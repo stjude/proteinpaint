@@ -1,9 +1,10 @@
 // Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
-// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
 // Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "apilink": "http://10.200.87.133:32580/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "multi-qa-mpnet-base-dot-v1", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
-// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "apilink": "http://10.200.87.133:32580/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "multi-qa-mpnet-base-dot-v1", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://10.200.87.133:32580/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "multi-qa-mpnet-base-dot-v1", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
 use anyhow::Result;
 use json::JsonValue;
+use r2d2_sqlite::SqliteConnectionManager;
 use rig::agent::AgentBuilder;
 use rig::client::CompletionClient;
 use rig::client::EmbeddingsClient;
@@ -93,6 +94,13 @@ async fn main() -> Result<()> {
                         None => panic!("dataset_file field is missing in input json"),
                     }
 
+                    let dataset_db_json: &JsonValue = &json_string["dataset_db"];
+                    let mut dataset_db: Option<&str> = None;
+                    match dataset_db_json.as_str() {
+                        Some(inp) => dataset_db = Some(inp),
+                        None => {}
+                    }
+
                     let apilink_json: &JsonValue = &json_string["apilink"];
                     let apilink: &str;
                     match apilink_json.as_str() {
@@ -149,6 +157,7 @@ async fn main() -> Result<()> {
                             temperature,
                             max_new_tokens,
                             top_p,
+                            dataset_db,
                         )
                         .await;
                     // "gpt-oss:20b" "granite3-dense:latest" "PetrosStav/gemma3-tools:12b" "llama3-groq-tool-use:latest" "PetrosStav/gemma3-tools:12b"
@@ -170,6 +179,7 @@ async fn main() -> Result<()> {
                             temperature,
                             max_new_tokens,
                             top_p,
+                            dataset_db,
                         )
                         .await;
                     }
@@ -193,6 +203,7 @@ async fn run_pipeline(
     temperature: f64,
     max_new_tokens: usize,
     top_p: f32,
+    dataset_db: Option<&str>,
 ) -> Option<String> {
     let mut classification: String = classify_query_by_dataset_type(
         user_input,
@@ -252,6 +263,7 @@ async fn run_pipeline(
                     temperature,
                     max_new_tokens,
                     top_p,
+                    dataset_db,
                 )
                 .await;
             }
@@ -460,74 +472,109 @@ async fn extract_summary_information(
     temperature: f64,
     max_new_tokens: usize,
     top_p: f32,
+    dataset_db: Option<&str>,
 ) -> String {
-    // Open the file
-    let mut file = File::open(dataset_file).unwrap();
+    match dataset_db {
+        Some(db) => {
+            let manager = SqliteConnectionManager::file(db);
+            let pool = r2d2::Pool::new(manager).unwrap();
 
-    // Create a string to hold the file contents
-    let mut contents = String::new();
+            let conn = pool.get().unwrap();
+            let sql_statement = "SELECT * from terms";
+            let mut terms = conn.prepare(&sql_statement).unwrap();
+            let mut rows = terms.query([]).unwrap();
 
-    // Read the file contents into the string
-    file.read_to_string(&mut contents).unwrap();
+            let mut names = Vec::<String>::new();
+            while let Some(row) = rows.next().unwrap() {
+                println!("row:{:?}", row);
+                let name: String = row.get(0).unwrap();
+                println!("id:{}", name);
+                let line: String = row.get(3).unwrap();
+                //println!("line:{}", line);
+                let json_data: Value = serde_json::from_str(&line).expect("Not a JSON");
+                let values = json_data["values"].as_object().unwrap();
 
-    // Split the contents by the delimiter "---"
-    let parts: Vec<&str> = contents.split("---").collect();
+                let mut keys = Vec::<&str>::new();
+                for (key, _value) in values {
+                    keys.push(key)
+                }
+                println!("items:{:?}", keys);
+                names.push(name)
+            }
+            println!("names:{:?}", names);
 
-    // Print the separated parts
-    let mut rag_docs = Vec::<String>::new();
-    for (_i, part) in parts.iter().enumerate() {
-        //println!("Part {}: {}", i + 1, part.trim());
-        rag_docs.push(part.trim().to_string())
-    }
+            // Open the file
+            let mut file = File::open(dataset_file).unwrap();
 
-    let additional;
-    match llm_backend_type {
-        llm_backend::Ollama() => {
-            additional = json!({});
+            // Create a string to hold the file contents
+            let mut contents = String::new();
+
+            // Read the file contents into the string
+            file.read_to_string(&mut contents).unwrap();
+
+            // Split the contents by the delimiter "---"
+            let parts: Vec<&str> = contents.split("---").collect();
+
+            // Print the separated parts
+            let mut rag_docs = Vec::<String>::new();
+            for (_i, part) in parts.iter().enumerate() {
+                //println!("Part {}: {}", i + 1, part.trim());
+                rag_docs.push(part.trim().to_string())
+            }
+
+            let additional;
+            match llm_backend_type {
+                llm_backend::Ollama() => {
+                    additional = json!({});
+                }
+                llm_backend::Sj() => {
+                    additional = json!({
+                            "max_new_tokens": max_new_tokens,
+                            "top_p": top_p
+                    });
+                }
+            }
+
+            let rag_docs_length = rag_docs.len();
+            // Create embeddings and add to vector store
+            let embeddings = EmbeddingsBuilder::new(embedding_model.clone())
+                .documents(rag_docs)
+                .expect("Reason1")
+                .build()
+                .await
+                .unwrap();
+
+            // Create vector store
+            let mut vector_store = InMemoryVectorStore::<String>::default();
+            InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
+
+            //let system_prompt = "I am an assistant that figures out the summary term from its respective dataset file. Extract the summary term {summary_term} from user query. The final output must be in the following JSON format {{\"chartType\":\"summary\",\"term\":{{\"id\":\"{{summary_term}}\"}}}}";
+
+            let system_prompt = String::from(
+                "I am an assistant that figures out the summary term from its respective dataset file. Extract the summary term ",
+            ) + &summary_term
+                + &" from user query. The final output must be in the following JSON format {{\"chartType\":\"summary\",\"term\":{{\"id\":\"{{"
+                + &summary_term
+                + "}}\"}}}}";
+            // Create RAG agent
+            let agent = AgentBuilder::new(comp_model)
+                .preamble(&system_prompt)
+                .dynamic_context(rag_docs_length, vector_store.index(embedding_model))
+                .temperature(temperature)
+                .additional_params(additional)
+                .build();
+
+            let response = agent.prompt(user_input).await.expect("Failed to prompt ollama");
+
+            //println!("Ollama: {}", response);
+            let result = response.replace("json", "").replace("```", "");
+            //println!("result:{}", result);
+            let json_value: Value = serde_json::from_str(&result).expect("REASON");
+            //println!("Classification result:{}", json_value);
+            json_value.to_string()
         }
-        llm_backend::Sj() => {
-            additional = json!({
-                    "max_new_tokens": max_new_tokens,
-                    "top_p": top_p
-            });
+        None => {
+            panic!("Dataset db file needed for summary term extraction from user input")
         }
     }
-
-    let rag_docs_length = rag_docs.len();
-    // Create embeddings and add to vector store
-    let embeddings = EmbeddingsBuilder::new(embedding_model.clone())
-        .documents(rag_docs)
-        .expect("Reason1")
-        .build()
-        .await
-        .unwrap();
-
-    // Create vector store
-    let mut vector_store = InMemoryVectorStore::<String>::default();
-    InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
-
-    //let system_prompt = "I am an assistant that figures out the summary term from its respective dataset file. Extract the summary term {summary_term} from user query. The final output must be in the following JSON format {{\"chartType\":\"summary\",\"term\":{{\"id\":\"{{summary_term}}\"}}}}";
-
-    let system_prompt = String::from(
-        "I am an assistant that figures out the summary term from its respective dataset file. Extract the summary term ",
-    ) + &summary_term
-        + &" from user query. The final output must be in the following JSON format {{\"chartType\":\"summary\",\"term\":{{\"id\":\"{{"
-        + &summary_term
-        + "}}\"}}}}";
-    // Create RAG agent
-    let agent = AgentBuilder::new(comp_model)
-        .preamble(&system_prompt)
-        .dynamic_context(rag_docs_length, vector_store.index(embedding_model))
-        .temperature(temperature)
-        .additional_params(additional)
-        .build();
-
-    let response = agent.prompt(user_input).await.expect("Failed to prompt ollama");
-
-    //println!("Ollama: {}", response);
-    let result = response.replace("json", "").replace("```", "");
-    //println!("result:{}", result);
-    let json_value: Value = serde_json::from_str(&result).expect("REASON");
-    //println!("Classification result:{}", json_value);
-    json_value.to_string()
 }
