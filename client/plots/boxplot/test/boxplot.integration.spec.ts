@@ -1,11 +1,14 @@
 import tape from 'tape'
 import * as helpers from '../../../test/front.helpers.js'
+import { detectGte } from '../../../test/test.helpers.js'
 
 /*
 Tests:
 	- Default box plot
 	- Box plot with overlay term = sex
 	- Box plot with continuous overlay term = agedx
+	- Box plot with divide term = sex
+	- Box plot with overlay term = aaclassic_5 and divide term = sex
 	- Box plot with user settings
  */
 
@@ -150,6 +153,87 @@ tape('Box plot with continuous overlay term = agedx', test => {
 			numValues,
 			`Should render ${numValues} boxplots`
 		)
+
+		if (test['_ok']) boxplot.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Box plot with divide term = sex', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'boxplot',
+					term: {
+						id: 'agedx',
+						q: { mode: 'continuous' }
+					},
+					term0: {
+						id: 'sex'
+					}
+				}
+			]
+		},
+		boxplot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(boxplot) {
+		boxplot.on('postRender.test', null)
+		const dom = boxplot.Inner.dom
+		const chartDivs = await detectGte({ elem: dom.charts.node(), selector: '.sjpp-boxplot-chartDiv' })
+		test.equal(chartDivs.length, 2, 'Should have 2 charts')
+		const boxplots = await detectGte({ elem: dom.charts.node(), selector: '.sjpp-boxplot-plot' })
+		test.equal(boxplots.length, 2, 'Should have 2 boxplots')
+
+		if (test['_ok']) boxplot.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Box plot with overlay term = aaclassic_5 and divide term = sex', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'boxplot',
+					term: {
+						id: 'agedx',
+						q: { mode: 'continuous' }
+					},
+					term2: {
+						id: 'aaclassic_5'
+					},
+					term0: {
+						id: 'sex'
+					}
+				}
+			]
+		},
+		boxplot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(boxplot) {
+		boxplot.on('postRender.test', null)
+		const dom = boxplot.Inner.dom
+		const chartDivs = await detectGte({ elem: dom.charts.node(), selector: '.sjpp-boxplot-chartDiv' })
+		test.equal(chartDivs.length, 2, 'Should have 2 charts')
+		const boxplots = await detectGte({ elem: dom.charts.node(), selector: '.sjpp-boxplot-plot' })
+		test.equal(boxplots.length, 10, 'Should have 10 boxplots')
 
 		if (test['_ok']) boxplot.Inner.app.destroy()
 		test.end()

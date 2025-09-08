@@ -56,7 +56,8 @@ export default function setViolinRenderer(self) {
 
 			const chartDiv = self.dom.violinDiv
 				.append('div')
-				.style('padding', Object.keys(self.data.charts).length > 1 ? '20px' : '0px')
+				.attr('class', 'sjpp-vp-chartDiv')
+				.style('padding', Object.keys(self.data.charts).length > 1 ? '20px 20px 0px 0px' : '0px')
 			if (plots.length === 0) {
 				chartDiv.html(` <span style="opacity:.6;font-size:1em;margin-left:90px;">No data to render Violin Plot</span>`)
 				return

@@ -41,7 +41,7 @@ class TdbBoxplot extends RxComponentInner {
 			div,
 			error: errorDiv,
 			charts: chartsDiv,
-			legend: div.append('div').attr('class', 'sjpp-boxplot-legend').style('margin-top', '10px'),
+			legend: div.append('div').attr('class', 'sjpp-boxplot-legend').style('margin-top', '25px'),
 			tip: new Menu()
 		}
 		if (opts.header) this.dom.header = opts.header.html('Box plot')
@@ -219,7 +219,7 @@ class TdbBoxplot extends RxComponentInner {
 	}
 
 	async init() {
-		this.dom.div.style('display', 'inline-block').style('margin-left', '10px')
+		this.dom.div.style('display', 'inline-block').style('margin-left', '20px')
 		this.interactions = new BoxPlotInteractions(this.app, this.dom, this.id)
 		try {
 			await this.setControls()
@@ -264,7 +264,10 @@ class TdbBoxplot extends RxComponentInner {
 			for (const key of Object.keys(data.charts)) {
 				const chart = data.charts[key]
 				// setup a dom{} object for the chart
-				const chartDiv = this.dom.charts.append('div')
+				const chartDiv = this.dom.charts
+					.append('div')
+					.attr('class', 'sjpp-boxplot-chartDiv')
+					.style('padding', Object.keys(data.charts).length > 1 ? '20px 20px 0px 0px' : '0px')
 				const chartTitle = chartDiv
 					.append('div')
 					.attr('class', 'pp-chart-title')
@@ -272,7 +275,7 @@ class TdbBoxplot extends RxComponentInner {
 					.style('text-align', 'center')
 					.style('font-size', '1.1em')
 					.style('margin-bottom', '20px')
-				const chartSvg = chartDiv.append('svg').attr('class', 'sjpp-boxplot-svg')
+				const chartSvg = chartDiv.append('svg')
 				chart.svg = chartSvg
 				const chartDom = Object.assign({}, this.dom, {
 					svg: chartSvg,

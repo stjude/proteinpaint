@@ -22,6 +22,8 @@ term1=geneExp, term2=survival
 test samplelst term2
 term=agedx, term2=geneExp with regular bins
 term=agedx, term2=geneExp with custom bins
+term1=numeric, term0=categorical
+term1=numeric, term2=numeric, term0=categorical
 test uncomputable categories legend
 Load linear regression-violin UI
 test change in plot length and thickness for new custom group variable
@@ -1105,6 +1107,88 @@ tape('term=agedx, term2=geneExp with custom bins', function (test) {
 
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
+	}
+})
+
+tape('term1=numeric, term0=categorical', function (test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: {
+						id: 'agedx',
+						q: { mode: 'continuous' }
+					},
+					term0: {
+						id: 'sex',
+						isAtomic: true
+					}
+				}
+			]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testViolin(violin, violinDiv)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+	async function testViolin(violin, violinDiv) {
+		const chartDivs = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-chartDiv' })
+		test.equal(chartDivs.length, 2, 'Should have 2 charts')
+		const violinPaths = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path' })
+		test.equal(violinPaths.length, 4, 'Should have 4 paths')
+	}
+})
+
+tape('term1=numeric, term2=numeric, term0=categorical', function (test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: {
+						id: 'agedx',
+						q: { mode: 'continuous' }
+					},
+					term2: {
+						id: 'aaclassic_5',
+						isAtomic: true
+					},
+					term0: {
+						id: 'sex',
+						isAtomic: true
+					}
+				}
+			]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testViolin(violin, violinDiv)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+	async function testViolin(violin, violinDiv) {
+		const chartDivs = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-chartDiv' })
+		test.equal(chartDivs.length, 2, 'Should have 2 charts')
+		const violinPaths = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path' })
+		test.equal(violinPaths.length, 6, 'Should have 6 paths')
 	}
 })
 

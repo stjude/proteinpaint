@@ -109,7 +109,7 @@ export class View {
 	) {
 		/** Draw boxplots, incrementing by the total row height */
 		for (const plot of data.plots) {
-			const g = dom.boxplots.append('g').attr('id', `sjpp-boxplot-${plot.boxplot.label}`).attr('padding', '5px')
+			const g = dom.boxplots.append('g').attr('class', 'sjpp-boxplot-plot').attr('padding', '5px')
 
 			drawBoxplot({
 				bp: plot.boxplot,
