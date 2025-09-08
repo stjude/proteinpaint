@@ -225,18 +225,19 @@ def plot_grin2_manhattan(grin_results: dict,
         ax.set_ylim(0, 5)
 
     # Create alternating pattern based on chromosome order
-    for i, (_, row) in enumerate(chrom_size.iterrows()):
-        chrom = row['chrom']
-        if chrom in chrom_data:
-            start_pos = chrom_data[chrom]['start']
-            end_pos = start_pos + chrom_data[chrom]['size']
-            
-            # Alternate between light and slightly darker gray
-            if i % 2 == 0:
-                ax.axvspan(start_pos, end_pos, facecolor='#f0f0f0', alpha=0.5, zorder=0)
-            else:
-                ax.axvspan(start_pos, end_pos, facecolor='#e0e0e0', alpha=0.5, zorder=0)
-    
+    num_chroms = len(chrom_size)
+    bin_width = total_genome_length / num_chroms
+
+    for i in range(num_chroms):
+        start_pos = i * bin_width
+        end_pos = start_pos + bin_width
+
+        # Alternate between light and slightly darker gray
+        if i % 2 == 0:
+            ax.axvspan(start_pos, end_pos, facecolor='#f0f0f0', alpha=0.5, zorder=0)
+        else:
+           ax.axvspan(start_pos, end_pos, facecolor='#e0e0e0', alpha=0.5, zorder=0)
+	
     # Plot the data points with size adjusted for DPI
     if plot_data['x']:
         # Scale point size with device pixel ratio for better visibility

@@ -1,1 +1,2 @@
-
+Fixes:
+- Making chromosome shading constant across chromosomes
