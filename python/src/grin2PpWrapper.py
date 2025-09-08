@@ -214,7 +214,7 @@ def plot_grin2_manhattan(grin_results: dict,
         # Apply y-axis padding
         y_padding = max_y * y_axis_space
         y_min = -y_padding  # Start below zero to create bottom padding
-        y_max = max_y + y_padding
+        y_max = max_y + 0.6
         
         ax.set_ylim(y_min, y_max)
     else:
