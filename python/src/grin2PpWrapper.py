@@ -65,20 +65,21 @@ def assign_lesion_colors(lesion_types):
 	available_colors = {k: color_map[k] for k in unique_types if k in color_map}
 	return available_colors
 
+
 def plot_grin2_manhattan(grin_results: dict, 
                         chrom_size: pd.DataFrame,
                         colors: Optional[Dict[str, str]] = None,
                         plot_width: int = 1000,
                         plot_height: int = 400,
-                        device_pixel_ratio: float = 2.0) -> tuple[plt.Figure, dict]:
+                        device_pixel_ratio: float = 2.0,
+                        x_padding_factor: float = 0.01,
+                        y_padding_factor: float = 0.015) -> tuple[plt.Figure, dict]:
     """
-    Create a Manhattan plot for GRIN2 genomic analysis results using colored scatter points.
-    
+    Create a Manhattan plot for GRIN2 genomic analysis results using colored scatter points.    
     This function generates a genome-wide visualization showing the statistical 
     significance of genomic alterations across all chromosomes. Each point represents 
     a gene with its significance level (-log₁₀(q-value)) plotted against its chromosome
     start position. Different mutation types (gain, loss, mutation) are shown in different colors.
-    
     Args:
         grin_results (dict): Results dictionary from grin_stats() function containing:
             - 'gene.hits': DataFrame with gene-level statistical results
@@ -89,9 +90,11 @@ def plot_grin2_manhattan(grin_results: dict,
         plot_width (int): Desired plot width in pixels.
         plot_height (int): Desired plot height in pixels.
         device_pixel_ratio (float): Device pixel ratio for rendering.
+         x_padding_factor (float): Fraction of genome length to add as x-axis padding (default: 0.01 = 1%)
+         y_padding_factor (float): Fraction of max y-value to add as y-axis padding (default: 0.015 = 1.5%)
 
     Returns:
-        tuple[plt.Figure, dict]: Matplotlib figure and interactive data dictionary
+        tuple[plt.Figure, dict]: The generated figure and a dictionary with plot metadata.
     """
     # Set default colors if not provided
     if colors is None:
@@ -102,12 +105,8 @@ def plot_grin2_manhattan(grin_results: dict,
         }
 
     # Calculate DPI and figure size
-    # Use higher DPI for device pixel ratio while keeping figure size constant
     base_dpi = 100
     plot_dpi = int(base_dpi * device_pixel_ratio)
-    
-    # Convert pixel dimensions to inches at base DPI
-    # This ensures the figure stays the same visual size regardless of DPR
     fig_width_inches = plot_width / base_dpi
     fig_height_inches = plot_height / base_dpi
     
@@ -121,11 +120,10 @@ def plot_grin2_manhattan(grin_results: dict,
         if q_col in gene_hits.columns:
             mutation_cols.append((mut_type, q_col))
     
-    # Collect data for each chromosome to calculate cumulative positions
+    # Calculate cumulative chromosome positions
     chrom_data = {}
     cumulative_pos = 0
     
-    # Calculate cumulative chromosome positions for plotting
     for chrom_index, (_, row) in enumerate(chrom_size.iterrows()):
         chrom = row['chrom']
         size = row['size']
@@ -139,22 +137,22 @@ def plot_grin2_manhattan(grin_results: dict,
     
     total_genome_length = cumulative_pos
     
-    # Collect all points to plot (for PNG)
+    # Calculate x-axis padding
+    x_padding = total_genome_length * x_padding_factor
+    
+    # Collect all points to plot
     plot_data = {'x': [], 'y': [], 'colors': [], 'types': []}
-    point_details = []  # Only significant points for interactivity
+    point_details = []
     
     # Process each gene
     for _, gene_row in gene_hits.iterrows():
         chrom = gene_row['chrom']
         gene_name = gene_row.get('gene', 'Unknown') 
-        # Skip if chromosome not in coordinate map
+        
         if chrom not in chrom_data:
             continue
             
-        # Use the gene's chromosome start position directly
         gene_start = gene_row.get('loc.start', 0)
-        
-        # Map to cumulative genome coordinates for plotting
         x_pos = chrom_data[chrom]['start'] + gene_start
         
         # Add points for each mutation type
@@ -163,24 +161,23 @@ def plot_grin2_manhattan(grin_results: dict,
                 continue
 
             q_value = gene_row[q_col]
-            
-            # Convert q-value to -log10(q-value)
             neg_log10_q = -np.log10(q_value)
             
-            # Add slight horizontal offset for multiple mutation types at same gene
+            # Add horizontal offset for multiple mutation types
             offset_factor = {'gain': -0.3, 'loss': 0, 'mutation': 0.3}
             x_offset = offset_factor.get(mut_type, 0) * (total_genome_length * 0.0001)
             
-            final_x = x_pos + x_offset
+            # Apply x-axis padding to move points away from left edge
+            final_x = x_pos + x_offset + x_padding
             color = colors.get(mut_type, '#888888')
             
-            # Add ALL points to plot_data (for PNG visualization)
+            # Add ALL points to plot_data
             plot_data['x'].append(final_x)
             plot_data['y'].append(neg_log10_q)
             plot_data['colors'].append(color)
             plot_data['types'].append(mut_type)
             
-            # Only add significant points (q <= 0.05) to interactive data
+            # Only add significant points for interactivity
             if q_value <= 0.05:
                 point_details.append({
                     'x': final_x,
@@ -193,101 +190,94 @@ def plot_grin2_manhattan(grin_results: dict,
                     'q_value': q_value
                 })
     
-    # Create the matplotlib figure with constant size but high DPI
+    # Create matplotlib figure
     fig, ax = plt.subplots(1, 1, figsize=(fig_width_inches, fig_height_inches), dpi=plot_dpi)
 
-    # Set up axes limits
-    ax.set_xlim(0, total_genome_length)
-    
-    # Calculate y-axis limits from data with optional scaling for very high values
+    # Calculate y-axis limits and padding
     y_axis_scaled = False
     scale_factor_y = 1.0
+    
     if plot_data['y']:
         max_y = max(plot_data['y'])
         
-        # If we have extremely high significance values, scale them down for better visualization
+        # Scale for very high values
         if max_y > 40:
-            # Scale all y-values so the maximum becomes 40
             target_max = 40
             scale_factor_y = target_max / max_y
             plot_data['y'] = [y * scale_factor_y for y in plot_data['y']]
-            # Also update point_details
             for point in point_details:
                 point['y'] *= scale_factor_y
             scaled_max = max(plot_data['y'])
-            ax.set_ylim(0, scaled_max + 0.15)  # Add a small margin so points don't get clipped
             y_axis_scaled = True
-        else:
-            # Normal case
-            ax.set_ylim(0, max(max_y + 0.15, 5))
+            max_y = scaled_max
+        
+        # Apply y-axis padding
+        y_padding = max_y * y_padding_factor
+        y_min = -y_padding  # Start below zero to create bottom padding
+        y_max = max_y + y_padding
+        
+        ax.set_ylim(y_min, y_max)
     else:
-        # No data points to plot
-        ax.set_ylim(0, 5)
+        ax.set_ylim(-0.25, 5.25)  # Default with padding
+    
+    # Set x-axis limits with padding on both sides
+    ax.set_xlim(0, total_genome_length + 2 * x_padding)
 
-    # Create alternating pattern based on chromosome order
+    # Create alternating chromosome backgrounds (adjusted for padding)
     num_chroms = len(chrom_size)
     bin_width = total_genome_length / num_chroms
 
     for i in range(num_chroms):
-        start_pos = i * bin_width
+        start_pos = i * bin_width + x_padding  # Offset by padding
         end_pos = start_pos + bin_width
 
-        # Alternate between light and slightly darker gray
         if i % 2 == 0:
             ax.axvspan(start_pos, end_pos, facecolor='#f0f0f0', alpha=0.5, zorder=0)
         else:
-           ax.axvspan(start_pos, end_pos, facecolor='#e0e0e0', alpha=0.5, zorder=0)
-	
-    # Plot the data points with size adjusted for DPI
+            ax.axvspan(start_pos, end_pos, facecolor='#e0e0e0', alpha=0.5, zorder=0)
+    
+    # Plot data points
     if plot_data['x']:
-        # Scale point size with device pixel ratio for better visibility
         point_size = 20 * min(device_pixel_ratio, 2.5)
         ax.scatter(plot_data['x'], plot_data['y'], c=plot_data['colors'], 
                    s=point_size, alpha=0.7, edgecolors='none', zorder=2)
     
-    # Set chromosome positions and labels
-    chr_positions = [chrom_data[row['chrom']]['center'] for _, row in chrom_size.iterrows() 
+    # Set chromosome labels (adjusted for padding)
+    chr_positions = [chrom_data[row['chrom']]['center'] + x_padding for _, row in chrom_size.iterrows() 
                      if row['chrom'] in chrom_data]
     chr_labels = [row['chrom'].replace('chr', '') for _, row in chrom_size.iterrows() 
                   if row['chrom'] in chrom_data]
     
-    # Set chromosome labels with font size scaled for DPI
+    # Style axes and labels
     font_size = 12 * min(device_pixel_ratio * 0.8, 2.0)
     ax.set_xticks(chr_positions)
     ax.set_xticklabels(chr_labels, rotation=45, ha='center', va='top', fontsize=font_size)
     ax.tick_params(axis='x', pad=2)
     ax.tick_params(axis='y', labelsize=font_size)
 
-    # Labels and title with scaled font sizes
     label_font_size = 12 * min(device_pixel_ratio * 0.8, 2.0)
     ax.set_ylabel('-log₁₀(q-value)', fontsize=label_font_size)
     ax.set_xlabel('Chromosomes', fontsize=label_font_size)
 
-    # Add horizontal legend at the top right, same level as title
+    # Add legend
     if len(mutation_cols) > 0:
-        # Create legend labels
         legend_labels = [mut_type.capitalize() for mut_type, _ in mutation_cols]
-        
-        # Add scaling note to legend if y-axis was scaled
         if y_axis_scaled:
             legend_labels.append("Y-axis capped at 40")
         
-        # Create legend handles using scatter plot markers (no lines)
         legend_handles = []
         marker_size = 8 * min(device_pixel_ratio * 0.8, 2.0)
         for mut_type, _ in mutation_cols:
             color = colors.get(mut_type, '#888888')
             legend_handles.append(plt.Line2D([0], [0], marker='o', color='w', 
                                            markerfacecolor=color, markersize=marker_size, alpha=0.7,
-                                           linestyle='None'))  # Explicitly no line
+                                           linestyle='None'))
         
-        # Add empty handle for scaling note if needed (with small marker)
         if y_axis_scaled:
             legend_handles.append(plt.Line2D([0], [0], marker='*', color='w', 
                                            markerfacecolor='gray', markersize=marker_size*0.75, alpha=0.7,
                                            linestyle='None'))
         
-        # Position legend horizontally at top right with scaled font
         legend_font_size = 10 * min(device_pixel_ratio * 0.8, 2.0)
         ax.legend(legend_handles, legend_labels, 
                  bbox_to_anchor=(1.0, 0.98), loc='lower right', 
@@ -295,57 +285,45 @@ def plot_grin2_manhattan(grin_results: dict,
                  fancybox=False, shadow=False, framealpha=0.0,
                  fontsize=legend_font_size)
     
-    # Clean up the plot
+    # Clean up plot
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.grid(True, alpha=0.3, axis='y')
     plt.tight_layout()
 
-    fig.canvas.draw()  # Ensure rendering is complete for interactive features
+    fig.canvas.draw()
 
-    # Calculate final output dimensions (should match requested plot_width x plot_height)
-    # The DPI scaling ensures high resolution while maintaining the target pixel dimensions
+    # Calculate coordinate transformation for interactive points
     width_pixels = plot_width
     height_pixels = plot_height
 
-    # Transform coordinates only for significant points
     if len(point_details) > 0:
         plot_coords = np.array([[point['x'], point['y']] for point in point_details])
-        
         pixel_coords = ax.transData.transform(plot_coords)
         
-        # Get the figure and axis bounding boxes in display coordinates
         fig_bbox = fig.get_window_extent()
-        ax_bbox = ax.get_window_extent()
-        
-        # Calculate scaling factors from display to target pixel space
         scale_x = width_pixels / fig_bbox.width
         scale_y = height_pixels / fig_bbox.height
         
-        # Position-dependent offset correction for perspective distortion
         plot_center_x = width_pixels / 2
         
-        # Transform coordinates to target pixel space
         for i, point in enumerate(point_details):
             px, py = pixel_coords[i]
             
-            # Calculate base pixel position
             base_x = px * scale_x
             base_y = height_pixels - (py * scale_y)
             
-            # Position-dependent offset: negative on left, positive on right
-            # Adjust the multiplier (0.010) to control correction strength
+            # Position-dependent offset correction
             distance_from_center = base_x - plot_center_x
-            position_offset = distance_from_center * 0.010  # Try values 0.005-0.015
+            position_offset = distance_from_center * 0.010
             
-            # Apply the position-dependent correction
             svg_x = int(round(base_x + position_offset))
             svg_y = int(round(base_y))
             
-            point['svg_x'] = max(0, min(width_pixels, svg_x))  # Clamp to image bounds
+            point['svg_x'] = max(0, min(width_pixels, svg_x))
             point['svg_y'] = max(0, min(height_pixels, svg_y))
 
-    # Update interactive_data with target dimensions
+    # Return interactive data
     interactive_data = {
         'points': point_details,
         'chrom_data': chrom_data,
@@ -354,8 +332,10 @@ def plot_grin2_manhattan(grin_results: dict,
         'total_genome_length': total_genome_length,
         'plot_width': width_pixels,
         'plot_height': height_pixels,
-		'device_pixel_ratio': device_pixel_ratio,
-        'dpi': plot_dpi
+        'device_pixel_ratio': device_pixel_ratio,
+        'dpi': plot_dpi,
+        'x_padding': x_padding,
+        'y_padding_factor': y_padding_factor
     }
     
     return fig, interactive_data
