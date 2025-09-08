@@ -668,6 +668,8 @@ try:
 	device_pixel_ratio = input_data.get("devicePixelRatio", 2.0)
 	plot_width = input_data.get("plot_width", 1000)
 	plot_height = input_data.get("plot_height", 400)
+	x_axis_space = input_data.get("x_axis_space", 0.01)
+	y_axis_space = input_data.get("y_axis_space", 0.01)
 
 	try:
 		# Create the Manhattan plot
@@ -677,7 +679,9 @@ try:
 			lsn_colors,
 			plot_width,
 			plot_height,
-			device_pixel_ratio
+			device_pixel_ratio,
+			x_axis_space,
+			y_axis_space
 		)
 
 		# Save to BytesIO buffer - use the DPI from the plot_data

@@ -26,6 +26,12 @@ export type GRIN2Request = {
 	/** Desired plot height in pixels (default: 400) */
 	plot_height?: number
 
+	/** Extra space to allocate for x-axis labels (default: 0.01) */
+	x_axis_space?: number
+
+	/** Extra space to allocate for y-axis labels (default: 0.01) */
+	y_axis_space?: number
+
 	/** Filter from existing PP infrastructure */
 	filter?: any // Filter object passed to get_samples(filter, ds)
 
