@@ -1,2 +1,2 @@
-Fixes:
-- Making chromosome shading constant across chromosomes
+Features:
+- GRIN2 Manhattan Plot: Fixed svg points overlapping plot axes 
