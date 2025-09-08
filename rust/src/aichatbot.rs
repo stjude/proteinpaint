@@ -334,7 +334,7 @@ async fn classify_query_by_dataset_type(
         rag_docs.push(part.trim().to_string())
     }
 
-    let rag_docs_length = rag_docs.len();
+    let top_k: usize = 3;
     // Create embeddings and add to vector store
     let embeddings = EmbeddingsBuilder::new(embedding_model.clone())
         .documents(rag_docs)
@@ -348,7 +348,7 @@ async fn classify_query_by_dataset_type(
     InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
 
     // Create RAG agent
-    let agent = AgentBuilder::new(comp_model).preamble("Generate classification for the user query into summary, dge, hierarchial, snv_indel, cnv, variant_calling, sv_fusion and none categories. Return output in JSON with ALWAYS a single word answer { \"answer\": \"dge\" }, that is 'summary' for summary plot, 'dge' for differential gene expression, 'hierarchial' for hierarchial clustering, 'snv_indel' for SNV/Indel, 'cnv' for CNV and 'sv_fusion' for SV/fusion, 'variant_calling' for variant calling, 'surivial' for survival data, 'none' for none of the previously described categories. The answer should always be in lower case").dynamic_context(rag_docs_length, vector_store.index(embedding_model)).temperature(temperature).additional_params(additional).build();
+    let agent = AgentBuilder::new(comp_model).preamble("Generate classification for the user query into summary, dge, hierarchial, snv_indel, cnv, variant_calling, sv_fusion and none categories. Return output in JSON with ALWAYS a single word answer { \"answer\": \"dge\" }, that is 'summary' for summary plot, 'dge' for differential gene expression, 'hierarchial' for hierarchial clustering, 'snv_indel' for SNV/Indel, 'cnv' for CNV and 'sv_fusion' for SV/fusion, 'variant_calling' for variant calling, 'surivial' for survival data, 'none' for none of the previously described categories. The answer should always be in lower case").dynamic_context(top_k, vector_store.index(embedding_model)).temperature(temperature).additional_params(additional).build();
 
     let response = agent.prompt(user_input).await.expect("Failed to prompt ollama");
 
@@ -356,8 +356,15 @@ async fn classify_query_by_dataset_type(
     let result = response.replace("json", "").replace("```", "");
     //println!("result:{}", result);
     let json_value: Value = serde_json::from_str(&result).expect("REASON");
-    //println!("Classification result:{}", json_value);
-    json_value["answer"].to_string()
+    match llm_backend_type {
+        llm_backend::Ollama() => json_value["answer"].to_string(),
+        llm_backend::Sj() => {
+            let json_value2: Value =
+                serde_json::from_str(&json_value[0]["generated_text"].to_string()).expect("REASON2");
+            println!("Classification result:{}", json_value2);
+            json_value2["answer"].to_string()
+        }
+    }
 }
 
 async fn extract_search_terms_from_query(
