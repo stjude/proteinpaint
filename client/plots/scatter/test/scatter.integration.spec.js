@@ -148,7 +148,7 @@ tape('\n', function (test) {
 
 tape('Render TermdbTest scatter plot and open survival and summary', function (test) {
 	test.timeoutAfter(8000)
-	test.plan(5)
+	test.plan(7)
 	const holder = getHolder()
 	runpp({
 		holder, //Fix for test failing because survival & summary sandboxs are not destroyed.
