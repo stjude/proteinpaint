@@ -28,7 +28,7 @@ class ViolinPlot {
 			.append('div')
 			.style('display', 'inline-block')
 			.style('padding', this.opts.mode != 'minimal' ? '5px' : '0px')
-			.style('padding-left', this.opts.mode != 'minimal' ? '45px' : '0px')
+			.style('padding-left', this.opts.mode != 'minimal' ? '10px' : '0px')
 			.attr('id', 'sjpp-vp-holder')
 
 		this.dom = {
@@ -49,7 +49,11 @@ class ViolinPlot {
 				.style('flex-wrap', 'wrap')
 				.style('max-width', '100vw')
 				.style('padding-left', this.opts.mode != 'minimal' ? '10px' : '0px'),
-			legendDiv: holder.append('div').classed('sjpp-vp-legend', true).style('padding-left', '5px')
+			legendDiv: holder
+				.append('div')
+				.classed('sjpp-vp-legend', true)
+				.style('padding-left', '5px')
+				.style('padding-top', '10px')
 		}
 
 		setViolinRenderer(this)

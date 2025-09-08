@@ -41,7 +41,7 @@ export default function setViolinRenderer(self) {
 		}
 
 		//filter out hidden values and only keep plots which are not hidden in term2.q.hiddenvalues
-		self.dom.violinDiv.select('*').remove()
+		self.dom.violinDiv.selectAll('*').remove()
 		for (const chartKey of Object.keys(self.data.charts)) {
 			const chart = self.data.charts[chartKey]
 			const plots = chart.plots.filter(p => !termNum?.q?.hiddenValues?.[p.label || p.seriesId])
@@ -54,7 +54,9 @@ export default function setViolinRenderer(self) {
 			this.k2c = getColors(plots.length)
 			if (self.legendRenderer) self.legendRenderer(getLegendGrps(termNum, self))
 
-			const chartDiv = self.dom.violinDiv.append('div').style('padding', '20px')
+			const chartDiv = self.dom.violinDiv
+				.append('div')
+				.style('padding', Object.keys(self.data.charts).length > 1 ? '20px' : '0px')
 			if (plots.length === 0) {
 				chartDiv.html(` <span style="opacity:.6;font-size:1em;margin-left:90px;">No data to render Violin Plot</span>`)
 				return
@@ -70,7 +72,7 @@ export default function setViolinRenderer(self) {
 				.style('display', chart.chartId ? 'block' : 'none')
 				.style('text-align', 'center')
 				.style('font-size', '1.1em')
-				.style('margin-bottom', '24px')
+				.style('margin-bottom', '20px')
 				.html(getChartTitle(chart.chartId))
 
 			// render chart data
@@ -134,9 +136,13 @@ export default function setViolinRenderer(self) {
 		}
 	}
 	self.getAutoThickness = function () {
-		/*if (self.data.plots.length === 1) */ return 150
-		const count = self.data.plots.length
-		return Math.min(130, Math.max(60, 600 / count)) //clamp between 60 and 130
+		let maxPlotCount = 0
+		for (const k of Object.keys(this.data.charts)) {
+			const chart = this.data.charts[k]
+			maxPlotCount = Math.max(maxPlotCount, chart.plots.length)
+		}
+		if (maxPlotCount == 1) return 150
+		return Math.min(130, Math.max(60, 600 / maxPlotCount)) //clamp between 60 and 130
 	}
 
 	self.getPlotThicknessWithPadding = function () {
