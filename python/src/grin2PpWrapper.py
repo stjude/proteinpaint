@@ -138,7 +138,7 @@ def plot_grin2_manhattan(grin_results: dict,
     total_genome_length = cumulative_pos
     
     # Calculate x-axis padding
-    x_axis_space = total_genome_length * x_axis_space
+    x_axis_padding = total_genome_length * x_axis_space
     
     # Collect all points to plot
     plot_data = {'x': [], 'y': [], 'colors': [], 'types': []}
@@ -168,7 +168,7 @@ def plot_grin2_manhattan(grin_results: dict,
             x_offset = offset_factor.get(mut_type, 0) * (total_genome_length * 0.0001)
             
             # Apply x-axis padding to move points away from left edge
-            final_x = x_pos + x_offset + x_axis_space
+            final_x = x_pos + x_offset + x_axis_padding
             color = colors.get(mut_type, '#888888')
             
             # Add ALL points to plot_data
@@ -221,13 +221,14 @@ def plot_grin2_manhattan(grin_results: dict,
         ax.set_ylim(-0.25, 5.25)  # Default with padding
     
     # Set x-axis limits with padding on both sides
-    ax.set_xlim(0, total_genome_length + 2 * x_axis_space)
+    ax.set_xlim(0, total_genome_length + 2 * x_axis_padding)
 
-    # Create alternating chromosome backgrounds (adjusted for padding)
+    # Create alternating chromosome backgrounds
     for i, (_, row) in enumerate(chrom_size.iterrows()):
         chrom = row['chrom']
         if chrom in chrom_data:
-            start_pos = chrom_data[chrom]['start']
+            # Apply the same x_axis_padding shift to chromosome shading
+            start_pos = chrom_data[chrom]['start'] + x_axis_padding
             end_pos = start_pos + chrom_data[chrom]['size']
             
             # Alternate between light and slightly darker gray
@@ -242,8 +243,8 @@ def plot_grin2_manhattan(grin_results: dict,
         ax.scatter(plot_data['x'], plot_data['y'], c=plot_data['colors'], 
                    s=point_size, alpha=0.7, edgecolors='none', zorder=2)
     
-    # Set chromosome labels (adjusted for padding)
-    chr_positions = [chrom_data[row['chrom']]['center'] + x_axis_space for _, row in chrom_size.iterrows() 
+    # Set chromosome labels
+    chr_positions = [chrom_data[row['chrom']]['center'] + x_axis_padding for _, row in chrom_size.iterrows() 
                      if row['chrom'] in chrom_data]
     chr_labels = [row['chrom'].replace('chr', '') for _, row in chrom_size.iterrows() 
                   if row['chrom'] in chrom_data]
