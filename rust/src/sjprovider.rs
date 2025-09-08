@@ -236,7 +236,7 @@ impl embeddings::EmbeddingModel for EmbeddingModel {
                         ]
                     }
             );
-            //println!("payload:{}", payload);
+            //println!("embedding_payload:{}", payload);
             //println!("self.base_url:{}", self.base_url);
             let response = self
                 .client
@@ -496,6 +496,7 @@ impl CompletionModel {
                     }
                 }]
         });
+        //println!("comp_request_payload:{}", request_payload);
 
         if !completion_request.tools.is_empty() {
             println!("completion_request.tools:{:?}", completion_request.tools);
@@ -1005,7 +1006,8 @@ mod tests {
         //let myprovider_client = myprovider::Client::new();
         let embedding_model = myprovider_client.embedding_model("multi-qa-mpnet-base-dot-v1");
         let comp_model = myprovider_client.completion_model("llama3.3-70b-instruct-vllm"); // "granite3-dense:latest" "PetrosStav/gemma3-tools:12b" "llama3-groq-tool-use:latest" "PetrosStav/gemma3-tools:12b"
-        let file_path = "/Users/rpaul1/Documents/test/RAG/LangGraph/ai_docs3.txt";
+        //let file_path = "/Users/rpaul1/Documents/test/RAG/LangGraph/ai_docs3.txt";
+        let file_path = "src/ai_docs3.txt";
 
         // Open the file
         let mut file = File::open(file_path).unwrap();
