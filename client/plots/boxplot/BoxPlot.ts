@@ -6,7 +6,7 @@ import { plotColor } from '#shared/common.js'
 import { Menu, getMaxLabelWidth } from '#dom'
 import type { Elem } from '../../types/d3'
 import type { MassAppApi, MassState } from '#mass/types/mass'
-import type { TdbBoxPlotOpts, BoxPlotSettings, BoxPlotDom, BoxPlotConfig, BoxPlotConfigOpts } from './BoxPlotTypes'
+import type { TdbBoxPlotOpts, BoxPlotSettings, BoxPlotDom, BoxPlotConfigOpts } from './BoxPlotTypes'
 import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
@@ -27,7 +27,7 @@ class TdbBoxplot extends RxComponentInner {
 		}
 		const holder = opts.holder.classed('sjpp-boxplot-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
-		const div = holder.append('div').style('padding', '5px')
+		const div = holder.append('div')
 		const errorDiv = div.append('div').attr('class', 'sjpp-boxplot-error').style('opacity', 0.75)
 		const chartsDiv = div
 			.append('div')
@@ -41,7 +41,7 @@ class TdbBoxplot extends RxComponentInner {
 			div,
 			error: errorDiv,
 			charts: chartsDiv,
-			legend: div.append('div').attr('class', 'sjpp-boxplot-legend'),
+			legend: div.append('div').attr('class', 'sjpp-boxplot-legend').style('margin-top', '10px'),
 			tip: new Menu()
 		}
 		if (opts.header) this.dom.header = opts.header.html('Box plot')
@@ -90,7 +90,14 @@ class TdbBoxplot extends RxComponentInner {
 					{ label: 'Default', value: false },
 					{ label: 'Median values', value: true }
 				],
-				getDisplayStyle: (plot: BoxPlotConfig) => (plot.term2 ? '' : 'none')
+				getDisplayStyle: () => {
+					let style = 'none'
+					for (const k of Object.keys(this.data.charts)) {
+						const chart = this.data.charts[k]
+						if (chart.plots.length > 1) style = ''
+					}
+					return style
+				}
 			},
 			{
 				label: 'Scale',
@@ -159,7 +166,14 @@ class TdbBoxplot extends RxComponentInner {
 				type: 'color',
 				chartType: 'boxplot',
 				settingsKey: 'color',
-				getDisplayStyle: (plot: BoxPlotConfig) => (plot.term2 ? 'none' : '')
+				getDisplayStyle: () => {
+					let style = ''
+					for (const k of Object.keys(this.data.charts)) {
+						const chart = this.data.charts[k]
+						if (chart.plots.length > 1) style = 'none'
+					}
+					return style
+				}
 			},
 			{
 				label: 'Display mode',
@@ -205,7 +219,7 @@ class TdbBoxplot extends RxComponentInner {
 	}
 
 	async init() {
-		this.dom.div.style('display', 'inline-block').style('margin', '10px')
+		this.dom.div.style('display', 'inline-block').style('margin-left', '10px')
 		this.interactions = new BoxPlotInteractions(this.app, this.dom, this.id)
 		try {
 			await this.setControls()
@@ -257,7 +271,7 @@ class TdbBoxplot extends RxComponentInner {
 					.style('display', config.term0 ? 'block' : 'none')
 					.style('text-align', 'center')
 					.style('font-size', '1.1em')
-					.style('margin-bottom', '24px')
+					.style('margin-bottom', '20px')
 				const chartSvg = chartDiv.append('svg').attr('class', 'sjpp-boxplot-svg')
 				chart.svg = chartSvg
 				const chartDom = Object.assign({}, this.dom, {
