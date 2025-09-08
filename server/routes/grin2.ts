@@ -126,8 +126,12 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		lesion: JSON.stringify(lesions),
 		devicePixelRatio: request.devicePixelRatio,
 		plot_width: request.plot_width,
-		plot_height: request.plot_height
+		plot_height: request.plot_height,
+		x_axis_space: request.x_axis_space,
+		y_axis_space: request.y_axis_space
 	}
+
+	mayLog('[GRIN2] Prepared input for Python script:', { ...pyInput })
 
 	// Build chromosome list from genome reference
 	for (const c in g.majorchr) {
