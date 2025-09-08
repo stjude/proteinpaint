@@ -1,2 +1,1 @@
-Fixes:
-- label legend title when both colorTW and shapeTW are used in scatter
+

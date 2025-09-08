@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - Adding interactive GRIN2 plot
 
+Fixes:
+- label legend title when both colorTW and shapeTW are used in scatter
+
 
 ## 2.142.1
 
