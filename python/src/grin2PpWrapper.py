@@ -72,8 +72,8 @@ def plot_grin2_manhattan(grin_results: dict,
                         plot_width: int = 1000,
                         plot_height: int = 400,
                         device_pixel_ratio: float = 2.0,
-                        x_padding_factor: float = 0.01,
-                        y_padding_factor: float = 0.015) -> tuple[plt.Figure, dict]:
+                        x_axis_space: float = 0.01,
+                        y_axis_space: float = 0.01) -> tuple[plt.Figure, dict]:
     """
     Create a Manhattan plot for GRIN2 genomic analysis results using colored scatter points.    
     This function generates a genome-wide visualization showing the statistical 
@@ -90,8 +90,8 @@ def plot_grin2_manhattan(grin_results: dict,
         plot_width (int): Desired plot width in pixels.
         plot_height (int): Desired plot height in pixels.
         device_pixel_ratio (float): Device pixel ratio for rendering.
-         x_padding_factor (float): Fraction of genome length to add as x-axis padding (default: 0.01 = 1%)
-         y_padding_factor (float): Fraction of max y-value to add as y-axis padding (default: 0.015 = 1.5%)
+        x_axis_space (float): Fraction of genome length to add as x-axis padding (default: 0.01 = 1%)
+        y_axis_space (float): Fraction of max y-value to add as y-axis padding (default: 0.01 = 1%)
 
     Returns:
         tuple[plt.Figure, dict]: The generated figure and a dictionary with plot metadata.
@@ -138,7 +138,7 @@ def plot_grin2_manhattan(grin_results: dict,
     total_genome_length = cumulative_pos
     
     # Calculate x-axis padding
-    x_padding = total_genome_length * x_padding_factor
+    x_axis_space = total_genome_length * x_axis_space
     
     # Collect all points to plot
     plot_data = {'x': [], 'y': [], 'colors': [], 'types': []}
@@ -168,7 +168,7 @@ def plot_grin2_manhattan(grin_results: dict,
             x_offset = offset_factor.get(mut_type, 0) * (total_genome_length * 0.0001)
             
             # Apply x-axis padding to move points away from left edge
-            final_x = x_pos + x_offset + x_padding
+            final_x = x_pos + x_offset +x_axis_space
             color = colors.get(mut_type, '#888888')
             
             # Add ALL points to plot_data
@@ -212,7 +212,7 @@ def plot_grin2_manhattan(grin_results: dict,
             max_y = scaled_max
         
         # Apply y-axis padding
-        y_padding = max_y * y_padding_factor
+        y_padding = max_y * y_axis_space
         y_min = -y_padding  # Start below zero to create bottom padding
         y_max = max_y + y_padding
         
@@ -221,14 +221,14 @@ def plot_grin2_manhattan(grin_results: dict,
         ax.set_ylim(-0.25, 5.25)  # Default with padding
     
     # Set x-axis limits with padding on both sides
-    ax.set_xlim(0, total_genome_length + 2 * x_padding)
+    ax.set_xlim(0, total_genome_length + 2 *x_axis_space)
 
     # Create alternating chromosome backgrounds (adjusted for padding)
     num_chroms = len(chrom_size)
     bin_width = total_genome_length / num_chroms
 
     for i in range(num_chroms):
-        start_pos = i * bin_width + x_padding  # Offset by padding
+        start_pos = i * bin_width +x_axis_space  # Offset by padding
         end_pos = start_pos + bin_width
 
         if i % 2 == 0:
@@ -243,7 +243,7 @@ def plot_grin2_manhattan(grin_results: dict,
                    s=point_size, alpha=0.7, edgecolors='none', zorder=2)
     
     # Set chromosome labels (adjusted for padding)
-    chr_positions = [chrom_data[row['chrom']]['center'] + x_padding for _, row in chrom_size.iterrows() 
+    chr_positions = [chrom_data[row['chrom']]['center'] +x_axis_space for _, row in chrom_size.iterrows() 
                      if row['chrom'] in chrom_data]
     chr_labels = [row['chrom'].replace('chr', '') for _, row in chrom_size.iterrows() 
                   if row['chrom'] in chrom_data]
@@ -334,8 +334,8 @@ def plot_grin2_manhattan(grin_results: dict,
         'plot_height': height_pixels,
         'device_pixel_ratio': device_pixel_ratio,
         'dpi': plot_dpi,
-        'x_padding': x_padding,
-        'y_padding_factor': y_padding_factor
+        'x_axis_space': x_axis_space,
+        'y_axis_space': y_axis_space
     }
     
     return fig, interactive_data
