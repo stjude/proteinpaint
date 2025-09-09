@@ -83,19 +83,19 @@ export async function getHandler(self: CategoricalTermSettingInstance) {
 		},
 
 		async showEditMenu() {
-			await new GroupSettingMethods(self).main()
-		},
-
-		async postMain() {
 			//for rendering groupsetting menu
+			const holder = self.dom.tip.d.append('div')
+			const loadingDiv = holder.append('div').style('margin', '10px').text('Getting categories...')
 			const body = self.opts.getBodyParams?.() || {}
 			const data = await self.vocabApi.getCategories(self.term, self.filter!, body)
+			loadingDiv.style('display', 'none')
 			/** Original code created a separate array (self.category2samplecount) and pushed only the key and label.
 			 * The new self.category2samplecount was used to create the groupsetting menu items. That logic was removed
 			 * as groupsetting.ts handles formating the data. However category2samplecount = [] is still used
 			 * in other client side code. The data shape may differ until all the code is refactored.
 			 */
 			self.category2samplecount = data.lst
+			await new GroupSettingMethods(self, { holder }).main()
 		}
 	}
 }
