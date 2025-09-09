@@ -235,6 +235,8 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		if (q.colorTW && q.colorTW.q.mode !== 'continuous') {
 			let i = 20
 			for (const [category, value] of Object.entries(result.colorMap)) {
+				delete value.sampleIds //set used to count samples
+
 				let tvalue
 				if (q.colorTW.term.values?.[value.key]) {
 					tvalue = q.colorTW.term.values?.[value.key]
@@ -260,6 +262,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		const shapes = Object.entries(result.shapeMap).sort((a, b) => a[0].localeCompare(b[0]))
 
 		for (const [category, value] of shapes) {
+			delete value.sampleIds //Set used to count samples
 			if ('shape' in value) continue
 			if (q.shapeTW.term.values?.[value.key]?.shape != undefined) value.shape = q.shapeTW.term.values?.[value.key].shape
 			else value.shape = i
@@ -320,11 +323,14 @@ function assignGeneVariantValue(dbSample, sample, tw, categoryMap, category) {
 
 			let mapValue
 			if (categoryMap[value] == undefined) {
-				mapValue = { color: class_info.color, sampleCount: 1, mutation, key: value }
+				const sampleIds = new Set()
+				sampleIds.add(dbSample.sample)
+				mapValue = { color: class_info.color, sampleCount: 1, mutation, key: value, sampleIds }
 				categoryMap[value] = mapValue
 			} else {
 				mapValue = categoryMap[value]
-				mapValue.sampleCount = mapValue.sampleCount + 1
+				mapValue.sampleIds.add(dbSample.sample)
+				mapValue.sampleCount = mapValue.sampleIds.size
 			}
 		}
 		sample[category] = getMutation(true, dbSample, tw) || getMutation(false, dbSample, tw)
