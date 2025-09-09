@@ -1,5 +1,12 @@
+// --------Summary plot examples----------------------//
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show hyperdiploid overlayed with age", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
+// (does not work)  Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary of fusions in men only", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for fusions in men only", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
+// -------Differential gene expression examples ------//
+
 // Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
-// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
 // Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "apilink": "http://10.200.87.133:32580/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "multi-qa-mpnet-base-dot-v1", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
 // Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://10.200.87.133:32580/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "multi-qa-mpnet-base-dot-v1", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
 use anyhow::Result;
@@ -10,12 +17,13 @@ use rig::client::CompletionClient;
 use rig::client::EmbeddingsClient;
 use rig::completion::Prompt;
 use rig::embeddings::builder::EmbeddingsBuilder;
+use std::collections::HashMap;
 //use rig::providers::ollama;
 use rig::vector_store::in_memory_store::InMemoryVectorStore;
 use schemars::JsonSchema;
 use serde_json::{Value, json};
 use std::fs::File;
-use std::io::{self, BufRead, Read};
+use std::io::{self, Read};
 mod sjprovider; // Importing custom rig module for invoking SJ GPU server
 
 #[allow(non_camel_case_types)]
@@ -184,7 +192,7 @@ async fn main() -> Result<()> {
                         .await;
                     }
 
-                    println!("final_output:{:?}", final_output);
+                    println!("final_output:{:?}", final_output.unwrap());
                 }
                 Err(error) => println!("Incorrect json:{}", error),
             }
@@ -236,41 +244,18 @@ async fn run_pipeline(
             de_result + &"]"
         );
     } else if classification == "summary".to_string() {
-        // The dataset file needs to be read to query what is the summary term for the dataset. This will later be queried directly from the dataset db file.
-        println!("dataset_file:{}", dataset_file);
-        let file = File::open(dataset_file).unwrap();
-        let reader = io::BufReader::new(file);
-
-        // Iterate through the lines in the file
-        let mut summary_term: Option<String> = None;
-        for line in reader.lines() {
-            let line = line.unwrap(); // Handle any potential errors
-            if line.starts_with("summary=") {
-                //println!("Relevant_line:{}", line); // Print the line if it starts with the prefix
-                summary_term = Some(line.replace("summary=", ""))
-            }
-        }
-
-        match summary_term {
-            Some(sum) => {
-                final_output = extract_summary_information(
-                    user_input,
-                    comp_model,
-                    embedding_model,
-                    dataset_file,
-                    &sum,
-                    &llm_backend_type,
-                    temperature,
-                    max_new_tokens,
-                    top_p,
-                    dataset_db,
-                )
-                .await;
-            }
-            None => {
-                panic!("summary_term not found")
-            }
-        }
+        final_output = extract_summary_information(
+            user_input,
+            comp_model,
+            embedding_model,
+            dataset_file,
+            &llm_backend_type,
+            temperature,
+            max_new_tokens,
+            top_p,
+            dataset_db,
+        )
+        .await;
     } else if classification == "hierarchial".to_string() {
         // Not implemented yet
         final_output = format!("{{\"{}\":\"{}\"}}", "chartType", "hierarchial");
@@ -360,7 +345,7 @@ async fn classify_query_by_dataset_type(
     InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
 
     // Create RAG agent
-    let agent = AgentBuilder::new(comp_model).preamble("Generate classification for the user query into summary, dge, hierarchial, snv_indel, cnv, variant_calling, sv_fusion and none categories. Return output in JSON with ALWAYS a single word answer { \"answer\": \"dge\" }, that is 'summary' for summary plot, 'dge' for differential gene expression, 'hierarchial' for hierarchial clustering, 'snv_indel' for SNV/Indel, 'cnv' for CNV and 'sv_fusion' for SV/fusion, 'variant_calling' for variant calling, 'surivial' for survival data, 'none' for none of the previously described categories. The answer should always be in lower case").dynamic_context(top_k, vector_store.index(embedding_model)).temperature(temperature).additional_params(additional).build();
+    let agent = AgentBuilder::new(comp_model).preamble("Generate classification for the user query into summary, dge, hierarchial, snv_indel, cnv, variant_calling, sv_fusion and none categories. Return output in JSON with ALWAYS a single word answer { \"answer\": \"dge\" }, that is 'summary' for summary plot, 'dge' for differential gene expression, 'hierarchial' for hierarchial clustering, 'snv_indel' for SNV/Indel, 'cnv' for CNV and 'sv_fusion' for SV/fusion, 'variant_calling' for variant calling, 'surivial' for survival data, 'none' for none of the previously described categories. The summary plot list and summarizes the cohort of patients according to the user query. The answer should always be in lower case").dynamic_context(top_k, vector_store.index(embedding_model)).temperature(temperature).additional_params(additional).build();
 
     let response = agent.prompt(user_input).await.expect("Failed to prompt ollama");
 
@@ -462,12 +447,46 @@ async fn extract_search_terms_from_query(
     json_value.to_string()
 }
 
+struct DbRows {
+    name: String,
+    description: Option<String>,
+    term_type: Option<String>,
+    values: Vec<String>,
+}
+
+trait ParseDbRows {
+    fn parse_db_rows(&self) -> String;
+}
+
+impl ParseDbRows for DbRows {
+    fn parse_db_rows(&self) -> String {
+        let mut output: String = "Name of field is \"".to_string() + &self.name + &"\". ";
+
+        match &self.term_type {
+            Some(item_ty) => {
+                output += "This field is of the type ";
+                output += &item_ty;
+                output += &". ";
+            }
+            None => {}
+        }
+        match &self.description {
+            Some(desc) => output += desc,
+            None => {}
+        }
+        if self.values.len() > 0 {
+            output += "This contains the following values (separated by comma(,)):";
+            output += &(self.values.join(",") + &".");
+        }
+        output
+    }
+}
+
 async fn extract_summary_information(
     user_input: &str,
     comp_model: impl rig::completion::CompletionModel + 'static,
     embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
     dataset_file: &str,
-    summary_term: &str,
     llm_backend_type: &llm_backend,
     temperature: f64,
     max_new_tokens: usize,
@@ -476,33 +495,6 @@ async fn extract_summary_information(
 ) -> String {
     match dataset_db {
         Some(db) => {
-            let manager = SqliteConnectionManager::file(db);
-            let pool = r2d2::Pool::new(manager).unwrap();
-
-            let conn = pool.get().unwrap();
-            let sql_statement = "SELECT * from terms";
-            let mut terms = conn.prepare(&sql_statement).unwrap();
-            let mut rows = terms.query([]).unwrap();
-
-            let mut names = Vec::<String>::new();
-            while let Some(row) = rows.next().unwrap() {
-                println!("row:{:?}", row);
-                let name: String = row.get(0).unwrap();
-                println!("id:{}", name);
-                let line: String = row.get(3).unwrap();
-                //println!("line:{}", line);
-                let json_data: Value = serde_json::from_str(&line).expect("Not a JSON");
-                let values = json_data["values"].as_object().unwrap();
-
-                let mut keys = Vec::<&str>::new();
-                for (key, _value) in values {
-                    keys.push(key)
-                }
-                println!("items:{:?}", keys);
-                names.push(name)
-            }
-            println!("names:{:?}", names);
-
             // Open the file
             let mut file = File::open(dataset_file).unwrap();
 
@@ -513,14 +505,72 @@ async fn extract_summary_information(
             file.read_to_string(&mut contents).unwrap();
 
             // Split the contents by the delimiter "---"
-            let parts: Vec<&str> = contents.split("---").collect();
+            let parts: Vec<&str> = contents.split("\n").collect();
+            let mut description_map = HashMap::new();
+            for (_i, part) in parts.iter().enumerate() {
+                let sentence: &str = part.trim();
+                let parts2: Vec<&str> = sentence.split(':').collect();
+                //println!("parts2:{:?}", parts2);
+                if parts2.len() == 2 {
+                    description_map.insert(parts2[0], parts2[1]);
+                    //println!("Part {}: {:?}", i + 1, parts2);
+                }
+            }
+            println!("description_map:{:?}", description_map);
+
+            let manager = SqliteConnectionManager::file(db);
+            let pool = r2d2::Pool::new(manager).unwrap();
+
+            let conn = pool.get().unwrap();
+            let sql_statement = "SELECT * from terms";
+            let mut terms = conn.prepare(&sql_statement).unwrap();
+            let mut rows = terms.query([]).unwrap();
 
             // Print the separated parts
             let mut rag_docs = Vec::<String>::new();
-            for (_i, part) in parts.iter().enumerate() {
-                //println!("Part {}: {}", i + 1, part.trim());
-                rag_docs.push(part.trim().to_string())
+            let mut names = Vec::<String>::new();
+            while let Some(row) = rows.next().unwrap() {
+                //println!("row:{:?}", row);
+                let name: String = row.get(0).unwrap();
+                //println!("id:{}", name);
+                match description_map.get(&name as &str) {
+                    Some(desc) => {
+                        let line: String = row.get(3).unwrap();
+                        //println!("line:{}", line);
+                        let json_data: Value = serde_json::from_str(&line).expect("Not a JSON");
+                        let values_json = json_data["values"].as_object();
+                        let mut keys = Vec::<String>::new();
+                        match values_json {
+                            Some(values) => {
+                                for (key, _value) in values {
+                                    keys.push(key.to_string())
+                                }
+                            }
+                            None => {}
+                        }
+
+                        let item_type_json = json_data["type"].as_str();
+                        let mut item_type: Option<String> = None;
+                        match item_type_json {
+                            Some(item_ty) => item_type = Some(String::from(item_ty)),
+                            None => {}
+                        }
+
+                        //println!("items:{:?}", keys);
+                        let item: DbRows = DbRows {
+                            name: name.clone(),
+                            description: Some(String::from(*desc)),
+                            term_type: item_type,
+                            values: keys,
+                        };
+                        //println!("Field details:{}", item.parse_db_rows());
+                        rag_docs.push(item.parse_db_rows());
+                        names.push(name)
+                    }
+                    None => {}
+                }
             }
+            println!("names:{:?}", names);
 
             let additional;
             match llm_backend_type {
@@ -535,7 +585,6 @@ async fn extract_summary_information(
                 }
             }
 
-            let rag_docs_length = rag_docs.len();
             // Create embeddings and add to vector store
             let embeddings = EmbeddingsBuilder::new(embedding_model.clone())
                 .documents(rag_docs)
@@ -550,16 +599,15 @@ async fn extract_summary_information(
 
             //let system_prompt = "I am an assistant that figures out the summary term from its respective dataset file. Extract the summary term {summary_term} from user query. The final output must be in the following JSON format {{\"chartType\":\"summary\",\"term\":{{\"id\":\"{{summary_term}}\"}}}}";
 
+            let top_k = 3;
             let system_prompt = String::from(
-                "I am an assistant that figures out the summary term from its respective dataset file. Extract the summary term ",
-            ) + &summary_term
-                + &" from user query. The final output must be in the following JSON format {{\"chartType\":\"summary\",\"term\":{{\"id\":\"{{"
-                + &summary_term
-                + "}}\"}}}}";
+                "I am an assistant that extracts the summary term from user query. It has four fields: group_categories (required), overlay (optional), filter (optional) and divide_by (optional). group_categories (required) is the primary variable being displayed. Overlay consists of the variable that must be overlayed on top of group_categories. divide_by is the variable used to stratify group_categories into two or more categories. The final output must be in the following JSON format: {\"chartType\":\"summary\",\"term\":{\"group_categories\":\"{group_category_answer}\",\"overlay\":\"{overlay_answer}\",\"divide_by\":\"{divide_by_answer}\",\"filter\":\"{filter_answer}\"}}. The values being added to the JSON parameters must be previously defined as field. Sample query1: \"Show ETR1 subtype\" Answer query1: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"ETR1\"}}. Sample query2: \"Show hyperdiploid subtype with age overlayed on top of it\" Answer query2: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"hyperdiploid\", \"overlay\":\"age\"}}. Sample query3: \"Show BAR1 subtype with age overlayed on top of it and stratify it on the basis of gender\" Answer query4: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"BAR1\", \"overlay\":\"age\", \"divide_by\":\"sex\"}}.",
+            );
+            println!("system_prompt:{}", system_prompt);
             // Create RAG agent
             let agent = AgentBuilder::new(comp_model)
                 .preamble(&system_prompt)
-                .dynamic_context(rag_docs_length, vector_store.index(embedding_model))
+                .dynamic_context(top_k, vector_store.index(embedding_model))
                 .temperature(temperature)
                 .additional_params(additional)
                 .build();
