@@ -7,6 +7,8 @@ import { dtsnvindel, mclass } from '#shared/common.js'
 import { get$id } from '#termsetting'
 import { PlotBase } from '#plots/PlotBase.ts'
 import { to_svg } from '#src/client'
+import { scaleLinear } from 'd3-scale'
+import * as d3axis from 'd3-axis'
 
 class GRIN2 extends PlotBase implements RxComponentInner {
 	readonly type = 'grin2'
@@ -337,6 +339,8 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 			this.dom.div.style('padding', '0').text('')
 			this.dom.div.selectAll('*').remove()
 
+			console.log('State before GRIN2 run', this.state)
+
 			// Get configuration and make request
 			const configValues = this.getConfigValues()
 			const requestData = {
@@ -379,6 +383,139 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 		// Only initialize the table, don't auto-run analysis
 		const config = structuredClone(this.state.config)
 		if (config.childType != this.type && config.chartType != this.type) return
+	}
+
+	private addAxesToExistingPlot(plotData: any, svg: any) {
+		const plotWidth = plotData.plot_width
+		const plotHeight = plotData.plot_height
+		const margin = { bottom: 80, left: 80, right: 20 }
+
+		// Expand SVG to accommodate labels
+		svg.attr('width', plotWidth + margin.left + margin.right).attr('height', plotHeight + margin.bottom)
+
+		// Move existing content into a group with margin offset
+		const existingContent = svg.selectAll('*')
+		const plotGroup = svg.append('g').attr('transform', `translate(${margin.left}, 0)`)
+
+		// Move existing elements to the offset group
+		existingContent.each(function (this: Element) {
+			plotGroup.node()!.appendChild(this)
+		})
+
+		// Create scales
+		const xScale = scaleLinear().domain([0, plotData.total_genome_length]).range([0, plotWidth])
+
+		const yScale = scaleLinear()
+			.domain([0, Math.max(...plotData.points.map(p => p.y), 5)])
+			.range([plotHeight, 0])
+
+		// X-axis at bottom
+		const xAxis = d3axis
+			.axisBottom(xScale)
+			.tickFormat(() => '')
+			.tickSizeOuter(0)
+			.ticks(0) // Remove default ticks
+
+		svg.append('g').attr('transform', `translate(${margin.left}, ${plotHeight})`).call(xAxis)
+
+		// Add chromosome labels
+		if (plotData.chrom_data) {
+			Object.entries(plotData.chrom_data).forEach(([chrom, data]: [string, any]) => {
+				const startPos = margin.left + xScale(data.start)
+				const endPos = margin.left + xScale(data.start + data.size)
+				const centerPos = startPos + (endPos - startPos) / 2
+
+				// Position label at true center
+				svg
+					.append('text')
+					.attr('x', centerPos)
+					.attr('y', plotHeight + 15)
+					.attr('text-anchor', 'middle')
+					.attr('font-size', '10px')
+					.attr('fill', 'black')
+					.text(chrom.replace('chr', ''))
+			})
+		}
+
+		// Y-axis at left
+		const yAxis = d3axis.axisLeft(yScale).ticks(6)
+
+		svg.append('g').attr('transform', `translate(${margin.left}, 0)`).call(yAxis)
+
+		// Axis labels
+		svg
+			.append('text')
+			.attr('x', margin.left + plotWidth / 2)
+			.attr('y', plotHeight + 35)
+			.attr('text-anchor', 'middle')
+			.attr('font-size', '12px')
+			.attr('fill', 'black')
+			.text('Chromosomes')
+
+		svg
+			.append('text')
+			.attr('transform', `rotate(-90)`)
+			.attr('x', -plotHeight / 2)
+			.attr('y', 15)
+			.attr('text-anchor', 'middle')
+			.attr('font-size', '12px')
+			.attr('fill', 'black')
+			.text('-log₁₀(q-value)')
+	}
+
+	private addLegend(plotData: any, svg: any) {
+		// Get unique mutation types and their colors from the data
+		const mutationTypes = [...new Set(plotData.points.map((p: any) => p.type))]
+		const legendData = mutationTypes.map(type => {
+			const point = plotData.points.find((p: any) => p.type === type)
+			return {
+				type: String(type).charAt(0).toUpperCase() + String(type).slice(1),
+				color: point?.color || '#888888'
+			}
+		})
+
+		// Position legend in the top margin area, accounting for the full SVG dimensions
+		const margin = { bottom: 60, left: 50, right: 30, top: 40 }
+		const legendY = 15 // Position from top of SVG
+		const itemWidth = 80
+		const totalWidth = legendData.length * itemWidth
+		const legendX = plotData.plot_width + margin.left - totalWidth // Position from right edge
+
+		// Add white background box
+		svg
+			.append('rect')
+			.attr('x', legendX - 10)
+			.attr('y', legendY - 5)
+			.attr('width', totalWidth + 20)
+			.attr('height', 25)
+			.attr('fill', 'white')
+			.attr('stroke', '#ccc')
+			.attr('stroke-width', 1)
+			.attr('rx', 3) // Rounded corners
+
+		// Legend items
+		legendData.forEach((item, i) => {
+			const x = legendX + i * itemWidth
+
+			// Legend dot
+			svg
+				.append('circle')
+				.attr('cx', x + 8)
+				.attr('cy', legendY + 8)
+				.attr('r', 6)
+				.attr('fill', item.color)
+				.attr('stroke', 'black')
+				.attr('stroke-width', 1)
+
+			// Legend text
+			svg
+				.append('text')
+				.attr('x', x + 20)
+				.attr('y', legendY + 12)
+				.attr('font-size', '12px')
+				.attr('fill', 'black')
+				.text(item.type)
+		})
 	}
 
 	private renderResults(result: any) {
@@ -453,6 +590,12 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 				.on('mouseout', () => {
 					this.dom.geneTip.hide()
 				})
+
+			// Add axes to the existing plot
+			this.addAxesToExistingPlot(plotData, svg)
+
+			// Add legend
+			this.addLegend(plotData, svg)
 		}
 		// Display top genes table
 		if (result.topGeneTable) {
