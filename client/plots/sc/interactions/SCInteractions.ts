@@ -14,14 +14,21 @@ export class SCInteractions {
 	}
 
 	/** Used in the gene search menu shown on click from a plot btn */
-	async geneSearchboxCallback(gene: string, plot: any) {
-		const parentConfig = this.app.getState().plots.find(p => p.id === this.id)
-		const plotConfig = plot.getPlotConfig(gene)
-		const config = Object.assign({ subplots: [plotConfig] }, parentConfig)
+	async createSubplot(_config) {
+		const config = Object.assign({}, _config, { parentId: this.id })
+		await this.app.dispatch({
+			type: 'plot_create',
+			parentId: this.id,
+			config
+		})
+	}
+
+	/** Updates the sample in the plot settings */
+	async updateSample(sample) {
 		await this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
-			config
+			config: { settings: { sc: { sample } } }
 		})
 	}
 }

@@ -1,12 +1,12 @@
 import type { BasePlotConfig, MassState } from '#mass/types/mass'
 import type { SCConfigOpts, SCDom, SCState, SCViewerOpts, SampleColumn } from './SCTypes'
 import type { SingleCellSample } from '#types'
+import { PlotBase } from '../PlotBase.ts'
 import { getCompInit, copyMerge, type RxComponent } from '#rx'
 import { SCModel } from './model/SCModel'
 import { SCViewModel } from './viewModel/SCViewModel'
-import { ChartsSelectionRenderer } from './view/ChartsSelectionRenderer'
 import { SCInteractions } from './interactions/SCInteractions'
-import { PlotBase } from '../PlotBase.ts'
+import { SCViewRenderer } from './view/SCViewRenderer'
 
 /** App in development. Project being set aside for awhile
  *
@@ -29,7 +29,7 @@ class SCViewer extends PlotBase implements RxComponent {
 	interactions?: SCInteractions
 	samples?: SingleCellSample[]
 	sampleColumns?: SampleColumn[]
-	view?: ChartsSelectionRenderer
+	view?: SCViewRenderer
 	viewModel?: SCViewModel
 
 	constructor(opts: SCViewerOpts) {
@@ -48,8 +48,8 @@ class SCViewer extends PlotBase implements RxComponent {
 			div,
 			selectBtnDiv: div.append('div').attr('id', 'sjpp-sc-select-btn'),
 			tableDiv: div.append('div').attr('id', 'sjpp-sc-sample-table'),
-			plotBtnsDiv: div.append('div').attr('id', 'sjpp-sc-chart-buttons').style('display', 'none'),
-			plotsDiv: div.append('div').attr('id', 'sjpp-sc-plots')
+			chartBtnsDiv: div.append('div').attr('id', 'sjpp-sc-chart-buttons').style('display', 'none'),
+			chartsDiv: div.append('div').attr('id', 'sjpp-sc-charts')
 		}
 
 		//opts.header is the sandbox header
@@ -72,9 +72,7 @@ class SCViewer extends PlotBase implements RxComponent {
 
 	reactsTo(action: any): boolean {
 		if (action.type.includes('cache_termq')) return true
-		if (action.type.startsWith('plot_')) {
-			return action.id === this.id
-		}
+		if (action.type.startsWith('plot_')) return action.id === this.id || action.parentId === this.id
 		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true
 		if (action.type == 'app_refresh') return true
@@ -85,7 +83,7 @@ class SCViewer extends PlotBase implements RxComponent {
 	async init(appState: MassState) {
 		const state = this.getState(appState) as SCState
 		/** ds defines defaults in termdbConfig.queries.singleCell
-		 * see Dataset type when resuming development*/
+		 * see Dataset type when resuming development */
 		const dsScSamples = state.termdbConfig.queries?.singleCell?.samples
 		const model = new SCModel(this.app)
 		try {
@@ -105,46 +103,17 @@ class SCViewer extends PlotBase implements RxComponent {
 		this.interactions = new SCInteractions(this.app, this.id)
 		//Init view model and view
 		this.viewModel = new SCViewModel(this.app, state.config, this.samples!, this.sampleColumns)
-		//Renders the static select btn and table
-		this.view = new ChartsSelectionRenderer(this.interactions, this.dom, this.viewModel.tableData)
+
+		this.view = new SCViewRenderer(this.dom, this.interactions)
+		this.view.render(this.viewModel.tableData)
 	}
-
-	/******* Code is a hold over from original design. *******
-	 * Eventual refactor will manage subplots in the dashboard. */
-
-	// async setComponent(config: SCConfig) {
-	// 	this.plotsDiv[config.childType] = this.dom.plots.append('div')
-
-	// 	const opts = {
-	// 		app: this.app,
-	// 		holder: this.plotsDiv[config.childType],
-	// 		id: this.id,
-	// 		parent: this.api
-	// 	}
-	// 	this.components.plots[config.childType] = await _.componentInit(opts)
-	// }
 
 	async main() {
 		const config = structuredClone(this.state.config)
 		if (config.chartType != this.type) return
 
 		if (!this.view) throw `View not initialized [SC main()]`
-
-		/******* Code below is a hold over from original design.*******
-		 * Will need to implement something similar for the subplots
-		 * when development resumes.*/
-
-		// if (!this.components.plots[config.childType]) await this.setComponent(config)
-
-		// for (const childType in this.components.plots) {
-		// 	const chart = this.components.plots[childType]
-		// 	if (chart.type != config.childType) {
-		// 		this.plotsDiv[chart.type].style('display', 'none')
-		// 	}
-		// }
-		// this.plotsDiv[config.childType].style('display', '')
-
-		// this.view.update(config)
+		this.view.update(config.settings.sc)
 	}
 }
 
@@ -155,7 +124,8 @@ export function getDefaultSCSettings(overrides = {}) {
 	const defaults = {
 		columns: {
 			sample: 'Sample'
-		}
+		},
+		sample: undefined
 	}
 	return Object.assign(defaults, overrides)
 }
@@ -163,7 +133,6 @@ export function getDefaultSCSettings(overrides = {}) {
 export function getPlotConfig(opts: SCConfigOpts) {
 	const config = {
 		chartType: 'sc',
-		subplots: [],
 		settings: {
 			sc: getDefaultSCSettings(opts.overrides || {})
 		}
