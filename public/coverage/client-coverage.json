@@ -1406,37 +1406,37 @@
   "termdb/search.js": {
     "lines": {
       "total": 115,
-      "covered": 86,
+      "covered": 4,
       "skipped": 0,
-      "pct": 74.78
+      "pct": 3.47
     },
     "functions": {
       "total": 22,
-      "covered": 18,
+      "covered": 0,
       "skipped": 0,
-      "pct": 81.81
+      "pct": 0
     },
     "statements": {
       "total": 128,
-      "covered": 89,
+      "covered": 4,
       "skipped": 0,
-      "pct": 69.53
+      "pct": 3.12
     },
     "branches": {
       "total": 95,
-      "covered": 50,
+      "covered": 0,
       "skipped": 0,
-      "pct": 52.63
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 52.63,
+      "curr": 0,
       "prev": 52.63,
-      "diff": 0
+      "diff": -52.63
     },
     "averagePct": {
-      "curr": 69.6875,
+      "curr": 1.6475,
       "prev": 69.6875,
-      "diff": 0
+      "diff": -68.04
     }
   },
   "termdb/tree.js": {
@@ -2845,10 +2845,10 @@
   },
   "filter/tvs.numeric.js": {
     "lines": {
-      "total": 234,
-      "covered": 92,
+      "total": 232,
+      "covered": 90,
       "skipped": 0,
-      "pct": 39.31
+      "pct": 38.79
     },
     "functions": {
       "total": 31,
@@ -2857,10 +2857,10 @@
       "pct": 38.7
     },
     "statements": {
-      "total": 257,
-      "covered": 94,
+      "total": 255,
+      "covered": 92,
       "skipped": 0,
-      "pct": 36.57
+      "pct": 36.07
     },
     "branches": {
       "total": 166,
@@ -2874,9 +2874,9 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 33.1625,
+      "curr": 32.9075,
       "prev": 33.1625,
-      "diff": 0
+      "diff": -0.25500000000000256
     }
   },
   "filter/tvs.survival.js": {
