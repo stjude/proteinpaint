@@ -448,6 +448,7 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 					table.addRow('Type', d.type)
 					table.addRow('-log10(q-value)', d.y.toFixed(3))
 					table.addRow('Count of impacted subjects', d.nsubj)
+					table.addRow('Chromosome', d.chrom)
 				})
 				.on('mouseout', () => {
 					this.dom.geneTip.hide()

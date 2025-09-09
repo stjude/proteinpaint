@@ -97,7 +97,7 @@ def plot_grin2_manhattan(grin_results: dict,
                                    Typical values: 0.005 to 0.06
 	Returns:
         tuple[plt.Figure, dict]: Matplotlib figure and interactive data dictionary
-		
+
     """
     # Set default colors if not provided
     if colors is None:
@@ -281,9 +281,9 @@ def plot_grin2_manhattan(grin_results: dict,
             
             # Alternate between light and slightly darker gray
             if i % 2 == 0:
-                ax.axvspan(start_pos, end_pos, facecolor='#f0f0f0', alpha=0.5, zorder=0)
+                ax.axvspan(start_pos, end_pos, facecolor='#FFFFFF', alpha=0.5, zorder=0)
             else:
-                ax.axvspan(start_pos, end_pos, facecolor='#e0e0e0', alpha=0.5, zorder=0)
+                ax.axvspan(start_pos, end_pos, facecolor='#D3D3D3', alpha=0.5, zorder=0)
 
     # Plot data points using pixel coordinates
     if pixel_plot_data['x']:
