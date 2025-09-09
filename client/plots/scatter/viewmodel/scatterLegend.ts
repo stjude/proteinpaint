@@ -79,11 +79,11 @@ export class ScatterLegend {
 		const scale = chart.colorLegend.size > 20 || chart.shapeLegend.size > 20 ? 0.6 : 0.7 //if many categories, reduce size
 
 		const colorG = legendG.append('g').style('font-size', `${fontSize}em`)
-		offsetY += step + 10
+		offsetY += step + 20
 		if (this.scatter.config.colorTW || this.scatter.config.colorColumn) {
 			title = `${getTitle(
 				this.scatter.config.colorTW?.term?.name || this.scatter.config.colorColumn.name,
-				30,
+				40,
 				this.scatter.config.shapeTW == undefined
 			)}`
 			const colorRefCategory = chart.colorLegend.get('Ref')
@@ -239,7 +239,7 @@ export class ScatterLegend {
 		if (this.scatter.config.shapeTW) {
 			offsetX = chart.colorLegendWidth
 			offsetY = 60
-			title = `${getTitle(this.scatter.config.shapeTW.term.name)}`
+			title = `${getTitle(this.scatter.config.shapeTW.term.name, 40)}`
 			if (this.scatter.config.shapeTW.term.type == 'geneVariant' && this.scatter.config.shapeTW.q.type == 'values') {
 				this.renderGeneVariantLegend(
 					chart,
