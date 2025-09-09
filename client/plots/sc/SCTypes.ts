@@ -30,9 +30,9 @@ export type SCDom = {
 	/** Holder for the sample table */
 	tableDiv: Div
 	/** Holder for the dynamically generated plot buttons for each sample */
-	plotBtnsDiv: Div
+	chartBtnsDiv: Div
 	/** Dashboard/multiple plot holder */
-	plotsDiv: Div
+	chartsDiv: Div
 	/** Sandbox header, if provided */
 	header?: Elem
 }

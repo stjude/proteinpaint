@@ -8,10 +8,20 @@ import type { SingleCellSample } from '#types'
  *  - Implement data mapper for plots in the dashboard
  */
 
+// export type SCViewModelData = {
+// 	//TODO
+// }
+
+type TableData = {
+	rows: TableRow[]
+	columns: TableColumn[]
+	selectedRows: number[]
+}
+
 export class SCViewModel {
 	app: AppApi
 	state: SCState
-	tableData: { rows: TableRow[]; columns: TableColumn[]; selectedRows: number[] }
+	tableData: TableData
 
 	constructor(app: AppApi, config: SCConfig, samples: SingleCellSample[], sampleColumns?: SampleColumn[]) {
 		this.app = app
