@@ -19,14 +19,13 @@ export type AIProjectAdminRequest = {
 	}
 }
 
-export type AIProjectAdminResponse =
-	| {
-			status: 'ok' | 'error'
-			projectId?: number
-			error?: string
-			data?: { cols: any[]; rows: any[]; images: string[] }[]
-	  }
-	| string[]
+export type AIProjectAdminResponse = {
+	status: 'ok' | 'error'
+	projectId?: number
+	images: string[]
+	error?: string
+	data?: { cols: any[]; rows: any[]; images: string[] }[]
+}
 
 export const aiProjectAdminPayload: RoutePayload = {
 	request: {

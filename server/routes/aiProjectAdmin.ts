@@ -1,7 +1,7 @@
 import type { RouteApi } from '#types'
 import { aiProjectAdminPayload } from '#types/checkers'
 import { getDbConnection } from '#src/aiHistoDBConnection.js'
-import { runSQL, runMultiStmtSQL } from '#src/runSQLHelpers.ts'
+import { runMultiStmtSQL, runSQL } from '#src/runSQLHelpers.ts'
 import type Database from 'better-sqlite3'
 
 export const api: RouteApi = {
@@ -58,8 +58,19 @@ function init({ genomes }) {
 				else if (req.method === 'DELETE') deleteProject(connection, query.project.id)
 				else throw new Error('Invalid request method for="admin" in aiProjectAdmin route.')
 
-				const projectId =
-					query.project.id || connection.prepare(`SELECT id FROM project WHERE name = ?`).get(query.project.name)
+				let projectId = query.project.id
+
+				if (!projectId) {
+					const row = connection.prepare(`SELECT id FROM project WHERE name = ?`).get(query.project.name) as
+						| { id: number }
+						| undefined
+
+					if (!row) {
+						throw new Error(`Project not found: ${query.project.name}`)
+					}
+
+					projectId = row.id
+				}
 
 				res.status(200).send({
 					status: 'ok',
@@ -77,12 +88,8 @@ function init({ genomes }) {
 					data
 				})
 			} else if (query.for === 'images') {
-				const images: Database.RunResult | any[] = getImages(connection, query.project)
-				if (Array.isArray(images)) {
-					res.send(images.map(row => row.image_path))
-				} else {
-					throw new Error('Images are not in expected format')
-				}
+				const images = getImages(connection, query.project)
+				res.send({ images })
 			} else {
 				res.send({
 					status: 'error',
@@ -104,14 +111,20 @@ function getProjects(connection: Database.Database): Database.RunResult | any[] 
 	return runSQL(connection, sql)
 }
 
-function getImages(connection: Database.Database, project: any): Database.RunResult | any[] {
+function getImages(connection: Database.Database, project: any): string[] {
+	// Get project ID if not provided
 	if (!project.id) {
 		const res: any = connection.prepare(`SELECT id FROM project WHERE name = ?`).get(project.name)
+		if (!res) throw new Error(`Project not found for name: ${project.name}`)
 		project.id = res.id
 	}
 
-	const sql = `SELECT image_path FROM project_images WHERE project_id = ${project.id}`
-	return runSQL(connection, sql)
+	// Query images
+	const imageRows = connection
+		.prepare(`SELECT image_path FROM project_images WHERE project_id = ? ORDER BY id ASC`)
+		.all(project.id) as { image_path: string }[]
+
+	return imageRows.map(r => r.image_path)
 }
 
 function editProject(connection: Database.Database, project: any): void {

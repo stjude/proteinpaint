@@ -197,11 +197,9 @@ export class WSIViewerInteractions {
 
 					const selectedClassId = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)?.id
 
-					// TODO fix hardcoded userId
 					const body: SaveWSIAnnotationRequest = {
 						genome: state.vocab.genome,
 						dslabel: state.vocab.dslabel,
-						userId: 1,
 						coordinates: annotationsData[currentIndex].zoomCoordinates,
 						classId: selectedClassId!,
 						projectId: aiProjectID,
