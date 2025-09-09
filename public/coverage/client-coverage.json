@@ -1729,10 +1729,10 @@
   },
   "plots/scatter/viewmodel/scatterLegend.ts": {
     "lines": {
-      "total": 214,
-      "covered": 162,
+      "total": 215,
+      "covered": 163,
       "skipped": 0,
-      "pct": 75.7
+      "pct": 75.81
     },
     "functions": {
       "total": 30,
@@ -1741,10 +1741,10 @@
       "pct": 36.66
     },
     "statements": {
-      "total": 227,
-      "covered": 169,
+      "total": 228,
+      "covered": 170,
       "skipped": 0,
-      "pct": 74.44
+      "pct": 74.56
     },
     "branches": {
       "total": 146,
@@ -1754,13 +1754,13 @@
     },
     "lowestPct": {
       "curr": 36.66,
-      "prev": 31.03,
-      "diff": 5.6299999999999955
+      "prev": 36.66,
+      "diff": 0
     },
     "averagePct": {
-      "curr": 61.0825,
-      "prev": 52.7625,
-      "diff": 8.32
+      "curr": 61.14,
+      "prev": 61.0825,
+      "diff": 0.05749999999999744
     }
   },
   "termdb/submenu.js": {
