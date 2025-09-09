@@ -1,7 +1,7 @@
 import type { Menu } from '#dom'
 import type { PlotConfig } from '#mass/types/mass'
 import type { BoxPlotEntry, BoxPlotData, TermWrapper } from '#types'
-import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
+import type { Div, Elem } from '../../types/d3'
 
 /** Opts sent from mass */
 export type TdbBoxPlotOpts = {
@@ -52,8 +52,6 @@ export type BoxPlotSettings = {
 
 /** Descriptions of the dom elements for the box plot */
 export type BoxPlotDom = {
-	/** Div for boxplots below the scale */
-	boxplots: SvgG
 	/** Controls div for the hamburger menu */
 	controls: Elem
 	/** Main div */
@@ -64,12 +62,8 @@ export type BoxPlotDom = {
 	header?: Elem
 	/** Legend */
 	legend: Div
-	/** Displays the term1 name as the plot title */
-	plotTitle: SvgText
-	/** Main svg holder */
-	svg: SvgSvg
-	/** Y-axis shown above the boxplots */
-	axis: any
+	/** Div for charts, each chart contains a set of boxplots */
+	charts: Div
 	/** box plot tooltip (e.g. over the outliers) */
 	tip: Menu
 }
@@ -130,6 +124,8 @@ export type PlotDimensions = {
 	/** Changes text color for the axis, plot labels, and legend
 	 * between black and white based on displayMode selection */
 	textColor: string
+	/** Title of chart */
+	chartTitle: string
 	/** Title of the plot and coordinates */
 	title: { x: number; y: number; text: string }
 	/** axis coordinates */

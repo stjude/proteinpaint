@@ -1,7 +1,7 @@
 import { format } from 'd3-format'
 import { decimalPlacesUntilFirstNonZero } from '#shared/roundValue.js'
 import { rgb } from 'd3-color'
-import type { BoxPlotResponse } from '#types'
+import type { BoxPlotChartEntry } from '#types'
 import type { BoxPlotSettings, PlotDimensions, ViewData, BoxPlotConfig } from '../BoxPlotTypes'
 import { LegendDataMapper } from './LegendDataMapper'
 
@@ -27,7 +27,7 @@ export class ViewModel {
 	viewData: ViewData
 	constructor(
 		config: BoxPlotConfig,
-		data: BoxPlotResponse,
+		data: BoxPlotChartEntry,
 		settings: BoxPlotSettings,
 		maxLabelLgth: number,
 		useDefaultSettings: boolean
@@ -60,7 +60,7 @@ export class ViewModel {
 		}
 	}
 
-	setPlotDimensions(data: BoxPlotResponse, config: any, settings: BoxPlotSettings) {
+	setPlotDimensions(data: BoxPlotChartEntry, config: any, settings: BoxPlotSettings) {
 		const svg = this.setSvgDimensions(settings, data)
 		const plotDim = {
 			//Add 1 to the max is big enough so the upper line to boxplot isn't cutoff
@@ -108,7 +108,7 @@ export class ViewModel {
 		return formattedTicks
 	}
 
-	setSvgDimensions(settings: BoxPlotSettings, data: BoxPlotResponse) {
+	setSvgDimensions(settings: BoxPlotSettings, data: BoxPlotChartEntry) {
 		const plotsSpace =
 			data.plots.filter(p => !p.isHidden).length * this.totalRowSize + this.topPad + this.bottomPad + this.incrPad
 		const depth = settings.boxplotWidth + this.totalLabelSize + this.horizPad / 2

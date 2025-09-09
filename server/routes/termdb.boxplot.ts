@@ -48,6 +48,9 @@ function init({ genomes }) {
 				divideTerm
 			)
 
+			if (!absMin && absMin !== 0) throw 'absMin is undefined [termdb.boxplot init()]'
+			if (!absMax && absMax !== 0) throw 'absMax is undefined [termdb.boxplot init()]'
+
 			const charts: any = {}
 			for (const [chart, plot2values] of chart2plot2values) {
 				const plots: any = []
@@ -89,8 +92,6 @@ function init({ genomes }) {
 						plots.push(plot)
 					}
 				}
-
-				if (absMin == null || absMax == null) throw 'absMin or absMax is null [termdb.boxplot init()]'
 
 				if (q.tw.term?.values) setHiddenPlots(q.tw, plots)
 				if (overlayTerm && overlayTerm.term?.values) setHiddenPlots(overlayTerm, plots)

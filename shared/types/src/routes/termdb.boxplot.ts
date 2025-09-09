@@ -15,6 +15,8 @@ export type BoxPlotRequest = {
 	orderByMedian: boolean
 	/** term2 */
 	overlayTw?: TermWrapper
+	/** term0 */
+	divideTw?: TermWrapper
 	filter?: Filter
 	filter0?: any
 	__protected__: any
@@ -25,11 +27,31 @@ export type BoxPlotResponse = {
 	absMin?: number
 	/** Absolute max value for all plots */
 	absMax?: number
-	plots: BoxPlotEntry[]
+	/** Charts data */
+	charts: {
+		[chartId: string]: BoxPlotChartEntry
+	}
 	/** Categories not shown in the final plot */
 	uncomputableValues: { label: string; value: number }[] | null
+	error?: any
 }
 
+// chart containing a set of boxplots
+export type BoxPlotChartEntry = {
+	/** Chart ID */
+	chartId: string
+	/** Boxplot data within the chart */
+	plots: BoxPlotEntry[]
+	/** svg of chart, necessary for svg download */
+	svg?: any
+	/** Copied from BoxPlotResponse, necessary for
+	ViewModel to process chart data */
+	absMin?: number
+	absMax?: number
+	uncomputableValues?: { label: string; value: number }[] | null
+}
+
+// individual boxplot
 export type BoxPlotEntry = {
 	boxplot: BoxPlotData & { label: string }
 	/** color matching the value/category color */

@@ -3,7 +3,7 @@ import { drawBoxplot, Menu } from '#dom'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisstyle } from '#src/client'
 import { axisTop, axisLeft } from 'd3-axis'
-import type { BoxPlotDom, BoxPlotSettings, ViewData, PlotDimensions } from '../BoxPlotTypes'
+import type { BoxPlotSettings, ViewData, PlotDimensions } from '../BoxPlotTypes'
 import type { MassAppApi } from '#mass/types/mass'
 import type { BoxPlotInteractions } from '../interactions/BoxPlotInteractions'
 import type { RenderedPlot } from './RenderedPlot'
@@ -13,16 +13,10 @@ import { BoxPlotLabelMenu } from './BoxPlotLabelMenu'
 /** Handles all the rendering logic for the boxplot. */
 export class View {
 	app: MassAppApi
-	dom: BoxPlotDom
+	dom: any
 	interactions: BoxPlotInteractions
 	settings: BoxPlotSettings
-	constructor(
-		data: ViewData,
-		settings: BoxPlotSettings,
-		dom: BoxPlotDom,
-		app: MassAppApi,
-		interactions: BoxPlotInteractions
-	) {
+	constructor(data: ViewData, settings: BoxPlotSettings, dom: any, app: MassAppApi, interactions: BoxPlotInteractions) {
 		this.app = app
 		this.dom = dom
 		this.interactions = interactions
@@ -48,7 +42,7 @@ export class View {
 		this.renderAxis(plotDim, dom, scale, settings)
 	}
 
-	renderTitle(plotDim: PlotDimensions, dom: BoxPlotDom) {
+	renderTitle(plotDim: PlotDimensions, dom: any) {
 		//Title of the chart
 		dom.chartTitle.text(plotDim.chartTitle)
 
@@ -66,12 +60,7 @@ export class View {
 	}
 
 	//Fix for the axis rendering min -> max when the plot is vertical
-	renderAxis(
-		plotDim: PlotDimensions,
-		dom: BoxPlotDom,
-		scale: ScaleLinear<number, number, never>,
-		settings: BoxPlotSettings
-	) {
+	renderAxis(plotDim: PlotDimensions, dom: any, scale: ScaleLinear<number, number, never>, settings: BoxPlotSettings) {
 		/** draw_boxplot renders the boxplot from min-max but the scale
 		 * renders the axis from max - min. Render the box plots, then change
 		 * the scale vector to match. */
@@ -101,12 +90,7 @@ export class View {
 		})
 	}
 
-	renderBoxPlots(
-		dom: BoxPlotDom,
-		data: ViewData,
-		scale: ScaleLinear<number, number, never>,
-		settings: BoxPlotSettings
-	) {
+	renderBoxPlots(dom: any, data: ViewData, scale: ScaleLinear<number, number, never>, settings: BoxPlotSettings) {
 		/** Draw boxplots, incrementing by the total row height */
 		for (const plot of data.plots) {
 			const g = dom.boxplots.append('g').attr('class', 'sjpp-boxplot-plot').attr('padding', '5px')
