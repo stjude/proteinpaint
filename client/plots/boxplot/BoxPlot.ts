@@ -17,6 +17,7 @@ class TdbBoxplot extends RxComponentInner {
 	readonly type = 'boxplot'
 	components: { controls: any }
 	dom: BoxPlotDom
+	data: any
 	interactions?: BoxPlotInteractions
 	private useDefaultSettings = true
 	constructor(opts: TdbBoxPlotOpts) {
@@ -256,38 +257,17 @@ class TdbBoxplot extends RxComponentInner {
 				const chartLabels = chart.plots.filter(p => !p.isHidden).map(p => p.boxplot.label)
 				labels.push(...chartLabels)
 			}
-			const maxLabelLgth = getMaxLabelWidth(tempsvg, labels)
+			const maxLabelLgth = getMaxLabelWidth(tempsvg.append('g'), labels)
 			tempsvg.remove()
 
 			// plot charts
 			const legend: any = [] // legend items across charts
 			for (const key of Object.keys(data.charts)) {
 				const chart = data.charts[key]
-				// setup a dom{} object for the chart
-				const chartDiv = this.dom.charts
-					.append('div')
-					.attr('class', 'sjpp-boxplot-chartDiv')
-					.style('padding', Object.keys(data.charts).length > 1 ? '20px 20px 0px 0px' : '0px')
-				const chartTitle = chartDiv
-					.append('div')
-					.attr('class', 'pp-chart-title')
-					.style('display', config.term0 ? 'block' : 'none')
-					.style('text-align', 'center')
-					.style('font-size', '1.1em')
-					.style('margin-bottom', '20px')
-				const chartSvg = chartDiv.append('svg')
-				chart.svg = chartSvg
-				const chartDom = Object.assign({}, this.dom, {
-					svg: chartSvg,
-					chartTitle,
-					plotTitle: chartSvg.append('text'),
-					axis: chartSvg.append('g'),
-					boxplots: chartSvg.append('g')
-				})
-				// get view model of chart
 				chart.absMin = data.absMin
 				chart.absMax = data.absMax
 				chart.uncomputableValues = data.uncomputableValues
+				// get view model of chart
 				const viewModel = new ViewModel(config, chart, settings, maxLabelLgth, this.useDefaultSettings)
 				// collect legend items
 				for (const l of viewModel.viewData.legend) {
@@ -317,6 +297,28 @@ class TdbBoxplot extends RxComponentInner {
 					})
 				}
 				// render view of chart
+				// setup a dom{} object for the chart
+				const chartDiv = this.dom.charts
+					.append('div')
+					.attr('class', 'sjpp-boxplot-chartDiv')
+					.style('padding', Object.keys(data.charts).length > 1 ? '20px 20px 0px 0px' : '0px')
+				const chartSvg = chartDiv.append('svg')
+				chart.svg = chartSvg // for downloading svg
+				const chartTitle = chartDiv
+					.append('div')
+					.attr('class', 'pp-chart-title')
+					.style('display', config.term0 ? 'block' : 'none')
+					.style('text-align', 'center')
+					.style('font-size', '1.1em')
+					.style('margin-bottom', '20px')
+				const chartDom = Object.assign({}, this.dom, {
+					svg: chartSvg,
+					chartTitle,
+					plotTitle: chartSvg.append('text'),
+					axis: chartSvg.append('g'),
+					boxplots: chartSvg.append('g')
+				})
+				// render the view
 				new View(viewModel.viewData, settings, chartDom, this.app, this.interactions)
 			}
 			// render legend (applies to all charts)

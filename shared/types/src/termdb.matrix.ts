@@ -23,6 +23,8 @@ type CategoryEntry = {
 	samplecount: number
 }
 
+// TODO: need to add a discriminant property (e.g. ".kind") to
+// distinguish between ValidGetDataResponse and { error: string }
 export type ValidGetDataResponse = {
 	samples: {
 		[index: string | number]: SampleEntry

@@ -96,10 +96,11 @@ const mockPlot2 = {
 	y: 155
 }
 
-const mockData = {
+const mockData: any = {
+	chartId: '',
+	plots: [mockPlot1, mockPlot2],
 	absMin: 0,
 	absMax: 100,
-	plots: [mockPlot1, mockPlot2],
 	uncomputableValues: [{ label: 'test', value: 1 }]
 }
 
