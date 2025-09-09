@@ -77,7 +77,7 @@ class SummaryInputPlot extends PlotBase implements RxComponentInner {
 			.text('Submit')
 			.on('click', () => {
 				const config = structuredClone(this.config)
-				config.chartType = config.term.type == 'survival' ? 'survival' : 'summary'
+				config.chartType = config.term.term.type == 'survival' ? 'survival' : 'summary'
 				this.app.dispatch({
 					type: 'plot_create',
 					config
