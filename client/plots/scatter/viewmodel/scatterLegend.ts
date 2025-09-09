@@ -393,13 +393,14 @@ export class ScatterLegend {
 				}
 				const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
 
+				const text = mkey.toUpperCase() + (key.includes(dtlabel) ? `, n=${category.sampleCount}` : '')
 				G.append('g')
 					.append('text')
 					.attr('x', offsetX - step + 24)
 					.attr('y', offsetY + 4)
 					.attr('name', 'sjpp-scatter-legend-label')
 					.style('text-decoration', hidden ? 'line-through' : 'none')
-					.text(mkey.toUpperCase() + (key.includes(dtlabel) ? `, n=${category.sampleCount}` : ''))
+					.text(text)
 					.on('click', event =>
 						this.legendInteractivity.onLegendClick(
 							chart,
