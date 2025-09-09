@@ -22,6 +22,7 @@ export class ChartButtons {
 	interactions: SCInteractions
 
 	constructor(interactions: SCInteractions, holder: Div) {
+		holder.style('padding', '10px')
 		const promptDiv = holder.append('div').style('padding', '10px 0').text('Select data from')
 		this.chartBtnsDom = {
 			promptDiv,
@@ -46,14 +47,14 @@ export class ChartButtons {
 
 		this.chartBtnsDom.btnsDiv
 			.selectAll('button')
-			.data(btns.filter(b => !b.hidden()))
+			.data(btns.filter(b => b.isVisible()))
 			.enter()
 			.append('button')
 			.style('padding', '10px 15px')
 			.style('border-radius', '20px')
 			.style('border', '1px solid rgb(237, 237, 237)')
 			.style('background-color', '#CFE2F3')
-			.style('margin', '10px')
+			.style('margin', '0 10px')
 			.style('cursor', 'pointer')
 			.text(b => b.label)
 			.on('click', (e, plot) => {
@@ -72,9 +73,7 @@ export class ChartButtons {
 		return [
 			{
 				label: 'Gene expression',
-				id: 'violin',
-
-				hidden: () => false,
+				id: 'geneExpression',
 				isVisible: () => true,
 				getPlotConfig: async geneLst => {
 					if (!geneLst.length) {
@@ -93,6 +92,8 @@ export class ChartButtons {
 
 	//********** Btn Menus **********/
 	geneSearchMenu(plot: any, self: ChartButtons) {
+		self.chartBtnsDom.tip.clear()
+
 		new GeneSetEditUI({
 			holder: self.chartBtnsDom.tip.d.append('div') as any,
 			genome: self.interactions.genome,
@@ -100,30 +101,34 @@ export class ChartButtons {
 			callback: async result => {
 				const config = await plot.getPlotConfig(result.geneList)
 				await self.interactions.createSubplot(config)
+				self.chartBtnsDom.tip.hide()
 			}
 		})
 	}
 
+	//********** Plot Config Helpers **********/
 	//In Dev: using 'cluster' as overlay
 	async getViolinConfig(gene) {
 		if (!this.sample) throw new Error('No sample selected')
 		return {
 			chartType: 'violin',
-			$id: await digestMessage(`${gene}-${this.sample.sample}-${this.sample.experimentID}`),
 			term: {
-				/** NOTE: There are no term handlers for the single cell types */
-				type: TermTypes.SINGLECELL_GENE_EXPRESSION,
-				id: gene,
-				gene,
-				name: gene,
-				sample: {
-					sID: this.sample.sample,
-					eID: this.sample.experimentID
+				$id: await digestMessage(`${gene}-${this.sample.sample}-${this.sample.experiment}`),
+				term: {
+					/** NOTE: There are no term handlers for the single cell types */
+					type: TermTypes.SINGLECELL_GENE_EXPRESSION,
+					id: gene,
+					gene,
+					name: gene,
+					sample: {
+						sID: this.sample.sample,
+						eID: this.sample.experiment
+					}
 				}
 			},
 			term2: {
 				//CHANGE ME
-				$id: await digestMessage(`CHANGEME-${this.sample.sample}-${this.sample.experimentID}`),
+				$id: await digestMessage(`CHANGEME-${this.sample.sample}-${this.sample.experiment}`),
 				term: {
 					/** NOTE: There are no term handlers for the single cell types */
 					type: TermTypes.SINGLECELL_CELLTYPE,
@@ -131,8 +136,9 @@ export class ChartButtons {
 					name: 'cluster', //CHANGE ME
 					sample: {
 						sID: this.sample.sample,
-						eID: this.sample.experimentID
-					}
+						eID: this.sample.experiment
+					},
+					plot: 'UMAP' //CHANGEME
 				}
 			}
 		}

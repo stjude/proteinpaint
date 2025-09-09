@@ -5,13 +5,12 @@ import type { TableRow, TableColumn } from '#dom'
 /** WIP config for the sc app */
 export type SCConfig = PlotConfig & {
 	chartType: 'sc'
-	/** TBD: Eventually the config for multiple plots
-	 * will be stored in this array. */
+	/** Plots appearing within the app */
+	subplots: any[]
 	/** Common settings and settings for each child component/plot */
 	settings: {
 		sc: SCSettings
 	}
-	sample: string
 }
 
 /** Opts defined in getPlotConfig() */
@@ -41,6 +40,7 @@ export type SCSettings = {
 	columns: {
 		sample: string
 	}
+	sample: string | undefined
 }
 
 /** State retrieved from this.app.getState()

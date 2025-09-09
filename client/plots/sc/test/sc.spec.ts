@@ -42,14 +42,7 @@ tape('Default SC app', test => {
 			plots: [
 				{
 					chartType: 'sc',
-					subplots: [
-						{
-							chartType: 'violin',
-							settings: {
-								violin: {}
-							}
-						}
-					],
+					subplots: [],
 					settings: {
 						sc: {
 							columns: {
