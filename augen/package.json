@@ -32,7 +32,7 @@
     "typia": "^4.1.14"
   },
   "devDependencies": {
-    "esbuild": "^0.19.12",
+    "esbuild": "^0.25.9",
     "express": "^4.17.1",
     "tape": "^5.2.2",
     "tsx": "^4.7.1"

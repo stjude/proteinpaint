@@ -22,6 +22,6 @@
     "src/*.js"
   ],
   "devDependencies": {
-    "esbuild": "^0.19.12"
+    "esbuild": "^0.25.9"
   }
 }
