@@ -51,39 +51,45 @@ const mockGetDataResponse = {
 tape('parseValues()', test => {
 	test.timeoutAfter(100)
 
-	let result, key2valuesMap, expected
+	let result, plot2values, chart2plot2values, expected
 
 	result = parseValues(mockRequest, mockGetDataResponse as any, mockSampleType, false)
-	key2valuesMap = new Map()
-	key2valuesMap.set(mockSampleType, [1, 1.75, 3, -1])
+	plot2values = new Map()
+	plot2values.set(mockSampleType, [1, 1.75, 3, -1])
+	chart2plot2values = new Map()
+	chart2plot2values.set('', plot2values)
 	expected = {
 		absMax: 3,
 		absMin: -1,
-		key2values: key2valuesMap,
+		chart2plot2values,
 		uncomputableValues: {}
 	}
 	test.deepEqual(result, expected, 'Should parse all values correctly')
 
 	result = parseValues(mockRequest, mockGetDataResponse as any, mockSampleType, true)
-	key2valuesMap = new Map()
-	key2valuesMap.set(mockSampleType, [1, 1.75, 3])
+	plot2values = new Map()
+	plot2values.set(mockSampleType, [1, 1.75, 3])
+	chart2plot2values = new Map()
+	chart2plot2values.set('', plot2values)
 	expected = {
 		absMax: 3,
 		absMin: 1,
-		key2values: key2valuesMap,
+		chart2plot2values,
 		uncomputableValues: {}
 	}
 
 	test.deepEqual(result, expected, 'Should parse values correctly and remove negative values for log scales')
 
 	result = parseValues(mockRequest, mockGetDataResponse as any, mockSampleType, false, mockRequest.overlayTw)
-	key2valuesMap = new Map()
-	key2valuesMap.set('Male', [1, -1])
-	key2valuesMap.set('Female', [1.75, 3])
+	plot2values = new Map()
+	plot2values.set('Male', [1, -1])
+	plot2values.set('Female', [1.75, 3])
+	chart2plot2values = new Map()
+	chart2plot2values.set('', plot2values)
 	expected = {
 		absMax: 3,
 		absMin: -1,
-		key2values: key2valuesMap,
+		chart2plot2values,
 		uncomputableValues: {}
 	}
 
