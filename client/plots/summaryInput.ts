@@ -70,13 +70,14 @@ class SummaryInputPlot extends PlotBase implements RxComponentInner {
 
 		this.dom.submit
 			.append('button')
-			.property('disabled', false)
+			.property('disabled', true)
 			.style('border', 'none')
 			.style('border-radius', '20px')
 			.style('padding', '10px 15px')
 			.text('Submit')
 			.on('click', () => {
 				const config = structuredClone(this.config)
+				if (!config.term) throw 'config.term is missing'
 				config.chartType = config.term.term.type == 'survival' ? 'survival' : 'summary'
 				this.app.dispatch({
 					type: 'plot_create',
@@ -104,13 +105,16 @@ class SummaryInputPlot extends PlotBase implements RxComponentInner {
 
 	async main() {
 		this.config = await this.getMutableConfig()
+		const submitBtn = this.dom.submit.select('button')
+		submitBtn.property('disabled', !this.config.term)
+		submitBtn.style('cursor', this.config.term ? 'pointer' : 'default')
 	}
 }
 
 export const summaryInputInit = getCompInit(SummaryInputPlot)
 export const componentInit = summaryInputInit
 
-export function getPlotConfig(/*opts, app*/) {
+export function getPlotConfig() {
 	const config = {
 		chartType: 'summaryInput',
 		settings: {}
