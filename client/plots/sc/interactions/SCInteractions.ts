@@ -4,11 +4,13 @@ import type { ClientGenome } from '../../../types/clientGenome'
 /** Handles the interactivity from the view */
 export class SCInteractions {
 	app: AppApi
+	dom: any
 	id: string
 	genome: ClientGenome
 
-	constructor(app: AppApi, id: string) {
+	constructor(app: AppApi, dom: any, id: string) {
 		this.app = app
+		this.dom = dom
 		this.id = id
 		this.genome = this.app.opts.genome
 	}
@@ -21,6 +23,7 @@ export class SCInteractions {
 			parentId: this.id,
 			config
 		})
+		return
 	}
 
 	/** Updates the sample in the plot settings */

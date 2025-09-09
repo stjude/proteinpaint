@@ -70,6 +70,7 @@ class SCViewer extends PlotBase implements RxComponent {
 		}
 	}
 
+	//Is this still necessary??
 	reactsTo(action: any): boolean {
 		if (action.type.includes('cache_termq')) return true
 		if (action.type.startsWith('plot_')) return action.id === this.id || action.parentId === this.id
@@ -100,7 +101,7 @@ class SCViewer extends PlotBase implements RxComponent {
 			else if (e.stack) console.log(e.stack)
 			throw `${e} [SC init()]`
 		}
-		this.interactions = new SCInteractions(this.app, this.id)
+		this.interactions = new SCInteractions(this.app, this.dom, this.id)
 		//Init view model and view
 		this.viewModel = new SCViewModel(this.app, state.config, this.samples!, this.sampleColumns)
 
@@ -109,7 +110,8 @@ class SCViewer extends PlotBase implements RxComponent {
 	}
 
 	async main() {
-		const config = structuredClone(this.state.config)
+		const state = this.getState(this.app.getState()) as SCState
+		const config = state.config
 		if (config.chartType != this.type) return
 
 		if (!this.view) throw `View not initialized [SC main()]`

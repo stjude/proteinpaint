@@ -26,6 +26,8 @@ export class SCViewRenderer {
 	/** Renders the select btn at the top of the page that
 	 * show/hides the sample table and plot buttons */
 	renderSelectBtn() {
+		this.dom.selectBtnDiv.style('padding', '10px')
+
 		const btn = this.dom.selectBtnDiv
 			.append('button')
 			.attr('data-testid', 'sjpp-sc-sample-table-select-btn')
