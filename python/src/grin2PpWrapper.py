@@ -65,23 +65,25 @@ def assign_lesion_colors(lesion_types):
 	available_colors = {k: color_map[k] for k in unique_types if k in color_map}
 	return available_colors
 
-
 def plot_grin2_manhattan(grin_results: dict, 
                         chrom_size: pd.DataFrame,
                         colors: Optional[Dict[str, str]] = None,
                         plot_width: int = 1000,
                         plot_height: int = 400,
                         device_pixel_ratio: float = 2.0,
-                        x_axis_space: float = 0.01,
-                        y_axis_space: float = 0.01) -> tuple[plt.Figure, dict]:
+                        png_dot_radius: int = 2,
+                        correction_strength: float = 0.06) -> tuple[plt.Figure, dict]:
+	
     """
-    Create a Manhattan plot for GRIN2 genomic analysis results using colored scatter points.    
+    Create a Manhattan plot for GRIN2 genomic analysis results using colored scatter points.
+    
     This function generates a genome-wide visualization showing the statistical 
     significance of genomic alterations across all chromosomes. Each point represents 
     a gene with its significance level (-log₁₀(q-value)) plotted against its chromosome
     start position. Different mutation types (gain, loss, mutation) are shown in different colors.
+    
     Args:
-        grin_results (dict): Results dictionary from grin_stats() function containing:
+	    grin_results (dict): Results dictionary from grin_stats() function containing:
             - 'gene.hits': DataFrame with gene-level statistical results
         chrom_size (pd.DataFrame): Chromosome size information with columns:
             - 'chrom': Chromosome names
@@ -90,11 +92,12 @@ def plot_grin2_manhattan(grin_results: dict,
         plot_width (int): Desired plot width in pixels.
         plot_height (int): Desired plot height in pixels.
         device_pixel_ratio (float): Device pixel ratio for rendering.
-        x_axis_space (float): Fraction of genome length to add as x-axis padding (default: 0.01 = 1%)
-        y_axis_space (float): Fraction of max y-value to add as y-axis padding (default: 0.01 = 1%)
-
-    Returns:
-        tuple[plt.Figure, dict]: The generated figure and a dictionary with plot metadata.
+        correction_strength (float): Strength of the radial correction term. 
+                                   Positive values pull points toward center.
+                                   Typical values: 0.005 to 0.06
+	Returns:
+        tuple[plt.Figure, dict]: Matplotlib figure and interactive data dictionary
+		
     """
     # Set default colors if not provided
     if colors is None:
@@ -104,11 +107,15 @@ def plot_grin2_manhattan(grin_results: dict,
             'mutation': '#44AA44'
         }
 
-    # Calculate DPI and figure size
+    # Calculate PNG dimensions with padding for dot radius
+    png_width = plot_width + 2 * png_dot_radius
+    png_height = plot_height + 2 * png_dot_radius
+
+    # Calculate DPI and figure size based on PNG dimensions
     base_dpi = 100
     plot_dpi = int(base_dpi * device_pixel_ratio)
-    fig_width_inches = plot_width / base_dpi
-    fig_height_inches = plot_height / base_dpi
+    fig_width_inches = png_width / base_dpi
+    fig_height_inches = png_height / base_dpi
     
     # Extract gene.hits data
     gene_hits = grin_results['gene.hits']
@@ -137,9 +144,6 @@ def plot_grin2_manhattan(grin_results: dict,
     
     total_genome_length = cumulative_pos
     
-    # Calculate x-axis padding
-    x_axis_padding = total_genome_length * x_axis_space
-    
     # Collect all points to plot
     plot_data = {'x': [], 'y': [], 'colors': [], 'types': [], 'nsubj.mutation': [], 'nsubj.gain': [], 'nsubj.loss': []}
     point_details = []
@@ -163,14 +167,12 @@ def plot_grin2_manhattan(grin_results: dict,
             q_value = gene_row[q_col]
             neg_log10_q = -np.log10(q_value)
             n_subj_count = gene_row.get(f'nsubj.{mut_type}', None)
-
             
             # Add horizontal offset for multiple mutation types
             offset_factor = {'gain': -0.3, 'loss': 0, 'mutation': 0.3}
             x_offset = offset_factor.get(mut_type, 0) * (total_genome_length * 0.0001)
             
-            # Apply x-axis padding to move points away from left edge
-            final_x = x_pos + x_offset + x_axis_padding
+            final_x = x_pos + x_offset
             color = colors.get(mut_type, '#888888')
             
             # Add ALL points to plot_data
@@ -199,9 +201,11 @@ def plot_grin2_manhattan(grin_results: dict,
     # Create matplotlib figure
     fig, ax = plt.subplots(1, 1, figsize=(fig_width_inches, fig_height_inches), dpi=plot_dpi)
 
-    # Calculate y-axis limits and padding
+    # Calculate y-axis limits
     y_axis_scaled = False
     scale_factor_y = 1.0
+    y_min = 0
+    y_max = 5  # default
     
     if plot_data['y']:
         max_y = max(plot_data['y'])
@@ -214,28 +218,66 @@ def plot_grin2_manhattan(grin_results: dict,
             for point in point_details:
                 point['y'] *= scale_factor_y
             scaled_max = max(plot_data['y'])
+            y_max = scaled_max + 0.15
             y_axis_scaled = True
-            max_y = scaled_max
-        
-        # Apply y-axis padding
-        y_padding = max_y * y_axis_space
-        y_min = -y_padding  # Start below zero to create bottom padding
-        y_max = max_y + 0.6
+        else:
+            y_max = max(max_y + 0.15, 5)
 
-        ax.set_ylim(y_min, y_max)
-    else:
-        ax.set_ylim(-0.25, 5.25)  # Default with padding
+    # Calculate center points for correction
+    plot_center_x = plot_width / 2
+    plot_center_y = plot_height / 2
+
+    # Create D3-compatible linear scales with radial correction
+    def x_scale_func(x):
+        return (x / total_genome_length) * plot_width
     
-    # Set x-axis limits with padding on both sides
-    ax.set_xlim(0, total_genome_length + 1 * x_axis_padding)
+    def y_scale_func(y):
+        return ((y_max - y) / y_max) * plot_height
+    
+    def apply_radial_correction(x_pixel, y_pixel):
+        """Apply radial correction to pull points toward center"""
+        # Calculate distance from center
+        dx = x_pixel - plot_center_x
+        dy = y_pixel - plot_center_y
+        
+        # Apply correction proportional to distance from center
+        corrected_x = x_pixel - (dx * correction_strength)
+        corrected_y = y_pixel - (dy * correction_strength)
+        
+        return corrected_x, corrected_y
+    
+    # Convert point details to SVG coordinates with correction
+    for point in point_details:
+        base_x = x_scale_func(point['x'])
+        base_y = y_scale_func(point['y'])
+        
+        # Apply radial correction
+        corrected_x, corrected_y = apply_radial_correction(base_x, base_y)
+        
+        point['svg_x'] = int(round(corrected_x))
+        point['svg_y'] = int(round(corrected_y))
+        
+        # Clamp to plot boundaries
+        point['svg_x'] = max(0, min(plot_width, point['svg_x']))
+        point['svg_y'] = max(0, min(plot_height, point['svg_y']))
+
+    # Convert coordinates for matplotlib (add padding and flip Y back)
+    pixel_plot_data = {
+        'x': [x_scale_func(x) + png_dot_radius for x in plot_data['x']],
+        'y': [plot_height - y_scale_func(y) + png_dot_radius for y in plot_data['y']],
+        'colors': plot_data['colors']
+    }
+
+    # Set matplotlib to use pixel coordinates
+    ax.set_xlim(0, png_width)
+    ax.set_ylim(0, png_height)
 
     # Create alternating chromosome backgrounds
     for i, (_, row) in enumerate(chrom_size.iterrows()):
         chrom = row['chrom']
         if chrom in chrom_data:
-            # Apply the same x_axis_padding shift to chromosome shading
-            start_pos = chrom_data[chrom]['start'] + x_axis_padding
-            end_pos = start_pos + chrom_data[chrom]['size']
+            start_pos = x_scale_func(chrom_data[chrom]['start']) + png_dot_radius
+            end_pos = x_scale_func(chrom_data[chrom]['start'] + chrom_data[chrom]['size']) + png_dot_radius
             
             # Alternate between light and slightly darker gray
             if i % 2 == 0:
@@ -243,109 +285,44 @@ def plot_grin2_manhattan(grin_results: dict,
             else:
                 ax.axvspan(start_pos, end_pos, facecolor='#e0e0e0', alpha=0.5, zorder=0)
 
-    # Plot data points
-    if plot_data['x']:
-        point_size = 20 * min(device_pixel_ratio, 2.5)
-        ax.scatter(plot_data['x'], plot_data['y'], c=plot_data['colors'], 
+    # Plot data points using pixel coordinates
+    if pixel_plot_data['x']:
+        point_size = (png_dot_radius * 2) ** 2
+        ax.scatter(pixel_plot_data['x'], pixel_plot_data['y'], c=pixel_plot_data['colors'], 
                    s=point_size, alpha=0.7, edgecolors='none', zorder=2)
-		
-        ax.scatter([x_axis_padding], [0], c='yellow', s=500, alpha=0.8, 
-          edgecolors='black', linewidths=2, zorder=10)
-    
-    # Set chromosome labels
-    chr_positions = [chrom_data[row['chrom']]['center'] + x_axis_padding for _, row in chrom_size.iterrows() 
-                     if row['chrom'] in chrom_data]
-    chr_labels = [row['chrom'].replace('chr', '') for _, row in chrom_size.iterrows() 
-                  if row['chrom'] in chrom_data]
-    
-    # Style axes and labels
-    font_size = 9 * min(device_pixel_ratio * 0.8, 2.0)
-    ax.set_xticks(chr_positions)
-    ax.set_xticklabels(chr_labels, rotation=45, ha='center', va='top', fontsize=font_size)
-    ax.tick_params(axis='x', pad=2)
-    ax.tick_params(axis='y', labelsize=font_size)
 
-    label_font_size = 12 * min(device_pixel_ratio * 0.8, 2.0)
-    ax.set_ylabel('-log₁₀(q-value)', fontsize=label_font_size)
-    ax.set_xlabel('Chromosomes', fontsize=label_font_size)
-
-    # Add legend
-    if len(mutation_cols) > 0:
-        legend_labels = [mut_type.capitalize() for mut_type, _ in mutation_cols]
-        if y_axis_scaled:
-            legend_labels.append("Y-axis capped at 40")
-        
-        legend_handles = []
-        marker_size = 8 * min(device_pixel_ratio * 0.8, 2.0)
-        for mut_type, _ in mutation_cols:
-            color = colors.get(mut_type, '#888888')
-            legend_handles.append(plt.Line2D([0], [0], marker='o', color='w', 
-                                           markerfacecolor=color, markersize=marker_size, alpha=0.7,
-                                           linestyle='None'))
-        
-        if y_axis_scaled:
-            legend_handles.append(plt.Line2D([0], [0], marker='*', color='w', 
-                                           markerfacecolor='gray', markersize=marker_size*0.75, alpha=0.7,
-                                           linestyle='None'))
-        
-        legend_font_size = 10 * min(device_pixel_ratio * 0.8, 2.0)
-        ax.legend(legend_handles, legend_labels, 
-                 bbox_to_anchor=(1.0, 0.98), loc='lower right', 
-                 ncol=len(legend_labels), frameon=False, 
-                 fancybox=False, shadow=False, framealpha=0.0,
-                 fontsize=legend_font_size)
-    
-    # Clean up plot
+    # Remove axes, labels, and ticks
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_xlabel('')
+    ax.set_ylabel('')
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
-    ax.grid(True, alpha=0.3, axis='y')
-    plt.tight_layout()
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    
+    # Remove all margins
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
     fig.canvas.draw()
 
-    # Calculate coordinate transformation for interactive points
-    width_pixels = plot_width
-    height_pixels = plot_height
-
-    if len(point_details) > 0:
-        plot_coords = np.array([[point['x'], point['y']] for point in point_details])
-        pixel_coords = ax.transData.transform(plot_coords)
-        
-        fig_bbox = fig.get_window_extent()
-        scale_x = width_pixels / fig_bbox.width
-        scale_y = height_pixels / fig_bbox.height
-        
-        plot_center_x = width_pixels / 2
-        
-        for i, point in enumerate(point_details):
-            px, py = pixel_coords[i]
-            
-            base_x = px * scale_x
-            base_y = height_pixels - (py * scale_y)
-            
-            # Position-dependent offset correction
-            distance_from_center = base_x - plot_center_x
-            position_offset = distance_from_center * 0.010
-            
-            svg_x = int(round(base_x + position_offset))
-            svg_y = int(round(base_y))
-            
-            point['svg_x'] = max(0, min(width_pixels, svg_x))
-            point['svg_y'] = max(0, min(height_pixels, svg_y))
-
-    # Return interactive data
+    # Return interactive data including correction strength for client-side tuning
     interactive_data = {
         'points': point_details,
         'chrom_data': chrom_data,
         'y_axis_scaled': y_axis_scaled,
         'scale_factor': scale_factor_y,
         'total_genome_length': total_genome_length,
-        'plot_width': width_pixels,
-        'plot_height': height_pixels,
+        'y_min': y_min,
+        'y_max': y_max,
+        'plot_width': plot_width,
+        'plot_height': plot_height,
+        'png_width': png_width,
+        'png_height': png_height,
         'device_pixel_ratio': device_pixel_ratio,
         'dpi': plot_dpi,
-        'x_axis_space': x_axis_space,
-        'y_axis_space': y_axis_space
+        'png_dot_radius': png_dot_radius,
+        'correction_strength': correction_strength
     }
     
     return fig, interactive_data
@@ -676,10 +653,9 @@ try:
 
 	# Get parameters from input, with defaults
 	device_pixel_ratio = input_data.get("devicePixelRatio", 2.0)
-	plot_width = input_data.get("plot_width", 1000)
-	plot_height = input_data.get("plot_height", 400)
-	x_axis_space = input_data.get("x_axis_space", 0.01)
-	y_axis_space = input_data.get("y_axis_space", 0.01)
+	plot_width = input_data.get("width", 1000)
+	plot_height = input_data.get("height", 400)
+	png_dot_radius = input_data.get("pngDotRadius", 2)
 
 	try:
 		# Create the Manhattan plot
@@ -690,8 +666,7 @@ try:
 			plot_width,
 			plot_height,
 			device_pixel_ratio,
-			x_axis_space,
-			y_axis_space
+			png_dot_radius
 		)
 
 		# Save to BytesIO buffer - use the DPI from the plot_data
