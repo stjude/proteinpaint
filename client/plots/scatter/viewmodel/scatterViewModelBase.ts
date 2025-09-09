@@ -76,8 +76,8 @@ export class ScatterViewModelBase {
 		 * When in continuous mode, color scale renders with a
 		 * default width of 150. */
 		const labels: any = []
-		if (this.scatter.config.colorTW) labels.push(this.scatter.config.colorTW.term.name)
-		if (this.scatter.config.scaleDotTW) labels.push(this.scatter.config.scaleDotTW.term.name)
+		if (this.scatter.config.colorTW) labels.push(this.scatter.config.colorTW.term.name + ' COLOR')
+		if (this.scatter.config.scaleDotTW) labels.push(this.scatter.config.scaleDotTW.term.name + ' SHAPE')
 		if (labels.length > 0) {
 			const labelsWidth = getMaxLabelWidth(svg, labels) + 40
 			chart.colorLegendWidth =
