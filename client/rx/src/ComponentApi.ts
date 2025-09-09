@@ -277,7 +277,7 @@ export class ComponentApi {
 	// defaults for optional preApiFreeze addons
 	replaceLastState(_) {}
 
-	getChart() {
+	getChartImages() {
 		return this.#Inner.getChartImages ? this.#Inner.getChartImages() : null
 	}
 }

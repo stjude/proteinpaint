@@ -8,6 +8,7 @@ import { summaryInit } from '#plots/summary.js'
 import { sayerror } from '../dom/sayerror.ts'
 import { Menu } from '#dom/menu'
 import { newSandboxDiv } from '../dom/sandbox.ts'
+import { getScale } from '#dom'
 
 /*
 opts{}
@@ -230,13 +231,17 @@ class MassApp extends AppBase implements RxAppInner {
 
 		let y = 50
 		const x = 20
-		const ratio = 72 / 96 //convert pixels to pt
 
 		for (const key in this.components.plots) {
 			const plot = this.components.plots[key]
 			const chart = plot.type == 'plot' ? plot.getComponents('chart') : plot // implies summary plot
-			const chartImages = chart.getChartImages()
-			if (!chartImages) continue
+			const chartImages = chart.getChartImages ? chart.getChartImages() : null
+
+			if (!chartImages) {
+				doc.text(`The ${chart.type} does not support downloading images yet`, x, y)
+				y += 30
+				continue
+			}
 			const entries: any[] = Object.entries(chartImages)
 
 			for (const [name, chart] of entries) {
@@ -254,14 +259,16 @@ class MassApp extends AppBase implements RxAppInner {
 				let height = svg.getAttribute('height')
 
 				svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
-				width = Math.min(pageWidth, width * ratio) - 30
-				height = Math.min(pageHeight, height * ratio) - 30
+				const scale = getScale(pageWidth, pageHeight, width, height)
+				width = scale * width
+				height = scale * height
 				if (y + height > pageHeight - 20) {
 					doc.addPage()
 					y = 50
 				}
 
-				doc.text(name.length > 90 ? name.slice(0, 90) + '...' : name, x + 10, y - 20)
+				doc.text(name.length > 90 ? name.slice(0, 90) + '...' : name, x + 10, y)
+				y += 20
 				await doc.svg(svg, { x, y, width, height })
 				y = y + height + 50
 				parent.removeChild(svg)

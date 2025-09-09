@@ -60,13 +60,12 @@ export async function downloadSVGsAsPdf(name2svg, filename) {
 	await import('svg2pdf.js') // This import extends jsPDF with SVG functionality
 	const doc = new jsPDF('portrait', 'pt', 'a4') // p for portrait, l for landscape, points, A4 size
 	doc.setFontSize(12)
-	const pageWidth = doc.internal.pageSize.getWidth() - 10
-	const pageHeight = doc.internal.pageSize.getHeight() - 10
+	const pageWidth = doc.internal.pageSize.getWidth()
+	const pageHeight = doc.internal.pageSize.getHeight()
 
 	const entries: any[] = Object.entries(name2svg)
 	let y = 50
-	const x = 20
-	const ratio = 72 / 96 //convert pixels to pt
+	const x = 20 //pt
 
 	for (const [name, chart] of entries) {
 		const parent = chart.parent
@@ -78,21 +77,38 @@ export async function downloadSVGsAsPdf(name2svg, filename) {
 			}
 		}
 		parent.appendChild(svg) //Added otherwise does not print, will remove later
+		const svgWidth = svg.getAttribute('width')
+		const svgHeight = svg.getAttribute('height')
+		const scale = getScale(pageWidth, pageHeight, svgWidth, svgHeight)
+		const width = svgWidth * scale //convert to pt and fit to page size
+		const height = svgHeight * scale //convert to pt and fit to page size
 
-		let width = svg.getAttribute('width')
-		let height = svg.getAttribute('height')
-		svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
-		width = Math.min(pageWidth, width * ratio) - 30
-		height = Math.min(pageHeight, height * ratio) - 30
 		if (y + height > pageHeight - 20) {
 			doc.addPage()
 			y = 50
 		}
 		if (name.trim()) doc.text(name.length > 90 ? name.slice(0, 90) + '...' : name, x + 10, y - 20)
 		else y -= 20
+		svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`)
+
 		await doc.svg(svg, { x, y, width, height })
 		y = y + height + 50
 		parent.removeChild(svg)
 	}
 	doc.save(filename + '.pdf')
+}
+
+export function getScale(pageWidth, pageHeight, svgWidth, svgHeight) {
+	const ratio = 72 / 96 //convert px to pt
+	const width = svgWidth * ratio //convert to pt
+	const height = svgHeight * ratio //convert to pt
+	let scaleWidth, scaleHeight
+	if (width > pageWidth) {
+		scaleWidth = pageWidth / width
+	}
+	if (height > pageHeight) {
+		scaleHeight = pageHeight / height
+	}
+	const scale = Math.min(scaleWidth || 1, scaleHeight || 1) * 0.95 //leave padding
+	return scale * ratio
 }

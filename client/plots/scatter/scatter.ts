@@ -6,7 +6,7 @@ import { ScatterView } from './view/scatterView.js'
 import { getCurrentCohortChartTypes } from '#mass/charts'
 import { rebaseGroupFilter } from '#mass/groups'
 import { plotColor } from '#shared/common.js'
-import { RxComponentInner } from '../../types/rx.d.js'
+import { type RxComponentInner } from '../../types/rx.d.js'
 import { filterJoin, getCombinedTermFilter } from '#filter'
 import { ScatterInteractivity, downloadImage } from './viewmodel/scatterInteractivity.js'
 import { ScatterViewModel2DLarge } from './viewmodel/scatterViewModel2DLarge.js'
@@ -65,6 +65,11 @@ export class Scatter extends PlotBase implements RxComponentInner {
 			return react
 		}
 		return true
+	}
+
+	//for some reason the scatter getChartImages is not seen unless I do this
+	preApiFreeze(api) {
+		api.getChartImages = () => this.getChartImages()
 	}
 
 	getState(appState: MassState) {
