@@ -4573,22 +4573,22 @@
   },
   "termsetting/handlers/categorical.ts": {
     "lines": {
-      "total": 58,
-      "covered": 20,
+      "total": 61,
+      "covered": 24,
       "skipped": 0,
-      "pct": 34.48
+      "pct": 39.34
     },
     "functions": {
-      "total": 12,
+      "total": 11,
       "covered": 7,
       "skipped": 0,
-      "pct": 58.33
+      "pct": 63.63
     },
     "statements": {
-      "total": 72,
-      "covered": 21,
+      "total": 75,
+      "covered": 25,
       "skipped": 0,
-      "pct": 29.16
+      "pct": 33.33
     },
     "branches": {
       "total": 64,
@@ -4602,9 +4602,9 @@
       "diff": -16.61
     },
     "averagePct": {
-      "curr": 33.6175,
+      "curr": 37.2,
       "prev": 47.245000000000005,
-      "diff": -13.627500000000005
+      "diff": -10.045000000000002
     }
   },
   "termsetting/handlers/condition.ts": {
