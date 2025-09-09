@@ -141,7 +141,7 @@ def plot_grin2_manhattan(grin_results: dict,
     x_axis_padding = total_genome_length * x_axis_space
     
     # Collect all points to plot
-    plot_data = {'x': [], 'y': [], 'colors': [], 'types': []}
+    plot_data = {'x': [], 'y': [], 'colors': [], 'types': [], 'nsubj.mutation': [], 'nsubj.gain': [], 'nsubj.loss': []}
     point_details = []
     
     # Process each gene
@@ -162,6 +162,8 @@ def plot_grin2_manhattan(grin_results: dict,
 
             q_value = gene_row[q_col]
             neg_log10_q = -np.log10(q_value)
+            n_subj_count = gene_row.get(f'nsubj.{mut_type}', None)
+
             
             # Add horizontal offset for multiple mutation types
             offset_factor = {'gain': -0.3, 'loss': 0, 'mutation': 0.3}
@@ -176,7 +178,10 @@ def plot_grin2_manhattan(grin_results: dict,
             plot_data['y'].append(neg_log10_q)
             plot_data['colors'].append(color)
             plot_data['types'].append(mut_type)
-            
+            plot_data['nsubj.mutation'].append(n_subj_count if mut_type == 'mutation' else None)
+            plot_data['nsubj.gain'].append(n_subj_count if mut_type == 'gain' else None)
+            plot_data['nsubj.loss'].append(n_subj_count if mut_type == 'loss' else None)
+
             # Only add significant points for interactivity
             if q_value <= 0.05:
                 point_details.append({
@@ -187,7 +192,8 @@ def plot_grin2_manhattan(grin_results: dict,
                     'gene': gene_name,
                     'chrom': chrom,
                     'pos': gene_start,
-                    'q_value': q_value
+                    'q_value': q_value,
+                    'nsubj': n_subj_count
                 })
     
     # Create matplotlib figure
@@ -215,13 +221,13 @@ def plot_grin2_manhattan(grin_results: dict,
         y_padding = max_y * y_axis_space
         y_min = -y_padding  # Start below zero to create bottom padding
         y_max = max_y + 0.6
-        
+
         ax.set_ylim(y_min, y_max)
     else:
         ax.set_ylim(-0.25, 5.25)  # Default with padding
     
     # Set x-axis limits with padding on both sides
-    ax.set_xlim(0, total_genome_length + 2 * x_axis_padding)
+    ax.set_xlim(0, total_genome_length + 1 * x_axis_padding)
 
     # Create alternating chromosome backgrounds
     for i, (_, row) in enumerate(chrom_size.iterrows()):
@@ -242,6 +248,9 @@ def plot_grin2_manhattan(grin_results: dict,
         point_size = 20 * min(device_pixel_ratio, 2.5)
         ax.scatter(plot_data['x'], plot_data['y'], c=plot_data['colors'], 
                    s=point_size, alpha=0.7, edgecolors='none', zorder=2)
+		
+        ax.scatter([x_axis_padding], [0], c='yellow', s=500, alpha=0.8, 
+          edgecolors='black', linewidths=2, zorder=10)
     
     # Set chromosome labels
     chr_positions = [chrom_data[row['chrom']]['center'] + x_axis_padding for _, row in chrom_size.iterrows() 
@@ -250,7 +259,7 @@ def plot_grin2_manhattan(grin_results: dict,
                   if row['chrom'] in chrom_data]
     
     # Style axes and labels
-    font_size = 12 * min(device_pixel_ratio * 0.8, 2.0)
+    font_size = 9 * min(device_pixel_ratio * 0.8, 2.0)
     ax.set_xticks(chr_positions)
     ax.set_xticklabels(chr_labels, rotation=45, ha='center', va='top', fontsize=font_size)
     ax.tick_params(axis='x', pad=2)
