@@ -64,7 +64,6 @@ function validateQuery(ds: any, connection: Database.Database) {
 			const projectId = annotation.projectId
 			const wsimageFilename = annotation.wsimage // expected to exactly match project_images.image_path
 			const coords = JSON.stringify(annotation.coordinates ?? [])
-			const userId = annotation.userId
 			const status = 1
 			const classId = annotation.classId
 
@@ -99,7 +98,16 @@ function validateQuery(ds: any, connection: Database.Database) {
 					project_id, user_id, coordinates, timestamp, status, class_id, image_id
 				) VALUES (?, ?, ?, ?, ?, ?, ?)
 			`
+
 			const insertStmt = connection.prepare(insertSql)
+
+			// Query first user id from project_users table, later replace with actual user management
+			const userRow = connection
+				.prepare(`SELECT id FROM project_users WHERE project_id = ? ORDER BY id ASC LIMIT 1`)
+				.get(projectId) as { id: number } | undefined
+
+			const userId = userRow?.id
+
 			insertStmt.run(projectId, userId, coords, timestamp, status, classId, imageId)
 
 			return { status: 'ok' }

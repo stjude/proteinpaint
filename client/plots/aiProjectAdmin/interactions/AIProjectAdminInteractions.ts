@@ -86,11 +86,17 @@ export class AIProjectAdminInteractions {
 		holder.selectAll('.sjpp-deletable-ai-prjt-admin-div').remove()
 
 		const config = this.getConfig()
-		let images: any = []
+		let images: string[] = []
+
 		if (_images && _images.length > 0) {
 			images = _images
 		} else {
-			images = await this.prjtRepo.getImagePaths(this.genome, this.dslabel, config.settings.project)
+			const response: AIProjectAdminResponse = await this.prjtRepo.getImagePaths(
+				this.genome,
+				this.dslabel,
+				config.settings.project
+			)
+			images = response.images
 		}
 
 		const wsiViewer = await import('#plots/wsiviewer/plot.wsi.js')

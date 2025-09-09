@@ -91,9 +91,9 @@ export class ClassesTableRender {
 	}
 
 	getNewClass(colorScale: any, rows: TableRow[]) {
-		const getName = (i: number) => `New class${i == 0 ? '' : ` ${i + 1}`}`
+		const getName = (i: number) => `New class ${i}`
 
-		let i = 0
+		let i = 1
 		let found = true
 		while (found) {
 			const checkName = getName(i)
@@ -104,7 +104,7 @@ export class ClassesTableRender {
 		rows.push([
 			{ html: `<div class="sja_menuoption">&times;<div>` },
 			{ value: getName(i) },
-			{ color: rgb(colorScale(`${i + 1}`)).formatHex() }
+			{ color: rgb(colorScale(`${i}`)).formatHex() }
 		])
 	}
 

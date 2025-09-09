@@ -83,7 +83,7 @@ export class CreateProjectRender {
 					project: {
 						filter: this.filter,
 						classes: this.classesTable!.rows.map((row, i) => {
-							return { label: row[1].value, color: row[2].color, key_shortcut: `Digit${i}` }
+							return { label: row[1].value, color: row[2].color, key_shortcut: `Digit${i + 1}` }
 						})
 					}
 				})
