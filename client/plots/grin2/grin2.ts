@@ -343,10 +343,9 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 				genome: this.app.vocabApi.vocab.genome,
 				dslabel: this.app.vocabApi.vocab.dslabel,
 				filter: this.state.termfilter.filter,
-				plot_width: 1000,
-				plot_height: 400,
-				x_axis_space: 0.4,
-				y_axis_space: 0.4,
+				width: 1000,
+				height: 400,
+				pngDotRadius: 2,
 				devicePixelRatio: window.devicePixelRatio,
 				...configValues
 			}

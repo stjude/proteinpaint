@@ -21,16 +21,13 @@ export type GRIN2Request = {
 	devicePixelRatio?: number
 
 	/** Desired plot width in pixels (default: 1000) */
-	plot_width?: number
+	width?: number
 
 	/** Desired plot height in pixels (default: 400) */
-	plot_height?: number
+	height?: number
 
-	/** Extra space to allocate for x-axis labels (default: 0.01) */
-	x_axis_space?: number
-
-	/** Extra space to allocate for y-axis labels (default: 0.01) */
-	y_axis_space?: number
+	/** Radius of the PNG rendered dots (default: 2) */
+	pngDotRadius?: number
 
 	/** Filter from existing PP infrastructure */
 	filter?: any // Filter object passed to get_samples(filter, ds)
