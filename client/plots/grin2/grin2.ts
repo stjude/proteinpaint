@@ -345,8 +345,8 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 				filter: this.state.termfilter.filter,
 				plot_width: 1000,
 				plot_height: 400,
-				x_axis_space: 0.015,
-				y_axis_space: 0.03,
+				x_axis_space: 0.4,
+				y_axis_space: 0.4,
 				devicePixelRatio: window.devicePixelRatio,
 				...configValues
 			}
@@ -448,6 +448,7 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 					table.addRow('Gene', d.gene)
 					table.addRow('Type', d.type)
 					table.addRow('-log10(q-value)', d.y.toFixed(3))
+					table.addRow('Count of impacted subjects', d.nsubj)
 				})
 				.on('mouseout', () => {
 					this.dom.geneTip.hide()
