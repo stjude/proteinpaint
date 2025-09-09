@@ -61,7 +61,6 @@ class TermSearch {
 			selectedTerms: appState.selectedTerms,
 			usecase: appState.tree.usecase,
 			search: appState.search,
-			isGeneSetTermdb: appState.termdbConfig.isGeneSetTermdb,
 			termTypeGroup: appState.termTypeGroup
 		}
 	}
@@ -84,9 +83,9 @@ class TermSearch {
 		this.dom.input.node().value = ''
 		this.dom.input.attr(
 			'placeholder',
-			'Search ' +
-				// termTypeGroup values cannot cover geneset, thus this check
-				(this.app.vocabApi.termdbConfig.isGeneSetTermdb ? 'Gene Sets' : this.state.termTypeGroup)
+			// termTypeGroup values cannot cover geneset, thus this check
+			// tdbcfg is missing for front vocab?
+			`Search ${this.app.vocabApi.termdbConfig?.isGeneSetTermdb ? 'Gene Sets' : this.state.termTypeGroup}`
 		)
 		this.clear()
 		this.dom.holder.style('display', this.state.isVisible ? 'block' : 'none')
