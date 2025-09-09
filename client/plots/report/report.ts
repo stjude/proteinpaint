@@ -4,6 +4,7 @@ import { ReportView } from './view/reportView'
 import { RxComponentInner } from '../../types/rx.d'
 import { controlsInit } from '../controls.js'
 import { importPlot } from '#plots/importPlot.js'
+import { getScale } from '#dom/downloadMenu'
 
 export class Report extends RxComponentInner {
 	config: any
@@ -133,7 +134,6 @@ export class Report extends RxComponentInner {
 		const doc: any = new jsPDF('p', 'pt', 'a4') // p for portrait, l for landscape, points, A4 size
 		const pageWidth = doc.internal.pageSize.getWidth() - 10
 		const pageHeight = doc.internal.pageSize.getHeight() - 10
-		const ratio = 72 / 96 //convert pixels to pt
 
 		let y = 40
 		const x = 20
@@ -161,11 +161,12 @@ export class Report extends RxComponentInner {
 							}
 						}
 						chart.parent.appendChild(svg) //Added otherwise does not print, will remove later
-						let width = svg.getAttribute('width')
-						let height = svg.getAttribute('height')
-						svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
-						width = Math.min(pageWidth, width * ratio) - 20
-						height = Math.min(pageHeight, height * ratio) - 20
+						const svgWidth = svg.getAttribute('width')
+						const svgHeight = svg.getAttribute('height')
+						svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`)
+						const scale = getScale(pageWidth, pageHeight, svgWidth, svgHeight)
+						const width = svgWidth * scale //convert to pt and fit to page size
+						const height = svgHeight * scale //convert to pt and fit to page size
 						if (y + height > pageHeight - 20) {
 							doc.addPage()
 							y = 40
@@ -179,10 +180,11 @@ export class Report extends RxComponentInner {
 						}
 						if (name.trim()) {
 							doc.text(name.length > 90 ? name.slice(0, 90) + '...' : name, x, y)
-							y += 20
+							y += 40
 						}
+						console.log(y)
 						await doc.svg(svg, { x, y, width, height })
-						y = y + height + 40
+						y = y + height + 60
 						chart.parent.removeChild(svg)
 						newSection = false
 					}

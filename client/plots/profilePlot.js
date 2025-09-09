@@ -403,9 +403,7 @@ export class profilePlot {
 					title: 'Filters'
 				})
 			}
-			this.components.controls.on(`downloadClick.${chartType}`, () =>
-				downloadSingleSVG(this.dom.svg, this.getDownloadFilename(), this.dom.holder.node())
-			)
+			this.components.controls.on(`downloadClick.${chartType}`, event => this.download(event))
 			this.components.controls.on(`helpClick.${chartType}`, () => {
 				const activeCohort = this.state.activeCohort
 				let link
@@ -569,7 +567,7 @@ export class profilePlot {
 	}
 
 	getChartImages() {
-		return { ['']: { svg: this.dom.svg, parent: this.dom.svg.node() } }
+		return { [this.chartName]: { svg: this.dom.svg, parent: this.dom.svg.node() } }
 	}
 }
 
