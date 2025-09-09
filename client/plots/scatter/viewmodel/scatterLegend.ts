@@ -100,7 +100,7 @@ export class ScatterLegend {
 					scale
 				)
 			} else {
-				this.addLegendTitle(legendG, title, offsetX, offsetY, this.scatter.config.colorTW)
+				this.addLegendTitle(legendG, title, offsetX, offsetY, this.scatter.config.colorTW, 'COLOR')
 				offsetY += step
 
 				if (this.scatter.config.colorTW?.q?.mode === 'continuous') {
@@ -254,7 +254,7 @@ export class ScatterLegend {
 			} else {
 				const shapeG = legendG.append('g').style('font-size', `${this.getFontSize(chart, chart.shapeLegend)}em`)
 
-				this.addLegendTitle(legendG, title, offsetX, offsetY, this.scatter.config.shapeTW)
+				this.addLegendTitle(legendG, title, offsetX, offsetY, this.scatter.config.shapeTW, 'SHAPE')
 
 				offsetY += step
 				const color = 'gray'
@@ -320,7 +320,7 @@ export class ScatterLegend {
 		return [circleG, itemG]
 	}
 
-	addLegendTitle(G, title, x, y, tw) {
+	addLegendTitle(G, title, x, y, tw, extraText) {
 		const _t = G.append('text')
 			.attr('data-testid', 'legendTitle') // may replace id with data-testid to avoid conflict with portal
 			.attr('x', x)
@@ -329,13 +329,6 @@ export class ScatterLegend {
 			.style('font-weight', 'bold')
 		//.on('click',()=>{}) TODO allow click on text to get edit/replace options for tw
 
-		// when plot has both color & shape and tw is either, since color legend hardcodes circles which may confuse with shape, thus put word "color/shape" at legend title to disambiguate
-		let extraText: any = null
-		if (tw == this.scatter.config.colorTW && this.scatter.config.shapeTW) {
-			extraText = 'COLOR'
-		} else if (tw == this.scatter.config.shapeTW && this.scatter.config.colorTW) {
-			extraText = 'SHAPE'
-		}
 		if (extraText) {
 			_t.append('tspan').text(extraText).attr('dx', 7).style('font-weight', 'normal').attr('font-size', '.7em')
 		}
@@ -347,7 +340,7 @@ export class ScatterLegend {
 		const title = name
 		const G = legendG.append('g').style('font-size', '0.9em')
 
-		this.addLegendTitle(G, title, offsetX, offsetY, tw)
+		this.addLegendTitle(G, title, offsetX, offsetY, tw, cname == 'category' ? 'COLOR' : 'SHAPE')
 
 		offsetX += step
 		const mutations: any = []
