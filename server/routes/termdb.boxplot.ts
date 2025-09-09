@@ -54,7 +54,7 @@ function init({ genomes }) {
 			const charts: any = {}
 			for (const [chart, plot2values] of chart2plot2values) {
 				const plots: any = []
-				for (const [key, values] of sortPlot2Values(data, plot2values, overlayTerm)) {
+				for (const [key, values] of sortPlot2Values(data as ValidGetDataResponse, plot2values, overlayTerm)) {
 					const sortedValues = values.sort((a, b) => a - b)
 
 					const vs = sortedValues.map((v: number) => {
