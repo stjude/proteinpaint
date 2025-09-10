@@ -41,7 +41,7 @@ impl<'a> ClientBuilder<'a> {
     }
 
     pub fn base_url(mut self, base_url: &'a str) -> Self {
-        println!("base_url:{}", base_url);
+        //println!("base_url:{}", base_url);
         self.base_url = base_url;
         self
     }
@@ -557,7 +557,7 @@ impl completion::CompletionModel for CompletionModel {
             .send()
             .await
             .map_err(|e| CompletionError::ProviderError(e.to_string()))?;
-        println!("response:{:?}", response);
+        //println!("response:{:?}", response);
         if response.status().is_success() {
             let text = response
                 .text()
