@@ -102,13 +102,14 @@ export function getPdfScale(pageWidth, pageHeight, svgWidth, svgHeight) {
 	const ratio = 72 / 96 //convert px to pt
 	const width = svgWidth * ratio //convert to pt
 	const height = svgHeight * ratio //convert to pt
-	let scaleWidth, scaleHeight
+	let scaleWidth = 1,
+		scaleHeight = 1
 	if (width > pageWidth) {
 		scaleWidth = pageWidth / width
 	}
 	if (height > pageHeight) {
 		scaleHeight = pageHeight / height
 	}
-	const scale = Math.min(scaleWidth || 1, scaleHeight || 1) * 0.95 //leave padding
+	const scale = Math.min(scaleWidth, scaleHeight) * 0.95 //leave padding
 	return scale * ratio
 }
