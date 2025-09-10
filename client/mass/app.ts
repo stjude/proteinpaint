@@ -8,7 +8,7 @@ import { summaryInit } from '#plots/summary.js'
 import { sayerror } from '../dom/sayerror.ts'
 import { Menu } from '#dom/menu'
 import { newSandboxDiv } from '../dom/sandbox.ts'
-import { getScale } from '#dom'
+import { getPdfScale } from '#dom'
 
 /*
 opts{}
@@ -259,7 +259,7 @@ class MassApp extends AppBase implements RxAppInner {
 				let height = svg.getAttribute('height')
 
 				svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
-				const scale = getScale(pageWidth, pageHeight, width, height)
+				const scale = getPdfScale(pageWidth, pageHeight, width, height)
 				width = scale * width
 				height = scale * height
 				if (y + height > pageHeight - 20) {

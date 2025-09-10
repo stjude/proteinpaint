@@ -4,7 +4,7 @@ import { ReportView } from './view/reportView'
 import { RxComponentInner } from '../../types/rx.d'
 import { controlsInit } from '../controls.js'
 import { importPlot } from '#plots/importPlot.js'
-import { getScale } from '#dom/downloadMenu'
+import { getPdfScale } from '#dom/downloadMenu'
 
 export class Report extends RxComponentInner {
 	config: any
@@ -164,7 +164,7 @@ export class Report extends RxComponentInner {
 						const svgWidth = svg.getAttribute('width')
 						const svgHeight = svg.getAttribute('height')
 						svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`)
-						const scale = getScale(pageWidth, pageHeight, svgWidth, svgHeight)
+						const scale = getPdfScale(pageWidth, pageHeight, svgWidth, svgHeight)
 						const width = svgWidth * scale //convert to pt and fit to page size
 						const height = svgHeight * scale //convert to pt and fit to page size
 						if (y + height > pageHeight - 20) {
