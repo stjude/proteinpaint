@@ -4,6 +4,9 @@
 // (does not work)  Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary of fusions in men only", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
 // Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for fusions in men only", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
 // Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show hyperdiploid overlayed with age", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://10.200.87.133:32580/v2/models/ray_gateway_router/infer", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text-v1.5", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary of fusions in men only", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://10.200.87.133:32580/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "nomic-embed-text-v1.5", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary of  molecular subtype in men only", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://10.200.87.133:32580/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "nomic-embed-text-v1.5", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
 // -------Differential gene expression examples ------//
 
 // Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
@@ -192,7 +195,14 @@ async fn main() -> Result<()> {
                         .await;
                     }
 
-                    println!("final_output:{:?}", final_output.unwrap());
+                    match final_output {
+                        Some(fin_out) => {
+                            println!("final_output:{:?}", fin_out);
+                        }
+                        None => {
+                            println!("final_output:{{\"{}\":\"{}\"}}", "chartType", "unknown");
+                        }
+                    }
                 }
                 Err(error) => println!("Incorrect json:{}", error),
             }
@@ -351,15 +361,18 @@ async fn classify_query_by_dataset_type(
 
     //println!("Ollama: {}", response);
     let result = response.replace("json", "").replace("```", "");
-    //println!("result:{}", result);
+    println!("result:{}", result);
     let json_value: Value = serde_json::from_str(&result).expect("REASON");
     match llm_backend_type {
         llm_backend::Ollama() => json_value["answer"].to_string(),
         llm_backend::Sj() => {
             let json_value2: Value =
                 serde_json::from_str(&json_value[0]["generated_text"].to_string()).expect("REASON2");
-            println!("Classification result:{}", json_value2);
-            json_value2["answer"].to_string()
+            //println!("json_value2:{}", json_value2.as_str().unwrap());
+            let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON2");
+            //let json_value3: Value = serde_json::from_str(&json_value2["answer"].to_string()).expect("REASON2");
+            println!("Classification result:{}", json_value3["answer"]);
+            json_value3["answer"].to_string()
         }
     }
 }
@@ -601,7 +614,7 @@ async fn extract_summary_information(
 
             let top_k = 3;
             let system_prompt = String::from(
-                "I am an assistant that extracts the summary term from user query. It has four fields: group_categories (required), overlay (optional), filter (optional) and divide_by (optional). group_categories (required) is the primary variable being displayed. Overlay consists of the variable that must be overlayed on top of group_categories. divide_by is the variable used to stratify group_categories into two or more categories. The final output must be in the following JSON format: {\"chartType\":\"summary\",\"term\":{\"group_categories\":\"{group_category_answer}\",\"overlay\":\"{overlay_answer}\",\"divide_by\":\"{divide_by_answer}\",\"filter\":\"{filter_answer}\"}}. The values being added to the JSON parameters must be previously defined as field. Sample query1: \"Show ETR1 subtype\" Answer query1: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"ETR1\"}}. Sample query2: \"Show hyperdiploid subtype with age overlayed on top of it\" Answer query2: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"hyperdiploid\", \"overlay\":\"age\"}}. Sample query3: \"Show BAR1 subtype with age overlayed on top of it and stratify it on the basis of gender\" Answer query4: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"BAR1\", \"overlay\":\"age\", \"divide_by\":\"sex\"}}.",
+                "I am an assistant that extracts the summary term from user query. It has four fields: group_categories (required), overlay (optional), filter (optional) and divide_by (optional). group_categories (required) is the primary variable being displayed. Overlay consists of the variable that must be overlayed on top of group_categories. divide_by is the variable used to stratify group_categories into two or more categories. The final output must be in the following JSON format with no extra comments: {\"chartType\":\"summary\",\"term\":{\"group_categories\":\"{group_category_answer}\",\"overlay\":\"{overlay_answer}\",\"divide_by\":\"{divide_by_answer}\",\"filter\":\"{filter_answer}\"}}. The values being added to the JSON parameters must be previously defined as field. Sample query1: \"Show ETR1 subtype\" Answer query1: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"ETR1\"}}. Sample query2: \"Show hyperdiploid subtype with age overlayed on top of it\" Answer query2: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"hyperdiploid\", \"overlay\":\"age\"}}. Sample query3: \"Show BAR1 subtype with age overlayed on top of it and stratify it on the basis of gender\" Answer query4: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"BAR1\", \"overlay\":\"age\", \"divide_by\":\"sex\"}}.",
             );
             println!("system_prompt:{}", system_prompt);
             // Create RAG agent
