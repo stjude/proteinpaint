@@ -2,6 +2,8 @@ export async function importPlot(chartType, notFoundMessage = '') {
 	// TODO: move to dynamic import of exact plot names here, instead of string-pattern,
 	// so that the bundler does not have to guess code file extension, directory names and letter casing
 	switch (chartType) {
+		/*case 'genomeBrowser':
+			return await import('./gb/GB.ts')*/
 		case 'AIProjectAdmin':
 			return await import('./aiProjectAdmin/AIProjectAdmin.ts')
 
