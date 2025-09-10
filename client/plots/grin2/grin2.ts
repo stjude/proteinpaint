@@ -387,17 +387,19 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 		if (config.childType != this.type && config.chartType != this.type) return
 	}
 
-	private setPlotDims(plotData, settings) {
-		const xAxisStart = plotData.plot_height
+	/** Calculates the plot dimensions with an offset before rendering. */
+	private setPlotDims(plotData: any, settings: any) {
 		const offset = 10
-		const yScaleRange = plotData.plot_height - settings.radius * 2 * 2
+		const xAxisStart = plotData.plot_height + offset
+		/** In the python code, the radius * 2 is used to pad the top and bottom
+		 * of the png. Hence the radius * 3. */
+		const yScaleRange = plotData.plot_height - settings.radius * 3 - offset * 2
 
 		const plotDims = {
 			svg: {
 				height: plotData.plot_height + settings.left + settings.right,
 				width: plotData.plot_width + settings.bottom,
-				x: settings.left,
-				y: 0
+				x: settings.left
 			},
 			xAxis: {
 				x: settings.left + offset * 3,
@@ -415,14 +417,14 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 			},
 			yAxis: {
 				x: settings.left,
-				y: settings.radius * 2,
+				y: offset + settings.radius * 2,
 				scale: scaleLinear()
-					.domain([0, Math.max(...plotData.points.map(p => p.y), 5)])
+					.domain([0, Math.max(...plotData.points.map(p => p.y))])
 					.range([yScaleRange, 0])
 			},
 			yLabel: {
 				x: -plotData.plot_height / 2,
-				y: 15
+				y: offset * 4
 			}
 		}
 		return plotDims
@@ -441,25 +443,23 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 			plotGroup.node()!.appendChild(this)
 		})
 
-		// Create scales
-		const xScale = plotDims.xAxis.scale
-
-		const yScale = plotDims.yAxis.scale
+		// x-axis
+		const xScale = plotDims.xAxis
 
 		// X-axis at bottom
 		const xAxis = d3axis
-			.axisBottom(xScale)
+			.axisBottom(xScale.scale)
 			.tickFormat(() => '')
 			.tickSizeOuter(0)
 			.ticks(0) // Remove default ticks
 
-		svg.append('g').attr('transform', `translate(${plotDims.xAxis.x}, ${plotDims.xAxis.y})`).call(xAxis)
+		svg.append('g').attr('transform', `translate(${xScale.x}, ${xScale.y})`).call(xAxis)
 
-		// Add chromosome labels
+		// Add chromosome labels (instead of numbered ticks) to the x-axis
 		if (plotData.chrom_data) {
 			Object.entries(plotData.chrom_data).forEach(([chrom, data]: [string, any]) => {
-				const startPos = plotDims.chrsLabel.start + xScale(data.start)
-				const endPos = plotDims.chrsLabel.end + xScale(data.start + data.size)
+				const startPos = plotDims.chrsLabel.start + xScale.scale(data.start)
+				const endPos = plotDims.chrsLabel.end + xScale.scale(data.start + data.size)
 				const centerPos = startPos + (endPos - startPos) / 2
 
 				// Position label at true center
@@ -474,12 +474,7 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 			})
 		}
 
-		// Y-axis at left
-		const yAxis = d3axis.axisLeft(yScale)
-
-		svg.append('g').attr('transform', `translate(${plotDims.yAxis.x}, ${plotDims.yAxis.y})`).call(yAxis)
-
-		// Axis labels
+		//Bottom label for x-axis
 		svg
 			.append('text')
 			.attr('x', plotDims.xLabel.x)
@@ -489,6 +484,13 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 			.attr('fill', 'black')
 			.text('Chromosomes')
 
+		// y-axis
+		const yScale = plotDims.yAxis
+		// Y-axis at left
+		const yAxisG = svg.append('g').attr('transform', `translate(${yScale.x}, ${yScale.y})`)
+		yAxisG.call(d3axis.axisLeft(yScale.scale))
+
+		// Y-axis label
 		svg
 			.append('text')
 			.attr('transform', `rotate(-90)`)
