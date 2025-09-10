@@ -434,37 +434,37 @@
   "dom/genesearch.ts": {
     "lines": {
       "total": 263,
-      "covered": 22,
+      "covered": 111,
       "skipped": 0,
-      "pct": 8.36
+      "pct": 42.2
     },
     "functions": {
       "total": 24,
-      "covered": 1,
+      "covered": 11,
       "skipped": 0,
-      "pct": 4.16
+      "pct": 45.83
     },
     "statements": {
-      "total": 288,
-      "covered": 22,
+      "total": 287,
+      "covered": 114,
       "skipped": 0,
-      "pct": 7.63
+      "pct": 39.72
     },
     "branches": {
       "total": 181,
-      "covered": 11,
+      "covered": 60,
       "skipped": 0,
-      "pct": 6.07
+      "pct": 33.14
     },
     "lowestPct": {
-      "curr": 4.16,
+      "curr": 33.14,
       "prev": 33.14,
-      "diff": -28.98
+      "diff": 0
     },
     "averagePct": {
-      "curr": 6.555,
+      "curr": 40.2225,
       "prev": 40.655,
-      "diff": -34.1
+      "diff": -0.43250000000000455
     }
   },
   "plots/matrix/test/matrix.integration.spec.js": {
