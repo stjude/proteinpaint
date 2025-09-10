@@ -79,7 +79,7 @@ export async function downloadSVGsAsPdf(name2svg, filename) {
 		parent.appendChild(svg) //Added otherwise does not print, will remove later
 		const svgWidth = svg.getAttribute('width')
 		const svgHeight = svg.getAttribute('height')
-		const scale = getScale(pageWidth, pageHeight, svgWidth, svgHeight)
+		const scale = getPdfScale(pageWidth, pageHeight, svgWidth, svgHeight)
 		const width = svgWidth * scale //convert to pt and fit to page size
 		const height = svgHeight * scale //convert to pt and fit to page size
 
@@ -98,7 +98,7 @@ export async function downloadSVGsAsPdf(name2svg, filename) {
 	doc.save(filename + '.pdf')
 }
 
-export function getScale(pageWidth, pageHeight, svgWidth, svgHeight) {
+export function getPdfScale(pageWidth, pageHeight, svgWidth, svgHeight) {
 	const ratio = 72 / 96 //convert px to pt
 	const width = svgWidth * ratio //convert to pt
 	const height = svgHeight * ratio //convert to pt
