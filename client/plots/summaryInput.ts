@@ -22,8 +22,6 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 		super(opts)
 		this.type = SummaryInputPlot.type
 		this.dom = this.getDom()
-		this.app = opts.app
-		this.id = opts.id
 	}
 
 	getDom() {
