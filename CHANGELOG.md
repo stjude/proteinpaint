@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.143.0
 
 Features:
 - Adding interactive GRIN2 plot
