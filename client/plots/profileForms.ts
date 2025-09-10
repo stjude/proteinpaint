@@ -71,9 +71,9 @@ export class profileForms extends profilePlot {
 				tabs: this.tabs
 			}).main()
 
-		const shift = 650
+		const shift = 620
 		const shiftTop = 50
-		const width = settings.svgw + shift + 440
+		const width = settings.svgw + shift + 500
 		const svg = rightDiv.style('padding', '20px').append('svg').attr('width', width)
 		svg
 			.append('defs')
@@ -90,7 +90,7 @@ export class profileForms extends profilePlot {
 		this.shift = shift
 		const mainG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop})`)
 		const gridG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop})`)
-		this.filterG = svg.append('g').attr('transform', `translate(${shift + settings.svgw + 60}, ${shiftTop})`)
+		this.filterG = svg.append('g').attr('transform', `translate(${shift + settings.svgw + 60}, ${shiftTop + 40})`)
 		const legendG = svg.append('g') //each plot will translate it to the right position
 
 		const xAxisG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop / 2})`)
