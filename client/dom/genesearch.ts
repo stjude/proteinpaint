@@ -38,27 +38,35 @@ type GeneSearchBoxArg = {
 	row: any
 	/** Optional. The default is 'Gene, position' */
 	placeholder?: string
-	/** optional
-	 * if 'gene' =>
-    input can be symbol or alias
-    result is {geneSymbol:str}, will not map to coord
-    cannot map isoform to gene name!
-    (later may need geneOrIsoform flag to query both) 
-	if 'snp' =>
-	user must select a single snp
-	input can be dbSNP id, position, or variant format (chr.pos.ref.alt)
-	allow to enter chr.pos.ref.alt or hgvs (see next section)
-    otherwise, only allow chr:start-stop
+	/** 
+	if 'gene':
+		input can be symbol or alias
+		result is {geneSymbol:str}, will not map to coord
+		cannot map isoform to gene name!
+		(later may need geneOrIsoform flag to query both) 
+	if 'snp':
+		user must select a single snp
+		input can be dbSNP id, position, or variant format (chr.pos.ref.alt)
+		allow to enter chr.pos.ref.alt or hgvs (see next section)
+		otherwise, only allow chr:start-stop
 	*/
 	searchOnly?: 'gene' | 'snp'
-	allowVariant?: boolean
-	/** optional
-    If true, user must click on search box and enter instead of automatically 
+	/** If true, user must click on search box and enter instead of automatically 
     focusing on search box. Use to render d3 animations smoothly. */
 	focusOff?: boolean
-	/** optional
-    triggered when a valid hit is found, and has been written to RESULT object (see below)
-    no parameter is supplied */
+	/**
+	if no callback():
+		any match is silently written to RESULT
+		with repeated search the latest match is written to RESULT
+		common pattern is that user will press a button to launch some logic that will check RESULT
+		it's up to the calling code to decide when to access RESULT (e.g. pressing some button in caller's ui)
+		usecase: block.tk.bam.gdc.js
+	if has callback():
+		upon a match, RESULT is updated and callback is triggered
+		as a way to notify caller to do subsequent steps
+		usecase: geneSearch4GDCmds3.js
+		no parameter is supplied
+	*/
 	callback?: () => void
 	/** optional
     triggered when the <input> is emptied. allows an app to de-select a gene in this way */
@@ -82,10 +90,40 @@ type GeneSearchBoxArg = {
 	hideInputBeforeCallback?: boolean
 	/** option to disable the input, useful in demo mode */
 	disableInput?: boolean
+	/** if true, allow user to type in a sequence mutation
+	partial support of hgvs https://varnomen.hgvs.org/recommendations/DNA/
+	limited to substitution/insertion/deletion on "g."
+	other references (o. m. c. n.) are not supported
+
+	entered positions are 1-based, parse to 0-based (TODO: this needs to be verified)
+
+	snv
+		given chr14:g.104780214C>T
+		parse to chr14.104780214.C.T
+
+	mnv
+		given chr2:g.119955155_119955159delinsTTTTT
+		parse to chr2.119955155.AGCTG.TTTTT
+		must query ref allele
+
+	deletion
+		chr17:g.7673802delCGCACCTCAAAGCTGTTC
+		parse to chr17.7673802.CGCACCTCAAAGCTGTTC.-
+
+		chr?:g.33344591del
+		parse to chr?.33344591.A.-
+		must query ref allele
+
+		if allele is present after "del", will use the allele
+		otherwise decide by position/range
+		https://varnomen.hgvs.org/recommendations/DNA/variant/deletion/
+
+	insertion
+		chr5:g.171410539_171410540insTCTG
+		parse to chr5.171410539.-.TCTG
+	*/
+	allowVariant?: boolean
 }
-/*************************************
-by calling addGeneSearchbox(), it redirectly returns a RESULT object detailed below without await
-*/
 
 /** "start/stop" are included when entered a coordinate or the coord is mapped from a gene/snp */
 type GeneOrSNPResult = { start: number; stop: number; ref?: string; alt?: string[] | string }
@@ -98,56 +136,12 @@ type ResultArg = (GeneOrSNPResult | VariantResult) & {
 
 type Result = Partial<GeneOrSNPResult> &
 	Partial<VariantResult> & { geneSymbol?: string; fromWhat?: string; chr?: string; searchbox?: any }
-/***********************************
-if arg.callback() is not provided:
-    any match is silently written to RESULT
-    with repeated search the latest match is written to RESULT
-    common pattern is that user will press a button to launch some logic that will check RESULT
-    it's up to the calling code to decide when to access RESULT (e.g. pressing some button in caller's ui)
-    usecase: block.tk.bam.gdc.js
-
-if arg.callback() is provided:
-    upon a match, RESULT is updated and callback is triggered
-    as a way to notify caller to do subsequent steps
-    usecase: geneSearch4GDCmds3.js
-
-
-***********************************
-partial support of hgvs https://varnomen.hgvs.org/recommendations/DNA/
-
-limited to substitution/insertion/deletion on "g."
-other references (o. m. c. n.) are not supported
-
-entered positions are 1-based, parse to 0-based (TODO: this needs to be verified)
-
-snv
-    given chr14:g.104780214C>T
-    parse to chr14.104780214.C.T
-
-mnv
-    given chr2:g.119955155_119955159delinsTTTTT
-    parse to chr2.119955155.AGCTG.TTTTT
-    must query ref allele
-
-deletion
-    chr17:g.7673802delCGCACCTCAAAGCTGTTC
-    parse to chr17.7673802.CGCACCTCAAAGCTGTTC.-
-
-    chr?:g.33344591del
-    parse to chr?.33344591.A.-
-    must query ref allele
-
-    if allele is present after "del", will use the allele
-    otherwise decide by position/range
-    https://varnomen.hgvs.org/recommendations/DNA/variant/deletion/
-
-insertion
-    chr5:g.171410539_171410540insTCTG
-    parse to chr5.171410539.-.TCTG
-*/
 
 export const debounceDelay = 500
 
+/*************************************
+by calling addGeneSearchbox(), it redirectly returns a RESULT object detailed below without await
+*/
 export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 	const tip = arg.tip,
 		row = arg.row
@@ -238,11 +232,12 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 					if (hitgene.size()) {
 						// gene match
 						const geneSymbol = hitgene.datum()
-						if (arg.searchOnly == 'gene') getResult({ geneSymbol }, geneSymbol)
-						else await geneCoordSearch(geneSymbol)
-
-						// clear gene hits
-						tip.showunder(searchbox.node()).clear()
+						if (arg.searchOnly == 'gene') {
+							getResult({ geneSymbol }, geneSymbol)
+						} else {
+							await geneCoordSearch(geneSymbol)
+						}
+						// must not clear tip, genes on multiple loci will show as further options
 						return
 					}
 				}
