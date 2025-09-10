@@ -334,15 +334,15 @@ class TdbBoxplot extends RxComponentInner {
 	}
 
 	getChartImages() {
-		const name2svg = {}
+		const chartImages: any[] = []
 		const charts: any[] = this.data.charts
 		for (const [key, chart] of Object.entries(charts)) {
 			const svg: any = chart.svg
 			const title = getChartTitle(this.state.config, key)
 			const name = `${this.state.config.term.term.name}  ${title}`
-			name2svg[name] = { svg, parent: svg.node() }
+			chartImages.push({ name, svg, parent: svg.node() })
 		}
-		return name2svg
+		return chartImages
 	}
 
 	download(event) {

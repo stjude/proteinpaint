@@ -569,7 +569,7 @@ export class profilePlot {
 	}
 
 	getChartImages() {
-		return { [this.chartName]: { svg: this.dom.svg, parent: this.dom.svg.node() } }
+		return [{ name: '', svg: this.dom.svg, parent: this.dom.svg.node() }]
 	}
 }
 

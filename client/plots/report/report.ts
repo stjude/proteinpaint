@@ -4,7 +4,7 @@ import { ReportView } from './view/reportView'
 import { RxComponentInner } from '../../types/rx.d'
 import { controlsInit } from '../controls.js'
 import { importPlot } from '#plots/importPlot.js'
-import { getPdfScale } from '#dom'
+import { downloadSVGsAsPdf } from '#dom'
 
 export class Report extends RxComponentInner {
 	config: any
@@ -123,66 +123,20 @@ export class Report extends RxComponentInner {
 	}
 
 	async downloadReport() {
-		const JSPDF = await import('jspdf')
-		const { jsPDF } = JSPDF
-		/*
-		When imported, the svg2pdf.js module modifies or extends the jsPDF library (which we already imported).
-		The code inside svg2pdf.js adds a new method (.svg()) to the jsPDF object prototype, making that functionality available on all jsPDF instances.
-		Therefore, a simple import 'svg2pdf.js' without curly braces is all that is needed to apply its functionality. 
-		*/
-		await import('svg2pdf.js') // This import extends jsPDF with SVG functionality
-		const doc: any = new jsPDF('landscape', 'pt', 'a4') // p for portrait, l for landscape, points, A4 size
-		const pageWidth = doc.internal.pageSize.getWidth() - 10
-		const pageHeight = doc.internal.pageSize.getHeight() - 10
-
-		let y = 40
-		const padding = 0.05 * pageWidth
-		const x = padding
-		doc.setFontSize(10)
-
+		const chartImagesAll: any[] = []
 		for (const section of this.config.sections) {
 			for (const plotConfig of section.plots) {
 				const plot = this.components.plots[plotConfig.id]
 				if (plot?.getChartImages) {
-					const name2svg = plot.getChartImages()
-					const entries: any[] = Object.entries(name2svg)
-
-					for (const [name, chart] of entries) {
-						const parent = chart.parent
-						const svg = chart.svg.node().cloneNode(true)
-						if (parent) {
-							const svgStyles = window.getComputedStyle(parent)
-							for (const [prop, value] of Object.entries(svgStyles)) {
-								if (prop.startsWith('font')) {
-									svg.style[prop] = value
-								}
-							}
-						}
-						chart.parent.appendChild(svg) //Added otherwise does not print, will remove later
-						const svgWidth = svg.getAttribute('width')
-						const svgHeight = svg.getAttribute('height')
-						svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`)
-						const scale = getPdfScale(pageWidth, pageHeight, svgWidth, svgHeight)
-						const width = svgWidth * scale //convert to pt and fit to page size
-						const height = svgHeight * scale //convert to pt and fit to page size
-						if (y + height > pageHeight - padding) {
-							doc.addPage()
-							y = 40
-						}
-
-						const text = name.length > 90 ? name.slice(0, 90) + '...' : name
-						doc.text(`${section.name} / ${text}`, x, y)
-						y += 30
-
-						await doc.svg(svg, { x, y, width, height })
-						y = y + height + 60
-						chart.parent.removeChild(svg)
+					const chartImages = plot.getChartImages()
+					for (const chartImage of chartImages) {
+						chartImage.name = `${section.name} / ${chartImage.name}`
+						chartImagesAll.push(chartImage)
 					}
 				}
 			}
 		}
-		if (y == 40) doc.deletePage(doc.internal.getNumberOfPages()) //delete last page if nothing added
-		doc.save('report.pdf')
+		downloadSVGsAsPdf(chartImagesAll, 'report', 'landscape')
 	}
 }
 

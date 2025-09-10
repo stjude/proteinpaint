@@ -1022,19 +1022,19 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.download = function (event) {
-		const name2svg = self.getChartImages()
-		const menu = new DownloadMenu(name2svg, self.state.config.term.term.name)
+		const charts = self.getChartImages()
+		const menu = new DownloadMenu(charts, self.state.config.term.term.name)
 		menu.show(event.clientX, event.clientY)
 	}
 
 	self.getChartImages = function () {
-		const name2svg = {}
+		const charts: any[] = []
 		const node = self.dom.chartsDiv.select('.sjpp-survival-mainG').node() //node to read the style
 
 		for (const chart of self.pj.tree.charts) {
-			name2svg[chart.chartId] = { svg: chart.svg, parent: node }
+			charts.push({ name: chart.chartId, svg: chart.svg, parent: node })
 		}
-		return name2svg
+		return charts
 	}
 
 	// The logic is replaced by the downloadMenu SVG option
