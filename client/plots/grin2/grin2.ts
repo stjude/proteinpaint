@@ -395,27 +395,28 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 
 		const plotDims = {
 			svg: {
-				height: plotData.plot_height + settings.left + settings.right,
-				width: plotData.plot_width + settings.bottom,
-				x: settings.left
+				height: plotData.plot_height + settings.bottom + settings.top,
+				width: plotData.plot_width + settings.left,
+				x: settings.left,
+				y: settings.top
 			},
 			xAxis: {
-				x: settings.left + offset * 3,
-				y: xAxisStart,
-				scale: scaleLinear().domain([0, plotData.total_genome_length]).range([0, plotData.plot_width])
+				scale: scaleLinear()
+					.domain([0, plotData.total_genome_length])
+					.range([0, plotData.plot_width - settings.right])
 			},
 			chrsLabel: {
-				start: settings.left,
+				start: settings.left + offset * 2 + 5,
 				end: settings.left,
 				y: xAxisStart + offset * 2
 			},
 			xLabel: {
 				x: settings.left + plotData.plot_width / 2,
-				y: xAxisStart + offset * 4
+				y: xAxisStart + settings.top + offset * 4
 			},
 			yAxis: {
 				x: settings.left,
-				y: offset + settings.radius * 2,
+				y: settings.top + offset + settings.radius * 2,
 				scale: scaleLinear()
 					.domain([0, Math.max(...plotData.points.map(p => p.y))])
 					.range([yScaleRange, 0])
@@ -435,15 +436,15 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 
 		// Move existing content into a group with margin offset
 		const existingContent = svg.selectAll('*')
-		const plotGroup = svg.append('g').attr('transform', `translate(${plotDims.svg.x}, 0)`)
+		const plotGroup = svg.append('g').attr('transform', `translate(${plotDims.svg.x}, ${plotDims.svg.y})`)
 
 		// Move existing elements to the offset group
 		existingContent.each(function (this: Element) {
 			plotGroup.node()!.appendChild(this)
 		})
 
-		const addAxisLabel = (x: number, y: number, text: string) => {
-			svg
+		const addAxisLabel = (x: number, y: number, text: string, isLeft = false) => {
+			const label = svg
 				.append('text')
 				.attr('x', x)
 				.attr('y', y)
@@ -451,19 +452,12 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 				.attr('font-size', `${fontSize}px`)
 				.attr('fill', 'black')
 				.text(text)
+
+			if (isLeft) label.attr('transform', `rotate(-90)`)
 		}
 
 		// x-axis
 		const xScale = plotDims.xAxis
-
-		// X-axis at bottom
-		const xAxis = d3axis
-			.axisBottom(xScale.scale)
-			.tickFormat(() => '')
-			.tickSizeOuter(0)
-			.ticks(0) // Remove default ticks
-
-		svg.append('g').attr('transform', `translate(${xScale.x}, ${xScale.y})`).call(xAxis)
 
 		// Add chromosome labels (instead of numbered ticks) to the x-axis
 		if (plotData.chrom_data) {
@@ -473,10 +467,7 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 				// Skip if the label is "M"
 				if (chromLabel === 'M') return
 
-				// Calculate start, end, and center positions for the chromosome
-				const startPos = plotDims.chrsLabel.start + xScale.scale(data.start)
-				const endPos = plotDims.chrsLabel.end + xScale.scale(data.start + data.size)
-				const centerPos = startPos + (endPos - startPos) / 2
+				const centerPos = plotDims.chrsLabel.start + xScale.scale(data.center)
 
 				// Position label at true center
 				svg
@@ -500,7 +491,7 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 		yAxisG.call(d3axis.axisLeft(yScale.scale))
 
 		// Y-axis label
-		addAxisLabel(plotDims.yLabel.x, plotDims.yLabel.y, '-log₁₀(q-value)')
+		addAxisLabel(plotDims.yLabel.x, plotDims.yLabel.y, '-log₁₀(q-value)', true)
 	}
 
 	private addLegend(plotData: any, svg: any) {
@@ -521,18 +512,6 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 		const totalWidth = legendData.length * itemWidth
 		const legendX = plotData.plot_width + margin.left - totalWidth // Position from right edge
 
-		// Add white background box
-		svg
-			.append('rect')
-			.attr('x', legendX - 10)
-			.attr('y', legendY - 5)
-			.attr('width', totalWidth + 20)
-			.attr('height', 25)
-			.attr('fill', 'white')
-			.attr('stroke', '#ccc')
-			.attr('stroke-width', 1)
-			.attr('rx', 3) // Rounded corners
-
 		// Legend items
 		legendData.forEach((item, i) => {
 			const x = legendX + i * itemWidth
@@ -541,7 +520,7 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 			svg
 				.append('circle')
 				.attr('cx', x + 8)
-				.attr('cy', legendY + 8)
+				.attr('cy', legendY)
 				.attr('r', 6)
 				.attr('fill', item.color)
 				.attr('stroke', 'black')
@@ -551,7 +530,7 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 			svg
 				.append('text')
 				.attr('x', x + 20)
-				.attr('y', legendY + 12)
+				.attr('y', legendY + 4)
 				.attr('font-size', '12px')
 				.attr('fill', 'black')
 				.text(item.type)
@@ -793,8 +772,9 @@ function getDefaultSettings(opts) {
 			width: 1000,
 			radius: 2,
 			bottom: 80,
+			top: 20,
 			left: 80,
-			right: 20
+			right: 50
 		}
 	}
 	return Object.assign(defaults, opts.overrides)
