@@ -9,7 +9,7 @@ import type { Geometry } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Settings from '#plots/wsiviewer/Settings.ts'
 import type { Prediction, TileSelection } from '@sjcrh/proteinpaint-types'
-import type { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
+import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.ts'
 import type { DeleteWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/deleteWSIAnnotation.js'
 
@@ -58,6 +58,8 @@ export class WSIViewerInteractions {
 		) => {
 			const state = wsiApp.app.getState()
 			const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
+
+			if (!zoomInPoints || zoomInPoints.length == 0) return
 
 			setTimeout(() => {
 				if (!activeImageExtent) return
@@ -114,10 +116,8 @@ export class WSIViewerInteractions {
 			holder.attr('tabindex', 0)
 			holder.node()?.focus()
 
-			const sessionTileSelections = sessionWSImage?.sessionsTileSelections || []
-			const predictions = sessionWSImage?.predictions || []
-			const annotations = sessionWSImage?.annotations || []
-			const annotationsData = [...sessionTileSelections, ...predictions, ...annotations]
+			// TODO extract this SessionWSImage which should covered to a class
+			const tileSelections = SessionWSImage.getTileSelections(sessionWSImage) || []
 
 			holder.on('keydown', async (event: KeyboardEvent) => {
 				let currentIndex = buffers.annotationsIdx.get()
@@ -127,7 +127,7 @@ export class WSIViewerInteractions {
 				const idx = currentIndex
 				if (event.key == '.') {
 					//Do not react if at the last annotation
-					if (currentIndex == annotationsData.length) return
+					if (currentIndex == tileSelections.length) return
 					currentIndex += 1
 				}
 				if (event.key == ',') {
@@ -144,13 +144,13 @@ export class WSIViewerInteractions {
 
 				if (event.key == 'Backspace') {
 					//Delete
-					this.deleteAnnotation(vectorLayer!, currentIndex)
+					this.deleteAnnotation(vectorLayer!, tileSelections, currentIndex)
 
 					const body: DeleteWSIAnnotationRequest = {
 						genome: state.vocab.genome,
 						dslabel: state.vocab.dslabel,
 						projectId: state.aiProjectID,
-						annotation: annotationsData[currentIndex],
+						annotation: tileSelections[currentIndex],
 						wsimage: sessionWSImage.filename
 					}
 					try {
@@ -159,9 +159,9 @@ export class WSIViewerInteractions {
 						console.error('Error in deleteWSIAnnotation request:', e.message || e)
 					}
 
-					const nextIdx = currentIndex == annotationsData.length ? 0 : currentIndex + 1
+					const nextIdx = currentIndex == tileSelections.length ? 0 : currentIndex + 1
 					buffers.annotationsIdx.set(nextIdx)
-					const coords = [annotationsData[nextIdx].zoomCoordinates] as unknown as [number, number][]
+					const coords = [tileSelections[nextIdx].zoomCoordinates] as unknown as [number, number][]
 					this.zoomInEffectListener(activeImageExtent, coords, map, activePatchColor)
 					return
 				}
@@ -176,7 +176,7 @@ export class WSIViewerInteractions {
 				}
 
 				if (shortcuts.includes(event.code)) {
-					if (event.code === 'Enter' && !(annotationsData[currentIndex] as Prediction).uncertainty) {
+					if (event.code === 'Enter' && !(tileSelections[currentIndex] as Prediction).uncertainty) {
 						// in case it's not a prediction, just ignore Enter press
 						return
 					}
@@ -184,23 +184,25 @@ export class WSIViewerInteractions {
 					//Update buffer to change table
 					let matchingClass = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)
 
-					if (!matchingClass) {
+					const predictions = sessionWSImage?.predictions
+
+					if (!matchingClass && predictions) {
 						matchingClass = sessionWSImage?.classes?.find(c => c.label === predictions[currentIndex].class)
 					}
 					const tmpClass =
-						event.code === 'Enter' || matchingClass!.label == annotationsData[currentIndex].class
+						event.code === 'Enter' || matchingClass!.label == tileSelections[currentIndex].class
 							? { label: 'Confirmed', color: matchingClass?.color || '' }
 							: { label: matchingClass!.label, color: matchingClass!.color }
 					buffers.tmpClass.set(tmpClass)
 
-					this.addAnnotation(vectorLayer!, annotationsData, currentIndex, matchingClass!.color, settings.tileSize)
+					this.addAnnotation(vectorLayer!, tileSelections, currentIndex, matchingClass!.color, settings.tileSize)
 
 					const selectedClassId = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)?.id
 
 					const body: SaveWSIAnnotationRequest = {
 						genome: state.vocab.genome,
 						dslabel: state.vocab.dslabel,
-						coordinates: annotationsData[currentIndex].zoomCoordinates,
+						coordinates: tileSelections[currentIndex].zoomCoordinates,
 						classId: selectedClassId!,
 						projectId: aiProjectID,
 						wsimage: sessionWSImage.filename
@@ -211,9 +213,9 @@ export class WSIViewerInteractions {
 						await dofetch3('saveWSIAnnotation', { method: 'POST', body })
 						//Advance to the next table row after annotating
 						const nextIdx = currentIndex + 1
-						if (nextIdx < annotationsData.length) {
+						if (nextIdx < tileSelections.length) {
 							buffers.annotationsIdx.set(nextIdx)
-							const coords = [annotationsData[nextIdx].zoomCoordinates] as unknown as [number, number][]
+							const coords = [tileSelections[nextIdx].zoomCoordinates] as unknown as [number, number][]
 							this.zoomInEffectListener(activeImageExtent, coords, map, activePatchColor)
 						}
 					} catch (e) {
@@ -233,11 +235,11 @@ export class WSIViewerInteractions {
 		) => {
 			const state = wsiApp.app.getState()
 			const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
-			const currentTileSelection = settings.sessionsTileSelection
+			const sessionsTileSelection = settings.sessionsTileSelection
 			const predictions = sessionWSImage?.predictions || []
-			const persistedAnnotationsData = sessionWSImage?.annotations || []
+			const annotations = sessionWSImage?.annotations || []
 
-			const annotationsData = [...currentTileSelection, ...predictions, ...persistedAnnotationsData]
+			const annotationsData = [...sessionsTileSelection, ...predictions, ...annotations]
 
 			// Check if click falls inside an existing annotation
 			const selectedAnnotationIndex = annotationsData.findIndex(annotation => {
@@ -262,6 +264,7 @@ export class WSIViewerInteractions {
 				.getLayers()
 				.getArray()
 				.find(l => l instanceof VectorLayer)!
+
 			const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
 
 			const topLeft: [number, number] = [coordinateX, -coordinateY]
@@ -270,8 +273,14 @@ export class WSIViewerInteractions {
 				settings.tileSize,
 				30,
 				settings.selectedPatchBorderColor,
-				`prediction-border-${selectedAnnotationIndex}`
+				`prediction-border-${newTileSelection.zoomCoordinates}`
 			)
+
+			console.log('topLeft', topLeft)
+
+			console.log('source', source)
+			console.log('borderFeature', borderFeature)
+			//Add border feature
 
 			source?.addFeature(borderFeature)
 
@@ -281,7 +290,7 @@ export class WSIViewerInteractions {
 				config: {
 					settings: {
 						renderWSIViewer: false,
-						sessionsTileSelection: [newTileSelection, ...currentTileSelection]
+						sessionsTileSelection: [newTileSelection, ...sessionsTileSelection]
 					}
 				}
 			})
@@ -336,11 +345,12 @@ export class WSIViewerInteractions {
 		source?.addFeature(square)
 	}
 
-	private deleteAnnotation(vectorLayer: VectorLayer, currentIndex: number) {
+	private deleteAnnotation(vectorLayer: VectorLayer, tileSelections: TileSelection[], currentIndex: number) {
+		const tileSelection = tileSelections[currentIndex]
 		const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
 
 		//Remove annotated square
-		const annotationFeature = source?.getFeatureById(`annotation-square-${currentIndex}`)
+		const annotationFeature = source?.getFeatureById(`annotation-square-${tileSelection.zoomCoordinates}`)
 		if (annotationFeature) {
 			source?.removeFeature(annotationFeature)
 		}
@@ -350,7 +360,7 @@ export class WSIViewerInteractions {
 			source?.removeFeature(activeBorderFeature)
 		}
 		// Remove prediction border
-		const predictionBorderFeature = source?.getFeatureById(`prediction-border-${currentIndex}`)
+		const predictionBorderFeature = source?.getFeatureById(`prediction-border-${tileSelection.zoomCoordinates}`)
 		if (predictionBorderFeature) {
 			source?.removeFeature(predictionBorderFeature)
 		}

@@ -11,7 +11,7 @@ export default function wsiViewerDefaults(overrides = {}): Settings {
 		thumbnailWidth: '60px',
 		thumbnailHeight: '80px',
 		renderWSIViewer: true,
-		renderAnnotationTable: true,
+		renderAnnotationTable: false,
 		selectedPatchBorderColor: '#FFA500',
 		tileSize: 512, // 512px
 		activeAnnotation: 0,

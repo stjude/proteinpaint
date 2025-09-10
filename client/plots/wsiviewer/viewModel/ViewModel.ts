@@ -19,7 +19,7 @@ export class ViewModel {
 		sessionsTileSelections: TileSelection[],
 		displayedImageIndex: number
 	) {
-		this.sampleWSImages = sampleWSImages
+		this.sampleWSImages = sampleWSImages as SessionWSImage[]
 		if (this.sampleWSImages[displayedImageIndex]) {
 			this.sampleWSImages[displayedImageIndex].sessionsTileSelections = sessionsTileSelections
 		}
@@ -53,10 +53,7 @@ export class ViewModel {
 	}
 
 	private setAnnonationsTableData(imageViewData: ImageViewData, imageData: SessionWSImage) {
-		if (!imageData?.annotations?.length && !imageData?.predictions?.length) return
-
-		// Map session annotations to the same format, starting index at 0
-		const sessionsTileSelections: any = imageData.sessionsTileSelections?.map((d, i) => {
+		const sessionsTileSelections: any[] = (imageData.sessionsTileSelections ?? []).map((d, i) => {
 			return [
 				{ value: i }, // Index
 				{ value: d.zoomCoordinates },
@@ -67,8 +64,7 @@ export class ViewModel {
 			]
 		})
 
-		// Original annotations follow, indexing continues from session annotations
-		const predictionRows: any = imageData.predictions!.map((d, i) => {
+		const predictionRows: any[] = (imageData.predictions ?? []).map((d, i) => {
 			return [
 				{ value: imageData.sessionsTileSelections!.length + i }, // Continue index
 				{ value: d.zoomCoordinates },
@@ -80,9 +76,9 @@ export class ViewModel {
 		})
 
 		// Original annotations follow, indexing continues from session annotations
-		const annotationsRows: any = imageData.annotations!.map((d, i) => {
+		const annotationsRows: any = (imageData.predictions ?? []).map((d, i) => {
 			return [
-				{ value: imageData.sessionsTileSelections!.length + imageData.predictions!.length + i }, // Continue index
+				{ value: sessionsTileSelections.length + predictionRows.length + i }, // Continue index
 				{ value: d.zoomCoordinates },
 				{ value: 0 },
 				{ value: '' },

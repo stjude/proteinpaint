@@ -24,7 +24,7 @@
         },
         {
             "//comment": "This is for testing only. HIDE in production. Remove when no longer needed.",
-            "hidden": true,
+            "hidden": false,
             "label": "AI Histo tool",
             "runargs": {
                 "mass": {
