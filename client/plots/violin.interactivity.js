@@ -1,29 +1,39 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
 import { niceNumLabels } from '#dom'
-import { to_svg } from '#src/client'
-import { rgb } from 'd3'
+import { rgb, select } from 'd3'
 import { TermTypes } from '#shared/terms.js'
 import { getSamplelstFilter } from '../mass/groups.js'
 import { listSamples } from './barchart.events.js'
+import { DownloadMenu } from '#dom'
 
 export function setInteractivity(self) {
-	self.download = () => {
+	self.getChartImages = function () {
+		const name2svg = {}
+
+		for (const [key, chart] of Object.entries(self.data.charts)) {
+			const title = self.getChartTitle(chart.chartId)
+			const name = `${self.config.term.term.name}  ${title}`
+			const chartDiv = chart.chartDiv
+			name2svg[name] = { svg: chartDiv.select('svg'), parent: chartDiv.node() }
+		}
+		return name2svg
+	}
+
+	self.download = function (event) {
 		if (!self.state) return
 
-		// has to be able to handle multichart view
-		// const mainGs = []
-		// const translate = { x: undefined, y: undefined }
-		// const titles = []
-		// let maxw = 0,
-		// 	maxh = 0,
-		// 	tboxh = 0
-		// let prevY = 0,
-		// 	numChartsPerRow = 0
-
-		self.dom.violinDiv.selectAll('.sjpp-violin-plot').each(function () {
-			to_svg(this, self.state.config.downloadFilename || 'violin', { apply_dom_styles: true })
-		})
+		const name2svg = self.getChartImages()
+		const dm = new DownloadMenu(name2svg, self.config.term.term.name)
+		dm.show(event.clientX, event.clientY)
 	}
+
+	//replaced by downloadMenu
+	// self.download = () => {
+	// 	if (!self.state) return
+	// 	self.dom.violinDiv.selectAll('.sjpp-violin-plot').each(function () {
+	// 		to_svg(this, self.state.config.downloadFilename || 'violin', { apply_dom_styles: true })
+	// 	})
+	// }
 
 	self.displayLabelClickMenu = function (t1, t2, plot, event) {
 		if (!t2) return // when no term 2 do not show options on the sole violin label

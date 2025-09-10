@@ -58,6 +58,7 @@ export default function setViolinRenderer(self) {
 				.append('div')
 				.attr('class', 'sjpp-vp-chartDiv')
 				.style('padding', Object.keys(self.data.charts).length > 1 ? '20px 20px 0px 0px' : '0px')
+			chart.chartDiv = chartDiv
 			if (plots.length === 0) {
 				chartDiv.html(` <span style="opacity:.6;font-size:1em;margin-left:90px;">No data to render Violin Plot</span>`)
 				return
@@ -74,7 +75,7 @@ export default function setViolinRenderer(self) {
 				.style('text-align', 'center')
 				.style('font-size', '1.1em')
 				.style('margin-bottom', '20px')
-				.html(getChartTitle(chart.chartId))
+				.html(self.getChartTitle(chart.chartId))
 
 			// render chart data
 			const svgData = renderSvg(t1, plots, chartDiv, self, isH, settings)
@@ -216,7 +217,7 @@ export default function setViolinRenderer(self) {
 		})
 	}
 
-	function getChartTitle(chartId) {
+	self.getChartTitle = function (chartId) {
 		if (!self.config.term0) return chartId
 		return self.config.term0.term.values && chartId in self.config.term0.term.values
 			? self.config.term0.term.values[chartId].label
