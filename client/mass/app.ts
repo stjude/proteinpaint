@@ -209,13 +209,9 @@ class MassApp extends AppBase implements RxAppInner {
 	}
 
 	async downloadSVGsAsPdf() {
+		// some duplication with dowloadMenu.ts/downloadSVGsAsPdf(), which contains notes on dependency usage
 		const JSPDF = await import('jspdf')
 		const { jsPDF } = JSPDF
-		/*
-		When imported, the svg2pdf.js module modifies or extends the jsPDF library (which we already imported).
-		The code inside svg2pdf.js adds a new method (.svg()) to the jsPDF object prototype, making that functionality available on all jsPDF instances.
-		Therefore, a simple import 'svg2pdf.js' without curly braces is all that is needed to apply its functionality. 
-		*/
 		await import('svg2pdf.js') // This import extends jsPDF with SVG functionality
 		const doc = new jsPDF('landscape', 'pt', 'a4') // p for portrait, l for landscape, points, A4 size
 		doc.setFontSize(12)
