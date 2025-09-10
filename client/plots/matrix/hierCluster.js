@@ -127,7 +127,7 @@ export class HierCluster extends Matrix {
 		for (const [i, column] of c.col.order.entries()) {
 			samples[column.name] = { sample: column.name }
 			for (const [j, row] of c.row.order.entries()) {
-				const tw = twlst.find(tw => tw.$id === row.name)
+				const tw = twlst.find(tw => tw.$id === row.name || tw.id === row.name)
 				const value = c.matrix[j][i]
 				samples[column.name][tw.$id] = {
 					key: tw.term.name,
