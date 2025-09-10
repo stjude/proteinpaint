@@ -27,7 +27,7 @@ export class RunchartViewModel extends ScatterViewModelBase {
 		const color = this.runchart.config.term0 ? this.runchart.cat2Color(chart.id) : this.runchart.settings.defaultColor
 		const coords = chart.cohortSamples.map(s => this.model.getCoordinates(chart, s)).sort((a, b) => a.x - b.x)
 
-		const xtext = coords[coords.length - 1].x - 20
+		const xtext = coords[coords.length - 1].x - 30
 		const areaBuilder = line()
 			.x((d: any) => d.x)
 			.y((d: any) => d.y)
