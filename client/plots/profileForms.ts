@@ -73,7 +73,7 @@ export class profileForms extends profilePlot {
 
 		const shift = 650
 		const shiftTop = 50
-		const width = settings.svgw + shift + 600
+		const width = settings.svgw + shift + 440
 		const svg = rightDiv.style('padding', '20px').append('svg').attr('width', width)
 		svg
 			.append('defs')
@@ -90,7 +90,7 @@ export class profileForms extends profilePlot {
 		this.shift = shift
 		const mainG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop})`)
 		const gridG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop})`)
-		this.filterG = svg.append('g').attr('transform', `translate(${shift + settings.svgw + 120}, ${shiftTop})`)
+		this.filterG = svg.append('g').attr('transform', `translate(${shift + settings.svgw + 60}, ${shiftTop})`)
 		const legendG = svg.append('g') //each plot will translate it to the right position
 
 		const xAxisG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop / 2})`)
@@ -305,7 +305,7 @@ export class profileForms extends profilePlot {
 		this.categories.add(category)
 
 		const percent = (value / total) * 100
-		const width = (percent / 100) * (this.settings.svgw - 150) //last 100 is for the not applicable category
+		const width = (percent / 100) * this.settings.svgw
 		itemG
 			.append('rect')
 			.attr('x', x)
@@ -438,7 +438,7 @@ export function getDefaultProfileFormsSettings() {
 		controls: {
 			isOpen: false
 		},
-		profileForms: { svgw: 400, svgh: 480 }
+		profileForms: { svgw: 420, svgh: 480 }
 	}
 	const profilePlotSettings = getDefaultProfilePlotSettings()
 	settings.profileForms = copyMerge(settings.profileForms, profilePlotSettings)
