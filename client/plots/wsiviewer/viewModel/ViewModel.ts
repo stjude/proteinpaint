@@ -19,7 +19,7 @@ export class ViewModel {
 		sessionsTileSelections: TileSelection[],
 		displayedImageIndex: number
 	) {
-		this.sampleWSImages = sampleWSImages as SessionWSImage[]
+		this.sampleWSImages = sampleWSImages
 		if (this.sampleWSImages[displayedImageIndex]) {
 			this.sampleWSImages[displayedImageIndex].sessionsTileSelections = sessionsTileSelections
 		}
