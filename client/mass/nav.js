@@ -207,7 +207,7 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('float', 'right')
 			.style('font-size', '1.1em')
-			.style('margin', '50px 100px 0 0')
+			.style('margin', '50px 10px 0 0')
 			.text(massNav?.title?.text) //this line will be executed in update UI to reflect cohort changes
 
 		const tabDiv = header.append('div').style('display', 'none').style('vertical-align', 'bottom')
@@ -234,16 +234,17 @@ function setRenderers(self) {
 			searchDiv: controlsDiv.append('div').style('margin', '10px'),
 			sessionDiv: controlsDiv.append('div').style('display', 'inline-block'),
 			recoverDiv: controlsDiv.append('div').style('display', 'inline-block'),
-			deleteAllDiv: controlsDiv
-				.append('div')
-				.style('display', 'inline-block')
-				.style('padding', '4px')
-				.style('vertical-align', 'middle'),
 			pdfDiv: controlsDiv
 				.append('div')
 				.style('display', 'inline-block')
 				.style('padding', '4px')
 				.style('vertical-align', 'middle'),
+			deleteAllDiv: controlsDiv
+				.append('div')
+				.style('display', 'inline-block')
+				.style('padding', '4px')
+				.style('vertical-align', 'middle'),
+
 			helpDiv: controlsDiv.append('div').style('display', 'none'),
 			sessionElapsedMessageDiv: controlsDiv.append('div').style('display', 'none'),
 			subheaderDiv: self.opts.holder

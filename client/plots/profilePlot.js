@@ -486,8 +486,10 @@ export class profilePlot {
 			.text(`${title} (n=${this.data.n})`)
 			.attr('transform', `translate(0, -5)`)
 		for (const tw of this.config.filterTWs) this.addFilterLegendItem(tw.term.name, this.settings[tw.term.id])
-		const hospital = this.data.hospital
+
 		if (this.settings.site) {
+			let hospital = this.data.hospital
+			if (hospital?.length > 50) hospital = hospital.slice(0, 50) + '...'
 			const label = this.sites.find(s => s.value == this.settings.site).label
 			this.addFilterLegendItem('Facility ID', label)
 			this.addFilterLegendItem('Facility', hospital)
