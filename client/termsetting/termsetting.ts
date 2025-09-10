@@ -11,7 +11,6 @@ import type {
 	TwLst,
 	NumericQ,
 	SnpsQ,
-	VocabApi,
 	Dom,
 	UseCase,
 	NoTermPromptOptsEntry,
@@ -20,7 +19,7 @@ import type {
 	Term,
 	GvPredefinedGsTW
 } from '#types'
-import type { TermSettingOpts, Handler, PillData } from './types'
+import type { TermSettingOpts, Handler, PillData, VocabApi } from './types'
 import { TermTypes, isDictionaryType, isNumericTerm } from '#shared/terms.js'
 import { TwRouter, routedTermTypes } from '#tw/TwRouter'
 
@@ -202,7 +201,7 @@ export class TermSetting {
 					throw e
 				}
 			}
-		} as TermSettingApi
+		} satisfies TermSettingApi
 	}
 
 	runCallback(overrideTw = null) {
@@ -1052,7 +1051,7 @@ function checkLegacyTw(tw) {
 	}
 }
 
-async function call_fillTW(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
+export async function call_fillTW(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
 	// repeating this logic from fillTermWrapper(), since call_fillTW() may be called directly
 	// TODO: may deprecate call_fillTW() once all term types have been migrated to xtw
 	if (await mayUseTwRouterFill(tw, vocabApi, defaultQByTsHandler)) return
