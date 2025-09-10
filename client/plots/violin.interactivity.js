@@ -8,15 +8,15 @@ import { DownloadMenu } from '#dom'
 
 export function setInteractivity(self) {
 	self.getChartImages = function () {
-		const name2svg = {}
+		const charts = []
 
 		for (const [key, chart] of Object.entries(self.data.charts)) {
 			const title = self.getChartTitle(chart.chartId)
 			const name = `${self.config.term.term.name}  ${title}`
 			const chartDiv = chart.chartDiv
-			name2svg[name] = { svg: chartDiv.select('svg'), parent: chartDiv.node() }
+			charts.push({ name, svg: chartDiv.select('svg'), parent: chartDiv.node() })
 		}
-		return name2svg
+		return charts
 	}
 
 	self.download = function (event) {

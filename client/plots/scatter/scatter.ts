@@ -165,12 +165,12 @@ export class Scatter extends PlotBase implements RxComponentInner {
 	}
 
 	getChartImages() {
-		const name2svg = {}
+		const chartImages: any[] = []
 		for (const chart of this.model.charts) {
 			const name = `${this.config.name || ''}${chart.id == 'Default' ? '' : ' ' + chart.id}	`
-			name2svg[name] = { svg: chart.svg, parent: chart.svg.node() }
+			chartImages.push({ name, svg: chart.svg, parent: chart.svg.node() })
 		}
-		return name2svg
+		return chartImages
 	}
 }
 

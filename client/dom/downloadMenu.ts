@@ -57,7 +57,7 @@ export class DownloadMenu {
 	}
 }
 
-export async function downloadSVGsAsPdf(name2svg, filename, orientation) {
+export async function downloadSVGsAsPdf(chartImages, filename, orientation) {
 	const JSPDF = await import('jspdf')
 	const { jsPDF } = JSPDF
 	/*
@@ -71,13 +71,13 @@ export async function downloadSVGsAsPdf(name2svg, filename, orientation) {
 	const pageWidth = doc.internal.pageSize.getWidth()
 	const pageHeight = doc.internal.pageSize.getHeight()
 
-	const entries: any[] = Object.entries(name2svg)
 	let y = 50
-	const x = 20 //pt
+	const x = 0.05 * pageWidth
 
-	for (const [name, chart] of entries) {
-		const parent = chart.parent
-		const svg = chart.svg.node().cloneNode(true) //clone to avoid modifying the original
+	for (const chartImage of chartImages) {
+		const name = chartImage.name
+		const parent = chartImage.parent
+		const svg = chartImage.svg.node().cloneNode(true) //clone to avoid modifying the original
 		if (parent) {
 			const svgStyles = window.getComputedStyle(parent)
 			for (const [prop, value] of Object.entries(svgStyles)) {

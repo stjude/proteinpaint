@@ -1114,19 +1114,19 @@ function setInteractivity(self) {
 	self.handlers = getHandlers(self)
 
 	self.getChartImages = function () {
-		const name2svg = {}
+		const charts = []
 		const node = self.dom.barDiv.select('.sjpcb-bars-mainG').node() //node to read the style
 
 		for (const chart of self.charts) {
 			const name = `${this.config.term.term.name}  ${chart.name ? chart.name : ''}`
-			name2svg[name] = { svg: chart.svg, parent: node }
+			charts.push({ name, svg: chart.svg, parent: node })
 		}
-		return name2svg
+		return charts
 	}
 
 	self.download = function (event) {
-		const name2svg = self.getChartImages()
-		const dm = new DownloadMenu(name2svg, self.config.term.term.name)
+		const charts = self.getChartImages()
+		const dm = new DownloadMenu(charts, self.config.term.term.name)
 		dm.show(event.clientX, event.clientY)
 	}
 

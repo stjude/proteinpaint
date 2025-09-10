@@ -5,7 +5,7 @@ import { vocabInit } from '#termdb/vocabulary'
 import { navInit } from './nav'
 import { plotInit } from './plot'
 import { summaryInit } from '#plots/summary.js'
-import { sayerror, Menu, newSandboxDiv, getPdfScale } from '#dom'
+import { sayerror, Menu, newSandboxDiv, downloadSVGsAsPdf } from '#dom'
 
 /*
 opts{}
@@ -130,7 +130,7 @@ class MassApp extends AppBase implements RxAppInner {
 					massSessionDuration: this.state.termdbConfig.massSessionDuration, // this.opts.massSessionDuration
 					pkgver: this.opts.pkgver,
 					downloadPlots: () => {
-						this.downloadSVGsAsPdf()
+						this.downloadPlots()
 					}
 				})
 			}
@@ -208,62 +208,28 @@ class MassApp extends AppBase implements RxAppInner {
 		this.bus.emit('error')
 	}
 
-	async downloadSVGsAsPdf() {
-		// some duplication with dowloadMenu.ts/downloadSVGsAsPdf(), which contains notes on dependency usage
-		const JSPDF = await import('jspdf')
-		const { jsPDF } = JSPDF
-		await import('svg2pdf.js') // This import extends jsPDF with SVG functionality
-		const doc = new jsPDF('landscape', 'pt', 'a4') // p for portrait, l for landscape, points, A4 size
-		doc.setFontSize(12)
-		const pageWidth = doc.internal.pageSize.getWidth() - 10
-		const pageHeight = doc.internal.pageSize.getHeight() - 10
-
-		let y = 50
-		const x = 20
-
+	async downloadPlots() {
+		const chartImagesAll: any[] = []
+		let i = 1
 		for (const key in this.components.plots) {
 			const plot = this.components.plots[key]
 			const chart = plot.type == 'plot' ? plot.getComponents('chart') : plot // implies summary plot
 			const chartImages = chart.getChartImages ? chart.getChartImages() : null
 
 			if (!chartImages) {
-				doc.text(`The ${chart.type} does not support downloading images yet`, x, y)
-				y += 30
+				console.log(`The ${chart.type} does not support downloading images yet`)
 				continue
 			}
-			const entries: any[] = Object.entries(chartImages)
 
-			for (const [name, chart] of entries) {
-				const parent = chart.parent
-				const svg = chart.svg.node().cloneNode(true) //clone to avoid modifying the original
-				if (parent) {
-					const svgStyles = window.getComputedStyle(parent)
-					for (const [prop, value] of Object.entries(svgStyles)) {
-						if (prop.startsWith('font')) svg.style[prop] = value
-					}
-				}
-				parent.appendChild(svg) //Added otherwise does not print, will remove later
-
-				let width = svg.getAttribute('width')
-				let height = svg.getAttribute('height')
-
-				svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
-				const scale = getPdfScale(pageWidth, pageHeight, width, height)
-				width = scale * width
-				height = scale * height
-				if (y + height > pageHeight - 20) {
-					doc.addPage()
-					y = 50
-				}
-
-				doc.text(name.length > 90 ? name.slice(0, 90) + '...' : name, x + 10, y)
-				y += 20
-				await doc.svg(svg, { x, y, width, height })
-				y = y + height + 50
-				parent.removeChild(svg)
+			for (const chartImage of chartImages) {
+				const parent = chartImage.parent
+				const svg = chartImage.svg
+				const name = `${i}. ${chartImage.name}`
+				chartImagesAll.push({ name, svg, parent })
 			}
+			i++
 		}
-		doc.save('plots.pdf')
+		downloadSVGsAsPdf(chartImagesAll, 'plots', 'landscape')
 	}
 }
 
