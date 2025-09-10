@@ -6,7 +6,7 @@
 // Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
 // Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show hyperdiploid overlayed with age", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://10.200.87.133:32580/v2/models/ray_gateway_router/infer", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text-v1.5", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
 // Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary of fusions in men only", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://10.200.87.133:32580/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "nomic-embed-text-v1.5", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
-// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary of  molecular subtype in men only", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://10.200.87.133:32580/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "nomic-embed-text-v1.5", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary of molecular subtype in men only", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://10.200.87.133:32580/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "nomic-embed-text-v1.5", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
 // -------Differential gene expression examples ------//
 
 // Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
@@ -24,7 +24,7 @@ use std::collections::HashMap;
 //use rig::providers::ollama;
 use rig::vector_store::in_memory_store::InMemoryVectorStore;
 use schemars::JsonSchema;
-use serde_json::{Value, json};
+use serde_json::{Map, Value, json};
 use std::fs::File;
 use std::io::{self, Read};
 mod sjprovider; // Importing custom rig module for invoking SJ GPU server
@@ -495,11 +495,115 @@ impl ParseDbRows for DbRows {
     }
 }
 
+async fn parse_dataset_db(db: &str) -> Vec<String> {
+    let manager = SqliteConnectionManager::file(db);
+    let pool = r2d2::Pool::new(manager).unwrap();
+    let conn = pool.get().unwrap();
+
+    let sql_statement_termhtmldef = "SELECT * from termhtmldef";
+    let mut termhtmldef = conn.prepare(&sql_statement_termhtmldef).unwrap();
+    let mut rows_termhtmldef = termhtmldef.query([]).unwrap();
+    let mut description_map = HashMap::new();
+    while let Some(row) = rows_termhtmldef.next().unwrap() {
+        //println!("row:{:?}", row);
+        let name: String = row.get(0).unwrap();
+        //println!("name:{}", name);
+        let json_html_str: String = row.get(1).unwrap();
+        let json_html: Value = serde_json::from_str(&json_html_str).expect("Not a JSON");
+        let json_html2: &Map<String, Value> = json_html.as_object().unwrap();
+        let description: String = String::from(
+            json_html2.get("description").unwrap()[0]
+                .as_object()
+                .unwrap()
+                .get("value")
+                .unwrap()
+                .as_str()
+                .unwrap(),
+        );
+        //println!("description:{}", description);
+        description_map.insert(name, description);
+    }
+
+    //// Open the file
+    //let mut file = File::open(dataset_file).unwrap();
+
+    //// Create a string to hold the file contents
+    //let mut contents = String::new();
+
+    //// Read the file contents into the string
+    //file.read_to_string(&mut contents).unwrap();
+
+    //// Split the contents by the delimiter "---"
+    //let parts: Vec<&str> = contents.split("\n").collect();
+
+    //for (_i, part) in parts.iter().enumerate() {
+    //    let sentence: &str = part.trim();
+    //    let parts2: Vec<&str> = sentence.split(':').collect();
+    //    //println!("parts2:{:?}", parts2);
+    //    if parts2.len() == 2 {
+    //        description_map.insert(parts2[0], parts2[1]);
+    //        //println!("Part {}: {:?}", i + 1, parts2);
+    //    }
+    //}
+    //println!("description_map:{:?}", description_map);
+
+    let sql_statement_terms = "SELECT * from terms";
+    let mut terms = conn.prepare(&sql_statement_terms).unwrap();
+    let mut rows_terms = terms.query([]).unwrap();
+
+    // Print the separated parts
+    let mut rag_docs = Vec::<String>::new();
+    let mut names = Vec::<String>::new();
+    while let Some(row) = rows_terms.next().unwrap() {
+        //println!("row:{:?}", row);
+        let name: String = row.get(0).unwrap();
+        //println!("id:{}", name);
+        match description_map.get(&name as &str) {
+            Some(desc) => {
+                let line: String = row.get(3).unwrap();
+                //println!("line:{}", line);
+                let json_data: Value = serde_json::from_str(&line).expect("Not a JSON");
+                let values_json = json_data["values"].as_object();
+                let mut keys = Vec::<String>::new();
+                match values_json {
+                    Some(values) => {
+                        for (key, _value) in values {
+                            keys.push(key.to_string())
+                        }
+                    }
+                    None => {}
+                }
+
+                let item_type_json = json_data["type"].as_str();
+                let mut item_type: Option<String> = None;
+                match item_type_json {
+                    Some(item_ty) => item_type = Some(String::from(item_ty)),
+                    None => {}
+                }
+
+                //println!("items:{:?}", keys);
+                let item: DbRows = DbRows {
+                    name: name.clone(),
+                    description: Some(String::from(desc.clone())),
+                    term_type: item_type,
+                    values: keys,
+                };
+                //println!("Field details:{}", item.parse_db_rows());
+                rag_docs.push(item.parse_db_rows());
+                names.push(name)
+            }
+            None => {}
+        }
+    }
+    //println!("names:{:?}", names);
+    rag_docs
+}
+
 async fn extract_summary_information(
     user_input: &str,
     comp_model: impl rig::completion::CompletionModel + 'static,
     embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
-    dataset_file: &str,
+    _dataset_file: &str, // Will be deprecated later
     llm_backend_type: &llm_backend,
     temperature: f64,
     max_new_tokens: usize,
@@ -508,83 +612,7 @@ async fn extract_summary_information(
 ) -> String {
     match dataset_db {
         Some(db) => {
-            // Open the file
-            let mut file = File::open(dataset_file).unwrap();
-
-            // Create a string to hold the file contents
-            let mut contents = String::new();
-
-            // Read the file contents into the string
-            file.read_to_string(&mut contents).unwrap();
-
-            // Split the contents by the delimiter "---"
-            let parts: Vec<&str> = contents.split("\n").collect();
-            let mut description_map = HashMap::new();
-            for (_i, part) in parts.iter().enumerate() {
-                let sentence: &str = part.trim();
-                let parts2: Vec<&str> = sentence.split(':').collect();
-                //println!("parts2:{:?}", parts2);
-                if parts2.len() == 2 {
-                    description_map.insert(parts2[0], parts2[1]);
-                    //println!("Part {}: {:?}", i + 1, parts2);
-                }
-            }
-            println!("description_map:{:?}", description_map);
-
-            let manager = SqliteConnectionManager::file(db);
-            let pool = r2d2::Pool::new(manager).unwrap();
-
-            let conn = pool.get().unwrap();
-            let sql_statement = "SELECT * from terms";
-            let mut terms = conn.prepare(&sql_statement).unwrap();
-            let mut rows = terms.query([]).unwrap();
-
-            // Print the separated parts
-            let mut rag_docs = Vec::<String>::new();
-            let mut names = Vec::<String>::new();
-            while let Some(row) = rows.next().unwrap() {
-                //println!("row:{:?}", row);
-                let name: String = row.get(0).unwrap();
-                //println!("id:{}", name);
-                match description_map.get(&name as &str) {
-                    Some(desc) => {
-                        let line: String = row.get(3).unwrap();
-                        //println!("line:{}", line);
-                        let json_data: Value = serde_json::from_str(&line).expect("Not a JSON");
-                        let values_json = json_data["values"].as_object();
-                        let mut keys = Vec::<String>::new();
-                        match values_json {
-                            Some(values) => {
-                                for (key, _value) in values {
-                                    keys.push(key.to_string())
-                                }
-                            }
-                            None => {}
-                        }
-
-                        let item_type_json = json_data["type"].as_str();
-                        let mut item_type: Option<String> = None;
-                        match item_type_json {
-                            Some(item_ty) => item_type = Some(String::from(item_ty)),
-                            None => {}
-                        }
-
-                        //println!("items:{:?}", keys);
-                        let item: DbRows = DbRows {
-                            name: name.clone(),
-                            description: Some(String::from(*desc)),
-                            term_type: item_type,
-                            values: keys,
-                        };
-                        //println!("Field details:{}", item.parse_db_rows());
-                        rag_docs.push(item.parse_db_rows());
-                        names.push(name)
-                    }
-                    None => {}
-                }
-            }
-            println!("names:{:?}", names);
-
+            let rag_docs = parse_dataset_db(db).await;
             let additional;
             match llm_backend_type {
                 llm_backend::Ollama() => {
