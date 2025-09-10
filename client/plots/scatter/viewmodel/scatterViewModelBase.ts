@@ -180,6 +180,7 @@ export class ScatterViewModelBase {
 				)
 				.attr('text-anchor', 'middle')
 				.text(termName)
+				.style('font-size', '0.9em')
 
 			if (termName.length > 65) {
 				text
@@ -203,7 +204,8 @@ export class ScatterViewModelBase {
 					.text(term0Name)
 			}
 			const isEvents = this.scatter.config.term2 ? false : true
-			const term2Name = isEvents ? 'Frequency' : getTitle(this.scatter.config.term2.term.name, 60)
+			const t2name = this.scatter.config.term2?.term?.name
+			const term2Name = isEvents ? 'Frequency' : getTitle(t2name, 60)
 			text = labelsG
 				.append('text')
 				.attr(
@@ -214,6 +216,7 @@ export class ScatterViewModelBase {
 				)
 				.attr('text-anchor', 'middle')
 				.text(term2Name)
+				.style('font-size', '0.9em')
 			if (term2Name.length > 60) {
 				text
 					.on('mouseenter', event => {
