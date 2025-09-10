@@ -3,8 +3,6 @@ import { root_ID } from './tree'
 import { getFilterItemByTag, findParent } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 
-// state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
-
 const defaultState = {
 	header_mode: 'search_only',
 	// will be ignored if there is no dataset termdb.selectCohort
