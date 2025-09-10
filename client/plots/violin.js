@@ -68,6 +68,11 @@ class ViolinPlot {
 		}
 	}
 
+	preApiFreeze(api) {
+		api.download = this.download
+		api.getChartImages = () => this.getChartImages()
+	}
+
 	async setControls() {
 		this.dom.controls.selectAll('*').remove()
 		this.components = {}
