@@ -431,6 +431,7 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 	}
 
 	private addAxesToExistingPlot(plotData: any, svg: any, plotDims: any) {
+		const fontSize = 12 //TODO: maybe move this to settings as well and reuse
 		// Expand SVG to accommodate labels
 		svg.attr('width', plotDims.svg.width).attr('height', plotDims.svg.height)
 
@@ -442,6 +443,17 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 		existingContent.each(function (this: Element) {
 			plotGroup.node()!.appendChild(this)
 		})
+
+		const addAxisLabel = (x: number, y: number, text: string) => {
+			svg
+				.append('text')
+				.attr('x', x)
+				.attr('y', y)
+				.attr('text-anchor', 'middle')
+				.attr('font-size', `${fontSize}px`)
+				.attr('fill', 'black')
+				.text(text)
+		}
 
 		// x-axis
 		const xScale = plotDims.xAxis
@@ -468,21 +480,14 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 					.attr('x', centerPos)
 					.attr('y', plotDims.chrsLabel.y)
 					.attr('text-anchor', 'middle')
-					.attr('font-size', '10px')
+					.attr('font-size', `${fontSize - 2}px`)
 					.attr('fill', 'black')
 					.text(chrom.replace('chr', ''))
 			})
 		}
 
 		//Bottom label for x-axis
-		svg
-			.append('text')
-			.attr('x', plotDims.xLabel.x)
-			.attr('y', plotDims.xLabel.y)
-			.attr('text-anchor', 'middle')
-			.attr('font-size', '12px')
-			.attr('fill', 'black')
-			.text('Chromosomes')
+		addAxisLabel(plotDims.xLabel.x, plotDims.xLabel.y, 'Chromosomes')
 
 		// y-axis
 		const yScale = plotDims.yAxis
@@ -491,15 +496,7 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 		yAxisG.call(d3axis.axisLeft(yScale.scale))
 
 		// Y-axis label
-		svg
-			.append('text')
-			.attr('transform', `rotate(-90)`)
-			.attr('x', plotDims.yLabel.x)
-			.attr('y', plotDims.yLabel.y)
-			.attr('text-anchor', 'middle')
-			.attr('font-size', '12px')
-			.attr('fill', 'black')
-			.text('-log₁₀(q-value)')
+		addAxisLabel(plotDims.yLabel.x, plotDims.yLabel.y, '-log₁₀(q-value)')
 	}
 
 	private addLegend(plotData: any, svg: any) {
