@@ -68,7 +68,7 @@ export class ViewModel {
 			domain: [data.absMin, data.absMax! <= 1 ? data.absMax : data.absMax! + 1],
 			range: [0, settings.boxplotWidth],
 			svg,
-			chartTitle: this.getChartTitle(config, data.chartId),
+			chartTitle: getChartTitle(config, data.chartId),
 			title: this.setTitleDimensions(config, settings, svg.height),
 			axis: {
 				x: settings.isVertical ? this.horizPad / 2 + this.incrPad + this.topPad : this.totalLabelSize,
@@ -118,13 +118,6 @@ export class ViewModel {
 		}
 	}
 
-	getChartTitle(config, chartId) {
-		if (!config.term0) return chartId
-		return config.term0.term.values && chartId in config.term0.term.values
-			? config.term0.term.values[chartId].label
-			: chartId
-	}
-
 	setTitleDimensions(config: any, settings: BoxPlotSettings, height: number) {
 		const depth = this.totalLabelSize + settings.boxplotWidth / 2
 		return {
@@ -162,4 +155,11 @@ export class ViewModel {
 		}
 		return plots
 	}
+}
+
+export function getChartTitle(config, chartId) {
+	if (!config.term0) return chartId
+	return config.term0.term.values && chartId in config.term0.term.values
+		? config.term0.term.values[chartId].label
+		: chartId
 }

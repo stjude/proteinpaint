@@ -12,7 +12,8 @@ import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
 import { BoxPlotInteractions } from './interactions/BoxPlotInteractions'
 import { LegendRenderer } from './view/LegendRender'
-
+import { DownloadMenu } from '#dom'
+import { getChartTitle } from './viewModel/ViewModel'
 class TdbBoxplot extends RxComponentInner {
 	readonly type = 'boxplot'
 	components: { controls: any }
@@ -197,7 +198,7 @@ class TdbBoxplot extends RxComponentInner {
 		})
 
 		this.components.controls.on('downloadClick.boxplot', event => {
-			this.interactions!.download(event, this.data)
+			this.download(event)
 		})
 		this.components.controls.on('helpClick.boxplot', () => {
 			this.interactions!.help()
@@ -326,10 +327,30 @@ class TdbBoxplot extends RxComponentInner {
 			const textColor = settings.displayMode == 'dark' ? 'white' : 'black'
 			if (legend.length) new LegendRenderer(this.dom.legend, legend, this.interactions, textColor)
 		} catch (e: any) {
+			if (e.stack) console.log(e.stack)
 			if (e instanceof Error) console.error(e.message || e)
-			else if (e.stack) console.log(e.stack)
 			throw e
 		}
+	}
+
+	getChartImages() {
+		const name2svg = {}
+		const charts: any[] = this.data.charts
+		for (const [key, chart] of Object.entries(charts)) {
+			const svg: any = chart.svg
+			const title = getChartTitle(this.state.config, key)
+			const name = `${this.state.config.term.term.name}  ${title}`
+			name2svg[name] = { svg, parent: svg.node() }
+		}
+		return name2svg
+	}
+
+	download(event) {
+		if (!this.state) return
+
+		const name2svg = this.getChartImages()
+		const dm = new DownloadMenu(name2svg, this.state.config.term.term.name)
+		dm.show(event.clientX, event.clientY)
 	}
 }
 
