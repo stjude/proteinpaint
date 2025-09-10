@@ -21,9 +21,17 @@ export class DownloadMenu {
 		menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text('PDF')
+			.text('PDF Portrait')
 			.on('click', () => {
-				downloadSVGsAsPdf(this.name2svg, this.filename)
+				downloadSVGsAsPdf(this.name2svg, this.filename, 'portrait')
+				this.menu.hide()
+			})
+		menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('PDF Landscape')
+			.on('click', () => {
+				downloadSVGsAsPdf(this.name2svg, this.filename, 'landscape')
 				this.menu.hide()
 			})
 		menuDiv
@@ -49,7 +57,7 @@ export class DownloadMenu {
 	}
 }
 
-export async function downloadSVGsAsPdf(name2svg, filename) {
+export async function downloadSVGsAsPdf(name2svg, filename, orientation) {
 	const JSPDF = await import('jspdf')
 	const { jsPDF } = JSPDF
 	/*
@@ -58,7 +66,7 @@ export async function downloadSVGsAsPdf(name2svg, filename) {
 	Therefore, a simple import 'svg2pdf.js' without curly braces is all that is needed to apply its functionality. 
 	 */
 	await import('svg2pdf.js') // This import extends jsPDF with SVG functionality
-	const doc = new jsPDF('portrait', 'pt', 'a4') // p for portrait, l for landscape, points, A4 size
+	const doc = new jsPDF(orientation, 'pt', 'a4') // p for portrait, l for landscape, points, A4 size
 	doc.setFontSize(12)
 	const pageWidth = doc.internal.pageSize.getWidth()
 	const pageHeight = doc.internal.pageSize.getHeight()
