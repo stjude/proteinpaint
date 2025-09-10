@@ -72,10 +72,6 @@ function init({ genomes }) {
 						})
 					}
 
-					if (ds.queries.WSImages.makeGeoJson) {
-						await ds.queries.WSImages.makeGeoJson(projectId, wsimageFilename)
-					}
-					wsimage.predictions = []
 					wsimages.push(wsimage)
 				}
 			}
