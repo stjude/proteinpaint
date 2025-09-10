@@ -12,7 +12,7 @@ export type SampleWSImagesResponse = {
 	sampleWSImages: WSImage[]
 }
 
-export type WSImage = {
+export class WSImage {
 	id?: number
 	filename: string
 	// TODO remove when it's verified
