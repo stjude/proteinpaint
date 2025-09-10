@@ -1,4 +1,10 @@
-import type { VocabApi, Filter, Q, TermWrapper, Term } from '#types'
+import type { Filter, Q, TermWrapper, Term } from '#types'
+import type { TermSettingApi } from './TermSettingApi'
+import type { TermdbVocab } from '#termdb/TermdbVocab'
+import type { FrontendVocab } from '#termdb/FrontendVocab'
+
+export type { TermSettingApi } from './TermSettingApi'
+export type VocabApi = TermdbVocab | FrontendVocab
 
 /*
 
@@ -47,7 +53,7 @@ type NumericContEditOptsEntry = {
 }
 
 export type UseCase = {
-	/** chart type */
+	/** the target use case, such as for a specific chart type */
 	target: string
 	/** refine logic per specifics (e.g. 'numeric' or 'term') */
 	detail?: string
@@ -91,6 +97,7 @@ export type PillData = BaseTermSettingOpts & {
 
 export type TermSettingOpts = BaseTermSettingOpts & {
 	//Required
+	api: TermSettingApi
 	holder: any
 	vocabApi: VocabApi
 	//Optional
@@ -103,7 +110,7 @@ export type TermSettingOpts = BaseTermSettingOpts & {
 	numericContinuousEditOptions?: NumericContEditOptsEntry[]
 	placeholder?: string
 	placeholderIcon?: string //default '+'
-	renderAs: string //none
+	renderAs: 'htmlSelect' | 'none' //none
 	tip?: any //TODO: Menu type?
 	use_bins_less?: boolean
 	usecase?: UseCase
@@ -145,7 +152,7 @@ export type InstanceDom = {
 	rangeAndLabelDiv?: any
 }
 
-export type Handler = {
+export interface Handler {
 	getPillName: (d: any) => string
 	getPillStatus: (f?: any) => any
 	showEditMenu: (div: Selection) => void
