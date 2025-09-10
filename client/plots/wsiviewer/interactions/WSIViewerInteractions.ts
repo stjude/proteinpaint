@@ -116,7 +116,6 @@ export class WSIViewerInteractions {
 			holder.attr('tabindex', 0)
 			holder.node()?.focus()
 
-			// TODO extract this SessionWSImage which should covered to a class
 			const tileSelections = SessionWSImage.getTileSelections(sessionWSImage) || []
 
 			holder.on('keydown', async (event: KeyboardEvent) => {
