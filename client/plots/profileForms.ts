@@ -162,7 +162,7 @@ export class profileForms extends profilePlot {
 			y += step
 		}
 		y += step * 2
-		const width = this.settings.svgw - 150
+		const width = this.settings.svgw
 		const posScale = d3Linear()
 			.domain([0, 100])
 			.range([this.shift, this.shift + width])
