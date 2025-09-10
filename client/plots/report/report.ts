@@ -136,13 +136,11 @@ export class Report extends RxComponentInner {
 		const pageHeight = doc.internal.pageSize.getHeight() - 10
 
 		let y = 40
-		const x = 0.05 * pageWidth
-		doc.setFontSize(12)
-		doc.text(this.config.sections[0].name, x, y)
+		const padding = 0.05 * pageWidth
+		const x = padding
 		doc.setFontSize(10)
-		let newSection
+
 		for (const section of this.config.sections) {
-			newSection = true
 			for (const plotConfig of section.plots) {
 				const plot = this.components.plots[plotConfig.id]
 				if (plot?.getChartImages) {
@@ -167,26 +165,18 @@ export class Report extends RxComponentInner {
 						const scale = getPdfScale(pageWidth, pageHeight, svgWidth, svgHeight)
 						const width = svgWidth * scale //convert to pt and fit to page size
 						const height = svgHeight * scale //convert to pt and fit to page size
-						if (y + height > pageHeight - 20) {
+						if (y + height > pageHeight - padding) {
 							doc.addPage()
 							y = 40
 						}
-						if (y == 40 || newSection) {
-							//new page, add section
-							doc.setFontSize(12)
-							doc.text(section.name, x, y)
-							doc.setFontSize(10)
-							y += 30
-						}
-						if (name.trim()) {
-							doc.text(name.length > 90 ? name.slice(0, 90) + '...' : name, x, y)
-							y += 40
-						}
-						console.log(y)
+
+						const text = name.length > 90 ? name.slice(0, 90) + '...' : name
+						doc.text(`${section.name} / ${text}`, x, y)
+						y += 30
+
 						await doc.svg(svg, { x, y, width, height })
 						y = y + height + 60
 						chart.parent.removeChild(svg)
-						newSection = false
 					}
 				}
 			}
