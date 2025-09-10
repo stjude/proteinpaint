@@ -331,6 +331,8 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 	}
 
 	private async runAnalysis() {
+		const config = this.app.getState().plots.find((p: any) => p.id === this.id)
+		const settings = config.settings.plotDims
 		try {
 			// Disable button with visual feedback
 			this.runButton.property('disabled', true).text('Running GRIN2...').style('opacity', '0.6')
@@ -347,9 +349,9 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 				genome: this.app.vocabApi.vocab.genome,
 				dslabel: this.app.vocabApi.vocab.dslabel,
 				filter: this.state.termfilter.filter,
-				width: 1000,
-				height: 400,
-				pngDotRadius: 2,
+				width: settings.width,
+				height: settings.height,
+				pngDotRadius: settings.radius,
 				devicePixelRatio: window.devicePixelRatio,
 				...configValues
 			}
@@ -385,17 +387,54 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 		if (config.childType != this.type && config.chartType != this.type) return
 	}
 
-	private addAxesToExistingPlot(plotData: any, svg: any) {
-		const plotWidth = plotData.plot_width
-		const plotHeight = plotData.plot_height
-		const margin = { bottom: 80, left: 80, right: 20 }
+	private setPlotDims(plotData, settings) {
+		const xAxisStart = plotData.plot_height
+		const offset = 10
+		const yScaleRange = plotData.plot_height - settings.radius * 2 * 2
 
+		const plotDims = {
+			svg: {
+				height: plotData.plot_height + settings.left + settings.right,
+				width: plotData.plot_width + settings.bottom,
+				x: settings.left,
+				y: 0
+			},
+			xAxis: {
+				x: settings.left + offset * 3,
+				y: xAxisStart,
+				scale: scaleLinear().domain([0, plotData.total_genome_length]).range([0, plotData.plot_width])
+			},
+			chrsLabel: {
+				start: settings.left,
+				end: settings.left,
+				y: xAxisStart + offset * 2
+			},
+			xLabel: {
+				x: settings.left + plotData.plot_width / 2,
+				y: xAxisStart + offset * 4
+			},
+			yAxis: {
+				x: settings.left,
+				y: settings.radius * 2,
+				scale: scaleLinear()
+					.domain([0, Math.max(...plotData.points.map(p => p.y), 5)])
+					.range([yScaleRange, 0])
+			},
+			yLabel: {
+				x: -plotData.plot_height / 2,
+				y: 15
+			}
+		}
+		return plotDims
+	}
+
+	private addAxesToExistingPlot(plotData: any, svg: any, plotDims: any) {
 		// Expand SVG to accommodate labels
-		svg.attr('width', plotWidth + margin.left + margin.right).attr('height', plotHeight + margin.bottom)
+		svg.attr('width', plotDims.svg.width).attr('height', plotDims.svg.height)
 
 		// Move existing content into a group with margin offset
 		const existingContent = svg.selectAll('*')
-		const plotGroup = svg.append('g').attr('transform', `translate(${margin.left}, 0)`)
+		const plotGroup = svg.append('g').attr('transform', `translate(${plotDims.svg.x}, 0)`)
 
 		// Move existing elements to the offset group
 		existingContent.each(function (this: Element) {
@@ -403,11 +442,9 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 		})
 
 		// Create scales
-		const xScale = scaleLinear().domain([0, plotData.total_genome_length]).range([0, plotWidth])
+		const xScale = plotDims.xAxis.scale
 
-		const yScale = scaleLinear()
-			.domain([0, Math.max(...plotData.points.map(p => p.y), 5)])
-			.range([plotHeight, 0])
+		const yScale = plotDims.yAxis.scale
 
 		// X-axis at bottom
 		const xAxis = d3axis
@@ -416,20 +453,20 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 			.tickSizeOuter(0)
 			.ticks(0) // Remove default ticks
 
-		svg.append('g').attr('transform', `translate(${margin.left}, ${plotHeight})`).call(xAxis)
+		svg.append('g').attr('transform', `translate(${plotDims.xAxis.x}, ${plotDims.xAxis.y})`).call(xAxis)
 
 		// Add chromosome labels
 		if (plotData.chrom_data) {
 			Object.entries(plotData.chrom_data).forEach(([chrom, data]: [string, any]) => {
-				const startPos = margin.left + xScale(data.start)
-				const endPos = margin.left + xScale(data.start + data.size)
+				const startPos = plotDims.chrsLabel.start + xScale(data.start)
+				const endPos = plotDims.chrsLabel.end + xScale(data.start + data.size)
 				const centerPos = startPos + (endPos - startPos) / 2
 
 				// Position label at true center
 				svg
 					.append('text')
 					.attr('x', centerPos)
-					.attr('y', plotHeight + 15)
+					.attr('y', plotDims.chrsLabel.y)
 					.attr('text-anchor', 'middle')
 					.attr('font-size', '10px')
 					.attr('fill', 'black')
@@ -438,15 +475,15 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 		}
 
 		// Y-axis at left
-		const yAxis = d3axis.axisLeft(yScale).ticks(6)
+		const yAxis = d3axis.axisLeft(yScale)
 
-		svg.append('g').attr('transform', `translate(${margin.left}, 0)`).call(yAxis)
+		svg.append('g').attr('transform', `translate(${plotDims.yAxis.x}, ${plotDims.yAxis.y})`).call(yAxis)
 
 		// Axis labels
 		svg
 			.append('text')
-			.attr('x', margin.left + plotWidth / 2)
-			.attr('y', plotHeight + 35)
+			.attr('x', plotDims.xLabel.x)
+			.attr('y', plotDims.xLabel.y)
 			.attr('text-anchor', 'middle')
 			.attr('font-size', '12px')
 			.attr('fill', 'black')
@@ -455,8 +492,8 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 		svg
 			.append('text')
 			.attr('transform', `rotate(-90)`)
-			.attr('x', -plotHeight / 2)
-			.attr('y', 15)
+			.attr('x', plotDims.yLabel.x)
+			.attr('y', plotDims.yLabel.y)
 			.attr('text-anchor', 'middle')
 			.attr('font-size', '12px')
 			.attr('fill', 'black')
@@ -591,8 +628,10 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 					this.dom.geneTip.hide()
 				})
 
+			const config = structuredClone(this.state.config)
+			const plotDims = this.setPlotDims(plotData, config.settings.grin2.plotDims)
 			// Add axes to the existing plot
-			this.addAxesToExistingPlot(plotData, svg)
+			this.addAxesToExistingPlot(plotData, svg, plotDims)
 
 			// Add legend
 			this.addLegend(plotData, svg)
@@ -746,6 +785,20 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 export const grin2Init = getCompInit(GRIN2)
 export const componentInit = grin2Init
 
+function getDefaultSettings(opts) {
+	const defaults = {
+		plotDims: {
+			height: 400,
+			width: 1000,
+			radius: 2,
+			bottom: 80,
+			left: 80,
+			right: 20
+		}
+	}
+	return Object.assign(defaults, opts.overrides)
+}
+
 export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 	const queries = app.vocabApi.termdbConfig.queries
 	const settings: any = { controls: {} }
@@ -777,7 +830,7 @@ export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 
 	const config = {
 		chartType: 'grin2',
-		settings
+		settings: Object.assign(getDefaultSettings(opts), settings)
 	}
 
 	return copyMerge(config, opts)
