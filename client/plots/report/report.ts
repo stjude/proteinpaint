@@ -4,7 +4,7 @@ import { ReportView } from './view/reportView'
 import { RxComponentInner } from '../../types/rx.d'
 import { controlsInit } from '../controls.js'
 import { importPlot } from '#plots/importPlot.js'
-import { getPdfScale } from '#dom/downloadMenu'
+import { getPdfScale } from '#dom'
 
 export class Report extends RxComponentInner {
 	config: any
