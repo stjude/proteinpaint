@@ -341,8 +341,6 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 			this.dom.div.style('padding', '0').text('')
 			this.dom.div.selectAll('*').remove()
 
-			console.log('State before GRIN2 run', this.state)
-
 			// Get configuration and make request
 			const configValues = this.getConfigValues()
 			const requestData = {
@@ -470,6 +468,12 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 		// Add chromosome labels (instead of numbered ticks) to the x-axis
 		if (plotData.chrom_data) {
 			Object.entries(plotData.chrom_data).forEach(([chrom, data]: [string, any]) => {
+				const chromLabel = chrom.replace('chr', '')
+
+				// Skip if the label is "M"
+				if (chromLabel === 'M') return
+
+				// Calculate start, end, and center positions for the chromosome
 				const startPos = plotDims.chrsLabel.start + xScale.scale(data.start)
 				const endPos = plotDims.chrsLabel.end + xScale.scale(data.start + data.size)
 				const centerPos = startPos + (endPos - startPos) / 2
@@ -557,8 +561,6 @@ class GRIN2 extends PlotBase implements RxComponentInner {
 	private renderResults(result: any) {
 		// Display Manhattan plot
 		if (result.pngImg) {
-			console.log('GRIN2 result', result)
-			console.log('GRIN2 sample number', result.plotData.points.length)
 			const plotContainer = this.dom.div.append('div').style('text-align', 'left').style('margin', '20px 0')
 
 			// Create header with title and download button
