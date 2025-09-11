@@ -1,5 +1,5 @@
 import { GroupSettingMethods } from './groupsetting.ts'
-import { getPillNameDefault } from '../termsetting.ts'
+import { getPillNameDefault } from '../utils.ts'
 import type { BaseGroupSet, GroupEntry, CategoricalQ, CategoricalTerm, CategoricalTermSettingInstance } from '#types'
 import type { PillData } from '../types'
 

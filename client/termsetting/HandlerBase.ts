@@ -1,8 +1,8 @@
 import type { Handler } from './types'
-import type { TermSettingInner } from './TermSettingInner'
+import type { TermSetting } from './TermSetting'
 
 export class HandlerBase implements Handler {
-	self: TermSettingInner
+	self: TermSetting
 
 	constructor(opts) {
 		this.self = opts.self

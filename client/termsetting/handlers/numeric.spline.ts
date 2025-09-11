@@ -1,6 +1,6 @@
 import { setDensityPlot } from './density'
 import { keyupEnter } from '#src/client'
-import { getPillNameDefault } from '../termsetting'
+import { getPillNameDefault } from '../utils.ts'
 import { convertViolinData } from '#filter/tvs.numeric'
 import type { NumericQ } from '#types'
 import { violinRenderer } from '#dom'

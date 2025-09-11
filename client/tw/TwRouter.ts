@@ -1,6 +1,6 @@
 import type { TermWrapper } from '#types'
 import type { TwOpts, TwBase } from './TwBase'
-import { mayHydrateDictTwLst } from '../termsetting/termsetting.ts'
+import { mayHydrateDictTwLst } from '#termsetting'
 // TODO: may convert these to dynamic imports
 import { CategoricalBase, CatValues, CatPredefinedGS, CatCustomGS } from './categorical.ts'
 import { GvBase, GvPredefinedGS, GvCustomGS } from './geneVariant.ts'

@@ -1,11 +1,11 @@
-import type { TermSettingInner } from './TermSettingInner'
+import type { TermSetting } from './TermSetting'
 import { Menu } from '#dom'
 // import { TwRouter } from '#tw'
 import { isNumericTerm } from '#shared/terms.js'
-import { get$id } from './termsetting.ts'
+import { get$id } from './utils.ts'
 
 export class TermSettingActions {
-	self: TermSettingInner
+	self: TermSetting
 
 	constructor(opts) {
 		this.self = opts.self

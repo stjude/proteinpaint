@@ -1,4 +1,4 @@
-import { getPillNameDefault } from '../termsetting'
+import { getPillNameDefault } from '../utils.ts'
 import type { RawGvTerm, VocabApi } from '#types'
 import type { PillData } from '../types'
 import { make_radios, renderTable } from '#dom'
@@ -6,12 +6,12 @@ import { dtTerms, getColors, dtcnv, mclass } from '#shared/common.js'
 import { filterInit, filterPromptInit, getNormalRoot } from '#filter/filter'
 import { rgb } from 'd3-color'
 import { getWrappedTvslst } from '#filter/filter'
-import type { TermSettingInner } from '../TermSettingInner.ts'
+import type { TermSetting } from '../TermSetting.ts'
 
 let colorScale = getColors(3)
 
 // self is the termsetting instance
-export function getHandler(self: TermSettingInner) {
+export function getHandler(self: TermSetting) {
 	return {
 		getPillName(d: PillData) {
 			return getPillNameDefault(self, d)
@@ -40,7 +40,7 @@ export function getHandler(self: TermSettingInner) {
 	}
 }
 
-async function makeEditMenu(self: TermSettingInner, _div: any) {
+async function makeEditMenu(self: TermSetting, _div: any) {
 	/* TODO: instead of directly modifying self.q here, should create a separate property on the handler to store pending user
 	configurations (similar to numeric continuous/discrete switching)
 	const handler = self.handlerByType.geneVariant */
@@ -107,7 +107,7 @@ async function makeEditMenu(self: TermSettingInner, _div: any) {
 }
 
 // make UI for grouping variants
-async function makeGroupUI(self: TermSettingInner, div) {
+async function makeGroupUI(self: TermSetting, div) {
 	div.style('display', 'block')
 	div.selectAll('*').remove()
 

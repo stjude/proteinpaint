@@ -1,9 +1,9 @@
 import { getPillNameDefault } from '#termsetting'
 import { renderTable } from '#dom'
 import type { PillData, SampleLstTW } from '#types'
-import type { TermSettingInner } from '../TermSettingInner.ts'
+import type { TermSetting } from '../TermSetting.ts'
 
-export function getHandler(self: TermSettingInner) {
+export function getHandler(self: TermSetting) {
 	return {
 		showEditMenu(div: any) {
 			div.selectAll('*').remove()

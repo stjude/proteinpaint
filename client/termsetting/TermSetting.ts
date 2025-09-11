@@ -26,7 +26,7 @@ const defaultOpts = {
 	customMenuOptions: [] satisfies CustomMenuOptions[]
 }
 
-export class TermSettingInner {
+export class TermSetting {
 	opts: any // Required<TermSettingOpts>
 	vocabApi: VocabApi
 	dom: {
@@ -82,8 +82,8 @@ export class TermSettingInner {
 		this.handler = new HandlerBase({ self: this })
 		this.handlerByType.default = this.handler
 		//this.tw = opts.tw
-		this.view = new TermSettingView({ self: this })
 		this.actions = new TermSettingActions({ self: this })
+		this.view = new TermSettingView({ self: this })
 	}
 
 	validateOpts(_opts: TermSettingOpts) {
