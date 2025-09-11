@@ -139,7 +139,7 @@ export class TermSettingApi {
 			if (q.mode != 'binary' && self.term.type != 'geneVariant') {
 				// mode=binary will never use groupsetting
 				// geneVariant term can cancel groupsetting within edit menu
-				options.push({ label: 'Cancel grouping', callback: self.actions.cancelGroupsetting } as opt)
+				options.push({ label: 'Cancel grouping', callback: () => self.actions.cancelGroupsetting() } as opt)
 			}
 		}
 

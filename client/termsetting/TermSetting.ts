@@ -79,6 +79,14 @@ export class TermSetting {
 		this.api = opts.api
 		this.vocabApi = opts.vocabApi
 		this.dom = this.getDom(opts)
+
+		this.activeCohort = opts.activeCohort
+		this.placeholder = opts.placeholder as string
+		this.durations = { exit: 0 }
+		this.disable_terms = opts.disable_terms
+		this.usecase = opts.usecase
+		this.abbrCutoff = opts.abbrCutoff
+
 		this.handler = new HandlerBase({ termsetting: this })
 		this.handlerByType.default = this.handler
 		//this.tw = opts.tw

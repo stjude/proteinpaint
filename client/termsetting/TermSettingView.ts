@@ -14,7 +14,7 @@ export class TermSettingView {
 
 	constructor(opts: TermsSettingViewOpts) {
 		this.termsetting = opts.termsetting
-		this.initUI(opts.termsetting)
+		this.initUI()
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const view = this
 		// these methods are required to correctly handle the `this` == HTMLElement context as used by d3-selection,
@@ -30,7 +30,8 @@ export class TermSettingView {
 		}
 	}
 
-	initUI(self) {
+	initUI() {
+		const self = this.termsetting
 		// run only once, upon init
 		if (self.opts.$id) {
 			self.dom.tip.d.attr('id', self.opts.$id + '-ts-tip')
@@ -40,9 +41,9 @@ export class TermSettingView {
 		self.dom.nopilldiv = self.dom.holder
 			.append('div')
 			.style('cursor', 'pointer')
-			.on('click', () => self.actions.clickNoPillDiv())
+			.on('click', event => self.actions.clickNoPillDiv(event))
 			.on(`keyup.sjpp-termdb`, event => {
-				if (event.key == 'Enter') self.api.showTree(event)
+				if (event.key == 'Enter') self.api.showTree(self.dom.nopilldiv.node(), event)
 			})
 		self.dom.pilldiv = self.dom.holder.append('div')
 
