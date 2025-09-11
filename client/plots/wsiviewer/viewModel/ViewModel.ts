@@ -2,7 +2,7 @@ import type { TileSelection, WSImage } from '@sjcrh/proteinpaint-types'
 import type { WSImageLayers } from '#plots/wsiviewer/viewModel/WSImageLayers.ts'
 import type { TableCell } from '#dom'
 import { roundValue } from '#shared/roundValue.js'
-import type { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
+import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
 
 export class ViewModel {
@@ -46,10 +46,9 @@ export class ViewModel {
 
 	public getInitialZoomInCoordinate(index: number) {
 		const image = this.sampleWSImages[index]
-		const sessionsTileSelections = image.sessionsTileSelections?.map(a => a.zoomCoordinates) || []
-		const predictions = image.predictions?.map(a => a.zoomCoordinates) || []
-		const persistedAnnotations = image.annotations?.map(a => a.zoomCoordinates) || []
-		return [...sessionsTileSelections, ...predictions, ...persistedAnnotations].slice(0, 1)
+		return SessionWSImage.getTileSelections(image)
+			.map(a => a.zoomCoordinates)
+			.slice(0, 1)
 	}
 
 	private setAnnonationsTableData(imageViewData: ImageViewData, imageData: SessionWSImage) {
@@ -76,7 +75,7 @@ export class ViewModel {
 		})
 
 		// Original annotations follow, indexing continues from session annotations
-		const annotationsRows: any = (imageData.predictions ?? []).map((d, i) => {
+		const annotationsRows: any = (imageData.annotations ?? []).map((d, i) => {
 			return [
 				{ value: sessionsTileSelections.length + predictionRows.length + i }, // Continue index
 				{ value: d.zoomCoordinates },
