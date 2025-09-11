@@ -1,12 +1,13 @@
 import { getCompInit, copyMerge } from '../../rx/index.js'
 import { fillTermWrapper } from '#termsetting'
 import { ReportView } from './view/reportView'
-import { RxComponentInner } from '../../types/rx.d'
+import { type RxComponentInner } from '#rx'
 import { controlsInit } from '../controls.js'
 import { importPlot } from '#plots/importPlot.js'
 import { downloadSVGsAsPdf } from '#dom'
+import { PlotBase } from '#plots/PlotBase.js'
 
-export class Report extends RxComponentInner {
+export class Report extends PlotBase implements RxComponentInner {
 	config: any
 	view!: ReportView
 	components: any
@@ -17,9 +18,10 @@ export class Report extends RxComponentInner {
 	id!: string
 	filterTWs: any[] = []
 	selectFilters: any
+	dom: any
 
-	constructor() {
-		super()
+	constructor(opts) {
+		super(opts)
 		this.type = 'report'
 	}
 
@@ -60,6 +62,11 @@ export class Report extends RxComponentInner {
 				await this.setPlot(plot, sectionDiv)
 			}
 		}
+	}
+
+	//for some reason the report getChartImages is not seen unless I do this
+	preApiFreeze(api) {
+		api.getChartImages = () => this.getChartImages()
 	}
 
 	getState(appState: any) {
@@ -122,7 +129,7 @@ export class Report extends RxComponentInner {
 		}
 	}
 
-	async downloadReport() {
+	getChartImages() {
 		const chartImagesAll: any[] = []
 		for (const section of this.config.sections) {
 			for (const plotConfig of section.plots) {
@@ -137,6 +144,11 @@ export class Report extends RxComponentInner {
 				}
 			}
 		}
+		return chartImagesAll
+	}
+
+	async downloadReport() {
+		const chartImagesAll = this.getChartImages()
 		downloadSVGsAsPdf(chartImagesAll, 'report', 'landscape')
 	}
 }
