@@ -72,7 +72,7 @@ def plot_grin2_manhattan(grin_results: dict,
                         plot_height: int = 400,
                         device_pixel_ratio: float = 2.0,
                         png_dot_radius: int = 2,
-                        correction_strength: float = 0.06) -> tuple[plt.Figure, dict]:
+                        correction_strength: float = 0.055) -> tuple[plt.Figure, dict]:
 	
     """
     Create a Manhattan plot for GRIN2 genomic analysis results using colored scatter points.
