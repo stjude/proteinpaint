@@ -1,1 +1,2 @@
-
+Features:
+- Volcano plot: add a button called "DEGs hierarchical clustering" to launch hiercluster for DEGs
