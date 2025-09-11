@@ -81,12 +81,17 @@ export class VolcanoPlotView {
 				)
 			})
 
-			// launch hierCluster for DEGs between the two groups
+			// Launch hierCluster for DEGs between the two groups
 			this.addActionButton('DEGs hierarchical clustering', async () => {
-				//significant EDGs between the two groups
-				const geneList = this.viewData.pValueTableData.rows.map(r => {
-					return { gene: r[0].value }
+				//Sort the DEG rows by q-value in ascending order
+				const rowsSorted = [...this.viewData.pValueTableData.rows].sort((a, b) => {
+					const aQVal = Number(a[3].value)
+					const bQVal = Number(b[3].value)
+					return aQVal - bQVal
 				})
+
+				// Launch hierCluster for up to 100 DEGs with the smallest q-values
+				const geneList = rowsSorted.slice(0, 100).map(r => ({ gene: r[0].value }))
 
 				const tws = geneList.map(d => {
 					const gene = d.gene
@@ -97,7 +102,7 @@ export class VolcanoPlotView {
 					return tw
 				})
 
-				const group = { name: 'DEGs', lst: tws, type: 'hierCluster' }
+				const group = { lst: tws, type: 'hierCluster' }
 				this.interactions.app.dispatch({
 					type: 'plot_create',
 					config: {
