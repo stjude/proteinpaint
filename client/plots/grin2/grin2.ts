@@ -778,7 +778,8 @@ export function getDefaultSettings(opts) {
 			right: 50
 		}
 	}
-	return Object.assign(defaults, opts.overrides)
+	// return Object.assign(defaults, opts.overrides)
+	return Object.assign(defaults, opts?.overrides)
 }
 
 export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
