@@ -10,7 +10,7 @@ Author: PP Team
 */
 
 import { dofetch3 } from '#common/dofetch'
-import { renderTable, sayerror, make_one_checkbox, table2col, Menu } from '#dom'
+import { renderTable, sayerror, make_one_checkbox } from '#dom'
 import { select } from 'd3-selection'
 import type { GdcGRIN2listRequest } from '#types'
 import { mclass, dtsnvindel, class2SOterm, bplen } from '@sjcrh/proteinpaint-shared/common.js'
@@ -23,7 +23,7 @@ import {
 	createDataTypeRow,
 	createInfoPanel
 } from './grin2/ui-components'
-import { addLegend, setPlotDims, addAxesToExistingPlot } from '../plots/manhattan/manhattan'
+import { addLegend, setPlotDims, addAxesToExistingPlot, renderInteractivePoints } from '../plots/manhattan/manhattan'
 import { getDefaultSettings } from '../plots/grin2/grin2'
 import { to_svg } from '#src/client'
 
@@ -1817,39 +1817,7 @@ async function getFilesAndShowTable(obj) {
 				.attr('width', plotData.plot_width)
 				.attr('height', plotData.plot_height)
 
-			// Add visible interactive points using pre-calculated SVG coordinates
-			const pointsLayer = svg.append('g')
-
-			// Tooltip for gene points
-			const geneTip = new Menu({ padding: '' })
-
-			pointsLayer
-				.selectAll('circle')
-				.data(plotData.points)
-				.enter()
-				.append('circle')
-				.attr('cx', d => d.svg_x)
-				.attr('cy', d => d.svg_y)
-				.attr('r', 6)
-				.attr('fill', d => d.color)
-				.attr('stroke', 'black')
-				.attr('stroke-width', 1)
-				.on('mouseover', (event, d) => {
-					geneTip.clear().show(event.clientX, event.clientY)
-
-					const table = table2col({
-						holder: geneTip.d.append('div'),
-						margin: '10px'
-					})
-					table.addRow('Gene', d.gene)
-					table.addRow('Type', d.type)
-					table.addRow('-log10(q-value)', d.y.toFixed(3))
-					table.addRow('Subject count', d.nsubj)
-					table.addRow('Chromosome', d.chrom)
-				})
-				.on('mouseout', () => {
-					geneTip.hide()
-				})
+			renderInteractivePoints(svg, plotData)
 
 			const settings = getDefaultSettings({})
 			const plotDims = setPlotDims(plotData, settings.plotDims)
