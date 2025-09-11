@@ -788,7 +788,7 @@ export function addHierClusterPlotMenuItem(chartType, div, text, tip, samplelstT
 					const tws = await Promise.all(
 						geneList.map(async d => {
 							const gene = d.symbol || d.gene
-							const unit = app.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression'
+							const unit = parent.app.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression'
 							const name = `${gene} ${unit}`
 							const term = { gene, name, type: 'geneExpression' }
 							let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
