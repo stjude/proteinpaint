@@ -211,6 +211,7 @@ class MassApp extends AppBase implements RxApp {
 	async downloadPlots() {
 		const chartImagesAll: any[] = []
 		let i = 1
+		const length = Object.keys(this.components.plots).length
 		for (const key in this.components.plots) {
 			const plot = this.components.plots[key]
 			const chart = plot.type == 'plot' ? plot.getComponents('chart') : plot // implies summary plot
@@ -224,7 +225,9 @@ class MassApp extends AppBase implements RxApp {
 			for (const chartImage of chartImages) {
 				const parent = chartImage.parent
 				const svg = chartImage.svg
-				const name = `${i}. ${chartImage.name}`
+				let name
+				if (length > 1) name = `${i}. ${chartImage.name}`
+				else name = chartImage.name
 				chartImagesAll.push({ name, svg, parent })
 			}
 			i++
