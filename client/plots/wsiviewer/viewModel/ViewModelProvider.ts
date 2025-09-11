@@ -168,7 +168,7 @@ export class ViewModelProvider {
 				const topLeft: [number, number] = [annotation.zoomCoordinates[0], -annotation.zoomCoordinates[1]]
 
 				const color = this.getClassColor(wsimages[i], annotation.class)
-				const featureId = `ann-${topLeft[0]}-${topLeft[1]}`
+				const featureId = `annotation-square-${annotation.zoomCoordinates}`
 
 				const borderFeature = this.createSquareFeature(topLeft, 512, color, featureId)
 				sourceAnnotations.addFeature(borderFeature)

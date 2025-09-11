@@ -4,6 +4,17 @@ import { WSImage } from '@sjcrh/proteinpaint-types'
 export class SessionWSImage extends WSImage {
 	sessionsTileSelections?: TileSelection[]
 
+	public static removeTileSelection(currentIndex: number, sessionWSImage: SessionWSImage): TileSelection[] {
+		if (!sessionWSImage.sessionsTileSelections) return []
+
+		const sessionsTileSelection = sessionWSImage.sessionsTileSelections[currentIndex]
+
+		if (!sessionsTileSelection) return []
+		if (currentIndex < 0 || currentIndex >= sessionWSImage.sessionsTileSelections.length) return []
+
+		return sessionWSImage.sessionsTileSelections.splice(currentIndex, 1)
+	}
+
 	public static getTileSelections(sessionWSImage: SessionWSImage): TileSelection[] {
 		const predictions = sessionWSImage.predictions || []
 		const annotations = sessionWSImage.annotations || []
@@ -11,14 +22,9 @@ export class SessionWSImage extends WSImage {
 		return [...sessionsTileSelections, ...predictions, ...annotations]
 	}
 
-	public static isAnnotation(currentIndex: number, sessionWSImage: SessionWSImage): boolean {
+	public static isTileSelection(currentIndex: number, sessionWSImage: SessionWSImage): boolean {
 		const sessionsCount = sessionWSImage.sessionsTileSelections?.length ?? 0
-		const predictionsCount = sessionWSImage.predictions?.length ?? 0
-		const annotationsCount = sessionWSImage.annotations?.length ?? 0
-
-		const annotationsStartIndex = sessionsCount + predictionsCount
-		const annotationsEndIndex = annotationsStartIndex + annotationsCount
-
-		return currentIndex >= annotationsStartIndex && currentIndex < annotationsEndIndex
+		if (sessionsCount == 0) return false
+		return currentIndex >= 0 && currentIndex < sessionsCount
 	}
 }
