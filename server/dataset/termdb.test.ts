@@ -247,6 +247,41 @@ export default function (): Mds3 {
 			// small list of terms for sunburst rings
 			sunburst_twLst: [{ id: 'sex', q: {} }]
 		},
+		assayAvailability: {
+			// term used below must be annotated on samples rather than patients(root). otherwise matrix will pull wrong samples for geneVariant term
+			byDt: {
+				// snvindel, differentiating sample origin
+				1: {
+					byOrigin: {
+						germline: {
+							term_id: 'assayavailability_germline',
+							label: 'Germline', // human readable label of this origin
+							yes: { value: ['1'] },
+							no: { value: ['2'] }
+						},
+						somatic: {
+							term_id: 'wgs_curated',
+							label: 'Somatic',
+							yes: { value: ['1'] },
+							no: { value: ['0'] } // the category doesn't exist in termdb but is still supplied since somatic.no{} is required
+						}
+					}
+				},
+
+				// fusion
+				2: {
+					term_id: 'assayavailability_fusion',
+					yes: { value: ['1'] },
+					no: { value: ['2'] }
+				},
+				// cnv
+				4: {
+					term_id: 'assayavailability_cnv',
+					yes: { value: ['1'] },
+					no: { value: ['2'] }
+				}
+			}
+		},
 		queries: {
 			snvindel: {
 				forTrack: true,
@@ -345,41 +380,10 @@ export default function (): Mds3 {
 			WSImages: {
 				type: 'H&E',
 				imageBySampleFolder: 'files/hg38/TermdbTest/wsimages'
-			}
-		},
-		assayAvailability: {
-			// term used below must be annotated on samples rather than patients(root). otherwise matrix will pull wrong samples for geneVariant term
-			byDt: {
-				// snvindel, differentiating sample origin
-				1: {
-					byOrigin: {
-						germline: {
-							term_id: 'assayavailability_germline',
-							label: 'Germline', // human readable label of this origin
-							yes: { value: ['1'] },
-							no: { value: ['2'] }
-						},
-						somatic: {
-							term_id: 'wgs_curated',
-							label: 'Somatic',
-							yes: { value: ['1'] },
-							no: { value: ['0'] } // the category doesn't exist in termdb but is still supplied since somatic.no{} is required
-						}
-					}
-				},
-
-				// fusion
-				2: {
-					term_id: 'assayavailability_fusion',
-					yes: { value: ['1'] },
-					no: { value: ['2'] }
-				},
-				// cnv
-				4: {
-					term_id: 'assayavailability_cnv',
-					yes: { value: ['1'] },
-					no: { value: ['2'] }
-				}
+			},
+			trackLst: {
+				jsonFile: 'files/hg38/TermdbTest/trackLst/facet.json',
+				activeTracks: ['bw 1', 'bed 1']
 			}
 		}
 	} satisfies Mds3
