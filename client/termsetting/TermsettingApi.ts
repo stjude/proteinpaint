@@ -1,15 +1,14 @@
 import type { TermSettingOpts /*Handler, PillData*/ } from './types'
 import { TermSettingInner } from './TermSettingInner'
 import type { Term, TermWrapper, Filter, GvPredefinedGsTW } from '#types'
-import { call_fillTW } from './termsetting'
+import { call_fillTW, get$id } from './termsetting'
 import { minimatch } from 'minimatch'
 import { isNumericTerm } from '#shared/terms.js'
 import { copyMerge, deepEqual } from '#rx'
 import { select } from 'd3-selection'
 
 export class TermSettingApi {
-	#Inner: any
-	#handler: any // Handler // TODO!!!
+	#Inner: TermSettingInner
 
 	constructor(opts: TermSettingOpts) {
 		this.#Inner = new TermSettingInner(opts)
@@ -20,7 +19,7 @@ export class TermSettingApi {
 		try {
 			if (self.doNotHideTipInMain) {
 				// single use: if true then delete
-				delete self.doNotHideTipInMain
+				self.doNotHideTipInMain = false
 			} else {
 				self.dom.tip.hide()
 			}
@@ -122,14 +121,15 @@ export class TermSettingApi {
 
 		type opt = { label: string; callback: (f?: any) => void }
 		const options: opt[] = []
+		const q = self.q as any
 
-		if (self.q.type == 'predefined-groupset' || self.q.type == 'custom-groupset') {
+		if (q.type == 'predefined-groupset' || q.type == 'custom-groupset') {
 			// term is using groupsetting
 			// should provide option to cancel it
-			if (self.q.mode != 'binary' && self.term.type != 'geneVariant') {
+			if (q.mode != 'binary' && self.term.type != 'geneVariant') {
 				// mode=binary will never use groupsetting
 				// geneVariant term can cancel groupsetting within edit menu
-				options.push({ label: 'Cancel grouping', callback: self.cancelGroupsetting } as opt)
+				options.push({ label: 'Cancel grouping', callback: self.actions.cancelGroupsetting } as opt)
 			}
 		}
 
@@ -144,14 +144,16 @@ export class TermSettingApi {
 				label: 'Edit',
 				callback: async div => {
 					if (self.term && isNumericTerm(self.term) && !self.term.bins) {
-						await self.vocabApi.setTermBins({ term: self.term, q: self.q })
+						const tw = { term: self.term, q: self.q, $id: '' }
+						tw.$id = await get$id(tw)
+						await self.vocabApi.setTermBins(tw)
 					}
 					self.handler!.showEditMenu(div)
 				}
 			} as opt)
 		}
 
-		if (self.term.type == 'geneVariant' && self.q.type == 'predefined-groupset') {
+		if (self.term.type == 'geneVariant' && (self.q as any).type == 'predefined-groupset') {
 			// display predefined groupsets of geneVariant term
 			// for quick access
 			const groupsets = self.term.groupsetting?.lst
@@ -167,7 +169,7 @@ export class TermSettingApi {
 							q: { type: 'predefined-groupset', predefined_groupset_idx: i, isAtomic: true }
 						}
 						await call_fillTW(tw, self.vocabApi)
-						self.opts.callback!(tw)
+						self.opts.callback(tw)
 					}
 				})
 			}
@@ -184,13 +186,13 @@ export class TermSettingApi {
 		}
 
 		if (minimatch('remove', self.opts.menuOptions)) {
-			options.push({ label: 'Remove', callback: self.removeTerm } as opt)
+			options.push({ label: 'Remove', callback: self.actions.removeTerm } as opt)
 		}
 
 		if (self.opts.customMenuOptions) options.push(...self.opts.customMenuOptions)
 
-		self.openMenu = menuHolder || tip.d
-		self.openMenu
+		const activeMenu = menuHolder || tip.d
+		activeMenu
 			.selectAll('div')
 			.data(options)
 			.enter()
@@ -207,7 +209,7 @@ export class TermSettingApi {
 				if (event.key == 'Enter') event.target.click()
 			})
 
-		self.openMenu.select('.sja_menuoption').node()?.focus()
+		activeMenu.select('.sja_menuoption').node()?.focus()
 		//self.showFullMenu(tip.d, self.opts.menuOptions)
 	}
 
@@ -229,10 +231,13 @@ export class TermSettingApi {
 			.attr('type', 'text')
 			.on('input', async () => {
 				const str = input.property('value')
+				const cohortStr = self.opts.vocabApi.termdbConfig.selectCohort.values[self.activeCohort || 0].keys
+					.slice()
+					.sort()
+					.join(',')
+
 				try {
-					const results = !str
-						? { lst: [] }
-						: await self.vocabApi.findTerm(str, self.activeCohort!, self.usecase!, 'gene')
+					const results = !str ? { lst: [] } : await self.vocabApi.findTerm(str, cohortStr, self.usecase as any, 'gene')
 					resultsDiv.selectAll('*').remove()
 					resultsDiv
 						.selectAll('div')
@@ -244,9 +249,9 @@ export class TermSettingApi {
 						.style('margin', '2px 3px')
 						.style('width', 'fit-content')
 						.text((gene: any) => gene.name)
-						.on('click', (gene: any) => {
+						.on('click', async (gene: any) => {
 							self.dom.tip.hide()
-							self.runCallback!({
+							this.runCallback({
 								term: {
 									name: gene.name,
 									type: 'geneVariant'
@@ -254,7 +259,7 @@ export class TermSettingApi {
 								q: {
 									exclude: []
 								}
-							})
+							} as any) // TODO: fix type
 						})
 				} catch (e) {
 					alert('Search error: ' + e)

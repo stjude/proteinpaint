@@ -5,15 +5,29 @@ import type {
 	SampleCountsEntry,
 	NoTermPromptOptsEntry,
 	VocabApi,
-	TermSettingApi
+	TermSettingApi,
+	Handler
 } from './types'
-import type { Term, Filter, Q } from '#types'
+import type { Term, Filter, Q, TermWrapper } from '#types'
 import { Menu } from '#dom'
 import { TermTypes, isDictionaryType } from '#shared/terms.js'
 import { minimatch } from 'minimatch'
+import { HandlerBase } from './HandlerBase.ts'
+import { TermSettingView } from './TermSettingView.ts'
+import { TermSettingActions } from './TermSettingActions.ts'
+
+type MenuOptions = string // 'edit|replace|save|remove|reuse'
+type MenuLayout = 'vertical' | 'horizontal'
+type CustomMenuOptions = { label: string; callback: (tw: TermWrapper) => void }
+
+const defaultOpts = {
+	menuOptions: 'edit' satisfies MenuOptions,
+	menuLayout: 'vertical' satisfies MenuLayout,
+	customMenuOptions: [] satisfies CustomMenuOptions[]
+}
 
 export class TermSettingInner {
-	opts: TermSettingOpts
+	opts: any // Required<TermSettingOpts>
 	vocabApi: VocabApi
 	dom: {
 		[name: string]: any // d3-selection
@@ -37,6 +51,12 @@ export class TermSettingInner {
 	hasError: boolean = false
 	api: TermSettingApi
 	numqByTermIdModeType: any //{}
+
+	//tw: TermWrapper
+	view: TermSettingView
+	actions: TermSettingActions
+
+	handler: Handler
 	handlerByType: {
 		[termType: string]: any // TODO: define handler api
 	} = {}
@@ -54,10 +74,34 @@ export class TermSettingInner {
 	filter: Filter | undefined
 
 	constructor(opts: TermSettingOpts) {
-		this.opts = opts
+		this.opts = this.validateOpts(opts)
 		this.api = opts.api
 		this.vocabApi = opts.vocabApi
 		this.dom = this.getDom(opts)
+		this.handler = new HandlerBase({ self: this })
+		//this.tw = opts.tw
+		this.view = new TermSettingView({ self: this })
+		this.actions = new TermSettingActions({ self: this })
+	}
+
+	validateOpts(_opts: TermSettingOpts) {
+		const o = {
+			...defaultOpts,
+			..._opts
+		}
+		if (!o.holder && o.renderAs != 'none') throw '.holder missing'
+		if (typeof o.callback != 'function') throw '.callback() is not a function'
+		if (!o.vocabApi) throw '.vocabApi missing'
+		if (typeof o.vocabApi != 'object') throw '.vocabApi{} is not object'
+		if ('placeholder' in o && !o.placeholder && 'placeholderIcon' in o && !o.placeholderIcon)
+			throw 'must specify a non-empty opts.placeholder and/or .placeholderIcon'
+		if (!('placeholder' in o)) o.placeholder = 'Select term&nbsp;'
+		if (!('placeholderIcon' in o)) o.placeholderIcon = '+'
+		if (!Number.isInteger(o.abbrCutoff)) o.abbrCutoff = 18 //set the default to 18
+		this.validateMenuOptions(o)
+		if (!o.numericEditMenuVersion) o.numericEditMenuVersion = ['discrete']
+		this.mayValidate_noTermPromptOptions(o)
+		return o
 	}
 
 	getDom(opts) {
@@ -125,12 +169,22 @@ export class TermSettingInner {
 		}
 		this.noTermPromptOptions = o.noTermPromptOptions
 	}
-}
 
-type MenuOptions = string // 'edit|replace|save|remove|reuse'
-type MenuLayout = 'vertical' | 'horizontal'
-
-const defaultOpts: { menuOptions: MenuOptions; menuLayout: MenuLayout } = {
-	menuOptions: 'edit',
-	menuLayout: 'vertical'
+	async setHandler(termtype: string | undefined | null) {
+		// TODO: should use TwRouter here??? or expect tw to be already filled-in/instantiated???
+		if (!termtype) {
+			this.handler = this.handlerByType.default as Handler
+			return
+		}
+		const type = termtype == 'integer' || termtype == 'float' || termtype == 'date' ? 'numeric' : termtype // 'categorical', 'condition', 'survival', etc
+		if (!this.handlerByType[type]) {
+			try {
+				const _ = await import(`./handlers/${type}.ts`)
+				this.handlerByType[type] = await _.getHandler(this)
+			} catch (e) {
+				throw `error with handler='./handlers/${type}.ts': ${e}`
+			}
+		}
+		this.handler = this.handlerByType[type] as Handler
+	}
 }
