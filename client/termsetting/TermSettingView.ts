@@ -39,9 +39,9 @@ export class TermSettingView {
 		self.dom.nopilldiv = self.dom.holder
 			.append('div')
 			.style('cursor', 'pointer')
-			.on('click', self.clickNoPillDiv)
+			.on('click', () => self.actions.clickNoPillDiv())
 			.on(`keyup.sjpp-termdb`, event => {
-				if (event.key == 'Enter') self.showTree(event)
+				if (event.key == 'Enter') self.api.showTree(event)
 			})
 		self.dom.pilldiv = self.dom.holder.append('div')
 
@@ -109,7 +109,7 @@ export class TermSettingView {
 				.on('click', (event: any, d: string) => {
 					if (d == 'delete') self.actions.removeTerm()
 					else if (d == 'replace') {
-						self.showTree(event.target)
+						self.api.showTree(event.target, event)
 					} else throw 'unknown button'
 				})
 

@@ -1,6 +1,5 @@
 import type { BaseTerm, MinBaseQ } from '../index.ts'
 import type { TermWrapper } from './tw.ts'
-import type { TermSettingInstance } from '../termsetting.ts'
 
 /*
 --------EXPORTED--------
@@ -30,12 +29,6 @@ export type SampleLstTerm = BaseTerm & {
 }
 
 export type SampleLstTW = TermWrapper & {
-	q: SampleLstQ
-	term: SampleLstTerm
-}
-
-//temporary, will eventually change to SampleLstHandler
-export type SampleLstTermSettingInstance = TermSettingInstance & {
 	q: SampleLstQ
 	term: SampleLstTerm
 }

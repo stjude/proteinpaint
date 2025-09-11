@@ -1,7 +1,7 @@
-import type { TermSettingOpts /*Handler, PillData*/ } from './types'
+import type { TermSettingOpts } from './types'
 import { TermSettingInner } from './TermSettingInner'
 import type { Term, TermWrapper, Filter, GvPredefinedGsTW } from '#types'
-import { call_fillTW, get$id } from './termsetting'
+import { call_fillTW } from './termsetting'
 import { minimatch } from 'minimatch'
 import { isNumericTerm } from '#shared/terms.js'
 import { copyMerge, deepEqual } from '#rx'
@@ -9,9 +9,12 @@ import { select } from 'd3-selection'
 
 export class TermSettingApi {
 	#Inner: TermSettingInner
+	Inner?: TermSettingInner
 
 	constructor(opts: TermSettingOpts) {
+		opts.api = this //; console.log(14, opts)
 		this.#Inner = new TermSettingInner(opts)
+		if (opts.debug) this.Inner = this.#Inner
 	}
 
 	async main(data: any = {}) {
@@ -40,7 +43,7 @@ export class TermSettingApi {
 			await self.setHandler(self.term ? self.term.type : null)
 			if (data.term && self.handler && self.handler.validateQ) self.handler.validateQ(data)
 			if (self.handler.postMain) await self.handler.postMain()
-			if (self.opts.renderAs != 'none') self.updateUI()
+			if (self.opts.renderAs != 'none') self.view.updateUI()
 		} catch (e) {
 			self.hasError = true
 			throw e
@@ -144,9 +147,9 @@ export class TermSettingApi {
 				label: 'Edit',
 				callback: async div => {
 					if (self.term && isNumericTerm(self.term) && !self.term.bins) {
-						const tw = { term: self.term, q: self.q, $id: '' }
-						tw.$id = await get$id(tw)
-						await self.vocabApi.setTermBins(tw)
+						const tw = { term: self.term, q: self.q /*, $id: ''*/ }
+						//tw.$id = await get$id(tw)
+						await self.vocabApi.setTermBins(tw as any) // TODO: fix type
 					}
 					self.handler!.showEditMenu(div)
 				}
@@ -182,11 +185,16 @@ export class TermSettingApi {
 		// }
 
 		if (minimatch('replace', self.opts.menuOptions)) {
-			options.push({ label: 'Replace', callback: self.showTree } as opt)
+			options.push({
+				label: 'Replace',
+				callback: (event, d) => {
+					this.showTree(event, d)
+				}
+			} as opt)
 		}
 
 		if (minimatch('remove', self.opts.menuOptions)) {
-			options.push({ label: 'Remove', callback: self.actions.removeTerm } as opt)
+			options.push({ label: 'Remove', callback: () => self.actions.removeTerm() } as opt)
 		}
 
 		if (self.opts.customMenuOptions) options.push(...self.opts.customMenuOptions)

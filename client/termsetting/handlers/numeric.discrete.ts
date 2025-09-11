@@ -147,7 +147,7 @@ function applyEdits(self) {
 	}
 	self.q.mode = 'discrete'
 	self.dom.tip.hide()
-	self.runCallback()
+	self.api.runCallback()
 }
 
 function processCustomBinInputs(self) {

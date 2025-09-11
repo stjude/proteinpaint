@@ -1,16 +1,17 @@
 import { getPillNameDefault } from '../termsetting'
-import type { GeneVariantTermSettingInstance, RawGvTerm, VocabApi } from '#types'
+import type { RawGvTerm, VocabApi } from '#types'
 import type { PillData } from '../types'
 import { make_radios, renderTable } from '#dom'
 import { dtTerms, getColors, dtcnv, mclass } from '#shared/common.js'
 import { filterInit, filterPromptInit, getNormalRoot } from '#filter/filter'
 import { rgb } from 'd3-color'
 import { getWrappedTvslst } from '#filter/filter'
+import type { TermSettingInner } from '../TermSettingInner.ts'
 
 let colorScale = getColors(3)
 
 // self is the termsetting instance
-export function getHandler(self: GeneVariantTermSettingInstance) {
+export function getHandler(self: TermSettingInner) {
 	return {
 		getPillName(d: PillData) {
 			return getPillNameDefault(self, d)
@@ -18,13 +19,14 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 
 		getPillStatus() {
 			let text
-			if (self.q.type == 'predefined-groupset') {
+			const q = self.q as any // TODO: migrate this handler to use client/tw code
+			if (q.type == 'predefined-groupset') {
 				const groupsetting = self.term.groupsetting
 				if (!groupsetting.lst?.length) throw 'no predefined groupsets found'
-				const groupset = groupsetting.lst[self.q.predefined_groupset_idx]
+				const groupset = groupsetting.lst[q.predefined_groupset_idx]
 				text = groupset.name
-			} else if (self.q.type == 'custom-groupset') {
-				const n = self.q.customset.groups.length
+			} else if (q.type == 'custom-groupset') {
+				const n = q.customset.groups.length
 				text = `Divided into ${n} groups`
 			} else {
 				text = 'any variant class'
@@ -38,7 +40,7 @@ export function getHandler(self: GeneVariantTermSettingInstance) {
 	}
 }
 
-async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
+async function makeEditMenu(self: TermSettingInner, _div: any) {
 	/* TODO: instead of directly modifying self.q here, should create a separate property on the handler to store pending user
 	configurations (similar to numeric continuous/discrete switching)
 	const handler = self.handlerByType.geneVariant */
@@ -48,7 +50,8 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 	const groupsDiv = div.append('div').style('display', 'none').style('margin', '10px').style('vertical-align', 'top')
 	// radio buttons for whether or not to group samples
 	optsDiv.append('div').style('font-weight', 'bold').text('Group samples')
-	const isGroupset = self.q.type == 'predefined-groupset' || self.q.type == 'custom-groupset'
+	const q = self.q as any // TODO: migrate this handler to use client/tw code
+	const isGroupset = q.type == 'predefined-groupset' || q.type == 'custom-groupset'
 	make_radios({
 		holder: optsDiv,
 		options: [
@@ -57,7 +60,7 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		],
 		callback: async v => {
 			if (v == 'group') {
-				if (self.q.type == 'values') Object.assign(self.q, { type: 'custom-groupset', customset: { groups: [] } })
+				if (q.type == 'values') Object.assign(q, { type: 'custom-groupset', customset: { groups: [] } })
 				await makeGroupUI(self, groupsDiv)
 			} else {
 				clearGroupset(self)
@@ -84,7 +87,8 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 		.append('button')
 		.text('Apply')
 		.on('click', () => {
-			if (self.q.type == 'predefined-groupset' || self.q.type == 'custom-groupset') {
+			const q = self.q as any // TODO: migrate this handler to use client/tw code
+			if (q.type == 'predefined-groupset' || q.type == 'custom-groupset') {
 				// groupsetting
 				if (!self.groups?.length) {
 					// no groups created
@@ -92,18 +96,18 @@ async function makeEditMenu(self: GeneVariantTermSettingInstance, _div: any) {
 					return
 				} else {
 					// groups created, assign to custom groupset
-					Object.assign(self.q, { type: 'custom-groupset', customset: { groups: self.groups } })
+					Object.assign(q, { type: 'custom-groupset', customset: { groups: self.groups } })
 				}
 			} else {
 				// no groupsetting
-				if (self.q.type != 'values') throw `q.type must be 'values'`
+				if (q.type != 'values') throw `q.type must be 'values'`
 			}
-			self.runCallback()
+			self.api.runCallback()
 		})
 }
 
 // make UI for grouping variants
-async function makeGroupUI(self: GeneVariantTermSettingInstance, div) {
+async function makeGroupUI(self: TermSettingInner, div) {
 	div.style('display', 'block')
 	div.selectAll('*').remove()
 
@@ -120,16 +124,17 @@ async function makeGroupUI(self: GeneVariantTermSettingInstance, div) {
 	// add new group button
 	const addNewGroupBtnHolder = div.append('div')
 
+	const q = self.q as any // TODO: migrate this handler to use client/tw code
 	// get groups
-	if (self.q.type != 'predefined-groupset' && self.q.type != 'custom-groupset') throw 'unexpected q.type'
+	if (q.type != 'predefined-groupset' && q.type != 'custom-groupset') throw 'unexpected q.type'
 	if (!self.groups) {
 		let groupset
-		if (self.q.type == 'predefined-groupset') {
+		if (q.type == 'predefined-groupset') {
 			const groupsetting = self.term.groupsetting
 			if (!groupsetting.lst?.length) throw 'no predefined groupsets found'
-			groupset = groupsetting.lst[self.q.predefined_groupset_idx]
+			groupset = groupsetting.lst[q.predefined_groupset_idx]
 		} else {
-			groupset = self.q.customset
+			groupset = q.customset
 		}
 		if (!groupset) throw 'groupset is missing'
 		if (!Array.isArray(groupset.groups)) throw 'groupset.groups is not array'

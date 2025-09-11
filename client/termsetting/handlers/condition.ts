@@ -104,7 +104,7 @@ async function showMenu_discrete(self, div: any) {
 			self.q.value_by_most_recent = i == 1
 			self.q.value_by_computable_grade = i == 2 || i == 3
 			self.dom.tip.hide()
-			self.runCallback()
+			self.api.runCallback()
 		})
 	// 0
 	value_type_select.append('option').text('Max grade per patient')
@@ -253,7 +253,7 @@ async function showMenu_discrete(self, div: any) {
 			event.target.innerHTML = 'Loading...'
 			// (event.target as HTMLButtonElement).disabled = true
 			// (event.target as HTMLButtonElement).innerHTML = 'Loading...'
-			self.runCallback()
+			self.api.runCallback()
 		})
 }
 
@@ -356,7 +356,7 @@ function showMenu_cutoff(self, div: any) {
 			event.target.innerHTML = 'Loading...'
 			// (event.target as HTMLButtonElement).disabled = true
 			// (event.target as HTMLButtonElement).innerHTML = 'Loading...'
-			self.runCallback()
+			self.api.runCallback()
 		})
 }
 

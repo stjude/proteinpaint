@@ -1,13 +1,15 @@
 import { getPillNameDefault } from '#termsetting'
 import { renderTable } from '#dom'
-import type { SampleLstTermSettingInstance, PillData, SampleLstTW } from '#types'
+import type { PillData, SampleLstTW } from '#types'
+import type { TermSettingInner } from '../TermSettingInner.ts'
 
-export function getHandler(self: SampleLstTermSettingInstance) {
+export function getHandler(self: TermSettingInner) {
 	return {
 		showEditMenu(div: any) {
 			div.selectAll('*').remove()
+			const q = self.q as any // TODO: migrate this handler to use client/tw code
 			if (self.vocabApi.termdbConfig?.displaySampleIds && self.vocabApi.hasVerifiedToken()) {
-				const groups = self.q.groups
+				const groups = q.groups
 				for (const group of groups) {
 					const groupDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 					const noButtonCallback = (i: number, node: any) => {
@@ -28,7 +30,7 @@ export function getHandler(self: SampleLstTermSettingInstance) {
 					.on('click', () => {
 						for (const group of groups)
 							group.values = group.values.filter(value => !('checked' in value) || value.checked)
-						self.runCallback!()
+						self.api.runCallback!()
 					})
 			} else {
 				const e = self.vocabApi.tokenVerificationPayload

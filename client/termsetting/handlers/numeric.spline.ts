@@ -313,5 +313,5 @@ function renderButtons(self) {
 function applyEdits(self) {
 	self.q.mode = 'spline'
 	self.dom.tip.hide()
-	self.runCallback()
+	self.api.runCallback()
 }

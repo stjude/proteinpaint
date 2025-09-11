@@ -153,7 +153,7 @@ async function makeEditMenu(self, div0: any) {
 					select_ancestry.node().options[select_ancestry.property('selectedIndex')].__ancestry_obj
 			}
 
-			self.runCallback()
+			self.api.runCallback()
 		})
 
 	btnRow

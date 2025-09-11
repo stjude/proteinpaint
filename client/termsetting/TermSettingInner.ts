@@ -50,7 +50,7 @@ export class TermSettingInner {
 	//Created
 	hasError: boolean = false
 	api: TermSettingApi
-	numqByTermIdModeType: any //{}
+	numqByTermIdModeType: { [twId: string]: { [mode: string]: any /* should be numeric q */ } } = {}
 
 	//tw: TermWrapper
 	view: TermSettingView
@@ -60,11 +60,11 @@ export class TermSettingInner {
 	handlerByType: {
 		[termType: string]: any // TODO: define handler api
 	} = {}
-	showTree: any
-	showGeneSearch: any
-	showMenu: any
-	initUI: any
-	updateUI: any
+	// showTree: any
+	// showGeneSearch: any
+	// showMenu: any
+	// initUI: any
+	// updateUI: any
 
 	//Pill data
 	term: any
@@ -72,6 +72,7 @@ export class TermSettingInner {
 	data: any
 	error: string | undefined
 	filter: Filter | undefined
+	groups?: any
 
 	constructor(opts: TermSettingOpts) {
 		this.opts = this.validateOpts(opts)
@@ -79,6 +80,7 @@ export class TermSettingInner {
 		this.vocabApi = opts.vocabApi
 		this.dom = this.getDom(opts)
 		this.handler = new HandlerBase({ self: this })
+		this.handlerByType.default = this.handler
 		//this.tw = opts.tw
 		this.view = new TermSettingView({ self: this })
 		this.actions = new TermSettingActions({ self: this })
@@ -118,7 +120,7 @@ export class TermSettingInner {
 			// tip2 is for showing inside tip, e.g. in snplocus UI
 			tip2: new Menu({
 				padding: '0px',
-				parent_menu: this.dom.tip.d.node()
+				parent_menu: tip.d.node()
 			})
 		}
 	}

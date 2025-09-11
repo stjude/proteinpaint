@@ -299,7 +299,7 @@ async function makeEditMenu(self, div0: any) {
 
 			delete self.doNotHideTipInMain
 
-			self.runCallback()
+			self.api.runCallback()
 			self.updateUI()
 		})
 
