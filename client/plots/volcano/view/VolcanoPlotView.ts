@@ -84,14 +84,18 @@ export class VolcanoPlotView {
 			// Launch hierCluster for DEGs between the two groups
 			this.addActionButton('DEGs hierarchical clustering', async () => {
 				//Sort the DEG rows by q-value in ascending order
+				const geneIndex = this.viewData.pValueTableData.columns.findIndex(col => col.label === 'Gene Name')
+				const adjustedPValIndex = this.viewData.pValueTableData.columns.findIndex(
+					col => col.label === 'Adjusted p-value'
+				)
 				const rowsSorted = [...this.viewData.pValueTableData.rows].sort((a, b) => {
-					const aQVal = Number(a[3].value)
-					const bQVal = Number(b[3].value)
+					const aQVal = Number(a[adjustedPValIndex].value)
+					const bQVal = Number(b[adjustedPValIndex].value)
 					return aQVal - bQVal
 				})
 
 				// Launch hierCluster for up to 100 DEGs with the smallest q-values
-				const geneList = rowsSorted.slice(0, 100).map(r => ({ gene: r[0].value }))
+				const geneList = rowsSorted.slice(0, 100).map(r => ({ gene: r[geneIndex].value }))
 
 				const tws = geneList.map(d => {
 					const gene = d.gene
