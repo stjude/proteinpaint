@@ -1,5 +1,4 @@
-import type { MinBaseQ, BaseTerm, TermGroupSetting, BaseTW, TermValues, BaseGroupSet, FilterGroup } from '../index.ts'
-import type { TermSettingInstance } from '../termsetting.ts'
+import type { MinBaseQ, BaseTerm, TermGroupSetting, BaseTW, TermValues, BaseGroupSet } from '../index.ts'
 
 // q types
 export type GvBaseQ = MinBaseQ & {
@@ -100,14 +99,6 @@ export type GvCustomGsTW = BaseTW & {
 
 export type RawGvTW = RawGvValuesTW | RawGvPredefinedGsTW | RawGvCustomGsTW
 export type GvTW = GvValuesTW | GvPredefinedGsTW | GvCustomGsTW
-
-// termsetting types
-export type GeneVariantTermSettingInstance = TermSettingInstance & {
-	q: GvQ
-	term: GvTerm
-	category2samplecount: any
-	groups: FilterGroup[] // will store groups created in edit UI
-}
 
 // miscellaneous types
 export type DtTerm = {

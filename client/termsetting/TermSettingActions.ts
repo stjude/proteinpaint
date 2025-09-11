@@ -1,6 +1,6 @@
 import type { TermSettingInner } from './TermSettingInner'
 import { Menu } from '#dom'
-import { TwRouter } from '#tw'
+// import { TwRouter } from '#tw'
 import { isNumericTerm } from '#shared/terms.js'
 import { get$id } from './termsetting.ts'
 
@@ -17,21 +17,19 @@ export class TermSettingActions {
 
 	async cancelGroupsetting() {
 		const self = this.self
-		self.opts.callback(
-			await TwRouter.fill({
-				id: self.term.id,
-				term: self.term,
-				q: { mode: 'discrete', type: 'values', isAtomic: true }
-			})
-		)
+		self.opts.callback({
+			id: self.term.id,
+			term: self.term,
+			q: { mode: 'discrete', type: 'values', isAtomic: true }
+		})
 	}
 
-	async clickNoPillDiv() {
+	async clickNoPillDiv(event) {
 		const self = this.self
 		// support various behaviors upon clicking nopilldiv
 		if (!self.noTermPromptOptions || self.noTermPromptOptions.length == 0) {
 			// show tree to select a dictionary term
-			await self.showTree(self.dom.nopilldiv.node())
+			await self.api.showTree(self.dom.nopilldiv.node(), event)
 			return
 		}
 		self.dom.tip.clear().showunder(self.dom.nopilldiv.node())
@@ -54,15 +52,15 @@ export class TermSettingActions {
 					}
 					self.dom.tip.clear()
 					if (option.isDictionary) {
-						await self.showTree(self.dom.tip.d.node())
+						await self.api.showTree(self.dom.tip.d.node(), event)
 					} else if (option.termtype) {
 						// pass in default q{} to customize settings in edit menu
 						if (option.q) self.q = structuredClone(option.q)
 						await self.setHandler(option.termtype)
 						if (isNumericTerm(self.term) && !self.term.bins && self.term.type != 'survival') {
-							const tw = { term: self.term, q: self.q, $id: '' }
-							tw.$id = await get$id(tw)
-							await self.vocabApi.setTermBins(tw)
+							const tw = { term: self.term, q: self.q /*, $id: ''*/ }
+							//tw.$id = await get$id(tw)
+							await self.vocabApi.setTermBins(tw as any) // TODO: fix type
 						}
 						if (!self.$id) self.$id = await get$id(self.vocabApi.getTwMinCopy({ term: self.term, q: self.q }))
 						self.handler!.showEditMenu(self.dom.tip.d)
@@ -76,3 +74,22 @@ export class TermSettingActions {
 		// load the input ui for this term type
 	}
 }
+
+// // do not consider irrelevant q attributes when
+// // computing the deep equality of two term.q's
+// function equivalentQs(q0: Q, q1: Q) {
+// 	const qlst = [q0, q1].map(q => JSON.parse(JSON.stringify(q)))
+// 	for (const q of qlst) {
+// 		delete q.binLabelFormatter
+// 		if (q.reuseId === 'Default') delete q.reuseId
+// 		// TODO: may need to delete non-relevant q attributes
+// 		// when setting defaults in regression.inputs.term.js
+// 		if (q.mode === 'continuous') delete q.mode
+// 		if (q.mode === 'discrete' && q.type == 'custom-bin' && q.lst) {
+// 			for (const bin of q.lst) {
+// 				delete bin.range
+// 			}
+// 		}
+// 	}
+// 	return deepEqual(qlst[0], qlst[1])
+// }

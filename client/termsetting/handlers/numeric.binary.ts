@@ -110,7 +110,7 @@ export function getHandler(self) {
 					self.q.lst = processCustomBinInputs(self)
 					self.numqByTermIdModeType[self.term.id].binary = JSON.parse(JSON.stringify(self.q))
 					self.q.mode = 'binary'
-					self.runCallback()
+					self.api.runCallback()
 				})
 
 			btndiv
