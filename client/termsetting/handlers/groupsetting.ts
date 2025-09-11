@@ -349,7 +349,7 @@ function setRenderers(self: any) {
 			.on('click', () => {
 				self.processDraggables()
 				self.tsInstance.dom.tip.hide()
-				self.tsInstance.runCallback()
+				self.tsInstance.api.runCallback()
 			})
 
 		//Top message
