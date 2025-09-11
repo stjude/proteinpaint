@@ -3,15 +3,15 @@ import { downloadSingleSVG, downloadAggregatedSVG } from '../common/svg.download
 
 export class DownloadMenu {
 	menu: Menu
-	name2svg: { [name: string]: { svg: any; parent: any } }
+	chartImages: any[]
 	holder: any
 	multipleSVGs: boolean
 	filename: string
 
-	constructor(name2svg, filename = 'charts') {
+	constructor(chartImages, filename = 'charts') {
 		this.menu = new Menu({ padding: '0px' })
-		this.name2svg = name2svg
-		this.multipleSVGs = Object.keys(name2svg).length > 1
+		this.chartImages = chartImages
+		this.multipleSVGs = chartImages.length > 1
 		this.filename = filename.replace(/\s/g, '_')
 	}
 
@@ -23,7 +23,7 @@ export class DownloadMenu {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text('PDF Portrait')
 			.on('click', () => {
-				downloadSVGsAsPdf(this.name2svg, this.filename, 'portrait')
+				downloadSVGsAsPdf(this.chartImages, this.filename, 'portrait')
 				this.menu.hide()
 			})
 		menuDiv
@@ -31,7 +31,7 @@ export class DownloadMenu {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text('PDF Landscape')
 			.on('click', () => {
-				downloadSVGsAsPdf(this.name2svg, this.filename, 'landscape')
+				downloadSVGsAsPdf(this.chartImages, this.filename, 'landscape')
 				this.menu.hide()
 			})
 		menuDiv
@@ -39,7 +39,7 @@ export class DownloadMenu {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text('SVG')
 			.on('click', () => {
-				downloadAggregatedSVG(this.name2svg, this.filename)
+				downloadAggregatedSVG(this.chartImages, this.filename)
 				this.menu.hide()
 			})
 
@@ -49,8 +49,8 @@ export class DownloadMenu {
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text('Multiple SVG')
 				.on('click', () => {
-					for (const [name, chart] of Object.entries(this.name2svg))
-						downloadSingleSVG(chart.svg.node(), name.replace(/\s/g, '_'), chart.parent)
+					for (const chart of this.chartImages)
+						downloadSingleSVG(chart.svg, chart.name.replace(/\s/g, '_'), chart.parent)
 					this.menu.hide()
 				})
 		this.menu.show(x - 20, y - 10)
