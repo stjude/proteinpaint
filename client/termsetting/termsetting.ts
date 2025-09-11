@@ -345,7 +345,7 @@ function setRenderers(self) {
 		}
 
 		if (!self.dom.holder) return // toggle the display of pilldiv and nopilldiv with availability of this.term
-		;(self.dom.nopilldiv as HTMLElement) = self.dom.holder
+		self.dom.nopilldiv = self.dom.holder
 			.append('div')
 			.style('cursor', 'pointer')
 			.on('click', self.clickNoPillDiv)
@@ -918,7 +918,7 @@ function getDefaultHandler(self): Handler {
 			//ignore
 		},
 		getPillStatus() {
-			//ignore
+			return { text: '' }
 		},
 		getPillName(d: PillData) {
 			return getPillNameDefault(self, d)

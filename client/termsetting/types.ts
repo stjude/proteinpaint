@@ -1,10 +1,10 @@
 import type { Filter, Q, TermWrapper, Term } from '#types'
 import type { TermSettingApi } from './TermSettingApi'
 import type { TermdbVocab } from '#termdb/TermdbVocab'
-import type { FrontendVocab } from '#termdb/FrontendVocab'
-
+//import type { FrontendVocab } from '#termdb/FrontendVocab'
 export type { TermSettingApi } from './TermSettingApi'
-export type VocabApi = TermdbVocab | FrontendVocab
+
+export type VocabApi = TermdbVocab //| FrontendVocab
 
 /*
 
@@ -45,6 +45,8 @@ export type NoTermPromptOptsEntry = {
 	text?: string
 	html?: string
 	q?: Q
+	invalid?: boolean
+	invalidMsg?: string
 }
 
 type NumericContEditOptsEntry = {
@@ -93,6 +95,7 @@ export type PillData = BaseTermSettingOpts & {
 	sampleCounts?: SampleCountsEntry[]
 	term?: Term
 	menuOptions?: string
+	tw?: TermWrapper
 }
 
 export type TermSettingOpts = BaseTermSettingOpts & {
@@ -117,6 +120,7 @@ export type TermSettingOpts = BaseTermSettingOpts & {
 	debug?: boolean | number //true or 1
 	/** See client copy genome type */
 	genomeObj?: any
+	tw?: TermWrapper
 
 	//vocab??
 
@@ -154,7 +158,7 @@ export type InstanceDom = {
 
 export interface Handler {
 	getPillName: (d: any) => string
-	getPillStatus: (f?: any) => any
+	getPillStatus: (f?: any) => { text: string; bgcolor?: string }
 	showEditMenu: (div: Selection) => void
 	validateQ?: (d: PillData) => void
 	postMain?: () => void
