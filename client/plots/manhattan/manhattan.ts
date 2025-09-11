@@ -20,11 +20,14 @@ export function renderInteractivePoints(svg: any, plotData: any, geneTip?) {
 		.append('circle')
 		.attr('cx', d => d.svg_x)
 		.attr('cy', d => d.svg_y)
-		.attr('r', 6)
-		.attr('fill', d => d.color)
+		.attr('r', 3)
+		.attr('fill-opacity', 0)
+		//.attr('fill', d => d.color)
 		.attr('stroke', 'black')
 		.attr('stroke-width', 1)
+		.attr('stroke-opacity', 0)
 		.on('mouseover', (event, d) => {
+			event.target.setAttribute('stroke-opacity', 1)
 			geneTip.clear().show(event.clientX, event.clientY)
 
 			const table = table2col({
@@ -32,12 +35,15 @@ export function renderInteractivePoints(svg: any, plotData: any, geneTip?) {
 				margin: '10px'
 			})
 			table.addRow('Gene', d.gene)
-			table.addRow('Type', d.type)
+			const [t1, t2] = table.addRow()
+			t1.text('Type')
+			t2.html(`<span style="color:${d.color}">●</span> ${d.type}`)
 			table.addRow('-log10(q-value)', d.y.toFixed(3))
 			table.addRow('Subject count', d.nsubj)
 			table.addRow('Chromosome', d.chrom)
 		})
-		.on('mouseout', () => {
+		.on('mouseout', event => {
+			event.target.setAttribute('stroke-opacity', 0)
 			geneTip.hide()
 		})
 }
