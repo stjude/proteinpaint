@@ -130,7 +130,8 @@ export class Report extends RxComponentInner {
 				if (plot?.getChartImages) {
 					const chartImages = plot.getChartImages()
 					for (const chartImage of chartImages) {
-						chartImage.name = `${section.name} / ${chartImage.name}`
+						if (chartImage.name.trim()) chartImage.name = `${section.name} / ${chartImage.name}`
+						else chartImage.name = section.name
 						chartImagesAll.push(chartImage)
 					}
 				}

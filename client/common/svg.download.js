@@ -113,13 +113,13 @@ export function downloadChart(mainGsel, svgName, styleParent = null) {
 	to_svg(svg, svgName, { apply_dom_styles: true })
 }
 
-export function downloadAggregatedSVG(name2svg, svgName) {
+export function downloadAggregatedSVG(chartImages, svgName) {
 	const x = 50
 	const svgParent = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
 	const styles = []
 
 	let y = 20
-	for (const [name, chart] of Object.entries(name2svg)) {
+	for (const chart of chartImages) {
 		const parent = chart.parent
 		const svg = chart.svg.clone(true)
 		const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
@@ -132,7 +132,7 @@ export function downloadAggregatedSVG(name2svg, svgName) {
 			}
 		}
 		const title = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-		title.textContent = name
+		title.textContent = chart.name
 		g.appendChild(title)
 
 		const svgNode = svg.node()
