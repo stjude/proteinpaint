@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- GRIN2 Manhattan Plot: Fixed svg points overlapping plot axes
+
 
 ## 2.143.0
 
