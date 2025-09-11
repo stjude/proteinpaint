@@ -76,10 +76,11 @@ export class profilePlot {
 		const config = appState.plots.find(p => p.id === this.id)
 		const state = this.getState(appState)
 		if (this.opts.header) {
-			console.log(this.opts.header)
 			this.chartName = config.chartType.match(/[A-Z][a-z]+/g)
 			this.chartName = this.chartName.join(' ')
-			this.chartName = config.header ? config.header + ` / ${state.user}` : this.chartName + ` / ${state.user}`
+			this.chartName = config.headerTitle
+				? config.headerTitle + ` / ${state.user}`
+				: this.chartName + ` / ${state.user}`
 			this.opts.header.style('text-transform', 'capitalize').text(this.chartName)
 		}
 		const div = this.opts.holder.append('div').style('display', 'inline-block')
@@ -612,7 +613,6 @@ export function makeChartBtnMenu(holder, chartsInstance, chartType) {
 	function createPlot(plotConfig, chartType, chartsInstance) {
 		let config = structuredClone(plotConfig)
 		config.chartType = chartType
-		config.header = chartType == 'profileRadarFacility' ? 'Facility Radar Graph' : 'Radar Graph'
 		chartsInstance.app.dispatch({
 			type: 'plot_create',
 			chartType,
@@ -667,7 +667,7 @@ export function clearLocalFilters(plot) {
 export function getDefaultProfilePlotSettings() {
 	return {
 		isAggregate: false,
-		showTable: true,
+		showTable: false,
 		filterByUserSites: false //if true, the aggregation will be limited to the user sites only
 	}
 }

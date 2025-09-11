@@ -423,7 +423,7 @@ export async function getPlotConfig(opts, app, _activeCohort) {
 	const formsConfig = await getProfilePlotConfig(activeCohort, app, opts)
 	let config = formsConfig
 	config.settings = getDefaultProfileFormsSettings()
-	config.header = 'Templates: Visualization tools to provide insights and assist in leveraging data'
+	config.headerTitle = 'Templates: Visualization tools to provide insights and assist in leveraging data'
 	config = copyMerge(structuredClone(config), opts)
 	for (const plot of config.options) {
 		if (plot.terms) await fillTwLst(plot.terms, app.vocabApi)

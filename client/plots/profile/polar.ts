@@ -78,7 +78,7 @@ class ProfilePolar extends profilePlot {
 	plot() {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
-		const width = 1100,
+		const width = 1000,
 			height = 600
 		this.dom.svg = this.dom.plotDiv
 			.append('div')
