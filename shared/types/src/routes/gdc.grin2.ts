@@ -120,6 +120,13 @@ export type RunGRIN2Request = {
 		/** Hypermutator max cut off for CNVs per case */
 		hyperMutator?: number // Default: 500
 	}
+	/** Device pixel ratio for rendering */
+	devicePixelRatio?: number // 2
+	/** Plot dimensions */
+	plot_width?: number // 1000
+	plot_height?: number // 400
+	/** Radius of the PNG rendered dots */
+	pngDotRadius?: number // 2
 }
 
 /** Error entry from failed file downloads */

@@ -80,10 +80,10 @@ async function runGrin2(genomes: any, req: any, res: any) {
 		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 		chromosomelist: {},
 		lesion: '' as string,
-		devicePixelRatio: 2,
-		plot_width: 1000,
-		plot_height: 400,
-		pngDotRadius: 2
+		devicePixelRatio: parsedRequest.devicePixelRatio || 2,
+		plot_width: parsedRequest.plot_width || 1000,
+		plot_height: parsedRequest.plot_height || 400,
+		pngDotRadius: parsedRequest.pngDotRadius || 2
 	}
 	for (const c in g.majorchr) {
 		// list is short so a small penalty for accessing the flag in the loop
@@ -134,7 +134,6 @@ async function runGrin2(genomes: any, req: any, res: any) {
 
 	// Call the python script
 	const grin2AnalysisStart = Date.now()
-	console.log('[GRIN2] Calling python script with pyInput parameters:', pyInput)
 	const pyResult = await run_python('grin2PpWrapper.py', JSON.stringify(pyInput))
 
 	// mayLog(`[GRIN2] python execution completed, result: ${pyResult}`)
