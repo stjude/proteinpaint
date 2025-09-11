@@ -30,21 +30,20 @@ export class WSImage {
 	tileSize?: number
 }
 
-export type Annotation = {
+// TODO move to another class
+export class TileSelection {
 	zoomCoordinates: [number, number]
+	class?: string
+}
+
+export class Annotation extends TileSelection {
 	class: string
 }
 
-export type Prediction = {
-	zoomCoordinates: [number, number]
+export class Prediction extends TileSelection {
 	type: string
 	class: string
 	uncertainty: number
-}
-
-export type TileSelection = {
-	zoomCoordinates: [number, number]
-	class?: string
 }
 
 export const sampleWSImagesPayload: RoutePayload = {

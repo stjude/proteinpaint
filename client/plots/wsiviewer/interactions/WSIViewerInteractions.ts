@@ -143,26 +143,16 @@ export class WSIViewerInteractions {
 
 				if (event.key == 'Backspace') {
 					//Delete
-					this.deleteAnnotation(vectorLayer!, tileSelections, currentIndex)
-
-					const body: DeleteWSIAnnotationRequest = {
-						genome: state.vocab.genome,
-						dslabel: state.vocab.dslabel,
-						projectId: state.aiProjectID,
-						annotation: tileSelections[currentIndex],
-						wsimage: sessionWSImage.filename
-					}
-					try {
-						await dofetch3('deleteWSIAnnotation', { method: 'DELETE', body })
-					} catch (e: any) {
-						console.error('Error in deleteWSIAnnotation request:', e.message || e)
-					}
-
-					const nextIdx = currentIndex == tileSelections.length ? 0 : currentIndex + 1
-					buffers.annotationsIdx.set(nextIdx)
-					const coords = [tileSelections[nextIdx].zoomCoordinates] as unknown as [number, number][]
-					this.zoomInEffectListener(activeImageExtent, coords, map, activePatchColor)
-					return
+					await this.deleteAnnotation(
+						wsiApp,
+						vectorLayer!,
+						sessionWSImage,
+						currentIndex,
+						activeImageExtent,
+						activePatchColor,
+						buffers,
+						map
+					)
 				}
 
 				if (idx !== currentIndex) {
@@ -274,11 +264,6 @@ export class WSIViewerInteractions {
 				settings.selectedPatchBorderColor,
 				`prediction-border-${newTileSelection.zoomCoordinates}`
 			)
-
-			console.log('topLeft', topLeft)
-
-			console.log('source', source)
-			console.log('borderFeature', borderFeature)
 			//Add border feature
 
 			source?.addFeature(borderFeature)
@@ -298,23 +283,20 @@ export class WSIViewerInteractions {
 
 	private addAnnotation(
 		vectorLayer: VectorLayer,
-		annotationsData: TileSelection[],
+		tileSelections: TileSelection[],
 		currentIndex: number,
 		color: any,
 		tileSize: number
 	) {
 		const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
-
+		const tileSelection = tileSelections[currentIndex]
 		//Remove any previous feature with the same ID
-		const feature = source?.getFeatureById(`annotation-square-${currentIndex}`)
+		const feature = source?.getFeatureById(`annotation-square-${tileSelection.zoomCoordinates}`)
 		if (feature) {
 			source?.removeFeature(feature)
 		}
 
-		const topLeft = [
-			annotationsData[currentIndex].zoomCoordinates[0],
-			-annotationsData[currentIndex].zoomCoordinates[1]
-		]
+		const topLeft = [tileSelection.zoomCoordinates[0], -tileSelection.zoomCoordinates[1]]
 
 		const squareCoords = [
 			[
@@ -332,7 +314,7 @@ export class WSIViewerInteractions {
 			}
 		})
 
-		square.setId(`annotation-square-${currentIndex}`)
+		square.setId(`annotation-square-${tileSelection.zoomCoordinates}`)
 
 		square.setStyle(
 			new Style({
@@ -344,7 +326,18 @@ export class WSIViewerInteractions {
 		source?.addFeature(square)
 	}
 
-	private deleteAnnotation(vectorLayer: VectorLayer, tileSelections: TileSelection[], currentIndex: number) {
+	private async deleteAnnotation(
+		wsiApp: any,
+		vectorLayer: VectorLayer<any, any>,
+		sessionWSImage: SessionWSImage,
+		currentIndex: number,
+		activeImageExtent: any,
+		activePatchColor,
+		buffers: any,
+		map: OLMap
+	) {
+		const state = wsiApp.app.getState()
+		const tileSelections: TileSelection[] = SessionWSImage.getTileSelections(sessionWSImage)
 		const tileSelection = tileSelections[currentIndex]
 		const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
 
@@ -363,6 +356,41 @@ export class WSIViewerInteractions {
 		if (predictionBorderFeature) {
 			source?.removeFeature(predictionBorderFeature)
 		}
+
+		const body: DeleteWSIAnnotationRequest = {
+			genome: state.vocab.genome,
+			dslabel: state.vocab.dslabel,
+			projectId: state.aiProjectID,
+			annotation: tileSelections[currentIndex],
+			wsimage: sessionWSImage.filename
+		}
+		try {
+			await dofetch3('deleteWSIAnnotation', { method: 'DELETE', body })
+		} catch (e: any) {
+			console.error('Error in deleteWSIAnnotation request:', e.message || e)
+		}
+
+		const nextIdx = currentIndex == tileSelections.length ? 0 : currentIndex + 1
+		buffers.annotationsIdx.set(nextIdx)
+		const coords = [tileSelections[nextIdx].zoomCoordinates] as unknown as [number, number][]
+		this.zoomInEffectListener(activeImageExtent, coords, map, activePatchColor)
+
+		let sessionsTileSelection: TileSelection[] = []
+
+		if (SessionWSImage.isTileSelection(currentIndex, sessionWSImage)) {
+			sessionsTileSelection = SessionWSImage.removeTileSelection(currentIndex, sessionWSImage)
+		}
+
+		wsiApp.app.dispatch({
+			type: 'plot_edit',
+			id: wsiApp.id,
+			config: {
+				settings: {
+					renderWSIViewer: false,
+					sessionsTileSelection: sessionsTileSelection
+				}
+			}
+		})
 	}
 
 	private addActiveBorder(vectorLayer: VectorLayer, zoomCoordinates: [number, number], color: any, tileSize: number) {
