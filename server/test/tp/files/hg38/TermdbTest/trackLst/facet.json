@@ -1,0 +1,24 @@
+[
+{
+	"isfacet":true,
+	"name":"Test Facet",
+	"tracks":[
+		{
+			"type":"bigwig","name":"bw 1","file":"files/hg38/TermdbTest/trackLst/bw1.bw",
+			"assay":"Assay1","sample":"3416"
+		},
+		{
+			"type":"bigwig","name":"bw 2","file":"files/hg38/TermdbTest/trackLst/bw2.bw",
+			"assay":"Assay2","sample":"3318"
+		},
+		{
+			"type":"bedj","name":"bed 1","file":"files/hg38/TermdbTest/trackLst/bed1.gz",
+			"assay":"Assay1","sample":"3416"
+		},
+		{
+			"type":"bedj","name":"bed 2","file":"files/hg38/TermdbTest/trackLst/bed2.gz",
+			"assay":"Assay2","sample":"3318"
+		}
+	]
+}
+]
