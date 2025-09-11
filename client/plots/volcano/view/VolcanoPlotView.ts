@@ -12,6 +12,7 @@ import type {
 } from '../VolcanoTypes'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
 import { DataPointMouseEvents } from './DataPointMouseEvents'
+import { TermTypes } from '#shared/terms.js'
 
 export class VolcanoPlotView {
 	dom: VolcanoDom
@@ -78,6 +79,35 @@ export class VolcanoPlotView {
 					'display',
 					this.volcanoDom.pValueTable.style('display') == 'none' ? 'inline-block' : 'none'
 				)
+			})
+
+			// launch hierCluster for DEGs between the two groups
+			this.addActionButton('DEGs hierarchical clustering', async () => {
+				//significant EDGs between the two groups
+				const geneList = this.viewData.pValueTableData.rows.map(r => {
+					return { gene: r[0].value }
+				})
+
+				const tws = geneList.map(d => {
+					const gene = d.gene
+					const unit = this.interactions.app.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression'
+					const name = `${gene} ${unit}`
+					const term = { gene, name, type: 'geneExpression' }
+					const tw = { term, q: {} }
+					return tw
+				})
+
+				const group = { name: 'DEGs', lst: tws, type: 'hierCluster' }
+				this.interactions.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'hierCluster',
+						termgroups: [group],
+						dataType: TermTypes.GENE_EXPRESSION,
+						divideBy: this.interactions.app.vocabApi.state.plots.find(p => p.id == this.interactions.id).tw,
+						settings: { hierCluster: { yDendrogramHeight: 0, clusterSamples: false } }
+					}
+				})
 			})
 		}
 	}
