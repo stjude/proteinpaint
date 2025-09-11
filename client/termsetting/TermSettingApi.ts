@@ -1,5 +1,5 @@
 import type { TermSettingOpts } from './types'
-import { TermSetting } from './TermSetting'
+import { TermSetting } from './TermSetting.ts'
 import type { Term, TermWrapper, Filter, GvPredefinedGsTW } from '#types'
 import { call_fillTW } from './utils.ts'
 import { minimatch } from 'minimatch'
@@ -14,18 +14,18 @@ export const termsettingInit = opts => {
 }
 
 export class TermSettingApi {
-	self: TermSetting
+	#termsetting: TermSetting
 	Inner?: TermSetting
 
 	constructor(opts: TermSettingOpts) {
 		opts.api = this //; console.log(14, opts)
-		this.self = new TermSetting(opts)
+		this.#termsetting = new TermSetting(opts)
 		// to be used for test-code only
-		if (opts.debug) this.Inner = this.self
+		if (opts.debug) this.Inner = this.#termsetting
 	}
 
 	async main(data: any = {}) {
-		const self = this.self
+		const self = this.#termsetting
 		try {
 			if (self.doNotHideTipInMain) {
 				// single use: if true then delete
@@ -58,7 +58,7 @@ export class TermSettingApi {
 	}
 
 	runCallback(overrideTw = null) {
-		const self = this.self
+		const self = this.#termsetting
 		/* optional termwrapper (tw) to override attributes of self.term{} and self.q{}
 		the override tw serves the "atypical" termsetting usage
 		as used in snplocus block pan/zoom update in regression.results.js
@@ -76,7 +76,7 @@ export class TermSettingApi {
 	}
 
 	async showTree(holder, event: MouseEvent | undefined) {
-		const self = this.self
+		const self = this.#termsetting
 		self.dom.tip.clear()
 		if (holder)
 			self.dom.tip.showunder(
@@ -117,7 +117,7 @@ export class TermSettingApi {
 	}
 
 	showMenu(event: MouseEvent, clickedElem = null, menuHolder = null) {
-		const self = this.self
+		const self = this.#termsetting
 		const tip = self.dom.tip
 		tip.clear()
 		// self.dom.holder really is set to clickedElem because
@@ -229,7 +229,7 @@ export class TermSettingApi {
 	}
 
 	showGeneSearch(clickedElem: Element | null, event: MouseEvent) {
-		const self = this.self
+		const self = this.#termsetting
 		self.dom.tip.clear()
 		if (clickedElem)
 			self.dom.tip.showunder(
@@ -289,16 +289,16 @@ export class TermSettingApi {
 	}
 
 	hasError() {
-		return this.self.hasError
+		return this.#termsetting.hasError
 	}
 
 	validateQ(d /*: PillData*/) {
-		const self = this.self
+		const self = this.#termsetting
 		if (!self.handler || !self.handler.validateQ) return
 		try {
 			self.handler.validateQ(d)
 		} catch (e) {
-			this.self.hasError = true
+			this.#termsetting.hasError = true
 			throw e
 		}
 	}

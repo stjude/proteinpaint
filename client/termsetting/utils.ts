@@ -1,7 +1,6 @@
 import type { CategoricalQ, Q, RawValuesQ, RawGvQ, TermWrapper, TwLst, NumericQ, SnpsQ, Term } from '#types'
 import type { VocabApi } from './types'
 import { TwRouter, routedTermTypes } from '#tw/TwRouter'
-import { TermSettingApi } from './TermSettingApi.ts'
 
 /*
 ********************* EXPORTED
@@ -10,7 +9,6 @@ fillTermWrapper()
 	mayValidateQmode
 set_hiddenvalues()
 */
-
 
 // append the common ID substring,
 // so that the first characters of $id is more indexable

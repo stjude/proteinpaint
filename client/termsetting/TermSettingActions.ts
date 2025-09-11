@@ -1,22 +1,22 @@
-import type { TermSetting } from './TermSetting'
+import type { TermSetting } from './TermSetting.ts'
 import { Menu } from '#dom'
 // import { TwRouter } from '#tw'
 import { isNumericTerm } from '#shared/terms.js'
 import { get$id } from './utils.ts'
 
 export class TermSettingActions {
-	self: TermSetting
+	termsetting: TermSetting
 
 	constructor(opts) {
-		this.self = opts.self
+		this.termsetting = opts.termsetting
 	}
 
 	removeTerm() {
-		this.self.opts.callback(null)
+		this.termsetting.opts.callback(null)
 	}
 
 	async cancelGroupsetting() {
-		const self = this.self
+		const self = this.termsetting
 		self.opts.callback({
 			id: self.term.id,
 			term: self.term,
@@ -25,7 +25,7 @@ export class TermSettingActions {
 	}
 
 	async clickNoPillDiv(event) {
-		const self = this.self
+		const self = this.termsetting
 		// support various behaviors upon clicking nopilldiv
 		if (!self.noTermPromptOptions || self.noTermPromptOptions.length == 0) {
 			// show tree to select a dictionary term

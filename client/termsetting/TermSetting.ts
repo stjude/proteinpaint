@@ -79,11 +79,11 @@ export class TermSetting {
 		this.api = opts.api
 		this.vocabApi = opts.vocabApi
 		this.dom = this.getDom(opts)
-		this.handler = new HandlerBase({ self: this })
+		this.handler = new HandlerBase({ termsetting: this })
 		this.handlerByType.default = this.handler
 		//this.tw = opts.tw
-		this.actions = new TermSettingActions({ self: this })
-		this.view = new TermSettingView({ self: this })
+		this.actions = new TermSettingActions({ termsetting: this })
+		this.view = new TermSettingView({ termsetting: this })
 	}
 
 	validateOpts(_opts: TermSettingOpts) {
