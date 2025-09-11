@@ -21,29 +21,6 @@
                     }
                 }
             }
-        },
-        {
-            "//comment": "This is for testing only. HIDE in production. Remove when no longer needed.",
-            "hidden": true,
-            "label": "AI Histo tool",
-            "runargs": {
-                "mass": {
-                    "state": {
-                        "dslabel": "AIAHistoLabeler",
-                        "genome": "hg38",
-                        "nav": {
-                            "header_mode": "hidden"
-                        },
-                        "plots": [
-                            {
-                                "chartType": "AIProjectAdmin",
-                                "subfolder": "aiProjectAdmin",
-                                "extension": "ts"
-                            }
-                        ]
-                    }
-                }
-            }
         }
     ]
 }
