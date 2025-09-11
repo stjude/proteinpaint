@@ -136,17 +136,18 @@ export class profilePlot {
 				})
 			}
 		})
-		icon_functions['add'](iconsDiv.append('div').style('padding', '3px'), {
-			title: 'Open a new plot',
-			handler: async () => {
-				let config = structuredClone(this.config)
-				config.parentId = this.id
-				this.app.dispatch({
-					type: 'plot_create',
-					config
-				})
-			}
-		})
+		if (!config.parentId)
+			icon_functions['add'](iconsDiv.append('div').style('padding', '3px'), {
+				title: 'Open a new plot',
+				handler: async () => {
+					let config = structuredClone(this.config)
+					config.parentId = this.id
+					this.app.dispatch({
+						type: 'plot_create',
+						config
+					})
+				}
+			})
 	}
 
 	onMouseOut(event) {
@@ -574,13 +575,28 @@ export class profilePlot {
 	}
 
 	async download(event) {
-		const name2svg = this.getChartImages()
-		const menu = new DownloadMenu(name2svg, this.getDownloadFilename())
+		const chartImages = this.getChartImages()
+		const menu = new DownloadMenu(chartImages, this.getDownloadFilename())
 		menu.show(event.clientX, event.clientY)
 	}
 
 	getChartImages() {
-		return [{ name: '', svg: this.dom.svg, parent: this.dom.svg.node() }]
+		const charts = [{ name: '', svg: this.dom.svg, parent: this.dom.svg.node() }]
+		//add comparison plots of added
+		let i = 1
+		for (const key in this.components.plots) {
+			const plot = this.components.plots[key]
+			const chartImages = plot.getChartImages()
+
+			for (const chartImage of chartImages) {
+				const parent = chartImage.parent
+				const svg = chartImage.svg
+				const name = `Comparison ${i}. ${chartImage.name}`
+				charts.push({ name, svg, parent })
+			}
+			i++
+		}
+		return charts
 	}
 }
 

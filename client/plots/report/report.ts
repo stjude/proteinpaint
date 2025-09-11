@@ -5,6 +5,7 @@ import { RxComponent } from '../../types/rx.d'
 import { controlsInit } from '../controls.js'
 import { importPlot } from '#plots/importPlot.js'
 import { downloadSVGsAsPdf } from '#dom'
+import { PlotBase } from '#plots/PlotBase.js'
 
 export class Report extends RxComponent {
 	config: any
@@ -17,9 +18,10 @@ export class Report extends RxComponent {
 	id!: string
 	filterTWs: any[] = []
 	selectFilters: any
+	dom: any
 
-	constructor() {
-		super()
+	constructor(opts) {
+		super(opts)
 		this.type = 'report'
 	}
 
@@ -60,6 +62,11 @@ export class Report extends RxComponent {
 				await this.setPlot(plot, sectionDiv)
 			}
 		}
+	}
+
+	//for some reason the report getChartImages is not seen unless I do this
+	preApiFreeze(api) {
+		api.getChartImages = () => this.getChartImages()
 	}
 
 	getState(appState: any) {
@@ -122,7 +129,7 @@ export class Report extends RxComponent {
 		}
 	}
 
-	async downloadReport() {
+	getChartImages() {
 		const chartImagesAll: any[] = []
 		for (const section of this.config.sections) {
 			for (const plotConfig of section.plots) {
@@ -137,6 +144,11 @@ export class Report extends RxComponent {
 				}
 			}
 		}
+		return chartImagesAll
+	}
+
+	async downloadReport() {
+		const chartImagesAll = this.getChartImages()
 		downloadSVGsAsPdf(chartImagesAll, 'report', 'landscape')
 	}
 }
