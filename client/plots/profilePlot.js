@@ -6,7 +6,7 @@ import { Menu } from '#dom/menu'
 import { icons as icon_functions } from '#dom/control.icons'
 import { getCategoricalTermFilter, getCombinedTermFilter } from '#filter'
 import { DownloadMenu } from '#dom/downloadMenu'
-
+import { importPlot } from '#plots/importPlot.js'
 /*
 
 The profilePlot is the base class for all the profile plots. It handles the common functionality such as setting controls, fetching data, and initializing the plot elements.
@@ -42,6 +42,7 @@ export class profilePlot {
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 		this.scoreTerms = []
 		this.isRadarFacility = false
+		this.components = { plots: {} }
 	}
 
 	getState(appState) {
@@ -59,7 +60,8 @@ export class profilePlot {
 			site,
 			sites,
 			user,
-			activeCohort: appState.activeCohort
+			activeCohort: appState.activeCohort,
+			plots: appState.plots.filter(p => p.parentId === this.id) //this property is needed to indicate that child plots need to be added to the appState plots
 		}
 	}
 
@@ -74,6 +76,7 @@ export class profilePlot {
 		const config = appState.plots.find(p => p.id === this.id)
 		const state = this.getState(appState)
 		if (this.opts.header) {
+			console.log(this.opts.header)
 			this.chartName = config.chartType.match(/[A-Z][a-z]+/g)
 			this.chartName = this.chartName.join(' ')
 			this.chartName = config.header ? config.header + ` / ${state.user}` : this.chartName + ` / ${state.user}`
@@ -136,7 +139,7 @@ export class profilePlot {
 			title: 'Open a new plot',
 			handler: async () => {
 				let config = structuredClone(this.config)
-				config.insertBeforeId = this.id
+				config.parentId = this.id
 				this.app.dispatch({
 					type: 'plot_create',
 					config
@@ -163,6 +166,15 @@ export class profilePlot {
 		this.settings = this.config.settings[this.type]
 		if (this.dom.tableBt)
 			this.dom.tableBt.style('background-color', this.settings.showTable ? 'rgb(207, 226, 243)' : 'transparent')
+		for (const config of this.state.plots) {
+			const plot = structuredClone(config)
+			if (this.components.plots[plot.id]) continue
+			const holder = this.opts.holder.append('div').style('display', 'inline-block').style('padding', '5px')
+			plot.holder = holder.append('div')
+			plot.app = this.app
+			const { componentInit } = await importPlot(plot.chartType)
+			this.components.plots[plot.id] = await componentInit(plot)
+		}
 	}
 
 	async setControls(additionalInputs = []) {
@@ -394,15 +406,13 @@ export class profilePlot {
 			}
 
 			inputs.unshift(...additionalInputs)
-			this.components = {
-				controls: await controlsInit({
-					app: this.app,
-					id: this.id,
-					holder: this.dom.controlsDiv,
-					inputs,
-					title: 'Filters'
-				})
-			}
+			this.components.controls = await controlsInit({
+				app: this.app,
+				id: this.id,
+				holder: this.dom.controlsDiv,
+				inputs,
+				title: 'Filters'
+			})
 			this.components.controls.on(`downloadClick.${chartType}`, event => this.download(event))
 			this.components.controls.on(`helpClick.${chartType}`, () => {
 				const activeCohort = this.state.activeCohort
