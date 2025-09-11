@@ -512,7 +512,7 @@ function setDropdownInput(opts) {
 					}
 					const value = values
 					callbackOrDispatch(opts, value)
-				}, 2000) // 2000 milliseconds delay
+				}, 1000) // 1000 milliseconds delay
 			}
 		})
 		.on('change', e => {
