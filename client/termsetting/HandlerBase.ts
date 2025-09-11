@@ -1,11 +1,11 @@
 import type { Handler } from './types'
-import type { TermSetting } from './TermSetting'
+import type { TermSetting } from './TermSetting.ts'
 
 export class HandlerBase implements Handler {
-	self: TermSetting
+	termsetting: TermSetting
 
 	constructor(opts) {
-		this.self = opts.self
+		this.termsetting = opts.termsetting
 	}
 
 	showEditMenu() {
@@ -17,7 +17,7 @@ export class HandlerBase implements Handler {
 	}
 
 	getPillName(d) {
-		const self = this.self
+		const self = this.termsetting
 		if (!self.opts.abbrCutoff) return d.name
 		return d.name.length <= self.opts.abbrCutoff + 2
 			? d.name

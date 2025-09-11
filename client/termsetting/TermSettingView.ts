@@ -1,20 +1,20 @@
 import { select, type BaseType } from 'd3-selection'
-import type { TermSetting } from './TermSetting'
+import type { TermSetting } from './TermSetting.ts'
 
 type TermsSettingViewOpts = {
-	self: TermSetting
+	termsetting: TermSetting
 }
 
 export class TermSettingView {
-	self: TermSetting
+	termsetting: TermSetting
 
 	_exitPill: (elem: HTMLElement) => void
 	_updatePill: (elem: HTMLElement) => void
 	_enterPill: (elem: HTMLElement) => void
 
 	constructor(opts: TermsSettingViewOpts) {
-		this.self = opts.self
-		this.initUI(opts.self)
+		this.termsetting = opts.termsetting
+		this.initUI(opts.termsetting)
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const view = this
 		// these methods are required to correctly handle the `this` == HTMLElement context as used by d3-selection,
@@ -73,7 +73,7 @@ export class TermSettingView {
 	}
 
 	async updateUI() {
-		const self = this.self
+		const self = this.termsetting
 
 		self.dom.btnDiv.selectAll('*').remove() //remove info button
 		self.dom.content_holder.selectAll('*').remove() //remove info content
@@ -161,7 +161,7 @@ export class TermSettingView {
 	}
 
 	enterPill(elem) {
-		const self = this.self
+		const self = this.termsetting
 		const one_term_div = select(elem)
 
 		// left half of blue pill
@@ -184,7 +184,7 @@ export class TermSettingView {
 	}
 
 	async updatePill(elem) {
-		const self = this.self
+		const self = this.termsetting
 		// decide if to show/hide the right half based on term status, and modify pill
 		const one_term_div = select(elem)
 
@@ -225,6 +225,6 @@ export class TermSettingView {
 	}
 
 	exitPill(elem) {
-		select(elem).style('opacity', 1).transition().duration(this.self.durations.exit).style('opacity', 0).remove()
+		select(elem).style('opacity', 1).transition().duration(this.termsetting.durations.exit).style('opacity', 0).remove()
 	}
 }
