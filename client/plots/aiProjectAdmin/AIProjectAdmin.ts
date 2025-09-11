@@ -59,13 +59,14 @@ class AIProjectAdmin extends RxComponentInner {
 		const state = structuredClone(this.state)
 		const config = state.config
 		if (config.chartType != this.type) return
-		if (!config.settings.project) return
+		const project = config.settings.project
+		if (!project) return
 
 		if (!this.interactions) throw new Error('AIProjectAdminInteractions not initialized')
 
 		this.dom.holder.selectAll('.sjpp-deletable-ai-prjt-admin-div').remove()
 
-		if (config.settings.project.type === 'new') {
+		if (project.type === 'new') {
 			const terms = await this.prjtRepo.getTerms(this.app)
 			if (!terms || terms.length === 0) {
 				sayerror(this.dom.errorDiv, 'No metadata found.')
@@ -73,6 +74,28 @@ class AIProjectAdmin extends RxComponentInner {
 			}
 			const createProjectRender = new CreateProjectRender(this.dom, this.app, this.interactions)
 			createProjectRender.render()
+		}
+
+		//launching project from embedded runpp()
+		if (project.type == 'existing') {
+			if (!project.name) {
+				sayerror(this.dom.errorDiv, 'Project name not provided.')
+				return
+			}
+			if (!project.id) {
+				const existingProject = this.projects?.find(p => p.name === project.name)
+				if (!existingProject) {
+					sayerror(this.dom.errorDiv, `Project ${project.name} not found.`)
+					return
+				}
+				//No need to call dispatch. Save to the state and call the wsi viewer.
+				await this.app.save({
+					type: 'plot_edit',
+					id: this.id,
+					config: { settings: { project: { id: existingProject.id } } }
+				})
+			}
+			this.interactions.launchViewer(this.dom.holder, [])
 		}
 	}
 }
@@ -87,6 +110,9 @@ export async function getPlotConfig(opts: any) {
 		extension: 'ts',
 		settings: getDefaultAIProjectAdminSettings(opts.overrides)
 	}
-
+	if (opts.settings?.project && !opts.settings?.project?.type) {
+		//If passing project from embedded runpp(), force type
+		opts.settings.project.type = 'existing'
+	}
 	return copyMerge(config, opts)
 }
