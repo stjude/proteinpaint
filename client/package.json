@@ -19,7 +19,7 @@
     "#shared/*": "@sjcrh/proteinpaint-shared/*",
     "#src/*": "./src/*.js",
     "#termdb/*": "./termdb/*.js",
-    "#termsetting": "./termsetting/termsetting.ts",
+    "#termsetting": "./termsetting/index.ts",
     "#termsetting/handlers/*": "./termsetting/handlers/*.ts",
     "#test/*": "./test/*",
     "#tw": "./tw/index.ts",

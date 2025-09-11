@@ -1,4 +1,4 @@
-import { set_hiddenvalues } from '../termsetting.ts'
+import { set_hiddenvalues } from '../utils.ts'
 import type { SingleCellCellTypeQ, SingleCellCellTypeTW, VocabApi } from '#types'
 import { getHandler as getCategoricalHandler } from './categorical.ts'
 import { copyMerge } from '#rx'

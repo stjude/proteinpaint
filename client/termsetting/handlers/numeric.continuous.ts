@@ -1,4 +1,4 @@
-import { getPillNameDefault } from '../termsetting'
+import { getPillNameDefault } from '../utils.ts'
 import type { PillData, Term } from '#types'
 import { convertViolinData } from '#filter/tvs.numeric'
 import { make_one_checkbox, violinRenderer } from '#dom'

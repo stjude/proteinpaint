@@ -1,12 +1,13 @@
 import { select, type BaseType } from 'd3-selection'
-import type { TermSettingInner } from './TermSettingInner'
+import type { TermSetting } from './TermSetting'
 
 type TermsSettingViewOpts = {
-	self: TermSettingInner
+	self: TermSetting
 }
 
 export class TermSettingView {
-	self: TermSettingInner
+	self: TermSetting
+
 	_exitPill: (elem: HTMLElement) => void
 	_updatePill: (elem: HTMLElement) => void
 	_enterPill: (elem: HTMLElement) => void

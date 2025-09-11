@@ -1,24 +1,31 @@
 import type { TermSettingOpts } from './types'
-import { TermSettingInner } from './TermSettingInner'
+import { TermSetting } from './TermSetting'
 import type { Term, TermWrapper, Filter, GvPredefinedGsTW } from '#types'
-import { call_fillTW } from './termsetting'
+import { call_fillTW } from './utils.ts'
 import { minimatch } from 'minimatch'
 import { isNumericTerm } from '#shared/terms.js'
 import { copyMerge, deepEqual } from '#rx'
 import { select } from 'd3-selection'
 
+export const termsettingInit = opts => {
+	// TODO: may convert to async-await as needed to initialize,
+	// if ever an async TermSettingApi.init() static method is created
+	return new TermSettingApi(opts)
+}
+
 export class TermSettingApi {
-	#Inner: TermSettingInner
-	Inner?: TermSettingInner
+	self: TermSetting
+	Inner?: TermSetting
 
 	constructor(opts: TermSettingOpts) {
 		opts.api = this //; console.log(14, opts)
-		this.#Inner = new TermSettingInner(opts)
-		if (opts.debug) this.Inner = this.#Inner
+		this.self = new TermSetting(opts)
+		// to be used for test-code only
+		if (opts.debug) this.Inner = this.self
 	}
 
 	async main(data: any = {}) {
-		const self = this.#Inner
+		const self = this.self
 		try {
 			if (self.doNotHideTipInMain) {
 				// single use: if true then delete
@@ -51,7 +58,7 @@ export class TermSettingApi {
 	}
 
 	runCallback(overrideTw = null) {
-		const self = this.#Inner
+		const self = this.self
 		/* optional termwrapper (tw) to override attributes of self.term{} and self.q{}
 		the override tw serves the "atypical" termsetting usage
 		as used in snplocus block pan/zoom update in regression.results.js
@@ -69,7 +76,7 @@ export class TermSettingApi {
 	}
 
 	async showTree(holder, event: MouseEvent | undefined) {
-		const self = this.#Inner
+		const self = this.self
 		self.dom.tip.clear()
 		if (holder)
 			self.dom.tip.showunder(
@@ -110,7 +117,7 @@ export class TermSettingApi {
 	}
 
 	showMenu(event: MouseEvent, clickedElem = null, menuHolder = null) {
-		const self = this.#Inner
+		const self = this.self
 		const tip = self.dom.tip
 		tip.clear()
 		// self.dom.holder really is set to clickedElem because
@@ -222,7 +229,7 @@ export class TermSettingApi {
 	}
 
 	showGeneSearch(clickedElem: Element | null, event: MouseEvent) {
-		const self = this.#Inner
+		const self = this.self
 		self.dom.tip.clear()
 		if (clickedElem)
 			self.dom.tip.showunder(
@@ -282,16 +289,16 @@ export class TermSettingApi {
 	}
 
 	hasError() {
-		return this.#Inner.hasError
+		return this.self.hasError
 	}
 
 	validateQ(d /*: PillData*/) {
-		const self = this.#Inner
+		const self = this.self
 		if (!self.handler || !self.handler.validateQ) return
 		try {
 			self.handler.validateQ(d)
 		} catch (e) {
-			this.#Inner.hasError = true
+			this.self.hasError = true
 			throw e
 		}
 	}

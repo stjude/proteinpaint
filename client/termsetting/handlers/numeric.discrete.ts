@@ -4,7 +4,7 @@ import type { DensityData } from './density'
 import { setDensityPlot } from './density'
 import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
 import { make_radios, Tabs, violinRenderer } from '#dom'
-import { getPillNameDefault } from '../termsetting'
+import { getPillNameDefault } from '../utils.ts'
 import { convertViolinData } from '#filter/tvs.numeric'
 import type { PillData, NumericBin, NumericQ } from '#types'
 

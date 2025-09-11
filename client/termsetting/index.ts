@@ -1,7 +1,5 @@
-import type { CategoricalQ, Q, RawValuesQ, RawGvQ, TermWrapper, TwLst, NumericQ, SnpsQ, Term } from '#types'
-import type { VocabApi } from './types'
-import { TwRouter, routedTermTypes } from '#tw/TwRouter'
-import { TermSettingApi } from './TermSettingApi.ts'
+export * from './utils.ts'
+export * from './TermSettingApi.ts'
 
 /*
 ********************* EXPORTED
@@ -18,12 +16,6 @@ showTree
 opts{}
 
 */
-
-export const termsettingInit = opts => {
-	// TODO: may convert to async-await as needed to initialize,
-	// if ever an async TermSettingApi.init() static method is created
-	return new TermSettingApi(opts)
-}
 
 // append the common ID substring,
 // so that the first characters of $id is more indexable

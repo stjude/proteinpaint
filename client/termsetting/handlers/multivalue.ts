@@ -1,4 +1,4 @@
-// import { getPillNameDefault, set_hiddenvalues } from '../termsetting.ts'
+// import { getPillNameDefault, set_hiddenvalues } from '../utils.ts'
 // import type { CategoricalQ, CategoricalTW, VocabApi } from '#types'
 // import { copyMerge } from '#rx'
 

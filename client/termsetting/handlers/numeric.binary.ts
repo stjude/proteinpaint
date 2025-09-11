@@ -2,7 +2,7 @@ import { setDensityPlot } from './density'
 import { renderBoundaryInclusionInput, renderBoundaryInputDivs } from './numeric.discrete'
 import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
 import { make_one_checkbox, violinRenderer } from '#dom'
-import { getPillNameDefault } from '../termsetting'
+import { getPillNameDefault } from '../utils.ts'
 import { convertViolinData } from '#filter/tvs.numeric'
 import type { PillData, NumericBin } from '#types'
 
