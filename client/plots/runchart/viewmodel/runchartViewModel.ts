@@ -1,4 +1,4 @@
-import { line } from 'd3'
+import { line, rgb } from 'd3'
 import type { Runchart } from '../runchart.ts'
 import { median as d3Median } from 'd3-array'
 import { roundValueAuto } from '#shared/roundValue.js'
@@ -27,6 +27,8 @@ export class RunchartViewModel extends ScatterViewModelBase {
 		const color = this.runchart.config.term0 ? this.runchart.cat2Color(chart.id) : this.runchart.settings.defaultColor
 		const coords = chart.cohortSamples.map(s => this.model.getCoordinates(chart, s)).sort((a, b) => a.x - b.x)
 
+		const medianColor = rgb(color).darker(2)
+
 		const xtext = coords[coords.length - 1].x - 30
 		const areaBuilder = line()
 			.x((d: any) => d.x)
@@ -46,7 +48,7 @@ export class RunchartViewModel extends ScatterViewModelBase {
 				.attr('y1', y)
 				.attr('x2', coords[coords.length - 1].x)
 				.attr('y2', y)
-				.attr('stroke', color)
+				.attr('stroke', medianColor)
 				.attr('stroke-width', 1)
 				.attr('opacity', 0.5)
 			g.append('text')
@@ -56,7 +58,7 @@ export class RunchartViewModel extends ScatterViewModelBase {
 				.text('M=' + roundValueAuto(median, true, 1))
 				.attr('opacity', 0.8)
 				.attr('font-size', '0.8em')
-				.attr('fill', color)
+				.attr('fill', medianColor)
 		}
 	}
 }

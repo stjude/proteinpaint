@@ -63,6 +63,7 @@ export class ScatterModel {
 			opts.scaleDotTW = c.scaleDotTW
 		}
 		if (c.term0) opts.divideByTW = c.term0
+		opts.excludeOutliers = this.scatter.settings.excludeOutliers
 
 		return opts
 	}
@@ -276,7 +277,6 @@ export class ScatterModel {
 		const yMax = chart.ranges.yMax
 		const extraSpaceX = (xMax - xMin) * 0.01 //extra space added to avoid clipping the particles on the X axis
 		const extraSpaceY = (yMax - yMin) * 0.01 //extra space added to avoid clipping the particles on the Y axis
-
 		chart.xAxisScale = d3Linear()
 			.domain([xMin - extraSpaceX, xMax + extraSpaceX])
 			.range([offsetX, this.scatter.settings.svgw + offsetX])

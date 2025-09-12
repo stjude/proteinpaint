@@ -172,6 +172,14 @@ export class RunchartView extends ScatterView {
 					settingsKey: 'saveZoomTransform',
 					title: `Option to save the zoom transformation in the state. Needed if you want to save a session with zoom and pan applied`,
 					processInput: value => this.saveZoomTransform(value)
+				},
+				{
+					label: 'Exclude outliers',
+					boxLabel: '',
+					type: 'checkbox',
+					chartType: 'runChart',
+					settingsKey: 'excludeOutliers',
+					title: `Option to exclude outliers from the analysis`
 				}
 			]
 		)
@@ -200,7 +208,6 @@ export class RunchartView extends ScatterView {
 					{ label: 'Polynomial', value: 'Polynomial' }
 				]
 			})
-
 		return inputs
 	}
 }

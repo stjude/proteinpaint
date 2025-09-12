@@ -2,7 +2,7 @@ import { roundValueAuto } from './roundValue.js'
 
 /* This file generates summary statistics on any given array of numbers*/
 
-export function summaryStats(array) {
+export function getDescriptiveStats(array) {
 	//console.log("array:",array)
 	let arr = array
 	if (typeof array[0] == 'string') {
@@ -31,20 +31,49 @@ export function summaryStats(array) {
 	const IQR = p75 - p25
 	const min = sorted_arr[0]
 	const max = sorted_arr[sorted_arr.length - 1]
-	//TODO outliers
+
+	//Calculating Q1, Q2, Q3
+	const q2 = median
+	const q1 = p25
+	const q3 = p75
+
+	// Calculate fences
+	const lowerFence = q1 - 1.5 * IQR
+	const upperFence = q3 + 1.5 * IQR
+
+	// Identify outliers
+	const outlierRange = { min: lowerFence, max: upperFence }
+
+	return {
+		total: n,
+		min,
+		max,
+		p25,
+		p75,
+		median,
+		mean,
+		variance,
+		stdDev,
+		IQR,
+		outlierRange
+	}
+}
+
+export function summaryStats(array) {
+	const stats = getStats(array)
 
 	return {
 		values: [
-			{ id: 'total', label: 'Total', value: n },
-			{ id: 'min', label: 'Minimum', value: roundValueAuto(min, true) },
-			{ id: 'p25', label: '1st quartile', value: roundValueAuto(p25, true) },
-			{ id: 'median', label: 'Median', value: roundValueAuto(median, true) },
-			{ id: 'mean', label: 'Mean', value: roundValueAuto(mean, true) },
-			{ id: 'p75', label: '3rd quartile', value: roundValueAuto(p75, true) },
-			{ id: 'max', label: 'Maximum', value: roundValueAuto(max, true) },
-			{ id: 'SD', label: 'Standard deviation', value: roundValueAuto(stdDev, true) },
-			{ id: 'variance', label: 'Variance', value: roundValueAuto(variance, true) },
-			{ id: 'IQR', label: 'Inter-quartile range', value: roundValueAuto(IQR, true) }
+			{ id: 'total', label: 'Total', value: stats.total },
+			{ id: 'min', label: 'Minimum', value: roundValueAuto(stats.min, true) },
+			{ id: 'p25', label: '1st quartile', value: roundValueAuto(stats.p25, true) },
+			{ id: 'median', label: 'Median', value: roundValueAuto(stats.median, true) },
+			{ id: 'mean', label: 'Mean', value: roundValueAuto(stats.mean, true) },
+			{ id: 'p75', label: '3rd quartile', value: roundValueAuto(stats.p75, true) },
+			{ id: 'max', label: 'Maximum', value: roundValueAuto(stats.max, true) },
+			{ id: 'SD', label: 'Standard deviation', value: roundValueAuto(stats.stdDev, true) },
+			{ id: 'variance', label: 'Variance', value: roundValueAuto(stats.variance, true) },
+			{ id: 'IQR', label: 'Inter-quartile range', value: roundValueAuto(stats.IQR, true) }
 		]
 	}
 }
