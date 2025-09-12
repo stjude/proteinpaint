@@ -160,45 +160,57 @@ function processCustomBinInputs(self) {
 		.split('\n')
 		.filter((d: any) => d != '' && !isNaN(d))
 
-	const trackBins = new Set(inputData)
-	if (!trackBins.size) return
 	// Fix for when user enters in the same number more than once.
 	// UI will ignore duplicate entries completely.
-
-	// Type '{ start: number; startinclusive: boolean; stopinclusive: boolean; }[]' is not assignable to type 'NumericBin[]'.
-	// Type '{ start: number; startinclusive: boolean; stopinclusive: boolean; }' is not assignable to type 'NumericBin'.
-	//   Property 'stop' is missing in type '{ start: number; startinclusive: boolean; stopinclusive: boolean; }' but required in type 'FullyBoundedBin'.
+	const trackBins = new Set(inputData)
+	if (!trackBins.size) return
 
 	const sortedBins = Array.from(trackBins)
 		.map((d: any) => +d)
 		.sort((a, b) => a - b)
 
 	const data: NumericBin[] = [
-		// first bin
+		// first bin: StartUnbounded type
 		{
 			startunbounded: true,
-			stop: trackBins[0].start,
+			stop: sortedBins[0],
 			startinclusive: false,
 			stopinclusive,
 			label: inputs[0].value
 		}
 	]
-
+	// first bin
 	if (!data[0].label) data[0].label = get_bin_label(data[0], self.q, self.term.valueConversion)
 	if (!data[0].range) data[0].range = get_bin_range_equation(data[0], self.q)
 
 	for (const [i, d] of sortedBins.entries()) {
-		const bin = {
-			start: +d,
-			startinclusive,
-			stopinclusive,
-			stop: trackBins[i + 1]?.start,
-			stopunbounded: i === trackBins.size,
-			label: inputs[i].value,
-			range: ''
+		let bin
+		const label = inputs[i + 1]?.value || ''
+		if (i !== trackBins.size - 1) {
+			// intermediate bin: FullyBounded type
+			bin = {
+				start: +d,
+				startinclusive,
+				stopinclusive,
+				stop: sortedBins[i + 1],
+				label,
+				range: ''
+			}
+		} else {
+			// last bin: StopUnbounded type
+			bin = {
+				start: +d,
+				startinclusive,
+				stopinclusive: false,
+				stopunbounded: true,
+				label,
+				range: ''
+			}
 		}
+
 		if (bin.label === '' || bin.label === undefined) bin.label = get_bin_label(bin, self.q, self.term.valueConversion)
 		if (bin.range === '' || bin.range === undefined) bin.range = get_bin_range_equation(bin, self.q)
+		data.push(bin)
 	}
 	return data
 }
