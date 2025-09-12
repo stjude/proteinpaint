@@ -143,7 +143,7 @@ def plot_grin2_manhattan(grin_results: dict,
     total_genome_length = cumulative_pos
     
     # Collect all points to plot
-    plot_data = {'x': [], 'y': [], 'colors': [], 'types': []}
+    plot_data = {'x': [], 'y': [], 'colors': [], 'types': [], 'nsubj.mutation': [], 'nsubj.gain': [], 'nsubj.loss': []}
     point_details = []
     
     # Process each gene
@@ -247,7 +247,7 @@ def plot_grin2_manhattan(grin_results: dict,
 
     # Plot data points using pixel coordinates
     if pixel_plot_data['x']:
-        point_size = png_dot_radius * png_dot_radius
+        point_size = png_dot_radius ** 2  # Area proportional to radius squared
 		
          # Flip Y coordinates for matplotlib (matplotlib has origin at bottom-left)
         flipped_y = [png_height - y for y in pixel_plot_data['y']]
