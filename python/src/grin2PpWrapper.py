@@ -214,30 +214,16 @@ def plot_grin2_manhattan(grin_results: dict,
         else:
             y_max = max(max_y + 0.15, 5)
 
-    # Create coordinate conversion functions for matplotlib plotting only
-    def x_to_pixels(x):
-        return (x / total_genome_length) * plot_width + png_dot_radius
-    
-    def y_to_pixels(y):
-        return png_height - ((y / y_max) * plot_height) + png_dot_radius
-
-    # Convert coordinates for matplotlib rendering
-    pixel_plot_data = {
-        'x': [x_to_pixels(x) for x in plot_data['x']],
-        'y': [y_to_pixels(y) for y in plot_data['y']],
-        'colors': plot_data['colors']
-    }
-
-    # Set matplotlib to use pixel coordinates
-    ax.set_xlim(0, png_width)
-    ax.set_ylim(0, png_height)
+    # Set matplotlib to use raw genomic coordinates
+    ax.set_xlim(0, total_genome_length)
+    ax.set_ylim(y_min, y_max)
 
     # Create alternating chromosome backgrounds
     for i, (_, row) in enumerate(chrom_size.iterrows()):
         chrom = row['chrom']
         if chrom in chrom_data:
-            start_pos = x_to_pixels(chrom_data[chrom]['start'])
-            end_pos = x_to_pixels(chrom_data[chrom]['start'] + chrom_data[chrom]['size'])
+            start_pos = chrom_data[chrom]['start']
+            end_pos = chrom_data[chrom]['start'] + chrom_data[chrom]['size']
             
             # Alternate between light and slightly darker gray
             if i % 2 == 0:
@@ -245,13 +231,10 @@ def plot_grin2_manhattan(grin_results: dict,
             else:
                 ax.axvspan(start_pos, end_pos, facecolor='#D3D3D3', alpha=0.5, zorder=0)
 
-    # Plot data points using pixel coordinates
-    if pixel_plot_data['x']:
+    # Plot data points using raw coordinates
+    if plot_data['x']:
         point_size = png_dot_radius ** 2  # Area proportional to radius squared
-		
-         # Flip Y coordinates for matplotlib (matplotlib has origin at bottom-left)
-        flipped_y = [png_height - y for y in pixel_plot_data['y']]
-        ax.scatter(pixel_plot_data['x'], flipped_y, c=pixel_plot_data['colors'], 
+        ax.scatter(plot_data['x'], plot_data['y'], c=plot_data['colors'], 
                    s=point_size, alpha=0.7, edgecolors='none', zorder=2)
 
     # Remove axes, labels, and ticks
@@ -288,6 +271,7 @@ def plot_grin2_manhattan(grin_results: dict,
     }
     
     return fig, interactive_data
+
 def sort_grin2_data(data):
 	"""
 	Sort Mutation data based on available p.nsubj columns with priority system
