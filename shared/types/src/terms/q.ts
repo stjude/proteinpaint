@@ -36,6 +36,7 @@ export type RawCustomGroupsetQ = MinBaseQ & {
 	}
 	/** deprecated nested object, will be handled by reshapeLegacyTW() in TwRouter */
 	groupsetting?: { inuse?: boolean } & GroupSettingQ
+	sampleCounts?: { key: string; value?: number; label?: string }[]
 }
 
 export type HiddenValues = {

@@ -47,7 +47,7 @@ export class TermSettingApi {
 			if ('activeCohort' in data) self.activeCohort = data.activeCohort
 			if ('sampleCounts' in data) self.sampleCounts = data.sampleCounts
 			if ('menuOptions' in data) self.opts.menuOptions = data.menuOptions
-			await self.setHandler(self.term ? self.term.type : null)
+			await self.setHandler(self.term ? self.term.type : null, data.tw)
 			if (data.term && self.handler && self.handler.validateQ) self.handler.validateQ(data)
 			if (self.handler.postMain) await self.handler.postMain()
 			if (self.opts.renderAs != 'none') self.view.updateUI()
