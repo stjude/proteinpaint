@@ -346,7 +346,8 @@ export default function (): Mds3 {
 			},
 			rnaseqGeneCount: {
 				storage_type: 'HDF5',
-				file: 'files/hg38/TermdbTest/rnaseq/TermdbTest.geneCounts.h5'
+				newformat: true,
+				file: 'files/hg38/TermdbTest/rnaseq/TermdbTest.geneCounts.new.h5'
 			},
 			singleCell: {
 				samples: {
