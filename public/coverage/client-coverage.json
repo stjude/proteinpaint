@@ -5390,13 +5390,13 @@
     },
     "lowestPct": {
       "curr": 12.58,
-      "prev": 0,
-      "diff": 12.58
+      "prev": 12.58,
+      "diff": 0
     },
     "averagePct": {
       "curr": 24.3875,
-      "prev": 0,
-      "diff": 24.3875
+      "prev": 24.3875,
+      "diff": 0
     }
   },
   "mass/test/store.integration.spec.ts": {
