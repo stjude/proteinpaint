@@ -9,6 +9,7 @@ import type {
 	Handler
 } from './types'
 import type { Term, Filter, Q, TermWrapper } from '#types'
+import { TwBase } from '#tw/TwBase'
 import { Menu } from '#dom'
 import { TermTypes, isDictionaryType } from '#shared/terms.js'
 import { minimatch } from 'minimatch'
@@ -67,6 +68,7 @@ export class TermSetting {
 	// updateUI: any
 
 	//Pill data
+	tw!: TermWrapper
 	term: any
 	q!: Q
 	data: any
@@ -180,7 +182,23 @@ export class TermSetting {
 		this.noTermPromptOptions = o.noTermPromptOptions
 	}
 
-	async setHandler(termtype: string | undefined | null) {
+	async setHandler(termtype: string | undefined | null, tw) {
+		if (tw instanceof TwBase) {
+			switch (tw.type) {
+				case 'CatTWValues':
+				case 'CatTWPredefinedGS':
+				case 'CatTWCustomGS': {
+					const { HandlerGroupSet } = await import('./HandlerGroupSet')
+					this.handler = new HandlerGroupSet({ termsetting: this })
+					break
+				}
+
+				default:
+					throw `unsupported tw.type='${tw.type}'`
+			}
+			return
+		}
+
 		// TODO: should use TwRouter here??? or expect tw to be already filled-in/instantiated???
 		if (!termtype) {
 			this.handler = this.handlerByType.default as Handler

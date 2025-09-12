@@ -238,6 +238,12 @@ export class CatCustomGS extends CategoricalBase {
 			// 			throw `there are no samples for the required binary value=${grp.name}`
 			// 	}
 			// }
+			if (q.sampleCounts && tw.term.values) {
+				for (const key in tw.term.values) {
+					if (!q.sampleCounts.find(d => d.key === key))
+						throw `there are no samples for the required binary value=${key}`
+				}
+			}
 		}
 		set_hiddenvalues(q, term)
 		return tw as CatTWCustomGS

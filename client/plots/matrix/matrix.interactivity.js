@@ -7,6 +7,7 @@ import { TermTypes, isNumericTerm, NUMERIC_DICTIONARY_TERM } from '#shared/terms
 import { mclass, dt2label, dtsnvindel, dtcnv, dtgeneexpression, dtmetaboliteintensity } from '#shared/common.js'
 import { rgb2hex } from '#src/client'
 import { getSamplelstTW, getFilter, addNewGroup } from '../../mass/groups.js'
+import { TwBase } from '#tw/TwBase'
 
 let inputIndex = 0
 const svgIcons = {
@@ -622,6 +623,7 @@ function setTermActions(self) {
 	setLabelDragEvents(self, 'term')
 
 	self.setPill = function (appState) {
+		console.log(624, 'setPill')
 		// will reuse a pill instance to show term edit menu
 		self.pill = termsettingInit({
 			tip: self.customTipApi,
@@ -697,6 +699,7 @@ function setTermActions(self) {
 	self.showTermMenu = async function (event) {
 		const t = event.target.__data__
 		if (!t || !t.tw || !t.grp) return
+		console.log(699, t.tw, t.tw instanceof TwBase)
 		const s = self.settings.matrix
 		const l = s.controlLabels
 		self.activeLabel = t
@@ -707,7 +710,9 @@ function setTermActions(self) {
 		const termMenuWaitDiv = self.dom.menutop.append('div').style('display', 'block').text('Loading...')
 		self.dom.tip.show(event.clientX - 20, event.clientY - 20)
 
-		await self.pill.main(Object.assign({ menuOptions: self.getMenuOptions(t) }, t.tw ? t.tw : { term: null, q: null }))
+		await self.pill.main(
+			Object.assign({ tw: t.tw, menuOptions: self.getMenuOptions(t) }, t.tw ? t.tw : { term: null, q: null })
+		)
 		termMenuWaitDiv.remove()
 
 		self.dom.shortcutDiv = self.dom.menutop.append('div').style('z-index', 10000)
