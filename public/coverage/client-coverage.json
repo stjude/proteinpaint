@@ -5473,10 +5473,10 @@
   },
   "termsetting/handlers/numeric.discrete.ts": {
     "lines": {
-      "total": 272,
+      "total": 277,
       "covered": 172,
       "skipped": 0,
-      "pct": 63.23
+      "pct": 62.09
     },
     "functions": {
       "total": 44,
@@ -5485,26 +5485,26 @@
       "pct": 70.45
     },
     "statements": {
-      "total": 297,
+      "total": 302,
       "covered": 179,
       "skipped": 0,
-      "pct": 60.26
+      "pct": 59.27
     },
     "branches": {
-      "total": 175,
+      "total": 179,
       "covered": 84,
       "skipped": 0,
-      "pct": 48
+      "pct": 46.92
     },
     "lowestPct": {
-      "curr": 48,
+      "curr": 46.92,
       "prev": 48,
-      "diff": 0
+      "diff": -1.0799999999999983
     },
     "averagePct": {
-      "curr": 60.485,
+      "curr": 59.682500000000005,
       "prev": 60.485,
-      "diff": 0
+      "diff": -0.8024999999999949
     }
   },
   "dom/test/pdfscale.unit.spec.js": {
