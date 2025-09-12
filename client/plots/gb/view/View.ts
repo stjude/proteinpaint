@@ -65,7 +65,7 @@ export class View {
 
 		// no block instance, create new block
 
-		const arg = {
+		const arg: any = {
 			holder: this.dom.blockHolder,
 			genome: this.app.opts.genome, // genome obj
 			nobox: true,

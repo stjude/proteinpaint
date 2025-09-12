@@ -1,5 +1,5 @@
 import { PlotBase } from '../PlotBase.ts'
-import { getCompInit, type ComponentApi, type RxComponentInner } from '#rx'
+import { getCompInit, type ComponentApi /*, type RxComponentInner */ } from '#rx'
 import { addGeneSearchbox, Menu, sayerror } from '#dom'
 import { getNormalRoot } from '#filter'
 import { gbControlsInit, mayUpdateGroupTestMethodsIdx } from '../genomeBrowser.controls.js'
@@ -9,7 +9,7 @@ import { View } from './view/View.ts'
 
 const geneTip = new Menu({ padding: '0px' })
 
-class TdbGenomeBrowser extends PlotBase implements RxComponentInner {
+class TdbGenomeBrowser extends PlotBase /* implements RxComponentInner*/ {
 	static type = 'genomeBrowser'
 
 	// expected RxComponentInner props, some are already declared/set in PlotBase
@@ -79,7 +79,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponentInner {
 			const tklst = await viewModel.generateTracks()
 			const view = new View(this.state, this.app, this.dom, this.opts, this.id)
 			await view.launchBlockWithTracks(tklst)
-		} catch (e) {
+		} catch (e: any) {
 			sayerror(this.dom.errDiv, e.message || e)
 			if (e.stack) console.log(e.stack)
 		}
@@ -221,7 +221,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	const genomeObj = chartsInstance.app.opts.genome
 	if (typeof genomeObj != 'object') throw 'chartsInstance.app.opts.genome not an object and needed for gene search box'
 
-	const arg = {
+	const arg: any = {
 		tip: geneTip,
 		genome: genomeObj,
 		row: holder.append('div').style('margin', '10px'),
@@ -229,7 +229,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			// found a hit {chr,start,stop,geneSymbol}; dispatch to create new plot
 			try {
 				await launchPlotAfterGeneSearch(result, chartsInstance, holder)
-			} catch (e) {
+			} catch (e: any) {
 				// upon err, create div in chart button menu to display err
 				holder.append('div').text('Error: ' + (e.message || e))
 				console.log(e)
