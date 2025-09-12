@@ -8,7 +8,7 @@ import { Menu, table2col } from '#dom'
  * into this dir.
  */
 export function renderInteractivePoints(svg: any, plotData: any, geneTip?) {
-	// Add visible interactive points using pre-calculated SVG coordinates
+	// Add visible interactive points using raw x/y coordinates
 	const pointsLayer = svg.append('g')
 
 	if (!geneTip) geneTip = new Menu({ padding: '' })
@@ -18,8 +18,9 @@ export function renderInteractivePoints(svg: any, plotData: any, geneTip?) {
 		.data(plotData.points)
 		.enter()
 		.append('circle')
-		.attr('cx', d => d.svg_x)
-		.attr('cy', d => d.svg_y)
+		.attr('cx', d => d.x)
+		.attr('cy', d => d.y)
+		// TODO: make radius a setting
 		.attr('r', 2.5)
 		.attr('fill-opacity', 0)
 		.attr('stroke', 'black')
@@ -36,7 +37,7 @@ export function renderInteractivePoints(svg: any, plotData: any, geneTip?) {
 			table.addRow('Gene', d.gene)
 			const [t1, t2] = table.addRow()
 			t1.text('Type')
-			t2.html(`<span style="color:${d.color}">●</span> ${d.type}`)
+			t2.html(`<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`)
 			table.addRow('-log10(q-value)', d.y.toFixed(3))
 			table.addRow('Subject count', d.nsubj)
 			table.addRow('Chromosome', d.chrom)
@@ -59,7 +60,7 @@ export function addLegend(plotData: any, svg: any) {
 	})
 
 	// Position legend in the top margin area, accounting for the full SVG dimensions
-	const margin = { bottom: 60, left: 50, right: 30, top: 40 }
+	const margin = { bottom: 60, left: 50, right: 30, top: 40 } // TODO make this a setting
 	const legendY = 15 // Position from top of SVG
 	const itemWidth = 80
 	const totalWidth = legendData.length * itemWidth
