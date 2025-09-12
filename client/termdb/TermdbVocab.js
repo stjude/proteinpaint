@@ -1047,6 +1047,7 @@ export class TermdbVocab extends Vocab {
 		if (opts.shapeTW) body.shapeTW = this.getTwMinCopy(opts.shapeTW)
 		if (opts.divideByTW) body.divideByTW = this.getTwMinCopy(opts.divideByTW)
 		if (opts.scaleDotTW) body.scaleDotTW = this.getTwMinCopy(opts.scaleDotTW)
+		body.excludeOutliers = opts.excludeOutliers
 
 		return await dofetch3('termdb', { headers, body })
 	}
