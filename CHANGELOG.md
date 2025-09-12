@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Volcano plot: add a button called "DEGs hierarchical clustering" to launch hiercluster for DEGs
+
 
 ## 2.144.0
 
