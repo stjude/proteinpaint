@@ -2,7 +2,7 @@ import type { Filter, Q, TermWrapper, Term } from '#types'
 import type { TermSettingApi } from './TermSettingApi.ts'
 import type { TermdbVocab } from '#termdb/TermdbVocab'
 //import type { FrontendVocab } from '#termdb/FrontendVocab'
-export type { TermSettingApi } from './TermSettingApi.ts'
+//export type { TermSettingApi } from './TermSettingApi.ts'
 
 export type VocabApi = TermdbVocab //| FrontendVocab
 
