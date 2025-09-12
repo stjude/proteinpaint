@@ -422,8 +422,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			// Add these scales to plotData for renderInteractivePoints to use
 			console.log('plotDims', plotDims)
-			plotData.xScale = (x: number) => plotDims.xAxis.scale(x)
-			plotData.yScale = (y: number) => plotDims.yAxis.scale(y)
+			plotData.xScale = (x: number) => plotDims.xAxis.scale(x) + 25
+			plotData.yScale = (y: number) => plotDims.yAxis.scale(y) + 10
 
 			const svg = plotContainer.append('svg').attr('width', plotData.plot_width).attr('height', plotData.plot_height)
 
