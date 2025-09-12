@@ -16,6 +16,10 @@
 #  genedb: gene db file path
 #  chromosomelist={ <key>: <len>, }
 #  lesion: JSON string containing array of lesion data from gdcGRIN2.rs
+#  devicePixelRatio: float (optional, default=2.0)
+#  width: int (optional, default=1000)
+#  height: int (optional, default=400)
+#  pngDotRadius: int (optional, default=2)
 # }
 
 # Output JSON:
@@ -240,12 +244,24 @@ def plot_grin2_manhattan(grin_results: dict,
         dx = x_pixel - plot_center_x
         dy = y_pixel - plot_center_y
         
+        # Distance-based micro-adjustment
+        distance = np.sqrt(dx**2 + dy**2)
+        max_distance = np.sqrt(plot_center_x**2 + plot_center_y**2)
+
+        # Stronger correction for points further from center
+        if max_distance > 0:
+            distance_factor = 1.0 + (distance / max_distance) * 0.002 
+        else:
+            distance_factor = 1.0
+
+        effective_correction = correction_strength * distance_factor
+
         # Apply correction proportional to distance from center
-        corrected_x = x_pixel - (dx * correction_strength)
-        corrected_y = y_pixel - (dy * correction_strength)
-        
+        corrected_x = x_pixel - (dx * effective_correction)
+        corrected_y = y_pixel - (dy * effective_correction)
+
         return corrected_x, corrected_y
-    
+
     # Convert point details to SVG coordinates with correction
     for point in point_details:
         base_x = x_scale_func(point['x'])
