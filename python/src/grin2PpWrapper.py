@@ -233,7 +233,7 @@ def plot_grin2_manhattan(grin_results: dict,
 
     # Plot data points using raw coordinates
     if plot_data['x']:
-        point_size = png_dot_radius ** 2  # Area proportional to radius squared
+        point_size = png_dot_radius * 3 ** 2 
         ax.scatter(plot_data['x'], plot_data['y'], c=plot_data['colors'], 
                    s=point_size, alpha=0.7, edgecolors='none', zorder=2)
 
