@@ -414,6 +414,16 @@ class GRIN2 extends PlotBase implements RxComponent {
 			})
 
 			const plotData = result.plotData
+			console.log('plotData', plotData)
+
+			// Create the same coordinate transformation functions that Python uses
+			const config = structuredClone(this.state.config)
+			const plotDims = setPlotDims(plotData, config.settings.grin2.plotDims)
+
+			// Add these scales to plotData for renderInteractivePoints to use
+			console.log('plotDims', plotDims)
+			plotData.xScale = (x: number) => plotDims.xAxis.scale(x) + 25
+			plotData.yScale = (y: number) => plotDims.yAxis.scale(y) + 10
 
 			const svg = plotContainer.append('svg').attr('width', plotData.plot_width).attr('height', plotData.plot_height)
 
@@ -426,8 +436,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			renderInteractivePoints(svg, plotData, this.dom.geneTip)
 
-			const config = structuredClone(this.state.config)
-			const plotDims = setPlotDims(plotData, config.settings.grin2.plotDims)
 			// Add axes to the existing plot
 			addAxesToExistingPlot(plotData, svg, plotDims)
 

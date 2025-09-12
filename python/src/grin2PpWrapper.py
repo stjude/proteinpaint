@@ -15,7 +15,11 @@
 # {
 #  genedb: gene db file path
 #  chromosomelist={ <key>: <len>, }
-#  lesion: JSON string containing array of lesion data from gdcGRIN2.rs
+#  lesion: JSON string containing array of lesion data from gdcGRIN2.rs or other source such as the filter object in ProteinPaint
+#  devicePixelRatio: float (default=2.0)
+#  width: int (default=1000)
+#  height: int (default=400)
+#  pngDotRadius: int (default=2)
 # }
 
 # Output JSON:
@@ -71,9 +75,7 @@ def plot_grin2_manhattan(grin_results: dict,
                         plot_width: int = 1000,
                         plot_height: int = 400,
                         device_pixel_ratio: float = 2.0,
-                        png_dot_radius: int = 2,
-                        correction_strength: float = 0.06) -> tuple[plt.Figure, dict]:
-	
+                        png_dot_radius: int = 2) -> tuple[plt.Figure, dict]:
     """
     Create a Manhattan plot for GRIN2 genomic analysis results using colored scatter points.
     
@@ -83,7 +85,7 @@ def plot_grin2_manhattan(grin_results: dict,
     start position. Different mutation types (gain, loss, mutation) are shown in different colors.
     
     Args:
-	    grin_results (dict): Results dictionary from grin_stats() function containing:
+        grin_results (dict): Results dictionary from grin_stats() function containing:
             - 'gene.hits': DataFrame with gene-level statistical results
         chrom_size (pd.DataFrame): Chromosome size information with columns:
             - 'chrom': Chromosome names
@@ -92,12 +94,8 @@ def plot_grin2_manhattan(grin_results: dict,
         plot_width (int): Desired plot width in pixels.
         plot_height (int): Desired plot height in pixels.
         device_pixel_ratio (float): Device pixel ratio for rendering.
-        correction_strength (float): Strength of the radial correction term. 
-                                   Positive values pull points toward center.
-                                   Typical values: 0.005 to 0.06
-	Returns:
+    Returns:
         tuple[plt.Figure, dict]: Matplotlib figure and interactive data dictionary
-
     """
     # Set default colors if not provided
     if colors is None:
@@ -168,27 +166,19 @@ def plot_grin2_manhattan(grin_results: dict,
             neg_log10_q = -np.log10(q_value)
             n_subj_count = gene_row.get(f'nsubj.{mut_type}', None)
             
-            # Add horizontal offset for multiple mutation types
-            offset_factor = {'gain': -0.3, 'loss': 0, 'mutation': 0.3}
-            x_offset = offset_factor.get(mut_type, 0) * (total_genome_length * 0.0001)
-            
-            final_x = x_pos + x_offset
             color = colors.get(mut_type, '#888888')
             
-            # Add ALL points to plot_data
-            plot_data['x'].append(final_x)
+            # Add ALL points to plot_data for PNG generation
+            plot_data['x'].append(x_pos)
             plot_data['y'].append(neg_log10_q)
             plot_data['colors'].append(color)
             plot_data['types'].append(mut_type)
-            plot_data['nsubj.mutation'].append(n_subj_count if mut_type == 'mutation' else None)
-            plot_data['nsubj.gain'].append(n_subj_count if mut_type == 'gain' else None)
-            plot_data['nsubj.loss'].append(n_subj_count if mut_type == 'loss' else None)
 
-            # Only add significant points for interactivity
+            # Only add significant points for interactivity - store raw coordinates
             if q_value <= 0.05:
                 point_details.append({
-                    'x': final_x,
-                    'y': neg_log10_q,
+                    'x': x_pos,  # Raw genomic coordinate
+                    'y': neg_log10_q,  # Raw -log10(q-value)
                     'color': color,
                     'type': mut_type,
                     'gene': gene_name,
@@ -215,6 +205,7 @@ def plot_grin2_manhattan(grin_results: dict,
             target_max = 40
             scale_factor_y = target_max / max_y
             plot_data['y'] = [y * scale_factor_y for y in plot_data['y']]
+            # Also scale point_details for consistency
             for point in point_details:
                 point['y'] *= scale_factor_y
             scaled_max = max(plot_data['y'])
@@ -223,61 +214,16 @@ def plot_grin2_manhattan(grin_results: dict,
         else:
             y_max = max(max_y + 0.15, 5)
 
-    # Calculate center points for correction
-    plot_center_x = plot_width / 2
-    plot_center_y = plot_height / 2
-
-    # Create D3-compatible linear scales with radial correction
-    def x_scale_func(x):
-        return (x / total_genome_length) * plot_width
-    
-    def y_scale_func(y):
-        return ((y_max - y) / y_max) * plot_height
-    
-    def apply_radial_correction(x_pixel, y_pixel):
-        """Apply radial correction to pull points toward center"""
-        # Calculate distance from center
-        dx = x_pixel - plot_center_x
-        dy = y_pixel - plot_center_y
-        
-        # Apply correction proportional to distance from center
-        corrected_x = x_pixel - (dx * correction_strength)
-        corrected_y = y_pixel - (dy * correction_strength)
-        
-        return corrected_x, corrected_y
-    
-    # Convert point details to SVG coordinates with correction
-    for point in point_details:
-        base_x = x_scale_func(point['x'])
-        base_y = y_scale_func(point['y'])
-        
-        # Apply radial correction
-        corrected_x, corrected_y = apply_radial_correction(base_x, base_y)
-        
-        point['svg_x'] = int(round(corrected_x))
-        point['svg_y'] = int(round(corrected_y))
-        
-        # Clamp to plot boundaries
-        point['svg_x'] = max(0, min(plot_width, point['svg_x']))
-        point['svg_y'] = max(0, min(plot_height, point['svg_y']))
-
-    # Convert coordinates for matplotlib (add padding and flip Y back)
-    pixel_plot_data = {
-        'x': [x_scale_func(x) + png_dot_radius for x in plot_data['x']],
-        'y': [plot_height - y_scale_func(y) + png_dot_radius for y in plot_data['y']],
-        'colors': plot_data['colors']
-    }
-
-    # Set matplotlib to use pixel coordinates
-    ax.set_xlim(0, png_width)
-    ax.set_ylim(0, png_height)
+    # Set matplotlib to use raw genomic coordinates
+    ax.set_xlim(0, total_genome_length)
+    ax.set_ylim(y_min, y_max)
 
     # Create alternating chromosome backgrounds
     for i, (_, row) in enumerate(chrom_size.iterrows()):
         chrom = row['chrom']
         if chrom in chrom_data:
-            start_pos = x_scale_func(chrom_data[chrom]['start']) + png_dot_radius
-            end_pos = x_scale_func(chrom_data[chrom]['start'] + chrom_data[chrom]['size']) + png_dot_radius
+            start_pos = chrom_data[chrom]['start']
+            end_pos = chrom_data[chrom]['start'] + chrom_data[chrom]['size']
             
             # Alternate between light and slightly darker gray
             if i % 2 == 0:
@@ -285,10 +231,10 @@ def plot_grin2_manhattan(grin_results: dict,
             else:
                 ax.axvspan(start_pos, end_pos, facecolor='#D3D3D3', alpha=0.5, zorder=0)
 
-    # Plot data points using pixel coordinates
-    if pixel_plot_data['x']:
-        point_size = (png_dot_radius * 2) ** 2
-        ax.scatter(pixel_plot_data['x'], pixel_plot_data['y'], c=pixel_plot_data['colors'], 
+    # Plot data points using raw coordinates
+    if plot_data['x']:
+        point_size = png_dot_radius * 3 ** 2 
+        ax.scatter(plot_data['x'], plot_data['y'], c=plot_data['colors'], 
                    s=point_size, alpha=0.7, edgecolors='none', zorder=2)
 
     # Remove axes, labels, and ticks
@@ -306,9 +252,9 @@ def plot_grin2_manhattan(grin_results: dict,
 
     fig.canvas.draw()
 
-    # Return interactive data including correction strength for client-side tuning
+    # Return raw coordinates and scale info for client-side D3 handling
     interactive_data = {
-        'points': point_details,
+        'points': point_details,  # Raw genomic x, raw -log10(q) y coordinates
         'chrom_data': chrom_data,
         'y_axis_scaled': y_axis_scaled,
         'scale_factor': scale_factor_y,
@@ -321,8 +267,7 @@ def plot_grin2_manhattan(grin_results: dict,
         'png_height': png_height,
         'device_pixel_ratio': device_pixel_ratio,
         'dpi': plot_dpi,
-        'png_dot_radius': png_dot_radius,
-        'correction_strength': correction_strength
+        'png_dot_radius': png_dot_radius
     }
     
     return fig, interactive_data
