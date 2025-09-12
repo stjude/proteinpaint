@@ -2,7 +2,7 @@ import { type ComponentApi } from './ComponentApi.ts'
 import { Bus } from './Bus.ts'
 import { notifyComponents, getComponents } from './utils.ts'
 
-export interface RxAppInner {
+export interface RxApp {
 	type: string
 	api?: AppApi
 	id: any
@@ -36,8 +36,8 @@ export class AppApi {
 	id: string
 	opts: any
 	vocabApi: any
-	#Inner: RxAppInner
-	Inner?: RxAppInner // only in debugmode
+	#App: RxApp
+	Inner?: RxApp // only in debugmode
 	#middlewares: any[] = []
 	state: any
 
@@ -60,13 +60,13 @@ export class AppApi {
 	constructor(opts, __Class__) {
 		// the component type + id may be used later to
 		// simplify getting its state from the store
-		const self: RxAppInner = new __Class__(opts)
+		const self: RxApp = new __Class__(opts)
 		self.opts = opts
 		if (!self.id) self.id = opts.id || self.opts?.id
 		if (!self.type) self.type = __Class__.type
 		self.api = this
 
-		this.#Inner = self
+		this.#App = self
 		this.id = self.id
 		this.type = self.type || __Class__.type
 		this.opts = opts
@@ -83,13 +83,13 @@ export class AppApi {
 	}
 
 	async init() {
-		if (this.#Inner.preApiFreeze) await this.#Inner.preApiFreeze(this)
-		await this.#Inner.init()
-		if (this.#Inner.bus) this.#Inner.bus.emit('postInit')
+		if (this.#App.preApiFreeze) await this.#App.preApiFreeze(this)
+		await this.#App.init()
+		if (this.#App.bus) this.#App.bus.emit('postInit')
 	}
 
 	async dispatch(action?: any) {
-		const self = this.#Inner
+		const self = this.#App
 		self.bus.emit('preDispatch')
 		try {
 			if (this.#middlewares.length) {
@@ -126,7 +126,7 @@ export class AppApi {
 
 	// action: RxAction
 	async save(action) {
-		const self = this.#Inner
+		const self = this.#App
 		// save changes to store, do not notify components
 		self.state = await self.store.write(action)
 		// TODO: may generalize to use the key instead of hardcoding to only .recover
@@ -140,7 +140,7 @@ export class AppApi {
 	}
 
 	getState() {
-		return this.#Inner.state
+		return this.#App.state
 	}
 	// fxn: RxAction => void
 	middle(fxn) {
@@ -167,14 +167,14 @@ export class AppApi {
 	// will also expose bus.emit() which should only
 	// be triggered by this component
 	on(eventType, callback) {
-		const self = this.#Inner
+		const self = this.#App
 		if (!self.eventTypes) throw `no eventTypes[] for ${self.type} component`
 		self.bus.on(eventType, callback)
 		return this
 	}
 
 	getComponents(dotSepNames = '') {
-		return getComponents(this.#Inner.components, dotSepNames)
+		return getComponents(this.#App.components, dotSepNames)
 	}
 
 	register(api) {
@@ -187,7 +187,7 @@ export class AppApi {
 	}
 
 	triggerAbort(reason = '') {
-		const self = this.#Inner
+		const self = this.#App
 		if (reason) if (reason) console.info(`triggerAbort()`, reason)
 		for (const name of Object.keys(self.components)) {
 			const component = self.components[name]
@@ -209,7 +209,7 @@ export class AppApi {
 	}
 
 	destroy() {
-		const self = this.#Inner
+		const self = this.#App
 		// delete references to other objects to make it easier
 		// for automatic garbage collection to find unreferenced objects
 		for (const key in self.components) {
@@ -235,7 +235,7 @@ export class AppApi {
 	}
 
 	printError(e) {
-		if (this.#Inner.printError) this.#Inner.printError(e)
+		if (this.#App.printError) this.#App.printError(e)
 		else alert(e)
 	}
 }

@@ -1,4 +1,4 @@
-import { StoreApi, StoreBase, type AppApi, type RxStoreInner } from '#rx'
+import { StoreApi, StoreBase, type AppApi, type RxStore } from '#rx'
 import { root_ID } from './tree'
 import { getFilterItemByTag, findParent } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
@@ -30,10 +30,10 @@ const defaultState = {
 }
 
 // one store for the whole tdb app
-class TdbStore extends StoreBase implements RxStoreInner {
+class TdbStore extends StoreBase implements RxStore {
 	static type = 'store'
 
-	// expected RxStoreInner, some are already declared/set in StoreBase
+	// expected RxStore, some are already declared/set in StoreBase
 	app: AppApi
 	api: StoreApi
 	type: string

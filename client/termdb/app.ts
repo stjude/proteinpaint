@@ -1,4 +1,4 @@
-import { AppApi, multiInit, type RxAppInner, type ComponentApi } from '#rx'
+import { AppApi, multiInit, type RxApp, type ComponentApi } from '#rx'
 import { AppBase } from '#plots/AppBase.ts'
 import { storeInit } from './store'
 import { vocabInit } from './vocabulary'
@@ -26,9 +26,9 @@ opts{}
 	getCategoriesArguments{}
 */
 
-class TdbApp extends AppBase implements RxAppInner {
+class TdbApp extends AppBase implements RxApp {
 	static type = 'app'
-	// expected RxAppInner, some are already declared/set in AppBase
+	// expected RxApp, some are already declared/set in AppBase
 	api: AppApi
 	type = 'app'
 	parentId?: string

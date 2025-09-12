@@ -1,6 +1,6 @@
 import type { BasePlotConfig, MassState } from '#mass/types/mass'
 import type { Div } from '../../types/d3'
-import { RxComponentInner } from '../../types/rx.d'
+import { RxComponent } from '../../types/rx.d'
 import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '#dom'
 import { termType2label } from '#shared/terms.js'
@@ -12,7 +12,7 @@ import { getDefaultGseaSettings } from '#plots/gsea.js'
 /** TODO:
  * - type this file
  */
-class DifferentialAnalysis extends RxComponentInner {
+class DifferentialAnalysis extends RxComponent {
 	readonly type = 'differentialAnalysis'
 	components: {
 		plots: { [key: string]: any }

@@ -1,4 +1,4 @@
-import { getCompInit, copyMerge, type RxComponentInner, type ComponentApi } from '#rx'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from '#plots/PlotBase.ts'
 import { controlsInit, term0_term2_defaultQ } from '#plots/controls.js'
 import { select } from 'd3-selection'
@@ -34,10 +34,10 @@ Object.assign(t0_t2_defaultQ, {
 	}
 })
 
-class TdbSurvival extends PlotBase implements RxComponentInner {
+class TdbSurvival extends PlotBase implements RxComponent {
 	static type = 'survival'
 
-	// expected RxComponentInner props, some are already declared/set in PlotBase
+	// expected RxComponent props, some are already declared/set in PlotBase
 	type: string
 	parentId?: string
 	dom!: {

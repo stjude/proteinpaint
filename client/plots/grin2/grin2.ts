@@ -1,4 +1,4 @@
-import { getCompInit, copyMerge, type RxComponentInner } from '#rx'
+import { getCompInit, copyMerge, type RxComponent } from '#rx'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { GRIN2Dom, GRIN2Opts } from './GRIN2Types'
 import { dofetch3 } from '#common/dofetch'
@@ -9,7 +9,7 @@ import { PlotBase } from '#plots/PlotBase.ts'
 import { to_svg } from '#src/client'
 import { addLegend, setPlotDims, addAxesToExistingPlot, renderInteractivePoints } from '../manhattan/manhattan.ts'
 
-class GRIN2 extends PlotBase implements RxComponentInner {
+class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
 	dom: GRIN2Dom
 	private runButton!: any

@@ -4,7 +4,7 @@ import type TileLayer from 'ol/layer/Tile.js'
 import { WSIViewerInteractions } from '#plots/wsiviewer/interactions/WSIViewerInteractions.ts'
 import type Settings from '#plots/wsiviewer/Settings.ts'
 import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
-import { RxComponentInner } from '../../types/rx.d'
+import { RxComponent } from '../../types/rx.d'
 import 'ol-ext/dist/ol-ext.css'
 import { WSIAnnotationsRenderer } from '#plots/wsiviewer/view/WSIAnnotationsRenderer.ts'
 import { Buffer } from '#plots/wsiviewer/interactions/Buffer.ts'
@@ -17,7 +17,7 @@ import type OLMap from 'ol/Map'
 import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
 import type { ViewModel } from '#plots/wsiviewer/viewModel/ViewModel.ts'
 
-export class WSIViewer extends RxComponentInner {
+export class WSIViewer extends RxComponent {
 	// following attributes are required by rx
 	private type: string
 

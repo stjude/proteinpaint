@@ -1,4 +1,4 @@
-import { StoreApi, StoreBase, type AppApi, type RxStoreInner } from '#rx'
+import { StoreApi, StoreBase, type AppApi, type RxStore } from '#rx'
 import { getFilterItemByTag, findParent } from '#filter/filter'
 import { getSamplelstTW, getFilter } from './groups.js'
 import { rehydrateFilter } from '../filter/rehydrateFilter.js'
@@ -81,10 +81,10 @@ const defaultState = {
 }
 
 // one store for the whole MASS app
-class MassStore extends StoreBase implements RxStoreInner {
+class MassStore extends StoreBase implements RxStore {
 	static type = 'store'
 
-	// expected RxStoreInner, some are already declared/set in AppBase
+	// expected RxStore, some are already declared/set in AppBase
 	app: AppApi
 	api: StoreApi
 	type: string

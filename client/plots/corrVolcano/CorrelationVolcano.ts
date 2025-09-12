@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge } from '#rx'
-import { RxComponentInner } from '../../types/rx.d'
+import { RxComponent } from '../../types/rx.d'
 import { fillTermWrapper, fillTwLst } from '#termsetting'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import { controlsInit } from '../controls'
@@ -15,7 +15,7 @@ import { CorrVolcanoInteractions } from './interactions/CorrVolcanoInteractions'
  *  - Add tests
  */
 
-class CorrelationVolcano extends RxComponentInner {
+class CorrelationVolcano extends RxComponent {
 	readonly type = 'correlationVolcano'
 	private components: { controls: any }
 	/** Max radius user may enter in control or legend menu */

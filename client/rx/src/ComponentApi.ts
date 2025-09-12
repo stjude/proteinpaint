@@ -2,7 +2,7 @@ import type { AppApi } from './AppApi.ts'
 import { deepEqual, notifyComponents, copyMerge, getComponents } from './utils.ts'
 import { Bus } from './Bus.ts'
 
-export interface RxComponentInner {
+export interface RxComponent {
 	type: string
 	api?: ComponentApi
 	app: AppApi
@@ -36,8 +36,8 @@ export class ComponentApi {
 	type: string
 	id?: string
 
-	#Inner: RxComponentInner
-	Inner?: RxComponentInner // only in debugmode
+	#Component: RxComponent
+	Inner?: RxComponent // only in debugmode
 	#latestActionSequenceId: number
 	#abortControllers: Set<AbortController>
 	#bus?: Bus
@@ -54,14 +54,14 @@ export class ComponentApi {
 		const opts = this.#validateOpts(_opts, __Class__)
 		// the component type + id may be used later to
 		// simplify getting its state from the store
-		const self: RxComponentInner = new __Class__(opts, this)
+		const self: RxComponent = new __Class__(opts, this)
 		self.opts = opts
 		if (!self.id) self.id = opts.id || self.opts?.id
 		if (!self.type) self.type = __Class__.type
 		self.app = opts.app
 		self.api = this
 
-		this.#Inner = self
+		this.#Component = self
 		this.id = self.id
 		this.type = self.type || __Class__.type
 
@@ -87,13 +87,13 @@ export class ComponentApi {
 	}
 
 	async init() {
-		const self = this.#Inner
+		const self = this.#Component
 		// an instance may want to add or modify api properties before it is frozen
 		if (self.preApiFreeze) await self.preApiFreeze(this)
 		// freeze the api's properties and methods before exposing
 		Object.freeze(this)
 
-		if (self.init) await self.init(this.#Inner.app.getState())
+		if (self.init) await self.init(this.#Component.app.getState())
 		// lessen confusing behavior
 		if (self.state && !self.hasStatePreMain) {
 			delete self.state
@@ -109,7 +109,7 @@ export class ComponentApi {
 
 	// current: {action: RxAction, appState}
 	async update(current) {
-		const self = this.#Inner
+		const self = this.#Component
 		if (current.action && self.reactsTo && !self.reactsTo(current.action)) return
 		const componentState = self.getState ? self.getState(current.appState) : current.appState
 		// no new state computed for this component
@@ -148,14 +148,14 @@ export class ComponentApi {
 	}
 
 	getComponents(dotSepNames = '') {
-		return getComponents(this.#Inner.components, dotSepNames)
+		return getComponents(this.#Component.components, dotSepNames)
 	}
 
 	// must not expose self.bus directly since that
 	// will also expose bus.emit() which should only
 	// be triggered by this component
 	on(eventType, callback) {
-		const self = this.#Inner
+		const self = this.#Component
 		if (!self.eventTypes) throw `no eventTypes[] for ${self.type} component`
 		self.bus.on(eventType, callback)
 		return this
@@ -230,7 +230,7 @@ export class ComponentApi {
 				this.#abortControllers.delete(c)
 			}
 		}
-		const self = this.#Inner
+		const self = this.#Component
 		if (!self.components) return
 		for (const name of Object.keys(self.components)) {
 			const component = self.components[name]
@@ -249,7 +249,7 @@ export class ComponentApi {
 	}
 
 	destroy() {
-		const self = this.#Inner
+		const self = this.#Component
 		// delete references to other objects to make it easier
 		// for automatic garbage collection to find unreferenced objects
 		self.app.deregister(self.api)
@@ -278,6 +278,6 @@ export class ComponentApi {
 	replaceLastState(_) {}
 
 	getChartImages() {
-		return this.#Inner.getChartImages ? this.#Inner.getChartImages() : null
+		return this.#Component.getChartImages ? this.#Component.getChartImages() : null
 	}
 }

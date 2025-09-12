@@ -1,7 +1,7 @@
 import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from '../controls'
-import { RxComponentInner } from '../../types/rx.d'
+import { RxComponent } from '../../types/rx.d'
 import { plotColor } from '#shared/common.js'
 import { Menu, getMaxLabelWidth } from '#dom'
 import type { Elem } from '../../types/d3'
@@ -14,7 +14,7 @@ import { BoxPlotInteractions } from './interactions/BoxPlotInteractions'
 import { LegendRenderer } from './view/LegendRender'
 import { DownloadMenu } from '#dom'
 import { getChartTitle } from './viewModel/ViewModel'
-class TdbBoxplot extends RxComponentInner {
+class TdbBoxplot extends RxComponent {
 	readonly type = 'boxplot'
 	components: { controls: any }
 	dom: BoxPlotDom

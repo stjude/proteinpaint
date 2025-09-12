@@ -9,7 +9,7 @@ import * as d3 from 'd3'
 import { profilePlot, getDefaultProfilePlotSettings, getProfilePlotConfig } from '../profilePlot.js'
 import { renderTable } from '#dom'
 
-/** TODO: profilePlot must extend RxComponentInner but file not tsc.
+/** TODO: profilePlot must extend RxComponent but file not tsc.
  * Work arounds until profilePlot is migrated to ts.
  */
 class ProfilePolar extends profilePlot {
@@ -24,7 +24,7 @@ class ProfilePolar extends profilePlot {
 	/** Once profilePlot is tsc, use extended dom profile plot type */
 	dom: any //ProfilePolarDom
 	config: any //Partial<ProfilePolarConfig> should be extended from a ProfilePlotConfig
-	/** Rm after profilePlot is tsc and extended from RxComponentInner */
+	/** Rm after profilePlot is tsc and extended from RxComponent */
 	id: any
 
 	constructor() {

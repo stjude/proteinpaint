@@ -1,4 +1,4 @@
-export interface RxStoreInner {
+export interface RxStore {
 	type: string
 	api?: StoreApi
 	id: any
@@ -26,8 +26,8 @@ export class StoreApi {
 	id?: string
 	opts: any
 
-	#Inner: RxStoreInner
-	Inner?: RxStoreInner // only in debugmode
+	#Store: RxStore
+	Inner?: RxStore // only in debugmode
 
 	static getInitFxn(__Class__) {
 		return async opts => {
@@ -43,13 +43,13 @@ export class StoreApi {
 		//this.opts = opts
 		// the component type + id may be used later to
 		// simplify getting its state from the store
-		const self: RxStoreInner = new __Class__(opts, this)
+		const self: RxStore = new __Class__(opts, this)
 		//self.opts = opts
 		//self.app = opts.app
 		if (!self.id) self.id = opts.id || self.opts?.id
 		if (!self.type) self.type = __Class__.type
 		self.api = this
-		this.#Inner = self
+		this.#Store = self
 		this.id = self.id
 		this.type = self.type || __Class__.type
 
@@ -65,18 +65,18 @@ export class StoreApi {
 	}
 
 	async init() {
-		if (this.#Inner.init) await this.#Inner.init()
-		if (this.#Inner.validateState) this.#Inner.validateState()
+		if (this.#Store.init) await this.#Store.init()
+		if (this.#Store.validateState) this.#Store.validateState()
 		Object.freeze(this)
 	}
 
 	async write(action) {
-		const self = this.#Inner
+		const self = this.#Store
 
 		// to allow an app or chart code to fail due to race condition,
 		// hardcode a constant value or comment out the ++ for the sequenceID
 		// !!! CRITICAL TO INCREMENT THIS !!!
-		action.sequenceId = this.#Inner.sequenceId++
+		action.sequenceId = this.#Store.sequenceId++
 		// avoid calls to inherited methods
 		const actions = self.constructor.prototype.actions
 		if (!actions) {
@@ -109,7 +109,7 @@ export class StoreApi {
 	}
 
 	async copyState() {
-		const self = this.#Inner
+		const self = this.#Store
 		const stateCopy = self.fromJson(self.toJson(self.state))
 		self.deepFreeze(stateCopy)
 		return stateCopy

@@ -1,4 +1,4 @@
-import { AppApi, type StoreApi, type ComponentApi, type RxAppInner } from '#rx'
+import { AppApi, type StoreApi, type ComponentApi, type RxApp } from '#rx'
 import { AppBase } from '#plots/AppBase.ts'
 import { storeInit } from './store'
 import { vocabInit } from '#termdb/vocabulary'
@@ -25,10 +25,10 @@ opts{}
 	to clear the profile local filters
 */
 
-class MassApp extends AppBase implements RxAppInner {
+class MassApp extends AppBase implements RxApp {
 	static type = 'app'
 
-	// expected RxAppInner, some are already declared/set in AppBase
+	// expected RxApp, some are already declared/set in AppBase
 	api: AppApi
 	type: string
 	parentId?: string

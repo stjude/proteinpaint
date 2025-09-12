@@ -1,4 +1,4 @@
-import { getCompInit, copyMerge, type ComponentApi, type RxComponentInner } from '#rx'
+import { getCompInit, copyMerge, type ComponentApi, type RxComponent } from '#rx'
 import { PlotBase } from './PlotBase.ts'
 import { Menu } from '#dom/menu'
 import { fillTermWrapper } from '#termsetting'
@@ -13,10 +13,10 @@ import { isNumericTerm } from '#shared/terms.js'
 import { term0_term2_defaultQ } from './controls'
 import { importPlot } from './importPlot.js'
 
-class SummaryPlot extends PlotBase implements RxComponentInner {
+class SummaryPlot extends PlotBase implements RxComponent {
 	static type = 'summary'
 
-	// expected RxComponentInner props, some are already declared/set in PlotBase
+	// expected RxComponent props, some are already declared/set in PlotBase
 	api: ComponentApi
 	type: string
 	parentId?: string

@@ -1,12 +1,12 @@
 import { getCompInit, copyMerge } from '../../rx/index.js'
 import { fillTermWrapper } from '#termsetting'
 import { ReportView } from './view/reportView'
-import { RxComponentInner } from '../../types/rx.d'
+import { RxComponent } from '../../types/rx.d'
 import { controlsInit } from '../controls.js'
 import { importPlot } from '#plots/importPlot.js'
 import { downloadSVGsAsPdf } from '#dom'
 
-export class Report extends RxComponentInner {
+export class Report extends RxComponent {
 	config: any
 	view!: ReportView
 	components: any

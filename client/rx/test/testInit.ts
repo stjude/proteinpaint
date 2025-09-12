@@ -1,7 +1,7 @@
-import { AppApi, type RxAppInner } from '../src/AppApi.ts'
-import { StoreApi, type RxStoreInner } from '../src/StoreApi.ts'
+import { AppApi, type RxApp } from '../src/AppApi.ts'
+import { StoreApi, type RxStore } from '../src/StoreApi.ts'
 import { StoreBase } from '../src/StoreBase.ts'
-import { ComponentApi, type RxComponentInner } from '../src/ComponentApi.js'
+import { ComponentApi, type RxComponent } from '../src/ComponentApi.js'
 
 /*************************
  reusable helper functions
@@ -30,8 +30,8 @@ export class AppBase {
 	}
 }
 
-class TestApp extends AppBase implements RxAppInner {
-	// expected RxAppInner, some are already declared/set in AppBase
+class TestApp extends AppBase implements RxApp {
+	// expected RxApp, some are already declared/set in AppBase
 	api: AppApi
 	type: string
 	parentId?: string
@@ -65,8 +65,8 @@ class TestApp extends AppBase implements RxAppInner {
 
 export const appInit = AppApi.getInitFxn(TestApp)
 
-class TestStore extends StoreBase implements RxStoreInner {
-	// expected RxStoreInner, some are already declared/set in StoreBase
+class TestStore extends StoreBase implements RxStore {
+	// expected RxStore, some are already declared/set in StoreBase
 	//app: AppApi
 	api: StoreApi
 	//type: string
@@ -97,8 +97,8 @@ TestStore.prototype.actions = {
 
 export const storeInit = StoreApi.getInitFxn(TestStore)
 
-class TestPart implements RxComponentInner {
-	// expected RxComponentInner props, some are already declared/set in PlotBase
+class TestPart implements RxComponent {
+	// expected RxComponent props, some are already declared/set in PlotBase
 	opts: any
 	app: AppApi
 	id: string

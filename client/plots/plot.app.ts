@@ -1,4 +1,4 @@
-import { AppApi, type RxAppInner, type ComponentApi } from '../rx'
+import { AppApi, type RxApp, type ComponentApi } from '../rx'
 import { AppBase } from '#plots/AppBase.ts'
 import { storeInit } from '#mass/store'
 import { vocabInit } from '#termdb/vocabulary'
@@ -54,8 +54,8 @@ constructor options (opts)
 	}
 */
 
-class PlotApp extends AppBase implements RxAppInner {
-	// expected RxAppInner, some are already declared/set in AppBase
+class PlotApp extends AppBase implements RxApp {
+	// expected RxApp, some are already declared/set in AppBase
 	api: AppApi
 	type: string
 	parentId?: string

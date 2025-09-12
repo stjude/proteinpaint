@@ -1,11 +1,11 @@
 import { PlotBase } from './PlotBase.ts'
-import { getCompInit, type ComponentApi, type RxComponentInner } from '#rx'
+import { getCompInit, type ComponentApi, type RxComponent } from '#rx'
 import { controlsInit } from './controls'
 
-class SummaryInputPlot extends PlotBase implements RxComponentInner {
+class SummaryInputPlot extends PlotBase implements RxComponent {
 	static type = 'summaryInput'
 
-	// expected RxComponentInner props, some are already declared/set in PlotBase
+	// expected RxComponent props, some are already declared/set in PlotBase
 	type: string
 	parentId?: string
 	dom!: {

@@ -6,7 +6,7 @@ import { ScatterView } from './view/scatterView.js'
 import { getCurrentCohortChartTypes } from '#mass/charts'
 import { rebaseGroupFilter } from '#mass/groups'
 import { plotColor } from '#shared/common.js'
-import { type RxComponentInner } from '../../types/rx.d.js'
+import { type RxComponent } from '../../types/rx.d.js'
 import { filterJoin, getCombinedTermFilter } from '#filter'
 import { ScatterInteractivity, downloadImage } from './viewmodel/scatterInteractivity.js'
 import { ScatterViewModel2DLarge } from './viewmodel/scatterViewModel2DLarge.js'
@@ -17,7 +17,7 @@ import type { MassState } from '../../../client/mass/types/mass.js'
 import { DownloadMenu } from '#dom/downloadMenu'
 import { PlotBase } from '#plots/PlotBase.js'
 
-export class Scatter extends PlotBase implements RxComponentInner {
+export class Scatter extends PlotBase implements RxComponent {
 	config: any
 	view!: ScatterView
 	model!: ScatterModel

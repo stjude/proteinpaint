@@ -1,7 +1,7 @@
 import type { BasePlotConfig, MassAppActions, MassState } from '#mass/types/mass'
 import type { SCConfigOpts, SCDom, SCState, SCViewerOpts, SampleColumn } from './SCTypes'
 import type { SingleCellSample } from '#types'
-import { RxComponentInner } from '../../types/rx.d'
+import { RxComponent } from '../../types/rx.d'
 import { getCompInit, copyMerge } from '#rx'
 import { SCModel } from './model/SCModel'
 import { SCViewModel } from './viewModel/SCViewModel'
@@ -20,7 +20,7 @@ import { SCInteractions } from './interactions/SCInteractions'
  * 			possibly other animation methods
  */
 
-class SCViewer extends RxComponentInner {
+class SCViewer extends RxComponent {
 	readonly type = 'sc'
 	components: {
 		plots: { [key: string]: any }

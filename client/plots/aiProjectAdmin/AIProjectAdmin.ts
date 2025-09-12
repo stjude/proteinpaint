@@ -1,4 +1,4 @@
-import { RxComponentInner } from '../../types/rx.d'
+import { RxComponent } from '../../types/rx.d'
 import { getCompInit, copyMerge } from '#rx'
 import type { MassState } from '#mass/types/mass'
 import { getDefaultAIProjectAdminSettings } from './defaults'
@@ -11,7 +11,7 @@ import { sayerror } from '#dom'
 /** This plot supports training AI models.
  * The UI allows users to create and manage projects. */
 
-class AIProjectAdmin extends RxComponentInner {
+class AIProjectAdmin extends RxComponent {
 	public type = 'AIProjectAdmin'
 	prjtRepo: ProjectReposity
 	projects?: any[]
