@@ -414,6 +414,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			})
 
 			const plotData = result.plotData
+			console.log('plotData', plotData)
 
 			const svg = plotContainer.append('svg').attr('width', plotData.plot_width).attr('height', plotData.plot_height)
 
@@ -424,10 +425,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.attr('width', plotData.plot_width)
 				.attr('height', plotData.plot_height)
 
-			renderInteractivePoints(svg, plotData, this.dom.geneTip)
-
 			const config = structuredClone(this.state.config)
 			const plotDims = setPlotDims(plotData, config.settings.grin2.plotDims)
+
+			renderInteractivePoints(svg, plotData, this.dom.geneTip)
+
 			// Add axes to the existing plot
 			addAxesToExistingPlot(plotData, svg, plotDims)
 
