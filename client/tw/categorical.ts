@@ -1,5 +1,6 @@
 import type {
 	CategoricalTerm,
+	CategoricalQ,
 	ValuesQ,
 	PredefinedGroupSettingQ,
 	CustomGroupSettingQ,
@@ -16,18 +17,21 @@ import type {
 import type { TwOpts } from './TwBase.ts'
 import { TwBase } from './TwBase.ts'
 import { copyMerge } from '#rx'
-import { set_hiddenvalues } from '#termsetting'
+import { set_hiddenvalues, type UseCase } from '#termsetting'
+import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
 
 export type CatInstance = CatValues | CatPredefinedGS | CatCustomGS
 export type CatTypes = typeof CatValues | typeof CatPredefinedGS | typeof CatCustomGS
 
 export class CategoricalBase extends TwBase {
 	// type, isAtomic, $id are set in ancestor base classes
-	term: CategoricalTerm
+	term!: CategoricalTerm
+	q: CategoricalQ
 
 	constructor(tw: CatTWTypes, opts: TwOpts) {
 		super(tw, opts)
 		this.term = tw.term
+		this.q = tw.q
 	}
 
 	/** tw.term must already be filled-in at this point */
@@ -98,6 +102,10 @@ export class CategoricalBase extends TwBase {
 	getTitleText() {
 		return this.term.name
 	}
+
+	getStatus(_?: UseCase) {
+		return { text: '' }
+	}
 }
 
 export class CatValues extends CategoricalBase {
@@ -140,6 +148,45 @@ export class CatValues extends CategoricalBase {
 		}
 		set_hiddenvalues(q, term)
 		return tw as CatTWValues
+	}
+
+	getStatus(usecase?: UseCase) {
+		if (usecase?.target == 'regression') {
+			return this.q.mode == 'binary' ? { text: 'binary' } : { text: 'categorical' }
+		}
+		return { text: '' }
+	}
+
+	getGroups(category2samplecount, maxGrpNum: number = 3) {
+		const values: any[] = []
+		const groups: any[] = []
+		const grpIdxes: Set<number> = new Set([0, 1, 2])
+		for (const v of Object.values(category2samplecount) as any[]) {
+			if (v.uncomputable) return //Still necessary? Possibly taken care of termdb route... somewhere
+			if (v?.group > maxGrpNum)
+				throwMsgWithFilePathAndFnName(
+					`The maximum number of groups is ${maxGrpNum}. The group index for value = ${v.label} is ${v.group}`
+				)
+			const value = {
+				key: v.key,
+				label: v.label,
+				group: v.group || 1,
+				samplecount: v.samplecount
+			}
+			values.push(value)
+		}
+
+		for (const g of Array.from(grpIdxes)) {
+			//add any required groups, specifically Excluded Categories and Group 2
+			groups.push({
+				currentIdx: g,
+				type: this.type,
+				name: g === 0 ? `Excluded categories` : `Group ${g.toString()}`,
+				uncomputable: g === 0
+			})
+		}
+
+		return { groups, values }
 	}
 }
 
@@ -192,6 +239,18 @@ export class CatPredefinedGS extends CategoricalBase {
 		}
 		set_hiddenvalues(q, term)
 		return tw as CatTWPredefinedGS
+	}
+
+	getStatus(usecase?: UseCase) {
+		if (usecase?.target == 'regression') {
+			return this.q.mode == 'binary' ? { text: 'binary' } : { text: 'categorical' }
+		}
+		// fill() should have already validated q
+		return { text: this.term.groupsetting.lst?.[this.q.predefined_groupset_idx].name || 'predefined groups' }
+	}
+
+	getGroups() {
+		throw `q.type='predefined-groupset' not supported in groupsetting menu`
 	}
 }
 
@@ -247,5 +306,54 @@ export class CatCustomGS extends CategoricalBase {
 		}
 		set_hiddenvalues(q, term)
 		return tw as CatTWCustomGS
+	}
+
+	getStatus(usecase?: UseCase) {
+		if (usecase?.target == 'regression') {
+			return this.q.mode == 'binary' ? { text: 'binary' } : { text: 'categorical' }
+		}
+		// TODO: move this validation to the fill() function above?
+		const n = this.q.customset.groups.filter(group => {
+			if (group.type != 'values') throw `group.type must be 'values'`
+			if (!group.uncomputable) return true
+		}).length
+		return { text: 'Divided into ' + n + ' groups' }
+	}
+
+	getGroups(category2samplecount) {
+		const values: any = []
+		const groups: any[] = []
+		const grpIdxes = new Set([0, 1, 2])
+		const q = this.q
+		for (const [i, g] of q.customset.groups.entries()) {
+			const group = g as any // TODO: improve typing
+			groups.push({
+				currentIdx: i,
+				type: group.type,
+				name: group.name,
+				uncomputable: group.uncomputable
+			})
+			grpIdxes.delete(i)
+			if (group.type != 'values') throw `group.type should equal 'values'`
+			for (const value of group.values) {
+				/** label may not be provided in groupsetting.customset.
+				 * If missing, find the label from category2samplecout or
+				 * use the last ditch effort to use the key.
+				 */
+				const label = value.label
+					? value.label
+					: category2samplecount
+					? category2samplecount.find((d: { key: string; label?: string; samplecount: number }) => d.key == value.key)
+							?.label
+					: value.key
+				values.push({
+					key: value.key,
+					label: label,
+					group: i,
+					samplecount: null
+				})
+			}
+		}
+		return { groups, values }
 	}
 }

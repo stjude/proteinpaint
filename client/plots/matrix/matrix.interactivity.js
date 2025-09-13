@@ -623,7 +623,6 @@ function setTermActions(self) {
 	setLabelDragEvents(self, 'term')
 
 	self.setPill = function (appState) {
-		console.log(624, 'setPill')
 		// will reuse a pill instance to show term edit menu
 		self.pill = termsettingInit({
 			tip: self.customTipApi,
@@ -699,7 +698,6 @@ function setTermActions(self) {
 	self.showTermMenu = async function (event) {
 		const t = event.target.__data__
 		if (!t || !t.tw || !t.grp) return
-		console.log(699, t.tw, t.tw instanceof TwBase)
 		const s = self.settings.matrix
 		const l = s.controlLabels
 		self.activeLabel = t

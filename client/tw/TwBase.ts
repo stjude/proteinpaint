@@ -1,5 +1,6 @@
 import type { Term, TermWrapper, Q } from '#types'
 import type { SetCellPropsSignature } from '../plots/matrix/matrix.xtw.ts'
+import { type UseCase } from '#termsetting'
 
 export type TwOpts = {
 	vocabApi?: any // TODO
@@ -61,5 +62,10 @@ export class TwBase {
 	render(a: any): any {
 		console.log(a)
 		throw `should implement this method in subclass code, as needed`
+	}
+
+	getStatus(_?: UseCase) {
+		//if (_) {}
+		return { text: '' }
 	}
 }

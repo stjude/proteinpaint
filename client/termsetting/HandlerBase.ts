@@ -1,22 +1,23 @@
-import type { Handler } from './types'
+import type { Handler, UseCase } from './types'
 import type { TermSetting } from './TermSetting.ts'
 import type { TwBase } from '#tw'
 
 export class HandlerBase implements Handler {
 	termsetting: TermSetting
-	tw: TwBase
+	//tw: TwBase
 
 	constructor(opts) {
 		this.termsetting = opts.termsetting
-		this.tw = opts.termsetting.tw
+		//this.tw = opts.termsetting.tw
 	}
 
 	showEditMenu() {
 		//ignore
 	}
 
-	getPillStatus() {
-		return this.termsetting.tw.getStatusText?.() || { text: '' }
+	getPillStatus(_?: UseCase) {
+		const tw = this.termsetting.tw as any as TwBase
+		return tw.getStatus?.() || { text: '' }
 	}
 
 	// this is equivalent to getPillNameDefault()

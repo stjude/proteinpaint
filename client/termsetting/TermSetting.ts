@@ -5,11 +5,11 @@ import type {
 	SampleCountsEntry,
 	NoTermPromptOptsEntry,
 	VocabApi,
-	TermSettingApi,
 	Handler
 } from './types'
+import type { TermSettingApi } from './TermSettingApi.ts'
 import type { Term, Filter, Q, TermWrapper } from '#types'
-import { TwBase } from '#tw/TwBase'
+import { TwBase /*CatValues, CatPredefinedGS, CatCustomGS*/ } from '#tw'
 import { Menu } from '#dom'
 import { TermTypes, isDictionaryType } from '#shared/terms.js'
 import { minimatch } from 'minimatch'
@@ -68,7 +68,7 @@ export class TermSetting {
 	// updateUI: any
 
 	//Pill data
-	tw!: TermWrapper
+	tw!: TermWrapper // | CatValues | CatPredefinedGS | CatCustomGS
 	term: any
 	q!: Q
 	data: any
@@ -182,13 +182,13 @@ export class TermSetting {
 		this.noTermPromptOptions = o.noTermPromptOptions
 	}
 
-	async setHandler(termtype: string | undefined | null, tw) {
+	async setHandler(termtype: string | undefined | null, tw?: TermWrapper) {
 		if (tw instanceof TwBase) {
 			switch (tw.type) {
 				case 'CatTWValues':
 				case 'CatTWPredefinedGS':
 				case 'CatTWCustomGS': {
-					const { HandlerGroupSet } = await import('./HandlerGroupSet')
+					const { HandlerGroupSet } = await import('./HandlerGroupSet.ts')
 					this.handler = new HandlerGroupSet({ termsetting: this })
 					break
 				}

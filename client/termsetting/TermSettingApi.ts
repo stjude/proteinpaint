@@ -36,6 +36,7 @@ export class TermSettingApi {
 			self.hasError = false
 			delete self.error
 			self.validateMainData(data)
+			self.tw = data.tw
 			// may need original values for comparing edited settings
 			self.data = data //as PillData
 			// term is read-only if it comes from state, let it remain read-only
