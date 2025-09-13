@@ -1011,7 +1011,13 @@ type Mds3Queries = {
 	DZImages?: DZImages
 	WSImages?: WSImages
 	images?: Images
+	chat?: any
 }
+
+/** chat app support
+type Chat = {
+}
+ */
 
 /** non-zoom small images
 iamge file to sample mapping is stored in images table

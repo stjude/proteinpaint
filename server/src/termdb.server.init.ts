@@ -668,6 +668,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	},
 	singleCellPlot: ({ ds }) => ds.queries?.singleCell,
 	correlationVolcano: ({ ds }) => ds.cohort.correlationVolcano,
+	chat: ({ ds }) => ds.queries?.chat,
 	geneExpression: ({ ds }) => ds.queries?.geneExpression,
 	metaboliteIntensity: ({ ds }) => ds.queries?.metaboliteIntensity,
 	DA: ({ ds }) => ds.queries?.rnaseqGeneCount,
