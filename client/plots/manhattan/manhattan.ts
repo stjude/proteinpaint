@@ -18,8 +18,8 @@ export function renderInteractivePoints(svg: any, plotData: any, geneTip?) {
 		.data(plotData.points)
 		.enter()
 		.append('circle')
-		.attr('cx', d => plotData.xScale(d.x))
-		.attr('cy', d => plotData.yScale(d.y))
+		.attr('cx', d => plotData.xScale(d.x) + plotData.png_dot_radius)
+		.attr('cy', d => plotData.yScale(d.y) + plotData.png_dot_radius)
 		// TODO: make radius a setting
 		.attr('r', 3)
 		.attr('fill-opacity', 0)
