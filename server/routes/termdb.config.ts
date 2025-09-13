@@ -189,14 +189,8 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 		}
 		if (q.snvindel.byisoform?.processTwsInOneQuery) q2.snvindel.byisoform = { processTwsInOneQuery: true } // quick fix; may revise later
 	}
-	if (q.trackLst) {
-		q2.trackLst = q.trackLst
-	}
 	if (q.svfusion) {
 		q2.svfusion = {}
-	}
-	if (q.ld) {
-		q2.ld = JSON.parse(JSON.stringify(q.ld))
 	}
 	if (q.cnv) {
 		q2.cnv = {}
@@ -233,30 +227,34 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 			delete q2.singleSampleGenomeQuantification[k].folder
 		}
 	}
-
 	if (q.geneExpression) {
 		q2.geneExpression = { unit: q.geneExpression.unit }
 	}
-
+	if (q.ld) {
+		q2.ld = structuredClone(q.ld)
+	}
+	if (q.trackLst) {
+		q2.trackLst = q.trackLst
+	}
+	if (q.chat) {
+		q2.chat = {}
+	}
 	if (q.NIdata && serverconfig.features.showBrainImaging) {
 		q2.NIdata = {}
 		for (const k in q.NIdata) {
 			q2.NIdata[k] = JSON.parse(JSON.stringify(q.NIdata[k]))
 		}
 	}
-
 	if (q.DZImages && serverconfig.features.showDZImages) {
 		q2.DZImages = {
 			type: q.DZImages.type
 		}
 	}
-
 	if (q.WSImages && serverconfig.features.showWSImages) {
 		q2.WSImages = {
 			type: q.WSImages.type
 		}
 	}
-
 	if (q.singleSampleGbtk) {
 		q2.singleSampleGbtk = {}
 		for (const k in q.singleSampleGbtk) {
@@ -264,7 +262,6 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 			delete q2.singleSampleGbtk[k].folder
 		}
 	}
-
 	if (q.rnaseqGeneCount) {
 		q2.rnaseqGeneCount = true
 	}

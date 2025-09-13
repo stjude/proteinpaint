@@ -2,9 +2,6 @@ export async function importPlot(chartType, notFoundMessage = '') {
 	// TODO: move to dynamic import of exact plot names here, instead of string-pattern,
 	// so that the bundler does not have to guess code file extension, directory names and letter casing
 	switch (chartType) {
-		/*// enable this when gb/GB.ts is ready to replace genomeBrowser.js
-		case 'genomeBrowser':
-			return await import('./gb/GB.ts')*/
 		case 'AIProjectAdmin':
 			return await import('./aiProjectAdmin/AIProjectAdmin.ts')
 
@@ -12,10 +9,18 @@ export async function importPlot(chartType, notFoundMessage = '') {
 			return await import(`./barchart.js`)
 
 		case 'boxplot':
-			return await import(`./boxplot/BoxPlot.js`)
+			return await import(`./boxplot/BoxPlot.ts`)
+
+		case 'chat':
+			return await import(`./chat/chat.ts`)
 
 		case 'correlationVolcano':
 			return await import(`./corrVolcano/CorrelationVolcano.ts`)
+
+		/*// enable this when gb/GB.ts is ready to replace genomeBrowser.js
+		case 'genomeBrowser':
+			return await import('./gb/GB.ts')
+			*/
 
 		case 'grin2':
 			return await import('./grin2/grin2')

@@ -1,0 +1,31 @@
+import type { Filter } from '../filter.ts'
+import type { RoutePayload } from './routeApi.js'
+
+/** */
+export type ChatRequest = {
+	genome: string
+	dslabel: string
+	filter?: Filter
+	filter0?: any // gdc
+	/** user prompt */
+	prompt: string
+	__protected__: any
+}
+
+export type ChatResponse = {
+	type: 'html' | 'plot'
+	/** when type=html, this value is set meaning server returns a chat response */
+	html?: string
+	/** when type=plot. value is json */
+	plot?: any
+}
+
+export const ChatPayload: RoutePayload = {
+	request: {
+		typeId: 'ChatRequest'
+	},
+	response: {
+		typeId: 'ChatResponse'
+	}
+	//examples: []
+}
