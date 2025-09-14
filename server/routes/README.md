@@ -2,7 +2,7 @@
 
 ## Background
 
-IMPORTANT: A route must be imported in `src/app.routes.ts` in order
+IMPORTANT: A route must be imported in `src/app.routes.js` in order
 for it to be included in the `augen.setRoutes(..., routes, ...)` argument 
 as called in `app.ts`.  
 
