@@ -60,6 +60,8 @@ class Chat extends RxComponent {
 				const prompt = event.target.value.trim()
 				if (!prompt) return // blank
 				const body = {
+					genome: this.app.vocabApi.vocab.genome,
+					dslabel: this.app.vocabApi.vocab.dslabel,
 					prompt
 				}
 				try {
