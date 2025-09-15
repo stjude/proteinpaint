@@ -1,6 +1,6 @@
 import type OLMap from 'ol/Map.js'
 import { debounce } from 'debounce'
-import { dofetch3 } from '#common/dofetch'
+import { clearServerDataCache, dofetch3 } from '#common/dofetch'
 import VectorLayer from 'ol/layer/Vector'
 import type VectorSource from 'ol/source/Vector'
 import { Feature } from 'ol'
@@ -369,18 +369,32 @@ export class WSIViewerInteractions {
 		} catch (e: any) {
 			console.error('Error in deleteWSIAnnotation request:', e.message || e)
 		}
+		// TODO find another way to clear server cache
+		clearServerDataCache()
 
-		const nextIdx = currentIndex == tileSelections.length ? 0 : currentIndex + 1
-		buffers.annotationsIdx.set(nextIdx)
-		const coords = [tileSelections[nextIdx].zoomCoordinates] as unknown as [number, number][]
-		this.zoomInEffectListener(activeImageExtent, coords, map, activePatchColor)
+		const updated: TileSelection[] = SessionWSImage.getTileSelections(sessionWSImage) ?? []
 
-		let sessionsTileSelection: TileSelection[] = []
+		// TODO try find a better way to sync buffer and session state
+		if (updated.length === 0) {
+			// Nothing to focus/zoom; reset buffer to 0 (or skip entirely)
+			buffers?.annotationsIdx?.set?.(0)
+		} else {
+			// If we deleted the last item, wrap to 0; otherwise, keep same index (now points to the next item)
+			const nextIdx = currentIndex >= updated.length ? 0 : currentIndex
+			buffers?.annotationsIdx?.set?.(nextIdx)
 
-		if (SessionWSImage.isTileSelection(currentIndex, sessionWSImage)) {
-			sessionsTileSelection = SessionWSImage.removeTileSelection(currentIndex, sessionWSImage)
+			const nextSel = updated[nextIdx]
+			if (nextSel?.zoomCoordinates) {
+				const coords = [nextSel.zoomCoordinates] as [number, number][]
+				this.zoomInEffectListener(activeImageExtent, coords, map, activePatchColor)
+			}
 		}
 
+		if (SessionWSImage.isTileSelection(currentIndex, sessionWSImage)) {
+			SessionWSImage.removeTileSelection(currentIndex, sessionWSImage)
+		}
+
+		const sessionsTileSelection: TileSelection[] = sessionWSImage.sessionsTileSelections ?? []
 		wsiApp.app.dispatch({
 			type: 'plot_edit',
 			id: wsiApp.id,
