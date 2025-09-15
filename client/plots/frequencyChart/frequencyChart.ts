@@ -13,8 +13,8 @@ export class FrequencyChart extends Runchart {
 	type: string
 	cat2Color: any
 
-	constructor(opts) {
-		super(opts)
+	constructor(opts, api) {
+		super(opts, api)
 		this.type = 'frequencyChart'
 	}
 
