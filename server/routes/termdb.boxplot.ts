@@ -183,9 +183,8 @@ export function parseValues(
 
 	/** Find the absolute min and max values to render
 	 * the plot scale */
-	let absMin: number | null = null,
-		absMax: number | null = null
-
+	let absMin = Infinity,
+		absMax = -Infinity
 	for (const val of Object.values(data.samples)) {
 		const value = val[q.tw.$id]
 		if (!Number.isFinite(value?.value)) continue
@@ -229,8 +228,8 @@ export function parseValues(
 		const values = plot2values.get(plot)
 		values.push(value.value)
 
-		if (absMin === null || value.value < absMin) absMin = value.value
-		if (absMax === null || value.value > absMax) absMax = value.value
+		if (value.value < absMin) absMin = value.value
+		if (value.value > absMax) absMax = value.value
 	}
 
 	return { absMax, absMin, chart2plot2values, uncomputableValues }
