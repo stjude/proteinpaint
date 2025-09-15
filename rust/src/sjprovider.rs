@@ -24,7 +24,7 @@ use url::Url;
 
 // ---------- Main Client ----------
 
-const MYPROVIDER_API_BASE_URL: &str = "http://10.200.87.133:32580/v2/models/ray_gateway_router/infer";
+const MYPROVIDER_API_BASE_URL: &str = "https://svltgpt01a.stjude.org/v2/models/ray_gateway_router/infer";
 
 pub struct ClientBuilder<'a> {
     base_url: &'a str,
@@ -998,7 +998,7 @@ mod tests {
         let user_input = "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs";
 
         // Initialize Myprovider client
-        let myprovider_host = "http://10.200.87.133:32580/v2/models/ray_gateway_router/infer";
+        let myprovider_host = "https://svltgpt01a.stjude.org/v2/models/ray_gateway_router/infer";
         let myprovider_client = Client::builder()
             .base_url(myprovider_host)
             .build()
@@ -1006,7 +1006,7 @@ mod tests {
         //let myprovider_client = myprovider::Client::new();
         let embedding_model = myprovider_client.embedding_model("multi-qa-mpnet-base-dot-v1");
         let comp_model = myprovider_client.completion_model("llama3.3-70b-instruct-vllm"); // "granite3-dense:latest" "PetrosStav/gemma3-tools:12b" "llama3-groq-tool-use:latest" "PetrosStav/gemma3-tools:12b"
-        //let file_path = "/Users/rpaul1/Documents/test/RAG/LangGraph/ai_docs3.txt";
+
         let file_path = "src/ai_docs3.txt";
 
         // Open the file
