@@ -12,6 +12,33 @@ export type ChatRequest = {
 	__protected__: any
 }
 
+export type numeric_filter = {
+	lower: number
+	upper: number
+}
+
+export type categorical_filter = {
+	name: string
+}
+
+export type filter_variable = {
+	name: string
+	variable_type: 'float' | 'categories'
+	cutoff: numeric_filter | categorical_filter
+}
+
+export type summary = {
+	group_categories: string
+	overlay?: string
+	divide_by?: string
+	filter?: filter_variable
+}
+
+export type plot = {
+	/** Different chart types currently supported by the AI chatbot */
+	chartType: summary | 'survival' | 'hierarchial' | 'snv_indel' | 'cnv' | 'variant_calling' | 'none' | 'dge'
+}
+
 export type ChatResponse = {
 	type: 'html' | 'plot'
 	/** when type=html, this value is set meaning server returns a chat response */
