@@ -18,8 +18,8 @@ export class Runchart extends Scatter {
 	filterTWs: any
 	selectFilters: any
 
-	constructor(opts) {
-		super(opts)
+	constructor(opts, api) {
+		super(opts, api)
 		this.type = 'runChart'
 	}
 
