@@ -27,6 +27,7 @@ export class Scatter extends PlotBase implements RxComponent {
 	}
 	components: {
 		[name: string]: ComponentApi | { [name: string]: ComponentApi }
+		controls?: any
 	} = {}
 
 	config: any
