@@ -167,6 +167,8 @@ export class profileForms extends profilePlot {
 			.domain([0, 100])
 			.range([this.shift, this.shift + width])
 		const posAxisBottom = axisBottom(posScale)
+			.ticks(10)
+			.tickFormat(d => d + '%')
 		const scaleG = this.dom.svg.append('g').attr('transform', `translate(0, ${y})`)
 		posAxisBottom(scaleG)
 
