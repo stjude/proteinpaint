@@ -33,7 +33,7 @@ export class ViewModel {
 				}
 			} else {
 				// official mds3 tk without precomputed tk data
-				const tk = {
+				const tk: any = {
 					type: 'mds3',
 					dslabel: this.app.opts.state.vocab.dslabel,
 					onClose: () => {
@@ -45,16 +45,15 @@ export class ViewModel {
 				}
 				// any cohort filter for this tk
 				{
-					//const lst = []
+					const lst: any = []
 					// register both global filter and local filter to pass to mds3 data queries
-					/** FIXME: address tsc issues here:
 					if (this.state.filter?.lst?.length) lst.push(this.state.filter)
 					if (this.state.config.snvindel.filter) lst.push(this.state.config.snvindel.filter)
 					if (lst.length == 1) {
 						tk.filterObj = structuredClone(lst[0])
 					} else if (lst.length > 1) {
 						tk.filterObj = filterJoin(lst)
-					} **/
+					}
 					// TODO this will cause mds3 tk to show a leftlabel to indicate the filtering, which should be hidden
 				}
 				tklst.push(tk)
