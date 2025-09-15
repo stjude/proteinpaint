@@ -1,28 +1,39 @@
 import { getCompInit, copyMerge } from '../../rx/index.js'
 import { fillTermWrapper } from '#termsetting'
 import { ReportView } from './view/reportView'
-import { RxComponent } from '../../types/rx.d'
+import { type RxComponent, type ComponentApi } from '#rx'
 import { controlsInit } from '../controls.js'
 import { importPlot } from '#plots/importPlot.js'
 import { downloadSVGsAsPdf } from '#dom'
 import { PlotBase } from '#plots/PlotBase.js'
 
-export class Report extends RxComponent {
+export class Report extends PlotBase implements RxComponent {
+	static type = 'report'
+
+	// expected RxComponent props, some are already declared/set in PlotBase
+	api: ComponentApi
+	type: string
+	parentId?: string
+	dom!: {
+		[index: string]: any
+	}
+	components: {
+		[name: string]: ComponentApi | { [name: string]: ComponentApi }
+	} = {}
+
 	config: any
 	view!: ReportView
-	components: any
 	settings: any
 	opts: any
 	state!: any
-	readonly type: string
 	id!: string
 	filterTWs: any[] = []
 	selectFilters: any
-	dom: any
 
-	constructor(opts) {
+	constructor(opts, api) {
 		super(opts)
-		this.type = 'report'
+		this.api = api
+		this.type = Report.type
 	}
 
 	async init(appState) {
@@ -62,11 +73,6 @@ export class Report extends RxComponent {
 				await this.setPlot(plot, sectionDiv)
 			}
 		}
-	}
-
-	//for some reason the report getChartImages is not seen unless I do this
-	preApiFreeze(api) {
-		api.getChartImages = () => this.getChartImages()
 	}
 
 	getState(appState: any) {

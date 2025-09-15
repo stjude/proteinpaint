@@ -6,7 +6,7 @@ import { ScatterView } from './view/scatterView.js'
 import { getCurrentCohortChartTypes } from '#mass/charts'
 import { rebaseGroupFilter } from '#mass/groups'
 import { plotColor } from '#shared/common.js'
-import { type RxComponent } from '../../types/rx.d.js'
+import { type RxComponent, type ComponentApi } from '#rx'
 import { filterJoin, getCombinedTermFilter } from '#filter'
 import { ScatterInteractivity, downloadImage } from './viewmodel/scatterInteractivity.js'
 import { ScatterViewModel2DLarge } from './viewmodel/scatterViewModel2DLarge.js'
@@ -18,26 +18,33 @@ import { DownloadMenu } from '#dom/downloadMenu'
 import { PlotBase } from '#plots/PlotBase.js'
 
 export class Scatter extends PlotBase implements RxComponent {
+	static type = 'sampleScatter'
+	api: ComponentApi
+	type: string
+	parentId?: string
+	dom!: {
+		[index: string]: any
+	}
+	components: {
+		[name: string]: ComponentApi | { [name: string]: ComponentApi }
+	} = {}
+
 	config: any
 	view!: ScatterView
 	model!: ScatterModel
 	vm!: any
 	interactivity!: ScatterInteractivity
-	components: any
 	settings: any
 	charts: any
 	opts: any
 	state!: any
-	readonly type: string
 	transform: any
-	parentId: any
 	zoom: any
-	dom: any
-	api: any
 
-	constructor(opts) {
+	constructor(opts, api) {
 		super(opts)
-		this.type = 'sampleScatter'
+		this.api = api
+		this.type = Scatter.type
 		this.parentId = opts?.parentId //not working!!!, need to pass opts with the parentId to the component
 		this.zoom = 1
 	}
@@ -65,11 +72,6 @@ export class Scatter extends PlotBase implements RxComponent {
 			return react
 		}
 		return true
-	}
-
-	//for some reason the scatter getChartImages is not seen unless I do this
-	preApiFreeze(api) {
-		api.getChartImages = () => this.getChartImages()
 	}
 
 	getState(appState: MassState) {

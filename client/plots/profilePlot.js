@@ -581,17 +581,17 @@ export class profilePlot {
 	}
 
 	getChartImages() {
-		const charts = [{ name: '', svg: this.dom.svg, parent: this.dom.svg.node() }]
-		//add comparison plots of added
+		const entries = Object.entries(this.components.plots)
+		const charts = [{ name: entries.length > 0 ? 'Original' : '', svg: this.dom.svg, parent: this.dom.svg.node() }]
 		let i = 1
-		for (const key in this.components.plots) {
-			const plot = this.components.plots[key]
+		for (const [key, plot] of entries) {
+			//Adding comparison plots
 			const chartImages = plot.getChartImages()
 
 			for (const chartImage of chartImages) {
 				const parent = chartImage.parent
 				const svg = chartImage.svg
-				const name = `Comparison ${i}. ${chartImage.name}`
+				const name = chartImages.length > 1 ? `Comparison ${i}. ${chartImage.name}` : `Comparison ${chartImage.name}`
 				charts.push({ name, svg, parent })
 			}
 			i++
