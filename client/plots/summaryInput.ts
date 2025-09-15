@@ -32,7 +32,7 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 			controls: opts.holder.append('div'),
 			submit: opts.holder.append('div').style('margin', '10px')
 		}
-		if (dom.header) dom.header.html('Summary Input')
+		if (dom.header) dom.header.html('Correlation Input')
 		return dom
 	}
 
@@ -41,17 +41,17 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 			{
 				type: 'term',
 				configKey: 'term',
-				label: 'Variable to summarize'
+				label: 'Variable to Correlate'
 			},
 			{
 				type: 'term',
 				configKey: 'term2',
-				label: 'Overlay variable'
+				label: 'Overlay Variable'
 			},
 			{
 				type: 'term',
 				configKey: 'term0',
-				label: 'Divide by variable'
+				label: 'Divide by Variable'
 			}
 		]
 

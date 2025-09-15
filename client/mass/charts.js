@@ -202,7 +202,9 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
-			label: 'Summary Input',
+			// currently only used by gdc, so hardcoding correlation input label
+			// may allow for other labels if used by other datasets
+			label: 'Correlation Input',
 			clickTo: self.prepPlot,
 			chartType: 'summaryInput',
 			config: {
