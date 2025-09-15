@@ -1,23 +1,23 @@
 // --------Summary plot examples----------------------//
-// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
-// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show hyperdiploid overlayed with age", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
-// (does not work)  Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary of fusions in men only", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
-// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for fusions in men only", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
-// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
-// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show hyperdiploid overlayed with age", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "https://svltgpt01a.stjude.org/v2/models/ray_gateway_router/infer", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text-v1.5", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
-// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary of fusions in men only", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "https://svltgpt01a.stjude.org/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "nomic-embed-text-v1.5", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
-// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary of molecular subtype in men only", "dataset_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "https://svltgpt01a.stjude.org/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "nomic-embed-text-v1.5", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_agnostic_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show hyperdiploid overlayed with age", "dataset_agnostic_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
+// (does not work)  Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary of fusions in men only", "dataset_agnostic_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for fusions in men only", "dataset_agnostic_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_agnostic_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show hyperdiploid overlayed with age", "dataset_agnostic_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "https://svltgpt01a.stjude.org/v2/models/ray_gateway_router/infer", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text-v1.5", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary of fusions in men only", "dataset_agnostic_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "https://svltgpt01a.stjude.org/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "nomic-embed-text-v1.5", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary of molecular subtype in men only", "dataset_agnostic_file":"src/ALL-pharma_aitrainingdata.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "https://svltgpt01a.stjude.org/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "nomic-embed-text-v1.5", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
 // (This worked) "user_input": "Show summary plot for age of diagnosis and show only ETV6-RUNX1 molecular subtype only"
 // (This did not work) "user_input": "Show summary plot for age of diagnosis for ETV6-RUNX1 subtype only"
 
-// cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for molecular subtype with age as overlay and divide by gender", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "https://svltgpt01a.stjude.org/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "nomic-embed-text-v1.5", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
-// cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for molecular subtype with age as overlay and divide by gender", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://localhost:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
+// cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for molecular subtype with age as overlay and divide by gender", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "https://svltgpt01a.stjude.org/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "nomic-embed-text-v1.5", "llm_backend_name": "SJ", "dataset_agnostic_file": "/Users/rpaul1/sjpp/proteinpaint/server/../rust/src/ai_docs3.txt"}' && time echo $json | target/release/aichatbot
+// cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for molecular subtype with age as overlay and divide by gender", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "http://localhost:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama", "dataset_agnostic_file": "/Users/rpaul1/sjpp/proteinpaint/server/../rust/src/ai_docs3.txt"}' && time echo $json | target/release/aichatbot
 
 // -------Differential gene expression examples ------//
 
-// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
-// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "apilink": "https://svltgpt01a.stjude.org/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "multi-qa-mpnet-base-dot-v1", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
-// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "https://svltgpt01a.stjude.org/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "multi-qa-mpnet-base-dot-v1", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs", "dataset_agnostic_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "apilink": "http://0.0.0.0:8000", "comp_model_name": "gpt-oss:20b", "embedding_model_name": "nomic-embed-text:latest", "llm_backend_name": "ollama"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs", "dataset_agnostic_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "apilink": "https://svltgpt01a.stjude.org/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "multi-qa-mpnet-base-dot-v1", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && export RUST_BACKTRACE=full && json='{"user_input": "Show summary plot for sample information", "dataset_agnostic_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "https://svltgpt01a.stjude.org/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "multi-qa-mpnet-base-dot-v1", "llm_backend_name": "SJ"}' && time echo $json | target/release/aichatbot
 use anyhow::Result;
 use json::JsonValue;
 use r2d2_sqlite::SqliteConnectionManager;
@@ -104,11 +104,13 @@ async fn main() -> Result<()> {
                         None => panic!("user_input field is missing in input json"),
                     }
 
-                    let dataset_file_json: &JsonValue = &json_string["dataset_file"];
-                    let mut dataset_file: Option<&str> = None;
-                    match dataset_file_json.as_str() {
-                        Some(inp) => dataset_file = Some(inp),
-                        None => {}
+                    let dataset_agnostic_file_json: &JsonValue = &json_string["dataset_agnostic_file"];
+                    let dataset_agnostic_file: &str;
+                    match dataset_agnostic_file_json.as_str() {
+                        Some(inp) => dataset_agnostic_file = inp,
+                        None => {
+                            panic!("Dataset agnostic file containing general information about ProteinPaint is missing")
+                        }
                     }
 
                     let dataset_db_json: &JsonValue = &json_string["dataset_db"];
@@ -170,7 +172,7 @@ async fn main() -> Result<()> {
                             comp_model,
                             embedding_model,
                             llm_backend_type,
-                            dataset_file,
+                            dataset_agnostic_file,
                             temperature,
                             max_new_tokens,
                             top_p,
@@ -192,7 +194,7 @@ async fn main() -> Result<()> {
                             comp_model,
                             embedding_model,
                             llm_backend_type,
-                            dataset_file,
+                            dataset_agnostic_file,
                             temperature,
                             max_new_tokens,
                             top_p,
@@ -223,7 +225,7 @@ async fn run_pipeline(
     comp_model: impl rig::completion::CompletionModel + 'static,
     embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
     llm_backend_type: llm_backend,
-    dataset_file: Option<&str>,
+    dataset_agnostic_file: &str,
     temperature: f64,
     max_new_tokens: usize,
     top_p: f32,
@@ -237,6 +239,7 @@ async fn run_pipeline(
         temperature,
         max_new_tokens,
         top_p,
+        dataset_agnostic_file,
     )
     .await;
     classification = classification.replace("\"", "");
@@ -264,7 +267,7 @@ async fn run_pipeline(
             user_input,
             comp_model,
             embedding_model,
-            dataset_file,
+            dataset_agnostic_file,
             &llm_backend_type,
             temperature,
             max_new_tokens,
@@ -308,11 +311,10 @@ async fn classify_query_by_dataset_type(
     temperature: f64,
     max_new_tokens: usize,
     top_p: f32,
+    dataset_agnostic_file: &str,
 ) -> String {
-    let file_path = "src/ai_docs3.txt";
-
     // Open the file
-    let mut file = File::open(file_path).unwrap();
+    let mut file = File::open(dataset_agnostic_file).unwrap();
 
     // Create a string to hold the file contents
     let mut contents = String::new();
@@ -535,7 +537,7 @@ async fn parse_dataset_db(db: &str) -> Vec<String> {
     }
 
     //// Open the file
-    //let mut file = File::open(dataset_file).unwrap();
+    //let mut file = File::open(dataset_agnostic_file).unwrap();
 
     //// Create a string to hold the file contents
     //let mut contents = String::new();
@@ -613,7 +615,7 @@ async fn extract_summary_information(
     user_input: &str,
     comp_model: impl rig::completion::CompletionModel + 'static,
     embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
-    _dataset_file: Option<&str>, // Will be deprecated later
+    _dataset_agnostic_file: &str, // Will be deprecated later
     llm_backend_type: &llm_backend,
     temperature: f64,
     max_new_tokens: usize,
@@ -654,7 +656,7 @@ async fn extract_summary_information(
 
             let top_k = 3; //rag_docs_length;
             let system_prompt = String::from(
-                "I am an assistant that extracts the summary term from user query. It has four fields: group_categories (required), overlay (optional), filter (optional) and divide_by (optional). group_categories (required) is the primary variable being displayed. Overlay consists of the variable that must be overlayed on top of group_categories. divide_by is the variable used to stratify group_categories into two or more categories. The final output must be in the following JSON format with no extra comments: {\"chartType\":\"summary\",\"term\":{\"group_categories\":\"{group_category_answer}\",\"overlay\":\"{overlay_answer}\",\"divide_by\":\"{divide_by_answer}\",\"filter\":\"{filter_answer}\"}}. The values being added to the JSON parameters must be previously defined as field in the database. If the filter variable is a \"value\" of a \"field\" in the database, use the field name and add the value as a \"filter cutoff\" . If the \"filter\" field is defined in the user query, it should contain an array with each item containing a subfield called \"name\" with the name of the filter variable. If the type of variable is \"categories\", add another field as \"type\" = \"categories\". In case the type of the variable is \"categories\", show the sub-category as a separate sub-field \"cutoff\" with a sub nested JSON with \"name\" as the field containing the subcategory name. In case the type of the variable is \"float\" it should contain a subfield called \"name\" followed by subfield \"type\" = \"float\". In the \"cutoff\" subfield, the nested JSON should contain the field \"lower\" containing the lower numeric limit and the \"upper\" field containing the upper numeric limit. If the upper and lower cutoffs are not defined in the user query, use a default value of 0 and 100 respectively. Sample query1: \"Show ETR1 subtype\" Answer query1: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"ETR1\"}}. Sample query2: \"Show hyperdiploid subtype with age overlayed on top of it\" Answer query2: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"hyperdiploid\", \"overlay\":\"age\"}}. Sample query3: \"Show BAR1 subtype with age overlayed on top of it and stratify it on the basis of gender\" Answer query4: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"BAR1\", \"overlay\":\"age\", \"divide_by\":\"sex\"}}. Sample query5: \"Show summary for cancer-diagnosis only for men\". Since gender is a categorical variable and the user wants to select for men, the answer query for sample query5 is as follows: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"cancer-diagnosis\", \"filter\": {\"name\": \"gender\", \"type\": \"categories\", \"cutoff\": {\"name\": \"male\"}}}}. Sample query6: \"Show molecular subtype summary for patients with age less than 30\". Age is a float variable so we need to provide the lower and higher cutoffs. So the answer to sample query6 is as follows: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"Molecular subtype\", \"filter\": {\"name\": \"age\", \"type\": \"float\", \"cutoff\": {\"lower\": 0, \"higher\": 30}}}} ",
+                "I am an assistant that extracts the summary term from user query. It has four fields: group_categories (required), overlay (optional), filter (optional) and divide_by (optional). group_categories (required) is the primary variable being displayed. Overlay consists of the variable that must be overlayed on top of group_categories. divide_by is the variable used to stratify group_categories into two or more categories. The final output must be in the following JSON format with no extra comments: {\"chartType\":\"summary\",\"term\":{\"group_categories\":\"{group_category_answer}\",\"overlay\":\"{overlay_answer}\",\"divide_by\":\"{divide_by_answer}\",\"filter\":\"{filter_answer}\"}}. The values being added to the JSON parameters must be previously defined as field in the database. If the filter variable is a \"value\" of a \"field\" in the database, use the field name and add the value as a \"filter cutoff\" . If the \"filter\" field is defined in the user query, it should contain an array with each item containing a subfield called \"name\" with the name of the filter variable. If the type of variable is \"categories\", add another field as \"variable_type\" = \"categories\". In case the type of the variable is \"categories\", show the sub-category as a separate sub-field \"cutoff\" with a sub nested JSON with \"name\" as the field containing the subcategory name. In case the type of the variable is \"float\" it should contain a subfield called \"name\" followed by subfield \"variable_type\" = \"float\". In the \"cutoff\" subfield, the nested JSON should contain the field \"lower\" containing the lower numeric limit and the \"upper\" field containing the upper numeric limit. If the upper and lower cutoffs are not defined in the user query, use a default value of 0 and 100 respectively. Sample query1: \"Show ETR1 subtype\" Answer query1: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"ETR1\"}}. Sample query2: \"Show hyperdiploid subtype with age overlayed on top of it\" Answer query2: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"hyperdiploid\", \"overlay\":\"age\"}}. Sample query3: \"Show BAR1 subtype with age overlayed on top of it and stratify it on the basis of gender\" Answer query4: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"BAR1\", \"overlay\":\"age\", \"divide_by\":\"sex\"}}. Sample query5: \"Show summary for cancer-diagnosis only for men\". Since gender is a categorical variable and the user wants to select for men, the answer query for sample query5 is as follows: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"cancer-diagnosis\", \"filter\": {\"name\": \"gender\", \"variable_type\": \"categories\", \"cutoff\": {\"name\": \"male\"}}}}. Sample query6: \"Show molecular subtype summary for patients with age less than 30\". Age is a float variable so we need to provide the lower and higher cutoffs. So the answer to sample query6 is as follows: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"Molecular subtype\", \"filter\": {\"name\": \"age\", \"variable_type\": \"float\", \"cutoff\": {\"lower\": 0, \"higher\": 30}}}} ",
             );
             //println!("system_prompt:{}", system_prompt);
             // Create RAG agent
