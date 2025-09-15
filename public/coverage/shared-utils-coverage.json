@@ -494,13 +494,13 @@
     },
     "lowestPct": {
       "curr": 75,
-      "prev": 0,
-      "diff": 75
+      "prev": 75,
+      "diff": 0
     },
     "averagePct": {
       "curr": 92.445,
-      "prev": 0,
-      "diff": 92.445
+      "prev": 92.445,
+      "diff": 0
     }
   }
 }
