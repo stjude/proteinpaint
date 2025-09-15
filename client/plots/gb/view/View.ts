@@ -65,6 +65,7 @@ export class View {
 
 		// no block instance, create new block
 
+		this.dom.blockHolder.selectAll('*').remove()
 		const arg: any = {
 			holder: this.dom.blockHolder,
 			genome: this.app.opts.genome, // genome obj

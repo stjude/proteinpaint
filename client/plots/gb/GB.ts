@@ -1,5 +1,5 @@
 import { PlotBase } from '../PlotBase.ts'
-import { getCompInit, type ComponentApi /*, type RxComponentInner */ } from '#rx'
+import { getCompInit, type ComponentApi, type RxComponent } from '#rx'
 import { addGeneSearchbox, Menu, sayerror } from '#dom'
 import { getNormalRoot } from '#filter'
 import { gbControlsInit, mayUpdateGroupTestMethodsIdx } from '../genomeBrowser.controls.js'
@@ -9,7 +9,7 @@ import { View } from './view/View.ts'
 
 const geneTip = new Menu({ padding: '0px' })
 
-class TdbGenomeBrowser extends PlotBase /* implements RxComponentInner*/ {
+class TdbGenomeBrowser extends PlotBase implements RxComponent {
 	static type = 'genomeBrowser'
 
 	// expected RxComponentInner props, some are already declared/set in PlotBase
@@ -72,12 +72,14 @@ class TdbGenomeBrowser extends PlotBase /* implements RxComponentInner*/ {
 
 	async main() {
 		this.dom.loadingDiv.style('display', 'inline')
+		const state = this.getState(this.app.getState())
+		if (state.config.chartType != this.type) return
 		try {
-			const model = new Model(this.state, this.app)
+			const model = new Model(state, this.app)
 			const data = await model.preComputeData()
-			const viewModel = new ViewModel(this.state, this.app, this.opts, data)
+			const viewModel = new ViewModel(state, this.app, this.opts, data)
 			const tklst = await viewModel.generateTracks()
-			const view = new View(this.state, this.app, this.dom, this.opts, this.id)
+			const view = new View(state, this.app, this.dom, this.opts, this.id)
 			await view.launchBlockWithTracks(tklst)
 		} catch (e: any) {
 			sayerror(this.dom.errDiv, e.message || e)
