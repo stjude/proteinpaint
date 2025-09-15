@@ -211,12 +211,10 @@ class MassApp extends AppBase implements RxApp {
 	async downloadPlots() {
 		const chartImagesAll: any[] = []
 		let i = 1
-		const length = Object.keys(this.components.plots).length
-		for (const key in this.components.plots) {
-			const plot = this.components.plots[key]
+		const entries: any[] = Object.entries(this.components.plots)
+		for (const [, plot] of entries) {
 			const chart = plot.type == 'plot' ? plot.getComponents('chart') : plot // implies summary plot
 			const chartImages = chart.getChartImages ? chart.getChartImages() : null
-
 			if (!chartImages) {
 				console.log(`The ${chart.type} does not support downloading images yet`)
 				continue
@@ -226,7 +224,7 @@ class MassApp extends AppBase implements RxApp {
 				const parent = chartImage.parent
 				const svg = chartImage.svg
 				let name
-				if (length > 1) name = `${i}. ${chartImage.name}`
+				if (entries.length > 1) name = `${i}. ${chartImage.name}`
 				else name = chartImage.name
 				chartImagesAll.push({ name, svg, parent })
 			}
