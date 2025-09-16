@@ -809,7 +809,7 @@ export function mayCopyFromCookie(q, cookies) {
 	}
 }
 
-export function boxplot_getvalue(lst) {
+export function boxplot_getvalue(lst, removeOutliers = false) {
 	/* ascending order
     each element: {value}
     */
@@ -836,7 +836,8 @@ export function boxplot_getvalue(lst) {
 		const j = lst.findIndex(i => i.value > p75 + iqr * 1.5)
 		w2 = lst[j == -1 ? l - 1 : j - 1].value
 	}
-	const out = lst.filter(i => i.value < p25 - iqr * 1.5 || i.value > p75 + iqr * 1.5)
+	let out = []
+	if (!removeOutliers) out = lst.filter(i => i.value < p25 - iqr * 1.5 || i.value > p75 + iqr * 1.5)
 	return { w1, w2, p05, p25, p50, p75, p95, iqr, out }
 }
 

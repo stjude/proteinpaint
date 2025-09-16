@@ -248,7 +248,6 @@ class TdbBoxplot extends RxComponent {
 			const settings = config.settings.boxplot
 			const model = new Model(config, this.state, this.app, settings)
 			const data = await model.getData()
-			console.log(data)
 			config.term.q.descrStats = data.descrStats
 
 			if (data.error) throw data.error
@@ -258,7 +257,6 @@ class TdbBoxplot extends RxComponent {
 				return
 			}
 			this.data = data
-
 			this.dom.charts.selectAll('*').remove()
 
 			// determine max label length across all charts
