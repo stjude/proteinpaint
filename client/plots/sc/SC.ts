@@ -1,5 +1,5 @@
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
-import type { SCConfigOpts, SCDom, SCState, SCViewerOpts, SampleColumn } from './SCTypes'
+import type { SCConfigOpts, SCDom, SCFormattedState, SCViewerOpts, SampleColumn } from './SCTypes'
 import type { SingleCellSample } from '#types'
 import { PlotBase } from '../PlotBase.ts'
 import { getCompInit, copyMerge, type RxComponent } from '#rx'
@@ -10,16 +10,15 @@ import { SCViewRenderer } from './view/SCViewRenderer'
 import { getDefaultSCAppSettings } from './defaults'
 import { importPlot } from '#plots/importPlot.js'
 
-/** App in development. Project being set aside for awhile
- *
- * App TODOs:
+/** Overall app TODOs:
  *  - Plot buttons
- *  	- Either return list of available data or create a route
  *  	- Implement additional menus to appear on click
  *  - Implement multi plot rendering
  *  	- Create sections by sample and render plots in each section
  * 		- Develop containers to hold plots with destroy methods and
  * 			possibly other animation methods
+ *  - Fix any outdated properties in the dataset queries.singleCell obj
+ *  - Type all files
  */
 
 class SCViewer extends PlotBase implements RxComponent {
@@ -61,7 +60,7 @@ class SCViewer extends PlotBase implements RxComponent {
 	getState(appState: MassState) {
 		const config = appState.plots.find((p: BasePlotConfig) => p.id === this.id)
 		if (!config) {
-			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)? [SC getState()]`
 		}
 		return {
 			config,
@@ -82,15 +81,14 @@ class SCViewer extends PlotBase implements RxComponent {
 		else return false
 	}
 
-	/** The sample data and table rendering should only occur once */
 	async init(appState: MassState) {
-		const state = this.getState(appState) as SCState
+		const state = this.getState(appState) as SCFormattedState
 		/** ds defines defaults in termdbConfig.queries.singleCell
 		 * see Dataset type when resuming development */
 		const dsScSamples = state.termdbConfig.queries?.singleCell?.samples
 		const model = new SCModel(this.app)
 		try {
-			/** Fetches the single cell sample data */
+			/** Fetches the single cell sample data for the table */
 			const response = await model.getSampleData()
 			if (response.error || !response.samples || !response.samples.length) {
 				this.app.printError('No samples found for this dataset')
@@ -101,37 +99,41 @@ class SCViewer extends PlotBase implements RxComponent {
 		} catch (e: any) {
 			if (e instanceof Error) console.error(`${e.message || e} [SC init()]`)
 			else if (e.stack) console.log(e.stack)
-			throw `${e} [SC init()]`
+			throw `${e.message || e} [SC init()]`
 		}
 		this.interactions = new SCInteractions(this.app, this.dom, this.id)
 		//Init view model and view
 		this.viewModel = new SCViewModel(this.app, state.config, this.samples!, this.sampleColumns)
-
 		this.view = new SCViewRenderer(this.dom, this.interactions)
+
+		/** The sample data and table rendering should only occur once
+		 * .update() in main() handles changes to the buttons and plots */
 		this.view.render(this.viewModel.tableData)
 	}
 
-	async initSubplot(plot) {
-		const opts = Object.assign({}, plot, {
+	/** The plot obj is already in state.plots[] but not rendered
+	 * (see SCInteractions). This creates the component and renders the plot */
+	async initSubplotComponent(subplot: any) {
+		const opts = Object.assign({}, subplot, {
 			app: this.app,
 			holder: this.dom.chartsDiv.append('div'),
 			parentId: this.id,
-			id: plot.id
+			id: subplot.id
 		})
 		const { componentInit } = await importPlot(opts.chartType)
-		this.components.plots[plot.id] = await componentInit(opts)
+		this.components.plots[subplot.id] = await componentInit(opts)
 	}
 
 	async main() {
-		const state = this.getState(this.app.getState()) as SCState
+		const state = this.getState(this.app.getState()) as SCFormattedState
 		const config = state.config
 		if (config.chartType != this.type) return
 
 		if (!this.interactions) throw `Interactions not initialized [SC main()]`
 		if (!this.view) throw `View not initialized [SC main()]`
 
-		for (const plot of state.subplots) {
-			if (!this.components.plots[plot.id]) await this.initSubplot(plot)
+		for (const subplot of state.subplots) {
+			if (!this.components.plots[subplot.id]) await this.initSubplotComponent(subplot)
 		}
 		this.view.update(config.settings)
 	}
@@ -143,6 +145,7 @@ export const componentInit = SCInit
 export function getPlotConfig(opts: SCConfigOpts, app: MassAppApi) {
 	const config = {
 		chartType: 'sc',
+		sections: opts.sections || {},
 		settings: getDefaultSCAppSettings(opts.overrides || {}, app)
 	} as any
 

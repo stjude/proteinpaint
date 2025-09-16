@@ -5,18 +5,18 @@ import type { TableRow, TableColumn } from '#dom'
 /** WIP config for the sc app */
 export type SCConfig = PlotConfig & {
 	chartType: 'sc'
-	/** Plots appearing within the app */
-	subplots: any[]
+	/** Each section is defined by the sample/cell/etc.
+	 * the array is the plot ids */
+	sections: { [index: string]: string[] }
 	/** Common settings and settings for each child component/plot */
-	settings: {
-		sc: SCSettings
-	}
+	settings: SCSettings
 }
 
 /** Opts defined in getPlotConfig() */
 export type SCConfigOpts = {
-	subplots?: PlotConfig[]
-	/** Settings overrides */
+	sections?: { [index: string]: string[] }
+	/** TODO: Fix this. It should be settings and not overrides.
+	 * Settings overrides */
 	overrides?: any
 }
 
@@ -37,16 +37,29 @@ export type SCDom = {
 }
 
 export type SCSettings = {
-	columns: {
-		sample: string
+	sc: {
+		columns: {
+			/** Defined column name for 'sample' column*/
+			sample: string
+		}
+		/** Active sample choosen by the user */
+		sample: any
 	}
-	sample: string | undefined
+	hierClusterUnit: string
+	hierCluster: {
+		yDendrogramHeight: number
+		clusterSamples: boolean
+	}
 }
 
-/** State retrieved from this.app.getState()
- * specific to SC chartType. */
-export type SCState = {
+/** State retrieved from this.getState()
+ * specific to SC chartType. ** NOT ** reflective
+ * of the plot obj in the state! */
+export type SCFormattedState = {
 	config: SCConfig
+	/** Filtered plots with parentId == this.id.
+	 * Allows for non-nested plot objects in state.plots.
+	 * This is ** not ** saved in the state */
 	subplots: PlotConfig[]
 	termfilter: any //Filter
 	termdbConfig: any

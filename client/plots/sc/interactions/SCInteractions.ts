@@ -4,9 +4,9 @@ import type { ClientGenome } from '../../../types/clientGenome'
 /** Handles the interactivity from the view */
 export class SCInteractions {
 	app: AppApi
-	dom: any
+	dom: any //May not be necessary
 	id: string
-	genome: ClientGenome
+	genome: ClientGenome //May not be necessary
 
 	constructor(app: AppApi, dom: any, id: string) {
 		this.app = app

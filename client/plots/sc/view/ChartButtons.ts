@@ -7,9 +7,29 @@ import { digestMessage } from '#termsetting'
 /** Rendering for the plot buttons that appear below the sample
  * table.
  *
- * TODOs:
+ * Notes:
+ *  - The hierarchical clustering limits to the first 100 genes.
+ *
+ ******* TODOs:
  * - Implement ds specific keys or logic for sample name
  * - Update anywhere with 'CHANGEME' before prod
+ * - Disable all chart btns until plot loads for performance??
+ *
+ ******* Scatter plot implementation TODOs:
+ * - Check that the proper single cell data is used
+ * - Configure tooltip to use 'cell' and not 'sample'
+ * - term2 in the config is currently defined in
+ * queries.singlecell.data.plots.[i].colorColumns. Need to 1. change that dataset obj and
+ * 2. use new obj in the config
+ *
+ ******* Hier clustering implenentation TODOs and questions:
+ * The matrix ** does not ** properly pull single cell data yet.
+ * This implementation works as a placeholder for now.
+ * Need to revisit before production.
+ *
+ * Questions:
+ * - Limit to 100 genes or no?
+ * - What settings to use for hier cluster?
  * */
 export class ChartButtons {
 	chartBtnsDom: {
@@ -35,6 +55,10 @@ export class ChartButtons {
 	}
 
 	update(settings) {
+		/** If the user has not selected a sample yet but clicks
+		 * the select sample/plots btn above the table, the prompt appears
+		 * unnecessarily */
+		this.chartBtnsDom.promptDiv.style('display', !settings.sc.sample ? 'none' : 'block')
 		if (!settings.sc.sample) return
 		this.settings = settings
 		this.sample = settings.sc.sample
@@ -70,11 +94,6 @@ export class ChartButtons {
 				// }
 			})
 	}
-
-	/** TODOs:
-	 * 1. btns will be visible based on available data. Need to build a route or change existing route to support
-	 * 2. Implement logic for tsne, umap, etc.
-	 */
 	getChartBtnOpts() {
 		return [
 			// {
@@ -126,7 +145,6 @@ export class ChartButtons {
 	}
 
 	//********** Plot Config Helpers **********/
-	//In Dev: using 'cluster' as overlay
 	async getViolinConfig(gene) {
 		if (!this.sample) throw new Error('No sample selected')
 		return {
@@ -151,7 +169,7 @@ export class ChartButtons {
 				term: {
 					/** NOTE: There are no term handlers for the single cell types */
 					type: TermTypes.SINGLECELL_CELLTYPE,
-					id: 'cluster', //CHANGE ME
+					id: 'cluster', //CHANGE ME, singlecell.data.plots.[i].colorColumns
 					name: 'cluster', //CHANGE ME
 					sample: {
 						sID: this.sample.sample,
@@ -201,12 +219,8 @@ export class ChartButtons {
 		}
 	}
 
-	/** TODOs and questions:
-	 * 1. Limit to 100 genes or no?
-	 * 2. What settings to use for hier cluster?
-	 */
 	getClusteringConfig(geneLst) {
-		//limit to 100 genes
+		//limit to 100 genes for performance
 		const tws = geneLst.slice(0, 100).map(g => {
 			return {
 				term: {
