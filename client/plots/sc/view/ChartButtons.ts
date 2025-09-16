@@ -81,7 +81,7 @@ export class ChartButtons {
 						return
 					}
 					if (geneLst.length == 1) return await this.getViolinConfig(geneLst[0].gene)
-					else if (geneLst.length == 2) return this.getScatterConfig(geneLst)
+					else if (geneLst.length == 2) return await this.getScatterConfig(geneLst)
 					else return this.getClusteringConfig(geneLst)
 				},
 				open: this.geneSearchMenu
@@ -144,8 +144,42 @@ export class ChartButtons {
 		}
 	}
 
-	getScatterConfig(geneLst) {
-		console.log('TODO: enable scatter plot', geneLst)
+	async getScatterConfig(geneLst) {
+		if (!this.sample) throw new Error('No sample selected')
+		const gene1 = geneLst[0].gene
+		const gene2 = geneLst[1].gene
+
+		return {
+			chartType: 'sampleScatter',
+			term: {
+				$id: await digestMessage(`${gene1}-${this.sample.sample}-${this.sample.experiment}`),
+				term: {
+					type: TermTypes.SINGLECELL_GENE_EXPRESSION,
+					gene: gene1,
+					id: gene1,
+					name: gene1,
+					q: { mode: 'continuous' },
+					sample: {
+						sID: this.sample.sample,
+						eID: this.sample.experiment
+					}
+				}
+			},
+			term2: {
+				$id: await digestMessage(`${gene2}-${this.sample.sample}-${this.sample.experiment}`),
+				term: {
+					type: TermTypes.SINGLECELL_GENE_EXPRESSION,
+					gene: gene2,
+					id: gene2,
+					name: gene2,
+					q: { mode: 'continuous' },
+					sample: {
+						sID: this.sample.sample,
+						eID: this.sample.experiment
+					}
+				}
+			}
+		}
 	}
 
 	getClusteringConfig(geneLst) {
