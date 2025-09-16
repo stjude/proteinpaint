@@ -77,7 +77,6 @@ tape(`initialization, empty credentials`, async test => {
 	const routes = Object.keys(app.routes)
 	routes.sort()
 	test.deepEqual(routes, [], 'should NOT set the expected routes when there are NO dsCredentials in serverconfig')
-
 	test.deepEqual(
 		Object.keys(authApi).sort(),
 		[
@@ -190,6 +189,7 @@ tape(`initialization, non-empty credentials`, async test => {
 		test.deepEqual(
 			Object.keys(authApi).sort(),
 			[
+				'adjustFilter',
 				'canDisplaySampleIds',
 				'credEmbedders',
 				'getDsAuth',
