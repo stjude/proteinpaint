@@ -2,12 +2,12 @@ import { getCompInit, copyMerge, type RxComponent } from '#rx'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { GRIN2Dom, GRIN2Opts } from './GRIN2Types'
 import { dofetch3 } from '#common/dofetch'
-import { Menu, renderTable, icons, table2col, make_one_checkbox } from '#dom'
+import { Menu, renderTable, table2col, make_one_checkbox } from '#dom'
 import { dtsnvindel, mclass } from '#shared/common.js'
 import { get$id } from '#termsetting'
 import { PlotBase } from '#plots/PlotBase.ts'
-import { to_svg } from '#src/client'
-import { addLegend, setPlotDims, addAxesToExistingPlot, renderInteractivePoints } from '../manhattan/manhattan.ts'
+// import { to_svg } from '#src/client'
+import { plotManhattan } from '../manhattan/manhattan.ts'
 
 class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
@@ -387,61 +387,19 @@ class GRIN2 extends PlotBase implements RxComponent {
 	private renderResults(result: any) {
 		// Display Manhattan plot
 		if (result.pngImg) {
-			const plotContainer = this.dom.div.append('div').style('text-align', 'left').style('margin', '20px 0')
-
-			// Create header with title and download button
-			const headerDiv = plotContainer
-				.append('div')
-				.style('display', 'flex')
-				.style('align-items', 'center')
-				.style('margin', '10px 0')
-
-			headerDiv.append('h3').style('margin', '0 10px 0 0').text('GRIN2 Manhattan Plot')
-
-			// Add download button using existing icons system
-			const downloadDiv = headerDiv.append('div').style('display', 'inline-block').style('cursor', 'pointer')
-
-			icons['download'](downloadDiv, {
-				width: 16,
-				height: 16,
-				title: 'Download GRIN2 plot',
-				handler: () => {
-					to_svg(
-						svg.node() as SVGSVGElement,
-						`grin2_manhattan_plot_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}`
-					)
-				}
-			})
-
-			const plotData = result.plotData
+			const plotData = result
 			console.log('plotData', plotData)
-
-			// Create the same coordinate transformation functions that Python uses
-			const config = structuredClone(this.state.config)
-			const plotDims = setPlotDims(plotData, config.settings.grin2.plotDims)
-
-			// Add these scales to plotData for renderInteractivePoints to use
-			console.log('plotDims', plotDims)
-			plotData.xScale = (x: number) => plotDims.xAxis.scale(x) + 25
-			plotData.yScale = (y: number) => plotDims.yAxis.scale(y) + 10
-
-			const svg = plotContainer.append('svg').attr('width', plotData.plot_width).attr('height', plotData.plot_height)
-
-			// Add the matplotlib background image
-			svg
-				.append('image')
-				.attr('xlink:href', `data:image/png;base64,${result.pngImg}`)
-				.attr('width', plotData.plot_width)
-				.attr('height', plotData.plot_height)
-
-			renderInteractivePoints(svg, plotData, this.dom.geneTip)
-
-			// Add axes to the existing plot
-			addAxesToExistingPlot(plotData, svg, plotDims)
-
-			// Add legend
-			addLegend(plotData, svg)
+			const plotDiv = this.dom.div
+			plotManhattan(plotDiv, plotData, {
+				pngDotRadius: 2,
+				plotWidth: 1000,
+				plotHeight: 400,
+				yAxisX: 70,
+				yAxisY: 10,
+				yAxisSpace: 10
+			})
 		}
+
 		// Display top genes table
 		if (result.topGeneTable) {
 			const tableContainer = this.dom.div.append('div').style('margin', '20px 0')
