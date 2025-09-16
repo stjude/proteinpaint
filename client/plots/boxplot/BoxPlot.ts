@@ -248,6 +248,9 @@ class TdbBoxplot extends RxComponent {
 			const settings = config.settings.boxplot
 			const model = new Model(config, this.state, this.app, settings)
 			const data = await model.getData()
+			console.log(data)
+			config.term.q.descrStats = data.descrStats
+
 			if (data.error) throw data.error
 			if (!data.charts || !Object.keys(data.charts).length) {
 				this.interactions!.clearDom()
