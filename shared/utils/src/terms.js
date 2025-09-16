@@ -81,7 +81,8 @@ const nonDictTypes = new Set([
 	TermTypes.GENE_VARIANT,
 	TermTypes.METABOLITE_INTENSITY,
 	TermTypes.SINGLECELL_GENE_EXPRESSION,
-	TermTypes.SINGLECELL_CELLTYPE
+	TermTypes.SINGLECELL_CELLTYPE,
+	TermTypes.SAMPLELST
 ])
 for (const dtTermType of dtTermTypes) {
 	nonDictTypes.add(TermTypes[dtTermType.toUpperCase()])

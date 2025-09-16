@@ -225,7 +225,8 @@ class TdbTree {
 			included_types: ['categorical'],
 			child_types: ['categorical'],
 			terms: tws.map(tw => {
-				this.termsById[tw.term.id || tw.term.name] = tw.term
+				tw.term.id = tw.term.name
+				this.termsById[tw.term.id] = tw.term
 				tw.term.isleaf = true
 				return tw.term
 			})
@@ -362,8 +363,7 @@ function setRenderers(self) {
 		// update other parts if needed, e.g. label
 		div.select('.' + cls_termchilddiv).style('display', isExpanded ? 'block' : 'none')
 
-		const tid = term.id || term.name
-		const isSelected = self.state.selectedTerms.find(t => (t.id ? t.id === id : t.name == id) && t.type === term.type)
+		const isSelected = self.state.selectedTerms.find(t => t.id == term.id && t.type === term.type)
 		div
 			.select('.' + cls_termlabel)
 			.style(
@@ -400,8 +400,7 @@ function setRenderers(self) {
 			if (self.expandAll) self.toggleBranch(term)
 		}
 
-		const id = term.id || term.name
-		const isSelected = self.state.selectedTerms.find(t => t.id === id && t.type === term.type)
+		const isSelected = self.state.selectedTerms.find(t => t.id === term.id && t.type === term.type)
 		const labeldiv = div
 			.append('div')
 			.attr('class', cls_termlabel)
@@ -525,8 +524,7 @@ function setInteractivity(self) {
 		}
 
 		if (self.opts.submit_lst) {
-			const id = term.id || term.name
-			const i = self.state.selectedTerms.findIndex(t => (t.id ? t.id === id : t.name == id) && t.type === term.type)
+			const i = self.state.selectedTerms.findIndex(t => t.id == term.id && t.type === term.type)
 			if (i == -1) {
 				self.app.dispatch({
 					type: 'app_refresh',

@@ -178,7 +178,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				samples[sampleId][tw.$id] = snp2value
 			}
 		} else if (
-			tw.term.type == TermTypes.GENE_EXPRESSION ||
+			tw.term.type == TermTypes.GENE_EXPRESSION11 ||
 			tw.term.type == TermTypes.METABOLITE_INTENSITY ||
 			tw.term.type == TermTypes.SSGSEA
 		) {
@@ -386,7 +386,7 @@ export function divideTerms(lst) {
 			if (!tw.$id || tw.$id == 'undefined') tw.$id = tw.term.id || tw.term.name //for tests and backwards compatibility
 			if (type == TermTypes.GENE_VARIANT) {
 				geneVariantTws.push(tw) // collect into own list to process separately later
-			} else if (isNonDictionaryType(type)) {
+			} else if (isNonDictionaryType(type) && type != 'samplelst') {
 				nonDict.push(tw)
 			} else {
 				dict.push(tw)
