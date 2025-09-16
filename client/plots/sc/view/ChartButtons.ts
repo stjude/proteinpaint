@@ -20,6 +20,7 @@ export class ChartButtons {
 	}
 	sample?: { [key: string]: any }
 	interactions: SCInteractions
+	settings?: any
 
 	constructor(interactions: SCInteractions, holder: Div) {
 		holder.style('padding', '10px')
@@ -33,10 +34,11 @@ export class ChartButtons {
 		this.interactions = interactions
 	}
 
-	update(sample: { [key: string]: any }) {
-		if (!sample) return
-		this.sample = sample
-		const name = sample.sample // add ds specific keys/logic here
+	update(settings) {
+		if (!settings.sc.sample) return
+		this.settings = settings
+		this.sample = settings.sc.sample
+		const name = settings.sc.sample.sample // add ds specific keys/logic here
 		this.chartBtnsDom.selectPrompt.text(` ${name}:`)
 		this.renderChartBtns()
 	}
@@ -57,11 +59,15 @@ export class ChartButtons {
 			.style('margin', '0 10px')
 			.style('cursor', 'pointer')
 			.text(b => b.label)
-			.on('click', (e, plot) => {
+			.on('click', async (e, plot) => {
 				if (plot.open) {
 					this.chartBtnsDom.tip.clear().showunder(e.target)
 					plot.open(plot, this)
 				}
+				// else {
+				// 	// const config = plot.getPlotConfig()
+				// 	// await this.interactions.createSubplot(config)
+				// }
 			})
 	}
 
@@ -71,13 +77,26 @@ export class ChartButtons {
 	 */
 	getChartBtnOpts() {
 		return [
+			// {
+			// 	label: 'UMAP',
+			// 	// id: 'umap',
+			// 	isVisible: () => true,
+			// 	getPlotConfig: async () => {
+			// 		return {
+
+			// 		}
+			// 	}
+			// },
 			{
 				label: 'Gene expression',
-				id: 'geneExpression',
+				// id: 'geneExpression',
 				isVisible: () => true,
 				getPlotConfig: async geneLst => {
+					/** If 1 gene is selected, show violin
+					 * If 2 genes are selected, show scatter
+					 * If >2 genes are selected, show hier clustering */
 					if (!geneLst.length) {
-						console.warn('No genes selected to launch gene exp subplot [PlotButtons.ts getChartBtnOpts()]')
+						alert('No genes selected to launch gene expression subplot [PlotButtons.ts getChartBtnOpts()]')
 						return
 					}
 					if (geneLst.length == 1) return await this.getViolinConfig(geneLst[0].gene)
@@ -182,7 +201,29 @@ export class ChartButtons {
 		}
 	}
 
+	/** TODOs and questions:
+	 * 1. Limit to 100 genes or no?
+	 * 2. What settings to use for hier cluster?
+	 */
 	getClusteringConfig(geneLst) {
-		console.log('TODO: enable clustering plot', geneLst)
+		//limit to 100 genes
+		const tws = geneLst.slice(0, 100).map(g => {
+			return {
+				term: {
+					gene: g.gene,
+					name: `${g.gene} ${this.settings.hierClusterUnit}`,
+					type: TermTypes.SINGLECELL_GENE_EXPRESSION,
+					sample: this.sample
+				},
+				q: {}
+			}
+		})
+
+		return {
+			chartType: 'hierCluster',
+			termgroups: [{ lst: tws, type: 'hierCluster' }],
+			dataType: TermTypes.GENE_EXPRESSION,
+			settings: { hierCluster: this.settings.hierCluster }
+		}
 	}
 }
