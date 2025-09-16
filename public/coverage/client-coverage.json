@@ -1981,10 +1981,10 @@
   },
   "plots/runchart/viewmodel/runchartViewModel.ts": {
     "lines": {
-      "total": 19,
-      "covered": 15,
+      "total": 20,
+      "covered": 16,
       "skipped": 0,
-      "pct": 78.94
+      "pct": 80
     },
     "functions": {
       "total": 9,
@@ -1993,10 +1993,10 @@
       "pct": 88.88
     },
     "statements": {
-      "total": 20,
-      "covered": 16,
+      "total": 21,
+      "covered": 17,
       "skipped": 0,
-      "pct": 80
+      "pct": 80.95
     },
     "branches": {
       "total": 4,
@@ -2010,45 +2010,45 @@
       "diff": -25
     },
     "averagePct": {
-      "curr": 74.455,
+      "curr": 74.9575,
       "prev": 93.75,
-      "diff": -19.295
+      "diff": -18.792500000000004
     }
   },
   "plots/runchart/runchart.ts": {
     "lines": {
-      "total": 66,
-      "covered": 50,
+      "total": 67,
+      "covered": 11,
       "skipped": 0,
-      "pct": 75.75
+      "pct": 16.41
     },
     "functions": {
-      "total": 11,
-      "covered": 6,
+      "total": 12,
+      "covered": 3,
       "skipped": 0,
-      "pct": 54.54
+      "pct": 25
     },
     "statements": {
-      "total": 74,
-      "covered": 56,
+      "total": 75,
+      "covered": 11,
       "skipped": 0,
-      "pct": 75.67
+      "pct": 14.66
     },
     "branches": {
       "total": 26,
-      "covered": 18,
+      "covered": 0,
       "skipped": 0,
-      "pct": 69.23
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 54.54,
+      "curr": 0,
       "prev": 66.66,
-      "diff": -12.119999999999997
+      "diff": -66.66
     },
     "averagePct": {
-      "curr": 68.7975,
+      "curr": 14.017499999999998,
       "prev": 78.17500000000001,
-      "diff": -9.377500000000012
+      "diff": -64.15750000000001
     }
   },
   "plots/runchart/view/runchartView.ts": {
@@ -3457,22 +3457,22 @@
   },
   "plots/frequencyChart/frequencyChart.ts": {
     "lines": {
-      "total": 40,
-      "covered": 37,
+      "total": 41,
+      "covered": 38,
       "skipped": 0,
-      "pct": 92.5
+      "pct": 92.68
     },
     "functions": {
-      "total": 5,
-      "covered": 5,
+      "total": 6,
+      "covered": 6,
       "skipped": 0,
       "pct": 100
     },
     "statements": {
-      "total": 47,
-      "covered": 39,
+      "total": 48,
+      "covered": 40,
       "skipped": 0,
-      "pct": 82.97
+      "pct": 83.33
     },
     "branches": {
       "total": 18,
@@ -3486,9 +3486,9 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 86.92250000000001,
+      "curr": 87.0575,
       "prev": 86.92250000000001,
-      "diff": 0
+      "diff": 0.1349999999999909
     }
   },
   "plots/frequencyChart/model/frequencyChartModel.ts": {
