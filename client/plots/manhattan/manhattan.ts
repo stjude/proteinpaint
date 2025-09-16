@@ -26,8 +26,15 @@ export function plotManhattan(div: any, data: any, settings: any) {
 		legendTextOffset: 12, // Distance between dot and text
 		legendVerticalOffset: 4, // Vertical offset for legend items
 		legendFontSize: 12, // Font size for legend text
+		// Interactive dot settings
+		showInteractiveDots: true, // Toggle interactive dots
+		interactiveDotRadius: 3, // Radius of interactive dots
+		interactiveDotStrokeWidth: 1, // Stroke width for interactive dots
 		...settings
 	}
+
+	// Create tooltip menu
+	const geneTip = new Menu({ padding: '' })
 
 	const svg = div
 		.append('svg')
@@ -70,8 +77,51 @@ export function plotManhattan(div: any, data: any, settings: any) {
 		.attr('height', data.plotData.png_height)
 		.attr('href', `data:image/png;base64,${data.pngImg}`)
 
-	// Create x-axis scale for positioning chromosome labels
+	// Create scales for positioning elements
 	const xScale = scaleLinear().domain([0, data.plotData.total_genome_length]).range([0, data.plotData.png_width])
+
+	// Add interactive dots layer
+	if (settings.showInteractiveDots && data.plotData.points && data.plotData.points.length > 0) {
+		const pointsLayer = svg
+			.append('g')
+			.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
+
+		pointsLayer
+			.selectAll('circle')
+			.data(data.plotData.points)
+			.enter()
+			.append('circle')
+			.attr('cx', d => xScale(d.x)) // Use xScale to convert pre-calculated genomic coordinates because of our chromosome scaling on the x-axis
+			.attr('cy', d => yScale(d.y)) // Use pre-calculated coordinates for y and yScale for proper scaling from the scale we made earlier
+			.attr('r', settings.interactiveDotRadius)
+			.attr('fill-opacity', 0)
+			.attr('stroke', 'black')
+			.attr('stroke-width', settings.interactiveDotStrokeWidth)
+			.attr('stroke-opacity', 0)
+			.on('mouseover', (event, d) => {
+				// Show stroke on hover
+				event.target.setAttribute('stroke-opacity', 1)
+
+				geneTip.clear().show(event.clientX, event.clientY)
+
+				const table = table2col({
+					holder: geneTip.d.append('div'),
+					margin: '10px'
+				})
+				table.addRow('Gene', d.gene)
+				const [t1, t2] = table.addRow()
+				t1.text('Type')
+				t2.html(`<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`)
+				table.addRow('-log10(q-value)', d.y.toFixed(3))
+				if (d.nsubj) table.addRow('Subject count', d.nsubj)
+				table.addRow('Chromosome', d.chrom)
+			})
+			.on('mouseout', event => {
+				// Hide stroke on mouseout
+				event.target.setAttribute('stroke-opacity', 0)
+				geneTip.hide()
+			})
+	}
 
 	// Add chromosome labels
 	if (data.plotData.chrom_data) {
@@ -84,7 +134,7 @@ export function plotManhattan(div: any, data: any, settings: any) {
 			if (chromLabel === 'M') return
 
 			// Calculate center position for label
-			const centerPos = settings.yAxisX + settings.yAxisSpace - 20 + xScale(chromData.center) // -20 to adjust for png padding. Will remove when png is fixed
+			const centerPos = settings.yAxisX + settings.yAxisSpace + xScale(chromData.center)
 
 			// Append chromosome label
 			svg
@@ -150,6 +200,7 @@ export function plotManhattan(div: any, data: any, settings: any) {
 		})
 	}
 }
+
 export function renderInteractivePoints(svg: any, plotData: any, geneTip?) {
 	// Add visible interactive points using raw x/y coordinates
 	const pointsLayer = svg.append('g')
