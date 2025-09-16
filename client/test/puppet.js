@@ -128,8 +128,10 @@ async function runTest(patternsStr) {
 			})
 			.catch(e => {
 				console.error('--- page.goto().catch ---', e)
-				process.exit(1)
+				errors[pattern] = error
 			})
+
+		if (errors[pattern]) continue
 
 		await new Promise((resolve, reject) => {
 			const i = setInterval(async () => {
