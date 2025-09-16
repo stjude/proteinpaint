@@ -7,6 +7,7 @@ import { SCModel } from './model/SCModel'
 import { SCViewModel } from './viewModel/SCViewModel'
 import { SCInteractions } from './interactions/SCInteractions'
 import { SCViewRenderer } from './view/SCViewRenderer'
+import { importPlot } from '#plots/importPlot.js'
 
 /** App in development. Project being set aside for awhile
  *
@@ -109,12 +110,29 @@ class SCViewer extends PlotBase implements RxComponent {
 		this.view.render(this.viewModel.tableData)
 	}
 
+	async initSubplot(plot) {
+		const opts = Object.assign({}, plot, {
+			app: this.app,
+			holder: this.dom.chartsDiv.append('div'),
+			parentId: this.id,
+			id: plot.id
+		})
+		const { componentInit } = await importPlot(opts.chartType)
+		this.components.plots[plot.id] = await componentInit(opts)
+	}
+
 	async main() {
 		const state = this.getState(this.app.getState()) as SCState
 		const config = state.config
 		if (config.chartType != this.type) return
 
+		if (!this.interactions) throw `Interactions not initialized [SC main()]`
 		if (!this.view) throw `View not initialized [SC main()]`
+
+		for (const plot of state.subplots) {
+			if (!this.components.plots[plot.id]) await this.initSubplot(plot)
+		}
+
 		this.view.update(config.settings.sc)
 	}
 }

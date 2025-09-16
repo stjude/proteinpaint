@@ -30,7 +30,7 @@ export class SCViewModel {
 		//Should only be called once
 		const [rows, columns] = this.getTabelData(config, samples, sampleColumns)
 		const selectedRows: number[] = []
-		const i = samples.findIndex(i => i.sample == config.sample)
+		const i = samples.findIndex(i => i.sample == config.settings.sc.sample)
 		if (i != -1) selectedRows.push(i)
 
 		/** Returning this data separately from the eventual
