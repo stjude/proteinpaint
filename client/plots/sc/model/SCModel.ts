@@ -1,11 +1,11 @@
 import type { AppApi } from '#rx'
-import type { SCState } from '../SCTypes'
+import type { SCFormattedState } from '../SCTypes'
 import { dofetch3 } from '#common/dofetch'
 
 /** Fetches data for sc app */
 export class SCModel {
 	app: AppApi
-	state: SCState
+	state: SCFormattedState
 
 	constructor(app: AppApi) {
 		this.app = app
@@ -43,7 +43,8 @@ export class SCModel {
 				}
 				/** Ignore errors and use the termid as the column header.
 				 * this is due to practical constrain that gdc needs to supply
-				 * analysis.workflow_type as 'Library',but this is not a term in gdc dictionary*/
+				 * analysis.workflow_type as 'Library', but this is not a term
+				 * in gdc dictionary */
 			}
 			col.label = label
 		}

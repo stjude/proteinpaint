@@ -1,7 +1,9 @@
+/** Define all subplot settings here */
 export function getDefaultSCAppSettings(overrides = {}, app) {
 	const defaults = {
 		sc: {
 			columns: {
+				// TODO: Implement ds specific column name
 				sample: 'Sample'
 			},
 			sample: undefined
