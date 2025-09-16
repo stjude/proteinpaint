@@ -3,7 +3,7 @@ import { boxplotPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import { boxplot_getvalue } from '../src/utils.js'
 import { sortPlot2Values } from './termdb.violin.ts'
-import { getDescriptiveStats, summaryStatsFromStats } from '#shared/descriptive.stats.js'
+import { summaryStats, summaryStatsFromStats, getDescriptiveStats } from '#shared/descriptive.stats.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/boxplot',
@@ -32,7 +32,10 @@ function init({ genomes }) {
 			if (q.divideTw) terms.push(q.divideTw)
 			const data = await getData({ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__ }, ds)
 			if (data.error) throw data.error
-
+			const values = Object.values(data.samples)
+				.map(s => s[q.tw.$id!]?.value)
+				.filter(v => typeof v === 'number')
+			const statsAll = summaryStats(values, true).values
 			const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
 			const overlayTerm = q.overlayTw
 			const divideTerm = q.divideTw
@@ -111,7 +114,8 @@ function init({ genomes }) {
 				absMin: q.removeOutliers ? outlierMin : absMin,
 				absMax: q.removeOutliers ? outlierMax : absMax,
 				charts,
-				uncomputableValues: setUncomputableValues(uncomputableValues)
+				uncomputableValues: setUncomputableValues(uncomputableValues),
+				descrStats: statsAll
 			}
 
 			res.send(returnData)

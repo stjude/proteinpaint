@@ -35,6 +35,7 @@ export type BoxPlotResponse = {
 	/** Categories not shown in the final plot */
 	uncomputableValues: { label: string; value: number }[] | null
 	error?: any
+	descrStats: any
 }
 
 // chart containing a set of boxplots
