@@ -75,7 +75,7 @@ export function plotManhattan(div: any, data: any, settings: any) {
 		.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
 		.attr('width', data.plotData.png_width)
 		.attr('height', data.plotData.png_height)
-		.attr('href', `data:image/png;base64,${data.pngImg}`)
+		.attr('href', `data:image/png;base64,${data.pngImg || data.png}`)
 
 	// Create scales for positioning elements
 	const xScale = scaleLinear().domain([0, data.plotData.total_genome_length]).range([0, data.plotData.png_width])

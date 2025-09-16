@@ -23,8 +23,7 @@ import {
 	createDataTypeRow,
 	createInfoPanel
 } from './grin2/ui-components'
-import { addLegend, setPlotDims, addAxesToExistingPlot, renderInteractivePoints } from '../plots/manhattan/manhattan'
-import { getDefaultSettings } from '../plots/grin2/grin2'
+import { plotManhattan } from '../plots/manhattan/manhattan'
 import { to_svg } from '#src/client'
 
 // ================================================================================
@@ -1769,7 +1768,7 @@ async function getFilesAndShowTable(obj) {
 				processedData = []
 				failedFilesInfo = null
 			}
-			if (!response.pngImg) throw 'result.pngImg missing'
+			if (!response.resultData.png) throw 'png missing'
 
 			// Show and populate download button div next the Run Analysis button
 			// Create a unique name for the download file based on selected mutations
@@ -1806,40 +1805,32 @@ async function getFilesAndShowTable(obj) {
 				.style('margin-bottom', '0px')
 				.style('text-align', 'left')
 
-			const plotData = response.resultData.plotData
+			const plotData = response.resultData
 
-			const svg = resultContainer.append('svg').attr('width', plotData.plot_width).attr('height', plotData.plot_height)
+			const plotDiv = resultContainer.append('div')
 
-			// Add the matplotlib background image
-			svg
-				.append('image')
-				.attr('xlink:href', `data:image/png;base64,${response.pngImg}`)
-				.attr('width', plotData.plot_width)
-				.attr('height', plotData.plot_height)
-
-			renderInteractivePoints(svg, plotData)
-
-			const settings = getDefaultSettings({})
-			const plotDims = setPlotDims(plotData, settings.plotDims)
-
-			// Add axes to the existing plot
-			addAxesToExistingPlot(plotData, svg, plotDims)
-
-			// Add legend
-			addLegend(plotData, svg)
+			plotManhattan(plotDiv, plotData, {
+				pngDotRadius: 2,
+				plotWidth: 1000,
+				plotHeight: 400,
+				yAxisX: 70,
+				yAxisY: 30,
+				yAxisSpace: 10,
+				showLegend: true,
+				legendItemWidth: 80,
+				legendDotRadius: 3,
+				showInteractiveDots: true,
+				legendRightOffset: 15,
+				legendTextOffset: 12,
+				legendVerticalOffset: 4,
+				legendFontSize: 12
+			})
 
 			// Add error handler for image
 			resultContainer.node().onerror = () => {
 				console.error('Image failed to load')
 				resultContainer.select('img').remove()
-				resultContainer
-					.append('div')
-					.attr('class', 'sja_error')
-					.style('padding', '10px')
-					.style('background-color', '#f8d7da')
-					.style('border', '1px solid #f5c6cb')
-					.style('margin', '10px 0')
-					.text('Failed to load image result. The analysis may have encountered an error.')
+				sayerror(resultContainer, 'Failed to load image result.')
 			}
 
 			if (response.topGeneTable && response.topGeneTable.rows && response.topGeneTable.rows.length > 0) {
