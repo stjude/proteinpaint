@@ -734,7 +734,7 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 	//   - if an array with 1+ entries: these are the only terms to be matched against a dataset's hidden terms,
 	//     and the ds should construct an actual or undefined auth filter based on matched terms
 	authApi.mayAdjustFilter = function (q, ds, routeTwLst) {
-		if (!ds.cohort?.termdb?.getAdditionalFilter || !ds.cohort?.termdb?.getFilter) return
+		if (!ds.cohort?.termdb?.getAdditionalFilter && !ds.cohort?.termdb?.getFilter) return
 		if (!q.__protected__) throw `missing q.__protected__`
 		if (ds.cohort?.termdb?.getFilter) {
 			const authFilter = ds.cohort.termdb.getFilter(q.__protected__.clientAuthResult)
