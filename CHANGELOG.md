@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - basic integration test to cover bedj and bw block tracks
+- add integration test for block bam tk
 
 
 ## 2.145.0
