@@ -72,7 +72,6 @@ tape('Render TermdbTest runchart plot', function (test) {
 
 	async function runTests(scatter) {
 		const scatterDiv = scatter.Inner.model.charts[0].chartDiv
-
 		testPlot()
 		testLegendTitle()
 

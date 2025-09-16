@@ -10,12 +10,13 @@ import { getColors } from '#shared/common.js'
 import { CategoryFiltersUI } from '#dom/categoryFiltersUI'
 
 export class FrequencyChart extends Runchart {
+	static type = 'frequencyChart'
 	type: string
 	cat2Color: any
 
 	constructor(opts, api) {
 		super(opts, api)
-		this.type = 'frequencyChart'
+		this.type = FrequencyChart.type
 	}
 
 	async init(appState) {
