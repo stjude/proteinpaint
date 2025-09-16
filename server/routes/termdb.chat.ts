@@ -28,21 +28,35 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dslabel'
 			//if (!ds.queries?.chat) throw 'not supported'
 
-			//{"user_input": "Show summary plot for sample information", "dataset_file":"sjpp/proteinpaint/server/test/tp/files/hg38/TermdbTest/TermdbTest_embeddings.txt", "dataset_db": "/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/clinical/db8", "apilink": "https://svltgpt01a.stjude.org/v2/models/ray_gateway_router/infer", "comp_model_name": "llama3.3-70b-instruct-vllm", "embedding_model_name": "multi-qa-mpnet-base-dot-v1", "llm_backend_name": "SJ"
-
 			const dataset_agnostic_file = serverconfig.binpath + '/../rust/src/ai_docs3.txt'
 			console.log('q:', q)
 			console.log('serverconfig:', serverconfig)
 			console.log('ds:', serverconfig.tpmasterdir + '/' + ds.cohort.db.file)
 			console.log('dataset_agnostic_file:', dataset_agnostic_file)
+
+			let apilink: string
+			let comp_model_name: string
+			let embedding_model_name: string
+			if (serverconfig.llm_backend != 'SJ') {
+				apilink = serverconfig.sj_apilink
+				comp_model_name = serverconfig.sj_comp_model_name
+				embedding_model_name = serverconfig.sj_embedding_model_name
+			} else if (serverconfig.llm_backend != 'ollama') {
+				apilink = serverconfig.ollama_apilink
+				comp_model_name = serverconfig.ollama_comp_model_name
+				embedding_model_name = serverconfig.ollama_embedding_model_name
+			} else {
+				throw "llm_backend either needs to be 'SJ' or 'ollama'" // Currently only 'SJ' and 'ollama' LLM backends are supported
+			}
+
 			const chatbot_input = {
 				// Just hardcoding variables here, these will later be defined in more appropriate places
 				user_input: q.prompt,
-				apilink: 'https://svltgpt01a.stjude.org/v2/models/ray_gateway_router/infer',
+				apilink: apilink,
 				dataset_db: serverconfig.tpmasterdir + '/' + ds.cohort.db.file,
-				comp_model_name: 'llama3.3-70b-instruct-vllm',
-				embedding_model_name: 'nomic-embed-text-v1.5',
-				llm_backend_name: 'SJ',
+				comp_model_name: comp_model_name,
+				embedding_model_name: embedding_model_name,
+				llm_backend_name: serverconfig.llm_backend, // The type of backend (engine) used for running the embedding and completion model. Currently "SJ" and "Ollama" are supported
 				dataset_agnostic_file: dataset_agnostic_file
 			}
 
