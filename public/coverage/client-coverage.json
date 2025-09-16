@@ -5966,13 +5966,13 @@
     },
     "lowestPct": {
       "curr": 18.75,
-      "prev": 0,
-      "diff": 18.75
+      "prev": 18.75,
+      "diff": 0
     },
     "averagePct": {
       "curr": 23.267500000000002,
-      "prev": 0,
-      "diff": 23.267500000000002
+      "prev": 23.267500000000002,
+      "diff": 0
     }
   },
   "src/test/block.integration.spec.ts": {
@@ -6002,13 +6002,13 @@
     },
     "lowestPct": {
       "curr": 91.66,
-      "prev": 0,
-      "diff": 91.66
+      "prev": 91.66,
+      "diff": 0
     },
     "averagePct": {
       "curr": 97.91499999999999,
-      "prev": 0,
-      "diff": 97.91499999999999
+      "prev": 97.91499999999999,
+      "diff": 0
     }
   },
   "src/block.ds.itemtable.js": {
@@ -6043,8 +6043,8 @@
     },
     "averagePct": {
       "curr": 0.07250000000000001,
-      "prev": 0,
-      "diff": 0.07250000000000001
+      "prev": 0.07250000000000001,
+      "diff": 0
     }
   },
   "src/block.ds.js": {
@@ -6079,8 +6079,8 @@
     },
     "averagePct": {
       "curr": 0.2075,
-      "prev": 0,
-      "diff": 0.2075
+      "prev": 0.2075,
+      "diff": 0
     }
   },
   "src/block.ds.maketk.js": {
@@ -6115,8 +6115,8 @@
     },
     "averagePct": {
       "curr": 0.22749999999999998,
-      "prev": 0,
-      "diff": 0.22749999999999998
+      "prev": 0.22749999999999998,
+      "diff": 0
     }
   },
   "src/block.ds.numericmode.js": {
@@ -6151,8 +6151,8 @@
     },
     "averagePct": {
       "curr": 0.2425,
-      "prev": 0,
-      "diff": 0.2425
+      "prev": 0.2425,
+      "diff": 0
     }
   },
   "src/block.ds.sun1.js": {
@@ -6187,8 +6187,8 @@
     },
     "averagePct": {
       "curr": 0.1825,
-      "prev": 0,
-      "diff": 0.1825
+      "prev": 0.1825,
+      "diff": 0
     }
   },
   "src/block.ds.vcf.js": {
@@ -6223,8 +6223,8 @@
     },
     "averagePct": {
       "curr": 0.7,
-      "prev": 0,
-      "diff": 0.7
+      "prev": 0.7,
+      "diff": 0
     }
   },
   "src/block.init.js": {
@@ -6259,8 +6259,8 @@
     },
     "averagePct": {
       "curr": 0.3025,
-      "prev": 0,
-      "diff": 0.3025
+      "prev": 0.3025,
+      "diff": 0
     }
   },
   "src/block.js": {
@@ -6290,13 +6290,13 @@
     },
     "lowestPct": {
       "curr": 11.05,
-      "prev": 0,
-      "diff": 11.05
+      "prev": 11.05,
+      "diff": 0
     },
     "averagePct": {
       "curr": 15.2975,
-      "prev": 0,
-      "diff": 15.2975
+      "prev": 15.2975,
+      "diff": 0
     }
   },
   "src/block.legend.js": {
@@ -6331,8 +6331,8 @@
     },
     "averagePct": {
       "curr": 3.845,
-      "prev": 0,
-      "diff": 3.845
+      "prev": 3.845,
+      "diff": 0
     }
   },
   "src/block.mds.expressionrank.adaptor.js": {
@@ -6367,8 +6367,8 @@
     },
     "averagePct": {
       "curr": 31.695,
-      "prev": 0,
-      "diff": 31.695
+      "prev": 31.695,
+      "diff": 0
     }
   },
   "src/block.mds.junction.adaptor.js": {
@@ -6403,8 +6403,8 @@
     },
     "averagePct": {
       "curr": 1.0350000000000001,
-      "prev": 0,
-      "diff": 1.0350000000000001
+      "prev": 1.0350000000000001,
+      "diff": 0
     }
   },
   "src/block.mds.svcnv.adaptor.js": {
@@ -6439,8 +6439,8 @@
     },
     "averagePct": {
       "curr": 1.9325,
-      "prev": 0,
-      "diff": 1.9325
+      "prev": 1.9325,
+      "diff": 0
     }
   },
   "src/block.sunburst.js": {
@@ -6475,8 +6475,8 @@
     },
     "averagePct": {
       "curr": 3.845,
-      "prev": 0,
-      "diff": 3.845
+      "prev": 3.845,
+      "diff": 0
     }
   },
   "src/block.tk.aicheck.adaptor.js": {
@@ -6511,8 +6511,8 @@
     },
     "averagePct": {
       "curr": 4.195,
-      "prev": 0,
-      "diff": 4.195
+      "prev": 4.195,
+      "diff": 0
     }
   },
   "src/block.tk.ase.adaptor.js": {
@@ -6547,8 +6547,8 @@
     },
     "averagePct": {
       "curr": 3.645,
-      "prev": 0,
-      "diff": 3.645
+      "prev": 3.645,
+      "diff": 0
     }
   },
   "src/block.tk.bam.adaptor.js": {
@@ -6583,8 +6583,8 @@
     },
     "averagePct": {
       "curr": 5.625,
-      "prev": 0,
-      "diff": 5.625
+      "prev": 5.625,
+      "diff": 0
     }
   },
   "src/block.tk.bampile.js": {
@@ -6619,8 +6619,8 @@
     },
     "averagePct": {
       "curr": 0.565,
-      "prev": 0,
-      "diff": 0.565
+      "prev": 0.565,
+      "diff": 0
     }
   },
   "src/block.tk.bedgraphdot.adaptor.js": {
@@ -6655,8 +6655,8 @@
     },
     "averagePct": {
       "curr": 31.695,
-      "prev": 0,
-      "diff": 31.695
+      "prev": 31.695,
+      "diff": 0
     }
   },
   "src/block.tk.bedj.js": {
@@ -6686,13 +6686,13 @@
     },
     "lowestPct": {
       "curr": 18.82,
-      "prev": 0,
-      "diff": 18.82
+      "prev": 18.82,
+      "diff": 0
     },
     "averagePct": {
       "curr": 25.78,
-      "prev": 0,
-      "diff": 25.78
+      "prev": 25.78,
+      "diff": 0
     }
   },
   "src/block.tk.bigwigstranded.js": {
@@ -6727,8 +6727,8 @@
     },
     "averagePct": {
       "curr": 0.2925,
-      "prev": 0,
-      "diff": 0.2925
+      "prev": 0.2925,
+      "diff": 0
     }
   },
   "src/block.tk.hicstraw.adaptor.ts": {
@@ -6763,8 +6763,8 @@
     },
     "averagePct": {
       "curr": 2.19,
-      "prev": 0,
-      "diff": 2.19
+      "prev": 2.19,
+      "diff": 0
     }
   },
   "src/block.tk.junction.adaptor.js": {
@@ -6799,8 +6799,8 @@
     },
     "averagePct": {
       "curr": 1.585,
-      "prev": 0,
-      "diff": 1.585
+      "prev": 1.585,
+      "diff": 0
     }
   },
   "src/block.tk.ld.adaptor.js": {
@@ -6835,8 +6835,8 @@
     },
     "averagePct": {
       "curr": 31.695,
-      "prev": 0,
-      "diff": 31.695
+      "prev": 31.695,
+      "diff": 0
     }
   },
   "src/block.tk.pgv.adaptor.js": {
@@ -6871,8 +6871,8 @@
     },
     "averagePct": {
       "curr": 31.695,
-      "prev": 0,
-      "diff": 31.695
+      "prev": 31.695,
+      "diff": 0
     }
   },
   "src/block.tk.usegm.js": {
@@ -6907,8 +6907,8 @@
     },
     "averagePct": {
       "curr": 0.445,
-      "prev": 0,
-      "diff": 0.445
+      "prev": 0.445,
+      "diff": 0
     }
   }
 }
