@@ -7,10 +7,11 @@ export class SearchHandler {
 	init(opts) {
 		this.callback = opts.callback
 		this.app = opts.app
+		const holder = opts.holder.append('div').style('padding', '10px 0px')
 		const geneSearch = addGeneSearchbox({
 			tip: new Menu({ padding: '0px' }),
 			genome: opts.genomeObj,
-			row: opts.holder,
+			row: holder,
 			searchOnly: 'gene',
 			callback: () => this.selectGene(geneSearch.geneSymbol)
 		})
