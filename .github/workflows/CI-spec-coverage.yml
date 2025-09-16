@@ -130,13 +130,13 @@ jobs:
           ./run.sh ppserver:latest
           sleep 10
           cd ../client
-          xvfb-run --auto-servernum npm run spec:coverage
+          xvfb-run --auto-servernum npm run spec:coverage || echo "TEST_FAILED=true" >> $GITHUB_ENV
 
       - name: Generate client unit-spec-only coverage report
         if: ${{ !contains(env.HAS_INTEGRATION_TESTS, 'true') }}
         run: |
           cd client
-          xvfb-run --auto-servernum npm run spec:coverage
+          xvfb-run --auto-servernum npm run spec:coverage || echo "TEST_FAILED=true" >> $GITHUB_ENV
 
       - name: Display coverage results
         run: |
@@ -182,9 +182,22 @@ jobs:
             git push origin $BRANCH
           fi
 
+      - name: Post build results on Slack
+        if:  ${{ env.TEST_FAILED == 'true' }}
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          payload: |
+            {
+              "status": "Failed unit and/or integration test(s) - https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "commit": "${{ env.SHORT_SHA }}",
+              "date-time": "${{ steps.current-time.outputs.formattedTime }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ inputs.SLACK_WEBHOOK_URL }}
+
       - name: Detect failure
         run: |
           FAILEDTEXTFILE=./public/coverage/specs/failedTexts.txt
-          if [[ -f $FAILEDTEXTFILE ]]; then
+          if [[ -f $FAILEDTEXTFILE || "${{ env.TEST_FAILED }}" == "true" ]]; then
             exit 1
           fi
