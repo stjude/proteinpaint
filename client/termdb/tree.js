@@ -7,6 +7,7 @@ import { TermTypeGroups, equals } from '#shared/terms.js'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'
+export const custom_variables_ID = '_Custom_Variables_'
 
 // when the total number of children at one branch exceeds this limit, the <div class=cls_termchilddiv> will scroll
 // this only count immediate children, not counting grandchildren
@@ -135,6 +136,7 @@ class TdbTree {
 		this.termsById = this.getTermsById()
 		const root = this.termsById[root_ID]
 		root.terms = await this.requestTermRecursive(root)
+		root.terms.push(...(await this.mayGetCustomTerms()))
 		this.dom.holder.style('display', 'block')
 		await this.renderBranch(root, this.dom.holder)
 		this.dom.holder
@@ -209,6 +211,27 @@ class TdbTree {
 
 	bindKey(term) {
 		return term.id
+	}
+
+	async mayGetCustomTerms() {
+		const tws = await this.app.vocabApi.getCustomTerms()
+		if (!tws.length) return []
+
+		const id = custom_variables_ID
+		const parentTerm = {
+			name: 'Custom Variables',
+			id: id,
+			isleaf: false,
+			included_types: ['categorical'],
+			child_types: ['categorical'],
+			terms: tws.map(tw => {
+				this.termsById[tw.term.id] = tw.term
+				tw.term.isleaf = true
+				return tw.term
+			})
+		}
+		this.termsById[id] = parentTerm
+		return [parentTerm]
 	}
 }
 
