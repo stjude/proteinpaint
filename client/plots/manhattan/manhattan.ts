@@ -7,6 +7,72 @@ import { Menu, table2col } from '#dom'
  * Eventually the manhattan plot will be decoupled from grin2
  * into this dir.
  */
+
+export function plotManhattan(div: any, data: any, settings: any) {
+	// Default settings
+	settings = {
+		pngDotRadius: 2,
+		plotWidth: 1000,
+		plotHeight: 400,
+		yAxisX: 70, // Space for y-axis
+		yAxisY: 40, // Top margin
+		yAxisSpace: 40, // Space between y-axis and plot
+		fontSize: 12,
+		...settings
+	}
+
+	const svg = div
+		.append('svg')
+		.attr('width', data.plotData.png_width + settings.yAxisX + settings.yAxisSpace)
+		.attr('height', data.plotData.png_height + settings.yAxisY)
+
+	// Add y-axis
+	const yAxisG = svg
+		.append('g')
+		.attr(
+			'transform',
+			`translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY - data.plotData.png_dot_radius})`
+		)
+	const yScale = scaleLinear()
+		.domain([0, data.plotData.y_max])
+		.range([data.plotData.png_height - settings.yAxisY, 0])
+	yAxisG.call(d3axis.axisLeft(yScale))
+
+	// Add y-axis label
+	svg
+		.append('text')
+		.attr('x', -(data.plotData.png_height / 2) - settings.yAxisY)
+		.attr('y', settings.yAxisX / 2)
+		.attr('transform', 'rotate(-90)')
+		.attr('text-anchor', 'middle')
+		.attr('font-size', `${settings.fontSize}px`)
+		.attr('fill', 'black')
+		.text('-log₁₀(q-value)')
+
+	// Add png image
+	svg
+		.append('image')
+		.attr(
+			'transform',
+			`translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY - data.plotData.png_dot_radius})`
+		)
+		.attr('width', data.plotData.png_width)
+		.attr('height', data.plotData.png_height)
+		.attr('href', `data:image/png;base64,${data.pngImg}`)
+
+	// Add x-axis
+	const xAxisG = svg
+		.append('g')
+		.attr(
+			'transform',
+			`translate(${settings.yAxisX + settings.yAxisSpace},${data.plotData.png_height + settings.yAxisY})`
+		)
+	const xScale = scaleLinear()
+		.domain([0, data.plotData.total_genome_length])
+		.range([0, data.plotData.png_width + settings.yAxisSpace])
+	xAxisG.call(d3axis.axisBottom(xScale))
+}
+
 export function renderInteractivePoints(svg: any, plotData: any, geneTip?) {
 	// Add visible interactive points using raw x/y coordinates
 	const pointsLayer = svg.append('g')
@@ -18,8 +84,8 @@ export function renderInteractivePoints(svg: any, plotData: any, geneTip?) {
 		.data(plotData.points)
 		.enter()
 		.append('circle')
-		.attr('cx', d => plotData.xScale(d.x) + plotData.png_dot_radius)
-		.attr('cy', d => plotData.yScale(d.y) + plotData.png_dot_radius)
+		.attr('cx', d => plotData.xScale(d.x))
+		.attr('cy', d => plotData.yScale(d.y))
 		// TODO: make radius a setting
 		.attr('r', 3)
 		.attr('fill-opacity', 0)
