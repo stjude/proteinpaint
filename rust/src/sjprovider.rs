@@ -23,9 +23,6 @@ use std::{convert::TryFrom, str::FromStr};
 use url::Url;
 
 // ---------- Main Client ----------
-
-const MYPROVIDER_API_BASE_URL: &str = "https://svltgpt01a.stjude.org/v2/models/ray_gateway_router/infer";
-
 pub struct ClientBuilder<'a> {
     base_url: &'a str,
     http_client: Option<reqwest::Client>,
@@ -35,7 +32,7 @@ impl<'a> ClientBuilder<'a> {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
-            base_url: MYPROVIDER_API_BASE_URL,
+            base_url: "",
             http_client: None,
         }
     }
@@ -988,24 +985,36 @@ mod tests {
     //use rig::providers::myprovider;
     use rig::vector_store::in_memory_store::InMemoryVectorStore;
     //use serde_json::json;
-    use std::fs::File;
+    use serde_json;
+    use std::fs::{self, File};
     use std::io::Read;
+    use std::path::Path;
 
     // Test deserialization and conversion for the /api/chat endpoint.
     #[tokio::test]
     #[ignore]
     async fn test_myprovider_implementation() {
         let user_input = "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs";
+        let serverconfig_file_path = Path::new("../../serverconfig.json");
+        let absolute_path = serverconfig_file_path.canonicalize().unwrap();
+
+        // Read the file
+        let data = fs::read_to_string(absolute_path).unwrap();
+
+        // Parse the JSON data
+        let json: serde_json::Value = serde_json::from_str(&data).unwrap();
 
         // Initialize Myprovider client
-        let myprovider_host = "https://svltgpt01a.stjude.org/v2/models/ray_gateway_router/infer";
+        let myprovider_host = json["sj_apilink"].as_str().unwrap();
+        let myprovider_embedding_model = json["sj_embedding_model_name"].as_str().unwrap();
+        let myprovider_comp_model = json["sj_comp_model_name"].as_str().unwrap();
         let myprovider_client = Client::builder()
             .base_url(myprovider_host)
             .build()
             .expect("myprovider server not found");
         //let myprovider_client = myprovider::Client::new();
-        let embedding_model = myprovider_client.embedding_model("multi-qa-mpnet-base-dot-v1");
-        let comp_model = myprovider_client.completion_model("llama3.3-70b-instruct-vllm"); // "granite3-dense:latest" "PetrosStav/gemma3-tools:12b" "llama3-groq-tool-use:latest" "PetrosStav/gemma3-tools:12b"
+        let embedding_model = myprovider_client.embedding_model(myprovider_embedding_model);
+        let comp_model = myprovider_client.completion_model(myprovider_comp_model); // "granite3-dense:latest" "PetrosStav/gemma3-tools:12b" "llama3-groq-tool-use:latest" "PetrosStav/gemma3-tools:12b"
 
         let file_path = "src/ai_docs3.txt";
 
@@ -1064,7 +1073,9 @@ mod tests {
         let result = response.replace("json", "").replace("```", "");
         //println!("result:{}", result);
         let json_value: Value = serde_json::from_str(&result).expect("REASON");
-        //println!("json_value:{}", json_value);
-        json_value["answer"].to_string();
+        let json_value2: Value = serde_json::from_str(&json_value[0]["generated_text"].to_string()).expect("REASON2");
+        //println!("json_value2:{}", json_value2.as_str().unwrap());
+        let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON2");
+        assert_eq!(json_value3["answer"].to_string().replace("\"", ""), "dge");
     }
 }

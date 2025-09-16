@@ -350,10 +350,6 @@ async fn classify_query_by_dataset_type(
     //println!("Ollama: {}", response);
     let result = response.replace("json", "").replace("```", "");
     let json_value: Value = serde_json::from_str(&result).expect("REASON");
-    //println!(
-    //    "json_value:{:?}",
-    //    json_value.as_object().unwrap()["answer"].to_string().replace("\"", "")
-    //);
     match llm_backend_type {
         llm_backend::Ollama() => json_value.as_object().unwrap()["answer"].to_string().replace("\"", ""),
         llm_backend::Sj() => {
