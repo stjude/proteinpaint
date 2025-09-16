@@ -1,6 +1,16 @@
 name: Spec Coverage
 
 on:
+  push:
+    branches:
+      - master
+      - fake-master
+    paths-ignore:
+      - '**.md'
+      - '**.txt'
+      - '.**ignore'
+      - 'docs/**'
+
   pull_request_target:
     types:
       - closed
