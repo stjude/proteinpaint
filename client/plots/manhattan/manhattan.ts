@@ -18,6 +18,14 @@ export function plotManhattan(div: any, data: any, settings: any) {
 		yAxisY: 40, // Top margin
 		yAxisSpace: 40, // Space between y-axis and plot
 		fontSize: 12,
+		// Legend settings
+		showLegend: true, // Toggle legend display
+		legendItemWidth: 80, // Horizontal space per legend item
+		legendDotRadius: 3, // Size of legend dots
+		legendRightOffset: 15, // Offset from right edge
+		legendTextOffset: 12, // Distance between dot and text
+		legendVerticalOffset: 4, // Vertical offset for legend items
+		legendFontSize: 12, // Font size for legend text
 		...settings
 	}
 
@@ -25,6 +33,16 @@ export function plotManhattan(div: any, data: any, settings: any) {
 		.append('svg')
 		.attr('width', data.plotData.png_width + settings.yAxisX + settings.yAxisSpace)
 		.attr('height', data.plotData.png_height + settings.yAxisY * 4) // Extra space for x-axis labels, legend, and title
+
+	// Generate legend data
+	const mutationTypes = [...new Set(data.plotData.points.map((p: any) => p.type))]
+	const legendData = mutationTypes.map(type => {
+		const point = data.plotData.points.find((p: any) => p.type === type)
+		return {
+			type: String(type).charAt(0).toUpperCase() + String(type).slice(1),
+			color: point?.color || '#888888'
+		}
+	})
 
 	// Add y-axis
 	const yAxisG = svg
@@ -66,7 +84,7 @@ export function plotManhattan(div: any, data: any, settings: any) {
 			if (chromLabel === 'M') return
 
 			// Calculate center position for label
-			const centerPos = settings.yAxisX + settings.yAxisSpace - 20 + xScale(chromData.center) // temp fix for right now. Will remove once png image is fixed
+			const centerPos = settings.yAxisX + settings.yAxisSpace - 20 + xScale(chromData.center) // -20 to adjust for png padding. Will remove when png is fixed
 
 			// Append chromosome label
 			svg
@@ -102,44 +120,36 @@ export function plotManhattan(div: any, data: any, settings: any) {
 		.text('Manhattan Plot')
 
 	// Add legend
-	const mutationTypes = [...new Set(data.plotData.points.map((p: any) => p.type))]
-	const legendData = mutationTypes.map(type => {
-		const point = data.plotData.points.find((p: any) => p.type === type)
-		return {
-			type: String(type).charAt(0).toUpperCase() + String(type).slice(1),
-			color: point?.color || '#888888'
-		}
-	})
-	const legendY = settings.yAxisY / 2 // Position from top of SVG
-	const itemWidth = 80
-	const totalWidth = legendData.length * itemWidth
-	const legendX = settings.yAxisX + settings.yAxisSpace + data.plotData.png_width - totalWidth - 15 // Position from right edge
+	if (settings.showLegend && legendData.length > 0) {
+		const legendY = settings.yAxisY / 2
+		const totalWidth = legendData.length * settings.legendItemWidth
+		const legendX =
+			settings.yAxisX + settings.yAxisSpace + data.plotData.png_width - totalWidth - settings.legendRightOffset
 
-	// Legend items
-	legendData.forEach((item, i) => {
-		const x = legendX + i * itemWidth
+		legendData.forEach((item, i) => {
+			const x = legendX + i * settings.legendItemWidth
 
-		// Legend dot
-		svg
-			.append('circle')
-			.attr('cx', x + 8)
-			.attr('cy', legendY)
-			.attr('r', 3)
-			.attr('fill', item.color)
-			.attr('stroke', 'black')
-			.attr('stroke-width', 1)
+			// Legend dot
+			svg
+				.append('circle')
+				.attr('cx', x + 8)
+				.attr('cy', legendY)
+				.attr('r', settings.legendDotRadius)
+				.attr('fill', item.color)
+				.attr('stroke', 'black')
+				.attr('stroke-width', 1)
 
-		// Legend text
-		svg
-			.append('text')
-			.attr('x', x + 20)
-			.attr('y', legendY + 4)
-			.attr('font-size', '12px')
-			.attr('fill', 'black')
-			.text(item.type)
-	})
+			// Legend text
+			svg
+				.append('text')
+				.attr('x', x + 8 + settings.legendTextOffset)
+				.attr('y', legendY + settings.legendVerticalOffset)
+				.attr('font-size', `${settings.legendFontSize}px`)
+				.attr('fill', 'black')
+				.text(item.type)
+		})
+	}
 }
-
 export function renderInteractivePoints(svg: any, plotData: any, geneTip?) {
 	// Add visible interactive points using raw x/y coordinates
 	const pointsLayer = svg.append('g')

@@ -396,7 +396,14 @@ class GRIN2 extends PlotBase implements RxComponent {
 				plotHeight: 400,
 				yAxisX: 70,
 				yAxisY: 30,
-				yAxisSpace: 10
+				yAxisSpace: 10,
+				showLegend: true,
+				legendItemWidth: 80,
+				legendDotRadius: 3,
+				legendRightOffset: 15,
+				legendTextOffset: 12,
+				legendVerticalOffset: 4,
+				legendFontSize: 12
 			})
 		}
 
