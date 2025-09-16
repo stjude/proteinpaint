@@ -1007,9 +1007,6 @@ async function launchblock(arg, app) {
 			app
 		)
 	}
-	if (arg.studyview) {
-		// TODO
-	}
 
 	if (arg.tracks) {
 		// tracks have to be labeled custom, even for smuggled native tracks
@@ -1047,7 +1044,8 @@ async function launchblock(arg, app) {
 		nativetracks: arg.nativetracks,
 		tklst: arg.tracks,
 		debugmode: app.debugmode,
-		legendimg: arg.legendimg
+		legendimg: arg.legendimg,
+		onloadalltk_always: arg.onloadalltk_always
 	}
 
 	if (arg.width) {
