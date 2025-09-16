@@ -12,7 +12,7 @@ import { getColors } from '#shared/common.js'
 import { CategoryFiltersUI } from '#dom/categoryFiltersUI'
 
 export class Runchart extends Scatter {
-	type: string
+	static type = 'runChart'
 	cat2Color: any
 	runchartvm!: RunchartViewModel
 	filterTWs: any
@@ -20,7 +20,7 @@ export class Runchart extends Scatter {
 
 	constructor(opts, api) {
 		super(opts, api)
-		this.type = 'runChart'
+		this.type = Runchart.type
 	}
 
 	async init(appState) {
