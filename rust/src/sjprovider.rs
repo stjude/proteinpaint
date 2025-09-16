@@ -1064,7 +1064,7 @@ mod tests {
         let result = response.replace("json", "").replace("```", "");
         //println!("result:{}", result);
         let json_value: Value = serde_json::from_str(&result).expect("REASON");
-        println!("json_value:{}", json_value);
+        //println!("json_value:{}", json_value);
         json_value["answer"].to_string();
     }
 }
