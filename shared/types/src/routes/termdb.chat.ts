@@ -35,7 +35,7 @@ export type summary = {
 }
 
 export type plot = {
-	/** Different chart types currently supported by the AI chatbot */
+	/** Different chart types currently supported by the AI chatbot, will add types for the other charts when they will be implemented */
 	chartType: summary | 'survival' | 'hierarchial' | 'snv_indel' | 'cnv' | 'variant_calling' | 'none' | 'dge'
 }
 
