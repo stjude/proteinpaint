@@ -101,7 +101,7 @@ export async function bigwigload(tk, block) {
 			showline: true
 		})
 	} catch (err) {
-		tk.img.attr('width', 1).attr('height', 1)
+		tk.img.attr('width', 0).attr('height', 0)
 		if (err.stack) {
 			// error
 			console.log(err.stack)
@@ -144,7 +144,7 @@ export async function bigwigloadsubpanel(tk, block, panel) {
 		if (data.error) throw data.error
 		panel.img.attr('xlink:href', data.src)
 	} catch (err) {
-		panel.img.attr('width', 1).attr('height', 1)
+		panel.img.attr('width', 0).attr('height', 0)
 		if (err.stack) {
 			// error
 			console.log(err.stack)
