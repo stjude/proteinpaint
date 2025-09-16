@@ -198,19 +198,19 @@ class TdbTree {
 				// not an expanded term
 				// if it's collapsing this term, must add back its children terms for toggle button to work
 				// see flag TERMS_ADD_BACK
-				const t0 = this.termsById[copy.id]
+				const t0 = this.termsById[copy.id || copy.name]
 				if (t0 && t0.terms) {
 					copy.terms = t0.terms
 				}
 			}
 
-			this.termsById[copy.id] = copy
+			this.termsById[copy.id || copy.name] = copy
 		}
 		return terms
 	}
 
 	bindKey(term) {
-		return term.id
+		return term.id || term.name
 	}
 
 	async mayGetCustomTerms() {
@@ -225,7 +225,7 @@ class TdbTree {
 			included_types: ['categorical'],
 			child_types: ['categorical'],
 			terms: tws.map(tw => {
-				this.termsById[tw.term.id] = tw.term
+				this.termsById[tw.term.id || tw.term.name] = tw.term
 				tw.term.isleaf = true
 				return tw.term
 			})
@@ -299,7 +299,8 @@ function setRenderers(self) {
 			self.included_terms.push(...term.terms)
 		}
 
-		if (!(term.id in self.termsById) || !self.included_terms.length) {
+		const id = term.id || term.name
+		if (!(id in self.termsById) || !self.included_terms.length) {
 			div.style('display', 'none')
 			return
 		}
@@ -339,13 +340,15 @@ function setRenderers(self) {
 
 	// this == the d3 selected DOM node
 	self.hideTerm = function (term) {
-		if (term.id in self.termsById && self.state.expandedTermIds.includes(term.id)) return
+		const id = term.id || term.name
+		if (id in self.termsById && self.state.expandedTermIds.includes(term.id)) return
 		select(this).style('display', 'none')
 	}
 
 	self.updateTerm = function (term) {
 		const div = select(this)
-		if (!(term.id in self.termsById)) {
+		const id = term.id || term.name
+		if (!(id in self.termsById)) {
 			div.style('display', 'none')
 			return
 		}
@@ -359,7 +362,8 @@ function setRenderers(self) {
 		// update other parts if needed, e.g. label
 		div.select('.' + cls_termchilddiv).style('display', isExpanded ? 'block' : 'none')
 
-		const isSelected = self.state.selectedTerms.find(t => t.id === term.id && t.type === term.type)
+		const tid = term.id || term.name
+		const isSelected = self.state.selectedTerms.find(t => (t.id ? t.id === id : t.name == id) && t.type === term.type)
 		div
 			.select('.' + cls_termlabel)
 			.style(
@@ -396,7 +400,8 @@ function setRenderers(self) {
 			if (self.expandAll) self.toggleBranch(term)
 		}
 
-		const isSelected = self.state.selectedTerms.find(t => t.id === term.id && t.type === term.type)
+		const id = term.id || term.name
+		const isSelected = self.state.selectedTerms.find(t => t.id === id && t.type === term.type)
 		const labeldiv = div
 			.append('div')
 			.attr('class', cls_termlabel)
@@ -483,7 +488,7 @@ function setInteractivity(self) {
 	self.toggleBranch = function (term) {
 		//event.stopPropagation()
 		if (term.isleaf) return
-		const t0 = self.termsById[term.id]
+		const t0 = self.termsById[term.id || term.name]
 		if (!t0) throw 'invalid term id'
 
 		if (!t0.terms) {
@@ -520,7 +525,8 @@ function setInteractivity(self) {
 		}
 
 		if (self.opts.submit_lst) {
-			const i = self.state.selectedTerms.findIndex(t => t.id === term.id && t.type === term.type)
+			const id = term.id || term.name
+			const i = self.state.selectedTerms.findIndex(t => (t.id ? t.id === id : t.name == id) && t.type === term.type)
 			if (i == -1) {
 				self.app.dispatch({
 					type: 'app_refresh',
