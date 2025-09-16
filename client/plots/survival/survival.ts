@@ -118,6 +118,12 @@ class TdbSurvival extends PlotBase implements RxComponent {
 		const opts = this.opts
 		const controls = this.opts.controls ? null : opts.holder.append('div')
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
+		const loadingDiv = holder
+			.append('div')
+			.style('position', 'absolute')
+			.style('display', 'none')
+			.style('padding', '20px')
+			.html('Loading ...')
 		const chartsDiv = holder
 			.append('div')
 			.style('margin', '10px')
@@ -126,12 +132,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 			.style('flex-wrap', 'wrap')
 			.style('max-width', '100vw')
 		const dom = {
-			loadingDiv: holder
-				.append('div')
-				.style('position', 'absolute')
-				.style('display', 'none')
-				.style('padding', '20px')
-				.html('Loading ...'),
+			loadingDiv,
 			header: opts.header,
 			controls,
 			holder,
