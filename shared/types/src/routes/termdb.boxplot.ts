@@ -20,6 +20,7 @@ export type BoxPlotRequest = {
 	filter?: Filter
 	filter0?: any
 	__protected__: any
+	removeOutliers?: boolean
 }
 
 export type BoxPlotResponse = {

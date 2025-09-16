@@ -1,12 +1,9 @@
-import type { BoxPlotRequest, BoxPlotResponse, BoxPlotData, RouteApi, ValidGetDataResponse } from '#types'
+import type { BoxPlotRequest, BoxPlotResponse, RouteApi, ValidGetDataResponse } from '#types'
 import { boxplotPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import { boxplot_getvalue } from '../src/utils.js'
 import { sortPlot2Values } from './termdb.violin.ts'
-import { roundValueAuto } from '#shared/roundValue.js'
-import { getMean, getVariance } from '#shared/descriptive.stats.js'
-
-const minSampleSize = 5 // a group below cutoff will not compute boxplot
+import { getDescriptiveStats, summaryStatsFromStats } from '#shared/descriptive.stats.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/boxplot',
@@ -50,21 +47,28 @@ function init({ genomes }) {
 
 			if (!absMin && absMin !== 0) throw 'absMin is undefined [termdb.boxplot init()]'
 			if (!absMax && absMax !== 0) throw 'absMax is undefined [termdb.boxplot init()]'
-
 			const charts: any = {}
+			let outlierMin = Number.POSITIVE_INFINITY,
+				outlierMax = Number.NEGATIVE_INFINITY
 			for (const [chart, plot2values] of chart2plot2values) {
 				const plots: any = []
 				for (const [key, values] of sortPlot2Values(data as ValidGetDataResponse, plot2values, overlayTerm)) {
 					const sortedValues = values.sort((a, b) => a - b)
 
-					const vs = sortedValues.map((v: number) => {
+					let vs = sortedValues.map((v: number) => {
 						const value = { value: v }
 						return value
 					})
+					const stats = getDescriptiveStats(sortedValues)
 
+					const descrStats = summaryStatsFromStats(stats, true).values
+					if (q.removeOutliers) {
+						vs = vs.filter(v => v.value > stats.outlierMin && v.value < stats.outlierMax)
+						if (outlierMin > stats.outlierMin) outlierMin = stats.outlierMin
+						if (outlierMax < stats.outlierMax) outlierMax = stats.outlierMax
+					}
 					const boxplot = boxplot_getvalue(vs)
 					if (!boxplot) throw 'boxplot_getvalue failed [termdb.boxplot init()]'
-					const descrStats = setDescrStats(boxplot as BoxPlotData, sortedValues)
 					const _plot = {
 						boxplot,
 						descrStats
@@ -104,8 +108,8 @@ function init({ genomes }) {
 			}
 
 			const returnData: BoxPlotResponse = {
-				absMin,
-				absMax,
+				absMin: q.removeOutliers ? outlierMin : absMin,
+				absMax: q.removeOutliers ? outlierMax : absMax,
 				charts,
 				uncomputableValues: setUncomputableValues(uncomputableValues)
 			}
@@ -131,29 +135,6 @@ function setHiddenPlots(term: any, plots: any) {
 		}
 	}
 	return plots
-}
-
-function setDescrStats(boxplot: BoxPlotData, sortedValues: number[]) {
-	// Return the total value for legend rendering
-	if (sortedValues.length < minSampleSize) return [{ id: 'total', label: 'Total', value: sortedValues.length }]
-	//boxplot_getvalue() already returns calculated stats
-	//Format data rather than recalculate
-	const mean = getMean(sortedValues)
-	const variance = getVariance(sortedValues)
-	const sd = Math.sqrt(variance)
-
-	return [
-		{ id: 'total', label: 'Total', value: sortedValues.length },
-		{ id: 'min', label: 'Minimum', value: roundValueAuto(sortedValues[0], true) },
-		{ id: 'p25', label: '1st quartile', value: roundValueAuto(boxplot.p25, true) },
-		{ id: 'median', label: 'Median', value: roundValueAuto(boxplot.p50, true) },
-		{ id: 'mean', label: 'Mean', value: roundValueAuto(mean, true) },
-		{ id: 'p75', label: '3rd quartile', value: roundValueAuto(boxplot.p75, true) },
-		{ id: 'max', label: 'Maximum', value: roundValueAuto(sortedValues[sortedValues.length - 1], true) },
-		{ id: 'sd', label: 'Standard deviation', value: isNaN(sd) ? null : roundValueAuto(sd, true) },
-		{ id: 'variance', label: 'Variance', value: roundValueAuto(variance, true) },
-		{ id: 'iqr', label: 'Inter-quartile range', value: roundValueAuto(boxplot.iqr, true) }
-	]
 }
 
 /** Only return a simplified object for the legend data */

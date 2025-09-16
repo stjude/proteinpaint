@@ -188,6 +188,14 @@ class TdbBoxplot extends RxComponent {
 					{ label: 'Filled', value: 'filled' },
 					{ label: 'Dark mode', value: 'dark' }
 				]
+			},
+			{
+				label: 'Remove outliers',
+				boxLabel: '',
+				type: 'checkbox',
+				chartType: 'boxplot',
+				settingsKey: 'removeOutliers',
+				title: `Option to remove outliers from the analysis`
 			}
 		]
 		this.components.controls = await controlsInit({
@@ -367,7 +375,8 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 		isVertical: false,
 		orderByMedian: false,
 		rowHeight: 50,
-		rowSpace: 15
+		rowSpace: 15,
+		removeOutliers: false
 	}
 	return Object.assign(defaults, overrides)
 }

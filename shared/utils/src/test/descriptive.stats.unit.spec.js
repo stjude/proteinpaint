@@ -42,17 +42,17 @@ tape('getVariance()', function (test) {
 	let data, expected, result
 
 	data = [1, 2, 3, 4, 5]
-	expected = 2
+	expected = 2.5
 	result = getVariance(data)
 	test.equal(result, expected, `Should return variance=${expected} for input data=${data}`)
 
 	data = [-10, -2, 0, 3, 10, 11]
-	expected = 51.666666666666664
+	expected = 62
 	result = getVariance(data)
 	test.equal(result, expected, `Should return variance=${expected} for input data=${data}`)
 
 	data = [18903, 34892, 23498034]
-	expected = 122420986741716.2
+	expected = 183631480112574.3
 	result = getVariance(data)
 	test.equal(result, expected, `Should return variance=${expected} for input data=${data}`)
 
@@ -63,17 +63,17 @@ tape('getStdDev()', function (test) {
 	let data, expected, result
 
 	data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-	expected = 2.8722813232690143
+	expected = 3.0276503540974917
 	result = getStdDev(data)
 	test.equal(result, expected, `Should return variance=${expected} for input data=${data}`)
 
 	data = [-10, -2, 0, 3, 10, 11, 48, 50]
-	expected = 21.288200957337846
+	expected = 22.7580441037575
 	result = getStdDev(data)
 	test.equal(result, expected, `Should return variance=${expected} for input data=${data}`)
 
 	data = [2348, 13049, 18903, 34892, 23498034]
-	expected = 9392300.29505785
+	expected = 10500910.96242034
 	result = getStdDev(data)
 	test.equal(result, expected, `Should return variance=${expected} for input data=${data}`)
 
@@ -93,8 +93,8 @@ tape('getStdDev()', function (test) {
 			{ id: 'mean', label: 'Mean', value: 5.5 },
 			{ id: 'p75', label: '3rd quartile', value: 8 },
 			{ id: 'max', label: 'Maximum', value: 10 },
-			{ id: 'SD', label: 'Standard deviation', value: 2.87 },
-			{ id: 'variance', label: 'Variance', value: 8.25 },
+			{ id: 'SD', label: 'Standard deviation', value: 3.03 },
+			{ id: 'variance', label: 'Variance', value: 9.17 },
 			{ id: 'IQR', label: 'Inter-quartile range', value: 5 }
 		]
 	}
@@ -111,8 +111,8 @@ tape('getStdDev()', function (test) {
 			{ id: 'mean', label: 'Mean', value: 13.75 },
 			{ id: 'p75', label: '3rd quartile', value: 29.5 },
 			{ id: 'max', label: 'Maximum', value: 50 },
-			{ id: 'SD', label: 'Standard deviation', value: 21.29 },
-			{ id: 'variance', label: 'Variance', value: 453.19 },
+			{ id: 'SD', label: 'Standard deviation', value: 22.76 },
+			{ id: 'variance', label: 'Variance', value: 517.93 },
 			{ id: 'IQR', label: 'Inter-quartile range', value: 30.5 }
 		]
 	}
@@ -129,8 +129,8 @@ tape('getStdDev()', function (test) {
 			{ id: 'mean', label: 'Mean', value: '4.7e+6' },
 			{ id: 'p75', label: '3rd quartile', value: 34892 },
 			{ id: 'max', label: 'Maximum', value: 23498034 },
-			{ id: 'SD', label: 'Standard deviation', value: '9.4e+6' },
-			{ id: 'variance', label: 'Variance', value: '8.8e+13' },
+			{ id: 'SD', label: 'Standard deviation', value: '1.1e+7' },
+			{ id: 'variance', label: 'Variance', value: '1.1e+14' },
 			{ id: 'IQR', label: 'Inter-quartile range', value: 21843 }
 		]
 	}
