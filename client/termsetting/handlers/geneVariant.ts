@@ -282,26 +282,26 @@ export async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi
 		lst: term.childTerms.map(dtTerm => {
 			const groupset: any = { name: dtTerm.name, dt: dtTerm.dt }
 			if (dtTerm.origin) groupset.origin = dtTerm.origin
-			if (dtTerm.dt == dtcnv) getCnvGroupset(groupset, dtTerm, vocabApi)
-			else getNonCnvGroupset(groupset, dtTerm)
+			if (dtTerm.dt == dtcnv) getCnvGroupset(groupset, dtTerm, term.name, vocabApi)
+			else getNonCnvGroupset(groupset, dtTerm, term.name)
 			return groupset
 		})
 	}
 
 	// function to get cnv groupset
 	// will route to appropriate function depending on mode of cnv data
-	function getCnvGroupset(groupset, dtTerm, vocabApi) {
+	function getCnvGroupset(groupset, dtTerm, geneName, vocabApi) {
 		const cnv = vocabApi.termdbConfig.queries?.cnv
 		if (!cnv) throw 'cnv query is missing'
 		const keys = Object.keys(cnv)
 		const isContinuous = keys.includes('cnvGainCutoff') || keys.includes('cnvLossCutoff')
-		if (isContinuous) getContCnvGroupset(groupset, dtTerm, cnv)
-		else getCatCnvGroupset(groupset, dtTerm)
+		if (isContinuous) getContCnvGroupset(groupset, dtTerm, geneName, cnv)
+		else getCatCnvGroupset(groupset, dtTerm, geneName)
 	}
 
 	// function to get cnv groupset for continuous cnv data
 	// will compare gain/loss/neutral
-	function getContCnvGroupset(groupset, dtTerm, cnv) {
+	function getContCnvGroupset(groupset, dtTerm, geneName, cnv) {
 		const cnvDefault = cnv.cnvCutoffsByGene?.[dtTerm.parentTerm.name] || {
 			cnvMaxLength: cnv.cnvMaxLength,
 			cnvGainCutoff: cnv.cnvGainCutoff,
@@ -309,7 +309,7 @@ export async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi
 		}
 		// gain group
 		const gainGroup = {
-			name: `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Gain (${dtTerm.origin})` : 'Gain'}`,
+			name: `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Gain (${dtTerm.origin})` : 'Gain'}`,
 			type: 'filter',
 			filter: getWrappedTvslst([
 				{
@@ -328,7 +328,7 @@ export async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi
 		}
 		// loss group
 		const lossGroup = {
-			name: `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Loss (${dtTerm.origin})` : 'Loss'}`,
+			name: `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Loss (${dtTerm.origin})` : 'Loss'}`,
 			type: 'filter',
 			filter: getWrappedTvslst([
 				{
@@ -347,7 +347,7 @@ export async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi
 		}
 		// neutral group
 		const wtGroup = {
-			name: `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Neutral (${dtTerm.origin})` : 'Neutral'}`,
+			name: `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Neutral (${dtTerm.origin})` : 'Neutral'}`,
 			type: 'filter',
 			filter: getWrappedTvslst([
 				{
@@ -376,7 +376,7 @@ export async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi
 
 	// function to get cnv groupset for categorical cnv data
 	// will compare cnv categories present in the data
-	function getCatCnvGroupset(groupset, dtTerm) {
+	function getCatCnvGroupset(groupset, dtTerm, geneName) {
 		groupset.groups = []
 		for (const key of Object.keys(dtTerm.values)) {
 			const label = dtTerm.values[key].label
@@ -391,7 +391,7 @@ export async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi
 					}
 				}
 			])
-			const name = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `${label} (${dtTerm.origin})` : label}`
+			const name = `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `${label} (${dtTerm.origin})` : label}`
 			const color = mclass[key].color
 			groupset.groups.push({ name, type: 'filter', filter, color })
 		}
@@ -399,11 +399,11 @@ export async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi
 
 	// function to get non-cnv (e.g. snv/indel, fusion, etc.) groupset
 	// will compare mutant vs. wildtype
-	function getNonCnvGroupset(groupset, dtTerm) {
+	function getNonCnvGroupset(groupset, dtTerm, geneName) {
 		colorScale = getColors(2)
 		groupset.groups = []
 		// group 1: mutant
-		const grp1Name = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Mutated (${dtTerm.origin})` : 'Mutated'}`
+		const grp1Name = `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Mutated (${dtTerm.origin})` : 'Mutated'}`
 		const grp1Filter = getWrappedTvslst([
 			{
 				type: 'tvs',
@@ -422,7 +422,7 @@ export async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi
 			color: rgb(colorScale(grp1Name)).formatHex()
 		})
 		// group 2: wildtype
-		const grp2Name = `${dtTerm.name_noOrigin} ${dtTerm.origin ? `Wildtype (${dtTerm.origin})` : 'Wildtype'}`
+		const grp2Name = `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Wildtype (${dtTerm.origin})` : 'Wildtype'}`
 		const grp2Filter = getWrappedTvslst([
 			{
 				type: 'tvs',
