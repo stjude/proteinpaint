@@ -5,6 +5,7 @@ import { runproteinpaint } from '../../test/front.helpers'
 /*** test sections
 
 basic bedj & bw test, could be expanded
+BAM tk
 */
 
 tape('\n', function (test) {
@@ -76,7 +77,73 @@ tape('basic bedj & bw test, could be expanded', test => {
 			test.equal(t.leftaxis.selectAll('text').nodes().length, 0, 'left axis is blank, no tick labels')
 		}
 		if (test['_ok']) holder.remove()
+		test.end()
+	}
+})
+tape('BAM tk', test => {
+	const holder: any = getHolder() // any suppresses tsc err
+	runproteinpaint({
+		holder,
+		noheader: true,
+		genome: 'hg38-test',
+		block: 1,
+		onloadalltk_always,
+		position: 'chr17:7674168-7674302',
+		tracks: [
+			{ type: 'bam', name: 'good bam', file: 'files/hg38/TermdbTest/trackLst/bam.bam' },
+			{
+				type: 'bam',
+				name: 'genotyping bam',
+				file: 'files/hg38/TermdbTest/trackLst/bam.bam',
+				strictness: 1,
+				variants: [{ chr: 'chr17', pos: 7674219, ref: 'C', alt: 'T' }]
+			},
+			{ type: 'bam', name: 'bad bam', file: 'files/hg38/TermdbTest/trackLst/xx' }
+		]
+	})
+	function onloadalltk_always(bb) {
+		{
+			const t = bb.tklst[0]
+			//console.log(t)
+			test.equal(t.name, 'good bam', 'tk named good bam exists')
 
+			let b = t.dom.pileup_img.node().getBBox()
+			test.ok(b.width > 100 && b.height > 10, 'pileup <image> width>100 & height>10')
+			test.ok(t.dom.pileup_axis.selectAll('text').nodes().length > 1, 'more than 1 tick labels in pileup Y axis')
+
+			test.ok(
+				t.groups[0].data.templatebox.length > 100,
+				'groups[0].data.templatebox.length>100 (positional position for over 100 reads loaded)'
+			)
+			b = t.groups[0].dom.img_fullstack.node().getBBox()
+			test.ok(b.width > 100 && b.height > 10, 'img_fullstack <image> width>100 & height>10')
+			b = t.groups[0].dom.img_partstack.node().getBBox()
+			test.ok(b.width == 0 && b.height == 0, 'img_partstack <image> width=0 & height=0')
+		}
+		{
+			const t = bb.tklst[1]
+			//console.log(t)
+			test.equal(t.name, 'genotyping bam', 'tk named genotyping bam exists')
+			let b = t.dom.pileup_img.node().getBBox()
+			test.ok(b.width > 100 && b.height > 10, 'pileup <image> width>100 & height>10')
+
+			/*************
+			due to lack of reference genome sequence (all 'N'),
+			re-alignment of read against ref & mut allele will always fail;
+			thus there will be no reads supporting "reference" and "mutant" group, just "neither" group
+
+			group[0] are the reads supporting neither ref or alt alleles
+			*/
+			test.ok(
+				t.groups[0].data.templatebox.length > 10,
+				'groups[0].data.templatebox.length>10 (positional position for over 10 reads loaded)'
+			)
+			b = t.groups[0].dom.img_fullstack.node().getBBox()
+			test.ok(b.width > 100 && b.height > 10, 'img_fullstack <image> width>100 & height>10')
+			b = t.groups[0].dom.img_partstack.node().getBBox()
+			test.ok(b.width == 0 && b.height == 0, 'img_partstack <image> width=0 & height=0')
+		}
+		if (test['_ok']) holder.remove()
 		test.end()
 	}
 })

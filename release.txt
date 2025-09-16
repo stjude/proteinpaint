@@ -1,1 +1,2 @@
-
+Fixes:
+- add integration test for block bam tk
