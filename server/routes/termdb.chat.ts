@@ -29,7 +29,6 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dslabel'
 			//if (!ds.queries?.chat) throw 'not supported'
 
-			const dataset_agnostic_file = serverconfig.binpath + '/../rust/src/ai_docs3.txt'
 			let apilink: string
 			let comp_model_name: string
 			let embedding_model_name: string
@@ -52,13 +51,14 @@ function init({ genomes }) {
 				dataset_db: serverconfig.tpmasterdir + '/' + ds.cohort.db.file,
 				comp_model_name: comp_model_name,
 				embedding_model_name: embedding_model_name,
-				llm_backend_name: serverconfig.llm_backend, // The type of backend (engine) used for running the embedding and completion model. Currently "SJ" and "Ollama" are supported
-				dataset_agnostic_file: dataset_agnostic_file
+				llm_backend_name: serverconfig.llm_backend // The type of backend (engine) used for running the embedding and completion model. Currently "SJ" and "Ollama" are supported
 			}
+			//mayLog('chatbot_input:', JSON.stringify(chatbot_input))
 
-			console.log('chatbot_input:', JSON.stringify(chatbot_input))
-
+			const time1 = new Date().valueOf()
 			const ai_output_data = await run_rust('aichatbot', JSON.stringify(chatbot_input))
+			const time2 = new Date().valueOf()
+			mayLog('Time taken to run rust AI chatbot:', time2 - time1, 'ms')
 			let ai_output_json: ChatResponse | string = ''
 			for (const line of ai_output_data.split('\n')) {
 				// The reason we are parsing each line from rust is because we want to debug what is causing the wrong output. As the AI pipeline matures, the rust code will be modified to always return a single JSON
@@ -68,8 +68,6 @@ function init({ genomes }) {
 					mayLog(line)
 				}
 			}
-			console.log('ai_output_json:', ai_output_json)
-			// may convert data
 			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
