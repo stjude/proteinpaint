@@ -42,7 +42,6 @@ tape('Default SC app', test => {
 			plots: [
 				{
 					chartType: 'sc',
-					subplots: [],
 					settings: {
 						sc: {
 							columns: {

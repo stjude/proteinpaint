@@ -31,11 +31,11 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'grin2':
 			return await import('./grin2/grin2')
 
-		case 'sc':
-			return await import('./sc/SC.ts')
-
 		case 'sampleScatter':
 			return await import(`./scatter/scatter.js`)
+
+		case 'sc':
+			return await import('./sc/SC.ts')
 
 		case 'summarizeCnvGeneexp':
 			return await import(`./summarizeCnvGeneexp.ts`)

@@ -99,9 +99,9 @@ export class ChartButtons {
 			genome: self.interactions.genome,
 			vocabApi: {},
 			callback: async result => {
+				self.chartBtnsDom.tip.hide()
 				const config = await plot.getPlotConfig(result.geneList)
 				await self.interactions.createSubplot(config)
-				self.chartBtnsDom.tip.hide()
 			}
 		})
 	}
