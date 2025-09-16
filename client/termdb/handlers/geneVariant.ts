@@ -69,7 +69,7 @@ export class SearchHandler {
 
 	searchGene() {
 		this.dom.searchDiv.selectAll('*').remove()
-		this.dom.searchDiv.style('margin-top', '10px')
+		this.dom.searchDiv.style('margin', '10px 0px')
 		const geneSearch = addGeneSearchbox({
 			tip: new Menu({ padding: '0px' }),
 			genome: this.opts.genomeObj,
