@@ -3,7 +3,7 @@ import { boxplotPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import { boxplot_getvalue } from '../src/utils.js'
 import { sortPlot2Values } from './termdb.violin.ts'
-import { summaryStats, summaryStatsFromStats, getDescriptiveStats } from '#shared/descriptive.stats.js'
+import { summaryStats, getDescriptiveStats, summaryStatsFromStats } from '#shared/descriptive.stats.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/boxplot',
@@ -32,10 +32,11 @@ function init({ genomes }) {
 			if (q.divideTw) terms.push(q.divideTw)
 			const data = await getData({ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__ }, ds)
 			if (data.error) throw data.error
-			const values = Object.values(data.samples)
-				.map(s => s[q.tw.$id!]?.value)
-				.filter(v => typeof v === 'number')
-			const statsAll = summaryStats(values, true).values
+			const samples = Object.values(data.samples)
+			const values = samples.map(s => s[q.tw.$id!]?.value).filter(v => typeof v === 'number')
+			//calculate stats here and pass them to client to avoid second request on client for getting stats
+			const statsAllSummary = summaryStats(values).values
+
 			const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
 			const overlayTerm = q.overlayTw
 			const divideTerm = q.divideTw
@@ -58,19 +59,18 @@ function init({ genomes }) {
 				for (const [key, values] of sortPlot2Values(data as ValidGetDataResponse, plot2values, overlayTerm)) {
 					const sortedValues = values.sort((a, b) => a - b)
 
-					let vs = sortedValues.map((v: number) => {
+					const vs = sortedValues.map((v: number) => {
 						const value = { value: v }
 						return value
 					})
 					const stats = getDescriptiveStats(sortedValues)
-
-					const descrStats = summaryStatsFromStats(stats, true).values
 					if (q.removeOutliers) {
-						vs = vs.filter(v => v.value > stats.outlierMin && v.value < stats.outlierMax)
-						if (outlierMin > stats.outlierMin) outlierMin = stats.outlierMin
-						if (outlierMax < stats.outlierMax) outlierMax = stats.outlierMax
+						outlierMin = Math.min(outlierMin, stats.outlierMin)
+						outlierMax = Math.max(outlierMax, stats.outlierMax)
 					}
-					const boxplot = boxplot_getvalue(vs)
+					const descrStats = summaryStatsFromStats(stats, true).values
+
+					const boxplot = boxplot_getvalue(vs, q.removeOutliers)
 					if (!boxplot) throw 'boxplot_getvalue failed [termdb.boxplot init()]'
 					const _plot = {
 						boxplot,
@@ -115,7 +115,7 @@ function init({ genomes }) {
 				absMax: q.removeOutliers ? outlierMax : absMax,
 				charts,
 				uncomputableValues: setUncomputableValues(uncomputableValues),
-				descrStats: statsAll
+				descrStats: statsAllSummary
 			}
 
 			res.send(returnData)
