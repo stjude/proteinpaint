@@ -2,6 +2,7 @@ import type { ChatRequest, ChatResponse, RouteApi } from '#types'
 import { ChatPayload } from '#types/checkers'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '../src/serverconfig.js'
+import { mayLog } from '#src/helpers.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/chat',
@@ -29,19 +30,14 @@ function init({ genomes }) {
 			//if (!ds.queries?.chat) throw 'not supported'
 
 			const dataset_agnostic_file = serverconfig.binpath + '/../rust/src/ai_docs3.txt'
-			console.log('q:', q)
-			console.log('serverconfig:', serverconfig)
-			console.log('ds:', serverconfig.tpmasterdir + '/' + ds.cohort.db.file)
-			console.log('dataset_agnostic_file:', dataset_agnostic_file)
-
 			let apilink: string
 			let comp_model_name: string
 			let embedding_model_name: string
-			if (serverconfig.llm_backend != 'SJ') {
+			if (serverconfig.llm_backend == 'SJ') {
 				apilink = serverconfig.sj_apilink
 				comp_model_name = serverconfig.sj_comp_model_name
 				embedding_model_name = serverconfig.sj_embedding_model_name
-			} else if (serverconfig.llm_backend != 'ollama') {
+			} else if (serverconfig.llm_backend == 'ollama') {
 				apilink = serverconfig.ollama_apilink
 				comp_model_name = serverconfig.ollama_comp_model_name
 				embedding_model_name = serverconfig.ollama_embedding_model_name
@@ -62,10 +58,19 @@ function init({ genomes }) {
 
 			console.log('chatbot_input:', JSON.stringify(chatbot_input))
 
-			const data = await run_rust('aichatbot', JSON.stringify(chatbot_input))
-			console.log('data:', data)
+			const ai_output_data = await run_rust('aichatbot', JSON.stringify(chatbot_input))
+			let ai_output_json: ChatResponse | string = ''
+			for (const line of ai_output_data.split('\n')) {
+				// The reason we are parsing each line from rust is because we want to debug what is causing the wrong output. As the AI pipeline matures, the rust code will be modified to always return a single JSON
+				if (line.startsWith('final_output:') == true) {
+					ai_output_json = JSON.parse(line.replace('final_output:', ''))
+				} else {
+					mayLog(line)
+				}
+			}
+			console.log('ai_output_json:', ai_output_json)
 			// may convert data
-			res.send(data as ChatResponse)
+			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			res.send({ error: e?.message || e })
