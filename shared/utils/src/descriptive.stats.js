@@ -32,12 +32,9 @@ export function getDescriptiveStats(array) {
 	const min = sorted_arr[0]
 	const max = sorted_arr[sorted_arr.length - 1]
 
-	// Calculate fences
-	const lowerFence = p25 - 1.5 * IQR //p25 is same as q1
-	const upperFence = p75 + 1.5 * IQR //p75 is same as q3
-
-	// Identify outliers
-	const outlierRange = { min: lowerFence, max: upperFence }
+	// Calculate outlier boundaries
+	const outlierMin = p25 - 1.5 * IQR //p25 is same as q1
+	const outlierMax = p75 + 1.5 * IQR //p75 is same as q3
 
 	return {
 		total: n,
@@ -50,14 +47,18 @@ export function getDescriptiveStats(array) {
 		variance,
 		stdDev,
 		IQR,
-		outlierRange
+		outlierMin,
+		outlierMax
 	}
 }
 
-export function summaryStats(array) {
+export function summaryStats(array, showOutlierRange = false) {
 	const stats = getDescriptiveStats(array)
+	return summaryStatsFromStats(stats, showOutlierRange)
+}
 
-	return {
+export function summaryStatsFromStats(stats, showOutlierRange = false) {
+	const result = {
 		values: [
 			{ id: 'total', label: 'Total', value: stats.total },
 			{ id: 'min', label: 'Minimum', value: roundValueAuto(stats.min, true) },
@@ -71,6 +72,13 @@ export function summaryStats(array) {
 			{ id: 'IQR', label: 'Inter-quartile range', value: roundValueAuto(stats.IQR, true) }
 		]
 	}
+	if (showOutlierRange) {
+		result.values.push(
+			{ id: 'outlierMin', label: 'Outlier min', value: roundValueAuto(stats.outlierMin, true) },
+			{ id: 'outlierMax', label: 'Outlier max', value: roundValueAuto(stats.outlierMax, true) }
+		)
+	}
+	return result
 }
 
 function computePercentile(values, percentile) {
@@ -86,7 +94,11 @@ export function getMean(data) {
 export function getVariance(data) {
 	const meanValue = getMean(data)
 	const squaredDifferences = data.map(value => Math.pow(value - meanValue, 2))
-	return squaredDifferences.reduce((sum, value) => sum + value, 0) / data.length
+	//Using n−1 compensates for the fact that we're basing variance on a sample mean,
+	// which tends to underestimate true variability. The correction is especially important with small sample sizes,
+	// where dividing by n would significantly distort the variance estimate.
+
+	return squaredDifferences.reduce((sum, value) => sum + value, 0) / (data.length - 1)
 }
 
 export function getStdDev(data) {

@@ -48,6 +48,8 @@ export type BoxPlotSettings = {
 	rowHeight: number
 	/** Space between the boxplots */
 	rowSpace: number
+	/** If true, remove outliers from the analysis */
+	removeOutliers: boolean
 }
 
 /** Descriptions of the dom elements for the box plot */

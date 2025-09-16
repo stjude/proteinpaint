@@ -138,12 +138,8 @@ export async function trigger_getSampleScatter(req, q, res, ds) {
 		if (samples.length > 0) {
 			if (q.excludeOutliers) {
 				const ystats = getDescriptiveStats(samples.map(s => s.y))
-				cohortSamples = cohortSamples.filter(
-					sample => sample.y > ystats.outlierRange.min && sample.y < ystats.outlierRange.max
-				)
-				refSamples = refSamples.filter(
-					sample => sample.y > ystats.outlierRange.min && sample.y < ystats.outlierRange.max
-				)
+				cohortSamples = cohortSamples.filter(sample => sample.y > ystats.outlierMin && sample.y < ystats.outlierMax)
+				refSamples = refSamples.filter(sample => sample.y > ystats.outlierMin && sample.y < ystats.outlierMax)
 			}
 			// Calculate global min/max range of x/y coordinates needed for the scatter plot. Needs to be done before colorAndShapeSamples that will dismiss
 			//  samples without color/shape or filtered out. If the plot is not premade and a filter on the coordinate terms is done, the coordinates excluded will be filtered out,

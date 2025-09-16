@@ -40,7 +40,7 @@ export class Model {
 
 		opts.orderByMedian = this.settings.orderByMedian
 		opts.isLogScale = this.settings.isLogScale
-
+		opts.removeOutliers = this.settings.removeOutliers
 		return opts
 	}
 
@@ -60,7 +60,7 @@ export class Model {
 		if (this.config.term0) terms.push(this.config.term0)
 		for (const t of terms) {
 			if (isNumericTerm(t.term)) {
-				const data = await this.app.vocabApi.getDescrStats(t, this.state.termfilter)
+				const data = await this.app.vocabApi.getDescrStats(t, this.state.termfilter, true)
 				if (data.error) {
 					if (data.error instanceof Error) console.error(data.error)
 					throw data.error
