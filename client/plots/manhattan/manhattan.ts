@@ -24,18 +24,13 @@ export function plotManhattan(div: any, data: any, settings: any) {
 	const svg = div
 		.append('svg')
 		.attr('width', data.plotData.png_width + settings.yAxisX + settings.yAxisSpace)
-		.attr('height', data.plotData.png_height + settings.yAxisY)
+		.attr('height', data.plotData.png_height + settings.yAxisY * 4) // Extra space for x-axis labels, legend, and title
 
 	// Add y-axis
 	const yAxisG = svg
 		.append('g')
-		.attr(
-			'transform',
-			`translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY - data.plotData.png_dot_radius})`
-		)
-	const yScale = scaleLinear()
-		.domain([0, data.plotData.y_max])
-		.range([data.plotData.png_height - settings.yAxisY, 0])
+		.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
+	const yScale = scaleLinear().domain([0, data.plotData.y_max]).range([data.plotData.png_height, 0])
 	yAxisG.call(d3axis.axisLeft(yScale))
 
 	// Add y-axis label
@@ -52,25 +47,97 @@ export function plotManhattan(div: any, data: any, settings: any) {
 	// Add png image
 	svg
 		.append('image')
-		.attr(
-			'transform',
-			`translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY - data.plotData.png_dot_radius})`
-		)
+		.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
 		.attr('width', data.plotData.png_width)
 		.attr('height', data.plotData.png_height)
 		.attr('href', `data:image/png;base64,${data.pngImg}`)
 
-	// Add x-axis
-	const xAxisG = svg
-		.append('g')
-		.attr(
-			'transform',
-			`translate(${settings.yAxisX + settings.yAxisSpace},${data.plotData.png_height + settings.yAxisY})`
-		)
-	const xScale = scaleLinear()
-		.domain([0, data.plotData.total_genome_length])
-		.range([0, data.plotData.png_width + settings.yAxisSpace])
-	xAxisG.call(d3axis.axisBottom(xScale))
+	// Create x-axis scale for positioning chromosome labels
+	const xScale = scaleLinear().domain([0, data.plotData.total_genome_length]).range([0, data.plotData.png_width])
+
+	// Add chromosome labels
+	if (data.plotData.chrom_data) {
+		const chromLabelY = data.plotData.png_height + settings.yAxisY + 20
+
+		Object.entries(data.plotData.chrom_data).forEach(([chrom, chromData]: [string, any]) => {
+			const chromLabel = chrom.replace('chr', '')
+
+			// Skip chrM if desired
+			if (chromLabel === 'M') return
+
+			// Calculate center position for label
+			const centerPos = settings.yAxisX + settings.yAxisSpace - 20 + xScale(chromData.center) // temp fix for right now. Will remove once png image is fixed
+
+			// Append chromosome label
+			svg
+				.append('text')
+				.attr('x', centerPos)
+				.attr('y', chromLabelY)
+				.attr('text-anchor', 'middle')
+				.attr('font-size', `${settings.fontSize - 2}px`)
+				.attr('fill', 'black')
+				.text(chromLabel)
+		})
+	}
+
+	// Add x-axis label
+	svg
+		.append('text')
+		.attr('x', settings.yAxisX + settings.yAxisSpace + data.plotData.png_width / 2)
+		.attr('y', data.plotData.png_height + settings.yAxisY + 45)
+		.attr('text-anchor', 'middle')
+		.attr('font-size', `${settings.fontSize}px`)
+		.attr('fill', 'black')
+		.text('Chromosomes')
+
+	// Add title
+	svg
+		.append('text')
+		.attr('x', settings.yAxisX + settings.yAxisSpace)
+		.attr('y', settings.yAxisY / 2)
+		.attr('text-anchor', 'left')
+		.attr('font-weight', 'bold')
+		.attr('font-size', `${settings.fontSize + 2}px`)
+		.attr('fill', 'black')
+		.text('Manhattan Plot')
+
+	// Add legend
+	const mutationTypes = [...new Set(data.plotData.points.map((p: any) => p.type))]
+	const legendData = mutationTypes.map(type => {
+		const point = data.plotData.points.find((p: any) => p.type === type)
+		return {
+			type: String(type).charAt(0).toUpperCase() + String(type).slice(1),
+			color: point?.color || '#888888'
+		}
+	})
+	const legendY = settings.yAxisY / 2 // Position from top of SVG
+	const itemWidth = 80
+	const totalWidth = legendData.length * itemWidth
+	const legendX = settings.yAxisX + settings.yAxisSpace + data.plotData.png_width - totalWidth - 15 // Position from right edge
+
+	// Legend items
+	legendData.forEach((item, i) => {
+		const x = legendX + i * itemWidth
+
+		// Legend dot
+		svg
+			.append('circle')
+			.attr('cx', x + 8)
+			.attr('cy', legendY)
+			.attr('r', 3)
+			.attr('fill', item.color)
+			.attr('stroke', 'black')
+			.attr('stroke-width', 1)
+
+		// Legend text
+		svg
+			.append('text')
+			.attr('x', x + 20)
+			.attr('y', legendY + 4)
+			.attr('font-size', '12px')
+			.attr('fill', 'black')
+			.text(item.type)
+	})
 }
 
 export function renderInteractivePoints(svg: any, plotData: any, geneTip?) {
