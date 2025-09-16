@@ -9,7 +9,6 @@ import { searchInit } from './search'
 import { select } from 'd3-selection'
 import { Menu, sayerror } from '#dom'
 import { dofetch3 } from '#common/dofetch'
-import { isUsableTerm } from '#shared/termdb.usecase.js'
 
 /*
 opts{}
@@ -246,7 +245,6 @@ class TdbApp extends AppBase implements RxApp {
 			.property('disabled', !n)
 			.text(!n ? 'Search or click term(s)' : `Submit ${n} term${n > 1 ? 's' : ''}`)
 
-		await this.mayShowCustomTerms()
 		this.dom.holder.selectAll('search, .termbtn, button').attr('tabindex', 0)
 		this.dom.holder.selectAll('.termbtn').on('keyup', event => {
 			if (event.key == 'Enter') event.target.click()
@@ -256,51 +254,6 @@ class TdbApp extends AppBase implements RxApp {
 	printError(e) {
 		sayerror(this.dom.errdiv, 'Error: ' + (e.message || e))
 		if (e.stack) console.log(e.stack)
-	}
-
-	async mayShowCustomTerms() {
-		if (Object.keys(this.state.submenu).length) return this.dom.customTermDiv.style('display', 'none') // do not display for submenu
-
-		// only run once, upon initiating this tree ui
-		const tws = await this.api.vocabApi.getCustomTerms()
-
-		if (!Array.isArray(tws) || tws.length == 0) return this.dom.customTermDiv.style('display', 'none')
-
-		// filter for display terms with usecase
-		const useTerms: any[] = []
-		for (const tw of tws) {
-			const uses = isUsableTerm(tw.term, this.state.tree.usecase, this.state.termdbConfig)
-			if (uses.has('plot')) useTerms.push(tw)
-		}
-		if (useTerms.length == 0) return this.dom.customTermDiv.style('display', 'none')
-
-		// has usable terms to display
-		this.dom.customTermDiv.selectAll('*').remove()
-		this.dom.customTermDiv.append('div').text('CUSTOM VARIABLES').style('font-size', '.7em')
-		for (const tw of useTerms) {
-			this.dom.customTermDiv
-				.append('div')
-				.style('margin-bottom', '3px')
-				.append('div')
-				.text(tw.term.name)
-				.attr('class', 'sja_filter_tag_btn')
-				.style('padding', '3px 6px')
-				.style('border-radius', '6px')
-				.on('click', () => {
-					if (!this.opts.tree) return // click callbacks are all under tree{}
-					if (this.opts.tree.click_term) {
-						this.opts.tree.click_term(tw)
-						return
-					}
-					if (this.opts.tree.click_term2select_tvs) {
-						this.api.dispatch({
-							type: 'submenu_set',
-							submenu: { term: tw.term, type: 'tvs' }
-						})
-						return
-					}
-				})
-		}
 	}
 }
 

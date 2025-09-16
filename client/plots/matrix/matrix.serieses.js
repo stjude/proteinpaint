@@ -86,8 +86,9 @@ export function getSerieses(data) {
 					const cellProps =
 						t.grp.type == 'hierCluster'
 							? setCellProps['hierCluster']
-							: t.tw.term.type == 'geneVariant' &&
-							  (t.tw?.q?.type == 'predefined-groupset' || t.tw?.q?.type == 'custom-groupset')
+							: (t.tw.term.type == 'geneVariant' &&
+									(t.tw?.q?.type == 'predefined-groupset' || t.tw?.q?.type == 'custom-groupset')) ||
+							  t.tw.term.type == 'samplelst'
 							? setCellProps['categorical']
 							: setCellProps[t.tw.term.type]
 

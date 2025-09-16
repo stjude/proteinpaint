@@ -1,5 +1,5 @@
 import { StoreApi, StoreBase, type AppApi, type RxStore } from '#rx'
-import { root_ID } from './tree'
+import { root_ID, custom_variables_ID } from './tree'
 import { getFilterItemByTag, findParent } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 
@@ -77,7 +77,7 @@ class TdbStore extends StoreBase implements RxStore {
 	validateState() {
 		const s = this.state
 		if (s.tree.expandedTermIds.length == 0) {
-			s.tree.expandedTermIds.push(root_ID)
+			s.tree.expandedTermIds.push(root_ID, custom_variables_ID)
 		} else {
 			if (s.tree.expandedTermIds[0] != root_ID) {
 				s.tree.expandedTermIds.unshift(root_ID)
