@@ -842,7 +842,10 @@ export class Barchart {
 					: ''
 			legendGrps.push({
 				name:
-					`<span style="${headingStyle}">` + t2.term.name + (value_by_label ? ', ' + value_by_label : '') + '</span>',
+					`<span style="${headingStyle}">` +
+					(t2.term.type == 'geneVariant' ? '' : t2.term.name) +
+					(value_by_label ? ', ' + value_by_label : '') +
+					'</span>',
 				items: s.rows
 					.flatMap(d => {
 						const total = chart ? this.totalsByDataId[d]?.[chart.chartId] : this.totalsByDataId[d]
