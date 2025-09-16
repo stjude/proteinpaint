@@ -81,6 +81,7 @@ tape(`initialization, empty credentials`, async test => {
 	test.deepEqual(
 		Object.keys(authApi).sort(),
 		[
+			'adjustFilter',
 			'canDisplaySampleIds',
 			'credEmbedders',
 			'getDsAuth',
@@ -599,7 +600,6 @@ tape(`invalid jwt`, async test => {
 	}
 
 	await authApi.maySetAuthRoutes(app, {}, '', serverconfig) //; console.log(app.routes)
-
 	{
 		const req = {
 			query: { embedder: 'localhost', dslabel: 'ds0' },

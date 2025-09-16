@@ -29,7 +29,8 @@ const defaultApiMethods = {
 	getHealth: () => undefined,
 	// credentialed embedders, using an array which can be frozen with Object.freeze(), unlike a Set()
 	credEmbedders: [],
-	mayAdjustFilter: (_, __, ___) => {}
+	mayAdjustFilter: (_, __, ___) => {},
+	adjustFilter: (_, __) => {}
 }
 
 // these may be overriden within maySetAuthRoutes()
