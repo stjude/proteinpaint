@@ -1770,30 +1770,6 @@ async function getFilesAndShowTable(obj) {
 			}
 			if (!response.resultData.png) throw 'png missing'
 
-			// Show and populate download button div next the Run Analysis button
-			// Create a unique name for the download file based on selected mutations
-			// and the current timestamp
-			const selectedMutations = datatypeOptions
-				.filter(opt => opt.selected)
-				.map(opt => opt.label.replace(/[^a-zA-Z0-9]/g, ''))
-				.join('_')
-
-			const now = new Date()
-			const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
-				now.getDate()
-			).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(
-				2,
-				'0'
-			)}-${String(now.getSeconds()).padStart(2, '0')}`
-			obj.downloadButtonDiv.selectAll('*').remove()
-			obj.downloadButtonDiv
-				.append('button')
-				.text('Download Plot')
-				.on('click', () => {
-					to_svg(svg.node() as SVGSVGElement, `GRIN2_Analysis_${selectedMutations}_${timestamp}`)
-				})
-			obj.downloadButtonDiv.style('display', 'block')
-
 			// Create results container
 			const resultContainer = obj.resultDiv.append('div').style('text-align', 'left').style('margin', '0 auto')
 
@@ -1825,6 +1801,31 @@ async function getFilesAndShowTable(obj) {
 				legendVerticalOffset: 4,
 				legendFontSize: 12
 			})
+
+			// Show and populate download button div next the Run Analysis button
+			// Create a unique name for the download file based on selected mutations
+			// and the current timestamp
+			const svg = plotDiv.select('svg')
+			const selectedMutations = datatypeOptions
+				.filter(opt => opt.selected)
+				.map(opt => opt.label.replace(/[^a-zA-Z0-9]/g, ''))
+				.join('_')
+
+			const now = new Date()
+			const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+				now.getDate()
+			).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(
+				2,
+				'0'
+			)}-${String(now.getSeconds()).padStart(2, '0')}`
+			obj.downloadButtonDiv.selectAll('*').remove()
+			obj.downloadButtonDiv
+				.append('button')
+				.text('Download Plot')
+				.on('click', () => {
+					to_svg(svg.node() as SVGSVGElement, `GRIN2_Analysis_${selectedMutations}_${timestamp}`)
+				})
+			obj.downloadButtonDiv.style('display', 'block')
 
 			// Add error handler for image
 			resultContainer.node().onerror = () => {
