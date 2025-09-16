@@ -47,6 +47,6 @@ export class SCViewRenderer {
 	}
 
 	update(settings) {
-		this.chartBtns.update(settings?.sample)
+		this.chartBtns.update(settings)
 	}
 }

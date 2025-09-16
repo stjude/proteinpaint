@@ -1,4 +1,4 @@
-import type { BasePlotConfig, MassState } from '#mass/types/mass'
+import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { SCConfigOpts, SCDom, SCState, SCViewerOpts, SampleColumn } from './SCTypes'
 import type { SingleCellSample } from '#types'
 import { PlotBase } from '../PlotBase.ts'
@@ -7,12 +7,13 @@ import { SCModel } from './model/SCModel'
 import { SCViewModel } from './viewModel/SCViewModel'
 import { SCInteractions } from './interactions/SCInteractions'
 import { SCViewRenderer } from './view/SCViewRenderer'
+import { getDefaultSCAppSettings } from './defaults'
 import { importPlot } from '#plots/importPlot.js'
 
 /** App in development. Project being set aside for awhile
  *
  * App TODOs:
- *  - Implement plot buttons
+ *  - Plot buttons
  *  	- Either return list of available data or create a route
  *  	- Implement additional menus to appear on click
  *  - Implement multi plot rendering
@@ -132,30 +133,17 @@ class SCViewer extends PlotBase implements RxComponent {
 		for (const plot of state.subplots) {
 			if (!this.components.plots[plot.id]) await this.initSubplot(plot)
 		}
-
-		this.view.update(config.settings.sc)
+		this.view.update(config.settings)
 	}
 }
 
 export const SCInit = getCompInit(SCViewer)
 export const componentInit = SCInit
 
-export function getDefaultSCSettings(overrides = {}) {
-	const defaults = {
-		columns: {
-			sample: 'Sample'
-		},
-		sample: undefined
-	}
-	return Object.assign(defaults, overrides)
-}
-
-export function getPlotConfig(opts: SCConfigOpts) {
+export function getPlotConfig(opts: SCConfigOpts, app: MassAppApi) {
 	const config = {
 		chartType: 'sc',
-		settings: {
-			sc: getDefaultSCSettings(opts.overrides || {})
-		}
+		settings: getDefaultSCAppSettings(opts.overrides || {}, app)
 	} as any
 
 	return copyMerge(config, opts)
