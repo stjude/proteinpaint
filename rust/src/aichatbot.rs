@@ -374,16 +374,27 @@ async fn extract_DE_search_terms_from_query(
     max_new_tokens: usize,
     top_p: f32,
 ) -> String {
-    let file_path = "src/DE_docs2.txt";
+    let contents = String::from("Differential Gene Expression (DGE or DE) is a technique where the most upregulated and downregulated genes between two cohorts of samples (or patients) are determined. A volcano plot is shown with fold-change in the x-axis and adjusted p-value on the y-axis. So, the upregulated and downregulared genes are on opposite sides of the graph and the most significant genes (based on adjusted p-value) is on the top of the graph.
 
-    // Open the file
-    let mut file = File::open(file_path).unwrap();
+The user may select a cutoff for a continuous variables such as age. In such cases the group should only include the range specified by the user. Inside the JSON each entry the name of the group must be inside the field \"name\". For the cutoff (if provided) a field called \"cutoff\" must be provided which should contain a subfield \"name\" containing the name of the cutoff, followed by \"greater\"/\"lesser\"/\"equal\" to followed by the numeric value of the cutoff. If the unit of the variable is provided such as cm,m,inches,celsius etc. then add it to a separate field called \"units\".  
 
-    // Create a string to hold the file contents
-    let mut contents = String::new();
+Example input user queries:
+When two groups are found give the following JSON output show {\"group1\": \"groupA\", \"group2\": \"groupB\"} 
+User query1: \"Show me the differential gene expression plot for groups groupA and groupB\"
+Output JSON query1: {\"group1\": {\"name\": \"groupA\"}, \"group2\": {\"name\": \"groupB\"}}
 
-    // Read the file contents into the string
-    file.read_to_string(&mut contents).unwrap();
+User query2: \"Show volcano plot for White vs Black\"
+Output JSON query2: {\"group1\": {\"name\": \"White\"}, \"group2\": {\"name\": \"Black\"}}
+
+In case no suitable groups are found, show {\"output\":\"No suitable two groups found for differential gene expression\"}
+User query3: \"Who wants to have vodka?\"
+Output JSON query3: {\"output\":\"No suitable two groups found for differential gene expression\"}
+
+User query4: \"Show volcano plot for Asians with age less than 20 and African greater than 80\"
+Output JSON query4: {\"group1\": {\"name\": \"Asians\", \"filter\": {\"name\": \"age\", \"cutoff\": {\"lesser\": 20}}}, \"group2\": {\"name\": \"African\", \"filter\": {\"name\": \"age\", \"cutoff\": {\"greater\": 80}}}}
+
+User query5: \"Show Differential gene expression plot for males with height greater than 185cm and women with less than 100cm\"
+Output JSON query5: {\"group1\": {\"name\": \"males\", \"filter\": {\"name\": \"height\", \"cutoff\": {\"greater\": 185, \"units\":\"cm\"}}}, \"group2\": {\"name\": \"women\", \"filter\": {\"name\": \"height\", \"cutoff\": {\"lesser\": 100, \"units\": \"cm\"}}}}");
 
     // Split the contents by the delimiter "---"
     let parts: Vec<&str> = contents.split("---").collect();
@@ -429,7 +440,7 @@ async fn extract_DE_search_terms_from_query(
     InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
 
     // Create RAG agent
-    let router_instructions = "Extract the group variable names for differential gene expression from input query. When two groups are found give the following JSON output show {{\"group1\": {\"name\": \"groupA\"}, \"group2\": {\"name\": \"groupB\"}}}. In case no suitable groups are found, show {\"output\":\"No suitable two groups found for differential gene expression\"}. In case of a continuous variable such as age, height added additional field to the group called \"filter\". This should contain a sub-field called \"names\" followed by a subfield called \"cutoff\". This sub-field should contain a key either greater, lesser or equalto. If the continuous variable has units provided by the user then add it in a separate field called \"units\". User query1: \"Show volcano plot for Asians with age less than 20 and African greater than 80\". Output JSON query1: {\"group1\": {\"name\": \"Asians\", \"filter\": {\"name\": \"age\", \"cutoff\": {\"lesser\": 20}}}, \"group2\": {\"name\": \"African\", \"filter\": {\"name\": \"age\", \"cutoff\": {\"greater\": 80}}}}. User query2: \"Show Differential gene expression plot for males with height greater than 185cm and women with less than 100cm\". Output JSON query2: {\"group1\": {\"name\": \"males\", \"filter\": {\"name\": \"height\", \"cutoff\": {\"greater\": 185, \"units\":\"cm\"}}}, \"group2\": {\"name\": \"women\", \"filter\": {\"name\": \"height\", \"cutoff\": {\"lesser\": 100, \"units\": \"cm\"}}}}. User query3: \"Show DE plot between healthy and diseased groups. Output JSON query3: {\"group1\":{\"name\":\"healthy\"},\"group2\":{\"name\":\"diseased\"}}";
+    let router_instructions = "Extract the group variable names for differential gene expression from input query. When two groups are found give the following JSON output with no extra comments. Show {{\"group1\": {\"name\": \"groupA\"}, \"group2\": {\"name\": \"groupB\"}}}. In case no suitable groups are found, show {\"output\":\"No suitable two groups found for differential gene expression\"}. In case of a continuous variable such as age, height added additional field to the group called \"filter\". This should contain a sub-field called \"names\" followed by a subfield called \"cutoff\". This sub-field should contain a key either greater, lesser or equalto. If the continuous variable has units provided by the user then add it in a separate field called \"units\". User query1: \"Show volcano plot for Asians with age less than 20 and African greater than 80\". Output JSON query1: {\"group1\": {\"name\": \"Asians\", \"filter\": {\"name\": \"age\", \"cutoff\": {\"lesser\": 20}}}, \"group2\": {\"name\": \"African\", \"filter\": {\"name\": \"age\", \"cutoff\": {\"greater\": 80}}}}. User query2: \"Show Differential gene expression plot for males with height greater than 185cm and women with less than 100cm\". Output JSON query2: {\"group1\": {\"name\": \"males\", \"filter\": {\"name\": \"height\", \"cutoff\": {\"greater\": 185, \"units\":\"cm\"}}}, \"group2\": {\"name\": \"women\", \"filter\": {\"name\": \"height\", \"cutoff\": {\"lesser\": 100, \"units\": \"cm\"}}}}. User query3: \"Show DE plot between healthy and diseased groups. Output JSON query3: {\"group1\":{\"name\":\"healthy\"},\"group2\":{\"name\":\"diseased\"}}";
     //println! {"router_instructions:{}",router_instructions};
     let agent = AgentBuilder::new(comp_model)
         .preamble(router_instructions)
@@ -445,7 +456,17 @@ async fn extract_DE_search_terms_from_query(
     //println!("result_groups:{}", result);
     let json_value: Value = serde_json::from_str(&result).expect("REASON");
     //println!("json_value:{}", json_value);
-    json_value.to_string()
+    match llm_backend_type {
+        llm_backend::Ollama() => json_value.to_string(),
+        llm_backend::Sj() => {
+            let json_value2: Value =
+                serde_json::from_str(&json_value[0]["generated_text"].to_string()).expect("REASON2");
+            //println!("json_value2:{}", json_value2.as_str().unwrap());
+            let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON2");
+            //println!("Classification result:{}", json_value3);
+            json_value3.to_string()
+        }
+    }
 }
 
 struct DbRows {
