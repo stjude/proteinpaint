@@ -734,16 +734,20 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 	//   - if an array with 1+ entries: these are the only terms to be matched against a dataset's hidden terms,
 	//     and the ds should construct an actual or undefined auth filter based on matched terms
 	authApi.mayAdjustFilter = function (q, ds, routeTwLst) {
-		if (!ds.cohort?.termdb?.getAdditionalFilter) return
+		if (!ds.cohort?.termdb?.getAdditionalFilter || !ds.cohort?.termdb?.getFilter) return
 		if (!q.__protected__) throw `missing q.__protected__`
+		if (ds.cohort?.termdb?.getFilter) {
+			const authFilter = ds.cohort.termdb.getFilter(q.__protected__.clientAuthResult)
+			this.adjustFilter(q, authFilter)
+			return
+		}
 		if (routeTwLst && !Array.isArray(routeTwLst)) throw `invalid routeTwLst`
 
 		// clientAuthResult{}: from authApi.getNonsensitiveInfo()
 		// ignoredTermIds[]: a list of protected term.ids to ignore,
 		//   such as when a server route is expected to aggregate the data
 		//   so that no sample level data will be included in the server response
-		if (!q.__protected__.clientAuthResult || !q.__protected__.ignoredTermIds)
-			throw `missing q.__protected__ clientAuthResult or ignoredTermIds`
+		if (!q.__protected__.ignoredTermIds) throw `missing q.__protected__ ignoredTermIds`
 		// NOTE: as needed, the server route code must append to q.__protected__.ignoredTermIds[],
 		//       since it knows the req.query key names that correspond to terms/termwrappers
 
@@ -753,6 +757,10 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 				: routeTwLst.filter(tw => !q.__protected__.ignoredTermIds.includes(tw.term.id)).map(tw => tw.term)
 		const authFilter = ds.cohort.termdb.getAdditionalFilter(q.__protected__.clientAuthResult, routeTerms)
 
+		authApi.adjustFilter(q, authFilter)
+	}
+
+	authApi.adjustFilter = function (q, authFilter) {
 		if (!q.filter) q.filter = { type: 'tvslst', join: '', lst: [] }
 		else if (q.filter.type != 'tvslst') throw `invalid q.filter.type != 'tvslst'`
 		else if (!Array.isArray(q.filter.lst)) throw `q.filter.lst[] is not an array`

@@ -1592,6 +1592,7 @@ keep this setting here for reason of:
 	//terms  are shown in the dictionary based on term and user role.
 	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
 	getAdditionalFilter?: (clientAuthResult: any, term: any) => Filter | undefined
+	getFilter?: (clientAuthResult: any) => Filter | undefined
 }
 
 type SampleType = {
