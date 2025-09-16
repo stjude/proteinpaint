@@ -3062,37 +3062,37 @@
   "plots/barchart.js": {
     "lines": {
       "total": 415,
-      "covered": 358,
+      "covered": 350,
       "skipped": 0,
-      "pct": 86.26
+      "pct": 84.33
     },
     "functions": {
       "total": 90,
-      "covered": 78,
+      "covered": 76,
       "skipped": 0,
-      "pct": 86.66
+      "pct": 84.44
     },
     "statements": {
       "total": 464,
-      "covered": 379,
+      "covered": 370,
       "skipped": 0,
-      "pct": 81.68
+      "pct": 79.74
     },
     "branches": {
-      "total": 411,
-      "covered": 283,
+      "total": 413,
+      "covered": 280,
       "skipped": 0,
-      "pct": 68.85
+      "pct": 67.79
     },
     "lowestPct": {
-      "curr": 68.85,
-      "prev": 64.39,
-      "diff": 4.459999999999994
+      "curr": 67.79,
+      "prev": 68.85,
+      "diff": -1.059999999999988
     },
     "averagePct": {
-      "curr": 80.86250000000001,
-      "prev": 73.76249999999999,
-      "diff": 7.100000000000023
+      "curr": 79.075,
+      "prev": 80.86250000000001,
+      "diff": -1.7875000000000085
     }
   },
   "mass/test/barchart.integration.spec.js": {
@@ -3602,37 +3602,37 @@
   "termsetting/handlers/geneVariant.ts": {
     "lines": {
       "total": 193,
-      "covered": 2,
+      "covered": 81,
       "skipped": 0,
-      "pct": 1.03
+      "pct": 41.96
     },
     "functions": {
       "total": 30,
-      "covered": 0,
+      "covered": 11,
       "skipped": 0,
-      "pct": 0
+      "pct": 36.66
     },
     "statements": {
       "total": 216,
-      "covered": 2,
+      "covered": 86,
       "skipped": 0,
-      "pct": 0.92
+      "pct": 39.81
     },
     "branches": {
       "total": 114,
-      "covered": 0,
+      "covered": 37,
       "skipped": 0,
-      "pct": 0
+      "pct": 32.45
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 32.45,
       "prev": 42.85,
-      "diff": -42.85
+      "diff": -10.399999999999999
     },
     "averagePct": {
-      "curr": 0.48750000000000004,
+      "curr": 37.72,
       "prev": 45.0975,
-      "diff": -44.61
+      "diff": -7.377499999999998
     }
   },
   "plots/barchart.events.js": {
@@ -6909,6 +6909,114 @@
       "curr": 0.445,
       "prev": 0.445,
       "diff": 0
+    }
+  },
+  "plots/violin.interactivity.js": {
+    "lines": {
+      "total": 154,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 0.64
+    },
+    "functions": {
+      "total": 27,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
+    },
+    "statements": {
+      "total": 163,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 0.61
+    },
+    "branches": {
+      "total": 116,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
+    },
+    "lowestPct": {
+      "curr": 0,
+      "prev": 0,
+      "diff": 0
+    },
+    "averagePct": {
+      "curr": 0.3125,
+      "prev": 0,
+      "diff": 0.3125
+    }
+  },
+  "plots/violin.js": {
+    "lines": {
+      "total": 95,
+      "covered": 7,
+      "skipped": 0,
+      "pct": 7.36
+    },
+    "functions": {
+      "total": 21,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 4.76
+    },
+    "statements": {
+      "total": 111,
+      "covered": 7,
+      "skipped": 0,
+      "pct": 6.3
+    },
+    "branches": {
+      "total": 75,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 1.33
+    },
+    "lowestPct": {
+      "curr": 1.33,
+      "prev": 0,
+      "diff": 1.33
+    },
+    "averagePct": {
+      "curr": 4.9375,
+      "prev": 0,
+      "diff": 4.9375
+    }
+  },
+  "plots/violin.renderer.js": {
+    "lines": {
+      "total": 225,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 0.44
+    },
+    "functions": {
+      "total": 44,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
+    },
+    "statements": {
+      "total": 248,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 0.4
+    },
+    "branches": {
+      "total": 255,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
+    },
+    "lowestPct": {
+      "curr": 0,
+      "prev": 0,
+      "diff": 0
+    },
+    "averagePct": {
+      "curr": 0.21000000000000002,
+      "prev": 0,
+      "diff": 0.21000000000000002
     }
   }
 }
