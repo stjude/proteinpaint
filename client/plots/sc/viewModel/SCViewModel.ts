@@ -3,7 +3,7 @@ import type { TableColumn, TableRow } from '#dom'
 import type { SCConfig, SCFormattedState, SampleColumn } from '../SCTypes'
 import type { SingleCellSample } from '#types'
 
-/** TODOs when app resumes development
+/** TODOs
  *  - ?Implement data mapper for buttons?
  *  - Implement data mapper for plots in the dashboard
  */
@@ -23,14 +23,14 @@ export class SCViewModel {
 	state: SCFormattedState
 	tableData: TableData
 
-	constructor(app: AppApi, config: SCConfig, samples: SingleCellSample[], sampleColumns?: SampleColumn[]) {
+	constructor(app: AppApi, config: SCConfig, items: SingleCellSample[], sampleColumns?: SampleColumn[]) {
 		this.app = app
 		this.state = this.app.getState()
 
 		//Should only be called once
-		const [rows, columns] = this.getTabelData(config, samples, sampleColumns)
+		const [rows, columns] = this.getTabelData(config, items, sampleColumns)
 		const selectedRows: number[] = []
-		const i = samples.findIndex(i => i.sample == config.settings.sc.sample)
+		const i = items.findIndex(i => i.sample == config.settings.sc.item?.sample)
 		if (i != -1) selectedRows.push(i)
 
 		/** Returning this data separately from the eventual
@@ -42,9 +42,9 @@ export class SCViewModel {
 		}
 	}
 
-	getTabelData(plotConfig: SCConfig, samples: SingleCellSample[], sampleColumns?: SampleColumn[]) {
+	getTabelData(plotConfig: SCConfig, items: SingleCellSample[], sampleColumns?: SampleColumn[]) {
 		const rows: TableRow[] = []
-		const hasExperiments = samples.some(i => i.experiments)
+		const hasExperiments = items.some(i => i.experiments)
 
 		// first column is sample and is hardcoded
 		const columns: TableColumn[] = [{ label: plotConfig.settings.sc.columns.sample, sortable: true }]
@@ -62,18 +62,18 @@ export class SCViewModel {
 		// if samples are using experiments, add the hardcoded experiment column at the end
 		if (hasExperiments) columns.push({ label: 'Experiment', sortable: true }) // corresponds to this.samples[].experiments[].experimentID
 
-		for (const sample of samples) {
+		for (const item of items) {
 			if (hasExperiments)
 				//GDC
-				for (const exp of sample.experiments!) {
+				for (const exp of item.experiments!) {
 					// first cell is always sample name. sneak in experiment object to be accessed in click callback
 					//TODO: Consider removing the experimentID as it is no longer needed.
-					const row: { [index: string]: any }[] = [{ value: sample.sample, __experimentID: exp.experimentID }]
+					const row: { [index: string]: any }[] = [{ value: item.sample, __experimentID: exp.experimentID }]
 					// hardcode to expect exp.sampleName and add this as a column
 					row.push({ value: exp.sampleName })
 					// optional sample and experiment columns
 					for (const col of sampleColumns || []) {
-						row.push({ value: sample[col.termid] })
+						row.push({ value: item[col.termid] })
 					}
 
 					// hardcode to always add in experiment id column
@@ -85,10 +85,10 @@ export class SCViewModel {
 			else {
 				// sample does not use experiment
 				// first cell is sample name
-				const row: { [index: string]: any }[] = [{ value: sample.sample }]
+				const row: { [index: string]: any }[] = [{ value: item.sample }]
 				// optional sample columns
 				for (const col of sampleColumns || []) {
-					row.push({ value: sample[col.termid] })
+					row.push({ value: item[col.termid] })
 				}
 				rows.push(row)
 			}

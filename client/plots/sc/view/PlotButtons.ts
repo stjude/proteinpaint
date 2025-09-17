@@ -4,16 +4,16 @@ import { Menu, GeneSetEditUI } from '#dom'
 import { TermTypes } from '#shared/terms.js'
 import { digestMessage } from '#termsetting'
 
-/** Rendering for the plot buttons that appear below the sample
+/** Rendering for the plot buttons that appear below the item
  * table.
  *
  * Notes:
  *  - The hierarchical clustering limits to the first 100 genes.
  *
  ******* TODOs:
- * - Implement ds specific keys or logic for sample name
+ * - Implement ds specific keys or logic for item name
  * - Update anywhere with 'CHANGEME' before prod
- * - Disable all chart btns until plot loads for performance??
+ * - Disable all plot btns until plot loads for performance??
  *
  ******* Scatter plot implementation TODOs:
  * - Check that the proper single cell data is used
@@ -31,21 +31,21 @@ import { digestMessage } from '#termsetting'
  * - Limit to 100 genes or no?
  * - What settings to use for hier cluster?
  * */
-export class ChartButtons {
-	chartBtnsDom: {
+export class PlotButtons {
+	plotBtnsDom: {
 		promptDiv: Div
 		selectPrompt: Elem
 		btnsDiv: Div
 		tip: Menu
 	}
-	sample?: { [key: string]: any }
+	item?: { [key: string]: any }
 	interactions: SCInteractions
 	settings?: any
 
 	constructor(interactions: SCInteractions, holder: Div) {
 		holder.style('padding', '10px')
 		const promptDiv = holder.append('div').style('padding', '10px 0').text('Select data from')
-		this.chartBtnsDom = {
+		this.plotBtnsDom = {
 			promptDiv,
 			selectPrompt: promptDiv.append('span'),
 			btnsDiv: holder.append('div'),
@@ -55,23 +55,24 @@ export class ChartButtons {
 	}
 
 	update(settings) {
-		/** If the user has not selected a sample yet but clicks
-		 * the select sample/plots btn above the table, the prompt appears
+		/** If the user has not selected a item yet but clicks
+		 * the select item/plots btn above the table, the prompt appears
 		 * unnecessarily */
-		this.chartBtnsDom.promptDiv.style('display', !settings.sc.sample ? 'none' : 'block')
-		if (!settings.sc.sample) return
+		const item = settings.sc.item
+		this.plotBtnsDom.promptDiv.style('display', !item ? 'none' : 'block')
+		if (!item) return
 		this.settings = settings
-		this.sample = settings.sc.sample
-		const name = settings.sc.sample.sample // add ds specific keys/logic here
-		this.chartBtnsDom.selectPrompt.text(` ${name}:`)
+		this.item = item
+		const name = item.sample // add ds specific keys/logic here
+		this.plotBtnsDom.selectPrompt.text(` ${name}:`)
 		this.renderChartBtns()
 	}
 
 	renderChartBtns() {
-		this.chartBtnsDom.btnsDiv.selectAll('*').remove()
+		this.plotBtnsDom.btnsDiv.selectAll('*').remove()
 		const btns = this.getChartBtnOpts()
 
-		this.chartBtnsDom.btnsDiv
+		this.plotBtnsDom.btnsDiv
 			.selectAll('button')
 			.data(btns.filter(b => b.isVisible()))
 			.enter()
@@ -85,7 +86,7 @@ export class ChartButtons {
 			.text(b => b.label)
 			.on('click', async (e, plot) => {
 				if (plot.open) {
-					this.chartBtnsDom.tip.clear().showunder(e.target)
+					this.plotBtnsDom.tip.clear().showunder(e.target)
 					plot.open(plot, this)
 				}
 				// else {
@@ -129,15 +130,15 @@ export class ChartButtons {
 	}
 
 	//********** Btn Menus **********/
-	geneSearchMenu(plot: any, self: ChartButtons) {
-		self.chartBtnsDom.tip.clear()
+	geneSearchMenu(plot: any, self: PlotButtons) {
+		self.plotBtnsDom.tip.clear()
 
 		new GeneSetEditUI({
-			holder: self.chartBtnsDom.tip.d.append('div') as any,
-			genome: self.interactions.genome,
+			holder: self.plotBtnsDom.tip.d.append('div') as any,
+			genome: self.interactions.app.opts.genome,
 			vocabApi: {},
 			callback: async result => {
-				self.chartBtnsDom.tip.hide()
+				self.plotBtnsDom.tip.hide()
 				const config = await plot.getPlotConfig(result.geneList)
 				await self.interactions.createSubplot(config)
 			}
@@ -146,11 +147,11 @@ export class ChartButtons {
 
 	//********** Plot Config Helpers **********/
 	async getViolinConfig(gene) {
-		if (!this.sample) throw new Error('No sample selected')
+		if (!this.item) throw new Error('No item selected')
 		return {
 			chartType: 'violin',
 			term: {
-				$id: await digestMessage(`${gene}-${this.sample.sample}-${this.sample.experiment}`),
+				$id: await digestMessage(`${gene}-${this.item.sample}-${this.item.experiment}`),
 				term: {
 					/** NOTE: There are no term handlers for the single cell types */
 					type: TermTypes.SINGLECELL_GENE_EXPRESSION,
@@ -158,22 +159,22 @@ export class ChartButtons {
 					gene,
 					name: gene,
 					sample: {
-						sID: this.sample.sample,
-						eID: this.sample.experiment
+						sID: this.item.sample,
+						eID: this.item.experiment
 					}
 				}
 			},
 			term2: {
 				//CHANGE ME
-				$id: await digestMessage(`CHANGEME-${this.sample.sample}-${this.sample.experiment}`),
+				$id: await digestMessage(`CHANGEME-${this.item.sample}-${this.item.experiment}`),
 				term: {
 					/** NOTE: There are no term handlers for the single cell types */
 					type: TermTypes.SINGLECELL_CELLTYPE,
 					id: 'cluster', //CHANGE ME, singlecell.data.plots.[i].colorColumns
 					name: 'cluster', //CHANGE ME
 					sample: {
-						sID: this.sample.sample,
-						eID: this.sample.experiment
+						sID: this.item.sample,
+						eID: this.item.experiment
 					},
 					plot: 'UMAP' //CHANGEME
 				}
@@ -182,14 +183,14 @@ export class ChartButtons {
 	}
 
 	async getScatterConfig(geneLst) {
-		if (!this.sample) throw new Error('No sample selected')
+		if (!this.item) throw new Error('No item selected')
 		const gene1 = geneLst[0].gene
 		const gene2 = geneLst[1].gene
 
 		return {
 			chartType: 'sampleScatter',
 			term: {
-				$id: await digestMessage(`${gene1}-${this.sample.sample}-${this.sample.experiment}`),
+				$id: await digestMessage(`${gene1}-${this.item.sample}-${this.item.experiment}`),
 				term: {
 					type: TermTypes.SINGLECELL_GENE_EXPRESSION,
 					gene: gene1,
@@ -197,13 +198,13 @@ export class ChartButtons {
 					name: gene1,
 					q: { mode: 'continuous' },
 					sample: {
-						sID: this.sample.sample,
-						eID: this.sample.experiment
+						sID: this.item.sample,
+						eID: this.item.experiment
 					}
 				}
 			},
 			term2: {
-				$id: await digestMessage(`${gene2}-${this.sample.sample}-${this.sample.experiment}`),
+				$id: await digestMessage(`${gene2}-${this.item.sample}-${this.item.experiment}`),
 				term: {
 					type: TermTypes.SINGLECELL_GENE_EXPRESSION,
 					gene: gene2,
@@ -211,8 +212,8 @@ export class ChartButtons {
 					name: gene2,
 					q: { mode: 'continuous' },
 					sample: {
-						sID: this.sample.sample,
-						eID: this.sample.experiment
+						sID: this.item.sample,
+						eID: this.item.experiment
 					}
 				}
 			}
@@ -227,7 +228,7 @@ export class ChartButtons {
 					gene: g.gene,
 					name: `${g.gene} ${this.settings.hierClusterUnit}`,
 					type: TermTypes.SINGLECELL_GENE_EXPRESSION,
-					sample: this.sample
+					sample: this.item
 				},
 				q: {}
 			}
