@@ -4,7 +4,7 @@ import { renderTable } from '#dom'
 import type { SCInteractions } from '../interactions/SCInteractions'
 
 /** Renders the sc app */
-export class ChartsSelectionRenderer {
+export class PlotSelectionRenderer {
 	dom: SCDom
 	interactions: SCInteractions
 
@@ -14,7 +14,7 @@ export class ChartsSelectionRenderer {
 		this.renderSamplesTable(tableData)
 	}
 
-	/** Users select one sample at a time to render the plot buttons
+	/** Users select one item at a time to render the plot buttons
 	 * to init() plots in the dashboard.*/
 	renderSamplesTable(tableData: SCTableData) {
 		renderTable({
@@ -31,13 +31,13 @@ export class ChartsSelectionRenderer {
 			striped: true,
 			selectedRows: tableData.selectedRows,
 			noButtonCallback: index => {
-				const sample = {}
+				const item = {}
 				tableData.rows[index].forEach((r: TableCell, idx: number) => {
 					if (!r.value) return
-					sample[tableData.columns[idx].label.toLowerCase()] = r.value
+					item[tableData.columns[idx].label.toLowerCase()] = r.value
 				})
-				this.interactions.updateSample(sample)
-				this.dom.chartBtnsDiv.style('display', 'block')
+				this.interactions.updateItem(item)
+				this.dom.plotsBtnsDiv.style('display', 'block')
 			}
 		})
 	}

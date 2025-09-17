@@ -5,16 +5,12 @@ import type { TableRow, TableColumn } from '#dom'
 /** WIP config for the sc app */
 export type SCConfig = PlotConfig & {
 	chartType: 'sc'
-	/** Each section is defined by the sample/cell/etc.
-	 * the array is the plot ids */
-	sections: { [index: string]: string[] }
 	/** Common settings and settings for each child component/plot */
 	settings: SCSettings
 }
 
 /** Opts defined in getPlotConfig() */
 export type SCConfigOpts = {
-	sections?: { [index: string]: string[] }
 	/** TODO: Fix this. It should be settings and not overrides.
 	 * Settings overrides */
 	overrides?: any
@@ -29,12 +25,12 @@ export type SCDom = {
 	/** Holder for the sample table */
 	tableDiv: Div
 	/** Holder for the dynamically generated plot buttons for each sample */
-	chartBtnsDiv: Div
-	/** Dashboard/multiple plot holder */
-	chartsDiv: Div
+	plotsBtnsDiv: Div
 	/** Sandbox header, if provided */
 	header?: Elem
 }
+
+export type Segments = { [key: string]: { title: any; subplots: any } }
 
 export type SCSettings = {
 	sc: {
@@ -42,8 +38,8 @@ export type SCSettings = {
 			/** Defined column name for 'sample' column*/
 			sample: string
 		}
-		/** Active sample choosen by the user */
-		sample: any
+		/** Active item choosen by the user */
+		item: any
 	}
 	hierClusterUnit: string
 	hierCluster: {
@@ -60,7 +56,7 @@ export type SCFormattedState = {
 	/** Filtered plots with parentId == this.id.
 	 * Allows for non-nested plot objects in state.plots.
 	 * This is ** not ** saved in the state */
-	subplots: PlotConfig[]
+	subplots: any[]
 	termfilter: any //Filter
 	termdbConfig: any
 	vocab: {

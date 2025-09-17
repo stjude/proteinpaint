@@ -6,7 +6,7 @@ export function getDefaultSCAppSettings(overrides = {}, app) {
 				// TODO: Implement ds specific column name
 				sample: 'Sample'
 			},
-			sample: undefined
+			item: undefined
 		},
 		hierClusterUnit: app.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression',
 		hierCluster: {
