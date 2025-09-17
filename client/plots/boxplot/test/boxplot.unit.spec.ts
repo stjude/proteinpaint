@@ -39,7 +39,8 @@ const mockSettings = {
 	orderByMedian: false,
 	rowHeight: 20,
 	rowSpace: 10,
-	useDefaultSettings: true
+	useDefaultSettings: true,
+	removeOutliers: false
 }
 
 const mockConfig = {
