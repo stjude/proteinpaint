@@ -37,7 +37,6 @@ This wilcoxon test implementation aims to copy the methodology used in R's wilco
 #   pvalue: p-value of test
 # }]
 
-
 ########
 # Code #
 ########
