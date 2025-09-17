@@ -1,1 +1,2 @@
-
+Features
+- Working prototype of new sc app. Gene expression subplots launch within item segements. 
