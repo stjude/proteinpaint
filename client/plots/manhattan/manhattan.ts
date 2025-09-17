@@ -102,7 +102,9 @@ export function plotManhattan(div: any, data: any, settings: any) {
 		.attr('href', `data:image/png;base64,${data.pngImg || data.png}`)
 
 	// Create scales for positioning elements
-	const xScale = scaleLinear().domain([0, data.plotData.total_genome_length]).range([0, data.plotData.png_width])
+	const xScale = scaleLinear()
+		.domain([-data.plotData.x_buffer, data.plotData.total_genome_length + data.plotData.x_buffer])
+		.range([0, data.plotData.png_width])
 
 	// Add interactive dots layer
 	if (settings.showInteractiveDots && data.plotData.points && data.plotData.points.length > 0) {
