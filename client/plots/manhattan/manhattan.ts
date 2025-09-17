@@ -6,7 +6,7 @@ import { Menu, table2col } from '#dom'
  * Creates an interactive Manhattan plot on top of a PNG background plot image.
  *
  * @param {Object} div - div element to contain the plot
- * @param {Object} data - Plot data:
+ * @param {Object} data - Plot data
  * @param {Object} settings - Display configuration options:
  *   @param {number} [settings.plotWidth=1000] - Plot area width
  *   @param {number} [settings.plotHeight=400] - Plot area height

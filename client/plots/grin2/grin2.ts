@@ -85,8 +85,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 			.style('width', '70%')
 			.text('Options')
 
-		const queries = this.app.vocabApi.termdbConfig.queries
-
 		// Function to use for adding data types
 		const addDataTypeTd = (tr, text) => {
 			tr.append('td')
@@ -102,6 +100,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const addOptsTd = tr => {
 			return tr.append('td').style('padding', '8px').style('border-bottom', `1px solid ${this.borderColor}`)
 		}
+
+		const queries = this.app.vocabApi.termdbConfig.queries
 
 		// SNV/INDEL Section
 		if (queries.snvindel) {
@@ -330,8 +330,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 	}
 
 	private async runAnalysis() {
-		const config = this.app.getState().plots.find((p: any) => p.id === this.id)
-		const settings = config.settings.plotDims
 		try {
 			// Disable button with visual feedback
 			this.runButton.property('disabled', true).text('Running GRIN2...').style('opacity', '0.6')
@@ -346,9 +344,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 				genome: this.app.vocabApi.vocab.genome,
 				dslabel: this.app.vocabApi.vocab.dslabel,
 				filter: this.state.termfilter.filter,
-				width: settings.width,
-				height: settings.height,
-				pngDotRadius: settings.radius,
+				width: this.state.config.settings.manhattan?.plotWidth,
+				height: this.state.config.settings.manhattan?.plotHeight,
+				pngDotRadius: this.state.config.settings.manhattan?.pngDotRadius,
 				devicePixelRatio: window.devicePixelRatio,
 				...configValues
 			}
@@ -379,7 +377,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 	}
 
 	async main() {
-		// Only initialize the table, don't auto-run analysis
+		// Initialize the table with the different data types and options
 		const config = structuredClone(this.state.config)
 		if (config.childType != this.type && config.chartType != this.type) return
 	}
@@ -388,23 +386,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// Display Manhattan plot
 		if (result.pngImg) {
 			const plotData = result
-			console.log('plotData', plotData)
 			const plotDiv = this.dom.div
-			plotManhattan(plotDiv, plotData, {
-				pngDotRadius: 2,
-				plotWidth: 1000,
-				plotHeight: 400,
-				yAxisX: 70,
-				yAxisY: 30,
-				yAxisSpace: 10,
-				showLegend: true,
-				legendItemWidth: 80,
-				legendDotRadius: 3,
-				legendRightOffset: 15,
-				legendTextOffset: 12,
-				legendVerticalOffset: 4,
-				legendFontSize: 12
-			})
+			const manhattanSettings = this.state.config.settings.manhattan
+			plotManhattan(plotDiv, plotData, manhattanSettings)
 		}
 
 		// Display top genes table
@@ -558,23 +542,49 @@ export const componentInit = grin2Init
 
 export function getDefaultSettings(opts) {
 	const defaults = {
-		plotDims: {
-			height: 400,
-			width: 1000,
-			radius: 2,
-			bottom: 80,
-			top: 20,
-			left: 80,
-			right: 50
+		manhattan: {
+			// Core plot dimensions
+			plotWidth: 1000,
+			plotHeight: 400,
+			pngDotRadius: 2,
+
+			// Layout spacing
+			yAxisX: 70,
+			yAxisY: 40,
+			yAxisSpace: 40,
+
+			// Typography
+			fontSize: 12,
+
+			// Legend settings
+			showLegend: true,
+			legendItemWidth: 80,
+			legendDotRadius: 3,
+			legendRightOffset: 15,
+			legendTextOffset: 12,
+			legendVerticalOffset: 4,
+			legendFontSize: 12,
+
+			// Interactive dots
+			showInteractiveDots: true,
+			interactiveDotRadius: 3,
+			interactiveDotStrokeWidth: 1
 		}
 	}
-	// return Object.assign(defaults, opts.overrides)
+
 	return Object.assign(defaults, opts?.overrides)
 }
 
 export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 	const queries = app.vocabApi.termdbConfig.queries
-	const settings: any = { controls: {} }
+	const defaultSettings = getDefaultSettings(opts)
+	const settings: any = {
+		controls: {},
+		manhattan: {
+			...defaultSettings.manhattan,
+			...opts?.manhattan
+		}
+	}
 
 	// Dynamically add data type options based on availability
 	if (queries?.snvindel) {
