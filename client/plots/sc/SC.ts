@@ -9,6 +9,7 @@ import { SCInteractions } from './interactions/SCInteractions'
 import { SCViewRenderer } from './view/SCViewRenderer'
 import { getDefaultSCAppSettings } from './defaults'
 import { importPlot } from '#plots/importPlot.js'
+import { newSandboxDiv } from '#dom'
 
 /** Overall app TODOs:
  *  - Plot buttons
@@ -114,9 +115,25 @@ class SCViewer extends PlotBase implements RxComponent {
 	/** The plot obj is already in state.plots[] but not rendered
 	 * (see SCInteractions). This creates the component and renders the plot */
 	async initSubplotComponent(subplot: any) {
+		const sandbox = newSandboxDiv(this.dom.chartsDiv as any, {
+			close: () => {
+				this.app.dispatch({
+					type: 'plot_delete',
+					id: subplot.id
+				})
+			},
+			plotId: subplot.id,
+			// beforePlotId: plot.insertBefore || null,
+			style: {
+				//TODO: What width is appropriate here? 50%?
+				width: '98.5%'
+			}
+		})
+
 		const opts = Object.assign({}, subplot, {
 			app: this.app,
-			holder: this.dom.chartsDiv.append('div'),
+			holder: sandbox.body,
+			header: sandbox.header,
 			parentId: this.id,
 			id: subplot.id
 		})
