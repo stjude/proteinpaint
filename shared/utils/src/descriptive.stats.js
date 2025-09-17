@@ -97,7 +97,7 @@ export function getVariance(data) {
 	//Using n−1 compensates for the fact that we're basing variance on a sample mean,
 	// which tends to underestimate true variability. The correction is especially important with small sample sizes,
 	// where dividing by n would significantly distort the variance estimate.
-
+	// For more details see https://en.wikipedia.org/wiki/Bessel%27s_correction
 	return squaredDifferences.reduce((sum, value) => sum + value, 0) / (data.length - 1)
 }
 
