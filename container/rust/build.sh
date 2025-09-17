@@ -16,5 +16,5 @@ fi
 # The podman buildx build command
 docker buildx build . \
   --file ./Dockerfile \
-  --tag "ghcr.io/stjude/rust_debian_testing:$TAG" \
+  --tag "ghcr.io/stjude/rust:$TAG" \
   $PLATFORM

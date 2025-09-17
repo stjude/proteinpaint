@@ -1,4 +1,4 @@
-FROM debian:testing
+FROM debian:trixie
 
 LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.version="latest"
