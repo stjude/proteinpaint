@@ -1,7 +1,7 @@
 import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from '../controls'
-import { RxComponent } from '../../types/rx.d'
+import { type RxComponent } from '#rx'
 import { plotColor } from '#shared/common.js'
 import { Menu, getMaxLabelWidth } from '#dom'
 import type { Elem } from '../../types/d3'
@@ -14,19 +14,29 @@ import { BoxPlotInteractions } from './interactions/BoxPlotInteractions'
 import { LegendRenderer } from './view/LegendRender'
 import { DownloadMenu } from '#dom'
 import { getChartTitle } from './viewModel/ViewModel'
-class TdbBoxplot extends RxComponent {
-	readonly type = 'boxplot'
+import { getCombinedTermFilter } from '#filter'
+import { PlotBase } from '#plots/PlotBase.ts'
+class TdbBoxplot extends PlotBase implements RxComponent {
+	static type = 'boxplot'
+	type: string
 	components: { controls: any }
 	dom: BoxPlotDom
 	data: any
 	interactions?: BoxPlotInteractions
 	private useDefaultSettings = true
-	constructor(opts: TdbBoxPlotOpts) {
-		super()
+	parentId?: string
+	api: any
+
+	constructor(opts: TdbBoxPlotOpts, api: MassAppApi) {
+		super(opts)
 		this.opts = opts
+		this.api = api
+		this.type = TdbBoxplot.type
 		this.components = {
 			controls: {}
 		}
+		if (opts?.parentId) this.parentId = opts.parentId
+
 		const holder = opts.holder.classed('sjpp-boxplot-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
 		const div = holder.append('div')
@@ -218,8 +228,10 @@ class TdbBoxplot extends RxComponent {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
+		const parentConfig = appState.plots.find(p => p.id === this.parentId)
+		const termfilter = getCombinedTermFilter(appState, parentConfig?.filter)
 		return {
-			termfilter: appState.termfilter,
+			termfilter,
 			config: Object.assign({}, config, {
 				settings: {
 					boxplot: config.settings.boxplot

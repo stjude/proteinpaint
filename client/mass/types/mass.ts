@@ -114,6 +114,7 @@ export type BasePlotConfig = {
 	term?: any //TermWrapper
 	term2?: any //
 	settings: PlotSettings
+	filter?: any
 }
 
 type PlotSettings = {

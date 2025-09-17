@@ -33,7 +33,7 @@ function init({ genomes }) {
 			const data = await getData({ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__ }, ds)
 			if (data.error) throw data.error
 			const samples = Object.values(data.samples)
-			const values = samples.map(s => s[q.tw.$id!]?.value).filter(v => typeof v === 'number')
+			const values = samples.map(s => s?.[q.tw.$id!]?.value).filter(v => typeof v === 'number')
 			//calculate stats here and pass them to client to avoid second request on client for getting stats
 			const statsAllSummary = summaryStats(values).values
 
