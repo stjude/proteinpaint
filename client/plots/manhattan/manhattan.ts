@@ -14,6 +14,18 @@ import { Menu, table2col } from '#dom'
  *   @param {boolean} [settings.showInteractiveDots=true] - Whether to show hoverable data points
  *   @param {number} [settings.yAxisX=70] - Y-axis positioning
  *   @param {number} [settings.yAxisSpace=40] - Space between Y-axis and plot
+ *   @param {number} [settings.yAxisY=40] - Top margin
+ *   @param {number} [settings.fontSize=12] - Base font size
+ *   @param {number} [settings.pngDotRadius=2] - Radius of dots in PNG plot
+ *   @param {number} [settings.legendItemWidth=80] - Horizontal space per legend item
+ *   @param {number} [settings.legendDotRadius=3] - Size of legend dots
+ *   @param {number} [settings.legendRightOffset=15] - Offset from right edge
+ *   @param {number} [settings.legendTextOffset=12] - Distance between dot and text
+ *   @param {number} [settings.legendVerticalOffset=4] - Vertical offset for legend items
+ *   @param {number} [settings.legendFontSize=12] - Font size for legend text
+ *   @param {number} [settings.interactiveDotRadius=3] - Radius of interactive dots
+ *   @param {number} [settings.interactiveDotStrokeWidth=1] - Stroke width for interactive dots
+ *
  *
  * @description
  * Renders a genomic Manhattan plot by overlaying interactive elements on the base PNG plot image.
@@ -28,22 +40,20 @@ export function plotManhattan(div: any, data: any, settings: any) {
 		pngDotRadius: 2,
 		plotWidth: 1000,
 		plotHeight: 400,
-		yAxisX: 70, // Space for y-axis
-		yAxisY: 40, // Top margin
-		yAxisSpace: 40, // Space between y-axis and plot
+		yAxisX: 70,
+		yAxisY: 40,
+		yAxisSpace: 40,
 		fontSize: 12,
-		// Legend settings
-		showLegend: true, // Toggle legend display
-		legendItemWidth: 80, // Horizontal space per legend item
-		legendDotRadius: 3, // Size of legend dots
-		legendRightOffset: 15, // Offset from right edge
-		legendTextOffset: 12, // Distance between dot and text
-		legendVerticalOffset: 4, // Vertical offset for legend items
-		legendFontSize: 12, // Font size for legend text
-		// Interactive dot settings
-		showInteractiveDots: true, // Toggle interactive dots
-		interactiveDotRadius: 3, // Radius of interactive dots
-		interactiveDotStrokeWidth: 1, // Stroke width for interactive dots
+		showLegend: true,
+		legendItemWidth: 80,
+		legendDotRadius: 3,
+		legendRightOffset: 15,
+		legendTextOffset: 12,
+		legendVerticalOffset: 4,
+		legendFontSize: 12,
+		showInteractiveDots: true,
+		interactiveDotRadius: 3,
+		interactiveDotStrokeWidth: 1,
 		...settings
 	}
 

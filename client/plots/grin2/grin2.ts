@@ -2,20 +2,65 @@ import { getCompInit, copyMerge, type RxComponent } from '#rx'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { GRIN2Dom, GRIN2Opts } from './GRIN2Types'
 import { dofetch3 } from '#common/dofetch'
-import { Menu, renderTable, table2col, make_one_checkbox } from '#dom'
+import { Menu, renderTable, table2col, make_one_checkbox, sayerror } from '#dom'
 import { dtsnvindel, mclass } from '#shared/common.js'
 import { get$id } from '#termsetting'
 import { PlotBase } from '#plots/PlotBase.ts'
-// import { to_svg } from '#src/client'
 import { plotManhattan } from '../manhattan/manhattan.ts'
 
 class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
 	dom: GRIN2Dom
 	private runButton!: any
+
+	// Colors
 	readonly borderColor = '#eee'
 	readonly backgroundColor = '#f8f8f8'
 	readonly optionsTextColor = '#666'
+	readonly btnBackgroundColor = '#f0f0f0'
+	readonly btnBorderColor = '#ccc'
+	readonly btnTextColor = '#333'
+	readonly btnHoverBackgroundColor = '#e0e0e0'
+	readonly btnDisabledBackgroundColor = '#f8f8f8'
+	readonly btnDisabledTextColor = '#999'
+
+	// Typography
+	readonly optionsTextFontSize: number = 12
+	readonly btnFontSize: number = 12
+	readonly headerFontSize: number = 14
+	readonly tableFontSize: number = 11
+
+	// Spacing & Layout
+	readonly btnPadding = '8px 16px'
+	readonly btnSmallPadding = '2px 8px' // for Select All/Clear All
+	readonly btnBorderRadius = '3px'
+	readonly btnMargin = '10px'
+	readonly tableCellPadding = '8px'
+	readonly controlsMargin = '5px'
+	readonly controlsPadding = '10px'
+
+	// Input fields
+	readonly inputWidth = '80px'
+	readonly inputPadding = '2px 4px'
+	readonly inputBorderColor = '#ddd'
+	readonly inputBorderRadius = '2px'
+
+	// Containers
+	readonly checkboxContainerMaxHeight = '150px'
+	readonly checkboxContainerBackground = '#fafafa'
+	readonly checkboxContainerBorder = '1px solid #ddd'
+	readonly checkboxContainerPadding = '4px'
+	readonly checkboxContainerBorderRadius = '3px'
+
+	// Interactive states
+	readonly disabledOpacity = '0.6'
+	readonly enabledOpacity = '1'
+
+	// Gaps and offsets
+	readonly controlGap = '8px'
+	readonly checkboxMarginBottom = '2px'
+	readonly headerMargin = '0 10px 0 0'
+	readonly sectionMargin = '20px 0'
 
 	constructor(opts: any) {
 		super(opts)
@@ -58,10 +103,10 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const tableDiv = this.dom.controls
 			.append('div')
 			.style('display', 'inline-block')
-			.style('padding', '10px')
-			.style('margin', '5px')
+			.style('padding', this.controlsPadding)
+			.style('margin', this.controlsMargin)
 
-		// Create manual table structure with headers since it didn't seem like table2col supports headers
+		// Create manual table structure with headers
 		const table = tableDiv.append('table').style('border-collapse', 'collapse').style('width', '100%')
 
 		// Add table headers
@@ -69,8 +114,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 		headerRow
 			.append('th')
 			.style('background', this.backgroundColor)
-			.style('padding', '8px')
+			.style('padding', this.tableCellPadding)
 			.style('font-weight', 'bold')
+			.style('font-size', `${this.headerFontSize}px`)
 			.style('border-right', `1px solid ${this.borderColor}`)
 			.style('border-bottom', `1px solid ${this.borderColor}`)
 			.style('width', '30%')
@@ -79,26 +125,31 @@ class GRIN2 extends PlotBase implements RxComponent {
 		headerRow
 			.append('th')
 			.style('background', this.backgroundColor)
-			.style('padding', '8px')
+			.style('padding', this.tableCellPadding)
 			.style('font-weight', 'bold')
+			.style('font-size', `${this.headerFontSize}px`)
 			.style('border-bottom', `1px solid ${this.borderColor}`)
 			.style('width', '70%')
 			.text('Options')
 
-		// Function to use for adding data types
+		// Function for adding data type cells
 		const addDataTypeTd = (tr, text) => {
 			tr.append('td')
-				.style('padding', '8px')
+				.style('padding', this.tableCellPadding)
 				.style('font-weight', '500')
+				.style('font-size', `${this.optionsTextFontSize}px`)
 				.style('vertical-align', 'top')
 				.style('border-right', `1px solid ${this.borderColor}`)
 				.style('border-bottom', `1px solid ${this.borderColor}`)
 				.text(text)
 		}
 
-		// For adding options
+		// Function for adding options cells
 		const addOptsTd = tr => {
-			return tr.append('td').style('padding', '8px').style('border-bottom', `1px solid ${this.borderColor}`)
+			return tr
+				.append('td')
+				.style('padding', this.tableCellPadding)
+				.style('border-bottom', `1px solid ${this.borderColor}`)
 		}
 
 		const queries = this.app.vocabApi.termdbConfig.queries
@@ -106,13 +157,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// SNV/INDEL Section
 		if (queries.snvindel) {
 			const snvRow = table.append('tr')
-
 			addDataTypeTd(snvRow, 'SNV/INDEL (Mutation)')
 
-			// Create nested table for options using table2col
 			const optionsTable = table2col({
 				holder: addOptsTd(snvRow),
-				cellPadding: '4px'
+				cellPadding: this.checkboxContainerPadding
 			})
 
 			this.addOptionRowToTable(optionsTable, 'Min Total Depth', 'snvindelOptions.minTotalDepth', 10, 1)
@@ -128,12 +177,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// CNV Section
 		if (queries.cnv) {
 			const cnvRow = table.append('tr')
-
 			addDataTypeTd(cnvRow, 'CNV (Copy Number Variation)')
 
 			const optionsTable = table2col({
 				holder: addOptsTd(cnvRow),
-				cellPadding: '4px'
+				cellPadding: this.checkboxContainerPadding
 			})
 
 			this.addOptionRowToTable(optionsTable, 'Loss Threshold', 'cnvOptions.lossThreshold', -0.4, undefined, 0, 0.1)
@@ -145,19 +193,26 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// Fusion Section (placeholder)
 		if (queries.svfusion) {
 			const fusionRow = table.append('tr')
-
 			addDataTypeTd(fusionRow, 'Fusion (Structural Variation)')
+
 			const msg = addOptsTd(fusionRow)
-			msg.append('div').style('color', this.optionsTextColor).text('Fusion filtering options to be configured later')
+			msg
+				.append('div')
+				.style('color', this.optionsTextColor)
+				.style('font-size', `${this.optionsTextFontSize}px`)
+				.text('Fusion filtering options to be configured later')
 		}
 
 		// General GRIN2 Section (placeholder)
 		const generalRow = table.append('tr')
-
 		addDataTypeTd(generalRow, 'GRIN2')
 
 		const msg = addOptsTd(generalRow)
-		msg.append('div').style('color', this.optionsTextColor).text('Additional GRIN2 parameters to be configured later')
+		msg
+			.append('div')
+			.style('color', this.optionsTextColor)
+			.style('font-size', `${this.optionsTextFontSize}px`)
+			.text('Additional GRIN2 parameters to be configured later')
 
 		// Run Button
 		this.runButton = tableDiv
@@ -165,15 +220,20 @@ class GRIN2 extends PlotBase implements RxComponent {
 			.style('text-align', 'center')
 			.style('margin-top', '15px')
 			.append('button')
-			.style('padding', '8px 16px')
-			.style('background', '#f8f8f8')
-			.style('color', '#333')
-			.style('border', '1px solid #ddd')
-			.style('border-radius', '3px')
-			.style('cursor', 'pointer')
-			.style('font-size', '14px')
+			.style('padding', this.btnPadding)
+			.style('background', this.btnBackgroundColor)
+			.style('color', this.btnTextColor)
+			.style('border', `1px solid ${this.btnBorderColor}`)
+			.style('border-radius', this.btnBorderRadius)
+			.style('font-size', `${this.btnFontSize}px`)
 			.text('Run GRIN2')
 			.on('click', () => this.runAnalysis())
+			.on('mouseover', () => {
+				this.runButton.style('background', this.btnHoverBackgroundColor)
+			})
+			.on('mouseout', () => {
+				this.runButton.style('background', this.btnBackgroundColor)
+			})
 	}
 
 	// Helper method to add option rows to table2col instances
@@ -187,16 +247,17 @@ class GRIN2 extends PlotBase implements RxComponent {
 		step?: number | null
 	) {
 		const [labelCell, inputCell] = table.addRow()
-		labelCell.text(label)
+		labelCell.text(label).style('font-size', `${this.optionsTextFontSize}px`)
 
 		const input = inputCell
 			.append('input')
 			.attr('type', 'number')
 			.attr('value', defaultValue)
-			.style('width', '80px')
-			.style('padding', '2px 4px')
-			.style('border', '1px solid #ddd')
-			.style('border-radius', '2px')
+			.style('width', this.inputWidth)
+			.style('padding', this.inputPadding)
+			.style('border', `1px solid ${this.inputBorderColor}`)
+			.style('border-radius', this.inputBorderRadius)
+			.style('font-size', `${this.optionsTextFontSize}px`)
 
 		if (min !== null && min !== undefined) input.attr('min', min)
 		if (max !== null && max !== undefined) input.attr('max', max)
@@ -219,53 +280,53 @@ class GRIN2 extends PlotBase implements RxComponent {
 			.append('div')
 			.style('margin-bottom', '6px')
 			.style('display', 'flex')
-			.style('gap', '8px')
+			.style('gap', this.controlGap)
 
 		const selectAllBtn = controlDiv
 			.append('button')
 			.attr('class', 'grin2-control-btn')
-			.style('padding', '2px 8px')
-			.style('font-size', '11px')
-			.style('border', '1px solid #ccc')
-			.style('background', '#f0f0f0')
-			.style('cursor', 'pointer')
-			.style('border-radius', '3px')
+			.style('padding', this.btnSmallPadding)
+			.style('font-size', `${this.tableFontSize}px`)
+			.style('border', `1px solid ${this.btnBorderColor}`)
+			.style('background', this.btnBackgroundColor)
+			.style('color', this.btnTextColor)
+			.style('border-radius', this.btnBorderRadius)
 			.text('Select All')
 
 		const clearAllBtn = controlDiv
 			.append('button')
 			.attr('class', 'grin2-control-btn')
-			.style('padding', '2px 8px')
-			.style('font-size', '11px')
-			.style('border', '1px solid #ccc')
-			.style('background', '#f0f0f0')
-			.style('cursor', 'pointer')
-			.style('border-radius', '3px')
+			.style('padding', this.btnSmallPadding)
+			.style('font-size', `${this.tableFontSize}px`)
+			.style('border', `1px solid ${this.btnBorderColor}`)
+			.style('background', this.btnBackgroundColor)
+			.style('color', this.btnTextColor)
+			.style('border-radius', this.btnBorderRadius)
 			.text('Clear All')
 
 		// Create checkbox container
 		const checkboxContainer = container
 			.append('div')
-			.style('max-height', '150px')
+			.style('max-height', this.checkboxContainerMaxHeight)
 			.style('overflow-y', 'auto')
-			.style('border', '1px solid #ddd')
-			.style('padding', '4px')
-			.style('background', '#fafafa')
-			.style('border-radius', '3px')
+			.style('border', this.checkboxContainerBorder)
+			.style('padding', this.checkboxContainerPadding)
+			.style('background', this.checkboxContainerBackground)
+			.style('border-radius', this.checkboxContainerBorderRadius)
 
 		// Store checkbox references for bulk operations
 		const checkboxes: any[] = []
 
 		// Create individual checkboxes using make_one_checkbox
 		snvIndelClasses.forEach(([classKey, classInfo]: [string, any]) => {
-			const checkboxDiv = checkboxContainer.append('div').style('margin-bottom', '2px')
+			const checkboxDiv = checkboxContainer.append('div').style('margin-bottom', this.checkboxMarginBottom)
 
 			const checkbox = make_one_checkbox({
 				holder: checkboxDiv,
 				labeltext: classInfo.label,
 				checked: defaultChecked.has(classKey),
 				divstyle: {
-					'font-size': '11px',
+					'font-size': `${this.tableFontSize}px`,
 					margin: '0',
 					display: 'flex',
 					'align-items': 'center'
@@ -286,16 +347,30 @@ class GRIN2 extends PlotBase implements RxComponent {
 		})
 
 		// Select All button functionality
-		selectAllBtn.on('click', () => {
-			checkboxes.forEach(checkbox => checkbox.property('checked', true))
-			selectAllBtn.style('background', '#f0f0f0').style('color', '#333')
-		})
+		selectAllBtn
+			.on('click', () => {
+				checkboxes.forEach(checkbox => checkbox.property('checked', true))
+				selectAllBtn.style('background', this.btnBackgroundColor).style('color', this.btnTextColor)
+			})
+			.on('mouseover', () => {
+				selectAllBtn.style('background', this.btnHoverBackgroundColor)
+			})
+			.on('mouseout', () => {
+				selectAllBtn.style('background', this.btnBackgroundColor)
+			})
 
 		// Clear All button functionality
-		clearAllBtn.on('click', () => {
-			checkboxes.forEach(checkbox => checkbox.property('checked', false))
-			clearAllBtn.style('background', '#f0f0f0').style('color', '#333')
-		})
+		clearAllBtn
+			.on('click', () => {
+				checkboxes.forEach(checkbox => checkbox.property('checked', false))
+				clearAllBtn.style('background', this.btnBackgroundColor).style('color', this.btnTextColor)
+			})
+			.on('mouseover', () => {
+				clearAllBtn.style('background', this.btnHoverBackgroundColor)
+			})
+			.on('mouseout', () => {
+				clearAllBtn.style('background', this.btnBackgroundColor)
+			})
 	}
 
 	private getConfigValues(): any {
@@ -332,7 +407,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 	private async runAnalysis() {
 		try {
 			// Disable button with visual feedback
-			this.runButton.property('disabled', true).text('Running GRIN2...').style('opacity', '0.6')
+			this.runButton
+				.property('disabled', true)
+				.text('Running GRIN2...')
+				.style('opacity', this.disabledOpacity)
+				.style('background', this.btnDisabledBackgroundColor)
+				.style('color', this.btnDisabledTextColor)
 
 			// Clear previous results
 			this.dom.div.style('padding', '0').text('')
@@ -358,17 +438,22 @@ class GRIN2 extends PlotBase implements RxComponent {
 			})
 
 			if (response.status === 'error') {
-				this.app.printError(`GRIN2 analysis failed: ${response.error}`)
+				sayerror(this.dom.div, `GRIN2 analysis failed: ${response.error}`)
 				return
 			}
 
 			this.renderResults(response)
 		} catch (error) {
 			this.dom.div.selectAll('*').remove()
-			this.app.printError(`Error: ${error instanceof Error ? error.message : String(error)}`)
+			sayerror(this.dom.div, `Error running GRIN2: ${error instanceof Error ? error.message : error}`)
 		} finally {
 			// Restore button state
-			this.runButton.property('disabled', false).text('Run GRIN2').style('opacity', '1')
+			this.runButton
+				.property('disabled', false)
+				.text('Run GRIN2')
+				.style('opacity', this.enabledOpacity)
+				.style('background', this.btnBackgroundColor)
+				.style('color', this.btnTextColor)
 		}
 	}
 
@@ -393,33 +478,39 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 		// Display top genes table
 		if (result.topGeneTable) {
-			const tableContainer = this.dom.div.append('div').style('margin', '20px 0')
+			const tableContainer = this.dom.div.append('div').style('margin', this.sectionMargin)
 
 			// Create header with title and Matrix button
 			const headerDiv = tableContainer
 				.append('div')
 				.style('display', 'flex')
 				.style('align-items', 'center')
-				.style('margin', '10px 0')
+				.style('margin', this.btnMargin)
 
 			headerDiv
 				.append('h3')
-				.style('margin', '0 10px 0 0')
+				.style('margin', this.headerMargin)
+				.style('font-size', `${this.headerFontSize}px`)
 				.text(`Top Genes (showing ${result.showingTop?.toLocaleString()} of ${result.totalGenes?.toLocaleString()})`)
 
 			// Add Matrix button
-			headerDiv
+			const matrixBtn = headerDiv
 				.append('button')
-				.style('padding', '6px 12px')
-				.style('background', '#f0f0f0')
-				.style('color', '#333')
-				.style('border', '1px solid #ccc')
-				.style('border-radius', '4px')
-				.style('cursor', 'pointer')
-				.style('font-size', '14px')
-				.style('margin-left', '10px')
+				.style('padding', this.btnSmallPadding)
+				.style('background', this.btnBackgroundColor)
+				.style('color', this.btnTextColor)
+				.style('border', `1px solid ${this.btnBorderColor}`)
+				.style('border-radius', this.btnBorderRadius)
+				.style('font-size', `${this.btnFontSize}px`)
+				.style('margin-left', this.btnMargin)
 				.text('Matrix')
 				.on('click', () => this.createMatrixFromGenes(result.topGeneTable))
+				.on('mouseover', function (this: HTMLElement) {
+					this.style.background = '#e0e0e0' // Use btnHoverBackgroundColor if accessible
+				})
+				.on('mouseout', () => {
+					matrixBtn.style('background', this.btnBackgroundColor)
+				})
 
 			const tableDiv = tableContainer.append('div')
 
@@ -441,7 +532,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 					allowSort: true,
 					style: {
 						'font-weight': 'bold',
-						'background-color': '#f5f5f5'
+						'background-color': this.backgroundColor
 					}
 				}
 			})
@@ -454,14 +545,18 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.append('div')
 				.style('display', 'flex')
 				.style('align-items', 'center')
-				.style('margin', '10px 0')
+				.style('margin', this.btnMargin)
 
-			headerDiv.append('h3').style('margin', '0 10px 0 0').text('GRIN2 Processing Summary')
+			headerDiv
+				.append('h3')
+				.style('margin', this.headerMargin)
+				.style('font-size', `${this.headerFontSize}px`)
+				.text('GRIN2 Processing Summary')
 
 			// Using table2col for processing summary
 			const table = table2col({
 				holder: this.dom.div.append('div'),
-				margin: '10px 0'
+				margin: this.btnMargin
 			})
 
 			Object.entries(result.processingSummary).forEach(([key, value]) => {
@@ -475,8 +570,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 		if (result.timing) {
 			this.dom.div
 				.append('div')
-				.style('margin', '20px 0')
-				.style('font-size', '12px')
+				.style('margin', this.sectionMargin)
+				.style('font-size', `${this.optionsTextFontSize}px`)
 				.style('color', this.optionsTextColor)
 				.text(
 					`Analysis completed in ${result.timing.totalTime}s (Processing: ${result.timing.processingTime}s, GRIN2: ${result.timing.grin2Time}s)`
@@ -493,7 +588,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.filter((gene: any) => gene && typeof gene === 'string')
 
 			if (geneSymbols.length === 0) {
-				throw new Error('No valid gene symbols found')
+				sayerror(this.dom.div, 'No valid gene symbols found')
 			}
 
 			// Create termwrappers for mutation data
@@ -531,8 +626,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				}
 			})
 		} catch (error) {
-			console.error('Error creating matrix from genes:', error)
-			this.app.printError(`Error creating matrix: ${error instanceof Error ? error.message : 'Unknown error'}`)
+			sayerror(this.dom.div, `Error creating matrix: ${error instanceof Error ? error.message : error}`)
 		}
 	}
 }
@@ -617,36 +711,4 @@ export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 	}
 
 	return copyMerge(config, opts)
-}
-
-export function makeChartBtnMenu(holder, chartsInstance) {
-	const genomeObj = chartsInstance.app.opts.genome
-	if (typeof genomeObj != 'object') throw 'chartsInstance.app.opts.genome not an object and needed for GRIN2'
-
-	// Create a simple button for GRIN2 analysis
-	const row = holder.append('div').style('margin', '10px')
-
-	row
-		.append('button')
-		.style('padding', '8px 16px')
-		.style('background', '#f0f0f0')
-		.style('color', '#333')
-		.style('border', '1px solid #ccc')
-		.style('border-radius', '4px')
-		.style('cursor', 'pointer')
-		.text('Configure GRIN2 Analysis')
-		.on('click', async () => {
-			try {
-				// Open the configuration sandbox instead of auto-running
-				const config = await getPlotConfig({}, chartsInstance.app)
-				chartsInstance.prepPlot({ config })
-			} catch (e: any) {
-				holder
-					.append('div')
-					.style('color', 'red')
-					.style('margin-top', '10px')
-					.text(`Error: ${e.message || e}`)
-				console.log(e)
-			}
-		})
 }
