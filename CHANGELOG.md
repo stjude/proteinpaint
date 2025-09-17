@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- hierCluster: if the genes are not clustered, after users reorder the genes, the submit button should not be disabled.
+
 
 ## 2.145.1
 
