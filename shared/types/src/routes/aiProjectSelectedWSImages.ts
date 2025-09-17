@@ -13,6 +13,22 @@ export type AiProjectSelectedWSImagesResponse = {
 	wsimages: WSImage[]
 }
 
+// TODO move to another class
+export interface TileSelection {
+	zoomCoordinates: [number, number]
+	class?: string
+}
+
+export interface Annotation extends TileSelection {
+	class: string
+}
+
+export interface Prediction extends TileSelection {
+	type: string
+	class: string
+	uncertainty: number
+}
+
 export const aiProjectSelectedWSImagesResponsePayload: RoutePayload = {
 	request: {
 		typeId: 'AiProjectSelectedWSImagesRequest'
