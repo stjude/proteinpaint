@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.145.1
 
 Fixes:
 - basic integration test to cover bedj and bw block tracks
