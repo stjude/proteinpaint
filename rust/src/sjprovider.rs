@@ -787,7 +787,7 @@ impl ConvertMessage for Message {
                         .collect::<Result<Vec<_>, _>>()
                 } else {
                     // Ollama requires separate text content and images array
-                    let (texts, images) =
+                    let (texts, _images) =
                         other_content
                             .into_iter()
                             .fold((Vec::new(), Vec::new()), |(mut texts, mut images), content| {
@@ -806,7 +806,7 @@ impl ConvertMessage for Message {
 
                     Ok(vec![Message::User {
                         content: texts.join(" "),
-                        images: if images.is_empty() { None } else { Some(images) },
+                        images: None,
                         name: None,
                     }])
                 }
