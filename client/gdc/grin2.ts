@@ -1785,22 +1785,7 @@ async function getFilesAndShowTable(obj) {
 
 			const plotDiv = resultContainer.append('div')
 
-			plotManhattan(plotDiv, plotData, {
-				pngDotRadius: 2,
-				plotWidth: 1000,
-				plotHeight: 400,
-				yAxisX: 70,
-				yAxisY: 30,
-				yAxisSpace: 10,
-				showLegend: true,
-				legendItemWidth: 80,
-				legendDotRadius: 3,
-				showInteractiveDots: true,
-				legendRightOffset: 15,
-				legendTextOffset: 12,
-				legendVerticalOffset: 4,
-				legendFontSize: 12
-			})
+			plotManhattan(plotDiv, plotData, {})
 
 			// Show and populate download button div next the Run Analysis button
 			// Create a unique name for the download file based on selected mutations
