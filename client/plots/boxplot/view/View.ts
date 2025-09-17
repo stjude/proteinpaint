@@ -56,7 +56,7 @@ export class View {
 			.attr('text-anchor', 'middle')
 			.attr('transform', transformStr)
 			.attr('fill', plotDim.textColor)
-			.text(plotDim.title.text)
+			.text(plotDim.title.text.length > 80 ? plotDim.title.text.slice(0, 80) + '...' : plotDim.title.text)
 	}
 
 	//Fix for the axis rendering min -> max when the plot is vertical
