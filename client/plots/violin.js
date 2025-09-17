@@ -316,17 +316,8 @@ class ViolinPlot {
 			)
 
 		const args = this.validateArgs()
-		await Promise.all([
-			this.getDescrStats(),
-			this.app.vocabApi
-				.getViolinPlotData(args)
-				.then(data => {
-					this.data = data
-				})
-				.catch(e => {
-					throw e
-				})
-		])
+		this.data = await this.app.vocabApi.getViolinPlotData(args)
+
 		if (this.data.error) throw this.data.error
 		/*
 		.min
@@ -340,6 +331,8 @@ class ViolinPlot {
 				.x1
 				.density
 		*/
+		args.tw.q.descrStats = this.data.descrStats
+
 		this.toggleLoadingDiv(this.opts.mode == 'minimal' ? 'none' : '')
 		setTimeout(
 			() => {
@@ -348,26 +341,6 @@ class ViolinPlot {
 			this.opts.mode == 'minimal' ? 0 : 500
 		)
 		this.toggleLoadingDiv('none')
-	}
-
-	async getDescrStats() {
-		// get descriptive statistics for numerical terms
-		const terms = [this.config.term]
-		if (this.config.term2) terms.push(this.config.term2)
-		if (this.config.term0) terms.push(this.config.term0)
-		const promises = []
-		for (const t of terms) {
-			if (!isNumericTerm(t.term)) continue
-			promises.push(
-				this.app.vocabApi
-					.getDescrStats(t, this.state.termfilter, this.config.settings?.violin?.unit == 'log')
-					.then(data => {
-						if (data.error) throw data.error
-						t.q.descrStats = data.values
-					})
-			)
-		}
-		if (promises.length) await Promise.all(promises)
 	}
 
 	validateArgs() {

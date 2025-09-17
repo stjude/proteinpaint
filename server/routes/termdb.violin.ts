@@ -65,6 +65,12 @@ export async function trigger_getViolinPlotData(q: ViolinRequest, ds: any) {
 		},
 		ds
 	)
+
+	const samples = Object.values(data.samples)
+	let values = samples.map(s => s?.[q.tw.$id!]?.value).filter(v => typeof v === 'number')
+	if (q.unit == 'log') values = values.filter(v => v > 0)
+	//calculate stats here and pass them to client to avoid second request on client for getting stats
+	const descrStats = summaryStats(values).values
 	const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
 	if (data.error) throw data.error
 	//get ordered labels to sort keys in plot2values
@@ -86,7 +92,7 @@ export async function trigger_getViolinPlotData(q: ViolinRequest, ds: any) {
 	if (q.overlayTw) await getWilcoxonData(result)
 
 	await createCanvasImg(q, result, ds)
-
+	result['descrStats'] = descrStats
 	return result
 }
 
