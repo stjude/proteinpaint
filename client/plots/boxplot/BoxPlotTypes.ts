@@ -9,6 +9,7 @@ export type TdbBoxPlotOpts = {
 	controls?: Elem
 	header?: Elem
 	numericEditMenuVersion?: string[]
+	parentId?: string
 }
 
 export type BoxPlotConfigOpts = {
