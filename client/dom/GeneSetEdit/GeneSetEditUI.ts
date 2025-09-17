@@ -136,7 +136,9 @@ export class GeneSetEditUI {
 		if ('mode' in opts) this.mode = opts.mode
 		if ('titleText' in opts) this.titleText = opts.titleText
 		this.origLst = structuredClone(this.geneList)
-		this.origNames = JSON.stringify(this.geneList.map(t => t.gene).sort())
+		this.origNames = opts.termsAsListed
+			? JSON.stringify(this.geneList.map(t => t.gene))
+			: JSON.stringify(this.geneList.map(t => t.gene).sort())
 
 		this.holder.selectAll('*').remove()
 		const div = this.holder.append('div').attr('class', 'sja_genesetinput').style('padding', '5px')
@@ -551,7 +553,11 @@ export class GeneSetEditUI {
 		this.renderStatLegend() // api.statColor2label has been accumulated if available
 
 		this.api.dom.clearBtn.property('disabled', !this.geneList?.length)
-		const hasChanged = this.origNames !== JSON.stringify(this.geneList.map(t => t.gene).sort())
+		const hasChanged =
+			this.origNames !==
+			(this.termsAsListed
+				? JSON.stringify(this.geneList.map(t => t.gene))
+				: JSON.stringify(this.geneList.map(t => t.gene).sort()))
 		this.api.dom.restoreBtn?.property('disabled', !hasChanged)
 		// disable submit button when gene list not changed or is empty in expression mode
 		this.api.dom.submitBtn.property(
