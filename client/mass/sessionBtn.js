@@ -88,7 +88,7 @@ class MassSessionBtn {
 				if (!id) return
 				if (loc.includes('browser')) {
 					this.sessionName = id
-					const state = this.savedSessions[id]
+					const state = structuredClone(this.savedSessions[id])
 					await preprocessState(state, this.app)
 					const targetWindow = this.dom.tip.d.node().querySelector(`[name="${radioName}"]:checked`).value
 					if (targetWindow == 'current') {
