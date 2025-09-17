@@ -322,5 +322,41 @@
       "prev": 0,
       "diff": 73.6275
     }
+  },
+  "src/utils.js": {
+    "lines": {
+      "total": 435,
+      "covered": 78,
+      "skipped": 0,
+      "pct": 17.93
+    },
+    "functions": {
+      "total": 94,
+      "covered": 2,
+      "skipped": 0,
+      "pct": 2.12
+    },
+    "statements": {
+      "total": 556,
+      "covered": 96,
+      "skipped": 0,
+      "pct": 17.26
+    },
+    "branches": {
+      "total": 293,
+      "covered": 33,
+      "skipped": 0,
+      "pct": 11.26
+    },
+    "lowestPct": {
+      "curr": 2.12,
+      "prev": 0,
+      "diff": 2.12
+    },
+    "averagePct": {
+      "curr": 12.1425,
+      "prev": 0,
+      "diff": 12.1425
+    }
   }
 }

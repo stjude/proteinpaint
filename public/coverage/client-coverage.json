@@ -4207,8 +4207,8 @@
     },
     "averagePct": {
       "curr": 54.019999999999996,
-      "prev": 53.70249999999999,
-      "diff": 0.31750000000000256
+      "prev": 54.019999999999996,
+      "diff": 0
     }
   },
   "dom/menu.js": {
@@ -7053,6 +7053,366 @@
       "curr": 16.405,
       "prev": 0,
       "diff": 16.405
+    }
+  },
+  "plots/boxplot/BoxPlot.ts": {
+    "lines": {
+      "total": 123,
+      "covered": 87,
+      "skipped": 0,
+      "pct": 70.73
+    },
+    "functions": {
+      "total": 21,
+      "covered": 14,
+      "skipped": 0,
+      "pct": 66.66
+    },
+    "statements": {
+      "total": 140,
+      "covered": 91,
+      "skipped": 0,
+      "pct": 65
+    },
+    "branches": {
+      "total": 66,
+      "covered": 34,
+      "skipped": 0,
+      "pct": 51.51
+    },
+    "lowestPct": {
+      "curr": 51.51,
+      "prev": 0,
+      "diff": 51.51
+    },
+    "averagePct": {
+      "curr": 63.474999999999994,
+      "prev": 0,
+      "diff": 63.474999999999994
+    }
+  },
+  "plots/boxplot/model/Model.ts": {
+    "lines": {
+      "total": 19,
+      "covered": 19,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 4,
+      "covered": 4,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 21,
+      "covered": 21,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branches": {
+      "total": 12,
+      "covered": 12,
+      "skipped": 0,
+      "pct": 100
+    },
+    "lowestPct": {
+      "curr": 100,
+      "prev": 0,
+      "diff": 100
+    },
+    "averagePct": {
+      "curr": 100,
+      "prev": 0,
+      "diff": 100
+    }
+  },
+  "plots/boxplot/test/boxplot.unit.spec.ts": {
+    "lines": {
+      "total": 88,
+      "covered": 87,
+      "skipped": 0,
+      "pct": 98.86
+    },
+    "functions": {
+      "total": 9,
+      "covered": 9,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 89,
+      "covered": 87,
+      "skipped": 0,
+      "pct": 97.75
+    },
+    "branches": {
+      "total": 6,
+      "covered": 5,
+      "skipped": 0,
+      "pct": 83.33
+    },
+    "lowestPct": {
+      "curr": 83.33,
+      "prev": 0,
+      "diff": 83.33
+    },
+    "averagePct": {
+      "curr": 94.985,
+      "prev": 0,
+      "diff": 94.985
+    }
+  },
+  "plots/boxplot/viewModel/LegendDataMapper.ts": {
+    "lines": {
+      "total": 31,
+      "covered": 30,
+      "skipped": 0,
+      "pct": 96.77
+    },
+    "functions": {
+      "total": 9,
+      "covered": 9,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 35,
+      "covered": 30,
+      "skipped": 0,
+      "pct": 85.71
+    },
+    "branches": {
+      "total": 44,
+      "covered": 34,
+      "skipped": 0,
+      "pct": 77.27
+    },
+    "lowestPct": {
+      "curr": 77.27,
+      "prev": 0,
+      "diff": 77.27
+    },
+    "averagePct": {
+      "curr": 89.93749999999999,
+      "prev": 0,
+      "diff": 89.93749999999999
+    }
+  },
+  "plots/boxplot/viewModel/ViewModel.ts": {
+    "lines": {
+      "total": 63,
+      "covered": 51,
+      "skipped": 0,
+      "pct": 80.95
+    },
+    "functions": {
+      "total": 15,
+      "covered": 12,
+      "skipped": 0,
+      "pct": 80
+    },
+    "statements": {
+      "total": 75,
+      "covered": 55,
+      "skipped": 0,
+      "pct": 73.33
+    },
+    "branches": {
+      "total": 85,
+      "covered": 44,
+      "skipped": 0,
+      "pct": 51.76
+    },
+    "lowestPct": {
+      "curr": 51.76,
+      "prev": 0,
+      "diff": 51.76
+    },
+    "averagePct": {
+      "curr": 71.50999999999999,
+      "prev": 0,
+      "diff": 71.50999999999999
+    }
+  },
+  "plots/boxplot/view/BoxPlotLabelMenu.ts": {
+    "lines": {
+      "total": 23,
+      "covered": 4,
+      "skipped": 0,
+      "pct": 17.39
+    },
+    "functions": {
+      "total": 10,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 10
+    },
+    "statements": {
+      "total": 26,
+      "covered": 4,
+      "skipped": 0,
+      "pct": 15.38
+    },
+    "branches": {
+      "total": 10,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
+    },
+    "lowestPct": {
+      "curr": 0,
+      "prev": 0,
+      "diff": 0
+    },
+    "averagePct": {
+      "curr": 10.6925,
+      "prev": 0,
+      "diff": 10.6925
+    }
+  },
+  "plots/boxplot/view/BoxPlotToolTips.ts": {
+    "lines": {
+      "total": 31,
+      "covered": 17,
+      "skipped": 0,
+      "pct": 54.83
+    },
+    "functions": {
+      "total": 9,
+      "covered": 4,
+      "skipped": 0,
+      "pct": 44.44
+    },
+    "statements": {
+      "total": 33,
+      "covered": 17,
+      "skipped": 0,
+      "pct": 51.51
+    },
+    "branches": {
+      "total": 4,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 25
+    },
+    "lowestPct": {
+      "curr": 25,
+      "prev": 0,
+      "diff": 25
+    },
+    "averagePct": {
+      "curr": 43.945,
+      "prev": 0,
+      "diff": 43.945
+    }
+  },
+  "plots/boxplot/view/LegendRender.ts": {
+    "lines": {
+      "total": 18,
+      "covered": 15,
+      "skipped": 0,
+      "pct": 83.33
+    },
+    "functions": {
+      "total": 4,
+      "covered": 3,
+      "skipped": 0,
+      "pct": 75
+    },
+    "statements": {
+      "total": 18,
+      "covered": 15,
+      "skipped": 0,
+      "pct": 83.33
+    },
+    "branches": {
+      "total": 6,
+      "covered": 3,
+      "skipped": 0,
+      "pct": 50
+    },
+    "lowestPct": {
+      "curr": 50,
+      "prev": 0,
+      "diff": 50
+    },
+    "averagePct": {
+      "curr": 72.91499999999999,
+      "prev": 0,
+      "diff": 72.91499999999999
+    }
+  },
+  "plots/boxplot/interactions/BoxPlotInteractions.ts": {
+    "lines": {
+      "total": 36,
+      "covered": 5,
+      "skipped": 0,
+      "pct": 13.88
+    },
+    "functions": {
+      "total": 11,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 9.09
+    },
+    "statements": {
+      "total": 38,
+      "covered": 5,
+      "skipped": 0,
+      "pct": 13.15
+    },
+    "branches": {
+      "total": 8,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
+    },
+    "lowestPct": {
+      "curr": 0,
+      "prev": 0,
+      "diff": 0
+    },
+    "averagePct": {
+      "curr": 9.03,
+      "prev": 0,
+      "diff": 9.03
+    }
+  },
+  "plots/boxplot/view/View.ts": {
+    "lines": {
+      "total": 34,
+      "covered": 33,
+      "skipped": 0,
+      "pct": 97.05
+    },
+    "functions": {
+      "total": 6,
+      "covered": 5,
+      "skipped": 0,
+      "pct": 83.33
+    },
+    "statements": {
+      "total": 36,
+      "covered": 33,
+      "skipped": 0,
+      "pct": 91.66
+    },
+    "branches": {
+      "total": 22,
+      "covered": 13,
+      "skipped": 0,
+      "pct": 59.09
+    },
+    "lowestPct": {
+      "curr": 59.09,
+      "prev": 0,
+      "diff": 59.09
+    },
+    "averagePct": {
+      "curr": 82.7825,
+      "prev": 0,
+      "diff": 82.7825
     }
   }
 }
