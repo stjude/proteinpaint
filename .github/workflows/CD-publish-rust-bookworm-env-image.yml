@@ -45,4 +45,4 @@ jobs:
           cd container/rust
           sh build.sh
           
-          docker push ghcr.io/stjude/rust:latest
+          docker push ghcr.io/stjude/rust_debian_testing:latest
