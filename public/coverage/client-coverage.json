@@ -589,26 +589,26 @@
       "pct": 93.33
     },
     "statements": {
-      "total": 89,
-      "covered": 71,
+      "total": 90,
+      "covered": 72,
       "skipped": 0,
-      "pct": 79.77
+      "pct": 80
     },
     "branches": {
-      "total": 84,
-      "covered": 61,
+      "total": 88,
+      "covered": 64,
       "skipped": 0,
-      "pct": 72.61
+      "pct": 72.72
     },
     "lowestPct": {
-      "curr": 72.61,
-      "prev": 0,
-      "diff": 72.61
+      "curr": 72.72,
+      "prev": 72.61,
+      "diff": 0.10999999999999943
     },
     "averagePct": {
-      "curr": 83.18,
-      "prev": 0,
-      "diff": 83.18
+      "curr": 83.26500000000001,
+      "prev": 83.18,
+      "diff": 0.08500000000000796
     }
   },
   "plots/matrix/matrix.controls.js": {
@@ -955,20 +955,20 @@
       "pct": 87.62
     },
     "branches": {
-      "total": 107,
-      "covered": 76,
+      "total": 108,
+      "covered": 77,
       "skipped": 0,
-      "pct": 71.02
+      "pct": 71.29
     },
     "lowestPct": {
-      "curr": 71.02,
-      "prev": 0,
-      "diff": 71.02
+      "curr": 71.29,
+      "prev": 71.02,
+      "diff": 0.27000000000001023
     },
     "averagePct": {
-      "curr": 87.6475,
-      "prev": 0,
-      "diff": 87.6475
+      "curr": 87.715,
+      "prev": 87.6475,
+      "diff": 0.06750000000000966
     }
   },
   "plots/matrix/matrix.xtw.ts": {
@@ -1441,38 +1441,38 @@
   },
   "termdb/tree.js": {
     "lines": {
-      "total": 173,
-      "covered": 122,
+      "total": 190,
+      "covered": 9,
       "skipped": 0,
-      "pct": 70.52
+      "pct": 4.73
     },
     "functions": {
-      "total": 28,
-      "covered": 17,
+      "total": 30,
+      "covered": 0,
       "skipped": 0,
-      "pct": 60.71
+      "pct": 0
     },
     "statements": {
-      "total": 196,
-      "covered": 130,
+      "total": 214,
+      "covered": 14,
       "skipped": 0,
-      "pct": 66.32
+      "pct": 6.54
     },
     "branches": {
-      "total": 149,
-      "covered": 70,
+      "total": 179,
+      "covered": 0,
       "skipped": 0,
-      "pct": 46.97
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 46.97,
-      "prev": 0,
-      "diff": 46.97
+      "curr": 0,
+      "prev": 46.97,
+      "diff": -46.97
     },
     "averagePct": {
-      "curr": 61.129999999999995,
-      "prev": 0,
-      "diff": 61.129999999999995
+      "curr": 2.8175,
+      "prev": 61.129999999999995,
+      "diff": -58.31249999999999
     }
   },
   "dom/test/maxLabelWidth.unit.spec.ts": {
