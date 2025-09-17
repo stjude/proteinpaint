@@ -143,16 +143,7 @@ export class WSIViewerInteractions {
 
 				if (event.key == 'Backspace') {
 					//Delete
-					await this.deleteAnnotation(
-						wsiApp,
-						vectorLayer!,
-						sessionWSImage,
-						currentIndex,
-						activeImageExtent,
-						activePatchColor,
-						buffers,
-						map
-					)
+					await this.deleteAnnotation(wsiApp, vectorLayer!, sessionWSImage, currentIndex)
 				}
 
 				if (idx !== currentIndex) {
@@ -188,6 +179,8 @@ export class WSIViewerInteractions {
 
 					const selectedClassId = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)?.id
 
+					const state = wsiApp.app.getState()
+
 					const body: SaveWSIAnnotationRequest = {
 						genome: state.vocab.genome,
 						dslabel: state.vocab.dslabel,
@@ -201,15 +194,30 @@ export class WSIViewerInteractions {
 						// TODO add UI rollback
 						await dofetch3('saveWSIAnnotation', { method: 'POST', body })
 						//Advance to the next table row after annotating
-						const nextIdx = currentIndex + 1
-						if (nextIdx < tileSelections.length) {
-							buffers.annotationsIdx.set(nextIdx)
-							const coords = [tileSelections[nextIdx].zoomCoordinates] as unknown as [number, number][]
-							this.zoomInEffectListener(activeImageExtent, coords, map, activePatchColor)
-						}
+
+						// TODO find another way to clear server cache
+						clearServerDataCache()
 					} catch (e) {
 						console.error('Error in saveWSIAnnotation request:', e)
 					}
+
+					if (SessionWSImage.isSessionTileSelection(currentIndex, sessionWSImage)) {
+						SessionWSImage.removeTileSelection(currentIndex, sessionWSImage)
+					}
+
+					const sessionsTileSelection: TileSelection[] = sessionWSImage.sessionsTileSelections ?? []
+					wsiApp.app.dispatch({
+						type: 'plot_edit',
+						id: wsiApp.id,
+						config: {
+							settings: {
+								renderWSIViewer: false,
+								activeAnnotation: currentIndex + 1,
+								sessionsTileSelection: sessionsTileSelection
+							}
+						}
+					})
+
 					return
 				}
 			})
@@ -330,11 +338,7 @@ export class WSIViewerInteractions {
 		wsiApp: any,
 		vectorLayer: VectorLayer<any, any>,
 		sessionWSImage: SessionWSImage,
-		currentIndex: number,
-		activeImageExtent: any,
-		activePatchColor,
-		buffers: any,
-		map: OLMap
+		currentIndex: number
 	) {
 		const state = wsiApp.app.getState()
 		const tileSelections: TileSelection[] = SessionWSImage.getTileSelections(sessionWSImage)
@@ -372,25 +376,7 @@ export class WSIViewerInteractions {
 		// TODO find another way to clear server cache
 		clearServerDataCache()
 
-		const updated: TileSelection[] = SessionWSImage.getTileSelections(sessionWSImage) ?? []
-
-		// TODO try find a better way to sync buffer and session state
-		if (updated.length === 0) {
-			// Nothing to focus/zoom; reset buffer to 0 (or skip entirely)
-			buffers?.annotationsIdx?.set?.(0)
-		} else {
-			// If we deleted the last item, wrap to 0; otherwise, keep same index (now points to the next item)
-			const nextIdx = currentIndex >= updated.length ? 0 : currentIndex
-			buffers?.annotationsIdx?.set?.(nextIdx)
-
-			const nextSel = updated[nextIdx]
-			if (nextSel?.zoomCoordinates) {
-				const coords = [nextSel.zoomCoordinates] as [number, number][]
-				this.zoomInEffectListener(activeImageExtent, coords, map, activePatchColor)
-			}
-		}
-
-		if (SessionWSImage.isTileSelection(currentIndex, sessionWSImage)) {
+		if (SessionWSImage.isSessionTileSelection(currentIndex, sessionWSImage)) {
 			SessionWSImage.removeTileSelection(currentIndex, sessionWSImage)
 		}
 
@@ -401,6 +387,7 @@ export class WSIViewerInteractions {
 			config: {
 				settings: {
 					renderWSIViewer: false,
+					activeAnnotation: Math.random(),
 					sessionsTileSelection: sessionsTileSelection
 				}
 			}

@@ -63,26 +63,34 @@ export class ViewModel {
 			]
 		})
 
-		const predictionRows: any[] = (imageData.predictions ?? []).map((d, i) => {
+		const predictionRows: any[] = (imageData.predictions ?? []).map((prediction, i) => {
+			const color = imageData.classes?.find(c => c.label === prediction.class)?.color
+
 			return [
 				{ value: imageData.sessionsTileSelections!.length + i }, // Continue index
-				{ value: d.zoomCoordinates },
-				{ value: roundValue(d.uncertainty, 4) },
-				{ value: d.class },
-				{ html: '' },
+				{ value: prediction.zoomCoordinates },
+				{ value: roundValue(prediction.uncertainty, 4) },
+				{ value: prediction.class },
+				{
+					html: `<span style="display:inline-block;width:12px;height:18px;background-color:${color};border:grey 1px solid;"></span>`
+				},
 				{ value: '' }
 			]
 		})
 
 		// Original annotations follow, indexing continues from session annotations
-		const annotationsRows: any = (imageData.annotations ?? []).map((d, i) => {
+		const annotationsRows: any = (imageData.annotations ?? []).map((annotation, i) => {
+			const color = imageData.classes?.find(c => c.label === annotation.class)?.color
+
 			return [
 				{ value: sessionsTileSelections.length + predictionRows.length + i }, // Continue index
-				{ value: d.zoomCoordinates },
+				{ value: annotation.zoomCoordinates },
 				{ value: 0 },
 				{ value: '' },
-				{ html: '' },
-				{ value: d.class }
+				{
+					html: `<span style="display:inline-block;width:12px;height:18px;background-color:${color};border:grey 1px solid;"></span>`
+				},
+				{ value: annotation.class }
 			]
 		})
 

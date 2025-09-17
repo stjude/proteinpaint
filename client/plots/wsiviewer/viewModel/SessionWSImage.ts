@@ -22,7 +22,7 @@ export class SessionWSImage extends WSImage {
 		return [...sessionsTileSelections, ...predictions, ...annotations]
 	}
 
-	public static isTileSelection(currentIndex: number, sessionWSImage: SessionWSImage): boolean {
+	public static isSessionTileSelection(currentIndex: number, sessionWSImage: SessionWSImage): boolean {
 		const sessionsCount = sessionWSImage.sessionsTileSelections?.length ?? 0
 		if (sessionsCount == 0) return false
 		return currentIndex >= 0 && currentIndex < sessionsCount
