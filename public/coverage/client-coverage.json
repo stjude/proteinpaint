@@ -4867,10 +4867,10 @@
       "pct": 40.9
     },
     "functions": {
-      "total": 46,
+      "total": 48,
       "covered": 19,
       "skipped": 0,
-      "pct": 41.3
+      "pct": 39.58
     },
     "statements": {
       "total": 218,
@@ -4879,20 +4879,20 @@
       "pct": 38.53
     },
     "branches": {
-      "total": 130,
-      "covered": 43,
+      "total": 134,
+      "covered": 45,
       "skipped": 0,
-      "pct": 33.07
+      "pct": 33.58
     },
     "lowestPct": {
-      "curr": 33.07,
+      "curr": 33.58,
       "prev": 33.07,
-      "diff": 0
+      "diff": 0.509999999999998
     },
     "averagePct": {
-      "curr": 38.449999999999996,
+      "curr": 38.147499999999994,
       "prev": 38.5025,
-      "diff": -0.05250000000000199
+      "diff": -0.355000000000004
     }
   },
   "mass/test/cuminc.integration.spec.js": {
