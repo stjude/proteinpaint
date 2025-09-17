@@ -9,6 +9,24 @@ export interface GRIN2Dom {
 }
 
 export interface GRIN2Opts {
+	/** Manhattan plot settings */
+	plotWidth?: number
+	plotHeight?: number
+	pngDotRadius?: number
+	yAxisX?: number
+	yAxisY?: number
+	yAxisSpace?: number
+	fontSize?: number
+	showLegend?: boolean
+	legendItemWidth?: number
+	legendDotRadius?: number
+	legendRightOffset?: number
+	legendTextOffset?: number
+	legendVerticalOffset?: number
+	legendFontSize?: number
+	showInteractiveDots?: boolean
+	interactiveDotRadius?: number
+	interactiveDotStrokeWidth?: number
 	/** Override default settings */
 	overrides?: Partial<GRIN2Settings>
 	/** Any additional options */
