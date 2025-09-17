@@ -4,6 +4,10 @@ import { WSImage } from '@sjcrh/proteinpaint-types'
 export class SessionWSImage extends WSImage {
 	sessionsTileSelections?: TileSelection[]
 
+	constructor(filename: string) {
+		super(filename)
+	}
+
 	public static removeTileSelection(currentIndex: number, sessionWSImage: SessionWSImage): TileSelection[] {
 		if (!sessionWSImage.sessionsTileSelections) return []
 

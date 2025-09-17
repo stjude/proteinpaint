@@ -27,6 +27,10 @@ export class WSImage {
 	activePatchColor?: string
 	/** Tile size in pixels needed for AI scripts */
 	tileSize?: number
+
+	constructor(filename: string) {
+		this.filename = filename
+	}
 }
 
 export const sampleWSImagesPayload: RoutePayload = {
