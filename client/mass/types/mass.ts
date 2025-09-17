@@ -1,62 +1,15 @@
-import type { RxAppApi } from '../../types/rx'
-import type { Menu } from '#dom'
-import type { Elem } from '../../types/d3'
-import type { ClientGenome } from '../../types/clientGenome'
+import type { AppApi } from '#rx'
 import type { BoxPlotSettings } from '../../plots/boxplot/BoxPlotTypes'
 import type { CorrVolcanoSettings } from '#plots/corrVolcano/CorrelationVolcanoTypes.ts'
 import type { VolcanoSettings } from '../../plots/volcano/VolcanoTypes.ts'
 import type { GRIN2Settings } from '#plots/grin2/GRIN2Types.ts'
 //import { TermWrapper } from '#types'
 
-export type MassAppApi = RxAppApi & {
-	Inner: MassApp
+export type MassAppApi = AppApi /*& {
+	//Inner: MassApp
 	printError: (e: string) => void
 	tip: Menu
-	opts: {
-		/** TODO!! -> {} */
-		callbacks: any
-		debug: boolean
-		genome: ClientGenome
-		holder: Elem
-		/** Current release version. See https://github.com/stjude/proteinpaint/releases */
-		pkgver: string
-		/** Server restart date and time */
-		launchDate: string
-		/** TODO!! These are probably defined somehwere else */
-		state: {
-			vocab: {
-				dslabel: string
-				genome: string
-			}
-		}
-	}
-	/** Should be a type for TermdbVocab or Frontend Vocab later */
-	vocabApi: any
-}
-type MassApp = {
-	api: MassAppApi
-	/** TODO */
-	bus: any
-	components: {
-		nav: any
-		plots: any
-	}
-	eventTypes: ['preDispatch', 'postInit', 'postRender', 'firstRender', 'error']
-	dom: {
-		holder: Elem
-		topbar: Elem
-		/** printError() message appear above the plot sandboxes */
-		errdiv: Elem
-	}
-	/** TODO */
-	opts: any
-	plotIdToSandboxId: any
-	state: MassState
-	/** TODO */
-	store: any
-	/** required app type */
-	type: 'app'
-}
+}*/
 
 /** TODO: Start of all possible options for the mass state
  * Combine with shared types later
