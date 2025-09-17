@@ -15,7 +15,7 @@ jobs:
 
       - name: build rust
         run: |
-          rustup default 1.86.0
+          rustup default 1.89.0
           cd rust && cargo build --release
           ./extract_binaries.sh
 
