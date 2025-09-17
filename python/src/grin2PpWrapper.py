@@ -36,6 +36,7 @@ import sqlite3
 import base64
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import numpy as np
 from io import BytesIO
 from grin2_core import order_index_gene_data, order_index_lsn_data, prep_gene_lsn_data, find_gene_lsn_overlaps, count_hits, row_bern_conv
@@ -93,6 +94,7 @@ def plot_grin2_manhattan(grin_results: dict,
         colors (Optional[Dict[str, str]]): Color mapping for mutation types.
         plot_width (int): Desired plot width in pixels.
         plot_height (int): Desired plot height in pixels.
+		png_dot_radius (int): Radius of dots in the PNG output.
         device_pixel_ratio (float): Device pixel ratio for rendering.
     Returns:
         tuple[plt.Figure, dict]: Matplotlib figure and interactive data dictionary
@@ -109,11 +111,19 @@ def plot_grin2_manhattan(grin_results: dict,
     png_width = plot_width + 2 * png_dot_radius
     png_height = plot_height + 2 * png_dot_radius
 
+	# Set up matplotlib margins to 0
+    plt.rcParams['figure.subplot.left'] = 0
+    plt.rcParams['figure.subplot.right'] = 1
+    plt.rcParams['figure.subplot.top'] = 1
+    plt.rcParams['figure.subplot.bottom'] = 0
+    plt.rcParams['axes.xmargin'] = 0
+    plt.rcParams['axes.ymargin'] = 0
+
     # Calculate DPI and figure size based on PNG dimensions
     base_dpi = 100
     plot_dpi = int(base_dpi * device_pixel_ratio)
-    fig_width_inches = png_width / base_dpi
-    fig_height_inches = png_height / base_dpi
+    fig_width = png_width / base_dpi
+    fig_height = png_height / base_dpi
     
     # Extract gene.hits data
     gene_hits = grin_results['gene.hits']
@@ -189,13 +199,13 @@ def plot_grin2_manhattan(grin_results: dict,
                 })
     
     # Create matplotlib figure
-    fig, ax = plt.subplots(1, 1, figsize=(fig_width_inches, fig_height_inches), dpi=plot_dpi)
+    fig, ax = plt.subplots(1, 1, figsize=(fig_width, fig_height), dpi=plot_dpi)
+    ax.set_position([0, 0, 1, 1])
 
     # Calculate y-axis limits
     y_axis_scaled = False
     scale_factor_y = 1.0
     y_min = 0
-    y_max = 5  # default
     
     if plot_data['y']:
         max_y = max(plot_data['y'])
@@ -209,10 +219,10 @@ def plot_grin2_manhattan(grin_results: dict,
             for point in point_details:
                 point['y'] *= scale_factor_y
             scaled_max = max(plot_data['y'])
-            y_max = scaled_max + 0.15
+            y_max = scaled_max + 0.35
             y_axis_scaled = True
         else:
-            y_max = max(max_y + 0.15, 5)
+            y_max = max_y + 0.35
 
     # Set matplotlib to use raw genomic coordinates
     ax.set_xlim(0, total_genome_length)
@@ -267,7 +277,9 @@ def plot_grin2_manhattan(grin_results: dict,
         'png_height': png_height,
         'device_pixel_ratio': device_pixel_ratio,
         'dpi': plot_dpi,
-        'png_dot_radius': png_dot_radius
+        'png_dot_radius': png_dot_radius,
+		'mpl x margin': ax.margins()[0],
+		'mpl y margin': ax.margins()[1]
     }
     
     return fig, interactive_data
@@ -616,9 +628,9 @@ try:
 
 		# Save to BytesIO buffer - use the DPI from the plot_data
 		save_dpi = plot_data['dpi']
-		
+		plt.tight_layout(pad=0)
 		buffer = BytesIO()
-		fig.savefig(buffer, format="png", bbox_inches="tight", dpi=save_dpi)
+		fig.savefig(buffer, format="png", bbox_inches="tight", dpi=save_dpi, pad_inches=0, facecolor='white')
 		plt.close(fig)
 
 		# Get bytes and encode as base64

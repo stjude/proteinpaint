@@ -6,7 +6,7 @@ import { Menu, renderTable, table2col, make_one_checkbox, sayerror } from '#dom'
 import { dtsnvindel, mclass } from '#shared/common.js'
 import { get$id } from '#termsetting'
 import { PlotBase } from '#plots/PlotBase.ts'
-import { plotManhattan } from '../manhattan/manhattan.ts'
+import { plotManhattan } from '../manhattan/manhattan'
 
 class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
