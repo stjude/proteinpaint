@@ -44,6 +44,13 @@ export async function getPlotConfig(opts = {}, app) {
 			join: 'and',
 			lst: []
 		},
+		localFilter: {
+			isAtomic: true,
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: []
+		},
 		cnvCutoffs: {},
 
 		// rendering options
@@ -170,6 +177,7 @@ export async function getPlotConfig(opts = {}, app) {
 	copyMerge(config.settings.matrix, overrides.settings)
 	if (overrides.legendGrpFilter) config.legendGrpFilter = overrides.legendGrpFilter
 	if (overrides.legendValueFilter) config.legendValueFilter = overrides.legendValueFilter
+	if (overrides.localFilter) config.localFilter = overrides.localFilter
 
 	if (opts.name) {
 		// name should be identifier of a premade plot from the datase; load data of the premade plot and override into config{}

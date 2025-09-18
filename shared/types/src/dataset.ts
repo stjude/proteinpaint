@@ -1303,6 +1303,8 @@ type Matrix = {
 	legendGrpFilter?: any
 	/** filter to hide categories or mclass, e.g. hide male, hide MISSENSE */
 	legendValueFilter?: any
+	/** local filter to limit samples in matrix/hiercluster, merged with this.state.termfilter.filter when querying server */
+	localFilter?: any
 	/** matrix criteria for a CNV alteration */
 	cnvCutoffs?: any
 }

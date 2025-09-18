@@ -17,6 +17,7 @@ import { select } from 'd3-selection'
 import { sayerror } from '#dom'
 import { getCombinedTermFilter } from '#filter'
 import { rebaseGroupFilter } from '../../mass/groups.js'
+import { filterJoin } from '#filter/filter'
 
 export class Matrix {
 	constructor(opts) {
@@ -134,7 +135,10 @@ export class Matrix {
 		this.prevFilter0 = this.state?.filter0 // will be used to detect cohort change
 
 		const parentConfig = appState.plots.find(p => p.id === this.parentId)
-		const termfilter = getCombinedTermFilter(appState, parentConfig?.filter)
+		const joinedFilter = parentConfig?.filter
+			? filterJoin([parentConfig.filter, config.localFilter])
+			: config.localFilter
+		const termfilter = getCombinedTermFilter(appState, joinedFilter)
 
 		return {
 			isVisible: true,

@@ -107,14 +107,26 @@ export class VolcanoPlotView {
 				})
 
 				const group = { lst: tws, type: 'hierCluster' }
+				const customVariable = this.interactions.app.vocabApi.state.plots.find(p => p.id == this.interactions.id).tw
+				const annotationGroup = { lst: [customVariable] }
 				this.interactions.app.dispatch({
 					type: 'plot_create',
 					config: {
 						chartType: 'hierCluster',
-						termgroups: [group],
+						termgroups: [group, annotationGroup],
 						dataType: TermTypes.GENE_EXPRESSION,
-						divideBy: this.interactions.app.vocabApi.state.plots.find(p => p.id == this.interactions.id).tw,
-						settings: { hierCluster: { yDendrogramHeight: 0, clusterSamples: false } }
+						localFilter: {
+							in: true,
+							type: 'tvslst',
+							lst: [
+								{
+									type: 'tvs',
+									tvs: {
+										term: customVariable.term
+									}
+								}
+							]
+						}
 					}
 				})
 			})
