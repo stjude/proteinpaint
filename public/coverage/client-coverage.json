@@ -1513,38 +1513,38 @@
   },
   "plots/scatter/scatter.ts": {
     "lines": {
-      "total": 119,
-      "covered": 24,
+      "total": 121,
+      "covered": 75,
       "skipped": 0,
-      "pct": 20.16
+      "pct": 61.98
     },
     "functions": {
-      "total": 22,
-      "covered": 7,
+      "total": 21,
+      "covered": 14,
       "skipped": 0,
-      "pct": 31.81
+      "pct": 66.66
     },
     "statements": {
-      "total": 140,
-      "covered": 24,
+      "total": 142,
+      "covered": 85,
       "skipped": 0,
-      "pct": 17.14
+      "pct": 59.85
     },
     "branches": {
       "total": 91,
-      "covered": 7,
+      "covered": 41,
       "skipped": 0,
-      "pct": 7.69
+      "pct": 45.05
     },
     "lowestPct": {
-      "curr": 7.69,
+      "curr": 45.05,
       "prev": 45.45,
-      "diff": -37.760000000000005
+      "diff": -0.4000000000000057
     },
     "averagePct": {
-      "curr": 19.2,
+      "curr": 58.38499999999999,
       "prev": 59.91,
-      "diff": -40.709999999999994
+      "diff": -1.5250000000000057
     }
   },
   "plots/scatter/viewmodel/scatterViewModel2DLarge.ts": {
@@ -5329,38 +5329,38 @@
   },
   "plots/survival/survival.ts": {
     "lines": {
-      "total": 484,
-      "covered": 359,
+      "total": 483,
+      "covered": 324,
       "skipped": 0,
-      "pct": 74.17
+      "pct": 67.08
     },
     "functions": {
-      "total": 119,
-      "covered": 77,
+      "total": 117,
+      "covered": 72,
       "skipped": 0,
-      "pct": 64.7
+      "pct": 61.53
     },
     "statements": {
-      "total": 516,
-      "covered": 368,
+      "total": 515,
+      "covered": 328,
       "skipped": 0,
-      "pct": 71.31
+      "pct": 63.68
     },
     "branches": {
       "total": 311,
-      "covered": 175,
+      "covered": 122,
       "skipped": 0,
-      "pct": 56.27
+      "pct": 39.22
     },
     "lowestPct": {
-      "curr": 56.27,
-      "prev": 0,
-      "diff": 56.27
+      "curr": 39.22,
+      "prev": 56.27,
+      "diff": -17.050000000000004
     },
     "averagePct": {
-      "curr": 66.6125,
-      "prev": 0,
-      "diff": 66.6125
+      "curr": 57.877500000000005,
+      "prev": 66.6125,
+      "diff": -8.734999999999992
     }
   },
   "mass/store.ts": {
@@ -7413,6 +7413,42 @@
       "curr": 82.7825,
       "prev": 0,
       "diff": 82.7825
+    }
+  },
+  "plots/summary.ts": {
+    "lines": {
+      "total": 165,
+      "covered": 80,
+      "skipped": 0,
+      "pct": 48.48
+    },
+    "functions": {
+      "total": 36,
+      "covered": 29,
+      "skipped": 0,
+      "pct": 80.55
+    },
+    "statements": {
+      "total": 179,
+      "covered": 81,
+      "skipped": 0,
+      "pct": 45.25
+    },
+    "branches": {
+      "total": 130,
+      "covered": 37,
+      "skipped": 0,
+      "pct": 28.46
+    },
+    "lowestPct": {
+      "curr": 28.46,
+      "prev": 0,
+      "diff": 28.46
+    },
+    "averagePct": {
+      "curr": 50.685,
+      "prev": 0,
+      "diff": 50.685
     }
   }
 }
