@@ -8,6 +8,7 @@ import * as utils from '../utils.js'
 stripJsScript
 cachedFetch
 validateRglst
+illegalpath()
 */
 
 tape('\n', function (test) {
