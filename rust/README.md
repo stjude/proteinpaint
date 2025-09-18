@@ -2,6 +2,23 @@
 
 This directory holds the source code for rust-compiled utilities.
 
+
+## Rust version
+
+Current rust version is 1.89.0. TODO introduce `rust-toolchain` file, and pin the rust version there.
+
+Currently the version is hardcoded in:
+
+the Github Actions workflow file `.github/workflows/CD-rust-build.yml`.
+
+The Github Actions workflow file `.github/workflows/CI-unit.yml`.
+
+The rust build docker file `container/rust/Dockerfile`.
+
+When bumping the rust version, please update these files accordingly, and publish the new rust build env image using:
+
+https://github.com/stjude/proteinpaint/actions/workflows/CD-publish-rust-bookworm-env-image.yml
+
 ## Code layout
 
 All source code files should be directly under the `src/` directory. For a source
