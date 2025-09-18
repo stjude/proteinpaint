@@ -35,7 +35,7 @@ function init({ genomes }) {
 			const samples = Object.values(data.samples)
 			const values = samples.map(s => s?.[q.tw.$id!]?.value).filter(v => typeof v === 'number')
 			//calculate stats here and pass them to client to avoid second request on client for getting stats
-			const descrStats = getDescrStats(values)
+			const descrStats = getDescrStats(values, q.removeOutliers)
 
 			const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
 			const overlayTerm = q.overlayTw
