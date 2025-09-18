@@ -138,7 +138,7 @@ export default function getHandlers(self) {
 				? (event, d) => self.opts.bar_click_override(getTermValues(d, self))
 				: (event, d) => handle_click(event, self, d)
 		},
-		colLabel: {
+		barLabel: {
 			text: d => {
 				return 'label' in d
 					? d.label
@@ -151,26 +151,6 @@ export default function getHandlers(self) {
 				: (event, d) => handle_click(event, self, d),
 			mouseover: event => {
 				event.stopPropagation()
-				tip.show(event.clientX, event.clientY).d.html('Click to hide bar')
-			},
-			mouseout: () => {
-				tip.hide()
-			}
-		},
-		rowLabel: {
-			text: d => {
-				return d.label
-					? d.label
-					: self.config.term.values && 'id' in d && d.id in self.config.term.values
-					? self.config.term.values[d.id].label
-					: d
-			},
-			click: self.opts.bar_click_override
-				? (event, d) => self.opts.bar_click_override(getTermValues(d, self))
-				: (event, d) => handle_click(event, self, d),
-			mouseover: event => {
-				event.stopPropagation()
-				tip.show(event.clientX, event.clientY).d.html('Click to hide bar')
 			},
 			mouseout: () => {
 				tip.hide()

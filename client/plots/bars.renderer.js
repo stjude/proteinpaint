@@ -64,14 +64,9 @@ returns:
           mouseout(),
           rectFill()
         },
-        colLabel: {
+        barLabel: {
           text: d => d,
           mouseover(d) {},
-          mouseout()
-        },
-        rowLabel: {
-          text(),
-          mouseover(),
           mouseout()
         },
         legend: {
@@ -277,19 +272,19 @@ export default function barsRenderer(barsapp, holder) {
 		collabels = mainG
 			.append('g')
 			.attr('class', 'bars-collabels')
-			.style('cursor', hm.handlers.colLabel.click ? 'pointer' : '')
+			.style('cursor', hm.handlers.barLabel.click ? 'pointer' : '')
 			.on('mouseover.tphm2', colLabelMouseover)
 			.on('mouseout.tphm2', colLabelMouseout)
-			.on('click.tphm2', hm.handlers.colLabel.click)
+			.on('click.tphm2', hm.handlers.barLabel.click)
 
 		rowlabels = mainG
 			.append('g')
 			.attr('class', 'bars-rowlabels')
 			.attr('data-testid', 'sjpcb-bars-rowlabels')
-			.style('cursor', hm.handlers.rowLabel.click ? 'pointer' : '')
+			.style('cursor', hm.handlers.barLabel.click ? 'pointer' : '')
 			.on('mouseover.tphm2', colLabelMouseover)
 			.on('mouseout.tphm2', colLabelMouseout)
-			.on('click.tphm2', hm.handlers.rowLabel.click)
+			.on('click.tphm2', hm.handlers.barLabel.click)
 
 		series = mainG
 			.append('g')
@@ -575,7 +570,7 @@ export default function barsRenderer(barsapp, holder) {
 			.attr('y', 2) //hm.colw / 3)
 			.attr('text-anchor', 'end')
 			.attr('font-size', computed.colfontsize + 'px')
-			.html(hm.handlers.colLabel.text)
+			.html(hm.handlers.barLabel.text)
 
 		g.transition().delay(hm.delay).duration(hm.duration).style('opacity', 1)
 	}
@@ -592,7 +587,7 @@ export default function barsRenderer(barsapp, holder) {
 			.attr('y', 2) //hm.colw / 3)
 			.attr('text-anchor', 'end')
 			.attr('font-size', computed.colfontsize + 'px')
-			.html(hm.handlers.colLabel.text)
+			.html(hm.handlers.barLabel.text)
 	}
 
 	function rowLabelsTransform() {
@@ -619,7 +614,7 @@ export default function barsRenderer(barsapp, holder) {
 			.attr('x', 2) //hm.colw / 3)
 			.attr('text-anchor', 'end')
 			.attr('font-size', computed.rowfontsize + 'px')
-			.html(hm.handlers.rowLabel.text)
+			.html(hm.handlers.barLabel.text)
 
 		g.transition().delay(hm.delay).duration(hm.duration).style('opacity', 1)
 	}
@@ -636,7 +631,7 @@ export default function barsRenderer(barsapp, holder) {
 			.attr('x', 2) //hm.colw / 3)
 			.attr('text-anchor', 'end')
 			.attr('font-size', computed.rowfontsize + 'px')
-			.html(hm.handlers.rowLabel.text)
+			.html(hm.handlers.barLabel.text)
 	}
 
 	function rowTextWeight(d) {
@@ -845,13 +840,13 @@ export default function barsRenderer(barsapp, holder) {
 		cell[hm.colgrpkey] = r.grp
 		//seriesMouseOver(cell)
 
-		if (hm.handlers.colLabel.mouseover) hm.handlers.colLabel.mouseover(event)
+		if (hm.handlers.barLabel.mouseover) hm.handlers.barLabel.mouseover(event)
 	}
 
 	function colLabelMouseout(event) {
 		currCell = emptyObj
 		//resizeCaller.show()
-		if (hm.handlers.colLabel.mouseout) hm.handlers.colLabel.mouseout(event)
+		if (hm.handlers.barLabel.mouseout) hm.handlers.barLabel.mouseout(event)
 	}
 
 	function seriesClick(event) {
