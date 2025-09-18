@@ -206,8 +206,12 @@ def plot_grin2_manhattan(grin_results: dict,
     y_axis_scaled = False
     scale_factor_y = 1.0
     y_min = 0
+
 	# Calculate x-axis buffer as percentage of total genome length
     x_buffer = total_genome_length * 0.005  # 0.5% buffer on each side
+
+	# Calculate y-axis buffer as percentage of total png height
+    y_buffer = png_height * 0.0011  # 0.11% buffer above and below
     
     if plot_data['y']:
         max_y = max(plot_data['y'])
@@ -221,14 +225,14 @@ def plot_grin2_manhattan(grin_results: dict,
             for point in point_details:
                 point['y'] *= scale_factor_y
             scaled_max = max(plot_data['y'])
-            y_max = scaled_max + 0.35
+            y_max = scaled_max
             y_axis_scaled = True
         else:
-            y_max = max_y + 0.35
+            y_max = max_y
 
     # Set matplotlib to use raw genomic coordinates
     ax.set_xlim(-x_buffer, total_genome_length + x_buffer)
-    ax.set_ylim(y_min, y_max)
+    ax.set_ylim(-y_buffer, y_max + y_buffer)
 
     # Create alternating chromosome backgrounds
     for i, (_, row) in enumerate(chrom_size.iterrows()):
@@ -272,6 +276,7 @@ def plot_grin2_manhattan(grin_results: dict,
         'scale_factor': scale_factor_y,
         'total_genome_length': total_genome_length,
         'x_buffer': x_buffer,
+        'y_buffer': y_buffer,
         'y_min': y_min,
         'y_max': y_max,
         'plot_width': plot_width,

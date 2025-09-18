@@ -51,7 +51,7 @@ function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
 			const request = req.query as GRIN2Request
-			console.log('[GRIN2] request:', request)
+			// console.log('[GRIN2] request:', request)
 
 			// Get genome and dataset from request parameters
 			const g = genomes[request.genome]
@@ -81,7 +81,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	const startTime = Date.now()
 
 	// Step 1: Get samples using cohort infrastructure
-	mayLog('[GRIN2] Getting samples from cohort filter...')
+	// mayLog('[GRIN2] Getting samples from cohort filter...')
 
 	const samples = await get_samples(
 		request,
@@ -89,30 +89,30 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		true // must set to true to return sample name to be able to access file. FIXME this can let names revealed to grin2 client, may need to apply access control
 	)
 
-	const cohortTime = Date.now() - startTime
-	mayLog(`[GRIN2] Retrieved ${samples.length.toLocaleString()} samples in ${Math.round(cohortTime / 1000)} seconds`)
+	// const cohortTime = Date.now() - startTime
+	// mayLog(`[GRIN2] Retrieved ${samples.length.toLocaleString()} samples in ${Math.round(cohortTime / 1000)} seconds`)
 
 	if (samples.length === 0) {
 		throw new Error('No samples found matching the provided filter criteria')
 	}
 
 	// Step 2: Process sample data and convert to lesion format
-	mayLog('[GRIN2] Processing sample data...')
+	// mayLog('[GRIN2] Processing sample data...')
 	const processingStartTime = Date.now()
 
 	const { lesions, processingSummary } = await processSampleData(samples, ds, request)
 
 	const processingTime = Date.now() - processingStartTime
 	const processingTimeToPrint = Math.round(processingTime / 1000)
-	mayLog(`[GRIN2] Data processing took ${processingTimeToPrint} seconds`)
-	mayLog(
-		`[GRIN2] Processing summary: ${processingSummary?.successfulSamples ?? 0}/${
-			processingSummary?.totalSamples ?? samples.length
-		} samples processed successfully`
-	)
+	// mayLog(`[GRIN2] Data processing took ${processingTimeToPrint} seconds`)
+	// mayLog(
+	// `[GRIN2] Processing summary: ${processingSummary?.successfulSamples ?? 0}/${
+	// 	processingSummary?.totalSamples ?? samples.length
+	// } samples processed successfully`
+	// )
 
 	if (processingSummary && processingSummary.failedSamples > 0) {
-		mayLog(`[GRIN2] Warning: ${processingSummary.failedSamples} samples failed to process`)
+		// mayLog(`[GRIN2] Warning: ${processingSummary.failedSamples} samples failed to process`)
 	}
 
 	if (lesions.length === 0) {
@@ -130,7 +130,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		height: request.height
 	}
 
-	mayLog('[GRIN2] Prepared input for Python script:', { ...pyInput })
+	// mayLog('[GRIN2] Prepared input for Python script:', { ...pyInput })
 
 	// Build chromosome list from genome reference
 	for (const c in g.majorchr) {
@@ -142,7 +142,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		pyInput.chromosomelist[c] = g.majorchr[c]
 	}
 
-	mayLog(`[GRIN2] Prepared ${lesions.length.toLocaleString()} lesions for analysis`)
+	// mayLog(`[GRIN2] Prepared ${lesions.length.toLocaleString()} lesions for analysis`)
 
 	// Step 4: Run GRIN2 analysis via Python
 	const grin2AnalysisStart = Date.now()
@@ -157,7 +157,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 
 	const grin2AnalysisTime = Date.now() - grin2AnalysisStart
 	const grin2AnalysisTimeToPrint = Math.round(grin2AnalysisTime / 1000)
-	mayLog(`[GRIN2] Python processing took ${grin2AnalysisTimeToPrint} seconds`)
+	// mayLog(`[GRIN2] Python processing took ${grin2AnalysisTimeToPrint} seconds`)
 
 	// Step 5: Parse results and respond
 	// mayLog(`[GRIN2] Full pyResult object:`, pyResult)
@@ -209,7 +209,7 @@ async function processSampleData(
 		failedFiles: []
 	}
 
-	mayLog(`[GRIN2] Processing JSON files for ${samples.length.toLocaleString()} samples`)
+	// mayLog(`[GRIN2] Processing JSON files for ${samples.length.toLocaleString()} samples`)
 
 	// Process each sample's JSON file
 	for (const sample of samples) {
@@ -237,7 +237,7 @@ async function processSampleData(
 		}
 	}
 
-	mayLog(`[GRIN2] Total lesions processed: ${lesions.length.toLocaleString()}`)
+	// mayLog(`[GRIN2] Total lesions processed: ${lesions.length.toLocaleString()}`)
 
 	return {
 		lesions,

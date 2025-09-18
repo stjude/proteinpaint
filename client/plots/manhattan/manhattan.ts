@@ -79,7 +79,9 @@ export function plotManhattan(div: any, data: any, settings: any) {
 	const yAxisG = svg
 		.append('g')
 		.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
-	const yScale = scaleLinear().domain([0, data.plotData.y_max]).range([data.plotData.png_height, 0])
+	const yScale = scaleLinear()
+		.domain([-data.plotData.y_buffer, data.plotData.y_max + data.plotData.y_buffer])
+		.range([data.plotData.png_height, 0])
 	yAxisG.call(d3axis.axisLeft(yScale))
 
 	// Add y-axis label
