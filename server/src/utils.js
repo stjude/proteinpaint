@@ -137,20 +137,26 @@ export function illegalpath(s, checkWhiteList = false, checkBlackList = true) {
 	if (s.indexOf('..') != -1) return true
 	if (s.match(/(\<script|script\>)/i)) return true // avoid the potential for parsing injected code in client side error message
 	if (checkWhiteList && serverconfig.whiteListPaths) {
+		// no need to sort, in order to respect the list order as entered in whitelistPaths
+		const whiteListPaths = serverconfig.whiteListPaths.slice() //.sort((a, b) => a[0] == '!' ? 1 : b[0] == '!' ? -1 : 0)
 		// as /textfile route is dangerous, this server whitelists path pattern for it.
 		// only if the req.query.file begins with or glob-matches any of the path pattern then it's allowed
-		let nomatch = true
-		for (const p of serverconfig.whiteListPaths) {
+		let notlegal = true // safer default to illegal
+		for (const p of whiteListPaths) {
 			if (s.startsWith(p) || (p[0] != '!' && minimatch(s, p))) {
-				nomatch = false
+				// all allowed path requires matching a NON-NEGATED entry in whitelistPaths[]
+				notlegal = false
 				break
 			}
 			if (p[0] == '!' && !minimatch(s, p)) {
-				nomatch = true
+				// NOTE for safety:
+				// negated patterns will only be used to detect an illegal path,
+				// not matching a negated pattern does not imply a path is legal
+				notlegal = true
 				break
 			}
 		}
-		if (nomatch) return true
+		if (notlegal) return true
 	}
 	/*** disable for now ***/
 	if (checkBlackList) {
@@ -158,7 +164,6 @@ export function illegalpath(s, checkWhiteList = false, checkBlackList = true) {
 			if (ext === path.extname(s).toLowerCase()) return true
 		}
 	}
-
 	return false
 }
 

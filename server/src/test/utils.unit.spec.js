@@ -196,13 +196,26 @@ tape('illegalpath()', test => {
 	serverconfig.whiteListPaths = [
 		'a/b/c', // simple path
 		'm/*/n/*', // wildcard
-		'!x/y/*' // begins with ! for reverse match
+		// NOTE: entry order is relevant when a negated pattern starts with a similar parent path as other entries
+		'x/y/a/*', // will be allowed since it's listed before a negated pattern in the same parent path
+		'!x/y/**', // begins with ! for reverse match, will not be allowed
+		'x/y/b/*' // will not be allowed since it's listed after a negated pattern in the same parent path
 	]
 	test.notOk(utils.illegalpath('a/b/c/FI', true), 'a/b/c/FI in white list, good')
 	test.notOk(utils.illegalpath('m/x/n/FI', true), 'm/x/n/FI allowed by wildcard, good')
 	test.ok(utils.illegalpath('b/c/FI', true), 'b/c/FI not in white list, bad')
 	test.ok(utils.illegalpath('a/b/FI', true), 'a/b/FI not in white list, bad')
 	test.ok(utils.illegalpath('x/y/FI', true), 'x/y/FI not allowed by reverse match, bad')
+	test.notOk(utils.illegalpath('x/y/a/c', true), 'x/y/a/c allowed since it matched a non-negated pattern, good')
+	// for safety, negated patterns are only used to identify illegal paths, not matching a negated pattern does NOT imply that a path is legal
+	test.ok(
+		utils.illegalpath('x/t/1', true),
+		`x/t/1 not allowed since it is not explicitly allowed by a non-negated pattern, bad`
+	)
+	test.ok(
+		utils.illegalpath('x/y/b/c', true),
+		'x/y/b/c not allowed since it matched a negated pattern before matching an entry for a non-negated pattern, good'
+	)
 
 	// blacklist to protect files with certain extension
 	test.ok(utils.illegalpath('a/b/c/FI.bam'), 'a/b/c/FI.bam not allowed by blacklisted extension, bad')
