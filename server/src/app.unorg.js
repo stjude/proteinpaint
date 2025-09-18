@@ -32,7 +32,6 @@ import url from 'url'
 import fs from 'fs'
 import path from 'path'
 import got from 'got'
-import lazy from 'lazy'
 import child_process from 'child_process'
 import { spawn } from 'child_process'
 import { createCanvas } from 'canvas'
@@ -314,51 +313,17 @@ function handle_svmr(req, res) {
 	}
 }
 
-function handle_textfile(req, res) {
-	/*
-    load a server hosted text file
-    argument is json object
-    .file
-    	path from <TP>
-    .from
-    .to
-    	optional, if present, will get range [from to] 1-based, else will get the entire file
-    */
-	if (!req.query.file) return res.send({ error: 'no file' })
-	if (utils.illegalpath(req.query.file)) return res.send({ error: 'invalid file name' })
-	const file = path.join(serverconfig.tpmasterdir, req.query.file)
-
-	if (req.query.from != undefined) {
-		// get range [from to]
-		if (!Number.isInteger(req.query.from)) {
-			res.send({ error: 'invalid value for from' })
-			return
-		}
-		if (!Number.isInteger(req.query.to)) {
-			res.send({ error: 'invalid value for to' })
-			return
-		}
-		const lines = []
-		// TODO replace by readline
-		lazy(fs.createReadStream(file))
-			.on('end', () => {
-				res.send({ text: lines.join('\n') })
-			})
-			.lines.map(String)
-			.skip(req.query.from - 1)
-			.take(req.query.to)
-			.forEach(line => {
-				lines.push(line)
-			})
-	} else {
-		// get entire file
-		fs.readFile(file, { encoding: 'utf8' }, (err, data) => {
-			if (err) {
-				res.send({ error: 'error reading file' })
-				return
-			}
-			res.send({ text: data })
-		})
+async function handle_textfile(req, res) {
+	// load a server hosted text file
+	try {
+		if (!req.query.file) throw 'query.file missing'
+		const [e, file] = utils.fileurl(req, true) // /textfile request is dangerous. must apply
+		if (e) throw e
+		if (req.query.from) throw 'from/to is no longer supported'
+		res.send({ text: await utils.read_file(file) })
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		res.send({ error: e.message || e })
 	}
 }
 

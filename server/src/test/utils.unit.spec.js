@@ -157,6 +157,54 @@ tape('validateRglst', test => {
 		/q\.rglst\[\]\.chr invalid chr name/,
 		'throws with 2nd region err'
 	)
+	test.end()
+})
+
+tape('illegalpath()', test => {
+	// argument must be sub path relative to tp; returns true for bad path
+	test.notOk(utils.illegalpath('ab/cd/'), 'ab/cd/ good')
+	test.notOk(utils.illegalpath('!ab/cd/'), '!ab/cd/ good')
+	test.notOk(utils.illegalpath('<ab/cd/'), '<ab/cd/ good')
+	test.notOk(utils.illegalpath('>ab/cd/'), '>ab/cd/ good')
+	test.notOk(utils.illegalpath('#ab/cd/'), '#ab/cd/ good')
+	test.notOk(utils.illegalpath('*ab/cd'), '*ab/cd good')
+	test.notOk(utils.illegalpath('\\ab/cd/'), '\\ab/cd/ good')
+
+	// begin with root
+	test.ok(utils.illegalpath('/ab/cd'), '/ab/cd bad')
+
+	// tracing back with ..
+	test.ok(utils.illegalpath('../ab/cd'), '../ab/cd bad')
+	test.ok(utils.illegalpath('..ab/cd'), '..ab/cd bad')
+	test.ok(utils.illegalpath('ab/../../../cd'), 'ab/../../../cd bad')
+
+	// prohibited characters: " ' | & whitespace
+	test.ok(utils.illegalpath('"a/b'), '"a/b bad')
+	test.ok(utils.illegalpath("'a/b"), "'a/b bad")
+	test.ok(utils.illegalpath('|ab/cd'), '|ab/cd bad')
+	test.ok(utils.illegalpath('ab&/cd'), 'ab&/cd bad')
+	test.ok(utils.illegalpath(' ab/cd'), ' ab/cd bad')
+
+	// <script>
+	test.ok(utils.illegalpath('<script>/cd'), '<script>/cd bad')
+	test.ok(utils.illegalpath('ab/<sCripT>/cd'), 'ab/<sCripT>/cd bad')
+	test.ok(utils.illegalpath('</script>/cd'), '</script>/cd bad')
+	test.notOk(utils.illegalpath('<cript>/cd'), '<cript>/cd good')
+
+	// by default whiteListPaths is missing; since serverconfig{} is modifiable, assign it
+	serverconfig.whiteListPaths = [
+		'a/b/c', // simple path
+		'm/*/n/*', // wildcard
+		'!x/y/*' // begins with ! for reverse match
+	]
+	test.notOk(utils.illegalpath('a/b/c/FI', true), 'a/b/c/FI in white list, good')
+	test.notOk(utils.illegalpath('m/x/n/FI', true), 'm/x/n/FI allowed by wildcard, good')
+	test.ok(utils.illegalpath('b/c/FI', true), 'b/c/FI not in white list, bad')
+	test.ok(utils.illegalpath('a/b/FI', true), 'a/b/FI not in white list, bad')
+	test.ok(utils.illegalpath('x/y/FI', true), 'x/y/FI not allowed by reverse match, bad')
+
+	// blacklist to protect files with certain extension
+	test.ok(utils.illegalpath('a/b/c/FI.bam'), 'a/b/c/FI.bam not allowed by blacklisted extension, bad')
 
 	test.end()
 })
