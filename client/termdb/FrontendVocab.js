@@ -6,7 +6,7 @@ import { roundValue } from '#shared/roundValue.js'
 import { isNumeric } from '#shared/helpers.js'
 import computePercentile from '#shared/compute.percentile.js'
 import { Vocab } from './Vocab'
-import { summaryStats } from '#shared/descriptive.stats.js'
+//import { summaryStats } from '#shared/descriptive.stats.js'
 
 export class FrontendVocab extends Vocab {
 	constructor(opts) {
@@ -264,7 +264,7 @@ export class FrontendVocab extends Vocab {
 			values.push(_v)
 		}
 
-		return summaryStats(values)
+		//return summaryStats(values)
 	}
 
 	async getTerms(ids, _dslabel = null, _genome = null) {

@@ -8,20 +8,20 @@ export class LegendDataMapper {
 		if (config.term.q?.descrStats) {
 			this.legendData.push({
 				label: `Descriptive Statistics${isTerm2 ? `: ${config.term.term.name}` : ''}`,
-				items: this.setDescrStatArr(config.term.q.descrStats)
+				items: this.getDescrStatItems(config.term.q.descrStats)
 			})
 		}
 		if (isTerm2 && isTerm2.q?.descrStats) {
 			this.legendData.push({
 				label: `Descriptive Statistics: ${config.term2.term.name}`,
-				items: this.setDescrStatArr(isTerm2.q.descrStats)
+				items: this.getDescrStatItems(isTerm2.q.descrStats)
 			})
 		}
 		const hiddenPlots =
 			plots
 				.filter(p => p.isHidden)
 				?.map(p => {
-					const total = p.descrStats.find(d => d.id === 'total')
+					const total = p.descrStats.total
 					if (!total || !total.value) throw `Missing total value for ${p.key}`
 					return { key: p.key, text: p.key, n: total.value, isHidden: true, isPlot: true }
 				}) || []
@@ -42,8 +42,8 @@ export class LegendDataMapper {
 		}
 	}
 
-	setDescrStatArr(statsArr: { id: string; label: string; value: number }[]) {
-		return statsArr.map(s => ({ key: s.id, text: `${s.label}: ${s.value}`, isHidden: false, isPlot: false }))
+	getDescrStatItems(stats) {
+		return Object.values(stats).map(s => ({ text: `${s.label}: ${s.value}`, isHidden: false, isPlot: false }))
 	}
 
 	setHiddenCategoryItems(

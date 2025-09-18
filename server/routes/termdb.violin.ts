@@ -5,7 +5,7 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { getData } from '../src/termdb.matrix.js'
 import { createCanvas } from 'canvas'
 import { getOrderedLabels } from '../src/termdb.barchart.js'
-import { summaryStats } from '#shared/descriptive.stats.js'
+import { getDescrStats } from './termdb.descrstats.ts'
 import { isNumericTerm } from '#shared/terms.js'
 import { numericBins, parseValues } from './termdb.boxplot.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
@@ -310,7 +310,7 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 			plot.src = canvas.toDataURL()
 
 			//generate summary stat values
-			plot.summaryStats = summaryStats(plot.values).values
+			plot.summaryStats = getDescrStats(plot.values)
 			//delete plot.values
 		}
 	}

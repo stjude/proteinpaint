@@ -7,7 +7,7 @@ import { authApi } from './auth.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { read_file } from './utils.js'
 import { isNumericTerm } from '@sjcrh/proteinpaint-shared/terms.js'
-import { getDescriptiveStats } from '#shared/descriptive.stats.js'
+import { getDescrStats } from '#routes/termdb.descrstats.ts'
 
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)
@@ -137,7 +137,7 @@ export async function trigger_getSampleScatter(req, q, res, ds) {
 		let range
 		if (samples.length > 0) {
 			if (q.excludeOutliers) {
-				const ystats = getDescriptiveStats(samples.map(s => s.y))
+				const ystats = getDescrStats(samples.map(s => s.y))
 				cohortSamples = cohortSamples.filter(sample => sample.y > ystats.outlierMin && sample.y < ystats.outlierMax)
 				refSamples = refSamples.filter(sample => sample.y > ystats.outlierMin && sample.y < ystats.outlierMax)
 			}

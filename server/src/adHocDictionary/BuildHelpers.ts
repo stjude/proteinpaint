@@ -1,5 +1,5 @@
 import { decimalPlacesUntilFirstNonZero } from '#shared/roundValue.js'
-import { summaryStats } from '#shared/descriptive.stats.js'
+import { getDescrStats } from '#routes/termdb.descrstats.ts'
 
 /** Helper functions for building ad hoc dictionaries.
  * Only used in the build script. */
@@ -97,13 +97,13 @@ function assignNumType(term: any, termValues: any) {
 }
 
 function assignDefaultBins(term: any, termValues: any) {
-	const stats = summaryStats(termValues)
-	if (!stats.values || stats.values.length == 0) {
+	const stats = getDescrStats(termValues)
+	if (!stats || !Object.keys(stats).length) {
 		term.bins = {}
 		return
 	}
-	const min = stats.values.find(s => s.id === 'min')!.value
-	const max = stats.values.find(s => s.id === 'max')!.value
+	const min = stats.min.value
+	const max = stats.max.value
 
 	if (max <= min) {
 		term.bins = {

@@ -29,7 +29,7 @@ export class BoxPlotToolTips {
 	}
 
 	addLabelTooltip() {
-		if (this.plot.descrStats.length < 2) return
+		if (Object.keys(this.plot.descrStats).length < 2) return
 		this.boxplot.labelG.on('mouseover', (event: MouseEvent) => {
 			this.tip.clear()
 			if (this.isVertical) this.tip.show(event.clientX, event.clientY)
@@ -42,7 +42,7 @@ export class BoxPlotToolTips {
 				.attr('colspan', 2)
 				.style('padding', this.tablePadding)
 				.text(this.plot.key)
-			for (const stat of this.plot.descrStats) {
+			for (const stat of Object.values(this.plot.descrStats)) {
 				const row = table.append('tr')
 				row.append('td').style('padding', this.tablePadding).style('opacity', 0.5).text(stat.label)
 				row.append('td').style('padding', this.tablePadding).style('text-align', 'center').text(stat.value)
