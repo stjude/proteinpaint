@@ -58,7 +58,7 @@ async function trigger_getDescrStats(q, ds) {
 			continue
 		}
 		const value = v.value
-		if (q.tw.q.hiddenValues?.[value]) {
+		if (q.tw.term.values?.[value]?.uncomputable) {
 			// skip uncomputable values
 			continue
 		}
