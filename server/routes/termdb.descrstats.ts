@@ -78,7 +78,7 @@ async function trigger_getDescrStats(q, ds) {
 
 // function to compute descriptive statistics for an
 // array of numeric values
-export function getDescrStats(values) {
+export function getDescrStats(values, showOutlierRange = false) {
 	if (!values.length) {
 		// no values, do not get stats as it breaks code
 		// set result to blank obj to avoid "missing response.header['content-type']" err on client
@@ -116,16 +116,19 @@ export function getDescrStats(values) {
 	const stats = {
 		total: { label: 'Total', value: n },
 		min: { label: 'Minimum', value: min },
-		max: { label: 'Maximum', value: max },
 		p25: { label: '1st quartile', value: p25 },
-		p75: { label: '3rd quartile', value: p75 },
 		median: { label: 'Median', value: median },
+		p75: { label: '3rd quartile', value: p75 },
+		max: { label: 'Maximum', value: max },
 		mean: { label: 'Mean', value: mean },
-		variance: { label: 'Variance', value: variance },
-		stdDev: { label: 'Standard deviation', value: stdDev },
-		iqr: { label: 'Inter-quartile range', value: IQR },
-		outlierMin: { label: 'Outlier minimum', value: outlierMin },
-		outlierMax: { label: 'Outlier maximum', value: outlierMax }
+		stdDev: { label: 'Standard deviation', value: stdDev }
+		//variance: { label: 'Variance', value: variance }, // not necessary to report, as it is just stdDev^2
+		//iqr: { label: 'Inter-quartile range', value: IQR } // not necessary to report, as it is just p75-p25
+	}
+
+	if (showOutlierRange) {
+		stats.outlierMin = { label: 'Outlier minimum', value: outlierMin }
+		stats.outlierMax = { label: 'Outlier maximum', value: outlierMax }
 	}
 
 	for (const v of Object.values(stats)) {

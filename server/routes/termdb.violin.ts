@@ -70,7 +70,7 @@ export async function trigger_getViolinPlotData(q: ViolinRequest, ds: any) {
 	let values = samples.map(s => s?.[q.tw.$id!]?.value).filter(v => typeof v === 'number')
 	if (q.unit == 'log') values = values.filter(v => v > 0)
 	//calculate stats here and pass them to client to avoid second request on client for getting stats
-	const descrStats = summaryStats(values).values
+	const descrStats = getDescrStats(values)
 	const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
 	if (data.error) throw data.error
 	//get ordered labels to sort keys in plot2values
