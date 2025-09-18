@@ -119,7 +119,14 @@ function setRenderers(self) {
 			button
 				.style('cursor', 'pointer')
 				.attr('class', 'sja_menuoption')
-				.on('click', () => {
+				.on('click', async () => {
+					if (self.state.nav?.activeTab == 0) {
+						// see notes in about.ts line 340
+						await self.app.dispatch({
+							type: 'tab_set',
+							activeTab: 1
+						})
+					}
 					self.app.dispatch({
 						type: 'plot_create',
 						config: {
