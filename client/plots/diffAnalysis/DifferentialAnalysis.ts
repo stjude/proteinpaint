@@ -41,7 +41,6 @@ class DifferentialAnalysis extends PlotBase implements RxComponent {
 		const tabsDiv = div.append('div').attr('id', 'sjpp-diff-analysis-tabs').style('display', 'inline-block')
 		const plots = div.append('div').attr('id', 'sjpp-diff-analysis-tabs-content')
 		this.dom = {
-			holder,
 			controls: controls.style('display', 'inline-block'),
 			div,
 			tabsDiv,
