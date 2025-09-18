@@ -1,7 +1,8 @@
 import type { BasePlotConfig, MassState } from '#mass/types/mass'
 import type { Div } from '../../types/d3'
-import { RxComponent } from '../../types/rx.d'
-import { getCompInit, copyMerge } from '#rx'
+import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { PlotBase } from '../PlotBase'
+import { importPlot } from '../importPlot.js'
 import { Menu } from '#dom'
 import { termType2label } from '#shared/terms.js'
 import type { DiffAnalysisDom, DiffAnalysisOpts, DiffAnalysisPlotConfig } from './DiffAnalysisTypes'
@@ -12,7 +13,8 @@ import { getDefaultGseaSettings } from '#plots/gsea.js'
 /** TODO:
  * - type this file
  */
-class DifferentialAnalysis extends RxComponent {
+class DifferentialAnalysis extends PlotBase implements RxComponent {
+	static type = 'differentialAnalysis'
 	readonly type = 'differentialAnalysis'
 	components: {
 		plots: { [key: string]: any }
@@ -23,8 +25,8 @@ class DifferentialAnalysis extends RxComponent {
 	plotsControlsDiv: { [key: string]: Div }
 	termType: string
 
-	constructor(opts: any) {
-		super()
+	constructor(opts: any, api) {
+		super(opts, api)
 		this.components = {
 			plots: {}
 		}
@@ -39,6 +41,7 @@ class DifferentialAnalysis extends RxComponent {
 		const tabsDiv = div.append('div').attr('id', 'sjpp-diff-analysis-tabs').style('display', 'inline-block')
 		const plots = div.append('div').attr('id', 'sjpp-diff-analysis-tabs-content')
 		this.dom = {
+			holder,
 			controls: controls.style('display', 'inline-block'),
 			div,
 			tabsDiv,
@@ -84,13 +87,8 @@ class DifferentialAnalysis extends RxComponent {
 	}
 
 	async setComponent(config: DiffAnalysisPlotConfig) {
-		let _
-		if (config.childType == 'volcano') _ = await import(`../volcano/Volcano.ts`)
-		if (config.childType == 'gsea') _ = await import(`#plots/gsea.js`)
-
 		this.plotsControlsDiv[config.childType] = this.dom.controls.append('div')
 		this.plotsDiv[config.childType] = this.dom.plots.append('div')
-
 		const opts = {
 			app: this.app,
 			holder: this.plotsDiv[config.childType],
@@ -99,6 +97,7 @@ class DifferentialAnalysis extends RxComponent {
 			controls: this.plotsControlsDiv[config.childType],
 			termType: config.termType
 		}
+		const _ = await importPlot(config.childType, `unsupported childType='${config.childType}'`)
 		this.components.plots[config.childType] = await _.componentInit(opts)
 	}
 

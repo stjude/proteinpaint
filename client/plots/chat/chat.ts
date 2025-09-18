@@ -1,5 +1,5 @@
-import { getCompInit, copyMerge } from '#rx'
-import { RxComponent } from '../../types/rx.d'
+import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { PlotBase } from '../PlotBase'
 import type { BasePlotConfig, MassState } from '#mass/types/mass'
 import { Menu } from '#dom'
 import { keyupEnter } from '#src/client'
@@ -9,11 +9,13 @@ import { dofetch3 } from '#common/dofetch'
 
  */
 
-class Chat extends RxComponent {
+class Chat extends PlotBase implements RxComponent {
+	static type = 'chat'
 	readonly type = 'chat'
-	private components: { controls: any }
-	constructor(opts: any) {
-		super()
+	components: { controls: any }
+
+	constructor(opts: any, api) {
+		super(opts, api)
 		this.opts = opts
 		this.components = {
 			controls: {}

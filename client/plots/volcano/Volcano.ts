@@ -1,8 +1,8 @@
 import type { MassState, BasePlotConfig, MassAppApi } from '#mass/types/mass'
-import { getCompInit, copyMerge } from '#rx'
+import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { PlotBase } from '../PlotBase'
 import { fillTermWrapper } from '#termsetting'
 import { Menu, sayerror } from '#dom'
-import { RxComponent } from '../../types/rx.d'
 import { controlsInit } from '../controls'
 import { roundValue } from '#shared/roundValue.js'
 import type { VolcanoOpts, VolcanoSettings, VolcanoDom } from './VolcanoTypes'
@@ -15,14 +15,15 @@ import { VolcanoControlInputs } from './VolcanoControlInputs'
 // The max sample cutoff for volcano rendering
 const maxSampleCutoff = 4000
 
-class Volcano extends RxComponent {
+class Volcano extends PlotBase implements RxComponent {
+	static type = 'volcano'
 	readonly type = 'volcano'
 	components: { controls: any }
 	dom: VolcanoDom
 	interactions?: VolcanoInteractions
 	termType: string
-	constructor(opts: VolcanoOpts) {
-		super()
+	constructor(opts: VolcanoOpts, api) {
+		super(opts, api)
 		this.components = {
 			controls: {}
 		}

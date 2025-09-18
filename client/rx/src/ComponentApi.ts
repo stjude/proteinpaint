@@ -18,7 +18,7 @@ export interface RxComponent {
 	components?: ComponentApi[] | { [name: string]: ComponentApi | { [name: string]: ComponentApi } }
 	preApiFreeze?: (api: ComponentApi) => void
 	init?: (appState: any) => Promise<void>
-	reactsTo?: (action: { type: string; [key: string]: any }) => boolean
+	reactsTo?: (action: { type: string; [key: string]: any }) => boolean | undefined
 	getState?: (appState: any) => any
 	hasStatePreMain?: boolean
 	main: (arg?: any) => void

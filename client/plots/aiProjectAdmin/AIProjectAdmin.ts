@@ -1,5 +1,5 @@
-import { RxComponent } from '../../types/rx.d'
-import { getCompInit, copyMerge } from '#rx'
+import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { PlotBase } from '../PlotBase'
 import type { MassState } from '#mass/types/mass'
 import { getDefaultAIProjectAdminSettings } from './defaults'
 import { ProjectReposity } from './repo/ProjectReposity'
@@ -11,15 +11,20 @@ import { sayerror } from '#dom'
 /** This plot supports training AI models.
  * The UI allows users to create and manage projects. */
 
-class AIProjectAdmin extends RxComponent {
+class AIProjectAdmin extends PlotBase implements RxComponent {
+	static type = 'AIProjectAdmin'
 	public type = 'AIProjectAdmin'
 	prjtRepo: ProjectReposity
 	projects?: any[]
 	prjtAdminUI?: ProjectAdminRender
 	interactions?: AIProjectAdminInteractions
 
-	constructor(opts: any) {
-		super()
+	dom!: {
+		[name: string]: any
+	}
+
+	constructor(opts: any, api) {
+		super(opts, api)
 		this.opts = opts
 		this.dom = {
 			holder: opts.holder,

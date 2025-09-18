@@ -9,6 +9,15 @@ export class PlotBase {
 	app: AppApi
 	id: string
 	state: any
+
+	dom: {
+		[name: string]: any
+	} = {}
+
+	components: {
+		[name: string]: ComponentApi | { [name: string]: ComponentApi }
+	} = {}
+
 	// dom: any
 	// config: any
 	configTermKeys?: string[]

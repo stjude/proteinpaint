@@ -1,5 +1,5 @@
-import { getCompInit, copyMerge } from '#rx'
-import { RxComponent } from '../../types/rx.d'
+import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { PlotBase } from '../PlotBase'
 import { fillTermWrapper, fillTwLst } from '#termsetting'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import { controlsInit } from '../controls'
@@ -15,9 +15,10 @@ import { CorrVolcanoInteractions } from './interactions/CorrVolcanoInteractions'
  *  - Add tests
  */
 
-class CorrelationVolcano extends RxComponent {
+class CorrelationVolcano extends PlotBase implements RxComponent {
+	static type = 'correlationVolcano'
 	readonly type = 'correlationVolcano'
-	private components: { controls: any }
+	components: { controls: any }
 	/** Max radius user may enter in control or legend menu */
 	readonly defaultInputMaxRadius = 35
 	/** Min radius user may enter in control or legend menu */
@@ -25,8 +26,8 @@ class CorrelationVolcano extends RxComponent {
 	dom: CorrVolcanoDom
 	variableTwLst: any
 	interactions?: CorrVolcanoInteractions
-	constructor(opts: any) {
-		super()
+	constructor(opts: any, api) {
+		super(opts, api)
 		this.opts = opts
 		this.components = {
 			controls: {}
