@@ -1,1 +1,2 @@
-
+Fixes:
+- delete "lazy" dependency, improve /textfile, unit test for illegalpath()
