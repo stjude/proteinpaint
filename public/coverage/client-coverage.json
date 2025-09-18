@@ -6949,38 +6949,38 @@
   },
   "plots/violin.js": {
     "lines": {
-      "total": 95,
-      "covered": 7,
+      "total": 84,
+      "covered": 78,
       "skipped": 0,
-      "pct": 7.36
+      "pct": 92.85
     },
     "functions": {
-      "total": 21,
-      "covered": 1,
+      "total": 17,
+      "covered": 15,
       "skipped": 0,
-      "pct": 4.76
+      "pct": 88.23
     },
     "statements": {
-      "total": 111,
-      "covered": 7,
+      "total": 95,
+      "covered": 83,
       "skipped": 0,
-      "pct": 6.3
+      "pct": 87.36
     },
     "branches": {
-      "total": 75,
-      "covered": 1,
+      "total": 65,
+      "covered": 52,
       "skipped": 0,
-      "pct": 1.33
+      "pct": 80
     },
     "lowestPct": {
-      "curr": 1.33,
-      "prev": 0,
-      "diff": 1.33
+      "curr": 80,
+      "prev": 1.33,
+      "diff": 78.67
     },
     "averagePct": {
-      "curr": 4.9375,
-      "prev": 0,
-      "diff": 4.9375
+      "curr": 87.11,
+      "prev": 4.9375,
+      "diff": 82.1725
     }
   },
   "plots/violin.renderer.js": {
