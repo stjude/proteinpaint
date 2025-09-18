@@ -67,7 +67,9 @@ export async function trigger_getViolinPlotData(q: ViolinRequest, ds: any) {
 	)
 
 	const samples = Object.values(data.samples)
-	let values = samples.map(s => s?.[q.tw.$id!]?.value).filter(v => typeof v === 'number')
+	let values = samples
+		.map(s => s?.[q.tw.$id!]?.value)
+		.filter(v => typeof v === 'number' && !q.tw.term.values?.[v]?.uncomputable)
 	if (q.unit == 'log') values = values.filter(v => v > 0)
 	//calculate stats here and pass them to client to avoid second request on client for getting stats
 	const descrStats = getDescrStats(values)
