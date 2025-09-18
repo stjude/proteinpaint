@@ -49,7 +49,8 @@ function init({ genomes }) {
 
 			const wsiImagePath = await getWSImagePath(ds, wSImagesRequest)
 
-			const session = await getSessionId(ds, cookieJar, getCookieString, setCookie, wsiImagePath, aiProjectId)
+			// TODO use project id when creating a session
+			const session = await getSessionId(ds, cookieJar, getCookieString, setCookie, wsiImagePath)
 
 			const getWsiImageResponse: any = await getWsiImageDimensions(
 				session.imageSessionId,
@@ -95,8 +96,7 @@ async function getSessionId(
 	cookieJar: any,
 	getCookieString: any,
 	setCookie: any,
-	wsimage: string,
-	aiProjectId: number | undefined
+	wsimage: string
 ): Promise<SessionData> {
 	const sessionManager = SessionManager.getInstance()
 
@@ -207,53 +207,6 @@ async function getSessionId(
 	}
 
 	const sessionData: SessionData = await sessionManager.setSession(wsimage, sessionId, tileServer, overlays)
-
-	if (ds.queries.WSImages.getWSIPredictionPatches) {
-		const predictionPatches = await ds.queries.WSImages.getWSIPredictionPatches(aiProjectId, wsimage)
-
-		if (!predictionPatches) throw new Error('No prediction files found')
-
-		const mount = serverconfig.features?.tileserver?.mount
-
-		if (!mount) throw new Error('No mount available for TileServer')
-
-		if (predictionPatches.length > 0) {
-			for (const predictionPatch of predictionPatches) {
-				const predictionFilePath = path.join(`${mount}/${ds.queries.WSImages.aiToolImageFolder}/`, predictionPatch)
-				const predictionsData = qs.stringify({
-					overlay_path: predictionFilePath
-				})
-
-				await ky.put(`${tileServer.url}/tileserver/overlay`, {
-					body: predictionsData,
-					timeout: 50000,
-					headers: {
-						'Content-Type': 'application/x-www-form-urlencoded',
-						Cookie: `session_id=${sessionId}`
-					},
-					hooks: getHooks(cookieJar, getCookieString, setCookie)
-				})
-			}
-
-			// Submit the color map for predictions
-			const cmapData = qs.stringify({
-				cmap: JSON.stringify({
-					keys: ['prediction', 'annotation'],
-					values: [ds.queries.WSImages.predictionColor, ds.queries.WSImages.annotationsColor]
-				})
-			})
-
-			await ky.put(`${tileServer.url}/tileserver/cmap`, {
-				body: cmapData,
-				timeout: 50000,
-				headers: {
-					'Content-Type': 'application/x-www-form-urlencoded',
-					Cookie: `session_id=${sessionId}`
-				},
-				hooks: getHooks(cookieJar, getCookieString, setCookie)
-			})
-		}
-	}
 
 	return sessionData
 }

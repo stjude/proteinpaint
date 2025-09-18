@@ -47,7 +47,15 @@ export class WSIAnnotationsRenderer {
 
 				this.buffers.annotationsIdx.addListener((index: number) => {
 					tr.style('background-color', index === rowIdx ? selectedColor : origColor)
-					const coords = [imageViewData.tilesTable!.rows[index][1].value] as unknown as [number, number][]
+					const rows = imageViewData.tilesTable?.rows
+					if (!rows || !Number.isInteger(index) || index < 0 || index >= rows.length) {
+						// Table not ready or index no longer valid (e.g., after delete)
+						return
+					}
+					const coords = [imageViewData.tilesTable?.rows[index][1].value] as unknown as [number, number][]
+
+					if (!coords || coords.length === 0) return
+
 					this.interactions.zoomInEffectListener(activeImageExtent, coords, map, imageViewData.activePatchColor!)
 				})
 

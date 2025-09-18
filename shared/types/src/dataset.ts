@@ -1072,8 +1072,6 @@ export type WSImages = {
 	/**  ds supplied */
 	getWSIAnnotations?: (projectId: string, wsiImage: string) => Promise<string[]>
 	/**  ds supplied */
-	makeGeoJson?: (sampleId: string, wsiImage: string) => void
-	/**  ds supplied */
 	getWSIPredictionOverlay?: (wsiImage: string) => Promise<string | undefined>
 	/**  ds supplied */
 	getWSIUncertaintyOverlay?: (wsiImage: string) => Promise<string | undefined>

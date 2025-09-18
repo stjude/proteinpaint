@@ -119,13 +119,7 @@ export class WSIViewer extends RxComponent {
 
 		this.metadataRenderer.renderMetadata(holder, imageViewData)
 
-		// TODO simplify the if condition
-		if (
-			(viewModel.sampleWSImages[settings.displayedImageIndex].annotations ||
-				viewModel.sampleWSImages[settings.displayedImageIndex].predictions) &&
-			settings.renderAnnotationTable &&
-			this.map
-		) {
+		if (settings.renderAnnotationTable && this.map) {
 			const wsiAnnotationsRenderer = new WSIAnnotationsRenderer(buffers, this.wsiViewerInteractions)
 			wsiAnnotationsRenderer.render(holder, imageViewData, activeImageExtent!, this.map)
 			this.legendRenderer.render(holder, imageViewData)

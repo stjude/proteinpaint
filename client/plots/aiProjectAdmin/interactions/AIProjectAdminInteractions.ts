@@ -100,7 +100,7 @@ export class AIProjectAdminInteractions {
 		}
 
 		const wsiViewer = await import('#plots/wsiviewer/plot.wsi.js')
-		wsiViewer.default(this.dslabel, holder, { name: this.genome }, null, config.settings.project.id, images)
+		wsiViewer.default(this.dslabel, holder, { name: this.genome }, null, config.settings.project.id, images, true)
 	}
 
 	public async appDispatchEdit(settings: any, config: any = {}): Promise<void> {

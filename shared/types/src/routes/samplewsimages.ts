@@ -1,5 +1,6 @@
 import type { RoutePayload } from './routeApi.ts'
 import type { WSIClass } from '../dataset.ts'
+import type { Annotation, Prediction } from './aiProjectSelectedWSImages.ts'
 
 export type SampleWSImagesRequest = {
 	genome: string
@@ -12,13 +13,11 @@ export type SampleWSImagesResponse = {
 	sampleWSImages: WSImage[]
 }
 
-export type WSImage = {
+export class WSImage {
 	id?: number
 	filename: string
-	// TODO remove when it's verified
-	annotationsAndPredictionsOverlay?: string
-	predictionLayers?: Array<string>
 	metadata?: string
+	predictionLayers?: Array<string>
 	annotations?: Array<Annotation>
 	predictions?: Array<Prediction>
 	classes?: Array<WSIClass>
@@ -28,23 +27,10 @@ export type WSImage = {
 	activePatchColor?: string
 	/** Tile size in pixels needed for AI scripts */
 	tileSize?: number
-}
 
-export type Annotation = {
-	zoomCoordinates: [number, number]
-	class: string
-}
-
-export type Prediction = {
-	zoomCoordinates: [number, number]
-	type: string
-	class: string
-	uncertainty: number
-}
-
-export type TileSelection = {
-	zoomCoordinates: [number, number]
-	class?: string
+	constructor(filename: string) {
+		this.filename = filename
+	}
 }
 
 export const sampleWSImagesPayload: RoutePayload = {

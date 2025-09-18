@@ -2,7 +2,7 @@ import type { TileSelection, WSImage } from '@sjcrh/proteinpaint-types'
 import type { WSImageLayers } from '#plots/wsiviewer/viewModel/WSImageLayers.ts'
 import type { TableCell } from '#dom'
 import { roundValue } from '#shared/roundValue.js'
-import type { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
+import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
 
 export class ViewModel {
@@ -46,17 +46,13 @@ export class ViewModel {
 
 	public getInitialZoomInCoordinate(index: number) {
 		const image = this.sampleWSImages[index]
-		const sessionsTileSelections = image.sessionsTileSelections?.map(a => a.zoomCoordinates) || []
-		const predictions = image.predictions?.map(a => a.zoomCoordinates) || []
-		const persistedAnnotations = image.annotations?.map(a => a.zoomCoordinates) || []
-		return [...sessionsTileSelections, ...predictions, ...persistedAnnotations].slice(0, 1)
+		return SessionWSImage.getTileSelections(image)
+			.map(a => a.zoomCoordinates)
+			.slice(0, 1)
 	}
 
 	private setAnnonationsTableData(imageViewData: ImageViewData, imageData: SessionWSImage) {
-		if (!imageData?.annotations?.length && !imageData?.predictions?.length) return
-
-		// Map session annotations to the same format, starting index at 0
-		const sessionsTileSelections: any = imageData.sessionsTileSelections?.map((d, i) => {
+		const sessionsTileSelections: any[] = (imageData.sessionsTileSelections ?? []).map((d, i) => {
 			return [
 				{ value: i }, // Index
 				{ value: d.zoomCoordinates },
@@ -67,27 +63,34 @@ export class ViewModel {
 			]
 		})
 
-		// Original annotations follow, indexing continues from session annotations
-		const predictionRows: any = imageData.predictions!.map((d, i) => {
+		const predictionRows: any[] = (imageData.predictions ?? []).map((prediction, i) => {
+			const color = imageData.classes?.find(c => c.label === prediction.class)?.color
+
 			return [
 				{ value: imageData.sessionsTileSelections!.length + i }, // Continue index
-				{ value: d.zoomCoordinates },
-				{ value: roundValue(d.uncertainty, 4) },
-				{ value: d.class },
-				{ html: '' },
+				{ value: prediction.zoomCoordinates },
+				{ value: roundValue(prediction.uncertainty, 4) },
+				{ value: prediction.class },
+				{
+					html: `<span style="display:inline-block;width:12px;height:18px;background-color:${color};border:grey 1px solid;"></span>`
+				},
 				{ value: '' }
 			]
 		})
 
 		// Original annotations follow, indexing continues from session annotations
-		const annotationsRows: any = imageData.annotations!.map((d, i) => {
+		const annotationsRows: any = (imageData.annotations ?? []).map((annotation, i) => {
+			const color = imageData.classes?.find(c => c.label === annotation.class)?.color
+
 			return [
-				{ value: imageData.sessionsTileSelections!.length + imageData.predictions!.length + i }, // Continue index
-				{ value: d.zoomCoordinates },
+				{ value: sessionsTileSelections.length + predictionRows.length + i }, // Continue index
+				{ value: annotation.zoomCoordinates },
 				{ value: 0 },
 				{ value: '' },
-				{ html: '' },
-				{ value: d.class }
+				{
+					html: `<span style="display:inline-block;width:12px;height:18px;background-color:${color};border:grey 1px solid;"></span>`
+				},
+				{ value: annotation.class }
 			]
 		})
 
