@@ -6,7 +6,7 @@ import { Menu, renderTable, table2col, make_one_checkbox, sayerror } from '#dom'
 import { dtsnvindel, mclass } from '#shared/common.js'
 import { get$id } from '#termsetting'
 import { PlotBase } from '#plots/PlotBase.ts'
-import { plotManhattan } from '../manhattan/manhattan'
+import { plotManhattan } from '#plots/manhattan/manhattan.ts'
 
 class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
@@ -506,7 +506,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.text('Matrix')
 				.on('click', () => this.createMatrixFromGenes(result.topGeneTable))
 				.on('mouseover', function (this: HTMLElement) {
-					this.style.background = '#e0e0e0' // Use btnHoverBackgroundColor if accessible
+					this.style.background = '#e0e0e0'
 				})
 				.on('mouseout', () => {
 					matrixBtn.style('background', this.btnBackgroundColor)
@@ -660,6 +660,7 @@ export function getDefaultSettings(opts) {
 			legendFontSize: 12,
 
 			// Interactive dots
+			showDownload: true,
 			showInteractiveDots: true,
 			interactiveDotRadius: 3,
 			interactiveDotStrokeWidth: 1
