@@ -1253,7 +1253,9 @@ export class MatrixControls {
 						controlPanelBtn.click()
 					}
 				},
-				termsAsListed: geneInputType == 'hierCluster' && !this.parent.config.settings.hierCluster.clusterRows
+				termsAsListed:
+					(geneInputType == 'hierCluster' && !this.parent.config.settings.hierCluster.clusterRows) ||
+					(geneInputType != 'hierCluster' && this.parent.config.settings.matrix.sortTermsBy == 'asListed')
 			})
 		}
 
