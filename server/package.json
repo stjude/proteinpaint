@@ -82,7 +82,6 @@
     "got": "^14.2.0",
     "image-size": "^0.5.5",
     "jsonwebtoken": "^9.0.0",
-    "jstat": "^1.9.3",
     "ky": "^1.2.1",
     "micromatch": "^4.0.5",
     "minimatch": "^10.0.1",
