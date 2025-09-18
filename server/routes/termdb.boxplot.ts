@@ -3,7 +3,7 @@ import { boxplotPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import { boxplot_getvalue } from '../src/utils.js'
 import { sortPlot2Values } from './termdb.violin.ts'
-import { summaryStats, getDescriptiveStats, summaryStatsFromStats } from '#shared/descriptive.stats.js'
+import { getDescrStats } from './termdb.descrstats.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/boxplot',
@@ -35,7 +35,7 @@ function init({ genomes }) {
 			const samples = Object.values(data.samples)
 			const values = samples.map(s => s?.[q.tw.$id!]?.value).filter(v => typeof v === 'number')
 			//calculate stats here and pass them to client to avoid second request on client for getting stats
-			const statsAllSummary = summaryStats(values).values
+			const descrStats = getDescrStats(values)
 
 			const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
 			const overlayTerm = q.overlayTw
@@ -63,12 +63,11 @@ function init({ genomes }) {
 						const value = { value: v }
 						return value
 					})
-					const stats = getDescriptiveStats(sortedValues)
+
 					if (q.removeOutliers) {
-						outlierMin = Math.min(outlierMin, stats.outlierMin)
-						outlierMax = Math.max(outlierMax, stats.outlierMax)
+						outlierMin = Math.min(outlierMin, descrStats.outlierMin)
+						outlierMax = Math.max(outlierMax, descrStats.outlierMax)
 					}
-					const descrStats = summaryStatsFromStats(stats, true).values
 
 					const boxplot = boxplot_getvalue(vs, q.removeOutliers)
 					if (!boxplot) throw 'boxplot_getvalue failed [termdb.boxplot init()]'
@@ -115,7 +114,7 @@ function init({ genomes }) {
 				absMax: q.removeOutliers ? outlierMax : absMax,
 				charts,
 				uncomputableValues: setUncomputableValues(uncomputableValues),
-				descrStats: statsAllSummary
+				descrStats
 			}
 
 			res.send(returnData)

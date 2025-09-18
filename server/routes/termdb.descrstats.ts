@@ -71,8 +71,17 @@ async function trigger_getDescrStats(q, ds) {
 		values.push(Number(value))
 	}
 
+	const stats = getDescrStats(values)
+
+	return stats
+}
+
+// function to compute descriptive statistics for an
+// array of numeric values
+export function getDescrStats(values) {
 	if (!values.length) {
-		// no computable values. do not get stats as it breaks code. set result to blank obj to avoid "missing response.header['content-type']" err on client
+		// no values, do not get stats as it breaks code
+		// set result to blank obj to avoid "missing response.header['content-type']" err on client
 		return {}
 	}
 

@@ -3,7 +3,7 @@ import { CorrelationVolcanoPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { mayLog } from '#src/helpers.ts'
-import { getStdDev } from '#shared/descriptive.stats.js'
+import { getStdDev } from './termdb.descrstats.ts'
 
 // to avoid crashing r, an array must meet below; otherwise the variable is skipped
 const minArrayLength = 3 // minimum number of values

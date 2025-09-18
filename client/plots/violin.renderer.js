@@ -131,7 +131,7 @@ export default function setViolinRenderer(self) {
 		const [th1, _] = table.addRow()
 		th1.attr('colspan', '2').style('color', 'black').style('text-align', 'center').text(d.label)
 		//Summary stat rows
-		for (const stat of d.summaryStats) {
+		for (const stat of Object.values(d.summaryStats)) {
 			const [td1, td2] = table.addRow()
 			td1.text(stat.label)
 			td2.style('text-align', 'center').text(stat.value ?? 0)
@@ -434,7 +434,7 @@ export default function setViolinRenderer(self) {
 	function renderMedian(violinG, isH, plot, svgData, self) {
 		const s = self.config.settings.violin
 		//render median values on plots
-		const median = svgData.axisScale(plot.summaryStats.find(x => x.id === 'median').value)
+		const median = svgData.axisScale(plot.summaryStats.median.value)
 		if (plot.plotValueCount >= 2) {
 			violinG
 				.append('line')
@@ -568,7 +568,7 @@ function getLegendGrps(termNum, self) {
 
 function addDescriptiveStats(term, legendGrps, headingStyle, self) {
 	if (term?.q.descrStats) {
-		const items = term.q.descrStats.map(stat => {
+		const items = Object.values(term.q.descrStats).map(stat => {
 			return {
 				text: `${stat.label}: ${stat.value}`,
 				noIcon: true

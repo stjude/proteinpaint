@@ -23,8 +23,8 @@ export class ListSamples {
 
 		try {
 			//ids 'min' and 'max' are always present in the descrStats{}
-			const min = plot.descrStats.find(d => d.id === 'min')!.value
-			const max = plot.descrStats.find(d => d.id === 'max')!.value
+			const min = plot.descrStats.min.value
+			const max = plot.descrStats.max.value
 			this.tvslst = this.getTvsLst(min, max, getRange, plotConfig.term, plotConfig.term2)
 		} catch (e: any) {
 			console.error(e.message || e)
