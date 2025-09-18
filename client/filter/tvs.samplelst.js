@@ -18,9 +18,8 @@ async function fillMenu(self, div, tvs) {
 	let samples, name
 	for (const field in tvs.term.values) {
 		name = field
-		samples = tvs.term.values[field].list //Only two possible groups and the second one contains the samples not in the first one
+		samples = tvs.term.values[field].list
 		addTable(div, tvs, field)
-		break
 	}
 	div
 		.append('div')
@@ -36,12 +35,8 @@ async function fillMenu(self, div, tvs) {
 			for (const field in tvs.term.values) {
 				const value = tvs.term.values[field]
 
-				if (!firstGroup) {
-					firstGroup = field
-					value.list = value.list.filter(s => !('checked' in s) || s.checked)
-				} else value.list = tvs.term.values[firstGroup].list //not in group
+				value.list = value.list.filter(s => !('checked' in s) || s.checked)
 			}
-
 			self.opts.callback(tvs)
 		})
 }
@@ -85,11 +80,9 @@ function get_pill_label(tvs) {
 }
 
 function getGroupLabel(term) {
-	let n, group
+	let n = 0
 	for (const item in term.values) {
-		n = term.values[item].list.length
-		group = item
-		break
+		n += term.values[item].list.length
 	}
-	return `${group} n=${n}`
+	return `${term.name} n=${n}`
 }
