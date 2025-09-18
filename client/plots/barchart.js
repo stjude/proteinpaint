@@ -402,7 +402,7 @@ export class Barchart {
 			if (isNumericTerm(t.term)) {
 				const data = await this.app.vocabApi.getDescrStats(t, this.state.termfilter)
 				if (data.error) throw data.error
-				t.q.descrStats = data.values
+				t.q.descrStats = data
 			}
 		}
 	}
@@ -762,7 +762,7 @@ export class Barchart {
 		// descriptive statistics
 		if (t1.q.descrStats && s.showStats) {
 			// term1 has descriptive stats
-			const items = t1.q.descrStats.map(stat => {
+			const items = Object.values(t1.q.descrStats).map(stat => {
 				return {
 					text: `${stat.label}: ${stat.value}`,
 					noIcon: true
@@ -775,7 +775,7 @@ export class Barchart {
 		}
 		if (t2?.q.descrStats && s.showAssociationTests) {
 			// term2 has descriptive stats
-			const items = t2.q.descrStats.map(stat => {
+			const items = Object.values(t2.q.descrStats).map(stat => {
 				return {
 					text: `${stat.label}: ${stat.value}`,
 					noIcon: true
