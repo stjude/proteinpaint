@@ -18,8 +18,8 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 	configTermKeys = ['term', 'term0', 'term2']
 	config: any
 
-	constructor(opts) {
-		super(opts)
+	constructor(opts, api) {
+		super(opts, api)
 		this.type = SummaryInputPlot.type
 		this.dom = this.getDom()
 	}

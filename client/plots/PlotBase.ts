@@ -1,9 +1,10 @@
-import { type AppApi } from '#rx'
+import type { AppApi, ComponentApi } from '#rx'
 import { TwRouter, routedTermTypes } from '#tw'
 
 export class PlotBase {
 	//type: string
 	//id: string
+	api?: ComponentApi
 	opts: any
 	app: AppApi
 	id: string
@@ -12,7 +13,8 @@ export class PlotBase {
 	// config: any
 	configTermKeys?: string[]
 
-	constructor(opts) {
+	constructor(opts, plotApi?: ComponentApi) {
+		if (plotApi) this.api = plotApi
 		this.opts = opts
 		this.id = opts.id
 		this.app = opts.app

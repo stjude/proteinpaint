@@ -22,8 +22,8 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		[name: string]: ComponentApi | { [name: string]: ComponentApi }
 	} = {}
 
-	constructor(opts) {
-		super(opts)
+	constructor(opts, api) {
+		super(opts, api)
 		this.type = TdbGenomeBrowser.type
 		this.dom = this.getDom()
 	}

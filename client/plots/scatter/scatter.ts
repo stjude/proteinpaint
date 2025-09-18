@@ -19,7 +19,6 @@ import { PlotBase } from '#plots/PlotBase.js'
 
 export class Scatter extends PlotBase implements RxComponent {
 	static type = 'sampleScatter'
-	api: ComponentApi
 	type: string
 	parentId?: string
 	dom!: {
@@ -43,8 +42,7 @@ export class Scatter extends PlotBase implements RxComponent {
 	zoom: any
 
 	constructor(opts, api) {
-		super(opts)
-		this.api = api
+		super(opts, api)
 		this.type = Scatter.type
 		this.parentId = opts?.parentId //not working!!!, need to pass opts with the parentId to the component
 		this.zoom = 1

@@ -25,7 +25,7 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'differentialAnalysis':
 			return await import(`./diffAnalysis/DifferentialAnalysis.ts`)
 
-		case 'disco':
+		case 'Disco':
 			return await import('./disco/Disco.ts')
 
 		case 'grin2':

@@ -11,7 +11,6 @@ export class Report extends PlotBase implements RxComponent {
 	static type = 'report'
 
 	// expected RxComponent props, some are already declared/set in PlotBase
-	api: ComponentApi
 	type: string
 	parentId?: string
 	dom!: {
@@ -31,8 +30,7 @@ export class Report extends PlotBase implements RxComponent {
 	selectFilters: any
 
 	constructor(opts, api) {
-		super(opts)
-		this.api = api
+		super(opts, api)
 		this.type = Report.type
 	}
 

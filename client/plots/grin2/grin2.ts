@@ -62,8 +62,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 	readonly headerMargin = '0 10px 0 0'
 	readonly sectionMargin = '20px 0'
 
-	constructor(opts: any) {
-		super(opts)
+	constructor(opts: any, api) {
+		super(opts, api)
 		this.opts = opts
 		const holder = opts.holder.classed('sjpp-grin2-main', true)
 		const controls = opts.controls ? holder : holder.append('div')

@@ -17,7 +17,6 @@ class SummaryPlot extends PlotBase implements RxComponent {
 	static type = 'summary'
 
 	// expected RxComponent props, some are already declared/set in PlotBase
-	api: ComponentApi
 	type: string
 	parentId?: string
 	dom!: {
@@ -38,8 +37,7 @@ class SummaryPlot extends PlotBase implements RxComponent {
 	boxContTerm?: 'term' | 'term2'
 
 	constructor(opts, api) {
-		super(opts)
-		this.api = api // optional to set only if this reference is used within class methods
+		super(opts, api)
 		this.type = SummaryPlot.type
 		this.dom = this.getDom(opts)
 		this.tabsData = this.getTabsData()

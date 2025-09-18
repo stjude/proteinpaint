@@ -25,7 +25,6 @@ import { newSandboxDiv } from '#dom'
 
 class SCViewer extends PlotBase implements RxComponent {
 	readonly type = 'sc'
-	api: any
 	components: { plots: { [key: string]: any } }
 	dom: SCDom
 	interactions?: SCInteractions
@@ -36,8 +35,7 @@ class SCViewer extends PlotBase implements RxComponent {
 	viewModel?: SCViewModel
 
 	constructor(opts: SCViewerOpts, api: any) {
-		super(opts)
-		this.api = api
+		super(opts, api)
 		this.components = {
 			plots: {}
 		}

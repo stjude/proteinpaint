@@ -78,8 +78,8 @@ class TdbSurvival extends PlotBase implements RxComponent {
 		return ''
 	}
 
-	constructor(opts) {
-		super(opts)
+	constructor(opts, api) {
+		super(opts, api)
 		this.type = TdbSurvival.type
 		if (opts?.parentId) this.parentId = opts.parentId
 		this.settings = Object.assign({}, opts.settings)
