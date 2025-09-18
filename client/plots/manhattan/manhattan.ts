@@ -61,7 +61,7 @@ export function plotManhattan(div: any, data: any, settings: any) {
 	}
 
 	// Set relative positioning on the main div for absolute positioning to work for download button
-	div.style('position', 'relative')
+	div.style('position', 'absolute')
 
 	// Create tooltip menu
 	const geneTip = new Menu({ padding: '' })
