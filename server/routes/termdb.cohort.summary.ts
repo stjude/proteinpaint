@@ -21,11 +21,8 @@ function init({ genomes }) {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
 			const [ds] = get_ds_tdb(genome, q)
-			const filter = ds.cohort.termdb.getAdditionalFilter
-				? ds.cohort.termdb.getAdditionalFilter(q.__protected__.clientAuthResult)
-				: undefined
 			let count
-			if (filter) {
+			if (ds.cohort.termdb.getAdditionalFilter) {
 				const samples = await get_samples(q, ds)
 				count = samples.length
 			} else count = ds.cohort.termdb.q?.getCohortSampleCount?.(q.cohort) || 1
