@@ -1,7 +1,8 @@
-import type { DescrStatsRequest, DescrStatsResponse, RouteApi } from '#types'
+import type { DescrStatsRequest, /*DescrStatsResponse, */ RouteApi } from '#types'
 import { descrStatsPayload } from '#types/checkers'
-import { summaryStats } from '#shared/descriptive.stats.js'
 import { getData } from '#src/termdb.matrix.js'
+import computePercentile from '#shared/compute.percentile.js'
+import { roundValueAuto } from '#shared/roundValue.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/descrstats',
@@ -20,7 +21,6 @@ export const api: RouteApi = {
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		const q: DescrStatsRequest = req.query
-		let result
 		try {
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome name'
@@ -30,44 +30,118 @@ function init({ genomes }) {
 			if (!tdb) throw 'invalid termdb object'
 
 			if (!q.tw.$id) q.tw.$id = '_' // current typing thinks tw$id is undefined. add this to avoid tsc err. delete this line when typing is fixed
-			const data = await getData(
-				{ filter: q.filter, filter0: q.filter0, terms: [q.tw], __protected__: q.__protected__ },
-				ds
-			)
-			if (data.error) throw data.error
 
-			const values: number[] = []
-			for (const key in data.samples) {
-				const sample = data.samples[key]
-				const v = sample[q.tw.$id]
-				if (!v && v !== 0) {
-					// skip undefined values
-					continue
-				}
-				const value = v.value
-				if (q.tw.q.hiddenValues?.[value]) {
-					// skip uncomputable values
-					continue
-				}
-				//skip computing for zeros if scale is log.
-				if (q.logScale) {
-					if (value === 0) {
-						continue
-					}
-				}
-				values.push(Number(value))
-			}
-
-			if (values.length) {
-				result = summaryStats(values)
-			} else {
-				// no computable values. do not get stats as it breaks code. set result to blank obj to avoid "missing response.header['content-type']" err on client
-				result = {}
-			}
+			const result = await trigger_getDescrStats(q, ds)
+			res.send(result)
 		} catch (e: any) {
 			if (e instanceof Error && e.stack) console.log(e)
-			result = { error: e?.message || e }
+			const result = { error: e?.message || e }
+			res.send(result)
 		}
-		res.send(result satisfies DescrStatsResponse)
+		//res.send(result satisfies DescrStatsResponse)
 	}
+}
+
+async function trigger_getDescrStats(q, ds) {
+	const data = await getData(
+		{ filter: q.filter, filter0: q.filter0, terms: [q.tw], __protected__: q.__protected__ },
+		ds
+	)
+	if (data.error) throw data.error
+
+	const values: number[] = []
+	for (const key in data.samples) {
+		const sample = data.samples[key]
+		const v = sample[q.tw.$id]
+		if (!v && v !== 0) {
+			// skip undefined values
+			continue
+		}
+		const value = v.value
+		if (q.tw.q.hiddenValues?.[value]) {
+			// skip uncomputable values
+			continue
+		}
+		//skip computing for zeros if scale is log.
+		if (q.logScale) {
+			if (value === 0) {
+				continue
+			}
+		}
+		values.push(Number(value))
+	}
+
+	if (!values.length) {
+		// no computable values. do not get stats as it breaks code. set result to blank obj to avoid "missing response.header['content-type']" err on client
+		return {}
+	}
+
+	if (values.some(v => !Number.isFinite(v))) throw 'non-numeric values found'
+
+	//compute total
+	const sorted_arr = values.sort((a, b) => a - b)
+	const n = sorted_arr.length
+
+	//compute median
+	const median = computePercentile(sorted_arr, 50, true)
+	//compute mean
+	const mean = getMean(sorted_arr)
+	// compute variance
+	const variance = getVariance(sorted_arr)
+	// compute standard deviation
+	const stdDev = Math.sqrt(variance)
+
+	//compute percentile ranges
+	const p25 = computePercentile(sorted_arr, 25, true)
+	const p75 = computePercentile(sorted_arr, 75, true)
+
+	//compute IQR
+	const IQR = p75 - p25
+	const min = sorted_arr[0]
+	const max = sorted_arr[sorted_arr.length - 1]
+
+	// Calculate outlier boundaries
+	const outlierMin = p25 - 1.5 * IQR //p25 is same as q1
+	const outlierMax = p75 + 1.5 * IQR //p75 is same as q3
+
+	const stats = {
+		total: { label: 'Total', value: n },
+		min: { label: 'Minimum', value: min },
+		max: { label: 'Maximum', value: max },
+		p25: { label: '1st quartile', value: p25 },
+		p75: { label: '3rd quartile', value: p75 },
+		median: { label: 'Median', value: median },
+		mean: { label: 'Mean', value: mean },
+		variance: { label: 'Variance', value: variance },
+		stdDev: { label: 'Standard deviation', value: stdDev },
+		iqr: { label: 'Inter-quartile range', value: IQR },
+		outlierMin: { label: 'Outlier minimum', value: outlierMin },
+		outlierMax: { label: 'Outlier maximum', value: outlierMax }
+	}
+
+	for (const v of Object.values(stats)) {
+		const rounded = roundValueAuto(v.value)
+		v.value = rounded
+	}
+
+	return stats
+}
+
+export function getMean(data) {
+	return data.reduce((sum, value) => sum + value, 0) / data.length
+}
+
+export function getVariance(data) {
+	const meanValue = getMean(data)
+	const squaredDifferences = data.map(value => Math.pow(value - meanValue, 2))
+	//Using n−1 compensates for the fact that we're basing variance on a sample mean,
+	// which tends to underestimate true variability. The correction is especially important with small sample sizes,
+	// where dividing by n would significantly distort the variance estimate.
+	// For more details see https://en.wikipedia.org/wiki/Bessel%27s_correction
+	return squaredDifferences.reduce((sum, value) => sum + value, 0) / (data.length - 1)
+}
+
+export function getStdDev(data) {
+	const variance = getVariance(data)
+	return Math.sqrt(variance)
 }
