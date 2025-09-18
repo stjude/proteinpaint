@@ -6,6 +6,7 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { getData } from './termdb.matrix.js'
 import { mclass, dt2label, dtTerms } from '#shared/common.js'
 import { summaryStats } from '#shared/descriptive.stats'
+import { isNumericTerm } from '#shared/terms'
 
 const binLabelFormatter = format('.3r')
 
@@ -118,12 +119,13 @@ export async function barchart_data(q, ds, tdb) {
 	let descrStats
 	if (data.samples) {
 		const t1 = map.get(1)
-		const samples = Object.values(data.samples)
-		let values = samples
-			.map(s => s?.[t1.$id]?.value)
-			.filter(v => typeof v === 'number' && !t1.term.values?.[v]?.uncomputable)
-		descrStats = summaryStats(values).values
-
+		if (isNumericTerm(t1.term)) {
+			const samples = Object.values(data.samples)
+			let values = samples
+				.map(s => s?.[t1.$id]?.value)
+				.filter(v => typeof v === 'number' && !t1.term.values?.[v]?.uncomputable)
+			descrStats = summaryStats(values).values
+		}
 		const t2 = map.get(2)
 		if (
 			(t1?.term?.type == 'geneVariant' && t1.q.type == 'values') ||
