@@ -5,6 +5,7 @@ import { format } from 'd3-format'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { getData } from './termdb.matrix.js'
 import { mclass, dt2label, dtTerms } from '#shared/common.js'
+import { summaryStats } from '#shared/descriptive.stats'
 
 const binLabelFormatter = format('.3r')
 
@@ -114,8 +115,15 @@ export async function barchart_data(q, ds, tdb) {
 	const bins = []
 	const categories = []
 	const chartid2dtterm = {}
+	let descrStats
 	if (data.samples) {
 		const t1 = map.get(1)
+		const samples = Object.values(data.samples)
+		let values = samples
+			.map(s => s?.[t1.$id]?.value)
+			.filter(v => typeof v === 'number' && !t1.term.values?.[v]?.uncomputable)
+		descrStats = summaryStats(values).values
+
 		const t2 = map.get(2)
 		if (
 			(t1?.term?.type == 'geneVariant' && t1.q.type == 'values') ||
@@ -194,7 +202,7 @@ export async function barchart_data(q, ds, tdb) {
 			pj: pj.times
 		}
 	}
-	const result = { data: pj.tree.results, bins, categories, sampleType: data.sampleType }
+	const result = { data: pj.tree.results, bins, categories, sampleType: data.sampleType, descrStats }
 	if (Object.keys(chartid2dtterm).length) result.chartid2dtterm = chartid2dtterm
 	return result
 }

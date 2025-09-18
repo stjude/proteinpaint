@@ -345,13 +345,13 @@ export class Barchart {
 			this.toggleLoadingDiv()
 
 			const reqOpts = this.getDataRequestOpts()
-			await this.getDescrStats()
 			await this.setControls() //needs to be called after getDescrStats() to set hasStats
 
 			const results = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
 			if (results.error) throw results
 			const data = results.data
 			this.charts = data.charts
+			if (results.descrStats) this.config.term.q.descrStats = results.descrStats
 			this.sampleType = results.sampleType
 			this.bins = results.bins
 			if (results.chartid2dtterm) this.chartid2dtterm = results.chartid2dtterm
@@ -390,21 +390,6 @@ export class Barchart {
 		if (c.term2) opts.term2 = c.term2
 		if (c.term0) opts.term0 = c.term0
 		return opts
-	}
-
-	async getDescrStats() {
-		// get descriptive statistics for numerical terms
-		const terms = [this.config.term]
-		if (this.config.term2) terms.push(this.config.term2)
-		if (this.config.term0) terms.push(this.config.term0)
-
-		for (const t of terms) {
-			if (isNumericTerm(t.term)) {
-				const data = await this.app.vocabApi.getDescrStats(t, this.state.termfilter)
-				if (data.error) throw data.error
-				t.q.descrStats = data.values
-			}
-		}
 	}
 
 	updateSettings(config) {

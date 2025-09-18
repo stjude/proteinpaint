@@ -54,7 +54,6 @@ tape('Default barchart component', test => {
 	test.equal(typeof testBarchart.reactsTo, 'function', 'Should have a .reactsTo() function')
 	test.equal(typeof testBarchart.getState, 'function', 'Should have a .getState() function')
 	test.equal(typeof testBarchart.getDataRequestOpts, 'function', 'Should have a .getDataRequestOpts() function')
-	test.equal(typeof testBarchart.getDescrStats, 'function', 'Should have a .getDescrStats() function')
 	test.equal(typeof testBarchart.updateSettings, 'function', 'Should have a .updateSettings() function')
 	test.equal(typeof testBarchart.mayResetHidden, 'function', 'Should have a .mayResetHidden() function')
 	test.equal(typeof testBarchart.mayEditHiddenValues, 'function', 'Should have a .mayEditHiddenValues() function')
