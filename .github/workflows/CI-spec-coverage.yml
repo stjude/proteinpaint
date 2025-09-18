@@ -42,7 +42,7 @@ jobs:
           INPUT_BUILD_SECRET: ${{ steps.set-build-secret.outputs.BUILD_SECRET }}
 
   test:
-    if: github.event.pull_request.merged || github.event_name == 'workflow_dispatch'
+    if: github.event.pull_request.merged || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     needs: check-user-permissions
     runs-on: ubuntu-22.04
     timeout-minutes: 15
