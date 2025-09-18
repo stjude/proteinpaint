@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.146.0
 
 Features:
 - Working prototype of new sc app. Gene expression subplots launch within item segements.
