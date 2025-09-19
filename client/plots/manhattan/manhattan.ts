@@ -1,6 +1,7 @@
 import { scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
-import { Menu, table2col } from '#dom'
+import { Menu, table2col, icons } from '#dom'
+import { to_svg } from '#src/client'
 
 /**
  * Creates an interactive Manhattan plot on top of a PNG background plot image.
@@ -11,6 +12,7 @@ import { Menu, table2col } from '#dom'
  *   @param {number} [settings.plotWidth=1000] - Plot area width
  *   @param {number} [settings.plotHeight=400] - Plot area height
  *   @param {boolean} [settings.showLegend=true] - Whether to display legend
+ *   @param {boolean} [settings.showDownload=true] - Whether to show download button
  *   @param {boolean} [settings.showInteractiveDots=true] - Whether to show hoverable data points
  *   @param {number} [settings.yAxisX=70] - Y-axis positioning
  *   @param {number} [settings.yAxisSpace=40] - Space between Y-axis and plot
@@ -25,7 +27,7 @@ import { Menu, table2col } from '#dom'
  *   @param {number} [settings.legendFontSize=12] - Font size for legend text
  *   @param {number} [settings.interactiveDotRadius=3] - Radius of interactive dots
  *   @param {number} [settings.interactiveDotStrokeWidth=1] - Stroke width for interactive dots
- *
+ * @param {Object} [app] - Optional app context for dispatching events
  *
  * @description
  * Renders a genomic Manhattan plot by overlaying interactive elements on the base PNG plot image.
@@ -34,12 +36,13 @@ import { Menu, table2col } from '#dom'
  * including axes, labels, legend, and top genes (represented as interactive dots) for detailed information on hover.
  */
 
-export function plotManhattan(div: any, data: any, settings: any) {
+export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	// Default settings
 	settings = {
 		pngDotRadius: 2,
 		plotWidth: 1000,
 		plotHeight: 400,
+		showDownload: true,
 		yAxisX: 70,
 		yAxisY: 40,
 		yAxisSpace: 40,
@@ -57,6 +60,9 @@ export function plotManhattan(div: any, data: any, settings: any) {
 		...settings
 	}
 
+	// Set relative positioning on the main div for positioning of download button
+	div.style('position', 'relative')
+
 	// Create tooltip menu
 	const geneTip = new Menu({ padding: '' })
 
@@ -65,21 +71,13 @@ export function plotManhattan(div: any, data: any, settings: any) {
 		.attr('width', data.plotData.png_width + settings.yAxisX + settings.yAxisSpace)
 		.attr('height', data.plotData.png_height + settings.yAxisY * 4) // Extra space for x-axis labels, legend, and title
 
-	// Generate legend data
-	const mutationTypes = [...new Set(data.plotData.points.map((p: any) => p.type))]
-	const legendData = mutationTypes.map(type => {
-		const point = data.plotData.points.find((p: any) => p.type === type)
-		return {
-			type: String(type).charAt(0).toUpperCase() + String(type).slice(1),
-			color: point?.color || '#888888'
-		}
-	})
-
 	// Add y-axis
 	const yAxisG = svg
 		.append('g')
 		.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
-	const yScale = scaleLinear().domain([0, data.plotData.y_max]).range([data.plotData.png_height, 0])
+	const yScale = scaleLinear()
+		.domain([-data.plotData.y_buffer, data.plotData.y_max + data.plotData.y_buffer])
+		.range([data.plotData.png_height, 0])
 	yAxisG.call(d3axis.axisLeft(yScale))
 
 	// Add y-axis label
@@ -147,82 +145,130 @@ export function plotManhattan(div: any, data: any, settings: any) {
 				event.target.setAttribute('stroke-opacity', 0)
 				geneTip.hide()
 			})
-	}
+			.on('click', (event, d) => {
+				if (app) {
+					// Open the genome browser with the current gene that is being clicked on
+					app.dispatch({
+						type: 'plot_create',
+						config: {
+							chartType: 'genomeBrowser',
+							geneSearchResult: { geneSymbol: d.gene }
+						}
+					})
+				}
+			})
 
-	// Add chromosome labels
-	if (data.plotData.chrom_data) {
-		const chromLabelY = data.plotData.png_height + settings.yAxisY + 20
+		// Add chromosome labels
+		if (data.plotData.chrom_data) {
+			const chromLabelY = data.plotData.png_height + settings.yAxisY + 20
 
-		Object.entries(data.plotData.chrom_data).forEach(([chrom, chromData]: [string, any]) => {
-			const chromLabel = chrom.replace('chr', '')
+			Object.entries(data.plotData.chrom_data).forEach(([chrom, chromData]: [string, any]) => {
+				const chromLabel = chrom.replace('chr', '')
 
-			// Skip chrM if desired
-			if (chromLabel === 'M') return
+				// Skip chrM
+				if (chromLabel === 'M') return
 
-			// Calculate center position for label
-			const centerPos = settings.yAxisX + settings.yAxisSpace + xScale(chromData.center)
+				// Calculate center position for label
+				const centerPos = settings.yAxisX + settings.yAxisSpace + xScale(chromData.center)
 
-			// Append chromosome label
-			svg
-				.append('text')
-				.attr('x', centerPos)
-				.attr('y', chromLabelY)
-				.attr('text-anchor', 'middle')
-				.attr('font-size', `${settings.fontSize - 2}px`)
-				.attr('fill', 'black')
-				.text(chromLabel)
+				// Append chromosome label
+				svg
+					.append('text')
+					.attr('x', centerPos)
+					.attr('y', chromLabelY)
+					.attr('text-anchor', 'middle')
+					.attr('font-size', `${settings.fontSize - 2}px`)
+					.attr('fill', 'black')
+					.text(chromLabel)
+			})
+		}
+
+		// Add x-axis label
+		svg
+			.append('text')
+			.attr('x', settings.yAxisX + settings.yAxisSpace + data.plotData.png_width / 2)
+			.attr('y', data.plotData.png_height + settings.yAxisY + 45)
+			.attr('text-anchor', 'middle')
+			.attr('font-size', `${settings.fontSize}px`)
+			.attr('fill', 'black')
+			.text('Chromosomes')
+
+		// Add title
+		svg
+			.append('text')
+			.attr('x', settings.yAxisX + settings.yAxisSpace)
+			.attr('y', settings.yAxisY / 2)
+			.attr('text-anchor', 'left')
+			.attr('font-weight', 'bold')
+			.attr('font-size', `${settings.fontSize + 2}px`)
+			.attr('fill', 'black')
+			.text('Manhattan Plot')
+
+		// Add download button if enabled
+		if (settings.showDownload) {
+			const downloadDiv = div
+				.append('div')
+				.style('position', 'absolute')
+				.style('top', '5px')
+				.style('left', `${settings.yAxisX + settings.yAxisSpace + 108}px`)
+				.style('z-index', '10')
+				.style('background', `${settings.background}`)
+				.style('padding', `${settings.padding + 2}px`)
+				.style('border-radius', `${settings.borderRadius + 10}px`)
+
+			icons['download'](downloadDiv, {
+				width: 16,
+				height: 16,
+				title: 'Download Manhattan plot',
+				handler: () => {
+					to_svg(
+						svg.node() as SVGSVGElement,
+						`manhattan_plot_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}`,
+						{ apply_dom_styles: true }
+					)
+				}
+			})
+		}
+
+		// Generate legend data
+		const mutationTypes = [...new Set(data.plotData.points.map((p: any) => p.type))]
+		const legendData = mutationTypes.map(type => {
+			const point = data.plotData.points.find((p: any) => p.type === type)
+			return {
+				type: String(type).charAt(0).toUpperCase() + String(type).slice(1),
+				color: point?.color || '#888888'
+			}
 		})
-	}
 
-	// Add x-axis label
-	svg
-		.append('text')
-		.attr('x', settings.yAxisX + settings.yAxisSpace + data.plotData.png_width / 2)
-		.attr('y', data.plotData.png_height + settings.yAxisY + 45)
-		.attr('text-anchor', 'middle')
-		.attr('font-size', `${settings.fontSize}px`)
-		.attr('fill', 'black')
-		.text('Chromosomes')
+		// Add legend
+		if (settings.showLegend && legendData.length > 0) {
+			const legendY = settings.yAxisY / 2
+			const totalWidth = legendData.length * settings.legendItemWidth
+			const legendX =
+				settings.yAxisX + settings.yAxisSpace + data.plotData.png_width - totalWidth - settings.legendRightOffset
 
-	// Add title
-	svg
-		.append('text')
-		.attr('x', settings.yAxisX + settings.yAxisSpace)
-		.attr('y', settings.yAxisY / 2)
-		.attr('text-anchor', 'left')
-		.attr('font-weight', 'bold')
-		.attr('font-size', `${settings.fontSize + 2}px`)
-		.attr('fill', 'black')
-		.text('Manhattan Plot')
+			legendData.forEach((item, i) => {
+				const x = legendX + i * settings.legendItemWidth
 
-	// Add legend
-	if (settings.showLegend && legendData.length > 0) {
-		const legendY = settings.yAxisY / 2
-		const totalWidth = legendData.length * settings.legendItemWidth
-		const legendX =
-			settings.yAxisX + settings.yAxisSpace + data.plotData.png_width - totalWidth - settings.legendRightOffset
+				// Legend dot
+				svg
+					.append('circle')
+					.attr('cx', x + 8)
+					.attr('cy', legendY)
+					.attr('r', settings.legendDotRadius)
+					.attr('fill', item.color)
+					.attr('stroke', 'black')
+					.attr('stroke-width', 1)
 
-		legendData.forEach((item, i) => {
-			const x = legendX + i * settings.legendItemWidth
-
-			// Legend dot
-			svg
-				.append('circle')
-				.attr('cx', x + 8)
-				.attr('cy', legendY)
-				.attr('r', settings.legendDotRadius)
-				.attr('fill', item.color)
-				.attr('stroke', 'black')
-				.attr('stroke-width', 1)
-
-			// Legend text
-			svg
-				.append('text')
-				.attr('x', x + 8 + settings.legendTextOffset)
-				.attr('y', legendY + settings.legendVerticalOffset)
-				.attr('font-size', `${settings.legendFontSize}px`)
-				.attr('fill', 'black')
-				.text(item.type)
-		})
+				// Legend text
+				svg
+					.append('text')
+					.attr('x', x + 8 + settings.legendTextOffset)
+					.attr('y', legendY + settings.legendVerticalOffset)
+					.attr('font-size', `${settings.legendFontSize}px`)
+					.attr('fill', 'black')
+					.text(item.type)
+			})
+		}
 	}
 }
