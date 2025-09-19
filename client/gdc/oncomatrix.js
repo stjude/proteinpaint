@@ -332,7 +332,7 @@ export async function init(arg, holder, genomes) {
 					})
 				}
 			},
-			triggerAbort: plotAppApi.triggerAbort
+			triggerAbort: _ => plotAppApi.triggerAbort(_)
 		}
 		return api
 	} catch (e) {
