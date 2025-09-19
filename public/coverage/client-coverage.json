@@ -3134,9 +3134,9 @@
   "termdb/vocabulary.js": {
     "lines": {
       "total": 66,
-      "covered": 10,
+      "covered": 14,
       "skipped": 0,
-      "pct": 15.15
+      "pct": 21.21
     },
     "functions": {
       "total": 3,
@@ -3146,25 +3146,25 @@
     },
     "statements": {
       "total": 73,
-      "covered": 10,
+      "covered": 14,
       "skipped": 0,
-      "pct": 13.69
+      "pct": 19.17
     },
     "branches": {
       "total": 70,
-      "covered": 7,
+      "covered": 10,
       "skipped": 0,
-      "pct": 10
+      "pct": 14.28
     },
     "lowestPct": {
-      "curr": 10,
+      "curr": 14.28,
       "prev": 10,
-      "diff": 0
+      "diff": 4.279999999999999
     },
     "averagePct": {
-      "curr": 18.042499999999997,
+      "curr": 21.997500000000002,
       "prev": 18.1475,
-      "diff": -0.10500000000000398
+      "diff": 3.8500000000000014
     }
   },
   "filter/tvs.dtcnv.categorical.js": {
