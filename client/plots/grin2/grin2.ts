@@ -473,7 +473,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			const plotData = result
 			const plotDiv = this.dom.div
 			const manhattanSettings = this.state.config.settings.manhattan
-			plotManhattan(plotDiv, plotData, manhattanSettings)
+			plotManhattan(plotDiv, plotData, manhattanSettings, this.app)
 		}
 
 		// Display top genes table
