@@ -1,4 +1,4 @@
-import type { BoxPlotRequest, BoxPlotResponse, RouteApi, ValidGetDataResponse } from '#types'
+import type { BoxPlotRequest, BoxPlotResponse, RouteApi, ValidGetDataResponse, DescrStats } from '#types'
 import { boxplotPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import { boxplot_getvalue } from '../src/utils.js'
@@ -37,7 +37,7 @@ function init({ genomes }) {
 				.map(s => s?.[q.tw.$id!]?.value)
 				.filter(v => typeof v === 'number' && !q.tw.term.values?.[v]?.uncomputable)
 			//calculate stats here and pass them to client to avoid second request on client for getting stats
-			const descrStats = getDescrStats(values, q.removeOutliers)
+			const descrStats: DescrStats = getDescrStats(values, q.removeOutliers)
 
 			const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
 			const overlayTerm = q.overlayTw
@@ -67,8 +67,8 @@ function init({ genomes }) {
 					})
 
 					if (q.removeOutliers) {
-						outlierMin = Math.min(outlierMin, descrStats.outlierMin)
-						outlierMax = Math.max(outlierMax, descrStats.outlierMax)
+						outlierMin = Math.min(outlierMin, descrStats.outlierMin.value)
+						outlierMax = Math.max(outlierMax, descrStats.outlierMax.value)
 					}
 
 					const boxplot = boxplot_getvalue(vs, q.removeOutliers)
