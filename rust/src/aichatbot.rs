@@ -120,9 +120,9 @@ async fn main() -> Result<()> {
 
                     let llm_backend_type: llm_backend;
                     let mut final_output: Option<String> = None;
-                    let temperature: f64 = 0.01;
+                    let temperature: f64 = 0.0;
                     let max_new_tokens: usize = 512;
-                    let top_p: f32 = 0.95;
+                    let top_p: f32 = 1.0;
 
                     if llm_backend_name != "ollama" && llm_backend_name != "SJ" {
                         panic!(
@@ -509,6 +509,7 @@ Output JSON query5: {\"group1\": {\"name\": \"males\", \"filter\": {\"name\": \"
     }
 }
 
+#[derive(Debug, Clone)]
 struct DbRows {
     name: String,
     description: Option<String>,
@@ -544,7 +545,7 @@ impl ParseDbRows for DbRows {
     }
 }
 
-async fn parse_dataset_db(db: &str) -> Vec<String> {
+async fn parse_dataset_db(db: &str) -> (Vec<String>, Vec<DbRows>) {
     let manager = SqliteConnectionManager::file(db);
     let pool = r2d2::Pool::new(manager).unwrap();
     let conn = pool.get().unwrap();
@@ -574,7 +575,7 @@ async fn parse_dataset_db(db: &str) -> Vec<String> {
     }
 
     //// Open the file
-    //let mut file = File::open(dataset_agnostic_file).unwrap();
+    //let mut file = File::open(dataset_file).unwrap();
 
     //// Create a string to hold the file contents
     //let mut contents = String::new();
@@ -603,6 +604,7 @@ async fn parse_dataset_db(db: &str) -> Vec<String> {
     // Print the separated parts
     let mut rag_docs = Vec::<String>::new();
     let mut names = Vec::<String>::new();
+    let mut db_vec = Vec::<DbRows>::new();
     while let Some(row) = rows_terms.next().unwrap() {
         //println!("row:{:?}", row);
         let name: String = row.get(0).unwrap();
@@ -637,6 +639,7 @@ async fn parse_dataset_db(db: &str) -> Vec<String> {
                     term_type: item_type,
                     values: keys,
                 };
+                db_vec.push(item.clone());
                 //println!("Field details:{}", item.parse_db_rows());
                 rag_docs.push(item.parse_db_rows());
                 names.push(name)
@@ -645,7 +648,7 @@ async fn parse_dataset_db(db: &str) -> Vec<String> {
         }
     }
     //println!("names:{:?}", names);
-    rag_docs
+    (rag_docs, db_vec)
 }
 
 async fn extract_summary_information(
@@ -660,7 +663,7 @@ async fn extract_summary_information(
 ) -> String {
     match dataset_db {
         Some(db) => {
-            let rag_docs = parse_dataset_db(db).await;
+            let (rag_docs, db_vec) = parse_dataset_db(db).await;
             //println!("rag_docs:{:?}", rag_docs);
             let additional;
             match llm_backend_type {
@@ -711,20 +714,135 @@ async fn extract_summary_information(
             let json_value: Value = serde_json::from_str(&result).expect("REASON");
             //println!("Classification result:{}", json_value);
 
+            let final_llm_json;
             match llm_backend_type {
-                llm_backend::Ollama() => json_value.to_string(),
+                llm_backend::Ollama() => final_llm_json = json_value.to_string(),
                 llm_backend::Sj() => {
                     let json_value2: Value =
                         serde_json::from_str(&json_value[0]["generated_text"].to_string()).expect("REASON2");
                     //println!("json_value2:{}", json_value2.as_str().unwrap());
                     let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON2");
                     //println!("Classification result:{}", json_value3);
-                    json_value3.to_string()
+                    final_llm_json = json_value3.to_string()
                 }
             }
+            let final_validated_json = validate_summary_output(final_llm_json.clone(), db_vec);
+            final_llm_json
         }
         None => {
             panic!("Dataset db file needed for summary term extraction from user input")
         }
     }
+}
+
+#[derive(Debug, Clone)]
+struct FilterData {
+    filter: String,
+    value: String,
+}
+
+fn validate_summary_output(raw_llm_json: String, db_vec: Vec<DbRows>) -> String {
+    let json_value: Value = serde_json::from_str(&raw_llm_json).expect("REASON");
+
+    // Check if group_categories (compulsory field) exists
+    println!("json_value:{:?}", json_value);
+
+    if json_value["chartType"].as_str().unwrap() != "summary" {
+        panic!("Did not return a summary chartType")
+    }
+
+    let summary_terms = &json_value["term"];
+    //println!("summary_terms:{}", summary_terms["group_categories"]);
+    let group_categories_field = summary_terms["group_categories"].as_str().unwrap();
+    let group_categories_verification = verify_json_field(group_categories_field, &db_vec);
+
+    let final_group_categories: String;
+    let final_group_filter: String;
+    let mut corrected_filter: Option<FilterData> = None;
+    if Some(group_categories_verification.correct_field.clone()).is_some()
+        && Some(group_categories_verification.correct_value.clone()).is_some()
+    {
+        let final_group_field = group_categories_verification.correct_field.unwrap();
+        let final_group_value = group_categories_verification.correct_value.unwrap();
+
+        corrected_filter = Some(FilterData {
+            filter: final_group_field,
+            value: final_group_value,
+        })
+    } else if Some(group_categories_verification.correct_field.clone()).is_some()
+        && group_categories_verification.correct_value.clone().is_none()
+    {
+        final_group_categories = group_categories_verification.correct_field.unwrap();
+    }
+
+    let final_llm_json: String;
+    let message: String;
+    if Some(corrected_filter.clone()).is_some() {
+        message = corrected_filter.clone().unwrap().value + &"is a value of " + &corrected_filter.unwrap().filter;
+    }
+
+    raw_llm_json
+}
+
+#[derive(Debug, Clone)]
+struct VerifiedField {
+    correct_field: Option<String>,        // Name of the correct field
+    correct_value: Option<String>, // Name of the correct value if there is a match between incorrect field and one of the values
+    probable_fields: Option<Vec<String>>, // If multiple fields are matching to the incomplete query
+}
+
+fn verify_json_field(llm_field_name: &str, db_vec: &Vec<DbRows>) -> VerifiedField {
+    // Check if llm_field_name exists or not in db name field
+
+    let verified_result: VerifiedField;
+    if db_vec.iter().any(|item| item.name == llm_field_name) {
+        println!("Found \"{}\" in db", llm_field_name);
+        verified_result = VerifiedField {
+            correct_field: Some(String::from(llm_field_name)),
+            correct_value: None,
+            probable_fields: None,
+        };
+    } else {
+        println!("Did not find \"{}\" in db", llm_field_name);
+        // Check to see if llm_field_name exists as values under any of the fields
+
+        let mut search_field: Option<String> = None;
+        let mut search_val: Option<String> = None;
+        for item in db_vec {
+            for val in &item.values {
+                if llm_field_name == val {
+                    search_field = Some(item.name.clone());
+                    search_val = Some(String::from(val));
+                    break;
+                }
+            }
+            match search_field {
+                Some(_) => break,
+                None => {}
+            }
+        }
+
+        match search_field {
+            Some(x) => {
+                verified_result = VerifiedField {
+                    correct_field: Some(String::from(x)),
+                    correct_value: search_val,
+                    probable_fields: None,
+                };
+            }
+            None => {
+                // Incorrect field found neither in any of the fields nor any of the values. This will then invoke embedding match across all the fields and their corresponding values
+
+                let mut search_terms = Vec::<String>::new();
+                search_terms.push(String::from(llm_field_name)); // Added the incorrect field item to the search
+
+                verified_result = VerifiedField {
+                    correct_field: None,
+                    correct_value: None,
+                    probable_fields: None,
+                };
+            }
+        }
+    }
+    verified_result
 }
