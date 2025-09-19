@@ -109,11 +109,23 @@ type HicDomain = {
 export type MinGenome = {
 	isMinGenome?: boolean
 	species: string
+	/** relative path to bgzipped- and samtools-indexed fasta file. 
+	or use "NA" for not available. this is used for termdbtest to avoid tracking a large fasta file in repo
+	*/
 	genomefile: string
 	genedb: GeneDb
 	defaultcoord: DefaultCoord
 	hicenzymefragment?: HicEnzymeFragment[]
 	majorchr: string
+}
+
+/** not part of genome ts file but defined in bootstrap object in serverconfig and copied to genome obj during server launch
+ */
+type Blat = {
+	port: string
+	host: string
+	// full path to the folder (/path/to/tp/genomes/) where the 2bit file for this genome is found as "<genome>.2bit"
+	seqDir: string
 }
 
 export type Genome = MinGenome & {
@@ -126,4 +138,5 @@ export type Genome = MinGenome & {
 	geneset?: GeneSet[]
 	hicdomain?: HicDomain
 	minorchr?: string
+	blat?: Blat
 }

@@ -31,6 +31,7 @@ export function request_closure(genomes) {
 	}
 }
 
+// TODO add this to /healthcheck and delete it from app header
 function server_stat(name, g) {
 	return new Promise(async (resolve, reject) => {
 		// query a random sequence to see if the server is up
@@ -75,119 +76,6 @@ async function do_blat(genome, seq, soft_starts, soft_stops) {
 	// Sorting alignments in descending order of score
 	hits.sort((a, b) => {
 		return b.query_match - a.query_match
-	})
-	return { hits }
-}
-
-// not in use! for parsing maf format
-async function do_blat2(genome, seq, soft_starts, soft_stops) {
-	const infile = path.join(serverconfig.cachedir, await write_tmpfile('>query\n' + seq + '\n'))
-	//console.log('soft_starts:', soft_starts, 'soft_stops:', soft_stops)
-	const outfile = await run_blat2(genome, infile)
-	const outputstr = (await read_file(outfile)).trim()
-	fs.unlink(outfile, () => {})
-	fs.unlink(infile, () => {})
-	if (outputstr == '') return { nohit: 1 }
-	const lines = outputstr.split('\n')
-	const hits = []
-	let h = {}
-	for (const line of lines) {
-		const l = line.split(' ').filter(function (el) {
-			return el != ''
-		})
-		//console.log(l)
-		if (l[0] == 'a') {
-			h = {}
-			h.score = parseFloat(l[1].substr(6, l[1].length)).toFixed(2)
-		} else if (l[0] == 's') {
-			if (l[1] == 'query') {
-				h.query_startpos = l[2]
-				h.query_alignlen = l[3]
-				h.query_strand = l[4]
-				h.query_totallen = l[5]
-				h.query_alignment = l[6]
-				h.query_stoppos = parseInt(l[2]) + parseInt(l[3] - 1)
-				if (soft_starts) {
-					//console.log("h.query_stoppos:",h.query_stoppos)
-					// Checking to see if the alignment coordinates lie within soft clip
-					const soft_starts_array = soft_starts.split(',')
-					const soft_stops_array = soft_stops.split(',')
-					//console.log("soft_starts_array:",soft_starts_array)
-					//console.log("soft_stops_array:",soft_stops_array)
-					h.query_insoftclip = false
-					for (let m = 0; m < soft_starts_array.length; m++) {
-						const soft_start = soft_starts_array[m]
-						const soft_stop = soft_stops_array[m]
-						if (
-							parseInt(soft_start) <= parseInt(h.query_startpos) &&
-							parseInt(h.query_stoppos) <= parseInt(soft_stop)
-						) {
-							h.query_insoftclip = true
-							h.query_soft_boundaries = '-1' // Indicating the whole of the alignment is inside the softclip
-							break
-						} else if (
-							parseInt(soft_start) > parseInt(h.query_startpos) &&
-							parseInt(h.query_stoppos) > parseInt(soft_start)
-						) {
-							//console.log('Alignment extends onto the left side of the soft-clip')
-							//console.log('h.query_alignment:', h.query_alignment)
-							//console.log('soft_start:', soft_start)
-							//console.log('soft_stop:', soft_stop)
-							//console.log('h.query_startpos:', h.query_startpos)
-							//console.log('h.query_stoppos:', h.query_stoppos)
-							h.query_insoftclip = true
-							//console.log('h.query_insoftclip:', h.query_insoftclip)
-							h.query_soft_boundaries = 'right:' + soft_start // Alignment extends onto the left side of the soft-clip
-						} else if (
-							parseInt(soft_stop) > parseInt(h.query_startpos) &&
-							parseInt(h.query_stoppos) > parseInt(soft_stop)
-						) {
-							//console.log('Alignment extends onto the right side of the soft-clip')
-							//console.log('h.query_alignment:', h.query_alignment)
-							//console.log('soft_start:', soft_start)
-							//console.log('soft_stop:', soft_stop)
-							//console.log('h.query_startpos:', h.query_startpos)
-							//console.log('h.query_stoppos:', h.query_stoppos)
-							h.query_insoftclip = true
-							//console.log('h.query_insoftclip:', h.query_insoftclip)
-							h.query_soft_boundaries = 'left:' + soft_stop //Alignment extends onto the right side of the soft clip
-						} else {
-							//h.query_soft_boundaries="-1"
-							continue
-						}
-					}
-				}
-				hits.push(h)
-			} else {
-				h.ref_chr = l[1]
-				h.ref_startpos = l[2]
-				h.ref_alignlen = l[3]
-				h.ref_strand = l[4]
-				h.ref_totallen = l[5] // This is actually the chromosome length
-				h.ref_alignment = l[6]
-				h.ref_stoppos = (parseInt(l[2]) + parseInt(l[3] - 1)).toString()
-				if (genome.repeatmasker) {
-					await get_lines_bigfile({
-						args: [
-							path.join(serverconfig.tpmasterdir, genome.repeatmasker.dbfile),
-							h.ref_chr + ':' + h.ref_startpos + '-' + h.ref_stoppos
-						],
-						callback: line => {
-							const columns = line.split('\t')
-							const json_object = JSON.parse(columns[3])
-							h.ref_in_repeat = json_object.category
-						}
-					})
-					if (h.ref_in_repeat == undefined) {
-						h.ref_in_repeat = '-'
-					}
-				}
-			}
-		}
-	}
-	// Sorting alignments in descending order of score
-	hits.sort((a, b) => {
-		return b.score - a.score
 	})
 	return { hits }
 }

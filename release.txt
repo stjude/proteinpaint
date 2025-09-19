@@ -1,0 +1,2 @@
+Fixes:
+- to enable blat, run gfServer as a child process
