@@ -1225,14 +1225,11 @@ export class MatrixControls {
 								}
 							}
 							//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
-							let tw = group.lst.find(
-								t =>
-									(d.symbol
-										? (t.term.gene || t.term.name) == d.symbol
-										: d.gene
-										? (t.term.gene || t.term.name) == d.gene
-										: undefined) && t.term.type == targetTermType
-							)
+							let tw = group.lst.find(t => {
+								const geneName = t.term.gene || t.term.name
+								const match = d.symbol ? geneName === d.symbol : d.gene ? geneName === d.gene : false
+								return match && t.term.type == targetTermType
+							})
 							if (!tw) {
 								tw = { term }
 								await fillTermWrapper(tw, this.opts.app.vocabApi)
