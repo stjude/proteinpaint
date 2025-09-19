@@ -11,6 +11,8 @@ import { mds_init } from './mds.init.js'
 import * as mds3_init from './mds3.init.js'
 import { parse_textfilewithheader } from './parse_textfilewithheader.js'
 import { clinsig } from '../dataset/clinvar.ts'
+import { spawn } from 'child_process'
+import net from 'net'
 
 export const genomes = {} // { hg19: {...}, ... }
 
@@ -132,10 +134,8 @@ export async function initGenomesDs(serverconfig) {
 			g2.snp = g.snp
 		}
 		if (g.blat) {
-			if (!g.blat.host) throw '.blat.host missing for ' + g.name
-			if (!g.blat.port) throw '.blat.port missing for ' + g.name
-			// gfServer must start with full path to 2bit file
-			g2.blat = g.blat // enable blat
+			g2.blat = g.blat
+			initBlatServer(g2)
 		}
 		if (g.nosnp) {
 			// no snp
@@ -571,4 +571,59 @@ function mayRetryInit(g, ds, d, e) {
 			}
 		}
 	}, ds.init.retryDelay)
+}
+
+async function initBlatServer(g) {
+	/*
+	g={
+		label
+		blat{}
+	}
+
+	quick fix: any exception thrown here will crash launch with UnhandledPromiseRejection
+	this allows spotting error early
+
+	later, allow gfServer to fail and server to continue to launch, and register the failure in g.blat.status='error' and note the err at g.blat.error='what'
+	*/
+	if (!g.blat.port) throw 'blat.port missing'
+	if (!g.blat.host) throw 'blat.host missing'
+	if (!g.blat.seqDir) throw 'blat.seqDir missing'
+	const twobitfile = path.join(g.blat.seqDir, g.label + '.2bit')
+	await utils.file_is_readable(twobitfile)
+
+	const ps = spawn(serverconfig.gfServer, ['start', g.blat.host, g.blat.port, twobitfile])
+	ps.on('exit', (code, signal) => {
+		throw `${g.label} gfServer launch failed and child process exited with code ${code}, signal ${signal}`
+	})
+	await waitForGfserverPort(g)
+}
+
+/*
+method to decide when gfServer is standby:
+  - gfServer v39x1 stdout "Server ready for queries!" is not reliable and it doesn't show up at ps.stdout.on('data')
+  - thus poll the port every 2 sec with a timeout
+*/
+function waitForGfserverPort(g, interval = 2000, timeout = 300 * 1000) {
+	return new Promise((resolve, reject) => {
+		const start = Date.now()
+		const tryConnect = () => {
+			//console.log(`####### ${g.label} gfServer port check`)
+			if (Date.now() - start > timeout) {
+				// wait timeout
+				//g.blat.status='error'
+				reject(`${g.label} gfServer port ${g.blat.port} not ready and timed out at ${timeout / 1000}s`)
+			}
+			const socket = net.createConnection({ host: g.blat.host, port: g.blat.port }, () => {
+				socket.end()
+				//g.blat.status='ready'
+				console.log(`${g.label} gfServer standby at port ${g.blat.port}, took`, (Date.now() - start) / 1000)
+				resolve()
+			})
+			socket.on('error', () => {
+				socket.destroy()
+				setTimeout(tryConnect, interval)
+			})
+		}
+		tryConnect()
+	})
 }
