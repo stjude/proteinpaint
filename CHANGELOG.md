@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.146.2
 
 Fixes:
 - closure plot api.triggerAbort() to avoid issues with private App property access
