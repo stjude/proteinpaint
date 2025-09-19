@@ -1,7 +1,6 @@
 import type { RoutePayload } from './routeApi.js'
 import type { Filter } from '../filter.ts'
 import type { TermWrapper } from '../terms/tw.ts'
-import type { ErrorResponse } from './errorResponse.ts'
 
 export type DescrStatsRequest = {
 	/** genome label in the serverconfig.json */
@@ -20,17 +19,15 @@ export type DescrStatsRequest = {
 	__protected__?: any //reuse definition from termdb.matrix.ts!!!
 }
 
-interface entries {
-	id: string
-	label: string
-	value: number
+export type DescrStats = {
+	[key: string]: {
+		key: string
+		label: string
+		value: number
+	}
 }
 
-type ValidResponse = {
-	values: entries[]
-}
-
-export type DescrStatsResponse = ValidResponse | ErrorResponse
+export type DescrStatsResponse = DescrStats
 
 export const descrStatsPayload: RoutePayload = {
 	request: {

@@ -2,11 +2,9 @@ import { getBarchartData, getCategoryData } from '../plots/barchart.data'
 import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '#common/termutils'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
-import { roundValue } from '#shared/roundValue.js'
 import { isNumeric } from '#shared/helpers.js'
 import computePercentile from '#shared/compute.percentile.js'
 import { Vocab } from './Vocab'
-//import { summaryStats } from '#shared/descriptive.stats.js'
 
 export class FrontendVocab extends Vocab {
 	constructor(opts) {
@@ -230,14 +228,12 @@ export class FrontendVocab extends Vocab {
 			values.push(_v)
 		}
 
-		// compute percentiles
-		// source: https://www.dummies.com/article/academics-the-arts/math/statistics/how-to-calculate-percentiles-in-statistics-169783/
 		values.sort((a, b) => a - b)
 		for (const percentile of percentile_lst) {
-			const index = Math.abs((percentile / 100) * values.length - 1)
-			const perc_value = Number.isInteger(index) ? (values[index] + values[index + 1]) / 2 : values[Math.ceil(index)]
+			const perc_value = computePercentile(values, percentile, true)
 			perc_values.push(perc_value)
 		}
+
 		return { values: perc_values }
 	}
 
@@ -264,7 +260,7 @@ export class FrontendVocab extends Vocab {
 			values.push(_v)
 		}
 
-		//return summaryStats(values)
+		return computeDescrStats(values)
 	}
 
 	async getTerms(ids, _dslabel = null, _genome = null) {
@@ -320,4 +316,81 @@ function get_histogram(ticks) {
 		}
 		return bins
 	}
+}
+
+// function to compute descriptive statistics for an
+// array of numeric values
+function computeDescrStats(values, showOutlierRange = false) {
+	if (!values.length) {
+		// no values, do not get stats as it breaks code
+		// set result to blank obj to avoid "missing response.header['content-type']" err on client
+		return {}
+	}
+
+	if (values.some(v => !Number.isFinite(v))) throw 'non-numeric values found'
+
+	//compute total
+	const sorted_arr = values.sort((a, b) => a - b)
+	const n = sorted_arr.length
+
+	//compute median
+	const median = computePercentile(sorted_arr, 50, true)
+	//compute mean
+	const mean = getMean(sorted_arr)
+	// compute variance
+	const variance = getVariance(sorted_arr)
+	// compute standard deviation
+	const stdDev = Math.sqrt(variance)
+
+	//compute percentile ranges
+	const p25 = computePercentile(sorted_arr, 25, true)
+	const p75 = computePercentile(sorted_arr, 75, true)
+
+	//compute IQR
+	const IQR = p75 - p25
+	const min = sorted_arr[0]
+	const max = sorted_arr[sorted_arr.length - 1]
+
+	// Calculate outlier boundaries
+	const outlierMin = p25 - 1.5 * IQR //p25 is same as q1
+	const outlierMax = p75 + 1.5 * IQR //p75 is same as q3
+
+	const stats = {
+		total: { label: 'Total', value: n },
+		min: { label: 'Minimum', value: min },
+		p25: { label: '1st quartile', value: p25 },
+		median: { label: 'Median', value: median },
+		p75: { label: '3rd quartile', value: p75 },
+		max: { label: 'Maximum', value: max },
+		mean: { label: 'Mean', value: mean },
+		stdDev: { label: 'Standard deviation', value: stdDev }
+		//variance: { label: 'Variance', value: variance }, // not necessary to report, as it is just stdDev^2
+		//iqr: { label: 'Inter-quartile range', value: IQR } // not necessary to report, as it is just p75-p25
+	}
+
+	if (showOutlierRange) {
+		stats.outlierMin = { label: 'Outlier minimum', value: outlierMin }
+		stats.outlierMax = { label: 'Outlier maximum', value: outlierMax }
+	}
+
+	for (const v of Object.values(stats)) {
+		const rounded = roundValueAuto(v.value)
+		v.value = rounded
+	}
+
+	return stats
+}
+
+function getMean(data) {
+	return data.reduce((sum, value) => sum + value, 0) / data.length
+}
+
+function getVariance(data) {
+	const meanValue = getMean(data)
+	const squaredDifferences = data.map(value => Math.pow(value - meanValue, 2))
+	//Using n−1 compensates for the fact that we're basing variance on a sample mean,
+	// which tends to underestimate true variability. The correction is especially important with small sample sizes,
+	// where dividing by n would significantly distort the variance estimate.
+	// For more details see https://en.wikipedia.org/wiki/Bessel%27s_correction
+	return squaredDifferences.reduce((sum, value) => sum + value, 0) / (data.length - 1)
 }

@@ -1,6 +1,7 @@
 import type { RoutePayload } from './routeApi.js'
 import type { TermWrapper } from '../terms/tw.ts'
 import type { Filter } from '../filter.ts'
+import type { DescrStats } from './termdb.descrstats.ts'
 
 /**Args set in Termdb vocab and from mass box plot */
 export type BoxPlotRequest = {
@@ -35,7 +36,7 @@ export type BoxPlotResponse = {
 	/** Categories not shown in the final plot */
 	uncomputableValues: { label: string; value: number }[] | null
 	error?: any
-	descrStats: any
+	descrStats: DescrStats
 }
 
 // chart containing a set of boxplots
@@ -58,7 +59,7 @@ export type BoxPlotEntry = {
 	boxplot: BoxPlotData & { label: string }
 	/** color matching the value/category color */
 	color?: string
-	descrStats: BoxPlotDescrStatsEntry[]
+	descrStats: DescrStats
 	/** Pertains to an uncomputable term value and
 	 * whether or not the plot is hidden by default */
 	isHidden?: boolean

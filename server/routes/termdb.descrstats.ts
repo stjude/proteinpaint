@@ -1,4 +1,4 @@
-import type { DescrStatsRequest, /*DescrStatsResponse, */ RouteApi } from '#types'
+import type { DescrStatsRequest, DescrStatsResponse, DescrStats, RouteApi } from '#types'
 import { descrStatsPayload } from '#types/checkers'
 import { getData } from '#src/termdb.matrix.js'
 import computePercentile from '#shared/compute.percentile.js'
@@ -31,14 +31,13 @@ function init({ genomes }) {
 
 			if (!q.tw.$id) q.tw.$id = '_' // current typing thinks tw$id is undefined. add this to avoid tsc err. delete this line when typing is fixed
 
-			const result = await trigger_getDescrStats(q, ds)
+			const result: DescrStatsResponse = await trigger_getDescrStats(q, ds)
 			res.send(result)
 		} catch (e: any) {
 			if (e instanceof Error && e.stack) console.log(e)
 			const result = { error: e?.message || e }
 			res.send(result)
 		}
-		//res.send(result satisfies DescrStatsResponse)
 	}
 }
 
@@ -113,22 +112,22 @@ export function getDescrStats(values, showOutlierRange = false) {
 	const outlierMin = p25 - 1.5 * IQR //p25 is same as q1
 	const outlierMax = p75 + 1.5 * IQR //p75 is same as q3
 
-	const stats = {
-		total: { label: 'Total', value: n },
-		min: { label: 'Minimum', value: min },
-		p25: { label: '1st quartile', value: p25 },
-		median: { label: 'Median', value: median },
-		p75: { label: '3rd quartile', value: p75 },
-		max: { label: 'Maximum', value: max },
-		mean: { label: 'Mean', value: mean },
-		stdDev: { label: 'Standard deviation', value: stdDev }
+	const stats: DescrStats = {
+		total: { key: 'total', label: 'Total', value: n },
+		min: { key: 'min', label: 'Minimum', value: min },
+		p25: { key: 'p25', label: '1st quartile', value: p25 },
+		median: { key: 'median', label: 'Median', value: median },
+		p75: { key: 'p75', label: '3rd quartile', value: p75 },
+		max: { key: 'max', label: 'Maximum', value: max },
+		mean: { key: 'mean', label: 'Mean', value: mean },
+		stdDev: { key: 'stdDev', label: 'Standard deviation', value: stdDev }
 		//variance: { label: 'Variance', value: variance }, // not necessary to report, as it is just stdDev^2
 		//iqr: { label: 'Inter-quartile range', value: IQR } // not necessary to report, as it is just p75-p25
 	}
 
 	if (showOutlierRange) {
-		stats.outlierMin = { label: 'Outlier minimum', value: outlierMin }
-		stats.outlierMax = { label: 'Outlier maximum', value: outlierMax }
+		stats.outlierMin = { key: 'outlierMin', label: 'Outlier minimum', value: outlierMin }
+		stats.outlierMax = { key: 'outlierMax', label: 'Outlier maximum', value: outlierMax }
 	}
 
 	for (const v of Object.values(stats)) {

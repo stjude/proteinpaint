@@ -1,5 +1,5 @@
 import type { FormattedPlotEntry, LegendData, LegendItemEntry, BoxPlotConfig } from '../BoxPlotTypes'
-import type { BoxPlotChartEntry } from '#types'
+import type { BoxPlotChartEntry, DescrStats } from '#types'
 
 export class LegendDataMapper {
 	legendData: LegendData = []
@@ -42,8 +42,13 @@ export class LegendDataMapper {
 		}
 	}
 
-	getDescrStatItems(stats) {
-		return Object.values(stats).map(s => ({ text: `${s.label}: ${s.value}`, isHidden: false, isPlot: false }))
+	getDescrStatItems(stats: DescrStats) {
+		return Object.values(stats).map(s => ({
+			key: s.key,
+			text: `${s.label}: ${s.value}`,
+			isHidden: false,
+			isPlot: false
+		}))
 	}
 
 	setHiddenCategoryItems(
