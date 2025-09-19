@@ -1,2 +1,0 @@
-Fixes:
-- closure plot api.triggerAbort() to avoid issues with private App property access
