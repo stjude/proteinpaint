@@ -21,14 +21,14 @@ tape('getDescrStats()', function (test) {
 	const data = [15, 20, 42, 26, 18, 4, 31, 19, 22, 15, 14, 4]
 	const stats = getDescrStats(data)
 	const expected = {
-		total: { label: 'Total', value: 12 },
-		min: { label: 'Minimum', value: 4 },
-		p25: { label: '1st quartile', value: 14.5 },
-		median: { label: 'Median', value: 18.5 },
-		p75: { label: '3rd quartile', value: 24 },
-		max: { label: 'Maximum', value: 42 },
-		mean: { label: 'Mean', value: 19.17 },
-		stdDev: { label: 'Standard deviation', value: 10.62 }
+		total: { key: 'total', label: 'Total', value: 12 },
+		min: { key: 'min', label: 'Minimum', value: 4 },
+		p25: { key: 'p25', label: '1st quartile', value: 14.5 },
+		median: { key: 'median', label: 'Median', value: 18.5 },
+		p75: { key: 'p75', label: '3rd quartile', value: 24 },
+		max: { key: 'max', label: 'Maximum', value: 42 },
+		mean: { key: 'mean', label: 'Mean', value: 19.17 },
+		stdDev: { key: 'stdDev', label: 'Standard deviation', value: 10.62 }
 	}
 	test.deepEqual(stats, expected, 'Should compute expected descriptive stats')
 	test.end()
