@@ -60,8 +60,8 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		...settings
 	}
 
-	// Set relative positioning on the main div for absolute positioning to work for download button
-	div.style('position', 'absolute')
+	// Set relative positioning on the main div for positioning of download button
+	div.style('position', 'relative')
 
 	// Create tooltip menu
 	const geneTip = new Menu({ padding: '' })
@@ -217,8 +217,8 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				.style('border-radius', `${settings.borderRadius + 10}px`)
 
 			icons['download'](downloadDiv, {
-				width: 12,
-				height: 12,
+				width: 16,
+				height: 16,
 				title: 'Download Manhattan plot',
 				handler: () => {
 					to_svg(
