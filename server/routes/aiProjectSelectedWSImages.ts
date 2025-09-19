@@ -1,7 +1,4 @@
 import type { Annotation, Mds3, RouteApi, WSImage } from '#types'
-import path from 'path'
-import fs from 'fs'
-import serverconfig from '#src/serverconfig.js'
 import type { AiProjectSelectedWSImagesRequest, AiProjectSelectedWSImagesResponse } from '#types'
 import { aiProjectSelectedWSImagesResponsePayload } from '#types/checkers'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
@@ -52,24 +49,8 @@ function init({ genomes }) {
 					wsimage.activePatchColor = ds.queries?.WSImages?.activePatchColor
 
 					if (ds.queries.WSImages.getWSIPredictionPatches) {
-						const predictionsFile = await ds.queries.WSImages.getWSIPredictionPatches(projectId, wsimageFilename)
-						const mount = serverconfig.features?.tileserver?.mount
-
-						if (!mount) throw new Error('No mount available for TileServer')
-
-						const predictionsFilePath = path.join(mount, ds.queries.WSImages.aiToolImageFolder, predictionsFile[0])
-
-						const predictionsData = JSON.parse(fs.readFileSync(predictionsFilePath, 'utf8'))
-
-						wsimage.predictions = predictionsData.features.map((d: any) => {
-							const featClass = wsimage.classes?.find(f => f.id == d.properties.class)?.label
-							// TODO handle missing class
-							return {
-								zoomCoordinates: d.properties.zoomCoordinates,
-								uncertainty: d.properties.uncertainty,
-								class: featClass
-							}
-						})
+						const predictions = await ds.queries.WSImages.getWSIPredictionPatches(projectId, wsimageFilename)
+						wsimage.predictions = predictions
 					}
 
 					wsimages.push(wsimage)
@@ -99,7 +80,6 @@ export async function validate_query_getWSIAnnotations(ds: Mds3) {
 	if (!connection) return
 	validateWSIAnnotationsQuery(ds, connection)
 }
-
 export async function validate_query_getWSIClassesQuery(ds: Mds3) {
 	if (!ds.queries?.WSImages?.db) return
 	const connection = getDbConnection(ds)
