@@ -1226,7 +1226,12 @@ export class MatrixControls {
 							}
 							//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
 							let tw = group.lst.find(
-								tw => (tw.term.gene == d.symbol || tw.term.gene == d.gene) && tw.term.type == targetTermType
+								t =>
+									(d.symbol
+										? (t.term.gene || t.term.name) == d.symbol
+										: d.gene
+										? (t.term.gene || t.term.name) == d.gene
+										: undefined) && t.term.type == targetTermType
 							)
 							if (!tw) {
 								tw = { term }
