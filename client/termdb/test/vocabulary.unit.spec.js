@@ -426,14 +426,14 @@ tape('getDescrStats()', async test => {
 
 	testId = 'd'
 	result = await frontendVocabApi.getDescrStats(testId)
-	test.equal(result.values[0].value, 10, `Should get the correct value for ${result.values[0].id}`)
-	test.equal(result.values[1].value, 0.05, `Should get the correct value for ${result.values[1].id}`)
-	test.equal(result.values[2].value, 0.2, `Should get the correct value for ${result.values[2].id}`)
-	test.equal(result.values[3].value, 0.45, `Should get the correct value for ${result.values[3].id}`)
-	test.equal(result.values[4].value, 0.48, `Should get the correct value for ${result.values[4].id}`)
-	test.equal(result.values[5].value, 0.8, `Should get the correct value for ${result.values[5].id}`)
-	test.equal(result.values[6].value, 1.1, `Should get the correct value for ${result.values[6].id}`)
-	test.equal(result.values[7].value, 0.35, `Should get the correct value for ${result.values[7].id}`)
+	test.equal(result.total.value, 10, `Should get the correct total value`)
+	test.equal(result.min.value, 0.05, `Should get the correct min value`)
+	test.equal(result.p25.value, 0.2, `Should get the correct 1st quartile value`)
+	test.equal(result.median.value, 0.45, `Should get the correct median value`)
+	test.equal(result.mean.value, 0.48, `Should get the correct mean value`)
+	test.equal(result.p75.value, 0.8, `Should get the correct 3rd quartile value`)
+	test.equal(result.max.value, 1.1, `Should get the correct max value`)
+	test.equal(result.stdDev.value, 0.35, `Should get the correct standard deviation value`)
 
 	testId = 'c'
 	msg = `Should throw error for non-numeric data`

@@ -4,6 +4,7 @@ import { sample_match_termvaluesetting } from '#common/termutils'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { isNumeric } from '#shared/helpers.js'
 import computePercentile from '#shared/compute.percentile.js'
+import { roundValueAuto } from '#shared/roundValue.js'
 import { Vocab } from './Vocab'
 
 export class FrontendVocab extends Vocab {
