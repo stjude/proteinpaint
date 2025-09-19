@@ -3,6 +3,7 @@ import type { WSImage } from './routes/samplewsimages.ts'
 import type { WSISample } from './routes/wsisamples.ts'
 import type { SaveWSIAnnotationRequest } from './routes/saveWSIAnnotation.ts'
 import type { DeleteWSIAnnotationRequest } from './routes/deleteWSIAnnotation.ts'
+import type { Prediction } from './routes/aiProjectSelectedWSImages.ts'
 
 /*** General usage types ***/
 type FileObj = {
@@ -1068,7 +1069,7 @@ export type WSImages = {
 	/** either ds supplied or dynamically added on launch with built in logic */
 	getWSImages?: (sampleName: string) => Promise<WSImage[]>
 	/**  ds supplied */
-	getWSIPredictionPatches?: (projectId: string, wsiImage: string) => Promise<string[]>
+	getWSIPredictionPatches?: (projectId: string, wsiImage: string) => Promise<Prediction[]>
 	/**  ds supplied */
 	getWSIAnnotations?: (projectId: string, wsiImage: string) => Promise<string[]>
 	/**  ds supplied */
