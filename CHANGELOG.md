@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- When using custom variable as global filter, show both groups and allow to check all samples in the custom variable
+- When launching DEGs hierCluster, cluster the samples and show custom variable as annotation row
+
 
 ## 2.146.0
 
