@@ -1,2 +1,2 @@
 Features:
--GRIN2/Manhattan plot: Added download button. Added genom browser click event. Moved plot_manhattan from grin2PpWrapper.py to plot_manhattan.py. Miscellaneous cleanups. 
+- GRIN2/Manhattan plot: Added download button. Added genom browser click event. Moved plot_manhattan from grin2PpWrapper.py to plot_manhattan.py. Miscellaneous cleanups. 
