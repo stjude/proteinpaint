@@ -24,7 +24,6 @@ function init({ genomes }) {
 			let count
 			//only if a filter is applied always request samples(panMB dataset). Profile and sjcares have getAdditionalFilter but the samples are only filtered where needed
 			//This avoids requesting samples for the sjglobal datasets
-			console.log(q.filter)
 			if (q.filter?.lst?.length) {
 				const samples = await get_samples(q, ds)
 				count = samples.length
