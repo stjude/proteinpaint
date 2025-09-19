@@ -3158,13 +3158,13 @@
     },
     "lowestPct": {
       "curr": 14.28,
-      "prev": 10,
-      "diff": 4.279999999999999
+      "prev": 14.28,
+      "diff": 0
     },
     "averagePct": {
       "curr": 21.997500000000002,
-      "prev": 18.1475,
-      "diff": 3.8500000000000014
+      "prev": 21.997500000000002,
+      "diff": 0
     }
   },
   "filter/tvs.dtcnv.categorical.js": {
