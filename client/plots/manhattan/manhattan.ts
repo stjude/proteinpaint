@@ -27,7 +27,7 @@ import { to_svg } from '#src/client'
  *   @param {number} [settings.legendFontSize=12] - Font size for legend text
  *   @param {number} [settings.interactiveDotRadius=3] - Radius of interactive dots
  *   @param {number} [settings.interactiveDotStrokeWidth=1] - Stroke width for interactive dots
- * @param {Object} [app] - App context for dispatching events
+ * @param {Object} [app] - Optional app context for dispatching events
  *
  * @description
  * Renders a genomic Manhattan plot by overlaying interactive elements on the base PNG plot image.
@@ -36,7 +36,7 @@ import { to_svg } from '#src/client'
  * including axes, labels, legend, and top genes (represented as interactive dots) for detailed information on hover.
  */
 
-export function plotManhattan(div: any, data: any, settings: any, app: any) {
+export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	// Default settings
 	settings = {
 		pngDotRadius: 2,
