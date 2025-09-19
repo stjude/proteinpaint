@@ -75,6 +75,8 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	const yAxisG = svg
 		.append('g')
 		.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
+		.attr('font-size', `${settings.fontSize + 2}px`)
+
 	const yScale = scaleLinear()
 		.domain([-data.plotData.y_buffer, data.plotData.y_max + data.plotData.y_buffer])
 		.range([data.plotData.png_height, 0])
@@ -87,7 +89,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		.attr('y', settings.yAxisX / 2)
 		.attr('transform', 'rotate(-90)')
 		.attr('text-anchor', 'middle')
-		.attr('font-size', `${settings.fontSize}px`)
+		.attr('font-size', `${settings.fontSize + 4}px`)
 		.attr('fill', 'black')
 		.text('-log₁₀(q-value)')
 
@@ -177,7 +179,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 					.attr('x', centerPos)
 					.attr('y', chromLabelY)
 					.attr('text-anchor', 'middle')
-					.attr('font-size', `${settings.fontSize - 2}px`)
+					.attr('font-size', `${settings.fontSize + 2}px`)
 					.attr('fill', 'black')
 					.text(chromLabel)
 			})
@@ -189,7 +191,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 			.attr('x', settings.yAxisX + settings.yAxisSpace + data.plotData.png_width / 2)
 			.attr('y', data.plotData.png_height + settings.yAxisY + 45)
 			.attr('text-anchor', 'middle')
-			.attr('font-size', `${settings.fontSize}px`)
+			.attr('font-size', `${settings.fontSize + 4}px`)
 			.attr('fill', 'black')
 			.text('Chromosomes')
 
@@ -265,7 +267,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 					.append('text')
 					.attr('x', x + 8 + settings.legendTextOffset)
 					.attr('y', legendY + settings.legendVerticalOffset)
-					.attr('font-size', `${settings.legendFontSize}px`)
+					.attr('font-size', `${settings.legendFontSize + 2}px`)
 					.attr('fill', 'black')
 					.text(item.type)
 			})
