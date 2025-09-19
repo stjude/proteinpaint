@@ -156,42 +156,42 @@ tape('render violin plot', function (test) {
 	function testDescrStats(violin, legendDiv) {
 		test.equal(
 			+legendDiv.node().querySelectorAll('.legend-row')[0].innerText.split(':')[1],
-			+violin.Inner.config.term.q.descrStats[0].value,
+			+violin.Inner.config.term.q.descrStats.total.value,
 			'Total n values rendered'
 		)
 		test.equal(
 			+legendDiv.node().querySelectorAll('.legend-row')[1].innerText.split(':')[1],
-			+violin.Inner.config.term.q.descrStats[1].value,
+			+violin.Inner.config.term.q.descrStats.min.value,
 			'Minimum value rendered'
 		)
 		test.equal(
 			+legendDiv.node().querySelectorAll('.legend-row')[2].innerText.split(':')[1],
-			+violin.Inner.config.term.q.descrStats[2].value,
+			+violin.Inner.config.term.q.descrStats.p25.value,
 			'1st quartile value rendered'
 		)
 		test.equal(
 			+legendDiv.node().querySelectorAll('.legend-row')[3].innerText.split(':')[1],
-			+violin.Inner.config.term.q.descrStats[3].value,
+			+violin.Inner.config.term.q.descrStats.median.value,
 			'Median value rendered'
 		)
 		test.equal(
 			+legendDiv.node().querySelectorAll('.legend-row')[4].innerText.split(':')[1],
-			+violin.Inner.config.term.q.descrStats[4].value,
-			'Mean value rendered'
-		)
-		test.equal(
-			+legendDiv.node().querySelectorAll('.legend-row')[5].innerText.split(':')[1],
-			+violin.Inner.config.term.q.descrStats[5].value,
+			+violin.Inner.config.term.q.descrStats.p75.value,
 			'3rd quartile value rendered'
 		)
 		test.equal(
-			+legendDiv.node().querySelectorAll('.legend-row')[6].innerText.split(':')[1],
-			+violin.Inner.config.term.q.descrStats[6].value,
+			+legendDiv.node().querySelectorAll('.legend-row')[5].innerText.split(':')[1],
+			+violin.Inner.config.term.q.descrStats.max.value,
 			'Max value rendered'
 		)
 		test.equal(
+			+legendDiv.node().querySelectorAll('.legend-row')[6].innerText.split(':')[1],
+			+violin.Inner.config.term.q.descrStats.mean.value,
+			'Mean value rendered'
+		)
+		test.equal(
 			+legendDiv.node().querySelectorAll('.legend-row')[7].innerText.split(':')[1],
-			+violin.Inner.config.term.q.descrStats[7].value,
+			+violin.Inner.config.term.q.descrStats.stdDev.value,
 			'Standard deviation rendered'
 		)
 	}
@@ -232,11 +232,11 @@ tape('term1 as numeric and term2 categorical, test median rendering', function (
 			'Number of median lines rendered should be/is equal to number of plots rendered'
 		)
 		const medianValues = median.map(({ __data__: { summaryStats } }) => {
-			const { value } = summaryStats.find(c => c.id === 'median')
+			const { value } = summaryStats.median
 			return value
 		})
 		const sumStatsValues = violin.Inner.data.charts[''].plots.map(({ summaryStats }) => {
-			const { value } = summaryStats.find(c => c.id === 'median')
+			const { value } = summaryStats.median
 			return value
 		})
 
@@ -564,13 +564,13 @@ tape('test hide option on label clicking', function (test) {
 	}
 
 	async function testHiddenValues(violin, legendDiv, violinDiv) {
-		const htmlLegends = await detectGte({ elem: legendDiv.node(), selector: '.sjpp-htmlLegend', count: 10 })
+		const htmlLegends = await detectGte({ elem: legendDiv.node(), selector: '.sjpp-htmlLegend' })
 		test.ok(htmlLegends, 'Legend exists')
 
 		const hiddenKeys = Object.keys(violin.Inner.config.term2.q.hiddenValues)
 		test.equal(
 			Object.keys(violin.Inner.config.term2.q.hiddenValues)[0],
-			htmlLegends[10].innerHTML,
+			htmlLegends[8].innerHTML,
 			'q.hiddenValues match legend'
 		)
 		const unhideLegendValue = htmlLegends.filter(c => hiddenKeys.find(k => c.__data__.text === k))

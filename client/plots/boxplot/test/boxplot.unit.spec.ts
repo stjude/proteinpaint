@@ -17,17 +17,17 @@ Tests:
 See unit tests for #dom/boxplot for rendering unit tests
 */
 
-const mockDescrStats1 = [
-	{ id: 'min', label: 'Min', value: 20 },
-	{ id: 'max', label: 'Max', value: 100 },
-	{ id: 'median', label: 'Median', value: 60 }
-]
+const mockDescrStats1 = {
+	min: { key: 'min', label: 'Min', value: 20 },
+	max: { key: 'max', label: 'Max', value: 100 },
+	medain: { key: 'median', label: 'Median', value: 60 }
+}
 
-const mockDescrStats2 = [
-	{ id: 'min', label: 'Min', value: 0 },
-	{ id: 'max', label: 'Max', value: 60 },
-	{ id: 'median', label: 'Median', value: 30 }
-]
+const mockDescrStats2 = {
+	min: { key: 'min', label: 'Min', value: 0 },
+	max: { key: 'max', label: 'Max', value: 60 },
+	medain: { key: 'median', label: 'Median', value: 30 }
+}
 
 const mockSettings = {
 	boxplotWidth: 20,
