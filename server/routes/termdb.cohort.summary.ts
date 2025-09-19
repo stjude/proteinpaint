@@ -22,7 +22,10 @@ function init({ genomes }) {
 			if (!genome) throw 'invalid genome'
 			const [ds] = get_ds_tdb(genome, q)
 			let count
-			if (ds.cohort.termdb.getAdditionalFilter) {
+			const filter = ds.cohort.termdb.getAdditionalFilter(q.__protected__.clientAuthResult)
+			//only if a filter is applied always request samples(panMB dataset). Profile and sjcares have getAdditionalFilter but the samples are only filtered where needed
+			//This avoids requesting samples for the sjglobal datasets
+			if (filter) {
 				const samples = await get_samples(q, ds)
 				count = samples.length
 			} else count = ds.cohort.termdb.q?.getCohortSampleCount?.(q.cohort) || 1
