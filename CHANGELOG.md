@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.146.1
 
 Fixes:
 - When using custom variable as global filter, show both groups and allow to check all samples in the custom variable
