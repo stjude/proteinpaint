@@ -57,15 +57,6 @@ function init({ genomes }) {
 				}
 			}
 
-			if (ds.queries.WSImages.getWSIPredictionOverlay) {
-				for (const wsimage of wsimages) {
-					const predictionOverlay = await ds.queries.WSImages.getWSIPredictionOverlay(wsimage.filename)
-					if (predictionOverlay) {
-						wsimage.predictionLayers = [predictionOverlay]
-					}
-				}
-			}
-
 			res.send({ wsimages: wsimages } satisfies AiProjectSelectedWSImagesResponse)
 		} catch (e: any) {
 			console.log(e)
