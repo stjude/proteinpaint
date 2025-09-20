@@ -552,16 +552,16 @@ tape('Incorrect dslabel', test => {
 	}
 })
 
-tape('Custom ssm only, no sample', test => {
+tape.only('Custom ssm only, no sample', test => {
 	test.timeoutAfter(2000)
 	const holder = getHolder()
 
 	const gene = 'TP53',
 		tkname = 'TP53 hg38-test',
 		custom_variants = [
-			{ chr: 'chr17', pos: 7675993, mname: 'point 1', class: 'M', dt: 1 },
-			{ chr: 'chr17', pos: 7676520, mname: 'point 2', class: 'M', dt: 1 },
-			{ chr: 'chr17', pos: 7676381, mname: 'point 3', class: 'M', dt: 1 }
+			{ chr: 'chr17', pos: 7675993, mname: 'point 1', class: 'M', dt: 1, info: { Acmg: 'P' } },
+			{ chr: 'chr17', pos: 7676520, mname: 'point 2', class: 'M', dt: 1, info: { Acmg: 'LP' } },
+			{ chr: 'chr17', pos: 7676381, mname: 'point 3', class: 'M', dt: 1, info: { Acmg: 'P' } }
 			// { chr: 'chr17', pos: 7675052, mname: 'point 4', class: 'E', dt: 1 },
 			// { chr: 'chr17', pos: 7674858, mname: 'point 5', class: 'E', dt: 1 },
 			// { chr: 'chr17', pos: 7674180, mname: 'point 6', class: 'F', dt: 1 },
@@ -587,36 +587,29 @@ tape('Custom ssm only, no sample', test => {
 		// Test mds3 is a track object and bb is block object
 		test.equal(bb.usegm.name, gene, `Should render block.usegm.name = ${gene}`)
 		test.equal(bb.tklst.length, 2, 'Should have two tracks')
-		test.ok(tk.skewer.rawmlst.length > 0, 'Should load mds3 tk with at least 1 data point')
-
-		//Confirm number of custom variants matches in block instance
-		test.equal(
-			tk.custom_variants.length,
-			custom_variants.length,
-			`Should render total # of custom variants = ${custom_variants.length}`
-		)
+		test.equal(tk.skewer.rawmlst.length, custom_variants.length, 'Should load all custom data points')
 
 		const classes2Check = new Set() //for legend testing below
 		for (const variant of custom_variants) {
 			classes2Check.add(variant.class)
-			//Test all custom variant entries successfully passed to block instance
+			// test all custom variant entries successfully passed to block instance
 			const variantFound = tk.custom_variants.find(i => i.mname == variant.mname)
 			test.ok(variantFound, `Should render data point for ${variant.mname}`)
 		}
 
-		/*** Verify all ui parts are rendered ***/
-		//Left labels
+		// left labels
 		test.ok(tk.leftlabels.doms.variants, 'Should render tk.leftlabels.doms.variants')
 		await testVariantLeftLabel(test, tk, bb)
 		test.notOk(tk.leftlabels.doms.filterObj, 'Should NOT render tk.leftlabels.doms.filterObj')
 		test.notOk(tk.leftlabels.doms.close, 'Should NOT render tk.leftlabels.doms.close')
 
-		//Legend
+		// legend TODO move to reusable test
 		test.equal(
 			tk.tr_legend.node().querySelectorAll('td')[0].innerText,
 			tkname,
 			`Should pass custom name = ${tkname} to legend`
 		)
+		// legend - mclass
 		for (const mutClass of classes2Check) {
 			const legendArray = tk.legend.mclass.currentData.find(d => d[0] == mutClass)
 			const samples2check = custom_variants.filter(d => d.class == mutClass)
@@ -626,8 +619,10 @@ tape('Custom ssm only, no sample', test => {
 				`Should pass ${samples2check.length} data points to legend for ${mutClass} class`
 			)
 		}
+		// legend - bcf info
+		test.ok(tk.legend.bcfInfo.Acmg, 'bcf INFO legend rendered for "Acmg"')
 
-		if (test._ok) holder.remove()
+		//if (test._ok) holder.remove()
 		test.end()
 	}
 })

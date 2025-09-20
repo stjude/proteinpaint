@@ -1,0 +1,2 @@
+Fixes:
+- mds3 tk custom data with INFO field support legend rendering and filtering

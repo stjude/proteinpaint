@@ -3,7 +3,7 @@ import { dofetch3 } from '#common/dofetch'
 import { initLegend, updateLegend } from './legend'
 import { loadTk, rangequery_rglst } from './tk'
 import urlmap from '#common/urlmap'
-import { mclass, dtsnvindel, dtsv, dtfusionrna, dtcnv } from '#shared/common.js'
+import { mclass, dtsnvindel, dtsv, dtfusionrna, dtcnv, getColors } from '#shared/common.js'
 import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
 import { getFilterName } from './filterName'
 import { fillTermWrapper } from '#termsetting'
@@ -484,6 +484,7 @@ async function get_ds(tk, block) {
 	} else if (tk.custom_variants) {
 		validateCustomVariants(tk, block)
 		mayDeriveSkewerOccurrence4samples(tk)
+		mayAddInfoField(tk)
 	} else {
 		throw 'unknown data source for custom track'
 	}
@@ -954,10 +955,8 @@ function validateCustomSvfusion(m, block) {
 	m.ssm_id = fields.join(ssmIdFieldsSeparator)
 }
 
-/*
-work-in-progress
+/* wip
 this works for receiving data from mass-matrix gene label-clicking
-
 in custom_variants[] data points,
 if "sample_id" is present but "occurrence" is missing, do below:
 - dedup the list by merging m{} of same variant together. only apply to ssm!
@@ -1034,6 +1033,30 @@ function mayDeriveSkewerOccurrence4samples(tk) {
 	v.type_samples = 'samples'
 	v.type_summary = 'summary'
 	v.type_sunburst = 'sunburst'
+}
+
+/* wip
+hardcode for Type="string", no auto detecting numeric values to set Type="Float"
+*/
+function mayAddInfoField(tk) {
+	if (!tk.custom_variants.some(i => i.info)) return // no variant has info field
+	const info = {} // replicate same structure as native tk
+	for (const m of tk.custom_variants) {
+		if (typeof m.info != 'object') continue
+		for (const k in m.info) {
+			const v = m.info[k]
+			if (v == null || v == undefined) continue
+			if (!info[k]) info[k] = { ID: k, Number: '.', Type: 'String', categories: {} }
+			if (!info[k].categories[v]) info[k].categories[v] = {}
+		}
+	}
+	for (const k in info) {
+		const colors = getColors(Object.keys(info[k].categories).length)
+		for (const c in info[k].categories) {
+			info[k].categories[c].color = colors(c)
+		}
+	}
+	tk.mds.bcf = { info }
 }
 
 /*
