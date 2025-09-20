@@ -5,6 +5,7 @@ import { may_render_cnv } from './cnv'
 import { make_leftlabels } from './leftlabel'
 import { mclass, dtsnvindel, dtsv, dtfusionrna, dtcnv } from '#shared/common.js'
 import { summarize_mclass } from '#shared/mds3tk.js'
+import { unannotatedKey } from './legend'
 
 /*
 loadTk
@@ -354,6 +355,19 @@ async function dataFromCustomVariants(tk, block) {
 	}
 
 	for (const m of tk.custom_variants) {
+		if (tk.legend.bcfInfo) {
+			let skip = false
+			for (const infoKey in tk.legend.bcfInfo) {
+				if (tk.legend.bcfInfo[infoKey].hiddenvalues?.size) {
+					const v = m.info?.[infoKey] || unannotatedKey
+					if (tk.legend.bcfInfo[infoKey].hiddenvalues.has(v)) {
+						skip = true
+						break
+					}
+				}
+			}
+			if (skip) continue
+		}
 		if (m.dt == dtcnv) {
 			if (m.chr != block.rglst[0].chr) continue
 			if (Math.max(m.start, bbstart) > Math.min(m.stop, bbstop)) continue

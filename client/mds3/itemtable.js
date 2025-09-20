@@ -394,17 +394,12 @@ tk{}
 		return
 	}
 	// this key is not rendered as url, show it using following logic
-	const valueSpan = td.append('span').text(infoValue)
-	if (infoField && infoField.categories) {
-		const category = infoField.categories[infoValue]
-		if (category) {
-			// {color,label,textcolor}
-			valueSpan.style('padding', '1px 4px').style('background', category.color)
-			if (category.textcolor) {
-				valueSpan.style('color', category.textcolor)
-			}
-		}
+	const color = infoField.categories?.[infoValue]?.color
+	if (color) {
+		// key has a color, show circle
+		td.append('span').html('&nbsp;&nbsp;').style('background', color).style('margin-right', '5px')
 	}
+	td.append('span').text(infoValue)
 }
 
 function print_mname(div, m) {

@@ -41,7 +41,7 @@ may_update_cnv
 const unknown_infoCategory_bgcolor = 'white',
 	unknown_infoCategory_textcolor = 'black'
 
-const unannotatedKey = 'Unannotated'
+export const unannotatedKey = 'Unannotated'
 
 export function initLegend(tk, block) {
 	/*
@@ -426,7 +426,7 @@ function may_update_infoFields(data, tk) {
 
 			const category2variantCount = new Map() // key: category of this INFO field, v: number of variants
 			for (const m of data.skewer) {
-				const category = infoKey in m.info ? m.info[infoKey] : unannotatedKey
+				const category = m.info?.[infoKey] || unannotatedKey
 				if (Array.isArray(category)) {
 					for (const c of category) {
 						category2variantCount.set(c, 1 + (category2variantCount.get(c) || 0))
