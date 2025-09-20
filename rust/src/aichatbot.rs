@@ -751,13 +751,14 @@ fn validate_summary_output(raw_llm_json: String, db_vec: Vec<DbRows>) -> String 
         panic!("Did not return a summary chartType")
     }
 
+    // Verifying group_categories field
+
     let summary_terms = &json_value["term"];
     //println!("summary_terms:{}", summary_terms["group_categories"]);
     let group_categories_field = summary_terms["group_categories"].as_str().unwrap();
     let group_categories_verification = verify_json_field(group_categories_field, &db_vec);
 
     let final_group_categories: String;
-    let final_group_filter: String;
     let mut corrected_filter: Option<FilterData> = None;
     if Some(group_categories_verification.correct_field.clone()).is_some()
         && Some(group_categories_verification.correct_value.clone()).is_some()
@@ -776,9 +777,73 @@ fn validate_summary_output(raw_llm_json: String, db_vec: Vec<DbRows>) -> String 
     }
 
     let final_llm_json: String;
-    let message: String;
+    let mut message: String = String::from("");
     if Some(corrected_filter.clone()).is_some() {
         message = corrected_filter.clone().unwrap().value + &"is a value of " + &corrected_filter.unwrap().filter;
+    }
+
+    // Verifying overlay field (if present)
+    let overlay_field = summary_terms["overlay"].as_str();
+    let mut final_overlay: Option<String> = None;
+    match overlay_field {
+        Some(overlay_fd) => {
+            let overlay_verification = verify_json_field(overlay_fd, &db_vec);
+            let mut corrected_filter2: Option<FilterData> = None;
+            if Some(overlay_verification.correct_field.clone()).is_some()
+                && Some(overlay_verification.correct_value.clone()).is_some()
+            {
+                let final_group_field = overlay_verification.correct_field.unwrap();
+                let final_group_value = overlay_verification.correct_value.unwrap();
+
+                corrected_filter2 = Some(FilterData {
+                    filter: final_group_field,
+                    value: final_group_value,
+                });
+            } else if Some(overlay_verification.correct_field.clone()).is_some()
+                && overlay_verification.correct_value.clone().is_none()
+            {
+                final_overlay = Some(overlay_verification.correct_field.unwrap());
+            }
+
+            if Some(corrected_filter2.clone()).is_some() {
+                message += &corrected_filter2.clone().unwrap().value;
+                message += &"is a value of ";
+                message += &corrected_filter2.unwrap().filter;
+            }
+        }
+        None => {}
+    }
+
+    // Verifying divide_by field (if present)
+    let divide_by_field = summary_terms["divide_by"].as_str();
+    let mut final_divide_by: Option<String> = None;
+    match divide_by_field {
+        Some(divide_by_fd) => {
+            let divide_by_verification = verify_json_field(divide_by_fd, &db_vec);
+            let mut corrected_filter2: Option<FilterData> = None;
+            if Some(divide_by_verification.correct_field.clone()).is_some()
+                && Some(divide_by_verification.correct_value.clone()).is_some()
+            {
+                let final_group_field = divide_by_verification.correct_field.unwrap();
+                let final_group_value = divide_by_verification.correct_value.unwrap();
+
+                corrected_filter2 = Some(FilterData {
+                    filter: final_group_field,
+                    value: final_group_value,
+                });
+            } else if Some(divide_by_verification.correct_field.clone()).is_some()
+                && divide_by_verification.correct_value.clone().is_none()
+            {
+                final_divide_by = Some(divide_by_verification.correct_field.unwrap());
+            }
+
+            if Some(corrected_filter2.clone()).is_some() {
+                message += &corrected_filter2.clone().unwrap().value;
+                message += &"is a value of ";
+                message += &corrected_filter2.unwrap().filter;
+            }
+        }
+        None => {}
     }
 
     raw_llm_json
