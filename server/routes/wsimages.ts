@@ -50,7 +50,7 @@ function init({ genomes }) {
 			const wsiImagePath = await getWSImagePath(ds, wSImagesRequest)
 
 			// TODO use project id when creating a session
-			const session = await getSessionId(ds, cookieJar, getCookieString, setCookie, wsiImagePath)
+			const session = await getSessionId(ds, cookieJar, getCookieString, setCookie, wsiImagePath, aiProjectId)
 
 			const getWsiImageResponse: any = await getWsiImageDimensions(
 				session.imageSessionId,
@@ -91,12 +91,14 @@ async function getWSImagePath(ds: any, wSImagesRequest: WSImagesRequest) {
 	}
 }
 
+// updated getSessionId signature and implementation
 async function getSessionId(
 	ds: any,
 	cookieJar: any,
 	getCookieString: any,
 	setCookie: any,
-	wsimage: string
+	wsimage: string,
+	projectId?: any
 ): Promise<SessionData> {
 	const sessionManager = SessionManager.getInstance()
 
@@ -105,8 +107,6 @@ async function getSessionId(
 	if (!invalidateResult) throw new Error('Session invalidation failed')
 
 	const session = await sessionManager.getSession(wsimage)
-
-	// TODO fix image layers recovery in case redis goes down.
 
 	if (session) {
 		return session
@@ -139,73 +139,57 @@ async function getSessionId(
 		hooks: getHooks(cookieJar, getCookieString, setCookie)
 	})
 
-	if (ds.queries.WSImages.getWSIPredictionOverlay) {
-		const predictionOverlay = await ds.queries.WSImages.getWSIPredictionOverlay(wsimage)
+	if (ds.queries.WSImages.getPredictionLayers) {
+		const predictionLayers: Map<string, string> | Record<string, string> | undefined =
+			await ds.queries.WSImages.getPredictionLayers(projectId, wsimage)
 
-		if (predictionOverlay) {
+		if (predictionLayers) {
 			const mount = serverconfig.features?.tileserver?.mount
 
-			const overlayFilePath = path.join(`${mount}/${ds.queries.WSImages.aiToolImageFolder}/`, predictionOverlay)
-			const annotationsData = qs.stringify({
-				overlay_path: overlayFilePath
-			})
-
-			const layerNumber: string = await ky
-				.put(`${tileServer.url}/tileserver/overlay`, {
-					body: annotationsData,
-					timeout: 50000,
-					headers: {
-						'Content-Type': 'application/x-www-form-urlencoded',
-						Cookie: `session_id=${sessionId}`
-					},
-					hooks: getHooks(cookieJar, getCookieString, setCookie)
-				})
-				.json()
-
-			const overlay: PredictionOverlay = {
-				layerNumber: layerNumber,
-				predictionOverlayType: 'Prediction'
+			const resolveFilename = (key: string): string | undefined => {
+				if (!predictionLayers) return undefined
+				if (predictionLayers instanceof Map) return predictionLayers.get(key) ?? undefined
+				// handle plain object
+				return (predictionLayers as Record<string, string>)[key] ?? undefined
 			}
 
-			overlays.push(overlay)
+			const pushOverlayForKey = async (
+				key: 'Prediction' | 'Uncertainty',
+				predictionOverlayType: 'Prediction' | 'Uncertainty'
+			) => {
+				const filename = resolveFilename(key)
+				if (!filename) return
+				const overlayFilePath = path.join(`${mount}/${ds.queries.WSImages.aiToolImageFolder}/`, filename)
+				const annotationsData = qs.stringify({
+					overlay_path: overlayFilePath
+				})
+
+				const layerNumber: string = await ky
+					.put(`${tileServer.url}/tileserver/overlay`, {
+						body: annotationsData,
+						timeout: 50000,
+						headers: {
+							'Content-Type': 'application/x-www-form-urlencoded',
+							Cookie: `session_id=${sessionId}`
+						},
+						hooks: getHooks(cookieJar, getCookieString, setCookie)
+					})
+					.json()
+
+				const overlay: PredictionOverlay = {
+					layerNumber: layerNumber,
+					predictionOverlayType
+				}
+
+				overlays.push(overlay)
+			}
+
+			await pushOverlayForKey('Prediction', 'Prediction')
+			await pushOverlayForKey('Uncertainty', 'Uncertainty')
 		}
 	}
 
-	if (ds.queries.WSImages.getWSIUncertaintyOverlay) {
-		const uncertaintyOverlay = await ds.queries.WSImages.getWSIUncertaintyOverlay(wsimage)
-
-		if (uncertaintyOverlay) {
-			const mount = serverconfig.features?.tileserver?.mount
-
-			const uncertaintyOverlayFilePath = path.join(
-				`${mount}/${ds.queries.WSImages.aiToolImageFolder}/`,
-				uncertaintyOverlay
-			)
-			const uncertaintyData = qs.stringify({
-				overlay_path: uncertaintyOverlayFilePath
-			})
-
-			const layerNumber: string = await ky
-				.put(`${tileServer.url}/tileserver/overlay`, {
-					body: uncertaintyData,
-					timeout: 50000,
-					headers: {
-						'Content-Type': 'application/x-www-form-urlencoded',
-						Cookie: `session_id=${sessionId}`
-					},
-					hooks: getHooks(cookieJar, getCookieString, setCookie)
-				})
-				.json()
-
-			const overlay: PredictionOverlay = {
-				layerNumber: layerNumber,
-				predictionOverlayType: 'Uncertainty'
-			}
-
-			overlays.push(overlay)
-		}
-	}
-
+	// TODO add session id to the
 	const sessionData: SessionData = await sessionManager.setSession(wsimage, sessionId, tileServer, overlays)
 
 	return sessionData

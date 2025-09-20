@@ -24,7 +24,6 @@ export interface Annotation extends TileSelection {
 }
 
 export interface Prediction extends TileSelection {
-	type: string
 	class: string
 	uncertainty: number
 }

@@ -1073,9 +1073,8 @@ export type WSImages = {
 	/**  ds supplied */
 	getWSIAnnotations?: (projectId: string, wsiImage: string) => Promise<string[]>
 	/**  ds supplied */
-	getWSIPredictionOverlay?: (wsiImage: string) => Promise<string | undefined>
-	/**  ds supplied */
-	getWSIUncertaintyOverlay?: (wsiImage: string) => Promise<string | undefined>
+	getPredictionLayers?: (projectId: string, wsiImage: string) => Promise<Map<string, string> | undefined>
+
 	/**  ds supplied */
 	getAnnotationClasses?: (projectId: string) => Promise<WSIClass[] | undefined>
 }

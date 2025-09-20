@@ -86,7 +86,7 @@ export class ViewModelProvider {
 				dslabel: dslabel,
 				sampleId: sampleId,
 				wsimage: wsimages[i].filename,
-				aiProjectId: 1
+				aiProjectId: aiProjectID
 			}
 
 			const data: WSImagesResponse = await dofetch3('wsimages', { body })
