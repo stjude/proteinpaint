@@ -552,7 +552,7 @@ tape('Incorrect dslabel', test => {
 	}
 })
 
-tape.only('Custom ssm only, no sample', test => {
+tape('Custom ssm only, no sample', test => {
 	test.timeoutAfter(2000)
 	const holder = getHolder()
 
