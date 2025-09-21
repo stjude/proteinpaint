@@ -40,14 +40,25 @@ read_counts_time <- system.time({
     control_indices <- match(controls, samples)
 
     # Check for missing samples
-    if (any(is.na(case_indices))) {
-      missing_cases <- cases[is.na(case_indices)]
-      stop(paste(missing_cases, "not found"))
-    }
-    if (any(is.na(control_indices))) {
-      missing_controls <- controls[is.na(control_indices)]
-      stop(paste(missing_controls, "not found"))
-    }
+    #if (any(is.na(case_indices))) {
+    #  missing_cases <- cases[is.na(case_indices)]
+    #  stop(paste(missing_cases, "not found"))
+    #}
+    #if (any(is.na(control_indices))) {
+    #  missing_controls <- controls[is.na(control_indices)]
+    #  stop(paste(missing_controls, "not found"))
+    #}
+
+    # Removing missing samples from cases
+    keep_cases <- !is.na(case_indices)
+    cases <- cases[keep_cases]
+    case_indices <- case_indices[keep_cases]
+
+    # Removing missing samples from controls
+    keep_controls <- !is.na(control_indices)
+    controls <- controls[keep_controls]
+    control_indices <- control_indices[keep_controls]
+
 
     samples_indices <- c(case_indices, control_indices)
     read_counts <- as.data.frame(t(h5read(input$input_file, "matrix", index = list(samples_indices, 1:length(geneNames)))))
@@ -55,6 +66,15 @@ read_counts_time <- system.time({
   } else if (input$storage_type == "text") {
     suppressWarnings({
       suppressMessages({
+        # Peek at the header of the input file (first line only)
+        available_cols <- colnames(read_tsv(input$input_file, n_max = 0))
+
+        # Keep only existing samples
+        cases <- intersect(cases, available_cols)
+        controls <- intersect(controls,available_cols)
+
+        # Final combine column set
+        combined <- c("geneSymbol", cases, controls)
         read_counts <- read_tsv(input$input_file, col_names = TRUE, col_select = combined)
       })
     })
@@ -265,6 +285,8 @@ final_data_generation_time <- system.time({
 final_output <- c()
 final_output$gene_data <- output
 final_output$edgeR_ql_image_name <- fit_image_name
+final_output$num_cases <- length(cases)
+final_output$num_controls <- length(controls)
 if (dim(read_counts)[1] * dim(read_counts)[2] < as.numeric(input$mds_cutoff)) { # If the dimensions of the read counts matrix is below this threshold, only then the mds image will be generated as its very compute intensive
   final_output$edgeR_mds_image_name <- mds_image_name
 }

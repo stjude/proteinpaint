@@ -297,8 +297,8 @@ values[] // using integer sample id
 
 		return {
 			data: result.gene_data,
-			sample_size1: sample_size1,
-			sample_size2: sample_size2,
+			sample_size2: result.num_cases[0],
+			sample_size1: result.num_controls[0],
 			method: param.method,
 			images
 		} as DEResponse
