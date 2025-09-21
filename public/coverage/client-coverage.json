@@ -4105,38 +4105,38 @@
   },
   "plots/matrix/hierCluster.js": {
     "lines": {
-      "total": 128,
-      "covered": 108,
+      "total": 129,
+      "covered": 109,
       "skipped": 0,
-      "pct": 84.37
+      "pct": 84.49
     },
     "functions": {
-      "total": 29,
+      "total": 31,
       "covered": 23,
       "skipped": 0,
-      "pct": 79.31
+      "pct": 74.19
     },
     "statements": {
-      "total": 144,
-      "covered": 110,
+      "total": 146,
+      "covered": 111,
       "skipped": 0,
-      "pct": 76.38
+      "pct": 76.02
     },
     "branches": {
-      "total": 69,
-      "covered": 34,
+      "total": 73,
+      "covered": 36,
       "skipped": 0,
-      "pct": 49.27
+      "pct": 49.31
     },
     "lowestPct": {
-      "curr": 49.27,
-      "prev": 0,
-      "diff": 49.27
+      "curr": 49.31,
+      "prev": 49.27,
+      "diff": 0.03999999999999915
     },
     "averagePct": {
-      "curr": 72.3325,
-      "prev": 0,
-      "diff": 72.3325
+      "curr": 71.0025,
+      "prev": 72.3325,
+      "diff": -1.3299999999999983
     }
   },
   "plots/matrix/hierCluster.renderers.js": {
