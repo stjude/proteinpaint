@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- mds3 tk custom data with INFO field support legend rendering and filtering
+
+
 ## 2.146.2
 
 Fixes:
