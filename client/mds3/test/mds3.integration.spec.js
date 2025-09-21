@@ -66,11 +66,9 @@ tape('Official data on TP53, extensive ui test', test => {
 		test.ok(tk.leftlabels.doms.samples, 'tk.leftlabels.doms.samples is set')
 		test.notOk(tk.leftlabels.doms.filterObj, 'tk.leftlabels.doms.filterObj is not set')
 		test.notOk(tk.leftlabels.doms.close, 'tk.leftlabels.doms.close is not set')
-		test.ok(tk.legend.mclass, 'tk.legend.mclass{} is set')
-		test.ok(
-			tk.legend.mclass.currentData.find(i => i[0] == 4),
-			'cnv item (dt=4) is found in legend.mclass.currentData[]'
-		) // value "4" is dtcnv
+
+		testLegend(test, tk)
+
 		await findSingletonMutationTestDiscoCnvPlots(test, tk)
 		await testVariantLeftLabel(test, tk, bb)
 		{
@@ -603,29 +601,103 @@ tape('Custom ssm only, no sample', test => {
 		test.notOk(tk.leftlabels.doms.filterObj, 'Should NOT render tk.leftlabels.doms.filterObj')
 		test.notOk(tk.leftlabels.doms.close, 'Should NOT render tk.leftlabels.doms.close')
 
-		// legend TODO move to reusable test
-		test.equal(
-			tk.tr_legend.node().querySelectorAll('td')[0].innerText,
-			tkname,
-			`Should pass custom name = ${tkname} to legend`
-		)
-		// legend - mclass
-		for (const mutClass of classes2Check) {
-			const legendArray = tk.legend.mclass.currentData.find(d => d[0] == mutClass)
-			const samples2check = custom_variants.filter(d => d.class == mutClass)
-			test.equal(
-				legendArray[1],
-				samples2check.length,
-				`Should pass ${samples2check.length} data points to legend for ${mutClass} class`
-			)
-		}
-		// legend - bcf info
-		test.ok(tk.legend.bcfInfo.Acmg, 'bcf INFO legend rendered for "Acmg"')
+		testLegend(test, tk)
 
-		//if (test._ok) holder.remove()
+		if (test._ok) holder.remove()
 		test.end()
 	}
 })
+
+export function testLegend(test, tk) {
+	test.equal(
+		tk.tr_legend.node().querySelectorAll('td')[0].innerText,
+		tk.name,
+		`Should pass custom name = ${tk.name} to legend`
+	)
+	// tk legend is consisted of components based on availability of data types
+	testLegend_mclass(test, tk)
+	testLegend_cnv(test, tk)
+}
+function testLegend_mclass(test, tk) {
+	if (!tk.skewer.rawmlst.find(i => i.dt == 1)) {
+		test.notOk(tk.legend.mclass, 'tk.legend.mclass is missing when tk has no snvindel')
+		return
+	}
+	test.ok(tk.legend.mclass, 'tk.legend.mclass is set when tk has snvindel')
+
+	const d = tk.legend.mclass.holder.selectAll('[data-testid="sja_mds3tk_legenditemlabel"]')
+	test.ok(d._groups[0].length >= 1, 'more than 1 mclass legend items')
+	for (const f of d._groups[0]) {
+		const value = f.getAttribute('__key__')
+		// tricky! this value is either mclass (dt=snvindel) or stringified dt value; thus guess
+		const dt = Number(value)
+		if (Number.isNaN(dt)) {
+			// value is mclass
+			test.ok(
+				tk.skewer.rawmlst.find(i => i.class == value),
+				`mclass ${value} matched to some m`
+			)
+		} else {
+			// this legend entry is about dt
+			if (dt == 4) {
+				test.ok(tk.cnv, 'mclass legend found entry for dt=4 and tk.cnv exists')
+			} else {
+				throw 'unknown dt from mclass legend ' + dt
+			}
+		}
+	}
+
+	// optional properties that can exist on snvindel data
+	testLegend_info(test, tk)
+	testLegend_format(test, tk)
+	testLegend_skewerRim(test, tk)
+}
+function testLegend_info(test, tk) {
+	/* unreliable: 
+
+		if(!tk.skewer.rawmlst.find(i=>i.info)) {
+		}
+
+	a native tk m data may have m.info, but can still miss INFO legend if no field has .categories{}
+	*/
+
+	// collect all "lengendable" INFO keys
+	const infoKey4legend = new Set()
+	if (tk.mds.bcf?.info) {
+		for (const k in tk.mds.bcf.info) {
+			if (tk.mds.bcf.info[k].categories) infoKey4legend.add(k)
+		}
+	}
+	if (infoKey4legend.size == 0) {
+		test.notOk(tk.legend.bcfInfo, '.tk.legend.bcfInfo is missing when tk has no INFO fields configured for legend')
+		return
+	}
+	test.ok(tk.legend.bcfInfo, '.tk.legend.bcfInfo is set when tk has INFO fields configured for legend')
+
+	// for each info key, test its rendering in legend
+	for (const infoKey of infoKey4legend) {
+		test.ok(tk.legend.bcfInfo[infoKey], `tk.legend.bcfInfo["${infoKey}"] exists`)
+		const d = tk.legend.bcfInfo[infoKey].holder.selectAll('[data-testid="sja_mds3tk_legenditemlabel"]')
+		test.ok(d._groups[0].length > 1, `INFO ${infoKey} has more than 1 legend fields`)
+		for (const f of d._groups[0]) {
+			const infoValue = f.innerHTML
+			test.ok(
+				tk.skewer.rawmlst.find(i => i.info?.[infoKey] == infoValue),
+				`INFO value ${infoValue} (${infoKey}) matched to some m`
+			)
+		}
+	}
+}
+function testLegend_format(test, tk) {}
+function testLegend_skewerRim(test, tk) {}
+function testLegend_cnv(test, tk) {
+	if (!tk.cnv) {
+		test.notOk(tk.legend.cnv, 'tk.legend.cnv is missing when tk has no cnv')
+		return
+	}
+	test.ok(tk.legend.cnv, 'tk.legend.cnv is set when tk has cnv')
+	// todo
+}
 
 tape('Custom variants, missing or invalid mclass', test => {
 	test.timeoutAfter(3000)

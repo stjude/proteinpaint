@@ -322,6 +322,7 @@ function may_update_formatFilter(data, tk) {
 				.style('margin-right', '5px')
 				.html(count > 1 ? count : '&nbsp;')
 			cell.append('div').style('display', 'inline-block').text(category)
+			console.log(1, category)
 		}
 
 		// hidden ones
@@ -440,11 +441,13 @@ function may_update_infoFields(data, tk) {
 			const show_lst = [...category2variantCount].sort((i, j) => j[1] - i[1])
 
 			for (const [category, count] of show_lst) {
-				const cell = tk.legend.bcfInfo[infoKey].holder
-					.append('div')
-					.attr('class', 'sja_clb')
-					.style('display', 'inline-block')
-					.on('click', () => {
+				printCategory({
+					holder: tk.legend.bcfInfo[infoKey].holder,
+					key: category,
+					color: tk.mds.bcf.info[infoKey].categories?.[category]?.color || unknown_infoCategory_bgcolor,
+					label: tk.mds.bcf.info[infoKey].categories?.[category]?.label || category,
+					count,
+					click: event => {
 						const opts = [
 							{
 								label: 'Hide',
@@ -472,7 +475,7 @@ function may_update_infoFields(data, tk) {
 							}
 						]
 
-						createLegendTipMenu(opts, tk, cell.node())
+						createLegendTipMenu(opts, tk, event.target)
 
 						// optional description of this category
 						const desc = tk.mds.bcf.info[infoKey].categories?.[category]?.desc
@@ -484,20 +487,8 @@ function may_update_infoFields(data, tk) {
 								.style('width', '150px')
 								.html(desc)
 						}
-					})
-
-				cell
-					.append('div')
-					.style('display', 'inline-block')
-					.attr('class', 'sja_mcdot')
-					.style('background', tk.mds.bcf.info[infoKey].categories?.[category]?.color || unknown_infoCategory_bgcolor)
-					.html(count > 1 ? count : '&nbsp;')
-				cell
-					.append('div')
-					.style('display', 'inline-block')
-					.style('color', tk.mds.bcf.info[infoKey].categories?.[category]?.color || unknown_infoCategory_textcolor)
-					.style('padding-left', '5px')
-					.text(tk.mds.bcf.info[infoKey].categories?.[category]?.label || category)
+					}
+				})
 			}
 
 			// hidden ones
@@ -518,6 +509,25 @@ function may_update_infoFields(data, tk) {
 			}
 		}
 	}
+}
+
+// print an entry for a category as a legend item
+function printCategory({ holder, key, color, count, label, click }) {
+	const div = holder.append('div').attr('class', 'sja_clb').style('display', 'inline-block').on('click', click)
+	div
+		.append('div')
+		.style('display', 'inline-block')
+		.attr('class', 'sja_mcdot')
+		.style('background', color)
+		.html(count > 1 ? count : '&nbsp;')
+	div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('color', color)
+		.style('padding-left', '5px')
+		.attr('data-testid', 'sja_mds3tk_legenditemlabel') // for testing
+		.attr('__key__', key) // for testing
+		.text(label)
 }
 
 function update_mclass(tk) {
@@ -579,11 +589,13 @@ function update_mclass(tk) {
 			color = mclass[c.k].color
 			desc = mclass[c.k].desc
 		}
-		const cell = tk.legend.mclass.holder
-			.append('div')
-			.attr('class', 'sja_clb')
-			.style('display', 'inline-block')
-			.on('click', event => {
+		printCategory({
+			holder: tk.legend.mclass.holder,
+			key: c.k,
+			label,
+			color,
+			count: c.count,
+			click: () => {
 				const opts = [
 					{
 						label: 'Hide',
@@ -650,19 +662,8 @@ function update_mclass(tk) {
 				descDiv.append('span').style('color', color).text(label.toUpperCase())
 
 				descDiv.append('div').style('color', 'black').html(desc)
-			})
-
-		cell
-			.append('div')
-			.style('display', 'inline-block')
-			.attr('class', 'sja_mcdot')
-			.style('background', color)
-			.html(c.count > 1 ? c.count : '&nbsp;')
-		cell
-			.append('div')
-			.style('display', 'inline-block')
-			.style('color', color)
-			.html('&nbsp;' + label)
+			}
+		})
 	}
 
 	// hidden ones
