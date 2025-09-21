@@ -101,7 +101,9 @@ async function getResult(q: TermdbClusterRequest, ds: any) {
 	const noValueTerms: string[] = []
 	for (const [term, obj] of term2sample2value) {
 		if (Object.keys(obj).length === 0) {
-			noValueTerms.push(term)
+			const tw = q.terms.find(t => t.$id == term)
+			const termName = !tw ? term : tw.term.type == 'geneExpression' ? tw.term.gene : tw.term.name
+			noValueTerms.push(termName)
 			term2sample2value.delete(term)
 			delete byTermId[term]
 		}
