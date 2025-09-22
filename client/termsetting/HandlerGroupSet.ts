@@ -57,7 +57,7 @@ export class HandlerGroupSet extends HandlerBase implements Handler {
 	constructor(opts) {
 		super(opts)
 		this.termsetting = opts.termsetting
-		this.tw = opts.termsetting.tw //; console.log(this.termsetting.dom.tip.d.node()); console.log(59, opts.holder?.node())
+		this.tw = opts.termsetting.tw
 		this.dom.holder = opts.holder || this.termsetting.dom.tip.d
 		this.data = { groups: [], values: [], filters: [] }
 	}
@@ -74,7 +74,7 @@ export class HandlerGroupSet extends HandlerBase implements Handler {
 			.style('margin', '10px')
 			.style('padding', '10px')
 			.text('Getting categories...')
-		this.dom.menuWrapper = holder.append('div') // console.log(60, this.dom.menuWrapper.node())
+		this.dom.menuWrapper = holder.append('div')
 
 		//for rendering groupsetting menu
 		const body = self.opts.getBodyParams?.() || {}
@@ -210,7 +210,7 @@ export class HandlerGroupSet extends HandlerBase implements Handler {
 			const groupValues = this.data.values
 				.filter((v: SampleCountEntry) => v.group == group.currentIdx)
 				.map((v: SampleCountEntry) => {
-					return { key: v.key, label: v.label }
+					return { key: v.key, label: v.label, samplecount: v.samplecount }
 				})
 			customgroup.values = groupValues
 			customset.groups.push(customgroup)

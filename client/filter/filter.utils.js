@@ -48,7 +48,7 @@ export function getFilterItemByTag(item, tag) {
 }
 
 export function excludeFilterByTag(filter, tag) {
-	if (!filter.lst) return filter
+	if (!filter?.lst) return filter
 	for (const [i, f] of filter.lst.entries()) {
 		if (f.tag === tag) {
 			filter.lst.splice(i, 1)
