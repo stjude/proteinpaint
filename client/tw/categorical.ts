@@ -157,11 +157,11 @@ export class CatValues extends CategoricalBase {
 		return { text: '' }
 	}
 
-	getGroups(category2samplecount, maxGrpNum: number = 3) {
+	getGroups(category2samplecount: any[], maxGrpNum: number = 3) {
 		const values: any[] = []
 		const groups: any[] = []
 		const grpIdxes: Set<number> = new Set([0, 1, 2])
-		for (const v of Object.values(category2samplecount) as any[]) {
+		for (const v of category2samplecount) {
 			if (v.uncomputable) return //Still necessary? Possibly taken care of termdb route... somewhere
 			if (v?.group > maxGrpNum)
 				throwMsgWithFilePathAndFnName(

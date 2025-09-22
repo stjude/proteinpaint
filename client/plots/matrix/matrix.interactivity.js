@@ -664,7 +664,7 @@ function setTermActions(self) {
 					tw.label = t.tw.label
 					if (t && t.tw) tw.$id = t.tw.$id
 					const legendValueFilter = self.mayRemoveTvsEntry(tw)
-					self.pill.main(tw)
+					self.pill.main(Object.assign({ filter: self.state.filter }, tw))
 					self.app.dispatch({
 						type: 'plot_nestedEdits',
 						id: self.opts.id,
@@ -709,7 +709,10 @@ function setTermActions(self) {
 		self.dom.tip.show(event.clientX - 20, event.clientY - 20)
 
 		await self.pill.main(
-			Object.assign({ tw: t.tw, menuOptions: self.getMenuOptions(t) }, t.tw ? t.tw : { term: null, q: null })
+			Object.assign(
+				{ tw: t.tw, menuOptions: self.getMenuOptions(t), filter: self.state.filter },
+				t.tw ? t.tw : { term: null, q: null }
+			)
 		)
 		termMenuWaitDiv.remove()
 
@@ -1157,7 +1160,9 @@ function setTermActions(self) {
 					self.dom.tip.hide()
 				})
 		} else {
-			await self.pill.main(Object.assign({ menuOptions: self.getMenuOptions(t) }, self.activeLabel.tw))
+			await self.pill.main(
+				Object.assign({ menuOptions: self.getMenuOptions(t), filter: self.state.filter }, self.activeLabel.tw)
+			)
 			self.pill.showMenu()
 		}
 	}
