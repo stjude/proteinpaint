@@ -190,13 +190,14 @@ export class TermSetting {
 				case 'CatTWCustomGS': {
 					const { HandlerGroupSet } = await import('./HandlerGroupSet.ts')
 					this.handler = new HandlerGroupSet({ termsetting: this })
-					break
+					return
+					//break
 				}
-
-				default:
-					throw `unsupported tw.type='${tw.type}'`
+				// TODO: should reinstate throw once all migrated tw's have strict handlers for each tw type
+				// default:
+				// 	throw `unsupported tw.type='${tw.type}'`
 			}
-			return
+			//return
 		}
 
 		// TODO: should use TwRouter here??? or expect tw to be already filled-in/instantiated???
