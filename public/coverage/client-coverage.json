@@ -782,8 +782,8 @@
     },
     "lowestPct": {
       "curr": 14.04,
-      "prev": 14,
-      "diff": 0.03999999999999915
+      "prev": 14.04,
+      "diff": 0
     },
     "averagePct": {
       "curr": 18.7425,
