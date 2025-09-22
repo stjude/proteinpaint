@@ -281,7 +281,7 @@ export function getNumberFromDate(date) {
 
 export function getMilisecondsInYear(year) {
 	const january1st = new Date(year, 0, 1)
-	const december31st = new Date(year, 11, 31, 23, 59, 59, 999)
+	const december31st = new Date(year, 11, 31, 23, 59, 59)
 	const diffTime = december31st - january1st
 	return diffTime
 }
