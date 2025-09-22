@@ -229,8 +229,9 @@ export function termType2label(type) {
 
 export function getDateFromNumber(value) {
 	const year = Math.floor(value)
-	const time = (value - year) * 365 * 24 * 60 * 60 * 1000 // convert to milliseconds
-	const january1st = new Date(year, 0, 0)
+	const january1st = new Date(year, 0, 1)
+	const diffTimeTotal = getMilisecondsInYear(year)
+	const time = (value - year) * diffTimeTotal
 	const date = new Date(january1st.getTime() + time)
 	return date
 }
@@ -244,8 +245,9 @@ Example:
  */
 export function getDateStrFromNumber(value) {
 	const year = Math.floor(value)
-	const time = (value - year) * 365 * 24 * 60 * 60 * 1000 // convert to milliseconds
-	const january1st = new Date(year, 0, 0)
+	const january1st = new Date(year, 0, 1)
+	const diffTimeTotal = getMilisecondsInYear(year)
+	const time = (value - year) * diffTimeTotal
 	const date = new Date(january1st.getTime() + time)
 
 	//Omit day to  deidentify the patients
@@ -261,18 +263,25 @@ export function getDateStrFromNumber(value) {
 export function getNumberFromDateStr(str) {
 	const date = new Date(str)
 	const year = date.getFullYear()
-	const january1st = new Date(year, 0, 0)
+	const january1st = new Date(year, 0, 1)
 	const diffTime = date - january1st
-	const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-	const decimal = roundValueAuto(diffDays / 365)
+	const diffTimeTotal = getMilisecondsInYear(year)
+	const decimal = diffTime / diffTimeTotal
 	return year + decimal
 }
 
 export function getNumberFromDate(date) {
 	const year = date.getFullYear()
-	const january1st = new Date(year, 0, 0)
+	const january1st = new Date(year, 0, 1)
 	const diffTime = date - january1st
-	const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-	const decimal = roundValueAuto(diffDays / 365)
+	const diffTimeTotal = getMilisecondsInYear(year)
+	const decimal = diffTime / diffTimeTotal
 	return year + decimal
+}
+
+export function getMilisecondsInYear(year) {
+	const january1st = new Date(year, 0, 1)
+	const december31st = new Date(year, 11, 31, 23, 59, 59, 999)
+	const diffTime = december31st - january1st
+	return diffTime
 }
