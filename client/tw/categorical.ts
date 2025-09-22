@@ -340,17 +340,15 @@ export class CatCustomGS extends CategoricalBase {
 				 * If missing, find the label from category2samplecout or
 				 * use the last ditch effort to use the key.
 				 */
-				const label = value.label
-					? value.label
-					: category2samplecount
-					? category2samplecount.find((d: { key: string; label?: string; samplecount: number }) => d.key == value.key)
-							?.label
-					: value.key
+				const c2s = category2samplecount?.find(
+					(d: { key: string; label?: string; samplecount: number }) => d.key == value.key
+				)
+				const label = value.label || c2s?.label || value.key
 				values.push({
 					key: value.key,
 					label: label,
 					group: i,
-					samplecount: null
+					samplecount: value.samplecount || c2s.samplecount
 				})
 			}
 		}
