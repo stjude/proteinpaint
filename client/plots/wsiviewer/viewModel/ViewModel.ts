@@ -1,7 +1,6 @@
 import type { TileSelection, WSImage } from '@sjcrh/proteinpaint-types'
 import type { WSImageLayers } from '#plots/wsiviewer/viewModel/WSImageLayers.ts'
 import type { TableCell } from '#dom'
-import { roundValue } from '#shared/roundValue.js'
 import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
 
@@ -52,50 +51,7 @@ export class ViewModel {
 	}
 
 	private setAnnonationsTableData(imageViewData: ImageViewData, imageData: SessionWSImage) {
-		const sessionsTileSelections: any[] = (imageData.sessionsTileSelections ?? []).map((d, i) => {
-			return [
-				{ value: i }, // Index
-				{ value: d.zoomCoordinates },
-				{ value: 0 },
-				{ value: '' },
-				{ html: '' },
-				{ value: '' }
-			]
-		})
-
-		const predictionRows: any[] = (imageData.predictions ?? []).map((prediction, i) => {
-			const color = imageData.classes?.find(c => c.label === prediction.class)?.color
-
-			return [
-				{ value: imageData.sessionsTileSelections!.length + i }, // Continue index
-				{ value: prediction.zoomCoordinates },
-				{ value: roundValue(prediction.uncertainty, 4) },
-				{ value: prediction.class },
-				{
-					html: `<span style="display:inline-block;width:12px;height:18px;background-color:${color};border:grey 1px solid;"></span>`
-				},
-				{ value: '' }
-			]
-		})
-
-		// Original annotations follow, indexing continues from session annotations
-		const annotationsRows: any = (imageData.annotations ?? []).map((annotation, i) => {
-			const color = imageData.classes?.find(c => c.label === annotation.class)?.color
-
-			return [
-				{ value: sessionsTileSelections.length + predictionRows.length + i }, // Continue index
-				{ value: annotation.zoomCoordinates },
-				{ value: 0 },
-				{ value: '' },
-				{
-					html: `<span style="display:inline-block;width:12px;height:18px;background-color:${color};border:grey 1px solid;"></span>`
-				},
-				{ value: annotation.class }
-			]
-		})
-
-		// Combine: session annotations first
-		const mergedRows = [...sessionsTileSelections, ...predictionRows, ...annotationsRows]
+		const mergedRows: any[] = SessionWSImage.getTilesTableRows(imageData)
 
 		const columns = [
 			{ label: 'Index', sortable: true, align: 'center' },
