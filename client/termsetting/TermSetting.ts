@@ -68,7 +68,7 @@ export class TermSetting {
 	// updateUI: any
 
 	//Pill data
-	tw!: TermWrapper // | CatValues | CatPredefinedGS | CatCustomGS
+	tw!: TwBase //CatValues | CatPredefinedGS | CatCustomGS
 	term: any
 	q!: Q
 	data: any
