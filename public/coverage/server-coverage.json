@@ -350,19 +350,19 @@
     },
     "lowestPct": {
       "curr": 3.19,
-      "prev": 2.12,
-      "diff": 1.0699999999999998
+      "prev": 3.19,
+      "diff": 0
     },
     "averagePct": {
       "curr": 18.012500000000003,
-      "prev": 12.1425,
-      "diff": 5.870000000000003
+      "prev": 18.012500000000003,
+      "diff": 0
     }
   },
   "src/test/utils.unit.spec.js": {
     "lines": {
-      "total": 79,
-      "covered": 79,
+      "total": 80,
+      "covered": 80,
       "skipped": 0,
       "pct": 100
     },
@@ -373,8 +373,8 @@
       "pct": 100
     },
     "statements": {
-      "total": 79,
-      "covered": 79,
+      "total": 80,
+      "covered": 80,
       "skipped": 0,
       "pct": 100
     },
@@ -386,13 +386,13 @@
     },
     "lowestPct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     },
     "averagePct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     }
   }
 }
