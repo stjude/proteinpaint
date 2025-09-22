@@ -31,6 +31,10 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'grin2':
 			return await import('./grin2/grin2')
 
+		case 'manhattan':
+			//CHANGE: temporarily use NewManhattan.ts instead of Manhattan.ts
+			return await import(`./manhattan/NewManhattan.ts`)
+
 		case 'sampleScatter':
 			return await import(`./scatter/scatter.js`)
 
