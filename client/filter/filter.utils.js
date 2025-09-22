@@ -47,6 +47,19 @@ export function getFilterItemByTag(item, tag) {
 	}
 }
 
+export function excludeFilterByTag(filter, tag) {
+	if (!filter.lst) return filter
+	for (const [i, f] of filter.lst.entries()) {
+		if (f.tag === tag) {
+			filter.lst.splice(i, 1)
+			break
+		} else if (f.lst) {
+			excludeFilterByTag(f, tag)
+		}
+	}
+	return getNormalRoot(filter)
+}
+
 /*
 	get valid filter data to be used for server requests
 	will use normalizeFilter recursively as needed

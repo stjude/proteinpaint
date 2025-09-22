@@ -3,7 +3,7 @@ import type { RawGvTerm, VocabApi } from '#types'
 import type { PillData } from '../types'
 import { make_radios, renderTable } from '#dom'
 import { dtTerms, getColors, dtcnv, mclass } from '#shared/common.js'
-import { filterInit, filterPromptInit, getNormalRoot } from '#filter/filter'
+import { filterInit, filterPromptInit, getNormalRoot, excludeFilterByTag } from '#filter/filter'
 import { rgb } from 'd3-color'
 import { getWrappedTvslst } from '#filter/filter'
 import type { TermSetting } from '../TermSetting.ts'
@@ -161,7 +161,8 @@ async function makeGroupUI(self: TermSetting, div) {
 	})
 
 	// filterPrompt.main() always empties the filterUiRoot data
-	filterPrompt.main(getMassFilter(self.filter)) // provide mass filter to limit the term tree
+	const filter = structuredClone(self.filter)
+	filterPrompt.main(excludeFilterByTag(filter, 'cohortFilter')) // provide mass filter to limit the term tree
 
 	if (!self.groups.length) {
 		// no groups, hide table
@@ -436,14 +437,6 @@ export async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi
 			color: rgb(colorScale(grp2Name)).formatHex()
 		})
 	}
-}
-
-function getMassFilter(filter) {
-	if (!filter || !filter.lst.length) {
-		return { type: 'tvslst', in: true, join: '', lst: [] }
-	}
-	const f = getNormalRoot(structuredClone(filter)) // strip tag
-	return f
 }
 
 function clearGroupset(self) {
