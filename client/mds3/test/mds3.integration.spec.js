@@ -620,7 +620,7 @@ export function testLegend(test, tk) {
 }
 function testLegend_mclass(test, tk) {
 	if (!tk.skewer.rawmlst.find(i => i.dt == 1)) {
-		test.notOk(tk.legend.mclass, 'tk.legend.mclass is missing when tk has no snvindel')
+		test.ok(!tk.legend.mclass, 'tk.legend.mclass is missing when tk has no snvindel')
 		return
 	}
 	test.ok(tk.legend.mclass, 'tk.legend.mclass is set when tk has snvindel')
@@ -669,10 +669,10 @@ function testLegend_info(test, tk) {
 		}
 	}
 	if (infoKey4legend.size == 0) {
-		test.notOk(tk.legend.bcfInfo, '.tk.legend.bcfInfo is missing when tk has no INFO fields configured for legend')
+		test.ok(!tk.legend.bcfInfo, 'tk.legend.bcfInfo is missing when tk has no INFO fields configured for legend')
 		return
 	}
-	test.ok(tk.legend.bcfInfo, '.tk.legend.bcfInfo is set when tk has INFO fields configured for legend')
+	test.ok(tk.legend.bcfInfo, 'tk.legend.bcfInfo is set when tk has INFO fields configured for legend')
 
 	// for each info key, test its rendering in legend
 	for (const infoKey of infoKey4legend) {
@@ -689,10 +689,22 @@ function testLegend_info(test, tk) {
 	}
 }
 function testLegend_format(test, tk) {}
-function testLegend_skewerRim(test, tk) {}
+function testLegend_skewerRim(test, tk) {
+	if (!tk.mds.queries?.snvindel?.skewerRim) {
+		test.ok(!tk.legend.skewerRim, 'tk.leged.skewerRim is missing when skewerRim is not configured')
+		return
+	}
+	test.ok(tk.legend.skewerRim, 'tk.leged.skewerRim is set when skewerRim is configured')
+	// lack a way to test legend contents
+	// requires that all m should have rim1count
+	test.ok(
+		tk.skewer.rawmlst.every(m => Number.isInteger(m.rim1count)),
+		'skewer.rawmlst[].rim1count are integer (risky?)'
+	)
+}
 function testLegend_cnv(test, tk) {
 	if (!tk.cnv) {
-		test.notOk(tk.legend.cnv, 'tk.legend.cnv is missing when tk has no cnv')
+		test.ok(!tk.legend.cnv, 'tk.legend.cnv is missing when tk has no cnv')
 		return
 	}
 	test.ok(tk.legend.cnv, 'tk.legend.cnv is set when tk has cnv')
