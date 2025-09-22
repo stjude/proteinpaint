@@ -1,4 +1,5 @@
 import type { Selection } from 'd3-selection'
+import { make_radios } from '#dom'
 
 export type AlternativeCnvSet = {
 	nameHtml?: string
@@ -22,24 +23,23 @@ export function renderCnvSourceSelector(
 
 	wrapper.append('div').text('Choose data source for CNV:')
 
-	const option = wrapper
-		.selectAll('div.sjpp-cnv-source-option')
-		.data(dataSets)
-		.enter()
-		.append('div')
-		.classed('sjpp-cnv-source-option', true)
+	const optionsHolder = wrapper.append('div')
+	const { divs } = make_radios({
+		holder: optionsHolder,
+		inputName: 'sjpp_cnv_source',
+		options: dataSets.map((set, index) => ({
+			label: set.nameHtml || set.name || `Set ${index + 1}`,
+			value: index,
+			checked: !!set.inuse
+		})),
+		styles: { display: 'block' },
+		callback: value => {
+			const selectedIndex = typeof value === 'number' ? value : Number(value)
+			if (!Number.isNaN(selectedIndex)) onChange(selectedIndex)
+		}
+	})
 
-	option
-		.append('input')
-		.attr('type', 'radio')
-		.attr('name', 'sjpp_cnv_source')
-		.property('checked', d => !!d.inuse)
-		.on('change', (event, d) => {
-			const i = dataSets.indexOf(d)
-			onChange(i)
-		})
-
-	option.append('span').html((d, i) => d.nameHtml || d.name || `Set ${i + 1}`)
+	divs.classed('sjpp-cnv-source-option', true)
 }
 
 /**
