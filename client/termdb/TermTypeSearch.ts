@@ -56,7 +56,8 @@ const useCasesExcluded = {
 		TermTypeGroups.SNP_LIST,
 		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.GENE_EXPRESSION,
-		TermTypeGroups.METABOLITE_INTENSITY
+		TermTypeGroups.METABOLITE_INTENSITY,
+		TermTypeGroups.SSGSEA
 	]
 }
 
