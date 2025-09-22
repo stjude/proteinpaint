@@ -38,8 +38,7 @@ may_update_cnv
 	.row
 */
 
-const unknown_infoCategory_bgcolor = 'white',
-	unknown_infoCategory_textcolor = 'black'
+const unknown_infoCategory_color = 'black'
 
 export const unannotatedKey = 'Unannotated'
 
@@ -444,7 +443,7 @@ function may_update_infoFields(data, tk) {
 				printCategory({
 					holder: tk.legend.bcfInfo[infoKey].holder,
 					key: category,
-					color: tk.mds.bcf.info[infoKey].categories?.[category]?.color || unknown_infoCategory_bgcolor,
+					color: tk.mds.bcf.info[infoKey].categories?.[category]?.color || unknown_infoCategory_color,
 					label: tk.mds.bcf.info[infoKey].categories?.[category]?.label || category,
 					count,
 					click: event => {
