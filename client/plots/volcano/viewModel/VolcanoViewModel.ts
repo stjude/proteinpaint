@@ -160,13 +160,13 @@ export class VolcanoViewModel {
 			y: plotDim.top.y + 10,
 			first: {
 				// color: controlColor || this.settings.defaultSignColor,
-				label: getLabel(`${this.config.samplelst.groups[0].name} (${this.response.sample_size1} samples)`),
+				label: getLabel(`${this.config.samplelst.groups[0].name} (${this.response.sample_size1})`),
 				x: 0
 				// rectX: this.settings.width/2 - 10,
 			},
 			second: {
 				// color: caseColor || this.settings.defaultSignColor,
-				label: getLabel(`${this.config.samplelst.groups[1].name} (${this.response.sample_size2} samples)`),
+				label: getLabel(`${this.config.samplelst.groups[1].name} (${this.response.sample_size2})`),
 				x: this.settings.width
 				// rectX: this.settings.width/2 + 10,
 			}
