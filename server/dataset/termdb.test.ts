@@ -1,4 +1,3 @@
-import { clinsig } from './clinvar.js'
 import type { Mds3 } from '#types'
 
 /*
@@ -292,7 +291,18 @@ export default function (): Mds3 {
 						{
 							name: 'Clinical Significance',
 							key: 'CLNSIG',
-							categories: clinsig,
+							categories: {
+								Pathogenic: {
+									color: '#f04124',
+									label: 'Pathogenic',
+									desc: 'The variant is reported to be pathogenic.'
+								},
+								LP: {
+									color: '#f024ce',
+									label: 'Likely Pathogenic',
+									desc: 'The variant is reported to be LP.'
+								}
+							},
 							separator: '|'
 						}
 					]
@@ -310,7 +320,10 @@ export default function (): Mds3 {
 				}
 			},
 			cnv: {
-				file: 'files/hg38/TermdbTest/TermdbTest_CNV_gene.gz'
+				file: 'files/hg38/TermdbTest/TermdbTest_CNV_gene.gz',
+				cnvMaxLength: 20000000,
+				cnvGainCutoff: 0.1,
+				cnvLossCutoff: -0.1
 			},
 			singleSampleMutation: {
 				src: 'native',

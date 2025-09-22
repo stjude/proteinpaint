@@ -321,7 +321,6 @@ function may_update_formatFilter(data, tk) {
 				.style('margin-right', '5px')
 				.html(count > 1 ? count : '&nbsp;')
 			cell.append('div').style('display', 'inline-block').text(category)
-			console.log(1, category)
 		}
 
 		// hidden ones
@@ -508,25 +507,6 @@ function may_update_infoFields(data, tk) {
 			}
 		}
 	}
-}
-
-// print an entry for a category as a legend item
-function printCategory({ holder, key, color, count, label, click }) {
-	const div = holder.append('div').attr('class', 'sja_clb').style('display', 'inline-block').on('click', click)
-	div
-		.append('div')
-		.style('display', 'inline-block')
-		.attr('class', 'sja_mcdot')
-		.style('background', color)
-		.html(count > 1 ? count : '&nbsp;')
-	div
-		.append('div')
-		.style('display', 'inline-block')
-		.style('color', color)
-		.style('padding-left', '5px')
-		.attr('data-testid', 'sja_mds3tk_legenditemlabel') // for testing
-		.attr('__key__', key) // for testing
-		.text(label)
 }
 
 function update_mclass(tk) {
@@ -886,7 +866,7 @@ function may_create_cnv(tk, block) {
 		})
 	} else {
 		// cnv data uses category but not numeric value; fill category legend based on returned data
-		R.cnvCategoryHolder = R.holder.append('span')
+		R.cnvCategoryHolder = R.holder.append('span').attr('data-testid', 'sjpp-mds3cnvlegend-categoryholder')
 	}
 
 	R.noCnv = R.holder.append('div').text('No data').style('opacity', 0.6) // indicator there's no cnv in the region
@@ -953,17 +933,20 @@ function may_update_cnv(tk) {
 			} else {
 				// show legend in cnv-only mode
 				tk.legend.cnv.cnvCategoryHolder.style('display', 'inline-block').selectAll('*').remove()
+
 				const class2count = new Map()
 				for (const c of tk.cnv.cnvLst) {
 					if (!c.class) continue
 					class2count.set(c.class, 1 + (class2count.get(c.class) || 0))
 				}
 				for (const [cls, count] of [...class2count].sort((i, j) => j[1] - i[1])) {
-					const cell = tk.legend.cnv.cnvCategoryHolder
-						.append('div')
-						.attr('class', 'sja_clb')
-						.style('display', 'inline-block')
-						.on('click', event => {
+					printCategory({
+						holder: tk.legend.cnv.cnvCategoryHolder,
+						key: cls,
+						label: mclass[cls].label,
+						color: mclass[cls].color,
+						count: count,
+						click: event => {
 							const opts = [
 								{
 									label: 'Hide',
@@ -988,18 +971,8 @@ function may_update_cnv(tk) {
 								}
 							]
 							createLegendTipMenu(opts, tk, event.target)
-						})
-					cell
-						.append('div')
-						.style('display', 'inline-block')
-						.attr('class', 'sja_mcdot')
-						.style('background', mclass[cls].color)
-						.html(count > 1 ? count : '&nbsp;')
-					cell
-						.append('div')
-						.style('display', 'inline-block')
-						.style('color', mclass[cls].color)
-						.html('&nbsp;' + mclass[cls].label)
+						}
+					})
 				}
 
 				for (const cls of tk.legend.mclass.hiddenvalues) {
@@ -1098,4 +1071,23 @@ function createLegendTipMenu(opts, tk, elem) {
 			}
 		}
 	}
+}
+
+// print an entry for a category as a legend item
+function printCategory({ holder, key, color, count, label, click }) {
+	const div = holder.append('div').attr('class', 'sja_clb').style('display', 'inline-block').on('click', click)
+	div
+		.append('div')
+		.style('display', 'inline-block')
+		.attr('class', 'sja_mcdot')
+		.style('background', color)
+		.html(count > 1 ? count : '&nbsp;')
+	div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('color', color)
+		.style('padding-left', '5px')
+		.attr('data-testid', 'sjpp-mds3tk-legenditemlabel')
+		.attr('__key__', key) // for testing
+		.text(label)
 }
