@@ -6,6 +6,7 @@ import { minimatch } from 'minimatch'
 import { isNumericTerm } from '#shared/terms.js'
 import { copyMerge, deepEqual } from '#rx'
 import { select } from 'd3-selection'
+import { TwRouter, routedTermTypes } from '#tw'
 
 export const termsettingInit = opts => {
 	// TODO: may convert to async-await as needed to initialize,
@@ -58,7 +59,7 @@ export class TermSettingApi {
 		}
 	}
 
-	runCallback(overrideTw = null) {
+	async runCallback(overrideTw = null) {
 		const self = this.#termsetting
 		/* optional termwrapper (tw) to override attributes of self.term{} and self.q{}
 		the override tw serves the "atypical" termsetting usage
@@ -73,7 +74,9 @@ export class TermSettingApi {
 			}
 		}
 		const otw = overrideTw ? JSON.parse(JSON.stringify(overrideTw)) : {}
-		if (self.opts.callback) self.opts.callback(overrideTw ? copyMerge(JSON.stringify(arg), otw) : arg)
+		const tw = overrideTw ? copyMerge(JSON.stringify(arg), otw) : arg
+		if (routedTermTypes.has(tw.term.type)) self.tw = await TwRouter.initRaw(tw)
+		if (self.opts.callback) self.opts.callback(tw)
 	}
 
 	async showTree(holder, event: MouseEvent | undefined) {
