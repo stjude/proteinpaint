@@ -220,5 +220,9 @@ tape('illegalpath()', test => {
 	// blacklist to protect files with certain extension
 	test.ok(utils.illegalpath('a/b/c/FI.bam'), 'a/b/c/FI.bam not allowed by blacklisted extension, bad')
 
+	// since serverconfig is loaded once in the same runtime,
+	// must clear whitelistPaths that could affect other unit or integration specs
+	delete serverconfig.whiteListPaths
+
 	test.end()
 })
