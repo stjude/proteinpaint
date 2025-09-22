@@ -1,3 +1,4 @@
+import { clinsig } from './clinvar.js'
 import type { Mds3 } from '#types'
 
 /*
@@ -286,7 +287,15 @@ export default function (): Mds3 {
 			snvindel: {
 				forTrack: true,
 				byrange: {
-					bcffile: 'files/hg38/TermdbTest/TermdbTest.bcf.gz'
+					bcffile: 'files/hg38/TermdbTest/TermdbTest.bcf.gz',
+					infoFields: [
+						{
+							name: 'Clinical Significance',
+							key: 'CLNSIG',
+							categories: clinsig,
+							separator: '|'
+						}
+					]
 				},
 				skewerRim: {
 					type: 'format',
