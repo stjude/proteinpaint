@@ -3,7 +3,7 @@ import { format as d3format } from 'd3-format'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons, newSandboxDiv, Menu, renderTable, table2col } from '#dom'
 import { dofetch3 } from '#common/dofetch'
-import { TermTypes, isNumericTerm } from '#shared/terms.js'
+import { TermTypes, isNumericTerm, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
 import { mclass, dt2label, dtsnvindel, dtcnv, dtgeneexpression, dtmetaboliteintensity } from '#shared/common.js'
 import { rgb2hex } from '#src/client'
 import { getSamplelstTW, getFilter, addNewGroup } from '../../mass/groups.js'
@@ -1253,9 +1253,14 @@ function setTermActions(self) {
 		//self.dom.textTermBtn.style('text-decoration', '')
 
 		const usecase = { target: 'matrix', detail: 'termgroups' }
-		if (self.activeLabel.grp.type == 'hierCluster') {
-			usecase.target = self.activeLabel.tw.term.type
-			usecase.detail = 'term'
+		if (self.chartType == 'hierCluster') {
+			if (self.config.dataType == NUMERIC_DICTIONARY_TERM) {
+				usecase.target = 'numericDictTermCluster'
+				usecase.detail = { exclude: self.state.termdbConfig.numericDictTermCluster?.exclude }
+			} else {
+				usecase.target = self.activeLabel.tw.term.type
+				usecase.detail = 'term'
+			}
 		}
 		const termdb = await import('#termdb/app')
 		self.dom.editbody.selectAll('*').remove()
