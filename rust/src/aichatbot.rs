@@ -738,8 +738,23 @@ async fn extract_summary_information(
 
 #[derive(Debug, Clone)]
 struct FilterData {
-    filter: String,
-    value: String,
+    // This struct contains the name of a term such as Sex and a value such as male/female
+    filter: String, // Name of the term
+    value: String,  // Name of the value of the term
+}
+
+#[derive(Debug, Clone)]
+struct FilterClass {
+    // This struct contains the details of the term defined as filter
+    filter: String,              // Name of the term
+    variable_type: VariableType, // Name of the value of the term
+}
+
+#[derive(Debug, Clone)]
+#[allow(non_camel_case_types)]
+enum VariableType {
+    categories(String),
+    float(String),
 }
 
 fn validate_summary_output(raw_llm_json: String, db_vec: Vec<DbRows>) -> String {
@@ -847,6 +862,50 @@ fn validate_summary_output(raw_llm_json: String, db_vec: Vec<DbRows>) -> String 
         None => {}
     }
 
+    // Verifying filter field (if present)
+    let filter_field = summary_terms["filter"].as_str();
+    let mut final_filter: Option<String> = None;
+    match filter_field {
+        Some(filter_fd) => {
+            let filter_verification = verify_json_field(filter_fd, &db_vec);
+            let mut corrected_filter2: Option<FilterData> = None;
+            if Some(filter_verification.correct_field.clone()).is_some()
+                && Some(filter_verification.correct_value.clone()).is_some()
+            {
+                let final_group_field = filter_verification.correct_field.unwrap();
+                let final_group_value = filter_verification.correct_value.unwrap();
+
+                corrected_filter2 = Some(FilterData {
+                    filter: final_group_field,
+                    value: final_group_value,
+                });
+            } else if Some(filter_verification.correct_field.clone()).is_some()
+                && filter_verification.correct_value.clone().is_none()
+            {
+                final_filter = Some(filter_verification.correct_field.unwrap());
+            }
+
+            if Some(corrected_filter2.clone()).is_some() {
+                message += &corrected_filter2.clone().unwrap().value;
+                message += &"is a value of ";
+                message += &corrected_filter2.unwrap().filter;
+            }
+        }
+        None => {}
+    }
+
+    let updated_json: String = String::from("");
+    if message.len() > 0 {
+        // New message field to append
+        let message_field = json!({
+        "message": message
+        });
+
+        let mut updated_json = json_value.as_object().unwrap().clone();
+        updated_json.extend(message_field.as_object().unwrap().iter().cloned());
+    } else {
+        updated_json = raw_llm_json
+    }
     raw_llm_json
 }
 
