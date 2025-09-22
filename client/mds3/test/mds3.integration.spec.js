@@ -2,6 +2,7 @@ import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { detectOne, detectZero, detectGte, whenVisible, detectLst, sleep } from '../../test/test.helpers'
 import { runproteinpaint } from '../../test/front.helpers.js'
+import { unannotatedKey } from '../legend.js'
 
 /**************
  test sections
@@ -514,14 +515,13 @@ tape('Official - hardcodeCnvOnly', test => {
 		test.ok(tk.leftlabels.doms.variants, 'tk.leftlabels.doms.variants is set')
 		test.ok(tk.leftlabels.doms.samples, 'tk.leftlabels.doms.samples is set')
 
-		// in termdbtest, cnvGainCutoff is not set on ds.queries.cnv, meaning the cnv is not by numeric value, and thus the legend is not rendered as a quickfix solution to support cnv segment by category. can reenable it when it changes later
-		test.ok(tk.legend.cnv, 'tk.legend.cnv{} is set')
+		testLegend(test, tk)
+
 		{
 			const t = tk.duplicateTk()
 			test.ok(t.hardcodeCnvOnly, 'duplicateTk() should attach hardcodeCnvOnly')
 		}
 
-		// todo: more tests
 		if (test._ok) holder.remove()
 		test.end()
 	}
@@ -607,109 +607,6 @@ tape('Custom ssm only, no sample', test => {
 		test.end()
 	}
 })
-
-export function testLegend(test, tk) {
-	test.equal(
-		tk.tr_legend.node().querySelectorAll('td')[0].innerText,
-		tk.name,
-		`Should pass custom name = ${tk.name} to legend`
-	)
-	// tk legend is consisted of components based on availability of data types
-	testLegend_mclass(test, tk)
-	testLegend_cnv(test, tk)
-}
-function testLegend_mclass(test, tk) {
-	if (!tk.skewer.rawmlst.find(i => i.dt == 1)) {
-		test.ok(!tk.legend.mclass, 'tk.legend.mclass is missing when tk has no snvindel')
-		return
-	}
-	test.ok(tk.legend.mclass, 'tk.legend.mclass is set when tk has snvindel')
-
-	const d = tk.legend.mclass.holder.selectAll('[data-testid="sja_mds3tk_legenditemlabel"]')
-	test.ok(d._groups[0].length >= 1, 'more than 1 mclass legend items')
-	for (const f of d._groups[0]) {
-		const value = f.getAttribute('__key__')
-		// tricky! this value is either mclass (dt=snvindel) or stringified dt value; thus guess
-		const dt = Number(value)
-		if (Number.isNaN(dt)) {
-			// value is mclass
-			test.ok(
-				tk.skewer.rawmlst.find(i => i.class == value),
-				`mclass ${value} matched to some m`
-			)
-		} else {
-			// this legend entry is about dt
-			if (dt == 4) {
-				test.ok(tk.cnv, 'mclass legend found entry for dt=4 and tk.cnv exists')
-			} else {
-				throw 'unknown dt from mclass legend ' + dt
-			}
-		}
-	}
-
-	// optional properties that can exist on snvindel data
-	testLegend_info(test, tk)
-	testLegend_format(test, tk)
-	testLegend_skewerRim(test, tk)
-}
-function testLegend_info(test, tk) {
-	/* unreliable: 
-
-		if(!tk.skewer.rawmlst.find(i=>i.info)) {
-		}
-
-	a native tk m data may have m.info, but can still miss INFO legend if no field has .categories{}
-	*/
-
-	// collect all "lengendable" INFO keys
-	const infoKey4legend = new Set()
-	if (tk.mds.bcf?.info) {
-		for (const k in tk.mds.bcf.info) {
-			if (tk.mds.bcf.info[k].categories) infoKey4legend.add(k)
-		}
-	}
-	if (infoKey4legend.size == 0) {
-		test.ok(!tk.legend.bcfInfo, 'tk.legend.bcfInfo is missing when tk has no INFO fields configured for legend')
-		return
-	}
-	test.ok(tk.legend.bcfInfo, 'tk.legend.bcfInfo is set when tk has INFO fields configured for legend')
-
-	// for each info key, test its rendering in legend
-	for (const infoKey of infoKey4legend) {
-		test.ok(tk.legend.bcfInfo[infoKey], `tk.legend.bcfInfo["${infoKey}"] exists`)
-		const d = tk.legend.bcfInfo[infoKey].holder.selectAll('[data-testid="sja_mds3tk_legenditemlabel"]')
-		test.ok(d._groups[0].length > 1, `INFO ${infoKey} has more than 1 legend fields`)
-		for (const f of d._groups[0]) {
-			const infoValue = f.innerHTML
-			test.ok(
-				tk.skewer.rawmlst.find(i => i.info?.[infoKey] == infoValue),
-				`INFO value ${infoValue} (${infoKey}) matched to some m`
-			)
-		}
-	}
-}
-function testLegend_format(test, tk) {}
-function testLegend_skewerRim(test, tk) {
-	if (!tk.mds.queries?.snvindel?.skewerRim) {
-		test.ok(!tk.legend.skewerRim, 'tk.leged.skewerRim is missing when skewerRim is not configured')
-		return
-	}
-	test.ok(tk.legend.skewerRim, 'tk.leged.skewerRim is set when skewerRim is configured')
-	// lack a way to test legend contents
-	// requires that all m should have rim1count
-	test.ok(
-		tk.skewer.rawmlst.every(m => Number.isInteger(m.rim1count)),
-		'skewer.rawmlst[].rim1count are integer (risky?)'
-	)
-}
-function testLegend_cnv(test, tk) {
-	if (!tk.cnv) {
-		test.ok(!tk.legend.cnv, 'tk.legend.cnv is missing when tk has no cnv')
-		return
-	}
-	test.ok(tk.legend.cnv, 'tk.legend.cnv is set when tk has cnv')
-	// todo
-}
 
 tape('Custom variants, missing or invalid mclass', test => {
 	test.timeoutAfter(3000)
@@ -992,6 +889,7 @@ tape('Custom cnv only, no sample', test => {
 				`Variant leftlabel should print "${custom_variants.length} variants"`
 			)
 		}
+		testLegend(test, tk)
 
 		if (test._ok) {
 			tk.menutip.d.remove()
@@ -1047,6 +945,7 @@ tape('Custom cnv and ssm, no sample', test => {
 				`Variant leftlabel should print "${custom_variants.length} variants"`
 			)
 		}
+		testLegend(test, tk)
 
 		if (test._ok) {
 			tk.menutip.d.remove()
@@ -1112,6 +1011,8 @@ tape('Custom cnv and ssm, WITH sample', test => {
 			test.equal(lab.node().innerHTML, `${set.size} samples`, `Samples leftlabel should print "${set.size} samples"`)
 		}
 
+		testLegend(test, tk)
+
 		if (test._ok) {
 			tk.menutip.d.remove()
 			holder.remove()
@@ -1120,7 +1021,7 @@ tape('Custom cnv and ssm, WITH sample', test => {
 	}
 })
 
-tape('Custom cnv (category but not numeric value), WITH sample', test => {
+tape.only('Custom cnv (category but not numeric value), WITH sample', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
@@ -1176,6 +1077,8 @@ tape('Custom cnv (category but not numeric value), WITH sample', test => {
 			const set = new Set(custom_variants.map(i => i.sample))
 			test.equal(lab.node().innerHTML, `${set.size} samples`, `Samples leftlabel should print "${set.size} samples"`)
 		}
+
+		testLegend(test, tk)
 
 		if (test._ok) {
 			tk.menutip.d.remove()
@@ -1374,6 +1277,162 @@ tape('Custom protein domain', test => {
 /*************************
  reusable helper functions
 **************************/
+
+export function testLegend(test, tk) {
+	test.equal(
+		tk.tr_legend.node().querySelectorAll('td')[0].innerText,
+		tk.name,
+		`Should pass custom name = ${tk.name} to legend`
+	)
+	// tk legend is consisted of components based on availability of data types
+	testLegend_mclass(test, tk)
+	testLegend_cnv(test, tk)
+}
+function testLegend_mclass(test, tk) {
+	test.ok(tk.legend.mclass, 'tk.legend.mclass is always created for all setup')
+
+	if (tk.hardcodeCnvOnly) {
+		// tricky: this is the only condition when it's hidden
+		test.equal(
+			tk.legend.mclass.row.style('display'),
+			'none',
+			'tk.legend.mclass.tr.display="none" when hardcodeCnvOnly flag is set'
+		)
+		return
+	}
+
+	test.equal(
+		tk.legend.mclass.row.style('display'),
+		'table-row',
+		'tk.legend.mclass.tr.display="table-row" when no hardcodeCnvOnly flag'
+	)
+
+	const d = tk.legend.mclass.holder.selectAll('[data-testid="sjpp-mds3tk-legenditemlabel"]')
+	test.ok(d._groups[0].length >= 1, 'more than 1 mclass legend items')
+	for (const f of d._groups[0]) {
+		const value = f.getAttribute('__key__')
+		// tricky! this value is either mclass (dt=snvindel) or stringified dt value; thus guess
+		const dt = Number(value)
+		if (Number.isNaN(dt)) {
+			// tricky! when hardcodeCnvOnly flag is not set, the categorical cnv types are listed in legend.mclass along with snvindel classes
+			if (value.startsWith('CNV_')) {
+				// is a cnv category, must not find it in skewer.rawmlst[]
+				test.ok(
+					tk.cnv.cnvLst.find(i => i.class == value),
+					`cnv category ${value} matched to some events`
+				)
+			} else {
+				// value is mclass
+				test.ok(
+					tk.skewer.rawmlst.find(i => i.class == value),
+					`mclass ${value} matched to some m`
+				)
+			}
+		} else {
+			// this legend entry is about dt
+			if (dt == 4) {
+				test.ok(tk.cnv, 'mclass legend found entry for dt=4 and tk.cnv exists')
+			} else {
+				throw 'unknown dt from mclass legend ' + dt
+			}
+		}
+	}
+
+	// optional properties that can exist on snvindel data
+	testLegend_info(test, tk)
+	//testLegend_format(test, tk) format are not in legend yet
+	testLegend_skewerRim(test, tk)
+}
+function testLegend_info(test, tk) {
+	/* unreliable: 
+
+		if(!tk.skewer.rawmlst.find(i=>i.info)) {
+		}
+
+	a native tk m data may have m.info, but can still miss INFO legend if no field has .categories{}
+	*/
+
+	// collect all "lengendable" INFO keys
+	const infoKey4legend = new Set()
+	if (tk.mds.bcf?.info) {
+		for (const k in tk.mds.bcf.info) {
+			if (tk.mds.bcf.info[k].categories) infoKey4legend.add(k)
+		}
+	}
+	if (infoKey4legend.size == 0) {
+		test.ok(!tk.legend.bcfInfo, 'tk.legend.bcfInfo is missing when tk has no INFO fields configured for legend')
+		return
+	}
+	test.ok(tk.legend.bcfInfo, 'tk.legend.bcfInfo is set when tk has INFO fields configured for legend')
+
+	// for each info key, test its rendering in legend
+	for (const infoKey of infoKey4legend) {
+		test.ok(tk.legend.bcfInfo[infoKey], `tk.legend.bcfInfo["${infoKey}"] exists`)
+		const d = tk.legend.bcfInfo[infoKey].holder.selectAll('[data-testid="sjpp-mds3tk-legenditemlabel"]')
+		test.ok(d._groups[0].length > 1, `INFO ${infoKey} has more than 1 legend fields`)
+		for (const f of d._groups[0]) {
+			const infoValue = f.getAttribute('__key__')
+			if (infoValue == unannotatedKey) {
+				// unannotated category, there are some variants not annotated by this field
+				test.ok(
+					tk.skewer.rawmlst.find(i => !i.info?.[infoKey]),
+					`INFO ${infoKey} value ${infoValue} matched to unannotated m`
+				)
+				continue
+			}
+			test.ok(
+				tk.skewer.rawmlst.find(i => i.info?.[infoKey] == infoValue),
+				`INFO ${infoKey} value ${infoValue} matched to some m`
+			)
+		}
+	}
+}
+
+//function testLegend_format(test, tk) {}
+
+function testLegend_skewerRim(test, tk) {
+	if (!tk.mds.queries?.snvindel?.skewerRim) {
+		test.ok(!tk.legend.skewerRim, 'tk.leged.skewerRim is missing when skewerRim is not configured')
+		return
+	}
+	test.ok(tk.legend.skewerRim, 'tk.leged.skewerRim is set when skewerRim is configured')
+	// lack a way to test legend contents
+	// quick fix: all m should have rim1count
+	test.ok(
+		tk.skewer.rawmlst.every(m => Number.isInteger(m.rim1count)),
+		'skewer.rawmlst[].rim1count are integer (risky?)'
+	)
+}
+function testLegend_cnv(test, tk) {
+	if (!tk.cnv) {
+		test.ok(!tk.legend.cnv, 'tk.legend.cnv is missing when tk has no cnv')
+		return
+	}
+	test.ok(tk.legend.cnv, 'tk.legend.cnv is set when tk has cnv')
+
+	// test if color scale is shown based on type of cnv data
+	const colorS = tk.legend.cnv.holder.selectAll('[data-testid="sjpp-color-scale"]')._groups[0]
+	{
+		if (Number.isFinite(tk.cnv.cnvGainCutoff)) {
+			test.equal(colorS.length, 1, 'has cnvGainCutoff and creates color scale')
+			test.ok(!tk.legend.cnv.cnvCategoryHolder, 'has cnvGainCutoff and does not create cnvCategoryHolder')
+		} else {
+			test.equal(colorS.length, 0, 'no cnvGainCutoff and does not show color scale')
+			test.ok(tk.legend.cnv.cnvCategoryHolder, 'no cnvGainCutoff and creates cnvCategoryHolder')
+			// tricky!! only populate this when hardcodeCnvOnly flag is true!!
+			if (tk.hardcodeCnvOnly) {
+				const d = tk.legend.cnv.cnvCategoryHolder.selectAll('[data-testid="sjpp-mds3tk-legenditemlabel"]')
+				test.ok(
+					d._groups[0].length > 0,
+					`hardcodeCnvOnly flag is true and hopefully at least 1 category in cnvCategoryHolder`
+				)
+			}
+		}
+	}
+
+	test.ok(tk.legend.cnv.cnvFilterPrompt, 'legend.cnv.cnvFilterPrompt should be set')
+	// todo
+}
 
 function getHolder() {
 	return d3s

@@ -205,7 +205,7 @@ async function itemtable_multiItems(arg) {
 		}
 		if (infoFields) {
 			for (const k of infoFields) {
-				const v = m.info[k]
+				const v = m.info?.[k]
 				if (v == undefined) {
 					row.push({}) // unannotated
 				} else {
@@ -399,7 +399,7 @@ tk{}
 		// key has a color, show circle
 		td.append('span').html('&nbsp;&nbsp;').style('background', color).style('margin-right', '5px')
 	}
-	td.append('span').text(infoValue)
+	td.append('span').text(infoField.categories?.[infoValue]?.label || infoValue)
 }
 
 function print_mname(div, m) {
