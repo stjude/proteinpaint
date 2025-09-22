@@ -1,5 +1,6 @@
-import type { TileSelection } from '@sjcrh/proteinpaint-types'
+import type { Annotation, Prediction, TileSelection } from '@sjcrh/proteinpaint-types'
 import { WSImage } from '@sjcrh/proteinpaint-types'
+import { roundValue } from '#shared/roundValue.js'
 
 export class SessionWSImage extends WSImage {
 	sessionsTileSelections?: TileSelection[]
@@ -20,10 +21,72 @@ export class SessionWSImage extends WSImage {
 	}
 
 	public static getTileSelections(sessionWSImage: SessionWSImage): TileSelection[] {
-		const predictions = sessionWSImage.predictions || []
-		const annotations = sessionWSImage.annotations || []
-		const sessionsTileSelections = sessionWSImage.sessionsTileSelections || []
+		const annotations: Annotation[] = sessionWSImage.annotations || []
+		const annotationKeys = new Set(annotations.map(a => `${a.zoomCoordinates[0]},${a.zoomCoordinates[1]}`))
+
+		const sessionsTileSelections: TileSelection[] = (sessionWSImage.sessionsTileSelections || []).filter(
+			s => !annotationKeys.has(`${s.zoomCoordinates[0]},${s.zoomCoordinates[1]}`)
+		)
+
+		const predictions: Prediction[] = (sessionWSImage.predictions || []).filter(
+			p => !annotationKeys.has(`${p.zoomCoordinates[0]},${p.zoomCoordinates[1]}`)
+		)
+
 		return [...sessionsTileSelections, ...predictions, ...annotations]
+	}
+
+	public static getTilesTableRows(sessionWSImage: SessionWSImage): any[] {
+		const annotations = sessionWSImage.annotations || []
+		const annotationKeys = new Set(annotations.map(a => `${a.zoomCoordinates[0]},${a.zoomCoordinates[1]}`))
+
+		const sessionsFiltered = (sessionWSImage.sessionsTileSelections || []).filter(
+			s => !annotationKeys.has(`${s.zoomCoordinates[0]},${s.zoomCoordinates[1]}`)
+		)
+
+		const sessionsRows: any[] = sessionsFiltered.map((d, i) => {
+			return [
+				{ value: i }, // Index
+				{ value: d.zoomCoordinates },
+				{ value: 0 },
+				{ value: '' },
+				{ html: '' },
+				{ value: '' }
+			]
+		})
+
+		const predictionsFiltered = (sessionWSImage.predictions || []).filter(
+			p => !annotationKeys.has(`${p.zoomCoordinates[0]},${p.zoomCoordinates[1]}`)
+		)
+
+		const predictionRows: any[] = predictionsFiltered.map((prediction, i) => {
+			const color = sessionWSImage.classes?.find(c => c.label === prediction.class)?.color
+			return [
+				{ value: sessionsRows.length + i }, // Continue index after sessions
+				{ value: prediction.zoomCoordinates },
+				{ value: roundValue(prediction.uncertainty, 4) },
+				{ value: prediction.class },
+				{
+					html: `<span style="display:inline-block;width:12px;height:18px;background-color:${color};border:grey 1px solid;"></span>`
+				},
+				{ value: '' }
+			]
+		})
+
+		const annotationsRows: any[] = annotations.map((annotation, i) => {
+			const color = sessionWSImage.classes?.find(c => c.label === annotation.class)?.color
+			return [
+				{ value: sessionsRows.length + predictionRows.length + i }, // Continue index
+				{ value: annotation.zoomCoordinates },
+				{ value: 0 },
+				{ value: '' },
+				{
+					html: `<span style="display:inline-block;width:12px;height:18px;background-color:${color};border:grey 1px solid;"></span>`
+				},
+				{ value: annotation.class }
+			]
+		})
+
+		return [...sessionsRows, ...predictionRows, ...annotationsRows]
 	}
 
 	public static isSessionTileSelection(currentIndex: number, sessionWSImage: SessionWSImage): boolean {

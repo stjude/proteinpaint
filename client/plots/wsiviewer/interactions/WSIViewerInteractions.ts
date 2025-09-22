@@ -212,7 +212,8 @@ export class WSIViewerInteractions {
 						config: {
 							settings: {
 								renderWSIViewer: false,
-								activeAnnotation: currentIndex + 1,
+								// TODO figure out how to avoid Math.random()
+								activeAnnotation: Math.random(),
 								sessionsTileSelection: sessionsTileSelection
 							}
 						}
