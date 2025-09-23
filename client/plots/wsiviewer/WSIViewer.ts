@@ -131,7 +131,7 @@ export class WSIViewer extends PlotBase implements RxComponent {
 				.attr('id', 'sjpp-legend-wrapper')
 				.style('display', 'inline-block')
 				.style('vertical-align', 'top')
-			this.modelTrainerRenderer.render(wrapper)
+			this.modelTrainerRenderer.render(wrapper, aiProjectID, genome, dslabel)
 			this.legendRenderer.render(wrapper, imageViewData)
 
 			const initialZoomInCoordinate = viewModel.getInitialZoomInCoordinate(settings.displayedImageIndex)

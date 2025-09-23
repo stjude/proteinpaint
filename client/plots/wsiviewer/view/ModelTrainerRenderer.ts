@@ -1,7 +1,7 @@
 import { dofetch3 } from '#common/dofetch'
 
 export class ModelTrainerRenderer {
-	render(holder) {
+	render(holder, projectId: string, genome: string, dslabel: string) {
 		//TODO: Add logic to check if there is an annotation to retrain the model
 		//Or look for a treshhold of annotations
 		//Maybe use a buffer??
@@ -22,8 +22,9 @@ export class ModelTrainerRenderer {
 				//temp implementation to call route
 				await dofetch3('/aiProjectTrainModel', {
 					body: {
-						genome: 'hg38',
-						dslabel: 'GDC'
+						genome,
+						dslabel,
+						projectId
 					}
 				})
 			})

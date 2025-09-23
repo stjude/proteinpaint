@@ -26,7 +26,7 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dataset name'
 
 			if (typeof ds.queries.WSImages.retrainModel == 'function') {
-				await ds.queries.WSImages.retrainModel()
+				await ds.queries.WSImages.retrainModel(query.projectId)
 			} else {
 				res.status(500).send({
 					status: 'error',
@@ -36,7 +36,7 @@ function init({ genomes }) {
 
 			res.status(200).send({
 				status: 'ok',
-				message: `Training model route called`
+				message: `Retraining model completed`
 			})
 		} catch (e: any) {
 			console.warn(e)
