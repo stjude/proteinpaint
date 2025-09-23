@@ -313,8 +313,6 @@ export function setClusteringBtn(holder, callback) {
 			? 'Gene Expression Clustering'
 			: dataType == 'metaboliteIntensity'
 			? 'Metabolite Intensity Clustering'
-			: dataType == 'numericDictTerm'
-			? 'Term Value Clustering'
 			: 'Clustering'
 	holder
 		.append('button')

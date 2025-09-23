@@ -1185,7 +1185,7 @@ function setTermActions(self) {
 
 		if (self.activeLabel.grp.type == 'hierCluster') {
 			// for hierCluster term group, only allow to add current hierCluster term to current group
-			self.showDictTermSelection()
+			self.showDictTermSelection(self.dom.editbody)
 			return
 		}
 
@@ -1228,7 +1228,7 @@ function setTermActions(self) {
 
 		//const termSrcDiv = self.dom.editbtns.append('div')
 		//termSrcDiv.append('span').html('Source&nbsp;')
-		self.showDictTermSelection()
+		self.showDictTermSelection(self.dom.editbody)
 	}
 
 	self.makeInsertPosRadios = function (div) {
@@ -1256,7 +1256,7 @@ function setTermActions(self) {
 		belowLabel.append('span').html('&nbsp;below')
 	}
 
-	self.showDictTermSelection = async () => {
+	self.showDictTermSelection = async holder => {
 		//self.dom.dictTermBtn.style('text-decoration', 'underline')
 		//self.dom.textTermBtn.style('text-decoration', '')
 
@@ -1271,9 +1271,9 @@ function setTermActions(self) {
 			}
 		}
 		const termdb = await import('#termdb/app')
-		self.dom.editbody.selectAll('*').remove()
+		holder.selectAll('*').remove()
 		termdb.appInit({
-			holder: self.dom.editbody.append('div'),
+			holder: holder.append('div'),
 			vocabApi: self.app.vocabApi,
 			state: {
 				vocab: self.state.vocab,
@@ -1283,7 +1283,10 @@ function setTermActions(self) {
 				},
 				tree: {
 					usecase
-				}
+				},
+				...(self.config.dataType === NUMERIC_DICTIONARY_TERM
+					? { selectedTerms: self.hcTermGroup.lst.map(t => t.term) }
+					: {})
 			},
 			tree: {
 				submit_lst
@@ -1307,15 +1310,19 @@ function setTermActions(self) {
 		const t = self.activeLabel
 		const termgroups = self.termGroups
 
-		if (t.grp.type == 'hierCluster') {
-			const grp = termgroups[t.grpIndex]
-			grp.lst.splice(t.lstIndex + 1, 0, ...newterms)
+		const isNumericDictTermC = self.config.dataType == NUMERIC_DICTIONARY_TERM
+		if (isNumericDictTermC || t.grp.type == 'hierCluster') {
+			const grp = isNumericDictTermC ? termgroups[0] : termgroups[t.grpIndex]
+			// for NUMERIC_DICTIONARY_TERM group, use selected terms as new group.lst since all terms are dictionary.
+			isNumericDictTermC
+				? grp.lst.splice(0, grp.lst.length, ...newterms)
+				: grp.lst.splice(t.lstIndex + 1, 0, ...newterms)
 			self.app.dispatch({
 				type: 'plot_nestedEdits',
 				id: self.opts.id,
 				edits: [
 					{
-						nestedKeys: ['termgroups', t.grpIndex, 'lst'],
+						nestedKeys: ['termgroups', isNumericDictTermC ? 0 : t.grpIndex, 'lst'],
 						value: grp.lst
 					}
 				]
