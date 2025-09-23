@@ -225,10 +225,12 @@ async function make_singleSampleTable(s, arg) {
 
 			for (const formatkey in s.ssmid2format[ssmid]) {
 				const value = s.ssmid2format[ssmid][formatkey]
-				const [cell1, cell2] = table.addRow()
+				const [t1, t2] = table.addRow()
 				const fobj = arg.tk.mds?.bcf?.format?.[formatkey]
-				cell1.text((fobj && fobj.Description) || formatkey)
-				cell2.html(printFormat(fobj, value))
+				t1.text(fobj?.Description || formatkey)
+					.attr('data-testid', 'sjpp-mds3tk-singlemtablerow4formatkey')
+					.attr('__key__', formatkey)
+				t2.html(printFormat(fobj, value))
 			}
 		}
 	}
@@ -278,6 +280,7 @@ function printSampleName(sample, tk, div, block, thisMutation) {
 		const t = tk.allow2selectSamples.buttonText
 		const btn = extraRow
 			.append('button')
+			.attr('data-testid', 'sjpp-mds3tk-selectsamplebtn')
 			.style('margin-right', '10px')
 			.text(t.endsWith('s') ? t.substring(0, t.length - 1) : t)
 			.on('click', () => {
