@@ -230,7 +230,7 @@ export function getDateFromNumber(value) {
 	const year = Math.floor(value)
 	const january1st = new Date(year, 0, 1)
 	const totalDays = getDaysInYear(year)
-	const time = Math.round((value - year) * totalDays) * oneDay
+	const time = Math.round((value - year) * totalDays) * oneDayTime
 	const date = new Date(january1st.getTime() + time)
 	return date
 }
@@ -242,7 +242,7 @@ Example:
 2025.0 represents the beginning of the year 2025. 
 2025.5 represents the middle of the year 2025. 
  */
-const oneDay = 24 * 60 * 60 * 1000
+const oneDayTime = 24 * 60 * 60 * 1000
 
 export function getDateStrFromNumber(value) {
 	const date = getDateFromNumber(value)
@@ -265,7 +265,7 @@ export function getNumberFromDateStr(str) {
 export function getNumberFromDate(date) {
 	const year = date.getFullYear()
 	const january1st = new Date(year, 0, 1)
-	const diffDays = (date - january1st) / oneDay
+	const diffDays = (date - january1st) / oneDayTime
 	const daysTotal = getDaysInYear(year)
 	const decimal = diffDays / daysTotal
 	return year + decimal
