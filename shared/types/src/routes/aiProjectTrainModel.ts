@@ -1,8 +1,9 @@
 import type { RoutePayload } from './routeApi.ts'
 
 export type AIProjectTrainModelRequest = {
-	genome: any
-	dslabel: any
+	genome: string
+	dslabel: string
+	projectId?: string
 }
 
 export type AIProjectTrainModelResponse = {
