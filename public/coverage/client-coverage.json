@@ -73,38 +73,38 @@
   },
   "filter/filter.utils.js": {
     "lines": {
-      "total": 120,
+      "total": 130,
       "covered": 104,
       "skipped": 0,
-      "pct": 86.66
+      "pct": 80
     },
     "functions": {
-      "total": 14,
+      "total": 15,
       "covered": 12,
       "skipped": 0,
-      "pct": 85.71
+      "pct": 80
     },
     "statements": {
-      "total": 155,
+      "total": 167,
       "covered": 119,
       "skipped": 0,
-      "pct": 76.77
+      "pct": 71.25
     },
     "branches": {
-      "total": 126,
+      "total": 134,
       "covered": 92,
       "skipped": 0,
-      "pct": 73.01
+      "pct": 68.65
     },
     "lowestPct": {
-      "curr": 73.01,
+      "curr": 68.65,
       "prev": 76.27,
-      "diff": -3.259999999999991
+      "diff": -7.61999999999999
     },
     "averagePct": {
-      "curr": 80.5375,
+      "curr": 74.975,
       "prev": 84.60249999999999,
-      "diff": -4.064999999999998
+      "diff": -9.627499999999998
     }
   },
   "filter/test/filter.integration.spec.js": {
@@ -3601,38 +3601,38 @@
   },
   "termsetting/handlers/geneVariant.ts": {
     "lines": {
-      "total": 193,
-      "covered": 81,
+      "total": 189,
+      "covered": 2,
       "skipped": 0,
-      "pct": 41.96
+      "pct": 1.05
     },
     "functions": {
-      "total": 30,
-      "covered": 11,
+      "total": 29,
+      "covered": 0,
       "skipped": 0,
-      "pct": 36.66
+      "pct": 0
     },
     "statements": {
-      "total": 216,
-      "covered": 86,
+      "total": 212,
+      "covered": 2,
       "skipped": 0,
-      "pct": 39.81
+      "pct": 0.94
     },
     "branches": {
-      "total": 114,
-      "covered": 37,
+      "total": 110,
+      "covered": 0,
       "skipped": 0,
-      "pct": 32.45
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 32.45,
+      "curr": 0,
       "prev": 42.85,
-      "diff": -10.399999999999999
+      "diff": -42.85
     },
     "averagePct": {
-      "curr": 37.72,
+      "curr": 0.4975,
       "prev": 45.0975,
-      "diff": -7.377499999999998
+      "diff": -44.599999999999994
     }
   },
   "plots/barchart.events.js": {
@@ -5005,25 +5005,25 @@
   },
   "tw/categorical.ts": {
     "lines": {
-      "total": 76,
+      "total": 121,
       "covered": 5,
       "skipped": 0,
-      "pct": 6.57
+      "pct": 4.13
     },
     "functions": {
-      "total": 12,
+      "total": 22,
       "covered": 0,
       "skipped": 0,
       "pct": 0
     },
     "statements": {
-      "total": 102,
+      "total": 151,
       "covered": 5,
       "skipped": 0,
-      "pct": 4.9
+      "pct": 3.31
     },
     "branches": {
-      "total": 80,
+      "total": 120,
       "covered": 0,
       "skipped": 0,
       "pct": 0
@@ -5034,9 +5034,9 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 2.8675,
-      "prev": 0,
-      "diff": 2.8675
+      "curr": 1.8599999999999999,
+      "prev": 2.8675,
+      "diff": -1.0075000000000003
     }
   },
   "tw/geneExpression.ts": {
@@ -5185,38 +5185,38 @@
   },
   "tw/TwBase.ts": {
     "lines": {
-      "total": 18,
-      "covered": 14,
-      "skipped": 0,
-      "pct": 77.77
-    },
-    "functions": {
-      "total": 3,
+      "total": 19,
       "covered": 2,
       "skipped": 0,
-      "pct": 66.66
+      "pct": 10.52
+    },
+    "functions": {
+      "total": 4,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
     },
     "statements": {
-      "total": 24,
-      "covered": 16,
+      "total": 25,
+      "covered": 2,
       "skipped": 0,
-      "pct": 66.66
+      "pct": 8
     },
     "branches": {
       "total": 16,
-      "covered": 8,
+      "covered": 0,
       "skipped": 0,
-      "pct": 50
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 50,
-      "prev": 0,
-      "diff": 50
+      "curr": 0,
+      "prev": 50,
+      "diff": -50
     },
     "averagePct": {
-      "curr": 65.27250000000001,
-      "prev": 0,
-      "diff": 65.27250000000001
+      "curr": 4.63,
+      "prev": 65.27250000000001,
+      "diff": -60.642500000000005
     }
   },
   "tw/date.ts": {
@@ -5545,10 +5545,10 @@
   },
   "termsetting/HandlerBase.ts": {
     "lines": {
-      "total": 7,
+      "total": 8,
       "covered": 2,
       "skipped": 0,
-      "pct": 28.57
+      "pct": 25
     },
     "functions": {
       "total": 4,
@@ -5557,13 +5557,13 @@
       "pct": 0
     },
     "statements": {
-      "total": 8,
+      "total": 9,
       "covered": 2,
       "skipped": 0,
-      "pct": 25
+      "pct": 22.22
     },
     "branches": {
-      "total": 4,
+      "total": 6,
       "covered": 0,
       "skipped": 0,
       "pct": 0
@@ -5574,9 +5574,9 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 13.3925,
+      "curr": 11.805,
       "prev": 26.3375,
-      "diff": -12.944999999999999
+      "diff": -14.532499999999999
     }
   },
   "termsetting/TermSettingActions.ts": {
@@ -5617,10 +5617,10 @@
   },
   "termsetting/TermSettingApi.ts": {
     "lines": {
-      "total": 121,
+      "total": 126,
       "covered": 3,
       "skipped": 0,
-      "pct": 2.47
+      "pct": 2.38
     },
     "functions": {
       "total": 23,
@@ -5629,13 +5629,13 @@
       "pct": 0
     },
     "statements": {
-      "total": 142,
+      "total": 148,
       "covered": 3,
       "skipped": 0,
-      "pct": 2.11
+      "pct": 2.02
     },
     "branches": {
-      "total": 120,
+      "total": 126,
       "covered": 0,
       "skipped": 0,
       "pct": 0
@@ -5646,9 +5646,9 @@
       "diff": -57.14
     },
     "averagePct": {
-      "curr": 1.145,
+      "curr": 1.1,
       "prev": 63.175000000000004,
-      "diff": -62.03
+      "diff": -62.075
     }
   },
   "termsetting/TermSettingInner.ts": {
@@ -5695,7 +5695,7 @@
       "pct": 2.94
     },
     "functions": {
-      "total": 19,
+      "total": 21,
       "covered": 0,
       "skipped": 0,
       "pct": 0
@@ -5833,10 +5833,10 @@
   },
   "termsetting/TermSetting.ts": {
     "lines": {
-      "total": 72,
+      "total": 77,
       "covered": 3,
       "skipped": 0,
-      "pct": 4.16
+      "pct": 3.89
     },
     "functions": {
       "total": 7,
@@ -5845,13 +5845,13 @@
       "pct": 0
     },
     "statements": {
-      "total": 94,
+      "total": 99,
       "covered": 3,
       "skipped": 0,
-      "pct": 3.19
+      "pct": 3.03
     },
     "branches": {
-      "total": 80,
+      "total": 85,
       "covered": 0,
       "skipped": 0,
       "pct": 0
@@ -5862,9 +5862,9 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 1.8375,
-      "prev": 0,
-      "diff": 1.8375
+      "curr": 1.73,
+      "prev": 1.8375,
+      "diff": -0.10749999999999993
     }
   },
   "termsetting/index.ts": {
@@ -5894,13 +5894,13 @@
     },
     "lowestPct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     },
     "averagePct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     }
   },
   "termsetting/utils.ts": {
@@ -5935,8 +5935,8 @@
     },
     "averagePct": {
       "curr": 2.0525,
-      "prev": 0,
-      "diff": 2.0525
+      "prev": 2.0525,
+      "diff": 0
     }
   },
   "src/block.tk.bigwig.js": {
@@ -7449,6 +7449,78 @@
       "curr": 50.685,
       "prev": 0,
       "diff": 50.685
+    }
+  },
+  "termsetting/types.ts": {
+    "lines": {
+      "total": 1,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 1,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branches": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    },
+    "lowestPct": {
+      "curr": 100,
+      "prev": 0,
+      "diff": 100
+    },
+    "averagePct": {
+      "curr": 100,
+      "prev": 0,
+      "diff": 100
+    }
+  },
+  "tw/index.ts": {
+    "lines": {
+      "total": 1,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 1,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branches": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    },
+    "lowestPct": {
+      "curr": 100,
+      "prev": 0,
+      "diff": 100
+    },
+    "averagePct": {
+      "curr": 100,
+      "prev": 0,
+      "diff": 100
     }
   }
 }
