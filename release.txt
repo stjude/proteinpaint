@@ -1,1 +1,2 @@
-
+Features:
+- Numeric dictionary term cluster: add a button to control panel to allow batch edit the terms in the clustering group. 
