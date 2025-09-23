@@ -38,6 +38,7 @@ export type RawSnpTW = RawSnpTWValues | RawSnpTWPredefinedGS | RawSnpTWCustomGS
 export type SnpQ = MinBaseQ & GroupSettingQ
 
 export type SnpTerm = BaseTerm & {
+	type: 'snp'
 	chr: string
 	start: number
 	stop: number
