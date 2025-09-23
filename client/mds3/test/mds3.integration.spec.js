@@ -34,7 +34,7 @@ Custom protein domain
 *** note ***
 
 this script exports following test methods to share with non-CI test using GDC/clinvar
-- findSingletonMutationTestDiscoCnvPlots
+- findSingletonMutationTestClick
 - testMclassFiltering
 - testSampleSummary2subtrack
 - testVariantLeftLabel
@@ -48,7 +48,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape.only('Official data on TP53, extensive ui test', test => {
+tape('Official data on TP53, extensive ui test', test => {
 	const holder = getHolder()
 	const gene = 'TP53'
 	runproteinpaint({
@@ -70,75 +70,17 @@ tape.only('Official data on TP53, extensive ui test', test => {
 
 		testLegend(test, tk)
 
-		await findSingletonMutationTestDiscoCnvPlots(test, tk)
+		await findSingletonMutationTestClick(test, tk)
 		await testVariantLeftLabel(test, tk, bb)
 		{
 			const t = tk.duplicateTk()
 			test.notOk(t.filterObj, 'duplicateTk() should not attach filterObj for main tk')
 			test.notOk(t.hardcodeCnvOnly, 'duplicateTk() should not attach hardcodeCnvOnly for main tk')
 		}
-		//if (test._ok) holder.remove()
+		if (test._ok) holder.remove()
 		test.end()
 	}
 })
-
-export async function findSingletonMutationTestDiscoCnvPlots(test, tk, holder) {
-	// find a singleton skewer, click disc
-	const singletonMutationDisc = tk.skewer.g
-		.selectAll('.sja_aa_disckick')
-		.nodes()
-		.find(i => i.__data__.occurrence == 1)
-	test.ok(singletonMutationDisc, 'a singleton mutation is found') // if not found can change to different gene
-	// click the singleton disc to show itemtip
-	singletonMutationDisc.dispatchEvent(new Event('click'))
-	await whenVisible(tk.itemtip.d)
-	test.pass('itemtip shows with variant table')
-
-	/* use count=1 to detect 1 or more buttons
-	gdc:
-		disco
-	termdbtest:
-		disco
-		methyl
-	
-	if sample selection is used, +1
-	*/
-	const buttons = await detectGte({ elem: tk.itemtip.dnode, selector: 'button', count: 1 })
-
-	test.ok(buttons.length >= 1, '1 or more buttons are showing in itemtip')
-
-	for (const btn of buttons) {
-		switch (btn.innerHTML) {
-			case 'Disco plot':
-				await testDisco(btn, tk)
-				break
-			case 'MethylationArray':
-				await testCnv(btn, tk)
-				break
-			default:
-				throw 'unknown button: ' + btn.innerHTML
-		}
-	}
-	if (test._ok) {
-		tk.itemtip.d.remove()
-		tk.menutip.d.remove()
-	}
-
-	async function testDisco(btn, tk) {
-		const name = 'Disco plot'
-		test.equal(btn.innerHTML, name, '1st button is called ' + name)
-		btn.dispatchEvent(new Event('click'))
-
-		// TODO detect disco showing in new sandbox
-	}
-	async function testCnv(btn, tk) {
-		const name = 'MethylationArray'
-		test.equal(btn.innerHTML, name, '2nd button is called ' + name)
-		btn.dispatchEvent(new Event('click'))
-
-		// TODO detect cnv showing in new sandbox
-	}
-}
 
 tape('Official - mclass filtering', test => {
 	const holder = getHolder()
@@ -431,7 +373,7 @@ export async function testAllow2selectSamples(genome, gene, dslabel, test) {
 must use a gene with both single and multi occurrence mutations to test
 */
 	const holder = getHolder()
-	const buttonText = 'SElect SAmple'
+	const buttonText = 'SElect SAmple' // hardcoded text should show in selection button
 	const buttonClass = 'testclassabc'
 	runproteinpaint({
 		holder,
@@ -443,27 +385,15 @@ must use a gene with both single and multi occurrence mutations to test
 				dslabel,
 				callbackOnRender,
 				allow2selectSamples: {
-					buttonText, // hardcoded text should show in selection button
+					buttonText,
 					class: buttonClass,
-					callback: () => {} // TODO figure out a way to verify callback is called by clicking button
+					callback: () => {}
 				}
 			}
 		]
 	})
 	async function callbackOnRender(tk, bb) {
-		// 1: click on singleton mutation to show selection button in menu
-		const singletonMutationDisc = tk.skewer.g
-			.selectAll('.sja_aa_disckick')
-			.nodes()
-			.find(i => i.__data__.occurrence == 1)
-		singletonMutationDisc.dispatchEvent(new Event('click'))
-		await whenVisible(tk.itemtip.d)
-
-		{
-			const button = await detectOne({ elem: tk.itemtip.dnode, selector: '.' + buttonClass })
-			test.equal(button.innerHTML, buttonText, buttonText + ' button created in single-sample menu')
-			// TODO trigger click on selection button
-		}
+		await findSingletonMutationTestClick(test, tk)
 
 		// 2: click on multi-sample mutation to show selection button in sample table
 		const multiMutationDisc = tk.skewer.g
@@ -602,6 +532,7 @@ tape('Custom ssm only, no sample', test => {
 		test.notOk(tk.leftlabels.doms.close, 'Should NOT render tk.leftlabels.doms.close')
 
 		testLegend(test, tk)
+		await findSingletonMutationTestClick(test, tk)
 
 		if (test._ok) holder.remove()
 		test.end()
@@ -671,7 +602,7 @@ tape('Custom variants WITH samples (allows some to be without)', test => {
 		tracks: [{ type: 'mds3', name: 'Test, with sample name', custom_variants, callbackOnRender }]
 	})
 
-	async function callbackOnRender(tk, bb) {
+	async function callbackOnRender(tk) {
 		test.ok(tk.leftlabels.doms.samples, 'tk.leftlabels.doms.samples is set')
 		const variantNum = new Set()
 		for (const variant of custom_variants) {
@@ -696,6 +627,8 @@ tape('Custom variants WITH samples (allows some to be without)', test => {
 			variantNum.size,
 			`Should render total # of custom variants = ${variantNum.size}`
 		)
+
+		await findSingletonMutationTestClick(test, tk)
 
 		// get the first skewer disc
 		const firstDisc = tk.skewer.g.selectAll('.sja_aa_disckick').nodes()[0]
@@ -773,17 +706,18 @@ tape('Custom data with samples and sample selection', test => {
 				name: 'Custom data',
 				custom_variants,
 				sampleAnnotation,
+				callbackOnRender,
 				allow2selectSamples: {
 					// cannot test this function! frontend vocab lacks a method
 					buttonText, // hardcoded text should show in selection button
 					callback: () => {}
 				}
 			}
-		],
-		onloadalltk_always: checkTrack
+		]
 	})
-	async function checkTrack(bb) {
-		const tk = bb.tklst.find(i => i.type == 'mds3')
+	async function callbackOnRender(tk) {
+		testLegend(test, tk)
+		await findSingletonMutationTestClick(test, tk)
 		test.equal(
 			tk.skewer.selection._groups[0].length,
 			custom_variants.length,
@@ -866,13 +800,12 @@ tape('Custom cnv only, no sample', test => {
 			{
 				type: 'mds3',
 				name: 'Custom data',
-				custom_variants
+				custom_variants,
+				callbackOnRender
 			}
-		],
-		onloadalltk_always: checkTrack
+		]
 	})
-	async function checkTrack(bb) {
-		const tk = bb.tklst.find(i => i.type == 'mds3')
+	async function callbackOnRender(tk) {
 		test.equal(
 			tk.cnv.g.selectAll('rect')._groups[0].length,
 			custom_variants.length,
@@ -922,13 +855,12 @@ tape('Custom cnv and ssm, no sample', test => {
 			{
 				type: 'mds3',
 				name: 'Custom data',
-				custom_variants
+				custom_variants,
+				callbackOnRender
 			}
-		],
-		onloadalltk_always: checkTrack
+		]
 	})
-	async function checkTrack(bb) {
-		const tk = bb.tklst.find(i => i.type == 'mds3')
+	async function callbackOnRender(tk) {
 		test.equal(
 			tk.cnv.g.selectAll('rect')._groups[0].length,
 			custom_variants.filter(i => i.dt == 4).length,
@@ -946,6 +878,7 @@ tape('Custom cnv and ssm, no sample', test => {
 			)
 		}
 		testLegend(test, tk)
+		await findSingletonMutationTestClick(test, tk)
 
 		if (test._ok) {
 			tk.menutip.d.remove()
@@ -978,13 +911,12 @@ tape('Custom cnv and ssm, WITH sample', test => {
 			{
 				type: 'mds3',
 				name: 'Custom data',
-				custom_variants: JSON.parse(JSON.stringify(custom_variants))
+				custom_variants: JSON.parse(JSON.stringify(custom_variants)),
+				callbackOnRender
 			}
-		],
-		onloadalltk_always: checkTrack
+		]
 	})
-	async function checkTrack(bb) {
-		const tk = bb.tklst.find(i => i.type == 'mds3')
+	async function callbackOnRender(tk) {
 		test.equal(
 			tk.cnv.g.selectAll('rect')._groups[0].length,
 			custom_variants.filter(i => i.dt == 4).length,
@@ -1012,6 +944,7 @@ tape('Custom cnv and ssm, WITH sample', test => {
 		}
 
 		testLegend(test, tk)
+		await findSingletonMutationTestClick(test, tk)
 
 		if (test._ok) {
 			tk.menutip.d.remove()
@@ -1045,13 +978,12 @@ tape('Custom cnv (category but not numeric value), WITH sample', test => {
 			{
 				type: 'mds3',
 				name: 'Custom data',
-				custom_variants: JSON.parse(JSON.stringify(custom_variants))
+				custom_variants: JSON.parse(JSON.stringify(custom_variants)),
+				callbackOnRender
 			}
-		],
-		onloadalltk_always: checkTrack
+		]
 	})
-	async function checkTrack(bb) {
-		const tk = bb.tklst.find(i => i.type == 'mds3')
+	async function callbackOnRender(tk) {
 		test.equal(
 			tk.cnv.g.selectAll('rect')._groups[0].length,
 			custom_variants.filter(i => i.dt == 4).length,
@@ -1440,8 +1372,144 @@ function testLegend_cnv(test, tk) {
 			}
 		}
 	}
-
 	test.ok(tk.legend.cnv.cnvFilterPrompt, 'legend.cnv.cnvFilterPrompt should be set')
+}
+
+export async function findSingletonMutationTestClick(test, tk) {
+	/*
+	find a singleton skewer and click disc to test its menu
+	mutation is either occurrence=1 or no occurrence (e.g. sample-less clinvar)
+	can be in viewmode=skewer or numeric
+	do this separately for different dt
+	*/
+
+	// look for dt=1 singleton
+	{
+		let m // to register the m object of the clicked singleton lollipop
+		const singletonMutationDisc = tk.skewer.g
+			.selectAll('.sja_aa_disckick')
+			.nodes()
+			.find(i => {
+				// numeric mode: m is __data__
+				// skewer: m is __data__.mlst[0]
+				const dt = (i.__data__.mlst?.[0] || i.__data__).dt
+				if (dt == 1 && (!i.__data__.occurrence || i.__data__.occurrence == 1)) {
+					m = i.__data__.mlst?.[0] || i.__data__
+					return true
+				}
+			})
+		if (m) {
+			test.ok(singletonMutationDisc, 'dt=1 singleton mutation is found')
+			// click the singleton disc to show itemtip
+			singletonMutationDisc.dispatchEvent(new Event('click'))
+			await whenVisible(tk.itemtip.d)
+			test.pass('dt=1 itemtip shows with variant table')
+			await testClickOnSsm(m, test, tk)
+		}
+	}
+
+	// look for dt=svfusion singleton
+	{
+		let m // to register the m object of the clicked singleton lollipop
+		const singletonMutationDisc = tk.skewer.g
+			.selectAll('.sja_aa_disckick')
+			.nodes()
+			.find(i => {
+				const dt = (i.__data__.mlst?.[0] || i.__data__).dt
+				if ((dt == 2 || dt == 5) && (!i.__data__.occurrence || i.__data__.occurrence == 1)) {
+					m = i.__data__.mlst?.[0] || i.__data__
+					return true
+				}
+			})
+		if (m) {
+			test.ok(singletonMutationDisc, 'dt=sv/fusion singleton is found')
+			singletonMutationDisc.dispatchEvent(new Event('click'))
+			await whenVisible(tk.itemtip.d)
+			test.pass('dt=sv/fusion itemtip shows with variant table')
+			await testClickOnSvfusion(m, test, tk)
+		}
+	}
+
+	// TODO itd
+
+	// clean up
+	if (test._ok) {
+		tk.itemtip.d.remove()
+		tk.menutip.d.remove()
+	}
+}
+async function testClickOnSvfusion(m, test, tk) {
+	const d = tk.itemtip.d.selectAll('[data-testid="sjpp-mds3tk-singlesvfusiongraph"]')._groups[0][0]
+	test.ok(d, 'svgraph <div> should be made')
+	await testSingletonItemtipButtons(test, tk)
+}
+async function testClickOnSsm(m, test, tk) {
+	{
+		// rows for INFO fields
+		const d = tk.itemtip.d.selectAll('[data-testid="sjpp-mds3tk-singlemtablerow4infokey"]')._groups[0]
+		if (m.info) {
+			test.ok(d.length, 'm.info{} is present and hope itemtable shows at least 1 info field')
+			for (const f of d) {
+				// must not do test.ok(m.info[f.innerHTML]), the field value may be 0 and false
+				test.ok(f.innerHTML in m.info, `itemtable shows row for INFO key "${f.innerHTML}"`)
+			}
+		} else {
+			test.ok(d.length == 0, 'm.info{} not present and itemtable displays no info rows')
+		}
+	}
+
+	{
+		// rows for FORMAT fields
+		const d = tk.itemtip.d.selectAll('[data-testid="sjpp-mds3tk-singlemtablerow4formatkey"]')._groups[0]
+		if (tk.mds.bcf?.format && d.length) {
+			// for some
+			//test.ok(d.length,'tk.mds.bcf.format{} is present and hope sample table shows at least 1 format field')
+			for (const f of d) {
+				const k = f.getAttribute('__key__')
+				test.ok(k in tk.mds.bcf.format, `sample table shows row for FORMAT key "${k}"`)
+			}
+		} else {
+			test.ok(d.length == 0, 'tk.mds.bcf.format not present and sample table displays no format rows')
+		}
+	}
+	await testSingletonItemtipButtons(test, tk)
+}
+
+async function testSingletonItemtipButtons(test, tk) {
+	{
+		if (tk.mds.queries?.singleSampleMutation) {
+			const btn = await detectOne({
+				elem: tk.itemtip.dnode,
+				selector: '[data-testid="proteinpaint_disc_table_disco_button"]'
+			})
+			// both custom & native tk have mds.queries
+			test.ok(btn, 'Disco button made when mds.queries.singleSampleMutation is present')
+			btn.dispatchEvent(new Event('click'))
+			// TODO detect disco showing in new sandbox
+		} else {
+			const btn = await detectZero({
+				elem: tk.itemtip.dnode,
+				selector: '[data-testid="proteinpaint_disc_table_disco_button"]'
+			})
+			test.ok(!btn, 'Disco button not made when mds.queries.singleSampleMutation is not present')
+		}
+	}
+	{
+		// select sample button
+		if (tk.allow2selectSamples) {
+			const btn = await detectOne({ elem: tk.itemtip.dnode, selector: '[data-testid="sjpp-mds3tk-selectsamplebtn"]' })
+			test.ok(btn, 'Select Sample button made when tk.allow2selectSamples is provided')
+			const t = tk.allow2selectSamples.buttonText
+			const t2 = t.endsWith('s') ? t.substring(0, t.length - 1) : t
+			test.equal(btn.innerHTML, t2, `button shows text "${t2}"`)
+			//btn.dispatchEvent(new Event('click'))
+			// no need to test callback 1) lack convenient way 2) throws vocab error for custom tk
+		} else {
+			const btn = await detectZero({ elem: tk.itemtip.dnode, selector: '[data-testid="sjpp-mds3tk-selectsamplebtn"]' })
+			test.ok(!btn, 'Select Sample button not made when tk.allow2selectSamples is not provided')
+		}
+	}
+	// no need to test buttons from singleSampleGenomeQuantification, it will be replaced
 }
 
 export function getHolder() {

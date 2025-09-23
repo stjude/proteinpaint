@@ -3,7 +3,7 @@ import * as d3s from 'd3-selection'
 import { detectLst, detectOne, detectZero, whenHidden, whenVisible, detectGte } from '../../test/test.helpers'
 import {
 	getHolder,
-	findSingletonMutationTestDiscoCnvPlots,
+	findSingletonMutationTestClick,
 	testMclassFiltering,
 	testSampleSummary2subtrack,
 	testVariantLeftLabel,
@@ -68,7 +68,7 @@ tape('GDC - gene symbol KRAS', test => {
 		test.notOk(tk.leftlabels.doms.filterObj, 'tk.leftlabels.doms.filterObj is not set')
 		test.notOk(tk.leftlabels.doms.close, 'tk.leftlabels.doms.close is not set')
 		testLegend(test, tk)
-		await findSingletonMutationTestDiscoCnvPlots(test, tk, bb)
+		await findSingletonMutationTestClick(test, tk)
 		await testVariantLeftLabel(test, tk, bb)
 		if (test._ok) holder.remove()
 		test.end()
@@ -301,6 +301,7 @@ tape('Clinvar - gene kras', test => {
 		test.ok(tk.leftlabels.doms.variants, 'tk.leftlabels.doms.variants is set')
 		test.notOk(tk.leftlabels.doms.samples, 'tk.leftlabels.doms.samples is absent')
 		testLegend(test, tk)
+		await findSingletonMutationTestClick(test, tk)
 		await testVariantLeftLabel(test, tk, bb)
 		if (test._ok) holder.remove()
 		test.end()

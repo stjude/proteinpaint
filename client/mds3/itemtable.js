@@ -305,7 +305,7 @@ function table_snvindel({ mlst, tk, block }, table) {
 			const [td1, td2] = table.addRow()
 
 			// column 1: info field key
-			td1.text(key)
+			td1.text(key).attr('data-testid', 'sjpp-mds3tk-singlemtablerow4infokey')
 
 			// column 2: info field value of this variant m{}
 			// value can be array or one string
@@ -542,6 +542,7 @@ export function printSvPair(pair, div) {
 }
 
 async function makeSvgraph(m, div, block) {
+	div.attr('data-testid', 'sjpp-mds3tk-singlesvfusiongraph')
 	const wait = div.append('div').text('Loading...')
 	try {
 		if (!m.pairlst) throw '.pairlst[] missing'
