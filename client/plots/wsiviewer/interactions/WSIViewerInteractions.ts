@@ -234,10 +234,10 @@ export class WSIViewerInteractions {
 			const state = wsiApp.app.getState()
 			const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
 			const sessionsTileSelection = settings.sessionsTileSelection
-			const predictions = sessionWSImage?.predictions || []
-			const annotations = sessionWSImage?.annotations || []
 
-			const annotationsData = [...sessionsTileSelection, ...predictions, ...annotations]
+			sessionWSImage.sessionsTileSelections = sessionsTileSelection
+
+			const annotationsData = SessionWSImage.getTileSelections(sessionWSImage)
 
 			// Check if click falls inside an existing annotation
 			const selectedAnnotationIndex = annotationsData.findIndex(annotation => {
@@ -248,6 +248,7 @@ export class WSIViewerInteractions {
 			})
 
 			if (selectedAnnotationIndex !== -1) {
+				// TODO remove buffers and use state only
 				buffers.annotationsIdx.set(selectedAnnotationIndex)
 				return
 			}
@@ -283,6 +284,8 @@ export class WSIViewerInteractions {
 				config: {
 					settings: {
 						renderWSIViewer: false,
+						renderAnnotationTable: true,
+						activeAnnotation: Math.random(),
 						sessionsTileSelection: [newTileSelection, ...sessionsTileSelection]
 					}
 				}
