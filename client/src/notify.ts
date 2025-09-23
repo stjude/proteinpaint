@@ -107,7 +107,7 @@ function setRefresh(notifyDiv) {
 		// - setting sessionStorage.setItem(/*refresh.key*/, ) manually (tab-specific)
 		// - setting serverconfig.features[/*refresh.key*/] (applies across tabs)
 
-		mode: 'appOnly',
+		mode: 'full',
 		// available mode options
 		modeOptions: {
 			appOnly: 'call runproteinpaint() on the same DOM element, with the original argument + any HMR state',
@@ -115,7 +115,7 @@ function setRefresh(notifyDiv) {
 			full:
 				'call window.reload() to refresh from URL params and/or runpp() arguments, ' +
 				'this may have less memory leaks than the default approach',
-			full_except_on_unhide: 'same as reload, except when a hidden browser tab is made visible',
+			full_except_on_unhide: 'same as full reload, except when a hidden browser tab is made visible',
 			none: 'do not refresh the app view'
 		},
 

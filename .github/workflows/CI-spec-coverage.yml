@@ -11,9 +11,9 @@ on:
       - '.**ignore'
       - 'docs/**'
 
-  pull_request_target:
-    types:
-      - closed
+  # pull_request_target:
+  #   types:
+  #     - closed
 
   workflow_dispatch:
     inputs:
