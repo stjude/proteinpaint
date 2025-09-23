@@ -176,7 +176,7 @@ export class TermSettingView {
 			.style('align-items', 'center')
 			.style('padding', '3px 6px 3px 6px')
 			.style('border-radius', '6px')
-			.html(self.handler.getPillName)
+			.html(d => self.handler.getPillName(d))
 			.on(`keyup.sjpp-termdb`, event => {
 				if (event.key == 'Enter') event.target.click()
 			})
@@ -192,7 +192,9 @@ export class TermSettingView {
 		const pillstat: { text: string; bgcolor?: string } = self.handler.getPillStatus() || { text: '' }
 		// { text, bgcolor }
 
-		self.dom.pill_termname.style('border-radius', pillstat.text ? '6px 0 0 6px' : '6px').html(self.handler.getPillName)
+		self.dom.pill_termname
+			.style('border-radius', pillstat.text ? '6px 0 0 6px' : '6px')
+			.html(d => self.handler.getPillName(d))
 
 		const pill_settingSummary = one_term_div
 			.selectAll('.ts_summary_btn')

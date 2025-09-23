@@ -5,6 +5,8 @@ import { vocabInit } from '../../termdb/vocabulary'
 import { termjson } from '../../test/testdata/termjson'
 import { termsettingInit } from '#termsetting'
 import { sleep, detectLst, detectGte, whenGone, detectOne } from '../../test/test.helpers'
+import { TwRouter } from '#tw'
+
 /*
 Tests:
 	menuOptions
@@ -77,6 +79,8 @@ async function getOpts(_opts = {}, genome = 'hg38-test', dslabel = 'TermdbTest')
 
 	const vocabApi = vocabInit({ app, state })
 	await vocabApi.getTermdbConfig()
+
+	if (opts.tsData.term?.type == 'categorical') opts.tsData.tw = await TwRouter.initRaw(opts.tsData)
 
 	opts.app = app
 	opts.pill = termsettingInit({
@@ -318,7 +322,6 @@ tape('use_bins_less', async test => {
 	})
 
 	await opts.pill.main(opts.tsData)
-
 	await opts.pillMenuClick('Edit')
 	await sleep(1000)
 	const tip = opts.pill.Inner.dom.tip.d.node()
