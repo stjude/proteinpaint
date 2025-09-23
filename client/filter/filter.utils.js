@@ -39,8 +39,8 @@ export function findParent(parent, $id) {
 }
 
 export function getFilterItemByTag(item, tag) {
-	if (item.tag === tag) return item
-	if (item.type !== 'tvslst') return
+	if (item?.tag === tag) return item
+	if (item?.type !== 'tvslst') return
 	for (const subitem of item.lst) {
 		const matchingItem = getFilterItemByTag(subitem, tag)
 		if (matchingItem) return matchingItem
@@ -48,6 +48,7 @@ export function getFilterItemByTag(item, tag) {
 }
 
 export function excludeFilterByTag(filter, tag) {
+	if (!filter) return getNormalRoot(filter)
 	if (!filter?.lst) return filter
 	for (const [i, f] of filter.lst.entries()) {
 		if (f.tag === tag) {

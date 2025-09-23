@@ -37,6 +37,10 @@ export class TermSettingApi {
 			self.hasError = false
 			delete self.error
 			self.validateMainData(data)
+			// TODO: use routedTermTypes.has(data.term?.type) instead of just categorical
+			if (!data.tw && data.term?.type === 'categorical') {
+				data.tw = await TwRouter.initRaw({ term: data.term, q: data.q })
+			}
 			self.tw = data.tw
 			// may need original values for comparing edited settings
 			self.data = data //as PillData
