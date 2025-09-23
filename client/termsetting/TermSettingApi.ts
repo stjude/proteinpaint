@@ -6,7 +6,7 @@ import { minimatch } from 'minimatch'
 import { isNumericTerm } from '#shared/terms.js'
 import { copyMerge, deepEqual } from '#rx'
 import { select } from 'd3-selection'
-import { TwRouter, CategoricalBase } from '#tw'
+import { TwRouter, CategoricalBase, SnpBase } from '#tw'
 
 export const termsettingInit = opts => {
 	// TODO: may convert to async-await as needed to initialize,
@@ -38,7 +38,7 @@ export class TermSettingApi {
 			delete self.error
 			self.validateMainData(data)
 			// TODO: use routedTermTypes.has(data.term?.type) instead of just categorical
-			if (!data.tw && data.term?.type === 'categorical') {
+			if (!data.tw && (data.term?.type === 'categorical' || data.term?.type === 'snp')) {
 				data.tw = await TwRouter.initRaw({ term: data.term, q: data.q })
 			}
 			self.tw = data.tw
@@ -79,7 +79,8 @@ export class TermSettingApi {
 		}
 		const otw = overrideTw ? JSON.parse(JSON.stringify(overrideTw)) : {}
 		const tw = overrideTw ? copyMerge(JSON.stringify(arg), otw) : arg
-		if (self.tw instanceof CategoricalBase) self.tw = await TwRouter.initRaw(tw, self.opts)
+		if (self.tw instanceof CategoricalBase || self.tw instanceof SnpBase)
+			self.tw = await TwRouter.initRaw(tw, self.opts)
 		if (self.opts.callback) self.opts.callback(tw)
 	}
 

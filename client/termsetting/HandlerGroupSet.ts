@@ -1,6 +1,6 @@
 import { HandlerBase } from './HandlerBase.ts'
 import type { Handler } from './index.ts'
-import type { CatValues, CatPredefinedGS, CatCustomGS } from '#tw'
+import type { CatValues, CatPredefinedGS, CatCustomGS, SnpValues, SnpPredefinedGS, SnpCustomGS } from '#tw'
 import { select, type Selection } from 'd3-selection'
 import type { TermSetting } from './TermSetting.ts'
 import { debounce } from 'debounce'
@@ -40,7 +40,7 @@ type GrpEntryWithDom = GrpEntry & {
 // }
 
 export class HandlerGroupSet extends HandlerBase implements Handler {
-	tw: CatValues | CatPredefinedGS | CatCustomGS
+	tw: CatValues | CatPredefinedGS | CatCustomGS | SnpValues | SnpPredefinedGS | SnpCustomGS
 	termsetting: TermSetting
 	category2samplecount: any
 	defaultMaxGrpNum = 5
@@ -203,9 +203,11 @@ export class HandlerGroupSet extends HandlerBase implements Handler {
 		const editedGrpset = this.draggedItem || this.editedName || this.removedGrp
 		if (!editedGrpset) return // no groupset changes, so return
 		const customset: any = { groups: [] }
+		console.log(205, this.data.groups)
 		for (const group of this.data.groups) {
 			// TODO: generalize group.type expectation
-			if (group.type != 'values' && group.type != 'CatTWValues') throw `group.type='${group.type}' is not recognized`
+			if (group.type != 'values' && group.type != 'CatTWValues' && group.type != 'SnpTWValues')
+				throw `group.type='${group.type}' is not recognized`
 			const customgroup: any = { name: group.name, type: 'values', uncomputable: group.uncomputable }
 			const groupValues = this.data.values
 				.filter((v: SampleCountEntry) => v.group == group.currentIdx)
@@ -219,6 +221,7 @@ export class HandlerGroupSet extends HandlerBase implements Handler {
 			type: 'custom-groupset',
 			customset
 		}
+		console.log(222, customset)
 	}
 
 	async initGroupDiv(group: GrpEntryWithDom) {
