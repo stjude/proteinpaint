@@ -48,7 +48,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('Official data on TP53, extensive ui test', test => {
+tape.only('Official data on TP53, extensive ui test', test => {
 	const holder = getHolder()
 	const gene = 'TP53'
 	runproteinpaint({
@@ -77,7 +77,7 @@ tape('Official data on TP53, extensive ui test', test => {
 			test.notOk(t.filterObj, 'duplicateTk() should not attach filterObj for main tk')
 			test.notOk(t.hardcodeCnvOnly, 'duplicateTk() should not attach hardcodeCnvOnly for main tk')
 		}
-		if (test._ok) holder.remove()
+		//if (test._ok) holder.remove()
 		test.end()
 	}
 })
@@ -1021,7 +1021,7 @@ tape('Custom cnv and ssm, WITH sample', test => {
 	}
 })
 
-tape.only('Custom cnv (category but not numeric value), WITH sample', test => {
+tape('Custom cnv (category but not numeric value), WITH sample', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
@@ -1185,6 +1185,8 @@ tape('Numeric mode custom dataset, with mode change', test => {
 		tk.skewer.viewModes[0].inuse = false
 		tk.skewer.viewModes[1].inuse = true
 
+		testLegend(test, tk)
+
 		tk.callbackOnRender = changeNM_autoScale
 		tk.load()
 	}
@@ -1246,6 +1248,8 @@ tape('Custom bcf with sample', test => {
 		const table = await detectOne({ elem: tk.menutip.dnode, selector: '[data-testid="sjpp_mds3tk_sampletable"]' })
 		test.ok(table, 'sample table shown')
 		tk.menutip.d.remove()
+
+		testLegend(test, tk)
 
 		if (test._ok) holder.remove()
 		test.end()
@@ -1419,22 +1423,28 @@ function testLegend_cnv(test, tk) {
 		} else {
 			test.equal(colorS.length, 0, 'no cnvGainCutoff and does not show color scale')
 			test.ok(tk.legend.cnv.cnvCategoryHolder, 'no cnvGainCutoff and creates cnvCategoryHolder')
-			// tricky!! only populate this when hardcodeCnvOnly flag is true!!
 			if (tk.hardcodeCnvOnly) {
+				// tricky!! only populate this when hardcodeCnvOnly flag is true!!
 				const d = tk.legend.cnv.cnvCategoryHolder.selectAll('[data-testid="sjpp-mds3tk-legenditemlabel"]')
 				test.ok(
 					d._groups[0].length > 0,
 					`hardcodeCnvOnly flag is true and hopefully at least 1 category in cnvCategoryHolder`
 				)
+				for (const f of d._groups[0]) {
+					const cnvclass = f.getAttribute('__key__')
+					test.ok(
+						tk.cnv.cnvLst.find(i => i.class == cnvclass),
+						'hardcodeCnvOnly flag=true and found cnv items mactching ' + cnvclass
+					)
+				}
 			}
 		}
 	}
 
 	test.ok(tk.legend.cnv.cnvFilterPrompt, 'legend.cnv.cnvFilterPrompt should be set')
-	// todo
 }
 
-function getHolder() {
+export function getHolder() {
 	return d3s
 		.select('body')
 		.append('div')
