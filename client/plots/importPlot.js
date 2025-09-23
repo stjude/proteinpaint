@@ -67,6 +67,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'volcano':
 			return await import(`./volcano/Volcano.ts`)
 
+		case 'WSISamplesPlot':
+			return await import('./wsisamples/WsiSamplesPlot.ts')
+
 		case 'WSIViewer':
 			return await import('./wsiviewer/WSIViewer.ts')
 
