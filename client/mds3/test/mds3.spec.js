@@ -2,12 +2,14 @@ import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { detectLst, detectOne, detectZero, whenHidden, whenVisible, detectGte } from '../../test/test.helpers'
 import {
+	getHolder,
 	findSingletonMutationTestDiscoCnvPlots,
 	testMclassFiltering,
 	testSampleSummary2subtrack,
 	testVariantLeftLabel,
 	testAllow2selectSamples,
-	testSubtkSampleSummaryIsSmaller
+	testSubtkSampleSummaryIsSmaller,
+	testLegend
 } from './mds3.integration.spec'
 
 /**************
@@ -65,7 +67,7 @@ tape('GDC - gene symbol KRAS', test => {
 		test.ok(tk.leftlabels.doms.samples, 'tk.leftlabels.doms.samples is set')
 		test.notOk(tk.leftlabels.doms.filterObj, 'tk.leftlabels.doms.filterObj is not set')
 		test.notOk(tk.leftlabels.doms.close, 'tk.leftlabels.doms.close is not set')
-		test.ok(tk.legend.mclass, 'tk.legend.mclass{} is set')
+		testLegend(test, tk)
 		await findSingletonMutationTestDiscoCnvPlots(test, tk, bb)
 		await testVariantLeftLabel(test, tk, bb)
 		if (test._ok) holder.remove()
@@ -201,6 +203,7 @@ tape('GDC - cnv only', test => {
 	async function callbackOnRender(tk, bb) {
 		test.ok(tk.cnv.cnvLst.length > 0, 'cnv only mode has loaded cnv segments')
 		await testVariantLeftLabel(test, tk, bb)
+		testLegend(test, tk)
 		if (test._ok) holder.remove()
 		test.end()
 	}
@@ -297,6 +300,7 @@ tape('Clinvar - gene kras', test => {
 		test.ok(tk.skewer.rawmlst.length > 0, 'mds3 tk should have loaded many data points')
 		test.ok(tk.leftlabels.doms.variants, 'tk.leftlabels.doms.variants is set')
 		test.notOk(tk.leftlabels.doms.samples, 'tk.leftlabels.doms.samples is absent')
+		testLegend(test, tk)
 		await testVariantLeftLabel(test, tk, bb)
 		if (test._ok) holder.remove()
 		test.end()
@@ -444,13 +448,3 @@ tape('GDC - sunburst', test => {
 		test.end()
 	}
 })
-
-function getHolder() {
-	return d3s
-		.select('body')
-		.append('div')
-		.style('border', '1px solid #aaa')
-		.style('padding', '5px')
-		.style('margin', '5px')
-		.node()
-}
