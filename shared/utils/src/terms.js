@@ -1,5 +1,4 @@
 import { dtgeneexpression, dtssgsea, dtmetaboliteintensity, TermTypeGroups, dtTerms } from './common.js'
-import { roundValueAuto } from './roundValue.js'
 
 // moved TermTypeGroups to `server/src/common.js`, so now has to re-export
 export { TermTypeGroups } from './common.js'
@@ -230,8 +229,8 @@ export function termType2label(type) {
 export function getDateFromNumber(value) {
 	const year = Math.floor(value)
 	const january1st = new Date(year, 0, 1)
-	const diffTimeTotal = getMilisecondsInYear(year)
-	const time = (value - year) * diffTimeTotal
+	const totalDays = getDaysInYear(year)
+	const time = Math.round((value - year) * totalDays) * oneDay
 	const date = new Date(january1st.getTime() + time)
 	return date
 }
@@ -243,12 +242,10 @@ Example:
 2025.0 represents the beginning of the year 2025. 
 2025.5 represents the middle of the year 2025. 
  */
+const oneDay = 24 * 60 * 60 * 1000
+
 export function getDateStrFromNumber(value) {
-	const year = Math.floor(value)
-	const january1st = new Date(year, 0, 1)
-	const diffTimeTotal = getMilisecondsInYear(year)
-	const time = (value - year) * diffTimeTotal
-	const date = new Date(january1st.getTime() + time)
+	const date = getDateFromNumber(value)
 
 	//Omit day to  deidentify the patients
 	return date.toLocaleDateString('en-US', {
@@ -262,26 +259,20 @@ export function getDateStrFromNumber(value) {
 //represents the fraction of the year that has elapsed.
 export function getNumberFromDateStr(str) {
 	const date = new Date(str)
-	const year = date.getFullYear()
-	const january1st = new Date(year, 0, 1)
-	const diffTime = date - january1st
-	const diffTimeTotal = getMilisecondsInYear(year)
-	const decimal = diffTime / diffTimeTotal
-	return year + decimal
+	return getNumberFromDate(date)
 }
 
 export function getNumberFromDate(date) {
 	const year = date.getFullYear()
 	const january1st = new Date(year, 0, 1)
-	const diffTime = date - january1st
-	const diffTimeTotal = getMilisecondsInYear(year)
-	const decimal = diffTime / diffTimeTotal
+	const diffDays = (date - january1st) / oneDay
+	const daysTotal = getDaysInYear(year)
+	const decimal = diffDays / daysTotal
 	return year + decimal
 }
 
-export function getMilisecondsInYear(year) {
-	const january1st = new Date(year, 0, 1)
-	const december31st = new Date(year, 11, 31, 23, 59, 59)
-	const diffTime = december31st - january1st
-	return diffTime
+export function getDaysInYear(year) {
+	const isLeap = new Date(year, 1, 29).getMonth() === 1
+	const days = isLeap ? 366 : 365
+	return days
 }

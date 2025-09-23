@@ -33,6 +33,15 @@ tape('convert end of year date to number', function (test) {
 	test.end()
 })
 
+tape('convert beginning of year number to date', function (test) {
+	const num = 2020.0027322404371
+	const date = getDateFromNumber(num).toDateString()
+	const expected = new Date(2020, 0, 2).toDateString()
+	test.equal(date, expected, `The date for number ${num} should be ${expected}`)
+
+	test.end()
+})
+
 tape('convert number to date', function (test) {
 	const num = 2023.496
 	const date = getDateFromNumber(num)
