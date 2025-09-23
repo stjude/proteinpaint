@@ -8,6 +8,7 @@
 export const routeFiles = [
 	import('../routes/aiProjectAdmin.ts'),
 	import('../routes/aiProjectSelectedWSImages.ts'),
+	import('../routes/aiProjectTrainModel.ts'),
 	import('../routes/brainImaging.ts'),
 	import('../routes/brainImagingSamples.ts'),
 	import('../routes/burden.ts'),

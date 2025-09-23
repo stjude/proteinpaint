@@ -13,6 +13,7 @@ import { ThumbnailRenderer } from '#plots/wsiviewer/view/ThumbnailRenderer.ts'
 import { MapRenderer } from '#plots/wsiviewer/view/MapRenderer.ts'
 import { MetadataRenderer } from '#plots/wsiviewer/view/MetadataRenderer.ts'
 import { LegendRenderer } from '#plots/wsiviewer/view/LegendRenderer.ts'
+import { ModelTrainerRenderer } from './view/ModelTrainerRenderer'
 import type OLMap from 'ol/Map'
 import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
 import type { ViewModel } from '#plots/wsiviewer/viewModel/ViewModel.ts'
@@ -30,6 +31,7 @@ export class WSIViewer extends PlotBase implements RxComponent {
 	private thumbnailRenderer = new ThumbnailRenderer()
 	private metadataRenderer = new MetadataRenderer()
 	private legendRenderer = new LegendRenderer()
+	private modelTrainerRenderer = new ModelTrainerRenderer()
 	private map: OLMap | undefined = undefined
 
 	constructor(opts: any, api) {
@@ -123,7 +125,14 @@ export class WSIViewer extends PlotBase implements RxComponent {
 		if (settings.renderAnnotationTable && this.map) {
 			const wsiAnnotationsRenderer = new WSIAnnotationsRenderer(buffers, this.wsiViewerInteractions)
 			wsiAnnotationsRenderer.render(holder, imageViewData, activeImageExtent!, this.map)
-			this.legendRenderer.render(holder, imageViewData)
+			holder.select('#sjpp-legend-wrapper').remove()
+			const wrapper = holder
+				.append('div')
+				.attr('id', 'sjpp-legend-wrapper')
+				.style('display', 'inline-block')
+				.style('vertical-align', 'top')
+			this.modelTrainerRenderer.render(wrapper)
+			this.legendRenderer.render(wrapper, imageViewData)
 
 			const initialZoomInCoordinate = viewModel.getInitialZoomInCoordinate(settings.displayedImageIndex)
 
