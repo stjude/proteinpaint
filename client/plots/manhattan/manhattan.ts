@@ -88,6 +88,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
 		.attr('font-size', `${settings.fontSize + 4}px`)
 
+	// TODO: In future make it so we don't have to filter the ticks. Currently the ticks function generates ticks that are outside of our desired range so we filter them out.
 	const yScale = scaleLinear()
 		.domain([-data.plotData.y_buffer, data.plotData.y_max + data.plotData.y_buffer])
 		.range([data.plotData.png_height, 0])
