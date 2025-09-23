@@ -1,5 +1,6 @@
 export * from './categorical'
 export * from './numeric'
+export * from './snp'
 export * from './composite'
 export * from './TwRouter'
 export * from './TwBase'

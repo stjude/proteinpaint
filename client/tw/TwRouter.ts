@@ -9,6 +9,7 @@ import { NumericBase, NumRegularBin, NumCustomBins, NumCont } from './numeric.ts
 import { DateBase } from './date.ts'
 import { SsGSEABase } from './ssGSEA.ts'
 import { MetaboliteIntensityBase } from './metaboliteIntensity.ts'
+import { SnpBase, SnpValues, SnpPredefinedGS, SnpCustomGS } from './snp.ts'
 
 export const routedTermTypes = new Set([
 	'categorical',
@@ -18,7 +19,8 @@ export const routedTermTypes = new Set([
 	'geneExpression',
 	'date',
 	'metaboliteIntensity',
-	'ssGSEA'
+	'ssGSEA',
+	'snp'
 ])
 
 export type UseCase = {
@@ -58,6 +60,13 @@ export class TwRouter {
 			case 'GvCustomGsTW':
 				return new GvCustomGS(tw, opts)
 
+			case 'SnpTWValues':
+				return new SnpValues(tw, opts)
+			case 'SnpTWPredefinedGS':
+				return new SnpPredefinedGS(tw, opts)
+			case 'SnpTWCustomGS':
+				return new SnpCustomGS(tw, opts)
+
 			default:
 				// console.log(46, tw)
 				throw `unable to init(tw)`
@@ -75,9 +84,9 @@ export class TwRouter {
 		opts.defaultQ = opts.defaultQByTsHandler?.[type] || null
 
 		switch (tw.term.type) {
-			case 'categorical': {
+			case 'categorical':
 				return await CategoricalBase.fill(tw, opts)
-			}
+
 			case 'integer':
 			case 'float':
 				return await NumericBase.fill(tw, opts)
@@ -102,6 +111,9 @@ export class TwRouter {
 
 			case 'ssGSEA':
 				return await SsGSEABase.fill(tw, opts)
+
+			case 'snp':
+				return await SnpBase.fill(tw, opts)
 
 			default:
 				throw `unrecognized tw.term?.type='${tw.term?.type}'`

@@ -187,7 +187,10 @@ export class TermSetting {
 			switch (tw.type) {
 				case 'CatTWValues':
 				case 'CatTWPredefinedGS':
-				case 'CatTWCustomGS': {
+				case 'CatTWCustomGS':
+				case 'SnpTWValues':
+				case 'SnpTWPredefinedGS':
+				case 'SnpTWCustomGS': {
 					const { HandlerGroupSet } = await import('./HandlerGroupSet.ts')
 					this.handler = new HandlerGroupSet({ termsetting: this })
 					return
