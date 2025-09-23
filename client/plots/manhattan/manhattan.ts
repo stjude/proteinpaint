@@ -17,6 +17,8 @@ import { to_svg } from '#src/client'
  *   @param {number} [settings.yAxisX=70] - Y-axis positioning
  *   @param {number} [settings.yAxisSpace=40] - Space between Y-axis and plot
  *   @param {number} [settings.yAxisY=40] - Top margin
+ *   @param {number} [settings.chromLabelBuffer=20] - Buffer space for chromosome labels
+ *   @param {number} [settings.xAxisTitleBuffer=45] - Buffer space for x-axis title
  *   @param {number} [settings.fontSize=12] - Base font size
  *   @param {number} [settings.pngDotRadius=2] - Radius of dots in PNG plot
  *   @param {number} [settings.legendItemWidth=80] - Horizontal space per legend item
@@ -46,6 +48,8 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		yAxisX: 70,
 		yAxisY: 40,
 		yAxisSpace: 40,
+		chromLabelBuffer: 20,
+		xAxisTitleBuffer: 45,
 		fontSize: 12,
 		showLegend: true,
 		legendItemWidth: 80,
@@ -69,18 +73,28 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	const svg = div
 		.append('svg')
 		.attr('width', data.plotData.png_width + settings.yAxisX + settings.yAxisSpace)
-		.attr('height', data.plotData.png_height + settings.yAxisY * 4) // Extra space for x-axis labels, legend, and title
+		.attr(
+			'height',
+			data.plotData.png_height +
+				settings.yAxisY +
+				settings.xAxisTitleBuffer +
+				settings.legendVerticalOffset +
+				settings.chromLabelBuffer
+		)
 
 	// Add y-axis
 	const yAxisG = svg
 		.append('g')
 		.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
-		.attr('font-size', `${settings.fontSize + 2}px`)
+		.attr('font-size', `${settings.fontSize + 4}px`)
 
 	const yScale = scaleLinear()
 		.domain([-data.plotData.y_buffer, data.plotData.y_max + data.plotData.y_buffer])
 		.range([data.plotData.png_height, 0])
-	yAxisG.call(d3axis.axisLeft(yScale))
+	const ticks = yScale.ticks(6).filter(t => t >= 0 && t <= 40)
+	yAxisG.call(d3axis.axisLeft(yScale).tickValues(ticks).tickSizeOuter(0))
+	yAxisG.select('.domain').remove()
+	yAxisG.selectAll('.tick line').remove()
 
 	// Add y-axis label
 	svg
@@ -101,7 +115,6 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		.attr('height', data.plotData.png_height)
 		.attr('href', `data:image/png;base64,${data.pngImg || data.png}`)
 
-	// Create scales for positioning elements
 	const xScale = scaleLinear()
 		.domain([-data.plotData.x_buffer, data.plotData.total_genome_length + data.plotData.x_buffer])
 		.range([0, data.plotData.png_width])
@@ -162,7 +175,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 		// Add chromosome labels
 		if (data.plotData.chrom_data) {
-			const chromLabelY = data.plotData.png_height + settings.yAxisY + 20
+			const chromLabelY = data.plotData.png_height + settings.yAxisY + settings.chromLabelBuffer
 
 			Object.entries(data.plotData.chrom_data).forEach(([chrom, chromData]: [string, any]) => {
 				const chromLabel = chrom.replace('chr', '')
@@ -189,7 +202,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		svg
 			.append('text')
 			.attr('x', settings.yAxisX + settings.yAxisSpace + data.plotData.png_width / 2)
-			.attr('y', data.plotData.png_height + settings.yAxisY + 45)
+			.attr('y', data.plotData.png_height + settings.yAxisY + settings.xAxisTitleBuffer)
 			.attr('text-anchor', 'middle')
 			.attr('font-size', `${settings.fontSize + 4}px`)
 			.attr('fill', 'black')

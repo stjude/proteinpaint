@@ -142,7 +142,7 @@ def plot_manhattan(grin_results: dict,
     y_min = 0
 
 	# Calculate x-axis buffer as percentage of total genome length
-    x_buffer = total_genome_length * 0.005  # 0.5% buffer on each side
+    x_buffer = total_genome_length * 0.010  # 1.0% buffer on each side
 
 	# Calculate y-axis buffer as percentage of total png height
     y_buffer = png_height * 0.0012  # 0.12% buffer above and below

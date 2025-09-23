@@ -22,6 +22,8 @@ export interface GRIN2Opts {
 	legendDotRadius?: number
 	legendRightOffset?: number
 	legendTextOffset?: number
+	chromLabelBuffer?: number
+	xAxisTitleBuffer?: number
 	legendVerticalOffset?: number
 	legendFontSize?: number
 	showInteractiveDots?: boolean
