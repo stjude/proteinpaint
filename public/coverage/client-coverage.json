@@ -7478,13 +7478,13 @@
     },
     "lowestPct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     },
     "averagePct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     }
   },
   "tw/index.ts": {
@@ -7514,13 +7514,13 @@
     },
     "lowestPct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     },
     "averagePct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     }
   }
 }
