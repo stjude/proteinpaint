@@ -82,20 +82,23 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				settings.chromLabelBuffer
 		)
 
+	const { plot_width, plot_height, x_domain, y_domain, interactive_padding } = data.plotData
+
+	const left = interactive_padding.left_px
+	const right = interactive_padding.right_px
+	const top = interactive_padding.top_px
+	const bottom = interactive_padding.bottom_px
+
 	// Add y-axis
 	const yAxisG = svg
 		.append('g')
 		.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
 		.attr('font-size', `${settings.fontSize + 4}px`)
 
-	// TODO: In future make it so we don't have to filter the ticks. Currently the ticks function generates ticks that are outside of our desired range so we filter them out.
 	const yScale = scaleLinear()
-		.domain([-data.plotData.y_buffer, data.plotData.y_max + data.plotData.y_buffer])
-		.range([data.plotData.png_height, 0])
-	const ticks = yScale.ticks(6).filter(t => t >= 0 && t <= 40)
-	yAxisG.call(d3axis.axisLeft(yScale).tickValues(ticks).tickSizeOuter(0))
-	yAxisG.select('.domain').remove()
-	yAxisG.selectAll('.tick line').remove()
+		.domain(y_domain) // [0, y_max]
+		.range([plot_height - bottom, top]) // inverted, padded
+	yAxisG.call(d3axis.axisLeft(yScale))
 
 	// Add y-axis label
 	svg
@@ -117,8 +120,23 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		.attr('href', `data:image/png;base64,${data.pngImg || data.png}`)
 
 	const xScale = scaleLinear()
-		.domain([-data.plotData.x_buffer, data.plotData.total_genome_length + data.plotData.x_buffer])
-		.range([0, data.plotData.png_width])
+		.domain(x_domain) // [0, total_genome_length]
+		.range([left, plot_width - right]) // padded pixel range
+
+	const t = data.plotData.transform // { x_offset, x_scale, y_offset, y_scale, round_to_pixel }
+	function xPx(xRaw: number) {
+		const v = t.x_offset + xRaw * t.x_scale
+		return t.round_to_pixel ? Math.round(v) : v
+	}
+	function yPx(yVal: number) {
+		const v = t.y_offset - yVal * t.y_scale
+		return t.round_to_pixel ? Math.round(v) : v
+	}
+
+	const pngR = data.plotData.png_dot_radius
+	const strokeW = settings.interactiveDotStrokeWidth ?? 1
+	// stroke sits half in/half out, so shrink radius to keep outer diameter equal to PNG dot
+	const ringR = Math.max(1, pngR - strokeW * 0.5)
 
 	// Add interactive dots layer
 	if (settings.showInteractiveDots && data.plotData.points && data.plotData.points.length > 0) {
@@ -131,13 +149,15 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 			.data(data.plotData.points)
 			.enter()
 			.append('circle')
-			.attr('cx', d => xScale(d.x)) // Use xScale to convert pre-calculated genomic coordinates because of our chromosome scaling on the x-axis
-			.attr('cy', d => yScale(d.y)) // Use pre-calculated coordinates for y and yScale for proper scaling from the scale we made earlier
-			.attr('r', settings.interactiveDotRadius)
+			.attr('cx', d => xPx(d.x)) // Use xScale to convert pre-calculated genomic coordinates because of our chromosome scaling on the x-axis
+			.attr('cy', d => yPx(d.y)) // Use pre-calculated coordinates for y and yScale for proper scaling from the scale we made earlier
+			.attr('r', ringR)
 			.attr('fill-opacity', 0)
 			.attr('stroke', 'black')
-			.attr('stroke-width', settings.interactiveDotStrokeWidth)
+			.attr('stroke-width', strokeW)
 			.attr('stroke-opacity', 0)
+			.attr('vector-effect', 'non-scaling-stroke')
+			.attr('shape-rendering', 'geometricPrecision')
 			.on('mouseover', (event, d) => {
 				// Show stroke on hover
 				event.target.setAttribute('stroke-opacity', 1)
@@ -152,7 +172,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				const [t1, t2] = table.addRow()
 				t1.text('Type')
 				t2.html(`<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`)
-				table.addRow('-log10(q-value)', d.y.toFixed(3))
+				table.addRow('-log₁₀(q-value)', d.y.toFixed(3))
 				if (d.nsubj) table.addRow('Subject count', d.nsubj)
 				table.addRow('Chromosome', d.chrom)
 			})

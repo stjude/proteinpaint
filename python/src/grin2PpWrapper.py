@@ -43,7 +43,8 @@ from io import BytesIO
 from grin2_core import order_index_gene_data, order_index_lsn_data, prep_gene_lsn_data, find_gene_lsn_overlaps, count_hits, row_bern_conv
 from grin2_core import row_prob_subj_hit, p_order, process_block_in_chunks, prob_hits, grin_stats, write_grin_xlsx
 from typing import Dict, Optional
-from manhattan import plot_manhattan
+# from manhattan import plot_manhattan
+from manhattan2 import plot_manhattan
 
 # Suppress all warnings 
 warnings.filterwarnings('ignore')
@@ -403,28 +404,18 @@ try:
 	png_dot_radius = input_data.get("pngDotRadius", 2)
 
 	try:
-		# Create the Manhattan plot
-		fig, plot_data = plot_manhattan(
-			grin_results, 
-			chrom_size, 
-			lsn_colors,
-			plot_width,
-			plot_height,
-			device_pixel_ratio,
-			png_dot_radius
+		png_bytes, plot_data = plot_manhattan(
+			grin_results,
+			chrom_size,
+			colors=lsn_colors,
+			plot_width=plot_width,
+			plot_height=plot_height,
+			device_pixel_ratio=device_pixel_ratio,
+			png_dot_radius=png_dot_radius,
+			preview=False
 		)
-
-		# Save to BytesIO buffer - use the DPI from the plot_data
-		save_dpi = plot_data['dpi']
-		plt.tight_layout(pad=0)
-		buffer = BytesIO()
-		fig.savefig(buffer, format="png", bbox_inches="tight", dpi=save_dpi, pad_inches=0, facecolor='white')
-		plt.close(fig)
-
-		# Get bytes and encode as base64
-		buffer.seek(0)
-		plot_bytes = buffer.getvalue()
-		base64_string = base64.b64encode(plot_bytes).decode("utf-8")
+		# Encode PNG bytes to Base64
+		base64_string = base64.b64encode(png_bytes).decode('utf-8')
 		
 	except Exception as e:
 		write_error(f"Failed to generate Manhattan plot: {str(e)}")
