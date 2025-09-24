@@ -1,8 +1,8 @@
-import { HandlerBase } from './HandlerBase.ts'
-import type { Handler } from './index.ts'
+import { HandlerBase } from '../HandlerBase.ts'
+import type { Handler } from '../index.ts'
 import type { CatValues, CatPredefinedGS, CatCustomGS, SnpValues, SnpPredefinedGS, SnpCustomGS } from '#tw'
 import { select, type Selection } from 'd3-selection'
-import type { TermSetting } from './TermSetting.ts'
+import type { TermSetting } from '../TermSetting.ts'
 import { debounce } from 'debounce'
 
 type SampleCountEntry = {
@@ -39,7 +39,7 @@ type GrpEntryWithDom = GrpEntry & {
 // 	excludedWrapper: HTMLElement
 // }
 
-export class HandlerGroupSet extends HandlerBase implements Handler {
+export class GroupSet extends HandlerBase implements Handler {
 	tw: CatValues | CatPredefinedGS | CatCustomGS | SnpValues | SnpPredefinedGS | SnpCustomGS
 	termsetting: TermSetting
 	category2samplecount: any
@@ -79,7 +79,7 @@ export class HandlerGroupSet extends HandlerBase implements Handler {
 		//for rendering groupsetting menu
 		const body = self.opts.getBodyParams?.() || {}
 		this.dom.loadingDiv.style('display', 'block')
-		const data = await self.vocabApi.getCategories(self.term, self.filter!, body)
+		const data = await self.vocabApi.getCategories(self.term, self.filter, body)
 		this.dom.loadingDiv.style('display', 'none')
 		/** Original code created a separate array (self.category2samplecount) and pushed only the key and label.
 		 * The new self.category2samplecount was used to create the groupsetting menu items. That logic was removed
