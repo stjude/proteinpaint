@@ -101,13 +101,18 @@ class SCViewer extends PlotBase implements RxComponent {
 
 	//TODO: .text() should be ds specific
 	async initSegment(item) {
+		const caseText = item.case ? `Case: ${item.case}` : ''
+		const itemText = item.sample ? `Sample: ${item.sample}` : '' //item.cell, etc.
+		const projectText = item['project id'] ? `Project: ${item['project id']}` : ''
+		const headerText = [itemText, caseText, projectText].join(' ')
+
 		this.segments[item.sample] = {
 			title: this.dom.div
 				.append('div')
 				.style('margin-left', '10px')
 				.style('padding', '10px')
 				.style('font-weight', 600)
-				.text(`Case: ${item.case}   Sample: ${item.sample}   Project: ${item['project id']}`),
+				.text(headerText),
 			subplots: this.dom.div.append('div').style('margin-left', '10px')
 		}
 	}
