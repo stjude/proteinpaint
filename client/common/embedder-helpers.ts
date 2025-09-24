@@ -21,7 +21,7 @@
      in downstream code
 */
 
-export function parentCorsMessage(res) {
+export function parentCorsMessage(res, flag = '') {
 	const embedder = res.state?.embedder || {}
 	const messageListener = event => {
 		if (event.origin !== embedder.origin) return
@@ -70,12 +70,15 @@ export function parentCorsMessage(res) {
 		}
 	}
 
-	document.body.innerHTML = `
-		<div style='margin: 20px; padding: 20px; font-size: 24px'>
-			The recovered session should be visible in another browser tab.
-			You may go back in your browser history or close this browser tab.
-		</div>
-	`
+	if (flag != 'noredirect') {
+		// only wipe document html if there is a redirect
+		document.body.innerHTML = `
+			<div style='margin: 20px; padding: 20px; font-size: 24px'>
+				The recovered session should be visible in another browser tab.
+				You may go back in your browser history or close this browser tab.
+			</div>
+		`
+	}
 
 	setTimeout(() => window.removeEventListener('message', messageListener), 8000)
 	const child = window.open(embedder.href, '_blank')
