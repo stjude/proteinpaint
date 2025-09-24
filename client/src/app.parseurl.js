@@ -168,7 +168,7 @@ upon error, throw err message as a string
 			if (d.error) throw d.error
 			if (!d.text) throw 'data.text missing'
 			const state = JSON.parse(d.text)
-			if (state.embedder?.origin != window.location.origin) {
+			if (state.embedder?.origin && state.embedder.origin != window.location.origin) {
 				parentCorsMessage({ state })
 				return
 			}
@@ -192,7 +192,7 @@ upon error, throw err message as a string
 			if (!d.text) throw 'data.text missing'
 			const state = JSON.parse(d.text)
 
-			if (state.embedder && state.embedder.origin != window.location.origin) {
+			if (state.embedder?.origin && state.embedder.origin != window.location.origin) {
 				parentCorsMessage({ state })
 				return
 			}
@@ -234,7 +234,7 @@ upon error, throw err message as a string
 			if (res.error) throw res.error
 		}
 		const embedder = res.state?.embedder
-		if (embedder && embedder.origin != window.location.origin) {
+		if (embedder?.origin && embedder.origin != window.location.origin) {
 			parentCorsMessage(res)
 			return
 		}
