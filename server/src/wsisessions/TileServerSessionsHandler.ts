@@ -9,7 +9,7 @@ export class TileServerSessionsHandler implements RemoteSessionHandler {
 			sessions = await ky.get(`${url}/tileserver/sessions`).json()
 		} catch (error) {
 			console.warn('Error fetching sessions:', error)
-			throw new Error('Error fetching sessions from ${tileServer.url}')
+			throw new Error(`Error fetching sessions from ${url}`)
 		}
 
 		return sessions
@@ -22,7 +22,7 @@ export class TileServerSessionsHandler implements RemoteSessionHandler {
 					await ky.put(`${sessionData.tileServerShard.url}/tileserver/reset/${sessionData.imageSessionId}`)
 				}
 			} catch (error) {
-				console.info(`Error resetting tile server for sessionId ${sessionData?.imageSessionId}}:`, error)
+				console.info(`Error resetting tile server for sessionId ${sessionData?.imageSessionId}:`, error)
 			}
 		}
 	}
