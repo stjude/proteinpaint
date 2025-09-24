@@ -1030,7 +1030,7 @@ function checkAccessToSampleData(data, ds, q) {
 	const access = ds.cohort.termdb.checkAccessToSampleData(q, { sampleCount: Object.keys(data.samples).length })
 	if (!access.canAccess)
 		throw {
-			message: `One or more terms has less than ${access.minSampleSize} samples with data.`,
+			message: access.message || `One or more terms has less than ${access.minSampleSize} samples with data.`,
 			code: 'ERR_MIN_SAMPLE_SIZE'
 		}
 	// more detailed check
