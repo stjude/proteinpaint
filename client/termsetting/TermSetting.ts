@@ -191,8 +191,8 @@ export class TermSetting {
 				case 'SnpTWValues':
 				case 'SnpTWPredefinedGS':
 				case 'SnpTWCustomGS': {
-					const { HandlerGroupSet } = await import('./HandlerGroupSet.ts')
-					this.handler = new HandlerGroupSet({ termsetting: this })
+					const { GroupSet } = await import('./handlers/GroupSet.ts')
+					this.handler = new GroupSet({ termsetting: this })
 					return
 					//break
 				}

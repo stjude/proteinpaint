@@ -79,23 +79,6 @@ export class SnpBase extends TwBase {
 			default:
 				throw `tw.type='${tw.type} (q.mode:q.type=${tw.q.mode}:${tw.q.type}' is not supported by SnpBase.fill()`
 		}
-
-		// if (!tw.term.groupsetting) tw.term.groupsetting = { disabled: false }
-		// if (tw.q.type == 'predefined-groupset') {
-		// 	if (!Number.isInteger(tw.q.predefined_groupset_idx)) throw 'predefined_groupset_idx is not an integer'
-		// }
-		// if (tw.q.type == 'custom-groupset') {
-		// 	if (!tw.q.customset) throw 'invalid customset'
-		// }
-
-		// if (defaultQ) {
-		// 	// merge defaultQ into tw.q
-		// 	copyMerge(tw.q, defaultQ)
-		// }
-
-		// set_hiddenvalues(tw.q, tw.term)
-
-		// return tw
 	}
 }
 
@@ -104,10 +87,6 @@ export class SnpValues extends SnpBase {
 	q: ValuesQ
 	#tw: SnpTWValues
 	#opts: TwOpts
-
-	// Class static side 'typeof SnpValues' incorrectly extends base class static side 'typeof SnpBase'.
-	//   The types returned by 'fill(...)' are incompatible between these types.
-	//     Type 'SnpTWValues' is missing the following properties from type 'Promise<SnpTW>': then, catch, finally, [Symbol.toStringTag]
 
 	// declare a constructor, to narrow the tw type
 	constructor(tw: SnpTWValues, opts: TwOpts = {}) {
@@ -153,7 +132,6 @@ export class SnpValues extends SnpBase {
 	}
 
 	getGroups(category2samplecount: any[], maxGrpNum: number = 3) {
-		console.log(154, 'SnpTWValues getGroups()')
 		const values: any[] = []
 		const groups: any[] = []
 		const grpIdxes: Set<number> = new Set([0, 1, 2])
@@ -317,7 +295,6 @@ export class SnpCustomGS extends SnpBase {
 	}
 
 	getGroups(category2samplecount) {
-		console.log(317, 'SnpTWCustomGS getGroups()')
 		const values: any = []
 		const groups: any[] = []
 		const grpIdxes = new Set([0, 1, 2])
