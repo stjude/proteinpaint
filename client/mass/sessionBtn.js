@@ -411,7 +411,7 @@ class MassSessionBtn {
 				//
 				a.on('click', event => {
 					event.preventDefault()
-					parentCorsMessage({ state }, window.location.origin)
+					parentCorsMessage({ state })
 					return false
 				})
 			}

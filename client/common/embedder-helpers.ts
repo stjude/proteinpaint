@@ -21,13 +21,13 @@
      in downstream code
 */
 
-export function parentCorsMessage(res, origin = '') {
+export function parentCorsMessage(res) {
 	const embedder = res.state?.embedder || {}
 	const messageListener = event => {
 		if (event.origin !== embedder.origin) return
 		if (event.data == 'getActiveMassSession') {
 			window.removeEventListener('message', messageListener)
-			child.postMessage({ state: res.state }, embedder.origin)
+			child?.postMessage({ state: res.state }, embedder.origin)
 			if (embedder.origin != window.location.origin) {
 				setTimeout(() => {
 					// The recovered session will remain visible in another tab, regardless of what happens below.
@@ -48,7 +48,7 @@ export function parentCorsMessage(res, origin = '') {
 						// by clicking on a bookmarked link or pasting that link directly on the browser
 						// address bar. In that case, make another attempt to close the transitory tab
 						console.log(e)
-						window.open(window.location, '_self').close()
+						window.open(window.location.href, '_self')?.close()
 					}
 				}, 500)
 			}
@@ -57,7 +57,7 @@ export function parentCorsMessage(res, origin = '') {
 	window.addEventListener('message', messageListener, false)
 
 	const confirmedCorsWindow = JSON.parse(localStorage.getItem('confirmedCorsWindow') || `[]`)
-	if (embedder.origin != window.location.origin && !confirmedCorsWindow.includes(embedder.origin)) {
+	if (embedder.origin && embedder.origin != window.location.origin && !confirmedCorsWindow.includes(embedder.origin)) {
 		const ok = confirm(
 			`Another window will open to recover the saved session. When the next window opens,` +
 				`\n- You may need to allow popups.` +
@@ -118,12 +118,13 @@ export function childCorsMessage(opts) {
 
 	let origin
 	try {
-		if (window.opener.origin) {
+		if (window.opener?.origin) {
 			origin = window.opener.origin
 		} else {
 			origin = hostURL
 		}
 	} catch (e) {
+		console.log(e)
 		origin = hostURL
 	}
 
