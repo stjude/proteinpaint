@@ -7525,10 +7525,10 @@
   },
   "termsetting/handlers/GroupSet.ts": {
     "lines": {
-      "total": 144,
+      "total": 142,
       "covered": 79,
       "skipped": 0,
-      "pct": 54.86
+      "pct": 55.63
     },
     "functions": {
       "total": 41,
@@ -7537,10 +7537,10 @@
       "pct": 51.21
     },
     "statements": {
-      "total": 151,
+      "total": 149,
       "covered": 79,
       "skipped": 0,
-      "pct": 52.31
+      "pct": 53.02
     },
     "branches": {
       "total": 60,
@@ -7550,13 +7550,13 @@
     },
     "lowestPct": {
       "curr": 35,
-      "prev": 0,
-      "diff": 35
+      "prev": 35,
+      "diff": 0
     },
     "averagePct": {
-      "curr": 48.345,
-      "prev": 0,
-      "diff": 48.345
+      "curr": 48.715,
+      "prev": 48.345,
+      "diff": 0.37000000000000455
     }
   },
   "tw/snp.ts": {
