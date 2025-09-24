@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Numeric dictionary term cluster: add a button to control panel to allow batch edit the terms in the clustering group.
+
 
 ## 2.146.3
 
