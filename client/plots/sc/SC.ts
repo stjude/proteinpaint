@@ -14,10 +14,6 @@ import { newSandboxDiv } from '#dom'
 /** Overall app TODOs:
  *  - Plot buttons
  *  	- Implement additional menus to appear on click
- *  - Implement multi plot rendering
- *  	- Create sections by item and render plots in each section
- * 		- Develop containers to hold plots with destroy methods and
- * 			possibly other animation methods
  *  - Fix any outdated properties in the dataset queries.singleCell obj
  *  - Type all files
  *  - instead of using 'sample', change to 'key' or 'item' or something

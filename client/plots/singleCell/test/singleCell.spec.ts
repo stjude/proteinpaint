@@ -6,7 +6,7 @@ DO NOT ENABLE THIS FILE ON CI. ITS FOR PROTOTYPING
 AND MANUAL CHECKS ONLY
 
 Tests:
-    - Default SC app
+    - Default single cell plot 
  */
 
 /*************************
@@ -31,40 +31,31 @@ const runpp = helpers.getRunPp('mass', {
 ***************/
 
 tape('\n', function (test) {
-	test.comment('-***- plots/sc/SC -***-')
+	test.comment('-***- plots/singleCell/SingleCell -***-')
 	test.end()
 })
 
-tape('Default SC app', test => {
+tape('Default single cell plot', test => {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			plots: [
 				{
-					chartType: 'sc',
-					settings: {
-						sc: {
-							columns: {
-								sample: 'Case'
-							}
-						}
-					}
+					chartType: 'singleCell'
 				}
 			]
 		},
-		sc: {
+		singleCell: {
 			callbacks: {
 				'postRender.test': runTests
 			}
 		}
 	})
 
-	async function runTests(sc) {
-		sc.on('postRender.test', null)
+	async function runTests(singleCell) {
+		singleCell.on('postRender.test', null)
 
-		// test.true(true, 'sc rendered')
-
-		// if (test['_ok']) sc.Inner.app.destroy()
+		// if (test['_ok']) singleCell.Inner.app.destroy()
 		test.end()
 	}
 })
