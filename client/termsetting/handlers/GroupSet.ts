@@ -203,7 +203,6 @@ export class GroupSet extends HandlerBase implements Handler {
 		const editedGrpset = this.draggedItem || this.editedName || this.removedGrp
 		if (!editedGrpset) return // no groupset changes, so return
 		const customset: any = { groups: [] }
-		console.log(205, this.data.groups)
 		for (const group of this.data.groups) {
 			// TODO: generalize group.type expectation
 			if (group.type != 'values' && group.type != 'CatTWValues' && group.type != 'SnpTWValues')
@@ -221,7 +220,6 @@ export class GroupSet extends HandlerBase implements Handler {
 			type: 'custom-groupset',
 			customset
 		}
-		console.log(222, customset)
 	}
 
 	async initGroupDiv(group: GrpEntryWithDom) {
