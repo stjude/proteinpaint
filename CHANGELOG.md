@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.147.0
 
 Features:
 - Numeric dictionary term cluster: add a button to control panel to allow batch edit the terms in the clustering group.
