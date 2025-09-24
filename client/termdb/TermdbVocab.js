@@ -494,7 +494,7 @@ export class TermdbVocab extends Vocab {
 				ticks: arg.ticks,
 				datasymbol: arg.datasymbol || 'rug',
 				orientation: arg.orientation || 'horizontal',
-				radius: arg.radius || 3,
+				radius: arg.radius || 8,
 				svgw: arg.svgw || 200,
 				unit: arg.unit || 'abs'
 			},

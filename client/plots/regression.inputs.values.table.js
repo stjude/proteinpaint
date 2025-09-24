@@ -170,9 +170,8 @@ function setRenderers(self) {
 										axisHeight: 25,
 										rightMargin: 10,
 										datasymbol: 'rug',
-										radius: 3,
-										plotThickness: 100
-										//strokeWidth: 0.01
+										radius: 6,
+										plotThickness: 80
 									})
 								}
 							}

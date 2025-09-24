@@ -1,7 +1,6 @@
 import { axisLeft, axisTop } from 'd3-axis'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { curveBasis, line } from 'd3-shape'
-import { getColors } from '#shared/common.js'
 import { brushX, brushY } from 'd3-brush'
 import { renderTable, Menu, getMaxLabelWidth, table2col } from '#dom'
 import { rgb } from 'd3'
@@ -14,7 +13,6 @@ export default function setViolinRenderer(self) {
 	self.render = function () {
 		const settings = self.config.settings.violin
 		const isH = settings.orientation === 'horizontal'
-		const imageOffset = settings.datasymbol === 'bean' ? settings.radius * window.devicePixelRatio : settings.radius
 		const t1 = self.config.term
 		const t2 = self.config.term2
 		const tip = new Menu({ padding: '5px' })
@@ -51,7 +49,6 @@ export default function setViolinRenderer(self) {
 						a.summaryStats.find(x => x.id === 'median').value - b.summaryStats.find(x => x.id === 'median').value
 				)
 			}
-			this.k2c = getColors(plots.length)
 			if (self.legendRenderer) self.legendRenderer(getLegendGrps(termNum, self))
 
 			const chartDiv = self.dom.violinDiv
@@ -104,7 +101,7 @@ export default function setViolinRenderer(self) {
 						.y(d => svgData.axisScale(d.x0))
 				}
 				//if only one plot pass area builder to calculate the exact height of the plot
-				const { violinG, height } = renderViolinPlot(svgData, plot, isH, wScale, areaBuilder, y, imageOffset)
+				const { violinG, height } = renderViolinPlot(svgData, plot, isH, wScale, areaBuilder, y)
 				y += height
 				if (self.opts.mode != 'minimal') renderLabels(t1, t2, violinG, plot, isH, settings, tip)
 
@@ -125,17 +122,9 @@ export default function setViolinRenderer(self) {
 	self.displaySummaryStats = function (d, event, tip) {
 		if (!d.summaryStats) return
 		tip.clear().show(event.clientX, event.clientY)
-
+		tip.d.append('div').text(d.label).style('margin-left', '15px')
 		const table = table2col({ holder: tip.d.append('div') })
-		//Sample label
-		const [th1, _] = table.addRow()
-		th1.attr('colspan', '2').style('color', 'black').style('text-align', 'center').text(d.label)
-		//Summary stat rows
-		for (const stat of Object.values(d.summaryStats)) {
-			const [td1, td2] = table.addRow()
-			td1.text(stat.label)
-			td2.style('text-align', 'center').text(stat.value ?? 0)
-		}
+		for (const { label, value } of Object.values(d.summaryStats)) table.addRow(label, value)
 	}
 	self.getAutoThickness = function () {
 		let maxPlotCount = 0
@@ -325,7 +314,7 @@ export default function setViolinRenderer(self) {
 		}
 	}
 
-	function renderViolinPlot(svgData, plot, isH, wScale, areaBuilder, y, imageOffset) {
+	function renderViolinPlot(svgData, plot, isH, wScale, areaBuilder, y) {
 		const label = plot.label?.split(',')[0]
 		const catTerm = self.config.term.q.mode == 'discrete' ? self.config.term : self.config.term2
 		const category = catTerm?.term.values ? Object.values(catTerm.term.values).find(o => o.label == label) : null
@@ -334,7 +323,6 @@ export default function setViolinRenderer(self) {
 		// : plot.divideTwBins
 		// ? plot.divideTwBins.color
 		// : self.config.term2
-		// ? self.k2c(plotIdx)
 		// : self.config.settings.violin.defaultColor
 		if (!plot.color) plot.color = color
 		if (category && !category.color) category.color = color
@@ -346,7 +334,7 @@ export default function setViolinRenderer(self) {
 		//render symmetrical violin plot
 		renderArea(violinG, plot, isH ? areaBuilder.y(d => -wScale(d.density)) : areaBuilder.x(d => -wScale(d.density)))
 
-		renderSymbolImage(self, violinG, plot, isH, imageOffset)
+		renderSymbolImage(self, violinG, plot, isH)
 		if (self.opts.mode != 'minimal') renderMedian(violinG, isH, plot, svgData, self)
 		renderLines(violinG, isH, self.config.settings.violin.lines, svgData)
 		if ('value' in self.state.config) {
@@ -418,8 +406,8 @@ export default function setViolinRenderer(self) {
 			.attr('d', areaBuilder(plot.density.bins))
 	}
 
-	function renderSymbolImage(self, violinG, plot, isH, imageOffset) {
-		violinG
+	function renderSymbolImage(self, violinG, plot, isH) {
+		const i = violinG
 			.append('image')
 			.style('opacity', 0)
 			.classed(self.config.settings.violin.datasymbol === 'rug' ? 'sjpp-rug-img' : 'sjpp-beans-img', true)
@@ -428,7 +416,16 @@ export default function setViolinRenderer(self) {
 			// .duration(self.opts.mode == 'minimal' ? 0 : 100)
 			.style('opacity', 1)
 			.attr('xlink:href', plot.src)
-			.attr('transform', isH ? `translate(0, -${imageOffset})` : `translate(-${imageOffset}, 0)`)
+			.attr(
+				'transform',
+				isH ? `translate(0, -${self.settings.radius / 2})` : `translate(-${self.settings.radius / 2}, 0)`
+			)
+		// todo must
+		if (self.settings.orientation == 'horizontal') {
+			i.attr('width', self.settings.svgw)
+		} else if (self.settings.orientation == 'vertical') {
+			i.attr('height', self.settings.svgw)
+		}
 	}
 
 	function renderMedian(violinG, isH, plot, svgData, self) {

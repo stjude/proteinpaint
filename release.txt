@@ -1,1 +1,2 @@
-
+Fixes:
+- improve violin item value plot quality and clean up

@@ -349,7 +349,8 @@ class ViolinPlot {
 		const arg = {
 			filter: this.state.termfilter.filter,
 			filter0: this.state.termfilter.filter0,
-			svgw: s.svgw / window.devicePixelRatio,
+			//svgw: s.svgw / window.devicePixelRatio,
+			svgw: s.svgw,
 			orientation: s.orientation,
 			devicePixelRatio: window.devicePixelRatio,
 			datasymbol: s.datasymbol,
@@ -404,7 +405,7 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		brushRange: null, //object with start and end if there is a brush selection
 		svgw: 500, // span length of a plot/svg, not including margin
 		datasymbol: 'rug',
-		radius: 4,
+		radius: 10,
 		strokeWidth: 0.2,
 		axisHeight: 60,
 		rightMargin: 50,
