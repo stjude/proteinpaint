@@ -1,5 +1,7 @@
 import type { RouteApi, AIProjectTrainModelRequest } from '#types'
 import { aiProjectTrainModelPayload } from '#types/checkers'
+import { TileServerSessionsHandler } from '#src/wsisessions/TileServerSessionsHandler.ts'
+import SessionManager from '#src/wsisessions/SessionManager.ts'
 
 export const api: RouteApi = {
 	endpoint: 'aiProjectTrainModel',
@@ -27,6 +29,20 @@ function init({ genomes }) {
 
 			if (typeof ds.queries.WSImages.retrainModel == 'function') {
 				await ds.queries.WSImages.retrainModel(query.projectId)
+
+				// After retraining, read sessions from SessionManager and reset them via TileServerSessionsHandler.
+				try {
+					const handler = new TileServerSessionsHandler()
+					const sessionMgr = SessionManager.getInstance()
+
+					// optionally pass a keyPrefix if you want to limit which sessions to read
+					const sessions = await sessionMgr.getAllSessions()
+					if (sessions && sessions.length) {
+						await handler.resetSessions(sessions)
+					}
+				} catch (err) {
+					console.warn('TileServerSessionsHandler error:', err)
+				}
 			} else {
 				res.status(500).send({
 					status: 'error',

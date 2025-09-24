@@ -162,6 +162,12 @@ export default class SessionManager {
 		return strings.length
 	}
 
+	public async getAllSessions(key: string = ''): Promise<Array<SessionData | undefined>> {
+		// keyValueStorages.getAllKeyValues returns array of { key, sessionData } in other usages
+		const keySessions = await this.keyValueStorages.getAllKeyValues(key)
+		return keySessions.map((kv: any) => kv.sessionData as SessionData | undefined)
+	}
+
 	public async deleteSession(key: string): Promise<void> {
 		await this.keyValueStorages.delete(key)
 	}
