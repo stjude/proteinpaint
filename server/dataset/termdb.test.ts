@@ -320,10 +320,7 @@ export default function (): Mds3 {
 				}
 			},
 			cnv: {
-				file: 'files/hg38/TermdbTest/TermdbTest_CNV_gene.gz',
-				cnvMaxLength: 20000000,
-				cnvGainCutoff: 0.1,
-				cnvLossCutoff: -0.1
+				file: 'files/hg38/TermdbTest/TermdbTest_CNV_gene.gz'
 			},
 			singleSampleMutation: {
 				src: 'native',
