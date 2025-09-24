@@ -136,7 +136,7 @@ async function fillMenu(self, div, tvs) {
 				{
 					tw: { term: tvs.term, q: { mode: 'continuous' } },
 					filter: self.filter,
-					svgw: self.num_obj.plot_size.width / window.devicePixelRatio
+					svgw: self.num_obj.plot_size.width
 				},
 				self.opts.getCategoriesArguments
 			)
@@ -164,7 +164,14 @@ async function fillMenu(self, div, tvs) {
 	// svg
 	//self.num_obj.svg = self.num_obj.num_div.append('svg')
 	//makeDensityPlot(density_plot_opts)
-	self.vr = new violinRenderer(self.num_obj.num_div, self.num_obj.density_data, self.num_obj.xpad, self.num_obj.ypad)
+	self.vr = new violinRenderer(
+		self.num_obj.num_div,
+		self.num_obj.density_data,
+		self.num_obj.plot_size.width,
+		self.num_obj.plot_size.height,
+		self.num_obj.plot_size.xpad,
+		self.num_obj.plot_size.ypad
+	)
 	self.vr.render()
 	self.num_obj.svg = self.vr.svg
 
@@ -225,6 +232,7 @@ export function convertViolinData(vd) {
 		densityMax: p.density.densityMax,
 		densityMin: p.density.densityMin,
 		density: p.density.bins,
+		radius: vd.radius,
 		valuesImg: p.src
 	}
 	return dd

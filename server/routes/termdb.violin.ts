@@ -225,23 +225,23 @@ function setResponse(valuesObject: any, data: ValidGetDataResponse, q: ViolinReq
 		min: valuesObject.min,
 		max: valuesObject.max,
 		charts,
-		uncomputableValues: Object.keys(valuesObject.uncomputableValues).length > 0 ? valuesObject.uncomputableValues : null
+		uncomputableValues:
+			Object.keys(valuesObject.uncomputableValues).length > 0 ? valuesObject.uncomputableValues : null,
+		// what??
+		radius: q.radius
 	}
 
 	return result
 }
 
 async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any }, ds: { [index: string]: any }) {
-	// size on x-y for creating circle and ticks
 	if (!q.radius) q.radius = 5
 	// assign defaults as needed
 	if (q.radius <= 0) throw 'q.radius is not a number'
 	else q.radius = +q.radius // ensure numeric value, not string
-
 	if (!q.strokeWidth) q.strokeWidth = 0.2
+	const isH = q.orientation == 'horizontal'
 
-	const refSize = q.radius * 4
-	//create scale object
 	for (const k of Object.keys(result.charts)) {
 		const chart = result.charts[k]
 		const plot2Values = {}
@@ -254,60 +254,56 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 			axisScale = scaleLog()
 				.base(ds.cohort.termdb.logscaleBase2 ? 2 : 10)
 				.domain([result.min, result.max])
-				.range(q.orientation === 'horizontal' ? [0, q.svgw] : [q.svgw, 0])
+				.range(isH ? [0, q.svgw] : [q.svgw, 0])
 		} else {
 			axisScale = scaleLinear()
 				.domain([result.min, result.max])
-				.range(q.orientation === 'horizontal' ? [0, q.svgw] : [q.svgw, 0])
+				.range(isH ? [0, q.svgw] : [q.svgw, 0])
 		}
-		const [width, height] =
-			q.orientation == 'horizontal'
-				? [q.svgw * q.devicePixelRatio, refSize * q.devicePixelRatio]
-				: [refSize * q.devicePixelRatio, q.svgw * q.devicePixelRatio]
 
-		const scaledRadius = q.radius / q.devicePixelRatio
-		const arcEndAngle = scaledRadius * Math.PI
+		const [width, height] = isH
+			? [q.svgw * q.devicePixelRatio, q.radius * q.devicePixelRatio]
+			: [q.radius * q.devicePixelRatio, q.svgw * q.devicePixelRatio]
 
 		for (const plot of chart.plots) {
-			// item: { label=str, values=[v1,v2,...] }
-			// set  the plot density
-			plot.density = densities[plot.label]
-			const noDensityRendered = plot.density.densityMax == 0
+			// plot: { label=str, values=[v1,v2,...] }
+			plot.density = densities[plot.label] // set the plot density
+
 			//backend rendering bean/rug plot on top of violin plot based on orientation of plot
 			const canvas = createCanvas(width, height)
 			const ctx = canvas.getContext('2d')
-			const symbolOpacity = noDensityRendered ? 1 : 0.6
-			ctx.strokeStyle = `rgba(0,0,0,${symbolOpacity})`
-			ctx.lineWidth = q.strokeWidth / q.devicePixelRatio
-			ctx.globalAlpha = symbolOpacity
-			// No violin is rendered when the values is less than cutoff
-			//Render in black so the user can see the data
-			ctx.fillStyle = '#ffe6e6' //only applied with rug
+			if (q.devicePixelRatio != 1) ctx.scale(q.devicePixelRatio, q.devicePixelRatio) //scaling for sharper image
+			ctx.strokeStyle = 'black'
+			ctx.lineWidth = 1
 
-			//scaling for sharper image
-			if (q.devicePixelRatio != 1) {
-				ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
-			}
-			if (q.datasymbol === 'rug')
+			if (q.datasymbol === 'rug') {
+				ctx.globalAlpha = 0.8
 				plot.values.forEach((i: number) => {
+					const s = axisScale(i)
 					ctx.beginPath()
-					if (q.orientation == 'horizontal') {
-						ctx.moveTo(+axisScale(i), 0)
-						ctx.lineTo(+axisScale(i), scaledRadius * 2)
+					if (isH) {
+						ctx.moveTo(s, 0)
+						ctx.lineTo(s, q.radius)
+						// may not use Math.floor()+.5 for "crisp" line as the max value line will be out of picture
+						//ctx.moveTo(Math.floor(s)+.5, 0); ctx.lineTo(Math.floor(s)+.5, scaledRadius * 2)
 					} else {
-						ctx.moveTo(0, +axisScale(i))
-						ctx.lineTo(scaledRadius * 2, +axisScale(i))
+						ctx.moveTo(0, s)
+						ctx.lineTo(q.radius, s)
 					}
 					ctx.stroke()
 				})
-			else if (q.datasymbol === 'bean')
+			} else if (q.datasymbol === 'bean') {
+				ctx.globalAlpha = 0.6
+				ctx.fillStyle = '#ffe6e6' //only applied with rug
 				plot.values.forEach((i: number) => {
+					const s = axisScale(i)
 					ctx.beginPath()
-					if (q.orientation === 'horizontal') ctx.arc(+axisScale(i), q.radius, scaledRadius, 0, arcEndAngle)
-					else ctx.arc(q.radius, +axisScale(i), scaledRadius, 0, arcEndAngle)
+					if (isH) ctx.arc(s, q.radius / 2, q.radius / 2, 0, 2 * Math.PI)
+					else ctx.arc(q.radius / 2, s, q.radius / 2, 0, 2 * Math.PI)
 					ctx.fill()
 					ctx.stroke()
 				})
+			}
 
 			plot.src = canvas.toDataURL()
 

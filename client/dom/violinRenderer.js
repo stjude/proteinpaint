@@ -2,6 +2,8 @@ import { scaleLinear } from 'd3-scale'
 import { line, curveBasis } from 'd3-shape'
 import { rgb, brushX, axisTop } from 'd3'
 
+// hardcoded to only plot a horizontal violin!
+
 export class violinRenderer {
 	constructor(holder, plot, width = 500, height = 100, shiftx = 20, shifty = 20, callback = null, scaleFactor = 1) {
 		this.holder = holder
@@ -34,12 +36,14 @@ export class violinRenderer {
 		this.scaleG.call(axisTop(this.axisScaleUI).tickValues(this.axisScaleUI.ticks()))
 		this.renderArea(false)
 		this.renderArea(true)
-		if (this.plot.valuesImg)
+		if (this.plot.valuesImg) {
 			this.violinG
 				.append('image')
 				.classed('sjpp-beans-img', true)
 				.attr('xlink:href', this.plot.valuesImg)
-				.attr('transform', `translate(0, -${this.plot.radius || 3})`)
+				.attr('transform', `translate(0, -${this.plot.radius / 2})`)
+				.attr('width', this.width)
+		}
 
 		if (this.callback)
 			this.svg.append('g').call(
