@@ -419,6 +419,13 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
   */
 	function mayUpdate__protected__(req, res) {
 		const __protected__ = req.query.__protected__
+		const q = req.query
+		if (q.filter) {
+			const cohortFilter = q.filter.lst.find(f => f.tvs?.term.id == 'subcohort')
+			if (cohortFilter) {
+				__protected__.activeCohort = cohortFilter.tvs.values.map(v => v.key)[0]
+			}
+		}
 		if (req.query.dslabel) {
 			Object.assign(__protected__, authApi.getNonsensitiveInfo(req))
 			if (req.query.genome && req.query.dslabel && req.query.dslabel !== 'msigdb') {
@@ -751,7 +758,7 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 			routeTwLst === undefined
 				? undefined
 				: routeTwLst.filter(tw => !q.__protected__.ignoredTermIds.includes(tw.term.id)).map(tw => tw.term)
-		const authFilter = ds.cohort.termdb.getAdditionalFilter(q.__protected__.clientAuthResult, routeTerms)
+		const authFilter = ds.cohort.termdb.getAdditionalFilter(q.__protected__, routeTerms)
 
 		if (!q.filter) q.filter = { type: 'tvslst', join: '', lst: [] }
 		else if (q.filter.type != 'tvslst') throw `invalid q.filter.type != 'tvslst'`
