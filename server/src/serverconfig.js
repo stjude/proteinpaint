@@ -297,10 +297,16 @@ function mayUpdateTestDatasets(datasets, serverconfig) {
 	const ds = datasets.find(ds => ds.jsfile.includes('/termdb.test.'))
 	if (!ds) return
 	const fileExt = ds.jsfile.split('.').pop()
-	datasets.push({
-		name: 'ProtectedTest',
-		jsfile: `./dataset/protected.test.${fileExt}`
-	})
+	datasets.push(
+		{
+			name: 'ProtectedTest',
+			jsfile: `./dataset/protected.test.${fileExt}`
+		},
+		{
+			name: 'TermdbTest1',
+			jsfile: `./dataset/termdb.test1.${fileExt}`
+		}
+	)
 
 	if (serverconfig.features.dslabelFilter?.includes('TermdbTest')) {
 		serverconfig.features.dslabelFilter.push('ProtectedTest')
