@@ -222,8 +222,6 @@ export class profilePlot {
 				this.data = await this.app.vocabApi.getProfileScores({
 					scoreTerms: this.scoreTerms,
 					filter: this.filter,
-					isAggregate,
-					sites: this.settings.sites,
 					userSites: this.state.sites,
 					facilityTW: this.config.facilityTW,
 					filterByUserSites: this.settings.filterByUserSites
@@ -233,25 +231,22 @@ export class profilePlot {
 					scoreTerms: this.scoreTerms,
 					scScoreTerms: this.scScoreTerms,
 					filter: this.filter,
-					isAggregate,
-					sites: this.settings.sites,
 					userSites: this.state.sites,
 					facilityTW: this.config.facilityTW,
 					filterByUserSites: this.settings.filterByUserSites
 				})
 			if ('error' in this.data) throw this.data.error
-			this.sites = this.data.sites
+			this.sites = this.filteredTermValues[this.config.facilityTW.id]?.filter(s => !s.disabled && s.value)
 			this.sites.sort((a, b) => {
 				return a.label.localeCompare(b.label)
 			})
 			if (isRadarFacility) {
 				if (!this.settings.facilitySite) this.settings.facilitySite = this.sites[0]?.value //set the first site as the facility site
-			} else if (!this.settings.site && !this.settings.sites && this.state.sites?.length == 1 && !isAggregate) {
-				this.settings.site = this.data.sites?.[0]?.value
-				this.settings.sites = [this.settings.site] //set sites to the single site
+			} else if (!this.settings[this.config.facilityTW?.term?.id] && this.state.sites?.length == 1 && !isAggregate) {
+				this.settings[this.config.facilityTW?.term?.id] = [this.data.sites?.[0]?.value]
 			}
-			if (this.settings.sites)
-				for (const site of this.settings.sites) {
+			if (this.settings[this.config.facilityTW?.term?.id])
+				for (const site of this.settings[this.config.facilityTW?.term?.id]) {
 					const siteOption = this.sites.find(s => s.value == site)
 					if (siteOption) siteOption.selected = true //mark selected sites
 				}
@@ -278,8 +273,9 @@ export class profilePlot {
 					],
 					callback: isAggregate => {
 						this.settings.isAggregate = isAggregate
-						const id = this.sites.find(s => s.label == this.state.site)?.value
-						isAggregate ? this.setSite('') : this.setSite(id)
+						const id = this.sites.find(s => s.value == this.state.site)?.value
+						const value = isAggregate ? [] : [id]
+						this.setFilterValue(this.config.facilityTW.term.id, value)
 					}
 				}
 				inputs.push(dataInput)
@@ -370,28 +366,33 @@ export class profilePlot {
 						chartType,
 						options: this.sites,
 						multiple: true,
-						callback: values => {
-							this.setSites(values)
-						}
+						callback: values => this.setFilterValue(this.config.facilityTW.term.id, values)
 					}
 					inputs.push(sitesInput)
 					if (this.state.user != 'admin') inputs.unshift(userSitesFilterInput) //add filter by user sites only for non-admin users
 				}
 				if (isRadarFacility) {
+					const settings = { ...this.settings }
+					settings[this.config.facilityTW.term.id] = null //clear facility filter to get all the sites allowed
+					const filter = this.getFilterWithSettings(settings)
+					//another request is needed to get the sample selected and populate the facility sites
 					this.sampleData = await this.app.vocabApi.getProfileScores({
 						terms: [...this.twLst, this.config.facilityTW], //added facility term to all the plots to get the hospital name
 						scoreTerms: this.scoreTerms,
-						filter: this.filter,
-						isAggregate: true,
-						site: this.settings.facilitySite,
+						filter, //filter excluding facility term
 						userSites: this.state.sites,
+						facilitySite: this.settings.facilitySite,
 						facilityTW: this.config.facilityTW
 					})
 					this.facilitySites = this.sampleData.sites
 					this.facilitySites.sort((a, b) => {
 						return a.label.localeCompare(b.label)
 					})
-					this.facilitySites.find(s => s.value == this.settings.facilitySite).selected = true //mark selected facility site
+					const facilitySite = this.facilitySites.find(s => s.value == this.settings.facilitySite)
+					if (!facilitySite)
+						//probably a session recovery
+						throw new Error(`Access to ${this.settings.facilitySite} facility not allowed`)
+					facilitySite.selected = true //mark selected facility site
 
 					inputs.unshift({
 						label: 'Facility site',
@@ -448,10 +449,14 @@ export class profilePlot {
 	setFilterValue(key, value) {
 		const config = this.config
 		this.settings[key] = value
-		this.settings.site = '' //always clear site when a filter is changed
-		this.settings.sites = null //clear sites
 		config.filter = this.getFilter()
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
+	}
+
+	getFilterWithSettings(settings) {
+		let filter = getCategoricalTermFilter(this.config.filterTWs, settings, null)
+		filter = getCombinedTermFilter(this.state, filter)
+		return filter.filter
 	}
 
 	getFilter() {
@@ -462,14 +467,6 @@ export class profilePlot {
 
 	clearFiltersExcept(ids) {
 		for (const tw of this.config.filterTWs) if (!ids.includes(tw.term.id)) this.settings[tw.term.id] = ''
-		this.settings.site = ''
-		this.settings.sites = null //clear sites
-	}
-
-	setSite(site) {
-		this.settings.site = site
-		this.settings.sites = null //clear sites
-		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
 
 	setFacilitySite(site) {
@@ -477,16 +474,8 @@ export class profilePlot {
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
 
-	setSites(sites) {
-		if (sites && sites.length == 1) this.settings.site = sites[0] //if only one site selected, set it as the site
-		this.settings.sites = sites?.map(s => Number(s))
-		if (this.settings.sites.length > 1) this.settings.site = '' //clear site
-		else if (this.settings.sites.length == 1) this.settings.site = this.settings.sites[0] //set site to the single site
-		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
-	}
-
 	addFilterLegend() {
-		const hasFilters = this.config.filterTWs.some(tw => this.settings[tw.term.id]) || this.settings.sites?.length > 0
+		const hasFilters = this.config.filterTWs.some(tw => this.settings[tw.term.id])
 		const title = hasFilters ? 'Filters' : 'No filter applied'
 		this.filterG
 			.attr('font-size', '0.9em')
@@ -496,27 +485,23 @@ export class profilePlot {
 			.text(`${title} (n=${this.data.n})`)
 			.attr('transform', `translate(0, -5)`)
 		for (const tw of this.config.filterTWs) this.addFilterLegendItem(tw.term.name, this.settings[tw.term.id])
-
-		if (this.settings.site) {
-			let hospital = this.data.hospital
-			if (hospital?.length > 50) hospital = hospital.slice(0, 50) + '...'
-			const label = this.sites.find(s => s.value == this.settings.site).label
-			this.addFilterLegendItem('Facility ID', label)
-			this.addFilterLegendItem('Facility', hospital)
-		}
 	}
 
 	addFilterLegendItem(filter, value) {
-		if (!value) return
+		if (!value || value?.length === 0) return
 		this.filtersCount++
-
+		const isArray = Array.isArray(value)
+		let text = isArray ? value.join(', ') : value
+		if (text.length > 40) {
+			text = text.slice(0, 40) + '...'
+		}
 		const itemG = this.filterG.append('g').attr('font-size', '0.95em')
-		const text = itemG
+		const textElem = itemG
 			.append('text')
 			.attr('transform', `translate(0, ${this.filtersCount * 22})`)
 			.attr('text-anchor', 'left')
-		text.append('tspan').attr('font-size', 'bold').text(filter)
-		text.append('tspan').text(`: ${value ? value : 'None'}`)
+		textElem.append('tspan').attr('font-size', 'bold').text(`${filter}: `)
+		textElem.append('tspan').text(text)
 	}
 
 	addEndUserImpressionNote(uiG) {
@@ -665,6 +650,7 @@ export async function loadFilterTerms(config, activeCohort, app) {
 	config.yearOfImplementationTW = { id: cohortPreffix + 'Year_implementation' }
 
 	const filterTWs = [
+		config.facilityTW,
 		config.countryTW,
 		config.regionTW,
 		config.incomeTW,

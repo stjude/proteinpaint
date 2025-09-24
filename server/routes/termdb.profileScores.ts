@@ -36,34 +36,25 @@ function init({ genomes }) {
 	}
 }
 
-async function getScores(query, ds) {
-	if (!query.filterByUserSites) query.__protected__.ignoredTermIds.push(query.facilityTW.term.id)
-
-	const terms: any[] = [query.facilityTW]
-	for (const term of query.scoreTerms) {
-		terms.push(term.score)
-		if (term.maxScore?.term) {
-			terms.push(term.maxScore)
-		}
-	}
-
+export async function getScoresData(query, ds, terms) {
 	const data = await getData(
 		{
 			terms,
-			filter: query.site || !query.isAggregate ? undefined : query.filter, //if site is specified, do not apply the filter that is for the aggregation
+			filter: query.filter, //if site is specified, do not apply the filter that is for the aggregation
 			__protected__: query.__protected__
 		},
 		ds
 	)
+	if (data.error) throw data.error
 	const lst: any[] = Object.values(data.samples)
-
-	let sites = lst.map((s: any) => {
-		return { label: data.refs.bySampleId[s.sample].label, value: s.sample }
-	})
+	let sites = lst.map(s => ({
+		value: s[query.facilityTW.$id].value,
+		label: query.facilityTW.term.values[s[query.facilityTW.$id].value]?.label || s[query.facilityTW.$id].value
+	}))
 
 	//If the user has sites keep only the sites that are visible to the user
 	if (query.userSites) {
-		sites = sites.filter(s => query.userSites.includes(s.label))
+		sites = sites.filter(s => query.userSites.includes(s.value))
 		if (lst.length == 1 && !sites.length) {
 			const siteId: number = lst[0].sample
 			const site = data.refs.bySampleId[siteId].label
@@ -71,24 +62,34 @@ async function getScores(query, ds) {
 			throw `The access to the hospital ${hospital} is denied`
 		}
 	}
+	const samples = Object.values(data.samples)
 
-	let sitesSelected: any[] = []
-	if (query.site) sitesSelected = [query.site]
-	else if (!query.isAggregate) sitesSelected = [sites[0].value] //only one site selected
-	else sitesSelected = query.sites
-	const sampleData = sitesSelected?.length == 1 ? data.samples[sitesSelected[0]] : null
-	let samples = Object.values(data.samples)
-	if (sitesSelected?.length > 0) samples = samples.filter((s: any) => sitesSelected.includes(s.sample))
+	let sampleData
+	if (query.facilitySite) sampleData = lst.find(s => s[query.facilityTW.$id].value == query.facilitySite)
+	else if (sites.length == 1) sampleData = data.samples[sites[0].value]
+	return { samples, sampleData, sites }
+}
+
+async function getScores(query, ds) {
+	if (!query.filterByUserSites) query.__protected__.ignoredTermIds.push(query.facilityTW.term.id)
+	const terms: any[] = [query.facilityTW]
+	for (const term of query.scoreTerms) {
+		terms.push(term.score)
+		if (term.maxScore?.term) {
+			terms.push(term.maxScore)
+		}
+	}
+	const data = await getScoresData(query, ds, terms)
 	const term2Score: any = {}
 	for (const d of query.scoreTerms) {
-		term2Score[d.score.term.id] = getPercentage(d, samples, sampleData)
+		term2Score[d.score.term.id] = getPercentage(d, data.samples, data.sampleData)
 	}
 
-	const facilityValue = sampleData?.[query.facilityTW.$id]
+	const facilityValue = data.sampleData?.[query.facilityTW.$id]
 	const termValue = query.facilityTW.term.values[facilityValue?.value]
 	const hospital = termValue?.label || termValue?.key
 
-	return { term2Score, sites, hospital, n: sampleData ? 1 : samples.length }
+	return { term2Score, sites: data.sites, hospital, n: data.sampleData ? 1 : data.samples.length }
 }
 
 function getPercentage(d, samples, sampleData) {
