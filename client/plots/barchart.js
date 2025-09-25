@@ -1118,11 +1118,10 @@ function setInteractivity(self) {
 
 	self.getChartImages = function () {
 		const charts = []
-		const node = self.dom.barDiv.select('.sjpcb-bars-mainG').node() //node to read the style
 
 		for (const chart of self.charts) {
 			const name = `${this.config.term.term.name}  ${chart.name ? chart.name : ''}`
-			charts.push({ name, svg: chart.svg, parent: node })
+			charts.push({ name, svg: chart.svg })
 		}
 		return charts
 	}

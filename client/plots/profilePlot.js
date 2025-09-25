@@ -217,7 +217,6 @@ export class profilePlot {
 			})
 			this.types = this.filteredTermValues[this.config.typeTW.id]
 			this.filter = this.config.filter || this.getFilter()
-
 			const isAggregate = this.isAggregate()
 			if (this.type != 'profileForms')
 				this.data = await this.app.vocabApi.getProfileScores({
@@ -240,7 +239,6 @@ export class profilePlot {
 					facilityTW: this.config.facilityTW,
 					filterByUserSites: this.settings.filterByUserSites
 				})
-
 			if ('error' in this.data) throw this.data.error
 			this.sites = this.data.sites
 			this.sites.sort((a, b) => {
@@ -582,17 +580,18 @@ export class profilePlot {
 
 	getChartImages() {
 		const entries = Object.entries(this.components.plots)
-		const charts = [{ name: entries.length > 0 ? 'Original' : '', svg: this.dom.svg, parent: this.dom.svg.node() }]
+		const note = '© 2025 St. Jude Children’s Research Hospital'
+		const charts = [{ name: entries.length > 0 ? 'Original' : '', svg: this.dom.svg, note }]
 		let i = 1
 		for (const [key, plot] of entries) {
 			//Adding comparison plots
 			const chartImages = plot.getChartImages()
 
 			for (const chartImage of chartImages) {
-				const parent = chartImage.parent
+				const note = chartImage.note
 				const svg = chartImage.svg
 				const name = chartImages.length > 1 ? `Comparison ${i}. ${chartImage.name}` : `Comparison ${chartImage.name}`
-				charts.push({ name, svg, parent })
+				charts.push({ name, svg, note })
 			}
 			i++
 		}

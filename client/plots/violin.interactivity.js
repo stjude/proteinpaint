@@ -14,7 +14,7 @@ export function setInteractivity(self) {
 			const title = self.getChartTitle(chart.chartId)
 			const name = `${self.config.term.term.name}  ${title}`
 			const chartDiv = chart.chartDiv
-			charts.push({ name, svg: chartDiv.select('svg'), parent: chartDiv.node() })
+			charts.push({ name, svg: chartDiv.select('svg') })
 		}
 		return charts
 	}

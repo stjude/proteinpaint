@@ -169,7 +169,7 @@ export class Scatter extends PlotBase implements RxComponent {
 		const chartImages: any[] = []
 		for (const chart of this.model.charts) {
 			const name = `${this.config.name || ''}${chart.id == 'Default' ? '' : ' ' + chart.id}	`
-			chartImages.push({ name, svg: chart.svg, parent: chart.svg.node() })
+			chartImages.push({ name, svg: chart.svg })
 		}
 		return chartImages
 	}
