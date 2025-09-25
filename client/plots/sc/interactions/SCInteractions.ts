@@ -5,11 +5,13 @@ export class SCInteractions {
 	app: AppApi
 	dom: any //May not be necessary
 	id: string
+	getState: () => any
 
-	constructor(app: AppApi, dom: any, id: string) {
+	constructor(app: AppApi, dom: any, id: string, getState: () => any) {
 		this.app = app
 		this.dom = dom
 		this.id = id
+		this.getState = getState()
 	}
 
 	/** Used in the gene search menu shown on click from a plot btn
