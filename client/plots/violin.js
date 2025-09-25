@@ -319,18 +319,6 @@ class ViolinPlot {
 		this.data = await this.app.vocabApi.getViolinPlotData(args)
 
 		if (this.data.error) throw this.data.error
-		/*
-		.min
-		.max
-		.plots[]
-			.biggestBin
-			.label
-			.plotValueCount
-			.bins[]
-				.x0
-				.x1
-				.density
-		*/
 		args.tw.q.descrStats = this.data.descrStats
 
 		this.toggleLoadingDiv(this.opts.mode == 'minimal' ? 'none' : '')
@@ -347,8 +335,6 @@ class ViolinPlot {
 		const { term, term2, term0, settings } = this.config
 		const s = this.settings
 		const arg = {
-			filter: this.state.termfilter.filter,
-			filter0: this.state.termfilter.filter0,
 			svgw: s.svgw,
 			orientation: s.orientation,
 			devicePixelRatio: window.devicePixelRatio,
@@ -367,8 +353,11 @@ class ViolinPlot {
 			// assume a single term for minimal plot
 			if (term2 || term0) throw 'only a single term allowed for minimal plot'
 			if (term.q.mode == 'spline') {
+				/** FIXME bad design; should not modify setting or even plot state in runtime, 
+				instead supply this in constructor arg and generalize it beyond spline
 				// term may be cubic spline from regression analysis
 				// render knot values as vertical lines on the plot
+				*/
 				s.lines = term.q.knots.map(x => Number(x.value))
 			} else {
 				s.lines = []
