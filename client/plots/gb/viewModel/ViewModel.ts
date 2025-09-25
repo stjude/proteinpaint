@@ -2,15 +2,13 @@ import { filterJoin } from '#filter'
 
 export class ViewModel {
 	state: any
-	app: any
 	opts: any
 	data: any
 	blockInstance: any
 	components: any
 	maySaveTrackUpdatesToState: any
-	constructor(state, app, opts, data) {
+	constructor(state, opts, data) {
 		this.state = state
-		this.app = app
 		this.opts = opts
 		this.data = data
 	}
@@ -35,7 +33,7 @@ export class ViewModel {
 				// official mds3 tk without precomputed tk data
 				const tk: any = {
 					type: 'mds3',
-					dslabel: this.app.opts.state.vocab.dslabel,
+					dslabel: this.state.vocab.dslabel,
 					onClose: () => {
 						// on closing subtk, the filterObj corresponding to the subtk will be "removed" from subMds3TkFilters[], by regenerating the array
 						this.maySaveTrackUpdatesToState()
@@ -63,7 +61,7 @@ export class ViewModel {
 						// for every element, create a new subtk
 						const t2: any = {
 							type: 'mds3',
-							dslabel: this.app.opts.state.vocab.dslabel,
+							dslabel: this.state.vocab.dslabel,
 							// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
 							newChartHolder: this.opts.plotDiv
 						}
@@ -125,7 +123,7 @@ export class ViewModel {
 		const tk = {
 			type: 'mds3',
 			// despite having custom data, still provide dslabel for the mds3 tk to function as an official dataset
-			dslabel: this.app.opts.state.vocab.dslabel,
+			dslabel: this.state.vocab.dslabel,
 			name: 'Variants',
 			custom_variants: data.mlst,
 			skewerModes: [nm]
