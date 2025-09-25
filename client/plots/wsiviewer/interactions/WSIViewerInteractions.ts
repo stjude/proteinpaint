@@ -39,6 +39,8 @@ export class WSIViewerInteractions {
 		buffers?: any
 	) => void
 
+	onRetrainModelClicked: (genome: string, dslabel: string, projectId: string) => void
+
 	constructor(wsiApp: any, opts: any) {
 		this.thumbnailClickListener = (index: number) => {
 			wsiApp.app.dispatch({
@@ -287,6 +289,30 @@ export class WSIViewerInteractions {
 						renderAnnotationTable: true,
 						activeAnnotation: Math.random(),
 						sessionsTileSelection: [newTileSelection, ...sessionsTileSelection]
+					}
+				}
+			})
+		}
+
+		this.onRetrainModelClicked = async (genome: string, dslabel: string, projectId: string) => {
+			await dofetch3('/aiProjectTrainModel', {
+				body: {
+					genome,
+					dslabel,
+					projectId
+				}
+			})
+
+			clearServerDataCache()
+
+			wsiApp.app.dispatch({
+				type: 'plot_edit',
+				id: opts.id,
+				config: {
+					settings: {
+						renderWSIViewer: true,
+						renderAnnotationTable: true,
+						activeAnnotation: Math.random()
 					}
 				}
 			})
