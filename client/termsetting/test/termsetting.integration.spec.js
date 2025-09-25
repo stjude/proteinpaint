@@ -1308,6 +1308,53 @@ tape('samplelst term', async test => {
 	test.end()
 })
 
+tape('singleCellCellType', async test => {
+	const opts = await getOpts({
+		tsData: {
+			term: {
+				type: 'singleCellCellType',
+				id: 'CellType',
+				name: 'CellType',
+				sample: {
+					sID: '1_patient'
+				},
+				plot: 'scRNA',
+				colorBy: 'CellType',
+				values: {
+					T_NK: {
+						key: 'T_NK',
+						value: 'T_NK'
+					},
+					Blast: {
+						key: 'Blast',
+						value: 'Blast'
+					},
+					Monocyte: {
+						key: 'Monocyte',
+						value: 'Monocyte'
+					}
+				},
+				groupsetting: {
+					disabled: true
+				}
+			},
+			q: {
+				isAtomic: true,
+				type: 'values',
+				hiddenValues: {}
+			}
+		}
+	})
+
+	await opts.pill.main(opts.tsData)
+	const pill = opts.holder.select('.ts_pill')
+	// check pill summary text
+	const pillSummary = pill.select('.term_name_btn')
+	test.equal(pillSummary.text(), 'CellType', 'Pill should display the expected summary text')
+	if (test._ok) opts.holder.remove()
+	test.end()
+})
+
 tape('geneVariant term', async test => {
 	const opts = await getOpts({
 		tsData: geneVariantTw
