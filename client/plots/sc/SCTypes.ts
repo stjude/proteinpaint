@@ -41,8 +41,8 @@ export type SCSettings = {
 		/** Active item choosen by the user */
 		item: any
 	}
-	hierClusterUnit: string
 	hierCluster: {
+		unit: string
 		yDendrogramHeight: number
 		clusterSamples: boolean
 	}

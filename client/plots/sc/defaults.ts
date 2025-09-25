@@ -8,8 +8,8 @@ export function getDefaultSCAppSettings(overrides = {}, app) {
 			},
 			item: undefined
 		},
-		hierClusterUnit: app.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression',
 		hierCluster: {
+			unit: app.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression',
 			yDendrogramHeight: 0,
 			clusterSamples: false
 		}
