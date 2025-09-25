@@ -546,7 +546,10 @@ export function server_init_db_queries(ds) {
 		return supportedChartTypes
 	}
 
-	q.getSingleSampleData = function (sampleId, term_ids = []) {
+	q.getSingleSampleData = async function (sampleId, term_ids = []) {
+		//TO DO: apply the filter to ensure when user auth the user filter is applied
+		//const filterCTEs = await getFilterCTEs(filter, q.ds, sampleTypes)
+
 		const termClause = !term_ids.length ? '' : `and term_id in (${term_ids.map(() => '?').join(',')})`
 		const query = `select term_id, value, jsondata from ( select term_id, value 
 		from anno_categorical 

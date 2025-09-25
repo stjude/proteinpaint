@@ -37,6 +37,8 @@ function init({ genomes }) {
 }
 
 export async function getScoresData(query, ds, terms) {
+	if (!query.filterByUserSites) query.__protected__.ignoredTermIds.push(query.facilityTW.term.id)
+
 	const data = await getData(
 		{
 			terms,
@@ -63,15 +65,15 @@ export async function getScoresData(query, ds, terms) {
 		}
 	}
 	const samples = Object.values(data.samples)
-
 	let sampleData
-	if (query.facilitySite) sampleData = lst.find(s => s[query.facilityTW.$id].value == query.facilitySite)
+	if ('facilitySite' in query)
+		sampleData = query.facilitySite ? lst.find(s => s[query.facilityTW.$id].value == query.facilitySite) : lst[0]
 	else if (sites.length == 1) sampleData = data.samples[sites[0].value]
+
 	return { samples, sampleData, sites }
 }
 
 async function getScores(query, ds) {
-	if (!query.filterByUserSites) query.__protected__.ignoredTermIds.push(query.facilityTW.term.id)
 	const terms: any[] = [query.facilityTW]
 	for (const term of query.scoreTerms) {
 		terms.push(term.score)
