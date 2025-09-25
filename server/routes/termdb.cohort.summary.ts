@@ -3,6 +3,7 @@ import { termdbCohortSummaryPayload } from '#types/checkers'
 import { get_ds_tdb } from '#src/termdb.js'
 import { mayCopyFromCookie } from '#src/utils.js' // ??? is this needed for this route ???
 import { get_samples } from '#src/termdb.sql.js'
+import { authApi } from '#src/auth.js'
 export const api: RouteApi = {
 	endpoint: 'termdb/cohort/summary',
 	methods: {
@@ -21,9 +22,11 @@ function init({ genomes }) {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
 			const [ds] = get_ds_tdb(genome, q)
-			let count
+			authApi.mayAdjustFilter(req.query, ds, []) //we dont include terms to ensure that no additional filter is applied and we count all the samples
+			//the response is aggregated, no identifiable information is included
 			//only if a filter is applied always request samples(panMB dataset). Profile and sjcares have getAdditionalFilter but the samples are only filtered where needed
 			//This avoids requesting samples for the sjglobal datasets
+			let count
 			if (q.filter?.lst?.length) {
 				const samples = await get_samples(q, ds)
 				count = samples.length

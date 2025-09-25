@@ -1,4 +1,3 @@
-import { downloadSingleSVG } from '../common/svg.download.js'
 import { controlsInit } from './controls.js'
 import { fillTermWrapper, fillTwLst } from '#termsetting'
 import { select } from 'd3-selection'
@@ -216,8 +215,14 @@ export class profilePlot {
 				return 1
 			})
 			this.types = this.filteredTermValues[this.config.typeTW.id]
-			this.filter = this.config.filter || this.getFilter()
 			const isAggregate = this.isAggregate()
+
+			if (!this.settings[this.config.facilityTW?.term?.id] && this.state.sites?.length == 1 && !isAggregate) {
+				this.settings[this.config.facilityTW?.term?.id] = [this.state.sites[0]]
+			}
+
+			this.filter = this.config.filter || this.getFilter()
+
 			if (this.type != 'profileForms')
 				this.data = await this.app.vocabApi.getProfileScores({
 					scoreTerms: this.scoreTerms,
@@ -240,11 +245,7 @@ export class profilePlot {
 			this.sites.sort((a, b) => {
 				return a.label.localeCompare(b.label)
 			})
-			if (isRadarFacility) {
-				if (!this.settings.facilitySite) this.settings.facilitySite = this.sites[0]?.value //set the first site as the facility site
-			} else if (!this.settings[this.config.facilityTW?.term?.id] && this.state.sites?.length == 1 && !isAggregate) {
-				this.settings[this.config.facilityTW?.term?.id] = [this.data.sites?.[0]?.value]
-			}
+
 			if (this.settings[this.config.facilityTW?.term?.id])
 				for (const site of this.settings[this.config.facilityTW?.term?.id]) {
 					const siteOption = this.sites.find(s => s.value == site)
@@ -381,14 +382,16 @@ export class profilePlot {
 						scoreTerms: this.scoreTerms,
 						filter, //filter excluding facility term
 						userSites: this.state.sites,
-						facilitySite: this.settings.facilitySite,
+						facilitySite: this.settings.facilitySite || null, //in case the user has selected a facility site
 						facilityTW: this.config.facilityTW
 					})
 					this.facilitySites = this.sampleData.sites
 					this.facilitySites.sort((a, b) => {
 						return a.label.localeCompare(b.label)
 					})
-					const facilitySite = this.facilitySites.find(s => s.value == this.settings.facilitySite)
+					const facilitySite = this.settings.facilitySite
+						? this.facilitySites.find(s => s.value == this.settings.facilitySite)
+						: this.facilitySites[0]
 					if (!facilitySite)
 						//probably a session recovery
 						throw new Error(`Access to ${this.settings.facilitySite} facility not allowed`)
