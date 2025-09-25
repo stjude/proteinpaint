@@ -227,8 +227,7 @@ function setResponse(valuesObject: any, data: ValidGetDataResponse, q: ViolinReq
 		charts,
 		uncomputableValues:
 			Object.keys(valuesObject.uncomputableValues).length > 0 ? valuesObject.uncomputableValues : null,
-		// what??
-		radius: q.radius
+		radius: q.radius // for a horizontal plot, client needs to vertically center this image and will require this size; however adhoc violin e.g. in tvs doesn't specify it yet and will be fixed so can delete this
 	}
 
 	return result
