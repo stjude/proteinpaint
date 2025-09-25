@@ -300,7 +300,7 @@ async function makeEditMenu(self, div0: any) {
 			delete self.doNotHideTipInMain
 
 			self.api.runCallback()
-			self.updateUI()
+			self.view.updateUI()
 		})
 
 	//add a hint
