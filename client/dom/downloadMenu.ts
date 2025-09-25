@@ -75,14 +75,13 @@ export async function downloadSVGsAsPdf(chartImages, filename, orientation) {
 	const x = 0.05 * pageWidth
 
 	for (const chartImage of chartImages) {
-		const name = chartImage.name
-		const parent = chartImage.parent
+		const name = `${chartImage.name}${chartImage.note || ''}`
 		const svg = chartImage.svg.node().cloneNode(true) //clone to avoid modifying the original
-		if (parent) {
-			const svgStyles = window.getComputedStyle(parent)
-			for (const [prop, value] of Object.entries(svgStyles)) {
-				if (prop.startsWith('font')) svg.style[prop] = value
-			}
+		const parent = chartImage.parent || chartImage.svg.node()
+
+		const svgStyles = window.getComputedStyle(parent)
+		for (const [prop, value] of Object.entries(svgStyles)) {
+			if (prop.startsWith('font')) svg.style[prop] = value
 		}
 		parent.appendChild(svg) //Added otherwise does not print, will remove later
 		const svgWidth = svg.getAttribute('width')
@@ -101,6 +100,7 @@ export async function downloadSVGsAsPdf(chartImages, filename, orientation) {
 
 		await doc.svg(svg, { x, y, width, height })
 		y = y + height + 50
+
 		parent.removeChild(svg)
 	}
 	doc.save(filename + '.pdf')

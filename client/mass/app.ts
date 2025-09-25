@@ -221,16 +221,13 @@ class MassApp extends AppBase implements RxApp {
 			}
 
 			for (const chartImage of chartImages) {
-				const parent = chartImage.parent
-				const svg = chartImage.svg
-				let name
-				if (entries.length > 1) name = `${i}. ${chartImage.name}`
-				else name = chartImage.name
-				chartImagesAll.push({ name, svg, parent })
+				if (entries.length > 1) chartImage.name = `${i}. ${chartImage.name}`
+				chartImagesAll.push(chartImage)
 			}
 			i++
 		}
-		downloadSVGsAsPdf(chartImagesAll, 'plots', 'landscape')
+		if (chartImagesAll.length > 0) downloadSVGsAsPdf(chartImagesAll, 'plots', 'landscape')
+		else alert('No chart images available for download')
 	}
 }
 

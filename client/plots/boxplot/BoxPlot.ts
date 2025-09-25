@@ -361,7 +361,7 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 			const svg: any = chart.svg
 			const title = getChartTitle(this.state.config, key)
 			const name = `${this.state.config.term.term.name}  ${title}`
-			chartImages.push({ name, svg, parent: svg.node() })
+			chartImages.push({ name, svg })
 		}
 		return chartImages
 	}
