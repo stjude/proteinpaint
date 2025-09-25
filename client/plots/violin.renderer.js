@@ -320,10 +320,6 @@ export default function setViolinRenderer(self) {
 		const category = catTerm?.term.values ? Object.values(catTerm.term.values).find(o => o.label == label) : null
 
 		const color = category?.color ? category.color : self.config.settings.violin.defaultColor
-		// : plot.divideTwBins
-		// ? plot.divideTwBins.color
-		// : self.config.term2
-		// : self.config.settings.violin.defaultColor
 		if (!plot.color) plot.color = color
 		if (category && !category.color) category.color = color
 		// <g> of one plot
@@ -378,9 +374,6 @@ export default function setViolinRenderer(self) {
 				tip.hide()
 			})
 			.style('opacity', 0)
-			// .transition()
-			// .delay(self.opts.mode == 'minimal' ? 0 : 100)
-			// .duration(self.opts.mode == 'minimal' ? 0 : 100)
 			.style('opacity', 1)
 			.attr('x', isH ? -5 : 0 - settings.svgw - 5)
 			.attr('y', 0)
@@ -399,9 +392,6 @@ export default function setViolinRenderer(self) {
 			.attr('stroke', rgb(plot.color).darker())
 			.attr('stroke-width', 1)
 			.attr('stroke-linejoin', 'round')
-			// .transition()
-			// .delay(self.opts.mode == 'minimal' ? 0 : 300)
-			// .duration(self.opts.mode == 'minimal' ? 0 : 600)
 			.style('opacity', '0.8')
 			.attr('d', areaBuilder(plot.density.bins))
 	}
@@ -411,16 +401,13 @@ export default function setViolinRenderer(self) {
 			.append('image')
 			.style('opacity', 0)
 			.classed(self.config.settings.violin.datasymbol === 'rug' ? 'sjpp-rug-img' : 'sjpp-beans-img', true)
-			// .transition()
-			// .delay(self.opts.mode == 'minimal' ? 0 : 400)
-			// .duration(self.opts.mode == 'minimal' ? 0 : 100)
 			.style('opacity', 1)
 			.attr('xlink:href', plot.src)
 			.attr(
 				'transform',
 				isH ? `translate(0, -${self.settings.radius / 2})` : `translate(-${self.settings.radius / 2}, 0)`
 			)
-		// todo must
+		// set image dimension for crisp look
 		if (self.settings.orientation == 'horizontal') {
 			i.attr('width', self.settings.svgw)
 		} else if (self.settings.orientation == 'vertical') {
@@ -435,9 +422,6 @@ export default function setViolinRenderer(self) {
 		if (plot.plotValueCount >= 2) {
 			violinG
 				.append('line')
-				// .transition()
-				// .delay(600)
-				// .duration(30)
 				.attr('class', 'sjpp-median-line')
 				.style('stroke-width', s.medianThickness)
 				.style('stroke', 'red')
@@ -458,9 +442,6 @@ export default function setViolinRenderer(self) {
 		for (const line of lines) {
 			violinG
 				.append('line')
-				// .transition()
-				// .delay(self.opts.mode == 'minimal' ? 0 : 600)
-				// .duration(self.opts.mode == 'minimal' ? 0 : 30)
 				.attr('class', 'sjpp-vp-line')
 				.style('stroke', self.opts.mode == 'minimal' ? 'red' : 'black') // if not minimal, then red median line will also appear
 				.attr('y1', isH ? -(plotThickness / 2) : svgData.axisScale(line))
