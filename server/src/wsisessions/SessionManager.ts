@@ -168,6 +168,13 @@ export default class SessionManager {
 		return keySessions.map((kv: any) => kv.sessionData as SessionData | undefined)
 	}
 
+	// New: return the full key/value entries so callers can delete by key after operating on sessionData
+	public async getAllKeyValues(
+		key: string = ''
+	): Promise<Array<{ key: string; sessionData: SessionData | undefined }>> {
+		return this.keyValueStorages.getAllKeyValues(key)
+	}
+
 	public async deleteSession(key: string): Promise<void> {
 		await this.keyValueStorages.delete(key)
 	}

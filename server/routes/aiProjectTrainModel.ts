@@ -35,10 +35,14 @@ function init({ genomes }) {
 					const handler = new TileServerSessionsHandler()
 					const sessionMgr = SessionManager.getInstance()
 
-					// optionally pass a keyPrefix if you want to limit which sessions to read
-					const sessions = await sessionMgr.getAllSessions()
+					// Get key/value pairs so we can both reset remote sessions and delete them locally
+					const keySessions = await sessionMgr.getAllKeyValues()
+					const sessions = keySessions.map((kv: any) => kv?.sessionData).filter(Boolean)
+
 					if (sessions && sessions.length) {
 						await handler.resetSessions(sessions)
+						// delete all sessions from session manager
+						await Promise.all(keySessions.map((kv: any) => sessionMgr.deleteSession(kv.key)))
 					}
 				} catch (err) {
 					console.warn('TileServerSessionsHandler error:', err)
