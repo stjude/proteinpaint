@@ -5,23 +5,26 @@ import { dofetch3 } from '#common/dofetch'
 /** Fetches data for sc app */
 export class SCModel {
 	app: AppApi
+	id?: string
 	state: SCFormattedState
 
-	constructor(app: AppApi) {
+	constructor(app: AppApi, id: string) {
 		this.app = app
+		this.id = id
 		//Should only use immutable state attributes (e.g. vocab.genome)
 		this.state = this.app.getState()
 	}
 
+	/********** Single Cell SAMPLES for rendering the table *********/
 	//The table data does not update
 	//Should only need to init once
 	async getSampleData() {
-		const body = this.getRequestOpts()
+		const body = this.getSampleRequestOpts()
 		return await dofetch3('termdb/singlecellSamples', { body })
 	}
 
 	//May involve more complicated logic later
-	getRequestOpts() {
+	getSampleRequestOpts() {
 		return {
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
@@ -49,5 +52,35 @@ export class SCModel {
 			col.label = label
 		}
 		return colsCopy
+	}
+
+	/********** Single Cell DATA for rendering plots *********/
+	async getData() {
+		const body = this.getDataRequestOpts()
+		if (!body) return
+		return await dofetch3('termdb/singlecellData', { body })
+	}
+
+	getDataRequestOpts() {
+		const state = this.app.getState()
+		const singleCellTermdbConfig = state.termdbConfig?.queries?.singleCell
+		if (!singleCellTermdbConfig?.data)
+			throw 'No singleCell.data defined in termdbConfig.queries [SC Model getDataRequestOpts()]'
+
+		const config = state.plots.find((p: any) => p.id === this.id)
+		if (!config.settings.sc.item) return
+
+		//TODO: May need to only use active plots for this sample
+		const plots = singleCellTermdbConfig.data.plots.map(p => p.name)
+
+		return {
+			genome: this.state.vocab.genome,
+			dslabel: this.state.vocab.dslabel,
+			plots,
+			sample: {
+				eID: config.settings.sc.item.experiment,
+				sID: config.settings.sc.item.sample
+			}
+		}
 	}
 }

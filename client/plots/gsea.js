@@ -6,7 +6,7 @@ import { getCompInit, copyMerge } from '#rx'
 import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { VolcanoModel } from '#plots/volcano/model/VolcanoModel.ts'
-import { getDefaultVolcanoSettings } from '#plots/volcano/Volcano.ts'
+import { getDefaultVolcanoSettings } from '#plots/volcano/defaults.ts'
 
 const tip = new Menu()
 
