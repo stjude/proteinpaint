@@ -1,7 +1,6 @@
 import type { Div, Elem } from '../../../types/d3'
 import type { SCInteractions } from '../interactions/SCInteractions'
 import { Menu, GeneSetEditUI } from '#dom'
-import { TermTypes } from '#shared/terms.js'
 import { digestMessage } from '#termsetting'
 
 /** Rendering for the plot buttons that appear below the item
@@ -19,7 +18,8 @@ import { digestMessage } from '#termsetting'
  * - Check that the proper single cell data is used
  * - Configure tooltip to use 'cell' and not 'sample'
  * - term2 in the config is currently defined in
- * queries.singlecell.data.plots.[i].colorColumns. Need to 1. change that dataset obj and
+ * queries.singlecell.data.plots.[i].colorColumns. Need to:
+ * 1. change that dataset obj and
  * 2. use new obj in the config
  *
  ******* Hier clustering implenentation TODOs and questions:
@@ -94,13 +94,34 @@ export class PlotButtons {
 					this.plotBtnsDom.tip.clear().showunder(e.target)
 					plot.open(plot, this)
 				} else {
-					const config = plot.getPlotConfig()
+					const config = await plot.getPlotConfig()
 					await this.interactions.createSubplot(config)
 				}
 			})
 	}
 	getChartBtnOpts() {
 		return [
+			{
+				label: 'tSNE',
+				isVisible: () => this.scTermdbConfig?.data?.plots.find(p => p.name == 'TSNE'),
+				getPlotConfig: async () => {
+					return await this.getSingleCellConfig('TSNE')
+				}
+			},
+			{
+				label: 'UMAP',
+				isVisible: () => this.scTermdbConfig?.data?.plots.find(p => p.name == 'UMAP'),
+				getPlotConfig: async () => {
+					return await this.getSingleCellConfig('UMAP')
+				}
+			},
+			{
+				label: 'PCA',
+				isVisible: () => this.scTermdbConfig?.data?.plots.find(p => p.name == 'PCA'),
+				getPlotConfig: async () => {
+					return await this.getSingleCellConfig('PCA')
+				}
+			},
 			{
 				label: 'Gene expression',
 				isVisible: () => true,
@@ -122,11 +143,11 @@ export class PlotButtons {
 				label: 'Differential expression',
 				isVisible: () => this.scTermdbConfig.DEgenes,
 				open: this.termDropdownMenu,
-				getPlotConfig: async (value, term) => {
+				getPlotConfig: (value, term) => {
 					//TODO: refine this config
 					return {
 						chartType: 'differentialAnalysis',
-						termType: TermTypes.SINGLECELL_CELLTYPE,
+						termType: 'singleCellCellType',
 						term: {
 							name: term
 						},
@@ -184,7 +205,7 @@ export class PlotButtons {
 			.on('change', async function () {
 				self.plotBtnsDom.tip.hide()
 				const value = select.node()!.value
-				const config = await plot.getPlotConfig(value, _plot.colorBy)
+				const config = plot.getPlotConfig(value, _plot.colorBy)
 				await self.interactions.createSubplot(config)
 			})
 
@@ -203,7 +224,7 @@ export class PlotButtons {
 				$id: await digestMessage(`${gene}-${this.item.sample}-${this.item.experiment}`),
 				term: {
 					/** NOTE: There are no term handlers for the single cell types */
-					type: TermTypes.SINGLECELL_GENE_EXPRESSION,
+					type: 'singleCellGeneExpression',
 					id: gene,
 					gene,
 					name: gene,
@@ -218,7 +239,7 @@ export class PlotButtons {
 				$id: await digestMessage(`CHANGEME-${this.item.sample}-${this.item.experiment}`),
 				term: {
 					/** NOTE: There are no term handlers for the single cell types */
-					type: TermTypes.SINGLECELL_CELLTYPE,
+					type: 'singleCellCellType',
 					id: 'cluster', //CHANGE ME, singlecell.data.plots.[i].colorColumns
 					name: 'cluster', //CHANGE ME
 					sample: {
@@ -241,7 +262,7 @@ export class PlotButtons {
 			term: {
 				$id: await digestMessage(`${gene1}-${this.item.sample}-${this.item.experiment}`),
 				term: {
-					type: TermTypes.SINGLECELL_GENE_EXPRESSION,
+					type: 'singleCellGeneExpression',
 					gene: gene1,
 					id: gene1,
 					name: gene1,
@@ -255,7 +276,7 @@ export class PlotButtons {
 			term2: {
 				$id: await digestMessage(`${gene2}-${this.item.sample}-${this.item.experiment}`),
 				term: {
-					type: TermTypes.SINGLECELL_GENE_EXPRESSION,
+					type: 'singleCellGeneExpression',
 					gene: gene2,
 					id: gene2,
 					name: gene2,
@@ -276,7 +297,7 @@ export class PlotButtons {
 				term: {
 					gene: g.gene,
 					name: `${g.gene} ${this.settings.hierCluster.unit}`,
-					type: TermTypes.SINGLECELL_GENE_EXPRESSION,
+					type: 'singleCellGeneExpression',
 					sample: this.item
 				},
 				q: {}
@@ -286,8 +307,42 @@ export class PlotButtons {
 		return {
 			chartType: 'hierCluster',
 			termgroups: [{ lst: tws, type: 'hierCluster' }],
-			dataType: TermTypes.GENE_EXPRESSION,
+			dataType: 'geneExpression',
 			settings: { hierCluster: this.settings.hierCluster }
+		}
+	}
+
+	async getSingleCellConfig(plotType) {
+		if (!this.item) throw new Error('No item selected')
+		const plot = this.scTermdbConfig.data.plots.find(p => p.name == plotType)
+		if (!plot) throw `No ${plotType} plot found in data.plots [PlotButtons.ts getSingleCellConfig()]`
+
+		return {
+			chartType: 'sampleScatter',
+			term: {
+				$id: await digestMessage(`${plot.name}-${this.item.sample}-${this.item.experiment}`),
+				term: {
+					type: 'singleCellCellType',
+					name: plot.name, //CHANGEME, this isn't correct
+					sample: {
+						sID: this.item.sample,
+						eID: this.item.experiment
+					},
+					plot: plotType
+				}
+			},
+			term2: {
+				$id: await digestMessage(`${plot.colorBy}-${this.item.sample}-${this.item.experiment}`),
+				term: {
+					type: 'singleCellCellType',
+					name: plot.colorBy, //CHANGEME, this isn't correct
+					sample: {
+						sID: this.item.sample,
+						eID: this.item.experiment
+					},
+					plot: plotType
+				}
+			}
 		}
 	}
 }
