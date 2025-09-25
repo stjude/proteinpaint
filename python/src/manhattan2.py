@@ -138,11 +138,10 @@ def plot_manhattan(
         canvas.create_rectangle(x0, 0, x1, plot_height, fill=fill, outline="")
 
     # draw points
-    r = int(png_dot_radius)
     for x_raw, y_val, color in zip(plot_data['x'], plot_data['y'], plot_data['colors']):
         cx = x_to_px(x_raw)
         cy = y_to_px(y_val)
-        canvas.create_oval(cx - r, cy - r, cx + r, cy + r, fill=color, outline="")
+        canvas.create_oval(cx - png_dot_radius, cy - png_dot_radius, cx + png_dot_radius, cy + png_dot_radius, fill=color, outline="")
 
     # Force rendering
     root.update_idletasks()
@@ -163,6 +162,7 @@ def plot_manhattan(
     img_bands = Image.new('RGB', (hi_w, hi_h), 'white')
     drw_bands = ImageDraw.Draw(img_bands, 'RGBA')
 
+    # scaled coordinate function
     def S(v: float) -> int:
         return int(round(v * render_scale))
 
@@ -183,8 +183,7 @@ def plot_manhattan(
     drw_pts = ImageDraw.Draw(img_pts, 'RGBA')
 
     # 3) radius overshoot before downscale so final dots don't look shrunken
-    base_r = float(png_dot_radius)
-    R = max(1, int(round(base_r * render_scale + 0.10)))  # +0.10 overshoot is subtle and safe
+    R = max(1, int(round(png_dot_radius * render_scale + 0.12)))  # +0.12 overshoot is subtle and safe
 
     for x_raw, y_val, color in zip(plot_data['x'], plot_data['y'], plot_data['colors']):
         cx = S(x_to_px(x_raw))
@@ -215,14 +214,11 @@ def plot_manhattan(
 
 
 
-    if not preview:
-        try:
-            root.destroy()
-        except Exception:
-            pass
-    else:
-        root.title("Manhattan Plot (Tkinter)")
-        root.mainloop()
+    try:
+        root.destroy()
+    except Exception:
+        pass
+
 
     interactive_data = {
         'points': point_details,
@@ -239,7 +235,6 @@ def plot_manhattan(
         'png_width': plot_width,
         'png_height': plot_height,
         'device_pixel_ratio': device_pixel_ratio,
-        'dpi': None,
         'png_dot_radius': png_dot_radius,
         'interactive_padding': {
             'left_px': float(left_pad_px),
@@ -249,7 +244,7 @@ def plot_manhattan(
         },
         'x_domain': [0.0, float(total_genome_length)],
         'y_domain': [0.0, float(y_max)],
-        # NEW: exact pixel transform for overlays
+        # Exact pixel transform for overlays
         'transform': {
             'x_offset': float(left_pad_px),
             'x_scale': float(x_scale),

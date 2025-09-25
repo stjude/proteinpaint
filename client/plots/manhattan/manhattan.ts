@@ -123,18 +123,31 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		.domain(x_domain) // [0, total_genome_length]
 		.range([left, plot_width - right]) // padded pixel range
 
-	const t = data.plotData.transform // { x_offset, x_scale, y_offset, y_scale, round_to_pixel }
+	// Transformation object passed in from Python side (manhattan2.py).
+	// It describes how to convert raw genomic (x) or value (y) data
+	// into actual pixel coordinates on the rendered plot.
+	//
+	// t = {
+	//   x_offset: number,       // left pixel margin (padding in pixels)
+	//   x_scale: number,        // scale factor: raw x → pixels per unit
+	//   y_offset: number,       // bottom pixel position of plot area
+	//   y_scale: number,        // scale factor: raw y → pixels per unit
+	//   round_to_pixel: boolean // whether to snap to integer pixels (for crisp rendering)
+	// }
+	const t = data.plotData.transform
+	// Convert raw genomic x-coordinate into a pixel x-coordinate
 	function xPx(xRaw: number) {
 		const v = t.x_offset + xRaw * t.x_scale
 		return t.round_to_pixel ? Math.round(v) : v
 	}
+	// Convert raw y-value (e.g. -log10(p)) into a pixel y-coordinate
 	function yPx(yVal: number) {
 		const v = t.y_offset - yVal * t.y_scale
 		return t.round_to_pixel ? Math.round(v) : v
 	}
 
 	const pngR = data.plotData.png_dot_radius
-	const strokeW = settings.interactiveDotStrokeWidth ?? 1
+	const strokeW = settings.interactiveDotStrokeWidth
 	// stroke sits half in/half out, so shrink radius to keep outer diameter equal to PNG dot
 	const ringR = Math.max(1, pngR - strokeW * 0.5)
 
@@ -149,8 +162,8 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 			.data(data.plotData.points)
 			.enter()
 			.append('circle')
-			.attr('cx', d => xPx(d.x)) // Use xScale to convert pre-calculated genomic coordinates because of our chromosome scaling on the x-axis
-			.attr('cy', d => yPx(d.y)) // Use pre-calculated coordinates for y and yScale for proper scaling from the scale we made earlier
+			.attr('cx', d => xPx(d.x))
+			.attr('cy', d => yPx(d.y))
 			.attr('r', ringR)
 			.attr('fill-opacity', 0)
 			.attr('stroke', 'black')
