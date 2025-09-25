@@ -410,8 +410,7 @@ try:
 			plot_width=plot_width,
 			plot_height=plot_height,
 			device_pixel_ratio=device_pixel_ratio,
-			png_dot_radius=png_dot_radius,
-			preview=False
+			png_dot_radius=png_dot_radius
 		)
 		# Encode PNG bytes to Base64
 		base64_string = base64.b64encode(png_bytes).decode('utf-8')

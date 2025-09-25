@@ -13,8 +13,7 @@ def plot_manhattan(
     plot_width: int = 1000,
     plot_height: int = 400,
     device_pixel_ratio: float = 2.0,
-    png_dot_radius: int = 2,
-    preview: bool = False
+    png_dot_radius: int = 2
 ) -> Tuple[bytes, dict]:
     """
     Draw a Manhattan plot with Tkinter (Canvas) and export a PNG with Pillow.
@@ -120,8 +119,7 @@ def plot_manhattan(
 
     # --- Tkinter drawing ---
     root = tk.Tk()
-    if not preview:
-        root.withdraw()
+    root.withdraw()
     canvas = tk.Canvas(root, width=plot_width, height=plot_height, bg="white", highlightthickness=0)
     canvas.pack()
 
