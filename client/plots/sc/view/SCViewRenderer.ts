@@ -49,8 +49,8 @@ export class SCViewRenderer {
 		})
 	}
 
-	update(settings) {
-		this.plotBtns.update(settings)
+	update(settings, data) {
+		this.plotBtns.update(settings, data)
 	}
 
 	removeSegments() {

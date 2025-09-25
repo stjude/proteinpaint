@@ -17,13 +17,16 @@ export class VolcanoModel {
 	/** May use mapper instead as more termTypes are added */
 	async getData() {
 		if (this.termType === 'geneExpression') {
-			const body = await this.getRequestBody()
+			const body = await this.getGERequestBody()
 			const data = await dofetch3('DEanalysis', { body })
 			return data
 		}
+		if (this.termType === 'singleCellCellType') {
+			//TODO: will add method for sc cell type
+		}
 	}
 
-	async getRequestBody() {
+	async getGERequestBody() {
 		await this.getOtherSamples(this.config.samplelst)
 		const state = this.app.getState()
 		const body = {

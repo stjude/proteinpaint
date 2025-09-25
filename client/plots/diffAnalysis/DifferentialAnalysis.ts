@@ -7,7 +7,7 @@ import { Menu } from '#dom'
 import { termType2label } from '#shared/terms.js'
 import type { DiffAnalysisDom, DiffAnalysisOpts, DiffAnalysisPlotConfig } from './DiffAnalysisTypes'
 import { DiffAnalysisView } from './view/DiffAnalysisView'
-import { getDefaultVolcanoSettings, validateVolcanoSettings } from '../volcano/Volcano.ts'
+import { getDefaultVolcanoSettings, validateVolcanoSettings } from '../volcano/defaults.ts'
 import { getDefaultGseaSettings } from '#plots/gsea.js'
 
 /** TODO:
@@ -20,6 +20,7 @@ class DifferentialAnalysis extends PlotBase implements RxComponent {
 		plots: { [key: string]: any }
 	}
 	dom: DiffAnalysisDom
+	parentId?: string
 	plotTabs?: DiffAnalysisView
 	plotsDiv: { [key: string]: Div }
 	plotsControlsDiv: { [key: string]: Div }
@@ -49,6 +50,8 @@ class DifferentialAnalysis extends PlotBase implements RxComponent {
 		}
 		this.plotsControlsDiv = {}
 		this.plotsDiv = {}
+
+		if (opts.parentId) this.parentId = opts.parentId
 
 		if (opts.header) {
 			this.dom.header = {
@@ -131,7 +134,7 @@ export const DiffAnalysisInit = getCompInit(DifferentialAnalysis)
 export const componentInit = DiffAnalysisInit
 
 //Use this as a sanity check.
-const enabledTermTypes = ['geneExpression']
+const enabledTermTypes = ['geneExpression', 'singleCellCellType']
 
 export function getPlotConfig(opts: DiffAnalysisOpts) {
 	if (!opts.termType) throw '.termType is required [DifferentialAnalysis getPlotConfig()]'
@@ -150,9 +153,12 @@ export function getPlotConfig(opts: DiffAnalysisOpts) {
 	if (opts.termType == 'geneExpression') {
 		config.settings.volcano = getDefaultVolcanoSettings(opts.overrides || {}, opts)
 		config.settings.gsea = getDefaultGseaSettings(opts.overrides || {})
-
-		validateVolcanoSettings(config, opts)
 	}
+	if (opts.termType == 'singleCellCellType') {
+		//TODO: Add DA settings for sc cell type
+	}
+
+	validateVolcanoSettings(config, opts)
 
 	return copyMerge(config, opts)
 }

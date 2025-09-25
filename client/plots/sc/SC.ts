@@ -10,6 +10,7 @@ import { SCViewRenderer } from './view/SCViewRenderer'
 import { getDefaultSCAppSettings } from './defaults'
 import { importPlot } from '#plots/importPlot.js'
 import { newSandboxDiv } from '#dom'
+import formatPlotData from './viewModel/plotData.ts'
 
 /** Overall app TODOs:
  *  - Plot buttons
@@ -26,6 +27,7 @@ class SCViewer extends PlotBase implements RxComponent {
 	interactions?: SCInteractions
 	items?: SingleCellSample[]
 	itemColumns?: SampleColumn[]
+	model?: SCModel
 	segments: Segments
 	view?: SCViewRenderer
 	viewModel?: SCViewModel
@@ -74,22 +76,22 @@ class SCViewer extends PlotBase implements RxComponent {
 		/** ds defines defaults in termdbConfig.queries.singleCell
 		 * see Dataset type when resuming development */
 		const dsScSamples = state.termdbConfig.queries?.singleCell?.samples
-		const model = new SCModel(this.app)
+		this.model = new SCModel(this.app, this.id)
 		try {
 			/** Fetches the single cell sample data for the table */
-			const response = await model.getSampleData()
+			const response = await this.model.getSampleData()
 			if (response.error || !response.samples || !response.samples.length) {
 				this.app.printError('No samples found for this dataset')
 				return
 			}
 			this.items = response.samples
-			this.itemColumns = await model.getColumnLabels(dsScSamples)
+			this.itemColumns = await this.model.getColumnLabels(dsScSamples)
 		} catch (e: any) {
 			if (e instanceof Error) console.error(`${e.message || e} [SC init()]`)
 			else if (e.stack) console.log(e.stack)
 			throw `${e.message || e} [SC init()]`
 		}
-		this.interactions = new SCInteractions(this.app, this.dom, this.id)
+		this.interactions = new SCInteractions(this.app, this.dom, this.id, () => this.getState(this.app.getState()))
 		//Init view model and view
 		this.viewModel = new SCViewModel(this.app, state.config, this.items!, this.itemColumns)
 		this.view = new SCViewRenderer(this.dom, this.interactions, this.segments)
@@ -155,17 +157,31 @@ class SCViewer extends PlotBase implements RxComponent {
 	async main() {
 		const state = this.getState(this.app.getState()) as SCFormattedState
 		const config = state.config
-		if (config.chartType != this.type) return
 
-		if (!this.interactions) throw `Interactions not initialized [SC main()]`
+		if (!this.model) throw `Model not initialized [SC main()]`
+		if (!this.viewModel) throw `ViewModel not initialized [SC main()]`
 		if (!this.view) throw `View not initialized [SC main()]`
+		if (!this.interactions) throw `Interactions not initialized [SC main()]`
 
 		// const errors = {} collect plot init errors
 		for (const subplot of state.subplots) {
 			if (!this.segments[subplot.scItem.sample]) this.initSegment(subplot.scItem)
 			if (!this.components.plots[subplot.id]) await this.initSubplotComponent(subplot)
 		}
-		this.view.update(config.settings)
+
+		let data: any = null
+		if (config.settings.sc.item) {
+			try {
+				data = await this.model.getData()
+			} catch (e: any) {
+				if (e instanceof Error) console.error(`${e.message || e} [SC main()]`)
+				else if (e.stack) console.log(e.stack)
+				throw `${e.message || e} [SC main()]`
+			}
+			data.plots = formatPlotData(data.plots)
+		}
+
+		this.view.update(config.settings, data)
 	}
 }
 

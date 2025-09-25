@@ -9,7 +9,7 @@ import type {
 import type { DEResponse } from '#types'
 import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { getSampleNum } from '../Volcano'
+import { getSampleNum } from '../defaults'
 
 export class VolcanoViewModel {
 	config: VolcanoPlotConfig
