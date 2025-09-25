@@ -18,7 +18,7 @@ import type OLMap from 'ol/Map'
 import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
 import type { ViewModel } from '#plots/wsiviewer/viewModel/ViewModel.ts'
 
-export class WSIViewer extends PlotBase implements RxComponent {
+class WSIViewer extends PlotBase implements RxComponent {
 	static type = 'WSIViewer'
 	// following attributes are required by rx
 	type: string
@@ -31,7 +31,6 @@ export class WSIViewer extends PlotBase implements RxComponent {
 	private thumbnailRenderer = new ThumbnailRenderer()
 	private metadataRenderer = new MetadataRenderer()
 	private legendRenderer = new LegendRenderer()
-	private modelTrainerRenderer = new ModelTrainerRenderer()
 	private map: OLMap | undefined = undefined
 
 	constructor(opts: any, api) {
@@ -123,6 +122,8 @@ export class WSIViewer extends PlotBase implements RxComponent {
 		this.metadataRenderer.renderMetadata(holder, imageViewData)
 
 		if (settings.renderAnnotationTable && this.map) {
+			const modelTrainerRenderer = new ModelTrainerRenderer(this.wsiViewerInteractions)
+
 			const wsiAnnotationsRenderer = new WSIAnnotationsRenderer(buffers, this.wsiViewerInteractions)
 			wsiAnnotationsRenderer.render(holder, imageViewData, activeImageExtent!, this.map)
 			holder.select('#sjpp-legend-wrapper').remove()
@@ -131,7 +132,7 @@ export class WSIViewer extends PlotBase implements RxComponent {
 				.attr('id', 'sjpp-legend-wrapper')
 				.style('display', 'inline-block')
 				.style('vertical-align', 'top')
-			this.modelTrainerRenderer.render(wrapper, aiProjectID, genome, dslabel)
+			modelTrainerRenderer.render(wrapper, aiProjectID, genome, dslabel)
 			this.legendRenderer.render(wrapper, imageViewData)
 
 			const initialZoomInCoordinate = viewModel.getInitialZoomInCoordinate(settings.displayedImageIndex)
@@ -157,6 +158,8 @@ export class WSIViewer extends PlotBase implements RxComponent {
 		}
 	}
 }
+
+export default WSIViewer
 
 export const wsiViewer = getCompInit(WSIViewer)
 
