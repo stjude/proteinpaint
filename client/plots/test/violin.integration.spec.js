@@ -1493,3 +1493,85 @@ tape('test change in plot length and thickness for custom group variable', funct
 		)
 	}
 })
+
+tape('term1=singleCellExpression, term2=singleCellCellType', function (test) {
+	test.timeoutAfter(5000)
+	runpp({
+		state: {
+			nav: {
+				activeTab: 1
+			},
+			plots: [
+				{
+					chartType: 'summary',
+					term: {
+						term: {
+							type: 'singleCellGeneExpression',
+							id: 'KRAS',
+							gene: 'KRAS',
+							name: 'KRAS',
+							sample: {
+								sID: '1_patient'
+							}
+						},
+						q: {
+							mode: 'continuous'
+						}
+					},
+					term2: {
+						term: {
+							type: 'singleCellCellType',
+							id: 'CellType',
+							name: 'CellType',
+							sample: {
+								sID: '1_patient'
+							},
+							plot: 'scRNA',
+							colorBy: 'CellType',
+							values: {
+								T_NK: {
+									key: 'T_NK',
+									value: 'T_NK'
+								},
+								Blast: {
+									key: 'Blast',
+									value: 'Blast'
+								},
+								Monocyte: {
+									key: 'Monocyte',
+									value: 'Monocyte'
+								}
+							},
+							groupsetting: {
+								disabled: false
+							}
+						}
+					}
+				}
+			],
+			vocab: {
+				genome: 'hg38-test',
+				dslabel: 'TermdbTest'
+			}
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(violin) {
+		violin.on('postRender.test', null)
+		const violinDiv = violin.Inner.dom.violinDiv
+
+		const numViolinPaths = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path' })
+		test.equal(
+			numViolinPaths.length / 2,
+			violin.Inner.data.charts[''].plots.length,
+			'Should render the correct number of plots per cell type for a gene expression term'
+		)
+
+		//if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+})
