@@ -1,6 +1,6 @@
 import type { ControlInputEntry } from '#mass/types/mass'
 import type { VolcanoPlotConfig } from './VolcanoTypes'
-import { getSampleNum } from './Volcano'
+import { getSampleNum } from './defaults'
 
 /** Handles settings the controls in the menu based on the app
  * termType.
@@ -136,7 +136,7 @@ export class VolcanoControlInputs {
 				label: 'CPM cutoff',
 				type: 'number',
 				chartType: 'volcano',
-				settingsKey: 'cpm_cutoff',
+				settingsKey: 'cpmCutoff',
 				title: 'The minimum normalized expression threshold to retain only genes with sufficient expression',
 				min: 0
 			},

@@ -4,8 +4,8 @@ import { PlotBase } from '../PlotBase'
 import { fillTermWrapper } from '#termsetting'
 import { Menu, sayerror } from '#dom'
 import { controlsInit } from '../controls'
-import { roundValue } from '#shared/roundValue.js'
-import type { VolcanoOpts, VolcanoSettings, VolcanoDom } from './VolcanoTypes'
+import { getDefaultVolcanoSettings, validateVolcanoSettings } from './defaults'
+import type { VolcanoOpts, VolcanoDom } from './VolcanoTypes'
 import { VolcanoModel } from './model/VolcanoModel'
 import { VolcanoViewModel } from './viewModel/VolcanoViewModel'
 import { VolcanoInteractions } from './interactions/VolcanoInteractions'
@@ -13,19 +13,18 @@ import { VolcanoPlotView } from './view/VolcanoPlotView'
 import { VolcanoControlInputs } from './VolcanoControlInputs'
 import { getCombinedTermFilter } from '#filter'
 
-// The max sample cutoff for volcano rendering
-const maxSampleCutoff = 4000
-
 class Volcano extends PlotBase implements RxComponent {
 	static type = 'volcano'
-	readonly type = 'volcano'
+	type: string
 	components: { controls: any }
 	dom: VolcanoDom
 	interactions?: VolcanoInteractions
 	termType: string
+
 	constructor(opts: VolcanoOpts, api) {
 		super(opts, api)
 		if (this.opts.parentId) this.parentId = this.opts.parentId
+		this.type = 'volcano'
 		this.components = {
 			controls: {}
 		}
@@ -151,55 +150,6 @@ class Volcano extends PlotBase implements RxComponent {
 
 export const volcanoInit = getCompInit(Volcano)
 export const componentInit = volcanoInit
-
-export function getDefaultVolcanoSettings(overrides = {}, opts: any): VolcanoSettings {
-	const features = JSON.parse(sessionStorage.getItem('optionalFeatures') as string)
-	const method = features?.runDE_methods?.includes('Wilcoxon') ? 'wilcoxon' : 'edgeR'
-	const defaults: VolcanoSettings = {
-		defaultSignColor: 'red',
-		defaultNonSignColor: 'black',
-		defaultHighlightColor: '#ffa200', // orange-yellow
-		foldChangeCutoff: 0,
-		/** Not enabling this feature for now */
-		// geneORA: undefined,
-		height: 400,
-		method,
-		minCount: 10,
-		minTotalCount: 15,
-		cpm_cutoff: 1,
-		pValue: roundValue(-Math.log10(0.05), 2),
-		pValueType: 'adjusted',
-		rankBy: 'abs(foldChange)',
-		//Only declare this value in one place
-		sampleNumCutoff: opts.termType == 'geneExpression' ? 3000 : maxSampleCutoff,
-		width: 400
-	}
-
-	return Object.assign(defaults, overrides)
-}
-
-export function getSampleNum(config: any) {
-	return config.samplelst.groups.reduce((sum: number, g: any) => sum + g.values.length, 0)
-}
-
-export function validateVolcanoSettings(config: any, opts: any) {
-	if (!config.settings.volcano) return
-	const settings = config.settings.volcano
-	const sampleNum = getSampleNum(opts)
-	if (sampleNum > maxSampleCutoff) {
-		throw `Sample size ${sampleNum} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
-	}
-
-	if (config.termType == 'geneExpression') {
-		const largeNum = sampleNum > settings.sampleNumCutoff
-
-		if (!opts.overrides && largeNum) {
-			settings.method = 'wilcoxon'
-		} else if (largeNum && settings.method != 'wilcoxon') {
-			throw `${settings.method} is not supported for ${sampleNum} samples when termtype = ${config.termType}. Please use Wilcoxon.`
-		}
-	}
-}
 
 export async function getPlotConfig(opts: VolcanoOpts, app: MassAppApi) {
 	if (!opts.termType) throw '.termType is required [Volcano getPlotConfig()]'

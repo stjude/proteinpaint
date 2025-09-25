@@ -38,8 +38,10 @@ export class PlotButtons {
 		btnsDiv: Div
 		tip: Menu
 	}
+	data?: any
 	item?: { [key: string]: any }
 	interactions: SCInteractions
+	scTermdbConfig: any
 	settings?: any
 
 	constructor(interactions: SCInteractions, holder: Div) {
@@ -52,15 +54,18 @@ export class PlotButtons {
 			tip: new Menu({ padding: '' })
 		}
 		this.interactions = interactions
+		const state = this.interactions.getState as any
+		this.scTermdbConfig = state.termdbConfig.queries.singleCell
 	}
 
-	update(settings) {
+	update(settings, data) {
 		/** If the user has not selected a item yet but clicks
 		 * the select item/plots btn above the table, the prompt appears
 		 * unnecessarily */
 		const item = settings.sc.item
 		this.plotBtnsDom.promptDiv.style('display', !item ? 'none' : 'block')
 		if (!item) return
+		if (data != null && data.plots) this.data = data
 		this.settings = settings
 		this.item = item
 		const name = item.sample // add ds specific keys/logic here
@@ -88,29 +93,18 @@ export class PlotButtons {
 				if (plot.open) {
 					this.plotBtnsDom.tip.clear().showunder(e.target)
 					plot.open(plot, this)
+				} else {
+					const config = plot.getPlotConfig()
+					await this.interactions.createSubplot(config)
 				}
-				// else {
-				// 	// const config = plot.getPlotConfig()
-				// 	// await this.interactions.createSubplot(config)
-				// }
 			})
 	}
 	getChartBtnOpts() {
 		return [
-			// {
-			// 	label: 'UMAP',
-			// 	// id: 'umap',
-			// 	isVisible: () => true,
-			// 	getPlotConfig: async () => {
-			// 		return {
-
-			// 		}
-			// 	}
-			// },
 			{
 				label: 'Gene expression',
-				// id: 'geneExpression',
 				isVisible: () => true,
+				open: this.geneSearchMenu,
 				getPlotConfig: async geneLst => {
 					/** If 1 gene is selected, show violin
 					 * If 2 genes are selected, show scatter
@@ -122,11 +116,31 @@ export class PlotButtons {
 					if (geneLst.length == 1) return await this.getViolinConfig(geneLst[0].gene)
 					else if (geneLst.length == 2) return await this.getScatterConfig(geneLst)
 					else return this.getClusteringConfig(geneLst)
-				},
-				open: this.geneSearchMenu
+				}
+			},
+			{
+				label: 'Differential expression',
+				isVisible: () => this.scTermdbConfig.DEgenes,
+				open: this.termDropdownMenu,
+				getPlotConfig: async (value, term) => {
+					//TODO: refine this config
+					return {
+						chartType: 'differentialAnalysis',
+						termType: TermTypes.SINGLECELL_CELLTYPE,
+						term: {
+							name: term
+						},
+						category: value
+					}
+				}
 			}
 			//More plot buttons here: single cell, etc.
-		]
+		] as {
+			label: string
+			isVisible: () => boolean
+			open?: (plot: any, self: PlotButtons) => void
+			getPlotConfig: (f?: any) => any
+		}[]
 	}
 
 	//********** Btn Menus **********/
@@ -143,6 +157,41 @@ export class PlotButtons {
 				await self.interactions.createSubplot(config)
 			}
 		})
+	}
+
+	/** CHANGEME: This elem is a placeholder for now
+	 * Ideally this will call the tree with singleCellCellTerms.
+	 * That term type is not implemented yet. Once it is,
+	 * refactor this workflow to use the tree. */
+	termDropdownMenu(plot: any, self: PlotButtons) {
+		//CHANGEME: This ds obj needs to be defined as a term, not column name
+		self.plotBtnsDom.tip.clear()
+		const _plot = self.data.plots[0]
+
+		const wrapper = self.plotBtnsDom.tip.d.append('div').style('padding', '10px')
+
+		wrapper
+			.append('div')
+			.style('display', 'block')
+			.style('width', '300px')
+			.text(`View differentially expressed genes of a ${_plot.colorBy.toLowerCase()} versus rest of the cells:`)
+
+		const select = wrapper
+			.append('select')
+			.style('margin', '10px 0')
+			.style('width', 'auto')
+			.style('padding', '5px')
+			.on('change', async function () {
+				self.plotBtnsDom.tip.hide()
+				const value = select.node()!.value
+				const config = await plot.getPlotConfig(value, _plot.colorBy)
+				await self.interactions.createSubplot(config)
+			})
+
+		const regex = new RegExp(_plot.colorBy, 'g')
+		for (const cluster of _plot.clusters) {
+			select.append('option').attr('value', cluster.replace(regex, '')).text(cluster)
+		}
 	}
 
 	//********** Plot Config Helpers **********/
@@ -226,7 +275,7 @@ export class PlotButtons {
 			return {
 				term: {
 					gene: g.gene,
-					name: `${g.gene} ${this.settings.hierClusterUnit}`,
+					name: `${g.gene} ${this.settings.hierCluster.unit}`,
 					type: TermTypes.SINGLECELL_GENE_EXPRESSION,
 					sample: this.item
 				},
