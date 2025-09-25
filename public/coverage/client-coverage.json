@@ -3926,37 +3926,37 @@
   "dom/violinRenderer.js": {
     "lines": {
       "total": 32,
-      "covered": 2,
+      "covered": 26,
       "skipped": 0,
-      "pct": 6.25
+      "pct": 81.25
     },
     "functions": {
       "total": 6,
-      "covered": 0,
+      "covered": 5,
       "skipped": 0,
-      "pct": 0
+      "pct": 83.33
     },
     "statements": {
       "total": 34,
-      "covered": 2,
+      "covered": 26,
       "skipped": 0,
-      "pct": 5.88
+      "pct": 76.47
     },
     "branches": {
-      "total": 20,
-      "covered": 0,
+      "total": 18,
+      "covered": 12,
       "skipped": 0,
-      "pct": 0
+      "pct": 66.66
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 66.66,
       "prev": 0,
-      "diff": 0
+      "diff": 66.66
     },
     "averagePct": {
-      "curr": 3.0324999999999998,
-      "prev": 0,
-      "diff": 3.0324999999999998
+      "curr": 76.9275,
+      "prev": 3.0324999999999998,
+      "diff": 73.895
     }
   },
   "dom/types/table.ts": {
