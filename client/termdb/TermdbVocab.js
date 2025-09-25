@@ -439,47 +439,7 @@ export class TermdbVocab extends Vocab {
 		return data.count
 	}
 
-	/*
-    Inputs:
-
-    arg{}
-        .tw main term to create violin/boxplot with
-        .overlayTw={}
-            optional termwrapper of 2nd term
-            if given, will result in multiple plots, and pvalue computed for each pair of plots
-            if missing, will result in one plot
-		.divideTw={}
-			optional termwrapper of term0
-			if given, will result in multiple charts, each of which contains one or more violin plots
-        .filter={}
-            optional
-        .svgw=int
-            required
-        .axisHeight=80
-        .rightMargin=50
-
-    additionalArgs{}
-        optional bag of key:value pairs
-	
-    Output: {}
-        min:num
-        max:num
-        pvalues[] array of pvalues, empty if just one plot
-        plots[ {} ]
-            plotValueCount:int
-                total number of samples plotted
-            median:num
-            label:str
-            biggestBin: int
-                as the thickest point of the violin plot
-            bins[]
-                x0: number
-                x1: number
-                density: int
-    */
 	async getViolinPlotData(arg, _body = {}) {
-		// the violin plot may still render when not in session,
-		// but not have an option to list samples
 		const headers = this.mayGetAuthHeaders('termdb')
 		arg.tw = this.getTwMinCopy(arg.tw)
 		if (arg.overlayTw) arg.overlayTw = this.getTwMinCopy(arg.overlayTw)
@@ -488,6 +448,8 @@ export class TermdbVocab extends Vocab {
 			{
 				genome: this.vocab.genome,
 				dslabel: this.vocab.dslabel,
+				filter: this.state.termfilter.filter,
+				filter0: this.state.termfilter.filter0,
 				embedder: window.location.hostname,
 				devicePixelRatio: window.devicePixelRatio,
 				isKDE: 'isKDE' in arg ? arg.isKDE : true,
@@ -502,10 +464,7 @@ export class TermdbVocab extends Vocab {
 			_body
 		)
 		if (body.filter) body.filter = getNormalRoot(body.filter)
-		// no need to do the same for filter0
-		const d = await dofetch3('termdb/violin', { headers, body })
-
-		return d
+		return await dofetch3('termdb/violin', { headers, body })
 	}
 
 	async getBoxPlotData(arg, _body = {}) {

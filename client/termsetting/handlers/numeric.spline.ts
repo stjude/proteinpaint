@@ -57,8 +57,6 @@ export function getHandler(self) {
 				const d = await self.vocabApi.getViolinPlotData(
 					{
 						tw: { term: self.term, q: self.q },
-						filter: self.filter,
-						filter0: self.vocabApi.state?.termfilter?.filter0, // this is in sync with mass. do not use the one from vocabApi.opts which is initial state and is out of sync with changes
 						svgw: self.num_obj.plot_size.width
 					},
 					self.opts.getBodyParams?.()
