@@ -6,6 +6,7 @@ import { gbControlsInit, mayUpdateGroupTestMethodsIdx } from '../genomeBrowser.c
 import { Model } from './model/Model.ts'
 import { ViewModel } from './viewModel/ViewModel.ts'
 import { View } from './view/View.ts'
+import { Interactions } from './interactions/Interactions.ts'
 
 const geneTip = new Menu({ padding: '0px' })
 
@@ -21,6 +22,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 	components: {
 		[name: string]: ComponentApi | { [name: string]: ComponentApi }
 	} = {}
+	interactions: any
 
 	constructor(opts, api) {
 		super(opts, api)
@@ -59,6 +61,8 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 				holder: this.dom.controlsDiv
 			})
 		}
+
+		this.interactions = new Interactions(this.app, this.dom, this.id)
 	}
 
 	getState(appState) {
@@ -66,7 +70,8 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		if (!config) throw `No plot with id='${this.id}' found`
 		return {
 			config,
-			filter: getNormalRoot(appState.termfilter.filter)
+			filter: getNormalRoot(appState.termfilter.filter),
+			vocab: appState.vocab
 		}
 	}
 
@@ -77,15 +82,27 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		try {
 			const model = new Model(state, this.app)
 			const data = await model.preComputeData()
-			const viewModel = new ViewModel(state, this.app, this.opts, data)
+			const opts = this.getOpts()
+			const viewModel = new ViewModel(state, opts, data)
 			const tklst = await viewModel.generateTracks()
-			const view = new View(state, this.app, this.dom, this.opts, this.id)
+			const view = new View(state, this.dom, opts, this.interactions)
 			await view.launchBlockWithTracks(tklst)
 		} catch (e: any) {
 			sayerror(this.dom.errDiv, e.message || e)
 			if (e.stack) console.log(e.stack)
 		}
 		this.dom.loadingDiv.style('display', 'none')
+	}
+
+	// get options for view model and view
+	getOpts() {
+		const opts = {
+			genome: this.app.opts.genome,
+			debug: this.app.opts.debug,
+			plotDiv: this.opts.plotDiv,
+			header: this.opts.header
+		}
+		return opts
 	}
 }
 
