@@ -38,9 +38,6 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'sc':
 			return await import('./sc/SC.ts')
 
-		case 'singleCell':
-			return await import('./singleCell/SingleCell.ts')
-
 		case 'summarizeCnvGeneexp':
 			return await import(`./summarizeCnvGeneexp.ts`)
 
