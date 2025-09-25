@@ -43,8 +43,7 @@ from io import BytesIO
 from grin2_core import order_index_gene_data, order_index_lsn_data, prep_gene_lsn_data, find_gene_lsn_overlaps, count_hits, row_bern_conv
 from grin2_core import row_prob_subj_hit, p_order, process_block_in_chunks, prob_hits, grin_stats, write_grin_xlsx
 from typing import Dict, Optional
-# from manhattan import plot_manhattan
-from manhattan2 import plot_manhattan
+from manhattan import plot_manhattan
 
 # Suppress all warnings 
 warnings.filterwarnings('ignore')
