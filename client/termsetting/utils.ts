@@ -1,4 +1,4 @@
-import type { CategoricalQ, Q, RawValuesQ, RawGvQ, TermWrapper, TwLst, NumericQ, SnpsQ, Term } from '#types'
+import type { QualQ, Q, RawValuesQ, RawGvQ, TermWrapper, TwLst, NumericQ, SnpsQ, Term } from '#types'
 import type { VocabApi } from './types'
 import { TwRouter, routedTermTypes } from '#tw/TwRouter'
 
@@ -65,7 +65,7 @@ defaultQByTsHandler{}
 */
 
 type DefaultQByTsHandler = {
-	categorical?: CategoricalQ
+	categorical?: QualQ
 	numeric?: NumericQ
 	snplst?: SnpsQ
 }

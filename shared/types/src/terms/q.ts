@@ -1,4 +1,4 @@
-import type { CategoricalBaseQ } from './categorical.js'
+//import type { CategoricalQ } from './q.ts'
 import type { Filter } from '../filter.js'
 
 // MinBaseQ is BaseQ without .mode and .type
@@ -16,6 +16,10 @@ export type MinBaseQ = {
 	isAtomic?: true
 	name?: string
 	reuseId?: string
+}
+
+export type CategoricalBaseQ = MinBaseQ & {
+	mode?: 'discrete' | 'binary'
 }
 
 export type RawValuesQ = MinBaseQ & { type?: 'values'; mode?: 'binary' }

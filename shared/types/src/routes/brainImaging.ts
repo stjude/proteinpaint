@@ -1,4 +1,4 @@
-import type { CategoricalTW } from '../terms/categorical.ts'
+import type { QualTW } from '../terms/qualitative.ts'
 import type { RoutePayload } from './routeApi.ts'
 
 export type BrainImagingRequest = {
@@ -15,9 +15,9 @@ export type BrainImagingRequest = {
 	/** the sample names selected by the users to plot on brain template */
 	selectedSampleFileNames: string[]
 	/* the term to divide the samples into groups */
-	divideByTW?: CategoricalTW
+	divideByTW?: QualTW
 	/* the term to color the samples based on their category */
-	overlayTW?: CategoricalTW
+	overlayTW?: QualTW
 	/* the term categories that were filtered out */
 	legendFilter?: string[]
 }

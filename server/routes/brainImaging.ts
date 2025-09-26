@@ -1,6 +1,6 @@
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
-import type { CategoricalTW, BrainImagingRequest, BrainImagingResponse, FilesByCategory, RouteApi } from '#types'
+import type { QualTW, BrainImagingRequest, BrainImagingResponse, FilesByCategory, RouteApi } from '#types'
 import { brainImagingPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import { isNumericTerm } from '@sjcrh/proteinpaint-shared/terms.js'
@@ -63,9 +63,9 @@ async function getBrainImage(query: BrainImagingRequest, genomes: any, plane: st
 		const refFile = path.join(serverconfig.tpmasterdir, q[key].referenceFile)
 		const dirPath = path.join(serverconfig.tpmasterdir, q[key].samples)
 
-		const terms: CategoricalTW[] = []
-		const divideByTW: CategoricalTW | undefined = query.divideByTW
-		const overlayTW: CategoricalTW | undefined = query.overlayTW
+		const terms: QualTW[] = []
+		const divideByTW: QualTW | undefined = query.divideByTW
+		const overlayTW: QualTW | undefined = query.overlayTW
 
 		if (divideByTW) terms.push(divideByTW)
 		if (overlayTW) terms.push(overlayTW)

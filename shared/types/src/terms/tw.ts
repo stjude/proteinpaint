@@ -1,7 +1,6 @@
 import type { SnpsQ, SnpsTW } from './snps.ts'
 import type { ConditionQ, ConditionTW } from './condition.ts'
 import type { SampleLstQ } from './samplelst.ts'
-import type { CatTWTypes, CategoricalQ } from './categorical.ts'
 import type { NumTW, NumericQ } from './numeric.ts'
 import type { GvTW, GvQ } from './geneVariant.ts'
 import type { QualTW, QualQ } from './qualitative.ts'
@@ -21,9 +20,9 @@ export type BaseTW = {
 	valueFilter?: any
 }
 
-export type TermWrapper = CatTWTypes | NumTW | GvTW | ConditionTW | SnpsTW | QualTW
+export type TermWrapper = NumTW | GvTW | ConditionTW | SnpsTW | QualTW
 
-export type Q = CategoricalQ | NumericQ | GvQ | ConditionQ | SnpsQ | SampleLstQ | QualQ // | other q
+export type Q = NumericQ | GvQ | ConditionQ | SnpsQ | SampleLstQ | QualQ // | other q
 
 //export type TermWrapper = CategoricalTW | NumericTW | SnpsTW | (BaseTW & { term: Term; q: Q })
 export type TwLst = TermWrapper[]
