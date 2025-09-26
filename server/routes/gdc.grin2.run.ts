@@ -5,6 +5,9 @@ import serverconfig from '#src/serverconfig.js'
 import path from 'path'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { mayLog } from '#src/helpers.ts'
+import { plotManhattan } from '#src/manhattan.ts'
+import { randomBytes } from 'crypto'
+import { join } from 'path'
 
 // Constants
 const MAX_RECORD = 100000 // Maximum number of records to process
@@ -58,6 +61,12 @@ function init({ genomes }) {
 	}
 }
 
+function makeCacheFileName(): string {
+	const stamp = Date.now()
+	const rand = randomBytes(16).toString('hex')
+	return `cache_${stamp}_${rand}.txt`
+}
+
 async function runGrin2(genomes: any, req: any, res: any) {
 	const g = genomes.hg38
 	if (!g) throw 'hg38 missing'
@@ -76,14 +85,14 @@ async function runGrin2(genomes: any, req: any, res: any) {
 		max_record: MAX_RECORD
 	}
 
+	const fileName = makeCacheFileName()
+	const cachePath = join(serverconfig.cachedir, 'grin2', fileName)
+
 	const pyInput = {
 		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 		chromosomelist: {},
 		lesion: '' as string,
-		devicePixelRatio: parsedRequest.devicePixelRatio || 2,
-		plot_width: parsedRequest.plot_width || 1000,
-		plot_height: parsedRequest.plot_height || 400,
-		pngDotRadius: parsedRequest.pngDotRadius || 2
+		cacheFileName: cachePath
 	}
 	for (const c in g.majorchr) {
 		// list is short so a small penalty for accessing the flag in the loop
@@ -134,7 +143,7 @@ async function runGrin2(genomes: any, req: any, res: any) {
 
 	// Call the python script
 	const grin2AnalysisStart = Date.now()
-	const pyResult = await run_python('grin2PpWrapper.py', JSON.stringify(pyInput))
+	const pyResult = await run_python('grin2PpWrapper2.py', JSON.stringify(pyInput))
 
 	// mayLog(`[GRIN2] python execution completed, result: ${pyResult}`)
 	if (pyResult.stderr?.trim()) {
@@ -144,13 +153,28 @@ async function runGrin2(genomes: any, req: any, res: any) {
 	const grin2AnalysisTimeToPrint = Math.round(grin2AnalysisTime / 1000)
 	mayLog(`[GRIN2] Python processing took ${grin2AnalysisTimeToPrint} seconds`)
 
+	// Step 5: Call plotManhattan to pass cache file of GRIN2 results and render interactive SVG on top of PNG which are all made from the cache file
+	const { pngBase64, plotData } = await plotManhattan(cachePath, g, {
+		plotWidth: 1000,
+		plotHeight: 400,
+		yMaxCap: 40,
+		yAxisX: 70,
+		yAxisY: 40,
+		yAxisSpace: 40,
+		fontSize: 12,
+		devicePixelRatio: 2, // for test
+		skipChrM: true,
+		drawChrSeparators: true
+	})
+
 	// Parse python result to get image or check for errors
 	const resultData = JSON.parse(pyResult)
-	const pngImg = resultData.png[0]
+
+	const pngImg = pngBase64
 	const topGeneTable = resultData.topGeneTable || null
 	const totalProcessTime = downloadTimeToPrint + grin2AnalysisTimeToPrint
 	return res.json({
-		resultData,
+		plotData,
 		pngImg,
 		topGeneTable,
 		rustResult: parsedRustResult,

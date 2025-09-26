@@ -1768,7 +1768,8 @@ async function getFilesAndShowTable(obj) {
 				processedData = []
 				failedFilesInfo = null
 			}
-			if (!response.resultData.png) throw 'png missing'
+
+			if (!response.pngImg) throw 'png missing'
 
 			// Create results container
 			const resultContainer = obj.resultDiv.append('div').style('text-align', 'left').style('margin', '0 auto')
@@ -1781,7 +1782,7 @@ async function getFilesAndShowTable(obj) {
 				.style('margin-bottom', '0px')
 				.style('text-align', 'left')
 
-			const plotData = response.resultData
+			const plotData = response
 
 			const plotDiv = resultContainer.append('div')
 
