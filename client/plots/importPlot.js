@@ -31,6 +31,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'grin2':
 			return await import('./grin2/grin2')
 
+		case 'gsea':
+			return await import(`./gsea.js`)
+
 		case 'sampleScatter':
 			return await import(`./scatter/scatter.js`)
 
