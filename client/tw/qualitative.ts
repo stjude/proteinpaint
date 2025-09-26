@@ -39,8 +39,22 @@ export class QualitativeBase extends TwBase {
 
 	/** tw.term must already be filled-in at this point */
 	static fill(tw: RawQualTW, opts: TwOpts = {}): QualTW {
-		if (!tw.term) throw `missing tw.term, must already be filled in`
+		if (!tw.term) throw `missing tw.term`
+		if (typeof tw.term != 'object') throw `tw.term is not an object`
 		if (!QualitativeBase.termTypes.has(tw.term.type)) throw `non-qualitative term.type='${tw.term.type}'`
+
+		switch (tw.term.type) {
+			case 'snp':
+				SnpBase.fill(tw.term)
+				break
+
+			// case 'categorical':
+			// 	CategoricalBase.fillTerm(tw)
+
+			default:
+				throw `unexpected qualitative term.type='${tw.term.type}'`
+		}
+
 		// GDC or other dataset may allow missing or empty term.values
 		//if (!tw.term.values || !Object.keys(tw.term.values).length) throw `missing or empty tw.term.values`
 
