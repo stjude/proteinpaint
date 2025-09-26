@@ -2,6 +2,7 @@ import type { MassAppApi } from '#mass/types/mass'
 import { downloadTable, GeneSetEditUI, MultiTermWrapperEditUI } from '#dom'
 import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
+import { TermTypes } from '#shared/terms.js'
 
 export class VolcanoInteractions {
 	app: MassAppApi
@@ -178,6 +179,53 @@ export class VolcanoInteractions {
 					config: { highlightedData }
 				})
 				this.dom.actionsTip.hide()
+			}
+		})
+	}
+
+	async launchDEGClustering() {
+		//Sort the DEG rows by q-value in ascending order
+		const geneIndex = this.pValueTableData.columns.findIndex(col => col.label === 'Gene Name')
+		const adjustedPValIndex = this.pValueTableData.columns.findIndex(col => col.label === 'Adjusted p-value')
+		const rowsSorted = [...this.pValueTableData.rows].sort((a, b) => {
+			const aQVal = Number(a[adjustedPValIndex].value)
+			const bQVal = Number(b[adjustedPValIndex].value)
+			return aQVal - bQVal
+		})
+
+		// Launch hierCluster for up to 100 DEGs with the smallest q-values
+		const geneList = rowsSorted.slice(0, 100).map(r => ({ gene: r[geneIndex].value }))
+
+		const tws = geneList.map(d => {
+			const gene = d.gene
+			const unit = this.app.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression'
+			const name = `${gene} ${unit}`
+			const term = { gene, name, type: TermTypes.GENE_EXPRESSION }
+			const tw = { term, q: {} }
+			return tw
+		})
+
+		const group = { lst: tws, type: 'hierCluster' }
+		const customVariable = this.app.getState().plots.find((p: any) => p.id === this.id).tw
+		const annotationGroup = { lst: [customVariable] }
+		await this.app.dispatch({
+			type: 'plot_create',
+			config: {
+				chartType: 'hierCluster',
+				termgroups: [group, annotationGroup],
+				dataType: TermTypes.GENE_EXPRESSION,
+				localFilter: {
+					in: true,
+					type: 'tvslst',
+					lst: [
+						{
+							type: 'tvs',
+							tvs: {
+								term: customVariable.term
+							}
+						}
+					]
+				}
 			}
 		})
 	}
