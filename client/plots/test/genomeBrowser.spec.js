@@ -1,7 +1,7 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
 import * as helpers from '../../test/front.helpers.js'
-import { detectLst, detectOne, detectZero, whenHidden, whenVisible, detectGte } from '../../test/test.helpers'
+import { detectGt, detectOne } from '../../test/test.helpers'
 
 /********************************************
  TEST SECTIONS
@@ -22,8 +22,13 @@ Single group: info
 
 ********************************************/
 
+/****************************************************
+NOTE: cannot convert this to integration test because
+these tests use SJLIFE as dataset
+*****************************************************/
+
 tape('\n', function (test) {
-	test.comment('-***- mass/genomeBrowser -***-')
+	test.comment('-***- plots/genomeBrowser -***-')
 	test.end()
 })
 
@@ -206,10 +211,11 @@ function runTests(test, holder) {
 		const div = gb.Inner.dom.holder
 		const blockDiv = await detectOne({ elem: div.node(), selector: '.sja_Block_div' })
 		test.ok(blockDiv, 'Block div is rendered')
-		test.equal(gb.Inner.blockInstance.tklst.length, 2, 'Block has 2 tracks')
-		const tk = gb.Inner.blockInstance.tklst.find(i => i.type == 'mds3')
-		test.ok(tk, 'One of the track is mds3')
-		test.ok(tk.custom_variants.length > 0, 'Many variants are found in mds3 tk')
+		const tklst = blockDiv.querySelectorAll('[data-testid="sja_sample_menu_opener"]')
+		test.equal(tklst.length, 2, 'Block has 2 tracks')
+		const variantTk = tklst[0]
+		const variants = await detectGt({ elem: variantTk, selector: '.sja_aa_discg' })
+		test.ok(variants.length > 0, 'Should render variants in variants track')
 		if (test._ok) holder.remove()
 		test.end()
 	}
