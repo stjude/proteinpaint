@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { computeBlockModeFlag } from '#plots/genomeBrowser.js'
+import { computeBlockModeFlag } from '#plots/gb/GB.ts'
 
 /* 
 Tests:
@@ -12,7 +12,7 @@ computeBlockModeFlag()
 ***************/
 
 tape('\n', test => {
-	test.comment('-***- plots/genomebrowser -***-')
+	test.comment('-***- plots/genomeBrowser -***-')
 	test.end()
 })
 

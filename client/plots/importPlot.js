@@ -17,10 +17,8 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'correlationVolcano':
 			return await import(`./corrVolcano/CorrelationVolcano.ts`)
 
-		/*// enable this when gb/GB.ts is ready to replace genomeBrowser.js
 		case 'genomeBrowser':
 			return await import('./gb/GB.ts')
-			*/
 
 		case 'differentialAnalysis':
 			return await import(`./diffAnalysis/DifferentialAnalysis.ts`)

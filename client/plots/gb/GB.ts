@@ -185,7 +185,7 @@ async function getDefaultConfig(vocabApi, override, activeCohort, blockIsProtein
 	return config
 }
 
-export function computeBlockModeFlag(config, blockIsProteinMode, vocabApi) {
+export function computeBlockModeFlag(config, blockIsProteinMode?, vocabApi?) {
 	// steps follow the order of priority
 	if (typeof blockIsProteinMode == 'boolean') {
 		// this setting is set by chart button menu by user choice or saved state
