@@ -546,7 +546,7 @@ export function server_init_db_queries(ds) {
 		return supportedChartTypes
 	}
 
-	q.getSingleSampleData = async function (sampleId, term_ids = []) {
+	q.getSingleSampleData = function (sampleId, term_ids = []) {
 		//TO DO: apply the filter to ensure when user auth the user filter is applied
 		//const filterCTEs = await getFilterCTEs(filter, q.ds, sampleTypes)
 
