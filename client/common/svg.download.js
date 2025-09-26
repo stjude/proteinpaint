@@ -1,13 +1,27 @@
 import { select } from 'd3-selection'
 import { to_svg } from '../src/client'
 
-export function downloadSingleSVG(svg, filename, parent) {
+export function downloadSingleSVG(svg, filename, parent, name = '') {
+	const svgParent = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+
 	if (parent) {
 		const svgStyles = window.getComputedStyle(parent)
-		for (const prop of svgStyles) {
-			if (prop.startsWith('font')) svg.style(prop, svgStyles.getPropertyValue(prop))
+		for (const [prop, value] of Object.entries(svgStyles)) {
+			if (prop.startsWith('font')) svgParent.style[prop] = value
 		}
 	}
+	const svgNode = svg.node().cloneNode(true)
+	const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+	if (name) {
+		g.setAttribute('transform', `translate(0, ${50})`)
+		const title = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+		title.textContent = name
+		g.appendChild(title)
+		svgNode.setAttribute('transform', `translate(${0}, ${80})`)
+	}
+	g.appendChild(svgNode)
+	svgParent.appendChild(g)
+
 	const link = document.createElement('a')
 	// If you don't know the name or want to use
 	// the webserver default set name = ''
@@ -16,7 +30,7 @@ export function downloadSingleSVG(svg, filename, parent) {
 	link.click()
 	link.remove()
 	const serializer = new XMLSerializer()
-	const svg_blob = new Blob([serializer.serializeToString(svg.node())], {
+	const svg_blob = new Blob([serializer.serializeToString(svgParent)], {
 		type: 'image/svg+xml'
 	})
 	link.href = URL.createObjectURL(svg_blob)
@@ -120,16 +134,13 @@ export function downloadAggregatedSVG(chartImages, svgName) {
 
 	let y = 20
 	for (const chart of chartImages) {
-		const parent = chart.parent
+		const parent = chart.parent || chart.svg.node()
 		const svg = chart.svg.clone(true)
 		const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
 		g.setAttribute('transform', `translate(${x}, ${y})`)
-
-		if (parent) {
-			const svgStyles = window.getComputedStyle(parent)
-			for (const [prop, value] of Object.entries(svgStyles)) {
-				if (prop.startsWith('font')) g.style[prop] = value
-			}
+		const svgStyles = window.getComputedStyle(parent)
+		for (const [prop, value] of Object.entries(svgStyles)) {
+			if (prop.startsWith('font')) g.style[prop] = value
 		}
 		const title = document.createElementNS('http://www.w3.org/2000/svg', 'text')
 		title.textContent = chart.name
@@ -137,7 +148,7 @@ export function downloadAggregatedSVG(chartImages, svgName) {
 
 		const svgNode = svg.node()
 		const bbox = svgNode.getBoundingClientRect()
-		svgNode.setAttribute('transform', `translate(${x}, ${30})`)
+		svgNode.setAttribute('transform', `translate(${x}, ${50})`)
 
 		g.appendChild(svgNode)
 		svgParent.appendChild(g)
