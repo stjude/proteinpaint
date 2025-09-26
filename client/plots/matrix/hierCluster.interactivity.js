@@ -1,6 +1,7 @@
 import { renderTable } from '#dom'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { select } from 'd3-selection'
+import { TermTypes, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
 
 // Given a clusterId, return all its children clusterIds
 export function getAllChildrenClusterIds(clickedClusterId, left) {
@@ -319,6 +320,8 @@ export function setClusteringBtn(holder, callback) {
 		//.property('disabled', d => d.disabled)
 		.datum({
 			label: cluteringButtonLabel,
+			getCount: () => this.hcTermGroup?.lst.length || 0,
+			showCount: dataType == TermTypes.METABOLITE_INTENSITY || dataType == NUMERIC_DICTIONARY_TERM ? 'append' : 'hide',
 			rows: [
 				{
 					label: `Cluster ${cl.Samples}`,
@@ -509,5 +512,39 @@ function updateClusteringControls(self, app, parent, table) {
 				.closest('tr')
 		)
 		colorSchemeControl.style('display', 'none')
+	}
+
+	// Only add set edit option for METABOLITE_INTENSITY and NUMERIC_DICTIONARY_TERM
+	if (
+		parent.chartType == 'hierCluster' &&
+		(parent.config.dataType == TermTypes.METABOLITE_INTENSITY || parent.config.dataType == NUMERIC_DICTIONARY_TERM)
+	) {
+		const geneInputTr = table.insert('tr', () => table.select('tr').node())
+		geneInputTr.append('td').attr('class', 'sja-termdb-config-row-label').html('Hierarchical Clustering Term Set')
+
+		const td1 = geneInputTr.append('td').style('display', 'block').style('padding', '5px 0px')
+		const editGrpDiv = td1.append('div').append('label')
+
+		const clusteringBtn = self.btns.node()
+		editGrpDiv
+			.append('button')
+			.html('Edit Set')
+			.on('click', () => {
+				app.tip.clear()
+				const backDiv = app.tip.d.append('div').style('padding', '5px')
+				backDiv
+					.attr('tabindex', 0)
+					.style('padding', '5px')
+					.style('text-decoration', 'underline')
+					.style('cursor', 'pointer')
+					.style('margin-bottom', '12px')
+					.html(`&#171; Back`)
+					.on('click', () => clusteringBtn.click())
+					.on('keyup', event => {
+						if (event.key == 'Enter') event.target.click()
+					})
+				const setEdiUiHolder = app.tip.d.append('div')
+				parent.showDictTermSelection(setEdiUiHolder)
+			})
 	}
 }

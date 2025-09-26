@@ -1262,9 +1262,18 @@ function setTermActions(self) {
 
 		const usecase = { target: 'matrix', detail: 'termgroups' }
 		if (self.chartType == 'hierCluster') {
-			if (self.config.dataType == NUMERIC_DICTIONARY_TERM) {
+			if (
+				self.config.dataType == NUMERIC_DICTIONARY_TERM &&
+				(!self.activeLabel || self.activeLabel.grp.type == 'hierCluster')
+			) {
 				usecase.target = 'numericDictTermCluster'
 				usecase.detail = { exclude: self.state.termdbConfig.numericDictTermCluster?.exclude }
+			} else if (
+				self.config.dataType == TermTypes.METABOLITE_INTENSITY &&
+				(!self.activeLabel || self.activeLabel.grp.type == 'hierCluster')
+			) {
+				usecase.target = TermTypes.METABOLITE_INTENSITY
+				usecase.detail = 'term'
 			} else {
 				usecase.target = self.activeLabel.tw.term.type
 				usecase.detail = 'term'
@@ -1284,7 +1293,7 @@ function setTermActions(self) {
 				tree: {
 					usecase
 				},
-				...(self.config.dataType === NUMERIC_DICTIONARY_TERM
+				...(!self.activeLabel || self.activeLabel.grp.type == 'hierCluster'
 					? { selectedTerms: self.hcTermGroup.lst.map(t => t.term) }
 					: {})
 			},
@@ -1306,28 +1315,27 @@ function setTermActions(self) {
 				return tw
 			})
 		)
-		const pos = self.insertRadioId && select(`input[name='${self.insertRadioId}']:checked`)?.property('value')
 		const t = self.activeLabel
 		const termgroups = self.termGroups
 
-		const isNumericDictTermC = self.config.dataType == NUMERIC_DICTIONARY_TERM
-		if (isNumericDictTermC || t.grp.type == 'hierCluster') {
-			const grp = isNumericDictTermC ? termgroups[0] : termgroups[t.grpIndex]
-			// for NUMERIC_DICTIONARY_TERM group, use selected terms as new group.lst since all terms are dictionary.
-			isNumericDictTermC
-				? grp.lst.splice(0, grp.lst.length, ...newterms)
-				: grp.lst.splice(t.lstIndex + 1, 0, ...newterms)
+		const isNumericDictTermCBut = self.config.dataType == NUMERIC_DICTIONARY_TERM && !t
+		const isMetaboliteIntensityCBut = self.config.dataType == TermTypes.METABOLITE_INTENSITY && !t
+		if (isNumericDictTermCBut || isMetaboliteIntensityCBut || t.grp.type == 'hierCluster') {
+			const grp = isNumericDictTermCBut || isMetaboliteIntensityCBut ? termgroups[0] : termgroups[t.grpIndex]
+			// for hiercluster group, use selected terms as new group.lst
+			grp.lst.splice(0, grp.lst.length, ...newterms)
 			self.app.dispatch({
 				type: 'plot_nestedEdits',
 				id: self.opts.id,
 				edits: [
 					{
-						nestedKeys: ['termgroups', isNumericDictTermC ? 0 : t.grpIndex, 'lst'],
+						nestedKeys: ['termgroups', isNumericDictTermCBut || isMetaboliteIntensityCBut ? 0 : t.grpIndex, 'lst'],
 						value: grp.lst
 					}
 				]
 			})
 		} else if (self.dom.grpNameSelect.property('value') == 'current') {
+			const pos = self.insertRadioId && select(`input[name='${self.insertRadioId}']:checked`)?.property('value')
 			const grp = termgroups[t.grpIndex]
 			const i = pos == 'above' ? t.lstIndex : t.lstIndex + 1
 			// remove this element
@@ -1343,6 +1351,7 @@ function setTermActions(self) {
 				]
 			})
 		} else {
+			const pos = self.insertRadioId && select(`input[name='${self.insertRadioId}']:checked`)?.property('value')
 			const i = pos == 'above' ? t.grpIndex : t.grpIndex + 1
 			termgroups.splice(i, 0, {
 				name: self.dom.grpNameTextInput.property('value'),

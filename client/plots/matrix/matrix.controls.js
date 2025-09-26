@@ -28,8 +28,6 @@ export class MatrixControls {
 			(this.parent.chartType == 'hierCluster' && this.parent.config.dataType == TermTypes.GENE_EXPRESSION)
 		) {
 			this.setGenesBtn(s)
-		} else if (this.parent.chartType == 'hierCluster' && this.parent.config.dataType == NUMERIC_DICTIONARY_TERM) {
-			this.setNumericDictTermsBtn()
 		}
 		if (s.addMutationCNVButtons && this.parent.chartType !== 'hierCluster') {
 			this.setMutationBtn()
@@ -426,19 +424,6 @@ export class MatrixControls {
 			.on('click', (event, d) => this.callback(event, d))
 	}
 
-	setNumericDictTermsBtn() {
-		this.opts.holder
-			.append('button')
-			.datum({
-				label: `${this.parent.app.vocabApi.termdbConfig.numericDictTermCluster.appName} Terms`,
-				getCount: () => this.parent.hcTermGroup.lst.length || 0,
-				rows: [],
-				customInputs: this.addNumericDictTermsInputs
-			})
-			.html(d => d.label)
-			.style('margin', '2px 0')
-			.on('click', (event, d) => this.callback(event, d))
-	}
 	setVariablesBtn(s) {
 		const l = s.controlLabels
 		this.opts.holder
@@ -1041,7 +1026,13 @@ export class MatrixControls {
 		this.parent.app.tip.hide()
 
 		this.btns
-			.text(d => (d.getCount ? `${d.getCount()} ` : '') + d.label)
+			.text(d =>
+				!d.getCount || d.showCount == 'hide'
+					? d.label
+					: d.showCount == 'append'
+					? `${d.label} (n=${d.getCount()})`
+					: `${d.getCount()} ${d.label}`
+			)
 			.each(function (d) {
 				if (d.updateBtn) d.updateBtn(select(this))
 			})
@@ -1135,11 +1126,6 @@ export class MatrixControls {
 		const tr = table.append('tr')
 		tr.append('td').text(header).attr('class', 'sja-termdb-config-row-label')
 		tr.append('td').text(value)
-	}
-
-	async addNumericDictTermsInputs(self, app, parent, table) {
-		const holder = app.tip.d.append('div')
-		self.parent.showDictTermSelection(holder)
 	}
 
 	async addGeneInputs(self, app, parent, table) {
