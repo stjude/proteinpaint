@@ -110,6 +110,7 @@ class SampleView {
 			this.samplesData = await this.app.vocabApi.getSamplesByName({
 				filter: getNormalRoot(appState.termfilter?.filter)
 			})
+			if (Object.keys(this.samplesData).length == 0) throw 'No accessible samples found'
 			const callback = sampleName => {
 				if (this.samplesData[sampleName]) {
 					const samples = getSamplesRelated(this.samplesData, sampleName)
