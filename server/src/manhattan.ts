@@ -4,58 +4,52 @@ import readline from 'readline'
 import { createCanvas } from 'canvas'
 import { scaleLinear } from 'd3-scale'
 
-/** Genome info must provide cumulative-friendly lengths */
 export type GenomeInfo = {
-	/** e.g., { chr1: 248956422, chr2: 242193529, ..., chrM?: <len> } */
 	majorchr: Record<string, number>
 }
 
-/** Interactive point returned to the client (q ≤ 0.05 only) */
 export type ManhattanPoint = {
 	x: number // genome-wide bp (chrom cumulative + loc.start)
-	y: number // -log10(q) (possibly scaled to fit 40 cap)
+	y: number // -log10(q) (possibly scaled to fit cap)
 	q: number // raw q-value
-	interactive: boolean // always true for these points
+	interactive: boolean // true here (q <= 0.05)
 	chrom: string
 	pos: number // loc.start
 	gene?: string
 	type?: 'gain' | 'loss' | 'mutation'
 	color?: string
-	nsubj?: number // nsubj.<type> if present
+	nsubj?: number
 }
 
-/** Plot data consumed by your client */
 export type ManhattanPlotData = {
 	png_width: number
 	png_height: number
-	y_max: number // axis max used by client (includes small headroom)
-	y_buffer: number // keep 0 (client domains start at 0)
-	x_buffer: number // keep 0 (client domains start at 0)
+	y_max: number
+	y_buffer: number // keep 0 (domains stay at 0..y_max on client)
+	x_buffer: number // keep 0 (domains stay at 0..total_bp on client)
 	total_genome_length: number
 	chrom_data: Record<string, { start: number; size: number; center: number }>
 	points: ManhattanPoint[] // significant only
+	padding: { left: number; right: number; top: number; bottom: number } // NEW
 }
 
-/** Options (tweak as needed) */
 export type ManhattanRenderOpts = {
 	plotWidth?: number
 	plotHeight?: number
 	devicePixelRatio?: number
-	yMaxCap?: number // target cap for tallest point (default 40)
+	yMaxCap?: number // target cap (default 40)
 	skipChrM?: boolean
-	pngDotRadius?: number // radius in px for PNG dots (default 2)
-	pngAlpha?: number // alpha for PNG dots (default 0.7)
-	yAxisX?: number // space for y axis (default 60)
-	yAxisY?: number // top margin (default 20)
-	yAxisSpace?: number // space between y axis and plot (default 10)
-	fontSize?: number // font size for axes (default 12)
-	showInteractiveDots?: boolean // whether client should show interactive dots (default true)
-	interactiveDotRadius?: number // radius in px for interactive dots (default 3)
-	interactiveDotStrokeWidth?: number // stroke width in px for interactive dots (default 1)
-	drawChrSeparators?: boolean // whether to draw vertical lines between chromosomes (default true)
+	pngDotRadius?: number
+	pngAlpha?: number
+	/** Pixel padding INSIDE the PNG drawing area (keeps domains 0-based) */
+	padding?: { left: number; right: number; top: number; bottom: number }
+	yAxisX?: number
+	yAxisY?: number
+	yAxisSpace?: number
+	fontSize?: number
+	drawChrSeparators?: boolean
 }
 
-/** Drop-in: reads TSV cache and returns { pngBase64, plotData } */
 export async function plotManhattan(
 	cacheFile: string,
 	genome: GenomeInfo,
@@ -69,10 +63,12 @@ export async function plotManhattan(
 		skipChrM: true,
 		pngDotRadius: 2,
 		pngAlpha: 0.7,
+		padding: { left: 14, right: 14, top: 10, bottom: 12 }, // ⬅️ tweak to taste
 		...opts
 	}
+	const PAD = settings.padding
 
-	// ----- Chromosome layout (skip chrM consistently) -----
+	// ---------- Chromosome layout (skip chrM) ----------
 	const chrOrder = Object.keys(genome.majorchr).filter(c => !(settings.skipChrM && c.replace('chr', '') === 'M'))
 	const chrom_data: Record<string, { start: number; size: number; center: number }> = {}
 	let totalBp = 0
@@ -82,12 +78,11 @@ export async function plotManhattan(
 		totalBp += len
 	}
 
-	// ----- TSV columns we care about -----
+	// ---------- TSV fields ----------
 	const FIELD_GENE = 'gene'
 	const FIELD_CHROM = 'chrom'
 	const FIELD_LOC_START = 'loc.start'
 
-	// lesion-type columns & colors (matches your Python)
 	const TYPE_COLOR: Record<'mutation' | 'gain' | 'loss', string> = {
 		mutation: '#44AA44',
 		gain: '#FF4444',
@@ -99,11 +94,11 @@ export async function plotManhattan(
 		{ type: 'mutation', qCol: 'q.nsubj.mutation', nCol: 'nsubj.mutation' }
 	]
 
-	// ----- Parse TSV -----
+	// ---------- Parse TSV ----------
 	const rl = readline.createInterface({ input: fs.createReadStream(cacheFile) })
 	let headerMap: Record<string, number> | null = null
 
-	// For PNG (all points, colored); for interactivity (q≤0.05 only)
+	// For PNG (all), for interactivity (q<=0.05)
 	const pngPoints: Array<{ x: number; y: number; color: string }> = []
 	const points: ManhattanPoint[] = []
 	let yObservedMaxRaw = 10
@@ -116,7 +111,6 @@ export async function plotManhattan(
 				headers.forEach((h, i) => (headerMap![h] = i))
 				return
 			}
-
 			const cols = line.split('\t')
 			const get = (name: string) => {
 				const i = headerMap![name]
@@ -134,7 +128,6 @@ export async function plotManhattan(
 			const xGenome = chrom_data[chrom].start + locStart
 			const gene = (get(FIELD_GENE) || undefined) as string | undefined
 
-			// For each lesion type, add a point if q is valid
 			for (const { type, qCol, nCol } of TYPE_COLS) {
 				const qStr = get(qCol)
 				if (!qStr) continue
@@ -144,16 +137,13 @@ export async function plotManhattan(
 				const yRaw = -Math.log10(q)
 				if (yRaw > yObservedMaxRaw) yObservedMaxRaw = yRaw
 
-				// collect for PNG
 				pngPoints.push({ x: xGenome, y: yRaw, color: TYPE_COLOR[type] })
 
-				// collect for interactivity if significant
 				if (q <= 0.05) {
-					const nsubjStr = get(nCol)
-					const nsubj = nsubjStr ? Number(nsubjStr) : undefined
+					const nsubjVal = Number(get(nCol))
 					points.push({
 						x: xGenome,
-						y: yRaw, // may be scaled later
+						y: yRaw, // scaled later if needed
 						q,
 						interactive: true,
 						chrom,
@@ -161,33 +151,31 @@ export async function plotManhattan(
 						gene,
 						type,
 						color: TYPE_COLOR[type],
-						nsubj: Number.isFinite(nsubj as number) ? (nsubj as number) : undefined
+						nsubj: Number.isFinite(nsubjVal) ? nsubjVal : undefined
 					})
 				}
 			}
 		})
-
 		rl.on('close', () => resolve())
 		rl.on('error', err => reject(err))
 	})
 
-	// ----- Uniform y scaling to a 40 cap (like your Python) -----
+	// ---------- Uniform y scaling to cap (like Python) ----------
 	let scale_factor = 1
 	let yMaxForAxis: number
 	if (pngPoints.length) {
 		if (yObservedMaxRaw > settings.yMaxCap) {
 			scale_factor = settings.yMaxCap / yObservedMaxRaw
-			// scale draw y for both PNG and interactive points
 			for (const p of pngPoints) p.y *= scale_factor
 			for (const p of points) p.y *= scale_factor
 		}
 		const scaledMax = Math.max(...pngPoints.map(p => p.y))
-		yMaxForAxis = scaledMax + 0.35 // small headroom like the Python
+		yMaxForAxis = scaledMax + 0.35
 	} else {
 		yMaxForAxis = 10
 	}
 
-	// ----- Render PNG (bands + colored points only) -----
+	// ---------- Render PNG with pixel padding in RANGE ----------
 	const W = settings.plotWidth
 	const H = settings.plotHeight
 	const DPR = settings.devicePixelRatio
@@ -196,20 +184,29 @@ export async function plotManhattan(
 	const ctx = canvas.getContext('2d')
 	if (DPR > 1) ctx.scale(DPR, DPR)
 
-	// white background
+	// background
 	ctx.fillStyle = '#FFFFFF'
 	ctx.fillRect(0, 0, W, H)
 
-	// scales (domains start at 0; client will use same)
-	const xScale = scaleLinear<number, number>().domain([0, totalBp]).range([0, W])
-	const yScale = scaleLinear<number, number>().domain([0, yMaxForAxis]).range([H, 0])
+	// ranges include padding; domains remain 0-based
+	const xScale = scaleLinear<number, number>()
+		.domain([0, totalBp])
+		.range([PAD.left, W - PAD.right])
 
-	// alternating chromosome bands
+	const yScale = scaleLinear<number, number>()
+		.domain([0, yMaxForAxis])
+		.range([H - PAD.bottom, PAD.top])
+
+	// draw the plotting band area only (between top/bottom padding)
+	const plotTop = PAD.top
+	const plotHeight = H - PAD.top - PAD.bottom
+
+	// alternating chr bands inside padded y-range
 	chrOrder.forEach((chr, i) => {
 		const x0 = xScale(chrom_data[chr].start)
 		const x1 = xScale(chrom_data[chr].start + chrom_data[chr].size)
 		ctx.fillStyle = i % 2 === 0 ? '#FFFFFF' : '#D3D3D3'
-		ctx.fillRect(x0, 0, x1 - x0, H)
+		ctx.fillRect(x0, plotTop, x1 - x0, plotHeight)
 	})
 
 	// colored points (slight alpha like matplotlib)
@@ -227,7 +224,7 @@ export async function plotManhattan(
 
 	const pngBase64 = canvas.toBuffer('image/png').toString('base64')
 
-	// ----- Return plotData for client overlay -----
+	// ---------- Return plotData (client mirrors same padding in ranges) ----------
 	const plotData: ManhattanPlotData = {
 		png_width: W,
 		png_height: H,
@@ -236,7 +233,8 @@ export async function plotManhattan(
 		x_buffer: 0,
 		total_genome_length: totalBp,
 		chrom_data,
-		points // significant only; each carries type/color/nsubj
+		points,
+		padding: PAD
 	}
 
 	return { pngBase64, plotData }

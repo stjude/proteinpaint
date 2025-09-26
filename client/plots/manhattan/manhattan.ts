@@ -75,11 +75,16 @@ export function plotManhattan(div: any, data: any, settings: any) {
 		}
 	})
 
+	// Access padding values
+	const PAD = data.plotData.padding
+
 	// Add y-axis
 	const yAxisG = svg
 		.append('g')
 		.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
-	const yScale = scaleLinear().domain([0, data.plotData.y_max]).range([data.plotData.png_height, 0])
+	const yScale = scaleLinear()
+		.domain([0, data.plotData.y_max])
+		.range([data.plotData.png_height - PAD.bottom, PAD.top])
 	yAxisG.call(d3axis.axisLeft(yScale))
 
 	// Add y-axis label
@@ -103,8 +108,8 @@ export function plotManhattan(div: any, data: any, settings: any) {
 
 	// Create scales for positioning elements
 	const xScale = scaleLinear()
-		.domain([-data.plotData.x_buffer, data.plotData.total_genome_length + data.plotData.x_buffer])
-		.range([0, data.plotData.png_width])
+		.domain([0, data.plotData.total_genome_length])
+		.range([PAD.left, data.plotData.png_width - PAD.right])
 
 	// Add interactive dots layer
 	if (settings.showInteractiveDots && data.plotData.points && data.plotData.points.length > 0) {
