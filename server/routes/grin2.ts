@@ -10,6 +10,7 @@ import { dtsnvindel, dtcnv, dtfusionrna } from '#shared/common.js'
 import { randomBytes } from 'crypto'
 import { join, dirname } from 'path'
 import { promises as fs } from 'fs'
+import { plotManhattan } from '#src/manhattan.js'
 /**
  * General GRIN2 analysis handler
  * Processes user-provided snvindel, CNV, and fusion filters and performs GRIN2 analysis
@@ -169,12 +170,25 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	const grin2AnalysisTimeToPrint = Math.round(grin2AnalysisTime / 1000)
 	mayLog(`[GRIN2] Python processing took ${grin2AnalysisTimeToPrint} seconds`)
 
-	// Step 5: Parse results and respond
-	// mayLog(`[GRIN2] Full pyResult object:`, pyResult)
+	// Step 5: Call plotManhattan to pass cache file of GRIN2 results and render interactive SVG on top of PNG which are all made from the cache file
+	const { pngBase64, plotData } = await plotManhattan(cachePath, g, {
+		plotWidth: 1000,
+		plotHeight: 400,
+		yMaxCap: 40,
+		yAxisX: 70,
+		yAxisY: 40,
+		yAxisSpace: 40,
+		fontSize: 12,
+		devicePixelRatio: request.devicePixelRatio,
+		skipChrM: true,
+		drawChrSeparators: true
+	})
+
+	// const resultData = JSON.parse(pyResult)
 	const resultData = JSON.parse(pyResult)
 
 	// Validate Python script output
-	if (!resultData?.png?.[0]) {
+	if (!pngBase64) {
 		throw new Error('Invalid Python output: missing PNG data')
 	}
 
@@ -182,8 +196,8 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 
 	const response: GRIN2Response = {
 		status: 'success',
-		pngImg: resultData.png[0],
-		plotData: resultData.plotData,
+		pngImg: pngBase64,
+		plotData: plotData,
 		topGeneTable: resultData.topGeneTable,
 		totalGenes: resultData.totalGenes,
 		showingTop: resultData.showingTop,
