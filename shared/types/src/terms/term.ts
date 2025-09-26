@@ -1,10 +1,10 @@
 import type { Filter } from '../filter.js'
-import type { CategoricalTerm } from './categorical.js'
 import type { ConditionTerm } from './condition.js'
 import type { NumericTerm } from './numeric.js'
 import type { GvTerm } from './geneVariant.js'
 import type { SampleLstTerm } from './samplelst.js'
 import type { SnpsTerm } from './snps.js'
+import type { QualTerm } from './qualitative.ts'
 
 /**
  * @param id      term.id for dictionary terms, undefined for non-dictionary terms
@@ -42,7 +42,7 @@ export type BaseTerm = {
 }
 
 // NumericTerm includes integer, float, date, geneExpression, metaboliteIntensity, and other non-dict terms
-export type Term = BaseTerm & (NumericTerm | CategoricalTerm | ConditionTerm | SampleLstTerm | SnpsTerm | GvTerm)
+export type Term = BaseTerm & (NumericTerm | ConditionTerm | SampleLstTerm | SnpsTerm | GvTerm | QualTerm)
 
 /*** types supporting Term types ***/
 

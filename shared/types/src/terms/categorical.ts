@@ -46,6 +46,12 @@ export type CategoricalBaseQ = MinBaseQ & {
 
 export type CategoricalQ = GroupSettingQ | ValuesQ
 
+export type RawCategoricalTerm = {
+	type: 'categorical'
+	values: TermValues
+	groupsetting?: TermGroupSetting
+}
+
 export type CategoricalTerm = BaseTerm & {
 	type: 'categorical'
 	values: TermValues

@@ -1,6 +1,6 @@
 import { HandlerBase } from '../HandlerBase.ts'
 import type { Handler } from '../index.ts'
-import type { CatValues, CatPredefinedGS, CatCustomGS, SnpValues, SnpPredefinedGS, SnpCustomGS } from '#tw'
+import type { QualValues, QualPredefinedGS, QualCustomGS } from '#tw'
 import { select, type Selection } from 'd3-selection'
 import type { TermSetting } from '../TermSetting.ts'
 import { debounce } from 'debounce'
@@ -40,7 +40,7 @@ type GrpEntryWithDom = GrpEntry & {
 // }
 
 export class GroupSet extends HandlerBase implements Handler {
-	tw: CatValues | CatPredefinedGS | CatCustomGS | SnpValues | SnpPredefinedGS | SnpCustomGS
+	tw: QualValues | QualPredefinedGS | QualCustomGS
 	termsetting: TermSetting
 	category2samplecount: any
 	defaultMaxGrpNum = 5
@@ -205,7 +205,7 @@ export class GroupSet extends HandlerBase implements Handler {
 		const customset: any = { groups: [] }
 		for (const group of this.data.groups) {
 			// TODO: generalize group.type expectation
-			if (group.type != 'values' && group.type != 'CatTWValues' && group.type != 'SnpTWValues')
+			if (group.type != 'values' && group.type != 'CatTWValues' && group.type != 'QualTWValues')
 				throw `group.type='${group.type}' is not recognized`
 			const customgroup: any = { name: group.name, type: 'values', uncomputable: group.uncomputable }
 			const groupValues = this.data.values

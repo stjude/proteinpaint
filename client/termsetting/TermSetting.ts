@@ -188,9 +188,9 @@ export class TermSetting {
 				case 'CatTWValues':
 				case 'CatTWPredefinedGS':
 				case 'CatTWCustomGS':
-				case 'SnpTWValues':
-				case 'SnpTWPredefinedGS':
-				case 'SnpTWCustomGS': {
+				case 'QualTWValues':
+				case 'QualTWPredefinedGS':
+				case 'QualTWCustomGS': {
 					const { GroupSet } = await import('./handlers/GroupSet.ts')
 					this.handler = new GroupSet({ termsetting: this })
 					return
