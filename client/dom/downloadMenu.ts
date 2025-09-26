@@ -50,7 +50,7 @@ export class DownloadMenu {
 				.text('Multiple SVG')
 				.on('click', () => {
 					for (const chart of this.chartImages)
-						downloadSingleSVG(chart.svg, chart.name.replace(/\s/g, '_'), chart.parent)
+						downloadSingleSVG(chart.svg, chart.name.replace(/[^a-zA-Z0-9]/g, '_'), chart.svg.node(), chart.name)
 					this.menu.hide()
 				})
 		this.menu.show(x - 20, y - 10)
@@ -75,7 +75,7 @@ export async function downloadSVGsAsPdf(chartImages, filename, orientation) {
 	const x = 0.05 * pageWidth
 
 	for (const chartImage of chartImages) {
-		const name = `${chartImage.name}${chartImage.note || ''}`
+		const name = chartImage.name
 		const svg = chartImage.svg.node().cloneNode(true) //clone to avoid modifying the original
 		const parent = chartImage.parent || chartImage.svg.node()
 
@@ -90,7 +90,7 @@ export async function downloadSVGsAsPdf(chartImages, filename, orientation) {
 		const width = svgWidth * scale //convert to pt and fit to page size
 		const height = svgHeight * scale //convert to pt and fit to page size
 
-		if (y + height > pageHeight - 20) {
+		if (y != 50 && y + height > pageHeight - 20) {
 			doc.addPage()
 			y = 50
 		}
