@@ -107,6 +107,7 @@ async function getSessionId(
 
 	const session = await sessionManager.getSession(wsimage)
 
+	// TODO fix image layers recovery in case redis goes down.
 	if (session) {
 		return session
 	}
@@ -188,7 +189,7 @@ async function getSessionId(
 		}
 	}
 
-	// TODO add session id to the
+	// TODO add session id
 	const sessionData: SessionData = await sessionManager.setSession(wsimage, sessionId, tileServer, overlays)
 
 	return sessionData
