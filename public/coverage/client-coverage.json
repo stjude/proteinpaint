@@ -361,10 +361,10 @@
   },
   "tw/TwRouter.ts": {
     "lines": {
-      "total": 49,
+      "total": 50,
       "covered": 21,
       "skipped": 0,
-      "pct": 42.85
+      "pct": 42
     },
     "functions": {
       "total": 6,
@@ -373,10 +373,10 @@
       "pct": 83.33
     },
     "statements": {
-      "total": 51,
+      "total": 52,
       "covered": 22,
       "skipped": 0,
-      "pct": 43.13
+      "pct": 42.3
     },
     "branches": {
       "total": 47,
@@ -390,9 +390,9 @@
       "diff": -12.769999999999996
     },
     "averagePct": {
-      "curr": 52.432500000000005,
+      "curr": 52.0125,
       "prev": 60.832499999999996,
-      "diff": -8.399999999999991
+      "diff": -8.819999999999993
     }
   },
   "tw/geneVariant.ts": {
@@ -5834,9 +5834,9 @@
   "termsetting/TermSetting.ts": {
     "lines": {
       "total": 77,
-      "covered": 70,
+      "covered": 75,
       "skipped": 0,
-      "pct": 90.9
+      "pct": 97.4
     },
     "functions": {
       "total": 7,
@@ -5846,25 +5846,25 @@
     },
     "statements": {
       "total": 99,
-      "covered": 76,
+      "covered": 88,
       "skipped": 0,
-      "pct": 76.76
+      "pct": 88.88
     },
     "branches": {
       "total": 88,
-      "covered": 58,
+      "covered": 69,
       "skipped": 0,
-      "pct": 65.9
+      "pct": 78.4
     },
     "lowestPct": {
-      "curr": 65.9,
+      "curr": 78.4,
       "prev": 78.4,
-      "diff": -12.5
+      "diff": 0
     },
     "averagePct": {
-      "curr": 83.39000000000001,
+      "curr": 91.16999999999999,
       "prev": 91.16999999999999,
-      "diff": -7.779999999999973
+      "diff": 0
     }
   },
   "termsetting/index.ts": {
@@ -7526,60 +7526,60 @@
   "termsetting/handlers/GroupSet.ts": {
     "lines": {
       "total": 142,
-      "covered": 12,
+      "covered": 79,
       "skipped": 0,
-      "pct": 8.45
+      "pct": 55.63
     },
     "functions": {
       "total": 41,
-      "covered": 2,
+      "covered": 21,
       "skipped": 0,
-      "pct": 4.87
+      "pct": 51.21
     },
     "statements": {
       "total": 149,
-      "covered": 12,
+      "covered": 79,
       "skipped": 0,
-      "pct": 8.05
+      "pct": 53.02
     },
     "branches": {
       "total": 60,
-      "covered": 2,
+      "covered": 21,
       "skipped": 0,
-      "pct": 3.33
+      "pct": 35
     },
     "lowestPct": {
-      "curr": 3.33,
+      "curr": 35,
       "prev": 35,
-      "diff": -31.67
+      "diff": 0
     },
     "averagePct": {
-      "curr": 6.175000000000001,
+      "curr": 48.715,
       "prev": 48.715,
-      "diff": -42.540000000000006
+      "diff": 0
     }
   },
   "tw/snp.ts": {
     "lines": {
-      "total": 122,
-      "covered": 5,
+      "total": 24,
+      "covered": 3,
       "skipped": 0,
-      "pct": 4.09
+      "pct": 12.5
     },
     "functions": {
-      "total": 20,
+      "total": 3,
       "covered": 0,
       "skipped": 0,
       "pct": 0
     },
     "statements": {
-      "total": 154,
-      "covered": 5,
+      "total": 31,
+      "covered": 3,
       "skipped": 0,
-      "pct": 3.24
+      "pct": 9.67
     },
     "branches": {
-      "total": 132,
+      "total": 27,
       "covered": 0,
       "skipped": 0,
       "pct": 0
@@ -7590,9 +7590,9 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 1.8325,
-      "prev": 0,
-      "diff": 1.8325
+      "curr": 5.5425,
+      "prev": 1.8325,
+      "diff": 3.7100000000000004
     }
   },
   "plots/test/violin.integration.spec.js": {
@@ -7737,6 +7737,42 @@
       "curr": 6.795,
       "prev": 0,
       "diff": 6.795
+    }
+  },
+  "tw/qualitative.ts": {
+    "lines": {
+      "total": 124,
+      "covered": 6,
+      "skipped": 0,
+      "pct": 4.83
+    },
+    "functions": {
+      "total": 23,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 4.34
+    },
+    "statements": {
+      "total": 150,
+      "covered": 6,
+      "skipped": 0,
+      "pct": 4
+    },
+    "branches": {
+      "total": 119,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
+    },
+    "lowestPct": {
+      "curr": 0,
+      "prev": 0,
+      "diff": 0
+    },
+    "averagePct": {
+      "curr": 3.2925,
+      "prev": 0,
+      "diff": 3.2925
     }
   }
 }
