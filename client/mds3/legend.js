@@ -1,6 +1,17 @@
 import { legend_newrow } from '#src/block.legend'
 import { Menu, ColorScale, icons, shapes } from '#dom'
-import { mclass, dt2label, dtcnv, dtloh, dtitd, dtsv, dtfusionrna, mclassitd, bplen } from '#shared/common.js'
+import {
+	mds3tkMclass,
+	mclass,
+	dt2label,
+	dtcnv,
+	dtloh,
+	dtitd,
+	dtsv,
+	dtfusionrna,
+	mclassitd,
+	bplen
+} from '#shared/common.js'
 import { interpolateRgb } from 'd3-interpolate'
 import { showLDlegend } from '../plots/regression.results'
 import { rgb } from 'd3-color'
@@ -543,11 +554,15 @@ function update_mclass(tk) {
 
 	for (const c of showlst) {
 		// { k, count }
+		const { label, desc, color } = mds3tkMclass(c.k)
+
+		/*
 		// k is either dt (integer), or mclass (string)
 		let label,
 			desc,
 			color = '#858585'
 
+console.log(c)
 		if (Number.isInteger(c.k)) {
 			// c.k is not mclass (string), but dt (integer)
 			label = dt2label[c.k]
@@ -568,6 +583,7 @@ function update_mclass(tk) {
 			color = mclass[c.k].color
 			desc = mclass[c.k].desc
 		}
+		*/
 		printCategory({
 			holder: tk.legend.mclass.holder,
 			key: c.k,
