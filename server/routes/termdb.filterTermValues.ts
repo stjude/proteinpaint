@@ -74,7 +74,8 @@ function getList(samplesPerFilter, filtersData, tw, showAll) {
 	const sampleValues = Array.from(new Set(annotations))
 	const filteredValues: any[] = []
 	for (const value of values) {
-		const label = value.label.replace(/["']/g, '') // remove quotes from the label if found, some datasets have quotes in the labels
+		let label = value.label.replace(/["']/g, '') // remove quotes from the label if found, some datasets have quotes in the labels
+		if (label.length > 50) label = label.slice(0, 47) + '...' //truncate long labels
 		const disabled = !sampleValues.includes(value.key || value.label) //if the value is not in the sample values, disable it
 		if (!showAll && disabled) continue //skip disabled values
 		filteredValues.push({ value: value.key || value.label, label, disabled })
