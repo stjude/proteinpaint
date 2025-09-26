@@ -16,7 +16,6 @@ import type {
 	RawQualTWCustomGS
 } from '#types'
 import { SnpBase } from './snp.ts'
-//import { CategoricalBase } from './categorical.ts'
 import type { TwOpts } from './TwBase.ts'
 import { TwBase } from './TwBase.ts'
 import { copyMerge } from '#rx'
@@ -40,22 +39,8 @@ export class QualitativeBase extends TwBase {
 
 	/** tw.term must already be filled-in at this point */
 	static fill(tw: RawQualTW, opts: TwOpts = {}): QualTW {
-		if (!tw.term) throw `missing tw.term`
-		if (typeof tw.term != 'object') throw `tw.term is not an object`
+		if (!tw.term) throw `missing tw.term, must already be filled in`
 		if (!QualitativeBase.termTypes.has(tw.term.type)) throw `non-qualitative term.type='${tw.term.type}'`
-
-		switch (tw.term.type) {
-			case 'snp':
-				SnpBase.fill(tw.term)
-				break
-
-			// case 'categorical':
-			// 	CategoricalBase.fillTerm(tw)
-
-			default:
-				throw `unexpected qualitative term.type='${tw.term.type}'`
-		}
-
 		// GDC or other dataset may allow missing or empty term.values
 		//if (!tw.term.values || !Object.keys(tw.term.values).length) throw `missing or empty tw.term.values`
 
@@ -155,10 +140,7 @@ export class QualValues extends QualitativeBase {
 		else if (q.type != 'values') throw `expecting tw.q.type='values', got ${tw.q.type}`
 
 		// GDC or other dataset may allow missing term.values
-		// if (!term.values) term.values = {}
-		// const numVals = Object.keys(tw.term.values).length
-		// GDC or other dataset may allow empty term.values
-		// if (!numVals) throw `empty term.values`
+		if (!term.values) term.values = {}
 		if (q.mode == 'binary') {
 			// a tw with q.type = 'values' can only have mode='binary' if it has exactly 2 values
 			if (tw.term.type == 'categorical' && Object.keys(tw.term.values).length != 2)
