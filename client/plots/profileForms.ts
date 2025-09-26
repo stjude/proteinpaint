@@ -172,12 +172,12 @@ export class profileForms extends profilePlot {
 		const scaleG = this.dom.svg.append('g').attr('transform', `translate(0, ${y})`)
 		posAxisBottom(scaleG)
 
-		const legendG = this.dom.legendG.attr('transform', `translate(200, ${y + 50})`)
+		const legendG = this.dom.legendG.attr('transform', `translate(100, ${y + 50})`)
 		let x = 0
 
 		for (const category of this.categories) {
 			this.drawLegendRect(x, 0, category, legendG)
-			x += 200
+			x += 220
 		}
 	}
 

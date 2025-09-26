@@ -49,10 +49,14 @@ export async function getScoresData(query, ds, terms) {
 	)
 	if (data.error) throw data.error
 	const lst: any[] = Object.values(data.samples)
-	let sites = lst.map(s => ({
-		value: s[query.facilityTW.$id].value,
-		label: query.facilityTW.term.values[s[query.facilityTW.$id].value]?.label || s[query.facilityTW.$id].value
-	}))
+	let sites = lst.map(s => {
+		let label = query.facilityTW.term.values[s[query.facilityTW.$id].value]?.label || s[query.facilityTW.$id].value
+		if (label.length > 50) label = label.slice(0, 47) + '...' //truncate long labels
+		return {
+			value: s[query.facilityTW.$id].value,
+			label
+		}
+	})
 
 	//If the user has sites keep only the sites that are visible to the user
 	if (query.userSites) {
@@ -65,12 +69,17 @@ export async function getScoresData(query, ds, terms) {
 		}
 	}
 	const samples = Object.values(data.samples)
-	let sampleData
-	if ('facilitySite' in query)
-		sampleData = query.facilitySite ? lst.find(s => s[query.facilityTW.$id].value == query.facilitySite) : lst[0]
-	else if (sites.length == 1) sampleData = data.samples[sites[0].value]
+	let sampleData, site
+	if ('facilitySite' in query) {
+		const index = query.facilitySite ? lst.findIndex(s => s[query.facilityTW.$id].value == query.facilitySite) : 0
+		sampleData = lst[index]
+		site = sites[index]
+	} else if (sites.length == 1) {
+		sampleData = data.samples[sites[0].value]
+		site = sites[0]
+	}
 
-	return { samples, sampleData, sites }
+	return { samples, sampleData, sites, site }
 }
 
 async function getScores(query, ds) {
@@ -87,11 +96,7 @@ async function getScores(query, ds) {
 		term2Score[d.score.term.id] = getPercentage(d, data.samples, data.sampleData)
 	}
 
-	const facilityValue = data.sampleData?.[query.facilityTW.$id]
-	const termValue = query.facilityTW.term.values[facilityValue?.value]
-	const hospital = termValue?.label || termValue?.key
-
-	return { term2Score, sites: data.sites, hospital, n: data.sampleData ? 1 : data.samples.length }
+	return { term2Score, sites: data.sites, site: data.site, n: data.sampleData ? 1 : data.samples.length }
 }
 
 function getPercentage(d, samples, sampleData) {

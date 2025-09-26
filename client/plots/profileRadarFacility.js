@@ -189,7 +189,7 @@ class profileRadarFacility extends profilePlot {
 
 		this.addFilterLegend()
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
-		const site = this.sampleData.sites[0]
+		const site = this.sampleData.site
 		const hospital = site.label
 		const id = site.value
 		this.addLegendItem(`${hospital} / ${id}`, color1, 0, 'none')
