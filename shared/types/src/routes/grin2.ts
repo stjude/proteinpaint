@@ -63,20 +63,19 @@ export type GRIN2Request = {
 	}
 }
 
+interface ManhattanPoint {
+	x: number // cumulative genomic coordinate
+	y: number // -log10(q), capped
+	q: number // actual q-value
+	interactive: boolean // whether this point is q <= 0.05
+	chrom: string
+	pos: number
+	gene?: string
+}
+
 /** Simple Interface to store the complex plot data from the python Manhattan plot */
 interface grin2PlotData {
-	points: Array<{
-		x: number
-		y: number
-		svg_x: number
-		svg_y: number
-		color: string
-		type: string
-		gene: string
-		chrom: string
-		pos: number
-		q_value: number
-	}>
+	points: ManhattanPoint[]
 	chrom_data: Record<
 		string,
 		{
@@ -85,13 +84,12 @@ interface grin2PlotData {
 			center: number
 		}
 	>
-	y_axis_scaled: boolean
-	scale_factor: number
+	y_max: number
+	y_buffer: number
+	x_buffer: number
 	total_genome_length: number
-	plot_width: number
-	plot_height: number
-	device_pixel_ratio: number
-	dpi: number
+	png_width: number
+	png_height: number
 }
 
 /**
