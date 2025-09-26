@@ -10,9 +10,9 @@ export function getTermGroups(termgroups, app) {
 	// should only set the addons once, it should not vary from one call to the next
 	if (!addons)
 		addons = {
-			CatTWValues: discreteAddons,
-			CatTWPredefinedGS: discreteAddons,
-			CatTWCustomGS: discreteAddons,
+			QualTWValues: discreteAddons,
+			QualTWPredefinedGS: discreteAddons,
+			QualTWCustomGS: discreteAddons,
 			NumTWRegularBin: discreteAddons,
 			NumTWCustomBin: discreteAddons,
 			NumTWCont: continuousAddons
