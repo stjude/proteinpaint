@@ -15,7 +15,9 @@ import type {
 	RawQualTWPredefinedGS,
 	RawQualTWCustomGS
 } from '#types'
+import { CategoricalBase } from './categorical.ts'
 import { SnpBase } from './snp.ts'
+import { SingleCellCellTypeBase } from './singleCellCellType.ts'
 import type { TwOpts } from './TwBase.ts'
 import { TwBase } from './TwBase.ts'
 import { copyMerge } from '#rx'
@@ -44,15 +46,21 @@ export class QualitativeBase extends TwBase {
 		if (!QualitativeBase.termTypes.has(tw.term.type)) throw `non-qualitative term.type='${tw.term.type}'`
 
 		switch (tw.term.type) {
+			case 'categorical':
+				CategoricalBase.fill(tw.term)
+				break
+
 			case 'snp':
 				SnpBase.fill(tw.term)
 				break
 
-			// case 'categorical':
-			// 	CategoricalBase.fillTerm(tw)
+			case 'singleCellCellType':
+				SingleCellCellTypeBase.fill(tw.term)
+				break
 
 			default:
-				throw `unexpected qualitative term.type='${tw.term.type}'`
+				// should never be reached if TwRouter.fill() routes correctly
+				throw `unexpected qualitative term.type'` //='${tw.term.type}'`
 		}
 
 		// GDC or other dataset may allow missing or empty term.values

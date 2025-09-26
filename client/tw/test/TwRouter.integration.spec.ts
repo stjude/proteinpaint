@@ -67,7 +67,7 @@ async function getTws() {
 		await TwRouter.fill({ id: 'sex' }, { vocabApi }),
 		{
 			$id: 'test.$id',
-			type: 'CatTWPredefinedGS',
+			type: 'QualTWPredefinedGS',
 			term: getTermWithGS(),
 			isAtomic: true as const,
 			q: {
@@ -121,7 +121,7 @@ tape('fill({id}) no tw.term, no tw.q', async test => {
 					hashtmldetail: true
 				},
 				q: { type: 'values', isAtomic: true, hiddenValues: {}, mode: 'discrete' },
-				type: 'CatTWValues'
+				type: 'QualTWValues'
 			},
 			'should fill-in a minimal dictionary tw with only {id}'
 		)

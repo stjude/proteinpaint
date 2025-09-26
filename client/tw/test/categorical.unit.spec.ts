@@ -1,8 +1,8 @@
 import tape from 'tape'
-import type { RawCatTW, GroupEntry, TermGroupSetting, CatTWValues, CatTWPredefinedGS, CatTWCustomGS } from '#types'
+import type { RawQualTW, GroupEntry, TermGroupSetting, QualTWValues, QualTWPredefinedGS, QualTWCustomGS } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
 import { termjson } from '../../test/testdata/termjson'
-import { CategoricalBase } from '../categorical'
+import { QualitativeBase } from '../qualitative.ts'
 
 /*************************
  reusable helper functions
@@ -68,7 +68,7 @@ tape('\n', function (test) {
 })
 
 tape('fill(invalid tw)', async test => {
-	// not typing with RawCatTW since these are not valid fill() argument
+	// not typing with RawQualTW since these are not valid fill() argument
 	const tw = {
 		$id: 'test.$id',
 		term: { id: 'abc', type: 'integer' }
@@ -76,10 +76,10 @@ tape('fill(invalid tw)', async test => {
 	{
 		const msg = 'should detect an incorrect term.type'
 		try {
-			await CategoricalBase.fill(tw as any, { vocabApi })
+			await QualitativeBase.fill(tw as any, { vocabApi })
 			test.fail(msg)
 		} catch (e: any) {
-			test.true(e.includes('incorrect term.type'), msg)
+			test.true(e.includes(`non-qualitative term.type='integer'`), msg + ': ' + e)
 		}
 	}
 
@@ -87,7 +87,7 @@ tape('fill(invalid tw)', async test => {
 })
 
 tape(`fill() default q.type='values'`, async test => {
-	const tw: RawCatTW = {
+	const tw: RawQualTW = {
 		$id: 'test.$id',
 		term: termjson.diaggrp,
 		q: { isAtomic: true },
@@ -95,12 +95,12 @@ tape(`fill() default q.type='values'`, async test => {
 	}
 
 	try {
-		const fullTw = await CategoricalBase.fill(tw as any, { vocabApi })
+		const fullTw = await QualitativeBase.fill(tw as any, { vocabApi })
 		test.deepEqual(
 			fullTw,
 			{
 				$id: 'test.$id',
-				term: tw.term,
+				term: termjson.diaggrp,
 				q: {
 					type: 'values',
 					mode: 'discrete',
@@ -108,8 +108,8 @@ tape(`fill() default q.type='values'`, async test => {
 					hiddenValues: {}
 				},
 				isAtomic: true,
-				type: 'CatTWValues'
-			} satisfies CatTWValues,
+				type: 'QualTWValues'
+			} satisfies QualTWValues,
 			`should fill-in categorical q with no type with default q.type='values'`
 		)
 	} catch (e: any) {
@@ -121,7 +121,7 @@ tape(`fill() default q.type='values'`, async test => {
 
 tape('fill() predefined-groupset', async test => {
 	const term = getTermWithGS()
-	const tw: RawCatTW = {
+	const tw: RawQualTW = {
 		$id: 'test.$id',
 		term,
 		q: { isAtomic: true, type: 'predefined-groupset', predefined_groupset_idx: 0 },
@@ -129,12 +129,12 @@ tape('fill() predefined-groupset', async test => {
 	}
 
 	try {
-		const fullTw = await CategoricalBase.fill(tw, { vocabApi })
+		const fullTw = await QualitativeBase.fill(tw, { vocabApi })
 		test.deepEqual(
 			fullTw,
 			{
 				$id: 'test.$id',
-				term: tw.term,
+				term,
 				q: {
 					type: 'predefined-groupset',
 					mode: 'discrete',
@@ -143,8 +143,8 @@ tape('fill() predefined-groupset', async test => {
 					hiddenValues: {}
 				},
 				isAtomic: true,
-				type: 'CatTWPredefinedGS'
-			} satisfies CatTWPredefinedGS,
+				type: 'QualTWPredefinedGS'
+			} satisfies QualTWPredefinedGS,
 			`should fill-in a categorical q.type='predefined-groupset'`
 		)
 	} catch (e: any) {
@@ -155,7 +155,7 @@ tape('fill() predefined-groupset', async test => {
 })
 
 tape('fill() custom-groupset', async test => {
-	const tw: RawCatTW = {
+	const tw: RawQualTW = {
 		$id: 'test.$id',
 		term: termjson.diaggrp,
 		q: {
@@ -169,7 +169,7 @@ tape('fill() custom-groupset', async test => {
 
 	const expected = {
 		$id: 'test.$id',
-		term: tw.term, // term is not filled-in, so ok to reuse raw tw.term here
+		term: termjson.diaggrp, // term is not filled-in, so ok to reuse raw tw.term here
 		q: {
 			isAtomic: true,
 			type: 'custom-groupset',
@@ -178,12 +178,12 @@ tape('fill() custom-groupset', async test => {
 			customset: getCustomSet(),
 			hiddenValues: {}
 		},
-		type: 'CatTWCustomGS',
+		type: 'QualTWCustomGS',
 		isAtomic: true
-	} satisfies CatTWCustomGS
+	} satisfies QualTWCustomGS
 
 	try {
-		const fullTw = await CategoricalBase.fill(tw, { vocabApi })
+		const fullTw = await QualitativeBase.fill(tw, { vocabApi })
 		test.deepEqual(fullTw, expected, `should fill-in a categorical q.type='custom-groupset'`)
 	} catch (e: any) {
 		test.fail(e)

@@ -1,15 +1,10 @@
-import type { TermGroupSetting, TermValues } from '../index.ts'
+import type { TermGroupSetting, TermValues, BaseTerm } from '../index.ts'
 
 /*
 For term type 'snp'
 */
 
-export type RawSnpTerm = SnpTerm & {
-	groupsetting?: TermGroupSetting
-	values?: TermValues
-}
-
-export type SnpTerm = {
+export type SnpTerm = BaseTerm & {
 	type: 'snp'
 	id: string
 	name: string
@@ -19,16 +14,11 @@ export type SnpTerm = {
 	ref: string
 	alt: string[]
 	groupsetting: TermGroupSetting
+	// may be used to hide
 	values: TermValues
-	test: string
 }
 
-// export type RawSnpTW = RawQualTW & { term: SnpTerm; type?: string }
-
-// export type SnpTW = QualTW & { term: SnpTerm }
-
-// export type SnpValues = { term: SnpTerm, q: ValuesQ }
-
-// export type SnpPredefinedGS = { term: SnpTerm, q: PredefinedGroupSettingQ }
-
-// export type SnpCustomGS = { term: SnpTerm, q: CustomGroupSettingQ }
+export type RawSnpTerm = SnpTerm & {
+	groupsetting?: TermGroupSetting
+	values?: TermValues
+}

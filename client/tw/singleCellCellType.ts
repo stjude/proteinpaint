@@ -1,34 +1,36 @@
-import type { RawCategoricalTerm, TermGroupSetting, TermValues } from '#types'
+import type { RawSingleCellCellTypeTerm, SingleCellCellTypeTerm, TermGroupSetting, TermValues } from '#types'
 
-const termType = 'categorical'
+const termType = 'singleCellCellType'
 
-export class CategoricalBase {
-	id: string
-	name: string
+export class SingleCellCellTypeBase {
+	type = termType
+	sample: string
+	plot: string
 	groupsetting: TermGroupSetting
 	values: TermValues
 
 	// option to fill-in/mutate the input raw term object in-place
 	// - does not have to construct, but may require forced type casting in consumer code
-	static fill(term: RawCategoricalTerm) {
-		if (term instanceof CategoricalBase) return
-		CategoricalBase.validate(term)
-		if (!term.name) term.name = term.id
+	static fill(term: RawSingleCellCellTypeTerm) {
+		if (term instanceof SingleCellCellTypeBase) return
+		SingleCellCellTypeBase.validate(term)
 		if (!term.groupsetting) term.groupsetting = { disabled: false }
 		if (!term.values) term.values = {}
 	}
 
-	static validate(term: RawCategoricalTerm) {
+	static validate(term: RawSingleCellCellTypeTerm) {
 		if (typeof term !== 'object') throw 'term is not an object'
 		if (term.type != termType) throw `incorrect term.type='${term?.type}', expecting '${termType}'`
+		if (!term?.sample) throw 'missing term.sample'
+		if (!term?.plot) throw 'missing term.plot'
 	}
 
 	// option to construct an object instance and not mutate the input raw term
 	// - will be used instead of tw.term literal object
-	constructor(term: RawCategoricalTerm) {
-		CategoricalBase.validate(term)
-		this.id = term.id
-		this.name = term.name || term.id
+	constructor(term: RawSingleCellCellTypeTerm | SingleCellCellTypeTerm) {
+		SingleCellCellTypeBase.validate(term)
+		this.sample = term.sample
+		this.plot = term.plot
 		this.groupsetting = term.groupsetting || { disabled: false }
 		this.values = term.values || {}
 	}

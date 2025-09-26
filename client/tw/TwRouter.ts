@@ -2,14 +2,13 @@ import type { TermWrapper } from '#types'
 import type { TwOpts, TwBase } from './TwBase'
 import { mayHydrateDictTwLst } from '#termsetting'
 // TODO: may convert these to dynamic imports
-import { CategoricalBase, CatValues, CatPredefinedGS, CatCustomGS } from './categorical.ts'
+import { QualValues, QualPredefinedGS, QualCustomGS } from './qualitative.ts'
 import { GvBase, GvPredefinedGS, GvCustomGS } from './geneVariant.ts'
 import { GeneExpBase } from './geneExpression.ts'
 import { NumericBase, NumRegularBin, NumCustomBins, NumCont } from './numeric.ts'
 import { DateBase } from './date.ts'
 import { SsGSEABase } from './ssGSEA.ts'
 import { MetaboliteIntensityBase } from './metaboliteIntensity.ts'
-import { QualValues, QualPredefinedGS, QualCustomGS } from './qualitative.ts'
 
 export const routedTermTypes = new Set([
 	'categorical',
@@ -20,7 +19,8 @@ export const routedTermTypes = new Set([
 	'date',
 	'metaboliteIntensity',
 	'ssGSEA',
-	'snp'
+	'snp',
+	'singleCellCellType'
 ])
 
 export type UseCase = {
@@ -41,13 +41,6 @@ export class TwRouter {
 
 	static init(tw: TermWrapper, opts: TwOpts = {}): TwBase {
 		switch (tw.type) {
-			case 'CatTWValues':
-				return new CatValues(tw, opts)
-			case 'CatTWPredefinedGS':
-				return new CatPredefinedGS(tw, opts)
-			case 'CatTWCustomGS':
-				return new CatCustomGS(tw, opts)
-
 			case 'NumTWRegularBin':
 				return new NumRegularBin(tw, opts)
 			case 'NumTWCustomBin':
@@ -85,7 +78,11 @@ export class TwRouter {
 
 		switch (tw.term.type) {
 			case 'categorical':
-				return await CategoricalBase.fill(tw, opts)
+			case 'singleCellCellType':
+			case 'snp': {
+				const { QualitativeBase } = await import('./qualitative.ts')
+				return await QualitativeBase.fill(tw, opts)
+			}
 
 			case 'integer':
 			case 'float':
@@ -111,11 +108,6 @@ export class TwRouter {
 
 			case 'ssGSEA':
 				return await SsGSEABase.fill(tw, opts)
-
-			case 'snp': {
-				const { QualitativeBase } = await import('./qualitative.ts')
-				return await QualitativeBase.fill(tw, opts)
-			}
 
 			default:
 				throw `unrecognized tw.term?.type='${tw.term?.type}'`

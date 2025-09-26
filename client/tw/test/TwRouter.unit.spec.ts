@@ -3,7 +3,7 @@ import { TwRouter } from '../TwRouter.ts'
 import type { RawCatTW, RawTW, GroupEntry, TermGroupSetting } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
 import { termjson } from '../../test/testdata/termjson'
-import { CatValues, CatPredefinedGS, CatCustomGS } from '../categorical'
+import { QualValues, QualPredefinedGS, QualCustomGS } from '../qualitative.ts'
 
 const vocabApi = vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } } })
 
@@ -112,7 +112,7 @@ tape('initRaw() categorical', async test => {
 		}
 
 		const xtw = await TwRouter.initRaw(tw, { vocabApi })
-		test.true(xtw instanceof CatValues, `should return a matching categorical xtw on init() with missing q or q.type`)
+		test.true(xtw instanceof QualValues, `should return a matching categorical xtw on init() with missing q or q.type`)
 	}
 	{
 		const term = getTermWithGS()
@@ -125,7 +125,7 @@ tape('initRaw() categorical', async test => {
 
 		const xtw = await TwRouter.initRaw(tw, { vocabApi })
 		test.true(
-			xtw instanceof CatPredefinedGS,
+			xtw instanceof QualPredefinedGS,
 			`should return a matching categorical xtw on init() with q.type='predefined-groupset'`
 		)
 		test.deepEqual(
@@ -151,7 +151,7 @@ tape('initRaw() categorical', async test => {
 
 		const xtw = await TwRouter.initRaw(tw, { vocabApi })
 		test.true(
-			xtw instanceof CatCustomGS,
+			xtw instanceof QualCustomGS,
 			`should return a matching categorical xtw on init() with q.type='custom-groupset'`
 		)
 		test.deepEqual(
