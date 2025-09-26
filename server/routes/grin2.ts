@@ -184,7 +184,6 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		drawChrSeparators: true
 	})
 
-	// const resultData = JSON.parse(pyResult)
 	const resultData = JSON.parse(pyResult)
 
 	// Validate Python script output
