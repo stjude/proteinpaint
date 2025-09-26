@@ -1514,37 +1514,37 @@
   "plots/scatter/scatter.ts": {
     "lines": {
       "total": 121,
-      "covered": 75,
+      "covered": 7,
       "skipped": 0,
-      "pct": 61.98
+      "pct": 5.78
     },
     "functions": {
       "total": 21,
-      "covered": 14,
+      "covered": 2,
       "skipped": 0,
-      "pct": 66.66
+      "pct": 9.52
     },
     "statements": {
       "total": 142,
-      "covered": 85,
+      "covered": 7,
       "skipped": 0,
-      "pct": 59.85
+      "pct": 4.92
     },
     "branches": {
       "total": 91,
-      "covered": 41,
+      "covered": 0,
       "skipped": 0,
-      "pct": 45.05
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 45.05,
+      "curr": 0,
       "prev": 45.45,
-      "diff": -0.4000000000000057
+      "diff": -45.45
     },
     "averagePct": {
-      "curr": 58.38499999999999,
+      "curr": 5.055,
       "prev": 59.91,
-      "diff": -1.5250000000000057
+      "diff": -54.855
     }
   },
   "plots/scatter/viewmodel/scatterViewModel2DLarge.ts": {
@@ -3061,10 +3061,10 @@
   },
   "plots/barchart.js": {
     "lines": {
-      "total": 415,
+      "total": 414,
       "covered": 350,
       "skipped": 0,
-      "pct": 84.33
+      "pct": 84.54
     },
     "functions": {
       "total": 90,
@@ -3073,10 +3073,10 @@
       "pct": 84.44
     },
     "statements": {
-      "total": 464,
+      "total": 463,
       "covered": 370,
       "skipped": 0,
-      "pct": 79.74
+      "pct": 79.91
     },
     "branches": {
       "total": 413,
@@ -3090,9 +3090,9 @@
       "diff": -1.059999999999988
     },
     "averagePct": {
-      "curr": 79.075,
+      "curr": 79.17,
       "prev": 80.86250000000001,
-      "diff": -1.7875000000000085
+      "diff": -1.6925000000000097
     }
   },
   "mass/test/barchart.integration.spec.js": {
@@ -6914,37 +6914,37 @@
   "plots/violin.interactivity.js": {
     "lines": {
       "total": 154,
-      "covered": 33,
+      "covered": 1,
       "skipped": 0,
-      "pct": 21.42
+      "pct": 0.64
     },
     "functions": {
       "total": 27,
-      "covered": 4,
+      "covered": 0,
       "skipped": 0,
-      "pct": 14.81
+      "pct": 0
     },
     "statements": {
       "total": 163,
-      "covered": 33,
+      "covered": 1,
       "skipped": 0,
-      "pct": 20.24
+      "pct": 0.61
     },
     "branches": {
       "total": 116,
-      "covered": 11,
+      "covered": 0,
       "skipped": 0,
-      "pct": 9.48
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 9.48,
-      "prev": 0,
-      "diff": 9.48
+      "curr": 0,
+      "prev": 9.48,
+      "diff": -9.48
     },
     "averagePct": {
-      "curr": 16.4875,
-      "prev": 0.3125,
-      "diff": 16.175
+      "curr": 0.3125,
+      "prev": 16.4875,
+      "diff": -16.175
     }
   },
   "plots/violin.js": {
@@ -7058,37 +7058,37 @@
   "plots/boxplot/BoxPlot.ts": {
     "lines": {
       "total": 123,
-      "covered": 87,
+      "covered": 8,
       "skipped": 0,
-      "pct": 70.73
+      "pct": 6.5
     },
     "functions": {
       "total": 21,
-      "covered": 14,
+      "covered": 2,
       "skipped": 0,
-      "pct": 66.66
+      "pct": 9.52
     },
     "statements": {
       "total": 140,
-      "covered": 91,
+      "covered": 8,
       "skipped": 0,
-      "pct": 65
+      "pct": 5.71
     },
     "branches": {
       "total": 66,
-      "covered": 34,
+      "covered": 1,
       "skipped": 0,
-      "pct": 51.51
+      "pct": 1.51
     },
     "lowestPct": {
-      "curr": 51.51,
-      "prev": 0,
-      "diff": 51.51
+      "curr": 1.51,
+      "prev": 51.51,
+      "diff": -50
     },
     "averagePct": {
-      "curr": 63.474999999999994,
-      "prev": 0,
-      "diff": 63.474999999999994
+      "curr": 5.8100000000000005,
+      "prev": 63.474999999999994,
+      "diff": -57.66499999999999
     }
   },
   "plots/boxplot/model/Model.ts": {
