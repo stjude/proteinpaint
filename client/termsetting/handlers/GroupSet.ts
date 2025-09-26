@@ -1,6 +1,6 @@
 import { HandlerBase } from '../HandlerBase.ts'
 import type { Handler } from '../index.ts'
-import type { CatValues, CatPredefinedGS, CatCustomGS, SnpValues, SnpPredefinedGS, SnpCustomGS } from '#tw'
+import type { QualValues, QualPredefinedGS, QualCustomGS } from '#tw'
 import { select, type Selection } from 'd3-selection'
 import type { TermSetting } from '../TermSetting.ts'
 import { debounce } from 'debounce'
@@ -40,7 +40,7 @@ type GrpEntryWithDom = GrpEntry & {
 // }
 
 export class GroupSet extends HandlerBase implements Handler {
-	tw: CatValues | CatPredefinedGS | CatCustomGS | SnpValues | SnpPredefinedGS | SnpCustomGS
+	tw: QualValues | QualPredefinedGS | QualCustomGS
 	termsetting: TermSetting
 	category2samplecount: any
 	defaultMaxGrpNum = 5

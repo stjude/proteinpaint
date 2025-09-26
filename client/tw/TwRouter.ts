@@ -9,7 +9,7 @@ import { NumericBase, NumRegularBin, NumCustomBins, NumCont } from './numeric.ts
 import { DateBase } from './date.ts'
 import { SsGSEABase } from './ssGSEA.ts'
 import { MetaboliteIntensityBase } from './metaboliteIntensity.ts'
-import { SnpBase, SnpValues, SnpPredefinedGS, SnpCustomGS } from './snp.ts'
+import { QualValues, QualPredefinedGS, QualCustomGS } from './qualitative.ts'
 
 export const routedTermTypes = new Set([
 	'categorical',
@@ -60,12 +60,12 @@ export class TwRouter {
 			case 'GvCustomGsTW':
 				return new GvCustomGS(tw, opts)
 
-			case 'SnpTWValues':
-				return new SnpValues(tw, opts)
-			case 'SnpTWPredefinedGS':
-				return new SnpPredefinedGS(tw, opts)
-			case 'SnpTWCustomGS':
-				return new SnpCustomGS(tw, opts)
+			case 'QualTWValues':
+				return new QualValues(tw, opts)
+			case 'QualTWPredefinedGS':
+				return new QualPredefinedGS(tw, opts)
+			case 'QualTWCustomGS':
+				return new QualCustomGS(tw, opts)
 
 			default:
 				// console.log(46, tw)
@@ -112,8 +112,10 @@ export class TwRouter {
 			case 'ssGSEA':
 				return await SsGSEABase.fill(tw, opts)
 
-			case 'snp':
+			case 'snp': {
+				const { SnpBase } = await import('./snp.ts')
 				return await SnpBase.fill(tw, opts)
+			}
 
 			default:
 				throw `unrecognized tw.term?.type='${tw.term?.type}'`
