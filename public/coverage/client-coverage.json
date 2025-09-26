@@ -5906,37 +5906,37 @@
   "termsetting/utils.ts": {
     "lines": {
       "total": 90,
-      "covered": 74,
+      "covered": 48,
       "skipped": 0,
-      "pct": 82.22
+      "pct": 53.33
     },
     "functions": {
       "total": 14,
-      "covered": 13,
+      "covered": 11,
       "skipped": 0,
-      "pct": 92.85
+      "pct": 78.57
     },
     "statements": {
       "total": 106,
-      "covered": 82,
+      "covered": 52,
       "skipped": 0,
-      "pct": 77.35
+      "pct": 49.05
     },
     "branches": {
       "total": 73,
-      "covered": 50,
+      "covered": 25,
       "skipped": 0,
-      "pct": 68.49
+      "pct": 34.24
     },
     "lowestPct": {
-      "curr": 68.49,
-      "prev": 0,
-      "diff": 68.49
+      "curr": 34.24,
+      "prev": 68.49,
+      "diff": -34.24999999999999
     },
     "averagePct": {
-      "curr": 80.22749999999999,
-      "prev": 2.0525,
-      "diff": 78.175
+      "curr": 53.7975,
+      "prev": 80.22749999999999,
+      "diff": -26.429999999999993
     }
   },
   "src/block.tk.bigwig.js": {
