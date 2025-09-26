@@ -3,6 +3,7 @@ import { authApi } from './auth.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { DEFAULT_SAMPLE_TYPE, numericTypes } from '#shared/terms.js'
 import type { isSupportedChartCallbacks } from '#types'
+import { getFilterCTEs } from './termdb.filter.js'
 
 /*
 server_init_db_queries()
@@ -546,12 +547,16 @@ export function server_init_db_queries(ds) {
 		return supportedChartTypes
 	}
 
-	q.getSingleSampleData = function (sampleId, term_ids = []) {
-		//TO DO: apply the filter to ensure when user auth the user filter is applied
-		//const filterCTEs = await getFilterCTEs(filter, q.ds, sampleTypes)
+	q.getSingleSampleData = async function (sampleId, term_ids = [], filter, ds) {
+		const sampleTypes = new Set(term_ids.map(id => ds.cohort.termdb.term2SampleType.get(id)))
+		const filterCTEs = await getFilterCTEs(filter, ds, sampleTypes)
+		let termClause = !term_ids.length ? '' : `and term_id in (${term_ids.map(() => '?').join(',')})`
+		if (filterCTEs) termClause += ` AND sample in ${filterCTEs.CTEname} `
 
-		const termClause = !term_ids.length ? '' : `and term_id in (${term_ids.map(() => '?').join(',')})`
-		const query = `select term_id, value, jsondata from ( select term_id, value 
+		const query = `
+		WITH
+		${filterCTEs ? filterCTEs.filters : ''}
+		select term_id, value, jsondata from ( select term_id, value 
 		from anno_categorical 
 		where sample=? ${termClause}
 		union all 
@@ -571,8 +576,8 @@ export function server_init_db_queries(ds) {
 		select term_id, (tte || ' ' || exit_code) as value 
 		from survival 
 		where sample=? ${termClause}) join terms on terms.id = term_id`
-		const sql = cn.prepare(query)
 		const params = [
+			...(filterCTEs ? filterCTEs.values : []),
 			sampleId,
 			...term_ids,
 			sampleId,
@@ -584,8 +589,10 @@ export function server_init_db_queries(ds) {
 			sampleId,
 			...term_ids
 		]
+
 		if (tables.has('anno_date')) params.push(sampleId, ...term_ids)
-		const rows = sql.all(params)
+		const rows = cn.prepare(query).all(params)
+		if (rows.length == 0) throw 'No accessible data found for the sample provided'
 		return rows
 	}
 
