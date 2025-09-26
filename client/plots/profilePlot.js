@@ -382,7 +382,7 @@ export class profilePlot {
 						scoreTerms: this.scoreTerms,
 						filter, //filter excluding facility term
 						userSites: this.state.sites,
-						facilitySite: this.settings.facilitySite || null, //in case the user has selected a facility site
+						facilitySite: this.settings.facilitySite || null, //need to pass null not undefined, so the parameter is always passed to the server
 						facilityTW: this.config.facilityTW
 					})
 					this.facilitySites = this.sampleData.sites
