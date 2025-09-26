@@ -7,7 +7,9 @@ import { mayLog } from '#src/helpers.ts'
 import { get_samples } from '#src/termdb.sql.js'
 import { read_file, file_is_readable } from '#src/utils.js'
 import { dtsnvindel, dtcnv, dtfusionrna } from '#shared/common.js'
-
+import { randomBytes } from 'crypto'
+import { join, dirname } from 'path'
+import { promises as fs } from 'fs'
 /**
  * General GRIN2 analysis handler
  * Processes user-provided snvindel, CNV, and fusion filters and performs GRIN2 analysis
@@ -77,6 +79,12 @@ function init({ genomes }) {
 	}
 }
 
+function makeCacheFileName(): string {
+	const stamp = Date.now()
+	const rand = randomBytes(16).toString('hex')
+	return `cache_${stamp}_${rand}.txt`
+}
+
 async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Response> {
 	const startTime = Date.now()
 
@@ -119,15 +127,17 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		throw new Error('No lesions found after processing all samples. Check filter criteria and input data.')
 	}
 
+	// ── Generate file name; build absolute path; ensure directory exists
+	const fileName = makeCacheFileName()
+	const cachePath = join(serverconfig.cachedir, 'grin2', fileName)
+	await fs.mkdir(dirname(cachePath), { recursive: true })
+
 	// Step 3: Prepare input for Python script
 	const pyInput = {
 		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 		chromosomelist: {} as { [key: string]: number },
 		lesion: JSON.stringify(lesions),
-		devicePixelRatio: request.devicePixelRatio,
-		pngDotRadius: request.pngDotRadius,
-		width: request.width,
-		height: request.height
+		cacheFileName: cachePath
 	}
 
 	mayLog('[GRIN2] Prepared input for Python script:', { ...pyInput })
@@ -146,7 +156,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 
 	// Step 4: Run GRIN2 analysis via Python
 	const grin2AnalysisStart = Date.now()
-	const pyResult = await run_python('grin2PpWrapper.py', JSON.stringify(pyInput))
+	const pyResult = await run_python('grin2PpWrapper2.py', JSON.stringify(pyInput))
 
 	if (pyResult.stderr?.trim()) {
 		mayLog(`[GRIN2] Python stderr: ${pyResult.stderr}`)
