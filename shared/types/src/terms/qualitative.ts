@@ -4,79 +4,66 @@ import type {
 	BaseTW,
 	PredefinedGroupSettingQ,
 	CustomGroupSettingQ,
+	RawCategoricalTerm,
 	CategoricalTerm,
+	RawSnpTerm,
 	SnpTerm
 } from '../index.ts'
 import type { RawValuesQ, RawPredefinedGroupsetQ, RawCustomGroupsetQ, MinBaseQ } from './q.ts'
 
 /**
- * A raw categorical term q object, before filling-in
+ * A raw qualitative termwrapper object, before filling-in
  *
  * test:QualitativeQ:
  *
  * @category TW
  */
 
-export type QualitativeTerm = CategoricalTerm | SnpTerm
+export type RawQualTerm = RawCategoricalTerm | RawSnpTerm
+export type QualTerm = CategoricalTerm | SnpTerm
 
 export type RawQualTWValues = BaseTW & {
 	type?: 'QualTWValues'
 	/** must already exist, for dictionary terms, TwRouter.fill() will use mayHydrateDictTwLst() */
-	term: QualitativeTerm
+	term: RawQualTerm
 	q: RawValuesQ
 }
 
 export type RawQualTWPredefinedGS = BaseTW & {
 	type?: 'QualTWPredefinedGS'
-	term: QualitativeTerm
+	term: RawQualTerm
 	q: RawPredefinedGroupsetQ
 }
 
 export type RawQualTWCustomGS = BaseTW & {
 	type?: 'QualTWCustomGS'
-	term: QualitativeTerm
+	term: RawQualTerm
 	q: RawCustomGroupsetQ
 }
 
 export type RawQualTW = RawQualTWValues | RawQualTWPredefinedGS | RawQualTWCustomGS
 
-export type QualitativeBaseQ = MinBaseQ & {
+export type QualBaseQ = MinBaseQ & {
 	mode?: 'discrete' | 'binary'
 }
 
-export type QualitativeQ = GroupSettingQ | ValuesQ
-
-/**
- * A categorical term wrapper object
- *
- * @group Termdb
- * @category TW
- */
-
-export type QualitativeTW = BaseTW & {
-	//id: string
-	type: 'QualTWValues' | 'QualTWPredefinedGS' | 'QualTWCustomGS'
-	q: QualitativeQ
-	term: QualitativeTerm
-}
+export type QualQ = GroupSettingQ | ValuesQ
 
 export type QualTWValues = BaseTW & {
 	//id: string
-	term: QualitativeTerm
+	term: QualTerm
 	q: ValuesQ
 	type: 'QualTWValues'
 }
 
 export type QualTWPredefinedGS = BaseTW & {
-	//id: string
-	term: QualitativeTerm
+	term: QualTerm
 	q: PredefinedGroupSettingQ
 	type: 'QualTWPredefinedGS'
 }
 
 export type QualTWCustomGS = BaseTW & {
-	//id: string
-	term: QualitativeTerm
+	term: QualTerm
 	q: CustomGroupSettingQ
 	type: 'QualTWCustomGS'
 }

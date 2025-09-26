@@ -205,7 +205,7 @@ export class GroupSet extends HandlerBase implements Handler {
 		const customset: any = { groups: [] }
 		for (const group of this.data.groups) {
 			// TODO: generalize group.type expectation
-			if (group.type != 'values' && group.type != 'CatTWValues' && group.type != 'SnpTWValues')
+			if (group.type != 'values' && group.type != 'CatTWValues' && group.type != 'QualTWValues')
 				throw `group.type='${group.type}' is not recognized`
 			const customgroup: any = { name: group.name, type: 'values', uncomputable: group.uncomputable }
 			const groupValues = this.data.values

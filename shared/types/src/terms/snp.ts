@@ -1,27 +1,31 @@
-import type {
-	BaseTerm,
-	TermGroupSetting,
-	RawQualTW,
-	QualTW /*ValuesQ, PredefinedGroupSettingQ, CustomGroupSettingQ*/
-} from '../index.ts'
+import type { TermGroupSetting, TermValues } from '../index.ts'
 
 /*
 For term type 'snp'
 */
 
-export type SnpTerm = BaseTerm & {
+export type RawSnpTerm = SnpTerm & {
+	groupsetting?: TermGroupSetting
+	values?: TermValues
+}
+
+export type SnpTerm = {
 	type: 'snp'
+	id: string
+	name: string
 	chr: string
 	start: number
 	stop: number
 	ref: string
 	alt: string[]
 	groupsetting: TermGroupSetting
+	values: TermValues
+	test: string
 }
 
-export type RawSnpTW = RawQualTW & { term: SnpTerm; type?: string }
+// export type RawSnpTW = RawQualTW & { term: SnpTerm; type?: string }
 
-export type SnpTW = QualTW & { term: SnpTerm }
+// export type SnpTW = QualTW & { term: SnpTerm }
 
 // export type SnpValues = { term: SnpTerm, q: ValuesQ }
 

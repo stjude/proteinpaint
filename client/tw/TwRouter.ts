@@ -113,8 +113,8 @@ export class TwRouter {
 				return await SsGSEABase.fill(tw, opts)
 
 			case 'snp': {
-				const { SnpBase } = await import('./snp.ts')
-				return await SnpBase.fill(tw, opts)
+				const { QualitativeBase } = await import('./qualitative.ts')
+				return await QualitativeBase.fill(tw, opts)
 			}
 
 			default:

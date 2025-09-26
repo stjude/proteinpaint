@@ -1,6 +1,7 @@
 import type {
-	QualitativeTerm,
-	QualitativeQ,
+	Term,
+	QualTerm,
+	QualQ,
 	ValuesQ,
 	PredefinedGroupSettingQ,
 	CustomGroupSettingQ,
@@ -14,6 +15,8 @@ import type {
 	RawQualTWPredefinedGS,
 	RawQualTWCustomGS
 } from '#types'
+import { SnpBase } from './snp.ts'
+//import { CategoricalBase } from './categorical.ts'
 import type { TwOpts } from './TwBase.ts'
 import { TwBase } from './TwBase.ts'
 import { copyMerge } from '#rx'
@@ -25,8 +28,8 @@ export type QualTypes = typeof QualValues | typeof QualPredefinedGS | typeof Qua
 
 export class QualitativeBase extends TwBase {
 	// type, isAtomic, $id are set in ancestor base classes
-	term: QualitativeTerm
-	q: QualitativeQ
+	term: QualTerm
+	q: QualQ
 	static termTypes = new Set(['categorical', 'snp', 'singleCellCellType'])
 
 	constructor(tw: QualTW, opts: TwOpts) {
@@ -37,8 +40,22 @@ export class QualitativeBase extends TwBase {
 
 	/** tw.term must already be filled-in at this point */
 	static fill(tw: RawQualTW, opts: TwOpts = {}): QualTW {
-		if (!tw.term) throw `missing tw.term, must already be filled in`
+		if (!tw.term) throw `missing tw.term`
+		if (typeof tw.term != 'object') throw `tw.term is not an object`
 		if (!QualitativeBase.termTypes.has(tw.term.type)) throw `non-qualitative term.type='${tw.term.type}'`
+
+		switch (tw.term.type) {
+			case 'snp':
+				SnpBase.fill(tw.term)
+				break
+
+			// case 'categorical':
+			// 	CategoricalBase.fillTerm(tw)
+
+			default:
+				throw `unexpected qualitative term.type='${tw.term.type}'`
+		}
+
 		// GDC or other dataset may allow missing or empty term.values
 		//if (!tw.term.values || !Object.keys(tw.term.values).length) throw `missing or empty tw.term.values`
 
@@ -138,16 +155,17 @@ export class QualValues extends QualitativeBase {
 		else if (q.type != 'values') throw `expecting tw.q.type='values', got ${tw.q.type}`
 
 		// GDC or other dataset may allow missing term.values
-		if (!term.values) term.values = {}
-		//const numVals = Object.keys(tw.term.values).length
-		//GDC or other dataset may allow empty term.values
-		//if (!numVals) throw `empty term.values`
+		// if (!term.values) term.values = {}
+		// const numVals = Object.keys(tw.term.values).length
+		// GDC or other dataset may allow empty term.values
+		// if (!numVals) throw `empty term.values`
 		if (q.mode == 'binary') {
 			// a tw with q.type = 'values' can only have mode='binary' if it has exactly 2 values
 			if (tw.term.type == 'categorical' && Object.keys(tw.term.values).length != 2)
 				throw 'term.values must have exactly two keys'
 		}
-		set_hiddenvalues(q, term)
+		set_hiddenvalues(q, term as Term) // TODO: do not force type
+		// TODO: figure out not having to force the returned type
 		return tw as QualTWValues
 	}
 
@@ -237,7 +255,8 @@ export class QualPredefinedGS extends QualitativeBase {
 			//
 			if (groupset.groups.length != 2) throw 'there must be exactly two groups'
 		}
-		set_hiddenvalues(q, term)
+		set_hiddenvalues(q, term as Term) // TODO: do not force type
+		// TODO: figure out not having to force the returned type
 		return tw as QualTWPredefinedGS
 	}
 
@@ -296,14 +315,15 @@ export class QualCustomGS extends QualitativeBase {
 			// 			throw `there are no samples for the required binary value=${grp.name}`
 			// 	}
 			// }
-			if (q.sampleCounts && tw.term.values) {
+			if (tw.term.type == 'categorical' && q.sampleCounts && tw.term.values) {
 				for (const key in tw.term.values) {
 					if (!q.sampleCounts.find(d => d.key === key))
 						throw `there are no samples for the required binary value=${key}`
 				}
 			}
 		}
-		set_hiddenvalues(q, term)
+		set_hiddenvalues(q, term as Term) // TODO: do not force type
+		// TODO: figure out not having to force the returned type
 		return tw as QualTWCustomGS
 	}
 
