@@ -12,7 +12,6 @@ import type {
 } from '../VolcanoTypes'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
 import { DataPointMouseEvents } from './DataPointMouseEvents'
-import { TermTypes } from '#shared/terms.js'
 
 export class VolcanoPlotView {
 	dom: VolcanoDom
@@ -83,52 +82,7 @@ export class VolcanoPlotView {
 
 			// Launch hierCluster for DEGs between the two groups
 			this.addActionButton('DEGs hierarchical clustering', async () => {
-				//Sort the DEG rows by q-value in ascending order
-				const geneIndex = this.viewData.pValueTableData.columns.findIndex(col => col.label === 'Gene Name')
-				const adjustedPValIndex = this.viewData.pValueTableData.columns.findIndex(
-					col => col.label === 'Adjusted p-value'
-				)
-				const rowsSorted = [...this.viewData.pValueTableData.rows].sort((a, b) => {
-					const aQVal = Number(a[adjustedPValIndex].value)
-					const bQVal = Number(b[adjustedPValIndex].value)
-					return aQVal - bQVal
-				})
-
-				// Launch hierCluster for up to 100 DEGs with the smallest q-values
-				const geneList = rowsSorted.slice(0, 100).map(r => ({ gene: r[geneIndex].value }))
-
-				const tws = geneList.map(d => {
-					const gene = d.gene
-					const unit = this.interactions.app.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression'
-					const name = `${gene} ${unit}`
-					const term = { gene, name, type: 'geneExpression' }
-					const tw = { term, q: {} }
-					return tw
-				})
-
-				const group = { lst: tws, type: 'hierCluster' }
-				const customVariable = this.interactions.app.vocabApi.state.plots.find(p => p.id == this.interactions.id).tw
-				const annotationGroup = { lst: [customVariable] }
-				this.interactions.app.dispatch({
-					type: 'plot_create',
-					config: {
-						chartType: 'hierCluster',
-						termgroups: [group, annotationGroup],
-						dataType: TermTypes.GENE_EXPRESSION,
-						localFilter: {
-							in: true,
-							type: 'tvslst',
-							lst: [
-								{
-									type: 'tvs',
-									tvs: {
-										term: customVariable.term
-									}
-								}
-							]
-						}
-					}
-				})
+				await this.interactions.launchDEGClustering()
 			})
 		}
 	}
