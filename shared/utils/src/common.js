@@ -455,6 +455,19 @@ mclass[mclassdeletion] = {
 }
 // TODO complex indel
 
+/* explain
+ */
+export function mds3tkMclass(k) {
+	if (k == dtcnv) {
+		return {
+			color: '#858585',
+			label: 'CNV',
+			desc: 'Copy number variation'
+		}
+	}
+	return mclass[k]
+}
+
 export const dt2color = {
 	[dtsnvindel]: mclass.M.color // general color for snvindel irrespective of class (when class is not available)
 	// add new dt as needed

@@ -131,22 +131,23 @@ function mclassorigin(block, height) {
 		.attr('transform', 'translate(' + (xpad + block.leftheadw + block.lpad + block.width - 200) + ',' + height + ')')
 
 	for (const [cls, count] of mclass2show) {
+		const { color, label } = common.mds3tkMclass(cls)
 		const row = g.append('g').attr('transform', 'translate(0,' + h + ')')
 		row
 			.append('circle')
 			.attr('cx', rowh / 2)
 			.attr('cy', rowh / 2)
 			.attr('r', rowh / 2)
-			.attr('fill', common.mclass[cls].color)
+			.attr('fill', color)
 		row
 			.append('text')
-			.text(common.mclass[cls].label + ', n=' + count)
+			.text(`${label}, n=${count}`)
 			.attr('x', rowh + 10)
 			.attr('y', rowh / 2)
 			.attr('dominant-baseline', 'central')
 			.attr('font-size', fontsize)
 			.attr('font-family', client.font)
-			.attr('fill', common.mclass[cls].color)
+			.attr('fill', color)
 		h += rowh + rowpad
 	}
 	if (block.legend.morigins && block.legend.morigins.size > 0) {
