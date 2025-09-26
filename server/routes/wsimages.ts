@@ -91,7 +91,6 @@ async function getWSImagePath(ds: any, wSImagesRequest: WSImagesRequest) {
 	}
 }
 
-// updated getSessionId signature and implementation
 async function getSessionId(
 	ds: any,
 	cookieJar: any,
