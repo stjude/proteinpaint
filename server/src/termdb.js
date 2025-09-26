@@ -299,7 +299,7 @@ async function get_singleSampleData(q, req, res, ds, tdb) {
 	if (canDisplay) {
 		try {
 			//TO DO: pass q.filter to apply user filter
-			result = tdb.q.getSingleSampleData(q.sampleId, q.term_ids)
+			result = await tdb.q.getSingleSampleData(q.sampleId, q.term_ids, q.filter, ds)
 			res.send(result)
 		} catch (e) {
 			res.send({ error: e.message || e })
