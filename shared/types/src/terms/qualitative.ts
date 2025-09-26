@@ -7,7 +7,9 @@ import type {
 	RawCategoricalTerm,
 	CategoricalTerm,
 	RawSnpTerm,
-	SnpTerm
+	SnpTerm,
+	RawSingleCellCellTypeTerm,
+	SingleCellCellTypeTerm
 } from '../index.ts'
 import type { RawValuesQ, RawPredefinedGroupsetQ, RawCustomGroupsetQ, MinBaseQ } from './q.ts'
 
@@ -19,8 +21,8 @@ import type { RawValuesQ, RawPredefinedGroupsetQ, RawCustomGroupsetQ, MinBaseQ }
  * @category TW
  */
 
-export type RawQualTerm = RawCategoricalTerm | RawSnpTerm
-export type QualTerm = CategoricalTerm | SnpTerm
+export type RawQualTerm = RawCategoricalTerm | RawSnpTerm | RawSingleCellCellTypeTerm
+export type QualTerm = CategoricalTerm | SnpTerm | SingleCellCellTypeTerm
 
 export type RawQualTWValues = BaseTW & {
 	type?: 'QualTWValues'

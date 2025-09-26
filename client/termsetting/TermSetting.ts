@@ -185,13 +185,10 @@ export class TermSetting {
 	async setHandler(termtype: string | undefined | null, tw?: TermWrapper) {
 		if (tw instanceof TwBase) {
 			switch (tw.type) {
-				case 'CatTWValues':
-				case 'CatTWPredefinedGS':
-				case 'CatTWCustomGS':
 				case 'QualTWValues':
 				case 'QualTWPredefinedGS':
 				case 'QualTWCustomGS': {
-					const { GroupSet } = await import('./handlers/GroupSet.ts')
+					const { GroupSet } = await import('./handlers/qualitative.ts')
 					this.handler = new GroupSet({ termsetting: this })
 					return
 					//break

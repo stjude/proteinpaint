@@ -1,9 +1,9 @@
 import type { RawSnpTerm, SnpTerm, TermGroupSetting, TermValues } from '#types'
 
-const SNP = 'snp'
+const termType = 'snp'
 
 export class SnpBase {
-	type = SNP
+	type = termType
 	id: string
 	name: string
 	chr: string
@@ -25,7 +25,7 @@ export class SnpBase {
 
 	static validate(term: RawSnpTerm) {
 		if (typeof term !== 'object') throw 'term is not an object'
-		if (term.type != 'snp') throw `incorrect term.type='${term?.type}', expecting 'snp'`
+		if (term.type != termType) throw `incorrect term.type='${term?.type}', expecting '${termType}'`
 		if (!term.id || !term.name) throw 'missing snp id/name'
 		if (!term.chr || !Number.isInteger(term.start) || !Number.isInteger(term.stop))
 			throw 'incomplete position information'

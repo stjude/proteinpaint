@@ -43,9 +43,9 @@ export class FakeApp {
 			return TwRouter.init(tw, { vocabApi: this.#opts.vocabApi, addons })
 		} else {
 			// example using extended subclass
-			if (tw.type == 'CatTWValues') return new FakeCatValues(tw, opts)
-			else if (tw.type == 'CatTWPredefinedGS') return new FakeCatPredefinedGS(tw, opts)
-			else if (tw.type == 'CatTWCustomGS') return new FakeCatCustomGS(tw, opts)
+			if (tw.type == 'QualTWValues') return new FakeCatValues(tw, opts)
+			else if (tw.type == 'QualTWPredefinedGS') return new FakeCatPredefinedGS(tw, opts)
+			else if (tw.type == 'QualTWCustomGS') return new FakeCatCustomGS(tw, opts)
 			else throw `no fakeApp extended class for tw.type=${tw.type}`
 		}
 	}

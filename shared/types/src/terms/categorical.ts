@@ -47,16 +47,19 @@ export type CategoricalBaseQ = MinBaseQ & {
 export type CategoricalQ = GroupSettingQ | ValuesQ
 
 export type RawCategoricalTerm = {
+	id: string
+	name?: string
 	type: 'categorical'
 	values: TermValues
 	groupsetting?: TermGroupSetting
 }
 
-export type CategoricalTerm = BaseTerm & {
-	type: 'categorical'
-	values: TermValues
-	groupsetting: TermGroupSetting
-}
+export type CategoricalTerm = BaseTerm &
+	RawCategoricalTerm & {
+		type: 'categorical'
+		values: TermValues
+		groupsetting: TermGroupSetting
+	}
 
 /**
  * A categorical term wrapper object

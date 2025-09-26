@@ -1,7 +1,7 @@
-import { CatValues, CatPredefinedGS, CatCustomGS } from '../../../index.ts'
+import { QualValues, QualPredefinedGS, QualCustomGS } from '../../../index.ts'
 import type { PlotTwRenderOpts, FakeTw } from '../types'
 
-export class FakeCatValues extends CatValues implements FakeTw {
+export class FakeCatValues extends QualValues implements FakeTw {
 	render(arg: PlotTwRenderOpts): string {
 		const t = this.term
 		const svgElems: string[] = []
@@ -19,7 +19,7 @@ export class FakeCatValues extends CatValues implements FakeTw {
 	}
 }
 
-export class FakeCatPredefinedGS extends CatPredefinedGS implements FakeTw {
+export class FakeCatPredefinedGS extends QualPredefinedGS implements FakeTw {
 	render(arg: PlotTwRenderOpts): string {
 		// the tw is guaranteed to have term.type=categorical, q.type='predefined-groupset'
 		const t = this.term
@@ -36,7 +36,7 @@ export class FakeCatPredefinedGS extends CatPredefinedGS implements FakeTw {
 	}
 }
 
-export class FakeCatCustomGS extends CatCustomGS implements FakeTw {
+export class FakeCatCustomGS extends QualCustomGS implements FakeTw {
 	render(arg: PlotTwRenderOpts): string {
 		// the tw is guaranteed to have term.type=categorical, q.type='predefined-groupset'
 		const t = this.term
