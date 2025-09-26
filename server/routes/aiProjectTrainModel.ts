@@ -52,6 +52,7 @@ function init({ genomes }) {
 					status: 'error',
 					error: 'No retraining script defined'
 				})
+				return
 			}
 
 			res.status(200).send({

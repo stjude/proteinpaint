@@ -32,6 +32,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 	private metadataRenderer = new MetadataRenderer()
 	private legendRenderer = new LegendRenderer()
 	private map: OLMap | undefined = undefined
+	loadingDiv: any
 
 	constructor(opts: any, api) {
 		super(opts, api)
@@ -54,6 +55,16 @@ class WSIViewer extends PlotBase implements RxComponent {
 		const state = structuredClone(this.state)
 		const settings = state.plots.find(p => p.id === this.id).settings as Settings
 		const holder = this.opts.holder
+
+		this.loadingDiv = holder
+			.append('div')
+			.style('position', 'absolute')
+			.style('top', '0')
+			.style('left', '0')
+			.style('width', '100%')
+			.style('height', '100%')
+			.style('background-color', 'rgba(255, 255, 255, 0.95)')
+			.style('text-align', 'center')
 
 		const buffers = {
 			annotationsIdx: new Buffer<number>(0),
@@ -156,6 +167,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 				)
 			}
 		}
+		this.wsiViewerInteractions.toggleLoadingDiv(false)
 	}
 }
 
