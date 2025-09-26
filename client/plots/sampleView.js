@@ -910,8 +910,8 @@ export function searchSampleInput(holder, samplesData, hasSampleAncestry, callba
 					getLabel(d) +
 					(i + 1 == limit
 						? isBigDataset
-							? `Showing first ${i + 1} hits`
-							: `Showing ${i + 1} of ${options.length} hits`
+							? ` Showing first ${i + 1} hits`
+							: ` Showing ${i + 1} of ${options.length} hits`
 						: i + 1 === options.length && i > 0
 						? `  (Found ${options.length} hits)`
 						: '')
