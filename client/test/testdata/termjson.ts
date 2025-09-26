@@ -323,7 +323,7 @@ export const termjson = {
 			type: 'values',
 			hiddenValues: {}
 		},
-		type: 'CatTWValues'
+		type: 'QualTWValues'
 	},
 	AWHO_region: {
 		id: 'AWHO_region',
@@ -368,7 +368,7 @@ export const termjson = {
 			type: 'values',
 			hiddenValues: {}
 		},
-		type: 'CatTWValues'
+		type: 'QualTWValues'
 	},
 	AIncome_group: {
 		id: 'AIncome_group',
@@ -409,7 +409,7 @@ export const termjson = {
 			type: 'values',
 			hiddenValues: {}
 		},
-		type: 'CatTWValues'
+		type: 'QualTWValues'
 	},
 	AFC_TypeofFacility: {
 		id: 'AFC_TypeofFacility',
@@ -454,7 +454,7 @@ export const termjson = {
 			type: 'values',
 			hiddenValues: {}
 		},
-		type: 'CatTWValues'
+		type: 'QualTWValues'
 	},
 	AFC_TeachingFacility: {
 		id: 'AFC_TeachingFacility',
@@ -487,6 +487,6 @@ export const termjson = {
 			type: 'values',
 			hiddenValues: {}
 		},
-		type: 'CatTWValues'
+		type: 'QualTWValues'
 	}
 }

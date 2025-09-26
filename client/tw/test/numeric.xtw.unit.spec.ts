@@ -20,7 +20,7 @@ tape('\n', function (test) {
 })
 
 tape('fill(invalid tw)', async test => {
-	// not typing with RawCatTW since these are not valid fill() argument
+	// not typing with RawQualTW since these are not valid fill() argument
 	const tw = {
 		term: { id: 'abc', type: 'categorical' }
 	}

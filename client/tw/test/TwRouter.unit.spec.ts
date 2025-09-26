@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { TwRouter } from '../TwRouter.ts'
-import type { RawCatTW, RawTW, GroupEntry, TermGroupSetting } from '#types'
+import type { RawQualTW, RawTW, GroupEntry, TermGroupSetting } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
 import { termjson } from '../../test/testdata/termjson'
 import { QualValues, QualPredefinedGS, QualCustomGS } from '../qualitative.ts'
@@ -104,7 +104,7 @@ tape('fill({id, q}) nested q.groupsetting (legacy support)', async test => {
 tape('initRaw() categorical', async test => {
 	{
 		const term = getTermWithGS()
-		const tw: RawCatTW = {
+		const tw: RawQualTW = {
 			$id: 'test.$id',
 			term,
 			isAtomic: true as const,
@@ -116,7 +116,7 @@ tape('initRaw() categorical', async test => {
 	}
 	{
 		const term = getTermWithGS()
-		const tw: RawCatTW = {
+		const tw: RawQualTW = {
 			$id: 'test.$id',
 			term,
 			isAtomic: true as const,
@@ -137,7 +137,7 @@ tape('initRaw() categorical', async test => {
 
 	{
 		const term = getTermWithGS()
-		const tw: RawCatTW = {
+		const tw: RawQualTW = {
 			$id: 'test.$id',
 			term,
 			isAtomic: true as const,
