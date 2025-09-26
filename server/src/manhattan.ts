@@ -198,8 +198,11 @@ export async function plotManhattan(
 		.range([H - PAD.bottom, PAD.top])
 
 	// draw the plotting band area only (between top/bottom padding)
-	const plotTop = PAD.top
-	const plotHeight = H - PAD.top - PAD.bottom
+	const radius_buffer = settings.pngDotRadius
+	const bandPad = Math.ceil(radius_buffer)
+	const plotTop = Math.max(0, PAD.top - bandPad)
+	const plotBottom = Math.min(H, H - PAD.bottom + bandPad)
+	const plotHeight = plotBottom - plotTop
 
 	// alternating chr bands inside padded y-range
 	chrOrder.forEach((chr, i) => {
