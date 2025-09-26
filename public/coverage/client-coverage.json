@@ -613,38 +613,38 @@
   },
   "plots/matrix/matrix.controls.js": {
     "lines": {
-      "total": 420,
+      "total": 415,
       "covered": 77,
       "skipped": 0,
-      "pct": 18.33
+      "pct": 18.55
     },
     "functions": {
-      "total": 147,
+      "total": 142,
       "covered": 26,
       "skipped": 0,
-      "pct": 17.68
+      "pct": 18.3
     },
     "statements": {
-      "total": 437,
+      "total": 432,
       "covered": 77,
       "skipped": 0,
-      "pct": 17.62
+      "pct": 17.82
     },
     "branches": {
-      "total": 396,
-      "covered": 37,
+      "total": 394,
+      "covered": 40,
       "skipped": 0,
-      "pct": 9.34
+      "pct": 10.15
     },
     "lowestPct": {
-      "curr": 9.34,
+      "curr": 10.15,
       "prev": 10.69,
-      "diff": -1.3499999999999996
+      "diff": -0.5399999999999991
     },
     "averagePct": {
-      "curr": 15.7425,
+      "curr": 16.205000000000002,
       "prev": 17.022499999999997,
-      "diff": -1.2799999999999976
+      "diff": -0.8174999999999955
     }
   },
   "plots/matrix/matrix.data.js": {
@@ -757,10 +757,10 @@
   },
   "plots/matrix/matrix.interactivity.js": {
     "lines": {
-      "total": 1526,
+      "total": 1531,
       "covered": 109,
       "skipped": 0,
-      "pct": 7.14
+      "pct": 7.11
     },
     "functions": {
       "total": 259,
@@ -769,26 +769,26 @@
       "pct": 5.4
     },
     "statements": {
-      "total": 1624,
+      "total": 1629,
       "covered": 114,
       "skipped": 0,
-      "pct": 7.01
+      "pct": 6.99
     },
     "branches": {
-      "total": 1178,
+      "total": 1197,
       "covered": 9,
       "skipped": 0,
-      "pct": 0.76
+      "pct": 0.75
     },
     "lowestPct": {
-      "curr": 0.76,
+      "curr": 0.75,
       "prev": 14.04,
-      "diff": -13.28
+      "diff": -13.29
     },
     "averagePct": {
-      "curr": 5.0775,
+      "curr": 5.0625,
       "prev": 19.185,
-      "diff": -14.107499999999998
+      "diff": -14.122499999999999
     }
   },
   "plots/matrix/matrix.js": {
@@ -4069,38 +4069,38 @@
   },
   "plots/matrix/hierCluster.interactivity.js": {
     "lines": {
-      "total": 139,
+      "total": 152,
       "covered": 41,
       "skipped": 0,
-      "pct": 29.49
+      "pct": 26.97
     },
     "functions": {
-      "total": 48,
+      "total": 53,
       "covered": 14,
       "skipped": 0,
-      "pct": 29.16
+      "pct": 26.41
     },
     "statements": {
-      "total": 144,
+      "total": 158,
       "covered": 42,
       "skipped": 0,
-      "pct": 29.16
+      "pct": 26.58
     },
     "branches": {
-      "total": 109,
-      "covered": 18,
+      "total": 122,
+      "covered": 21,
       "skipped": 0,
-      "pct": 16.51
+      "pct": 17.21
     },
     "lowestPct": {
-      "curr": 16.51,
-      "prev": 16.21,
-      "diff": 0.3000000000000007
+      "curr": 17.21,
+      "prev": 16.51,
+      "diff": 0.6999999999999993
     },
     "averagePct": {
-      "curr": 26.080000000000002,
-      "prev": 25.455,
-      "diff": 0.6250000000000036
+      "curr": 24.292499999999997,
+      "prev": 26.080000000000002,
+      "diff": -1.787500000000005
     }
   },
   "plots/matrix/hierCluster.js": {
