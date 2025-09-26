@@ -42,7 +42,7 @@ export async function getScoresData(query, ds, terms) {
 	const data = await getData(
 		{
 			terms,
-			filter: query.filter, //if site is specified, do not apply the filter that is for the aggregation
+			filter: query.filter,
 			__protected__: query.__protected__
 		},
 		ds
@@ -58,7 +58,7 @@ export async function getScoresData(query, ds, terms) {
 		}
 	})
 
-	//If the user has sites keep only the sites that are visible to the user
+	//If the user has sites keep only the sites that are visible to the user as choices for selection
 	if (query.userSites) {
 		sites = sites.filter(s => query.userSites.includes(s.value))
 		if (lst.length == 1 && !sites.length) {
