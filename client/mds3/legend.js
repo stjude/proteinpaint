@@ -555,35 +555,6 @@ function update_mclass(tk) {
 	for (const c of showlst) {
 		// { k, count }
 		const { label, desc, color } = mds3tkMclass(c.k)
-
-		/*
-		// k is either dt (integer), or mclass (string)
-		let label,
-			desc,
-			color = '#858585'
-
-console.log(c)
-		if (Number.isInteger(c.k)) {
-			// c.k is not mclass (string), but dt (integer)
-			label = dt2label[c.k]
-			if (c.k == dtcnv) {
-				desc = 'Copy number variation.'
-			} else if (c.k == dtloh) {
-				desc = 'Loss of heterozygosity.'
-			} else if (c.k == dtitd) {
-				color = mclass[mclassitd].color
-				desc = 'Internal tandem duplication.'
-			} else if (c.k == dtsv) {
-				desc = 'Structural variation of DNA.'
-			} else if (c.k == dtfusionrna) {
-				desc = 'Fusion gene from RNA-seq.'
-			}
-		} else {
-			label = mclass[c.k].label
-			color = mclass[c.k].color
-			desc = mclass[c.k].desc
-		}
-		*/
 		printCategory({
 			holder: tk.legend.mclass.holder,
 			key: c.k,
