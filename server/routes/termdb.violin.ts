@@ -36,7 +36,7 @@ function init({ genomes }) {
 			if (!g) throw 'invalid genome name'
 			const ds = g.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid ds'
-			data = await trigger_getViolinPlotData(q, ds)
+			data = await getViolin(q, ds)
 		} catch (e: any) {
 			data = { error: e?.message || e }
 			if (e instanceof Error && e.stack) console.log(e)
@@ -45,7 +45,7 @@ function init({ genomes }) {
 	}
 }
 
-export async function trigger_getViolinPlotData(q: ViolinRequest, ds: any) {
+async function getViolin(q: ViolinRequest, ds: any) {
 	if (typeof q.tw?.term != 'object' || typeof q.tw?.q != 'object') throw 'q.tw not of {term,q}'
 	const term = q.tw.term
 	if (!q.tw.q.mode) q.tw.q.mode = 'continuous'

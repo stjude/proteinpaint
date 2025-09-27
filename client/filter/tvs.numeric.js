@@ -135,7 +135,7 @@ async function fillMenu(self, div, tvs) {
 			const data = await self.opts.vocabApi.getViolinPlotData(
 				{
 					tw: { term: tvs.term, q: { mode: 'continuous' } },
-					filter: self.filter,
+					//filter: self.filter,
 					svgw: self.num_obj.plot_size.width
 				},
 				self.opts.getCategoriesArguments
