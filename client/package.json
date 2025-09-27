@@ -37,7 +37,7 @@
     "test:puppet": "rm -rf .nyc_output && node test/puppet.js",
     "combined:coverage": "./test.sh *.spec.* name=*",
     "spec:coverage": "./test.sh *.spec.* RELEVANT_SPECS_ONLY",
-    "tsc": "tsc -p tsconfig-x.json",
+    "tsc": "tsc",
     "examples": "node ./test/import-specs.js name=_x_.examples && npm run tape",
     "build": "rm -rf dist && node esbuild.config.mjs",
     "prepack": "rm -rf dist && node esbuild.config.mjs && npm run sedver",
