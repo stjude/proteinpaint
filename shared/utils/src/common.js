@@ -455,8 +455,11 @@ mclass[mclassdeletion] = {
 }
 // TODO complex indel
 
-/* explain
- */
+/* tricky
+when a mds3 tk uses numeric cnv, data points from tk.cnv.cnvLst[] has .class=dtcnv but no class!
+a "cnv" entry needs to be present in mclass legend, and thus this wrapper function over mclass{} to allow dtcnv as key
+the tricky case doesn't apply to other plots
+*/
 export function mds3tkMclass(k) {
 	if (k == dtcnv) {
 		return {
