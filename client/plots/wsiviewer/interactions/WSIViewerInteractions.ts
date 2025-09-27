@@ -323,14 +323,21 @@ export class WSIViewerInteractions {
 			if (show) {
 				wsiApp.loadingDiv.selectAll('*').remove()
 				wsiApp.loadingDiv
-					.style('display', '')
+					.style('display', 'block')
 					.append('div')
 					.style('position', 'relative')
 					.style('top', '50%')
 					.append('span')
 					.attr('class', 'sjpp-spinner')
+
+				wsiApp.mapHolder.style('display', 'none')
+				wsiApp.annotationTable.style('display', 'none')
+				wsiApp.legendHolder.style('display', 'none')
 			} else {
 				wsiApp.loadingDiv.style('display', 'none')
+				wsiApp.mapHolder.style('display', 'block')
+				wsiApp.annotationTable.style('display', 'inline-block')
+				wsiApp.legendHolder.style('display', 'inline-block')
 			}
 		}
 	}
