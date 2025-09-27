@@ -25,7 +25,9 @@ export class ModelTrainerRenderer {
 			.style('cursor', 'pointer')
 			.text('Retrain Model')
 			.on('click', async () => {
-				this.wsiinteractions.onRetrainModelClicked(genome, dslabel, projectId)
+				this.wsiinteractions.toggleLoadingDiv(true)
+				await this.wsiinteractions.onRetrainModelClicked(genome, dslabel, projectId)
+				this.wsiinteractions.toggleLoadingDiv(false)
 				//temp implementation to call route
 			})
 	}

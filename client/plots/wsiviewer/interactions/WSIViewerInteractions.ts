@@ -40,6 +40,7 @@ export class WSIViewerInteractions {
 	) => void
 
 	onRetrainModelClicked: (genome: string, dslabel: string, projectId: string) => void
+	toggleLoadingDiv: (show: boolean) => void
 
 	constructor(wsiApp: any, opts: any) {
 		this.thumbnailClickListener = (index: number) => {
@@ -316,6 +317,28 @@ export class WSIViewerInteractions {
 					}
 				}
 			})
+		}
+
+		this.toggleLoadingDiv = (show: boolean) => {
+			if (show) {
+				wsiApp.loadingDiv.selectAll('*').remove()
+				wsiApp.loadingDiv
+					.style('display', 'block')
+					.append('div')
+					.style('position', 'relative')
+					.style('top', '50%')
+					.append('span')
+					.attr('class', 'sjpp-spinner')
+
+				wsiApp.mapHolder.style('display', 'none')
+				wsiApp.annotationTable.style('display', 'none')
+				wsiApp.legendHolder.style('display', 'none')
+			} else {
+				wsiApp.loadingDiv.style('display', 'none')
+				wsiApp.mapHolder.style('display', 'block')
+				wsiApp.annotationTable.style('display', 'inline-block')
+				wsiApp.legendHolder.style('display', 'inline-block')
+			}
 		}
 	}
 

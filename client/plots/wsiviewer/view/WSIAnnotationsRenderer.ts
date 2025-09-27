@@ -19,7 +19,7 @@ export class WSIAnnotationsRenderer {
 		const tablesWrapper = holder
 			.append('div')
 			.attr('id', 'annotations-table-wrapper')
-			.style('display', 'inline-block')
+			.style('display', 'none')
 			.style('padding', '20px')
 
 		if (!imageViewData.tilesTable) return
@@ -91,5 +91,7 @@ export class WSIAnnotationsRenderer {
 				})
 			}
 		})
+
+		return tablesWrapper
 	}
 }

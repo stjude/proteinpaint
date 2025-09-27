@@ -32,6 +32,10 @@ class WSIViewer extends PlotBase implements RxComponent {
 	private metadataRenderer = new MetadataRenderer()
 	private legendRenderer = new LegendRenderer()
 	private map: OLMap | undefined = undefined
+	private loadingDiv: any
+	private annotationTable: any
+	private mapHolder: any
+	private legendHolder: any
 
 	constructor(opts: any, api) {
 		super(opts, api)
@@ -54,6 +58,22 @@ class WSIViewer extends PlotBase implements RxComponent {
 		const state = structuredClone(this.state)
 		const settings = state.plots.find(p => p.id === this.id).settings as Settings
 		const holder = this.opts.holder
+
+		// Check if wsiViewer-progress already exists
+		let loadingDiv = holder.select('.wsiViewer-progress')
+		if (loadingDiv.empty()) {
+			loadingDiv = holder
+				.append('div')
+				.attr('class', 'wsiViewer-progress')
+				.style('position', 'absolute')
+				.style('top', '0')
+				.style('left', '0')
+				.style('width', '100%')
+				.style('height', '100%')
+				.style('background-color', 'rgba(255, 255, 255, 0.95)')
+				.style('text-align', 'center')
+		}
+		this.loadingDiv = loadingDiv
 
 		const buffers = {
 			annotationsIdx: new Buffer<number>(0),
@@ -114,6 +134,8 @@ class WSIViewer extends PlotBase implements RxComponent {
 				settings
 			).render(holder, settings)
 
+			this.mapHolder = holder.select('div[id="wsi-viewer"]')
+
 			if (activeImageExtent && this.map) {
 				this.map.getView().fit(activeImageExtent)
 			}
@@ -125,7 +147,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 			const modelTrainerRenderer = new ModelTrainerRenderer(this.wsiViewerInteractions)
 
 			const wsiAnnotationsRenderer = new WSIAnnotationsRenderer(buffers, this.wsiViewerInteractions)
-			wsiAnnotationsRenderer.render(holder, imageViewData, activeImageExtent!, this.map)
+			this.annotationTable = wsiAnnotationsRenderer.render(holder, imageViewData, activeImageExtent!, this.map)
 			holder.select('#sjpp-legend-wrapper').remove()
 			const wrapper = holder
 				.append('div')
@@ -134,6 +156,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 				.style('vertical-align', 'top')
 			modelTrainerRenderer.render(wrapper, aiProjectID, genome, dslabel)
 			this.legendRenderer.render(wrapper, imageViewData)
+			this.legendHolder = holder.select('div[id="sjpp-legend-wrapper"]')
 
 			const initialZoomInCoordinate = viewModel.getInitialZoomInCoordinate(settings.displayedImageIndex)
 
@@ -156,6 +179,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 				)
 			}
 		}
+		this.wsiViewerInteractions.toggleLoadingDiv(false)
 	}
 }
 
