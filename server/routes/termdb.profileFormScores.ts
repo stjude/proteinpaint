@@ -1,6 +1,6 @@
 import type { RouteApi } from '#types'
 import { ProfileFormScoresPayload } from '#types/checkers'
-import { getData } from '../src/termdb.matrix.js'
+import { getScoresData } from './termdb.profileScores.js'
 
 /*
 Given a set of multivalue score terms, a filter, login site info, etc.,
@@ -37,60 +37,26 @@ function init({ genomes }) {
 }
 
 async function getScoresDict(query, ds) {
-	if (!query.filterByUserSites) query.__protected__.ignoredTermIds.push(query.facilityTW.term.id)
 	const terms = [...query.scoreTerms, query.facilityTW]
 	if (query.scScoreTerms) terms.push(...query.scScoreTerms)
 
-	const data = await getData(
-		{
-			terms,
-			filter: query.site || !query.isAggregate ? undefined : query.filter, //if isRadarFacility and site is specified, do not apply the filter
-			__protected__: query.__protected__
-		},
-		ds
-	)
-	const lst: any[] = Object.values(data.samples)
-	let sites = lst.map((s: any) => {
-		return { label: data.refs.bySampleId[s.sample].label, value: s.sample }
-	})
-
-	sites = lst.map((s: any) => {
-		return { label: data.refs.bySampleId[s.sample].label, value: s.sample }
-	})
-	if (query.userSites) {
-		sites = sites.filter(s => query.userSites.includes(s.label))
-		if (lst.length == 1 && !sites.length) {
-			const siteId: number = lst[0].sample
-			const site = data.refs.bySampleId[siteId].label
-			const hospital = query.facilityTW.term.values[site].label
-			throw `The access to the hospital ${hospital} is denied`
-		}
-	}
-
-	let sitesSelected: any[] = []
-	if (query.site) sitesSelected = [query.site]
-	else if (!query.isAggregate) sitesSelected = [sites[0].value] //only one site selected
-	else sitesSelected = query.sites
-	const sampleData = sitesSelected?.length == 1 ? data.samples[sitesSelected[0]] : null
-	let samples = sampleData ? [sampleData] : Object.values(data.samples)
-	if (sitesSelected?.length > 0) samples = samples.filter((s: any) => sitesSelected.includes(s.sample))
-
+	const data = await getScoresData(query, ds, terms)
 	const term2Score: any = {}
 	for (const d of query.scoreTerms) {
 		const getDictFunc = (sample: any) => getDict(d.$id, sample)
-		const percents: { [key: string]: number } = getPercentsDict(getDictFunc, samples)
+		const percents: { [key: string]: number } = getPercentsDict(getDictFunc, data.samples)
 		term2Score[d.term.id] = percents
 	}
 	if (query.scScoreTerms)
 		for (const d of query.scScoreTerms) {
-			const percents: { [key: string]: number } = getSCPercentsDict(d, samples)
+			const percents: { [key: string]: number } = getSCPercentsDict(d, data.samples)
 			term2Score[d.term.id] = percents
 		}
-	const facilityValue = sampleData?.[query.facilityTW.$id]
+	const facilityValue = data.sampleData?.[query.facilityTW.$id]
 	const termValue = query.facilityTW.term.values[facilityValue?.value]
 	const hospital = termValue?.label || termValue?.key
 
-	return { term2Score, sites, hospital, n: sampleData ? 1 : samples.length }
+	return { term2Score, sites: data.sites, hospital, n: data.sampleData ? 1 : data.samples.length }
 }
 
 function getDict(key, sample) {

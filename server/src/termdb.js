@@ -298,7 +298,8 @@ async function get_singleSampleData(q, req, res, ds, tdb) {
 	let result = []
 	if (canDisplay) {
 		try {
-			result = tdb.q.getSingleSampleData(q.sampleId, q.term_ids)
+			//TO DO: pass q.filter to apply user filter
+			result = await tdb.q.getSingleSampleData(q.sampleId, q.term_ids, q.filter, ds)
 			res.send(result)
 		} catch (e) {
 			res.send({ error: e.message || e })
@@ -315,7 +316,6 @@ async function get_AllSamples(q, req, res, ds) {
 
 async function get_AllSamplesByName(q, req, res, ds) {
 	// return {}, k: sample name, v: id
-
 	if (!authApi.canDisplaySampleIds(req, ds)) return res.send({})
 
 	let sampleName2Id = new Map()

@@ -110,6 +110,7 @@ class SampleView {
 			this.samplesData = await this.app.vocabApi.getSamplesByName({
 				filter: getNormalRoot(appState.termfilter?.filter)
 			})
+			if (Object.keys(this.samplesData).length == 0) throw 'No accessible samples found'
 			const callback = sampleName => {
 				if (this.samplesData[sampleName]) {
 					const samples = getSamplesRelated(this.samplesData, sampleName)
@@ -910,8 +911,8 @@ export function searchSampleInput(holder, samplesData, hasSampleAncestry, callba
 					getLabel(d) +
 					(i + 1 == limit
 						? isBigDataset
-							? `Showing first ${i + 1} hits`
-							: `Showing ${i + 1} of ${options.length} hits`
+							? ` Showing first ${i + 1} hits`
+							: ` Showing ${i + 1} of ${options.length} hits`
 						: i + 1 === options.length && i > 0
 						? `  (Found ${options.length} hits)`
 						: '')
