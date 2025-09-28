@@ -167,9 +167,7 @@ async function fillMenu(self, div, tvs) {
 		width: self.num_obj.plot_size.width,
 		radius: self.num_obj.plot_size.radius,
 		height: self.num_obj.plot_size.height
-		//shiftx:self.num_obj.plot_size.xpad, shifty:self.num_obj.plot_size.ypad
 	})
-	console.log(self.vr)
 	self.vr.render()
 	self.num_obj.svg = self.vr.svg
 
