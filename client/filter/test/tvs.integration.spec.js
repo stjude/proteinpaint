@@ -693,13 +693,7 @@ tape('tvs: Condition', async test => {
 	test.end()
 })
 
-/*
-reasons to skip:
-1. test breaks with recent change of vocab getViolinPlotData()
-2. this filter ui seems problematic by manual inspection. only run this test and <select> shows as blank. clicking shows ABC-selected. delete Age tvs pill; click AND select Sex, the category count is by XYZ rather than ABC
-3. htmlSelect <select> is no longer in use and no plan to use it yet. thus should be fine to skip
-*/
-tape.skip('tvs: Cohort-htmlSelect + Numeric', async test => {
+tape('tvs: Cohort-htmlSelect + Numeric', async test => {
 	const filterData = {
 		type: 'tvslst',
 		in: true,
