@@ -25,6 +25,7 @@ import { Menu, table2col } from '#dom'
  *   @param {number} [settings.legendFontSize=12] - Font size for legend text
  *   @param {number} [settings.interactiveDotRadius=3] - Radius of interactive dots
  *   @param {number} [settings.interactiveDotStrokeWidth=1] - Stroke width for interactive dots
+ * @param {Object} [app] - App context for dispatching events
  *
  *
  * @description
@@ -34,7 +35,7 @@ import { Menu, table2col } from '#dom'
  * including axes, labels, legend, and top genes (represented as interactive dots) for detailed information on hover.
  */
 
-export function plotManhattan(div: any, data: any, settings: any) {
+export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	// Default settings
 	settings = {
 		pngDotRadius: 2,
@@ -151,6 +152,18 @@ export function plotManhattan(div: any, data: any, settings: any) {
 				// Hide stroke on mouseout
 				event.target.setAttribute('stroke-opacity', 0)
 				geneTip.hide()
+			})
+			.on('click', (event, d) => {
+				if (app) {
+					// Open the genome browser with the current gene that is being clicked on
+					app.dispatch({
+						type: 'plot_create',
+						config: {
+							chartType: 'genomeBrowser',
+							geneSearchResult: { geneSymbol: d.gene }
+						}
+					})
+				}
 			})
 	}
 
