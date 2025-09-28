@@ -85,12 +85,13 @@ export class violinRenderer {
 			.x(d => this.axisScale(d.x0))
 			.y(d => (invert ? -this.wScale(d.density) : this.wScale(d.density)))
 
+		const color = this.vd.color || '#dddddd'
 		this.violinG
 			.append('path')
 			//.attr('class', 'sjpp-vp-path')
-			.style('fill', this.vd.color || rgb(221, 221, 221))
+			.style('fill', color)
 			.style('opacity', 0)
-			.attr('stroke', rgb(this.vd.color).darker())
+			.attr('stroke', rgb(color).darker())
 			.attr('stroke-width', 1)
 			.attr('stroke-linejoin', 'round')
 			.style('opacity', '0.8')
