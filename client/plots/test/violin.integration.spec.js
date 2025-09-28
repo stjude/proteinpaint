@@ -3,7 +3,6 @@ import { getRunPp } from '../../test/front.helpers.js'
 import { fillTermWrapper } from '#termsetting'
 import { getFilterItemByTag, filterJoin } from '#filter'
 import { sleep, detectOne, detectGte, detectLst } from '../../test/test.helpers.js'
-import { violinRenderer } from '../../dom/violinRenderer'
 import { select, brushX } from 'd3'
 
 /***************** Test Layout *****************:

@@ -12,9 +12,10 @@ import type { NumericBin } from '#types'
 
 */
 
+// this is violin route return
 export type DensityData = {
-	maxvalue: number
-	minvalue: number
+	max: number
+	min: number
 }
 
 type BrushEntry = {
@@ -47,10 +48,10 @@ type NumberObj = {
 export async function setDensityPlot(self) {
 	if (!self.num_obj) throw `Missing density data [density.ts setDensityPlot()]`
 	const numObj = self.num_obj as NumberObj
-	if (numObj.density_data.maxvalue == numObj.density_data.minvalue) {
+	if (numObj.density_data.max == numObj.density_data.min) {
 		handleNoDensity(self)
 		numObj.brushes.forEach((brush: BrushEntry) => {
-			if (brush.range.stop > numObj.density_data.minvalue) brush.init()
+			if (brush.range.stop > numObj.density_data.min) brush.init()
 		})
 	} else {
 		// svg for range plot
@@ -63,8 +64,8 @@ export async function setDensityPlot(self) {
 			.attr('transform', `translate(${numObj.plot_size.xpad}, ${numObj.plot_size.ypad})`)
 			.attr('class', 'binsize_g')
 
-		const maxvalue = numObj.density_data.maxvalue
-		const minvalue = numObj.density_data.minvalue
+		const maxvalue = numObj.density_data.max
+		const minvalue = numObj.density_data.min
 
 		self.num_obj.xscale = scaleLinear()
 			.domain([minvalue, maxvalue])
@@ -118,8 +119,8 @@ function handleNoDensity(self) {
 		}
 
 		const custom_bins_q = self.num_obj.custom_bins_q
-		const maxvalue = self.num_obj.density_data!.maxvalue
-		const minvalue = self.num_obj.density_data!.minvalue
+		const maxvalue = self.num_obj.density_data!.max
+		const minvalue = self.num_obj.density_data!.min
 
 		const custom_bins = custom_bins_q.lst || []
 
@@ -147,8 +148,8 @@ function handleNoDensity(self) {
 function renderBinLines(self, data: any) {
 	const o = self.num_obj as NumberObj
 	if (!o.density_data) throw `Missing .density_data [density.ts, renderBinLines()]`
-	const scaledMinX = Math.round(o.xscale(o.density_data.minvalue)) as number
-	const scaledMaxX = Math.round(o.xscale(o.density_data.maxvalue)) as number
+	const scaledMinX = Math.round(o.xscale(o.density_data.min)) as number
+	const scaledMaxX = Math.round(o.xscale(o.density_data.max)) as number
 	type LineData = {
 		x: any
 		index: number
@@ -165,7 +166,7 @@ function renderBinLines(self, data: any) {
 		// assume that boundary lines will be hidden if x > last_bin.start
 		// offset max value by first_bin.stop in case the first boundary is dragged
 		// to the left, will reveal additional non-draggable boundaries from the right
-		const binLinesStop = o.density_data.maxvalue + Math.abs(data.first_bin.stop) - Math.min(o.density_data.minvalue, 0)
+		const binLinesStop = o.density_data.max + Math.abs(data.first_bin.stop) - Math.min(o.density_data.min, 0)
 		let index = 0
 		//
 		for (let i = data.first_bin.stop; i <= binLinesStop; i = i + data.bin_size) {

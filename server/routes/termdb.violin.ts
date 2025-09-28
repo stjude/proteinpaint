@@ -225,9 +225,7 @@ function setResponse(valuesObject: any, data: ValidGetDataResponse, q: ViolinReq
 		min: valuesObject.min,
 		max: valuesObject.max,
 		charts,
-		uncomputableValues:
-			Object.keys(valuesObject.uncomputableValues).length > 0 ? valuesObject.uncomputableValues : null,
-		radius: q.radius // for a horizontal plot, client needs to vertically center this image and will require this size; however adhoc violin e.g. in tvs doesn't specify it yet and will be fixed so can delete this
+		uncomputableValues: Object.keys(valuesObject.uncomputableValues).length > 0 ? valuesObject.uncomputableValues : null
 	}
 
 	return result

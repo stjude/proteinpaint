@@ -18,8 +18,8 @@ applyBrush() // main function to define and init d3 brushes,
 export function addBrushes(self, new_brush_location) {
 	// const ranges = self.num_obj.ranges
 	const brushes = self.num_obj.brushes
-	const maxvalue = self.num_obj.density_data.maxvalue
-	const minvalue = self.num_obj.density_data.minvalue
+	const maxvalue = self.num_obj.density_data.max
+	const minvalue = self.num_obj.density_data.min
 	const rawDecile = (maxvalue - minvalue) / 10
 	const decile = self.tvs.term.type == 'integer' ? Math.floor(rawDecile) : rawDecile
 
@@ -66,8 +66,8 @@ function applyBrush(self, elem, brush) {
 	const range = brush.range
 	const plot_size = self.num_obj.plot_size
 	const xscale = self.num_obj.xscale
-	const maxvalue = self.num_obj.density_data.maxvalue
-	const minvalue = self.num_obj.density_data.minvalue
+	const maxvalue = self.num_obj.density_data.max
+	const minvalue = self.num_obj.density_data.min
 
 	brush.d3brush = brushX()
 		.extent([

@@ -1,7 +1,6 @@
 import { setDensityPlot } from './density'
 import { keyupEnter } from '#src/client'
 import { getPillNameDefault } from '../utils.ts'
-import { convertViolinData } from '#filter/tvs.numeric'
 import type { NumericQ } from '#types'
 import { violinRenderer } from '#dom'
 /*
@@ -45,7 +44,8 @@ export function getHandler(self) {
 				width: 500,
 				height: 100,
 				xpad: 10,
-				ypad: 20
+				ypad: 20,
+				radius: 8
 			}
 			div.selectAll('*').remove()
 			div
@@ -61,18 +61,19 @@ export function getHandler(self) {
 					},
 					self.opts.getBodyParams?.()
 				)
-				self.num_obj.density_data = convertViolinData(d)
+				self.num_obj.density_data = d
 			} catch (err) {
 				console.log(err)
 			}
 			div.selectAll('*').remove()
 			self.dom.density_div = div.append('div')
-			self.vr = new violinRenderer(
-				self.dom.density_div,
-				self.num_obj.density_data,
-				self.num_obj.plot_size.width,
-				self.num_obj.plot_size.height
-			)
+			self.vr = new violinRenderer({
+				holder: self.dom.density_div,
+				rd: self.num_obj.density_data,
+				width: self.num_obj.plot_size.width,
+				height: self.num_obj.plot_size.height,
+				radius: self.num_obj.plot_size.radius
+			})
 			self.num_obj.svg = self.vr.svg
 			self.dom.num_holder = div
 			self.dom.knots_div = div.append('div').style('padding', '5px')

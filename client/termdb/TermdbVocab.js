@@ -448,8 +448,8 @@ export class TermdbVocab extends Vocab {
 			{
 				genome: this.vocab.genome,
 				dslabel: this.vocab.dslabel,
-				filter: this.state.termfilter.filter,
-				filter0: this.state.termfilter.filter0,
+				filter: this.state.termfilter?.filter, // mds3 tk filterObj state lacks termfilter!!
+				filter0: this.state.termfilter?.filter0,
 				embedder: window.location.hostname,
 				devicePixelRatio: window.devicePixelRatio,
 				isKDE: 'isKDE' in arg ? arg.isKDE : true,

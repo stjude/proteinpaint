@@ -1,6 +1,5 @@
 import { getPillNameDefault } from '../utils.ts'
 import type { PillData, Term } from '#types'
-import { convertViolinData } from '#filter/tvs.numeric'
 import { make_one_checkbox, violinRenderer } from '#dom'
 
 /*
@@ -39,19 +38,24 @@ export function getHandler(self) {
 				width: 500,
 				height: 100,
 				xpad: 10,
-				ypad: 20
+				ypad: 20,
+				radius: 8
 			}
 			const d = await self.vocabApi.getViolinPlotData(
 				{
 					tw: { term: self.term, q: self.q },
-					svgw: plot_size.width
+					svgw: plot_size.width,
+					radius: plot_size.radius
 				},
 				self.opts.getBodyParams?.()
 			)
-			const density_data = convertViolinData(d)
-
-			const vr = new violinRenderer(densityDiv, density_data, plot_size.width, plot_size.height)
-
+			const vr = new violinRenderer({
+				holder: densityDiv,
+				rd: d,
+				width: plot_size.width,
+				height: plot_size.height,
+				radius: plot_size.radius
+			})
 			vr.render()
 
 			let convert2ZCheckbox
