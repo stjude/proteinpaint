@@ -43,7 +43,8 @@ export function getHandler(self) {
 			self.num_obj.plot_size = {
 				width: 500,
 				height: 100,
-				//xpad: 10, ypad: 20,
+				xpad: 10, // required for line plotting
+				ypad: 20,
 				radius: 8
 			}
 
