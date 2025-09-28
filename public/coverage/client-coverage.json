@@ -3925,10 +3925,10 @@
   },
   "dom/violinRenderer.js": {
     "lines": {
-      "total": 32,
-      "covered": 26,
+      "total": 36,
+      "covered": 30,
       "skipped": 0,
-      "pct": 81.25
+      "pct": 83.33
     },
     "functions": {
       "total": 6,
@@ -3937,26 +3937,26 @@
       "pct": 83.33
     },
     "statements": {
-      "total": 34,
-      "covered": 26,
+      "total": 39,
+      "covered": 30,
       "skipped": 0,
-      "pct": 76.47
+      "pct": 76.92
     },
     "branches": {
-      "total": 18,
-      "covered": 12,
+      "total": 21,
+      "covered": 15,
       "skipped": 0,
-      "pct": 66.66
+      "pct": 71.42
     },
     "lowestPct": {
-      "curr": 66.66,
-      "prev": 0,
-      "diff": 66.66
+      "curr": 71.42,
+      "prev": 66.66,
+      "diff": 4.760000000000005
     },
     "averagePct": {
-      "curr": 76.9275,
-      "prev": 3.0324999999999998,
-      "diff": 73.895
+      "curr": 78.75,
+      "prev": 76.9275,
+      "diff": 1.8225000000000051
     }
   },
   "dom/types/table.ts": {
@@ -7881,6 +7881,42 @@
       "curr": 7.535,
       "prev": 0,
       "diff": 7.535
+    }
+  },
+  "dom/test/violinRenderer.unit.spec.js": {
+    "lines": {
+      "total": 28,
+      "covered": 26,
+      "skipped": 0,
+      "pct": 92.85
+    },
+    "functions": {
+      "total": 3,
+      "covered": 3,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 28,
+      "covered": 26,
+      "skipped": 0,
+      "pct": 92.85
+    },
+    "branches": {
+      "total": 4,
+      "covered": 2,
+      "skipped": 0,
+      "pct": 50
+    },
+    "lowestPct": {
+      "curr": 50,
+      "prev": 0,
+      "diff": 50
+    },
+    "averagePct": {
+      "curr": 83.925,
+      "prev": 0,
+      "diff": 83.925
     }
   }
 }
