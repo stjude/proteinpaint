@@ -1,6 +1,7 @@
 import { scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
-import { Menu, table2col } from '#dom'
+import { Menu, table2col, icons } from '#dom'
+import { to_svg } from '#src/client'
 
 /**
  * Creates an interactive Manhattan plot on top of a PNG background plot image.
@@ -25,6 +26,7 @@ import { Menu, table2col } from '#dom'
  *   @param {number} [settings.legendFontSize=12] - Font size for legend text
  *   @param {number} [settings.interactiveDotRadius=3] - Radius of interactive dots
  *   @param {number} [settings.interactiveDotStrokeWidth=1] - Stroke width for interactive dots
+ *   @param {boolean} [settings.showDownload=true] - Whether to show download button
  * @param {Object} [app] - App context for dispatching events
  *
  *
@@ -55,8 +57,12 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		showInteractiveDots: true,
 		interactiveDotRadius: 3,
 		interactiveDotStrokeWidth: 1,
+		showDownload: true,
 		...settings
 	}
+
+	// Set relative positioning on the main div for positioning of download button
+	div.style('position', 'relative')
 
 	// Create tooltip menu
 	const geneTip = new Menu({ padding: '' })
@@ -65,16 +71,6 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		.append('svg')
 		.attr('width', data.plotData.png_width + settings.yAxisX + settings.yAxisSpace)
 		.attr('height', data.plotData.png_height + settings.yAxisY * 4) // Extra space for x-axis labels, legend, and title
-
-	// Generate legend data
-	const mutationTypes = [...new Set(data.plotData.points.map((p: any) => p.type))]
-	const legendData = mutationTypes.map(type => {
-		const point = data.plotData.points.find((p: any) => p.type === type)
-		return {
-			type: String(type).charAt(0).toUpperCase() + String(type).slice(1),
-			color: point?.color || '#888888'
-		}
-	})
 
 	// Access padding values
 	const PAD = data.plotData.padding
@@ -212,6 +208,42 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		.attr('font-size', `${settings.fontSize + 2}px`)
 		.attr('fill', 'black')
 		.text('Manhattan Plot')
+
+	// Add download button
+	if (settings.showDownload) {
+		const downloadDiv = div
+			.append('div')
+			.style('position', 'absolute')
+			.style('top', '5px')
+			.style('left', `${settings.yAxisX + settings.yAxisSpace + 108}px`)
+			.style('z-index', '10')
+			.style('background', `${settings.background}`)
+			.style('padding', `${settings.padding + 2}px`)
+			.style('border-radius', `${settings.borderRadius + 10}px`)
+
+		icons['download'](downloadDiv, {
+			width: 12,
+			height: 12,
+			title: 'Download Manhattan plot',
+			handler: () => {
+				to_svg(
+					svg.node() as SVGSVGElement,
+					`manhattan_plot_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}`,
+					{ apply_dom_styles: true }
+				)
+			}
+		})
+	}
+
+	// Generate legend data
+	const mutationTypes = [...new Set(data.plotData.points.map((p: any) => p.type))]
+	const legendData = mutationTypes.map(type => {
+		const point = data.plotData.points.find((p: any) => p.type === type)
+		return {
+			type: String(type).charAt(0).toUpperCase() + String(type).slice(1),
+			color: point?.color || '#888888'
+		}
+	})
 
 	// Add legend
 	if (settings.showLegend && legendData.length > 0) {
