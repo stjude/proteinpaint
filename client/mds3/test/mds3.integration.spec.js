@@ -245,13 +245,11 @@ export function testSubtkSampleSummaryIsSmaller(test, tk, subtk) {
 				}
 			}
 		} else if (main.density_data) {
-			if (!Number.isInteger(main.density_data.samplecount)) throw 'main.density_data.samplecount is not integer'
-			test.ok(
-				sub.density_data.samplecount <= main.density_data.samplecount,
-				'sub<=main for density_data.samplecount for ' + main.termid
-			)
-			if (sub.density_data.samplecount < main.density_data.samplecount)
-				subLTmaintotalcount.push(main.termid + ' lower density')
+			const maincount = main.density_data.charts[''].plots[0].plotValueCount,
+				subcount = sub.density_data.charts[''].plots[0].plotValueCount
+			if (!Number.isInteger(maincount)) throw 'main.density_data sample count is not integer'
+			test.ok(subcount <= maincount, 'sub<=main for density_data sample count for ' + main.termid)
+			if (subcount < maincount) subLTmaintotalcount.push(main.termid + ' lower density')
 		} else {
 		}
 	}

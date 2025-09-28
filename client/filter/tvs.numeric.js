@@ -119,15 +119,12 @@ async function fillMenu(self, div, tvs) {
 		.attr('class', 'num_div')
 		.style('padding', '5px')
 		.style('color', '#000')
-	//.style('border-style', 'solid')
-	//.style('border-width', '2px')
-	//.style('border-color', '#eee')
 
 	self.num_obj.plot_size = {
-		width: 500,
+		width: 450,
 		height: 100,
-		xpad: 10,
-		ypad: 20
+		//xpad: 10, ypad: 20,
+		radius: 8
 	}
 
 	if (typeof self.opts.vocabApi.getViolinPlotData == 'function') {
@@ -135,13 +132,15 @@ async function fillMenu(self, div, tvs) {
 			const data = await self.opts.vocabApi.getViolinPlotData(
 				{
 					tw: { term: tvs.term, q: { mode: 'continuous' } },
-					//filter: self.filter,
-					svgw: self.num_obj.plot_size.width
+					/// big note
+					filter: self.filter,
+					svgw: self.num_obj.plot_size.width,
+					radius: self.num_obj.plot_size.radius
 				},
 				self.opts.getCategoriesArguments
 			)
 			if (data.error) throw data.error
-			self.num_obj.density_data = convertViolinData(data)
+			self.num_obj.density_data = data
 		} catch (err) {
 			throw err
 		}
@@ -155,23 +154,21 @@ async function fillMenu(self, div, tvs) {
 
 	if (self.num_obj.density_data.error) throw self.num_obj.density_data.error
 
-	if (!self.num_obj.density_data.density || !self.num_obj.density_data.density.length) {
-		//if (!tvs.term.range) throw `unable to create an edit menu: missing both density data and term.range`
+	if (!self.num_obj.density_data.charts?.['']?.plots?.[0]?.density?.bins) {
+		// no density data for this term (e.g. bcf numeric info field in a custom filter)
 		addRangeTableNoDensity(self, tvs)
 		return
 	}
 
-	// svg
-	//self.num_obj.svg = self.num_obj.num_div.append('svg')
-	//makeDensityPlot(density_plot_opts)
-	self.vr = new violinRenderer(
-		self.num_obj.num_div,
-		self.num_obj.density_data,
-		self.num_obj.plot_size.width,
-		self.num_obj.plot_size.height,
-		self.num_obj.plot_size.xpad,
-		self.num_obj.plot_size.ypad
-	)
+	self.vr = new violinRenderer({
+		holder: self.num_obj.num_div,
+		rd: self.num_obj.density_data,
+		width: self.num_obj.plot_size.width,
+		radius: self.num_obj.plot_size.radius,
+		height: self.num_obj.plot_size.height
+		//shiftx:self.num_obj.plot_size.xpad, shifty:self.num_obj.plot_size.ypad
+	})
+	console.log(self.vr)
 	self.vr.render()
 	self.num_obj.svg = self.vr.svg
 
@@ -183,10 +180,8 @@ async function fillMenu(self, div, tvs) {
 	const ranges = []
 
 	for (const [index, range] of tvs.ranges.entries()) {
-		//if (range.value == undefined) {
 		range.index = index
 		ranges.push(range)
-		//}
 	}
 	// add brush_g for tvs brushes
 	self.num_obj.brush_g = self.vr.brushG.attr('class', 'brush_g')
@@ -222,22 +217,6 @@ async function fillMenu(self, div, tvs) {
 	await showCheckList_numeric(self, tvs, div)
 }
 
-// convert violin data (vd) to old density data (dd)
-export function convertViolinData(vd) {
-	const p = vd.charts[''].plots[0] || { plotValueCount: 0, biggestBin: 0 } // assuming only one plot
-	const dd = {
-		minvalue: vd.min,
-		maxvalue: vd.max,
-		samplecount: p.plotValueCount,
-		densityMax: p.density.densityMax,
-		densityMin: p.density.densityMin,
-		density: p.density.bins,
-		radius: vd.radius,
-		valuesImg: p.src
-	}
-	return dd
-}
-
 function setTvsDefaults(tvs) {
 	if (!tvs.ranges) tvs.ranges = []
 }
@@ -251,7 +230,6 @@ function addRangeTableNoDensity(self, tvs) {
 
 	const brush = {}
 	const table = num_div.append('table')
-	//.style('display', 'inline-block')
 	const tr = table.append('tr')
 	tr.append('td').html('Range')
 	brush.equation_td = tr.append('td')
@@ -263,11 +241,9 @@ function addRangeTableNoDensity(self, tvs) {
 	brush.apply_btn = tr
 		.append('td')
 		.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
-		//.style('display', 'inline-block')
 		.style('border-radius', '13px')
 		.style('margin', '5px')
 		.style('margin-left', '10px')
-		// .style('padding', '5px 12px')
 		.style('text-align', 'center')
 		.style('font-size', '.8em')
 		.style('text-transform', 'uppercase')

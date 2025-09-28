@@ -1,15 +1,31 @@
 import { scaleLinear } from 'd3-scale'
 import { line, curveBasis } from 'd3-shape'
-import { rgb, brushX, axisTop } from 'd3'
+import { rgb } from 'd3-color'
+import { axisTop } from 'd3-axis'
+import { brushX } from 'd3-brush'
 
-// hardcoded to only plot a horizontal violin!
-
+/*
+hardcoded to only plot a horizontal violin
+*/
 export class violinRenderer {
-	constructor(holder, plot, width = 500, height = 100, shiftx = 20, shifty = 20, callback = null, scaleFactor = 1) {
+	constructor({
+		holder,
+		rd,
+		radius = 10,
+		width = 500,
+		height = 100,
+		shiftx = 20,
+		shifty = 20,
+		callback = null,
+		scaleFactor = 1
+	}) {
 		this.holder = holder
-		this.plot = plot
+		this.rd = rd // ViolinResponse route data
+		this.vd = rd.charts?.['']?.plots?.[0] // the only violin data from route data
+		if (!this.vd) throw "rd.charts?.['']?.plots?.[0] missing"
 		this.width = width
 		this.height = height
+		this.radius = radius
 		this.callback = callback
 		this.shiftx = shiftx
 		this.shifty = shifty
@@ -17,13 +33,13 @@ export class violinRenderer {
 			.append('svg')
 			.attr('width', `${width + 50}px`)
 			.attr('height', `${height + 50}px`)
-		this.axisScale = scaleLinear().domain([plot.minvalue, plot.maxvalue]).range([0, width])
+		this.axisScale = scaleLinear().domain([rd.min, rd.max]).range([0, width])
 		this.axisScaleUI = scaleLinear()
-			.domain([plot.minvalue * scaleFactor, plot.maxvalue * scaleFactor])
+			.domain([rd.min * scaleFactor, rd.max * scaleFactor])
 			.range([0, width])
 
 		this.wScale = scaleLinear()
-			.domain([plot.densityMax, plot.densityMin])
+			.domain([this.vd.density.densityMax, this.vd.density.densityMin])
 			.range([height * 0.45, 0])
 	}
 
@@ -36,12 +52,12 @@ export class violinRenderer {
 		this.scaleG.call(axisTop(this.axisScaleUI).tickValues(this.axisScaleUI.ticks()))
 		this.renderArea(false)
 		this.renderArea(true)
-		if (this.plot.valuesImg) {
+		if (this.vd.src) {
 			this.violinG
 				.append('image')
 				.classed('sjpp-beans-img', true)
-				.attr('xlink:href', this.plot.valuesImg)
-				.attr('transform', `translate(0, -${this.plot.radius / 2})`)
+				.attr('xlink:href', this.vd.src)
+				.attr('transform', `translate(0, -${this.radius / 2})`)
 				.attr('width', this.width)
 		}
 
@@ -63,7 +79,7 @@ export class violinRenderer {
 	}
 
 	renderArea(invert) {
-		if (this.plot.densityMax == 0) return
+		if (this.vd.densityMax == 0) return
 		const areaBuilder = line()
 			.curve(curveBasis)
 			.x(d => this.axisScale(d.x0))
@@ -72,12 +88,12 @@ export class violinRenderer {
 		this.violinG
 			.append('path')
 			//.attr('class', 'sjpp-vp-path')
-			.style('fill', this.plot.color || rgb(221, 221, 221))
+			.style('fill', this.vd.color || rgb(221, 221, 221))
 			.style('opacity', 0)
-			.attr('stroke', rgb(this.plot.color).darker())
+			.attr('stroke', rgb(this.vd.color).darker())
 			.attr('stroke-width', 1)
 			.attr('stroke-linejoin', 'round')
 			.style('opacity', '0.8')
-			.attr('d', areaBuilder(this.plot.density))
+			.attr('d', areaBuilder(this.vd.density.bins))
 	}
 }

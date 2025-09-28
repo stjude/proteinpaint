@@ -3,7 +3,6 @@ import { renderBoundaryInclusionInput, renderBoundaryInputDivs } from './numeric
 import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
 import { make_one_checkbox, violinRenderer } from '#dom'
 import { getPillNameDefault } from '../utils.ts'
-import { convertViolinData } from '#filter/tvs.numeric'
 import type { PillData, NumericBin } from '#types'
 
 /*
@@ -44,8 +43,8 @@ export function getHandler(self) {
 			self.num_obj.plot_size = {
 				width: 500,
 				height: 100,
-				xpad: 10,
-				ypad: 20
+				//xpad: 10, ypad: 20,
+				radius: 8
 			}
 
 			div.selectAll('*').remove()
@@ -57,20 +56,22 @@ export function getHandler(self) {
 			const d = await self.vocabApi.getViolinPlotData(
 				{
 					tw: { term: self.term, q: self.q },
-					svgw: self.num_obj.plot_size.width
+					svgw: self.num_obj.plot_size.width,
+					radius: self.num_obj.plot_size.radius
 				},
 				self.opts.getBodyParams?.()
 			)
-			self.num_obj.density_data = convertViolinData(d)
+			self.num_obj.density_data = d
 			self.dom.num_holder = div
 			div.selectAll('*').remove()
 			self.dom.density_div = div.append('div')
-			self.vr = new violinRenderer(
-				self.dom.density_div,
-				self.num_obj.density_data,
-				self.num_obj.plot_size.width,
-				self.num_obj.plot_size.height
-			)
+			self.vr = new violinRenderer({
+				holder: self.dom.density_div,
+				rd: self.num_obj.density_data,
+				width: self.num_obj.plot_size.width,
+				height: self.num_obj.plot_size.height,
+				radius: self.num_obj.plot_size.radius
+			})
 			self.num_obj.svg = self.vr.svg
 			self.dom.bins_div = div.append('div').style('padding', '4px')
 
@@ -129,7 +130,7 @@ export function getHandler(self) {
 }
 
 function setqDefaults(self) {
-	const dd = self.num_obj.density_data!
+	const { min, max } = self.num_obj.density_data
 	const boundry_value = self.q && self.q.lst && self.q.lst.length ? self.q.lst[0].stop : undefined
 	const cache = self.numqByTermIdModeType
 	if (!self.term) throw `Missing .term{} [numeric.binary, setqDefaults()]`
@@ -137,12 +138,7 @@ function setqDefaults(self) {
 	if (!cache[t.id]) cache[t.id] = {}
 	if (!cache[t.id].binary) {
 		// automatically derive a cutoff to generate binary bins
-		const cutoff =
-			boundry_value !== undefined
-				? Number(boundry_value)
-				: dd.maxvalue != dd.minvalue
-				? dd.minvalue + (dd.maxvalue - dd.minvalue) / 2
-				: dd.maxvalue
+		const cutoff = boundry_value !== undefined ? Number(boundry_value) : max != min ? min + (max - min) / 2 : max
 
 		cache[t.id].binary = {
 			mode: 'binary',

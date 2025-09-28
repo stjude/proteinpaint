@@ -1,11 +1,9 @@
 import { keyupEnter } from '#src/client'
 import { format } from 'd3-format'
-import type { DensityData } from './density'
 import { setDensityPlot } from './density'
 import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
 import { make_radios, Tabs, violinRenderer } from '#dom'
 import { getPillNameDefault } from '../utils.ts'
-import { convertViolinData } from '#filter/tvs.numeric'
 import type { PillData, NumericBin, NumericQ } from '#types'
 
 /*
@@ -66,8 +64,9 @@ async function showBinsMenu(self, div: any) {
 	self.num_obj.plot_size = {
 		width: 500,
 		height: 100,
-		xpad: 10,
-		ypad: 20
+		xpad: 10, // required for plotting bin lines
+		ypad: 20,
+		radius: 8
 	}
 	div.selectAll('*').remove()
 	div.append('div').style('padding', '10px').style('text-align', 'center').html('Getting distribution data ...<br/>')
@@ -75,11 +74,12 @@ async function showBinsMenu(self, div: any) {
 		const d = await self.vocabApi.getViolinPlotData(
 			{
 				tw: { term: self.term, q: { mode: 'continuous' } },
-				svgw: self.num_obj.plot_size.width
+				svgw: self.num_obj.plot_size.width,
+				radius: self.num_obj.plot_size.radius
 			},
 			self.opts.getBodyParams?.()
 		)
-		self.num_obj.density_data = convertViolinData(d)
+		self.num_obj.density_data = d
 	} catch (err) {
 		console.log(err)
 	}
@@ -93,12 +93,13 @@ async function showBinsMenu(self, div: any) {
 	}
 	self.dom.num_holder = div
 	self.dom.density_div = div.append('div')
-	self.vr = new violinRenderer(
-		self.dom.density_div,
-		self.num_obj.density_data,
-		self.num_obj.plot_size.width,
-		self.num_obj.plot_size.height
-	)
+	self.vr = new violinRenderer({
+		holder: self.dom.density_div,
+		rd: self.num_obj.density_data,
+		width: self.num_obj.plot_size.width,
+		height: self.num_obj.plot_size.height,
+		radius: self.num_obj.plot_size.radius
+	})
 	self.num_obj.svg = self.vr.svg
 	self.dom.bins_div = div.append('div').style('padding', '4px')
 	setqDefaults(self)
@@ -213,7 +214,7 @@ function processCustomBinInputs(self) {
 }
 
 function setqDefaults(self) {
-	const dd = self.num_obj.density_data as DensityData
+	const { min, max } = self.num_obj.density_data
 
 	const cache = self.numqByTermIdModeType
 	const t = self.term
@@ -228,12 +229,12 @@ function setqDefaults(self) {
 			setting defaultCustomBoundary to arbitrary "0" will allow existing UI to work
 			but remains to be evaluated if is really okay to use 0
 			*/
-			!Number.isFinite(dd.minvalue) || !Number.isFinite(dd.maxvalue)
+			!Number.isFinite(min) || !Number.isFinite(max)
 				? 0
 				: // minvalue and maxvalue is valid number
-				dd.maxvalue != dd.minvalue
-				? dd.minvalue + (dd.maxvalue - dd.minvalue) / 2
-				: dd.maxvalue
+				max != min
+				? min + (max - min) / 2
+				: max
 
 		cache[t.id].discrete = {
 			'regular-bin':
@@ -420,7 +421,7 @@ function renderRegularSizedBinsInputs(self, tablediv: any) {
 function renderBinSizeInput(self, tr: any) {
 	tr.append('td').style('margin', '5px').style('opacity', 0.5).text('Bin Size')
 
-	const dd = self.num_obj.density_data as DensityData
+	const { min, max } = self.num_obj.density_data
 	const origBinSize = self.q.bin_size
 
 	self.dom.bin_size_input = tr
@@ -430,7 +431,7 @@ function renderBinSizeInput(self, tr: any) {
 		.attr('value', 'rounding' in self.q ? format(self.q.rounding!)(self.q.bin_size!) : self.q.bin_size)
 		.style('margin-left', '15px')
 		.style('width', '100px')
-		.style('color', () => (self.q.bin_size! > Math.abs(dd.maxvalue - dd.minvalue) ? 'red' : ''))
+		.style('color', () => (self.q.bin_size! > Math.abs(max - min) ? 'red' : ''))
 		.on('change', event => {
 			const newValue = Number(event.target.value)
 			// must validate input value
@@ -440,7 +441,7 @@ function renderBinSizeInput(self, tr: any) {
 				event.target.value = origBinSize
 				return
 			}
-			if ((dd.maxvalue - dd.minvalue) / newValue > 100) {
+			if ((max - min) / newValue > 100) {
 				// avoid rendering too many svg lines and lock up browser
 				window.alert('Bin size too small. Try setting a bigger value.')
 				event.target.value = origBinSize
@@ -449,7 +450,7 @@ function renderBinSizeInput(self, tr: any) {
 			self.q.bin_size = newValue
 			self.dom.bin_size_input.style(
 				'color',
-				self.q.bin_size > dd.maxvalue - dd.minvalue ? 'red' : newValue != origBinSize ? 'green' : ''
+				self.q.bin_size > max - min ? 'red' : newValue != origBinSize ? 'green' : ''
 			)
 			setDensityPlot(self)
 		})
@@ -460,7 +461,7 @@ function renderFirstBinInput(self, tr: any) {
 
 	tr.append('td').style('margin', '5px').style('opacity', 0.5).text('First Bin Stop')
 
-	const dd = self.num_obj.density_data as DensityData
+	const { min, max } = self.num_obj.density_data
 	const origValue = self.q.first_bin.stop
 
 	self.dom.first_stop_input = tr
@@ -472,7 +473,7 @@ function renderFirstBinInput(self, tr: any) {
 		.style('margin-left', '15px')
 		.on('change', event => {
 			const newValue = Number(event.target.value)
-			if (newValue < dd.minvalue || newValue > dd.maxvalue) {
+			if (newValue < min || newValue > max) {
 				window.alert('First bin stop value out of bound.')
 				event.target.value = origValue
 				return
@@ -501,7 +502,7 @@ function renderLastBinInputs(self, tr: any) {
 		.style('vertical-align', 'top')
 		.text('Last Bin Start')
 
-	const dd = self.num_obj.density_data as DensityData
+	const { max } = self.num_obj.density_data
 
 	const td1 = tr.append('td').style('padding-left', '15px').style('vertical-align', 'top')
 	const radio_div = td1.append('div')
@@ -527,7 +528,7 @@ function renderLastBinInputs(self, tr: any) {
 
 			if (self.dom.last_start_input.property('value') == '') {
 				// blank input, fill max
-				self.dom.last_start_input.property('value', dd.maxvalue)
+				self.dom.last_start_input.property('value', max)
 			}
 			setLastBinStart()
 			setDensityPlot(self)
@@ -560,12 +561,12 @@ function renderLastBinInputs(self, tr: any) {
 		// TODO first_bin should be required
 		if (self.q.first_bin && inputValue <= self.q.first_bin.stop) {
 			window.alert('Last bin start cannot be smaller than first bin stop.')
-			self.dom.last_start_input.property('value', dd.maxvalue)
+			self.dom.last_start_input.property('value', max)
 			return
 		}
-		if (inputValue > dd.maxvalue) {
+		if (inputValue > max) {
 			window.alert('Last bin start value out of bound.')
-			self.dom.last_start_input.property('value', dd.maxvalue)
+			self.dom.last_start_input.property('value', max)
 			return
 		}
 		if (!self.q.last_bin) self.q.last_bin = {} // this should be fine since it's optional

@@ -160,7 +160,7 @@ async function showSummary4terms(data, div, tk, block) {
 			continue
 		}
 		if (d.density_data) {
-			if (!Number.isFinite(d.density_data.minvalue) || !Number.isFinite(d.density_data.maxvalue)) {
+			if (!Number.isFinite(d.density_data.min) || !Number.isFinite(d.density_data.max)) {
 				holder.append('div').text('No data')
 				continue
 			}
@@ -277,8 +277,15 @@ async function showDensity4oneTerm(termid, div, data, tk, block) {
 		}
 		createSubTk(tk, block, tvs)
 	}
-	const scaleFactor = term.valueConversion ? term.valueConversion.scaleFactor : 1
-	const vr = new violinRenderer(div, data.density_data, 400, 100, 10, 20, callback, scaleFactor)
+	const vr = new violinRenderer({
+		holder: div,
+		rd: data.density_data,
+		width: 400,
+		height: 100,
+		radius: 8,
+		callback,
+		scaleFactor: term.valueConversion ? term.valueConversion.scaleFactor : 1
+	})
 	vr.render()
 }
 

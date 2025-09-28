@@ -8,17 +8,27 @@ tape('violin brush', test => {
 
 	//Mock plot data
 	const plotData = {
-		minvalue: 0,
-		maxvalue: 100,
+		min: 0,
+		max: 100,
 		xMin: 0,
 		xMax: 100,
-		density: [
-			{ x0: 0, density: 0.1 },
-			{ x0: 50, density: 0.5 },
-			{ x0: 100, density: 1.0 }
-		],
-		densityMax: 0.5,
-		densityMin: 0.1,
+		charts: {
+			'': {
+				plots: [
+					{
+						density: {
+							bins: [
+								{ x0: 0, density: 0.1 },
+								{ x0: 50, density: 0.5 },
+								{ x0: 100, density: 1.0 }
+							],
+							densityMax: 0.5,
+							densityMin: 0.1
+						}
+					}
+				]
+			}
+		},
 		color: 'rgb(221, 221, 221)'
 	}
 
@@ -29,7 +39,16 @@ tape('violin brush', test => {
 		brushRange = { rangeStart, rangeEnd }
 	}
 
-	const violin = new violinRenderer(holder, plotData, 500, 100, 20, 20, brushingCallback)
+	const violin = new violinRenderer({
+		holder,
+		rd: plotData,
+		width: 500,
+		height: 100,
+		shiftx: 20,
+		shifty: 20,
+		radius: 8,
+		callback: brushingCallback
+	})
 	violin.render()
 
 	//Simulate the brushing
