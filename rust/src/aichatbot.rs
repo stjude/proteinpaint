@@ -651,7 +651,7 @@ async fn parse_dataset_db(db: &str) -> Vec<String> {
 async fn extract_summary_information(
     user_input: &str,
     comp_model: impl rig::completion::CompletionModel + 'static,
-    embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
+    _embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
     llm_backend_type: &llm_backend,
     temperature: f64,
     max_new_tokens: usize,
@@ -675,30 +675,30 @@ async fn extract_summary_information(
                 }
             }
 
-            let rag_docs_length = rag_docs.len();
             // Create embeddings and add to vector store
-            let embeddings = EmbeddingsBuilder::new(embedding_model.clone())
-                .documents(rag_docs)
-                .expect("Reason1")
-                .build()
-                .await
-                .unwrap();
+            //let embeddings = EmbeddingsBuilder::new(embedding_model.clone())
+            //    .documents(rag_docs)
+            //    .expect("Reason1")
+            //    .build()
+            //    .await
+            //    .unwrap();
 
-            // Create vector store
-            let mut vector_store = InMemoryVectorStore::<String>::default();
-            InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
+            //// Create vector store
+            //let mut vector_store = InMemoryVectorStore::<String>::default();
+            //InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
 
-            //let system_prompt = "I am an assistant that figures out the summary term from its respective dataset file. Extract the summary term {summary_term} from user query. The final output must be in the following JSON format {{\"chartType\":\"summary\",\"term\":{{\"id\":\"{{summary_term}}\"}}}}";
-
-            let top_k = rag_docs_length;
             let system_prompt = String::from(
-                "I am an assistant that extracts the summary term from user query. It has four fields: group_categories (required), overlay (optional), filter (optional) and divide_by (optional). group_categories (required) is the primary variable being displayed. Overlay consists of the variable that must be overlayed on top of group_categories. divide_by is the variable used to stratify group_categories into two or more categories. The final output must be in the following JSON format with no extra comments: {\"chartType\":\"summary\",\"term\":{\"group_categories\":\"{group_category_answer}\",\"overlay\":\"{overlay_answer}\",\"divide_by\":\"{divide_by_answer}\",\"filter\":\"{filter_answer}\"}}. The values being added to the JSON parameters must be previously defined as field in the database. If the filter variable is a \"value\" of a \"field\" in the database, use the field name and add the value as a \"filter cutoff\" . If the \"filter\" field is defined in the user query, it should contain an array with each item containing a subfield called \"name\" with the name of the filter variable. If the type of variable is \"categories\", add another field as \"variable_type\" = \"categories\". In case the type of the variable is \"categories\", show the sub-category as a separate sub-field \"cutoff\" with a sub nested JSON with \"name\" as the field containing the subcategory name. In case the type of the variable is \"float\" it should contain a subfield called \"name\" followed by subfield \"variable_type\" = \"float\". In the \"cutoff\" subfield, the nested JSON should contain the field \"lower\" containing the lower numeric limit and the \"upper\" field containing the upper numeric limit. If the upper and lower cutoffs are not defined in the user query, use a default value of 0 and 100 respectively. Sample query1: \"Show ETR1 subtype\" Answer query1: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"ETR1\"}}. Sample query2: \"Show hyperdiploid subtype with age overlayed on top of it\" Answer query2: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"hyperdiploid\", \"overlay\":\"age\"}}. Sample query3: \"Show BAR1 subtype with age overlayed on top of it and stratify it on the basis of gender\" Answer query4: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"BAR1\", \"overlay\":\"age\", \"divide_by\":\"sex\"}}. Sample query5: \"Show summary for cancer-diagnosis only for men\". Since gender is a categorical variable and the user wants to select for men, the answer query for sample query5 is as follows: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"cancer-diagnosis\", \"filter\": {\"name\": \"gender\", \"variable_type\": \"categories\", \"cutoff\": {\"name\": \"male\"}}}}. Sample query6: \"Show molecular subtype summary for patients with age less than 30\". Age is a float variable so we need to provide the lower and higher cutoffs. So the answer to sample query6 is as follows: \"{\"chartType\":\"summary\",\"term\":{\"group_categories\":\"Molecular subtype\", \"filter\": {\"name\": \"age\", \"variable_type\": \"float\", \"cutoff\": {\"lower\": 0, \"higher\": 30}}}} ",
+                String::from(
+                    "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. There are three fields in the JSON to be returned: The {{action}} field will ALWAYS be \"summary\". The \"terms\" field should contain all the variables that the user wants to visualize and should ONLY contain names of the fields from the sqlite db. The \"filter\" field is optional and should contain the variable with which the dataset will be filtered. When the filter field is defined, it should contain an array of JSON terms. For each term add a sub-field named \"term\" containing the name of the the field from the sqlite db. If the term is of type \"categorical\", then add another subfield called \"value\" with the actual value prescribed by the user. Else if the term is of type \"float\", then add a subfield \"greaterThan\" if the minimum value of the value is provided and \"lessThan\" if the maximum value of the field is provided.\n  Example question1: \"compare age of diagnosis between patient gender for KMT2A patients\"\n Example answer1: {{\"action\":\"summary\", \"terms\":[\"Age\", \"Sex\"], filter:[ {{\"term\":\"Molecular Subtype\", \"value\":\"KMT2A\"}}]}}\n Example question2: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer2: {{\"action\":\"summary\", \"terms\":[\"Molecular Subtype\"], filter:[ {{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}  The sqlite db in plain language is as follows:\n",
+                ) + &rag_docs.join(",")
+                    + "\nQuestion: {question} \nanswer:",
             );
+
             //println!("system_prompt:{}", system_prompt);
             // Create RAG agent
             let agent = AgentBuilder::new(comp_model)
                 .preamble(&system_prompt)
-                .dynamic_context(top_k, vector_store.index(embedding_model))
+                //.dynamic_context(top_k, vector_store.index(embedding_model))
                 .temperature(temperature)
                 .additional_params(additional)
                 .build();
