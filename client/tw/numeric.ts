@@ -26,7 +26,7 @@ import { copyMerge } from '#rx'
 export class NumericBase extends TwBase {
 	// type is set by TwBase constructor
 	term: NumericTerm
-	static termTypes = new Set(['integer', 'float', 'date', 'geneExpression', 'metaboliteIntensity'])
+	static termTypes = new Set(['integer', 'float', 'date', 'geneExpression', 'metaboliteIntensity', 'snp'])
 
 	constructor(tw: NumTW, opts: TwOpts) {
 		super(tw, opts)
@@ -36,6 +36,24 @@ export class NumericBase extends TwBase {
 	static async fill(tw: RawNumTW, opts: TwOpts = {}): Promise<NumTW> {
 		if (!tw.term) throw `missing tw.term, must already be filled in`
 		if (!NumericBase.termTypes.has(tw.term.type)) throw `non-numeric term.type='${tw.term.type}'`
+
+		// switch (tw.term.type) {
+		// 	case 'integer':
+		// 		IntegerBase.fill(tw.term)
+		// 		break
+
+		// 	case 'snp':
+		// 		FloatBase.fill(tw.term)
+		// 		break
+
+		// 	case 'singleCellCellType':
+		// 		GeneExpression.fill(tw.term)
+		// 		break
+
+		// 	default:
+		// 		// should never be reached if TwRouter.fill() routes correctly
+		// 		throw `unexpected numeric term.type='${tw.term.type}'`
+		// }
 
 		if (opts.defaultQ) {
 			opts.defaultQ.isAtomic = true
