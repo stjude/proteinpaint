@@ -101,8 +101,6 @@ class WSIViewer extends PlotBase implements RxComponent {
 		// }
 		// this.loadingDiv = loadingDiv
 
-		this.wsiViewerInteractions.toggleLoadingDiv(true)
-
 		const buffers = {
 			annotationsIdx: new Buffer<number>(0),
 			tmpClass: new Buffer<{ label: string; color: string }>({ label: '', color: '' })
@@ -148,6 +146,8 @@ class WSIViewer extends PlotBase implements RxComponent {
 		const imageViewData: ImageViewData = viewModel.getImageViewData(settings.displayedImageIndex)
 
 		if (settings.renderWSIViewer) {
+			this.wsiViewerInteractions.toggleLoadingDiv(true)
+
 			this.thumbnailsContainer = this.thumbnailRenderer.render(
 				this.dom.mapHolder,
 				this.thumbnailsContainer,
