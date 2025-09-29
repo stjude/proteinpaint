@@ -107,7 +107,7 @@ function setRefresh(notifyDiv) {
 		// - setting sessionStorage.setItem(/*refresh.key*/, ) manually (tab-specific)
 		// - setting serverconfig.features[/*refresh.key*/] (applies across tabs)
 
-		mode: 'full',
+		mode: 'full_except_on_unhide',
 		// available mode options
 		modeOptions: {
 			appOnly: 'call runproteinpaint() on the same DOM element, with the original argument + any HMR state',
