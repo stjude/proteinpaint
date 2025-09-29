@@ -102,8 +102,8 @@ tape('Multiple samples', function (test) {
 	test.timeoutAfter(3000)
 
 	const samples = [
-		{ sampleId: 3416, sampleName: '3416' },
-		{ sampleId: 2646, sampleName: '2646' }
+		{ sampleId: 96, sampleName: '3416' },
+		{ sampleId: 41, sampleName: '2646' }
 	]
 
 	runpp({
