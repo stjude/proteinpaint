@@ -17,6 +17,7 @@ import { ModelTrainerRenderer } from './view/ModelTrainerRenderer'
 import type OLMap from 'ol/Map'
 import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
 import type { ViewModel } from '#plots/wsiviewer/viewModel/ViewModel.ts'
+import { sayerror } from '#dom'
 
 class WSIViewer extends PlotBase implements RxComponent {
 	static type = 'WSIViewer'
@@ -32,16 +33,41 @@ class WSIViewer extends PlotBase implements RxComponent {
 	private metadataRenderer = new MetadataRenderer()
 	private legendRenderer = new LegendRenderer()
 	private map: OLMap | undefined = undefined
-	private loadingDiv: any
+	// private loadingDiv: any
 	private annotationTable: any
-	private mapHolder: any
-	private legendHolder: any
+	// private mapHolder: any
+	// private legendHolder: any
 
 	constructor(opts: any, api) {
 		super(opts, api)
 		this.type = 'WSIViewer'
 		this.opts = opts
 		this.wsiViewerInteractions = new WSIViewerInteractions(this, opts)
+		this.dom = {
+			holder: opts.holder,
+			loadingDiv: opts.holder
+				.append('div')
+				.attr('class', 'wsiViewer-progress')
+				.style('position', 'absolute')
+				.style('top', '0')
+				.style('left', '0')
+				.style('width', '100%')
+				.style('height', '100%')
+				.style('background-color', 'rgba(255, 255, 255, 0.95)')
+				.style('text-align', 'center'),
+			errorDiv: opts.holder.append('div').attr('class', 'wsiViewer-error').style('margin-left', '10px'),
+			mapHolder: opts.holder.append('div').attr('id', 'wsiviewer-mapHolder'),
+			annotationsHolder: opts.holder
+				.append('div')
+				.attr('id', 'annotations-table-wrapper')
+				.style('padding', '20px')
+				.style('display', 'inline-block'),
+			legendHolder: opts.holder
+				.append('div')
+				.attr('id', 'sjpp-legendHolder')
+				.style('display', 'inline-block')
+				.style('vertical-align', 'top')
+		}
 	}
 
 	async init(): Promise<void> {
@@ -60,20 +86,22 @@ class WSIViewer extends PlotBase implements RxComponent {
 		const holder = this.opts.holder
 
 		// Check if wsiViewer-progress already exists
-		let loadingDiv = holder.select('.wsiViewer-progress')
-		if (loadingDiv.empty()) {
-			loadingDiv = holder
-				.append('div')
-				.attr('class', 'wsiViewer-progress')
-				.style('position', 'absolute')
-				.style('top', '0')
-				.style('left', '0')
-				.style('width', '100%')
-				.style('height', '100%')
-				.style('background-color', 'rgba(255, 255, 255, 0.95)')
-				.style('text-align', 'center')
-		}
-		this.loadingDiv = loadingDiv
+		// let loadingDiv = holder.select('.wsiViewer-progress')
+		// if (loadingDiv.empty()) {
+		// 	loadingDiv = holder
+		// 		.append('div')
+		// 		.attr('class', 'wsiViewer-progress')
+		// 		.style('position', 'absolute')
+		// 		.style('top', '0')
+		// 		.style('left', '0')
+		// 		.style('width', '100%')
+		// 		.style('height', '100%')
+		// 		.style('background-color', 'rgba(255, 255, 255, 0.95)')
+		// 		.style('text-align', 'center')
+		// }
+		// this.loadingDiv = loadingDiv
+
+		this.wsiViewerInteractions.toggleLoadingDiv(true)
 
 		const buffers = {
 			annotationsIdx: new Buffer<number>(0),
@@ -103,12 +131,14 @@ class WSIViewer extends PlotBase implements RxComponent {
 		const wsimageLayersLoadError = viewModel.wsimageLayersLoadError
 
 		if (wsimages.length === 0) {
-			holder.append('div').style('margin-left', '10px').text('No WSI images.')
+			sayerror(this.dom.errorDiv, 'No WSI images found.')
+			// holder.append('div').style('margin-left', '10px').text('No WSI images.')
 			return
 		}
 
 		if (wsimageLayersLoadError) {
-			holder.append('div').style('margin-left', '10px').text(wsimageLayersLoadError)
+			sayerror(this.dom.errorDiv, wsimageLayersLoadError)
+			// holder.append('div').style('margin-left', '10px').text(wsimageLayersLoadError)
 			return
 		}
 
@@ -119,7 +149,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 
 		if (settings.renderWSIViewer) {
 			this.thumbnailsContainer = this.thumbnailRenderer.render(
-				holder,
+				this.dom.mapHolder,
 				this.thumbnailsContainer,
 				wsimageLayers.map(wsimageLayers => wsimageLayers.wsimage),
 				settings,
@@ -132,31 +162,35 @@ class WSIViewer extends PlotBase implements RxComponent {
 				viewModel.sampleWSImages[settings.displayedImageIndex],
 				buffers,
 				settings
-			).render(holder, settings)
+			).render(this.dom.mapHolder, settings)
 
-			this.mapHolder = holder.select('div[id="wsi-viewer"]')
+			// this.mapHolder = holder.select('div[id="wsi-viewer"]')
 
 			if (activeImageExtent && this.map) {
 				this.map.getView().fit(activeImageExtent)
 			}
 		}
 
-		this.metadataRenderer.renderMetadata(holder, imageViewData)
+		this.metadataRenderer.renderMetadata(this.dom.holder, imageViewData)
 
 		if (settings.renderAnnotationTable && this.map) {
 			const modelTrainerRenderer = new ModelTrainerRenderer(this.wsiViewerInteractions)
 
 			const wsiAnnotationsRenderer = new WSIAnnotationsRenderer(buffers, this.wsiViewerInteractions)
-			this.annotationTable = wsiAnnotationsRenderer.render(holder, imageViewData, activeImageExtent!, this.map)
-			holder.select('#sjpp-legend-wrapper').remove()
-			const wrapper = holder
-				.append('div')
-				.attr('id', 'sjpp-legend-wrapper')
-				.style('display', 'inline-block')
-				.style('vertical-align', 'top')
-			modelTrainerRenderer.render(wrapper, aiProjectID, genome, dslabel)
-			this.legendRenderer.render(wrapper, imageViewData)
-			this.legendHolder = holder.select('div[id="sjpp-legend-wrapper"]')
+			this.annotationTable = wsiAnnotationsRenderer.render(
+				this.dom.annotationsHolder,
+				imageViewData,
+				activeImageExtent!,
+				this.map
+			)
+			this.dom.legendHolder.selectAll('*').remove()
+			// this.legendHolder = holder
+			// 	.append('div')
+			// 	.attr('id', 'sjpp-legendHolder')
+			// 	.style('display', 'inline-block')
+			// 	.style('vertical-align', 'top')
+			modelTrainerRenderer.render(this.dom.legendHolder, aiProjectID, genome, dslabel)
+			this.legendRenderer.render(this.dom.legendHolder, imageViewData)
 
 			const initialZoomInCoordinate = viewModel.getInitialZoomInCoordinate(settings.displayedImageIndex)
 

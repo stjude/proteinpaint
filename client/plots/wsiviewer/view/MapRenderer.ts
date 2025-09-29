@@ -51,7 +51,7 @@ export class MapRenderer {
 			.attr('id', 'wsi-viewer')
 			.style('width', settings.imageWidth)
 			.style('height', settings.imageHeight)
-			.style('display', 'none') // Initially hidden
+		// .style('display', 'none') // Initially hidden
 
 		const activeImage: TileLayer = this.wSImageLayers.wsimage
 		const extent = activeImage?.getSource()?.getTileGrid()?.getExtent()

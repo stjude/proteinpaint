@@ -27,8 +27,8 @@ export class ModelTrainerRenderer {
 			.on('click', async () => {
 				this.wsiinteractions.toggleLoadingDiv(true)
 				await this.wsiinteractions.onRetrainModelClicked(genome, dslabel, projectId)
-				this.wsiinteractions.toggleLoadingDiv(false)
 				//temp implementation to call route
+				//Spinner will be removed when main() is called
 			})
 	}
 }
