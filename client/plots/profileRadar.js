@@ -140,7 +140,7 @@ class profileRadar extends profilePlot {
 			})
 			if (leftSide) textElem.attr('text-anchor', 'end')
 		}
-		if (this.settings.showTable) {
+		if (this.settings.showTable && !this.isComparison) {
 			renderTable({
 				rows,
 				columns,

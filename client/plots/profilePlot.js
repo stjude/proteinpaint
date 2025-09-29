@@ -139,6 +139,8 @@ export class profilePlot {
 			icon_functions['add'](iconsDiv.append('div').style('padding', '3px'), {
 				title: 'Open a new plot',
 				handler: async () => {
+					if (this.isComparison) return
+					this.legendG.selectAll('*').remove()
 					let config = structuredClone(this.config)
 					config.parentId = this.id
 					this.app.dispatch({
@@ -165,6 +167,7 @@ export class profilePlot {
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings[this.type]
+		this.isComparison = this.config.parentId || this.state.plots.length > 0
 		if (this.dom.tableBt)
 			this.dom.tableBt.style('background-color', this.settings.showTable ? 'rgb(207, 226, 243)' : 'transparent')
 		for (const config of this.state.plots) {
@@ -240,9 +243,6 @@ export class profilePlot {
 				})
 			if ('error' in this.data) throw this.data.error
 			this.sites = this.filteredTermValues[this.config.facilityTW.id]?.filter(s => !s.disabled && s.value)
-			this.sites.sort((a, b) => {
-				return a.label.localeCompare(b.label)
-			})
 
 			if (this.settings[this.config.facilityTW?.term?.id])
 				for (const site of this.settings[this.config.facilityTW?.term?.id]) {
@@ -379,14 +379,10 @@ export class profilePlot {
 						terms: [...this.twLst, this.config.facilityTW], //added facility term to all the plots to get the hospital name
 						scoreTerms: this.scoreTerms,
 						filter, //filter excluding facility term
-						userSites: this.state.sites,
 						facilitySite: this.settings.facilitySite || null, //need to pass null not undefined, so the parameter is always passed to the server
 						facilityTW: this.config.facilityTW
 					})
 					this.facilitySites = this.sampleData.sites
-					this.facilitySites.sort((a, b) => {
-						return a.label.localeCompare(b.label)
-					})
 					const facilitySite = this.settings.facilitySite
 						? this.facilitySites.find(s => s.value == this.settings.facilitySite)
 						: this.facilitySites[0]
@@ -673,7 +669,7 @@ export function clearLocalFilters(plot) {
 export function getDefaultProfilePlotSettings() {
 	return {
 		isAggregate: false,
-		showTable: false,
+		showTable: true,
 		filterByUserSites: false //if true, the aggregation will be limited to the user sites only
 	}
 }

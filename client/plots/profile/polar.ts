@@ -26,6 +26,7 @@ class ProfilePolar extends profilePlot {
 	config: any //Partial<ProfilePolarConfig> should be extended from a ProfilePlotConfig
 	/** Rm after profilePlot is tsc and extended from RxComponent */
 	id: any
+	state: any
 
 	constructor() {
 		super()
@@ -143,7 +144,7 @@ class ProfilePolar extends profilePlot {
 			i++
 		}
 		this.dom.tableDiv.selectAll('*').remove()
-		if (this.settings.showTable)
+		if (this.settings.showTable && !this.isComparison)
 			renderTable({
 				rows,
 				columns,
@@ -166,16 +167,18 @@ class ProfilePolar extends profilePlot {
 				.text(`${percent}%`)
 				.attr('pointer-events', 'none')
 		}
-		this.legendG
-			.append('text')
-			.attr('text-anchor', 'left')
-			.style('font-weight', 'bold')
-			.text('Overall Score')
-			.attr('transform', `translate(0, -5)`)
+		if (!this.isComparison) {
+			this.legendG
+				.append('text')
+				.attr('text-anchor', 'left')
+				.style('font-weight', 'bold')
+				.text('Overall Score')
+				.attr('transform', `translate(0, -5)`)
 
-		this.addLegendItem('A', 'More than 75% of possible scorable items', 1)
-		this.addLegendItem('B', '50-75% of possible scorable items', 2)
-		this.addLegendItem('C', 'Less than 50% of possible scorable items', 3)
+			this.addLegendItem('A', 'More than 75% of possible scorable items', 1)
+			this.addLegendItem('B', '50-75% of possible scorable items', 2)
+			this.addLegendItem('C', 'Less than 50% of possible scorable items', 3)
+		}
 		this.addFilterLegend()
 
 		function addCircle(percent: number, text?: string) {
