@@ -108,7 +108,7 @@ class SampleView {
 			})
 		} else {
 			this.samplesData = await this.app.vocabApi.getSamplesByName({
-				filter: getNormalRoot(appState.termfilter?.filter)
+				filter: appState.termfilter?.filter
 			})
 			if (Object.keys(this.samplesData).length == 0) throw 'No accessible samples found'
 			const callback = sampleName => {
@@ -451,7 +451,11 @@ class SampleView {
 		const term_ids = []
 		for (const term of terms) term_ids.push(term.id)
 		for (const sample of this.state.samples) {
-			const data = await this.app.vocabApi.getSingleSampleData({ sampleId: sample.sampleId, term_ids })
+			const data = await this.app.vocabApi.getSingleSampleData({
+				sampleId: sample.sampleId,
+				term_ids,
+				filter: this.state.termfilter.filter
+			})
 			if ('error' in data) throw data.error
 			if (!this.sampleDataByTermId[sample.sampleId]) this.sampleDataByTermId[sample.sampleId] = {}
 			for (const id in data) this.sampleDataByTermId[sample.sampleId][id] = data[id]
@@ -465,7 +469,10 @@ class SampleView {
 		const sampleData = {}
 		let lines = 'Sample'
 		for (const sample of this.state.samples) {
-			sampleData[sample.sampleId] = await this.app.vocabApi.getSingleSampleData({ sampleId: sample.sampleId })
+			sampleData[sample.sampleId] = await this.app.vocabApi.getSingleSampleData({
+				sampleId: sample.sampleId,
+				filter: this.state.termfilter.filter
+			})
 			lines += `\t${sample.sampleName}`
 		}
 		lines += '\n'

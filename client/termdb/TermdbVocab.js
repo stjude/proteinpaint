@@ -1063,6 +1063,7 @@ export class TermdbVocab extends Vocab {
 			for: 'singleSampleData',
 			sampleId: opts.sampleId,
 			term_ids: opts.term_ids,
+			filter: getNormalRoot(opts.filter),
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
 			embedder: window.location.hostname
@@ -1107,7 +1108,7 @@ export class TermdbVocab extends Vocab {
 			dslabel: this.state.vocab.dslabel,
 			embedder: window.location.hostname
 		}
-		if (opts?.filter) body.filter = opts.filter
+		if (opts?.filter) body.filter = getNormalRoot(opts.filter)
 		const data = await dofetch3('termdb', { headers, body })
 		return data
 	}
