@@ -1421,17 +1421,19 @@ export type Termdb = {
 	 * in order to minimize the ease of extracting identifiable information from aggregate data
 	 * in server response
 	 *
-	 * q            :   req.query as processed through app middleware (pre-parsed, may have req.body props, __protectec__, etc)
-	 *
-	 * data{
-	 *   sampleCount:   the number of samples with matching data from one or more queried terms
-	 * }
-	 *
 	 * returns: {minSampleSize, canAccess}, see below
 	 */
 	checkAccessToSampleData?: (
+		/** req.query as processed through app middleware (pre-parsed, may have req.body props, __protectec__, etc) */
 		q: any,
-		data: { sampleCount: number }
+		data: {
+			/** the number of samples with matching data from one or more queried terms */
+			sampleCount: number
+			/** option to specify sample names that is accessible to the current user,
+			 * not using sample ID since portal embedder and token generator does not
+			 * know the internal sample ID-to-name mapping */
+			sampleNames?: string[]
+		}
 	) => {
 		/** the required minimum sample size for the current user,
 		 * may be dependent on login status or other context

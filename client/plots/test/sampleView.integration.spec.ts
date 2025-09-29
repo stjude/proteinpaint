@@ -138,3 +138,16 @@ tape('Multiple samples', function (test) {
 		test.end()
 	}
 })
+
+// TODO: create a test to not allow admin session recovery by public or user
+tape.skip('', function (test) {
+	// const runpp = helpers.getRunPp('mass', {
+	// 	state: {
+	// 		dslabel: 'ProtectedTest',
+	// 		genome: 'hg38-test',
+	// 		nav: { header_mode: 'hidden' }
+	// 	},
+	// 	debug: 1
+	// })
+	test.end()
+})

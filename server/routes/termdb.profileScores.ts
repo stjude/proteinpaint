@@ -61,13 +61,9 @@ export async function getScoresData(query, ds, terms) {
 
 	//If the user has sites keep only the sites that are visible to the user as choices for selection
 	if (userSites) {
+		// NOTE: getData() in termdb.matrix uses checkAccessToSampleData() to make sure
+		// that data results are protected, as needed
 		sites = sites.filter(s => userSites.includes(s.value))
-		if (lst.length == 1 && !sites.length) {
-			const siteId: number = lst[0].sample
-			const site = data.refs.bySampleId[siteId].label
-			const hospital = query.facilityTW.term.values[site].label
-			throw `The access to the hospital ${hospital} is denied`
-		}
 	}
 	sites.sort((a, b) => {
 		return a.label.localeCompare(b.label)

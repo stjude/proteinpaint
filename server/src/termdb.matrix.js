@@ -1027,7 +1027,15 @@ function checkAccessToSampleData(data, ds, q) {
 	// handle the option to require a minimum sample size for data
 	if (!ds.cohort.termdb.checkAccessToSampleData) return
 	// quick check
-	const access = ds.cohort.termdb.checkAccessToSampleData(q, { sampleCount: Object.keys(data.samples).length })
+	const sampleIds = Object.keys(data.samples)
+	const samples = ds.cohort.db.connection
+		.prepare(`SELECT name FROM sampleidmap WHERE id in (${sampleIds.map(s => '?').join(',')})`)
+		.all(sampleIds)
+	// pass sampleNames since portal token does not know internal sample ID-to-name mapping
+	const access = ds.cohort.termdb.checkAccessToSampleData(q, {
+		sampleCount: sampleIds.length,
+		sampleNames: samples.map(s => s.name)
+	})
 	if (!access.canAccess)
 		throw {
 			message: access.message || `One or more terms has less than ${access.minSampleSize} samples with data.`,
