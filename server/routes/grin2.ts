@@ -10,7 +10,7 @@ import { dtsnvindel, dtcnv, dtfusionrna } from '#shared/common.js'
 import { randomBytes } from 'crypto'
 import { join, dirname } from 'path'
 import { promises as fs } from 'fs'
-import { plotManhattan } from '#src/manhattan.js'
+import { plotManhattan } from '#src/manhattan.ts'
 /**
  * General GRIN2 analysis handler
  * Processes user-provided snvindel, CNV, and fusion filters and performs GRIN2 analysis
@@ -180,8 +180,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		yAxisSpace: 40,
 		fontSize: 12,
 		devicePixelRatio: request.devicePixelRatio,
-		skipChrM: true,
-		drawChrSeparators: true
+		skipChrM: true
 	})
 
 	const resultData = JSON.parse(pyResult)
