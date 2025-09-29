@@ -41,7 +41,7 @@ class profileRadar extends profilePlot {
 	plot() {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
-		const width = 1180
+		const width = this.isComparison ? 1000 : 1180
 		const height = 800
 		this.dom.svg = this.dom.plotDiv
 			.append('div')
@@ -85,9 +85,9 @@ class profileRadar extends profilePlot {
 		this.legendG = this.dom.svg
 			.append('g')
 			.attr('data-testid', 'sjpp-profileRadar-legend')
-			.attr('transform', `translate(${x + 300},${y + 210})`)
-		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${x + 300},${y + 300})`)
-		this.noteG = this.dom.svg.append('g').attr('transform', `translate(${40},${y + 250})`)
+			.attr('transform', `translate(${x + 250},${y + 210})`)
+		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${x + 250},${y + 300})`)
+		this.noteG = this.dom.svg.append('g').attr('transform', `translate(0,${y + 250})`)
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
@@ -182,16 +182,18 @@ class profileRadar extends profilePlot {
 				.text(`${percent}%`)
 				.attr('pointer-events', 'none')
 		}
-		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text(`Legend`)
-		let abbrev = config.term1.abbrev ? `(${config.term1.abbrev})` : ''
-		const item1 = `${config.term1.name} ${abbrev}`
-		this.addLegendItem(item1, color1, 0, 'none')
-		abbrev = config.term2.abbrev ? `(${config.term2.abbrev})` : ''
+		if (!this.isComparison) {
+			this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text(`Legend`)
+			let abbrev = config.term1.abbrev ? `(${config.term1.abbrev})` : ''
+			const item1 = `${config.term1.name} ${abbrev}`
+			this.addLegendItem(item1, color1, 0, 'none')
+			abbrev = config.term2.abbrev ? `(${config.term2.abbrev})` : ''
 
-		const item2 = `${config.term2.name} ${abbrev}`
-		this.addLegendItem(item2, color2, 1, '5, 5')
-		if (this.state.activeCohort == ABBREV_COHORT) this.addEndUserImpressionNote(this.noteG)
-		else this.addPOCNote(this.noteG)
+			const item2 = `${config.term2.name} ${abbrev}`
+			this.addLegendItem(item2, color2, 1, '5, 5')
+			if (this.state.activeCohort == ABBREV_COHORT) this.addEndUserImpressionNote(this.noteG)
+			else this.addPOCNote(this.noteG)
+		}
 		this.addFilterLegend()
 	}
 

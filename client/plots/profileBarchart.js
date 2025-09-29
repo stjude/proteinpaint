@@ -163,21 +163,23 @@ class profileBarchart extends profilePlot {
 			.attr('transform', `translate(${50},${y + 80})`)
 		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${50},${y + 180})`)
 
-		this.legendG
-			.append('text')
-			.attr('text-anchor', 'left')
-			.style('font-weight', 'bold')
-			.text('Overall Score')
-			.attr('transform', `translate(0, -5)`)
+		if (!this.isComparison) {
+			this.legendG
+				.append('text')
+				.attr('text-anchor', 'left')
+				.style('font-weight', 'bold')
+				.text('Overall Score')
+				.attr('transform', `translate(0, -5)`)
 
-		this.addLegendItem('A', 'More than 75% of possible scorable items', 1)
-		this.addLegendItem('B', '50-75% of possible scorable items', 2)
-		this.addLegendItem('C', 'Less than 50% of possible scorable items', 3)
+			this.addLegendItem('A', 'More than 75% of possible scorable items', 1)
+			this.addLegendItem('B', '50-75% of possible scorable items', 2)
+			this.addLegendItem('C', 'Less than 50% of possible scorable items', 3)
+			if (this.state.activeCohort == ABBREV_COHORT) {
+				const uiG = this.legendG.append('g').attr('transform', `translate(550, -90)`)
+				this.addEndUserImpressionNote(uiG)
+			} else this.addPOCNote(this.legendG.append('g').attr('transform', `translate(550, -90)`))
+		}
 		this.addFilterLegend()
-		if (this.state.activeCohort == ABBREV_COHORT) {
-			const uiG = this.legendG.append('g').attr('transform', `translate(550, -90)`)
-			this.addEndUserImpressionNote(uiG)
-		} else this.addPOCNote(this.legendG.append('g').attr('transform', `translate(550, -90)`))
 
 		if (!hasSubjectiveData) return
 		drawLine(910, 120, 50, y, 'B')
