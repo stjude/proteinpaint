@@ -538,8 +538,13 @@ impl ParseDbRows for DbRows {
             None => {}
         }
         if self.values.len() > 0 {
-            output += "This contains the following values (separated by comma(,)):";
-            output += &(self.values.join(",") + &".");
+            output += "This contains the following values (separated by comma(,)) and inside parenthesis (\")):";
+            let mut values_str: String = String::from("");
+            for val in &self.values {
+                let val_par = String::from("\"") + &val + &"\"";
+                values_str += &val_par;
+            }
+            output += &(values_str + &".");
         }
         output
     }
