@@ -38,7 +38,8 @@ function init({ genomes }) {
 
 export async function getScoresData(query, ds, terms) {
 	if (!query.filterByUserSites) query.__protected__.ignoredTermIds.push(query.facilityTW.term.id)
-
+	const { clientAuthResult, activeCohort } = query.__protected__
+	const userSites = clientAuthResult[activeCohort].sites || []
 	const data = await getData(
 		{
 			terms,
@@ -59,8 +60,8 @@ export async function getScoresData(query, ds, terms) {
 	})
 
 	//If the user has sites keep only the sites that are visible to the user as choices for selection
-	if (query.userSites) {
-		sites = sites.filter(s => query.userSites.includes(s.value))
+	if (userSites) {
+		sites = sites.filter(s => userSites.includes(s.value))
 		if (lst.length == 1 && !sites.length) {
 			const siteId: number = lst[0].sample
 			const site = data.refs.bySampleId[siteId].label

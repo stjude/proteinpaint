@@ -227,7 +227,6 @@ export class profilePlot {
 				this.data = await this.app.vocabApi.getProfileScores({
 					scoreTerms: this.scoreTerms,
 					filter: this.filter,
-					userSites: this.state.sites,
 					facilityTW: this.config.facilityTW,
 					filterByUserSites: this.settings.filterByUserSites
 				})
@@ -236,7 +235,6 @@ export class profilePlot {
 					scoreTerms: this.scoreTerms,
 					scScoreTerms: this.scScoreTerms,
 					filter: this.filter,
-					userSites: this.state.sites,
 					facilityTW: this.config.facilityTW,
 					filterByUserSites: this.settings.filterByUserSites
 				})
