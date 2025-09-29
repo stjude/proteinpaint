@@ -61,7 +61,6 @@ export async function getScoresData(query, ds, terms) {
 
 	//If the user has sites keep only the sites that are visible to the user as choices for selection
 	if (userSites) {
-		console.log(sites, userSites)
 		sites = sites.filter(s => userSites.includes(s.value))
 		if (lst.length == 1 && !sites.length) {
 			const siteId: number = lst[0].sample
@@ -70,12 +69,16 @@ export async function getScoresData(query, ds, terms) {
 			throw `The access to the hospital ${hospital} is denied`
 		}
 	}
+	sites.sort((a, b) => {
+		return a.label.localeCompare(b.label)
+	})
 	const samples = Object.values(data.samples)
 	let sampleData, site
 	if ('facilitySite' in query) {
-		const index = query.facilitySite ? lst.findIndex(s => s[query.facilityTW.$id].value == query.facilitySite) : 0
+		const facilitySite = query.facilitySite || sites[0].value
+		const index = lst.findIndex(s => s[query.facilityTW.$id].value == facilitySite)
 		sampleData = lst[index]
-		site = sites[index]
+		site = sites.find(s => s.value == facilitySite)
 	} else if (sites.length == 1) {
 		sampleData = data.samples[sites[0].value]
 		site = sites[0]
