@@ -30,6 +30,7 @@ export class profileForms extends profilePlot {
 	shiftTop: any
 	categories: any
 	module: any
+	legendG: any
 
 	constructor(opts) {
 		super()
@@ -91,7 +92,7 @@ export class profileForms extends profilePlot {
 		const mainG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop})`)
 		const gridG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop})`)
 		this.filterG = svg.append('g').attr('transform', `translate(${shift + settings.svgw + 60}, ${shiftTop + 40})`)
-		const legendG = svg.append('g') //each plot will translate it to the right position
+		this.legendG = svg.append('g') //each plot will translate it to the right position
 
 		const xAxisG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop / 2})`)
 
@@ -100,7 +101,7 @@ export class profileForms extends profilePlot {
 			headerDiv,
 			mainG,
 			gridG,
-			legendG,
+			legendG: this.legendG,
 			xAxisG,
 			domainDiv
 		})
