@@ -8,8 +8,7 @@ import { get_samples } from '#src/termdb.sql.js'
 import { read_file, file_is_readable } from '#src/utils.js'
 import { dtsnvindel, dtcnv, dtfusionrna } from '#shared/common.js'
 import { randomBytes } from 'crypto'
-import { join, dirname } from 'path'
-import { promises as fs } from 'fs'
+import { join } from 'path'
 import { plotManhattan } from '#src/manhattan.ts'
 /**
  * General GRIN2 analysis handler
@@ -131,7 +130,6 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	// ── Generate file name; build absolute path; ensure directory exists
 	const fileName = makeCacheFileName()
 	const cachePath = join(serverconfig.cachedir, 'grin2', fileName)
-	await fs.mkdir(dirname(cachePath), { recursive: true })
 
 	// Step 3: Prepare input for Python script
 	const pyInput = {

@@ -36,6 +36,8 @@ from io import BytesIO
 from grin2_core import order_index_gene_data, order_index_lsn_data, prep_gene_lsn_data, find_gene_lsn_overlaps, count_hits, row_bern_conv
 from grin2_core import row_prob_subj_hit, p_order, process_block_in_chunks, prob_hits, grin_stats, write_grin_xlsx
 from typing import Dict, Optional
+import os
+import sys
 
 # Suppress all warnings 
 warnings.filterwarnings('ignore')
@@ -381,6 +383,11 @@ try:
 	try:
 		grin_table = grin_results["gene.hits"]
 		sorted_results = sort_grin2_data(grin_table)
+		 # Keep full table for later use
+		full_results = sorted_results.copy()
+		# Create a trimmed copy for writing to cache file
+		drop_cols = ["p1.nsubj", "p2.nsubj", "p3.nsubj", "gene.row", "q1.nsubj", "q2.nsubj", "q3.nsubj", "p.nsubj.gain", "p.nsubj.loss", "p.nsubj.mutation"]
+		file_results = sorted_results.drop(columns=drop_cols, errors="ignore")
 	except Exception as e:
 		write_error(f"Failed to extract gene.hits or sort grin_table: {str(e)}")
 		sys.exit(1)
@@ -389,8 +396,10 @@ try:
 	cache_file = input_data.get("cacheFileName")
 	if cache_file:
 		try:
+			# Make sure directory exists
+			os.makedirs(os.path.dirname(cache_file), exist_ok=True)
 			# Save as tab-delimited text
-			sorted_results.to_csv(cache_file, sep="\t", index=False)
+			file_results.to_csv(cache_file, sep="\t", index=False)
 		except Exception as e:
 			write_error(f"Failed to write cache file {cache_file}: {str(e)}")
 			sys.exit(1)
