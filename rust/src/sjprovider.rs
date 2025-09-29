@@ -481,12 +481,39 @@ impl CompletionModel {
             panic!("max_new_tokens and top_p not found!");
         };
 
+        let mut user_query = "";
+        let mut system_prompt = "";
+        for message in &full_history {
+            match message {
+                self::Message::User {
+                    content: text,
+                    images: _,
+                    name: _,
+                } => {
+                    //println!("User:{:?}", text);
+                    user_query = text;
+                }
+                self::Message::System {
+                    content: text,
+                    images: _,
+                    name: _,
+                } => {
+                    system_prompt = text;
+                    //println!("System:{:?}", text);
+                }
+                self::Message::Assistant { content: _, id: _ } => {}
+                self::Message::ToolResult { content: _, name: _ } => {}
+            }
+        }
+        let final_text = system_prompt.replace(&"{question}", &user_query);
+
+        //println!("final_text:{:?}", final_text);
         let mut request_payload = json!({
          "inputs":[
                 {
                     "model_name": self.model,
                     "inputs": {
-                        "text": full_history,
+                        "text": final_text,
                         "max_new_tokens": max_new_tokens,
                         "temperature": completion_request.temperature,
                         "top_p": top_p
