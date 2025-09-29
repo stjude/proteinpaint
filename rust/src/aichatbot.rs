@@ -369,7 +369,7 @@ If a query does not match any of the fields described above, then return JSON wi
         rag_docs.push(part.trim().to_string())
     }
 
-    let top_k: usize = 3;
+    //let top_k: usize = 3;
     // Create embeddings and add to vector store
     let embeddings = EmbeddingsBuilder::new(embedding_model.clone())
         .documents(rag_docs)
@@ -383,7 +383,8 @@ If a query does not match any of the fields described above, then return JSON wi
     InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
 
     // Create RAG agent
-    let agent = AgentBuilder::new(comp_model).preamble("Generate classification for the user query into summary, dge, hierarchial, snv_indel, cnv, variant_calling, sv_fusion and none categories. Return output in JSON with ALWAYS a single word answer { \"answer\": \"dge\" }, that is 'summary' for summary plot, 'dge' for differential gene expression, 'hierarchial' for hierarchial clustering, 'snv_indel' for SNV/Indel, 'cnv' for CNV and 'sv_fusion' for SV/fusion, 'variant_calling' for variant calling, 'surivial' for survival data, 'none' for none of the previously described categories. The summary plot list and summarizes the cohort of patients according to the user query. The answer should always be in lower case").dynamic_context(top_k, vector_store.index(embedding_model)).temperature(temperature).additional_params(additional).build();
+    let agent = AgentBuilder::new(comp_model).preamble(&(String::from("Generate classification for the user query into summary, dge, hierarchial, snv_indel, cnv, variant_calling, sv_fusion and none categories. Return output in JSON with ALWAYS a single word answer { \"answer\": \"dge\" }, that is 'summary' for summary plot, 'dge' for differential gene expression, 'hierarchial' for hierarchial clustering, 'snv_indel' for SNV/Indel, 'cnv' for CNV and 'sv_fusion' for SV/fusion, 'variant_calling' for variant calling, 'surivial' for survival data, 'none' for none of the previously described categories. The summary plot list and summarizes the cohort of patients according to the user query. The answer should always be in lower case\n The options are as follows:\n") + &contents + "\nQuestion= {question} \nanswer")).temperature(temperature).additional_params(additional).build();
+    //.dynamic_context(top_k, vector_store.index(embedding_model))
 
     let response = agent.prompt(user_input).await.expect("Failed to prompt ollama");
 
