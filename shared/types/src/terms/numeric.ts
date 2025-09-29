@@ -46,10 +46,14 @@ export type NumericBaseTerm = BaseTerm & {
 }
 
 export type NumericDictTerm = NumericBaseTerm & {
-	id?: string
+	id: string
 	type: 'integer' | 'float'
 	bins: PresetNumericBins
 	values?: TermValues
+}
+
+export type RawNumericDictTerm = NumericDictTerm & {
+	id?: string
 }
 
 export type NumericTerm = NumericDictTerm | GeneExpressionTerm | MetaboliteIntensityTerm | DateTerm | SsGSEATerm

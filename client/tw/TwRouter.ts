@@ -4,7 +4,6 @@ import { mayHydrateDictTwLst } from '#termsetting'
 // TODO: may convert these to dynamic imports
 import { QualValues, QualPredefinedGS, QualCustomGS } from './qualitative.ts'
 import { GvBase, GvPredefinedGS, GvCustomGS } from './geneVariant.ts'
-import { GeneExpBase } from './geneExpression.ts'
 import { NumericBase, NumRegularBin, NumCustomBins, NumCont } from './numeric.ts'
 import { DateBase } from './date.ts'
 import { SsGSEABase } from './ssGSEA.ts'
@@ -80,16 +79,17 @@ export class TwRouter {
 			case 'categorical':
 			case 'singleCellCellType':
 			case 'snp': {
-				const { QualitativeBase } = await import('./qualitative.ts')
+				const { QualitativeBase } = await import('./qualitative')
 				return await QualitativeBase.fill(tw, opts)
 			}
 
 			case 'integer':
 			case 'float':
+			case 'geneExpression':
 				return await NumericBase.fill(tw, opts)
 
-			case 'geneExpression':
-				return await GeneExpBase.fill(tw, opts)
+			// case 'geneExpression':
+			// 	return await GeneExpBase.fill(tw, opts)
 
 			// case 'condition':
 			// 	return

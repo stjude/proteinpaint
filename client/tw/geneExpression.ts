@@ -1,56 +1,33 @@
-import { TwBase, type TwOpts } from './TwBase.ts'
-import { NumRegularBin, NumCustomBins, NumCont, NumSpline } from './numeric.ts'
-import type { RawGeneExpTW } from '#types'
-import { copyMerge } from '#rx'
+import { type TwOpts } from './TwBase.ts'
+import type { RawGeneExpTerm } from '#types'
 
-export class GeneExpBase extends TwBase {
-	static async fill(tw: RawGeneExpTW, opts: TwOpts) {
-		if (tw.term.type != 'geneExpression') throw 'unexpected term.type'
-		if (typeof tw.term !== 'object') throw 'tw.term is not an object'
-		if (!tw.term.gene && !tw.term.name) throw 'no gene or name present'
-		if (!tw.term.gene) tw.term.gene = tw.term.name
-		if (!tw.term.gene || typeof tw.term.gene != 'string') throw 'geneExpression tw.term.gene must be non-empty string'
+const termType = 'geneExpression'
 
-		if (!tw.term.name) {
+export class GeneExpBase {
+	// option to fill-in/mutate the input raw term object in-place
+	// - does not have to construct, but may require forced type casting in consumer code
+	static async fill(term: RawGeneExpTerm, opts: TwOpts) {
+		if (term.type != 'geneExpression') throw 'unexpected term.type'
+		if (typeof term !== 'object') throw 'term is not an object'
+		if (!term.gene && !term.name) throw 'no gene or name present'
+		if (!term.gene) term.gene = term.name
+		if (!term.gene || typeof term.gene != 'string') throw 'geneExpression term.gene must be non-empty string'
+
+		if (!term.name) {
 			const unit = opts.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression'
-			const name = `${tw.term.gene} ${unit}`
-			tw.term.name = name
+			const name = `${term.gene} ${unit}`
+			term.name = name
 		}
+	}
 
-		if (opts.defaultQ) copyMerge(tw.q, opts.defaultQ) // override if default is given
+	static validate(term: RawGeneExpTerm) {
+		if (typeof term !== 'object') throw 'term is not an object'
+		if (term.type != termType) throw `incorrect term.type='${term?.type}', expecting '${termType}'`
+	}
 
-		if (!tw.q.mode) {
-			tw.q.mode = 'continuous'
-		} else if (tw.q.mode == 'discrete') {
-			if (!tw.q.type) tw.q.type = 'regular-bin'
-		}
-
-		tw.type =
-			tw.q.type == 'regular-bin'
-				? 'NumTWRegularBin'
-				: tw.q.type == 'custom-bin' //|| tw.q.mode == 'binary'
-				? 'NumTWCustomBin'
-				: tw.q.mode == 'continuous'
-				? 'NumTWCont'
-				: tw.q.mode == 'spline'
-				? 'NumTWSpline'
-				: tw.type
-
-		switch (tw.type) {
-			case 'NumTWRegularBin':
-				return await NumRegularBin.fill(tw, opts)
-
-			case 'NumTWCustomBin':
-				return await NumCustomBins.fill(tw, opts)
-
-			case 'NumTWCont':
-				return await NumCont.fill(tw)
-
-			case 'NumTWSpline':
-				return await NumSpline.fill(tw)
-
-			default:
-				throw `tw.type='${tw.type} (q.mode:q.type=${tw.q.mode}:${tw.q.type}' is not supported`
-		}
+	// option to construct an object instance and not mutate the input raw term
+	// - will be used instead of term literal object
+	constructor(term: RawGeneExpTerm) {
+		GeneExpBase.validate(term)
 	}
 }
