@@ -1,59 +1,122 @@
-import fs from 'fs'
-import readline from 'readline'
+import fs from 'node:fs'
+import readline from 'node:readline'
 import { createCanvas } from 'canvas'
 import { scaleLinear } from 'd3-scale'
-import type { GRIN2Request } from '../../shared/types/src/routes/grin2.ts'
-
-export type GenomeInfo = {
-	majorchr: Record<string, number>
-}
-
-// pick only the plot-related keys from GRIN2Request
-type RenderKeys =
-	| 'width'
-	| 'height'
-	| 'devicePixelRatio'
-	| 'yMaxCap'
-	| 'skipChrM'
-	| 'pngDotRadius'
-	| 'pngAlpha'
-	| 'padding'
-	| 'yAxisX'
-	| 'yAxisY'
-	| 'yAxisSpace'
-	| 'fontSize'
-	| 'drawChrSeparators'
-
-export type GRIN2RenderOpts = Pick<GRIN2Request, RenderKeys>
-
-export type ManhattanPoint = {
-	x: number // genome-wide bp (chrom cumulative + loc.start)
-	y: number // -log10(q) (possibly scaled to fit cap)
-	q: number // raw q-value
-	interactive: boolean // whether this point is q <= 0.05
-	chrom: string
-	pos: number // loc.start
-	gene?: string
-	type?: 'gain' | 'loss' | 'mutation'
-	color?: string
-	nsubj?: number
-}
 
 export type QValueLocator = {
 	type: 'mutation' | 'gain' | 'loss'
 	qValueColumnIdx: number
 }
 
-export type ManhattanPlotData = {
+type ManhattanPoint = {
+	x: number
+	y: number
+	q: number
+	interactive: boolean
+	chrom: string
+	pos: number
+	gene: string
+	type: 'mutation' | 'gain' | 'loss'
+	color: string
+}
+
+type ManhattanPlotData = {
 	png_width: number
 	png_height: number
 	y_max: number
-	y_buffer: number // keep 0 (domains stay at 0..y_max on client)
-	x_buffer: number // keep 0 (domains stay at 0..total_bp on client)
+	y_buffer: number
+	x_buffer: number
 	total_genome_length: number
 	chrom_data: Record<string, { start: number; size: number; center: number }>
-	points: ManhattanPoint[] // significant only
-	padding: { left: number; right: number; top: number; bottom: number } // NEW
+	points: ManhattanPoint[]
+	padding: { left: number; right: number; top: number; bottom: number }
+}
+
+type GRIN2RenderOpts = {
+	plotWidth: number
+	plotHeight: number
+	devicePixelRatio: number
+	yMaxCap: number
+	skipChrM: boolean
+	pngDotRadius: number
+	pngAlpha: number
+	padding: { left: number; right: number; top: number; bottom: number }
+}
+
+type GenomeInfo = {
+	majorchr: Record<string, number>
+}
+
+const TYPE_COLOR: Record<'mutation' | 'gain' | 'loss', string> = {
+	mutation: '#44AA44',
+	gain: '#FF4444',
+	loss: '#4444FF'
+}
+
+// --- small helper that draws static layers once and exposes plotDot ---
+function createManhattanRenderer(opts: {
+	W: number
+	H: number
+	DPR: number
+	PAD: { left: number; right: number; top: number; bottom: number }
+	totalBp: number
+	chrOrder: string[]
+	chrom_data: Record<string, { start: number; size: number; center: number }>
+	yMaxForAxis: number
+	pngDotRadius: number
+	pngAlpha: number
+}) {
+	const { W, H, DPR, PAD, totalBp, chrOrder, chrom_data, yMaxForAxis, pngDotRadius, pngAlpha } = opts
+
+	const canvas = createCanvas(W * DPR, H * DPR)
+	const ctx = canvas.getContext('2d')
+	if (DPR > 1) ctx.scale(DPR, DPR)
+
+	// Background
+	ctx.fillStyle = '#FFFFFF'
+	ctx.fillRect(0, 0, W, H)
+
+	// Scales (domains are genome units and -log10(q); ranges include padding)
+	const xScale = scaleLinear<number, number>()
+		.domain([0, totalBp])
+		.range([PAD.left, W - PAD.right])
+	const yScale = scaleLinear<number, number>()
+		.domain([0, yMaxForAxis])
+		.range([H - PAD.bottom, PAD.top])
+
+	// Plotting band height (to keep bands behind dots, respecting dot radius bleed)
+	const bandPad = Math.ceil(pngDotRadius)
+	const plotTop = Math.max(0, PAD.top - bandPad)
+	const plotBottom = Math.min(H, H - PAD.bottom + bandPad)
+	const plotHeight = plotBottom - plotTop
+
+	// Alternating chr bands
+	chrOrder.forEach((chr, i) => {
+		const x0 = xScale(chrom_data[chr].start)
+		const x1 = xScale(chrom_data[chr].start + chrom_data[chr].size)
+		ctx.fillStyle = i % 2 === 0 ? '#FFFFFF' : '#D3D3D3'
+		ctx.fillRect(x0, plotTop, x1 - x0, plotHeight)
+	})
+
+	// Prepare dot drawing
+	const r = pngDotRadius
+	ctx.globalAlpha = pngAlpha
+
+	function plotDot(xGenome: number, yVal: number, color: string) {
+		const cx = xScale(xGenome)
+		const cy = yScale(yVal)
+		ctx.fillStyle = color
+		ctx.beginPath()
+		ctx.arc(cx, cy, r, 0, Math.PI * 2)
+		ctx.fill()
+	}
+
+	function finalize(): string {
+		ctx.globalAlpha = 1
+		return canvas.toBuffer('image/png').toString('base64')
+	}
+
+	return { plotDot, finalize, xScale, yScale }
 }
 
 export async function plotManhattan(
@@ -62,7 +125,7 @@ export async function plotManhattan(
 	qValueLocators: QValueLocator[],
 	opts: Partial<GRIN2RenderOpts> = {}
 ): Promise<{ pngBase64: string; plotData: ManhattanPlotData }> {
-	const settings = {
+	const settings: GRIN2RenderOpts = {
 		plotWidth: 1000,
 		plotHeight: 400,
 		devicePixelRatio: 1,
@@ -70,7 +133,7 @@ export async function plotManhattan(
 		skipChrM: true,
 		pngDotRadius: 2,
 		pngAlpha: 0.7,
-		padding: { left: 14, right: 14, top: 10, bottom: 12 }, // ⬅️ tweak to taste
+		padding: { left: 14, right: 14, top: 10, bottom: 12 },
 		...opts
 	}
 	const PAD = settings.padding
@@ -85,42 +148,89 @@ export async function plotManhattan(
 		totalBp += len
 	}
 
-	const TYPE_COLOR: Record<'mutation' | 'gain' | 'loss', string> = {
-		mutation: '#44AA44',
-		gain: '#FF4444',
-		loss: '#4444FF'
-	}
-	// Build index maps from the array you pass in from Python
+	// Build index map once
 	const qIdxByType = new Map(qValueLocators.map(d => [d.type, d.qValueColumnIdx]))
 
-	// Fixed base columns from your Python writer (with header present in file)
+	// Fixed columns in cache file
 	const GENE_IDX = 0
 	const CHROM_IDX = 1
 	const LOC_START_IDX = 2
 
-	// ---------- Parse TSV ----------
-	const rl = readline.createInterface({ input: fs.createReadStream(cacheFile) })
-
-	// For PNG (all), for interactivity (q<=0.05)
-	const pngPoints: Array<{ x: number; y: number; color: string }> = []
-	const points: ManhattanPoint[] = []
+	// ---------------- Pass 1: find yObservedMaxRaw ----------------
 	let yObservedMaxRaw = 10
-	let isFirstLine = true
-
 	await new Promise<void>((resolve, reject) => {
-		rl.on('line', (line: string) => {
-			if (!line || !line.trim()) return
+		const rl1 = readline.createInterface({ input: fs.createReadStream(cacheFile) })
+		let isFirstLine = true
 
-			// Skip the header row (we keep it in the file but don’t use it here)
+		rl1.on('line', (line: string) => {
+			if (!line || !line.trim()) return
 			if (isFirstLine) {
-				isFirstLine = false
+				isFirstLine = false // skip header
 				return
 			}
-
 			const cols = line.split('\t')
 			if (cols.length < 4) return
 
-			const gene = cols[GENE_IDX] || undefined
+			const chrom = cols[CHROM_IDX]
+			if (!chrom) return
+			if (settings.skipChrM && chrom.replace('chr', '') === 'M') return
+			if (!(chrom in chrom_data)) return
+
+			for (const [, qIdx] of qIdxByType) {
+				if (qIdx == null || qIdx < 0 || qIdx >= cols.length) continue
+				const q = Number(cols[qIdx])
+				if (!Number.isFinite(q) || q <= 0 || q > 1) continue
+				const yRaw = -Math.log10(q)
+				if (yRaw > yObservedMaxRaw) yObservedMaxRaw = yRaw
+			}
+		})
+		rl1.on('close', () => resolve())
+		rl1.on('error', err => reject(err))
+	})
+
+	// ---------- Determine y scale (uniform scaling if above cap) ----------
+	let scale_factor = 1
+	if (yObservedMaxRaw > settings.yMaxCap) scale_factor = settings.yMaxCap / yObservedMaxRaw
+
+	// After scaling, the true plotted max is min(yObservedMaxRaw, yMaxCap)
+	const yMaxForAxis = Math.min(yObservedMaxRaw, settings.yMaxCap) + 0.35
+
+	// ---------- Init canvas + static layers ONCE ----------
+	const W = settings.plotWidth
+	const H = settings.plotHeight
+	const DPR = settings.devicePixelRatio
+
+	const renderer = createManhattanRenderer({
+		W,
+		H,
+		DPR,
+		PAD,
+		totalBp,
+		chrOrder,
+		chrom_data,
+		yMaxForAxis,
+		pngDotRadius: settings.pngDotRadius,
+		pngAlpha: settings.pngAlpha
+	})
+
+	// For interactivity (q <= 0.05)
+	const points: ManhattanPoint[] = []
+
+	// ---------------- Pass 2: stream and plot dots ----------------
+	await new Promise<void>((resolve, reject) => {
+		const rl2 = readline.createInterface({ input: fs.createReadStream(cacheFile) })
+		let isFirstLine = true
+
+		rl2.on('line', (line: string) => {
+			if (!line || !line.trim()) return
+			if (isFirstLine) {
+				isFirstLine = false // skip header
+				return
+			}
+			const cols = line.split('\t')
+			if (cols.length < 4) return
+
+			const gene = cols[GENE_IDX]
 			const chrom = cols[CHROM_IDX]
 			if (!chrom) return
 			if (settings.skipChrM && chrom.replace('chr', '') === 'M') return
@@ -131,22 +241,22 @@ export async function plotManhattan(
 
 			const xGenome = chrom_data[chrom].start + locStart
 
-			// Use the integer indices provided by Python — no header lookups
 			for (const [type, qIdx] of qIdxByType) {
 				if (qIdx == null || qIdx < 0 || qIdx >= cols.length) continue
-
 				const q = Number(cols[qIdx])
 				if (!Number.isFinite(q) || q <= 0 || q > 1) continue
 
-				const yRaw = -Math.log10(q)
-				if (yRaw > yObservedMaxRaw) yObservedMaxRaw = yRaw
+				let y = -Math.log10(q)
+				if (scale_factor !== 1) y *= scale_factor
 
-				pngPoints.push({ x: xGenome, y: yRaw, color: TYPE_COLOR[type] })
+				// draw per point (no re-render of static layers)
+				renderer.plotDot(xGenome, y, TYPE_COLOR[type])
 
+				// keep only interactive set (q<=0.05)
 				if (q <= 0.05) {
 					points.push({
 						x: xGenome,
-						y: yRaw,
+						y,
 						q,
 						interactive: true,
 						chrom,
@@ -158,78 +268,14 @@ export async function plotManhattan(
 				}
 			}
 		})
-		rl.on('close', () => resolve())
-		rl.on('error', err => reject(err))
+		rl2.on('close', () => resolve())
+		rl2.on('error', err => reject(err))
 	})
 
-	// ---------- Uniform y scaling to cap (like Python) ----------
-	let scale_factor = 1
-	let yMaxForAxis: number
-	if (pngPoints.length) {
-		if (yObservedMaxRaw > settings.yMaxCap) {
-			scale_factor = settings.yMaxCap / yObservedMaxRaw
-			for (const p of pngPoints) p.y *= scale_factor
-			for (const p of points) p.y *= scale_factor
-		}
-		const scaledMax = Math.max(...pngPoints.map(p => p.y))
-		yMaxForAxis = scaledMax + 0.35
-	} else {
-		yMaxForAxis = 10
-	}
+	// ---------- PNG out ----------
+	const pngBase64 = renderer.finalize()
 
-	// ---------- Render PNG with pixel padding in RANGE ----------
-	const W = settings.plotWidth
-	const H = settings.plotHeight
-	const DPR = settings.devicePixelRatio
-
-	const canvas = createCanvas(W * DPR, H * DPR)
-	const ctx = canvas.getContext('2d')
-	if (DPR > 1) ctx.scale(DPR, DPR)
-
-	// background
-	ctx.fillStyle = '#FFFFFF'
-	ctx.fillRect(0, 0, W, H)
-
-	// ranges include padding; domains remain 0-based
-	const xScale = scaleLinear<number, number>()
-		.domain([0, totalBp])
-		.range([PAD.left, W - PAD.right])
-
-	const yScale = scaleLinear<number, number>()
-		.domain([0, yMaxForAxis])
-		.range([H - PAD.bottom, PAD.top])
-
-	// draw the plotting band area only (between top/bottom padding)
-	const radius_buffer = settings.pngDotRadius
-	const bandPad = Math.ceil(radius_buffer)
-	const plotTop = Math.max(0, PAD.top - bandPad)
-	const plotBottom = Math.min(H, H - PAD.bottom + bandPad)
-	const plotHeight = plotBottom - plotTop
-
-	// alternating chr bands inside padded y-range
-	chrOrder.forEach((chr, i) => {
-		const x0 = xScale(chrom_data[chr].start)
-		const x1 = xScale(chrom_data[chr].start + chrom_data[chr].size)
-		ctx.fillStyle = i % 2 === 0 ? '#FFFFFF' : '#D3D3D3'
-		ctx.fillRect(x0, plotTop, x1 - x0, plotHeight)
-	})
-
-	// colored points
-	const r = settings.pngDotRadius
-	ctx.globalAlpha = settings.pngAlpha
-	for (const p of pngPoints) {
-		ctx.fillStyle = p.color
-		const cx = xScale(p.x)
-		const cy = yScale(p.y)
-		ctx.beginPath()
-		ctx.arc(cx, cy, r, 0, Math.PI * 2)
-		ctx.fill()
-	}
-	ctx.globalAlpha = 1
-
-	const pngBase64 = canvas.toBuffer('image/png').toString('base64')
-
-	// ---------- Return plotData (client mirrors same padding in ranges) ----------
+	// ---------- Return plotData (for D3 overlay, hovers, etc.) ----------
 	const plotData: ManhattanPlotData = {
 		png_width: W,
 		png_height: H,

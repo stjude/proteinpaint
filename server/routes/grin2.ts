@@ -180,19 +180,14 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	// console.log('[GRIN2] plotManhattan Request:', request)
 	const manhattanStart = Date.now()
 	const { pngBase64, plotData } = await plotManhattan(cachePath, g, qValueLocators, {
-		width: request.width,
-		height: request.height,
+		plotWidth: request.width,
+		plotHeight: request.height,
 		yMaxCap: request.yMaxCap,
-		yAxisX: request.yAxisX,
-		yAxisY: request.yAxisY,
-		yAxisSpace: request.yAxisSpace,
-		fontSize: request.fontSize,
 		devicePixelRatio: request.devicePixelRatio,
 		skipChrM: request.skipChrM,
 		pngDotRadius: request.pngDotRadius,
 		pngAlpha: request.pngAlpha,
-		padding: request.padding,
-		drawChrSeparators: request.drawChrSeparators
+		padding: request.padding
 		// Other manhattan settings can be added here as needed
 	})
 
