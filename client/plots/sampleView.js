@@ -373,7 +373,8 @@ class SampleView {
 		*/
 		const data = await this.app.vocabApi.getTermChildren(
 			term,
-			this.state.toSelectCohort ? this.state.cohortValuelst : null
+			this.state.toSelectCohort ? this.state.cohortValuelst : null,
+			this.state.termfilter.filter
 		)
 		if (data.error) throw data.error
 		if (!data.lst || data.lst.length == 0) {

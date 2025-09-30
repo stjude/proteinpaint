@@ -41,8 +41,8 @@ class profileRadar extends profilePlot {
 	plot() {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
-		const width = this.isComparison ? 1000 : 1180
-		const height = 800
+		const width = this.isComparison ? 1000 : 1050
+		const height = 650
 		this.dom.svg = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
@@ -72,7 +72,7 @@ class profileRadar extends profilePlot {
 		// Create a polar grid.
 		const radius = this.radius
 		const x = 300
-		const y = 330
+		const y = 310
 		this.dom.svg
 			.append('text')
 			.attr('transform', `translate(60, ${40})`)
@@ -85,9 +85,9 @@ class profileRadar extends profilePlot {
 		this.legendG = this.dom.svg
 			.append('g')
 			.attr('data-testid', 'sjpp-profileRadar-legend')
-			.attr('transform', `translate(${x + 340},${y - 250})`)
-		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${x + 340},${y - 150})`)
-		this.noteG = this.dom.svg.append('g').attr('transform', `translate(0,${y + 250})`)
+			.attr('transform', `translate(${x + 340},${y - 120})`)
+		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${x + 340},${y - 20})`)
+		this.noteG = this.dom.svg.append('g').attr('transform', `translate(20, ${y + 150})`)
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
 
