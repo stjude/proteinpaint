@@ -11,10 +11,14 @@ export type SsGSEATerm = NumericBaseTerm & {
 	/** term.name: geneset db term name for native term, and user-defined name for custom term */
 	/** custom term has list of gene names used for computing score */
 	genes?: string[]
-	name?: string
+	name: string
 	type: 'ssGSEA'
 	bins?: PresetNumericBins
 	unit?: string
+}
+
+export type RawSsGSEATerm = SsGSEATerm & {
+	name?: string
 }
 
 export type SsGSEATW = NumTW & { term: SsGSEATerm }

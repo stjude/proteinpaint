@@ -15,6 +15,6 @@ export type DateTerm = NumericBaseTerm & {
 
 export type DateTW = NumTW & { term: DateTerm }
 
-type RawDateTerm = DateTerm & { name?: string }
+export type RawDateTerm = DateTerm & { name?: string }
 
 export type RawDateTW = RawNumTW & { term: RawDateTerm }

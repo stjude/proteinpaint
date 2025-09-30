@@ -8,6 +8,7 @@ MetaboliteIntensityTermSettingInstance
 */
 
 export type MetaboliteIntensityTerm = NumericBaseTerm & {
+	id?: string
 	name: string
 	type: 'metaboliteIntensity'
 	metabolite: string
@@ -17,7 +18,8 @@ export type MetaboliteIntensityTerm = NumericBaseTerm & {
 
 export type MetaboliteIntensityTW = NumTW & { term: MetaboliteIntensityTerm }
 
-type RawMetabolitIntensityTerm = {
+export type RawMetaboliteIntensityTerm = NumericBaseTerm & {
+	id?: string
 	type: 'metaboliteIntensity'
 	metabolite: string
 	name?: string
@@ -25,4 +27,4 @@ type RawMetabolitIntensityTerm = {
 	unit?: string
 }
 
-export type RawMetaboliteIntensityTW = RawNumTW & { term: RawMetabolitIntensityTerm }
+export type RawMetaboliteIntensityTW = RawNumTW & { term: RawMetaboliteIntensityTerm }
