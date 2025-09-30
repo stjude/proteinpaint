@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.147.1
 
 Fixes:
 - improve violin item value plot quality and clean up
