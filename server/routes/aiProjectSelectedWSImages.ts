@@ -50,7 +50,12 @@ function init({ genomes }) {
 
 					if (ds.queries.WSImages.getWSIPredictionPatches) {
 						const predictions = await ds.queries.WSImages.getWSIPredictionPatches(projectId, wsimageFilename)
-						wsimage.predictions = predictions
+
+						const classMap = new Map<number, string>((wsimage.classes || []).map((c: any) => [c.id, c.label]))
+						wsimage.predictions = (predictions || []).map((p: any) => {
+							const label = classMap.get(p.class) ?? p.class
+							return { ...p, class: label }
+						})
 					}
 
 					wsimages.push(wsimage)
