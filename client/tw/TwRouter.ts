@@ -5,9 +5,6 @@ import { mayHydrateDictTwLst } from '#termsetting'
 import { QualValues, QualPredefinedGS, QualCustomGS } from './qualitative.ts'
 import { GvBase, GvPredefinedGS, GvCustomGS } from './geneVariant.ts'
 import { NumericBase, NumRegularBin, NumCustomBins, NumCont } from './numeric.ts'
-import { DateBase } from './date.ts'
-import { SsGSEABase } from './ssGSEA.ts'
-import { MetaboliteIntensityBase } from './metaboliteIntensity.ts'
 
 export const routedTermTypes = new Set([
 	'categorical',
@@ -60,7 +57,6 @@ export class TwRouter {
 				return new QualCustomGS(tw, opts)
 
 			default:
-				// console.log(46, tw)
 				throw `unable to init(tw)`
 		}
 	}
@@ -86,10 +82,10 @@ export class TwRouter {
 			case 'integer':
 			case 'float':
 			case 'geneExpression':
+			case 'metaboliteIntensity':
+			case 'date':
+			case 'ssGSEA':
 				return await NumericBase.fill(tw, opts)
-
-			// case 'geneExpression':
-			// 	return await GeneExpBase.fill(tw, opts)
 
 			// case 'condition':
 			// 	return
@@ -99,15 +95,6 @@ export class TwRouter {
 
 			case 'geneVariant':
 				return await GvBase.fill(tw, opts)
-
-			case 'date':
-				return await DateBase.fill(tw, opts)
-
-			case 'metaboliteIntensity':
-				return await MetaboliteIntensityBase.fill(tw, opts)
-
-			case 'ssGSEA':
-				return await SsGSEABase.fill(tw, opts)
 
 			default:
 				throw `unrecognized tw.term?.type='${tw.term?.type}'`

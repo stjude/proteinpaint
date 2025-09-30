@@ -22,11 +22,15 @@ import { TwBase, type TwOpts } from './TwBase.ts'
 import { isNumeric } from '#shared/helpers.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { copyMerge } from '#rx'
+import { GeneExpBase } from './geneExpression.ts'
+import { MetaboliteIntensityBase } from './metaboliteIntensity.ts'
+import { DateBase } from './date.ts'
+import { SsGSEABase } from './ssGSEA.ts'
 
 export class NumericBase extends TwBase {
 	// type is set by TwBase constructor
 	term: NumericTerm
-	static termTypes = new Set(['integer', 'float', 'date', 'geneExpression', 'metaboliteIntensity', 'snp'])
+	static termTypes = new Set(['integer', 'float', 'date', 'geneExpression', 'metaboliteIntensity'])
 
 	constructor(tw: NumTW, opts: TwOpts) {
 		super(tw, opts)
@@ -37,23 +41,36 @@ export class NumericBase extends TwBase {
 		if (!tw.term) throw `missing tw.term, must already be filled in`
 		if (!NumericBase.termTypes.has(tw.term.type)) throw `non-numeric term.type='${tw.term.type}'`
 
-		// switch (tw.term.type) {
-		// 	case 'integer':
-		// 		IntegerBase.fill(tw.term)
-		// 		break
+		switch (tw.term.type) {
+			case 'integer':
+			case 'float':
+				if (!tw.q.mode) tw.q.mode = 'discrete'
+				break
 
-		// 	case 'snp':
-		// 		FloatBase.fill(tw.term)
-		// 		break
+			case 'geneExpression':
+				GeneExpBase.fill(tw.term, opts)
+				if (!tw.q.mode) tw.q.mode = 'continuous'
+				break
 
-		// 	case 'singleCellCellType':
-		// 		GeneExpression.fill(tw.term)
-		// 		break
+			case 'metaboliteIntensity':
+				MetaboliteIntensityBase.fill(tw.term)
+				if (!tw.q.mode) tw.q.mode = 'continuous'
+				break
 
-		// 	default:
-		// 		// should never be reached if TwRouter.fill() routes correctly
-		// 		throw `unexpected numeric term.type='${tw.term.type}'`
-		// }
+			case 'date':
+				DateBase.fill(tw.term)
+				if (!tw.q.mode) tw.q.mode = 'continuous'
+				break
+
+			case 'ssGSEA':
+				SsGSEABase.fill(tw.term)
+				if (!tw.q.mode) tw.q.mode = 'continuous'
+				break
+
+			// default:
+			// 	// should never be reached if TwRouter.fill() routes correctly
+			// 	throw `unexpected numeric term.type='${tw.term.type}'`
+		}
 
 		if (opts.defaultQ) {
 			opts.defaultQ.isAtomic = true
@@ -66,16 +83,15 @@ export class NumericBase extends TwBase {
 			copyMerge(tw.q, opts.defaultQ)
 		}
 
-		if (!tw.q.mode) tw.q.mode = 'discrete'
-
-		// fill q.type for binary or discrete mode to enable routing
-		if ((tw.q.mode == 'discrete' || tw.q.mode == 'binary') && !tw.q.type) {
+		// remove q.type for continuous or spline mode
+		if (tw.q.mode == 'continuous' || tw.q.mode == 'spline') {
+			delete tw.q.type
+		} else if (!tw.q.type) {
 			if (tw.q.mode == 'binary') tw.q.type = 'custom-bin'
-			else if (tw.q.mode == 'discrete') mayFillQWithPresetBins(tw)
+			else if (tw.q.mode == 'discrete') tw.q.type = 'regular-bin'
 		}
 
-		// remove q.type for continuous or spline mode
-		if (tw.q.mode == 'continuous' || tw.q.mode == 'spline') delete tw.q.type
+		if (tw.q.type == 'regular-bin' && tw.term.bins) mayFillQWithPresetBins(tw)
 
 		/* 
 			Pre-fill the tw.type, since it's required for ROUTING to the

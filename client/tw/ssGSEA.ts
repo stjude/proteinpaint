@@ -1,44 +1,34 @@
-import { TwBase, type TwOpts } from './TwBase.ts'
-import { NumRegularBin, NumCustomBins, NumCont } from './numeric.ts'
-import type { RawSsGSEATW } from '#types'
-import { copyMerge } from '#rx'
+import type { RawSsGSEATerm, PresetNumericBins } from '#types'
 
-export class SsGSEABase extends TwBase {
-	static async fill(tw: RawSsGSEATW, opts: TwOpts) {
-		if (tw.term.type != 'ssGSEA') throw 'unexpected term.type'
-		if (typeof tw.term !== 'object') throw 'tw.term is not an object'
-		if (!tw.term.id) throw 'tw.term.id missing'
-		if (!tw.term.name) tw.term.name = tw.term.id // only apply to native; lack way to auto retrieve
+const termType = 'ssGSEA'
 
-		if (opts.defaultQ) copyMerge(tw.q, opts.defaultQ) // override if default is given
+export class SsGSEABase {
+	type = termType
+	id: string
+	name: string
+	bins?: PresetNumericBins
+	unit?: string
 
-		if (!tw.q.mode) {
-			tw.q.mode = 'continuous'
-		} else if (tw.q.mode == 'discrete') {
-			if (!tw.q.type) tw.q.type = 'regular-bin'
-		}
+	// option to fill-in/mutate the input raw term object in-place
+	// - does not have to construct, but may require forced type casting in consumer code
+	static async fill(term: RawSsGSEATerm) {
+		SsGSEABase.validate(term)
+		if (!term.name) term.name = term.id // only apply to native; lack way to auto retrieve
+	}
 
-		tw.type =
-			tw.q.type == 'regular-bin'
-				? 'NumTWRegularBin'
-				: tw.q.type == 'custom-bin' //|| tw.q.mode == 'binary'
-				? 'NumTWCustomBin'
-				: tw.q.mode == 'continuous'
-				? 'NumTWCont'
-				: tw.type
+	static validate(term: RawSsGSEATerm) {
+		if (term.type != 'ssGSEA') throw `unexpected term.type='$term.type', should be '${termType}'`
+		if (typeof term !== 'object') throw 'term is not an object'
+		if (!term.id) throw 'term.id missing'
+	}
 
-		switch (tw.type) {
-			case 'NumTWRegularBin':
-				return await NumRegularBin.fill(tw, opts)
-
-			case 'NumTWCustomBin':
-				return await NumCustomBins.fill(tw, opts)
-
-			case 'NumTWCont':
-				return await NumCont.fill(tw)
-
-			default:
-				throw `tw.type='${tw.type} (q.mode:q.type=${tw.q.mode}:${tw.q.type}' is not supported`
-		}
+	// option to construct an object instance and not mutate the input raw term
+	// - will be used instead of term literal object
+	constructor(term: RawSsGSEATerm) {
+		SsGSEABase.validate(term)
+		this.id = term.id
+		this.name = term.name || term.id
+		this.bins = term.bins
+		this.unit = term.unit
 	}
 }

@@ -1,42 +1,25 @@
-import { TwBase, type TwOpts } from './TwBase.ts'
-import { NumRegularBin, NumCustomBins, NumCont } from './numeric.ts'
-import type { RawDateTW } from '#types'
-import { copyMerge } from '#rx'
+import type { RawDateTerm } from '#types'
 
-export class DateBase extends TwBase {
-	static async fill(tw: RawDateTW, opts: TwOpts) {
-		if (tw.term.type != 'date') throw 'unexpected term.type'
-		if (typeof tw.term !== 'object') throw 'tw.term is not an object'
+const termType = 'date'
 
-		if (opts.defaultQ) copyMerge(tw.q, opts.defaultQ) // override if default is given
+export class DateBase {
+	type = termType
 
-		if (!tw.q.mode) {
-			tw.q.mode = 'continuous'
-		} else if (tw.q.mode == 'discrete') {
-			if (!tw.q.type) tw.q.type = 'regular-bin'
-		}
+	// option to fill-in/mutate the input raw term object in-place
+	// - does not have to construct, but may require forced type casting in consumer code
+	static async fill(term: RawDateTerm) {
+		this.validate(term)
+	}
 
-		tw.type =
-			tw.q.type == 'regular-bin'
-				? 'NumTWRegularBin'
-				: tw.q.type == 'custom-bin' //|| tw.q.mode == 'binary'
-				? 'NumTWCustomBin'
-				: tw.q.mode == 'continuous'
-				? 'NumTWCont'
-				: tw.type
+	static validate(term: RawDateTerm) {
+		if (term.type != 'date') throw 'unexpected term.type'
+		if (typeof term !== 'object') throw 'term is not an object'
+		if (!term.name || typeof term.name != 'string') throw 'invalid date term.name'
+	}
 
-		switch (tw.type) {
-			case 'NumTWRegularBin':
-				return await NumRegularBin.fill(tw, opts)
-
-			case 'NumTWCustomBin':
-				return await NumCustomBins.fill(tw, opts)
-
-			case 'NumTWCont':
-				return await NumCont.fill(tw)
-
-			default:
-				throw `tw.type='${tw.type} (q.mode:q.type=${tw.q.mode}:${tw.q.type}' is not supported`
-		}
+	// option to construct an object instance and not mutate the input raw term
+	// - will be used instead of term literal object
+	constructor(term: RawDateTerm) {
+		DateBase.validate(term)
 	}
 }
