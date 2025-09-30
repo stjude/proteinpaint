@@ -65,7 +65,7 @@ export function parentCorsMessage(res, flag = '') {
 				`\n- After the session is recovered, this browser window should automatically close.`
 		)
 		if (ok) {
-			if (embedder.origin && !confirmedCorsWindow.incldues(embedder.origin)) confirmedCorsWindow.push(embedder.origin)
+			if (embedder.origin && !confirmedCorsWindow.includes(embedder.origin)) confirmedCorsWindow.push(embedder.origin)
 			localStorage.setItem('confirmedCorsWindow', JSON.stringify(confirmedCorsWindow.filter(d => d != undefined))) // not falsy
 		}
 	}
