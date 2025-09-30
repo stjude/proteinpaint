@@ -10,7 +10,7 @@ class profileRadarFacility extends profilePlot {
 	constructor() {
 		super()
 		this.type = 'profileRadarFacility'
-		this.radius = 250
+		this.radius = 200
 		this.isRadarFacility = true // this is a radar facility plot
 	}
 
@@ -59,20 +59,20 @@ class profileRadarFacility extends profilePlot {
 
 		this.dom.svg
 			.append('text')
-			.attr('transform', `translate(110, ${30})`)
+			.attr('transform', `translate(90, ${30})`)
 			.attr('font-weight', 'bold')
 			.text(this.config.title)
 		const radius = this.radius
-		const x = 370
-		const y = 350
+		const x = 300
+		const y = 330
 		const radarG = this.dom.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.radarG = radarG
 
 		this.legendG = this.dom.svg
 			.append('g')
 			.attr('font-size', '0.9em')
-			.attr('transform', `translate(${x + 300},${y + 200})`)
-		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${x + 300},${y + 300})`)
+			.attr('transform', `translate(${x + 320},${y - 200})`)
+		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${x + 320},${y - 100})`)
 
 		const rows = []
 		const columns = [
@@ -129,7 +129,7 @@ class profileRadarFacility extends profilePlot {
 			const leftSide = iangle > Math.PI / 2 && iangle <= (3 / 2) * Math.PI
 			let dx = radius * 1.1 * Math.cos(iangle)
 			let dy = radius * 1.1 * Math.sin(iangle) - 10
-			const textElem = radarG.append('text').attr('x', `${dx}px`).attr('y', `${dy}px`)
+			const textElem = radarG.append('text').attr('x', `${dx}px`).attr('y', `${dy}px`).attr('font-size', '0.9em')
 
 			const texts = item.module.split(' ')
 			let span
@@ -180,7 +180,7 @@ class profileRadarFacility extends profilePlot {
 			const percent = i * 10
 			radarG
 				.append('text')
-				.attr('transform', `translate(-10, ${(-percent / 100) * radius + 5})`)
+				.attr('transform', `translate(0, ${(-percent / 100) * radius - 2})`)
 				.attr('text-anchor', 'end')
 				.style('font-size', '0.8rem')
 				.text(`${percent}%`)
