@@ -1,24 +1,47 @@
-// server/src/manhattanFromCache.ts
 import fs from 'fs'
 import readline from 'readline'
 import { createCanvas } from 'canvas'
 import { scaleLinear } from 'd3-scale'
+import type { GRIN2Request } from '../../shared/types/src/routes/grin2.ts'
 
 export type GenomeInfo = {
 	majorchr: Record<string, number>
 }
 
+// pick only the plot-related keys from GRIN2Request
+type RenderKeys =
+	| 'width'
+	| 'height'
+	| 'devicePixelRatio'
+	| 'yMaxCap'
+	| 'skipChrM'
+	| 'pngDotRadius'
+	| 'pngAlpha'
+	| 'padding'
+	| 'yAxisX'
+	| 'yAxisY'
+	| 'yAxisSpace'
+	| 'fontSize'
+	| 'drawChrSeparators'
+
+export type GRIN2RenderOpts = Pick<GRIN2Request, RenderKeys>
+
 export type ManhattanPoint = {
 	x: number // genome-wide bp (chrom cumulative + loc.start)
 	y: number // -log10(q) (possibly scaled to fit cap)
 	q: number // raw q-value
-	interactive: boolean // true here (q <= 0.05)
+	interactive: boolean // whether this point is q <= 0.05
 	chrom: string
 	pos: number // loc.start
 	gene?: string
 	type?: 'gain' | 'loss' | 'mutation'
 	color?: string
 	nsubj?: number
+}
+
+export type QValueLocator = {
+	type: 'mutation' | 'gain' | 'loss'
+	qValueColumnIdx: number
 }
 
 export type ManhattanPlotData = {
@@ -33,27 +56,11 @@ export type ManhattanPlotData = {
 	padding: { left: number; right: number; top: number; bottom: number } // NEW
 }
 
-export type ManhattanRenderOpts = {
-	plotWidth?: number
-	plotHeight?: number
-	devicePixelRatio?: number
-	yMaxCap?: number // target cap (default 40)
-	skipChrM?: boolean
-	pngDotRadius?: number
-	pngAlpha?: number
-	/** Pixel padding INSIDE the PNG drawing area (keeps domains 0-based) */
-	padding?: { left: number; right: number; top: number; bottom: number }
-	yAxisX?: number
-	yAxisY?: number
-	yAxisSpace?: number
-	fontSize?: number
-	drawChrSeparators?: boolean
-}
-
 export async function plotManhattan(
 	cacheFile: string,
 	genome: GenomeInfo,
-	opts: ManhattanRenderOpts = {}
+	qValueLocators: QValueLocator[],
+	opts: Partial<GRIN2RenderOpts> = {}
 ): Promise<{ pngBase64: string; plotData: ManhattanPlotData }> {
 	const settings = {
 		plotWidth: 1000,
@@ -78,60 +85,57 @@ export async function plotManhattan(
 		totalBp += len
 	}
 
-	// ---------- TSV fields ----------
-	const FIELD_GENE = 'gene'
-	const FIELD_CHROM = 'chrom'
-	const FIELD_LOC_START = 'loc.start'
-
 	const TYPE_COLOR: Record<'mutation' | 'gain' | 'loss', string> = {
 		mutation: '#44AA44',
 		gain: '#FF4444',
 		loss: '#4444FF'
 	}
-	const TYPE_COLS: Array<{ type: 'mutation' | 'gain' | 'loss'; qCol: string; nCol: string }> = [
-		{ type: 'gain', qCol: 'q.nsubj.gain', nCol: 'nsubj.gain' },
-		{ type: 'loss', qCol: 'q.nsubj.loss', nCol: 'nsubj.loss' },
-		{ type: 'mutation', qCol: 'q.nsubj.mutation', nCol: 'nsubj.mutation' }
-	]
+	// Build index maps from the array you pass in from Python
+	const qIdxByType = new Map(qValueLocators.map(d => [d.type, d.qValueColumnIdx]))
+
+	// Fixed base columns from your Python writer (with header present in file)
+	const GENE_IDX = 0
+	const CHROM_IDX = 1
+	const LOC_START_IDX = 2
 
 	// ---------- Parse TSV ----------
 	const rl = readline.createInterface({ input: fs.createReadStream(cacheFile) })
-	let headerMap: Record<string, number> | null = null
 
 	// For PNG (all), for interactivity (q<=0.05)
 	const pngPoints: Array<{ x: number; y: number; color: string }> = []
 	const points: ManhattanPoint[] = []
 	let yObservedMaxRaw = 10
+	let isFirstLine = true
 
 	await new Promise<void>((resolve, reject) => {
 		rl.on('line', (line: string) => {
-			if (!headerMap) {
-				const headers = line.split('\t').map(h => h.trim())
-				headerMap = {}
-				headers.forEach((h, i) => (headerMap![h] = i))
+			if (!line || !line.trim()) return
+
+			// Skip the header row (we keep it in the file but don’t use it here)
+			if (isFirstLine) {
+				isFirstLine = false
 				return
 			}
-			const cols = line.split('\t')
-			const get = (name: string) => {
-				const i = headerMap![name]
-				return i == null ? '' : cols[i]
-			}
 
-			const chrom = get(FIELD_CHROM)
+			const cols = line.split('\t')
+			if (cols.length < 4) return
+
+			const gene = cols[GENE_IDX] || undefined
+			const chrom = cols[CHROM_IDX]
 			if (!chrom) return
 			if (settings.skipChrM && chrom.replace('chr', '') === 'M') return
 			if (!(chrom in chrom_data)) return
 
-			const locStart = Number(get(FIELD_LOC_START))
+			const locStart = Number(cols[LOC_START_IDX])
 			if (!Number.isFinite(locStart)) return
 
 			const xGenome = chrom_data[chrom].start + locStart
-			const gene = (get(FIELD_GENE) || undefined) as string | undefined
 
-			for (const { type, qCol, nCol } of TYPE_COLS) {
-				const qStr = get(qCol)
-				if (!qStr) continue
-				const q = Number(qStr)
+			// Use the integer indices provided by Python — no header lookups
+			for (const [type, qIdx] of qIdxByType) {
+				if (qIdx == null || qIdx < 0 || qIdx >= cols.length) continue
+
+				const q = Number(cols[qIdx])
 				if (!Number.isFinite(q) || q <= 0 || q > 1) continue
 
 				const yRaw = -Math.log10(q)
@@ -140,18 +144,16 @@ export async function plotManhattan(
 				pngPoints.push({ x: xGenome, y: yRaw, color: TYPE_COLOR[type] })
 
 				if (q <= 0.05) {
-					const nsubjVal = Number(get(nCol))
 					points.push({
 						x: xGenome,
-						y: yRaw, // scaled later if needed
+						y: yRaw,
 						q,
 						interactive: true,
 						chrom,
 						pos: locStart,
 						gene,
 						type,
-						color: TYPE_COLOR[type],
-						nsubj: Number.isFinite(nsubjVal) ? nsubjVal : undefined
+						color: TYPE_COLOR[type]
 					})
 				}
 			}
@@ -212,7 +214,7 @@ export async function plotManhattan(
 		ctx.fillRect(x0, plotTop, x1 - x0, plotHeight)
 	})
 
-	// colored points (slight alpha like matplotlib)
+	// colored points
 	const r = settings.pngDotRadius
 	ctx.globalAlpha = settings.pngAlpha
 	for (const p of pngPoints) {

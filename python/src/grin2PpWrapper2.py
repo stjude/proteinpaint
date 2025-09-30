@@ -42,6 +42,48 @@ import sys
 # Suppress all warnings 
 warnings.filterwarnings('ignore')
 
+# Supported types of lesions. TODO: Make this configurable in the future
+SUPPORTED_TYPES = ("mutation", "gain", "loss")
+
+def ensure_column_order(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Ensure first 4 columns are exactly: gene, chrom, loc.start, loc.end
+    Keep the rest of the columns in their original relative order after those four.
+    """
+    required = ["gene", "chrom", "loc.start", "loc.end"]
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise ValueError(f"Missing required columns for headerless cache: {missing}")
+
+    # Keep original order for remaining columns
+    remaining = [c for c in df.columns if c not in required]
+    new_order = required + remaining
+    return df[new_order]
+
+def compute_qvalue_columns(df: pd.DataFrame, types=SUPPORTED_TYPES):
+    """
+    Build an array like:
+      [ {type:'mutation', qValueColumnIdx:int}, {type:'loss', qValueColumnIdx:int}, ... ]
+    using the *DataFrame column order* that will be written to disk.
+    """
+    qcols = []
+    for t in types:
+        # Format of q-value column names
+        q_name = f"q.nsubj.{t}"
+
+        q_col = next((c for c in [q_name] if c in df.columns), None)
+        if q_col is None:
+            continue
+
+        entry = {
+            "type": t,
+            "qValueColumnIdx": int(df.columns.get_loc(q_col))
+        }
+
+        qcols.append(entry)
+
+    return qcols
+
 def write_error(msg):
 	"Write error messages to stderr"
 	print(f"ERROR: {msg}", file=sys.stderr)
@@ -398,8 +440,10 @@ try:
 		try:
 			# Make sure directory exists
 			os.makedirs(os.path.dirname(cache_file), exist_ok=True)
-			# Save as tab-delimited text
-			file_results.to_csv(cache_file, sep="\t", index=False)
+			# Getting q-value column array for response
+			q_value_columns = compute_qvalue_columns(file_results)
+			# Save as tab-delimited text without index
+			file_results.to_csv(cache_file, sep="\t", index=False, header=True)
 		except Exception as e:
 			write_error(f"Failed to write cache file {cache_file}: {str(e)}")
 			sys.exit(1)
@@ -418,7 +462,8 @@ try:
 			"rows": topgene_table_data
 		},
 		"totalGenes": len(sorted_results),
-		"showingTop": num_rows_to_process
+		"showingTop": num_rows_to_process,
+		"qValueColumns": q_value_columns 
 	}
 
 	# Output JSON

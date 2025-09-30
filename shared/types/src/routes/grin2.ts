@@ -18,7 +18,7 @@ export type GRIN2Request = {
 	dslabel: string
 
 	/** Values to customize the Manhattan plot */
-	yMaxCap?: number // target cap (default 40)
+	yMaxCap?: number
 	skipChrM?: boolean
 	pngAlpha?: number
 	padding?: { left: number; right: number; top: number; bottom: number }
@@ -31,6 +31,7 @@ export type GRIN2Request = {
 	width?: number
 	height?: number
 	pngDotRadius?: number
+	qValueColumns: any[]
 
 	/** Filter from existing PP infrastructure */
 	filter?: any // Filter object passed to get_samples(filter, ds)

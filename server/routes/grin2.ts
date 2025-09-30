@@ -54,7 +54,7 @@ function init({ genomes }) {
 		try {
 			const request = req.query as GRIN2Request
 
-			console.log('[GRIN2] server request:', request)
+			// console.log('[GRIN2] server request:', request)
 
 			// Get genome and dataset from request parameters
 			const g = genomes[request.genome]
@@ -158,6 +158,11 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	// Step 4: Run GRIN2 analysis via Python
 	const grin2AnalysisStart = Date.now()
 	const pyResult = await run_python('grin2PpWrapper2.py', JSON.stringify(pyInput))
+	console.log('[GRIN2] Python script result:', JSON.parse(pyResult))
+	const qValueLocators: any[] = JSON.parse(pyResult).qValueColumns
+	//console.log('[GRIN2] Q-value locators:', qValueLocators)
+
+	// Validate Python script output
 
 	if (pyResult.stderr?.trim()) {
 		mayLog(`[GRIN2] Python stderr: ${pyResult.stderr}`)
@@ -172,11 +177,11 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 
 	// Step 5: Call plotManhattan to pass cache file of GRIN2 results and render interactive SVG on top of PNG which are all made from the cache file
 	// We pass in various settings from the request to control the plot appearance
-	console.log('[GRIN2] plotManhattan Request:', request)
+	// console.log('[GRIN2] plotManhattan Request:', request)
 	const manhattanStart = Date.now()
-	const { pngBase64, plotData } = await plotManhattan(cachePath, g, {
-		plotWidth: request.width,
-		plotHeight: request.height,
+	const { pngBase64, plotData } = await plotManhattan(cachePath, g, qValueLocators, {
+		width: request.width,
+		height: request.height,
 		yMaxCap: request.yMaxCap,
 		yAxisX: request.yAxisX,
 		yAxisY: request.yAxisY,
