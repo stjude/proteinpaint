@@ -137,7 +137,7 @@ export class profilePlot {
 		})
 		if (!config.parentId)
 			icon_functions['add'](iconsDiv.append('div').style('padding', '3px'), {
-				title: 'Open a new plot',
+				title: 'Open a new plot for comparison',
 				handler: async () => {
 					if (this.isComparison) return
 					this.legendG.selectAll('*').remove()

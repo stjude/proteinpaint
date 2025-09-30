@@ -39,8 +39,8 @@ class profileRadarFacility extends profilePlot {
 
 	plot() {
 		this.dom.plotDiv.selectAll('*').remove()
-		const width = this.isComparison ? 1000 : 1200
-		const height = 800
+		const width = this.isComparison ? 1000 : 1100
+		const height = 630
 		this.dom.svg = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
@@ -71,8 +71,8 @@ class profileRadarFacility extends profilePlot {
 		this.legendG = this.dom.svg
 			.append('g')
 			.attr('font-size', '0.9em')
-			.attr('transform', `translate(${x + 320},${y - 200})`)
-		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${x + 320},${y - 100})`)
+			.attr('transform', `translate(${x + 320},${y - 150})`)
+		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${x + 320},${y - 50})`)
 
 		const rows = []
 		const columns = [

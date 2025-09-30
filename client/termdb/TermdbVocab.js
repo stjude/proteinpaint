@@ -39,11 +39,12 @@ export class TermdbVocab extends Vocab {
 		return this.termdbConfig
 	}
 
-	async getTermChildren(term, cohortValuelst) {
+	async getTermChildren(term, cohortValuelst, filter) {
 		let data
 		const body = {
 			genome: this.vocab.genome,
-			dslabel: this.vocab.dslabel
+			dslabel: this.vocab.dslabel,
+			filter: getNormalRoot(filter)
 		}
 		if (cohortValuelst) {
 			body.cohortValues = cohortValuelst.slice().sort().join(',')

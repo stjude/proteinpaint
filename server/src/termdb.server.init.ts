@@ -613,7 +613,7 @@ export function server_init_db_queries(ds) {
 // function name is intentionally general but not specific to auth, later might add other term filtering context in here
 export function filterTerms(req, ds, terms) {
 	if (!ds.cohort.termdb.isTermVisible || !terms?.length) return terms
-	return terms.filter(term => ds.cohort.termdb.isTermVisible(req.query.__protected__.clientAuthResult, term.id))
+	return terms.filter(term => ds.cohort.termdb.isTermVisible(req.query.__protected__, term.id))
 }
 
 /*
