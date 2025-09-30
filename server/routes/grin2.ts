@@ -53,7 +53,8 @@ function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
 			const request = req.query as GRIN2Request
-			console.log('[GRIN2] request:', request)
+
+			console.log('[GRIN2] server request:', request)
 
 			// Get genome and dataset from request parameters
 			const g = genomes[request.genome]
@@ -85,6 +86,7 @@ function makeCacheFileName(): string {
 	return `cache_${stamp}_${rand}.txt`
 }
 
+// Function to call GRIN2 analysis
 async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Response> {
 	const startTime = Date.now()
 
@@ -139,7 +141,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		cacheFileName: cachePath
 	}
 
-	mayLog('[GRIN2] Prepared input for Python script:', { ...pyInput })
+	//mayLog('[GRIN2] Prepared input for Python script:', { ...pyInput })
 
 	// Build chromosome list from genome reference
 	for (const c in g.majorchr) {
@@ -169,23 +171,34 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	mayLog(`[GRIN2] Python processing took ${grin2AnalysisTimeToPrint} seconds`)
 
 	// Step 5: Call plotManhattan to pass cache file of GRIN2 results and render interactive SVG on top of PNG which are all made from the cache file
+	// We pass in various settings from the request to control the plot appearance
+	console.log('[GRIN2] plotManhattan Request:', request)
+	const manhattanStart = Date.now()
 	const { pngBase64, plotData } = await plotManhattan(cachePath, g, {
-		plotWidth: 1000,
-		plotHeight: 400,
-		yMaxCap: 40,
-		yAxisX: 70,
-		yAxisY: 40,
-		yAxisSpace: 40,
-		fontSize: 12,
+		plotWidth: request.width,
+		plotHeight: request.height,
+		yMaxCap: request.yMaxCap,
+		yAxisX: request.yAxisX,
+		yAxisY: request.yAxisY,
+		yAxisSpace: request.yAxisSpace,
+		fontSize: request.fontSize,
 		devicePixelRatio: request.devicePixelRatio,
-		skipChrM: true
+		skipChrM: request.skipChrM,
+		pngDotRadius: request.pngDotRadius,
+		pngAlpha: request.pngAlpha,
+		padding: request.padding,
+		drawChrSeparators: request.drawChrSeparators
+		// Other manhattan settings can be added here as needed
 	})
 
+	const manhattanTime = Date.now() - manhattanStart
+	const manhattanTimeToPrint = Math.round(manhattanTime / 1000)
+	mayLog(`[GRIN2] Manhattan plot rendering took ${manhattanTimeToPrint} seconds`)
 	const resultData = JSON.parse(pyResult)
 
-	// Validate Python script output
+	// Validate Manhattan plot script output
 	if (!pngBase64) {
-		throw new Error('Invalid Python output: missing PNG data')
+		throw new Error('Invalid Manhattan plot output: missing PNG data')
 	}
 
 	const totalTime = Math.round((Date.now() - startTime) / 1000)
@@ -200,6 +213,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		timing: {
 			processingTime: processingTimeToPrint,
 			grin2Time: grin2AnalysisTimeToPrint,
+			manhattanTime: manhattanTimeToPrint,
 			totalTime: totalTime
 		},
 		processingSummary: processingSummary

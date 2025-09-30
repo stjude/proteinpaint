@@ -27,6 +27,12 @@ export interface GRIN2Opts {
 	showInteractiveDots?: boolean
 	interactiveDotRadius?: number
 	interactiveDotStrokeWidth?: number
+	showDownload?: boolean
+	yMaxCap?: number
+	skipChrM?: boolean
+	pngAlpha?: number
+	padding?: { left: number; right: number; top: number; bottom: number }
+	drawChrSeparators?: boolean
 	/** Override default settings */
 	overrides?: Partial<GRIN2Settings>
 	/** Any additional options */

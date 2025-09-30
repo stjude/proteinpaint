@@ -38,26 +38,8 @@ import { to_svg } from '#src/client'
  */
 
 export function plotManhattan(div: any, data: any, settings: any, app?: any) {
-	// Default settings
+	// Getting settings
 	settings = {
-		pngDotRadius: 2,
-		plotWidth: 1000,
-		plotHeight: 400,
-		yAxisX: 70,
-		yAxisY: 40,
-		yAxisSpace: 40,
-		fontSize: 12,
-		showLegend: true,
-		legendItemWidth: 80,
-		legendDotRadius: 3,
-		legendRightOffset: 15,
-		legendTextOffset: 12,
-		legendVerticalOffset: 4,
-		legendFontSize: 12,
-		showInteractiveDots: true,
-		interactiveDotRadius: 3,
-		interactiveDotStrokeWidth: 1,
-		showDownload: true,
 		...settings
 	}
 

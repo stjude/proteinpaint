@@ -17,16 +17,19 @@ export type GRIN2Request = {
 	/** Dataset label within the genome */
 	dslabel: string
 
-	/** Device pixel ratio for rendering */
+	/** Values to customize the Manhattan plot */
+	yMaxCap?: number // target cap (default 40)
+	skipChrM?: boolean
+	pngAlpha?: number
+	padding?: { left: number; right: number; top: number; bottom: number }
+	yAxisX?: number
+	yAxisY?: number
+	yAxisSpace?: number
+	fontSize?: number
+	drawChrSeparators?: boolean
 	devicePixelRatio?: number
-
-	/** Desired plot width in pixels (default: 1000) */
 	width?: number
-
-	/** Desired plot height in pixels (default: 400) */
 	height?: number
-
-	/** Radius of the PNG rendered dots (default: 2) */
 	pngDotRadius?: number
 
 	/** Filter from existing PP infrastructure */
@@ -129,6 +132,8 @@ export type GRIN2Response = {
 		processingTime: number
 		/** Time taken to run GRIN2 processing */
 		grin2Time: number
+		/** Time taken to render the Manhattan plot */
+		manhattanTime: number
 		/** Total time taken for the entire run */
 		totalTime: number
 	}

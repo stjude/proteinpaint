@@ -6,7 +6,7 @@ import { Menu, renderTable, table2col, make_one_checkbox, sayerror } from '#dom'
 import { dtsnvindel, mclass } from '#shared/common.js'
 import { get$id } from '#termsetting'
 import { PlotBase } from '#plots/PlotBase.ts'
-import { plotManhattan } from '../manhattan/manhattan'
+import { plotManhattan } from '#plots/manhattan/manhattan.ts'
 
 class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
@@ -420,16 +420,40 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			// Get configuration and make request
 			const configValues = this.getConfigValues()
+			console.log('GRIN2 Config Values:', configValues)
+			console.log('Manhattan Settings:', this.state.config.settings.grin2.manhattan)
 			const requestData = {
 				genome: this.app.vocabApi.vocab.genome,
 				dslabel: this.app.vocabApi.vocab.dslabel,
 				filter: this.state.termfilter.filter,
-				width: this.state.config.settings.manhattan?.plotWidth,
-				height: this.state.config.settings.manhattan?.plotHeight,
-				pngDotRadius: this.state.config.settings.manhattan?.pngDotRadius,
+				width: this.state.config.settings.grin2.manhattan?.plotWidth,
+				height: this.state.config.settings.grin2.manhattan?.plotHeight,
+				pngDotRadius: this.state.config.settings.grin2.manhattan?.pngDotRadius,
 				devicePixelRatio: window.devicePixelRatio,
+				yMaxCap: this.state.config.settings.grin2.manhattan?.yMaxCap,
+				skipChrM: this.state.config.settings.grin2.manhattan?.skipChrM,
+				pngAlpha: this.state.config.settings.grin2.manhattan?.pngAlpha,
+				padding: this.state.config.settings.grin2.manhattan?.padding,
+				yAxisX: this.state.config.settings.grin2.manhattan?.yAxisX,
+				yAxisY: this.state.config.settings.grin2.manhattan?.yAxisY,
+				yAxisSpace: this.state.config.settings.grin2.manhattan?.yAxisSpace,
+				fontSize: this.state.config.settings.grin2.manhattan?.fontSize,
+				drawChrSeparators: this.state.config.settings.grin2.manhattan?.drawChrSeparators,
+				interactiveDotRadius: this.state.config.settings.grin2.manhattan?.interactiveDotRadius,
+				interactiveDotStrokeWidth: this.state.config.settings.grin2.manhattan?.interactiveDotStrokeWidth,
+				showLegend: this.state.config.settings.grin2.manhattan?.showLegend,
+				legendDotRadius: this.state.config.settings.grin2.manhattan?.legendDotRadius,
+				legendFontSize: this.state.config.settings.grin2.manhattan?.legendFontSize,
+				legendItemWidth: this.state.config.settings.grin2.manhattan?.legendItemWidth,
+				legendRightOffset: this.state.config.settings.grin2.manhattan?.legendRightOffset,
+				legendTextOffset: this.state.config.settings.grin2.manhattan?.legendTextOffset,
+				legendVerticalOffset: this.state.config.settings.grin2.manhattan?.legendVerticalOffset,
+				showInteractiveDots: this.state.config.settings.grin2.manhattan?.showInteractiveDots,
+				showDownload: this.state.config.settings.grin2.manhattan?.showDownload,
 				...configValues
 			}
+
+			console.log('GRIN2 Request Data:', requestData)
 
 			const response = await dofetch3('/grin2', {
 				method: 'POST',
@@ -472,7 +496,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		if (result.pngImg) {
 			const plotData = result
 			const plotDiv = this.dom.div
-			const manhattanSettings = this.state.config.settings.manhattan
+			const manhattanSettings = this.state.config.settings.grin2.manhattan
 			plotManhattan(plotDiv, plotData, manhattanSettings, this.app)
 		}
 
@@ -641,6 +665,12 @@ export function getDefaultSettings(opts) {
 			plotWidth: 1000,
 			plotHeight: 400,
 			pngDotRadius: 2,
+			yMaxCap: 40,
+			skipChrM: true,
+			pngAlpha: 0.7,
+			padding: { left: 14, right: 14, top: 10, bottom: 12 },
+			drawChrSeparators: false,
+			showDownload: true,
 
 			// Layout spacing
 			yAxisX: 70,
@@ -679,6 +709,8 @@ export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 			...opts?.manhattan
 		}
 	}
+
+	console.log('GRIN2 getPlotConfig settings and opts:', settings, opts)
 
 	// Dynamically add data type options based on availability
 	if (queries?.snvindel) {
