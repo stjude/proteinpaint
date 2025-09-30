@@ -7382,37 +7382,37 @@
   "plots/boxplot/view/View.ts": {
     "lines": {
       "total": 34,
-      "covered": 33,
+      "covered": 2,
       "skipped": 0,
-      "pct": 97.05
+      "pct": 5.88
     },
     "functions": {
       "total": 6,
-      "covered": 5,
+      "covered": 0,
       "skipped": 0,
-      "pct": 83.33
+      "pct": 0
     },
     "statements": {
       "total": 36,
-      "covered": 33,
+      "covered": 2,
       "skipped": 0,
-      "pct": 91.66
+      "pct": 5.55
     },
     "branches": {
       "total": 22,
-      "covered": 13,
+      "covered": 0,
       "skipped": 0,
-      "pct": 59.09
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 59.09,
-      "prev": 0,
-      "diff": 59.09
+      "curr": 0,
+      "prev": 59.09,
+      "diff": -59.09
     },
     "averagePct": {
-      "curr": 82.7825,
-      "prev": 0,
-      "diff": 82.7825
+      "curr": 2.8575,
+      "prev": 82.7825,
+      "diff": -79.925
     }
   },
   "plots/summary.ts": {
@@ -7917,6 +7917,78 @@
       "curr": 83.925,
       "prev": 0,
       "diff": 83.925
+    }
+  },
+  "plots/sampleView.js": {
+    "lines": {
+      "total": 457,
+      "covered": 286,
+      "skipped": 0,
+      "pct": 62.58
+    },
+    "functions": {
+      "total": 68,
+      "covered": 49,
+      "skipped": 0,
+      "pct": 72.05
+    },
+    "statements": {
+      "total": 501,
+      "covered": 299,
+      "skipped": 0,
+      "pct": 59.68
+    },
+    "branches": {
+      "total": 261,
+      "covered": 111,
+      "skipped": 0,
+      "pct": 42.52
+    },
+    "lowestPct": {
+      "curr": 42.52,
+      "prev": 0,
+      "diff": 42.52
+    },
+    "averagePct": {
+      "curr": 59.2075,
+      "prev": 0,
+      "diff": 59.2075
+    }
+  },
+  "plots/test/sampleView.integration.spec.ts": {
+    "lines": {
+      "total": 36,
+      "covered": 35,
+      "skipped": 0,
+      "pct": 97.22
+    },
+    "functions": {
+      "total": 8,
+      "covered": 7,
+      "skipped": 0,
+      "pct": 87.5
+    },
+    "statements": {
+      "total": 39,
+      "covered": 38,
+      "skipped": 0,
+      "pct": 97.43
+    },
+    "branches": {
+      "total": 8,
+      "covered": 6,
+      "skipped": 0,
+      "pct": 75
+    },
+    "lowestPct": {
+      "curr": 75,
+      "prev": 0,
+      "diff": 75
+    },
+    "averagePct": {
+      "curr": 89.2875,
+      "prev": 0,
+      "diff": 89.2875
     }
   }
 }
