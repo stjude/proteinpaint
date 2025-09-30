@@ -89,9 +89,9 @@ tape(`initialization, empty credentials`, async test => {
 			'getNonsensitiveInfo',
 			'getPayloadFromHeaderAuth',
 			'getRequiredCredForDsEmbedder',
+			'isUserLoggedIn',
 			'mayAdjustFilter',
-			'maySetAuthRoutes',
-			'userCanAccess'
+			'maySetAuthRoutes'
 		],
 		'should set the expected methods with an empty dsCredentials'
 	)
@@ -103,7 +103,7 @@ tape(`initialization, empty credentials`, async test => {
 		true,
 		'should support the cohort.termdb.displaySampleIds() option in the default canDisplaySampleIds()'
 	)
-	test.equal(authApi.userCanAccess(req, ds), true, 'should allow use access by default when there are no credentials')
+	test.equal(authApi.isUserLoggedIn(req, ds), true, 'should allow use access by default when there are no credentials')
 	test.deepEqual(
 		authApi.getNonsensitiveInfo(),
 		{ forbiddenRoutes: [] },
@@ -197,9 +197,9 @@ tape(`initialization, non-empty credentials`, async test => {
 				'getNonsensitiveInfo',
 				'getPayloadFromHeaderAuth',
 				'getRequiredCredForDsEmbedder',
+				'isUserLoggedIn',
 				'mayAdjustFilter',
-				'maySetAuthRoutes',
-				'userCanAccess'
+				'maySetAuthRoutes'
 			],
 			'should set the expected methods with a non-empty dsCredentials'
 		)
@@ -221,9 +221,9 @@ tape(`initialization, non-empty credentials`, async test => {
 			'should return open-access getRequiredCredForDsEmbedder with an empty dsCredentials'
 		)
 		test.deepEqual(
-			authApi.userCanAccess(req),
+			authApi.isUserLoggedIn(req),
 			true,
-			'should return open-access userCanAccess with an empty dsCredentials'
+			'should return open-access isUserLoggedIn with an empty dsCredentials'
 		)
 	}
 
@@ -354,9 +354,9 @@ tape(`auth methods`, async test => {
 		`should return the expected forbidden routes for a non-wildcard embedder`
 	)
 	test.deepEqual(
-		authApi.userCanAccess({ query: { embedder: 'localhost' } }, { label: 'ds100' }),
+		authApi.isUserLoggedIn({ query: { embedder: 'localhost' } }, { label: 'ds100' }),
 		true,
-		`should return false for userCanAccess() for a non-logged in user`
+		`should return false for isUserLoggedIn() for a non-logged in user`
 	)
 })
 
@@ -1113,7 +1113,7 @@ tape(`req.query.filter, __protected__`, async test => {
 				ignoredTermIds: [],
 				sessionid: 'xyz',
 				clientAuthResult: {},
-				userCanAccess: false
+				isUserLoggedIn: false
 			},
 			'should set up req.query.__protected__'
 		)

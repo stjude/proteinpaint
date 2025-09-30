@@ -16,14 +16,14 @@ const defaultApiMethods = {
 	getJwtPayload, // declared below
 	canDisplaySampleIds: (req, ds) => {
 		if (!ds.cohort.termdb.displaySampleIds) return false
-		return authApi.userCanAccess(req, ds, protectedRoutes.samples)
+		return authApi.isUserLoggedIn(req, ds, protectedRoutes.samples)
 	},
 	// these open-acces, default methods may be replaced by maySetAuthRoutes()
 	getDsAuth: (req = undefined) => [],
 	getNonsensitiveInfo: _ => {
 		return { forbiddenRoutes: [] }
 	},
-	userCanAccess: () => true,
+	isUserLoggedIn: () => true,
 	getRequiredCredForDsEmbedder: (dslabel = undefined, embedder = undefined) => undefined,
 	getPayloadFromHeaderAuth: () => ({}),
 	getHealth: () => undefined,
@@ -440,7 +440,7 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 				authApi.mayAdjustFilter(req.query, ds)
 
 				// this flag may be used by downstream code that does not have access to req argument or ds object
-				__protected__.userCanAccess = authApi.userCanAccess(req, ds, protectedRoutes.minSampleSize)
+				__protected__.isUserLoggedIn = authApi.isUserLoggedIn(req, ds, protectedRoutes.minSampleSize)
 			}
 		}
 		Object.freeze(__protected__)
@@ -657,12 +657,11 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 		return requiredCred.length ? requiredCred : undefined
 	}
 
-	authApi.userCanAccess = function (req, ds, protectedRoutes) {
+	authApi.isUserLoggedIn = function (req, ds, protectedRoutes) {
 		const cred = getRequiredCred(req.query, req.path, protectedRoutes)
 		if (!cred) return true
-		// !!! DEPRECATED: for 'basic' auth type, always require a login when runpp() is first called !!!
-		// this causes unnecessary additional logins when links are opened from a 'landing page'
-		// if (cred.type == 'basic' && req.path.startsWith('/genomes')) return false
+		// NOTE: Basic (password) credentials are converted to session token upon log-in,
+		// so that a user does not have to login again for each runproteinpaint() call.
 		const id = getSessionId(req, cred, sessions)
 		const activeSession = sessions[ds.label]?.[id]
 		const sessionStart = activeSession?.time || 0
