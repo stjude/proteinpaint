@@ -4058,13 +4058,13 @@
     },
     "lowestPct": {
       "curr": 58.97,
-      "prev": 48.71,
-      "diff": 10.259999999999998
+      "prev": 58.97,
+      "diff": 0
     },
     "averagePct": {
       "curr": 73.7575,
-      "prev": 69.2975,
-      "diff": 4.459999999999994
+      "prev": 73.7575,
+      "diff": 0
     }
   },
   "plots/matrix/hierCluster.interactivity.js": {
@@ -4094,13 +4094,13 @@
     },
     "lowestPct": {
       "curr": 22.95,
-      "prev": 17.21,
-      "diff": 5.739999999999998
+      "prev": 22.95,
+      "diff": 0
     },
     "averagePct": {
       "curr": 26.2,
-      "prev": 26.080000000000002,
-      "diff": 0.11999999999999744
+      "prev": 26.2,
+      "diff": 0
     }
   },
   "plots/matrix/hierCluster.js": {
@@ -4130,13 +4130,13 @@
     },
     "lowestPct": {
       "curr": 50.68,
-      "prev": 49.31,
-      "diff": 1.3699999999999974
+      "prev": 50.68,
+      "diff": 0
     },
     "averagePct": {
       "curr": 72.9575,
-      "prev": 72.3325,
-      "diff": 0.625
+      "prev": 72.9575,
+      "diff": 0
     }
   },
   "plots/matrix/hierCluster.renderers.js": {
