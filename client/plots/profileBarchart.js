@@ -82,8 +82,8 @@ class profileBarchart extends profilePlot {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
 		const hasSubjectiveData = this.configComponent.hasSubjectiveData
-		const width = 1400
-		const height = this.rowCount * 32 + 600
+		const width = this.state.activeCohort == ABBREV_COHORT ? 1000 : 1300
+		const height = this.rowCount * 32 + 450
 		this.dom.svg = this.dom.plotDiv.append('svg').attr('width', width).attr('height', height)
 		const title =
 			this.state.activeCohort == ABBREV_COHORT
@@ -160,8 +160,8 @@ class profileBarchart extends profilePlot {
 		this.legendG = this.dom.svg
 			.append('g')
 			.attr('data-testid', 'sjpp-profileBarchart-legend')
-			.attr('transform', `translate(${50},${y + 80})`)
-		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${50},${y + 180})`)
+			.attr('transform', `translate(400,${y + 90})`)
+		this.filterG = this.dom.svg.append('g').attr('transform', `translate(0,${y + 90})`)
 
 		if (!this.isComparison) {
 			this.legendG
@@ -175,9 +175,9 @@ class profileBarchart extends profilePlot {
 			this.addLegendItem('B', '50-75% of possible scorable items', 2)
 			this.addLegendItem('C', 'Less than 50% of possible scorable items', 3)
 			if (this.state.activeCohort == ABBREV_COHORT) {
-				const uiG = this.legendG.append('g').attr('transform', `translate(550, -90)`)
+				const uiG = this.legendG.append('g')
 				this.addEndUserImpressionNote(uiG)
-			} else this.addPOCNote(this.legendG.append('g').attr('transform', `translate(550, -90)`))
+			} else this.addPOCNote(this.legendG.append('g'))
 		}
 		this.addFilterLegend()
 
