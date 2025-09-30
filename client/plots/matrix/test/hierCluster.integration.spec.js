@@ -4,75 +4,16 @@ import { sleep, detectOne, detectGte, detectLst, detectAttr } from '#test/test.h
 import { select } from 'd3-selection'
 import { appInit } from '#plots/plot.app.js'
 import { fillTermWrapper } from '#termsetting'
-import { TermTypes } from '#shared/terms.js'
-
-/*************************
- reusable helper functions
-**************************/
-
-async function getHierClusterApp(_opts = {}) {
-	const holder = select('body').append('div')
-	const defaults = {
-		debug: true,
-		holder,
-		genome: 'hg38-test',
-		state: {
-			genome: 'hg38-test',
-			dslabel: 'TermdbTest',
-			termfilter: { filter0: _opts.filter0 },
-			plots: [
-				{
-					chartType: 'hierCluster',
-					dataType: TermTypes.GENE_EXPRESSION,
-					settings: {
-						hierCluster: {
-							termGroupName: 'Gene Expression (CGC genes only)'
-						},
-						matrix: {
-							// the matrix autocomputes the colw based on available screen width,
-							// need to set an exact screen width for consistent tests using getBBox()
-							availContentWidth: 1200
-						}
-					},
-					// force empty termgroups, genes since the instance requestData() will not have expression data,
-					// and will cause a non-trival error if using the actual requestData(), which will be mocked below
-					termgroups: [], // _opts.termgroups || [],
-					// !!! there will be an initial load error since this is an empty geneset,
-					// !!! but will be ignored since it's not relevant to this test
-					terms: _opts.terms || []
-					//genes,
-					//settings
-				}
-			]
-		},
-		app: {
-			features: ['recover'],
-			callbacks: _opts?.app?.callbacks || {}
-		},
-		recover: {
-			undoHtml: 'Undo',
-			redoHtml: 'Redo',
-			resetHtml: 'Restore',
-			adjustTrackedState(state) {
-				const s = structuredClone(state)
-				delete s.termfilter.filter0
-				return s
-			}
-		},
-		hierCluster: _opts?.hierCluster || {}
-	}
-
-	const opts = Object.assign(defaults, _opts)
-	const app = await appInit(opts)
-	holder.select('.sja_errorbar').node()?.lastChild?.click()
-	const hc = Object.values(app.Inner.components.plots).find(
-		p => p.type == 'hierCluster' || p.chartType == 'hierCluster'
-	).Inner
-	return { app, hc }
-}
+import { TermTypes, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
 
 /**************
  test sections
+
+basic render
+localFilter
+avoid race condition
+dendrogram click
+
 ***************/
 
 tape('\n', function (test) {
@@ -82,15 +23,25 @@ tape('\n', function (test) {
 
 tape('basic render', async test => {
 	test.timeoutAfter(4000)
-	const { app, hc } = await getHierClusterApp({
-		terms: [
-			{ gene: 'AKT1', type: 'geneExpression' },
-			{ gene: 'TP53', type: 'geneExpression' },
-			{ gene: 'BCR', type: 'geneExpression' },
-			{ gene: 'KRAS', type: 'geneExpression' }
-		]
-	})
+	const { app, hc } = await getHierClusterApp({ terms: getGenes() })
 	test.equal(hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size(), 4, 'should render 4 gene rows')
+	test.equal(hc.dom.sampleLabelG.selectAll('.sjpp-matrix-label').size(), 60, 'should render 60 sample columns') // update "60" when data changes
+	if (test._ok) app.destroy()
+	test.end()
+})
+
+tape('localFilter', async test => {
+	test.timeoutAfter(4000)
+	const { app, hc } = await getHierClusterApp({
+		terms: getGenes(),
+		localFilter: {
+			type: 'tvslst',
+			join: '',
+			in: true,
+			lst: [{ type: 'tvs', tvs: { term: { id: 'diaggrp' }, values: [{ key: 'Acute lymphoblastic leukemia' }] } }]
+		}
+	})
+	test.equal(hc.dom.sampleLabelG.selectAll('.sjpp-matrix-label').size(), 36, 'should render 36 sample columns') // update "36" when data changes
 	if (test._ok) app.destroy()
 	test.end()
 })
@@ -103,14 +54,7 @@ tape('avoid race condition', async test => {
 	// !!!
 	test.timeoutAfter(4000)
 	test.plan(3)
-	const { app, hc } = await getHierClusterApp({
-		terms: [
-			{ gene: 'AKT1', type: 'geneExpression' },
-			{ gene: 'TP53', type: 'geneExpression' },
-			{ gene: 'BCR', type: 'geneExpression' },
-			{ gene: 'KRAS', type: 'geneExpression' }
-		]
-	})
+	const { app, hc } = await getHierClusterApp({ terms: getGenes() })
 	const termgroups = structuredClone(hc.config.termgroups)
 	termgroups[0].lst = await Promise.all([
 		fillTermWrapper({ term: { gene: 'AKT1', name: 'AKT1', type: 'geneExpression' } }, app.vocabApi),
@@ -177,14 +121,7 @@ tape('dendrogram click', async function (test) {
 	test.plan(3)
 
 	let numRenders = 0
-	const { app, hc } = await getHierClusterApp({
-		terms: [
-			{ gene: 'AKT1', type: 'geneExpression' },
-			{ gene: 'TP53', type: 'geneExpression' },
-			{ gene: 'BCR', type: 'geneExpression' },
-			{ gene: 'KRAS', type: 'geneExpression' }
-		]
-	})
+	const { app, hc } = await getHierClusterApp({ terms: getGenes() })
 
 	const img = await detectOne({ elem: hc.dom.topDendrogram.node(), selector: 'image' })
 	const svgBox = hc.dom.svg.node().getBoundingClientRect()
@@ -248,3 +185,93 @@ tape('dendrogram click', async function (test) {
 		app.destroy()
 	}
 })
+
+tape('numericDictTerm', async function (test) {
+	// leave it here in case it's used later: bins:{ default:{"type": "regular-bin", "startinclusive": true, "bin_size": 0.1, "first_bin": { "stop": 0.1 }, "last_bin": { "start": 0.7 }} }
+	const terms = [
+		{
+			id: 'aaclassic_5', // tw.id must be provided
+			term: { id: 'aaclassic_5', name: 'a1', type: 'float' }, // requires {id,name,type}; term.name doesn't need to be real, unique name works
+			q: { mode: 'continuous' } // set to continuous to avoid validating tw.term.bins
+		},
+		{ id: 'hrtavg', term: { id: 'hrtavg', name: 'a2', type: 'float' }, q: { mode: 'continuous' } },
+		{ id: 'agedx', term: { id: 'agedx', name: 'a3', type: 'float' }, q: { mode: 'continuous' } }
+	]
+	const { app, hc } = await getHierClusterApp({ terms, dataType: NUMERIC_DICTIONARY_TERM })
+	test.equal(hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size(), 3, 'should render 3 rows')
+	if (test._ok) app.destroy()
+	test.end()
+})
+
+/*************************
+ reusable helper functions
+**************************/
+
+async function getHierClusterApp(_opts = {}) {
+	const holder = select('body').append('div')
+	const defaults = {
+		debug: true,
+		holder,
+		genome: 'hg38-test',
+		state: {
+			genome: 'hg38-test',
+			dslabel: 'TermdbTest',
+			termfilter: { filter0: _opts.filter0 },
+			plots: [
+				{
+					chartType: 'hierCluster',
+					dataType: _opts.dataType || TermTypes.GENE_EXPRESSION,
+					settings: {
+						hierCluster: {
+							termGroupName: 'Gene Expression (CGC genes only)'
+						},
+						matrix: {
+							// the matrix autocomputes the colw based on available screen width,
+							// need to set an exact screen width for consistent tests using getBBox()
+							availContentWidth: 1200
+						}
+					},
+					// force empty termgroups, genes since the instance requestData() will not have expression data,
+					// and will cause a non-trival error if using the actual requestData(), which will be mocked below
+					termgroups: [], // _opts.termgroups || [],
+					// !!! there will be an initial load error since this is an empty geneset,
+					// !!! but will be ignored since it's not relevant to this test
+					terms: _opts.terms || [],
+					localFilter: _opts.localFilter
+				}
+			]
+		},
+		app: {
+			features: ['recover'],
+			callbacks: _opts?.app?.callbacks || {}
+		},
+		recover: {
+			undoHtml: 'Undo',
+			redoHtml: 'Redo',
+			resetHtml: 'Restore',
+			adjustTrackedState(state) {
+				const s = structuredClone(state)
+				delete s.termfilter.filter0
+				return s
+			}
+		},
+		hierCluster: _opts?.hierCluster || {}
+	}
+
+	const opts = Object.assign(defaults, _opts)
+	const app = await appInit(opts)
+	holder.select('.sja_errorbar').node()?.lastChild?.click()
+	const hc = Object.values(app.Inner.components.plots).find(
+		p => p.type == 'hierCluster' || p.chartType == 'hierCluster'
+	).Inner
+	return { app, hc }
+}
+function getGenes() {
+	// return a copy for each test, to avoid unexpected changes in reusing scoped variables
+	return [
+		{ gene: 'AKT1', type: 'geneExpression' },
+		{ gene: 'TP53', type: 'geneExpression' },
+		{ gene: 'BCR', type: 'geneExpression' },
+		{ gene: 'KRAS', type: 'geneExpression' }
+	]
+}
