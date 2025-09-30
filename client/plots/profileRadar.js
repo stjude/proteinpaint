@@ -9,7 +9,7 @@ class profileRadar extends profilePlot {
 	constructor() {
 		super()
 		this.type = 'profileRadar'
-		this.radius = 250
+		this.radius = 200
 	}
 
 	async init(appState) {
@@ -71,8 +71,8 @@ class profileRadar extends profilePlot {
 
 		// Create a polar grid.
 		const radius = this.radius
-		const x = 370
-		const y = 340
+		const x = 300
+		const y = 330
 		this.dom.svg
 			.append('text')
 			.attr('transform', `translate(60, ${40})`)
@@ -85,8 +85,8 @@ class profileRadar extends profilePlot {
 		this.legendG = this.dom.svg
 			.append('g')
 			.attr('data-testid', 'sjpp-profileRadar-legend')
-			.attr('transform', `translate(${x + 250},${y + 210})`)
-		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${x + 250},${y + 300})`)
+			.attr('transform', `translate(${x + 340},${y - 250})`)
+		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${x + 340},${y - 150})`)
 		this.noteG = this.dom.svg.append('g').attr('transform', `translate(0,${y + 250})`)
 
 		for (let i = 0; i <= 10; i++) this.addPoligon(i * 10)
@@ -125,7 +125,7 @@ class profileRadar extends profilePlot {
 			const leftSide = iangle > Math.PI / 2 && iangle <= (3 / 2) * Math.PI
 			let dx = radius * 1.1 * Math.cos(iangle)
 			let dy = radius * 1.1 * Math.sin(iangle) - 10
-			const textElem = radarG.append('text').attr('x', `${dx}px`).attr('y', `${dy}px`)
+			const textElem = radarG.append('text').attr('x', `${dx}px`).attr('y', `${dy}px`).attr('font-size', '0.9em')
 			const texts = module.split(' ')
 			let span
 			texts.forEach(text => {
@@ -176,7 +176,7 @@ class profileRadar extends profilePlot {
 			const percent = i * 10
 			radarG
 				.append('text')
-				.attr('transform', `translate(-10, ${(-percent / 100) * radius + 5})`)
+				.attr('transform', `translate(0, ${(-percent / 100) * radius - 2})`)
 				.attr('text-anchor', 'end')
 				.style('font-size', '0.8rem')
 				.text(`${percent}%`)
