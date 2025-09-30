@@ -30,6 +30,7 @@ arg
 upon error, throw err message as a string
 */
 	const urlp = urlmap()
+	const features = JSON.parse(sessionStorage.getItem('optionalFeatures'))
 
 	if (urlp.has('appcard')) {
 		const ad = await import('../appdrawer/adSandbox')
@@ -52,7 +53,6 @@ upon error, throw err message as a string
 		//Check if track/app can be shown on this server
 		//If not show error message
 		if (re.elements[element]?.configFeature) {
-			const features = JSON.parse(sessionStorage.getItem('optionalFeatures'))
 			if (!features[re.elements[element].configFeature]) {
 				sayerror(arg.holder, `This track or app is not enabled on this site.`)
 				return
@@ -168,6 +168,15 @@ upon error, throw err message as a string
 			if (d.error) throw d.error
 			if (!d.text) throw 'data.text missing'
 			const state = JSON.parse(d.text)
+
+			if (features.overrideEmbedderHostInMassSession) {
+				// on local dev, set this to override "embedder{}" setting in session file
+				// to prevent redirecting to portal site and test the session with local pp
+				state.embedder.host = features.overrideEmbedderHostInMassSession
+				state.embedder.origin = 'http://' + features.overrideEmbedderHostInMassSession
+				state.embedder.href = `http://${features.overrideEmbedderHostInMassSession}/`
+			}
+
 			if (state.embedder?.origin && state.embedder.origin != window.location.origin) {
 				parentCorsMessage({ state })
 				return
