@@ -246,13 +246,12 @@ class SummaryPlot extends PlotBase implements RxComponent {
 			maxHistoryLen: 10,
 			margin: '5px 10px' //Prevents a gap appearing between the tabs and sandbox content
 		})
-
 		this.components.filter = await filterRxCompInit({
 			app: this.app,
 			vocabApi: this.app.vocabApi,
 			parentId: this.id,
 			holder: this.dom.filterDiv,
-			hideLabel: this.opts.header_mode === 'with_tabs',
+			hideLabel: true,
 			emptyLabel: '+Add new filter',
 			callback: filter => {
 				this.app.dispatch({
