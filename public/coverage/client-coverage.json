@@ -7946,13 +7946,13 @@
     },
     "lowestPct": {
       "curr": 42.52,
-      "prev": 0,
-      "diff": 42.52
+      "prev": 42.52,
+      "diff": 0
     },
     "averagePct": {
       "curr": 59.2075,
-      "prev": 0,
-      "diff": 59.2075
+      "prev": 59.2075,
+      "diff": 0
     }
   },
   "plots/test/sampleView.integration.spec.ts": {
