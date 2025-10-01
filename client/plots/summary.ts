@@ -12,6 +12,7 @@ import { Tabs } from '../dom/toggleButtons'
 import { isNumericTerm } from '#shared/terms.js'
 import { term0_term2_defaultQ } from './controls'
 import { importPlot } from './importPlot.js'
+import { filterRxCompInit } from '#filter'
 
 class SummaryPlot extends PlotBase implements RxComponent {
 	static type = 'summary'
@@ -82,7 +83,8 @@ class SummaryPlot extends PlotBase implements RxComponent {
 				.style('display', 'inline-block')
 				.style('vertical-align', 'sub'),
 			chartToggles: paneTitleDiv.append('div').style('display', 'inline-block').style('margin-left', '10px'),
-			localRecoverDiv: paneTitleDiv.append('div').style('display', 'inline-block')
+			localRecoverDiv: paneTitleDiv.append('div').style('display', 'inline-block'),
+			filterDiv: holder.header.append('div').style('display', 'inline-block')
 		}
 	}
 
@@ -243,6 +245,22 @@ class SummaryPlot extends PlotBase implements RxComponent {
 			plot_id: this.id,
 			maxHistoryLen: 10,
 			margin: '5px 10px' //Prevents a gap appearing between the tabs and sandbox content
+		})
+
+		this.components.filter = await filterRxCompInit({
+			app: this.app,
+			vocabApi: this.app.vocabApi,
+			parentId: this.id,
+			holder: this.dom.filterDiv,
+			hideLabel: this.opts.header_mode === 'with_tabs',
+			emptyLabel: '+Add new filter',
+			callback: filter => {
+				this.app.dispatch({
+					id: this.id,
+					type: 'plot_edit',
+					config: { filter }
+				})
+			}
 		})
 	}
 

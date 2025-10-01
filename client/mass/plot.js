@@ -3,6 +3,7 @@ import { Menu } from '#dom/menu'
 import { recoverInit } from '../rx/src/recover'
 import { select as d3select } from 'd3-selection'
 import { importPlot } from '#plots/importPlot.js'
+import { filterRxCompInit } from '#filter'
 
 class MassPlot {
 	constructor(opts) {
@@ -66,6 +67,23 @@ class MassPlot {
 			id: this.id,
 			plotDiv: d3select(this.dom.holder.app_div.node().parentNode)
 		})
+
+		this.components.filter = await filterRxCompInit({
+			app: this.app,
+			vocabApi: this.app.vocabApi,
+			parentId: this.id,
+			holder: this.dom.filterDiv,
+			hideLabel: this.opts.header_mode === 'with_tabs',
+			emptyLabel: '+Add new filter',
+			callback: filter => {
+				this.app.dispatch({
+					id: this.id,
+					type: 'plot_edit',
+					config: { filter }
+				})
+			}
+		})
+
 		/******* reason for passing plotDiv to chart ********
 
 		- this plot instance may allow to launch a new plot as a persistent sandbox
@@ -116,9 +134,8 @@ function setRenderers(self) {
 					.style('color', '#555')
 					.style('padding-left', '7px')
 					.style('vertical-align', 'sub'),
-
 				localRecoverDiv: holder.header.append('div').style('display', 'inline-block'),
-
+				filterDiv: holder.header.append('div').style('display', 'inline-block'),
 				body: holder.body
 					// .style('margin-top', '-1px')
 					.style('white-space', 'nowrap')
