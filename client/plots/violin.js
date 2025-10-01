@@ -288,7 +288,8 @@ class ViolinPlot {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		const parentConfig = appState.plots.find(p => p.id === this.parentId)
-		const termfilter = getCombinedTermFilter(appState, parentConfig?.filter)
+
+		const termfilter = getCombinedTermFilter(appState, config.filter || parentConfig?.filter)
 		return {
 			termfilter,
 			config,
