@@ -55,7 +55,8 @@ class MassPlot {
 					(action.type == 'plot_edit' || action.type == 'plot_nestedEdits') &&
 					action._track_ != 'none',
 				plot_id: this.id,
-				maxHistoryLen: 10
+				maxHistoryLen: 10,
+				hideLabel: true
 			})
 		}
 		const _ = await importPlot(opts.chartType)
@@ -81,7 +82,8 @@ class MassPlot {
 					type: 'plot_edit',
 					config: { filter }
 				})
-			}
+			},
+			hideLabel: true
 		})
 
 		/******* reason for passing plotDiv to chart ********
