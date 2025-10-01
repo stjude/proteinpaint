@@ -236,7 +236,6 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 	// assign defaults as needed
 	if (q.radius <= 0) throw 'q.radius is not a number'
 	else q.radius = +q.radius // ensure numeric value, not string
-	if (!q.strokeWidth) q.strokeWidth = 0.2
 	const isH = q.orientation == 'horizontal'
 
 	for (const k of Object.keys(result.charts)) {

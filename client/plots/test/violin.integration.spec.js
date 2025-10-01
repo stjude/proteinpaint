@@ -1,14 +1,15 @@
 import tape from 'tape'
-import { getRunPp } from '../../test/front.helpers.js'
+import { getRunPp, getSamplelstTw } from '../../test/front.helpers.js'
 import { fillTermWrapper } from '#termsetting'
 import { getFilterItemByTag, filterJoin } from '#filter'
 import { sleep, detectOne, detectGte, detectLst } from '../../test/test.helpers.js'
 import { select, brushX } from 'd3'
 
-/***************** Test Layout *****************:
+/**************
+ test sections
 
+render violin plot agedx/sex
 term1 as numeric and term2 categorical, test median rendering
-render violin plot
 test basic controls
 test label clicking, filtering and hovering
 test hide option on label clicking
@@ -17,56 +18,26 @@ term1=categorical, term2=numeric
 term1=numeric, term2=survival
 term1=numeric, term2=condition
 term1=geneExp, term2=categorical
+term1=ssgsea, term2=categorical
 term1=geneExp, term2=survival
-test samplelst term2
+term1=numeric, term2=samplelst
+term1=geneexp, term2=samplelst
+term1=ssgsea, term2=samplelst
 term=agedx, term2=geneExp with regular bins
 term=agedx, term2=geneExp with custom bins
 term1=numeric, term0=categorical
 term1=numeric, term2=numeric, term0=categorical
 test uncomputable categories legend
 Load linear regression-violin UI
-test change in plot length and thickness for new custom group variable
-
-***********************************************/
-
-/*************************
- reusable helper functions
-**************************/
-
-const runpp = getRunPp('mass', {
-	state: {
-		nav: { activeTab: 1 },
-		vocab: { dslabel: 'TermdbTest', genome: 'hg38-test' }
-	},
-	debug: 1
-})
-
-/**************
- test sections
+term1=numeric, term2=samplelst, test change in plot length and thickness
 ***************/
 
 tape('\n', function (test) {
 	test.comment('-***- plots/violin -***-')
 	test.end()
 })
-const open_state = {
-	chartType: 'summary',
-	childType: 'violin',
-	term: {
-		id: 'agedx',
-		isAtomic: true,
-		q: {
-			mode: 'continuous',
-			hiddenValues: {},
-			isAtomic: true
-		}
-	},
-	term2: {
-		id: 'sex'
-	}
-}
 
-tape('render violin plot', function (test) {
+tape('render violin plot agedx/sex', function (test) {
 	test.timeoutAfter(4000)
 	runpp({
 		state: {
@@ -696,7 +667,7 @@ tape('term1=categorical, term2=numeric', function (test) {
 	}
 })
 
-tape.skip('term1=numeric, term2=survival', function (test) {
+tape('term1=numeric, term2=survival', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
@@ -779,9 +750,6 @@ tape('term1=geneExp, term2=categorical', function (test) {
 	test.timeoutAfter(2000)
 	runpp({
 		state: {
-			nav: {
-				header_mode: 'hide_search'
-			},
 			plots: [
 				{
 					chartType: 'summary',
@@ -813,10 +781,45 @@ tape('term1=geneExp, term2=categorical', function (test) {
 		test.ok(groups, 'categorical groups exist')
 	}
 })
+tape('term1=ssgsea, term2=categorical', function (test) {
+	test.timeoutAfter(2000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: {
+						term: { id: 'HALLMARK_ADIPOGENESIS', type: 'ssGSEA', name: 'HALLMARK_ADIPOGENESIS' },
+						q: { mode: 'continuous' }
+					},
+					term2: {
+						id: 'diaggrp'
+					}
+				}
+			]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testViolin(violin, violinDiv)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+	async function testViolin(violin, violinDiv) {
+		const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 2 })
+		test.ok(groups, 'categorical groups exist')
+	}
+})
 
-// TODO FIX
+// this combo returns no data thus breaks
 tape.skip('term1=geneExp, term2=survival', function (test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(10000)
 	runpp({
 		state: {
 			nav: {
@@ -854,62 +857,38 @@ tape.skip('term1=geneExp, term2=survival', function (test) {
 	}
 })
 
-tape('test samplelst term2', function (test) {
+tape('term1=numeric, term2=samplelst', function (test) {
 	test.timeoutAfter(4000)
-	const values = [
-		{
-			sampleId: 42,
-			sample: '2660'
+	runpp({
+		state: {
+			nav: {
+				header_mode: 'hide_search'
+			},
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: { id: 'agedx', q: { mode: 'continuous' } },
+					term2: getSamplelstTw()
+				}
+			]
 		},
-		{
-			sampleId: 44,
-			sample: '2688'
-		},
-		{
-			sampleId: 45,
-			sample: '2702'
-		},
-		{
-			sampleId: 46,
-			sample: '2716'
-		},
-		{
-			sampleId: 59,
-			sample: '2898'
-		},
-		{
-			sampleId: 60,
-			sample: '2912'
-		},
-		{
-			sampleId: 67,
-			sample: '3010'
-		},
-		{
-			sampleId: 68,
-			sample: '3024'
-		},
-		{
-			sampleId: 69,
-			sample: '3038'
-		},
-		{
-			sampleId: 70,
-			sample: '3052'
-		},
-		{
-			sampleId: 73,
-			sample: '3094'
-		},
-		{
-			sampleId: 79,
-			sample: '3178'
-		},
-		{
-			sampleId: 80,
-			sample: '3192'
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
 		}
-	]
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 2 })
+		test.equal(violin.Inner.data.charts[''].plots.length, 2, 'plots[] should be array length of 2')
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('term1=geneexp, term2=samplelst', function (test) {
+	test.timeoutAfter(4000)
 	runpp({
 		state: {
 			nav: {
@@ -920,46 +899,10 @@ tape('test samplelst term2', function (test) {
 					chartType: 'summary',
 					childType: 'violin',
 					term: {
-						id: 'agedx',
-						q: {
-							mode: 'continuous'
-						}
+						term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' },
+						q: { mode: 'continuous' }
 					},
-					term2: {
-						term: {
-							name: 'TermdbTest TSNE groups',
-							type: 'samplelst',
-							values: {
-								'Group 1': {
-									key: 'Group 1',
-									label: 'Group 1',
-									list: values
-								},
-								'Not in Group 1': {
-									key: 'Not in Group 1',
-									label: 'Not in Group 1',
-									list: values
-								}
-							}
-						},
-						q: {
-							mode: 'discrete',
-							groups: [
-								{
-									name: 'Group 1',
-									in: true,
-									values
-								},
-								{
-									name: 'Not in Group 1',
-									in: false,
-									values
-								}
-							],
-							isAtomic: true,
-							type: 'custom-groupset'
-						}
-					}
+					term2: getSamplelstTw()
 				}
 			]
 		},
@@ -969,19 +912,44 @@ tape('test samplelst term2', function (test) {
 			}
 		}
 	})
-
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
-		violin.on('postRender.test', null)
-
-		await testGroupsRendering(violin, violinDiv)
+		await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 2 })
+		test.equal(violin.Inner.data.charts[''].plots.length, 2, 'plots[] should be array length of 2')
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
-	// TODO test listsamples/hide - callbacks on label clicking and brushing for samplelst
-	async function testGroupsRendering(violin, violinDiv) {
+})
+tape('term1=ssgsea, term2=samplelst', function (test) {
+	test.timeoutAfter(4000)
+	runpp({
+		state: {
+			nav: {
+				header_mode: 'hide_search'
+			},
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: {
+						term: { id: 'HALLMARK_ADIPOGENESIS', type: 'ssGSEA', name: 'HALLMARK_ADIPOGENESIS' },
+						q: { mode: 'continuous' }
+					},
+					term2: getSamplelstTw()
+				}
+			]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
 		await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 2 })
 		test.equal(violin.Inner.data.charts[''].plots.length, 2, 'plots[] should be array length of 2')
+		test.end()
 	}
 })
 
@@ -1302,7 +1270,7 @@ tape('Load linear regression-violin UI', function (test) {
 	}
 })
 
-tape('test change in plot length and thickness for custom group variable', function (test) {
+tape('term1=numeric, term2=samplelst, test change in plot length and thickness', function (test) {
 	test.timeoutAfter(5000)
 	runpp({
 		state: {
@@ -1313,128 +1281,8 @@ tape('test change in plot length and thickness for custom group variable', funct
 				{
 					chartType: 'summary',
 					childType: 'violin',
-					term: {
-						id: 'agedx',
-						q: {
-							mode: 'continuous'
-						}
-					},
-					term2: {
-						term: {
-							name: 'Group 1 vs Group 2',
-							type: 'samplelst',
-							values: {
-								'Group 1': {
-									key: 'Group 1',
-									label: 'Group 1',
-									list: [
-										{
-											sampleId: 41,
-											sample: '2646'
-										},
-										{
-											sampleId: 52,
-											sample: '2800'
-										},
-										{
-											sampleId: 56,
-											sample: '2856'
-										},
-										{
-											sampleId: 58,
-											sample: '2884'
-										}
-									]
-								},
-								'Group 2': {
-									key: 'Group 2',
-									label: 'Group 2',
-									list: [
-										{
-											sampleId: 49,
-											sample: '2758'
-										},
-										{
-											sampleId: 50,
-											sample: '2772'
-										},
-										{
-											sampleId: 61,
-											sample: '2926'
-										},
-										{
-											sampleId: 74,
-											sample: '3108'
-										},
-										{
-											sampleId: 75,
-											sample: '3122'
-										},
-										{
-											sampleId: 76,
-											sample: '3136'
-										}
-									]
-								}
-							}
-						},
-						q: {
-							mode: 'discrete',
-							groups: [
-								{
-									name: 'Group 1',
-									values: [
-										{
-											sampleId: 41,
-											sample: '2646'
-										},
-										{
-											sampleId: 52,
-											sample: '2800'
-										},
-										{
-											sampleId: 56,
-											sample: '2856'
-										},
-										{
-											sampleId: 58,
-											sample: '2884'
-										}
-									]
-								},
-								{
-									name: 'Group 2',
-									values: [
-										{
-											sampleId: 49,
-											sample: '2758'
-										},
-										{
-											sampleId: 50,
-											sample: '2772'
-										},
-										{
-											sampleId: 61,
-											sample: '2926'
-										},
-										{
-											sampleId: 74,
-											sample: '3108'
-										},
-										{
-											sampleId: 75,
-											sample: '3122'
-										},
-										{
-											sampleId: 76,
-											sample: '3136'
-										}
-									]
-								}
-							],
-							type: 'custom-groupset'
-						}
-					}
+					term: { id: 'agedx', q: { mode: 'continuous' } },
+					term2: getSamplelstTw()
 				}
 			]
 		},
@@ -1497,9 +1345,6 @@ tape('term1=singleCellExpression, term2=singleCellCellType', function (test) {
 	test.timeoutAfter(5000)
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					chartType: 'summary',
@@ -1569,8 +1414,35 @@ tape('term1=singleCellExpression, term2=singleCellCellType', function (test) {
 			violin.Inner.data.charts[''].plots.length,
 			'Should render the correct number of plots per cell type for a gene expression term'
 		)
-
-		//if (test._ok) violin.Inner.app.destroy()
+		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
 })
+
+/*************************
+ reusable helper functions
+**************************/
+
+const runpp = getRunPp('mass', {
+	state: {
+		nav: { activeTab: 1 },
+		vocab: { dslabel: 'TermdbTest', genome: 'hg38-test' }
+	},
+	debug: 1
+})
+const open_state = {
+	chartType: 'summary',
+	childType: 'violin',
+	term: {
+		id: 'agedx',
+		isAtomic: true,
+		q: {
+			mode: 'continuous',
+			hiddenValues: {},
+			isAtomic: true
+		}
+	},
+	term2: {
+		id: 'sex'
+	}
+}
