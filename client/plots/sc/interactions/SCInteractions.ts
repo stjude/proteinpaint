@@ -38,4 +38,21 @@ export class SCInteractions {
 			config: { settings: { sc: { item } } }
 		})
 	}
+
+	toggleLoading(on: boolean) {
+		if (on) {
+			this.dom.loading.selectAll('*').remove()
+			this.dom.loading
+				.style('display', 'block')
+				.append('div')
+				.style('position', 'relative')
+				.style('top', '50%')
+				.append('span')
+				.attr('class', 'sjpp-spinner')
+			this.dom.loading.style('display', '')
+		} else {
+			this.dom.loading.selectAll('.sjpp-spinner').remove()
+			this.dom.loading.style('display', 'none')
+		}
+	}
 }
