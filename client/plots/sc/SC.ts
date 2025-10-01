@@ -46,6 +46,16 @@ class SCViewer extends PlotBase implements RxComponent {
 
 		this.dom = {
 			div,
+			loading: opts.holder
+				.append('div')
+				.attr('class', 'sjpp-sc-loading')
+				.style('position', 'absolute')
+				.style('top', '0')
+				.style('left', '0')
+				.style('width', '100%')
+				.style('height', '100%')
+				.style('background-color', 'rgba(255, 255, 255, 0.95)')
+				.style('text-align', 'center'),
 			selectBtnDiv: div.append('div').attr('id', 'sjpp-sc-select-btn'),
 			tableDiv: div.append('div').attr('id', 'sjpp-sc-item-table'),
 			plotsBtnsDiv: div.append('div').attr('id', 'sjpp-sc-plot-buttons').style('display', 'none')
@@ -163,6 +173,8 @@ class SCViewer extends PlotBase implements RxComponent {
 		if (!this.view) throw `View not initialized [SC main()]`
 		if (!this.interactions) throw `Interactions not initialized [SC main()]`
 
+		this.interactions.toggleLoading(true)
+
 		// const errors = {} collect plot init errors
 		for (const subplot of state.subplots) {
 			if (!this.segments[subplot.scItem.sample]) this.initSegment(subplot.scItem)
@@ -173,7 +185,13 @@ class SCViewer extends PlotBase implements RxComponent {
 		if (config.settings.sc.item) {
 			try {
 				data = await this.model.getData()
+				if (data.error || !data.plots || !data.plots.length) {
+					this.interactions.toggleLoading(false)
+					this.app.printError(data.error)
+					return
+				}
 			} catch (e: any) {
+				this.interactions.toggleLoading(false)
 				if (e instanceof Error) console.error(`${e.message || e} [SC main()]`)
 				else if (e.stack) console.log(e.stack)
 				throw `${e.message || e} [SC main()]`
@@ -182,6 +200,8 @@ class SCViewer extends PlotBase implements RxComponent {
 		}
 
 		this.view.update(config.settings, data)
+		this.interactions.toggleLoading(false)
+		console.log('Single cell main() complete')
 	}
 }
 

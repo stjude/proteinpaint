@@ -100,40 +100,35 @@ export class PlotButtons {
 			})
 	}
 	getChartBtnOpts() {
-		return [
-			{
-				label: 'tSNE',
-				isVisible: () => this.scTermdbConfig?.data?.plots.find(p => p.name == 'TSNE'),
+		const btns: {
+			label: string
+			isVisible: () => boolean
+			open?: (plot: any, self: PlotButtons) => void
+			getPlotConfig: (f?: any, g?: any) => any
+		}[] = []
+
+		for (const plots of this.scTermdbConfig?.data?.plots || []) {
+			btns.push({
+				label: plots.name,
+				isVisible: () => true,
 				getPlotConfig: async () => {
-					return await this.getSingleCellConfig('TSNE')
+					return await this.getSingleCellConfig(plots.name)
 				}
-			},
-			{
-				label: 'UMAP',
-				isVisible: () => this.scTermdbConfig?.data?.plots.find(p => p.name == 'UMAP'),
-				getPlotConfig: async () => {
-					return await this.getSingleCellConfig('UMAP')
-				}
-			},
-			{
-				label: 'PCA',
-				isVisible: () => this.scTermdbConfig?.data?.plots.find(p => p.name == 'PCA'),
-				getPlotConfig: async () => {
-					return await this.getSingleCellConfig('PCA')
-				}
-			},
+			})
+		}
+		btns.push(
 			{
 				label: 'Gene expression',
 				isVisible: () => true,
 				open: this.geneSearchMenu,
 				getPlotConfig: async geneLst => {
-					/** If 1 gene is selected, show violin
-					 * If 2 genes are selected, show scatter
-					 * If >2 genes are selected, show hier clustering */
 					if (!geneLst.length) {
 						alert('No genes selected to launch gene expression subplot [PlotButtons.ts getChartBtnOpts()]')
 						return
 					}
+					/** If 1 gene, launch violin
+					 * If 2 genes, launch scatter
+					 * If >2 genes, launch hier clustering */
 					if (geneLst.length == 1) return await this.getViolinConfig(geneLst[0].gene)
 					else if (geneLst.length == 2) return await this.getScatterConfig(geneLst)
 					else return this.getClusteringConfig(geneLst)
@@ -155,13 +150,8 @@ export class PlotButtons {
 					}
 				}
 			}
-			//More plot buttons here: single cell, etc.
-		] as {
-			label: string
-			isVisible: () => boolean
-			open?: (plot: any, self: PlotButtons) => void
-			getPlotConfig: (f?: any) => any
-		}[]
+		)
+		return btns
 	}
 
 	//********** Btn Menus **********/
