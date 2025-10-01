@@ -28,17 +28,12 @@ export function deepEqual(x, y) {
 	if (x === y) {
 		return true
 	} else if (typeof x == 'object' && x != null && typeof y == 'object' && y != null) {
-		if (Object.keys(x).length != Object.keys(y).length) {
-			return false
-		}
-		const xKeys = Object.keys(x)
+		const xEntries = Object.entries(x)
 		const yKeys = Object.keys(y)
-		for (const prop of xKeys) {
-			if (yKeys.includes(prop)) {
-				if (!deepEqual(x[prop], y[prop])) return false
-			} else {
-				return false
-			}
+		if (xEntries.length != yKeys.length) return false
+		for (const [key, val] of xEntries) {
+			if (!yKeys.includes(key)) return false
+			if (!deepEqual(val, y[key])) return false
 		}
 		return true
 	} else return false
@@ -46,8 +41,8 @@ export function deepEqual(x, y) {
 
 export function deepFreeze(obj) {
 	Object.freeze(obj)
-	for (const key in obj) {
-		if (typeof obj == 'object') deepFreeze(obj[key])
+	for (const value of Object.values(obj)) {
+		if (value && typeof value == 'object') deepFreeze(value)
 	}
 }
 
