@@ -361,10 +361,10 @@
   },
   "tw/TwRouter.ts": {
     "lines": {
-      "total": 46,
-      "covered": 24,
+      "total": 42,
+      "covered": 31,
       "skipped": 0,
-      "pct": 52.17
+      "pct": 73.8
     },
     "functions": {
       "total": 6,
@@ -373,26 +373,26 @@
       "pct": 83.33
     },
     "statements": {
-      "total": 48,
-      "covered": 25,
+      "total": 44,
+      "covered": 32,
       "skipped": 0,
-      "pct": 52.08
+      "pct": 72.72
     },
     "branches": {
       "total": 45,
-      "covered": 24,
+      "covered": 33,
       "skipped": 0,
-      "pct": 53.33
+      "pct": 73.33
     },
     "lowestPct": {
-      "curr": 52.08,
+      "curr": 72.72,
       "prev": 53.19,
-      "diff": -1.1099999999999994
+      "diff": 19.53
     },
     "averagePct": {
-      "curr": 60.22749999999999,
+      "curr": 75.795,
       "prev": 60.832499999999996,
-      "diff": -0.605000000000004
+      "diff": 14.962500000000006
     }
   },
   "tw/geneVariant.ts": {
@@ -4933,38 +4933,38 @@
   },
   "tw/numeric.ts": {
     "lines": {
-      "total": 114,
-      "covered": 59,
+      "total": 130,
+      "covered": 61,
       "skipped": 0,
-      "pct": 51.75
+      "pct": 46.92
     },
     "functions": {
       "total": 17,
-      "covered": 10,
+      "covered": 8,
       "skipped": 0,
-      "pct": 58.82
+      "pct": 47.05
     },
     "statements": {
-      "total": 155,
-      "covered": 66,
+      "total": 175,
+      "covered": 68,
       "skipped": 0,
-      "pct": 42.58
+      "pct": 38.85
     },
     "branches": {
-      "total": 144,
-      "covered": 54,
+      "total": 159,
+      "covered": 57,
       "skipped": 0,
-      "pct": 37.5
+      "pct": 35.84
     },
     "lowestPct": {
-      "curr": 37.5,
+      "curr": 35.84,
       "prev": 41.17,
-      "diff": -3.6700000000000017
+      "diff": -5.329999999999998
     },
     "averagePct": {
-      "curr": 47.662499999999994,
+      "curr": 42.165,
       "prev": 53.735,
-      "diff": -6.072500000000005
+      "diff": -11.57
     }
   },
   "plots/barchart.data.js": {
@@ -5041,25 +5041,25 @@
   },
   "tw/geneExpression.ts": {
     "lines": {
-      "total": 23,
-      "covered": 2,
+      "total": 18,
+      "covered": 3,
       "skipped": 0,
-      "pct": 8.69
+      "pct": 16.66
     },
     "functions": {
-      "total": 1,
+      "total": 3,
       "covered": 0,
       "skipped": 0,
       "pct": 0
     },
     "statements": {
-      "total": 30,
-      "covered": 2,
+      "total": 24,
+      "covered": 3,
       "skipped": 0,
-      "pct": 6.66
+      "pct": 12.5
     },
     "branches": {
-      "total": 39,
+      "total": 27,
       "covered": 0,
       "skipped": 0,
       "pct": 0
@@ -5070,9 +5070,9 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 3.8375,
+      "curr": 7.29,
       "prev": 5.2075,
-      "diff": -1.3699999999999997
+      "diff": 2.0825000000000005
     }
   },
   "termdb/test/submenu.integration.spec.js": {
@@ -5221,25 +5221,25 @@
   },
   "tw/date.ts": {
     "lines": {
-      "total": 15,
-      "covered": 2,
+      "total": 9,
+      "covered": 3,
       "skipped": 0,
-      "pct": 13.33
+      "pct": 33.33
     },
     "functions": {
-      "total": 1,
+      "total": 3,
       "covered": 0,
       "skipped": 0,
       "pct": 0
     },
     "statements": {
-      "total": 19,
-      "covered": 2,
+      "total": 12,
+      "covered": 3,
       "skipped": 0,
-      "pct": 10.52
+      "pct": 25
     },
     "branches": {
-      "total": 22,
+      "total": 8,
       "covered": 0,
       "skipped": 0,
       "pct": 0
@@ -5250,32 +5250,32 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 5.9625,
+      "curr": 14.5825,
       "prev": 5.9625,
-      "diff": 0
+      "diff": 8.62
     }
   },
   "tw/metaboliteIntensity.ts": {
     "lines": {
       "total": 15,
-      "covered": 2,
+      "covered": 3,
       "skipped": 0,
-      "pct": 13.33
+      "pct": 20
     },
     "functions": {
-      "total": 1,
+      "total": 3,
       "covered": 0,
       "skipped": 0,
       "pct": 0
     },
     "statements": {
-      "total": 19,
-      "covered": 2,
+      "total": 21,
+      "covered": 3,
       "skipped": 0,
-      "pct": 10.52
+      "pct": 14.28
     },
     "branches": {
-      "total": 22,
+      "total": 20,
       "covered": 0,
       "skipped": 0,
       "pct": 0
@@ -5286,32 +5286,32 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 5.9625,
+      "curr": 8.57,
       "prev": 5.9625,
-      "diff": 0
+      "diff": 2.6075
     }
   },
   "tw/ssGSEA.ts": {
     "lines": {
-      "total": 17,
-      "covered": 2,
+      "total": 14,
+      "covered": 3,
       "skipped": 0,
-      "pct": 11.76
+      "pct": 21.42
     },
     "functions": {
-      "total": 1,
+      "total": 3,
       "covered": 0,
       "skipped": 0,
       "pct": 0
     },
     "statements": {
-      "total": 23,
-      "covered": 2,
+      "total": 18,
+      "covered": 3,
       "skipped": 0,
-      "pct": 8.69
+      "pct": 16.66
     },
     "branches": {
-      "total": 26,
+      "total": 10,
       "covered": 0,
       "skipped": 0,
       "pct": 0
@@ -5322,9 +5322,9 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 5.1125,
+      "curr": 9.52,
       "prev": 5.1125,
-      "diff": 0
+      "diff": 4.4075
     }
   },
   "plots/survival/survival.ts": {
