@@ -84,6 +84,13 @@ async fn main() -> Result<()> {
                         None => panic!("user_input field is missing in input json"),
                     }
 
+                    let genedb_json: &JsonValue = &json_string["genedb"];
+                    let mut genedb: Option<&str> = None;
+                    match genedb_json.as_str() {
+                        Some(inp) => genedb = Some(inp),
+                        None => {}
+                    }
+
                     let dataset_db_json: &JsonValue = &json_string["dataset_db"];
                     let mut dataset_db: Option<&str> = None;
                     match dataset_db_json.as_str() {
@@ -147,6 +154,7 @@ async fn main() -> Result<()> {
                             max_new_tokens,
                             top_p,
                             dataset_db,
+                            genedb,
                         )
                         .await;
                     // "gpt-oss:20b" "granite3-dense:latest" "PetrosStav/gemma3-tools:12b" "llama3-groq-tool-use:latest" "PetrosStav/gemma3-tools:12b"
@@ -168,6 +176,7 @@ async fn main() -> Result<()> {
                             max_new_tokens,
                             top_p,
                             dataset_db,
+                            genedb,
                         )
                         .await;
                     }
@@ -198,6 +207,7 @@ async fn run_pipeline(
     max_new_tokens: usize,
     top_p: f32,
     dataset_db: Option<&str>,
+    genedb: Option<&str>,
 ) -> Option<String> {
     let mut classification: String = classify_query_by_dataset_type(
         user_input,
@@ -239,6 +249,7 @@ async fn run_pipeline(
             max_new_tokens,
             top_p,
             dataset_db,
+            genedb,
         )
         .await;
     } else if classification == "hierarchical".to_string() {
@@ -658,6 +669,7 @@ async fn extract_summary_information(
     max_new_tokens: usize,
     top_p: f32,
     dataset_db: Option<&str>,
+    _genedb: Option<&str>,
 ) -> String {
     match dataset_db {
         Some(db) => {
@@ -750,7 +762,7 @@ struct FilterTerm {
 
 fn validate_summary_output2(raw_llm_json: String, db_vec: Vec<DbRows>) -> String {
     let json_value: SummaryType =
-        serde_json::from_str(&raw_llm_json).expect("Did not get a valid JSON of type {action: summary, terms:[term1, term2], filter:[{term: term1, value: value1}] } from the LLM");
+        serde_json::from_str(&raw_llm_json).expect("Did not get a valid JSON of type {action: summary, terms:[term1, term2], filter:[{term: term1, value: value1}]} from the LLM");
     let mut message: String = String::from("");
     match json_value.message {
         Some(mes) => {
