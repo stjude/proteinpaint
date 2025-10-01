@@ -122,7 +122,6 @@ export default function setViolinRenderer(self) {
 	self.displaySummaryStats = function (d, event, tip) {
 		if (!d.summaryStats) return
 		tip.clear().show(event.clientX, event.clientY)
-		tip.d.append('div').text(d.label).style('margin-left', '15px')
 		const table = table2col({ holder: tip.d.append('div') })
 		for (const { label, value } of Object.values(d.summaryStats)) table.addRow(label, value)
 	}

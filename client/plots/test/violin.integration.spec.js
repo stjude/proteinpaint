@@ -2,14 +2,13 @@ import tape from 'tape'
 import { getRunPp, getSamplelstTw } from '../../test/front.helpers.js'
 import { fillTermWrapper } from '#termsetting'
 import { getFilterItemByTag, filterJoin } from '#filter'
-import { sleep, detectOne, detectGte, detectLst } from '../../test/test.helpers.js'
+import { sleep, detectOne, detectGte, detectLst, whenVisible } from '../../test/test.helpers.js'
 import { select, brushX } from 'd3'
 
 /**************
  test sections
 
-render violin plot agedx/sex
-term1 as numeric and term2 categorical, test median rendering
+general rendering in agedx/sex
 test basic controls
 test label clicking, filtering and hovering
 test hide option on label clicking
@@ -37,13 +36,10 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('render violin plot agedx/sex', function (test) {
+tape('general rendering in agedx/sex', function (test) {
 	test.timeoutAfter(4000)
 	runpp({
 		state: {
-			nav: {
-				header_mode: 'hide_search'
-			},
 			plots: [open_state]
 		},
 		violin: {
@@ -52,7 +48,6 @@ tape('render violin plot agedx/sex', function (test) {
 			}
 		}
 	})
-
 	async function runTests(violin) {
 		violin.on('postRender.test', null)
 		const legendDiv = violin.Inner.dom.legendDiv
@@ -65,6 +60,8 @@ tape('render violin plot agedx/sex', function (test) {
 		testDataLength(violinDiv, violinDivData) //test if length of samples is same as shown in plot labels
 		testPvalue(violin, violinDiv, violinDivData)
 		testDescrStats(violin, legendDiv)
+		await testMedianRendering(violin, violinDiv)
+
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
@@ -165,30 +162,6 @@ tape('render violin plot agedx/sex', function (test) {
 			'Standard deviation rendered'
 		)
 	}
-})
-
-tape('term1 as numeric and term2 categorical, test median rendering', function (test) {
-	test.timeoutAfter(3000)
-	runpp({
-		state: {
-			nav: {
-				header_mode: 'hidden'
-			},
-			plots: [open_state]
-		},
-		violin: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
-	async function runTests(violin) {
-		const violinDiv = violin.Inner.dom.violinDiv
-		await testMedianRendering(violin, violinDiv)
-		if (test._ok) violin.Inner.app.destroy()
-		test.end()
-	}
-
 	async function testMedianRendering(violin, violinDiv) {
 		const median = await detectGte({
 			elem: violinDiv.node(),
@@ -223,7 +196,7 @@ tape('term1 as numeric and term2 categorical, test median rendering', function (
 	}
 })
 
-tape('test basic controls', function (test) {
+tape.only('test basic controls', function (test) {
 	test.timeoutAfter(4000)
 	runpp({
 		state: {
@@ -242,6 +215,8 @@ tape('test basic controls', function (test) {
 	async function runTests(violin) {
 		violin.on('postRender.test', null)
 		const violinDiv = violin.Inner.dom.violinDiv
+		await changeMedianSize2(violin, violinDiv)
+
 		await changeOrientation(violin, violinDiv) // test orientation by changing to vertical
 		await changeDataSymbol(violin, violinDiv) //test change in Data symbol
 		await changeStrokeWidth(violin) //test change in stroke width
@@ -273,7 +248,41 @@ tape('test basic controls', function (test) {
 			}
 		})
 		test.ok(termLabel, 'Should render term label')
+		console.log(termLabel)
 		test.true(termLabel.transform.animVal[0].angle === -90, 'Orientation should change to vertical')
+	}
+	async function changeMedianSize2(violin, violinDiv) {
+		const testMedianLength = 10
+		const testMedianThickness = 10
+		console.log(1, violinDiv)
+		const medianEle = await detectGte({
+			elem: violinDiv.node(),
+			selector: '.sjpp-median-line',
+			count: 1,
+			async trigger() {
+				await violin.Inner.app.dispatch({
+					type: 'plot_edit',
+					id: violin.Inner.id,
+					config: {
+						settings: {
+							violin: {
+								medianLength: testMedianLength,
+								medianThickness: testMedianThickness
+							}
+						}
+					}
+				})
+			}
+		})
+		test.ok(medianEle, 'Median exists')
+		test.true(
+			violin.Inner.app.Inner.state.plots[0].settings.violin.medianLength === testMedianLength,
+			`Plot median length changed to ${testMedianLength}`
+		)
+		test.true(
+			violin.Inner.app.Inner.state.plots[0].settings.violin.medianLength === testMedianLength,
+			`Plot median thickness changed to ${testMedianThickness}`
+		)
 	}
 
 	async function changeDataSymbol(violin, violinDiv) {
@@ -401,8 +410,12 @@ tape('test label clicking, filtering and hovering', function (test) {
 		const violinDivData = violin.Inner.data.charts[''].plots
 		const violinSettings = violin.Inner.config.settings.violin
 
-		await testFiltering(violin, violinSettings, violinDivData) //test filtering by providing tvs.lst object
-		await testLabelHovering(violin, violinDiv)
+		// before filtering there are two violins, one for each sex
+		await testLabelHover(test, violin, violinDiv, 2)
+		// filter to just one sex
+		await testFiltering(violin, violinSettings, violinDivData)
+		// after filtering, just one sex is left
+		await testLabelHover(test, violin, violinDiv, 1)
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
@@ -470,18 +483,6 @@ tape('test label clicking, filtering and hovering', function (test) {
 			filter
 		})
 		test.ok(true, 'Filtering works as expected upon given range(start, stop) of values')
-	}
-
-	async function testLabelHovering(violin, violinDiv) {
-		const elem = await detectOne({
-			elem: violinDiv.node(),
-			selector: '.sjpp-axislabel'
-		})
-		test.ok(elem, 'Hover Element exists')
-		elem.dispatchEvent(new Event('mouseover'), { bubbles: true })
-		const tip = violin.Inner.dom.tip
-		test.ok(tip.d.node().style.display == 'block', 'Should display table of summary statistics on hover')
-		tip.hide()
 	}
 })
 
@@ -592,7 +593,8 @@ tape('term1 as numeric and term2 numeric, change median size', function (test) {
 		violin.on('postRender.test', null)
 		const violinDiv = violin.Inner.dom.violinDiv
 		await changeMedianSize(violin, violinDiv)
-		if (test._ok) violin.Inner.app.destroy()
+		//if (test._ok) violin.Inner.app.destroy()
+
 		test.end()
 	}
 
@@ -949,6 +951,7 @@ tape('term1=ssgsea, term2=samplelst', function (test) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count: 2 })
 		test.equal(violin.Inner.data.charts[''].plots.length, 2, 'plots[] should be array length of 2')
+		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -1435,14 +1438,41 @@ const open_state = {
 	childType: 'violin',
 	term: {
 		id: 'agedx',
-		isAtomic: true,
-		q: {
-			mode: 'continuous',
-			hiddenValues: {},
-			isAtomic: true
-		}
+		q: { mode: 'continuous' }
 	},
-	term2: {
-		id: 'sex'
+	term2: { id: 'sex' }
+}
+// detect given number of violin labels
+// use the first label to test mouseover menu and click menu options
+async function testLabelHover(test, violin, violinDiv, labelcount) {
+	const labs = await detectLst({
+		elem: violinDiv.node(),
+		selector: '.sjpp-axislabel',
+		count: labelcount
+	})
+	test.ok(labs, `Detected ${labelcount} violin labels`)
+
+	// test mouseover
+	labs[0].dispatchEvent(new Event('mouseover'), { bubbles: true })
+	{
+		const tip = violin.Inner.dom.tip
+		await whenVisible(tip.d)
+		const table = await detectOne({ elem: tip.dnode, selector: '[data-testid="sja_simpletable"]' })
+		test.pass('summary stat table found in hover tooltip')
+		tip.hide()
+	}
+
+	if (violin.Inner.state.config.term2) {
+		// has term2, click label will show menu and test this menu; if no term2, menu won't show by design
+		labs[0].dispatchEvent(new Event('click'), { bubbles: true })
+		const tip = violin.Inner.app.tip
+		await whenVisible(tip.d)
+		await detectOne({ elem: tip.dnode, selector: '[data-testid="sjpp-violinLabOpt-addf"]' })
+		test.pass('Add filter option is in menu')
+		await detectOne({ elem: tip.dnode, selector: '[data-testid="sjpp-violinLabOpt-hide"]' })
+		test.pass('Hide option is in menu')
+		// note that this option is conditional; lacks way to test different conditions
+		await detectOne({ elem: tip.dnode, selector: '[data-testid="sjpp-violinLabOpt-list"]' })
+		test.pass('List option is in menu')
 	}
 }
