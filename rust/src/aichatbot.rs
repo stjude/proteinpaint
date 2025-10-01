@@ -240,7 +240,7 @@ async fn run_pipeline(
             de_result + &"]"
         );
     } else if classification == "summary".to_string() {
-        final_output = extract_summary_information(
+        final_output = make_summary_chart(
             user_input,
             comp_model,
             embedding_model,
@@ -309,7 +309,7 @@ If a ProteinPaint dataset contains hierarchical data then return JSON with singl
 
 ---
 
-Differential Gene Expression (DGE or DE) is a technique where the most upregulated and downregulated genes between two cohorts of samples (or patients) are determined. A volcano plot is shown with fold-change in the x-axis and adjusted p-value on the y-axis. So, the upregulated and downregulared genes are on opposite sides of the graph and the most significant genes (based on adjusted p-value) is on the top of the graph. Following differential gene expression generally GeneSet Enrichment Analysis (GSEA) is carried out where based on the genes and their corresponding fold changes the upregulation/downregulation of genesets (or pathways) is determined.
+Differential Gene Expression (DGE or DE) is a technique where the most upregulated and downregulated genes between two cohorts of samples (or patients) are determined from a pool of THOUSANDS of genes. A volcano plot is shown with fold-change in the x-axis and adjusted p-value on the y-axis. So, the upregulated and downregulared genes are on opposite sides of the graph and the most significant genes (based on adjusted p-value) is on the top of the graph. Following differential gene expression generally GeneSet Enrichment Analysis (GSEA) is carried out where based on the genes and their corresponding fold changes the upregulation/downregulation of genesets (or pathways) is determined.
 
 If a ProteinPaint dataset contains differential gene expression data then return JSON with single key, 'dge'.
 
@@ -337,7 +337,7 @@ If a user query asks about variant calling or mapping reads then JSON with singl
 
 ---
 
-Summary plot in ProteinPaint shows the various facets of the datasets. It may show all the samples according to their respective diagnosis or subtypes of cancer. It is also useful for visualizing all the different facets of the dataset. You can display a categorical variable and overlay another variable on top it and stratify (or divide) using a third variable simultaneously. You can also custom filters to the dataset so that you can only study part of the dataset. If a user query asks about variant calling or mapping reads then JSON with single key, 'summary'.
+Summary plot in ProteinPaint shows the various facets of the datasets. Show expression of a SINGLE gene or compare the expression of a SINGLE gene across two different cohorts defined by the user. It may show all the samples according to their respective diagnosis or subtypes of cancer. It is also useful for comparing and correlating different clinical variables. It can show all possible distributions, frequency of a category, overlay, correlate or cross-tabulate with another variable on top of it. If a user query asks about a SINGLE gene expression or correlating clinical variables then return JSON with single key, 'summary'.
 
 Sample Query1: \"Show all fusions for patients with age less than 30\"
 Sample Answer1: { \"answer\": \"summary\" }
@@ -554,6 +554,21 @@ impl ParseDbRows for DbRows {
     }
 }
 
+async fn parse_geneset_db(db: &str) -> Vec<String> {
+    let manager = SqliteConnectionManager::file(db);
+    let pool = r2d2::Pool::new(manager).unwrap();
+    let conn = pool.get().unwrap();
+    let sql_statement_genedb = "SELECT * from codingGenes";
+    let mut genedb = conn.prepare(&sql_statement_genedb).unwrap();
+    let mut rows_genedb = genedb.query([]).unwrap();
+    let mut gene_list = Vec::<String>::new();
+    while let Some(coding_gene) = rows_genedb.next().unwrap() {
+        let code_gene: String = coding_gene.get(0).unwrap();
+        gene_list.push(code_gene)
+    }
+    gene_list
+}
+
 async fn parse_dataset_db(db: &str) -> (Vec<String>, Vec<DbRows>) {
     let manager = SqliteConnectionManager::file(db);
     let pool = r2d2::Pool::new(manager).unwrap();
@@ -658,6 +673,32 @@ async fn parse_dataset_db(db: &str) -> (Vec<String>, Vec<DbRows>) {
     }
     //println!("names:{:?}", names);
     (rag_docs, db_vec)
+}
+
+async fn make_summary_chart(
+    user_input: &str,
+    comp_model: impl rig::completion::CompletionModel + 'static,
+    embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
+    llm_backend_type: &llm_backend,
+    temperature: f64,
+    max_new_tokens: usize,
+    top_p: f32,
+    dataset_db: Option<&str>,
+    genedb: Option<&str>,
+) -> String {
+    let gene_list: Vec<String> = parse_geneset_db(genedb.unwrap()).await;
+    let contents: Vec<String> = vec![
+        String::from(
+            "Show expression of a SINGLE gene or compare the expression of a SINGLE gene across two different cohorts defined by the user",
+        ),
+        String::from(
+            "It may show all the samples according to their respective diagnosis or subtypes of cancer. It is also useful for comparing and correlating different clinical variables. It can show all possible distributions, frequency of a category, overlay, correlate or cross-tabulate with another clinical variable on top of it.",
+        ),
+    ];
+    let user_words: Vec<&str> = user_input.split_whitespace().collect();
+    let user_words2: Vec<String> = user_words.into_iter().map(|s| s.to_string()).collect();
+    let common: Vec<String> = gene_list.into_iter().filter(|x| user_words2.contains(&x)).collect();
+    contents[0].clone() // Temporary addition so as to avoid compilation errors, MUST be replaced with correct LLM output
 }
 
 async fn extract_summary_information(
