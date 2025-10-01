@@ -43,10 +43,12 @@ export function setInteractivity(self) {
 		const options = [
 			{
 				label: `Add filter: ${plot.label.split(',')[0]}`,
+				testid: 'sjpp-violinLabOpt-addf',
 				callback: getAddFilterCallback(t1, t2, self, plot, label, false)
 			},
 			{
 				label: `Hide: ${plot.label}`,
+				testid: 'sjpp-violinLabOpt-hide',
 				callback: () => {
 					const term = self.config[label]
 
@@ -69,6 +71,7 @@ export function setInteractivity(self) {
 		if (self.state.displaySampleIds && self.state.hasVerifiedToken) {
 			options.push({
 				label: `List samples`,
+				testid: 'sjpp-violinLabOpt-list',
 				callback: async () => {
 					const [start, end] = [self.data.min, self.data.max * 2]
 					await self.listSamples(event, t1, t2, plot, start, end)
@@ -86,6 +89,7 @@ export function setInteractivity(self) {
 		const options = [
 			{
 				label: `Add filter`,
+				testid: 'sjpp-violinBrushOpt-addf',
 				callback: getAddFilterCallback(t1, t2, self, plot, start, end, true)
 			}
 		]
@@ -93,6 +97,7 @@ export function setInteractivity(self) {
 		if (self.state.displaySampleIds && self.state.hasVerifiedToken) {
 			options.push({
 				label: `List samples`,
+				testid: 'sjpp-violinBrushOpt-list',
 				callback: async () => self.listSamples(event, t1, t2, plot, start, end)
 			})
 		}
@@ -102,7 +107,7 @@ export function setInteractivity(self) {
 
 	self.displayMenu = function (event, options, plot, start, end) {
 		self.app.tip.d.selectAll('*').remove()
-		//For testing and debugging
+		//For testing and debugging XXX do not do this
 		self.app.tip.d.classed('sjpp-violin-brush-tip', true)
 
 		const isBrush = start != null && end != null
@@ -122,6 +127,7 @@ export function setInteractivity(self) {
 			.enter()
 			.append('div')
 			.attr('class', 'sja_menuoption')
+			.attr('data-testid', d => d.testid)
 			.text(d => d.label)
 			.on('click', async (event, d) => {
 				if (event.target._clicked) return
