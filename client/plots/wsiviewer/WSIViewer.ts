@@ -33,10 +33,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 	private metadataRenderer = new MetadataRenderer()
 	private legendRenderer = new LegendRenderer()
 	private map: OLMap | undefined = undefined
-	// private loadingDiv: any
 	private annotationTable: any
-	// private mapHolder: any
-	// private legendHolder: any
 
 	constructor(opts: any, api) {
 		super(opts, api)
@@ -85,22 +82,6 @@ class WSIViewer extends PlotBase implements RxComponent {
 		const settings = state.plots.find(p => p.id === this.id).settings as Settings
 		const holder = this.opts.holder
 
-		// Check if wsiViewer-progress already exists
-		// let loadingDiv = holder.select('.wsiViewer-progress')
-		// if (loadingDiv.empty()) {
-		// 	loadingDiv = holder
-		// 		.append('div')
-		// 		.attr('class', 'wsiViewer-progress')
-		// 		.style('position', 'absolute')
-		// 		.style('top', '0')
-		// 		.style('left', '0')
-		// 		.style('width', '100%')
-		// 		.style('height', '100%')
-		// 		.style('background-color', 'rgba(255, 255, 255, 0.95)')
-		// 		.style('text-align', 'center')
-		// }
-		// this.loadingDiv = loadingDiv
-
 		const buffers = {
 			annotationsIdx: new Buffer<number>(0),
 			tmpClass: new Buffer<{ label: string; color: string }>({ label: '', color: '' })
@@ -130,13 +111,13 @@ class WSIViewer extends PlotBase implements RxComponent {
 
 		if (wsimages.length === 0) {
 			sayerror(this.dom.errorDiv, 'No WSI images found.')
-			// holder.append('div').style('margin-left', '10px').text('No WSI images.')
+			this.wsiViewerInteractions.toggleLoadingDiv(false)
 			return
 		}
 
 		if (wsimageLayersLoadError) {
 			sayerror(this.dom.errorDiv, wsimageLayersLoadError)
-			// holder.append('div').style('margin-left', '10px').text(wsimageLayersLoadError)
+			this.wsiViewerInteractions.toggleLoadingDiv(false)
 			return
 		}
 
@@ -164,8 +145,6 @@ class WSIViewer extends PlotBase implements RxComponent {
 				settings
 			).render(this.dom.mapHolder, settings)
 
-			// this.mapHolder = holder.select('div[id="wsi-viewer"]')
-
 			if (activeImageExtent && this.map) {
 				this.map.getView().fit(activeImageExtent)
 			}
@@ -184,11 +163,6 @@ class WSIViewer extends PlotBase implements RxComponent {
 				this.map
 			)
 			this.dom.legendHolder.selectAll('*').remove()
-			// this.legendHolder = holder
-			// 	.append('div')
-			// 	.attr('id', 'sjpp-legendHolder')
-			// 	.style('display', 'inline-block')
-			// 	.style('vertical-align', 'top')
 			modelTrainerRenderer.render(this.dom.legendHolder, aiProjectID, genome, dslabel)
 			this.legendRenderer.render(this.dom.legendHolder, imageViewData)
 

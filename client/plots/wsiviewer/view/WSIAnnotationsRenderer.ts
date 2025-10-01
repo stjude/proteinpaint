@@ -15,13 +15,6 @@ export class WSIAnnotationsRenderer {
 
 	render(holder: any, imageViewData: ImageViewData, activeImageExtent: Extent, map: OLMap) {
 		holder.select('div[id="annotations-table"]').remove()
-
-		// const tablesWrapper = holder
-		// 	// .append('div')
-		// 	// .attr('id', 'annotations-table-wrapper')
-		// 	.style('display', 'none')
-		// 	.style('padding', '20px')
-
 		if (!imageViewData.tilesTable) return
 		const selectedColor = '#fcfc8b'
 

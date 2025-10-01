@@ -4,7 +4,6 @@ import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
 export class LegendRenderer {
 	render(holder: any, imageViewData: ImageViewData) {
 		if (!imageViewData.classesTable) return
-		// holder.selectAll('div[id="legend-wrapper"]').remove()
 
 		const legendHolder = holder
 			.append('div')
