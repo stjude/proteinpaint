@@ -725,7 +725,7 @@ async fn extract_summary_information(
                 }
             }
             println!("final_llm_json:{}", final_llm_json);
-            let final_validated_json = validate_summary_output(final_llm_json.clone(), db_vec);
+            let final_validated_json = validate_summary_output2(final_llm_json.clone(), db_vec);
             final_validated_json
         }
         None => {
@@ -734,6 +734,178 @@ async fn extract_summary_information(
     }
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+struct SummaryType {
+    action: String,
+    filter: Option<Vec<FilterTerm>>,
+    message: Option<String>,
+    terms: Vec<String>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+struct FilterTerm {
+    term: String,
+    value: String,
+}
+
+fn validate_summary_output2(raw_llm_json: String, db_vec: Vec<DbRows>) -> String {
+    let json_value: SummaryType =
+        serde_json::from_str(&raw_llm_json).expect("Did not get a valid JSON of type {action: summary, terms:[term1, term2], filter:[{term: term1, value: value1}] } from the LLM");
+    let mut message: String = String::from("");
+    match json_value.message {
+        Some(mes) => {
+            message = message + &mes; // Append any message given by the LLM
+        }
+        None => {}
+    }
+
+    let mut new_json: Value; // New JSON value that will contain items of the final validated JSON
+    if json_value.action != String::from("summary") {
+        message = message + &"Did not return a summary action";
+        new_json = serde_json::json!(null);
+    } else {
+        new_json = serde_json::from_str(&"{\"action\":\"summary\"}").expect("Not a valid JSON");
+    }
+
+    let mut validated_summary_terms = Vec::<String>::new();
+    for sum_term in &json_value.terms {
+        let term_verification = verify_json_field(sum_term, &db_vec);
+        if Some(term_verification.correct_field.clone()).is_some() && term_verification.correct_value.clone().is_none()
+        {
+            match term_verification.correct_field {
+                Some(tm) => validated_summary_terms.push(tm),
+                None => message = message + &"\"" + &sum_term + &"\"" + &" not found in db.",
+            }
+        } else if Some(term_verification.correct_field.clone()).is_some()
+            && Some(term_verification.correct_value.clone()).is_some()
+        {
+            message = message
+                + &term_verification.correct_value.unwrap()
+                + &"is a value of "
+                + &term_verification.correct_field.unwrap()
+                + &".";
+        }
+    }
+    if let Some(obj) = new_json.as_object_mut() {
+        obj.insert(String::from("terms"), serde_json::json!(validated_summary_terms));
+    }
+
+    match &json_value.filter {
+        Some(filter_terms_array) => {
+            let mut validated_filter_terms = Vec::<FilterTerm>::new();
+            for parsed_filter_term in filter_terms_array {
+                let term_verification = verify_json_field(&parsed_filter_term.term, &db_vec);
+                let mut value_verification: Option<String> = None;
+                for item in &db_vec {
+                    if &item.name == &parsed_filter_term.term {
+                        for val in &item.values {
+                            if &parsed_filter_term.value == val {
+                                value_verification = Some(val.clone());
+                                break;
+                            }
+                        }
+                    }
+                    if value_verification != None {
+                        break;
+                    }
+                }
+                if term_verification.correct_field.is_some() && value_verification.is_some() {
+                    let verified_filter = FilterTerm {
+                        term: term_verification.correct_field.clone().unwrap(),
+                        value: value_verification.clone().unwrap(),
+                    };
+                    validated_filter_terms.push(verified_filter);
+                }
+                if term_verification.correct_field.is_none() {
+                    message = message + &"\"" + &parsed_filter_term.term + &"\" filter term not found in db";
+                }
+                if value_verification.is_none() {
+                    message = message
+                        + &"\""
+                        + &parsed_filter_term.value
+                        + &"\" filter value not found for filter field \""
+                        + &parsed_filter_term.term
+                        + "\" in db";
+                }
+            }
+
+            if validated_filter_terms.len() > 0 {
+                if let Some(obj) = new_json.as_object_mut() {
+                    obj.insert(String::from("filter"), serde_json::json!(validated_filter_terms));
+                }
+            }
+        }
+        None => {}
+    }
+    serde_json::to_string(&new_json).unwrap()
+}
+
+#[derive(Debug, Clone)]
+struct VerifiedField {
+    correct_field: Option<String>,         // Name of the correct field
+    correct_value: Option<String>, // Name of the correct value if there is a match between incorrect field and one of the values
+    _probable_fields: Option<Vec<String>>, // If multiple fields are matching to the incomplete query
+}
+
+fn verify_json_field(llm_field_name: &str, db_vec: &Vec<DbRows>) -> VerifiedField {
+    // Check if llm_field_name exists or not in db name field
+    let verified_result: VerifiedField;
+    if db_vec.iter().any(|item| item.name == llm_field_name) {
+        //println!("Found \"{}\" in db", llm_field_name);
+        verified_result = VerifiedField {
+            correct_field: Some(String::from(llm_field_name)),
+            correct_value: None,
+            _probable_fields: None,
+        };
+    } else {
+        println!("Did not find \"{}\" in db", llm_field_name);
+        // Check to see if llm_field_name exists as values under any of the fields
+        let (search_field, search_val) = verify_json_value(llm_field_name, &db_vec);
+
+        match search_field {
+            Some(x) => {
+                verified_result = VerifiedField {
+                    correct_field: Some(String::from(x)),
+                    correct_value: search_val,
+                    _probable_fields: None,
+                };
+            }
+            None => {
+                // Incorrect field found neither in any of the fields nor any of the values. This will then invoke embedding match across all the fields and their corresponding values
+
+                let mut search_terms = Vec::<String>::new();
+                search_terms.push(String::from(llm_field_name)); // Added the incorrect field item to the search
+                verified_result = VerifiedField {
+                    correct_field: None,
+                    correct_value: None,
+                    _probable_fields: None,
+                };
+            }
+        }
+    }
+    verified_result
+}
+
+fn verify_json_value(llm_value_name: &str, db_vec: &Vec<DbRows>) -> (Option<String>, Option<String>) {
+    let mut search_field: Option<String> = None;
+    let mut search_val: Option<String> = None;
+    for item in db_vec {
+        for val in &item.values {
+            if llm_value_name == val {
+                search_field = Some(item.name.clone());
+                search_val = Some(String::from(val));
+                break;
+            }
+        }
+        match search_field {
+            Some(_) => break,
+            None => {}
+        }
+    }
+    (search_field, search_val)
+}
+
+#[allow(dead_code)] // Older version of validated code, will be deleted later
 fn validate_summary_output(raw_llm_json: String, db_vec: Vec<DbRows>) -> String {
     let json_value: Value = serde_json::from_str(&raw_llm_json).expect("Did not get a valid JSON from the LLM");
     let mut message: String = String::from("");
@@ -839,75 +1011,4 @@ fn validate_summary_output(raw_llm_json: String, db_vec: Vec<DbRows>) -> String 
         }
     }
     serde_json::to_string(&new_json).unwrap()
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-struct FilterTerm {
-    term: String,
-    value: String,
-}
-
-#[derive(Debug, Clone)]
-struct VerifiedField {
-    correct_field: Option<String>,         // Name of the correct field
-    correct_value: Option<String>, // Name of the correct value if there is a match between incorrect field and one of the values
-    _probable_fields: Option<Vec<String>>, // If multiple fields are matching to the incomplete query
-}
-
-fn verify_json_field(llm_field_name: &str, db_vec: &Vec<DbRows>) -> VerifiedField {
-    // Check if llm_field_name exists or not in db name field
-    let verified_result: VerifiedField;
-    if db_vec.iter().any(|item| item.name == llm_field_name) {
-        //println!("Found \"{}\" in db", llm_field_name);
-        verified_result = VerifiedField {
-            correct_field: Some(String::from(llm_field_name)),
-            correct_value: None,
-            _probable_fields: None,
-        };
-    } else {
-        println!("Did not find \"{}\" in db", llm_field_name);
-        // Check to see if llm_field_name exists as values under any of the fields
-        let (search_field, search_val) = verify_json_value(llm_field_name, &db_vec);
-
-        match search_field {
-            Some(x) => {
-                verified_result = VerifiedField {
-                    correct_field: Some(String::from(x)),
-                    correct_value: search_val,
-                    _probable_fields: None,
-                };
-            }
-            None => {
-                // Incorrect field found neither in any of the fields nor any of the values. This will then invoke embedding match across all the fields and their corresponding values
-
-                let mut search_terms = Vec::<String>::new();
-                search_terms.push(String::from(llm_field_name)); // Added the incorrect field item to the search
-                verified_result = VerifiedField {
-                    correct_field: None,
-                    correct_value: None,
-                    _probable_fields: None,
-                };
-            }
-        }
-    }
-    verified_result
-}
-
-fn verify_json_value(llm_value_name: &str, db_vec: &Vec<DbRows>) -> (Option<String>, Option<String>) {
-    let mut search_field: Option<String> = None;
-    let mut search_val: Option<String> = None;
-    for item in db_vec {
-        for val in &item.values {
-            if llm_value_name == val {
-                search_field = Some(item.name.clone());
-                search_val = Some(String::from(val));
-                break;
-            }
-        }
-        match search_field {
-            Some(_) => break,
-            None => {}
-        }
-    }
-    (search_field, search_val)
 }
