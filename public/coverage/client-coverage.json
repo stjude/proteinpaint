@@ -4934,37 +4934,37 @@
   "tw/numeric.ts": {
     "lines": {
       "total": 130,
-      "covered": 86,
+      "covered": 44,
       "skipped": 0,
-      "pct": 66.15
+      "pct": 33.84
     },
     "functions": {
       "total": 17,
-      "covered": 11,
+      "covered": 4,
       "skipped": 0,
-      "pct": 64.7
+      "pct": 23.52
     },
     "statements": {
       "total": 175,
-      "covered": 97,
+      "covered": 51,
       "skipped": 0,
-      "pct": 55.42
+      "pct": 29.14
     },
     "branches": {
       "total": 159,
-      "covered": 85,
+      "covered": 46,
       "skipped": 0,
-      "pct": 53.45
+      "pct": 28.93
     },
     "lowestPct": {
-      "curr": 53.45,
-      "prev": 41.17,
-      "diff": 12.280000000000001
+      "curr": 23.52,
+      "prev": 53.45,
+      "diff": -29.930000000000003
     },
     "averagePct": {
-      "curr": 59.93000000000001,
-      "prev": 53.735,
-      "diff": 6.195000000000007
+      "curr": 28.8575,
+      "prev": 59.93000000000001,
+      "diff": -31.072500000000005
     }
   },
   "plots/barchart.data.js": {
