@@ -57,8 +57,9 @@ export class StoreBase {
 
 	deepFreeze(obj) {
 		Object.freeze(obj)
-		for (const key in obj) {
-			if (typeof obj == 'object') this.deepFreeze(obj[key])
+		// not using for..in loop, in order to not descend into inherited props/methods
+		for (const value of Object.values(obj)) {
+			if (value !== null && typeof value == 'object') this.deepFreeze(value)
 		}
 	}
 

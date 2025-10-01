@@ -31,6 +31,7 @@ export function deepEqual(x, y) {
 		const xEntries = Object.entries(x)
 		const yKeys = Object.keys(y)
 		if (xEntries.length != yKeys.length) return false
+		// not using for..in loop, in order to not descend into inherited props/methods
 		for (const [key, val] of xEntries) {
 			if (!yKeys.includes(key)) return false
 			if (!deepEqual(val, y[key])) return false
@@ -41,8 +42,9 @@ export function deepEqual(x, y) {
 
 export function deepFreeze(obj) {
 	Object.freeze(obj)
+	// not using for..in loop, in order to not descend into inherited props/methods
 	for (const value of Object.values(obj)) {
-		if (value && typeof value == 'object') deepFreeze(value)
+		if (value !== null && typeof value == 'object') deepFreeze(value)
 	}
 }
 
