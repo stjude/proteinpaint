@@ -743,78 +743,92 @@ fn validate_summary_output(raw_llm_json: String, db_vec: Vec<DbRows>) -> String 
         new_json = serde_json::json!(null);
     } else {
         new_json = serde_json::from_str(&"{\"action\":\"summary\"}").expect("Not a valid JSON");
-        let summary_terms: &Value = &json_value["terms"];
-        if let Value::Array(summary_terms_array) = summary_terms {
-            let mut validated_summary_terms = Vec::<String>::new();
-            for sum_term in summary_terms_array {
-                let term_verification = verify_json_field(sum_term.as_str().unwrap(), &db_vec);
-                if Some(term_verification.correct_field.clone()).is_some()
-                    && term_verification.correct_value.clone().is_none()
-                {
-                    match term_verification.correct_field {
-                        Some(tm) => validated_summary_terms.push(tm),
-                        None => message = message + &"\"" + &sum_term.as_str().unwrap() + &"\"" + &" not found in db.",
+        if json_value.is_object() {
+            if json_value.as_object().unwrap().contains_key("terms") {
+                let summary_terms: &Value = &json_value["terms"];
+                if let Value::Array(summary_terms_array) = summary_terms {
+                    let mut validated_summary_terms = Vec::<String>::new();
+                    for sum_term in summary_terms_array {
+                        let term_verification = verify_json_field(sum_term.as_str().unwrap(), &db_vec);
+                        if Some(term_verification.correct_field.clone()).is_some()
+                            && term_verification.correct_value.clone().is_none()
+                        {
+                            match term_verification.correct_field {
+                                Some(tm) => validated_summary_terms.push(tm),
+                                None => {
+                                    message =
+                                        message + &"\"" + &sum_term.as_str().unwrap() + &"\"" + &" not found in db."
+                                }
+                            }
+                        } else if Some(term_verification.correct_field.clone()).is_some()
+                            && Some(term_verification.correct_value.clone()).is_some()
+                        {
+                            message = message
+                                + &term_verification.correct_value.unwrap()
+                                + &"is a value of "
+                                + &term_verification.correct_field.unwrap()
+                                + &".";
+                        }
                     }
-                } else if Some(term_verification.correct_field.clone()).is_some()
-                    && Some(term_verification.correct_value.clone()).is_some()
-                {
-                    message = message
-                        + &term_verification.correct_value.unwrap()
-                        + &"is a value of "
-                        + &term_verification.correct_field.unwrap()
-                        + &".";
+                    if let Some(obj) = new_json.as_object_mut() {
+                        obj.insert(String::from("terms"), serde_json::json!(validated_summary_terms));
+                    }
                 }
+            } else {
+                message = message + &"JSON does not contain \"terms\" object."
             }
-            if let Some(obj) = new_json.as_object_mut() {
-                obj.insert(String::from("terms"), serde_json::json!(validated_summary_terms));
-            }
-        }
-        let filter_terms: &Value = &json_value["filter"];
-        if let Value::Array(filter_terms_array) = filter_terms {
-            let mut validated_filter_terms = Vec::<FilterTerm>::new();
-            for filter_term in filter_terms_array {
-                let parsed_filter_term: FilterTerm = serde_json::from_str(&filter_term.to_string())
-                    .expect("filter JSON term not in {term, value} format");
-                let term_verification = verify_json_field(&parsed_filter_term.term, &db_vec);
-                let mut value_verification: Option<String> = None;
-                for item in &db_vec {
-                    if &item.name == &parsed_filter_term.term {
-                        for val in &item.values {
-                            if &parsed_filter_term.value == val {
-                                value_verification = Some(val.clone());
+            if json_value.as_object().unwrap().contains_key("filter") {
+                // Filter object is optional
+                let filter_terms: &Value = &json_value["filter"];
+                if let Value::Array(filter_terms_array) = filter_terms {
+                    let mut validated_filter_terms = Vec::<FilterTerm>::new();
+                    for filter_term in filter_terms_array {
+                        let parsed_filter_term: FilterTerm = serde_json::from_str(&filter_term.to_string())
+                            .expect("filter JSON term not in {term, value} format");
+                        let term_verification = verify_json_field(&parsed_filter_term.term, &db_vec);
+                        let mut value_verification: Option<String> = None;
+                        for item in &db_vec {
+                            if &item.name == &parsed_filter_term.term {
+                                for val in &item.values {
+                                    if &parsed_filter_term.value == val {
+                                        value_verification = Some(val.clone());
+                                        break;
+                                    }
+                                }
+                            }
+                            if value_verification != None {
                                 break;
                             }
                         }
+                        if term_verification.correct_field.is_some() && value_verification.is_some() {
+                            let verified_filter = FilterTerm {
+                                term: term_verification.correct_field.clone().unwrap(),
+                                value: value_verification.clone().unwrap(),
+                            };
+                            validated_filter_terms.push(verified_filter);
+                        }
+                        if term_verification.correct_field.is_none() {
+                            message = message + &"\"" + &parsed_filter_term.term + &"\" filter term not found in db";
+                        }
+                        if value_verification.is_none() {
+                            message = message
+                                + &"\""
+                                + &parsed_filter_term.value
+                                + &"\" filter value not found for filter field \""
+                                + &parsed_filter_term.term
+                                + "\" in db";
+                        }
                     }
-                    if value_verification != None {
-                        break;
-                    }
-                }
-                if term_verification.correct_field.is_some() && value_verification.is_some() {
-                    let verified_filter = FilterTerm {
-                        term: term_verification.correct_field.clone().unwrap(),
-                        value: value_verification.clone().unwrap(),
-                    };
-                    validated_filter_terms.push(verified_filter);
-                }
-                if term_verification.correct_field.is_none() {
-                    message = message + &"\"" + &parsed_filter_term.term + &"\" filter term not found in db";
-                }
-                if value_verification.is_none() {
-                    message = message
-                        + &"\""
-                        + &parsed_filter_term.value
-                        + &"\" filter value not found for filter field \""
-                        + &parsed_filter_term.term
-                        + "\" in db";
-                }
-            }
 
-            if validated_filter_terms.len() > 0 {
-                if let Some(obj) = new_json.as_object_mut() {
-                    obj.insert(String::from("filter"), serde_json::json!(validated_filter_terms));
+                    if validated_filter_terms.len() > 0 {
+                        if let Some(obj) = new_json.as_object_mut() {
+                            obj.insert(String::from("filter"), serde_json::json!(validated_filter_terms));
+                        }
+                    }
                 }
             }
+        } else {
+            message = message + &"JSON does not contain objects."
         }
     }
     if message.len() > 0 {
