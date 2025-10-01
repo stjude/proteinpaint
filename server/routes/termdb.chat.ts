@@ -3,6 +3,7 @@ import { ChatPayload } from '#types/checkers'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
+import path from 'path'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/chat',
@@ -48,7 +49,8 @@ function init({ genomes }) {
 				// Just hardcoding variables here, these will later be defined in more appropriate places
 				user_input: q.prompt,
 				apilink: apilink,
-				dataset_db: serverconfig.tpmasterdir + '/' + ds.cohort.db.file,
+				dataset_db: path.join(serverconfig.tpmasterdir, ds.cohort.db.file),
+				genedb: path.join(serverconfig.tpmasterdir, genomes[q.genome].genedb.dbfile),
 				comp_model_name: comp_model_name,
 				embedding_model_name: embedding_model_name,
 				llm_backend_name: serverconfig.llm_backend // The type of backend (engine) used for running the embedding and completion model. Currently "SJ" and "Ollama" are supported
