@@ -133,7 +133,7 @@ export default function setViolinRenderer(self) {
 			maxPlotCount = Math.max(maxPlotCount, chart.plots.length)
 		}
 		if (maxPlotCount == 1) return 150
-		return Math.min(130, Math.max(60, 600 / maxPlotCount)) //clamp between 60 and 130
+		return Math.min(100, Math.max(40, 600 / maxPlotCount)) //clamp between 60 and 130
 	}
 
 	self.getPlotThicknessWithPadding = function () {

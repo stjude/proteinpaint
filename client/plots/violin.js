@@ -173,16 +173,6 @@ class ViolinPlot {
 				min: 4
 			},
 			{
-				label: 'Stroke width',
-				title: 'Size of Symbol stroke',
-				type: 'number',
-				chartType: 'violin',
-				settingsKey: 'strokeWidth',
-				step: 0.1,
-				max: 2,
-				min: 0.1
-			},
-			{
 				label: 'Bins',
 				type: 'number',
 				chartType: 'violin',
@@ -191,7 +181,6 @@ class ViolinPlot {
 				min: 1,
 				max: 50
 			},
-
 			{
 				label: 'Plot length',
 				title: 'Length of the plot',
@@ -200,7 +189,7 @@ class ViolinPlot {
 				settingsKey: 'svgw',
 				step: 10,
 				max: 1000,
-				min: 500,
+				min: 200,
 				debounceInterval: 1000
 			},
 			{
@@ -211,7 +200,7 @@ class ViolinPlot {
 				settingsKey: 'plotThickness',
 				step: 10,
 				max: 200,
-				min: 40,
+				min: 20,
 				debounceInterval: 1000
 			},
 			{
@@ -340,7 +329,6 @@ class ViolinPlot {
 			devicePixelRatio: window.devicePixelRatio,
 			datasymbol: s.datasymbol,
 			radius: s.radius,
-			strokeWidth: s.strokeWidth,
 			axisHeight: s.axisHeight,
 			rightMargin: s.rightMargin,
 			unit: s.unit,
@@ -394,7 +382,6 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		svgw: 500, // span length of a plot/svg, not including margin
 		datasymbol: 'rug',
 		radius: 10,
-		strokeWidth: 0.2,
 		axisHeight: 60,
 		rightMargin: 50,
 		lines: [],
