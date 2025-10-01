@@ -697,6 +697,7 @@ async fn make_summary_chart(
     ];
     let user_words: Vec<&str> = user_input.split_whitespace().collect();
     let user_words2: Vec<String> = user_words.into_iter().map(|s| s.to_string()).collect();
+    // MUST CONVERT gene names and sentence to UPPER CASE BEFORE keyword search
     let common: Vec<String> = gene_list.into_iter().filter(|x| user_words2.contains(&x)).collect();
     contents[0].clone() // Temporary addition so as to avoid compilation errors, MUST be replaced with correct LLM output
 }
