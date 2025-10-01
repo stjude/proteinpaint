@@ -311,8 +311,9 @@ export class Barchart {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
-		const parentConfig = appState.plots.find(p => p.id === this.parentId)
-		const termfilter = getCombinedTermFilter(appState, parentConfig?.filter)
+		const parentConfig = this.parentId && appState.plots.find(p => p.id === this.parentId)
+		// TODO: may need to combine parentConfig.filter with local config.filter
+		const termfilter = getCombinedTermFilter(appState, config.filter || parentConfig?.filter)
 		return {
 			nav: {
 				header_mode: appState.nav.header_mode

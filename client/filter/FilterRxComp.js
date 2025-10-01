@@ -7,6 +7,7 @@ class FilterRxComp extends Filter {
 	constructor(opts) {
 		super(opts)
 		this.type = 'filter'
+		this.parentId = opts.parentId
 		this.initHolder()
 		// rx.getCompInit() will create this.opts, this.api
 	}
@@ -17,8 +18,10 @@ class FilterRxComp extends Filter {
 	}
 
 	getState(appState) {
+		const parentConfig = this.parentId && appState.plots.find(p => p.id === this.parentId)
+		const defaultFilter = { type: 'tvslst', join: '', lst: [] }
 		return {
-			termfilter: appState.termfilter,
+			termfilter: { filter: parentConfig?.filter || defaultFilter },
 			activeCohort: appState.activeCohort
 		}
 	}
@@ -32,8 +35,8 @@ class FilterRxComp extends Filter {
 			return
 		}
 		this.dom.holder.style('display', 'inline-block')
-		const rawCopy = JSON.stringify(rawFilter || f.filter)
-		super.main(rawCopy, { activeCohort: this.state.activeCohort })
+		this.rawCopy = JSON.stringify(rawFilter || f?.filter)
+		super.main(this.rawCopy, { activeCohort: this.state.activeCohort })
 	}
 
 	initHolder() {
