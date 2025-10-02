@@ -74,7 +74,7 @@ class MassPlot {
 			vocabApi: this.app.vocabApi,
 			parentId: this.id,
 			holder: this.dom.filterDiv,
-			hideLabel: this.opts.header_mode === 'with_tabs',
+			hideLabel: true,
 			emptyLabel: '+Add new filter',
 			callback: filter => {
 				this.app.dispatch({
@@ -82,8 +82,7 @@ class MassPlot {
 					type: 'plot_edit',
 					config: { filter }
 				})
-			},
-			hideLabel: true
+			}
 		})
 
 		/******* reason for passing plotDiv to chart ********
