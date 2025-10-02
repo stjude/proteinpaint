@@ -249,7 +249,6 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	mayLog(`[GRIN2] Python processing took ${grin2AnalysisTimeToPrint} seconds`)
 
 	// Step 5: Parse results and respond
-	// mayLog(`[GRIN2] Full pyResult object:`, pyResult)
 	const resultData = JSON.parse(pyResult)
 
 	// Validate Python script output
