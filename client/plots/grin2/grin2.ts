@@ -557,9 +557,23 @@ class GRIN2 extends PlotBase implements RxComponent {
 				margin: this.btnMargin
 			})
 
-			Object.entries(result.processingSummary).forEach(([key, value]) => {
+			Object.entries(result.processingSummary ?? {}).forEach(([key, value]) => {
 				const displayKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
-				const displayValue = Array.isArray(value) ? value.join(', ') : String(value)
+
+				let displayValue: string
+
+				if (Array.isArray(value)) {
+					displayValue = value.join(', ')
+				} else if (typeof value === 'number') {
+					displayValue = value.toLocaleString()
+				} else if (value && typeof value === 'object') {
+					// Special handling for processedByType (record of type -> number)
+					const entries = Object.entries(value as Record<string, number>)
+					displayValue = entries.map(([t, v]) => `${t}: ${v.toLocaleString()}`).join(', ')
+				} else {
+					displayValue = value == null ? '' : String(value)
+				}
+
 				table.addRow(displayKey, displayValue)
 			})
 		}
