@@ -553,7 +553,7 @@ export async function listSamples(arg) {
 	}
 
 	// query sample data
-	const { event, self, terms, tvslst, geneVariant } = arg
+	const { event, self, terms, tvslst, geneVariant, tip } = arg
 	const opts = {
 		terms,
 		filter: filterJoin([self.state.termfilter.filter, tvslst]),
@@ -625,18 +625,25 @@ export async function listSamples(arg) {
 		}
 	}
 
-	// render table
-	const menu = new Menu({ padding: '5px' })
-	const div = menu.d.append('div')
+	// render table in div. from now on arg.tip should always be given
+	let div
+	if (tip) {
+		div = tip.d
+		tip.clear().show(event.clientX, event.clientY, false)
+	} else {
+		const menu = new Menu({ padding: '5px' })
+		menu.show(event.clientX, event.clientY, false)
+		div = menu.d.append('div')
+	}
 	renderTable({
 		rows,
 		columns,
 		div,
 		showLines: true,
 		maxHeight: '40vh',
-		resize: true
+		resize: true,
+		dataTestId: 'sjpp-listsampletable'
 	})
-	menu.show(event.clientX, event.clientY, false)
 }
 
 // if geneVariant term is present, filter sample by its geneVariant group assignment
