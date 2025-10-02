@@ -6914,37 +6914,37 @@
   "plots/violin.interactivity.js": {
     "lines": {
       "total": 154,
-      "covered": 33,
+      "covered": 65,
       "skipped": 0,
-      "pct": 21.42
+      "pct": 42.2
     },
     "functions": {
-      "total": 27,
-      "covered": 4,
+      "total": 28,
+      "covered": 11,
       "skipped": 0,
-      "pct": 14.81
+      "pct": 39.28
     },
     "statements": {
       "total": 163,
-      "covered": 33,
+      "covered": 65,
       "skipped": 0,
-      "pct": 20.24
+      "pct": 39.87
     },
     "branches": {
       "total": 116,
-      "covered": 11,
+      "covered": 35,
       "skipped": 0,
-      "pct": 9.48
+      "pct": 30.17
     },
     "lowestPct": {
-      "curr": 9.48,
+      "curr": 30.17,
       "prev": 9.48,
-      "diff": 0
+      "diff": 20.69
     },
     "averagePct": {
-      "curr": 16.4875,
+      "curr": 37.879999999999995,
       "prev": 16.4875,
-      "diff": 0
+      "diff": 21.392499999999995
     }
   },
   "plots/violin.js": {
@@ -6985,38 +6985,38 @@
   },
   "plots/violin.renderer.js": {
     "lines": {
-      "total": 223,
-      "covered": 199,
+      "total": 222,
+      "covered": 200,
       "skipped": 0,
-      "pct": 89.23
+      "pct": 90.09
     },
     "functions": {
       "total": 43,
-      "covered": 36,
+      "covered": 37,
       "skipped": 0,
-      "pct": 83.72
+      "pct": 86.04
     },
     "statements": {
-      "total": 247,
-      "covered": 216,
+      "total": 246,
+      "covered": 217,
       "skipped": 0,
-      "pct": 87.44
+      "pct": 88.21
     },
     "branches": {
       "total": 255,
-      "covered": 202,
+      "covered": 201,
       "skipped": 0,
-      "pct": 79.21
+      "pct": 78.82
     },
     "lowestPct": {
-      "curr": 79.21,
+      "curr": 78.82,
       "prev": 79.21,
-      "diff": 0
+      "diff": -0.39000000000000057
     },
     "averagePct": {
-      "curr": 84.89999999999999,
+      "curr": 85.78999999999999,
       "prev": 84.89999999999999,
-      "diff": 0
+      "diff": 0.8900000000000006
     }
   },
   "src/block.tk.bam.js": {
@@ -7597,38 +7597,38 @@
   },
   "plots/test/violin.integration.spec.js": {
     "lines": {
-      "total": 381,
-      "covered": 358,
+      "total": 367,
+      "covered": 357,
       "skipped": 0,
-      "pct": 93.96
+      "pct": 97.27
     },
     "functions": {
-      "total": 93,
-      "covered": 87,
+      "total": 85,
+      "covered": 82,
       "skipped": 0,
-      "pct": 93.54
+      "pct": 96.47
     },
     "statements": {
-      "total": 403,
-      "covered": 378,
+      "total": 388,
+      "covered": 377,
       "skipped": 0,
-      "pct": 93.79
+      "pct": 97.16
     },
     "branches": {
-      "total": 48,
-      "covered": 22,
+      "total": 44,
+      "covered": 21,
       "skipped": 0,
-      "pct": 45.83
+      "pct": 47.72
     },
     "lowestPct": {
-      "curr": 45.83,
-      "prev": 45.23,
-      "diff": 0.6000000000000014
+      "curr": 47.72,
+      "prev": 45.83,
+      "diff": 1.8900000000000006
     },
     "averagePct": {
-      "curr": 81.78,
-      "prev": 81.71000000000001,
-      "diff": 0.06999999999999318
+      "curr": 84.655,
+      "prev": 81.78,
+      "diff": 2.875
     }
   },
   "termsetting/handlers/singleCellCellType.ts": {
