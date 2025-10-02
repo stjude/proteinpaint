@@ -338,7 +338,8 @@ class ViolinPlot {
 			rightMargin: s.rightMargin,
 			unit: s.unit,
 			ticks: s.ticks,
-			orderByMedian: s.orderByMedian
+			orderByMedian: s.orderByMedian,
+			filter: this.state.termfilter.filter
 		}
 
 		if (this.opts.mode == 'minimal') {
