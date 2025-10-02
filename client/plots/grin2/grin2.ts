@@ -566,10 +566,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 					displayValue = value.join(', ')
 				} else if (typeof value === 'number') {
 					displayValue = value.toLocaleString()
-				} else if (value && typeof value === 'object') {
-					// Special handling for processedByType (record of type -> number)
-					const entries = Object.entries(value as Record<string, number>)
-					displayValue = entries.map(([t, v]) => `${t}: ${v.toLocaleString()}`).join(', ')
 				} else {
 					displayValue = value == null ? '' : String(value)
 				}
@@ -587,6 +583,19 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.style('color', this.optionsTextColor)
 				.text(
 					`Analysis completed in ${result.timing.totalTime}s (Processing: ${result.timing.processingTime}s, GRIN2: ${result.timing.grin2Time}s)`
+				)
+		}
+
+		// If we didn't process all samples, note that caps truncated the run
+		if (result.processingSummary.processedSamples < result.processingSummary.totalSamples) {
+			this.dom.div
+				.append('div')
+				.style('margin', this.sectionMargin)
+				.style('font-size', `${this.optionsTextFontSize}px`)
+				.style('color', this.optionsTextColor)
+				.text(
+					`Note: Per-type lesion caps were reached before all samples could be processed. ` +
+						`Analysis ran on ${result.processingSummary?.processedSamples} of ${result.processingSummary?.totalSamples} samples.`
 				)
 		}
 	}
