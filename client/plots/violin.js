@@ -1,7 +1,8 @@
 import { getCompInit, copyMerge } from '../rx'
 import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from './controls'
 import setViolinRenderer from './violin.renderer'
-import htmlLegend from '../dom/html.legend'
+//import htmlLegend from '../dom/html.legend'
+import { htmlLegend, Menu } from '#dom'
 import { fillTermWrapper } from '#termsetting'
 import { setInteractivity } from './violin.interactivity'
 import { plotColor } from '#shared/common.js'
@@ -32,6 +33,7 @@ class ViolinPlot {
 			.attr('id', 'sjpp-vp-holder')
 
 		this.dom = {
+			tip: new Menu(),
 			header: this.opts.header,
 			loadingDiv: this.opts.holder
 				.append('div')

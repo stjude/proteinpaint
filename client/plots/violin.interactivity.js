@@ -203,7 +203,8 @@ export function setInteractivity(self) {
 			self,
 			terms,
 			tvslst,
-			geneVariant
+			geneVariant,
+			tip: self.dom.tip
 		}
 		await listSamples(arg)
 	}

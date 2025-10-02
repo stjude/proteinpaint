@@ -1,8 +1,14 @@
-import { isDictionaryType, TermTypes, getBin } from '#shared/terms.js'
-import { getParentType, getSampleType, dtTermTypes } from '#shared/terms.js'
+import {
+	isDictionaryType,
+	TermTypes,
+	getBin,
+	annoNumericTypes,
+	getParentType,
+	getSampleType,
+	dtTermTypes
+} from '#shared/terms.js'
 import { getSnpData } from './termdb.matrix.js'
 import { filterByItem } from './mds3.init.js'
-import { annoNumericTypes } from '#shared/terms.js'
 
 /*
 ds: required by get_numerical()
@@ -15,8 +21,11 @@ Recursively generates CTE statements based on the nested filter
 each run processes one level of filter.lst[]
 One CTE is made for each item of filter.lst[], with name "CTEname_<i>"
 A superCTE is made to cap this level, with name "CTEname"
-
 */
+
+// dummy $id for making up tw from tvs ({$id,term:tvs:term}) as required by getters
+const $id = 'xx'
+
 export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname = 'f') {
 	if (!filter) return
 	if (filter.type != 'tvslst') throw 'filter.type is not "tvslst" but: ' + filter.type
@@ -205,7 +214,7 @@ function get_samplelst(tvs, CTEname, ds, sample_type, onlyChildren) {
 // TODO: may retire get_geneVariant() as geneVariant filtering is now
 // performed by get_dtTerm()
 async function get_geneVariant(tvs, CTEname, ds, onlyChildren) {
-	const tw = { $id: Math.random().toString(), term: tvs.term, q: {} }
+	const tw = { $id, term: tvs.term, q: {} }
 	const data = await ds.mayGetGeneVariantData(tw, { genome: ds.genomename })
 	/*
 	data here is map of sampleId-mutationData pairs, e.g.
@@ -214,7 +223,7 @@ async function get_geneVariant(tvs, CTEname, ds, onlyChildren) {
 	*/
 	const samplenames = []
 	for (const [key, value] of data) {
-		const sampleValues = value[tw.$id].values
+		const sampleValues = value[$id].values
 		/*
 		sampleVlaues here is an array of results for each available dt for the sampleID. e.g.
 		[
@@ -293,20 +302,20 @@ async function get_snp(tvs, CTEname, ds) {
 async function get_geneExpression(tvs, CTEname, ds) {
 	const q = ds.queries?.geneExpression
 	if (!q) throw 'not supported' // guard against request to unsupported data. FIXME may improve filterui to gracefully handle such and avoid showing completely broken mass ui when the request comes from handwrite state or url
-	const data = await q.get({ terms: [tvs.term] })
-	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get(tvs.term.gene))
+	const data = await q.get({ terms: [{ $id, term: tvs.term }] })
+	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
 async function get_metaboliteIntensity(tvs, CTEname, ds) {
 	const q = ds.queries?.metaboliteIntensity
 	if (!q) throw 'not supported'
-	const data = await q.get({ terms: [tvs.term] })
-	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get(tvs.term.name))
+	const data = await q.get({ terms: [{ $id, term: tvs.term }] })
+	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
 async function get_ssGSEA(tvs, CTEname, ds) {
 	const q = ds.queries?.ssGSEA
 	if (!q) throw 'not supported'
-	const data = await q.get({ terms: [tvs.term] })
-	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get(tvs.term.id))
+	const data = await q.get({ terms: [{ $id, term: tvs.term }] })
+	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
 
 function numericSampleData2tvs(tvs, CTEname, termData) {
@@ -336,12 +345,12 @@ function numericSampleData2tvs(tvs, CTEname, termData) {
 }
 
 async function get_dtTerm(tvs, CTEname, ds) {
-	const tw = { $id: Math.random().toString(), term: tvs.term.parentTerm, q: {} }
+	const tw = { $id, term: tvs.term.parentTerm, q: {} }
 	const data = await ds.mayGetGeneVariantData(tw, { genome: ds.genomename })
 
 	const samples = []
 	for (const [sample, value] of data) {
-		const mlst = value[tw.$id]?.values
+		const mlst = value[$id]?.values
 		if (!mlst) throw 'mlst is missing'
 		const filter = { type: 'tvs', tvs }
 		const [pass, tested] = filterByItem(filter, mlst)
