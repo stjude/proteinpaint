@@ -54,25 +54,14 @@ tape('general rendering in agedx/sex', function (test) {
 		const violinDivControls = violin.Inner.dom.controls
 		const violinDivData = violin.Inner.data.charts
 
-		await testViolinPath(violinDiv) //test if violin path is generated. should be more than 0
+		await testViolinByCount(test, violinDiv, 2)
 		testPlotTitle(violinDiv, violinDivControls) //test if label in ts-pill is same as title on svg.
-		testDataLength(violinDiv, violinDivData) //test if length of samples is same as shown in plot labels
+		await testLabelHoverClick(test, violin, violinDiv, 2)
 		testPvalue(violin, violinDiv, violinDivData)
 		testDescrStats(violin, legendDiv)
 		await testMedianRendering(violin, violinDiv)
-
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
-	}
-
-	async function testViolinPath(violinDiv) {
-		await detectOne({ elem: violinDiv.node(), selector: 'svg' })
-		const noPlotNum = 0
-		const actualPlotNum = violinDiv.selectAll('.sjpp-violinG').size()
-		test.true(
-			noPlotNum < actualPlotNum,
-			`should have more than ${noPlotNum} plots, actual plot no. is ${actualPlotNum}`
-		)
 	}
 
 	function testPlotTitle(violinDiv, violinDivControls) {
@@ -82,30 +71,6 @@ tape('general rendering in agedx/sex', function (test) {
 			label,
 			'Plot title is same as ts-pill label'
 		)
-	}
-
-	function testDataLength(violinDiv, violinDivData) {
-		const axisLabelNodes = violinDiv.selectAll('.sjpp-axislabel').nodes()
-		const plots = violinDivData[''].plots
-		const plotValueCount1 = plots[0]?.plotValueCount
-
-		const plotValueCount2 = plots[1]?.plotValueCount
-
-		if (plotValueCount1) {
-			test.equal(
-				+axisLabelNodes[0].innerHTML.split('=')[1],
-				plotValueCount1,
-				`There are ${plotValueCount1} values for Female`
-			)
-		}
-
-		if (plotValueCount2) {
-			test.equal(
-				+axisLabelNodes[1].innerHTML.split('=')[1],
-				plotValueCount2,
-				`There are ${plotValueCount2} values for Male`
-			)
-		}
 	}
 
 	function testPvalue(violin, violinDiv, violinDivData) {
@@ -1347,6 +1312,11 @@ async function testLabelHoverClick(test, violin, violinDiv, labelcount) {
 		count: labelcount
 	})
 	test.ok(labs, `Detected ${labelcount} violin labels`)
+	// this test only work without term0 and can be generalized
+	for (let i = 0; i < labelcount; i++) {
+		const n = violin.Inner.data.charts[''].plots[i].values.length
+		test.ok(labs[i].innerHTML.endsWith('n=' + n), `violin #${i} label text ends with "n=${n}"`)
+	}
 
 	// test mouseover
 	labs[0].dispatchEvent(new Event('mouseover'), { bubbles: true })
@@ -1370,6 +1340,7 @@ async function testLabelHoverClick(test, violin, violinDiv, labelcount) {
 		// option "List sample" is conditional; lacks way to test different conditions
 		await detectOne({ elem: tip.dnode, selector: '[data-testid="sjpp-violinLabOpt-list"]' })
 		test.pass('List option is in menu')
+		tip.hide()
 	}
 }
 // detect given number of violin svg <path>
@@ -1377,5 +1348,5 @@ async function testViolinByCount(test, violinDiv, count) {
 	// FIXME detectLst for specific number of <path> doesn't work
 	//const groups = await detectLst({ elem: violinDiv.node(), selector: 'path.sjpp-vp-path', count })
 	const groups = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-vp-path', count })
-	test.ok(groups, `Detected ${count} violin <path>`)
+	test.ok(groups, `Detected ${count} violin <path class=sjpp-vp-path>`)
 }
