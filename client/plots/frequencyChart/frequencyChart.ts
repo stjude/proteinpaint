@@ -7,7 +7,6 @@ import { plotColor } from '#shared/common.js'
 import { ScatterInteractivity } from '../scatter/viewmodel/scatterInteractivity.ts'
 import { Runchart } from '../runchart/runchart.ts'
 import { getColors } from '#shared/common.js'
-import { CategoryFiltersUI } from '#dom/categoryFiltersUI'
 
 export class FrequencyChart extends Runchart {
 	static type = 'frequencyChart'
@@ -27,15 +26,11 @@ export class FrequencyChart extends Runchart {
 		this.model = new FrequencyChartModel(this)
 		this.vm = new RunchartViewModel(this)
 		this.interactivity = new ScatterInteractivity(this)
-		if (!this.parentId && this.config.filterTWs)
-			//if you are in the report you dont show filters
-			this.selectFilters = new CategoryFiltersUI(this.view.dom.headerDiv, this, this.config)
 	}
 
 	async main() {
 		this.config = structuredClone(this.state.config)
 		this.settings = this.config.settings[this.type]
-		if (!this.parentId && this.config.filterTWs) this.selectFilters.fillFilters()
 
 		await this.model.initData()
 		await this.model.processData()
@@ -71,7 +66,6 @@ export async function getPlotConfig(opts, app) {
 		await fillTermWrapper(plot.term, app.vocabApi)
 		if (plot.term0) await fillTermWrapper(plot.term0, app.vocabApi)
 		if (plot.scaleDotTW) await fillTermWrapper(plot.scaleDotTW, app.vocabApi)
-		if (plot.filterTWs) for (const tw of plot.filterTWs) await fillTermWrapper(tw, app.vocabApi)
 
 		return plot
 	} catch (e) {
