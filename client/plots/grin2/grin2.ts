@@ -432,9 +432,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			}
 
 			const response = await dofetch3('/grin2', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(requestData)
+				body: requestData
 			})
 
 			if (response.status === 'error') {
