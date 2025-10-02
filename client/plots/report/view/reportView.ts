@@ -1,6 +1,5 @@
 import type { Report } from '../report.ts'
 import { icons as icon_functions } from '#dom/control.icons'
-import { CategoryFiltersUI } from '#dom/categoryFiltersUI'
 
 export class ReportView {
 	opts: any
@@ -21,7 +20,6 @@ export class ReportView {
 			.style('vertical-align', 'top')
 			.style('padding', '20px')
 		const headerDiv = mainDiv.append('div').style('padding', '10px')
-		this.report.selectFilters = new CategoryFiltersUI(headerDiv, this.report, this.report.config)
 
 		const downloadDiv = headerDiv
 			.append('div')

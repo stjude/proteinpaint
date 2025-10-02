@@ -39,7 +39,6 @@ export class CategoryFiltersUI {
 					const selection = selectedOptions.map((o: any) => o.text).join(', ')
 					button.text(` ${tw.term.name}: ${selection} ▼`)
 				})
-
 			select.on('mousedown', e => {
 				e.preventDefault() //prevent the select from closing on click
 				const option = e.target
