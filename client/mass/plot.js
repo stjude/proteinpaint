@@ -1,10 +1,14 @@
-import { getCompInit, copyMerge } from '#rx'
+import { getCompInit, copyMerge, multiInit } from '#rx'
 import { Menu } from '#dom/menu'
 import { recoverInit } from '../rx/src/recover'
 import { select as d3select } from 'd3-selection'
 import { importPlot } from '#plots/importPlot.js'
 import { filterRxCompInit } from '#filter'
 
+/*
+	MassPlot is a "wrapper" for chart component(s).
+	It creates expected plot-specific elements like an error div, undo-redo buttons, and local filter.
+*/
 class MassPlot {
 	constructor(opts) {
 		this.type = 'plot'
@@ -45,8 +49,10 @@ class MassPlot {
 	}
 
 	async setComponents(opts) {
-		this.components = {
-			recover: await recoverInit({
+		const _ = await importPlot(opts.chartType)
+
+		this.components = await multiInit({
+			recover: recoverInit({
 				app: this.app,
 				holder: this.dom.localRecoverDiv,
 				getState: appState => this.getState(appState),
@@ -57,46 +63,41 @@ class MassPlot {
 				plot_id: this.id,
 				maxHistoryLen: 10,
 				hideLabel: true
+			}),
+			chart: _.componentInit({
+				app: this.app,
+				holder: this.dom.viz,
+				header: this.dom.paneTitleDiv,
+				id: this.id,
+				plotDiv: d3select(this.dom.holder.app_div.node().parentNode)
+				/******* reason for passing plotDiv to chart ********
+				- this plot instance may allow to launch a new plot as a persistent sandbox
+				  inside mass plotDiv, maintaining the uniform plot appearance despite it's ad-hoc
+				  the new plot is not a formal mass plot type, and cannot be done via app.dispatch()
+				  thus the need to directly access plotDiv
+				- example: mds3 tk from genome browser can launch disco etc
+				- having access to plotDiv may offer flexibility for the plot to do stuff
+
+				since plot.js has no access to mass app .dom.plotDiv in which all apps are shown,
+				this workarounds gets the parent node of sandbox.app_div which is app.dom.plotDiv
+				*/
+			}),
+			filter: filterRxCompInit({
+				app: this.app,
+				vocabApi: this.app.vocabApi,
+				parentId: this.id,
+				holder: this.dom.filterDiv,
+				hideLabel: true,
+				emptyLabel: '+Add new filter',
+				callback: filter => {
+					this.app.dispatch({
+						id: this.id,
+						type: 'plot_edit',
+						config: { filter }
+					})
+				}
 			})
-		}
-		const _ = await importPlot(opts.chartType)
-
-		this.components.chart = await _.componentInit({
-			app: this.app,
-			holder: this.dom.viz,
-			header: this.dom.paneTitleDiv,
-			id: this.id,
-			plotDiv: d3select(this.dom.holder.app_div.node().parentNode)
 		})
-
-		this.components.filter = await filterRxCompInit({
-			app: this.app,
-			vocabApi: this.app.vocabApi,
-			parentId: this.id,
-			holder: this.dom.filterDiv,
-			hideLabel: true,
-			emptyLabel: '+Add new filter',
-			callback: filter => {
-				this.app.dispatch({
-					id: this.id,
-					type: 'plot_edit',
-					config: { filter }
-				})
-			}
-		})
-
-		/******* reason for passing plotDiv to chart ********
-
-		- this plot instance may allow to launch a new plot as a persistent sandbox
-		  inside mass plotDiv, maintaining the uniform plot appearance despite it's ad-hoc
-		  the new plot is not a formal mass plot type, and cannot be done via app.dispatch()
-		  thus the need to directly access plotDiv
-		- example: mds3 tk from genome browser can launch disco etc
-		- having access to plotDiv may offer flexibility for the plot to do stuff
-
-		since plot.js has no access to mass app .dom.plotDiv in which all apps are shown,
-		this workarounds gets the parent node of sandbox.app_div which is app.dom.plotDiv
-		*/
 	}
 
 	destroy() {
@@ -156,10 +157,4 @@ function setRenderers(self) {
 			self.dom.errdiv.style('display', 'none').text(e)
 		}
 	}
-
-	/*
-		TODO: may create option for a custom filter for this plot only,
-		which will override the app-wide filter that is set from the nav tab
-	*/
-	// self.renderFilter = function() {...}
 }
