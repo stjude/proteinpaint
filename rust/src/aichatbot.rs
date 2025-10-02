@@ -700,6 +700,8 @@ async fn extract_summary_information(
             //let mut vector_store = InMemoryVectorStore::<String>::default();
             //InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
 
+            // Need to try with schema JSON format something like this:    let schema_json = schemars::schema_for!(SummaryType); // error handling here
+            // println!("schema_json summary:{:?}", schema_json);
             let system_prompt = String::from(
                 String::from(
                     "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. There are three fields in the JSON to be returned: The {{action}} field will ALWAYS be \"summary\". The \"terms\" field should contain all the variables that the user wants to visualize and should ONLY contain names of the fields from the sqlite db. The \"filter\" field is optional and should contain the variable with which the dataset will be filtered. When the filter field is defined, it should contain an array of JSON terms. For each term add a sub-field named \"term\" containing the name of the the field from the sqlite db. If the term is of type \"categorical\", then add another subfield called \"value\" with the actual value prescribed by the user. Else if the term is of type \"float\", then add a subfield \"greaterThan\" if the minimum value of the value is provided and \"lessThan\" if the maximum value of the field is provided.\n  Example question1: \"compare age of diagnosis between patient gender for KMT2A patients\"\n Example answer1: {{\"action\":\"summary\", \"terms\":[\"Age\", \"Sex\"], filter:[ {{\"term\":\"Molecular Subtype\", \"value\":\"KMT2A\"}}]}}\n Example question2: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer2: {{\"action\":\"summary\", \"terms\":[\"Molecular Subtype\"], filter:[ {{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}  The sqlite db in plain language is as follows:\n",
@@ -746,7 +748,7 @@ async fn extract_summary_information(
     }
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct SummaryType {
     action: String,
     filter: Option<Vec<FilterTerm>>,
@@ -754,7 +756,7 @@ struct SummaryType {
     terms: Vec<String>,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct FilterTerm {
     term: String,
     value: String,
@@ -786,7 +788,9 @@ fn validate_summary_output2(raw_llm_json: String, db_vec: Vec<DbRows>) -> String
         {
             match term_verification.correct_field {
                 Some(tm) => validated_summary_terms.push(tm),
-                None => message = message + &"\"" + &sum_term + &"\"" + &" not found in db.",
+                None => {
+                    message = message + &"\"" + &sum_term + &"\"" + &" not found in db.";
+                }
             }
         } else if Some(term_verification.correct_field.clone()).is_some()
             && Some(term_verification.correct_value.clone()).is_some()
@@ -848,6 +852,13 @@ fn validate_summary_output2(raw_llm_json: String, db_vec: Vec<DbRows>) -> String
             }
         }
         None => {}
+    }
+    if message.len() > 0 {
+        if let Some(obj) = new_json.as_object_mut() {
+            // The `if let` ensures we only proceed if the top-level JSON is an object.
+            // Append a new string field.
+            obj.insert(String::from("message"), serde_json::json!(message));
+        }
     }
     serde_json::to_string(&new_json).unwrap()
 }
