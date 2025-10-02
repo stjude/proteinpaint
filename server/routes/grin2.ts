@@ -33,6 +33,9 @@ import { dtsnvindel, dtcnv, dtfusionrna } from '#shared/common.js'
  * 6. Return Manhattan plot as base64 string, top gene table, timing information, and statistically significant results that are displayed as an interactive svg
  */
 
+// Constants
+const MAX_LESIONS_PER_TYPE = 10000 // Maximum number of lesions to process per type to avoid overwhelming the production server
+
 export const api: RouteApi = {
 	endpoint: 'grin2',
 	methods: {
@@ -111,7 +114,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		} samples processed successfully`
 	)
 
-	if (processingSummary && processingSummary.failedSamples > 0) {
+	if (processingSummary?.failedSamples !== undefined && processingSummary.failedSamples > 0) {
 		mayLog(`[GRIN2] Warning: ${processingSummary.failedSamples} samples failed to process`)
 	}
 
@@ -119,11 +122,97 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		throw new Error('No lesions found after processing all samples. Check filter criteria and input data.')
 	}
 
+	// Step 2.5: Limit number of lesions per type to avoid overwhelming the production server
+	function limitLesionsByType(all: any[] | string, maxPerType: number) {
+		// Accept JSON string or array
+		const lesions: any[] = typeof all === 'string' ? JSON.parse(all) : all
+
+		// Map raw strings to our canonical buckets
+		const normalize = (s: string): 'mutation' | 'gain' | 'loss' | 'unknown' => {
+			const r = s.toLowerCase()
+			if (r.includes('gain') || r.includes('amp') || r.includes('amplification')) return 'gain'
+			if (r.includes('loss') || r.includes('del') || r.includes('deletion')) return 'loss'
+			if (r.includes('mut') || r.includes('snv') || r.includes('indel')) return 'mutation'
+			return (r as any) || 'unknown'
+		}
+
+		// Pull a type out of either a tuple or an object
+		const resolveType = (l: any): string => {
+			if (Array.isArray(l)) {
+				// Prefer 5th element (index 4) per your example
+				const idxVal = typeof l[4] === 'string' ? l[4] : undefined
+				// Fallback: last string element in the tuple
+				const lastStr = (() => {
+					for (let i = l.length - 1; i >= 0; i--) {
+						if (typeof l[i] === 'string') return l[i]
+					}
+					return undefined
+				})()
+				return normalize(idxVal ?? lastStr ?? 'unknown')
+			}
+			if (l && typeof l === 'object') {
+				return normalize(l.type ?? l.eventType ?? l.kind ?? l.datatype ?? l.category ?? 'unknown')
+			}
+			return 'unknown'
+		}
+
+		// Bucket by type
+		const buckets: Record<string, any[]> = {}
+		for (const lesion of lesions) {
+			const t = resolveType(lesion)
+			;(buckets[t] ||= []).push(lesion)
+		}
+
+		const limited: any[] = []
+		const processedByType: Record<string, number> = {}
+		let totalFound = 0
+		let truncated = false
+
+		for (const [t, arr] of Object.entries(buckets)) {
+			const totalForType = arr.length
+			totalFound += totalForType
+			const processed = Math.min(totalForType, maxPerType)
+			processedByType[t] = processed
+
+			if (processed < totalForType) {
+				truncated = true
+				mayLog(
+					`[GRIN2] Warning: ${t} lesions (${totalForType.toLocaleString()}) exceed the per-type limit of ` +
+						`${maxPerType.toLocaleString()}. Only the first ${processed.toLocaleString()} will be processed.`
+				)
+			}
+
+			limited.push(...arr.slice(0, processed))
+		}
+
+		if (Object.keys(processedByType).length === 0) {
+			mayLog('[GRIN2] Note: No lesion types resolved; check tuple shape and type position.')
+		}
+
+		return {
+			limited,
+			totalLesions: totalFound,
+			processedLesions: limited.length,
+			truncatedLesions: truncated,
+			processedByType
+		}
+	}
+
+	const { limited, totalLesions, processedLesions, processedByType } = limitLesionsByType(lesions, MAX_LESIONS_PER_TYPE)
+
+	// Update processing summary with lesion counts
+	const extendedProcessingSummary = {
+		...processingSummary,
+		totalLesions,
+		processedLesions,
+		processedByType
+	}
+
 	// Step 3: Prepare input for Python script
 	const pyInput = {
 		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 		chromosomelist: {} as { [key: string]: number },
-		lesion: JSON.stringify(lesions),
+		lesion: JSON.stringify(limited),
 		devicePixelRatio: request.devicePixelRatio,
 		pngDotRadius: request.pngDotRadius,
 		width: request.width,
@@ -142,7 +231,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		pyInput.chromosomelist[c] = g.majorchr[c]
 	}
 
-	mayLog(`[GRIN2] Prepared ${lesions.length.toLocaleString()} lesions for analysis`)
+	mayLog(`[GRIN2] Prepared ${processedLesions.toLocaleString()} lesions per type for analysis`)
 
 	// Step 4: Run GRIN2 analysis via Python
 	const grin2AnalysisStart = Date.now()
@@ -182,7 +271,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 			grin2Time: grin2AnalysisTimeToPrint,
 			totalTime: totalTime
 		},
-		processingSummary: processingSummary
+		processingSummary: extendedProcessingSummary
 	}
 
 	return response
@@ -206,7 +295,9 @@ async function processSampleData(
 		totalSamples: samples.length,
 		successfulSamples: 0,
 		failedSamples: 0,
-		failedFiles: []
+		failedFiles: [],
+		totalLesions: 0,
+		processedLesions: 0
 	}
 
 	mayLog(`[GRIN2] Processing JSON files for ${samples.length.toLocaleString()} samples`)
@@ -222,9 +313,10 @@ async function processSampleData(
 			lesions.push(...sampleLesions)
 			lesionId += sampleLesions.length
 
-			processingSummary.successfulSamples++
+			// Checking to make sure it isn't undefined, but it should never be
+			processingSummary.successfulSamples = (processingSummary.successfulSamples ?? 0) + 1
 		} catch (error) {
-			processingSummary.failedSamples++
+			processingSummary.failedSamples = (processingSummary.failedSamples ?? 0) + 1
 			processingSummary.failedFiles?.push(sample.name)
 
 			mayLog(
@@ -237,7 +329,7 @@ async function processSampleData(
 		}
 	}
 
-	mayLog(`[GRIN2] Total lesions processed: ${lesions.length.toLocaleString()}`)
+	// mayLog(`[GRIN2] Total lesions processed: ${lesions.length.toLocaleString()}`)
 
 	return {
 		lesions,
