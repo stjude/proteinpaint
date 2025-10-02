@@ -27,7 +27,6 @@ export class Report extends PlotBase implements RxComponent {
 	state!: any
 	id!: string
 	filterTWs: any[] = []
-	selectFilters: any
 
 	constructor(opts, api) {
 		super(opts, api)
@@ -89,8 +88,8 @@ export class Report extends PlotBase implements RxComponent {
 
 	async main() {
 		this.config = structuredClone(this.state.config)
+		console.log(this.config)
 		this.settings = this.config.settings.report
-		this.selectFilters.fillFilters()
 	}
 
 	async setPlot(plot, sectionDiv) {
