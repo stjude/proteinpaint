@@ -139,8 +139,6 @@ export default function (): Mds3 {
 				plotConfigByCohort: {
 					default: {
 						report: {
-							filterTWs: [{ id: 'diaggrp' }],
-
 							sections: [
 								{
 									name: 'Demographics',

@@ -1,5 +1,4 @@
 import { getCompInit, copyMerge } from '../../rx/index.js'
-import { fillTermWrapper } from '#termsetting'
 import { ReportView } from './view/reportView'
 import { type RxComponent, type ComponentApi } from '#rx'
 import { controlsInit } from '../controls.js'
@@ -26,7 +25,6 @@ export class Report extends PlotBase implements RxComponent {
 	opts: any
 	state!: any
 	id!: string
-	filterTWs: any[] = []
 
 	constructor(opts, api) {
 		super(opts, api)
@@ -88,7 +86,6 @@ export class Report extends PlotBase implements RxComponent {
 
 	async main() {
 		this.config = structuredClone(this.state.config)
-		console.log(this.config)
 		this.settings = this.config.settings.report
 	}
 
@@ -185,7 +182,6 @@ export async function getPlotConfig(opts, app) {
 		// the filter should always start with the authFilter, avoids issues with previous filters from previous sessions with different user access
 		opts.filter = authFilter
 		copyMerge(plot, config, opts)
-		if (plot.filterTWs) for (const tw of plot.filterTWs) await fillTermWrapper(tw, app.vocabApi)
 
 		return plot
 	} catch (e) {
