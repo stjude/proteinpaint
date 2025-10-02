@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- bug fix to enable listing samples from geneexp & ssgsea bar/violin
+
 
 ## 2.147.1
 
