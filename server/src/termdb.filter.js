@@ -84,7 +84,7 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 			// .values:[]
 			// .CTEname
 		} else if (item.tvs.term.type == 'survival') {
-			f = get_survival(item.tvs, CTEname_i, onlyChildren)
+			f = get_survival(item.tvs, CTEname_i, ds, onlyChildren)
 		} else if (item.tvs.term.type == 'samplelst') {
 			f = get_samplelst(item.tvs, CTEname_i, ds, sample_type, onlyChildren)
 		} else if (annoNumericTypes.has(item.tvs.term.type)) {
@@ -149,7 +149,7 @@ function get_categorical(tvs, CTEname, ds, onlyChildren) {
 	}
 }
 
-function get_survival(tvs, CTEname, onlyChildren) {
+function get_survival(tvs, CTEname, ds, onlyChildren) {
 	let query = `SELECT sample
 	FROM survival
 	WHERE term_id = ?
