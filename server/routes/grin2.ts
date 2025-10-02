@@ -109,7 +109,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	const processingTimeToPrint = Math.round(processingTime / 1000)
 	mayLog(`[GRIN2] Data processing took ${processingTimeToPrint} seconds`)
 	mayLog(
-		`[GRIN2] Processing summary: ${processingSummary?.successfulSamples ?? 0}/${
+		`[GRIN2] Processing summary: ${processingSummary?.processedSamples ?? 0}/${
 			processingSummary?.totalSamples ?? samples.length
 		} samples processed successfully`
 	)
@@ -122,97 +122,11 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		throw new Error('No lesions found after processing all samples. Check filter criteria and input data.')
 	}
 
-	// Step 2.5: Limit number of lesions per type to avoid overwhelming the production server
-	function limitLesionsByType(all: any[] | string, maxPerType: number) {
-		// Accept JSON string or array
-		const lesions: any[] = typeof all === 'string' ? JSON.parse(all) : all
-
-		// Map raw strings to our canonical buckets
-		const normalize = (s: string): 'mutation' | 'gain' | 'loss' | 'unknown' => {
-			const r = s.toLowerCase()
-			if (r.includes('gain') || r.includes('amp') || r.includes('amplification')) return 'gain'
-			if (r.includes('loss') || r.includes('del') || r.includes('deletion')) return 'loss'
-			if (r.includes('mut') || r.includes('snv') || r.includes('indel')) return 'mutation'
-			return (r as any) || 'unknown'
-		}
-
-		// Pull a type out of either a tuple or an object
-		const resolveType = (l: any): string => {
-			if (Array.isArray(l)) {
-				// Prefer 5th element (index 4) per your example
-				const idxVal = typeof l[4] === 'string' ? l[4] : undefined
-				// Fallback: last string element in the tuple
-				const lastStr = (() => {
-					for (let i = l.length - 1; i >= 0; i--) {
-						if (typeof l[i] === 'string') return l[i]
-					}
-					return undefined
-				})()
-				return normalize(idxVal ?? lastStr ?? 'unknown')
-			}
-			if (l && typeof l === 'object') {
-				return normalize(l.type ?? l.eventType ?? l.kind ?? l.datatype ?? l.category ?? 'unknown')
-			}
-			return 'unknown'
-		}
-
-		// Bucket by type
-		const buckets: Record<string, any[]> = {}
-		for (const lesion of lesions) {
-			const t = resolveType(lesion)
-			;(buckets[t] ||= []).push(lesion)
-		}
-
-		const limited: any[] = []
-		const processedByType: Record<string, number> = {}
-		let totalFound = 0
-		let truncated = false
-
-		for (const [t, arr] of Object.entries(buckets)) {
-			const totalForType = arr.length
-			totalFound += totalForType
-			const processed = Math.min(totalForType, maxPerType)
-			processedByType[t] = processed
-
-			if (processed < totalForType) {
-				truncated = true
-				mayLog(
-					`[GRIN2] Warning: ${t} lesions (${totalForType.toLocaleString()}) exceed the per-type limit of ` +
-						`${maxPerType.toLocaleString()}. Only the first ${processed.toLocaleString()} will be processed.`
-				)
-			}
-
-			limited.push(...arr.slice(0, processed))
-		}
-
-		if (Object.keys(processedByType).length === 0) {
-			mayLog('[GRIN2] Note: No lesion types resolved; check tuple shape and type position.')
-		}
-
-		return {
-			limited,
-			totalLesions: totalFound,
-			processedLesions: limited.length,
-			truncatedLesions: truncated,
-			processedByType
-		}
-	}
-
-	const { limited, totalLesions, processedLesions, processedByType } = limitLesionsByType(lesions, MAX_LESIONS_PER_TYPE)
-
-	// Update processing summary with lesion counts
-	const extendedProcessingSummary = {
-		...processingSummary,
-		totalLesions,
-		processedLesions,
-		processedByType
-	}
-
 	// Step 3: Prepare input for Python script
 	const pyInput = {
 		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 		chromosomelist: {} as { [key: string]: number },
-		lesion: JSON.stringify(limited),
+		lesion: JSON.stringify(lesions),
 		devicePixelRatio: request.devicePixelRatio,
 		pngDotRadius: request.pngDotRadius,
 		width: request.width,
@@ -231,7 +145,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		pyInput.chromosomelist[c] = g.majorchr[c]
 	}
 
-	mayLog(`[GRIN2] Prepared ${processedLesions.toLocaleString()} lesions per type for analysis`)
+	// mayLog(`[GRIN2] Prepared ${processedLesions.toLocaleString()} lesions for analysis`)
 
 	// Step 4: Run GRIN2 analysis via Python
 	const grin2AnalysisStart = Date.now()
@@ -270,7 +184,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 			grin2Time: grin2AnalysisTimeToPrint,
 			totalTime: totalTime
 		},
-		processingSummary: extendedProcessingSummary
+		processingSummary: processingSummary
 	}
 
 	return response
@@ -280,109 +194,156 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
  * Process sample data by reading per-sample JSON files and converting to lesion format
  * Each sample has a JSON file containing mutation data (mlst array)
  * Returns a string array of lesions: [ID, chrom, loc.start, loc.end, lsn.type] and processing summary
+ * We limit the number of lesions per type to avoid overwhelming the production server. The limit is set by MAX_LESIONS_PER_TYPE
  */
 async function processSampleData(
 	samples: any[],
 	ds: any,
 	request: GRIN2Request
-): Promise<{ lesions: string[]; processingSummary: GRIN2Response['processingSummary'] }> {
-	const lesions: string[] = []
+): Promise<{ lesions: any[]; processingSummary: GRIN2Response['processingSummary'] }> {
+	const lesions: any[] = []
 	let lesionId = 1
 
-	// Initialize processing summary
+	const keptByType: Record<'mutation' | 'gain' | 'loss', number> = { mutation: 0, gain: 0, loss: 0 }
+	const warnedTypes = new Set<'mutation' | 'gain' | 'loss'>()
+
 	const processingSummary: GRIN2Response['processingSummary'] = {
 		totalSamples: samples.length,
-		successfulSamples: 0,
+		processedSamples: 0,
 		failedSamples: 0,
 		failedFiles: [],
 		totalLesions: 0,
 		processedLesions: 0
 	}
 
+	const allTypesCapped = () =>
+		keptByType.mutation >= MAX_LESIONS_PER_TYPE &&
+		keptByType.gain >= MAX_LESIONS_PER_TYPE &&
+		keptByType.loss >= MAX_LESIONS_PER_TYPE
+
 	mayLog(`[GRIN2] Processing JSON files for ${samples.length.toLocaleString()} samples`)
 
-	// Process each sample's JSON file
-	for (const sample of samples) {
+	outer: for (const sample of samples) {
+		// If fully capped, don’t even open more files
+		if (allTypesCapped()) {
+			mayLog('[GRIN2] All per-type caps reached; stopping early.')
+			break outer
+		}
+
+		const filepath = path.join(serverconfig.tpmasterdir, ds.queries.singleSampleMutation.folder, sample.name)
+
 		try {
-			const filepath = path.join(serverconfig.tpmasterdir, ds.queries.singleSampleMutation.folder, sample.name)
 			await file_is_readable(filepath)
 			const mlst = JSON.parse(await read_file(filepath))
 
-			const { sampleLesions } = await processSampleMlst(sample.name, mlst, lesionId, request)
+			const { sampleLesions } = await processSampleMlst(sample.name, mlst, lesionId, request, keptByType, warnedTypes)
+
 			lesions.push(...sampleLesions)
 			lesionId += sampleLesions.length
 
-			// Checking to make sure it isn't undefined, but it should never be
-			processingSummary.successfulSamples = (processingSummary.successfulSamples ?? 0) + 1
+			processingSummary.processedSamples = (processingSummary.processedSamples ?? 0) + 1
+			processingSummary.totalLesions = (processingSummary.totalLesions ?? 0) + sampleLesions.length
+
+			if (allTypesCapped()) {
+				mayLog('[GRIN2] All per-type caps reached; stopping early.')
+				break outer
+			}
 		} catch (error) {
 			processingSummary.failedSamples = (processingSummary.failedSamples ?? 0) + 1
-			processingSummary.failedFiles?.push(sample.name)
-
-			mayLog(
-				`[GRIN2] Error processing sample ${sample.name}: ${
-					typeof error === 'object' && error !== null && 'message' in error
-						? (error as { message?: string }).message
-						: String(error)
-				}`
-			)
+			processingSummary.failedFiles?.push({
+				sampleName: sample.name,
+				filePath: filepath,
+				error: typeof error === 'object' && error && 'message' in error ? (error as any).message : String(error)
+			})
+			mayLog(`[GRIN2] Error processing sample ${sample.name}: ${processingSummary.failedFiles!.at(-1)!.error}`)
 		}
 	}
 
-	// mayLog(`[GRIN2] Total lesions processed: ${lesions.length.toLocaleString()}`)
-
-	return {
-		lesions,
-		processingSummary
-	}
+	processingSummary.processedLesions = lesions.length
+	return { lesions, processingSummary }
 }
 
-/** Process the MLST data for each sample */
+/** Process the MLST data for each sample and cap the number of lesions per type */
 async function processSampleMlst(
 	sampleName: string,
 	mlst: any[],
 	startId: number,
-	request: GRIN2Request
-): Promise<{
-	sampleLesions: string[]
-}> {
-	const lesions: any[] = []
+	request: GRIN2Request,
+	keptByType: Record<'mutation' | 'gain' | 'loss', number>,
+	warnedTypes: Set<'mutation' | 'gain' | 'loss'>
+): Promise<{ sampleLesions: any[] }> {
+	const sampleLesions: any[] = []
 
-	// Process each entry in mlst based on its data type
+	const tryPush = (tupleLesion: any[]) => {
+		const t = tupleLesion[4] as 'mutation' | 'gain' | 'loss'
+		const used = keptByType[t] ?? 0
+		if (used < MAX_LESIONS_PER_TYPE) {
+			sampleLesions.push(tupleLesion)
+			keptByType[t] = used + 1
+		} else if (!warnedTypes.has(t)) {
+			warnedTypes.add(t)
+			mayLog(
+				`[GRIN2] Warning: ${t} lesions exceeded the per-type limit of ${MAX_LESIONS_PER_TYPE.toLocaleString()}. ` +
+					`Additional ${t} lesions will be skipped.`
+			)
+		}
+	}
+
 	for (const m of mlst) {
 		switch (m.dt) {
 			case dtsnvindel: {
 				if (!request.snvindelOptions) break
-				const snvIndelLesion = filterAndConvertSnvIndel(sampleName, m, request.snvindelOptions)
-				if (snvIndelLesion) {
-					lesions.push(snvIndelLesion)
+				// mutation cap reached? skip conversion entirely
+				if ((keptByType.mutation ?? 0) >= MAX_LESIONS_PER_TYPE) {
+					if (!warnedTypes.has('mutation')) {
+						warnedTypes.add('mutation')
+						mayLog(
+							`[GRIN2] Warning: mutation lesions exceeded the per-type limit of ${MAX_LESIONS_PER_TYPE.toLocaleString()}. ` +
+								`Additional mutation lesions will be skipped.`
+						)
+					}
+					break
 				}
+				const les = filterAndConvertSnvIndel(sampleName, m, request.snvindelOptions)
+				if (les) tryPush(les)
 				break
 			}
+
 			case dtcnv: {
 				if (!request.cnvOptions) break
-				const cnvLesion = filterAndConvertCnv(sampleName, m, request.cnvOptions)
-				if (cnvLesion) {
-					lesions.push(cnvLesion)
+				// both CNV types already capped? skip any work
+				if ((keptByType.gain ?? 0) >= MAX_LESIONS_PER_TYPE && (keptByType.loss ?? 0) >= MAX_LESIONS_PER_TYPE) {
+					break
 				}
+				const les = filterAndConvertCnv(sampleName, m, request.cnvOptions) // -> [..., 'gain'|'loss']
+				if (les) tryPush(les)
 				break
 			}
+
 			case dtfusionrna: {
 				if (!request.fusionOptions) break
-				const fusionLesion = filterAndConvertFusion(sampleName, m, request.fusionOptions)
-				if (fusionLesion) {
-					lesions.push(fusionLesion)
+				// mutation cap reached? skip conversion entirely
+				if ((keptByType.mutation ?? 0) >= MAX_LESIONS_PER_TYPE) {
+					if (!warnedTypes.has('mutation')) {
+						warnedTypes.add('mutation')
+						mayLog(
+							`[GRIN2] Warning: mutation lesions exceeded the per-type limit of ${MAX_LESIONS_PER_TYPE.toLocaleString()}. ` +
+								`Additional mutation lesions will be skipped.`
+						)
+					}
+					break
 				}
+				const les = filterAndConvertFusion(sampleName, m, request.fusionOptions) // -> [..., 'mutation']
+				if (les) tryPush(les)
 				break
 			}
-			default: {
+
+			default:
 				break
-			}
 		}
 	}
 
-	return {
-		sampleLesions: lesions
-	}
+	return { sampleLesions }
 }
 
 function filterAndConvertSnvIndel(

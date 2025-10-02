@@ -137,7 +137,7 @@ export type GRIN2Response = {
 	/** Detailed processing summary */
 	processingSummary?: {
 		totalSamples?: number
-		successfulSamples?: number
+		processedSamples?: number
 		failedSamples?: number
 		failedFiles?: Array<{
 			sampleName: string
@@ -146,7 +146,6 @@ export type GRIN2Response = {
 		}>
 		totalLesions?: number
 		processedLesions?: number
-		processedByType?: Record<string, number>
 	}
 }
 
