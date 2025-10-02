@@ -9,13 +9,11 @@ import { controlsInit } from '../controls.js'
 import { select2Terms } from '#dom/select2Terms'
 import { Scatter } from '../scatter/scatter.js'
 import { getColors } from '#shared/common.js'
-import { CategoryFiltersUI } from '#dom/categoryFiltersUI'
 
 export class Runchart extends Scatter {
 	static type = 'runChart'
 	cat2Color: any
 	runchartvm!: RunchartViewModel
-	filterTWs: any
 	selectFilters: any
 
 	constructor(opts, api) {
@@ -26,19 +24,15 @@ export class Runchart extends Scatter {
 	async init(appState) {
 		const state: any = this.getState(appState)
 		this.config = structuredClone(state.config)
-		this.filterTWs = []
 		this.view = new RunchartView(this)
 		this.model = new RunchartModel(this)
 		this.vm = new RunchartViewModel(this)
 		this.interactivity = new ScatterInteractivity(this)
-		if (!this.parentId && this.config.filterTWs)
-			this.selectFilters = new CategoryFiltersUI(this.view.dom.headerDiv, this, this.config)
 	}
 
 	async main() {
 		this.config = structuredClone(this.state.config)
 		this.settings = this.config.settings[this.type]
-		if (!this.parentId && this.config.filterTWs) this.selectFilters.fillFilters()
 		await this.model.initData()
 		await this.model.processData()
 		this.cat2Color = getColors(this.model.charts.length)
@@ -80,8 +74,7 @@ export async function getPlotConfig(opts, app) {
 			runChart: settings,
 			startColor: {}, //dict to store the start color of the gradient for each chart when using continuous color
 			stopColor: {} //dict to store the stop color of the gradient for each chart when using continuous color
-		},
-		filterTWs: opts.filterTWs || []
+		}
 	}
 	copyMerge(plot, defaultConfig, opts)
 
@@ -96,9 +89,6 @@ export async function getPlotConfig(opts, app) {
 		await fillTermWrapper(plot.term2, app.vocabApi)
 		if (plot.term0) await fillTermWrapper(plot.term0, app.vocabApi)
 		if (plot.scaleDotTW) await fillTermWrapper(plot.scaleDotTW, app.vocabApi)
-		if (plot.filterTWs)
-			//fill the filterTWs with the term data
-			for (const tw of plot.filterTWs) await fillTermWrapper(tw, app.vocabApi)
 
 		return plot
 	} catch (e) {
