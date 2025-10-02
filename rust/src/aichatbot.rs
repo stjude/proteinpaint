@@ -337,7 +337,7 @@ If a user query asks about variant calling or mapping reads then JSON with singl
 
 ---
 
-Summary plot in ProteinPaint shows the various facets of the datasets. It may show all the samples according to their respective diagnosis or subtypes of cancer. It is also useful for visualizing all the different facets of the dataset. You can display a categorical variable and overlay another variable on top it and stratify (or divide) using a third variable simultaneously. You can also custom filters to the dataset so that you can only study part of the dataset. If a user query asks about variant calling or mapping reads then JSON with single key, 'summary'.
+Summary plot in ProteinPaint shows the various facets of the datasets. Show expression of a SINGLE gene or compare the expression of a SINGLE gene across two different cohorts defined by the user. It may show all the samples according to their respective diagnosis or subtypes of cancer. It is also useful for comparing and correlating different clinical variables. It can show all possible distributions, frequency of a category, overlay, correlate or cross-tabulate with another variable on top of it. If a user query asks about a SINGLE gene expression or correlating clinical variables then return JSON with single key, 'summary'.
 
 Sample Query1: \"Show all fusions for patients with age less than 30\"
 Sample Answer1: { \"answer\": \"summary\" }
@@ -700,12 +700,15 @@ async fn extract_summary_information(
             //let mut vector_store = InMemoryVectorStore::<String>::default();
             //InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
 
-            // Need to try with schema JSON format something like this:    let schema_json = schemars::schema_for!(SummaryType); // error handling here
-            // println!("schema_json summary:{:?}", schema_json);
+            let schema_json = schemars::schema_for!(SummaryType); // error handling here
+            let schema_json_string = serde_json::to_string_pretty(&schema_json).unwrap();
+            println!("schema_json summary:{}", schema_json_string);
             let system_prompt = String::from(
                 String::from(
-                    "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. There are three fields in the JSON to be returned: The {{action}} field will ALWAYS be \"summary\". The \"terms\" field should contain all the variables that the user wants to visualize and should ONLY contain names of the fields from the sqlite db. The \"filter\" field is optional and should contain the variable with which the dataset will be filtered. When the filter field is defined, it should contain an array of JSON terms. For each term add a sub-field named \"term\" containing the name of the the field from the sqlite db. If the term is of type \"categorical\", then add another subfield called \"value\" with the actual value prescribed by the user. Else if the term is of type \"float\", then add a subfield \"greaterThan\" if the minimum value of the value is provided and \"lessThan\" if the maximum value of the field is provided.\n  Example question1: \"compare age of diagnosis between patient gender for KMT2A patients\"\n Example answer1: {{\"action\":\"summary\", \"terms\":[\"Age\", \"Sex\"], filter:[ {{\"term\":\"Molecular Subtype\", \"value\":\"KMT2A\"}}]}}\n Example question2: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer2: {{\"action\":\"summary\", \"terms\":[\"Molecular Subtype\"], filter:[ {{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}  The sqlite db in plain language is as follows:\n",
-                ) + &rag_docs.join(",")
+                    "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. The JSON schema is as follows:",
+                ) + &schema_json_string
+                    + &"\n  Example question1: \"compare tp53 expression between genders\"\n Example answer1: {{\"action\":\"summary\", \"terms\":[\"term\": \"Sex\", \"geneExpression\": ], filter:[ {{\"term\":\"Molecular Subtype\", \"value\":\"KMT2A\"}}]}}\n Example question2: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer2: {{\"action\":\"summary\", \"terms\":[\"Molecular Subtype\"], filter:[ {{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}  The sqlite db in plain language is as follows:\n"
+                    + &rag_docs.join(",")
                     + "\nQuestion: {question} \nanswer:",
             );
 
@@ -739,8 +742,9 @@ async fn extract_summary_information(
                 }
             }
             println!("final_llm_json:{}", final_llm_json);
-            let final_validated_json = validate_summary_output2(final_llm_json.clone(), db_vec);
-            final_validated_json
+            //let final_validated_json = validate_summary_output2(final_llm_json.clone(), db_vec);
+            //final_validated_json
+            final_llm_json // Temporarily adding it here, needs to be replaced back to final_validated_json
         }
         None => {
             panic!("Dataset db file needed for summary term extraction from user input")
@@ -748,12 +752,45 @@ async fn extract_summary_information(
     }
 }
 
+fn get_summary_string() -> String {
+    "summary".to_string()
+}
+
+fn get_type_string() -> String {
+    "geneExpression".to_string()
+}
+
+const SUMMARY: &str = &"summary";
+const TYPE_STRING: &str = &"geneExpression";
+
 #[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct SummaryType {
+    // Serde uses this for deserialization.
+    #[serde(default = "get_summary_string")]
+    // Schemars uses this for schema generation.
+    #[schemars(rename = "SUMMARY")]
     action: String,
+    terms: Vec<SummaryTerms>,
     filter: Option<Vec<FilterTerm>>,
     message: Option<String>,
-    terms: Vec<String>,
+}
+
+#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+enum SummaryTerms {
+    #[allow(non_camel_case_types)]
+    term(String),
+    #[allow(non_camel_case_types)]
+    geneExpression(GeneExpressionTerm),
+}
+
+#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+struct GeneExpressionTerm {
+    // Serde uses this for deserialization.
+    #[serde(default = "get_type_string")]
+    // Schemars uses this for schema generation.
+    #[schemars(rename = "TYPE_STRING")]
+    r#type: String,
+    gene: String,
 }
 
 #[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
@@ -762,106 +799,106 @@ struct FilterTerm {
     value: String,
 }
 
-fn validate_summary_output2(raw_llm_json: String, db_vec: Vec<DbRows>) -> String {
-    let json_value: SummaryType =
-        serde_json::from_str(&raw_llm_json).expect("Did not get a valid JSON of type {action: summary, terms:[term1, term2], filter:[{term: term1, value: value1}]} from the LLM");
-    let mut message: String = String::from("");
-    match json_value.message {
-        Some(mes) => {
-            message = message + &mes; // Append any message given by the LLM
-        }
-        None => {}
-    }
-
-    let mut new_json: Value; // New JSON value that will contain items of the final validated JSON
-    if json_value.action != String::from("summary") {
-        message = message + &"Did not return a summary action";
-        new_json = serde_json::json!(null);
-    } else {
-        new_json = serde_json::from_str(&"{\"action\":\"summary\"}").expect("Not a valid JSON");
-    }
-
-    let mut validated_summary_terms = Vec::<String>::new();
-    for sum_term in &json_value.terms {
-        let term_verification = verify_json_field(sum_term, &db_vec);
-        if Some(term_verification.correct_field.clone()).is_some() && term_verification.correct_value.clone().is_none()
-        {
-            match term_verification.correct_field {
-                Some(tm) => validated_summary_terms.push(tm),
-                None => {
-                    message = message + &"\"" + &sum_term + &"\"" + &" not found in db.";
-                }
-            }
-        } else if Some(term_verification.correct_field.clone()).is_some()
-            && Some(term_verification.correct_value.clone()).is_some()
-        {
-            message = message
-                + &term_verification.correct_value.unwrap()
-                + &"is a value of "
-                + &term_verification.correct_field.unwrap()
-                + &".";
-        }
-    }
-    if let Some(obj) = new_json.as_object_mut() {
-        obj.insert(String::from("terms"), serde_json::json!(validated_summary_terms));
-    }
-
-    match &json_value.filter {
-        Some(filter_terms_array) => {
-            let mut validated_filter_terms = Vec::<FilterTerm>::new();
-            for parsed_filter_term in filter_terms_array {
-                let term_verification = verify_json_field(&parsed_filter_term.term, &db_vec);
-                let mut value_verification: Option<String> = None;
-                for item in &db_vec {
-                    if &item.name == &parsed_filter_term.term {
-                        for val in &item.values {
-                            if &parsed_filter_term.value == val {
-                                value_verification = Some(val.clone());
-                                break;
-                            }
-                        }
-                    }
-                    if value_verification != None {
-                        break;
-                    }
-                }
-                if term_verification.correct_field.is_some() && value_verification.is_some() {
-                    let verified_filter = FilterTerm {
-                        term: term_verification.correct_field.clone().unwrap(),
-                        value: value_verification.clone().unwrap(),
-                    };
-                    validated_filter_terms.push(verified_filter);
-                }
-                if term_verification.correct_field.is_none() {
-                    message = message + &"\"" + &parsed_filter_term.term + &"\" filter term not found in db";
-                }
-                if value_verification.is_none() {
-                    message = message
-                        + &"\""
-                        + &parsed_filter_term.value
-                        + &"\" filter value not found for filter field \""
-                        + &parsed_filter_term.term
-                        + "\" in db";
-                }
-            }
-
-            if validated_filter_terms.len() > 0 {
-                if let Some(obj) = new_json.as_object_mut() {
-                    obj.insert(String::from("filter"), serde_json::json!(validated_filter_terms));
-                }
-            }
-        }
-        None => {}
-    }
-    if message.len() > 0 {
-        if let Some(obj) = new_json.as_object_mut() {
-            // The `if let` ensures we only proceed if the top-level JSON is an object.
-            // Append a new string field.
-            obj.insert(String::from("message"), serde_json::json!(message));
-        }
-    }
-    serde_json::to_string(&new_json).unwrap()
-}
+//fn validate_summary_output2(raw_llm_json: String, db_vec: Vec<DbRows>) -> String {
+//    let json_value: SummaryType =
+//        serde_json::from_str(&raw_llm_json).expect("Did not get a valid JSON of type {action: summary, terms:[term1, term2], filter:[{term: term1, value: value1}]} from the LLM");
+//    let mut message: String = String::from("");
+//    match json_value.message {
+//        Some(mes) => {
+//            message = message + &mes; // Append any message given by the LLM
+//        }
+//        None => {}
+//    }
+//
+//    let mut new_json: Value; // New JSON value that will contain items of the final validated JSON
+//    if json_value.action != String::from("summary") {
+//        message = message + &"Did not return a summary action";
+//        new_json = serde_json::json!(null);
+//    } else {
+//        new_json = serde_json::from_str(&"{\"action\":\"summary\"}").expect("Not a valid JSON");
+//    }
+//
+//    let mut validated_summary_terms = Vec::<String>::new();
+//    for sum_term in &json_value.terms {
+//        let term_verification = verify_json_field(sum_term, &db_vec);
+//        if Some(term_verification.correct_field.clone()).is_some() && term_verification.correct_value.clone().is_none()
+//        {
+//            match term_verification.correct_field {
+//                Some(tm) => validated_summary_terms.push(tm),
+//                None => {
+//                    message = message + &"\"" + &sum_term + &"\"" + &" not found in db.";
+//                }
+//            }
+//        } else if Some(term_verification.correct_field.clone()).is_some()
+//            && Some(term_verification.correct_value.clone()).is_some()
+//        {
+//            message = message
+//                + &term_verification.correct_value.unwrap()
+//                + &"is a value of "
+//                + &term_verification.correct_field.unwrap()
+//                + &".";
+//        }
+//    }
+//    if let Some(obj) = new_json.as_object_mut() {
+//        obj.insert(String::from("terms"), serde_json::json!(validated_summary_terms));
+//    }
+//
+//    match &json_value.filter {
+//        Some(filter_terms_array) => {
+//            let mut validated_filter_terms = Vec::<FilterTerm>::new();
+//            for parsed_filter_term in filter_terms_array {
+//                let term_verification = verify_json_field(&parsed_filter_term.term, &db_vec);
+//                let mut value_verification: Option<String> = None;
+//                for item in &db_vec {
+//                    if &item.name == &parsed_filter_term.term {
+//                        for val in &item.values {
+//                            if &parsed_filter_term.value == val {
+//                                value_verification = Some(val.clone());
+//                                break;
+//                            }
+//                        }
+//                    }
+//                    if value_verification != None {
+//                        break;
+//                    }
+//                }
+//                if term_verification.correct_field.is_some() && value_verification.is_some() {
+//                    let verified_filter = FilterTerm {
+//                        term: term_verification.correct_field.clone().unwrap(),
+//                        value: value_verification.clone().unwrap(),
+//                    };
+//                    validated_filter_terms.push(verified_filter);
+//                }
+//                if term_verification.correct_field.is_none() {
+//                    message = message + &"\"" + &parsed_filter_term.term + &"\" filter term not found in db";
+//                }
+//                if value_verification.is_none() {
+//                    message = message
+//                        + &"\""
+//                        + &parsed_filter_term.value
+//                        + &"\" filter value not found for filter field \""
+//                        + &parsed_filter_term.term
+//                        + "\" in db";
+//                }
+//            }
+//
+//            if validated_filter_terms.len() > 0 {
+//                if let Some(obj) = new_json.as_object_mut() {
+//                    obj.insert(String::from("filter"), serde_json::json!(validated_filter_terms));
+//                }
+//            }
+//        }
+//        None => {}
+//    }
+//    if message.len() > 0 {
+//        if let Some(obj) = new_json.as_object_mut() {
+//            // The `if let` ensures we only proceed if the top-level JSON is an object.
+//            // Append a new string field.
+//            obj.insert(String::from("message"), serde_json::json!(message));
+//        }
+//    }
+//    serde_json::to_string(&new_json).unwrap()
+//}
 
 #[derive(Debug, Clone)]
 struct VerifiedField {
@@ -926,112 +963,4 @@ fn verify_json_value(llm_value_name: &str, db_vec: &Vec<DbRows>) -> (Option<Stri
         }
     }
     (search_field, search_val)
-}
-
-#[allow(dead_code)] // Older version of validated code, will be deleted later
-fn validate_summary_output(raw_llm_json: String, db_vec: Vec<DbRows>) -> String {
-    let json_value: Value = serde_json::from_str(&raw_llm_json).expect("Did not get a valid JSON from the LLM");
-    let mut message: String = String::from("");
-    let mut new_json: Value; // New JSON value that will contain items of the final validated JSON
-    if json_value["action"].as_str().unwrap() != "summary" {
-        message = message + &"Did not return a summary action";
-        new_json = serde_json::json!(null);
-    } else {
-        new_json = serde_json::from_str(&"{\"action\":\"summary\"}").expect("Not a valid JSON");
-        if json_value.is_object() {
-            if json_value.as_object().unwrap().contains_key("terms") {
-                let summary_terms: &Value = &json_value["terms"];
-                if let Value::Array(summary_terms_array) = summary_terms {
-                    let mut validated_summary_terms = Vec::<String>::new();
-                    for sum_term in summary_terms_array {
-                        let term_verification = verify_json_field(sum_term.as_str().unwrap(), &db_vec);
-                        if Some(term_verification.correct_field.clone()).is_some()
-                            && term_verification.correct_value.clone().is_none()
-                        {
-                            match term_verification.correct_field {
-                                Some(tm) => validated_summary_terms.push(tm),
-                                None => {
-                                    message =
-                                        message + &"\"" + &sum_term.as_str().unwrap() + &"\"" + &" not found in db."
-                                }
-                            }
-                        } else if Some(term_verification.correct_field.clone()).is_some()
-                            && Some(term_verification.correct_value.clone()).is_some()
-                        {
-                            message = message
-                                + &term_verification.correct_value.unwrap()
-                                + &"is a value of "
-                                + &term_verification.correct_field.unwrap()
-                                + &".";
-                        }
-                    }
-                    if let Some(obj) = new_json.as_object_mut() {
-                        obj.insert(String::from("terms"), serde_json::json!(validated_summary_terms));
-                    }
-                }
-            } else {
-                message = message + &"JSON does not contain \"terms\" object."
-            }
-            if json_value.as_object().unwrap().contains_key("filter") {
-                // Filter object is optional
-                let filter_terms: &Value = &json_value["filter"];
-                if let Value::Array(filter_terms_array) = filter_terms {
-                    let mut validated_filter_terms = Vec::<FilterTerm>::new();
-                    for filter_term in filter_terms_array {
-                        let parsed_filter_term: FilterTerm = serde_json::from_str(&filter_term.to_string())
-                            .expect("filter JSON term not in {term, value} format");
-                        let term_verification = verify_json_field(&parsed_filter_term.term, &db_vec);
-                        let mut value_verification: Option<String> = None;
-                        for item in &db_vec {
-                            if &item.name == &parsed_filter_term.term {
-                                for val in &item.values {
-                                    if &parsed_filter_term.value == val {
-                                        value_verification = Some(val.clone());
-                                        break;
-                                    }
-                                }
-                            }
-                            if value_verification != None {
-                                break;
-                            }
-                        }
-                        if term_verification.correct_field.is_some() && value_verification.is_some() {
-                            let verified_filter = FilterTerm {
-                                term: term_verification.correct_field.clone().unwrap(),
-                                value: value_verification.clone().unwrap(),
-                            };
-                            validated_filter_terms.push(verified_filter);
-                        }
-                        if term_verification.correct_field.is_none() {
-                            message = message + &"\"" + &parsed_filter_term.term + &"\" filter term not found in db";
-                        }
-                        if value_verification.is_none() {
-                            message = message
-                                + &"\""
-                                + &parsed_filter_term.value
-                                + &"\" filter value not found for filter field \""
-                                + &parsed_filter_term.term
-                                + "\" in db";
-                        }
-                    }
-
-                    if validated_filter_terms.len() > 0 {
-                        if let Some(obj) = new_json.as_object_mut() {
-                            obj.insert(String::from("filter"), serde_json::json!(validated_filter_terms));
-                        }
-                    }
-                }
-            }
-        } else {
-            message = message + &"JSON does not contain objects."
-        }
-    }
-    if message.len() > 0 {
-        if let Some(obj) = new_json.as_object_mut() {
-            // The `if let` ensures we only proceed if the top-level JSON is an object.
-            // Append a new string field.
-            obj.insert(String::from("message"), serde_json::json!(message));
-        }
-    }
-    serde_json::to_string(&new_json).unwrap()
 }
