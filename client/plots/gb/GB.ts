@@ -2,7 +2,7 @@ import { PlotBase } from '../PlotBase.ts'
 import { getCompInit, type ComponentApi, type RxComponent } from '#rx'
 import { addGeneSearchbox, Menu, sayerror } from '#dom'
 import { getNormalRoot } from '#filter'
-import { gbControlsInit, mayUpdateGroupTestMethodsIdx } from '../genomeBrowser.controls.js'
+import { mayUpdateGroupTestMethodsIdx } from '../genomeBrowser.controls.js' //// TODO: remove this import
 import { Model } from './model/Model.ts'
 import { ViewModel } from './viewModel/ViewModel.ts'
 import { View } from './view/View.ts'
@@ -54,14 +54,6 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 	}
 
 	async init() {
-		this.components = {
-			gbControls: await gbControlsInit({
-				app: this.app,
-				id: this.id,
-				holder: this.dom.controlsDiv
-			})
-		}
-
 		this.interactions = new Interactions(this.app, this.dom, this.id)
 	}
 
@@ -84,9 +76,9 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 			const data = await model.preComputeData()
 			const opts = this.getOpts()
 			const viewModel = new ViewModel(state, opts, data)
-			const tklst = await viewModel.generateTracks()
-			const view = new View(state, this.dom, opts, this.interactions)
-			await view.launchBlockWithTracks(tklst)
+			await viewModel.generateTracks()
+			const view = new View(state, viewModel.viewData, this.dom, opts, this.interactions)
+			await view.main()
 		} catch (e: any) {
 			sayerror(this.dom.errDiv, e.message || e)
 			if (e.stack) console.log(e.stack)
@@ -98,6 +90,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 	getOpts() {
 		const opts = {
 			genome: this.app.opts.genome,
+			vocabApi: this.app.vocabApi,
 			debug: this.app.opts.debug,
 			plotDiv: this.opts.plotDiv,
 			header: this.opts.header
