@@ -1,6 +1,6 @@
 import { setRenderers } from './filter.renderer'
 import { setInteractivity } from './filter.interactivity'
-import { findItem, findParent, getFilterItemByTag, getNormalRoot } from './filter.utils'
+import { findItem, findParent, getFilterItemByTag, getNormalRoot, filterJoin } from './filter.utils'
 import { vocabInit } from '#termdb/vocabulary'
 import { Menu } from '#dom/menu'
 
@@ -194,13 +194,16 @@ export class Filter {
 	getId(item) {
 		return item.$id
 	}
+	// The method below is used to get correct categories + sample counts in the pill edit menu,
+	// so that all values of the pill term, including filtered-out values, will still show up
+	// as checkbox inputs/range option. The other filter data entries will still be applied.
 	getFilterExcludingPill($id) {
 		const rootCopy = JSON.parse(JSON.stringify(this.rawFilter))
 		const parentCopy = findParent(rootCopy, $id)
 		const i = parentCopy.lst.findIndex(f => f.$id === $id)
 		if (i == -1) return null
 		parentCopy.lst.splice(i, 1)
-		return getNormalRoot(rootCopy)
+		return filterJoin([getNormalRoot(rootCopy), this.app.getState().termfilter?.filter])
 		/*
 		!!! 
 			The logic below incorectly assumes that there are at most 2 root tvslst.lst entries,

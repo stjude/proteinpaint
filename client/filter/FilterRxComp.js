@@ -21,6 +21,8 @@ class FilterRxComp extends Filter {
 		const parentConfig = this.parentId && appState.plots.find(p => p.id === this.parentId)
 		const defaultFilter = { type: 'tvslst', join: '', lst: [] }
 		return {
+			// if there is parentConfig, assume this is UI for a local filter,
+			// otherwise this UI is for global app filter
 			termfilter: parentConfig ? { filter: parentConfig.filter || defaultFilter } : appState.termfilter,
 			activeCohort: appState.activeCohort
 		}
