@@ -222,6 +222,16 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 		})
 	}
 
+	reactsTo(action) {
+		if (action.type.startsWith('plot_')) {
+			return (
+				(action.id === this.id || action.id == this.parentId) &&
+				(!action.config?.childType || action.config?.childType == this.type)
+			)
+		}
+		return true
+	}
+
 	getState(appState: MassState) {
 		const config = appState.plots.find((p: any) => p.id === this.id)
 		if (!config) {

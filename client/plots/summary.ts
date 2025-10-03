@@ -266,10 +266,9 @@ class SummaryPlot extends PlotBase implements RxComponent {
 	reactsTo(action) {
 		if (action.type.includes('cache_termq')) return true
 		if (action.type.startsWith('plot_')) {
-			return (
-				(action.id === this.id || action.id == this.parentId) &&
-				(!action.config?.childType || action.config?.childType == this.type)
-			)
+			if (action.type.startsWith('plot_')) {
+				return action.id === this.id || action.id == this.parentId
+			}
 		}
 		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true

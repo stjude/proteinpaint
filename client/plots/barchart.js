@@ -297,6 +297,16 @@ export class Barchart extends PlotBase {
 		}
 	}
 
+	reactsTo(action) {
+		if (action.type.startsWith('plot_')) {
+			return (
+				(action.id === this.id || action.id == this.parentId) &&
+				(!action.config?.childType || action.config?.childType == this.type)
+			)
+		}
+		return true
+	}
+
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) {
