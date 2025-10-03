@@ -309,7 +309,7 @@ If a ProteinPaint dataset contains hierarchical data then return JSON with singl
 
 ---
 
-Differential Gene Expression (DGE or DE) is a technique where the most upregulated and downregulated genes between two cohorts of samples (or patients) are determined. A volcano plot is shown with fold-change in the x-axis and adjusted p-value on the y-axis. So, the upregulated and downregulared genes are on opposite sides of the graph and the most significant genes (based on adjusted p-value) is on the top of the graph. Following differential gene expression generally GeneSet Enrichment Analysis (GSEA) is carried out where based on the genes and their corresponding fold changes the upregulation/downregulation of genesets (or pathways) is determined.
+Differential Gene Expression (DGE or DE) is a technique where the most upregulated and downregulated genes between two cohorts of samples (or patients) are determined from a pool of THOUSANDS of genes. A volcano plot is shown with fold-change in the x-axis and adjusted p-value on the y-axis. So, the upregulated and downregulared genes are on opposite sides of the graph and the most significant genes (based on adjusted p-value) is on the top of the graph. Following differential gene expression generally GeneSet Enrichment Analysis (GSEA) is carried out where based on the genes and their corresponding fold changes the upregulation/downregulation of genesets (or pathways) is determined.
 
 If a ProteinPaint dataset contains differential gene expression data then return JSON with single key, 'dge'.
 
@@ -526,6 +526,21 @@ struct DbRows {
     values: Vec<String>,
 }
 
+async fn parse_geneset_db(db: &str) -> Vec<String> {
+    let manager = SqliteConnectionManager::file(db);
+    let pool = r2d2::Pool::new(manager).unwrap();
+    let conn = pool.get().unwrap();
+    let sql_statement_genedb = "SELECT * from codingGenes";
+    let mut genedb = conn.prepare(&sql_statement_genedb).unwrap();
+    let mut rows_genedb = genedb.query([]).unwrap();
+    let mut gene_list = Vec::<String>::new();
+    while let Some(coding_gene) = rows_genedb.next().unwrap() {
+        let code_gene: String = coding_gene.get(0).unwrap();
+        gene_list.push(code_gene)
+    }
+    gene_list
+}
+
 trait ParseDbRows {
     fn parse_db_rows(&self) -> String;
 }
@@ -669,10 +684,20 @@ async fn extract_summary_information(
     max_new_tokens: usize,
     top_p: f32,
     dataset_db: Option<&str>,
-    _genedb: Option<&str>,
+    genedb: Option<&str>,
 ) -> String {
     match dataset_db {
         Some(db) => {
+            let gene_list: Vec<String> = parse_geneset_db(genedb.unwrap()).await;
+            let lowercase_user_input = user_input.to_lowercase();
+            let user_words: Vec<&str> = lowercase_user_input.split_whitespace().collect();
+            let user_words2: Vec<String> = user_words.into_iter().map(|s| s.to_string()).collect();
+
+            let common_genes: Vec<String> = gene_list
+                .into_iter()
+                .filter(|x| user_words2.contains(&x.to_lowercase()))
+                .collect();
+            println!("common_genes:{:?}", common_genes);
             let (rag_docs, db_vec) = parse_dataset_db(db).await;
             //println!("rag_docs:{:?}", rag_docs);
             let additional;
@@ -703,14 +728,28 @@ async fn extract_summary_information(
             let schema_json = schemars::schema_for!(SummaryType); // error handling here
             let schema_json_string = serde_json::to_string_pretty(&schema_json).unwrap();
             println!("schema_json summary:{}", schema_json_string);
-            let system_prompt = String::from(
-                String::from(
-                    "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. The JSON schema is as follows:",
-                ) + &schema_json_string
-                    + &"\n  Example question1: \"compare tp53 expression between genders\"\n Example answer1: {{\"action\":\"summary\", \"terms\":[\"term\": \"Sex\", \"geneExpression\": ], filter:[ {{\"term\":\"Molecular Subtype\", \"value\":\"KMT2A\"}}]}}\n Example question2: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer2: {{\"action\":\"summary\", \"terms\":[\"Molecular Subtype\"], filter:[ {{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}  The sqlite db in plain language is as follows:\n"
-                    + &rag_docs.join(",")
-                    + "\nQuestion: {question} \nanswer:",
-            );
+            let system_prompt: String;
+            if common_genes.len() > 0 {
+                system_prompt = String::from(
+                    String::from(
+                        "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. There are three fields in the JSON to be returned: The {{action}} field will ALWAYS be \"summary\". The \"terms\" field should contain all the variables that the user wants to visualize and should ONLY contain names of the fields from the sqlite db. The \"filter\" field is optional and should contain the variable with which the dataset will be filtered. When the filter field is defined, it should contain an array of JSON terms. The JSON schema is as follows:",
+                    ) + &schema_json_string
+                        + &"\n  Example question1: \"compare tp53 expression between genders\"\n Example answer1: {{\"action\":\"summary\", \"terms\":[\"term\": \"Sex\", \"geneExpression\": ], filter:[ {{\"term\":\"Molecular Subtype\", \"value\":\"KMT2A\"}}]}}\n Example question2: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer2: {{\"action\":\"summary\", \"terms\":[\"Molecular Subtype\"], filter:[ {{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}  The sqlite db in plain language is as follows:\n"
+                        + &rag_docs.join(",")
+                        + &"\n Relevant genes are as follows (separated by comma(,)):"
+                        + &common_genes.join(",")
+                        + &"\nQuestion: {question} \nanswer:",
+                );
+            } else {
+                system_prompt = String::from(
+                    String::from(
+                        "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. There are three fields in the JSON to be returned: The {{action}} field will ALWAYS be \"summary\". The \"terms\" field should contain all the variables that the user wants to visualize and should ONLY contain names of the fields from the sqlite db. The \"filter\" field is optional and should contain the variable with which the dataset will be filtered. When the filter field is defined, it should contain an array of JSON terms.The JSON schema is as follows:",
+                    ) + &schema_json_string
+                        + &"\n  Example question1: \"compare tp53 expression between genders\"\n Example answer1: {{\"action\":\"summary\", \"terms\":[\"term\": \"Sex\", \"geneExpression\": ], filter:[ {{\"term\":\"Molecular Subtype\", \"value\":\"KMT2A\"}}]}}\n Example question2: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer2: {{\"action\":\"summary\", \"terms\":[\"Molecular Subtype\"], filter:[ {{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}  The sqlite db in plain language is as follows:\n"
+                        + &rag_docs.join(",")
+                        + &"\nQuestion: {question} \nanswer:",
+                );
+            }
 
             //println!("system_prompt:{}", system_prompt);
             // Create RAG agent
@@ -760,15 +799,15 @@ fn get_type_string() -> String {
     "geneExpression".to_string()
 }
 
-const SUMMARY: &str = &"summary";
-const TYPE_STRING: &str = &"geneExpression";
+const action: &str = &"summary";
+const geneExpression: &str = &"geneExpression";
 
 #[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct SummaryType {
     // Serde uses this for deserialization.
     #[serde(default = "get_summary_string")]
     // Schemars uses this for schema generation.
-    #[schemars(rename = "SUMMARY")]
+    #[schemars(rename = "action")]
     action: String,
     terms: Vec<SummaryTerms>,
     filter: Option<Vec<FilterTerm>>,
@@ -788,7 +827,7 @@ struct GeneExpressionTerm {
     // Serde uses this for deserialization.
     #[serde(default = "get_type_string")]
     // Schemars uses this for schema generation.
-    #[schemars(rename = "TYPE_STRING")]
+    #[schemars(rename = "geneExpression")]
     r#type: String,
     gene: String,
 }
