@@ -584,10 +584,11 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 	if (data.error) throw 'cannot get categories: ' + data.error
 	const category2samplecount = new Map() // k: category/grade, v: number of samples
 	const computableCategories = [] // list of computable keys
+	const uncomputableCategories = [] // list of computable keys
 	for (const i of data.lst) {
 		category2samplecount.set(i.key, i.samplecount)
-		if (term.values && term.values[i.key] && term.values[i.key].uncomputable) continue
-		computableCategories.push(i.key)
+		if (term.values && term.values[i.key] && term.values[i.key].uncomputable) uncomputableCategories.push(i.key)
+		else computableCategories.push(i.key)
 	}
 	if (computableCategories.length < 2) {
 		// TODO UI should reject this term and prompt user to select a different one
@@ -654,7 +655,16 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 	// step 5: last resort. divide values[] array into two groups
 	const customset = {
 		activeCohort: state.activeCohort,
+		// creating 3 groups instead of 2 groups since current groupset UI expects first group to be excluded group
+		// TODO: refactor client/termsetting/handlers/qualitative.ts to not consider the first group (i.e. group.currentIdx === 0) as the excluded group, but rather to consider group.excluded=true as the excluded group
 		groups: [
+			{
+				name: 'Excluded categories',
+				type: 'values',
+				values: uncomputableCategories.map(v => {
+					return { key: v }
+				})
+			},
 			{
 				name: 'Group 1',
 				type: 'values',
@@ -670,8 +680,8 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 	// TODO use category2samplecount to evenlly divide samples
 	const group_i_cutoff = Math.round(computableCategories.length / 2)
 	for (const [i, v] of computableCategories.entries()) {
-		if (i < group_i_cutoff) customset.groups[0].values.push({ key: v })
-		else customset.groups[1].values.push({ key: v })
+		if (i < group_i_cutoff) customset.groups[1].values.push({ key: v })
+		else customset.groups[2].values.push({ key: v })
 	}
 	q.customset = customset
 	q.type = 'custom-groupset'

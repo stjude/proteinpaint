@@ -163,11 +163,21 @@ export class QualValues extends QualitativeBase {
 
 		// GDC or other dataset may allow missing term.values
 		if (!term.values) term.values = {}
-		if (q.mode == 'binary') {
+
+		/*
+		logistic regression outcome variable will have q.mode='binary' and q.type='values' and will error out at here when Object.keys(tw.term.values).length != 2
+		for a quick fix, will skip this check
+		this will allow binary groups to be filled by maySetTwoGroups() in client/plots/regression.inputs.term.js
+		for long-term fix:
+			- In QualitativeBase.fill(), when tw.q.mode='binary', should route the tw to QualValues.fill() when Object.keys(tw.term.values).length == 2 to ensure that no groups are created
+			- Otherwise should route to QualCustomGS.fill() to fill 2 custom groups
+		*/
+		/*if (q.mode == 'binary') {
 			// a tw with q.type = 'values' can only have mode='binary' if it has exactly 2 values
 			if (tw.term.type == 'categorical' && Object.keys(tw.term.values).length != 2)
 				throw 'term.values must have exactly two keys'
-		}
+		}*/
+
 		set_hiddenvalues(q, term as Term) // TODO: do not force type
 		// TODO: figure out not having to force the returned type
 		return tw as QualTWValues
@@ -308,7 +318,10 @@ export class QualCustomGS extends QualitativeBase {
 		const { term, q } = tw
 		if (!q.customset) throw `missing tw.q.customset`
 		if (q.mode == 'binary') {
-			if (q.customset.groups.length != 2) throw 'there must be exactly two groups'
+			// skipping the following check to allow 3 groups to be specified by maySetTwoGroups() in client/plots/regression.inputs.term.js (1 for excluded group and 2 for included groups)
+			// TODO: refactor client/termsetting/handlers/qualitative.ts to not consider the first group (i.e. group.currentIdx === 0) as the excluded group, but rather to consider group.excluded=true as the excluded group
+			//if (q.customset.groups.length != 2) throw 'there must be exactly two groups'
+
 			// TODO:
 			// - add validation that both groups have samplecount > 0 or some other minimum count
 			// - rough example
