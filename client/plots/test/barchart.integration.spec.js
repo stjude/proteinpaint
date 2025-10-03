@@ -1,5 +1,6 @@
 import tape from 'tape'
 import { termjson } from '../../test/testdata/termjson'
+import { getSamplelstTw, getCategoryGroupsetting, getGenesetMutTw } from '../../test/testdata/data.ts'
 import * as helpers from '../../test/front.helpers.js'
 import { sleep, detectLst, detectGte, detectOne } from '../../test/test.helpers.js'
 import { getFilterItemByTag } from '../../filter/filter'
@@ -7,66 +8,44 @@ import * as vocabData from '../../termdb/test/vocabData'
 import { hideCategory } from '../barchart.events.js'
 
 /*
-TODO cover all combinations
+test sections
 
-Tests:
-	term1=categorical
-	term1=categorical (no values)
-	term1=categorical, term2=defaultbins
-	term0=defaultbins, term1=categorical
-	term1=geneVariant no group
-	term1=geneVariant with groups
-	term1=geneVariant gene set with groups
-	term1=categorical, term2=geneVariant
-	term1=geneExp, term2=geneVariant SKIPPED
-	term1=geneVariant, term2=geneExp
-	term1=geneExp
-	term1=numeric term2=geneExp with default bins
-	term1=geneExp, term2=categorical
-	term1=condition, term2=gene exp with default bins
-	term1=TP53 gene exp, term2=BCR gene exp, both terms with default bins
-	term1=categorical, term0=gene exp with default bins
-	series visibility - q.hiddenValue
-	series visibility - numeric
-	series visibility - condition
+term1=categorical
+term1=categorical (no values)
+term1=categorical, term2=defaultbins
+term0=defaultbins, term1=categorical
+term1=geneVariant no group
+term1=geneVariant with groups
+term1=geneVariant geneset with groups
+term1=categorical, term2=geneVariant
+term1=geneExp, term2=geneVariant SKIPPED
+term1=geneVariant, term2=geneExp
+term1=geneExp
+term1=numeric term2=geneExp with default bins
+term1=geneExp, term2=categorical
+term1=condition, term2=gene exp with default bins
+term1=TP53 gene exp, term2=BCR gene exp, both terms with default bins
+term1=categorical, term0=gene exp with default bins
+series visibility - q.hiddenValue
+series visibility - numeric
+series visibility - condition
 
-	single barchart, categorical filter
-	single barchart, TP53 mutation dtTerm filter
+single barchart, categorical filter
+single barchart, TP53 mutation dtTerm filter
 
-	click non-group bar to add filter
-	click custom categorical group bar to add filter
-	single chart, genotype overlay
-	numeric exclude range
-	numeric filter - only special value
-	custom vocab: categorical terms with numeric filter
-	custom vocab: numeric terms with categorical filter
-	max number of bins: exceeded
-	no visible series data, no overlay
-	all hidden + with overlay, legend click
-	unhidden chart and legend
-	customized bins
+click non-group bar to add filter
+click custom categorical group bar to add filter
+numeric exclude range
+numeric filter - only special value
+custom vocab: categorical terms with numeric filter
+custom vocab: numeric terms with categorical filter
+max number of bins: exceeded
+no visible series data, no overlay
+all hidden + with overlay, legend click
+unhidden chart and legend
+customized bins
  */
 
-/*************************
- reusable helper functions
-**************************/
-
-const runpp = helpers.getRunPp('mass', {
-	state: {
-		nav: {
-			activeTab: 1
-		},
-		vocab: {
-			dslabel: 'TermdbTest',
-			genome: 'hg38-test'
-		}
-	},
-	debug: 1
-})
-
-/**************
- test sections
-***************/
 tape('\n', function (test) {
 	test.comment('-***- plots/barchart -***-')
 	test.end()
@@ -374,31 +353,14 @@ tape('term1=geneVariant with groups', function (test) {
 	}
 })
 
-tape('term1=geneVariant gene set with groups', function (test) {
+tape('term1=geneVariant geneset with groups', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			plots: [
 				{
 					chartType: 'barchart',
-					term: {
-						term: {
-							genes: [
-								{
-									kind: 'gene',
-									gene: 'TP53',
-									type: 'geneVariant'
-								},
-								{
-									kind: 'gene',
-									gene: 'KRAS',
-									type: 'geneVariant'
-								}
-							],
-							type: 'geneVariant'
-						},
-						q: { type: 'predefined-groupset' }
-					}
+					term: getGenesetMutTw()
 				}
 			]
 		},
@@ -1149,55 +1111,11 @@ tape('click custom categorical group bar to add filter', function (test) {
 	test.timeoutAfter(3000)
 
 	const termfilter = { filter: [] }
-	const customset = {
-		name: 'A versus B',
-		groups: [
-			{
-				name: 'Test A',
-				type: 'values',
-				values: [
-					{
-						key: 'Acute lymphoblastic leukemia',
-						label: 'Acute lymphoblastic leukemia'
-					},
-					{
-						key: 'Acute myeloid leukemia',
-						label: 'Acute myeloid leukemia'
-					}
-				]
-			},
-			{
-				name: 'Test B',
-				type: 'values',
-				values: [
-					{
-						key: 'Central nervous system (CNS)',
-						label: 'Central nervous system (CNS)'
-					},
-					{
-						key: 'Wilms tumor',
-						label: 'Wilms tumor'
-					}
-				]
-			}
-		]
-	}
+	const tw = getCategoryGroupsetting()
 	runpp({
 		state: {
 			termfilter,
-			plots: [
-				{
-					chartType: 'barchart',
-					term: {
-						id: 'diaggrp',
-						term: termjson['diaggrp'],
-						q: {
-							type: 'custom-groupset',
-							customset
-						}
-					}
-				}
-			]
+			plots: [{ chartType: 'barchart', term: tw }]
 		},
 		barchart: {
 			callbacks: {
@@ -1251,8 +1169,8 @@ tape('click custom categorical group bar to add filter', function (test) {
 				type: 'tvs',
 				tvs: {
 					term: config.term.term,
-					values: customset.groups[0].values,
-					groupset_label: customset.groups[0].name
+					values: tw.q.customset.groups[0].values,
+					groupset_label: tw.q.customset.groups[0].name
 				}
 			},
 			'should create a customset filter with the clicked group.values array'
@@ -2256,3 +2174,20 @@ const tp53dtTermFilter = {
 	],
 	tag: 'filterUiRoot'
 }
+
+/*************************
+ reusable helper functions
+**************************/
+
+const runpp = helpers.getRunPp('mass', {
+	state: {
+		nav: {
+			activeTab: 1
+		},
+		vocab: {
+			dslabel: 'TermdbTest',
+			genome: 'hg38-test'
+		}
+	},
+	debug: 1
+})

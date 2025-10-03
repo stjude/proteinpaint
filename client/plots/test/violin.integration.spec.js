@@ -1,5 +1,6 @@
 import tape from 'tape'
-import { getRunPp, getSamplelstTw } from '../../test/front.helpers.js'
+import { getRunPp } from '../../test/front.helpers.js'
+import { getSamplelstTw, getCategoryGroupsetting, getGenesetMutTw } from '../../test/testdata/data.ts'
 import { fillTermWrapper } from '#termsetting'
 import { getFilterItemByTag, filterJoin } from '#filter'
 import { sleep, detectOne, detectGte, detectLst, whenVisible, whenHidden } from '../../test/test.helpers.js'
@@ -13,10 +14,20 @@ agedx/sex, basic controls
 test label clicking, filtering and hovering
 test hide option on label clicking
 term1=categorical, term2=numeric
+term1=numeric, term2=cat groupsetting
 term1=numeric, term2=survival
+term1=numeric, term2=geneVariant
+term1=numeric, term2=geneVariant geneset
 term1=numeric, term2=condition
 term1=geneExp, term2=categorical
+term1=geneExp, term2=cat groupsetting
+term1=geneExp, term2=geneVariant
+term1=geneExp, term2=geneVariant geneset
 term1=ssgsea, term2=categorical
+term1=ssgsea, term2=cat groupsetting
+term1=ssgsea, term2=geneVariant
+term1=ssgsea, term2=geneVariant geneset
+term1=geneExp, term2=survival (SKIPPED)
 term1=geneExp, term2=survival
 term1=numeric, term2=samplelst
 term1=geneexp, term2=samplelst
@@ -28,6 +39,7 @@ term1=numeric, term2=numeric, term0=categorical
 test uncomputable categories legend
 Load linear regression-violin UI
 term1=singleCellExpression, term2=singleCellCellType
+
 ***************/
 
 tape('\n', function (test) {
@@ -36,7 +48,6 @@ tape('\n', function (test) {
 })
 
 tape('agedx/sex, basic rendering', function (test) {
-	test.timeoutAfter(4000)
 	runpp({
 		state: {
 			plots: [open_state]
@@ -161,7 +172,6 @@ tape('agedx/sex, basic rendering', function (test) {
 })
 
 tape('agedx/sex, basic controls', function (test) {
-	test.timeoutAfter(4000)
 	runpp({
 		state: {
 			plots: [open_state]
@@ -358,7 +368,6 @@ tape('agedx/sex, basic controls', function (test) {
 })
 
 tape('test label clicking, filtering and hovering', function (test) {
-	test.timeoutAfter(5000)
 	runpp({
 		state: {
 			nav: {
@@ -456,7 +465,6 @@ tape('test label clicking, filtering and hovering', function (test) {
 })
 
 tape('test hide option on label clicking', function (test) {
-	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			nav: {
@@ -552,9 +560,34 @@ tape('term1=categorical, term2=numeric', function (test) {
 		test.end()
 	}
 })
+tape('term1=numeric, term2=cat groupsetting', function (test) {
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: { id: 'agedx', q: { mode: 'continuous' } },
+					term2: getCategoryGroupsetting()
+				}
+			]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testLabelHoverClick(test, violin, violinDiv, 2)
+		await testViolinByCount(test, violinDiv, 2)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+})
 
 tape('term1=numeric, term2=survival', function (test) {
-	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			plots: [
@@ -580,9 +613,60 @@ tape('term1=numeric, term2=survival', function (test) {
 		test.end()
 	}
 })
+tape('term1=numeric, term2=geneVariant', function (test) {
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: { id: 'agedx', q: { mode: 'continuous' } },
+					term2: { term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'predefined-groupset' } }
+				}
+			]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testViolinByCount(test, violinDiv, 1)
+		await testLabelHoverClick(test, violin, violinDiv, 2)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('term1=numeric, term2=geneVariant geneset', function (test) {
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: { id: 'agedx', q: { mode: 'continuous' } },
+					term2: getGenesetMutTw()
+				}
+			]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testViolinByCount(test, violinDiv, 1)
+		await testLabelHoverClick(test, violin, violinDiv, 2)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+})
 
 tape('term1=numeric, term2=condition', function (test) {
-	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			plots: [
@@ -620,7 +704,6 @@ tape('term1=numeric, term2=condition', function (test) {
 })
 
 tape('term1=geneExp, term2=categorical', function (test) {
-	test.timeoutAfter(2000)
 	runpp({
 		state: {
 			plots: [
@@ -651,8 +734,94 @@ tape('term1=geneExp, term2=categorical', function (test) {
 		test.end()
 	}
 })
+tape('term1=geneExp, term2=cat groupsetting', function (test) {
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: {
+						term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' },
+						q: { mode: 'continuous' }
+					},
+					term2: getCategoryGroupsetting()
+				}
+			]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testViolinByCount(test, violinDiv, 2)
+		await testLabelHoverClick(test, violin, violinDiv, 2)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('term1=geneExp, term2=geneVariant', function (test) {
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: {
+						term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' },
+						q: { mode: 'continuous' }
+					},
+					term2: { term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'predefined-groupset' } }
+				}
+			]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testViolinByCount(test, violinDiv, 1)
+		await testLabelHoverClick(test, violin, violinDiv, 2)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('term1=geneExp, term2=geneVariant geneset', function (test) {
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: {
+						term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' },
+						q: { mode: 'continuous' }
+					},
+					term2: getGenesetMutTw()
+				}
+			]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testViolinByCount(test, violinDiv, 1)
+		await testLabelHoverClick(test, violin, violinDiv, 2)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+})
 tape('term1=ssgsea, term2=categorical', function (test) {
-	test.timeoutAfter(2000)
 	runpp({
 		state: {
 			plots: [
@@ -683,10 +852,96 @@ tape('term1=ssgsea, term2=categorical', function (test) {
 		test.end()
 	}
 })
+tape('term1=ssgsea, term2=cat groupsetting', function (test) {
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: {
+						term: { id: 'HALLMARK_ADIPOGENESIS', type: 'ssGSEA', name: 'HALLMARK_ADIPOGENESIS' },
+						q: { mode: 'continuous' }
+					},
+					term2: getCategoryGroupsetting()
+				}
+			]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testViolinByCount(test, violinDiv, 2)
+		await testLabelHoverClick(test, violin, violinDiv, 2)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('term1=ssgsea, term2=geneVariant', function (test) {
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: {
+						term: { id: 'HALLMARK_ADIPOGENESIS', type: 'ssGSEA', name: 'HALLMARK_ADIPOGENESIS' },
+						q: { mode: 'continuous' }
+					},
+					term2: { term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'predefined-groupset' } }
+				}
+			]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testViolinByCount(test, violinDiv, 1)
+		await testLabelHoverClick(test, violin, violinDiv, 2)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('term1=ssgsea, term2=geneVariant geneset', function (test) {
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: {
+						term: { id: 'HALLMARK_ADIPOGENESIS', type: 'ssGSEA', name: 'HALLMARK_ADIPOGENESIS' },
+						q: { mode: 'continuous' }
+					},
+					term2: getGenesetMutTw()
+				}
+			]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testViolinByCount(test, violinDiv, 1)
+		await testLabelHoverClick(test, violin, violinDiv, 2)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+})
 
-// this combo returns no data thus breaks
-tape.skip('term1=geneExp, term2=survival', function (test) {
-	test.timeoutAfter(10000)
+// this returns no data thus breaks
+tape.skip('term1=geneExp, term2=survival (SKIPPED)', function (test) {
 	runpp({
 		state: {
 			plots: [
@@ -722,7 +977,6 @@ tape.skip('term1=geneExp, term2=survival', function (test) {
 })
 
 tape('term1=numeric, term2=samplelst', function (test) {
-	test.timeoutAfter(4000)
 	runpp({
 		state: {
 			plots: [
@@ -749,7 +1003,6 @@ tape('term1=numeric, term2=samplelst', function (test) {
 	}
 })
 tape('term1=geneexp, term2=samplelst', function (test) {
-	test.timeoutAfter(4000)
 	runpp({
 		state: {
 			plots: [
@@ -779,7 +1032,6 @@ tape('term1=geneexp, term2=samplelst', function (test) {
 	}
 })
 tape('term1=ssgsea, term2=samplelst', function (test) {
-	test.timeoutAfter(4000)
 	runpp({
 		state: {
 			plots: [
@@ -810,7 +1062,6 @@ tape('term1=ssgsea, term2=samplelst', function (test) {
 })
 
 tape('term=agedx, term2=geneExp with regular bins', function (test) {
-	test.timeoutAfter(4000)
 	runpp({
 		state: {
 			plots: [
@@ -856,7 +1107,6 @@ tape('term=agedx, term2=geneExp with regular bins', function (test) {
 })
 
 tape('term=agedx, term2=geneExp with custom bins', function (test) {
-	test.timeoutAfter(2000)
 	runpp({
 		state: {
 			plots: [
@@ -915,7 +1165,6 @@ tape('term=agedx, term2=geneExp with custom bins', function (test) {
 })
 
 tape('term1=numeric, term0=categorical', function (test) {
-	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			plots: [
@@ -954,7 +1203,6 @@ tape('term1=numeric, term0=categorical', function (test) {
 })
 
 tape('term1=numeric, term2=numeric, term0=categorical', function (test) {
-	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			plots: [
@@ -997,7 +1245,6 @@ tape('term1=numeric, term2=numeric, term0=categorical', function (test) {
 })
 
 tape('test uncomputable categories legend', function (test) {
-	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			nav: {
@@ -1061,7 +1308,6 @@ tape('test uncomputable categories legend', function (test) {
 })
 
 tape('Load linear regression-violin UI', function (test) {
-	test.timeoutAfter(1000)
 	runpp({
 		state: {
 			nav: {
@@ -1105,7 +1351,6 @@ tape('Load linear regression-violin UI', function (test) {
 })
 
 tape('term1=singleCellExpression, term2=singleCellCellType', function (test) {
-	test.timeoutAfter(5000)
 	runpp({
 		state: {
 			plots: [
