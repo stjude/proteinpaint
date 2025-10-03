@@ -60,7 +60,6 @@ function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
 			const request = req.query as GRIN2Request
-			console.log('[GRIN2] request:', request)
 
 			// Get genome and dataset from request parameters
 			const g = genomes[request.genome]
@@ -90,7 +89,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	const startTime = Date.now()
 
 	// Step 1: Get samples using cohort infrastructure
-	mayLog('[GRIN2] Getting samples from cohort filter...')
+	//mayLog('[GRIN2] Getting samples from cohort filter...')
 
 	const samples = await get_samples(
 		request,
@@ -106,7 +105,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	}
 
 	// Step 2: Process sample data, convert to lesion format, and apply filter caps per type
-	mayLog('[GRIN2] Processing sample data...')
+	// mayLog('[GRIN2] Processing sample data...')
 	const processingStartTime = Date.now()
 
 	const { lesions, processingSummary } = await processSampleData(samples, ds, request)
@@ -259,8 +258,6 @@ async function processSampleData(
 		unprocessedSamples: 0
 	}
 
-	mayLog(`[GRIN2] Processing JSON files for ${samples.length.toLocaleString()} samples`)
-
 	outer: for (let i = 0; i < samples.length; i++) {
 		// Stop before opening more files if all enabled types are already capped
 		if (allTypesCapped()) {
@@ -299,7 +296,6 @@ async function processSampleData(
 				filePath: filepath,
 				error: error instanceof Error ? error.message || 'Unknown error' : String(error)
 			})
-			mayLog(`[GRIN2] Error processing sample ${sample.name}: ${processingSummary.failedFiles!.at(-1)!.error}`)
 		}
 	}
 
