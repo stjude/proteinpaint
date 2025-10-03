@@ -264,7 +264,7 @@ async fn run_pipeline(
     } else if classification == "variant_calling".to_string() {
         // Not implemented yet and will never be supported. Need a separate messages for this
         final_output = format!("{{\"{}\":\"{}\"}}", "action", "variant_calling");
-    } else if classification == "surivial".to_string() {
+    } else if classification == "survival".to_string() {
         // Not implemented yet
         final_output = format!("{{\"{}\":\"{}\"}}", "action", "surivial");
     } else if classification == "none".to_string() {
@@ -309,13 +309,29 @@ If a ProteinPaint dataset contains hierarchical data then return JSON with singl
 
 ---
 
-Differential Gene Expression (DGE or DE) is a technique where the most upregulated and downregulated genes between two cohorts of samples (or patients) are determined from a pool of THOUSANDS of genes. A volcano plot is shown with fold-change in the x-axis and adjusted p-value on the y-axis. So, the upregulated and downregulared genes are on opposite sides of the graph and the most significant genes (based on adjusted p-value) is on the top of the graph. Following differential gene expression generally GeneSet Enrichment Analysis (GSEA) is carried out where based on the genes and their corresponding fold changes the upregulation/downregulation of genesets (or pathways) is determined.
+Differential Gene Expression (DGE or DE) is a technique where the most upregulated (or highest) and downregulated (or lowest) genes between two cohorts of samples (or patients) are determined from a pool of THOUSANDS of genes. A volcano plot is shown with fold-change in the x-axis and adjusted p-value on the y-axis. So, the upregulated and downregulared genes are on opposite sides of the graph and the most significant genes (based on adjusted p-value) is on the top of the graph. Following differential gene expression generally GeneSet Enrichment Analysis (GSEA) is carried out where based on the genes and their corresponding fold changes the upregulation/downregulation of genesets (or pathways) is determined.
+
+Sample Query1: \"Which gene has the highest expression between the two genders\"
+Sample Answer1: { \"answer\": \"dge\" }
+
+Sample Query2: \"Which gene has the lowest expression between the two races\"
+Sample Answer2: { \"answer\": \"dge\" }
+
+Sample Query1: \"Which genes are the most upregulated genes between group A and group B\"
+Sample Answer1: { \"answer\": \"dge\" }
+
+Sample Query3: \"Which gene are overexpressed between male and female\"
+Sample Answer3: { \"answer\": \"dge\" }
+
+Sample Query4: \"Which gene are housekeeping genes between male and female\"
+Sample Answer4: { \"answer\": \"dge\" } 
+
 
 If a ProteinPaint dataset contains differential gene expression data then return JSON with single key, 'dge'.
 
 ---
 
-Survival analysis (also called time-to-event analysis or duration analysis) is a branch of statistics aimed at analyzing the duration of time from a well-defined time origin until one or more events happen, called survival times or duration times. In other words, in survival analysis, we are interested in a certain event and want to analyze the time until the event happens.
+Survival analysis (also called time-to-event analysis or duration analysis) is a branch of statistics aimed at analyzing the duration of time from a well-defined time origin until one or more events happen, called survival times or duration times. In other words, in survival analysis, we are interested in a certain event and want to analyze the time until the event happens. Generally in survival analysis survival rates between two (or more) cohorts of patients  is compared. 
 
 There are two main methods of survival analysis:
 
@@ -326,6 +342,13 @@ There are two main methods of survival analysis:
    HR = 1: No effect
    HR < 1: Reduction in the hazard
    HR > 1: Increase in Hazard
+
+Sample Query1: \"Compare survival rates between group A and B\"
+Sample Answer1: { \"answer\": \"summary\" }
+
+Sample Query2: \"List all molecular subtypes of leukemia\"
+Sample Answer2: { \"answer\": \"summary\" } 
+
 
 If a ProteinPaint dataset contains survival data then return JSON with single key, 'survival'.
 
@@ -342,8 +365,8 @@ Summary plot in ProteinPaint shows the various facets of the datasets. Show expr
 Sample Query1: \"Show all fusions for patients with age less than 30\"
 Sample Answer1: { \"answer\": \"summary\" }
 
-Sample Query1: \"List all molecular subtypes of leukemia\"
-Sample Answer1: { \"answer\": \"summary\" } 
+Sample Query2: \"List all molecular subtypes of leukemia\"
+Sample Answer2: { \"answer\": \"summary\" } 
 
 ---
 
@@ -730,9 +753,9 @@ async fn extract_summary_information(
             println!("schema_json summary:{}", schema_json_string);
             let system_prompt: String = String::from(
                 String::from(
-                    "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. There are three fields in the JSON to be returned: The \"action\" field will ALWAYS be \"summary\". The \"terms\" field should contain all the variables that the user wants to visualize and should ONLY contain names of the fields from the sqlite db. The \"filter\" field is optional and should contain the variable with which the dataset will be filtered. When the filter field is defined, it should contain an array of JSON terms. The JSON schema is as follows:",
+                    "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. There are three fields in the JSON to be returned: The \"action\" field will ALWAYS be \"summary\". The \"summaryterms\" field should contain all the variables that the user wants to visualize. The \"clinical\" subfield should ONLY contain names of the fields from the sqlite db. The \"geneExpression\" subfield should ONLY contain genes names from the relevant genes list. The \"filter\" field is optional and should contain the variable with which the dataset will be filtered. When the \"filter\" field is defined, it should contain an array of JSON terms. The \"message\" field only contain messages of terms in the user input that were not found in their respective databases. The JSON schema is as follows:",
                 ) + &schema_json_string
-                    + &"\n  Example question1: \"compare tp53 expression between genders\"\n Example answer1: {{\"action\":\"summary\", \"terms\":[\"term\": \"Sex\", \"geneExpression\": ], filter:[ {{\"term\":\"Molecular Subtype\", \"value\":\"KMT2A\"}}]}}\n Example question2: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer2: {{\"action\":\"summary\", \"terms\":[\"Molecular Subtype\"], filter:[ {{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}  The sqlite db in plain language is as follows:\n"
+                    + &"\n  Example question1: \"compare tp53 expression between genders\"\n Example answer1: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\": \"Sex\"}, {\"geneExpression\": \"TP53\"}]}}\n Example question2: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer2: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\":\"Molecular Subtype\"}], filter:[ {{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}  The sqlite db in plain language is as follows:\n"
                     + &rag_docs.join(",")
                     + &"\n Relevant genes are as follows (separated by comma(,)):"
                     + &common_genes.join(",")
@@ -797,7 +820,7 @@ struct SummaryType {
     // Schemars uses this for schema generation.
     #[schemars(rename = "action")]
     action: String,
-    terms: Vec<SummaryTerms>,
+    summaryterms: Vec<SummaryTerms>,
     filter: Option<Vec<FilterTerm>>,
     message: Option<String>,
 }
@@ -805,19 +828,9 @@ struct SummaryType {
 #[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 enum SummaryTerms {
     #[allow(non_camel_case_types)]
-    term(String),
+    clinical(String),
     #[allow(non_camel_case_types)]
-    geneExpression(GeneExpressionTerm),
-}
-
-#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
-struct GeneExpressionTerm {
-    // Serde uses this for deserialization.
-    #[serde(default = "get_type_string")]
-    // Schemars uses this for schema generation.
-    #[schemars(rename = "geneExpression")]
-    r#type: String,
-    gene: String,
+    geneExpression(String),
 }
 
 #[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
