@@ -145,7 +145,7 @@ async function getDefaultConfig(vocabApi, override, activeCohort, blockIsProtein
 		if (config.snvindel.details) {
 			// test method may be inconsistent with group configuration (e.g. no fisher for INFO fields), update test method here
 			// 1st arg is a fake "self"
-			mayUpdateGroupTestMethodsIdx({ state: { config } }, config.snvindel.details)
+			mayUpdateGroupTestMethodsIdx({ config }, config.snvindel.details)
 			// a type=filter group may use filterByCohort. in such case, modify default state to assign proper filter based on current cohort
 			const gf = config.snvindel.details.groups.find(i => i.type == 'filter')
 			if (gf?.filterByCohort) {
