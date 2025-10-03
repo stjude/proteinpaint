@@ -728,28 +728,16 @@ async fn extract_summary_information(
             let schema_json = schemars::schema_for!(SummaryType); // error handling here
             let schema_json_string = serde_json::to_string_pretty(&schema_json).unwrap();
             println!("schema_json summary:{}", schema_json_string);
-            let system_prompt: String;
-            if common_genes.len() > 0 {
-                system_prompt = String::from(
-                    String::from(
-                        "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. There are three fields in the JSON to be returned: The \"action\" field will ALWAYS be \"summary\". The \"terms\" field should contain all the variables that the user wants to visualize and should ONLY contain names of the fields from the sqlite db. The \"filter\" field is optional and should contain the variable with which the dataset will be filtered. When the filter field is defined, it should contain an array of JSON terms. The JSON schema is as follows:",
-                    ) + &schema_json_string
-                        + &"\n  Example question1: \"compare tp53 expression between genders\"\n Example answer1: {{\"action\":\"summary\", \"terms\":[\"term\": \"Sex\", \"geneExpression\": ], filter:[ {{\"term\":\"Molecular Subtype\", \"value\":\"KMT2A\"}}]}}\n Example question2: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer2: {{\"action\":\"summary\", \"terms\":[\"Molecular Subtype\"], filter:[ {{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}  The sqlite db in plain language is as follows:\n"
-                        + &rag_docs.join(",")
-                        + &"\n Relevant genes are as follows (separated by comma(,)):"
-                        + &common_genes.join(",")
-                        + &"\nQuestion: {question} \nanswer:",
-                );
-            } else {
-                system_prompt = String::from(
-                    String::from(
-                        "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. There are three fields in the JSON to be returned: The \"action\" field will ALWAYS be \"summary\". The \"terms\" field should contain all the variables that the user wants to visualize and should ONLY contain names of the fields from the sqlite db. The \"filter\" field is optional and should contain the variable with which the dataset will be filtered. When the filter field is defined, it should contain an array of JSON terms.The JSON schema is as follows:",
-                    ) + &schema_json_string
-                        + &"\n  Example question1: \"compare tp53 expression between genders\"\n Example answer1: {{\"action\":\"summary\", \"terms\":[\"term\": \"Sex\", \"geneExpression\": ], filter:[ {{\"term\":\"Molecular Subtype\", \"value\":\"KMT2A\"}}]}}\n Example question2: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer2: {{\"action\":\"summary\", \"terms\":[\"Molecular Subtype\"], filter:[ {{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}  The sqlite db in plain language is as follows:\n"
-                        + &rag_docs.join(",")
-                        + &"\nQuestion: {question} \nanswer:",
-                );
-            }
+            let system_prompt: String = String::from(
+                String::from(
+                    "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. There are three fields in the JSON to be returned: The \"action\" field will ALWAYS be \"summary\". The \"terms\" field should contain all the variables that the user wants to visualize and should ONLY contain names of the fields from the sqlite db. The \"filter\" field is optional and should contain the variable with which the dataset will be filtered. When the filter field is defined, it should contain an array of JSON terms. The JSON schema is as follows:",
+                ) + &schema_json_string
+                    + &"\n  Example question1: \"compare tp53 expression between genders\"\n Example answer1: {{\"action\":\"summary\", \"terms\":[\"term\": \"Sex\", \"geneExpression\": ], filter:[ {{\"term\":\"Molecular Subtype\", \"value\":\"KMT2A\"}}]}}\n Example question2: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer2: {{\"action\":\"summary\", \"terms\":[\"Molecular Subtype\"], filter:[ {{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}  The sqlite db in plain language is as follows:\n"
+                    + &rag_docs.join(",")
+                    + &"\n Relevant genes are as follows (separated by comma(,)):"
+                    + &common_genes.join(",")
+                    + &"\nQuestion: {question} \nanswer:",
+            );
 
             //println!("system_prompt:{}", system_prompt);
             // Create RAG agent
