@@ -18,6 +18,7 @@ export class ThumbnailRenderer {
 			thumbnailsContainer = holder
 				.append('div')
 				.attr('id', 'thumbnails')
+				.style('display', 'none') // Initially hidden
 				.attr('data-testid', 'sjpp-thumbnails')
 				.style('width', '600px')
 				.style('height', '80px')

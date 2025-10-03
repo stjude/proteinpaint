@@ -17,6 +17,7 @@ import { ModelTrainerRenderer } from './view/ModelTrainerRenderer'
 import type OLMap from 'ol/Map'
 import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
 import type { ViewModel } from '#plots/wsiviewer/viewModel/ViewModel.ts'
+import { sayerror } from '#dom'
 
 class WSIViewer extends PlotBase implements RxComponent {
 	static type = 'WSIViewer'
@@ -32,12 +33,40 @@ class WSIViewer extends PlotBase implements RxComponent {
 	private metadataRenderer = new MetadataRenderer()
 	private legendRenderer = new LegendRenderer()
 	private map: OLMap | undefined = undefined
+	private annotationTable: any
 
 	constructor(opts: any, api) {
 		super(opts, api)
 		this.type = 'WSIViewer'
 		this.opts = opts
 		this.wsiViewerInteractions = new WSIViewerInteractions(this, opts)
+		this.dom = {
+			holder: opts.holder,
+			loadingDiv: opts.holder
+				.append('div')
+				.attr('class', 'wsiViewer-progress')
+				.style('position', 'absolute')
+				.style('top', '0')
+				.style('left', '0')
+				.style('width', '100%')
+				.style('height', '100%')
+				.style('background-color', 'rgba(255, 255, 255, 0.95)')
+				.style('text-align', 'center')
+				.style('display', 'none'),
+
+			errorDiv: opts.holder.append('div').attr('class', 'wsiViewer-error').style('margin-left', '10px'),
+			mapHolder: opts.holder.append('div').attr('id', 'wsiviewer-mapHolder'),
+			annotationsHolder: opts.holder
+				.append('div')
+				.attr('id', 'annotations-table-wrapper')
+				.style('padding', '20px')
+				.style('display', 'inline-block'),
+			legendHolder: opts.holder
+				.append('div')
+				.attr('id', 'sjpp-legendHolder')
+				.style('display', 'inline-block')
+				.style('vertical-align', 'top')
+		}
 	}
 
 	async init(): Promise<void> {
@@ -83,12 +112,14 @@ class WSIViewer extends PlotBase implements RxComponent {
 		const wsimageLayersLoadError = viewModel.wsimageLayersLoadError
 
 		if (wsimages.length === 0) {
-			holder.append('div').style('margin-left', '10px').text('No WSI images.')
+			sayerror(this.dom.errorDiv, 'No WSI images found.')
+			this.wsiViewerInteractions.toggleLoadingDiv(false)
 			return
 		}
 
 		if (wsimageLayersLoadError) {
-			holder.append('div').style('margin-left', '10px').text(wsimageLayersLoadError)
+			sayerror(this.dom.errorDiv, wsimageLayersLoadError)
+			this.wsiViewerInteractions.toggleLoadingDiv(false)
 			return
 		}
 
@@ -98,8 +129,10 @@ class WSIViewer extends PlotBase implements RxComponent {
 		const imageViewData: ImageViewData = viewModel.getImageViewData(settings.displayedImageIndex)
 
 		if (settings.renderWSIViewer) {
+			this.wsiViewerInteractions.toggleLoadingDiv(settings.renderAnnotationTable)
+
 			this.thumbnailsContainer = this.thumbnailRenderer.render(
-				holder,
+				this.dom.mapHolder,
 				this.thumbnailsContainer,
 				wsimageLayers.map(wsimageLayers => wsimageLayers.wsimage),
 				settings,
@@ -112,28 +145,28 @@ class WSIViewer extends PlotBase implements RxComponent {
 				viewModel.sampleWSImages[settings.displayedImageIndex],
 				buffers,
 				settings
-			).render(holder, settings)
+			).render(this.dom.mapHolder, settings)
 
 			if (activeImageExtent && this.map) {
 				this.map.getView().fit(activeImageExtent)
 			}
 		}
 
-		this.metadataRenderer.renderMetadata(holder, imageViewData)
+		this.metadataRenderer.renderMetadata(this.dom.holder, imageViewData)
 
 		if (settings.renderAnnotationTable && this.map) {
 			const modelTrainerRenderer = new ModelTrainerRenderer(this.wsiViewerInteractions)
 
 			const wsiAnnotationsRenderer = new WSIAnnotationsRenderer(buffers, this.wsiViewerInteractions)
-			wsiAnnotationsRenderer.render(holder, imageViewData, activeImageExtent!, this.map)
-			holder.select('#sjpp-legend-wrapper').remove()
-			const wrapper = holder
-				.append('div')
-				.attr('id', 'sjpp-legend-wrapper')
-				.style('display', 'inline-block')
-				.style('vertical-align', 'top')
-			modelTrainerRenderer.render(wrapper, aiProjectID, genome, dslabel)
-			this.legendRenderer.render(wrapper, imageViewData)
+			this.annotationTable = wsiAnnotationsRenderer.render(
+				this.dom.annotationsHolder,
+				imageViewData,
+				activeImageExtent!,
+				this.map
+			)
+			this.dom.legendHolder.selectAll('*').remove()
+			modelTrainerRenderer.render(this.dom.legendHolder, aiProjectID, genome, dslabel)
+			this.legendRenderer.render(this.dom.legendHolder, imageViewData)
 
 			const initialZoomInCoordinate = viewModel.getInitialZoomInCoordinate(settings.displayedImageIndex)
 
@@ -156,6 +189,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 				)
 			}
 		}
+		this.wsiViewerInteractions.toggleLoadingDiv(false)
 	}
 }
 

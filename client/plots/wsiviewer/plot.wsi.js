@@ -48,5 +48,6 @@ export default async function (
 		loadingDiv.remove()
 	} catch (e) {
 		loadingDiv.text('Error: ' + (e.message || e))
+		console.error(e.message || e)
 	}
 }

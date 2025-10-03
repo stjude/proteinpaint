@@ -14,21 +14,14 @@ export class WSIAnnotationsRenderer {
 	}
 
 	render(holder: any, imageViewData: ImageViewData, activeImageExtent: Extent, map: OLMap) {
-		holder.select('div[id="annotations-table-wrapper"]').remove()
-
-		const tablesWrapper = holder
-			.append('div')
-			.attr('id', 'annotations-table-wrapper')
-			.style('display', 'inline-block')
-			.style('padding', '20px')
-
+		holder.select('div[id="annotations-table"]').remove()
 		if (!imageViewData.tilesTable) return
 		const selectedColor = '#fcfc8b'
 
 		renderTable({
 			columns: imageViewData.tilesTable.columns,
 			rows: imageViewData.tilesTable.rows,
-			div: tablesWrapper
+			div: holder
 				.append('div')
 				.attr('id', 'annotations-table')
 				.style('margins', '20px')
@@ -91,5 +84,7 @@ export class WSIAnnotationsRenderer {
 				})
 			}
 		})
+
+		return holder
 	}
 }

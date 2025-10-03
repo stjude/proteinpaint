@@ -40,6 +40,7 @@ export class WSIViewerInteractions {
 	) => void
 
 	onRetrainModelClicked: (genome: string, dslabel: string, projectId: string) => void
+	toggleLoadingDiv: (show: boolean) => void
 
 	constructor(wsiApp: any, opts: any) {
 		this.thumbnailClickListener = (index: number) => {
@@ -295,27 +296,53 @@ export class WSIViewerInteractions {
 		}
 
 		this.onRetrainModelClicked = async (genome: string, dslabel: string, projectId: string) => {
-			await dofetch3('/aiProjectTrainModel', {
-				body: {
-					genome,
-					dslabel,
-					projectId
-				}
-			})
-
-			clearServerDataCache()
-
-			wsiApp.app.dispatch({
-				type: 'plot_edit',
-				id: opts.id,
-				config: {
-					settings: {
-						renderWSIViewer: true,
-						renderAnnotationTable: true,
-						activeAnnotation: Math.random()
+			try {
+				await dofetch3('/aiProjectTrainModel', {
+					body: {
+						genome,
+						dslabel,
+						projectId
 					}
-				}
-			})
+				})
+				clearServerDataCache()
+
+				wsiApp.app.dispatch({
+					type: 'plot_edit',
+					id: opts.id,
+					config: {
+						settings: {
+							renderWSIViewer: true,
+							renderAnnotationTable: true,
+							activeAnnotation: Math.random()
+						}
+					}
+				})
+			} catch (e: any) {
+				this.toggleLoadingDiv(false)
+				wsiApp.app.printError('Error retraining model: ' + (e.message || e))
+			}
+		}
+
+		this.toggleLoadingDiv = (show: boolean) => {
+			if (show) {
+				wsiApp.dom.loadingDiv.selectAll('*').remove()
+				wsiApp.dom.loadingDiv
+					.style('display', 'block')
+					.append('div')
+					.style('position', 'relative')
+					.style('top', '50%')
+					.append('span')
+					.attr('class', 'sjpp-spinner')
+
+				wsiApp.dom.mapHolder.style('display', 'none')
+				wsiApp.dom.annotationsHolder.style('display', 'none')
+				wsiApp.dom.legendHolder.style('display', 'none')
+			} else {
+				wsiApp.dom.loadingDiv.style('display', 'none')
+				wsiApp.dom.mapHolder.style('display', 'block')
+				wsiApp.dom.annotationsHolder.style('display', 'inline-block')
+				wsiApp.dom.legendHolder.style('display', 'inline-block')
+			}
 		}
 	}
 
