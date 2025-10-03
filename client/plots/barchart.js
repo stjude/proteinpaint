@@ -13,12 +13,13 @@ import { isNumericTerm } from '#shared/terms.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getCombinedTermFilter } from '#filter'
 import { DownloadMenu } from '#dom/downloadMenu'
+import { PlotBase } from '#plots/PlotBase.js'
 
-export class Barchart {
+export class Barchart extends PlotBase {
 	constructor(opts) {
 		// rx.getComponentInit() will set this.app, this.id, this.opts
+		super(opts)
 		this.type = 'barchart'
-		if (opts?.parentId) this.parentId = opts.parentId
 	}
 	//freeze the api of this class. don't want embedder functions to modify it.
 	preApiFreeze(api) {
@@ -294,16 +295,6 @@ export class Barchart {
 
 			this.components.controls.on('downloadClick.barchart', this.download)
 		}
-	}
-
-	reactsTo(action) {
-		if (action.type.startsWith('plot_')) {
-			return (
-				(action.id === this.id || action.id == this.parentId) &&
-				(!action.config?.childType || action.config?.childType == this.type)
-			)
-		}
-		return true
 	}
 
 	getState(appState) {

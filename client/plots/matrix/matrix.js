@@ -17,12 +17,12 @@ import { select } from 'd3-selection'
 import { sayerror } from '#dom'
 import { getCombinedTermFilter } from '#filter'
 import { rebaseGroupFilter } from '../../mass/groups.js'
-import { filterJoin } from '#filter/filter'
+import { PlotBase } from '#plots/PlotBase.js'
 
-export class Matrix {
+export class Matrix extends PlotBase {
 	constructor(opts) {
+		super(opts)
 		this.type = 'matrix'
-		if (opts?.parentId) this.parentId = opts.parentId
 		this.holderTitle = 'Sample Matrix'
 		this.optionalFeatures = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.matrix || []
 		setInteractivity(this)

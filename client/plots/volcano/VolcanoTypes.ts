@@ -66,6 +66,7 @@ export type VolcanoOpts = {
 		}[]
 	}
 	overrides?: Partial<VolcanoSettings>
+	parentId?: string
 }
 
 /** Main dom elements created on init() */
