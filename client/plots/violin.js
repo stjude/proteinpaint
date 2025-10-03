@@ -8,6 +8,7 @@ import { setInteractivity } from './violin.interactivity'
 import { plotColor } from '#shared/common.js'
 import { isNumericTerm } from '#shared/terms.js'
 import { getCombinedTermFilter } from '#filter'
+import { PlotBase } from '#plots/PlotBase.js'
 
 /*
 when opts.mode = 'minimal', a minimal violin plot will be rendered that will have a single term and minimal features (i.e. no controls, legend, labels, brushing, transitions, etc.)
@@ -15,10 +16,10 @@ when opts.mode = 'minimal', a minimal violin plot will be rendered that will hav
 TODO default to unit=log if term enables
 */
 
-class ViolinPlot {
+class ViolinPlot extends PlotBase {
 	constructor(opts) {
+		super(opts)
 		this.type = 'violin'
-		if (opts?.parentId) this.parentId = opts.parentId
 	}
 
 	async init(appState) {
@@ -270,16 +271,6 @@ class ViolinPlot {
 		})
 
 		this.components.controls.on('downloadClick.violin', this.download)
-	}
-
-	reactsTo(action) {
-		if (action.type.startsWith('plot_')) {
-			return (
-				(action.id === this.id || action.id == this.parentId) &&
-				(!action.config?.childType || action.config?.childType == this.type)
-			)
-		}
-		return true
 	}
 
 	getState(appState) {

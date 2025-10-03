@@ -9,6 +9,7 @@ export class PlotBase {
 	app: AppApi
 	id: string
 	state: any
+	parentId?: string
 
 	dom: {
 		[name: string]: any
@@ -27,6 +28,7 @@ export class PlotBase {
 		this.opts = opts
 		this.id = opts.id
 		this.app = opts.app
+		this.parentId = opts?.parentId
 	}
 
 	async getMutableConfig() {

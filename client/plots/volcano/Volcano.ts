@@ -27,6 +27,7 @@ class Volcano extends PlotBase implements RxComponent {
 		this.components = {
 			controls: {}
 		}
+
 		this.termType = opts.termType
 		const holder = opts.holder.classed('sjpp-diff-analysis-main', true)
 		//Either allow a node to be passed or create a new div
@@ -49,12 +50,12 @@ class Volcano extends PlotBase implements RxComponent {
 
 	reactsTo(action) {
 		if (action.type.includes('cache_termq')) return true
-		if (action.type.startsWith('plot_')) {
-			return action.id === this.id
-		}
 		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true
 		if (action.type == 'app_refresh') return true
+		if (action.type.startsWith('plot_')) {
+			return action.id === this.id || action.id == this.parentId
+		}
 	}
 
 	getState(appState: MassState) {

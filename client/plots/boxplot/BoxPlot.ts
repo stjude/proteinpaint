@@ -35,7 +35,6 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 		this.components = {
 			controls: {}
 		}
-		if (opts?.parentId) this.parentId = opts.parentId
 
 		const holder = opts.holder.classed('sjpp-boxplot-main', true)
 		const controls = opts.controls ? holder : holder.append('div')

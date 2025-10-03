@@ -44,7 +44,6 @@ export class Scatter extends PlotBase implements RxComponent {
 	constructor(opts, api) {
 		super(opts, api)
 		this.type = Scatter.type
-		this.parentId = opts?.parentId //not working!!!, need to pass opts with the parentId to the component
 		this.zoom = 1
 	}
 
@@ -61,16 +60,6 @@ export class Scatter extends PlotBase implements RxComponent {
 			}
 		}
 		this.dom = this.view.dom
-	}
-
-	reactsTo(action) {
-		if (action.type.startsWith('plot_')) {
-			const react =
-				(action.id === this.id || action.id == this.parentId) &&
-				(!action.config?.childType || action.config?.childType == this.type)
-			return react
-		}
-		return true
 	}
 
 	getState(appState: MassState) {

@@ -7,6 +7,7 @@ import { addNewGroup, getFilter, getSamplelstTW } from '../mass/groups'
 // import { filterJoin, getFilterItemByTag } from '#filter'
 import { Menu } from '#dom/menu'
 import { getCombinedTermFilter } from '#filter'
+import { PlotBase } from '#plots/PlotBase.js'
 
 /*
 state {
@@ -18,11 +19,11 @@ facet table is always shown for secured or unsecured ds, as it does not reveal s
 click on table cells allow to select corresponding samples, this is only allowed when hasVerifiedToken() is true
 */
 
-class Facet {
+class Facet extends PlotBase {
 	constructor(opts) {
+		super(opts)
 		this.type = 'facet'
 		const holder = opts.holder
-		if (opts?.parentId) this.parentId = opts.parentId
 
 		const controlsHolder = holder.append('div').style('display', 'inline-block')
 		const mainDiv = holder.append('div').style('display', 'inline-block')
@@ -38,16 +39,6 @@ class Facet {
 
 	async init(appState) {
 		await this.setControls()
-	}
-
-	reactsTo(action) {
-		if (action.type.startsWith('plot_')) {
-			return (
-				(action.id === this.id || action.id == this.parentId) &&
-				(!action.config?.childType || action.config?.childType == this.type)
-			)
-		}
-		return true
 	}
 
 	getState(appState) {
