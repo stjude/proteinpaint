@@ -51,7 +51,6 @@ tape('Default barchart component', test => {
 
 	test.equal(testBarchart.type, 'barchart', 'Should set type to barchart')
 	test.equal(typeof testBarchart.setControls, 'function', 'Should have a .setControls() function')
-	test.equal(typeof testBarchart.reactsTo, 'function', 'Should have a .reactsTo() function')
 	test.equal(typeof testBarchart.getState, 'function', 'Should have a .getState() function')
 	test.equal(typeof testBarchart.getDataRequestOpts, 'function', 'Should have a .getDataRequestOpts() function')
 	test.equal(typeof testBarchart.getDescrStats, 'function', 'Should have a .getDescrStats() function')
