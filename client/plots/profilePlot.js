@@ -628,6 +628,7 @@ export async function getProfilePlotConfig(activeCohort, app, opts) {
 	if (!config) throw `No data available for the plot ${opts.chartType} in this dataset`
 	const cohortPreffix = activeCohort == FULL_COHORT ? 'F' : 'A'
 	config.facilityTW = { id: cohortPreffix + 'UNIT' } //All the plots want the facility term to show the hospital name if a site is selected
+	config.hidePlotFilter = true
 	await fillTermWrapper(config.facilityTW, app.vocabApi)
 	await loadFilterTerms(config, activeCohort, app)
 	return structuredClone(config)
