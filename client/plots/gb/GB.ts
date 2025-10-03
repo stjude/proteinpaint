@@ -2,10 +2,10 @@ import { PlotBase } from '../PlotBase.ts'
 import { getCompInit, type ComponentApi, type RxComponent } from '#rx'
 import { addGeneSearchbox, Menu, sayerror } from '#dom'
 import { getNormalRoot } from '#filter'
-import { gbControlsInit, mayUpdateGroupTestMethodsIdx } from '../genomeBrowser.controls.js'
 import { Model } from './model/Model.ts'
 import { ViewModel } from './viewModel/ViewModel.ts'
 import { View } from './view/View.ts'
+import { Interactions, mayUpdateGroupTestMethodsIdx } from './interactions/Interactions.ts'
 
 const geneTip = new Menu({ padding: '0px' })
 
@@ -21,6 +21,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 	components: {
 		[name: string]: ComponentApi | { [name: string]: ComponentApi }
 	} = {}
+	interactions: any
 
 	constructor(opts, api) {
 		super(opts, api)
@@ -52,13 +53,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 	}
 
 	async init() {
-		this.components = {
-			gbControls: await gbControlsInit({
-				app: this.app,
-				id: this.id,
-				holder: this.dom.controlsDiv
-			})
-		}
+		this.interactions = new Interactions(this.app, this.dom, this.id)
 	}
 
 	getState(appState) {
@@ -66,7 +61,8 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		if (!config) throw `No plot with id='${this.id}' found`
 		return {
 			config,
-			filter: getNormalRoot(appState.termfilter.filter)
+			filter: getNormalRoot(appState.termfilter.filter),
+			vocab: appState.vocab
 		}
 	}
 
@@ -77,15 +73,28 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		try {
 			const model = new Model(state, this.app)
 			const data = await model.preComputeData()
-			const viewModel = new ViewModel(state, this.app, this.opts, data)
-			const tklst = await viewModel.generateTracks()
-			const view = new View(state, this.app, this.dom, this.opts, this.id)
-			await view.launchBlockWithTracks(tklst)
+			const opts = this.getOpts()
+			const viewModel = new ViewModel(state, opts, data)
+			await viewModel.generateTracks()
+			const view = new View(state, viewModel.viewData, this.dom, opts, this.interactions)
+			await view.main()
 		} catch (e: any) {
 			sayerror(this.dom.errDiv, e.message || e)
 			if (e.stack) console.log(e.stack)
 		}
 		this.dom.loadingDiv.style('display', 'none')
+	}
+
+	// get options for view model and view
+	getOpts() {
+		const opts = {
+			genome: this.app.opts.genome,
+			vocabApi: this.app.vocabApi,
+			debug: this.app.opts.debug,
+			plotDiv: this.opts.plotDiv,
+			header: this.opts.header
+		}
+		return opts
 	}
 }
 
@@ -136,7 +145,7 @@ async function getDefaultConfig(vocabApi, override, activeCohort, blockIsProtein
 		if (config.snvindel.details) {
 			// test method may be inconsistent with group configuration (e.g. no fisher for INFO fields), update test method here
 			// 1st arg is a fake "self"
-			mayUpdateGroupTestMethodsIdx({ state: { config } }, config.snvindel.details)
+			mayUpdateGroupTestMethodsIdx({ config }, config.snvindel.details)
 			// a type=filter group may use filterByCohort. in such case, modify default state to assign proper filter based on current cohort
 			const gf = config.snvindel.details.groups.find(i => i.type == 'filter')
 			if (gf?.filterByCohort) {
@@ -168,7 +177,7 @@ async function getDefaultConfig(vocabApi, override, activeCohort, blockIsProtein
 	return config
 }
 
-export function computeBlockModeFlag(config, blockIsProteinMode, vocabApi) {
+export function computeBlockModeFlag(config, blockIsProteinMode?, vocabApi?) {
 	// steps follow the order of priority
 	if (typeof blockIsProteinMode == 'boolean') {
 		// this setting is set by chart button menu by user choice or saved state

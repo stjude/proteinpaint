@@ -2,17 +2,17 @@ import { filterJoin } from '#filter'
 
 export class ViewModel {
 	state: any
-	app: any
 	opts: any
 	data: any
 	blockInstance: any
 	components: any
 	maySaveTrackUpdatesToState: any
-	constructor(state, app, opts, data) {
+	viewData: any
+	constructor(state, opts, data) {
 		this.state = state
-		this.app = app
 		this.opts = opts
 		this.data = data
+		this.viewData = {}
 	}
 
 	async generateTracks() {
@@ -35,7 +35,7 @@ export class ViewModel {
 				// official mds3 tk without precomputed tk data
 				const tk: any = {
 					type: 'mds3',
-					dslabel: this.app.opts.state.vocab.dslabel,
+					dslabel: this.state.vocab.dslabel,
 					onClose: () => {
 						// on closing subtk, the filterObj corresponding to the subtk will be "removed" from subMds3TkFilters[], by regenerating the array
 						this.maySaveTrackUpdatesToState()
@@ -63,7 +63,7 @@ export class ViewModel {
 						// for every element, create a new subtk
 						const t2: any = {
 							type: 'mds3',
-							dslabel: this.app.opts.state.vocab.dslabel,
+							dslabel: this.state.vocab.dslabel,
 							// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
 							newChartHolder: this.opts.plotDiv
 						}
@@ -94,11 +94,11 @@ export class ViewModel {
 				if (t.shown) tklst.push(t)
 			}
 		}
-		return tklst
+		this.viewData.tklst = tklst
 	}
 
 	async launchCustomMds3tk(data) {
-		//this.mayDisplaySampleCountInControls(data) // TODO: move to View
+		this.mayGetSampleCounts(data)
 
 		if (this.blockInstance) {
 			// block already launched. update data on the tk and rerender
@@ -125,7 +125,7 @@ export class ViewModel {
 		const tk = {
 			type: 'mds3',
 			// despite having custom data, still provide dslabel for the mds3 tk to function as an official dataset
-			dslabel: this.app.opts.state.vocab.dslabel,
+			dslabel: this.state.vocab.dslabel,
 			name: 'Variants',
 			custom_variants: data.mlst,
 			skewerModes: [nm]
@@ -133,27 +133,10 @@ export class ViewModel {
 		return tk
 	}
 
-	mayDisplaySampleCountInControls(data) {
-		/* quick fix
-		group sample count returned by server is not part of state and is not accessible to controls component
-		has to synthesize a "current" object with the _partialData special attribute
-		and pass it to api.update() for component instance to receive it via getState()
-		*/
+	mayGetSampleCounts(data) {
 		if (Number.isInteger(data.totalSampleCount_group1) || Number.isInteger(data.totalSampleCount_group2)) {
-			const current = {
-				appState: {
-					plots: [
-						{
-							id: this.components.gbControls.id,
-							_partialData: {
-								groupSampleCounts: [data.totalSampleCount_group1, data.totalSampleCount_group2],
-								pop2average: data.pop2average
-							}
-						}
-					]
-				}
-			}
-			this.components.gbControls.update(current)
+			this.viewData.groupSampleCounts = [data.totalSampleCount_group1, data.totalSampleCount_group2]
+			this.viewData.pop2average = data.pop2average
 		}
 	}
 }
