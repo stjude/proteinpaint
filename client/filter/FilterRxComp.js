@@ -21,7 +21,7 @@ class FilterRxComp extends Filter {
 		const parentConfig = this.parentId && appState.plots.find(p => p.id === this.parentId)
 		const defaultFilter = { type: 'tvslst', join: '', lst: [] }
 		return {
-			termfilter: { filter: parentConfig?.filter || defaultFilter },
+			termfilter: parentConfig ? { filter: parentConfig.filter || defaultFilter } : appState.termfilter,
 			activeCohort: appState.activeCohort
 		}
 	}
