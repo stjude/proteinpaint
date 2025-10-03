@@ -6,6 +6,7 @@ import { isNumericTerm } from '#shared/terms.js'
 import { addNewGroup, getFilter, getSamplelstTW } from '../mass/groups'
 // import { filterJoin, getFilterItemByTag } from '#filter'
 import { Menu } from '#dom/menu'
+import { getCombinedTermFilter } from '#filter'
 
 /*
 state {
@@ -21,6 +22,8 @@ class Facet {
 	constructor(opts) {
 		this.type = 'facet'
 		const holder = opts.holder
+		if (opts?.parentId) this.parentId = opts.parentId
+
 		const controlsHolder = holder.append('div').style('display', 'inline-block')
 		const mainDiv = holder.append('div').style('display', 'inline-block')
 
@@ -37,17 +40,29 @@ class Facet {
 		await this.setControls()
 	}
 
+	reactsTo(action) {
+		if (action.type.startsWith('plot_')) {
+			return (
+				(action.id === this.id || action.id == this.parentId) &&
+				(!action.config?.childType || action.config?.childType == this.type)
+			)
+		}
+		return true
+	}
+
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (this.dom.header)
 			this.dom.header.html(
 				`${config.columnTw.term.name} <span style="font-size:.8em">(COLUMN)</span> ${config.rowTw.term.name} <span style="font-size:.8em">(ROW) &nbsp; FACET TABLE</span>`
 			)
+		const parentConfig = this.parentId && appState.plots.find(p => p.id === this.parentId)
+		const termfilter = getCombinedTermFilter(appState, config.filter || parentConfig?.filter)
 
 		return {
 			config,
 			vocab: appState.vocab,
-			termfilter: appState.termfilter,
+			termfilter,
 			groups: appState.groups
 		}
 	}
