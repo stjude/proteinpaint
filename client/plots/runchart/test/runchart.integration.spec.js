@@ -370,7 +370,7 @@ tape('Test divide by date', function (test) {
 					chartType: 'runChart',
 					term: { id: 'date' },
 					term2: { id: 'hrtavg' },
-					term0: { id: 'date' }
+					term0: { id: 'date', q: { mode: 'discrete' } }
 				}
 			]
 		},
