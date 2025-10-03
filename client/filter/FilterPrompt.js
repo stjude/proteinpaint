@@ -23,7 +23,8 @@ class FilterPrompt extends Filter {
 				caller's known raw filter state
 			*/
 			getNormalRoot: () => getNormalRoot(this.rawFilter),
-			getPromise: name => this.promises[name]
+			getPromise: name => this.promises[name],
+			destroy: () => this.destroy()
 		}
 
 		if (opts.debug) this.api.Inner = this
