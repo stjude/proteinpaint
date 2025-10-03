@@ -28,7 +28,7 @@ import { dtsnvindel, dtcnv, dtfusionrna } from '#shared/common.js'
  *    - CNV: Filter by copy number thresholds, and max segment length
  *    - Fusion: TBD
  *    - Hypermutator: Apply a maximum mutation count cutoff for highly mutated samples
- * 4. Convert filtered data to lesion format expected by Python script
+ * 4. Convert filtered data to lesion format and apply filter caps per type
  * 5. Pass lesion data and device pixel ratio to Python for GRIN2 statistical analysis and plot generation
  * 6. Return Manhattan plot as base64 string, top gene table, timing information, and statistically significant results that are displayed as an interactive svg
  */
@@ -39,9 +39,8 @@ export const ALL_LESION_TYPES = ['mutation', 'gain', 'loss', 'fusion'] as const
 export type LesionType = (typeof ALL_LESION_TYPES)[number]
 
 // ---- Per-request state (reinitialized per request)
-let CURRENT_TYPES: ReadonlySet<LesionType> = new Set()
-let keptByType: Partial<Record<LesionType, number>> = {}
-let warnedTypes: Partial<Record<LesionType, boolean>> = {}
+let CURRENT_TYPES: Set<LesionType> = new Set()
+const trackType: Map<LesionType, { count: number; warned: boolean }> = new Map()
 
 export const api: RouteApi = {
 	endpoint: 'grin2',
@@ -106,7 +105,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		throw new Error('No samples found matching the provided filter criteria')
 	}
 
-	// Step 2: Process sample data and convert to lesion format
+	// Step 2: Process sample data, convert to lesion format, and apply filter caps per type
 	mayLog('[GRIN2] Processing sample data...')
 	const processingStartTime = Date.now()
 
@@ -139,8 +138,6 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		width: request.width,
 		height: request.height
 	}
-
-	mayLog('[GRIN2] Prepared input for Python script:', { ...pyInput })
 
 	// Build chromosome list from genome reference
 	for (const c in g.majorchr) {
@@ -207,20 +204,17 @@ function lesionTypesForRequest(req: GRIN2Request): LesionType[] {
 // Reset per-request trackers based on the request (call once per run)
 export function resetLesionTrackers(req: GRIN2Request) {
 	CURRENT_TYPES = new Set<LesionType>(lesionTypesForRequest(req))
-	keptByType = {}
-	warnedTypes = {}
+	trackType.clear()
 	for (const t of CURRENT_TYPES) {
-		keptByType[t] = 0
-		warnedTypes[t] = false
+		trackType.set(t, { count: 0, warned: false })
 	}
 }
 
 // Early-stop: are all enabled types at their caps?
 function allTypesCapped(): boolean {
-	if (CURRENT_TYPES.size === 0) return false
 	for (const t of CURRENT_TYPES) {
-		// ?? 0 to check against 0 if keptByType[t] is undefined for some reason
-		if ((keptByType[t] ?? 0) < MAX_LESIONS_PER_TYPE) return false
+		const entry = trackType.get(t)
+		if (!entry || entry.count < MAX_LESIONS_PER_TYPE) return false
 	}
 	return true
 }
@@ -228,14 +222,17 @@ function allTypesCapped(): boolean {
 // Warn once per type
 function warnOnce(t: LesionType) {
 	if (!CURRENT_TYPES.has(t)) return
-	if (!warnedTypes[t]) {
-		warnedTypes[t] = true
+	const entry = trackType.get(t)
+	if (!entry) return
+	if (!entry.warned) {
+		entry.warned = true
 		mayLog(
 			`[GRIN2] Warning: ${t} lesions exceeded the per-type limit of ${MAX_LESIONS_PER_TYPE.toLocaleString()}. ` +
 				`Additional ${t} lesions will be skipped.`
 		)
 	}
 }
+
 /**
  * Process sample data by reading per-sample JSON files and converting to lesion format
  * Each sample has a JSON file containing mutation data (mlst array)
@@ -310,14 +307,15 @@ async function processSampleData(
 	return { lesions, processingSummary }
 }
 
-/** Enforce cap. Simply check if keptByType[t] < cap. If it is it gets incremented and returns true to caller so that the tuple is pushed.
+/** Enforce cap. Simply check if entry.count < MAX_LESIONS_PER_TYPE. If it is it gets incremented and returns true to caller so that the tuple is pushed.
  * Else the cap is hit. The first time this happens we call warnOnce and print that the cap is hit. We return false to caller so that tuple isn't pushed. */
 function pushIfUnderCap(lesion: any[]): boolean {
 	const t = lesion[4] as LesionType
 	if (!CURRENT_TYPES.has(t)) return false
-	const used = keptByType[t] ?? 0
-	if (used < MAX_LESIONS_PER_TYPE) {
-		keptByType[t] = used + 1
+	const entry = trackType.get(t)
+	if (!entry) return false
+	if (entry.count < MAX_LESIONS_PER_TYPE) {
+		entry.count++
 		return true
 	}
 	warnOnce(t)
@@ -338,11 +336,11 @@ async function processSampleMlst(
 			case dtsnvindel: {
 				if (!request.snvindelOptions) break
 				// mutation cap reached? skip conversion entirely
-				if ((keptByType['mutation'] ?? 0) >= MAX_LESIONS_PER_TYPE) {
+				if ((trackType.get('mutation')?.count ?? 0) >= MAX_LESIONS_PER_TYPE) {
 					warnOnce('mutation')
 					break
 				}
-				const les = filterAndConvertSnvIndel(sampleName, m, request.snvindelOptions) // -> tuple [..., 'mutation']
+				const les = filterAndConvertSnvIndel(sampleName, m, request.snvindelOptions)
 				if (les && pushIfUnderCap(les)) sampleLesions.push(les)
 				break
 			}
@@ -350,20 +348,23 @@ async function processSampleMlst(
 			case dtcnv: {
 				if (!request.cnvOptions) break
 				// both CNV subtypes already capped? skip conversion
-				if ((keptByType['gain'] ?? 0) >= MAX_LESIONS_PER_TYPE && (keptByType['loss'] ?? 0) >= MAX_LESIONS_PER_TYPE)
+				if (
+					(trackType.get('gain')?.count ?? 0) >= MAX_LESIONS_PER_TYPE &&
+					(trackType.get('loss')?.count ?? 0) >= MAX_LESIONS_PER_TYPE
+				)
 					break
-				const les = filterAndConvertCnv(sampleName, m, request.cnvOptions) // -> tuple [..., 'gain'|'loss']
+				const les = filterAndConvertCnv(sampleName, m, request.cnvOptions)
 				if (les && pushIfUnderCap(les)) sampleLesions.push(les)
 				break
 			}
 
 			case dtfusionrna: {
 				if (!request.fusionOptions) break
-				if ((keptByType['fusion'] ?? 0) >= MAX_LESIONS_PER_TYPE) {
+				if ((trackType.get('fusion')?.count ?? 0) >= MAX_LESIONS_PER_TYPE) {
 					warnOnce('fusion')
 					break
 				}
-				const les = filterAndConvertFusion(sampleName, m, request.fusionOptions) // -> tuple [..., 'fusion']
+				const les = filterAndConvertFusion(sampleName, m, request.fusionOptions)
 				if (les && pushIfUnderCap(les)) sampleLesions.push(les)
 				break
 			}
