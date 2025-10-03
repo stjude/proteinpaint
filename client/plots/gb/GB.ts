@@ -138,9 +138,11 @@ async function getDefaultConfig(vocabApi, override, activeCohort, blockIsProtein
 	if (config.snvindel) {
 		// presence of snvindel will generate the "mds3" tk, here setup associated config
 		// request default variant filter (vcf INFO), required for snvindel
-		const vf = await vocabApi.get_variantFilter()
-		if (vf?.filter) {
-			config.variantFilter = vf
+		if (!config.variantFilter) {
+			const vf = await vocabApi.get_variantFilter()
+			if (vf?.filter) {
+				config.variantFilter = vf
+			}
 		}
 		if (config.snvindel.details) {
 			// test method may be inconsistent with group configuration (e.g. no fisher for INFO fields), update test method here
