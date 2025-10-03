@@ -73,6 +73,16 @@ class ViolinPlot extends PlotBase {
 		}
 	}
 
+	reactsTo(action) {
+		if (action.type.startsWith('plot_')) {
+			return (
+				(action.id === this.id || action.id == this.parentId) &&
+				(!action.config?.childType || action.config?.childType == this.type)
+			)
+		}
+		return true
+	}
+
 	preApiFreeze(api) {
 		api.download = this.download
 		api.getChartImages = () => this.getChartImages()

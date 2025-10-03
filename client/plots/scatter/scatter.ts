@@ -62,6 +62,16 @@ export class Scatter extends PlotBase implements RxComponent {
 		this.dom = this.view.dom
 	}
 
+	reactsTo(action) {
+		if (action.type.startsWith('plot_')) {
+			return (
+				(action.id === this.id || action.id == this.parentId) &&
+				(!action.config?.childType || action.config?.childType == this.type)
+			)
+		}
+		return true
+	}
+
 	getState(appState: MassState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) {
