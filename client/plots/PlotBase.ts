@@ -26,8 +26,8 @@ export class PlotBase {
 	constructor(opts, plotApi?: ComponentApi) {
 		if (plotApi) this.api = plotApi
 		this.opts = opts
-		this.id = opts.id
-		this.app = opts.app
+		this.id = opts?.id
+		this.app = opts?.app
 		this.parentId = opts?.parentId
 	}
 
