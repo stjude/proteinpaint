@@ -214,8 +214,9 @@ export class VolcanoInteractions {
 				chartType: 'hierCluster',
 				termgroups: [group, annotationGroup],
 				dataType: TermTypes.GENE_EXPRESSION,
-				localFilter: {
+				filter: {
 					in: true,
+					join: '',
 					type: 'tvslst',
 					lst: [
 						{
