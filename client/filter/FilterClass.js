@@ -203,7 +203,8 @@ export class Filter {
 		const i = parentCopy.lst.findIndex(f => f.$id === $id)
 		if (i == -1) return null
 		parentCopy.lst.splice(i, 1)
-		return filterJoin([getNormalRoot(rootCopy), this.app.getState().termfilter?.filter])
+		const globalFilter = this.app?.getState().termfilter?.filter
+		return getNormalRoot(!globalFilter ? rootCopy : filterJoin([rootCopy, globalFilter]))
 		/*
 		!!! 
 			The logic below incorectly assumes that there are at most 2 root tvslst.lst entries,
@@ -301,5 +302,11 @@ export class Filter {
 			if (this.bus) this.bus.emit('postRender')
 			delete this.mainResolve
 		}
+	}
+
+	destroy() {
+		this.dom.holder.remove()
+		this.dom.controlsTip.destroy()
+		this.dom.treeTip.destroy()
 	}
 }
