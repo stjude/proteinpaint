@@ -557,23 +557,17 @@ class GRIN2 extends PlotBase implements RxComponent {
 				margin: this.btnMargin
 			})
 
-			const rows: Array<[string, any]> = [
-				['Total Samples', result.processingSummary.totalSamples],
-				['Processed Samples', result.processingSummary.processedSamples],
-				['Failed Samples', result.processingSummary.failedSamples],
-				[
-					'Failed Files',
-					result.processingSummary.failedFiles?.length
-						? result.processingSummary.failedFiles.map(f => f.sampleName).join(', ')
-						: ''
-				],
-				['Total Lesions', result.processingSummary.totalLesions],
-				['Processed Lesions', result.processingSummary.processedLesions]
-			]
-
-			rows.forEach(([label, value]) => {
-				table.addRow(label, value)
-			})
+			table.addRow('Total Samples', result.processingSummary.totalSamples)
+			table.addRow('Processed Samples', result.processingSummary.processedSamples)
+			table.addRow('Failed Samples', result.processingSummary.failedSamples)
+			table.addRow(
+				'Failed Files',
+				result.processingSummary.failedFiles?.length
+					? result.processingSummary.failedFiles.map(f => f.sampleName).join(', ')
+					: ''
+			)
+			table.addRow('Total Lesions', result.processingSummary.totalLesions)
+			table.addRow('Processed Lesions', result.processingSummary.processedLesions)
 		}
 
 		// Display timing information
