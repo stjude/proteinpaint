@@ -6913,110 +6913,110 @@
   },
   "plots/violin.interactivity.js": {
     "lines": {
-      "total": 154,
-      "covered": 1,
+      "total": 136,
+      "covered": 95,
       "skipped": 0,
-      "pct": 0.64
+      "pct": 69.85
     },
     "functions": {
-      "total": 28,
-      "covered": 0,
+      "total": 25,
+      "covered": 17,
       "skipped": 0,
-      "pct": 0
+      "pct": 68
     },
     "statements": {
-      "total": 163,
-      "covered": 1,
+      "total": 144,
+      "covered": 97,
       "skipped": 0,
-      "pct": 0.61
+      "pct": 67.36
     },
     "branches": {
-      "total": 116,
-      "covered": 0,
+      "total": 112,
+      "covered": 55,
       "skipped": 0,
-      "pct": 0
+      "pct": 49.1
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 49.1,
       "prev": 30.17,
-      "diff": -30.17
+      "diff": 18.93
     },
     "averagePct": {
-      "curr": 0.3125,
+      "curr": 63.57749999999999,
       "prev": 37.879999999999995,
-      "diff": -37.567499999999995
+      "diff": 25.697499999999998
     }
   },
   "plots/violin.js": {
     "lines": {
       "total": 84,
-      "covered": 7,
+      "covered": 78,
       "skipped": 0,
-      "pct": 8.33
+      "pct": 92.85
     },
     "functions": {
       "total": 17,
-      "covered": 1,
+      "covered": 15,
       "skipped": 0,
-      "pct": 5.88
+      "pct": 88.23
     },
     "statements": {
       "total": 95,
-      "covered": 7,
+      "covered": 83,
       "skipped": 0,
-      "pct": 7.36
+      "pct": 87.36
     },
     "branches": {
       "total": 65,
-      "covered": 1,
+      "covered": 52,
       "skipped": 0,
-      "pct": 1.53
+      "pct": 80
     },
     "lowestPct": {
-      "curr": 1.53,
+      "curr": 80,
       "prev": 80,
-      "diff": -78.47
+      "diff": 0
     },
     "averagePct": {
-      "curr": 5.775,
+      "curr": 87.11,
       "prev": 87.11,
-      "diff": -81.335
+      "diff": 0
     }
   },
   "plots/violin.renderer.js": {
     "lines": {
-      "total": 222,
-      "covered": 1,
+      "total": 220,
+      "covered": 198,
       "skipped": 0,
-      "pct": 0.45
+      "pct": 90
     },
     "functions": {
       "total": 43,
-      "covered": 0,
+      "covered": 37,
       "skipped": 0,
-      "pct": 0
+      "pct": 86.04
     },
     "statements": {
-      "total": 246,
-      "covered": 1,
+      "total": 244,
+      "covered": 215,
       "skipped": 0,
-      "pct": 0.4
+      "pct": 88.11
     },
     "branches": {
       "total": 255,
-      "covered": 0,
+      "covered": 202,
       "skipped": 0,
-      "pct": 0
+      "pct": 79.21
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 79.21,
       "prev": 79.21,
-      "diff": -79.21
+      "diff": 0
     },
     "averagePct": {
-      "curr": 0.21250000000000002,
+      "curr": 85.84,
       "prev": 85.78999999999999,
-      "diff": -85.57749999999999
+      "diff": 0.05000000000001137
     }
   },
   "src/block.tk.bam.js": {
@@ -7597,38 +7597,38 @@
   },
   "plots/test/violin.integration.spec.js": {
     "lines": {
-      "total": 367,
-      "covered": 357,
+      "total": 403,
+      "covered": 394,
       "skipped": 0,
-      "pct": 97.27
+      "pct": 97.76
     },
     "functions": {
-      "total": 85,
-      "covered": 82,
+      "total": 96,
+      "covered": 93,
       "skipped": 0,
-      "pct": 96.47
+      "pct": 96.87
     },
     "statements": {
-      "total": 388,
-      "covered": 377,
+      "total": 432,
+      "covered": 422,
       "skipped": 0,
-      "pct": 97.16
+      "pct": 97.68
     },
     "branches": {
-      "total": 44,
-      "covered": 21,
+      "total": 62,
+      "covered": 32,
       "skipped": 0,
-      "pct": 47.72
+      "pct": 51.61
     },
     "lowestPct": {
-      "curr": 47.72,
-      "prev": 45.83,
-      "diff": 1.8900000000000006
+      "curr": 51.61,
+      "prev": 47.72,
+      "diff": 3.8900000000000006
     },
     "averagePct": {
-      "curr": 84.655,
-      "prev": 81.78,
-      "diff": 2.875
+      "curr": 85.98,
+      "prev": 84.655,
+      "diff": 1.3250000000000028
     }
   },
   "termsetting/handlers/singleCellCellType.ts": {
