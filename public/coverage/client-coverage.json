@@ -4999,8 +4999,8 @@
     },
     "averagePct": {
       "curr": 0.76,
-      "prev": 0,
-      "diff": 0.76
+      "prev": 0.76,
+      "diff": 0
     }
   },
   "tw/categorical.ts": {
@@ -7989,6 +7989,42 @@
       "curr": 89.2875,
       "prev": 0,
       "diff": 89.2875
+    }
+  },
+  "plots/test/barchart.integration.spec.js": {
+    "lines": {
+      "total": 405,
+      "covered": 405,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 101,
+      "covered": 98,
+      "skipped": 0,
+      "pct": 97.02
+    },
+    "statements": {
+      "total": 430,
+      "covered": 427,
+      "skipped": 0,
+      "pct": 99.3
+    },
+    "branches": {
+      "total": 70,
+      "covered": 41,
+      "skipped": 0,
+      "pct": 58.57
+    },
+    "lowestPct": {
+      "curr": 58.57,
+      "prev": 0,
+      "diff": 58.57
+    },
+    "averagePct": {
+      "curr": 88.7225,
+      "prev": 0,
+      "diff": 88.7225
     }
   }
 }
