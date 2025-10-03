@@ -10,7 +10,7 @@ import { TermTypes, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
  test sections
 
 basic render
-localFilter
+filter
 avoid race condition
 dendrogram click
 
@@ -30,11 +30,11 @@ tape('basic render', async test => {
 	test.end()
 })
 
-tape('localFilter', async test => {
+tape('filter', async test => {
 	test.timeoutAfter(4000)
 	const { app, hc } = await getHierClusterApp({
 		terms: getGenes(),
-		localFilter: {
+		filter: {
 			type: 'tvslst',
 			join: '',
 			in: true,
@@ -237,7 +237,7 @@ async function getHierClusterApp(_opts = {}) {
 					// !!! there will be an initial load error since this is an empty geneset,
 					// !!! but will be ignored since it's not relevant to this test
 					terms: _opts.terms || [],
-					localFilter: _opts.localFilter
+					filter: _opts.filter
 				}
 			]
 		},
