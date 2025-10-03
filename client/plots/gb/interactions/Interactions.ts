@@ -132,3 +132,17 @@ export class Interactions {
 		})
 	}
 }
+
+export function mayUpdateGroupTestMethodsIdx(state, d) {
+	if (d.groups.length != 2) return // not two groups, no need to update test method
+	// depending on types of two groups, may need to update test method
+	const [g1, g2] = d.groups
+	if (g1.type == 'info' || g2.type == 'info' || (g1.type == 'population' && g2.type == 'population')) {
+		// if any group is INFO, or both are population, can only allow value difference and not fisher test
+		const i = state.config.snvindel.details.groupTestMethods.findIndex(i => i.name == 'Allele frequency difference')
+		if (i == -1) throw 'Allele frequency difference not found'
+		d.groupTestMethodsIdx = i
+	} else {
+		// otherwise, do not change existing method idx
+	}
+}
