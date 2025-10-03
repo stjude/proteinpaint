@@ -53,4 +53,82 @@ export class Interactions {
 			config
 		})
 	}
+
+	clickFacetCell(event, tklst, state) {
+		this.dom.tip.clear().showunder(event.target)
+		const table = this.dom.tip.d.append('table').style('margin', '5px 5px 5px 2px')
+		for (const tk of tklst) {
+			const tr = table.append('tr')
+			const td1 = tr
+				.append('td')
+				.style('font-size', '.8em')
+				.text(state.config.trackLst.activeTracks.includes(tk.name) ? 'SHOWN' : '')
+			tr.append('td')
+				.attr('class', 'sja_menuoption')
+				.text(tk.name)
+				.on('click', () => {
+					let newActiveTracks, newRemoveTracks // default undefined to not remove any track
+					if (state.config.trackLst.activeTracks.includes(tk.name)) {
+						td1.text('')
+						newActiveTracks = state.config.trackLst.activeTracks.filter(n => n != tk.name)
+						newRemoveTracks = [tk.name]
+					} else {
+						td1.text('SHOWN')
+						newActiveTracks = structuredClone(state.config.trackLst.activeTracks)
+						newActiveTracks.push(tk.name)
+					}
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: {
+							trackLst: {
+								activeTracks: newActiveTracks,
+								removeTracks: newRemoveTracks
+							}
+						}
+					})
+				})
+		}
+	}
+
+	launchVariantTrack = toDisplay => {
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: { snvindel: { shown: toDisplay } }
+		})
+	}
+
+	launchLdTrack = (tracks, i, toDisplay) => {
+		tracks[i].shown = toDisplay
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: { ld: { tracks } }
+		})
+	}
+
+	launchGroupsFilter = groups => {
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: { snvindel: { details: { groups } } }
+		})
+	}
+
+	launchSnvIndelDetails = details => {
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: { snvindel: { details } }
+		})
+	}
+
+	launchVariantFilter = filter => {
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: { variantFilter: { filter } }
+		})
+	}
 }

@@ -7,10 +7,12 @@ export class ViewModel {
 	blockInstance: any
 	components: any
 	maySaveTrackUpdatesToState: any
+	viewData: any
 	constructor(state, opts, data) {
 		this.state = state
 		this.opts = opts
 		this.data = data
+		this.viewData = {}
 	}
 
 	async generateTracks() {
@@ -92,11 +94,11 @@ export class ViewModel {
 				if (t.shown) tklst.push(t)
 			}
 		}
-		return tklst
+		this.viewData.tklst = tklst
 	}
 
 	async launchCustomMds3tk(data) {
-		//this.mayDisplaySampleCountInControls(data) // TODO: move to View
+		this.mayGetSampleCounts(data)
 
 		if (this.blockInstance) {
 			// block already launched. update data on the tk and rerender
@@ -131,27 +133,10 @@ export class ViewModel {
 		return tk
 	}
 
-	mayDisplaySampleCountInControls(data) {
-		/* quick fix
-		group sample count returned by server is not part of state and is not accessible to controls component
-		has to synthesize a "current" object with the _partialData special attribute
-		and pass it to api.update() for component instance to receive it via getState()
-		*/
+	mayGetSampleCounts(data) {
 		if (Number.isInteger(data.totalSampleCount_group1) || Number.isInteger(data.totalSampleCount_group2)) {
-			const current = {
-				appState: {
-					plots: [
-						{
-							id: this.components.gbControls.id,
-							_partialData: {
-								groupSampleCounts: [data.totalSampleCount_group1, data.totalSampleCount_group2],
-								pop2average: data.pop2average
-							}
-						}
-					]
-				}
-			}
-			this.components.gbControls.update(current)
+			this.viewData.groupSampleCounts = [data.totalSampleCount_group1, data.totalSampleCount_group2]
+			this.viewData.pop2average = data.pop2average
 		}
 	}
 }
