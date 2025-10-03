@@ -146,6 +146,7 @@ export type GRIN2Response = {
 		}>
 		totalLesions?: number
 		processedLesions?: number
+		unprocessedSamples?: number
 	}
 }
 

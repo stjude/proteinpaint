@@ -35,6 +35,13 @@ import { dtsnvindel, dtcnv, dtfusionrna } from '#shared/common.js'
 
 // Constants
 const MAX_LESIONS_PER_TYPE = 10000 // Maximum number of lesions to process per type to avoid overwhelming the production server
+export const ALL_LESION_TYPES = ['mutation', 'gain', 'loss', 'fusion'] as const
+export type LesionType = (typeof ALL_LESION_TYPES)[number]
+
+// ---- Per-request state (reinitialized per request)
+let CURRENT_TYPES: ReadonlySet<LesionType> = new Set()
+let keptByType: Partial<Record<LesionType, number>> = {}
+let warnedTypes: Partial<Record<LesionType, boolean>> = {}
 
 export const api: RouteApi = {
 	endpoint: 'grin2',
@@ -145,8 +152,6 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		pyInput.chromosomelist[c] = g.majorchr[c]
 	}
 
-	// mayLog(`[GRIN2] Prepared ${processedLesions.toLocaleString()} lesions for analysis`)
-
 	// Step 4: Run GRIN2 analysis via Python
 	const grin2AnalysisStart = Date.now()
 	const pyResult = await run_python('grin2PpWrapper.py', JSON.stringify(pyInput))
@@ -190,6 +195,47 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	return response
 }
 
+// Build the active type list from the request options
+function lesionTypesForRequest(req: GRIN2Request): LesionType[] {
+	const out: LesionType[] = []
+	if (req.snvindelOptions) out.push('mutation')
+	if (req.cnvOptions) out.push('gain', 'loss')
+	if (req.fusionOptions) out.push('fusion')
+	return out
+}
+
+// Reset per-request trackers based on the request (call once per run)
+export function resetLesionTrackers(req: GRIN2Request) {
+	CURRENT_TYPES = new Set<LesionType>(lesionTypesForRequest(req))
+	keptByType = {}
+	warnedTypes = {}
+	for (const t of CURRENT_TYPES) {
+		keptByType[t] = 0
+		warnedTypes[t] = false
+	}
+}
+
+// Early-stop: are all enabled types at their caps?
+function allTypesCapped(): boolean {
+	if (CURRENT_TYPES.size === 0) return false
+	for (const t of CURRENT_TYPES) {
+		// ?? 0 to check against 0 if keptByType[t] is undefined for some reason
+		if ((keptByType[t] ?? 0) < MAX_LESIONS_PER_TYPE) return false
+	}
+	return true
+}
+
+// Warn once per type
+function warnOnce(t: LesionType) {
+	if (!CURRENT_TYPES.has(t)) return
+	if (!warnedTypes[t]) {
+		warnedTypes[t] = true
+		mayLog(
+			`[GRIN2] Warning: ${t} lesions exceeded the per-type limit of ${MAX_LESIONS_PER_TYPE.toLocaleString()}. ` +
+				`Additional ${t} lesions will be skipped.`
+		)
+	}
+}
 /**
  * Process sample data by reading per-sample JSON files and converting to lesion format
  * Each sample has a JSON file containing mutation data (mlst array)
@@ -201,16 +247,10 @@ async function processSampleData(
 	ds: any,
 	request: GRIN2Request
 ): Promise<{ lesions: any[]; processingSummary: GRIN2Response['processingSummary'] }> {
+	resetLesionTrackers(request)
+
 	const lesions: any[] = []
 	let lesionId = 1
-
-	const keptByType: Record<'mutation' | 'gain' | 'loss' | 'fusion', number> = {
-		mutation: 0,
-		gain: 0,
-		loss: 0,
-		fusion: 0
-	}
-	const warnedTypes = new Set<'mutation' | 'gain' | 'loss' | 'fusion'>()
 
 	const processingSummary: GRIN2Response['processingSummary'] = {
 		totalSamples: samples.length,
@@ -218,49 +258,49 @@ async function processSampleData(
 		failedSamples: 0,
 		failedFiles: [],
 		totalLesions: 0,
-		processedLesions: 0
+		processedLesions: 0,
+		unprocessedSamples: 0
 	}
-
-	const allTypesCapped = () =>
-		keptByType.mutation >= MAX_LESIONS_PER_TYPE &&
-		keptByType.gain >= MAX_LESIONS_PER_TYPE &&
-		keptByType.loss >= MAX_LESIONS_PER_TYPE
-	// TODO: keptByType.fusion >= MAX_LESIONS_PER_TYPE Will implement fusion cap after fusion options are added
-	// TODO: fusion is set up for the cap like the other types. Will just need to enable this later when fusion is supported
 
 	mayLog(`[GRIN2] Processing JSON files for ${samples.length.toLocaleString()} samples`)
 
-	outer: for (const sample of samples) {
-		// If fully capped, don’t even open more files
+	outer: for (let i = 0; i < samples.length; i++) {
+		// Stop before opening more files if all enabled types are already capped
 		if (allTypesCapped()) {
-			mayLog('[GRIN2] All per-type caps reached; stopping early.')
+			const remaining = samples.length - i
+			if (remaining > 0) processingSummary.unprocessedSamples! += remaining
+			mayLog('[GRIN2] All enabled per-type caps reached; stopping early.')
 			break outer
 		}
 
+		const sample = samples[i]
 		const filepath = path.join(serverconfig.tpmasterdir, ds.queries.singleSampleMutation.folder, sample.name)
 
 		try {
 			await file_is_readable(filepath)
 			const mlst = JSON.parse(await read_file(filepath))
 
-			const { sampleLesions } = await processSampleMlst(sample.name, mlst, lesionId, request, keptByType, warnedTypes)
+			const { sampleLesions } = await processSampleMlst(sample.name, mlst, lesionId, request)
 
 			lesions.push(...sampleLesions)
 			lesionId += sampleLesions.length
 
-			processingSummary.processedSamples = (processingSummary.processedSamples ?? 0) + 1
-			processingSummary.totalLesions = (processingSummary.totalLesions ?? 0) + sampleLesions.length
+			processingSummary.processedSamples! += 1
+			processingSummary.totalLesions! += sampleLesions.length
 
+			// Stop after this sample if caps are now all met
 			if (allTypesCapped()) {
-				mayLog('[GRIN2] All per-type caps reached; stopping early.')
+				const remaining = samples.length - 1 - i
+				if (remaining > 0) processingSummary.unprocessedSamples! += remaining
+				mayLog('[GRIN2] All enabled per-type caps reached; stopping early.')
 				break outer
 			}
 		} catch (error) {
-			processingSummary.failedSamples = (processingSummary.failedSamples ?? 0) + 1
-			processingSummary.failedFiles?.push({
+			processingSummary.failedSamples! += 1
+			processingSummary.failedFiles!.push({
 				sampleName: sample.name,
 				filePath: filepath,
-				error: typeof error === 'object' && error && 'message' in error ? (error as any).message : String(error)
+				error: error instanceof Error ? error.message || 'Unknown error' : String(error)
 			})
 			mayLog(`[GRIN2] Error processing sample ${sample.name}: ${processingSummary.failedFiles!.at(-1)!.error}`)
 		}
@@ -270,33 +310,17 @@ async function processSampleData(
 	return { lesions, processingSummary }
 }
 
-type LesionType = 'mutation' | 'gain' | 'loss' | 'fusion'
-
-function warnOnce(t: LesionType, warnedTypes: Set<LesionType>, cap: number) {
-	if (!warnedTypes.has(t)) {
-		warnedTypes.add(t)
-		mayLog(
-			`[GRIN2] Warning: ${t} lesions exceeded the per-type limit of ${cap.toLocaleString()}. ` +
-				`Additional ${t} lesions will be skipped.`
-		)
-	}
-}
-
 /** Enforce cap. Simply check if keptByType[t] < cap. If it is it gets incremented and returns true to caller so that the tuple is pushed.
  * Else the cap is hit. The first time this happens we call warnOnce and print that the cap is hit. We return false to caller so that tuple isn't pushed. */
-function pushIfUnderCap(
-	tupleLesion: any[],
-	keptByType: Record<LesionType, number>,
-	warnedTypes: Set<LesionType>,
-	cap: number
-): boolean {
-	const t = tupleLesion[4] as LesionType
-	const used = keptByType[t]
-	if (used < cap) {
+function pushIfUnderCap(lesion: any[]): boolean {
+	const t = lesion[4] as LesionType
+	if (!CURRENT_TYPES.has(t)) return false
+	const used = keptByType[t] ?? 0
+	if (used < MAX_LESIONS_PER_TYPE) {
 		keptByType[t] = used + 1
 		return true
 	}
-	warnOnce(t, warnedTypes, cap)
+	warnOnce(t)
 	return false
 }
 
@@ -305,45 +329,42 @@ async function processSampleMlst(
 	sampleName: string,
 	mlst: any[],
 	startId: number,
-	request: GRIN2Request,
-	keptByType: Record<'mutation' | 'gain' | 'loss' | 'fusion', number>,
-	warnedTypes: Set<'mutation' | 'gain' | 'loss' | 'fusion'>
+	request: GRIN2Request
 ): Promise<{ sampleLesions: any[] }> {
 	const sampleLesions: any[] = []
-	const CAP = MAX_LESIONS_PER_TYPE
 
 	for (const m of mlst) {
 		switch (m.dt) {
 			case dtsnvindel: {
 				if (!request.snvindelOptions) break
 				// mutation cap reached? skip conversion entirely
-				if (keptByType.mutation >= CAP) {
-					warnOnce('mutation', warnedTypes, CAP)
+				if ((keptByType['mutation'] ?? 0) >= MAX_LESIONS_PER_TYPE) {
+					warnOnce('mutation')
 					break
 				}
-				const les = filterAndConvertSnvIndel(sampleName, m, request.snvindelOptions)
-				if (les && pushIfUnderCap(les, keptByType, warnedTypes, CAP)) sampleLesions.push(les)
+				const les = filterAndConvertSnvIndel(sampleName, m, request.snvindelOptions) // -> tuple [..., 'mutation']
+				if (les && pushIfUnderCap(les)) sampleLesions.push(les)
 				break
 			}
 
 			case dtcnv: {
 				if (!request.cnvOptions) break
-				// both CNV types already capped? skip conversion entirely
-				if (keptByType.gain >= CAP && keptByType.loss >= CAP) break
-				const les = filterAndConvertCnv(sampleName, m, request.cnvOptions)
-				if (les && pushIfUnderCap(les, keptByType, warnedTypes, CAP)) sampleLesions.push(les)
+				// both CNV subtypes already capped? skip conversion
+				if ((keptByType['gain'] ?? 0) >= MAX_LESIONS_PER_TYPE && (keptByType['loss'] ?? 0) >= MAX_LESIONS_PER_TYPE)
+					break
+				const les = filterAndConvertCnv(sampleName, m, request.cnvOptions) // -> tuple [..., 'gain'|'loss']
+				if (les && pushIfUnderCap(les)) sampleLesions.push(les)
 				break
 			}
 
 			case dtfusionrna: {
 				if (!request.fusionOptions) break
-				// fusion cap reached? skip conversion entirely
-				if (keptByType.fusion >= CAP) {
-					warnOnce('fusion', warnedTypes, CAP)
+				if ((keptByType['fusion'] ?? 0) >= MAX_LESIONS_PER_TYPE) {
+					warnOnce('fusion')
 					break
 				}
-				const les = filterAndConvertFusion(sampleName, m, request.fusionOptions)
-				if (les && pushIfUnderCap(les, keptByType, warnedTypes, CAP)) sampleLesions.push(les)
+				const les = filterAndConvertFusion(sampleName, m, request.fusionOptions) // -> tuple [..., 'fusion']
+				if (les && pushIfUnderCap(les)) sampleLesions.push(les)
 				break
 			}
 
