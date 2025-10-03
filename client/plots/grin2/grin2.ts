@@ -557,17 +557,18 @@ class GRIN2 extends PlotBase implements RxComponent {
 				margin: this.btnMargin
 			})
 
-			table.addRow('Total Samples', result.processingSummary.totalSamples)
-			table.addRow('Processed Samples', result.processingSummary.processedSamples)
-			table.addRow('Failed Samples', result.processingSummary.failedSamples)
+			table.addRow('Total Samples', result.processingSummary.totalSamples.toLocaleString())
+			table.addRow('Processed Samples', result.processingSummary.processedSamples.toLocaleString())
+			table.addRow('Unprocessed Samples', (result.processingSummary.unprocessedSamples ?? 0).toLocaleString())
+			table.addRow('Failed Samples', result.processingSummary.failedSamples.toLocaleString())
 			table.addRow(
 				'Failed Files',
 				result.processingSummary.failedFiles?.length
 					? result.processingSummary.failedFiles.map(f => f.sampleName).join(', ')
-					: ''
+					: '0'
 			)
-			table.addRow('Total Lesions', result.processingSummary.totalLesions)
-			table.addRow('Processed Lesions', result.processingSummary.processedLesions)
+			table.addRow('Total Lesions', result.processingSummary.totalLesions.toLocaleString())
+			table.addRow('Processed Lesions', result.processingSummary.processedLesions.toLocaleString())
 		}
 
 		// Display timing information
