@@ -50,8 +50,7 @@ class MassPlot {
 
 	async setComponents(opts) {
 		const _ = await importPlot(opts.chartType)
-
-		this.components = await multiInit({
+		const promises = {
 			recover: recoverInit({
 				app: this.app,
 				holder: this.dom.localRecoverDiv,
@@ -81,8 +80,11 @@ class MassPlot {
 				since plot.js has no access to mass app .dom.plotDiv in which all apps are shown,
 				this workarounds gets the parent node of sandbox.app_div which is app.dom.plotDiv
 				*/
-			}),
-			filter: filterRxCompInit({
+			})
+		}
+
+		if (!this.state.config.hidePlotFilter)
+			promises.filter = filterRxCompInit({
 				app: this.app,
 				vocabApi: this.app.vocabApi,
 				parentId: this.id,
@@ -97,7 +99,8 @@ class MassPlot {
 					})
 				}
 			})
-		})
+
+		this.components = await multiInit(promises)
 	}
 
 	destroy() {
