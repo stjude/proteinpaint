@@ -1982,145 +1982,145 @@
   "plots/runchart/viewmodel/runchartViewModel.ts": {
     "lines": {
       "total": 20,
-      "covered": 16,
+      "covered": 20,
       "skipped": 0,
-      "pct": 80
+      "pct": 100
     },
     "functions": {
       "total": 9,
-      "covered": 8,
+      "covered": 9,
       "skipped": 0,
-      "pct": 88.88
+      "pct": 100
     },
     "statements": {
       "total": 21,
-      "covered": 17,
+      "covered": 21,
       "skipped": 0,
-      "pct": 80.95
+      "pct": 100
     },
     "branches": {
       "total": 4,
-      "covered": 2,
+      "covered": 3,
       "skipped": 0,
-      "pct": 50
+      "pct": 75
     },
     "lowestPct": {
-      "curr": 50,
+      "curr": 75,
       "prev": 75,
-      "diff": -25
+      "diff": 0
     },
     "averagePct": {
-      "curr": 74.9575,
+      "curr": 93.75,
       "prev": 93.75,
-      "diff": -18.792500000000004
+      "diff": 0
     }
   },
   "plots/runchart/runchart.ts": {
     "lines": {
       "total": 67,
-      "covered": 11,
+      "covered": 51,
       "skipped": 0,
-      "pct": 16.41
+      "pct": 76.11
     },
     "functions": {
       "total": 12,
-      "covered": 3,
+      "covered": 7,
       "skipped": 0,
-      "pct": 25
+      "pct": 58.33
     },
     "statements": {
       "total": 75,
-      "covered": 11,
+      "covered": 57,
       "skipped": 0,
-      "pct": 14.66
+      "pct": 76
     },
     "branches": {
       "total": 26,
-      "covered": 0,
+      "covered": 18,
       "skipped": 0,
-      "pct": 0
+      "pct": 69.23
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 58.33,
       "prev": 66.66,
-      "diff": -66.66
+      "diff": -8.329999999999998
     },
     "averagePct": {
-      "curr": 14.017499999999998,
+      "curr": 69.9175,
       "prev": 78.17500000000001,
-      "diff": -64.15750000000001
+      "diff": -8.257500000000007
     }
   },
   "plots/runchart/view/runchartView.ts": {
     "lines": {
       "total": 21,
-      "covered": 6,
+      "covered": 18,
       "skipped": 0,
-      "pct": 28.57
+      "pct": 85.71
     },
     "functions": {
       "total": 4,
-      "covered": 1,
+      "covered": 3,
       "skipped": 0,
-      "pct": 25
+      "pct": 75
     },
     "statements": {
       "total": 21,
-      "covered": 6,
+      "covered": 18,
       "skipped": 0,
-      "pct": 28.57
+      "pct": 85.71
     },
     "branches": {
       "total": 6,
-      "covered": 0,
+      "covered": 4,
       "skipped": 0,
-      "pct": 0
+      "pct": 66.66
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 66.66,
       "prev": 50,
-      "diff": -50
+      "diff": 16.659999999999997
     },
     "averagePct": {
-      "curr": 20.535,
+      "curr": 78.26999999999998,
       "prev": 63.019999999999996,
-      "diff": -42.485
+      "diff": 15.249999999999986
     }
   },
   "plots/runchart/model/runchartModel.ts": {
     "lines": {
       "total": 28,
-      "covered": 2,
+      "covered": 8,
       "skipped": 0,
-      "pct": 7.14
+      "pct": 28.57
     },
     "functions": {
       "total": 3,
-      "covered": 0,
+      "covered": 1,
       "skipped": 0,
-      "pct": 0
+      "pct": 33.33
     },
     "statements": {
       "total": 29,
-      "covered": 2,
+      "covered": 8,
       "skipped": 0,
-      "pct": 6.89
+      "pct": 27.58
     },
     "branches": {
       "total": 8,
-      "covered": 0,
+      "covered": 1,
       "skipped": 0,
-      "pct": 0
+      "pct": 12.5
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 12.5,
       "prev": 0,
-      "diff": 0
+      "diff": 12.5
     },
     "averagePct": {
-      "curr": 3.5075,
+      "curr": 25.494999999999997,
       "prev": 3.5075,
-      "diff": 0
+      "diff": 21.987499999999997
     }
   },
   "plots/scatter/viewmodel/scatterLasso.ts": {
@@ -8025,6 +8025,42 @@
       "curr": 88.7225,
       "prev": 0,
       "diff": 88.7225
+    }
+  },
+  "plots/runchart/test/runchart.integration.spec.js": {
+    "lines": {
+      "total": 138,
+      "covered": 135,
+      "skipped": 0,
+      "pct": 97.82
+    },
+    "functions": {
+      "total": 38,
+      "covered": 38,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 146,
+      "covered": 143,
+      "skipped": 0,
+      "pct": 97.94
+    },
+    "branches": {
+      "total": 18,
+      "covered": 11,
+      "skipped": 0,
+      "pct": 61.11
+    },
+    "lowestPct": {
+      "curr": 61.11,
+      "prev": 0,
+      "diff": 61.11
+    },
+    "averagePct": {
+      "curr": 89.2175,
+      "prev": 0,
+      "diff": 89.2175
     }
   }
 }
