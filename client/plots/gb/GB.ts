@@ -2,11 +2,10 @@ import { PlotBase } from '../PlotBase.ts'
 import { getCompInit, type ComponentApi, type RxComponent } from '#rx'
 import { addGeneSearchbox, Menu, sayerror } from '#dom'
 import { getNormalRoot } from '#filter'
-import { mayUpdateGroupTestMethodsIdx } from '../genomeBrowser.controls.js' //// TODO: remove this import
 import { Model } from './model/Model.ts'
 import { ViewModel } from './viewModel/ViewModel.ts'
 import { View } from './view/View.ts'
-import { Interactions } from './interactions/Interactions.ts'
+import { Interactions, mayUpdateGroupTestMethodsIdx } from './interactions/Interactions.ts'
 
 const geneTip = new Menu({ padding: '0px' })
 

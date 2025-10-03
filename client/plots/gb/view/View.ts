@@ -2,6 +2,7 @@ import { first_genetrack_tolist } from '#common/1stGenetk'
 import { Tabs, make_one_checkbox, renderTable } from '#dom'
 import { filterInit } from '#filter/filter'
 import { appInit } from '#termdb/app'
+import { mayUpdateGroupTestMethodsIdx } from '../interactions/Interactions.ts'
 
 export class View {
 	state: any
@@ -544,7 +545,7 @@ export class View {
 								infoKey: f.id
 							}
 							const details = this.makeNewDetail(newGroup, groupIdx)
-							this.mayUpdateGroupTestMethodsIdx(details)
+							mayUpdateGroupTestMethodsIdx(this.state, details)
 							this.interactions.launchSnvIndelDetails(details)
 						})
 				}
@@ -570,7 +571,7 @@ export class View {
 								adjust_race: p.adjust_race
 							}
 							const details = this.makeNewDetail(newGroup, groupIdx)
-							this.mayUpdateGroupTestMethodsIdx(details)
+							mayUpdateGroupTestMethodsIdx(this.state, details)
 							this.interactions.launchSnvIndelDetails(details)
 						})
 				}
@@ -599,7 +600,7 @@ export class View {
 								}
 							}
 							const details = this.makeNewDetail(newGroup, groupIdx)
-							this.mayUpdateGroupTestMethodsIdx(details)
+							mayUpdateGroupTestMethodsIdx(this.state, details)
 							this.interactions.launchSnvIndelDetails(details)
 						}
 					}
@@ -617,22 +618,6 @@ export class View {
 		}
 		newDetail.groups[groupIdx] = newGroup
 		return newDetail
-	}
-
-	mayUpdateGroupTestMethodsIdx(d) {
-		if (d.groups.length != 2) return // not two groups, no need to update test method
-		// depending on types of two groups, may need to update test method
-		const [g1, g2] = d.groups
-		if (g1.type == 'info' || g2.type == 'info' || (g1.type == 'population' && g2.type == 'population')) {
-			// if any group is INFO, or both are population, can only allow value difference and not fisher test
-			const i = this.state.config.snvindel.details.groupTestMethods.findIndex(
-				i => i.name == 'Allele frequency difference'
-			)
-			if (i == -1) throw 'Allele frequency difference not found'
-			d.groupTestMethodsIdx = i
-		} else {
-			// otherwise, do not change existing method idx
-		}
 	}
 
 	renderTestMethod() {
