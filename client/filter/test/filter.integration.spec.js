@@ -66,6 +66,10 @@ function getOpts(_opts = {}) {
 				opts.filterUiRoot = getFilterItemByTag(filter, 'filterUiRoot')
 				/*** filter.api.main() is already called in filter.refresh() before this callback ***/
 				//opts.filter.main(opts.filterData)
+			},
+			destroy: () => {
+				opts.filter.destroy()
+				holder.remove()
 			}
 		},
 		_opts
@@ -233,7 +237,7 @@ tape('empty filter: visible controls', async test => {
 		2,
 		'should hide the add-transformer buttons'
 	)
-
+	if (test._ok) opts.destroy()
 	test.end()
 })
 
@@ -303,6 +307,7 @@ tape('1-entry root filter: visible controls', async test => {
 	test.equal(removeOpt.size(), 1, 'should have a remove option')
 
 	document.body.dispatchEvent(new Event('mousedown', { bubbles: true }))
+	if (test._ok) opts.destroy()
 	test.end()
 })
 
@@ -423,6 +428,7 @@ tape('2-entry root filter: visible controls', async test => {
 		'transparent',
 		'should unhighlight the filter group after clicking elsewhere'
 	)
+	if (test._ok) opts.destroy()
 	test.end()
 })
 
@@ -463,7 +469,7 @@ tape('+NEW button interaction', async test => {
 		'none',
 		'should show the filter container div'
 	)
-
+	if (test._ok) opts.destroy()
 	test.end()
 })
 
@@ -509,6 +515,7 @@ tape('add-transformer button interaction, 1-pill', async test => {
 	)
 	test.equal(lst[1] && lst[1].tvs && lst[1].tvs.term.id, 'sex', 'should append the new term to the root filter')
 	test.equal(opts.holder.selectAll('.sja_pill_wrapper').size(), 2, 'should display 2 pills')
+	if (test._ok) opts.destroy()
 	test.end()
 })
 
@@ -560,6 +567,7 @@ tape('add-transformer button interaction, 2-pill', async test => {
 	)
 	test.equal(opts.filterData.lst[1].tvs.term.id, 'sex', 'should append the new term to the re-rooted filter')
 	test.equal(opts.holder.selectAll('.sja_pill_wrapper').size(), 3, 'should display 3 pills')
+	if (test._ok) opts.destroy()
 	test.end()
 })
 
@@ -611,6 +619,7 @@ tape('add-transformer button interaction, NEGATED 2-pill', async test => {
 	)
 	test.equal(opts.filterData.lst[1]?.tvs.term.id, 'sex', 'should append the new term to the re-rooted filter')
 	test.equal(opts.holder.selectAll('.sja_pill_wrapper').size(), 3, 'should display 3 pills')
+	if (test._ok) opts.destroy()
 	test.end()
 })
 
@@ -650,6 +659,7 @@ tape('pill Edit interaction', async test => {
 	test.ok(applyBtn, 'should display an apply button in the edit menu')
 
 	document.body.dispatchEvent(new Event('mousedown', { bubbles: true }))
+	if (test._ok) opts.destroy()
 	test.end()
 })
 
@@ -687,6 +697,7 @@ tape('pill Replace interaction', async test => {
 	)
 
 	document.body.dispatchEvent(new Event('mousedown', { bubbles: true }))
+	if (test._ok) opts.destroy()
 	test.end()
 })
 
@@ -753,6 +764,7 @@ tape('pill menu-append interaction', async test => {
 	}
 
 	document.body.dispatchEvent(new Event('mousedown', { bubbles: true }))
+	if (test._ok) opts.destroy()
 	test.end()
 })
 
@@ -786,6 +798,7 @@ tape('pill Negate interaction', async test => {
 	)
 
 	document.body.dispatchEvent(new Event('mousedown', { bubbles: true }))
+	if (test._ok) opts.destroy()
 	test.end()
 })
 
@@ -816,6 +829,7 @@ tape('pill Remove interaction', async test => {
 	test.equal(opts.holder.selectAll('.sja_pill_wrapper').size(), 0, `should remove a pill when clicked`)
 
 	document.body.dispatchEvent(new Event('mousedown', { bubbles: true }))
+	if (test._ok) opts.destroy()
 	test.end()
 })
 
@@ -867,6 +881,7 @@ tape('group menu-append interaction', async test => {
 	test.equal(lst.length, origLstLength + 1, 'should append one item to the root filter.lst[]')
 
 	document.body.dispatchEvent(new Event('mousedown', { bubbles: true }))
+	if (test._ok) opts.destroy()
 	test.end()
 })
 
@@ -917,6 +932,7 @@ tape('group Negate interaction', async test => {
 		0,
 		'should show parentheses for non-nested filters'
 	)
+	if (test._ok) opts.destroy()
 	test.end()
 })
 
@@ -947,6 +963,7 @@ tape('group Remove interaction', async test => {
 	test.equal(opts.holder.selectAll('.sja_pill_wrapper').size(), 0, `should remove a group's pills when clicked`)
 
 	//document.body.dispatchEvent(new Event('mousedown', { bubbles: true }))
+	if (test._ok) opts.destroy()
 	test.end()
 })
 
@@ -983,6 +1000,7 @@ tape('group Switch join interaction', async test => {
 		'and',
 		`should switch a group's filter.join value after clicking ${expectedLabel}`
 	)
+	if (test._ok) opts.destroy()
 	test.end()
 })
 
@@ -1136,7 +1154,7 @@ tape('nested filters', async test => {
 		0,
 		'should not show parentheses around the second (1-item) group of the root filter'
 	)
-
+	if (test._ok) opts.destroy()
 	test.end()
 })
 
@@ -1218,6 +1236,7 @@ tape('hidden filters', async test => {
 	)
 	test.equal(lstOr[1].tvs.term.id, 'sex', 'should append the new term to the re-rooted filter')
 	test.equal(opts.holder.selectAll('.sja_pill_wrapper').size(), 3, 'should display 3 pills')
+	if (test._ok) opts.destroy()
 	test.end()
 })
 
@@ -1316,7 +1335,7 @@ tape('renderAs: htmlSelect', async test => {
 	const removeOpt = menuRows.filter(d => d.action == 'remove').node()
 	test.equal(removeOpt && removeOpt.style.display, 'none', 'should hide the Remove option')
 	opts.filter.Inner.dom.controlsTip.hide()
-
+	if (test._ok) opts.destroy()
 	test.end()
 })
 
@@ -1599,7 +1618,7 @@ tape('getNormalRoot()', async test => {
 		},
 		'should return the hidden plus user configured options after removing empty tvslst'
 	)
-
+	if (test._ok) opts.destroy()
 	test.end()
 })
 
@@ -1709,7 +1728,6 @@ tape('filterJoin()', test => {
 			'joining single tvs into empty filter should yield join=""'
 		)
 	}
-
 	test.end()
 })
 
@@ -1755,7 +1773,8 @@ tape('Rx filter state inputs', async test => {
 		},
 		dispatch(action) {
 			console.log(action)
-		}
+		},
+		deregister() {}
 	}
 
 	const filterApi = await filterRxCompInit({
@@ -1784,12 +1803,17 @@ tape('Rx filter state inputs', async test => {
 
 	try {
 		filter.state = filter.getState(null)
-		filter.main(filterData)
+		await filter.main(filterData)
 		test.fail(message)
 	} catch (e) {
 		test.pass(`${message}: ${e}`)
 	}
-
+	if (test._ok) {
+		setTimeout(() => {
+			filterApi.destroy()
+			holder.remove()
+		}, 0)
+	}
 	test.end()
 })
 
@@ -1817,6 +1841,10 @@ tape('filterPromptInit()', async test => {
 		callback(filter) {
 			opts.filterData = filter
 			opts.filterUiRoot = getFilterItemByTag(filter, 'filterUiRoot')
+		},
+		destroy() {
+			opts.filter.destroy()
+			holder.remove()
 		}
 	}
 
@@ -1856,6 +1884,6 @@ tape('filterPromptInit()', async test => {
 	backBtn.click()
 	const findTree = filter.dom.termSrcDiv.node().querySelectorAll('.termbtn')
 	test.ok(findTree.length > 1, `Should display tree after clicking back button`)
-
+	if (test._ok) opts.destroy()
 	test.end()
 })

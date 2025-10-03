@@ -37,7 +37,9 @@ class FilterRxComp extends Filter {
 			return
 		}
 		this.dom.holder.style('display', 'inline-block')
-		this.rawCopy = JSON.stringify(rawFilter || f?.filter)
+		const filter = structuredClone(rawFilter || f?.filter)
+		if (filter.lst.length < 2) filter.join = ''
+		this.rawCopy = JSON.stringify(filter)
 		super.main(this.rawCopy, { activeCohort: this.state.activeCohort })
 	}
 
