@@ -33,7 +33,9 @@ class ViolinPlot {
 			.attr('id', 'sjpp-vp-holder')
 
 		this.dom = {
-			tip: new Menu(),
+			hovertip: new Menu({ padding: '3px' }), // separate tips for hover & click on violin labels to avoid interfering
+			clicktip: new Menu({ padding: '0px' }),
+			sampletabletip: new Menu({ padding: '3px' }), // sampletable is lauched from option shown in clicktip which closes on clicking, thus need its own menu..
 			header: this.opts.header,
 			loadingDiv: this.opts.holder
 				.append('div')

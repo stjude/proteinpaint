@@ -2,7 +2,7 @@ import { axisLeft, axisTop } from 'd3-axis'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { curveBasis, line } from 'd3-shape'
 import { brushX, brushY } from 'd3-brush'
-import { renderTable, Menu, getMaxLabelWidth, table2col } from '#dom'
+import { renderTable, getMaxLabelWidth, table2col } from '#dom'
 import { rgb } from 'd3'
 import { format as d3format } from 'd3-format'
 import { TermTypes } from '#shared/terms.js'
@@ -15,8 +15,6 @@ export default function setViolinRenderer(self) {
 		const isH = settings.orientation === 'horizontal'
 		const t1 = self.config.term
 		const t2 = self.config.term2
-		const tip = new Menu({ padding: '5px' })
-		self.dom.tip = tip
 
 		//termsetting.js 'set_hiddenvalues()' adds uncomputable values from term.values to q.hiddenValues object. Since it will show up on the legend, delete that key-value pair from t2.q.hiddenValues object.
 		const termNum =
@@ -103,7 +101,7 @@ export default function setViolinRenderer(self) {
 				//if only one plot pass area builder to calculate the exact height of the plot
 				const { violinG, height } = renderViolinPlot(svgData, plot, isH, wScale, areaBuilder, y)
 				y += height
-				if (self.opts.mode != 'minimal') renderLabels(t1, t2, violinG, plot, isH, settings, tip)
+				if (self.opts.mode != 'minimal') renderLabels(t1, t2, violinG, plot, isH, settings)
 
 				if (self.config.term.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
 					// is sc data, disable brushing for now because 1) no use 2) avoid bug of listing cells
@@ -111,7 +109,8 @@ export default function setViolinRenderer(self) {
 					// enable brushing
 					if (self.opts.mode != 'minimal') renderBrushing(t1, t2, violinG, settings, plot, isH, svgData)
 				}
-				self.labelHideLegendClicking(t2, plot)
+
+				self.labelHideLegendClicking(t2, plot) // FIXME
 			}
 
 			// render p-value table
@@ -119,10 +118,10 @@ export default function setViolinRenderer(self) {
 		}
 	}
 
-	self.displaySummaryStats = function (d, event, tip) {
+	self.displaySummaryStats = function (d, event) {
 		if (!d.summaryStats) return
-		tip.clear().show(event.clientX, event.clientY)
-		const table = table2col({ holder: tip.d.append('div') })
+		self.dom.hovertip.clear().show(event.clientX, event.clientY)
+		const table = table2col({ holder: self.dom.hovertip.d.append('div') })
 		for (const { label, value } of Object.values(d.summaryStats)) table.addRow(label, value)
 	}
 	self.getAutoThickness = function () {
@@ -353,11 +352,11 @@ export default function setViolinRenderer(self) {
 		return { violinG, height }
 	}
 
-	function renderLabels(t1, t2, violinG, plot, isH, settings, tip) {
-		// create scale label
+	// label for each violin (on left when horizontal)
+	function renderLabels(t1, t2, violinG, plot, isH, settings) {
 		violinG
 			.append('text')
-			.classed('sjpp-axislabel', true)
+			.attr('data-testid', 'sjpp-violin-label')
 			.text(`${plot.label}, n=${plot.plotValueCount}`)
 			.style('cursor', 'pointer')
 			.on('click', function (event) {
@@ -367,10 +366,10 @@ export default function setViolinRenderer(self) {
 			.on('mouseover', function (event, d) {
 				event.stopPropagation()
 				if (!event) return
-				self.displaySummaryStats(d, event, tip)
+				self.displaySummaryStats(d, event)
 			})
 			.on('mouseout', function () {
-				tip.hide()
+				self.dom.hovertip.hide()
 			})
 			.style('opacity', 0)
 			.style('opacity', 1)

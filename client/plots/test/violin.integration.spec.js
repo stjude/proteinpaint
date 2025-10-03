@@ -354,7 +354,6 @@ tape('agedx/sex, basic controls', function (test) {
 	}
 
 	async function changeModeToDiscrete(violin, violinDiv) {
-		// console.log(violin.getComponents('controls.config.term1').Inner.pill.Inner.dom.tip.d.selectAll('.sjpp-toggle-button'));
 		violin.Inner.app.dispatch({
 			id: violin.Inner.id,
 			type: 'plot_edit',
@@ -523,7 +522,11 @@ tape('test hide option on label clicking', function (test) {
 		)
 		const unhideLegendValue = htmlLegends.filter(c => hiddenKeys.find(k => c.__data__.text === k))
 		unhideLegendValue[0].dispatchEvent(new Event('click'), { bubbles: true })
-		const hiddenValueRendered = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-axislabel', count: 2 })
+		const hiddenValueRendered = await detectGte({
+			elem: violinDiv.node(),
+			selector: '[data-testid="sjpp-violin-label"]',
+			count: 2
+		})
 		test.ok(hiddenValueRendered, 'hidden value rendered')
 
 		test.equal(
@@ -1310,9 +1313,6 @@ tape('test uncomputable categories legend', function (test) {
 tape('Load linear regression-violin UI', function (test) {
 	runpp({
 		state: {
-			nav: {
-				header_mode: 'hide_search'
-			},
 			plots: [
 				{
 					chartType: 'regression',
@@ -1333,20 +1333,10 @@ tape('Load linear regression-violin UI', function (test) {
 	})
 	async function runTests(regression) {
 		regression.on('postRender.test', null)
-		await regressionViolinRendering(regression)
+		// point to outcome tw holder and avoid searching whole regression ui, in case later input terms are also added
+		await testViolinByCount(test, regression.Inner.inputs.outcome.dom.holder, 1)
 		if (test._ok) regression.Inner.app.destroy()
 		test.end()
-	}
-	async function regressionViolinRendering(regression) {
-		const regressionVp = await detectLst({
-			elem: regression.Inner.dom.inputs.node(),
-			selector: '.sjpp-vp-path',
-			count: 2
-		})
-		test.ok(regressionVp.length == 2, 'Violin plot for regression UI exists')
-
-		const expectedPathColor = 'rgb(221, 221, 221)'
-		test.equal(expectedPathColor, getComputedStyle(regressionVp[0]).fill, 'Path fill matches expected fill')
 	}
 })
 
@@ -1442,12 +1432,13 @@ const open_state = {
 	},
 	term2: { id: 'sex' }
 }
+
 // detect given number of violin labels
 // use the first label to test mouseover menu and click menu options
 async function testLabelHoverClick(test, violin, violinDiv, labelcount) {
 	const labs = await detectLst({
 		elem: violinDiv.node(),
-		selector: '.sjpp-axislabel',
+		selector: '[data-testid="sjpp-violin-label"]',
 		count: labelcount
 	})
 	test.ok(labs, `Detected ${labelcount} violin labels`)
@@ -1460,7 +1451,7 @@ async function testLabelHoverClick(test, violin, violinDiv, labelcount) {
 	// test mouseover
 	labs[0].dispatchEvent(new Event('mouseover'), { bubbles: true })
 	{
-		const tip = violin.Inner.dom.tip
+		const tip = violin.Inner.dom.hovertip
 		await whenVisible(tip.d)
 		const table = await detectOne({ elem: tip.dnode, selector: '[data-testid="sja_simpletable"]' })
 		test.pass('summary stat table found in hover tooltip')
@@ -1468,7 +1459,7 @@ async function testLabelHoverClick(test, violin, violinDiv, labelcount) {
 	}
 
 	labs[0].dispatchEvent(new Event('click'), { bubbles: true })
-	const tip = violin.Inner.app.tip
+	const tip = violin.Inner.dom.clicktip
 	if (!violin.Inner.state.config.term2 || violin.Inner.state.config.term2.term.type == 'singleCellCellType') {
 		/* by design, menu won't show:
 		- if no term2
@@ -1488,11 +1479,11 @@ async function testLabelHoverClick(test, violin, violinDiv, labelcount) {
 		const lab = await detectOne({ elem: tip.dnode, selector: '[data-testid="sjpp-violinLabOpt-list"]' })
 		test.pass('List option is in menu')
 		// click to load samples and display in table
+		await whenVisible(violin.Inner.dom.sampletabletip.d)
 		lab.dispatchEvent(new Event('click'))
-		await whenVisible(violin.Inner.dom.tip.d)
-		await detectOne({ elem: violin.Inner.dom.tip.dnode, selector: '[data-testid="sjpp-listsampletable"]' })
+		await detectOne({ elem: violin.Inner.dom.sampletabletip.dnode, selector: '[data-testid="sjpp-listsampletable"]' })
 		test.pass('Tip with sample table displayed after clicking "List sample"')
-		violin.Inner.dom.tip.hide()
+		violin.Inner.dom.sampletabletip.hide()
 		tip.hide()
 	}
 }

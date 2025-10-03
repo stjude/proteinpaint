@@ -1,10 +1,8 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
-import { niceNumLabels } from '#dom'
-import { rgb, select } from 'd3'
+import { DownloadMenu, niceNumLabels } from '#dom'
 import { TermTypes } from '#shared/terms.js'
 import { getSamplelstFilter } from '../mass/groups.js'
 import { listSamples } from './barchart.events.js'
-import { DownloadMenu } from '#dom'
 
 export function setInteractivity(self) {
 	self.getChartImages = function () {
@@ -21,19 +19,10 @@ export function setInteractivity(self) {
 
 	self.download = function (event) {
 		if (!self.state) return
-
 		const name2svg = self.getChartImages()
 		const dm = new DownloadMenu(name2svg, self.config.term.term.name)
 		dm.show(event.clientX, event.clientY)
 	}
-
-	//replaced by downloadMenu
-	// self.download = () => {
-	// 	if (!self.state) return
-	// 	self.dom.violinDiv.selectAll('.sjpp-violin-plot').each(function () {
-	// 		to_svg(this, self.state.config.downloadFilename || 'violin', { apply_dom_styles: true })
-	// 	})
-	// }
 
 	self.displayLabelClickMenu = function (t1, t2, plot, event) {
 		if (!t2) return // when no term 2 do not show options on the sole violin label
@@ -74,7 +63,7 @@ export function setInteractivity(self) {
 				testid: 'sjpp-violinLabOpt-list',
 				callback: async () => {
 					const [start, end] = [self.data.min, self.data.max * 2]
-					await self.listSamples(event, t1, t2, plot, start, end)
+					await self.callListSamples(event, t1, t2, plot, start, end)
 				}
 			})
 		}
@@ -98,17 +87,14 @@ export function setInteractivity(self) {
 			options.push({
 				label: `List samples`,
 				testid: 'sjpp-violinBrushOpt-list',
-				callback: async () => self.listSamples(event, t1, t2, plot, start, end)
+				callback: async () => self.callListSamples(event, t1, t2, plot, start, end)
 			})
 		}
 		self.displayMenu(event, options, plot, start, end)
-		// const brushValues = plot.values.filter(i => i > start && i < end)
 	}
 
 	self.displayMenu = function (event, options, plot, start, end) {
-		self.app.tip.d.selectAll('*').remove()
-		//For testing and debugging XXX do not do this
-		self.app.tip.d.classed('sjpp-violin-brush-tip', true)
+		const tip = self.dom.clicktip.clear().showunder(event.target)
 
 		const isBrush = start != null && end != null
 
@@ -116,17 +102,16 @@ export function setInteractivity(self) {
 			const [niceStart, niceEnd] =
 				self.config.term.term.type == 'integer' ? [Math.round(start), Math.round(end)] : niceNumLabels([start, end])
 
-			self.app.tip.d.append('div').text(`From ${niceStart} to ${niceEnd}`)
+			tip.d.append('div').style('margin', '10px').text(`From ${niceStart} to ${niceEnd}`)
 		}
-
 		//show menu options for label clicking and brush selection
-		self.app.tip.d
+		tip.d
 			.append('div')
 			.selectAll('div')
 			.data(options)
 			.enter()
 			.append('div')
-			.attr('class', 'sja_menuoption')
+			.attr('class', 'sja_menuoption sja_sharp_border')
 			.attr('data-testid', d => d.testid)
 			.text(d => d.label)
 			.on('click', async (event, d) => {
@@ -134,51 +119,11 @@ export function setInteractivity(self) {
 				event.target._clicked = true
 				event.target.textContent = 'Loading...'
 				await d.callback()
-				self.app.tip.hide()
-			})
-		//Color picker available in the control panel
-		// self.addEditColorToMenu(plot)
-		self.app.tip.show(event.clientX, event.clientY)
-	}
-
-	self.addEditColorToMenu = function (plot) {
-		const color = rgb(plot.color).formatHex()
-		const input = self.app.tip.d
-			.append('div')
-			.attr('class', 'sja_sharp_border')
-			.style('padding', '0px 10px')
-			.text('Color:')
-			.append('input')
-			.attr('type', 'color')
-			.attr('value', color)
-			.on('change', () => {
-				const newColor = input.node().value
-				const term2 = self.config.term2
-				let key
-				for (const field in term2.term.values)
-					if (term2.term.values[field].label == plot.label) {
-						term2.term.values[field].color = newColor
-						key = field
-					}
-
-				if (!key) term2.term.values = { [plot.label]: { label: plot.label, color: newColor } }
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: self.id,
-					config: {
-						term2: {
-							isAtomic: true,
-							term: self.config.term2.term,
-							q: getUpdatedQfromClick(plot, self.config.term2, false)
-						}
-					}
-				})
-
-				self.app.tip.hide()
+				tip.hide()
 			})
 	}
 
-	self.listSamples = async function (event, t1, t2, plot, start, end) {
+	self.callListSamples = async function (event, t1, t2, plot, start, end) {
 		let tvslst
 		const geneVariant = {}
 		if (t1.term.type == 'geneVariant' || t2?.term.type == 'geneVariant') {
@@ -204,23 +149,13 @@ export function setInteractivity(self) {
 			terms,
 			tvslst,
 			geneVariant,
-			tip: self.dom.tip
+			tip: self.dom.sampletabletip
 		}
 		await listSamples(arg)
 	}
 
-	self.openSampleView = function (sampleId, sampleName) {
-		self.app.dispatch({
-			type: 'plot_create',
-			config: {
-				chartType: 'sampleView',
-				sample: { sampleId, sampleName }
-			}
-		})
-		self.app.tip.hide()
-	}
-
 	self.labelHideLegendClicking = function (t2, plot) {
+		// whoever wrote this tangled mess needs to be fired
 		self.dom.legendDiv
 			.selectAll('.sjpp-htmlLegend')
 			.on('click', event => {
@@ -258,12 +193,12 @@ export function setInteractivity(self) {
 				const q = event.target.__data__
 				if (q === undefined) return
 				if (q.isHidden === true && q.isClickable === true) {
-					self.dom.tip.d.html('Click to unhide plot')
-					self.dom.tip.show(event.clientX, event.clientY)
+					console.log(11)
+					self.dom.hovertip.clear().show(event.clientX, event.clientY).d.append('span').text('Click to unhide plot')
 				}
 			})
 			.on('mouseout', function () {
-				self.dom.tip.hide()
+				self.dom.hovertip.hide()
 			})
 	}
 
