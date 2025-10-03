@@ -51,7 +51,9 @@ class WSIViewer extends PlotBase implements RxComponent {
 				.style('width', '100%')
 				.style('height', '100%')
 				.style('background-color', 'rgba(255, 255, 255, 0.95)')
-				.style('text-align', 'center'),
+				.style('text-align', 'center')
+				.style('display', 'none'),
+
 			errorDiv: opts.holder.append('div').attr('class', 'wsiViewer-error').style('margin-left', '10px'),
 			mapHolder: opts.holder.append('div').attr('id', 'wsiviewer-mapHolder'),
 			annotationsHolder: opts.holder
@@ -127,7 +129,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 		const imageViewData: ImageViewData = viewModel.getImageViewData(settings.displayedImageIndex)
 
 		if (settings.renderWSIViewer) {
-			this.wsiViewerInteractions.toggleLoadingDiv(true)
+			this.wsiViewerInteractions.toggleLoadingDiv(settings.renderAnnotationTable)
 
 			this.thumbnailsContainer = this.thumbnailRenderer.render(
 				this.dom.mapHolder,

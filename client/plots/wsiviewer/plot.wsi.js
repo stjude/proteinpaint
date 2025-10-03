@@ -21,8 +21,7 @@ export default async function (
 	aiWSIMageFiles,
 	renderAnnotationTable = false
 ) {
-	// Replaced by temp spinner. May completely replace with progress bar.
-	// const loadingDiv = holder.append('div').style('margin', '20px').text('Loading...')
+	const loadingDiv = holder.append('div').style('margin', '20px').text('Loading...')
 
 	try {
 		const opts = {
@@ -46,9 +45,9 @@ export default async function (
 		}
 		const plot = await import('#plots/plot.app.js')
 		const plotAppApi = await plot.appInit(opts)
-		// loadingDiv.remove()
+		loadingDiv.remove()
 	} catch (e) {
-		// loadingDiv.text('Error: ' + (e.message || e))
+		loadingDiv.text('Error: ' + (e.message || e))
 		console.error(e.message || e)
 	}
 }
