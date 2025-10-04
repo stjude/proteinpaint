@@ -557,11 +557,18 @@ class GRIN2 extends PlotBase implements RxComponent {
 				margin: this.btnMargin
 			})
 
-			Object.entries(result.processingSummary).forEach(([key, value]) => {
-				const displayKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
-				const displayValue = Array.isArray(value) ? value.join(', ') : String(value)
-				table.addRow(displayKey, displayValue)
-			})
+			table.addRow('Total Samples', result.processingSummary.totalSamples.toLocaleString())
+			table.addRow('Processed Samples', result.processingSummary.processedSamples.toLocaleString())
+			table.addRow('Unprocessed Samples', (result.processingSummary.unprocessedSamples ?? 0).toLocaleString())
+			table.addRow('Failed Samples', result.processingSummary.failedSamples.toLocaleString())
+			table.addRow(
+				'Failed Files',
+				result.processingSummary.failedFiles?.length
+					? result.processingSummary.failedFiles.map(f => f.sampleName).join(', ')
+					: '0'
+			)
+			table.addRow('Total Lesions', result.processingSummary.totalLesions.toLocaleString())
+			table.addRow('Processed Lesions', result.processingSummary.processedLesions.toLocaleString())
 		}
 
 		// Display timing information
@@ -573,6 +580,19 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.style('color', this.optionsTextColor)
 				.text(
 					`Analysis completed in ${result.timing.totalTime}s (Processing: ${result.timing.processingTime}s, GRIN2: ${result.timing.grin2Time}s)`
+				)
+		}
+
+		// If we didn't process all samples, note that caps truncated the run
+		if (result.processingSummary.processedSamples < result.processingSummary.totalSamples) {
+			this.dom.div
+				.append('div')
+				.style('margin', this.sectionMargin)
+				.style('font-size', `${this.optionsTextFontSize}px`)
+				.style('color', this.optionsTextColor)
+				.text(
+					`Note: Per-type lesion caps were reached before all samples could be processed. ` +
+						`Analysis ran on ${result.processingSummary?.processedSamples} of ${result.processingSummary?.totalSamples} samples.`
 				)
 		}
 	}
