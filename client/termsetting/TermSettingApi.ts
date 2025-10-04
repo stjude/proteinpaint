@@ -125,6 +125,7 @@ export class TermSettingApi {
 		})
 	}
 
+	// TODO: move this method to TermSetting class
 	showMenu(event: MouseEvent, clickedElem = null, menuHolder = null) {
 		const self = this.#termsetting
 		const tip = self.dom.tip
@@ -237,6 +238,7 @@ export class TermSettingApi {
 		//self.showFullMenu(tip.d, self.opts.menuOptions)
 	}
 
+	// TODO: move this method to TermSetting class
 	showGeneSearch(clickedElem: Element | null, event: MouseEvent) {
 		const self = this.#termsetting
 		self.dom.tip.clear()
@@ -303,12 +305,16 @@ export class TermSettingApi {
 
 	validateQ(d /*: PillData*/) {
 		const self = this.#termsetting
-		if (!self.handler || !self.handler.validateQ) return
+		if (!self.handler?.validateQ) return
 		try {
 			self.handler.validateQ(d)
 		} catch (e) {
 			this.#termsetting.hasError = true
 			throw e
 		}
+	}
+
+	destroy() {
+		this.#termsetting.destroy()
 	}
 }

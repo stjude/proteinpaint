@@ -216,4 +216,10 @@ export class TermSetting {
 		}
 		this.handler = this.handlerByType[type] as Handler
 	}
+
+	destroy() {
+		this.dom.holder.remove()
+		this.dom.tip.destroy()
+		this.dom.tip2.destroy()
+	}
 }

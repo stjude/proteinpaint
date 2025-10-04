@@ -178,7 +178,7 @@ tape('menuOptions', async test => {
 		`should show 1 menu option when menuOptions is empty/undefined`
 	)
 
-	opts.pill.Inner.dom.tip.hide()
+	if (test._ok) opts.pill.destroy()
 	test.end()
 })
 
@@ -308,7 +308,7 @@ tape.skip('Reuse option', async test => {
 		)
 	}
 
-	opts.pill.Inner.dom.tip.hide()
+	if (test._ok) opts.pill.destroy()
 	test.end()
 })
 
@@ -327,6 +327,7 @@ tape('use_bins_less', async test => {
 	const tip = opts.pill.Inner.dom.tip.d.node()
 	const bin_size_input = tip.querySelectorAll('tr')[0].querySelectorAll('input')[0]
 	test.equal(bin_size_input.value, '5', 'has term.bins.less.bin_size as value (is 5 not 3)')
+	if (test._ok) opts.pill.destroy()
 	test.end()
 })
 
@@ -408,7 +409,7 @@ tape('Categorical term', async test => {
 		`Should display the first item ('${dragItems[0].innerHTML}') as dragged to second group`
 	)
 	test.equal(secondGrpItems.length, 1, `Should display only one item in second group`)
-
+	if (test._ok) opts.pill.destroy()
 	test.end()
 })
 
@@ -453,7 +454,7 @@ tape('Numerical term: range boundaries', async test => {
 	await sleep(50)
 	const q0 = opts.pill.Inner.numqByTermIdModeType.agedx.discrete['regular-bin']
 	test.equal(q0.stopinclusive && !q0.startinclusive, true, 'should set the range boundary to stop inclusive')
-	opts.pill.Inner.dom.tip.hide()
+	if (test._ok) opts.pill.destroy()
 })
 
 tape('Numerical term: fixed bins', async test => {
@@ -593,7 +594,7 @@ tape('Numerical term: fixed bins', async test => {
 	await sleep(500)
 	window.removeEventListener('error.firstBinStopTest', detectFirstBinStopError)
 	test.pass(firstBinStopMessage)*/
-	tip.hide()
+	if (test._ok) opts.pill.destroy()
 })
 
 tape('Numerical term: float custom bins', async test => {
@@ -639,7 +640,7 @@ tape('Numerical term: float custom bins', async test => {
 	const tip = opts.pill.Inner.dom.tip
 	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
 	test.equal(lines.length, 2, 'should have 2 lines')
-	tip.hide()
+	if (test._ok) opts.pill.destroy()
 })
 
 tape('Numerical term.bins.default.type=custom-bin', async test => {
@@ -683,10 +684,7 @@ tape('Numerical term.bins.default.type=custom-bin', async test => {
 	test.notOk(tabs, 'No switch tab should be rendered for Same/Varying bin size')
 	// if the "Same bin size/Varying bin size" toggle tab is still rendered, click "Same bin size" tab will break!! thus test to avoid it
 
-	if (test._ok) {
-		opts.holder.remove()
-		tip.d.remove()
-	}
+	if (test._ok) opts.pill.destroy()
 })
 
 tape('Numerical term: toggle menu - 4 options', async test => {
@@ -746,7 +744,7 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 
 	const binary_lines = tip.d.node().querySelectorAll('.binsize_g')[2].querySelectorAll('line')
 	test.equal(binary_lines.length, 1, 'Should have rendered UI for Binary menu')
-	tip.hide()
+	if (test._ok) opts.pill.destroy()
 })
 
 tape('Numerical term: toggle menu - 2 options', async test => {
@@ -768,12 +766,11 @@ tape('Numerical term: toggle menu - 2 options', async test => {
 		2,
 		'Should have 2 toggle buttons for nuermic edit menu'
 	)
-	tip.hide()
+	if (test._ok) opts.pill.destroy()
 })
 
 tape('Numerical term: toggle menu - 1 option', async test => {
 	test.timeoutAfter(3000)
-	test.plan(1)
 
 	const opts = await getOpts({
 		numericEditMenuVersion: ['continuous'],
@@ -790,7 +787,8 @@ tape('Numerical term: toggle menu - 1 option', async test => {
 		0,
 		'Should not have any toggle buttons for nuermic edit menu'
 	)
-	tip.hide()
+	if (test._ok) opts.pill.destroy()
+	test.end()
 })
 
 tape('Numerical term: integer custom bins', async test => {
@@ -861,7 +859,8 @@ tape('Numerical term: integer custom bins', async test => {
 		0,
 		'should not have commas in the x-axis tick labels'
 	)
-	tip.hide()
+	if (test._ok) opts.pill.destroy()
+	test.end()
 })
 
 tape('Conditional term', async test => {
@@ -1032,7 +1031,7 @@ tape('Conditional term', async test => {
 	// 	'Should have bluepill summary btn "By Max Grade" as default'
 	// )
 
-	// tip.hide()
+	if (test._ok) opts.pill.destroy()
 	test.end()
 })
 //Custom vocab needs to have the allowedTermTypes supported by the dataset
@@ -1100,7 +1099,7 @@ tape('Custom vocabulary', async test => {
 		`should change the termsetting pill label to '${vocab.terms.find(d => d.id === 'd').name}'`
 	)
 
-	opts.pill.Inner.dom.tip.hide()
+	if (test._ok) opts.pill.destroy()
 	test.end()
 })
 
@@ -1130,6 +1129,7 @@ tape('noTermPromptOptions', async test => {
 	pill.dom.tip.dnode.querySelector('.sja_menuoption').click()
 	const termBtns = await detectGte({ elem: pill.dom.tip.dnode, selector: '.termbtn' })
 	test.ok(termBtns.length > 0, `Should display the dictionary term tree`)
+	opts.pill.destroy()
 
 	//Tests for missing arguments
 	message = 'Should throw for missing .noTermPromptOptions array'
@@ -1146,6 +1146,7 @@ tape('noTermPromptOptions', async test => {
 		test.fail(message)
 	} catch (e) {
 		test.pass(`${message}: ${e}`)
+		opts.pill.destroy()
 	}
 
 	message = 'Should throw for missing .noTermPromptOptions[0].text'
@@ -1162,6 +1163,7 @@ tape('noTermPromptOptions', async test => {
 		test.fail(message)
 	} catch (e) {
 		test.pass(`${message}: ${e}`)
+		opts.pill.destroy()
 	}
 
 	message = 'Should throw for missing isDictionary and .termtype'
@@ -1178,6 +1180,7 @@ tape('noTermPromptOptions', async test => {
 		test.fail(message)
 	} catch (e) {
 		test.pass(`${message}: ${e}`)
+		opts.pill.destroy()
 	}
 
 	message = 'Should throw for missing .q{}'
@@ -1192,8 +1195,8 @@ tape('noTermPromptOptions', async test => {
 		test.fail(message)
 	} catch (e) {
 		test.pass(`${message}: ${e}`)
+		opts.pill.destroy()
 	}
-
 	test.end()
 })
 
@@ -1305,6 +1308,7 @@ tape('samplelst term', async test => {
 	if (missingSamples.length == 0) test.pass(`Should display all sample values for all groups`)
 	else test.fail(`Missing the following samples from group table = ${missingSamples}`)
 
+	if (test._ok) opts.pill.destroy()
 	test.end()
 })
 
@@ -1390,6 +1394,7 @@ tape('geneVariant term', async test => {
 	await sleep(300)
 	pillSummary = pill.select('.ts_summary_btn')
 	test.equal(pillSummary.text(), 'CNV', 'Pill should display CNV predefined groupset')
+	if (test._ok) opts.pill.destroy()
 	test.end()
 })
 
