@@ -34,7 +34,7 @@ import { dtsnvindel, dtcnv, dtfusionrna } from '#shared/common.js'
  */
 
 // Constants & types
-const MAX_LESIONS_PER_TYPE = 10000 // Maximum number of lesions to process per type to avoid overwhelming the production server
+const MAX_LESIONS_PER_TYPE = 50000 // Maximum number of lesions to process per type to avoid overwhelming the production server
 type LesionType = 'mutation' | 'gain' | 'loss' | 'fusion' // Defining lesion types. We can add more types in the future if needed
 type TrackState = { count: number; warned: boolean }
 type LesionTracker = {
