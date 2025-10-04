@@ -192,22 +192,22 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	return response
 }
 
-/** Build the active type list from the request options */
-function lesionTypesForRequest(req: GRIN2Request): LesionType[] {
-	const out: LesionType[] = []
-	if (req.snvindelOptions) out.push('mutation')
-	if (req.cnvOptions) out.push('gain', 'loss')
-	if (req.fusionOptions) out.push('fusion')
-	return out
-}
-
 /**  Initializes a new, request-specific lesion tracker.
  * Builds a set of enabled lesion types from the request and a Map that tracks
  * per-type lesion counts and warning flags. */
 function getLesionTracker(req: GRIN2Request): LesionTracker {
-	const currentTypes = new Set<LesionType>(lesionTypesForRequest(req))
+	const currentTypes = new Set<LesionType>()
+
+	if (req.snvindelOptions) currentTypes.add('mutation')
+	if (req.cnvOptions) {
+		currentTypes.add('gain')
+		currentTypes.add('loss')
+	}
+	if (req.fusionOptions) currentTypes.add('fusion')
+
 	const track = new Map<LesionType, TrackState>()
 	for (const t of currentTypes) track.set(t, { count: 0, warned: false })
+
 	return { currentTypes, track }
 }
 
