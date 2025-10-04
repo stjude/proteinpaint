@@ -11,9 +11,10 @@ use std::collections::HashMap;
 //use rig::providers::ollama;
 use rig::vector_store::in_memory_store::InMemoryVectorStore;
 use schemars::JsonSchema;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 use std::io::{self};
-mod sjprovider; // Importing custom rig module for invoking SJ GPU server
+mod ollama;
+mod sjprovider; // Importing custom rig module for invoking SJ GPU server // Importing custom rig module for invoking ollama server
 
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone)]
@@ -26,43 +27,6 @@ enum llm_backend {
 #[allow(dead_code)]
 struct OutputJson {
     pub answer: String,
-}
-
-#[allow(non_camel_case_types)]
-#[derive(Debug, JsonSchema)]
-#[allow(dead_code)]
-enum cutoff_info {
-    lesser(f32),
-    greater(f32),
-    equalto(f32),
-}
-
-#[derive(Debug, JsonSchema)]
-#[allow(dead_code)]
-struct Cutoff {
-    cutoff_name: cutoff_info,
-    units: Option<String>,
-}
-
-#[derive(Debug, JsonSchema)]
-#[allow(dead_code)]
-struct Filter {
-    name: String,
-    cutoff: Cutoff,
-}
-
-#[derive(Debug, JsonSchema)]
-#[allow(dead_code)]
-struct Group {
-    name: String,
-    filter: Filter,
-}
-
-#[derive(Debug, JsonSchema)]
-#[allow(dead_code)]
-struct DEOutput {
-    group1: Group,
-    group2: Group,
 }
 
 #[tokio::main]
@@ -142,7 +106,7 @@ async fn main() -> Result<()> {
                     } else if llm_backend_name == "ollama".to_string() {
                         llm_backend_type = llm_backend::Ollama();
                         // Initialize Ollama client
-                        let ollama_client = rig::providers::ollama::Client::builder()
+                        let ollama_client = ollama::Client::builder()
                             .base_url(apilink)
                             .build()
                             .expect("Ollama server not found");
@@ -387,14 +351,16 @@ If a query does not match any of the fields described above, then return JSON wi
     // Split the contents by the delimiter "---"
     let parts: Vec<&str> = contents.split("---").collect();
     let schema_json: Value = serde_json::to_value(schemars::schema_for!(OutputJson)).unwrap(); // error handling here
+    let schema_json_string = serde_json::to_string_pretty(&schema_json).unwrap();
 
     let additional;
     match llm_backend_type {
         llm_backend::Ollama() => {
             additional = json!({
-                    "format": schema_json
-            }
-                );
+                    "max_new_tokens": max_new_tokens,
+                    "top_p": top_p,
+                    "schema_json": schema_json_string
+            });
         }
         llm_backend::Sj() => {
             additional = json!({
@@ -434,17 +400,60 @@ If a query does not match any of the fields described above, then return JSON wi
     let result = response.replace("json", "").replace("```", "");
     let json_value: Value = serde_json::from_str(&result).expect("REASON");
     match llm_backend_type {
-        llm_backend::Ollama() => json_value.as_object().unwrap()["answer"].to_string().replace("\"", ""),
+        llm_backend::Ollama() => {
+            let json_value2: Value = serde_json::from_str(&json_value["content"].to_string()).expect("REASON2");
+            let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON3");
+            json_value3["answer"].to_string()
+        }
         llm_backend::Sj() => {
             let json_value2: Value =
                 serde_json::from_str(&json_value[0]["generated_text"].to_string()).expect("REASON2");
             //println!("json_value2:{}", json_value2.as_str().unwrap());
-            let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON2");
+            let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON3");
             //let json_value3: Value = serde_json::from_str(&json_value2["answer"].to_string()).expect("REASON2");
             //println!("Classification result:{}", json_value3["answer"]);
             json_value3["answer"].to_string()
         }
     }
+}
+
+// DE JSON output schema
+
+#[allow(non_camel_case_types)]
+#[derive(Debug, JsonSchema)]
+#[allow(dead_code)]
+enum cutoff_info {
+    lesser(f32),
+    greater(f32),
+    equalto(f32),
+}
+
+#[derive(Debug, JsonSchema)]
+#[allow(dead_code)]
+struct Cutoff {
+    cutoff_name: cutoff_info,
+    units: Option<String>,
+}
+
+#[derive(Debug, JsonSchema)]
+#[allow(dead_code)]
+struct Filter {
+    name: String,
+    cutoff: Cutoff,
+}
+
+#[derive(Debug, JsonSchema)]
+#[allow(dead_code)]
+struct Group {
+    name: String,
+    filter: Filter,
+}
+
+#[derive(Debug, JsonSchema)]
+#[allow(dead_code)]
+struct DEOutput {
+    group1: Group,
+    group2: Group,
 }
 
 #[allow(non_snake_case)]
@@ -483,16 +492,17 @@ Output JSON query5: {\"group1\": {\"name\": \"males\", \"filter\": {\"name\": \"
     let parts: Vec<&str> = contents.split("---").collect();
 
     let schema_json: Value = serde_json::to_value(schemars::schema_for!(DEOutput)).unwrap(); // error handling here
-
+    let schema_json_string = serde_json::to_string_pretty(&schema_json).unwrap();
     //println!("DE schema:{}", schema_json);
 
     let additional;
     match llm_backend_type {
         llm_backend::Ollama() => {
             additional = json!({
-                    "format": schema_json
-            }
-                );
+                    "max_new_tokens": max_new_tokens,
+                    "top_p": top_p,
+                    "schema_json": schema_json_string
+            });
         }
         llm_backend::Sj() => {
             additional = json!({
@@ -540,7 +550,12 @@ Output JSON query5: {\"group1\": {\"name\": \"males\", \"filter\": {\"name\": \"
     let json_value: Value = serde_json::from_str(&result).expect("REASON");
     //println!("json_value:{}", json_value);
     match llm_backend_type {
-        llm_backend::Ollama() => json_value.to_string(),
+        llm_backend::Ollama() => {
+            let json_value2: Value = serde_json::from_str(&json_value["content"].to_string()).expect("REASON2");
+            //println!("json_value2:{:?}", json_value2);
+            let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON3");
+            json_value3.to_string()
+        }
         llm_backend::Sj() => {
             let json_value2: Value =
                 serde_json::from_str(&json_value[0]["generated_text"].to_string()).expect("REASON2");
@@ -727,9 +742,16 @@ async fn extract_summary_information(
             let (rag_docs, db_vec) = parse_dataset_db(db).await;
             //println!("rag_docs:{:?}", rag_docs);
             let additional;
+            let schema_json = schemars::schema_for!(SummaryType); // error handling here
+            let schema_json_string = serde_json::to_string_pretty(&schema_json).unwrap();
+            //println!("schema_json summary:{}", schema_json_string);
             match llm_backend_type {
                 llm_backend::Ollama() => {
-                    additional = json!({});
+                    additional = json!({
+                                "max_new_tokens": max_new_tokens,
+                                "top_p": top_p,
+                    "schema_json": schema_json_string
+                        });
                 }
                 llm_backend::Sj() => {
                     additional = json!({
@@ -750,10 +772,6 @@ async fn extract_summary_information(
             //// Create vector store
             //let mut vector_store = InMemoryVectorStore::<String>::default();
             //InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
-
-            let schema_json = schemars::schema_for!(SummaryType); // error handling here
-            let schema_json_string = serde_json::to_string_pretty(&schema_json).unwrap();
-            //println!("schema_json summary:{}", schema_json_string);
 
             let gene_expression_statement;
             let gene_expression_examples;
@@ -813,7 +831,11 @@ async fn extract_summary_information(
 
             let final_llm_json;
             match llm_backend_type {
-                llm_backend::Ollama() => final_llm_json = json_value.to_string(),
+                llm_backend::Ollama() => {
+                    let json_value2: Value = serde_json::from_str(&json_value["content"].to_string()).expect("REASON2");
+                    let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON3");
+                    final_llm_json = json_value3.to_string()
+                }
                 llm_backend::Sj() => {
                     let json_value2: Value =
                         serde_json::from_str(&json_value[0]["generated_text"].to_string()).expect("REASON2");
