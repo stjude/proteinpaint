@@ -245,7 +245,6 @@ async function processSampleData(
 	tracker: LesionTracker
 ): Promise<{ lesions: any[]; processingSummary: GRIN2Response['processingSummary'] }> {
 	const lesions: any[] = []
-	let lesionId = 1
 
 	const processingSummary: GRIN2Response['processingSummary'] = {
 		totalSamples: samples.length,
@@ -272,9 +271,8 @@ async function processSampleData(
 			await file_is_readable(filepath)
 			const mlst = JSON.parse(await read_file(filepath))
 
-			const { sampleLesions } = await processSampleMlst(sample.name, mlst, lesionId, request, tracker)
+			const { sampleLesions } = await processSampleMlst(sample.name, mlst, request, tracker)
 			lesions.push(...sampleLesions)
-			lesionId += sampleLesions.length
 
 			processingSummary.processedSamples! += 1
 			processingSummary.totalLesions! += sampleLesions.length
@@ -300,26 +298,10 @@ async function processSampleData(
 	return { lesions, processingSummary }
 }
 
-/** Enforce cap. Simply check if entry.count < MAX_LESIONS_PER_TYPE. If it is it gets incremented and returns true to caller so that the tuple is pushed.
- * Else the cap is hit. The first time this happens we call warnOnce and print that the cap is hit. We return false to caller so that tuple isn't pushed. */
-function pushIfUnderCap(lesion: any[], tracker: LesionTracker): boolean {
-	const t = lesion[4] as LesionType
-	if (!tracker.currentTypes.has(t)) return false
-	const entry = tracker.track.get(t)
-	if (!entry) return false
-	if (entry.count < MAX_LESIONS_PER_TYPE) {
-		entry.count++
-		return true
-	}
-	warnOnce(t, tracker)
-	return false
-}
-
 /** Process the MLST data for each sample and cap the number of lesions per type */
 async function processSampleMlst(
 	sampleName: string,
 	mlst: any[],
-	startId: number,
 	request: GRIN2Request,
 	tracker: LesionTracker
 ): Promise<{ sampleLesions: any[] }> {
@@ -329,35 +311,63 @@ async function processSampleMlst(
 		switch (m.dt) {
 			case dtsnvindel: {
 				if (!request.snvindelOptions) break
+
 				const entry = tracker.track.get('mutation')
 				if (entry && entry.count >= MAX_LESIONS_PER_TYPE) {
 					warnOnce('mutation', tracker)
 					break
 				}
+
 				const les = filterAndConvertSnvIndel(sampleName, m, request.snvindelOptions)
-				if (les && pushIfUnderCap(les, tracker)) sampleLesions.push(les)
+				if (les && entry) {
+					entry.count++
+					sampleLesions.push(les)
+				}
 				break
 			}
 
 			case dtcnv: {
 				if (!request.cnvOptions) break
-				const g = tracker.track.get('gain')
-				const l = tracker.track.get('loss')
-				if (g && g.count >= MAX_LESIONS_PER_TYPE && l && l.count >= MAX_LESIONS_PER_TYPE) break
+
+				const gain = tracker.track.get('gain')
+				const loss = tracker.track.get('loss')
+
+				// If both CNV subtypes are already capped, skip CNVs entirely
+				if (gain && gain.count >= MAX_LESIONS_PER_TYPE && loss && loss.count >= MAX_LESIONS_PER_TYPE) {
+					break
+				}
+
 				const les = filterAndConvertCnv(sampleName, m, request.cnvOptions)
-				if (les && pushIfUnderCap(les, tracker)) sampleLesions.push(les)
+				if (les) {
+					const t = les[4] as LesionType
+					const entry = tracker.track.get(t)
+					// Got to still check the chosen subtype after conversion
+					if (entry && entry.count < MAX_LESIONS_PER_TYPE) {
+						entry.count++
+						sampleLesions.push(les)
+					} else if (t === 'gain') {
+						warnOnce('gain', tracker)
+					} else if (t === 'loss') {
+						warnOnce('loss', tracker)
+					}
+				}
 				break
 			}
 
 			case dtfusionrna: {
 				if (!request.fusionOptions) break
-				const f = tracker.track.get('fusion')
-				if (f && f.count >= MAX_LESIONS_PER_TYPE) {
+
+				const fusion = tracker.track.get('fusion')
+				if (fusion && fusion.count >= MAX_LESIONS_PER_TYPE) {
 					warnOnce('fusion', tracker)
 					break
 				}
+
 				const les = filterAndConvertFusion(sampleName, m, request.fusionOptions)
-				if (les && pushIfUnderCap(les, tracker)) sampleLesions.push(les)
+				if (les && fusion) {
+					fusion.count++
+					sampleLesions.push(les)
+				}
 				break
 			}
 
