@@ -35,12 +35,9 @@ import { dtsnvindel, dtcnv, dtfusionrna } from '#shared/common.js'
 
 // Constants & types
 const MAX_LESIONS_PER_TYPE = 50000 // Maximum number of lesions to process per type to avoid overwhelming the production server
-type LesionType = 'mutation' | 'gain' | 'loss' | 'fusion' // Defining lesion types. We can add more types in the future if needed
 type TrackState = { count: number; warned: boolean }
-type LesionTracker = {
-	currentTypes: Set<LesionType>
-	track: Map<LesionType, TrackState>
-}
+type LesionType = typeof dtsnvindel | typeof dtcnv | typeof dtfusionrna // Types of lesions we track coming from existing pp dt infrastructure
+type LesionTracker = Map<LesionType, TrackState>
 
 export const api: RouteApi = {
 	endpoint: 'grin2',
@@ -196,39 +193,32 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
  * Builds a set of enabled lesion types from the request and a Map that tracks
  * per-type lesion counts and warning flags. */
 function getLesionTracker(req: GRIN2Request): LesionTracker {
-	const currentTypes = new Set<LesionType>()
-
-	if (req.snvindelOptions) currentTypes.add('mutation')
-	if (req.cnvOptions) {
-		currentTypes.add('gain')
-		currentTypes.add('loss')
-	}
-	if (req.fusionOptions) currentTypes.add('fusion')
+	const currentTypes: LesionType[] = []
+	if (req.snvindelOptions) currentTypes.push(dtsnvindel as LesionType)
+	if (req.cnvOptions) currentTypes.push(dtcnv as LesionType)
+	if (req.fusionOptions) currentTypes.push(dtfusionrna as LesionType)
 
 	const track = new Map<LesionType, TrackState>()
 	for (const t of currentTypes) track.set(t, { count: 0, warned: false })
-
-	return { currentTypes, track }
+	return track
 }
 
 /** Early-stop if all enabled types are at their caps */
 function allTypesCapped(tracker: LesionTracker): boolean {
-	for (const t of tracker.currentTypes) {
-		const entry = tracker.track.get(t)
-		if (!entry || entry.count < MAX_LESIONS_PER_TYPE) return false
+	for (const value of tracker.values()) {
+		if (value.count < MAX_LESIONS_PER_TYPE) return false
 	}
 	return true
 }
 
 /** Warn once per type */
-function warnOnce(t: LesionType, tracker: LesionTracker) {
-	if (!tracker.currentTypes.has(t)) return
-	const entry = tracker.track.get(t)
+function warnOnce(label: string, tracker: LesionTracker, key: LesionType) {
+	const entry = tracker.get(key)
 	if (!entry || entry.warned) return
 	entry.warned = true
 	mayLog(
-		`[GRIN2] Warning: ${t} lesions exceeded the per-type limit of ${MAX_LESIONS_PER_TYPE.toLocaleString()}. ` +
-			`Additional ${t} lesions will be skipped.`
+		`[GRIN2] Warning: ${label} lesions exceeded the per-type limit of ${MAX_LESIONS_PER_TYPE.toLocaleString()}. ` +
+			`Additional ${label} lesions will be skipped.`
 	)
 }
 
@@ -298,7 +288,7 @@ async function processSampleData(
 	return { lesions, processingSummary }
 }
 
-/** Process the MLST data for each sample and cap the number of lesions per type */
+/** Process the MLST data for each sample and cap the number of lesions per data type */
 async function processSampleMlst(
 	sampleName: string,
 	mlst: any[],
@@ -312,9 +302,9 @@ async function processSampleMlst(
 			case dtsnvindel: {
 				if (!request.snvindelOptions) break
 
-				const entry = tracker.track.get('mutation')
+				const entry = tracker.get(dtsnvindel)
 				if (entry && entry.count >= MAX_LESIONS_PER_TYPE) {
-					warnOnce('mutation', tracker)
+					warnOnce('mutation', tracker, dtsnvindel)
 					break
 				}
 
@@ -329,27 +319,17 @@ async function processSampleMlst(
 			case dtcnv: {
 				if (!request.cnvOptions) break
 
-				const gain = tracker.track.get('gain')
-				const loss = tracker.track.get('loss')
-
-				// If both CNV subtypes are already capped, skip CNVs entirely
-				if (gain && gain.count >= MAX_LESIONS_PER_TYPE && loss && loss.count >= MAX_LESIONS_PER_TYPE) {
+				// Shared cap for both gain & loss
+				const cnv = tracker.get(dtcnv)
+				if (cnv && cnv.count >= MAX_LESIONS_PER_TYPE) {
+					warnOnce('CNV (gain/loss)', tracker, dtcnv)
 					break
 				}
 
 				const les = filterAndConvertCnv(sampleName, m, request.cnvOptions)
-				if (les) {
-					const t = les[4] as LesionType
-					const entry = tracker.track.get(t)
-					// Got to still check the chosen subtype after conversion
-					if (entry && entry.count < MAX_LESIONS_PER_TYPE) {
-						entry.count++
-						sampleLesions.push(les)
-					} else if (t === 'gain') {
-						warnOnce('gain', tracker)
-					} else if (t === 'loss') {
-						warnOnce('loss', tracker)
-					}
+				if (les && cnv) {
+					cnv.count++ // single counter for both gain and loss
+					sampleLesions.push(les)
 				}
 				break
 			}
@@ -357,9 +337,9 @@ async function processSampleMlst(
 			case dtfusionrna: {
 				if (!request.fusionOptions) break
 
-				const fusion = tracker.track.get('fusion')
+				const fusion = tracker.get(dtfusionrna)
 				if (fusion && fusion.count >= MAX_LESIONS_PER_TYPE) {
-					warnOnce('fusion', tracker)
+					warnOnce('fusion', tracker, dtfusionrna)
 					break
 				}
 
