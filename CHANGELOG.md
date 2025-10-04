@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- GRIN2: Added lesion cap to route
+
 Fixes:
 - bug fix to enable listing samples from geneexp & ssgsea bar/violin
 
