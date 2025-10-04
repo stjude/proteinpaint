@@ -35,9 +35,8 @@ import { dtsnvindel, dtcnv, dtfusionrna } from '#shared/common.js'
 
 // Constants & types
 const MAX_LESIONS_PER_TYPE = 50000 // Maximum number of lesions to process per type to avoid overwhelming the production server
-type TrackState = { count: number; warned: boolean }
-type LesionType = typeof dtsnvindel | typeof dtcnv | typeof dtfusionrna // Types of lesions we track coming from existing pp dt infrastructure
-type LesionTracker = Map<LesionType, TrackState>
+type TrackState = { count: number }
+type LesionTracker = Map<number, TrackState>
 
 export const api: RouteApi = {
 	endpoint: 'grin2',
@@ -193,13 +192,13 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
  * Builds a set of enabled lesion types from the request and a Map that tracks
  * per-type lesion counts and warning flags. */
 function getLesionTracker(req: GRIN2Request): LesionTracker {
-	const currentTypes: LesionType[] = []
-	if (req.snvindelOptions) currentTypes.push(dtsnvindel as LesionType)
-	if (req.cnvOptions) currentTypes.push(dtcnv as LesionType)
-	if (req.fusionOptions) currentTypes.push(dtfusionrna as LesionType)
+	const currentTypes: number[] = []
+	if (req.snvindelOptions) currentTypes.push(dtsnvindel)
+	if (req.cnvOptions) currentTypes.push(dtcnv)
+	if (req.fusionOptions) currentTypes.push(dtfusionrna)
 
-	const track = new Map<LesionType, TrackState>()
-	for (const t of currentTypes) track.set(t, { count: 0, warned: false })
+	const track = new Map<number, TrackState>()
+	for (const t of currentTypes) track.set(t, { count: 0 })
 	return track
 }
 
@@ -209,17 +208,6 @@ function allTypesCapped(tracker: LesionTracker): boolean {
 		if (value.count < MAX_LESIONS_PER_TYPE) return false
 	}
 	return true
-}
-
-/** Warn once per type */
-function warnOnce(label: string, tracker: LesionTracker, key: LesionType) {
-	const entry = tracker.get(key)
-	if (!entry || entry.warned) return
-	entry.warned = true
-	mayLog(
-		`[GRIN2] Warning: ${label} lesions exceeded the per-type limit of ${MAX_LESIONS_PER_TYPE.toLocaleString()}. ` +
-			`Additional ${label} lesions will be skipped.`
-	)
 }
 
 /**
@@ -285,6 +273,31 @@ async function processSampleData(
 	}
 
 	processingSummary.processedLesions = lesions.length
+
+	// After processing all samples, we will warn for any type that has reached its cap
+	for (const [type, info] of tracker.entries()) {
+		if (info.count >= MAX_LESIONS_PER_TYPE) {
+			let label: string
+			switch (type) {
+				case dtsnvindel:
+					label = 'mutation'
+					break
+				case dtcnv:
+					label = 'CNV (gain/loss)'
+					break
+				case dtfusionrna:
+					label = 'fusion'
+					break
+				default:
+					label = `type ${type}`
+					break
+			}
+			mayLog(
+				`[GRIN2] Warning: ${label} lesions reached the per-type cap of ${MAX_LESIONS_PER_TYPE.toLocaleString()}. No further ${label} lesions were processed.`
+			)
+		}
+	}
+
 	return { lesions, processingSummary }
 }
 
@@ -304,7 +317,6 @@ async function processSampleMlst(
 
 				const entry = tracker.get(dtsnvindel)
 				if (entry && entry.count >= MAX_LESIONS_PER_TYPE) {
-					warnOnce('mutation', tracker, dtsnvindel)
 					break
 				}
 
@@ -322,7 +334,6 @@ async function processSampleMlst(
 				// Shared cap for both gain & loss
 				const cnv = tracker.get(dtcnv)
 				if (cnv && cnv.count >= MAX_LESIONS_PER_TYPE) {
-					warnOnce('CNV (gain/loss)', tracker, dtcnv)
 					break
 				}
 
@@ -339,7 +350,6 @@ async function processSampleMlst(
 
 				const fusion = tracker.get(dtfusionrna)
 				if (fusion && fusion.count >= MAX_LESIONS_PER_TYPE) {
-					warnOnce('fusion', tracker, dtfusionrna)
 					break
 				}
 
