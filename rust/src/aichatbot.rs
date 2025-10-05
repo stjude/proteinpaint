@@ -183,7 +183,7 @@ async fn main() -> Result<()> {
 
                     match final_output {
                         Some(fin_out) => {
-                            println!("final_output:{:?}", fin_out);
+                            println!("final_output:{:?}", fin_out.replace("\\", ""));
                         }
                         None => {
                             println!("final_output:{{\"{}\":\"{}\"}}", "action", "unknown");
@@ -757,7 +757,7 @@ async fn extract_summary_information(
 
             let schema_json = schemars::schema_for!(SummaryType); // error handling here
             let schema_json_string = serde_json::to_string_pretty(&schema_json).unwrap();
-            println!("schema_json summary:{}", schema_json_string);
+            //println!("schema_json summary:{}", schema_json_string);
             let system_prompt: String = String::from(
                 String::from(
                     "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. There are three fields in the JSON to be returned: The \"action\" field will ALWAYS be \"summary\". The \"summaryterms\" field should contain all the variables that the user wants to visualize. The \"clinical\" subfield should ONLY contain names of the fields from the sqlite db. The \"geneExpression\" subfield should ONLY contain genes names from the relevant genes list. The \"filter\" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both \"summaryterms\" and \"filter\". There are two kinds of filter variables: \"Categorical\" and \"Numeric\". \"Categorical\" variables are those variables which can have a fixed set of values e.g. gender, molecular subtypes. They are defined by the \"CategoricalFilterTerm\" which consists of \"term\" (a field from the sqlite3 db)  and \"value\" (a value of the field from the sqlite db).  \"Numeric\" variables are those which can have any numeric value. They are defined by \"NumericFilterTerm\" and contain  the subfields \"term\" (a field from the sqlite3 db), \"greaterThan\" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and \"lessThan\" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. The \"message\" field only contain messages of terms in the user input that were not found in their respective databases. The JSON schema is as follows:",
@@ -798,7 +798,7 @@ async fn extract_summary_information(
                     final_llm_json = json_value3.to_string()
                 }
             }
-            println!("final_llm_json:{}", final_llm_json);
+            //println!("final_llm_json:{}", final_llm_json);
             let final_validated_json = validate_summary_output(final_llm_json.clone(), db_vec, common_genes);
             final_validated_json
         }
@@ -884,6 +884,7 @@ fn validate_summary_output(raw_llm_json: String, db_vec: Vec<DbRows>, common_gen
     }
 
     let mut validated_summary_terms = Vec::<SummaryTerms>::new();
+    let mut summary_terms_tobe_removed = Vec::<SummaryTerms>::new();
     for sum_term in &json_value.summaryterms {
         match sum_term {
             SummaryTerms::clinical(clin) => {
@@ -921,9 +922,6 @@ fn validate_summary_output(raw_llm_json: String, db_vec: Vec<DbRows>, common_gen
                 }
             }
         }
-    }
-    if let Some(obj) = new_json.as_object_mut() {
-        obj.insert(String::from("summaryterms"), serde_json::json!(validated_summary_terms));
     }
 
     match &json_value.filter {
@@ -979,6 +977,43 @@ fn validate_summary_output(raw_llm_json: String, db_vec: Vec<DbRows>, common_gen
                 }
             }
 
+            for summary_term in &validated_summary_terms {
+                match summary_term {
+                    SummaryTerms::clinical(clinicial_term) => {
+                        for filter_term in &validated_filter_terms {
+                            match filter_term {
+                                FilterTerm::Categorical(categorical) => {
+                                    if &categorical.term == clinicial_term {
+                                        summary_terms_tobe_removed.push(summary_term.clone());
+                                    }
+                                }
+                                FilterTerm::Numeric(numeric) => {
+                                    if &numeric.term == clinicial_term {
+                                        summary_terms_tobe_removed.push(summary_term.clone());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    SummaryTerms::geneExpression(gene) => {
+                        for filter_term in &validated_filter_terms {
+                            match filter_term {
+                                FilterTerm::Categorical(categorical) => {
+                                    if &categorical.term == gene {
+                                        summary_terms_tobe_removed.push(summary_term.clone());
+                                    }
+                                }
+                                FilterTerm::Numeric(numeric) => {
+                                    if &numeric.term == gene {
+                                        summary_terms_tobe_removed.push(summary_term.clone());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             if validated_filter_terms.len() > 0 {
                 if let Some(obj) = new_json.as_object_mut() {
                     obj.insert(String::from("filter"), serde_json::json!(validated_filter_terms));
@@ -987,6 +1022,58 @@ fn validate_summary_output(raw_llm_json: String, db_vec: Vec<DbRows>, common_gen
         }
         None => {}
     }
+
+    // Removing terms that are found both in filter term as well summary
+    let mut validated_summary_terms_final = Vec::<SummaryTerms>::new();
+
+    for summary_term in &validated_summary_terms {
+        let mut hit = 0;
+        match summary_term {
+            SummaryTerms::clinical(clinical_term) => {
+                for summary_term2 in &summary_terms_tobe_removed {
+                    match summary_term2 {
+                        SummaryTerms::clinical(clinical_term2) => {
+                            if clinical_term == clinical_term2 {
+                                hit = 1;
+                            }
+                        }
+                        SummaryTerms::geneExpression(gene2) => {
+                            if clinical_term == gene2 {
+                                hit = 1;
+                            }
+                        }
+                    }
+                }
+            }
+            SummaryTerms::geneExpression(gene) => {
+                for summary_term2 in &summary_terms_tobe_removed {
+                    match summary_term2 {
+                        SummaryTerms::clinical(clinical_term2) => {
+                            if gene == clinical_term2 {
+                                hit = 1;
+                            }
+                        }
+                        SummaryTerms::geneExpression(gene2) => {
+                            if gene == gene2 {
+                                hit = 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if hit == 0 {
+            validated_summary_terms_final.push(summary_term.clone())
+        }
+    }
+
+    if let Some(obj) = new_json.as_object_mut() {
+        obj.insert(
+            String::from("summaryterms"),
+            serde_json::json!(validated_summary_terms_final),
+        );
+    }
+
     if message.len() > 0 {
         if let Some(obj) = new_json.as_object_mut() {
             // The `if let` ensures we only proceed if the top-level JSON is an object.
