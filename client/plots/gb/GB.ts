@@ -5,6 +5,7 @@ import { getNormalRoot } from '#filter'
 import { Model } from './model/Model.ts'
 import { ViewModel } from './viewModel/ViewModel.ts'
 import { View } from './view/View.ts'
+import { TabsRenderer } from './view/TabsRenderer.ts'
 import { Interactions, mayUpdateGroupTestMethodsIdx } from './interactions/Interactions.ts'
 
 const geneTip = new Menu({ padding: '0px' })
@@ -52,8 +53,11 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		return dom
 	}
 
-	async init() {
+	async init(appState) {
 		this.interactions = new Interactions(this.app, this.dom, this.id)
+		const state = this.getState(appState)
+		const tabs = new TabsRenderer(state, this.dom, this.interactions)
+		tabs.main()
 	}
 
 	getState(appState) {
