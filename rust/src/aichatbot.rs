@@ -344,10 +344,10 @@ There are two main methods of survival analysis:
    HR > 1: Increase in Hazard
 
 Sample Query1: \"Compare survival rates between group A and B\"
-Sample Answer1: { \"answer\": \"summary\" }
+Sample Answer1: { \"answer\": \"survival\" }
 
 Sample Query2: \"List all molecular subtypes of leukemia\"
-Sample Answer2: { \"answer\": \"summary\" } 
+Sample Answer2: { \"answer\": \"survival\" } 
 
 
 If a ProteinPaint dataset contains survival data then return JSON with single key, 'survival'.
@@ -369,7 +369,12 @@ Sample Query2: \"List all molecular subtypes of leukemia\"
 Sample Answer2: { \"answer\": \"summary\" } 
 
 Sample Query2: \"is tp53 expression higher in men than women ?\"
-Sample Answer2: { \"answer\": \"summary\" } 
+Sample Answer2: { \"answer\": \"summary\" }
+
+Sample Query2: \"Compare ATM expression between races for wonmen greater than 80yrs\"
+Sample Answer2: { \"answer\": \"summary\" }
+
+
 ---
 
 If a query does not match any of the fields described above, then return JSON with single key, 'none'
@@ -807,10 +812,6 @@ fn get_summary_string() -> String {
     "summary".to_string()
 }
 
-fn get_type_string() -> String {
-    "geneExpression".to_string()
-}
-
 //const action: &str = &"summary";
 //const geneExpression: &str = &"geneExpression";
 
@@ -847,6 +848,7 @@ struct CategoricalFilterTerm {
 }
 
 #[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+#[allow(non_snake_case)]
 struct NumericFilterTerm {
     term: String,
     greaterThan: Option<f32>,
