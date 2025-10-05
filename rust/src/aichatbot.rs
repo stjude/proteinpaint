@@ -309,7 +309,7 @@ If a ProteinPaint dataset contains hierarchical data then return JSON with singl
 
 ---
 
-Differential Gene Expression (DGE or DE) is a technique where the most upregulated (or highest) and downregulated (or lowest) genes between two cohorts of samples (or patients) are determined from a pool of THOUSANDS of genes. A volcano plot is shown with fold-change in the x-axis and adjusted p-value on the y-axis. So, the upregulated and downregulared genes are on opposite sides of the graph and the most significant genes (based on adjusted p-value) is on the top of the graph. Following differential gene expression generally GeneSet Enrichment Analysis (GSEA) is carried out where based on the genes and their corresponding fold changes the upregulation/downregulation of genesets (or pathways) is determined.
+Differential Gene Expression (DGE or DE) is a technique where the most upregulated (or highest) and downregulated (or lowest) genes between two cohorts of samples (or patients) are determined from a pool of THOUSANDS of genes. Differential gene expression CANNOT be computed for a SINGLE gene. A volcano plot is shown with fold-change in the x-axis and adjusted p-value on the y-axis. So, the upregulated and downregulared genes are on opposite sides of the graph and the most significant genes (based on adjusted p-value) is on the top of the graph. Following differential gene expression generally GeneSet Enrichment Analysis (GSEA) is carried out where based on the genes and their corresponding fold changes the upregulation/downregulation of genesets (or pathways) is determined.
 
 Sample Query1: \"Which gene has the highest expression between the two genders\"
 Sample Answer1: { \"answer\": \"dge\" }
@@ -368,6 +368,8 @@ Sample Answer1: { \"answer\": \"summary\" }
 Sample Query2: \"List all molecular subtypes of leukemia\"
 Sample Answer2: { \"answer\": \"summary\" } 
 
+Sample Query2: \"is tp53 expression higher in men than women ?\"
+Sample Answer2: { \"answer\": \"summary\" } 
 ---
 
 If a query does not match any of the fields described above, then return JSON with single key, 'none'
@@ -753,9 +755,9 @@ async fn extract_summary_information(
             println!("schema_json summary:{}", schema_json_string);
             let system_prompt: String = String::from(
                 String::from(
-                    "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. There are three fields in the JSON to be returned: The \"action\" field will ALWAYS be \"summary\". The \"summaryterms\" field should contain all the variables that the user wants to visualize. The \"clinical\" subfield should ONLY contain names of the fields from the sqlite db. The \"geneExpression\" subfield should ONLY contain genes names from the relevant genes list. The \"filter\" field is optional and should contain the variable with which the dataset will be filtered. When the \"filter\" field is defined, it should contain an array of JSON terms. The \"message\" field only contain messages of terms in the user input that were not found in their respective databases. The JSON schema is as follows:",
+                    "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. There are three fields in the JSON to be returned: The \"action\" field will ALWAYS be \"summary\". The \"summaryterms\" field should contain all the variables that the user wants to visualize. The \"clinical\" subfield should ONLY contain names of the fields from the sqlite db. The \"geneExpression\" subfield should ONLY contain genes names from the relevant genes list. The \"filter\" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both \"summaryterms\" and \"filter\". There are two kinds of filter variables: \"Categorical\" and \"Numeric\". \"Categorical\" variables are those variables which can have a fixed set of values e.g. gender, molecular subtypes. They are defined by the \"CategoricalFilterTerm\" which consists of \"term\" (a field from the sqlite3 db)  and \"value\" (a value of the field from the sqlite db).  \"Numeric\" variables are those which can have any numeric value. They are defined by \"NumericFilterTerm\" and contain  the subfields \"term\" (a field from the sqlite3 db), \"greaterThan\" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and \"lessThan\" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. The \"message\" field only contain messages of terms in the user input that were not found in their respective databases. The JSON schema is as follows:",
                 ) + &schema_json_string
-                    + &"\n  Example question1: \"compare tp53 expression between genders\"\n Example answer1: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\": \"Sex\"}, {\"geneExpression\": \"TP53\"}]}}\n Example question2: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer2: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\":\"Molecular Subtype\"}], filter:[ {{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}  The sqlite db in plain language is as follows:\n"
+                    + &"\n  Example question1: \"compare tp53 expression between genders\"\n Example answer1: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\": \"Sex\"}, {\"geneExpression\": \"TP53\"}]}}\n Example question2: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer2: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\":\"Molecular Subtype\"}], filter:[ {\"Numeric\":{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}\n Example question3: \"is tmem181 overexpressed in men?\" Example answer3: {\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"Sex\"},{\"geneExpression\":\"TMEM181\"}]}\n Example question4: \"show summary of molecular subtype for men under 40 years only\"\n Example answer4: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"Sex\",\"value\":\"Male\"}},{\"Numeric\":{\"greaterThan\":null,\"lessThan\":40.0,\"term\":\"Age\"}}],\"summaryterms\":[{\"clinical\":\"Molecular subtype\"}]}\n Example Question5: \"Show race for women with early onset of cancer\"\n Example Answer5: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"Sex\",\"value\":\"Female\"}}, {\"Numeric\":{\"greaterThan\":null,\"lessThan\":18.0,\"term\":\"Age\"}],\"summaryterms\":[{\"clinical\":\"Ancestry\"}]}\n The sqlite db in plain language is as follows:\n"
                     + &rag_docs.join(",")
                     + &"\n Relevant genes are as follows (separated by comma(,)):"
                     + &common_genes.join(",")
@@ -833,9 +835,22 @@ enum SummaryTerms {
 }
 
 #[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
-struct FilterTerm {
+enum FilterTerm {
+    Categorical(CategoricalFilterTerm),
+    Numeric(NumericFilterTerm),
+}
+
+#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+struct CategoricalFilterTerm {
     term: String,
     value: String,
+}
+
+#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+struct NumericFilterTerm {
+    term: String,
+    greaterThan: Option<f32>,
+    lessThan: Option<f32>,
 }
 
 fn validate_summary_output(raw_llm_json: String, db_vec: Vec<DbRows>, common_genes: Vec<String>) -> String {
@@ -913,38 +928,52 @@ fn validate_summary_output(raw_llm_json: String, db_vec: Vec<DbRows>, common_gen
         Some(filter_terms_array) => {
             let mut validated_filter_terms = Vec::<FilterTerm>::new();
             for parsed_filter_term in filter_terms_array {
-                let term_verification = verify_json_field(&parsed_filter_term.term, &db_vec);
-                let mut value_verification: Option<String> = None;
-                for item in &db_vec {
-                    if &item.name == &parsed_filter_term.term {
-                        for val in &item.values {
-                            if &parsed_filter_term.value == val {
-                                value_verification = Some(val.clone());
+                match parsed_filter_term {
+                    FilterTerm::Categorical(categorical) => {
+                        let term_verification = verify_json_field(&categorical.term, &db_vec);
+                        let mut value_verification: Option<String> = None;
+                        for item in &db_vec {
+                            if &item.name == &categorical.term {
+                                for val in &item.values {
+                                    if &categorical.value == val {
+                                        value_verification = Some(val.clone());
+                                        break;
+                                    }
+                                }
+                            }
+                            if value_verification != None {
                                 break;
                             }
                         }
+                        if term_verification.correct_field.is_some() && value_verification.is_some() {
+                            let verified_filter = CategoricalFilterTerm {
+                                term: term_verification.correct_field.clone().unwrap(),
+                                value: value_verification.clone().unwrap(),
+                            };
+                            let categorical_filter_term: FilterTerm = FilterTerm::Categorical(verified_filter);
+                            validated_filter_terms.push(categorical_filter_term);
+                        }
+                        if term_verification.correct_field.is_none() {
+                            message = message + &"\"" + &categorical.term + &"\" filter term not found in db";
+                        }
+                        if value_verification.is_none() {
+                            message = message
+                                + &"\""
+                                + &categorical.value
+                                + &"\" filter value not found for filter field \""
+                                + &categorical.term
+                                + "\" in db";
+                        }
                     }
-                    if value_verification != None {
-                        break;
+                    FilterTerm::Numeric(numeric) => {
+                        let term_verification = verify_json_field(&numeric.term, &db_vec);
+                        if term_verification.correct_field.is_none() {
+                            message = message + &"\"" + &numeric.term + &"\" filter term not found in db";
+                        } else {
+                            let numeric_filter_term: FilterTerm = FilterTerm::Numeric(numeric.clone());
+                            validated_filter_terms.push(numeric_filter_term);
+                        }
                     }
-                }
-                if term_verification.correct_field.is_some() && value_verification.is_some() {
-                    let verified_filter = FilterTerm {
-                        term: term_verification.correct_field.clone().unwrap(),
-                        value: value_verification.clone().unwrap(),
-                    };
-                    validated_filter_terms.push(verified_filter);
-                }
-                if term_verification.correct_field.is_none() {
-                    message = message + &"\"" + &parsed_filter_term.term + &"\" filter term not found in db";
-                }
-                if value_verification.is_none() {
-                    message = message
-                        + &"\""
-                        + &parsed_filter_term.value
-                        + &"\" filter value not found for filter field \""
-                        + &parsed_filter_term.term
-                        + "\" in db";
                 }
             }
 
