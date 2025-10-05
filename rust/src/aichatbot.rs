@@ -374,14 +374,12 @@ Sample Answer1: { \"answer\": \"summary\" }
 Sample Query2: \"List all molecular subtypes of leukemia\"
 Sample Answer2: { \"answer\": \"summary\" } 
 
-Sample Query2: \"is tp53 expression higher in men than women ?\"
-Sample Answer2: { \"answer\": \"summary\" }
+Sample Query3: \"is tp53 expression higher in men than women ?\"
+Sample Answer3: { \"answer\": \"summary\" }
 
-Sample Query2: \"Compare ATM expression between races for wonmen greater than 80yrs\"
-Sample Answer2: { \"answer\": \"summary\" }
+Sample Query4: \"Compare ATM expression between races for women greater than 80yrs\"
+Sample Answer4: { \"answer\": \"summary\" }
 
-
----
 
 If a query does not match any of the fields described above, then return JSON with single key, 'none'
 ");
