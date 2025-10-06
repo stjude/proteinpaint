@@ -994,7 +994,6 @@ export class TermdbVocab extends Vocab {
 		// dofetch* mayAdjustRequest() will automatically
 		// convert to GET query params or POST body, as needed
 		const body = {
-			for: 'scatter',
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
 			plotName: opts.name,
@@ -1010,7 +1009,7 @@ export class TermdbVocab extends Vocab {
 		if (opts.scaleDotTW) body.scaleDotTW = this.getTwMinCopy(opts.scaleDotTW)
 		body.excludeOutliers = opts.excludeOutliers
 
-		return await dofetch3('termdb', { headers, body })
+		return await dofetch3('termdb/sampleScatter', { headers, body })
 	}
 
 	async getDefaultBins(opts) {

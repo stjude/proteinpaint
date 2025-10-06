@@ -1,4 +1,16 @@
-import type { RouteApi } from '#types'
+import type {
+	ColorLegendEntry,
+	ColorMap,
+	ScatterSample,
+	ShapeLegendEntry,
+	ShapeMap,
+	TermdbSampleScatterRequest,
+	TermdbSampleScatterlResponse,
+	RouteApi,
+	TermWrapper,
+	Term,
+	ValidGetDataResponse
+} from '#types'
 import { termdbSampleScatterPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import path from 'path'
@@ -6,13 +18,12 @@ import serverconfig from '../src/serverconfig.js'
 import { schemeCategory20, getColors } from '#shared/common.js'
 import { mclass, dt2label, morigin } from '#shared/common.js'
 import { authApi } from '../src/auth.js'
-import { run_R } from '@sjcrh/proteinpaint-r'
 import { read_file } from '../src/utils.js'
 import { isNumericTerm } from '@sjcrh/proteinpaint-shared/terms.js'
 import { getDescrStats } from '#routes/termdb.descrstats.ts'
 
 export const api: RouteApi = {
-	endpoint: '/termdb/sampleScatter',
+	endpoint: 'termdb/sampleScatter',
 	methods: {
 		get: {
 			...termdbSampleScatterPayload,
@@ -33,7 +44,7 @@ const refColor = '#F5F5DC'
 2. from two numeric terms. determined by q.coordTWs[] */
 function init({ genomes }) {
 	return async function (req, res) {
-		const q = req.query
+		const q = req.query satisfies TermdbSampleScatterRequest
 		if (!q.genome || !q.dslabel) {
 			throw new Error('Genome and dataset label are required for termdb/sampleScatter request.')
 		}
@@ -58,7 +69,7 @@ function init({ genomes }) {
 			if (data.error) throw data.error
 			let result
 			if (q.coordTWs.length > 0) {
-				const tmp = await getSampleCoordinatesByTerms(req, q, ds, data)
+				const tmp = await getSampleCoordinatesByTerms(req, q, ds, data as ValidGetDataResponse)
 				cohortSamples = tmp[0]
 				// coordTwData = tmp[1]
 			} else {
@@ -68,7 +79,7 @@ function init({ genomes }) {
 				const plot = ds.cohort.scatterplots.plots.find(p => p.name == q.plotName)
 				if (!plot) throw `plot not found with plotName ${q.plotName}`
 
-				const tmp = await getSamples(req, ds, plot)
+				const tmp = await getSamples(ds, plot)
 				refSamples = tmp[0]
 				cohortSamples = tmp[1]
 
@@ -127,8 +138,8 @@ function init({ genomes }) {
 				)
 				range = { xMin, xMax, yMin, yMax }
 			}
-			if (!result) result = await colorAndShapeSamples(refSamples, cohortSamples, data, q)
-			res.send({ result, range })
+			if (!result) result = await colorAndShapeSamples(refSamples, cohortSamples, data as ValidGetDataResponse, q)
+			res.send({ result, range } satisfies TermdbSampleScatterlResponse)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			res.send({ error: e.message || e })
@@ -136,7 +147,7 @@ function init({ genomes }) {
 	}
 }
 
-async function getSamples(req, ds, plot) {
+async function getSamples(ds: any, plot: any) {
 	if (!plot.filterableSamples) await loadFile(plot, ds) // this is the first time the plot is accessed. load the data in mem
 
 	return [readSamples(plot.referenceSamples), readSamples(plot.filterableSamples)]
@@ -153,9 +164,20 @@ async function getSamples(req, ds, plot) {
 	}
 }
 
-async function colorAndShapeSamples(refSamples, cohortSamples, data, q): Promise<{ [index: string]: any }> {
+async function colorAndShapeSamples(
+	refSamples: any,
+	cohortSamples: any,
+	data: any,
+	q: TermdbSampleScatterRequest
+): Promise<{ [index: string]: any }> {
 	const results: {
-		[index: string]: { samples: any[]; colorMap: any; shapeMap: any; colorLegend?: any; shapeLegend?: any }
+		[index: string]: {
+			samples: ScatterSample[]
+			colorMap: ColorMap
+			shapeMap: ShapeMap
+			colorLegend?: ColorLegendEntry[]
+			shapeLegend?: ShapeLegendEntry[]
+		}
 	} = {}
 	let fCount = 0
 	const hasTerms = Object.keys(data.samples).length > 0
@@ -220,95 +242,108 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q): Promise
 	//To choose a color scheme we pass the max number of categories
 	let max = 0
 	// eslint-disable-next-line
-	for (const [_, result] of Object.entries(results)) max = Math.max(max, Object.keys((result as any).colorMap).length)
+	for (const [_, result] of Object.entries(results)) max = Math.max(max, Object.keys(result.colorMap).length)
 	const k2c = getColors(max)
 	const scheme = schemeCategory20
 	// eslint-disable-next-line
-	for (const [_, result] of Object.entries(results as any)) {
+	for (const [_, result] of Object.entries(results)) {
 		if (q.colorTW && q.colorTW.q.mode !== 'continuous') {
 			let i = 20
-			for (const [category, value] of Object.entries((result as any).colorMap)) {
-				delete (value as any).sampleIds //set used to count samples
+			for (const [category, value] of Object.entries(result.colorMap)) {
+				delete value['sampleIds'] //set used to count samples
 
 				let tvalue
-				if (q.colorTW.term.values?.[(value as any).key]) {
-					tvalue = q.colorTW.term.values?.[(value as any).key]
+				if (q.colorTW.term.values?.[value.key]) {
+					tvalue = q.colorTW.term.values?.[value.key]
 				}
 
 				if (tvalue && 'color' in tvalue) {
-					;(value as any).color = tvalue.color
+					value.color = tvalue.color
 				} else if (isNumericTerm(q.colorTW.term)) {
 					const bins = data.refs.byTermId[q.colorTW.$id].bins
 					const bin = bins.find(bin => bin.label == category)
-					if (bin?.color) (value as any).color = bin.color
+					if (bin?.color) value.color = bin.color
 					else {
-						;(value as any).color = scheme[i - 1] //no bin or custom bin without color
+						value.color = scheme[i - 1] //no bin or custom bin without color
 						i--
 					}
 				} else if (!(q.colorTW.term.type == 'geneVariant' && q.colorTW.q.type == 'values')) {
-					;(value as any).color = k2c(category)
+					value.color = k2c(category)
 				}
 			}
 		}
 		let i = 0
 
-		const shapes = Object.entries((result as any).shapeMap).sort((a, b) => a[0].localeCompare(b[0]))
+		const shapes = Object.entries(result.shapeMap).sort((a, b) => a[0].localeCompare(b[0]))
 
 		// eslint-disable-next-line
 		for (const [_, value] of shapes) {
-			delete (value as any).sampleIds //Set used to count samples
-			if ('shape' in (value as any)) continue
+			delete value['sampleIds'] //Set used to count samples
+			if ('shape' in value) continue
 			if (q.shapeTW.term.values?.[(value as any).key]?.shape != undefined)
 				(value as any).shape = q.shapeTW.term.values?.[(value as any).key].shape
 			else (value as any).shape = i
 			i++
 		}
-		;(result as any).colorLegend = q.colorTW
-			? order((result as any).colorMap, q.colorTW, data.refs)
-			: ([['Default', { sampleCount: cohortSamples.length, color: 'blue', key: 'Default' }]] as any)
-		;(result as any).colorLegend.push([
+		result.colorLegend = q.colorTW
+			? order(result.colorMap, q.colorTW, data.refs)
+			: ([['Default', { sampleCount: cohortSamples.length, color: 'blue', key: 'Default' }]] as ColorLegendEntry[])
+		result.colorLegend!.push([
 			'Ref',
 			{
 				sampleCount: refSamples.length,
 				color: q.colorTW?.term.values?.['Ref'] ? q.colorTW.term.values?.['Ref'].color : (refColor as string),
 				key: 'Ref'
 			}
-		])(result as any).shapeLegend = shapes as any
-		;(result as any).shapeLegend.push(['Ref', { sampleCount: refSamples.length, shape: 0, key: 'Ref' }])
+		])
+		result.shapeLegend = shapes
+		result.shapeLegend!.push(['Ref', { sampleCount: refSamples.length, shape: 0, key: 'Ref' }])
 	}
 	return results
 }
 
-function hasValue(dbSample, tw) {
-	const key = dbSample?.[tw?.$id]?.key
+function hasValue(dbSample: { sample: any; value: any }, tw: TermWrapper) {
+	const key = tw && tw.$id !== undefined ? dbSample?.[tw.$id]?.key : undefined
 	const hasKey = key !== undefined
 	// a sample is allowed to be missing value for a term. no need to log out
 	//if (!hasKey) console.log(JSON.stringify(dbSample) + ' missing value for the term ' + JSON.stringify(tw))
 	return hasKey
 }
 
-function processSample(dbSample, sample, tw, categoryMap, category) {
-	let value = null
-	if (tw.term.type == 'geneVariant' && tw.q.type == 'values')
+function processSample(
+	dbSample: { sample: any; value: any },
+	sample: any,
+	tw: TermWrapper,
+	categoryMap: any,
+	category: string
+) {
+	let value: any = null
+	if (tw.term.type == 'geneVariant' && tw.q['type'] == 'values')
 		assignGeneVariantValue(dbSample, sample, tw, categoryMap, category)
 	else {
-		value = dbSample?.[tw.$id]?.key
+		value = dbSample?.[tw.$id!]?.key
 		if (value == null) return
 		if (tw.term.values?.[value]?.label) {
 			value = tw.term.values?.[value]?.label
 			sample.hidden[category] = tw.q.hiddenValues ? value! in tw.q.hiddenValues : false
-		} else sample.hidden[category] = tw.q.hiddenValues ? dbSample?.[tw.$id]?.key in tw.q.hiddenValues : false
+		} else sample.hidden[category] = tw.q.hiddenValues ? dbSample?.[tw.$id!]?.key in tw.q.hiddenValues : false
 		if (value) {
-			sample[category] = (value as any).toString()
-			if (categoryMap[value] == undefined) categoryMap[value] = { sampleCount: 1, key: dbSample?.[tw.$id]?.key }
+			sample[category] = value.toString()
+			if (categoryMap[value] == undefined) categoryMap[value] = { sampleCount: 1, key: dbSample?.[tw.$id!]?.key }
 			else categoryMap[value].sampleCount++
 		}
 	}
 }
 
-function assignGeneVariantValue(dbSample, sample, tw, categoryMap, category) {
+function assignGeneVariantValue(
+	dbSample: { sample: any; value: any },
+	sample: any,
+	tw: TermWrapper,
+	categoryMap: any,
+	category: string
+) {
 	if (tw.term.type == 'geneVariant') {
-		const mutations = dbSample?.[tw.$id]?.values
+		const mutations = dbSample?.[tw.$id!]?.values
 		sample.cat_info[category] = []
 
 		for (const mutation of mutations) {
@@ -335,8 +370,8 @@ function assignGeneVariantValue(dbSample, sample, tw, categoryMap, category) {
 	}
 }
 
-function getMutation(strict, dbSample, tw) {
-	const mutations = dbSample?.[tw.$id]?.values
+function getMutation(strict: boolean, dbSample: { sample: any; value: any }, tw: TermWrapper) {
+	const mutations = dbSample?.[tw.$id!]?.values
 	//eslint-disable-next-line
 	for (const [dt, _] of Object.entries(dt2label)) {
 		const mutation = mutations.find(mutation => {
@@ -352,7 +387,7 @@ function getMutation(strict, dbSample, tw) {
 	}
 }
 
-function getCategory(mutation) {
+function getCategory(mutation: { dt: string; class: string; origin: string }) {
 	const dt = mutation.dt
 	const class_info = mclass[mutation.class]
 	const origin = morigin[mutation.origin]?.label
@@ -360,9 +395,9 @@ function getCategory(mutation) {
 	return `${class_info.label}, ${dtlabel}`
 }
 
-function order(map, tw, refs) {
+function order(map: any, tw: TermWrapper, refs: any) {
 	const hasOrder = tw?.term?.values
-		? Object.keys(tw.term.values).some(key => tw.term.values[key].order != undefined)
+		? Object.keys(tw.term.values).some(key => tw.term.values![key].order != undefined)
 		: false
 	let entries: any = []
 	if (!tw || map.size == 0) return entries
@@ -384,8 +419,8 @@ function order(map, tw, refs) {
 			else if (v1 < v2) return -1
 			return 0
 		})
-	} else if (refs?.byTermId[tw.$id]?.bins) {
-		const bins = refs.byTermId[tw.$id].bins
+	} else if (refs?.byTermId[tw.$id!]?.bins) {
+		const bins = refs.byTermId[tw.$id!].bins
 		entries.sort((a, b) => {
 			const binA = bins.findIndex(bin => bin.label == a[0])
 			const binB = bins.findIndex(bin => bin.label == b[0])
@@ -399,7 +434,13 @@ function order(map, tw, refs) {
 	return entries
 }
 
-async function getSampleCoordinatesByTerms(req, q, ds, data) {
+async function getSampleCoordinatesByTerms(
+	req: any,
+	q: TermdbSampleScatterRequest,
+	ds: any,
+	data: ValidGetDataResponse
+) {
+	if (!q.coordTWs || q.coordTWs.length == 0) return [[], data]
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
 	const samples: any = []
 	for (const sampleId in data.samples) {
@@ -428,21 +469,13 @@ async function getSampleCoordinatesByTerms(req, q, ds, data) {
 	return [samples, data]
 }
 
-function isComputable(term, value) {
+function isComputable(term: Term, value: number) {
 	if (!term) return true
 	return !term.values?.[value]?.uncomputable
 }
 
-export async function trigger_getLowessCurve(req, q, res) {
-	const data = q.coords
-	const result = JSON.parse(await run_R('lowess.R', JSON.stringify(data)))
-	const lowessCurve: any = []
-	for (const [i, x] of Object.entries(result.x)) lowessCurve.push([x, result.y[i]])
-	return res.send(lowessCurve)
-}
-
 // load a file for a plot
-async function loadFile(p, ds) {
+async function loadFile(p: any, ds: any) {
 	const lines = (await read_file(path.join(serverconfig.tpmasterdir, p.file))).trim().split('\n')
 	const xColumn = p.coordsColumns?.x || 1
 	const yColumn = p.coordsColumns?.y || 2
@@ -462,9 +495,9 @@ async function loadFile(p, ds) {
 			invalidXY++
 			continue
 		}
-		const sample: any = { sample: l[0], x, y }
+		const sample: Partial<ScatterSample> = { sample: l[0], x, y }
 		if (p.colorColumn) {
-			sample.sampleId = l[0]
+			sample['sampleId'] = l[0] //deleted later
 			sample.category = l[p.colorColumn.index]
 			sample.shape = 'Ref'
 			sample.z = 0
@@ -482,7 +515,7 @@ async function loadFile(p, ds) {
 			p.referenceSamples.push(sample)
 		} else {
 			// sample id can be undefined, e.g. reference samples
-			sample.sampleId = id
+			sample['sampleId'] = id
 			p.filterableSamples.push(sample)
 		}
 	}
