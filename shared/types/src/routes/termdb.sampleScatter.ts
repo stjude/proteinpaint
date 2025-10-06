@@ -1,37 +1,46 @@
 import type { RoutePayload } from './routeApi.ts'
-import type { TermWrapper } from 'src/terms/tw.ts'
 
+//TermWrapper defined in client/types/terms/tw.ts
+//Do not use #types TermWrapper here as it will be deprecated
 export type TermdbSampleScatterRequest = {
 	genome: string
 	dslabel: string
-	colorTW?: TermWrapper
-	shapeTW?: TermWrapper
-	divideByTW?: TermWrapper
-	scaleDotTW?: TermWrapper
-	coordTWs?: TermWrapper[]
+	colorTW?: any //TermWrapper
+	shapeTW?: any //TermWrapper
+	divideByTW?: any //TermWrapper
+	scaleDotTW?: any //TermWrapper
+	coordTWs?: any[] //TermWrapper[]
 	plotName?: string
 	filter?: any
 	filter0?: any
 	__protected__?: any // auth token for accessing protected data
 }
 
-type ScatterSample = {
+export type ScatterSample = {
 	category: string
 	sample: string
 	info: { [index: string]: any }
-	shape: number
+	shape: string
 	x: number
 	y: number
 	z: number
 }
 
+type ColorObject = { color: string; sampleCount: number; key: string }
+export type ColorLegendEntry = [string, ColorObject]
+export type ColorMap = { [index: string]: ColorObject }
+
+type ShapeObject = { shape: number; sampleCount: number; key: string }
+export type ShapeLegendEntry = [string, ShapeObject]
+export type ShapeMap = { [index: string]: ShapeObject }
+
 type ScatterResult = {
 	[index: string]: {
-		colorMap: { [index: string]: { color: number; sampleCount: number; key: string } }[]
-		colorLegend: [string, { color: number; sampleCount: number; key: string }][]
+		colorLegend: ColorLegendEntry[]
+		colorMap: ColorMap
 		samples: ScatterSample[]
-		shapeMap: [string, { shape: number; sampleCount: number; key: string }][]
-		shapeLegend: { [index: string]: { shape: number; sampleCount: number; key: string } }[]
+		shapeLegend: ShapeLegendEntry[]
+		shapeMap: ShapeMap
 	}
 }
 
