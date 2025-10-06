@@ -727,7 +727,7 @@ async fn extract_summary_information(
                 .into_iter()
                 .filter(|x| user_words2.contains(&x.to_lowercase()))
                 .collect();
-            println!("common_genes:{:?}", common_genes);
+            //println!("common_genes:{:?}", common_genes);
             let (rag_docs, db_vec) = parse_dataset_db(db).await;
             //println!("rag_docs:{:?}", rag_docs);
             let additional;
@@ -918,7 +918,10 @@ fn validate_summary_output(raw_llm_json: String, db_vec: Vec<DbRows>, common_gen
                     }
                 }
                 if num_gene_verification == 0 || common_genes.len() == 0 {
-                    message = message + &"\"" + &gene + &"\"" + &" not found in genedb.";
+                    if message.to_lowercase().contains(&gene.to_lowercase()) {
+                    } else {
+                        message = message + &"\"" + &gene + &"\"" + &" not found in genedb.";
+                    }
                 }
             }
         }
