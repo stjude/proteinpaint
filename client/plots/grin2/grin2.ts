@@ -6,7 +6,7 @@ import { Menu, renderTable, table2col, make_one_checkbox, sayerror } from '#dom'
 import { dtsnvindel, mclass } from '#shared/common.js'
 import { get$id } from '#termsetting'
 import { PlotBase } from '#plots/PlotBase.ts'
-import { plotManhattan } from '../manhattan/manhattan'
+import { plotManhattan } from '#plots/manhattan/manhattan.ts'
 
 class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
@@ -97,6 +97,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	async setControls() {
 		this.createConfigTable()
+	}
+
+	// Determining if we have fusion/sv/or both. Returns [] | [2] | [5] | [2, 5]
+	private getSvFusionCodes(): number[] {
+		const list: number[] = this.app.vocabApi.termdbConfig.queries.svfusion.dtLst ?? []
+		return [2, 5].filter(code => list.includes(code))
 	}
 
 	private createConfigTable() {
@@ -190,17 +196,33 @@ class GRIN2 extends PlotBase implements RxComponent {
 			this.addOptionRowToTable(optionsTable, 'Hypermutator Threshold', 'cnvOptions.hyperMutator', 500, 1)
 		}
 
-		// Fusion Section (placeholder)
-		if (queries.svfusion) {
-			const fusionRow = table.append('tr')
-			addDataTypeTd(fusionRow, 'Fusion (Structural Variation)')
+		// Decide from dt list which of fusion/sv are present
+		const codes = this.getSvFusionCodes()
 
-			const msg = addOptsTd(fusionRow)
-			msg
+		// Fusion Section
+		if (queries.svfusion && codes.includes(2)) {
+			const fusionRow = table.append('tr')
+			addDataTypeTd(fusionRow, 'Fusion (RNA Fusion Events)')
+
+			const fusionMsg = addOptsTd(fusionRow)
+			fusionMsg
 				.append('div')
 				.style('color', this.optionsTextColor)
 				.style('font-size', `${this.optionsTextFontSize}px`)
 				.text('Fusion filtering options to be configured later')
+		}
+
+		// SV Section
+		if (queries.svfusion && codes.includes(5)) {
+			const svRow = table.append('tr')
+			addDataTypeTd(svRow, 'SV (Structural Variants)')
+
+			const svMsg = addOptsTd(svRow)
+			svMsg
+				.append('div')
+				.style('color', this.optionsTextColor)
+				.style('font-size', `${this.optionsTextFontSize}px`)
+				.text('SV filtering options to be configured later')
 		}
 
 		// General GRIN2 Section (placeholder)

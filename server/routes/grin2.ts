@@ -6,7 +6,7 @@ import { run_python } from '@sjcrh/proteinpaint-python'
 import { mayLog } from '#src/helpers.ts'
 import { get_samples } from '#src/termdb.sql.js'
 import { read_file, file_is_readable } from '#src/utils.js'
-import { dtsnvindel, dtcnv, dtfusionrna } from '#shared/common.js'
+import { dtsnvindel, dtcnv, dtfusionrna, dtsv } from '#shared/common.js'
 
 /**
  * General GRIN2 analysis handler
@@ -196,6 +196,7 @@ function getLesionTracker(req: GRIN2Request): LesionTracker {
 	if (req.snvindelOptions) currentTypes.push(dtsnvindel)
 	if (req.cnvOptions) currentTypes.push(dtcnv)
 	if (req.fusionOptions) currentTypes.push(dtfusionrna)
+	if (req.svOptions) currentTypes.push(dtsv)
 
 	const track = new Map<number, TrackState>()
 	for (const t of currentTypes) track.set(t, { count: 0 })
@@ -288,6 +289,9 @@ async function processSampleData(
 				case dtfusionrna:
 					label = 'fusion'
 					break
+				case dtsv:
+					label = 'structural variant'
+					break
 				default:
 					label = `type ${type}`
 					break
@@ -356,6 +360,22 @@ async function processSampleMlst(
 				const les = filterAndConvertFusion(sampleName, m, request.fusionOptions)
 				if (les && fusion) {
 					fusion.count++
+					sampleLesions.push(les)
+				}
+				break
+			}
+
+			case dtsv: {
+				if (!request.svOptions) break
+
+				const sv = tracker.get(dtsv)
+				if (sv && sv.count >= MAX_LESIONS_PER_TYPE) {
+					break
+				}
+
+				const les = filterAndConvertSV(sampleName, m, request.svOptions)
+				if (les && sv) {
+					sv.count++
 					sampleLesions.push(les)
 				}
 				break
@@ -437,4 +457,9 @@ function filterAndConvertFusion(
 	// Convert to lesion format: [ID, chrom, loc.start, loc.end, lsn.type]
 	// Using chrA for the chrom and posA/posB for the start and end locations
 	return [sampleName, entry.chrA, entry.posA, entry.posB, 'fusion']
+}
+
+function filterAndConvertSV(sampleName: string, entry: any, _options: GRIN2Request['svOptions']): string[] | null {
+	// Convert to lesion format: [ID, chrom, loc.start, loc.end, lsn.type]
+	return [sampleName, entry.chr, entry.start, entry.stop, 'sv']
 }

@@ -409,16 +409,6 @@ type SingleSampleMutationQuery = {
 	               "type": "snvindel"
 	             }
 		TODO specify property names for read depth; needed for grin2 filtering
-
-	fusion example entry:
-			     {
-	               "chromosome": "chr1",
-	               "start": 123456,
-	               "end": 123789,
-	               "type": "fusion",
-				   "fusionType": null,
-	               "confidence": null
-	             }
 	*/
 	src: 'native' | 'gdcapi' | string
 	/** which property of client mutation object to retrieve sample identifier for

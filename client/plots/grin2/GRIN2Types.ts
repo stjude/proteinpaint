@@ -58,8 +58,12 @@ export interface GRIN2Settings {
 		hyperMutator: number
 	}
 
-	/** Options for filtering fusion file content (optional) */
+	/** Options for filtering fusion file content (optional). For now we won't have any options */
 	fusionOptions?: {
+		[key: string]: any
+	}
+	/** Options for filtering structural variant file content (optional). For now we won't have any options */
+	svOptions?: {
 		[key: string]: any
 	}
 	/** Options for general GRIN2 settings (optional) */
