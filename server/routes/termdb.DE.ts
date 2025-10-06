@@ -44,6 +44,7 @@ function init({ genomes }) {
 					},
 					ds
 				)
+
 				if (term_results.error) throw term_results.error
 			}
 

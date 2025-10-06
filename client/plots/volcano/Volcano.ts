@@ -11,6 +11,7 @@ import { VolcanoViewModel } from './viewModel/VolcanoViewModel'
 import { VolcanoInteractions } from './interactions/VolcanoInteractions'
 import { VolcanoPlotView } from './view/VolcanoPlotView'
 import { VolcanoControlInputs } from './VolcanoControlInputs'
+import { getCombinedTermFilter } from '#filter'
 
 // The max sample cutoff for volcano rendering
 const maxSampleCutoff = 4000
@@ -24,6 +25,7 @@ class Volcano extends PlotBase implements RxComponent {
 	termType: string
 	constructor(opts: VolcanoOpts, api) {
 		super(opts, api)
+		if (this.opts.parentId) this.parentId = this.opts.parentId
 		this.components = {
 			controls: {}
 		}
@@ -54,7 +56,10 @@ class Volcano extends PlotBase implements RxComponent {
 		if (action.type.startsWith('cohort')) return true
 		if (action.type == 'app_refresh') return true
 		if (action.type.startsWith('plot_')) {
-			return action.id === this.id || action.id == this.parentId
+			return (
+				(action.id === this.id || action.id == this.parentId) &&
+				(!action.config?.childType || action.config?.childType == this.type)
+			)
 		}
 	}
 
@@ -63,12 +68,16 @@ class Volcano extends PlotBase implements RxComponent {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
+		const parentConfig = this.parentId && appState.plots.find(p => p.id === this.parentId)
+		const termfilter = getCombinedTermFilter(appState, config.filter || parentConfig?.filter)
+
 		return {
 			config: Object.assign({}, config, {
 				settings: {
 					volcano: config.settings.volcano
 				}
-			})
+			}),
+			termfilter
 		}
 	}
 

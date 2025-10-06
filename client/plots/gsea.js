@@ -7,11 +7,14 @@ import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { VolcanoModel } from '#plots/volcano/model/VolcanoModel.ts'
 import { getDefaultVolcanoSettings } from '#plots/volcano/Volcano.ts'
+import { PlotBase } from '#plots/PlotBase.js'
+import { getCombinedTermFilter } from '#filter'
 
 const tip = new Menu()
 
-class gsea {
+class gsea extends PlotBase {
 	constructor(opts) {
+		super(opts)
 		this.type = 'gsea'
 		this.opts = opts
 		this.components = {
@@ -178,8 +181,12 @@ class gsea {
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
+		const parentConfig = appState.plots.find(p => p.id === this.parentId)
+		const termfilter = getCombinedTermFilter(appState, config.filter || parentConfig?.filter)
+
 		return {
-			config
+			config,
+			termfilter
 		}
 	}
 
@@ -219,6 +226,15 @@ class gsea {
 				else if (e.stack) console.log(e.stack)
 				throw e
 			}
+		}
+	}
+
+	reactsTo(action) {
+		if (action.type.startsWith('plot_')) {
+			return (
+				(action.id === this.id || action.id == this.parentId) &&
+				(!action.config?.childType || action.config?.childType == this.type)
+			)
 		}
 	}
 

@@ -63,6 +63,7 @@ class DifferentialAnalysis extends PlotBase implements RxComponent {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
+
 		return {
 			config
 		}
@@ -71,7 +72,7 @@ class DifferentialAnalysis extends PlotBase implements RxComponent {
 	reactsTo(action) {
 		if (action.type.includes('cache_termq')) return true
 		if (action.type.startsWith('plot_')) {
-			return action.id === this.id
+			return action.id === this.id || action.id == this.parentId
 		}
 		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true
@@ -142,8 +143,8 @@ export function getPlotConfig(opts: DiffAnalysisOpts) {
 		childType: 'volcano',
 		termType: opts.termType,
 		highlightedData: opts.highlightedData || [],
-		settings: {},
-		hidePlotFilter: true //TODO: Support filtering and reactivity in child plots
+		settings: {}
+		//PlotFilter: true //TODO: Support filtering and reactivity in child plots
 	} as any
 
 	if (opts.termType == 'geneExpression') {

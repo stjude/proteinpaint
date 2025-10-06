@@ -25,13 +25,16 @@ export class VolcanoModel {
 
 	async getRequestBody() {
 		await this.getOtherSamples(this.config.samplelst)
+		const state = this.app.getState()
 		const body = {
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
 			method: this.settings.method,
 			min_count: this.settings.minCount,
 			min_total_count: this.settings.minTotalCount,
-			samplelst: this.config.samplelst
+			samplelst: this.config.samplelst,
+			filter: state.termfilter.filter,
+			filter0: state.termfilter.filter0
 		} as any
 		//This is a workaround until the server can accept an arr of confounder tws
 		const confounders = this.config?.confounderTws

@@ -252,6 +252,7 @@ class SummaryPlot extends PlotBase implements RxComponent {
 			parentId: this.id,
 			holder: this.dom.filterDiv,
 			hideLabel: true,
+
 			emptyLabel: '+Add new filter',
 			callback: filter => {
 				this.app.dispatch({
