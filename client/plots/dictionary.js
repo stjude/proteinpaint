@@ -61,7 +61,7 @@ export const componentInit = dictInit
 export function getPlotConfig(opts, app) {
 	// currently, there are no configurations options for
 	// the dictionary tree; may add appearance, styling options later
-	const config = {}
+	const config = { hidePlotFilter: true }
 	// may apply overrides to the default configuration
 	return copyMerge(config, opts)
 }
