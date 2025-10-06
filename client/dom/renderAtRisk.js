@@ -137,6 +137,7 @@ export function renderAtRiskG({ g, s, chart, term2values, term2toColor, onSerieC
 
 			const sObj = chart.serieses.find(s => s.seriesId === seriesId)
 			g.append('text')
+				.attr('data-testid', 'sjpp-atrisk-seriesId')
 				.attr('transform', `translate(${s.atRiskLabelOffset}, 0)`)
 				.attr('text-anchor', 'end')
 				.attr('font-size', `${s.axisTitleFontSize - 4}px`)
