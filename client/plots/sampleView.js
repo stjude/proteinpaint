@@ -854,7 +854,7 @@ export async function getPlotConfig(opts, app) {
 	if (q)
 		//Init show property for each genome quantification plot to true
 		for (const ssgqKey in q.singleSampleGenomeQuantification) settings.sampleView[ssgqKey] = true
-	const config = { activeCohort: 0, sample: null, expandedTermIds: [root_ID], settings }
+	const config = { activeCohort: 0, sample: null, expandedTermIds: [root_ID], settings, hidePlotFilter: true }
 	return copyMerge(config, opts)
 }
 

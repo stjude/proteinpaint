@@ -1712,7 +1712,8 @@ export async function getPlotConfig(opts, app) {
 			},
 			startColor: {},
 			stopColor: {},
-			plots
+			plots,
+			hidePlotFilter: true
 		}
 		// may apply term-specific changes to the default object
 		const result = copyMerge(config, opts)

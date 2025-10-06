@@ -3,6 +3,8 @@ import { RegressionResults } from './regression.results'
 import { getCompInit, copyMerge } from '../rx'
 import { sayerror } from '../dom/sayerror.ts'
 import { fillTermWrapper } from '#termsetting'
+import { getCombinedTermFilter } from '#filter'
+import { PlotBase } from '#plots/PlotBase.js'
 
 /*
 Code architecture:
@@ -14,8 +16,9 @@ regression.js
 	regression.results.js
 */
 
-class Regression {
+class Regression extends PlotBase {
 	constructor(opts) {
+		super(opts)
 		this.type = 'regression'
 		this.genomeObj = opts.app.opts.genome
 	}
@@ -54,11 +57,13 @@ class Regression {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		if (!config.regressionType) throw 'regressionType is required'
+		const parentConfig = this.parentId && appState.plots.find(p => p.id === this.parentId)
+		const termfilter = getCombinedTermFilter(appState, config.filter || parentConfig?.filter)
 		return {
 			vocab: appState.vocab,
 			formIsComplete: config.outcome && config.independent.length,
 			activeCohort: appState.activeCohort,
-			termfilter: appState.termfilter,
+			termfilter,
 			config,
 			allowedTermTypes: appState.termdbConfig.allowedTermTypes,
 			minTimeSinceDx: appState.termdbConfig.minTimeSinceDx
