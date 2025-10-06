@@ -7741,38 +7741,38 @@
   },
   "tw/qualitative.ts": {
     "lines": {
-      "total": 129,
-      "covered": 35,
+      "total": 125,
+      "covered": 6,
       "skipped": 0,
-      "pct": 27.13
+      "pct": 4.8
     },
     "functions": {
       "total": 23,
-      "covered": 7,
+      "covered": 1,
       "skipped": 0,
-      "pct": 30.43
+      "pct": 4.34
     },
     "statements": {
-      "total": 156,
-      "covered": 39,
+      "total": 151,
+      "covered": 6,
       "skipped": 0,
-      "pct": 25
+      "pct": 3.97
     },
     "branches": {
-      "total": 123,
-      "covered": 22,
+      "total": 115,
+      "covered": 0,
       "skipped": 0,
-      "pct": 17.88
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 17.88,
-      "prev": 0,
-      "diff": 17.88
+      "curr": 0,
+      "prev": 17.88,
+      "diff": -17.88
     },
     "averagePct": {
-      "curr": 25.11,
-      "prev": 3.2925,
-      "diff": 21.8175
+      "curr": 3.2775000000000003,
+      "prev": 25.11,
+      "diff": -21.8325
     }
   },
   "termsetting/handlers/qualitative.ts": {
