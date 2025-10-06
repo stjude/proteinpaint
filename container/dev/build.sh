@@ -14,5 +14,4 @@ fi
 docker buildx build . \
   --file ./Dockerfile \
   --tag "ghcr.io/stjude/devcontainer:$TAG" \
-  $PLATFORM \
-  --build-arg ARCH="$ARCH"
+  $PLATFORM
