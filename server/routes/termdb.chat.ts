@@ -28,7 +28,11 @@ function init({ genomes }) {
 			if (!g) throw 'invalid genome'
 			const ds = g.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid dslabel'
-			//if (!ds.queries?.chat) throw 'not supported'
+
+			let hasGeneExpression = false
+			if (ds.queries['geneExpression']) {
+				hasGeneExpression = true
+			}
 
 			let apilink: string
 			let comp_model_name: string
@@ -53,7 +57,8 @@ function init({ genomes }) {
 				genedb: path.join(serverconfig.tpmasterdir, genomes[q.genome].genedb.dbfile),
 				comp_model_name: comp_model_name,
 				embedding_model_name: embedding_model_name,
-				llm_backend_name: serverconfig.llm_backend // The type of backend (engine) used for running the embedding and completion model. Currently "SJ" and "Ollama" are supported
+				llm_backend_name: serverconfig.llm_backend, // The type of backend (engine) used for running the embedding and completion model. Currently "SJ" and "Ollama" are supported
+				hasGeneExpression: hasGeneExpression
 			}
 			//mayLog('chatbot_input:', JSON.stringify(chatbot_input))
 
