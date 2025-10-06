@@ -11,7 +11,7 @@ use std::collections::HashMap;
 //use rig::providers::ollama;
 use rig::vector_store::in_memory_store::InMemoryVectorStore;
 use schemars::JsonSchema;
-use serde_json::{Map, Value, json};
+use serde_json::{json, Map, Value};
 use std::io::{self};
 mod sjprovider; // Importing custom rig module for invoking SJ GPU server
 
