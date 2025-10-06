@@ -67,8 +67,6 @@ export default function (): Mds3 {
 
 				timeUnit: 'years',
 
-				minTimeSinceDx: 5, // enrollment in sjlife requires 5 years since cancer diagnosis
-
 				ageEndOffset: 0.00274, // number of years to offset ending age of patients
 				// for cox outcome with timeScale='age'
 				// 1 day (i.e. 1/365 or 0.00274) needs to be added
