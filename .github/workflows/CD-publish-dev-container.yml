@@ -26,17 +26,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker Image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./container/
-          file: ./container/dev/Dockerfile
-          tags: ghcr.io/stjude/devcontainer:latest
-          platforms: linux/amd64
-          outputs: type=image
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          push: true
-          build-args: |
-            IMGREV=${{ github.sha }}
-            IMGVER=latest
+      - name: Build image
+        run: |
+          cd container/dev
+          sh build.sh
+
+          docker push ghcr.io/stjude/devcontainer:latest
