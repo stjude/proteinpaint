@@ -64,11 +64,11 @@ class Volcano extends PlotBase implements RxComponent {
 	}
 
 	getState(appState: MassState) {
-		const config = appState.plots.find((p: BasePlotConfig) => p.id === this.id)
+		const config: any = appState.plots.find((p: BasePlotConfig) => p.id === this.id)
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
-		const parentConfig = this.parentId && appState.plots.find(p => p.id === this.parentId)
+		const parentConfig: any = this.parentId && appState.plots.find(p => p.id === this.parentId)
 		const termfilter = getCombinedTermFilter(appState, config.filter || parentConfig?.filter)
 
 		return {
