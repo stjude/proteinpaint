@@ -247,16 +247,20 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 		const h5file = path.join(serverconfig.tpmasterdir, G.folder, (q.sample.eID || q.sample.sID) + '.h5')
 		await file_is_readable(h5file)
 
-		//const read_hdf5_input_type = { gene: q.gene, hdf5_file: h5file }
-		const read_hdf5_input_type = { query: [q.gene], hdf5_file: h5file }
+		const query_gene = q.gene
+		if (!query_gene) {
+			throw new Error('Gene parameter is undefined')
+		}
+
+		const read_hdf5_input_type = { query: [query_gene], hdf5_file: h5file }
 
 		const time1 = Date.now()
 		const rust_output = await run_rust('readH5', JSON.stringify(read_hdf5_input_type))
 		mayLog('Time taken to query HDF5 file:', Date.now() - time1, 'ms')
 
 		const result = JSON.parse(rust_output)
-		const out = result.query_output[q.gene]?.samples
-		if (!out) throw `No expression data for ${q.gene}`
+		const out = result.query_output[query_gene]?.samples
+		if (!out) throw `No expression data for ${query_gene}`
 
 		return out
 	}
