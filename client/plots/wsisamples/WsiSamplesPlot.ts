@@ -127,7 +127,8 @@ export async function getPlotConfig(opts: any, app: any) {
 		subfolder: 'wsisamples',
 		extension: 'ts',
 		wsimages: await getWSISamples(app),
-		settings: wsiSamplesDefaults(opts.overrides)
+		settings: wsiSamplesDefaults(opts.overrides),
+		hidePlotFilter: true
 	}
 }
 
