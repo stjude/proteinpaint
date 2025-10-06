@@ -273,12 +273,7 @@ values[] // using integer sample id
 	) {
 		// edgeR will be used for DE analysis
 		const time1 = new Date().valueOf()
-		let result
-		if (q.newformat) {
-			result = JSON.parse(await run_R('edge_newh5.R', JSON.stringify(expression_input)))
-		} else {
-			result = JSON.parse(await run_R('edge.R', JSON.stringify(expression_input)))
-		}
+		const result = JSON.parse(await run_R('edge_newh5.R', JSON.stringify(expression_input)))
 		mayLog('Time taken to run edgeR:', formatElapsedTime(Date.now() - time1))
 		param.method = 'edgeR'
 		const ql_imagePath: string = path.join(serverconfig.cachedir, result.edgeR_ql_image_name[0]) // Retrieve the edgeR quality image and send it to client side. Does not need to be an array, will address this later.
@@ -343,35 +338,18 @@ export async function validate_query_rnaseqGeneCount(ds) {
 		if (ds.queries.rnaseqGeneCount.storage_type == 'text') {
 			samples = (await get_header_txt(q.file, null)).split('\t').slice(4)
 		} else if (ds.queries.rnaseqGeneCount.storage_type == 'HDF5') {
-			if (q.newformat) {
-				const get_samples_from_hdf5 = {
-					hdf5_file: q.file,
-					validate: true
-				}
-				const time1 = new Date().valueOf()
-				const result = await run_rust('readH5', JSON.stringify(get_samples_from_hdf5))
-				const time2 = new Date().valueOf()
-				mayLog('Time taken to query gene expression:', time2 - time1, 'ms')
-				const vr = JSON.parse(result)
-				if (vr.status !== 'success') throw vr.message
-				if (!Array.isArray(vr.samples)) throw 'HDF5 file has no samples, please check file.'
-				samples = vr.samples
-			} else {
-				const get_samples_from_hdf5 = {
-					input_file: q.file,
-					data_type: 'get_samples'
-				}
-				//console.log("get_samples_from_hdf5:",get_samples_from_hdf5)
-				//fs.writeFile('test.txt', JSON.stringify(get_samples_from_hdf5), function (err) {
-				//	// For catching input to rust pipeline, in case of an error
-				//	if (err) return console.log(err)
-				//})
-				const time1 = new Date().valueOf()
-				const result = await run_rust('DEanalysis', JSON.stringify(get_samples_from_hdf5))
-				const time2 = new Date().valueOf()
-				mayLog('Time taken to query gene expression:', time2 - time1, 'ms')
-				samples = result.split(',')
+			const get_samples_from_hdf5 = {
+				hdf5_file: q.file,
+				validate: true
 			}
+			const time1 = new Date().valueOf()
+			const result = await run_rust('readH5', JSON.stringify(get_samples_from_hdf5))
+			const time2 = new Date().valueOf()
+			mayLog('Time taken to query gene expression:', time2 - time1, 'ms')
+			const vr = JSON.parse(result)
+			if (vr.status !== 'success') throw vr.message
+			if (!Array.isArray(vr.samples)) throw 'HDF5 file has no samples, please check file.'
+			samples = vr.samples
 		} else throw 'unknown storage type:' + ds.queries.rnaseqGeneCount.storage_type
 
 		q.allSampleSet = new Set(samples)

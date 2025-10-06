@@ -247,33 +247,16 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 		const h5file = path.join(serverconfig.tpmasterdir, G.folder, (q.sample.eID || q.sample.sID) + '.h5')
 		await file_is_readable(h5file)
 
-		const read_hdf5_input_type = { gene: q.gene, hdf5_file: h5file }
+		//const read_hdf5_input_type = { gene: q.gene, hdf5_file: h5file }
+		const read_hdf5_input_type = { query: [q.gene], hdf5_file: h5file }
 
-		let out // object of barcodes as keys, and values as value
-		try {
-			const time1 = Date.now()
-			const rust_output = await run_rust('readHDF5', JSON.stringify(read_hdf5_input_type))
-			mayLog('Time taken to query HDF5 file:', Date.now() - time1, 'ms')
-			for (const line of rust_output.split('\n')) {
-				if (line.startsWith('output_string:')) {
-					out = JSON.parse(line.replace('output_string:', ''))
-				} else {
-					console.log(line)
-				}
-			}
-		} catch (e) {
-			// arg should be an error string; if needed generate sanitised version by not showing file path
+		const time1 = Date.now()
+		const rust_output = await run_rust('readH5', JSON.stringify(read_hdf5_input_type))
+		mayLog('Time taken to query HDF5 file:', Date.now() - time1, 'ms')
 
-			// possible for gene not found in hdf5. in such case rust will return lengthy error including file path which we do not want to show on client.
-			if (typeof e == 'string') {
-				const geneNotFound = `Gene '${q.gene}' not found in the HDF5 file`
-				// if the substring exists in rust error, means the gene is not found. throw a simple msg to alert downstream
-				if (e.includes(geneNotFound)) throw 'No expression data for this gene'
-			}
-			// encountered other error
-			console.log(e)
-			throw 'error reading h5 file: ' + e
-		}
+		const result = JSON.parse(rust_output)
+		const out = result.query_output[q.gene]?.samples
+		if (!out) throw `No expression data for ${q.gene}`
 
 		return out
 	}
