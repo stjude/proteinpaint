@@ -384,6 +384,8 @@ type SvFusion = {
 		*/
 		file?: string
 	}
+	/** Pass dt numbers for if this sample has fusion events, sv events, or both */
+	dtLst: number[]
 }
 
 type SingleSampleMutationQuery = {
