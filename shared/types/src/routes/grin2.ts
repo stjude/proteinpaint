@@ -61,6 +61,12 @@ export type GRIN2Request = {
 		/** Placeholder - fusion filtering options to be implemented */
 		[key: string]: any
 	}
+
+	/** Options for filtering structural variant file content */
+	svOptions?: {
+		/** Placeholder - structural variant filtering options to be implemented */
+		[key: string]: any
+	}
 }
 
 /** Simple Interface to store the complex plot data from the python Manhattan plot */
