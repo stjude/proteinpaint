@@ -11,7 +11,7 @@ export async function get_incidence(q, ds) {
 		if (!ds.cohort) throw 'cohort missing from ds'
 		const minTimeSinceDx = ds.cohort.termdb.minTimeSinceDx
 		const minSampleSize = Number(q.minSampleSize)
-		if (!Number.isFinite(minTimeSinceDx)) throw 'invalid minTimeSinceDx'
+		if (minTimeSinceDx && !Number.isFinite(minTimeSinceDx)) throw 'invalid minTimeSinceDx'
 		if (!Number.isFinite(minSampleSize)) throw 'invalid minSampleSize'
 		q.ds = ds
 		const twLst = []
