@@ -1041,7 +1041,7 @@ export function getSamplelstTW2(groups) {
 	}
 }
 
-export function getSamplelstTW(groups, name = 'groups', notIn = true) {
+export function getSamplelstTW(groups, name = groups.length == 1 ? 'group' : 'groups', notIn = true) {
 	const values = {}
 	const qgroups = []
 	let samples
@@ -1057,7 +1057,7 @@ export function getSamplelstTW(groups, name = 'groups', notIn = true) {
 	}
 	if (groups.length == 1 && notIn) {
 		const name2 = 'Not in ' + groups[0].name
-		values[name2] = { key: name2, label: name2, color: '#aaa', list: samples }
+		values[name2] = { key: name2, label: name2, color: '#aaa', list: samples, in: false }
 		qgroups.push({
 			name: name2,
 			in: false,

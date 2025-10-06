@@ -14,11 +14,8 @@ async function fillMenu(self, div, tvs) {
 	div.selectAll('*').remove()
 	div = div.append('div')
 	div.style('font-size', '0.8em')
-	const rows = []
-	let samples, name
 	for (const field in tvs.term.values) {
-		name = field
-		samples = tvs.term.values[field].list
+		if (tvs.term.values[field].in === false) continue
 		addTable(div, tvs, field)
 	}
 	div
@@ -82,6 +79,7 @@ function get_pill_label(tvs) {
 function getGroupLabel(term) {
 	let n = 0
 	for (const item in term.values) {
+		if (term.values[item].in === false) continue
 		n += term.values[item].list.length
 	}
 	return `${term.name} n=${n}`
