@@ -21,7 +21,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.PAT }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -32,7 +32,7 @@ jobs:
           context: ./container/
           file: ./container/dev/Dockerfile
           tags: ghcr.io/stjude/devcontainer:latest
-          platforms: linux/arm64,linux/amd64
+          platforms: linux/amd64
           outputs: type=image
           cache-from: type=gha
           cache-to: type=gha,mode=max
