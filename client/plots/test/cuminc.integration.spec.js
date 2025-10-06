@@ -167,10 +167,7 @@ tape('term1=Cardiovascular System, term2=agedx', function (test) {
 		const legend = div.selectAll('.pp-cuminc-chartLegends').node()
 		test.ok(legend, `Should render chart legend`)
 		//Exclude table header and tick values
-		const numRiskRowLabels = div
-			.selectAll('.sjpp-cuminc-atrisk text')
-			.nodes()
-			.filter(d => !d.__data__?.tickVal && d.className.animVal != 'sjpp-atrisk-title')
+		const numRiskRowLabels = div.selectAll('[data-testid="sjpp-atrisk-seriesId"]').nodes()
 
 		//Test legend and risk table match legend data
 		for (const [i, d] of legend.__data__.visibleSerieses.entries()) {
@@ -326,10 +323,7 @@ tape('term1 = Cardiovascular System, term2 = agedx, numeric regular bins', test 
 		test.equal(cumincCurves.length, expectedCount, `Should update ${expectedCount} curves in plot`)
 
 		//Number at risk table
-		const numRiskRowLabels = div
-			.selectAll('.sjpp-cuminc-atrisk text')
-			.nodes()
-			.filter(d => !d.__data__?.tickVal && d.className.animVal != 'sjpp-atrisk-title')
+		const numRiskRowLabels = div.selectAll('[data-testid="sjpp-atrisk-seriesId"]').nodes()
 		const foundNewLabels = numRiskRowLabels.filter(l => cuminc.Inner.uniqueSeriesIds.has(l.__data__.seriesId))
 		test.equal(foundNewLabels.length, expectedCount, `Should update ${expectedCount} labels in Number at risk table`)
 
@@ -491,10 +485,7 @@ tape('term1 = Cardiovascular System, term2 = agedx, numeric custom bins', test =
 		test.equal(cumincCurves.length, expectedCount, `Should update ${expectedCount} curves in plot`)
 
 		//Number at risk table
-		const numRiskRowLabels = div
-			.selectAll('.sjpp-cuminc-atrisk text')
-			.nodes()
-			.filter(d => !d.__data__?.tickVal && d.className.animVal != 'sjpp-atrisk-title')
+		const numRiskRowLabels = div.selectAll('[data-testid="sjpp-atrisk-seriesId"]').nodes()
 		const foundNewLabels = numRiskRowLabels.filter(l => inner.uniqueSeriesIds.has(l.__data__.seriesId))
 		test.equal(foundNewLabels.length, expectedCount, `Should update ${expectedCount} labels in Number at risk table`)
 
