@@ -143,8 +143,8 @@ export function getPlotConfig(opts: DiffAnalysisOpts) {
 		childType: 'volcano',
 		termType: opts.termType,
 		highlightedData: opts.highlightedData || [],
-		settings: {}
-		//PlotFilter: true //TODO: Support filtering and reactivity in child plots
+		settings: {},
+		hidePlotFilter: true //TODO: Support filtering and reactivity in child plots
 	} as any
 
 	if (opts.termType == 'geneExpression') {
