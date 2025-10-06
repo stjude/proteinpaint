@@ -1,7 +1,6 @@
 import tape from 'tape'
 import * as helpers from '../../test/front.helpers.js'
-import { select, selectAll } from 'd3-selection'
-import { detectOne, detectGte } from '../../test/test.helpers.js'
+import { detectOne } from '../../test/test.helpers.js'
 
 /* 
 Tests:
@@ -9,7 +8,9 @@ Tests:
     Linear: continuous outcome = "agedx", continuous independent = "aaclassic_5"
 	Linear: continuous outcome = "agedx", discrete independent = "aaclassic_5"
 	Linear: continuous outcome = "agedx", cubic spline independent = "aaclassic_5"
-	Logistic: binary outcome = "hrtavg", continuous independent = "agedx"
+	Linear: continuous outcome = "agedx", independents = "sex" * "aaclassic_5"
+	Logistic: continuous outcome = "hrtavg", continuous independent = "agedx"
+	Logistic: categorical outcome = "diaggrp", continuous independent = "agedx"
     Cox: graded outcome = "Arrhythmias", continuous independent = "agedx"
 	Cox: survival outcome, continuous independent = "agedx"
 
@@ -352,7 +353,68 @@ tape('Linear: continuous outcome = "agedx", cubic spline independent = "aaclassi
 	}
 })
 
-tape('Logistic: binary outcome = "hrtavg", continuous independent = "agedx"', test => {
+tape('Linear: continuous outcome = "agedx", independents = "sex" * "aaclassic_5"', test => {
+	test.timeoutAfter(5000)
+	test.plan(2)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'linear',
+					outcome: {
+						id: 'agedx'
+					},
+					independent: [
+						{ id: 'sex', interactions: ['aaclassic_5'] },
+						{ id: 'aaclassic_5', q: { mode: 'continuous' }, interactions: ['sex'] }
+					]
+				}
+			]
+		},
+		regression: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(regression) {
+		const data = await getData(regression)
+		const regDom = regression.Inner.dom
+
+		//**** Results ****
+		let tableLabel, table, results
+
+		//Coefficients table
+		tableLabel = 'coefficients table'
+		table = regDom.results.selectAll('div[name^="Coefficients"] table tr').nodes()
+
+		const interactionRow = table[4]
+		test.equal(
+			interactionRow.childNodes[0].innerText,
+			'Sex :\nCumulative Alkylating Agents (Cyclo ...',
+			'Should render interaction term name'
+		)
+
+		const values2check = Array.from(interactionRow.childNodes).slice(3)
+		const sex$id = tid2$id('sex', regression)
+		const aaclassic_5$id = tid2$id('aaclassic_5', regression)
+		const interaction = data.coefficients.interactions.find(
+			interaction => interaction.term1 == sex$id && interaction.term2 == aaclassic_5$id
+		)
+		if (!interaction) throw 'interaction not found'
+		interaction.categories[0].lst
+		results = checkOnlyRowValues(values2check, getCoefData(interaction.categories[0].lst))
+		test.equal(results, true, `Should render all interaction data in ${tableLabel}`)
+
+		if (test._ok) regression.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Logistic: continuous outcome = "hrtavg", continuous independent = "agedx"', test => {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -363,6 +425,102 @@ tape('Logistic: binary outcome = "hrtavg", continuous independent = "agedx"', te
 					regressionType: 'logistic',
 					outcome: {
 						id: 'hrtavg',
+						isAtomic: true
+					},
+					independent: [{ id: 'agedx' }]
+				}
+			]
+		},
+		regression: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(regression) {
+		const data = await getData(regression)
+		const regDom = regression.Inner.dom
+
+		//**** Results ****
+		let tableLabel, table, results, testTerm
+
+		//Sample size
+		const sampleSizeDiv = regDom.results
+			.selectAll('div[name^="Sample size"] span')
+			.nodes()
+			.filter(d => d.innerText == data.sampleSize)
+		test.ok(
+			regDom.results.node().querySelector('div[name^="Sample size"]') && sampleSizeDiv,
+			`Should render "Sample size: ${data.sampleSize}"`
+		)
+
+		//Residual table
+		tableLabel = 'Deviance residuals table'
+		table = regDom.results.selectAll('table[name^="sjpp-residuals-table"] tr').nodes()
+		results = checkTableRow(table, 1, data.residuals.rows)
+		test.equal(results, true, `Should render all residuals data in ${tableLabel}`)
+
+		//Coefficients table
+		tableLabel = 'coefficients table'
+		table = regDom.results.selectAll('div[name^="Coefficients"] table tr').nodes()
+		const coefHeader = structuredClone(data.coefficients.header)
+		coefHeader.splice(3, 2, '95% CI')
+		coefHeader[2] = coefHeader[2] + String.fromCharCode(160) + 'ⓘ'
+		results = checkTableRow(table, 0, coefHeader)
+		test.equal(results, true, `Should render all coefficient headers in ${tableLabel}`)
+		const logHeaders = coefHeader.filter(d => d === 'Odds ratio' + String.fromCharCode(160) + 'ⓘ')
+		test.equal(logHeaders.length, 1, `Should render headers specific to logistic regression`)
+
+		const coefIntercept = [data.coefficients.intercept[0], data.coefficients.intercept[1]]
+		coefIntercept.push(...getCoefData(data.coefficients.intercept.slice(2)))
+		results = checkTableRow(table, 1, coefIntercept)
+		test.equal(results, true, `Should render all intercept data in ${tableLabel}`)
+
+		testTerm = 'Age (years) at Cancer Diagnosis'
+		const checkValues1 = [testTerm, '(continuous)']
+		checkValues1.push(...getCoefData(data.coefficients.terms[tid2$id('agedx', regression)].fields))
+		results = checkTableRow(table, 2, checkValues1)
+		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
+
+		//Type III Stats
+		tableLabel = 'type3 table'
+		table = regDom.results.selectAll('div[name^="Type III statistics"] table tr').nodes()
+		results = checkTableRow(table, 0, data.type3.header)
+		test.equal(results, true, `Should render all header data in ${tableLabel}`)
+
+		results = checkTableRow(table, 1, data.type3.intercept)
+		test.equal(results, true, `Should render all intercept data in ${tableLabel}`)
+
+		const checkValues2 = [testTerm]
+		data.type3.terms[tid2$id('agedx', regression)].forEach(d => checkValues2.push(d))
+		results = checkTableRow(table, 2, checkValues2)
+		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
+
+		//Other stats
+		tableLabel = 'other summary statistics table'
+		table = regDom.results.selectAll('div[name^="Other summary statistics"] table tr').nodes()
+		for (const [i, header] of data.other.header.entries()) {
+			results = checkTableRow(table, i, [header, data.other.rows[i]])
+			test.equal(results, true, `Should render all ${header} data in ${tableLabel}`)
+		}
+
+		if (test._ok) regression.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Logistic: categorical outcome = "diaggrp", continuous independent = "agedx"', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'logistic',
+					outcome: {
+						id: 'diaggrp',
 						isAtomic: true
 					},
 					independent: [{ id: 'agedx' }]
