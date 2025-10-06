@@ -16,6 +16,9 @@ CONTAINER_NAME="ppdev"
 PORT=3000
 IMAGE_NAME="ghcr.io/stjude/devcontainer:latest"
 
+
+./build.sh
+
 # temporarily ignore bash error
 set +e
 echo "finding any matching dev containers to stop and remove ..."
