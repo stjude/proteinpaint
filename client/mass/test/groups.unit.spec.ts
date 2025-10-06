@@ -68,21 +68,29 @@ const mockSamplelstTW = {
 
 const mockSamplelstTWOther = {
 	isAtomic: true,
-	q: {
-		groups: [mockGrp1, { name: `Not in ${mockGrp1Name}`, in: false, values: mockGrp1Values }]
-	},
 	term: {
-		name: 'groups',
+		name: 'group',
 		type: 'samplelst',
 		values: {
+			[mockGrp1Name]: mockTermGrp1Obj,
 			[`Not in ${mockGrp1Name}`]: {
-				color: '#aaa',
 				key: `Not in ${mockGrp1Name}`,
-				label: `Not in ${mockGrp1Name}`,
-				list: mockGrp1Values
-			},
-			[mockGrp1Name]: mockTermGrp1Obj
+				label: 'Not in Test Group 1',
+				color: '#aaa',
+				list: mockGrp1Values,
+				in: false
+			}
 		}
+	},
+	q: {
+		groups: [
+			mockGrp1,
+			{
+				name: `Not in ${mockGrp1Name}`,
+				in: false,
+				values: mockGrp1Values
+			}
+		]
 	}
 }
 
@@ -213,23 +221,24 @@ tape('groups getFilter()', test => {
 		join: '',
 		lst: [
 			{
-				noEdit: false,
 				type: 'tvs',
 				tvs: {
 					term: {
-						name: 'groups',
+						name: 'group',
 						type: 'samplelst',
 						values: {
+							[mockGrp1Name]: mockTermGrp1Obj,
 							[`Not in ${mockGrp1Name}`]: {
-								color: '#aaa',
 								key: `Not in ${mockGrp1Name}`,
 								label: `Not in ${mockGrp1Name}`,
-								list: mockGrp1Values
-							},
-							[mockGrp1Name]: mockTermGrp1Obj
+								color: '#aaa',
+								list: mockGrp1Values,
+								in: false
+							}
 						}
 					}
-				}
+				},
+				noEdit: false
 			}
 		]
 	}
