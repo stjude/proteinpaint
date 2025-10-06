@@ -676,17 +676,19 @@ export const componentInit = cumincInit
 
 function setRenderers(self) {
 	self.render = function () {
-		const data = self.pj.tree.charts || [{}]
+		const data = self.pj.tree.charts || []
 		if (self.noData?.length) {
 			// add in charts with no data
 			data.push(
 				...self.noData.map(chartId => {
 					let chartTitle = chartId
 					const t0 = self.config.term0
-					if (t0.q?.type == 'predefined-groupset' || t0.q?.type == 'custom-groupset') return { chartId, chartTitle }
-					if (t0.term.values) {
-						const value = t0.term.values[chartId]
-						if (value && value.label) chartTitle = value.label
+					if (t0) {
+						if (t0.q?.type == 'predefined-groupset' || t0.q?.type == 'custom-groupset') return { chartId, chartTitle }
+						if (t0.term.values) {
+							const value = t0.term.values[chartId]
+							if (value && value.label) chartTitle = value.label
+						}
 					}
 					return { chartId, chartTitle }
 				})
@@ -978,6 +980,11 @@ function setRenderers(self) {
 		const fontSize = s.axisTitleFontSize - 2
 
 		div.selectAll('*').remove()
+
+		if (!serieses.some(v => v)) {
+			// no series defined, so do not render legend
+			return
+		}
 
 		// title div
 		div
