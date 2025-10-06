@@ -74,6 +74,7 @@ async fn main() -> Result<()> {
             let input_json = json::parse(&input);
             match input_json {
                 Ok(json_string) => {
+                    //println!("json_string:{}", json_string);
                     let user_input_json: &JsonValue = &json_string["user_input"];
                     //let user_input = "Does aspirin leads to decrease in death rates among Africans?";
                     //let user_input = "Show the point deletion in TP53 gene.";
@@ -132,6 +133,8 @@ async fn main() -> Result<()> {
                     let max_new_tokens: usize = 512;
                     let top_p: f32 = 0.95;
 
+                    let has_gene_expression_str: &JsonValue = &json_string["hasGeneExpression"];
+                    let has_gene_expression: bool = has_gene_expression_str.as_bool().unwrap();
                     if llm_backend_name != "ollama" && llm_backend_name != "SJ" {
                         panic!(
                             "This code currently supports only Ollama and SJ provider. llm_backend_name must be \"ollama\" or \"SJ\""
@@ -155,9 +158,9 @@ async fn main() -> Result<()> {
                             top_p,
                             dataset_db,
                             genedb,
+                            has_gene_expression,
                         )
                         .await;
-                    // "gpt-oss:20b" "granite3-dense:latest" "PetrosStav/gemma3-tools:12b" "llama3-groq-tool-use:latest" "PetrosStav/gemma3-tools:12b"
                     } else if llm_backend_name == "SJ".to_string() {
                         llm_backend_type = llm_backend::Sj();
                         // Initialize Sj provider client
@@ -177,6 +180,7 @@ async fn main() -> Result<()> {
                             top_p,
                             dataset_db,
                             genedb,
+                            has_gene_expression,
                         )
                         .await;
                     }
@@ -208,6 +212,7 @@ async fn run_pipeline(
     top_p: f32,
     dataset_db: Option<&str>,
     genedb: Option<&str>,
+    has_gene_expression: bool,
 ) -> Option<String> {
     let mut classification: String = classify_query_by_dataset_type(
         user_input,
@@ -250,6 +255,7 @@ async fn run_pipeline(
             top_p,
             dataset_db,
             genedb,
+            has_gene_expression,
         )
         .await;
     } else if classification == "hierarchical".to_string() {
@@ -715,18 +721,10 @@ async fn extract_summary_information(
     top_p: f32,
     dataset_db: Option<&str>,
     genedb: Option<&str>,
+    has_gene_expression: bool,
 ) -> String {
     match dataset_db {
         Some(db) => {
-            let gene_list: Vec<String> = parse_geneset_db(genedb.unwrap()).await;
-            let lowercase_user_input = user_input.to_lowercase();
-            let user_words: Vec<&str> = lowercase_user_input.split_whitespace().collect();
-            let user_words2: Vec<String> = user_words.into_iter().map(|s| s.to_string()).collect();
-
-            let common_genes: Vec<String> = gene_list
-                .into_iter()
-                .filter(|x| user_words2.contains(&x.to_lowercase()))
-                .collect();
             //println!("common_genes:{:?}", common_genes);
             let (rag_docs, db_vec) = parse_dataset_db(db).await;
             //println!("rag_docs:{:?}", rag_docs);
@@ -758,11 +756,40 @@ async fn extract_summary_information(
             let schema_json = schemars::schema_for!(SummaryType); // error handling here
             let schema_json_string = serde_json::to_string_pretty(&schema_json).unwrap();
             //println!("schema_json summary:{}", schema_json_string);
+
+            let gene_expression_statement;
+            let gene_expression_examples;
+            let mut common_genes = Vec::<String>::new();
+            match has_gene_expression {
+                true => {
+                    let gene_list: Vec<String> = parse_geneset_db(genedb.unwrap()).await;
+                    let lowercase_user_input = user_input.to_lowercase();
+                    let user_words: Vec<&str> = lowercase_user_input.split_whitespace().collect();
+                    let user_words2: Vec<String> = user_words.into_iter().map(|s| s.to_string()).collect();
+
+                    common_genes = gene_list
+                        .into_iter()
+                        .filter(|x| user_words2.contains(&x.to_lowercase()))
+                        .collect();
+                    gene_expression_statement =
+                        "The \"geneExpression\" subfield should ONLY contain genes names from the relevant genes list.";
+                    gene_expression_examples = "Example question4: \"compare tp53 expression between genders\"\n Example answer4: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\": \"Sex\"}, {\"geneExpression\": \"TP53\"}]}}\n Example question5: \"is tmem181 overexpressed in men?\" Example answer5: {\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"Sex\"},{\"geneExpression\":\"TMEM181\"}]}\n"
+                }
+                false => {
+                    gene_expression_statement = "The \"geneExpression\" field should be EMPTY and must NOT display any gene names as the dataset does not support it. Add message to \"message\" field stating that \"gene expression is not supported for this dataset\"";
+                    gene_expression_examples = "Example question4: \"compare tp53 expression between genders\"\n Example answer4: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\": \"Sex\"}], \"message\": \"gene expression is not supported for this dataset\"}}\n Example question5: \"is tmem181 overexpressed in men?\" Example answer5: {\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"Sex\"}], \"message\": \"gene expression is not supported for this dataset\"}\n"
+                }
+            }
+
             let system_prompt: String = String::from(
                 String::from(
-                    "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. There are three fields in the JSON to be returned: The \"action\" field will ALWAYS be \"summary\". The \"summaryterms\" field should contain all the variables that the user wants to visualize. The \"clinical\" subfield should ONLY contain names of the fields from the sqlite db. The \"geneExpression\" subfield should ONLY contain genes names from the relevant genes list. The \"filter\" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both \"summaryterms\" and \"filter\". There are two kinds of filter variables: \"Categorical\" and \"Numeric\". \"Categorical\" variables are those variables which can have a fixed set of values e.g. gender, molecular subtypes. They are defined by the \"CategoricalFilterTerm\" which consists of \"term\" (a field from the sqlite3 db)  and \"value\" (a value of the field from the sqlite db).  \"Numeric\" variables are those which can have any numeric value. They are defined by \"NumericFilterTerm\" and contain  the subfields \"term\" (a field from the sqlite3 db), \"greaterThan\" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and \"lessThan\" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. The \"message\" field only contain messages of terms in the user input that were not found in their respective databases. The JSON schema is as follows:",
-                ) + &schema_json_string
-                    + &"\n  Example question1: \"compare tp53 expression between genders\"\n Example answer1: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\": \"Sex\"}, {\"geneExpression\": \"TP53\"}]}}\n Example question2: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer2: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\":\"Molecular Subtype\"}], filter:[ {\"Numeric\":{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}\n Example question3: \"is tmem181 overexpressed in men?\" Example answer3: {\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"Sex\"},{\"geneExpression\":\"TMEM181\"}]}\n Example question4: \"show summary of molecular subtype for men under 40 years only\"\n Example answer4: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"Sex\",\"value\":\"Male\"}},{\"Numeric\":{\"greaterThan\":null,\"lessThan\":40.0,\"term\":\"Age\"}}],\"summaryterms\":[{\"clinical\":\"Molecular subtype\"}]}\n Example Question5: \"Show race for women with early onset of cancer\"\n Example Answer5: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"Sex\",\"value\":\"Female\"}}, {\"Numeric\":{\"greaterThan\":null,\"lessThan\":18.0,\"term\":\"Age\"}],\"summaryterms\":[{\"clinical\":\"Ancestry\"}]}\n The sqlite db in plain language is as follows:\n"
+                    "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. There are three fields in the JSON to be returned: The \"action\" field will ALWAYS be \"summary\". The \"summaryterms\" field should contain all the variables that the user wants to visualize. The \"clinical\" subfield should ONLY contain names of the fields from the sqlite db. ",
+                ) + &gene_expression_statement
+                    + &" The \"filter\" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both \"summaryterms\" and \"filter\". There are two kinds of filter variables: \"Categorical\" and \"Numeric\". \"Categorical\" variables are those variables which can have a fixed set of values e.g. gender, molecular subtypes. They are defined by the \"CategoricalFilterTerm\" which consists of \"term\" (a field from the sqlite3 db)  and \"value\" (a value of the field from the sqlite db).  \"Numeric\" variables are those which can have any numeric value. They are defined by \"NumericFilterTerm\" and contain  the subfields \"term\" (a field from the sqlite3 db), \"greaterThan\" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and \"lessThan\" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. The \"message\" field only contain messages of terms in the user input that were not found in their respective databases. The JSON schema is as follows:"
+                    + &schema_json_string
+                    + &"\n  Example question1: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer1: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\":\"Molecular Subtype\"}], filter:[ {\"Numeric\":{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}\n Example question2: \"show summary of molecular subtype for men under 40 years only\"\n Example answer2: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"Sex\",\"value\":\"Male\"}},{\"Numeric\":{\"greaterThan\":null,\"lessThan\":40.0,\"term\":\"Age\"}}],\"summaryterms\":[{\"clinical\":\"Molecular subtype\"}]}\n Example Question3: \"Show race for women with early onset of cancer\"\n Example Answer3: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"Sex\",\"value\":\"Female\"}}, {\"Numeric\":{\"greaterThan\":null,\"lessThan\":18.0,\"term\":\"Age\"}],\"summaryterms\":[{\"clinical\":\"Ancestry\"}]}\n "
+                    + &gene_expression_examples
+                    + "The sqlite db in plain language is as follows:\n"
                     + &rag_docs.join(",")
                     + &"\n Relevant genes are as follows (separated by comma(,)):"
                     + &common_genes.join(",")
@@ -799,7 +826,8 @@ async fn extract_summary_information(
                 }
             }
             //println!("final_llm_json:{}", final_llm_json);
-            let final_validated_json = validate_summary_output(final_llm_json.clone(), db_vec, common_genes);
+            let final_validated_json =
+                validate_summary_output(final_llm_json.clone(), db_vec, common_genes, has_gene_expression);
             final_validated_json
         }
         None => {
@@ -855,7 +883,12 @@ struct NumericFilterTerm {
     lessThan: Option<f32>,
 }
 
-fn validate_summary_output(raw_llm_json: String, db_vec: Vec<DbRows>, common_genes: Vec<String>) -> String {
+fn validate_summary_output(
+    raw_llm_json: String,
+    db_vec: Vec<DbRows>,
+    common_genes: Vec<String>,
+    has_gene_expression: bool,
+) -> String {
     let json_value: SummaryType =
        serde_json::from_str(&raw_llm_json).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
     let mut message: String = String::from("");
@@ -909,18 +942,30 @@ fn validate_summary_output(raw_llm_json: String, db_vec: Vec<DbRows>, common_gen
                 }
             }
             SummaryTerms::geneExpression(gene) => {
-                let mut num_gene_verification = 0;
-                for common_gene in &common_genes {
-                    // Comparing predicted gene against the common gene
-                    if common_gene == gene {
-                        num_gene_verification += 1;
-                        validated_summary_terms.push(SummaryTerms::geneExpression(String::from(gene)));
+                match has_gene_expression {
+                    true => {
+                        let mut num_gene_verification = 0;
+                        for common_gene in &common_genes {
+                            // Comparing predicted gene against the common gene
+                            if common_gene == gene {
+                                num_gene_verification += 1;
+                                validated_summary_terms.push(SummaryTerms::geneExpression(String::from(gene)));
+                            }
+                        }
+
+                        if num_gene_verification == 0 || common_genes.len() == 0 {
+                            if message.to_lowercase().contains(&gene.to_lowercase()) { // Check if the LLM has already added the message, if not then add it
+                            } else {
+                                message = message + &"\"" + &gene + &"\"" + &" not found in genedb.";
+                            }
+                        }
                     }
-                }
-                if num_gene_verification == 0 || common_genes.len() == 0 {
-                    if message.to_lowercase().contains(&gene.to_lowercase()) {
-                    } else {
-                        message = message + &"\"" + &gene + &"\"" + &" not found in genedb.";
+                    false => {
+                        let missing_gene_data: &str = "gene expression is not supported for this dataset";
+                        if message.to_lowercase().contains(&missing_gene_data.to_lowercase()) { // Check if the LLM has already added the message, if not then add it
+                        } else {
+                            message = message + &"Gene expression not supported for this dataset";
+                        }
                     }
                 }
             }
