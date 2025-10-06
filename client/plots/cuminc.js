@@ -14,6 +14,8 @@ import { getSeriesTip } from '#dom/svgSeriesTips'
 import { renderAtRiskG } from '#dom/renderAtRisk'
 import { renderPvalues } from '#dom/renderPvalueTable'
 import { Menu } from '#dom/menu'
+import { getCombinedTermFilter } from '#filter'
+import { PlotBase } from '#plots/PlotBase.js'
 
 const t0_t2_defaultQ = structuredClone(term0_term2_defaultQ)
 Object.assign(t0_t2_defaultQ, {
@@ -33,7 +35,7 @@ class Cuminc
 	- no skipped series
 	- no skipped charts
 */
-export class Cuminc {
+export class Cuminc extends PlotBase {
 	constructor(opts) {
 		this.type = 'cuminc'
 		this.pj = getPj(this)
@@ -384,12 +386,14 @@ class MassCumInc {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
+		const parentConfig = this.parentId && appState.plots.find(p => p.id === this.parentId)
+		const termfilter = getCombinedTermFilter(appState, config.filter || parentConfig?.filter)
 
 		return {
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
 			activeCohort: appState.activeCohort,
-			termfilter: appState.termfilter,
+			termfilter,
 			config: {
 				term: JSON.parse(JSON.stringify(config.term)),
 				term0: config.term0 ? JSON.parse(JSON.stringify(config.term0)) : null,
