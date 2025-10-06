@@ -1,5 +1,5 @@
 {
-  "version": "2.147.2-1",
+  "version": "2.148.0",
   "name": "@sjcrh/proteinpaint",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "server/main.js",
