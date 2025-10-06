@@ -190,7 +190,7 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 		if (q.snvindel.byisoform?.processTwsInOneQuery) q2.snvindel.byisoform = { processTwsInOneQuery: true } // quick fix; may revise later
 	}
 	if (q.svfusion) {
-		q2.svfusion = {}
+		q2.svfusion = { dtLst: q.svfusion.dtLst }
 	}
 	if (q.cnv) {
 		q2.cnv = {}
