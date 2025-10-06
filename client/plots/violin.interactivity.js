@@ -154,52 +154,32 @@ export function setInteractivity(self) {
 		await listSamples(arg)
 	}
 
-	self.labelHideLegendClicking = function (t2, plot) {
-		// whoever wrote this tangled mess needs to be fired
-		self.dom.legendDiv
-			.selectAll('.sjpp-htmlLegend')
-			.on('click', event => {
-				event.stopPropagation()
-				const d = event.target.__data__
-				const termNum =
-					t2?.term.type === 'condition' ||
-					t2?.term.type === 'samplelst' ||
-					t2?.term.type === 'categorical' ||
-					((t2?.term.type === 'float' || t2?.term.type === 'integer') && self.config.term?.q.mode === 'continuous')
-						? 'term2'
-						: 'term'
-				const term = self.config[termNum]
-				if (t2) {
-					for (const key of Object.keys(term?.q?.hiddenValues)) {
-						if (d.text === key) {
-							delete term.q.hiddenValues[key]
-						}
-					}
-					const isHidden = false
-					self.app.dispatch({
-						type: 'plot_edit',
-						id: self.id,
-						config: {
-							[termNum]: {
-								isAtomic: true,
-								term: term.term,
-								q: getUpdatedQfromClick(plot, term, isHidden)
-							}
-						}
-					})
+	self.hideLegendItem = function (d) {
+		let termNum, tw // find overlay term (aka term2)
+		if (self.config.term.q.mode == 'continuous') {
+			// whichever tw q.mode is continuous, is "term1"
+			termNum = 'term2'
+			tw = self.config.term2
+		} else {
+			termNum = 'term'
+			tw = self.config.term
+		}
+		for (const key of Object.keys(tw.q?.hiddenValues)) {
+			if (d.text === key) {
+				delete tw.q.hiddenValues[key]
+			}
+		}
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: {
+				[termNum]: {
+					isAtomic: true,
+					term: tw.term,
+					q: getUpdatedQfromClick({ label: d.text }, tw, false)
 				}
-			})
-			.on('mouseover', event => {
-				const q = event.target.__data__
-				if (q === undefined) return
-				if (q.isHidden === true && q.isClickable === true) {
-					console.log(11)
-					self.dom.hovertip.clear().show(event.clientX, event.clientY).d.append('span').text('Click to unhide plot')
-				}
-			})
-			.on('mouseout', function () {
-				self.dom.hovertip.hide()
-			})
+			}
+		})
 	}
 
 	self.createTvsLstRanges = function (term, tvslst, rangeStart, rangeStop, lstIdx) {
