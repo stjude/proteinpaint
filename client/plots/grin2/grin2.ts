@@ -725,7 +725,8 @@ export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 
 	const config = {
 		chartType: 'grin2',
-		settings: Object.assign(getDefaultSettings(opts), settings)
+		settings: Object.assign(getDefaultSettings(opts), settings),
+		hidePlotFilter: true
 	}
 
 	return copyMerge(config, opts)

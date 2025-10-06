@@ -383,7 +383,7 @@ export async function getPlotConfig(opts) {
 	const settings = {
 		brainImaging: { brainImageL: 76, brainImageF: 116, brainImageT: 80 }
 	}
-	const config = { chartType: 'brainImaging', settings }
+	const config = { chartType: 'brainImaging', settings, hidePlotFilter: true }
 	return copyMerge(config, opts)
 }
 
