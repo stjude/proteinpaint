@@ -10,7 +10,7 @@
 	USAGE: 
 	run from the pp dir as
 		
-		./build/bump.js <verType> [-o=outputType] [-w] [-x=workspaceNamePattern] [-c=referenceCommit]
+		./build/bump.cjs <verType> [-o=outputType] [-w] [-x=workspaceNamePattern] [-c=referenceCommit]
 	
 	ARGUMENTS:
 	verType: 

@@ -41,16 +41,16 @@ fi
 # CONTEXT
 ##########
 
-# version before calling bump.js
+# version before calling bump.cjs
 PREVIOUS_VERSION="$(node -p "require('./package.json').version")"
 
-UPDATED=$(./build/bump.js $VERTYPE "$@")
+UPDATED=$(./build/bump.cjs $VERTYPE "$@")
 
 if [[ "$UPDATED" == "" ]]; then
   echo "No workspace package updates - assume a release was interrupted and needs to be resumed."
 fi
 
-# this is the version that was assigned after ./build/bump.js [...] -w
+# this is the version that was assigned after ./build/bump.cjs [...] -w
 VERSION="$(node -p "require('./package.json').version")"
 
 ########################
