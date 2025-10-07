@@ -5690,21 +5690,21 @@
   "termsetting/TermSettingView.ts": {
     "lines": {
       "total": 68,
-      "covered": 53,
+      "covered": 52,
       "skipped": 0,
-      "pct": 77.94
+      "pct": 76.47
     },
     "functions": {
-      "total": 21,
+      "total": 23,
       "covered": 16,
       "skipped": 0,
-      "pct": 76.19
+      "pct": 69.56
     },
     "statements": {
       "total": 74,
-      "covered": 53,
+      "covered": 52,
       "skipped": 0,
-      "pct": 71.62
+      "pct": 70.27
     },
     "branches": {
       "total": 42,
@@ -5718,9 +5718,9 @@
       "diff": -14.290000000000006
     },
     "averagePct": {
-      "curr": 67.745,
+      "curr": 65.38250000000001,
       "prev": 73.165,
-      "diff": -5.420000000000002
+      "diff": -7.782499999999999
     }
   },
   "termsetting/handlers/numeric.continuous.ts": {
