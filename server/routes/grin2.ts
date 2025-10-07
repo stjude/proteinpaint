@@ -359,8 +359,19 @@ async function processSampleMlst(
 
 				const les = filterAndConvertFusion(sampleName, m, request.fusionOptions)
 				if (les && fusion) {
+					// Count this as ONE fusion event, even if it creates two lesions
 					fusion.count++
-					sampleLesions.push(les)
+
+					// But add all lesions (breakpoints) to the list
+					if (Array.isArray(les[0])) {
+						// Multiple lesions (two breakpoints)
+						for (const lesion of les as string[][]) {
+							sampleLesions.push(lesion)
+						}
+					} else {
+						// Single lesion
+						sampleLesions.push(les)
+					}
 				}
 				break
 			}
@@ -453,10 +464,37 @@ function filterAndConvertFusion(
 	sampleName: string,
 	entry: any,
 	_options: GRIN2Request['fusionOptions']
-): string[] | null {
-	// Convert to lesion format: [ID, chrom, loc.start, loc.end, lsn.type]
-	// Using chrA for the chrom and posA/posB for the start and end locations
-	return [sampleName, entry.chrA, entry.posA, entry.posB, 'fusion']
+): string[] | string[][] | null {
+	// Fusion events are breakpoint events
+	// Represent as small windows around each breakpoint (±500bp)
+	const breakpointWindow = 500
+
+	// Validate required fields
+	if (!entry.chrA || entry.posA === undefined) {
+		return null
+	}
+
+	// First breakpoint on chrA
+	const startA = Math.max(0, entry.posA - breakpointWindow)
+	const endA = entry.posA + breakpointWindow
+
+	const lesionA: string[] = [sampleName, entry.chrA, startA.toString(), endA.toString(), 'fusion']
+
+	// Check if there's a second breakpoint on chrB
+	if (entry.chrB && entry.posB !== undefined) {
+		// Inter-chromosomal fusion or same chromosome with two breakpoints
+		const startB = Math.max(0, entry.posB - breakpointWindow)
+		const endB = entry.posB + breakpointWindow
+
+		const lesionB: string[] = [sampleName, entry.chrB, startB.toString(), endB.toString(), 'fusion']
+
+		// Return both breakpoints as separate lesions
+		// This will correctly identify genes affected at both fusion partners
+		return [lesionA, lesionB]
+	}
+
+	// Only chrA breakpoint available
+	return lesionA
 }
 
 function filterAndConvertSV(sampleName: string, entry: any, _options: GRIN2Request['svOptions']): string[] | null {
