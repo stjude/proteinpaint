@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- rename utils, git hooks js scripts to cjs
+
 
 ## 2.148.0
 

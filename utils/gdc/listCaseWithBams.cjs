@@ -3,9 +3,9 @@ this script is hosted at https://proteinpaint.stjude.org/GDC/listCaseWithBams.js
 
 examples:
 
-node listCaseWithBams.js // list all cases
+node listCaseWithBams.cjs // list all cases
 
-node listCaseWithBams.js '{"op":"and","content":[{"op":"in","content":{"field":"cases.primary_site","value":["breast","bronchus and lung"]}}]}' // using a cohort
+node listCaseWithBams.cjs '{"op":"and","content":[{"op":"in","content":{"field":"cases.primary_site","value":["breast","bronchus and lung"]}}]}' // using a cohort
 
 */
 

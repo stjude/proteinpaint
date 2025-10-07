@@ -35,7 +35,7 @@ mkdir tmppack
 FRONTDEPNAME="@sjcrh/proteinpaint-front"
 SERVERDEPNAME="@sjcrh/proteinpaint-server"
 
-# no -w argument to bump.js, just get the changed workspace since the last publish
+# no -w argument to bump.cjs, just get the changed workspace since the last publish
 cd ..
 CHANGEDWS=$(./build/bump.cjs prerelease)
 cd container

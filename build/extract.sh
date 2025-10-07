@@ -83,9 +83,9 @@ if [[ "$TARGETDIR" == "build/full" ]]; then
 	tar -C tmppack/ -xvf $FILE build/server
 fi
 tar -C tmppack/ -xvf $FILE build/Dockerfile
-tar -C tmppack/ -xvf $FILE build/minpkgjson.js
+tar -C tmppack/ -xvf $FILE build/minpkgjson.cjs
 tar -C tmppack/ -xvf $FILE public/index.html
-tar -C tmppack/ -xvf $FILE utils/install.pp.js
+tar -C tmppack/ -xvf $FILE utils/install.pp.cjs
 tar -C tmppack/ -xvf $FILE .dockerignore
 tar -C tmppack/ -xvf $FILE LICENSE
 echo "$REV" > tmppack/rev.txt

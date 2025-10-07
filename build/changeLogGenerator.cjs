@@ -6,7 +6,7 @@
 */
 
 const fs = require('fs')
-const rp = require('./releaseParser')
+const rp = require('./releaseParser.cjs')
 
 const options = process.argv[2] || ''
 const releaseTxtFile = './release.txt'

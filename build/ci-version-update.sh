@@ -23,7 +23,7 @@ elif [[ "$BRANCH" == "prerelease"* && "$1" == "auto-detect" ]]; then
 else
   # non pre* version type will be ignored, instead auto-detect 
   # the version type based on unreleased changelog entries 
-  NOTES=$(node ./build/changeLogGenerator.js -u)
+  NOTES=$(node ./build/changeLogGenerator.cjs -u)
   if [[ "$NOTES" == *"Features:"* ]]; then
     VERTYPE=minor
   elif [[ "$NOTES" == *"Fixes:"* ]]; then
