@@ -144,7 +144,7 @@ class ProfilePolar extends profilePlot {
 			i++
 		}
 		this.dom.tableDiv.selectAll('*').remove()
-		if (this.settings.showTable && !this.isComparison)
+		if (!this.isComparison)
 			renderTable({
 				rows,
 				columns,

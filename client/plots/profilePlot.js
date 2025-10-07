@@ -6,6 +6,7 @@ import { icons as icon_functions } from '#dom/control.icons'
 import { getCategoricalTermFilter, getCombinedTermFilter } from '#filter'
 import { DownloadMenu } from '#dom/downloadMenu'
 import { importPlot } from '#plots/importPlot.js'
+import { PlotBase } from './PlotBase.js'
 /*
 
 The profilePlot is the base class for all the profile plots. It handles the common functionality such as setting controls, fetching data, and initializing the plot elements.
@@ -34,8 +35,9 @@ const orderedVolumes = [
 
 export const ABBREV_COHORT = 0
 export const FULL_COHORT = 1
-export class profilePlot {
-	constructor() {
+export class profilePlot extends PlotBase {
+	constructor(opts) {
+		super(opts)
 		this.type = 'profilePlot'
 		this.downloadCount = 0
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
@@ -88,7 +90,7 @@ export class profilePlot {
 		const rightDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 
 		const controlsDiv = leftDiv.append('div').style('display', 'inline-block').style('font-size', '0.9em')
-		const iconsDiv = leftDiv.append('div').style('margin-left', '6px').style('margin-top', '15px')
+		const iconsDiv = leftDiv.append('div').style('margin-top', '10px').style('padding-left', '12px')
 
 		const holder = rightDiv.insert('div').style('display', 'inline-block')
 
@@ -109,22 +111,8 @@ export class profilePlot {
 
 		document.addEventListener('scroll', () => this?.tip?.hide())
 
-		//later on show table for the profileForms
-		if (this.type != 'profileBarchart' && this.type != 'profileForms') {
-			const tableIconDiv = iconsDiv.append('div').style('padding-bottom', '15px')
-			this.dom.tableBt = tableIconDiv
-				.append('button')
-				.attr('data-testid', 'sjpp-profile-table-button')
-				.style('border', 'none')
-				.style('background-color', 'rgb(207, 226, 243)')
-			icon_functions['table'](this.dom.tableBt, { title: 'Show table with data' })
-			this.dom.tableBt.on('click', () => {
-				const show = !this.settings.showTable
-				this.dom.tableBt.style('background-color', show ? 'rgb(207, 226, 243)' : 'transparent')
-				this.showTable(show)
-			})
-		}
-		icon_functions['restart'](iconsDiv.append('div').style('padding', '0px 5px 15px 5px'), {
+		const restartDiv = iconsDiv.append('div').style('padding-bottom', '8px')
+		icon_functions['restart'](restartDiv, {
 			title: 'Clear filters',
 			handler: async () => {
 				this.clearFiltersExcept([])
@@ -135,11 +123,24 @@ export class profilePlot {
 				})
 			}
 		})
-		if (!config.parentId)
-			icon_functions['add'](iconsDiv.append('div').style('padding', '3px'), {
-				title: 'Open a new plot for comparison',
-				handler: async () => {
-					if (this.isComparison) return
+		if (!config.parentId) {
+			const iconDiv = iconsDiv.append('div').style('fill', '#aaa').style('padding', '2px')
+
+			icon_functions['add'](iconDiv, {
+				title: 'Show table with data',
+				handler: () => {
+					const show = !this.isComparison
+					const icon = iconDiv.select('svg')
+					icon.style('fill', show ? 'orange' : 'black')
+					if (this.isComparison) {
+						const id = this.state.plots.find(p => p.parentId === this.id)?.id
+						this.app.dispatch({
+							type: 'plot_delete',
+							id,
+							parentId: this.id
+						})
+						return
+					}
 					this.legendG.selectAll('*').remove()
 					let config = structuredClone(this.config)
 					config.parentId = this.id
@@ -149,15 +150,11 @@ export class profilePlot {
 					})
 				}
 			})
+		}
 	}
 
 	onMouseOut(event) {
 		this.tip.hide()
-	}
-
-	async showTable(show) {
-		this.settings.showTable = show
-		await this.app.dispatch({ type: 'plot_edit', id: this.id, config: { settings: { [this.type]: this.settings } } })
 	}
 
 	preApiFreeze(api) {
@@ -168,8 +165,6 @@ export class profilePlot {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings[this.type]
 		this.isComparison = this.config.parentId || this.state.plots.length > 0
-		if (this.dom.tableBt)
-			this.dom.tableBt.style('background-color', this.settings.showTable ? 'rgb(207, 226, 243)' : 'transparent')
 		for (const config of this.state.plots) {
 			const plot = structuredClone(config)
 			if (this.components.plots[plot.id]) continue
@@ -178,6 +173,13 @@ export class profilePlot {
 			plot.app = this.app
 			const { componentInit } = await importPlot(plot.chartType)
 			this.components.plots[plot.id] = await componentInit(plot)
+		}
+		//delete child plot if comparison disabled and plot deleted
+		for (const plotId in this.components.plots) {
+			if (!this.state.plots.find(p => p.id === plotId)) {
+				this.components.plots[plotId].destroy()
+				delete this.components.plots[plotId]
+			}
 		}
 	}
 
@@ -670,7 +672,6 @@ export function clearLocalFilters(plot) {
 export function getDefaultProfilePlotSettings() {
 	return {
 		isAggregate: false,
-		showTable: true,
 		filterByUserSites: false //if true, the aggregation will be limited to the user sites only
 	}
 }
