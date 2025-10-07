@@ -97,7 +97,8 @@ function assignNumType(term: any, termValues: any) {
 }
 
 function assignDefaultBins(term: any, termValues: any) {
-	const stats = getDescrStats(termValues)
+	//Term values must be numbers format before calling getDescrStats()
+	const stats = getDescrStats(termValues.map(c => Number(c)))
 	if (!stats || !Object.keys(stats).length) {
 		term.bins = {}
 		return
