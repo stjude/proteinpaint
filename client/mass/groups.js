@@ -33,13 +33,6 @@ this
 
 const colorScale = getColors(5)
 
-//// !! this is deprecated along with showTermsTree()
-let tip2
-function addTip2(tip) {
-	if (!tip2) tip2 = new Menu({ padding: 0, offsetX: 250, offsetY: -34, parent_menu: tip.d.node() })
-	tip2.clear()
-}
-
 class MassGroups {
 	constructor(opts = {}) {
 		this.type = 'groups'
@@ -217,13 +210,13 @@ class MassGroups {
 		const groupsInfo = menuDiv.append('div')
 
 		const table = table2col({ holder: groupsInfo })
-		table.table.style('scale', 0.9)
+		table.table.style('scale', 0.9).style('margin-left', '0px')
 		for (const [grpKey, grp] of Object.entries(tw.term.values)) {
 			const colorSquare = grp.color
 				? `<span style="display:inline-block; width:12px; height:12px; background-color:${grp.color}" ></span>`
 				: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
 			const [c1, c2] = table.addRow()
-			c1.html(`${colorSquare} ${grp.label}:`)
+			c1.html(`${colorSquare} ${grp.label}`)
 			c2.html(`${grp.othersGroupSampleNum || grp.list.length} samples`)
 		}
 
@@ -274,6 +267,7 @@ function addSummarizeOptions(menuDiv, self, samplelstTW, id) {
 function mayAddGenomebrowserOption(menuDiv, self, samplelstTW) {
 	if (!self.state.currentCohortChartTypes.includes('genomeBrowser')) return
 	if (!self.app.vocabApi.termdbConfig.queries?.snvindel) return // for now only allow for snvindel
+	if (self.app.vocabApi.termdbConfig.queries.snvindel.details) return // allows to disable this option for sjlife
 	if (samplelstTW.q.groups.length != 2) return // hardcoded to only support 2 groups
 	const itemdiv = menuDiv
 		.append('div')
@@ -293,7 +287,7 @@ function mayAddGenomebrowserOption(menuDiv, self, samplelstTW) {
 					const config = {
 						chartType: 'genomeBrowser',
 						geneSearchResult: result,
-						snvindel: { filter: f1 }, // code filter in 1st tk
+						snvindel: { shown: true, filter: f1 }, // code filter in 1st tk
 						subMds3TkFilters: [f2] // code filter in 2nd tk
 					}
 					self.app.dispatch({
@@ -476,10 +470,6 @@ function initUI(self) {
 		.style('margin', '20px')
 		.style('border-left', 'solid 1px black')
 		.style('padding', '10px')
-
-	self.dom.holder.on('click', event => {
-		if (tip2) tip2.hide()
-	})
 }
 
 async function updateUI(self) {
@@ -711,36 +701,6 @@ export async function openSummaryPlot(tw, samplelstTW, app, id, newId) {
 	})
 }
 
-export async function showTermsTree( // do not use and use new one below to avoid addTip2()
-	div,
-	callback,
-	app,
-	tip,
-	treeState = { tree: { usecase: { target: 'default', detail: 'term' } } },
-	closeParent = true,
-	shift = true,
-	disable_terms = []
-) {
-	const activeCohort = app.getState().activeCohort
-	//we need to pass the active cohort to build the tree with the correct terms
-	const state = { activeCohort, ...treeState }
-	addTip2(tip) // tip2 is added if missing and ready to use
-	if (shift) tip2.showunderoffset(div.node())
-	else tip2.showunder(div.node())
-	appInit({
-		holder: tip2.d,
-		vocabApi: app.vocabApi,
-		state,
-		tree: {
-			disable_terms,
-			click_term: term => {
-				callback(term)
-				tip2.hide()
-				if (closeParent) tip.hide()
-			}
-		}
-	})
-}
 async function showTree(
 	div,
 	callback,
@@ -878,7 +838,7 @@ function mayAddMatrixMenuItems(div, text, tip, samplelstTW, id, parent, state, o
 		.attr('class', 'sja_menuoption sja_sharp_border')
 		.text(text)
 		.on('click', () => {
-			tip.showunderoffset(itemDiv.node())
+			tip.clear().showunderoffset(itemDiv.node())
 
 			if (preBuiltMatrix) {
 				// adding buttons to divide each pre-built matrix
