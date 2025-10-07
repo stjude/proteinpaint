@@ -215,8 +215,6 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 
 			if (keyupEnter(event)) {
 				// pressed enter
-				input.blur()
-				tip.hide()
 
 				// this call may repeat the last debounced checkInput using debouncer(),
 				// but it's safer to call it again in case the Enter key was pressed after the debounceDelay
@@ -234,6 +232,11 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 						const geneSymbol = hitgene.datum()
 						if (arg.searchOnly == 'gene') {
 							getResult({ geneSymbol }, geneSymbol)
+							// hit is found. hide gene tip and blur input
+							tip.hide()
+							input.blur()
+							// cancel debouncer to prevent repeating gene search and tip from showing up again
+							debouncer.clear()
 						} else {
 							await geneCoordSearch(geneSymbol)
 						}
@@ -314,6 +317,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 				tip.d.select('.sja_menuoption').node().focus()
 				return
 			}
+
 			debouncer()
 		})
 
