@@ -24,7 +24,7 @@ CHANGEDFILES="$(git diff --name-only HEAD $SHATESTED)"
 IS_CODE_OR_CONFIG="f => !f.endsWith('.md') && (!f.endsWith('.txt') || f.startsWith('server/test/tp')) && !f.endsWith('ignore') && f != 'LICENSE' && f != 'DESCRIPTION'"
 RELEVANTFILES=$(node -p "(\`$CHANGEDFILES\`).split('\n').filter($IS_CODE_OR_CONFIG).join('\n')")
 # patch is used only to satisfy the version type argument, can be any other allowed value  
-CHANGEDWS="$(./build/bump.js patch -c=$SHATESTED)"
+CHANGEDWS="$(./build/bump.cjs patch -c=$SHATESTED)"
 WS_TO_TEST=""
 for ws in $CHANGEDWS; do
 	# QUICK FIX to detect rust ws as changed when test tp files have changed
