@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - rename utils, git hooks js scripts to cjs
+- mass group fully declare menu and submenus, and tidy up options
 
 
 ## 2.148.0
