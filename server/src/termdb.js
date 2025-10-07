@@ -6,8 +6,7 @@ import { get_survival } from './termdb.survival.js'
 import { get_regression } from './termdb.regression.js'
 import { validate as snpValidate } from './termdb.snp.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
-import { trigger_getSampleScatter } from './termdb.scatter.js'
-import { trigger_getLowessCurve } from './termdb.scatter.js'
+import { trigger_getLowessCurve } from '../routes/termdb.sampleScatter.ts'
 import { getData, getSamplesPerFilterResponse } from './termdb.matrix.js'
 import { get_mds3variantData } from './mds3.variant.js'
 import { get_lines_bigfile, mayCopyFromCookie } from './utils.js'
@@ -66,8 +65,7 @@ export function handle_request_closure(genomes) {
 			if (q.getLDdata) return await LDoverlay(q, ds, res)
 			if (q.genesetByTermId) return trigger_genesetByTermId(q, res, tdb)
 			if (q.getSampleScatter) q.for = 'scatter'
-			if (q.for == 'scatter') return await trigger_getSampleScatter(req, q, res, ds)
-			if (q.getLowessCurve) return await trigger_getLowessCurve(req, q, res)
+			if (q.getLowessCurve) return await trigger_getLowessCurve(q, res)
 
 			if (q.for == 'termTypes') return res.send(await ds.getTermTypes(q))
 			if (q.for == 'matrix') return await get_matrix(q, req, res, ds, genome)

@@ -44,7 +44,7 @@ type ScatterResult = {
 	}
 }
 
-export type TermdbSampleScatterlResponse = {
+export type TermdbSampleScatterResponse = {
 	range: { xMin: number; xMax: number; yMin: number; yMax: number }
 	result: ScatterResult
 }
