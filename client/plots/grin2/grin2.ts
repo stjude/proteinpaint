@@ -156,6 +156,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 				optionRows.forEach(optionRow => {
 					select(optionRow).style('display', isChecked ? '' : 'none')
 				})
+				// Update run button state
+				this.updateRunButtonState()
 			},
 			checked: checked
 		})
@@ -176,6 +178,43 @@ class GRIN2 extends PlotBase implements RxComponent {
 		})
 
 		return optionsTable
+	}
+
+	// Enable the Run button only if at least one data type is checked
+	private updateRunButtonState() {
+		let anyChecked = false
+
+		this.dom.controls.selectAll('input[type="checkbox"]').each(function (this: HTMLInputElement) {
+			const label = this.parentElement?.textContent?.trim()
+			// Only check data type checkboxes
+			if (
+				label &&
+				(label === 'SNV/INDEL (Mutation)' ||
+					label === 'CNV (Copy Number Variation)' ||
+					label === 'Fusion (RNA Fusion Events)' ||
+					label === 'SV (Structural Variants)')
+			) {
+				if (this.checked) {
+					anyChecked = true
+				}
+			}
+		})
+
+		if (anyChecked) {
+			this.runButton
+				.property('disabled', false)
+				.style('opacity', this.enabledOpacity)
+				.style('background', this.btnBackgroundColor)
+				.style('color', this.btnTextColor)
+				.style('cursor', 'pointer')
+		} else {
+			this.runButton
+				.property('disabled', true)
+				.style('opacity', this.disabledOpacity)
+				.style('background', this.btnDisabledBackgroundColor)
+				.style('color', this.btnDisabledTextColor)
+				.style('cursor', 'not-allowed')
+		}
 	}
 
 	private createConfigTable() {
@@ -217,7 +256,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			this.createDataTypeSection(table, 'SNV/INDEL (Mutation)', optionsTable => {
 				const rows: any[] = []
 
-				// Add numeric option rows
+				// Add option rows
 				rows.push(
 					this.addOptionRowToTable(optionsTable, 'Min Total Depth', 'snvindelOptions.minTotalDepth', 10, 1).node()
 						.parentElement
@@ -257,26 +296,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 				const rows: any[] = []
 
 				rows.push(
-					this.addOptionRowToTable(
-						optionsTable,
-						'Loss Threshold',
-						'cnvOptions.lossThreshold',
-						-0.4,
-						undefined,
-						0,
-						0.1
-					).node().parentElement
+					this.addOptionRowToTable(optionsTable, 'Loss Threshold', 'cnvOptions.lossThreshold', -0.4, 0, 0.1).node()
+						.parentElement
 				)
 				rows.push(
-					this.addOptionRowToTable(
-						optionsTable,
-						'Gain Threshold',
-						'cnvOptions.gainThreshold',
-						0.3,
-						0,
-						undefined,
-						0.1
-					).node().parentElement
+					this.addOptionRowToTable(optionsTable, 'Gain Threshold', 'cnvOptions.gainThreshold', 0.3, 0, 0.1).node()
+						.parentElement
 				)
 				rows.push(
 					this.addOptionRowToTable(optionsTable, 'Max Segment Length', 'cnvOptions.maxSegLength', 0, 0).node()
@@ -305,7 +330,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 						.append('div')
 						.style('color', this.optionsTextColor)
 						.style('font-size', `${this.optionsTextFontSize}px`)
-						.text('Fusion filtering options to be configured later')
+						.text('Fusion data currently has no options')
 
 					return [msgLabel.node().parentElement]
 				},
@@ -363,6 +388,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 			.on('mouseout', () => {
 				this.runButton.style('background', this.btnBackgroundColor)
 			})
+		// Set initial button state
+		this.updateRunButtonState()
 	}
 
 	// Helper method to add option rows to table2col instances
@@ -371,13 +398,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 		label: string,
 		configPath: string,
 		defaultValue: number,
-		min?: number | null,
-		max?: number | null,
-		step?: number | null
+		min?: number,
+		max?: number,
+		step?: number
 	) {
 		const [labelCell, inputCell] = table.addRow()
 		labelCell.text(label).style('font-size', `${this.optionsTextFontSize}px`)
-		// Remove any bottom border styling from labelCell if it exists
 
 		const input = inputCell
 			.append('input')
@@ -507,9 +533,44 @@ class GRIN2 extends PlotBase implements RxComponent {
 	private getConfigValues(): any {
 		const config: any = {}
 
-		// Get numeric values
+		// Helper function to check if a data type checkbox is checked
+		const isDataTypeChecked = (labelText: string): boolean => {
+			let isChecked = true // default to true if no checkbox found
+			this.dom.controls.selectAll('input[type="checkbox"]').each(function (this: HTMLInputElement) {
+				const label = this.parentElement?.textContent?.trim()
+				if (label === labelText) {
+					isChecked = this.checked
+				}
+			})
+			return isChecked
+		}
+
 		this.dom.controls.selectAll('input[data-settings-path]').each(function (this: HTMLInputElement) {
 			const path = this.getAttribute('data-settings-path')!
+
+			// Check if this input belongs to a checked data type
+			const dataType = path.split('.')[0] // e.g., 'snvindelOptions', 'cnvOptions'
+			let shouldInclude = false
+
+			switch (dataType) {
+				case 'snvindelOptions':
+					shouldInclude = isDataTypeChecked('SNV/INDEL (Mutation)')
+					break
+				case 'cnvOptions':
+					shouldInclude = isDataTypeChecked('CNV (Copy Number Variation)')
+					break
+				case 'fusionOptions':
+					shouldInclude = isDataTypeChecked('Fusion (RNA Fusion Events)')
+					break
+				case 'svOptions':
+					shouldInclude = isDataTypeChecked('SV (Structural Variants)')
+					break
+				default:
+					shouldInclude = false
+			}
+
+			if (!shouldInclude) return // Skip this input if data type is unchecked
+
 			const value = parseFloat(this.value)
 
 			// Set nested object properties
@@ -521,8 +582,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 			}
 			current[parts[parts.length - 1]] = value
 		})
-		// Only add consequences if snvindelOptions was already created by getPlotConfig
-		if (config.snvindelOptions) {
+
+		// Only add consequences if SNV/INDEL is checked and snvindelOptions was created
+		if (config.snvindelOptions && isDataTypeChecked('SNV/INDEL (Mutation)')) {
 			const consequences: string[] = []
 			this.dom.controls.selectAll('input[data-consequence]').each(function (this: HTMLInputElement) {
 				if (this.checked) {
