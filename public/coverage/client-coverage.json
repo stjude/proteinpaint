@@ -109,38 +109,38 @@
   },
   "filter/test/filter.integration.spec.js": {
     "lines": {
-      "total": 572,
-      "covered": 563,
+      "total": 601,
+      "covered": 591,
       "skipped": 0,
-      "pct": 98.42
+      "pct": 98.33
     },
     "functions": {
-      "total": 100,
-      "covered": 92,
+      "total": 104,
+      "covered": 96,
       "skipped": 0,
-      "pct": 92
+      "pct": 92.3
     },
     "statements": {
-      "total": 572,
-      "covered": 563,
+      "total": 622,
+      "covered": 612,
       "skipped": 0,
-      "pct": 98.42
+      "pct": 98.39
     },
     "branches": {
-      "total": 54,
-      "covered": 50,
+      "total": 98,
+      "covered": 72,
       "skipped": 0,
-      "pct": 92.59
+      "pct": 73.46
     },
     "lowestPct": {
-      "curr": 92,
-      "prev": 0,
-      "diff": 92
+      "curr": 73.46,
+      "prev": 92,
+      "diff": -18.540000000000006
     },
     "averagePct": {
-      "curr": 95.35750000000002,
-      "prev": 0,
-      "diff": 95.35750000000002
+      "curr": 90.61999999999999,
+      "prev": 95.35750000000002,
+      "diff": -4.737500000000026
     }
   },
   "mass/about.ts": {
@@ -4321,38 +4321,38 @@
   },
   "filter/FilterClass.js": {
     "lines": {
-      "total": 117,
-      "covered": 107,
+      "total": 121,
+      "covered": 111,
       "skipped": 0,
-      "pct": 91.45
+      "pct": 91.73
     },
     "functions": {
-      "total": 18,
-      "covered": 16,
+      "total": 19,
+      "covered": 17,
       "skipped": 0,
-      "pct": 88.88
+      "pct": 89.47
     },
     "statements": {
-      "total": 136,
-      "covered": 116,
+      "total": 140,
+      "covered": 120,
       "skipped": 0,
-      "pct": 85.29
+      "pct": 85.71
     },
     "branches": {
-      "total": 94,
-      "covered": 66,
+      "total": 96,
+      "covered": 67,
       "skipped": 0,
-      "pct": 70.21
+      "pct": 69.79
     },
     "lowestPct": {
-      "curr": 70.21,
+      "curr": 69.79,
       "prev": 70.21,
-      "diff": 0
+      "diff": -0.4199999999999875
     },
     "averagePct": {
-      "curr": 83.9575,
+      "curr": 84.175,
       "prev": 83.9575,
-      "diff": 0
+      "diff": 0.21750000000000114
     }
   },
   "filter/FilterPrompt.js": {
@@ -4363,10 +4363,10 @@
       "pct": 57.14
     },
     "functions": {
-      "total": 7,
-      "covered": 2,
+      "total": 8,
+      "covered": 3,
       "skipped": 0,
-      "pct": 28.57
+      "pct": 37.5
     },
     "statements": {
       "total": 31,
@@ -4381,50 +4381,50 @@
       "pct": 41.17
     },
     "lowestPct": {
-      "curr": 28.57,
+      "curr": 37.5,
       "prev": 28.57,
-      "diff": 0
+      "diff": 8.93
     },
     "averagePct": {
-      "curr": 45.42750000000001,
+      "curr": 47.66,
       "prev": 45.42750000000001,
-      "diff": 0
+      "diff": 2.2324999999999875
     }
   },
   "filter/FilterRxComp.js": {
     "lines": {
-      "total": 23,
-      "covered": 19,
+      "total": 28,
+      "covered": 24,
       "skipped": 0,
-      "pct": 82.6
+      "pct": 85.71
     },
     "functions": {
-      "total": 6,
+      "total": 7,
       "covered": 5,
       "skipped": 0,
-      "pct": 83.33
+      "pct": 71.42
     },
     "statements": {
-      "total": 23,
-      "covered": 19,
+      "total": 29,
+      "covered": 25,
       "skipped": 0,
-      "pct": 82.6
+      "pct": 86.2
     },
     "branches": {
-      "total": 11,
-      "covered": 7,
+      "total": 19,
+      "covered": 10,
       "skipped": 0,
-      "pct": 63.63
+      "pct": 52.63
     },
     "lowestPct": {
-      "curr": 63.63,
+      "curr": 52.63,
       "prev": 63.63,
-      "diff": 0
+      "diff": -11
     },
     "averagePct": {
-      "curr": 78.04,
+      "curr": 73.99,
       "prev": 78.04,
-      "diff": 0
+      "diff": -4.050000000000011
     }
   },
   "filter/FilterStateless.js": {
@@ -4435,10 +4435,10 @@
       "pct": 85.71
     },
     "functions": {
-      "total": 4,
-      "covered": 3,
+      "total": 5,
+      "covered": 4,
       "skipped": 0,
-      "pct": 75
+      "pct": 80
     },
     "statements": {
       "total": 15,
@@ -4458,9 +4458,9 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 74.065,
+      "curr": 75.315,
       "prev": 74.065,
-      "diff": 0
+      "diff": 1.25
     }
   },
   "filter/filter.interactivity.js": {
