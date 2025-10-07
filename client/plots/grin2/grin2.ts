@@ -166,10 +166,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 			cellPadding: this.checkboxContainerPadding
 		})
 
-		// Remove borders from the nested table rows
-		// optionsTable.table.selectAll('tr').style('border', 'none').style('border-bottom', 'none')
-		// // optionsTable.table.selectAll('td').style('border', 'none')
-
 		// Call the callback to add options and collect row elements
 		const returnedRows = optionsCallback(optionsTable)
 		optionRows.push(...returnedRows)
