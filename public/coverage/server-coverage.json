@@ -394,5 +394,41 @@
       "prev": 100,
       "diff": 0
     }
+  },
+  "src/mds3.init.js": {
+    "lines": {
+      "total": 1526,
+      "covered": 864,
+      "skipped": 0,
+      "pct": 56.61
+    },
+    "functions": {
+      "total": 114,
+      "covered": 58,
+      "skipped": 0,
+      "pct": 50.87
+    },
+    "statements": {
+      "total": 1804,
+      "covered": 1049,
+      "skipped": 0,
+      "pct": 58.14
+    },
+    "branches": {
+      "total": 1259,
+      "covered": 405,
+      "skipped": 0,
+      "pct": 32.16
+    },
+    "lowestPct": {
+      "curr": 32.16,
+      "prev": 0,
+      "diff": 32.16
+    },
+    "averagePct": {
+      "curr": 49.445,
+      "prev": 0,
+      "diff": 49.445
+    }
   }
 }
