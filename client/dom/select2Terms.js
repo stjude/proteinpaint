@@ -47,7 +47,9 @@ export function select2Terms(tip, app, chartType, detail, callback, detail2) {
 			.style('font-family', 'Courier')
 		const xdiv = row
 			.append('div')
-			.attr('class', 'sja_filter_tag_btn add_term_btn')
+			.attr('class', 'ts_pill sja_filter_tag_btn')
+			.style('padding', '3px 6px')
+			.style('border-radius', '6px')
 			.text('+')
 			.on('click', e => {
 				getTreeTerm(xdiv, term => (xterm = term), detail)
@@ -61,7 +63,9 @@ export function select2Terms(tip, app, chartType, detail, callback, detail2) {
 			.style('font-family', 'Courier')
 		const ydiv = row
 			.append('div')
-			.attr('class', 'sja_filter_tag_btn add_term_btn')
+			.attr('class', 'ts_pill sja_filter_tag_btn')
+			.style('padding', '3px 6px')
+			.style('border-radius', '6px')
 			.text('+')
 			.on('click', e => {
 				getTreeTerm(ydiv, term => (yterm = term), detail2 || detail)
