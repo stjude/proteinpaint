@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- tw "add new" icon appears identical to tw pill without visual difference
+
+
 ## 2.148.1
 
 Fixes:
