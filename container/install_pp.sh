@@ -78,8 +78,8 @@ fi
 if [[ ! -f "verify.sh" ]]; then
   wget https://raw.githubusercontent.com/stjude/proteinpaint/master/container/verify.sh
 fi
-if [[ ! -f "validateConfig.js" ]]; then
-  wget https://raw.githubusercontent.com/stjude/proteinpaint/master/container/validateConfig.js
+if [[ ! -f "validateConfig.cjs" ]]; then
+  wget https://raw.githubusercontent.com/stjude/proteinpaint/master/container/validateConfig.cjs
 fi
 chmod a+x *
 

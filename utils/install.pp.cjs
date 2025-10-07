@@ -19,7 +19,7 @@ if (arg.size == 0) {
 	console.log(`
 Run this script under the ProteinPaint root diretory:
 
-$ node utils/install.pp.js [options]
+$ node utils/install.pp.cjs [options]
 
 -c FILE  The config file, two-column, tab-delimited
          First column is key, and the second column is value

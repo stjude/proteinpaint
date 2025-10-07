@@ -9,7 +9,7 @@
 MSG="$(cat $1)"
 NOTES="$(cat release.txt)"
   
-NOTES=$(node ./build/setReleaseText.js release.txt "$1")
+NOTES=$(node ./build/setReleaseText.cjs release.txt "$1")
 if [[ "$NOTES" != "" ]]; then
   echo -e "$NOTES" > release.txt
 fi

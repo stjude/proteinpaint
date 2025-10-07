@@ -2,14 +2,14 @@
 	can test by running a commit,
 
 	or from the command line:
-	usage: node setReleaseText.js [releaseTxtFileName="release.txt"] [commitFile]
+	usage: node setReleaseText.cjs [releaseTxtFileName="release.txt"] [commitFile]
 
 	if releaseTextFileName == "--empty", a starter template with empty sections will be outputted
 */
 
 const fs = require('fs')
 const spawnSync = require('child_process').spawnSync
-const rp = require('./releaseParser')
+const rp = require('./releaseParser.cjs')
 
 if (process.argv[2] == '--empty') {
 	console.log(rp.titles.map(t => `${t}\n- \n`).join('\n'))

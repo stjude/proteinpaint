@@ -15,7 +15,7 @@
 #if [ "$1" == "$2"  ] && [ ${NUM_CHECKOUTS} -eq 1 ]; then
 #  if [[ ! -s release.txt ]]; then
 #  	# echo "creating empty sections in release.txt"
-#		node build/setReleaseText.js --empty > release.txt
+#		node build/setReleaseText.cjs --empty > release.txt
 #	# else
 #	# 	echo "release.txt is not empty"
 #	fi

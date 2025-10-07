@@ -1,6 +1,6 @@
 /*
 	call from the proteinpaint project dir
-	usage: node changeLogGenerator.js [-u]
+	usage: node changeLogGenerator.cjs [-u]
 	
 	-u output only the unreleased change notes 
 */

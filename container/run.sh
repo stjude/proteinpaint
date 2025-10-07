@@ -12,7 +12,7 @@ if [[ ! -f serverconfig.json ]]; then
 fi
 
 # may fill-in serverconfig defaults
-node validateConfig
+node validateConfig.cjs
 TPDIR=$(node -p "require('./serverconfig.json').tpmasterdir")
 HOSTPORT=$(node -p "require('./serverconfig.json').URL?.split(':')[2]")
 EXPOSED_PORT=3000 # forced to 3000 by server/src/serverconfig.js, previously $(node -p "require('./serverconfig.json').port || 3000")
