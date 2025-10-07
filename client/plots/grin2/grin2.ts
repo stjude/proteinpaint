@@ -545,6 +545,15 @@ class GRIN2 extends PlotBase implements RxComponent {
 			return isChecked
 		}
 
+		// Initialize empty objects for fusion and sv if checked (since they don't have options yet)
+		if (isDataTypeChecked('Fusion (RNA Fusion Events)')) {
+			config.fusionOptions = {}
+		}
+		if (isDataTypeChecked('SV (Structural Variants)')) {
+			config.svOptions = {}
+		}
+
+		// Get numeric values only for checked data types
 		this.dom.controls.selectAll('input[data-settings-path]').each(function (this: HTMLInputElement) {
 			const path = this.getAttribute('data-settings-path')!
 
