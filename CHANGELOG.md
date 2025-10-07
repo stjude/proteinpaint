@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.148.1
 
 Fixes:
 - rename utils, git hooks js scripts to cjs
