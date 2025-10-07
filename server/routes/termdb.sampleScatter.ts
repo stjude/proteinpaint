@@ -5,7 +5,7 @@ import type {
 	ShapeLegendEntry,
 	ShapeMap,
 	TermdbSampleScatterRequest,
-	TermdbSampleScatterlResponse,
+	TermdbSampleScatterResponse,
 	RouteApi,
 	TermWrapper,
 	Term,
@@ -18,6 +18,7 @@ import serverconfig from '../src/serverconfig.js'
 import { schemeCategory20, getColors } from '#shared/common.js'
 import { mclass, dt2label, morigin } from '#shared/common.js'
 import { authApi } from '../src/auth.js'
+import { run_R } from '@sjcrh/proteinpaint-r'
 import { read_file } from '../src/utils.js'
 import { isNumericTerm } from '@sjcrh/proteinpaint-shared/terms.js'
 import { getDescrStats } from '#routes/termdb.descrstats.ts'
@@ -139,7 +140,7 @@ function init({ genomes }) {
 				range = { xMin, xMax, yMin, yMax }
 			}
 			if (!result) result = await colorAndShapeSamples(refSamples, cohortSamples, data as ValidGetDataResponse, q)
-			res.send({ result, range } satisfies TermdbSampleScatterlResponse)
+			res.send({ result, range } satisfies TermdbSampleScatterResponse)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			res.send({ error: e.message || e })
@@ -529,4 +530,26 @@ async function loadFile(p: any, ds: any) {
 		invalidXY,
 		'lines with invalid X/Y values'
 	)
+}
+
+// called in mds3.init
+export async function mayInitiateScatterplots(ds) {
+	if (!ds.cohort.scatterplots) return
+	if (!Array.isArray(ds.cohort.scatterplots.plots)) throw 'cohort.scatterplots.plots is not array'
+	for (const p of ds.cohort.scatterplots.plots) {
+		if (!p.name) throw '.name missing from one of scatterplots.plots[]'
+		if (p.file) {
+			// file is potentially big and can slow down server launch. only load it the first time the plot is accessed
+		} else {
+			throw 'unknown data source of one of scatterplots.plots[]'
+		}
+	}
+}
+
+export async function trigger_getLowessCurve(q, res) {
+	const data = q.coords
+	const result = JSON.parse(await run_R('lowess.R', JSON.stringify(data)))
+	const lowessCurve: any = []
+	for (const [i, x] of Object.entries(result.x)) lowessCurve.push([x, result.y[i]])
+	return res.send(lowessCurve)
 }
