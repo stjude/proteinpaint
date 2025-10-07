@@ -7,6 +7,10 @@ export interface GRIN2Dom {
 	geneTip: Menu
 	header?: any
 }
+export type CheckboxConfig = {
+	callback: (isChecked: boolean) => Promise<void> | void
+	checked?: boolean
+}
 
 export interface GRIN2Opts {
 	/** Manhattan plot settings */
