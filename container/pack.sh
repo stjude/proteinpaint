@@ -37,7 +37,7 @@ SERVERDEPNAME="@sjcrh/proteinpaint-server"
 
 # no -w argument to bump.js, just get the changed workspace since the last publish
 cd ..
-CHANGEDWS=$(./build/bump.js prerelease)
+CHANGEDWS=$(./build/bump.cjs prerelease)
 cd container
 echo "$CHANGEDWS"
 

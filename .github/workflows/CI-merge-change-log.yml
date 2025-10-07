@@ -24,7 +24,7 @@ jobs:
 
       - name: Detect changes
         run: |
-          NOTES=$(node ./build/changeLogGenerator.js)
+          NOTES=$(node ./build/changeLogGenerator.cjs)
           if [[ "$NOTES" != "" ]]; then
             echo "$NOTES" > CHANGELOG.md
           fi

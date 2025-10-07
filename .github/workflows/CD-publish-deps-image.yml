@@ -65,7 +65,7 @@ jobs:
       - name: Check for Rust workspace changes
         id: check-rust-changes
         run: |
-          CHANGEDWS=$(./build/bump.js prerelease)
+          CHANGEDWS=$(./build/bump.cjs prerelease)
           
           if [[ "$CHANGEDWS" == *"rust"* ]]; then
             echo "Rust workspace changes detected"
