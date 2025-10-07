@@ -20,7 +20,13 @@ class MassPlot {
 		if (action.type.includes('cache_termq')) return true
 		if (action.type.endsWith('_group')) return true
 		if (action.type.startsWith('plot_')) {
-			return action.id === this.id || action.id == this.parentId
+			//action.parentId == this.id is a special case to react when deleting a child plot of this plot, for example in the profile comparison, when closing one of the comparison plots
+			return (
+				action.id === this.id ||
+				action.id == this.parentId ||
+				action.config?.parentId === this.id ||
+				action.parentId === this.id
+			)
 		}
 		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true
