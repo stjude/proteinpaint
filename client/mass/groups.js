@@ -33,15 +33,12 @@ this
 
 const colorScale = getColors(5)
 
-// tip2 is used for showing the terms tree, which works as a submenu of this.tip, created here for reuse
+//// !! this is deprecated along with showTermsTree()
 let tip2
 function addTip2(tip) {
-	// FIXME hardcoded x pos is not generally applicable
 	if (!tip2) tip2 = new Menu({ padding: 0, offsetX: 250, offsetY: -34, parent_menu: tip.d.node() })
 	tip2.clear()
 }
-
-const geneTip = new Menu({ padding: '0px' })
 
 class MassGroups {
 	constructor(opts = {}) {
@@ -54,7 +51,10 @@ class MassGroups {
 			holder: this.opts.holder.append('div').style('margin', '10px')
 		}
 		initUI(this)
-		this.tip = new Menu({ padding: '0px' })
+		this.tip = new Menu({ padding: '0px' }) // custom term click menu
+		// submenu based on this.tip; FIXME do not use fixed x offset
+		this.tip2 = new Menu({ padding: '0px', offsetX: 250, offsetY: -34, parent_menu: this.tip.d.node() })
+		this.tip3 = new Menu({ padding: '0px' }) // gene search tooltip
 	}
 
 	getState(appState) {
@@ -210,13 +210,14 @@ class MassGroups {
 
 	showGroupsMenu(event, tw, deleteCallback) {
 		const samplelstTW = structuredClone(tw)
-		this.tip.clear()
+		this.tip.clear().showunder(event.target)
 		const menuDiv = this.tip.d.append('div')
 		const id = this?.lastId
 
 		const groupsInfo = menuDiv.append('div')
 
 		const table = table2col({ holder: groupsInfo })
+		table.table.style('scale', 0.9)
 		for (const [grpKey, grp] of Object.entries(tw.term.values)) {
 			const colorSquare = grp.color
 				? `<span style="display:inline-block; width:12px; height:12px; background-color:${grp.color}" ></span>`
@@ -228,21 +229,9 @@ class MassGroups {
 
 		if (this.state.currentCohortChartTypes.includes('DA') && samplelstTW.q.groups.length == 2)
 			addDiffAnalysisPlotMenuItem(menuDiv, this, samplelstTW)
-
-		if (this.state.currentCohortChartTypes.includes('survival'))
-			addPlotMenuItem('survival', menuDiv, 'Compare survival', this.tip, samplelstTW, id, this, true)
-
-		if (this.state.currentCohortChartTypes.includes('geneExpression'))
-			addHierClusterPlotMenuItem('geneExpression', menuDiv, 'Gene expression', this.tip, samplelstTW, id, this, true)
-
-		if (this.state.currentCohortChartTypes.includes('matrix'))
-			addMatrixMenuItems(menuDiv, 'Matrix', this.tip, samplelstTW, id, this, this.state, true, () => this.newId)
-
-		if (this.state.currentCohortChartTypes.includes('cuminc'))
-			addPlotMenuItem('cuminc', menuDiv, 'Compare cumulative incidence', this.tip, samplelstTW, id, this, true)
-
-		addSummarizeOption(menuDiv, this, samplelstTW, id)
-
+		addSummarizeOptions(menuDiv, this, samplelstTW, id)
+		mayAddHierClusterPlotMenuItem('geneExpression', menuDiv, 'Gene expression', this.tip2, samplelstTW, id, this, true)
+		mayAddMatrixMenuItems(menuDiv, 'Matrix', this.tip2, samplelstTW, id, this, this.state, true, () => this.newId)
 		mayAddSamplescatterOption(menuDiv, this, samplelstTW)
 		mayAddGenomebrowserOption(menuDiv, this, samplelstTW)
 
@@ -255,29 +244,31 @@ class MassGroups {
 				deleteCallback()
 				this.tip.hide()
 			})
-
-		this.tip.showunder(event.target)
 	}
 }
 
 export const groupsInit = getCompInit(MassGroups)
 
-function addSummarizeOption(menuDiv, self, samplelstTW, id) {
-	const summarizeDiv = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border').html('Summarize')
-	summarizeDiv.insert('div').html('›').style('float', 'right')
-
-	summarizeDiv.on('click', async () => {
-		showTermsTree(
-			summarizeDiv,
+function addSummarizeOptions(menuDiv, self, samplelstTW, id) {
+	const d = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border').text('Summarize')
+	d.on('click', async () => {
+		showTree(
+			d,
 			term => {
 				const tw = { term }
 				if (isNumericTerm(term)) tw.q = { mode: 'continuous' }
 				openSummaryPlot(tw, samplelstTW, self.app, id, () => self.newId)
 			},
 			self.app,
-			self.tip
+			self.tip2
 		)
 	})
+	d.insert('div').html('›').style('float', 'right')
+
+	if (self.state.currentCohortChartTypes.includes('survival'))
+		addPlotMenuItem('survival', menuDiv, 'Compare survival', self.tip2, samplelstTW, id, self, true)
+	if (self.state.currentCohortChartTypes.includes('cuminc'))
+		addPlotMenuItem('cuminc', menuDiv, 'Compare cumulative incidence', self.tip2, samplelstTW, id, self, true)
 }
 
 function mayAddGenomebrowserOption(menuDiv, self, samplelstTW) {
@@ -289,13 +280,15 @@ function mayAddGenomebrowserOption(menuDiv, self, samplelstTW) {
 		.attr('class', 'sja_menuoption sja_sharp_border')
 		.text('Compare mutations')
 		.on('click', () => {
-			addTip2(self.tip)
-			tip2.showunderoffset(itemdiv.node())
+			self.tip2.clear().showunderoffset(itemdiv.node())
 			const arg = {
-				tip: geneTip,
+				tip: self.tip3,
 				genome: self.app.opts.genome,
-				row: tip2.d.append('div').style('margin', '10px'),
+				row: self.tip2.d.append('div').style('margin', '10px'),
 				callback: () => {
+					self.tip.hide()
+					self.tip2.hide()
+					self.tip3.hide()
 					const [f1, f2] = makeFiltersFromTwoSampleGroups(samplelstTW)
 					const config = {
 						chartType: 'genomeBrowser',
@@ -311,6 +304,7 @@ function mayAddGenomebrowserOption(menuDiv, self, samplelstTW) {
 			}
 			const result = addGeneSearchbox(arg)
 		})
+	itemdiv.insert('div').html('›').style('float', 'right')
 }
 
 function makeFiltersFromTwoSampleGroups(tw) {
@@ -377,6 +371,7 @@ function mayAddSamplescatterOption(menuDiv, self, samplelstTW) {
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text(`Overlay on ${plot.name}`)
 				.on('click', () => {
+					self.tip2.hide() // in case tip2 is already opened through another option
 					let config = {
 						chartType: 'sampleScatter',
 						name: plot.name
@@ -410,6 +405,7 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text(`Differential ${termType2label(TermTypes.GENE_EXPRESSION)} Analysis`)
 			.on('click', e => {
+				self.tip2.hide() // in case tip2 is already opened through another option
 				//Move this to diff analysis plot??
 				//Do the check but not add to the state??
 				const groups = []
@@ -714,7 +710,8 @@ export async function openSummaryPlot(tw, samplelstTW, app, id, newId) {
 		config
 	})
 }
-export async function showTermsTree(
+
+export async function showTermsTree( // do not use and use new one below to avoid addTip2()
 	div,
 	callback,
 	app,
@@ -744,17 +741,39 @@ export async function showTermsTree(
 		}
 	})
 }
-export function addPlotMenuItem(chartType, div, text, tip, samplelstTW, id, parent, openOnTop = false) {
-	const itemDiv = div
+async function showTree(
+	div,
+	callback,
+	app,
+	tip,
+	treeState = { tree: { usecase: { target: 'default', detail: 'term' } } }
+) {
+	const activeCohort = app.getState().activeCohort
+	const state = { activeCohort, ...treeState }
+	tip.clear().showunderoffset(div.node())
+	appInit({
+		holder: tip.d,
+		vocabApi: app.vocabApi,
+		state,
+		tree: {
+			click_term: term => {
+				callback(term)
+				tip.hide()
+				if (tip.dnode.parent_menu) tip.dnode.parent_menu.style.display = 'none'
+			}
+		}
+	})
+}
+function addPlotMenuItem(chartType, div, text, tip, samplelstTW, id, parent, openOnTop = false) {
+	const d = div
 		.append('div')
 		.attr('class', 'sja_menuoption sja_sharp_border')
-		//.html('Compare survival&nbsp;&nbsp;›')
-		.html(`${text}&nbsp;&nbsp;›`)
+		.text(text)
 		.on('click', e => {
 			const state = { tree: { usecase: { target: chartType, detail: 'term' } } }
 			if (chartType == 'survival') state.nav = { header_mode: 'hide_search' }
-			showTermsTree(
-				itemDiv,
+			showTree(
+				d,
 				term => {
 					openPlot(chartType, term, samplelstTW, parent.app, id, openOnTop ? () => parent.newId : null)
 				},
@@ -763,25 +782,25 @@ export function addPlotMenuItem(chartType, div, text, tip, samplelstTW, id, pare
 				state
 			)
 		})
+	d.insert('div').html('›').style('float', 'right')
 }
 
-export function addHierClusterPlotMenuItem(chartType, div, text, tip, samplelstTW, id, parent, openOnTop = false) {
+function mayAddHierClusterPlotMenuItem(chartType, div, text, tip, samplelstTW, id, parent, openOnTop = false) {
+	if (!parent.state.currentCohortChartTypes.includes('geneExpression')) return
 	const itemDiv = div
 		.append('div')
 		.attr('class', 'sja_menuoption sja_sharp_border')
-		.html(`${text}&nbsp;&nbsp;›`)
+		.text(text)
 		.on('click', () => {
-			addTip2(tip) // tip2 is added if missing and ready to use
-			tip2.showunderoffset(itemDiv.node())
+			tip.clear().showunderoffset(itemDiv.node())
 
 			new GeneSetEditUI({
-				holder: tip2.d,
+				holder: tip.d,
 				genome: parent.app.opts.genome,
 				geneList: [],
 				vocabApi: parent.app.vocabApi,
 				mode: TermTypes.GENE_EXPRESSION,
 				callback: async ({ geneList, groupName }) => {
-					tip.hide()
 					const group = { name: groupName, lst: [], type: 'hierCluster' }
 					const lst = group.lst.filter(tw => tw.term.type != 'geneExpression')
 
@@ -800,7 +819,8 @@ export function addHierClusterPlotMenuItem(chartType, div, text, tip, samplelstT
 					)
 
 					// close geneset edit ui after clicking submit
-					tip2.d.selectAll('*').remove()
+					tip.hide()
+					if (tip.dnode.parent_menu) tip.dnode.parent_menu.style.display = 'none'
 
 					if (tws.length == 1) {
 						const tw = tws[0]
@@ -845,23 +865,24 @@ export function addHierClusterPlotMenuItem(chartType, div, text, tip, samplelstT
 				}
 			})
 		})
+	itemDiv.insert('div').html('›').style('float', 'right')
 }
 
-export function addMatrixMenuItems(div, text, tip, samplelstTW, id, parent, state, openOnTop = false, newId) {
+function mayAddMatrixMenuItems(div, text, tip, samplelstTW, id, parent, state, openOnTop = false, newId) {
+	if (!state.currentCohortChartTypes.includes('matrix')) return
 	const preBuiltMatrix = state.matrixplots
 	const hasSnvIndel = parent.app.vocabApi.termdbConfig?.queries?.snvindel
 	if (!preBuiltMatrix && !hasSnvIndel) return
 	const itemDiv = div
 		.append('div')
 		.attr('class', 'sja_menuoption sja_sharp_border')
-		.html(`${text}&nbsp;&nbsp;›`)
+		.text(text)
 		.on('click', () => {
-			addTip2(tip) // tip2 is added if missing and ready to use
-			tip2.showunderoffset(itemDiv.node())
+			tip.showunderoffset(itemDiv.node())
 
 			if (preBuiltMatrix) {
 				// adding buttons to divide each pre-built matrix
-				const preBuiltMatrixDiv = tip2.d.append('div')
+				const preBuiltMatrixDiv = tip.d.append('div')
 				for (const plot of preBuiltMatrix) {
 					preBuiltMatrixDiv
 						.append('button')
@@ -882,14 +903,14 @@ export function addMatrixMenuItems(div, text, tip, samplelstTW, id, parent, stat
 								config
 							})
 							tip.hide()
-							tip2.hide()
+							tip.dnode.parent_menu.style.display = 'none'
 						})
 				}
 			}
 
 			if (hasSnvIndel) {
 				// adding geneSet edit UI for building new matrix
-				const newMatrixDiv = tip2.d.append('div')
+				const newMatrixDiv = tip.d.append('div')
 				new GeneSetEditUI({
 					holder: newMatrixDiv,
 					genome: parent.app.opts.genome,
@@ -898,6 +919,7 @@ export function addMatrixMenuItems(div, text, tip, samplelstTW, id, parent, stat
 					vocabApi: parent.app.vocabApi,
 					callback: async ({ geneList, groupName }) => {
 						tip.hide()
+						tip.dnode.parent_menu.style.display = 'none'
 						const group = { name: groupName, lst: [] }
 						const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
 
@@ -918,8 +940,6 @@ export function addMatrixMenuItems(div, text, tip, samplelstTW, id, parent, stat
 								return tw
 							})
 						)
-						// close geneset edit ui after clicking submit
-						tip2.d.selectAll('*').remove()
 						group.lst = [...lst, ...tws]
 						parent.app.dispatch({
 							type: 'plot_create',
@@ -934,6 +954,7 @@ export function addMatrixMenuItems(div, text, tip, samplelstTW, id, parent, stat
 				})
 			}
 		})
+	itemDiv.insert('div').html('›').style('float', 'right')
 }
 
 export function addNewGroup(app, filter, groups) {
