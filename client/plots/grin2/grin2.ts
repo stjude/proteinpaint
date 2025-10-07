@@ -118,7 +118,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 			.style('border-bottom', `1px solid ${this.borderColor}`)
 
 		if (checkboxConfig) {
-			// Use the text as the labeltext for the checkbox
 			make_one_checkbox({
 				holder: td,
 				labeltext: text,
@@ -141,6 +140,48 @@ class GRIN2 extends PlotBase implements RxComponent {
 			.style('border-bottom', `1px solid ${this.borderColor}`)
 	}
 
+	private createDataTypeSection(
+		table: any,
+		label: string,
+		optionsCallback: (optionsTable: any) => HTMLElement[],
+		checked: boolean = true
+	) {
+		const row = table.append('tr')
+		const optionRows: HTMLElement[] = []
+
+		// Create the data type cell with checkbox
+		this.addDataTypeTd(row, label, {
+			callback: async isChecked => {
+				// Control visibility of all option rows
+				optionRows.forEach(optionRow => {
+					select(optionRow).style('display', isChecked ? '' : 'none')
+				})
+			},
+			checked: checked
+		})
+
+		// Create the options table
+		const optionsTable = table2col({
+			holder: this.addOptsTd(row),
+			cellPadding: this.checkboxContainerPadding
+		})
+
+		// Remove borders from the nested table rows
+		// optionsTable.table.selectAll('tr').style('border', 'none').style('border-bottom', 'none')
+		// // optionsTable.table.selectAll('td').style('border', 'none')
+
+		// Call the callback to add options and collect row elements
+		const returnedRows = optionsCallback(optionsTable)
+		optionRows.push(...returnedRows)
+
+		// Set initial visibility based on checked state
+		optionRows.forEach(optionRow => {
+			select(optionRow).style('display', checked ? '' : 'none')
+		})
+
+		return optionsTable
+	}
+
 	private createConfigTable() {
 		const tableDiv = this.dom.controls
 			.append('div')
@@ -148,7 +189,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 			.style('padding', this.controlsPadding)
 			.style('margin', this.controlsMargin)
 
-		// Create manual table structure with headers
 		const table = tableDiv.append('table').style('border-collapse', 'collapse').style('width', '100%')
 
 		// Add table headers
@@ -177,76 +217,82 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const queries = this.app.vocabApi.termdbConfig.queries
 
 		// SNV/INDEL Section
-		// SNV/INDEL Section
 		if (queries.snvindel) {
-			const snvRow = table.append('tr')
+			this.createDataTypeSection(table, 'SNV/INDEL (Mutation)', optionsTable => {
+				const rows: any[] = []
 
-			// Store references to option rows
-			const optionRows: any[] = []
+				// Add numeric option rows
+				rows.push(
+					this.addOptionRowToTable(optionsTable, 'Min Total Depth', 'snvindelOptions.minTotalDepth', 10, 1).node()
+						.parentElement
+				)
+				rows.push(
+					this.addOptionRowToTable(
+						optionsTable,
+						'Min Alt Allele Count',
+						'snvindelOptions.minAltAlleleCount',
+						2,
+						1
+					).node().parentElement
+				)
+				rows.push(
+					this.addOptionRowToTable(
+						optionsTable,
+						'Hypermutator Threshold',
+						'snvindelOptions.hyperMutator',
+						1000,
+						1
+					).node().parentElement
+				)
 
-			// Create the data type cell with checkbox FIRST (left column)
-			this.addDataTypeTd(snvRow, 'SNV/INDEL (Mutation)', {
-				callback: async isChecked => {
-					console.log('Checkbox state:', isChecked)
-					// Control visibility of all option rows
-					optionRows.forEach(row => {
-						select(row).style('display', isChecked ? '' : 'none')
-					})
-				},
-				checked: true
+				// Add consequence checkboxes
+				const [consequenceLabel, consequenceCell] = optionsTable.addRow()
+				consequenceLabel.text('Consequences')
+				this.createConsequenceCheckboxes(consequenceCell)
+				rows.push(consequenceLabel.node().parentElement)
+
+				return rows
 			})
-
-			// Then create the options table (right column)
-			const optionsTable = table2col({
-				holder: this.addOptsTd(snvRow),
-				cellPadding: this.checkboxContainerPadding
-			})
-
-			// Add option rows
-			const row1 = this.addOptionRowToTable(optionsTable, 'Min Total Depth', 'snvindelOptions.minTotalDepth', 10, 1)
-			const row2 = this.addOptionRowToTable(
-				optionsTable,
-				'Min Alt Allele Count',
-				'snvindelOptions.minAltAlleleCount',
-				2,
-				1
-			)
-			const row3 = this.addOptionRowToTable(
-				optionsTable,
-				'Hypermutator Threshold',
-				'snvindelOptions.hyperMutator',
-				1000,
-				1
-			)
-
-			// Consequence checkboxes
-			const [consequenceLabel, consequenceCell] = optionsTable.addRow()
-			consequenceLabel.text('Consequences')
-			this.createConsequenceCheckboxes(consequenceCell)
-
-			// Collect all row elements for visibility control
-			optionRows.push(
-				row1.node().parentElement,
-				row2.node().parentElement,
-				row3.node().parentElement,
-				consequenceLabel.node().parentElement
-			)
 		}
 
 		// CNV Section
 		if (queries.cnv) {
-			const cnvRow = table.append('tr')
-			this.addDataTypeTd(cnvRow, 'CNV (Copy Number Variation)')
+			this.createDataTypeSection(table, 'CNV (Copy Number Variation)', optionsTable => {
+				const rows: any[] = []
 
-			const optionsTable = table2col({
-				holder: this.addOptsTd(cnvRow),
-				cellPadding: this.checkboxContainerPadding
+				rows.push(
+					this.addOptionRowToTable(
+						optionsTable,
+						'Loss Threshold',
+						'cnvOptions.lossThreshold',
+						-0.4,
+						undefined,
+						0,
+						0.1
+					).node().parentElement
+				)
+				rows.push(
+					this.addOptionRowToTable(
+						optionsTable,
+						'Gain Threshold',
+						'cnvOptions.gainThreshold',
+						0.3,
+						0,
+						undefined,
+						0.1
+					).node().parentElement
+				)
+				rows.push(
+					this.addOptionRowToTable(optionsTable, 'Max Segment Length', 'cnvOptions.maxSegLength', 0, 0).node()
+						.parentElement
+				)
+				rows.push(
+					this.addOptionRowToTable(optionsTable, 'Hypermutator Threshold', 'cnvOptions.hyperMutator', 500, 1).node()
+						.parentElement
+				)
+
+				return rows
 			})
-
-			this.addOptionRowToTable(optionsTable, 'Loss Threshold', 'cnvOptions.lossThreshold', -0.4, undefined, 0, 0.1)
-			this.addOptionRowToTable(optionsTable, 'Gain Threshold', 'cnvOptions.gainThreshold', 0.3, 0, undefined, 0.1)
-			this.addOptionRowToTable(optionsTable, 'Max Segment Length', 'cnvOptions.maxSegLength', 0, 0)
-			this.addOptionRowToTable(optionsTable, 'Hypermutator Threshold', 'cnvOptions.hyperMutator', 500, 1)
 		}
 
 		// Decide from dt list which of fusion/sv are present
@@ -254,28 +300,40 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 		// Fusion Section
 		if (queries.svfusion && codes.includes(2)) {
-			const fusionRow = table.append('tr')
-			this.addDataTypeTd(fusionRow, 'Fusion (RNA Fusion Events)')
+			this.createDataTypeSection(
+				table,
+				'Fusion (RNA Fusion Events)',
+				optionsTable => {
+					const [msgLabel, msgCell] = optionsTable.addRow()
+					msgCell
+						.append('div')
+						.style('color', this.optionsTextColor)
+						.style('font-size', `${this.optionsTextFontSize}px`)
+						.text('Fusion filtering options to be configured later')
 
-			const fusionMsg = this.addOptsTd(fusionRow)
-			fusionMsg
-				.append('div')
-				.style('color', this.optionsTextColor)
-				.style('font-size', `${this.optionsTextFontSize}px`)
-				.text('Fusion filtering options to be configured later')
+					return [msgLabel.node().parentElement]
+				},
+				false
+			)
 		}
 
 		// SV Section
 		if (queries.svfusion && codes.includes(5)) {
-			const svRow = table.append('tr')
-			this.addDataTypeTd(svRow, 'SV (Structural Variants)')
+			this.createDataTypeSection(
+				table,
+				'SV (Structural Variants)',
+				optionsTable => {
+					const [msgLabel, msgCell] = optionsTable.addRow()
+					msgCell
+						.append('div')
+						.style('color', this.optionsTextColor)
+						.style('font-size', `${this.optionsTextFontSize}px`)
+						.text('SV filtering options to be configured later')
 
-			const svMsg = this.addOptsTd(svRow)
-			svMsg
-				.append('div')
-				.style('color', this.optionsTextColor)
-				.style('font-size', `${this.optionsTextFontSize}px`)
-				.text('SV filtering options to be configured later')
+					return [msgLabel.node().parentElement]
+				},
+				false
+			)
 		}
 
 		// General GRIN2 Section (placeholder)
@@ -323,6 +381,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 	) {
 		const [labelCell, inputCell] = table.addRow()
 		labelCell.text(label).style('font-size', `${this.optionsTextFontSize}px`)
+		// Remove any bottom border styling from labelCell if it exists
 
 		const input = inputCell
 			.append('input')
@@ -340,7 +399,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 		input.attr('data-settings-path', configPath)
 
-		return labelCell // Return so we can get the row element
+		return labelCell
 	}
 
 	private createConsequenceCheckboxes(container: any) {
