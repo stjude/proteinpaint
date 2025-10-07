@@ -3,7 +3,7 @@ import path from 'path'
 import fs from 'fs'
 import serverconfig from '../serverconfig.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
-import BuildHelpers from './BuildHelpers.ts'
+import { BuildHelpers } from './BuildHelpers.ts'
 import FilterHelpers from './FilterHelpers.ts'
 
 /** Will assign later based on the ds defined image column header */
