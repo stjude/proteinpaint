@@ -6,7 +6,7 @@ Initialize a bin configuration for a numeric dataset
     {format: 'string'}: output bin config as JSON string
 */
 export default function initBinConfig(data, opts = {}) {
-	if (data.find(d => !Number.isFinite(d))) throw 'non-numeric values found'
+	if (data.find(d => !Number.isFinite(d))) throw 'non-numeric values found [termdb.initbinconfig.js initBinConfig()]'
 
 	let binConfig
 	const s = new Set(data)
