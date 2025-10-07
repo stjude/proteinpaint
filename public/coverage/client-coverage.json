@@ -2450,37 +2450,37 @@
   "mass/groups.js": {
     "lines": {
       "total": 413,
-      "covered": 146,
+      "covered": 6,
       "skipped": 0,
-      "pct": 35.35
+      "pct": 1.45
     },
     "functions": {
       "total": 74,
-      "covered": 19,
+      "covered": 0,
       "skipped": 0,
-      "pct": 25.67
+      "pct": 0
     },
     "statements": {
       "total": 448,
-      "covered": 153,
+      "covered": 6,
       "skipped": 0,
-      "pct": 34.15
+      "pct": 1.33
     },
     "branches": {
-      "total": 194,
-      "covered": 41,
+      "total": 196,
+      "covered": 0,
       "skipped": 0,
-      "pct": 21.13
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 21.13,
+      "curr": 0,
       "prev": 21.13,
-      "diff": 0
+      "diff": -21.13
     },
     "averagePct": {
-      "curr": 29.075,
+      "curr": 0.6950000000000001,
       "prev": 29.45,
-      "diff": -0.375
+      "diff": -28.755
     }
   },
   "filter/test/tvs.integration.spec.js": {
