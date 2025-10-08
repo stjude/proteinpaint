@@ -45,6 +45,17 @@ type NumberObj = {
 	xscale: any
 }
 
+type LineData = {
+	x: any
+	index: number
+	scaledX: number
+	isDraggable?: boolean
+	draggedX?: number
+	start?: number
+	end?: number
+	value?: number
+}
+
 export async function setDensityPlot(self) {
 	if (!self.num_obj) throw `Missing density data [density.ts setDensityPlot()]`
 	const numObj = self.num_obj as NumberObj
@@ -148,18 +159,8 @@ function handleNoDensity(self) {
 function renderBinLines(self, data: any) {
 	const o = self.num_obj as NumberObj
 	if (!o.density_data) throw `Missing .density_data [density.ts, renderBinLines()]`
-	const scaledMinX = Math.round(o.xscale(o.density_data.min)) as number
-	const scaledMaxX = Math.round(o.xscale(o.density_data.max)) as number
-	type LineData = {
-		x: any
-		index: number
-		scaledX: number
-		isDraggable?: boolean
-		draggedX?: number
-		start?: number
-		end?: number
-		value?: number
-	}
+	const scaledMinX = Math.round(o.xscale(o.density_data.min)) //as number
+	const scaledMaxX = Math.round(o.xscale(o.density_data.max)) //as number
 	const lines: any = []
 
 	if (data.mode == 'discrete' && data.type == 'regular-bin') {
