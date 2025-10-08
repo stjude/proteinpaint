@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- New unit tests for adhoc dictionary build helpers.
+
 Fixes:
 - in gene search on hitting Enter and found a hit, cancel debouncer to prevent gene tip showing up
 - apply a user-assigned custom bin label if present
