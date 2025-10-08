@@ -1,2 +1,1 @@
-Fixes:
-- in gene search on hitting Enter and found a hit, cancel debouncer to prevent gene tip showing up
+
