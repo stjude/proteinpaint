@@ -3,7 +3,7 @@ import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { GRIN2Dom, GRIN2Opts, CheckboxConfig } from './GRIN2Types'
 import { dofetch3 } from '#common/dofetch'
 import { Menu, renderTable, table2col, make_one_checkbox, sayerror } from '#dom'
-import { dtsnvindel, mclass } from '#shared/common.js'
+import { dtsnvindel, dtsv, dtfusionrna, mclass } from '#shared/common.js'
 import { get$id } from '#termsetting'
 import { PlotBase } from '#plots/PlotBase.ts'
 import { plotManhattan } from '#plots/manhattan/manhattan.ts'
@@ -100,10 +100,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 		this.createConfigTable()
 	}
 
-	// Determining if we have fusion/sv/or both. Returns [] | [2] | [5] | [2, 5]
-	private getSvFusionCodes(): number[] {
-		const list: number[] = this.app.vocabApi.termdbConfig.queries.svfusion.dtLst ?? []
-		return [2, 5].filter(code => list.includes(code))
+	private hasFusion(): boolean {
+		return this.app.vocabApi.termdbConfig.queries.svfusion.dtLst.includes(dtfusionrna)
+	}
+	private hasSv(): boolean {
+		return this.app.vocabApi.termdbConfig.queries.svfusion.dtLst.includes(dtsv)
 	}
 
 	// Function for adding data type cells
@@ -316,11 +317,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 			})
 		}
 
-		// Decide from dt list which of fusion/sv are present
-		const codes = this.getSvFusionCodes()
-
 		// Fusion Section
-		if (queries.svfusion && codes.includes(2)) {
+		if (queries.svfusion && this.hasFusion()) {
 			this.createDataTypeSection(
 				table,
 				'Fusion (RNA Fusion Events)',
@@ -339,7 +337,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 
 		// SV Section
-		if (queries.svfusion && codes.includes(5)) {
+		if (queries.svfusion && this.hasSv()) {
 			this.createDataTypeSection(
 				table,
 				'SV (Structural Variants)',
