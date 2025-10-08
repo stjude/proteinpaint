@@ -7,7 +7,6 @@ import { dtsnvindel, dtsv, dtfusionrna, mclass, dtcnv } from '#shared/common.js'
 import { get$id } from '#termsetting'
 import { PlotBase } from '#plots/PlotBase.ts'
 import { plotManhattan } from '#plots/manhattan/manhattan.ts'
-import { select } from 'd3'
 
 class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
@@ -127,7 +126,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const left = this.addTd(row)
 		const right = this.addOptsTd(row)
 
-		// ----- Right-side options table -----
+		// Options table
 		const opts = table2col({ holder: right, tdcss: { border: 'none', padding: '4px 0' } })
 
 		// Top numeric options (hardcoded)
@@ -187,7 +186,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const left = this.addTd(row)
 		const right = this.addOptsTd(row)
 
-		// ----- Right-side CNV options (hardcoded) -----
+		// CNV options table
 		const opts = table2col({ holder: right, tdcss: { border: 'none', padding: '4px 0' } })
 
 		// Loss Threshold (allow negatives)
@@ -212,11 +211,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 			0.05 // step
 		)
 
-		// Max Segment Length (0 = unlimited; units as you expect)
+		// Max Segment Length (0 = no cap)
 		this.addOptionRowToTable(
 			opts,
 			'Max Segment Length',
-			'settings.cnv.maxSegmentLength',
+			'settings.cnv.maxSegLength',
 			0, // default (no cap)
 			0, // min
 			1e9, // max
@@ -319,33 +318,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 			.style('border-bottom', `1px solid ${this.borderColor}`)
 	}
 
-	private createDataTypeSection(
-		table: any,
-		label: string,
-		optionsCallback: (optionsTable: any) => HTMLElement[],
-		checked: boolean = true
-	) {
-		const row = table.append('tr')
-		const optionRows: HTMLElement[] = []
-
-		// Create the options table
-		const optionsTable = table2col({
-			holder: this.addOptsTd(row),
-			cellPadding: this.checkboxContainerPadding
-		})
-
-		// Call the callback to add options and collect row elements
-		const returnedRows = optionsCallback(optionsTable)
-		optionRows.push(...returnedRows)
-
-		// Set initial visibility based on checked state
-		optionRows.forEach(optionRow => {
-			select(optionRow).style('display', checked ? '' : 'none')
-		})
-
-		return optionsTable
-	}
-
 	// Enable the Run button only if at least one data type is checked
 	private updateRunButtonState() {
 		let anyChecked = false
@@ -416,7 +388,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 			.text('Options')
 
 		const queries = this.app.vocabApi.termdbConfig.queries
-		// Seed dtUsage BEFORE adding rows so callbacks have something to update
 		this.dtUsage = {}
 		if (queries.snvindel) {
 			this.dtUsage[dtsnvindel] = { checked: this.dtUsage[dtsnvindel]?.checked ?? true, label: 'SNV/INDEL (Mutation)' }
@@ -619,16 +590,16 @@ class GRIN2 extends PlotBase implements RxComponent {
 	private getConfigValues(): any {
 		const config: any = {}
 
-		// Use the LIVE dtUsage set earlier + updated by callbacks
-		const dtUsage = this.dtUsage
-
-		// collect numeric/nested settings from DOM as you already do…
+		// Collect all numeric inputs
 		this.dom.controls.selectAll('input[data-settings-path]').each(function (this: HTMLInputElement) {
-			const path = this.getAttribute('data-settings-path')!
+			const path = this.getAttribute('data-settings-path')! // e.g., "settings.snvindel.minTotalDepth"
 			const value = parseFloat(this.value)
 			const parts = path.split('.')
+
+			// Skip 'settings' prefix and build directly as XOptions
 			let current = config
-			for (let i = 0; i < parts.length - 1; i++) {
+			for (let i = 1; i < parts.length - 1; i++) {
+				// Start at 1 to skip 'settings'
 				const part = parts[i]
 				if (!current[part]) current[part] = {}
 				current = current[part]
@@ -636,8 +607,42 @@ class GRIN2 extends PlotBase implements RxComponent {
 			current[parts[parts.length - 1]] = value
 		})
 
-		config.dtUsage = dtUsage
-		return config
+		// Now transform to XOptions format
+		const requestConfig: any = {}
+
+		if (this.dtUsage[dtsnvindel]?.checked && config.snvindel) {
+			requestConfig.snvindelOptions = {
+				...config.snvindel,
+				consequences: this.getSelectedConsequences()
+			}
+		}
+
+		if (this.dtUsage[dtcnv]?.checked && config.cnv) {
+			requestConfig.cnvOptions = config.cnv
+		}
+
+		if (this.dtUsage[dtfusionrna]?.checked && config.fusion) {
+			requestConfig.fusionOptions = config.fusion
+		}
+
+		if (this.dtUsage[dtsv]?.checked && config.sv) {
+			requestConfig.svOptions = config.sv
+		}
+
+		return requestConfig
+	}
+
+	private getSelectedConsequences(): string[] {
+		const consequences: string[] = []
+
+		this.dom.controls.selectAll('input[data-consequence]').each(function (this: HTMLInputElement) {
+			if (this.checked) {
+				const consequence = this.getAttribute('data-consequence')
+				if (consequence) consequences.push(consequence)
+			}
+		})
+
+		return consequences
 	}
 
 	private async runAnalysis() {
@@ -656,7 +661,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			// Get configuration and make request
 			const configValues = this.getConfigValues()
-			console.log('Running GRIN2 with config:', configValues)
 			const requestData = {
 				genome: this.app.vocabApi.vocab.genome,
 				dslabel: this.app.vocabApi.vocab.dslabel,
@@ -667,6 +671,35 @@ class GRIN2 extends PlotBase implements RxComponent {
 				devicePixelRatio: window.devicePixelRatio,
 				...configValues
 			}
+
+			// Only include options if checkbox is checked
+			if (this.dtUsage[dtsnvindel]?.checked && configValues.settings?.snvindel) {
+				requestData.snvindelOptions = {
+					minTotalDepth: configValues.settings.snvindel.minTotalDepth,
+					minAltAlleleCount: configValues.settings.snvindel.minAltAlleleCount,
+					hypermutatorThreshold: configValues.settings.snvindel.hypermutatorThreshold,
+					consequences: this.getSelectedConsequences() // You'll need to implement this
+				}
+			}
+
+			if (this.dtUsage[dtcnv]?.checked && configValues.settings?.cnv) {
+				requestData.cnvOptions = {
+					lossThreshold: configValues.settings.cnv.lossThreshold,
+					gainThreshold: configValues.settings.cnv.gainThreshold,
+					maxSegLength: configValues.settings.cnv.maxSegmentLength,
+					hypermutatorThreshold: configValues.settings.cnv.hypermutatorThreshold
+				}
+			}
+
+			if (this.dtUsage[dtfusionrna]?.checked && configValues.settings?.fusion) {
+				requestData.fusionOptions = configValues.settings.fusion
+			}
+
+			if (this.dtUsage[dtsv]?.checked && configValues.settings?.sv) {
+				requestData.svOptions = configValues.settings.sv
+			}
+
+			console.log('GRIN2 request data:', requestData)
 
 			const response = await dofetch3('/grin2', {
 				body: requestData
