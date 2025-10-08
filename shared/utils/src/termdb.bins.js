@@ -267,6 +267,8 @@ export function get_bin_label(bin, binconfig, valueConversion) {
 	/*
   Generate a numeric bin label given a bin configuration and an optional term valueConversion object
 */
+	if ('label' in bin) return bin.label
+
 	const bc = binconfig
 	if (!bc.binLabelFormatter) bc.binLabelFormatter = getNumDecimalsFormatter(bc)
 	if (!bin.startunbounded && !bin.stopunbounded && !('startinclusive' in bin) && !('stopinclusive' in bin)) {
