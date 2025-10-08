@@ -1,6 +1,7 @@
 import { select } from 'd3-selection'
 import { rgb } from 'd3-color'
 
+// TODO document arg
 export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {} }, barDiv) {
 	const isHidden = {}
 
