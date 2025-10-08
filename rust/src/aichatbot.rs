@@ -7,18 +7,19 @@ use rig::client::CompletionClient;
 use rig::client::EmbeddingsClient;
 use rig::completion::Prompt;
 use rig::embeddings::builder::EmbeddingsBuilder;
-use std::collections::HashMap;
-//use rig::providers::ollama;
 use rig::vector_store::in_memory_store::InMemoryVectorStore;
 use schemars::JsonSchema;
 use serde_json::{Map, Value, json};
+use std::collections::HashMap;
 use std::io::{self};
-mod ollama;
-mod sjprovider; // Importing custom rig module for invoking SJ GPU server // Importing custom rig module for invoking ollama server
+mod ollama; // Importing custom rig module for invoking ollama server
+mod sjprovider; // Importing custom rig module for invoking SJ GPU server
+
+mod test_ai; // Test examples for AI chatbot
 
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone)]
-enum llm_backend {
+pub enum llm_backend {
     Ollama(),
     Sj(),
 }
@@ -40,9 +41,6 @@ async fn main() -> Result<()> {
                 Ok(json_string) => {
                     //println!("json_string:{}", json_string);
                     let user_input_json: &JsonValue = &json_string["user_input"];
-                    //let user_input = "Does aspirin leads to decrease in death rates among Africans?";
-                    //let user_input = "Show the point deletion in TP53 gene.";
-                    //let user_input = "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs";
                     let user_input: &str;
                     match user_input_json.as_str() {
                         Some(inp) => user_input = inp,
@@ -50,17 +48,30 @@ async fn main() -> Result<()> {
                     }
 
                     let genedb_json: &JsonValue = &json_string["genedb"];
-                    let mut genedb: Option<&str> = None;
+                    let genedb: &str;
                     match genedb_json.as_str() {
-                        Some(inp) => genedb = Some(inp),
-                        None => {}
+                        Some(inp) => genedb = inp,
+                        None => {
+                            panic!("Gene db not found")
+                        }
                     }
 
                     let dataset_db_json: &JsonValue = &json_string["dataset_db"];
-                    let mut dataset_db: Option<&str> = None;
+                    let dataset_db: &str;
                     match dataset_db_json.as_str() {
-                        Some(inp) => dataset_db = Some(inp),
-                        None => {}
+                        Some(inp) => dataset_db = inp,
+                        None => {
+                            panic!("dataset db not found")
+                        }
+                    }
+
+                    let dataset_training_json: &JsonValue = &json_string["aifiles"];
+                    let dataset_training_json: &str;
+                    match dataset_training_json_json.as_str() {
+                        Some(inp) => dataset_training_json = inp,
+                        None => {
+                            panic!("dataset training json file not found")
+                        }
                     }
 
                     let apilink_json: &JsonValue = &json_string["apilink"];
@@ -166,7 +177,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn run_pipeline(
+pub async fn run_pipeline(
     user_input: &str,
     comp_model: impl rig::completion::CompletionModel + 'static,
     embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
@@ -174,8 +185,8 @@ async fn run_pipeline(
     temperature: f64,
     max_new_tokens: usize,
     top_p: f32,
-    dataset_db: Option<&str>,
-    genedb: Option<&str>,
+    dataset_db: &str,
+    genedb: &str,
     has_gene_expression: bool,
 ) -> Option<String> {
     let mut classification: String = classify_query_by_dataset_type(
@@ -737,128 +748,121 @@ async fn extract_summary_information(
     temperature: f64,
     max_new_tokens: usize,
     top_p: f32,
-    dataset_db: Option<&str>,
-    genedb: Option<&str>,
+    dataset_db: &str,
+    genedb: &str,
     has_gene_expression: bool,
 ) -> String {
-    match dataset_db {
-        Some(db) => {
-            //println!("common_genes:{:?}", common_genes);
-            let (rag_docs, db_vec) = parse_dataset_db(db).await;
-            //println!("rag_docs:{:?}", rag_docs);
-            let additional;
-            let schema_json = schemars::schema_for!(SummaryType); // error handling here
-            let schema_json_string = serde_json::to_string_pretty(&schema_json).unwrap();
-            //println!("schema_json summary:{}", schema_json_string);
-            match llm_backend_type {
-                llm_backend::Ollama() => {
-                    additional = json!({
-                                "max_new_tokens": max_new_tokens,
-                                "top_p": top_p,
+    let (rag_docs, db_vec) = parse_dataset_db(dataset_db).await;
+    println!("rag_docs:{:?}", rag_docs);
+    let additional;
+    let schema_json = schemars::schema_for!(SummaryType); // error handling here
+    let schema_json_string = serde_json::to_string_pretty(&schema_json).unwrap();
+    //println!("schema_json summary:{}", schema_json_string);
+    match llm_backend_type {
+        llm_backend::Ollama() => {
+            additional = json!({
+                    "max_new_tokens": max_new_tokens,
+                    "top_p": top_p,
                     "schema_json": schema_json_string
-                        });
-                }
-                llm_backend::Sj() => {
-                    additional = json!({
-                            "max_new_tokens": max_new_tokens,
-                            "top_p": top_p
-                    });
-                }
-            }
-
-            // Create embeddings and add to vector store
-            //let embeddings = EmbeddingsBuilder::new(embedding_model.clone())
-            //    .documents(rag_docs)
-            //    .expect("Reason1")
-            //    .build()
-            //    .await
-            //    .unwrap();
-
-            //// Create vector store
-            //let mut vector_store = InMemoryVectorStore::<String>::default();
-            //InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
-
-            let gene_expression_statement;
-            let gene_expression_examples;
-            let mut common_genes = Vec::<String>::new();
-            match has_gene_expression {
-                true => {
-                    let gene_list: Vec<String> = parse_geneset_db(genedb.unwrap()).await;
-                    let lowercase_user_input = user_input.to_lowercase();
-                    let user_words: Vec<&str> = lowercase_user_input.split_whitespace().collect();
-                    let user_words2: Vec<String> = user_words.into_iter().map(|s| s.to_string()).collect();
-
-                    common_genes = gene_list
-                        .into_iter()
-                        .filter(|x| user_words2.contains(&x.to_lowercase()))
-                        .collect();
-                    gene_expression_statement =
-                        "The \"geneExpression\" subfield should ONLY contain genes names from the relevant genes list.";
-                    gene_expression_examples = "Example question4: \"compare tp53 expression between genders\"\n Example answer4: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\": \"Sex\"}, {\"geneExpression\": \"TP53\"}]}}\n Example question5: \"is tmem181 overexpressed in men?\" Example answer5: {\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"Sex\"},{\"geneExpression\":\"TMEM181\"}]}\n"
-                }
-                false => {
-                    gene_expression_statement = "The \"geneExpression\" field should be EMPTY and must NOT display any gene names as the dataset does not support it. Add message to \"message\" field stating that \"gene expression is not supported for this dataset\"";
-                    gene_expression_examples = "Example question4: \"compare tp53 expression between genders\"\n Example answer4: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\": \"Sex\"}], \"message\": \"gene expression is not supported for this dataset\"}}\n Example question5: \"is tmem181 overexpressed in men?\" Example answer5: {\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"Sex\"}], \"message\": \"gene expression is not supported for this dataset\"}\n"
-                }
-            }
-
-            let system_prompt: String = String::from(
-                String::from(
-                    "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. There are three fields in the JSON to be returned: The \"action\" field will ALWAYS be \"summary\". The \"summaryterms\" field should contain all the variables that the user wants to visualize. The \"clinical\" subfield should ONLY contain names of the fields from the sqlite db. ",
-                ) + &gene_expression_statement
-                    + &" The \"filter\" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both \"summaryterms\" and \"filter\". There are two kinds of filter variables: \"Categorical\" and \"Numeric\". \"Categorical\" variables are those variables which can have a fixed set of values e.g. gender, molecular subtypes. They are defined by the \"CategoricalFilterTerm\" which consists of \"term\" (a field from the sqlite3 db)  and \"value\" (a value of the field from the sqlite db).  \"Numeric\" variables are those which can have any numeric value. They are defined by \"NumericFilterTerm\" and contain  the subfields \"term\" (a field from the sqlite3 db), \"greaterThan\" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and \"lessThan\" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. The \"message\" field only contain messages of terms in the user input that were not found in their respective databases. The JSON schema is as follows:"
-                    + &schema_json_string
-                    + &"\n  Example question1: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer1: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\":\"Molecular Subtype\"}], filter:[ {\"Numeric\":{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}\n Example question2: \"show summary of molecular subtype for men under 40 years only\"\n Example answer2: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"Sex\",\"value\":\"Male\"}},{\"Numeric\":{\"greaterThan\":null,\"lessThan\":40.0,\"term\":\"Age\"}}],\"summaryterms\":[{\"clinical\":\"Molecular subtype\"}]}\n Example Question3: \"Show race for women with early onset of cancer\"\n Example Answer3: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"Sex\",\"value\":\"Female\"}}, {\"Numeric\":{\"greaterThan\":null,\"lessThan\":18.0,\"term\":\"Age\"}],\"summaryterms\":[{\"clinical\":\"Ancestry\"}]}\n "
-                    + &gene_expression_examples
-                    + "The sqlite db in plain language is as follows:\n"
-                    + &rag_docs.join(",")
-                    + &"\n Relevant genes are as follows (separated by comma(,)):"
-                    + &common_genes.join(",")
-                    + &"\nQuestion: {question} \nanswer:",
-            );
-
-            //println!("system_prompt:{}", system_prompt);
-            // Create RAG agent
-            let agent = AgentBuilder::new(comp_model)
-                .preamble(&system_prompt)
-                //.dynamic_context(top_k, vector_store.index(embedding_model))
-                .temperature(temperature)
-                .additional_params(additional)
-                .build();
-
-            let response = agent.prompt(user_input).await.expect("Failed to prompt server");
-
-            //println!("Ollama: {}", response);
-            let result = response.replace("json", "").replace("```", "");
-            //println!("result:{}", result);
-            let json_value: Value = serde_json::from_str(&result).expect("REASON");
-            //println!("Classification result:{}", json_value);
-
-            let final_llm_json;
-            match llm_backend_type {
-                llm_backend::Ollama() => {
-                    let json_value2: Value = serde_json::from_str(&json_value["content"].to_string()).expect("REASON2");
-                    let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON3");
-                    final_llm_json = json_value3.to_string()
-                }
-                llm_backend::Sj() => {
-                    let json_value2: Value =
-                        serde_json::from_str(&json_value[0]["generated_text"].to_string()).expect("REASON2");
-                    //println!("json_value2:{}", json_value2.as_str().unwrap());
-                    let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON2");
-                    //println!("Classification result:{}", json_value3);
-                    final_llm_json = json_value3.to_string()
-                }
-            }
-            //println!("final_llm_json:{}", final_llm_json);
-            let final_validated_json =
-                validate_summary_output(final_llm_json.clone(), db_vec, common_genes, has_gene_expression);
-            final_validated_json
+            });
         }
-        None => {
-            panic!("Dataset db file needed for summary term extraction from user input")
+        llm_backend::Sj() => {
+            additional = json!({
+                    "max_new_tokens": max_new_tokens,
+                    "top_p": top_p
+            });
         }
     }
+
+    // Create embeddings and add to vector store
+    //let embeddings = EmbeddingsBuilder::new(embedding_model.clone())
+    //    .documents(rag_docs)
+    //    .expect("Reason1")
+    //    .build()
+    //    .await
+    //    .unwrap();
+
+    //// Create vector store
+    //let mut vector_store = InMemoryVectorStore::<String>::default();
+    //InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
+
+    let gene_expression_statement;
+    let gene_expression_examples;
+    let mut common_genes = Vec::<String>::new();
+    match has_gene_expression {
+        true => {
+            let gene_list: Vec<String> = parse_geneset_db(genedb).await;
+            let lowercase_user_input = user_input.to_lowercase();
+            let user_words: Vec<&str> = lowercase_user_input.split_whitespace().collect();
+            let user_words2: Vec<String> = user_words.into_iter().map(|s| s.to_string()).collect();
+
+            common_genes = gene_list
+                .into_iter()
+                .filter(|x| user_words2.contains(&x.to_lowercase()))
+                .collect();
+            //println!("common_genes:{:?}", common_genes);
+            gene_expression_statement =
+                "The \"geneExpression\" subfield should ONLY contain genes names from the relevant genes list.";
+            gene_expression_examples = "Example question4: \"compare tp53 expression between genders\"\n Example answer4: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\": \"sex\"}, {\"geneExpression\": \"TP53\"}]}}\n Example question5: \"is tmem181 overexpressed in men?\" Example answer5: {\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"sex\"},{\"geneExpression\":\"TMEM181\"}]}\n"
+        }
+        false => {
+            gene_expression_statement = "The \"geneExpression\" field should be EMPTY and must NOT display any gene names as the dataset does not support it. Add message to \"message\" field stating that \"gene expression is not supported for this dataset\"";
+            gene_expression_examples = "Example question4: \"compare tp53 expression between genders\"\n Example answer4: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\": \"sex\"}], \"message\": \"gene expression is not supported for this dataset\"}}\n Example question5: \"is tmem181 overexpressed in men?\" Example answer5: {\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"sex\"}], \"message\": \"gene expression is not supported for this dataset\"}\n"
+        }
+    }
+
+    let system_prompt: String = String::from(
+        String::from(
+            "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. There are three fields in the JSON to be returned: The \"action\" field will ALWAYS be \"summary\". The \"summaryterms\" field should contain all the variables that the user wants to visualize. The \"clinical\" subfield should ONLY contain names of the fields from the sqlite db. ",
+        ) + &gene_expression_statement
+            + &" The \"filter\" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both \"summaryterms\" and \"filter\". There are two kinds of filter variables: \"Categorical\" and \"Numeric\". \"Categorical\" variables are those variables which can have a fixed set of values e.g. gender, molecular subtypes. They are defined by the \"CategoricalFilterTerm\" which consists of \"term\" (a field from the sqlite3 db)  and \"value\" (a value of the field from the sqlite db).  \"Numeric\" variables are those which can have any numeric value. They are defined by \"NumericFilterTerm\" and contain  the subfields \"term\" (a field from the sqlite3 db), \"greaterThan\" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and \"lessThan\" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. The \"message\" field only contain messages of terms in the user input that were not found in their respective databases. The JSON schema is as follows:"
+            + &schema_json_string
+            + &"\n  Example question1: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer1: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\":\"Molecular Subtype\"}], filter:[ {\"Numeric\":{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}\n Example question2: \"show summary of molecular subtype for men under 40 years only\"\n Example answer2: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"sex\",\"value\":\"Male\"}},{\"Numeric\":{\"greaterThan\":null,\"lessThan\":40.0,\"term\":\"Age\"}}],\"summaryterms\":[{\"clinical\":\"Molecular subtype\"}]}\n Example Question3: \"Show race for women with early onset of cancer\"\n Example Answer3: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"sex\",\"value\":\"Female\"}}, {\"Numeric\":{\"greaterThan\":null,\"lessThan\":18.0,\"term\":\"Age\"}],\"summaryterms\":[{\"clinical\":\"Ancestry\"}]}\n "
+            + &gene_expression_examples
+            + "The sqlite db in plain language is as follows:\n"
+            + &rag_docs.join(",")
+            + &"\n Relevant genes are as follows (separated by comma(,)):"
+            + &common_genes.join(",")
+            + &"\nQuestion: {question} \nanswer:",
+    );
+
+    //println!("system_prompt:{}", system_prompt);
+    // Create RAG agent
+    let agent = AgentBuilder::new(comp_model)
+        .preamble(&system_prompt)
+        //.dynamic_context(top_k, vector_store.index(embedding_model))
+        .temperature(temperature)
+        .additional_params(additional)
+        .build();
+
+    let response = agent.prompt(user_input).await.expect("Failed to prompt ollama");
+
+    //println!("Ollama: {}", response);
+    let result = response.replace("json", "").replace("```", "");
+    //println!("result:{}", result);
+    let json_value: Value = serde_json::from_str(&result).expect("REASON");
+    //println!("Classification result:{}", json_value);
+
+    let final_llm_json;
+    match llm_backend_type {
+        llm_backend::Ollama() => {
+            let json_value2: Value = serde_json::from_str(&json_value["content"].to_string()).expect("REASON2");
+            let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON3");
+            final_llm_json = json_value3.to_string()
+        }
+        llm_backend::Sj() => {
+            let json_value2: Value =
+                serde_json::from_str(&json_value[0]["generated_text"].to_string()).expect("REASON2");
+            //println!("json_value2:{}", json_value2.as_str().unwrap());
+            let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON2");
+            //println!("Classification result:{}", json_value3);
+            final_llm_json = json_value3.to_string()
+        }
+    }
+    //println!("final_llm_json:{}", final_llm_json);
+    let final_validated_json =
+        validate_summary_output(final_llm_json.clone(), db_vec, common_genes, has_gene_expression);
+    final_validated_json
 }
 
 fn get_summary_string() -> String {
@@ -868,7 +872,7 @@ fn get_summary_string() -> String {
 //const action: &str = &"summary";
 //const geneExpression: &str = &"geneExpression";
 
-#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct SummaryType {
     // Serde uses this for deserialization.
     #[serde(default = "get_summary_string")]
@@ -880,7 +884,7 @@ struct SummaryType {
     message: Option<String>,
 }
 
-#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 enum SummaryTerms {
     #[allow(non_camel_case_types)]
     clinical(String),
@@ -888,19 +892,19 @@ enum SummaryTerms {
     geneExpression(String),
 }
 
-#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 enum FilterTerm {
     Categorical(CategoricalFilterTerm),
     Numeric(NumericFilterTerm),
 }
 
-#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct CategoricalFilterTerm {
     term: String,
     value: String,
 }
 
-#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 #[allow(non_snake_case)]
 struct NumericFilterTerm {
     term: String,
