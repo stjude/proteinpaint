@@ -113,6 +113,7 @@ export async function getPlotConfig(opts: any) {
 		chartType: 'AIProjectAdmin',
 		subfolder: 'aiProjectAdmin',
 		extension: 'ts',
+		hidePlotFilter: true, //Disable the filter in the sandbox header
 		settings: getDefaultAIProjectAdminSettings(opts.overrides)
 	}
 	if (opts.settings?.project && !opts.settings?.project?.type) {

@@ -3,7 +3,7 @@ import { getDescrStats } from '#routes/termdb.descrstats.ts'
 
 /** Helper functions for building ad hoc dictionaries.
  * Only used in the build script. */
-export default class BuildHelpers {
+export class BuildHelpers {
 	static imageKeyIdx: number | null
 
 	public static makeParentTerms(header: string, id2term: Map<string, any>, imageKey: string) {
@@ -84,7 +84,7 @@ export default class BuildHelpers {
 	}
 }
 
-function assignNumType(term: any, termValues: any) {
+export function assignNumType(term: any, termValues: any) {
 	const foundDecimals = decimalPlacesUntilFirstNonZero(termValues)
 	if (foundDecimals > 0) {
 		term.type = 'float'
@@ -96,8 +96,13 @@ function assignNumType(term: any, termValues: any) {
 	}
 }
 
-function assignDefaultBins(term: any, termValues: any) {
-	const stats = getDescrStats(termValues)
+export function assignDefaultBins(term: any, termValues: any) {
+	if (!termValues || !termValues.length) {
+		term.bins = {}
+		return
+	}
+	//Term values must be numbers format before calling getDescrStats()
+	const stats = getDescrStats(termValues.map(c => Number(c)))
 	if (!stats || !Object.keys(stats).length) {
 		term.bins = {}
 		return
