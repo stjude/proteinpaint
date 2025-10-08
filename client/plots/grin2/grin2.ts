@@ -1,9 +1,9 @@
 import { getCompInit, copyMerge, type RxComponent } from '#rx'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
-import type { GRIN2Dom, GRIN2Opts, CheckboxConfig } from './GRIN2Types'
+import type { GRIN2Dom, GRIN2Opts } from './GRIN2Types'
 import { dofetch3 } from '#common/dofetch'
 import { Menu, renderTable, table2col, make_one_checkbox, sayerror } from '#dom'
-import { dtsnvindel, dtsv, dtfusionrna, mclass } from '#shared/common.js'
+import { dtsnvindel, dtsv, dtfusionrna, mclass, dtcnv } from '#shared/common.js'
 import { get$id } from '#termsetting'
 import { PlotBase } from '#plots/PlotBase.ts'
 import { plotManhattan } from '#plots/manhattan/manhattan.ts'
@@ -13,6 +13,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
 	dom: GRIN2Dom
 	private runButton!: any
+	private dtUsage: Record<number, { checked: boolean; label: string }> = {}
 
 	// Colors
 	readonly borderColor = '#eee'
@@ -107,8 +108,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 		return this.app.vocabApi.termdbConfig.queries.svfusion.dtLst.includes(dtsv)
 	}
 
-	// Function for adding data type cells
-	private addDataTypeTd = (tr, text: string, checkboxConfig: CheckboxConfig | null = null) => {
+	// Helper for making styling of data type cells consistent
+	private addTd(tr: any) {
 		const td = tr
 			.append('td')
 			.style('padding', this.tableCellPadding)
@@ -117,20 +118,68 @@ class GRIN2 extends PlotBase implements RxComponent {
 			.style('vertical-align', 'top')
 			.style('border-right', `1px solid ${this.borderColor}`)
 			.style('border-bottom', `1px solid ${this.borderColor}`)
-
-		if (checkboxConfig) {
-			make_one_checkbox({
-				holder: td,
-				labeltext: text,
-				callback: checkboxConfig.callback,
-				checked: checkboxConfig.checked || false
-			})
-		} else {
-			// No checkbox, just add text as before
-			td.text(text)
-		}
-
 		return td
+	}
+
+	// Add SNV/INDEL row
+	private addSnvindelRow = table => {
+		const row = table.append('tr')
+		const td = this.addTd(row)
+		make_one_checkbox({
+			holder: td,
+			labeltext: 'SNV/INDEL (Mutation)',
+			checked: this.dtUsage[dtsnvindel]?.checked ?? false,
+			callback: checked => {
+				this.dtUsage[dtsnvindel].checked = checked
+				console.log('[dtUsage updated]', dtsnvindel, checked, this.dtUsage)
+				this.updateRunButtonState()
+			}
+		})
+	}
+
+	// Add CNV row
+	private addCnvRow = table => {
+		const row = table.append('tr')
+		const td = this.addTd(row)
+		make_one_checkbox({
+			holder: td,
+			labeltext: 'CNV (Copy Number Variation)',
+			checked: this.dtUsage[dtcnv]?.checked ?? false,
+			callback: checked => {
+				this.dtUsage[dtcnv].checked = checked
+				console.log('[dtUsage updated]', dtcnv, checked, this.dtUsage)
+			}
+		})
+	}
+
+	// Add Fusion row
+	private addFusionRow = table => {
+		const row = table.append('tr')
+		const td = this.addTd(row)
+		make_one_checkbox({
+			holder: td,
+			labeltext: 'Fusion (RNA Fusion Events)',
+			callback: checked => {
+				this.dtUsage[dtfusionrna].checked = checked
+				console.log('[dtUsage updated]', dtfusionrna, checked, this.dtUsage)
+				this.updateRunButtonState()
+			}
+		})
+	}
+
+	// Add SV row
+	private addSvRow = table => {
+		const row = table.append('tr')
+		const td = this.addTd(row)
+		make_one_checkbox({
+			holder: td,
+			labeltext: 'SV (Structural Variants)',
+			callback: checked => {
+				this.dtUsage[dtsv].checked = checked
+				console.log('[dtUsage updated]', dtsv, checked, this.dtUsage)
+				this.updateRunButtonState()
+			}
+		})
 	}
 
 	// Function for adding options cells
@@ -149,19 +198,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 	) {
 		const row = table.append('tr')
 		const optionRows: HTMLElement[] = []
-
-		// Create the data type cell with checkbox
-		this.addDataTypeTd(row, label, {
-			callback: async isChecked => {
-				// Control visibility of all option rows
-				optionRows.forEach(optionRow => {
-					select(optionRow).style('display', isChecked ? '' : 'none')
-				})
-				// Update run button state
-				this.updateRunButtonState()
-			},
-			checked: checked
-		})
 
 		// Create the options table
 		const optionsTable = table2col({
@@ -251,113 +287,46 @@ class GRIN2 extends PlotBase implements RxComponent {
 			.text('Options')
 
 		const queries = this.app.vocabApi.termdbConfig.queries
+		// Seed dtUsage BEFORE adding rows so callbacks have something to update
+		this.dtUsage = {}
+		if (queries.snvindel) {
+			this.dtUsage[dtsnvindel] = { checked: this.dtUsage[dtsnvindel]?.checked ?? true, label: 'SNV/INDEL (Mutation)' }
+		}
+		if (queries.cnv) {
+			this.dtUsage[dtcnv] = { checked: this.dtUsage[dtcnv]?.checked ?? true, label: 'CNV (Copy Number Variation)' }
+		}
+		if (queries.svfusion) {
+			if (this.hasFusion())
+				this.dtUsage[dtfusionrna] = {
+					checked: this.dtUsage[dtfusionrna]?.checked ?? false,
+					label: 'Fusion (RNA Fusion Events)'
+				}
+			if (this.hasSv())
+				this.dtUsage[dtsv] = { checked: this.dtUsage[dtsv]?.checked ?? false, label: 'SV (Structural Variants)' }
+		}
 
 		// SNV/INDEL Section
 		if (queries.snvindel) {
-			this.createDataTypeSection(table, 'SNV/INDEL (Mutation)', optionsTable => {
-				const rows: any[] = []
-
-				// Add option rows
-				rows.push(
-					this.addOptionRowToTable(optionsTable, 'Min Total Depth', 'snvindelOptions.minTotalDepth', 10, 1).node()
-						.parentElement
-				)
-				rows.push(
-					this.addOptionRowToTable(
-						optionsTable,
-						'Min Alt Allele Count',
-						'snvindelOptions.minAltAlleleCount',
-						2,
-						1
-					).node().parentElement
-				)
-				rows.push(
-					this.addOptionRowToTable(
-						optionsTable,
-						'Hypermutator Threshold',
-						'snvindelOptions.hyperMutator',
-						1000,
-						1
-					).node().parentElement
-				)
-
-				// Add consequence checkboxes
-				const [consequenceLabel, consequenceCell] = optionsTable.addRow()
-				consequenceLabel.text('Consequences')
-				this.createConsequenceCheckboxes(consequenceCell)
-				rows.push(consequenceLabel.node().parentElement)
-
-				return rows
-			})
+			this.addSnvindelRow(table)
 		}
 
 		// CNV Section
 		if (queries.cnv) {
-			this.createDataTypeSection(table, 'CNV (Copy Number Variation)', optionsTable => {
-				const rows: any[] = []
-
-				rows.push(
-					this.addOptionRowToTable(optionsTable, 'Loss Threshold', 'cnvOptions.lossThreshold', -0.4, 0, 0.1).node()
-						.parentElement
-				)
-				rows.push(
-					this.addOptionRowToTable(optionsTable, 'Gain Threshold', 'cnvOptions.gainThreshold', 0.3, 0, 0.1).node()
-						.parentElement
-				)
-				rows.push(
-					this.addOptionRowToTable(optionsTable, 'Max Segment Length', 'cnvOptions.maxSegLength', 0, 0).node()
-						.parentElement
-				)
-				rows.push(
-					this.addOptionRowToTable(optionsTable, 'Hypermutator Threshold', 'cnvOptions.hyperMutator', 500, 1).node()
-						.parentElement
-				)
-
-				return rows
-			})
+			this.addCnvRow(table)
 		}
 
 		// Fusion Section
 		if (queries.svfusion && this.hasFusion()) {
-			this.createDataTypeSection(
-				table,
-				'Fusion (RNA Fusion Events)',
-				optionsTable => {
-					const [msgLabel, msgCell] = optionsTable.addRow()
-					msgCell
-						.append('div')
-						.style('color', this.optionsTextColor)
-						.style('font-size', `${this.optionsTextFontSize}px`)
-						.text('Fusion data currently has no options')
-
-					return [msgLabel.node().parentElement]
-				},
-				false
-			)
+			this.addFusionRow(table)
 		}
 
 		// SV Section
 		if (queries.svfusion && this.hasSv()) {
-			this.createDataTypeSection(
-				table,
-				'SV (Structural Variants)',
-				optionsTable => {
-					const [msgLabel, msgCell] = optionsTable.addRow()
-					msgCell
-						.append('div')
-						.style('color', this.optionsTextColor)
-						.style('font-size', `${this.optionsTextFontSize}px`)
-						.text('SV filtering options to be configured later')
-
-					return [msgLabel.node().parentElement]
-				},
-				false
-			)
+			this.addSvRow(table)
 		}
 
 		// General GRIN2 Section (placeholder)
 		const generalRow = table.append('tr')
-		this.addDataTypeTd(generalRow, 'GRIN2')
 
 		const msg = this.addOptsTd(generalRow)
 		msg
@@ -531,76 +500,24 @@ class GRIN2 extends PlotBase implements RxComponent {
 	private getConfigValues(): any {
 		const config: any = {}
 
-		// Helper function to check if a data type checkbox is checked
-		const isDataTypeChecked = (labelText: string): boolean => {
-			let isChecked = true // default to true if no checkbox found
-			this.dom.controls.selectAll('input[type="checkbox"]').each(function (this: HTMLInputElement) {
-				const label = this.parentElement?.textContent?.trim()
-				if (label === labelText) {
-					isChecked = this.checked
-				}
-			})
-			return isChecked
-		}
+		// Use the LIVE dtUsage set earlier + updated by callbacks
+		const dtUsage = this.dtUsage
 
-		// Initialize empty objects for fusion and sv if checked (since they don't have options yet)
-		if (isDataTypeChecked('Fusion (RNA Fusion Events)')) {
-			config.fusionOptions = {}
-		}
-		if (isDataTypeChecked('SV (Structural Variants)')) {
-			config.svOptions = {}
-		}
-
-		// Get numeric values only for checked data types
+		// collect numeric/nested settings from DOM as you already do…
 		this.dom.controls.selectAll('input[data-settings-path]').each(function (this: HTMLInputElement) {
 			const path = this.getAttribute('data-settings-path')!
-
-			// Check if this input belongs to a checked data type
-			const dataType = path.split('.')[0] // e.g., 'snvindelOptions', 'cnvOptions'
-			let shouldInclude = false
-
-			switch (dataType) {
-				case 'snvindelOptions':
-					shouldInclude = isDataTypeChecked('SNV/INDEL (Mutation)')
-					break
-				case 'cnvOptions':
-					shouldInclude = isDataTypeChecked('CNV (Copy Number Variation)')
-					break
-				case 'fusionOptions':
-					shouldInclude = isDataTypeChecked('Fusion (RNA Fusion Events)')
-					break
-				case 'svOptions':
-					shouldInclude = isDataTypeChecked('SV (Structural Variants)')
-					break
-				default:
-					shouldInclude = false
-			}
-
-			if (!shouldInclude) return // Skip this input if data type is unchecked
-
 			const value = parseFloat(this.value)
-
-			// Set nested object properties
 			const parts = path.split('.')
 			let current = config
 			for (let i = 0; i < parts.length - 1; i++) {
-				if (!current[parts[i]]) current[parts[i]] = {}
-				current = current[parts[i]]
+				const part = parts[i]
+				if (!current[part]) current[part] = {}
+				current = current[part]
 			}
 			current[parts[parts.length - 1]] = value
 		})
 
-		// Only add consequences if SNV/INDEL is checked and snvindelOptions was created
-		if (config.snvindelOptions && isDataTypeChecked('SNV/INDEL (Mutation)')) {
-			const consequences: string[] = []
-			this.dom.controls.selectAll('input[data-consequence]').each(function (this: HTMLInputElement) {
-				if (this.checked) {
-					consequences.push(this.getAttribute('data-consequence')!)
-				}
-			})
-			config.snvindelOptions.consequences = consequences
-		}
-
+		config.dtUsage = dtUsage
 		return config
 	}
 
