@@ -110,7 +110,7 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 
 			for (const tw of termwrappers) {
 				const term = id2term.get(tw.term.id)
-				if (!term.values) throw `Term ${term.id} has no values defined`
+				if (!term.values) throw new Error(`Term ${term.id} has no values defined`)
 				//TODO: Use getSamples from termdb.matrix.js??
 				const indexKey = term.type == 'categorical' ? '_' : `${term.id}`
 				const value = columns[term.index].trim()
@@ -197,6 +197,6 @@ async function readSourceFile(source: string) {
 	try {
 		return fs.readFileSync(sourceFilePath, 'utf8')
 	} catch (e) {
-		throw `Error reading source file ${sourceFilePath}: ${e}`
+		throw new Error(`Error reading source file ${sourceFilePath}: ${e}`)
 	}
 }
