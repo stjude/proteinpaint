@@ -204,6 +204,7 @@ export async function getPlotConfig(opts: any) {
 		chartType: 'WSIViewer',
 		subfolder: 'wsiviewer',
 		extension: 'ts',
+		hidePlotFilter: true, //Disable the filter in the sandbox header
 		settings: wsiViewerDefaults(opts.overrides)
 	}
 }
