@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - in gene search on hitting Enter and found a hit, cancel debouncer to prevent gene tip showing up
+- apply a user-assigned custom bin label if present
 
 
 ## 2.148.2

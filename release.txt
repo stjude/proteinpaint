@@ -1,2 +1,1 @@
-Fixes:
-- apply a user-assigned custom bin label if present
+
