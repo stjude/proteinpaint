@@ -411,6 +411,38 @@ tape('get_bin_label(), force label_offset == 1', function (test) {
 	test.end()
 })
 
+tape('get_bin_label(), user-assigned custom bin label', function (test) {
+	const binconfig = {
+		type: 'custom-bin',
+		lst: [
+			{
+				startunbounded: true,
+				stopinclusive: true,
+				stop: 10,
+				label: 'TEST ABC'
+			},
+			{
+				start: 20,
+				startinclusive: true,
+				stopunbounded: true,
+				label: 'TEST XYZ'
+			}
+		]
+	}
+
+	test.equal(
+		b.get_bin_label(binconfig.lst[0], binconfig),
+		binconfig.lst[0].label,
+		`should apply the user-assigned bin[0] label='${binconfig.lst[0].label}'`
+	)
+	test.equal(
+		b.get_bin_label(binconfig.lst[1], binconfig),
+		binconfig.lst[1].label,
+		`should apply the user-assigned bin[1] label='${binconfig.lst[1].label}'`
+	)
+	test.end()
+})
+
 tape('compute_bins() unbounded', function (test) {
 	let bins = b.compute_bins({ bin_size: 5, label_offset: 1, first_bin: { startunbounded: 1, stop: 5 } }, get_summary)
 	removeColorAttr(bins)
