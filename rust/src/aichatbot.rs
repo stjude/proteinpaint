@@ -7,18 +7,19 @@ use rig::client::CompletionClient;
 use rig::client::EmbeddingsClient;
 use rig::completion::Prompt;
 use rig::embeddings::builder::EmbeddingsBuilder;
-use std::collections::HashMap;
-//use rig::providers::ollama;
 use rig::vector_store::in_memory_store::InMemoryVectorStore;
 use schemars::JsonSchema;
 use serde_json::{Map, Value, json};
+use std::collections::HashMap;
 use std::io::{self};
-mod ollama;
-mod sjprovider; // Importing custom rig module for invoking SJ GPU server // Importing custom rig module for invoking ollama server
+mod ollama; // Importing custom rig module for invoking ollama server
+mod sjprovider; // Importing custom rig module for invoking SJ GPU server
+
+mod test_ai; // Test examples for AI chatbot
 
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone)]
-enum llm_backend {
+pub enum llm_backend {
     Ollama(),
     Sj(),
 }
@@ -166,7 +167,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn run_pipeline(
+pub async fn run_pipeline(
     user_input: &str,
     comp_model: impl rig::completion::CompletionModel + 'static,
     embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
@@ -868,7 +869,7 @@ fn get_summary_string() -> String {
 //const action: &str = &"summary";
 //const geneExpression: &str = &"geneExpression";
 
-#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct SummaryType {
     // Serde uses this for deserialization.
     #[serde(default = "get_summary_string")]
@@ -880,7 +881,7 @@ struct SummaryType {
     message: Option<String>,
 }
 
-#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 enum SummaryTerms {
     #[allow(non_camel_case_types)]
     clinical(String),
@@ -888,19 +889,19 @@ enum SummaryTerms {
     geneExpression(String),
 }
 
-#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 enum FilterTerm {
     Categorical(CategoricalFilterTerm),
     Numeric(NumericFilterTerm),
 }
 
-#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct CategoricalFilterTerm {
     term: String,
     value: String,
 }
 
-#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 #[allow(non_snake_case)]
 struct NumericFilterTerm {
     term: String,
