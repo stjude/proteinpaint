@@ -14,8 +14,8 @@ export default function setViolinRenderer(self) {
 		const settings = self.config.settings.violin
 		const isH = settings.orientation === 'horizontal'
 
-		// violin tw, overlay tw. only one of them can be q.mode=continuous
-		let vtw, otw
+		let vtw, // only one of (term1 & term2) can be q.mode=continuous, which will be vtw (violin tw)
+			otw // the other one (if present) is otw (overlay tw)
 		if (self.config.term.q.mode == 'continuous') {
 			vtw = self.config.term
 			otw = self.config.term2 // could be missing
@@ -76,6 +76,7 @@ export default function setViolinRenderer(self) {
 			let y = 0
 			const thickness = self.settings.plotThickness || self.getAutoThickness()
 			for (const [plotIdx, plot] of plots.entries()) {
+				console.log(plot)
 				//R x values are not the same as the plot values, so we need to use a scale to map them to the plot values
 				// The scale uses half of the plotThickness as the maximum value as the image is symmetrical
 				// Only one half of the image is computed and the other half is mirrored
@@ -99,13 +100,17 @@ export default function setViolinRenderer(self) {
 				//if only one plot pass area builder to calculate the exact height of the plot
 				const { violinG, height } = renderViolinPlot(svgData, plot, isH, wScale, areaBuilder, y)
 				y += height
-				if (self.opts.mode != 'minimal') renderLabels(t1, t2, violinG, plot, isH, settings)
+				if (self.opts.mode != 'minimal') renderLabels(vtw, otw, violinG, plot, isH, settings)
 
-				if (self.config.term.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
-					// is sc data, disable brushing for now because 1) no use 2) avoid bug of listing cells
+				if (
+					vtw.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION ||
+					otw?.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION
+				) {
+					// is sc data, disable brushing until its supported
+				} else if (self.opts.mode == 'minimal') {
+					// no interactivity in this mode
 				} else {
-					// enable brushing
-					if (self.opts.mode != 'minimal') renderBrushing(t1, t2, violinG, settings, plot, isH, svgData)
+					renderBrushing(vtw, otw, violinG, settings, plot, isH, svgData)
 				}
 			}
 			self.renderPvalueTable(chartDiv, chart)
@@ -391,7 +396,7 @@ export default function setViolinRenderer(self) {
 	}
 
 	// label for each violin (on left when horizontal)
-	function renderLabels(t1, t2, violinG, plot, isH, settings) {
+	function renderLabels(vtw, otw, violinG, plot, isH, settings) {
 		violinG
 			.append('text')
 			.attr('data-testid', 'sjpp-violin-label')
@@ -399,7 +404,7 @@ export default function setViolinRenderer(self) {
 			.style('cursor', 'pointer')
 			.on('click', function (event) {
 				if (!event) return
-				self.displayLabelClickMenu(t1, t2, plot, event)
+				self.displayLabelClickMenu(vtw, otw, plot, event)
 			})
 			.on('mouseover', function (event, d) {
 				event.stopPropagation()
@@ -487,9 +492,9 @@ export default function setViolinRenderer(self) {
 		}
 	}
 
-	function renderBrushing(t1, t2, violinG, settings, plot, isH, svgData) {
+	function renderBrushing(vtw, otw, violinG, settings, plot, isH, svgData) {
 		//brushing on data points
-		if (settings.datasymbol === 'rug' || settings.datasymbol === 'bean') {
+		if (settings.datasymbol == 'rug' || settings.datasymbol == 'bean') {
 			violinG
 				.append('g')
 				.classed('sjpp-brush', true)
@@ -500,12 +505,10 @@ export default function setViolinRenderer(self) {
 									[0, -20],
 									[settings.svgw, 20]
 								])
-								.on('end', async event => {
+								.on('end', event => {
 									const selection = event.selection
-
 									if (!selection) return
-
-									self.displayBrushMenu(t1, t2, self, plot, selection, svgData.axisScale, isH)
+									self.displayBrushMenu(vtw, otw, self, plot, selection, svgData.axisScale, isH)
 								})
 						: brushY()
 								.extent([
@@ -514,13 +517,11 @@ export default function setViolinRenderer(self) {
 								])
 								.on('end', async event => {
 									const selection = event.selection
-
 									if (!selection) return
-
-									self.displayBrushMenu(t1, t2, self, plot, selection, svgData.axisScale, isH)
+									self.displayBrushMenu(vtw, otw, self, plot, selection, svgData.axisScale, isH)
 								})
 				)
-		} else return
+		}
 	}
 
 	self.toggleLoadingDiv = function (display = '') {

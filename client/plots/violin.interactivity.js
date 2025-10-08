@@ -24,33 +24,29 @@ export function setInteractivity(self) {
 		dm.show(event.clientX, event.clientY)
 	}
 
-	self.displayLabelClickMenu = function (t1, t2, plot, event) {
-		if (!t2) return // when no term 2 do not show options on the sole violin label
-		if (self.config.term.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) return // is sc gene exp data, none of the options below work, thus disable
+	self.displayLabelClickMenu = function (vtw, otw, plot, event) {
+		if (!otw) return // when no term 2 do not show options on the sole violin label
+		if (vtw.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION || otw?.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION)
+			return
 
-		const label = t1.q.mode === 'continuous' ? 'term2' : 'term'
 		const options = [
 			{
 				label: `Add filter: ${plot.label.split(',')[0]}`,
 				testid: 'sjpp-violinLabOpt-addf',
-				callback: getAddFilterCallback(t1, t2, self, plot, label, false)
+				callback: getAddFilterCallback(vtw, otw, self, plot)
 			},
 			{
 				label: `Hide: ${plot.label}`,
 				testid: 'sjpp-violinLabOpt-hide',
 				callback: () => {
-					const term = self.config[label]
-
-					const isHidden = true
-
 					self.app.dispatch({
 						type: 'plot_edit',
 						id: self.id,
 						config: {
-							[label]: {
+							[otw.$id == self.config.term.$id ? 'term' : 'term2']: {
 								isAtomic: true,
-								term: term.term,
-								q: getUpdatedQfromClick(plot, term, isHidden)
+								term: otw.term,
+								q: getUpdatedQfromClick(plot, otw, true)
 							}
 						}
 					})
@@ -58,19 +54,20 @@ export function setInteractivity(self) {
 			}
 		]
 		if (self.state.displaySampleIds && self.state.hasVerifiedToken) {
+			// XXX never track boolean flag of hasVerifiedToken??
 			options.push({
 				label: `List samples`,
 				testid: 'sjpp-violinLabOpt-list',
 				callback: async () => {
-					const [start, end] = [self.data.min, self.data.max * 2]
-					await self.callListSamples(event, t1, t2, plot, start, end)
+					await self.callListSamples(event, vtw, otw, plot)
 				}
 			})
 		}
 		self.displayMenu(event, options, plot)
 	}
 
-	self.displayBrushMenu = function (t1, t2, self, plot, selection, scale, isH) {
+	self.displayBrushMenu = function (vtw, otw, self, plot, selection, scale, isH) {
+		// start & end are vtw axis values (actual term values)
 		const [start, end] = isH
 			? [scale.invert(selection[0]), scale.invert(selection[1])]
 			: [scale.invert(selection[1]), scale.invert(selection[0])]
@@ -79,7 +76,7 @@ export function setInteractivity(self) {
 			{
 				label: `Add filter`,
 				testid: 'sjpp-violinBrushOpt-addf',
-				callback: getAddFilterCallback(t1, t2, self, plot, start, end, true)
+				callback: getAddFilterCallback(vtw, otw, self, plot, start, end)
 			}
 		]
 
@@ -87,7 +84,7 @@ export function setInteractivity(self) {
 			options.push({
 				label: `List samples`,
 				testid: 'sjpp-violinBrushOpt-list',
-				callback: async () => self.callListSamples(event, t1, t2, plot, start, end)
+				callback: async () => self.callListSamples(event, vtw, otw, plot, start, end)
 			})
 		}
 		self.displayMenu(event, options, plot, start, end)
@@ -96,12 +93,9 @@ export function setInteractivity(self) {
 	self.displayMenu = function (event, options, plot, start, end) {
 		const tip = self.dom.clicktip.clear().showunder(event.target)
 
-		const isBrush = start != null && end != null
-
-		if (isBrush) {
+		if (Number.isFinite(start) && Number.isFinite(stop)) {
 			const [niceStart, niceEnd] =
 				self.config.term.term.type == 'integer' ? [Math.round(start), Math.round(end)] : niceNumLabels([start, end])
-
 			tip.d.append('div').style('margin', '10px').text(`From ${niceStart} to ${niceEnd}`)
 		}
 		//show menu options for label clicking and brush selection
@@ -123,26 +117,25 @@ export function setInteractivity(self) {
 			})
 	}
 
-	self.callListSamples = async function (event, t1, t2, plot, start, end) {
+	self.callListSamples = async function (event, vtw, otw, plot, start, end) {
 		let tvslst
 		const geneVariant = {}
-		if (t1.term.type == 'geneVariant' || t2?.term.type == 'geneVariant') {
-			// geneVariant filtering will be handled separately by
-			// mayFilterByGeneVariant() in client/plots/barchart.events.js
-			let violinTw
-			if (t1.term.type == 'geneVariant') {
-				geneVariant.t1value = plot.seriesId
-				violinTw = t2
-			} else {
-				geneVariant.t2value = plot.seriesId
-				violinTw = t1
+		const terms = [vtw]
+		if (otw) {
+			terms.push(otw)
+			tvslst = self.getTvsLst(vtw, otw, plot, start, end)
+			if (otw.term.type == 'geneVariant') {
+				// geneVariant filtering will be handled separately by
+				// mayFilterByGeneVariant() in client/plots/barchart.events.js
+				if (otw.$id == self.config.term.$id) {
+					geneVariant.t1value = plot.seriesId
+				} else {
+					geneVariant.t2value = plot.seriesId
+				}
 			}
-			tvslst = self.getTvsLst(violinTw, null, plot, start, end)
 		} else {
-			tvslst = self.getTvsLst(t1, t2, plot, start, end)
+			tvslst = self.getTvsLst(vtw, null, plot, start, end)
 		}
-		const terms = [t1]
-		if (t2) terms.push(t2)
 		const arg = {
 			event,
 			self,
@@ -198,14 +191,13 @@ export function setInteractivity(self) {
 		]
 	}
 
-	self.getTvsLst = function (t1, t2, plot, rangeStart, rangeStop) {
+	self.getTvsLst = function (vtw, otw, plot, rangeStart, rangeStop) {
 		const tvslst = {
 			type: 'tvslst',
 			in: true,
 			join: 'and',
 			lst: []
 		}
-
 		if (t2) {
 			if (
 				t2.q?.mode === 'continuous' ||
@@ -222,7 +214,13 @@ export function setInteractivity(self) {
 	}
 }
 
-function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop, isBrush) {
+/* called in follow:
+- on clicking violin label, otw must be present as a violin label is a otw category; there won't be range start/stop
+  yields 1 tvs from otw category
+- on brushing, otw can be either present or missing; rangeStart and stop are from vtw numeric axis
+  yields a tvs from vtw, and optional 2nd tvs from otw
+*/
+function getAddFilterCallback(vtw, otw, self, plot, rangeStart, rangeStop) {
 	const tvslst = {
 		type: 'tvslst',
 		in: true,
@@ -230,6 +228,7 @@ function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop, isBrush
 		lst: []
 	}
 
+	/*
 	if (t2) {
 		if (t1.term.type === 'categorical' || t1.term.type === 'condition') {
 			createTvsLstValues(t1, plot, tvslst, 0)
@@ -266,6 +265,7 @@ function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop, isBrush
 			self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
 		}
 	}
+	*/
 
 	return () => {
 		const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
