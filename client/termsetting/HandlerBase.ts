@@ -11,7 +11,7 @@ export class HandlerBase implements Handler {
 		//this.tw = opts.termsetting.tw
 	}
 
-	showEditMenu() {
+	showEditMenu(_) {
 		//ignore
 	}
 
