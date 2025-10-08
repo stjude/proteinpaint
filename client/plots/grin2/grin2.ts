@@ -122,61 +122,190 @@ class GRIN2 extends PlotBase implements RxComponent {
 	}
 
 	// Add SNV/INDEL row
-	private addSnvindelRow = table => {
+	private addSnvindelRow = (table: any) => {
 		const row = table.append('tr')
-		const td = this.addTd(row)
+		const left = this.addTd(row)
+		const right = this.addOptsTd(row)
+
+		// ----- Right-side options table -----
+		const opts = table2col({ holder: right, tdcss: { border: 'none', padding: '4px 0' } })
+
+		// Top numeric options (hardcoded)
+		this.addOptionRowToTable(
+			opts,
+			'Min Total Depth',
+			'settings.snvindel.minTotalDepth',
+			10, // default
+			0, // min
+			1e6, // max
+			1 // step
+		)
+		this.addOptionRowToTable(opts, 'Min Alt Allele Count', 'settings.snvindel.minAltAlleleCount', 2, 0, 1e6, 1)
+		this.addOptionRowToTable(
+			opts,
+			'Hypermutator Threshold',
+			'settings.snvindel.hypermutatorThreshold',
+			1000,
+			0,
+			1e9,
+			10
+		)
+
+		// Consequences section header + checkbox grid
+		{
+			const [labelCell, containerCell] = opts.addRow()
+			labelCell
+				.text('Consequences')
+				.style('font-size', `${this.optionsTextFontSize}px`)
+				.style('font-weight', '600')
+				.style('padding-top', '8px')
+
+			// Build the consequence checkboxes in the right cell
+			this.createConsequenceCheckboxes(containerCell)
+		}
+
+		// ----- Left-side SNV/INDEL checkbox -----
+		const isChecked = this.dtUsage[dtsnvindel]?.checked ?? true
+		right.style('display', isChecked ? '' : 'none')
+
 		make_one_checkbox({
-			holder: td,
+			holder: left,
 			labeltext: 'SNV/INDEL (Mutation)',
-			checked: this.dtUsage[dtsnvindel]?.checked ?? false,
-			callback: checked => {
+			checked: isChecked,
+			divstyle: { margin: '6px 0' },
+			callback: (checked: boolean) => {
 				this.dtUsage[dtsnvindel].checked = checked
-				console.log('[dtUsage updated]', dtsnvindel, checked, this.dtUsage)
+				right.style('display', checked ? '' : 'none')
 				this.updateRunButtonState()
 			}
 		})
 	}
 
 	// Add CNV row
-	private addCnvRow = table => {
+	private addCnvRow = (table: any) => {
 		const row = table.append('tr')
-		const td = this.addTd(row)
+		const left = this.addTd(row)
+		const right = this.addOptsTd(row)
+
+		// ----- Right-side CNV options (hardcoded) -----
+		const opts = table2col({ holder: right, tdcss: { border: 'none', padding: '4px 0' } })
+
+		// Loss Threshold (allow negatives)
+		this.addOptionRowToTable(
+			opts,
+			'Loss Threshold',
+			'settings.cnv.lossThreshold',
+			-0.4, // default
+			-5, // min
+			0, // max
+			0.05 // step
+		)
+
+		// Gain Threshold (positive)
+		this.addOptionRowToTable(
+			opts,
+			'Gain Threshold',
+			'settings.cnv.gainThreshold',
+			0.3, // default
+			0, // min
+			5, // max
+			0.05 // step
+		)
+
+		// Max Segment Length (0 = unlimited; units as you expect)
+		this.addOptionRowToTable(
+			opts,
+			'Max Segment Length',
+			'settings.cnv.maxSegmentLength',
+			0, // default (no cap)
+			0, // min
+			1e9, // max
+			10 // step
+		)
+
+		// Hypermutator Threshold
+		this.addOptionRowToTable(
+			opts,
+			'Hypermutator Threshold',
+			'settings.cnv.hypermutatorThreshold',
+			500, // default
+			0, // min
+			1e9, // max
+			10 // step
+		)
+
+		// ----- Left-side CNV checkbox -----
+		const isChecked = this.dtUsage[dtcnv]?.checked ?? true
+		right.style('display', isChecked ? '' : 'none')
+
 		make_one_checkbox({
-			holder: td,
+			holder: left,
 			labeltext: 'CNV (Copy Number Variation)',
-			checked: this.dtUsage[dtcnv]?.checked ?? false,
-			callback: checked => {
+			checked: isChecked,
+			divstyle: { margin: '6px 0' },
+			callback: (checked: boolean) => {
 				this.dtUsage[dtcnv].checked = checked
-				console.log('[dtUsage updated]', dtcnv, checked, this.dtUsage)
+				right.style('display', checked ? '' : 'none')
+				this.updateRunButtonState()
 			}
 		})
 	}
 
 	// Add Fusion row
-	private addFusionRow = table => {
+	private addFusionRow = (table: any) => {
 		const row = table.append('tr')
-		const td = this.addTd(row)
+		const left = this.addTd(row)
+		const right = this.addOptsTd(row)
+
+		// ----- Right side -----
+		right
+			.append('div')
+			.style('padding', '6px 8px')
+			.style('font-size', `${this.optionsTextFontSize}px`)
+			.style('color', this.optionsTextColor)
+			.text('Coming soon!')
+
+		const isChecked = this.dtUsage[dtfusionrna]?.checked ?? false
+		right.style('display', isChecked ? '' : 'none')
+
 		make_one_checkbox({
-			holder: td,
+			holder: left,
 			labeltext: 'Fusion (RNA Fusion Events)',
-			callback: checked => {
+			checked: isChecked,
+			divstyle: { margin: '6px 0' },
+			callback: (checked: boolean) => {
 				this.dtUsage[dtfusionrna].checked = checked
-				console.log('[dtUsage updated]', dtfusionrna, checked, this.dtUsage)
+				right.style('display', checked ? '' : 'none')
 				this.updateRunButtonState()
 			}
 		})
 	}
 
 	// Add SV row
-	private addSvRow = table => {
+	private addSvRow = (table: any) => {
 		const row = table.append('tr')
-		const td = this.addTd(row)
+		const left = this.addTd(row)
+		const right = this.addOptsTd(row)
+
+		// ----- Right side -----
+		right
+			.append('div')
+			.style('padding', '6px 8px')
+			.style('font-size', `${this.optionsTextFontSize}px`)
+			.style('color', this.optionsTextColor)
+			.text('Coming soon!')
+
+		const isChecked = this.dtUsage[dtsv]?.checked ?? false
+		right.style('display', isChecked ? '' : 'none')
+
 		make_one_checkbox({
-			holder: td,
+			holder: left,
 			labeltext: 'SV (Structural Variants)',
-			callback: checked => {
+			checked: isChecked,
+			divstyle: { margin: '6px 0' },
+			callback: (checked: boolean) => {
 				this.dtUsage[dtsv].checked = checked
-				console.log('[dtUsage updated]', dtsv, checked, this.dtUsage)
+				right.style('display', checked ? '' : 'none')
 				this.updateRunButtonState()
 			}
 		})
@@ -324,16 +453,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 		if (queries.svfusion && this.hasSv()) {
 			this.addSvRow(table)
 		}
-
-		// General GRIN2 Section (placeholder)
-		const generalRow = table.append('tr')
-
-		const msg = this.addOptsTd(generalRow)
-		msg
-			.append('div')
-			.style('color', this.optionsTextColor)
-			.style('font-size', `${this.optionsTextFontSize}px`)
-			.text('Additional GRIN2 parameters to be configured later')
 
 		// Run Button
 		this.runButton = tableDiv
@@ -537,6 +656,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			// Get configuration and make request
 			const configValues = this.getConfigValues()
+			console.log('Running GRIN2 with config:', configValues)
 			const requestData = {
 				genome: this.app.vocabApi.vocab.genome,
 				dslabel: this.app.vocabApi.vocab.dslabel,
