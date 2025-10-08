@@ -328,7 +328,7 @@ function computeDescrStats(values, showOutlierRange = false) {
 		return {}
 	}
 
-	if (values.some(v => !Number.isFinite(v))) throw 'non-numeric values found [FrontendVocab.js computeDescrStats()]'
+	if (values.some(v => !Number.isFinite(v))) throw new Error('non-numeric values found')
 
 	//compute total
 	const sorted_arr = values.sort((a, b) => a - b)

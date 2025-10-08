@@ -84,7 +84,7 @@ export function getDescrStats(values, showOutlierRange = false) {
 		return {}
 	}
 
-	if (values.some(v => !Number.isFinite(v))) throw 'non-numeric values found [termdb.descrstats.ts getDescrStats()]'
+	if (values.some(v => !Number.isFinite(v))) throw new Error('non-numeric values found')
 
 	//compute total
 	const sorted_arr = values.sort((a, b) => a - b)
