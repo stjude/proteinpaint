@@ -88,7 +88,7 @@ export class TermSetting {
 		this.disable_terms = opts.disable_terms
 		this.usecase = opts.usecase
 		this.abbrCutoff = opts.abbrCutoff
-
+		// default handler
 		this.handler = new HandlerBase({ termsetting: this })
 		this.handlerByType.default = this.handler
 		//this.tw = opts.tw
@@ -219,8 +219,8 @@ export class TermSetting {
 					return
 				}
 				// TODO: should reinstate throw once all migrated tw's have strict handlers for each tw type
-				// default:
-				// 	throw `unsupported tw.type='${tw.type}'`
+				default:
+					throw `unsupported tw.type='${tw.type}'`
 			}
 			//return
 		}

@@ -168,12 +168,12 @@ export class TermSettingApi {
 						//tw.$id = await get$id(tw)
 						await self.vocabApi.setTermBins(tw as any) // TODO: fix type
 					}
-					self.handler!.showEditMenu(div)
+					self.handler.showEditMenu(div)
 				}
 			} as opt)
 		}
 
-		if (self.term.type == 'geneVariant' && (self.q as any).type == 'predefined-groupset') {
+		if (self.term.type == 'geneVariant' && 'type' in self.q && self.q.type == 'predefined-groupset') {
 			// display predefined groupsets of geneVariant term
 			// for quick access
 			const groupsets = self.term.groupsetting?.lst
