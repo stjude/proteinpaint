@@ -758,7 +758,7 @@ impl ConvertMessage for Message {
                                         images.push(data)
                                     }
                                     rig::message::UserContent::Document(rig::message::Document { data, .. }) => {
-                                        texts.push(data)
+                                        texts.push(data.to_string())
                                     }
                                     _ => {} // Audio not supported by Ollama
                                 }
