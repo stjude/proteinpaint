@@ -35,7 +35,9 @@ import { dtsnvindel, dtcnv, dtfusionrna, dtsv } from '#shared/common.js'
 
 // Constants & types
 const MAX_LESIONS_PER_TYPE = 50000 // Maximum number of lesions to process per type to avoid overwhelming the production server
-const BREAKPOINTWINDOW = 500 // Window size around breakpoints for fusion and SV events
+const FLANKING_SIZE = 500 // Flanking size for snvindel, cnv, fusion, and SV events. TODO: add 5' and 3' flanking sizes
+// const FIVE_PRIME_FLANKING_SIZE = 500 // Flanking size for snvindel, cnv, fusion, and SV events for 5' end. Not used yet.
+// const FIVE_PRIME_FLANKING_SIZE = 500 // Flanking size for snvindel, cnv, fusion, and SV events for 3' end. Not used yet.
 type TrackState = { count: number }
 type LesionTracker = Map<number, TrackState>
 
@@ -513,16 +515,16 @@ function filterAndConvertFusion(
 	}
 
 	// First breakpoint on chrA
-	const startA = Math.max(0, entry.posA - BREAKPOINTWINDOW)
-	const endA = entry.posA + BREAKPOINTWINDOW
+	const startA = Math.max(0, entry.posA - FLANKING_SIZE)
+	const endA = entry.posA + FLANKING_SIZE
 
 	const lesionA: string[] = [sampleName, entry.chrA, startA.toString(), endA.toString(), 'fusion']
 
 	// Check if there's a second breakpoint on chrB
 	if (entry.chrB && entry.posB !== undefined) {
 		// Inter-chromosomal fusion or same chromosome with two breakpoints
-		const startB = Math.max(0, entry.posB - BREAKPOINTWINDOW)
-		const endB = entry.posB + BREAKPOINTWINDOW
+		const startB = Math.max(0, entry.posB - FLANKING_SIZE)
+		const endB = entry.posB + FLANKING_SIZE
 
 		const lesionB: string[] = [sampleName, entry.chrB, startB.toString(), endB.toString(), 'fusion']
 
@@ -546,16 +548,16 @@ function filterAndConvertSV(
 	}
 
 	// First breakpoint on chrA
-	const startA = Math.max(0, entry.posA - BREAKPOINTWINDOW)
-	const endA = entry.posA + BREAKPOINTWINDOW
+	const startA = Math.max(0, entry.posA - FLANKING_SIZE)
+	const endA = entry.posA + FLANKING_SIZE
 
 	const lesionA: string[] = [sampleName, entry.chrA, startA.toString(), endA.toString(), 'sv']
 
 	// Check if there's a second breakpoint on chrB
 	if (entry.chrB && entry.posB !== undefined) {
 		// Inter-chromosomal SV or same chromosome with two breakpoints
-		const startB = Math.max(0, entry.posB - BREAKPOINTWINDOW)
-		const endB = entry.posB + BREAKPOINTWINDOW
+		const startB = Math.max(0, entry.posB - FLANKING_SIZE)
+		const endB = entry.posB + FLANKING_SIZE
 
 		const lesionB: string[] = [sampleName, entry.chrB, startB.toString(), endB.toString(), 'sv']
 
