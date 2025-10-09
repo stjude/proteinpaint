@@ -62,7 +62,8 @@ function init({ genomes }) {
 				status: 'ok',
 				wsiSessionId: session.imageSessionId,
 				overlays: session.overlays,
-				slide_dimensions: getWsiImageResponse.slide_dimensions
+				slide_dimensions: getWsiImageResponse.slide_dimensions,
+				mpp: getWsiImageResponse.mpp
 			}
 
 			res.status(200).json(payload)

@@ -54,13 +54,22 @@ export class MapRenderer {
 		// .style('display', 'none') // Initially hidden
 
 		const activeImage: TileLayer = this.wSImageLayers.wsimage
+
 		const extent = activeImage?.getSource()?.getTileGrid()?.getExtent()
 
-		// TODO Add metersPerUnit?
+		const mpp = this.wSImageLayers.mpp
+
+		// compute numeric microns-per-pixel (handle number or number[])
+		const mmpNumeric = Array.isArray(mpp) ? mpp[0] : mpp
+		// convert microns -> meters for metersPerUnit (fallback to 1 micron if missing)
+		const metersPerUnit = (mmpNumeric || 1) * 1e-6
+
+		// Add metersPerUnit so controls that rely on real-world units work correctly
 		const projection = new Projection({
 			code: 'ZoomifyProjection',
 			units: 'pixels',
 			extent: extent,
+			metersPerUnit: metersPerUnit,
 			getPointResolution: function (resolution) {
 				return resolution
 			}
@@ -108,8 +117,8 @@ export class MapRenderer {
 			}
 			const mousePositionControl = new MousePosition({
 				coordinateFormat: coordinateFormat,
-				// TODO Reuse projection from the map creation?
-				projection: undefined,
+				// Use the map view projection so coordinates are reported using the same metersPerUnit
+				projection: map.getView().getProjection(),
 				className: 'ol-mouse-position',
 				placeholder: '&nbsp;'
 			})

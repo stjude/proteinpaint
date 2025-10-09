@@ -98,6 +98,8 @@ export class ViewModelProvider {
 			const imgWidth = data.slide_dimensions[0]
 			const imgHeight = data.slide_dimensions[1]
 
+			const mpp = data.mpp // microns per pixel
+
 			let queryParams = `wsi_image=${wsimage}&dslabel=${dslabel}&genome=${genome}`
 			if (sampleId) {
 				queryParams += `&sample_id=${sampleId}`
@@ -124,7 +126,8 @@ export class ViewModelProvider {
 			const layer = new TileLayer(options)
 
 			const wsiImageLayers: WSImageLayers = {
-				wsimage: layer
+				wsimage: layer,
+				mpp: mpp
 			}
 
 			if (data.overlays) {
