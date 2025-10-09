@@ -180,7 +180,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// CNV options table
 		const opts = table2col({ holder: right, tdcss: { border: 'none', padding: '4px 0' } })
 
-		// Loss Threshold (allow negatives)
+		// Loss Threshold
 		this.addOptionRowToTable(
 			opts,
 			'Loss Threshold',
@@ -191,7 +191,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			0.05 // step
 		)
 
-		// Gain Threshold (positive)
+		// Gain Threshold
 		this.addOptionRowToTable(
 			opts,
 			'Gain Threshold',
@@ -210,7 +210,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			0, // default (no cap)
 			0, // min
 			1e9, // max
-			10 // step
+			1000 // step
 		)
 
 		// ----- Left-side CNV checkbox -----
@@ -300,23 +300,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	// Enable the Run button only if at least one data type is checked
 	private updateRunButtonState() {
-		let anyChecked = false
-
-		this.dom.controls.selectAll('input[type="checkbox"]').each(function (this: HTMLInputElement) {
-			const label = this.parentElement?.textContent?.trim()
-			// Only check data type checkboxes
-			if (
-				label &&
-				(label === 'SNV/INDEL (Mutation)' ||
-					label === 'CNV (Copy Number Variation)' ||
-					label === 'Fusion (RNA Fusion Events)' ||
-					label === 'SV (Structural Variants)')
-			) {
-				if (this.checked) {
-					anyChecked = true
-				}
-			}
-		})
+		const anyChecked = Object.values(this.dtUsage).some(info => info.checked)
 
 		if (anyChecked) {
 			this.runButton
