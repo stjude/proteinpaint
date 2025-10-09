@@ -26,6 +26,7 @@ read_json_time <- system.time({
   cases <- unlist(strsplit(input$case, ","))
   controls <- unlist(strsplit(input$control, ","))
   combined <- c("geneSymbol", cases, controls)
+  cpm_cutoff <- input$cpm_cutoff
 })
 #cat("Time to read JSON: ", as.difftime(read_json_time, units = "secs")[3], " seconds\n")
 
@@ -108,19 +109,28 @@ normalization_time <- system.time({
 #cat("Normalization time: ", as.difftime(normalization_time, units = "secs")[3], " seconds\n")
 
 # Cutoffs for cpm, will add them as UI options later
-if (length(samples_indices) > 100) {
-  gene_cpm_cutoff <- 15
-  sample_cpm_cutoff <- 30
-  count_cpm_cutoff <- 100000
-} else {
-  gene_cpm_cutoff <- 5
-  sample_cpm_cutoff <- 15
-  count_cpm_cutoff <- 100000
-}
+# Get the number of cases and controls
+n_cases <- length(cases)
+n_controls <- length(controls)
+# Choose the smaller group size
+sample_cpm_cutoff <- min(n_cases,n_controls)
 
-filter_using_cpm_time <- system.time({
-  y <- filter_using_cpm(y, gene_cpm_cutoff, sample_cpm_cutoff, count_cpm_cutoff) # Filtering counts matrix based on gene_cpm_cutoff, sample_cpm_cutoff and count_cpm_cutoff
-})
+keep_genes <- rowSums(cpm(y$counts)>cpm_cutoff)>=sample_cpm_cutoff
+y <- y[keep_genes,]
+
+#if (length(samples_indices) > 100) {
+#  gene_cpm_cutoff <- 15
+#  sample_cpm_cutoff <- 30
+#  count_cpm_cutoff <- 100000
+#} else {
+#  gene_cpm_cutoff <- 5
+#  sample_cpm_cutoff <- 15
+#  count_cpm_cutoff <- 100000
+#}
+
+#filter_using_cpm_time <- system.time({
+#  y <- filter_using_cpm(y, gene_cpm_cutoff, sample_cpm_cutoff, count_cpm_cutoff) # Filtering counts matrix based on gene_cpm_cutoff, sample_cpm_cutoff and count_cpm_cutoff
+#})
 #cat("Filter using cpm time: ", as.difftime(filter_using_cpm_time, units = "secs")[3], " seconds\n")
 
 if (dim(y)[1]==0) { # Its possible after filtering there might not be any genes left in the matrix, in such a case the R code must exit gracefully with an error.
