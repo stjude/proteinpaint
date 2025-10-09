@@ -10,6 +10,7 @@ Features:
 Fixes:
 - in gene search on hitting Enter and found a hit, cancel debouncer to prevent gene tip showing up
 - apply a user-assigned custom bin label if present
+- currentGeneNames[] from matrix query supports coord string so not to break getData
 
 
 ## 2.148.2
