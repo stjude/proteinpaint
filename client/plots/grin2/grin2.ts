@@ -127,7 +127,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const right = this.addOptsTd(row)
 
 		// Options table
-		const snvindelTableOpts = table2col({ holder: right, tdcss: { border: 'none', padding: '4px 0' } })
+		const snvindelTableOpts = table2col({ holder: right })
 
 		// Top numeric options
 		this.dom.snvindel_minTotalDepth = this.addOptionRowToTable(
@@ -168,7 +168,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 			holder: left,
 			labeltext: 'SNV/INDEL (Mutation)',
 			checked: isChecked,
-			divstyle: { margin: '6px 0' },
 			callback: (checked: boolean) => {
 				this.dtUsage[dtsnvindel].checked = checked
 				right.style('display', checked ? '' : 'none')
@@ -184,7 +183,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const right = this.addOptsTd(row)
 
 		// CNV options table
-		const cnvTableOpts = table2col({ holder: right, tdcss: { border: 'none', padding: '4px 0' } })
+		const cnvTableOpts = table2col({ holder: right })
 
 		// Loss Threshold
 		this.dom.cnv_lossThreshold = this.addOptionRowToTable(
@@ -224,7 +223,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 			holder: left,
 			labeltext: 'CNV (Copy Number Variation)',
 			checked: isChecked,
-			divstyle: { margin: '6px 0' },
 			callback: (checked: boolean) => {
 				this.dtUsage[dtcnv].checked = checked
 				right.style('display', checked ? '' : 'none')
@@ -254,7 +252,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 			holder: left,
 			labeltext: 'Fusion (RNA Fusion Events)',
 			checked: isChecked,
-			divstyle: { margin: '6px 0' },
 			callback: (checked: boolean) => {
 				this.dtUsage[dtfusionrna].checked = checked
 				right.style('display', checked ? '' : 'none')
@@ -284,7 +281,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 			holder: left,
 			labeltext: 'SV (Structural Variants)',
 			checked: isChecked,
-			divstyle: { margin: '6px 0' },
 			callback: (checked: boolean) => {
 				this.dtUsage[dtsv].checked = checked
 				right.style('display', checked ? '' : 'none')
@@ -311,14 +307,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.style('opacity', this.enabledOpacity)
 				.style('background', this.btnBackgroundColor)
 				.style('color', this.btnTextColor)
-				.style('cursor', 'pointer')
 		} else {
 			this.runButton
 				.property('disabled', true)
 				.style('opacity', this.disabledOpacity)
 				.style('background', this.btnDisabledBackgroundColor)
 				.style('color', this.btnDisabledTextColor)
-				.style('cursor', 'not-allowed')
 		}
 	}
 
