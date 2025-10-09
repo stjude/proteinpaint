@@ -140,3 +140,17 @@ export function getGenesetMutTw() {
 		q: { type: 'predefined-groupset' }
 	}
 }
+
+export function getGeneVariantTw(position = false) {
+	return {
+		term: {
+			genes: [
+				position
+					? { kind: 'coord', chr: 'chr14', start: 104769349, stop: 104795747, name: 'AKT1region', type: 'geneVariant' }
+					: { kind: 'gene', gene: 'TP53', type: 'geneVariant' }
+			],
+			type: 'geneVariant'
+		},
+		q: { type: 'predefined-groupset' }
+	}
+}
