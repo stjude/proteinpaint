@@ -629,9 +629,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 				genome: this.app.vocabApi.vocab.genome,
 				dslabel: this.app.vocabApi.vocab.dslabel,
 				filter: this.state.termfilter.filter,
-				width: this.state.config.settings.manhattan?.plotWidth,
-				height: this.state.config.settings.manhattan?.plotHeight,
-				pngDotRadius: this.state.config.settings.manhattan?.pngDotRadius,
+				width: this.state.config.settings.grin2.manhattan?.plotWidth,
+				height: this.state.config.settings.grin2.manhattan?.plotHeight,
+				pngDotRadius: this.state.config.settings.grin2.manhattan?.pngDotRadius,
 				devicePixelRatio: window.devicePixelRatio,
 				...configValues
 			}
@@ -642,7 +642,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 					minTotalDepth: configValues.settings.snvindel.minTotalDepth,
 					minAltAlleleCount: configValues.settings.snvindel.minAltAlleleCount,
 					hypermutatorThreshold: configValues.settings.snvindel.hypermutatorThreshold,
-					consequences: this.getSelectedConsequences() // You'll need to implement this
+					consequences: this.getSelectedConsequences()
 				}
 			}
 
