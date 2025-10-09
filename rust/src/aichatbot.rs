@@ -51,10 +51,12 @@ async fn main() -> Result<()> {
                     }
 
                     let genedb_json: &JsonValue = &json_string["genedb"];
-                    let mut genedb: Option<&str> = None;
+                    let genedb: &str;
                     match genedb_json.as_str() {
-                        Some(inp) => genedb = Some(inp),
-                        None => {}
+                        Some(inp) => genedb = inp,
+                        None => {
+                            panic!("Gene db not found")
+                        }
                     }
 
                     let dataset_db_json: &JsonValue = &json_string["dataset_db"];
@@ -178,7 +180,7 @@ pub async fn run_pipeline(
     max_new_tokens: usize,
     top_p: f32,
     dataset_db: &str,
-    genedb: Option<&str>,
+    genedb: &str,
     has_gene_expression: bool,
 ) -> Option<String> {
     let mut classification: String = classify_query_by_dataset_type(
@@ -741,7 +743,7 @@ async fn extract_summary_information(
     max_new_tokens: usize,
     top_p: f32,
     dataset_db: &str,
-    genedb: Option<&str>,
+    genedb: &str,
     has_gene_expression: bool,
 ) -> String {
     //println!("common_genes:{:?}", common_genes);
@@ -784,7 +786,7 @@ async fn extract_summary_information(
     let mut common_genes = Vec::<String>::new();
     match has_gene_expression {
         true => {
-            let gene_list: Vec<String> = parse_geneset_db(genedb.unwrap()).await;
+            let gene_list: Vec<String> = parse_geneset_db(genedb).await;
             let lowercase_user_input = user_input.to_lowercase();
             let user_words: Vec<&str> = lowercase_user_input.split_whitespace().collect();
             let user_words2: Vec<String> = user_words.into_iter().map(|s| s.to_string()).collect();
