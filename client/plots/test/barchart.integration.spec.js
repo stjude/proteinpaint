@@ -16,7 +16,7 @@ term1=categorical, term2=defaultbins
 term0=defaultbins, term1=categorical
 term1=geneVariant no group
 term1=geneVariant with groups
-term1=geneVariant using region but not gene
+term1=geneVariant, term2=geneVariant using region but not gene
 term1=geneVariant geneset with groups
 term1=categorical, term2=geneVariant
 term1=geneExp, term2=geneVariant SKIPPED
@@ -192,6 +192,7 @@ tape('term1=categorical, term2=defaultbins', function (test) {
 		await triggerUncomputableOverlay(barchart)
 		clickLegendToHideOverlay(barchart)
 		await testHiddenOverlayData(barchart)
+		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
 
@@ -348,14 +349,15 @@ tape('term1=geneVariant with groups', function (test) {
 		test.end()
 	}
 })
-tape.only('term1=geneVariant using region but not gene', function (test) {
+tape('term1=geneVariant, term2=geneVariant using region but not gene', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			plots: [
 				{
 					chartType: 'barchart',
-					term: getGeneVariantTw(true) // gives region but not gene
+					term: getGeneVariantTw(),
+					term2: getGeneVariantTw(true) // gives region but not gene
 				}
 			]
 		},
@@ -369,7 +371,7 @@ tape.only('term1=geneVariant using region but not gene', function (test) {
 		const barDiv = barchart.Inner.dom.barDiv
 		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
 		test.true(numCharts == 1, 'Should have 1 chart from gene variant term')
-		//if (test._ok) barchart.Inner.app.destroy()
+		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -1058,7 +1060,8 @@ tape('click non-group bar to add filter', function (test) {
 			matchAs: '>='
 		})
 		testTermValues(barchart)
-		//test.end()
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
 	}
 
 	let clickedData, currData

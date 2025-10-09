@@ -146,7 +146,7 @@ export function getGeneVariantTw(position = false) {
 		term: {
 			genes: [
 				position
-					? { kind: 'coord', chr: 'chr14', start: 104769349, stop: 104795747, name: 'AKT1region', type: 'geneVariant' }
+					? { kind: 'coord', chr: 'chr12', start: 25205246, stop: 25250936, name: 'KRASregion', type: 'geneVariant' }
 					: { kind: 'gene', gene: 'TP53', type: 'geneVariant' }
 			],
 			type: 'geneVariant'
