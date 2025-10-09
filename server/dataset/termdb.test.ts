@@ -313,7 +313,8 @@ export default function (): Mds3 {
 			svfusion: {
 				byrange: {
 					file: 'files/hg38/TermdbTest/TermdbTest_Fusion.gz'
-				}
+				},
+				dtLst: [2, 5]
 			},
 			cnv: {
 				file: 'files/hg38/TermdbTest/TermdbTest_CNV_gene.gz'
