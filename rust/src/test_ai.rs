@@ -14,7 +14,7 @@ mod tests {
         temperature: f64,
         max_new_tokens: usize,
         top_p: f32,
-        dataset_db: Option<&str>,
+        dataset_db: &str,
         genedb: Option<&str>,
         has_gene_expression: bool,
     ) -> Option<String> {
@@ -50,5 +50,7 @@ mod tests {
                 has_gene_expression: true,
             },
         ];
+        let termdbtestdb: &str = "../../server/test/tp/files/hg38/TermdbTest/db";
+        let genedb: Option<&str> = Some("../../server/test/tp/files/hg38/TermdbTest/db");
     }
 }
