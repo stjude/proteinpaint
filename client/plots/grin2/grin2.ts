@@ -359,6 +359,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		if (queries.cnv) {
 			this.dtUsage[dtcnv] = { checked: this.dtUsage[dtcnv]?.checked ?? true, label: 'CNV (Copy Number Variation)' }
 		}
+		// Additional check because svfusion query comes packaged with both fusion and sv. Use the dtLst to see which is actually present.
 		if (queries.svfusion?.dtLst) {
 			for (const dt of queries.svfusion.dtLst) {
 				if (dt === dtfusionrna) {
@@ -591,6 +592,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			requestConfig.cnvOptions = config.cnv
 		}
 
+		// We also allow {} for fusion and sv because we have no options yet. Just want to support the data type.
 		if (this.dtUsage[dtfusionrna]?.checked) {
 			requestConfig.fusionOptions = config.fusion || {}
 		}
