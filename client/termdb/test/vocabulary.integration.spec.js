@@ -727,7 +727,7 @@ tape('getTermInfo()', async test => {
 	test.ok(result.terminfo, `Should return a terminfo object`)
 
 	//Returns empty object for non-conditional term
-	testId = 'diaggrp'
+	testId = 'date'
 	result = await termdbVocabApi.getTermInfo(testId)
 	test.ok(!result.terminfo, `Should return an empty object`)
 

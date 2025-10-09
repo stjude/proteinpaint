@@ -1,1 +1,2 @@
-
+Fixes:
+- currentGeneNames[] from matrix query supports coord string so not to break getData

@@ -1,4 +1,5 @@
 import path from 'path'
+import { string2pos } from '#shared/common.js'
 import { get_samples, get_term_cte, interpolateSqlValues, get_active_groupset } from './termdb.sql'
 import { getFilterCTEs } from './termdb.filter'
 import serverconfig from './serverconfig'
@@ -557,30 +558,46 @@ export async function getSamples(q, rows) {
 	}
 }
 
+// FIXME change currentGeneNames[] into list of tw (but may increase request payload a lot esp for matrix with many genes)
 async function mayQueryMutatedSamples(q) {
 	if (!q.currentGeneNames) return // no genes, do not query mutated samples and do not limit
 	// has genes. query samples mutated on any of these genes, collect sample id into a set and return
 	const sampleSet = new Set()
 	for (const geneName of q.currentGeneNames) {
 		// TODO: use fillTW() here
-		const tw = {
-			term: {
-				name: geneName,
-				genes: [
-					{
-						kind: 'gene',
-						id: geneName,
-						gene: geneName,
-						name: geneName,
-						type: 'geneVariant'
-					}
-				],
+		// the string can be either gene name or "chr:start-stop"
+		let gene
+		const c = string2pos(geneName, q.ds.genomeObj, true)
+		if (c) {
+			gene = {
+				kind: 'coord',
 				type: 'geneVariant',
-				groupsetting: { disabled: false }
-			},
-			q: { type: 'values' }
+				id: geneName,
+				chr: c.chr,
+				start: c.start,
+				stop: c.stop
+			}
+		} else {
+			gene = {
+				kind: 'gene',
+				type: 'geneVariant',
+				id: geneName,
+				gene: geneName,
+				name: geneName
+			}
 		}
-		const data = await q.ds.mayGetGeneVariantData(tw, q)
+		const data = await q.ds.mayGetGeneVariantData(
+			{
+				term: {
+					name: geneName,
+					genes: [gene],
+					type: 'geneVariant',
+					groupsetting: { disabled: false }
+				},
+				q: { type: 'values' }
+			},
+			q
+		)
 		for (const sampleId of data.keys()) {
 			sampleSet.add(sampleId)
 		}
