@@ -5,53 +5,22 @@ fn main() {}
 
 #[cfg(test)]
 mod tests {
-    //use crate::sjprovider::CompletionModel;
-    //use crate::sjprovider::EmbeddingModel;
-    //use crate::sjprovider;
-
     use serde_json;
     use std::fs::{self};
     use std::path::Path; // Importing custom rig module for invoking SJ GPU server
 
     //#[tokio::test]
     #[ignore]
-    async fn run_pipeline(
-        user_input: &str,
-        comp_model: impl rig::completion::CompletionModel + 'static,
-        embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
-        llm_backend_type: super::super::llm_backend,
-        temperature: f64,
-        max_new_tokens: usize,
-        top_p: f32,
-        dataset_db: &str,
-        genedb: &str,
-        has_gene_expression: bool,
-    ) -> Option<String> {
-        let final_output = super::super::run_pipeline(
-            user_input,
-            comp_model,
-            embedding_model,
-            llm_backend_type,
-            temperature,
-            max_new_tokens,
-            top_p,
-            dataset_db,
-            genedb,
-            has_gene_expression,
-        )
-        .await;
-        final_output
-    }
-
     struct UserQuery {
         user_prompt: String,
         has_gene_expression: bool,
+        expected_json: String,
     }
 
-    fn user_prompts() {
+    async fn user_prompts() {
         let user_prompts = vec![
             UserQuery {
-                user_prompt: String::from("Show molecular subtypes for men reater than 60 yrs"),
+                user_prompt: String::from("Show molecular subtypes for men greater than 60 yrs"),
                 has_gene_expression: true,
             },
             UserQuery {
@@ -84,5 +53,22 @@ mod tests {
             .expect("SJ server not found");
         let embedding_model = sj_client.embedding_model(sjprovider_embedding_model);
         let comp_model = sj_client.completion_model(sjprovider_comp_model);
+        let llm_backend_type = super::super::llm_backend::Sj();
+
+        for user_input in user_prompts {
+            let final_output = super::super::run_pipeline(
+                &user_input.user_prompt,
+                comp_model.clone(),
+                embedding_model.clone(),
+                llm_backend_type.clone(),
+                temperature,
+                max_new_tokens,
+                top_p,
+                termdbtestdb,
+                genedb,
+                user_input.has_gene_expression,
+            )
+            .await;
+        }
     }
 }
