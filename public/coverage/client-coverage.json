@@ -3134,9 +3134,9 @@
   "termdb/vocabulary.js": {
     "lines": {
       "total": 66,
-      "covered": 14,
+      "covered": 19,
       "skipped": 0,
-      "pct": 21.21
+      "pct": 28.78
     },
     "functions": {
       "total": 3,
@@ -3146,25 +3146,25 @@
     },
     "statements": {
       "total": 73,
-      "covered": 14,
+      "covered": 20,
       "skipped": 0,
-      "pct": 19.17
+      "pct": 27.39
     },
     "branches": {
       "total": 70,
-      "covered": 10,
+      "covered": 15,
       "skipped": 0,
-      "pct": 14.28
+      "pct": 21.42
     },
     "lowestPct": {
-      "curr": 14.28,
+      "curr": 21.42,
       "prev": 14.28,
-      "diff": 0
+      "diff": 7.140000000000002
     },
     "averagePct": {
-      "curr": 21.997500000000002,
+      "curr": 27.73,
       "prev": 21.997500000000002,
-      "diff": 0
+      "diff": 5.732499999999998
     }
   },
   "filter/tvs.dtcnv.categorical.js": {
@@ -8133,6 +8133,42 @@
       "curr": 36.315,
       "prev": 0,
       "diff": 36.315
+    }
+  },
+  "termdb/test/vocabulary.integration.spec.js": {
+    "lines": {
+      "total": 485,
+      "covered": 365,
+      "skipped": 0,
+      "pct": 75.25
+    },
+    "functions": {
+      "total": 33,
+      "covered": 21,
+      "skipped": 0,
+      "pct": 63.63
+    },
+    "statements": {
+      "total": 489,
+      "covered": 365,
+      "skipped": 0,
+      "pct": 74.64
+    },
+    "branches": {
+      "total": 39,
+      "covered": 20,
+      "skipped": 0,
+      "pct": 51.28
+    },
+    "lowestPct": {
+      "curr": 51.28,
+      "prev": 0,
+      "diff": 51.28
+    },
+    "averagePct": {
+      "curr": 66.19999999999999,
+      "prev": 0,
+      "diff": 66.19999999999999
     }
   }
 }

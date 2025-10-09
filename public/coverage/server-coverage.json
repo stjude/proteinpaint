@@ -502,5 +502,41 @@
       "prev": 0,
       "diff": 100
     }
+  },
+  "src/termdb.matrix.js": {
+    "lines": {
+      "total": 473,
+      "covered": 37,
+      "skipped": 0,
+      "pct": 7.82
+    },
+    "functions": {
+      "total": 52,
+      "covered": 1,
+      "skipped": 0,
+      "pct": 1.92
+    },
+    "statements": {
+      "total": 540,
+      "covered": 39,
+      "skipped": 0,
+      "pct": 7.22
+    },
+    "branches": {
+      "total": 355,
+      "covered": 12,
+      "skipped": 0,
+      "pct": 3.38
+    },
+    "lowestPct": {
+      "curr": 1.92,
+      "prev": 0,
+      "diff": 1.92
+    },
+    "averagePct": {
+      "curr": 5.085,
+      "prev": 0,
+      "diff": 5.085
+    }
   }
 }
