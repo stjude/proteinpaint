@@ -127,23 +127,29 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const right = this.addOptsTd(row)
 
 		// Options table
-		const opts = table2col({ holder: right, tdcss: { border: 'none', padding: '4px 0' } })
+		const snvindelTableOpts = table2col({ holder: right, tdcss: { border: 'none', padding: '4px 0' } })
 
-		// Top numeric options (hardcoded)
-		this.addOptionRowToTable(
-			opts,
+		// Top numeric options
+		this.dom.snvindel_minTotalDepth = this.addOptionRowToTable(
+			snvindelTableOpts,
 			'Min Total Depth',
-			'settings.snvindel.minTotalDepth',
 			10, // default
 			0, // min
 			1e6, // max
 			1 // step
 		)
-		this.addOptionRowToTable(opts, 'Min Alt Allele Count', 'settings.snvindel.minAltAlleleCount', 2, 0, 1e6, 1)
+		this.dom.snvindel_minAltAlleleCount = this.addOptionRowToTable(
+			snvindelTableOpts,
+			'Min Alt Allele Count',
+			2,
+			0,
+			1e6,
+			1
+		)
 
 		// Consequences section header + checkbox grid
 		{
-			const [labelCell, containerCell] = opts.addRow()
+			const [labelCell, containerCell] = snvindelTableOpts.addRow()
 			labelCell
 				.text('Consequences')
 				.style('font-size', `${this.optionsTextFontSize}px`)
@@ -178,13 +184,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const right = this.addOptsTd(row)
 
 		// CNV options table
-		const opts = table2col({ holder: right, tdcss: { border: 'none', padding: '4px 0' } })
+		const cnvTableOpts = table2col({ holder: right, tdcss: { border: 'none', padding: '4px 0' } })
 
 		// Loss Threshold
-		this.addOptionRowToTable(
-			opts,
+		this.dom.cnv_lossThreshold = this.addOptionRowToTable(
+			cnvTableOpts,
 			'Loss Threshold',
-			'settings.cnv.lossThreshold',
 			-0.4, // default
 			-5, // min
 			0, // max
@@ -192,10 +197,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 		)
 
 		// Gain Threshold
-		this.addOptionRowToTable(
-			opts,
+		this.dom.cnv_gainThreshold = this.addOptionRowToTable(
+			cnvTableOpts,
 			'Gain Threshold',
-			'settings.cnv.gainThreshold',
 			0.3, // default
 			0, // min
 			5, // max
@@ -203,10 +207,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 		)
 
 		// Max Segment Length (0 = no cap)
-		this.addOptionRowToTable(
-			opts,
+		this.dom.cnv_maxSegLength = this.addOptionRowToTable(
+			cnvTableOpts,
 			'Max Segment Length',
-			'settings.cnv.maxSegLength',
 			0, // default (no cap)
 			0, // min
 			1e9, // max
@@ -424,7 +427,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 	private addOptionRowToTable(
 		table: any,
 		label: string,
-		configPath: string,
 		defaultValue: number,
 		min?: number,
 		max?: number,
@@ -447,9 +449,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		if (max !== null && max !== undefined) input.attr('max', max)
 		if (step !== null && step !== undefined) input.attr('step', step)
 
-		input.attr('data-settings-path', configPath)
-
-		return labelCell
+		return input
 	}
 
 	private createConsequenceCheckboxes(container: any) {
@@ -559,46 +559,31 @@ class GRIN2 extends PlotBase implements RxComponent {
 	}
 
 	private getConfigValues(): any {
-		const config: any = {}
-
-		// Collect all numeric inputs
-		this.dom.controls.selectAll('input[data-settings-path]').each(function (this: HTMLInputElement) {
-			const path = this.getAttribute('data-settings-path')! // e.g., "settings.snvindel.minTotalDepth"
-			const value = parseFloat(this.value)
-			const parts = path.split('.')
-
-			// Skip 'settings' prefix and build directly as XOptions
-			let current = config
-			for (let i = 1; i < parts.length - 1; i++) {
-				// Start at 1 to skip 'settings'
-				const part = parts[i]
-				if (!current[part]) current[part] = {}
-				current = current[part]
-			}
-			current[parts[parts.length - 1]] = value
-		})
-
-		// Now transform to XOptions format
 		const requestConfig: any = {}
 
-		if (this.dtUsage[dtsnvindel]?.checked && config.snvindel) {
+		if (this.dtUsage[dtsnvindel]?.checked) {
 			requestConfig.snvindelOptions = {
-				...config.snvindel,
+				minTotalDepth: parseFloat(this.dom.snvindel_minTotalDepth.property('value')),
+				minAltAlleleCount: parseFloat(this.dom.snvindel_minAltAlleleCount.property('value')),
 				consequences: this.getSelectedConsequences()
 			}
 		}
 
-		if (this.dtUsage[dtcnv]?.checked && config.cnv) {
-			requestConfig.cnvOptions = config.cnv
+		if (this.dtUsage[dtcnv]?.checked) {
+			requestConfig.cnvOptions = {
+				lossThreshold: parseFloat(this.dom.cnv_lossThreshold.property('value')),
+				gainThreshold: parseFloat(this.dom.cnv_gainThreshold.property('value')),
+				maxSegLength: parseFloat(this.dom.cnv_maxSegLength.property('value'))
+			}
 		}
 
-		// We also allow {} for fusion and sv because we have no options yet. Just want to support the data type.
+		// We allow {} for fusion and sv because we have no options yet. Just want to support the data type.
 		if (this.dtUsage[dtfusionrna]?.checked) {
-			requestConfig.fusionOptions = config.fusion || {}
+			requestConfig.fusionOptions = {}
 		}
 
 		if (this.dtUsage[dtsv]?.checked) {
-			requestConfig.svOptions = config.sv || {}
+			requestConfig.svOptions = {}
 		}
 
 		return requestConfig

@@ -6,6 +6,12 @@ export interface GRIN2Dom {
 	tip: Menu
 	geneTip: Menu
 	header?: any
+	snvindel_minTotalDepth?: any
+	snvindel_minAltAlleleCount?: any
+	snvindel_consequences?: any
+	cnv_lossThreshold?: any
+	cnv_gainThreshold?: any
+	cnv_maxSegLength?: any
 }
 
 export interface GRIN2Opts {
