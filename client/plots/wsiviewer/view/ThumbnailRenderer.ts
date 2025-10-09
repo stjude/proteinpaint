@@ -2,6 +2,7 @@ import type TileLayer from 'ol/layer/Tile'
 import type Zoomify from 'ol/source/Zoomify'
 import type Settings from '#plots/wsiviewer/Settings.ts'
 import type { WSIViewerInteractions } from '#plots/wsiviewer/interactions/WSIViewerInteractions.ts'
+import { icons } from '#dom'
 
 export class ThumbnailRenderer {
 	constructor() {}
@@ -26,13 +27,23 @@ export class ThumbnailRenderer {
 				.style('margin-left', '20px')
 				.style('margin-bottom', '20px')
 
-			for (let i = 0; i < layers.length; i++) {
+			const leftIconHolder = thumbnailsContainer.append('div').style('display', 'flex').style('align-items', 'center')
+			icons['left'](leftIconHolder, {
+				width: setting.iconDimensions,
+				height: setting.iconDimensions,
+				handler: () => {
+					console.log('TODO')
+				}
+			})
+
+			for (let i = 0; i < setting.numDisplayedThumbnails; i++) {
 				const isActive = i === setting.displayedImageIndex
 				const thumbnail = thumbnailsContainer
 					.append('div')
 					.attr('id', `thumbnail${i}`)
 					.style('width', setting.thumbnailWidth)
 					.style('height', setting.thumbnailHeight)
+					.style('margin-left', i == 0 ? '10px' : '0px')
 					.style('margin-right', '10px')
 					.style('display', 'flex')
 					.style('height', 'auto')
@@ -52,6 +63,15 @@ export class ThumbnailRenderer {
 					.style('height', '60px')
 					.style('object-fit', 'cover')
 			}
+
+			const rightIconHolder = thumbnailsContainer.append('div').style('display', 'flex').style('align-items', 'center')
+			icons['right'](rightIconHolder, {
+				width: setting.iconDimensions,
+				height: setting.iconDimensions,
+				handler: () => {
+					console.log('TODO')
+				}
+			})
 		} else {
 			// Update borders only
 			for (let i = 0; i < layers.length; i++) {
@@ -61,7 +81,6 @@ export class ThumbnailRenderer {
 					.style('border', isActive ? setting.activeThumbnailBorderStyle : setting.nonActiveThumbnailBorderStyle)
 			}
 		}
-
 		return thumbnailsContainer
 	}
 }
