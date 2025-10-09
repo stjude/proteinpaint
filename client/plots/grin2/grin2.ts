@@ -621,12 +621,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 			requestConfig.cnvOptions = config.cnv
 		}
 
-		if (this.dtUsage[dtfusionrna]?.checked && config.fusion) {
-			requestConfig.fusionOptions = config.fusion
+		if (this.dtUsage[dtfusionrna]?.checked) {
+			requestConfig.fusionOptions = config.fusion || {}
 		}
 
-		if (this.dtUsage[dtsv]?.checked && config.sv) {
-			requestConfig.svOptions = config.sv
+		if (this.dtUsage[dtsv]?.checked) {
+			requestConfig.svOptions = config.sv || {}
 		}
 
 		return requestConfig

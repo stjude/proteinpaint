@@ -359,18 +359,25 @@ async function processSampleMlst(
 
 				const les = filterAndConvertFusion(sampleName, m, request.fusionOptions)
 				if (les && fusion) {
-					// Count this as ONE fusion event, even if it creates two lesions
-					fusion.count++
+					// Check if adding these lesions would exceed the cap
+					const lesionsToAdd = Array.isArray(les[0]) ? (les as string[][]).length : 1
 
-					// But add all lesions (breakpoints) to the list
+					if (fusion.count + lesionsToAdd > MAX_LESIONS_PER_TYPE) {
+						// Would exceed cap, skip this fusion
+						break
+					}
+
+					// Add all lesions (breakpoints) to the list
 					if (Array.isArray(les[0])) {
 						// Multiple lesions (two breakpoints)
 						for (const lesion of les as string[][]) {
 							sampleLesions.push(lesion)
+							fusion.count++ // ← Increment for each lesion added
 						}
 					} else {
 						// Single lesion
 						sampleLesions.push(les)
+						fusion.count++
 					}
 				}
 				break
@@ -386,8 +393,26 @@ async function processSampleMlst(
 
 				const les = filterAndConvertSV(sampleName, m, request.svOptions)
 				if (les && sv) {
-					sv.count++
-					sampleLesions.push(les)
+					// Check if adding these lesions would exceed the cap
+					const lesionsToAdd = Array.isArray(les[0]) ? (les as string[][]).length : 1
+
+					if (sv.count + lesionsToAdd > MAX_LESIONS_PER_TYPE) {
+						// Would exceed cap, skip this SV
+						break
+					}
+
+					// Add all lesions (breakpoints) to the list
+					if (Array.isArray(les[0])) {
+						// Multiple lesions (two breakpoints)
+						for (const lesion of les as string[][]) {
+							sampleLesions.push(lesion)
+							sv.count++ // ← Increment for each lesion added
+						}
+					} else {
+						// Single lesion
+						sampleLesions.push(les)
+						sv.count++
+					}
 				}
 				break
 			}
@@ -497,7 +522,38 @@ function filterAndConvertFusion(
 	return lesionA
 }
 
-function filterAndConvertSV(sampleName: string, entry: any, _options: GRIN2Request['svOptions']): string[] | null {
-	// Convert to lesion format: [ID, chrom, loc.start, loc.end, lsn.type]
-	return [sampleName, entry.chr, entry.start, entry.stop, 'sv']
+function filterAndConvertSV(
+	sampleName: string,
+	entry: any,
+	_options: GRIN2Request['svOptions']
+): string[] | string[][] | null {
+	// SV events are breakpoint events similar to fusions
+	// Represent as small windows around each breakpoint (±500bp)
+	const breakpointWindow = 500
+
+	// Validate required fields for first breakpoint
+	if (!entry.chrA || entry.posA === undefined) {
+		return null
+	}
+
+	// First breakpoint on chrA
+	const startA = Math.max(0, entry.posA - breakpointWindow)
+	const endA = entry.posA + breakpointWindow
+
+	const lesionA: string[] = [sampleName, entry.chrA, startA.toString(), endA.toString(), 'sv']
+
+	// Check if there's a second breakpoint on chrB
+	if (entry.chrB && entry.posB !== undefined) {
+		// Inter-chromosomal SV or same chromosome with two breakpoints
+		const startB = Math.max(0, entry.posB - breakpointWindow)
+		const endB = entry.posB + breakpointWindow
+
+		const lesionB: string[] = [sampleName, entry.chrB, startB.toString(), endB.toString(), 'sv']
+
+		// Return both breakpoints as separate lesions
+		return [lesionA, lesionB]
+	}
+
+	// Only chrA breakpoint available
+	return lesionA
 }
