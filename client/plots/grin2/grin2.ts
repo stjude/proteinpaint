@@ -359,14 +359,20 @@ class GRIN2 extends PlotBase implements RxComponent {
 		if (queries.cnv) {
 			this.dtUsage[dtcnv] = { checked: this.dtUsage[dtcnv]?.checked ?? true, label: 'CNV (Copy Number Variation)' }
 		}
-		if (queries.svfusion) {
-			if (this.hasFusion())
-				this.dtUsage[dtfusionrna] = {
-					checked: this.dtUsage[dtfusionrna]?.checked ?? false,
-					label: 'Fusion (RNA Fusion Events)'
+		if (queries.svfusion?.dtLst) {
+			for (const dt of queries.svfusion.dtLst) {
+				if (dt === dtfusionrna) {
+					this.dtUsage[dt] = {
+						checked: this.dtUsage[dt]?.checked ?? false,
+						label: 'Fusion (RNA Fusion Events)'
+					}
+				} else if (dt === dtsv) {
+					this.dtUsage[dt] = {
+						checked: this.dtUsage[dt]?.checked ?? false,
+						label: 'SV (Structural Variants)'
+					}
 				}
-			if (this.hasSv())
-				this.dtUsage[dtsv] = { checked: this.dtUsage[dtsv]?.checked ?? false, label: 'SV (Structural Variants)' }
+			}
 		}
 
 		// SNV/INDEL Section
@@ -380,12 +386,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 
 		// Fusion Section
-		if (queries.svfusion && this.hasFusion()) {
+		if (this.dtUsage[dtfusionrna]) {
 			this.addFusionRow(table)
 		}
 
 		// SV Section
-		if (queries.svfusion && this.hasSv()) {
+		if (this.dtUsage[dtsv]) {
 			this.addSvRow(table)
 		}
 
