@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { termjson } from '../../test/testdata/termjson'
-import { getSamplelstTw, getCategoryGroupsetting, getGenesetMutTw } from '../../test/testdata/data.ts'
+import { getSamplelstTw, getCategoryGroupsetting, getGeneVariantTw, getGenesetMutTw } from '../../test/testdata/data.ts'
 import * as helpers from '../../test/front.helpers.js'
 import { sleep, detectLst, detectGte, detectOne } from '../../test/test.helpers.js'
 import { getFilterItemByTag } from '../../filter/filter'
@@ -16,6 +16,7 @@ term1=categorical, term2=defaultbins
 term0=defaultbins, term1=categorical
 term1=geneVariant no group
 term1=geneVariant with groups
+term1=geneVariant using region but not gene
 term1=geneVariant geneset with groups
 term1=categorical, term2=geneVariant
 term1=geneExp, term2=geneVariant SKIPPED
@@ -330,12 +331,7 @@ tape('term1=geneVariant with groups', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
-			plots: [
-				{
-					chartType: 'barchart',
-					term: { term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'predefined-groupset' } }
-				}
-			]
+			plots: [{ chartType: 'barchart', term: getGeneVariantTw() }]
 		},
 		barchart: {
 			callbacks: {
@@ -349,6 +345,31 @@ tape('term1=geneVariant with groups', function (test) {
 		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
 		test.true(numCharts == 1, 'Should have 1 chart from gene variant term')
 		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape.only('term1=geneVariant using region but not gene', function (test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'barchart',
+					term: getGeneVariantTw(true) // gives region but not gene
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': testNumCharts
+			}
+		}
+	})
+	function testNumCharts(barchart) {
+		const barDiv = barchart.Inner.dom.barDiv
+		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
+		test.true(numCharts == 1, 'Should have 1 chart from gene variant term')
+		//if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
