@@ -9,9 +9,17 @@ export interface GRIN2Dom {
 	snvindel_minTotalDepth?: any
 	snvindel_minAltAlleleCount?: any
 	snvindel_consequences?: any
+	snvindel_five_prime_flank_size?: any
+	snvindel_three_prime_flank_size?: any
 	cnv_lossThreshold?: any
 	cnv_gainThreshold?: any
 	cnv_maxSegLength?: any
+	cnv_five_prime_flank_size?: any
+	cnv_three_prime_flank_size?: any
+	fusion_five_prime_flank_size?: any
+	fusion_three_prime_flank_size?: any
+	sv_five_prime_flank_size?: any
+	sv_three_prime_flank_size?: any
 }
 
 export interface GRIN2Opts {

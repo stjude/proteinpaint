@@ -29,6 +29,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 	readonly optionsTextFontSize: number = 12
 	readonly btnFontSize: number = 12
 	readonly headerFontSize: number = 14
+	readonly headerFontWeight: number = 600
 	readonly tableFontSize: number = 11
 
 	// Spacing & Layout
@@ -122,9 +123,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	// Add SNV/INDEL row
 	private addSnvindelRow = (table: any) => {
-		const row = table.append('tr')
-		const left = this.addTd(row)
-		const right = this.addOptsTd(row)
+		const [left, right] = table.addRow()
 
 		// Options table
 		const snvindelTableOpts = table2col({ holder: right })
@@ -145,6 +144,24 @@ class GRIN2 extends PlotBase implements RxComponent {
 			0,
 			1e6,
 			1
+		)
+		// 5' flanking size
+		this.dom.snvindel_five_prime_flank_size = this.addOptionRowToTable(
+			snvindelTableOpts,
+			"5' Flanking Size",
+			500, // default
+			0, // min
+			1e9, // max
+			500 // step
+		)
+		// 3' flanking size
+		this.dom.snvindel_three_prime_flank_size = this.addOptionRowToTable(
+			snvindelTableOpts,
+			"3' Flanking Size",
+			500, // default
+			0, // min
+			1e9, // max
+			500 // step
 		)
 
 		// Consequences section header + checkbox grid
@@ -178,9 +195,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	// Add CNV row
 	private addCnvRow = (table: any) => {
-		const row = table.append('tr')
-		const left = this.addTd(row)
-		const right = this.addOptsTd(row)
+		const [left, right] = table.addRow()
 
 		// CNV options table
 		const cnvTableOpts = table2col({ holder: right })
@@ -215,6 +230,26 @@ class GRIN2 extends PlotBase implements RxComponent {
 			1000 // step
 		)
 
+		// 5' flanking size
+		this.dom.cnv_five_prime_flank_size = this.addOptionRowToTable(
+			cnvTableOpts,
+			"5' Flanking Size",
+			500, // default
+			0, // min
+			1e9, // max
+			500 // step
+		)
+
+		// 3' flanking size
+		this.dom.cnv_three_prime_flank_size = this.addOptionRowToTable(
+			cnvTableOpts,
+			"3' Flanking Size",
+			500, // default
+			0, // min
+			1e9, // max
+			500 // step
+		)
+
 		// ----- Left-side CNV checkbox -----
 		const isChecked = this.dtUsage[dtcnv]?.checked ?? true
 		right.style('display', isChecked ? '' : 'none')
@@ -233,17 +268,30 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	// Add Fusion row
 	private addFusionRow = (table: any) => {
-		const row = table.append('tr')
-		const left = this.addTd(row)
-		const right = this.addOptsTd(row)
+		const [left, right] = table.addRow()
 
-		// ----- Right side -----
-		right
-			.append('div')
-			.style('padding', '6px 8px')
-			.style('font-size', `${this.optionsTextFontSize}px`)
-			.style('color', this.optionsTextColor)
-			.text('Coming soon!')
+		// Fusion options table
+		const fusionTableOpts = table2col({ holder: right })
+
+		// 5' flanking size
+		this.dom.fusion_five_prime_flank_size = this.addOptionRowToTable(
+			fusionTableOpts,
+			"5' Flanking Size",
+			500, // default
+			0, // min
+			1e9, // max
+			500 // step
+		)
+
+		// 3' flanking size
+		this.dom.fusion_three_prime_flank_size = this.addOptionRowToTable(
+			fusionTableOpts,
+			"3' Flanking Size",
+			500, // default
+			0, // min
+			1e9, // max
+			500 // step
+		)
 
 		const isChecked = this.dtUsage[dtfusionrna]?.checked ?? false
 		right.style('display', isChecked ? '' : 'none')
@@ -262,17 +310,30 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	// Add SV row
 	private addSvRow = (table: any) => {
-		const row = table.append('tr')
-		const left = this.addTd(row)
-		const right = this.addOptsTd(row)
+		const [left, right] = table.addRow()
 
-		// ----- Right side -----
-		right
-			.append('div')
-			.style('padding', '6px 8px')
-			.style('font-size', `${this.optionsTextFontSize}px`)
-			.style('color', this.optionsTextColor)
-			.text('Coming soon!')
+		// SV options table
+		const svTableOpts = table2col({ holder: right })
+
+		// 5' flanking size
+		this.dom.sv_five_prime_flank_size = this.addOptionRowToTable(
+			svTableOpts,
+			"5' Flanking Size",
+			500, // default
+			0, // min
+			1e9, // max
+			500 // step
+		)
+
+		// 3' flanking size
+		this.dom.sv_three_prime_flank_size = this.addOptionRowToTable(
+			svTableOpts,
+			"3' Flanking Size",
+			500, // default
+			0, // min
+			1e9, // max
+			500 // step
+		)
 
 		const isChecked = this.dtUsage[dtsv]?.checked ?? false
 		right.style('display', isChecked ? '' : 'none')
@@ -302,95 +363,61 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const anyChecked = Object.values(this.dtUsage).some(info => info.checked)
 
 		if (anyChecked) {
-			this.runButton
-				.property('disabled', false)
-				.style('opacity', this.enabledOpacity)
-				.style('background', this.btnBackgroundColor)
-				.style('color', this.btnTextColor)
+			this.runButton.property('disabled', false)
 		} else {
-			this.runButton
-				.property('disabled', true)
-				.style('opacity', this.disabledOpacity)
-				.style('background', this.btnDisabledBackgroundColor)
-				.style('color', this.btnDisabledTextColor)
+			this.runButton.property('disabled', true)
 		}
 	}
 
 	private createConfigTable() {
-		const tableDiv = this.dom.controls
-			.append('div')
-			.style('display', 'inline-block')
-			.style('padding', this.controlsPadding)
-			.style('margin', this.controlsMargin)
+		const tableDiv = this.dom.controls.append('div').style('display', 'inline-block')
 
-		const table = tableDiv.append('table').style('border-collapse', 'collapse').style('width', '100%')
-
-		// Add table headers
-		const headerRow = table.append('tr')
-		headerRow
-			.append('th')
-			.style('background', this.backgroundColor)
-			.style('padding', this.tableCellPadding)
-			.style('font-weight', 'bold')
+		tableDiv
+			.append('p')
 			.style('font-size', `${this.headerFontSize}px`)
-			.style('border-right', `1px solid ${this.borderColor}`)
-			.style('border-bottom', `1px solid ${this.borderColor}`)
-			.style('width', '30%')
-			.text('Data Type')
+			.style('font-weight', `${this.headerFontWeight}`)
+			.style('margin', `${this.headerMargin}px`)
+			.style('text-align', 'center')
+			.text('Set up analysis')
 
-		headerRow
-			.append('th')
-			.style('background', this.backgroundColor)
-			.style('padding', this.tableCellPadding)
-			.style('font-weight', 'bold')
-			.style('font-size', `${this.headerFontSize}px`)
-			.style('border-bottom', `1px solid ${this.borderColor}`)
-			.style('width', '70%')
-			.text('Options')
-
+		const table = table2col({
+			holder: tableDiv
+		})
 		const queries = this.app.vocabApi.termdbConfig.queries
 		this.dtUsage = {}
 		if (queries.snvindel) {
-			this.dtUsage[dtsnvindel] = { checked: this.dtUsage[dtsnvindel]?.checked ?? true, label: 'SNV/INDEL (Mutation)' }
+			this.dtUsage[dtsnvindel] = {
+				checked: true,
+				label: 'SNV/INDEL (Mutation)'
+			}
+			this.addSnvindelRow(table)
 		}
+
 		if (queries.cnv) {
-			this.dtUsage[dtcnv] = { checked: this.dtUsage[dtcnv]?.checked ?? true, label: 'CNV (Copy Number Variation)' }
+			this.dtUsage[dtcnv] = {
+				checked: true,
+				label: 'CNV (Copy Number Vation)'
+			}
+			this.addCnvRow(table)
 		}
-		// Additional check because svfusion query comes packaged with both fusion and sv. Use the dtLst to see which is actually present.
+		// Additional check because svfusion query comes packaged with both fusion and sv.
+		// Use the dtLst to see which is actually present.
 		if (queries.svfusion?.dtLst) {
 			for (const dt of queries.svfusion.dtLst) {
 				if (dt === dtfusionrna) {
 					this.dtUsage[dt] = {
-						checked: this.dtUsage[dt]?.checked ?? false,
+						checked: false,
 						label: 'Fusion (RNA Fusion Events)'
 					}
+					this.addFusionRow(table)
 				} else if (dt === dtsv) {
 					this.dtUsage[dt] = {
-						checked: this.dtUsage[dt]?.checked ?? false,
+						checked: false,
 						label: 'SV (Structural Variants)'
 					}
+					this.addSvRow(table)
 				}
 			}
-		}
-
-		// SNV/INDEL Section
-		if (queries.snvindel) {
-			this.addSnvindelRow(table)
-		}
-
-		// CNV Section
-		if (queries.cnv) {
-			this.addCnvRow(table)
-		}
-
-		// Fusion Section
-		if (this.dtUsage[dtfusionrna]) {
-			this.addFusionRow(table)
-		}
-
-		// SV Section
-		if (this.dtUsage[dtsv]) {
-			this.addSvRow(table)
 		}
 
 		// Run Button
@@ -559,7 +586,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 			requestConfig.snvindelOptions = {
 				minTotalDepth: parseFloat(this.dom.snvindel_minTotalDepth.property('value')),
 				minAltAlleleCount: parseFloat(this.dom.snvindel_minAltAlleleCount.property('value')),
-				consequences: this.getSelectedConsequences()
+				consequences: this.getSelectedConsequences(),
+				fivePrimeFlankSize: parseFloat(this.dom.snvindel_five_prime_flank_size.property('value')),
+				threePrimeFlankSize: parseFloat(this.dom.snvindel_three_prime_flank_size.property('value'))
 			}
 		}
 
@@ -567,17 +596,24 @@ class GRIN2 extends PlotBase implements RxComponent {
 			requestConfig.cnvOptions = {
 				lossThreshold: parseFloat(this.dom.cnv_lossThreshold.property('value')),
 				gainThreshold: parseFloat(this.dom.cnv_gainThreshold.property('value')),
-				maxSegLength: parseFloat(this.dom.cnv_maxSegLength.property('value'))
+				maxSegLength: parseFloat(this.dom.cnv_maxSegLength.property('value')),
+				fivePrimeFlankSize: parseFloat(this.dom.cnv_five_prime_flank_size.property('value')),
+				threePrimeFlankSize: parseFloat(this.dom.cnv_three_prime_flank_size.property('value'))
 			}
 		}
 
-		// We allow {} for fusion and sv because we have no options yet. Just want to support the data type.
 		if (this.dtUsage[dtfusionrna]?.checked) {
-			requestConfig.fusionOptions = {}
+			requestConfig.fusionOptions = {
+				fivePrimeFlankSize: parseFloat(this.dom.fusion_five_prime_flank_size.property('value')),
+				threePrimeFlankSize: parseFloat(this.dom.fusion_three_prime_flank_size.property('value'))
+			}
 		}
 
 		if (this.dtUsage[dtsv]?.checked) {
-			requestConfig.svOptions = {}
+			requestConfig.svOptions = {
+				fivePrimeFlankSize: parseFloat(this.dom.sv_five_prime_flank_size.property('value')),
+				threePrimeFlankSize: parseFloat(this.dom.sv_three_prime_flank_size.property('value'))
+			}
 		}
 
 		return requestConfig
@@ -622,6 +658,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 				devicePixelRatio: window.devicePixelRatio,
 				...configValues
 			}
+
+			console.log('GRIN2 Request', requestData)
 
 			const response = await dofetch3('/grin2', {
 				body: requestData
