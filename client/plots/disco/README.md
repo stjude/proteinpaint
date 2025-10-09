@@ -62,5 +62,3 @@ records are parsed by `DataMapper` and collected in a `DataHolder`.  A
 
 This flow keeps the visualization reactive: the store is the single source of
 truth and every component re-renders whenever its slice of the state changes.
-
-//Test push

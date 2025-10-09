@@ -20,7 +20,6 @@ import { CnvHeatmapRenderer } from '#plots/disco/cnv/CnvHeatmapRenderer.ts'
 import type ViewModel from '#plots/disco/viewmodel/ViewModel.ts'
 import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
 import { InvalidDataUI } from '#dom'
-import { renderCnvSourceLegend } from './cnv/CnvSourceSelector.ts'
 import { dtcnv, dtloh } from '#shared/common.js'
 
 export default class Disco {
@@ -197,6 +196,8 @@ export default class Disco {
 
 			// TODO calculate viewModel.filteredSnvDataLength always
 			const appState = this.app.getState()
+			this.viewModel.svgDiv = svgDiv
+			this.viewModel.appState = appState
 
 			for (const name in this.features) {
 				this.features[name].update({ state: this.state, appState })
@@ -210,13 +211,7 @@ export default class Disco {
 				this.app.opts.state.args.genome
 			)
 
-			discoRenderer.render(svgDiv, this.viewModel)
-
-			const altCnv = this.app.getState().args.alternativeDataByDt?.[dtcnv]
-			if (altCnv && altCnv.length > 0) {
-				const legendG = svgDiv.select('g[data-testid="sjpp_disco_plot_legend"]')
-				renderCnvSourceLegend(svgDiv, legendG, altCnv, settings.label.fontSize, i => this.onCnvSourceSelect(i))
-			}
+			discoRenderer.render(svgDiv, this.viewModel, this.onCnvSourceSelect)
 
 			if (this.viewModel.invalidDataInfo?.entries?.length) {
 				InvalidDataUI.render(this.errorDiv, this.viewModel.invalidDataInfo)
