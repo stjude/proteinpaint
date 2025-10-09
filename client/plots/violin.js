@@ -1,7 +1,6 @@
 import { getCompInit, copyMerge } from '../rx'
 import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from './controls'
 import setViolinRenderer from './violin.renderer'
-//import htmlLegend from '../dom/html.legend'
 import { htmlLegend, Menu } from '#dom'
 import { fillTermWrapper } from '#termsetting'
 import { setInteractivity } from './violin.interactivity'
@@ -53,11 +52,8 @@ class ViolinPlot extends PlotBase {
 				.style('flex-direction', 'row')
 				.style('flex-wrap', 'wrap')
 				.style('max-width', '100vw'),
-			legendDiv: holder
-				.append('div')
-				.classed('sjpp-vp-legend', true)
-				.style('margin-left', '-15px')
-				.style('padding-top', '20px')
+			legendDiv: holder.append('div').style('margin-left', '-15px').style('padding-top', '20px'),
+			hiddenDiv: holder.append('div').style('margin-left', '-15px').style('padding-top', '20px')
 		}
 
 		setViolinRenderer(this)
@@ -65,10 +61,16 @@ class ViolinPlot extends PlotBase {
 
 		if (this.opts.mode != 'minimal') {
 			this.legendRenderer = htmlLegend(this.dom.legendDiv, {
-				settings: {
-					legendOrientation: 'vertical'
-				},
+				settings: { legendOrientation: 'vertical' },
 				handlers: {}
+			})
+			this.hiddenRenderer = htmlLegend(this.dom.hiddenDiv, {
+				settings: { legendOrientation: 'vertical' },
+				handlers: {
+					legend: {
+						click: e => this.hideLegendItem(e.target.__data__)
+					}
+				}
 			})
 		}
 	}

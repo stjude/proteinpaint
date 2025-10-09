@@ -10,44 +10,43 @@ import { TermTypes } from '#shared/terms.js'
 const minSampleSize = 5 // a group below cutoff will not render a violin plot
 
 export default function setViolinRenderer(self) {
-	self.render = function () {
+	self.render = async function () {
 		const settings = self.config.settings.violin
 		const isH = settings.orientation === 'horizontal'
-		const t1 = self.config.term
-		const t2 = self.config.term2
 
-		//termsetting.js 'set_hiddenvalues()' adds uncomputable values from term.values to q.hiddenValues object. Since it will show up on the legend, delete that key-value pair from t2.q.hiddenValues object.
-		const termNum =
-			t2?.term.type === 'condition' ||
-			t2?.term.type === 'samplelst' ||
-			t2?.term.type === 'categorical' ||
-			((t2?.term.type === 'float' || t2?.term.type === 'integer') && t1.q.mode === 'continuous')
-				? t2
-				: t1
+		let vtw, // only one of (term1 & term2) can be q.mode=continuous, which will be vtw (violin tw)
+			otw // the other one (if present) is otw (overlay tw)
+		if (self.config.term.q.mode == 'continuous') {
+			vtw = self.config.term
+			otw = self.config.term2 // could be missing
+		} else {
+			vtw = self.config.term2 // both must be present
+			otw = self.config.term
+		}
 
-		if (termNum && termNum.term?.values) {
-			for (const [k, v] of Object.entries(termNum.term.values)) {
+		if (otw?.term?.values) {
+			//filter out hidden values and only keep plots which are not hidden in term2.q.hiddenvalues
+			for (const [k, v] of Object.entries(otw.term.values)) {
 				if (v.uncomputable) {
-					if (termNum.q.hiddenValues[k]) {
-						termNum.q.hiddenValues[v.label] = 1
-						delete termNum.q.hiddenValues[k]
+					if (otw.q.hiddenValues[k]) {
+						otw.q.hiddenValues[v.label] = 1
+						delete otw.q.hiddenValues[k]
 					}
 				}
 			}
 		}
 
-		//filter out hidden values and only keep plots which are not hidden in term2.q.hiddenvalues
 		self.dom.violinDiv.selectAll('*').remove()
+
 		for (const chartKey of Object.keys(self.data.charts)) {
 			const chart = self.data.charts[chartKey]
-			const plots = chart.plots.filter(p => !termNum?.q?.hiddenValues?.[p.label || p.seriesId])
-			if (settings.orderByMedian == true) {
+			const plots = chart.plots.filter(p => !otw?.q?.hiddenValues?.[p.label || p.seriesId])
+			if (settings.orderByMedian) {
 				plots.sort(
 					(a, b) =>
 						a.summaryStats.find(x => x.id === 'median').value - b.summaryStats.find(x => x.id === 'median').value
 				)
 			}
-			if (self.legendRenderer) self.legendRenderer(getLegendGrps(termNum, self))
 
 			const chartDiv = self.dom.violinDiv
 				.append('div')
@@ -59,7 +58,6 @@ export default function setViolinRenderer(self) {
 				return
 			}
 
-			// append the svg object to the body of the page
 			chartDiv.select('.sjpp-violin-plot').remove()
 
 			// render chart title
@@ -70,14 +68,15 @@ export default function setViolinRenderer(self) {
 				.style('text-align', 'center')
 				.style('font-size', '1.1em')
 				.style('margin-bottom', '20px')
-				.html(self.getChartTitle(chart.chartId))
+				.html('xx' + self.getChartTitle(chart.chartId))
 
 			// render chart data
-			const svgData = renderSvg(t1, plots, chartDiv, self, isH, settings)
-			renderScale(t1, t2, settings, isH, svgData, self)
+			const svgData = renderSvg(vtw, plots, chartDiv, self, isH, settings)
+			renderScale(vtw, settings, isH, svgData, self)
 			let y = 0
 			const thickness = self.settings.plotThickness || self.getAutoThickness()
 			for (const [plotIdx, plot] of plots.entries()) {
+				console.log(plot)
 				//R x values are not the same as the plot values, so we need to use a scale to map them to the plot values
 				// The scale uses half of the plotThickness as the maximum value as the image is symmetrical
 				// Only one half of the image is computed and the other half is mirrored
@@ -101,20 +100,71 @@ export default function setViolinRenderer(self) {
 				//if only one plot pass area builder to calculate the exact height of the plot
 				const { violinG, height } = renderViolinPlot(svgData, plot, isH, wScale, areaBuilder, y)
 				y += height
-				if (self.opts.mode != 'minimal') renderLabels(t1, t2, violinG, plot, isH, settings)
+				if (self.opts.mode != 'minimal') renderLabels(vtw, otw, violinG, plot, isH, settings)
 
-				if (self.config.term.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
-					// is sc data, disable brushing for now because 1) no use 2) avoid bug of listing cells
+				if (
+					vtw.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION ||
+					otw?.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION
+				) {
+					// is sc data, disable brushing until its supported
+				} else if (self.opts.mode == 'minimal') {
+					// no interactivity in this mode
 				} else {
-					// enable brushing
-					if (self.opts.mode != 'minimal') renderBrushing(t1, t2, violinG, settings, plot, isH, svgData)
+					renderBrushing(vtw, otw, violinG, settings, plot, isH, svgData)
 				}
-
-				self.labelHideLegendClicking(t2, plot) // FIXME
 			}
+			self.renderPvalueTable(chartDiv, chart)
+		}
+		self.renderLegend(termNum) // create one legend even if there are multiple charts from divideby
+	}
 
-			// render p-value table
-			if (self.settings.showAssociationTests) self.renderPvalueTable(chartDiv, chart)
+	self.renderLegend = function (termNum) {
+		if (!self.legendRenderer) return
+		const legendGrps = [],
+			headingStyle = 'opacity:0.6;font-weight:normal'
+		let tw1, tw2
+		if (self.config.term.q.mode == 'continuous') {
+			tw1 = self.config.term
+			tw2 = self.config.term2
+		} else {
+			tw1 = self.config.term2
+			tw2 = self.config.term1
+		}
+		if (self.settings.showStats) {
+			addDescriptiveStats(tw1, legendGrps, headingStyle, self)
+		}
+
+		addUncomputableValues(
+			tw1.q.hiddenValues && Object.keys(tw1?.q.hiddenValues).length > 0 ? tw1 : null,
+			legendGrps,
+			headingStyle,
+			self
+		)
+		self.legendRenderer(legendGrps)
+
+		if (0) {
+			if (tw.q.hiddenValues && Object.entries(termNum.q.hiddenValues).length != 0) {
+				const items = []
+				for (const key of Object.keys(termNum.q.hiddenValues)) {
+					items.push({
+						text: key,
+						noIcon: true,
+						/** Need to specify that this is a hidden value for
+						 * text styling in the legend and  a plot for
+						 * rendering a tooltip or click events.
+						 */
+						isHidden: true,
+						isClickable: true,
+						hiddenOpacity: 1
+					})
+				}
+				self.hiddenRenderer([
+					{
+						name: `<span style="${headingStyle}">${termNum.term.name}</span>`,
+						items
+					}
+				])
+			}
 		}
 	}
 
@@ -140,6 +190,7 @@ export default function setViolinRenderer(self) {
 	}
 
 	self.renderPvalueTable = function (chartDiv, chart) {
+		if (!self.settings.showAssociationTests) return
 		if (!chart.pvalues) return
 		const tableHolder = chartDiv
 			.append('div')
@@ -256,21 +307,17 @@ export default function setViolinRenderer(self) {
 		// a <g> in which everything is rendered into
 		const svgG = violinSvg.append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
 
-		return { margin: margin, svgG: svgG, axisScale: createNumericScale(self, settings, isH), violinSvg: violinSvg }
+		return { margin, svgG, axisScale: createNumericScale(self, settings, isH), violinSvg }
 	}
 
-	function renderScale(t1, t2, settings, isH, svg, self) {
+	function renderScale(tw, settings, isH, svg, self) {
 		// <g>: holder of numeric axis
 		const g = svg.svgG
 			.append('g')
 			.style('font-size', '12')
 			.classed(settings.unit === 'log' ? 'sjpp-logscale' : 'sjpp-linearscale', true)
 
-		const ticks =
-			settings.unit === 'log'
-				? svg.axisScale.ticks(15)
-				: // svg.axisScale.ticks().filter(tick => tick > 0 || tick < 0)
-				  svg.axisScale.ticks()
+		const ticks = settings.unit === 'log' ? svg.axisScale.ticks(15) : svg.axisScale.ticks()
 
 		g.call(
 			(isH ? axisTop : axisLeft)()
@@ -294,10 +341,9 @@ export default function setViolinRenderer(self) {
 		)
 
 		if (self.opts.mode != 'minimal') {
-			// TODO need to add term2 label onto the svg
 			const lab = svg.svgG
 				.append('text')
-				.text(t2?.q?.mode === 'continuous' ? t2.term.name : t1.term.name)
+				.text(tw.term.name)
 				.classed('sjpp-numeric-term-label', true)
 				.style('font-weight', 600)
 				.attr('text-anchor', 'middle')
@@ -305,9 +351,6 @@ export default function setViolinRenderer(self) {
 				.attr('y', isH ? -30 : -45)
 				.style('opacity', 0)
 				.attr('transform', isH ? null : 'rotate(-90)')
-				// .transition()
-				// .delay(self.opts.mode == 'minimal' ? 0 : 100)
-				// .duration(self.opts.mode == 'minimal' ? 0 : 200)
 				.style('opacity', 1)
 		}
 	}
@@ -353,7 +396,7 @@ export default function setViolinRenderer(self) {
 	}
 
 	// label for each violin (on left when horizontal)
-	function renderLabels(t1, t2, violinG, plot, isH, settings) {
+	function renderLabels(vtw, otw, violinG, plot, isH, settings) {
 		violinG
 			.append('text')
 			.attr('data-testid', 'sjpp-violin-label')
@@ -361,7 +404,7 @@ export default function setViolinRenderer(self) {
 			.style('cursor', 'pointer')
 			.on('click', function (event) {
 				if (!event) return
-				self.displayLabelClickMenu(t1, t2, plot, event)
+				self.displayLabelClickMenu(vtw, otw, plot, event)
 			})
 			.on('mouseover', function (event, d) {
 				event.stopPropagation()
@@ -449,9 +492,9 @@ export default function setViolinRenderer(self) {
 		}
 	}
 
-	function renderBrushing(t1, t2, violinG, settings, plot, isH, svgData) {
+	function renderBrushing(vtw, otw, violinG, settings, plot, isH, svgData) {
 		//brushing on data points
-		if (settings.datasymbol === 'rug' || settings.datasymbol === 'bean') {
+		if (settings.datasymbol == 'rug' || settings.datasymbol == 'bean') {
 			violinG
 				.append('g')
 				.classed('sjpp-brush', true)
@@ -462,12 +505,10 @@ export default function setViolinRenderer(self) {
 									[0, -20],
 									[settings.svgw, 20]
 								])
-								.on('end', async event => {
+								.on('end', event => {
 									const selection = event.selection
-
 									if (!selection) return
-
-									self.displayBrushMenu(t1, t2, self, plot, selection, svgData.axisScale, isH)
+									self.displayBrushMenu(vtw, otw, self, plot, selection, svgData.axisScale, isH)
 								})
 						: brushY()
 								.extent([
@@ -476,13 +517,11 @@ export default function setViolinRenderer(self) {
 								])
 								.on('end', async event => {
 									const selection = event.selection
-
 									if (!selection) return
-
-									self.displayBrushMenu(t1, t2, self, plot, selection, svgData.axisScale, isH)
+									self.displayBrushMenu(vtw, otw, self, plot, selection, svgData.axisScale, isH)
 								})
 				)
-		} else return
+		}
 	}
 
 	self.toggleLoadingDiv = function (display = '') {
@@ -512,34 +551,6 @@ export function createNumericScale(self, settings, isH) {
 				.domain([self.data.min, self.data.max])
 				.range(isH ? [0, settings.svgw] : [settings.svgw, 0]))
 	return axisScale
-}
-
-function getLegendGrps(termNum, self) {
-	const legendGrps = [],
-		t1 = self.config.term,
-		t2 = self.config.term2,
-		headingStyle = 'color: #aaa; font-weight: 400'
-	if (self.settings.showStats) addDescriptiveStats(t1, legendGrps, headingStyle, self)
-	if (t2?.term.type === 'float' || t2?.q.mode === 'continuous' || t2?.term.type === 'integer')
-		addDescriptiveStats(t2, legendGrps, headingStyle, self)
-
-	addUncomputableValues(
-		t1?.q.mode === 'continuous' && t1?.q.hiddenValues && Object.keys(t1?.q.hiddenValues).length > 0
-			? t1
-			: t2?.q.mode === 'continuous' && t2?.q.hiddenValues && Object.keys(t2?.q.hiddenValues).length > 0
-			? t2
-			: null,
-		legendGrps,
-		headingStyle,
-		self
-	)
-
-	if (t2) {
-		if (termNum.q.hiddenValues && Object.entries(termNum.q.hiddenValues).length != 0) {
-			addHiddenValues(termNum, legendGrps, headingStyle)
-		}
-	}
-	return legendGrps
 }
 
 function addDescriptiveStats(term, legendGrps, headingStyle, self) {
@@ -588,22 +599,4 @@ function addUncomputableValues(term, legendGrps, headingStyle, self) {
 	}
 }
 
-function addHiddenValues(term, legendGrps, headingStyle) {
-	const items = []
-	for (const key of Object.keys(term.q.hiddenValues)) {
-		items.push({
-			text: `${key}`,
-			noIcon: true,
-			/** Need to specify that this is a hidden value for
-			 * text styling in the legend and  a plot for
-			 * rendering a tooltip or click events.
-			 */
-			isHidden: true,
-			isClickable: true,
-			hiddenOpacity: 1
-		})
-	}
-	const title = `${term.term.name}`
-	const name = `<span style="${headingStyle}">${title}</span>`
-	legendGrps.push({ name, items })
-}
+function addHiddenValues(term, legendGrps, headingStyle) {}
