@@ -754,10 +754,10 @@ async fn extract_summary_information(
     match llm_backend_type {
         llm_backend::Ollama() => {
             additional = json!({
-                        "max_new_tokens": max_new_tokens,
-                        "top_p": top_p,
-            "schema_json": schema_json_string
-                });
+                    "max_new_tokens": max_new_tokens,
+                    "top_p": top_p,
+                    "schema_json": schema_json_string
+            });
         }
         llm_backend::Sj() => {
             additional = json!({
