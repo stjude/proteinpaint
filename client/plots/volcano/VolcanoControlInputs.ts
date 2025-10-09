@@ -133,6 +133,14 @@ export class VolcanoControlInputs {
 				max: 10000
 			},
 			{
+				label: 'CPM cutoff',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'cpm_cutoff',
+				title: 'The minimum normalized expression threshold to retain only genes with sufficient expression',
+				min: 0
+			},
+			{
 				label: 'Fold change (log)',
 				type: 'number',
 				chartType: 'volcano',

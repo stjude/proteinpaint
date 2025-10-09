@@ -129,6 +129,7 @@ export type VolcanoSettings = {
 	minCount: number
 	/** smallest total number of reads required for a gene to be considered in the analysis */
 	minTotalCount: number
+	cpm_cutoff: number
 	/** p value cutoff for significance */
 	pValue: number
 	/** Users may switch between 'original' and 'adjusted' p values */

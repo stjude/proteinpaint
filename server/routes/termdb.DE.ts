@@ -232,6 +232,7 @@ values[] // using integer sample id
 		cachedir: serverconfig.cachedir,
 		min_count: param.min_count,
 		min_total_count: param.min_total_count,
+		cpm_cutoff: param.cpm_cutoff,
 		storage_type: param.storage_type,
 		DE_method: param.method,
 		mds_cutoff: 10000 // If the dimensions of the read counts matrix is below this threshold, only then the mds image will be generated as its very compute intensive. Number of genes * Number of samples < mds_cutoff for mds generation

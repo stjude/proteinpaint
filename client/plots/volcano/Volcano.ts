@@ -166,6 +166,7 @@ export function getDefaultVolcanoSettings(overrides = {}, opts: any): VolcanoSet
 		method,
 		minCount: 10,
 		minTotalCount: 15,
+		cpm_cutoff: 1,
 		pValue: roundValue(-Math.log10(0.05), 2),
 		pValueType: 'adjusted',
 		rankBy: 'abs(foldChange)',
