@@ -11,6 +11,8 @@ export type DERequest = {
 	min_count: number
 	/** Minimum total read count required for each sample */
 	min_total_count: number
+	/** Minimum normalized expression threshold to retain only genes with sufficient expression */
+	cpm_cutoff: number
 	/** Storage_type for storing data. Will deprecate text files */
 	storage_type: 'text' | 'HDF5'
 	/** Method of DE used wilcoxon/edgeR */

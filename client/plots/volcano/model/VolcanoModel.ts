@@ -34,7 +34,8 @@ export class VolcanoModel {
 			min_total_count: this.settings.minTotalCount,
 			samplelst: this.config.samplelst,
 			filter: state.termfilter.filter,
-			filter0: state.termfilter.filter0
+			filter0: state.termfilter.filter0,
+			cpm_cutoff: this.settings.cpm_cutoff
 		} as any
 		//This is a workaround until the server can accept an arr of confounder tws
 		const confounders = this.config?.confounderTws
