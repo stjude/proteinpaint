@@ -384,31 +384,14 @@ type SvFusion = {
 		*/
 		file?: string
 	}
-	/** Pass dt numbers for if this sample has fusion events, sv events, or both */
+	/** list of dt values to indicate if this ds has sv, fusion, or both */
 	dtLst: number[]
 }
 
 type SingleSampleMutationQuery = {
 	/** for native ds, each file should contain a stringified json array with elements below
-	for non-native ds, the getter should return an json array with same structure:
-
-	cnv example entry:
-	             {
-	               "chromosome": "chr1",
-	               "start": 123456,
-	               "end": 123789,
-	               "type": "cnv",
-	               "log2Ratio": null
-	             }
-
-	snvindel example entry:
-	             {
-	               "chromosome": "chr1",
-	               "start": 123456,
-	               "end": 123789,
-	               "type": "snvindel"
-	             }
-		TODO specify property names for read depth; needed for grin2 filtering
+	see file server/test/tp/files/hg38/TermdbTest/mutationpersample/3318 for example
+	for non-native ds, the getter should return an json array with same structure
 	*/
 	src: 'native' | 'gdcapi' | string
 	/** which property of client mutation object to retrieve sample identifier for
