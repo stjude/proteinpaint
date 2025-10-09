@@ -66,14 +66,6 @@ export default async function (termdbConfig, dslabel, sample, holder, genomeObj,
 		}
 
 		if (data.alternativeDataByDt) {
-			const altCnv = data.alternativeDataByDt[dtcnv]
-			if (Array.isArray(altCnv)) {
-				for (const set of altCnv) {
-					if (Array.isArray(set.mlst)) {
-						for (const m of set.mlst) m.position = m.pos
-					}
-				}
-			}
 			disco_arg.alternativeDataByDt = data.alternativeDataByDt
 		}
 
