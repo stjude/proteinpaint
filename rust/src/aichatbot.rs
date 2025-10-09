@@ -746,9 +746,8 @@ async fn extract_summary_information(
     genedb: &str,
     has_gene_expression: bool,
 ) -> String {
-    //println!("common_genes:{:?}", common_genes);
     let (rag_docs, db_vec) = parse_dataset_db(dataset_db).await;
-    //println!("rag_docs:{:?}", rag_docs);
+    println!("rag_docs:{:?}", rag_docs);
     let additional;
     let schema_json = schemars::schema_for!(SummaryType); // error handling here
     let schema_json_string = serde_json::to_string_pretty(&schema_json).unwrap();
@@ -795,13 +794,14 @@ async fn extract_summary_information(
                 .into_iter()
                 .filter(|x| user_words2.contains(&x.to_lowercase()))
                 .collect();
+            //println!("common_genes:{:?}", common_genes);
             gene_expression_statement =
                 "The \"geneExpression\" subfield should ONLY contain genes names from the relevant genes list.";
-            gene_expression_examples = "Example question4: \"compare tp53 expression between genders\"\n Example answer4: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\": \"Sex\"}, {\"geneExpression\": \"TP53\"}]}}\n Example question5: \"is tmem181 overexpressed in men?\" Example answer5: {\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"Sex\"},{\"geneExpression\":\"TMEM181\"}]}\n"
+            gene_expression_examples = "Example question4: \"compare tp53 expression between genders\"\n Example answer4: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\": \"sex\"}, {\"geneExpression\": \"TP53\"}]}}\n Example question5: \"is tmem181 overexpressed in men?\" Example answer5: {\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"sex\"},{\"geneExpression\":\"TMEM181\"}]}\n"
         }
         false => {
             gene_expression_statement = "The \"geneExpression\" field should be EMPTY and must NOT display any gene names as the dataset does not support it. Add message to \"message\" field stating that \"gene expression is not supported for this dataset\"";
-            gene_expression_examples = "Example question4: \"compare tp53 expression between genders\"\n Example answer4: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\": \"Sex\"}], \"message\": \"gene expression is not supported for this dataset\"}}\n Example question5: \"is tmem181 overexpressed in men?\" Example answer5: {\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"Sex\"}], \"message\": \"gene expression is not supported for this dataset\"}\n"
+            gene_expression_examples = "Example question4: \"compare tp53 expression between genders\"\n Example answer4: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\": \"sex\"}], \"message\": \"gene expression is not supported for this dataset\"}}\n Example question5: \"is tmem181 overexpressed in men?\" Example answer5: {\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"sex\"}], \"message\": \"gene expression is not supported for this dataset\"}\n"
         }
     }
 
@@ -811,7 +811,7 @@ async fn extract_summary_information(
         ) + &gene_expression_statement
             + &" The \"filter\" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both \"summaryterms\" and \"filter\". There are two kinds of filter variables: \"Categorical\" and \"Numeric\". \"Categorical\" variables are those variables which can have a fixed set of values e.g. gender, molecular subtypes. They are defined by the \"CategoricalFilterTerm\" which consists of \"term\" (a field from the sqlite3 db)  and \"value\" (a value of the field from the sqlite db).  \"Numeric\" variables are those which can have any numeric value. They are defined by \"NumericFilterTerm\" and contain  the subfields \"term\" (a field from the sqlite3 db), \"greaterThan\" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and \"lessThan\" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. The \"message\" field only contain messages of terms in the user input that were not found in their respective databases. The JSON schema is as follows:"
             + &schema_json_string
-            + &"\n  Example question1: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer1: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\":\"Molecular Subtype\"}], filter:[ {\"Numeric\":{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}\n Example question2: \"show summary of molecular subtype for men under 40 years only\"\n Example answer2: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"Sex\",\"value\":\"Male\"}},{\"Numeric\":{\"greaterThan\":null,\"lessThan\":40.0,\"term\":\"Age\"}}],\"summaryterms\":[{\"clinical\":\"Molecular subtype\"}]}\n Example Question3: \"Show race for women with early onset of cancer\"\n Example Answer3: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"Sex\",\"value\":\"Female\"}}, {\"Numeric\":{\"greaterThan\":null,\"lessThan\":18.0,\"term\":\"Age\"}],\"summaryterms\":[{\"clinical\":\"Ancestry\"}]}\n "
+            + &"\n  Example question1: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer1: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\":\"Molecular Subtype\"}], filter:[ {\"Numeric\":{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}\n Example question2: \"show summary of molecular subtype for men under 40 years only\"\n Example answer2: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"sex\",\"value\":\"Male\"}},{\"Numeric\":{\"greaterThan\":null,\"lessThan\":40.0,\"term\":\"Age\"}}],\"summaryterms\":[{\"clinical\":\"Molecular subtype\"}]}\n Example Question3: \"Show race for women with early onset of cancer\"\n Example Answer3: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"sex\",\"value\":\"Female\"}}, {\"Numeric\":{\"greaterThan\":null,\"lessThan\":18.0,\"term\":\"Age\"}],\"summaryterms\":[{\"clinical\":\"Ancestry\"}]}\n "
             + &gene_expression_examples
             + "The sqlite db in plain language is as follows:\n"
             + &rag_docs.join(",")
