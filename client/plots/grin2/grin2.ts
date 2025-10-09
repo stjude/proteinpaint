@@ -140,15 +140,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 			1 // step
 		)
 		this.addOptionRowToTable(opts, 'Min Alt Allele Count', 'settings.snvindel.minAltAlleleCount', 2, 0, 1e6, 1)
-		this.addOptionRowToTable(
-			opts,
-			'Hypermutator Threshold',
-			'settings.snvindel.hypermutatorThreshold',
-			1000,
-			0,
-			1e9,
-			10
-		)
 
 		// Consequences section header + checkbox grid
 		{
@@ -217,17 +208,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 			'Max Segment Length',
 			'settings.cnv.maxSegLength',
 			0, // default (no cap)
-			0, // min
-			1e9, // max
-			10 // step
-		)
-
-		// Hypermutator Threshold
-		this.addOptionRowToTable(
-			opts,
-			'Hypermutator Threshold',
-			'settings.cnv.hypermutatorThreshold',
-			500, // default
 			0, // min
 			1e9, // max
 			10 // step
