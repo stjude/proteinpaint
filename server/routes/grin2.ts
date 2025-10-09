@@ -35,6 +35,7 @@ import { dtsnvindel, dtcnv, dtfusionrna, dtsv } from '#shared/common.js'
 
 // Constants & types
 const MAX_LESIONS_PER_TYPE = 50000 // Maximum number of lesions to process per type to avoid overwhelming the production server
+const BREAKPOINTWINDOW = 500 // Window size around breakpoints for fusion and SV events
 type TrackState = { count: number }
 type LesionTracker = Map<number, TrackState>
 
@@ -435,7 +436,8 @@ function filterAndConvertSnvIndel(
 		return null
 	}
 
-	// Check consequence filtering
+	// Check consequence filtering. If no consequences selected, include all consequences
+	// If consequences are selected, only include those
 	if (options.consequences.length > 0 && entry.class && !options.consequences.includes(entry.class)) {
 		return null
 	}
@@ -505,26 +507,22 @@ function filterAndConvertFusion(
 	entry: any,
 	_options: GRIN2Request['fusionOptions']
 ): string[] | string[][] | null {
-	// Fusion events are breakpoint events
-	// Represent as small windows around each breakpoint (±500bp)
-	const breakpointWindow = 500
-
 	// Validate required fields
 	if (!entry.chrA || entry.posA === undefined) {
 		return null
 	}
 
 	// First breakpoint on chrA
-	const startA = Math.max(0, entry.posA - breakpointWindow)
-	const endA = entry.posA + breakpointWindow
+	const startA = Math.max(0, entry.posA - BREAKPOINTWINDOW)
+	const endA = entry.posA + BREAKPOINTWINDOW
 
 	const lesionA: string[] = [sampleName, entry.chrA, startA.toString(), endA.toString(), 'fusion']
 
 	// Check if there's a second breakpoint on chrB
 	if (entry.chrB && entry.posB !== undefined) {
 		// Inter-chromosomal fusion or same chromosome with two breakpoints
-		const startB = Math.max(0, entry.posB - breakpointWindow)
-		const endB = entry.posB + breakpointWindow
+		const startB = Math.max(0, entry.posB - BREAKPOINTWINDOW)
+		const endB = entry.posB + BREAKPOINTWINDOW
 
 		const lesionB: string[] = [sampleName, entry.chrB, startB.toString(), endB.toString(), 'fusion']
 
@@ -542,26 +540,22 @@ function filterAndConvertSV(
 	entry: any,
 	_options: GRIN2Request['svOptions']
 ): string[] | string[][] | null {
-	// SV events are breakpoint events similar to fusions
-	// Represent as small windows around each breakpoint (±500bp)
-	const breakpointWindow = 500
-
 	// Validate required fields for first breakpoint
 	if (!entry.chrA || entry.posA === undefined) {
 		return null
 	}
 
 	// First breakpoint on chrA
-	const startA = Math.max(0, entry.posA - breakpointWindow)
-	const endA = entry.posA + breakpointWindow
+	const startA = Math.max(0, entry.posA - BREAKPOINTWINDOW)
+	const endA = entry.posA + BREAKPOINTWINDOW
 
 	const lesionA: string[] = [sampleName, entry.chrA, startA.toString(), endA.toString(), 'sv']
 
 	// Check if there's a second breakpoint on chrB
 	if (entry.chrB && entry.posB !== undefined) {
 		// Inter-chromosomal SV or same chromosome with two breakpoints
-		const startB = Math.max(0, entry.posB - breakpointWindow)
-		const endB = entry.posB + breakpointWindow
+		const startB = Math.max(0, entry.posB - BREAKPOINTWINDOW)
+		const endB = entry.posB + BREAKPOINTWINDOW
 
 		const lesionB: string[] = [sampleName, entry.chrB, startB.toString(), endB.toString(), 'sv']
 
