@@ -636,35 +636,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 				...configValues
 			}
 
-			// Only include options if checkbox is checked
-			if (this.dtUsage[dtsnvindel]?.checked && configValues.settings?.snvindel) {
-				requestData.snvindelOptions = {
-					minTotalDepth: configValues.settings.snvindel.minTotalDepth,
-					minAltAlleleCount: configValues.settings.snvindel.minAltAlleleCount,
-					hypermutatorThreshold: configValues.settings.snvindel.hypermutatorThreshold,
-					consequences: this.getSelectedConsequences()
-				}
-			}
-
-			if (this.dtUsage[dtcnv]?.checked && configValues.settings?.cnv) {
-				requestData.cnvOptions = {
-					lossThreshold: configValues.settings.cnv.lossThreshold,
-					gainThreshold: configValues.settings.cnv.gainThreshold,
-					maxSegLength: configValues.settings.cnv.maxSegmentLength,
-					hypermutatorThreshold: configValues.settings.cnv.hypermutatorThreshold
-				}
-			}
-
-			if (this.dtUsage[dtfusionrna]?.checked && configValues.settings?.fusion) {
-				requestData.fusionOptions = configValues.settings.fusion
-			}
-
-			if (this.dtUsage[dtsv]?.checked && configValues.settings?.sv) {
-				requestData.svOptions = configValues.settings.sv
-			}
-
-			console.log('GRIN2 request data:', requestData)
-
 			const response = await dofetch3('/grin2', {
 				body: requestData
 			})
@@ -704,7 +675,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		if (result.pngImg) {
 			const plotData = result
 			const plotDiv = this.dom.div
-			const manhattanSettings = this.state.config.settings.manhattan
+			const manhattanSettings = this.state.config.settings.grin2.manhattan
 			plotManhattan(plotDiv, plotData, manhattanSettings)
 		}
 
