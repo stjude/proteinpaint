@@ -8,15 +8,14 @@ use rig::completion::{GetTokenUsage, Usage};
 use rig::message::ConvertMessage;
 use rig::streaming::RawStreamingChoice;
 use rig::{
-    Embed, OneOrMany,
     completion::{self, CompletionError, CompletionRequest},
     embeddings::{self, EmbeddingError, EmbeddingsBuilder},
     impl_conversion_traits, message,
     message::{ImageDetail, Text},
-    streaming,
+    streaming, Embed, OneOrMany,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::convert::TryInto;
 //use std::time::Duration;
 use std::{convert::TryFrom, str::FromStr};
@@ -458,13 +457,11 @@ impl CompletionModel {
 
         //println!("request_payload:{}", request_payload);
         if !completion_request.tools.is_empty() {
-            request_payload["tools"] = json!(
-                completion_request
-                    .tools
-                    .into_iter()
-                    .map(|tool| tool.into())
-                    .collect::<Vec<ToolDefinition>>()
-            );
+            request_payload["tools"] = json!(completion_request
+                .tools
+                .into_iter()
+                .map(|tool| tool.into())
+                .collect::<Vec<ToolDefinition>>());
         }
 
         //tracing::debug!(target: "rig", "Chat mode payload: {}", request_payload);
