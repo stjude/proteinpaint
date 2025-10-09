@@ -65,6 +65,8 @@ async function getViolin(q: ViolinRequest, ds: any) {
 		},
 		ds
 	)
+	if (!data) throw 'getData() returns nothing'
+	if (data.error) throw data.error
 
 	const samples = Object.values(data.samples)
 	let values = samples
