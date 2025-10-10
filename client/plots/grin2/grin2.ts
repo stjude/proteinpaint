@@ -22,8 +22,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 	readonly btnBorderColor = '#ccc'
 	readonly btnTextColor = '#333'
 	readonly btnHoverBackgroundColor = '#e0e0e0'
-	readonly btnDisabledBackgroundColor = '#f8f8f8'
-	readonly btnDisabledTextColor = '#999'
 
 	// Typography
 	readonly optionsTextFontSize: number = 12
@@ -67,18 +65,14 @@ class GRIN2 extends PlotBase implements RxComponent {
 	constructor(opts: any, api) {
 		super(opts, api)
 		this.opts = opts
-		const holder = opts.holder.classed('sjpp-grin2-main', true)
-		const controls = opts.controls ? holder : holder.append('div')
-		const div = holder.append('div').style('padding', '5px').style('display', 'inline-block')
-
+		opts.holder.classed('sjpp-grin2-main', true)
 		this.dom = {
-			controls: controls.style('display', 'block'),
-			div,
+			controls: opts.holder.append('div'), // controls ui on top
+			div: opts.holder.append('div').style('margin', '20px'), // result ui on bottom
 			tip: new Menu({ padding: '' }),
 			geneTip: new Menu({ padding: '' })
 		}
-
-		if (opts.header) this.dom.header = opts.header.text('GRIN2').style('font-size', '0.7em').style('opacity', 0.6)
+		if (opts.header) this.dom.header = opts.header.text('GRIN2')
 	}
 
 	getState(appState: MassState) {
@@ -87,7 +81,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		return {
-			termdbConfig: appState.termdbConfig,
 			termfilter: appState.termfilter,
 			config: Object.assign({}, config, {
 				settings: {
@@ -97,57 +90,25 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 	}
 
-	async setControls() {
-		this.createConfigTable()
-	}
-
-	private hasFusion(): boolean {
-		return this.app.vocabApi.termdbConfig.queries.svfusion.dtLst.includes(dtfusionrna)
-	}
-	private hasSv(): boolean {
-		return this.app.vocabApi.termdbConfig.queries.svfusion.dtLst.includes(dtsv)
-	}
-
-	// Helper for making styling of data type cells consistent
-	private addTd(tr: any) {
-		const td = tr
-			.append('td')
-			.style('padding', this.tableCellPadding)
-			.style('font-weight', '500')
-			.style('font-size', `${this.optionsTextFontSize}px`)
-			.style('vertical-align', 'top')
-			.style('border-right', `1px solid ${this.borderColor}`)
-			.style('border-bottom', `1px solid ${this.borderColor}`)
-		return td
-	}
-
-	// Add SNV/INDEL row
 	private addSnvindelRow = (table: any) => {
 		const [left, right] = table.addRow()
 
 		// Options table
-		const snvindelTableOpts = table2col({ holder: right })
+		const t2 = table2col({ holder: right })
 
 		// Top numeric options
 		this.dom.snvindel_minTotalDepth = this.addOptionRowToTable(
-			snvindelTableOpts,
+			t2,
 			'Min Total Depth',
 			10, // default
 			0, // min
 			1e6, // max
 			1 // step
 		)
-		this.dom.snvindel_minAltAlleleCount = this.addOptionRowToTable(
-			snvindelTableOpts,
-			'Min Alt Allele Count',
-			2,
-			0,
-			1e6,
-			1
-		)
+		this.dom.snvindel_minAltAlleleCount = this.addOptionRowToTable(t2, 'Min Alt Allele Count', 2, 0, 1e6, 1)
 		// 5' flanking size
 		this.dom.snvindel_five_prime_flank_size = this.addOptionRowToTable(
-			snvindelTableOpts,
+			t2,
 			"5' Flanking Size",
 			500, // default
 			0, // min
@@ -156,7 +117,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		)
 		// 3' flanking size
 		this.dom.snvindel_three_prime_flank_size = this.addOptionRowToTable(
-			snvindelTableOpts,
+			t2,
 			"3' Flanking Size",
 			500, // default
 			0, // min
@@ -166,7 +127,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 		// Consequences section header + checkbox grid
 		{
-			const [labelCell, containerCell] = snvindelTableOpts.addRow()
+			const [labelCell, containerCell] = t2.addRow()
 			labelCell
 				.text('Consequences')
 				.style('font-size', `${this.optionsTextFontSize}px`)
@@ -178,8 +139,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 
 		// ----- Left-side SNV/INDEL checkbox -----
-		const isChecked = this.dtUsage[dtsnvindel]?.checked ?? true
-		right.style('display', isChecked ? '' : 'none')
+		const isChecked = this.dtUsage[dtsnvindel].checked
+		t2.table.style('display', isChecked ? '' : 'none')
 
 		make_one_checkbox({
 			holder: left,
@@ -187,7 +148,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			checked: isChecked,
 			callback: (checked: boolean) => {
 				this.dtUsage[dtsnvindel].checked = checked
-				right.style('display', checked ? '' : 'none')
+				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonState()
 			}
 		})
@@ -198,11 +159,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const [left, right] = table.addRow()
 
 		// CNV options table
-		const cnvTableOpts = table2col({ holder: right })
+		const t2 = table2col({ holder: right })
 
 		// Loss Threshold
 		this.dom.cnv_lossThreshold = this.addOptionRowToTable(
-			cnvTableOpts,
+			t2,
 			'Loss Threshold',
 			-0.4, // default
 			-5, // min
@@ -212,7 +173,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 		// Gain Threshold
 		this.dom.cnv_gainThreshold = this.addOptionRowToTable(
-			cnvTableOpts,
+			t2,
 			'Gain Threshold',
 			0.3, // default
 			0, // min
@@ -222,7 +183,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 		// Max Segment Length (0 = no cap)
 		this.dom.cnv_maxSegLength = this.addOptionRowToTable(
-			cnvTableOpts,
+			t2,
 			'Max Segment Length',
 			0, // default (no cap)
 			0, // min
@@ -232,7 +193,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 		// 5' flanking size
 		this.dom.cnv_five_prime_flank_size = this.addOptionRowToTable(
-			cnvTableOpts,
+			t2,
 			"5' Flanking Size",
 			500, // default
 			0, // min
@@ -242,7 +203,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 		// 3' flanking size
 		this.dom.cnv_three_prime_flank_size = this.addOptionRowToTable(
-			cnvTableOpts,
+			t2,
 			"3' Flanking Size",
 			500, // default
 			0, // min
@@ -251,8 +212,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 		)
 
 		// ----- Left-side CNV checkbox -----
-		const isChecked = this.dtUsage[dtcnv]?.checked ?? true
-		right.style('display', isChecked ? '' : 'none')
+		const isChecked = this.dtUsage[dtcnv].checked
+		t2.table.style('display', isChecked ? '' : 'none')
 
 		make_one_checkbox({
 			holder: left,
@@ -260,7 +221,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			checked: isChecked,
 			callback: (checked: boolean) => {
 				this.dtUsage[dtcnv].checked = checked
-				right.style('display', checked ? '' : 'none')
+				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonState()
 			}
 		})
@@ -271,11 +232,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const [left, right] = table.addRow()
 
 		// Fusion options table
-		const fusionTableOpts = table2col({ holder: right })
+		const t2 = table2col({ holder: right })
 
 		// 5' flanking size
 		this.dom.fusion_five_prime_flank_size = this.addOptionRowToTable(
-			fusionTableOpts,
+			t2,
 			"5' Flanking Size",
 			500, // default
 			0, // min
@@ -285,7 +246,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 		// 3' flanking size
 		this.dom.fusion_three_prime_flank_size = this.addOptionRowToTable(
-			fusionTableOpts,
+			t2,
 			"3' Flanking Size",
 			500, // default
 			0, // min
@@ -293,8 +254,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 			500 // step
 		)
 
-		const isChecked = this.dtUsage[dtfusionrna]?.checked ?? false
-		right.style('display', isChecked ? '' : 'none')
+		const isChecked = this.dtUsage[dtfusionrna].checked
+		t2.table.style('display', isChecked ? '' : 'none')
 
 		make_one_checkbox({
 			holder: left,
@@ -302,7 +263,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			checked: isChecked,
 			callback: (checked: boolean) => {
 				this.dtUsage[dtfusionrna].checked = checked
-				right.style('display', checked ? '' : 'none')
+				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonState()
 			}
 		})
@@ -313,11 +274,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const [left, right] = table.addRow()
 
 		// SV options table
-		const svTableOpts = table2col({ holder: right })
+		const t2 = table2col({ holder: right })
 
 		// 5' flanking size
 		this.dom.sv_five_prime_flank_size = this.addOptionRowToTable(
-			svTableOpts,
+			t2,
 			"5' Flanking Size",
 			500, // default
 			0, // min
@@ -327,7 +288,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 		// 3' flanking size
 		this.dom.sv_three_prime_flank_size = this.addOptionRowToTable(
-			svTableOpts,
+			t2,
 			"3' Flanking Size",
 			500, // default
 			0, // min
@@ -335,8 +296,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 			500 // step
 		)
 
-		const isChecked = this.dtUsage[dtsv]?.checked ?? false
-		right.style('display', isChecked ? '' : 'none')
+		const isChecked = this.dtUsage[dtsv].checked
+		t2.table.style('display', isChecked ? '' : 'none')
 
 		make_one_checkbox({
 			holder: left,
@@ -344,45 +305,20 @@ class GRIN2 extends PlotBase implements RxComponent {
 			checked: isChecked,
 			callback: (checked: boolean) => {
 				this.dtUsage[dtsv].checked = checked
-				right.style('display', checked ? '' : 'none')
+				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonState()
 			}
 		})
 	}
 
-	// Function for adding options cells
-	private addOptsTd = tr => {
-		return tr
-			.append('td')
-			.style('padding', this.tableCellPadding)
-			.style('border-bottom', `1px solid ${this.borderColor}`)
-	}
-
 	// Enable the Run button only if at least one data type is checked
 	private updateRunButtonState() {
 		const anyChecked = Object.values(this.dtUsage).some(info => info.checked)
-
-		if (anyChecked) {
-			this.runButton.property('disabled', false)
-		} else {
-			this.runButton.property('disabled', true)
-		}
+		this.runButton.property('disabled', !anyChecked)
 	}
 
 	private createConfigTable() {
-		const tableDiv = this.dom.controls.append('div').style('display', 'inline-block')
-
-		tableDiv
-			.append('p')
-			.style('font-size', `${this.headerFontSize}px`)
-			.style('font-weight', `${this.headerFontWeight}`)
-			.style('margin', `${this.headerMargin}px`)
-			.style('text-align', 'center')
-			.text('Set up analysis')
-
-		const table = table2col({
-			holder: tableDiv
-		})
+		const table = table2col({ holder: this.dom.controls, disableScroll: true })
 		const queries = this.app.vocabApi.termdbConfig.queries
 		this.dtUsage = {}
 		if (queries.snvindel) {
@@ -400,46 +336,27 @@ class GRIN2 extends PlotBase implements RxComponent {
 			}
 			this.addCnvRow(table)
 		}
-		// Additional check because svfusion query comes packaged with both fusion and sv.
-		// Use the dtLst to see which is actually present.
-		if (queries.svfusion?.dtLst) {
-			for (const dt of queries.svfusion.dtLst) {
-				if (dt === dtfusionrna) {
-					this.dtUsage[dt] = {
-						checked: false,
-						label: 'Fusion (RNA Fusion Events)'
-					}
-					this.addFusionRow(table)
-				} else if (dt === dtsv) {
-					this.dtUsage[dt] = {
-						checked: false,
-						label: 'SV (Structural Variants)'
-					}
-					this.addSvRow(table)
-				}
+		if (queries.svfusion?.dtLst?.includes(dtfusionrna)) {
+			this.dtUsage[dtfusionrna] = {
+				checked: false,
+				label: 'Fusion (RNA Fusion Events)'
 			}
+			this.addFusionRow(table)
+		}
+		if (queries.svfusion?.dtLst?.includes(dtsv)) {
+			this.dtUsage[dtsv] = {
+				checked: false,
+				label: 'SV (Structural Variants)'
+			}
+			this.addSvRow(table)
 		}
 
 		// Run Button
-		this.runButton = tableDiv
-			.append('div')
-			.style('text-align', 'center')
-			.style('margin-top', '15px')
+		this.runButton = this.dom.controls
 			.append('button')
-			.style('padding', this.btnPadding)
-			.style('background', this.btnBackgroundColor)
-			.style('color', this.btnTextColor)
-			.style('border', `1px solid ${this.btnBorderColor}`)
-			.style('border-radius', this.btnBorderRadius)
-			.style('font-size', `${this.btnFontSize}px`)
+			.style('margin-left', '100px')
 			.text('Run GRIN2')
 			.on('click', () => this.runAnalysis())
-			.on('mouseover', () => {
-				this.runButton.style('background', this.btnHoverBackgroundColor)
-			})
-			.on('mouseout', () => {
-				this.runButton.style('background', this.btnBackgroundColor)
-			})
 		// Set initial button state
 		this.updateRunButtonState()
 	}
@@ -634,16 +551,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	private async runAnalysis() {
 		try {
-			// Disable button with visual feedback
-			this.runButton
-				.property('disabled', true)
-				.text('Running GRIN2...')
-				.style('opacity', this.disabledOpacity)
-				.style('background', this.btnDisabledBackgroundColor)
-				.style('color', this.btnDisabledTextColor)
+			this.runButton.property('disabled', true).text('Running GRIN2...')
 
 			// Clear previous results
-			this.dom.div.style('padding', '0').text('')
 			this.dom.div.selectAll('*').remove()
 
 			// Get configuration and make request
@@ -665,28 +575,19 @@ class GRIN2 extends PlotBase implements RxComponent {
 				body: requestData
 			})
 
-			if (response.status === 'error') {
-				sayerror(this.dom.div, `GRIN2 analysis failed: ${response.error}`)
-				return
-			}
+			if (response.status === 'error') throw `GRIN2 analysis failed: ${response.error}`
 
 			this.renderResults(response)
 		} catch (error) {
-			this.dom.div.selectAll('*').remove()
 			sayerror(this.dom.div, `Error running GRIN2: ${error instanceof Error ? error.message : error}`)
 		} finally {
 			// Restore button state
-			this.runButton
-				.property('disabled', false)
-				.text('Run GRIN2')
-				.style('opacity', this.enabledOpacity)
-				.style('background', this.btnBackgroundColor)
-				.style('color', this.btnTextColor)
+			this.runButton.property('disabled', false).text('Run GRIN2')
 		}
 	}
 
 	async init() {
-		await this.setControls()
+		this.createConfigTable()
 	}
 
 	async main() {
