@@ -24,10 +24,11 @@ import { dtsnvindel, dtcnv, dtfusionrna, dtsv } from '#shared/common.js'
  *        - loc.end: End position of the lesion
  *        - lsn.type: Type of lesion ("mutation", "gain", "loss", "fusion")
  * 3. Read and filter file contents based on snvindelOptions, cnvOptions, fusionOptions:
- *    - SNV/indel: Filter by depth, alternate allele count, and consequence types
- *    - CNV: Filter by copy number thresholds, and max segment length
- *    - Fusion: TBD
- *    - Hypermutator: Apply a maximum mutation count cutoff for highly mutated samples
+ *    - SNV/indel: Filter by depth, alternate allele count, consequence types, and 5' and 3' flanking sizes
+ *    - CNV: Filter by copy number thresholds, max segment length, and 5' and 3' flanking sizes
+ *    - Fusion: Filter by 5' and 3' flanking sizes
+ *    - SV: Filter by 5' and 3' flanking sizes
+ *    - Hypermutator: To be implemented at later date
  * 4. Convert filtered data to lesion format and apply filter caps per type
  * 5. Pass lesion data and device pixel ratio to Python for GRIN2 statistical analysis and plot generation
  * 6. Return Manhattan plot as base64 string, top gene table, timing information, and statistically significant results that are displayed as an interactive svg
