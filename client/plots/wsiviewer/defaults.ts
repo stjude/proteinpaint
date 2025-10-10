@@ -13,6 +13,8 @@ export default function wsiViewerDefaults(overrides = {}): Settings {
 		renderWSIViewer: true,
 		renderAnnotationTable: false,
 		selectedPatchBorderColor: '#FFA500',
+		/** Border color for annotated patches */
+		annotatedPatchBorderColor: '#D3D3D3',
 		tileSize: 512, // 512px
 		activeAnnotation: 0,
 		sessionsTileSelection: []

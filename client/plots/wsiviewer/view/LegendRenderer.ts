@@ -36,16 +36,23 @@ export class LegendRenderer {
 		const titleLth = getMaxLabelWidth(svg as any, [title], 1)
 		svg
 			.append('text')
-			.attr('x', (width * 1.5 - titleLth) / 2) //Center the title
+			.attr('x', (width - titleLth) / 2) //Center the title
 			.attr('y', 15)
+			.style('opacity', 0.8)
 			.text(title)
+
+		//Assumes the ranges are equal intervals.
+		const upperBound = Math.log(imageViewData.uncertainty.length)
+		const domain = imageViewData.uncertainty.map((_, i) => {
+			return upperBound * (i / (imageViewData.uncertainty!.length - 1))
+		})
 
 		new ColorScale({
 			holder: svg,
-			domain: [0, 1],
+			domain,
 			colors: imageViewData.uncertainty.map(u => u.color),
 			position: '25, 25',
-			ticks: 2,
+			// ticks: 2,
 			barwidth: width,
 			labels: {
 				left: imageViewData.uncertainty[0].label,

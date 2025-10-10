@@ -30,6 +30,7 @@ export class ViewModelProvider {
 		sampleId: string,
 		tileSelections: TileSelection[],
 		displayedImageIndex: number,
+		annotatedPatchBorderColor: string,
 		aiProjectID: number | undefined = undefined,
 		aiWSIMageFiles: Array<string> | undefined
 	): Promise<ViewModel> {
@@ -41,7 +42,14 @@ export class ViewModelProvider {
 			try {
 				const data: SampleWSImagesResponse = await this.getSampleWSImages(genome, dslabel, sampleId)
 				wsImages = data.sampleWSImages
-				wsimageLayers = await this.getWSImageLayers(genome, dslabel, data.sampleWSImages, sampleId, undefined)
+				wsimageLayers = await this.getWSImageLayers(
+					genome,
+					dslabel,
+					data.sampleWSImages,
+					sampleId,
+					undefined,
+					annotatedPatchBorderColor
+				)
 			} catch (e: any) {
 				wsimageLayersLoadError = `Error loading image layers for sample  ${sampleId}: ${e.message || e}`
 			}
@@ -53,7 +61,14 @@ export class ViewModelProvider {
 				aiWSIMageFiles!
 			)
 			wsImages = data.wsimages
-			wsimageLayers = await this.getWSImageLayers(genome, dslabel, data.wsimages, undefined, aiProjectID!)
+			wsimageLayers = await this.getWSImageLayers(
+				genome,
+				dslabel,
+				data.wsimages,
+				undefined,
+				aiProjectID!,
+				annotatedPatchBorderColor
+			)
 		}
 
 		return new ViewModel(wsImages, wsimageLayers, wsimageLayersLoadError, tileSelections, displayedImageIndex)
@@ -74,7 +89,8 @@ export class ViewModelProvider {
 		dslabel: string,
 		wsimages: WSImage[],
 		sampleId: string | undefined,
-		aiProjectID: number | undefined
+		aiProjectID: number | undefined,
+		annotatedPatchBorderColor: string
 	): Promise<WSImageLayers[]> {
 		const layers: Array<WSImageLayers> = []
 
@@ -173,7 +189,16 @@ export class ViewModelProvider {
 				const color = this.getClassColor(wsimages[i], annotation.class)
 				const featureId = `annotation-square-${annotation.zoomCoordinates}`
 
-				const borderFeature = this.createSquareFeature(topLeft, 512, color, featureId)
+				const squareFeature = this.createSquareFeature(topLeft, 512, color, featureId)
+				sourceAnnotations.addFeature(squareFeature)
+
+				const borderFeature = this.createBorderFeature(
+					topLeft,
+					512,
+					15,
+					annotatedPatchBorderColor,
+					`annotation-border-${annotation.zoomCoordinates}`
+				)
 				sourceAnnotations.addFeature(borderFeature)
 			}
 
@@ -210,6 +235,7 @@ export class ViewModelProvider {
 		})
 	}
 
+	//TODO: This should be centralized with interaction code
 	private createSquareFeature(
 		topLeft: [number, number],
 		tileSize: number,
@@ -228,6 +254,52 @@ export class ViewModelProvider {
 
 		const feature = new Feature({
 			geometry: new Polygon(squareCoords),
+			properties: {
+				isLocked: false
+			}
+		})
+
+		if (featureId) {
+			feature.setId(featureId)
+		}
+
+		feature.setStyle(
+			new Style({
+				fill: new Fill({ color }),
+				stroke: new Stroke({ color, width: 2 })
+			})
+		)
+
+		return feature
+	}
+
+	//TODO: This should be centralized with interaction code
+	private createBorderFeature(
+		topLeft: [number, number],
+		tileSize: number,
+		borderWidth: number,
+		color: any,
+		featureId?: string
+	): Feature<Geometry> {
+		const borderCoords = [
+			[
+				topLeft,
+				[topLeft[0] + tileSize, topLeft[1]],
+				[topLeft[0] + tileSize, topLeft[1] - tileSize],
+				[topLeft[0], topLeft[1] - tileSize],
+				topLeft
+			],
+			[
+				[topLeft[0] + borderWidth, topLeft[1] - borderWidth],
+				[topLeft[0] + tileSize - borderWidth, topLeft[1] - borderWidth],
+				[topLeft[0] + tileSize - borderWidth, topLeft[1] - tileSize + borderWidth],
+				[topLeft[0] + borderWidth, topLeft[1] - tileSize + borderWidth],
+				[topLeft[0] + borderWidth, topLeft[1] - borderWidth]
+			]
+		]
+
+		const feature = new Feature({
+			geometry: new Polygon(borderCoords),
 			properties: {
 				isLocked: false
 			}
