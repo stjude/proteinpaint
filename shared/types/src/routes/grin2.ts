@@ -42,6 +42,10 @@ export type GRIN2Request = {
 		consequences?: string[]
 		/** Maximum mutation count cutoff for highly mutated scenarios */
 		hyperMutator?: number // Default: 1000
+		/** Number of bases to include as 5' flank around the mutation position */
+		fivePrimeFlankSize?: number
+		/** Number of bases to include as 3' flank around the mutation position */
+		threePrimeFlankSize?: number
 	}
 
 	/** Options for filtering CNV file content */
@@ -54,18 +58,26 @@ export type GRIN2Request = {
 		maxSegLength?: number // Default: 0
 		/** Hypermutator max cut off for CNVs per case */
 		hyperMutator?: number // Default: 500
+		/** Number of bases to include as 5' flank around the segment position */
+		fivePrimeFlankSize?: number
+		/** Number of bases to include as 3' flank around the segment position */
+		threePrimeFlankSize?: number
 	}
 
 	/** Options for filtering fusion file content */
 	fusionOptions?: {
-		/** Placeholder - fusion filtering options to be implemented */
-		[key: string]: any
+		/** Number of bases to include as 5' flank around the fusion position */
+		fivePrimeFlankSize?: number
+		/** Number of bases to include as 3' flank around the fusion position */
+		threePrimeFlankSize?: number
 	}
 
 	/** Options for filtering structural variant file content */
 	svOptions?: {
-		/** Placeholder - structural variant filtering options to be implemented */
-		[key: string]: any
+		/** Number of bases to include as 5' flank around the sv position */
+		fivePrimeFlankSize?: number
+		/** Number of bases to include as 3' flank around the sv position */
+		threePrimeFlankSize?: number
 	}
 }
 
