@@ -954,7 +954,7 @@ mod tests {
     #[tokio::test]
     #[ignore]
 
-    async fn test_myprovider_implementation() {
+    async fn test_ollama_implementation() {
         let user_input = "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs";
         let serverconfig_file_path = Path::new("../../serverconfig.json");
         let absolute_path = serverconfig_file_path.canonicalize().unwrap();
@@ -966,9 +966,9 @@ mod tests {
         let json: serde_json::Value = serde_json::from_str(&data).unwrap();
 
         // Initialize Myprovider client
-        let myprovider_host = json["sj_apilink"].as_str().unwrap();
-        let myprovider_embedding_model = json["sj_embedding_model_name"].as_str().unwrap();
-        let myprovider_comp_model = json["sj_comp_model_name"].as_str().unwrap();
+        let myprovider_host = json["ollama_apilink"].as_str().unwrap();
+        let myprovider_embedding_model = json["ollama_embedding_model_name"].as_str().unwrap();
+        let myprovider_comp_model = json["ollama_comp_model_name"].as_str().unwrap();
         let myprovider_client = Client::builder()
             .base_url(myprovider_host)
             .build()
@@ -1079,17 +1079,16 @@ If a query does not match any of the fields described above, then return JSON wi
         });
 
         // Create RAG agent
-        let agent = AgentBuilder::new(comp_model).preamble("Generate classification for the user query into summary, dge, hierarchial, snv_indel, cnv, variant_calling, sv_fusion and none categories. Return output in JSON with ALWAYS a single word answer { \"answer\": \"dge\" }, that is 'summary' for summary plot, 'dge' for differential gene expression, 'hierarchial' for hierarchial clustering, 'snv_indel' for SNV/Indel, 'cnv' for CNV and 'sv_fusion' for SV/fusion, 'variant_calling' for variant calling, 'surivial' for survival data, 'none' for none of the previously described categories. The answer should always be in lower case").dynamic_context(top_k, vector_store.index(embedding_model)).additional_params(additional).temperature(temperature).build();
+        let agent = AgentBuilder::new(comp_model).preamble("Generate classification for the user query into summary, dge, hierarchial, snv_indel, cnv, variant_calling, sv_fusion and none categories. Return output in JSON with ALWAYS a single word answer { \"answer\": \"dge\" }, that is 'summary' for summary plot, 'dge' for differential gene expression, 'hierarchial' for hierarchial clustering, 'snv_indel' for SNV/Indel, 'cnv' for CNV and 'sv_fusion' for SV/fusion, 'variant_calling' for variant calling, 'surivial' for survival data, 'none' for none of the previously described categories. The answer should always be in lower case. \nQuestion= {question} \nanswer").dynamic_context(top_k, vector_store.index(embedding_model)).additional_params(additional).temperature(temperature).build();
 
         let response = agent.prompt(user_input).await.expect("Failed to prompt myprovider");
 
         //println!("Myprovider: {}", response);
         let result = response.replace("json", "").replace("```", "");
         //println!("result:{}", result);
-        let json_value: Value = serde_json::from_str(&result).expect("REASON");
-        let json_value2: Value = serde_json::from_str(&json_value[0]["generated_text"].to_string()).expect("REASON2");
-        //println!("json_value2:{}", json_value2.as_str().unwrap());
-        let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON2");
+        let json_value: Value = serde_json::from_str(&result).expect("REASON2");
+        let json_value2: Value = serde_json::from_str(&json_value["content"].to_string()).expect("REASON3");
+        let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON4");
         assert_eq!(json_value3["answer"].to_string().replace("\"", ""), "dge");
     }
 }
