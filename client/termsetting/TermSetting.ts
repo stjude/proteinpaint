@@ -183,19 +183,15 @@ export class TermSetting {
 	}
 
 	async setHandler(termtype: string | undefined | null, tw?: TermWrapper) {
-		console.log(185)
 		if (tw instanceof TwBase) {
-			console.log(187)
 			switch (tw.type) {
 				case 'QualTWValues':
 				case 'QualTWPredefinedGS':
 				case 'QualTWCustomGS': {
 					if (this.handlerByType.qualitative) {
-						console.log(193)
 						this.handler = this.handlerByType.qualitative
 						return
 					}
-					console.log(196)
 					const { GroupSet } = await import('./handlers/qualitative.ts')
 					this.handler = new GroupSet({ termsetting: this })
 					this.handlerByType.qualitative = this.handler
@@ -208,12 +204,10 @@ export class TermSetting {
 				case 'NumTWBinary':
 				case 'NumTWSpline': {
 					if (this.handlerByType.numeric) {
-						console.log(208)
 						this.handler = this.handlerByType.numeric
 						return
 					}
-					console.log(211)
-					const { NumericHandler } = await import('./handlers/numeric2.ts')
+					const { NumericHandler } = await import('./handlers/NumericHandler.ts')
 					this.handler = new NumericHandler({ termsetting: this })
 					this.handlerByType.numeric = this.handler
 					return
@@ -240,6 +234,19 @@ export class TermSetting {
 			}
 		}
 		this.handler = this.handlerByType[type] as Handler
+	}
+
+	renderButtons(btnDiv) {
+		btnDiv
+			.append('button')
+			.style('margin', '5px')
+			.html('Apply')
+			.on('click', () => this.handler.applyEdits())
+		btnDiv
+			.append('button')
+			.style('margin', '5px')
+			.html('Reset')
+			.on('click', () => this.handler.undoEdits())
 	}
 
 	destroy() {

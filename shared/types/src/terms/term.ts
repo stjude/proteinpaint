@@ -39,6 +39,11 @@ export type BaseTerm = {
 	/** Do not build .values{} when building termdb. Used for 
 	making categorical term with empty .values{} in TermdbTest */
 	skipValuesBuild?: boolean
+	valueConversion?: {
+		fromUnit: string
+		toUnit: string
+		scaleFactor: string
+	}
 }
 
 // NumericTerm includes integer, float, date, geneExpression, metaboliteIntensity, and other non-dict terms

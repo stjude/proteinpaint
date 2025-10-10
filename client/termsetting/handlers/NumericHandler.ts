@@ -2,8 +2,7 @@ import { HandlerBase } from '../HandlerBase.ts'
 import type { Handler } from '../index.ts'
 import type { NumRegularBin, NumCustomBins, NumCont, NumSpline } from '#tw'
 import { Tabs } from '#dom'
-import { violinRenderer } from '#dom'
-// import { setDensityPlot } from './density'
+import { NumericDensity } from './NumericDensity.ts'
 
 type NumericTabCallback = (event: PointerEvent, tab: TabData) => void
 
@@ -15,13 +14,19 @@ type TabData = {
 	active?: boolean
 }
 
-//
+/*
+	NumericHandler 
+	- NumericDensity
+	- NumericDiscrete
+		 - NumRegularBinEditor
+		 - NumCustomBinEditor
+*/
+
 export class NumericHandler extends HandlerBase implements Handler {
+	opts: any // TODO
 	tw: NumRegularBin | NumCustomBins | NumCont | NumSpline
 	tabs: TabData[] = []
-	vr!: violinRenderer
-	density_data!: any
-	handlerByType: {
+	handlerByMode: {
 		[twType: string]: Handler
 	} = {}
 	editHandler!: Handler
@@ -31,11 +36,16 @@ export class NumericHandler extends HandlerBase implements Handler {
 		[name: string]: any
 	} = {}
 
+	density: NumericDensity
+	density_data!: any
+
 	constructor(opts) {
 		super(opts)
+		this.opts = opts
 		this.termsetting = opts.termsetting
 		this.tw = opts.termsetting.tw
 		this.tabs = this.setTabs()
+		this.density = new NumericDensity(opts, this)
 	}
 
 	getPillStatus() {
@@ -51,7 +61,7 @@ export class NumericHandler extends HandlerBase implements Handler {
 			this.dom.editDiv.selectAll('*').remove()
 			this.editHandler.showEditMenu(this.dom.editDiv)
 		}
-		console.log(53, this.tw.q.mode)
+
 		if (self.opts.numericEditMenuVersion.includes('continuous')) {
 			tabs.push({
 				mode: 'continuous',
@@ -92,27 +102,26 @@ export class NumericHandler extends HandlerBase implements Handler {
 	}
 
 	async setEditHandler(tabData) {
-		if (!this.handlerByType[tabData.mode]) {
-			console.log(88, tabData.mode)
+		if (!this.handlerByMode[tabData.mode]) {
 			switch (tabData.mode) {
 				case 'continuous': {
-					const { getHandler } = await import('./NumRegularBin.ts') // TODO
-					this.handlerByType.continuous = getHandler(this)
+					const { NumDiscrete } = await import('./NumDiscrete.ts') // TODO
+					this.handlerByMode.continuous = new NumDiscrete(this.opts, this)
 					break
 				}
 				case 'discrete': {
-					const { getHandler } = await import('./NumRegularBin.ts')
-					this.handlerByType.discrete = getHandler(this)
+					const { NumDiscrete } = await import('./NumDiscrete.ts')
+					this.handlerByMode.discrete = new NumDiscrete(this.opts, this)
 					break
 				}
 				case 'binary': {
-					const { getHandler } = await import('./NumRegularBin.ts') // TODO
-					this.handlerByType.binary = getHandler(this)
+					const { NumDiscrete } = await import('./NumDiscrete.ts') // TODO
+					this.handlerByMode.binary = new NumDiscrete(this.opts, this)
 					break
 				}
 				case 'spline': {
-					const { getHandler } = await import('./NumRegularBin.ts') // TODO
-					this.handlerByType.spline = getHandler(this)
+					const { NumDiscrete } = await import('./NumDiscrete.ts') // TODO
+					this.handlerByMode.spline = new NumDiscrete(this.opts, this)
 					break
 				}
 				default:
@@ -120,10 +129,11 @@ export class NumericHandler extends HandlerBase implements Handler {
 					break
 			}
 		}
-		this.editHandler = this.handlerByType[tabData.mode]
+		this.editHandler = this.handlerByMode[tabData.mode]
 	}
 
 	async showEditMenu(div) {
+		//console.log(135, 'NumericHandler showEditMenu()')
 		div.selectAll('*').remove()
 		const self = this.tw
 		for (const t of this.tabs) {
@@ -134,11 +144,10 @@ export class NumericHandler extends HandlerBase implements Handler {
 		topBar.append('span').html('Use as&nbsp;')
 		const contentHolder = div.append('div')
 
-		await this.showViolin(div.append('div'))
+		this.density_data = await this.density.showViolin(div.append('div'))
 		this.setEditHandler(this.tabs.find(t => t.active))
 		this.dom.editDiv = div.append('div')
 
-		console.log(130, this.tabs, this.density_data)
 		if (this.tabs.length > 1) {
 			new Tabs({
 				holder: topBar.append('div').style('display', 'inline-block'),
@@ -147,52 +156,11 @@ export class NumericHandler extends HandlerBase implements Handler {
 				tabs: this.tabs
 			}).main()
 		}
-
-		//this.editHandler.showEditMenu(this.dom.editDiv)
 	}
 
-	async showViolin(div) {
-		const self = this.termsetting
-		//this.setqDefaults(self)
-
-		div.style('padding', '5px').selectAll('*').remove()
-
-		const loadingDiv = div
-			.append('div')
-			.style('padding', '10px')
-			.style('text-align', 'center')
-			.html('Getting distribution data ...<br/>')
-
-		const densityDiv = div.append('div')
-
-		const plot_size = {
-			width: 500,
-			height: 100,
-			xpad: 10,
-			ypad: 20,
-			radius: 8
-		}
-
-		this.density_data = await self.vocabApi.getViolinPlotData(
-			{
-				tw: { term: self.term, q: self.q },
-				svgw: plot_size.width,
-				radius: plot_size.radius,
-				filter: self.filter
-			},
-			self.opts.getBodyParams?.()
-		)
-
-		loadingDiv.remove()
-
-		this.vr = new violinRenderer({
-			holder: densityDiv,
-			rd: this.density_data,
-			width: plot_size.width,
-			height: plot_size.height,
-			radius: plot_size.radius
-		})
-
-		this.vr.render()
+	applyEdits() {
+		this.editHandler.applyEdits()
+		this.termsetting.dom.tip.hide()
+		this.termsetting.api.runCallback()
 	}
 }

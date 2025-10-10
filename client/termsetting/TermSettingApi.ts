@@ -168,7 +168,8 @@ export class TermSettingApi {
 						//tw.$id = await get$id(tw)
 						await self.vocabApi.setTermBins(tw as any) // TODO: fix type
 					}
-					self.handler.showEditMenu(div)
+					await self.handler.showEditMenu(div.append('div'))
+					self.renderButtons(div.append('div'))
 				}
 			} as opt)
 		}
