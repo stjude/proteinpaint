@@ -3068,31 +3068,31 @@
     },
     "functions": {
       "total": 90,
-      "covered": 76,
+      "covered": 75,
       "skipped": 0,
-      "pct": 84.44
+      "pct": 83.33
     },
     "statements": {
-      "total": 463,
+      "total": 462,
       "covered": 370,
       "skipped": 0,
-      "pct": 79.91
+      "pct": 80.08
     },
     "branches": {
-      "total": 413,
-      "covered": 280,
+      "total": 415,
+      "covered": 282,
       "skipped": 0,
-      "pct": 67.79
+      "pct": 67.95
     },
     "lowestPct": {
-      "curr": 67.79,
+      "curr": 67.95,
       "prev": 68.85,
-      "diff": -1.059999999999988
+      "diff": -0.8999999999999915
     },
     "averagePct": {
-      "curr": 79.17,
+      "curr": 78.975,
       "prev": 80.86250000000001,
-      "diff": -1.6925000000000097
+      "diff": -1.887500000000017
     }
   },
   "mass/test/barchart.integration.spec.js": {
@@ -7993,38 +7993,38 @@
   },
   "plots/test/barchart.integration.spec.js": {
     "lines": {
-      "total": 405,
-      "covered": 405,
+      "total": 417,
+      "covered": 417,
       "skipped": 0,
       "pct": 100
     },
     "functions": {
-      "total": 101,
-      "covered": 98,
+      "total": 103,
+      "covered": 100,
       "skipped": 0,
-      "pct": 97.02
+      "pct": 97.08
     },
     "statements": {
-      "total": 430,
-      "covered": 427,
+      "total": 445,
+      "covered": 442,
       "skipped": 0,
-      "pct": 99.3
+      "pct": 99.32
     },
     "branches": {
-      "total": 70,
-      "covered": 41,
+      "total": 76,
+      "covered": 44,
       "skipped": 0,
-      "pct": 58.57
+      "pct": 57.89
     },
     "lowestPct": {
-      "curr": 58.57,
-      "prev": 0,
-      "diff": 58.57
+      "curr": 57.89,
+      "prev": 58.57,
+      "diff": -0.6799999999999997
     },
     "averagePct": {
-      "curr": 88.7225,
-      "prev": 0,
-      "diff": 88.7225
+      "curr": 88.57249999999999,
+      "prev": 88.7225,
+      "diff": -0.15000000000000568
     }
   },
   "plots/runchart/test/runchart.integration.spec.js": {
