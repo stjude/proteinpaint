@@ -3,7 +3,7 @@ import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { GRIN2Dom, GRIN2Opts } from './GRIN2Types'
 import { dofetch3 } from '#common/dofetch'
 import { Menu, renderTable, table2col, make_one_checkbox, sayerror } from '#dom'
-import { dtsnvindel, dtsv, dtfusionrna, mclass, dtcnv } from '#shared/common.js'
+import { dtsnvindel, mclass, dtcnv } from '#shared/common.js'
 import { get$id } from '#termsetting'
 import { PlotBase } from '#plots/PlotBase.ts'
 import { plotManhattan } from '#plots/manhattan/manhattan.ts'
@@ -106,24 +106,24 @@ class GRIN2 extends PlotBase implements RxComponent {
 			1 // step
 		)
 		this.dom.snvindel_minAltAlleleCount = this.addOptionRowToTable(t2, 'Min Alt Allele Count', 2, 0, 1e6, 1)
-		// 5' flanking size
-		this.dom.snvindel_five_prime_flank_size = this.addOptionRowToTable(
-			t2,
-			"5' Flanking Size",
-			500, // default
-			0, // min
-			1e9, // max
-			500 // step
-		)
-		// 3' flanking size
-		this.dom.snvindel_three_prime_flank_size = this.addOptionRowToTable(
-			t2,
-			"3' Flanking Size",
-			500, // default
-			0, // min
-			1e9, // max
-			500 // step
-		)
+		// // 5' flanking size
+		// this.dom.snvindel_five_prime_flank_size = this.addOptionRowToTable(
+		// 	t2,
+		// 	"5' Flanking Size",
+		// 	500, // default
+		// 	0, // min
+		// 	1e9, // max
+		// 	500 // step
+		// )
+		// // 3' flanking size
+		// this.dom.snvindel_three_prime_flank_size = this.addOptionRowToTable(
+		// 	t2,
+		// 	"3' Flanking Size",
+		// 	500, // default
+		// 	0, // min
+		// 	1e9, // max
+		// 	500 // step
+		// )
 
 		// Consequences section header + checkbox grid
 		{
@@ -191,25 +191,25 @@ class GRIN2 extends PlotBase implements RxComponent {
 			1000 // step
 		)
 
-		// 5' flanking size
-		this.dom.cnv_five_prime_flank_size = this.addOptionRowToTable(
-			t2,
-			"5' Flanking Size",
-			500, // default
-			0, // min
-			1e9, // max
-			500 // step
-		)
+		// // 5' flanking size
+		// this.dom.cnv_five_prime_flank_size = this.addOptionRowToTable(
+		// 	t2,
+		// 	"5' Flanking Size",
+		// 	500, // default
+		// 	0, // min
+		// 	1e9, // max
+		// 	500 // step
+		// )
 
-		// 3' flanking size
-		this.dom.cnv_three_prime_flank_size = this.addOptionRowToTable(
-			t2,
-			"3' Flanking Size",
-			500, // default
-			0, // min
-			1e9, // max
-			500 // step
-		)
+		// // 3' flanking size
+		// this.dom.cnv_three_prime_flank_size = this.addOptionRowToTable(
+		// 	t2,
+		// 	"3' Flanking Size",
+		// 	500, // default
+		// 	0, // min
+		// 	1e9, // max
+		// 	500 // step
+		// )
 
 		// ----- Left-side CNV checkbox -----
 		const isChecked = this.dtUsage[dtcnv].checked
@@ -228,88 +228,88 @@ class GRIN2 extends PlotBase implements RxComponent {
 	}
 
 	// Add Fusion row
-	private addFusionRow = (table: any) => {
-		const [left, right] = table.addRow()
+	// private addFusionRow = (table: any) => {
+	// 	const [left, right] = table.addRow()
 
-		// Fusion options table
-		const t2 = table2col({ holder: right })
+	// 	// Fusion options table
+	// 	const t2 = table2col({ holder: right })
 
-		// 5' flanking size
-		this.dom.fusion_five_prime_flank_size = this.addOptionRowToTable(
-			t2,
-			"5' Flanking Size",
-			500, // default
-			0, // min
-			1e9, // max
-			500 // step
-		)
+	// 	// // 5' flanking size
+	// 	// this.dom.fusion_five_prime_flank_size = this.addOptionRowToTable(
+	// 	// 	t2,
+	// 	// 	"5' Flanking Size",
+	// 	// 	500, // default
+	// 	// 	0, // min
+	// 	// 	1e9, // max
+	// 	// 	500 // step
+	// 	// )
 
-		// 3' flanking size
-		this.dom.fusion_three_prime_flank_size = this.addOptionRowToTable(
-			t2,
-			"3' Flanking Size",
-			500, // default
-			0, // min
-			1e9, // max
-			500 // step
-		)
+	// 	// // 3' flanking size
+	// 	// this.dom.fusion_three_prime_flank_size = this.addOptionRowToTable(
+	// 	// 	t2,
+	// 	// 	"3' Flanking Size",
+	// 	// 	500, // default
+	// 	// 	0, // min
+	// 	// 	1e9, // max
+	// 	// 	500 // step
+	// 	// )
 
-		const isChecked = this.dtUsage[dtfusionrna].checked
-		t2.table.style('display', isChecked ? '' : 'none')
+	// 	const isChecked = this.dtUsage[dtfusionrna].checked
+	// 	t2.table.style('display', isChecked ? '' : 'none')
 
-		make_one_checkbox({
-			holder: left,
-			labeltext: 'Fusion (RNA Fusion Events)',
-			checked: isChecked,
-			callback: (checked: boolean) => {
-				this.dtUsage[dtfusionrna].checked = checked
-				t2.table.style('display', checked ? '' : 'none')
-				this.updateRunButtonState()
-			}
-		})
-	}
+	// 	make_one_checkbox({
+	// 		holder: left,
+	// 		labeltext: 'Fusion (RNA Fusion Events)',
+	// 		checked: isChecked,
+	// 		callback: (checked: boolean) => {
+	// 			this.dtUsage[dtfusionrna].checked = checked
+	// 			t2.table.style('display', checked ? '' : 'none')
+	// 			this.updateRunButtonState()
+	// 		}
+	// 	})
+	// }
 
 	// Add SV row
-	private addSvRow = (table: any) => {
-		const [left, right] = table.addRow()
+	// private addSvRow = (table: any) => {
+	// 	const [left, right] = table.addRow()
 
-		// SV options table
-		const t2 = table2col({ holder: right })
+	// 	// SV options table
+	// 	const t2 = table2col({ holder: right })
 
-		// 5' flanking size
-		this.dom.sv_five_prime_flank_size = this.addOptionRowToTable(
-			t2,
-			"5' Flanking Size",
-			500, // default
-			0, // min
-			1e9, // max
-			500 // step
-		)
+	// 	// // 5' flanking size
+	// 	// this.dom.sv_five_prime_flank_size = this.addOptionRowToTable(
+	// 	// 	t2,
+	// 	// 	"5' Flanking Size",
+	// 	// 	500, // default
+	// 	// 	0, // min
+	// 	// 	1e9, // max
+	// 	// 	500 // step
+	// 	// )
 
-		// 3' flanking size
-		this.dom.sv_three_prime_flank_size = this.addOptionRowToTable(
-			t2,
-			"3' Flanking Size",
-			500, // default
-			0, // min
-			1e9, // max
-			500 // step
-		)
+	// 	// // 3' flanking size
+	// 	// this.dom.sv_three_prime_flank_size = this.addOptionRowToTable(
+	// 	// 	t2,
+	// 	// 	"3' Flanking Size",
+	// 	// 	500, // default
+	// 	// 	0, // min
+	// 	// 	1e9, // max
+	// 	// 	500 // step
+	// 	// )
 
-		const isChecked = this.dtUsage[dtsv].checked
-		t2.table.style('display', isChecked ? '' : 'none')
+	// 	const isChecked = this.dtUsage[dtsv].checked
+	// 	t2.table.style('display', isChecked ? '' : 'none')
 
-		make_one_checkbox({
-			holder: left,
-			labeltext: 'SV (Structural Variants)',
-			checked: isChecked,
-			callback: (checked: boolean) => {
-				this.dtUsage[dtsv].checked = checked
-				t2.table.style('display', checked ? '' : 'none')
-				this.updateRunButtonState()
-			}
-		})
-	}
+	// 	make_one_checkbox({
+	// 		holder: left,
+	// 		labeltext: 'SV (Structural Variants)',
+	// 		checked: isChecked,
+	// 		callback: (checked: boolean) => {
+	// 			this.dtUsage[dtsv].checked = checked
+	// 			t2.table.style('display', checked ? '' : 'none')
+	// 			this.updateRunButtonState()
+	// 		}
+	// 	})
+	// }
 
 	// Enable the Run button only if at least one data type is checked
 	private updateRunButtonState() {
@@ -336,20 +336,20 @@ class GRIN2 extends PlotBase implements RxComponent {
 			}
 			this.addCnvRow(table)
 		}
-		if (queries.svfusion?.dtLst?.includes(dtfusionrna)) {
-			this.dtUsage[dtfusionrna] = {
-				checked: false,
-				label: 'Fusion (RNA Fusion Events)'
-			}
-			this.addFusionRow(table)
-		}
-		if (queries.svfusion?.dtLst?.includes(dtsv)) {
-			this.dtUsage[dtsv] = {
-				checked: false,
-				label: 'SV (Structural Variants)'
-			}
-			this.addSvRow(table)
-		}
+		// if (queries.svfusion?.dtLst?.includes(dtfusionrna)) {
+		// 	this.dtUsage[dtfusionrna] = {
+		// 		checked: false,
+		// 		label: 'Fusion (RNA Fusion Events)'
+		// 	}
+		// 	this.addFusionRow(table)
+		// }
+		// if (queries.svfusion?.dtLst?.includes(dtsv)) {
+		// 	this.dtUsage[dtsv] = {
+		// 		checked: false,
+		// 		label: 'SV (Structural Variants)'
+		// 	}
+		// 	this.addSvRow(table)
+		// }
 
 		// Run Button
 		this.runButton = this.dom.controls
@@ -503,9 +503,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 			requestConfig.snvindelOptions = {
 				minTotalDepth: parseFloat(this.dom.snvindel_minTotalDepth.property('value')),
 				minAltAlleleCount: parseFloat(this.dom.snvindel_minAltAlleleCount.property('value')),
-				consequences: this.getSelectedConsequences(),
-				fivePrimeFlankSize: parseFloat(this.dom.snvindel_five_prime_flank_size.property('value')),
-				threePrimeFlankSize: parseFloat(this.dom.snvindel_three_prime_flank_size.property('value'))
+				consequences: this.getSelectedConsequences()
+				// fivePrimeFlankSize: parseFloat(this.dom.snvindel_five_prime_flank_size.property('value')),
+				// threePrimeFlankSize: parseFloat(this.dom.snvindel_three_prime_flank_size.property('value'))
 			}
 		}
 
@@ -513,25 +513,25 @@ class GRIN2 extends PlotBase implements RxComponent {
 			requestConfig.cnvOptions = {
 				lossThreshold: parseFloat(this.dom.cnv_lossThreshold.property('value')),
 				gainThreshold: parseFloat(this.dom.cnv_gainThreshold.property('value')),
-				maxSegLength: parseFloat(this.dom.cnv_maxSegLength.property('value')),
-				fivePrimeFlankSize: parseFloat(this.dom.cnv_five_prime_flank_size.property('value')),
-				threePrimeFlankSize: parseFloat(this.dom.cnv_three_prime_flank_size.property('value'))
+				maxSegLength: parseFloat(this.dom.cnv_maxSegLength.property('value'))
+				// fivePrimeFlankSize: parseFloat(this.dom.cnv_five_prime_flank_size.property('value')),
+				// threePrimeFlankSize: parseFloat(this.dom.cnv_three_prime_flank_size.property('value'))
 			}
 		}
 
-		if (this.dtUsage[dtfusionrna]?.checked) {
-			requestConfig.fusionOptions = {
-				fivePrimeFlankSize: parseFloat(this.dom.fusion_five_prime_flank_size.property('value')),
-				threePrimeFlankSize: parseFloat(this.dom.fusion_three_prime_flank_size.property('value'))
-			}
-		}
+		// if (this.dtUsage[dtfusionrna]?.checked) {
+		// 	requestConfig.fusionOptions = {
+		// 		// fivePrimeFlankSize: parseFloat(this.dom.fusion_five_prime_flank_size.property('value')),
+		// 		// threePrimeFlankSize: parseFloat(this.dom.fusion_three_prime_flank_size.property('value'))
+		// 	}
+		// }
 
-		if (this.dtUsage[dtsv]?.checked) {
-			requestConfig.svOptions = {
-				fivePrimeFlankSize: parseFloat(this.dom.sv_five_prime_flank_size.property('value')),
-				threePrimeFlankSize: parseFloat(this.dom.sv_three_prime_flank_size.property('value'))
-			}
-		}
+		// if (this.dtUsage[dtsv]?.checked) {
+		// 	requestConfig.svOptions = {
+		// 		// fivePrimeFlankSize: parseFloat(this.dom.sv_five_prime_flank_size.property('value')),
+		// 		// threePrimeFlankSize: parseFloat(this.dom.sv_three_prime_flank_size.property('value'))
+		// 	}
+		// }
 
 		return requestConfig
 	}
@@ -568,8 +568,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 				devicePixelRatio: window.devicePixelRatio,
 				...configValues
 			}
-
-			console.log('GRIN2 Request', requestData)
 
 			const response = await dofetch3('/grin2', {
 				body: requestData
