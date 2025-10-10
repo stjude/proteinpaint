@@ -462,10 +462,10 @@ function filterAndConvertSnvIndel(
 	}
 
 	// Apply 5' and 3' flanking to the point mutation
-	const flanking5p = options.fivePrimeFlankSize || 0
-	const flanking3p = options.threePrimeFlankSize || 0
-	const start = entry.pos - flanking5p
-	const end = entry.pos + flanking3p
+	// const flanking5p = options.fivePrimeFlankSize || 0
+	// const flanking3p = options.threePrimeFlankSize || 0
+	const start = entry.pos
+	const end = entry.pos
 
 	// TODO: implement hypermutator threshold filter (maybe calculate number of mutations per sample?)
 
@@ -508,10 +508,10 @@ function filterAndConvertCnv(sampleName: string, entry: any, options: GRIN2Reque
 	// Apply 5' and 3' flanking to the segment
 	// const flanking5p = options.fivePrimeFlankSize || 0
 	// const flanking3p = options.threePrimeFlankSize || 0
-	// const start = entry.start - flanking5p
-	// const end = entry.stop + flanking3p
+	const start = entry.start
+	const end = entry.stop
 
-	return [sampleName, entry.chr, entry.start, entry.stop, lesionType]
+	return [sampleName, entry.chr, start, end, lesionType]
 }
 
 function filterAndConvertFusion(
@@ -528,19 +528,19 @@ function filterAndConvertFusion(
 	// const flanking5p = options.fivePrimeFlankSize || 0
 	// const flanking3p = options.threePrimeFlankSize || 0
 
-	// // First breakpoint on chrA
-	// const startA = Math.max(0, entry.posA - flanking5p)
-	// const endA = entry.posA + flanking3p
+	// First breakpoint on chrA
+	const startA = entry.posA
+	const endA = entry.posA
 
-	const lesionA: string[] = [sampleName, entry.chrA, entry.posA, entry.posA, 'fusion']
+	const lesionA: string[] = [sampleName, entry.chrA, startA, endA, 'fusion']
 
 	// Check if there's a second breakpoint on chrB
 	if (entry.chrB && entry.posB !== undefined) {
 		// Inter-chromosomal fusion or same chromosome with two breakpoints
-		// const startB = Math.max(0, entry.posB - flanking5p)
-		// const endB = entry.posB + flanking3p
+		const startB = entry.posB
+		const endB = entry.posB
 
-		const lesionB: string[] = [sampleName, entry.chrB, entry.posB, entry.posB, 'fusion']
+		const lesionB: string[] = [sampleName, entry.chrB, startB, endB, 'fusion']
 
 		// Return both breakpoints as separate lesions
 		// This will correctly identify genes affected at both fusion partners
@@ -566,18 +566,18 @@ function filterAndConvertSV(
 	// const flanking3p = options.threePrimeFlankSize || 0
 
 	// First breakpoint on chrA
-	// const startA = Math.max(0, entry.posA - flanking5p)
-	// const endA = entry.posA + flanking3p
+	const startA = entry.posA
+	const endA = entry.posA
 
-	const lesionA: string[] = [sampleName, entry.chrA, entry.posA, entry.posA, 'sv']
+	const lesionA: string[] = [sampleName, entry.chrA, startA, endA, 'sv']
 
 	// Check if there's a second breakpoint on chrB
 	if (entry.chrB && entry.posB !== undefined) {
 		// Inter-chromosomal SV or same chromosome with two breakpoints
-		// const startB = Math.max(0, entry.posB - flanking5p)
-		// const endB = entry.posB + flanking3p
+		const startB = entry.posB
+		const endB = entry.posB
 
-		const lesionB: string[] = [sampleName, entry.chrB, entry.posB, entry.posB, 'sv']
+		const lesionB: string[] = [sampleName, entry.chrB, startB, endB, 'sv']
 
 		// Return both breakpoints as separate lesions
 		return [lesionA, lesionB]
