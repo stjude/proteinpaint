@@ -162,6 +162,8 @@ export interface Handler {
 	showEditMenu: (div: Selection) => void
 	validateQ?: (d: PillData) => void
 	postMain?: () => void
+	applyEdits: () => void
+	undoEdits: () => void
 }
 
 export interface HandlerGenerator {
