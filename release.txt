@@ -1,2 +1,1 @@
-Fixes:
-- In DE deleted sloppily hardcoded cpm filters and added user-controllable gene CPM filter; BCV is now displayed on volcano stats UI
+
