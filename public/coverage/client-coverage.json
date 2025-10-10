@@ -1111,8 +1111,8 @@
     },
     "averagePct": {
       "curr": 8.41,
-      "prev": 7.0225,
-      "diff": 1.3875000000000002
+      "prev": 8.41,
+      "diff": 0
     }
   },
   "plots/volcano/model/VolcanoModel.ts": {
