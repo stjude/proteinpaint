@@ -31,20 +31,20 @@ export class ThumbnailRenderer {
 			icons['left'](leftIconHolder, {
 				width: setting.iconDimensions,
 				height: setting.iconDimensions,
+				disabled: setting.thumbnailRangeStart === 0,
 				handler: () => {
-					console.log('TODO')
+					wsiViewerInteractions.toggleThumbnails(this.newStart(setting, layers, true))
 				}
 			})
 
-			for (let i = 0; i < setting.numDisplayedThumbnails; i++) {
+			for (let i = setting.thumbnailRangeStart; i < this.lastShownImage(setting, layers.length); i++) {
 				const isActive = i === setting.displayedImageIndex
 				const thumbnail = thumbnailsContainer
 					.append('div')
 					.attr('id', `thumbnail${i}`)
 					.style('width', setting.thumbnailWidth)
 					.style('height', setting.thumbnailHeight)
-					.style('margin-left', i == 0 ? '10px' : '0px')
-					.style('margin-right', '10px')
+					.style('margin', '0 5px')
 					.style('display', 'flex')
 					.style('height', 'auto')
 					.style('align-items', 'center')
@@ -68,8 +68,9 @@ export class ThumbnailRenderer {
 			icons['right'](rightIconHolder, {
 				width: setting.iconDimensions,
 				height: setting.iconDimensions,
+				disabled: setting.thumbnailRangeStart + setting.numDisplayedThumbnails >= layers.length,
 				handler: () => {
-					console.log('TODO')
+					wsiViewerInteractions.toggleThumbnails(this.newStart(setting, layers))
 				}
 			})
 		} else {
@@ -81,6 +82,24 @@ export class ThumbnailRenderer {
 					.style('border', isActive ? setting.activeThumbnailBorderStyle : setting.nonActiveThumbnailBorderStyle)
 			}
 		}
+
 		return thumbnailsContainer
+	}
+
+	private lastShownImage(setting, layersLength) {
+		return setting.thumbnailRangeStart + setting.numDisplayedThumbnails >= layersLength
+			? layersLength
+			: setting.thumbnailRangeStart + setting.numDisplayedThumbnails
+	}
+
+	private newStart(setting, layers, isLeft = false) {
+		if (isLeft) {
+			return Math.max(0, setting.thumbnailRangeStart - setting.numDisplayedThumbnails)
+		} else {
+			return Math.min(
+				layers.length - setting.numDisplayedThumbnails,
+				setting.thumbnailRangeStart + setting.numDisplayedThumbnails
+			)
+		}
 	}
 }
