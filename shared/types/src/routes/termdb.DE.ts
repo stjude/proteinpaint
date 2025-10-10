@@ -66,6 +66,8 @@ export type DEResponse = {
 	/** QL: Image describing the quality of the fitting from QL pipeline, this is only generated for edgeR not for wilcoxon method  */
 	/** MDS: Image showing the MDS plot of samples from both groups, this is only generated for edgeR not for wilcoxon method */
 	images?: DEImage[]
+	/** Biological coefficient of variation (BCV), this is only generated for edgeR*/
+	bcv?: number
 }
 
 export type DataEntry = {

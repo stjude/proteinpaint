@@ -192,6 +192,12 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
 
 DE_method <- input$DE_method
 if (DE_method == "edgeR") {
+
+  # extract common dispersion and BCV(Biological coefficient of variation)
+  y <- estimateDisp(y,design)
+  common_disp <- y$common.dispersion
+  bcv <- sqrt(common_disp)
+
   fit_time <- system.time({
     suppressWarnings({
       suppressMessages({
@@ -297,6 +303,12 @@ final_output$gene_data <- output
 final_output$edgeR_ql_image_name <- fit_image_name
 final_output$num_cases <- length(cases)
 final_output$num_controls <- length(controls)
+
+# BCV is available only for edgeR
+if (DE_method == "edgeR") {
+  final_output$bcv <- bcv
+}
+
 if (dim(read_counts)[1] * dim(read_counts)[2] < as.numeric(input$mds_cutoff)) { # If the dimensions of the read counts matrix is below this threshold, only then the mds image will be generated as its very compute intensive
   final_output$edgeR_mds_image_name <- mds_image_name
 }

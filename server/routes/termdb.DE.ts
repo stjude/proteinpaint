@@ -291,14 +291,17 @@ values[] // using integer sample id
 
 		const images = [result.ql_image]
 		if (result.mds_image) images.push(result.mds_image)
-
-		return {
+		const output: DEResponse = {
 			data: result.gene_data,
 			sample_size2: result.num_cases[0],
 			sample_size1: result.num_controls[0],
 			method: param.method,
 			images
-		} as DEResponse
+		}
+		if (result.bcv && result.bcv[0] !== null && result.bcv[0] !== undefined) {
+			output.bcv = result.bcv[0]
+		}
+		return output
 	}
 
 	// Wilcoxon test will be used for DE analysis
