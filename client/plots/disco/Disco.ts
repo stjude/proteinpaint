@@ -261,7 +261,7 @@ export default class Disco {
 		return renderersMap
 	}
 
-	private onCnvSourceSelect(index: number) {
+	private onCnvSourceSelect = (index: number) => {
 		const state = this.app.getState()
 		const args = state.args
 		const alt = args.alternativeDataByDt?.[dtcnv]
