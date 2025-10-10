@@ -1054,7 +1054,7 @@ export type WSImages = {
 	predictionColor?: Array<number>
 	annotationsColor?: Array<number>
 	tileSize?: number
-	uncertainty?: { color: string; label: string }[]
+	uncertainty?: { color: string; label?: string }[]
 
 	/** dynamically added on launch with built in logic */
 	saveWSIAnnotation?: (annotation: SaveWSIAnnotationRequest) => Promise<void>
