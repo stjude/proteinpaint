@@ -11,6 +11,7 @@ export default interface Settings {
 	renderWSIViewer: boolean
 	renderAnnotationTable: boolean
 	selectedPatchBorderColor: string
+	annotatedPatchBorderColor: string
 	tileSize: number
 	activeAnnotation: number
 	sessionsTileSelection: Array<TileSelection>
