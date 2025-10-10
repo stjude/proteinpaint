@@ -190,45 +190,6 @@ class gsea extends PlotBase {
 		}
 	}
 
-	/** This allows the gsea to run independently. If the DE data
-	 * was already requested (e.g. in the DA from the volcano plot),
-	 * the cached response returns rather than running the DE
-	 * route again.
-	 *
-	 * Also allows loading the gsea from a mass session file without
-	 * error. */
-	async init(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
-		if (!config.gsea_params) {
-			try {
-				const volcanoSettings =
-					config.settings?.volcano || getDefaultVolcanoSettings({}, { termType: 'geneExpression' })
-				const model = new VolcanoModel(this.app, config, volcanoSettings)
-				const response = await model.getData()
-				if (!response || !response.data || response.error) {
-					throw response.error || 'No data returned from volcano model'
-				}
-				const inputGenes = response.data.map(g => g.gene_name)
-				await this.app.save({
-					type: 'plot_edit',
-					id: this.id,
-					config: {
-						gsea_params: {
-							genes: inputGenes,
-							fold_change: response.data.map(g => g.fold_change),
-							genome: this.app.vocabApi.opts.state.vocab.genome,
-							genes_length: inputGenes.length
-						}
-					}
-				})
-			} catch (e) {
-				if (e instanceof Error) console.error(e.message || e)
-				else if (e.stack) console.log(e.stack)
-				throw e
-			}
-		}
-	}
-
 	reactsTo(action) {
 		if (action.type.startsWith('plot_')) {
 			return (
@@ -245,7 +206,25 @@ class gsea extends PlotBase {
 		this.config = structuredClone(config)
 		if (this.config.chartType != this.type && this.config.childType != this.type) return
 		this.settings = this.config.settings.gsea
-
+		try {
+			const volcanoSettings = config.settings?.volcano || getDefaultVolcanoSettings({}, { termType: 'geneExpression' })
+			const model = new VolcanoModel(this.app, this.state, volcanoSettings)
+			const response = await model.getData()
+			if (!response || !response.data || response.error) {
+				throw response.error || 'No data returned from volcano model'
+			}
+			const inputGenes = response.data.map(g => g.gene_name)
+			this.config.gsea_params = {
+				genes: inputGenes,
+				fold_change: response.data.map(g => g.fold_change),
+				genome: this.app.vocabApi.opts.state.vocab.genome,
+				genes_length: inputGenes.length
+			}
+		} catch (e) {
+			if (e instanceof Error) console.error(e.message || e)
+			else if (e.stack) console.log(e.stack)
+			throw e
+		}
 		this.imageUrl = null // Reset the image URL
 		await this.setControls()
 		if (this.dom.header)

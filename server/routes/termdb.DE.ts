@@ -11,6 +11,7 @@ import serverconfig from '../src/serverconfig.js'
 import imagesize from 'image-size'
 import { get_header_txt } from '#src/utils.js'
 import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
+import { get_samples } from '#src/termdb.sql.js'
 
 export const api: RouteApi = {
 	endpoint: 'DEanalysis',
@@ -79,6 +80,7 @@ samplelst{}
 groups[]
 values[] // using integer sample id
 */
+	const filteredSamples = await get_samples(param, ds) //param is the query object from the request
 	if (param.samplelst?.groups?.length != 2) throw '.samplelst.groups.length!=2'
 	if (param.samplelst.groups[0].values?.length < 1) throw 'samplelst.groups[0].values.length<1'
 	if (param.samplelst.groups[1].values?.length < 1) throw 'samplelst.groups[1].values.length<1'
@@ -92,6 +94,7 @@ values[] // using integer sample id
 	const conf1_group1: (string | number)[] = []
 	const conf2_group1: (string | number)[] = []
 	for (const s of param.samplelst.groups[0].values) {
+		if (!filteredSamples.find(fs => fs.id === s.sampleId)) continue //sample filtered out
 		if (!Number.isInteger(s.sampleId)) continue
 		const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
 		if (!n) continue
@@ -153,6 +156,8 @@ values[] // using integer sample id
 	const conf2_group2: (string | number)[] = []
 	for (const s of param.samplelst.groups[1].values) {
 		if (!Number.isInteger(s.sampleId)) continue
+		if (!filteredSamples.find(fs => fs.id === s.sampleId)) continue //sample filtered out
+
 		const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
 		if (!n) continue
 		if (q.allSampleSet.has(n)) {

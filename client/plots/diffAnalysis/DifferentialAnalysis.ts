@@ -144,7 +144,7 @@ export function getPlotConfig(opts: DiffAnalysisOpts) {
 		termType: opts.termType,
 		highlightedData: opts.highlightedData || [],
 		settings: {},
-		hidePlotFilter: true //TODO: Support filtering and reactivity in child plots
+		hidePlotFilter: false //TODO: Support filtering and reactivity in child plots
 	} as any
 
 	if (opts.termType == 'geneExpression') {

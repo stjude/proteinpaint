@@ -16,13 +16,14 @@ import { getCombinedTermFilter } from '#filter'
 // The max sample cutoff for volcano rendering
 const maxSampleCutoff = 4000
 
-class Volcano extends PlotBase implements RxComponent {
+export class Volcano extends PlotBase implements RxComponent {
 	static type = 'volcano'
 	readonly type = 'volcano'
 	components: { controls: any }
 	dom: VolcanoDom
 	interactions?: VolcanoInteractions
 	termType: string
+
 	constructor(opts: VolcanoOpts, api) {
 		super(opts, api)
 		if (this.opts.parentId) this.parentId = this.opts.parentId
@@ -70,7 +71,6 @@ class Volcano extends PlotBase implements RxComponent {
 		}
 		const parentConfig: any = this.parentId && appState.plots.find(p => p.id === this.parentId)
 		const termfilter = getCombinedTermFilter(appState, config.filter || parentConfig?.filter)
-
 		return {
 			config: Object.assign({}, config, {
 				settings: {
@@ -120,7 +120,7 @@ class Volcano extends PlotBase implements RxComponent {
 			}, 500)
 
 			/** Fetch data */
-			const model = new VolcanoModel(this.app, config, settings)
+			const model = new VolcanoModel(this.app, this.state, settings)
 			const response = await model.getData()
 			if (!response || response.error || !response.data.length) {
 				sayerror(this.dom.error, response.error || 'No data returned from server')
