@@ -13,6 +13,7 @@ export type WSImagesResponse = {
 	wsiSessionId?: string
 	overlays?: Array<PredictionOverlay>
 	slide_dimensions: number[]
+	mpp: number[]
 	status: string
 	error?: string
 }
