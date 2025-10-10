@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.149.0
 
 Features:
 - New unit tests for adhoc dictionary build helpers.
