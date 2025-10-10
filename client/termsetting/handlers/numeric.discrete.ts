@@ -2,7 +2,7 @@ import { keyupEnter } from '#src/client'
 import { format } from 'd3-format'
 import { setDensityPlot } from './density'
 import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
-import { make_radios, Tabs, violinRenderer } from '#dom'
+import { make_radios, Tabs } from '#dom'
 import { getPillNameDefault } from '../utils.ts'
 import type { PillData, NumericBin, NumericQ } from '#types'
 
@@ -93,14 +93,14 @@ async function showBinsMenu(self, div: any) {
 	}
 	self.dom.num_holder = div
 	self.dom.density_div = div.append('div')
-	self.vr = new violinRenderer({
-		holder: self.dom.density_div,
-		rd: self.num_obj.density_data,
-		width: self.num_obj.plot_size.width,
-		height: self.num_obj.plot_size.height,
-		radius: self.num_obj.plot_size.radius
-	})
-	self.num_obj.svg = self.vr.svg
+	// self.vr = new violinRenderer({
+	// 	holder: self.dom.density_div,
+	// 	rd: self.num_obj.density_data,
+	// 	width: self.num_obj.plot_size.width,
+	// 	height: self.num_obj.plot_size.height,
+	// 	radius: self.num_obj.plot_size.radius
+	// })
+	// self.num_obj.svg = self.vr.svg
 	self.dom.bins_div = div.append('div').style('padding', '4px')
 	setqDefaults(self)
 	setDensityPlot(self)

@@ -28,4 +28,12 @@ export class HandlerBase implements Handler {
 			? d.name
 			: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
 	}
+
+	applyEdits() {
+		// ignore
+	}
+
+	undoEdits() {
+		// ignore
+	}
 }

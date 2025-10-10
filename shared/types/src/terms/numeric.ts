@@ -108,14 +108,27 @@ export type RegularNumericBinConfig = MinBaseQ & {
 	// if last_bin?.start is set, then a fixed last bin is used; otherwise it's not fixed and computed from data
 	last_bin?: StopUnboundedBin | FullyBoundedBin
 	label_offset?: number
+	startinclusive?: boolean
+	stopinclusive?: boolean
+	/** a d3-format value to format the bin boundary values.
+	 * Defaults to none, in which case the computed bin start and stop values
+	 * (float numbers in javascript) will be used as-is for labels.
+	 * Or, when using the browser UI to edit the numeric bin, the number of decimals
+	 * in the bin_size will be used as the number of fixed decimals;
+	 * for example, bin_size = 0.25 and bin_size = 0.250 will imply a ‘.2f’ and ‘.3f’ d3-format value, respectively.
+	 * Note that the generated bin labels may use integer values in some cases for less clutter, such as when bins.size = 1.
+	 *  */
+	rounding?: string
 }
+
+export type CustomNumericBinConfigLst = [NumericBin, ...NumericBin[]]
 
 export type CustomNumericBinConfig = MinBaseQ & {
 	type: 'custom-bin'
 	mode?: 'discrete' | 'binary'
 	// since ts will allow NumericBin[] to be empty,
 	// use this workaround to define a non-empty array
-	lst: [NumericBin, ...NumericBin[]]
+	lst: CustomNumericBinConfigLst
 	preferredBins?: 'median'
 }
 
