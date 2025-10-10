@@ -2,6 +2,7 @@ import { getCompInit, copyMerge, type RxComponent } from '#rx'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { GRIN2Dom, GRIN2Opts } from './GRIN2Types'
 import { dofetch3 } from '#common/dofetch'
+import { getNormalRoot } from '#filter'
 import { Menu, renderTable, table2col, make_one_checkbox, sayerror } from '#dom'
 import { dtsnvindel, mclass, dtcnv, dtfusionrna, dtsv } from '#shared/common.js'
 import { get$id } from '#termsetting'
@@ -106,6 +107,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 			1 // step
 		)
 		this.dom.snvindel_minAltAlleleCount = this.addOptionRowToTable(t2, 'Min Alt Allele Count', 2, 0, 1e6, 1)
+
+		// if 5/3 flanking size will be needed in future, can create a helper this.addFlankingOption() to dedup
+
 		// // 5' flanking size
 		// this.dom.snvindel_five_prime_flank_size = this.addOptionRowToTable(
 		// 	t2,
@@ -561,7 +565,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			const requestData = {
 				genome: this.app.vocabApi.vocab.genome,
 				dslabel: this.app.vocabApi.vocab.dslabel,
-				filter: this.state.termfilter.filter,
+				filter: getNormalRoot(this.state.termfilter.filter),
 				width: this.state.config.settings.grin2.manhattan?.plotWidth,
 				height: this.state.config.settings.grin2.manhattan?.plotHeight,
 				pngDotRadius: this.state.config.settings.grin2.manhattan?.pngDotRadius,
