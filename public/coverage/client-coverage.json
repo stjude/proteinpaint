@@ -1081,25 +1081,25 @@
   },
   "plots/volcano/Volcano.ts": {
     "lines": {
-      "total": 85,
-      "covered": 7,
+      "total": 89,
+      "covered": 8,
       "skipped": 0,
-      "pct": 8.23
+      "pct": 8.98
     },
     "functions": {
-      "total": 16,
-      "covered": 2,
+      "total": 18,
+      "covered": 3,
       "skipped": 0,
-      "pct": 12.5
+      "pct": 16.66
     },
     "statements": {
-      "total": 95,
-      "covered": 7,
+      "total": 100,
+      "covered": 8,
       "skipped": 0,
-      "pct": 7.36
+      "pct": 8
     },
     "branches": {
-      "total": 65,
+      "total": 75,
       "covered": 0,
       "skipped": 0,
       "pct": 0
@@ -1110,17 +1110,17 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 7.0225,
+      "curr": 8.41,
       "prev": 7.0225,
-      "diff": 0
+      "diff": 1.3875000000000002
     }
   },
   "plots/volcano/model/VolcanoModel.ts": {
     "lines": {
-      "total": 26,
+      "total": 27,
       "covered": 2,
       "skipped": 0,
-      "pct": 7.69
+      "pct": 7.4
     },
     "functions": {
       "total": 7,
@@ -1129,10 +1129,10 @@
       "pct": 0
     },
     "statements": {
-      "total": 28,
+      "total": 29,
       "covered": 2,
       "skipped": 0,
-      "pct": 7.14
+      "pct": 6.89
     },
     "branches": {
       "total": 10,
@@ -1146,9 +1146,9 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 3.7075,
+      "curr": 3.5725,
       "prev": 3.7075,
-      "diff": 0
+      "diff": -0.13500000000000023
     }
   },
   "plots/volcano/test/volcano.unit.spec.ts": {
@@ -1225,10 +1225,10 @@
   },
   "plots/volcano/viewModel/VolcanoViewModel.ts": {
     "lines": {
-      "total": 84,
-      "covered": 81,
+      "total": 86,
+      "covered": 82,
       "skipped": 0,
-      "pct": 96.42
+      "pct": 95.34
     },
     "functions": {
       "total": 15,
@@ -1237,26 +1237,26 @@
       "pct": 93.33
     },
     "statements": {
-      "total": 91,
-      "covered": 84,
+      "total": 93,
+      "covered": 85,
       "skipped": 0,
-      "pct": 92.3
+      "pct": 91.39
     },
     "branches": {
-      "total": 44,
-      "covered": 29,
+      "total": 48,
+      "covered": 31,
       "skipped": 0,
-      "pct": 65.9
+      "pct": 64.58
     },
     "lowestPct": {
-      "curr": 65.9,
+      "curr": 64.58,
       "prev": 67.5,
-      "diff": -1.5999999999999943
+      "diff": -2.9200000000000017
     },
     "averagePct": {
-      "curr": 86.98750000000001,
+      "curr": 86.16,
       "prev": 87.47999999999999,
-      "diff": -0.4924999999999784
+      "diff": -1.3199999999999932
     }
   },
   "plots/volcano/VolcanoControlInputs.ts": {
