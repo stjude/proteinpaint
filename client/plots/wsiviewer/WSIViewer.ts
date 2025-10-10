@@ -132,6 +132,10 @@ class WSIViewer extends PlotBase implements RxComponent {
 		if (settings.renderWSIViewer) {
 			this.wsiViewerInteractions.toggleLoadingDiv(settings.renderAnnotationTable)
 
+			if (this.thumbnailsContainer != undefined) {
+				this.thumbnailsContainer.remove()
+				this.thumbnailsContainer = undefined
+			}
 			this.thumbnailsContainer = this.thumbnailRenderer.render(
 				this.dom.mapHolder,
 				this.thumbnailsContainer,

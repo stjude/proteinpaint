@@ -12,6 +12,8 @@ export default interface Settings {
 	numDisplayedThumbnails: number
 	/** Width and height of previous and next thumbnail icons */
 	iconDimensions: number
+	/** Range of thumbnails currently shown, based on numDisplayedThumbnails */
+	thumbnailRangeStart: number
 	renderWSIViewer: boolean
 	renderAnnotationTable: boolean
 	selectedPatchBorderColor: string

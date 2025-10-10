@@ -41,6 +41,7 @@ export class WSIViewerInteractions {
 
 	onRetrainModelClicked: (genome: string, dslabel: string, projectId: string) => void
 	toggleLoadingDiv: (show: boolean) => void
+	toggleThumbnails: (start: number) => void
 
 	constructor(wsiApp: any, opts: any) {
 		this.thumbnailClickListener = (index: number) => {
@@ -348,6 +349,16 @@ export class WSIViewerInteractions {
 				wsiApp.dom.annotationsHolder.style('display', 'inline-block')
 				wsiApp.dom.legendHolder.style('display', 'inline-block')
 			}
+		}
+
+		this.toggleThumbnails = (start: number) => {
+			wsiApp.app.dispatch({
+				type: 'plot_edit',
+				id: opts.id,
+				config: {
+					settings: { thumbnailRangeStart: start, renderWSIViewer: true }
+				}
+			})
 		}
 	}
 
