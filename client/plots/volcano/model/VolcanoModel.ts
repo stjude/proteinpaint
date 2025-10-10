@@ -7,11 +7,14 @@ export class VolcanoModel {
 	config: VolcanoPlotConfig
 	settings: VolcanoSettings
 	termType: string
-	constructor(app: MassAppApi, config: VolcanoPlotConfig, settings: VolcanoSettings) {
+	state: any
+
+	constructor(app: MassAppApi, state: any, settings: VolcanoSettings) {
 		this.app = app
-		this.config = config
+		this.state = state
+		this.config = state.config
 		this.settings = settings
-		this.termType = config.termType
+		this.termType = state.config.termType
 	}
 
 	/** May use mapper instead as more termTypes are added */
@@ -28,7 +31,7 @@ export class VolcanoModel {
 
 	async getGERequestBody() {
 		await this.getOtherSamples(this.config.samplelst)
-		const state = this.app.getState()
+		const state = this.state
 		const body = {
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
