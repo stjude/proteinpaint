@@ -1,2 +1,1 @@
-Features:
-- GRIN2: Adding support for fusion and sv data types. Allowo user selection of data types via checkboxes
+

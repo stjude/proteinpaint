@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- GRIN2: Adding support for fusion and sv data types. Allowo user selection of data types via checkboxes
+
+
 ## 2.149.0
 
 Features:
