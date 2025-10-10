@@ -1,10 +1,10 @@
 import { getCompInit, copyMerge } from '#rx'
 import { select } from 'd3-selection'
 import { controlsInit } from './controls'
-import { getNormalRoot } from '#filter/filter'
+import { getNormalRoot } from '#filter'
 import { dofetch3 } from '#common/dofetch'
 import { DEFAULT_SAMPLE_TYPE, isNumericTerm, ROOT_SAMPLE_TYPE, getDateStrFromNumber } from '#shared/terms.js'
-import { sayerror } from '../dom/sayerror.ts'
+import { sayerror } from '#dom'
 
 const root_ID = 'root'
 const samplesLimit = 15
