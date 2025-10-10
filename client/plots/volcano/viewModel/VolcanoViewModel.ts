@@ -244,6 +244,13 @@ export class VolcanoViewModel {
 				value: this.response.sample_size2
 			}
 		]
+
+		if (this.response.bcv !== undefined && this.response.bcv !== null) {
+			tableRows.push({
+				label: 'Biological coefficient of variation',
+				value: roundValueAuto(this.response.bcv)
+			})
+		}
 		return tableRows
 	}
 
