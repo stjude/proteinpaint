@@ -48,7 +48,12 @@ export class WSIViewerInteractions {
 				type: 'plot_edit',
 				id: opts.id,
 				config: {
-					settings: { displayedImageIndex: index, renderWSIViewer: true }
+					settings: {
+						activeAnnotation: 0,
+						sessionsTileSelection: [],
+						displayedImageIndex: index,
+						renderWSIViewer: true
+					}
 				}
 			})
 		}
