@@ -20,6 +20,7 @@ import { CnvHeatmapRenderer } from '#plots/disco/cnv/CnvHeatmapRenderer.ts'
 import type ViewModel from '#plots/disco/viewmodel/ViewModel.ts'
 import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
 import { InvalidDataUI } from '#dom'
+import { dtcnv, dtloh } from '#shared/common.js'
 
 export default class Disco {
 	// following attributes are required by rx
@@ -187,10 +188,16 @@ export default class Disco {
 			const holder = this.opts.holder
 			// TODO change this
 			holder.select('div[id="sjpp_disco_plot_holder_div"]').remove()
-			const svgDiv = holder.append('div').attr('id', 'sjpp_disco_plot_holder_div').style('display', 'inline-block')
+			const svgDiv = holder
+				.append('div')
+				.attr('id', 'sjpp_disco_plot_holder_div')
+				.style('display', 'inline-block')
+				.style('position', 'relative')
 
 			// TODO calculate viewModel.filteredSnvDataLength always
 			const appState = this.app.getState()
+			this.viewModel.svgDiv = svgDiv
+			this.viewModel.appState = appState
 
 			for (const name in this.features) {
 				this.features[name].update({ state: this.state, appState })
@@ -204,7 +211,7 @@ export default class Disco {
 				this.app.opts.state.args.genome
 			)
 
-			discoRenderer.render(svgDiv, this.viewModel)
+			discoRenderer.render(svgDiv, this.viewModel, this.onCnvSourceSelect)
 
 			if (this.viewModel.invalidDataInfo?.entries?.length) {
 				InvalidDataUI.render(this.errorDiv, this.viewModel.invalidDataInfo)
@@ -213,7 +220,10 @@ export default class Disco {
 	}
 
 	getState(appState: any) {
-		return appState.plots.find(p => p.id === this.id)
+		const config = appState.plots.find(p => p.id === this.id)
+		if (!config) return config
+		// include args.data so updates rerender when mutation list changes
+		return { ...config, mlst: appState.args.data }
 	}
 
 	getRingRenderers(
@@ -249,6 +259,23 @@ export default class Disco {
 		renderersMap.set(RingType.LOH, lohRenderer)
 
 		return renderersMap
+	}
+
+	private onCnvSourceSelect = (index: number) => {
+		const state = this.app.getState()
+		const args = state.args
+		const alt = args.alternativeDataByDt?.[dtcnv]
+		if (!alt) return
+		const altClone = structuredClone(args.alternativeDataByDt)
+		altClone[dtcnv].forEach((d, i) => (d.inuse = i === index))
+		const selected = altClone[dtcnv][index]
+		selected.mlst.forEach((d: any) => (d.position = d.pos))
+		const baseData = args.data.filter((d: any) => d.dt != dtcnv && d.dt != dtloh)
+		const newData = baseData.concat(selected.mlst)
+		this.app.dispatch({
+			type: 'app_refresh',
+			state: { args: { ...args, data: newData, alternativeDataByDt: altClone } }
+		})
 	}
 
 	toggleVisibility(isOpen: boolean) {

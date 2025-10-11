@@ -15,7 +15,7 @@ export class DiscoRenderer {
 		this.fusionRenderer = new FusionRenderer(genome)
 	}
 
-	render(holder: any, viewModel: ViewModel) {
+	render(holder: any, viewModel: ViewModel, onCnvSourceSelect: (index: number) => void) {
 		const svgDiv = holder.append('div').style('display', 'inline-block').style('font-family', 'Arial')
 
 		const svg = svgDiv
@@ -61,7 +61,9 @@ export class DiscoRenderer {
 			viewModel.legend,
 			-1 * (viewModel.settings.rings.labelLinesInnerRadius + viewModel.settings.rings.labelsToLinesDistance + 50),
 			viewModel.width,
-			viewModel.height / 2
+			viewModel.height / 2,
+			viewModel,
+			onCnvSourceSelect
 		)
 	}
 }

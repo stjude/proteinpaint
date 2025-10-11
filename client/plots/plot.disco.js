@@ -1,5 +1,5 @@
 import { dofetch3 } from '#common/dofetch'
-import { dt2label } from '#shared/common.js'
+import { dt2label, dtcnv } from '#shared/common.js'
 
 /*
 make a disco plot for the "singleSampleMutation" directive, as well as the subsequent block-launching from clicking the image
@@ -63,6 +63,10 @@ export default async function (termdbConfig, dslabel, sample, holder, genomeObj,
 			sampleName: sample[termdbConfig.queries.singleSampleMutation.sample_id_key],
 			data: mlst,
 			genome: genomeObj
+		}
+
+		if (data.alternativeDataByDt) {
+			disco_arg.alternativeDataByDt = data.alternativeDataByDt
 		}
 
 		if (termdbConfig.queries.singleSampleMutation.discoPlot?.skipChrM) {
