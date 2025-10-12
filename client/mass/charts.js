@@ -388,6 +388,13 @@ function getChartTypeList(self, state) {
 			chartType: 'summarizeGeneexpSurvival',
 			usecase: { target: 'summarizeGeneexpSurvival' },
 			clickTo: self.loadChartSpecificMenu
+		},
+		{
+			label: 'Variant Predictor',
+			chartType: 'variantPredictor',
+			usecase: { target: 'variantPredictor' },
+			clickTo: self.prepPlot,
+			config: { chartType: 'variantPredictor' }
 		}
 	]
 
