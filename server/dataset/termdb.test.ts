@@ -31,7 +31,8 @@ export default function (): Mds3 {
 			runChart: () => true,
 			frequencyChart: () => true,
 			report: () => true,
-			summarizeMutationDiagnosis: () => true
+			summarizeMutationDiagnosis: () => true,
+			variantPredictor: () => true
 		},
 		cohort: {
 			massNav: {

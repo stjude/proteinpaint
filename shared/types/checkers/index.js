@@ -2,6 +2,7 @@
 export * from './aiProjectAdmin.ts'
 export * from './aiProjectSelectedWSImages.ts'
 export * from './aiProjectTrainModel.ts'
+export * from './alphaGenome.ts'
 export * from './brainImaging.ts'
 export * from './brainImagingSamples.ts'
 export * from './burden.ts'
