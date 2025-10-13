@@ -29,6 +29,7 @@ export class ScatterTooltip {
 	}
 
 	showTooltip(event, chart) {
+		if (this.scatter.config.lassoOn) return
 		this.chart = chart
 		const onClick = event.type == 'click'
 		this.onClick = onClick
