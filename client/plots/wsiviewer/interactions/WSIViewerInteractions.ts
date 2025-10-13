@@ -183,7 +183,7 @@ export class WSIViewerInteractions {
 							: { label: matchingClass!.label, color: matchingClass!.color }
 					buffers.tmpClass.set(tmpClass)
 
-					this.addAnnotation(vectorLayer!, tileSelections, currentIndex, matchingClass!.color, settings.tileSize)
+					this.addAnnotation(vectorLayer!, tileSelections, currentIndex, matchingClass!.color, settings)
 
 					const selectedClassId = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)?.id
 
@@ -356,7 +356,7 @@ export class WSIViewerInteractions {
 		tileSelections: TileSelection[],
 		currentIndex: number,
 		color: any,
-		tileSize: number
+		settings: Settings
 	) {
 		const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
 		const tileSelection = tileSelections[currentIndex]
@@ -366,14 +366,14 @@ export class WSIViewerInteractions {
 			source?.removeFeature(feature)
 		}
 
-		const topLeft = [tileSelection.zoomCoordinates[0], -tileSelection.zoomCoordinates[1]]
+		const topLeft: [number, number] = [tileSelection.zoomCoordinates[0], -tileSelection.zoomCoordinates[1]]
 
 		const squareCoords = [
 			[
 				topLeft,
-				[topLeft[0] + tileSize, topLeft[1]],
-				[topLeft[0] + tileSize, topLeft[1] - tileSize],
-				[topLeft[0], topLeft[1] - tileSize]
+				[topLeft[0] + settings.tileSize, topLeft[1]],
+				[topLeft[0] + settings.tileSize, topLeft[1] - settings.tileSize],
+				[topLeft[0], topLeft[1] - settings.tileSize]
 			]
 		]
 
@@ -394,6 +394,14 @@ export class WSIViewerInteractions {
 		)
 
 		source?.addFeature(square)
+
+		this.addAnnotationBorder(
+			source,
+			topLeft,
+			tileSelection.zoomCoordinates,
+			settings.annotatedPatchBorderColor,
+			settings.tileSize
+		)
 	}
 
 	private async deleteAnnotation(
@@ -421,6 +429,12 @@ export class WSIViewerInteractions {
 		const predictionBorderFeature = source?.getFeatureById(`prediction-border-${tileSelection.zoomCoordinates}`)
 		if (predictionBorderFeature) {
 			source?.removeFeature(predictionBorderFeature)
+		}
+
+		// Remove annotation border
+		const annotationBorderFeat = source?.getFeatureById(`annotation-border-${tileSelection.zoomCoordinates}`)
+		if (annotationBorderFeat) {
+			source?.removeFeature(annotationBorderFeat)
 		}
 
 		const body: DeleteWSIAnnotationRequest = {
@@ -467,6 +481,21 @@ export class WSIViewerInteractions {
 
 		const feature = this.createBorderFeature(zoomCoordinates, tileSize, 50, color, 'active-border')
 		source?.addFeature(feature)
+	}
+
+	private addAnnotationBorder(source, topLeft, zoomCoordinates: [number, number], color: string, tileSize: number) {
+		const existingFeature = source?.getFeatureById(`prediction-border-${zoomCoordinates}`)
+		if (existingFeature) {
+			source?.removeFeature(existingFeature)
+		}
+		const annotatedBorderFeat = this.createBorderFeature(
+			topLeft,
+			tileSize,
+			15,
+			color,
+			`annotation-border-${zoomCoordinates}`
+		)
+		source?.addFeature(annotatedBorderFeat)
 	}
 
 	private createBorderFeature(

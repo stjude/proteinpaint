@@ -102,6 +102,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 			sample_id,
 			settings.sessionsTileSelection,
 			settings.displayedImageIndex,
+			settings.annotatedPatchBorderColor,
 			aiProjectID,
 			aiWSIMageFiles
 		)
