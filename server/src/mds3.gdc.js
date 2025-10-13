@@ -1368,9 +1368,12 @@ async function querySamplesSurvival(q, survivalTwLst, ds, samples, geneTwLst) {
 			}
 		})
 	}
+	let survFilter
 	if (q.filterObj) {
 		const g = filter2GDCfilter(q.filterObj)
 		if (g) filter.content.push(g)
+		survFilter = structuredClone(q.filterObj)
+		survFilter.lst = q.filterObj.lst.filter(item => item.tvs.term.type == 'survival')
 	}
 	addTid2value_to_filter(q.tid2value, filter.content, ds)
 
@@ -1398,6 +1401,8 @@ async function querySamplesSurvival(q, survivalTwLst, ds, samples, geneTwLst) {
 		if (!d.id) throw 'd.id (case uuid) missing'
 		if (typeof d.censored != 'boolean') throw 'd.censored is not boolean'
 		if (!Number.isFinite(d.time)) throw 'd.time not number'
+		const pass = mayFilterBySurvival(survFilter, d)
+		if (!pass) continue
 		let s = samples.find(i => i.sample_id == d.id) // find existing sample
 		if (!s) {
 			// may create new and insert to samples[]
@@ -1413,6 +1418,25 @@ async function querySamplesSurvival(q, survivalTwLst, ds, samples, geneTwLst) {
 			key: d.censored ? 0 : 1,
 			value: Number((d.time / 365).toFixed(2)) // convert to years
 		}
+	}
+}
+
+// determine if survival status value passes survival filter
+function mayFilterBySurvival(filter, d) {
+	if (!filter?.lst.length) return true
+	const status = d.censored ? 0 : 1 // 0 = alive; 1 = dead
+	const pass =
+		filter.join == 'and'
+			? filter.lst.every(item => inItem(item, status))
+			: filter.lst.some(item => inItem(item, status))
+	return pass
+	function inItem(item, value) {
+		if (item.type == 'tvslst') return mayFilterBySurvival(item, value)
+		const tvs = item.tvs
+		if (tvs.term.type != 'survival') throw 'unexpected term.type'
+		const inValues = tvs.values.some(v => v.key == value)
+		const inItem = tvs.isnot ? !inValues : inValues
+		return inItem
 	}
 }
 

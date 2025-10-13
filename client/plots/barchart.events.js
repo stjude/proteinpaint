@@ -574,6 +574,7 @@ export async function listSamples(arg) {
 	const term2isNumeric = self.config.term2 ? isNumericTerm(self.config.term2.term) : false
 	const termIsGv = self.config.term.term.type == 'geneVariant'
 	const term2isGv = self.config.term2?.term.type == 'geneVariant'
+	const term2isSurv = self.config.term2?.term.type == 'survival'
 	for (const sample of data.lst) {
 		const pass = mayFilterByGeneVariant(sample, self, geneVariant)
 		if (!pass) continue
@@ -606,6 +607,9 @@ export async function listSamples(arg) {
 				row.push({ value })
 			} else if (term2isGv) {
 				addGvRowVals(sample, self.config.term2, row)
+			} else if (term2isSurv) {
+				const value = self.config.term2.term.values[t2entry.key].label
+				row.push({ value })
 			} else {
 				const label = self.config.term2.term.values?.[t2entry.value]?.label
 				const value = label || t2entry.value

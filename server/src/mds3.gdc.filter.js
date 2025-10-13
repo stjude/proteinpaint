@@ -29,6 +29,10 @@ export function filter2GDCfilter(f) {
 			// geneExpression term filtering will be performed during post-processing (see mayFilterByExpression() in server/src/mds3.gdc.js)
 			continue
 		}
+		if (item.tvs.term.type == 'survival') {
+			// survival term filtering will be performed during post-processing (see mayFilterBySurvival() in server/src/mds3.gdc.js)
+			continue
+		}
 
 		if (item.tvs.values) {
 			// categorical
