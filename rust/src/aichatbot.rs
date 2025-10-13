@@ -1,4 +1,5 @@
 // Syntax: cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/aichatbot
+#![allow(non_snake_case)]
 use anyhow::Result;
 use json::JsonValue;
 use r2d2_sqlite::SqliteConnectionManager;
@@ -11,11 +12,40 @@ use rig::vector_store::in_memory_store::InMemoryVectorStore;
 use schemars::JsonSchema;
 use serde_json::{Map, Value, json};
 use std::collections::HashMap;
-use std::io::{self};
+use std::fs;
+use std::io;
+use std::path::Path;
 mod ollama; // Importing custom rig module for invoking ollama server
 mod sjprovider; // Importing custom rig module for invoking SJ GPU server
 
 mod test_ai; // Test examples for AI chatbot
+
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+pub struct AiJsonFormat {
+    hasGeneExpression: bool,
+    db: String,     // Dataset db
+    genedb: String, // Gene db
+    charts: Vec<Charts>,
+}
+
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+enum Charts {
+    Summary(TrainTestData),
+    DE(TrainTestData),
+}
+
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+struct TrainTestData {
+    SystemPrompt: Option<String>,
+    TrainingData: Vec<QuestionAnswer>,
+    TestData: Vec<QuestionAnswer>,
+}
+
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+struct QuestionAnswer {
+    question: String,
+    answer: String,
+}
 
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone)]
@@ -47,32 +77,34 @@ async fn main() -> Result<()> {
                         None => panic!("user_input field is missing in input json"),
                     }
 
-                    let genedb_json: &JsonValue = &json_string["genedb"];
-                    let genedb: &str;
-                    match genedb_json.as_str() {
-                        Some(inp) => genedb = inp,
+                    let tpmasterdir_json: &JsonValue = &json_string["tpmasterdir"];
+                    let tpmasterdir: &str;
+                    match tpmasterdir_json.as_str() {
+                        Some(inp) => tpmasterdir = inp,
+                        None => panic!("tpmasterdir not found"),
+                    }
+
+                    let ai_json_file_json: &JsonValue = &json_string["aifiles"];
+                    let ai_json_file: String;
+                    match ai_json_file_json.as_str() {
+                        Some(inp) => ai_json_file = String::from("../../") + &inp,
                         None => {
-                            panic!("Gene db not found")
+                            panic!("ai json file not found")
                         }
                     }
 
-                    let dataset_db_json: &JsonValue = &json_string["dataset_db"];
-                    let dataset_db: &str;
-                    match dataset_db_json.as_str() {
-                        Some(inp) => dataset_db = inp,
-                        None => {
-                            panic!("dataset db not found")
-                        }
-                    }
+                    let ai_json_file = Path::new(&ai_json_file);
+                    let ai_json_file_path = ai_json_file.canonicalize().unwrap();
 
-                    let dataset_training_json: &JsonValue = &json_string["aifiles"];
-                    let dataset_training_json: &str;
-                    match dataset_training_json_json.as_str() {
-                        Some(inp) => dataset_training_json = inp,
-                        None => {
-                            panic!("dataset training json file not found")
-                        }
-                    }
+                    // Read the file
+                    let ai_data = fs::read_to_string(ai_json_file_path).unwrap();
+
+                    // Parse the JSON data
+                    let ai_json: AiJsonFormat =
+                        serde_json::from_str(&ai_data).expect("AI JSON file does not have the correct format");
+
+                    let genedb = String::from(tpmasterdir) + &"/" + &ai_json.genedb;
+                    let dataset_db = String::from(tpmasterdir) + &"/" + &ai_json.db;
 
                     let apilink_json: &JsonValue = &json_string["apilink"];
                     let apilink: &str;
@@ -108,8 +140,6 @@ async fn main() -> Result<()> {
                     let max_new_tokens: usize = 512;
                     let top_p: f32 = 0.95;
 
-                    let has_gene_expression_str: &JsonValue = &json_string["hasGeneExpression"];
-                    let has_gene_expression: bool = has_gene_expression_str.as_bool().unwrap();
                     if llm_backend_name != "ollama" && llm_backend_name != "SJ" {
                         panic!(
                             "This code currently supports only Ollama and SJ provider. llm_backend_name must be \"ollama\" or \"SJ\""
@@ -131,9 +161,9 @@ async fn main() -> Result<()> {
                             temperature,
                             max_new_tokens,
                             top_p,
-                            dataset_db,
-                            genedb,
-                            has_gene_expression,
+                            &dataset_db,
+                            &genedb,
+                            &ai_json,
                         )
                         .await;
                     } else if llm_backend_name == "SJ".to_string() {
@@ -153,9 +183,9 @@ async fn main() -> Result<()> {
                             temperature,
                             max_new_tokens,
                             top_p,
-                            dataset_db,
-                            genedb,
-                            has_gene_expression,
+                            &dataset_db,
+                            &genedb,
+                            &ai_json,
                         )
                         .await;
                     }
@@ -187,7 +217,7 @@ pub async fn run_pipeline(
     top_p: f32,
     dataset_db: &str,
     genedb: &str,
-    has_gene_expression: bool,
+    ai_json: &AiJsonFormat,
 ) -> Option<String> {
     let mut classification: String = classify_query_by_dataset_type(
         user_input,
@@ -230,7 +260,7 @@ pub async fn run_pipeline(
             top_p,
             dataset_db,
             genedb,
-            has_gene_expression,
+            ai_json,
         )
         .await;
     } else if classification == "hierarchical".to_string() {
@@ -750,7 +780,7 @@ async fn extract_summary_information(
     top_p: f32,
     dataset_db: &str,
     genedb: &str,
-    has_gene_expression: bool,
+    ai_json: &AiJsonFormat,
 ) -> String {
     let (rag_docs, db_vec) = parse_dataset_db(dataset_db).await;
     println!("rag_docs:{:?}", rag_docs);
@@ -789,7 +819,7 @@ async fn extract_summary_information(
     let gene_expression_statement;
     let gene_expression_examples;
     let mut common_genes = Vec::<String>::new();
-    match has_gene_expression {
+    match ai_json.hasGeneExpression {
         true => {
             let gene_list: Vec<String> = parse_geneset_db(genedb).await;
             let lowercase_user_input = user_input.to_lowercase();
@@ -860,8 +890,7 @@ async fn extract_summary_information(
         }
     }
     //println!("final_llm_json:{}", final_llm_json);
-    let final_validated_json =
-        validate_summary_output(final_llm_json.clone(), db_vec, common_genes, has_gene_expression);
+    let final_validated_json = validate_summary_output(final_llm_json.clone(), db_vec, common_genes, ai_json);
     final_validated_json
 }
 
@@ -916,7 +945,7 @@ fn validate_summary_output(
     raw_llm_json: String,
     db_vec: Vec<DbRows>,
     common_genes: Vec<String>,
-    has_gene_expression: bool,
+    ai_json: &AiJsonFormat,
 ) -> String {
     let json_value: SummaryType =
        serde_json::from_str(&raw_llm_json).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
@@ -971,7 +1000,7 @@ fn validate_summary_output(
                 }
             }
             SummaryTerms::geneExpression(gene) => {
-                match has_gene_expression {
+                match ai_json.hasGeneExpression {
                     true => {
                         let mut num_gene_verification = 0;
                         for common_gene in &common_genes {
