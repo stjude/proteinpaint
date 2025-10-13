@@ -531,7 +531,13 @@ function getTvs(termIndex, value, self, geneVariant) {
 			values: [{ key: value }]
 		}
 	}
-	if (isNumericTerm(term.term)) {
+	if (term.q.type == 'custom-groupset' || term.q.type == 'predefined-groupset') {
+		const groupset =
+			term.q.type == 'custom-groupset' ? term.q.customset : term.term.groupsetting.lst[term.q.predefined_groupset_idx]
+		const group = groupset.groups.find(group => group.name == value)
+		if (!group) throw 'group not found'
+		tvs.tvs.values = group.values
+	} else if (isNumericTerm(term.term)) {
 		const bins = self.bins[termIndex]
 		tvs.tvs.ranges = [bins.find(bin => bin.label == value)]
 	} else if (term.term.type == 'samplelst') {
@@ -583,7 +589,7 @@ export async function listSamples(arg) {
 		/** Don't show hidden values in the results
 		 * May not be caught in server request for custom variables
 		 * with user supplied keys */
-		if (self.config.term.q?.hiddenValues && Object.keys(self.config.term.q.hiddenValues).includes(t1entry.key)) continue
+		if (self.config.term.q?.hiddenValues && self.config.term.q.hiddenValues[t1entry.value]) continue
 		if (termIsNumeric) {
 			const value = t1entry.value
 			row.push({ value: roundValueAuto(value) })
@@ -594,15 +600,14 @@ export async function listSamples(arg) {
 			const t2entry = sample[self.config.term2.$id]
 			if (!t2entry) continue
 			//Don't show hidden values in the results
-			if (self.config.term2.q?.hiddenValues && Object.keys(self.config.term2.q.hiddenValues).includes(t2entry.key))
-				continue
+			if (self.config.term2.q?.hiddenValues && self.config.term2.q.hiddenValues[t2entry.value]) continue
 			if (term2isNumeric) {
 				const value = roundValueAuto(t2entry.value)
 				row.push({ value })
 			} else if (term2isGv) {
 				addGvRowVals(sample, self.config.term2, row)
 			} else {
-				const label = self.config.term2.term.values?.[t2entry.key]?.label
+				const label = self.config.term2.term.values?.[t2entry.value]?.label
 				const value = label || t2entry.value
 				row.push({ value })
 			}
