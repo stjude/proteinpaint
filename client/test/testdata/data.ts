@@ -93,8 +93,7 @@ export function getSamplelstTw() {
 					values
 				}
 			],
-			isAtomic: true,
-			type: 'custom-groupset'
+			isAtomic: true
 		}
 	}
 }
