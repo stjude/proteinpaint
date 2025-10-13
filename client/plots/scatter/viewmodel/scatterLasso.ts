@@ -174,8 +174,9 @@ export class ScatterLasso {
 		const columns: TableColumn[] = []
 		const first = group.items[0]
 		if ('sample' in first) columns.push(formatCell('Sample', 'label'))
+		if (this.scatter.config.term) columns.push(formatCell(this.scatter.config.colorTW.term.name, 'label'))
+		if (this.scatter.config.term2) columns.push(formatCell(this.scatter.config.term2.term.name, 'label'))
 		if (this.scatter.config.colorTW) columns.push(formatCell(this.scatter.config.colorTW.term.name, 'label'))
-
 		if (this.scatter.config.shapeTW) columns.push(formatCell(this.scatter.config.shapeTW.term.name, 'label'))
 		let info = false
 		const hasSampleName = 'sample' in group.items[0]
@@ -183,6 +184,8 @@ export class ScatterLasso {
 		for (const item of group.items) {
 			const row: TableCell[] = []
 			if (hasSampleName) row.push(formatCell(item.sample))
+			if (this.scatter.config.term) row.push(formatCell(this.getCategoryInfo(item, 'x')))
+			if (this.scatter.config.term2) row.push(formatCell(this.getCategoryInfo(item, 'y')))
 			if (this.scatter.config.colorTW) row.push(formatCell(this.getCategoryInfo(item, 'category')))
 			if (this.scatter.config.shapeTW) row.push(formatCell(this.getCategoryInfo(item, 'shape')))
 			if ('info' in item) {
