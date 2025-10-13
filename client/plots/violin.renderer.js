@@ -41,6 +41,7 @@ export default function setViolinRenderer(self) {
 		const chartKeys = Object.keys(self.data.charts)
 		if (!chartKeys?.length) {
 			self.dom.banner.html(`<span>No visible violin plot data to render</span>`).style('display', 'block')
+			self.dom.legendDiv.selectAll('*').remove()
 			return
 		}
 		for (const chartKey of chartKeys) {
