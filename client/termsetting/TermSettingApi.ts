@@ -1,7 +1,7 @@
 import type { TermSettingOpts } from './types'
 import { TermSetting } from './TermSetting.ts'
 import type { Term, TermWrapper, Filter, GvPredefinedGsTW } from '#types'
-import { call_fillTW } from './utils.ts'
+import { call_fillTW, get$id } from './utils.ts'
 import { minimatch } from 'minimatch'
 import { isNumericTerm } from '#shared/terms.js'
 import { copyMerge, deepEqual } from '#rx'
@@ -70,7 +70,7 @@ export class TermSettingApi {
 		as used in snplocus block pan/zoom update in regression.results.js
 		*/
 		const arg: any = self.term ? { term: self.term, q: self.q, isAtomic: true } : {}
-		if ('$id' in this) arg.$id = this.$id
+		arg.$id = '$id' in this ? this.$id : await get$id(arg)
 		if (arg.q?.reuseId && arg.q.reuseId === self.data.q?.reuseId) {
 			if (!deepEqual(arg.q, self.data.q)) {
 				delete arg.q.reuseId
