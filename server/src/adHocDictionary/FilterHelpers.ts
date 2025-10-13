@@ -19,11 +19,9 @@ export default class FilterHelpers {
 				type: 'tvslst',
 				join: String(raw.join ?? 'and').toLowerCase() as 'and' | 'or',
 				in: raw.in,
-				lst: (raw.lst ?? []).map(FilterHelpers.normalizeFilter).filter(Boolean)
+				lst: (raw.lst ?? []).map(FilterHelpers.normalizeFilter)
 			}
-		}
-
-		if (raw.type === 'tvs' && raw.tvs?.term) {
+		} else if (raw.type === 'tvs' && raw.tvs?.term) {
 			const t = raw.tvs.term
 			const termType = String(t.type)
 			if (termType === 'categorical') {
@@ -50,8 +48,7 @@ export default class FilterHelpers {
 					isNot: !!raw.tvs.isnot
 				}
 			}
-		}
-		return null
+		} else return null
 	}
 
 	/** Returns list of images matching the filter */
