@@ -38,7 +38,12 @@ export default function setViolinRenderer(self) {
 
 		//filter out hidden values and only keep plots which are not hidden in term2.q.hiddenvalues
 		self.dom.violinDiv.selectAll('*').remove()
-		for (const chartKey of Object.keys(self.data.charts)) {
+		const chartKeys = Object.keys(self.data.charts)
+		if (!chartKeys?.length) {
+			self.dom.banner.html(`<span>No visible violin plot data to render</span>`).style('display', 'block')
+			return
+		}
+		for (const chartKey of chartKeys) {
 			const chart = self.data.charts[chartKey]
 			const plots = chart.plots.filter(p => !termNum?.q?.hiddenValues?.[p.label || p.seriesId])
 			if (settings.orderByMedian == true) {
@@ -55,7 +60,9 @@ export default function setViolinRenderer(self) {
 				.style('padding', Object.keys(self.data.charts).length > 1 ? '20px 20px 0px 0px' : '0px')
 			chart.chartDiv = chartDiv
 			if (plots.length === 0) {
-				chartDiv.html(` <span style="opacity:.6;font-size:1em;margin-left:90px;">No data to render Violin Plot</span>`)
+				chartDiv.html(
+					` <span style="opacity:.6;font-size:1em;margin-left:90px;">No visible violin plot data to render</span>`
+				)
 				return
 			}
 

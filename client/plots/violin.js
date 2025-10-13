@@ -46,6 +46,13 @@ class ViolinPlot extends PlotBase {
 				.style('padding-top', '20px')
 				.text('Loading ...'),
 			controls,
+			banner: holder
+				.append('div')
+				.style('display', 'none')
+				.style('text-align', 'center')
+				.style('padding', '20px')
+				.style('font-size', '16px')
+				.style('color', '#aaa'),
 			violinDiv: holder
 				.append('div')
 				.attr('class', 'sjpp-vp-violinDiv')
