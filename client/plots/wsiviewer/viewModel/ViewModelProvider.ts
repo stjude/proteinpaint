@@ -137,7 +137,8 @@ export class ViewModelProvider {
 				metadata: wsimages[i].metadata,
 				source: source,
 				baseLayer: true,
-				title: 'Slide'
+				title: 'Slide',
+				name: wsimage.replace(/\.(svs)$/i, '')
 			}
 			const layer = new TileLayer(options)
 

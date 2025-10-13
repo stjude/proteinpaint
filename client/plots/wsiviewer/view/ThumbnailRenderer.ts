@@ -27,15 +27,8 @@ export class ThumbnailRenderer {
 				.style('margin-left', '20px')
 				.style('margin-bottom', '20px')
 
+			// Placeholder for left arrow, if needed
 			const leftIconHolder = thumbnailsContainer.append('div').style('display', 'flex').style('align-items', 'center')
-			icons['left'](leftIconHolder, {
-				width: setting.iconDimensions,
-				height: setting.iconDimensions,
-				disabled: setting.thumbnailRangeStart === 0,
-				handler: () => {
-					wsiViewerInteractions.toggleThumbnails(this.newStart(setting, layers, true))
-				}
-			})
 
 			for (let i = setting.thumbnailRangeStart; i < this.lastShownImage(setting, layers.length); i++) {
 				const isActive = i === setting.displayedImageIndex
@@ -46,6 +39,7 @@ export class ThumbnailRenderer {
 					.style('height', setting.thumbnailHeight)
 					.style('margin', '0 5px')
 					.style('display', 'flex')
+					.style('flex-direction', 'column')
 					.style('height', 'auto')
 					.style('align-items', 'center')
 					.style('justify-content', 'center')
@@ -62,17 +56,37 @@ export class ThumbnailRenderer {
 					.style('max-width', '100%')
 					.style('height', '60px')
 					.style('object-fit', 'cover')
+
+				thumbnail
+					.append('span')
+					.style('font-size', '0.85em')
+					.text(layers[i].get('name') || '')
 			}
 
+			//Placeholder for right arrow, if needed
 			const rightIconHolder = thumbnailsContainer.append('div').style('display', 'flex').style('align-items', 'center')
-			icons['right'](rightIconHolder, {
-				width: setting.iconDimensions,
-				height: setting.iconDimensions,
-				disabled: setting.thumbnailRangeStart + setting.numDisplayedThumbnails >= layers.length,
-				handler: () => {
-					wsiViewerInteractions.toggleThumbnails(this.newStart(setting, layers))
-				}
-			})
+
+			/** Only show display arrows (i.e. prev/next buttons) when
+			 * the num of thumbnails exceeds the num that can be displayed*/
+			if (layers.length > setting.numDisplayedThumbnails) {
+				icons['left'](leftIconHolder, {
+					width: setting.iconDimensions,
+					height: setting.iconDimensions,
+					disabled: setting.thumbnailRangeStart === 0,
+					handler: () => {
+						wsiViewerInteractions.toggleThumbnails(this.newStart(setting, layers, true))
+					}
+				})
+
+				icons['right'](rightIconHolder, {
+					width: setting.iconDimensions,
+					height: setting.iconDimensions,
+					disabled: setting.thumbnailRangeStart + setting.numDisplayedThumbnails >= layers.length,
+					handler: () => {
+						wsiViewerInteractions.toggleThumbnails(this.newStart(setting, layers))
+					}
+				})
+			}
 		} else {
 			// Update borders only
 			for (let i = 0; i < layers.length; i++) {
