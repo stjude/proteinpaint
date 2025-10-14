@@ -1,6 +1,5 @@
 import tape from 'tape'
 import FilterHelpers from '../adHocDictionary/FilterHelpers.js'
-import { mock } from 'node:test'
 
 const mockImageKeyIdx = 0
 const mockHeadersMap = new Map([
@@ -38,25 +37,32 @@ tape('FilterHelpers constructor', async function (test) {
 	test.end()
 })
 
-tape('FilterHelpers.normalizedFilter()', async function (test) {
+tape('Empty filter given to FilterHelpers.normalizeFilter() returns null', async function (test) {
 	test.timeoutAfter(300)
 
-	let mockFilter, expected, result
-
-	//Empty filter object
-	mockFilter = {}
-	expected = null
-	result = FilterHelpers.normalizeFilter(mockFilter)
+	const mockFilter = {}
+	const expected = null
+	const result = FilterHelpers.normalizeFilter(mockFilter)
 	test.equal(result, expected, 'Should return null for empty filter object')
 
-	//Null input
-	mockFilter = null
-	expected = null
-	result = FilterHelpers.normalizeFilter(mockFilter)
+	test.end()
+})
+
+tape('Null given to FilterHelpers.normalizeFilter() returns null', async function (test) {
+	test.timeoutAfter(300)
+
+	const mockFilter = null
+	const expected = null
+	const result = FilterHelpers.normalizeFilter(mockFilter)
 	test.equal(result, expected, 'Should return null for null input')
 
-	//tvslst
-	mockFilter = {
+	test.end()
+})
+
+tape('Simple tvslst given to FilterHelpers.normalizeFilter() returns normalized obj', async function (test) {
+	test.timeoutAfter(300)
+
+	const mockFilter = {
 		type: 'tvslst',
 		join: '',
 		in: true,
@@ -70,7 +76,7 @@ tape('FilterHelpers.normalizedFilter()', async function (test) {
 			}
 		]
 	}
-	expected = {
+	const expected = {
 		type: 'tvslst',
 		join: '',
 		in: true,
@@ -83,28 +89,38 @@ tape('FilterHelpers.normalizedFilter()', async function (test) {
 			}
 		]
 	}
-	result = FilterHelpers.normalizeFilter(mockFilter)
+	const result = FilterHelpers.normalizeFilter(mockFilter)
 	test.deepEqual(result, expected, 'Should normalize filter object for a tvslst with range filter')
 
-	//Single tvs, categorical
-	mockFilter = {
+	test.end()
+})
+
+tape('Categorical tvs given to FilterHelpers.normalizeFilter() returns normalized obj', async function (test) {
+	test.timeoutAfter(300)
+
+	const mockFilter = {
 		type: 'tvs',
 		tvs: {
 			term: { id: 'dx', type: 'categorical' },
 			values: [{ key: 'cancer', label: 'Cancer' }]
 		}
 	}
-	expected = {
+	const expected = {
 		termid: 'dx',
 		type: 'categorical',
 		filter: ['cancer'],
 		isNot: false
 	}
-	result = FilterHelpers.normalizeFilter(mockFilter)
+	const result = FilterHelpers.normalizeFilter(mockFilter)
 	test.deepEqual(result, expected, 'Should normalize filter object for a categorical tvs term')
 
-	// Nested tvslst
-	mockFilter = {
+	test.end()
+})
+
+tape('Nested tvslst given to FilterHelpers.normalizeFilter() returns normalized obj', async function (test) {
+	test.timeoutAfter(300)
+
+	const mockFilter = {
 		type: 'tvslst',
 		join: 'and',
 		in: true,
@@ -125,7 +141,7 @@ tape('FilterHelpers.normalizedFilter()', async function (test) {
 			}
 		]
 	}
-	expected = {
+	const expected = {
 		type: 'tvslst',
 		join: 'and',
 		in: true,
@@ -139,19 +155,16 @@ tape('FilterHelpers.normalizedFilter()', async function (test) {
 			{ termid: 'dx', type: 'categorical', filter: ['cancer'], isNot: false }
 		]
 	}
-	result = FilterHelpers.normalizeFilter(mockFilter)
+	const result = FilterHelpers.normalizeFilter(mockFilter)
 	test.deepEqual(result, expected, 'Should normalize filter object for a nested tvslst')
 
 	test.end()
 })
 
-tape('FilterHelpers.getMatches()', async function (test) {
+tape('Simple categorical filter returns matches in FilterHelpers.getMatches() ', async function (test) {
 	test.timeoutAfter(300)
 
-	let mockFilter, normalized, expected, result
-
-	//Single categorical filter match
-	mockFilter = {
+	const mockFilter = {
 		type: 'tvslst',
 		join: '',
 		in: true,
@@ -165,13 +178,18 @@ tape('FilterHelpers.getMatches()', async function (test) {
 			}
 		]
 	}
-	normalized = FilterHelpers.normalizeFilter(mockFilter)
-	result = FilterHelpers.getMatches(normalized, mockDataRows)
-	expected = [['S2', '60', 'Cancer']]
+	const normalized = FilterHelpers.normalizeFilter(mockFilter)
+	const result = FilterHelpers.getMatches(normalized, mockDataRows)
+	const expected = [['S2', '60', 'Cancer']]
 	test.deepEqual(result, expected, 'Should return array of matching data rows for categorical filter')
 
-	//Nested filter
-	mockFilter = {
+	test.end()
+})
+
+tape('Nested filter returns multiple matches in FilterHelpers.getMatches() ', async function (test) {
+	test.timeoutAfter(300)
+
+	const mockFilter = {
 		type: 'tvslst',
 		join: 'and',
 		in: true,
@@ -192,16 +210,22 @@ tape('FilterHelpers.getMatches()', async function (test) {
 			}
 		]
 	}
-	normalized = FilterHelpers.normalizeFilter(mockFilter)
-	result = FilterHelpers.getMatches(normalized, mockDataRows)
-	expected = [
+	const normalized = FilterHelpers.normalizeFilter(mockFilter)
+	const result = FilterHelpers.getMatches(normalized, mockDataRows)
+	const expected = [
 		['S3', '30', 'Healthy'],
 		['S5', '25', 'Healthy']
 	]
 	test.deepEqual(result, expected, 'Should return array of matching data rows for nested filter.')
 
+	test.end()
+})
+
+tape('No matches found in FilterHelpers.getMatches() ', async function (test) {
+	test.timeoutAfter(300)
+
 	//No matches
-	mockFilter = {
+	const mockFilter = {
 		type: 'tvslst',
 		join: 'and',
 		in: true,
@@ -222,13 +246,19 @@ tape('FilterHelpers.getMatches()', async function (test) {
 			}
 		]
 	}
-	normalized = FilterHelpers.normalizeFilter(mockFilter)
-	result = FilterHelpers.getMatches(normalized, mockDataRows)
-	expected = []
+	const normalized = FilterHelpers.normalizeFilter(mockFilter)
+	const result = FilterHelpers.getMatches(normalized, mockDataRows)
+	const expected = []
 	test.deepEqual(result, expected, 'Should return empty array when there are no matches.')
 
+	test.end()
+})
+
+tape('Invalid term id returns empty array from FilterHelpers.getMatches()', async function (test) {
+	test.timeoutAfter(300)
+
 	//Invalid term id
-	mockFilter = {
+	const mockFilter = {
 		type: 'tvslst',
 		join: 'and',
 		in: true,
@@ -249,9 +279,9 @@ tape('FilterHelpers.getMatches()', async function (test) {
 			}
 		]
 	}
-	normalized = FilterHelpers.normalizeFilter(mockFilter)
-	result = FilterHelpers.getMatches(normalized, mockDataRows)
-	expected = []
+	const normalized = FilterHelpers.normalizeFilter(mockFilter)
+	const result = FilterHelpers.getMatches(normalized, mockDataRows)
+	const expected = []
 	test.deepEqual(result, expected, 'Should return empty array for invalid terms.')
 
 	test.end()
