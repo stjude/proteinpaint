@@ -13,6 +13,7 @@ import type { WSImageLayers } from '#plots/wsiviewer/viewModel/WSImageLayers.ts'
 import type Layer from 'ol/layer/Layer'
 import type Settings from '../Settings'
 import type { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
+import { addProjection } from 'ol/proj'
 
 export class MapRenderer {
 	public wSImageLayers: WSImageLayers
@@ -74,6 +75,8 @@ export class MapRenderer {
 				return resolution
 			}
 		})
+
+		addProjection(projection)
 
 		const layers: Array<Layer> = [activeImage]
 		if (this.wSImageLayers.overlays) {
