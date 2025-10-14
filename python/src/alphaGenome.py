@@ -34,8 +34,8 @@ alternate = parsed_data['alternate'] or 'C'
 
 API_KEY = os.getenv("API_KEY")
 model = dna_client.create(API_KEY)
-len = 2048
-interval = genome.Interval(chromosome=chromosome, start=35677410, end=36725986)
+len = 16384//2
+interval = genome.Interval(chromosome=chromosome, start=position-len, end=position+len)
 variant = genome.Variant(
     chromosome=chromosome,
     position=position,
@@ -61,7 +61,7 @@ fig = plot_components.plot(
             colors={'REF': 'dimgrey', 'ALT': 'red'},
         ),
     ],
-    interval=outputs.reference.rna_seq.interval.resize(2**15),
+    interval=outputs.reference.rna_seq.interval,
     # Annotate the location of the variant as a vertical line.
     annotations=[plot_components.VariantAnnotation([variant], alpha=0.8)],
 )

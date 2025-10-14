@@ -20,19 +20,17 @@ export const api: RouteApi = {
 	}
 }
 
-function init({ genomes }) {
+function init() {
 	return async (req, res): Promise<void> => {
 		try {
 			const query: alphaGenomeRequest = req.query
-			const g = genomes[query.genome]
-			if (!g) throw 'invalid genome name'
-			const ds = g.datasets[query.dslabel]
-			if (!ds) throw 'invalid dataset name'
+
 			const params = JSON.stringify({
 				chromosome: query.chromosome,
 				position: query.position,
 				reference: query.reference,
-				alternate: query.alternate
+				alternate: query.alternate,
+				ontologyTerm: query.ontologyTerm
 			})
 			const url = await run_python('alphaGenome.py', params)
 			res.send({ plotImage: url } satisfies alphaGenomeResponse)

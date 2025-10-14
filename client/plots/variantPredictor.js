@@ -2,6 +2,7 @@ import { PlotBase } from './PlotBase'
 import { getCompInit, copyMerge } from '#rx'
 import { dofetch3 } from '#common/dofetch'
 import { controlsInit } from './controls'
+import { on } from 'events'
 
 class VariantPredictor extends PlotBase {
 	constructor(opts) {
@@ -46,18 +47,25 @@ class VariantPredictor extends PlotBase {
 				title: 'Genomic position of the variant'
 			},
 			{
-				label: 'Reference',
+				label: 'Reference Bases',
 				type: 'text',
 				chartType: this.type,
 				settingsKey: 'reference',
 				title: 'Reference base of the variant'
 			},
 			{
-				label: 'Alternate',
+				label: 'Alternate Bases',
 				type: 'text',
 				chartType: this.type,
 				settingsKey: 'alternate',
 				title: 'Alternate base of the variant'
+			},
+			{
+				label: 'Ontology term',
+				type: 'text',
+				chartType: this.type,
+				settingsKey: 'ontologyTerm',
+				title: 'Ontology term'
 			}
 		]
 		this.components = {
@@ -78,7 +86,8 @@ class VariantPredictor extends PlotBase {
 			chromosome: settings.chromosome,
 			position: settings.position,
 			reference: settings.reference,
-			alternate: settings.alternate
+			alternate: settings.alternate,
+			ontologyTerm: settings.ontologyTerm
 		}
 		const data = await dofetch3('alphaGenome', { body })
 		this.dom.plotDiv.selectAll('*').remove()
@@ -95,7 +104,8 @@ export function getPlotConfig(opts) {
 				chromosome: 'chr22',
 				position: 36201698,
 				reference: 'A',
-				alternate: 'C'
+				alternate: 'C',
+				ontologyTerm: 'UBERON:0001157'
 			}
 		}
 	}
