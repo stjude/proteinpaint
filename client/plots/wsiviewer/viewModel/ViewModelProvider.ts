@@ -29,12 +29,9 @@ export class ViewModelProvider {
 		genome: string,
 		dslabel: string,
 		sampleId: string,
-		tileSelections: TileSelection[],
-		displayedImageIndex: number,
-		annotatedPatchBorderColor: string,
+		settings: Settings,
 		aiProjectID: number | undefined = undefined,
-		aiWSIMageFiles: Array<string> | undefined,
-		setting
+		aiWSIMageFiles: Array<string> | undefined
 	): Promise<ViewModel> {
 		let wsimageLayers: Array<WSImageLayers> = []
 		let wsimageLayersLoadError: string | undefined = undefined
@@ -50,6 +47,7 @@ export class ViewModelProvider {
 					data.sampleWSImages,
 					sampleId,
 					undefined,
+					settings.annotatedPatchBorderColor
 					annotatedPatchBorderColor,
 					setting
 				)
@@ -70,12 +68,13 @@ export class ViewModelProvider {
 				data.wsimages,
 				undefined,
 				aiProjectID!,
-				annotatedPatchBorderColor,
-				setting
+                settings.annotatedPatchBorderColor,
+                settings
+
 			)
 		}
 
-		return new ViewModel(wsImages, wsimageLayers, wsimageLayersLoadError, tileSelections, displayedImageIndex)
+		return new ViewModel(wsImages, wsimageLayers, wsimageLayersLoadError, settings)
 	}
 
 	public async getSampleWSImages(genome: string, dslabel: string, sample_id: string): Promise<SampleWSImagesResponse> {
@@ -94,19 +93,11 @@ export class ViewModelProvider {
 		wsimages: WSImage[],
 		sampleId: string | undefined,
 		aiProjectID: number | undefined,
-		annotatedPatchBorderColor: string,
-		setting: Settings
+		annotatedPatchBorderColor: string
 	): Promise<WSImageLayers[]> {
 		const layers: Array<WSImageLayers> = []
 
-		/** Only load a range of images from the entire set from the
-		 * tile server. This is to speed up loading time. */
-		const lastImageIndex =
-			setting.thumbnailRangeStart + setting.numDisplayedThumbnails >= wsimages.length
-				? wsimages.length
-				: setting.thumbnailRangeStart + setting.numDisplayedThumbnails
-
-		for (let i = setting.thumbnailRangeStart; i < lastImageIndex; i++) {
+		for (let i = 0; i < wsimages.length; i++) {
 			const wsimage = wsimages[i].filename
 
 			const body: WSImagesRequest = {

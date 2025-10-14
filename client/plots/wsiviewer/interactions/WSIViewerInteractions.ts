@@ -25,7 +25,7 @@ export class WSIViewerInteractions {
 		coordinateX: number,
 		coordinateY: number,
 		sessionWSImage: SessionWSImage,
-		buffers: any,
+		// buffers: any,
 		map: OLMap
 	) => void
 	setKeyDownListener: (
@@ -237,7 +237,7 @@ export class WSIViewerInteractions {
 			coordinateX: number,
 			coordinateY: number,
 			sessionWSImage: SessionWSImage,
-			buffers: any,
+			// buffers: any,
 			map: OLMap
 		) => {
 			const state = wsiApp.app.getState()
@@ -257,8 +257,18 @@ export class WSIViewerInteractions {
 			})
 
 			if (selectedAnnotationIndex !== -1) {
-				// TODO remove buffers and use state only
-				buffers.annotationsIdx.set(selectedAnnotationIndex)
+				wsiApp.app.dispatch({
+					type: 'plot_edit',
+					id: wsiApp.id,
+					config: {
+						settings: {
+							renderWSIViewer: false,
+							renderAnnotationTable: true,
+							activeAnnotation: selectedAnnotationIndex,
+							sessionsTileSelection: [...sessionsTileSelection]
+						}
+					}
+				})
 				return
 			}
 

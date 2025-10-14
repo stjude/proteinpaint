@@ -100,9 +100,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 			genome,
 			dslabel,
 			sample_id,
-			settings.sessionsTileSelection,
-			settings.displayedImageIndex,
-			settings.annotatedPatchBorderColor,
+			settings,
 			aiProjectID,
 			aiWSIMageFiles,
 			settings
@@ -153,7 +151,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 				wsimageLayers[settings.displayedImageIndex],
 				this.wsiViewerInteractions.viewerClickListener,
 				viewModel.sampleWSImages[settings.displayedImageIndex],
-				buffers,
+				// buffers,
 				settings
 			).render(this.dom.mapHolder, settings)
 

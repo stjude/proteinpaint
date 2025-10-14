@@ -35,7 +35,9 @@ export class SessionWSImage extends WSImage {
 		return [...sessionsTileSelections, ...predictions, ...annotations]
 	}
 
-	public static getTilesTableRows(sessionWSImage: SessionWSImage): any[] {
+	public static getTilesTableRows(sessionWSImage: SessionWSImage, selectedTileIndex: number): any[] {
+		console.log('selectedTileIndex', selectedTileIndex)
+
 		const annotations = sessionWSImage.annotations || []
 		const annotationKeys = new Set(annotations.map(a => `${a.zoomCoordinates[0]},${a.zoomCoordinates[1]}`))
 
@@ -43,9 +45,15 @@ export class SessionWSImage extends WSImage {
 			s => !annotationKeys.has(`${s.zoomCoordinates[0]},${s.zoomCoordinates[1]}`)
 		)
 
+		const selectedColor = '#fcfc8b'
+
 		const sessionsRows: any[] = sessionsFiltered.map((d, i) => {
+			const idx = i
+			const firstCell: any = { value: idx }
+			// Mark original/background hint for renderers. Keep column shape unchanged.
+			firstCell.origBackground = idx === selectedTileIndex ? selectedColor : ''
 			return [
-				{ value: i }, // Index
+				firstCell, // Index
 				{ value: d.zoomCoordinates },
 				{ value: 0 },
 				{ value: '' },
@@ -59,9 +67,12 @@ export class SessionWSImage extends WSImage {
 		)
 
 		const predictionRows: any[] = predictionsFiltered.map((prediction, i) => {
+			const idx = sessionsRows.length + i // Continue index after sessions
 			const color = sessionWSImage.classes?.find(c => c.label === prediction.class)?.color
+			const firstCell: any = { value: idx }
+			firstCell.origBackground = idx === selectedTileIndex ? selectedColor : ''
 			return [
-				{ value: sessionsRows.length + i }, // Continue index after sessions
+				firstCell,
 				{ value: prediction.zoomCoordinates },
 				{ value: roundValue(prediction.uncertainty, 4) },
 				{ value: prediction.class },
@@ -73,9 +84,12 @@ export class SessionWSImage extends WSImage {
 		})
 
 		const annotationsRows: any[] = annotations.map((annotation, i) => {
+			const idx = sessionsRows.length + predictionRows.length + i // Continue index
 			const color = sessionWSImage.classes?.find(c => c.label === annotation.class)?.color
+			const firstCell: any = { value: idx }
+			firstCell.origBackground = idx === selectedTileIndex ? selectedColor : ''
 			return [
-				{ value: sessionsRows.length + predictionRows.length + i }, // Continue index
+				firstCell,
 				{ value: annotation.zoomCoordinates },
 				{ value: 0 },
 				{ value: '' },

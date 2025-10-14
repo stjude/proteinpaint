@@ -31,11 +31,13 @@ export class WSIAnnotationsRenderer {
 			hoverEffects: (tr, row) => {
 				const selectedIdx = this.buffers.annotationsIdx.get()
 				const rowIdx = row[0].value as number
-				const isSelected = selectedIdx === rowIdx
-				const origColor = tr.style('background-color') || 'transparent'
+				// Prefer origBackground hint from row data if present
+				const origHint = (row[0] as any).origBackground
+				const origColor = origHint || tr.style('background-color') || 'transparent'
 
 				tr.style('cursor', 'pointer')
-				//Show selected row in yellow on render
+				//Show selected row in yellow on render (use selected buffer if set, otherwise use origBackground hint)
+				const isSelected = selectedIdx === rowIdx || (!Number.isInteger(selectedIdx) && origHint)
 				tr.style('background-color', isSelected ? selectedColor : origColor)
 
 				this.buffers.annotationsIdx.addListener((index: number) => {
