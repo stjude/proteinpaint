@@ -390,11 +390,11 @@ function getChartTypeList(self, state) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
-			label: 'Variant Predictor',
-			chartType: 'variantPredictor',
-			usecase: { target: 'variantPredictor' },
+			label: 'Alpha Genome',
+			chartType: 'alphaGenome',
+			usecase: { target: 'alphaGenome' },
 			clickTo: self.prepPlot,
-			config: { chartType: 'variantPredictor' }
+			config: { chartType: 'alphaGenome' }
 		}
 	]
 

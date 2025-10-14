@@ -25,53 +25,60 @@ import json
 import base64
 import os
 
-input_data = sys.stdin.read()
-parsed_data = json.loads(input_data)
-position = int(parsed_data['position']) or 36201698
-chromosome = parsed_data['chromosome'] or 'chr22'
-reference = parsed_data['reference'] or 'A'
-alternate = parsed_data['alternate'] or 'C'
+try:
+    input_data = sys.stdin.read()
+    parsed_data = json.loads(input_data)
+    position = int(parsed_data['position']) or 36201698
+    chromosome = parsed_data['chromosome'] or 'chr22'
+    reference = parsed_data['reference'] or 'A'
+    alternate = parsed_data['alternate'] or 'C'
+    ontologyTerm = parsed_data['ontologyTerm']
+    ontology_terms = [ontologyTerm] if ontologyTerm else ['UBERON:0000955']  # brain
+    #alphagenone uses hg38 genome coordinates
 
-API_KEY = os.getenv("API_KEY")
-model = dna_client.create(API_KEY)
-len = 16384//2
-interval = genome.Interval(chromosome=chromosome, start=position-len, end=position+len)
-variant = genome.Variant(
-    chromosome=chromosome,
-    position=position,
-    reference_bases=reference,
-    alternate_bases=alternate,
-)
+    API_KEY = os.getenv("API_KEY")
+    model = dna_client.create(API_KEY)
+    len = 16384//2
+    interval = genome.Interval(chromosome=chromosome, start=position-len, end=position+len)
+    variant = genome.Variant(
+        chromosome=chromosome,
+        position=position,
+        reference_bases=reference,
+        alternate_bases=alternate,
+    )
 
-outputs = model.predict_variant(
-    interval=interval,
-    variant=variant,
-    ontology_terms=['UBERON:0001157'],
-    requested_outputs=[dna_client.OutputType.RNA_SEQ],
-)
-
-
-fig = plot_components.plot(
-    [
-        plot_components.OverlaidTracks(
-            tdata={
-                'REF': outputs.reference.rna_seq,
-                'ALT': outputs.alternate.rna_seq,
-            },
-            colors={'REF': 'dimgrey', 'ALT': 'red'},
-        ),
-    ],
-    interval=outputs.reference.rna_seq.interval,
-    # Annotate the location of the variant as a vertical line.
-    annotations=[plot_components.VariantAnnotation([variant], alpha=0.8)],
-)
+    outputs = model.predict_variant(
+        interval=interval,
+        variant=variant,
+        ontology_terms=ontology_terms,
+        requested_outputs=[dna_client.OutputType.RNA_SEQ],
+    )
 
 
-# Output the image data to stdout
-buf = io.BytesIO()
-fig.savefig(buf, format='png', bbox_inches='tight', facecolor='white')
-data = base64.b64encode(buf.getbuffer()).decode("ascii")
-buffer_url = f"data:image/png;base64,{data}"
-buf.seek(0)
-plt.close()
-print(buffer_url)
+    fig = plot_components.plot(
+        [
+            plot_components.OverlaidTracks(
+                tdata={
+                    'REF': outputs.reference.rna_seq,
+                    'ALT': outputs.alternate.rna_seq,
+                },
+                colors={'REF': 'dimgrey', 'ALT': 'red'},
+            ),
+        ],
+        interval=outputs.reference.rna_seq.interval,
+        # Annotate the location of the variant as a vertical line.
+        annotations=[plot_components.VariantAnnotation([variant], alpha=0.8)],
+    )
+
+
+    # Output the image data to stdout
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', bbox_inches='tight', facecolor='white')
+    data = base64.b64encode(buf.getbuffer()).decode("ascii")
+    buffer_url = f"data:image/png;base64,{data}"
+    buf.seek(0)
+    plt.close()
+    print(buffer_url)
+except Exception as e:
+    print(f"Error: {str(e)}", file=sys.stderr)
+    sys.exit(1)
