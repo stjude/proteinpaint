@@ -50,13 +50,16 @@ export default class LegendRenderer {
 			)
 		})
 		const altCnv = viewModel.appState.args.alternativeDataByDt?.[dtcnv] as AlternativeCnvSet[]
-		const svgDiv = viewModel.svgDiv // Assuming ViewModel now holds reference to the SVG container div
 
 		if (altCnv && altCnv.length > 0) {
 			const legendG = holder.select('g[data-testid="sjpp_disco_plot_legend"]')
+			const cnvLegendG = legendG.select('#sjpp-disco-cnv-legend')
 
 			if (!legendG.empty()) {
-				renderCnvSourceLegend(svgDiv, legendG, altCnv, this.fontSize, onCnvSourceSelect)
+				/** This shouldn't be necessary. It's reasonable to assume
+				 * a cnv legend group will exist if there is a cnvClassMap.*/
+				const add2G = cnvLegendG.empty() ? legendG : cnvLegendG
+				renderCnvSourceLegend(add2G, altCnv, this.fontSize, onCnvSourceSelect)
 			}
 		}
 	}

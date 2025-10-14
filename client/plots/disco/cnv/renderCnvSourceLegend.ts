@@ -1,4 +1,4 @@
-import type { Selection } from 'd3-selection'
+import type { SvgG } from '../../../types/d3'
 import { make_radios, Menu } from '#dom'
 
 export type AlternativeCnvSet = {
@@ -8,14 +8,7 @@ export type AlternativeCnvSet = {
 	mlst: any[]
 }
 
-type MenuApi = {
-	clear: () => MenuApi
-	d: Selection<HTMLDivElement, any, any, any>
-	hide: () => void
-	showunder: (dom: Element) => void
-}
-
-const cnvMenu = new Menu() as MenuApi
+const cnvMenu = new Menu()
 
 function parseSetLabel(set: AlternativeCnvSet, index: number) {
 	let text = set.name || `Set ${index + 1}`
@@ -43,108 +36,95 @@ function parseSetLabel(set: AlternativeCnvSet, index: number) {
  * button will display a small menu with radio buttons to choose among the
  * available CNV data sets.
  *
- * @param svgDiv - div that holds the svg, used as relative container for the menu
  * @param legendG - legend <g> element to append the label and button to
- * @param dataSets - list of alternative CNV data sets from the server
+ * @param datasets - list of alternative CNV data sets from the server
  * @param fontSize - font size used in the legend
  * @param onChange - callback fired with the index of the selected data set
  */
 export function renderCnvSourceLegend(
-	_svgDiv: Selection<HTMLDivElement, any, any, any>,
-	legendG: Selection<SVGGElement, any, any, any>,
-	dataSets: AlternativeCnvSet[],
+	legendG: SvgG,
+	datasets: AlternativeCnvSet[],
 	fontSize: number,
 	onChange: (index: number) => void
 ) {
-	if (!dataSets || dataSets.length === 0) return
+	if (!legendG || legendG.empty()) throw new Error('legendG is required')
+	if (!datasets || datasets.length === 0) throw new Error('at least one dataset is required')
 
 	legendG.select('g.sjpp-cnv-source').remove()
-	const legendNode = legendG.node()
-	const legendBBox = legendNode ? legendNode.getBBox() : undefined
-	const g = legendG
+
+	const gBBox = legendG.node()!.getBBox()
+	const cnvSrcWrapper = legendG
 		.append('g')
 		.attr('class', 'sjpp-cnv-source')
-		.attr(
-			'transform',
-			`translate(${legendBBox?.x || 0}, ${(legendBBox?.y || 0) + (legendBBox?.height || 0) + fontSize})`
-		)
+		.attr('transform', `translate(${gBBox.width},${gBBox.y + fontSize})`)
 
-	const currentIndex = dataSets.findIndex(d => d.inuse)
-	const current = currentIndex >= 0 ? dataSets[currentIndex] : dataSets[0]
-	const effectiveIndex = currentIndex >= 0 ? currentIndex : dataSets.indexOf(current)
-	const currentLabelInfo = parseSetLabel(current, effectiveIndex >= 0 ? effectiveIndex : 0)
+	const prompt = cnvSrcWrapper
+		.append('text')
+		.attr('font-size', fontSize)
+		.attr('dominant-baseline', 'middle')
+		.text('Source:')
 
-	const prefix = g.append('text').attr('font-size', fontSize).attr('dominant-baseline', 'middle').text('Source: ')
-	const prefixNode = prefix.node()
-	const prefixWidth = prefixNode ? prefixNode.getBBox().width : 0
+	const [ds, idx] = getActiveDataset(datasets)
+	const sourceInfo = parseSetLabel(ds, idx)
 
-	const linkG = g.append('g').attr('transform', `translate(${prefixWidth},0)`)
+	const promptWidth = prompt.node() ? prompt.node()!.getBBox().width : 0
 
-	const aTag = linkG
+	const link = cnvSrcWrapper
 		.append('a')
-		.attr('href', currentLabelInfo.href || '#')
-		.attr('target', currentLabelInfo.target)
-		.attr('xlink:href', currentLabelInfo.href || '#')
+		.attr('transform', `translate(${promptWidth + 5},0)`)
+		.attr('href', sourceInfo.href || '#')
+		.attr('target', sourceInfo.target)
+		.attr('xlink:href', sourceInfo.href || '#')
 		.style('cursor', 'pointer')
 		.on('click', function (event: MouseEvent) {
-			if (aTag.attr('href') === '#') {
+			if (link.attr('href') === '#') {
 				event.preventDefault()
 			}
-			if (!currentLabelInfo.href) {
+			if (!sourceInfo.href) {
 				event.stopPropagation()
 				showCnvMenu(this)
 			}
 		})
 
-	const linkTextElement = aTag
+	const linkG = link.append('g')
+	const linkText = linkG
 		.append('text')
 		.attr('font-size', fontSize)
 		.attr('dominant-baseline', 'middle')
-		.text(currentLabelInfo.text)
+		.style('fill', sourceInfo.href ? '#428bca' : 'black')
+		.style('text-decoration', sourceInfo.href ? 'underline' : 'none')
+		.text(sourceInfo.text)
 
-	if (currentLabelInfo.href) {
-		linkTextElement.style('fill', '#428bca').style('text-decoration', 'underline')
-	}
-
-	const linkWidth = linkTextElement.node() ? linkTextElement.node()!.getBBox().width : 0
-	const labelWidth = prefixWidth + linkWidth
-
-	const buttonPaddingX = 10
-	const buttonPaddingY = 4
-	const buttonHeight = fontSize + buttonPaddingY * 2
-	const buttonGroup = g
+	const linkWidth = linkText.node() ? linkText.node()!.getBBox().width : 0
+	const btnPadding = 10
+	const btnWdt = 100 + btnPadding * 4
+	const btnHgt = fontSize + btnPadding * 2
+	const btnWrapper = cnvSrcWrapper
 		.append('g')
-		.attr('transform', `translate(${labelWidth + 12},${-buttonHeight / 2})`)
+		.attr('transform', `translate(${linkWidth + promptWidth + fontSize},${-btnHgt / 2})`)
 		.style('cursor', 'pointer')
 		.on('click', function (event: MouseEvent) {
 			event.stopPropagation()
 			showCnvMenu(this)
 		})
-
-	const buttonText = buttonGroup
-		.append('text')
-		.attr('x', buttonPaddingX)
-		.attr('y', buttonHeight / 2)
-		.attr('font-size', fontSize)
-		.attr('dominant-baseline', 'middle')
-		.attr('text-anchor', 'start')
-		.text('Click to change')
-
-	const buttonTextWidth = buttonText.node() ? buttonText.node()!.getBBox().width : 0
-	const buttonWidth = buttonTextWidth + buttonPaddingX * 2
-
-	buttonGroup
-		.insert('rect', 'text')
-		.attr('width', buttonWidth)
-		.attr('height', buttonHeight)
-		.attr('rx', 4)
-		.attr('ry', 4)
+	btnWrapper
+		.append('rect')
+		.attr('width', btnWdt)
+		.attr('height', btnHgt)
+		.attr('rx', 10)
+		.attr('ry', 10)
 		.style('fill', '#f2f2f2')
-		.style('stroke', '#ccc')
-		.style('stroke-width', 1)
+	btnWrapper
+		.append('text')
+		.attr('x', btnWdt / 2)
+		.attr('y', btnHgt / 2)
+		.attr('font-size', fontSize)
+		.attr('text-anchor', 'middle')
+		.attr('dominant-baseline', 'middle')
+		.text('Click to change'.toUpperCase())
 
 	function showCnvMenu(dom: Element) {
-		cnvMenu.clear()
+		cnvMenu.clear().showunder(dom)
 
 		cnvMenu.d.append('div').text('Choose data source for CNV:').style('margin', '5px 5px 0 5px')
 
@@ -153,7 +133,7 @@ export function renderCnvSourceLegend(
 		make_radios({
 			holder: optionsHolder,
 			inputName: 'sjpp_cnv_source',
-			options: dataSets.map((set, index) => ({
+			options: datasets.map((set, index) => ({
 				label: parseSetLabel(set, index).text,
 				value: index,
 				checked: !!set.inuse
@@ -165,6 +145,11 @@ export function renderCnvSourceLegend(
 				cnvMenu.hide()
 			}
 		})
-		cnvMenu.showunder(dom)
 	}
+}
+
+function getActiveDataset(datasets) {
+	let currentIndex = datasets.findIndex(d => d.inuse)
+	if (currentIndex == -1) currentIndex = 0
+	return [datasets[currentIndex], currentIndex]
 }

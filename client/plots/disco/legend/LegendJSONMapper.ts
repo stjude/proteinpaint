@@ -105,6 +105,7 @@ export default class LegendJSONMapper {
 
 			legendJSON.push({
 				name: legend.cnvTitle,
+				id: 'sjpp-disco-cnv-legend',
 				order: order,
 				items: cnvItems
 			})
@@ -181,6 +182,7 @@ export default class LegendJSONMapper {
 			legendJSON.push({
 				name: legend.cnvTitle,
 				order: order,
+				id: 'sjpp-disco-cnv-legend',
 				items: cnvItems
 			})
 		}
