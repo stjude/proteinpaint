@@ -4789,10 +4789,10 @@
   },
   "dom/svg.legend.js": {
     "lines": {
-      "total": 97,
-      "covered": 55,
+      "total": 99,
+      "covered": 57,
       "skipped": 0,
-      "pct": 56.7
+      "pct": 57.57
     },
     "functions": {
       "total": 9,
@@ -4801,26 +4801,26 @@
       "pct": 55.55
     },
     "statements": {
-      "total": 103,
-      "covered": 55,
+      "total": 107,
+      "covered": 57,
       "skipped": 0,
-      "pct": 53.39
+      "pct": 53.27
     },
     "branches": {
-      "total": 93,
-      "covered": 37,
+      "total": 97,
+      "covered": 39,
       "skipped": 0,
-      "pct": 39.78
+      "pct": 40.2
     },
     "lowestPct": {
-      "curr": 39.78,
-      "prev": 0,
-      "diff": 39.78
+      "curr": 40.2,
+      "prev": 39.78,
+      "diff": 0.4200000000000017
     },
     "averagePct": {
-      "curr": 51.355,
-      "prev": 0,
-      "diff": 51.355
+      "curr": 51.64750000000001,
+      "prev": 51.355,
+      "diff": 0.2925000000000111
     }
   },
   "termdb/test/geneVariant.integration.spec.ts": {
