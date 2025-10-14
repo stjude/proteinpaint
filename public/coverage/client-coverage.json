@@ -2125,38 +2125,38 @@
   },
   "plots/scatter/viewmodel/scatterLasso.ts": {
     "lines": {
-      "total": 112,
-      "covered": 2,
+      "total": 116,
+      "covered": 67,
       "skipped": 0,
-      "pct": 1.78
+      "pct": 57.75
     },
     "functions": {
       "total": 31,
-      "covered": 0,
+      "covered": 9,
       "skipped": 0,
-      "pct": 0
+      "pct": 29.03
     },
     "statements": {
-      "total": 127,
-      "covered": 2,
+      "total": 135,
+      "covered": 73,
       "skipped": 0,
-      "pct": 1.57
+      "pct": 54.07
     },
     "branches": {
-      "total": 49,
-      "covered": 0,
+      "total": 57,
+      "covered": 19,
       "skipped": 0,
-      "pct": 0
+      "pct": 33.33
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 29.03,
       "prev": 29.03,
-      "diff": -29.03
+      "diff": 0
     },
     "averagePct": {
-      "curr": 0.8375,
+      "curr": 43.545,
       "prev": 42.16,
-      "diff": -41.3225
+      "diff": 1.3850000000000051
     }
   },
   "plots/scatter/viewmodel/scatterViewModel.ts": {
@@ -2341,38 +2341,38 @@
   },
   "plots/scatter/viewmodel/scatterTooltip.ts": {
     "lines": {
-      "total": 185,
-      "covered": 5,
+      "total": 186,
+      "covered": 121,
       "skipped": 0,
-      "pct": 2.7
+      "pct": 65.05
     },
     "functions": {
       "total": 20,
-      "covered": 1,
+      "covered": 14,
       "skipped": 0,
-      "pct": 5
+      "pct": 70
     },
     "statements": {
-      "total": 214,
-      "covered": 5,
+      "total": 216,
+      "covered": 133,
       "skipped": 0,
-      "pct": 2.33
+      "pct": 61.57
     },
     "branches": {
-      "total": 157,
-      "covered": 0,
+      "total": 159,
+      "covered": 78,
       "skipped": 0,
-      "pct": 0
+      "pct": 49.05
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 49.05,
       "prev": 43.42,
-      "diff": -43.42
+      "diff": 5.6299999999999955
     },
     "averagePct": {
-      "curr": 2.5075000000000003,
+      "curr": 61.417500000000004,
       "prev": 59.34750000000001,
-      "diff": -56.84000000000001
+      "diff": 2.069999999999993
     }
   },
   "plots/scatter/viewmodel/scatterViewModel3D.ts": {
