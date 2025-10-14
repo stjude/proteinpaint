@@ -290,18 +290,7 @@ function table_snvindel({ mlst, tk, block }, table) {
 				.append('a')
 				.text('View variant score')
 				.on('click', async () => {
-					const params = {
-						chromosome: m.chr,
-						position: m.pos + 1,
-						reference: m.ref,
-						alternate: m.alt,
-						ontologyTerm: 'UBERON:0001157'
-					}
-
-					const data = await dofetch3('alphaGenome', { body: params })
-					const menu = new Menu({ padding: '2px' })
-					menu.d.append('img').attr('width', '1250px').attr('src', data.plotImage)
-					menu.show(0, 0)
+					openAlphaGenome(m)
 				})
 		}
 	}
@@ -356,6 +345,28 @@ function table_snvindel({ mlst, tk, block }, table) {
 			}
 		}
 	}
+}
+
+const menu = new Menu({ padding: '2px' })
+
+async function openAlphaGenome(m) {
+	const params = {
+		chromosome: m.chr,
+		position: m.pos + 1,
+		reference: m.ref,
+		alternate: m.alt,
+		ontologyTerm: 'UBERON:0000955' // brain, should be dynamic in future, provided by the dataset
+	}
+
+	const data = await dofetch3('alphaGenome', { body: params })
+	if (data.error) {
+		console.error(data.error)
+		alert('Error fetching alpha genome: ' + (data.error.message || data.error))
+		return
+	}
+	menu.clear()
+	menu.d.append('img').attr('width', '1250px').attr('src', data.plotImage)
+	menu.show(0, 0)
 }
 
 function table_snvindel_mayInsertNumericValueRow(m, tk, table) {

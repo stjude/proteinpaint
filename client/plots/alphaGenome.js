@@ -2,12 +2,11 @@ import { PlotBase } from './PlotBase'
 import { getCompInit, copyMerge } from '#rx'
 import { dofetch3 } from '#common/dofetch'
 import { controlsInit } from './controls'
-import { on } from 'events'
 
-class VariantPredictor extends PlotBase {
+class AlphaGenome extends PlotBase {
 	constructor(opts) {
 		super(opts)
-		this.type = 'variantPredictor'
+		this.type = 'alphaGenome'
 		this.dom = {
 			holder: opts.holder,
 			controlsDiv: opts.holder.append('div').style('display', 'inline-block'),
@@ -26,7 +25,7 @@ class VariantPredictor extends PlotBase {
 	}
 
 	async init(appState) {
-		this.opts.header.text('Variant Predictor')
+		this.opts.header.text('Alpha Genome Variant Predictor')
 		this.setControls()
 	}
 
@@ -90,6 +89,7 @@ class VariantPredictor extends PlotBase {
 			ontologyTerm: settings.ontologyTerm
 		}
 		const data = await dofetch3('alphaGenome', { body })
+		if (data.error) throw data.error
 		this.dom.plotDiv.selectAll('*').remove()
 		this.dom.plotDiv.append('img').attr('width', '1250px').attr('src', data.plotImage)
 	}
@@ -99,13 +99,13 @@ export function getPlotConfig(opts) {
 	const config = {
 		hidePlotFilter: true,
 		settings: {
-			variantPredictor: {
+			alphaGenome: {
 				controls: { isOpen: false },
 				chromosome: 'chr22',
 				position: 36201698,
 				reference: 'A',
 				alternate: 'C',
-				ontologyTerm: 'UBERON:0001157'
+				ontologyTerm: 'UBERON:0000955' // brain
 			}
 		}
 	}
@@ -114,5 +114,5 @@ export function getPlotConfig(opts) {
 	return config
 }
 
-export const variantPredictorInit = getCompInit(VariantPredictor)
-export const componentInit = variantPredictorInit
+export const alphaGenomeInit = getCompInit(AlphaGenome)
+export const componentInit = alphaGenomeInit

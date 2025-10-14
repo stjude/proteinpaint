@@ -36,7 +36,7 @@ function init() {
 			res.send({ plotImage: url } satisfies alphaGenomeResponse)
 		} catch (e: any) {
 			console.log(e)
-			res.status(404).send(e)
+			res.status(404).send({ error: e })
 		}
 	}
 }

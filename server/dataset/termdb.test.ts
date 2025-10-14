@@ -32,7 +32,7 @@ export default function (): Mds3 {
 			frequencyChart: () => true,
 			report: () => true,
 			summarizeMutationDiagnosis: () => true,
-			variantPredictor: () => true
+			alphaGenome: () => true
 		},
 		cohort: {
 			massNav: {
