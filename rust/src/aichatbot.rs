@@ -20,6 +20,7 @@ mod sjprovider; // Importing custom rig module for invoking SJ GPU server
 
 mod test_ai; // Test examples for AI chatbot
 
+// Struct for intaking data from dataset json
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 pub struct AiJsonFormat {
     hasGeneExpression: bool,
@@ -36,7 +37,7 @@ enum Charts {
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct TrainTestData {
-    SystemPrompt: Option<String>,
+    SystemPrompt: String,
     TrainingData: Vec<QuestionAnswer>,
     TestData: Vec<QuestionAnswer>,
 }
@@ -279,8 +280,10 @@ pub async fn run_pipeline(
         // Not implemented yet
         final_output = format!("{{\"{}\":\"{}\"}}", "action", "surivial");
     } else if classification == "none".to_string() {
-        final_output = format!("{{\"{}\":\"{}\"}}", "action", "none");
-        println!("The input query did not match any known features in Proteinpaint");
+        final_output = format!(
+            "{{\"{}\":\"{}\",\"{}\":\"{}\"}}",
+            "action", "none", "message", "The input query did not match any known features in Proteinpaint"
+        );
     } else {
         final_output = format!("{{\"{}\":\"{}\"}}", "action", "unknown:".to_string() + &classification);
     }
@@ -816,8 +819,6 @@ async fn extract_summary_information(
     //let mut vector_store = InMemoryVectorStore::<String>::default();
     //InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
 
-    let gene_expression_statement;
-    let gene_expression_examples;
     let mut common_genes = Vec::<String>::new();
     match ai_json.hasGeneExpression {
         true => {
@@ -830,68 +831,92 @@ async fn extract_summary_information(
                 .into_iter()
                 .filter(|x| user_words2.contains(&x.to_lowercase()))
                 .collect();
-            //println!("common_genes:{:?}", common_genes);
-            gene_expression_statement =
-                "The \"geneExpression\" subfield should ONLY contain genes names from the relevant genes list.";
-            gene_expression_examples = "Example question4: \"compare tp53 expression between genders\"\n Example answer4: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\": \"sex\"}, {\"geneExpression\": \"TP53\"}]}}\n Example question5: \"is tmem181 overexpressed in men?\" Example answer5: {\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"sex\"},{\"geneExpression\":\"TMEM181\"}]}\n"
         }
-        false => {
-            gene_expression_statement = "The \"geneExpression\" field should be EMPTY and must NOT display any gene names as the dataset does not support it. Add message to \"message\" field stating that \"gene expression is not supported for this dataset\"";
-            gene_expression_examples = "Example question4: \"compare tp53 expression between genders\"\n Example answer4: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\": \"sex\"}], \"message\": \"gene expression is not supported for this dataset\"}}\n Example question5: \"is tmem181 overexpressed in men?\" Example answer5: {\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"sex\"}], \"message\": \"gene expression is not supported for this dataset\"}\n"
+        false => {}
+    }
+
+    let mut summary_data_check: Option<TrainTestData> = None;
+    for chart in ai_json.charts.clone() {
+        if let Charts::Summary(traindata) = chart {
+            summary_data_check = Some(traindata);
+            break;
         }
     }
 
-    let system_prompt: String = String::from(
-        String::from(
-            "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. There are three fields in the JSON to be returned: The \"action\" field will ALWAYS be \"summary\". The \"summaryterms\" field should contain all the variables that the user wants to visualize. The \"clinical\" subfield should ONLY contain names of the fields from the sqlite db. ",
-        ) + &gene_expression_statement
-            + &" The \"filter\" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both \"summaryterms\" and \"filter\". There are two kinds of filter variables: \"Categorical\" and \"Numeric\". \"Categorical\" variables are those variables which can have a fixed set of values e.g. gender, molecular subtypes. They are defined by the \"CategoricalFilterTerm\" which consists of \"term\" (a field from the sqlite3 db)  and \"value\" (a value of the field from the sqlite db).  \"Numeric\" variables are those which can have any numeric value. They are defined by \"NumericFilterTerm\" and contain  the subfields \"term\" (a field from the sqlite3 db), \"greaterThan\" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and \"lessThan\" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. The \"message\" field only contain messages of terms in the user input that were not found in their respective databases. The JSON schema is as follows:"
-            + &schema_json_string
-            + &"\n  Example question1: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer1: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\":\"Molecular Subtype\"}], filter:[ {\"Numeric\":{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}\n Example question2: \"show summary of molecular subtype for men under 40 years only\"\n Example answer2: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"sex\",\"value\":\"Male\"}},{\"Numeric\":{\"greaterThan\":null,\"lessThan\":40.0,\"term\":\"Age\"}}],\"summaryterms\":[{\"clinical\":\"Molecular subtype\"}]}\n Example Question3: \"Show race for women with early onset of cancer\"\n Example Answer3: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"sex\",\"value\":\"Female\"}}, {\"Numeric\":{\"greaterThan\":null,\"lessThan\":18.0,\"term\":\"Age\"}],\"summaryterms\":[{\"clinical\":\"Ancestry\"}]}\n "
-            + &gene_expression_examples
-            + "The sqlite db in plain language is as follows:\n"
-            + &rag_docs.join(",")
-            + &"\n Relevant genes are as follows (separated by comma(,)):"
-            + &common_genes.join(",")
-            + &"\nQuestion: {question} \nanswer:",
-    );
+    match summary_data_check {
+        Some(summary_data) => {
+            let mut training_data: String = String::from("");
+            let mut train_iter = 0;
+            for ques_ans in summary_data.TrainingData {
+                train_iter += 1;
+                training_data += "Example question";
+                training_data += &train_iter.to_string();
+                training_data += &":";
+                training_data += &ques_ans.question;
+                training_data += &" ";
+                training_data += "Example answer";
+                training_data += &train_iter.to_string();
+                training_data += &":";
+                training_data += &ques_ans.answer;
+                training_data += &"\n";
+            }
 
-    //println!("system_prompt:{}", system_prompt);
-    // Create RAG agent
-    let agent = AgentBuilder::new(comp_model)
-        .preamble(&system_prompt)
-        //.dynamic_context(top_k, vector_store.index(embedding_model))
-        .temperature(temperature)
-        .additional_params(additional)
-        .build();
+            let system_prompt: String = String::from(
+                String::from(
+                    "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. There are three fields in the JSON to be returned: The \"action\" field will ALWAYS be \"summary\". The \"summaryterms\" field should contain all the variables that the user wants to visualize. The \"clinical\" subfield should ONLY contain names of the fields from the sqlite db. ",
+                ) + &summary_data.SystemPrompt
+                    + &" The \"filter\" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both \"summaryterms\" and \"filter\". There are two kinds of filter variables: \"Categorical\" and \"Numeric\". \"Categorical\" variables are those variables which can have a fixed set of values e.g. gender, molecular subtypes. They are defined by the \"CategoricalFilterTerm\" which consists of \"term\" (a field from the sqlite3 db)  and \"value\" (a value of the field from the sqlite db).  \"Numeric\" variables are those which can have any numeric value. They are defined by \"NumericFilterTerm\" and contain  the subfields \"term\" (a field from the sqlite3 db), \"greaterThan\" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and \"lessThan\" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. The \"message\" field only contain messages of terms in the user input that were not found in their respective databases. The JSON schema is as follows:"
+                    + &schema_json_string
+                    + &"\n  Example question1: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer1: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\":\"Molecular Subtype\"}], filter:[ {\"Numeric\":{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}\n Example question2: \"show summary of molecular subtype for men under 40 years only\"\n Example answer2: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"sex\",\"value\":\"Male\"}},{\"Numeric\":{\"greaterThan\":null,\"lessThan\":40.0,\"term\":\"Age\"}}],\"summaryterms\":[{\"clinical\":\"Molecular subtype\"}]}\n Example Question3: \"Show race for women with early onset of cancer\"\n Example Answer3: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"sex\",\"value\":\"Female\"}}, {\"Numeric\":{\"greaterThan\":null,\"lessThan\":18.0,\"term\":\"Age\"}],\"summaryterms\":[{\"clinical\":\"Ancestry\"}]}\n "
+                    + &training_data
+                    + "The sqlite db in plain language is as follows:\n"
+                    + &rag_docs.join(",")
+                    + &"\n Relevant genes are as follows (separated by comma(,)):"
+                    + &common_genes.join(",")
+                    + &"\nQuestion: {question} \nanswer:",
+            );
 
-    let response = agent.prompt(user_input).await.expect("Failed to prompt ollama");
+            //println!("system_prompt:{}", system_prompt);
+            // Create RAG agent
+            let agent = AgentBuilder::new(comp_model)
+                .preamble(&system_prompt)
+                //.dynamic_context(top_k, vector_store.index(embedding_model))
+                .temperature(temperature)
+                .additional_params(additional)
+                .build();
 
-    //println!("Ollama: {}", response);
-    let result = response.replace("json", "").replace("```", "");
-    //println!("result:{}", result);
-    let json_value: Value = serde_json::from_str(&result).expect("REASON");
-    //println!("Classification result:{}", json_value);
+            let response = agent.prompt(user_input).await.expect("Failed to prompt ollama");
 
-    let final_llm_json;
-    match llm_backend_type {
-        llm_backend::Ollama() => {
-            let json_value2: Value = serde_json::from_str(&json_value["content"].to_string()).expect("REASON2");
-            let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON3");
-            final_llm_json = json_value3.to_string()
+            //println!("Ollama: {}", response);
+            let result = response.replace("json", "").replace("```", "");
+            //println!("result:{}", result);
+            let json_value: Value = serde_json::from_str(&result).expect("REASON");
+            //println!("Classification result:{}", json_value);
+
+            let final_llm_json;
+            match llm_backend_type {
+                llm_backend::Ollama() => {
+                    let json_value2: Value = serde_json::from_str(&json_value["content"].to_string()).expect("REASON2");
+                    let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON3");
+                    final_llm_json = json_value3.to_string()
+                }
+                llm_backend::Sj() => {
+                    let json_value2: Value =
+                        serde_json::from_str(&json_value[0]["generated_text"].to_string()).expect("REASON2");
+                    //println!("json_value2:{}", json_value2.as_str().unwrap());
+                    let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON3");
+                    //println!("Classification result:{}", json_value3);
+                    final_llm_json = json_value3.to_string()
+                }
+            }
+            //println!("final_llm_json:{}", final_llm_json);
+            let final_validated_json = validate_summary_output(final_llm_json.clone(), db_vec, common_genes, ai_json);
+            final_validated_json
         }
-        llm_backend::Sj() => {
-            let json_value2: Value =
-                serde_json::from_str(&json_value[0]["generated_text"].to_string()).expect("REASON2");
-            //println!("json_value2:{}", json_value2.as_str().unwrap());
-            let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON2");
-            //println!("Classification result:{}", json_value3);
-            final_llm_json = json_value3.to_string()
+        None => {
+            panic!("summary chart train and test data is not defined in dataset JSON file")
         }
     }
-    //println!("final_llm_json:{}", final_llm_json);
-    let final_validated_json = validate_summary_output(final_llm_json.clone(), db_vec, common_genes, ai_json);
-    final_validated_json
 }
 
 fn get_summary_string() -> String {
