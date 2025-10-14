@@ -44,7 +44,6 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 		//Add root term required for termdb queries
 		id2term.set('__root', { id: 'root', name: 'root', __tree_isroot: true })
 
-		new BuildHelpers()
 		//Creates the term object for each header
 		BuildHelpers.makeParentTerms(lines[0], id2term, imageKey)
 		//Assigns term.values, term.type, and, if applicable, term.bins
