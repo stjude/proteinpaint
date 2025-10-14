@@ -2,6 +2,7 @@ import { mclass, dtsnvindel, dtfusionrna, dtsv, dtcnv, bplen, dt2label } from '#
 import { init_sampletable } from './sampletable'
 import { appear, renderTable, table2col, makeSsmLink } from '#dom'
 import { dofetch3 } from '#common/dofetch'
+import { Menu } from '#dom'
 
 /*
 when there's just one item, print a vertical 2-col table to show details
@@ -280,6 +281,29 @@ function table_snvindel({ mlst, tk, block }, table) {
 		// do not pretend m is mutation if ref/alt is missing
 		td1.text(m.ref && m.alt ? 'Mutation' : 'Position')
 		print_snv(td2, m, tk, block)
+
+		if (m.ref && m.alt) {
+			const [td3, td4] = table.addRow()
+			// do not pretend m is mutation if ref/alt is missing
+			td3.text('Alpha Genome')
+			td4
+				.append('a')
+				.text('View variant score')
+				.on('click', async () => {
+					const params = {
+						chromosome: m.chr,
+						position: m.pos + 1,
+						reference: m.ref,
+						alternate: m.alt,
+						ontologyTerm: 'UBERON:0001157'
+					}
+
+					const data = await dofetch3('alphaGenome', { body: params })
+					const menu = new Menu({ padding: '2px' })
+					menu.d.append('img').attr('width', '1250px').attr('src', data.plotImage)
+					menu.show(0, 0)
+				})
+		}
 	}
 	if (m.occurrence > 1) {
 		const [td1, td2] = table.addRow()
