@@ -104,7 +104,8 @@ class WSIViewer extends PlotBase implements RxComponent {
 			settings.displayedImageIndex,
 			settings.annotatedPatchBorderColor,
 			aiProjectID,
-			aiWSIMageFiles
+			aiWSIMageFiles,
+			settings
 		)
 
 		const wsimages = viewModel.sampleWSImages
@@ -141,7 +142,8 @@ class WSIViewer extends PlotBase implements RxComponent {
 				this.thumbnailsContainer,
 				wsimageLayers.map(wsimageLayers => wsimageLayers.wsimage),
 				settings,
-				this.wsiViewerInteractions
+				this.wsiViewerInteractions,
+				aiWSIMageFiles.length
 			)
 
 			this.map = new MapRenderer(

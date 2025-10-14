@@ -12,7 +12,8 @@ export class ThumbnailRenderer {
 		thumbnailsContainer: any,
 		layers: Array<TileLayer<Zoomify>>,
 		setting: Settings,
-		wsiViewerInteractions: WSIViewerInteractions
+		wsiViewerInteractions: WSIViewerInteractions,
+		numTotalFiles: number
 	) {
 		if (!thumbnailsContainer) {
 			// First-time initialization
@@ -30,7 +31,7 @@ export class ThumbnailRenderer {
 			// Placeholder for left arrow, if needed
 			const leftIconHolder = thumbnailsContainer.append('div').style('display', 'flex').style('align-items', 'center')
 
-			for (let i = setting.thumbnailRangeStart; i < this.lastShownImage(setting, layers.length); i++) {
+			for (let i = 0; i < layers.length; i++) {
 				const isActive = i === setting.displayedImageIndex
 				const thumbnail = thumbnailsContainer
 					.append('div')
@@ -68,22 +69,22 @@ export class ThumbnailRenderer {
 
 			/** Only show display arrows (i.e. prev/next buttons) when
 			 * the num of thumbnails exceeds the num that can be displayed*/
-			if (layers.length > setting.numDisplayedThumbnails) {
+			if (numTotalFiles > setting.numDisplayedThumbnails) {
 				icons['left'](leftIconHolder, {
 					width: setting.iconDimensions,
 					height: setting.iconDimensions,
 					disabled: setting.thumbnailRangeStart === 0,
 					handler: () => {
-						wsiViewerInteractions.toggleThumbnails(this.newStart(setting, layers, true))
+						wsiViewerInteractions.toggleThumbnails(this.newStart(setting, numTotalFiles, true))
 					}
 				})
 
 				icons['right'](rightIconHolder, {
 					width: setting.iconDimensions,
 					height: setting.iconDimensions,
-					disabled: setting.thumbnailRangeStart + setting.numDisplayedThumbnails >= layers.length,
+					disabled: setting.thumbnailRangeStart + setting.numDisplayedThumbnails >= numTotalFiles,
 					handler: () => {
-						wsiViewerInteractions.toggleThumbnails(this.newStart(setting, layers))
+						wsiViewerInteractions.toggleThumbnails(this.newStart(setting, numTotalFiles))
 					}
 				})
 			}
@@ -100,18 +101,12 @@ export class ThumbnailRenderer {
 		return thumbnailsContainer
 	}
 
-	private lastShownImage(setting, layersLength) {
-		return setting.thumbnailRangeStart + setting.numDisplayedThumbnails >= layersLength
-			? layersLength
-			: setting.thumbnailRangeStart + setting.numDisplayedThumbnails
-	}
-
-	private newStart(setting, layers, isLeft = false) {
+	private newStart(setting, numTotalFiles, isLeft = false) {
 		if (isLeft) {
 			return Math.max(0, setting.thumbnailRangeStart - setting.numDisplayedThumbnails)
 		} else {
 			return Math.min(
-				layers.length - setting.numDisplayedThumbnails,
+				numTotalFiles - setting.numDisplayedThumbnails,
 				setting.thumbnailRangeStart + setting.numDisplayedThumbnails
 			)
 		}
