@@ -1,6 +1,10 @@
 import type Legend from './Legend.ts'
 import svgLegend from '#dom/svg.legend'
 import LegendJSONMapper from './LegendJSONMapper.ts'
+import { dtcnv } from '#shared/common.js'
+import { renderCnvSourceLegend } from '../cnv/renderCnvSourceLegend.ts'
+import type ViewModel from '../viewmodel/ViewModel.ts'
+import type { AlternativeCnvSet } from '../cnv/renderCnvSourceLegend.ts'
 
 export default class LegendRenderer {
 	private legendJSONMapper: LegendJSONMapper
@@ -11,7 +15,15 @@ export default class LegendRenderer {
 		this.legendJSONMapper = new LegendJSONMapper(cappedCnvMaxAbsValue)
 	}
 
-	render(holder: any, legend: Legend, xOffset: number, svgw, svgh) {
+	render(
+		holder: any,
+		legend: Legend,
+		xOffset: number,
+		svgw: number,
+		svgh: number,
+		viewModel: ViewModel,
+		onCnvSourceSelect: (index: number) => void
+	) {
 		const svgLegendRenderer = svgLegend({
 			holder: holder.append('g').attr('data-testid', 'sjpp_disco_plot_legend'),
 			rectFillFxn: d => d.color,
@@ -37,5 +49,18 @@ export default class LegendRenderer {
 				}
 			)
 		})
+		const altCnv = viewModel.appState.args.alternativeDataByDt?.[dtcnv] as AlternativeCnvSet[]
+
+		if (altCnv && altCnv.length > 0) {
+			const legendG = holder.select('g[data-testid="sjpp_disco_plot_legend"]')
+			const cnvLegendG = legendG.select('#sjpp-disco-cnv-legend')
+
+			if (!legendG.empty()) {
+				/** This shouldn't be necessary. It's reasonable to assume
+				 * a cnv legend group will exist if there is a cnvClassMap.*/
+				const add2G = cnvLegendG.empty() ? legendG : cnvLegendG
+				renderCnvSourceLegend(add2G, altCnv, this.fontSize, onCnvSourceSelect)
+			}
+		}
 	}
 }

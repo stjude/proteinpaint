@@ -10,6 +10,9 @@ import type { DataHolder } from '#plots/disco/data/DataHolder.ts'
 import type { InvalidDataInfo } from '#dom'
 
 export default class ViewModel {
+	public appState: any
+	public svgDiv: any
+
 	width: number
 	height: number
 	legendHeight: number
