@@ -235,7 +235,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		const point = data.plotData.points.find((p: any) => p.type === type)
 		return {
 			type: String(type).charAt(0).toUpperCase() + String(type).slice(1),
-			color: point?.color || '#888888'
+			color: point?.color
 		}
 	})
 

@@ -1,1 +1,2 @@
-
+Features:
+- GRIN2: Adding plot download and genomebrowser click functionality for genes
