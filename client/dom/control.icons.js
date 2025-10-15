@@ -102,34 +102,39 @@ export const icons = {
 			.html('&#8689;')
 	},
 	left: (elem, o) => {
-		const fill = o.fill ? o.fill : o.disabled ? disabled.color : 'rgb(100,100,255)'
+		const defaultFill = 'rgb(100,100,255)'
+		const fill = o.fill ? o.fill : o.disabled ? disabled.color : defaultFill
+		const _opts = { color: fill, width: 12, height: 12 }
+		Object.assign(_opts, o)
 		return getHolder(elem, o)
-			.style('padding', '0 3px')
-			.style('color', o.disabled ? disabled.color : 'rgb(100,100,255)')
+			.style('padding', '3px')
+			.style('color', _opts.disabled ? disabled.color : defaultFill)
 			.style('opacity', 0.9)
 			.style('font-size', '16px')
-			.style('padding', '3px')
 			.style('cursor', 'pointer')
 			.html(
-				`<svg width='12' height='12'>
+				`<svg width='${_opts.width}' height='${_opts.height}'>
 				<g transform='translate(0,1)'>
-					<path d='M0,6L12,0L12,12Z' style='fill:${fill}'></path>
+					<path d='M0,${_opts.height / 2}L${_opts.width},0L${_opts.width},${_opts.height}Z' style='fill:${_opts.color}'></path>
 				</g>
 			</svg>`
 			)
 	},
 	right: (elem, o) => {
+		const defaultFill = 'rgb(100,100,255)'
+		const fill = o.fill ? o.fill : o.disabled ? disabled.color : defaultFill
+		const _opts = { color: fill, width: 12, height: 12 }
+		Object.assign(_opts, o)
 		return getHolder(elem, o)
-			.style('padding', '0 3px')
-			.style('color', 'rgb(100,100,255)')
+			.style('padding', '3px')
+			.style('color', _opts.disabled ? disabled.color : defaultFill)
 			.style('opacity', 0.9)
 			.style('font-size', '16px')
-			.style('padding-top', '3px')
 			.style('cursor', 'pointer')
 			.html(
-				`<svg width='12' height='12'>
-				<g transform='translate(0,0)'>
-					<path d='M0,0L12,6L0,12Z' style='fill:rgb(100,100,255)'></path>
+				`<svg width='${_opts.width}' height='${_opts.height}'>
+				<g transform='translate(0,1)'>
+					<path d='M0,0L${_opts.width},${_opts.height / 2}L0,${_opts.height}Z' style='fill:${_opts.color}'></path>
 				</g>
 			</svg>`
 			)
@@ -138,7 +143,7 @@ export const icons = {
 		const fill = o.disabled ? disabled.color : 'rgb(100,100,255)'
 		return (
 			getHolder(elem, o)
-				.style('padding', '0 3px')
+				.style('padding', '3px')
 				//.style('color', 'rgb(100,100,255)')
 				.style('opacity', 0.9)
 				.style('font-size', '16px')
