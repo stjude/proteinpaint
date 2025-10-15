@@ -150,7 +150,7 @@ export class ViewModelProvider {
 				source: source,
 				baseLayer: true,
 				title: 'Slide',
-				name: wsimage.replace(/\.(svs)$/i, '')
+				name: wsimage.replace(/(\.\w{3,4})$/i, '') //remove file extension
 			}
 			const layer = new TileLayer(options)
 
