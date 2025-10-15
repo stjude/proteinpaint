@@ -4,8 +4,6 @@ use anyhow::Result;
 use json::JsonValue;
 use r2d2_sqlite::SqliteConnectionManager;
 use rig::agent::AgentBuilder;
-use rig::client::CompletionClient;
-use rig::client::EmbeddingsClient;
 use rig::completion::Prompt;
 use rig::embeddings::builder::EmbeddingsBuilder;
 use rig::vector_store::in_memory_store::InMemoryVectorStore;
@@ -76,6 +74,10 @@ async fn main() -> Result<()> {
                     match user_input_json.as_str() {
                         Some(inp) => user_input = inp,
                         None => panic!("user_input field is missing in input json"),
+                    }
+
+                    if user_input.len() == 0 {
+                        panic!("The user input is empty");
                     }
 
                     let tpmasterdir_json: &JsonValue = &json_string["tpmasterdir"];
@@ -359,9 +361,6 @@ There are two main methods of survival analysis:
 
 Sample Query1: \"Compare survival rates between group A and B\"
 Sample Answer1: { \"answer\": \"survival\" }
-
-Sample Query2: \"List all molecular subtypes of leukemia\"
-Sample Answer2: { \"answer\": \"survival\" } 
 
 
 If a ProteinPaint dataset contains survival data then return JSON with single key, 'survival'.
@@ -786,7 +785,6 @@ async fn extract_summary_information(
     ai_json: &AiJsonFormat,
 ) -> String {
     let (rag_docs, db_vec) = parse_dataset_db(dataset_db).await;
-    println!("rag_docs:{:?}", rag_docs);
     let additional;
     let schema_json = schemars::schema_for!(SummaryType); // error handling here
     let schema_json_string = serde_json::to_string_pretty(&schema_json).unwrap();
@@ -867,7 +865,6 @@ async fn extract_summary_information(
                 ) + &summary_data.SystemPrompt
                     + &" The \"filter\" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both \"summaryterms\" and \"filter\". There are two kinds of filter variables: \"Categorical\" and \"Numeric\". \"Categorical\" variables are those variables which can have a fixed set of values e.g. gender, molecular subtypes. They are defined by the \"CategoricalFilterTerm\" which consists of \"term\" (a field from the sqlite3 db)  and \"value\" (a value of the field from the sqlite db).  \"Numeric\" variables are those which can have any numeric value. They are defined by \"NumericFilterTerm\" and contain  the subfields \"term\" (a field from the sqlite3 db), \"greaterThan\" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and \"lessThan\" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. The \"message\" field only contain messages of terms in the user input that were not found in their respective databases. The JSON schema is as follows:"
                     + &schema_json_string
-                    + &"\n  Example question1: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer1: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\":\"Molecular Subtype\"}], filter:[ {\"Numeric\":{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}\n Example question2: \"show summary of molecular subtype for men under 40 years only\"\n Example answer2: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"sex\",\"value\":\"Male\"}},{\"Numeric\":{\"greaterThan\":null,\"lessThan\":40.0,\"term\":\"Age\"}}],\"summaryterms\":[{\"clinical\":\"Molecular subtype\"}]}\n Example Question3: \"Show race for women with early onset of cancer\"\n Example Answer3: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"sex\",\"value\":\"Female\"}}, {\"Numeric\":{\"greaterThan\":null,\"lessThan\":18.0,\"term\":\"Age\"}],\"summaryterms\":[{\"clinical\":\"Ancestry\"}]}\n "
                     + &training_data
                     + "The sqlite db in plain language is as follows:\n"
                     + &rag_docs.join(",")
