@@ -1,6 +1,7 @@
 import { keyupEnter } from '#src/client'
 import type { NumCustomBins } from '#tw'
 import type { NumDiscrete } from './NumDiscrete.ts'
+import type { BoundaryValue } from './NumericDensity.ts'
 import type { TermSetting } from '../TermSetting.ts'
 import type {
 	CustomNumericBinConfig,
@@ -30,13 +31,17 @@ export class NumCustomBinEditor {
 	}
 
 	render(div) {
-		if (this.dom.inputsDiv) return
+		this.editHandler.handler.density.setBinLines(this.getBoundaryValues())
 		if (this.dom.inputsDiv) {
 			if (this.editHandler.dom.binsDiv?.node().contains(this.dom.inputsDiv.node())) return
 			else delete this.dom.inputsDiv //.remove()
 		}
 		this.dom.inputsDiv = div.append('div').style('display', 'flex').style('width', '100%')
 		this.renderCustomBinInputs()
+	}
+
+	getBoundaryValues(): BoundaryValue[] {
+		return this.q.lst.slice(1).map(bin => ({ x: bin.startunbounded ? bin.stop : bin.start, isDraggable: true }))
 	}
 
 	getQ(): CustomNumericBinConfig {

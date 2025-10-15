@@ -7,6 +7,11 @@ import { select, pointer, type BaseType } from 'd3-selection'
 import { scaleLinear, drag as d3drag } from 'd3'
 //import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
 
+export type BoundaryValue = {
+	x: number
+	isDraggable: boolean
+}
+
 type LineData = {
 	x: any
 	index: number
@@ -80,7 +85,7 @@ export class NumericDensity {
 		return this.setData()
 	}
 
-	async showViolin(div?: any) {
+	async showViolin(div, boundaries?) {
 		div.style('padding', '5px').selectAll('*').remove()
 
 		const loadingDiv = div
@@ -103,10 +108,12 @@ export class NumericDensity {
 
 		this.dom.svg = this.vr.svg
 		this.vr.render()
+		if (boundaries) await this.setBinLines(boundaries)
+
 		return this.density_data
 	}
 
-	async setBinLines() {
+	async setBinLines(boundaries) {
 		if (this.density_data.max == this.density_data.min) {
 			this.handleNoDensity()
 			this.brushes.forEach((brush: BrushEntry) => {
@@ -115,13 +122,14 @@ export class NumericDensity {
 		} else {
 			// svg for range plot
 			// const div = self.q.mode == 'spline' ? self.dom.knots_div : self.dom.bins_div
-			this.vr.render()
+			//this.vr.render()
 
 			// add binsize_g for termsetting lines
-			this.dom.binsize_g = this.dom.svg
-				.append('g')
-				.attr('transform', `translate(${this.plot_size.xpad}, ${this.plot_size.ypad})`)
-				.attr('class', 'binsize_g')
+			if (!this.dom.binsize_g)
+				this.dom.binsize_g = this.dom.svg
+					.append('g')
+					.attr('transform', `translate(${this.plot_size.xpad}, ${this.plot_size.ypad})`)
+					.attr('class', 'binsize_g')
 
 			const maxvalue = this.density_data.max
 			const minvalue = this.density_data.min
@@ -131,38 +139,27 @@ export class NumericDensity {
 				.range([this.plot_size.xpad, this.plot_size.width + this.plot_size.xpad])
 
 			this.ranges = []
-			const self = this.termsetting
-			if ('type' in self.q && self.q.type == 'regular-bin') {
-				if (self.q.first_bin) {
-					this.ranges.push(self.q.first_bin)
-					//this.ranges[0].bin = 'first'
-				}
-				if (self.q.last_bin) {
-					this.ranges.push(self.q.last_bin)
-					//this.ranges[1].bin = 'last'
-				}
-			}
 			this.brushes = []
-			this.renderBinLines(self.q)
+			this.renderBinLines(boundaries)
 		}
 	}
 
 	handleNoDensity() {
 		this.no_density_data = true
 		this.ranges = []
-		const self = this.termsetting
-		if ('type' in self.q) {
-			if (self.q.type == 'regular-bin') {
-				if (self.q.first_bin) {
-					this.ranges.push(self.q.first_bin)
-					//this.ranges[0].bin = 'first'
-				}
-				if (self.q.last_bin) {
-					this.ranges.push(self.q.last_bin)
-					//this.ranges[1].bin = 'last'
-				}
-			}
-		}
+		// const self = this.termsetting
+		// if ('type' in self.q) {
+		// 	if (self.q.type == 'regular-bin') {
+		// 		if (self.q.first_bin) {
+		// 			this.ranges.push(self.q.first_bin)
+		// 			//this.ranges[0].bin = 'first'
+		// 		}
+		// 		if (self.q.last_bin) {
+		// 			this.ranges.push(self.q.last_bin)
+		// 			//this.ranges[1].bin = 'last'
+		// 		}
+		// 	}
+		// }
 		this.brushes = []
 		//const brushes = this.brushes
 
@@ -210,57 +207,19 @@ export class NumericDensity {
 		// }
 	}
 
-	renderBinLines(data: any) {
-		return // TODO: enable
+	renderBinLines(data: BoundaryValue[]) {
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const o = this
 		if (!this.density_data) throw `Missing .density_data [density.ts, renderBinLines()]`
-		const scaledMinX = Math.round(o.xscale(o.density_data.min)) //as number
-		const scaledMaxX = Math.round(o.xscale(o.density_data.max)) //as number
-		const lines: any = []
-
-		if (data.mode == 'discrete' && data.type == 'regular-bin') {
-			// assume that boundary lines will be hidden if x > last_bin.start
-			// offset max value by first_bin.stop in case the first boundary is dragged
-			// to the left, will reveal additional non-draggable boundaries from the right
-			const binLinesStop = o.density_data.max + Math.abs(data.first_bin.stop) - Math.min(o.density_data.min, 0)
-			let index = 0
-			//
-			for (let i = data.first_bin.stop; i <= binLinesStop; i = i + data.bin_size) {
-				lines.push({ x: i, index, scaledX: Math.round(o.xscale(i)) })
-				index++
-			}
-			const lastVisibleLine = lines
-				.slice()
-				.reverse()
-				.find((d: LineData) => d.scaledX <= scaledMaxX)
-
-			if (data.last_bin && data.last_bin.start && data.last_bin.start !== lastVisibleLine.x) {
-				lines.push({ x: data.last_bin.start, index, scaledX: Math.round(o.xscale(data.last_bin.start)) })
-			}
-		} else if ((data.mode == 'discrete' && data.type == 'custom-bin') || data.mode == 'binary') {
-			lines.push(
-				...data.lst.slice(1).map((d: LineData, index: number) => {
-					return { x: d.start, index, scaledX: Math.round(o.xscale(d.start)) }
-				})
-			)
-		} else if (data.mode == 'spline') {
-			lines.push(
-				...data.knots.map((d: LineData, index: number) => {
-					return { x: d.value, index, scaledX: Math.round(o.xscale(d.value)) }
-				})
-			)
+		const scaledMinX = Math.round(this.xscale(o.density_data.min)) //as number
+		const scaledMaxX = Math.round(this.xscale(o.density_data.max)) //as number
+		const lines: any[] = []
+		for (const [index, v] of data.entries()) {
+			lines.push({ x: v.x, index, scaledX: Math.round(this.xscale(v.x)), isDraggable: v.isDraggable })
 		}
 
-		// const self = this.handler.tw
-		// lines.forEach((d: LineData, i: number) => {
-		// 	d.isDraggable =
-		// 		self.q.type == 'custom-bin' ||
-		// 		self.q.mode == 'spline' ||
-		// 		i === 0 ||
-		// 		(self.q.last_bin && self.q.last_bin.start === d.x && d.index == lines.length - 1)
-		// })
-
+		//const self = this.handler.tw
+		console.log(222, this.dom.binsize_g.node().querySelectorAll('line'))
 		this.dom.binsize_g.selectAll('line').remove()
 		const lastVisibleLine =
 			lines.length == 1
@@ -316,7 +275,7 @@ export class NumericDensity {
 			d.draggedX = draggedX
 			line.attr('x1', d.draggedX).attr('y1', 0).attr('x2', d.draggedX).attr('y2', o.plot_size.height)
 
-			const inverted = +o.xscale.invert(d.draggedX)
+			const inverted = +this.xscale.invert(d.draggedX)
 			const value = self.term.type == 'integer' ? Math.round(inverted) : inverted.toFixed(3)
 
 			if (self.q.mode == 'discrete' && self.q.type == 'regular-bin') {
@@ -392,13 +351,13 @@ export class NumericDensity {
 			const d = line.datum() as LineData
 
 			d.scaledX = d.draggedX as number
-			d.x = +o.xscale.invert(d.draggedX).toFixed(self.term.type == 'integer' ? 0 : 3)
+			d.x = +this.xscale.invert(d.draggedX).toFixed(self.term.type == 'integer' ? 0 : 3)
 			if (self.q.mode == 'discrete' && self.q.type == 'regular-bin') {
 				if (d.index === 0) {
 					self.q.first_bin!.stop = d.x
-					middleLines.each(function (d: LineData) {
+					middleLines.each((d: LineData) => {
 						d.scaledX = d.draggedX as number
-						d.x = +o.xscale.invert(d.draggedX).toFixed(self.term.type == 'integer' ? 0 : 3)
+						d.x = +this.xscale.invert(d.draggedX).toFixed(self.term.type == 'integer' ? 0 : 3)
 					})
 				} else {
 					self.q.last_bin!.start = d.x
