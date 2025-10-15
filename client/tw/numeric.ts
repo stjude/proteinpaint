@@ -30,10 +30,12 @@ import { SsGSEABase } from './ssGSEA.ts'
 export class NumericBase extends TwBase {
 	// type is set by TwBase constructor
 	term: NumericTerm
+	type: 'NumTWRegularBin' | 'NumTWCustomBin' | 'NumTWCont' | 'NumTWBinary' | 'NumTWSpline'
 	static termTypes = new Set(['integer', 'float', 'date', 'geneExpression', 'metaboliteIntensity', 'ssGSEA'])
 
 	constructor(tw: NumTW, opts: TwOpts) {
 		super(tw, opts)
+		this.type = tw.type
 		this.term = tw.term
 	}
 

@@ -78,9 +78,9 @@ function setRenderers(self) {
 			//add light blue border underneath the buttons
 			.style(`border-${self.opts.linePosition}`, '0.5px solid #1575ad')
 
-		if (!self.opts.contentHolder && !self.opts.noContent) {
-			self.dom.contentHolder = self.dom.holder.append('div')
-		} else self.dom.contentHolder = self.opts.contentHolder
+		if (!self.dom.contentHolder && !self.opts.noContent) {
+			self.dom.contentHolder = self.opts.contentHolder || self.dom.holder.append('div')
+		}
 
 		if (self.opts.tabsPosition == 'vertical') {
 			self.dom.tabsHolder
