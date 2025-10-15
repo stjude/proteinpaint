@@ -176,10 +176,6 @@ export class NumericHandler extends HandlerBase implements Handler {
 		}
 	}
 
-	async renderDensity(div) {
-		this.density_data = await this.density.showViolin(div)
-	}
-
 	applyEdits() {
 		this.editHandler.applyEdits()
 		this.termsetting.dom.tip.hide()

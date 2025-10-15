@@ -50,12 +50,13 @@ export class NumDiscrete extends HandlerBase implements Handler {
 
 	async showEditMenu(div: any) {
 		if (this.dom.boundaryInclusionDiv) {
+			//console.log(52, this.dom.boundaryInclusionDiv && div.node().contains(this.dom.boundaryInclusionDiv.node()))
 			if (div.node().contains(this.dom.boundaryInclusionDiv.node())) return // already rendered
 			else delete this.dom.boundaryInclusionDiv
 		}
 
 		this.dom.density_div = div.append('div')
-		await this.handler.renderDensity(this.dom.density_div)
+		await this.handler.density.showViolin(this.dom.density_div)
 
 		this.tw = this.termsetting.tw as NumRegularBin | NumCustomBins // TODO: do not force
 		this.dom.boundaryInclusionDiv = div.append('div')

@@ -42,7 +42,7 @@ export class NumContEditor extends HandlerBase implements Handler {
 		}
 
 		this.dom.density_div = div.append('div')
-		await this.handler.renderDensity(this.dom.density_div)
+		await this.handler.density.showViolin(this.dom.density_div)
 
 		this.dom.inputsDiv = div.append('div')
 		let convert2ZCheckbox

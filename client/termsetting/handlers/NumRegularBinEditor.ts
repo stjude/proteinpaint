@@ -4,6 +4,7 @@ import { make_radios } from '#dom'
 import initBinConfig from '#shared/termdb.initbinconfig.js'
 import type { NumRegularBin } from '#tw'
 import type { NumDiscrete } from './NumDiscrete.ts'
+import type { BoundaryValue } from './NumericDensity.ts'
 import type { TermSetting } from '../TermSetting.ts'
 import type { RegularNumericBinConfig } from '#types'
 
@@ -30,6 +31,7 @@ export class NumRegularBinEditor {
 	}
 
 	render(div) {
+		this.editHandler.handler.density.setBinLines(this.getBoundaryValues())
 		if (this.dom.binsTable) {
 			if (this.editHandler.dom.binsDiv?.node().contains(this.dom.binsTable.node())) return
 			else delete this.dom.binsTable //.remove()
@@ -211,6 +213,16 @@ export class NumRegularBinEditor {
 				stopinclusive: false
 			}
 		this.editHandler.handler.density.renderBinLines(this.q)
+	}
+
+	getBoundaryValues(): BoundaryValue[] {
+		const o = this.editHandler.handler
+		const binLinesStop = o.density_data.max + Math.abs(this.q.first_bin.stop) - Math.min(o.density_data.min, 0)
+		const boundaryValues: BoundaryValue[] = []
+		for (let i = this.q.first_bin.stop; i <= binLinesStop; i = i + this.q.bin_size) {
+			boundaryValues.push({ x: i, isDraggable: i === this.q.first_bin.stop || i === i + this.q.bin_size })
+		}
+		return boundaryValues
 	}
 
 	getEditedQ(startinclusive, stopinclusive): RegularNumericBinConfig {
