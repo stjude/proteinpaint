@@ -7,7 +7,6 @@ import type Settings from '#plots/wsiviewer/Settings.ts'
 import wsiViewerDefaults from '#plots/wsiviewer/defaults.ts'
 import 'ol-ext/dist/ol-ext.css'
 import { WSIAnnotationsRenderer } from '#plots/wsiviewer/view/WSIAnnotationsRenderer.ts'
-import { Buffer } from '#plots/wsiviewer/interactions/Buffer.ts'
 import { ViewModelProvider } from '#plots/wsiviewer/viewModel/ViewModelProvider.ts'
 import { ThumbnailRenderer } from '#plots/wsiviewer/view/ThumbnailRenderer.ts'
 import { MapRenderer } from '#plots/wsiviewer/view/MapRenderer.ts'
@@ -84,11 +83,6 @@ class WSIViewer extends PlotBase implements RxComponent {
 		const settings = state.plots.find(p => p.id === this.id).settings as Settings
 		const holder = this.opts.holder
 
-		const buffers = {
-			annotationsIdx: new Buffer<number>(0),
-			tmpClass: new Buffer<{ label: string; color: string }>({ label: '', color: '' })
-		}
-
 		// TODO verify if state.vocab.genome is needed?
 		const genome = state.genome || state.vocab.genome
 		const dslabel = state.dslabel || state.vocab.dslabel
@@ -151,7 +145,6 @@ class WSIViewer extends PlotBase implements RxComponent {
 				wsimageLayers[settings.displayedImageIndex],
 				this.wsiViewerInteractions.viewerClickListener,
 				viewModel.sampleWSImages[settings.displayedImageIndex],
-				// buffers,
 				settings
 			).render(this.dom.mapHolder, settings)
 
@@ -165,18 +158,13 @@ class WSIViewer extends PlotBase implements RxComponent {
 		if (settings.renderAnnotationTable && this.map) {
 			const modelTrainerRenderer = new ModelTrainerRenderer(this.wsiViewerInteractions)
 
-			const wsiAnnotationsRenderer = new WSIAnnotationsRenderer(buffers, this.wsiViewerInteractions)
-			this.annotationTable = wsiAnnotationsRenderer.render(
-				this.dom.annotationsHolder,
-				imageViewData,
-				activeImageExtent!,
-				this.map
-			)
+			const wsiAnnotationsRenderer = new WSIAnnotationsRenderer(this, settings, this.wsiViewerInteractions)
+			this.annotationTable = wsiAnnotationsRenderer.render(this.dom.annotationsHolder, imageViewData)
 			this.dom.legendHolder.selectAll('*').remove()
 			modelTrainerRenderer.render(this.dom.legendHolder, aiProjectID, genome, dslabel)
 			this.legendRenderer.render(this.dom.legendHolder, imageViewData)
 
-			const initialZoomInCoordinate = viewModel.getInitialZoomInCoordinate(settings.displayedImageIndex)
+			const initialZoomInCoordinate = viewModel.getInitialZoomInCoordinate(settings)
 
 			if (initialZoomInCoordinate != undefined) {
 				this.wsiViewerInteractions.zoomInEffectListener(
@@ -192,8 +180,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 					activeImageExtent,
 					imageViewData.activePatchColor!,
 					aiProjectID,
-					imageViewData.shortcuts,
-					buffers
+					imageViewData.shortcuts
 				)
 			}
 		}

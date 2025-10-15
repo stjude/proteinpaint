@@ -1,19 +1,20 @@
 import { renderTable } from '#dom'
 import type { WSIViewerInteractions } from '../interactions/WSIViewerInteractions'
-import type OLMap from 'ol/Map.js'
-import type { Extent } from 'ol/extent'
 import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
+import type Settings from '#plots/wsiviewer/Settings.ts'
 
 export class WSIAnnotationsRenderer {
-	buffers: any
+	settings: Settings
 	interactions: WSIViewerInteractions
+	wsiApp: any
 
-	constructor(buffers: any, wsiinteractions: WSIViewerInteractions) {
-		this.buffers = buffers
+	constructor(wsiApp: any, settings: Settings, wsiinteractions: WSIViewerInteractions) {
+		this.wsiApp = wsiApp
+		this.settings = settings
 		this.interactions = wsiinteractions
 	}
 
-	render(holder: any, imageViewData: ImageViewData, activeImageExtent: Extent, map: OLMap) {
+	render(holder: any, imageViewData: ImageViewData) {
 		holder.select('div[id="annotations-table"]').remove()
 		if (!imageViewData.tilesTable) return
 		const selectedColor = '#fcfc8b'
@@ -29,63 +30,58 @@ export class WSIAnnotationsRenderer {
 			header: { allowSort: true },
 			showLines: false,
 			hoverEffects: (tr, row) => {
-				const selectedIdx = this.buffers.annotationsIdx.get()
+				console.log('called')
+				const selectedIdx = this.settings.activeAnnotation
 				const rowIdx = row[0].value as number
-				// Prefer origBackground hint from row data if present
-				const origHint = (row[0] as any).origBackground
-				const origColor = origHint || tr.style('background-color') || 'transparent'
+				const isSelected = selectedIdx === rowIdx
+				const origColor = tr.style('background-color') || 'transparent'
 
 				tr.style('cursor', 'pointer')
-				//Show selected row in yellow on render (use selected buffer if set, otherwise use origBackground hint)
-				const isSelected = selectedIdx === rowIdx || (!Number.isInteger(selectedIdx) && origHint)
+				//Show selected row in yellow on render
 				tr.style('background-color', isSelected ? selectedColor : origColor)
-
-				this.buffers.annotationsIdx.addListener((index: number) => {
-					tr.style('background-color', index === rowIdx ? selectedColor : origColor)
-					const rows = imageViewData.tilesTable?.rows
-					if (!rows || !Number.isInteger(index) || index < 0 || index >= rows.length) {
-						// Table not ready or index no longer valid (e.g., after delete)
-						return
-					}
-					const coords = [imageViewData.tilesTable?.rows[index][1].value] as unknown as [number, number][]
-
-					if (!coords || coords.length === 0) return
-
-					this.interactions.zoomInEffectListener(activeImageExtent, coords, map, imageViewData.activePatchColor!)
-				})
 
 				tr.style('outline', 'none') //Remove the default outline on click
 
-				this.buffers.tmpClass.addListener((tmpClass: { label: string; color: string }) => {
-					if (this.buffers.annotationsIdx.get() === rowIdx) {
-						const spanHtml = `<span style="display:inline-block;width:12px;height:18px;background-color:${tmpClass.color};border:grey 1px solid;"></span>`
-
-						/** Need to update the data source. Otherwise user changes
-						 * disappear on sort. */
-						imageViewData.tilesTable!.rows[rowIdx][4].html = spanHtml
-						imageViewData.tilesTable!.rows[rowIdx][5].value = tmpClass.label
-
-						const predictedClassTd = tr.select('td:nth-child(4)')
-						const colorTd = tr.select('td:nth-child(5)')
-						const annotationTd = tr.select('td:nth-child(6)')
-
-						if (tmpClass.label != 'Confirmed') {
-							predictedClassTd.style('text-decoration', 'line-through').style('color', 'grey')
-						} else {
-							predictedClassTd.style('text-decoration', 'none').style('color', 'black')
-						}
-						colorTd.select('span').remove()
-						colorTd.html(spanHtml)
-						//Padding overrides the default padding
-						annotationTd.style('padding', '0px').text(tmpClass.label)
-					}
-				})
-
 				tr.on('click', () => {
-					this.buffers.annotationsIdx.set(rowIdx)
+					this.wsiApp.app.dispatch({
+						type: 'plot_edit',
+						id: this.wsiApp.id,
+						config: {
+							settings: {
+								renderWSIViewer: false,
+								renderAnnotationTable: true,
+								activeAnnotation: rowIdx
+							}
+						}
+					})
 				})
 			}
 		})
+
+		// Ensure the selected row is visible after the table is rendered.
+		// Use requestAnimationFrame to run after DOM paint.
+		const selectedIdx = this.settings.activeAnnotation
+		if (Number.isInteger(selectedIdx)) {
+			const tableDiv = holder.select('div#annotations-table')
+			if (!tableDiv.empty()) {
+				requestAnimationFrame(() => {
+					const container = tableDiv.node() as HTMLElement | null
+					if (!container) return
+					const rows = Array.from(container.querySelectorAll('tr'))
+					for (const tr of rows) {
+						const firstTd = tr.querySelector('td:first-child')
+						if (!firstTd) continue
+						const idx = Number.parseInt(firstTd.textContent?.trim() ?? '', 10)
+						if (Number.isNaN(idx)) continue
+						if (idx === selectedIdx) {
+							// scrollIntoView to ensure the selected row is visible
+							;(tr as HTMLElement).scrollIntoView({ block: 'nearest', inline: 'nearest' })
+							break
+						}
+					}
+				})
+			}
+		}
 
 		return holder
 	}

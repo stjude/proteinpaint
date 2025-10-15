@@ -45,11 +45,11 @@ export class ViewModel {
 		return imageViewData
 	}
 
-	public getInitialZoomInCoordinate(index: number) {
-		const image = this.sampleWSImages[index]
+	public getInitialZoomInCoordinate(settings: Settings) {
+		const image = this.sampleWSImages[settings.displayedImageIndex]
 		return SessionWSImage.getTileSelections(image)
 			.map(a => a.zoomCoordinates)
-			.slice(0, 1)
+			.slice(settings.activeAnnotation, settings.activeAnnotation + 1)
 	}
 
 	private setAnnonationsTableData(imageViewData: ImageViewData, imageData: SessionWSImage) {

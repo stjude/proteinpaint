@@ -21,13 +21,7 @@ export class WSIViewerInteractions {
 		map: OLMap,
 		activePatchColor: string
 	) => void
-	viewerClickListener: (
-		coordinateX: number,
-		coordinateY: number,
-		sessionWSImage: SessionWSImage,
-		// buffers: any,
-		map: OLMap
-	) => void
+	viewerClickListener: (coordinateX: number, coordinateY: number, sessionWSImage: SessionWSImage, map: OLMap) => void
 	setKeyDownListener: (
 		holder: any,
 		sessionWSImage: SessionWSImage,
@@ -35,8 +29,7 @@ export class WSIViewerInteractions {
 		activeImageExtent: any,
 		activePatchColor: string,
 		aiProjectID: number,
-		shortcuts?: string[],
-		buffers?: any
+		shortcuts?: string[]
 	) => void
 
 	onRetrainModelClicked: (genome: string, dslabel: string, projectId: string) => void
@@ -115,8 +108,7 @@ export class WSIViewerInteractions {
 			activeImageExtent: any,
 			activePatchColor: string,
 			aiProjectID: number,
-			shortcuts: string[] = [],
-			buffers: any
+			shortcuts: string[] = []
 		) => {
 			const state = wsiApp.app.getState()
 			const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
@@ -128,7 +120,7 @@ export class WSIViewerInteractions {
 			const tileSelections = SessionWSImage.getTileSelections(sessionWSImage) || []
 
 			holder.on('keydown', async (event: KeyboardEvent) => {
-				let currentIndex = buffers.annotationsIdx.get()
+				let currentIndex = settings.activeAnnotation
 
 				event.preventDefault()
 				event.stopPropagation()
@@ -159,7 +151,16 @@ export class WSIViewerInteractions {
 					//When the index changes, scroll to the new annotation
 					//Timeout for when user presses arrows multiple times.
 					const d = debounce(async () => {
-						buffers.annotationsIdx.set(currentIndex)
+						wsiApp.app.dispatch({
+							type: 'plot_edit',
+							id: wsiApp.id,
+							config: {
+								settings: {
+									renderWSIViewer: false,
+									activeAnnotation: currentIndex
+								}
+							}
+						})
 					}, 500)
 					d()
 				}
@@ -178,11 +179,6 @@ export class WSIViewerInteractions {
 					if (!matchingClass && predictions) {
 						matchingClass = sessionWSImage?.classes?.find(c => c.label === predictions[currentIndex].class)
 					}
-					const tmpClass =
-						event.code === 'Enter' || matchingClass!.label == tileSelections[currentIndex].class
-							? { label: 'Confirmed', color: matchingClass?.color || '' }
-							: { label: matchingClass!.label, color: matchingClass!.color }
-					buffers.tmpClass.set(tmpClass)
 
 					this.addAnnotation(vectorLayer!, tileSelections, currentIndex, matchingClass!.color, settings)
 
@@ -222,7 +218,8 @@ export class WSIViewerInteractions {
 							settings: {
 								renderWSIViewer: false,
 								// TODO figure out how to avoid Math.random()
-								activeAnnotation: Math.random(),
+								randomNum: Math.random(),
+								activeAnnotation: 0,
 								sessionsTileSelection: sessionsTileSelection
 							}
 						}
@@ -237,7 +234,6 @@ export class WSIViewerInteractions {
 			coordinateX: number,
 			coordinateY: number,
 			sessionWSImage: SessionWSImage,
-			// buffers: any,
 			map: OLMap
 		) => {
 			const state = wsiApp.app.getState()
@@ -304,7 +300,7 @@ export class WSIViewerInteractions {
 					settings: {
 						renderWSIViewer: false,
 						renderAnnotationTable: true,
-						activeAnnotation: Math.random(),
+						randomNum: Math.random(),
 						sessionsTileSelection: [newTileSelection, ...sessionsTileSelection]
 					}
 				}
@@ -329,7 +325,7 @@ export class WSIViewerInteractions {
 						settings: {
 							renderWSIViewer: true,
 							renderAnnotationTable: true,
-							activeAnnotation: Math.random()
+							randomNum: Math.random()
 						}
 					}
 				})
@@ -484,7 +480,7 @@ export class WSIViewerInteractions {
 			config: {
 				settings: {
 					renderWSIViewer: false,
-					activeAnnotation: Math.random(),
+					randomNum: Math.random(),
 					sessionsTileSelection: sessionsTileSelection
 				}
 			}

@@ -36,8 +36,6 @@ export class SessionWSImage extends WSImage {
 	}
 
 	public static getTilesTableRows(sessionWSImage: SessionWSImage, selectedTileIndex: number): any[] {
-		console.log('selectedTileIndex', selectedTileIndex)
-
 		const annotations = sessionWSImage.annotations || []
 		const annotationKeys = new Set(annotations.map(a => `${a.zoomCoordinates[0]},${a.zoomCoordinates[1]}`))
 

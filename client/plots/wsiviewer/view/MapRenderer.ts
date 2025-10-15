@@ -21,11 +21,9 @@ export class MapRenderer {
 		coordinateX: number,
 		coordinateY: number,
 		sessionWSImage: SessionWSImage,
-		// buffers: any,
 		map: OLMap
 	) => void
 	private sessionWSImage: SessionWSImage
-	// private buffers: any
 	private settings: Settings
 
 	constructor(
@@ -34,13 +32,11 @@ export class MapRenderer {
 			(coordinateX: number, coordinateY: number, sessionWSImage: SessionWSImage, map: OLMap): void
 		},
 		sessionWSImage: SessionWSImage,
-		// buffers: any,
 		settings: Settings
 	) {
 		this.wSImageLayers = wSImageLayers
 		this.sessionWSImage = sessionWSImage
 		this.viewerClickListener = viewerClickListener
-		// this.buffers = buffers
 		this.settings = settings
 	}
 
