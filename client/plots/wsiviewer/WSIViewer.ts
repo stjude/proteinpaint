@@ -137,13 +137,16 @@ class WSIViewer extends PlotBase implements RxComponent {
 				this.thumbnailsContainer.remove()
 				this.thumbnailsContainer = undefined
 			}
+
+			const numTotalFiles = aiWSIMageFiles?.length || wsimages.length
+
 			this.thumbnailsContainer = this.thumbnailRenderer.render(
 				this.dom.mapHolder,
 				this.thumbnailsContainer,
 				wsimageLayers.map(wsimageLayers => wsimageLayers.wsimage),
 				settings,
 				this.wsiViewerInteractions,
-				aiWSIMageFiles.length
+				numTotalFiles
 			)
 
 			this.map = new MapRenderer(

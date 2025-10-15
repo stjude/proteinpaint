@@ -58,10 +58,11 @@ export class ThumbnailRenderer {
 					.style('height', '60px')
 					.style('object-fit', 'cover')
 
-				thumbnail
-					.append('span')
-					.style('font-size', '0.85em')
-					.text(layers[i].get('name') || '')
+				let name = layers[i].get('name') || ''
+				if (name.length > 15) {
+					name = name.substring(0, 12) + '...'
+				}
+				thumbnail.append('span').style('font-size', '0.85em').style('text-wrap', 'wrap').text(name)
 			}
 
 			//Placeholder for right arrow, if needed
