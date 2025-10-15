@@ -14,7 +14,8 @@ import { VolcanoControlInputs } from './VolcanoControlInputs'
 import { getCombinedTermFilter } from '#filter'
 
 // The max sample cutoff for volcano rendering
-const maxSampleCutoff = 4000
+export const maxSampleCutoff = 4000
+export const defaultSampleNumCutoff = 3000
 
 class Volcano extends PlotBase implements RxComponent {
 	static type = 'volcano'
@@ -171,7 +172,7 @@ export function getDefaultVolcanoSettings(overrides = {}, opts: any): VolcanoSet
 		pValueType: 'adjusted',
 		rankBy: 'abs(foldChange)',
 		//Only declare this value in one place
-		sampleNumCutoff: opts.termType == 'geneExpression' ? 3000 : maxSampleCutoff,
+		sampleNumCutoff: opts.termType == 'geneExpression' ? defaultSampleNumCutoff : maxSampleCutoff,
 		width: 400
 	}
 

@@ -14,6 +14,9 @@ import { getCurrentCohortChartTypes } from './charts'
 import { getColors } from '#shared/common.js'
 import { rgb } from 'd3-color'
 import { TermTypes, isNumericTerm, termType2label } from '#shared/terms.js'
+import { dofetch3 } from '#common/dofetch'
+import { sayerror } from '#dom'
+import { maxSampleCutoff, defaultSampleNumCutoff } from '../plots/volcano/Volcano.ts'
 
 /*
 this
@@ -394,12 +397,12 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 	// DA app can be applied to multiple datatypes. show options based on availability for each datatype
 	if (self.app.vocabApi.termdbConfig.queries?.rnaseqGeneCount) {
 		// hardcoded! rnaseq genecount will correspond to gene exp term type on DA ui
-		div
+		const itemDiv = div
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text(`Differential ${termType2label(TermTypes.GENE_EXPRESSION)} Analysis`)
-			.on('click', e => {
-				self.tip2.hide() // in case tip2 is already opened through another option
+			.on('click', async e => {
+				// self.tip2.hide() // in case tip2 is already opened through another option
 				//Move this to diff analysis plot??
 				//Do the check but not add to the state??
 				const groups = []
@@ -410,18 +413,144 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 						throw 'group does not contain samples for differential analysis'
 					}
 				}
-				const config = {
-					chartType: 'differentialAnalysis',
-					state: self.state,
+
+				// get actual numbers of samples with rnaseq count
+				const body = {
+					genome: self.app.vocabApi.vocab.genome,
+					dslabel: self.app.vocabApi.vocab.dslabel,
 					samplelst: { groups },
-					termType: TermTypes.GENE_EXPRESSION,
-					tw: samplelstTW
+					filter: self.state.termfilter.filter,
+					filter0: self.state.termfilter.filter0,
+					preAnalysis: true
 				}
-				self.tip.hide()
-				self.app.dispatch({
-					type: 'plot_create',
-					config
-				})
+				const preAnalysisData = await dofetch3('DEanalysis', { body })
+
+				const numControl = preAnalysisData.data[samplelstTW.q.groups[0].name]
+				const numCase = preAnalysisData.data[samplelstTW.q.groups[1].name]
+
+				if (numControl + numCase > maxSampleCutoff) {
+					if (preAnalysisData.data.alert)
+						preAnalysisData.data.alert += ` | Sample size ${
+							numControl + numCase
+						} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
+					else
+						preAnalysisData.data.alert = `Sample size ${
+							numControl + numCase
+						} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
+				}
+
+				// display actual numbers of samples with rnaseq count
+				const tip = self.tip2
+				tip.clear().showunderoffset(itemDiv.node())
+				const menuDiv = tip.d.append('div')
+				const table = table2col({ holder: menuDiv })
+				table.table.style('margin-left', '5px').style('padding', '5px 10px')
+				{
+					const controlGColor = samplelstTW.term.values[samplelstTW.q.groups[0].name].color
+					const colorSquareCtrl = controlGColor
+						? `<span style="display:inline-block; width:12px; height:12px; background-color:${controlGColor}" ></span>`
+						: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
+					const [c1, c2] = table.addRow()
+					c1.html(
+						`<span style="font-size:.8em;font-weight:bold">CONTROL</span> ${colorSquareCtrl} ${samplelstTW.q.groups[0].name}`
+					)
+					c2.html(`${numControl} samples`)
+				}
+				{
+					const caseGColor = samplelstTW.term.values[samplelstTW.q.groups[1].name].color
+					const colorSquareCase = caseGColor
+						? `<span style="display:inline-block; width:12px; height:12px; background-color:${caseGColor}" ></span>`
+						: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
+					const [c1, c2] = table.addRow()
+					c1.html(
+						`<span style="font-size:.8em;font-weight:bold">CASE</span> ${colorSquareCase} ${samplelstTW.q.groups[1].name}`
+					)
+					c2.html(`${numCase} samples`)
+				}
+
+				// display errors
+				const alertDiv = menuDiv.append('div')
+				if (preAnalysisData.data.alert) {
+					sayerror(alertDiv, preAnalysisData.data.alert)
+				}
+
+				// option to launch DE
+				const sample_size_limit = 8
+				if (!preAnalysisData.data.alert) {
+					const options =
+						numControl + numCase >= defaultSampleNumCutoff
+							? [{ label: 'Wilcoxon', value: 'wilcoxon' }]
+							: numControl <= sample_size_limit && numCase <= sample_size_limit
+							? [
+									{ label: 'edgeR', value: 'edgeR' },
+									{ label: 'Limma', value: 'limma' }
+							  ]
+							: [
+									{ label: 'edgeR', value: 'edgeR' },
+									{ label: 'Wilcoxon', value: 'wilcoxon' },
+									{ label: 'Limma', value: 'limma' }
+							  ]
+
+					const launchDEDiv = menuDiv.append('div').style('margin', '8px 5px').style('padding', '5px 10px')
+					const radioRow = launchDEDiv.append('tr')
+					let selectedMethod = options[0].value
+
+					radioRow
+						.append('td')
+						.html('Method')
+						.attr('aria-label', 'DE Method')
+						.attr('class', 'sja-termdb-config-row-label')
+						.style('padding', '5px')
+
+					const cell = radioRow.append('td')
+					const radioBtnDiv = cell.append('div')
+
+					const name = `de-method-${Date.now()}`
+					const items = radioBtnDiv
+						.selectAll('label')
+						.data(options)
+						.enter()
+						.append('label')
+						.style('display', 'inline-block')
+						.style('vertical-align', 'top')
+						.style('margin-right', '0.75rem')
+
+					items
+						.append('input')
+						.attr('type', 'radio')
+						.attr('name', name)
+						.attr('value', d => d.value)
+						.on('change', (event, d) => {
+							selectedMethod = d.value
+						})
+					items.append('span').text(d => d.label)
+
+					//preselect first option
+					radioBtnDiv.select(`input[name="${name}"]`).property('checked', true)
+
+					launchDEDiv
+						.append('button')
+						.style('border', 'none')
+						.style('border-radius', '20px')
+						.style('padding', '10px 15px')
+						.text(`Run Differential ${termType2label(TermTypes.GENE_EXPRESSION)} Analysis`)
+						.on('click', async () => {
+							const config = {
+								chartType: 'differentialAnalysis',
+								state: self.state,
+								samplelst: { groups },
+								termType: TermTypes.GENE_EXPRESSION,
+								tw: samplelstTW,
+								settings: { volcano: { method: selectedMethod } }
+							}
+							tip.hide()
+							self.tip.hide()
+							self.app.dispatch({
+								type: 'plot_create',
+								config
+							})
+						})
+				}
 			})
 	}
 

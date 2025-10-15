@@ -21,6 +21,8 @@ export type DERequest = {
 	tw?: any
 	/** Term for confounding variable2 (if present) */
 	tw2?: any
+	/** Option to return early with actual number of samples with expression values */
+	preAnalysis?: boolean
 }
 
 export type ExpressionInput = {

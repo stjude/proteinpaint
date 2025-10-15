@@ -212,6 +212,26 @@ values[] // using integer sample id
 	const sample_size1 = group1names.length
 	const sample_size2 = group2names.length
 
+	if (param.preAnalysis) {
+		const alerts: string[] = []
+		if (sample_size1 < 1) alerts.push('sample size of group1 < 1')
+		if (sample_size2 < 1) alerts.push('sample size of group2 < 1')
+
+		// Detect common samples
+		const common = group1names.filter(x => group2names.includes(x))
+		if (common.length) alerts.push(`Common samples found: ${common.join(', ')}`)
+
+		const group1Name = param.samplelst.groups[0].name
+		const group2Name = param.samplelst.groups[1].name
+		return {
+			data: {
+				[group1Name]: sample_size1,
+				[group2Name]: sample_size2,
+				...(alerts.length ? { alert: alerts.join(' | ') } : {})
+			}
+		}
+	}
+
 	if (sample_size1 < 1) throw 'sample size of group1 < 1'
 	if (sample_size2 < 1) throw 'sample size of group2 < 1'
 	// pass group names and txt file to rust
@@ -221,12 +241,12 @@ values[] // using integer sample id
 		throw 'Common elements found between both groups:' + commonnames.map(i => i).join(',')
 	}
 
-	const cases_string = group1names.map(i => i).join(',')
-	const controls_string = group2names.map(i => i).join(',')
+	const cases_string = group2names.map(i => i).join(',')
+	const controls_string = group1names.map(i => i).join(',')
 	//group 1 by default is selected as the control group. Later on we can allow user to select which group is control and which is treatment. Reason to do this is to first select the group against which the comparison is to be made in the DE analysis. This is important for the interpretation of the results as analyses is context dependent based on the biological question. If the user wants to compare the expression of a specific gene between 2 groups, then the user should select the group that is not of interest as the control group.
 	const expression_input = {
-		case: controls_string,
-		control: cases_string,
+		case: cases_string,
+		control: controls_string,
 		data_type: 'do_DE',
 		input_file: q.file,
 		cachedir: serverconfig.cachedir,
