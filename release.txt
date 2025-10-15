@@ -1,1 +1,2 @@
-
+Features:
+- DE analysis: At groups custom term menu, on clicking DE option show a submenu that shows: 1. actual number of samples with expression data. 2. Alerts about the DE analysis such as group size is above/below limit. 3. options for DE methods that will be used. 4. Run Differential Gene Expression button.
