@@ -2668,9 +2668,9 @@ dependencies = [
 
 [[package]]
 name = "rig-core"
-version = "0.21.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fda909fffdc506e22541e7221d2bd56f21b94ccea218adb4e1bb3677706669a"
+checksum = "136b8115983df35be2c9b176c50c8a793886411e7b5ee8767b8c9cfd25e0ea90"
 dependencies = [
  "as-any",
  "async-stream",
@@ -2678,6 +2678,7 @@ dependencies = [
  "bytes",
  "futures",
  "glob",
+ "http 1.3.1",
  "mime_guess",
  "ordered-float 5.0.0",
  "reqwest",
