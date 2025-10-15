@@ -65,20 +65,9 @@ export class NumericDensity {
 		this.tw = opts.termsetting.tw
 	}
 
-	async showViolin(div) {
+	async setData() {
+		if (this.density_data) return this.density_data
 		const self = this.termsetting
-		//this.setqDefaults(self)
-
-		div.style('padding', '5px').selectAll('*').remove()
-
-		const loadingDiv = div
-			.append('div')
-			.style('padding', '10px')
-			.style('text-align', 'center')
-			.html('Getting distribution data ...<br/>')
-
-		const densityDiv = div.append('div')
-
 		this.density_data = await self.vocabApi.getViolinPlotData(
 			{
 				tw: { term: self.term, q: self.q },
@@ -88,7 +77,20 @@ export class NumericDensity {
 			},
 			self.opts.getBodyParams?.()
 		)
+		return this.setData()
+	}
 
+	async showViolin(div?: any) {
+		div.style('padding', '5px').selectAll('*').remove()
+
+		const loadingDiv = div
+			.append('div')
+			.style('padding', '10px')
+			.style('text-align', 'center')
+			.html('Getting distribution data ...<br/>')
+
+		const densityDiv = div.append('div')
+		await this.setData()
 		loadingDiv.remove()
 
 		this.vr = new violinRenderer({

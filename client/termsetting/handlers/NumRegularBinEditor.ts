@@ -21,7 +21,7 @@ export class NumRegularBinEditor {
 		this.editHandler = editHandler
 		this.opts = editHandler.opts
 		this.tw = editHandler.tw
-		this.q = this.getQ()
+		this.q = this.getDefaultQ()
 		this.termsetting = editHandler.termsetting
 	}
 
@@ -41,7 +41,7 @@ export class NumRegularBinEditor {
 		this.renderLastBinInputs(binsTable.append('tr'))
 	}
 
-	getQ(): RegularNumericBinConfig {
+	getDefaultQ(): RegularNumericBinConfig {
 		if (this.tw.q.type == 'regular-bin') return JSON.parse(JSON.stringify(this.tw.q))
 		const self = this.termsetting
 		const t = this.tw.term

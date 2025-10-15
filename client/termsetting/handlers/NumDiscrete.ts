@@ -49,13 +49,16 @@ export class NumDiscrete extends HandlerBase implements Handler {
 	}
 
 	async showEditMenu(div: any) {
-		this.tw = this.termsetting.tw as NumRegularBin | NumCustomBins // TODO: do not force?
-		//const self = this.termsetting
+		if (this.dom.boundaryInclusionDiv) {
+			if (div.node().contains(this.dom.boundaryInclusionDiv.node())) return // already rendered
+			else delete this.dom.boundaryInclusionDiv
+		}
+
+		this.dom.density_div = div.append('div')
+		await this.handler.renderDensity(this.dom.density_div)
+
+		this.tw = this.termsetting.tw as NumRegularBin | NumCustomBins // TODO: do not force
 		this.dom.boundaryInclusionDiv = div.append('div')
-		//handler.dom.density_div = div.append('div')
-		//handler.dom.bins_div = div.append('div').style('padding', '4px')
-		// this.setqDefaults(handler)
-		// setDensityPlot(handler)
 		this.renderBoundaryInclusionInput()
 		this.mayShowValueconversionMsg(div)
 		this.renderTypeInputs(div)
@@ -64,7 +67,7 @@ export class NumDiscrete extends HandlerBase implements Handler {
 	renderBoundaryInclusionInput() {
 		//if (this.dom.boundaryInput) return
 		//const handler = this.handler
-		this.dom.boundaryInclusionDiv.selectAll('*').remove()
+		//this.dom.boundaryInclusionDiv.selectAll('*').remove()
 		this.dom.boundaryInclusionDiv
 			.append('span')
 			.style('padding', '5px')

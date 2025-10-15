@@ -167,6 +167,7 @@ export type ContinuousNumericQ = MinBaseQ & {
 	// making type optional here makes NumericQ operations/conditions
 	// work consistently within the TermWrapper union type
 	type?: undefined
+	scale?: number
 }
 
 export type SplineNumericQ = MinBaseQ & {
