@@ -41,6 +41,7 @@ export interface GRIN2Opts {
 	showInteractiveDots?: boolean
 	interactiveDotRadius?: number
 	interactiveDotStrokeWidth?: number
+	showDownload?: boolean
 	/** Override default settings */
 	overrides?: Partial<GRIN2Settings>
 	/** Any additional options */

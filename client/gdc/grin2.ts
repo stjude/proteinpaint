@@ -23,8 +23,7 @@ import {
 	createDataTypeRow,
 	createInfoPanel
 } from './grin2/ui-components'
-import { plotManhattan } from '../plots/manhattan/manhattan'
-import { to_svg } from '#src/client'
+import { plotManhattan } from '#plots/manhattan/manhattan.ts'
 
 // ================================================================================
 // TYPE DEFINITIONS, INTERFACES, & DEFAULTS
@@ -1771,15 +1770,11 @@ async function getFilesAndShowTable(obj) {
 			if (!response.resultData.png) throw 'png missing'
 
 			// Create results container
-			const resultContainer = obj.resultDiv.append('div').style('text-align', 'left').style('margin', '0 auto')
-
-			// Add title with spacing above
-			resultContainer
-				.append('h3')
-				.text('GRIN2 Analysis Results')
-				.style('margin-top', '40px')
-				.style('margin-bottom', '0px')
+			const resultContainer = obj.resultDiv
+				.append('div')
 				.style('text-align', 'left')
+				.style('margin', '0 auto')
+				.style('margin-top', '40px')
 
 			const plotData = response.resultData
 
@@ -1787,34 +1782,8 @@ async function getFilesAndShowTable(obj) {
 
 			plotManhattan(plotDiv, plotData, {})
 
-			// Show and populate download button div next the Run Analysis button
-			// Create a unique name for the download file based on selected mutations
-			// and the current timestamp
-			const svg = plotDiv.select('svg')
-			const selectedMutations = datatypeOptions
-				.filter(opt => opt.selected)
-				.map(opt => opt.label.replace(/[^a-zA-Z0-9]/g, ''))
-				.join('_')
-
-			const now = new Date()
-			const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
-				now.getDate()
-			).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(
-				2,
-				'0'
-			)}-${String(now.getSeconds()).padStart(2, '0')}`
-			obj.downloadButtonDiv.selectAll('*').remove()
-			obj.downloadButtonDiv
-				.append('button')
-				.text('Download Plot')
-				.on('click', () => {
-					to_svg(svg.node() as SVGSVGElement, `GRIN2_Analysis_${selectedMutations}_${timestamp}`)
-				})
-			obj.downloadButtonDiv.style('display', 'block')
-
 			// Add error handler for image
 			resultContainer.node().onerror = () => {
-				console.error('Image failed to load')
 				resultContainer.select('img').remove()
 				sayerror(resultContainer, 'Failed to load image result.')
 			}
@@ -1885,7 +1854,7 @@ async function getFilesAndShowTable(obj) {
 					},
 					download: {
 						// Enable table download functionality
-						fileName: `GRIN2_TopGenes_${timestamp}.tsv`
+						fileName: `GRIN2_TopGenes.tsv`
 					}
 				})
 
@@ -2254,13 +2223,6 @@ async function getFilesAndShowTable(obj) {
 		obj.busy = false
 	}
 }
-
-// List of data type options
-const datatypeOptions = [
-	{ option: 'mafOption', selected: true, label: 'Include Mutation' },
-	{ option: 'cnvOption', selected: false, label: 'Include CNV' },
-	{ option: 'fusionOption', selected: false, label: 'Include Fusion' }
-]
 
 /**
  * Main GRIN2 UI initialization function
