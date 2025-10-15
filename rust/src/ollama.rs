@@ -73,6 +73,15 @@ impl Client {
     pub fn builder() -> ClientBuilder<'static> {
         ClientBuilder::new()
     }
+
+    pub fn completion_model(&self, model: &str) -> CompletionModel {
+        CompletionModel::new(self.clone(), model)
+    }
+
+    pub fn embedding_model(&self, model: &str) -> EmbeddingModel {
+        EmbeddingModel::new(self.clone(), model, 0)
+    }
+
     pub fn new() -> Self {
         Self::builder().build().expect("Myprovider client should build")
     }
