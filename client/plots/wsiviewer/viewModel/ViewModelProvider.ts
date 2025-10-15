@@ -1,11 +1,5 @@
 import { dofetch3 } from '#common/dofetch'
-import type {
-	SampleWSImagesResponse,
-	TileSelection,
-	WSImage,
-	WSImagesRequest,
-	WSImagesResponse
-} from '@sjcrh/proteinpaint-types'
+import type { SampleWSImagesResponse, WSImage, WSImagesRequest, WSImagesResponse } from '@sjcrh/proteinpaint-types'
 import { ViewModel } from '#plots/wsiviewer/viewModel/ViewModel.ts'
 import type { WSImageLayers } from '#plots/wsiviewer/viewModel/WSImageLayers.ts'
 import Zoomify from 'ol/source/Zoomify'
@@ -48,8 +42,6 @@ export class ViewModelProvider {
 					sampleId,
 					undefined,
 					settings.annotatedPatchBorderColor
-					annotatedPatchBorderColor,
-					setting
 				)
 			} catch (e: any) {
 				wsimageLayersLoadError = `Error loading image layers for sample  ${sampleId}: ${e.message || e}`
@@ -68,9 +60,7 @@ export class ViewModelProvider {
 				data.wsimages,
 				undefined,
 				aiProjectID!,
-                settings.annotatedPatchBorderColor,
-                settings
-
+				settings.annotatedPatchBorderColor
 			)
 		}
 

@@ -30,7 +30,6 @@ export class WSIAnnotationsRenderer {
 			header: { allowSort: true },
 			showLines: false,
 			hoverEffects: (tr, row) => {
-				console.log('called')
 				const selectedIdx = this.settings.activeAnnotation
 				const rowIdx = row[0].value as number
 				const isSelected = selectedIdx === rowIdx
