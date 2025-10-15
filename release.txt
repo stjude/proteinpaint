@@ -1,2 +1,3 @@
 Features:
 - GRIN2: Adding plot download and genomebrowser click functionality for genes
+- GRIN2: Added creation of cache file that save results for future plotting changes

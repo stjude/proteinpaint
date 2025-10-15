@@ -7,6 +7,7 @@ import { mayLog } from '#src/helpers.ts'
 import { get_samples } from '#src/termdb.sql.js'
 import { read_file, file_is_readable } from '#src/utils.js'
 import { dtsnvindel, dtcnv, dtfusionrna, dtsv } from '#shared/common.js'
+import crypto from 'crypto'
 
 /**
  * General GRIN2 analysis handler
@@ -23,14 +24,14 @@ import { dtsnvindel, dtcnv, dtfusionrna, dtsv } from '#shared/common.js'
  *        - loc.start: Start position of the lesion
  *        - loc.end: End position of the lesion
  *        - lsn.type: Type of lesion ("mutation", "gain", "loss", "fusion")
- * 3. Read and filter file contents based on snvindelOptions, cnvOptions, fusionOptions:
- *    - SNV/indel: Filter by depth, alternate allele count, consequence types, and 5' and 3' flanking sizes
+ * 3. Read and filter file contents based on snvindelOptions, cnvOptions, fusionOptions, and svOptions:
+ *    - SNV/indel: Filter by total depth, alternate allele count, consequence types, and 5' and 3' flanking sizes
  *    - CNV: Filter by copy number thresholds, max segment length, and 5' and 3' flanking sizes
  *    - Fusion: Filter by 5' and 3' flanking sizes
  *    - SV: Filter by 5' and 3' flanking sizes
  *    - Hypermutator: To be implemented at later date
  * 4. Convert filtered data to lesion format and apply filter caps per type
- * 5. Pass lesion data and device pixel ratio to Python for GRIN2 statistical analysis and plot generation
+ * 5. Pass lesion data, device pixel ratio, and cacheFileName to Python for GRIN2 statistical analysis and plot generation (Long term we will make the plot generation be done by rust and just use the cache file of results from python)
  * 6. Return Manhattan plot as base64 string, top gene table, timing information, and statistically significant results that are displayed as an interactive svg
  */
 
@@ -80,6 +81,14 @@ function init({ genomes }) {
 			res.status(500).send(errorResponse)
 		}
 	}
+}
+
+// Function to generate a unique cache file name for each GRIN2 request
+function generateCacheFileName(): string {
+	// Generate 16 bytes of random data = 32 hex characters
+	const randomHex = crypto.randomBytes(16).toString('hex')
+	const cacheFileName = `grin2_results_${randomHex}.txt`
+	return path.join(serverconfig.cachedir, 'grin2', cacheFileName)
 }
 
 async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Response> {
@@ -133,7 +142,8 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		devicePixelRatio: request.devicePixelRatio,
 		pngDotRadius: request.pngDotRadius,
 		width: request.width,
-		height: request.height
+		height: request.height,
+		cacheFileName: generateCacheFileName()
 	}
 
 	// Build chromosome list from genome reference
