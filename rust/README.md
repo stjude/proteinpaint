@@ -64,6 +64,11 @@ For running the tests written in native rust, from the `proteinpaint/rust` direc
 cargo test
 ```
 
+For running AI tests using cargo, they need to be run locally since CI does not have access to the LLM server. These tests are "ignored" in CI and need the `ignored` flag to be run. These tests must be run from the `proteinpaint/rust` directory. 3 tests wil be run using the command below. One each to see if the SJ and ollama server are accessible and the third one is unit test for the actual ai chatbot. 
+
+```bash
+time cargo test -- --ignored --nocapture
+```
 
 ## Build
 
