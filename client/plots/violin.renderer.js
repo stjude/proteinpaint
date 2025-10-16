@@ -472,6 +472,8 @@ export default function setViolinRenderer(self) {
 							if (!selection) return
 
 							self.displayBrushMenu(t1, t2, self, plot, selection, svgData.axisScale, isH)
+
+							document.body.addEventListener('pointerdown', onClickOut, true)
 						})
 				: brushY()
 						.extent([
@@ -484,6 +486,8 @@ export default function setViolinRenderer(self) {
 							if (!selection) return
 
 							self.displayBrushMenu(t1, t2, self, plot, selection, svgData.axisScale, isH)
+
+							document.body.addEventListener('pointerdown', onClickOut, true)
 						})
 
 			const brushG = violinG.append('g').classed('sjpp-brush', true).call(br)
@@ -492,8 +496,8 @@ export default function setViolinRenderer(self) {
 			const onClickOut = e => {
 				if (!brushG || !br) return
 				if (!brushG.node().contains(e.target)) brushG.call(br.move, null)
+				document.body.removeEventListener('pointerdown', onClickOut, true)
 			}
-			document.addEventListener('pointerdown', onClickOut, true)
 		}
 	}
 
