@@ -39,20 +39,25 @@ class WSIViewer extends PlotBase implements RxComponent {
 		this.type = 'WSIViewer'
 		this.opts = opts
 		this.wsiViewerInteractions = new WSIViewerInteractions(this, opts)
+		const loadingDiv = opts.holder
+			.append('div')
+			.attr('class', 'wsiViewer-progress')
+			.style('position', 'absolute')
+			.style('top', '0')
+			.style('left', '0')
+			.style('width', '100%')
+			.style('height', '100%')
+			.style('background-color', 'rgba(255, 255, 255, 0.95)')
+			.style('text-align', 'center')
+			.style('display', 'none')
 		this.dom = {
 			holder: opts.holder,
-			loadingDiv: opts.holder
-				.append('div')
-				.attr('class', 'wsiViewer-progress')
-				.style('position', 'absolute')
-				.style('top', '0')
-				.style('left', '0')
-				.style('width', '100%')
-				.style('height', '100%')
-				.style('background-color', 'rgba(255, 255, 255, 0.95)')
-				.style('text-align', 'center')
-				.style('display', 'none'),
-
+			loadingDiv: {
+				//Maybe move to #dom later????
+				div: loadingDiv,
+				bar: loadingDiv.append('progress'),
+				percent: loadingDiv.append('span').text('0%')
+			},
 			errorDiv: opts.holder.append('div').attr('class', 'wsiViewer-error').style('margin-left', '10px'),
 			mapHolder: opts.holder.append('div').attr('id', 'wsiviewer-mapHolder'),
 			annotationsHolder: opts.holder
@@ -106,13 +111,13 @@ class WSIViewer extends PlotBase implements RxComponent {
 
 		if (wsimages.length === 0) {
 			sayerror(this.dom.errorDiv, 'No WSI images found.')
-			this.wsiViewerInteractions.toggleLoadingDiv(false)
+			// this.wsiViewerInteractions.toggleLoadingDiv(false)
 			return
 		}
 
 		if (wsimageLayersLoadError) {
 			sayerror(this.dom.errorDiv, wsimageLayersLoadError)
-			this.wsiViewerInteractions.toggleLoadingDiv(false)
+			// this.wsiViewerInteractions.toggleLoadingDiv(false)
 			return
 		}
 
@@ -129,7 +134,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 		const imageViewData: ImageViewData = viewModel.getImageViewData(settings.displayedImageIndex)
 
 		if (settings.renderWSIViewer) {
-			this.wsiViewerInteractions.toggleLoadingDiv(settings.renderAnnotationTable)
+			// this.wsiViewerInteractions.toggleLoadingDiv(settings.renderAnnotationTable)
 
 			if (this.thumbnailsContainer != undefined) {
 				this.thumbnailsContainer.remove()
@@ -190,7 +195,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 				)
 			}
 		}
-		this.wsiViewerInteractions.toggleLoadingDiv(false)
+		// this.wsiViewerInteractions.toggleLoadingDiv(false)
 	}
 }
 

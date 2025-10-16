@@ -3,6 +3,7 @@ import type { AiProjectSelectedWSImagesRequest, AiProjectSelectedWSImagesRespons
 import { aiProjectSelectedWSImagesResponsePayload } from '#types/checkers'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
+import { createProgress } from '#src/websocket/taskManager.ts'
 
 /*
 given a sample, return all whole slide images for specified dataset
@@ -24,18 +25,27 @@ export const api: RouteApi = {
 
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
+		let progress: ReturnType<typeof createProgress> | undefined
+
 		try {
 			const query: AiProjectSelectedWSImagesRequest = req.query
 			const g = genomes[query.genome]
 			if (!g) throw 'invalid genome name'
 			const ds = g.datasets[query.dslabel]
 			if (!ds) throw 'invalid dataset name'
+
+			progress = createProgress(query?.jobId)
+			res.status(202).json({ jobId: progress.jobId })
+			progress.emit({ percent: 0, status: 'queued', message: 'Loading images...' })
+
 			const projectId = query.projectId
 			const wsimagesFilenames = query.wsimagesFilenames
 
+			const total = wsimagesFilenames.length || 1
 			const wsimages: WSImage[] = []
 
 			if (ds.queries.WSImages.getWSIAnnotations) {
+				let i = 0
 				for (const wsimageFilename of wsimagesFilenames) {
 					const wsimage: WSImage = {
 						filename: wsimageFilename
@@ -59,13 +69,28 @@ function init({ genomes }) {
 					}
 
 					wsimages.push(wsimage)
+					i++
+					progress.emit({
+						percent: Math.round((i / total) * 100),
+						status: 'running',
+						message: `Processed ${i}/${total}`
+					})
 				}
 			}
-
-			res.send({ wsimages: wsimages } satisfies AiProjectSelectedWSImagesResponse)
+			progress.done({ wsimages } satisfies AiProjectSelectedWSImagesResponse)
+			// res.send({ wsimages: wsimages } satisfies AiProjectSelectedWSImagesResponse)
 		} catch (e: any) {
-			console.log(e)
-			res.status(404).send('Sample images not found')
+			console.error(e)
+			// res.status(404).send('Sample images not found')
+			if (progress) {
+				try {
+					progress.fail(e)
+				} catch {
+					//Comment so eslint is happy
+				}
+			} else if (!res.headersSent) {
+				res.status(400).json({ error: e?.message ?? 'Failed' })
+			}
 		}
 	}
 }

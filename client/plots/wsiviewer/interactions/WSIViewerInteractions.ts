@@ -313,7 +313,7 @@ export class WSIViewerInteractions {
 					}
 				})
 			} catch (e: any) {
-				this.toggleLoadingDiv(false)
+				// this.toggleLoadingDiv(false)
 				wsiApp.app.printError('Error retraining model: ' + (e.message || e))
 			}
 		}

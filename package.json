@@ -67,6 +67,7 @@
     "typescript-eslint": "^8.46.2"
   },
   "dependencies": {
-    "html-to-image": "^1.11.13"
+    "html-to-image": "^1.11.13",
+    "socket.io-client": "^4.8.1"
   }
 }

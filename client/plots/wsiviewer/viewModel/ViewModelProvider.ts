@@ -15,6 +15,7 @@ import type { Geometry } from 'ol/geom'
 import { Polygon } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Settings from '#plots/wsiviewer/Settings.ts'
+import { socket } from '#dom'
 
 export class ViewModelProvider {
 	constructor() {}
@@ -244,14 +245,43 @@ export class ViewModelProvider {
 		aiProjectID: number,
 		aiProjectFiles: Array<string>
 	): Promise<AiProjectSelectedWSImagesResponse> {
+		/** TODO: Tmp proof of concept. Needs a fix
+		 * jobID should be returned from the route itself as
+		 * res.send({jobId: 'xxxx'}). Problem is it's not returning
+		 * before the route ends as expected. subscribe-job fires
+		 * after all the progress events have been sent.
+		 */
+		const jobId = 'test-' + Math.random().toString(36).slice(2)
+		socket.emit('subscribe-job', jobId)
+
 		const body: AiProjectSelectedWSImagesRequest = {
 			genome: genome,
 			dslabel: dslabel,
 			projectId: aiProjectID,
-			wsimagesFilenames: aiProjectFiles
+			wsimagesFilenames: aiProjectFiles,
+			jobId: jobId
 		}
-		return await dofetch3('aiProjectSelectedWSImages', {
-			body: body
+		await dofetch3('aiProjectSelectedWSImages', { body })
+
+		//TODO: This needs to be reusable code for other routes that use progress
+		return new Promise<AiProjectSelectedWSImagesResponse>((resolve, reject) => {
+			const onProgress = (p: any) => {
+				if (p.jobId !== jobId) return // ignore other jobs
+				console.log('progress:', p)
+
+				if (p.status === 'completed') {
+					socket.off('task-progress', onProgress)
+					// server sent final payload in p.data
+					resolve(p.data as AiProjectSelectedWSImagesResponse)
+				} else if (p.status === 'error' || p.status === 'cancelled') {
+					socket.off('task-progress', onProgress)
+					reject(new Error(p.error || p.message || 'Job failed'))
+				}
+			}
+
+			// avoid stacking duplicate listeners
+			socket.off('task-progress', onProgress)
+			socket.on('task-progress', onProgress)
 		})
 	}
 

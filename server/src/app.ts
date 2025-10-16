@@ -18,6 +18,7 @@ import { sendMessageToSlack } from './postOnSlack.ts'
 import { routeFiles } from './app.routes.js'
 import { setPythonBinPath } from '@sjcrh/proteinpaint-python'
 import { CacheManager } from './CacheManager.ts'
+import { getIO, mountSocketIO } from './websocket/socket.ts'
 
 const basepath = serverconfig.basepath || ''
 Object.freeze(process.argv)
@@ -190,6 +191,9 @@ async function startServer(app, routeCallbacks: OptionalRouteCallbacks = {}) {
 			cert: fs.readFileSync(serverconfig.ssl.cert)
 		}
 		const server = await https.createServer(options, app)
+		console.log('mounting socket.io ...')
+		mountSocketIO(server)
+		app.locals.io = getIO() //May not be needed
 		// second optional argument is host, formatted so that req.ip will be ipv4
 		server.listen(port, '0.0.0.0', () => {
 			console.log(`HTTPS ${message}`)
@@ -211,7 +215,9 @@ async function startServer(app, routeCallbacks: OptionalRouteCallbacks = {}) {
 				process.exit(0)
 			})
 		}
-
+		console.log('mounting socket.io ...')
+		mountSocketIO(server)
+		app.locals.io = getIO() //May not be needed
 		return server
 	}
 }
