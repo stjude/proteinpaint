@@ -465,12 +465,7 @@ tape('test label clicking, filtering and hovering', function (test) {
 
 tape('test hide option on label clicking', function (test) {
 	runpp({
-		state: {
-			nav: {
-				header_mode: 'hide_search'
-			},
-			plots: [open_state]
-		},
+		state: { plots: [open_state] },
 		violin: {
 			callbacks: {
 				'postRender.test': runTests
@@ -479,11 +474,9 @@ tape('test hide option on label clicking', function (test) {
 	})
 	async function runTests(violin) {
 		violin.on('postRender.test', null)
-		const legendDiv = violin.Inner.dom.legendDiv
 		const violinDiv = violin.Inner.dom.violinDiv
-
-		testHideOption(violin, legendDiv) //test filter on label clicking
-		await testHiddenValues(violin, legendDiv, violinDiv)
+		testHideOption(violin) //test filter on label clicking
+		await testHiddenValues(violin, violinDiv)
 
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
@@ -510,14 +503,17 @@ tape('test hide option on label clicking', function (test) {
 		test.ok(true, 'label Clicking and Hide option ok!')
 	}
 
-	async function testHiddenValues(violin, legendDiv, violinDiv) {
-		const htmlLegends = await detectGte({ elem: legendDiv.node(), selector: '.sjpp-htmlLegend' })
+	async function testHiddenValues(violin, violinDiv) {
+		const htmlLegends = await detectGte({
+			elem: violin.Inner.dom.hiddenDiv.node(), // use hiddenDiv but not legendDiv
+			selector: '.sjpp-htmlLegend'
+		})
 		test.ok(htmlLegends, 'Legend exists')
 
 		const hiddenKeys = Object.keys(violin.Inner.config.term2.q.hiddenValues)
 		test.equal(
 			Object.keys(violin.Inner.config.term2.q.hiddenValues)[0],
-			htmlLegends[8].innerHTML,
+			htmlLegends[0].innerHTML,
 			'q.hiddenValues match legend'
 		)
 		const unhideLegendValue = htmlLegends.filter(c => hiddenKeys.find(k => c.__data__.text === k))
@@ -1418,7 +1414,7 @@ tape('term1=singleCellExpression, term2=singleCellCellType', function (test) {
 
 const runpp = getRunPp('mass', {
 	state: {
-		nav: { activeTab: 1 },
+		nav: { header_mode: 'hidden' },
 		vocab: { dslabel: 'TermdbTest', genome: 'hg38-test' }
 	},
 	debug: 1

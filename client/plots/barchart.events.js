@@ -545,6 +545,7 @@ function getTvs(termIndex, value, self, geneVariant) {
 	return tvs
 }
 
+// TODO document arg
 export async function listSamples(arg) {
 	// validate arg
 	for (const k of Object.keys(arg)) {
