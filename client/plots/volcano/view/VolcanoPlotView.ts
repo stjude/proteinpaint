@@ -68,22 +68,36 @@ export class VolcanoPlotView {
 		this.dom.actionsTip.d.style('overflow', 'hidden')
 		this.volcanoDom.actions.style('margin-left', '20px').style('padding', '5px')
 		if (this.termType == 'geneExpression') {
-			this.addActionButton('Confounding factors', () => this.interactions.confoundersMenu())
-			this.addActionButton('Genes', () => this.interactions.launchGeneSetEdit())
+			this.addActionButton('Confounding Factors', () => this.interactions.confoundersMenu())
+			this.addActionButton('Highlight Genes', () => this.interactions.launchGeneSetEdit())
 			this.addActionButton('Statistics', () => {
 				this.renderStatsMenu()
 			})
-			this.addActionButton('P Value Table', () => {
-				this.volcanoDom.pValueTable.style(
-					'display',
-					this.volcanoDom.pValueTable.style('display') == 'none' ? 'inline-block' : 'none'
-				)
-			})
+			const numSigGenes = this.viewData.statsData.find(d => d.label == 'Number of significant genes')?.value
+			if (numSigGenes) {
+				this.volcanoDom.actions
+					.append('span')
+					.text(`${numSigGenes} DE genes:`)
+					.style('margin-left', '10px')
+					.style('font-weight', 'bold')
 
-			// Launch hierCluster for DEGs between the two groups
-			this.addActionButton('DEGs hierarchical clustering', async () => {
-				await this.interactions.launchDEGClustering()
-			})
+				this.addActionButton('Show P Value Table', () => {
+					this.volcanoDom.pValueTable.style(
+						'display',
+						this.volcanoDom.pValueTable.style('display') == 'none' ? 'inline-block' : 'none'
+					)
+				})
+			}
+
+			if (numSigGenes && numSigGenes >= 3) {
+				// Launch hierCluster for DEGs between the two groups
+				this.addActionButton(
+					`Hierarchical Clustering of ${numSigGenes > 100 ? 'top 100' : numSigGenes} DE Genes`,
+					async () => {
+						await this.interactions.launchDEGClustering()
+					}
+				)
+			}
 		}
 	}
 
