@@ -6,6 +6,7 @@ export type AiProjectSelectedWSImagesRequest = {
 	dslabel: string
 	projectId: number
 	wsimagesFilenames: Array<string>
+	jobId?: string //TODO, should be done differently
 }
 
 export type AiProjectSelectedWSImagesResponse = {
