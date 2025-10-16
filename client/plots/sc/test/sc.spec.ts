@@ -6,7 +6,7 @@ DO NOT ENABLE THIS FILE ON CI. ITS FOR PROTOTYPING
 AND MANUAL CHECKS ONLY
 
 Tests:
-    - Default Default SC app
+    - Default SC app
  */
 
 /*************************

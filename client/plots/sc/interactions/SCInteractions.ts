@@ -5,11 +5,13 @@ export class SCInteractions {
 	app: AppApi
 	dom: any //May not be necessary
 	id: string
+	getState: () => any
 
-	constructor(app: AppApi, dom: any, id: string) {
+	constructor(app: AppApi, dom: any, id: string, getState: () => any) {
 		this.app = app
 		this.dom = dom
 		this.id = id
+		this.getState = getState()
 	}
 
 	/** Used in the gene search menu shown on click from a plot btn
@@ -35,5 +37,22 @@ export class SCInteractions {
 			id: this.id,
 			config: { settings: { sc: { item } } }
 		})
+	}
+
+	toggleLoading(on: boolean) {
+		if (on) {
+			this.dom.loading.selectAll('*').remove()
+			this.dom.loading
+				.style('display', 'block')
+				.append('div')
+				.style('position', 'relative')
+				.style('top', '50%')
+				.append('span')
+				.attr('class', 'sjpp-spinner')
+			this.dom.loading.style('display', '')
+		} else {
+			this.dom.loading.selectAll('.sjpp-spinner').remove()
+			this.dom.loading.style('display', 'none')
+		}
 	}
 }
