@@ -32,8 +32,14 @@ try:
     chromosome = parsed_data['chromosome'] or 'chr22'
     reference = parsed_data['reference'] or 'A'
     alternate = parsed_data['alternate'] or 'C'
-    ontologyTerm = parsed_data['ontologyTerm']
-    ontology_terms = [ontologyTerm] if ontologyTerm else ['UBERON:0000955']  # brain
+    ontology_terms = parsed_data.get('ontologyTerms', [
+            'UBERON:0000310',  # breast
+            'UBERON:0002107',  # liver
+            'UBERON:0002367',  # prostate
+            'UBERON:0000955',  # brain
+            'UBERON:0002048',  # lung
+            'UBERON:0001155',  # colon
+        ])  # Example ontology term
     #alphagenone uses hg38 genome coordinates
 
     API_KEY = os.getenv("API_KEY")

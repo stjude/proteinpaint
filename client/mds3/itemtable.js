@@ -354,8 +354,7 @@ async function openAlphaGenome(m) {
 		chromosome: m.chr,
 		position: m.pos + 1,
 		reference: m.ref,
-		alternate: m.alt,
-		ontologyTerm: 'UBERON:0000955' // brain, should be dynamic in future, provided by the dataset
+		alternate: m.alt
 	}
 
 	const data = await dofetch3('alphaGenome', { body: params })

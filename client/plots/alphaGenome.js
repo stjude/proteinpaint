@@ -62,9 +62,10 @@ class AlphaGenome extends PlotBase {
 			{
 				label: 'Ontology term',
 				type: 'text',
+				title:
+					'Ontology term. If none provided will plot all: UBERON:0000310(breast), UBERON:0002107(liver), UBERON:0002367(prostate), UBERON:0000955(brain), UBERON:0002048(lung), UBERON:0001155(colon)',
 				chartType: this.type,
-				settingsKey: 'ontologyTerm',
-				title: 'Ontology term'
+				settingsKey: 'ontologyTerm'
 			}
 		]
 		this.components = {
@@ -105,7 +106,7 @@ export function getPlotConfig(opts) {
 				position: 36201698,
 				reference: 'A',
 				alternate: 'C',
-				ontologyTerm: 'UBERON:0000955' // brain
+				ontologyTerm: ''
 			}
 		}
 	}
