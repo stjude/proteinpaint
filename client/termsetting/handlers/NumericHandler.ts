@@ -44,7 +44,7 @@ export class NumericHandler extends HandlerBase implements Handler {
 		this.opts = opts
 		this.termsetting = opts.termsetting
 		this.tw = opts.termsetting.tw
-		this.tabs = this.setTabs()
+		this.tabs = this.setTabData()
 		this.density = new NumericDensity(opts, this)
 	}
 
@@ -52,22 +52,23 @@ export class NumericHandler extends HandlerBase implements Handler {
 		return this.tw.getStatus(this.termsetting.usecase)
 	}
 
-	setTabs() {
+	setTabData() {
 		const self = this.termsetting
 		const tabs: TabData[] = []
 		const callback = async (event, tabData) => {
 			if (event) event.stopPropagation()
 			await this.setEditHandler(tabData)
 			//this.dom.editDiv.selectAll('*').remove()
-			this.editHandler.showEditMenu(tabData.contentHolder) //this.dom.editDiv)
+			await this.editHandler.showEditMenu(tabData.contentHolder) //this.dom.editDiv)
 		}
 
+		const numTabs = self.opts.numericEditMenuVersion.length
 		if (self.opts.numericEditMenuVersion.includes('continuous')) {
 			tabs.push({
 				mode: 'continuous',
 				label: self.term.type == 'survival' ? 'Time to Event' : 'Continuous',
 				callback,
-				active: this.tw.q.mode === 'continuous'
+				active: this.tw.q.mode === 'continuous' || numTabs === 1
 			})
 		}
 
@@ -76,16 +77,7 @@ export class NumericHandler extends HandlerBase implements Handler {
 				mode: 'discrete',
 				label: self.term.type == 'survival' ? 'Exit code' : 'Discrete',
 				callback,
-				active: this.tw.q.mode === 'discrete'
-			})
-		}
-
-		if (self.opts.numericEditMenuVersion.includes('binary')) {
-			tabs.push({
-				mode: 'binary',
-				label: 'Binary',
-				callback,
-				active: this.tw.q.mode === 'binary'
+				active: this.tw.q.mode === 'discrete' || numTabs === 1
 			})
 		}
 
@@ -94,7 +86,16 @@ export class NumericHandler extends HandlerBase implements Handler {
 				mode: 'spline',
 				label: 'Cubic spline',
 				callback,
-				active: this.tw.q.mode === 'spline'
+				active: this.tw.q.mode === 'spline' || numTabs === 1
+			})
+		}
+
+		if (self.opts.numericEditMenuVersion.includes('binary')) {
+			tabs.push({
+				mode: 'binary',
+				label: 'Binary',
+				callback,
+				active: this.tw.q.mode === 'binary' || numTabs === 1
 			})
 		}
 
@@ -110,18 +111,18 @@ export class NumericHandler extends HandlerBase implements Handler {
 					break
 				}
 				case 'discrete': {
-					const { NumDiscrete } = await import('./NumDiscrete.ts')
-					this.handlerByMode.discrete = new NumDiscrete(this.opts, this)
+					const { NumDiscreteEditor } = await import('./NumDiscreteEditor.ts')
+					this.handlerByMode.discrete = new NumDiscreteEditor(this.opts, this)
 					break
 				}
 				case 'binary': {
-					const { NumDiscrete } = await import('./NumDiscrete.ts') // TODO
-					this.handlerByMode.binary = new NumDiscrete(this.opts, this)
+					const { NumDiscreteEditor } = await import('./NumDiscreteEditor.ts') // TODO
+					this.handlerByMode.binary = new NumDiscreteEditor(this.opts, this)
 					break
 				}
 				case 'spline': {
-					const { NumDiscrete } = await import('./NumDiscrete.ts') // TODO
-					this.handlerByMode.spline = new NumDiscrete(this.opts, this)
+					const { NumDiscreteEditor } = await import('./NumDiscreteEditor.ts') // TODO
+					this.handlerByMode.spline = new NumDiscreteEditor(this.opts, this)
 					break
 				}
 				default:
@@ -134,45 +135,28 @@ export class NumericHandler extends HandlerBase implements Handler {
 
 	async showEditMenu(div) {
 		div.selectAll('*').remove()
-
-		// const twType = this.termsetting.tw.type
-		// if (
-		// 	twType == 'NumTWRegularBin' ||
-		// 	twType == 'NumTWCustomBin' ||
-		// 	twType == 'NumTWCont' ||
-		// 	//twType == 'NumTWBinary' ||
-		// 	twType == 'NumTWSpline'
-
-		// 	// this.termsetting.tw instanceof NumRegularBin ||
-		// 	// this.termsetting.tw instanceof NumCustomBins ||
-		// 	// this.termsetting.tw instanceof NumCont ||
-		// 	// this.termsetting.tw instanceof NumSpline
-		// )
-		// throw `invalid numeric tw.type='${twType}'`
 		this.tw = this.termsetting.tw as NumRegularBin | NumCustomBins | NumCont | NumSpline // TODO: do not force type
-		//console.log(135, 'NumericHandler showEditMenu()')
 
 		const self = this.tw
 		for (const t of this.tabs) {
-			t.active = self.q.mode == t.mode || (t.mode == 'continuous' && !self.q.mode)
+			t.active = this.tabs.length === 1 || self.q.mode == t.mode || (t.mode == 'continuous' && !self.q.mode)
 		}
 
 		this.density_data = await this.density.setData()
-
-		const topBar = div.append('div').style('padding', '10px')
-		topBar.append('span').html('Use as&nbsp;')
-		const contentHolder = div.append('div')
-
-		this.setEditHandler(this.tabs.find(t => t.active))
+		await this.setEditHandler(this.tabs.find(t => t.active))
 		this.dom.editDiv = div.append('div')
 
 		if (this.tabs.length > 1) {
+			this.dom.topBar = this.dom.editDiv.append('div').style('padding', '10px')
+			this.dom.topBar.append('span').html('Use as&nbsp;')
 			new Tabs({
-				holder: topBar.append('div').style('display', 'inline-block'),
-				contentHolder,
+				holder: this.dom.topBar.append('div').style('display', 'inline-block'),
+				contentHolder: this.dom.editDiv.append('div'),
 				noTopContentStyle: true,
 				tabs: this.tabs
 			}).main()
+		} else {
+			this.editHandler.showEditMenu(div)
 		}
 	}
 
@@ -180,5 +164,9 @@ export class NumericHandler extends HandlerBase implements Handler {
 		this.editHandler.applyEdits()
 		this.termsetting.dom.tip.hide()
 		this.termsetting.api.runCallback()
+	}
+
+	undoEdits() {
+		this.editHandler.undoEdits()
 	}
 }
