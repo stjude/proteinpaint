@@ -1,7 +1,7 @@
 import { keyupEnter } from '#src/client'
 import type { NumCustomBins } from '#tw'
-import type { NumDiscrete } from './NumDiscrete.ts'
-import type { BoundaryValue } from './NumericDensity.ts'
+import type { NumDiscreteEditor } from './NumDiscreteEditor.ts'
+import type { BoundaryOpts, LineData } from './NumericDensity.ts'
 import type { TermSetting } from '../TermSetting.ts'
 import type {
 	CustomNumericBinConfig,
@@ -15,7 +15,7 @@ import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
 export class NumCustomBinEditor {
 	tw: NumCustomBins
 	q: CustomNumericBinConfig
-	editHandler: NumDiscrete
+	editHandler: NumDiscreteEditor
 	termsetting: TermSetting
 	opts: any
 	dom: {
@@ -26,27 +26,69 @@ export class NumCustomBinEditor {
 		this.editHandler = editHandler
 		this.opts = editHandler.opts
 		this.tw = editHandler.tw
-		this.q = this.getQ()
 		this.termsetting = editHandler.termsetting
+		this.q = this.getDefaultQ()
 	}
 
-	render(div) {
-		this.editHandler.handler.density.setBinLines(this.getBoundaryValues())
+	async render(div) {
+		await this.editHandler.handler.density.setBinLines(this.getBoundaryOpts())
 		if (this.dom.inputsDiv) {
 			if (this.editHandler.dom.binsDiv?.node().contains(this.dom.inputsDiv.node())) return
-			else delete this.dom.inputsDiv //.remove()
+			else {
+				this.dom.inputsDiv.remove()
+				delete this.dom.inputsDiv
+			}
 		}
 		this.dom.inputsDiv = div.append('div').style('display', 'flex').style('width', '100%')
 		this.renderCustomBinInputs()
 	}
 
-	getBoundaryValues(): BoundaryValue[] {
-		return this.q.lst.slice(1).map(bin => ({ x: bin.startunbounded ? bin.stop : bin.start, isDraggable: true }))
+	getBoundaryOpts(): BoundaryOpts {
+		return {
+			values: this.q.lst.slice(1).map(bin => ({ x: bin.startunbounded ? bin.stop : bin.start, isDraggable: true })),
+			callback: (d: LineData, value) => {
+				const boundaryValues = this.q.lst.slice(1).map(d => ('start' in d ? d.start : ''))
+				boundaryValues[d.index] = value
+
+				// const q = this.q
+				// q.lst![d.index + 1].start = value as number
+				// q.lst![d.index + 1].label = get_bin_label(q.lst![d.index + 1], self.q)
+				// q.lst![d.index + 1].range = get_bin_range_equation(q.lst![d.index + 1], self.q)
+				// q.lst![d.index].stop = value as number
+				// q.lst![d.index].label = get_bin_label(q.lst![d.index], self.q)
+				// q.lst![d.index].range = get_bin_range_equation(q.lst![d.index], self.q)
+				// if (handler.dom.customBinBoundaryInput) {
+				// 	// this is created by binary.js when mode=binary
+				// 	// quick fix: while dragging, revert from percentile to normal, as it's hard to update percentile values
+				// 	q.modeBinaryCutoffType = 'normal'
+				// 	if (handler.dom.customBinBoundaryPercentileCheckbox) {
+				// 		handler.dom.customBinBoundaryPercentileCheckbox.property('checked', false)
+				// 	}
+				// 	handler.dom.customBinBoundaryInput.property(
+				// 		'value',
+				// 		self.q
+				// 			.lst!.slice(1)
+				// 			.map((d: any) => d.start)
+				// 			.join('\n')
+				// 	)
+				// }
+				// if (handler.dom.customBinLabelInput) {
+				// 	handler.dom.customBinLabelInput.property('value', (c: any) => c.label)
+				// }
+				// if (handler.dom.customBinRanges) {
+				// 	handler.dom.customBinRanges.html((c: any) => c.range)
+				// }
+
+				this.dom.customBinBoundaryInput.text(boundaryValues.join(',\n'))
+				this.handleInputChange('drag')
+				return 0
+			}
+		}
 	}
 
-	getQ(): CustomNumericBinConfig {
+	getDefaultQ(): CustomNumericBinConfig {
 		if (this.tw.q.mode == 'discrete' && this.tw.q.type == 'custom-bin') {
-			const copy = structuredClone(this.tw.q)
+			const copy = JSON.parse(JSON.stringify(this.tw.q))
 			copy.lst.forEach(bin => {
 				if (!bin.label) bin.label = get_bin_label(bin, this.tw.q, this.tw.term.valueConversion)
 				bin.range = get_bin_range_equation(bin, this.tw.q)
@@ -89,6 +131,10 @@ export class NumCustomBinEditor {
 				return bin
 			}) as CustomNumericBinConfigLst // TODO: remove forced type
 		}
+	}
+
+	getBoundaryInclusion() {
+		return this.q.lst[0].startinclusive ? 'startinclusive' : 'stopinclusive'
 	}
 
 	/******************* Functions for Numerical Custom size bins *******************/
@@ -168,7 +214,7 @@ export class NumCustomBinEditor {
 		this.dom.customBinLabelInput = this.dom.inputsDiv.selectAll('input').data(data)
 	}
 
-	handleInputChange() {
+	handleInputChange(eventType = '') {
 		const self = this.tw
 		const inputs = this.dom.inputsDiv.selectAll('input')
 		inputs.property('value', '')
@@ -179,12 +225,12 @@ export class NumCustomBinEditor {
 		}
 		// update self.q.lst and render bin lines only if bin boundry changed
 		//const q = self.numqByTermIdModeType[self.term.id].discrete[self.q.type!]
-		if (self.q.hiddenValues!) this.tw.q.hiddenValues = self.q.hiddenValues!
+		if (self.q.hiddenValues) this.tw.q.hiddenValues = self.q.hiddenValues
 		if (this.binsChanged(data, this.q.lst)) {
 			this.q.lst = data
-			//self.renderBinLines!(handler, q)
 		}
 		this.renderBoundaryInputDivs()
+		if (eventType != 'drag') this.editHandler.handler.density.setBinLines(this.getBoundaryOpts())
 		//self.q.lst = q.lst //store the new ranges in self.q, the mode is initialized when selecting the tab
 	}
 
@@ -277,5 +323,11 @@ export class NumCustomBinEditor {
 			type: 'custom-bin',
 			lst
 		}
+	}
+
+	undoEdits() {
+		this.q = this.getDefaultQ()
+		this.dom.inputsDiv.selectAll('*').remove()
+		this.renderCustomBinInputs()
 	}
 }

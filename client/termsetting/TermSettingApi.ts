@@ -6,7 +6,7 @@ import { minimatch } from 'minimatch'
 import { isNumericTerm } from '#shared/terms.js'
 import { copyMerge, deepEqual } from '#rx'
 import { select } from 'd3-selection'
-import { TwRouter, CategoricalBase, SnpBase, QualitativeBase } from '#tw'
+import { TwRouter, CategoricalBase, SnpBase, QualitativeBase, NumericBase } from '#tw'
 
 export const termsettingInit = opts => {
 	// TODO: may convert to async-await as needed to initialize,
@@ -38,7 +38,7 @@ export class TermSettingApi {
 			delete self.error
 			self.validateMainData(data)
 			// TODO: use routedTermTypes.has(data.term?.type) instead of just categorical
-			if (!data.tw && QualitativeBase.termTypes.has(data.term?.type)) {
+			if (!data.tw && (QualitativeBase.termTypes.has(data.term?.type) || NumericBase.termTypes.has(data.term?.type))) {
 				data.tw = await TwRouter.initRaw({ term: data.term, q: data.q })
 			}
 			self.tw = data.tw

@@ -11,7 +11,7 @@ import { NumRegularBinEditor } from './NumRegularBinEditor.ts'
 import { NumCustomBinEditor } from './NumCustomBinEditor.ts'
 
 // To show edit menu
-export class NumDiscrete extends HandlerBase implements Handler {
+export class NumDiscreteEditor extends HandlerBase implements Handler {
 	tw: NumRegularBin | NumCustomBins
 	termsetting: TermSetting
 	handler: NumericHandler
@@ -50,7 +50,6 @@ export class NumDiscrete extends HandlerBase implements Handler {
 
 	async showEditMenu(div: any) {
 		if (this.dom.boundaryInclusionDiv) {
-			//console.log(52, this.dom.boundaryInclusionDiv && div.node().contains(this.dom.boundaryInclusionDiv.node()))
 			if (div.node().contains(this.dom.boundaryInclusionDiv.node())) return // already rendered
 			else delete this.dom.boundaryInclusionDiv
 		}
@@ -63,12 +62,16 @@ export class NumDiscrete extends HandlerBase implements Handler {
 		this.renderBoundaryInclusionInput()
 		this.mayShowValueconversionMsg(div)
 		this.renderTypeInputs(div)
+
+		this.dom.boundaryInput
+			.selectAll('option')
+			.property('selected', d => d.value === this.editorsByType[this.activeTab].getBoundaryInclusion())
 	}
 
 	renderBoundaryInclusionInput() {
 		//if (this.dom.boundaryInput) return
 		//const handler = this.handler
-		//this.dom.boundaryInclusionDiv.selectAll('*').remove()
+		this.dom.boundaryInclusionDiv.selectAll('*').remove()
 		this.dom.boundaryInclusionDiv
 			.append('span')
 			.style('padding', '5px')
@@ -81,7 +84,11 @@ export class NumDiscrete extends HandlerBase implements Handler {
 			.append('select')
 			.style('margin-left', '10px')
 			.on('change', () => {
-				this.editorsByType['custom-bin'].handleInputChange()
+				if (this.activeTab == 'custom-bin') this.editorsByType[this.activeTab].handleInputChange()
+				const q = this.editorsByType['regular-bin'].q
+				const v = this.dom.boundaryInput.property('value')
+				q.startinclusive = v === 'startinclusive'
+				q.stopinclusive = v === 'stopinclusive'
 			})
 
 		this.dom.boundaryInput
@@ -94,7 +101,7 @@ export class NumDiscrete extends HandlerBase implements Handler {
 			.append('option')
 			.property('value', d => d.value)
 			.property('selected', d =>
-				this.tw.q.type == 'regular-bin' ? this.tw.q[d.value] == true : this.tw.q.lst[0][d.value] == true
+				this.tw.q.type == 'regular-bin' ? this.tw.q[d.value] == true : this.tw.q.lst?.[0]?.[d.value] == true
 			)
 			.html(d => d.html)
 	}
@@ -112,6 +119,14 @@ export class NumDiscrete extends HandlerBase implements Handler {
 	}
 
 	renderTypeInputs(_div) {
+		if (this.dom.binsDiv) {
+			if (_div.node().contains(this.dom.binsDiv.node())) return
+			else {
+				this.dom.binsDiv.remove()
+				delete this.dom.binsDiv
+			}
+		}
+
 		//if (this.dom.binsDiv) return
 		this.dom.binsDiv = _div.append('div')
 		//const handler = this.handler
@@ -145,7 +160,7 @@ export class NumDiscrete extends HandlerBase implements Handler {
 					// that may have been already edited by the user
 					if (tab.isInitialized) return
 					this.activeTab = 'regular-bin'
-					this.editorsByType['regular-bin']?.render(tab.contentHolder)
+					await this.editorsByType['regular-bin'].render(tab.contentHolder)
 				}
 			},
 			{
@@ -156,7 +171,7 @@ export class NumDiscrete extends HandlerBase implements Handler {
 					// that may have been already edited by the user
 					if (tab.isInitialized) return
 					this.activeTab = 'custom-bin'
-					this.editorsByType['custom-bin']?.render(tab.contentHolder)
+					await this.editorsByType['custom-bin'].render(tab.contentHolder)
 				}
 			}
 		]
@@ -164,10 +179,15 @@ export class NumDiscrete extends HandlerBase implements Handler {
 	}
 
 	applyEdits() {
-		const startinclusive = this.dom.boundaryInput.property('value') == 'startinclusive'
-		const stopinclusive = this.dom.boundaryInput.property('value') == 'stopinclusive'
+		const v = this.dom.boundaryInput.property('value')
+		const startinclusive = v == 'startinclusive'
+		const stopinclusive = v == 'stopinclusive'
 		this.termsetting.q = this.editorsByType[this.activeTab].getEditedQ(startinclusive, stopinclusive)
-		setTimeout(() => this.destroy(), 0)
+		//setTimeout(() => this.destroy(), 0)
+	}
+
+	undoEdits() {
+		this.editorsByType[this.activeTab].undoEdits()
 	}
 
 	destroy() {
