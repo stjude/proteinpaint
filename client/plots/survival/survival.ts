@@ -205,11 +205,12 @@ class TdbSurvival extends PlotBase implements RxComponent {
 							title: 'The internal height of the chart plot'
 						},
 						{
-							label: '95% CI',
+							label: '95% Confidence Interval',
 							boxLabel: 'Visible',
 							type: 'checkbox',
 							chartType: 'survival',
-							settingsKey: 'ciVisible'
+							settingsKey: 'ciVisible',
+							title: 'Display 95% confidence interval'
 						},
 						{
 							label: 'Censored Symbol',
@@ -217,9 +218,10 @@ class TdbSurvival extends PlotBase implements RxComponent {
 							chartType: 'survival',
 							settingsKey: 'symbol',
 							options: [
-								{ label: 'X', value: 'x' },
-								{ label: 'Tick', value: 'vtick' }
-							]
+								{ label: 'Tick', value: 'vtick' },
+								{ label: 'X', value: 'x' }
+							],
+							title: 'Symbol for displaying censored samples'
 						},
 						{
 							label: 'Survival Time Visualized',
@@ -264,7 +266,8 @@ class TdbSurvival extends PlotBase implements RxComponent {
 							label: 'Default color',
 							type: 'color',
 							chartType: 'survival',
-							settingsKey: 'defaultColor'
+							settingsKey: 'defaultColor',
+							title: 'Default plot color'
 						}
 					]
 				})
