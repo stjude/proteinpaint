@@ -20,6 +20,7 @@ import { Feature } from 'ol'
 import type { Geometry } from 'ol/geom'
 import { Polygon } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
+import type Settings from '#plots/wsiviewer/Settings.ts'
 
 export class ViewModelProvider {
 	constructor() {}
@@ -32,7 +33,8 @@ export class ViewModelProvider {
 		displayedImageIndex: number,
 		annotatedPatchBorderColor: string,
 		aiProjectID: number | undefined = undefined,
-		aiWSIMageFiles: Array<string> | undefined
+		aiWSIMageFiles: Array<string> | undefined,
+		setting
 	): Promise<ViewModel> {
 		let wsimageLayers: Array<WSImageLayers> = []
 		let wsimageLayersLoadError: string | undefined = undefined
@@ -48,7 +50,8 @@ export class ViewModelProvider {
 					data.sampleWSImages,
 					sampleId,
 					undefined,
-					annotatedPatchBorderColor
+					annotatedPatchBorderColor,
+					setting
 				)
 			} catch (e: any) {
 				wsimageLayersLoadError = `Error loading image layers for sample  ${sampleId}: ${e.message || e}`
@@ -67,7 +70,8 @@ export class ViewModelProvider {
 				data.wsimages,
 				undefined,
 				aiProjectID!,
-				annotatedPatchBorderColor
+				annotatedPatchBorderColor,
+				setting
 			)
 		}
 
@@ -90,11 +94,19 @@ export class ViewModelProvider {
 		wsimages: WSImage[],
 		sampleId: string | undefined,
 		aiProjectID: number | undefined,
-		annotatedPatchBorderColor: string
+		annotatedPatchBorderColor: string,
+		setting: Settings
 	): Promise<WSImageLayers[]> {
 		const layers: Array<WSImageLayers> = []
 
-		for (let i = 0; i < wsimages.length; i++) {
+		/** Only load a range of images from the entire set from the
+		 * tile server. This is to speed up loading time. */
+		const lastImageIndex =
+			setting.thumbnailRangeStart + setting.numDisplayedThumbnails >= wsimages.length
+				? wsimages.length
+				: setting.thumbnailRangeStart + setting.numDisplayedThumbnails
+
+		for (let i = setting.thumbnailRangeStart; i < lastImageIndex; i++) {
 			const wsimage = wsimages[i].filename
 
 			const body: WSImagesRequest = {
@@ -137,7 +149,8 @@ export class ViewModelProvider {
 				metadata: wsimages[i].metadata,
 				source: source,
 				baseLayer: true,
-				title: 'Slide'
+				title: 'Slide',
+				name: wsimage.replace(/(\.\w{3,4})$/i, '') //remove file extension
 			}
 			const layer = new TileLayer(options)
 

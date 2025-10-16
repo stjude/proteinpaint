@@ -10,14 +10,11 @@ import { SCViewRenderer } from './view/SCViewRenderer'
 import { getDefaultSCAppSettings } from './defaults'
 import { importPlot } from '#plots/importPlot.js'
 import { newSandboxDiv } from '#dom'
+import formatPlotData from './viewModel/plotData.ts'
 
 /** Overall app TODOs:
  *  - Plot buttons
  *  	- Implement additional menus to appear on click
- *  - Implement multi plot rendering
- *  	- Create sections by item and render plots in each section
- * 		- Develop containers to hold plots with destroy methods and
- * 			possibly other animation methods
  *  - Fix any outdated properties in the dataset queries.singleCell obj
  *  - Type all files
  *  - instead of using 'sample', change to 'key' or 'item' or something
@@ -30,6 +27,7 @@ class SCViewer extends PlotBase implements RxComponent {
 	interactions?: SCInteractions
 	items?: SingleCellSample[]
 	itemColumns?: SampleColumn[]
+	model?: SCModel
 	segments: Segments
 	view?: SCViewRenderer
 	viewModel?: SCViewModel
@@ -48,6 +46,16 @@ class SCViewer extends PlotBase implements RxComponent {
 
 		this.dom = {
 			div,
+			loading: opts.holder
+				.append('div')
+				.attr('class', 'sjpp-sc-loading')
+				.style('position', 'absolute')
+				.style('top', '0')
+				.style('left', '0')
+				.style('width', '100%')
+				.style('height', '100%')
+				.style('background-color', 'rgba(255, 255, 255, 0.95)')
+				.style('text-align', 'center'),
 			selectBtnDiv: div.append('div').attr('id', 'sjpp-sc-select-btn'),
 			tableDiv: div.append('div').attr('id', 'sjpp-sc-item-table'),
 			plotsBtnsDiv: div.append('div').attr('id', 'sjpp-sc-plot-buttons').style('display', 'none')
@@ -78,22 +86,22 @@ class SCViewer extends PlotBase implements RxComponent {
 		/** ds defines defaults in termdbConfig.queries.singleCell
 		 * see Dataset type when resuming development */
 		const dsScSamples = state.termdbConfig.queries?.singleCell?.samples
-		const model = new SCModel(this.app)
+		this.model = new SCModel(this.app, this.id)
 		try {
 			/** Fetches the single cell sample data for the table */
-			const response = await model.getSampleData()
+			const response = await this.model.getSampleData()
 			if (response.error || !response.samples || !response.samples.length) {
 				this.app.printError('No samples found for this dataset')
 				return
 			}
 			this.items = response.samples
-			this.itemColumns = await model.getColumnLabels(dsScSamples)
+			this.itemColumns = await this.model.getColumnLabels(dsScSamples)
 		} catch (e: any) {
 			if (e instanceof Error) console.error(`${e.message || e} [SC init()]`)
 			else if (e.stack) console.log(e.stack)
 			throw `${e.message || e} [SC init()]`
 		}
-		this.interactions = new SCInteractions(this.app, this.dom, this.id)
+		this.interactions = new SCInteractions(this.app, this.dom, this.id, () => this.getState(this.app.getState()))
 		//Init view model and view
 		this.viewModel = new SCViewModel(this.app, state.config, this.items!, this.itemColumns)
 		this.view = new SCViewRenderer(this.dom, this.interactions, this.segments)
@@ -105,13 +113,18 @@ class SCViewer extends PlotBase implements RxComponent {
 
 	//TODO: .text() should be ds specific
 	async initSegment(item) {
+		const caseText = item.case ? `Case: ${item.case}` : ''
+		const itemText = item.sample ? `Sample: ${item.sample}` : '' //item.cell, etc.
+		const projectText = item['project id'] ? `Project: ${item['project id']}` : ''
+		const headerText = [itemText, caseText, projectText].join(' ')
+
 		this.segments[item.sample] = {
 			title: this.dom.div
 				.append('div')
 				.style('margin-left', '10px')
 				.style('padding', '10px')
 				.style('font-weight', 600)
-				.text(`Case: ${item.case}   Sample: ${item.sample}   Project: ${item['project id']}`),
+				.text(headerText),
 			subplots: this.dom.div.append('div').style('margin-left', '10px')
 		}
 	}
@@ -154,17 +167,41 @@ class SCViewer extends PlotBase implements RxComponent {
 	async main() {
 		const state = this.getState(this.app.getState()) as SCFormattedState
 		const config = state.config
-		if (config.chartType != this.type) return
 
-		if (!this.interactions) throw `Interactions not initialized [SC main()]`
+		if (!this.model) throw `Model not initialized [SC main()]`
+		if (!this.viewModel) throw `ViewModel not initialized [SC main()]`
 		if (!this.view) throw `View not initialized [SC main()]`
+		if (!this.interactions) throw `Interactions not initialized [SC main()]`
+
+		this.interactions.toggleLoading(true)
 
 		// const errors = {} collect plot init errors
 		for (const subplot of state.subplots) {
 			if (!this.segments[subplot.scItem.sample]) this.initSegment(subplot.scItem)
 			if (!this.components.plots[subplot.id]) await this.initSubplotComponent(subplot)
 		}
-		this.view.update(config.settings)
+
+		let data: any = null
+		if (config.settings.sc.item) {
+			try {
+				data = await this.model.getData()
+				if (data.error || !data.plots || !data.plots.length) {
+					this.interactions.toggleLoading(false)
+					this.app.printError(data.error)
+					return
+				}
+			} catch (e: any) {
+				this.interactions.toggleLoading(false)
+				if (e instanceof Error) console.error(`${e.message || e} [SC main()]`)
+				else if (e.stack) console.log(e.stack)
+				throw `${e.message || e} [SC main()]`
+			}
+			data.plots = formatPlotData(data.plots)
+		}
+
+		this.view.update(config.settings, data)
+		this.interactions.toggleLoading(false)
+		console.log('Single cell main() complete')
 	}
 }
 

@@ -3,7 +3,6 @@ import type { TableCell } from '#dom'
 import { renderTable } from '#dom'
 import type { SCInteractions } from '../interactions/SCInteractions'
 
-/** Renders the sc app */
 export class PlotSelectionRenderer {
 	dom: SCDom
 	interactions: SCInteractions

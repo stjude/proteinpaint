@@ -38,7 +38,13 @@ export default function setViolinRenderer(self) {
 
 		//filter out hidden values and only keep plots which are not hidden in term2.q.hiddenvalues
 		self.dom.violinDiv.selectAll('*').remove()
-		for (const chartKey of Object.keys(self.data.charts)) {
+		const chartKeys = Object.keys(self.data.charts)
+		if (!chartKeys?.length) {
+			self.dom.banner.html(`<span>No visible violin plot data to render</span>`).style('display', 'block')
+			self.dom.legendDiv.selectAll('*').remove()
+			return
+		}
+		for (const chartKey of chartKeys) {
 			const chart = self.data.charts[chartKey]
 			const plots = chart.plots.filter(p => !termNum?.q?.hiddenValues?.[p.label || p.seriesId])
 			if (settings.orderByMedian == true) {
@@ -55,7 +61,9 @@ export default function setViolinRenderer(self) {
 				.style('padding', Object.keys(self.data.charts).length > 1 ? '20px 20px 0px 0px' : '0px')
 			chart.chartDiv = chartDiv
 			if (plots.length === 0) {
-				chartDiv.html(` <span style="opacity:.6;font-size:1em;margin-left:90px;">No data to render Violin Plot</span>`)
+				chartDiv.html(
+					` <span style="opacity:.6;font-size:1em;margin-left:90px;">No visible violin plot data to render</span>`
+				)
 				return
 			}
 
@@ -452,37 +460,45 @@ export default function setViolinRenderer(self) {
 	function renderBrushing(t1, t2, violinG, settings, plot, isH, svgData) {
 		//brushing on data points
 		if (settings.datasymbol === 'rug' || settings.datasymbol === 'bean') {
-			violinG
-				.append('g')
-				.classed('sjpp-brush', true)
-				.call(
-					isH
-						? brushX()
-								.extent([
-									[0, -20],
-									[settings.svgw, 20]
-								])
-								.on('end', async event => {
-									const selection = event.selection
+			const br = isH
+				? brushX()
+						.extent([
+							[0, -20],
+							[settings.svgw, 20]
+						])
+						.on('end', async event => {
+							const selection = event.selection
 
-									if (!selection) return
+							if (!selection) return
 
-									self.displayBrushMenu(t1, t2, self, plot, selection, svgData.axisScale, isH)
-								})
-						: brushY()
-								.extent([
-									[-20, 0],
-									[20, settings.svgw]
-								])
-								.on('end', async event => {
-									const selection = event.selection
+							self.displayBrushMenu(t1, t2, self, plot, selection, svgData.axisScale, isH)
 
-									if (!selection) return
+							document.body.addEventListener('pointerdown', onClickOut, true)
+						})
+				: brushY()
+						.extent([
+							[-20, 0],
+							[20, settings.svgw]
+						])
+						.on('end', async event => {
+							const selection = event.selection
 
-									self.displayBrushMenu(t1, t2, self, plot, selection, svgData.axisScale, isH)
-								})
-				)
-		} else return
+							if (!selection) return
+
+							self.displayBrushMenu(t1, t2, self, plot, selection, svgData.axisScale, isH)
+
+							document.body.addEventListener('pointerdown', onClickOut, true)
+						})
+
+			const brushG = violinG.append('g').classed('sjpp-brush', true).call(br)
+
+			// clear brush when clicking outside of it
+			const onClickOut = e => {
+				if (!brushG || !br) return
+				if (!brushG.node().contains(e.target)) br.clear(brushG)
+				document.body.removeEventListener('pointerdown', onClickOut, true)
+			}
+		}
 	}
 
 	self.toggleLoadingDiv = function (display = '') {

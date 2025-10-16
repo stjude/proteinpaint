@@ -311,13 +311,21 @@ function getUpdatedQfromClick(plot, term, isHidden = false) {
 
 function createTvsLstValues(term, plot, tvslst, lstIdx) {
 	createTvsTerm(term, tvslst)
+
 	tvslst.lst[lstIdx].tvs.values = [
 		{
 			key: plot.seriesId,
 			label: plot.label
 		}
 	]
-	if (term.term.type === 'condition') {
+
+	if (term.q.type == 'custom-groupset' || term.q.type == 'predefined-groupset') {
+		const groupset =
+			term.q.type == 'custom-groupset' ? term.q.customset : term.term.groupsetting.lst[term.q.predefined_groupset_idx]
+		const group = groupset.groups.find(group => group.name == plot.seriesId)
+		if (!group) throw 'group not found'
+		tvslst.lst[lstIdx].tvs.values = group.values
+	} else if (term.term.type === 'condition') {
 		tvslst.lst[lstIdx].tvs.bar_by_grade = term.q.bar_by_grade
 		tvslst.lst[lstIdx].tvs.value_by_max_grade = term.q.value_by_max_grade
 	} else if (term.term.type === 'samplelst') {

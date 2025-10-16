@@ -17,13 +17,16 @@ export class VolcanoModel {
 	/** May use mapper instead as more termTypes are added */
 	async getData() {
 		if (this.termType === 'geneExpression') {
-			const body = await this.getRequestBody()
+			const body = await this.getGERequestBody()
 			const data = await dofetch3('DEanalysis', { body })
 			return data
 		}
+		if (this.termType === 'singleCellCellType') {
+			//TODO: will add method for sc cell type
+		}
 	}
 
-	async getRequestBody() {
+	async getGERequestBody() {
 		await this.getOtherSamples(this.config.samplelst)
 		const state = this.app.getState()
 		const body = {
@@ -35,7 +38,7 @@ export class VolcanoModel {
 			samplelst: this.config.samplelst,
 			filter: state.termfilter.filter,
 			filter0: state.termfilter.filter0,
-			cpm_cutoff: this.settings.cpm_cutoff
+			cpm_cutoff: this.settings.cpmCutoff
 		} as any
 		//This is a workaround until the server can accept an arr of confounder tws
 		const confounders = this.config?.confounderTws

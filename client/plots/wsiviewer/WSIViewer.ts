@@ -104,7 +104,8 @@ class WSIViewer extends PlotBase implements RxComponent {
 			settings.displayedImageIndex,
 			settings.annotatedPatchBorderColor,
 			aiProjectID,
-			aiWSIMageFiles
+			aiWSIMageFiles,
+			settings
 		)
 
 		const wsimages = viewModel.sampleWSImages
@@ -132,12 +133,20 @@ class WSIViewer extends PlotBase implements RxComponent {
 		if (settings.renderWSIViewer) {
 			this.wsiViewerInteractions.toggleLoadingDiv(settings.renderAnnotationTable)
 
+			if (this.thumbnailsContainer != undefined) {
+				this.thumbnailsContainer.remove()
+				this.thumbnailsContainer = undefined
+			}
+
+			const numTotalFiles = aiWSIMageFiles?.length || wsimages.length
+
 			this.thumbnailsContainer = this.thumbnailRenderer.render(
 				this.dom.mapHolder,
 				this.thumbnailsContainer,
 				wsimageLayers.map(wsimageLayers => wsimageLayers.wsimage),
 				settings,
-				this.wsiViewerInteractions
+				this.wsiViewerInteractions,
+				numTotalFiles
 			)
 
 			this.map = new MapRenderer(

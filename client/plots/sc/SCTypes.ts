@@ -20,6 +20,8 @@ export type SCConfigOpts = {
 export type SCDom = {
 	/** Main div */
 	div: Div
+	/** When visible, shows a loading spinner */
+	loading: Div
 	/** Holder for the 'select' btn at the top page */
 	selectBtnDiv: Div
 	/** Holder for the sample table */
@@ -41,8 +43,8 @@ export type SCSettings = {
 		/** Active item choosen by the user */
 		item: any
 	}
-	hierClusterUnit: string
 	hierCluster: {
+		unit: string
 		yDendrogramHeight: number
 		clusterSamples: boolean
 	}
