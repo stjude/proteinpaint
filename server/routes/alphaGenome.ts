@@ -25,14 +25,14 @@ function init() {
 		try {
 			const query: alphaGenomeRequest = req.query
 
-			const params = JSON.stringify({
+			const params = {
 				chromosome: query.chromosome,
 				position: query.position,
 				reference: query.reference,
-				alternate: query.alternate,
-				ontologyTerm: query.ontologyTerm
-			})
-			const url = await run_python('alphaGenome.py', params)
+				alternate: query.alternate
+			}
+			if (query.ontologyTerm) params['ontologyTerms'] = [query.ontologyTerm]
+			const url = await run_python('alphaGenome.py', JSON.stringify(params))
 			res.send({ plotImage: url } satisfies alphaGenomeResponse)
 		} catch (e: any) {
 			console.log(e)
