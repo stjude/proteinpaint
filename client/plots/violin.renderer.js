@@ -495,7 +495,7 @@ export default function setViolinRenderer(self) {
 			// clear brush when clicking outside of it
 			const onClickOut = e => {
 				if (!brushG || !br) return
-				if (!brushG.node().contains(e.target)) brushG.call(br.move, null)
+				if (!brushG.node().contains(e.target)) br.clear(brushG)
 				document.body.removeEventListener('pointerdown', onClickOut, true)
 			}
 		}
