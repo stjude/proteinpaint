@@ -68,8 +68,8 @@ export class VolcanoPlotView {
 		this.dom.actionsTip.d.style('overflow', 'hidden')
 		this.volcanoDom.actions.style('margin-left', '20px').style('padding', '5px')
 		if (this.termType == 'geneExpression') {
-			this.addActionButton('Confounding Factors', () => this.interactions.confoundersMenu())
-			this.addActionButton('Highlight Genes', () => this.interactions.launchGeneSetEdit())
+			this.addActionButton('Confounding factors', () => this.interactions.confoundersMenu())
+			this.addActionButton('Highlight genes', () => this.interactions.launchGeneSetEdit())
 			this.addActionButton('Statistics', () => {
 				this.renderStatsMenu()
 			})
@@ -81,7 +81,7 @@ export class VolcanoPlotView {
 					.style('margin-left', '10px')
 					.style('font-weight', 'bold')
 
-				this.addActionButton('Show P Value Table', () => {
+				this.addActionButton('Show p-value table', () => {
 					this.volcanoDom.pValueTable.style(
 						'display',
 						this.volcanoDom.pValueTable.style('display') == 'none' ? 'inline-block' : 'none'
@@ -92,7 +92,7 @@ export class VolcanoPlotView {
 			if (numSigGenes && numSigGenes >= 3) {
 				// Launch hierCluster for DEGs between the two groups
 				this.addActionButton(
-					`Hierarchical Clustering of ${numSigGenes > 100 ? 'top 100' : numSigGenes} DE Genes`,
+					`Hierarchical clustering of ${numSigGenes > 100 ? 'top 100' : numSigGenes} DE genes`,
 					async () => {
 						await this.interactions.launchDEGClustering()
 					}
