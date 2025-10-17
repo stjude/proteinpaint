@@ -1277,10 +1277,15 @@ sandbox header
 }
 
   .sja_root_holder [aria-label]:hover:after, .sja_menu_div [aria-label]:hover:after, .sja_pane [aria-label]:hover:after {
+    /* uncomment for fading out effect
     animation-name: fadeOut;
-    animation-duration: 5s;
+    animation-duration: 10s;
+    */
+    opacity: 1;
+    width: max-content;
   }
 
+  /* uncomment for fading out effect
   @keyframes fadeOut {
     0% {
       opacity: 1;
@@ -1293,4 +1298,4 @@ sandbox header
         width: max-content;
 
     }
-  }
+  }*/
