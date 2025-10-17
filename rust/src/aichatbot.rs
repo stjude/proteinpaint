@@ -951,12 +951,12 @@ impl SummaryType {
     #[allow(dead_code)]
     pub fn sort_summarytype_struct(&mut self) {
         // This function is necessary for testing (test_ai.rs) to see if two variables of type "SummaryType" are equal or not. Without this a vector of two Summarytype holding the same values but in different order will be classified separately.
-        self.summaryterms.sort()
+        self.summaryterms.sort();
 
-        //match self.filter {
-        //    Some(filterterms) => filterterms.sort(),
-        //    None => {}
-        //}
+        match self.filter.clone() {
+            Some(ref mut filterterms) => filterterms.sort(),
+            None => {}
+        }
     }
 }
 
@@ -979,7 +979,7 @@ impl PartialOrd for SummaryTerms {
     }
 }
 
-#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+#[derive(PartialEq, Eq, Ord, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 enum FilterTerm {
     Categorical(CategoricalFilterTerm),
     Numeric(NumericFilterTerm),
@@ -996,18 +996,66 @@ impl PartialOrd for FilterTerm {
     }
 }
 
-#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct CategoricalFilterTerm {
     term: String,
     value: String,
 }
 
-#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 #[allow(non_snake_case)]
 struct NumericFilterTerm {
     term: String,
     greaterThan: Option<f32>,
     lessThan: Option<f32>,
+}
+
+impl PartialEq for NumericFilterTerm {
+    fn eq(&self, other: &Self) -> bool {
+        let greater_equality: bool;
+        match (self.greaterThan, other.greaterThan) {
+            (Some(a), Some(b)) => greater_equality = (a - b).abs() < 1e-6,
+            (None, None) => greater_equality = true,
+            _ => greater_equality = false,
+        }
+
+        let less_equality: bool;
+        match (self.lessThan, other.lessThan) {
+            (Some(a), Some(b)) => less_equality = (a - b).abs() < 1e-6,
+            (None, None) => less_equality = true,
+            _ => less_equality = false,
+        }
+
+        if greater_equality == true && less_equality == true {
+            true
+        } else {
+            false
+        }
+    }
+}
+
+impl Eq for NumericFilterTerm {}
+
+impl PartialOrd for NumericFilterTerm {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        if self.greaterThan < other.greaterThan {
+            Some(std::cmp::Ordering::Less)
+        } else if self.greaterThan > other.greaterThan {
+            Some(std::cmp::Ordering::Greater)
+        } else if self.lessThan < other.lessThan {
+            Some(std::cmp::Ordering::Less)
+        } else if self.lessThan > other.lessThan {
+            Some(std::cmp::Ordering::Greater)
+        } else {
+            Some(std::cmp::Ordering::Equal)
+        }
+    }
+}
+
+impl Ord for NumericFilterTerm {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.partial_cmp(other).unwrap()
+    }
 }
 
 fn validate_summary_output(
@@ -1019,15 +1067,6 @@ fn validate_summary_output(
     let json_value: SummaryType =
        serde_json::from_str(&raw_llm_json).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
     let mut message: String = String::from("");
-    //let json_match = serde_json::from_str(&raw_llm_json);
-    //match json_match {
-    //    Some(json_value) => {
-
-    //	}
-    //    None => {
-    //        message = message + &"Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM";
-    //    }
-    //}
     match json_value.message {
         Some(mes) => {
             message = message + &mes; // Append any message given by the LLM

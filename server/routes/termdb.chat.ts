@@ -63,7 +63,7 @@ function init({ genomes }) {
 				aifiles: serverconfig_ds_entries.aifiles,
 				binpath: serverconfig.binpath
 			}
-			mayLog('chatbot_input:', JSON.stringify(chatbot_input))
+			//mayLog('chatbot_input:', JSON.stringify(chatbot_input))
 
 			const time1 = new Date().valueOf()
 			const ai_output_data = await run_rust('aichatbot', JSON.stringify(chatbot_input))

@@ -102,9 +102,12 @@ mod tests {
                                                 &ai_json,
                                             )
                                             .await;
-                                            let llm_json_value: super::super::SummaryType = serde_json::from_str(&llm_output.unwrap()).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
-                                            let expected_json_value: super::super::SummaryType = serde_json::from_str(&ques_ans.answer).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
-                                            assert_eq!(llm_json_value, expected_json_value);
+                                            let mut llm_json_value: super::super::SummaryType = serde_json::from_str(&llm_output.unwrap()).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
+                                            let mut expected_json_value: super::super::SummaryType = serde_json::from_str(&ques_ans.answer).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
+                                            assert_eq!(
+                                                llm_json_value.sort_summarytype_struct(),
+                                                expected_json_value.sort_summarytype_struct()
+                                            );
                                         }
                                     }
                                     super::super::Charts::DE(_testdata) => {} // To do
