@@ -98,7 +98,8 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 		invalidTokenErrorHandling: tdb.invalidTokenErrorHandling,
 		colorMap: tdb.colorMap,
 		defaultTw4correlationPlot: tdb.defaultTw4correlationPlot,
-		authFilter: req.query.filter
+		authFilter: req.query.filter,
+		alphaGenome: tdb.alphaGenome
 	}
 	// optional attributes
 	// when missing, the attribute will not be present as "key:undefined"

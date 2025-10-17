@@ -290,7 +290,8 @@ function table_snvindel({ mlst, tk, block }, table) {
 				.append('a')
 				.text('View')
 				.on('click', async () => {
-					openAlphaGenome(m)
+					const ontologyTerms = tk.mds.termdbConfig.alphaGenome?.ontologyTerms
+					openAlphaGenome(m, ontologyTerms)
 				})
 		}
 	}
@@ -349,12 +350,13 @@ function table_snvindel({ mlst, tk, block }, table) {
 
 const menu = new Menu({ padding: '2px' })
 
-async function openAlphaGenome(m) {
+async function openAlphaGenome(m, ontologyTerms) {
 	const params = {
 		chromosome: m.chr,
 		position: m.pos + 1,
 		reference: m.ref,
-		alternate: m.alt
+		alternate: m.alt,
+		ontologyTerms
 	}
 
 	const data = await dofetch3('alphaGenome', { body: params })

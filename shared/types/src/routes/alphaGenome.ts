@@ -1,6 +1,8 @@
 import type { RoutePayload } from './routeApi.ts'
 
 export type alphaGenomeRequest = {
+	genome?: string
+	dslabel?: string
 	chromosome: string
 	position: number
 	reference: string
