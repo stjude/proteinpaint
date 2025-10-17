@@ -320,23 +320,16 @@ export class WSIViewerInteractions {
 
 		this.toggleLoadingDiv = (show: boolean) => {
 			if (show) {
-				wsiApp.dom.loadingDiv.selectAll('*').remove()
-				wsiApp.dom.loadingDiv
-					.style('display', 'block')
-					.append('div')
-					.style('position', 'relative')
-					.style('top', '50%')
-					.append('span')
-					.attr('class', 'sjpp-spinner')
-
-				wsiApp.dom.mapHolder.style('display', 'none')
-				wsiApp.dom.annotationsHolder.style('display', 'none')
-				wsiApp.dom.legendHolder.style('display', 'none')
+				wsiApp.dom.loading.div.style('display', 'block')
+				//Commented out to see progress bar
+				// wsiApp.dom.mapHolder.style('display', 'none')
+				// wsiApp.dom.annotationsHolder.style('display', 'none')
+				// wsiApp.dom.legendHolder.style('display', 'none')
 			} else {
-				wsiApp.dom.loadingDiv.style('display', 'none')
-				wsiApp.dom.mapHolder.style('display', 'block')
-				wsiApp.dom.annotationsHolder.style('display', 'inline-block')
-				wsiApp.dom.legendHolder.style('display', 'inline-block')
+				wsiApp.dom.loading.div.style('display', 'none')
+				// wsiApp.dom.mapHolder.style('display', 'block')
+				// wsiApp.dom.annotationsHolder.style('display', 'inline-block')
+				// wsiApp.dom.legendHolder.style('display', 'inline-block')
 			}
 		}
 

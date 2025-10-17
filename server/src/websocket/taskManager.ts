@@ -39,10 +39,12 @@ function getId() {
 }
 
 //For caching last progress state
+//Allows new subscribers to get the last known state immediately
 const lastProgress = new Map<string, any>()
 export function remember(jobId: string, payload: any) {
 	lastProgress.set(jobId, { jobId, ...payload })
 }
+
 export function getLast(jobId: string) {
 	return lastProgress.get(jobId)
 }

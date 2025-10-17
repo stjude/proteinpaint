@@ -26,7 +26,9 @@ export class ViewModelProvider {
 		sampleId: string,
 		settings: Settings,
 		aiProjectID: number | undefined = undefined,
-		aiWSIMageFiles: Array<string> | undefined
+		aiWSIMageFiles: Array<string> | undefined,
+		setting,
+		dom: any
 	): Promise<ViewModel> {
 		let wsimageLayers: Array<WSImageLayers | null> = []
 		let wsimageLayersLoadError: string | undefined = undefined
@@ -55,7 +57,8 @@ export class ViewModelProvider {
 				genome,
 				dslabel,
 				aiProjectID!,
-				aiWSIMageFiles!
+				aiWSIMageFiles!,
+				dom
 			)
 			wsImages = data.wsimages
 			wsimageLayers = await this.getWSImageLayers(
@@ -243,7 +246,8 @@ export class ViewModelProvider {
 		genome: string,
 		dslabel: string,
 		aiProjectID: number,
-		aiProjectFiles: Array<string>
+		aiProjectFiles: Array<string>,
+		dom: any
 	): Promise<AiProjectSelectedWSImagesResponse> {
 		const body: AiProjectSelectedWSImagesRequest = {
 			genome: genome,
@@ -256,17 +260,22 @@ export class ViewModelProvider {
 		socket.emit('subscribe-job', jobId)
 
 		//TODO: This needs to be reusable code for other routes that use progress
+		/** Also needs to be combined with the toggleLoadingDiv in the interactions*/
 		return new Promise<AiProjectSelectedWSImagesResponse>((resolve, reject) => {
 			const onProgress = (p: any) => {
 				if (p.jobId !== jobId) return // ignore other jobs
-				console.log('progress:', p)
-
+				console.log('AI Project Selected WSI Images progress:', p)
+				dom.loading.bar.attr('value', p.percent)
+				dom.loading.percent.text(`${p.percent}%`)
 				if (p.status === 'completed') {
 					socket.off('task-progress', onProgress)
-					// server sent final payload in p.data
+					setTimeout(() => {
+						dom.loading.div.style('display', 'none')
+					}, 500)
 					resolve(p.data as AiProjectSelectedWSImagesResponse)
 				} else if (p.status === 'error' || p.status === 'cancelled') {
 					socket.off('task-progress', onProgress)
+					dom.loading.div.style('display', 'none')
 					reject(new Error(p.error || p.message || 'Job failed'))
 				}
 			}
