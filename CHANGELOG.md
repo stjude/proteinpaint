@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - GRIN2: Adding support for fusion and sv data types. Allowo user selection of data types via checkboxes
+- DE analysis: At groups custom term menu, on clicking DE option show a submenu that shows: 1. actual number of samples with expression data. 2. Alerts about the DE analysis such as group size is above/below limit. 3. options for DE methods that will be used. 4. Run Differential Gene Expression button.
+- DE volcano UI improvement: rename Genes button to Highlight genes; before P Value Table button, display text N DE genes then follow with two buttons Show P Value Table & Hierarchical Clustering Up to 100 Genes that are clear the latter two buttons apply to DE genes
 
 
 ## 2.149.0
