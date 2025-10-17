@@ -817,21 +817,15 @@ async fn extract_summary_information(
     //let mut vector_store = InMemoryVectorStore::<String>::default();
     //InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
 
-    let mut common_genes = Vec::<String>::new();
-    match ai_json.hasGeneExpression {
-        true => {
-            let gene_list: Vec<String> = parse_geneset_db(genedb).await;
-            let lowercase_user_input = user_input.to_lowercase();
-            let user_words: Vec<&str> = lowercase_user_input.split_whitespace().collect();
-            let user_words2: Vec<String> = user_words.into_iter().map(|s| s.to_string()).collect();
+    let gene_list: Vec<String> = parse_geneset_db(genedb).await;
+    let lowercase_user_input = user_input.to_lowercase();
+    let user_words: Vec<&str> = lowercase_user_input.split_whitespace().collect();
+    let user_words2: Vec<String> = user_words.into_iter().map(|s| s.to_string()).collect();
 
-            common_genes = gene_list
-                .into_iter()
-                .filter(|x| user_words2.contains(&x.to_lowercase()))
-                .collect();
-        }
-        false => {}
-    }
+    let common_genes: Vec<String> = gene_list
+        .into_iter()
+        .filter(|x| user_words2.contains(&x.to_lowercase()))
+        .collect();
 
     let mut summary_data_check: Option<TrainTestData> = None;
     for chart in ai_json.charts.clone() {
