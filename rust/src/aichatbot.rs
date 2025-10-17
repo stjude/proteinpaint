@@ -29,6 +29,7 @@ pub struct AiJsonFormat {
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 enum Charts {
+    // More chart types will be added here later
     Summary(TrainTestData),
     DE(TrainTestData),
 }
@@ -87,17 +88,36 @@ async fn main() -> Result<()> {
                         None => panic!("tpmasterdir not found"),
                     }
 
+                    let binpath_json: &JsonValue = &json_string["binpath"];
+                    let binpath: &str;
+                    match binpath_json.as_str() {
+                        Some(inp) => binpath = inp,
+                        None => panic!("binpath not found"),
+                    }
+
                     let ai_json_file_json: &JsonValue = &json_string["aifiles"];
                     let ai_json_file: String;
                     match ai_json_file_json.as_str() {
-                        Some(inp) => ai_json_file = String::from("../../") + &inp,
+                        Some(inp) => ai_json_file = String::from(binpath) + &"/../../" + &inp,
                         None => {
                             panic!("ai json file not found")
                         }
                     }
 
+                    println!("ai_json_file:{}", ai_json_file);
                     let ai_json_file = Path::new(&ai_json_file);
-                    let ai_json_file_path = ai_json_file.canonicalize().unwrap();
+                    let ai_json_file_path;
+                    let current_dir = std::env::current_dir().unwrap();
+                    println!("current_dir:{:?}", current_dir);
+                    match ai_json_file.canonicalize() {
+                        Ok(p) => ai_json_file_path = p,
+                        Err(_) => {
+                            panic!(
+                                "AI JSON file path not found:{:?}, current directory:{:?}",
+                                ai_json_file, current_dir
+                            )
+                        }
+                    }
 
                     // Read the file
                     let ai_data = fs::read_to_string(ai_json_file_path).unwrap();

@@ -1,0 +1,36 @@
+{
+  "hasGeneExpression": true,
+  "db": "files/hg38/TermdbTest/db",
+  "genedb": "anno/genes.hg38.test.db",
+  "charts": [
+    {
+       "Summary":{
+          "SystemPrompt":"The \"geneExpression\" subfield should ONLY contain genes names from the relevant genes list.", 
+          "TrainingData":[
+               {"question":"Show summary of all molecular subtypes for patients with age from 10 to 40 years", "answer":"{{\"action\":\"summary\", \"summaryterms\":[{\"clinical\":\"diaggrp\"}], filter:[ {\"Numeric\":{\"term\":\"agedx\", \"greaterThan\":10, \"lessThan\":40}}]}}"},
+	       {"question":"Show correlation between diagnosis groups and ancestry", "answer":"{\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"diaggrp\"},{\"clinical\":\"genetic_race\"}]}"},
+       	       {"question":"show summary of molecular subtype for men under 40 years only", "answer": "{\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"sex\",\"value\":\"1\"}},{\"Numeric\":{\"greaterThan\":null,\"lessThan\":40.0,\"term\":\"agedx\"}}],\"summaryterms\":[{\"clinical\":\"diaggrp\"}]}"},
+       	       {"question":"compare tp53 expression between genders", "answer": "{{\"action\":\"summary\", \"summaryterms\":[{\"clinical\": \"sex\"}, {\"geneExpression\": \"TP53\"}]}}"},
+       	       {"question":"is tmem88b overexpressed in men?", "answer": "{\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"sex\"},{\"geneExpression\":\"TMEM88B\"}]}"},
+	       {"question":"is myc overexpressed in women?", "answer": "{\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"sex\"}], \"message\": \"MYC not found in genes db\"}"}
+          ],
+          "TestData":[
+	       {"question":"Show correlation between kras gene expression and race","answer":"{\"action\":\"summary\",\"summaryterms\":[{\"geneExpression\":\"KRAS\"},{\"clinical\":\"genetic_race\"}]}"},
+	       {"question":"Show molecular subtypes for men greater than 60 yrs", "answer":"{\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"sex\",\"value\":\"1\"}},{\"Numeric\":{\"greaterThan\":60.0,\"lessThan\":null,\"term\":\"agedx\"}}],\"summaryterms\":[{\"clinical\":\"diaggrp\"}]}"},
+	       {"question":"Show TP53 gene expression between genders","answer":"{\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"Sex\"},{\"geneExpression\":\"TP53\"}]}"}
+          ]	 
+       }
+    },
+    {
+       "DE": {
+          "SystemPrompt":"", 
+          "TrainingData":[
+               {"question":"Show molecular subtypes","answer":"{\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"Molecular subtype\"}]}"}
+          ],
+          "TestData":[
+               {"question":"","answer":""}
+          ]
+       }
+    }	    
+  ]  
+}

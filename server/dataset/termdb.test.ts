@@ -16,10 +16,10 @@ To enable this dataset on your pp instance, have this entry in hg38-test dataset
 Files are hosted at the specified locations under tp/
 
 NOTE: genome/hg38.test.js 
-	- uses copyDataFilesFromRepo2Tp() to create <tp>/files/hg38/TermdbTest
-	  dir files or symlink, if the <tp> dir is writable
-	- will add a ProtectedTest entry as needed, to simplify the setup of 
-		serverconfig dataset entries in local dev ang github CI
+        - uses copyDataFilesFromRepo2Tp() to create <tp>/files/hg38/TermdbTest
+          dir files or symlink, if the <tp> dir is writable
+        - will add a ProtectedTest entry as needed, to simplify the setup of 
+                serverconfig dataset entries in local dev ang github CI
 */
 
 // export a function to allow reuse of this dataset without causing conflicts
@@ -399,7 +399,8 @@ export default function (): Mds3 {
 			trackLst: {
 				jsonFile: 'files/hg38/TermdbTest/trackLst/facet.json',
 				activeTracks: ['bw 1', 'bed 1']
-			}
+			},
+			chat: {}
 		}
 	} satisfies Mds3
 }
