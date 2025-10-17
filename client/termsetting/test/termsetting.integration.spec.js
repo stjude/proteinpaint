@@ -615,16 +615,11 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 	await sleep(10)
 	const binary_lines = await detectGte({
 		elem: opts.pill.Inner.handler.dom.editDiv.node(),
-		selector: '.binsize_g line', //line',
+		selector: '.binsize_g line',
 		count: 1
-		// trigger: async () => { console.log(618)
-		// 	toggleButtons[3].click()
-		// }
 	})
 
-	//const binary_lines = .querySelectorAll('line')
-	// TODO: there should be only 1 line
-	test.equal(binary_lines.length, 8, 'Should have rendered UI for Binary menu')
+	test.equal(binary_lines.length, 1, 'Should have rendered UI for Binary menu')
 	if (test._ok) opts.pill.destroy()
 })
 
