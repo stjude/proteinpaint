@@ -15,7 +15,7 @@ import { getColors } from '#shared/common.js'
 import { rgb } from 'd3-color'
 import { TermTypes, isNumericTerm, termType2label } from '#shared/terms.js'
 import { dofetch3 } from '#common/dofetch'
-import { sayerror } from '#dom'
+import { sayerror, make_radios } from '#dom'
 import { maxSampleCutoff, defaultSampleNumCutoff } from '../plots/volcano/Volcano.ts'
 
 /*
@@ -505,28 +505,20 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 					const cell = radioRow.append('td')
 					const radioBtnDiv = cell.append('div')
 
-					const name = `de-method-${Date.now()}`
-					const items = radioBtnDiv
-						.selectAll('label')
-						.data(options)
-						.enter()
-						.append('label')
-						.style('display', 'inline-block')
-						.style('vertical-align', 'top')
-						.style('margin-right', '0.75rem')
-
-					items
-						.append('input')
-						.attr('type', 'radio')
-						.attr('name', name)
-						.attr('value', d => d.value)
-						.on('change', (event, d) => {
-							selectedMethod = d.value
-						})
-					items.append('span').text(d => d.label)
-
-					//preselect first option
-					radioBtnDiv.select(`input[name="${name}"]`).property('checked', true)
+					make_radios({
+						holder: radioBtnDiv,
+						inputName: `de-method-${Date.now()}`,
+						options: options.map((o, i) => ({
+							...o,
+							title: `${o.label} method`,
+							checked: i === 0 // preselect first option
+						})),
+						styles: {
+							display: 'inline-block',
+							padding: '0 12px 0 0'
+						},
+						callback: v => (selectedMethod = v)
+					})
 
 					launchDEDiv
 						.append('button')
