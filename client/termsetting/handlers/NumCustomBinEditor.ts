@@ -3,13 +3,7 @@ import type { NumCustomBins } from '#tw'
 import type { NumDiscreteEditor } from './NumDiscreteEditor.ts'
 import type { BoundaryOpts, LineData } from './NumericDensity.ts'
 import type { TermSetting } from '../TermSetting.ts'
-import type {
-	CustomNumericBinConfig,
-	CustomNumericBinConfigLst,
-	StartUnboundedBin,
-	StopUnboundedBin,
-	NumericBin
-} from '#types'
+import type { CustomNumericBinConfig, CustomNumericBinConfigLst, StartUnboundedBin, StopUnboundedBin } from '#types'
 import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
 
 export class NumCustomBinEditor {
@@ -109,27 +103,37 @@ export class NumCustomBinEditor {
 				? min + (max - min) / 2
 				: max
 
+		const firstBin = {
+			startunbounded: true,
+			startinclusive: false,
+			stopinclusive: false,
+			stop: +defaultCustomBoundary.toFixed(this.tw.term.type == 'integer' ? 0 : 2)
+		} satisfies StartUnboundedBin
+
+		const lastBin = {
+			stopunbounded: true,
+			startinclusive: true,
+			stopinclusive: false,
+			start: +defaultCustomBoundary.toFixed(this.tw.term.type == 'integer' ? 0 : 2)
+		} satisfies StopUnboundedBin
+
 		return {
-			type: 'custom-bin',
 			mode: 'discrete',
+			type: 'custom-bin',
 			lst: [
+				// Type '{ label: any; range: any; startunbounded: boolean; startinclusive: boolean; stopinclusive: boolean; stop: number; }' is not assignable to type 'StartUnboundedBin | FullyBoundedBin'.
+				// Property 'start' is missing in type '{ label: any; range: any; startunbounded: boolean; startinclusive: boolean; stopinclusive: boolean; stop: number; }' but required in type 'FullyBoundedBin'.
 				{
-					startunbounded: true,
-					startinclusive: false,
-					stopinclusive: false,
-					stop: +defaultCustomBoundary.toFixed(this.tw.term.type == 'integer' ? 0 : 2)
-				} satisfies NumericBin,
+					...firstBin,
+					label: get_bin_label(firstBin, this.tw.q, this.tw.term.valueConversion),
+					range: get_bin_range_equation(firstBin, this.tw.q)
+				},
 				{
-					stopunbounded: true,
-					startinclusive: true,
-					stopinclusive: false,
-					start: +defaultCustomBoundary.toFixed(this.tw.term.type == 'integer' ? 0 : 2)
-				} satisfies StopUnboundedBin
-			].map((bin: StartUnboundedBin | StopUnboundedBin) => {
-				if (!bin.label) bin.label = get_bin_label(bin, this.tw.q, this.tw.term.valueConversion)
-				bin.range = get_bin_range_equation(bin, this.tw.q)
-				return bin
-			}) as CustomNumericBinConfigLst // TODO: remove forced type
+					...lastBin,
+					label: get_bin_label(lastBin, this.tw.q, this.tw.term.valueConversion),
+					range: get_bin_range_equation(lastBin, this.tw.q)
+				} //satisfies StopUnboundedBin
+			]
 		}
 	}
 

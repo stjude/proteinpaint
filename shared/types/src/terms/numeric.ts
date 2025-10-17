@@ -155,6 +155,8 @@ export type BinaryNumericQ = MinBaseQ & {
 	type: 'custom-bin'
 	// tuple type with 2 members
 	lst: [StartUnboundedBin | FullyBoundedBin, StopUnboundedBin | FullyBoundedBin]
+	cutoffType?: 'normal' | 'percentile'
+	cutoffPercentile?: number
 }
 
 export type ContinuousNumericQ = MinBaseQ & {

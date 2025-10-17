@@ -106,7 +106,7 @@ export class NumericHandler extends HandlerBase implements Handler {
 		if (!this.handlerByMode[tabData.mode]) {
 			switch (tabData.mode) {
 				case 'continuous': {
-					const { NumContEditor } = await import('./NumContEditor.ts') // TODO
+					const { NumContEditor } = await import('./NumContEditor.ts')
 					this.handlerByMode.continuous = new NumContEditor(this.opts, this)
 					break
 				}
@@ -116,8 +116,8 @@ export class NumericHandler extends HandlerBase implements Handler {
 					break
 				}
 				case 'binary': {
-					const { NumDiscreteEditor } = await import('./NumDiscreteEditor.ts') // TODO
-					this.handlerByMode.binary = new NumDiscreteEditor(this.opts, this)
+					const { NumBinaryEditor } = await import('./NumBinaryEditor.ts')
+					this.handlerByMode.binary = new NumBinaryEditor(this.opts, this)
 					break
 				}
 				case 'spline': {
