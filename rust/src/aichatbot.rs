@@ -104,11 +104,9 @@ async fn main() -> Result<()> {
                         }
                     }
 
-                    println!("ai_json_file:{}", ai_json_file);
                     let ai_json_file = Path::new(&ai_json_file);
                     let ai_json_file_path;
                     let current_dir = std::env::current_dir().unwrap();
-                    println!("current_dir:{:?}", current_dir);
                     match ai_json_file.canonicalize() {
                         Ok(p) => ai_json_file_path = p,
                         Err(_) => {
@@ -951,8 +949,14 @@ struct SummaryType {
 
 impl SummaryType {
     #[allow(dead_code)]
-    pub fn sort_struct(&mut self) {
+    pub fn sort_summarytype_struct(&mut self) {
+        // This function is necessary for testing (test_ai.rs) to see if two variables of type "SummaryType" are equal or not. Without this a vector of two Summarytype holding the same values but in different order will be classified separately.
         self.summaryterms.sort()
+
+        //match self.filter {
+        //    Some(filterterms) => filterterms.sort(),
+        //    None => {}
+        //}
     }
 }
 
@@ -979,6 +983,17 @@ impl PartialOrd for SummaryTerms {
 enum FilterTerm {
     Categorical(CategoricalFilterTerm),
     Numeric(NumericFilterTerm),
+}
+
+impl PartialOrd for FilterTerm {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self, other) {
+            (FilterTerm::Categorical(_), FilterTerm::Categorical(_)) => Some(std::cmp::Ordering::Equal),
+            (FilterTerm::Numeric(_), FilterTerm::Numeric(_)) => Some(std::cmp::Ordering::Equal),
+            (FilterTerm::Categorical(_), FilterTerm::Numeric(_)) => Some(std::cmp::Ordering::Greater),
+            (FilterTerm::Numeric(_), FilterTerm::Categorical(_)) => Some(std::cmp::Ordering::Greater),
+        }
+    }
 }
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]

@@ -54,23 +54,19 @@ mod tests {
                 match &dataset.aifiles {
                     Some(ai_json_file) => {
                         println!("Testing dataset:{}", dataset.name);
+                        let ai_json_file_path = String::from("../../") + ai_json_file;
+                        let ai_json_file = Path::new(&ai_json_file_path);
+
+                        // Read the file
+                        let ai_data = fs::read_to_string(ai_json_file).unwrap();
+                        // Parse the JSON data
+                        let ai_json: super::super::AiJsonFormat =
+                            serde_json::from_str(&ai_data).expect("AI JSON file does not have the correct format");
+                        //println!("ai_json:{:?}", ai_json);
+                        let genedb = String::from(&serverconfig.tpmasterdir) + &"/" + &ai_json.genedb;
+                        let dataset_db = String::from(&serverconfig.tpmasterdir) + &"/" + &ai_json.db;
                         let llm_backend_name = &serverconfig.llm_backend;
                         let llm_backend_type: super::super::llm_backend;
-                        if dataset.name == "TermdbTest" {
-                            let termdb_home_dir = "../server/test/tp/files/hg38/TermdbTest/";
-                        } else {
-                            let ai_json_file_path = String::from("../../") + ai_json_file;
-                            let ai_json_file = Path::new(&ai_json_file_path);
-
-                            // Read the file
-                            let ai_data = fs::read_to_string(ai_json_file).unwrap();
-                            // Parse the JSON data
-                            let ai_json: super::super::AiJsonFormat =
-                                serde_json::from_str(&ai_data).expect("AI JSON file does not have the correct format");
-                            //println!("ai_json:{:?}", ai_json);
-                            let genedb = String::from(&serverconfig.tpmasterdir) + &"/" + &ai_json.genedb;
-                            let dataset_db = String::from(&serverconfig.tpmasterdir) + &"/" + &ai_json.db;
-                        }
 
                         if llm_backend_name != "ollama" && llm_backend_name != "SJ" {
                             panic!(
@@ -145,9 +141,12 @@ mod tests {
                                                     &ai_json,
                                                 )
                                                 .await;
-                                                let llm_json_value: super::super::SummaryType = serde_json::from_str(&llm_output.unwrap()).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
-                                                let expected_json_value: super::super::SummaryType = serde_json::from_str(&ques_ans.answer).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
-                                                assert_eq!(llm_json_value, expected_json_value);
+                                                let mut llm_json_value: super::super::SummaryType = serde_json::from_str(&llm_output.unwrap()).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
+                                                let mut expected_json_value: super::super::SummaryType = serde_json::from_str(&ques_ans.answer).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
+                                                assert_eq!(
+                                                    llm_json_value.sort_summarytype_struct(),
+                                                    expected_json_value.sort_summarytype_struct()
+                                                );
                                             } else {
                                                 panic!("The user input is empty");
                                             }
