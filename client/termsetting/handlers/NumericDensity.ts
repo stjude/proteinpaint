@@ -185,8 +185,8 @@ export class NumericDensity {
 			.attr('y2', plot_size.height)
 			.style('cursor', (d: LineData) => (d.isDraggable ? 'ew-resize' : ''))
 			.style('display', (d: LineData) => (!d.isDraggable && d.scaledX > lastVisibleScaledX ? 'none' : ''))
-			.on('mouseover', function (this: BaseType, d: LineData) {
-				if (tw.q.type != 'regular-bin' || d.isDraggable) select(this).style('stroke-width', 3)
+			.on('mouseover', function (this: SVGLineElement, _, d: LineData) {
+				if (d.isDraggable) select(this).style('stroke-width', 3)
 			})
 			.on('mouseout', function (this: BaseType) {
 				select(this).style('stroke-width', 1)

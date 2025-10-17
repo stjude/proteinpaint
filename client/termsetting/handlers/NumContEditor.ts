@@ -92,8 +92,8 @@ export class NumContEditor extends HandlerBase implements Handler {
 	}
 
 	applyEdits() {
-		this.termsetting.q = this.q
 		setTimeout(() => this.destroy(), 0)
+		return this.q
 	}
 
 	destroy() {

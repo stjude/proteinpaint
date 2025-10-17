@@ -1,4 +1,4 @@
-import type { Filter, Q, TermWrapper, Term } from '#types'
+import type { Filter, Q, TermWrapper, Term, NumericQ } from '#types'
 import type { TermSettingApi } from './TermSettingApi.ts'
 import type { TermdbVocab } from '#termdb/TermdbVocab'
 //import type { FrontendVocab } from '#termdb/FrontendVocab'
@@ -164,6 +164,7 @@ export interface Handler {
 	postMain?: () => void
 	applyEdits: () => void
 	undoEdits: () => void
+	getEditedQ?: () => NumericQ
 }
 
 export interface HandlerGenerator {
