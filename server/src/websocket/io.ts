@@ -1,4 +1,5 @@
 import { Server } from 'socket.io'
+import { getLast } from './taskManager.ts'
 
 let io: Server | null = null
 
@@ -12,6 +13,8 @@ export function mountSocketIO(server: any) {
 		socket.on('subscribe-job', (jobId: string) => {
 			console.log(`socket ${socket.id} subscribing to job ${jobId}`)
 			socket.join(`job:${jobId}`)
+			const last = getLast(jobId);
+    		if (last) socket.emit('task-progress', last)
 		})
 		socket.on('unsubscribe-job', (jobId: string) => {
 			socket.leave(`job:${jobId}`)
