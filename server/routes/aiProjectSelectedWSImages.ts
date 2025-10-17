@@ -35,6 +35,7 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dataset name'
 
 			progress = createProgress(query?.jobId)
+			console.log(38, `Starting aiProjectSelectedWSImages for job ${progress.jobId}`)
 			res.status(202).json({ jobId: progress.jobId })
 			progress.emit({ percent: 0, status: 'queued', message: 'Loading images...' })
 

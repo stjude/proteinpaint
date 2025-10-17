@@ -18,7 +18,7 @@ import { sendMessageToSlack } from './postOnSlack.ts'
 import { routeFiles } from './app.routes.js'
 import { setPythonBinPath } from '@sjcrh/proteinpaint-python'
 import { CacheManager } from './CacheManager.ts'
-import { getIO, mountSocketIO } from './websocket/socket.ts'
+import { getIO, mountSocketIO } from './websocket/io.ts'
 
 const basepath = serverconfig.basepath || ''
 Object.freeze(process.argv)

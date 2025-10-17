@@ -1,4 +1,4 @@
-import { getIO } from './socket.ts'
+import { getIO } from './io.ts'
 
 export type Progress = {
 	jobId: string
@@ -17,22 +17,32 @@ export function createProgress(jobId = getId()): Progress {
 	const room = `job:${jobId}`
 	console.log(`created progress for job ${jobId} in room ${room}`)
 
-	const emit = (partial: any) => {
-		console.log(21, `emitting to ${room}:`, partial)
-		io.to(room).emit('task-progress', { jobId, ...partial })
+	const push = (payload: any) => {
+		remember(jobId, payload)
+		console.log(21, `emitting to ${room}:`, payload)
+		io.to(room).emit('task-progress', { jobId, ...payload })
 	}
 
 	// initial
-	emit({ percent: 0, status: 'queued', message: 'Queued' })
+	push({ percent: 0, status: 'queued' })
 
 	return {
 		jobId,
-		emit: p => emit({ status: 'running', ...p }),
-		done: data => emit({ percent: 100, status: 'completed', data }),
-		fail: err => emit({ status: 'error', message: (err as Error)?.message || String(err) })
+		emit: p => push({ status: 'running', ...p }),
+		done: data => push({ percent: 100, status: 'completed', data }),
+		fail: err => push({ status: 'error', message: (err as Error)?.message || String(err) })
 	}
 }
 
 function getId() {
 	return Math.random().toString(36).slice(2)
+}
+
+//For caching last progress state
+const lastProgress = new Map<string, any>()
+export function remember(jobId: string, payload: any) {
+	lastProgress.set(jobId, { jobId, ...payload })
+}
+export function getLast(jobId: string) {
+	return lastProgress.get(jobId)
 }

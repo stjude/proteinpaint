@@ -245,23 +245,15 @@ export class ViewModelProvider {
 		aiProjectID: number,
 		aiProjectFiles: Array<string>
 	): Promise<AiProjectSelectedWSImagesResponse> {
-		/** TODO: Tmp proof of concept. Needs a fix
-		 * jobID should be returned from the route itself as
-		 * res.send({jobId: 'xxxx'}). Problem is it's not returning
-		 * before the route ends as expected. subscribe-job fires
-		 * after all the progress events have been sent.
-		 */
-		const jobId = 'test-' + Math.random().toString(36).slice(2)
-		socket.emit('subscribe-job', jobId)
-
 		const body: AiProjectSelectedWSImagesRequest = {
 			genome: genome,
 			dslabel: dslabel,
 			projectId: aiProjectID,
-			wsimagesFilenames: aiProjectFiles,
-			jobId: jobId
+			wsimagesFilenames: aiProjectFiles
 		}
-		await dofetch3('aiProjectSelectedWSImages', { body })
+		const res = await dofetch3('aiProjectSelectedWSImages', { body })
+		const jobId = res.jobId
+		socket.emit('subscribe-job', jobId)
 
 		//TODO: This needs to be reusable code for other routes that use progress
 		return new Promise<AiProjectSelectedWSImagesResponse>((resolve, reject) => {
