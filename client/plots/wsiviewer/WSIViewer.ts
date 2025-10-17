@@ -53,11 +53,17 @@ class WSIViewer extends PlotBase implements RxComponent {
 			.style('display', 'none')
 		this.dom = {
 			holder: opts.holder,
-			loadingDiv: {
+			loading: {
 				//Maybe move to #dom later????
 				div: loadingDiv,
-				bar: loadingDiv.append('progress'),
-				percent: loadingDiv.append('span').text('0%')
+				bar: loadingDiv
+					.append('progress')
+					.attr('id', 'bar')
+					.style('width', '360px')
+					.style('height', '18px')
+					.attr('value', '0')
+					.attr('max', '100'),
+				percent: loadingDiv.append('span').attr('id', 'percent').text('0%')
 			},
 			errorDiv: opts.holder.append('div').attr('class', 'wsiViewer-error').style('margin-left', '10px'),
 			mapHolder: opts.holder.append('div').attr('id', 'wsiviewer-mapHolder'),
@@ -110,7 +116,8 @@ class WSIViewer extends PlotBase implements RxComponent {
 			settings.annotatedPatchBorderColor,
 			aiProjectID,
 			aiWSIMageFiles,
-			settings
+			settings,
+			this.dom
 		)
 
 		const wsimages = viewModel.sampleWSImages
@@ -136,7 +143,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 		const imageViewData: ImageViewData = viewModel.getImageViewData(settings.displayedImageIndex)
 
 		if (settings.renderWSIViewer) {
-			// this.wsiViewerInteractions.toggleLoadingDiv(settings.renderAnnotationTable)
+			this.wsiViewerInteractions.toggleLoadingDiv(settings.renderAnnotationTable)
 
 			if (this.thumbnailsContainer != undefined) {
 				this.thumbnailsContainer.remove()
