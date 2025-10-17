@@ -20,13 +20,19 @@ class AlphaGenome extends PlotBase {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		return {
-			config
+			config,
+			ontologyTerms: appState.termdbConfig.alphaGenome.ontologyTerms
 		}
 	}
 
 	async init(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
+		const body = {
+			ontologyTerms: appState.termdbConfig.alphaGenome.ontologyTerms
+		}
 		this.opts.header.text('Alpha Genome Variant Predictor')
-		const { sampleTypes } = await dofetch3('alphaGenomeSampleTypes', {})
+		const { sampleTypes } = await dofetch3('alphaGenomeSampleTypes', { body })
+		console.log(sampleTypes)
 		this.setControls({ sampleTypes })
 	}
 
@@ -65,8 +71,7 @@ class AlphaGenome extends PlotBase {
 				type: 'dropdown',
 				multiple: true,
 				options: sampleTypes,
-				title:
-					'Ontology term. If none provided will plot all: UBERON:0000955(brain), UBERON:0000310(breast), UBERON:0002107(liver), UBERON:0002367(prostate), UBERON:0002048(lung), UBERON:0001155(colon)',
+				title: 'Sample type',
 				chartType: this.type,
 				settingsKey: 'ontologyTerms'
 			}
@@ -99,24 +104,15 @@ class AlphaGenome extends PlotBase {
 	}
 }
 
-export function getPlotConfig(opts) {
+export function getPlotConfig(opts, app) {
+	const alphaGenome = (app.vocabApi.termdbConfig.alphaGenome = app.vocabApi.termdbConfig.alphaGenome)
 	const config = {
 		hidePlotFilter: true,
 		settings: {
 			alphaGenome: {
 				controls: { isOpen: false },
-				chromosome: 'chr22',
-				position: 36201698,
-				reference: 'A',
-				alternate: 'C',
-				ontologyTerms: [
-					'UBERON:0000955', // brain
-					'UBERON:0000310', // female breast
-					'UBERON:0002107', // liver
-					'UBERON:0002367', // prostate
-					'UBERON:0002048', // lung
-					'UBERON:0001155' // colon
-				]
+				...alphaGenome.defaultMutation,
+				ontologyTerms: alphaGenome.ontologyTerms
 			}
 		}
 	}

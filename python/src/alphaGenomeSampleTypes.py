@@ -13,7 +13,6 @@
 # If red (ALT) is higher than gray (REF), the variant increases expression. If red dips below gray, the variant may decrease expression or disrupt splicing.
 # If the effect (divergence) appears only in one or few tissues, it’s tissue-specific. If it appears in many, it may have a broad regulatory effect.
 
-#
 #In order to test this code, you need to set the environment variable API_KEY to your API key.
 #
 
@@ -32,70 +31,23 @@ import os
 try:
     input_data = sys.stdin.read()
     parsed_data = json.loads(input_data)
-    position = int(parsed_data['position']) or 36201698
-    chromosome = parsed_data['chromosome'] or 'chr22'
-    reference = parsed_data['reference'] or 'A'
-    alternate = parsed_data['alternate'] or 'C'
-    ontology_terms = parsed_data.get('ontologyTerms', [
-            'UBERON:0000955',  # brain
-            'UBERON:0000310',  # breast
-            'UBERON:0002367',  # prostate
-            'UBERON:0001155',  # colon
-            'UBERON:0002048',  # lung
-            'UBERON:0013756',  # blood
-            'UBERON:0002113',  # kidney
-            'UBERON:0000945',  # stomach
-            'UBERON:0002107',  # liver
-        ])
-    #alphagenone uses hg38 genome coordinates
+    ontology_terms = parsed_data['ontologyTerms'] or None
 
     API_KEY = os.getenv("API_KEY")
     model = dna_client.create(API_KEY)
-    len = 1024  #16384//2
-    interval = genome.Interval(chromosome=chromosome, start=position-len, end=position+len)
-    variant = genome.Variant(
-        chromosome=chromosome,
-        position=position,
-        reference_bases=reference,
-        alternate_bases=alternate,
-    )
 
-    outputs = model.predict_variant(
-        interval=interval,
-        variant=variant,
-        ontology_terms=ontology_terms,
-        requested_outputs=[
-            dna_client.OutputType.RNA_SEQ
-        ],
-    )
+    metadata = model.output_metadata(dna_client.Organism.HOMO_SAPIENS).rna_seq
+    df = metadata
+    # Convert to DataFrame
+    #df = uberon_metadata.concatenate()
+
+    label_map = dict(zip(df.ontology_curie, df.biosample_name))
+    # filter by ontology terms
+    if ontology_terms:
+        label_map = {k: v for k, v in label_map.items() if k in ontology_terms}
+    print(json.dumps(label_map))
 
 
-    tdata = {
-                'REF': outputs.reference.rna_seq,
-                'ALT': outputs.alternate.rna_seq,
-            }
-    fig = plot_components.plot(
-        [
-            plot_components.OverlaidTracks(
-                tdata=tdata,
-                colors={'REF': 'dimgrey', 'ALT': 'red'},
-                ylabel_template='{biosample_name} ({strand})\n{name}'
-            ),
-        ],
-        interval=outputs.reference.rna_seq.interval,
-        # Annotate the location of the variant as a vertical line.
-        annotations=[plot_components.VariantAnnotation([variant], alpha=0.8)],
-    )
-
-
-    # Output the image data to stdout
-    buf = io.BytesIO()
-    fig.savefig(buf, format='png', bbox_inches='tight', facecolor='white')
-    data = base64.b64encode(buf.getbuffer()).decode("ascii")
-    buffer_url = f"data:image/png;base64,{data}"
-    buf.seek(0)
-    plt.close()
-    print(buffer_url)
 except Exception as e:
     print(f"Error: {str(e)}", file=sys.stderr)
     sys.exit(1)

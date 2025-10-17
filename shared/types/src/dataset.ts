@@ -1576,6 +1576,10 @@ keep this setting here for reason of:
 	//terms  are shown in the dictionary based on term and user role.
 	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
 	getAdditionalFilter?: (__protected__: any, term: any) => Filter | undefined
+	alphaGenome?: {
+		ontologyTerms: string[]
+		defaultMutation: { gene: string; chromosome: string; position: number; reference: string; alternate: string }
+	}
 }
 
 type SampleType = {
