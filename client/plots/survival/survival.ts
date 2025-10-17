@@ -210,7 +210,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 							type: 'checkbox',
 							chartType: 'survival',
 							settingsKey: 'ciVisible',
-							title: 'Display 95% confidence interval'
+							title: 'Display the 95% confidence interval'
 						},
 						{
 							label: 'Censored Symbol',
