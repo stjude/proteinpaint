@@ -288,7 +288,7 @@ function table_snvindel({ mlst, tk, block }, table) {
 			td3.text('Alpha Genome')
 			td4
 				.append('a')
-				.text('View variant score')
+				.text('View')
 				.on('click', async () => {
 					openAlphaGenome(m)
 				})
