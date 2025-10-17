@@ -422,13 +422,13 @@
     },
     "lowestPct": {
       "curr": 76.94,
-      "prev": 76.79,
-      "diff": 0.14999999999999147
+      "prev": 76.94,
+      "diff": 0
     },
     "averagePct": {
       "curr": 83.3725,
-      "prev": 83.28500000000001,
-      "diff": 0.08749999999999147
+      "prev": 83.3725,
+      "diff": 0
     }
   },
   "src/test/termdb.bins.unit.spec.js": {
