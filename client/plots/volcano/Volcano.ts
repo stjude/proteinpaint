@@ -13,10 +13,6 @@ import { VolcanoPlotView } from './view/VolcanoPlotView'
 import { VolcanoControlInputs } from './VolcanoControlInputs'
 import { getCombinedTermFilter } from '#filter'
 
-// The max sample cutoff for volcano rendering
-export const maxSampleCutoff = 4000
-export const defaultSampleNumCutoff = 3000
-
 class Volcano extends PlotBase implements RxComponent {
 	static type = 'volcano'
 	type: string

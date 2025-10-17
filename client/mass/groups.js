@@ -16,7 +16,7 @@ import { rgb } from 'd3-color'
 import { TermTypes, isNumericTerm, termType2label } from '#shared/terms.js'
 import { dofetch3 } from '#common/dofetch'
 import { sayerror, make_radios } from '#dom'
-import { maxSampleCutoff, defaultSampleNumCutoff } from '../plots/volcano/Volcano.ts'
+import { maxSampleCutoff, maxGESampleCutoff } from '../plots/volcano/defaults.ts'
 
 /*
 this
@@ -484,7 +484,7 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 				const sample_size_limit = 8
 				if (!preAnalysisData.data.alert) {
 					const options =
-						numControl + numCase >= defaultSampleNumCutoff
+						numControl + numCase >= maxGESampleCutoff
 							? [{ label: 'Wilcoxon', value: 'wilcoxon' }]
 							: numControl <= sample_size_limit && numCase <= sample_size_limit
 							? [
