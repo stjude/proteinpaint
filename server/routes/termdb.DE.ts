@@ -212,15 +212,8 @@ values[] // using integer sample id
 	const sample_size1 = group1names.length
 	const sample_size2 = group2names.length
 
+	const alerts = validateGroups(sample_size1, sample_size2, group1names, group2names)
 	if (param.preAnalysis) {
-		const alerts: string[] = []
-		if (sample_size1 < 1) alerts.push('sample size of group1 < 1')
-		if (sample_size2 < 1) alerts.push('sample size of group2 < 1')
-
-		// Detect common samples
-		const common = group1names.filter(x => group2names.includes(x))
-		if (common.length) alerts.push(`Common samples found: ${common.join(', ')}`)
-
 		const group1Name = param.samplelst.groups[0].name
 		const group2Name = param.samplelst.groups[1].name
 		return {
@@ -231,15 +224,7 @@ values[] // using integer sample id
 			}
 		}
 	}
-
-	if (sample_size1 < 1) throw 'sample size of group1 < 1'
-	if (sample_size2 < 1) throw 'sample size of group2 < 1'
-	// pass group names and txt file to rust
-
-	const commonnames = group1names.filter(element => group2names.includes(element))
-	if (commonnames.length > 0) {
-		throw 'Common elements found between both groups:' + commonnames.map(i => i).join(',')
-	}
+	if (alerts.length) throw alerts.join(' | ')
 
 	const cases_string = group2names.map(i => i).join(',')
 	const controls_string = group1names.map(i => i).join(',')
@@ -330,6 +315,18 @@ values[] // using integer sample id
 	mayLog('Time taken to run rust DE pipeline:', formatElapsedTime(Date.now() - time1))
 	param.method = 'wilcoxon'
 	return { data: result, sample_size1: sample_size1, sample_size2: sample_size2, method: param.method } as DEResponse
+}
+
+function validateGroups(sample_size1: number, sample_size2: number, group1names: string[], group2names: string[]) {
+	const alerts: string[] = []
+
+	if (sample_size1 < 1) alerts.push('sample size of group1 < 1')
+	if (sample_size2 < 1) alerts.push('sample size of group2 < 1')
+
+	const commonnames = group1names.filter(x => group2names.includes(x))
+	if (commonnames.length) alerts.push(`Common elements found between both groups: ${commonnames.join(', ')}`)
+
+	return alerts
 }
 
 async function readFileAndDelete(file, key, response) {
