@@ -2449,38 +2449,38 @@
   },
   "mass/groups.js": {
     "lines": {
-      "total": 413,
+      "total": 454,
       "covered": 145,
       "skipped": 0,
-      "pct": 35.1
+      "pct": 31.93
     },
     "functions": {
-      "total": 72,
+      "total": 75,
       "covered": 19,
       "skipped": 0,
-      "pct": 26.38
+      "pct": 25.33
     },
     "statements": {
-      "total": 449,
+      "total": 490,
       "covered": 152,
       "skipped": 0,
-      "pct": 33.85
+      "pct": 31.02
     },
     "branches": {
-      "total": 191,
+      "total": 210,
       "covered": 43,
       "skipped": 0,
-      "pct": 22.51
+      "pct": 20.47
     },
     "lowestPct": {
-      "curr": 22.51,
-      "prev": 21.13,
-      "diff": 1.3800000000000026
+      "curr": 20.47,
+      "prev": 22.51,
+      "diff": -2.0400000000000027
     },
     "averagePct": {
-      "curr": 29.460000000000004,
-      "prev": 29.45,
-      "diff": 0.010000000000005116
+      "curr": 27.1875,
+      "prev": 29.460000000000004,
+      "diff": -2.2725000000000044
     }
   },
   "filter/test/tvs.integration.spec.js": {
@@ -8174,37 +8174,37 @@
   "plots/volcano/defaults.ts": {
     "lines": {
       "total": 22,
-      "covered": 19,
+      "covered": 3,
       "skipped": 0,
-      "pct": 86.36
+      "pct": 13.63
     },
     "functions": {
       "total": 4,
-      "covered": 4,
+      "covered": 0,
       "skipped": 0,
-      "pct": 100
+      "pct": 0
     },
     "statements": {
       "total": 23,
-      "covered": 19,
+      "covered": 3,
       "skipped": 0,
-      "pct": 82.6
+      "pct": 13.04
     },
     "branches": {
       "total": 19,
-      "covered": 11,
+      "covered": 0,
       "skipped": 0,
-      "pct": 57.89
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 57.89,
-      "prev": 0,
-      "diff": 57.89
+      "curr": 0,
+      "prev": 57.89,
+      "diff": -57.89
     },
     "averagePct": {
-      "curr": 81.7125,
-      "prev": 0,
-      "diff": 81.7125
+      "curr": 6.6675,
+      "prev": 81.7125,
+      "diff": -75.045
     }
   }
 }
