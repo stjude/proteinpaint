@@ -425,6 +425,13 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 				}
 				const preAnalysisData = await dofetch3('DEanalysis', { body })
 
+				const tip = self.tip2
+				if (!preAnalysisData?.data) {
+					tip.clear().showunderoffset(itemDiv.node())
+					sayerror(tip.d.append('div'), 'Error retrieving pre-analysis data')
+					throw new Error('no data returned from pre-analysis request')
+				}
+
 				const numControl = preAnalysisData.data[samplelstTW.q.groups[0].name]
 				const numCase = preAnalysisData.data[samplelstTW.q.groups[1].name]
 
@@ -440,7 +447,6 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 				}
 
 				// display actual numbers of samples with rnaseq count
-				const tip = self.tip2
 				tip.clear().showunderoffset(itemDiv.node())
 				const menuDiv = tip.d.append('div')
 				const table = table2col({ holder: menuDiv })
