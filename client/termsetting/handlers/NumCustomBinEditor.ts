@@ -43,36 +43,6 @@ export class NumCustomBinEditor {
 			callback: (d: LineData, value) => {
 				const boundaryValues = this.q.lst.slice(1).map(d => ('start' in d ? d.start : ''))
 				boundaryValues[d.index] = value
-
-				// const q = this.q
-				// q.lst![d.index + 1].start = value as number
-				// q.lst![d.index + 1].label = get_bin_label(q.lst![d.index + 1], self.q)
-				// q.lst![d.index + 1].range = get_bin_range_equation(q.lst![d.index + 1], self.q)
-				// q.lst![d.index].stop = value as number
-				// q.lst![d.index].label = get_bin_label(q.lst![d.index], self.q)
-				// q.lst![d.index].range = get_bin_range_equation(q.lst![d.index], self.q)
-				// if (handler.dom.customBinBoundaryInput) {
-				// 	// this is created by binary.js when mode=binary
-				// 	// quick fix: while dragging, revert from percentile to normal, as it's hard to update percentile values
-				// 	q.modeBinaryCutoffType = 'normal'
-				// 	if (handler.dom.customBinBoundaryPercentileCheckbox) {
-				// 		handler.dom.customBinBoundaryPercentileCheckbox.property('checked', false)
-				// 	}
-				// 	handler.dom.customBinBoundaryInput.property(
-				// 		'value',
-				// 		self.q
-				// 			.lst!.slice(1)
-				// 			.map((d: any) => d.start)
-				// 			.join('\n')
-				// 	)
-				// }
-				// if (handler.dom.customBinLabelInput) {
-				// 	handler.dom.customBinLabelInput.property('value', (c: any) => c.label)
-				// }
-				// if (handler.dom.customBinRanges) {
-				// 	handler.dom.customBinRanges.html((c: any) => c.range)
-				// }
-
 				this.dom.customBinBoundaryInput.text(boundaryValues.join(',\n'))
 				this.handleInputChange('drag')
 				return 0

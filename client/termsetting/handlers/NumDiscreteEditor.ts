@@ -178,11 +178,11 @@ export class NumDiscreteEditor extends HandlerBase implements Handler {
 		new Tabs({ holder: div, tabs }).main()
 	}
 
-	applyEdits() {
+	getEditedQ() {
 		const v = this.dom.boundaryInput.property('value')
 		const startinclusive = v == 'startinclusive'
 		const stopinclusive = v == 'stopinclusive'
-		this.termsetting.q = this.editorsByType[this.activeTab].getEditedQ(startinclusive, stopinclusive)
+		return this.editorsByType[this.activeTab].getEditedQ(startinclusive, stopinclusive)
 		//setTimeout(() => this.destroy(), 0)
 	}
 

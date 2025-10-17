@@ -121,8 +121,8 @@ export class NumericHandler extends HandlerBase implements Handler {
 					break
 				}
 				case 'spline': {
-					const { NumDiscreteEditor } = await import('./NumDiscreteEditor.ts') // TODO
-					this.handlerByMode.spline = new NumDiscreteEditor(this.opts, this)
+					const { NumSplineEditor } = await import('./NumSplineEditor.ts')
+					this.handlerByMode.spline = new NumSplineEditor(this.opts, this)
 					break
 				}
 				default:
@@ -161,7 +161,7 @@ export class NumericHandler extends HandlerBase implements Handler {
 	}
 
 	applyEdits() {
-		this.editHandler.applyEdits()
+		if (this.editHandler.getEditedQ) this.termsetting.q = this.editHandler.getEditedQ()
 		this.termsetting.dom.tip.hide()
 		this.termsetting.api.runCallback()
 	}

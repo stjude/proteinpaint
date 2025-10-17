@@ -37,13 +37,13 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 
 	async showEditMenu(div) {
 		if (this.dom.density_div) {
-			if (this.handler.dom.binsDiv?.node().contains(this.dom.inputsDiv.node())) return
+			if (this.handler.dom.editDiv?.node().contains(this.dom.density_div.node())) return
 			else {
 				this.dom.density_div.remove()
-				delete this.dom.inputsDiv
+				delete this.dom.density_div
 			}
 		}
-
+		this.q = this.getDefaultQ()
 		this.dom.density_div = div.append('div')
 		await this.handler.density.showViolin(this.dom.density_div)
 		await this.handler.density.setBinLines(this.getBoundaryOpts())
@@ -56,30 +56,12 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 		this.renderBoundaryInputDivs()
 	}
 
-	getBoundaryOpts(): BoundaryOpts {
-		return {
-			values: [
-				{
-					//this.q.lst[0].map(bin => ({ x: bin.startunbounded ? bin.stop : bin.start, isDraggable: true })),
-					x: this.q.lst[0].stop,
-					isDraggable: true
-				}
-			],
-			callback: (d: LineData, value) => {
-				const boundaryValues = this.q.lst.slice(1).map(d => ('start' in d ? d.start : ''))
-				boundaryValues[d.index] = value
-				this.dom.cutoffInput.text(boundaryValues.join(',\n'))
-				//this.handleInputChange('drag')
-				//return 0
-			}
-		}
-	}
-
 	getDefaultQ(): BinaryNumericQ {
-		if (this.tw.q.mode == 'binary') {
-			const copy = JSON.parse(JSON.stringify(this.tw.q))
+		const tw = this.termsetting.tw as NumCustomBins
+		if (tw.q.mode == 'binary') {
+			const copy = JSON.parse(JSON.stringify(tw.q))
 			copy.lst.forEach(bin => {
-				if (!bin.label) bin.label = get_bin_label(bin, this.tw.q, this.tw.term.valueConversion)
+				if (!bin.label) bin.label = get_bin_label(bin, tw.q, tw.term.valueConversion)
 				bin.range = get_bin_range_equation(bin, this.tw.q)
 			})
 			return copy
@@ -129,6 +111,26 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 			],
 			cutoffType: 'normal'
 		} //as BinaryNumericQ //TODO: remove forced type
+	}
+
+	getBoundaryOpts(): BoundaryOpts {
+		return {
+			values: [
+				{
+					//this.q.lst[0].map(bin => ({ x: bin.startunbounded ? bin.stop : bin.start, isDraggable: true })),
+					x: this.q.lst[0].stop,
+					isDraggable: true
+				}
+			],
+			callback: (d: LineData, value) => {
+				this.q.lst[0].stop = value
+				this.q.lst[1].start = value
+				this.dom.cutoffInput.property('value', value)
+				this.q.lst = this.processBinaryBinInputs()
+				this.dom.customBinRanges.data(this.q.lst).html(d => d.range)
+				this.dom.customBinLabelInput.data(this.q.lst).property('value', d => d.label)
+			}
+		}
 	}
 
 	getBoundaryInclusion() {
@@ -235,15 +237,15 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 			.style('align-items', 'center')
 
 		grid.append('div').style('margin-bottom', '3px').style('color', 'rgb(136, 136, 136)').text('Range')
-
 		grid.append('div').style('margin-bottom', '3px').style('color', 'rgb(136, 136, 136)').text('Bin label')
 
 		for (const d of data) {
-			grid.append('div').attr('name', 'range').html(d.range)
+			grid.append('div').datum(d).attr('name', 'range').html(d.range)
 
 			grid
 				.append('div')
 				.append('input')
+				.datum(d)
 				.attr('type', 'text')
 				.style('margin', '2px 0px')
 				.property('value', d.label)
@@ -252,8 +254,8 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 				})
 		}
 
-		this.dom.customBinRanges = this.dom.inputsDiv.selectAll('div[name="range"]').data(data)
-		this.dom.customBinLabelInput = this.dom.inputsDiv.selectAll('input').data(data)
+		this.dom.customBinRanges = this.dom.inputsDiv.selectAll('div[name="range"]')
+		this.dom.customBinLabelInput = this.dom.inputsDiv.selectAll('input')
 		this.handler.density.setBinLines(this.getBoundaryOpts())
 	}
 
@@ -282,11 +284,13 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 		const bins: [StartUnboundedBin, StopUnboundedBin] = [
 			{
 				...firstBin,
-				label: get_bin_label(firstBin, this.q)
+				label: get_bin_label(firstBin, this.q),
+				range: get_bin_range_equation(firstBin, this.tw.q)
 			},
 			{
 				...lastBin,
-				label: get_bin_label(lastBin, this.q)
+				label: get_bin_label(lastBin, this.q),
+				range: get_bin_range_equation(lastBin, this.tw.q)
 			}
 		]
 

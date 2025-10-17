@@ -79,7 +79,7 @@ export class TermSettingApi {
 		}
 		const otw = overrideTw ? JSON.parse(JSON.stringify(overrideTw)) : {}
 		const tw = overrideTw ? copyMerge(JSON.stringify(arg), otw) : arg
-		if (self.tw instanceof CategoricalBase || self.tw instanceof SnpBase)
+		if (self.tw instanceof CategoricalBase || self.tw instanceof SnpBase || self.tw instanceof NumericBase)
 			self.tw = await TwRouter.initRaw(tw, self.opts)
 		if (self.opts.callback) self.opts.callback(tw)
 	}
