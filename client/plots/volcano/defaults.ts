@@ -2,9 +2,9 @@ import { roundValue } from '#shared/roundValue.js'
 import type { VolcanoSettings } from './VolcanoTypes'
 
 // The max sample cutoff for volcano rendering
-const maxSampleCutoff = 4000
+export const maxSampleCutoff = 4000
 // The max sample cutoff for gene expression term type
-const maxGESampleCutoff = 3000
+export const maxGESampleCutoff = 3000
 
 export function getDefaultVolcanoSettings(overrides = {}, opts: any): VolcanoSettings {
 	const features = JSON.parse(sessionStorage.getItem('optionalFeatures') as string)
