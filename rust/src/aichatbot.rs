@@ -949,12 +949,30 @@ struct SummaryType {
     message: Option<String>,
 }
 
-#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+impl SummaryType {
+    #[allow(dead_code)]
+    pub fn sort_struct(&mut self) {
+        self.summaryterms.sort()
+    }
+}
+
+#[derive(PartialEq, Eq, Ord, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 enum SummaryTerms {
     #[allow(non_camel_case_types)]
     clinical(String),
     #[allow(non_camel_case_types)]
     geneExpression(String),
+}
+
+impl PartialOrd for SummaryTerms {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self, other) {
+            (SummaryTerms::clinical(_), SummaryTerms::clinical(_)) => Some(std::cmp::Ordering::Equal),
+            (SummaryTerms::geneExpression(_), SummaryTerms::geneExpression(_)) => Some(std::cmp::Ordering::Equal),
+            (SummaryTerms::clinical(_), SummaryTerms::geneExpression(_)) => Some(std::cmp::Ordering::Greater),
+            (SummaryTerms::geneExpression(_), SummaryTerms::clinical(_)) => Some(std::cmp::Ordering::Greater),
+        }
+    }
 }
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
