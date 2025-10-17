@@ -31,74 +31,81 @@ export const api: RouteApi = {
 
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
-		let progress: ReturnType<typeof createProgress> | undefined
+		const progress = createProgress(req.query?.jobId)
+		res.status(202).json({ jobId: progress.jobId })
 
-		try {
-			const query: AiProjectSelectedWSImagesRequest = req.query
-			const g = genomes[query.genome]
-			if (!g) throw 'invalid genome name'
-			const ds = g.datasets[query.dslabel]
-			if (!ds) throw 'invalid dataset name'
+		/** TODO: Timeout creates enough delay to allow the response
+		 * to be sent before processing. Technically shouldn't be necessary
+		 * but an alternative has not presented itself yet */
+		setTimeout(async () => {
+			try {
+				const query: AiProjectSelectedWSImagesRequest = req.query
+				const g = genomes[query.genome]
+				if (!g) {
+					const errorMsg = 'Invalid genome name'
+					progress.fail(errorMsg)
+					throw new Error(errorMsg)
+				}
+				const ds = g.datasets[query.dslabel]
+				if (!ds) {
+					const errorMsg = 'Invalid dataset name'
+					progress.fail(errorMsg)
+					throw new Error(errorMsg)
+				}
 
-			progress = createProgress(query?.jobId)
-			console.log(38, `Starting aiProjectSelectedWSImages for job ${progress.jobId}`)
-			res.status(202).json({ jobId: progress.jobId })
-			progress.emit({ percent: 0, status: 'queued', message: 'Loading images...' })
+				progress.emit({ percent: 0, status: 'running', message: 'Loading images...' })
 
-			const projectId = query.projectId
-			const wsimagesFilenames = query.wsimagesFilenames
+				const projectId = query.projectId
+				const wsimagesFilenames = query.wsimagesFilenames
 
-			const total = wsimagesFilenames.length || 1
-			const wsimages: WSImage[] = []
+				const total = wsimagesFilenames.length || 1
+				const wsimages: WSImage[] = []
 
-			if (ds.queries.WSImages.getWSIAnnotations) {
-				let i = 0
-				for (const wsimageFilename of wsimagesFilenames) {
-					const wsimage: WSImage = {
-						filename: wsimageFilename
-					}
+				if (ds.queries.WSImages.getWSIAnnotations) {
+					let i = 0
+					for (const wsimageFilename of wsimagesFilenames) {
+						const wsimage: WSImage = {
+							filename: wsimageFilename
+						}
 
-					wsimage.annotations = await ds.queries.WSImages.getWSIAnnotations(projectId, wsimageFilename)
+						wsimage.annotations = await ds.queries.WSImages.getWSIAnnotations(projectId, wsimageFilename)
 
-					wsimage.classes = await ds.queries.WSImages.getAnnotationClasses(projectId)
+						wsimage.classes = await ds.queries.WSImages.getAnnotationClasses(projectId)
 
-					wsimage.uncertainty = ds.queries?.WSImages?.uncertainty
-					wsimage.activePatchColor = ds.queries?.WSImages?.activePatchColor
+						wsimage.uncertainty = ds.queries?.WSImages?.uncertainty
+						wsimage.activePatchColor = ds.queries?.WSImages?.activePatchColor
 
-					if (ds.queries.WSImages.getWSIPredictionPatches) {
-						const predictions = await ds.queries.WSImages.getWSIPredictionPatches(projectId, wsimageFilename)
+						if (ds.queries.WSImages.getWSIPredictionPatches) {
+							const predictions = await ds.queries.WSImages.getWSIPredictionPatches(projectId, wsimageFilename)
 
-						const classMap = new Map<number, string>((wsimage.classes || []).map((c: any) => [c.id, c.label]))
-						wsimage.predictions = (predictions || []).map((p: any) => {
-							const label = classMap.get(p.class) ?? p.class
-							return { ...p, class: label }
+							const classMap = new Map<number, string>((wsimage.classes || []).map((c: any) => [c.id, c.label]))
+							wsimage.predictions = (predictions || []).map((p: any) => {
+								const label = classMap.get(p.class) ?? p.class
+								return { ...p, class: label }
+							})
+						}
+
+						wsimages.push(wsimage)
+						i++
+						progress.emit({
+							percent: Math.round((i / total) * 100),
+							status: 'running',
+							message: `Processed ${i}/${total}`
 						})
 					}
-
-					wsimages.push(wsimage)
-					i++
-					progress.emit({
-						percent: Math.round((i / total) * 100),
-						status: 'running',
-						message: `Processed ${i}/${total}`
-					})
 				}
-			}
-			progress.done({ wsimages } satisfies AiProjectSelectedWSImagesResponse)
-			// res.send({ wsimages: wsimages } satisfies AiProjectSelectedWSImagesResponse)
-		} catch (e: any) {
-			console.error(e)
-			// res.status(404).send('Sample images not found')
-			if (progress) {
-				try {
+				progress.done({ wsimages } satisfies AiProjectSelectedWSImagesResponse)
+				// res.send({ wsimages: wsimages } satisfies AiProjectSelectedWSImagesResponse)
+			} catch (e: any) {
+				console.error(e)
+				// res.status(404).send('Sample images not found')
+				if (progress) {
 					progress.fail(e)
-				} catch {
-					//Comment so eslint is happy
+				} else if (!res.headersSent) {
+					res.status(400).json({ error: e?.message ?? 'Failed' })
 				}
-			} else if (!res.headersSent) {
-				res.status(400).json({ error: e?.message ?? 'Failed' })
 			}
-		}
+		}, 10)
 	}
 }
 

@@ -21,7 +21,7 @@ import type { Geometry } from 'ol/geom'
 import { Polygon } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Settings from '#plots/wsiviewer/Settings.ts'
-import { socket } from '#dom'
+import { socket } from '#common/socket'
 
 export class ViewModelProvider {
 	constructor() {}
@@ -35,7 +35,7 @@ export class ViewModelProvider {
 		annotatedPatchBorderColor: string,
 		aiProjectID: number | undefined = undefined,
 		aiWSIMageFiles: Array<string> | undefined,
-		setting,
+		setting: Settings,
 		dom: any
 	): Promise<ViewModel> {
 		let wsimageLayers: Array<WSImageLayers> = []

@@ -12,6 +12,17 @@ export type Progress = {
 	fail: (err: unknown) => void
 }
 
+//For caching last progress state
+//Allows new subscribers to get the last known state immediately
+const lastProgress = new Map<string, any>()
+export function remember(jobId: string, payload: any) {
+	lastProgress.set(jobId, { jobId, ...payload })
+}
+
+export function getLast(jobId: string) {
+	return lastProgress.get(jobId)
+}
+
 export function createProgress(jobId = getId()): Progress {
 	const io = getIO()
 	const room = `job:${jobId}`
@@ -36,15 +47,4 @@ export function createProgress(jobId = getId()): Progress {
 
 function getId() {
 	return Math.random().toString(36).slice(2)
-}
-
-//For caching last progress state
-//Allows new subscribers to get the last known state immediately
-const lastProgress = new Map<string, any>()
-export function remember(jobId: string, payload: any) {
-	lastProgress.set(jobId, { jobId, ...payload })
-}
-
-export function getLast(jobId: string) {
-	return lastProgress.get(jobId)
 }
