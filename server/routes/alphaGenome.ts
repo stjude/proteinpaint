@@ -31,7 +31,7 @@ function init() {
 				reference: query.reference,
 				alternate: query.alternate
 			}
-			if (query.ontologyTerm) params['ontologyTerms'] = [query.ontologyTerm]
+			if (query.ontologyTerms) params['ontologyTerms'] = query.ontologyTerms
 			const url = await run_python('alphaGenome.py', JSON.stringify(params))
 			res.send({ plotImage: url } satisfies alphaGenomeResponse)
 		} catch (e: any) {

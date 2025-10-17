@@ -9,6 +9,10 @@
 # Identifying driver mutations: A cancer genome has numerous mutations, but only a small fraction, known as "driver variants," contribute to 
 # tumor growth. Variant predictors help distinguish these from "passenger variants," which do not influence tumor progression, 
 # by identifying mutations with a significant functional effect. This is crucial for understanding the molecular mechanisms of cancer. 
+# In this plot where the red and gray lines diverge, you can infer allele-specific expression (ASE) or transcriptional impact of the variant.
+# If red (ALT) is higher than gray (REF), the variant increases expression. If red dips below gray, the variant may decrease expression or disrupt splicing.
+# If the effect (divergence) appears only in one or few tissues, it’s tissue-specific. If it appears in many, it may have a broad regulatory effect.
+
 #
 #In order to test this code, you need to set the environment variable API_KEY to your API key.
 #
@@ -33,18 +37,24 @@ try:
     reference = parsed_data['reference'] or 'A'
     alternate = parsed_data['alternate'] or 'C'
     ontology_terms = parsed_data.get('ontologyTerms', [
-            'UBERON:0000310',  # breast
-            'UBERON:0002107',  # liver
-            'UBERON:0002367',  # prostate
             'UBERON:0000955',  # brain
-            'UBERON:0002048',  # lung
+            'UBERON:0000310',  # breast
+            'UBERON:0002367',  # prostate
             'UBERON:0001155',  # colon
-        ])  # Example ontology term
+            'UBERON:0001052',  # rectum
+            'UBERON:0002367',  # prostate
+            'UBERON:0002048',  # lung
+            'UBERON:0002097',  # skin
+            'UBERON:0013756',  # blood
+            'UBERON:0002113',  # kidney
+            'UBERON:0000945',  # stomach
+            'UBERON:0002107',  # liver
+        ])
     #alphagenone uses hg38 genome coordinates
 
     API_KEY = os.getenv("API_KEY")
     model = dna_client.create(API_KEY)
-    len = 16384//2
+    len = 1024  #16384//2
     interval = genome.Interval(chromosome=chromosome, start=position-len, end=position+len)
     variant = genome.Variant(
         chromosome=chromosome,
@@ -61,14 +71,16 @@ try:
     )
 
 
+    tdata = {
+                'REF': outputs.reference.rna_seq,
+                'ALT': outputs.alternate.rna_seq,
+            }
     fig = plot_components.plot(
         [
             plot_components.OverlaidTracks(
-                tdata={
-                    'REF': outputs.reference.rna_seq,
-                    'ALT': outputs.alternate.rna_seq,
-                },
+                tdata=tdata,
                 colors={'REF': 'dimgrey', 'ALT': 'red'},
+                ylabel_template='{biosample_name}:{name}{strand}'
             ),
         ],
         interval=outputs.reference.rna_seq.interval,

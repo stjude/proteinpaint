@@ -26,10 +26,11 @@ class AlphaGenome extends PlotBase {
 
 	async init(appState) {
 		this.opts.header.text('Alpha Genome Variant Predictor')
-		this.setControls()
+		const { sampleTypes } = await dofetch3('alphaGenomeSampleTypes', {})
+		this.setControls({ sampleTypes })
 	}
 
-	async setControls() {
+	async setControls({ sampleTypes }) {
 		const inputs = [
 			{
 				label: 'Chromosome',
@@ -60,12 +61,14 @@ class AlphaGenome extends PlotBase {
 				title: 'Alternate base of the variant'
 			},
 			{
-				label: 'Ontology term',
-				type: 'text',
+				label: 'Sample type ',
+				type: 'dropdown',
+				multiple: true,
+				options: sampleTypes,
 				title:
-					'Ontology term. If none provided will plot all: UBERON:0000310(breast), UBERON:0002107(liver), UBERON:0002367(prostate), UBERON:0000955(brain), UBERON:0002048(lung), UBERON:0001155(colon)',
+					'Ontology term. If none provided will plot all: UBERON:0000955(brain), UBERON:0000310(breast), UBERON:0002107(liver), UBERON:0002367(prostate), UBERON:0002048(lung), UBERON:0001155(colon)',
 				chartType: this.type,
-				settingsKey: 'ontologyTerm'
+				settingsKey: 'ontologyTerms'
 			}
 		]
 		this.components = {
@@ -87,7 +90,7 @@ class AlphaGenome extends PlotBase {
 			position: settings.position,
 			reference: settings.reference,
 			alternate: settings.alternate,
-			ontologyTerm: settings.ontologyTerm
+			ontologyTerms: settings.ontologyTerms
 		}
 		const data = await dofetch3('alphaGenome', { body })
 		if (data.error) throw data.error
@@ -106,7 +109,14 @@ export function getPlotConfig(opts) {
 				position: 36201698,
 				reference: 'A',
 				alternate: 'C',
-				ontologyTerm: ''
+				ontologyTerms: [
+					'UBERON:0000955', // brain
+					'UBERON:0000310', // female breast
+					'UBERON:0002107', // liver
+					'UBERON:0002367', // prostate
+					'UBERON:0002048', // lung
+					'UBERON:0001155' // colon
+				]
 			}
 		}
 	}
