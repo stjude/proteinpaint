@@ -84,6 +84,11 @@ const defaultOpts = {
 			...subdirOptsDefaults,
 			maxAge: day * 60, // total milliseconds in 60 days
 			skipMs: halfDay // run every 12 hours
+		},
+		grin2: {
+			...subdirOptsDefaults,
+			maxAge: day * 30,
+			skipMs: halfDay
 		}
 		// bam: {
 		//  ...subdirOptsDefaults,

@@ -20,6 +20,7 @@
 #  width: int (default=1000)
 #  height: int (default=400)
 #  pngDotRadius: int (default=2)
+#  cacheFileName: string - will save GRIN2 results to this file in cache directory
 # }
 
 # Output JSON:
@@ -676,6 +677,25 @@ try:
 	try:
 		grin_table = grin_results["gene.hits"]
 		sorted_results = sort_grin2_data(grin_table)
+
+		cache_file_path = input_data.get("cacheFileName")
+		if cache_file_path:
+			cache_columns = ['gene', 'chrom']
+			possible_types = ['mutation', 'gain', 'loss', 'fusion', 'sv'] # TODO: maybe get this dynamically
+			for t in possible_types:
+				nsub_col = f'nsubj.{t}'
+				q_col = f'q.nsubj.{t}'
+
+				if nsub_col in sorted_results.columns:
+					cache_columns.append(nsub_col)
+				if q_col in sorted_results.columns:
+					cache_columns.append(q_col)
+				
+				# Create filtered dataframe with only cache columns
+				results_to_cache = sorted_results[cache_columns].copy()
+
+				# Save to TSV
+				results_to_cache.to_csv(cache_file_path, index=False, sep='\t')
 	except Exception as e:
 		write_error(f"Failed to extract gene.hits or sort grin_table: {str(e)}")
 		sys.exit(1)
@@ -720,7 +740,7 @@ try:
 		plt.close("all")
 		
 	# 7. Generate topGeneTable
-	max_genes_to_show = 500
+	max_genes_to_show = 500 # TODO: make this configurable
 	num_rows_to_process = min(len(sorted_results), max_genes_to_show)
 	table_result = simple_column_filter(sorted_results, num_rows_to_process)
 	columns = table_result["columns"]
