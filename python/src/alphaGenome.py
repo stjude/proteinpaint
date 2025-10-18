@@ -23,6 +23,7 @@ from alphagenome.data import genome
 from alphagenome.models import dna_client
 from alphagenome.visualization import plot_components
 import matplotlib.pyplot as plt
+import numpy as np
 import io
 import sys
 import json
@@ -69,10 +70,29 @@ try:
         ],
     )
 
+    # Calculate the difference between alt and ref tracks
+    # output.alt.values and output.ref.values are NumPy arrays
+    scores = np.abs(outputs.alternate.rna_seq.values - outputs.reference.rna_seq.values)
+    scores = np.max(scores, axis=0) #Get the max value on the y-axis for each track
+
+
+    # Get the indices of the tracks, sorted from highest to lowest score
+    sorted_indices = np.argsort(scores)[::-1]# [start : stop : step], [::-1] means order all the scores in reversed order.
+    # Choose how many of the top tracks to display
+    top_k = 20 
+    top_indices = sorted_indices[:top_k]
+
+    # Select the raw data for the top k tracks using NumPy indexing
+    top_k_ref_values = outputs.reference.rna_seq[:, top_indices] #The : means “all positions on the x-axis”
+    top_k_alt_values = outputs.alternate.rna_seq[:, top_indices]
+
+    #print(top_indices)
+    # Get the maximum absolute score across all track outputs for the single variant
+    max_score = np.max(scores)
 
     tdata = {
-                'REF': outputs.reference.rna_seq,
-                'ALT': outputs.alternate.rna_seq,
+                'REF': top_k_ref_values,
+                'ALT': top_k_alt_values,
             }
     fig = plot_components.plot(
         [
