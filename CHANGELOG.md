@@ -9,6 +9,7 @@ Features:
 - DE analysis: At groups custom term menu, on clicking DE option show a submenu that shows: 1. actual number of samples with expression data. 2. Alerts about the DE analysis such as group size is above/below limit. 3. options for DE methods that will be used. 4. Run Differential Gene Expression button.
 - DE volcano UI improvement: rename Genes button to Highlight genes; before P Value Table button, display text N DE genes then follow with two buttons Show P Value Table & Hierarchical Clustering Up to 100 Genes that are clear the latter two buttons apply to DE genes
 - GRIN2: Adding plot download and genomebrowser click functionality for genes
+- GRIN2: Added creation of cache file that save results for future plotting changes
 
 Fixes:
 - replace empty string bin label
