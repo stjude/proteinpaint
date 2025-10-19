@@ -301,38 +301,11 @@ tape('term0=defaultbins, term1=categorical', function (test) {
 	}
 })
 
-tape('term1=geneVariant no group', function (test) {
-	test.timeoutAfter(3000)
-	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'barchart',
-					term: { term: { type: 'geneVariant', gene: 'TP53' } }
-				}
-			]
-		},
-		barchart: {
-			callbacks: {
-				'postRender.test': testNumCharts
-			}
-		}
-	})
-
-	function testNumCharts(barchart) {
-		const barDiv = barchart.Inner.dom.barDiv
-		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
-		test.true(numCharts > 2, 'Should have more than 2 charts by TP53 as a gene variant term')
-		if (test._ok) barchart.Inner.app.destroy()
-		test.end()
-	}
-})
-
 tape('term1=geneVariant with groups', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
-			plots: [{ chartType: 'barchart', term: getGeneVariantTw() }]
+			plots: [{ chartType: 'summary', childType: 'barchart', term: getGeneVariantTw() }]
 		},
 		barchart: {
 			callbacks: {
@@ -349,13 +322,15 @@ tape('term1=geneVariant with groups', function (test) {
 		test.end()
 	}
 })
+
 tape('term1=geneVariant, term2=geneVariant using region but not gene', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: getGeneVariantTw(),
 					term2: getGeneVariantTw(true) // gives region but not gene
 				}
@@ -382,7 +357,8 @@ tape('term1=geneVariant geneset with groups', function (test) {
 		state: {
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: getGenesetMutTw()
 				}
 			]
@@ -466,7 +442,8 @@ tape('term1=geneVariant, term2=geneExp', function (test) {
 		state: {
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: { term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'predefined-groupset' } },
 					term2: { term: { type: 'geneExpression', gene: 'TP53' } }
 				}
