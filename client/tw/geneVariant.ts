@@ -69,7 +69,7 @@ export class GvBase extends TwBase {
 			if (!gene.id) gene.id = gene.name
 		}
 
-		tw.term.id = tw.term.name = tw.term.genes.map(gene => gene.name).join(', ')
+		if (!tw.term.name) tw.term.name = tw.term.genes.map(gene => gene.name).join(', ')
 
 		if (!Object.keys(tw.q).includes('type')) tw.q.type = 'values'
 
