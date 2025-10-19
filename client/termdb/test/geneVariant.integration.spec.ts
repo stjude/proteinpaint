@@ -11,6 +11,7 @@ Tests:
     Single gene input
     Change mutation type
     Gene set input
+	Gene set input - custom name
 */
 
 /*************************
@@ -113,6 +114,7 @@ tape('Change mutation type', async test => {
 	geneSearchInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }))
 	await sleep(100)
 	test.equal(tw.q.predefined_groupset_idx, 2, 'q.predefined_groupset_idx should be 2 upon selecting third radio button')
+	test.end()
 })
 
 tape('Gene set input', async test => {
@@ -132,6 +134,7 @@ tape('Gene set input', async test => {
 		.node()
 	geneSearchInput.value = 'TP53'
 	geneSearchInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }))
+	await sleep(100) // wait for dispatch event
 	geneSearchInput.value = 'KRAS'
 	geneSearchInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }))
 	const buttons = holder.select('[data-testid="sjpp-genevariant-geneSearchDiv"]').selectAll('button').nodes()
@@ -140,5 +143,39 @@ tape('Gene set input', async test => {
 	submitButton.click()
 	await sleep(100) // wait until tw is populated
 	test.equal(tw.term.genes.length, 2, 'term.genes[] should have length of 2')
-	test.equal(tw.term.name, 'KRAS, TP53', 'term.name should concatenate gene names')
+	test.equal(tw.term.name, 'TP53, KRAS', 'term.name should concatenate gene names')
+	test.end()
+})
+
+tape('Gene set input - custom name', async test => {
+	let tw
+	const callback = _tw => {
+		tw = _tw
+	}
+	const holder = getHolder()
+	await initializeSearchHandler({ holder, callback })
+	const inputTypeRadiosDiv = holder.select('[data-testid="sjpp-genevariant-genesetTypeRadios"]')
+	const inputTypeRadios = inputTypeRadiosDiv.selectAll('input[type="radio"]')
+	const secondRadio: any = inputTypeRadios.nodes()[1]
+	secondRadio.click()
+	const geneSearchInput: any = holder
+		.select('[data-testid="sjpp-genevariant-geneSearchDiv"]')
+		.select('input[type="text"]')
+		.node()
+	geneSearchInput.value = 'TP53'
+	geneSearchInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }))
+	await sleep(100) // wait for dispatch event
+	geneSearchInput.value = 'KRAS'
+	geneSearchInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }))
+	await sleep(100) // wait for dispatch event
+	const nameInput: any = holder.select('[data-testid="sja_genesetinput_name"]').node()
+	nameInput.value = 'Test gene set'
+	const buttons = holder.select('[data-testid="sjpp-genevariant-geneSearchDiv"]').selectAll('button').nodes()
+	const submitButton: any = buttons.find((btn: any) => btn.textContent.trim() === 'Submit')
+	await sleep(100) // wait until submit button is enabled
+	submitButton.click()
+	await sleep(100) // wait until tw is populated
+	test.equal(tw.term.genes.length, 2, 'term.genes[] should have length of 2')
+	test.equal(tw.term.name, 'Test gene set', 'term.name should be custom name')
+	test.end()
 })

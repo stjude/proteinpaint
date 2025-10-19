@@ -128,6 +128,7 @@ export class SearchHandler {
 			holder: this.dom.searchDiv.append('div'),
 			genome: this.opts.genomeObj,
 			vocabApi: this.opts.app.vocabApi,
+			nameInput: true,
 			callback: async result => await this.selectGeneSet(result)
 		})
 		this.dom.searchDiv.select('.sja_genesetinput').style('padding', '0px').style('margin-top', '-10px')
@@ -146,7 +147,8 @@ export class SearchHandler {
 			}
 			return gene
 		})
-		const name = genes.map(gene => gene.name).join(', ')
+		const name = result.name
+		if (!name) throw 'gene set name not found'
 		Object.assign(this.term, {
 			id: name,
 			name,
