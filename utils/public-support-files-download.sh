@@ -29,8 +29,8 @@ curl --parallel \
     https://proteinpaint.stjude.org/ppSupport/refGene.hg38.gz.tbi \
     https://proteinpaint.stjude.org/ppSupport/gencode.v40.hg19.gz \
     https://proteinpaint.stjude.org/ppSupport/gencode.v40.hg19.gz.tbi \
-    https://proteinpaint.stjude.org/ppSupport/gencode.v47.hg38.gz \
-    https://proteinpaint.stjude.org/ppSupport/gencode.v47.hg38.gz.tbi \
+    https://proteinpaint.stjude.org/ppSupport/gencode.v48.hg38.gz \
+    https://proteinpaint.stjude.org/ppSupport/gencode.v48.hg38.gz.tbi \
     https://proteinpaint.stjude.org/ppSupport/genes.hg19.db \
     https://proteinpaint.stjude.org/ppSupport/genes.hg38.db \
     `# Please note that following two steps only download dbSNP slice files for testing your ProteinPaint server;` \
