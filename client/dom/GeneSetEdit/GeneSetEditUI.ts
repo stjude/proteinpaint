@@ -53,6 +53,8 @@ type Gene = {
 
 export type CallbackArg = {
 	geneList: Gene[]
+	/** optional, gene set name */
+	name?: string
 }
 
 /** optional instruction to add new button(s) and pull in gene sets by custom-designed means.
@@ -90,6 +92,8 @@ export type GeneSetEditArg = {
 	limitedGenesList?: string[]
 	/** show the terms in the order of input*/
 	termsAsListed?: boolean
+	/** show input for geneset name */
+	nameInput?: boolean
 }
 
 type MenuListEntry = {
@@ -117,6 +121,7 @@ export class GeneSetEditUI {
 	menuList: MenuListEntry[]
 	mode?: 'geneVariant' | 'geneExpression'
 	minNumGenes: number
+	nameInput?: any
 	geneList: Gene[]
 	titleText?: string
 	customInputs?: CustomInputs
@@ -179,6 +184,17 @@ export class GeneSetEditUI {
 			focusOff: true
 		})
 
+		if (opts.nameInput) {
+			// display input for geneset name
+			const nameDiv = row.append('div').style('margin-left', '10px')
+			nameDiv.append('span').text('Name')
+			this.nameInput = nameDiv
+				.append('input')
+				.attr('data-testid', 'sja_genesetinput_name')
+				.attr('type', 'text')
+				.style('width', '120px')
+		}
+
 		this.menuList = []
 
 		this.api = {
@@ -213,7 +229,9 @@ export class GeneSetEditUI {
 					disabled: !this.geneList?.length,
 					callback: () => {
 						this.api.dom.submitBtn.property('disabled', true).text('Loading...') // to prevent repeated clicking and triggering callback. when this ui is used in geneVariant tw edit, it can keep showing a while after user clicks btn thus this fix is needed
-						this.callback({ geneList: this.geneList })
+						const result: CallbackArg = { geneList: this.geneList }
+						if (this.nameInput) result.name = this.nameInput.property('value')
+						this.callback(result)
 					}
 				})
 			},
@@ -367,6 +385,7 @@ export class GeneSetEditUI {
 										for (const gene of geneset) this.geneList.push({ gene: gene.symbol })
 										this.renderGenes()
 									}
+									if (this.nameInput) this.nameInput.property('value', term.name)
 									this.tip2.hide()
 									this.api.dom.submitBtn.node()!.focus()
 								}
@@ -488,13 +507,6 @@ export class GeneSetEditUI {
 	}
 
 	renderGenes() {
-		const hasStat = this.geneList.some(g => g.mutationStat)
-		if (!hasStat && !this.termsAsListed)
-			this.geneList.sort((a, b) => {
-				if (a.gene < b.gene) return -1
-				if (a.gene > b.gene) return 1
-				return 0
-			})
 		this.api.dom.geneHoldingDiv.selectAll('*').remove()
 
 		const renderGene = this.renderGene.bind(this)
@@ -551,6 +563,8 @@ export class GeneSetEditUI {
 			})
 
 		this.renderStatLegend() // api.statColor2label has been accumulated if available
+
+		if (this.nameInput) this.nameInput.property('value', this.geneList.map(g => g.gene).join(', '))
 
 		this.api.dom.clearBtn.property('disabled', !this.geneList?.length)
 		const hasChanged =
