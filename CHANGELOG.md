@@ -10,6 +10,7 @@ Features:
 - DE volcano UI improvement: rename Genes button to Highlight genes; before P Value Table button, display text N DE genes then follow with two buttons Show P Value Table & Hierarchical Clustering Up to 100 Genes that are clear the latter two buttons apply to DE genes
 - GRIN2: Adding plot download and genomebrowser click functionality for genes
 - GRIN2: Added creation of cache file that save results for future plotting changes
+- GRIN2: Now determining data types available to python  cache file table from request data types. Returning cacheFileName in response. Made top gene table number of genes displayed a parameter sent by the request
 
 Fixes:
 - replace empty string bin label
