@@ -2739,6 +2739,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		// query genes concurrently to speed up geneset query
 		// limit to 50 genes at a time (otherwise gdc query can fail)
 		if (!tw.term.genes?.length) throw 'tw.term.genes[] is empty'
+		if (tw.term.genes.length > 100) throw 'gene set size exceeds 100 genes'
 		const termdbmclass = q.ds?.cohort?.termdb?.mclass // custom mclass labels from dataset
 		const chunkSize = 50
 		for (let i = 0; i < tw.term.genes.length; i += chunkSize) {

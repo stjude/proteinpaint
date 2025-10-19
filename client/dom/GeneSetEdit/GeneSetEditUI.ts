@@ -78,6 +78,8 @@ export type GeneSetEditArg = {
 	mode?: 'geneVariant' | 'geneExpression'
 	/** Minimum number of genes to return in the callback */
 	minNumGenes?: number
+	/** Maxiumum number of genes allowed in gene set */
+	maxNumGenes?: number
 	/** What to do with the genes returned */
 	callback: (arg: CallbackArg) => void
 	/** passed termdb instance */
@@ -120,7 +122,9 @@ export class GeneSetEditUI {
 	/** Objects detailing the menus to create above the api.dom.geneHoldingDiv as clickable links  */
 	menuList: MenuListEntry[]
 	mode?: 'geneVariant' | 'geneExpression'
-	minNumGenes: number
+	minNumGenes?: number
+	maxNumGenes?: number
+	updateName: boolean // whether to update gene set name upon user input
 	nameInput?: any
 	geneList: Gene[]
 	titleText?: string
@@ -137,7 +141,9 @@ export class GeneSetEditUI {
 		this.customInputs = opts.customInputs
 		this.geneList = structuredClone(opts.geneList || [])
 		this.tip2 = new Menu({ padding: '0px', parent_menu: opts.holder.node(), test: 'test' })
+		this.updateName = true
 		this.minNumGenes = opts.minNumGenes || 0
+		if ('maxNumGenes' in opts) this.maxNumGenes = opts.maxNumGenes
 		if ('mode' in opts) this.mode = opts.mode
 		if ('titleText' in opts) this.titleText = opts.titleText
 		this.origLst = structuredClone(this.geneList)
@@ -192,7 +198,7 @@ export class GeneSetEditUI {
 				.append('input')
 				.attr('data-testid', 'sja_genesetinput_name')
 				.attr('type', 'text')
-				.style('width', '120px')
+				.style('width', '150px')
 		}
 
 		this.menuList = []
@@ -207,6 +213,7 @@ export class GeneSetEditUI {
 					disabled: !this.geneList?.length,
 					callback: () => {
 						this.geneList = []
+						this.updateName = true
 						this.renderGenes()
 					}
 				}),
@@ -228,6 +235,12 @@ export class GeneSetEditUI {
 					text: 'Submit',
 					disabled: !this.geneList?.length,
 					callback: () => {
+						if (this.maxNumGenes && this.geneList.length > this.maxNumGenes) {
+							window.alert(
+								`Gene set size (${this.geneList.length} genes) exceeds the allowed limit (${this.maxNumGenes} genes).`
+							)
+							return
+						}
 						this.api.dom.submitBtn.property('disabled', true).text('Loading...') // to prevent repeated clicking and triggering callback. when this ui is used in geneVariant tw edit, it can keep showing a while after user clicks btn thus this fix is needed
 						const result: CallbackArg = { geneList: this.geneList }
 						if (this.nameInput) result.name = this.nameInput.property('value')
@@ -383,9 +396,11 @@ export class GeneSetEditUI {
 									const geneset = term._geneset
 									if (geneset) {
 										for (const gene of geneset) this.geneList.push({ gene: gene.symbol })
-										this.renderGenes()
+										this.renderGenes(term.name)
+										// disable name update to retain msigdb gene set name
+										// when user modifies gene set
+										this.updateName = false
 									}
-									if (this.nameInput) this.nameInput.property('value', term.name)
 									this.tip2.hide()
 									this.api.dom.submitBtn.node()!.focus()
 								}
@@ -506,7 +521,7 @@ export class GeneSetEditUI {
 		this.renderGenes()
 	}
 
-	renderGenes() {
+	renderGenes(geneSetName?: string) {
 		this.api.dom.geneHoldingDiv.selectAll('*').remove()
 
 		const renderGene = this.renderGene.bind(this)
@@ -564,7 +579,9 @@ export class GeneSetEditUI {
 
 		this.renderStatLegend() // api.statColor2label has been accumulated if available
 
-		if (this.nameInput) this.nameInput.property('value', this.geneList.map(g => g.gene).join(', '))
+		if (this.nameInput && this.updateName) {
+			this.nameInput.property('value', geneSetName || this.geneList.map(g => g.gene).join(', '))
+		}
 
 		this.api.dom.clearBtn.property('disabled', !this.geneList?.length)
 		const hasChanged =
@@ -576,7 +593,7 @@ export class GeneSetEditUI {
 		// disable submit button when gene list not changed or is empty in expression mode
 		this.api.dom.submitBtn.property(
 			'disabled',
-			!hasChanged || this.geneList?.length < this.minNumGenes || !this.geneList?.length
+			!hasChanged || (this.minNumGenes && this.geneList?.length < this.minNumGenes) || !this.geneList?.length
 		)
 		if (hasChanged) this.api.dom.submitBtn!.node()!.focus()
 	}
