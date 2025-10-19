@@ -58,8 +58,8 @@ export default <Genome>{
 		},
 		{
 			__isgene: true,
-			name: 'GENCODE v47',
-			file: 'anno/gencode.v47.hg38.gz',
+			name: 'GENCODE v48',
+			file: 'anno/gencode.v48.hg38.gz',
 			translatecoding: true,
 			categories: {
 				coding: { color: '#004D99', label: 'Coding gene' },
