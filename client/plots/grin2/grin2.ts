@@ -570,6 +570,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				height: this.state.config.settings.grin2.manhattan?.plotHeight,
 				pngDotRadius: this.state.config.settings.grin2.manhattan?.pngDotRadius,
 				devicePixelRatio: window.devicePixelRatio,
+				maxGenesToShow: this.state.config.settings.grin2?.manhattan?.maxGenesToShow,
 				...configValues
 			}
 
@@ -816,7 +817,10 @@ export function getDefaultSettings(opts) {
 			interactiveDotStrokeWidth: 1,
 
 			// Download options
-			showDownload: true
+			showDownload: true,
+
+			// Max genes to show in table
+			maxGenesToShow: 500
 		}
 	}
 

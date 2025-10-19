@@ -21,6 +21,8 @@
 #  height: int (default=400)
 #  pngDotRadius: int (default=2)
 #  cacheFileName: string - will save GRIN2 results to this file in cache directory
+#  availableDataTypes: [string]
+#  maxGenesToShow: int (default=500) 
 # }
 
 # Output JSON:
@@ -29,6 +31,7 @@
 #  topGeneTable: [<list>]
 #  totalGenes: int
 #  showingTop: int
+#  cacheFileName: string
 # }
 """
 
@@ -679,10 +682,23 @@ try:
 		sorted_results = sort_grin2_data(grin_table)
 
 		cache_file_path = input_data.get("cacheFileName")
+		available_types = input_data.get("availableDataTypes")
+		# Dictionary to map data types coming from client to data types for cache file columns
+		option_type_mapping = {
+		'snvindelOptions': ['mutation'],
+		'cnvOptions': ['gain', 'loss'],
+		'fusionOptions': ['fusion'],
+		'svOptions': ['sv']
+		}
+
+		# Determine which data types to include based on available options
+		data_types = [data_type 
+              for option in available_types 
+              for data_type in option_type_mapping.get(option)]
+		
 		if cache_file_path:
 			cache_columns = ['gene', 'chrom']
-			possible_types = ['mutation', 'gain', 'loss', 'fusion', 'sv'] # TODO: maybe get this dynamically
-			for t in possible_types:
+			for t in data_types:
 				nsub_col = f'nsubj.{t}'
 				q_col = f'q.nsubj.{t}'
 
@@ -740,7 +756,7 @@ try:
 		plt.close("all")
 		
 	# 7. Generate topGeneTable
-	max_genes_to_show = 500 # TODO: make this configurable
+	max_genes_to_show = input_data.get("maxGenesToShow")
 	num_rows_to_process = min(len(sorted_results), max_genes_to_show)
 	table_result = simple_column_filter(sorted_results, num_rows_to_process)
 	columns = table_result["columns"]
@@ -755,7 +771,8 @@ try:
 			"rows": topgene_table_data
 		},
 		"totalGenes": len(sorted_results),
-		"showingTop": num_rows_to_process
+		"showingTop": num_rows_to_process,
+		"cacheFileName": cache_file_path
 	}
 
 	# Output JSON
