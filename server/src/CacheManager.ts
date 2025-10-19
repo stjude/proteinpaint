@@ -87,7 +87,7 @@ const defaultOpts = {
 		},
 		grin2: {
 			...subdirOptsDefaults,
-			maxAge: day * 30,
+			maxAge: day * 60,
 			skipMs: halfDay
 		}
 		// bam: {
