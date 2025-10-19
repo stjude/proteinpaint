@@ -31,8 +31,8 @@ import crypto from 'crypto'
  *    - SV: Filter by 5' and 3' flanking sizes
  *    - Hypermutator: To be implemented at later date
  * 4. Convert filtered data to lesion format and apply filter caps per type
- * 5. Pass lesion data, device pixel ratio, and cacheFileName to Python for GRIN2 statistical analysis and plot generation (Long term we will make the plot generation be done by rust and just use the cache file of results from python)
- * 6. Return Manhattan plot as base64 string, top gene table, timing information, and statistically significant results that are displayed as an interactive svg
+ * 5. Pass lesion data, device pixel ratio, maxGenesToShow, and cacheFileName to Python for GRIN2 statistical analysis and plot generation (Long term we will make the plot generation be done by rust and just use the cache file of results from python)
+ * 6. Return Manhattan plot as base64 string, top gene table, timing information, statistically significant results that are displayed as an interactive svg, and cache file name for future use
  */
 
 // Constants & types
@@ -91,6 +91,19 @@ function generateCacheFileName(): string {
 	return path.join(serverconfig.cachedir, 'grin2', cacheFileName)
 }
 
+// Function to extract the different data types from the request to pass for python
+function getAvailableDataTypes(request: any): string[] {
+	const availableOptions: string[] = []
+
+	for (const key in request) {
+		if (key.endsWith('Options')) {
+			availableOptions.push(key)
+		}
+	}
+
+	return availableOptions
+}
+
 async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Response> {
 	const startTime = Date.now()
 
@@ -143,7 +156,9 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		pngDotRadius: request.pngDotRadius,
 		width: request.width,
 		height: request.height,
-		cacheFileName: generateCacheFileName()
+		cacheFileName: generateCacheFileName(),
+		availableDataTypes: getAvailableDataTypes(request),
+		maxGenesToShow: request.maxGenesToShow
 	}
 
 	// Build chromosome list from genome reference
@@ -193,7 +208,8 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 			grin2Time: grin2AnalysisTimeToPrint,
 			totalTime: totalTime
 		},
-		processingSummary: processingSummary
+		processingSummary: processingSummary,
+		cacheFileName: resultData.cacheFileName
 	}
 
 	return response

@@ -79,6 +79,7 @@ export type GRIN2Request = {
 		/** Number of bases to include as 3' flank around the sv position */
 		threePrimeFlankSize?: number
 	}
+	maxGenesToShow?: number // Default: 500
 }
 
 /** Simple Interface to store the complex plot data from the python Manhattan plot */
@@ -166,6 +167,8 @@ export type GRIN2Response = {
 		processedLesions?: number
 		unprocessedSamples?: number
 	}
+	/** Cache file name for storing GRIN2 results */
+	cacheFileName?: string
 }
 
 /**
