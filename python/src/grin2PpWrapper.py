@@ -167,12 +167,12 @@ def plot_grin2_manhattan(grin_results: dict,
     # Process each gene
     for _, gene_row in gene_hits.iterrows():
         chrom = gene_row['chrom']
-        gene_name = gene_row.get('gene', 'Unknown') 
+        gene_name = gene_row.get('gene') 
         
         if chrom not in chrom_data:
             continue
             
-        gene_start = gene_row.get('loc.start', 0)
+        gene_start = gene_row.get('loc.start')
         x_pos = chrom_data[chrom]['start'] + gene_start
         
         # Add points for each mutation type
@@ -201,6 +201,8 @@ def plot_grin2_manhattan(grin_results: dict,
                     'type': mut_type,
                     'gene': gene_name,
                     'chrom': chrom,
+                    'start': gene_row.get('loc.start'),
+                    'end': gene_row.get('loc.end'),
                     'pos': gene_start,
                     'q_value': q_value,
                     'nsubj': n_subj_count

@@ -136,8 +136,8 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				t1.text('Type')
 				t2.html(`<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`)
 				table.addRow('-log₁₀(q-value)', d.y.toFixed(3))
-				if (d.nsubj) table.addRow('Subject count', d.nsubj)
-				table.addRow('Chromosome', d.chrom)
+				table.addRow('Subject count', d.nsubj)
+				table.addRow('Position', `${d.chrom}: ${d.start} - ${d.end}`)
 			})
 			.on('mouseout', event => {
 				// Hide stroke on mouseout
