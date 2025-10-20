@@ -2,15 +2,16 @@
 // cd .. && cargo build --release && json='{"data_type":"get_samples","input_file":"/Users/rpaul1/pp_data/files/hg38/ALL-pharmacotyping/rnaseq/counts.h5"}' && time echo $json | target/release/DEanalysis
 // cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/DEanalysis
 #![allow(non_snake_case)]
-use hdf5::types::VarLenAscii;
 use hdf5::File as HDF5File;
+use hdf5::types::VarLenAscii;
+use hdf5::types::VarLenUnicode;
 use json;
-use nalgebra::base::dimension::Const;
-use nalgebra::base::dimension::Dyn;
-use nalgebra::base::Matrix;
-use nalgebra::base::VecStorage;
 use nalgebra::DMatrix;
 use nalgebra::ViewStorage;
+use nalgebra::base::Matrix;
+use nalgebra::base::VecStorage;
+use nalgebra::base::dimension::Const;
+use nalgebra::base::dimension::Dyn;
 //use ndarray::Array1;
 use ndarray::Array2;
 use ndarray::Dim;
@@ -70,7 +71,6 @@ fn input_data_from_HDF5(
     Vec<usize>,
     Vec<usize>,
     Vec<String>,
-    Vec<String>,
 ) {
     let file = HDF5File::open(&hdf5_filename).unwrap(); // open for reading
 
@@ -86,129 +86,53 @@ fn input_data_from_HDF5(
     //println!("num_samples bulk:{}", num_samples);
     //println!("num_genes bulk:{}", num_genes);
 
-    //let now_gene_ids = Instant::now();
-    let ds_gene_ids = file.dataset("gene_ids").unwrap();
-    //println!("ds_gene_ids:{:?}", ds_gene_ids);
-    let gene_ids = ds_gene_ids
-        .read::<VarLenAscii, Dim<[usize; 1]>>()
-        .unwrap();
-    //println!("\tgene_ids = {:?}", gene_ids);
-    //println!("\tgene_ids.shape() = {:?}", gene_ids.shape());
-    //println!("\tgene_ids.strides() = {:?}", gene_ids.strides());
-    //println!("\tgene_ids.ndim() = {:?}", gene_ids.ndim());
-    //println!("Time for parsing gene names:{:?}", now_gene_ids.elapsed());
+    // Read the item dataset
+    let ds_item = file.dataset("item").unwrap();
+    let item = ds_item.read_1d::<VarLenUnicode>().unwrap();
+    let gene_names: Vec<String> = item.iter().map(|x| x.to_string()).collect();
 
-    //let now_gene_names = Instant::now();
-    let ds_gene_names = file.dataset("gene_names").unwrap();
-    //println!("ds_gene_names:{:?}", ds_gene_names);
-    let gene_names = ds_gene_names
-        .read::<VarLenAscii, Dim<[usize; 1]>>()
-        .unwrap();
-    //println!("\tgene_names = {:?}", gene_names);
-    //println!("\tgene_names.shape() = {:?}", gene_names.shape());
-    //println!("\tgene_names.strides() = {:?}", gene_names.strides());
-    //println!("\tgene_names.ndim() = {:?}", gene_names.ndim());
-    //println!(
-    //    "Time for parsing gene symbols:{:?}",
-    //    now_gene_names.elapsed()
-    //);
-
-    let mut gene_ids_string: Vec<String> = Vec::with_capacity(gene_ids.len());
-    let mut gene_names_string: Vec<String> = Vec::with_capacity(gene_names.len());
-    for i in 0..gene_ids.len() {
-        gene_ids_string.push(gene_ids[i].to_string());
-        gene_names_string.push(gene_names[i].to_string());
-    }
-
-    //let now_samples = Instant::now();
+    // Read the samples dataset
     let ds_samples = file.dataset("samples").unwrap();
-    let samples = ds_samples.read::<VarLenAscii, Dim<[usize; 1]>>().unwrap();
-    //println!("\tsamples = {:?}", samples);
-    //println!("\tsamples.shape() = {:?}", samples.shape());
-    //println!("\tsamples.strides() = {:?}", samples.strides());
-    //println!("\tsamples.ndim() = {:?}", samples.ndim());
-    //println!("Time for parsing samples:{:?}", now_samples.elapsed());
+    let samples = ds_samples.read_1d::<VarLenUnicode>().unwrap();
 
-    //Find all columns values that are populated for the given gene
-    //let now_counts = Instant::now();
-    let ds_counts = file.dataset("counts").unwrap(); // open the dataset
+    // Read the matrix dataset
+    let ds_matrix = file.dataset("matrix").unwrap();
+
+    // Get dimensions from the matrix dataset
+    let matrix_shape = ds_matrix.shape();
+    let num_genes = matrix_shape[0];
 
     let mut global_sample_index = 0;
     for sample_name in case_list {
-        let sample_index;
-        match samples
-            .iter()
-            .position(|x| x.to_string() == *sample_name.to_string())
-        {
-            Some(index) => {
-                //println!(
-                //    "The index of '{}' is {} in 0-based format (add 1 to compare with R output)",
-                //    sample_name, index
-                //);
-                sample_index = index;
-            }
-            None => panic!(
-                "Sample '{}' not found in the HDF5 file '{}'",
-                sample_name, &hdf5_filename
-            ),
+        if let Some(sample_index) = samples.iter().position(|x| x.to_string() == *sample_name.to_string()) {
+            let sample_array: Array2<f64> = ds_matrix
+                .read_slice_2d((0..num_genes, sample_index..sample_index + 1))
+                .unwrap();
+            input_vector.append(&mut sample_array.as_slice().unwrap().to_vec());
+            case_indexes.push(global_sample_index);
+            global_sample_index += 1;
         }
-
-        let sample_array: Array2<f64> = ds_counts
-            .read_slice_2d((0..gene_ids.len(), sample_index..sample_index + 1))
-            .unwrap();
-        //println!("Length of gene array:{:?}", sample_array.len()); // Please check the result
-        input_vector.append(&mut sample_array.as_slice().unwrap().to_vec());
-        case_indexes.push(global_sample_index);
-        global_sample_index += 1;
+        // Skip sample if not found
     }
 
     for sample_name in control_list {
-        let sample_index;
-        match samples
-            .iter()
-            .position(|x| x.to_string() == *sample_name.to_string())
-        {
-            Some(index) => {
-                //println!(
-                //    "The index of '{}' is {} in 0-based format (add 1 to compare with R output)",
-                //    sample_name, index
-                //);
-                sample_index = index;
-            }
-            None => panic!(
-                "Sample '{}' not found in the HDF5 file '{}'",
-                sample_name, &hdf5_filename
-            ),
+        if let Some(sample_index) = samples.iter().position(|x| x.to_string() == *sample_name.to_string()) {
+            let sample_array: Array2<f64> = ds_matrix
+                .read_slice_2d((0..num_genes, sample_index..sample_index + 1))
+                .unwrap();
+            input_vector.append(&mut sample_array.as_slice().unwrap().to_vec());
+            control_indexes.push(global_sample_index);
+            global_sample_index += 1;
         }
-        //let data_counts: Array1<_> = ds_counts.read::<f64, Dim<[usize; 1]>>().unwrap();
-        //println!("Data_counts: {:?}", data_counts);
-        let sample_array: Array2<f64> = ds_counts
-            .read_slice_2d((0..gene_ids.len(), sample_index..sample_index + 1))
-            .unwrap();
-        //println!("Length of gene array:{:?}", sample_array.len()); // Please check the result
-        input_vector.append(&mut sample_array.as_slice().unwrap().to_vec());
-        control_indexes.push(global_sample_index);
-        global_sample_index += 1;
+        // Ship sample if not found
     }
 
-    //println!("Time for parsing HDF5 data:{:?}", now_counts.elapsed());
-    //println!(
-    //    "case + control length:{}",
-    //    case_list.len() + control_list.len()
-    //);
-    //println!("gene_ids length:{}", gene_ids.len());
-    //println!("input_vector length:{}", input_vector.len());
-    let dm = DMatrix::from_row_slice(
-        case_list.len() + control_list.len(),
-        gene_ids.len(),
-        &input_vector,
-    );
+    let dm = DMatrix::from_row_slice(case_indexes.len() + control_indexes.len(), num_genes, &input_vector);
     (
         dm.transpose(), // Transposing the matrix
         case_indexes,
         control_indexes,
-        gene_ids_string,
-        gene_names_string,
+        gene_names,
     )
 }
 
@@ -220,7 +144,6 @@ fn input_data_from_text(
     Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
     Vec<usize>,
     Vec<usize>,
-    Vec<String>,
     Vec<String>,
 ) {
     //let input_time = Instant::now();
@@ -344,15 +267,14 @@ fn input_data_from_text(
         let control_indexes_original = Arc::new(control_indexes_original);
         let buffer = Arc::new(buffer);
         let case_indexes_temp = Arc::new(Mutex::new(Vec::<usize>::with_capacity(case_list.len())));
-        let control_indexes_temp =
-            Arc::new(Mutex::new(Vec::<usize>::with_capacity(control_list.len())));
+        let control_indexes_temp = Arc::new(Mutex::new(Vec::<usize>::with_capacity(control_list.len())));
         let num_lines_temp = Arc::new(Mutex::<usize>::new(0));
         let num_columns_temp = Arc::new(Mutex::<usize>::new(0));
         let genes_names_temp = Arc::new(Mutex::new(Vec::<String>::new()));
         let genes_symbols_temp = Arc::new(Mutex::new(Vec::<String>::new()));
         let input_vector_temp = Arc::new(Mutex::new(Vec::<f64>::new()));
         let mut handles = vec![]; // Vector to store handle which is used to prevent one thread going ahead of another
-                                  //println!("Number of threads used:{}", max_threads);
+        //println!("Number of threads used:{}", max_threads);
         for thread_num in 0..max_threads {
             let case_indexes_original = Arc::clone(&case_indexes_original);
             let control_indexes_original = Arc::clone(&control_indexes_original);
@@ -400,11 +322,11 @@ fn input_data_from_text(
                                     }
                                     Err(_n) => {
                                         panic!(
-                                        "Number {} in line {} and column {} is not a decimal number",
-                                        field,
-                                        num_lines_thread + 1,
-                                        index + 1
-                                    );
+                                            "Number {} in line {} and column {} is not a decimal number",
+                                            field,
+                                            num_lines_thread + 1,
+                                            index + 1
+                                        );
                                     }
                                 }
                             } else if binary_search(&control_indexes_original, index) != -1 {
@@ -420,11 +342,11 @@ fn input_data_from_text(
                                     }
                                     Err(_n) => {
                                         panic!(
-                                        "Number {} in line {} and column {} is not a decimal number",
-                                        field,
-                                        num_lines_thread + 1,
-                                        index + 1
-                                    );
+                                            "Number {} in line {} and column {} is not a decimal number",
+                                            field,
+                                            num_lines_thread + 1,
+                                            index + 1
+                                        );
                                     }
                                 }
                             }
@@ -433,26 +355,11 @@ fn input_data_from_text(
                         num_lines_thread += 1;
                     }
                 }
-                input_vector_temp
-                    .lock()
-                    .unwrap()
-                    .append(&mut input_vector_thread);
-                case_indexes_temp
-                    .lock()
-                    .unwrap()
-                    .append(&mut case_indexes_thread);
-                control_indexes_temp
-                    .lock()
-                    .unwrap()
-                    .append(&mut control_indexes_thread);
-                genes_names_temp
-                    .lock()
-                    .unwrap()
-                    .append(&mut genes_names_thread);
-                genes_symbols_temp
-                    .lock()
-                    .unwrap()
-                    .append(&mut genes_symbols_thread);
+                input_vector_temp.lock().unwrap().append(&mut input_vector_thread);
+                case_indexes_temp.lock().unwrap().append(&mut case_indexes_thread);
+                control_indexes_temp.lock().unwrap().append(&mut control_indexes_thread);
+                genes_names_temp.lock().unwrap().append(&mut genes_names_thread);
+                genes_symbols_temp.lock().unwrap().append(&mut genes_symbols_thread);
                 *num_lines_temp.lock().unwrap() += num_lines_thread;
                 if num_columns_thread > 0 {
                     *num_columns_temp.lock().unwrap() += num_columns_thread;
@@ -490,14 +397,13 @@ fn input_data_from_text(
     //println!("Time for inputting data:{:?}", input_time.elapsed());
     let dm = DMatrix::from_row_slice(num_lines, num_columns, &input_vector);
     //println!("dm:{:?}", dm);
-    (dm, case_indexes, control_indexes, gene_ids, gene_names)
+    (dm, case_indexes, control_indexes, gene_names)
 }
 
 #[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 struct AdjustedPValueIndexes {
     index: usize,
-    gene_id: String,
     gene_name: String,
     fold_change: f64,
     original_p_value: f64,
@@ -506,7 +412,6 @@ struct AdjustedPValueIndexes {
 
 struct PValueIndexes {
     index: usize,
-    gene_id: String,
     gene_name: String,
     fold_change: f64,
     p_value: f64,
@@ -578,10 +483,8 @@ fn main() {
                                 get_DE_samples(file_name)
                             } else if x == "do_DE" {
                                 let min_count_option = json_string["min_count"].as_f64().to_owned();
-                                let min_total_count_option =
-                                    json_string["min_total_count"].as_f64().to_owned();
-                                let storage_type_option =
-                                    json_string["storage_type"].as_str().to_owned();
+                                let min_total_count_option = json_string["min_total_count"].as_f64().to_owned();
+                                let storage_type_option = json_string["storage_type"].as_str().to_owned();
                                 let storage_type;
                                 match storage_type_option {
                                     Some(x) => {
@@ -590,10 +493,7 @@ fn main() {
                                         } else if x == "text" {
                                             storage_type = "text"
                                         } else {
-                                            panic!(
-                                                "Unknown storage_type:{}{}",
-                                                x, " Needs to be either HDF5 or text"
-                                            );
+                                            panic!("Unknown storage_type:{}{}", x, " Needs to be either HDF5 or text");
                                         }
                                     }
                                     None => panic!("storage_type needs to be HDF5 or text"),
@@ -612,53 +512,26 @@ fn main() {
                                         panic!("min_total_count is missing a value")
                                     }
                                 }
-                                let case_string =
-                                    &json_string["case"].to_owned().as_str().unwrap().to_string();
-                                let control_string = &json_string["control"]
-                                    .to_owned()
-                                    .as_str()
-                                    .unwrap()
-                                    .to_string();
+                                let case_string = &json_string["case"].to_owned().as_str().unwrap().to_string();
+                                let control_string = &json_string["control"].to_owned().as_str().unwrap().to_string();
                                 let case_list: Vec<&str> = case_string.split(",").collect();
                                 let control_list: Vec<&str> = control_string.split(",").collect();
-                                let (
-                                    input_matrix,
-                                    case_indexes,
-                                    control_indexes,
-                                    gene_ids,
-                                    gene_names,
-                                );
+                                let (input_matrix, case_indexes, control_indexes, gene_names);
                                 if storage_type == "text" {
-                                    (
-                                        input_matrix,
-                                        case_indexes,
-                                        control_indexes,
-                                        gene_ids,
-                                        gene_names,
-                                    ) = input_data_from_text(file_name, &case_list, &control_list);
+                                    (input_matrix, case_indexes, control_indexes, gene_names) =
+                                        input_data_from_text(file_name, &case_list, &control_list);
                                 } else {
                                     // Parsing data from a HDF5 file
-                                    (
-                                        input_matrix,
-                                        case_indexes,
-                                        control_indexes,
-                                        gene_ids,
-                                        gene_names,
-                                    ) = input_data_from_HDF5(file_name, &case_list, &control_list);
+                                    (input_matrix, case_indexes, control_indexes, gene_names) =
+                                        input_data_from_HDF5(file_name, &case_list, &control_list);
                                 }
                                 //let filtering_time = Instant::now();
-                                let (
-                                    filtered_matrix,
-                                    lib_sizes,
-                                    filtered_genes,
-                                    filtered_gene_names,
-                                ) = filter_by_expr(
+                                let (filtered_matrix, lib_sizes, filtered_gene_names) = filter_by_expr(
                                     min_count,
                                     min_total_count,
                                     &input_matrix,
                                     case_indexes.len(),
                                     control_indexes.len(),
-                                    gene_ids,
                                     gene_names,
                                 );
                                 //println!("filtering time:{:?}", filtering_time.elapsed());
@@ -689,8 +562,7 @@ fn main() {
                                 for col in 0..normalized_matrix.ncols() {
                                     let norm_factor = norm_factors[col];
                                     for row in 0..normalized_matrix.nrows() {
-                                        normalized_matrix[(row, col)] =
-                                            normalized_matrix[(row, col)] / norm_factor;
+                                        normalized_matrix[(row, col)] = normalized_matrix[(row, col)] / norm_factor;
                                     }
                                 }
                                 //println!("normalized_matrix:{:?}", normalized_matrix);
@@ -700,16 +572,13 @@ fn main() {
                                 // Using Wilcoxon test for differential gene expression
 
                                 //let now2 = Instant::now();
-                                let mut p_values: Vec<PValueIndexes> =
-                                    Vec::with_capacity(normalized_matrix.nrows());
+                                let mut p_values: Vec<PValueIndexes> = Vec::with_capacity(normalized_matrix.nrows());
                                 const THRESHOLD: usize = 50; // This determines whether the Wilcoxon exact test or the normal test will be used based on sample size.
 
                                 //println!("case_indexes:{:?}", case_indexes);
                                 //println!("control_indexes:{:?}", control_indexes);
                                 //let num_normalized_rows = normalized_matrix.nrows();
-                                if normalized_matrix.nrows() * normalized_matrix.ncols()
-                                    < PAR_CUTOFF
-                                {
+                                if normalized_matrix.nrows() * normalized_matrix.ncols() < PAR_CUTOFF {
                                     for i in 0..normalized_matrix.nrows() {
                                         let row = normalized_matrix.row(i);
                                         //println!("row:{:?}", row);
@@ -726,10 +595,7 @@ fn main() {
                                                 control.push(row[(0, j)]);
                                                 //println!("{},{}", input_data_vec.0[i][j], "Control");
                                             } else {
-                                                panic!(
-                                        "Column {} could not be classified into case/control",
-                                        j
-                                    );
+                                                panic!("Column {} could not be classified into case/control", j);
                                             }
                                         }
                                         //println!("treated{:?}", treated);
@@ -743,22 +609,14 @@ fn main() {
                                         ); // Setting continuity correction to true in case of normal approximation
                                         let treated_mean = Data::new(treated).mean();
                                         let control_mean = Data::new(control).mean();
-                                        if (treated_mean.unwrap() / control_mean.unwrap())
-                                            .log2()
-                                            .is_nan()
-                                            == false
-                                            && (treated_mean.unwrap() / control_mean.unwrap())
-                                                .log2()
-                                                .is_infinite()
+                                        if (treated_mean.unwrap() / control_mean.unwrap()).log2().is_nan() == false
+                                            && (treated_mean.unwrap() / control_mean.unwrap()).log2().is_infinite()
                                                 == false
                                         {
                                             p_values.push(PValueIndexes {
                                                 index: i,
-                                                gene_id: filtered_genes[i].to_owned(),
                                                 gene_name: filtered_gene_names[i].to_owned(),
-                                                fold_change: (treated_mean.unwrap()
-                                                    / control_mean.unwrap())
-                                                .log2(),
+                                                fold_change: (treated_mean.unwrap() / control_mean.unwrap()).log2(),
                                                 p_value: p_value,
                                             });
                                         }
@@ -766,29 +624,20 @@ fn main() {
                                 } else {
                                     // Multithreaded implementation of calculating wilcoxon p-values
                                     let normalized_matrix_temp = Arc::new(normalized_matrix);
-                                    let filtered_genes_temp = Arc::new(filtered_genes);
-                                    let filtered_gene_names_temp =
-                                        Arc::new(filtered_gene_names);
+                                    let filtered_gene_names_temp = Arc::new(filtered_gene_names);
                                     let case_indexes_temp = Arc::new(case_indexes);
                                     let control_indexes_temp = Arc::new(control_indexes);
-                                    let p_values_temp =
-                                        Arc::new(Mutex::new(Vec::<PValueIndexes>::new()));
+                                    let p_values_temp = Arc::new(Mutex::new(Vec::<PValueIndexes>::new()));
                                     let mut handles = vec![]; // Vector to store handle which is used to prevent one thread going ahead of another
                                     for thread_num in 0..max_threads {
-                                        let normalized_matrix_temp =
-                                            Arc::clone(&normalized_matrix_temp);
+                                        let normalized_matrix_temp = Arc::clone(&normalized_matrix_temp);
                                         let case_indexes_temp = Arc::clone(&case_indexes_temp);
-                                        let control_indexes_temp =
-                                            Arc::clone(&control_indexes_temp);
+                                        let control_indexes_temp = Arc::clone(&control_indexes_temp);
                                         let p_values_temp = Arc::clone(&p_values_temp);
-                                        let filtered_genes_temp = Arc::clone(&filtered_genes_temp);
-                                        let filtered_gene_names_temp =
-                                            Arc::clone(&filtered_gene_names_temp);
+                                        let filtered_gene_names_temp = Arc::clone(&filtered_gene_names_temp);
                                         let handle = thread::spawn(move || {
                                             let mut p_values_thread: Vec<PValueIndexes> =
-                                                Vec::with_capacity(
-                                                    normalized_matrix_temp.nrows() / max_threads,
-                                                );
+                                                Vec::with_capacity(normalized_matrix_temp.nrows() / max_threads);
                                             for i in 0..normalized_matrix_temp.nrows() {
                                                 let remainder: usize = i % max_threads; // Calculate remainder of iteration number divided by max_threads to decide which thread parses the row
                                                 if remainder == thread_num {
@@ -797,55 +646,43 @@ fn main() {
                                                     let mut treated = Vec::<f64>::new();
                                                     let mut control = Vec::<f64>::new();
                                                     //println!("conditions:{:?}", conditions);
-                                                    for j in 0..(case_indexes_temp.len()
-                                                        + control_indexes_temp.len())
-                                                    {
+                                                    for j in 0..(case_indexes_temp.len() + control_indexes_temp.len()) {
                                                         //println!("row[(0, j)]:{}", row[(0, j)]);
                                                         if case_indexes_temp.contains(&j) {
                                                             treated.push(row[(0, j)]);
                                                             //println!("{},{}", input_data_vec.0[i][j], "Diseased");
-                                                        } else if control_indexes_temp.contains(&j)
-                                                        {
+                                                        } else if control_indexes_temp.contains(&j) {
                                                             // + 1 was added because in the input file the first column of thw first row is blank as the first column consists of gene names
                                                             control.push(row[(0, j)]);
                                                             //println!("{},{}", input_data_vec.0[i][j], "Control");
                                                         } else {
                                                             panic!(
-                                        "Column {} could not be classified into case/control",
-                                        j
-                                    );
+                                                                "Column {} could not be classified into case/control",
+                                                                j
+                                                            );
                                                         }
                                                     }
                                                     //println!("treated{:?}", treated);
                                                     //println!("control{:?}", control);
-                                                    let p_value =
-                                                        stats_functions::wilcoxon_rank_sum_test(
-                                                            treated.clone(),
-                                                            control.clone(),
-                                                            THRESHOLD,
-                                                            't',
-                                                            true,
-                                                        ); // Setting continuity correction to true in case of normal approximation
+                                                    let p_value = stats_functions::wilcoxon_rank_sum_test(
+                                                        treated.clone(),
+                                                        control.clone(),
+                                                        THRESHOLD,
+                                                        't',
+                                                        true,
+                                                    ); // Setting continuity correction to true in case of normal approximation
                                                     let treated_mean = Data::new(treated).mean();
                                                     let control_mean = Data::new(control).mean();
-                                                    if (treated_mean.unwrap()
-                                                        / control_mean.unwrap())
-                                                    .log2()
-                                                    .is_nan()
+                                                    if (treated_mean.unwrap() / control_mean.unwrap()).log2().is_nan()
                                                         == false
-                                                        && (treated_mean.unwrap()
-                                                            / control_mean.unwrap())
-                                                        .log2()
-                                                        .is_infinite()
+                                                        && (treated_mean.unwrap() / control_mean.unwrap())
+                                                            .log2()
+                                                            .is_infinite()
                                                             == false
                                                     {
                                                         p_values_thread.push(PValueIndexes {
                                                             index: i,
-                                                            gene_id: filtered_genes_temp[i]
-                                                                .to_owned(),
-                                                            gene_name: filtered_gene_names_temp
-                                                                [i]
-                                                                .to_owned(),
+                                                            gene_name: filtered_gene_names_temp[i].to_owned(),
                                                             fold_change: (treated_mean.unwrap()
                                                                 / control_mean.unwrap())
                                                             .log2(),
@@ -854,10 +691,7 @@ fn main() {
                                                     }
                                                 }
                                             }
-                                            p_values_temp
-                                                .lock()
-                                                .unwrap()
-                                                .append(&mut p_values_thread);
+                                            p_values_temp.lock().unwrap().append(&mut p_values_thread);
                                         });
                                         handles.push(handle);
                                     }
@@ -893,22 +727,18 @@ fn main() {
 
 fn adjust_p_values(mut original_p_values: Vec<PValueIndexes>) -> String {
     // Sorting p-values in ascending order
-    original_p_values.as_mut_slice().sort_by(|a, b| {
-        (a.p_value)
-            .partial_cmp(&b.p_value)
-            .unwrap_or(Ordering::Equal)
-    });
+    original_p_values
+        .as_mut_slice()
+        .sort_by(|a, b| (a.p_value).partial_cmp(&b.p_value).unwrap_or(Ordering::Equal));
 
-    let mut adjusted_p_values: Vec<AdjustedPValueIndexes> =
-        Vec::with_capacity(original_p_values.len());
+    let mut adjusted_p_values: Vec<AdjustedPValueIndexes> = Vec::with_capacity(original_p_values.len());
     let mut old_p_value: f64 = 0.0;
     let mut rank: f64 = original_p_values.len() as f64;
     for j in 0..original_p_values.len() {
         let i = original_p_values.len() - j - 1;
 
         //println!("p_val:{}", p_val);
-        let mut adjusted_p_val: f64 =
-            original_p_values[i].p_value * (original_p_values.len() as f64 / rank); // adjusted p-value = original_p_value * (N/rank)
+        let mut adjusted_p_val: f64 = original_p_values[i].p_value * (original_p_values.len() as f64 / rank); // adjusted p-value = original_p_value * (N/rank)
         if adjusted_p_val > 1.0 {
             // p_value should NEVER be greater than 1
             adjusted_p_val = 1.0;
@@ -927,7 +757,6 @@ fn adjust_p_values(mut original_p_values: Vec<PValueIndexes>) -> String {
         adjusted_p_values.push(AdjustedPValueIndexes {
             index: original_p_values[i].index,
             fold_change: original_p_values[i].fold_change,
-            gene_id: original_p_values[i].gene_id.to_owned(),
             gene_name: original_p_values[i].gene_name.to_owned(),
             original_p_value: original_p_values[i].p_value,
             adjusted_p_value: adjusted_p_val,
@@ -948,18 +777,15 @@ fn adjust_p_values(mut original_p_values: Vec<PValueIndexes>) -> String {
 
 #[allow(dead_code)]
 fn adjust_p_values_bonferroni(original_p_values: Vec<PValueIndexes>) -> Vec<AdjustedPValueIndexes> {
-    let mut adjusted_p_values: Vec<AdjustedPValueIndexes> =
-        Vec::with_capacity(original_p_values.len());
+    let mut adjusted_p_values: Vec<AdjustedPValueIndexes> = Vec::with_capacity(original_p_values.len());
     for i in 0..original_p_values.len() {
-        let mut adjusted_p_value: f64 =
-            original_p_values[i].p_value * original_p_values.len() as f64; // In bonferroni correction, multiplying p_value by number of tests (excluding those with low sample sizes)
+        let mut adjusted_p_value: f64 = original_p_values[i].p_value * original_p_values.len() as f64; // In bonferroni correction, multiplying p_value by number of tests (excluding those with low sample sizes)
         if adjusted_p_value > 1.0 {
             // p_value should NEVER be greater than 1
             adjusted_p_value = 1.0;
         }
         adjusted_p_values.push(AdjustedPValueIndexes {
             index: original_p_values[i].index,
-            gene_id: original_p_values[i].gene_id.to_owned(),
             gene_name: original_p_values[i].gene_name.to_owned(),
             fold_change: original_p_values[i].fold_change,
             original_p_value: original_p_values[i].p_value,
@@ -970,10 +796,7 @@ fn adjust_p_values_bonferroni(original_p_values: Vec<PValueIndexes>) -> Vec<Adju
 }
 
 // Original TMM normalization source code in edgeR: https://rdrr.io/bioc/edgeR/src/R/calcNormFactors.R
-fn tmm_normalization(
-    input_matrix: Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
-    lib_sizes: &Vec<f64>,
-) -> Vec<f64> {
+fn tmm_normalization(input_matrix: Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>, lib_sizes: &Vec<f64>) -> Vec<f64> {
     //println!("Unnormalized matrix:{:?}", input_matrix);
     let f75 = calc_factor_quantile(&input_matrix, lib_sizes);
     //println!("f75:{:?}", f75);
@@ -1010,12 +833,7 @@ fn tmm_normalization(
         for col in 0..input_matrix.ncols() {
             let obs_data = input_matrix.column(col);
             let obs_lib_size = lib_sizes[col];
-            f.push(calc_factor_tmm(
-                obs_data,
-                &ref_data,
-                ref_lib_size,
-                obs_lib_size,
-            ));
+            f.push(calc_factor_tmm(obs_data, &ref_data, ref_lib_size, obs_lib_size));
         }
     } else {
         // Multithreaded implementation of TMM normalization
@@ -1028,8 +846,7 @@ fn tmm_normalization(
             let lib_sizes_temp = Arc::clone(&lib_sizes_temp);
             let input_matrix_temp = Arc::clone(&input_matrix_temp);
             let handle = thread::spawn(move || {
-                let mut f_thread: Vec<f_index> =
-                    Vec::with_capacity(input_matrix_temp.ncols() / max_threads);
+                let mut f_thread: Vec<f_index> = Vec::with_capacity(input_matrix_temp.ncols() / max_threads);
                 let ref_data = input_matrix_temp.column(ref_column);
                 let ref_lib_size = lib_sizes_temp[ref_column];
                 for col in 0..input_matrix_temp.ncols() {
@@ -1120,11 +937,7 @@ fn calc_factor_tmm(
         let mut num: f64 = 0.0;
         let mut den: f64 = 0.0;
         for i in 0..log_r.len() {
-            if log_r_log[i] >= lo_l
-                && log_r_log[i] <= hi_l
-                && abs_e_log[i] >= lo_s
-                && abs_e_log[i] <= hi_s
-            {
+            if log_r_log[i] >= lo_l && log_r_log[i] <= hi_l && abs_e_log[i] >= lo_s && abs_e_log[i] <= hi_s {
                 num += log_r[i] / v[i];
                 den += 1.0 / v[i];
             }
@@ -1252,14 +1065,8 @@ fn filter_by_expr(
     raw_data: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
     num_diseased: usize,
     num_control: usize,
-    gene_ids: Vec<String>,
     gene_names: Vec<String>,
-) -> (
-    Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
-    Vec<f64>,
-    Vec<String>,
-    Vec<String>,
-) {
+) -> (Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>, Vec<f64>, Vec<String>) {
     // Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>
     //const min_count: f64 = 10.0; // Value of constant from R implementation
     //const min_total_count: f64 = 15.0; // Value of constant from R implementation
@@ -1344,14 +1151,12 @@ fn filter_by_expr(
         blank.push(0.0);
     }
     let mut filtered_matrix = DMatrix::from_vec(positives.len(), num_diseased + num_control, blank);
-    let mut filtered_genes: Vec<String> = Vec::with_capacity(positives.len());
     let mut filtered_gene_names: Vec<String> = Vec::with_capacity(positives.len());
     let mut i = 0;
     //println!("filtered_matrix rows:{}", filtered_matrix.nrows());
     //println!("filtered_matrix cols:{}", filtered_matrix.ncols());
     for index in positives {
         let row = raw_data.row(index);
-        filtered_genes.push(gene_ids[index].to_owned());
         filtered_gene_names.push(gene_names[index].to_owned());
         let mut j = 0;
         for item in &row {
@@ -1372,12 +1177,7 @@ fn filter_by_expr(
         modified_lib_sizes.push(modified_lib_sizes_vector[(0, i)].into());
     }
     //println!("filtered_matrix:{:?}", filtered_matrix);
-    (
-        filtered_matrix,
-        modified_lib_sizes,
-        filtered_genes,
-        filtered_gene_names,
-    )
+    (filtered_matrix, modified_lib_sizes, filtered_gene_names)
 }
 
 fn cpm(
@@ -1393,8 +1193,7 @@ fn cpm(
     for col in 0..input_matrix.ncols() {
         let norm_factor = column_sums[(0, col)];
         for row in 0..input_matrix.nrows() {
-            output_matrix[(row, col)] =
-                (input_matrix[(row, col)] as f64 * 1000000.0) / norm_factor as f64;
+            output_matrix[(row, col)] = (input_matrix[(row, col)] as f64 * 1000000.0) / norm_factor as f64;
         }
     }
     //println!("output_matrix:{:?}", output_matrix);
