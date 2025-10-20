@@ -52,7 +52,7 @@ export class LegendRenderer {
 			domain,
 			colors: imageViewData.uncertainty.map(u => u.color),
 			position: '25, 25',
-			// ticks: 2,
+			ticks: 10,
 			barwidth: width,
 			labels: {
 				left: imageViewData.uncertainty[0].label,
