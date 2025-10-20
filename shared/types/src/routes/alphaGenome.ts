@@ -8,6 +8,7 @@ export type alphaGenomeRequest = {
 	reference: string
 	alternate: string
 	ontologyTerms: string[]
+	outputType?: number
 }
 
 export type alphaGenomeResponse = {
@@ -15,9 +16,11 @@ export type alphaGenomeResponse = {
 	plotImage: string
 }
 
-export type alphaGenomeSampleTypesResponse = {
-	/** the alpha genome sample types */
-	sampleTypes: string[]
+export type AlphaGenomeTypesResponse = {
+	/** the alpha genome ontology terms supported by the dataset */
+	ontologyTerms: any[]
+	/** the alpha genome output types */
+	outputTypes: any[]
 }
 
 export const alphaGenomePayload: RoutePayload = {

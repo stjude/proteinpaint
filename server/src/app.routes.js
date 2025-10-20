@@ -70,5 +70,5 @@ export const routeFiles = [
 	import('../routes/termdb.profileScores.ts'),
 	import('../routes/termdb.profileFormScores.ts'),
 	import('../routes/alphaGenome.ts'),
-	import('../routes/alphaGenomeSampleTypes.ts')
+	import('../routes/AlphaGenomeTypes.ts')
 ]

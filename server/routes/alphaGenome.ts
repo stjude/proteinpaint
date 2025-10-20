@@ -24,7 +24,6 @@ function init() {
 	return async (req, res): Promise<void> => {
 		try {
 			const query: alphaGenomeRequest = req.query
-
 			const params = {
 				chromosome: query.chromosome,
 				position: query.position,
@@ -32,6 +31,8 @@ function init() {
 				alternate: query.alternate
 			}
 			if (query.ontologyTerms) params['ontologyTerms'] = query.ontologyTerms
+			if (query.outputType) params['outputType'] = Number(query.outputType)
+			console.log('alphaGenome params', params)
 			const url = await run_python('alphaGenome.py', JSON.stringify(params))
 			res.send({ plotImage: url } satisfies alphaGenomeResponse)
 		} catch (e: any) {

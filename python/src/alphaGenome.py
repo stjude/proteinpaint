@@ -29,6 +29,7 @@ import sys
 import json
 import base64
 import os
+import traceback
 
 try:
     input_data = sys.stdin.read()
@@ -48,11 +49,13 @@ try:
             'UBERON:0000945',  # stomach
             'UBERON:0002107',  # liver
         ])
+    output_type = parsed_data.get('outputType', 4) # Default to RNA_SEQ
+    output_type = dna_client.OutputType(output_type)
     #alphagenone uses hg38 genome coordinates
 
     API_KEY = os.getenv("API_KEY")
     model = dna_client.create(API_KEY)
-    len = 1024  #16384//2
+    len = 16384//2
     interval = genome.Interval(chromosome=chromosome, start=position-len, end=position+len)
     variant = genome.Variant(
         chromosome=chromosome,
@@ -65,14 +68,19 @@ try:
         interval=interval,
         variant=variant,
         ontology_terms=ontology_terms,
-        requested_outputs=[
-            dna_client.OutputType.RNA_SEQ
-        ],
+        requested_outputs=[output_type]
     )
+
+    # Convert enum to its attribute name, usually lowercased
+    output_name = output_type.name.lower()  # e.g. "RNA_SEQ" -> "rna_seq"
+
+    # Dynamically access the attribute
+    ref_output = getattr(outputs.reference, output_name)
+    alt_output = getattr(outputs.alternate, output_name)
 
     # Calculate the difference between alt and ref tracks
     # output.alt.values and output.ref.values are NumPy arrays
-    scores = np.abs(outputs.alternate.rna_seq.values - outputs.reference.rna_seq.values)
+    scores = np.abs(alt_output.values - ref_output.values)
     scores = np.max(scores, axis=0) #Get the max value on the y-axis for each track
 
 
@@ -83,8 +91,8 @@ try:
     top_indices = sorted_indices[:top_k]
 
     # Select the raw data for the top k tracks using NumPy indexing
-    top_k_ref_values = outputs.reference.rna_seq[:, top_indices] #The : means “all positions on the x-axis”
-    top_k_alt_values = outputs.alternate.rna_seq[:, top_indices]
+    top_k_ref_values = ref_output[:, top_indices] #The : means “all positions on the x-axis”
+    top_k_alt_values = alt_output[:, top_indices]
 
     #print(top_indices)
     # Get the maximum absolute score across all track outputs for the single variant
@@ -99,10 +107,10 @@ try:
             plot_components.OverlaidTracks(
                 tdata=tdata,
                 colors={'REF': 'dimgrey', 'ALT': 'red'},
-                ylabel_template='{biosample_name} ({strand})\n{name}'
+                ylabel_template='({strand})\n{name}'
             ),
         ],
-        interval=outputs.reference.rna_seq.interval,
+        interval=interval,
         # Annotate the location of the variant as a vertical line.
         annotations=[plot_components.VariantAnnotation([variant], alpha=0.8)],
     )
@@ -118,4 +126,6 @@ try:
     print(buffer_url)
 except Exception as e:
     print(f"Error: {str(e)}", file=sys.stderr)
+    traceback.print_exc()
+
     sys.exit(1)
