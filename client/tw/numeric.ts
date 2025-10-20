@@ -324,7 +324,11 @@ export async function fillQWithMedianBin(tw, vocabApi) {
 	if (!result.values) throw '.values[] missing from vocab.getPercentile()'
 	const median = roundValueAuto(result.values[0])
 
-	if (!isNumeric(median)) throw 'median value not a number'
+	/* do not check if median is numeric here because median will be null
+	if term has no data in dataset, so instead of throwing error, should
+	proceed to plot code, which will report to user that no data is available */
+	//if (!isNumeric(median)) throw 'median value not a number'
+
 	tw.q.type = 'custom-bin'
 	tw.q.lst = [
 		{

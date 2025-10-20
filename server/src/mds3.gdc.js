@@ -344,13 +344,13 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2id, term2sa
 	if (typeof re != 'string') throw 'response.body is not tsv text'
 	const lines = re.trim().split('\n')
 
-	if (lines.length <= 1) throw 'less than 1 line from tsv response.body'
+	const bySampleId = {}
+	if (lines.length <= 1) return bySampleId
 
 	// header line:
 	// gene \t case1 \t case 2 \t ...
 	const caseHeader = lines[0].split('\t').slice(1) // order of case uuid in tsv header
 
-	const bySampleId = {}
 	for (const c of caseHeader) {
 		const s = ds.__gdc.caseid2submitter.get(c)
 		if (!s) throw 'case submitter id unknown for a uuid'
