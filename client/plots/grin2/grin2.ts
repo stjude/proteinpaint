@@ -628,20 +628,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 			// Add Matrix button
 			const matrixBtn = headerDiv
 				.append('button')
-				.style('padding', this.btnSmallPadding)
-				.style('background', this.btnBackgroundColor)
-				.style('color', this.btnTextColor)
-				.style('border', `1px solid ${this.btnBorderColor}`)
-				.style('border-radius', this.btnBorderRadius)
-				.style('font-size', `${this.btnFontSize}px`)
-				.style('margin-left', this.btnMargin)
 				.text('Matrix (0 genes selected)')
-				.on('click', () => this.createMatrixFromGenes(selectedGenes))
-				.on('mouseover', function (this: HTMLElement) {
-					this.style.background = '#e0e0e0'
-				})
-				.on('mouseout', () => {
-					matrixBtn.style('background', this.btnBackgroundColor)
+				.property('disabled', true)
+				.on('click', () => {
+					matrixBtn.property('disabled', true) // matrix is expensive. disable to prevent repeated clicking
+					this.createMatrixFromGenes(selectedGenes)
 				})
 
 			const tableDiv = tableContainer.append('div')
@@ -651,9 +642,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 				columns: result.topGeneTable.columns,
 				rows: result.topGeneTable.rows,
 				div: tableDiv,
-				showLines: true,
-				striped: true,
-				showHeader: true,
 				maxHeight: '400px',
 				maxWidth: '100%',
 				dataTestId: 'grin2-top-genes-table',
@@ -667,7 +655,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 						selectedGenes.splice(selectedGenes.indexOf(geneName), 1)
 					}
 					// Update button text after selection changes
-					matrixBtn.text(`Matrix (${selectedGenes.length} genes selected)`)
+					matrixBtn.text(`Matrix (${selectedGenes.length} genes selected)`).property('disabled', !selectedGenes.length)
 				},
 				selectAll: false,
 				download: {
