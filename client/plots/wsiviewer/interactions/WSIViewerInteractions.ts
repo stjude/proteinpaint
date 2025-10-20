@@ -33,7 +33,7 @@ export class WSIViewerInteractions {
 	) => void
 
 	onRetrainModelClicked: (genome: string, dslabel: string, projectId: string) => void
-	toggleLoadingDiv: (show: boolean) => void
+	toggleLoadingDiv: (show: boolean, p?: any) => void
 	toggleThumbnails: (start: number) => void
 
 	constructor(wsiApp: any, opts: any) {
@@ -313,23 +313,41 @@ export class WSIViewerInteractions {
 					}
 				})
 			} catch (e: any) {
-				// this.toggleLoadingDiv(false)
+				this.toggleLoadingDiv(false)
 				wsiApp.app.printError('Error retraining model: ' + (e.message || e))
 			}
 		}
 
-		this.toggleLoadingDiv = (show: boolean) => {
+		//P == process returned from socket.io
+		this.toggleLoadingDiv = (show: boolean, p?: any) => {
+			if (p) {
+				wsiApp.dom.loading.bar.attr('value', p.percent)
+				wsiApp.dom.loading.percent.text(`${p.percent}%`)
+				wsiApp.dom.loading.message.text(p.message || '')
+			} else if (show && !p) {
+				wsiApp.dom.loading.bar.style('display', 'none')
+				wsiApp.dom.loading.percent.style('display', 'none')
+				wsiApp.dom.loading.message.style('display', 'none')
+				wsiApp.dom.loading.div.selectAll('.sjpp-spinner-div').remove()
+				wsiApp.dom.loading.div
+					.style('display', 'block')
+					.append('div')
+					.attr('class', 'sjpp-spinner-div')
+					.style('position', 'relative')
+					.style('top', '50%')
+					.append('span')
+					.attr('class', 'sjpp-spinner')
+			}
 			if (show) {
 				wsiApp.dom.loading.div.style('display', 'block')
-				//Commented out to see progress bar
-				// wsiApp.dom.mapHolder.style('display', 'none')
-				// wsiApp.dom.annotationsHolder.style('display', 'none')
-				// wsiApp.dom.legendHolder.style('display', 'none')
+				wsiApp.dom.mapHolder.style('display', 'none')
+				wsiApp.dom.annotationsHolder.style('display', 'none')
+				wsiApp.dom.legendHolder.style('display', 'none')
 			} else {
 				wsiApp.dom.loading.div.style('display', 'none')
-				// wsiApp.dom.mapHolder.style('display', 'block')
-				// wsiApp.dom.annotationsHolder.style('display', 'inline-block')
-				// wsiApp.dom.legendHolder.style('display', 'inline-block')
+				wsiApp.dom.mapHolder.style('display', 'block')
+				wsiApp.dom.annotationsHolder.style('display', 'inline-block')
+				wsiApp.dom.legendHolder.style('display', 'inline-block')
 			}
 		}
 

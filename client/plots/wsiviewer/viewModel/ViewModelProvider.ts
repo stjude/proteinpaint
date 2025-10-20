@@ -16,6 +16,7 @@ import { Polygon } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Settings from '#plots/wsiviewer/Settings.ts'
 import { socket } from '#common/socket'
+import type { WSIViewerInteractions } from '#plots/wsiviewer/interactions/WSIViewerInteractions.ts'
 
 export class ViewModelProvider {
 	constructor() {}
@@ -28,7 +29,7 @@ export class ViewModelProvider {
 		aiProjectID: number | undefined = undefined,
 		aiWSIMageFiles: Array<string> | undefined,
 		setting: Settings,
-		dom: any
+		interactions: WSIViewerInteractions
 	): Promise<ViewModel> {
 		let wsimageLayers: Array<WSImageLayers | null> = []
 		let wsimageLayersLoadError: string | undefined = undefined
@@ -58,7 +59,7 @@ export class ViewModelProvider {
 				dslabel,
 				aiProjectID!,
 				aiWSIMageFiles!,
-				dom
+				interactions
 			)
 			wsImages = data.wsimages
 			wsimageLayers = await this.getWSImageLayers(
@@ -247,7 +248,7 @@ export class ViewModelProvider {
 		dslabel: string,
 		aiProjectID: number,
 		aiProjectFiles: Array<string>,
-		dom: any
+		interactions: WSIViewerInteractions
 	): Promise<AiProjectSelectedWSImagesResponse> {
 		const body: AiProjectSelectedWSImagesRequest = {
 			genome: genome,
@@ -260,22 +261,22 @@ export class ViewModelProvider {
 		socket.emit('subscribe-job', jobId)
 
 		//TODO: This needs to be reusable code for other routes that use progress
-		/** Also needs to be combined with the toggleLoadingDiv in the interactions*/
 		return new Promise<AiProjectSelectedWSImagesResponse>((resolve, reject) => {
 			const onProgress = (p: any) => {
 				if (p.jobId !== jobId) return // ignore other jobs
 				console.log('AI Project Selected WSI Images progress:', p)
-				dom.loading.bar.attr('value', p.percent)
-				dom.loading.percent.text(`${p.percent}%`)
+				if (p.status === 'running' || p.status === 'queued') {
+					interactions.toggleLoadingDiv(true, p)
+				}
 				if (p.status === 'completed') {
 					socket.off('task-progress', onProgress)
 					setTimeout(() => {
-						dom.loading.div.style('display', 'none')
+						interactions.toggleLoadingDiv(false)
 					}, 500)
 					resolve(p.data as AiProjectSelectedWSImagesResponse)
 				} else if (p.status === 'error' || p.status === 'cancelled') {
 					socket.off('task-progress', onProgress)
-					dom.loading.div.style('display', 'none')
+					interactions.toggleLoadingDiv(false)
 					reject(new Error(p.error || p.message || 'Job failed'))
 				}
 			}
