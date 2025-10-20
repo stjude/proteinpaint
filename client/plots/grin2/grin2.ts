@@ -718,7 +718,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 
 		// If we didn't process all samples, note that caps truncated the run
-		if (result.processingSummary.processedSamples < result.processingSummary.totalSamples) {
+		const expectedToProcessSamples = result.processingSummary.totalSamples - result.processingSummary.failedSamples
+		if (result.processingSummary.processedSamples < expectedToProcessSamples) {
 			this.dom.div
 				.append('div')
 				.style('margin', this.sectionMargin)
@@ -726,7 +727,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.style('color', this.optionsTextColor)
 				.text(
 					`Note: Per-type lesion caps were reached before all samples could be processed. ` +
-						`Analysis ran on ${result.processingSummary?.processedSamples} of ${result.processingSummary?.totalSamples} samples.`
+						`Analysis ran on ${result.processingSummary.processedSamples} of ${expectedToProcessSamples} samples.`
 				)
 		}
 	}
