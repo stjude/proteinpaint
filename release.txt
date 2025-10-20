@@ -1,1 +1,2 @@
-
+Features:
+- GRIN2: Improved gene hover tooltip with chromosome position info
