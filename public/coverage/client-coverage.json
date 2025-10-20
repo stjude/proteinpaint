@@ -409,13 +409,13 @@
       "pct": 0
     },
     "statements": {
-      "total": 122,
+      "total": 123,
       "covered": 5,
       "skipped": 0,
-      "pct": 4.09
+      "pct": 4.06
     },
     "branches": {
-      "total": 108,
+      "total": 110,
       "covered": 0,
       "skipped": 0,
       "pct": 0
@@ -426,9 +426,9 @@
       "diff": -33.33
     },
     "averagePct": {
-      "curr": 2.365,
+      "curr": 2.3575,
       "prev": 45.035000000000004,
-      "diff": -42.67
+      "diff": -42.6775
     }
   },
   "dom/genesearch.ts": {
@@ -4861,38 +4861,38 @@
   },
   "dom/GeneSetEdit/GeneSetEditUI.ts": {
     "lines": {
-      "total": 198,
-      "covered": 81,
-      "skipped": 0,
-      "pct": 40.9
-    },
-    "functions": {
-      "total": 48,
-      "covered": 19,
-      "skipped": 0,
-      "pct": 39.58
-    },
-    "statements": {
-      "total": 218,
+      "total": 207,
       "covered": 84,
       "skipped": 0,
-      "pct": 38.53
+      "pct": 40.57
+    },
+    "functions": {
+      "total": 47,
+      "covered": 17,
+      "skipped": 0,
+      "pct": 36.17
+    },
+    "statements": {
+      "total": 227,
+      "covered": 85,
+      "skipped": 0,
+      "pct": 37.44
     },
     "branches": {
-      "total": 134,
-      "covered": 45,
+      "total": 143,
+      "covered": 46,
       "skipped": 0,
-      "pct": 33.58
+      "pct": 32.16
     },
     "lowestPct": {
-      "curr": 33.58,
-      "prev": 33.07,
-      "diff": 0.509999999999998
+      "curr": 32.16,
+      "prev": 33.58,
+      "diff": -1.4200000000000017
     },
     "averagePct": {
-      "curr": 38.147499999999994,
+      "curr": 36.585,
       "prev": 38.5025,
-      "diff": -0.355000000000004
+      "diff": -1.9174999999999969
     }
   },
   "mass/test/cuminc.integration.spec.js": {

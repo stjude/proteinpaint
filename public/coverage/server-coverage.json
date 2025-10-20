@@ -397,10 +397,10 @@
   },
   "src/mds3.init.js": {
     "lines": {
-      "total": 1526,
+      "total": 1527,
       "covered": 864,
       "skipped": 0,
-      "pct": 56.61
+      "pct": 56.58
     },
     "functions": {
       "total": 114,
@@ -409,26 +409,26 @@
       "pct": 50.87
     },
     "statements": {
-      "total": 1804,
+      "total": 1806,
       "covered": 1049,
       "skipped": 0,
-      "pct": 58.14
+      "pct": 58.08
     },
     "branches": {
-      "total": 1259,
+      "total": 1261,
       "covered": 405,
       "skipped": 0,
-      "pct": 32.16
+      "pct": 32.11
     },
     "lowestPct": {
-      "curr": 32.16,
-      "prev": 0,
-      "diff": 32.16
+      "curr": 32.11,
+      "prev": 32.16,
+      "diff": -0.04999999999999716
     },
     "averagePct": {
-      "curr": 49.445,
-      "prev": 0,
-      "diff": 49.445
+      "curr": 49.41,
+      "prev": 49.445,
+      "diff": -0.035000000000003695
     }
   },
   "src/adHocDictionary/BuildHelpers.ts": {
