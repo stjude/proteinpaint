@@ -84,7 +84,7 @@ export class PlotButtons {
 			.append('button')
 			.style('padding', '10px 15px')
 			.style('border-radius', '20px')
-			.style('border', '1px solid rgb(237, 237, 237)')
+			.style('border-color', 'transparent')
 			.style('background-color', '#CFE2F3')
 			.style('margin', '0 10px')
 			.style('cursor', 'pointer')
@@ -302,37 +302,35 @@ export class PlotButtons {
 		}
 	}
 
-	async getSingleCellConfig(plotType) {
+	async getSingleCellConfig(plotName) {
 		if (!this.item) throw new Error('No item selected')
-		const plot = this.scTermdbConfig.data.plots.find(p => p.name == plotType)
-		if (!plot) throw `No ${plotType} plot found in data.plots [PlotButtons.ts getSingleCellConfig()]`
-
-		return {
+		const plot = this.scTermdbConfig.data.plots.find(p => p.name == plotName)
+		if (!plot) throw `No plot by name ${plotName} in data.plots [PlotButtons.ts getSingleCellConfig()]`
+		const cfg = {
 			chartType: 'sampleScatter',
-			term: {
-				$id: await digestMessage(`${plot.name}-${this.item.sample}-${this.item.experiment}`),
-				term: {
-					type: 'singleCellCellType',
-					name: plot.name, //CHANGEME, this isn't correct
-					sample: {
-						sID: this.item.sample,
-						eID: this.item.experiment
-					},
-					plot: plotType
-				}
-			},
-			term2: {
-				$id: await digestMessage(`${plot.colorBy}-${this.item.sample}-${this.item.experiment}`),
-				term: {
-					type: 'singleCellCellType',
-					name: plot.colorBy, //CHANGEME, this isn't correct
-					sample: {
-						sID: this.item.sample,
-						eID: this.item.experiment
-					},
-					plot: plotType
+			singleCellPlot: {
+				name: plotName,
+				sample: {
+					sID: this.item.sample,
+					eID: this.item.experiment
 				}
 			}
 		}
+		if (plot.colorColumns?.[0]) {
+			// apply optional color term. hardcodes to 1st of the array
+			cfg.colorTW = {
+				$id: await digestMessage(`${plot.name}-${this.item.sample}-${this.item.experiment}`),
+				term: {
+					type: 'singleCellCellType',
+					name: plot.colorColumns[0].name,
+					sample: {
+						sID: this.item.sample,
+						eID: this.item.experiment
+					},
+					plot: plotName
+				}
+			}
+		}
+		return cfg
 	}
 }
