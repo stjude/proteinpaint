@@ -635,16 +635,17 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.style('border-radius', this.btnBorderRadius)
 				.style('font-size', `${this.btnFontSize}px`)
 				.style('margin-left', this.btnMargin)
-				.text('Matrix')
-				.on('click', () => this.createMatrixFromGenes(result.topGeneTable))
+				.text('Matrix (0 genes selected)')
+				.on('click', () => this.createMatrixFromGenes(selectedGenes))
 				.on('mouseover', function (this: HTMLElement) {
-					this.style.background = '#e0e0e0' // Use btnHoverBackgroundColor if accessible
+					this.style.background = '#e0e0e0'
 				})
 				.on('mouseout', () => {
 					matrixBtn.style('background', this.btnBackgroundColor)
 				})
 
 			const tableDiv = tableContainer.append('div')
+			const selectedGenes: string[] = []
 
 			renderTable({
 				columns: result.topGeneTable.columns,
@@ -656,7 +657,19 @@ class GRIN2 extends PlotBase implements RxComponent {
 				maxHeight: '400px',
 				maxWidth: '100%',
 				dataTestId: 'grin2-top-genes-table',
-				selectAll: true,
+				noButtonCallback: (rowIndex, checkboxNode) => {
+					// Get the gene name from the first column of the selected row
+					const geneName = result.topGeneTable.rows[rowIndex][0]?.value
+					if (checkboxNode.checked) {
+						selectedGenes.push(geneName)
+					} else {
+						// Remove gene from array
+						selectedGenes.splice(selectedGenes.indexOf(geneName), 1)
+					}
+					// Update button text after selection changes
+					matrixBtn.text(`Matrix (${selectedGenes.length} genes selected)`)
+				},
+				selectAll: false,
 				download: {
 					fileName: `grin2_top_genes_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}.tsv`
 				},
@@ -732,16 +745,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 	}
 
-	private async createMatrixFromGenes(topGeneTable: any): Promise<void> {
+	private async createMatrixFromGenes(geneSymbols: string[]): Promise<void> {
 		try {
-			// Extract top 20 gene symbols
-			const geneSymbols = topGeneTable.rows
-				.slice(0, 20)
-				.map((row: any) => row[0]?.value)
-				.filter((gene: any) => gene && typeof gene === 'string')
-
 			if (geneSymbols.length === 0) {
-				sayerror(this.dom.div, 'No valid gene symbols found')
+				sayerror(this.dom.div, 'No genes selected. Please select genes from the table.')
+				return
 			}
 
 			// Create termwrappers for mutation data
@@ -753,11 +761,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 						name: gene
 					}
 
-					// Get minimal copy for $id generation (required parameter)
+					// Get minimal copy for $id generation
 					const minTwCopy = this.app.vocabApi.getTwMinCopy({ term })
 
 					return {
-						$id: await get$id(minTwCopy), // Await the async get$id call
+						$id: await get$id(minTwCopy),
 						term,
 						q: {}
 					}
