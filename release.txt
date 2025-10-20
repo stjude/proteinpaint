@@ -1,2 +1,1 @@
-Features:
-- GRIN2: Made top gene table genes selectable. Now can open matrix view with user-selected genes
+
