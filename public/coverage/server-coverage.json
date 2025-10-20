@@ -643,8 +643,8 @@
     },
     "averagePct": {
       "curr": 1.4425,
-      "prev": 0,
-      "diff": 1.4425
+      "prev": 1.4425,
+      "diff": 0
     }
   }
 }

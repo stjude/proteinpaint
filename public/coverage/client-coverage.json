@@ -4933,10 +4933,10 @@
   },
   "tw/numeric.ts": {
     "lines": {
-      "total": 130,
+      "total": 129,
       "covered": 44,
       "skipped": 0,
-      "pct": 33.84
+      "pct": 34.1
     },
     "functions": {
       "total": 17,
@@ -4945,16 +4945,16 @@
       "pct": 23.52
     },
     "statements": {
-      "total": 175,
+      "total": 173,
       "covered": 51,
       "skipped": 0,
-      "pct": 29.14
+      "pct": 29.47
     },
     "branches": {
-      "total": 159,
+      "total": 157,
       "covered": 46,
       "skipped": 0,
-      "pct": 28.93
+      "pct": 29.29
     },
     "lowestPct": {
       "curr": 23.52,
@@ -4962,9 +4962,9 @@
       "diff": -29.930000000000003
     },
     "averagePct": {
-      "curr": 28.8575,
+      "curr": 29.095,
       "prev": 59.93000000000001,
-      "diff": -31.072500000000005
+      "diff": -30.835000000000008
     }
   },
   "plots/barchart.data.js": {
