@@ -3,14 +3,15 @@ import { alphaGenomePayload } from '#types/checkers'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import type {
 	alphaGenomeRequest,
-	alphaGenomeSampleTypesResponse
+	AlphaGenomeTypesResponse
 } from '@sjcrh/proteinpaint-types/routes/alphaGenome.js'
+import { on } from 'events'
 
 /*
 given one or more samples, map the sample(s) to brain template and return the image
 */
 export const api: RouteApi = {
-	endpoint: 'alphaGenomeSampleTypes',
+	endpoint: 'AlphaGenomeTypes',
 	methods: {
 		get: {
 			...alphaGenomePayload,
@@ -27,15 +28,13 @@ function init() {
 	return async (req, res): Promise<void> => {
 		try {
 			const query: alphaGenomeRequest = req.query
-			const params = { ontologyTerms: query.ontologyTerms }
-			console.log(JSON.stringify(params))
-			let sampleTypes = await run_python('alphaGenomeSampleTypes.py', JSON.stringify(params))
-			sampleTypes = JSON.parse(sampleTypes)
-			const keys = Object.keys(sampleTypes)
-			sampleTypes = keys.map(k => ({ label: sampleTypes[k], value: k }))
-			sampleTypes = sampleTypes.sort((a, b) => a.label.localeCompare(b.label))
-
-			res.send({ sampleTypes } satisfies alphaGenomeSampleTypesResponse)
+			const params = query.ontologyTerms? { ontologyTerms: query.ontologyTerms }: {}
+			const result = await run_python('AlphaGenomeTypes.py', JSON.stringify(params))
+			let {ontologyTerms, outputTypes} = JSON.parse(result)
+			const ontologyKeys = Object.keys(ontologyTerms)
+			ontologyTerms = ontologyKeys.map(k => ({ label: ontologyTerms[k], value: k }))
+			ontologyTerms = ontologyTerms.sort((a, b) => a.label.localeCompare(b.label))
+			res.send({ ontologyTerms, outputTypes } satisfies AlphaGenomeTypesResponse)
 		} catch (e: any) {
 			console.log(e)
 			res.status(404).send({ error: e })

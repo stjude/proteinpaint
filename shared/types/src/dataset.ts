@@ -1578,7 +1578,15 @@ keep this setting here for reason of:
 	getAdditionalFilter?: (__protected__: any, term: any) => Filter | undefined
 	alphaGenome?: {
 		ontologyTerms: string[]
-		defaultMutation: { gene: string; chromosome: string; position: number; reference: string; alternate: string }
+		default: {
+			gene: string
+			chromosome: string
+			position: number
+			reference: string
+			alternate: string
+			ontologyTerm: string
+			outputType: number
+		}
 	}
 }
 

@@ -27,15 +27,14 @@ class AlphaGenome extends PlotBase {
 
 	async init(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
-		const body = {
-			ontologyTerms: appState.termdbConfig.alphaGenome.ontologyTerms
-		}
+		const body = {}
 		this.opts.header.text('Alpha Genome Variant Predictor')
-		const { sampleTypes } = await dofetch3('alphaGenomeSampleTypes', { body })
-		this.setControls({ sampleTypes })
+		const { ontologyTerms, outputTypes } = await dofetch3('AlphaGenomeTypes', { body })
+		console.log(ontologyTerms, outputTypes)
+		this.setControls({ ontologyTerms, outputTypes })
 	}
 
-	async setControls({ sampleTypes }) {
+	async setControls({ ontologyTerms, outputTypes }) {
 		const inputs = [
 			{
 				label: 'Chromosome',
@@ -66,13 +65,20 @@ class AlphaGenome extends PlotBase {
 				title: 'Alternate base of the variant'
 			},
 			{
-				label: 'Sample type ',
+				label: 'Ontology term',
 				type: 'dropdown',
-				multiple: true,
-				options: sampleTypes,
-				title: 'Sample type',
+				options: ontologyTerms,
+				title: 'Ontology term',
 				chartType: this.type,
-				settingsKey: 'ontologyTerms'
+				settingsKey: 'ontologyTerm'
+			},
+			{
+				label: 'Output type',
+				type: 'dropdown',
+				options: outputTypes,
+				title: 'Output type',
+				chartType: this.type,
+				settingsKey: 'outputType'
 			}
 		]
 		this.components = {
@@ -94,7 +100,8 @@ class AlphaGenome extends PlotBase {
 			position: settings.position,
 			reference: settings.reference,
 			alternate: settings.alternate,
-			ontologyTerms: settings.ontologyTerms
+			ontologyTerms: [settings.ontologyTerm],
+			outputType: settings.outputType
 		}
 		const data = await dofetch3('alphaGenome', { body })
 		if (data.error) throw data.error
@@ -110,8 +117,7 @@ export function getPlotConfig(opts, app) {
 		settings: {
 			alphaGenome: {
 				controls: { isOpen: false },
-				...alphaGenome.defaultMutation,
-				ontologyTerms: alphaGenome.ontologyTerms
+				...alphaGenome.default
 			}
 		}
 	}
