@@ -132,12 +132,12 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 					margin: '10px'
 				})
 				table.addRow('Gene', d.gene)
+				table.addRow('Position', `${d.chrom}:${d.start}-${d.end}`)
 				const [t1, t2] = table.addRow()
 				t1.text('Type')
 				t2.html(`<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`)
 				table.addRow('-log₁₀(q-value)', d.y.toFixed(3))
 				table.addRow('Subject count', d.nsubj)
-				table.addRow('Position', `${d.chrom}: ${d.start} - ${d.end}`)
 			})
 			.on('mouseout', event => {
 				// Hide stroke on mouseout
