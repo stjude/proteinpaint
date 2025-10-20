@@ -8234,13 +8234,13 @@
     },
     "lowestPct": {
       "curr": 48.35,
-      "prev": 0,
-      "diff": 48.35
+      "prev": 48.35,
+      "diff": 0
     },
     "averagePct": {
       "curr": 67.5125,
-      "prev": 0,
-      "diff": 67.5125
+      "prev": 67.5125,
+      "diff": 0
     }
   },
   "plots/test/grin2.integration.spec.ts": {
@@ -8270,13 +8270,13 @@
     },
     "lowestPct": {
       "curr": 50,
-      "prev": 0,
-      "diff": 50
+      "prev": 50,
+      "diff": 0
     },
     "averagePct": {
       "curr": 87.5,
-      "prev": 0,
-      "diff": 87.5
+      "prev": 87.5,
+      "diff": 0
     }
   }
 }
