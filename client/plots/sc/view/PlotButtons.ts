@@ -315,7 +315,7 @@ export class PlotButtons {
 					eID: this.item.experiment
 				}
 			}
-		}
+		} as any // avoids tsc err
 		if (plot.colorColumns?.[0]) {
 			// apply optional color term. hardcodes to 1st of the array
 			cfg.colorTW = {
