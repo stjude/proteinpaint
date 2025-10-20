@@ -73,6 +73,15 @@ impl Client {
     pub fn builder() -> ClientBuilder<'static> {
         ClientBuilder::new()
     }
+
+    pub fn completion_model(&self, model: &str) -> CompletionModel {
+        CompletionModel::new(self.clone(), model)
+    }
+
+    pub fn embedding_model(&self, model: &str) -> EmbeddingModel {
+        EmbeddingModel::new(self.clone(), model, 0, self.base_url.to_string())
+    }
+
     pub fn new() -> Self {
         Self::builder().build().expect("Myprovider client should build")
     }
@@ -129,11 +138,16 @@ impl EmbeddingsClient for Client {
 
 impl VerifyClient for Client {
     async fn verify(&self) -> Result<(), VerifyError> {
-        let response = self.get("api/tags").expect("Failed to build request").send().await?;
+        let response = self
+            .get("api/tags")
+            .expect("Failed to build request")
+            .send()
+            .await
+            .unwrap();
         match response.status() {
             reqwest::StatusCode::OK => Ok(()),
             _ => {
-                response.error_for_status()?;
+                response.error_for_status().unwrap();
                 Ok(())
             }
         }
@@ -262,7 +276,7 @@ impl embeddings::EmbeddingModel for EmbeddingModel {
 
             if response.status().is_success() {
                 //println!("response.json:{:?}", response.text().await?);
-                let json_data: Value = serde_json::from_str(&response.text().await?)?;
+                let json_data: Value = serde_json::from_str(&response.text().await.unwrap())?;
                 let emb = json_data["outputs"].as_array().unwrap();
                 //.unwrap_or(&vec![serde_json::Value::String(
                 //    "No embeddings found in json output".to_string(),
@@ -639,7 +653,7 @@ impl completion::CompletionModel for CompletionModel {
                 let chunk = match chunk_result {
                     Ok(c) => c,
                     Err(e) => {
-                        yield Err(CompletionError::from(e));
+                        yield Err(CompletionError::RequestError(e.into()));
                         break;
                     }
                 };

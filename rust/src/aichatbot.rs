@@ -1,24 +1,55 @@
 // Syntax: cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/aichatbot
+#![allow(non_snake_case)]
 use anyhow::Result;
 use json::JsonValue;
 use r2d2_sqlite::SqliteConnectionManager;
 use rig::agent::AgentBuilder;
-use rig::client::CompletionClient;
-use rig::client::EmbeddingsClient;
 use rig::completion::Prompt;
 use rig::embeddings::builder::EmbeddingsBuilder;
-use std::collections::HashMap;
-//use rig::providers::ollama;
 use rig::vector_store::in_memory_store::InMemoryVectorStore;
 use schemars::JsonSchema;
 use serde_json::{Map, Value, json};
-use std::io::{self};
-mod ollama;
-mod sjprovider; // Importing custom rig module for invoking SJ GPU server // Importing custom rig module for invoking ollama server
+use std::collections::HashMap;
+use std::fs;
+use std::io;
+use std::path::Path;
+mod ollama; // Importing custom rig module for invoking ollama server
+mod sjprovider; // Importing custom rig module for invoking SJ GPU server
+
+mod test_ai; // Test examples for AI chatbot
+
+// Struct for intaking data from dataset json
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+pub struct AiJsonFormat {
+    hasGeneExpression: bool,
+    db: String,     // Dataset db
+    genedb: String, // Gene db
+    charts: Vec<Charts>,
+}
+
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+enum Charts {
+    // More chart types will be added here later
+    Summary(TrainTestData),
+    DE(TrainTestData),
+}
+
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+struct TrainTestData {
+    SystemPrompt: String,
+    TrainingData: Vec<QuestionAnswer>,
+    TestData: Vec<QuestionAnswer>,
+}
+
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+struct QuestionAnswer {
+    question: String,
+    answer: String,
+}
 
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone)]
-enum llm_backend {
+pub enum llm_backend {
     Ollama(),
     Sj(),
 }
@@ -40,28 +71,61 @@ async fn main() -> Result<()> {
                 Ok(json_string) => {
                     //println!("json_string:{}", json_string);
                     let user_input_json: &JsonValue = &json_string["user_input"];
-                    //let user_input = "Does aspirin leads to decrease in death rates among Africans?";
-                    //let user_input = "Show the point deletion in TP53 gene.";
-                    //let user_input = "Generate DE plot for men with weight greater than 30lbs vs women less than 20lbs";
                     let user_input: &str;
                     match user_input_json.as_str() {
                         Some(inp) => user_input = inp,
                         None => panic!("user_input field is missing in input json"),
                     }
 
-                    let genedb_json: &JsonValue = &json_string["genedb"];
-                    let mut genedb: Option<&str> = None;
-                    match genedb_json.as_str() {
-                        Some(inp) => genedb = Some(inp),
-                        None => {}
+                    if user_input.len() == 0 {
+                        panic!("The user input is empty");
                     }
 
-                    let dataset_db_json: &JsonValue = &json_string["dataset_db"];
-                    let mut dataset_db: Option<&str> = None;
-                    match dataset_db_json.as_str() {
-                        Some(inp) => dataset_db = Some(inp),
-                        None => {}
+                    let tpmasterdir_json: &JsonValue = &json_string["tpmasterdir"];
+                    let tpmasterdir: &str;
+                    match tpmasterdir_json.as_str() {
+                        Some(inp) => tpmasterdir = inp,
+                        None => panic!("tpmasterdir not found"),
                     }
+
+                    let binpath_json: &JsonValue = &json_string["binpath"];
+                    let binpath: &str;
+                    match binpath_json.as_str() {
+                        Some(inp) => binpath = inp,
+                        None => panic!("binpath not found"),
+                    }
+
+                    let ai_json_file_json: &JsonValue = &json_string["aifiles"];
+                    let ai_json_file: String;
+                    match ai_json_file_json.as_str() {
+                        Some(inp) => ai_json_file = String::from(binpath) + &"/../../" + &inp,
+                        None => {
+                            panic!("ai json file not found")
+                        }
+                    }
+
+                    let ai_json_file = Path::new(&ai_json_file);
+                    let ai_json_file_path;
+                    let current_dir = std::env::current_dir().unwrap();
+                    match ai_json_file.canonicalize() {
+                        Ok(p) => ai_json_file_path = p,
+                        Err(_) => {
+                            panic!(
+                                "AI JSON file path not found:{:?}, current directory:{:?}",
+                                ai_json_file, current_dir
+                            )
+                        }
+                    }
+
+                    // Read the file
+                    let ai_data = fs::read_to_string(ai_json_file_path).unwrap();
+
+                    // Parse the JSON data
+                    let ai_json: AiJsonFormat =
+                        serde_json::from_str(&ai_data).expect("AI JSON file does not have the correct format");
+
+                    let genedb = String::from(tpmasterdir) + &"/" + &ai_json.genedb;
+                    let dataset_db = String::from(tpmasterdir) + &"/" + &ai_json.db;
 
                     let apilink_json: &JsonValue = &json_string["apilink"];
                     let apilink: &str;
@@ -97,8 +161,6 @@ async fn main() -> Result<()> {
                     let max_new_tokens: usize = 512;
                     let top_p: f32 = 0.95;
 
-                    let has_gene_expression_str: &JsonValue = &json_string["hasGeneExpression"];
-                    let has_gene_expression: bool = has_gene_expression_str.as_bool().unwrap();
                     if llm_backend_name != "ollama" && llm_backend_name != "SJ" {
                         panic!(
                             "This code currently supports only Ollama and SJ provider. llm_backend_name must be \"ollama\" or \"SJ\""
@@ -120,9 +182,9 @@ async fn main() -> Result<()> {
                             temperature,
                             max_new_tokens,
                             top_p,
-                            dataset_db,
-                            genedb,
-                            has_gene_expression,
+                            &dataset_db,
+                            &genedb,
+                            &ai_json,
                         )
                         .await;
                     } else if llm_backend_name == "SJ".to_string() {
@@ -142,9 +204,9 @@ async fn main() -> Result<()> {
                             temperature,
                             max_new_tokens,
                             top_p,
-                            dataset_db,
-                            genedb,
-                            has_gene_expression,
+                            &dataset_db,
+                            &genedb,
+                            &ai_json,
                         )
                         .await;
                     }
@@ -166,7 +228,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn run_pipeline(
+pub async fn run_pipeline(
     user_input: &str,
     comp_model: impl rig::completion::CompletionModel + 'static,
     embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
@@ -174,9 +236,9 @@ async fn run_pipeline(
     temperature: f64,
     max_new_tokens: usize,
     top_p: f32,
-    dataset_db: Option<&str>,
-    genedb: Option<&str>,
-    has_gene_expression: bool,
+    dataset_db: &str,
+    genedb: &str,
+    ai_json: &AiJsonFormat,
 ) -> Option<String> {
     let mut classification: String = classify_query_by_dataset_type(
         user_input,
@@ -219,7 +281,7 @@ async fn run_pipeline(
             top_p,
             dataset_db,
             genedb,
-            has_gene_expression,
+            ai_json,
         )
         .await;
     } else if classification == "hierarchical".to_string() {
@@ -238,8 +300,10 @@ async fn run_pipeline(
         // Not implemented yet
         final_output = format!("{{\"{}\":\"{}\"}}", "action", "surivial");
     } else if classification == "none".to_string() {
-        final_output = format!("{{\"{}\":\"{}\"}}", "action", "none");
-        println!("The input query did not match any known features in Proteinpaint");
+        final_output = format!(
+            "{{\"{}\":\"{}\",\"{}\":\"{}\"}}",
+            "action", "none", "message", "The input query did not match any known features in Proteinpaint"
+        );
     } else {
         final_output = format!("{{\"{}\":\"{}\"}}", "action", "unknown:".to_string() + &classification);
     }
@@ -315,9 +379,6 @@ There are two main methods of survival analysis:
 
 Sample Query1: \"Compare survival rates between group A and B\"
 Sample Answer1: { \"answer\": \"survival\" }
-
-Sample Query2: \"List all molecular subtypes of leukemia\"
-Sample Answer2: { \"answer\": \"survival\" } 
 
 
 If a ProteinPaint dataset contains survival data then return JSON with single key, 'survival'.
@@ -737,79 +798,86 @@ async fn extract_summary_information(
     temperature: f64,
     max_new_tokens: usize,
     top_p: f32,
-    dataset_db: Option<&str>,
-    genedb: Option<&str>,
-    has_gene_expression: bool,
+    dataset_db: &str,
+    genedb: &str,
+    ai_json: &AiJsonFormat,
 ) -> String {
-    match dataset_db {
-        Some(db) => {
-            //println!("common_genes:{:?}", common_genes);
-            let (rag_docs, db_vec) = parse_dataset_db(db).await;
-            //println!("rag_docs:{:?}", rag_docs);
-            let additional;
-            let schema_json = schemars::schema_for!(SummaryType); // error handling here
-            let schema_json_string = serde_json::to_string_pretty(&schema_json).unwrap();
-            //println!("schema_json summary:{}", schema_json_string);
-            match llm_backend_type {
-                llm_backend::Ollama() => {
-                    additional = json!({
-                                "max_new_tokens": max_new_tokens,
-                                "top_p": top_p,
+    let (rag_docs, db_vec) = parse_dataset_db(dataset_db).await;
+    let additional;
+    let schema_json = schemars::schema_for!(SummaryType); // error handling here
+    let schema_json_string = serde_json::to_string_pretty(&schema_json).unwrap();
+    //println!("schema_json summary:{}", schema_json_string);
+    match llm_backend_type {
+        llm_backend::Ollama() => {
+            additional = json!({
+                    "max_new_tokens": max_new_tokens,
+                    "top_p": top_p,
                     "schema_json": schema_json_string
-                        });
-                }
-                llm_backend::Sj() => {
-                    additional = json!({
-                            "max_new_tokens": max_new_tokens,
-                            "top_p": top_p
-                    });
-                }
-            }
+            });
+        }
+        llm_backend::Sj() => {
+            additional = json!({
+                    "max_new_tokens": max_new_tokens,
+                    "top_p": top_p
+            });
+        }
+    }
 
-            // Create embeddings and add to vector store
-            //let embeddings = EmbeddingsBuilder::new(embedding_model.clone())
-            //    .documents(rag_docs)
-            //    .expect("Reason1")
-            //    .build()
-            //    .await
-            //    .unwrap();
+    // Create embeddings and add to vector store
+    //let embeddings = EmbeddingsBuilder::new(embedding_model.clone())
+    //    .documents(rag_docs)
+    //    .expect("Reason1")
+    //    .build()
+    //    .await
+    //    .unwrap();
 
-            //// Create vector store
-            //let mut vector_store = InMemoryVectorStore::<String>::default();
-            //InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
+    //// Create vector store
+    //let mut vector_store = InMemoryVectorStore::<String>::default();
+    //InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
 
-            let gene_expression_statement;
-            let gene_expression_examples;
-            let mut common_genes = Vec::<String>::new();
-            match has_gene_expression {
-                true => {
-                    let gene_list: Vec<String> = parse_geneset_db(genedb.unwrap()).await;
-                    let lowercase_user_input = user_input.to_lowercase();
-                    let user_words: Vec<&str> = lowercase_user_input.split_whitespace().collect();
-                    let user_words2: Vec<String> = user_words.into_iter().map(|s| s.to_string()).collect();
+    let gene_list: Vec<String> = parse_geneset_db(genedb).await;
+    let lowercase_user_input = user_input.to_lowercase();
+    let user_words: Vec<&str> = lowercase_user_input.split_whitespace().collect();
+    let user_words2: Vec<String> = user_words.into_iter().map(|s| s.to_string()).collect();
 
-                    common_genes = gene_list
-                        .into_iter()
-                        .filter(|x| user_words2.contains(&x.to_lowercase()))
-                        .collect();
-                    gene_expression_statement =
-                        "The \"geneExpression\" subfield should ONLY contain genes names from the relevant genes list.";
-                    gene_expression_examples = "Example question4: \"compare tp53 expression between genders\"\n Example answer4: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\": \"Sex\"}, {\"geneExpression\": \"TP53\"}]}}\n Example question5: \"is tmem181 overexpressed in men?\" Example answer5: {\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"Sex\"},{\"geneExpression\":\"TMEM181\"}]}\n"
-                }
-                false => {
-                    gene_expression_statement = "The \"geneExpression\" field should be EMPTY and must NOT display any gene names as the dataset does not support it. Add message to \"message\" field stating that \"gene expression is not supported for this dataset\"";
-                    gene_expression_examples = "Example question4: \"compare tp53 expression between genders\"\n Example answer4: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\": \"Sex\"}], \"message\": \"gene expression is not supported for this dataset\"}}\n Example question5: \"is tmem181 overexpressed in men?\" Example answer5: {\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"Sex\"}], \"message\": \"gene expression is not supported for this dataset\"}\n"
-                }
+    let common_genes: Vec<String> = gene_list
+        .into_iter()
+        .filter(|x| user_words2.contains(&x.to_lowercase()))
+        .collect();
+
+    let mut summary_data_check: Option<TrainTestData> = None;
+    for chart in ai_json.charts.clone() {
+        if let Charts::Summary(traindata) = chart {
+            summary_data_check = Some(traindata);
+            break;
+        }
+    }
+
+    match summary_data_check {
+        Some(summary_data) => {
+            let mut training_data: String = String::from("");
+            let mut train_iter = 0;
+            for ques_ans in summary_data.TrainingData {
+                train_iter += 1;
+                training_data += "Example question";
+                training_data += &train_iter.to_string();
+                training_data += &":";
+                training_data += &ques_ans.question;
+                training_data += &" ";
+                training_data += "Example answer";
+                training_data += &train_iter.to_string();
+                training_data += &":";
+                training_data += &ques_ans.answer;
+                training_data += &"\n";
             }
 
             let system_prompt: String = String::from(
                 String::from(
                     "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. There are three fields in the JSON to be returned: The \"action\" field will ALWAYS be \"summary\". The \"summaryterms\" field should contain all the variables that the user wants to visualize. The \"clinical\" subfield should ONLY contain names of the fields from the sqlite db. ",
-                ) + &gene_expression_statement
+                ) + &summary_data.SystemPrompt
                     + &" The \"filter\" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both \"summaryterms\" and \"filter\". There are two kinds of filter variables: \"Categorical\" and \"Numeric\". \"Categorical\" variables are those variables which can have a fixed set of values e.g. gender, molecular subtypes. They are defined by the \"CategoricalFilterTerm\" which consists of \"term\" (a field from the sqlite3 db)  and \"value\" (a value of the field from the sqlite db).  \"Numeric\" variables are those which can have any numeric value. They are defined by \"NumericFilterTerm\" and contain  the subfields \"term\" (a field from the sqlite3 db), \"greaterThan\" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and \"lessThan\" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. The \"message\" field only contain messages of terms in the user input that were not found in their respective databases. The JSON schema is as follows:"
                     + &schema_json_string
-                    + &"\n  Example question1: \"Show summary of all molecular subtypes for patients with age from 10 to 40 years\"\n Example answer1: {{\"action\":\"summary\", \"summaryterms\":[{\"clinical\":\"Molecular Subtype\"}], filter:[ {\"Numeric\":{\"term\":\"Age\", \"greaterThan\":10, \"lessThan\":40}}]}}\n Example question2: \"show summary of molecular subtype for men under 40 years only\"\n Example answer2: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"Sex\",\"value\":\"Male\"}},{\"Numeric\":{\"greaterThan\":null,\"lessThan\":40.0,\"term\":\"Age\"}}],\"summaryterms\":[{\"clinical\":\"Molecular subtype\"}]}\n Example Question3: \"Show race for women with early onset of cancer\"\n Example Answer3: {\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"Sex\",\"value\":\"Female\"}}, {\"Numeric\":{\"greaterThan\":null,\"lessThan\":18.0,\"term\":\"Age\"}],\"summaryterms\":[{\"clinical\":\"Ancestry\"}]}\n "
-                    + &gene_expression_examples
+                    + &training_data
                     + "The sqlite db in plain language is as follows:\n"
                     + &rag_docs.join(",")
                     + &"\n Relevant genes are as follows (separated by comma(,)):"
@@ -826,7 +894,7 @@ async fn extract_summary_information(
                 .additional_params(additional)
                 .build();
 
-            let response = agent.prompt(user_input).await.expect("Failed to prompt server");
+            let response = agent.prompt(user_input).await.expect("Failed to prompt ollama");
 
             //println!("Ollama: {}", response);
             let result = response.replace("json", "").replace("```", "");
@@ -845,18 +913,17 @@ async fn extract_summary_information(
                     let json_value2: Value =
                         serde_json::from_str(&json_value[0]["generated_text"].to_string()).expect("REASON2");
                     //println!("json_value2:{}", json_value2.as_str().unwrap());
-                    let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON2");
+                    let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON3");
                     //println!("Classification result:{}", json_value3);
                     final_llm_json = json_value3.to_string()
                 }
             }
             //println!("final_llm_json:{}", final_llm_json);
-            let final_validated_json =
-                validate_summary_output(final_llm_json.clone(), db_vec, common_genes, has_gene_expression);
+            let final_validated_json = validate_summary_output(final_llm_json.clone(), db_vec, common_genes, ai_json);
             final_validated_json
         }
         None => {
-            panic!("Dataset db file needed for summary term extraction from user input")
+            panic!("summary chart train and test data is not defined in dataset JSON file")
         }
     }
 }
@@ -868,7 +935,7 @@ fn get_summary_string() -> String {
 //const action: &str = &"summary";
 //const geneExpression: &str = &"geneExpression";
 
-#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct SummaryType {
     // Serde uses this for deserialization.
     #[serde(default = "get_summary_string")]
@@ -880,7 +947,20 @@ struct SummaryType {
     message: Option<String>,
 }
 
-#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+impl SummaryType {
+    #[allow(dead_code)]
+    pub fn sort_summarytype_struct(&mut self) {
+        // This function is necessary for testing (test_ai.rs) to see if two variables of type "SummaryType" are equal or not. Without this a vector of two Summarytype holding the same values but in different order will be classified separately.
+        self.summaryterms.sort();
+
+        match self.filter.clone() {
+            Some(ref mut filterterms) => filterterms.sort(),
+            None => {}
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Ord, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 enum SummaryTerms {
     #[allow(non_camel_case_types)]
     clinical(String),
@@ -888,13 +968,35 @@ enum SummaryTerms {
     geneExpression(String),
 }
 
-#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+impl PartialOrd for SummaryTerms {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self, other) {
+            (SummaryTerms::clinical(_), SummaryTerms::clinical(_)) => Some(std::cmp::Ordering::Equal),
+            (SummaryTerms::geneExpression(_), SummaryTerms::geneExpression(_)) => Some(std::cmp::Ordering::Equal),
+            (SummaryTerms::clinical(_), SummaryTerms::geneExpression(_)) => Some(std::cmp::Ordering::Greater),
+            (SummaryTerms::geneExpression(_), SummaryTerms::clinical(_)) => Some(std::cmp::Ordering::Greater),
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Ord, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 enum FilterTerm {
     Categorical(CategoricalFilterTerm),
     Numeric(NumericFilterTerm),
 }
 
-#[derive(Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+impl PartialOrd for FilterTerm {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self, other) {
+            (FilterTerm::Categorical(_), FilterTerm::Categorical(_)) => Some(std::cmp::Ordering::Equal),
+            (FilterTerm::Numeric(_), FilterTerm::Numeric(_)) => Some(std::cmp::Ordering::Equal),
+            (FilterTerm::Categorical(_), FilterTerm::Numeric(_)) => Some(std::cmp::Ordering::Greater),
+            (FilterTerm::Numeric(_), FilterTerm::Categorical(_)) => Some(std::cmp::Ordering::Greater),
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct CategoricalFilterTerm {
     term: String,
     value: String,
@@ -908,24 +1010,63 @@ struct NumericFilterTerm {
     lessThan: Option<f32>,
 }
 
+impl PartialEq for NumericFilterTerm {
+    fn eq(&self, other: &Self) -> bool {
+        let greater_equality: bool;
+        match (self.greaterThan, other.greaterThan) {
+            (Some(a), Some(b)) => greater_equality = (a - b).abs() < 1e-6,
+            (None, None) => greater_equality = true,
+            _ => greater_equality = false,
+        }
+
+        let less_equality: bool;
+        match (self.lessThan, other.lessThan) {
+            (Some(a), Some(b)) => less_equality = (a - b).abs() < 1e-6,
+            (None, None) => less_equality = true,
+            _ => less_equality = false,
+        }
+
+        if greater_equality == true && less_equality == true {
+            true
+        } else {
+            false
+        }
+    }
+}
+
+impl Eq for NumericFilterTerm {}
+
+impl PartialOrd for NumericFilterTerm {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        if self.greaterThan < other.greaterThan {
+            Some(std::cmp::Ordering::Less)
+        } else if self.greaterThan > other.greaterThan {
+            Some(std::cmp::Ordering::Greater)
+        } else if self.lessThan < other.lessThan {
+            Some(std::cmp::Ordering::Less)
+        } else if self.lessThan > other.lessThan {
+            Some(std::cmp::Ordering::Greater)
+        } else {
+            Some(std::cmp::Ordering::Equal)
+        }
+    }
+}
+
+impl Ord for NumericFilterTerm {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}
+
 fn validate_summary_output(
     raw_llm_json: String,
     db_vec: Vec<DbRows>,
     common_genes: Vec<String>,
-    has_gene_expression: bool,
+    ai_json: &AiJsonFormat,
 ) -> String {
     let json_value: SummaryType =
        serde_json::from_str(&raw_llm_json).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
     let mut message: String = String::from("");
-    //let json_match = serde_json::from_str(&raw_llm_json);
-    //match json_match {
-    //    Some(json_value) => {
-
-    //	}
-    //    None => {
-    //        message = message + &"Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM";
-    //    }
-    //}
     match json_value.message {
         Some(mes) => {
             message = message + &mes; // Append any message given by the LLM
@@ -967,7 +1108,7 @@ fn validate_summary_output(
                 }
             }
             SummaryTerms::geneExpression(gene) => {
-                match has_gene_expression {
+                match ai_json.hasGeneExpression {
                     true => {
                         let mut num_gene_verification = 0;
                         for common_gene in &common_genes {
