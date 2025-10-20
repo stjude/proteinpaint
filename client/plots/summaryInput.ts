@@ -37,21 +37,22 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 	}
 
 	async init() {
+		const customControls = this.app.getState().termdbConfig.customControls
 		const inputs = [
 			{
 				type: 'term',
 				configKey: 'term',
-				label: 'Variable to Correlate'
+				label: customControls?.term?.label || 'Primary Variable'
 			},
 			{
 				type: 'term',
 				configKey: 'term2',
-				label: 'Overlay Variable'
+				label: customControls?.term2?.label || 'Overlay Variable'
 			},
 			{
 				type: 'term',
 				configKey: 'term0',
-				label: 'Divide by Variable'
+				label: customControls?.term0?.label || 'Divide by Variable'
 			}
 		]
 

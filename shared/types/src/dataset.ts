@@ -1552,6 +1552,8 @@ keep this setting here for reason of:
 	 */
 	hasSampleAncestry?: boolean
 	sampleTypes?: SampleType[]
+	/** custom config for plot controls */
+	customControls?: any
 
 	tracks?: {
 		/** allow color or shape changes in the lollipop */

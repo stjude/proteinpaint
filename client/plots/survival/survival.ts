@@ -157,6 +157,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 	}
 
 	async setControls() {
+		const customControls = this.app.getState().termdbConfig.customControls
 		if (this.opts.controls) {
 			this.opts.controls.on('downloadClick.survival', this.download)
 		} else {
@@ -173,8 +174,8 @@ class TdbSurvival extends PlotBase implements RxComponent {
 							configKey: 'term2',
 							chartType: 'survival',
 							usecase: { target: 'survival', detail: 'term2' },
-							title: 'Overlay data',
-							label: 'Overlay',
+							title: customControls?.term2?.label || 'Overlay data',
+							label: customControls?.term2?.label || 'Overlay',
 							vocabApi: this.app.vocabApi,
 							numericEditMenuVersion: ['discrete'],
 							defaultQ4fillTW: t0_t2_defaultQ
@@ -184,8 +185,8 @@ class TdbSurvival extends PlotBase implements RxComponent {
 							configKey: 'term0',
 							chartType: 'survival',
 							usecase: { target: 'survival', detail: 'term0' },
-							title: 'Divide by data',
-							label: 'Divide by',
+							title: customControls?.term0?.label || 'Divide by data',
+							label: customControls?.term0?.label || 'Divide by',
 							vocabApi: this.app.vocabApi,
 							numericEditMenuVersion: ['discrete'],
 							defaultQ4fillTW: t0_t2_defaultQ
