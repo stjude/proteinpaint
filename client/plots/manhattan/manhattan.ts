@@ -69,6 +69,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 	const svg = div
 		.append('svg')
+		.attr('data-testid', 'sjpp-manhattan')
 		.attr('width', data.plotData.png_width + settings.yAxisX + settings.yAxisSpace)
 		.attr('height', data.plotData.png_height + settings.yAxisY * 4) // Extra space for x-axis labels, legend, and title
 
