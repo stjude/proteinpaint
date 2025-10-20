@@ -96,8 +96,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 			sample_id,
 			settings,
 			aiProjectID,
-			aiWSIMageFiles,
-			settings
+			aiWSIMageFiles
 		)
 
 		const wsimages = viewModel.sampleWSImages
