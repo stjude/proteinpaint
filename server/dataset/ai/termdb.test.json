@@ -25,7 +25,7 @@
        "DE": {
           "SystemPrompt":"", 
           "TrainingData":[
-               {"question":"Show molecular subtypes","answer":"{\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"Molecular subtype\"}]}"}
+               {"question":"Show differential gene expression between group A and B","answer":"{\"action\":\"dge\",\"DE_output\":[{\"group1\":{\"name\":\"group A\"},\"group2\":{\"name\":\"group B\"}}]}"}
           ],
           "TestData":[
                {"question":"","answer":""}
