@@ -4,5 +4,5 @@
     nibabel
     numpy
     pyvips
-    numba
+    numba==0.61.2
     xlsxwriter
