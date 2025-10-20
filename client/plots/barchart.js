@@ -87,6 +87,7 @@ export class Barchart extends PlotBase {
 
 	async setControls() {
 		const state = this.state
+		const customControls = this.app.getState().termdbConfig.customControls
 		this.dom.controls.selectAll('*').remove()
 		if (this.opts.controls) {
 			this.opts.controls.on('downloadClick.barchart', this.download)
@@ -100,7 +101,7 @@ export class Barchart extends PlotBase {
 					configKey: 'term',
 					chartType: 'barchart',
 					usecase: { target: 'barchart', detail: 'term' },
-					label: renderTerm1Label,
+					label: customControls?.term?.label || renderTerm1Label,
 					vocabApi: this.app.vocabApi,
 					menuOptions: 'edit',
 					defaultQ4fillTW: { geneVariant: { type: 'custom-groupset' } },
@@ -116,8 +117,8 @@ export class Barchart extends PlotBase {
 					configKey: 'term2',
 					chartType: 'barchart',
 					usecase: { target: 'barchart', detail: 'term2' },
-					title: 'Overlay data',
-					label: 'Overlay',
+					title: customControls?.term2?.label || 'Overlay data',
+					label: customControls?.term2?.label || 'Overlay',
 					vocabApi: this.app.vocabApi,
 					numericEditMenuVersion: this.opts.numericEditMenuVersion,
 					defaultQ4fillTW: term0_term2_defaultQ,
@@ -146,8 +147,8 @@ export class Barchart extends PlotBase {
 					configKey: 'term0',
 					chartType: 'barchart',
 					usecase: { target: 'barchart', detail: 'term0' },
-					title: 'Divide by data',
-					label: 'Divide by',
+					title: customControls?.term0?.label || 'Divide by data',
+					label: customControls?.term0?.label || 'Divide by',
 					vocabApi: this.app.vocabApi,
 					numericEditMenuVersion: this.opts.numericEditMenuVersion,
 					defaultQ4fillTW: term0_term2_defaultQ,

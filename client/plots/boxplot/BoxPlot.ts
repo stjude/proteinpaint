@@ -59,13 +59,14 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 	}
 
 	async setControls() {
+		const customControls = this.app.getState().termdbConfig.customControls
 		const inputs = [
 			{
 				type: 'term',
 				configKey: 'term',
 				chartType: 'boxplot',
 				usecase: { target: 'boxplot', detail: 'term' },
-				label: renderTerm1Label,
+				label: customControls?.term?.label || renderTerm1Label,
 				vocabApi: this.app.vocabApi,
 				menuOptions: 'edit'
 			},
@@ -74,8 +75,8 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 				configKey: 'term2',
 				chartType: 'boxplot',
 				usecase: { target: 'boxplot', detail: 'term2' },
-				title: 'Overlay data',
-				label: 'Overlay',
+				title: customControls?.term2?.label || 'Overlay data',
+				label: customControls?.term2?.label || 'Overlay',
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: this.opts.numericEditMenuVersion || ['continuous', 'discrete'],
 				defaultQ4fillTW: term0_term2_defaultQ
@@ -85,8 +86,8 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 				configKey: 'term0',
 				chartType: 'boxplot',
 				usecase: { target: 'boxplot', detail: 'term0' },
-				title: 'Divide by data',
-				label: 'Divide by',
+				title: customControls?.term0?.label || 'Divide by data',
+				label: customControls?.term0?.label || 'Divide by',
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: this.opts.numericEditMenuVersion || ['continuous', 'discrete'],
 				defaultQ4fillTW: term0_term2_defaultQ

@@ -97,6 +97,7 @@ class ViolinPlot extends PlotBase {
 
 	async setControls() {
 		this.dom.controls.selectAll('*').remove()
+		const customControls = this.app.getState().termdbConfig.customControls
 		this.components = {}
 		if (this.opts.mode == 'minimal') return
 		const inputs = [
@@ -105,7 +106,7 @@ class ViolinPlot extends PlotBase {
 				configKey: 'term',
 				chartType: 'violin',
 				usecase: { target: 'violin', detail: 'term' },
-				label: renderTerm1Label,
+				label: customControls?.term?.label || renderTerm1Label,
 				vocabApi: this.app.vocabApi,
 				menuOptions: 'edit'
 			},
@@ -114,8 +115,8 @@ class ViolinPlot extends PlotBase {
 				configKey: 'term2',
 				chartType: 'violin',
 				usecase: { target: 'violin', detail: 'term2' },
-				title: 'Overlay data',
-				label: 'Overlay',
+				title: customControls?.term2?.label || 'Overlay data',
+				label: customControls?.term2?.label || 'Overlay',
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: this.opts.numericEditMenuVersion,
 				defaultQ4fillTW: term0_term2_defaultQ
@@ -125,8 +126,8 @@ class ViolinPlot extends PlotBase {
 				configKey: 'term0',
 				chartType: 'violin',
 				usecase: { target: 'violin', detail: 'term0' },
-				title: 'Divide by data',
-				label: 'Divide by',
+				title: customControls?.term0?.label || 'Divide by data',
+				label: customControls?.term0?.label || 'Divide by',
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: this.opts.numericEditMenuVersion,
 				defaultQ4fillTW: term0_term2_defaultQ
