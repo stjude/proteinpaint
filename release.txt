@@ -1,2 +1,1 @@
-Features:
-- GRIN2: Improved cap reached message logic to account for high numbers of failed files
+

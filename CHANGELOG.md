@@ -12,6 +12,7 @@ Features:
 - GRIN2: Added creation of cache file that save results for future plotting changes
 - GRIN2: Now determining data types available to python  cache file table from request data types. Returning cacheFileName in response. Made top gene table number of genes displayed a parameter sent by the request
 - GRIN2: Improved gene hover tooltip with chromosome position info
+- GRIN2: Improved cap reached message logic to account for high numbers of failed files
 
 Fixes:
 - replace empty string bin label
