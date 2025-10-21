@@ -27,6 +27,7 @@ class TdbPlotControls {
 		this.type = 'plotControls'
 		this.customEvents = ['downloadClick', 'infoClick', 'helpClick']
 		this.isOpen = opts.isOpen || false
+		this.showTopBar = opts.hasOwnProperty('showTopBar') ? opts.showTopBar : true
 		setInteractivity(this)
 		setRenderers(this)
 	}
@@ -36,8 +37,18 @@ class TdbPlotControls {
 			this.setDom()
 			// not using this.components since these will be manually updated later in main(),
 			// instead of updating these via notifyComponents() from app.dispatch
-			this.features = await multiInit({
-				topbar: topBarInit({
+			const arg = {
+				config: configUiInit({
+					app: this.app,
+					id: this.id,
+					holder: this.dom.config_div,
+					isOpen: () => this.isOpen,
+					tip: this.app.tip,
+					inputs: this.opts.inputs
+				})
+			}
+			if (this.showTopBar) {
+				arg.topbar = topBarInit({
 					app: this.app,
 					id: this.id,
 					holder: this.dom.topbar,
@@ -58,16 +69,9 @@ class TdbPlotControls {
 						}),
 					helpHandler: () => this.bus.emit('helpClick'),
 					title: this.opts.title
-				}),
-				config: configUiInit({
-					app: this.app,
-					id: this.id,
-					holder: this.dom.config_div,
-					isOpen: () => this.isOpen,
-					tip: this.app.tip,
-					inputs: this.opts.inputs
 				})
-			})
+			}
+			this.features = await multiInit(arg)
 		} catch (e) {
 			throw e
 		}
