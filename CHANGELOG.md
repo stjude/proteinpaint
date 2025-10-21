@@ -17,6 +17,7 @@ Features:
 
 Fixes:
 - replace empty string bin label
+- Survival plot: allows users to set default time units and switch among time units: years, months, weeks, days
 
 
 ## 2.149.0
