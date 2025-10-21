@@ -1,8 +1,7 @@
 import { mclass, dtsnvindel, dtfusionrna, dtsv, dtcnv, bplen, dt2label } from '#shared/common.js'
 import { init_sampletable } from './sampletable'
-import { appear, renderTable, table2col, makeSsmLink } from '#dom'
+import { appear, renderTable, table2col, makeSsmLink, Menu } from '#dom'
 import { dofetch3 } from '#common/dofetch'
-import { Menu } from '#dom'
 
 /*
 when there's just one item, print a vertical 2-col table to show details
@@ -43,7 +42,7 @@ printSvPair
 */
 
 const cutoff_tableview = 10
-const { ontologyTerms } = await dofetch3('alphaGenomeTypes', {})
+let ontologyTerms
 
 export async function itemtable(arg) {
 	if (arg.mlst.find(m => m.dt != dtsnvindel && m.dt != dtfusionrna && m.dt != dtsv && m.dt != dtcnv)) {
@@ -269,7 +268,7 @@ async function itemtable_multiItems(arg) {
 table display of variant attributes, for mlst[0] single variant
 do not show sample level details
 */
-function table_snvindel({ mlst, tk, block }, table) {
+async function table_snvindel({ mlst, tk, block }, table) {
 	const m = mlst[0]
 	{
 		const [td1, td2] = table.addRow()
@@ -282,13 +281,14 @@ function table_snvindel({ mlst, tk, block }, table) {
 		// do not pretend m is mutation if ref/alt is missing
 		td1.text(m.ref && m.alt ? 'Mutation' : 'Position')
 		print_snv(td2, m, tk, block)
-		if (m.ref && m.alt && m.ref != '-' && m.alt != '-') {
+		if (tk.mds.termdbConfig.queries?.alphaGenome && m.ref && m.alt && m.ref != '-' && m.alt != '-') {
+			if (!ontologyTerms) await dofetch3('alphaGenomeTypes', {}).then(data => (ontologyTerms = data.ontologyTerms))
 			const [td3, td4] = table.addRow()
 			// do not pretend m is mutation if ref/alt is missing
 			td3.text('Alpha Genome')
 			const select = td4.append('select')
 			for (const term of ontologyTerms) select.append('option').attr('value', term.value).text(term.label)
-			const ontologyTerm = tk.mds.termdbConfig.alphaGenome?.ontologyTerm
+			const ontologyTerm = tk.mds.termdbConfig.queries.alphaGenome?.ontologyTerm
 			if (ontologyTerm) select.node().value = ontologyTerm
 
 			td4
