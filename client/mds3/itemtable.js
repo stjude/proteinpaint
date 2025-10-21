@@ -43,6 +43,7 @@ printSvPair
 */
 
 const cutoff_tableview = 10
+const { ontologyTerms } = await dofetch3('alphaGenomeTypes', {})
 
 export async function itemtable(arg) {
 	if (arg.mlst.find(m => m.dt != dtsnvindel && m.dt != dtfusionrna && m.dt != dtsv && m.dt != dtcnv)) {
@@ -286,12 +287,16 @@ function table_snvindel({ mlst, tk, block }, table) {
 			const [td3, td4] = table.addRow()
 			// do not pretend m is mutation if ref/alt is missing
 			td3.text('Alpha Genome')
+			const select = td4.append('select')
+			for (const term of ontologyTerms) select.append('option').attr('value', term.value).text(term.label)
+			const ontologyTerm = tk.mds.termdbConfig.alphaGenome?.default.ontologyTerm
+			select.node().value = ontologyTerm
+
 			td4
-				.append('a')
+				.append('button')
 				.text('View')
 				.on('click', async () => {
-					const ontologyTerms = tk.mds.termdbConfig.alphaGenome?.ontologyTerms
-					openAlphaGenome(m, ontologyTerms)
+					openAlphaGenome(m, select.node().value)
 				})
 		}
 	}
@@ -350,13 +355,13 @@ function table_snvindel({ mlst, tk, block }, table) {
 
 const menu = new Menu({ padding: '2px' })
 
-async function openAlphaGenome(m, ontologyTerms) {
+async function openAlphaGenome(m, ontologyTerm) {
 	const params = {
 		chromosome: m.chr,
 		position: m.pos + 1,
 		reference: m.ref,
 		alternate: m.alt,
-		ontologyTerms
+		ontologyTerms: [ontologyTerm]
 	}
 
 	const data = await dofetch3('alphaGenome', { body: params })
