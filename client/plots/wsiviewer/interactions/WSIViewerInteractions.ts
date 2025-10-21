@@ -463,6 +463,7 @@ export class WSIViewerInteractions {
 			config: {
 				settings: {
 					renderWSIViewer: false,
+					renderAnnotationTable: true,
 					randomNum: Math.random(),
 					sessionsTileSelection: sessionsTileSelection
 				}
