@@ -61,6 +61,7 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 			id: this.id,
 			holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
 			isOpen: true,
+			showTopBar: false,
 			inputs
 		})
 
