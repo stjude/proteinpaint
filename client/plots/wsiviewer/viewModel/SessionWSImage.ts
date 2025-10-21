@@ -60,11 +60,7 @@ export class SessionWSImage extends WSImage {
 			]
 		})
 
-		const predictionsFiltered = (sessionWSImage.predictions || []).filter(
-			p => !annotationKeys.has(`${p.zoomCoordinates[0]},${p.zoomCoordinates[1]}`)
-		)
-
-		const predictionRows: any[] = predictionsFiltered.map((prediction, i) => {
+		const predictionRows: any[] = (sessionWSImage.predictions || []).map((prediction, i) => {
 			const idx = sessionsRows.length + i // Continue index after sessions
 			const color = sessionWSImage.classes?.find(c => c.label === prediction.class)?.color
 			const firstCell: any = { value: idx }
