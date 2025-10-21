@@ -14,6 +14,7 @@ Features:
 - GRIN2: Improved gene hover tooltip with chromosome position info
 - GRIN2: Improved cap reached message logic to account for high numbers of failed files
 - GRIN2: Made top gene table genes selectable. Now can open matrix view with user-selected genes
+- Added numba version to requirements.txt
 
 Fixes:
 - replace empty string bin label
