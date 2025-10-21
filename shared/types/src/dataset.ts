@@ -1577,7 +1577,7 @@ keep this setting here for reason of:
 	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
 	getAdditionalFilter?: (__protected__: any, term: any) => Filter | undefined
 	alphaGenome?: {
-		ontologyTerms: string[]
+		ontologyTerm?: string // default ontology term for a dataset
 		default: {
 			gene: string
 			chromosome: string
