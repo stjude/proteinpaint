@@ -1,5 +1,8 @@
 import type { RoutePayload } from './routeApi.ts'
 
+export type alphaGenomeTypesRequest = {
+	dslabel: string
+}
 export type alphaGenomeTypesResponse = {
 	/** the alpha genome ontology terms supported by the dataset */
 	ontologyTerms: any[]
