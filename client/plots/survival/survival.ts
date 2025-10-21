@@ -232,17 +232,16 @@ class TdbSurvival extends PlotBase implements RxComponent {
 								'The maximum time-to-event to be displayed in the survival plot, affects only the visual representation and does not impact other analyses. All available data is still used to compute p-values. If this value is left empty or set to 0, no cutoff will be applied.'
 						},
 						{
-							label: 'Time Factor',
-							type: 'math',
-							chartType: 'survival',
-							settingsKey: 'timeFactor',
-							title: 'Rescale the time scale by multiplying this factor. Enter a number or an expression like 1/365.'
-						},
-						{
 							label: 'Time Unit',
-							type: 'text',
+							type: 'radio',
 							chartType: 'survival',
 							settingsKey: 'timeUnit',
+							options: [
+								{ label: 'years', value: 'years' },
+								{ label: 'months', value: 'months' },
+								{ label: 'weeks', value: 'weeks' },
+								{ label: 'days', value: 'days' }
+							],
 							title: `The unit to display in the x-axis title, like 'years'`
 						},
 						{
@@ -384,7 +383,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 			data.keys.forEach((k, i) => {
 				obj[k] = estKeys.includes(k) ? Number(d[i]) : d[i]
 			})
-			obj.time = obj.time * this.settings.timeFactor
+			obj.time = obj.time * this.getTimeFactor()
 			rows.push(obj)
 			this.uniqueSeriesIds.add(obj.seriesId)
 		}
@@ -408,6 +407,24 @@ class TdbSurvival extends PlotBase implements RxComponent {
 		}
 
 		return rows
+	}
+
+	// time factor that converts survival data from default time unit to the current time unit.
+	getTimeFactor() {
+		const numUnitInOneYear = this.settings.numUnitInOneYear
+		const timeUnit = this.settings.timeUnit
+		switch (timeUnit) {
+			case 'years':
+				return (1 / numUnitInOneYear) * 1
+			case 'months':
+				return (1 / numUnitInOneYear) * 12
+			case 'weeks':
+				return (1 / numUnitInOneYear) * 52
+			case 'days':
+				return (1 / numUnitInOneYear) * 365
+			default:
+				throw 'unknown time Unit for survival data'
+		}
 	}
 
 	setTerm2Color(charts) {
@@ -1296,8 +1313,8 @@ export async function getPlotConfig(opts, app) {
 				chartMargin: 10,
 				svgw: 400,
 				svgh: 300,
-				timeFactor: 1,
-				timeUnit: '',
+				numUnitInOneYear: 1,
+				timeUnit: 'years',
 				atRiskVisible: true,
 				atRiskLabelOffset: -20,
 				xTickValues: [], // if undefined or empty, will be ignored
