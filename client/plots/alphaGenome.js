@@ -30,6 +30,7 @@ class AlphaGenome extends PlotBase {
 		const body = {}
 		this.opts.header.text('Alpha Genome Variant Predictor')
 		const { ontologyTerms, outputTypes, intervals } = await dofetch3('AlphaGenomeTypes', { body })
+		console.log(ontologyTerms)
 		this.setControls({ ontologyTerms, outputTypes, intervals })
 	}
 

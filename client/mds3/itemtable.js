@@ -282,15 +282,14 @@ function table_snvindel({ mlst, tk, block }, table) {
 		// do not pretend m is mutation if ref/alt is missing
 		td1.text(m.ref && m.alt ? 'Mutation' : 'Position')
 		print_snv(td2, m, tk, block)
-
-		if (m.ref && m.alt) {
+		if (m.ref && m.alt && m.ref != '-' && m.alt != '-') {
 			const [td3, td4] = table.addRow()
 			// do not pretend m is mutation if ref/alt is missing
 			td3.text('Alpha Genome')
 			const select = td4.append('select')
 			for (const term of ontologyTerms) select.append('option').attr('value', term.value).text(term.label)
-			const ontologyTerm = tk.mds.termdbConfig.alphaGenome?.default.ontologyTerm
-			select.node().value = ontologyTerm
+			const ontologyTerm = tk.mds.termdbConfig.alphaGenome?.ontologyTerm
+			if (ontologyTerm) select.node().value = ontologyTerm
 
 			td4
 				.append('button')
