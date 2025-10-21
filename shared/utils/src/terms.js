@@ -181,8 +181,7 @@ export function getSampleType(term, ds) {
 	if (term.type == 'samplelst') {
 		const key = Object.keys(term.values)[0]
 		const sampleId = term.values[key].list[0]?.sampleId
-		// sampleId2Type expects number as key
-		if (sampleId) return ds.sampleId2Type.get(Number(sampleId))
+		if (sampleId) return ds.sampleId2Type.get(Number(sampleId) || sampleId)
 		else return DEFAULT_SAMPLE_TYPE
 	}
 	// samplelst or non dict terms

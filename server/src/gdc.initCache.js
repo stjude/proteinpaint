@@ -234,6 +234,7 @@ async function cacheMappingOnNewRelease(ds, version) {
 		await getCasesWithGeneExpression(ds, ref)
 		await getAnalysisTsv2loom4scrna(ds, ref)
 		await setAssayAvailability(ds, ref, totalCases)
+		await setSampleTypes(ds, ref)
 	} catch (e) {
 		if (mayCancelStalePendingCache(ds, ref)) return // avoid resetting ds.__* variables that may affect newer data version caching
 		if (isRecoverableError(e)) {
@@ -657,6 +658,14 @@ async function getAnalysisTsv2loom4scrna(ds, ref) {
 		const hdf5 = submitter2hdf5.get(submitter)
 		if (!hdf5) throw 'aliquot has tsv but missing hdf5'
 		ref.scrnaAnalysis2hdf5.set(tsv, hdf5)
+	}
+}
+
+async function setSampleTypes(ds, ref) {
+	const sampleType = 3 // cases will have sampleType=3
+	ds.cohort.termdb.sampleTypes = { [sampleType]: { name: 'case', plural_name: 'cases', parent_id: null } }
+	for (const caseid of ref.caseid2submitter.keys()) {
+		ds.sampleId2Type.set(caseid, sampleType)
 	}
 }
 
