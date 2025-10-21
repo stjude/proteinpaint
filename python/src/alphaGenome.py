@@ -34,10 +34,11 @@ import traceback
 try:
     input_data = sys.stdin.read()
     parsed_data = json.loads(input_data)
-    position = int(parsed_data['position']) or 36201698
-    chromosome = parsed_data['chromosome'] or 'chr22'
-    reference = parsed_data['reference'] or 'A'
-    alternate = parsed_data['alternate'] or 'C'
+    API_KEY = parsed_data.get('API_KEY', os.getenv("API_KEY"))
+    position = int(parsed_data['position'])
+    chromosome = parsed_data['chromosome']
+    reference = parsed_data['reference']
+    alternate = parsed_data['alternate']
     ontology_terms = parsed_data.get('ontologyTerms', [
             'UBERON:0000955',  # brain
             'UBERON:0000310',  # breast
@@ -50,12 +51,14 @@ try:
             'UBERON:0002107',  # liver
         ])
     output_type = parsed_data.get('outputType', 4) # Default to RNA_SEQ
+    interval = parsed_data.get('interval', 16384) # Default to 16384
     output_type = dna_client.OutputType(output_type)
-    #alphagenone uses hg38 genome coordinates
+    if(output_type == dna_client.OutputType.SPLICE_JUNCTIONS or output_type == dna_client.OutputType.CONTACT_MAPS):
+        raise Exception("Output type not supported")
+        #alphagenone uses hg38 genome coordinates
 
-    API_KEY = os.getenv("API_KEY")
     model = dna_client.create(API_KEY)
-    len = 16384//2
+    len = interval//2
     interval = genome.Interval(chromosome=chromosome, start=position-len, end=position+len)
     variant = genome.Variant(
         chromosome=chromosome,
@@ -78,30 +81,31 @@ try:
     ref_output = getattr(outputs.reference, output_name)
     alt_output = getattr(outputs.alternate, output_name)
 
-    # Calculate the difference between alt and ref tracks
-    # output.alt.values and output.ref.values are NumPy arrays
-    scores = np.abs(alt_output.values - ref_output.values)
-    scores = np.max(scores, axis=0) #Get the max value on the y-axis for each track
+    if( ref_output.values.shape[1] > 10):  # if the output does not have junctions attribute
+        # Calculate the difference between alt and ref tracks
+        # output.alt.values and output.ref.values are NumPy arrays
+        scores = np.abs(alt_output.values - ref_output.values)
+        scores = np.max(scores, axis=0) #Get the max value on the y-axis for each track
+
+        # Get the indices of the tracks, sorted from highest to lowest score
+        sorted_indices = np.argsort(scores)[::-1]# [start : stop : step], [::-1] means order all the scores in reversed order.
 
 
-    # Get the indices of the tracks, sorted from highest to lowest score
-    sorted_indices = np.argsort(scores)[::-1]# [start : stop : step], [::-1] means order all the scores in reversed order.
-    # Choose how many of the top tracks to display
-    top_k = 20 
-    top_indices = sorted_indices[:top_k]
+        # # Choose how many of the top tracks to display
+        top_k = 20 
+        top_indices = sorted_indices[:top_k] 
 
-    # Select the raw data for the top k tracks using NumPy indexing
-    top_k_ref_values = ref_output[:, top_indices] #The : means “all positions on the x-axis”
-    top_k_alt_values = alt_output[:, top_indices]
+        # Select the raw data for the top k tracks using NumPy indexing
+        ref_output = ref_output[:, top_indices] #The : means “all positions on the x-axis”
+        alt_output = alt_output[:, top_indices]
 
-    #print(top_indices)
-    # Get the maximum absolute score across all track outputs for the single variant
-    max_score = np.max(scores)
-
+        #print(top_indices)
+        # Get the maximum absolute score across all track outputs for the single variant
+        #max_score = np.max(scores)
     tdata = {
-                'REF': top_k_ref_values,
-                'ALT': top_k_alt_values,
-            }
+        'REF': ref_output,
+        'ALT': alt_output,
+    }
     fig = plot_components.plot(
         [
             plot_components.OverlaidTracks(
@@ -126,6 +130,6 @@ try:
     print(buffer_url)
 except Exception as e:
     print(f"Error: {str(e)}", file=sys.stderr)
-    traceback.print_exc()
+    #traceback.print_exc()
 
     sys.exit(1)

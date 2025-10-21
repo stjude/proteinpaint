@@ -13,9 +13,10 @@ import os
 try:
     input_data = sys.stdin.read()
     parsed_data = json.loads(input_data)
+    API_KEY = parsed_data.get('API_KEY', os.getenv("API_KEY"))
+
     ontology_terms = parsed_data.get('ontologyTerms', None) 
 
-    API_KEY = os.getenv("API_KEY")
     model = dna_client.create(API_KEY)
 
     metadata = model.output_metadata(dna_client.Organism.HOMO_SAPIENS).rna_seq
@@ -23,14 +24,16 @@ try:
     # Convert to DataFrame
     #df = uberon_metadata.concatenate()
 
-    label_map = dict(zip(df.ontology_curie, df.biosample_name))
+    ontologyMap = dict(zip(df.biosample_name, df.ontology_curie))
     # filter by ontology terms
     if ontology_terms:
-        label_map = {k: v for k, v in label_map.items() if k in ontology_terms}
+        ontologyTerms = [{"label": label, "value": value} for k, v in ontologyMap.items() if k in ontology_terms]
+    else:
+        ontologyTerms = [{"label": k, "value": v} for k, v in ontologyMap.items()]
 
     outputTypes = [{"label": outputType.name, "value": outputType.value} for outputType in dna_client.OutputType]
-
-    result = { "ontologyTerms": label_map, "outputTypes": outputTypes }
+    intervals = [{"label": interval, "value": interval} for interval in [2048, 16384, 131072, 524288]]
+    result = { "ontologyTerms": ontologyTerms, "outputTypes": outputTypes, "intervals": intervals }
     print(json.dumps(result))
 
 
