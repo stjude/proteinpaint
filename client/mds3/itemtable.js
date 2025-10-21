@@ -281,23 +281,24 @@ async function table_snvindel({ mlst, tk, block }, table) {
 		// do not pretend m is mutation if ref/alt is missing
 		td1.text(m.ref && m.alt ? 'Mutation' : 'Position')
 		print_snv(td2, m, tk, block)
-		if (tk.mds.termdbConfig.queries?.alphaGenome && m.ref && m.alt && m.ref != '-' && m.alt != '-') {
-			if (!ontologyTerms) await dofetch3('alphaGenomeTypes', {}).then(data => (ontologyTerms = data.ontologyTerms))
-			const [td3, td4] = table.addRow()
-			// do not pretend m is mutation if ref/alt is missing
-			td3.text('Alpha Genome')
-			const select = td4.append('select')
-			for (const term of ontologyTerms) select.append('option').attr('value', term.value).text(term.label)
-			const ontologyTerm = tk.mds.termdbConfig.queries.alphaGenome?.ontologyTerm
-			if (ontologyTerm) select.node().value = ontologyTerm
+		// if (tk.mds.termdbConfig?.queries?.alphaGenome && m.ref && m.alt && m.ref != '-' && m.alt != '-') {
+		// 	if (!ontologyTerms) await dofetch3('alphaGenomeTypes', {}).then(data => (ontologyTerms = data.ontologyTerms))
 
-			td4
-				.append('button')
-				.text('View')
-				.on('click', async () => {
-					openAlphaGenome(m, select.node().value)
-				})
-		}
+		// 	const [td3, td4] = table.addRow()
+		// 	// do not pretend m is mutation if ref/alt is missing
+		// 	td3.text('Alpha Genome')
+		// 	const select = td4.append('select')
+		// 	for (const term of ontologyTerms) select.append('option').attr('value', term.value).text(term.label)
+		// 	const ontologyTerm = tk.mds.termdbConfig.queries.alphaGenome?.ontologyTerm
+		// 	if (ontologyTerm) select.node().value = ontologyTerm
+
+		// 	td4
+		// 		.append('button')
+		// 		.text('View')
+		// 		.on('click', async () => {
+		// 			openAlphaGenome(m, select.node().value)
+		// 		})
+		// }
 	}
 	if (m.occurrence > 1) {
 		const [td1, td2] = table.addRow()

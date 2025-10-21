@@ -26,7 +26,9 @@ class AlphaGenome extends PlotBase {
 	}
 
 	async init(appState) {
-		const body = {}
+		const body = {
+			dslabel: this.app.vocabApi.vocab.dslabel
+		}
 		this.opts.header.text('Alpha Genome Variant Predictor')
 		const { ontologyTerms, outputTypes, intervals } = await dofetch3('AlphaGenomeTypes', { body })
 
