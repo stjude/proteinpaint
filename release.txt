@@ -1,1 +1,2 @@
-
+Fixes:
+- Survival plot: allows users to set default time units and switch among time units: years, months, weeks, days
