@@ -114,7 +114,7 @@ try:
                 ylabel_template='({strand})\n{name}'
             ),
         ],
-        interval=interval,
+        interval=ref_output.interval.resize(len//2),
         # Annotate the location of the variant as a vertical line.
         annotations=[plot_components.VariantAnnotation([variant], alpha=0.8)],
     )

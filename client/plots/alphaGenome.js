@@ -34,7 +34,6 @@ class AlphaGenome extends PlotBase {
 	}
 
 	async setControls({ ontologyTerms, outputTypes, intervals }) {
-		console.log(ontologyTerms, outputTypes, intervals)
 		const inputs = [
 			{
 				label: 'Chromosome',
