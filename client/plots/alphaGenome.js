@@ -2,6 +2,7 @@ import { PlotBase } from './PlotBase'
 import { getCompInit, copyMerge } from '#rx'
 import { dofetch3 } from '#common/dofetch'
 import { controlsInit } from './controls'
+import { interval } from 'd3'
 
 class AlphaGenome extends PlotBase {
 	constructor(opts) {
@@ -26,15 +27,14 @@ class AlphaGenome extends PlotBase {
 	}
 
 	async init(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
 		const body = {}
 		this.opts.header.text('Alpha Genome Variant Predictor')
-		const { ontologyTerms, outputTypes } = await dofetch3('AlphaGenomeTypes', { body })
-		console.log(ontologyTerms, outputTypes)
-		this.setControls({ ontologyTerms, outputTypes })
+		const { ontologyTerms, outputTypes, intervals } = await dofetch3('AlphaGenomeTypes', { body })
+		this.setControls({ ontologyTerms, outputTypes, intervals })
 	}
 
-	async setControls({ ontologyTerms, outputTypes }) {
+	async setControls({ ontologyTerms, outputTypes, intervals }) {
+		console.log(ontologyTerms, outputTypes, intervals)
 		const inputs = [
 			{
 				label: 'Chromosome',
@@ -79,6 +79,14 @@ class AlphaGenome extends PlotBase {
 				title: 'Output type',
 				chartType: this.type,
 				settingsKey: 'outputType'
+			},
+			{
+				label: 'Interval',
+				type: 'dropdown',
+				options: intervals,
+				title: 'Interval',
+				chartType: this.type,
+				settingsKey: 'interval'
 			}
 		]
 		this.components = {
@@ -101,7 +109,8 @@ class AlphaGenome extends PlotBase {
 			reference: settings.reference,
 			alternate: settings.alternate,
 			ontologyTerms: [settings.ontologyTerm],
-			outputType: settings.outputType
+			outputType: settings.outputType,
+			interval: Number(settings.interval)
 		}
 		const data = await dofetch3('alphaGenome', { body })
 		if (data.error) throw data.error
@@ -117,7 +126,8 @@ export function getPlotConfig(opts, app) {
 		settings: {
 			alphaGenome: {
 				controls: { isOpen: false },
-				...alphaGenome.default
+				...alphaGenome.default,
+				interval: 16384
 			}
 		}
 	}

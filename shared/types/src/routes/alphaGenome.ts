@@ -9,6 +9,7 @@ export type alphaGenomeRequest = {
 	alternate: string
 	ontologyTerms: string[]
 	outputType?: number
+	interval: number
 }
 
 export type alphaGenomeResponse = {
@@ -21,6 +22,7 @@ export type AlphaGenomeTypesResponse = {
 	ontologyTerms: any[]
 	/** the alpha genome output types */
 	outputTypes: any[]
+	intervals: number[]
 }
 
 export const alphaGenomePayload: RoutePayload = {
