@@ -98,8 +98,7 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 		invalidTokenErrorHandling: tdb.invalidTokenErrorHandling,
 		colorMap: tdb.colorMap,
 		defaultTw4correlationPlot: tdb.defaultTw4correlationPlot,
-		authFilter: req.query.filter,
-		alphaGenome: tdb.alphaGenome
+		authFilter: req.query.filter
 	}
 	// optional attributes
 	// when missing, the attribute will not be present as "key:undefined"
@@ -240,6 +239,8 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 	if (q.chat) {
 		q2.chat = {}
 	}
+	if (q.alphaGenome) q2.alphaGenome = q.alphaGenome
+
 	if (q.NIdata && serverconfig.features.showBrainImaging) {
 		q2.NIdata = {}
 		for (const k in q.NIdata) {

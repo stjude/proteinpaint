@@ -986,6 +986,18 @@ type Mds3Queries = {
 	WSImages?: WSImages
 	images?: Images
 	chat?: any
+	alphaGenome?: {
+		ontologyTerm?: string // default ontology term for a dataset
+		default: {
+			gene: string
+			chromosome: string
+			position: number
+			reference: string
+			alternate: string
+			ontologyTerm: string
+			outputType: number
+		}
+	}
 }
 
 /** chat app support
@@ -1576,18 +1588,6 @@ keep this setting here for reason of:
 	//terms  are shown in the dictionary based on term and user role.
 	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
 	getAdditionalFilter?: (__protected__: any, term: any) => Filter | undefined
-	alphaGenome?: {
-		ontologyTerm?: string // default ontology term for a dataset
-		default: {
-			gene: string
-			chromosome: string
-			position: number
-			reference: string
-			alternate: string
-			ontologyTerm: string
-			outputType: number
-		}
-	}
 }
 
 type SampleType = {

@@ -400,7 +400,18 @@ export default function (): Mds3 {
 				jsonFile: 'files/hg38/TermdbTest/trackLst/facet.json',
 				activeTracks: ['bw 1', 'bed 1']
 			},
-			chat: {}
+			chat: {},
+			alphaGenome: {
+				default: {
+					gene: 'FLT3',
+					chromosome: 'chr13',
+					position: 28034105,
+					reference: 'A',
+					alternate: 'AACTCCCATTTGAGATCATACC',
+					ontologyTerm: 'EFO:0000572', // lymphoblast
+					outputType: 4 //RNA SEQ
+				}
+			}
 		}
 	} satisfies Mds3
 }

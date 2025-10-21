@@ -1,7 +1,7 @@
 // this file was auto-generated using 'npm run generate' or 'npm run dev' from the shared/types dir
 import { createValidate } from 'typia'
-import type { alphaGenomeTypesResponse } from '../src/routes/alphaGenome.ts'
+import type { alphaGenomeTypesResponse } from '../src/routes/alphaGenomeTypes.ts'
 
-export { alphaGenomePayload } from '../src/routes/alphaGenome.ts'
+export { alphaGenomeTypesPayload } from '../src/routes/alphaGenomeTypes.ts'
 
-export const validalphaGenomeResponse = createValidate<alphaGenomeTypesResponse>()
+export const validGenomeTypesResponse = createValidate<alphaGenomeTypesResponse>()

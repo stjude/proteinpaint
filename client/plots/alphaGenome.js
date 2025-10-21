@@ -21,8 +21,7 @@ class AlphaGenome extends PlotBase {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		return {
-			config,
-			ontologyTerms: appState.termdbConfig.alphaGenome.ontologyTerms
+			config
 		}
 	}
 
@@ -30,7 +29,7 @@ class AlphaGenome extends PlotBase {
 		const body = {}
 		this.opts.header.text('Alpha Genome Variant Predictor')
 		const { ontologyTerms, outputTypes, intervals } = await dofetch3('AlphaGenomeTypes', { body })
-		console.log(ontologyTerms)
+
 		this.setControls({ ontologyTerms, outputTypes, intervals })
 	}
 
@@ -120,7 +119,7 @@ class AlphaGenome extends PlotBase {
 }
 
 export function getPlotConfig(opts, app) {
-	const alphaGenome = (app.vocabApi.termdbConfig.alphaGenome = app.vocabApi.termdbConfig.alphaGenome)
+	const alphaGenome = (app.vocabApi.termdbConfig.alphaGenome = app.vocabApi.termdbConfig.queries.alphaGenome)
 	const config = {
 		hidePlotFilter: true,
 		settings: {
