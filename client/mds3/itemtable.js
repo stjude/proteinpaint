@@ -42,7 +42,7 @@ printSvPair
 */
 
 const cutoff_tableview = 10
-let ontologyTerms
+//let ontologyTerms
 
 export async function itemtable(arg) {
 	if (arg.mlst.find(m => m.dt != dtsnvindel && m.dt != dtfusionrna && m.dt != dtsv && m.dt != dtcnv)) {
@@ -353,8 +353,8 @@ async function table_snvindel({ mlst, tk, block }, table) {
 	}
 }
 
+/*
 const menu = new Menu({ padding: '2px' })
-
 async function openAlphaGenome(m, ontologyTerm) {
 	const params = {
 		chromosome: m.chr,
@@ -374,6 +374,7 @@ async function openAlphaGenome(m, ontologyTerm) {
 	menu.d.append('img').attr('width', '1250px').attr('src', data.plotImage)
 	menu.show(0, 0)
 }
+*/
 
 function table_snvindel_mayInsertNumericValueRow(m, tk, table) {
 	const currentMode = tk.skewer.viewModes.find(i => i.inuse)
