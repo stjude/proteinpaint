@@ -9,6 +9,8 @@ export const routeFiles = [
 	import('../routes/aiProjectAdmin.ts'),
 	import('../routes/aiProjectSelectedWSImages.ts'),
 	import('../routes/aiProjectTrainModel.ts'),
+	import('../routes/alphaGenome.ts'),
+	import('../routes/alphaGenomeTypes.ts'),
 	import('../routes/brainImaging.ts'),
 	import('../routes/brainImagingSamples.ts'),
 	import('../routes/burden.ts'),
@@ -68,7 +70,5 @@ export const routeFiles = [
 	import('../routes/img.ts'),
 	import('../routes/termdb.filterTermValues.ts'),
 	import('../routes/termdb.profileScores.ts'),
-	import('../routes/termdb.profileFormScores.ts'),
-	import('../routes/alphaGenome.ts'),
-	import('../routes/AlphaGenomeTypes.ts')
+	import('../routes/termdb.profileFormScores.ts')
 ]
