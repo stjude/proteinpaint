@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
-import { PlotBase } from '#plots/PlotBase.ts'
+import { PlotBase, defaultUiLabels } from '#plots/PlotBase.ts'
 import { controlsInit, term0_term2_defaultQ } from '#plots/controls.js'
 import { select } from 'd3-selection'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
@@ -157,7 +157,9 @@ class TdbSurvival extends PlotBase implements RxComponent {
 	}
 
 	async setControls() {
-		const customControls = this.app.getState().termdbConfig.customControls
+		const state = this.getState(this.app.getState())
+		const controlLabels = state.config.controlLabels
+		if (!controlLabels) throw 'controls labels not found'
 		if (this.opts.controls) {
 			this.opts.controls.on('downloadClick.survival', this.download)
 		} else {
@@ -174,8 +176,8 @@ class TdbSurvival extends PlotBase implements RxComponent {
 							configKey: 'term2',
 							chartType: 'survival',
 							usecase: { target: 'survival', detail: 'term2' },
-							title: customControls?.term2?.label || 'Overlay data',
-							label: customControls?.term2?.label || 'Overlay',
+							title: controlLabels.term2.title || controlLabels.term2.label,
+							label: controlLabels.term2.label,
 							vocabApi: this.app.vocabApi,
 							numericEditMenuVersion: ['discrete'],
 							defaultQ4fillTW: t0_t2_defaultQ
@@ -185,8 +187,8 @@ class TdbSurvival extends PlotBase implements RxComponent {
 							configKey: 'term0',
 							chartType: 'survival',
 							usecase: { target: 'survival', detail: 'term0' },
-							title: customControls?.term0?.label || 'Divide by data',
-							label: customControls?.term0?.label || 'Divide by',
+							title: controlLabels.term0.title || controlLabels.term0.label,
+							label: controlLabels.term0.label,
 							vocabApi: this.app.vocabApi,
 							numericEditMenuVersion: ['discrete'],
 							defaultQ4fillTW: t0_t2_defaultQ
@@ -296,6 +298,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 				term: config.term,
 				term0: config.term0 || null,
 				term2: config.term2 || null,
+				controlLabels: config.controlLabels,
 				settings: config.settings.survival
 			},
 			termdbConfig: appState.termdbConfig
@@ -1299,6 +1302,7 @@ export async function getPlotConfig(opts, app) {
 
 	const config = {
 		id: opts.term.term.id,
+		controlLabels: Object.assign({}, defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {}),
 		settings: {
 			controls: {
 				term2: null, // the previous overlay value may be displayed as a convenience for toggling

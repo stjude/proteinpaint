@@ -11,20 +11,9 @@ import {
 	CNVClasses
 } from '#shared/common.js'
 import { isDictionaryType } from '#shared/terms.js'
+import { defaultUiLabels } from '#plots/PlotBase.js'
 
 export async function getPlotConfig(opts = {}, app) {
-	const controlLabels = {
-		Samples: 'Samples',
-		samples: 'samples',
-		Sample: 'Sample',
-		sample: 'sample',
-		Terms: 'Variables',
-		terms: 'variables',
-		Term: 'Variable',
-		term: 'Variable',
-		Mutations: 'Mutations'
-	}
-
 	const config = {
 		// data configuration
 		termgroups: [],
@@ -139,7 +128,7 @@ export async function getPlotConfig(opts = {}, app) {
 				// when a canvas dataURL image in a zoomed-in matrix svg stops rendering
 				imgWMax: 60000 / window.devicePixelRatio,
 				scrollHeight: 12,
-				controlLabels,
+				controlLabels: defaultUiLabels,
 				cnvUnit: 'log2ratio',
 				ignoreCnvValues: false, //will ignore numeric CNV values if true
 
@@ -204,7 +193,7 @@ export async function getPlotConfig(opts = {}, app) {
 	// may apply term-specific changes to the default object
 	copyMerge(config, opts)
 	const m = config.settings.matrix
-	m.sortOptions = getSortOptions(app.vocabApi.termdbConfig, controlLabels, m)
+	m.sortOptions = getSortOptions(app.vocabApi.termdbConfig, defaultUiLabels, m)
 	// harcode these overrides for now
 	m.duration = 0
 	// force auto-dimensions for colw

@@ -15,7 +15,7 @@ import { renderAtRiskG } from '#dom/renderAtRisk'
 import { renderPvalues } from '#dom/renderPvalueTable'
 import { Menu } from '#dom/menu'
 import { getCombinedTermFilter } from '#filter'
-import { PlotBase } from '#plots/PlotBase.js'
+import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
 
 const t0_t2_defaultQ = structuredClone(term0_term2_defaultQ)
 Object.assign(t0_t2_defaultQ, {
@@ -252,6 +252,8 @@ class MassCumInc {
 
 	async setControls(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
+		const controlLabels = config.controlLabels
+		if (!controlLabels) throw 'controls labels not found'
 		if (this.opts.controls) {
 			this.opts.controls.on('downloadClick.cuminc', this.download)
 		} else {
@@ -284,7 +286,7 @@ class MassCumInc {
 							configKey: 'term',
 							chartType: 'cuminc',
 							usecase: { target: 'cuminc', detail: 'term' },
-							label: renderTerm1Label,
+							label: controlLabels.term1?.label || renderTerm1Label,
 							vocabApi: this.app.vocabApi,
 							menuOptions: 'edit'
 						},
@@ -293,8 +295,8 @@ class MassCumInc {
 							configKey: 'term2',
 							chartType: 'cuminc',
 							usecase: { target: 'cuminc', detail: 'term2' },
-							title: 'Overlay data',
-							label: 'Overlay',
+							title: controlLabels.term2.title || controlLabels.term2.label,
+							label: controlLabels.term2.label,
 							vocabApi: this.app.vocabApi,
 							numericEditMenuVersion: ['discrete'],
 							defaultQ4fillTW: t0_t2_defaultQ
@@ -304,8 +306,8 @@ class MassCumInc {
 							configKey: 'term0',
 							chartType: 'cuminc',
 							usecase: { target: 'cuminc', detail: 'term0' },
-							title: 'Divide by data',
-							label: 'Divide by',
+							title: controlLabels.term0.title || controlLabels.term0.label,
+							label: controlLabels.term0.label,
 							vocabApi: this.app.vocabApi,
 							numericEditMenuVersion: ['discrete'],
 							defaultQ4fillTW: t0_t2_defaultQ
@@ -1301,6 +1303,7 @@ export async function getPlotConfig(opts, app) {
 	}
 	const config = {
 		id: opts.term.term.id,
+		controlLabels: copyMerge(defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {}),
 		settings: JSON.parse(defaultSettings)
 	}
 	// may apply term-specific changes to the default object
