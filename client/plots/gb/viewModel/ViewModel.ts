@@ -6,13 +6,14 @@ export class ViewModel {
 	data: any
 	blockInstance: any
 	components: any
-	maySaveTrackUpdatesToState: any
+	interactions: any
 	viewData: any
-	constructor(state, opts, data) {
+	constructor(state, opts, data, interactions) {
 		this.state = state
 		this.opts = opts
 		this.data = data
 		this.viewData = {}
+		this.interactions = interactions
 	}
 
 	async generateTracks() {
@@ -38,7 +39,7 @@ export class ViewModel {
 					dslabel: this.state.vocab.dslabel,
 					onClose: () => {
 						// on closing subtk, the filterObj corresponding to the subtk will be "removed" from subMds3TkFilters[], by regenerating the array
-						this.maySaveTrackUpdatesToState()
+						this.interactions.maySaveTrackUpdatesToState(this.blockInstance, this.state)
 					},
 					// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
 					newChartHolder: this.opts.plotDiv
