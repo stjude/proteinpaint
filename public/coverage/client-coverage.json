@@ -1045,38 +1045,38 @@
   },
   "dom/table.ts": {
     "lines": {
-      "total": 290,
-      "covered": 187,
+      "total": 301,
+      "covered": 207,
       "skipped": 0,
-      "pct": 64.48
+      "pct": 68.77
     },
     "functions": {
       "total": 36,
-      "covered": 18,
+      "covered": 20,
       "skipped": 0,
-      "pct": 50
+      "pct": 55.55
     },
     "statements": {
-      "total": 339,
-      "covered": 201,
+      "total": 348,
+      "covered": 221,
       "skipped": 0,
-      "pct": 59.29
+      "pct": 63.5
     },
     "branches": {
-      "total": 276,
-      "covered": 155,
+      "total": 284,
+      "covered": 175,
       "skipped": 0,
-      "pct": 56.15
+      "pct": 61.61
     },
     "lowestPct": {
-      "curr": 50,
+      "curr": 55.55,
       "prev": 50,
-      "diff": 0
+      "diff": 5.549999999999997
     },
     "averagePct": {
-      "curr": 57.480000000000004,
+      "curr": 62.3575,
       "prev": 57.725,
-      "diff": -0.24499999999999744
+      "diff": 4.6325
     }
   },
   "plots/volcano/Volcano.ts": {
@@ -3986,13 +3986,13 @@
     },
     "lowestPct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     },
     "averagePct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     }
   },
   "plots/matrix/test/hierCluster.integration.spec.js": {
@@ -8277,6 +8277,42 @@
       "curr": 87.5,
       "prev": 87.5,
       "diff": 0
+    }
+  },
+  "dom/test/table.unit.spec.js": {
+    "lines": {
+      "total": 201,
+      "covered": 190,
+      "skipped": 0,
+      "pct": 94.52
+    },
+    "functions": {
+      "total": 25,
+      "covered": 25,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 221,
+      "covered": 208,
+      "skipped": 0,
+      "pct": 94.11
+    },
+    "branches": {
+      "total": 56,
+      "covered": 37,
+      "skipped": 0,
+      "pct": 66.07
+    },
+    "lowestPct": {
+      "curr": 66.07,
+      "prev": 0,
+      "diff": 66.07
+    },
+    "averagePct": {
+      "curr": 88.675,
+      "prev": 0,
+      "diff": 88.675
     }
   }
 }
