@@ -530,7 +530,7 @@ function createSortButton(th: Th, callback, updateTable) {
 }
 
 /** Detects the type of values in a column and sorts accordingly */
-function sortTableCallBack(i: number, rows: any, isAscending: boolean) {
+export function sortTableCallBack(i: number, rows: any, isAscending: boolean) {
 	/** Some values always returned as strings may be numeric values
 	 * (e.g. file names used as either alphanumeric or numeric ids).
 	 * In the latter case, sorting fails.
