@@ -1,5 +1,5 @@
 import { PlotBase, defaultUiLabels } from './PlotBase.ts'
-import { getCompInit, copyMerge, type ComponentApi, type RxComponent } from '#rx'
+import { getCompInit, type ComponentApi, type RxComponent } from '#rx'
 import { controlsInit } from './controls'
 
 class SummaryInputPlot extends PlotBase implements RxComponent {
@@ -122,7 +122,7 @@ export function getPlotConfig(_opts, app) {
 	const config = {
 		chartType: 'summaryInput',
 		settings: {},
-		controlLabels: copyMerge(defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {})
+		controlLabels: Object.assign({}, defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {})
 	}
 	return config
 }

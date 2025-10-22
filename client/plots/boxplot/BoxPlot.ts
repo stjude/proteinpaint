@@ -416,7 +416,7 @@ export async function getPlotConfig(opts: BoxPlotConfigOpts, app: MassAppApi) {
 
 	const config = {
 		id: opts.term.term.id,
-		controlLabels: copyMerge(defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {}),
+		controlLabels: Object.assign({}, defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {}),
 		settings: {
 			controls: {
 				term2: null,
