@@ -181,7 +181,8 @@ export class ViewModelProvider {
 						preview: `/tileserver/layer/${overlay.layerNumber}/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${predictionQueryParams}`,
 						metadata: wsimages[i].metadata,
 						source: sourceOverlay,
-						title: overlay.predictionOverlayType
+						title: overlay.predictionOverlayType,
+						visible: false
 					}
 
 					if (wsiImageLayers.overlays) {
