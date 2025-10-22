@@ -55,3 +55,19 @@ export class PlotBase {
 		return config
 	}
 }
+
+// default UI labels
+// used by plot controls and tooltips
+export const defaultUiLabels = {
+	Samples: 'Samples',
+	samples: 'samples',
+	Sample: 'Sample',
+	sample: 'sample',
+	Terms: 'Variables',
+	terms: 'variables',
+	Term: 'Variable',
+	term: 'Variable',
+	Mutations: 'Mutations',
+	term2: { label: 'Overlay', title: 'Overlay data' },
+	term0: { label: 'Divide by', title: 'Divide by data' }
+}

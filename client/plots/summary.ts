@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge, type ComponentApi, type RxComponent } from '#rx'
-import { PlotBase } from './PlotBase.ts'
+import { PlotBase, defaultUiLabels } from './PlotBase.ts'
 import { Menu } from '#dom/menu'
 import { fillTermWrapper } from '#termsetting'
 import { recoverInit } from '../rx/src/recover'
@@ -432,6 +432,7 @@ export async function getPlotConfig(opts, app) {
 		//id: opts.term.term.id,
 		term: opts.term,
 		groups: [],
+		controlLabels: copyMerge(defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {}),
 		settings: {
 			controls: {
 				isOpen: false

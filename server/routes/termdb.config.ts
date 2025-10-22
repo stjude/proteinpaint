@@ -114,7 +114,7 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	if (tdb.excludedTermtypeByTarget) c.excludedTermtypeByTarget = tdb.excludedTermtypeByTarget
 	if (tdb.survival) c.survival = tdb.survival
 	if (tdb.regression) c.regression = tdb.regression
-	if (tdb.customControls) c.customControls = tdb.customControls
+	if (tdb.uiLabels) c.uiLabels = tdb.uiLabels
 	if (ds.assayAvailability) c.assayAvailability = ds.assayAvailability
 	if (ds.cohort.correlationVolcano) c.correlationVolcano = ds.cohort.correlationVolcano
 	addRestrictAncestries(c, tdb)
