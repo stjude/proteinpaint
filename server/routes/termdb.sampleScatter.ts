@@ -9,7 +9,8 @@ import type {
 	RouteApi,
 	TermWrapper,
 	Term,
-	ValidGetDataResponse
+	ValidGetDataResponse,
+	Cell
 } from '#types'
 import { termdbSampleScatterPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
@@ -51,6 +52,9 @@ function init({ genomes }) {
 		}
 		const g = genomes[q.genome]
 		const ds = g.datasets[q.dslabel]
+		if (q.sample)
+			//single cell plot
+			return getSingleCellScatter(req, res, ds)
 		try {
 			let refSamples: number[] = [], // reference samples, those that are not in termdb and only present in prebuilt scatter map
 				cohortSamples // cohort (or termdb) samples, those are annotated by terms
@@ -146,6 +150,45 @@ function init({ genomes }) {
 			res.send({ error: e.message || e })
 		}
 	}
+}
+
+async function getSingleCellScatter(req, res, ds) {
+	const q = req.query satisfies TermdbSampleScatterRequest
+	const data = await ds.queries.singleCell.data.get({ plots: [q.plotName], sample: q.sample })
+	const plot = data.plots[0]
+	const cells: Cell[] = [...plot.expCells, ...plot.noExpCells]
+	const samples: ScatterSample[] = cells.map(cell => {
+		return {
+			sample: cell.cellId,
+			x: cell.x,
+			y: cell.y,
+			z: 0,
+			category: cell.category,
+			shape: 'Ref'
+		}
+	})
+	const [xMin, xMax, yMin, yMax] = samples.reduce(
+		(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
+		[samples[0].x, samples[0].x, samples[0].y, samples[0].y]
+	)
+	const categories: any = new Set(samples.map(s => s.category))
+	const colorMap = {}
+	const k2c = getColors(categories.size)
+	for (const category of categories) {
+		const color = k2c(category)
+		colorMap[category] = {
+			sampleCount: samples.filter((s: any) => s.category == category).length,
+			color,
+			key: category
+		}
+	}
+	const shapeLegend: ShapeLegendEntry[] = [['Ref', { sampleCount: samples.length, shape: 0, key: 'Ref' }]]
+	const colorLegend: ColorLegendEntry[] = Object.entries(colorMap)
+
+	res.send({
+		result: { Default: { samples, colorLegend, shapeLegend } },
+		range: { xMin, xMax, yMin, yMax }
+	} satisfies TermdbSampleScatterResponse)
 }
 
 async function getSamples(ds: any, plot: any) {

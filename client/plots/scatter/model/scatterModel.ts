@@ -43,6 +43,7 @@ export class ScatterModel {
 	// later on, add methods with same name to FrontendVocab
 	getDataRequestOpts() {
 		const c: any = this.scatter.config
+		if (c.singleCellPlot) return c.singleCellPlot
 		const coordTWs: any = []
 		if (c.term) coordTWs.push(c.term)
 		if (c.term2) coordTWs.push(c.term2)
@@ -69,19 +70,23 @@ export class ScatterModel {
 	}
 
 	async initData() {
-		const reqOpts = this.getDataRequestOpts()
-		if (reqOpts.coordTWs.length == 1 && this.scatter.type == 'sampleScatter') return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
-
-		const data: ScatterResponse = await this.scatter.app.vocabApi.getScatterData(reqOpts)
-		this.is3D = this.scatter.config.term0?.q.mode == 'continuous'
-		if ('error' in data) throw data.error
-		this.range = data.range
-		this.charts = []
-		for (const [key, chartData] of Object.entries(data.result)) {
-			if (!Array.isArray(chartData.samples)) throw 'data.samples[] not array'
-			this.createChart(key, chartData)
+		try {
+			const reqOpts = this.getDataRequestOpts()
+			if (reqOpts.coordTWs?.length == 1 && this.scatter.type == 'sampleScatter') return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
+			const data: ScatterResponse = await this.scatter.app.vocabApi.getScatterData(reqOpts)
+			this.is3D = this.scatter.config.term0?.q.mode == 'continuous'
+			if ('error' in data) throw data.error
+			this.range = data.range
+			this.charts = []
+			for (const [key, chartData] of Object.entries(data.result)) {
+				if (!Array.isArray(chartData.samples)) throw 'data.samples[] not array'
+				this.createChart(key, chartData)
+			}
+			this.initRanges()
+		} catch (e: any) {
+			console.log(e)
+			throw e.message || e
 		}
-		this.initRanges()
 	}
 
 	createChart(id: string, data: ScatterDataResult) {
