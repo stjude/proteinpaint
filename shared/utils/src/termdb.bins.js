@@ -362,7 +362,7 @@ export function get_bin_range_equation(bin, binconfig) {
 	const bin_label = get_bin_label(bin, binconfig)
 	if (bin.startunbounded || bin.stopunbounded) {
 		// first or last bins, e.g. x ≤ 14 and x > 16
-		range_eq = x + '&nbsp;' + bin_label
+		range_eq = x + ' ' + bin_label
 	} else if (bin.startinclusive) {
 		// bins with startinclusive, e.g. 14 ≤ x < 16
 		range_eq = bin_label.replace('to <', '≤ ' + x + ' <')

@@ -26,9 +26,9 @@ export class NumRegularBinEditor {
 		this.q = this.getDefaultQ()
 	}
 
-	// main() {
-	// 	//this.tw = structuredClone(this.editHandler.tw)
-	// }
+	getPillStatus() {
+		return { text: 'bin size=' + this.tw.q.bin_size }
+	}
 
 	render(div) {
 		this.editHandler.handler.density.setBinLines(this.getBoundaryOpts())
@@ -53,10 +53,6 @@ export class NumRegularBinEditor {
 		if (defaultQ) return JSON.parse(JSON.stringify(defaultQ))
 		const binConfig = initBinConfig(this.editHandler.handler.density_data)
 		return typeof binConfig == 'string' ? JSON.parse(binConfig) : binConfig
-	}
-
-	getBoundaryInclusion() {
-		return this.q.startinclusive ? 'startinclusive' : 'stopinclusive'
 	}
 
 	renderBinSizeInput(tr: any) {
@@ -149,7 +145,7 @@ export class NumRegularBinEditor {
 		const td1 = tr.append('td').style('padding-left', '15px').style('vertical-align', 'top')
 		const radio_div = td1.append('div')
 
-		make_radios({
+		const radios = make_radios({
 			holder: radio_div,
 			options: [
 				{ label: 'Automatic', value: 'auto', checked: isAuto },
@@ -172,6 +168,8 @@ export class NumRegularBinEditor {
 				this.setLastBinStart()
 			}
 		})
+
+		this.dom.fixed_radio = radios.inputs.filter((_, i) => i === 1)
 
 		const edit_div = tr
 			.append('td')
@@ -197,7 +195,9 @@ export class NumRegularBinEditor {
 		const q = this.q
 		const { max } = this.editHandler.handler.density_data
 		// only get value from <input>
-		const inputValue = Number(this.dom.last_start_input.property('value'))
+		const strInput = this.dom.last_start_input.property('value')
+		if (strInput === '') return
+		const inputValue = Number(strInput)
 
 		// TODO first_bin should be required
 		if (q.first_bin && inputValue <= q.first_bin.stop) {
@@ -210,27 +210,35 @@ export class NumRegularBinEditor {
 			this.dom.last_start_input.property('value', max)
 			return
 		}
-		if (!q.last_bin)
+		if (q.last_bin) q.last_bin.start = inputValue
+		else
 			q.last_bin = {
 				start: inputValue,
 				stopunbounded: true,
 				stopinclusive: false
 			}
+
 		this.editHandler.handler.density.setBinLines(this.getBoundaryOpts())
 	}
 
 	getBoundaryOpts(): BoundaryOpts {
 		const { min, max } = this.editHandler.handler.density_data
-		const binLinesStop = max + Math.abs(this.q.first_bin.stop) - Math.min(min, 0)
+		const binLinesStop = this.q.last_bin?.start ?? max + Math.abs(this.q.first_bin.stop) - Math.min(min, 0)
 		const boundaryValues: BoundaryValue[] = []
 		for (let i = this.q.first_bin.stop; i <= binLinesStop; i = i + this.q.bin_size) {
+			if (this.q.last_bin?.start === i) break
+			if (i > binLinesStop) boundaryValues[boundaryValues.length - 1].isLastVisibleLine = true
 			const isDraggable = i === this.q.first_bin.stop || i === this.q.bin_size - 1
 			// non-draggable lines should move with the first bin boundary line
 			boundaryValues.push({ x: i, isDraggable, movesWithLineIndex: !isDraggable ? 0 : -1 })
 		}
 		if (this.q.last_bin) {
-			//lines.push({ x: data.last_bin.start, index, scaledX: Math.round(o.xscale(data.last_bin.start)) })
-			boundaryValues.push({ x: this.q.last_bin.start, isDraggable: true, isLastVisibleLine: true })
+			boundaryValues.push({
+				x: this.q.last_bin.start,
+				isDraggable: true,
+				isLastVisibleLine: true,
+				movesWithLineIndex: -1
+			})
 		}
 
 		return {
@@ -250,24 +258,33 @@ export class NumRegularBinEditor {
 		}
 	}
 
-	getEditedQ(startinclusive, stopinclusive): RegularNumericBinConfig {
+	getEditedQ(destroyDom = true): RegularNumericBinConfig {
 		const bin_size = this.dom.bin_size_input.property('value')
-		const config = {
+		const config: RegularNumericBinConfig = {
 			mode: 'discrete',
 			type: 'regular-bin',
-			startinclusive,
-			stopinclusive,
+			startinclusive: this.editHandler.boundaryInclusion == 'startinclusive',
+			stopinclusive: this.editHandler.boundaryInclusion == 'stopinclusive',
 			bin_size: Number(bin_size),
 			first_bin: {
 				startunbounded: true,
 				stop: Number(this.dom.first_stop_input.property('value'))
 			},
 			rounding: bin_size.includes('.') && !bin_size.endsWith('.') ? `.${bin_size.split('.')[1].length}f` : '.0f'
-		} satisfies RegularNumericBinConfig
+		}
 
-		for (const name of Object.keys(this.dom)) {
-			this.dom[name].remove()
-			delete this.dom[name]
+		if (this.dom.fixed_radio.property('checked')) {
+			config.last_bin = {
+				start: Number(this.dom.last_start_input.property('value')),
+				stopunbounded: true
+			}
+		}
+
+		if (destroyDom) {
+			for (const name of Object.keys(this.dom)) {
+				this.dom[name].remove()
+				delete this.dom[name]
+			}
 		}
 
 		return config
@@ -279,5 +296,6 @@ export class NumRegularBinEditor {
 		this.renderBinSizeInput(this.dom.binsTable.append('tr'))
 		this.renderFirstBinInput(this.dom.binsTable.append('tr'))
 		this.renderLastBinInputs(this.dom.binsTable.append('tr'))
+		this.editHandler.handler.density.setBinLines(this.getBoundaryOpts())
 	}
 }

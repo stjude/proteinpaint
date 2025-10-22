@@ -24,6 +24,10 @@ export class NumCustomBinEditor {
 		this.q = this.getDefaultQ()
 	}
 
+	getPillStatus() {
+		return { text: this.tw.q.lst.length + ' bins' }
+	}
+
 	async render(div) {
 		await this.editHandler.handler.density.setBinLines(this.getBoundaryOpts())
 		if (this.dom.inputsDiv) {
@@ -105,10 +109,6 @@ export class NumCustomBinEditor {
 				} //satisfies StopUnboundedBin
 			]
 		}
-	}
-
-	getBoundaryInclusion() {
-		return this.q.lst[0].startinclusive ? 'startinclusive' : 'stopinclusive'
 	}
 
 	/******************* Functions for Numerical Custom size bins *******************/
@@ -223,8 +223,8 @@ export class NumCustomBinEditor {
 
 	processCustomBinInputs() {
 		const self = this.termsetting
-		const startinclusive = this.editHandler.dom.boundaryInput.property('value') == 'startinclusive'
-		const stopinclusive = this.editHandler.dom.boundaryInput.property('value') == 'stopinclusive'
+		const startinclusive = this.editHandler.boundaryInclusion == 'startinclusive'
+		const stopinclusive = this.editHandler.boundaryInclusion == 'stopinclusive'
 		//const inputs = this.dom.inputsDiv.node().querySelectorAll('input')
 
 		const inputData = this.dom.customBinBoundaryInput
@@ -286,11 +286,13 @@ export class NumCustomBinEditor {
 		return data
 	}
 
-	getEditedQ(): CustomNumericBinConfig {
+	getEditedQ(destroyDom = true): CustomNumericBinConfig {
 		const lst = this.processCustomBinInputs()
-		for (const name of Object.keys(this.dom)) {
-			this.dom[name].remove()
-			delete this.dom[name]
+		if (destroyDom) {
+			for (const name of Object.keys(this.dom)) {
+				this.dom[name].remove()
+				delete this.dom[name]
+			}
 		}
 		return {
 			mode: 'discrete',
@@ -303,5 +305,6 @@ export class NumCustomBinEditor {
 		this.q = this.getDefaultQ()
 		this.dom.inputsDiv.selectAll('*').remove()
 		this.renderCustomBinInputs()
+		this.editHandler.handler.density.setBinLines(this.getBoundaryOpts())
 	}
 }

@@ -234,11 +234,13 @@ export class NumSplineEditor extends HandlerBase implements Handler {
 			.html('Will overwrite existing values.')
 	}
 
-	getEditedQ(): SplineNumericQ {
+	getEditedQ(destroyDom: boolean = true): SplineNumericQ {
 		const knots = this.processKnotsInputs()
-		for (const name of Object.keys(this.dom)) {
-			this.dom[name].remove()
-			delete this.dom[name]
+		if (destroyDom) {
+			for (const name of Object.keys(this.dom)) {
+				this.dom[name].remove()
+				delete this.dom[name]
+			}
 		}
 		return {
 			mode: 'spline',
@@ -249,6 +251,7 @@ export class NumSplineEditor extends HandlerBase implements Handler {
 	async undoEdits() {
 		this.q = await this.getDefaultQ()
 		this.dom.knots_div.selectAll('*').remove()
+		await this.handler.density.setBinLines(this.getBoundaryOpts())
 		this.renderCustomSplineInputs()
 		this.renderAutoSplineInputs()
 	}

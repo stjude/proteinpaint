@@ -14,7 +14,7 @@ SPECPATTERN=$1 # will be used to emit imports
 
 # 
 # space separated URL params to be used to filter which bundled spec file to run, examples: 
-# - "name=tvs.spec"
+# - "name=tvs.unit.spec"
 # - "dir=filter"
 # - or use the URL parameter after clicking on a card dir/file name in http://localhost:3000/testrun.html
 #

@@ -165,6 +165,10 @@ export interface Handler {
 	applyEdits: () => void
 	undoEdits: () => void
 	getEditedQ?: () => NumericQ
+	dom?: {
+		[name: string]: any
+	}
+	destroy?: () => void
 }
 
 export interface HandlerGenerator {

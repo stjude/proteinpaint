@@ -51,7 +51,7 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 		this.dom.boundaryInclusionDiv = div.append('div').style('padding', '5px')
 		this.dom.cutoff_div = div.append('div').style('padding', '10px')
 		this.dom.inputsDiv = div.append('div').style('padding', '10px').style('display', 'flex').style('width', '100%')
-		this.renderBoundaryInclusionInput()
+		this.renderBoundaryInclusionSelect()
 		this.renderCutoffInput()
 		this.renderBoundaryInputDivs()
 	}
@@ -137,7 +137,7 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 		return this.q.lst[0].startinclusive ? 'startinclusive' : 'stopinclusive'
 	}
 
-	renderBoundaryInclusionInput() {
+	renderBoundaryInclusionSelect() {
 		//if (this.dom.boundaryInput) return
 		//const handler = this.handler
 		this.dom.boundaryInclusionDiv.selectAll('*').remove()
@@ -149,14 +149,14 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 
 		const x = '<span style="font-family:Times;font-style:italic">x</span>'
 
-		this.dom.boundaryInput = this.dom.boundaryInclusionDiv
+		this.dom.boundaryInclusionSelect = this.dom.boundaryInclusionDiv
 			.append('select')
 			.style('margin-left', '10px')
 			.on('change', () => {
 				this.renderBoundaryInputDivs()
 			})
 
-		this.dom.boundaryInput
+		this.dom.boundaryInclusionSelect
 			.selectAll('option')
 			.data([
 				{ value: 'stopinclusive', html: `start &lt; ${x} &le; end` },
@@ -201,15 +201,16 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 			.style('display', 'none')
 			.style('width', '100px')
 			.style('margin-right', '10px')
-			.on('change', async () => this.handlePercentileChange())
+			.on('change', () => this.handlePercentileChange())
 	}
 
 	async handlePercentileChange() {
 		try {
-			const percentile = Number(this.dom.cutoffInputPercentile.property('value'))
+			const cutoffPercentile = Number(this.dom.cutoffInputPercentile.property('value'))
+			this.q.cutoffPercentile = cutoffPercentile
 			const data = await this.termsetting.vocabApi.getPercentile(
 				this.tw.term,
-				[percentile],
+				[cutoffPercentile],
 				this.termsetting.vocabApi.state?.termfilter
 			)
 			this.dom.cutoffInput.property('value', data.values[0])
@@ -260,7 +261,7 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 	}
 
 	processBinaryBinInputs() {
-		const inclusive = this.dom.boundaryInput.property('value')
+		const inclusive = this.dom.boundaryInclusionSelect.property('value')
 		const startinclusive = inclusive == 'startinclusive'
 		const stopinclusive = inclusive == 'stopinclusive'
 		//const inputDivs = this.dom.bins_table.node().querySelectorAll('input')
@@ -297,11 +298,13 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 		return bins
 	}
 
-	getEditedQ(): BinaryNumericQ {
+	getEditedQ(destroyDom: boolean = true): BinaryNumericQ {
 		const lst = this.processBinaryBinInputs()
-		for (const name of Object.keys(this.dom)) {
-			this.dom[name].remove()
-			delete this.dom[name]
+		if (destroyDom) {
+			for (const name of Object.keys(this.dom)) {
+				this.dom[name].remove()
+				delete this.dom[name]
+			}
 		}
 		return {
 			mode: 'binary',
@@ -310,9 +313,12 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 		}
 	}
 
-	undoEdits() {
+	async undoEdits() {
 		this.q = this.getDefaultQ()
+		await this.handler.density.setBinLines(this.getBoundaryOpts())
 		this.dom.inputsDiv.selectAll('*').remove()
-		//this.()
+		this.renderBoundaryInclusionSelect()
+		this.renderCutoffInput()
+		this.renderBoundaryInputDivs()
 	}
 }
