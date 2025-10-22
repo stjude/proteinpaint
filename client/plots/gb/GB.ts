@@ -78,7 +78,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 			const model = new Model(state, this.app)
 			const data = await model.preComputeData()
 			const opts = this.getOpts()
-			const viewModel = new ViewModel(state, opts, data)
+			const viewModel = new ViewModel(state, opts, data, this.interactions)
 			await viewModel.generateTracks()
 			const view = new View(state, viewModel.viewData, this.dom, opts, this.interactions)
 			await view.main()
