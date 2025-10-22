@@ -19,6 +19,7 @@ Features:
 Fixes:
 - replace empty string bin label
 - Survival plot: allows users to set default time units and switch among time units: years, months, weeks, days
+- Table sorting now correctly detects and sorts numeric values stored as strings, preventing issues in components that use mixed string types (e.g., datasets with both numeric and alphanumeric IDs).
 
 
 ## 2.149.0
