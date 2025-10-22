@@ -59,8 +59,8 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 	}
 
 	async setControls() {
-		this.dom.controls.selectAll('*').remove()
-		const controlLabels = this.state.config.controlLabels
+		const state = this.getState(this.app.getState())
+		const controlLabels = state.config.controlLabels
 		if (!controlLabels) throw 'controls labels not found'
 		const inputs = [
 			{
@@ -256,6 +256,7 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 	async init() {
 		this.dom.div.style('display', 'inline-block').style('margin-left', '20px')
 		this.interactions = new BoxPlotInteractions(this.app, this.dom, this.id)
+		await this.setControls()
 	}
 
 	async main() {
@@ -265,7 +266,6 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 
 			if (!this.interactions) throw 'Interactions not initialized [box plot main()]'
 
-			await this.setControls()
 			const settings = config.settings.boxplot
 			const model = new Model(config, this.state, this.app, settings)
 			const data = await model.getData()
