@@ -1,1 +1,2 @@
-
+Fixes
+- Table sorting now correctly detects and sorts numeric values stored as strings, preventing issues in components that use mixed string types (e.g., datasets with both numeric and alphanumeric IDs).  
