@@ -3061,10 +3061,10 @@
   },
   "plots/barchart.js": {
     "lines": {
-      "total": 414,
-      "covered": 350,
+      "total": 416,
+      "covered": 346,
       "skipped": 0,
-      "pct": 84.54
+      "pct": 83.17
     },
     "functions": {
       "total": 90,
@@ -3073,26 +3073,26 @@
       "pct": 83.33
     },
     "statements": {
-      "total": 462,
-      "covered": 370,
+      "total": 465,
+      "covered": 365,
       "skipped": 0,
-      "pct": 80.08
+      "pct": 78.49
     },
     "branches": {
-      "total": 415,
-      "covered": 282,
+      "total": 425,
+      "covered": 287,
       "skipped": 0,
-      "pct": 67.95
+      "pct": 67.52
     },
     "lowestPct": {
-      "curr": 67.95,
+      "curr": 67.52,
       "prev": 68.85,
-      "diff": -0.8999999999999915
+      "diff": -1.3299999999999983
     },
     "averagePct": {
-      "curr": 78.975,
+      "curr": 78.1275,
       "prev": 80.86250000000001,
-      "diff": -1.887500000000017
+      "diff": -2.7350000000000136
     }
   },
   "mass/test/barchart.integration.spec.js": {
@@ -6949,10 +6949,10 @@
   },
   "plots/violin.js": {
     "lines": {
-      "total": 84,
+      "total": 86,
       "covered": 7,
       "skipped": 0,
-      "pct": 8.33
+      "pct": 8.13
     },
     "functions": {
       "total": 17,
@@ -6961,26 +6961,26 @@
       "pct": 5.88
     },
     "statements": {
-      "total": 94,
+      "total": 97,
       "covered": 7,
       "skipped": 0,
-      "pct": 7.44
+      "pct": 7.21
     },
     "branches": {
-      "total": 65,
+      "total": 75,
       "covered": 1,
       "skipped": 0,
-      "pct": 1.53
+      "pct": 1.33
     },
     "lowestPct": {
-      "curr": 1.53,
+      "curr": 1.33,
       "prev": 80,
-      "diff": -78.47
+      "diff": -78.67
     },
     "averagePct": {
-      "curr": 5.795000000000001,
+      "curr": 5.637500000000001,
       "prev": 87.11,
-      "diff": -81.315
+      "diff": -81.4725
     }
   },
   "plots/violin.renderer.js": {
@@ -7057,38 +7057,38 @@
   },
   "plots/boxplot/BoxPlot.ts": {
     "lines": {
-      "total": 123,
+      "total": 126,
       "covered": 8,
       "skipped": 0,
-      "pct": 6.5
+      "pct": 6.34
     },
     "functions": {
-      "total": 21,
+      "total": 22,
       "covered": 2,
       "skipped": 0,
-      "pct": 9.52
+      "pct": 9.09
     },
     "statements": {
-      "total": 140,
+      "total": 143,
       "covered": 8,
       "skipped": 0,
-      "pct": 5.71
+      "pct": 5.59
     },
     "branches": {
-      "total": 66,
+      "total": 80,
       "covered": 1,
       "skipped": 0,
-      "pct": 1.51
+      "pct": 1.25
     },
     "lowestPct": {
-      "curr": 1.51,
+      "curr": 1.25,
       "prev": 51.51,
-      "diff": -50
+      "diff": -50.26
     },
     "averagePct": {
-      "curr": 5.8100000000000005,
+      "curr": 5.5675,
       "prev": 63.474999999999994,
-      "diff": -57.66499999999999
+      "diff": -57.90749999999999
     }
   },
   "plots/boxplot/model/Model.ts": {
@@ -7417,38 +7417,38 @@
   },
   "plots/summary.ts": {
     "lines": {
-      "total": 165,
+      "total": 168,
       "covered": 80,
       "skipped": 0,
-      "pct": 48.48
+      "pct": 47.61
     },
     "functions": {
-      "total": 36,
-      "covered": 29,
+      "total": 37,
+      "covered": 28,
       "skipped": 0,
-      "pct": 80.55
+      "pct": 75.67
     },
     "statements": {
-      "total": 179,
-      "covered": 81,
+      "total": 182,
+      "covered": 83,
       "skipped": 0,
-      "pct": 45.25
+      "pct": 45.6
     },
     "branches": {
-      "total": 130,
-      "covered": 37,
+      "total": 136,
+      "covered": 50,
       "skipped": 0,
-      "pct": 28.46
+      "pct": 36.76
     },
     "lowestPct": {
-      "curr": 28.46,
-      "prev": 0,
-      "diff": 28.46
+      "curr": 36.76,
+      "prev": 28.46,
+      "diff": 8.299999999999997
     },
     "averagePct": {
-      "curr": 50.685,
-      "prev": 0,
-      "diff": 50.685
+      "curr": 51.41,
+      "prev": 50.685,
+      "diff": 0.7249999999999943
     }
   },
   "termsetting/types.ts": {

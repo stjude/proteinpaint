@@ -505,10 +505,10 @@
   },
   "src/termdb.matrix.js": {
     "lines": {
-      "total": 473,
+      "total": 474,
       "covered": 37,
       "skipped": 0,
-      "pct": 7.82
+      "pct": 7.8
     },
     "functions": {
       "total": 52,
@@ -517,26 +517,26 @@
       "pct": 1.92
     },
     "statements": {
-      "total": 540,
+      "total": 541,
       "covered": 39,
       "skipped": 0,
-      "pct": 7.22
+      "pct": 7.2
     },
     "branches": {
-      "total": 355,
+      "total": 357,
       "covered": 12,
       "skipped": 0,
-      "pct": 3.38
+      "pct": 3.36
     },
     "lowestPct": {
       "curr": 1.92,
-      "prev": 0,
-      "diff": 1.92
+      "prev": 1.92,
+      "diff": 0
     },
     "averagePct": {
-      "curr": 5.085,
-      "prev": 0,
-      "diff": 5.085
+      "curr": 5.069999999999999,
+      "prev": 5.085,
+      "diff": -0.015000000000000568
     }
   },
   "src/adHocDictionary/FilterHelpers.ts": {
