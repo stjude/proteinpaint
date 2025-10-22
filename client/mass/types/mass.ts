@@ -70,6 +70,7 @@ export type BasePlotConfig = {
 	settings: PlotSettings
 	filter?: any
 	parentId?: string
+	controlLabels?: any
 }
 
 type PlotSettings = {
