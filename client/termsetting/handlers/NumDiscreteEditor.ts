@@ -21,8 +21,9 @@ export class NumDiscreteEditor extends HandlerBase implements Handler {
 	draggedItem: any
 	removedGrp: any
 	editedName: any
-	activeTab: 'regular-bin' | 'custom-bin' = 'regular-bin'
+	boundaryInclusion: 'startinclusive' | 'stopinclusive' = 'stopinclusive'
 
+	activeTab: 'regular-bin' | 'custom-bin' = 'regular-bin'
 	editorsByType: {
 		'regular-bin': NumRegularBinEditor
 		'custom-bin': NumCustomBinEditor
@@ -37,15 +38,25 @@ export class NumDiscreteEditor extends HandlerBase implements Handler {
 			'regular-bin': new NumRegularBinEditor(this),
 			'custom-bin': new NumCustomBinEditor(this)
 		}
+		if (this.tw.term.bins?.default.type != 'regular-bin') this.activeTab = 'custom-bin'
 		//this.dom.holder = opts.holder || this.termsetting.dom.tip.d
+	}
+
+	setDefaultBoundaryInclusion() {
+		if (this.tw.q.mode == 'discrete') {
+			if (this.tw.q.type == 'regular-bin')
+				this.boundaryInclusion = this.tw.q.startinclusive ? 'startinclusive' : 'stopinclusive'
+			else this.boundaryInclusion = this.tw.q.lst[0].startinclusive ? 'startinclusive' : 'stopinclusive'
+		} else {
+			this.boundaryInclusion = 'stopinclusive'
+		}
 	}
 
 	getPillStatus() {
 		if (!this.tw.q) throw `Missing .q{} [numeric.discrete getPillStatus()]`
 		const text = this.tw.q?.name || this.tw.q?.reuseId
 		if (text) return { text }
-		if (this.tw.q.type == 'regular-bin') return { text: 'bin size=' + this.tw.q.bin_size }
-		return { text: this.tw.q.lst.length + ' bins' }
+		return this.editorsByType[this.activeTab].getPillStatus()
 	}
 
 	async showEditMenu(div: any) {
@@ -58,20 +69,14 @@ export class NumDiscreteEditor extends HandlerBase implements Handler {
 		await this.handler.density.showViolin(this.dom.density_div)
 
 		this.tw = this.termsetting.tw as NumRegularBin | NumCustomBins // TODO: do not force
-		this.dom.boundaryInclusionDiv = div.append('div')
-		this.renderBoundaryInclusionInput()
+		this.setDefaultBoundaryInclusion()
+		this.renderBoundaryInclusionInput(div)
 		this.mayShowValueconversionMsg(div)
 		this.renderTypeInputs(div)
-
-		this.dom.boundaryInput
-			.selectAll('option')
-			.property('selected', d => d.value === this.editorsByType[this.activeTab].getBoundaryInclusion())
 	}
 
-	renderBoundaryInclusionInput() {
-		//if (this.dom.boundaryInput) return
-		//const handler = this.handler
-		this.dom.boundaryInclusionDiv.selectAll('*').remove()
+	renderBoundaryInclusionInput(div) {
+		this.dom.boundaryInclusionDiv = div.append('div')
 		this.dom.boundaryInclusionDiv
 			.append('span')
 			.style('padding', '5px')
@@ -84,11 +89,11 @@ export class NumDiscreteEditor extends HandlerBase implements Handler {
 			.append('select')
 			.style('margin-left', '10px')
 			.on('change', () => {
+				this.boundaryInclusion = this.dom.boundaryInput.property('value')
 				if (this.activeTab == 'custom-bin') this.editorsByType[this.activeTab].handleInputChange()
 				const q = this.editorsByType['regular-bin'].q
-				const v = this.dom.boundaryInput.property('value')
-				q.startinclusive = v === 'startinclusive'
-				q.stopinclusive = v === 'stopinclusive'
+				q.startinclusive = this.boundaryInclusion === 'startinclusive'
+				q.stopinclusive = this.boundaryInclusion === 'stopinclusive'
 			})
 
 		this.dom.boundaryInput
@@ -100,9 +105,7 @@ export class NumDiscreteEditor extends HandlerBase implements Handler {
 			.enter()
 			.append('option')
 			.property('value', d => d.value)
-			.property('selected', d =>
-				this.tw.q.type == 'regular-bin' ? this.tw.q[d.value] == true : this.tw.q.lst?.[0]?.[d.value] == true
-			)
+			.property('selected', d => d.value === this.boundaryInclusion)
 			.html(d => d.html)
 	}
 
@@ -119,15 +122,6 @@ export class NumDiscreteEditor extends HandlerBase implements Handler {
 	}
 
 	renderTypeInputs(_div) {
-		if (this.dom.binsDiv) {
-			if (_div.node().contains(this.dom.binsDiv.node())) return
-			else {
-				this.dom.binsDiv.remove()
-				delete this.dom.binsDiv
-			}
-		}
-
-		//if (this.dom.binsDiv) return
 		this.dom.binsDiv = _div.append('div')
 		//const handler = this.handler
 		//const self = handler.termsetting
@@ -178,15 +172,15 @@ export class NumDiscreteEditor extends HandlerBase implements Handler {
 		new Tabs({ holder: div, tabs }).main()
 	}
 
-	getEditedQ() {
-		const v = this.dom.boundaryInput.property('value')
-		const startinclusive = v == 'startinclusive'
-		const stopinclusive = v == 'stopinclusive'
-		return this.editorsByType[this.activeTab].getEditedQ(startinclusive, stopinclusive)
-		//setTimeout(() => this.destroy(), 0)
+	getEditedQ(destroyDom = true) {
+		this.boundaryInclusion = this.dom.boundaryInput.property('value')
+		return this.editorsByType[this.activeTab].getEditedQ(destroyDom)
+		if (destroyDom) this.destroy()
 	}
 
 	undoEdits() {
+		this.setDefaultBoundaryInclusion()
+		this.dom.boundaryInput.property('value', this.boundaryInclusion)
 		this.editorsByType[this.activeTab].undoEdits()
 	}
 

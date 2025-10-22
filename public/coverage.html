@@ -56,7 +56,7 @@
       try {
         console.clear()
         d3.select('#main-div').html('Requesting coverage report ...')
-        const res = await fetch('/specCoverage').then(r => r.json())
+        const res = await fetch('/specCoverage' + window.location.search ).then(r => r.json())
         if (res.error) console.log(res.error)
         if (res.out) {
           getLatestCoverageReports(`<h2>See the browser console for test coverage logs.<h2>`, res.workspaces, res.failures)

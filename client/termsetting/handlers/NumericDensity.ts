@@ -1,6 +1,5 @@
 import type { TermSetting } from '../TermSetting.ts'
 import type { NumRegularBin, NumCustomBins, NumCont, NumSpline } from '#tw'
-import type { NumericHandler } from './NumericHandler.ts'
 import type { NumericBin } from '#types'
 import { violinRenderer } from '#dom'
 import { select, pointer, type BaseType } from 'd3-selection'
@@ -30,18 +29,7 @@ export type DraggedLineData = LineData & {
 	end?: number
 }
 
-// type BrushEntry = {
-// 	//No documentation!
-// 	orig: string
-// 	range: {
-// 		start: number
-// 		stop: number
-// 	}
-// 	init: () => void
-// }
-
 export class NumericDensity {
-	handler: NumericHandler
 	termsetting: TermSetting
 	opts: any // TODO
 	tw: NumRegularBin | NumCustomBins | NumCont | NumSpline
@@ -49,7 +37,8 @@ export class NumericDensity {
 	dom: {
 		[name: string]: any
 	} = {}
-
+	// WeakMap allows deletion of value when the object/DOM key is deleted,
+	// so better for avoiding memory leak
 	vrByDiv: WeakMap<HTMLElement, any> = new WeakMap()
 	vr!: violinRenderer
 	density_data!: any
@@ -71,8 +60,7 @@ export class NumericDensity {
 		radius: 8
 	}
 
-	constructor(opts, handler) {
-		this.handler = handler
+	constructor(opts) {
 		this.opts = opts
 		this.termsetting = opts.termsetting
 		this.tw = opts.termsetting.tw
@@ -133,7 +121,8 @@ export class NumericDensity {
 			//this.vr.render()
 
 			// add binsize_g for termsetting lines
-			if (this.dom.binsize_g) this.dom.binsize_g.remove()
+			if (this.dom.binsize_g) this.dom.binsize_g.selectAll('*').remove()
+			if (!this.dom.svg) console.trace(124)
 			this.dom.binsize_g = this.dom.svg
 				.append('g')
 				.attr('transform', `translate(${this.plot_size.xpad}, ${this.plot_size.ypad})`)
@@ -169,7 +158,8 @@ export class NumericDensity {
 			lines.push({ ...v, index, scaledX: Math.round(this.xscale(v.x)) })
 		}
 		const lastVisibleLine = lines.find(l => l.isLastVisibleLine)
-		const lastVisibleScaledX = lastVisibleLine ? this.xscale(lastVisibleLine.scaledX) : scaledMaxX
+		const lastVisibleScaledX = lastVisibleLine ? lastVisibleLine.scaledX : scaledMaxX
+		const dragger = d3drag().on('drag', onDrag).on('end', onDrag)
 
 		this.dom.binsize_g.selectAll('line').remove()
 		this.dom.binsize_g
@@ -184,7 +174,7 @@ export class NumericDensity {
 			.attr('x2', (d: LineData) => d.scaledX)
 			.attr('y2', plot_size.height)
 			.style('cursor', (d: LineData) => (d.isDraggable ? 'ew-resize' : ''))
-			.style('display', (d: LineData) => (!d.isDraggable && d.scaledX > lastVisibleScaledX ? 'none' : ''))
+			.attr('display', (d: LineData) => (!d.isDraggable && d.scaledX > lastVisibleScaledX ? 'none' : ''))
 			.on('mouseover', function (this: SVGLineElement, _, d: LineData) {
 				if (d.isDraggable) select(this).style('stroke-width', 3)
 			})
@@ -192,10 +182,7 @@ export class NumericDensity {
 				select(this).style('stroke-width', 1)
 			})
 			.each(function (this: Element, d: LineData) {
-				if (d.isDraggable) {
-					const dragger = d3drag().on('drag', onDrag).on('end', onDrag)
-					select(this).call(dragger)
-				}
+				if (d.isDraggable) select(this).call(dragger)
 			})
 
 		const lineElems = this.dom.binsize_g.node().querySelectorAll('line')
@@ -208,7 +195,7 @@ export class NumericDensity {
 			d.draggedX = draggedX
 			select(this).attr('x1', d.draggedX).attr('y1', 0).attr('x2', d.draggedX).attr('y2', plot_size.height)
 
-			const lastVisibleScaledX = lastVisibleLine?.draggedX || scaledMaxX
+			const lastVisibleScaledX = lastVisibleLine?.draggedX ?? lastVisibleLine?.scaledX ?? scaledMaxX
 
 			const xOffset = d.draggedX - d.scaledX
 			if (xOffset) {
@@ -223,54 +210,15 @@ export class NumericDensity {
 				}
 				const inverted = xscale.invert(d.draggedX)
 				const value = tw.term.type == 'integer' ? Math.round(inverted) : inverted.toFixed(3)
-				boundaryOpts.callback(d, value)
+				boundaryOpts.callback(d, Number(value))
 			}
-
-			// if (tw.q.mode == 'spline') {
-			// 	//self.q.knots[d.index].value = value
-			// 	if (handler.dom.customKnotsInput) {
-			// 		handler.dom.customKnotsInput.property('value', tw.q.knots.map((d: any) => d.value).join('\n'))
-			// 	}
-			// }
-			// else {
-			// 	throw 'Dragging not allowed for this term type'
-			// }
 		}
+	}
 
-		// function dragend(this: any, event: DragEvent, b: any) {
-		// 	const draggedX = pointer(event, this)[0]
-		// 	const line =
-		// 		tw.q.type == 'regular-bin'
-		// 			? select(this)
-		// 			: b.index > 0 && draggedX <= lines[b.index - 1].scaledX
-		// 			? select(this.previousSibling)
-		// 			: b.index < lines.length - 1 && draggedX >= lines[b.index + 1].scaledX
-		// 			? select(this.nextSibling)
-		// 			: select(this)
-		// 	const d = line.datum() as LineData
-
-		// 	d.scaledX = d.draggedX as number
-		// 	d.x = +this.xscale.invert(d.draggedX).toFixed(tw.term.type == 'integer' ? 0 : 3)
-		// 	if (tw.q.mode == 'discrete' && tw.q.type == 'regular-bin') {
-		// 		if (d.index === 0) {
-		// 			tw.q.first_bin!.stop = d.x
-		// 			middleLines.each((d: LineData) => {
-		// 				d.scaledX = d.draggedX as number
-		// 				d.x = +this.xscale.invert(d.draggedX).toFixed(tw.term.type == 'integer' ? 0 : 3)
-		// 			})
-		// 		} else {
-		// 			tw.q.last_bin!.start = d.x
-		// 		}
-		// 		lastScaledX = lines
-		// 			.slice()
-		// 			.reverse()
-		// 			.find((d: LineData) => d.scaledX < scaledMaxX).scaledX
-		// 	} else if (tw.q.mode == 'discrete' && tw.q.type == 'custom-bin') {
-		// 		// tw.q.lst![d.index + 1].start = d.x
-		// 		// tw.q.lst![d.index].stop = d.x
-		// 	} else if (tw.q.mode == 'spline') {
-		// 		tw.q.knots[d.index].value = d.x
-		// 	}
-		// }
+	destroy() {
+		for (const [k, v] of Object.entries(this.dom)) {
+			delete this.dom[k]
+			if (typeof v.remove == 'function') v.remove()
+		}
 	}
 }

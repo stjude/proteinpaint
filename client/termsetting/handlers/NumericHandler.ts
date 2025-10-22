@@ -3,6 +3,10 @@ import type { Handler } from '../index.ts'
 import type { NumRegularBin, NumCustomBins, NumCont, NumSpline } from '#tw'
 import { Tabs } from '#dom'
 import { NumericDensity } from './NumericDensity.ts'
+import type { NumContEditor } from './NumContEditor'
+import type { NumDiscreteEditor } from './NumDiscreteEditor'
+import type { NumBinaryEditor } from './NumBinaryEditor'
+import type { NumSplineEditor } from './NumSplineEditor'
 
 type NumericTabCallback = (event: PointerEvent, tab: TabData) => void
 
@@ -22,14 +26,16 @@ type TabData = {
 		 - NumCustomBinEditor
 */
 
+type EditHandler = NumContEditor | NumDiscreteEditor | NumBinaryEditor | NumSplineEditor
+
 export class NumericHandler extends HandlerBase implements Handler {
 	opts: any // TODO
 	tw: NumRegularBin | NumCustomBins | NumCont | NumSpline
 	tabs: TabData[] = []
 	handlerByMode: {
-		[twType: string]: Handler
+		[twType: string]: EditHandler
 	} = {}
-	editHandler!: Handler
+	editHandler!: EditHandler
 	toggleBtns!: Tabs
 
 	dom: {
@@ -45,7 +51,7 @@ export class NumericHandler extends HandlerBase implements Handler {
 		this.termsetting = opts.termsetting
 		this.tw = opts.termsetting.tw
 		this.tabs = this.setTabData()
-		this.density = new NumericDensity(opts, this)
+		this.density = new NumericDensity(opts)
 	}
 
 	getPillStatus() {
@@ -161,12 +167,19 @@ export class NumericHandler extends HandlerBase implements Handler {
 	}
 
 	applyEdits() {
-		if (this.editHandler.getEditedQ) this.termsetting.q = this.editHandler.getEditedQ()
+		this.termsetting.q = this.editHandler.getEditedQ()
 		this.termsetting.dom.tip.hide()
 		this.termsetting.api.runCallback()
 	}
 
 	undoEdits() {
 		this.editHandler.undoEdits()
+	}
+
+	destroy() {
+		for (const s of Object.values(this.dom)) {
+			if (typeof s.remove == 'function') s.remove()
+		}
+		this.density.destroy()
 	}
 }

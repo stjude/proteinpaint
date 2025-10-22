@@ -45,10 +45,9 @@ export class NumContEditor extends HandlerBase implements Handler {
 		await this.handler.density.showViolin(this.dom.density_div)
 
 		this.dom.inputsDiv = div.append('div')
-		let convert2ZCheckbox
 		if (this.termsetting.opts.usecase?.target == 'matrix') {
-			convert2ZCheckbox = make_one_checkbox({
-				holder: div,
+			this.dom.convert2ZCheckbox = await make_one_checkbox({
+				holder: this.dom.inputsDiv.append('div'),
 				labeltext: 'Convert to Z-score',
 				checked: this.q.convert2ZScore ? true : false,
 				divstyle: { display: 'inline-block', padding: '3px 10px' },
@@ -56,7 +55,7 @@ export class NumContEditor extends HandlerBase implements Handler {
 					this.q.convert2ZScore = checked
 					if (checked) {
 						// set the Scale values option to "No Scaling"
-						select.property('value', 1)
+						this.dom.scaleSelect.property('value', 1)
 						delete this.q.scale
 					}
 				}
@@ -66,17 +65,17 @@ export class NumContEditor extends HandlerBase implements Handler {
 		const selectDiv = this.dom.inputsDiv.append('div').style('display', 'inline-block')
 		selectDiv.append('div').style('display', 'inline-block').style('padding', '3px 10px').html('Scale values')
 
-		const select = selectDiv.append('select').on('change', (event: any) => {
-			//if (!this.q) throw `Missing .q{} [Nu getHandler()]`
-			if (event.target.value != '1') {
+		this.dom.scaleSelect = selectDiv.append('select').on('change', (event: any) => {
+			//if (!this.q) throw `Missing .q{} [NumContEditor]`
+			if (event.target.value == '1') delete this.q.scale
+			else {
 				// uncheck the convert to z-score checkbox
-				if (convert2ZCheckbox) convert2ZCheckbox.property('checked', false)
-
+				if (this.dom.convert2ZCheckbox) this.dom.convert2ZCheckbox.property('checked', false)
 				this.q.scale = Number(event.target.value)
-			} else delete this.q.scale
+			}
 		})
 
-		select
+		this.dom.scaleSelect
 			.selectAll('option')
 			.data([
 				{ html: 'No Scaling', value: 1 },
@@ -91,8 +90,11 @@ export class NumContEditor extends HandlerBase implements Handler {
 			.property('selected', d => 'scale' in this.q && d.value == this.q.scale)
 	}
 
-	applyEdits() {
-		setTimeout(() => this.destroy(), 0)
+	getEditedQ() {
+		const scaleValue = this.dom.scaleSelect.property('value')
+		if (scaleValue == '1') delete this.q.scale
+		else this.q.scale = Number(scaleValue)
+		this.q.convert2ZScore = this.dom.convert2ZCheckbox.property('checked')
 		return this.q
 	}
 
