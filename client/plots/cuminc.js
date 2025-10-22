@@ -1303,7 +1303,7 @@ export async function getPlotConfig(opts, app) {
 	}
 	const config = {
 		id: opts.term.term.id,
-		controlLabels: copyMerge(defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {}),
+		controlLabels: Object.assign({}, defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {}),
 		settings: JSON.parse(defaultSettings)
 	}
 	// may apply term-specific changes to the default object

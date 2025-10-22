@@ -427,7 +427,7 @@ export async function getPlotConfig(opts, app) {
 
 	const config = {
 		id: opts.term.term.id,
-		controlLabels: copyMerge(defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {}),
+		controlLabels: Object.assign({}, defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {}),
 		settings: {
 			controls: {
 				term2: null, // the previous overlay value may be displayed as a convenience for toggling
