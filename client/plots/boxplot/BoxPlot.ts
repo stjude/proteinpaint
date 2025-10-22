@@ -15,7 +15,7 @@ import { LegendRenderer } from './view/LegendRender'
 import { DownloadMenu } from '#dom'
 import { getChartTitle } from './viewModel/ViewModel'
 import { getCombinedTermFilter } from '#filter'
-import { PlotBase } from '#plots/PlotBase.ts'
+import { PlotBase, defaultUiLabels } from '#plots/PlotBase.ts'
 class TdbBoxplot extends PlotBase implements RxComponent {
 	static type = 'boxplot'
 	type: string
@@ -59,14 +59,16 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 	}
 
 	async setControls() {
-		const customControls = this.app.getState().termdbConfig.customControls
+		this.dom.controls.selectAll('*').remove()
+		const controlLabels = this.state.config.controlLabels
+		if (!controlLabels) throw 'controls labels not found'
 		const inputs = [
 			{
 				type: 'term',
 				configKey: 'term',
 				chartType: 'boxplot',
 				usecase: { target: 'boxplot', detail: 'term' },
-				label: customControls?.term?.label || renderTerm1Label,
+				label: controlLabels.term1?.label || renderTerm1Label,
 				vocabApi: this.app.vocabApi,
 				menuOptions: 'edit'
 			},
@@ -75,8 +77,8 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 				configKey: 'term2',
 				chartType: 'boxplot',
 				usecase: { target: 'boxplot', detail: 'term2' },
-				title: customControls?.term2?.label || 'Overlay data',
-				label: customControls?.term2?.label || 'Overlay',
+				title: controlLabels.term2.title || controlLabels.term2.label,
+				label: controlLabels.term2.label,
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: this.opts.numericEditMenuVersion || ['continuous', 'discrete'],
 				defaultQ4fillTW: term0_term2_defaultQ
@@ -86,8 +88,8 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 				configKey: 'term0',
 				chartType: 'boxplot',
 				usecase: { target: 'boxplot', detail: 'term0' },
-				title: customControls?.term0?.label || 'Divide by data',
-				label: customControls?.term0?.label || 'Divide by',
+				title: controlLabels.term0.title || controlLabels.term0.label,
+				label: controlLabels.term0.label,
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: this.opts.numericEditMenuVersion || ['continuous', 'discrete'],
 				defaultQ4fillTW: term0_term2_defaultQ
@@ -254,11 +256,6 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 	async init() {
 		this.dom.div.style('display', 'inline-block').style('margin-left', '20px')
 		this.interactions = new BoxPlotInteractions(this.app, this.dom, this.id)
-		try {
-			await this.setControls()
-		} catch (e: any) {
-			console.error(new Error(e.message || e))
-		}
 	}
 
 	async main() {
@@ -268,6 +265,7 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 
 			if (!this.interactions) throw 'Interactions not initialized [box plot main()]'
 
+			await this.setControls()
 			const settings = config.settings.boxplot
 			const model = new Model(config, this.state, this.app, settings)
 			const data = await model.getData()
@@ -418,6 +416,7 @@ export async function getPlotConfig(opts: BoxPlotConfigOpts, app: MassAppApi) {
 
 	const config = {
 		id: opts.term.term.id,
+		controlLabels: copyMerge(defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {}),
 		settings: {
 			controls: {
 				term2: null,

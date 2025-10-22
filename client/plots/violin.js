@@ -97,7 +97,8 @@ class ViolinPlot extends PlotBase {
 
 	async setControls() {
 		this.dom.controls.selectAll('*').remove()
-		const customControls = this.app.getState().termdbConfig.customControls
+		const controlLabels = this.state.config.controlLabels
+		if (!controlLabels) throw 'controls labels not found'
 		this.components = {}
 		if (this.opts.mode == 'minimal') return
 		const inputs = [
@@ -106,7 +107,7 @@ class ViolinPlot extends PlotBase {
 				configKey: 'term',
 				chartType: 'violin',
 				usecase: { target: 'violin', detail: 'term' },
-				label: customControls?.term?.label || renderTerm1Label,
+				label: controlLabels.term1?.label || renderTerm1Label,
 				vocabApi: this.app.vocabApi,
 				menuOptions: 'edit'
 			},
@@ -115,8 +116,8 @@ class ViolinPlot extends PlotBase {
 				configKey: 'term2',
 				chartType: 'violin',
 				usecase: { target: 'violin', detail: 'term2' },
-				title: customControls?.term2?.label || 'Overlay data',
-				label: customControls?.term2?.label || 'Overlay',
+				title: controlLabels.term2.title || controlLabels.term2.label,
+				label: controlLabels.term2.label,
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: this.opts.numericEditMenuVersion,
 				defaultQ4fillTW: term0_term2_defaultQ
@@ -126,8 +127,8 @@ class ViolinPlot extends PlotBase {
 				configKey: 'term0',
 				chartType: 'violin',
 				usecase: { target: 'violin', detail: 'term0' },
-				title: customControls?.term0?.label || 'Divide by data',
-				label: customControls?.term0?.label || 'Divide by',
+				title: controlLabels.term0.title || controlLabels.term0.label,
+				label: controlLabels.term0.label,
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: this.opts.numericEditMenuVersion,
 				defaultQ4fillTW: term0_term2_defaultQ
@@ -426,6 +427,7 @@ export async function getPlotConfig(opts, app) {
 
 	const config = {
 		id: opts.term.term.id,
+		controlLabels: copyMerge(defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {}),
 		settings: {
 			controls: {
 				term2: null, // the previous overlay value may be displayed as a convenience for toggling

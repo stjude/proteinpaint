@@ -1,5 +1,5 @@
-import { PlotBase } from './PlotBase.ts'
-import { getCompInit, type ComponentApi, type RxComponent } from '#rx'
+import { PlotBase, defaultUiLabels } from './PlotBase.ts'
+import { getCompInit, copyMerge, type ComponentApi, type RxComponent } from '#rx'
 import { controlsInit } from './controls'
 
 class SummaryInputPlot extends PlotBase implements RxComponent {
@@ -36,23 +36,37 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 		return dom
 	}
 
-	async init() {
-		const customControls = this.app.getState().termdbConfig.customControls
+	getState(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
+		if (!config) {
+			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+		}
+		return {
+			termfilter: appState.termfilter,
+			config,
+			// quick fix to skip history tracking as needed
+			_scope_: appState._scope_
+		}
+	}
+
+	async setControls() {
+		this.dom.controls.selectAll('*').remove()
+		const controlLabels = this.state.config.controlLabels
 		const inputs = [
 			{
 				type: 'term',
 				configKey: 'term',
-				label: customControls?.term?.label || 'Primary Variable'
+				label: controlLabels.term1?.label || 'Primary variable'
 			},
 			{
 				type: 'term',
 				configKey: 'term2',
-				label: customControls?.term2?.label || 'Overlay Variable'
+				label: controlLabels.term2.label
 			},
 			{
 				type: 'term',
 				configKey: 'term0',
-				label: customControls?.term0?.label || 'Divide by Variable'
+				label: controlLabels.term0.label
 			}
 		]
 
@@ -67,13 +81,17 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 
 		const appState = this.app.getState()
 		controls.update({ state: this.state, appState })
+	}
 
+	renderSubmit() {
+		this.dom.submit.selectAll('*').remove()
 		this.dom.submit
 			.append('button')
-			.property('disabled', true)
+			.property('disabled', !this.config.term)
 			.style('border', 'none')
 			.style('border-radius', '20px')
 			.style('padding', '10px 15px')
+			.style('cursor', this.config.term ? 'pointer' : 'default')
 			.text('Submit')
 			.on('click', () => {
 				const config = structuredClone(this.config)
@@ -90,34 +108,21 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 			})
 	}
 
-	getState(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
-		if (!config) {
-			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
-		}
-		return {
-			termfilter: appState.termfilter,
-			config,
-			// quick fix to skip history tracking as needed
-			_scope_: appState._scope_
-		}
-	}
-
 	async main() {
 		this.config = await this.getMutableConfig()
-		const submitBtn = this.dom.submit.select('button')
-		submitBtn.property('disabled', !this.config.term)
-		submitBtn.style('cursor', this.config.term ? 'pointer' : 'default')
+		await this.setControls()
+		this.renderSubmit()
 	}
 }
 
 export const summaryInputInit = getCompInit(SummaryInputPlot)
 export const componentInit = summaryInputInit
 
-export function getPlotConfig() {
+export function getPlotConfig(_opts, app) {
 	const config = {
 		chartType: 'summaryInput',
-		settings: {}
+		settings: {},
+		controlLabels: copyMerge(defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {})
 	}
 	return config
 }

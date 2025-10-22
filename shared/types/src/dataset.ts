@@ -1169,12 +1169,7 @@ type CorrelationVolcano = {
 }
 
 type UiLabels = {
-	samples?: string
-	sample?: string
-	Samples?: string
-	Sample?: string
-	Mutations?: string
-	Mutation?: string
+	[propName: string]: string | { label: string; [otherAttr: string]: string }
 }
 
 type SurvPlotsEntry = {
@@ -1552,8 +1547,8 @@ keep this setting here for reason of:
 	 */
 	hasSampleAncestry?: boolean
 	sampleTypes?: SampleType[]
-	/** custom config for plot controls */
-	customControls?: any
+	/** ui labels used for plot controls and tooltips */
+	uiLabels?: UiLabels
 
 	tracks?: {
 		/** allow color or shape changes in the lollipop */

@@ -13,7 +13,7 @@ import { isNumericTerm } from '#shared/terms.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getCombinedTermFilter } from '#filter'
 import { DownloadMenu } from '#dom/downloadMenu'
-import { PlotBase } from '#plots/PlotBase.js'
+import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
 
 export class Barchart extends PlotBase {
 	constructor(opts) {
@@ -87,7 +87,8 @@ export class Barchart extends PlotBase {
 
 	async setControls() {
 		const state = this.state
-		const customControls = this.app.getState().termdbConfig.customControls
+		const controlLabels = state.config.controlLabels
+		if (!controlLabels) throw 'controls labels not found'
 		this.dom.controls.selectAll('*').remove()
 		if (this.opts.controls) {
 			this.opts.controls.on('downloadClick.barchart', this.download)
@@ -101,7 +102,7 @@ export class Barchart extends PlotBase {
 					configKey: 'term',
 					chartType: 'barchart',
 					usecase: { target: 'barchart', detail: 'term' },
-					label: customControls?.term?.label || renderTerm1Label,
+					label: controlLabels.term1?.label || renderTerm1Label,
 					vocabApi: this.app.vocabApi,
 					menuOptions: 'edit',
 					defaultQ4fillTW: { geneVariant: { type: 'custom-groupset' } },
@@ -117,8 +118,8 @@ export class Barchart extends PlotBase {
 					configKey: 'term2',
 					chartType: 'barchart',
 					usecase: { target: 'barchart', detail: 'term2' },
-					title: customControls?.term2?.label || 'Overlay data',
-					label: customControls?.term2?.label || 'Overlay',
+					title: controlLabels.term2.title || controlLabels.term2.label,
+					label: controlLabels.term2.label,
 					vocabApi: this.app.vocabApi,
 					numericEditMenuVersion: this.opts.numericEditMenuVersion,
 					defaultQ4fillTW: term0_term2_defaultQ,
@@ -147,8 +148,8 @@ export class Barchart extends PlotBase {
 					configKey: 'term0',
 					chartType: 'barchart',
 					usecase: { target: 'barchart', detail: 'term0' },
-					title: customControls?.term0?.label || 'Divide by data',
-					label: customControls?.term0?.label || 'Divide by',
+					title: controlLabels.term0.title || controlLabels.term0.label,
+					label: controlLabels.term0.label,
 					vocabApi: this.app.vocabApi,
 					numericEditMenuVersion: this.opts.numericEditMenuVersion,
 					defaultQ4fillTW: term0_term2_defaultQ,
@@ -1301,6 +1302,7 @@ export async function getPlotConfig(opts, app) {
 
 	const config = {
 		id: opts.term.term.id,
+		controlLabels: copyMerge(defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {}),
 		settings: {
 			controls: {
 				term2: null, // the previous overlay value may be displayed as a convenience for toggling
