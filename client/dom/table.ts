@@ -529,18 +529,40 @@ function createSortButton(th: Th, callback, updateTable) {
 	})
 }
 
+/** Detects the type of values in a column and sorts accordingly */
 function sortTableCallBack(i: number, rows: any, isAscending: boolean) {
-	const newRows = rows.sort((a, b) => {
-		if ((!a[i].value && a[i].value != 0) || (!b[i].value && b[i].value != 0)) return
-		//numbers
-		if (typeof a[i].value === 'number' && typeof b[i].value === 'number') {
-			if (!isAscending) return b[i].value - a[i].value
-			else return a[i].value - b[i].value
-			//strings
-		} else if (typeof a[i].value === 'string' && typeof b[i].value === 'string') {
-			if (!isAscending) return b[i].value.localeCompare(a[i].value)
-			else return a[i].value.localeCompare(b[i].value)
+	/** Some values always returned as strings may be numeric values
+	 * (e.g. file names used as either alphanumeric or numeric ids).
+	 * In the latter case, sorting fails.
+	 * Detect such columns and sort the value as numbers */
+	let allNumStrs = true
+	for (let r = 0; r < rows.length; r++) {
+		const v = rows[r][i].value
+		if (typeof v !== 'string' || !Number.isFinite(+v)) {
+			allNumStrs = false
+			break
 		}
+	}
+	const newRows = rows.sort((a: TableCell, b: TableCell) => {
+		const aVal = a[i].value
+		const bVal = b[i].value
+
+		if ((aVal == null && aVal !== 0) || (bVal == null && bVal !== 0)) return 0
+		// numbers
+		if (typeof aVal === 'number' && typeof bVal === 'number') {
+			return isAscending ? aVal - bVal : bVal - aVal
+		}
+		// numeric strings, detected above
+		if (allNumStrs) {
+			const aNum = +aVal
+			const bNum = +bVal
+			return isAscending ? aNum - bNum : bNum - aNum
+		}
+		// regular strings
+		if (typeof aVal === 'string' && typeof bVal === 'string') {
+			return isAscending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+		}
+		return 0
 	})
 	return newRows
 }
