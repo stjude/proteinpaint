@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { renderTable } from '../table'
+import { renderTable, sortTableCallBack } from '../table'
 import * as d3s from 'd3-selection'
 
 /*
@@ -11,6 +11,9 @@ Tests:
 	Missing and excess row data
 	Return correct rows on button click
 	Sort buttons
+	sortTableCallBack correctly detect and sort numeric string values
+	sortTableCallBack correctly detect and sort numeric values
+	sortTableCallBack correctly detect and sort string values
 	fillCell
 */
 
@@ -307,7 +310,7 @@ tape('Bar plot rendering', async test => {
 	test.end()
 })
 
-tape('Sort button', async test => {
+tape('Sort buttons', async test => {
 	test.timeoutAfter(100)
 
 	const holder = getHolder()
@@ -330,6 +333,45 @@ tape('Sort button', async test => {
 	)
 
 	if (test._ok) holder.remove()
+	test.end()
+})
+
+tape('sortTableCallBack correctly detect and sort numeric string values', async test => {
+	test.timeoutAfter(100)
+
+	const mockRows = [[{ value: '1000' }], [{ value: '1050' }], [{ value: '50' }], [{ value: '500' }], [{ value: '5' }]]
+	const isAscenting = true
+	const result = sortTableCallBack(0, mockRows, isAscenting)
+	const expected = [[{ value: '5' }], [{ value: '50' }], [{ value: '500' }], [{ value: '1000' }], [{ value: '1050' }]]
+	test.deepEqual(result, expected, 'Should sort numeric string values correctly')
+
+	test.end()
+})
+
+tape('sortTableCallBack correctly detect and sort numeric values', async test => {
+	test.timeoutAfter(100)
+
+	const mockRows = [[{ value: 1000 }], [{ value: 1050 }], [{ value: 50 }], [{ value: 500 }], [{ value: 5 }]]
+	const isAscenting = true
+	const result = sortTableCallBack(0, mockRows, isAscenting)
+	const expected = [[{ value: 5 }], [{ value: 50 }], [{ value: 500 }], [{ value: 1000 }], [{ value: 1050 }]]
+	test.deepEqual(result, expected, 'Should sort numeric values correctly')
+
+	test.end()
+})
+
+tape('sortTableCallBack correctly detect and sort string values', async test => {
+	test.timeoutAfter(100)
+
+	const isAscenting = true
+	const result = sortTableCallBack(0, testOpts.rows, isAscenting)
+	const expected = [
+		[{ value: 'A' }, { value: 300 }, { value: '2021-01-02' }],
+		[{ value: 'B' }, { value: 100 }, { value: '2021-01-03' }],
+		[{ value: 'C' }, { value: 200 }, { value: '2021-01-01' }]
+	]
+	test.deepEqual(result, expected, 'Should sort string values correctly')
+
 	test.end()
 })
 
