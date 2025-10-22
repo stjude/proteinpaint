@@ -990,17 +990,17 @@ export class TermdbVocab extends Vocab {
 		// the scatter plot may still render when not in session,
 		// but not have an option to list samples
 		const headers = this.mayGetAuthHeaders('termdb')
-
 		// dofetch* mayAdjustRequest() will automatically
 		// convert to GET query params or POST body, as needed
 		const body = {
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
 			plotName: opts.name,
-			coordTWs: opts.coordTWs.map(tw => this.getTwMinCopy(tw)),
+			coordTWs: opts.coordTWs?.map(tw => this.getTwMinCopy(tw)),
 			filter: getNormalRoot(opts.filter),
 			filter0: opts.filter0,
-			embedder: window.location.hostname
+			embedder: window.location.hostname,
+			sample: opts.sample
 		}
 		if (opts.colorColumn) body.colorColumn = opts.colorColumn
 		if (opts.colorTW) body.colorTW = this.getTwMinCopy(opts.colorTW)
@@ -1008,7 +1008,6 @@ export class TermdbVocab extends Vocab {
 		if (opts.divideByTW) body.divideByTW = this.getTwMinCopy(opts.divideByTW)
 		if (opts.scaleDotTW) body.scaleDotTW = this.getTwMinCopy(opts.scaleDotTW)
 		body.excludeOutliers = opts.excludeOutliers
-
 		return await dofetch3('termdb/sampleScatter', { headers, body })
 	}
 

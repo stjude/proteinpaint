@@ -19,7 +19,7 @@ export type TermdbSampleScatterRequest = {
 export type ScatterSample = {
 	category: string
 	sample: string
-	info: { [index: string]: any }
+	info?: { [index: string]: any }
 	shape: string
 	x: number
 	y: number
@@ -37,10 +37,8 @@ export type ShapeMap = { [index: string]: ShapeObject }
 type ScatterResult = {
 	[index: string]: {
 		colorLegend: ColorLegendEntry[]
-		colorMap: ColorMap
 		samples: ScatterSample[]
 		shapeLegend: ShapeLegendEntry[]
-		shapeMap: ShapeMap
 	}
 }
 
