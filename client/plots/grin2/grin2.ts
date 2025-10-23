@@ -101,12 +101,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 		this.dom.snvindel_minTotalDepth = this.addOptionRowToTable(
 			t2,
 			'Min Total Depth',
-			10, // default
+			10, // default TODO: get from queries.snvindel once available
 			0, // min
 			1e6, // max
 			1 // step
 		)
-		this.dom.snvindel_minAltAlleleCount = this.addOptionRowToTable(t2, 'Min Alt Allele Count', 2, 0, 1e6, 1)
+		this.dom.snvindel_minAltAlleleCount = this.addOptionRowToTable(t2, 'Min Alt Allele Count', 2, 0, 1e6, 1) // TODO: get from queries.snvindel once available
 
 		// if 5/3 flanking size will be needed in future, can create a helper this.addFlankingOption() to dedup
 
