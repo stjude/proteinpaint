@@ -3,6 +3,7 @@ import { Tabs } from '#dom'
 import { filterInit, filterJoin } from '#filter'
 import { appInit } from '#termdb/app'
 import { mayUpdateGroupTestMethodsIdx } from '../interactions/Interactions.ts'
+import { rehydrateFilter } from '../../../filter/rehydrateFilter.js'
 
 export class View {
 	state: any
@@ -52,7 +53,11 @@ export class View {
 					type: 'mds3',
 					dslabel: this.state.vocab.dslabel,
 					onClose: async () => {
-						// on closing subtk, the filterObj corresponding to the subtk will be "removed" from subMds3TkFilters[], by regenerating the array
+						// on closing subtk, the filterObj corresponding to the subtk will be "removed" from subMds3Tks[], by regenerating the array
+						await this.maySaveTrackUpdatesToState()
+					},
+					callbackOnRender: async () => {
+						// will allow legend filtering changes to be saved to state
 						await this.maySaveTrackUpdatesToState()
 					},
 					// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
@@ -71,10 +76,13 @@ export class View {
 					}
 					// TODO this will cause mds3 tk to show a leftlabel to indicate the filtering, which should be hidden
 				}
+				if (this.state.config.mclassHiddenValues) {
+					tk.legend = { mclass: { hiddenvalues: new Set(this.state.config.mclassHiddenValues) } }
+				}
 				tklst.push(tk)
 
-				if (this.state.config?.subMds3TkFilters) {
-					for (const subFilter of this.state.config.subMds3TkFilters) {
+				if (this.state.config?.subMds3Tks) {
+					for (const subtk of this.state.config.subMds3Tks) {
 						// for every element, create a new subtk
 						const t2: any = {
 							type: 'mds3',
@@ -84,10 +92,13 @@ export class View {
 						}
 						if (this.state.filter?.lst?.length) {
 							// join sub filter with global
-							t2.filterObj = filterJoin([this.state.filter, subFilter])
+							t2.filterObj = filterJoin([this.state.filter, subtk.filterObj])
 						} else {
 							// no global. only sub
-							t2.filterObj = structuredClone(subFilter)
+							t2.filterObj = structuredClone(subtk.filterObj)
+						}
+						if (subtk.mclassHiddenValues) {
+							t2.legend = { mclass: { hiddenvalues: new Set(subtk.mclassHiddenValues) } }
 						}
 						tklst.push(t2)
 					}
@@ -163,13 +174,27 @@ export class View {
 		const config = structuredClone(this.state.config)
 		for (const t of this.blockInstance.tklst) {
 			if (t.type == 'mds3' && t.filterObj) {
-				if (JSON.stringify(t.filterObj) == JSON.stringify(this.state.filter)) {
+				const mclassHiddenValues = t.legend?.mclass?.hiddenvalues
+				const massFilter = structuredClone(this.state.filter)
+				// t.filterObj is fully hydrated, so need to rehydrate mass filter
+				// to be able to compare the two filters
+				await Promise.all(rehydrateFilter(massFilter, this.opts.vocabApi))
+				if (JSON.stringify(t.filterObj) == JSON.stringify(massFilter)) {
 					// this tk filter is identical as state (mass global filter). this means the tk is the "main" tk and the filter was auto-added via mass global filter.
-					// do not add such filter in subMds3TkFilters[], that will cause an issue of auto-creating unwanted subtk on global filter change
+					if (mclassHiddenValues) {
+						// track has hidden mclass values, store in config root
+						config.mclassHiddenValues = [...mclassHiddenValues]
+					}
+					// do not add this track to subMds3Tks[], as it would cause an issue of auto-creating unwanted subtk on global filter change
 					continue
 				} else {
-					if (!config.subMds3TkFilters) config.subMds3TkFilters = []
-					config.subMds3TkFilters.push(t.filterObj)
+					if (!config.subMds3Tks) config.subMds3Tks = []
+					const subtk: any = { filterObj: t.filterObj }
+					if (mclassHiddenValues) {
+						// track has hidden mclass values, store in subtk obj
+						subtk.mclassHiddenValues = [...mclassHiddenValues]
+					}
+					config.subMds3Tks.push(subtk)
 					// filter0?
 				}
 			}
