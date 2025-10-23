@@ -166,7 +166,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		Object.entries(data.plotData.chrom_data).forEach(([chrom, chromData]: [string, any]) => {
 			const chromLabel = chrom.replace('chr', '')
 
-			// Skip chrM if desired
+			// Skip chrM
 			if (chromLabel === 'M') return
 
 			// Calculate center position for label
@@ -179,7 +179,6 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				.attr('y', chromLabelY)
 				.attr('text-anchor', 'middle')
 				.attr('font-size', `${settings.fontSize - 2}px`)
-				.attr('fill', 'black')
 				.text(chromLabel)
 		})
 	}
@@ -199,10 +198,8 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		.append('text')
 		.attr('x', settings.yAxisX + settings.yAxisSpace)
 		.attr('y', settings.yAxisY / 2)
-		.attr('text-anchor', 'left')
 		.attr('font-weight', 'bold')
 		.attr('font-size', `${settings.fontSize + 2}px`)
-		.attr('fill', 'black')
 		.text('Manhattan Plot')
 
 	if (settings.showDownload) {
@@ -211,10 +208,6 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 			.style('position', 'absolute')
 			.style('top', '5px')
 			.style('left', `${settings.yAxisX + settings.yAxisSpace + 108}px`)
-			.style('z-index', '10')
-			.style('background', `${settings.background}`)
-			.style('padding', `${settings.padding + 2}px`)
-			.style('border-radius', `${settings.borderRadius + 10}px`)
 
 		icons['download'](downloadDiv, {
 			width: 16,
@@ -257,8 +250,6 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				.attr('cy', legendY)
 				.attr('r', settings.legendDotRadius)
 				.attr('fill', item.color)
-				.attr('stroke', 'black')
-				.attr('stroke-width', 1)
 
 			// Legend text
 			svg
@@ -266,7 +257,6 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				.attr('x', x + 8 + settings.legendTextOffset)
 				.attr('y', legendY + settings.legendVerticalOffset)
 				.attr('font-size', `${settings.legendFontSize}px`)
-				.attr('fill', 'black')
 				.text(item.type)
 		})
 	}

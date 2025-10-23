@@ -335,6 +335,49 @@ def get_chrom_key(chrom):
 			return 24
 		else:
 			return 100
+def get_user_friendly_label(col_name):
+	"""
+	Convert technical GRIN2 column names to user-friendly labels
+	"""
+	# Mapping for lesion types
+	lesion_type_map = {
+		"mutation": "Mutation",
+		"gain": "Copy Gain",
+		"loss": "Copy Loss",
+		"fusion": "Fusion",
+		"sv": "Structural Variant"
+	}
+	
+	# Mapping for constellation tests
+	constellation_map = {
+		"p1.nsubj": "P-value (1 Lesion Type)",
+		"q1.nsubj": "Q-value (1 Lesion Type)",
+		"p2.nsubj": "P-value (2 Lesion Types)",
+		"q2.nsubj": "Q-value (2 Lesion Types)",
+		"p3.nsubj": "P-value (3 Lesion Types)",
+		"q3.nsubj": "Q-value (3 Lesion Types)",
+		"p4.nsubj": "P-value (4 Lesion Types)",
+		"q4.nsubj": "Q-value (4 Lesion Types)",
+		"p5.nsubj": "P-value (5 Lesion Types)",
+		"q5.nsubj": "Q-value (5 Lesion Types)"
+	}
+	
+	# Check if it's a constellation column
+	if col_name in constellation_map:
+		return constellation_map[col_name]
+	
+	# Parse p.nsubj.*, q.nsubj.*, or nsubj.* columns
+	for lesion_type, friendly_name in lesion_type_map.items():
+		if col_name == f"p.nsubj.{lesion_type}":
+			return f"P-value ({friendly_name})"
+		elif col_name == f"q.nsubj.{lesion_type}":
+			return f"Q-value ({friendly_name})"
+		elif col_name == f"nsubj.{lesion_type}":
+			return f"Subject Count ({friendly_name})"
+	
+	# If no match found, return original name
+	return col_name
+
 def get_sig_values(data):
 	"""
 	Find all existing p-value columns and return corresponding q-value columns
@@ -399,15 +442,7 @@ def simple_column_filter(sorted_results, num_rows_to_process=50):
 	fusion_has_data = has_data(sorted_results[p_cols[3]]) if len(p_cols) > 3 and p_cols[3] in sorted_results.columns else False
 	sv_has_data = has_data(sorted_results[p_cols[4]]) if len(p_cols) > 4 and p_cols[4] in sorted_results.columns else False
 	
-	# Check CNV data availability (gain OR loss)
-	has_cnv_data = cnv_gain_has_data or cnv_loss_has_data
-	# Check structural variant data availability (fusion OR sv)
-	has_sv_data = fusion_has_data or sv_has_data
-	# Check combinations for constellation tests
-	has_both_maf_and_cnv = mutation_has_data and has_cnv_data
-	has_both_maf_and_sv = mutation_has_data and has_sv_data
-	
-	# Check if constellation columns actually exist
+	# Check if constellation columns actually exist in the GRIN2 results
 	p1_exists = 'p1.nsubj' in sorted_results.columns
 	q1_exists = 'q1.nsubj' in sorted_results.columns
 	p2_exists = 'p2.nsubj' in sorted_results.columns
@@ -416,21 +451,45 @@ def simple_column_filter(sorted_results, num_rows_to_process=50):
 	q3_exists = 'q3.nsubj' in sorted_results.columns
 	p4_exists = 'p4.nsubj' in sorted_results.columns
 	q4_exists = 'q4.nsubj' in sorted_results.columns
+	p5_exists = 'p5.nsubj' in sorted_results.columns
+	q5_exists = 'q5.nsubj' in sorted_results.columns
 	
-	# Improved sorting logic with fallbacks
-	# Priority: p1 (CNV constellation) > p.nsubj.mutation > p.nsubj.gain > p.nsubj.fusion > p.nsubj.loss > p.nsubj.sv
-	if p1_exists and has_cnv_data:
-		sorted_results = sorted_results.sort_values('p1.nsubj', ascending=True)
-	elif 'p.nsubj.mutation' in sorted_results.columns:
-		sorted_results = sorted_results.sort_values('p.nsubj.mutation', ascending=True)
-	elif 'p.nsubj.gain' in sorted_results.columns:
-		sorted_results = sorted_results.sort_values('p.nsubj.gain', ascending=True)
-	elif 'p.nsubj.fusion' in sorted_results.columns:
-		sorted_results = sorted_results.sort_values('p.nsubj.fusion', ascending=True)
-	elif 'p.nsubj.loss' in sorted_results.columns:
-		sorted_results = sorted_results.sort_values('p.nsubj.loss', ascending=True)
-	elif 'p.nsubj.sv' in sorted_results.columns:
-		sorted_results = sorted_results.sort_values('p.nsubj.sv', ascending=True)
+	# Sorting logic: Sort by Subject Count in descending order (largest first)
+	# Priority: mutation > gain > loss > fusion > sv
+	# Check both that the column exists AND has meaningful data
+	sorted_column = None
+	
+	# Try mutation first
+	if 'nsubj.mutation' in n_cols and 'nsubj.mutation' in sorted_results.columns:
+		if has_data(sorted_results['nsubj.mutation']):
+			sorted_column = 'nsubj.mutation'
+	
+	# Try gain
+	if not sorted_column and 'nsubj.gain' in n_cols and 'nsubj.gain' in sorted_results.columns:
+		if has_data(sorted_results['nsubj.gain']):
+			sorted_column = 'nsubj.gain'
+	
+	# Try loss
+	if not sorted_column and 'nsubj.loss' in n_cols and 'nsubj.loss' in sorted_results.columns:
+		if has_data(sorted_results['nsubj.loss']):
+			sorted_column = 'nsubj.loss'
+	
+	# Try fusion
+	if not sorted_column and 'nsubj.fusion' in n_cols and 'nsubj.fusion' in sorted_results.columns:
+		if has_data(sorted_results['nsubj.fusion']):
+			sorted_column = 'nsubj.fusion'
+	
+	# Try sv
+	if not sorted_column and 'nsubj.sv' in n_cols and 'nsubj.sv' in sorted_results.columns:
+		if has_data(sorted_results['nsubj.sv']):
+			sorted_column = 'nsubj.sv'
+	
+	# Final fallback to p-value sorting if no subject count data available
+	if not sorted_column and 'p.nsubj.mutation' in sorted_results.columns:
+		sorted_column = 'p.nsubj.mutation'
+		sorted_results = sorted_results.sort_values(sorted_column, ascending=True)
+	elif sorted_column:
+		sorted_results = sorted_results.sort_values(sorted_column, ascending=False)
 
 	# Build columns list
 	columns = [
@@ -441,62 +500,72 @@ def simple_column_filter(sorted_results, num_rows_to_process=50):
 	# Add individual mutation type columns based on what data exists
 	if mutation_has_data:
 		columns.extend([
-			{"label": p_cols[0], "sortable": True},
-			{"label": q_cols[0], "sortable": True},
-			{"label": n_cols[0], "sortable": True}
+			{"label": get_user_friendly_label(p_cols[0]), "sortable": True},
+			{"label": get_user_friendly_label(q_cols[0]), "sortable": True},
+			{"label": get_user_friendly_label(n_cols[0]), "sortable": True}
 		])
 	if cnv_gain_has_data:
 		columns.extend([
-			{"label": p_cols[1], "sortable": True},
-			{"label": q_cols[1], "sortable": True},
-			{"label": n_cols[1], "sortable": True}
+			{"label": get_user_friendly_label(p_cols[1]), "sortable": True},
+			{"label": get_user_friendly_label(q_cols[1]), "sortable": True},
+			{"label": get_user_friendly_label(n_cols[1]), "sortable": True}
 		])
 	if cnv_loss_has_data:
 		columns.extend([
-			{"label": p_cols[2], "sortable": True},
-			{"label": q_cols[2], "sortable": True},
-			{"label": n_cols[2], "sortable": True}
+			{"label": get_user_friendly_label(p_cols[2]), "sortable": True},
+			{"label": get_user_friendly_label(q_cols[2]), "sortable": True},
+			{"label": get_user_friendly_label(n_cols[2]), "sortable": True}
 		])
 	if fusion_has_data:
 		columns.extend([
-			{"label": p_cols[3], "sortable": True},
-			{"label": q_cols[3], "sortable": True},
-			{"label": n_cols[3], "sortable": True}
+			{"label": get_user_friendly_label(p_cols[3]), "sortable": True},
+			{"label": get_user_friendly_label(q_cols[3]), "sortable": True},
+			{"label": get_user_friendly_label(n_cols[3]), "sortable": True}
 		])
 	if sv_has_data:
 		columns.extend([
-			{"label": p_cols[4], "sortable": True},
-			{"label": q_cols[4], "sortable": True},
-			{"label": n_cols[4], "sortable": True}
+			{"label": get_user_friendly_label(p_cols[4]), "sortable": True},
+			{"label": get_user_friendly_label(q_cols[4]), "sortable": True},
+			{"label": get_user_friendly_label(n_cols[4]), "sortable": True}
 		])
 	
-	# Add constellation columns based on what data combinations we have
-	# p1/q1: CNV constellation (gain OR loss present)
-	if has_cnv_data and p1_exists and q1_exists:
+	# Add constellation columns based on what GRIN2 computed
+	# The GRIN2 algorithm determines which constellation tests are relevant
+	# We just display whichever constellation columns exist in the results
+	
+	# p1/q1: Gene affected by exactly 1 lesion type
+	if p1_exists and q1_exists:
 		columns.extend([
-			{"label": "p1.nsubj", "sortable": True},
-			{"label": "q1.nsubj", "sortable": True}
+			{"label": get_user_friendly_label("p1.nsubj"), "sortable": True},
+			{"label": get_user_friendly_label("q1.nsubj"), "sortable": True}
 		])
 	
-	# p2/q2: SV constellation (fusion OR sv present)
-	if has_sv_data and p2_exists and q2_exists:
+	# p2/q2: Gene affected by exactly 2 lesion types
+	if p2_exists and q2_exists:
 		columns.extend([
-			{"label": "p2.nsubj", "sortable": True},
-			{"label": "q2.nsubj", "sortable": True}
+			{"label": get_user_friendly_label("p2.nsubj"), "sortable": True},
+			{"label": get_user_friendly_label("q2.nsubj"), "sortable": True}
 		])
 	
-	# p3/q3: MAF + CNV constellation (mutation AND (gain OR loss) present)
-	if has_both_maf_and_cnv and p3_exists and q3_exists:
+	# p3/q3: Gene affected by exactly 3 lesion types
+	if p3_exists and q3_exists:
 		columns.extend([
-			{"label": "p3.nsubj", "sortable": True},
-			{"label": "q3.nsubj", "sortable": True}
+			{"label": get_user_friendly_label("p3.nsubj"), "sortable": True},
+			{"label": get_user_friendly_label("q3.nsubj"), "sortable": True}
+		])
+
+	# p4/q4: Gene affected by exactly 4 lesion types
+	if p4_exists and q4_exists:
+		columns.extend([
+			{"label": get_user_friendly_label("p4.nsubj"), "sortable": True},
+			{"label": get_user_friendly_label("q4.nsubj"), "sortable": True}
 		])
 	
-	# p4/q4: MAF + SV constellation (mutation AND (fusion OR sv) present)
-	if has_both_maf_and_sv and p4_exists and q4_exists:
+	# p5/q5: Gene affected by all 5 lesion types
+	if p5_exists and q5_exists:
 		columns.extend([
-			{"label": "p4.nsubj", "sortable": True},
-			{"label": "q4.nsubj", "sortable": True}
+			{"label": get_user_friendly_label("p5.nsubj"), "sortable": True},
+			{"label": get_user_friendly_label("q5.nsubj"), "sortable": True}
 		])
 	
 	# Build rows to match the active columns
@@ -539,29 +608,35 @@ def simple_column_filter(sorted_results, num_rows_to_process=50):
 				{"value": smart_format(sorted_results.iloc[i][n_cols[4]])}
 			])
 		
-		# Add constellation data based on what combinations we have
-		if has_cnv_data and p1_exists and q1_exists:
+		# Add constellation data - just check if columns exist
+		if p1_exists and q1_exists:
 			row_data.extend([
 				{"value": smart_format(sorted_results.iloc[i]["p1.nsubj"])},
 				{"value": smart_format(sorted_results.iloc[i]["q1.nsubj"])}
 			])
 		
-		if has_sv_data and p2_exists and q2_exists:
+		if p2_exists and q2_exists:
 			row_data.extend([
 				{"value": smart_format(sorted_results.iloc[i]["p2.nsubj"])},
 				{"value": smart_format(sorted_results.iloc[i]["q2.nsubj"])}
 			])
 		
-		if has_both_maf_and_cnv and p3_exists and q3_exists:
+		if p3_exists and q3_exists:
 			row_data.extend([
 				{"value": smart_format(sorted_results.iloc[i]["p3.nsubj"])},
 				{"value": smart_format(sorted_results.iloc[i]["q3.nsubj"])}
 			])
 		
-		if has_both_maf_and_sv and p4_exists and q4_exists:
+		if p4_exists and q4_exists:
 			row_data.extend([
 				{"value": smart_format(sorted_results.iloc[i]["p4.nsubj"])},
 				{"value": smart_format(sorted_results.iloc[i]["q4.nsubj"])}
+			])
+		
+		if p5_exists and q5_exists:
+			row_data.extend([
+				{"value": smart_format(sorted_results.iloc[i]["p5.nsubj"])},
+				{"value": smart_format(sorted_results.iloc[i]["q5.nsubj"])}
 			])
 		
 		topgene_table_data.append(row_data)
