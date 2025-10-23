@@ -169,7 +169,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		this.dom.cnv_lossThreshold = this.addOptionRowToTable(
 			t2,
 			'Loss Threshold',
-			-0.1, // default
+			this.app.vocabApi.termdbConfig.queries.cnv.cnvLossCutoff, // default
 			-5, // min
 			0, // max
 			0.05 // step
@@ -179,7 +179,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		this.dom.cnv_gainThreshold = this.addOptionRowToTable(
 			t2,
 			'Gain Threshold',
-			0.1, // default
+			this.app.vocabApi.termdbConfig.queries.cnv.cnvGainCutoff, // default
 			0, // min
 			5, // max
 			0.05 // step
@@ -189,7 +189,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		this.dom.cnv_maxSegLength = this.addOptionRowToTable(
 			t2,
 			'Max Segment Length',
-			2000000, // default (2 Mb)
+			this.app.vocabApi.termdbConfig.queries.cnv.cnvMaxLength, // default (2 Mb)
 			0, // min
 			1e9, // max
 			1000 // step
