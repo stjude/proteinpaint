@@ -5329,10 +5329,10 @@
   },
   "plots/survival/survival.ts": {
     "lines": {
-      "total": 489,
-      "covered": 361,
+      "total": 492,
+      "covered": 364,
       "skipped": 0,
-      "pct": 73.82
+      "pct": 73.98
     },
     "functions": {
       "total": 118,
@@ -5341,26 +5341,26 @@
       "pct": 65.25
     },
     "statements": {
-      "total": 520,
-      "covered": 370,
+      "total": 524,
+      "covered": 373,
       "skipped": 0,
-      "pct": 71.15
+      "pct": 71.18
     },
     "branches": {
-      "total": 316,
-      "covered": 177,
+      "total": 328,
+      "covered": 184,
       "skipped": 0,
-      "pct": 56.01
+      "pct": 56.09
     },
     "lowestPct": {
-      "curr": 56.01,
+      "curr": 56.09,
       "prev": 56.27,
-      "diff": -0.2600000000000051
+      "diff": -0.17999999999999972
     },
     "averagePct": {
-      "curr": 66.5575,
+      "curr": 66.625,
       "prev": 66.6125,
-      "diff": -0.05499999999999261
+      "diff": 0.012500000000002842
     }
   },
   "mass/store.ts": {
