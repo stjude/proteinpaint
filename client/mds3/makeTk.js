@@ -245,6 +245,7 @@ export async function makeTk(tk, block) {
 			filterObj: filter || structuredClone(tk.filterObj),
 			allow2selectSamples: tk.allow2selectSamples,
 			onClose: tk.onClose,
+			callbackOnRender: tk.callbackOnRender,
 			hardcodeCnvOnly: tk.hardcodeCnvOnly,
 			token: tk.token // for testing
 		}
