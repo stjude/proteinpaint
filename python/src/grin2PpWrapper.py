@@ -774,8 +774,7 @@ try:
               for data_type in option_type_mapping.get(option)]
 		
 		if cache_file_path:
-			sorted_results['pos'] = (sorted_results['loc.start'] + sorted_results['loc.end']) / 2
-			cache_columns = ['gene', 'chrom', 'pos']
+			cache_columns = ['gene', 'chrom']
 			for t in data_types:
 				nsub_col = f'nsubj.{t}'
 				q_col = f'q.nsubj.{t}'
@@ -787,6 +786,14 @@ try:
 				
 				# Create filtered dataframe with only cache columns
 				results_to_cache = sorted_results[cache_columns].copy()
+
+				# Calculate pos as midpoint of loc.start and loc.end and make it an integer
+				results_to_cache['pos'] = (sorted_results['loc.start'] + sorted_results['loc.end']) // 2
+				 
+				 # Reorder columns to put pos right after chrom
+				column_order = ['gene', 'chrom', 'pos'] + [col for col in cache_columns if col not in ['gene', 'chrom']]
+				results_to_cache = results_to_cache[column_order]
+
 
 				# Save to TSV
 				results_to_cache.to_csv(cache_file_path, index=False, sep='\t')
