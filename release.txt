@@ -1,1 +1,2 @@
-
+Features:
+- GRIN2: Improved cacheFile output with pos column

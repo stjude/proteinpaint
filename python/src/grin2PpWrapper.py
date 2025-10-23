@@ -774,7 +774,8 @@ try:
               for data_type in option_type_mapping.get(option)]
 		
 		if cache_file_path:
-			cache_columns = ['gene', 'chrom']
+			sorted_results['pos'] = (sorted_results['loc.start'] + sorted_results['loc.end']) / 2
+			cache_columns = ['gene', 'chrom', 'pos']
 			for t in data_types:
 				nsub_col = f'nsubj.{t}'
 				q_col = f'q.nsubj.{t}'
@@ -789,6 +790,7 @@ try:
 
 				# Save to TSV
 				results_to_cache.to_csv(cache_file_path, index=False, sep='\t')
+
 	except Exception as e:
 		write_error(f"Failed to extract gene.hits or sort grin_table: {str(e)}")
 		sys.exit(1)
