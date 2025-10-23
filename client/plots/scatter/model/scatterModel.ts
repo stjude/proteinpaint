@@ -43,7 +43,7 @@ export class ScatterModel {
 	// later on, add methods with same name to FrontendVocab
 	getDataRequestOpts() {
 		const c: any = this.scatter.config
-		if (c.singleCellPlot) return c.singleCellPlot
+		if (c.singleCellPlot) return c
 		const coordTWs: any = []
 		if (c.term) coordTWs.push(c.term)
 		if (c.term2) coordTWs.push(c.term2)

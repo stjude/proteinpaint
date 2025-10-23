@@ -52,7 +52,7 @@ function init({ genomes }) {
 		}
 		const g = genomes[q.genome]
 		const ds = g.datasets[q.dslabel]
-		if (q.sample)
+		if (q.singleCellPlot)
 			//single cell plot
 			return getSingleCellScatter(req, res, ds)
 		try {
@@ -154,7 +154,8 @@ function init({ genomes }) {
 
 async function getSingleCellScatter(req, res, ds) {
 	const q = req.query satisfies TermdbSampleScatterRequest
-	const data = await ds.queries.singleCell.data.get({ plots: [q.plotName], sample: q.sample })
+	const { name, sample } = q.singleCellPlot
+	const data = await ds.queries.singleCell.data.get({ plots: [name], sample })
 	const plot = data.plots[0]
 	const cells: Cell[] = [...plot.expCells, ...plot.noExpCells]
 	const samples: ScatterSample[] = cells.map(cell => {
