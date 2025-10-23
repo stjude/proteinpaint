@@ -336,6 +336,7 @@ async function step3(arg) {
 		tklst: arg.tklst,
 		mclassOverride: arg.mclassOverride,
 		hide_dsHandles: arg.hide_dsHandles,
-		onloadalltk_always: arg.onloadalltk_always
+		onloadalltk_always: arg.onloadalltk_always,
+		onAddRemoveTk: arg.onAddRemoveTk
 	})
 }

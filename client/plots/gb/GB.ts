@@ -3,7 +3,6 @@ import { getCompInit, type ComponentApi, type RxComponent } from '#rx'
 import { addGeneSearchbox, Menu, sayerror } from '#dom'
 import { getNormalRoot } from '#filter'
 import { Model } from './model/Model.ts'
-import { ViewModel } from './viewModel/ViewModel.ts'
 import { View } from './view/View.ts'
 import { TabsRenderer } from './view/TabsRenderer.ts'
 import { Interactions, mayUpdateGroupTestMethodsIdx } from './interactions/Interactions.ts'
@@ -78,9 +77,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 			const model = new Model(state, this.app)
 			const data = await model.preComputeData()
 			const opts = this.getOpts()
-			const viewModel = new ViewModel(state, opts, data, this.interactions)
-			await viewModel.generateTracks()
-			const view = new View(state, viewModel.viewData, this.dom, opts, this.interactions)
+			const view = new View(state, data, this.dom, opts, this.interactions)
 			await view.main()
 		} catch (e: any) {
 			sayerror(this.dom.errDiv, e.message || e)
