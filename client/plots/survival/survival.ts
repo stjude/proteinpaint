@@ -415,8 +415,8 @@ class TdbSurvival extends PlotBase implements RxComponent {
 
 	// time factor that converts survival data from default time unit to the current time unit.
 	getTimeFactor() {
-		const numUnitInOneYear = this.settings.numUnitInOneYear
-		const timeUnit = this.settings.timeUnit
+		const numUnitInOneYear = this.settings.numUnitInOneYear || 1
+		const timeUnit = this.settings.timeUnit || 'years'
 		switch (timeUnit) {
 			case 'years':
 				return (1 / numUnitInOneYear) * 1
