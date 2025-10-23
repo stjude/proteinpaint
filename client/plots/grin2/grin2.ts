@@ -189,7 +189,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		this.dom.cnv_maxSegLength = this.addOptionRowToTable(
 			t2,
 			'Max Segment Length',
-			2000000, // default (no cap)
+			2000000, // default (2 Mb)
 			0, // min
 			1e9, // max
 			1000 // step
