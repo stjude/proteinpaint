@@ -1,1 +1,2 @@
-
+Features:
+- GRIN2: Made top gene table column names user friendly with label mapping. Reworked column display logic for constellation test. Improved defaults for ASHOP portal

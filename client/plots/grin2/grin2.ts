@@ -4,7 +4,7 @@ import type { GRIN2Dom, GRIN2Opts } from './GRIN2Types'
 import { dofetch3 } from '#common/dofetch'
 import { getNormalRoot } from '#filter'
 import { Menu, renderTable, table2col, make_one_checkbox, sayerror } from '#dom'
-import { dtsnvindel, mclass, dtcnv, dtfusionrna, dtsv } from '#shared/common.js'
+import { dtsnvindel, mclass, dtcnv, dtfusionrna, dtsv, proteinChangingMutations } from '#shared/common.js'
 import { get$id } from '#termsetting'
 import { PlotBase } from '#plots/PlotBase.ts'
 import { plotManhattan } from '#plots/manhattan/manhattan.ts'
@@ -169,7 +169,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		this.dom.cnv_lossThreshold = this.addOptionRowToTable(
 			t2,
 			'Loss Threshold',
-			-0.4, // default
+			-0.1, // default
 			-5, // min
 			0, // max
 			0.05 // step
@@ -179,7 +179,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		this.dom.cnv_gainThreshold = this.addOptionRowToTable(
 			t2,
 			'Gain Threshold',
-			0.3, // default
+			0.1, // default
 			0, // min
 			5, // max
 			0.05 // step
@@ -189,7 +189,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		this.dom.cnv_maxSegLength = this.addOptionRowToTable(
 			t2,
 			'Max Segment Length',
-			0, // default (no cap)
+			2000000, // default (no cap)
 			0, // min
 			1e9, // max
 			1000 // step
@@ -400,7 +400,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 		)
 
 		// Define default checked consequences
-		const defaultChecked = new Set(['M', 'N', 'I', 'L', 'StartLost', 'F', 'D', 'ProteinAltering', 'StopLost'])
+		const defaultChecked = new Set<string>(proteinChangingMutations)
+		defaultChecked.add('StartLost')
+		defaultChecked.add('StopLost')
 
 		// Create Select All/Clear All controls
 		const controlDiv = container
@@ -412,23 +414,13 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const selectAllBtn = controlDiv
 			.append('button')
 			.attr('class', 'grin2-control-btn')
-			.style('padding', this.btnSmallPadding)
 			.style('font-size', `${this.tableFontSize}px`)
-			.style('border', `1px solid ${this.btnBorderColor}`)
-			.style('background', this.btnBackgroundColor)
-			.style('color', this.btnTextColor)
-			.style('border-radius', this.btnBorderRadius)
 			.text('Select All')
 
 		const clearAllBtn = controlDiv
 			.append('button')
 			.attr('class', 'grin2-control-btn')
-			.style('padding', this.btnSmallPadding)
 			.style('font-size', `${this.tableFontSize}px`)
-			.style('border', `1px solid ${this.btnBorderColor}`)
-			.style('background', this.btnBackgroundColor)
-			.style('color', this.btnTextColor)
-			.style('border-radius', this.btnBorderRadius)
 			.text('Clear All')
 
 		// Create checkbox container
@@ -437,9 +429,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 			.style('max-height', this.checkboxContainerMaxHeight)
 			.style('overflow-y', 'auto')
 			.style('border', this.checkboxContainerBorder)
-			.style('padding', this.checkboxContainerPadding)
-			.style('background', this.checkboxContainerBackground)
-			.style('border-radius', this.checkboxContainerBorderRadius)
 
 		// Store checkbox references for bulk operations
 		const checkboxes: any[] = []
@@ -468,7 +457,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			checkbox.attr('data-consequence', classKey)
 
 			// Set title attribute on the label for tooltip
-			checkboxDiv.select('label').attr('title', classInfo.desc || classInfo.label)
+			checkboxDiv.select('label').attr('title', classInfo.desc)
 
 			checkboxes.push(checkbox)
 		})
