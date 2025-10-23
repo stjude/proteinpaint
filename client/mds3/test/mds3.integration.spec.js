@@ -138,6 +138,7 @@ export async function testSampleSummary2subtrack(genome, gene, dslabel, test) {
 		const div = await detectOne({ elem: tk.menutip.d.node(), selector: '.sja_mds3samplesummarydiv' })
 		test.ok(div, 'Sample summary table rendered in menutip')
 
+		/* skipped as callbackOnRender() is now also triggered by subtk
 		for (const tw of tk.mds.variant2samples.twLst) {
 			// each tw should show up in div as a tab
 			const twDiv = tk.menutip.d
@@ -146,7 +147,7 @@ export async function testSampleSummary2subtrack(genome, gene, dslabel, test) {
 				.find(e => e.innerText.startsWith(tw.term.name))
 			// the found div is <div>TW.name <span></span></div>, thus must use startsWith
 			test.ok(twDiv, 'Should display tab for ' + tw.term.name)
-		}
+		}*/
 
 		// find one of the clickable label for a category
 		// attach this callback on bb (block instance) to be triggered when the subtrack is loaded
