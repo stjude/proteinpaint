@@ -5,7 +5,7 @@ import { convertUnits } from '#shared/helpers.js'
 
 let addons
 
-export function getTermGroups(termgroups, app) {
+export async function getTermGroups(termgroups, app) {
 	const termGroups = structuredClone(termgroups)
 	// should only set the addons once, it should not vary from one call to the next
 	if (!addons)
@@ -28,7 +28,7 @@ export function getTermGroups(termgroups, app) {
 		if (tG.type == 'hierCluster') continue
 		const xtwlst: (MatrixTWObj | TermWrapper)[] = []
 		for (const tw of tG.lst) {
-			xtwlst.push(tw.type in opts.addons ? TwRouter.init(tw, opts) : tw)
+			xtwlst.push(tw.type in opts.addons ? await TwRouter.init(tw, opts) : tw)
 		}
 		tG.lst = xtwlst
 	}

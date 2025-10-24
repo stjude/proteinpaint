@@ -1,8 +1,4 @@
 import type { NumericTerm, NumTW, RawNumTW, StartUnboundedBin, StopUnboundedBin } from '#types'
-import { NumRegularBin } from './NumRegularBin.ts'
-import { NumCustomBins } from './NumCustomBins.ts'
-import { NumCont } from './NumCont.ts'
-import { NumSpline } from './NumSpline.ts'
 import { TwBase, type TwOpts } from './TwBase.ts'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { copyMerge } from '#rx'
@@ -10,11 +6,6 @@ import { GeneExpBase } from './geneExpression.ts'
 import { MetaboliteIntensityBase } from './metaboliteIntensity.ts'
 import { DateBase } from './date.ts'
 import { SsGSEABase } from './ssGSEA.ts'
-
-export { NumRegularBin } from './NumRegularBin.ts'
-export { NumCustomBins } from './NumCustomBins.ts'
-export { NumCont } from './NumCont.ts'
-export { NumSpline } from './NumSpline.ts'
 
 export class NumericBase extends TwBase {
 	// type is set by TwBase constructor
@@ -126,18 +117,22 @@ export class NumericBase extends TwBase {
 			   in order to match the function signature's return type.
 		*/
 		switch (tw.type) {
-			case 'NumTWRegularBin':
+			case 'NumTWRegularBin': {
+				const { NumRegularBin } = await import('./NumRegularBin.ts')
 				return await NumRegularBin.fill(tw, opts)
-
-			case 'NumTWCustomBin':
+			}
+			case 'NumTWCustomBin': {
+				const { NumCustomBins } = await import('./NumCustomBins.ts')
 				return await NumCustomBins.fill(tw, opts)
-
-			case 'NumTWCont':
+			}
+			case 'NumTWCont': {
+				const { NumCont } = await import('./NumCont.ts')
 				return await NumCont.fill(tw)
-
-			case 'NumTWSpline':
+			}
+			case 'NumTWSpline': {
+				const { NumSpline } = await import('./NumSpline.ts')
 				return await NumSpline.fill(tw)
-
+			}
 			default:
 				throw `tw.type='${tw.type} (q.mode:q.type=${tw.q.mode}:${tw.q.type}' is not supported by NumericBase.fill()`
 		}

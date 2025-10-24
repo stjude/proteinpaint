@@ -45,7 +45,7 @@ export class PlotBase {
 			if (!value) continue
 			if (Array.isArray(value)) {
 				for (const [i, tw] of value.entries()) {
-					if (routedTermTypes.has(tw.term?.type)) config[key][i] = TwRouter.init(tw, opts)
+					if (routedTermTypes.has(tw.term?.type)) config[key][i] = await TwRouter.init(tw, opts)
 				}
 			} else if (routedTermTypes.has(value.term?.type)) {
 				config[key] = await TwRouter.initRaw(value, opts)

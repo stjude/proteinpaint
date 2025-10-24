@@ -146,7 +146,7 @@ tape('extended TwBase', async test => {
 		//const xtws = terms.map(getHandler)
 		const start = Date.now()
 		const app = new FakeApp({ twlst, vocabApi })
-		app.main(data)
+		await app.main(data)
 		test.pass(msg)
 		if (twlst.length > 10) {
 			// indicates benchmark test

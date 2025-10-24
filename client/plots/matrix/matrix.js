@@ -159,7 +159,7 @@ export class Matrix extends PlotBase {
 		try {
 			this.config = structuredClone(this.state.config)
 			if (this.mayRequireToken()) return
-			this.termGroups = getTermGroups(this.config.termgroups, this.app)
+			this.termGroups = await getTermGroups(this.config.termgroups, this.app)
 
 			const prevTranspose = this.settings.transpose
 			// controlsRenderer.getSettings() supplies settings that are not tracked in the global app and plot state

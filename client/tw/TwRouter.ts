@@ -4,7 +4,7 @@ import { mayHydrateDictTwLst } from '#termsetting'
 // TODO: may convert these to dynamic imports
 import { QualValues, QualPredefinedGS, QualCustomGS } from './qualitative.ts'
 import { GvBase, GvPredefinedGS, GvCustomGS } from './geneVariant.ts'
-import { NumericBase, NumRegularBin, NumCustomBins, NumCont, NumSpline } from './numeric.ts'
+import { NumericBase } from './numeric.ts'
 
 export const routedTermTypes = new Set([
 	'categorical',
@@ -36,17 +36,24 @@ export class TwRouter {
 		this.opts = opts
 	}
 
-	static init(tw: TermWrapper, opts: TwOpts = {}): TwBase {
+	static async init(tw: TermWrapper, opts: TwOpts = {}): Promise<TwBase> {
 		switch (tw.type) {
-			case 'NumTWRegularBin':
+			case 'NumTWRegularBin': {
+				const { NumRegularBin } = await import('./NumRegularBin.ts')
 				return new NumRegularBin(tw, opts)
-			case 'NumTWCustomBin':
+			}
+			case 'NumTWCustomBin': {
+				const { NumCustomBins } = await import('./NumCustomBins.ts')
 				return new NumCustomBins(tw, opts)
-			case 'NumTWCont':
+			}
+			case 'NumTWCont': {
+				const { NumCont } = await import('./NumCont.ts')
 				return new NumCont(tw, opts)
-			case 'NumTWSpline':
+			}
+			case 'NumTWSpline': {
+				const { NumSpline } = await import('./NumSpline.ts')
 				return new NumSpline(tw, opts)
-
+			}
 			case 'GvPredefinedGsTW':
 				return new GvPredefinedGS(tw, opts)
 			case 'GvCustomGsTW':
@@ -66,7 +73,7 @@ export class TwRouter {
 
 	static async initRaw(rawTw /*: RawTW*/, opts: TwOpts = {}): Promise<TwBase> {
 		const tw = await TwRouter.fill(rawTw, opts)
-		return TwRouter.init(tw, opts)
+		return await TwRouter.init(tw, opts)
 	}
 
 	static async fill(tw /*: RawTW*/, opts: TwOpts = {}): Promise<TermWrapper> {
