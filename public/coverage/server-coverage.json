@@ -613,7 +613,7 @@
   },
   "src/mds3.gdc.js": {
     "lines": {
-      "total": 994,
+      "total": 995,
       "covered": 31,
       "skipped": 0,
       "pct": 3.11
@@ -625,13 +625,13 @@
       "pct": 0
     },
     "statements": {
-      "total": 1162,
+      "total": 1164,
       "covered": 31,
       "skipped": 0,
       "pct": 2.66
     },
     "branches": {
-      "total": 687,
+      "total": 689,
       "covered": 0,
       "skipped": 0,
       "pct": 0

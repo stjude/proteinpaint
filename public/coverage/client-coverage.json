@@ -1513,25 +1513,25 @@
   },
   "plots/scatter/scatter.ts": {
     "lines": {
-      "total": 121,
-      "covered": 7,
+      "total": 119,
+      "covered": 5,
       "skipped": 0,
-      "pct": 5.78
+      "pct": 4.2
     },
     "functions": {
       "total": 21,
-      "covered": 2,
+      "covered": 1,
       "skipped": 0,
-      "pct": 9.52
+      "pct": 4.76
     },
     "statements": {
-      "total": 142,
-      "covered": 7,
+      "total": 140,
+      "covered": 5,
       "skipped": 0,
-      "pct": 4.92
+      "pct": 3.57
     },
     "branches": {
-      "total": 91,
+      "total": 97,
       "covered": 0,
       "skipped": 0,
       "pct": 0
@@ -1542,9 +1542,9 @@
       "diff": -45.45
     },
     "averagePct": {
-      "curr": 5.055,
+      "curr": 3.1325000000000003,
       "prev": 59.91,
-      "diff": -54.855
+      "diff": -56.777499999999996
     }
   },
   "plots/scatter/viewmodel/scatterViewModel2DLarge.ts": {
@@ -1693,10 +1693,10 @@
   },
   "plots/scatter/model/scatterModel.ts": {
     "lines": {
-      "total": 182,
+      "total": 186,
       "covered": 5,
       "skipped": 0,
-      "pct": 2.74
+      "pct": 2.68
     },
     "functions": {
       "total": 27,
@@ -1705,13 +1705,13 @@
       "pct": 0
     },
     "statements": {
-      "total": 202,
+      "total": 207,
       "covered": 5,
       "skipped": 0,
-      "pct": 2.47
+      "pct": 2.41
     },
     "branches": {
-      "total": 144,
+      "total": 148,
       "covered": 0,
       "skipped": 0,
       "pct": 0
@@ -1722,9 +1722,9 @@
       "diff": -55.55
     },
     "averagePct": {
-      "curr": 1.3025000000000002,
+      "curr": 1.2725,
       "prev": 62.162499999999994,
-      "diff": -60.85999999999999
+      "diff": -60.88999999999999
     }
   },
   "plots/scatter/viewmodel/scatterLegend.ts": {
@@ -2161,10 +2161,10 @@
   },
   "plots/scatter/viewmodel/scatterViewModel.ts": {
     "lines": {
-      "total": 45,
+      "total": 46,
       "covered": 2,
       "skipped": 0,
-      "pct": 4.44
+      "pct": 4.34
     },
     "functions": {
       "total": 23,
@@ -2173,13 +2173,13 @@
       "pct": 0
     },
     "statements": {
-      "total": 47,
+      "total": 49,
       "covered": 2,
       "skipped": 0,
-      "pct": 4.25
+      "pct": 4.08
     },
     "branches": {
-      "total": 18,
+      "total": 20,
       "covered": 0,
       "skipped": 0,
       "pct": 0
@@ -2190,9 +2190,9 @@
       "diff": -65.21
     },
     "averagePct": {
-      "curr": 2.1725000000000003,
+      "curr": 2.105,
       "prev": 74.57,
-      "diff": -72.3975
+      "diff": -72.46499999999999
     }
   },
   "plots/scatter/viewmodel/scatterViewModelBase.ts": {
@@ -2233,38 +2233,38 @@
   },
   "plots/scatter/viewmodel/scatterZoom.ts": {
     "lines": {
-      "total": 43,
-      "covered": 16,
+      "total": 44,
+      "covered": 2,
       "skipped": 0,
-      "pct": 37.2
+      "pct": 4.54
     },
     "functions": {
       "total": 14,
-      "covered": 2,
+      "covered": 0,
       "skipped": 0,
-      "pct": 14.28
+      "pct": 0
     },
     "statements": {
-      "total": 49,
-      "covered": 16,
+      "total": 50,
+      "covered": 2,
       "skipped": 0,
-      "pct": 32.65
+      "pct": 4
     },
     "branches": {
       "total": 22,
-      "covered": 5,
+      "covered": 0,
       "skipped": 0,
-      "pct": 22.72
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 14.28,
+      "curr": 0,
       "prev": 50,
-      "diff": -35.72
+      "diff": -50
     },
     "averagePct": {
-      "curr": 26.7125,
+      "curr": 2.135,
       "prev": 74.6425,
-      "diff": -47.93
+      "diff": -72.5075
     }
   },
   "plots/scatter/viewmodel/scatterInteractivity.ts": {
