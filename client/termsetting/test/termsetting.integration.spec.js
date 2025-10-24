@@ -515,7 +515,7 @@ tape('Numerical term.bins.default.type=custom-bin', async test => {
 
 	await opts.pill.main(opts.tsData)
 	await opts.pillMenuClick('Edit')
-	await sleep(10)
+	await sleep(100)
 	const tip = opts.pill.Inner.dom.tip
 	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
 	test.equal(lines.length, 1, 'should have 1 line')
@@ -542,6 +542,7 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 
 	await opts.pill.main(opts.tsData)
 	await opts.pillMenuClick('Edit')
+	await sleep(100)
 	const tip = opts.pill.Inner.dom.tip
 	const toggleButtons = tip.d.node().querySelectorAll('.sj-toggle-button')
 
@@ -608,6 +609,7 @@ tape('Numerical term: toggle menu - 2 options', async test => {
 
 	await opts.pill.main(opts.tsData)
 	await opts.pillMenuClick('Edit')
+	await sleep(100)
 	test.equal(
 		opts.pill.Inner.handler.dom.topBar.node().querySelectorAll('.sj-toggle-button').length,
 		2,
