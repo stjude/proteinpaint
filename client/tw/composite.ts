@@ -1,6 +1,6 @@
 import type { QualTW, NumTWDiscreteTypes, NumTWCont } from '#types'
 import type { QualValues, QualPredefinedGS, QualCustomGS } from './qualitative'
-import type { NumRegularBin, NumCustomBins, NumCont } from './numeric'
+import type { NumRegularBin, NumCustomBins, NumCont } from './index'
 
 export type DiscreteTW = QualTW | NumTWDiscreteTypes
 export type DiscreteXTW = QualValues | QualPredefinedGS | QualCustomGS | NumRegularBin | NumCustomBins

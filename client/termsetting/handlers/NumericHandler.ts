@@ -21,9 +21,11 @@ type TabData = {
 /*
 	NumericHandler 
 	- NumericDensity
-	- NumericDiscrete
+	- NumDiscreteEditor
 		 - NumRegularBinEditor
 		 - NumCustomBinEditor
+	- NumBinaryEditor
+	- NumSplineEditor
 */
 
 type EditHandler = NumContEditor | NumDiscreteEditor | NumBinaryEditor | NumSplineEditor

@@ -337,6 +337,7 @@ tape('Numerical term: fixed bins', async test => {
 	})
 	await opts.pill.main(opts.tsData)
 	await opts.pillMenuClick('Edit')
+	await sleep(10)
 	const tip = opts.pill.Inner.dom.tip
 	await detectGte({ target: tip.d.node(), selector: '.binsize_g', count: 1 })
 	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
@@ -367,7 +368,7 @@ tape('Numerical term: fixed bins', async test => {
 
 	//trigger 'change' to update bins
 	bin_size_input.dispatchEvent(new Event('change'))
-	await sleep(10)
+	await sleep(50)
 	test.equal(tip.d.node().querySelector('tr').querySelector('input').value, '5', 'Should change "bin size" from input')
 
 	//trigger and test first_bin_change
@@ -376,7 +377,7 @@ tape('Numerical term: fixed bins', async test => {
 
 	//trigger 'change' to update bins
 	first_bin_input.dispatchEvent(new Event('change'))
-	await sleep(10)
+	await sleep(50)
 	test.equal(
 		tip.d.node().querySelectorAll('tr')[1].querySelector('input').value,
 		'7',
