@@ -24,10 +24,6 @@ export class NumSplineEditor extends HandlerBase implements Handler {
 		this.tw = handler.tw
 	}
 
-	getPillStatus() {
-		return { text: 'cubic spline' }
-	}
-
 	async getDefaultQ() {
 		//const q00 = tw.q
 		// TODO *** validate this.q ***//

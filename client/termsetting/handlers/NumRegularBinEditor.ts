@@ -26,10 +26,6 @@ export class NumRegularBinEditor {
 		this.q = this.getDefaultQ()
 	}
 
-	getPillStatus() {
-		return { text: 'bin size=' + this.tw.q.bin_size }
-	}
-
 	render(div) {
 		this.editHandler.handler.density.setBinLines(this.getBoundaryOpts())
 		if (this.dom.binsTable) {

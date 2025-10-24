@@ -31,7 +31,15 @@ export class NumericBase extends TwBase {
 	// type is set by TwBase constructor
 	term: NumericTerm
 	type: 'NumTWRegularBin' | 'NumTWCustomBin' | 'NumTWCont' | 'NumTWBinary' | 'NumTWSpline'
-	static termTypes = new Set(['integer', 'float', 'date', 'geneExpression', 'metaboliteIntensity', 'ssGSEA'])
+	static termTypes = new Set([
+		'integer',
+		'float',
+		'date',
+		'geneExpression',
+		'metaboliteIntensity',
+		'ssGSEA',
+		'singleCellGeneExpression'
+	])
 
 	constructor(tw: NumTW, opts: TwOpts) {
 		super(tw, opts)
@@ -170,6 +178,10 @@ export class NumRegularBin extends NumericBase {
 		return this.#tw
 	}
 
+	getStatus() {
+		return { text: 'bin size=' + this.q.bin_size }
+	}
+
 	// See the relevant comments in the NumericBase.fill() function above
 	static async fill(tw: RawNumTWRegularBin, opts: TwOpts = {}): Promise<NumTWRegularBin> {
 		if (!tw.type) tw.type = 'NumTWRegularBin'
@@ -221,6 +233,15 @@ export class NumCustomBins extends NumericBase {
 
 	getTw() {
 		return this.#tw
+	}
+
+	getStatus(opts?: any, data?: any) {
+		if (this.q.mode == 'binary') {
+			const regressionStatus =
+				opts.usecase?.target == 'regression' && this.q.lst.find(x => x.label != data.refGrp)?.label
+			return { text: regressionStatus || 'binary' }
+		}
+		return { text: this.q.lst.length + ' bins' }
 	}
 
 	// See the relevant comments in the NumericBase.fill() function above
@@ -279,6 +300,10 @@ export class NumCont extends NumericBase {
 		return this.#tw
 	}
 
+	getStatus() {
+		return { text: this.q.scale ? `scale=${this.q.scale}` : 'continuous' } // FIXME not effective
+	}
+
 	// See the relevant comments in the NumericBase.fill() function above
 	static async fill(tw: RawNumTWCont): Promise<NumTWCont> {
 		if (!tw.type) tw.type = 'NumTWCont'
@@ -305,6 +330,10 @@ export class NumSpline extends NumericBase {
 		this.q = tw.q
 		this.#tw = tw
 		this.#opts = opts
+	}
+
+	getStatus() {
+		return { text: 'cubic spline' }
 	}
 
 	static async fill(tw: RawNumTWSpline): Promise<NumTWSpline> {

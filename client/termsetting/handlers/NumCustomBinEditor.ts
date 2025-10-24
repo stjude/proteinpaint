@@ -24,10 +24,6 @@ export class NumCustomBinEditor {
 		this.q = this.getDefaultQ()
 	}
 
-	getPillStatus() {
-		return { text: this.tw.q.lst.length + ' bins' }
-	}
-
 	async render(div) {
 		await this.editHandler.handler.density.setBinLines(this.getBoundaryOpts())
 		if (this.dom.inputsDiv) {

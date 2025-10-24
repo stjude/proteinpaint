@@ -101,7 +101,6 @@ tape('\n', test => {
 
 tape('handler methods', async test => {
 	const { editHandler, destroy } = await getNumericHandler()
-	test.deepEqual(editHandler.getPillStatus(), { text: 'binary' }, 'should give the expected status')
 	editHandler.termsetting.tw.q = { mode: 'continuous' }
 	test.deepEqual(
 		await editHandler.getDefaultQ(),

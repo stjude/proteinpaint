@@ -79,13 +79,15 @@ tape('\n', test => {
 	test.end()
 })
 
-tape('tabs data', async test => {
+tape('tabs data and pill status', async test => {
 	const { handler, destroy } = await getNumericHandler()
 	test.deepEqual(
 		handler.tabs.map(t => t.label),
 		['Continuous', 'Discrete', 'Cubic spline', 'Binary'],
 		'sets the expected tab data'
 	)
+
+	test.deepEqual(handler.getPillStatus(), { text: 'bin size=500' }, `should give the expected pill status`)
 	if ((test as any)._ok) destroy()
 	test.end()
 })

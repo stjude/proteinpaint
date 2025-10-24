@@ -64,7 +64,7 @@ export class TwBase {
 		throw `should implement this method in subclass code, as needed`
 	}
 
-	getStatus(_?: UseCase) {
+	getStatus(_?: UseCase, __?: any) {
 		//if (_) {}
 		return { text: '' }
 	}
