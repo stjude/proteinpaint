@@ -359,7 +359,10 @@ export function get_bin_label(bin, binconfig, valueConversion) {
 export function get_bin_range_equation(bin, binconfig) {
 	const x = '<span style="font-family:Times;font-style:italic;">x</span>'
 	let range_eq
-	const bin_label = get_bin_label(bin, binconfig)
+	// should always use computed (not user-customized) bin label to determine bin range text
+	const copy = structuredClone(bin)
+	copy.label = '' // mutate only the copy, and not the original bin argument
+	const bin_label = get_bin_label(copy, binconfig)
 	if (bin.startunbounded || bin.stopunbounded) {
 		// first or last bins, e.g. x ≤ 14 and x > 16
 		range_eq = x + ' ' + bin_label
