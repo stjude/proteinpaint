@@ -2,6 +2,9 @@ import type { RouteApi, AIProjectTrainModelRequest } from '#types'
 import { aiProjectTrainModelPayload } from '#types/checkers'
 import { TileServerSessionsHandler } from '#src/wsisessions/TileServerSessionsHandler.ts'
 import SessionManager from '#src/wsisessions/SessionManager.ts'
+import { getDbConnection } from '#src/aiHistoDBConnection.js'
+import type Database from 'better-sqlite3'
+import { getImages } from '#routes/aiProjectAdmin.js'
 
 export const api: RouteApi = {
 	endpoint: 'aiProjectTrainModel',
@@ -21,14 +24,21 @@ function init({ genomes }) {
 	return async function (req, res) {
 		try {
 			const query: AIProjectTrainModelRequest = req.query
-			console.log(query)
 			const g = genomes[query.genome]
 			if (!g) throw 'invalid genome name'
 			const ds = g.datasets[query.dslabel]
 			if (!ds) throw 'invalid dataset name'
 
 			if (typeof ds.queries.WSImages.retrainModel == 'function') {
-				await ds.queries.WSImages.retrainModel(query.projectId)
+				const connection = getDbConnection(ds) as Database.Database
+
+				const project = {
+					id: query.projectId
+				}
+
+				const wsimages = getImages(connection, project)
+
+				await ds.queries.WSImages.retrainModel(query.projectId, wsimages)
 
 				// After retraining, read sessions from SessionManager and reset them via TileServerSessionsHandler.
 				try {
