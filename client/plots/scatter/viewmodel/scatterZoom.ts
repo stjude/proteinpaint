@@ -10,6 +10,7 @@ export class ScatterZoom {
 	zoom: any
 
 	constructor(scatter: Scatter) {
+		this.zoom = 1
 		this.scatter = scatter
 		this.zoomD3 = d3zoom()
 			.scaleExtent([0.1, 10])

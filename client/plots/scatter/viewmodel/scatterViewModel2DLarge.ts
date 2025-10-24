@@ -57,13 +57,12 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 		})
 
 		this.addLegendSVG(chart)
-
 		this.animate(camera, scene, renderer)
 	}
+
 	animate(camera, scene, renderer) {
 		requestAnimationFrame(() => this.animate(camera, scene, renderer))
-		camera.zoom = this.scatter.zoom
-
+		camera.zoom = this.scatter.vm.scatterZoom.zoom
 		camera.updateProjectionMatrix()
 		renderer.render(scene, camera)
 	}
