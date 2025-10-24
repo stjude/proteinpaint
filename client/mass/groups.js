@@ -291,7 +291,7 @@ function mayAddGenomebrowserOption(menuDiv, self, samplelstTW) {
 						chartType: 'genomeBrowser',
 						geneSearchResult: result,
 						snvindel: { shown: true, filter: f1 }, // code filter in 1st tk
-						subMds3TkFilters: [f2] // code filter in 2nd tk
+						subMds3Tks: [{ filterObj: f2 }] // code filter in 2nd tk
 					}
 					self.app.dispatch({
 						type: 'plot_create',
