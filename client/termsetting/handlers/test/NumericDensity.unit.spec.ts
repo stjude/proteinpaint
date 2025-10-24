@@ -62,7 +62,7 @@ async function getNumericDensity(opts: any = {}) {
 		density,
 		destroy: () => {
 			density.destroy()
-			//holder.remove()
+			holder.remove()
 		}
 	}
 }

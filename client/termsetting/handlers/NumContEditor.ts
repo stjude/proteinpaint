@@ -90,7 +90,7 @@ export class NumContEditor extends HandlerBase implements Handler {
 		const scaleValue = this.dom.scaleSelect.property('value')
 		if (scaleValue == '1') delete this.q.scale
 		else this.q.scale = Number(scaleValue)
-		this.q.convert2ZScore = this.dom.convert2ZCheckbox.property('checked')
+		if (this.dom.convert2ZCheckbox) this.q.convert2ZScore = this.dom.convert2ZCheckbox.property('checked')
 		return this.q
 	}
 

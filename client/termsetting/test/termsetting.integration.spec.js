@@ -434,34 +434,6 @@ tape('Numerical term: fixed bins', async test => {
 		'3',
 		'Should reset the bins by "Reset" button'
 	)
-
-	/*** 
-		TODO: FIX THIS UNRELIABLE TEST using 
-		a termsetting.density component unit testing
-
-		Because this test is triggered via the termdb app,
-		and is not a component specific test, capturing the
-		error is very difficult even with try-catch or window.onerror
-		event listener, since the event handler may be buried in layers
-		of nested function calls. Must use unit testing instead.
-	***/
-	/*const firstBinStopInput = d3s
-		.select(tip.d.selectAll('tr')._groups[0][1])
-		.selectAll('td')
-		._groups[0][1].querySelector('input')
-	d3s.select(firstBinStopInput).property('value', opts.pill.Inner.num_obj.density_data.maxvalue + 5)
-	const firstBinStopMessage = 'UNRELIABLE TEST!!! should handle first_bin.stop > density_data.maxvalue'
-	function detectFirstBinStopError(err) {
-		console.log(468, err)
-		if (err.includes(`Cannot read property 'scaledX' of undefined`)) {
-			test.fail(firstBinStopMessage + ': ' + err)
-		}
-	}
-	window.addEventListener('error.firstBinStopTest', detectFirstBinStopError)
-	firstBinStopInput.dispatchEvent(new Event('change'))
-	await sleep(500)
-	window.removeEventListener('error.firstBinStopTest', detectFirstBinStopError)
-	test.pass(firstBinStopMessage)*/
 	if (test._ok) opts.pill.destroy()
 })
 

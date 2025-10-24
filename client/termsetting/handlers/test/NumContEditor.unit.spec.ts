@@ -97,6 +97,13 @@ tape('no opts.usecase', async test => {
 	editHandler.dom?.scaleSelect.property('value', scaleValue)
 	editHandler.dom?.scaleSelect.node().dispatchEvent(new Event('change', { bubbles: true }))
 	test.equal(editHandler.q.scale, scaleValue, `should set q.scale to ${scaleValue}`)
+
+	test.deepEqual(
+		editHandler.getEditedQ(),
+		{ mode: 'continuous', isAtomic: true, hiddenValues: {}, scale: 100 },
+		`should give the expected edited q object`
+	)
+
 	if ((test as any)._ok) destroy()
 	test.end()
 })
