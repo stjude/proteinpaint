@@ -31,10 +31,6 @@ export class NumContEditor extends HandlerBase implements Handler {
 		return { mode: 'continuous' }
 	}
 
-	getPillStatus() {
-		return { text: this.q.scale ? `scale=${this.q.scale}` : 'continuous' } // FIXME not effective
-	}
-
 	async showEditMenu(div: any) {
 		if (this.dom.inputsDiv) {
 			if (div.node().contains(this.dom.inputsDiv.node())) return

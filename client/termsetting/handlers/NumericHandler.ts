@@ -55,7 +55,7 @@ export class NumericHandler extends HandlerBase implements Handler {
 	}
 
 	getPillStatus() {
-		return this.tw.getStatus(this.termsetting.usecase)
+		return this.tw.getStatus(this.termsetting.usecase, this.termsetting.data)
 	}
 
 	setTabData() {

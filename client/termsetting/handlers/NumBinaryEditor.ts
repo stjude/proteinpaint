@@ -28,13 +28,6 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 		this.q = this.getDefaultQ()
 	}
 
-	getPillStatus() {
-		const regressionStatus =
-			this.termsetting.opts.usecase?.target == 'regression' &&
-			this.tw.q.lst.find(x => x.label != this.termsetting.data.refGrp)?.label
-		return { text: regressionStatus || 'binary' }
-	}
-
 	async showEditMenu(div) {
 		if (this.dom.density_div) {
 			if (this.handler.dom.editDiv?.node().contains(this.dom.density_div.node())) return

@@ -91,7 +91,6 @@ tape('\n', test => {
 
 tape('handler methods', async test => {
 	const { editHandler, destroy } = await getNumericHandler()
-	test.deepEqual(editHandler.getPillStatus(), { text: 'bin size=500' }, 'should give the expected status')
 	editHandler.setDefaultBoundaryInclusion()
 	test.equal(editHandler.boundaryInclusion, 'stopinclusive', 'should set the expected default boundaryInclusion')
 

@@ -52,13 +52,6 @@ export class NumDiscreteEditor extends HandlerBase implements Handler {
 		}
 	}
 
-	getPillStatus() {
-		if (!this.tw.q) throw `Missing .q{} [numeric.discrete getPillStatus()]`
-		const text = this.tw.q?.name || this.tw.q?.reuseId
-		if (text) return { text }
-		return this.editorsByType[this.activeTab].getPillStatus()
-	}
-
 	async showEditMenu(div: any) {
 		if (this.dom.boundaryInclusionDiv) {
 			if (div.node().contains(this.dom.boundaryInclusionDiv.node())) return // already rendered

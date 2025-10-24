@@ -95,7 +95,6 @@ tape('\n', test => {
 
 tape('handler methods', async test => {
 	const { binsEditor, destroy } = await getNumericHandler()
-	test.deepEqual(binsEditor.getPillStatus(), { text: 'bin size=500' }, 'should give the expected status')
 	test.deepEqual(
 		binsEditor.getDefaultQ(),
 		{
