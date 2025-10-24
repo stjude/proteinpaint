@@ -160,6 +160,9 @@ export async function testSampleSummary2subtrack(genome, gene, dslabel, test) {
 
 			const subtk = bb.tklst[2] // mds3 sub-track object created off main one (tk)
 
+			test.equal(tk.subtk, undefined, '.subtk is not set on main tk')
+			test.equal(subtk.subtk, true, '.subtk=true is set on subtk')
+
 			test.equal(subtk.type, 'mds3', '3rd track type is mds3 (subtrack launched from main track)')
 
 			test.ok(
