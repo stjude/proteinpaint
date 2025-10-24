@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.151.0
 
 Features:
 - GRIN2: Made top gene table column names user friendly with label mapping. Reworked column display logic for constellation test. Improved defaults for ASHOP portal
