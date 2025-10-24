@@ -165,7 +165,7 @@ export class NumericHandler extends HandlerBase implements Handler {
 				tabs: this.tabs
 			}).main()
 		} else {
-			this.editHandler.showEditMenu(div)
+			this.editHandler.showEditMenu(this.dom.editDiv)
 		}
 	}
 
