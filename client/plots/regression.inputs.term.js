@@ -688,10 +688,6 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 }
 
 function setContMode(tw) {
-	if (!tw.q.type) {
-		console.log('may not happen: why is input.term.q not yet set for numeric term at this point')
-		// should already be set to default bins
-	}
 	tw.q.mode = 'continuous'
 }
 
