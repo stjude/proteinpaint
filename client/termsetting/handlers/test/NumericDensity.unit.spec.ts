@@ -47,7 +47,9 @@ async function getNumericDensity(opts: any = {}) {
 	const holder = d3s
 		.select('body')
 		.append('div')
-		.style('position', 'relative')
+		.style('position', 'fixed')
+		.style('top', 500)
+		.style('left', 500)
 		.style('width', 'fit-content')
 		.style('margin', '20px')
 		.style('padding', '5px')
@@ -60,7 +62,7 @@ async function getNumericDensity(opts: any = {}) {
 		density,
 		destroy: () => {
 			density.destroy()
-			holder.remove()
+			//holder.remove()
 		}
 	}
 }
@@ -77,15 +79,15 @@ function simulateDrag(elem, xOffset) {
 			view: window
 		})
 	)
-	elem.dispatchEvent(
-		new MouseEvent('mousemove', {
-			bubbles: true,
-			cancelable: true,
-			clientX: draggedX,
-			clientY: box.y,
-			view: window
-		})
-	)
+	// elem.dispatchEvent(
+	// 	new MouseEvent('mousemove', {
+	// 		bubbles: true,
+	// 		cancelable: true,
+	// 		clientX: draggedX,
+	// 		clientY: box.y,
+	// 		view: window
+	// 	})
+	// )
 	elem.dispatchEvent(
 		new MouseEvent('mouseup', {
 			bubbles: true,

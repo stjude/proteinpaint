@@ -8,41 +8,49 @@ import { Menu } from '#dom/menu'
 	default behavior
  */
 
+tape('\n', test => {
+	test.comment('-***- dom/svgSeriesTips.unit.spec -***-')
+	test.end()
+})
+
 tape('default behavior', test => {
 	const width = 400
 	const height = 350
 	const svg = select('body')
+		.append('div')
+		.style('position', 'fixed')
+		.style('bottom', 50)
+		.style('left', 50)
 		.append('svg')
 		.attr('width', width)
 		.attr('height', height)
 		.style('margin', '20px')
 		.style('fill', 'transparent')
 		.style('stroke', '#000')
-	const line = svg
-		.append('line')
-		.style('stroke', '#000')
-		.style('stroke-width', '1px')
-	const rect = svg
-		.append('rect')
-		.attr('x', 0)
-		.attr('y', 0)
-		.attr('width', width)
-		.attr('height', height)
+	const line = svg.append('line').style('stroke', '#000').style('stroke-width', '1px')
+	const rect = svg.append('rect').attr('x', 0).attr('y', 0).attr('width', width).attr('height', height)
 	const tip = new Menu({ padding: '5px' })
 
 	const seriesTip = getSeriesTip(line, rect, tip)
 	test.equal(line.style('display'), 'none', 'should hide the vertical line initially')
 
 	const domain = [0, 4]
-	const xScale = scaleLinear()
-		.domain(domain)
-		.range([0, width])
+	const xScale = scaleLinear().domain(domain).range([0, width])
 	const serieses = [
 		{
-			data: [{ x: 1, html: 'a1' }, { x: 2, html: 'a2' }, { x: 3, html: 'a3' }, { x: 4, html: 'a4' }]
+			data: [
+				{ x: 1, html: 'a1' },
+				{ x: 2, html: 'a2' },
+				{ x: 3, html: 'a3' },
+				{ x: 4, html: 'a4' }
+			]
 		},
 		{
-			data: [{ x: 2.5, html: 'z2.5' }, { x: 3.5, html: 'z3.5' }, { x: 4, html: 'z4' }]
+			data: [
+				{ x: 2.5, html: 'z2.5' },
+				{ x: 3.5, html: 'z3.5' },
+				{ x: 4, html: 'z4' }
+			]
 		}
 	]
 	seriesTip.update({ xScale, serieses })
@@ -71,7 +79,7 @@ tape('default behavior', test => {
 		})
 	)
 	const html2 = tip.d.html()
-	test.ok(html2.includes('a3') && html2.includes('z2.5'), 'must only both series a & z info in the tip')
+	test.ok(html2.includes('a3') && html2.includes('z2.5'), 'must only include both series a & z info in the tip')
 
 	if (test._ok) {
 		seriesTip.destroy()

@@ -122,7 +122,6 @@ export class NumericDensity {
 
 			// add binsize_g for termsetting lines
 			if (this.dom.binsize_g) this.dom.binsize_g.selectAll('*').remove()
-			if (!this.dom.svg) console.trace(124)
 			this.dom.binsize_g = this.dom.svg
 				.append('g')
 				.attr('transform', `translate(${this.plot_size.xpad}, ${this.plot_size.ypad})`)

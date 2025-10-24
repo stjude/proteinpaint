@@ -184,9 +184,7 @@ tape('initial rendered UI', async test => {
 
 tape('cutoff interactivity', async test => {
 	const { editHandler, holder, destroy } = await getNumericHandler()
-	console.log(184)
 	await editHandler.showEditMenu(holder)
-	console.log(185)
 	const lines = editHandler.handler.density.dom.binsize_g.selectAll('line')
 	test.equal(lines.size(), 1, `should render only one draggable line in the density plot`)
 	const line = lines.node()
