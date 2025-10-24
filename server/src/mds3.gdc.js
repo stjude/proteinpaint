@@ -2201,6 +2201,7 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 			seuratClusterTerm.values[clusterId] = { label: 'Cluster ' + clusterId }
 			for (const plot of plots) {
 				const datasetPlot = datasetPlots.find(p => p.name == plot.name)
+				if (!datasetPlot) throw 'datasetPlot not found for plot ' + plot.name
 				const colorColumn =
 					datasetPlot.colorColumns.find(c => c.name == q.colorBy?.[plot.name]) || datasetPlot.colorColumns[0]
 				plot.colorBy = colorColumn.name
