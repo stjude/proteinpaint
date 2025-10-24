@@ -3,7 +3,6 @@ import { Tabs } from '#dom'
 import { filterInit, filterJoin } from '#filter'
 import { appInit } from '#termdb/app'
 import { mayUpdateGroupTestMethodsIdx } from '../interactions/Interactions.ts'
-import { rehydrateFilter } from '../../../filter/rehydrateFilter.js'
 
 export class View {
 	state: any
@@ -86,7 +85,16 @@ export class View {
 						// for every element, create a new subtk
 						const t2: any = {
 							type: 'mds3',
+							subtk: true,
 							dslabel: this.state.vocab.dslabel,
+							onClose: async () => {
+								// on closing subtk, the filterObj corresponding to the subtk will be "removed" from subMds3Tks[], by regenerating the array
+								await this.maySaveTrackUpdatesToState()
+							},
+							callbackOnRender: async () => {
+								// will allow legend filtering changes to be saved to state
+								await this.maySaveTrackUpdatesToState()
+							},
 							// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
 							newChartHolder: this.opts.plotDiv
 						}
@@ -172,15 +180,12 @@ export class View {
 		- a facet track is removed by user via block ui */
 		if (!this.blockInstance) return
 		const config = structuredClone(this.state.config)
+		config.subMds3Tks = []
 		for (const t of this.blockInstance.tklst) {
 			if (t.type == 'mds3' && t.filterObj) {
 				const mclassHiddenValues = t.legend?.mclass?.hiddenvalues
-				const massFilter = structuredClone(this.state.filter)
-				// t.filterObj is fully hydrated, so need to rehydrate mass filter
-				// to be able to compare the two filters
-				await Promise.all(rehydrateFilter(massFilter, this.opts.vocabApi))
-				if (JSON.stringify(t.filterObj) == JSON.stringify(massFilter)) {
-					// this tk filter is identical as state (mass global filter). this means the tk is the "main" tk and the filter was auto-added via mass global filter.
+				if (!t.subtk) {
+					// "main" track
 					if (mclassHiddenValues) {
 						// track has hidden mclass values, store in config root
 						config.mclassHiddenValues = [...mclassHiddenValues]
@@ -188,7 +193,7 @@ export class View {
 					// do not add this track to subMds3Tks[], as it would cause an issue of auto-creating unwanted subtk on global filter change
 					continue
 				} else {
-					if (!config.subMds3Tks) config.subMds3Tks = []
+					// sub track
 					const subtk: any = { filterObj: t.filterObj }
 					if (mclassHiddenValues) {
 						// track has hidden mclass values, store in subtk obj
