@@ -16,6 +16,7 @@ export const routedTermTypes = new Set([
 	'metaboliteIntensity',
 	'ssGSEA',
 	'snp',
+	'singleCellGeneExpression',
 	'singleCellCellType'
 ])
 
@@ -87,6 +88,7 @@ export class TwRouter {
 			case 'metaboliteIntensity':
 			case 'date':
 			case 'ssGSEA':
+			case 'singleCellGeneExpression':
 				return await NumericBase.fill(tw, opts)
 
 			// case 'condition':
