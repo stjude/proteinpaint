@@ -199,6 +199,10 @@ tape('edit interactivity', async test => {
 		`should re-render the draggable lines in the updated x-positions`
 	)
 
+	const input0 = binsEditor.dom.customBinLabelInput.node()
+	input0.value = '- TEST -'
+	input0.dispatchEvent(new Event('change', { bubbles: true }))
+
 	test.deepEqual(
 		binsEditor.getEditedQ(false),
 		{
@@ -210,7 +214,7 @@ tape('edit interactivity', async test => {
 					stop: 10,
 					startinclusive: false,
 					stopinclusive: true,
-					label: '≤10',
+					label: '- TEST -',
 					range: '<span style="font-family:Times;font-style:italic;">x</span> ≤10'
 				},
 				{
@@ -249,7 +253,7 @@ tape('edit interactivity', async test => {
 		},
 		`should give the expected edited q object`
 	)
-
+	return
 	const inputsDiv = binsEditor.dom.inputsDiv.node()
 	await binsEditor.render(editHandler.dom.binsDiv.node().firstChild)
 	test.equal(

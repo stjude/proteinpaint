@@ -221,7 +221,7 @@ export class NumCustomBinEditor {
 		const self = this.termsetting
 		const startinclusive = this.editHandler.boundaryInclusion == 'startinclusive'
 		const stopinclusive = this.editHandler.boundaryInclusion == 'stopinclusive'
-		//const inputs = this.dom.inputsDiv.node().querySelectorAll('input')
+		const inputs = this.dom.inputsDiv.node().querySelectorAll('input')
 
 		const inputData = this.dom.customBinBoundaryInput
 			.property('value')
@@ -243,8 +243,8 @@ export class NumCustomBinEditor {
 				startunbounded: true,
 				stop: sortedBins[0],
 				startinclusive: false,
-				stopinclusive
-				//label: inputs[0].value
+				stopinclusive,
+				label: inputs[0].value
 			}
 		]
 		// first bin
@@ -252,15 +252,15 @@ export class NumCustomBinEditor {
 		if (!data[0].range) data[0].range = get_bin_range_equation(data[0], self.q)
 		for (const [i, d] of sortedBins.entries()) {
 			let bin
-			//const label = inputs[i + 1]?.value || ''
+			const label = inputs[i + 1]?.value || ''
 			if (i !== trackBins.size - 1) {
 				// intermediate bin: FullyBounded type
 				bin = {
 					start: +d,
 					startinclusive,
 					stopinclusive,
-					stop: sortedBins[i + 1]
-					//label,
+					stop: sortedBins[i + 1],
+					label
 					//range: ''
 				}
 			} else {
@@ -269,8 +269,8 @@ export class NumCustomBinEditor {
 					start: +d,
 					startinclusive,
 					stopinclusive: false,
-					stopunbounded: true
-					//label,
+					stopunbounded: true,
+					label
 					//range: ''
 				}
 			}
