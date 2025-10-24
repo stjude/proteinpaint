@@ -1,31 +1,20 @@
-import type {
-	NumericTerm,
-	NumericQ,
-	NumTW,
-	NumTWRegularBin,
-	NumTWCustomBin,
-	NumTWCont,
-	NumTWSpline,
-	RawNumTW,
-	RawNumTWRegularBin,
-	RawNumTWCustomBin,
-	RawNumTWCont,
-	RawNumTWSpline,
-	ContinuousNumericQ,
-	SplineNumericQ,
-	StartUnboundedBin,
-	StopUnboundedBin,
-	RegularNumericBinConfig,
-	CustomNumericBinConfig
-} from '#types'
+import type { NumericTerm, NumTW, RawNumTW, StartUnboundedBin, StopUnboundedBin } from '#types'
+import { NumRegularBin } from './NumRegularBin.ts'
+import { NumCustomBins } from './NumCustomBins.ts'
+import { NumCont } from './NumCont.ts'
+import { NumSpline } from './NumSpline.ts'
 import { TwBase, type TwOpts } from './TwBase.ts'
-import { isNumeric } from '#shared/helpers.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { copyMerge } from '#rx'
 import { GeneExpBase } from './geneExpression.ts'
 import { MetaboliteIntensityBase } from './metaboliteIntensity.ts'
 import { DateBase } from './date.ts'
 import { SsGSEABase } from './ssGSEA.ts'
+
+export { NumRegularBin } from './NumRegularBin.ts'
+export { NumCustomBins } from './NumCustomBins.ts'
+export { NumCont } from './NumCont.ts'
+export { NumSpline } from './NumSpline.ts'
 
 export class NumericBase extends TwBase {
 	// type is set by TwBase constructor
@@ -159,197 +148,6 @@ export class NumericBase extends TwBase {
 	}
 }
 
-export class NumRegularBin extends NumericBase {
-	// type, isAtomic, $id are set in ancestor base classes
-	q: RegularNumericBinConfig
-	#tw: NumTWRegularBin
-	#opts: TwOpts
-
-	// declare a constructor, to narrow the tw type
-	constructor(tw: NumTWRegularBin, opts: TwOpts = {}) {
-		super(tw, opts)
-		//this.term = tw.term // already set by base constructor
-		this.q = tw.q
-		this.#tw = tw
-		this.#opts = opts
-	}
-
-	getTw() {
-		return this.#tw
-	}
-
-	getStatus() {
-		return { text: 'bin size=' + this.q.bin_size }
-	}
-
-	// See the relevant comments in the NumericBase.fill() function above
-	static async fill(tw: RawNumTWRegularBin, opts: TwOpts = {}): Promise<NumTWRegularBin> {
-		if (!tw.type) tw.type = 'NumTWRegularBin'
-		else if (tw.type != 'NumTWRegularBin') throw `expecting tw.type='NumTWRegularBin', got '${tw.type}'`
-
-		if (!tw.q.mode) tw.q.mode = 'discrete'
-		else if (tw.q.mode != 'discrete' && tw.q.mode != 'binary' && tw.q.mode != 'continuous')
-			throw `expecting tw.q.mode='discrete'|'binary'|'continous', got '${tw.q.mode}'`
-
-		if (tw.q.type && tw.q.type != 'regular-bin') throw `expecting tw.q.type='regular-bin', got '${tw.q.type}'`
-
-		if (!tw.term.bins) {
-			/* non-dictionary term (e.g. gene term) may be missing bin definition, this is expected as it's not valid to apply same bin to genes with vastly different exp range,
-			and not worth it to precompute each gene's default bin with its actual exp data as cohort filter can not be predicted
-			here make a request to determine default bin for this term based on its data
-
-			do not do this when tw.q.mode is continuous:
-			1. it will add significant delay to gene exp clustering, esp for gdc. bins are useless for hiercluster and the request will lock up server
-			2. the way setTermBins works, tw.q.type won't be filled and errors out
-			*/
-			await opts.vocabApi.setTermBins(tw)
-		}
-
-		if (!tw.q.first_bin || !isNumeric(tw.q.bin_size)) mayFillQWithPresetBins(tw)
-
-		if (!isNumeric(tw.q.bin_size)) throw `tw.q.bin_size=${tw.q.bin_size} is not numeric`
-		if (!tw.q.first_bin) throw `missing tw.q.first_bin`
-		if (!isNumeric(tw.q.first_bin?.stop)) throw `tw.q.first_bin.stop is not numeric`
-
-		TwBase.setHiddenValues(tw.q as NumericQ, tw.term)
-		return tw as NumTWRegularBin
-	}
-}
-
-export class NumCustomBins extends NumericBase {
-	// term, type, isAtomic, $id are set in ancestor base classes
-	q: CustomNumericBinConfig
-	#tw: NumTWCustomBin
-	#opts: TwOpts
-
-	// declare a constructor, to narrow the tw type
-	constructor(tw: NumTWCustomBin, opts: TwOpts = {}) {
-		super(tw, opts)
-		//this.term = tw.term // already set by base constructor
-		this.q = tw.q
-		this.#tw = tw
-		this.#opts = opts
-	}
-
-	getTw() {
-		return this.#tw
-	}
-
-	getStatus(opts?: any, data?: any) {
-		if (this.q.mode == 'binary') {
-			const regressionStatus =
-				opts.usecase?.target == 'regression' && this.q.lst.find(x => x.label != data.refGrp)?.label
-			return { text: regressionStatus || 'binary' }
-		}
-		return { text: this.q.lst.length + ' bins' }
-	}
-
-	// See the relevant comments in the NumericBase.fill() function above
-	static async fill(tw: RawNumTWCustomBin, opts: TwOpts = {}): Promise<NumTWCustomBin> {
-		if (!tw.type) tw.type = 'NumTWCustomBin'
-		else if (tw.type != 'NumTWCustomBin') throw `expecting tw.type='NumTWCustomBin', got '${tw.type}'`
-
-		if (!tw.q.mode) tw.q.mode = 'discrete'
-		else if (tw.q.mode != 'discrete' && tw.q.mode != 'binary' && tw.q.mode != 'continuous')
-			throw `expecting tw.q.mode='discrete'|binary|continuous', got '${tw.q.mode}'`
-
-		if (tw.q.mode == 'binary' && !tw.q.preferredBins) tw.q.preferredBins = 'median'
-
-		if (!tw.term.bins) {
-			/* non-dictionary term (e.g. gene term) may be missing bin definition, this is expected as it's not valid to apply same bin to genes with vastly different exp range,
-			and not worth it to precompute each gene's default bin with its actual exp data as cohort filter can not be predicted
-			here make a request to determine default bin for this term based on its data
-
-			do not do this when tw.q.mode is continuous:
-			1. it will add significant delay to gene exp clustering, esp for gdc. bins are useless for hiercluster and the request will lock up server
-			2. the way setTermBins works, tw.q.type won't be filled and errors out
-			*/
-			await opts.vocabApi.setTermBins(tw)
-		}
-
-		if (tw.q.preferredBins == 'median' && !tw.q.lst?.length) await fillQWithMedianBin(tw, opts.vocabApi)
-		else if (tw.q.type != 'custom-bin') throw `expecting tw.q.type='custom-bin', got '${tw.q.type}'`
-
-		if (!Array.isArray(tw.q.lst)) mayFillQWithPresetBins(tw)
-
-		if (!tw.q.lst || !tw.q.lst.length) throw `missing or empty q.lst[] for custom-bin`
-		if (tw.q.mode == 'binary' && tw.q.lst.length != 2) throw `numeric q.mode='binary' requires exactly 2 bins`
-
-		TwBase.setHiddenValues(tw.q as NumericQ, tw.term)
-		tw.type = 'NumTWCustomBin'
-		return tw as NumTWCustomBin
-	}
-}
-
-export class NumCont extends NumericBase {
-	// term, type, isAtomic, $id are set in ancestor base classes
-	q: ContinuousNumericQ
-	#tw: NumTWCont
-	#opts: TwOpts
-
-	// declare a constructor, to narrow the tw type
-	constructor(tw: NumTWCont, opts: TwOpts = {}) {
-		super(tw, opts)
-		//this.term = tw.term // already set by base constructor
-		this.q = tw.q
-		this.#tw = tw
-		this.#opts = opts
-	}
-
-	getTw() {
-		return this.#tw
-	}
-
-	getStatus() {
-		return { text: this.q.scale ? `scale=${this.q.scale}` : 'continuous' } // FIXME not effective
-	}
-
-	// See the relevant comments in the NumericBase.fill() function above
-	static async fill(tw: RawNumTWCont): Promise<NumTWCont> {
-		if (!tw.type) tw.type = 'NumTWCont'
-		else if (tw.type != 'NumTWCont') throw `expecting tw.type='NumTWCont', got '${tw.type}'`
-
-		if (tw.q.mode != 'continuous') throw `tw.q.mode='${tw.q.mode}', expecting 'continuous'`
-
-		TwBase.setHiddenValues(tw.q as NumericQ, tw.term)
-		tw.type = 'NumTWCont'
-		return tw as NumTWCont
-	}
-}
-
-export class NumSpline extends NumericBase {
-	// term, type, isAtomic, $id are set in ancestor base classes
-	q: SplineNumericQ
-	#tw: NumTWSpline
-	#opts: TwOpts
-
-	// declare a constructor, to narrow the tw type
-	constructor(tw: NumTWSpline, opts: TwOpts = {}) {
-		super(tw, opts)
-		//this.term = tw.term // already set by base constructor
-		this.q = tw.q
-		this.#tw = tw
-		this.#opts = opts
-	}
-
-	getStatus() {
-		return { text: 'cubic spline' }
-	}
-
-	static async fill(tw: RawNumTWSpline): Promise<NumTWSpline> {
-		if (!tw.type) tw.type = 'NumTWSpline'
-		else if (tw.type != 'NumTWSpline') throw `expecting tw.type='NumTWSpline', got '${tw.type}'`
-
-		if (tw.q.mode != 'spline') throw `tw.q.mode='${tw.q.mode}', expecting 'spline'`
-		if (!tw.q.knots) throw `missing tw.q.knots`
-		if (!tw.q.knots.length) throw `empty tw.q.knots[]`
-
-		TwBase.setHiddenValues(tw.q as NumericQ, tw.term)
-		tw.type = 'NumTWSpline'
-		return tw as NumTWSpline
-	}
-}
-
 export async function fillQWithMedianBin(tw, vocabApi) {
 	const result = await vocabApi.getPercentile(tw.term, [50], vocabApi.state.termfilter)
 	if (!result.values) throw '.values[] missing from vocab.getPercentile()'
@@ -380,7 +178,7 @@ export async function fillQWithMedianBin(tw, vocabApi) {
 
 const validPreferredBins = new Set(['default', 'less', 'median'])
 
-function mayFillQWithPresetBins(tw) {
+export function mayFillQWithPresetBins(tw) {
 	if (!tw.term.bins) throw `missing tw.term.bins`
 	// preprocessing the preferredBins to make sure that q.type is set
 	// and can be used to route the raw tw to the correct subclass fill() function
