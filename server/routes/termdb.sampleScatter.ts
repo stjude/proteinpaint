@@ -156,46 +156,52 @@ async function getSingleCellScatter(req, res, ds) {
 	const q = req.query satisfies TermdbSampleScatterRequest
 	const { name, sample } = q.singleCellPlot
 	const tw = q.colorTW as TermWrapper
-	const data = await ds.queries.singleCell.data.get({ plots: [name], sample })
-	const plot = data.plots[0]
-	const cells: Cell[] = [...plot.expCells, ...plot.noExpCells]
-	const samples: ScatterSample[] = cells.map(cell => {
-		const hidden = {
-			category: tw?.q?.hiddenValues ? cell.category in tw.q.hiddenValues : false
-		}
-		return {
-			sample: cell.cellId,
-			sampleId: cell.cellId,
-			x: cell.x,
-			y: cell.y,
-			z: 0,
-			category: cell.category,
-			shape: 'Ref',
-			hidden
-		}
-	})
-	const [xMin, xMax, yMin, yMax] = samples.reduce(
-		(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
-		[samples[0].x, samples[0].x, samples[0].y, samples[0].y]
-	)
-	const categories: any = new Set(samples.map(s => s.category))
-	const colorMap = {}
-	const k2c = getColors(categories.size)
-	for (const category of categories) {
-		const color = k2c(category)
-		colorMap[category] = {
-			sampleCount: samples.filter((s: any) => s.category == category).length,
-			color,
-			key: category
-		}
-	}
-	const shapeLegend: ShapeLegendEntry[] = [['Ref', { sampleCount: samples.length, shape: 0, key: 'Ref' }]]
-	const colorLegend: ColorLegendEntry[] = Object.entries(colorMap)
+	try {
+		const data = await ds.queries.singleCell.data.get({ plots: [name], sample })
 
-	res.send({
-		result: { Default: { samples, colorLegend, shapeLegend } },
-		range: { xMin, xMax, yMin, yMax }
-	} satisfies TermdbSampleScatterResponse)
+		const plot = data.plots[0]
+		const cells: Cell[] = [...plot.expCells, ...plot.noExpCells]
+		const samples: ScatterSample[] = cells.map(cell => {
+			const hidden = {
+				category: tw?.q?.hiddenValues ? cell.category in tw.q.hiddenValues : false
+			}
+			return {
+				sample: cell.cellId,
+				sampleId: cell.cellId,
+				x: cell.x,
+				y: cell.y,
+				z: 0,
+				category: cell.category,
+				shape: 'Ref',
+				hidden
+			}
+		})
+		const [xMin, xMax, yMin, yMax] = samples.reduce(
+			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
+			[samples[0].x, samples[0].x, samples[0].y, samples[0].y]
+		)
+		const categories: any = new Set(samples.map(s => s.category))
+		const colorMap = {}
+		const k2c = getColors(categories.size)
+		for (const category of categories) {
+			const color = k2c(category)
+			colorMap[category] = {
+				sampleCount: samples.filter((s: any) => s.category == category).length,
+				color,
+				key: category
+			}
+		}
+		const shapeLegend: ShapeLegendEntry[] = [['Ref', { sampleCount: samples.length, shape: 0, key: 'Ref' }]]
+		const colorLegend: ColorLegendEntry[] = Object.entries(colorMap)
+
+		res.send({
+			result: { Default: { samples, colorLegend, shapeLegend } },
+			range: { xMin, xMax, yMin, yMax }
+		} satisfies TermdbSampleScatterResponse)
+	} catch (e: any) {
+		console.log(e)
+		res.send({ error: e.message || e })
+	}
 }
 
 async function getSamples(ds: any, plot: any) {
