@@ -253,7 +253,7 @@ tape('edit interactivity', async test => {
 		},
 		`should give the expected edited q object`
 	)
-	return
+
 	const inputsDiv = binsEditor.dom.inputsDiv.node()
 	await binsEditor.render(editHandler.dom.binsDiv.node().firstChild)
 	test.equal(
