@@ -55,6 +55,7 @@ export class NumericHandler extends HandlerBase implements Handler {
 	}
 
 	getPillStatus() {
+		this.tw = this.termsetting.tw as NumRegularBin | NumCustomBins | NumCont | NumSpline // TODO: do not force type
 		return this.tw.getStatus(this.termsetting.usecase, this.termsetting.data)
 	}
 

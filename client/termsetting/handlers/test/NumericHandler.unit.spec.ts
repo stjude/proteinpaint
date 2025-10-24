@@ -34,16 +34,27 @@ async function getNumericHandler(_opts: any = {}) {
 				..._opts
 			},
 			api: {
-				runCallback() {}
+				async runCallback() {
+					const self = handler.termsetting
+					const q = (handler.editHandler as any).q
+					self.tw = await TwRouter.initRaw({ term: self.term, q }, self.opts)
+				}
 			},
 			dom: {
 				tip: {
-					hide() {}
+					hide() {
+						//holder.remove()
+					}
 				}
 			},
 			vocabApi: {
 				getViolinPlotData() {
 					return agedxViolinData
+				},
+				getPercentile() {
+					return {
+						values: [0.03537315665, 3.13072460515, 8.164619357749999, 17.8726813385]
+					}
 				}
 			}
 		}
@@ -131,6 +142,20 @@ tape('showEditMenu, multiple modes', async test => {
 		`should render 4 tabs, one toggle button for each mode`
 	)
 	test.equal(handler.dom.btnDiv?.selectAll('button').size(), 2, `should render an apply and reset button`)
+
+	test.deepEqual(handler.getPillStatus(), { text: 'bin size=500' }, 'should have the expected initial pill status')
+	const tabBtns = handler.dom.topBar.node().querySelectorAll('button')
+	tabBtns[2].click()
+	await sleep(10)
+	// assume that the first button is Apply
+	handler.dom.btnDiv.select('button').node().click()
+	await sleep(10)
+	test.deepEqual(
+		handler.getPillStatus(),
+		{ text: 'cubic spline' },
+		'should have a different pill status after switching q.modes'
+	)
+
 	if ((test as any)._ok) destroy()
 	test.end()
 })
