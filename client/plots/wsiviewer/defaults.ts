@@ -20,7 +20,8 @@ export default function wsiViewerDefaults(overrides = {}): Settings {
 		annotatedPatchBorderColor: '#D3D3D3',
 		tileSize: 512, // 512px
 		activeAnnotation: 0,
-		sessionsTileSelection: []
+		sessionsTileSelection: [],
+		randomNum: 0
 	}
 	return copyMerge(defaults, overrides)
 }
