@@ -155,17 +155,23 @@ function init({ genomes }) {
 async function getSingleCellScatter(req, res, ds) {
 	const q = req.query satisfies TermdbSampleScatterRequest
 	const { name, sample } = q.singleCellPlot
+	const tw = q.colorTW as TermWrapper
 	const data = await ds.queries.singleCell.data.get({ plots: [name], sample })
 	const plot = data.plots[0]
 	const cells: Cell[] = [...plot.expCells, ...plot.noExpCells]
 	const samples: ScatterSample[] = cells.map(cell => {
+		const hidden = {
+			category: tw?.q?.hiddenValues ? cell.category in tw.q.hiddenValues : false
+		}
 		return {
 			sample: cell.cellId,
+			sampleId: cell.cellId,
 			x: cell.x,
 			y: cell.y,
 			z: 0,
 			category: cell.category,
-			shape: 'Ref'
+			shape: 'Ref',
+			hidden
 		}
 	})
 	const [xMin, xMax, yMin, yMax] = samples.reduce(

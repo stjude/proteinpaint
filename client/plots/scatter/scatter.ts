@@ -102,7 +102,7 @@ export class Scatter extends PlotBase implements RxComponent {
 		if (this.model.is3D) this.vm = new ScatterViewModel3D(this)
 		else if (this.model.is2DLarge) this.vm = new ScatterViewModel2DLarge(this)
 		else this.vm = new ScatterViewModel(this)
-		if (!this.config.colorColumn) await this.setControls()
+		if (!this.config.colorColumn && !this.config.singleCellPlot) await this.setControls()
 		await this.model.processData()
 		this.vm.render()
 		this.view.dom.loadingDiv.style('display', 'none')
@@ -187,7 +187,8 @@ export async function getPlotConfig(opts, app) {
 			sampleScatter: getDefaultScatterSettings(),
 			startColor: {}, //dict to store the start color of the gradient for each chart when using continuous color
 			stopColor: {} //dict to store the stop color of the gradient for each chart when using continuous color
-		}
+		},
+		hidePlotFilter: opts.singleCellPlot ? true : false
 	}
 
 	try {

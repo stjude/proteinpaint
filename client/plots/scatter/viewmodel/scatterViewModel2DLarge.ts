@@ -60,10 +60,10 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 
 		this.animate(camera, scene, renderer)
 	}
-
 	animate(camera, scene, renderer) {
 		requestAnimationFrame(() => this.animate(camera, scene, renderer))
 		camera.zoom = this.scatter.zoom
+
 		camera.updateProjectionMatrix()
 		renderer.render(scene, camera)
 	}

@@ -78,6 +78,7 @@ export class ScatterViewModel extends ScatterViewModelBase {
 
 	setTools() {
 		super.setTools()
+		if (this.scatter.config.singleCellPlot) return
 		const toolsDiv = this.view.dom.toolsDiv
 		const display = 'block'
 		const searchDiv = toolsDiv.insert('div').style('display', display).style('margin', '15px 10px')
