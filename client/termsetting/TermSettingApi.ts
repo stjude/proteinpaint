@@ -169,7 +169,6 @@ export class TermSettingApi {
 						await self.vocabApi.setTermBins(tw as any) // TODO: fix type
 					}
 					await self.handler.showEditMenu(div.append('div'))
-					self.renderButtons(div.append('div'))
 				}
 			} as opt)
 		}

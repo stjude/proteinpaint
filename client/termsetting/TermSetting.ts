@@ -236,19 +236,6 @@ export class TermSetting {
 		this.handler = this.handlerByType[type] as Handler
 	}
 
-	renderButtons(btnDiv) {
-		btnDiv
-			.append('button')
-			.style('margin', '5px')
-			.html('Apply')
-			.on('click', () => this.handler.applyEdits())
-		btnDiv
-			.append('button')
-			.style('margin', '5px')
-			.html('Reset')
-			.on('click', () => this.handler.undoEdits())
-	}
-
 	destroy() {
 		this.dom.holder.remove()
 		this.dom.tip.destroy()
