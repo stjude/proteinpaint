@@ -151,6 +151,8 @@ export class NumericHandler extends HandlerBase implements Handler {
 		this.density_data = await this.density.setData()
 		await this.setEditHandler(this.tabs.find(t => t.active))
 		this.dom.editDiv = div.append('div')
+		this.dom.btnDiv = div.append('div')
+		this.renderButtons(this.dom.btnDiv)
 
 		if (this.tabs.length > 1) {
 			this.dom.topBar = this.dom.editDiv.append('div').style('padding', '10px')
@@ -166,14 +168,24 @@ export class NumericHandler extends HandlerBase implements Handler {
 		}
 	}
 
-	applyEdits() {
-		this.termsetting.q = this.editHandler.getEditedQ()
-		this.termsetting.dom.tip.hide()
-		this.termsetting.api.runCallback()
-	}
+	renderButtons(btnDiv) {
+		btnDiv
+			.append('button')
+			.style('margin', '5px')
+			.html('Apply')
+			.on('click', () => {
+				this.termsetting.q = this.editHandler.getEditedQ()
+				this.termsetting.dom.tip.hide()
+				this.termsetting.api.runCallback()
+			})
 
-	undoEdits() {
-		this.editHandler.undoEdits()
+		btnDiv
+			.append('button')
+			.style('margin', '5px')
+			.html('Reset')
+			.on('click', () => {
+				this.editHandler.undoEdits()
+			})
 	}
 
 	destroy() {
