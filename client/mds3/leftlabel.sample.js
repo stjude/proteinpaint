@@ -291,6 +291,7 @@ async function showDensity4oneTerm(termid, div, data, tk, block) {
 
 function createSubTk(tk, block, tvs) {
 	const tk2 = block.block_addtk_template(tk.duplicateTk(getNewFilter(tk, tvs)))
+	tk2.subtk = true
 	block.tk_load(tk2)
 }
 
