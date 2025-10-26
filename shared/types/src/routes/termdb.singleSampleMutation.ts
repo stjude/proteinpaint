@@ -14,7 +14,7 @@ type ValidResponse = {
 	mlst: object[]
 	/** total number of items for each dt, useful to indicate snvindel limited to 10k for a hypermutator */
 	dt2total?: { dt: number; total: number }[]
-	/** this declares alternative data for some dt, e.g. a gdc case has cnv results from both snp array and wgs
+	/** declares presence of alternative data for some dt, e.g. a gdc case has cnv results from both snp array and wgs
 	key: dt value
 	value: array of objects, each is a distinct set of data points for this dt
 		on ui, selecting an object will allow to show this data in disco plot
@@ -30,6 +30,10 @@ type ValidResponse = {
 			inuse?: boolean
 			/** required list of events from this data */
 			mlst: object[]
+			/** optional info about this source */
+			attrs?: {
+				[index: string]: string
+			}
 		}[]
 	}
 }
