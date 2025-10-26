@@ -3,6 +3,7 @@ import { gdcMafPayload } from '#types/checkers'
 import ky from 'ky'
 import { joinUrl } from '#shared/joinUrl.js'
 import serverconfig from '#src/serverconfig.js'
+import { getGdcSampletypes } from '#src/mds3.gdc.js'
 
 /*
 this route lists available gdc MAF files based on user's cohort filter
@@ -147,33 +148,14 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 		}
 		*/
 
-		const file: GdcMafFile = {
+		files.push({
 			id: h.id,
 			project_id: c.project.project_id,
 			file_size: h.file_size,
 			case_submitter_id: c.submitter_id,
 			case_uuid: c.case_id,
-			sample_types: []
-		}
-
-		if (c.samples) {
-			let normalTypeName // if found Normal in c.samples[], do not insert to sample_types[]; when completed the iteration, insert normalTypeName to sample_types[], as a way to keep it always at last; just sample_types.sort() won't work due to presence of "Primary" and "Metastatic" tumor descriptors that will cause Normal to appear 1st and last...
-			for (const { tumor_descriptor, tissue_type } of c.samples) {
-				// concatenate the two properties into 'sample_type' to show on client.
-				if (tissue_type == 'Normal') {
-					// ignore Not Applicable
-					normalTypeName = (tumor_descriptor == 'Not Applicable' ? '' : tumor_descriptor + ' ') + tissue_type
-					continue
-				}
-				// always include tissue descriptor for non-normal
-				file.sample_types.push(tumor_descriptor + ' ' + tissue_type)
-			}
-			if (normalTypeName) file.sample_types.push(normalTypeName)
-		}
-
-		// dedup sample type. helps with such maf file https://portal.gdc.cancer.gov/files/efb54683-2d2c-44c2-9bc7-911588d5cc64 which will show repeating Tumor and hard to resolve
-		file.sample_types = [...new Set(file.sample_types)]
-		files.push(file)
+			sample_types: getGdcSampletypes(c)
+		} as GdcMafFile)
 	}
 
 	// sort files in descending order of file size and show on table as default

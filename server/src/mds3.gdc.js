@@ -12,6 +12,7 @@ import serverconfig from './serverconfig.js'
 
 const maxCase4geneExpCluster = 1000 // max number of cases allowed for gene exp clustering app; okay just to hardcode in code and not to define in ds
 const maxGene4geneExpCluster = 2000 // max #genes allowed for gene exp cluster
+const ascns = 'Allele-specific Copy Number Segment'
 
 /*
 GDC API
@@ -708,7 +709,8 @@ opts{}
 */
 async function getCnvFusion4oneCase(opts, ds) {
 	const fields = [
-		'cases.samples.tissue_type', // may not be needed
+		'cases.samples.tissue_type',
+		'cases.samples.tumor_descriptor',
 		'data_type',
 		'file_id',
 		'file_name',
@@ -736,6 +738,7 @@ async function getCnvFusion4oneCase(opts, ds) {
 		fusionfiles = []
 
 	for (const h of re.data.hits) {
+		if (!h.cases?.[0]) throw 'h.cases[0] missing'
 		if (h.data_format == 'BEDPE') {
 			if (h.experimental_strategy != 'RNA-Seq') continue
 			if (h.analysis?.workflow_type != 'Arriba') continue
@@ -743,7 +746,8 @@ async function getCnvFusion4oneCase(opts, ds) {
 			try {
 				fusionfiles.push({
 					nameHtml: `<a href=https://portal.gdc.cancer.gov/files/${h.file_id} target=_blank>${h.file_name}</a>`,
-					mlst: await loadArribaFile(host, headers, h.file_id)
+					mlst: await loadArribaFile(host, headers, h.file_id),
+					attrs: getAttr(h)
 				})
 			} catch (e) {
 				// no permission to fusion file
@@ -753,10 +757,11 @@ async function getCnvFusion4oneCase(opts, ds) {
 
 		if (h.data_format == 'TXT') {
 			if (h.experimental_strategy == 'Genotyping Array') {
-				if (h.data_type == 'Masked Copy Number Segment' || h.data_type == 'Allele-specific Copy Number Segment') {
+				if (h.data_type == 'Masked Copy Number Segment' || h.data_type == ascns) {
 					cnvfiles.push({
 						nameHtml: `<a href=https://portal.gdc.cancer.gov/files/${h.file_id} target=_blank>${h.file_name}</a>`,
-						mlst: await loadCnvFile(host, h.file_id)
+						mlst: await loadCnvFile(host, h.file_id),
+						attrs: getAttr(h)
 					})
 				}
 				continue
@@ -764,11 +769,11 @@ async function getCnvFusion4oneCase(opts, ds) {
 			if (h.experimental_strategy == 'WGS') {
 				// is wgs, no need to check tissue_type, the file is usable
 				if (!h.file_id) continue
-				if (h.data_type != 'Allele-specific Copy Number Segment') continue
+				if (h.data_type != ascns) continue
 				cnvfiles.push({
 					nameHtml: `<a href=https://portal.gdc.cancer.gov/files/${h.file_id} target=_blank>${h.file_name}</a>`,
-					wgsTempFlag: true,
-					mlst: await loadCnvFile(host, h.file_id)
+					mlst: await loadCnvFile(host, h.file_id),
+					attrs: getAttr(h)
 				})
 				continue
 			}
@@ -778,6 +783,14 @@ async function getCnvFusion4oneCase(opts, ds) {
 	if (fusionfiles.length) dt2files[common.dtfusionrna] = fusionfiles
 	if (cnvfiles.length) dt2files[common.dtcnv] = cnvfiles
 	return dt2files
+
+	function getAttr(h) {
+		return {
+			'Experimental Strategy': h.experimental_strategy,
+			'Data Type': h.data_type,
+			Samples: getGdcSampletypes(h.cases[0]).join(', ')
+		}
+	}
 
 	function getFilter(p) {
 		/* p={}
@@ -794,7 +807,7 @@ async function getCnvFusion4oneCase(opts, ds) {
 						field: 'data_type',
 						value: [
 							'Masked Copy Number Segment', // for snp array we only want this type of file
-							'Allele-specific Copy Number Segment', // for wgs we want this type of file
+							ascns, // for wgs we want this type of file
 							'Transcript Fusion' // fusion
 						]
 					}
@@ -803,6 +816,27 @@ async function getCnvFusion4oneCase(opts, ds) {
 		}
 		return filters
 	}
+}
+
+export function getGdcSampletypes(c) {
+	// use set to dedup sample type. helps with such maf file https://portal.gdc.cancer.gov/files/efb54683-2d2c-44c2-9bc7-911588d5cc64 which will show repeating Tumor and hard to resolve
+	const set = new Set()
+	if (c.samples) {
+		let normalTypeName // if found Normal in c.samples[], do not insert to sample_types[]; when completed the iteration, insert normalTypeName to sample_types[], as a way to keep it always at last; just sample_types.sort() won't work due to presence of "Primary" and "Metastatic" tumor descriptors that will cause Normal to appear 1st and last...
+		for (const { tumor_descriptor, tissue_type } of c.samples) {
+			// concatenate the two properties into 'sample_type' to show on client.
+			if (tissue_type == 'Normal') {
+				// ignore Not Applicable
+				normalTypeName = (tumor_descriptor == 'Not Applicable' ? '' : tumor_descriptor + ' ') + tissue_type
+				continue
+			}
+			// always include tissue descriptor for non-normal
+			set.add(tumor_descriptor + ' ' + tissue_type)
+		}
+		if (normalTypeName) set.add(normalTypeName)
+	}
+
+	return [...set]
 }
 
 /*
@@ -2294,14 +2328,13 @@ async function getSingleSampleMutations(query, ds, genome) {
 	const cfs = dt2files[common.dtcnv]
 	if (cfs) {
 		// select a default set of cnvs to insert to mlst so it shows on disco;
-		const usefile = cfs.find(f => f.wgsTempFlag) || cfs[0]
+		const usefile = cfs.find(f => f.attrs['Experimental Strategy'] == 'WGS' || f.attrs['Data Type'] == ascns) || cfs[0]
 		result.mlst.push(...usefile.mlst)
 		if (cfs.length == 1) {
 			// just one. data from this file is already added to result.mlst so no need to include this
 			delete dt2files[common.dtcnv]
 		} else {
 			// more than 1 cnv file, send all to client but delete the temporary flag
-			for (const f of cfs) delete f.wgsTempFlag
 			usefile.inuse = true
 		}
 	}
