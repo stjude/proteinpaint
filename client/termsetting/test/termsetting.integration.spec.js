@@ -41,6 +41,10 @@ $ npx watchify termsetting.spec.js -o ../../../public/bin/spec.bundle.js -v
  reusable helper functions
 **************************/
 
+function getTermCopy(id) {
+	return JSON.parse(JSON.stringify(termjson[id]))
+}
+
 // required to activate usage of xtw
 const features = JSON.parse(sessionStorage.getItem('optionalFeatures') || '{}')
 features.usextw = true
@@ -182,11 +186,12 @@ tape('menuOptions', async test => {
 })
 
 tape('use_bins_less', async test => {
+	const term = getTermCopy('agedx')
 	const opts = await getOpts({
 		use_bins_less: true,
 		tsData: {
-			term: termjson.agedx,
-			q: termjson.agedx.bins.less
+			term,
+			q: term.bins.less
 		}
 	})
 
@@ -286,10 +291,11 @@ tape('Numerical term: range boundaries', async test => {
 	test.timeoutAfter(3000)
 	test.plan(5)
 
+	const term = getTermCopy('agedx')
 	const opts = await getOpts({
 		tsData: {
-			term: termjson['agedx'],
-			q: termjson['agedx'].bins.default
+			term,
+			q: term.bins.default
 		}
 	})
 
@@ -329,10 +335,11 @@ tape('Numerical term: fixed bins', async test => {
 	test.timeoutAfter(3000)
 	test.plan(9)
 
+	const term = getTermCopy('agedx')
 	const opts = await getOpts({
 		tsData: {
-			term: termjson['agedx'],
-			q: termjson['agedx'].bins.default
+			term,
+			q: term.bins.default
 		}
 	})
 	await opts.pill.main(opts.tsData)
@@ -443,7 +450,7 @@ tape('Numerical term: float custom bins', async test => {
 
 	const opts = await getOpts({
 		tsData: {
-			term: termjson['agedx'],
+			term: getTermCopy('agedx'),
 			q: {
 				type: 'custom-bin',
 				lst: [
@@ -534,11 +541,11 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 	const opts = await getOpts({
 		numericEditMenuVersion: ['continuous', 'discrete', 'spline', 'binary'],
 		tsData: {
-			term: termjson['agedx'],
+			term: getTermCopy('agedx'),
 			q: { mode: 'continuous' }
 		}
 	})
-	//opts.tsData.q = termjson['agedx'].bins.less
+	//opts.tsData.q = getTermCopy('agedx').bins.less
 
 	await opts.pill.main(opts.tsData)
 	await opts.pillMenuClick('Edit')
@@ -557,7 +564,7 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 		'Should have rendered UI for Continuous menu'
 	)
 
-	//opts.tsData.q = termjson['agedx'].bins.less
+	//opts.tsData.q = getTermCopy('agedx').bins.less
 	//await opts.pill.main(opts.tsData)
 	test.equal(toggleButtons[1].innerText, 'Discrete', 'Should have title for 2nd tab as Discrete')
 	toggleButtons[1].click()
@@ -603,7 +610,7 @@ tape('Numerical term: toggle menu - 2 options', async test => {
 	const opts = await getOpts({
 		numericEditMenuVersion: ['continuous', 'discrete'],
 		tsData: {
-			term: termjson['agedx']
+			term: getTermCopy('agedx')
 		}
 	})
 
@@ -624,7 +631,7 @@ tape('Numerical term: toggle menu - 1 option', async test => {
 	const opts = await getOpts({
 		numericEditMenuVersion: ['continuous'],
 		tsData: {
-			term: termjson['agedx']
+			term: getTermCopy('agedx')
 		}
 	})
 
@@ -646,7 +653,7 @@ tape('Numerical term: integer custom bins', async test => {
 
 	const opts = await getOpts({
 		tsData: {
-			term: termjson['agedx'],
+			term: getTermCopy('agedx'),
 			q: {
 				type: 'custom-bin',
 				lst: [

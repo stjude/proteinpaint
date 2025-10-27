@@ -10,8 +10,9 @@ import * as d3s from 'd3-selection'
 **************************/
 
 async function getNumericDensity(opts: any = {}) {
+	const term = JSON.parse(JSON.stringify(termjson.agedx))
 	const rawTw = {
-		term: termjson.agedx,
+		term,
 		q: {
 			mode: 'continuous'
 		}
