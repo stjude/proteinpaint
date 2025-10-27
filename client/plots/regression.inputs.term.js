@@ -111,7 +111,6 @@ export class InputTerm {
 			// do not allow condition term
 			arg.numericEditMenuVersion = ['continuous', 'discrete', 'spline']
 			// for geneVariant term, only allow groupsetting
-			arg.defaultQ4fillTW['geneVariant'] = { type: 'custom-groupset' }
 			arg.geneVariantEditMenuOnlyGrp = true
 			return
 		}
