@@ -11,7 +11,7 @@ import * as d3s from 'd3-selection'
 **************************/
 
 async function getNumericHandler(opts: any = {}) {
-	const term = structuredClone(termjson.agedx)
+	const term = JSON.parse(JSON.stringify(termjson.agedx))
 	if (term.bins.default.type == 'regular-bin') term.bins.default.bin_size = 500
 
 	const rawTw = {

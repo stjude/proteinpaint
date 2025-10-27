@@ -11,8 +11,9 @@ import * as d3s from 'd3-selection'
 **************************/
 
 async function getNumericHandler(opts: any = {}) {
+	const term = JSON.parse(JSON.stringify(termjson.agedx))
 	const rawTw = {
-		term: termjson.agedx,
+		term,
 		q: {
 			mode: 'spline',
 			//[{value: 0.04}, {value: 3.13}, {value: 8.16}, {value: 17.87}]

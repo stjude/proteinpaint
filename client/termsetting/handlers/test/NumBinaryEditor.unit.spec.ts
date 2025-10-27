@@ -15,8 +15,9 @@ const pct50 = 6.3475409836
 const pct70 = 1000.36986301355
 
 async function getNumericHandler(opts: any = {}) {
+	const term = JSON.parse(JSON.stringify(termjson.agedx))
 	const rawTw = {
-		term: termjson.agedx,
+		term,
 		q: {
 			mode: 'binary'
 		}

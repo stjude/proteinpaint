@@ -73,7 +73,7 @@ tape('basic bedj & bw test, could be expanded', test => {
 			test.equal(t.name, 'bad bw', 'tk named bad bw exists')
 			const b = t.img.node().getBBox()
 			test.ok(b.width == 0 && b.height == 0, 'bad bw <image> width=height=0')
-			test.equal(t.gerror.text(), 'Cannot read bigWig file', 'gerror text="Cannot read bigWig file"')
+			test.equal(t.gerror?.text(), 'Cannot read bigWig file', 'gerror text="Cannot read bigWig file"')
 			test.equal(t.leftaxis.selectAll('text').nodes().length, 0, 'left axis is blank, no tick labels')
 		}
 		if (test['_ok']) holder.remove()
