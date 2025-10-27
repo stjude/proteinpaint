@@ -13,7 +13,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
 	dom: GRIN2Dom
 	private runButton!: any
-	private dtUsage: Record<number, { checked: boolean; label: string }> = {}
+	// private dtUsage: Record<number, { checked: boolean; label: string }> = {}
 
 	// Colors
 	readonly borderColor = '#eee'
@@ -92,6 +92,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 	}
 
 	private addSnvindelRow = (table: any) => {
+		console.log('this', this)
+		console.log('this.state', this.state)
 		const [left, right] = table.addRow()
 
 		// Options table
@@ -143,15 +145,32 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 
 		// ----- Left-side SNV/INDEL checkbox -----
-		const isChecked = this.dtUsage[dtsnvindel].checked
+		const isChecked = this.state.config.settings.grin2.dtUsage[dtsnvindel].checked
 		t2.table.style('display', isChecked ? '' : 'none')
 
 		make_one_checkbox({
 			holder: left,
 			labeltext: 'SNV/INDEL (Mutation)',
 			checked: isChecked,
-			callback: (checked: boolean) => {
-				this.dtUsage[dtsnvindel].checked = checked
+			callback: async (checked: boolean) => {
+				await this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config: {
+						settings: {
+							grin2: {
+								dtUsage: {
+									...this.state.config.settings.grin2.dtUsage,
+									[dtsnvindel]: {
+										...this.state.config.settings.grin2.dtUsage[dtsnvindel],
+										checked: checked
+									}
+								}
+							}
+						}
+					}
+				})
+
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonState()
 			}
@@ -216,7 +235,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// )
 
 		// ----- Left-side CNV checkbox -----
-		const isChecked = this.dtUsage[dtcnv].checked
+		const isChecked = this.state.config.settings.grin2.dtUsage[dtcnv].checked
 		t2.table.style('display', isChecked ? '' : 'none')
 
 		make_one_checkbox({
@@ -224,7 +243,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			labeltext: 'CNV (Copy Number Variation)',
 			checked: isChecked,
 			callback: (checked: boolean) => {
-				this.dtUsage[dtcnv].checked = checked
+				this.state.config.settings.grin2.dtUsage[dtcnv].checked = checked
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonState()
 			}
@@ -258,7 +277,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// 	500 // step
 		// )
 
-		const isChecked = this.dtUsage[dtfusionrna].checked
+		const isChecked = this.state.config.settings.grin2.dtUsage[dtfusionrna].checked
 		t2.table.style('display', isChecked ? '' : 'none')
 
 		make_one_checkbox({
@@ -266,7 +285,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			labeltext: 'Fusion (RNA Fusion Events)',
 			checked: isChecked,
 			callback: (checked: boolean) => {
-				this.dtUsage[dtfusionrna].checked = checked
+				this.state.config.settings.grin2.dtUsage[dtfusionrna].checked = checked
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonState()
 			}
@@ -300,7 +319,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// 	500 // step
 		// )
 
-		const isChecked = this.dtUsage[dtsv].checked
+		const isChecked = this.state.config.settings.grin2.dtUsage[dtsv].checked
 		t2.table.style('display', isChecked ? '' : 'none')
 
 		make_one_checkbox({
@@ -308,7 +327,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			labeltext: 'SV (Structural Variants)',
 			checked: isChecked,
 			callback: (checked: boolean) => {
-				this.dtUsage[dtsv].checked = checked
+				this.state.config.settings.grin2.dtUsage[dtsv].checked = checked
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonState()
 			}
@@ -317,16 +336,16 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	// Enable the Run button only if at least one data type is checked
 	private updateRunButtonState() {
-		const anyChecked = Object.values(this.dtUsage).some(info => info.checked)
+		const dtUsage = this.state.config.settings.grin2.dtUsage as Record<number, { checked: boolean; label: string }>
+		const anyChecked = Object.values(dtUsage).some(info => info.checked)
 		this.runButton.property('disabled', !anyChecked)
 	}
 
 	private createConfigTable() {
 		const table = table2col({ holder: this.dom.controls, disableScroll: true })
 		const queries = this.app.vocabApi.termdbConfig.queries
-		this.dtUsage = {}
 		if (queries.snvindel) {
-			this.dtUsage[dtsnvindel] = {
+			this.state.config.settings.grin2.dtUsage[dtsnvindel] = {
 				checked: true,
 				label: 'SNV/INDEL (Mutation)'
 			}
@@ -334,21 +353,21 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 
 		if (queries.cnv) {
-			this.dtUsage[dtcnv] = {
+			this.state.config.settings.grin2.dtUsage[dtcnv] = {
 				checked: true,
-				label: 'CNV (Copy Number Vation)'
+				label: 'CNV (Copy Number Variation)'
 			}
 			this.addCnvRow(table)
 		}
 		if (queries.svfusion?.dtLst?.includes(dtfusionrna)) {
-			this.dtUsage[dtfusionrna] = {
+			this.state.config.settings.grin2.dtUsage[dtfusionrna] = {
 				checked: false,
 				label: 'Fusion (RNA Fusion Events)'
 			}
 			this.addFusionRow(table)
 		}
 		if (queries.svfusion?.dtLst?.includes(dtsv)) {
-			this.dtUsage[dtsv] = {
+			this.state.config.settings.grin2.dtUsage[dtsv] = {
 				checked: false,
 				label: 'SV (Structural Variants)'
 			}
@@ -492,7 +511,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 	private getConfigValues(): any {
 		const requestConfig: any = {}
 
-		if (this.dtUsage[dtsnvindel]?.checked) {
+		if (this.state.config.settings.grin2.dtUsage[dtsnvindel]?.checked) {
 			requestConfig.snvindelOptions = {
 				minTotalDepth: parseFloat(this.dom.snvindel_minTotalDepth.property('value')),
 				minAltAlleleCount: parseFloat(this.dom.snvindel_minAltAlleleCount.property('value')),
@@ -502,7 +521,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			}
 		}
 
-		if (this.dtUsage[dtcnv]?.checked) {
+		if (this.state.config.settings.grin2.dtUsage[dtcnv]?.checked) {
 			requestConfig.cnvOptions = {
 				lossThreshold: parseFloat(this.dom.cnv_lossThreshold.property('value')),
 				gainThreshold: parseFloat(this.dom.cnv_gainThreshold.property('value')),
@@ -512,14 +531,14 @@ class GRIN2 extends PlotBase implements RxComponent {
 			}
 		}
 
-		if (this.dtUsage[dtfusionrna]?.checked) {
+		if (this.state.config.settings.grin2.dtUsage[dtfusionrna]?.checked) {
 			requestConfig.fusionOptions = {
 				// fivePrimeFlankSize: parseFloat(this.dom.fusion_five_prime_flank_size.property('value')),
 				// threePrimeFlankSize: parseFloat(this.dom.fusion_three_prime_flank_size.property('value'))
 			}
 		}
 
-		if (this.dtUsage[dtsv]?.checked) {
+		if (this.state.config.settings.grin2.dtUsage[dtsv]?.checked) {
 			requestConfig.svOptions = {
 				// fivePrimeFlankSize: parseFloat(this.dom.sv_five_prime_flank_size.property('value')),
 				// threePrimeFlankSize: parseFloat(this.dom.sv_three_prime_flank_size.property('value'))
@@ -578,14 +597,14 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 	}
 
-	async init() {
-		this.createConfigTable()
-	}
+	async init() {}
 
 	async main() {
 		// Initialize the table with the different data types and options
 		const config = structuredClone(this.state.config)
 		if (config.childType != this.type && config.chartType != this.type) return
+
+		this.createConfigTable()
 	}
 
 	private renderResults(result: any) {
@@ -839,6 +858,7 @@ export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 	const defaultSettings = getDefaultSettings(opts)
 	const settings: any = {
 		controls: {},
+		dtUsage: {},
 		manhattan: {
 			...defaultSettings.manhattan,
 			...opts?.manhattan
@@ -847,6 +867,7 @@ export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 
 	// Dynamically add data type options based on availability
 	if (queries?.snvindel) {
+		settings.dtUsage[dtsnvindel] = { checked: true, label: 'SNV/INDEL (Mutation)' }
 		settings.snvindelOptions = {
 			minTotalDepth: 10,
 			minAltAlleleCount: 2,
@@ -856,6 +877,7 @@ export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 	}
 
 	if (queries?.cnv) {
+		settings.dtUsage[dtcnv] = { checked: true, label: 'CNV (Copy Number Variation)' }
 		settings.cnvOptions = {
 			lossThreshold: -0.4,
 			gainThreshold: 0.3,
@@ -865,8 +887,17 @@ export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 	}
 
 	if (queries?.svfusion) {
-		settings.fusionOptions = {
-			// Add fusion-specific defaults when needed
+		if (queries.svfusion.dtLst.includes(dtfusionrna)) {
+			settings.dtUsage[dtfusionrna] = { checked: false, label: 'Fusion (RNA Fusion Events)' }
+			settings.fusionOptions = {
+				// Add fusion-specific defaults when needed
+			}
+		}
+		if (queries.svfusion.dtLst.includes(dtsv)) {
+			settings.dtUsage[dtsv] = { checked: false, label: 'SV (Structural Variants)' }
+			settings.svOptions = {
+				// Add SV-specific defaults when needed
+			}
 		}
 	}
 
