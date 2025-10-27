@@ -103,10 +103,10 @@ function getParameter(tk, block) {
 	}
 	*/
 
-	if (tk.mds.has_skewer) {
-		// need to load skewer data
-		par.skewer = 1
-	}
+	//if (tk.mds.has_skewer) {} // need to load skewer data
+	// always set skewer=1 and do not depend on has_skewer to allow a ds with cnv-only to show tk
+	par.skewer = 1
+
 	if (tk.set_id) {
 		// quick fix!!!
 		par.set_id = tk.set_id
