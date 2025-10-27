@@ -8458,5 +8458,221 @@
       "prev": 0,
       "diff": 8.2375
     }
+  },
+  "plots/regression.inputs.term.js": {
+    "lines": {
+      "total": 315,
+      "covered": 217,
+      "skipped": 0,
+      "pct": 68.88
+    },
+    "functions": {
+      "total": 47,
+      "covered": 29,
+      "skipped": 0,
+      "pct": 61.7
+    },
+    "statements": {
+      "total": 355,
+      "covered": 226,
+      "skipped": 0,
+      "pct": 63.66
+    },
+    "branches": {
+      "total": 321,
+      "covered": 191,
+      "skipped": 0,
+      "pct": 59.5
+    },
+    "lowestPct": {
+      "curr": 59.5,
+      "prev": 0,
+      "diff": 59.5
+    },
+    "averagePct": {
+      "curr": 63.434999999999995,
+      "prev": 0,
+      "diff": 63.434999999999995
+    }
+  },
+  "plots/regression.js": {
+    "lines": {
+      "total": 85,
+      "covered": 61,
+      "skipped": 0,
+      "pct": 71.76
+    },
+    "functions": {
+      "total": 16,
+      "covered": 11,
+      "skipped": 0,
+      "pct": 68.75
+    },
+    "statements": {
+      "total": 93,
+      "covered": 62,
+      "skipped": 0,
+      "pct": 66.66
+    },
+    "branches": {
+      "total": 57,
+      "covered": 32,
+      "skipped": 0,
+      "pct": 56.14
+    },
+    "lowestPct": {
+      "curr": 56.14,
+      "prev": 0,
+      "diff": 56.14
+    },
+    "averagePct": {
+      "curr": 65.8275,
+      "prev": 0,
+      "diff": 65.8275
+    }
+  },
+  "plots/test/regression.integration.spec.js": {
+    "lines": {
+      "total": 419,
+      "covered": 411,
+      "skipped": 0,
+      "pct": 98.09
+    },
+    "functions": {
+      "total": 54,
+      "covered": 54,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 436,
+      "covered": 427,
+      "skipped": 0,
+      "pct": 97.93
+    },
+    "branches": {
+      "total": 69,
+      "covered": 52,
+      "skipped": 0,
+      "pct": 75.36
+    },
+    "lowestPct": {
+      "curr": 75.36,
+      "prev": 0,
+      "diff": 75.36
+    },
+    "averagePct": {
+      "curr": 92.845,
+      "prev": 0,
+      "diff": 92.845
+    }
+  },
+  "plots/regression.inputs.js": {
+    "lines": {
+      "total": 175,
+      "covered": 108,
+      "skipped": 0,
+      "pct": 61.71
+    },
+    "functions": {
+      "total": 30,
+      "covered": 21,
+      "skipped": 0,
+      "pct": 70
+    },
+    "statements": {
+      "total": 191,
+      "covered": 113,
+      "skipped": 0,
+      "pct": 59.16
+    },
+    "branches": {
+      "total": 114,
+      "covered": 49,
+      "skipped": 0,
+      "pct": 42.98
+    },
+    "lowestPct": {
+      "curr": 42.98,
+      "prev": 0,
+      "diff": 42.98
+    },
+    "averagePct": {
+      "curr": 58.4625,
+      "prev": 0,
+      "diff": 58.4625
+    }
+  },
+  "plots/regression.inputs.values.table.js": {
+    "lines": {
+      "total": 113,
+      "covered": 94,
+      "skipped": 0,
+      "pct": 83.18
+    },
+    "functions": {
+      "total": 21,
+      "covered": 18,
+      "skipped": 0,
+      "pct": 85.71
+    },
+    "statements": {
+      "total": 115,
+      "covered": 95,
+      "skipped": 0,
+      "pct": 82.6
+    },
+    "branches": {
+      "total": 64,
+      "covered": 44,
+      "skipped": 0,
+      "pct": 68.75
+    },
+    "lowestPct": {
+      "curr": 68.75,
+      "prev": 0,
+      "diff": 68.75
+    },
+    "averagePct": {
+      "curr": 80.06,
+      "prev": 0,
+      "diff": 80.06
+    }
+  },
+  "plots/regression.results.js": {
+    "lines": {
+      "total": 855,
+      "covered": 374,
+      "skipped": 0,
+      "pct": 43.74
+    },
+    "functions": {
+      "total": 84,
+      "covered": 35,
+      "skipped": 0,
+      "pct": 41.66
+    },
+    "statements": {
+      "total": 911,
+      "covered": 394,
+      "skipped": 0,
+      "pct": 43.24
+    },
+    "branches": {
+      "total": 501,
+      "covered": 147,
+      "skipped": 0,
+      "pct": 29.34
+    },
+    "lowestPct": {
+      "curr": 29.34,
+      "prev": 0,
+      "diff": 29.34
+    },
+    "averagePct": {
+      "curr": 39.495000000000005,
+      "prev": 0,
+      "diff": 39.495000000000005
+    }
   }
 }
