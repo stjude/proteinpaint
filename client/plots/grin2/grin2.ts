@@ -630,17 +630,16 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.text('Lollipop')
 				.property('disabled', true)
 				.on('click', () => {
-					if (lastSelectedGene) {
+					if (lastTouchedGene) {
 						lollipopBtn.property('disabled', true)
-						this.createLollipopFromGene(lastSelectedGene)
+						this.createLollipopFromGene(lastTouchedGene)
 						// Re-enable after dispatch completes
 						setTimeout(() => lollipopBtn.property('disabled', false), 500)
 					}
 				})
-
 			const tableDiv = tableContainer.append('div')
 			const selectedGenes: string[] = []
-			let lastSelectedGene: string | null = null
+			let lastTouchedGene: string | null = null
 
 			renderTable({
 				columns: result.topGeneTable.columns,
@@ -652,23 +651,27 @@ class GRIN2 extends PlotBase implements RxComponent {
 				noButtonCallback: (rowIndex, checkboxNode) => {
 					// Get the gene name from the first column of the selected row
 					const geneName = result.topGeneTable.rows[rowIndex][0]?.value
+
 					if (checkboxNode.checked) {
 						selectedGenes.push(geneName)
-						lastSelectedGene = geneName
-						lollipopBtn.text(`Lollipop (${lastSelectedGene})`)
-						lollipopBtn.property('disabled', false)
+						lastTouchedGene = geneName // When checking, use the gene just checked
 					} else {
 						// Remove gene from array
 						selectedGenes.splice(selectedGenes.indexOf(geneName), 1)
-						// If this was the last selected gene and it's being unchecked, update accordingly
-						if (lastSelectedGene === geneName) {
-							// Set to the last gene still in selectedGenes, or null if empty
-							lastSelectedGene = selectedGenes.length > 0 ? selectedGenes[selectedGenes.length - 1] : null
-							lollipopBtn.text(lastSelectedGene ? `Lollipop (${lastSelectedGene})` : 'Lollipop')
-							lollipopBtn.property('disabled', selectedGenes.length === 0)
-						}
+						// When unchecking, use the last gene still in the array
+						lastTouchedGene = selectedGenes.length > 0 ? selectedGenes[selectedGenes.length - 1] : null
 					}
-					// Update button text after selection changes
+
+					// Update lollipop button - only enable if at least one gene is selected
+					if (selectedGenes.length > 0) {
+						lollipopBtn.text(`Lollipop (${lastTouchedGene})`)
+						lollipopBtn.property('disabled', false)
+					} else {
+						lollipopBtn.text('Lollipop')
+						lollipopBtn.property('disabled', true)
+					}
+
+					// Update matrix button text after selection changes
 					matrixBtn.text(`Matrix (${selectedGenes.length} genes selected)`).property('disabled', !selectedGenes.length)
 				},
 				selectAll: false,
