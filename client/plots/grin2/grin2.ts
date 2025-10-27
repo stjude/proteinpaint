@@ -624,8 +624,21 @@ class GRIN2 extends PlotBase implements RxComponent {
 					this.createMatrixFromGenes(selectedGenes)
 				})
 
+			// Add the lollipop button
+			const lollipopBtn = headerDiv
+				.append('button')
+				.text('Lollipop')
+				.property('disabled', true)
+				.on('click', () => {
+					if (lastSelectedGene) {
+						lollipopBtn.property('disabled', true)
+						this.createLollipopFromGene(lastSelectedGene)
+					}
+				})
+
 			const tableDiv = tableContainer.append('div')
 			const selectedGenes: string[] = []
+			let lastSelectedGene: string | null = null
 
 			renderTable({
 				columns: result.topGeneTable.columns,
@@ -639,9 +652,19 @@ class GRIN2 extends PlotBase implements RxComponent {
 					const geneName = result.topGeneTable.rows[rowIndex][0]?.value
 					if (checkboxNode.checked) {
 						selectedGenes.push(geneName)
+						lastSelectedGene = geneName
+						lollipopBtn.text(`Lollipop (${lastSelectedGene})`)
+						lollipopBtn.property('disabled', false)
 					} else {
 						// Remove gene from array
 						selectedGenes.splice(selectedGenes.indexOf(geneName), 1)
+						// If this was the last selected gene and it's being unchecked, update accordingly
+						if (lastSelectedGene === geneName) {
+							// Set to the last gene still in selectedGenes, or null if empty
+							lastSelectedGene = selectedGenes.length > 0 ? selectedGenes[selectedGenes.length - 1] : null
+							lollipopBtn.text(lastSelectedGene ? `Lollipop (${lastSelectedGene})` : 'Lollipop')
+							lollipopBtn.property('disabled', selectedGenes.length === 0)
+						}
 					}
 					// Update button text after selection changes
 					matrixBtn.text(`Matrix (${selectedGenes.length} genes selected)`).property('disabled', !selectedGenes.length)
@@ -724,11 +747,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	private async createMatrixFromGenes(geneSymbols: string[]): Promise<void> {
 		try {
-			if (geneSymbols.length === 0) {
-				sayerror(this.dom.div, 'No genes selected. Please select genes from the table.')
-				return
-			}
-
 			// Create termwrappers for mutation data
 			const termwrappers = await Promise.all(
 				geneSymbols.map(async (gene: string) => {
@@ -765,6 +783,21 @@ class GRIN2 extends PlotBase implements RxComponent {
 			})
 		} catch (error) {
 			sayerror(this.dom.div, `Error creating matrix: ${error instanceof Error ? error.message : error}`)
+		}
+	}
+
+	private async createLollipopFromGene(geneSymbol: string): Promise<void> {
+		try {
+			// Create and dispatch lollipop plot
+			this.app.dispatch({
+				type: 'plot_create',
+				config: {
+					chartType: 'genomeBrowser',
+					geneSearchResult: { geneSymbol: geneSymbol }
+				}
+			})
+		} catch (error) {
+			sayerror(this.dom.div, `Error creating lollipop: ${error instanceof Error ? error.message : error}`)
 		}
 	}
 }
