@@ -633,8 +633,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 					if (lastTouchedGene) {
 						lollipopBtn.property('disabled', true)
 						this.createLollipopFromGene(lastTouchedGene)
-						// Re-enable after dispatch completes
-						setTimeout(() => lollipopBtn.property('disabled', false), 500)
 					}
 				})
 			const tableDiv = tableContainer.append('div')
