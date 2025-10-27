@@ -7,7 +7,7 @@ import { Menu, renderTable, table2col, make_one_checkbox, sayerror } from '#dom'
 import { dtsnvindel, mclass, dtcnv, dtfusionrna, dtsv, proteinChangingMutations } from '#shared/common.js'
 import { get$id } from '#termsetting'
 import { PlotBase } from '#plots/PlotBase.ts'
-import { plotManhattan } from '#plots/manhattan/manhattan.ts'
+import { plotManhattan, createLollipopFromGene } from '#plots/manhattan/manhattan.ts'
 
 class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
@@ -632,7 +632,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.on('click', () => {
 					if (lastTouchedGene) {
 						lollipopBtn.property('disabled', true)
-						this.createLollipopFromGene(lastTouchedGene)
+						createLollipopFromGene(lastTouchedGene, this.app)
 					}
 				})
 			const tableDiv = tableContainer.append('div')
@@ -786,21 +786,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 			})
 		} catch (error) {
 			sayerror(this.dom.div, `Error creating matrix: ${error instanceof Error ? error.message : error}`)
-		}
-	}
-
-	private async createLollipopFromGene(geneSymbol: string): Promise<void> {
-		try {
-			// Create and dispatch lollipop plot
-			this.app.dispatch({
-				type: 'plot_create',
-				config: {
-					chartType: 'genomeBrowser',
-					geneSearchResult: { geneSymbol }
-				}
-			})
-		} catch (error) {
-			sayerror(this.dom.div, `Error creating lollipop: ${error instanceof Error ? error.message : error}`)
 		}
 	}
 }
