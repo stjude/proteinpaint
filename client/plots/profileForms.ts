@@ -44,7 +44,6 @@ export class profileForms extends profilePlot {
 		const config = structuredClone(appState.plots.find(p => p.id === this.id))
 		this.twLst = await this.app.vocabApi.getMultivalueTWs({ parent_id: config.tw.term.id })
 		const settings = config.settings.profileForms
-
 		this.tabs = []
 		for (const plot of config.options) {
 			const tws = this.twLst.filter(tw => tw.term.subtype == plot.subtype)
@@ -127,21 +126,25 @@ export class profileForms extends profilePlot {
 	}
 
 	renderPlot() {
-		this.dom.headerDiv.style('display', 'none')
-		this.dom.mainG.selectAll('*').remove()
-		this.dom.gridG.selectAll('*').remove()
-		this.dom.xAxisG.selectAll('*').remove()
-		this.dom.legendG.selectAll('*').remove()
+		try {
+			this.dom.headerDiv.style('display', 'none')
+			this.dom.mainG.selectAll('*').remove()
+			this.dom.gridG.selectAll('*').remove()
+			this.dom.xAxisG.selectAll('*').remove()
+			this.dom.legendG.selectAll('*').remove()
 
-		switch (this.activePlot.name) {
-			case IMPRESSIONS_TAB:
-				this.renderImpressions()
-				break
-			case LIKERT_TAB:
-				this.renderLikert()
-				break
-			case YES_NO_TAB:
-				this.renderYesNo()
+			switch (this.activePlot.name) {
+				case IMPRESSIONS_TAB:
+					this.renderImpressions()
+					break
+				case LIKERT_TAB:
+					this.renderLikert()
+					break
+				case YES_NO_TAB:
+					this.renderYesNo()
+			}
+		} catch (e) {
+			console.error('Error rendering profile forms plot:', e)
 		}
 	}
 
@@ -195,7 +198,7 @@ export class profileForms extends profilePlot {
 		for (const tw of this.scoreTerms) {
 			const percents: { [key: string]: number } = this.getPercentageDict(tw)
 
-			const scTerm = activePlot.scTerms.find(t => t.term.id.includes(tw.term.id))
+			const scTerm = activePlot.scTerms.find(t => tw.term.id.includes(t.term.id))
 			const scPercents: { [key: string]: number } = this.getPercentageDict(scTerm)
 
 			const scPercentKeys = Object.keys(scPercents).sort((a, b) => a.localeCompare(b))

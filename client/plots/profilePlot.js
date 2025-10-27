@@ -25,6 +25,7 @@ All the profile plots have the same filters:
 The profileRadarFacility adds at the top of these filters the facility select as here we compare a single facility with the average scores of all the facilities aggregated
 */
 
+//order for income groups and hospital volumes
 const orderedIncomes = ['Low income', 'Lower middle income', 'Upper middle income', 'High income']
 const orderedVolumes = [
 	'Small (1-25 annual newly diagnoses)',
@@ -33,8 +34,10 @@ const orderedVolumes = [
 	'Very large (>120 annual newly diagnoses)'
 ]
 
+//Cohort types
 export const ABBREV_COHORT = 0
 export const FULL_COHORT = 1
+
 export class profilePlot extends PlotBase {
 	constructor(opts) {
 		super(opts)
@@ -46,6 +49,7 @@ export class profilePlot extends PlotBase {
 		this.components = { plots: {} }
 	}
 
+	//extracts the relevant state from the appState: config, termfilter, vocab, login info
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
@@ -71,8 +75,10 @@ export class profilePlot extends PlotBase {
 		if (!this.state.logged) return true
 		if (this.settings.isAggregate) return true //marked by the user
 		if (this.state.sites?.length > 1 || this.state.user == 'admin' || this.isRadarFacility) return true //multiple sites selected
+		return false
 	}
 
+	//initializes the plot elements
 	async init(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		const state = this.getState(appState)
@@ -153,12 +159,9 @@ export class profilePlot extends PlotBase {
 		}
 	}
 
+	//tooltip handler to hide the tooltip when mouse leaves the plot area
 	onMouseOut(event) {
 		this.tip.hide()
-	}
-
-	preApiFreeze(api) {
-		api.getChartImages = () => this.getChartImages()
 	}
 
 	async main() {
@@ -499,7 +502,7 @@ export class profilePlot extends PlotBase {
 			.append('text')
 			.attr('transform', `translate(0, ${this.filtersCount * 22})`)
 			.attr('text-anchor', 'left')
-		textElem.append('tspan').attr('font-size', 'bold').text(`${filter}: `)
+		textElem.append('tspan').attr('font-weight', 'bold').text(`${filter}: `)
 		textElem.append('tspan').text(text)
 	}
 
