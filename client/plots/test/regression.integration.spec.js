@@ -9,6 +9,7 @@ Tests:
 	Linear: continuous outcome = "agedx", discrete independent = "aaclassic_5"
 	Linear: continuous outcome = "agedx", cubic spline independent = "aaclassic_5"
 	Linear: continuous outcome = "agedx", independents = "sex" * "aaclassic_5"
+	Linear: continuous outcome = "agedx", geneVariant independent = "TP53"
 	Logistic: continuous outcome = "hrtavg", continuous independent = "agedx"
 	Logistic: categorical outcome = "diaggrp", continuous independent = "agedx"
     Cox: graded outcome = "Arrhythmias", continuous independent = "agedx"
@@ -408,6 +409,64 @@ tape('Linear: continuous outcome = "agedx", independents = "sex" * "aaclassic_5"
 		interaction.categories[0].lst
 		results = checkOnlyRowValues(values2check, getCoefData(interaction.categories[0].lst))
 		test.equal(results, true, `Should render all interaction data in ${tableLabel}`)
+
+		if (test._ok) regression.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Linear: continuous outcome = "agedx", geneVariant independent = "TP53"', test => {
+	test.timeoutAfter(5000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'linear',
+					outcome: {
+						id: 'agedx'
+					},
+					independent: [{ term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'predefined-groupset' } }]
+				}
+			]
+		},
+		regression: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(regression) {
+		const data = await getData(regression)
+		const regDom = regression.Inner.dom
+
+		//**** Results ****
+		let tableLabel, table, results
+
+		//Coefficients table
+		tableLabel = 'coefficients table'
+		table = regDom.results.selectAll('div[name^="Coefficients"] table tr').nodes()
+
+		const $id = tid2$id('TP53', regression)
+
+		for (const [i, tr] of table.entries()) {
+			//Test all bin values for independent term
+			if (i < 2 || i == table.length - 1) continue //Skip header, intercept, and bottom scale rows
+			if (i == 2) {
+				//Skip the beginning cell spanning the remaining rows
+				const checkValues = getCoefData(data.coefficients.terms[$id].categories[tr.childNodes[1].innerText])
+				results = checkOnlyRowValues(Array.from(tr.childNodes).slice(1), checkValues)
+				test.equal(results, true, `Should render all ${tr.childNodes[1].innerText} data in ${tableLabel}`)
+			} else {
+				const checkValues = getCoefData(data.coefficients.terms[$id].categories[tr.childNodes[0].innerText])
+				results = checkOnlyRowValues(Array.from(tr.childNodes), checkValues)
+				test.equal(results, true, `Should render all ${tr.childNodes[0].innerText} data in ${tableLabel}`)
+			}
+		}
+
+		//TODO: necessary to check all other values?
 
 		if (test._ok) regression.Inner.app.destroy()
 		test.end()
@@ -904,7 +963,10 @@ function getCoefData(in_data) {
 }
 
 function tid2$id(tid, regression) {
-	const t = regression.Inner.inputs.independent.inputLst.find(i => i.term.id == tid)
+	const t = regression.Inner.inputs.independent.inputLst.find(i => {
+		const id = i.term.id || i.term.term.id || i.term.term.name
+		return id == tid
+	})
 	if (t) return t.term.$id
 	throw 'unknown ' + tid
 }

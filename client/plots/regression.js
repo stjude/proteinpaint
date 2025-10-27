@@ -208,6 +208,9 @@ export function get_defaultQ4fillTW(regressionType, useCase = '') {
 		}
 	}
 
+	// geneVariant term
+	defaultQ['geneVariant'] = { type: 'predefined-groupset' }
+
 	return defaultQ
 }
 
