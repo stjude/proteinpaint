@@ -146,16 +146,8 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				geneTip.hide()
 			})
 			.on('click', (event, d) => {
-				if (app) {
-					// Open the genome browser with the current gene that is being clicked on
-					app.dispatch({
-						type: 'plot_create',
-						config: {
-							chartType: 'genomeBrowser',
-							geneSearchResult: { geneSymbol: d.gene }
-						}
-					})
-				}
+				// if app is avaialble, open the genome browser with the current gene that is being clicked on
+				if (app) createLollipopFromGene(d.gene, app)
 			})
 	}
 
@@ -260,4 +252,21 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				.text(item.type)
 		})
 	}
+}
+
+export function createLollipopFromGene(geneSymbol: string, app: any) {
+	const cfg: any = {
+		type: 'plot_create',
+		config: {
+			chartType: 'genomeBrowser',
+			snvindel: { shown: true }, // always set snvindel.shown=true so the mds3 tk is always shown; since grin2 works for this ds, it doesn't matter whether snvindel/cnv/svfusion any is present; all will be shown in mds3 tk
+			geneSearchResult: { geneSymbol }
+		}
+	}
+	if (app.vocabApi.termdbConfig.queries.trackLst?.activeTracks) {
+		cfg.config.trackLst = structuredClone(app.vocabApi.termdbConfig.queries.trackLst)
+		cfg.config.trackLst.activeTracks = [] // clear all active tracks as they are not related to grin2 analysis
+		// cannot do cfg.config.trackLst={activeTracks:[]}; breaks
+	}
+	app.dispatch(cfg)
 }
