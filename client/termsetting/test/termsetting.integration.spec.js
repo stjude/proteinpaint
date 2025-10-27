@@ -542,7 +542,7 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 
 	await opts.pill.main(opts.tsData)
 	await opts.pillMenuClick('Edit')
-	await sleep(100)
+	await sleep(200)
 	const tip = opts.pill.Inner.dom.tip
 	const toggleButtons = tip.d.node().querySelectorAll('.sj-toggle-button')
 
@@ -585,7 +585,7 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 	toggleButtons[3].click()
 
 	// TODO: !!! IMPROVE DETECTION TIMING !!!
-	await sleep(10)
+	await sleep(50)
 	const binary_lines = await detectGte({
 		elem: opts.pill.Inner.handler.dom.editDiv.node(),
 		selector: '.binsize_g line',
