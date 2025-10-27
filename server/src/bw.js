@@ -1,5 +1,5 @@
-import * as utils from './utils'
-import serverconfig from './serverconfig'
+import * as utils from './utils.js'
+import serverconfig from './serverconfig.js'
 import { spawn } from 'child_process'
 import { createCanvas } from 'canvas'
 import { run_rust } from '@sjcrh/proteinpaint-rust'

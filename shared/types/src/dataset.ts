@@ -1912,6 +1912,7 @@ type GeneFpkm = Fpkm & {
 	boxplotbysamplegroup?: BoxPlotBySampleGroup
 	ase?: ASE
 	outlier?: GeneFpkmOutlier
+	no_ase?: boolean
 }
 
 type CutoffValueLstEntry = {

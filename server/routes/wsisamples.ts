@@ -1,6 +1,5 @@
-import type { Mds3, RouteApi, WSImagesRequest } from '#types'
+import type { Mds3, RouteApi, WSImagesRequest, WSISample, WSISamplesResponse } from '#types'
 import { wsiSamplesPayload } from '#types/checkers'
-import type { WSISample, WSISamplesResponse } from '#types'
 
 const routePath = 'wsisamples'
 export const api: RouteApi = {

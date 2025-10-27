@@ -1,4 +1,4 @@
-import { getUncomputableClause, get_bins } from './termdb.sql'
+import { getUncomputableClause, get_bins } from './termdb.sql.js'
 import { annoNumericTypes } from '#shared/terms.js'
 
 export const continuous = {

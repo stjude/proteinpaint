@@ -1,7 +1,7 @@
 import type { Genome } from '#types'
 import { CancerGeneCensusLst } from './cgc.js'
 
-export default <Genome>{
+export default {
 	species: 'human',
 	genomefile: 'genomes/hg38.gz',
 	genedb: {
@@ -489,4 +489,4 @@ chrM	16569`,
 	chrUn_KI270423v1	981
 	chrUn_KI270392v1	971
 	chrUn_KI270394v1	970`
-}
+} satisfies Genome

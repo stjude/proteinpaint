@@ -1,3 +1,3 @@
 export class TileServerShard {
-	constructor(public readonly url: string) {}
+	constructor(_: string) {}
 }

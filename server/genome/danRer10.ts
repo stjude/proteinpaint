@@ -1,6 +1,6 @@
 import type { Genome } from '#types'
 
-export default <Genome>{
+export default {
 	species: 'zebrafish',
 	genomefile: 'genomes/danRer10.gz',
 	genedb: {
@@ -1107,4 +1107,4 @@ chrUn_KN150657v1	1007
 chrUn_KN150461v1	1000
 chrUn_KN150247v1	728
 chrUn_KN150525v1	650`
-}
+} satisfies Genome

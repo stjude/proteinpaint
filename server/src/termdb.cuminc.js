@@ -1,4 +1,4 @@
-import { getData } from './termdb.matrix'
+import { getData } from './termdb.matrix.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 
 /*********** EXPORT

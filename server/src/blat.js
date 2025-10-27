@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
-import { get_lines_bigfile, read_file, write_tmpfile } from './utils'
-import serverconfig from './serverconfig'
+import { get_lines_bigfile, read_file, write_tmpfile } from './utils.js'
+import serverconfig from './serverconfig.js'
 import { spawn } from 'child_process'
 
 export function request_closure(genomes) {

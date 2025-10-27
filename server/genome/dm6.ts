@@ -1,6 +1,6 @@
 import type { Genome } from '#types'
 
-export default <Genome>{
+export default {
 	species: 'fruit fly',
 	genomefile: 'genomes/dm6.gz',
 	genedb: {
@@ -1927,4 +1927,4 @@ chrUn_DS486008v1	1001
 chrY_DS486003v1_random	1001
 chrUn_DS485695v2	564
 chrUn_DS485566v2	544`
-}
+} satisfies Genome

@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
-import serverconfig from './serverconfig'
-import { validate_termdb } from './mds3.init'
+import serverconfig from './serverconfig.js'
+import { validate_termdb } from './mds3.init.js'
 
 export function server_updateAttr(ds, sds) {
 	/*

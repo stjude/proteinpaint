@@ -1,6 +1,6 @@
 import type { RouteApi } from '#types'
 import { aiProjectAdminPayload } from '#types/checkers'
-import { getDbConnection } from '#src/aiHistoDBConnection.js'
+import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import { runMultiStmtSQL, runSQL } from '#src/runSQLHelpers.ts'
 import type Database from 'better-sqlite3'
 

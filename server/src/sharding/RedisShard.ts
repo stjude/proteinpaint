@@ -1,3 +1,3 @@
 export class RedisShard {
-	constructor(public readonly url: string) {}
+	constructor(_: string) {}
 }

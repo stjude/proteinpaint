@@ -1,8 +1,8 @@
 import fs from 'fs'
 import path from 'path'
-import * as utils from './utils'
-import serverconfig from './serverconfig'
-import { authApi } from './auth'
+import * as utils from './utils.js'
+import serverconfig from './serverconfig.js'
+import { authApi } from './auth.js'
 
 const cachedir_massSession = serverconfig.cachedir_massSession || path.join(serverconfig.cachedir, 'massSession')
 if (!fs.existsSync(cachedir_massSession)) fs.mkdirSync(cachedir_massSession)

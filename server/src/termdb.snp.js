@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import * as utils from './utils'
+import * as utils from './utils.js'
 import * as termdbsql from './termdb.sql.js'
 import readline from 'readline'
 import serverconfig from './serverconfig.js'

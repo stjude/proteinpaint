@@ -1,6 +1,6 @@
 import type { Genome } from '#types'
 
-export default <Genome>{
+export default {
 	species: 'Chinese hamster ovary cells',
 	genomefile: 'genomes/CriGri.fa.gz',
 	genedb: {
@@ -1857,4 +1857,4 @@ RAZU01001097.1	4614
 RAZU01000036.1	2936
 RAZU01000037.1	568
 `
-}
+} satisfies Genome

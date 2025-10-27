@@ -24,7 +24,7 @@
     "bundle": "cd client; npm run dev",
     "dev": "cd shared/types && npm run generate && cd ../utils && npm run build && cd ../../client && ./dev.sh ",
     "build": "npm run build --workspace=server",
-    "prestart": "tsx server/emitImports.js dev > ./server.ts",
+    "#prestart": "tsx server/emitImports.js dev > ./server.ts",
     "start": "tsx watch ./server.ts",
     "dev1": "trap 'kill %1' INT; npm run bundle & npm start",
     "server": "trap 'kill %1' INT; npm run dev -w @sjcrh/proteinpaint-server & npm start",

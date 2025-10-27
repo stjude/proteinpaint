@@ -1,4 +1,4 @@
-import { get_samples } from './termdb.sql'
+import { get_samples } from './termdb.sql.js'
 
 /*
 input:

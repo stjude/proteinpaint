@@ -1,6 +1,6 @@
 import path from 'path'
 import * as utils from './utils.js'
-import serverconfig from './serverconfig'
+import serverconfig from './serverconfig.js'
 import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
 import { run_R } from '@sjcrh/proteinpaint-r'

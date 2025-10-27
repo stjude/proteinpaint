@@ -20,9 +20,9 @@ export type GdcMafFile = {
 	project_id: string
 }
 
-enum ExperimentalStrategy {
-	targeted = 'Targeted Sequencing',
-	wxs = 'WXS'
+export type ExperimentalStrategy = {
+	targeted: 'Targeted Sequencing'
+	wxs: 'WXS'
 }
 
 export type GdcMafRequest = {

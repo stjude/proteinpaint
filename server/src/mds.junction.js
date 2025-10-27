@@ -1,6 +1,6 @@
 import path from 'path'
-import * as utils from './utils'
-import serverconfig from './serverconfig'
+import * as utils from './utils.js'
+import serverconfig from './serverconfig.js'
 
 /*
 get all junctions in view range, make stats for:

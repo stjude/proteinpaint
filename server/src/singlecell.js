@@ -3,7 +3,7 @@ import readline from 'readline'
 import * as d3scale from 'd3-scale'
 import * as d3color from 'd3-color'
 import * as d3interpolate from 'd3-interpolate'
-import * as utils from './utils'
+import * as utils from './utils.js'
 import { schemeCategory10 } from 'd3-scale-chromatic'
 
 const schemeCategory20 = [

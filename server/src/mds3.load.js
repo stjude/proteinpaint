@@ -1,9 +1,9 @@
-import { mayCopyFromCookie, fileurl, validateRglst } from './utils'
-import { snvindelByRangeGetter_bcf } from './mds3.init'
+import { mayCopyFromCookie, fileurl, validateRglst } from './utils.js'
+import { snvindelByRangeGetter_bcf } from './mds3.init.js'
 import { validate_variant2samples } from './mds3.variant2samples.js'
 import { dtcnv, mclasscnvgain, mclasscnvAmp, mclasscnvloss, mclasscnvHomozygousDel } from '#shared/common.js'
 import { summarize_mclass } from '#shared/mds3tk.js'
-import { plotWiggle } from './bw'
+import { plotWiggle } from './bw.js'
 
 /*
 method good for somatic variants, in skewer and gp queries:

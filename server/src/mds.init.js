@@ -6,7 +6,7 @@ import serverconfig from './serverconfig.js'
 import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
 import { parse_textfilewithheader } from './parse_textfilewithheader.js'
-import { server_updateAttr } from './dsUpdateAttr'
+import { server_updateAttr } from './dsUpdateAttr.js'
 
 const tabix = serverconfig.tabix
 // const samtools = serverconfig.samtools

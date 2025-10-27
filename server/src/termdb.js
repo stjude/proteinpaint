@@ -17,7 +17,7 @@ import { get_samples_ancestry, get_samples } from './termdb.sql.js'
 import { TermTypeGroups } from '#shared/terms.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import serverconfig from './serverconfig.js'
-import { filterTerms } from './termdb.server.init.js'
+import { filterTerms } from './termdb.server.init.ts'
 /*
 ********************** EXPORTED
 handle_request_closure

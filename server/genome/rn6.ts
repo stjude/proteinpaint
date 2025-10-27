@@ -1,6 +1,6 @@
 import type { Genome } from '#types'
 
-export default <Genome>{
+export default {
 	species: 'rat',
 	genomefile: 'genomes/rn6.gz',
 	genedb: {
@@ -1001,4 +1001,4 @@ chrUn_AABR07022456v1	351
 chrUn_AABR07022885v1	265
 chrUn_AABR07022944v1	238
 chrUn_AABR07024268v1	230`
-}
+} satisfies Genome

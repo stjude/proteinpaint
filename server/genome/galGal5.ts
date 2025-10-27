@@ -1,6 +1,6 @@
 import type { Genome } from '#types'
 
-export default <Genome>{
+export default {
 	species: 'chicken',
 	genomefile: 'genomes/galGal5.gz',
 	genedb: {
@@ -23521,4 +23521,4 @@ chrUn_NT_479335v1	203
 chr6_NT_461072v1_random	202
 chr20_NT_462944v1_random	200
 chrUn_NT_479312v1	200`
-}
+} satisfies Genome

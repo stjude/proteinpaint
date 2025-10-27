@@ -1,6 +1,6 @@
 import type { RouteApi } from '#types'
 import { ProfileFormScoresPayload } from '#types/checkers'
-import { getScoresData } from './termdb.profileScores.js'
+import { getScoresData } from './termdb.profileScores.ts'
 
 /*
 Given a set of multivalue score terms, a filter, login site info, etc.,

@@ -1,11 +1,11 @@
 import fs from 'fs'
 import path from 'path'
-import * as utils from './utils'
-import serverconfig from './serverconfig'
+import * as utils from './utils.js'
+import serverconfig from './serverconfig.js'
 import { spawn } from 'child_process'
 import { Readable } from 'stream'
 import readline from 'readline'
-import * as bamcommon from './bam.common'
+import * as bamcommon from './bam.common.js'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 
 const features = serverconfig.features

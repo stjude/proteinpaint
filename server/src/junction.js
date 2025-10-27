@@ -1,7 +1,7 @@
 import fs from 'fs'
-import * as utils from './utils'
+import * as utils from './utils.js'
 import readline from 'readline'
-import serverconfig from './serverconfig'
+import serverconfig from './serverconfig.js'
 
 export default function (genomes) {
 	return async (req, res) => {

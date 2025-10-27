@@ -1,6 +1,6 @@
 import { dofetch, dofetch3, sayerror, tab_wait, appear } from '#src/client'
 import { newSandboxDiv } from '../dom/sandbox.ts'
-import * as utils from './utils'
+import * as utils from './utils.js'
 import { addGeneSearchbox } from '../dom/genesearch.ts'
 import { Menu } from '#dom/menu'
 import { Tabs } from '../dom/toggleButtons'

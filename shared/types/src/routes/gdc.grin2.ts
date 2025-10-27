@@ -20,8 +20,8 @@ export type GdcGRIN2File = {
 	file_format?: 'MAF'
 }
 
-enum ExperimentalStrategy {
-	wxs = 'WXS'
+type ExperimentalStrategy = {
+	wxs: 'WXS'
 }
 
 /**

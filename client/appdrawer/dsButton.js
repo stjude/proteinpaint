@@ -1,5 +1,5 @@
 import { getInitFxn } from '#rx'
-import * as utils from './utils'
+import * as utils from './utils.js'
 import { openSandbox } from './adSandbox'
 import { slideDrawer } from './mainBtn'
 

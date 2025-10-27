@@ -1,6 +1,6 @@
 import type { Genome } from '#types'
 
-export default <Genome>{
+export default {
 	species: 'mouse',
 	genomefile: 'genomes/mm9.gz',
 	genedb: {
@@ -117,4 +117,4 @@ chrUn_random	5900358
 chrX_random	1785075
 chrY_random	58682461
 `
-}
+} satisfies Genome

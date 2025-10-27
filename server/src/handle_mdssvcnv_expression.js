@@ -1,6 +1,6 @@
-import { tabixnoterror, cache_index } from './utils'
+import { tabixnoterror, cache_index } from './utils.js'
 import { spawn } from 'child_process'
-import serverconfig from './serverconfig'
+import serverconfig from './serverconfig.js'
 import path from 'path'
 import readline from 'readline'
 

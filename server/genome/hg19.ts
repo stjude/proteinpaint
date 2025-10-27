@@ -1,6 +1,6 @@
 import type { Genome } from '#types'
 
-export default <Genome>{
+export default {
 	species: 'human',
 	genomefile: 'genomes/hg19.gz',
 	genedb: {
@@ -301,4 +301,4 @@ chrUn_gl000231	27386
 chrUn_gl000229	19913
 chrUn_gl000226	15008
 chr18_gl000207_random	4262`
-}
+} satisfies Genome

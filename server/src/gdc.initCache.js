@@ -2,7 +2,7 @@ import ky from 'ky'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import serverconfig from './serverconfig.js'
 import { gdcBuildDictionary } from './gdc.buildDictionary.js'
-import { cachedFetch, isRecoverableError } from './utils'
+import { cachedFetch, isRecoverableError } from './utils.js'
 import { deepEqual } from '#shared/helpers.js'
 import { joinUrl } from '#shared/joinUrl.js'
 

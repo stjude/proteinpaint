@@ -1,4 +1,4 @@
-import { getUncomputableClause } from './termdb.sql'
+import { getUncomputableClause } from './termdb.sql.js'
 
 export const values = {
 	getCTE(tablename, term, ds, q, values) {

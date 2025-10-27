@@ -1,9 +1,9 @@
 import path from 'path'
 import { string2pos } from '#shared/common.js'
-import { get_samples, get_term_cte, interpolateSqlValues, get_active_groupset } from './termdb.sql'
-import { getFilterCTEs } from './termdb.filter'
-import serverconfig from './serverconfig'
-import { read_file } from './utils'
+import { get_samples, get_term_cte, interpolateSqlValues, get_active_groupset } from './termdb.sql.js'
+import { getFilterCTEs } from './termdb.filter.js'
+import serverconfig from './serverconfig.js'
+import { read_file } from './utils.js'
 import {
 	TermTypes,
 	isDictionaryType,

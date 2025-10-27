@@ -1,6 +1,6 @@
 import type { MinGenome } from '#types'
 
-export default <MinGenome>{
+export default {
 	species: 'human',
 	genomefile: 'genomes/hgvirus.gz',
 	genedb: {
@@ -42,4 +42,4 @@ export default <MinGenome>{
     chrM_paternal	16571
     chrX_paternal	155275199
     chrY_paternal	59373566`
-}
+} satisfies MinGenome
