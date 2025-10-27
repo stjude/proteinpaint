@@ -633,6 +633,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 					if (lastSelectedGene) {
 						lollipopBtn.property('disabled', true)
 						this.createLollipopFromGene(lastSelectedGene)
+						// Re-enable after dispatch completes
+						setTimeout(() => lollipopBtn.property('disabled', false), 500)
 					}
 				})
 
@@ -793,7 +795,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				type: 'plot_create',
 				config: {
 					chartType: 'genomeBrowser',
-					geneSearchResult: { geneSymbol: geneSymbol }
+					geneSearchResult: { geneSymbol }
 				}
 			})
 		} catch (error) {
