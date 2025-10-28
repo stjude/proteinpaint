@@ -78,19 +78,15 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	getState(appState: MassState) {
 		const config = appState.plots.find((p: BasePlotConfig) => p.id === this.id)
+		console.log('getState - config:', config)
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		return {
 			termfilter: appState.termfilter,
-			config: Object.assign({}, config, {
-				settings: {
-					grin2: config.settings
-				}
-			})
+			config
 		}
 	}
-
 	private addSnvindelRow = (table: any) => {
 		console.log('this', this)
 		console.log('this.state', this.state)
@@ -145,29 +141,34 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 
 		// ----- Left-side SNV/INDEL checkbox -----
-		const isChecked = this.state.config.settings.grin2.dtUsage[dtsnvindel].checked
+		const isChecked = this.state.config.settings.dtUsage[dtsnvindel].checked
 		t2.table.style('display', isChecked ? '' : 'none')
 		make_one_checkbox({
 			holder: left,
 			labeltext: 'SNV/INDEL (Mutation)',
 			checked: isChecked,
 			callback: async (checked: boolean) => {
-				const dtu = structuredClone(this.state.config.settings.grin2.dtUsage)
+				const dtu = structuredClone(this.state.config.settings.dtUsage)
 				dtu[dtsnvindel].checked = checked
 
+				const currentGrin2Settings = structuredClone(this.state.config.settings)
+				// Update just the dtUsage part
+				currentGrin2Settings.dtUsage = dtu
+
 				console.log('Cloned and modified dtUsage:', dtu)
-				await this.app.save({
+				await this.app.dispatch({
 					type: 'plot_edit',
 					id: this.id,
 					config: {
 						settings: {
-							grin2: {
-								dtUsage: dtu
-							}
+							// move it OUT of 'grin2'
+							dtUsage: dtu
 						}
 					}
 				})
 
+				// Check what the state actually is after dispatch
+				console.log('State after dispatch:', this.state.config.settings.dtUsage)
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonState(dtu)
 			}
@@ -232,7 +233,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// )
 
 		// ----- Left-side CNV checkbox -----
-		const isChecked = this.state.config.settings.grin2.dtUsage[dtcnv].checked
+		const isChecked = this.state.config.settings.dtUsage[dtcnv].checked
 		t2.table.style('display', isChecked ? '' : 'none')
 
 		make_one_checkbox({
@@ -240,22 +241,27 @@ class GRIN2 extends PlotBase implements RxComponent {
 			labeltext: 'CNV (Copy Number Variation)',
 			checked: isChecked,
 			callback: async (checked: boolean) => {
-				const dtu = structuredClone(this.state.config.settings.grin2.dtUsage)
+				const dtu = structuredClone(this.state.config.settings.dtUsage)
 				dtu[dtcnv].checked = checked
 
+				const currentGrin2Settings = structuredClone(this.state.config.settings)
+				// Update just the dtUsage part
+				currentGrin2Settings.dtUsage = dtu
+
 				console.log('Cloned and modified dtUsage:', dtu)
-				await this.app.save({
+				await this.app.dispatch({
 					type: 'plot_edit',
 					id: this.id,
 					config: {
 						settings: {
-							grin2: {
-								dtUsage: dtu
-							}
+							// move it OUT of 'grin2'
+							dtUsage: dtu
 						}
 					}
 				})
 
+				// Check what the state actually is after dispatch
+				console.log('State after dispatch:', this.state.config.settings.dtUsage)
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonState(dtu)
 			}
@@ -289,7 +295,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// 	500 // step
 		// )
 
-		const isChecked = this.state.config.settings.grin2.dtUsage[dtfusionrna].checked
+		const isChecked = this.state.config.settings.dtUsage[dtfusionrna].checked
 		t2.table.style('display', isChecked ? '' : 'none')
 
 		make_one_checkbox({
@@ -297,22 +303,27 @@ class GRIN2 extends PlotBase implements RxComponent {
 			labeltext: 'Fusion (RNA Fusion Events)',
 			checked: isChecked,
 			callback: async (checked: boolean) => {
-				const dtu = structuredClone(this.state.config.settings.grin2.dtUsage)
+				const dtu = structuredClone(this.state.config.settings.dtUsage)
 				dtu[dtfusionrna].checked = checked
 
+				const currentGrin2Settings = structuredClone(this.state.config.settings)
+				// Update just the dtUsage part
+				currentGrin2Settings.dtUsage = dtu
+
 				console.log('Cloned and modified dtUsage:', dtu)
-				await this.app.save({
+				await this.app.dispatch({
 					type: 'plot_edit',
 					id: this.id,
 					config: {
 						settings: {
-							grin2: {
-								dtUsage: dtu
-							}
+							// move it OUT of 'grin2'
+							dtUsage: dtu
 						}
 					}
 				})
 
+				// Check what the state actually is after dispatch
+				console.log('State after dispatch:', this.state.config.settings.dtUsage)
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonState(dtu)
 			}
@@ -346,7 +357,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// 	500 // step
 		// )
 
-		const isChecked = this.state.config.settings.grin2.dtUsage[dtsv].checked
+		const isChecked = this.state.config.settings.dtUsage[dtsv].checked
 		t2.table.style('display', isChecked ? '' : 'none')
 
 		make_one_checkbox({
@@ -354,22 +365,27 @@ class GRIN2 extends PlotBase implements RxComponent {
 			labeltext: 'SV (Structural Variants)',
 			checked: isChecked,
 			callback: async (checked: boolean) => {
-				const dtu = structuredClone(this.state.config.settings.grin2.dtUsage)
+				const dtu = structuredClone(this.state.config.settings.dtUsage)
 				dtu[dtsv].checked = checked
 
+				const currentGrin2Settings = structuredClone(this.state.config.settings)
+				// Update just the dtUsage part
+				currentGrin2Settings.dtUsage = dtu
+
 				console.log('Cloned and modified dtUsage:', dtu)
-				await this.app.save({
+				await this.app.dispatch({
 					type: 'plot_edit',
 					id: this.id,
 					config: {
 						settings: {
-							grin2: {
-								dtUsage: dtu
-							}
+							// move it OUT of 'grin2'
+							dtUsage: dtu
 						}
 					}
 				})
 
+				// Check what the state actually is after dispatch
+				console.log('State after dispatch:', this.state.config.settings.dtUsage)
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonState(dtu)
 			}
@@ -378,8 +394,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	// Enable the Run button only if at least one data type is checked
 	private updateRunButtonState(dtu?: Record<number, { checked: boolean; label: string }>) {
-		const dtUsage =
-			dtu || (this.state.config.settings.grin2.dtUsage as Record<number, { checked: boolean; label: string }>)
+		const dtUsage = dtu || (this.state.config.settings.dtUsage as Record<number, { checked: boolean; label: string }>)
 		console.log('updateRunButtonState - dtUsage:', dtUsage)
 		const anyChecked = Object.values(dtUsage).some(info => info.checked)
 		this.runButton.property('disabled', !anyChecked)
@@ -539,47 +554,32 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	private getConfigValues(): any {
 		const requestConfig: any = {}
-		console.log('getConfigValues - dtUsage:', this.state.config.settings.grin2.dtUsage)
+		const dtUsage = this.state.config.settings.dtUsage
 
-		if (this.state.config.settings.grin2.dtUsage[dtsnvindel]?.checked) {
-			console.log('Adding snvindelOptions')
+		if (dtUsage[dtsnvindel]?.checked) {
 			requestConfig.snvindelOptions = {
 				minTotalDepth: parseFloat(this.dom.snvindel_minTotalDepth.property('value')),
 				minAltAlleleCount: parseFloat(this.dom.snvindel_minAltAlleleCount.property('value')),
 				consequences: this.getSelectedConsequences()
-				// fivePrimeFlankSize: parseFloat(this.dom.snvindel_five_prime_flank_size.property('value')),
-				// threePrimeFlankSize: parseFloat(this.dom.snvindel_three_prime_flank_size.property('value'))
 			}
 		}
 
-		if (this.state.config.settings.grin2.dtUsage[dtcnv]?.checked) {
-			console.log('Adding cnvOptions')
+		if (dtUsage[dtcnv]?.checked) {
 			requestConfig.cnvOptions = {
 				lossThreshold: parseFloat(this.dom.cnv_lossThreshold.property('value')),
 				gainThreshold: parseFloat(this.dom.cnv_gainThreshold.property('value')),
 				maxSegLength: parseFloat(this.dom.cnv_maxSegLength.property('value'))
-				// fivePrimeFlankSize: parseFloat(this.dom.cnv_five_prime_flank_size.property('value')),
-				// threePrimeFlankSize: parseFloat(this.dom.cnv_three_prime_flank_size.property('value'))
 			}
 		}
 
-		if (this.state.config.settings.grin2.dtUsage[dtfusionrna]?.checked) {
-			console.log('Adding fusionOptions')
-			requestConfig.fusionOptions = {
-				// fivePrimeFlankSize: parseFloat(this.dom.fusion_five_prime_flank_size.property('value')),
-				// threePrimeFlankSize: parseFloat(this.dom.fusion_three_prime_flank_size.property('value'))
-			}
+		if (dtUsage[dtfusionrna]?.checked) {
+			requestConfig.fusionOptions = {}
 		}
 
-		if (this.state.config.settings.grin2.dtUsage[dtsv]?.checked) {
-			console.log('Adding svOptions')
-			requestConfig.svOptions = {
-				// fivePrimeFlankSize: parseFloat(this.dom.sv_five_prime_flank_size.property('value')),
-				// threePrimeFlankSize: parseFloat(this.dom.sv_three_prime_flank_size.property('value'))
-			}
+		if (dtUsage[dtsv]?.checked) {
+			requestConfig.svOptions = {}
 		}
 
-		console.log('Final requestConfig:', requestConfig)
 		return requestConfig
 	}
 
@@ -597,7 +597,10 @@ class GRIN2 extends PlotBase implements RxComponent {
 	}
 
 	private async runAnalysis() {
-		console.log('runAnalysis - dtUsage at start:', this.state.config.settings.grin2.dtUsage)
+		// console.log('runAnalysis - dtUsage at start:', this.state.config.settings.dtUsage)
+		console.log('runAnalysis - dtUsage at start:', this.state.config.settings.dtUsage)
+		console.log('runAnalysis - dtfusionrna checked?', this.state.config.settings.dtUsage[dtfusionrna]?.checked)
+		console.log('runAnalysis - dtsv checked?', this.state.config.settings.dtUsage[dtsv]?.checked)
 		try {
 			this.runButton.property('disabled', true).text('Running GRIN2...')
 
@@ -606,15 +609,16 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			// Get configuration and make request
 			const configValues = this.getConfigValues()
+			console.log('configValues:', configValues)
 			const requestData = {
 				genome: this.app.vocabApi.vocab.genome,
 				dslabel: this.app.vocabApi.vocab.dslabel,
 				filter: getNormalRoot(this.state.termfilter.filter),
-				width: this.state.config.settings.grin2.manhattan?.plotWidth,
-				height: this.state.config.settings.grin2.manhattan?.plotHeight,
-				pngDotRadius: this.state.config.settings.grin2.manhattan?.pngDotRadius,
+				width: this.state.config.settings.manhattan?.plotWidth,
+				height: this.state.config.settings.manhattan?.plotHeight,
+				pngDotRadius: this.state.config.settings.manhattan?.pngDotRadius,
 				devicePixelRatio: window.devicePixelRatio,
-				maxGenesToShow: this.state.config.settings.grin2?.manhattan?.maxGenesToShow,
+				maxGenesToShow: this.state.config.settings?.manhattan?.maxGenesToShow,
 				...configValues
 			}
 
@@ -640,7 +644,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 	async init() {}
 
 	async main() {
-		console.log('main() called - dtUsage:', this.state.config.settings.grin2.dtUsage)
+		console.log('main() called - dtUsage:', this.state.config.settings.dtUsage)
 		// Initialize the table with the different data types and options
 		const config = structuredClone(this.state.config)
 		if (config.childType != this.type && config.chartType != this.type) return
@@ -662,7 +666,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		if (result.pngImg) {
 			const plotData = result
 			const plotDiv = this.dom.div
-			const manhattanSettings = this.state.config.settings.grin2.manhattan
+			const manhattanSettings = this.state.config.settings.manhattan
 			plotManhattan(plotDiv, plotData, manhattanSettings, this.app)
 		}
 
@@ -906,54 +910,55 @@ export function getDefaultSettings(opts) {
 export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 	const queries = app.vocabApi.termdbConfig.queries
 	const defaultSettings = getDefaultSettings(opts)
-	const settings: any = {
-		controls: {},
-		dtUsage: {},
-		manhattan: {
-			...defaultSettings.manhattan,
-			...opts?.manhattan
-		}
-	}
+
+	const dtUsage: any = {}
 
 	// Dynamically add data type options based on availability
 	if (queries?.snvindel) {
-		settings.dtUsage[dtsnvindel] = { checked: true, label: 'SNV/INDEL (Mutation)' }
-		settings.snvindelOptions = {
-			minTotalDepth: 10,
-			minAltAlleleCount: 2,
-			consequences: [],
-			hyperMutator: 1000
-		}
+		dtUsage[dtsnvindel] = { checked: true, label: 'SNV/INDEL (Mutation)' }
 	}
 
 	if (queries?.cnv) {
-		settings.dtUsage[dtcnv] = { checked: true, label: 'CNV (Copy Number Variation)' }
-		settings.cnvOptions = {
-			lossThreshold: -0.4,
-			gainThreshold: 0.3,
-			maxSegLength: 0,
-			hyperMutator: 500
-		}
+		dtUsage[dtcnv] = { checked: true, label: 'CNV (Copy Number Variation)' }
 	}
 
 	if (queries?.svfusion) {
 		if (queries.svfusion.dtLst.includes(dtfusionrna)) {
-			settings.dtUsage[dtfusionrna] = { checked: false, label: 'Fusion (RNA Fusion Events)' }
-			settings.fusionOptions = {
-				// Add fusion-specific defaults when needed
-			}
+			dtUsage[dtfusionrna] = { checked: false, label: 'Fusion (RNA Fusion Events)' }
 		}
 		if (queries.svfusion.dtLst.includes(dtsv)) {
-			settings.dtUsage[dtsv] = { checked: false, label: 'SV (Structural Variants)' }
-			settings.svOptions = {
-				// Add SV-specific defaults when needed
-			}
+			dtUsage[dtsv] = { checked: false, label: 'SV (Structural Variants)' }
 		}
 	}
 
 	const config = {
 		chartType: 'grin2',
-		settings: Object.assign(getDefaultSettings(opts), settings),
+		settings: {
+			controls: {},
+			dtUsage: dtUsage,
+			manhattan: {
+				...defaultSettings.manhattan,
+				...opts?.manhattan
+			},
+			snvindelOptions: queries?.snvindel
+				? {
+						minTotalDepth: 10,
+						minAltAlleleCount: 2,
+						consequences: [],
+						hyperMutator: 1000
+				  }
+				: undefined,
+			cnvOptions: queries?.cnv
+				? {
+						lossThreshold: -0.4,
+						gainThreshold: 0.3,
+						maxSegLength: 0,
+						hyperMutator: 500
+				  }
+				: undefined,
+			fusionOptions: queries?.svfusion?.dtLst?.includes(dtfusionrna) ? {} : undefined,
+			svOptions: queries?.svfusion?.dtLst?.includes(dtsv) ? {} : undefined
+		},
 		hidePlotFilter: true
 	}
 
