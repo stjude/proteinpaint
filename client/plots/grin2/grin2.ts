@@ -78,18 +78,14 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	getState(appState: MassState) {
 		const config = appState.plots.find((p: BasePlotConfig) => p.id === this.id)
-		console.log('getState - config:', config)
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		return {
-			termfilter: appState.termfilter,
 			config
 		}
 	}
 	private addSnvindelRow = (table: any) => {
-		console.log('this', this)
-		console.log('this.state', this.state)
 		const [left, right] = table.addRow()
 
 		// Options table
@@ -147,28 +143,23 @@ class GRIN2 extends PlotBase implements RxComponent {
 			holder: left,
 			labeltext: 'SNV/INDEL (Mutation)',
 			checked: isChecked,
-			callback: async (checked: boolean) => {
+			callback: (checked: boolean) => {
 				const dtu = structuredClone(this.state.config.settings.dtUsage)
 				dtu[dtsnvindel].checked = checked
 
 				const currentGrin2Settings = structuredClone(this.state.config.settings)
-				// Update just the dtUsage part
 				currentGrin2Settings.dtUsage = dtu
 
-				console.log('Cloned and modified dtUsage:', dtu)
-				await this.app.dispatch({
+				this.app.dispatch({
 					type: 'plot_edit',
 					id: this.id,
 					config: {
 						settings: {
-							// move it OUT of 'grin2'
 							dtUsage: dtu
 						}
 					}
 				})
 
-				// Check what the state actually is after dispatch
-				console.log('State after dispatch:', this.state.config.settings.dtUsage)
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonState(dtu)
 			}
@@ -240,28 +231,23 @@ class GRIN2 extends PlotBase implements RxComponent {
 			holder: left,
 			labeltext: 'CNV (Copy Number Variation)',
 			checked: isChecked,
-			callback: async (checked: boolean) => {
+			callback: (checked: boolean) => {
 				const dtu = structuredClone(this.state.config.settings.dtUsage)
 				dtu[dtcnv].checked = checked
 
 				const currentGrin2Settings = structuredClone(this.state.config.settings)
-				// Update just the dtUsage part
 				currentGrin2Settings.dtUsage = dtu
 
-				console.log('Cloned and modified dtUsage:', dtu)
-				await this.app.dispatch({
+				this.app.dispatch({
 					type: 'plot_edit',
 					id: this.id,
 					config: {
 						settings: {
-							// move it OUT of 'grin2'
 							dtUsage: dtu
 						}
 					}
 				})
 
-				// Check what the state actually is after dispatch
-				console.log('State after dispatch:', this.state.config.settings.dtUsage)
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonState(dtu)
 			}
@@ -302,28 +288,23 @@ class GRIN2 extends PlotBase implements RxComponent {
 			holder: left,
 			labeltext: 'Fusion (RNA Fusion Events)',
 			checked: isChecked,
-			callback: async (checked: boolean) => {
+			callback: (checked: boolean) => {
 				const dtu = structuredClone(this.state.config.settings.dtUsage)
 				dtu[dtfusionrna].checked = checked
 
 				const currentGrin2Settings = structuredClone(this.state.config.settings)
-				// Update just the dtUsage part
 				currentGrin2Settings.dtUsage = dtu
 
-				console.log('Cloned and modified dtUsage:', dtu)
-				await this.app.dispatch({
+				this.app.dispatch({
 					type: 'plot_edit',
 					id: this.id,
 					config: {
 						settings: {
-							// move it OUT of 'grin2'
 							dtUsage: dtu
 						}
 					}
 				})
 
-				// Check what the state actually is after dispatch
-				console.log('State after dispatch:', this.state.config.settings.dtUsage)
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonState(dtu)
 			}
@@ -364,28 +345,23 @@ class GRIN2 extends PlotBase implements RxComponent {
 			holder: left,
 			labeltext: 'SV (Structural Variants)',
 			checked: isChecked,
-			callback: async (checked: boolean) => {
+			callback: (checked: boolean) => {
 				const dtu = structuredClone(this.state.config.settings.dtUsage)
 				dtu[dtsv].checked = checked
 
 				const currentGrin2Settings = structuredClone(this.state.config.settings)
-				// Update just the dtUsage part
 				currentGrin2Settings.dtUsage = dtu
 
-				console.log('Cloned and modified dtUsage:', dtu)
-				await this.app.dispatch({
+				this.app.dispatch({
 					type: 'plot_edit',
 					id: this.id,
 					config: {
 						settings: {
-							// move it OUT of 'grin2'
 							dtUsage: dtu
 						}
 					}
 				})
 
-				// Check what the state actually is after dispatch
-				console.log('State after dispatch:', this.state.config.settings.dtUsage)
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonState(dtu)
 			}
@@ -395,13 +371,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 	// Enable the Run button only if at least one data type is checked
 	private updateRunButtonState(dtu?: Record<number, { checked: boolean; label: string }>) {
 		const dtUsage = dtu || (this.state.config.settings.dtUsage as Record<number, { checked: boolean; label: string }>)
-		console.log('updateRunButtonState - dtUsage:', dtUsage)
 		const anyChecked = Object.values(dtUsage).some(info => info.checked)
 		this.runButton.property('disabled', !anyChecked)
 	}
 
 	private createConfigTable() {
-		console.log('createConfigTable called')
 		const table = table2col({ holder: this.dom.controls, disableScroll: true })
 		const queries = this.app.vocabApi.termdbConfig.queries
 		if (queries.snvindel) {
@@ -597,10 +571,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 	}
 
 	private async runAnalysis() {
-		// console.log('runAnalysis - dtUsage at start:', this.state.config.settings.dtUsage)
-		console.log('runAnalysis - dtUsage at start:', this.state.config.settings.dtUsage)
-		console.log('runAnalysis - dtfusionrna checked?', this.state.config.settings.dtUsage[dtfusionrna]?.checked)
-		console.log('runAnalysis - dtsv checked?', this.state.config.settings.dtUsage[dtsv]?.checked)
 		try {
 			this.runButton.property('disabled', true).text('Running GRIN2...')
 
@@ -609,11 +579,10 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			// Get configuration and make request
 			const configValues = this.getConfigValues()
-			console.log('configValues:', configValues)
 			const requestData = {
 				genome: this.app.vocabApi.vocab.genome,
 				dslabel: this.app.vocabApi.vocab.dslabel,
-				filter: getNormalRoot(this.state.termfilter.filter),
+				filter: getNormalRoot(this.app.vocabApi.state.termfilter.filter),
 				width: this.state.config.settings.manhattan?.plotWidth,
 				height: this.state.config.settings.manhattan?.plotHeight,
 				pngDotRadius: this.state.config.settings.manhattan?.pngDotRadius,
@@ -621,10 +590,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 				maxGenesToShow: this.state.config.settings?.manhattan?.maxGenesToShow,
 				...configValues
 			}
-
-			console.log('Full requestData being sent:', requestData)
-			console.log('fusionOptions present?', 'fusionOptions' in requestData)
-			console.log('svOptions present?', 'svOptions' in requestData)
 
 			const response = await dofetch3('/grin2', {
 				body: requestData
@@ -644,7 +609,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 	async init() {}
 
 	async main() {
-		console.log('main() called - dtUsage:', this.state.config.settings.dtUsage)
 		// Initialize the table with the different data types and options
 		const config = structuredClone(this.state.config)
 		if (config.childType != this.type && config.chartType != this.type) return
@@ -653,12 +617,10 @@ class GRIN2 extends PlotBase implements RxComponent {
 		if (!this.runButton) {
 			this.createConfigTable()
 		} else {
-			console.log('Table already exists, skipping createConfigTable')
 			// State has updated, but we don't need to recreate UI
 			// Just update the button state with current state
 			this.updateRunButtonState()
 		}
-		// this.createConfigTable()
 	}
 
 	private renderResults(result: any) {
