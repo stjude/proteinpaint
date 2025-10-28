@@ -13,5 +13,16 @@
   "pos": 7675088,
   "ref": "C",
   "refCount": 9
+ },
+ {
+  "chrA": "chr17",
+  "chrB": "chr14",
+  "dt": 2,
+  "geneA": "TP53",
+  "geneB": "AKT1",
+  "posA": 7674289,
+  "posB": 104779348,
+  "strandA": "-",
+  "strandB": "-"
  }
 ]

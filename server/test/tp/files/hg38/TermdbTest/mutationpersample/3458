@@ -13,5 +13,16 @@
   "pos": 25245347,
   "ref": "C",
   "refCount": 12
+ },
+ {
+  "chrA": "chr12",
+  "chrB": "chr14",
+  "dt": 2,
+  "geneA": "KRAS",
+  "geneB": "AKT1",
+  "posA": 25225245,
+  "posB": 104779948,
+  "strandA": "-",
+  "strandB": "-"
  }
 ]

@@ -13,5 +13,23 @@
   "pos": 7675088,
   "ref": "C",
   "refCount": 13
+ },
+ {
+  "chr": "chr17",
+  "dt": 4,
+  "start": 7668419,
+  "stop": 7687489,
+  "value": 1.0
+ },
+ {
+  "chrA": "chr12",
+  "chrB": "chr14",
+  "dt": 2,
+  "geneA": "KRAS",
+  "geneB": "AKT1",
+  "posA": 25225245,
+  "posB": 104779948,
+  "strandA": "-",
+  "strandB": "-"
  }
 ]
