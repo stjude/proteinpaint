@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.152.0
 
 Features:
 - GRIN2: Added lollipop button for top gene table
