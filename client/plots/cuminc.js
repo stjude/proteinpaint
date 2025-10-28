@@ -907,12 +907,10 @@ function setRenderers(self) {
 			.style('overflow', 'visible')
 			.style('padding-left', '20px')
 
-		/* eslint-disable */
 		const [clipRect, clipG, mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect] = getSvgSubElems(
 			svg,
 			chart
 		)
-		/* eslint-enable */
 
 		// set dimensions of clipRect
 		// will be same as those of plotRect

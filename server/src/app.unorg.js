@@ -28,7 +28,6 @@ when launching:
 
 import serverconfig from './serverconfig.js'
 import util from 'util'
-import url from 'url'
 import fs from 'fs'
 import path from 'path'
 import got from 'got'
@@ -170,24 +169,6 @@ export function setRoutes(app, _genomes, serverconfig) {
 	# so that the validation happens from within the same monitored process (see startServer())
 	```
 ***/
-
-function sleep(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms))
-}
-
-function log(req) {
-	const j = {}
-	for (const k in req.query) {
-		if (k != 'jwt') j[k] = req.query[k]
-	}
-	console.log(
-		'%s\t%s\t%s\t%s',
-		url.parse(req.url).pathname,
-		new Date(),
-		req.header('x-forwarded-for') || req.connection.remoteAddress,
-		JSON.stringify(j).replace(/\\"/g, '"')
-	)
-}
 
 async function handle_cards(req, res) {
 	try {

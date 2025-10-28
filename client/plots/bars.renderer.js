@@ -96,11 +96,8 @@ export default function barsRenderer(barsapp, holder) {
 	let chart
 	let chartTitle
 	let svg, mainG, series, collabels, rowlabels
-	// eslint-disable-next-line
 	let axisG, yAxis, yTitle, yLine, xAxis, xTitle, xLine
-	// eslint-disable-next-line
 	let currCell, currRects, currRowTexts, currColTexts
-	// eslint-disable-next-line
 	let defaults //will have key values in init
 	let currserieses = []
 	let prevBox

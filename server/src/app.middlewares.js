@@ -4,7 +4,7 @@ import cookieParser from 'cookie-parser'
 import bodyParser from 'body-parser'
 import basicAuth from 'express-basic-auth'
 import compression from 'compression'
-import url from 'url'
+import { URL } from 'url'
 import serverconfig from './serverconfig.js'
 import * as validator from './validator.js'
 import { authApi } from './auth.js'
@@ -116,7 +116,8 @@ function log(req) {
 	for (const k of Object.keys(req.query)) {
 		if (k != 'jwt' && k !== '__protected__') j[k] = req.query[k]
 	}
-	const pathname = url.parse(req.url).pathname
+	// okay to supply a dummy hostname here, since only the pathname needs to be computed
+	const pathname = new URL(`http://localhost${req.url}`).pathname
 	if (pathname.endsWith('.js.map')) return
 	console.log(
 		'%s\t%s\t%s\t%s',
