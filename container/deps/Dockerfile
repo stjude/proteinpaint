@@ -71,7 +71,7 @@ RUN Rscript R/utils/install.pkgs.R
 
 # Install NVM and Node.js
 ENV NVM_DIR=/root/.nvm
-ARG NODE_VERSION=22.15.0
+ARG NODE_VERSION=24.10.0
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && \
     . "$NVM_DIR/nvm.sh" && \
     nvm install $NODE_VERSION && \
