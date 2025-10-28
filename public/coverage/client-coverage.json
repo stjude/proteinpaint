@@ -8426,37 +8426,37 @@
   "termsetting/handlers/NumericDensity.ts": {
     "lines": {
       "total": 77,
-      "covered": 11,
+      "covered": 71,
       "skipped": 0,
-      "pct": 14.28
+      "pct": 92.2
     },
     "functions": {
       "total": 17,
-      "covered": 1,
+      "covered": 14,
       "skipped": 0,
-      "pct": 5.88
+      "pct": 82.35
     },
     "statements": {
       "total": 86,
-      "covered": 11,
+      "covered": 75,
       "skipped": 0,
-      "pct": 12.79
+      "pct": 87.2
     },
     "branches": {
       "total": 43,
-      "covered": 0,
+      "covered": 31,
       "skipped": 0,
-      "pct": 0
+      "pct": 72.09
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 72.09,
       "prev": 0,
-      "diff": 0
+      "diff": 72.09
     },
     "averagePct": {
-      "curr": 8.2375,
-      "prev": 0,
-      "diff": 8.2375
+      "curr": 83.46000000000001,
+      "prev": 8.2375,
+      "diff": 75.22250000000001
     }
   },
   "plots/regression.inputs.term.js": {
@@ -8709,6 +8709,42 @@
       "curr": 89.30499999999999,
       "prev": 0,
       "diff": 89.30499999999999
+    }
+  },
+  "termsetting/handlers/test/NumericDensity.unit.spec.ts": {
+    "lines": {
+      "total": 66,
+      "covered": 66,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 21,
+      "covered": 19,
+      "skipped": 0,
+      "pct": 90.47
+    },
+    "statements": {
+      "total": 71,
+      "covered": 69,
+      "skipped": 0,
+      "pct": 97.18
+    },
+    "branches": {
+      "total": 11,
+      "covered": 6,
+      "skipped": 0,
+      "pct": 54.54
+    },
+    "lowestPct": {
+      "curr": 54.54,
+      "prev": 0,
+      "diff": 54.54
+    },
+    "averagePct": {
+      "curr": 85.5475,
+      "prev": 0,
+      "diff": 85.5475
     }
   }
 }
