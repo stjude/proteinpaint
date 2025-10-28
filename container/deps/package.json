@@ -1,31 +1,133 @@
 {
-	"name": "@sjcrh/proteinpaint-container",
-	"version": "2.132.1-2",
-	"bin": "launch.js",
-	"scripts": {
-		"//": "this dev script is for developing and testing the container itself, not for using the container as a dev environment",
-		"dev": "./pack.sh && ./build.sh",
-		"build": "rm -rf tmppack && ./build.sh",
-		"postinstall": "if [ ! -f ./pack.sh ]; then docker pull ghcr.io/stjude/ppfull:latest; fi"
-	},
-	"containerDeps": {
-		"server": "2.132.1-2",
-		"front": "2.132.1-2"
-	},
-	"files": [
-		"build.sh",
-		"Dockerfile",
-		"app-full.mjs",
-		"app-server.js",
-		"launch.js",
-		"public",
-		"run.sh",
-		"validateConfig.js",
-		"verify.sh"
-	],
-	"license": "SEE LICENSE IN ./LICENSE",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/stjude/proteinpaint"
-	}
+  "name": "@sjcrh/proteinpaint-server",
+  "version": "2.152.0",
+  "type": "module",
+  "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
+  "main": "src/app.js",
+  "module": "src/app.js",
+  "bin": "start.js",
+  "imports": {
+    "#types": "@sjcrh/proteinpaint-types",
+    "#types/checkers": "@sjcrh/proteinpaint-types/checkers",
+    "#shared/*": "@sjcrh/proteinpaint-shared/*",
+    "#src/*": "./src/*",
+    "#routes/*": "./routes/*"
+  },
+  "scripts": {
+    "dev": "npm run start",
+    "prestart": "tsx emitImports.js dev > server.js",
+    "start": "tsx watch ./start.js",
+    "test:unit": "tsx emitImports.js unit > serverTests.js && c8 tsx serverTests.js && rm -rf ./cache",
+    "test": "tsc && npm run test:unit",
+    "precombined:coverage": "tsx emitImports.js unit > serverTests.js",
+    "combined:coverage": "coverageKey=test c8 --all --src=proteinpaint/server --experimental-monocart -r=v8 -r=html -r=json -r=markdown-summary -r=markdown-details -o=./.coverage tsx ./coverage.js & ",
+    "postcombined:coverage": "rm -rf ./cache",
+    "spec:coverage": "tsx test/relevant.js",
+    "getconf": "../build/getConfigProp.cjs",
+    "doc": "../augen/build.sh routes shared/types/routes shared/checkers ../public/docs/server",
+    "mjs": "esbuild \"$DIR/*.ts\" --platform=node --outdir=\"$DIR\" --format=esm",
+    "cjs": "esbuild \"$DIR/*.ts\" --platform=node --outdir=\"$DIR\" --format=cjs",
+    "build": "./build.sh",
+    "prepack": "npm run build",
+    "postpack": "./dedupjs.sh",
+    "dedup": "./dedupjs.sh"
+  },
+  "author": "",
+  "license": "SEE LICENSE IN ./LICENSE",
+  "devDependencies": {
+    "@babel/core": "^7.9.6",
+    "@babel/plugin-proposal-optional-chaining": "^7.9.0",
+    "@babel/plugin-transform-runtime": "^7.14.5",
+    "@babel/preset-env": "^7.9.6",
+    "@babel/preset-typescript": "^7.21.4",
+    "@babel/register": "^7.14.5",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20.11.24",
+    "@types/tough-cookie": "^4.0.5",
+    "@typescript-eslint/eslint-plugin": "^8.13.0",
+    "babel-loader": "^8.2.2",
+    "c8": "^10.1.3",
+    "esbuild": "^0.25.9",
+    "monocart-coverage-reports": "^2.12.1",
+    "node-notifier": "^9.0.1",
+    "node-watch": "^0.7.1",
+    "nodemon": "^3.1.10",
+    "prettier": "^2.8.8",
+    "tape": "^5.2.2",
+    "ts-node": "^10.9.1",
+    "ts-patch": "^3.0.2",
+    "tsx": "^4.7.1",
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "@sjcrh/augen": "2.143.0",
+    "@sjcrh/proteinpaint-python": "2.151.0",
+    "@sjcrh/proteinpaint-r": "2.149.0",
+    "@sjcrh/proteinpaint-rust": "2.150.0",
+    "@sjcrh/proteinpaint-shared": "2.152.0",
+    "@sjcrh/proteinpaint-types": "2.152.0",
+    "@types/express": "^5.0.0",
+    "@types/express-session": "^1.18.1",
+    "better-sqlite3": "^12.4.1",
+    "body-parser": "^1.15.2",
+    "canvas": "~3.1.0",
+    "compression": "^1.6.2",
+    "connect-redis": "^6.1.3",
+    "cookie-parser": "^1.4.5",
+    "d3": "^7.6.1",
+    "deep-object-diff": "^1.1.0",
+    "express": "^4.17.1",
+    "express-basic-auth": "^1.1.5",
+    "express-session": "^1.18.1",
+    "got": "^14.2.0",
+    "image-size": "^0.5.5",
+    "jsonwebtoken": "^9.0.0",
+    "ky": "^1.2.1",
+    "micromatch": "^4.0.5",
+    "minimatch": "^10.0.1",
+    "node-fetch": "^2.6.1",
+    "partjson": "^0.58.2",
+    "redis": "^4.7.0",
+    "tiny-async-pool": "^1.2.0",
+    "tough-cookie": "^4.1.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stjude/proteinpaint",
+    "directory": "server"
+  },
+  "files": [
+    "bin.js",
+    "dataset/*.js",
+    "genome/*.js",
+    "routes/*.js",
+    "start.js",
+    "src/app.js",
+    "src/serverconfig.js",
+    "src/mds3.gdc.filter.js",
+    "src/checkReadingFrame.js",
+    "src/bedj.parseBed.js",
+    "LICENSE/*"
+  ],
+  "bugs": {
+    "url": "https://github.com/stjude/pp-dist"
+  },
+  "browserify": {
+    "transform": [
+      "browserify-css",
+      [
+        "babelify",
+        {
+          "babelrc": false,
+          "presets": [
+            "@babel/preset-env"
+          ],
+          "plugins": [
+            "@babel/plugin-syntax-dynamic-import",
+            "@babel/plugin-transform-runtime"
+          ]
+        }
+      ]
+    ]
+  }
 }
