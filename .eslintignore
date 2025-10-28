@@ -1,0 +1,7 @@
+**/tmp*/*
+**/shared/checkers/**/*
+augen/**/checkers/**/*
+client/types/test/d3.type.spec.ts
+container/coverage/server/*
+shared/types/dist/*
+shared/types/src/test/numeric.type.spec.ts

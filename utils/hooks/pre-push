@@ -9,10 +9,9 @@ pre-commit run --files $FILES
 # run linter on ts files
 echo "linting ..."
 # echo "$FILES" | grep "\.ts" | xargs npx eslint
-echo "$FILES" | grep "shared\/" | grep "\.ts" | xargs npx eslint # eslint.config.js defaults to shared-node-browser
-echo "$FILES" | grep "client\/" | grep "\.ts" | JSENV=browser xargs npx eslint
-echo "$FILES" | grep "front\/" | grep "\.ts" | JSENV=browser xargs npx eslint
-echo "$FILES" | grep "python\/" | grep "\.ts" | JSENV=node npx eslint
-echo "$FILES" | grep "rust\/" | grep "\.ts" | JSENV=node xargs npx eslint
-echo "$FILES" | grep "server\/" | grep "\.ts" | JSENV=node npx eslint
+echo "$FILES" | grep "shared\/" | grep "\.ts" | xargs npx eslint --env shared-node-browser
+echo "$FILES" | grep "client\/" | grep "\.ts" | xargs npx eslint --env browser
+echo "$FILES" | grep "front\/" | grep "\.ts" | xargs npx eslint --env browser
+echo "$FILES" | grep "rust\/" | grep "\.ts" | xargs npx eslint --env node
+echo "$FILES" | grep "server\/" | grep "\.ts" | xargs npx eslint --env node
 exit 0

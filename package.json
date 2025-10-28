@@ -36,7 +36,7 @@
     "postcombined:coverage": "curl http://localhost:3000/coverage/close?key=test",
     "spec:coverage": "npm run spec:coverage --workspaces --if-present && node test/evalAllSpecCovResults.mjs 1",
     "local:integration": "cd client; npm run test:integration",
-    "lint": "eslint .",
+    "lint": "eslint . --ext .ts",
     "docker": "./build/dev/run.sh",
     "testws": "npm test --workspaces",
     "sethooks": "./utils/hooks/init.sh",
@@ -61,8 +61,8 @@
     "@types/node": "^20.2.4",
     "@types/tape": "^5.6.4",
     "c8": "^10.1.3",
-    "eslint": "^9.38.0",
-    "eslint-config-prettier": "^10.1.8",
+    "eslint": "^8.43.0",
+    "eslint-config-prettier": "^8.8.0",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.46.2"
   }
