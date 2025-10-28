@@ -147,9 +147,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 				const dtu = structuredClone(this.state.config.settings.dtUsage)
 				dtu[dtsnvindel].checked = checked
 
-				const currentGrin2Settings = structuredClone(this.state.config.settings)
-				currentGrin2Settings.dtUsage = dtu
-
 				this.app.dispatch({
 					type: 'plot_edit',
 					id: this.id,
@@ -235,9 +232,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 				const dtu = structuredClone(this.state.config.settings.dtUsage)
 				dtu[dtcnv].checked = checked
 
-				const currentGrin2Settings = structuredClone(this.state.config.settings)
-				currentGrin2Settings.dtUsage = dtu
-
 				this.app.dispatch({
 					type: 'plot_edit',
 					id: this.id,
@@ -292,9 +286,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 				const dtu = structuredClone(this.state.config.settings.dtUsage)
 				dtu[dtfusionrna].checked = checked
 
-				const currentGrin2Settings = structuredClone(this.state.config.settings)
-				currentGrin2Settings.dtUsage = dtu
-
 				this.app.dispatch({
 					type: 'plot_edit',
 					id: this.id,
@@ -348,9 +339,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 			callback: (checked: boolean) => {
 				const dtu = structuredClone(this.state.config.settings.dtUsage)
 				dtu[dtsv].checked = checked
-
-				const currentGrin2Settings = structuredClone(this.state.config.settings)
-				currentGrin2Settings.dtUsage = dtu
 
 				this.app.dispatch({
 					type: 'plot_edit',
