@@ -1,6 +1,12 @@
 import tape from 'tape'
 import { getRunPp } from '../../test/front.helpers.js'
-import { getSamplelstTw, getCategoryGroupsetting, getGenesetMutTw } from '../../test/testdata/data.ts'
+import {
+	getSamplelstTw,
+	getCategoryGroupsetting,
+	getGenesetMutTw,
+	getSsgseaTw,
+	getGeneVariantTw
+} from '../../test/testdata/data.ts'
 import { fillTermWrapper } from '#termsetting'
 import { getFilterItemByTag, filterJoin } from '#filter'
 import { sleep, detectOne, detectGte, detectLst, whenVisible, whenHidden } from '../../test/test.helpers.js'
@@ -624,7 +630,7 @@ tape('term1=numeric, term2=geneVariant', function (test) {
 					chartType: 'summary',
 					childType: 'violin',
 					term: { id: 'agedx', q: { mode: 'continuous' } },
-					term2: { term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'predefined-groupset' } }
+					term2: getGeneVariantTw()
 				}
 			]
 		},
@@ -777,7 +783,7 @@ tape('term1=geneExp, term2=geneVariant', function (test) {
 						term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' },
 						q: { mode: 'continuous' }
 					},
-					term2: { term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'predefined-groupset' } }
+					term2: getGeneVariantTw()
 				}
 			]
 		},
@@ -831,10 +837,7 @@ tape('term1=ssgsea, term2=categorical', function (test) {
 				{
 					chartType: 'summary',
 					childType: 'violin',
-					term: {
-						term: { id: 'HALLMARK_ADIPOGENESIS', type: 'ssGSEA', name: 'HALLMARK_ADIPOGENESIS' },
-						q: { mode: 'continuous' }
-					},
+					term: getSsgseaTw(),
 					term2: {
 						id: 'diaggrp'
 					}
@@ -862,10 +865,7 @@ tape('term1=ssgsea, term2=cat groupsetting', function (test) {
 				{
 					chartType: 'summary',
 					childType: 'violin',
-					term: {
-						term: { id: 'HALLMARK_ADIPOGENESIS', type: 'ssGSEA', name: 'HALLMARK_ADIPOGENESIS' },
-						q: { mode: 'continuous' }
-					},
+					term: getSsgseaTw(),
 					term2: getCategoryGroupsetting()
 				}
 			]
@@ -891,11 +891,8 @@ tape('term1=ssgsea, term2=geneVariant', function (test) {
 				{
 					chartType: 'summary',
 					childType: 'violin',
-					term: {
-						term: { id: 'HALLMARK_ADIPOGENESIS', type: 'ssGSEA', name: 'HALLMARK_ADIPOGENESIS' },
-						q: { mode: 'continuous' }
-					},
-					term2: { term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'predefined-groupset' } }
+					term: getSsgseaTw(),
+					term2: getGeneVariantTw()
 				}
 			]
 		},
@@ -920,10 +917,7 @@ tape('term1=ssgsea, term2=geneVariant geneset', function (test) {
 				{
 					chartType: 'summary',
 					childType: 'violin',
-					term: {
-						term: { id: 'HALLMARK_ADIPOGENESIS', type: 'ssGSEA', name: 'HALLMARK_ADIPOGENESIS' },
-						q: { mode: 'continuous' }
-					},
+					term: getSsgseaTw(),
 					term2: getGenesetMutTw()
 				}
 			]
@@ -1041,10 +1035,7 @@ tape('term1=ssgsea, term2=samplelst', function (test) {
 				{
 					chartType: 'summary',
 					childType: 'violin',
-					term: {
-						term: { id: 'HALLMARK_ADIPOGENESIS', type: 'ssGSEA', name: 'HALLMARK_ADIPOGENESIS' },
-						q: { mode: 'continuous' }
-					},
+					term: getSsgseaTw(),
 					term2: getSamplelstTw()
 				}
 			]

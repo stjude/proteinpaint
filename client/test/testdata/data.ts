@@ -4,6 +4,8 @@ that are used in unit/integration tests so to simplify test and avoid code dupli
 
 functions could accept parameters to return customized objects
 
+::NOTE::
+
 if some data contents needs to be changed, better off creating a new function and avoid changing existing one, as multiple tests may be coded against that data
 */
 
@@ -151,5 +153,21 @@ export function getGeneVariantTw(position = false) {
 			type: 'geneVariant'
 		},
 		q: { type: 'predefined-groupset' }
+	}
+}
+
+export function getSsgseaTw(isBin = false) {
+	return {
+		term: { id: 'HALLMARK_ADIPOGENESIS', type: 'ssGSEA', name: 'HALLMARK_ADIPOGENESIS' },
+		q: isBin
+			? {
+					type: 'regular-bin',
+					startinclusive: true,
+					bin_size: 0.2,
+					first_bin: { stop: -0.4 },
+					last_bin: { start: 0.8 },
+					mode: 'discrete'
+			  }
+			: { mode: 'continuous' }
 	}
 }

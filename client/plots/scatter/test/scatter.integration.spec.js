@@ -14,13 +14,20 @@ import {
 import { openSummaryPlot, openPlot, getSamplelstTW } from '../../../mass/groups.js'
 import { rgb } from 'd3-color'
 import { mclass } from '#shared/common.js'
+import {
+	getSamplelstTw,
+	getCategoryGroupsetting,
+	getGenesetMutTw,
+	getGeneVariantTw,
+	getSsgseaTw
+} from '../../../test/testdata/data.ts'
 
 /*
 Tests:
 	Render TermdbTest scatter plot and open survival and summary
 	Render TermdbTest scatter plot adding age as Z to render a 3D plot
 	Render 3D plot with age as Z and showContour set to true to apply contour on 3D plot
-	Render scatter plot of agedx vs hrtavg
+	dynamic scatter of agedx & hrtavg
 	Invalid colorTW.id
 	Invalid colorTW.term
 	Invalid plot name
@@ -31,8 +38,15 @@ Tests:
 	Check/uncheck Show axes from menu
 	Click zoom in, zoom out, and reset buttons
 	Groups and group menus function
-	Color by gene
- */
+	colorTW=geneVariant with no groupsetting
+	colorTW=geneVariant gene list
+	colorTW=ssgsea
+	singlecell
+
+todo
+	dynamic scatter of two gene exp
+	dynamic scatter of two ssgsea
+*/
 
 const runpp = helpers.getRunPp('mass', {
 	state: {
@@ -300,7 +314,7 @@ tape('Render 3D plot with age as Z and showContour set to true to apply contour 
 	}
 })
 
-tape('Render scatter plot of agedx vs hrtavg', function (test) {
+tape('dynamic scatter of agedx & hrtavg', function (test) {
 	test.timeoutAfter(8000)
 	test.plan(2)
 	const holder = getHolder()
@@ -1073,30 +1087,116 @@ tape('Click zoom in, zoom out, and reset buttons', function (test) {
 	//Add tests for changes in axes
 })
 
-tape('Color by gene', function (test) {
-	const colorGeneState = {
-		plots: [
-			{
-				chartType: 'sampleScatter',
-				colorTW: { term: { gene: 'TP53', name: 'TP53', type: 'geneVariant' } },
-				name: 'TermdbTest TSNE'
-			}
-		]
-	}
+tape('colorTW=geneVariant with no groupsetting', function (test) {
 	runpp({
-		state: colorGeneState,
-		sampleScatter: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+		state: {
+			plots: [
+				{
+					chartType: 'sampleScatter',
+					name: 'TermdbTest TSNE',
+					colorTW: { term: { gene: 'TP53', name: 'TP53', type: 'geneVariant' } }
+				}
+			]
+		},
+		sampleScatter: { callbacks: { 'postRender.test': runTests } }
 	})
 	async function runTests(scatter) {
 		const dots = scatter.Inner.view.dom.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
 		test.true(
 			dots.find(dot => dot.getAttribute('fill') == mclass['M'].color),
-			`At least a sample with MISSENSE color was expected`
+			'At least a sample with MISSENSE color was expected'
 		)
+		if (test._ok) scatter.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('colorTW=geneVariant with groupsetting', function (test) {
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'sampleScatter',
+					name: 'TermdbTest TSNE',
+					colorTW: getGeneVariantTw()
+				}
+			]
+		},
+		sampleScatter: { callbacks: { 'postRender.test': runTests } }
+	})
+	async function runTests(scatter) {
+		const dots = scatter.Inner.view.dom.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
+		const lab = 'TP53 SNV/indel Mutated (somatic)'
+		test.true(
+			dots.find(d => d.__data__.category == lab),
+			`A dot with category=${lab}`
+		)
+		if (test._ok) scatter.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('colorTW=geneVariant with gene list', function (test) {
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'sampleScatter',
+					name: 'TermdbTest TSNE',
+					colorTW: getGenesetMutTw()
+				}
+			]
+		},
+		sampleScatter: { callbacks: { 'postRender.test': runTests } }
+	})
+	async function runTests(scatter) {
+		const dots = scatter.Inner.view.dom.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
+		const lab = 'TP53, KRAS, AKT1 SNV/indel Mutated (somatic)'
+		test.true(
+			dots.find(d => d.__data__.category == lab),
+			`A dot with category=${lab}`
+		)
+		if (test._ok) scatter.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('colorTW=ssgsea', function (test) {
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'sampleScatter',
+					name: 'TermdbTest TSNE',
+					colorTW: getSsgseaTw()
+				}
+			]
+		},
+		sampleScatter: { callbacks: { 'postRender.test': runTests } }
+	})
+	async function runTests(scatter) {
+		const dots = scatter.Inner.view.dom.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
+		test.true(
+			dots.find(d => Number.isFinite(d.__data__.category)),
+			`A dot with category=number`
+		)
+		if (test._ok) scatter.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('singlecell', function (test) {
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'sampleScatter',
+					singleCellPlot: { name: 'scRNA', sample: { sID: '1_patient' } }
+				}
+			]
+		},
+		sampleScatter: { callbacks: { 'postRender.test': runTests } }
+	})
+	async function runTests(scatter) {
+		const dots = scatter.Inner.view.dom.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
+		test.true(dots.length, 'some dots are loaded from singlecell plot')
 		if (test._ok) scatter.Inner.app.destroy()
 		test.end()
 	}
