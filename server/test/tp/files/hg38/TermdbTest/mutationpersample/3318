@@ -1,32 +1,17 @@
 [
  {
   "alt": "T",
+  "altCount": 15,
   "chr": "chr17",
   "class": "M",
+  "dna_assay": "wgs",
   "dt": 1,
   "gene": "TP53",
   "isoform": "NM_000546",
   "mname": "R175H",
   "origin": "germline",
   "pos": 7675088,
-  "ref": "C"
- },
- {
-  "chrA": "chr12",
-  "chrB": "chr14",
-  "dt": 2,
-  "geneA": "KRAS",
-  "geneB": "AKT1",
-  "posA": 25225245,
-  "posB": 104779948,
-  "strandA": "-",
-  "strandB": "-"
- },
- {
-  "chr": "chr17",
-  "dt": 4,
-  "start": 7668419,
-  "stop": 7687489,
-  "value": 1.0
+  "ref": "C",
+  "refCount": 13
  }
 ]

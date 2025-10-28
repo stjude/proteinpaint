@@ -1,32 +1,17 @@
 [
  {
   "alt": "G",
+  "altCount": 7,
   "chr": "chr17",
   "class": "F",
+  "dna_assay": "wgs",
   "dt": 1,
   "gene": "TP53",
   "isoform": "NM_000546",
   "mname": "R156Afs*14",
   "origin": "germline",
   "pos": 7675147,
-  "ref": "GG"
- },
- {
-  "chr": "chr12",
-  "dt": 4,
-  "start": 25205244,
-  "stop": 25250928,
-  "value": -1.0
- },
- {
-  "chrA": "chr12",
-  "chrB": "chr14",
-  "dt": 2,
-  "geneA": "KRAS",
-  "geneB": "AKT1",
-  "posA": 25225245,
-  "posB": 104779948,
-  "strandA": "-",
-  "strandB": "-"
+  "ref": "GG",
+  "refCount": 9
  }
 ]

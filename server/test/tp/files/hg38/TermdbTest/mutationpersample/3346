@@ -1,21 +1,17 @@
 [
  {
   "alt": "T",
+  "altCount": 20,
   "chr": "chr12",
   "class": "M",
+  "dna_assay": "wgs",
   "dt": 1,
   "gene": "KRAS",
-  "isoform": "NM_001369786",
+  "isoform": "NM_033360",
   "mname": "G13D",
   "origin": "germline",
   "pos": 25245347,
-  "ref": "C"
- },
- {
-  "chr": "chr12",
-  "dt": 4,
-  "start": 25205244,
-  "stop": 25250928,
-  "value": 1.0
+  "ref": "C",
+  "refCount": 12
  }
 ]
