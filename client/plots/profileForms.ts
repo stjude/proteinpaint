@@ -144,7 +144,8 @@ export class profileForms extends profilePlot {
 					this.renderYesNo()
 			}
 		} catch (e) {
-			console.error('Error rendering profile forms plot:', e)
+			console.error('Error rendering profile forms plot:', e) //prints stack trace
+			throw e
 		}
 	}
 

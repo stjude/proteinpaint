@@ -442,18 +442,11 @@ export function server_init_db_queries(ds) {
 			if (cache.has(parent_id)) return cache.get(parent_id)
 			const items = s.all(parent_id)
 			const terms = items.map(item => {
-				const jsondata = JSON.parse(item.jsondata)
-				return {
-					$id: item.id,
-					term: {
-						id: item.id,
-						name: item.name,
-						type: 'multivalue',
-						subtype: jsondata.plotType,
-						details: jsondata.domainDetails,
-						values: jsondata.values
-					}
-				}
+				const t = JSON.parse(item.jsondata)
+				t.id = item.id
+				t.name = item.name
+				t.type = 'multivalue'
+				return { $id: item.id, term: t }
 			})
 			cache.set(parent_id, terms)
 			return terms
