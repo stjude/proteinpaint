@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge } from '../rx/index.js'
 import { getProfilePlotConfig, profilePlot, getDefaultProfilePlotSettings } from './profilePlot.js'
-import { fillTwLst } from '#termsetting'
+import { fillTermWrapper, fillTwLst } from '#termsetting'
 import { axisBottom, axisTop } from 'd3-axis'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { Tabs } from '../dom/toggleButtons.js'
@@ -31,11 +31,14 @@ export class profileForms extends profilePlot {
 	categories: any
 	module: any
 	legendG: any
+	//for each plot tab, a dict of sc term wrappers
+	id2SCTW: { [key: string]: { [key: string]: any } }
 
 	constructor(opts) {
 		super()
 		this.opts = opts
 		this.type = 'profileForms'
+		this.id2SCTW = {}
 	}
 
 	async init(appState) {
@@ -56,8 +59,18 @@ export class profileForms extends profilePlot {
 				active: false
 			}
 			if (plot.name == config.activeTab) tab.active = true
+			if (plot.hasSC) {
+				this.id2SCTW[plot.name] = {}
+				for (const tw of this.twLst) {
+					if (tw.term.subtype != plot.subtype) continue
+					const scTermId = tw.term.id.replace(/^POC/, '')
+					const scTW: any = { id: scTermId }
+					await fillTermWrapper(scTW, this.app.vocabApi)
+					this.id2SCTW[plot.name][scTermId] = scTW
+				}
+				this.twLst.push(...Object.values(this.id2SCTW[plot.name]))
+			}
 			this.tabs.push(tab)
-			if (plot.scTerms) this.twLst.push(...plot.scTerms)
 		}
 
 		const topDiv = rightDiv.append('div')
@@ -112,7 +125,9 @@ export class profileForms extends profilePlot {
 		const activeTab = this.state.config.activeTab || this.tabs[0].label
 		this.activePlot = this.state.config.options.find(p => p.name == activeTab)
 		this.scoreTerms = this.twLst.filter(tw => tw.term.subtype == this.activePlot.subtype)
-		this.scScoreTerms = this.activePlot.scTerms
+		if (this.activePlot.hasSC) {
+			this.scScoreTerms = Object.values(this.id2SCTW[this.activePlot.name])
+		}
 		const parents = this.config.tw.term.id.split('__')
 		this.module = parents[1]
 		const domain = parents.slice(1).join(' / ')
@@ -195,13 +210,11 @@ export class profileForms extends profilePlot {
 
 		let y = 0
 		let showSCBar = false
-		const activePlot = this.activePlot
 		for (const tw of this.scoreTerms) {
 			const percents: { [key: string]: number } = this.getPercentageDict(tw)
-
-			const scTerm = activePlot.scTerms.find(t => tw.term.id.includes(t.term.id))
-			const scPercents: { [key: string]: number } = this.getPercentageDict(scTerm)
-
+			const scTermId = tw.term.id.replace(/^POC/, '')
+			const scTW = this.id2SCTW[this.activePlot.name][scTermId]
+			const scPercents: { [key: string]: number } = this.getPercentageDict(scTW)
 			const scPercentKeys = Object.keys(scPercents).sort((a, b) => a.localeCompare(b))
 			const scTotal = Object.values(scPercents).reduce((a, b) => a + b, 0)
 			showSCBar = scTotal > 1
@@ -264,7 +277,7 @@ export class profileForms extends profilePlot {
 			const d = path.__data__
 			const menu = this.tip.clear()
 			const percent = roundValueAuto(d.value, true, 1)
-			menu.d.text(`${d.category}: ${percent}%`)
+			menu.d.text(`${d.key}: ${percent}%`)
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
 	}
@@ -322,7 +335,7 @@ export class profileForms extends profilePlot {
 			.attr('stroke-width', 0.5)
 			.attr('stroke-opacity', 0.5)
 			.attr('fill', color)
-			.datum({ category, value: percent })
+			.datum({ key: category, value: percent })
 			.on('mouseover', event => this.onMouseOver(event))
 		if (showPercent)
 			itemG
@@ -434,7 +447,6 @@ export async function getPlotConfig(opts, app, _activeCohort) {
 	config = copyMerge(structuredClone(config), opts)
 	for (const plot of config.options) {
 		if (plot.terms) await fillTwLst(plot.terms, app.vocabApi)
-		if (plot.scTerms) await fillTwLst(plot.scTerms, app.vocabApi)
 	}
 
 	return config
