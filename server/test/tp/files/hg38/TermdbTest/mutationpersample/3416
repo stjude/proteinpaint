@@ -13,5 +13,23 @@
   "pos": 7673802,
   "ref": "C",
   "refCount": 9
+ },
+ {
+  "chr": "chr14",
+  "dt": 4,
+  "start": 104769347,
+  "stop": 104795747,
+  "value": -1.0
+ },
+ {
+  "chrA": "chr17",
+  "chrB": "chr14",
+  "dt": 2,
+  "geneA": "TP53",
+  "geneB": "AKT1",
+  "posA": 7674915,
+  "posB": 104779348,
+  "strandA": "-",
+  "strandB": "-"
  }
 ]
