@@ -12,6 +12,7 @@ import type {
 } from '../VolcanoTypes'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
 import { DataPointMouseEvents } from './DataPointMouseEvents'
+import { TermTypes } from '#shared/terms.js'
 
 export class VolcanoPlotView {
 	dom: VolcanoDom
@@ -67,7 +68,7 @@ export class VolcanoPlotView {
 		//Images may have a large margin. Hide the overflow.
 		this.dom.actionsTip.d.style('overflow', 'hidden')
 		this.volcanoDom.actions.style('margin-left', '20px').style('padding', '5px')
-		if (this.termType == 'geneExpression') {
+		if (this.termType == TermTypes.GENE_EXPRESSION) {
 			this.addActionButton('Confounding factors', () => this.interactions.confoundersMenu())
 			this.addActionButton('Highlight genes', () => this.interactions.launchGeneSetEdit())
 			this.addActionButton('Statistics', () => {
@@ -241,13 +242,13 @@ export class VolcanoPlotView {
 			noRadioBtn: true,
 			noButtonCallback: (i: number) => {
 				//On click, persistently highlight the data point
-				if (this.termType != 'geneExpression') return
+				if (this.termType != TermTypes.GENE_EXPRESSION) return
 				const gene = this.viewData.pValueTableData.rows[i][0].value as string
 				if (!gene) return
 				this.interactions.highlightDataPoint(gene)
 			},
 			hoverEffects: (tr, row) => {
-				if (this.termType != 'geneExpression') return
+				if (this.termType != TermTypes.GENE_EXPRESSION) return
 				//Highlight the data point when hovering over the table row
 				//Previously highlighted data points are not affected
 				const circles = this.volcanoDom.plot.selectAll('circle').nodes()

@@ -4,7 +4,7 @@ import { getCompInit, copyMerge, type RxComponent } from '#rx'
 import { PlotBase } from '../PlotBase'
 import { importPlot } from '../importPlot.js'
 import { Menu } from '#dom'
-import { termType2label } from '#shared/terms.js'
+import { termType2label, TermTypes } from '#shared/terms.js'
 import type { DiffAnalysisDom, DiffAnalysisOpts, DiffAnalysisPlotConfig } from './DiffAnalysisTypes'
 import { DiffAnalysisView } from './view/DiffAnalysisView'
 import { getDefaultVolcanoSettings, validateVolcanoSettings } from '../volcano/defaults.ts'
@@ -64,7 +64,9 @@ class DifferentialAnalysis extends PlotBase implements RxComponent {
 	getState(appState: MassState) {
 		const config = appState.plots.find((p: BasePlotConfig) => p.id === this.id)
 		if (!config) {
-			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+			throw new Error(
+				`No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+			)
 		}
 
 		return {
@@ -108,6 +110,7 @@ class DifferentialAnalysis extends PlotBase implements RxComponent {
 		const config = structuredClone(this.state.config)
 		if (config.chartType != this.type) return
 
+		//TODO: Change to use parentId instead
 		if (!this.components.plots[config.childType]) await this.setComponent(config)
 
 		for (const childType in this.components.plots) {
@@ -134,31 +137,28 @@ export const DiffAnalysisInit = getCompInit(DifferentialAnalysis)
 export const componentInit = DiffAnalysisInit
 
 //Use this as a sanity check.
-const enabledTermTypes = ['geneExpression', 'singleCellCellType']
+const enabledTermTypes = [TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTYPE]
 
 export function getPlotConfig(opts: DiffAnalysisOpts) {
-	if (!opts.termType) throw '.termType is required [DifferentialAnalysis getPlotConfig()]'
+	if (!opts.termType) throw new Error('.termType is required')
 	if (!enabledTermTypes.includes(opts.termType))
-		throw `termType '${opts.termType}' not supported by DifferentialAnalysis`
+		throw new Error(`termType '${opts.termType}' not supported by DifferentialAnalysis`)
 
 	const config = {
 		chartType: 'differentialAnalysis',
 		childType: 'volcano',
 		termType: opts.termType,
-		highlightedData: opts.highlightedData || [],
 		settings: {},
 		hidePlotFilter: true //TODO: Support filtering and reactivity in child plots
 	} as any
 
-	if (opts.termType == 'geneExpression') {
-		config.settings.volcano = getDefaultVolcanoSettings(opts.overrides || {}, opts)
-		config.settings.gsea = getDefaultGseaSettings(opts.overrides || {})
+	if (opts.termType == TermTypes.GENE_EXPRESSION) {
+		config.highlightedData = opts.highlightedData || []
 	}
-	if (opts.termType == 'singleCellCellType') {
-		//TODO: Add DA settings for sc cell type
-	}
+
+	config.settings.volcano = getDefaultVolcanoSettings(opts.overrides || {}, opts)
+	config.settings.gsea = getDefaultGseaSettings(opts.overrides || {})
 
 	validateVolcanoSettings(config, opts)
-
 	return copyMerge(config, opts)
 }

@@ -1,12 +1,15 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { dofetch3 } from '#common/dofetch'
 import type { VolcanoPlotConfig, VolcanoSettings } from '../VolcanoTypes'
+import type { DERequest, TermdbSingleCellDEgenesRequest } from '#types'
+import { TermTypes } from '#shared/terms.js'
 
 export class VolcanoModel {
 	app: MassAppApi
-	config: VolcanoPlotConfig
+	config: any
 	settings: VolcanoSettings
 	termType: string
+
 	constructor(app: MassAppApi, config: VolcanoPlotConfig, settings: VolcanoSettings) {
 		this.app = app
 		this.config = config
@@ -16,16 +19,20 @@ export class VolcanoModel {
 
 	/** May use mapper instead as more termTypes are added */
 	async getData() {
-		if (this.termType === 'geneExpression') {
+		console.log(21, this.termType)
+		if (this.termType === TermTypes.GENE_EXPRESSION) {
 			const body = await this.getGERequestBody()
-			const data = await dofetch3('DEanalysis', { body })
-			return data
+			return await dofetch3('DEanalysis', { body })
 		}
-		if (this.termType === 'singleCellCellType') {
-			//TODO: will add method for sc cell type
+		if (this.termType === TermTypes.SINGLECELL_CELLTYPE) {
+			const body = await this.getSCCTRequestBody()
+			return await dofetch3('termdb/singlecellDEgenes', { body })
+		} else {
+			throw new Error(`Volcano plot does not support route for termType='${this.termType}'`)
 		}
 	}
 
+	//Gene expression
 	async getGERequestBody() {
 		await this.getOtherSamples(this.config.samplelst)
 		const state = this.app.getState()
@@ -39,7 +46,7 @@ export class VolcanoModel {
 			filter: state.termfilter.filter,
 			filter0: state.termfilter.filter0,
 			cpm_cutoff: this.settings.cpmCutoff
-		} as any
+		} as Partial<DERequest> //remove Partial when storage_type is removed from DERequest
 		//This is a workaround until the server can accept an arr of confounder tws
 		const confounders = this.config?.confounderTws
 		if (confounders?.length) {
@@ -50,7 +57,20 @@ export class VolcanoModel {
 		return body
 	}
 
-	/** retrieve the sampleId/sampleName for samples in the "others" group instead of using {in: false} */
+	//Single cell cell type
+	getSCCTRequestBody(): TermdbSingleCellDEgenesRequest {
+		const body = {
+			genome: this.app.vocabApi.vocab.genome,
+			dslabel: this.app.vocabApi.vocab.dslabel,
+			sample: this.config.sample,
+			columnName: this.config.columnName,
+			categoryName: this.config.categoryName
+		}
+		return body
+	}
+
+	/** retrieve the sampleId/sampleName for samples in
+	 * the "others" group instead of using {in: false} */
 	async getOtherSamples(samplelst) {
 		const othersSamplesGroup = samplelst.groups.find(g => !g.in)
 		if (!othersSamplesGroup) return

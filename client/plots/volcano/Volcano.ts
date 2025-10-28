@@ -65,7 +65,9 @@ class Volcano extends PlotBase implements RxComponent {
 	getState(appState: MassState) {
 		const config: any = appState.plots.find((p: BasePlotConfig) => p.id === this.id)
 		if (!config) {
-			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+			throw new Error(
+				`No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+			)
 		}
 		const parentConfig: any = this.parentId && appState.plots.find(p => p.id === this.parentId)
 		const termfilter = getCombinedTermFilter(appState, config.filter || parentConfig?.filter)
@@ -111,7 +113,7 @@ class Volcano extends PlotBase implements RxComponent {
 
 		const settings = config.settings.volcano
 		try {
-			if (!this.interactions) throw 'Interactions not initialized [main() Volcano.ts]'
+			if (!this.interactions) throw new Error('Interactions not initialized')
 
 			//Only show Loading for data requests that take longer than 500ms
 			const showWait = setTimeout(() => {
@@ -152,15 +154,15 @@ export const volcanoInit = getCompInit(Volcano)
 export const componentInit = volcanoInit
 
 export async function getPlotConfig(opts: VolcanoOpts, app: MassAppApi) {
-	if (!opts.termType) throw '.termType is required [Volcano getPlotConfig()]'
+	if (!opts.termType) throw new Error('.termType is required')
 	if (opts.confounderTws) {
 		try {
 			for (const tw of opts.confounderTws) {
 				await fillTermWrapper(tw, app.vocabApi)
 			}
 		} catch (e: any) {
-			console.error(new Error(`${e} [volcano getPlotConfig()]`))
-			throw `volcano getPlotConfig() failed`
+			console.error(`${e}`)
+			throw new Error(`volcano getPlotConfig() failed`)
 		}
 	}
 
@@ -173,7 +175,6 @@ export async function getPlotConfig(opts: VolcanoOpts, app: MassAppApi) {
 		},
 		termType: opts.termType
 	}
-
 	//Validate user submitted unavailable/inappropriate settings
 	validateVolcanoSettings(config, opts)
 

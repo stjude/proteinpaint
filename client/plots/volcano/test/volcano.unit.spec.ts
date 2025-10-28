@@ -1,7 +1,6 @@
 import tape from 'tape'
 import * as testData from './testData'
 import { VolcanoViewModel } from '../viewModel/VolcanoViewModel'
-// import { scaleLinear } from 'd3-scale'
 
 /* Tests:
     - init VolcanoViewModel
@@ -131,13 +130,11 @@ tape('setPlotDimensions', function (test) {
 	const plotDim = viewModel.setPlotDimensions()
 	test.deepEqual(plotDim.svg, { height: 590, width: 540 }, 'Should properly set svg')
 	test.deepEqual(plotDim.xAxisLabel, { x: 280, y: 510 }, 'Should properly set xAxisLabel')
-	// test.deepEqual(plotDim.xScale, { x: 90, y: 450, scale: scaleLinear()}, 'Should properly set xScale')
 	test.deepEqual(
 		plotDim.yAxisLabel,
 		{ text: '-log10(adjusted P value)', x: 23.333333333333332, y: 240 },
 		'Should properly set yAxisLabel'
 	)
-	// test.deepEqual(plotDim.yScale, { x: 70, y: 30, scale: scaleLinear() }, 'Should properly set yScale')
 	test.deepEqual(plotDim.plot, { height: 400, width: 400, x: 90, y: 40 }, 'Should properly set plot')
 	test.deepEqual(
 		plotDim.logFoldChangeLine,

@@ -10,9 +10,10 @@ import type { DEResponse } from '#types'
 import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getSampleNum } from '../defaults'
+import { TermTypes } from '#shared/terms.js'
 
 export class VolcanoViewModel {
-	config: VolcanoPlotConfig
+	config: any
 	dataType: string
 	response: DEResponse
 	pValueCutoff: number
@@ -41,8 +42,8 @@ export class VolcanoViewModel {
 		this.pValueCutoff = settings.pValue
 		this.plotX = this.horizPad + this.offset * 2
 
-		const controlColor = (this.config.tw?.term?.values as any)?.[this.config.samplelst.groups[0].name]?.color
-		const caseColor = (this.config.tw?.term?.values as any)?.[this.config.samplelst.groups[1].name].color
+		const controlColor = this.config.tw?.term?.values?.[this.config.samplelst.groups[0].name]?.color || 'red'
+		const caseColor = this.config.tw?.term?.values?.[this.config.samplelst.groups[1].name].color || 'blue'
 
 		//Set colors equal to the groups colors if present
 		const barplot = caseColor && controlColor ? { colorNegative: controlColor, colorPositive: caseColor } : {}
@@ -81,8 +82,8 @@ export class VolcanoViewModel {
 	}
 
 	setDataType() {
-		if (this.termType == 'geneExpression') return 'genes'
-		else throw `Unknown termType: ${this.termType} [VolcanoViewModel setDataType()]`
+		if (this.termType == TermTypes.GENE_EXPRESSION) return 'genes'
+		else throw new Error(`Unknown termType: ${this.termType}`)
 	}
 
 	setMinMaxValues() {
@@ -149,7 +150,7 @@ export class VolcanoViewModel {
 		// caseColor: string,
 		// controlColor: string
 	) {
-		if (this.termType != 'geneExpression') return
+		if (this.termType != TermTypes.GENE_EXPRESSION) return
 		const getLabel = (name: string) => {
 			if (name.length >= 25) return name.substring(0, 20) + '...'
 			return name
@@ -213,8 +214,8 @@ export class VolcanoViewModel {
 	}
 
 	getGenesColor(d: DataPointEntry, significant: boolean, controlColor: string, caseColor: string) {
-		if (this.termType != 'geneExpression') return
-		if (!d.gene_name) throw `Missing gene_name in data: ${JSON.stringify(d)} [VolcanoViewModel getGenesColor()]`
+		if (this.termType != TermTypes.GENE_EXPRESSION) return
+		if (!d.gene_name) throw new Error(`Missing gene_name in data: ${JSON.stringify(d)}`)
 		if (significant) {
 			if (controlColor && caseColor) d.color = d.fold_change > 0 ? caseColor : controlColor
 			else d.color = this.settings.defaultSignColor
@@ -255,7 +256,7 @@ export class VolcanoViewModel {
 	}
 
 	setPTableColumns() {
-		if (this.termType == 'geneExpression') {
+		if (this.termType == TermTypes.GENE_EXPRESSION) {
 			this.pValueTable.columns.splice(0, 0, { label: 'Gene Name', sortable: true })
 		}
 	}
@@ -264,7 +265,7 @@ export class VolcanoViewModel {
 		const userActions = {
 			noShow: new Set<string>()
 		}
-		if (this.termType == 'geneExpression') {
+		if (this.termType == TermTypes.GENE_EXPRESSION) {
 			if (this.settings.method == 'edgeR' && getSampleNum(this.config) > 100) {
 				userActions.noShow.add('Confounding factors')
 			}

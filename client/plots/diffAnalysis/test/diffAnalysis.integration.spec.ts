@@ -1,5 +1,6 @@
 import tape from 'tape'
 import * as helpers from '../../../test/front.helpers.js'
+import { TermTypes } from '#shared/terms.js'
 
 /*
 Tests:
@@ -35,7 +36,6 @@ tape('\n', function (test) {
 
 tape('Default gene expression diffAnalysis', test => {
 	test.timeoutAfter(5000)
-
 	const group1Values = [
 		{ sampleId: 105, sample: '17_patient' },
 		{ sampleId: 129, sample: '2646_patient' },
@@ -103,6 +103,7 @@ tape('Default gene expression diffAnalysis', test => {
 		{ sampleId: 186, sample: '3444_patient' },
 		{ sampleId: 187, sample: '3458_patient' }
 	]
+
 	const groups = [
 		{
 			name: 'Female',
@@ -124,7 +125,7 @@ tape('Default gene expression diffAnalysis', test => {
 					samplelst: {
 						groups
 					},
-					termType: 'geneExpression',
+					termType: TermTypes.GENE_EXPRESSION,
 					tw: {
 						q: {
 							groups
