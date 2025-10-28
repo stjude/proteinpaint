@@ -101,11 +101,10 @@ export const genomeBrowserInit = getCompInit(TdbGenomeBrowser)
 // this alias will allow abstracted dynamic imports
 export const componentInit = genomeBrowserInit
 
-export async function getPlotConfig(opts, app, activeCohort) {
-	// 3rd arg is initial active cohort
+export async function getPlotConfig(opts, app) {
 	try {
 		// request default queries config from dataset, and allows opts to override
-		const c = await getDefaultConfig(app.vocabApi, opts, activeCohort)
+		const c = await getDefaultConfig(app.vocabApi, opts)
 		//console.log(c)
 		return c
 	} catch (e) {
@@ -117,10 +116,8 @@ export async function getPlotConfig(opts, app, activeCohort) {
 vocabApi
 override? {}
     optional custom state to override default
-activeCohort int -1/0/1..
-    -1 if ds is not using cohort, 0/1 etc if true
 */
-async function getDefaultConfig(vocabApi, override, activeCohort) {
+async function getDefaultConfig(vocabApi, override) {
 	const config = Object.assign(
 		// clone for modifying
 		structuredClone({
@@ -148,6 +145,7 @@ async function getDefaultConfig(vocabApi, override, activeCohort) {
 			// a type=filter group may use filterByCohort. in such case, modify default state to assign proper filter based on current cohort
 			const gf = config.snvindel.details.groups.find(i => i.type == 'filter')
 			if (gf?.filterByCohort) {
+				const activeCohort = vocabApi.state.activeCohort
 				if (!Number.isInteger(activeCohort)) throw 'filterByCohort but activeCohort not integer'
 				// modify and assign
 				gf.filter = gf.filterByCohort[vocabApi.termdbConfig.selectCohort.values[activeCohort].keys.join(',')]
