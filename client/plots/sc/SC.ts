@@ -211,6 +211,7 @@ export const componentInit = SCInit
 export function getPlotConfig(opts: SCConfigOpts, app: MassAppApi) {
 	const config = {
 		chartType: 'sc',
+		hidePlotFilter: true,
 		settings: getDefaultSCAppSettings(opts.overrides || {}, app)
 	} as any
 
