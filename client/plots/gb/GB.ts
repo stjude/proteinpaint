@@ -1,13 +1,12 @@
 import { PlotBase } from '../PlotBase.ts'
 import { getCompInit, type ComponentApi, type RxComponent } from '#rx'
-import { addGeneSearchbox, Menu, sayerror } from '#dom'
+import { Menu } from '#dom'
 import { getNormalRoot } from '#filter'
 import { Model } from './model/Model.ts'
 import { View } from './view/View.ts'
 import { TabsRenderer } from './view/TabsRenderer.ts'
+import { GeneSearchRenderer } from './view/GeneSearchRenderer.ts'
 import { Interactions, mayUpdateGroupTestMethodsIdx } from './interactions/Interactions.ts'
-
-const geneTip = new Menu({ padding: '0px' })
 
 class TdbGenomeBrowser extends PlotBase implements RxComponent {
 	static type = 'genomeBrowser'
@@ -38,15 +37,12 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 			.style('font-size', '0.75em')
 			.text('GENOME BROWSER')
 		// layout rows from top to bottom
-		const errDiv = holder.append('div')
-		const messageRow = holder.append('div').style('margin-left', '25px')
-		messageRow.append('span').html('&nbsp;') // to not to collapse row when empty
+		const loadingDiv = holder.append('div').style('display', 'none').style('margin-left', '25px').text('Loading...')
 		const dom = {
 			tip: new Menu(),
 			holder,
-			errDiv,
-			loadingDiv: messageRow.append('span').text('Loading...'),
-			controlsDiv: holder.append('div').style('margin-left', '25px'),
+			loadingDiv,
+			controlsDiv: holder.append('div').style('margin', '15px 0px 25px 25px'),
 			blockHolder: holder.append('div')
 		}
 		return dom
@@ -57,6 +53,9 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		const state = this.getState(appState)
 		const tabs = new TabsRenderer(state, this.dom, this.interactions)
 		tabs.main()
+		const opts = this.getOpts()
+		const geneSearch = new GeneSearchRenderer(state, this.dom.controlsDiv.append('div'), opts, this.interactions)
+		geneSearch.main()
 	}
 
 	getState(appState) {
@@ -70,18 +69,17 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 	}
 
 	async main() {
-		this.dom.loadingDiv.style('display', 'inline')
+		this.dom.loadingDiv.style('display', 'block')
 		const state = this.getState(this.app.getState())
 		if (state.config.chartType != this.type) return
-		try {
+		if (state.config.geneSearchResult) {
+			// valid gene search result
+			// render genome browser
 			const model = new Model(state, this.app)
 			const data = await model.preComputeData()
 			const opts = this.getOpts()
 			const view = new View(state, data, this.dom, opts, this.interactions)
 			await view.main()
-		} catch (e: any) {
-			sayerror(this.dom.errDiv, e.message || e)
-			if (e.stack) console.log(e.stack)
 		}
 		this.dom.loadingDiv.style('display', 'none')
 	}
@@ -121,10 +119,8 @@ override? {}
     optional custom state to override default
 activeCohort int -1/0/1..
     -1 if ds is not using cohort, 0/1 etc if true
-blockIsProteinMode? bool
-    optional. if missing auto compute
 */
-async function getDefaultConfig(vocabApi, override, activeCohort, blockIsProteinMode?) {
+async function getDefaultConfig(vocabApi, override, activeCohort) {
 	const config = Object.assign(
 		// clone for modifying
 		structuredClone({
@@ -134,7 +130,7 @@ async function getDefaultConfig(vocabApi, override, activeCohort, blockIsProtein
 		}),
 		override || {}
 	)
-	computeBlockModeFlag(config, blockIsProteinMode, vocabApi)
+	computeBlockModeFlag(config, vocabApi)
 
 	if (config.snvindel) {
 		// presence of snvindel will generate the "mds3" tk, here setup associated config
@@ -180,13 +176,8 @@ async function getDefaultConfig(vocabApi, override, activeCohort, blockIsProtein
 	return config
 }
 
-export function computeBlockModeFlag(config, blockIsProteinMode?, vocabApi?) {
+export function computeBlockModeFlag(config, vocabApi?) {
 	// steps follow the order of priority
-	if (typeof blockIsProteinMode == 'boolean') {
-		// this setting is set by chart button menu by user choice or saved state
-		config.blockIsProteinMode = blockIsProteinMode
-		return
-	}
 	if (typeof config.blockIsProteinMode == 'boolean') {
 		// state has predefined mode, do not modify
 		return
@@ -216,93 +207,10 @@ export function computeBlockModeFlag(config, blockIsProteinMode?, vocabApi?) {
 
 /*
 called in mass/charts.js, to render the menu upon clicking the chart button in the charts tray
-
-holder: the holder in the tooltip
-chartsInstance: MassCharts instance
-{
-    app {
-        vocabApi
-        opts { // the mass ui options
-            genome{} // client-side genome object
-        }
-    }
-    state {
-        termdbConfig{} // should no longer track it in plot state
-    }
-}
+	holder: the holder in the tooltip
+	chartsInstance: MassCharts instance
 */
-export function makeChartBtnMenu(holder, chartsInstance) {
-	const genomeObj = chartsInstance.app.opts.genome
-	if (typeof genomeObj != 'object') throw 'chartsInstance.app.opts.genome not an object and needed for gene search box'
-
-	const arg: any = {
-		tip: geneTip,
-		genome: genomeObj,
-		row: holder.append('div').style('margin', '10px'),
-		callback: async () => {
-			// found a hit {chr,start,stop,geneSymbol}; dispatch to create new plot
-			try {
-				await launchPlotAfterGeneSearch(result, chartsInstance, holder)
-			} catch (e: any) {
-				// upon err, create div in chart button menu to display err
-				holder.append('div').text('Error: ' + (e.message || e))
-				console.log(e)
-			}
-		}
-	}
-	switch (chartsInstance.state.termdbConfig.queries.gbRestrictMode) {
-		case undefined:
-			// not set. allowed
-			break
-		case 'genomic':
-			// gb can only be block mode, add default coord to arg
-			arg.defaultCoord = chartsInstance.state.termdbConfig.queries.defaultCoord
-			break
-		case 'protein':
-			// gb can only be protein mode, only allow searching gene
-			arg.searchOnly = 'gene'
-			break
-		default:
-			throw 'unknown gbRestrictMode'
-	}
-	const result = addGeneSearchbox(arg)
-}
-
-async function launchPlotAfterGeneSearch(result, chartsInstance, holder) {
-	if (result.geneSymbol && !chartsInstance.state.termdbConfig.queries.gbRestrictMode) {
-		// user found a gene and no restricted mode from ds, ask user if to use either protein/genomic mode
-
-		// on repeated gene search, detect if btndiv is present, and remove, avoiding showing duplicate buttons
-		holder.select('.sjpp_gbmodebtndiv').remove()
-		// create new div and buttons
-		const btndiv = holder.append('div').attr('class', 'sjpp_gbmodebtndiv').style('margin', '15px')
-		btndiv
-			.append('button')
-			.style('margin-right', '10px')
-			.text('Protein view of ' + result.geneSymbol)
-			.on('click', () => launch(true)) // true for going to protein mode
-		btndiv
-			.append('button')
-			.text('Genomic view of ' + result.geneSymbol)
-			.on('click', () => launch(false)) // explicitely set false for genomic mode so downstream won't auto set
-		return
-	}
-	// only one possibility of gb mode and it can be auto determined
-	await launch(chartsInstance.state.termdbConfig.queries.gbRestrictMode == 'protein')
-
-	async function launch(blockIsProteinMode) {
-		// must do this as 'plot_prep' does not call getPlotConfig()
-		// request default queries config from dataset, and allows opts to override
-		// this config{} will become this.state.config{}
-		const config = await getDefaultConfig(
-			chartsInstance.app.vocabApi,
-			null,
-			chartsInstance.state.activeCohort,
-			blockIsProteinMode
-		)
-		config.chartType = 'genomeBrowser'
-		config.geneSearchResult = result
-		const chart = { config }
-		chartsInstance.prepPlot(chart)
-	}
+export function makeChartBtnMenu(_holder, chartsInstance) {
+	const chart = { config: { chartType: 'genomeBrowser' } }
+	chartsInstance.prepPlot(chart)
 }
