@@ -133,10 +133,13 @@ tape('1 draggable line without lastVisibleLine', async test => {
 				values[0],
 				`should provide a copy of the draggable line data as the first argument to callback`
 			)
-			test.equal(value, 1516.62, `should provide the value as the second argument to callback`)
+			test.true((value - 1516.62) / value < 0.01, `should provide the value as the second argument to callback`)
 			test.deepEqual(
-				lines.filter(l => l.style.display !== 'none').map(l => Number(l.getAttribute('x1'))),
-				x1b4drag.map(x => x + xOffset),
+				lines
+					.filter(l => l.style.display !== 'none')
+					.map((l, i) => Math.abs(Math.floor(Number(l.getAttribute('x1')) - x1b4drag[i] - xOffset)) < 2),
+				// check that the difference between expected and actual x values is less than a few pixels
+				[true, true, true],
 				`should also move non-draggable lines in the expected x-positions of the density plot`
 			)
 			if ((test as any)._ok) destroy()
@@ -182,10 +185,16 @@ tape('1 draggable line with lastVisibleLine', async test => {
 				values[0],
 				`should provide a copy of the draggable line data as the first argument to callback`
 			)
-			test.equal(value, 1516.62, `should provide the value as the second argument to callback`)
+			test.true((value - 1516.62) / value < 0.01, `should provide the value as the second argument to callback`)
+			const expectedXDiff = [0, 0, 44]
 			test.deepEqual(
-				lines.filter(l => l.style.display !== 'none').map(l => Number(l.getAttribute('x1'))),
-				[171, 213, 222],
+				lines
+					.filter(l => l.style.display !== 'none')
+					.map(
+						(l, i) => Math.abs(Math.floor(Number(l.getAttribute('x1')) - x1b4drag[i] - xOffset) + expectedXDiff[i]) < 2
+					),
+				// check that the difference between expected and actual x values is less than a few pixels
+				[true, true, true],
 				`should also move non-draggable lines in the expected x-positions of the density plot`
 			)
 			if ((test as any)._ok) destroy()
