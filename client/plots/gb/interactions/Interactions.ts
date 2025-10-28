@@ -20,6 +20,17 @@ export class Interactions {
 		})
 	}
 
+	onGeneSearch = async (result, blockIsProteinMode) => {
+		await this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: {
+				geneSearchResult: result,
+				blockIsProteinMode
+			}
+		})
+	}
+
 	saveToState = async config => {
 		await this.app.save({
 			type: 'plot_edit',
