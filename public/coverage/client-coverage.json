@@ -8746,5 +8746,41 @@
       "prev": 0,
       "diff": 85.5475
     }
+  },
+  "plots/cuminc.js": {
+    "lines": {
+      "total": 495,
+      "covered": 372,
+      "skipped": 0,
+      "pct": 75.15
+    },
+    "functions": {
+      "total": 91,
+      "covered": 69,
+      "skipped": 0,
+      "pct": 75.82
+    },
+    "statements": {
+      "total": 533,
+      "covered": 381,
+      "skipped": 0,
+      "pct": 71.48
+    },
+    "branches": {
+      "total": 302,
+      "covered": 188,
+      "skipped": 0,
+      "pct": 62.25
+    },
+    "lowestPct": {
+      "curr": 62.25,
+      "prev": 0,
+      "diff": 62.25
+    },
+    "averagePct": {
+      "curr": 71.175,
+      "prev": 0,
+      "diff": 71.175
+    }
   }
 }
