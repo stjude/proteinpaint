@@ -13,7 +13,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
 	dom: GRIN2Dom
 	private runButton!: any
-	// private dtUsage: Record<number, { checked: boolean; label: string }> = {}
 
 	// Colors
 	readonly borderColor = '#eee'
@@ -340,6 +339,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				const dtu = structuredClone(this.state.config.settings.dtUsage)
 				dtu[dtsv].checked = checked
 
+				// FIXME on every check/uncheck, app dispatches and call main(), which is undesirable. tried app.save() and somehow not all box status can be saved
 				this.app.dispatch({
 					type: 'plot_edit',
 					id: this.id,
