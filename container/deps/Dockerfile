@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install --allow-downgrades -y \
 	libgsl0-dev \
 	libhdf5-dev \
 	liblzma-dev \
-        libdatrie1=0.2.13-3+b1 \
+    libdatrie1=0.2.13-4 \
 	libncurses5-dev \
 	libperl-dev \
 	libssl-dev \
@@ -41,13 +41,14 @@ RUN apt-get update && apt-get install --allow-downgrades -y \
 	g++ \
     pkg-config \
     cmake \
-    python3=3.13.3-1 \
-    python3-venv=3.13.3-1 \
-    python3-pip=25.1.1+dfsg-1 \
-#    In case the python3 pin breaks the build use:
-#    python3-pip \
-#    python3-venv \
-#    and read the versions and pin again.
+    # python3=3.13.9-1 \
+    # python3-venv=3.13.7-1 \
+    # python3-pip=25.2+dfsg-1 \
+    # In case the python3 pin breaks the build use:
+    python3 \
+    python3-pip \
+    python3-venv \
+    # and read the versions and pin again.
     x11-common \
     libx11-dev \
     libx11-data \
@@ -86,9 +87,10 @@ ENV PATH="/root/.nvm/versions/node/v${NODE_VERSION}/bin:$PATH"
 RUN node -v && npm -v
 
 # Install python dependencies
+COPY ./python/requirements.txt ./python/requirements.txt
 RUN python3 -m venv /opt/venv && \
     pip install --upgrade pip && \
-    pip install -r requirements.txt && \
+    pip install -r ./python/requirements.txt && \
     ## clean up
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/downloaded_packages/ /tmp/*.rds

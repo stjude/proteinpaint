@@ -90,6 +90,11 @@ cp ../server/app-server.mjs .
 mkdir -p R
 cp -r ../../R/utils R/
 
+mkdir -p python
+cp -r ../../python/requirements.txt python/
+
+cp ../../server/package.json ./
+
 # Create the tmppack folder to store pp tarballs during CI,
 # if there are changes in the pp repo
 mkdir -p ./tmppack

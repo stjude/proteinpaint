@@ -5,7 +5,7 @@ import path from 'path'
 import type { VersionInfo, GenomeBuildInfo, HealthCheckResponse } from '#types'
 import { authApi } from './auth.js'
 
-const pkg = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '../../package.json'), { encoding: 'utf8' }))
+const pkg = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '../package.json'), { encoding: 'utf8' }))
 
 export async function getStat(genomes) {
 	if (!versionInfo.deps) setVersionInfoDeps() // set only once
