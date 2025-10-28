@@ -24,12 +24,12 @@ if [[ "$FILES" != "" ]]; then
 
 	# lint against team preferences
 	echo "Linting ..."
-	echo "$FILES" | grep "shared\/" | grep "\.ts" | xargs npx eslint --env shared-node-browser
-	echo "$FILES" | grep "client\/" | grep "\.ts" | xargs npx eslint --env browser
-	echo "$FILES" | grep "front\/" | grep "\.ts" | xargs npx eslint --env browser
-	echo "$FILES" | grep "rust\/" | grep "\.ts" | xargs npx eslint --env node
-	echo "$FILES" | grep "server\/" | grep "\.ts" | xargs npx eslint --env node
-	echo "$FILES" | grep "/R\/" | grep "\.ts" | xargs npx eslint --env node
+	echo "$FILES" | grep "shared\/" | grep "\.ts" | xargs npx eslint # eslint.config.js defaults to shared-node-browser
+	echo "$FILES" | grep "client\/" | grep "\.ts" | JSENV=browser xargs npx eslint
+	echo "$FILES" | grep "front\/" | grep "\.ts" | JSENV=browser xargs npx eslint
+	echo "$FILES" | grep "rust\/" | grep "\.ts" | JSENV=node xargs npx eslint
+	echo "$FILES" | grep "server\/" | grep "\.ts" | JSENV=node xargs npx eslint
+	echo "$FILES" | grep "/R\/" | grep "\.ts" | JSENV=node xargs npx eslint
 
 	# check for invalid use of .Inner reference
 	echo "checking for forbidden .Inner. usage"
