@@ -1,5 +1,6 @@
 import { roundValue } from '#shared/roundValue.js'
 import type { VolcanoSettings } from './VolcanoTypes'
+import { TermTypes } from '#shared/terms.js'
 
 // The max sample cutoff for volcano rendering
 export const maxSampleCutoff = 4000
@@ -23,7 +24,7 @@ export function getDefaultVolcanoSettings(overrides = {}, opts: any): VolcanoSet
 		pValueType: 'adjusted',
 		rankBy: 'abs(foldChange)',
 		//Only declare this value in one place
-		sampleNumCutoff: opts.termType == 'geneExpression' ? maxGESampleCutoff : maxSampleCutoff,
+		sampleNumCutoff: opts.termType == TermTypes.GENE_EXPRESSION ? maxGESampleCutoff : maxSampleCutoff,
 		width: 400
 	}
 
@@ -35,6 +36,7 @@ export function getSampleNum(config: any) {
 }
 
 export function validateVolcanoSettings(config: any, opts: any) {
+	if (config.termType == TermTypes.SINGLECELL_CELLTYPE) return
 	if (!config.settings.volcano) return
 	const settings = config.settings.volcano
 	const sampleNum = getSampleNum(opts)
@@ -42,7 +44,7 @@ export function validateVolcanoSettings(config: any, opts: any) {
 		throw `Sample size ${sampleNum} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
 	}
 
-	if (config.termType == 'geneExpression') {
+	if (config.termType == TermTypes.GENE_EXPRESSION) {
 		const largeNum = sampleNum > settings.sampleNumCutoff
 
 		if (!opts.overrides && largeNum) {

@@ -1,6 +1,7 @@
 import type { ControlInputEntry } from '#mass/types/mass'
 import type { VolcanoPlotConfig } from './VolcanoTypes'
 import { getSampleNum } from './defaults'
+import { TermTypes } from '#shared/terms.js'
 
 /** Handles settings the controls in the menu based on the app
  * termType.
@@ -18,15 +19,15 @@ import { getSampleNum } from './defaults'
  */
 
 export class VolcanoControlInputs {
-	config: VolcanoPlotConfig
-	sampleNum: number
+	config: any
+	sampleNum?: number
 	/** term type used to determine which controls to show */
 	termType: string
 	/** control inputs for controls init */
 	inputs: ControlInputEntry[]
 	constructor(config: VolcanoPlotConfig, termType: string) {
 		this.config = config
-		this.sampleNum = getSampleNum(config)
+		if (this.config.termType == TermTypes.GENE_EXPRESSION) this.sampleNum = getSampleNum(config)
 		this.termType = termType
 		//Populated with the default controls for the volcano plot
 		this.inputs = [
@@ -78,11 +79,12 @@ export class VolcanoControlInputs {
 				label: 'Significant value color',
 				type: 'color',
 				chartType: 'volcano',
-				title: 'Default color for highlighted data points.',
+				title: 'Default color for significant data points.',
 				settingsKey: 'defaultSignColor',
 				getDisplayStyle: () => {
-					const controlColor = (this.config.tw?.term?.values as any)?.[this.config.samplelst.groups[0].name]?.color
-					const caseColor = (this.config.tw?.term?.values as any)?.[this.config.samplelst.groups[1].name].color
+					if (this.config.typeType == TermTypes.SINGLECELL_CELLTYPE) return ''
+					const controlColor = this.config.tw?.term?.values?.[this.config.samplelst.groups[0].name]?.color
+					const caseColor = this.config.tw?.term?.values?.[this.config.samplelst.groups[1].name].color
 					if (controlColor && caseColor) return 'none'
 					else return ''
 				}
@@ -91,7 +93,7 @@ export class VolcanoControlInputs {
 				label: 'Non-significant value color',
 				type: 'color',
 				chartType: 'volcano',
-				title: 'Default color for highlighted data points.',
+				title: 'Default color for non-significant data points.',
 				settingsKey: 'defaultNonSignColor'
 			},
 			{
@@ -112,7 +114,7 @@ export class VolcanoControlInputs {
 	}
 
 	addGeneExpressionControlInputs() {
-		if (this.termType !== 'geneExpression') return
+		if (this.termType !== TermTypes.GENE_EXPRESSION) return
 		const geInputs = [
 			{
 				label: 'Minimum read count',
@@ -193,7 +195,7 @@ export class VolcanoControlInputs {
 	}
 
 	getMethodOptions() {
-		if (this.termType !== 'geneExpression') return
+		if (this.termType !== TermTypes.GENE_EXPRESSION) return
 		const settings = this.config.settings.volcano
 		const features = JSON.parse(sessionStorage.getItem('optionalFeatures') as string)
 		if (features?.runDE_methods?.length) {
@@ -203,7 +205,7 @@ export class VolcanoControlInputs {
 			}
 			return opts
 		}
-		if (this.sampleNum < settings!.sampleNumCutoff) {
+		if (this.sampleNum! < settings!.sampleNumCutoff) {
 			return [
 				{ label: 'edgeR', value: 'edgeR' },
 				{ label: 'Wilcoxon', value: 'wilcoxon' },

@@ -23,6 +23,7 @@ export class VolcanoInteractions {
 	async confoundersMenu() {
 		const state = this.app.getState()
 		const config = state.plots.find((p: VolcanoPlotConfig) => p.id === this.id)
+		if (config.termType !== TermTypes.GENE_EXPRESSION) return
 
 		/** Find terms used to create the groups and disable in the
 		 * termsetting UI. Prevents users from trying to control for
@@ -108,6 +109,7 @@ export class VolcanoInteractions {
 	 * For geneExpression, value == gene symbol */
 	async launchBoxPlot(value: string) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
+		if (config.termType != TermTypes.GENE_EXPRESSION) return
 		const values = {}
 		for (const group of config.samplelst.groups) {
 			values[group.name] = {
@@ -120,7 +122,7 @@ export class VolcanoInteractions {
 		 * need to be handled separately.
 		 * TODO: In the future with more use cases, simplify this logic. */
 		const setTerm = () => {
-			if (config.termType == 'geneExpression') {
+			if (config.termType == TermTypes.GENE_EXPRESSION) {
 				return {
 					q: { mode: 'continuous' },
 					term: {

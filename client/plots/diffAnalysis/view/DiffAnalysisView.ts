@@ -1,7 +1,7 @@
 import type { MassAppApi } from '#mass/types/mass'
-import { Tabs } from '#dom'
-import type { RenderedTab } from '#dom'
+import { Tabs, type RenderedTab } from '#dom'
 import type { DiffAnalysisDom, DiffAnalysisPlotConfig } from '../DiffAnalysisTypes'
+import { TermTypes } from '#shared/terms.js'
 
 export class DiffAnalysisView {
 	app: MassAppApi
@@ -33,7 +33,7 @@ function setRenderers(self) {
 				active: self.config.childType === 'volcano',
 				id: 'volcano',
 				label: 'Volcano',
-				isVisible: () => self.config.termType === 'geneExpression',
+				isVisible: () => self.config.termType === TermTypes.GENE_EXPRESSION,
 				getPlotConfig: () => {
 					return {
 						childType: 'volcano'
@@ -45,7 +45,7 @@ function setRenderers(self) {
 				active: self.config.childType === 'gsea',
 				id: 'gsea',
 				label: 'Gene Set Enrichment Analysis',
-				isVisible: () => self.config.termType === 'geneExpression',
+				isVisible: () => self.config.termType === TermTypes.GENE_EXPRESSION,
 				getPlotConfig: () => {
 					return {
 						childType: 'gsea'
