@@ -1,25 +1,17 @@
 [
  {
   "alt": "T",
+  "altCount": 20,
   "chr": "chr12",
   "class": "M",
+  "dna_assay": "wgs",
   "dt": 1,
   "gene": "KRAS",
-  "isoform": "NM_001369786",
+  "isoform": "NM_033360",
   "mname": "G13D",
   "origin": "somatic",
   "pos": 25245347,
-  "ref": "C"
- },
- {
-  "chrA": "chr12",
-  "chrB": "chr14",
-  "dt": 2,
-  "geneA": "KRAS",
-  "geneB": "AKT1",
-  "posA": 25225245,
-  "posB": 104779948,
-  "strandA": "-",
-  "strandB": "-"
+  "ref": "C",
+  "refCount": 12
  }
 ]

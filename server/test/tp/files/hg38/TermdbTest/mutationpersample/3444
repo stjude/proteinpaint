@@ -1,25 +1,17 @@
 [
  {
   "alt": "G",
+  "altCount": 7,
   "chr": "chr17",
   "class": "F",
+  "dna_assay": "wgs",
   "dt": 1,
   "gene": "TP53",
   "isoform": "NM_000546",
   "mname": "R156Afs*14",
   "origin": "somatic",
   "pos": 7675147,
-  "ref": "GG"
- },
- {
-  "chrA": "chr17",
-  "chrB": "chr14",
-  "dt": 2,
-  "geneA": "TP53",
-  "geneB": "AKT1",
-  "posA": 7674289,
-  "posB": 104779348,
-  "strandA": "-",
-  "strandB": "-"
+  "ref": "GG",
+  "refCount": 9
  }
 ]

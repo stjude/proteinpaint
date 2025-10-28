@@ -1,32 +1,17 @@
 [
  {
   "alt": "T",
+  "altCount": 7,
   "chr": "chr17",
   "class": "M",
+  "dna_assay": "wgs",
   "dt": 1,
   "gene": "TP53",
   "isoform": "NM_000546",
   "mname": "R273H",
   "origin": "somatic",
   "pos": 7673802,
-  "ref": "C"
- },
- {
-  "chr": "chr14",
-  "dt": 4,
-  "start": 104769347,
-  "stop": 104795747,
-  "value": -1.0
- },
- {
-  "chrA": "chr17",
-  "chrB": "chr14",
-  "dt": 2,
-  "geneA": "TP53",
-  "geneB": "AKT1",
-  "posA": 7674289,
-  "posB": 104779348,
-  "strandA": "-",
-  "strandB": "-"
+  "ref": "C",
+  "refCount": 9
  }
 ]
