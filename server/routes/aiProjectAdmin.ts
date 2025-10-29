@@ -111,7 +111,7 @@ function getProjects(connection: Database.Database): Database.RunResult | any[] 
 	return runSQL(connection, sql)
 }
 
-function getImages(connection: Database.Database, project: any): string[] {
+export function getImages(connection: Database.Database, project: any): string[] {
 	// Get project ID if not provided
 	if (!project.id) {
 		const res: any = connection.prepare(`SELECT id FROM project WHERE name = ?`).get(project.name)
