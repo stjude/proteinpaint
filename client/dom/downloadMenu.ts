@@ -57,7 +57,7 @@ export class DownloadMenu {
 	}
 }
 
-export async function downloadSVGsAsPdf(chartImages, filename, orientation) {
+export async function downloadSVGsAsPdf(chartImages, filename, orientation, header = '') {
 	const JSPDF = await import('jspdf')
 	const { jsPDF } = JSPDF
 	/*
@@ -73,6 +73,12 @@ export async function downloadSVGsAsPdf(chartImages, filename, orientation) {
 
 	let y = 50
 	const x = 0.05 * pageWidth
+
+	if (header) {
+		const lines = header.split('\n')
+		doc.text(header, x, y)
+		y += 30 * lines.length + 20
+	}
 
 	for (const chartImage of chartImages) {
 		const name = chartImage.name
