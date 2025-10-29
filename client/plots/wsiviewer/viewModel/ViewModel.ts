@@ -98,6 +98,7 @@ export class ViewModel {
 	private setClassData(imageViewData: ImageViewData, imageData: WSImage) {
 		if (!imageData?.classes?.length) return
 
+		// Note: 'Enter' is no longer included in shortcuts since it is now handled separately in the interaction code.
 		const shortcuts: string[] = []
 		const classRows: TableCell[][] = []
 
