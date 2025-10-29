@@ -203,6 +203,7 @@ export class Filter {
 		const i = parentCopy.lst.findIndex(f => f.$id === $id)
 		if (i == -1) return null
 		parentCopy.lst.splice(i, 1)
+		if (parentCopy.lst.length < 2) parentCopy.join = ''
 		const globalFilter = this.app?.getState().termfilter?.filter
 		return getNormalRoot(!globalFilter ? rootCopy : filterJoin([rootCopy, globalFilter]))
 		/*
