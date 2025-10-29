@@ -318,29 +318,34 @@ async function processSampleData(
 		total: lesions.length,
 		byType: {}
 	}
+
+	// Count lesions by type in a single pass
+	const lesionTypeCounts: Record<string, number> = {}
+	for (const lesion of lesions) {
+		const lesionType = lesion[4] // Get the lesion type from the 5th element
+		lesionTypeCounts[lesionType] = (lesionTypeCounts[lesionType] || 0) + 1
+	}
 	for (const [type, info] of tracker.entries()) {
 		const isCapped = info.count >= MAX_LESIONS_PER_TYPE
 
 		switch (type) {
 			case dtsnvindel:
 				lesionCounts.byType['mutation'] = {
-					count: lesions.filter(l => l[4] === 'mutation').length,
+					count: lesionTypeCounts['mutation'] || 0,
 					capped: isCapped,
 					samples: samplesPerType.get(type)?.size || 0
 				}
 				break
 			case dtcnv: {
-				// For CNV, count gains and losses separately but share capped status
-				const gains = lesions.filter(l => l[4] === 'gain').length
-				const losses = lesions.filter(l => l[4] === 'loss').length
+				// For CNV, count gains and losses separately but share capped status and sample count
 				const sampleCount = samplesPerType.get(type)?.size || 0
 				lesionCounts.byType['gain'] = {
-					count: gains,
+					count: lesionTypeCounts['gain'] || 0,
 					capped: isCapped,
 					samples: sampleCount
 				}
 				lesionCounts.byType['loss'] = {
-					count: losses,
+					count: lesionTypeCounts['loss'] || 0,
 					capped: isCapped,
 					samples: sampleCount
 				}
@@ -348,14 +353,14 @@ async function processSampleData(
 			}
 			case dtfusionrna:
 				lesionCounts.byType['fusion'] = {
-					count: lesions.filter(l => l[4] === 'fusion').length,
+					count: lesionTypeCounts['fusion'] || 0,
 					capped: isCapped,
 					samples: samplesPerType.get(type)?.size || 0
 				}
 				break
 			case dtsv:
 				lesionCounts.byType['sv'] = {
-					count: lesions.filter(l => l[4] === 'sv').length,
+					count: lesionTypeCounts['sv'] || 0,
 					capped: isCapped,
 					samples: samplesPerType.get(type)?.size || 0
 				}
