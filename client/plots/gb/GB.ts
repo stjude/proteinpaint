@@ -38,11 +38,13 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 			.text('GENOME BROWSER')
 		// layout rows from top to bottom
 		const loadingDiv = holder.append('div').style('display', 'none').style('margin-left', '25px').text('Loading...')
+		const controlsDiv = holder.append('div').style('margin', '15px 0px 25px 25px')
 		const dom = {
 			tip: new Menu(),
 			holder,
 			loadingDiv,
-			controlsDiv: holder.append('div').style('margin', '15px 0px 25px 25px'),
+			tabsDiv: controlsDiv.append('div'),
+			geneSearchDiv: controlsDiv.append('div'),
 			blockHolder: holder.append('div')
 		}
 		return dom
@@ -54,7 +56,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		const tabs = new TabsRenderer(state, this.dom, this.interactions)
 		tabs.main()
 		const opts = this.getOpts()
-		const geneSearch = new GeneSearchRenderer(state, this.dom.controlsDiv.append('div'), opts, this.interactions)
+		const geneSearch = new GeneSearchRenderer(state, this.dom.geneSearchDiv, opts, this.interactions)
 		geneSearch.main()
 	}
 
@@ -75,6 +77,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		if (state.config.geneSearchResult) {
 			// valid gene search result
 			// render genome browser
+			this.dom.geneSearchDiv.style('display', 'none')
 			const model = new Model(state, this.app)
 			const data = await model.preComputeData()
 			const opts = this.getOpts()
