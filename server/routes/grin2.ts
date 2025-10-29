@@ -208,7 +208,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 			grin2Time: grin2AnalysisTimeToPrint,
 			totalTime: totalTime
 		},
-		processingSummary: { ...processingSummary, lesionCounts: resultData.lesionCounts },
+		processingSummary: processingSummary,
 		cacheFileName: resultData.cacheFileName
 	}
 
@@ -303,31 +303,51 @@ async function processSampleData(
 	processingSummary.processedLesions = lesions.length
 
 	// After processing all samples, we will warn for any type that has reached its cap
+	const lesionCounts: any = {
+		total: lesions.length,
+		byType: {}
+	}
 	for (const [type, info] of tracker.entries()) {
-		if (info.count >= MAX_LESIONS_PER_TYPE) {
-			let label: string
-			switch (type) {
-				case dtsnvindel:
-					label = 'mutation'
-					break
-				case dtcnv:
-					label = 'CNV (gain/loss)'
-					break
-				case dtfusionrna:
-					label = 'fusion'
-					break
-				case dtsv:
-					label = 'structural variant'
-					break
-				default:
-					label = `type ${type}`
-					break
+		const isCapped = info.count >= MAX_LESIONS_PER_TYPE
+
+		switch (type) {
+			case dtsnvindel:
+				lesionCounts.byType['mutation'] = {
+					count: lesions.filter(l => l[4] === 'mutation').length,
+					capped: isCapped
+				}
+				break
+			case dtcnv: {
+				// For CNV, count gains and losses separately but share capped status
+				const gains = lesions.filter(l => l[4] === 'gain').length
+				const losses = lesions.filter(l => l[4] === 'loss').length
+				lesionCounts.byType['gain'] = {
+					count: gains,
+					capped: isCapped
+				}
+				lesionCounts.byType['loss'] = {
+					count: losses,
+					capped: isCapped
+				}
+				break
 			}
-			mayLog(
-				`[GRIN2] Warning: ${label} lesions reached the per-type cap of ${MAX_LESIONS_PER_TYPE.toLocaleString()}. No further ${label} lesions were processed.`
-			)
+			case dtfusionrna:
+				lesionCounts.byType['fusion'] = {
+					count: lesions.filter(l => l[4] === 'fusion').length,
+					capped: isCapped
+				}
+				break
+			case dtsv:
+				lesionCounts.byType['sv'] = {
+					count: lesions.filter(l => l[4] === 'sv').length,
+					capped: isCapped
+				}
+				break
 		}
 	}
+
+	// Add lesionCounts to processingSummary
+	processingSummary.lesionCounts = lesionCounts
 
 	return { lesions, processingSummary }
 }
