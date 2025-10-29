@@ -283,7 +283,7 @@ export class WSIViewerInteractions {
 					settings: {
 						renderWSIViewer: false,
 						renderAnnotationTable: true,
-						randomNum: Math.random(),
+						changeTrigger: Date.now(),
 						sessionsTileSelection: [newTileSelection, ...sessionsTileSelection]
 					}
 				}
@@ -308,7 +308,7 @@ export class WSIViewerInteractions {
 						settings: {
 							renderWSIViewer: true,
 							renderAnnotationTable: true,
-							randomNum: Math.random()
+							changeTrigger: Date.now()
 						}
 					}
 				})
@@ -465,7 +465,7 @@ export class WSIViewerInteractions {
 					renderWSIViewer: false,
 					renderAnnotationTable: true,
 					activeAnnotation: 0,
-					randomNum: Math.random(),
+					changeTrigger: Date.now(),
 					sessionsTileSelection: sessionsTileSelection
 				}
 			}
@@ -584,7 +584,7 @@ export class WSIViewerInteractions {
 				settings: {
 					renderWSIViewer: false,
 					// TODO figure out how to avoid Math.random()
-					randomNum: Math.random(),
+					changeTrigger: Date.now(),
 					activeAnnotation: 0,
 					sessionsTileSelection: sessionsTileSelection
 				}

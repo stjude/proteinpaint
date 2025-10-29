@@ -94,8 +94,7 @@ export class ViewModelProvider {
 		numDisplayedThumbnails: number,
 		displayedImageIndex: number
 	): Promise<Array<WSImageLayers | null>> {
-		// Initialize sparse array with null values
-		const layers: Array<WSImageLayers | null> = new Array(wsimages.length).fill(null)
+		const layers: Array<WSImageLayers | null> = Array.from({ length: wsimages.length }, () => null)
 
 		// Calculate the range of thumbnails to load
 		const startIndex = thumbnailRangeStart
@@ -103,12 +102,12 @@ export class ViewModelProvider {
 
 		// Determine which indices need to be loaded
 		const indicesToLoad = new Set<number>()
-		
+
 		// Load layers for visible thumbnail range
 		for (let i = startIndex; i < endIndex; i++) {
 			indicesToLoad.add(i)
 		}
-		
+
 		// Always load the currently displayed image if not in range
 		indicesToLoad.add(displayedImageIndex)
 
