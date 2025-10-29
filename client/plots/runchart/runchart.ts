@@ -110,6 +110,19 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	*/
 
 	const menuDiv = holder.append('div')
+	menuDiv
+		.append('button')
+		.style('margin', '5px')
+		.style('padding', '10px 15px')
+		.style('border-radius', '20px')
+		.style('border-color', '#ededed')
+		.style('display', 'block')
+		.text('Select data to plot ...')
+		.on('click', () => {
+			chartsInstance.dom.tip.clear()
+			select2Terms(chartsInstance.dom.tip, chartsInstance.app, 'runChart', 'date', callback, 'numeric')
+			chartsInstance.dom.tip.show() //re-show the tip after it was cleared
+		})
 	for (const plot of chartsInstance.state.termdbConfig?.plotConfigByCohort?.default?.runChart?.plots || []) {
 		const config = structuredClone(plot)
 		menuDiv
@@ -131,19 +144,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 				chartsInstance.dom.tip.hide()
 			})
 	}
-	menuDiv
-		.append('button')
-		.style('margin', '5px')
-		.style('padding', '10px 15px')
-		.style('border-radius', '20px')
-		.style('border-color', '#ededed')
-		.style('display', 'block')
-		.text('Select terms')
-		.on('click', () => {
-			chartsInstance.dom.tip.clear()
-			select2Terms(chartsInstance.dom.tip, chartsInstance.app, 'runChart', 'date', callback, 'numeric')
-			chartsInstance.dom.tip.show() //re-show the tip after it was cleared
-		})
+
 	const callback = (xterm, yterm) => {
 		chartsInstance.app.dispatch({
 			type: 'plot_create',
