@@ -365,7 +365,6 @@ async function processSampleData(
 
 	// Add lesionCounts to processingSummary
 	processingSummary.lesionCounts = lesionCounts
-	console.log('processingSummary.lesionCounts: ', processingSummary.lesionCounts)
 
 	return { lesions, processingSummary }
 }
