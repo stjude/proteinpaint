@@ -4321,10 +4321,10 @@
   },
   "filter/FilterClass.js": {
     "lines": {
-      "total": 121,
-      "covered": 111,
+      "total": 122,
+      "covered": 112,
       "skipped": 0,
-      "pct": 91.73
+      "pct": 91.8
     },
     "functions": {
       "total": 19,
@@ -4333,26 +4333,26 @@
       "pct": 89.47
     },
     "statements": {
-      "total": 140,
-      "covered": 120,
+      "total": 142,
+      "covered": 122,
       "skipped": 0,
-      "pct": 85.71
+      "pct": 85.91
     },
     "branches": {
-      "total": 96,
-      "covered": 67,
+      "total": 98,
+      "covered": 69,
       "skipped": 0,
-      "pct": 69.79
+      "pct": 70.4
     },
     "lowestPct": {
-      "curr": 69.79,
+      "curr": 70.4,
       "prev": 70.21,
-      "diff": -0.4199999999999875
+      "diff": 0.19000000000001194
     },
     "averagePct": {
-      "curr": 84.175,
-      "prev": 83.9575,
-      "diff": 0.21750000000000114
+      "curr": 84.39499999999998,
+      "prev": 84.175,
+      "diff": 0.21999999999998465
     }
   },
   "filter/FilterPrompt.js": {
