@@ -116,7 +116,14 @@ class WSIViewer extends PlotBase implements RxComponent {
 			return
 		}
 
-		const activeImage: TileLayer = wsimageLayers[settings.displayedImageIndex].wsimage
+		const activeLayerData = wsimageLayers[settings.displayedImageIndex]
+		if (!activeLayerData) {
+			sayerror(this.dom.errorDiv, `Layer for image index ${settings.displayedImageIndex} is not loaded.`)
+			this.wsiViewerInteractions.toggleLoadingDiv(false)
+			return
+		}
+
+		const activeImage: TileLayer = activeLayerData.wsimage
 		const activeImageExtent = activeImage?.getSource()?.getTileGrid()?.getExtent()
 
 		const imageViewData: ImageViewData = viewModel.getImageViewData(settings.displayedImageIndex)
@@ -134,14 +141,14 @@ class WSIViewer extends PlotBase implements RxComponent {
 			this.thumbnailsContainer = this.thumbnailRenderer.render(
 				this.dom.mapHolder,
 				this.thumbnailsContainer,
-				wsimageLayers.map(wsimageLayers => wsimageLayers.wsimage),
+				wsimageLayers.map(layer => layer ? layer.wsimage : null),
 				settings,
 				this.wsiViewerInteractions,
 				numTotalFiles
 			)
 
 			this.map = new MapRenderer(
-				wsimageLayers[settings.displayedImageIndex],
+				activeLayerData,
 				this.wsiViewerInteractions.viewerClickListener,
 				viewModel.sampleWSImages[settings.displayedImageIndex],
 				settings

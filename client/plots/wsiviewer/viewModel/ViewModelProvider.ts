@@ -27,7 +27,7 @@ export class ViewModelProvider {
 		aiProjectID: number | undefined = undefined,
 		aiWSIMageFiles: Array<string> | undefined
 	): Promise<ViewModel> {
-		let wsimageLayers: Array<WSImageLayers> = []
+		let wsimageLayers: Array<WSImageLayers | null> = []
 		let wsimageLayersLoadError: string | undefined = undefined
 		let wsImages: WSImage[] = []
 
@@ -41,7 +41,10 @@ export class ViewModelProvider {
 					data.sampleWSImages,
 					sampleId,
 					undefined,
-					settings.annotatedPatchBorderColor
+					settings.annotatedPatchBorderColor,
+					settings.thumbnailRangeStart,
+					settings.numDisplayedThumbnails,
+					settings.displayedImageIndex
 				)
 			} catch (e: any) {
 				wsimageLayersLoadError = `Error loading image layers for sample  ${sampleId}: ${e.message || e}`
@@ -60,7 +63,10 @@ export class ViewModelProvider {
 				data.wsimages,
 				undefined,
 				aiProjectID!,
-				settings.annotatedPatchBorderColor
+				settings.annotatedPatchBorderColor,
+				settings.thumbnailRangeStart,
+				settings.numDisplayedThumbnails,
+				settings.displayedImageIndex
 			)
 		}
 
@@ -83,11 +89,31 @@ export class ViewModelProvider {
 		wsimages: WSImage[],
 		sampleId: string | undefined,
 		aiProjectID: number | undefined,
-		annotatedPatchBorderColor: string
-	): Promise<WSImageLayers[]> {
-		const layers: Array<WSImageLayers> = []
+		annotatedPatchBorderColor: string,
+		thumbnailRangeStart: number,
+		numDisplayedThumbnails: number,
+		displayedImageIndex: number
+	): Promise<Array<WSImageLayers | null>> {
+		// Initialize sparse array with null values
+		const layers: Array<WSImageLayers | null> = new Array(wsimages.length).fill(null)
 
-		for (let i = 0; i < wsimages.length; i++) {
+		// Calculate the range of thumbnails to load
+		const startIndex = thumbnailRangeStart
+		const endIndex = Math.min(thumbnailRangeStart + numDisplayedThumbnails, wsimages.length)
+
+		// Determine which indices need to be loaded
+		const indicesToLoad = new Set<number>()
+		
+		// Load layers for visible thumbnail range
+		for (let i = startIndex; i < endIndex; i++) {
+			indicesToLoad.add(i)
+		}
+		
+		// Always load the currently displayed image if not in range
+		indicesToLoad.add(displayedImageIndex)
+
+		// Load layers for the determined indices
+		for (const i of indicesToLoad) {
 			const wsimage = wsimages[i].filename
 
 			const body: WSImagesRequest = {
@@ -208,7 +234,7 @@ export class ViewModelProvider {
 				wsiImageLayers.overlays = [vectorLayer]
 			}
 
-			layers.push(wsiImageLayers)
+			layers[i] = wsiImageLayers
 		}
 		return layers
 	}
