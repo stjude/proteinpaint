@@ -15,11 +15,6 @@ type KeyVal = {
 	v?: string
 }
 
-type KeyLabel = {
-	key: string
-	label: string
-}
-
 /** a set of categories about a vcf INFO field */
 export type InfoFieldCategories = {
 	/** category key from an INFO field of a vcf file */
@@ -385,7 +380,7 @@ type SvFusion = {
 		file?: string
 	}
 	/** list of dt values to indicate if this ds has sv, fusion, or both */
-	dtLst?: number[]
+	dtLst: number[]
 }
 
 type SingleSampleMutationQuery = {
@@ -1172,24 +1167,6 @@ type UiLabels = {
 	[propName: string]: string | { label: string; [otherAttr: string]: string }
 }
 
-type SurvPlotsEntry = {
-	name: string
-	serialtimekey: string
-	iscensoredkey: string
-	timelabel: string
-}
-
-type SurvPlots = {
-	[index: string]: SurvPlotsEntry
-}
-
-type sampleGroupAttrLstEntry = { key: string }
-
-type SurvivalPlot = {
-	plots: SurvPlots
-	samplegroupattrlst: sampleGroupAttrLstEntry[]
-}
-
 type TieBreakerFilterValuesEntry = {
 	dt: number
 }
@@ -1778,259 +1755,6 @@ type Title = {
 	text: string
 	link?: string
 }
-/*** types supporting MdsCohort type ***/
-type SampleAttribute = {
-	attributes: Attributes
-}
-
-type HierarchiesLstEntry = {
-	name: string
-	levels: KeyLabelFull[]
-}
-
-type Hierarchies = {
-	lst: HierarchiesLstEntry[]
-}
-
-type SetSamples = {
-	file: string
-	valuename: string
-	skipzero: boolean
-}
-
-type SetSignatures = {
-	[index: number | string]: { name?: string; color: string; nodata?: boolean | number }
-}
-
-type MutSigSets = {
-	[index: string]: {
-		name: string
-		samples: SetSamples
-		signatures: SetSignatures
-	}
-}
-
-type MutationSignature = {
-	sets: MutSigSets
-}
-
-type MdsCohort = {
-	//Does not apply to Mds3 or genomes!
-	files: FileObj[]
-	samplenamekey: string
-	tohash: (item: any, ds: any) => void //Fix later
-	sampleAttribute?: SampleAttribute
-	hierarchies?: Hierarchies
-	survivalplot?: SurvivalPlot
-	mutation_signature?: MutationSignature
-	scatterplot?: any
-}
-
-/*** types supporting MdsQueries type ***/
-type BaseTrack = {
-	name?: string
-	istrack?: boolean
-	type?: string
-	file?: string
-	hideforthemoment?: number
-	viewrangeupperlimit?: number
-}
-
-type LegendVOrigin = {
-	key: string
-	somatic: string
-	germline: string
-}
-
-type GroupSampleByAttr = {
-	attrlst: KeyLabelFull[]
-	sortgroupby?: {
-		key: string
-		order: string[]
-	}
-	attrnamespacer?: string
-}
-
-type Svcnv = BaseTrack & {
-	valueCutoff: number
-	bplengthUpperLimit: number
-	segmeanValueCutoff?: number
-	no_loh?: number
-	lohLengthUpperLimit?: number
-	hideLOHwithCNVoverlap?: boolean
-	vcf_querykey?: string
-	expressionrank_querykey?: string
-	multihidelabel_vcf: boolean
-	multihidelabel_fusion?: boolean
-	multihidelabel_sv: boolean
-	legend_vorigin?: LegendVOrigin
-	groupsamplebyattr?: GroupSampleByAttr
-	isfull?: boolean
-}
-
-type KeyLabelFull = {
-	/* Used in: 
-                queries.genefpkm.boxplotbysamplegroup.attributes
-                cohort.hierarchies.lst[i].levels
-*/
-	k: string
-	label: string
-	full?: string
-}
-
-type ASE = {
-	qvalue: number
-	meandelta_monoallelic: number
-	asemarkernumber_biallelic: number
-	color_noinfo: string
-	color_notsure: string
-	color_biallelic: string
-	color_monoallelic: string
-}
-
-type GeneFpkmOutlier = {
-	pvalue: number
-	color: string
-}
-
-type BoxPlotAdditionalsEntry = {
-	label: string
-	attributes: KeyVal[]
-}
-
-type BoxPlotBySampleGroup = {
-	attributes: KeyLabelFull[]
-	additionals?: BoxPlotAdditionalsEntry[]
-}
-
-type Fpkm = BaseTrack & {
-	datatype: string
-	itemcolor: string
-}
-
-type GeneFpkm = Fpkm & {
-	isgenenumeric: boolean
-	boxplotbysamplegroup?: BoxPlotBySampleGroup
-	ase?: ASE
-	outlier?: GeneFpkmOutlier
-	no_ase?: boolean
-}
-
-type CutoffValueLstEntry = {
-	/** '<' or '>' to add to the label */
-	side: string
-	value: number
-	label: string
-}
-
-type ValuePerSample = KeyLabel & {
-	cutoffValueLst: CutoffValueLstEntry[]
-}
-
-type InfoFilterCatEntry = {
-	label: string
-	color: string
-	valuePerSample?: ValuePerSample
-}
-
-type InfoFilterCat = {
-	[index: string]: InfoFilterCatEntry
-}
-
-type InfoFilterLstEntry = KeyLabel & {
-	categories: InfoFilterCat
-	hiddenCategories: { Unannotated: number }
-}
-
-type InfoFilter = {
-	lst: InfoFilterLstEntry[]
-}
-
-type ReadCountBoxPlotPerCohort = {
-	groups: KeyLabel[]
-}
-
-type SingleJunctionSummary = {
-	readcountboxplotpercohort: ReadCountBoxPlotPerCohort
-}
-
-type Junction = BaseTrack & {
-	readcountCutoff: number
-	infoFilter: InfoFilter
-	singlejunctionsummary: SingleJunctionSummary
-}
-
-type MdsSnvindel = BaseTrack & {
-	tracks: BaseTrack[]
-	singlesamples?: {
-		tablefile: string
-	}
-}
-
-type SomaticCnv = BaseTrack & {
-	valueLabel: string
-	valueCutoff: number
-	bplengthUpperLimit: number
-}
-
-type Vcf = BaseTrack & {
-	tracks: BaseTrack[]
-}
-
-type MdsQueries = {
-	svcnv?: Svcnv
-	genefpkm?: GeneFpkm
-	junction?: Junction
-	snvindel?: MdsSnvindel
-	somaticcnv?: SomaticCnv
-	vcf?: Vcf
-	fpkm?: Fpkm
-}
-
-type AttrValues = {
-	[index: string]: {
-		name?: string
-		label?: string
-		color?: string
-	}
-}
-
-type AttributesEntry = {
-	label: string
-	values?: AttrValues
-	hidden?: number
-	filter?: number
-	appendto_link?: string
-	isfloat?: number | boolean
-	isinteger?: number | boolean
-	clientnoshow?: number
-	showintrack?: boolean
-}
-
-type Attributes = {
-	[index: string]: AttributesEntry
-}
-
-type MutationAttribute = {
-	attributes: Attributes
-}
-
-type MutationTypesEntry = {
-	db_col: string
-	label?: string
-	default: number
-	sizecutoff?: string
-	log2cutoff?: number
-}
-
-type Gene2MutCount = {
-	dbfile: string
-	mutationTypes: MutationTypesEntry[]
-}
-
-type LocusAttribute = {
-	attributes: Attributes
-}
 
 type ViewMode = {
 	byAttribute?: string
@@ -2045,18 +1769,18 @@ type BaseMds = {
 }
 
 export type Mds = BaseMds & {
+	// replaced by mds3!!!
 	isMds: boolean
 	about?: KeyVal[]
 	sampleAssayTrack?: FileObj
 	singlesamplemutationjson?: FileObj
-	aaaannotationsampleset2matrix?: any
-	cohort?: MdsCohort
-	queries?: MdsQueries
-	mutationAttribute?: MutationAttribute
+	cohort?: any
+	queries?: any
+	mutationAttribute?: any
 	dbFile?: string
 	version?: { label: string; link: string }
-	gene2mutcount?: Gene2MutCount
-	locusAttribute?: LocusAttribute
+	gene2mutcount?: any
+	locusAttribute?: any
 	alleleAttribute?: {
 		attributes: {
 			[attrName: string]: {
