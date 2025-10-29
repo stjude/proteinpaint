@@ -16,7 +16,7 @@ import { rgb } from 'd3-color'
 import { TermTypes, isNumericTerm, termType2label } from '#shared/terms.js'
 import { dofetch3 } from '#common/dofetch'
 import { sayerror, make_radios } from '#dom'
-import { maxSampleCutoff, maxGESampleCutoff } from '../plots/volcano/defaults.ts'
+import { maxSampleCutoff, maxGESampleCutoff } from '../plots/volcano/settings/defaults.ts'
 
 /*
 this

@@ -1,16 +1,17 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { dofetch3 } from '#common/dofetch'
-import type { VolcanoPlotConfig, VolcanoSettings } from '../VolcanoTypes'
+import type { VolcanoPlotConfig } from '../VolcanoTypes'
 import type { DERequest, TermdbSingleCellDEgenesRequest } from '#types'
 import { TermTypes } from '#shared/terms.js'
+import type { ValidatedVolcanoSettings } from '../settings/Settings'
 
 export class VolcanoModel {
 	app: MassAppApi
 	config: any
-	settings: VolcanoSettings
+	settings: any
 	termType: string
 
-	constructor(app: MassAppApi, config: VolcanoPlotConfig, settings: VolcanoSettings) {
+	constructor(app: MassAppApi, config: VolcanoPlotConfig, settings: ValidatedVolcanoSettings) {
 		this.app = app
 		this.config = config
 		this.settings = settings
@@ -19,7 +20,6 @@ export class VolcanoModel {
 
 	/** May use mapper instead as more termTypes are added */
 	async getData() {
-		console.log(21, this.termType)
 		if (this.termType === TermTypes.GENE_EXPRESSION) {
 			const body = await this.getGERequestBody()
 			return await dofetch3('DEanalysis', { body })

@@ -1,6 +1,6 @@
 import type { ControlInputEntry } from '#mass/types/mass'
 import type { VolcanoPlotConfig } from './VolcanoTypes'
-import { getSampleNum } from './defaults'
+import { getSampleNum } from './settings/defaults'
 import { TermTypes } from '#shared/terms.js'
 
 /** Handles settings the controls in the menu based on the app
@@ -8,7 +8,7 @@ import { TermTypes } from '#shared/terms.js'
  *
  * Add additional term type specific controls similar to
  * addGeneExpressionControlInputs(), called in
- * getVolcanoControlInputs()
+ * getVolcanoControlInputs(). Add the type to settings/Settings.ts
  *
  * If control should show for multiple but not all term types,
  * then use the getDisplayStyle arg in the control object.
@@ -110,10 +110,11 @@ export class VolcanoControlInputs {
 
 	/** Add more term type specific controls here. */
 	setVolcanoControlInputs() {
-		this.addGeneExpressionControlInputs()
+		this.addGeneExpControlInputs()
+		this.addSingleCellCTControlInputs()
 	}
 
-	addGeneExpressionControlInputs() {
+	addGeneExpControlInputs() {
 		if (this.termType !== TermTypes.GENE_EXPRESSION) return
 		const geInputs = [
 			{
@@ -158,20 +159,20 @@ export class VolcanoControlInputs {
 				settingsKey: 'method',
 				title: 'Toggle between analysis methods',
 				options: this.getMethodOptions()
-			},
-			{
-				label: 'Rank Genes by',
-				type: 'radio',
-				chartType: 'volcano',
-				settingsKey: 'rankBy',
-				title: 'Rank genes by either the absolute value of the fold change or the variance',
-				options: [
-					{ label: 'abs(Fold Change)', value: 'abs(foldChange)' },
-					{ label: 'Variance', value: 'variance' }
-				],
-				//TODO: will enable this feature when there is backhand support
-				getDisplayStyle: () => 'none'
 			}
+			// {
+			// 	label: 'Rank Genes by',
+			// 	type: 'radio',
+			// 	chartType: 'volcano',
+			// 	settingsKey: 'rankBy',
+			// 	title: 'Rank genes by either the absolute value of the fold change or the variance',
+			// 	options: [
+			// 		{ label: 'abs(Fold Change)', value: 'abs(foldChange)' },
+			// 		{ label: 'Variance', value: 'variance' }
+			// 	],
+			// 	//TODO: will enable this feature when there is backhand support
+			// 	getDisplayStyle: () => 'none'
+			// }
 			//Not enabling this feature
 			//needs more discussion
 			//Better as a control above the volcano plot?
@@ -192,6 +193,14 @@ export class VolcanoControlInputs {
 		]
 
 		this.inputs.splice(0, 0, ...geInputs)
+	}
+
+	addSingleCellCTControlInputs() {
+		if (this.termType !== TermTypes.SINGLECELL_CELLTYPE) return
+
+		const scctInputs = []
+
+		this.inputs.splice(0, 0, ...scctInputs)
 	}
 
 	getMethodOptions() {

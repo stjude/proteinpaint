@@ -7,12 +7,9 @@ import { Menu } from '#dom'
 import { termType2label, TermTypes } from '#shared/terms.js'
 import type { DiffAnalysisDom, DiffAnalysisOpts, DiffAnalysisPlotConfig } from './DiffAnalysisTypes'
 import { DiffAnalysisView } from './view/DiffAnalysisView'
-import { getDefaultVolcanoSettings, validateVolcanoSettings } from '../volcano/defaults.ts'
+import { getDefaultVolcanoSettings, validateVolcanoSettings } from '../volcano/settings/defaults.ts'
 import { getDefaultGseaSettings } from '#plots/gsea.js'
 
-/** TODO:
- * - type this file
- */
 class DifferentialAnalysis extends PlotBase implements RxComponent {
 	static type = 'differentialAnalysis'
 	readonly type = 'differentialAnalysis'
@@ -142,7 +139,7 @@ const enabledTermTypes = [TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTY
 export function getPlotConfig(opts: DiffAnalysisOpts) {
 	if (!opts.termType) throw new Error('.termType is required')
 	if (!enabledTermTypes.includes(opts.termType))
-		throw new Error(`termType '${opts.termType}' not supported by DifferentialAnalysis`)
+		throw new Error(`termType = '${opts.termType}' not supported by Differential Analysis`)
 
 	const config = {
 		chartType: 'differentialAnalysis',
@@ -160,5 +157,6 @@ export function getPlotConfig(opts: DiffAnalysisOpts) {
 	config.settings.gsea = getDefaultGseaSettings(opts.overrides || {})
 
 	validateVolcanoSettings(config, opts)
+
 	return copyMerge(config, opts)
 }
