@@ -7,7 +7,7 @@ import type Settings from '#plots/wsiviewer/Settings.ts'
 
 export class ViewModel {
 	public sampleWSImages: SessionWSImage[]
-	public wsimageLayers: Array<WSImageLayers>
+	public wsimageLayers: Array<WSImageLayers | null>
 	public wsimageLayersLoadError: string | undefined
 	public selectedTileIndex: number
 
@@ -15,7 +15,7 @@ export class ViewModel {
 
 	constructor(
 		sampleWSImages: WSImage[],
-		wsimageLayers: WSImageLayers[],
+		wsimageLayers: Array<WSImageLayers | null>,
 		wsimageLayersLoadError: string | undefined,
 		settings: Settings
 	) {
@@ -59,8 +59,11 @@ export class ViewModel {
 		if (imageData?.uncertainty) {
 			imageViewData.uncertainty = imageData?.uncertainty
 		}
-		const metadata = this.wsimageLayers[index].wsimage.get('metadata')
-		if (metadata) imageViewData.metadata = metadata
+		const layer = this.wsimageLayers[index]
+		if (layer) {
+			const metadata = layer.wsimage.get('metadata')
+			if (metadata) imageViewData.metadata = metadata
+		}
 
 		if (imageData.activePatchColor) imageViewData.activePatchColor = imageData.activePatchColor
 
