@@ -51,13 +51,13 @@ export class View {
 				const tk: any = {
 					type: 'mds3',
 					dslabel: this.state.vocab.dslabel,
-					onClose: async () => {
+					onClose: () => {
 						// on closing subtk, the filterObj corresponding to the subtk will be "removed" from subMds3Tks[], by regenerating the array
-						await this.maySaveTrackUpdatesToState()
+						this.maySaveTrackUpdatesToState()
 					},
-					callbackOnRender: async () => {
+					callbackOnRender: () => {
 						// will allow legend filtering changes to be saved to state
-						await this.maySaveTrackUpdatesToState()
+						this.maySaveTrackUpdatesToState()
 					},
 					// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
 					newChartHolder: this.opts.plotDiv
@@ -87,13 +87,13 @@ export class View {
 							type: 'mds3',
 							subtk: true,
 							dslabel: this.state.vocab.dslabel,
-							onClose: async () => {
+							onClose: () => {
 								// on closing subtk, the filterObj corresponding to the subtk will be "removed" from subMds3Tks[], by regenerating the array
-								await this.maySaveTrackUpdatesToState()
+								this.maySaveTrackUpdatesToState()
 							},
 							callbackOnRender: async () => {
 								// will allow legend filtering changes to be saved to state
-								await this.maySaveTrackUpdatesToState()
+								this.maySaveTrackUpdatesToState()
 							},
 							// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
 							newChartHolder: this.opts.plotDiv
@@ -174,7 +174,7 @@ export class View {
 		}
 	}
 
-	maySaveTrackUpdatesToState = async () => {
+	maySaveTrackUpdatesToState = () => {
 		/* following changes will be saved in state:
 		- when a mds3 subtk is created/updated, its tk.filterObj should be saved to state so it can be recovered from session
 		- a facet track is removed by user via block ui */
@@ -209,7 +209,7 @@ export class View {
 			const newLst = config.trackLst.activeTracks.filter(n => this.blockInstance.tklst.find(i => i.name == n))
 			config.trackLst.activeTracks = newLst
 		}
-		await this.interactions.saveToState(config)
+		this.interactions.saveToState(config)
 	}
 
 	mayRenderGroups() {
@@ -713,8 +713,8 @@ export class View {
 			nobox: true,
 			tklst,
 			debugmode: this.opts.debug,
-			onAddRemoveTk: async () => {
-				await this.maySaveTrackUpdatesToState()
+			onAddRemoveTk: () => {
+				this.maySaveTrackUpdatesToState()
 			}
 		}
 		if (this.state.config.blockIsProteinMode) {

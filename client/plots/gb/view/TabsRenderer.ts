@@ -12,6 +12,7 @@ export class TabsRenderer {
 	}
 
 	main() {
+		this.dom.tabsDiv.selectAll('*').remove() // TODO: need to also remove other divs created here (e.g. group1div, group2div, etc.)
 		this.getTabs()
 		this.mayRenderTabs()
 	}
@@ -168,7 +169,9 @@ export class TabsRenderer {
 						.attr('class', 'sja_clbtext')
 						.style('text-align', 'center')
 						.text(tklst.length)
-						.on('click', event => this.interactions.clickFacetCell(event, tklst, this.state))
+						.on('click', event => {
+							this.clickFacetCell(event, tklst)
+						})
 				}
 			})
 		}
@@ -188,5 +191,41 @@ export class TabsRenderer {
 			rows,
 			div
 		})
+	}
+
+	clickFacetCell(event, tklst) {
+		this.dom.tip.clear().showunder(event.target)
+		const activeTracks = this.state.config.trackLst.activeTracks
+		const table = this.dom.tip.d.append('table').style('margin', '5px 5px 5px 2px')
+		for (const tk of tklst) {
+			const tr = table.append('tr')
+			const td1 = tr
+				.append('td')
+				.style('font-size', '.8em')
+				.text(activeTracks.includes(tk.name) ? 'SHOWN' : '')
+			tr.append('td')
+				.attr('class', 'sja_menuoption')
+				.text(tk.name)
+				.on('click', () => {
+					this.dom.tip.hide()
+					let newActiveTracks, newRemoveTracks // default undefined to not remove any track
+					if (activeTracks.includes(tk.name)) {
+						td1.text('')
+						newActiveTracks = structuredClone(activeTracks).filter(n => n != tk.name)
+						newRemoveTracks = [tk.name]
+					} else {
+						td1.text('SHOWN')
+						newActiveTracks = structuredClone(activeTracks)
+						newActiveTracks.push(tk.name)
+					}
+					const config = {
+						trackLst: {
+							activeTracks: newActiveTracks,
+							removeTracks: newRemoveTracks
+						}
+					}
+					this.interactions.launchFacet(config)
+				})
+		}
 	}
 }

@@ -50,14 +50,8 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		return dom
 	}
 
-	async init(appState) {
+	async init() {
 		this.interactions = new Interactions(this.app, this.dom, this.id)
-		const state = this.getState(appState)
-		const tabs = new TabsRenderer(state, this.dom, this.interactions)
-		tabs.main()
-		const opts = this.getOpts()
-		const geneSearch = new GeneSearchRenderer(state, this.dom.geneSearchDiv, opts, this.interactions)
-		geneSearch.main()
 	}
 
 	getState(appState) {
@@ -74,13 +68,18 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		this.dom.loadingDiv.style('display', 'block')
 		const state = this.getState(this.app.getState())
 		if (state.config.chartType != this.type) return
+		const opts = this.getOpts()
+		// NOTE: tabs and genesearch will re-render upon every coordinate change
+		const tabs = new TabsRenderer(state, this.dom, this.interactions)
+		tabs.main()
+		const geneSearch = new GeneSearchRenderer(state, this.dom.geneSearchDiv, opts, this.interactions)
+		geneSearch.main()
 		if (state.config.geneSearchResult) {
 			// valid gene search result
 			// render genome browser
 			this.dom.geneSearchDiv.style('display', 'none')
 			const model = new Model(state, this.app)
 			const data = await model.preComputeData()
-			const opts = this.getOpts()
 			const view = new View(state, data, this.dom, opts, this.interactions)
 			await view.main()
 		}
