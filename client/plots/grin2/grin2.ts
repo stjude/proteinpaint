@@ -759,10 +759,16 @@ class GRIN2 extends PlotBase implements RxComponent {
 						sv: 'Structural Variants'
 					}
 
-					// Add a row for each lesion type that exists
-					for (const [type, count] of Object.entries(byType)) {
-						const label = typeLabels[type]
-						table.addRow(`  ${label}`, (count as number).toLocaleString())
+					// Define the order we want to display types
+					const typeOrder = ['mutation', 'gain', 'loss', 'fusion', 'sv']
+
+					// Add a row for each lesion type in the specified order
+					for (const type of typeOrder) {
+						if (byType[type] !== undefined) {
+							const label = typeLabels[type]
+							const count = byType[type] as number
+							table.addRow(`  ${label}`, count.toLocaleString())
+						}
 					}
 				}
 			}
