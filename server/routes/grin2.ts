@@ -252,6 +252,12 @@ async function processSampleData(
 ): Promise<{ lesions: any[]; processingSummary: GRIN2Response['processingSummary'] }> {
 	const lesions: any[] = []
 
+	// Track unique samples per lesion type
+	const samplesPerType = new Map<number, Set<string>>()
+	for (const [type] of tracker.entries()) {
+		samplesPerType.set(type, new Set<string>())
+	}
+
 	const processingSummary: GRIN2Response['processingSummary'] = {
 		totalSamples: samples.length,
 		processedSamples: 0,
@@ -277,8 +283,13 @@ async function processSampleData(
 			await file_is_readable(filepath)
 			const mlst = JSON.parse(await read_file(filepath))
 
-			const { sampleLesions } = await processSampleMlst(sample.name, mlst, request, tracker)
+			const { sampleLesions, contributedTypes } = await processSampleMlst(sample.name, mlst, request, tracker)
 			lesions.push(...sampleLesions)
+
+			// Track samples for each type they contributed to
+			for (const type of contributedTypes) {
+				samplesPerType.get(type)?.add(sample.name)
+			}
 
 			processingSummary.processedSamples! += 1
 			processingSummary.totalLesions! += sampleLesions.length
@@ -314,33 +325,39 @@ async function processSampleData(
 			case dtsnvindel:
 				lesionCounts.byType['mutation'] = {
 					count: lesions.filter(l => l[4] === 'mutation').length,
-					capped: isCapped
+					capped: isCapped,
+					samples: samplesPerType.get(type)?.size || 0
 				}
 				break
 			case dtcnv: {
 				// For CNV, count gains and losses separately but share capped status
 				const gains = lesions.filter(l => l[4] === 'gain').length
 				const losses = lesions.filter(l => l[4] === 'loss').length
+				const sampleCount = samplesPerType.get(type)?.size || 0
 				lesionCounts.byType['gain'] = {
 					count: gains,
-					capped: isCapped
+					capped: isCapped,
+					samples: sampleCount
 				}
 				lesionCounts.byType['loss'] = {
 					count: losses,
-					capped: isCapped
+					capped: isCapped,
+					samples: sampleCount
 				}
 				break
 			}
 			case dtfusionrna:
 				lesionCounts.byType['fusion'] = {
 					count: lesions.filter(l => l[4] === 'fusion').length,
-					capped: isCapped
+					capped: isCapped,
+					samples: samplesPerType.get(type)?.size || 0
 				}
 				break
 			case dtsv:
 				lesionCounts.byType['sv'] = {
 					count: lesions.filter(l => l[4] === 'sv').length,
-					capped: isCapped
+					capped: isCapped,
+					samples: samplesPerType.get(type)?.size || 0
 				}
 				break
 		}
@@ -348,6 +365,7 @@ async function processSampleData(
 
 	// Add lesionCounts to processingSummary
 	processingSummary.lesionCounts = lesionCounts
+	console.log('processingSummary.lesionCounts: ', processingSummary.lesionCounts)
 
 	return { lesions, processingSummary }
 }
@@ -358,8 +376,9 @@ async function processSampleMlst(
 	mlst: any[],
 	request: GRIN2Request,
 	tracker: LesionTracker
-): Promise<{ sampleLesions: any[] }> {
+): Promise<{ sampleLesions: any[]; contributedTypes: Set<number> }> {
 	const sampleLesions: any[] = []
+	const contributedTypes = new Set<number>()
 
 	for (const m of mlst) {
 		switch (m.dt) {
@@ -375,6 +394,7 @@ async function processSampleMlst(
 				if (les && entry) {
 					entry.count++
 					sampleLesions.push(les)
+					contributedTypes.add(dtsnvindel)
 				}
 				break
 			}
@@ -392,6 +412,7 @@ async function processSampleMlst(
 				if (les && cnv) {
 					cnv.count++ // single counter for both gain and loss
 					sampleLesions.push(les)
+					contributedTypes.add(dtcnv)
 				}
 				break
 			}
@@ -426,6 +447,7 @@ async function processSampleMlst(
 						sampleLesions.push(les)
 						fusion.count++
 					}
+					contributedTypes.add(dtfusionrna)
 				}
 				break
 			}
@@ -460,6 +482,7 @@ async function processSampleMlst(
 						sampleLesions.push(les)
 						sv.count++
 					}
+					contributedTypes.add(dtsv)
 				}
 				break
 			}
@@ -469,7 +492,7 @@ async function processSampleMlst(
 		}
 	}
 
-	return { sampleLesions }
+	return { sampleLesions, contributedTypes }
 }
 
 function filterAndConvertSnvIndel(
