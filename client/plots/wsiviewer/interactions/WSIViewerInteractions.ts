@@ -21,13 +21,7 @@ export class WSIViewerInteractions {
 		map: OLMap,
 		activePatchColor: string
 	) => void
-	viewerClickListener: (
-		coordinateX: number,
-		coordinateY: number,
-		sessionWSImage: SessionWSImage,
-		buffers: any,
-		map: OLMap
-	) => void
+	viewerClickListener: (coordinateX: number, coordinateY: number, sessionWSImage: SessionWSImage, map: OLMap) => void
 	setKeyDownListener: (
 		holder: any,
 		sessionWSImage: SessionWSImage,
@@ -35,8 +29,7 @@ export class WSIViewerInteractions {
 		activeImageExtent: any,
 		activePatchColor: string,
 		aiProjectID: number,
-		shortcuts?: string[],
-		buffers?: any
+		shortcuts?: string[]
 	) => void
 
 	onRetrainModelClicked: (genome: string, dslabel: string, projectId: string) => void
@@ -115,8 +108,7 @@ export class WSIViewerInteractions {
 			activeImageExtent: any,
 			activePatchColor: string,
 			aiProjectID: number,
-			shortcuts: string[] = [],
-			buffers: any
+			shortcuts: string[] = []
 		) => {
 			const state = wsiApp.app.getState()
 			const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
@@ -128,7 +120,7 @@ export class WSIViewerInteractions {
 			const tileSelections = SessionWSImage.getTileSelections(sessionWSImage) || []
 
 			holder.on('keydown', async (event: KeyboardEvent) => {
-				let currentIndex = buffers.annotationsIdx.get()
+				let currentIndex = settings.activeAnnotation
 
 				event.preventDefault()
 				event.stopPropagation()
@@ -144,6 +136,24 @@ export class WSIViewerInteractions {
 					currentIndex -= 1
 				}
 
+				if (idx !== currentIndex) {
+					//When the index changes, scroll to the new annotation
+					//Timeout for when user presses arrows multiple times.
+					const d = debounce(async () => {
+						wsiApp.app.dispatch({
+							type: 'plot_edit',
+							id: wsiApp.id,
+							config: {
+								settings: {
+									renderWSIViewer: false,
+									activeAnnotation: currentIndex
+								}
+							}
+						})
+					}, 500)
+					d()
+				}
+
 				// TODO handle this better
 				const vectorLayer = map
 					.getLayers()
@@ -155,78 +165,48 @@ export class WSIViewerInteractions {
 					await this.deleteAnnotation(wsiApp, vectorLayer!, sessionWSImage, currentIndex)
 				}
 
-				if (idx !== currentIndex) {
-					//When the index changes, scroll to the new annotation
-					//Timeout for when user presses arrows multiple times.
-					const d = debounce(async () => {
-						buffers.annotationsIdx.set(currentIndex)
-					}, 500)
-					d()
-				}
-
-				if (shortcuts.includes(event.code)) {
-					if (event.code === 'Enter' && !(tileSelections[currentIndex] as Prediction).uncertainty) {
-						// in case it's not a prediction, just ignore Enter press
+				// New Enter key branch: check for prediction uncertainty and save annotation
+				if (event.key === 'Enter') {
+					// Only proceed if this selection has a prediction uncertainty
+					if (!(tileSelections[currentIndex] as Prediction).uncertainty) {
 						return
 					}
 
-					//Update buffer to change table
-					let matchingClass = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)
-
 					const predictions = sessionWSImage?.predictions
+					if (!predictions || !predictions[currentIndex]) return
 
-					if (!matchingClass && predictions) {
-						matchingClass = sessionWSImage?.classes?.find(c => c.label === predictions[currentIndex].class)
-					}
-					const tmpClass =
-						event.code === 'Enter' || matchingClass!.label == tileSelections[currentIndex].class
-							? { label: 'Confirmed', color: matchingClass?.color || '' }
-							: { label: matchingClass!.label, color: matchingClass!.color }
-					buffers.tmpClass.set(tmpClass)
+					// Find class by prediction label
+					const matchingClass = sessionWSImage?.classes?.find(c => c.label === predictions[currentIndex].class)
 
-					this.addAnnotation(vectorLayer!, tileSelections, currentIndex, matchingClass!.color, settings)
-
-					const selectedClassId = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)?.id
-
-					const state = wsiApp.app.getState()
-
-					const body: SaveWSIAnnotationRequest = {
-						genome: state.vocab.genome,
-						dslabel: state.vocab.dslabel,
-						coordinates: tileSelections[currentIndex].zoomCoordinates,
-						classId: selectedClassId!,
-						projectId: aiProjectID,
-						wsimage: sessionWSImage.filename
+					if (!matchingClass) {
+						// Nothing to annotate against
+						return
 					}
 
-					try {
-						// TODO add UI rollback
-						await dofetch3('saveWSIAnnotation', { method: 'POST', body })
-						//Advance to the next table row after annotating
+					// Draw annotation visually
+					this.addAnnotation(vectorLayer!, tileSelections, currentIndex, matchingClass.color, settings)
 
-						// TODO find another way to clear server cache
-						clearServerDataCache()
-					} catch (e) {
-						console.error('Error in saveWSIAnnotation request:', e)
-					}
+					const selectedClassId = matchingClass.id
 
-					if (SessionWSImage.isSessionTileSelection(currentIndex, sessionWSImage)) {
-						SessionWSImage.removeTileSelection(currentIndex, sessionWSImage)
-					}
+					// Persist and finalize via helper
+					await this.saveAndFinalizeAnnotation(wsiApp, sessionWSImage, currentIndex, selectedClassId, aiProjectID)
 
-					const sessionsTileSelection: TileSelection[] = sessionWSImage.sessionsTileSelections ?? []
-					wsiApp.app.dispatch({
-						type: 'plot_edit',
-						id: wsiApp.id,
-						config: {
-							settings: {
-								renderWSIViewer: false,
-								// TODO figure out how to avoid Math.random()
-								activeAnnotation: Math.random(),
-								sessionsTileSelection: sessionsTileSelection
-							}
-						}
-					})
+					return
+				}
+
+				if (shortcuts.includes(event.code)) {
+					// Resolve class either by key_shortcut
+					const matchingClass = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)
+
+					if (!matchingClass) return
+
+					// Visual add
+					this.addAnnotation(vectorLayer!, tileSelections, currentIndex, matchingClass.color, settings)
+
+					const selectedClassId = matchingClass.id
+
+					// Persist and finalize via helper
+					await this.saveAndFinalizeAnnotation(wsiApp, sessionWSImage, currentIndex, selectedClassId, aiProjectID)
 
 					return
 				}
@@ -237,7 +217,6 @@ export class WSIViewerInteractions {
 			coordinateX: number,
 			coordinateY: number,
 			sessionWSImage: SessionWSImage,
-			buffers: any,
 			map: OLMap
 		) => {
 			const state = wsiApp.app.getState()
@@ -257,8 +236,18 @@ export class WSIViewerInteractions {
 			})
 
 			if (selectedAnnotationIndex !== -1) {
-				// TODO remove buffers and use state only
-				buffers.annotationsIdx.set(selectedAnnotationIndex)
+				wsiApp.app.dispatch({
+					type: 'plot_edit',
+					id: wsiApp.id,
+					config: {
+						settings: {
+							renderWSIViewer: false,
+							renderAnnotationTable: true,
+							activeAnnotation: selectedAnnotationIndex,
+							sessionsTileSelection: [...sessionsTileSelection]
+						}
+					}
+				})
 				return
 			}
 
@@ -294,7 +283,7 @@ export class WSIViewerInteractions {
 					settings: {
 						renderWSIViewer: false,
 						renderAnnotationTable: true,
-						activeAnnotation: Math.random(),
+						changeTrigger: Date.now(),
 						sessionsTileSelection: [newTileSelection, ...sessionsTileSelection]
 					}
 				}
@@ -319,7 +308,7 @@ export class WSIViewerInteractions {
 						settings: {
 							renderWSIViewer: true,
 							renderAnnotationTable: true,
-							activeAnnotation: Math.random()
+							changeTrigger: Date.now()
 						}
 					}
 				})
@@ -474,7 +463,9 @@ export class WSIViewerInteractions {
 			config: {
 				settings: {
 					renderWSIViewer: false,
-					activeAnnotation: Math.random(),
+					renderAnnotationTable: true,
+					activeAnnotation: 0,
+					changeTrigger: Date.now(),
 					sessionsTileSelection: sessionsTileSelection
 				}
 			}
@@ -552,5 +543,52 @@ export class WSIViewerInteractions {
 		)
 
 		return feature
+	}
+
+	private async saveAndFinalizeAnnotation(
+		wsiApp: any,
+		sessionWSImage: SessionWSImage,
+		currentIndex: number,
+		selectedClassId: number | undefined,
+		aiProjectID: number
+	) {
+		const state = wsiApp.app.getState()
+		const tileSelections: TileSelection[] = SessionWSImage.getTileSelections(sessionWSImage)
+		const body: SaveWSIAnnotationRequest = {
+			genome: state.vocab.genome,
+			dslabel: state.vocab.dslabel,
+			coordinates: tileSelections[currentIndex].zoomCoordinates,
+			classId: selectedClassId!,
+			projectId: aiProjectID,
+			wsimage: sessionWSImage.filename
+		}
+
+		try {
+			// TODO add UI rollback
+			await dofetch3('saveWSIAnnotation', { method: 'POST', body })
+			// TODO find another way to clear server cache
+			clearServerDataCache()
+		} catch (e) {
+			console.error('Error in saveWSIAnnotation request:', e)
+		}
+
+		if (SessionWSImage.isSessionTileSelection(currentIndex, sessionWSImage)) {
+			SessionWSImage.removeTileSelection(currentIndex, sessionWSImage)
+		}
+
+		const sessionsTileSelection: TileSelection[] = sessionWSImage.sessionsTileSelections ?? []
+		wsiApp.app.dispatch({
+			type: 'plot_edit',
+			id: wsiApp.id,
+			config: {
+				settings: {
+					renderWSIViewer: false,
+					// TODO figure out how to avoid Math.random()
+					changeTrigger: Date.now(),
+					activeAnnotation: 0,
+					sessionsTileSelection: sessionsTileSelection
+				}
+			}
+		})
 	}
 }

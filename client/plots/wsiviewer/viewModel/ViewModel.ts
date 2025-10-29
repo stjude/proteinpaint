@@ -1,27 +1,51 @@
-import type { TileSelection, WSImage } from '@sjcrh/proteinpaint-types'
+import type { WSImage } from '@sjcrh/proteinpaint-types'
 import type { WSImageLayers } from '#plots/wsiviewer/viewModel/WSImageLayers.ts'
 import type { TableCell } from '#dom'
 import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
+import type Settings from '#plots/wsiviewer/Settings.ts'
 
 export class ViewModel {
 	public sampleWSImages: SessionWSImage[]
-	public wsimageLayers: Array<WSImageLayers>
+	public wsimageLayers: Array<WSImageLayers | null>
 	public wsimageLayersLoadError: string | undefined
+	public selectedTileIndex: number
 
 	imageViewData: (index: number) => ImageViewData
 
 	constructor(
 		sampleWSImages: WSImage[],
-		wsimageLayers: WSImageLayers[],
+		wsimageLayers: Array<WSImageLayers | null>,
 		wsimageLayersLoadError: string | undefined,
-		sessionsTileSelections: TileSelection[],
-		displayedImageIndex: number
+		settings: Settings
 	) {
-		this.sampleWSImages = sampleWSImages
-		if (this.sampleWSImages[displayedImageIndex]) {
-			this.sampleWSImages[displayedImageIndex].sessionsTileSelections = sessionsTileSelections
+		// Convert incoming WSImage[] into SessionWSImage[] and filter predictions that overlap annotations
+		this.sampleWSImages = (sampleWSImages || []).map(ws => {
+			const s = new SessionWSImage(ws.filename)
+			// copy common properties
+			s.id = ws.id
+			s.metadata = ws.metadata
+			s.predictionLayers = ws.predictionLayers
+			s.annotations = ws.annotations
+			s.classes = ws.classes
+			s.uncertainty = ws.uncertainty
+			s.activePatchColor = ws.activePatchColor
+			s.tileSize = ws.tileSize
+
+			// filter predictions that share coordinates with annotations
+			const annotations = ws.annotations || []
+			const annotationKeys = new Set(annotations.map(a => `${a.zoomCoordinates[0]},${a.zoomCoordinates[1]}`))
+			s.predictions = (ws.predictions || []).filter(
+				p => !annotationKeys.has(`${p.zoomCoordinates[0]},${p.zoomCoordinates[1]}`)
+			)
+
+			// sessionsTileSelections will be set from settings for the displayed image below if needed
+			return s
+		})
+		if (this.sampleWSImages[settings.displayedImageIndex]) {
+			this.sampleWSImages[settings.displayedImageIndex].sessionsTileSelections = settings.sessionsTileSelection
 		}
+		this.selectedTileIndex = settings.activeAnnotation
 		this.wsimageLayers = wsimageLayers
 		this.wsimageLayersLoadError = wsimageLayersLoadError
 		this.imageViewData = index => this.getImageViewData(index)
@@ -35,23 +59,26 @@ export class ViewModel {
 		if (imageData?.uncertainty) {
 			imageViewData.uncertainty = imageData?.uncertainty
 		}
-		const metadata = this.wsimageLayers[index].wsimage.get('metadata')
-		if (metadata) imageViewData.metadata = metadata
+		const layer = this.wsimageLayers[index]
+		if (layer) {
+			const metadata = layer.wsimage.get('metadata')
+			if (metadata) imageViewData.metadata = metadata
+		}
 
 		if (imageData.activePatchColor) imageViewData.activePatchColor = imageData.activePatchColor
 
 		return imageViewData
 	}
 
-	public getInitialZoomInCoordinate(index: number) {
-		const image = this.sampleWSImages[index]
+	public getInitialZoomInCoordinate(settings: Settings) {
+		const image = this.sampleWSImages[settings.displayedImageIndex]
 		return SessionWSImage.getTileSelections(image)
 			.map(a => a.zoomCoordinates)
-			.slice(0, 1)
+			.slice(settings.activeAnnotation, settings.activeAnnotation + 1)
 	}
 
 	private setAnnonationsTableData(imageViewData: ImageViewData, imageData: SessionWSImage) {
-		const mergedRows: any[] = SessionWSImage.getTilesTableRows(imageData)
+		const mergedRows: any[] = SessionWSImage.getTilesTableRows(imageData, this.selectedTileIndex)
 
 		const columns = [
 			{ label: 'Index', sortable: true, align: 'center' },
@@ -71,7 +98,8 @@ export class ViewModel {
 	private setClassData(imageViewData: ImageViewData, imageData: WSImage) {
 		if (!imageData?.classes?.length) return
 
-		const shortcuts: string[] = ['Enter']
+		// Note: 'Enter' is no longer included in shortcuts since it is now handled separately in the interaction code.
+		const shortcuts: string[] = []
 		const classRows: TableCell[][] = []
 
 		for (const c of imageData.classes) {

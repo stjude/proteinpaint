@@ -1062,7 +1062,7 @@ export type WSImages = {
 	/**  ds supplied */
 	getAnnotationClasses?: (projectId: string) => Promise<WSIClass[] | undefined>
 	/**  ds supplied */
-	retrainModel?: (projectId: string) => Promise<void>
+	retrainModel?: (projectId: string, wsimages: string[]) => Promise<void>
 }
 
 export type WSIClass = { id: number; key_shortcut: string; label: string; color: string }

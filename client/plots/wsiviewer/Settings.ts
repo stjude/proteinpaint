@@ -21,4 +21,5 @@ export default interface Settings {
 	tileSize: number
 	activeAnnotation: number
 	sessionsTileSelection: Array<TileSelection>
+	changeTrigger: number
 }

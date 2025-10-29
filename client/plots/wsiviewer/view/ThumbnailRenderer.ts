@@ -10,7 +10,7 @@ export class ThumbnailRenderer {
 	public render(
 		holder: any,
 		thumbnailsContainer: any,
-		layers: Array<TileLayer<Zoomify>>,
+		layers: Array<TileLayer<Zoomify> | null>,
 		setting: Settings,
 		wsiViewerInteractions: WSIViewerInteractions,
 		numTotalFiles: number
@@ -33,7 +33,13 @@ export class ThumbnailRenderer {
 			//To show truncated names in tooltip on hover
 			const tooltip = new Menu()
 
-			for (let i = 0; i < layers.length; i++) {
+			// Calculate the range of thumbnails to display
+			const startIndex = setting.thumbnailRangeStart
+			const endIndex = Math.min(setting.thumbnailRangeStart + setting.numDisplayedThumbnails, layers.length)
+
+			for (let i = startIndex; i < endIndex; i++) {
+				const layer = layers[i]
+				if (!layer) continue // Skip unloaded layers
 				const isActive = i === setting.displayedImageIndex
 				const thumbnail = thumbnailsContainer
 					.append('div')
@@ -54,7 +60,7 @@ export class ThumbnailRenderer {
 
 				thumbnail
 					.append('img')
-					.attr('src', layers[i].get('preview'))
+					.attr('src', layer.get('preview'))
 					.attr('alt', `Thumbnail ${i}`)
 					.style('max-width', '100%')
 					.style('height', '60px')
@@ -62,7 +68,7 @@ export class ThumbnailRenderer {
 
 				// If necessary, truncate long names
 				// show full name on hover
-				const imageName = layers[i].get('name') || ''
+				const imageName = layer.get('name') || ''
 				let name = imageName
 				if (imageName.length > 9) {
 					name = imageName.substring(0, 6) + '...'
@@ -103,8 +109,11 @@ export class ThumbnailRenderer {
 				})
 			}
 		} else {
-			// Update borders only
-			for (let i = 0; i < layers.length; i++) {
+			// Update borders only for visible thumbnails
+			const startIndex = setting.thumbnailRangeStart
+			const endIndex = Math.min(setting.thumbnailRangeStart + setting.numDisplayedThumbnails, layers.length)
+			
+			for (let i = startIndex; i < endIndex; i++) {
 				const isActive = i === setting.displayedImageIndex
 				holder
 					.select(`#thumbnail${i}`)

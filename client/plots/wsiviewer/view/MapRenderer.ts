@@ -21,26 +21,22 @@ export class MapRenderer {
 		coordinateX: number,
 		coordinateY: number,
 		sessionWSImage: SessionWSImage,
-		buffers: any,
 		map: OLMap
 	) => void
 	private sessionWSImage: SessionWSImage
-	private buffers: any
 	private settings: Settings
 
 	constructor(
 		wSImageLayers: WSImageLayers,
 		viewerClickListener: {
-			(coordinateX: number, coordinateY: number, sessionWSImage: SessionWSImage, buffers: any, map: OLMap): void
+			(coordinateX: number, coordinateY: number, sessionWSImage: SessionWSImage, map: OLMap): void
 		},
 		sessionWSImage: SessionWSImage,
-		buffers: any,
 		settings: Settings
 	) {
 		this.wSImageLayers = wSImageLayers
 		this.sessionWSImage = sessionWSImage
 		this.viewerClickListener = viewerClickListener
-		this.buffers = buffers
 		this.settings = settings
 	}
 
@@ -136,7 +132,7 @@ export class MapRenderer {
 				const tileY = Math.floor(-coordinate[1] / tileSize) * tileSize
 
 				// Call the listener with upper-left corner
-				this.viewerClickListener(tileX, tileY, this.sessionWSImage, this.buffers, map)
+				this.viewerClickListener(tileX, tileY, this.sessionWSImage, map)
 			})
 		}
 
