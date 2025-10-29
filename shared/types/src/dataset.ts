@@ -385,7 +385,7 @@ type SvFusion = {
 		file?: string
 	}
 	/** list of dt values to indicate if this ds has sv, fusion, or both */
-	dtLst: number[]
+	dtLst?: number[]
 }
 
 type SingleSampleMutationQuery = {
@@ -1799,7 +1799,7 @@ type SetSamples = {
 }
 
 type SetSignatures = {
-	[index: number]: { name: string; color: string }
+	[index: number | string]: { name?: string; color: string; nodata?: boolean | number }
 }
 
 type MutSigSets = {
@@ -1823,7 +1823,7 @@ type MdsCohort = {
 	hierarchies?: Hierarchies
 	survivalplot?: SurvivalPlot
 	mutation_signature?: MutationSignature
-	//scatterplot - skipping b/c codes to the old scatterplot, not mass
+	scatterplot?: any
 }
 
 /*** types supporting MdsQueries type ***/
@@ -1865,6 +1865,7 @@ type Svcnv = BaseTrack & {
 	multihidelabel_sv: boolean
 	legend_vorigin?: LegendVOrigin
 	groupsamplebyattr?: GroupSampleByAttr
+	isfull?: boolean
 }
 
 type KeyLabelFull = {
@@ -2048,6 +2049,7 @@ export type Mds = BaseMds & {
 	about?: KeyVal[]
 	sampleAssayTrack?: FileObj
 	singlesamplemutationjson?: FileObj
+	aaaannotationsampleset2matrix?: any
 	cohort?: MdsCohort
 	queries?: MdsQueries
 	mutationAttribute?: MutationAttribute
