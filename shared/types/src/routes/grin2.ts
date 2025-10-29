@@ -166,6 +166,17 @@ export type GRIN2Response = {
 		totalLesions?: number
 		processedLesions?: number
 		unprocessedSamples?: number
+		lesionCounts?: {
+			total?: number
+			byType?: Record<
+				string,
+				{
+					count: number
+					capped: boolean
+					samples: number
+				}
+			>
+		}
 	}
 	/** Cache file name for storing GRIN2 results */
 	cacheFileName?: string
