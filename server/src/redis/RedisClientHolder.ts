@@ -7,7 +7,7 @@ import { RedisShardingAlgorithm } from '#src/sharding/RedisShardingAlgorithm.ts'
 import type { ShardingAlgorithm } from '#src/sharding/ShardingAlgorithm.ts'
 import { SessionData } from '#src/wsisessions/SessionManager.ts'
 import type { TileServerShard } from '#src/sharding/TileServerShard.ts'
-import { ClientHolder } from '#src/caching/ClientHolder.ts'
+import type { ClientHolder } from '#src/caching/ClientHolder.ts'
 import type { KeyValueStorage } from '#src/caching/KeyValueStorage.ts'
 import type { PredictionOverlay } from '#types'
 import path from 'path'
@@ -120,7 +120,7 @@ export default class RedisClientHolder implements KeyValueStorage {
 	}
 
 	public getClient(url: string): ClientHolder<any> {
-		return new ClientHolder(this.clients.get(url))
+		return { client: this.clients.get(url) }
 	}
 
 	public async get(key: string): Promise<string | null | undefined> {

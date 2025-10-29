@@ -1,7 +1,7 @@
 import serverconfig from '#src/serverconfig.js'
 import ky from 'ky'
 import type { ShardingAlgorithm } from '#src/sharding/ShardingAlgorithm.ts'
-import { TileServerShard } from '#src/sharding/TileServerShard.ts'
+import type { TileServerShard } from '#src/sharding/TileServerShard.ts'
 import { getShardIndex } from '#src/sharding/getShardIndex.ts'
 
 export class TileServerShardingAlgorithm implements ShardingAlgorithm<TileServerShard> {
@@ -17,7 +17,9 @@ export class TileServerShardingAlgorithm implements ShardingAlgorithm<TileServer
 				if (onlineCheck) {
 					await ky.get(`${node.url}/tileserver/healthcheck`, { timeout: 600000 }).json()
 				}
-				nodes.push(new TileServerShard(node.url))
+				nodes.push({
+					url: node.url
+				})
 			} catch (error) {
 				console.error(`Failed to connect to ${node.url}`, error)
 			}

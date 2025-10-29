@@ -1,7 +1,7 @@
 import serverconfig from '#src/serverconfig.js'
 import type { ShardingAlgorithm } from '#src/sharding/ShardingAlgorithm.ts'
 import { getShardIndex } from '#src/sharding/getShardIndex.ts'
-import { RedisShard } from '#src/sharding/RedisShard.ts'
+import type { RedisShard } from '#src/sharding/RedisShard.ts'
 import RedisClientHolder from '#src/redis/RedisClientHolder.ts'
 
 export class RedisShardingAlgorithm implements ShardingAlgorithm<RedisShard> {
@@ -24,7 +24,7 @@ export class RedisShardingAlgorithm implements ShardingAlgorithm<RedisShard> {
 				}
 
 				if (addNode) {
-					nodes.push(new RedisShard(node.url))
+					nodes.push({ url: node.url })
 				}
 			}
 		}
