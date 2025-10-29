@@ -2,14 +2,14 @@ import type {
 	VolcanoPlotDimensions,
 	VolcanoPlotConfig,
 	VolcanoPValueTableData,
-	VolcanoSettings,
 	VolcanoViewData,
 	DataPointEntry
 } from '../VolcanoTypes'
+import type { ValidatedVolcanoSettings } from '../settings/Settings'
 import type { DEResponse } from '#types'
 import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { getSampleNum } from '../defaults'
+import { getSampleNum } from '../settings/defaults'
 import { TermTypes } from '#shared/terms.js'
 
 export class VolcanoViewModel {
@@ -18,7 +18,7 @@ export class VolcanoViewModel {
 	response: DEResponse
 	pValueCutoff: number
 	pValueTable: VolcanoPValueTableData
-	settings: VolcanoSettings
+	settings: any
 	termType: string
 	viewData: VolcanoViewData
 	numSignificant = 0
@@ -36,7 +36,7 @@ export class VolcanoViewModel {
 	readonly bottomPad = 60
 	readonly horizPad = 70
 	readonly topPad = 40
-	constructor(config: VolcanoPlotConfig, response: DEResponse, settings: VolcanoSettings) {
+	constructor(config: VolcanoPlotConfig, response: DEResponse, settings: ValidatedVolcanoSettings) {
 		this.config = config
 		this.response = response
 		this.pValueCutoff = settings.pValue
@@ -83,6 +83,7 @@ export class VolcanoViewModel {
 
 	setDataType() {
 		if (this.termType == TermTypes.GENE_EXPRESSION) return 'genes'
+		else if (this.termType == TermTypes.SINGLECELL_CELLTYPE) return 'cells'
 		else throw new Error(`Unknown termType: ${this.termType}`)
 	}
 

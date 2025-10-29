@@ -7,23 +7,23 @@ import type {
 	VolcanoDom,
 	VolcanoPlotDimensions,
 	VolcanoPlotDom,
-	VolcanoSettings,
 	VolcanoViewData
 } from '../VolcanoTypes'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
 import { DataPointMouseEvents } from './DataPointMouseEvents'
 import { TermTypes } from '#shared/terms.js'
+import type { ValidatedVolcanoSettings } from '../settings/Settings'
 
 export class VolcanoPlotView {
 	dom: VolcanoDom
 	interactions: VolcanoInteractions
-	settings: VolcanoSettings
+	settings: any
 	termType: string
 	volcanoDom: VolcanoPlotDom
 	viewData: VolcanoViewData
 	constructor(
 		dom: VolcanoDom,
-		settings: VolcanoSettings,
+		settings: ValidatedVolcanoSettings,
 		viewData: VolcanoViewData,
 		interactions: VolcanoInteractions,
 		termType: string

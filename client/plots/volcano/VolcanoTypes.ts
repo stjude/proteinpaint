@@ -2,6 +2,7 @@ import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
 import type { PlotConfig } from '#mass/types/mass'
 import type { TableCell, TableColumn, Menu } from '#dom'
 import type { DataEntry, DEImage, TermWrapper } from '#types'
+import type { ValidatedVolcanoSettings } from './settings/Settings'
 
 /** Attributes are added in the view model
  * to the response data for rendering. */
@@ -72,7 +73,7 @@ export type VolcanoOpts = {
 			samplelst: string[]
 		}[]
 	}
-	overrides?: Partial<VolcanoSettings>
+	overrides?: ValidatedVolcanoSettings
 	parentId?: string
 }
 
@@ -117,38 +118,6 @@ export type VolcanoPValueTableData = {
 	columns: TableColumn[]
 	rows: TableCell[][]
 	height: number
-}
-
-/** Settings for the differential analysis volcano */
-export type VolcanoSettings = {
-	/** Default color for highlighted data points. Maybe overridden by assigned term color */
-	defaultHighlightColor: string
-	/** Default color for non-significant data points. Maybe overridden by assigned term color */
-	defaultNonSignColor: string
-	/** Default color for significant data points. Maybe overridden by assigned term color */
-	defaultSignColor: string
-	/** largest absolute fold change to be considered in the analysis */
-	foldChangeCutoff: number
-	method: 'wilcoxon' | 'edgeR' | 'limma'
-	/** Not enabling this feature for now */
-	// geneORA: 'upregulated' | 'downregulated' | 'both' | undefined
-	/** smallest number of reads required for a gene to be considered in the analysis */
-	minCount: number
-	/** smallest total number of reads required for a gene to be considered in the analysis */
-	minTotalCount: number
-	cpmCutoff: number
-	/** p value cutoff for significance */
-	pValue: number
-	/** Users may switch between 'original' and 'adjusted' p values */
-	pValueType: 'original' | 'adjusted'
-	/** Toggle between ranking the genes by variance or abs(foldChange) */
-	rankBy: 'abs(foldChange)' | 'pValue'
-	/** Cutoff for running the analysis */
-	sampleNumCutoff: number
-	/** plot height */
-	height: number
-	/** plot width */
-	width: number
 }
 
 type TermInfoEntry = {
