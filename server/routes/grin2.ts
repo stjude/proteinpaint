@@ -241,7 +241,7 @@ function allTypesCapped(tracker: LesionTracker): boolean {
 /**
  * Process sample data by reading per-sample JSON files and converting to lesion format
  * Each sample has a JSON file containing mutation data (mlst array)
- * Returns a string array of lesions: [ID, chrom, loc.start, loc.end, lsn.type] and processing summary
+ * Returns a string array of lesions: [ID, chrom, loc.start, loc.end, lsn.type] and processing summary that now includes detailed stats breakdown
  * We limit the number of lesions per type to avoid overwhelming the production server. The limit is set by MAX_LESIONS_PER_TYPE
  */
 async function processSampleData(
