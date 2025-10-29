@@ -208,7 +208,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 			grin2Time: grin2AnalysisTimeToPrint,
 			totalTime: totalTime
 		},
-		processingSummary: processingSummary,
+		processingSummary: { ...processingSummary, lesionCounts: resultData.lesionCounts },
 		cacheFileName: resultData.cacheFileName
 	}
 

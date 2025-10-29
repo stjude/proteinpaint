@@ -735,6 +735,9 @@ try:
 			"lsn.type": str
 		})
 		lesion_df["chrom"] = lesion_df["chrom"].apply(lambda c: f"chr{c}" if not c.startswith("chr") else c)
+		
+		# Report lesion counts by type
+		lesion_counts = lesion_df["lsn.type"].value_counts()
 		lsn_colors = assign_lesion_colors(lesion_df["lsn.type"])
 	except json.JSONDecodeError as json_err:
 		write_error(f"Failed to parse lesion JSON: {json_err}")
@@ -858,7 +861,10 @@ try:
 		},
 		"totalGenes": len(sorted_results),
 		"showingTop": num_rows_to_process,
-		"cacheFileName": cache_file_path
+		"cacheFileName": cache_file_path,
+		"lesionCounts": {
+			"byType": lesion_counts.to_dict()
+		}
 	}
 
 	# Output JSON

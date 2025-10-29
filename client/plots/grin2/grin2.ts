@@ -612,6 +612,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 	}
 
 	private renderResults(result: any) {
+		console.log('GRIN2 result:', result)
 		// Display Manhattan plot
 		if (result.pngImg) {
 			const plotData = result
@@ -742,6 +743,29 @@ class GRIN2 extends PlotBase implements RxComponent {
 			)
 			table.addRow('Total Lesions', result.processingSummary.totalLesions.toLocaleString())
 			table.addRow('Processed Lesions', result.processingSummary.processedLesions.toLocaleString())
+
+			// Add lesion counts if available
+			if (result.processingSummary.lesionCounts) {
+				// Add each lesion type as its own row
+				if (result.processingSummary.lesionCounts.byType) {
+					const byType = result.processingSummary.lesionCounts.byType
+
+					// Define friendly names for lesion types
+					const typeLabels: Record<string, string> = {
+						mutation: 'Mutations',
+						gain: 'Copy Gains',
+						loss: 'Copy Losses',
+						fusion: 'Fusions',
+						sv: 'Structural Variants'
+					}
+
+					// Add a row for each lesion type that exists
+					for (const [type, count] of Object.entries(byType)) {
+						const label = typeLabels[type]
+						table.addRow(`  ${label}`, (count as number).toLocaleString())
+					}
+				}
+			}
 		}
 
 		// Display timing information
