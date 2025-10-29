@@ -766,13 +766,16 @@ class GRIN2 extends PlotBase implements RxComponent {
 					for (const type of typeOrder) {
 						if (byType[type] !== undefined) {
 							const label = typeLabels[type]
-							const typeInfo = byType[type] as { count: number; capped: boolean }
+							const typeInfo = byType[type] as { count: number; capped: boolean; samples?: number }
 
 							// Add count row
 							table.addRow(`  ${label}`, typeInfo.count.toLocaleString())
 
 							// Add capped status row
 							table.addRow(`    ${label} Capped`, typeInfo.capped ? 'Yes' : 'No')
+
+							// Add sample count row
+							table.addRow(`    ${label} Samples`, (typeInfo.samples ?? 0).toLocaleString())
 						}
 					}
 				}
