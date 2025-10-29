@@ -64,10 +64,7 @@ export class TabsRenderer {
 		if (!tabs?.length) return
 		// has some tabs! initiate the tab ui, then at <div> of each tab, render contents
 		const toggles = new Tabs({
-			holder: this.dom.controlsDiv
-				.append('div')
-				.style('border-bottom', 'solid 1px #ccc')
-				.style('padding-bottom', '20px'),
+			holder: this.dom.tabsDiv.append('div').style('border-bottom', 'solid 1px #ccc').style('padding-bottom', '20px'),
 			tabs,
 			hideOnDblClick: true
 		})
