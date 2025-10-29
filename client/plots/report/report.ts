@@ -5,6 +5,7 @@ import { controlsInit } from '../controls.js'
 import { importPlot } from '#plots/importPlot.js'
 import { downloadSVGsAsPdf } from '#dom'
 import { PlotBase } from '#plots/PlotBase.js'
+import { isNumericTerm } from '@sjcrh/proteinpaint-shared'
 
 export class Report extends PlotBase implements RxComponent {
 	static type = 'report'
@@ -147,9 +148,31 @@ export class Report extends PlotBase implements RxComponent {
 		return chartImagesAll
 	}
 
+	getFilterStr() {
+		if (!this.config.filter) return ''
+		let title = ''
+		for (const item of this.config.filter.lst) {
+			const tvs = item.tvs
+			const name = tvs.term.name || tvs.term.id
+			if (tvs.term.type == 'categorical') {
+				const values = tvs?.values?.map(v => v.key)
+				title += `${name}: ${values.join(', ')}\n`
+			} else if (isNumericTerm(tvs.term)) {
+				const ranges = tvs?.ranges?.map(r => {
+					const start = r.start != null ? r.start : '-∞'
+					const stop = r.stop != null ? r.stop : '∞'
+					return `${start} to ${stop}`
+				})
+				title += `${name}: ${ranges.join(', ')}\n`
+			}
+		}
+		return title
+	}
+
 	async downloadReport() {
 		const chartImagesAll = this.getChartImages()
-		downloadSVGsAsPdf(chartImagesAll, 'report', 'landscape')
+		const title = this.getFilterStr()
+		downloadSVGsAsPdf(chartImagesAll, 'report', 'landscape', title)
 	}
 }
 
