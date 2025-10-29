@@ -31,6 +31,9 @@
 #  topGeneTable: [<list>]
 #  totalGenes: int
 #  showingTop: int
+#   lesionCounts: {
+#		byType: dict{type: count}
+#		}
 #  cacheFileName: string
 # }
 """
