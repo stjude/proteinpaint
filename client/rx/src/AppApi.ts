@@ -127,6 +127,7 @@ export class AppApi {
 	// action: RxAction
 	async save(action) {
 		const self = this.#App
+		if (self.wasDestroyed) return
 		// save changes to store, do not notify components
 		self.state = await self.store.write(action)
 		// TODO: may generalize to use the key instead of hardcoding to only .recover
