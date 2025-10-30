@@ -41,6 +41,7 @@ jobs:
     permissions:
       contents: write
       packages: write
+      id-token: write  
     timeout-minutes: 20
     outputs:
       updated_rust: ${{ steps.version_bump.outputs.updated_rust }}
@@ -108,7 +109,7 @@ jobs:
           echo "latest_release_changes=$CHANGES" >> $GITHUB_OUTPUT
 
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPMJS_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Release
         id: create_release
