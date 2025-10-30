@@ -46,6 +46,7 @@ class ProfilePolar extends profilePlot {
 
 	async main() {
 		await super.main()
+		//gets filters and scores data
 		await this.setControls()
 		this.angle = (Math.PI * 2) / this.config.terms.length
 		this.plot()
