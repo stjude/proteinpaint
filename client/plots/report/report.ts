@@ -150,7 +150,7 @@ export class Report extends PlotBase implements RxComponent {
 	async downloadReport() {
 		const chartImagesAll = this.getChartImages()
 		let filterImgUrl
-		if (this.opts.getFilterImage) {
+		if (this.opts.getFilterImage && this.config.filter?.lst?.length) {
 			filterImgUrl = await this.opts.getFilterImage()
 		}
 		downloadSVGsAsPdf(chartImagesAll, 'report', 'landscape', filterImgUrl)
