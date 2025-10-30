@@ -4393,22 +4393,22 @@
   },
   "filter/FilterRxComp.js": {
     "lines": {
-      "total": 28,
-      "covered": 24,
-      "skipped": 0,
-      "pct": 85.71
-    },
-    "functions": {
-      "total": 7,
-      "covered": 5,
-      "skipped": 0,
-      "pct": 71.42
-    },
-    "statements": {
-      "total": 29,
+      "total": 31,
       "covered": 25,
       "skipped": 0,
-      "pct": 86.2
+      "pct": 80.64
+    },
+    "functions": {
+      "total": 8,
+      "covered": 5,
+      "skipped": 0,
+      "pct": 62.5
+    },
+    "statements": {
+      "total": 32,
+      "covered": 26,
+      "skipped": 0,
+      "pct": 81.25
     },
     "branches": {
       "total": 19,
@@ -4422,9 +4422,9 @@
       "diff": -11
     },
     "averagePct": {
-      "curr": 73.99,
+      "curr": 69.255,
       "prev": 78.04,
-      "diff": -4.050000000000011
+      "diff": -8.78500000000001
     }
   },
   "filter/FilterStateless.js": {
