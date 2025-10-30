@@ -388,7 +388,6 @@ export class profilePlot extends PlotBase {
 					const filter = this.getFilterWithSettings(settings)
 					//another request is needed to get the sample selected and populate the facility sites
 					this.sampleData = await this.app.vocabApi.getProfileScores({
-						terms: [...this.twLst, this.config.facilityTW], //added facility term to all the plots to get the hospital name
 						scoreTerms: this.scoreTerms,
 						filter, //filter excluding facility term
 						facilitySite: this.settings.facilitySite || null, //need to pass null not undefined, so the parameter is always passed to the server

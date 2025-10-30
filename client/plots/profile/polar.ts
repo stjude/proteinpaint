@@ -1,6 +1,5 @@
 import type { MassAppApi, MassState } from '#mass/types/mass'
 import type { SvgG } from '../../types/d3'
-import type { TermWrapper } from '#types'
 // import type { ProfilePolarConfig, ProfilePolarDom } from './types/PolarTypes'
 import type { TableCell } from '#dom'
 import { getCompInit, copyMerge } from '#rx'
@@ -20,7 +19,6 @@ class ProfilePolar extends profilePlot {
 	polarG!: SvgG
 	legendG!: SvgG
 	filterG!: SvgG
-	twLst: TermWrapper[]
 	/** Once profilePlot is tsc, use extended dom profile plot type */
 	dom: any //ProfilePolarDom
 	config: any //Partial<ProfilePolarConfig> should be extended from a ProfilePlotConfig
@@ -31,17 +29,12 @@ class ProfilePolar extends profilePlot {
 	constructor() {
 		super()
 		this.config = {}
-		this.twLst = []
 	}
 
 	async init(appState: MassState) {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id) as any
 		this.scoreTerms = config.terms
-		for (const data of config.terms) {
-			this.twLst.push(data.score)
-			this.twLst.push(data.maxScore)
-		}
 	}
 
 	async main() {

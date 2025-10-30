@@ -17,14 +17,9 @@ class profileRadar extends profilePlot {
 		const config = appState.plots.find(p => p.id === this.id)
 		this.plotConfig = config
 		this.lineGenerator = d3.line()
-		this.twLst = []
 		this.terms = this.plotConfig.terms
 		for (const row of this.terms) {
-			this.twLst.push(row.term1.score)
-			if (row.term1.maxScore.term) this.twLst.push(row.term1.maxScore)
 			this.scoreTerms.push(row.term1)
-			this.twLst.push(row.term2.score)
-			if (row.term2.maxScore.term) this.twLst.push(row.term2.maxScore)
 			this.scoreTerms.push(row.term2)
 		}
 		this.arcGenerator = d3.arc().innerRadius(0)

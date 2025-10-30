@@ -18,12 +18,9 @@ class profileRadarFacility extends profilePlot {
 		await super.init(appState)
 		const config = structuredClone(appState.plots.find(p => p.id === this.id))
 		this.plotConfig = config
-		this.twLst = [config.facilityTW]
 		this.terms = config.terms
 		for (const row of this.terms) {
 			this.rowCount++
-			this.twLst.push(row.score)
-			this.twLst.push(row.maxScore)
 			this.scoreTerms.push(row)
 		}
 		this.lineGenerator = d3.line()
