@@ -8209,10 +8209,10 @@
   },
   "plots/grin2/grin2.ts": {
     "lines": {
-      "total": 253,
-      "covered": 194,
+      "total": 263,
+      "covered": 204,
       "skipped": 0,
-      "pct": 76.67
+      "pct": 77.56
     },
     "functions": {
       "total": 43,
@@ -8221,26 +8221,26 @@
       "pct": 58.13
     },
     "statements": {
-      "total": 260,
-      "covered": 199,
+      "total": 270,
+      "covered": 209,
       "skipped": 0,
-      "pct": 76.53
+      "pct": 77.4
     },
     "branches": {
-      "total": 109,
-      "covered": 52,
+      "total": 117,
+      "covered": 56,
       "skipped": 0,
-      "pct": 47.7
+      "pct": 47.86
     },
     "lowestPct": {
-      "curr": 47.7,
+      "curr": 47.86,
       "prev": 48.35,
-      "diff": -0.6499999999999986
+      "diff": -0.490000000000002
     },
     "averagePct": {
-      "curr": 64.75750000000001,
+      "curr": 65.2375,
       "prev": 67.7325,
-      "diff": -2.9749999999999943
+      "diff": -2.4950000000000045
     }
   },
   "plots/test/grin2.integration.spec.ts": {
