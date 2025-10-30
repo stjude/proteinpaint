@@ -1,6 +1,8 @@
 import { getCompInit } from '#rx'
 import { Filter } from './FilterClass'
 import { getNormalRoot } from './filter.utils'
+import * as htmlToImage from 'html-to-image'
+import { toPng, toJpeg, toBlob, toPixelData, toSvg } from 'html-to-image'
 
 // use this in rx-based apps
 class FilterRxComp extends Filter {
@@ -15,6 +17,16 @@ class FilterRxComp extends Filter {
 	async preApiFreeze(api) {
 		api.main = this.main.bind(this)
 		api.getNormalRoot = () => getNormalRoot(this.rawFilter)
+		api.getFilterImage = async () => {
+			// demo only, most likely you just want to return dataURL and add that to your PDF
+			const dataUrl = await htmlToImage.toJpeg(this.dom.filterContainer.node(), {
+				quality: 0.95,
+				style: {
+					background: 'white'
+				}
+			})
+			return dataUrl
+		}
 	}
 
 	getState(appState) {

@@ -75,7 +75,7 @@ class MassPlot {
 				holder: this.dom.viz,
 				header: this.dom.paneTitleDiv,
 				id: this.id,
-				plotDiv: d3select(this.dom.holder.app_div.node().parentNode)
+				plotDiv: d3select(this.dom.holder.app_div.node().parentNode),
 				/******* reason for passing plotDiv to chart ********
 				- this plot instance may allow to launch a new plot as a persistent sandbox
 				  inside mass plotDiv, maintaining the uniform plot appearance despite it's ad-hoc
@@ -87,6 +87,7 @@ class MassPlot {
 				since plot.js has no access to mass app .dom.plotDiv in which all apps are shown,
 				this workarounds gets the parent node of sandbox.app_div which is app.dom.plotDiv
 				*/
+				getFilterImage: async () => this.components.filter.getFilterImage()
 			})
 		}
 
