@@ -110,7 +110,7 @@ function getPercentage(d, samples, sampleData) {
 			.map(sample => (sample[d.score.$id].value / (sample[d.maxScore.$id]?.value || d.maxScore)) * 100)
 		scores.sort((s1, s2) => s1 - s2)
 		const middle = Math.floor(scores.length / 2)
-		const score = scores.length % 2 !== 0 ? scores[middle] : (scores[middle - 1] + scores[middle]) / 2
+		const score = scores.length % 2 !== 0 ? scores[middle] : (scores[middle - 1] + scores[middle]) / 2 //calculated median
 		return Math.round(score)
 	} else {
 		const score = sampleData[d.score.$id]?.value

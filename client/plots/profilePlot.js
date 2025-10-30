@@ -66,6 +66,7 @@ export class profilePlot extends PlotBase {
 			sites,
 			user,
 			activeCohort: appState.activeCohort,
+			//Find plots where I am a parent. Here the child is a second plot for comparison
 			plots: appState.plots.filter(p => p.parentId === this.id) //this property is needed to indicate that child plots need to be added to the appState plots
 		}
 	}
@@ -133,7 +134,7 @@ export class profilePlot extends PlotBase {
 			const iconDiv = iconsDiv.append('div').style('fill', '#aaa').style('padding', '2px')
 
 			icon_functions['add'](iconDiv, {
-				title: 'Show table with data',
+				title: 'Open another plot for comparison',
 				handler: () => {
 					const show = !this.isComparison
 					const icon = iconDiv.select('svg')
@@ -168,6 +169,8 @@ export class profilePlot extends PlotBase {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings[this.type]
 		this.isComparison = this.config.parentId || this.state.plots.length > 0
+		//Render second plot for comparison that is a duplicat of this one, that will be rendered to the right of this plot
+		//Child plots need to be rendered by the fater plot, a similar approach is used in the report
 		for (const config of this.state.plots) {
 			const plot = structuredClone(config)
 			if (this.components.plots[plot.id]) continue
