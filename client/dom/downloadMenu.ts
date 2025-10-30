@@ -80,7 +80,7 @@ export async function downloadSVGsAsPdf(chartImages, filename, orientation, filt
 		const width = img.width
 
 		doc.addImage(filterImgUrl, 'JPEG', x, y, width, 30)
-		y += 30 + 50
+		y += 80 // 30 for image height + 50 for padding
 	}
 
 	for (const chartImage of chartImages) {
