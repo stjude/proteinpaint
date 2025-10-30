@@ -43,19 +43,14 @@ class profileBarchart extends profilePlot {
 		this.configComponent =
 			this.config.plotByComponent.find(comp => comp.component.name == this.settings.component) ||
 			this.config.plotByComponent[0]
-		this.twLst = []
 		this.rowCount = 0
 		for (const group of this.configComponent.groups)
 			for (const row of group.rows) {
 				this.rowCount++
 				if (row.term1) {
-					this.twLst.push(row.term1.score)
-					this.twLst.push(row.term1.maxScore)
 					this.scoreTerms.push(row.term1)
 				}
 				if (row.term2) {
-					this.twLst.push(row.term2.score)
-					this.twLst.push(row.term2.maxScore)
 					this.scoreTerms.push(row.term2)
 				}
 			}
