@@ -108,11 +108,11 @@ tape('add variants track', (test: any) => {
 	async function runTests(gb) {
 		gb.on('postRender.test', null)
 		const dom = gb.Inner.dom
-		const controlsDiv = dom.controlsDiv
-		const tabs = controlsDiv.selectAll('[data-testid="sja_toggle_button"]').nodes()
+		const tabsDiv = dom.tabsDiv
+		const tabs = tabsDiv.selectAll('[data-testid="sja_toggle_button"]').nodes()
 		const variantsTab = tabs[1]
 		variantsTab.click()
-		const variantsCheckbox = controlsDiv.select('input[type="checkbox"]').node()
+		const variantsCheckbox = tabsDiv.select('input[type="checkbox"]').node()
 		variantsCheckbox.click()
 		const blockDiv = await detectOne({ elem: dom.blockHolder.node(), selector: '.sja_Block_div' })
 		test.ok(blockDiv, 'Should render block')
