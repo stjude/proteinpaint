@@ -39,14 +39,14 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		// layout rows from top to bottom
 		const loadingDiv = holder.append('div').style('display', 'none').style('margin-left', '25px').text('Loading...')
 		const errDiv = holder.append('div').style('display', 'none').style('margin', '10px')
-		const controlsDiv = holder.append('div').style('margin', '15px 0px 25px 25px')
+		const controlsDiv = holder.append('div').style('margin', '15px 0px 0px 25px')
 		const dom = {
 			tip: new Menu(),
 			holder,
 			loadingDiv,
 			errDiv,
 			tabsDiv: controlsDiv.append('div'),
-			geneSearchDiv: controlsDiv.append('div'),
+			geneSearchDiv: controlsDiv.append('div').style('margin', '20px 0px'),
 			blockHolder: holder.append('div')
 		}
 		return dom

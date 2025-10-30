@@ -18,7 +18,7 @@ export class GeneSearchRenderer {
 
 	renderGeneSearch() {
 		const gbRestrictMode = this.opts.vocabApi.termdbConfig.queries.gbRestrictMode
-		const row = this.holder.append('div').style('margin-top', '20px')
+		const row = this.holder.append('div')
 		row.append('span').html('Search')
 		const arg: any = {
 			tip: new Menu({ padding: '0px' }),
