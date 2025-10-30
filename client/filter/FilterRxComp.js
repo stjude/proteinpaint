@@ -18,7 +18,7 @@ class FilterRxComp extends Filter {
 		api.getNormalRoot = () => getNormalRoot(this.rawFilter)
 		api.getFilterImage = async () => {
 			// demo only, most likely you just want to return dataURL and add that to your PDF
-			const dataUrl = await htmlToImage.toJpeg(this.dom.filterContainer.node(), {
+			const dataUrl = await htmlToImage.toPng(this.dom.filterContainer.node(), {
 				quality: 0.95,
 				style: {
 					background: 'white'
