@@ -304,7 +304,7 @@ MassStore.prototype.actions = {
 		if (!action.config) throw '.config{} missing for plot_prep'
 		if (action.config.chartType && Object.keys(action.config).length == 1) {
 			const _ = await importPlot(action.config.chartType)
-			const config = await _.getPlotConfig(action.config, this.app)
+			const config = await _.getPlotConfig(action.config, this.app, this.state.activeCohort)
 			action.config = Object.assign(config, action.config)
 		}
 		Object.assign(plot, action.config)
@@ -313,7 +313,7 @@ MassStore.prototype.actions = {
 
 	async plot_create(this: MassStore, action) {
 		const _ = await importPlot(action.config.chartType)
-		const plot = await _.getPlotConfig(action.config, this.app)
+		const plot = await _.getPlotConfig(action.config, this.app, this.state.activeCohort)
 		if (!('id' in action)) action.id = getId()
 		plot.id = action.id
 		if (plot.mayAdjustConfig) {
@@ -345,7 +345,7 @@ MassStore.prototype.actions = {
 					p.parentId = plot.id
 					if (!p.id) p.id = getId() // fill in missing child plot id
 					const _ = await importPlot(p.chartType)
-					const config = await _.getPlotConfig(p, this.app)
+					const config = await _.getPlotConfig(p, this.app, this.state.activeCohort)
 					// Move nested state.plot[i].plots[] into the root state.plots[] array
 					this.state.plots.push(config)
 				}
