@@ -169,7 +169,7 @@ export type GRIN2Response = {
 		lesionCounts?: {
 			total?: number
 			byType?: Record<
-				string,
+				string, // Our key is the GRIN2 lesion type
 				{
 					count: number
 					capped: boolean
