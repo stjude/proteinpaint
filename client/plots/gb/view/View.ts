@@ -176,7 +176,6 @@ export class View {
 	mayRenderPop2Avg(pop2average) {
 		if (!pop2average) return
 		const div = this.dom.tabsDiv.select('#sjpp-gb-pop2avg')
-		console.log('div:', div)
 		const lst: any = []
 		for (const k in pop2average) {
 			const value = pop2average[k]
