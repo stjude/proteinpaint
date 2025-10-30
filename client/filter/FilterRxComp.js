@@ -2,7 +2,7 @@ import { getCompInit } from '#rx'
 import { Filter } from './FilterClass'
 import { getNormalRoot } from './filter.utils'
 import * as htmlToImage from 'html-to-image'
-import { toPng, toJpeg, toBlob, toPixelData, toSvg } from 'html-to-image'
+import { toJpeg } from 'html-to-image'
 
 // use this in rx-based apps
 class FilterRxComp extends Filter {

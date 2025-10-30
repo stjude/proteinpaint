@@ -67,6 +67,7 @@
     "debounce": "^1.2.0",
     "esbuild-plugin-polyfill-node": "^0.3.0",
     "highlight.js": "~11.2.0",
+    "html-to-image": "^1.11.13",
     "html-webpack-plugin": "^5.5.0",
     "install": "^0.13.0",
     "jspdf": "^3.0.1",
