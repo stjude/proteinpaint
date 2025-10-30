@@ -193,8 +193,12 @@ export class profilePlot extends PlotBase {
 			for (const tw of this.config.filterTWs) {
 				filters[tw.term.id] = getCategoricalTermFilter(this.config.filterTWs, this.settings, tw)
 			}
+			const filterTWs =
+				this.state.user == 'public'
+					? this.config.filterTWs.filter(tw => tw.term.id != this.config.facilityTW.id)
+					: this.config.filterTWs
 			this.filteredTermValues = await this.app.vocabApi.filterTermValues({
-				terms: this.config.filterTWs,
+				terms: filterTWs,
 				filter: this.state.termfilter.filter,
 				filters,
 				// safe to pass because the backend code will still compare terms[] with the the dataset's hiddenTermIds,
