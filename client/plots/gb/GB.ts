@@ -72,7 +72,6 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		const state = this.getState(this.app.getState())
 		if (state.config.chartType != this.type) return
 		const opts = this.getOpts()
-		// NOTE: tabs and genesearch will re-render upon every coordinate change
 		const tabs = new TabsRenderer(state, this.dom, opts, this.interactions)
 		tabs.main()
 		const geneSearch = new GeneSearchRenderer(state, this.dom.geneSearchDiv, opts, this.interactions)
