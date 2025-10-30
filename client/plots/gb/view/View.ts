@@ -7,8 +7,6 @@ export class View {
 	dom: any
 	opts: any
 	interactions: any
-	groupSampleCounts: any
-	pop2average: any
 	blockInstance: any
 	constructor(state, data, dom, opts, interactions) {
 		this.state = state
@@ -161,9 +159,37 @@ export class View {
 	}
 
 	mayGetSampleCounts(data) {
-		if (Number.isInteger(data.totalSampleCount_group1) || Number.isInteger(data.totalSampleCount_group2)) {
-			this.groupSampleCounts = [data.totalSampleCount_group1, data.totalSampleCount_group2]
-			this.pop2average = data.pop2average
+		this.mayRenderSampleCount('group1', data.totalSampleCount_group1)
+		this.mayRenderSampleCount('group2', data.totalSampleCount_group2)
+		this.mayRenderPop2Avg(data.pop2average)
+	}
+
+	mayRenderSampleCount(group, count) {
+		if (!Number.isInteger(count)) return
+		this.dom.tabsDiv
+			.select(`.sjpp-gb-${group}`)
+			.select('.sjpp-gb-filter-count')
+			.style('display', 'inline')
+			.text('n=' + count)
+	}
+
+	mayRenderPop2Avg(pop2average) {
+		if (!pop2average) return
+		const div = this.dom.tabsDiv.select('#sjpp-gb-pop2avg')
+		console.log('div:', div)
+		const lst: any = []
+		for (const k in pop2average) {
+			const value = pop2average[k]
+			if (!Number.isFinite(value)) continue // if there are no samples involved in current view, admix value is null
+			lst.push(`${k}=${value.toFixed(2)}`)
+		}
+		if (lst.length) {
+			// has valid admix values to display
+			div.style('display', 'inline')
+			const txt = div.text()
+			div.text(`${txt}: ${lst.join(', ')}`)
+		} else {
+			div.style('display', 'none')
 		}
 	}
 

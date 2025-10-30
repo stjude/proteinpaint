@@ -1,6 +1,6 @@
 import { PlotBase } from '../PlotBase.ts'
 import { getCompInit, type ComponentApi, type RxComponent } from '#rx'
-import { Menu } from '#dom'
+import { Menu, sayerror } from '#dom'
 import { getNormalRoot } from '#filter'
 import { Model } from './model/Model.ts'
 import { View } from './view/View.ts'
@@ -38,11 +38,13 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 			.text('GENOME BROWSER')
 		// layout rows from top to bottom
 		const loadingDiv = holder.append('div').style('display', 'none').style('margin-left', '25px').text('Loading...')
+		const errDiv = holder.append('div').style('display', 'none').style('margin', '10px')
 		const controlsDiv = holder.append('div').style('margin', '15px 0px 25px 25px')
 		const dom = {
 			tip: new Menu(),
 			holder,
 			loadingDiv,
+			errDiv,
 			tabsDiv: controlsDiv.append('div'),
 			geneSearchDiv: controlsDiv.append('div'),
 			blockHolder: holder.append('div')
@@ -66,6 +68,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 
 	async main() {
 		this.dom.loadingDiv.style('display', 'block')
+		this.dom.errDiv.style('display', 'none')
 		const state = this.getState(this.app.getState())
 		if (state.config.chartType != this.type) return
 		const opts = this.getOpts()
@@ -77,11 +80,17 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		if (state.config.geneSearchResult) {
 			// valid gene search result
 			// render genome browser
-			this.dom.geneSearchDiv.style('display', 'none')
-			const model = new Model(state, this.app)
-			const data = await model.preComputeData()
-			const view = new View(state, data, this.dom, opts, this.interactions)
-			await view.main()
+			try {
+				this.dom.geneSearchDiv.style('display', 'none')
+				const model = new Model(state, this.app)
+				const data = await model.preComputeData()
+				const view = new View(state, data, this.dom, opts, this.interactions)
+				await view.main()
+			} catch (e: any) {
+				this.dom.errDiv.style('display', 'block')
+				sayerror(this.dom.errDiv, 'Error: ' + (e.message || e))
+				if (e.stack) console.log(e.stack)
+			}
 		}
 		this.dom.loadingDiv.style('display', 'none')
 	}
