@@ -163,13 +163,7 @@ export async function getPlotConfig(opts, app) {
 
 	const authFilter = app.vocabApi?.termdbConfig?.authFilter
 	const settings = getDefaultReportSettings()
-	if (authFilter?.lst?.length) {
-		//The authFilter contains a single tvs with the list of sites the user has access to.
-		//As they are preselected here I fill the settings with the sites to show them as selected in the site filter
-		const siteTvs = authFilter.lst[0].tvs
-		const sites = siteTvs?.values?.map(v => v.key)
-		settings[siteTvs.term.id] = sites //set the site filter to the current site
-	}
+
 	const plot: any = {
 		settings: {
 			controls: {

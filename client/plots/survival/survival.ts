@@ -1053,7 +1053,7 @@ function setInteractivity(self) {
 
 	self.getChartImages = function () {
 		const charts: any[] = []
-
+		if (!self.pj.tree.charts) return charts // no charts to download
 		for (const chart of self.pj.tree.charts) {
 			charts.push({ name: chart.chartId, svg: chart.svg })
 		}
