@@ -10,8 +10,6 @@ export class TabsRenderer {
 	interactions: any
 	tabs: any
 	filterUI: any
-	groupSampleCounts: any
-	pop2average: any
 	constructor(state, dom, opts, interactions) {
 		this.state = state
 		this.dom = dom
@@ -21,7 +19,7 @@ export class TabsRenderer {
 	}
 
 	main() {
-		this.dom.tabsDiv.selectAll('*').remove() // TODO: need to also remove other divs created here (e.g. group1div, group2div, etc.)
+		this.dom.tabsDiv.selectAll('*').remove()
 		this.getTabs()
 		this.mayRenderTabs()
 	}
@@ -100,8 +98,8 @@ export class TabsRenderer {
 			if (this.state.config.snvindel.details) {
 				const div = tabs[tabsIdx++].contentHolder.append('div')
 				// hardcode to 2 groups used by this.state.config.snvindel.details.groups[]
-				this.dom.group1div = div.append('div')
-				this.dom.group2div = div.append('div')
+				this.dom.group1div = div.append('div').attr('class', 'sjpp-gb-group1')
+				this.dom.group2div = div.append('div').attr('class', 'sjpp-gb-group2')
 				this.dom.testMethodDiv = div.append('div').style('margin-top', '3px')
 				this.mayRenderGroups()
 
@@ -451,49 +449,32 @@ export class TabsRenderer {
 			.style('margin-left', '10px')
 			.style('opacity', 0.6)
 
-		if (this.pop2average) {
-			// info available, computed for the other group comparing against this population, display here
-			if (this.state.config.snvindel.details.groups[groupIdx == 1 ? 0 : 1]?.type == 'filter') {
-				/*
-				!!poor fix!!
-				only render the text when the other group is "filter",
-				so that when the other group is no longer type=filter, the admix text will disappear from this group
-				this is because self._partialData is *sticky* and is never deleted, due to the way parent passing it to child
-				and assume that pop2average must be from comparison between 2 groups of filter-vs-population
-				e.g. when info-vs-population, despite the _partialData is still there, must not render it
-				*/
-				const lst: any = []
-				for (const k in this.pop2average) {
-					const value = this.pop2average[k]
-					if (!Number.isFinite(value)) continue // if there are no samples involved in current view, admix value is null
-					lst.push(`${k}=${value.toFixed(2)}`)
-				}
-
-				if (lst.length) {
-					// has valid admix values to display
-					div
-						.append('span')
-						.text(`Group ${groupIdx == 1 ? 1 : 2} average admixture: ${lst.join(', ')}`)
-						.style('margin-left', '20px')
-						.attr('class', 'sja_clbtext')
-						.on('click', event => {
-							this.dom.tip
-								.clear()
-								.showunder(event.target)
-								.d.append('div')
-								.style('margin', '10px')
-								.style('width', '500px').html(`These are average admixture coefficients based on current Group ${
-								groupIdx == 1 ? 1 : 2
-							} samples.
-							They are used to adjust variant allele counts of matching ancestries from <span class=sja_menuoption style="padding:2px 5px">${
-								group.label
-							}</span>,
-							so that the adjusted allele counts can be compared against Group ${groupIdx == 1 ? 1 : 2} allele counts.
-							This allows to account for ancestry composition difference between the two groups.
-							`)
-						})
-				}
-			}
+		if (this.state.config.snvindel.details.groups[groupIdx == 1 ? 0 : 1]?.type == 'filter') {
+			/*
+			!!poor fix!!
+			only render the text when the other group is "filter",
+			so that when the other group is no longer type=filter, the admix text will disappear from this group
+			this is because self._partialData is *sticky* and is never deleted, due to the way parent passing it to child
+			and assume that pop2average must be from comparison between 2 groups of filter-vs-population
+			e.g. when info-vs-population, despite the _partialData is still there, must not render it
+			*/
+			div
+				.append('span')
+				.style('display', 'none') // hidden for now, will display once pop2average data becomes available (see View.ts)
+				.text(`Group ${groupIdx == 1 ? 1 : 2} average admixture`)
+				.style('margin-left', '20px')
+				.attr('class', 'sja_clbtext')
+				.attr('id', 'sjpp-gb-pop2avg')
+				.on('click', event => {
+					this.dom.tip.clear().showunder(event.target).d.append('div').style('margin', '10px').style('width', '500px')
+						.html(`These are average admixture coefficients based on current Group ${groupIdx == 1 ? 1 : 2} samples.
+					They are used to adjust variant allele counts of matching ancestries from <span class=sja_menuoption style="padding:2px 5px">${
+						group.label
+					}</span>,
+					so that the adjusted allele counts can be compared against Group ${groupIdx == 1 ? 1 : 2} allele counts.
+					This allows to account for ancestry composition difference between the two groups.
+					`)
+				})
 		}
 	}
 
@@ -518,19 +499,15 @@ export class TabsRenderer {
 		}
 
 		this.filterUI[groupIdx].main(this.getJoinedFilter(group))
-		div.select('.sjpp-gb-filter-count').remove()
-		const count = this.groupSampleCounts?.[groupIdx]
 
-		if (Number.isInteger(count)) {
-			// quick fix! sample count for this group is already present from partial data, create field to display
-			div
-				.append('span')
-				.attr('class', 'sjpp-gb-filter-count')
-				.style('margin-left', '10px')
-				.style('opacity', 0.5)
-				.style('font-size', '.9em')
-				.text('n=' + count)
-		}
+		// placeholder for sample count
+		div
+			.append('span')
+			.attr('class', 'sjpp-gb-filter-count')
+			.style('display', 'none')
+			.style('margin-left', '10px')
+			.style('opacity', 0.5)
+			.style('font-size', '.9em')
 	}
 
 	getJoinedFilter(group) {
