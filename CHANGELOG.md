@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - GRIN2: Now calling dispatch only during run button click
+- support GDC correlation plot demo mode by handling state override
 
 
 ## 2.153.0
