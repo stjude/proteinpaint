@@ -56,7 +56,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           cache: 'npm'
-          node-version: '22'
+          node-version: '24'
 
       - name: Install PP packages
         run: |
