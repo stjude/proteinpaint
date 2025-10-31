@@ -18,18 +18,12 @@ for WS in ${WORKSPACES}; do
   PUBLISHEDVER=$(npm view $PKGNAME version | tail -n1)
   CURRENTVER=$(node -p "require('./$WS/package.json').version")
   
-  TAG=''
-  if [ "$CURRENTVER" == *"-"* ]; then 
-    # current version is a pre-release since it include a hyphen '-'
-    # npm 11 requires specifying a tag for prerelease
-    TAG='--tag latest'
-  fi
-  
   echo "$WS [$PUBLISHEDVER] [$CURRENTVER]"
   if [[ "$PUBLISHEDVER" != "$CURRENTVER" ]]; then
     cd $WS
     echo "publishing $WS-$CURRENTVER"
-    npm publish --provenance --access public $TAG
+    # npm 11 requires a tag for pre-release version, default to latest regardless of type of release
+    npm publish --provenance --access public --tag latest
     cd $PPDIR
   fi
 done
