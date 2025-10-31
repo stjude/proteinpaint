@@ -1,6 +1,6 @@
 {
 	"name": "@sjcrh/proteinpaint-front",
-	"version": "2.152.1-0",
+	"version": "2.153.0",
 	"browser": "src/app.js",
 	"main": "src/index.js",
 	"bin": "init.js",
@@ -12,7 +12,7 @@
 		"test:integration": "echo 'TODO: front integration tests'"
 	},
 	"devDependencies": {
-		"@sjcrh/proteinpaint-client": "2.152.1-0",
+		"@sjcrh/proteinpaint-client": "2.153.0",
 		"webpack": "^5.76.0",
 		"webpack-cli": "^4.9.2",
 		"webpack-node-externals": "^3.0.0",

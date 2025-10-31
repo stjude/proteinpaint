@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.153.0
 
 Features:
 - GRIN2: Added detailed processing summary stats for each lesion type
