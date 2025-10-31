@@ -93,15 +93,27 @@ export class NumericBase extends TwBase {
 			copyMerge(tw.q, opts.defaultQ)
 		}
 
-		// remove q.type for continuous or spline mode
-		if (tw.q.mode == 'continuous' || tw.q.mode == 'spline') {
-			delete tw.q.type
-		} else if (!tw.q.type) {
-			if (tw.q.mode == 'binary') tw.q.type = 'custom-bin'
-			else if (tw.q.mode == 'discrete') tw.q.type = 'regular-bin'
-		}
+		// set q.type based on q.mode
+		switch (tw.q.mode) {
+			case 'discrete':
+				if (!tw.q.type) {
+					if (tw.term.bins) mayFillQWithPresetBins(tw)
+					else tw.q.type = 'regular-bin'
+				}
+				break
 
-		if (tw.q.type == 'regular-bin' && tw.term.bins) mayFillQWithPresetBins(tw)
+			case 'binary':
+				tw.q.type = 'custom-bin'
+				break
+
+			case 'continuous':
+			case 'spline':
+				delete tw.q.type
+				break
+
+			default:
+				throw 'tw.q.mode not supported'
+		}
 
 		/* 
 			Pre-fill the tw.type, since it's required for ROUTING to the
