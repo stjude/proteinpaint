@@ -493,6 +493,16 @@ class GRIN2 extends PlotBase implements RxComponent {
 		return requestConfig
 	}
 
+	private getDtUsageFromCheckboxes(): Record<number, { checked: boolean; label: string }> {
+		const dtUsage = structuredClone(this.state.config.settings.dtUsage)
+		this.dom.controls.selectAll('input[type="checkbox"][data-dt]').each(function (this: HTMLInputElement) {
+			const dt = parseInt(this.getAttribute('data-dt')!)
+			if (dtUsage[dt]) {
+				dtUsage[dt].checked = this.checked
+			}
+		})
+		return dtUsage
+	}
 	private getSelectedConsequences(): string[] {
 		const consequences: string[] = []
 
@@ -506,26 +516,13 @@ class GRIN2 extends PlotBase implements RxComponent {
 		return consequences
 	}
 	private updateRunButtonFromCheckboxes() {
-		const dtUsage = structuredClone(this.state.config.settings.dtUsage)
-		this.dom.controls.selectAll('input[type="checkbox"][data-dt]').each(function (this: HTMLInputElement) {
-			const dt = parseInt(this.getAttribute('data-dt')!)
-			if (dtUsage[dt]) {
-				dtUsage[dt].checked = this.checked
-			}
-		})
+		const dtUsage = this.getDtUsageFromCheckboxes()
 		this.updateRunButtonState(dtUsage)
 	}
 	private async runAnalysis() {
 		try {
-			// Read all checkbox states
-			const dtUsage = structuredClone(this.state.config.settings.dtUsage)
-
-			this.dom.controls.selectAll('input[type="checkbox"][data-dt]').each(function (this: HTMLInputElement) {
-				const dt = parseInt(this.getAttribute('data-dt')!)
-				if (dtUsage[dt]) {
-					dtUsage[dt].checked = this.checked
-				}
-			})
+			// Get checkbox states
+			const dtUsage = this.getDtUsageFromCheckboxes()
 
 			this.runButton.property('disabled', true).text('Running GRIN2...')
 
