@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- GRIN2: Now calling dispatch only during run button click
+
+
 ## 2.153.0
 
 Features:
