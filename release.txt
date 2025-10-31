@@ -1,1 +1,2 @@
-
+Fixes
+- Allow the case.diagnoses.age_at_diagnosis variable to be loaded in GDC correlation plot
