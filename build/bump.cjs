@@ -51,6 +51,10 @@ if (!verType) {
 
 // root package version
 const rootPkg = require(path.join(cwd, '/package.json'))
+const recoverVersion = path.join(cwd, '/recover-version.txt')
+const refVersion = fs.existsSync(recoverVersion)
+	? fs.readFileSync(recoverVersion, { encoding: 'utf8' }).trim()
+	: rootPkg.version
 
 // command-line options, `-${single_letter}=value`
 const defaults = {
@@ -62,7 +66,7 @@ const defaults = {
 	// -x argument
 	exclude: [],
 	// -c argument
-	refCommit: `v${rootPkg.version}^{commit}`
+	refCommit: `v${refVersion}^{commit}`
 }
 const opts = JSON.parse(JSON.stringify(defaults))
 for (const k of process.argv.slice(3)) {

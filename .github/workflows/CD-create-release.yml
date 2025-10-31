@@ -20,6 +20,10 @@ on:
           - npm packages + Docker image
           - npm packages only
 
+      recover:
+        type: string
+        description: Continue from version # when recovering from an interrupted CI
+
       build_secret:
         type: string
         description: Build secret
@@ -80,6 +84,12 @@ jobs:
 
           if [ "${{ github.event.inputs.include }}" = "npm packages only" ]; then
             exclude="-x=container";
+          fi
+
+          if [ "${{ github.event.inputs.recover }}" != "" ]; then
+            # allow bump.cjs to detect updated workspaces from a previous version instead of the current pp/package.json version;
+            # this is used when recoverring from an interrupted npm publish
+            echo "${{ github.event.inputs.recover }}" > recover-version.txt
           fi
 
           # NOTE: inputs.release_type may be ignored based on unreleased entries in CHANGELOG
