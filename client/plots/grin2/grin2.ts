@@ -509,10 +509,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	private async runAnalysis() {
 		try {
-			// First, read all checkbox states from the DOM and dispatch them to update state
+			// Read all checkbox states from the DOM
 			const dtUsage = structuredClone(this.state.config.settings.dtUsage)
 
-			// Get all checkboxes and update dtUsage based on their checked state
 			this.dom.controls.selectAll('input[type="checkbox"]').each(function (this: HTMLInputElement) {
 				const labelText = this.nextSibling?.textContent?.trim()
 
@@ -527,36 +526,13 @@ class GRIN2 extends PlotBase implements RxComponent {
 				}
 			})
 
-			console.log('Updated dtUsage:', dtUsage)
-
-			// Dispatch the entire settings object with updated dtUsage
-			// Dispatch the entire config object with updated settings
-			const updatedConfig = {
-				...this.state.config,
-				settings: {
-					...this.state.config.settings,
-					dtUsage: dtUsage
-				}
-			}
-
-			console.log('Dispatching updated config:', updatedConfig)
-			console.log('this:', this)
-			// Dispatch the updated dtUsage to state
-			this.app.dispatch({
-				type: 'plot_edit',
-				id: this.id,
-				config: updatedConfig
-			})
-			console.log('After dispatch, state.config.settings.dtUsage:', this.state.config.settings.dtUsage)
-
 			this.runButton.property('disabled', true).text('Running GRIN2...')
 
 			// Clear previous results
 			this.dom.div.selectAll('*').remove()
 
-			// Get configuration and make request
+			// Get configuration and make request using the dtUsage we just read
 			const configValues = this.getConfigValues(dtUsage)
-			console.log('GRIN2 config values right before run analysis:', configValues)
 			const requestData = {
 				genome: this.app.vocabApi.vocab.genome,
 				dslabel: this.app.vocabApi.vocab.dslabel,
@@ -576,10 +552,24 @@ class GRIN2 extends PlotBase implements RxComponent {
 			if (response.status === 'error') throw `GRIN2 analysis failed: ${response.error}`
 
 			this.renderResults(response)
+
+			// AFTER the analysis completes successfully, THEN dispatch to save state
+			const updatedConfig = {
+				...this.state.config,
+				settings: {
+					...this.state.config.settings,
+					dtUsage: dtUsage
+				}
+			}
+
+			this.app.dispatch({
+				type: 'plot_edit',
+				id: this.id,
+				config: updatedConfig
+			})
 		} catch (error) {
 			sayerror(this.dom.div, `Error running GRIN2: ${error instanceof Error ? error.message : error}`)
 		} finally {
-			// Restore button state
 			this.runButton.property('disabled', false).text('Run GRIN2')
 		}
 	}
@@ -591,9 +581,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const config = structuredClone(this.state.config)
 		if (config.childType != this.type && config.chartType != this.type) return
 
-		this.dom.controls.selectAll('*').remove()
-		this.runButton = null // Reset the runButton reference
-		this.createConfigTable()
+		if (!this.runButton) {
+			this.createConfigTable()
+		}
 	}
 
 	private renderResults(result: any) {
