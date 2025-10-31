@@ -496,9 +496,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 	private getDtUsageFromCheckboxes(): Record<number, { checked: boolean; label: string }> {
 		const dtUsage = structuredClone(this.state.config.settings.dtUsage)
 		this.dom.controls.selectAll('input[type="checkbox"][data-dt]').each(function (this: HTMLInputElement) {
-			const dt = parseInt(this.getAttribute('data-dt')!)
-			if (dtUsage[dt]) {
-				dtUsage[dt].checked = this.checked
+			const dtAttr = this.getAttribute('data-dt')
+			if (dtAttr !== null) {
+				const dt = parseInt(dtAttr)
+				if (dtUsage[dt]) {
+					dtUsage[dt].checked = this.checked
+				}
 			}
 		})
 		return dtUsage
