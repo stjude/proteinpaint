@@ -345,7 +345,9 @@ export function bindProteinPaint({ rootElem, initArgs, updateArgs, isStale, hasC
 			initArgs,
 			updateArgs || {},
 			// may reapply previously rendered state from an unbound stale instance
-			{ state: rootElem._ppAppState || {} }
+			{
+				state: Object.assign(rootElem._ppAppState || {}, initArgs.state || {})
+			}
 		)
 
 		delete rootElem._ppAppState
