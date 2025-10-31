@@ -103,6 +103,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 		// if 5/3 flanking size will be needed in future, can create a helper this.addFlankingOption() to dedup
 
+		// TODO: Enable once talk to collaborators about supporting these options
 		// // 5' flanking size
 		// this.dom.snvindel_five_prime_flank_size = this.addOptionRowToTable(
 		// 	t2,
