@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - GRIN2: Added detailed processing summary stats for each lesion type
 
+Fixes
+- Allow the case.diagnoses.age_at_diagnosis variable to be loaded in GDC correlation plot
+
 
 ## 2.152.0
 
