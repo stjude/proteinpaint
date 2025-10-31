@@ -4933,38 +4933,38 @@
   },
   "tw/numeric.ts": {
     "lines": {
-      "total": 129,
-      "covered": 44,
+      "total": 141,
+      "covered": 43,
       "skipped": 0,
-      "pct": 34.1
+      "pct": 30.49
     },
     "functions": {
-      "total": 17,
+      "total": 22,
       "covered": 4,
       "skipped": 0,
-      "pct": 23.52
+      "pct": 18.18
     },
     "statements": {
-      "total": 173,
-      "covered": 51,
+      "total": 183,
+      "covered": 49,
       "skipped": 0,
-      "pct": 29.47
+      "pct": 26.77
     },
     "branches": {
-      "total": 157,
-      "covered": 46,
+      "total": 160,
+      "covered": 37,
       "skipped": 0,
-      "pct": 29.29
+      "pct": 23.12
     },
     "lowestPct": {
-      "curr": 23.52,
+      "curr": 18.18,
       "prev": 53.45,
-      "diff": -29.930000000000003
+      "diff": -35.27
     },
     "averagePct": {
-      "curr": 29.095,
+      "curr": 24.64,
       "prev": 59.93000000000001,
-      "diff": -30.835000000000008
+      "diff": -35.290000000000006
     }
   },
   "plots/barchart.data.js": {
