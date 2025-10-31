@@ -143,21 +143,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			labeltext: 'SNV/INDEL (Mutation)',
 			checked: isChecked,
 			callback: (checked: boolean) => {
-				const dtu = structuredClone(this.state.config.settings.dtUsage)
-				dtu[dtsnvindel].checked = checked
-
-				this.app.dispatch({
-					type: 'plot_edit',
-					id: this.id,
-					config: {
-						settings: {
-							dtUsage: dtu
-						}
-					}
-				})
-
 				t2.table.style('display', checked ? '' : 'none')
-				this.updateRunButtonState(dtu)
 			}
 		})
 	}
@@ -228,21 +214,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			labeltext: 'CNV (Copy Number Variation)',
 			checked: isChecked,
 			callback: (checked: boolean) => {
-				const dtu = structuredClone(this.state.config.settings.dtUsage)
-				dtu[dtcnv].checked = checked
-
-				this.app.dispatch({
-					type: 'plot_edit',
-					id: this.id,
-					config: {
-						settings: {
-							dtUsage: dtu
-						}
-					}
-				})
-
 				t2.table.style('display', checked ? '' : 'none')
-				this.updateRunButtonState(dtu)
 			}
 		})
 	}
@@ -282,21 +254,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			labeltext: 'Fusion (RNA Fusion Events)',
 			checked: isChecked,
 			callback: (checked: boolean) => {
-				const dtu = structuredClone(this.state.config.settings.dtUsage)
-				dtu[dtfusionrna].checked = checked
-
-				this.app.dispatch({
-					type: 'plot_edit',
-					id: this.id,
-					config: {
-						settings: {
-							dtUsage: dtu
-						}
-					}
-				})
-
 				t2.table.style('display', checked ? '' : 'none')
-				this.updateRunButtonState(dtu)
 			}
 		})
 	}
@@ -336,22 +294,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			labeltext: 'SV (Structural Variants)',
 			checked: isChecked,
 			callback: (checked: boolean) => {
-				const dtu = structuredClone(this.state.config.settings.dtUsage)
-				dtu[dtsv].checked = checked
-
-				// FIXME on every check/uncheck, app dispatches and call main(), which is undesirable. tried app.save() and somehow not all box status can be saved
-				this.app.dispatch({
-					type: 'plot_edit',
-					id: this.id,
-					config: {
-						settings: {
-							dtUsage: dtu
-						}
-					}
-				})
-
 				t2.table.style('display', checked ? '' : 'none')
-				this.updateRunButtonState(dtu)
 			}
 		})
 	}
@@ -514,11 +457,17 @@ class GRIN2 extends PlotBase implements RxComponent {
 			})
 	}
 
-	private getConfigValues(): any {
+	private getConfigValues(dtUsage?: Record<number, { checked: boolean; label: string }>): any {
 		const requestConfig: any = {}
-		const dtUsage = this.state.config.settings.dtUsage
+		const usage = dtUsage || this.state.config.settings.dtUsage
 
-		if (dtUsage[dtsnvindel]?.checked) {
+		console.log('getConfigValues received dtUsage:', usage)
+		console.log('dtsnvindel checked?', usage[dtsnvindel]?.checked)
+		console.log('dtcnv checked?', usage[dtcnv]?.checked)
+		console.log('dtfusionrna checked?', usage[dtfusionrna]?.checked)
+		console.log('dtsv checked?', usage[dtsv]?.checked)
+
+		if (usage[dtsnvindel]?.checked) {
 			requestConfig.snvindelOptions = {
 				minTotalDepth: parseFloat(this.dom.snvindel_minTotalDepth.property('value')),
 				minAltAlleleCount: parseFloat(this.dom.snvindel_minAltAlleleCount.property('value')),
@@ -526,7 +475,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			}
 		}
 
-		if (dtUsage[dtcnv]?.checked) {
+		if (usage[dtcnv]?.checked) {
 			requestConfig.cnvOptions = {
 				lossThreshold: parseFloat(this.dom.cnv_lossThreshold.property('value')),
 				gainThreshold: parseFloat(this.dom.cnv_gainThreshold.property('value')),
@@ -534,11 +483,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 			}
 		}
 
-		if (dtUsage[dtfusionrna]?.checked) {
+		if (usage[dtfusionrna]?.checked) {
 			requestConfig.fusionOptions = {}
 		}
 
-		if (dtUsage[dtsv]?.checked) {
+		if (usage[dtsv]?.checked) {
 			requestConfig.svOptions = {}
 		}
 
@@ -560,13 +509,54 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	private async runAnalysis() {
 		try {
+			// First, read all checkbox states from the DOM and dispatch them to update state
+			const dtUsage = structuredClone(this.state.config.settings.dtUsage)
+
+			// Get all checkboxes and update dtUsage based on their checked state
+			this.dom.controls.selectAll('input[type="checkbox"]').each(function (this: HTMLInputElement) {
+				const labelText = this.nextSibling?.textContent?.trim()
+
+				if (labelText?.includes('SNV/INDEL')) {
+					dtUsage[dtsnvindel].checked = this.checked
+				} else if (labelText?.includes('CNV')) {
+					dtUsage[dtcnv].checked = this.checked
+				} else if (labelText?.includes('Fusion')) {
+					dtUsage[dtfusionrna].checked = this.checked
+				} else if (labelText?.includes('SV')) {
+					dtUsage[dtsv].checked = this.checked
+				}
+			})
+
+			console.log('Updated dtUsage:', dtUsage)
+
+			// Dispatch the entire settings object with updated dtUsage
+			// Dispatch the entire config object with updated settings
+			const updatedConfig = {
+				...this.state.config,
+				settings: {
+					...this.state.config.settings,
+					dtUsage: dtUsage
+				}
+			}
+
+			console.log('Dispatching updated config:', updatedConfig)
+			console.log('this:', this)
+			// Dispatch the updated dtUsage to state
+			this.app.dispatch({
+				type: 'plot_edit',
+				id: this.id,
+				config: updatedConfig
+			})
+			console.log('After dispatch, state.config.settings.dtUsage:', this.state.config.settings.dtUsage)
+
 			this.runButton.property('disabled', true).text('Running GRIN2...')
 
 			// Clear previous results
 			this.dom.div.selectAll('*').remove()
 
 			// Get configuration and make request
-			const configValues = this.getConfigValues()
+			const configValues = this.getConfigValues(dtUsage)
+			console.log('GRIN2 config values right before run analysis:', configValues)
 			const requestData = {
 				genome: this.app.vocabApi.vocab.genome,
 				dslabel: this.app.vocabApi.vocab.dslabel,
@@ -601,14 +591,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const config = structuredClone(this.state.config)
 		if (config.childType != this.type && config.chartType != this.type) return
 
-		// Only create the table once
-		if (!this.runButton) {
-			this.createConfigTable()
-		} else {
-			// State has updated, but we don't need to recreate UI
-			// Just update the button state with current state
-			this.updateRunButtonState()
-		}
+		this.dom.controls.selectAll('*').remove()
+		this.runButton = null // Reset the runButton reference
+		this.createConfigTable()
 	}
 
 	private renderResults(result: any) {
