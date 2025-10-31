@@ -144,6 +144,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			checked: isChecked,
 			callback: (checked: boolean) => {
 				t2.table.style('display', checked ? '' : 'none')
+				this.updateRunButtonFromCheckboxes()
 			}
 		}).attr('data-dt', dtsnvindel)
 	}
@@ -215,6 +216,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			checked: isChecked,
 			callback: (checked: boolean) => {
 				t2.table.style('display', checked ? '' : 'none')
+				this.updateRunButtonFromCheckboxes()
 			}
 		}).attr('data-dt', dtcnv)
 	}
@@ -255,6 +257,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			checked: isChecked,
 			callback: (checked: boolean) => {
 				t2.table.style('display', checked ? '' : 'none')
+				this.updateRunButtonFromCheckboxes()
 			}
 		}).attr('data-dt', dtfusionrna)
 	}
@@ -295,6 +298,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			checked: isChecked,
 			callback: (checked: boolean) => {
 				t2.table.style('display', checked ? '' : 'none')
+				this.updateRunButtonFromCheckboxes()
 			}
 		}).attr('data-dt', dtsv)
 	}
@@ -506,7 +510,16 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 		return consequences
 	}
-
+	private updateRunButtonFromCheckboxes() {
+		const dtUsage = structuredClone(this.state.config.settings.dtUsage)
+		this.dom.controls.selectAll('input[type="checkbox"][data-dt]').each(function (this: HTMLInputElement) {
+			const dt = parseInt(this.getAttribute('data-dt')!)
+			if (dtUsage[dt]) {
+				dtUsage[dt].checked = this.checked
+			}
+		})
+		this.updateRunButtonState(dtUsage)
+	}
 	private async runAnalysis() {
 		try {
 			// Read all checkbox states
