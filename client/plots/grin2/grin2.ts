@@ -465,12 +465,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const requestConfig: any = {}
 		const usage = dtUsage || this.state.config.settings.dtUsage
 
-		console.log('getConfigValues received dtUsage:', usage)
-		console.log('dtsnvindel checked?', usage[dtsnvindel]?.checked)
-		console.log('dtcnv checked?', usage[dtcnv]?.checked)
-		console.log('dtfusionrna checked?', usage[dtfusionrna]?.checked)
-		console.log('dtsv checked?', usage[dtsv]?.checked)
-
 		if (usage[dtsnvindel]?.checked) {
 			requestConfig.snvindelOptions = {
 				minTotalDepth: parseFloat(this.dom.snvindel_minTotalDepth.property('value')),
