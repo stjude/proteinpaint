@@ -43,7 +43,7 @@ export async function init(
 			dslabel: gdcDslabel,
 			termfilter: { filter0: arg.filter0 },
 			nav: { activeTab: 1, header_mode: 'only_buttons' },
-			plots: [
+			plots: arg.state?.plots || [
 				{ chartType: 'summaryInput' } // default shows summaryInput ui, can change
 				//{ chartType: 'barchart', term: {id: 'case.demographic.gender'} }, // uncomment for quicker testing
 			]

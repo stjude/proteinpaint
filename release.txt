@@ -1,1 +1,2 @@
-
+Features:
+- support GDC correlation plot demo mode by handling state override
