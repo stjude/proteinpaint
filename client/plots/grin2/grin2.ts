@@ -145,7 +145,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			callback: (checked: boolean) => {
 				t2.table.style('display', checked ? '' : 'none')
 			}
-		})
+		}).attr('data-dt', dtsnvindel)
 	}
 
 	// Add CNV row
@@ -216,7 +216,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			callback: (checked: boolean) => {
 				t2.table.style('display', checked ? '' : 'none')
 			}
-		})
+		}).attr('data-dt', dtcnv)
 	}
 
 	// Add Fusion row
@@ -256,7 +256,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			callback: (checked: boolean) => {
 				t2.table.style('display', checked ? '' : 'none')
 			}
-		})
+		}).attr('data-dt', dtfusionrna)
 	}
 
 	// Add SV row
@@ -296,7 +296,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			callback: (checked: boolean) => {
 				t2.table.style('display', checked ? '' : 'none')
 			}
-		})
+		}).attr('data-dt', dtsv)
 	}
 
 	// Enable the Run button only if at least one data type is checked
@@ -509,20 +509,13 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	private async runAnalysis() {
 		try {
-			// Read all checkbox states from the DOM
+			// Read all checkbox states
 			const dtUsage = structuredClone(this.state.config.settings.dtUsage)
 
-			this.dom.controls.selectAll('input[type="checkbox"]').each(function (this: HTMLInputElement) {
-				const labelText = this.nextSibling?.textContent?.trim()
-
-				if (labelText?.includes('SNV/INDEL')) {
-					dtUsage[dtsnvindel].checked = this.checked
-				} else if (labelText?.includes('CNV')) {
-					dtUsage[dtcnv].checked = this.checked
-				} else if (labelText?.includes('Fusion')) {
-					dtUsage[dtfusionrna].checked = this.checked
-				} else if (labelText?.includes('SV')) {
-					dtUsage[dtsv].checked = this.checked
+			this.dom.controls.selectAll('input[type="checkbox"][data-dt]').each(function (this: HTMLInputElement) {
+				const dt = parseInt(this.getAttribute('data-dt')!)
+				if (dtUsage[dt]) {
+					dtUsage[dt].checked = this.checked
 				}
 			})
 
@@ -553,7 +546,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			this.renderResults(response)
 
-			// AFTER the analysis completes successfully, THEN dispatch to save state
+			// After the analysis completes successfully, dispatch with the updated config to save state
 			const updatedConfig = {
 				...this.state.config,
 				settings: {
