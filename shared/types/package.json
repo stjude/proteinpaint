@@ -36,5 +36,10 @@
   "files": [
     "dist/*.js",
     "src"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stjude/proteinpaint",
+    "directory": "server"
+  }
 }
