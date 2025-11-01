@@ -6,7 +6,15 @@
 
 set -euo pipefail
 
-WORKSPACES=$1
+WORKSPACES=""
+if [[ "$1" != "" ]]; then
+  WORKSPACES=$1
+elif [[ -f ./build/unpublishedPkgs.txt ]]; then
+  # support the recovery of interruped publish step
+  WORKSPACES="$(cat ./build/unpublishedPkgs.txt)"
+  rm ./build/unpublishedPkgs.txt
+fi
+
 PPDIR=$PWD
 for WS in ${WORKSPACES}; do
   PRIVATE=$(node -p "require('./$WS/package.json').private")

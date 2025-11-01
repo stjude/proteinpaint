@@ -157,7 +157,8 @@ for (const w of rootPkg.workspaces) {
 			// !!! also remove the quick fix below for rust code change !!!
 			selfChanged:
 				hasRelevantChangedFiles && (wsHashOnRelease != wsHashCurrent || (pkgDir == 'rust' && hasRelevantChangedFiles)),
-			changedDeps: new Set()
+			changedDeps: new Set(),
+			private: pkg.private
 		}
 	}
 }
@@ -165,6 +166,10 @@ for (const w of rootPkg.workspaces) {
 // ************************************
 // * UPDATE IN-MEMORY WORKSPACE PACKAGE
 // ************************************
+
+const unpublishedFile = path.join(__dirname, 'unpublishedPkgs.txt')
+fs.rmSync(unpublishedFile, { force: true })
+const unpublishedPkgs = new Set()
 
 // detect changed workspaces, including deps that have changed
 let hasChanges = false
@@ -200,28 +205,45 @@ if (opts.write && hasChanges) {
 	ex(`npm i --package-lock-only`)
 }
 
+if (unpublishedPkgs.size) {
+	fs.writeFileSync(unpublishedFile, [...unpublishedPkgs].join(' '), { encoding: 'utf8' })
+}
+
 // *******************
 // * HELPER FUNCTIONS
 // *******************
 
 function setWsDeps(name) {
-	pkgs[name].checked = true
+	const pkg = pkgs[name]
+	pkg.checked = true
 	for (const key of ['dependencies', 'devDependencies']) {
-		const deps = pkgs[name][key]
+		const deps = pkg[key]
 		for (const dname in deps) {
 			if (dname === name) throw `package=${name} is dependent on itself`
 			if (!(dname in pkgs)) {
 				delete deps[dname]
 				continue
 			}
-			if (!pkgs[dname].checked) setWsDeps(dname)
+			if (!pkg.checked) setWsDeps(dname)
 			if (pkgs[dname].selfChanged || pkgs[dname].changedDeps.size) {
 				deps[dname] = newVersion
-				pkgs[name].changedDeps.add(dname)
+				pkg.changedDeps.add(dname)
 			}
 		}
 	}
-	pkgs[name].hasChanged = pkgs[name].selfChanged || pkgs[name].changedDeps.size // && (!releaseTextFile /* check if releaseTxtFile is not empty */)
+	pkg.hasChanged = pkg.selfChanged || pkg.changedDeps.size // && (!releaseTextFile /* check if releaseTxtFile is not empty */)
+
+	// support the detection of unpublished packages, for example,
+	// if a CI workflow was triggered from a tagged commit where
+	// a previous CI run was interrupted and failed to publish all
+	// updated workspaces after committing and tagging the version change
+	if (!pkg.private && !pkg.hasChanged && pkg.version === rootPkg.version) {
+		const publishedVersion = ex(`npm view ${pkg.name} version | tail -n1`)
+		if (publishedVersion !== pkg.version) unpublishedPkgs.add(pkg.pkgDir)
+
+		// --- uncomment for testing ---
+		// if (pkg.pkgDir == 'client') unpublishedPkgs.add(pkg.pkgDir)
+	}
 }
 
 // minimize the pkg object as needed by removinng uninformative attributes
