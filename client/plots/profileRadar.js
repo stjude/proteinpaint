@@ -18,6 +18,7 @@ class profileRadar extends profilePlot {
 		this.plotConfig = config
 		this.lineGenerator = d3.line()
 		this.terms = this.plotConfig.terms
+		//Initialize score terms so that termdb.profileScores in profilePlot can retrieve the scores for these terms
 		for (const row of this.terms) {
 			this.scoreTerms.push(row.term1)
 			this.scoreTerms.push(row.term2)
