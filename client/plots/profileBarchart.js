@@ -20,43 +20,47 @@ class profileBarchart extends profilePlot {
 		const config = appState.plots.find(p => p.id === this.id)
 		const state = this.getState(appState)
 		this.componentNames = config.plotByComponent.map(elem => {
-			return { value: elem.component.name, label: elem.component.name }
+			return { value: elem.profileComponent.name, label: elem.profileComponent.name }
 		})
-		this.componentInput = {
+		this.profileComponentInput = {
 			label: 'Component',
 			type: 'dropdown',
 			chartType: 'profileBarchart',
 			options: this.componentNames,
-			settingsKey: 'component',
-			callback: value => this.setComponent(value)
+			settingsKey: 'profileComponent',
+			callback: value => this.setProfileComponent(value)
 		}
 	}
 
-	setComponent(value) {
-		this.settings.component = value
+	setProfileComponent(value) {
+		this.settings.profileComponent = value
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
 
 	async main() {
-		await super.main()
-
-		this.configComponent =
-			this.config.plotByComponent.find(comp => comp.component.name == this.settings.component) ||
-			this.config.plotByComponent[0]
-		this.rowCount = 0
-		for (const group of this.configComponent.groups)
-			for (const row of group.rows) {
-				this.rowCount++
-				if (row.term1) {
-					this.scoreTerms.push(row.term1)
+		try {
+			await super.main()
+			this.configProfileComponent =
+				this.config.plotByComponent.find(comp => comp.profileComponent.name == this.settings.profileComponent) ||
+				this.config.plotByComponent[0]
+			this.rowCount = 0
+			for (const group of this.configProfileComponent.groups)
+				for (const row of group.rows) {
+					this.rowCount++
+					if (row.term1) {
+						this.scoreTerms.push(row.term1)
+					}
+					if (row.term2) {
+						this.scoreTerms.push(row.term2)
+					}
 				}
-				if (row.term2) {
-					this.scoreTerms.push(row.term2)
-				}
-			}
-		await this.setControls([this.componentInput])
-		this.component = this.settings.component || this.componentNames[0].value
-		this.plot()
+			await this.setControls([this.profileComponentInput])
+			this.profileComponent = this.settings.profileComponent || this.componentNames[0].value
+			this.plot()
+		} catch (e) {
+			console.error(e)
+			throw `${e} [profileBarchart main()]`
+		}
 	}
 
 	onMouseOut(event) {
@@ -76,19 +80,19 @@ class profileBarchart extends profilePlot {
 	plot() {
 		const config = this.config
 		this.dom.plotDiv.selectAll('*').remove()
-		const hasSubjectiveData = this.configComponent.hasSubjectiveData
+		const hasSubjectiveData = this.configProfileComponent.hasSubjectiveData
 		const width = this.state.activeCohort == ABBREV_COHORT ? 1000 : 1300
 		const height = this.rowCount * 32 + 450
 		this.dom.svg = this.dom.plotDiv.append('svg').attr('width', width).attr('height', height)
 		const title =
 			this.state.activeCohort == ABBREV_COHORT
-				? `Score-based Results for the ${this.component} Component by Module and Domain Compared with End-User Impression`
-				: `Objective ${this.component == 'Patients and Outcomes' ? '' : 'and Subjective '}Score-based Results for the ${
-						this.component
-				  } Component by Module and Domain`
+				? `Score-based Results for the ${this.profileComponent} Component by Module and Domain Compared with End-User Impression`
+				: `Objective ${
+						this.profileComponent == 'Patients and Outcomes' ? '' : 'and Subjective '
+				  }Score-based Results for the ${this.profileComponent} Component by Module and Domain`
 		this.dom.svg.append('text').attr('transform', `translate(50, 30)`).attr('font-weight', 'bold').text(title)
 		const svg = this.dom.svg
-		const color = this.configComponent.component.color
+		const color = this.configProfileComponent.profileComponent.color
 		this.dom.svg
 			.append('defs')
 			.append('pattern')
@@ -122,7 +126,7 @@ class profileBarchart extends profilePlot {
 			x += stepx
 		}
 		y = 70
-		for (const group of this.configComponent.groups) {
+		for (const group of this.configProfileComponent.groups) {
 			svg
 				.append('text')
 				.attr('transform', `translate(${50}, ${y + 40})`)
@@ -220,7 +224,7 @@ class profileBarchart extends profilePlot {
 	}
 
 	drawRect(x, y, row, field, g) {
-		const hasSubjectiveData = this.configComponent.hasSubjectiveData
+		const hasSubjectiveData = this.configProfileComponent.hasSubjectiveData
 
 		const d = row[field]
 		let subjectiveTerm = false
@@ -232,7 +236,7 @@ class profileBarchart extends profilePlot {
 		const width = value ? (value / 100) * barwidth : 0
 		if (value) {
 			const isObjective =
-				this.state.activeCohort == FULL_COHORT && this.settings.component == 'Patients and Outcomes'
+				this.state.activeCohort == FULL_COHORT && this.settings.profileComponent == 'Patients and Outcomes'
 					? true
 					: !subjectiveTerm && (pairValue || !hasSubjectiveData)
 			const rect = g
@@ -285,7 +289,7 @@ class profileBarchart extends profilePlot {
 			.attr('y', 0)
 			.attr('width', 20)
 			.attr('height', 20)
-		if (operator == 'and') rect.attr('fill', 'gray')
+		if (operator == 'and') rect.attr('fill', color)
 		else rect.attr('fill', `url(#${this.id}_diagonalHatch)`)
 
 		const text = this.dom.svg
@@ -307,9 +311,9 @@ export async function getPlotConfig(opts, app, _activeCohort) {
 		config = copyMerge(config, opts)
 		config.settings.controls = { isOpen: false }
 		const twlst = []
-		for (const component of config.plotByComponent) {
-			component.hasSubjectiveData = false
-			for (const group of component.groups)
+		for (const profileComponent of config.plotByComponent) {
+			profileComponent.hasSubjectiveData = false
+			for (const group of profileComponent.groups)
 				for (const row of group.rows) {
 					if (row.term1) {
 						row.term1.score.q = row.term1.maxScore.q = { mode: 'continuous' }
@@ -321,7 +325,7 @@ export async function getPlotConfig(opts, app, _activeCohort) {
 						twlst.push(row.term2.score)
 						twlst.push(row.term2.maxScore)
 					}
-					if (row.term1 && row.term2) component.hasSubjectiveData = true
+					if (row.term1 && row.term2) profileComponent.hasSubjectiveData = true
 				}
 		}
 		await fillTwLst(twlst, app.vocabApi)

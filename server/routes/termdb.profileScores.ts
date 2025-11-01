@@ -85,6 +85,7 @@ export async function getScoresData(query, ds, terms) {
 
 async function getScores(query, ds) {
 	const terms: any[] = [query.facilityTW]
+	//score terms has a list of pairs of score and maxScore terms
 	for (const term of query.scoreTerms) {
 		terms.push(term.score)
 		if (term.maxScore?.term) {

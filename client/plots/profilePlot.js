@@ -196,6 +196,7 @@ export class profilePlot extends PlotBase {
 			for (const tw of this.config.filterTWs) {
 				filters[tw.term.id] = getCategoricalTermFilter(this.config.filterTWs, this.settings, tw)
 			}
+			//the public view does not show the facility term/site term, so I remove it, to avoid applying the user filter that would remove all the samples
 			const filterTWs =
 				this.state.user == 'public'
 					? this.config.filterTWs.filter(tw => tw.term.id != this.config.facilityTW.id)
@@ -646,6 +647,7 @@ export async function getProfilePlotConfig(activeCohort, app, opts) {
 }
 
 export async function loadFilterTerms(config, activeCohort, app) {
+	//These are the profile filters for each plot. Hardcoded here
 	const cohortPreffix = activeCohort == FULL_COHORT ? 'F' : 'A'
 	config.countryTW = { id: cohortPreffix + 'country' }
 	config.regionTW = { id: cohortPreffix + 'WHO_region' }
