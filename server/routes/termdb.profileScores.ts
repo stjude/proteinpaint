@@ -37,6 +37,8 @@ function init({ genomes }) {
 }
 
 export async function getScoresData(query, ds, terms) {
+	// we show aggregated data for facility term, so we can ignore site-based access control
+	// Only the sites need to be filtered, done below if userSites is defined
 	if (!query.filterByUserSites) query.__protected__.ignoredTermIds.push(query.facilityTW.term.id)
 	const { clientAuthResult, activeCohort } = query.__protected__
 	const userSites = clientAuthResult[activeCohort].sites

@@ -1,7 +1,6 @@
 import type { RouteApi } from '#types'
 import { FilterTermValuesPayload } from '#types/checkers'
 import { getData, getSamplesPerFilter } from '../src/termdb.matrix.js'
-import { authApi } from '../src/auth.js'
 
 /*
 Given a set of terms and filters per term, this route returns the list of samples that match each term filter.
@@ -42,7 +41,9 @@ async function getFilters(query, ds) {
 	// which only affects aggregation levels (not revealed sample-level data),
 	// as performed by this route code, and since query.terms would still
 	// be matched against a dataset's hiddenTermIds[]
-	if (!query.filterByUserSites) authApi.mayAdjustFilter(query, ds, query.terms)
+
+	// we show aggregated data for facility term, so we can ignore site-based access control
+	if (!query.filterByUserSites) query.__protected__.ignoredTermIds.push(query.facilityTW.term.id)
 
 	//Dictionary with samples applying all the filters but not the one from the current term id
 	const samplesPerFilter = await getSamplesPerFilter(query, ds)

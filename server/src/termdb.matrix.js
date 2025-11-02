@@ -370,6 +370,7 @@ export async function getSamplesPerFilter(q, ds) {
 	for (const id in q.filters) {
 		let filter = q.filters[id]
 		if (q.filter) filter = filterJoin([q.filter, q.filters[id]])
+		authApi.mayAdjustFilter(q, ds, q.terms)
 		const result = (await get_samples({ filter, __protected__: q.__protected__ }, q.ds)).map(i => i.id)
 		samples[id] = Array.from(new Set(result))
 	}

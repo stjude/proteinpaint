@@ -196,15 +196,12 @@ export class profilePlot extends PlotBase {
 			for (const tw of this.config.filterTWs) {
 				filters[tw.term.id] = getCategoricalTermFilter(this.config.filterTWs, this.settings, tw)
 			}
-			//the public view does not show the facility term/site term, so I remove it, to avoid applying the user filter that would remove all the samples
-			const filterTWs =
-				this.state.user == 'public'
-					? this.config.filterTWs.filter(tw => tw.term.id != this.config.facilityTW.id)
-					: this.config.filterTWs
+
 			this.filteredTermValues = await this.app.vocabApi.filterTermValues({
-				terms: filterTWs,
+				terms: this.config.filterTWs,
 				filter: this.state.termfilter.filter,
 				filters,
+				facilityTW: this.config.facilityTW,
 				// safe to pass because the backend code will still compare terms[] with the the dataset's hiddenTermIds,
 				// it only affects what will be included in the aggregation and does not disable user access authentication
 				filterByUserSites: this.settings.filterByUserSites,

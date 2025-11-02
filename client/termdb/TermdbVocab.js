@@ -1313,6 +1313,7 @@ export class TermdbVocab extends Vocab {
 				this.mayStripTwProps(tw)
 			}
 		}
+		if (body.facilityTW) this.mayStripTwProps(body.facilityTW)
 		return await dofetch3('termdb/filterTermValues', { body })
 	}
 
