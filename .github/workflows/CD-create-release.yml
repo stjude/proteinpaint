@@ -93,7 +93,7 @@ jobs:
           fi
 
           # NOTE: inputs.release_type may be ignored based on unreleased entries in CHANGELOG
-          . ./build/ci-version-update.sh ${{ github.event.inputs.release_type }} -w $exclude
+          . ./build/ci-version-update.sh "${{ github.event.inputs.release_type }}" "${{ github.event.inputs.recover }}" -w $exclude
           
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
           

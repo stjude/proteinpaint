@@ -14,6 +14,9 @@ set -euxo pipefail
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 VERTYPE=prerelease # default
 
+# second argument is the recover string (may be empty)
+RECOVER="${2:-}"
+
 if [[ "$1" == "pre"* ]]; then
   # respect user-selected prerelease, prepatch, preminor, premajor
   VERTYPE=$1
@@ -46,9 +49,13 @@ PREVIOUS_VERSION="$(node -p "require('./package.json').version")"
 
 UPDATED=$(./build/bump.cjs $VERTYPE "$@")
 
-if [[ "$UPDATED" == "" ]]; then
-  echo "No workspace package updates - assume a release was interrupted and needs to be resumed."
+if [[ -z "$UPDATED" ]]; then
+  msg="No workspace package updates"
+  [[ -n "$RECOVER" ]] && msg+=" - assume a release was interrupted and needs to be resumed."
+  echo "$msg"
+  [[ -z "$RECOVER" ]] && exit 0
 fi
+
 
 # this is the version that was assigned after ./build/bump.cjs [...] -w
 VERSION="$(node -p "require('./package.json').version")"
