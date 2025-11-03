@@ -313,7 +313,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		})
 	}
 
-	// Enable the Run button only if at least one data type is checked
+	// Enable the run button only if at least one data type is checked
 	private updateRunButtonState(dtu?: Record<number, { checked: boolean; label: string }>) {
 		const dtUsage = dtu || (this.state.config.settings.dtUsage as Record<number, { checked: boolean; label: string }>)
 		const anyChecked = Object.values(dtUsage).some(info => info.checked)
