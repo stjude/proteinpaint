@@ -12,7 +12,6 @@ import { plotManhattan, createLollipopFromGene } from '#plots/manhattan/manhatta
 class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
 	dom: GRIN2Dom
-	private runButton!: any
 
 	// Colors
 	readonly borderColor = '#eee'
@@ -343,8 +342,13 @@ class GRIN2 extends PlotBase implements RxComponent {
 			.style('margin-left', '100px')
 			.text('Run GRIN2')
 			.on('click', () => this.runAnalysis())
-		// Set initial button state
-		this.updateRunButtonState()
+
+		if (this.state.config.settings.runAnalysis) {
+			this.runAnalysis()
+		} else {
+			// Set initial button state
+			this.updateRunButtonState()
+		}
 	}
 
 	// Helper method to add option rows to table2col instances
@@ -557,7 +561,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 				...this.state.config,
 				settings: {
 					...this.state.config.settings,
-					dtUsage: dtUsage
+					dtUsage: dtUsage,
+					runAnalysis: true
 				}
 			}
 
@@ -892,6 +897,7 @@ export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 		settings: {
 			controls: {},
 			dtUsage: dtUsage,
+			runAnalysis: false,
 			manhattan: {
 				...defaultSettings.manhattan,
 				...opts?.manhattan
