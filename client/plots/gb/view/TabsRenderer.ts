@@ -142,7 +142,10 @@ export class TabsRenderer {
 					labeltext: t.name,
 					checked: t.shown,
 					holder: div,
-					callback: checked => this.interactions.launchLdTrack(tracks, i, checked)
+					callback: checked => {
+						tracks[i].shown = checked
+						this.interactions.launchLdTrack(tracks)
+					}
 				})
 			}
 		}
