@@ -60,7 +60,6 @@ export async function getScoresData(query, ds, terms) {
 			label
 		}
 	})
-
 	//If the user has sites keep only the sites that are visible to the user as choices for selection
 	if (userSites) {
 		// NOTE: getData() in termdb.matrix uses checkAccessToSampleData() to make sure

@@ -1,6 +1,9 @@
 import type { RouteApi } from '#types'
 import { FilterTermValuesPayload } from '#types/checkers'
-import { getData, getSamplesPerFilter } from '../src/termdb.matrix.js'
+import { getData } from '../src/termdb.matrix.js'
+import { authApi } from '#src/auth.js'
+import { filterJoin } from '#shared/filter.js'
+import { get_samples } from '../src/termdb.sql.js'
 
 /*
 Given a set of terms and filters per term, this route returns the list of samples that match each term filter.
@@ -42,9 +45,6 @@ async function getFilters(query, ds) {
 	// as performed by this route code, and since query.terms would still
 	// be matched against a dataset's hiddenTermIds[]
 
-	// we show aggregated data for facility term, so we can ignore site-based access control
-	if (!query.filterByUserSites) query.__protected__.ignoredTermIds.push(query.facilityTW.term.id)
-
 	//Dictionary with samples applying all the filters but not the one from the current term id
 	const samplesPerFilter = await getSamplesPerFilter(query, ds)
 	const filtersData = await getData(
@@ -60,6 +60,25 @@ async function getFilters(query, ds) {
 		tw2List[tw.term.id] = getList(samplesPerFilter, filtersData, tw, query.showAll)
 	}
 	return { ...tw2List }
+}
+
+async function getSamplesPerFilter(q, ds) {
+	q.ds = ds
+	const samples = {}
+	//When called from filterTermValues is ok to adjust filter to not apply the user site filter
+	for (const id in q.filters) {
+		// unless we are getting the samples for the sites bypass the user filter, the data is aggregated so is ok
+		if (!q.filterByUserSites && q.facilityTW?.term?.id != id) {
+			q.__protected__.ignoredTermIds.push(q.facilityTW.term.id)
+			authApi.mayAdjustFilter(q, ds, q.terms)
+		}
+
+		let filter = q.filters[id]
+		if (q.filter) filter = filterJoin([q.filter, q.filters[id]])
+		const result = (await get_samples({ filter, __protected__: q.__protected__ }, q.ds)).map(i => i.id)
+		samples[id] = Array.from(new Set(result))
+	}
+	return samples
 }
 
 function getList(samplesPerFilter, filtersData, tw, showAll) {
