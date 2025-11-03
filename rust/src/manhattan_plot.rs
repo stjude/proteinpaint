@@ -398,7 +398,7 @@ fn plot_grin2_manhattan(
     //let png_base64 = format!("data:image/png;base64,{}", b64);
 
     // ------------------------------------------------
-    // 12. Gnerate interactive data
+    // 12. Generate interactive data
     // ------------------------------------------------
     let interactive_data = InteractiveData {
         points: point_details,
