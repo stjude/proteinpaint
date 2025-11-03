@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- GRIN2: Refactored data type and consequences checkbox logic. Moved them to align with existing pattern. Other cleanups
+
+
 ## 2.154.0
 
 Features:

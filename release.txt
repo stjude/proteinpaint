@@ -1,2 +1,1 @@
-Features:
-- GRIN2: Refactored data type and consequences checkbox logic. Moved them to align with existing pattern. Other cleanups
+
