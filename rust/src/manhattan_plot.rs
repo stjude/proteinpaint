@@ -30,7 +30,7 @@ use std::fs::File;
 use std::io::Cursor;
 use std::io::{self, BufRead, BufReader};
 
-// Define the JSON input stucture
+// Define the JSON input structure
 #[derive(Deserialize, Debug)]
 struct Input {
     file: String,
