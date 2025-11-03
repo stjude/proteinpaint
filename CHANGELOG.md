@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - GRIN2: Refactored data type and consequences checkbox logic. Moved them to align with existing pattern. Other cleanups
 
+Fixes:
+- GRIN2: Updated integration test to reference new location of run button
+
 
 ## 2.154.0
 
