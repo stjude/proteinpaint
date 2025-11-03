@@ -426,7 +426,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				divstyle: {
 					'font-size': `${this.tableFontSize}px`
 				},
-				callback: async (checked: boolean) => {
+				callback: (checked: boolean) => {
 					checkboxDiv.style('display', checked ? '' : 'none')
 				}
 			})
