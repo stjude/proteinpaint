@@ -3,6 +3,7 @@ import { GRIN2Payload } from '#types/checkers'
 import serverconfig from '#src/serverconfig.js'
 import path from 'path'
 import { run_python } from '@sjcrh/proteinpaint-python'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { mayLog } from '#src/helpers.ts'
 import { get_samples } from '#src/termdb.sql.js'
 import { read_file, file_is_readable } from '#src/utils.js'
@@ -152,10 +153,6 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 		chromosomelist: {} as { [key: string]: number },
 		lesion: JSON.stringify(lesions),
-		devicePixelRatio: request.devicePixelRatio,
-		pngDotRadius: request.pngDotRadius,
-		width: request.width,
-		height: request.height,
 		cacheFileName: generateCacheFileName(),
 		availableDataTypes: getAvailableDataTypes(request),
 		maxGenesToShow: request.maxGenesToShow
@@ -186,20 +183,41 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	const grin2AnalysisTimeToPrint = Math.round(grin2AnalysisTime / 1000)
 	mayLog(`[GRIN2] Python processing took ${grin2AnalysisTimeToPrint} seconds`)
 
-	// Step 5: Parse results and respond
 	const resultData = JSON.parse(pyResult)
 
-	// Validate Python script output
-	if (!resultData?.png?.[0]) {
-		throw new Error('Invalid Python output: missing PNG data')
+	// Step 5: Prepare Rust input
+	const rustInput = {
+		file: resultData.cacheFileName,
+		type: 'grin2',
+		chrSizes: pyInput.chromosomelist,
+		plot_width: request.width,
+		plot_height: request.height,
+		device_pixel_ratio: request.devicePixelRatio,
+		png_dot_radius: request.pngDotRadius
+	}
+
+	// Step 6: Generate manhattan plot via rust
+	const manhattanPlotStart = Date.now()
+	const rsResult = await run_rust('manhattan_plot', JSON.stringify(rustInput))
+	const manhattanPlotTime = Date.now() - manhattanPlotStart
+	const manhattanPlotTimeToPrint = Math.round(manhattanPlotTime / 1000)
+	mayLog(`[GRIN2] Manhattan plot generation took ${manhattanPlotTimeToPrint} seconds`)
+
+	const manhattanPlotData = JSON.parse(rsResult)
+
+	// Step 6: Parse results and respond
+
+	// Validate Rust script output
+	if (!manhattanPlotData?.png) {
+		throw new Error('Invalid Rust output: missing PNG data')
 	}
 
 	const totalTime = Math.round((Date.now() - startTime) / 1000)
 
 	const response: GRIN2Response = {
 		status: 'success',
-		pngImg: resultData.png[0],
-		plotData: resultData.plotData,
+		pngImg: manhattanPlotData.png,
+		plotData: manhattanPlotData.plot_data,
 		topGeneTable: resultData.topGeneTable,
 		totalGenes: resultData.totalGenes,
 		showingTop: resultData.showingTop,
