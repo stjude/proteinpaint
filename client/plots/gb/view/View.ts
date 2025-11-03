@@ -20,11 +20,6 @@ export class View {
 	}
 
 	async main() {
-		if (this.blockInstance && this.data) {
-			// block already launched. update data on the tk and rerender
-			this.updateCustomMds3tk()
-			return
-		}
 		const tabs = new TabsRenderer(this.state, this.dom, this.opts, this.interactions)
 		await tabs.main()
 		const geneSearch = new GeneSearchRenderer(this.state, this.dom.geneSearchDiv, this.opts, this.interactions)
@@ -47,12 +42,17 @@ export class View {
 			// show snvindel-based mds3 tk
 			if (this.data) {
 				// variant data has been precomputed
-				// launch custom mds3 tk to show the variants
 				// TODO move computing logic to official mds3 tk and avoid tricky workaround using custom tk
-				const tk = await this.launchCustomMds3tk()
-				if (tk) {
-					// tricky! will not return obj when block is already shown, since it updates data for existing tk obj
-					tklst.push(tk)
+				if (this.blockInstance) {
+					// block already launched, update variant data on tk and rerender
+					this.updateCustomMds3tk()
+				} else {
+					// block not present, launch custom mds3 tk to display variant data
+					const tk = await this.launchCustomMds3tk()
+					if (tk) {
+						// tricky! will not return obj when block is already shown, since it updates data for existing tk obj
+						tklst.push(tk)
+					}
 				}
 			} else {
 				// official mds3 tk without precomputed tk data
@@ -277,6 +277,12 @@ export class View {
 				for (const n of this.state.config.trackLst.removeTracks) {
 					const i = this.blockInstance.tklst.findIndex(i => i.name == n)
 					if (i != -1) this.blockInstance.tk_remove(i)
+				}
+			}
+			if (this.state.config.ld?.tracks) {
+				for (const t of this.state.config.ld.tracks) {
+					const i = this.blockInstance.tklst.findIndex(i => i.name == t.name)
+					if (!t.shown && i != -1) this.blockInstance.tk_remove(i)
 				}
 			}
 			// tricky! if snvindel.shown is false, means user has toggled it off. thus find all mds3 tk and remove them

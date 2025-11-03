@@ -55,8 +55,7 @@ export class Interactions {
 		})
 	}
 
-	launchLdTrack = (tracks, i, toDisplay) => {
-		tracks[i].shown = toDisplay
+	launchLdTrack = tracks => {
 		this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
