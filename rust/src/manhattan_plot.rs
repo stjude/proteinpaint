@@ -422,7 +422,7 @@ fn plot_grin2_manhattan(
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut input = String::new();
     match io::stdin().read_line(&mut input) {
-        Ok(_nytes_read) => {
+        Ok(_bytes_read) => {
             let input_json: Input = match serde_json::from_str(&input) {
                 Ok(json) => json,
                 Err(_err) => {
