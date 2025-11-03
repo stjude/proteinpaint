@@ -65,18 +65,17 @@ async function getFilters(query, ds) {
 async function getSamplesPerFilter(q, ds) {
 	q.ds = ds
 	const samples = {}
-	//When called from filterTermValues is ok to adjust filter to not apply the user site filter
+	const userFilter = q.filter ? structuredClone(q.filter) : null
+	//Adjust q filter to not apply user site filter if not requested
+	if (!q.filterByUserSites) {
+		q.__protected__.ignoredTermIds.push(q.facilityTW.term.id)
+		authApi.mayAdjustFilter(q, ds, q.terms)
+	}
 	for (const id in q.filters) {
-		// unless we are getting the samples for the sites bypass the user filter, the data is aggregated so is ok
-		if (!q.filterByUserSites && q.facilityTW?.term?.id != id) {
-			if (!q.__protected__.ignoredTermIds.includes(id)) {
-				q.__protected__.ignoredTermIds.push(q.facilityTW.term.id)
-				authApi.mayAdjustFilter(q, ds, q.terms)
-			}
-		} else q.__protected__.ignoredTermIds.splice(0, q.__protected__.ignoredTermIds.length)
-		console.log(id, q.__protected__.ignoredTermIds)
+		// Use site filter only for facility term otherwise use q filter
+		const termfilter = id == q.facilityTW.term.id ? userFilter : q.filter
 		let filter = q.filters[id]
-		if (q.filter) filter = filterJoin([q.filter, q.filters[id]])
+		if (q.filter) filter = filterJoin([termfilter, q.filters[id]])
 		const result = (await get_samples({ filter, __protected__: q.__protected__ }, q.ds)).map(i => i.id)
 		samples[id] = Array.from(new Set(result))
 	}
