@@ -8810,13 +8810,13 @@
     },
     "lowestPct": {
       "curr": 50,
-      "prev": 0,
-      "diff": 50
+      "prev": 50,
+      "diff": 0
     },
     "averagePct": {
       "curr": 87.5,
-      "prev": 0,
-      "diff": 87.5
+      "prev": 87.5,
+      "diff": 0
     }
   },
   "plots/gb/test/genomeBrowser.unit.spec.ts": {
@@ -8846,13 +8846,13 @@
     },
     "lowestPct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     },
     "averagePct": {
       "curr": 100,
-      "prev": 0,
-      "diff": 100
+      "prev": 100,
+      "diff": 0
     }
   },
   "plots/gb/view/View.ts": {
@@ -8882,13 +8882,13 @@
     },
     "lowestPct": {
       "curr": 36.6,
-      "prev": 0,
-      "diff": 36.6
+      "prev": 36.6,
+      "diff": 0
     },
     "averagePct": {
       "curr": 41.125,
-      "prev": 0,
-      "diff": 41.125
+      "prev": 41.125,
+      "diff": 0
     }
   }
 }
