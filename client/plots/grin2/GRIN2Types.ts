@@ -6,12 +6,12 @@ export interface GRIN2Dom {
 	tip: Menu
 	geneTip: Menu
 	header?: any
-	snvindelCheckbox: any
-	cnvCheckbox: any
-	fusionCheckbox: any
-	svCheckbox: any
-	runButton: any
-	snvindel_minTotalDepth?: any
+	snvindelCheckbox: any | null
+	cnvCheckbox: any | null
+	fusionCheckbox: any | null
+	svCheckbox: any | null
+	runButton: any | null
+	snvindel_minTotalDepth?: any | null
 	snvindel_minAltAlleleCount?: any
 	snvindel_consequences?: any
 	snvindel_five_prime_flank_size?: any
@@ -25,10 +25,10 @@ export interface GRIN2Dom {
 	fusion_three_prime_flank_size?: any
 	sv_five_prime_flank_size?: any
 	sv_three_prime_flank_size?: any
-	consequenceCheckboxes: Record<string, any>
-	snvindelSelectAllBtn?: any
-	snvindelClearAllBtn?: any
-	snvindelDefaultBtn?: any
+	consequenceCheckboxes: Record<string, any | null>
+	snvindelSelectAllBtn?: any | null
+	snvindelClearAllBtn?: any | null
+	snvindelDefaultBtn?: any | null
 }
 
 export interface GRIN2Opts {
