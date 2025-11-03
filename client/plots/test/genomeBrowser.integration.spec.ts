@@ -118,7 +118,7 @@ tape('add variants track', (test: any) => {
 		test.ok(blockDiv, 'Should render block')
 		const tklst = blockDiv.querySelectorAll('[data-testid="sja_sample_menu_opener"]')
 		test.equal(tklst.length, 4, 'Block has 4 tracks')
-		const variantTk = tklst[0]
+		const variantTk = tklst[3]
 		const variants = await detectGt({ elem: variantTk, selector: '.sja_aa_discg' })
 		test.ok(variants.length > 0, 'Should render variants in variants track')
 		if (test._ok) gb.Inner.app.destroy()
