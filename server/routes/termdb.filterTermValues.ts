@@ -5,11 +5,6 @@ import { authApi } from '#src/auth.js'
 import { filterJoin } from '#shared/filter.js'
 import { get_samples } from '../src/termdb.sql.js'
 
-/*
-Given a set of terms and filters per term, this route returns the list of samples that match each term filter.
-It allows to fill the filter dropdowns in the profile plots. 
-*/
-
 export const api: RouteApi = {
 	endpoint: 'termdb/filterTermValues',
 	methods: {
@@ -39,6 +34,14 @@ function init({ genomes }) {
 	}
 }
 
+/*
+Given a set of terms and filters per term, this route returns the list of possible values per term. The possible values
+is based on the current selection of samples. If a value is not available it is shown as disabled. Each term/dropdown is populated with the values 
+from the samples that match the term's filter. The term filter is a filter that combines all the other term filters but excludes its own. 
+For example, lets say the user selects region Africa and country Cameroon. To populate the countries we build the country filter that selects the samples from 
+the Africa region (the region filter) without restricting them to be Cameroon (the country filter). Therefore this filter excludes the country filter, 
+in order to list all the other possible choices. Currently this endpoint is used to fill the filter dropdowns in the profile plots.
+*/
 async function getFilters(query, ds) {
 	// safe to process this client-submitted query.filterByUserSites flag,
 	// which only affects aggregation levels (not revealed sample-level data),
