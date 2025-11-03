@@ -89,7 +89,9 @@ export class TermdbVocab extends Vocab {
 	async getNestedChartSeriesData(opts) {
 		const [route, body] = this.getTdbDataUrl(opts)
 		const headers = this.mayGetAuthHeaders('termdb')
-		const data = await dofetch3(route, { headers, body }, this.opts.fetchOpts)
+		const initOpts = { headers, body }
+		if (opts.signal) initOpts.signal = opts.signal
+		const data = await dofetch3(route, initOpts, this.opts.fetchOpts)
 		if (data.error) throw data.error
 
 		const valuesByTermId = {}
@@ -440,7 +442,7 @@ export class TermdbVocab extends Vocab {
 		return data.count
 	}
 
-	async getViolinPlotData(arg, _body = {}) {
+	async getViolinPlotData(arg, _body = {}, initOpts) {
 		const headers = this.mayGetAuthHeaders('termdb')
 		arg.tw = this.getTwMinCopy(arg.tw)
 		if (arg.overlayTw) arg.overlayTw = this.getTwMinCopy(arg.overlayTw)
@@ -465,7 +467,9 @@ export class TermdbVocab extends Vocab {
 			_body
 		)
 		if (body.filter) body.filter = getNormalRoot(body.filter)
-		return await dofetch3('termdb/violin', { headers, body })
+		const init = { headers, body }
+		if (initOpts.signal) init.signal = initOpts.signal
+		return await dofetch3('termdb/violin', init)
 	}
 
 	async getBoxPlotData(arg, _body = {}) {
