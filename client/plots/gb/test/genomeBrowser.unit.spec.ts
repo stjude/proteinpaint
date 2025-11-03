@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { computeBlockModeFlag } from '#plots/gb/GB.ts'
+import { computeBlockModeFlag } from '../GB.ts'
 
 /* 
 Tests:

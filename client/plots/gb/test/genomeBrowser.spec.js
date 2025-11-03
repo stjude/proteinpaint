@@ -1,7 +1,7 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
-import * as helpers from '../../test/front.helpers.js'
-import { detectGt, detectOne } from '../../test/test.helpers'
+import * as helpers from '../../../test/front.helpers.js'
+import { detectGt, detectOne } from '../../../test/test.helpers'
 
 /********************************************
  TEST SECTIONS
