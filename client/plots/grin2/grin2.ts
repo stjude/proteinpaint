@@ -75,7 +75,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 			cnvCheckbox: null,
 			fusionCheckbox: null,
 			svCheckbox: null,
-			runButton: null
+			runButton: null,
+			consequenceCheckboxes: {},
+			snvindelSelectAllBtn: null,
+			snvindelClearAllBtn: null,
+			snvindelDefaultBtn: null
 		}
 		if (opts.header) this.dom.header = opts.header.text('GRIN2')
 	}
@@ -382,36 +386,36 @@ class GRIN2 extends PlotBase implements RxComponent {
 		defaultChecked.add('StartLost')
 		defaultChecked.add('StopLost')
 
-		// Create Select All/Clear All controls
+		// Create Select All/Clear All/Default buttons
 		const controlDiv = container
 			.append('div')
 			.style('margin-bottom', '6px')
 			.style('display', 'flex')
 			.style('gap', this.controlGap)
 
-		const selectAllBtn = controlDiv
+		this.dom.snvindelSelectAllBtn = controlDiv
 			.append('button')
-			.attr('class', 'grin2-control-btn')
 			.style('font-size', `${this.tableFontSize}px`)
 			.text('Select All')
 
-		const clearAllBtn = controlDiv
+		this.dom.snvindelClearAllBtn = controlDiv
 			.append('button')
-			.attr('class', 'grin2-control-btn')
 			.style('font-size', `${this.tableFontSize}px`)
 			.text('Clear All')
 
-		// Create checkbox container
+		this.dom.snvindelDefaultBtn = controlDiv
+			.append('button')
+			.style('font-size', `${this.tableFontSize}px`)
+			.text('Default')
+
+		// Create consequence checkbox container
 		const checkboxContainer = container
 			.append('div')
 			.style('max-height', this.checkboxContainerMaxHeight)
 			.style('overflow-y', 'auto')
 			.style('border', this.checkboxContainerBorder)
 
-		// Store checkbox references for bulk operations
-		const checkboxes: any[] = []
-
-		// Create individual checkboxes using make_one_checkbox
+		// Create individual consequence checkboxes
 		snvIndelClasses.forEach(([classKey, classInfo]: [string, any]) => {
 			const checkboxDiv = checkboxContainer.append('div').style('margin-bottom', this.checkboxMarginBottom)
 
@@ -420,51 +424,36 @@ class GRIN2 extends PlotBase implements RxComponent {
 				labeltext: classInfo.label,
 				checked: defaultChecked.has(classKey),
 				divstyle: {
-					'font-size': `${this.tableFontSize}px`,
-					margin: '0',
-					display: 'flex',
-					'align-items': 'center'
+					'font-size': `${this.tableFontSize}px`
 				},
-				callback: async (_isChecked: boolean) => {
-					// Update data attribute for retrieval in getConfigValues
-					checkbox.attr('data-consequence', classKey)
+				callback: async (checked: boolean) => {
+					checkboxDiv.style('display', checked ? '' : 'none')
 				}
 			})
-
-			// Set data attribute for config retrieval
-			checkbox.attr('data-consequence', classKey)
 
 			// Set title attribute on the label for tooltip
 			checkboxDiv.select('label').attr('title', classInfo.desc)
 
-			checkboxes.push(checkbox)
+			// Store checkbox reference by classKey
+			this.dom.consequenceCheckboxes[classKey] = checkbox
 		})
 
 		// Select All button functionality
-		selectAllBtn
-			.on('click', () => {
-				checkboxes.forEach(checkbox => checkbox.property('checked', true))
-				selectAllBtn.style('background', this.btnBackgroundColor).style('color', this.btnTextColor)
-			})
-			.on('mouseover', () => {
-				selectAllBtn.style('background', this.btnHoverBackgroundColor)
-			})
-			.on('mouseout', () => {
-				selectAllBtn.style('background', this.btnBackgroundColor)
-			})
+		this.dom.snvindelSelectAllBtn.on('click', () => {
+			Object.values(this.dom.consequenceCheckboxes).forEach(checkbox => checkbox.property('checked', true))
+		})
 
 		// Clear All button functionality
-		clearAllBtn
-			.on('click', () => {
-				checkboxes.forEach(checkbox => checkbox.property('checked', false))
-				clearAllBtn.style('background', this.btnBackgroundColor).style('color', this.btnTextColor)
+		this.dom.snvindelClearAllBtn.on('click', () => {
+			Object.values(this.dom.consequenceCheckboxes).forEach(checkbox => checkbox.property('checked', false))
+		})
+
+		// Default button functionality
+		this.dom.snvindelDefaultBtn.on('click', () => {
+			Object.entries(this.dom.consequenceCheckboxes).forEach(([classKey, checkbox]) => {
+				checkbox.property('checked', defaultChecked.has(classKey))
 			})
-			.on('mouseover', () => {
-				clearAllBtn.style('background', this.btnHoverBackgroundColor)
-			})
-			.on('mouseout', () => {
-				clearAllBtn.style('background', this.btnBackgroundColor)
-			})
+		})
 	}
 
 	private getConfigValues(dtUsage: Record<number, { checked: boolean; label: string }>): any {
@@ -516,18 +505,19 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 		return dtUsage
 	}
+
 	private getSelectedConsequences(): string[] {
 		const consequences: string[] = []
 
-		this.dom.controls.selectAll('input[data-consequence]').each(function (this: HTMLInputElement) {
-			if (this.checked) {
-				const consequence = this.getAttribute('data-consequence')
-				if (consequence) consequences.push(consequence)
+		Object.entries(this.dom.consequenceCheckboxes).forEach(([classKey, checkbox]) => {
+			if (checkbox.property('checked')) {
+				consequences.push(classKey)
 			}
 		})
 
 		return consequences
 	}
+
 	private updateRunButtonFromCheckboxes() {
 		const dtUsage = this.getDtUsageFromCheckboxes()
 		this.updateRunButtonState(dtUsage)

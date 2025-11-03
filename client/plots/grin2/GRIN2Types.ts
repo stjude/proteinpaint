@@ -25,6 +25,10 @@ export interface GRIN2Dom {
 	fusion_three_prime_flank_size?: any
 	sv_five_prime_flank_size?: any
 	sv_three_prime_flank_size?: any
+	consequenceCheckboxes: Record<string, any>
+	snvindelSelectAllBtn?: any
+	snvindelClearAllBtn?: any
+	snvindelDefaultBtn?: any
 }
 
 export interface GRIN2Opts {
