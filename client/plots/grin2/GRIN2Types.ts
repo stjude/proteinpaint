@@ -6,6 +6,11 @@ export interface GRIN2Dom {
 	tip: Menu
 	geneTip: Menu
 	header?: any
+	snvindelCheckbox: any
+	cnvCheckbox: any
+	fusionCheckbox: any
+	svCheckbox: any
+	runButton: any
 	snvindel_minTotalDepth?: any
 	snvindel_minAltAlleleCount?: any
 	snvindel_consequences?: any

@@ -70,7 +70,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 			controls: opts.holder.append('div'), // controls ui on top
 			div: opts.holder.append('div').style('margin', '20px'), // result ui on bottom
 			tip: new Menu({ padding: '' }),
-			geneTip: new Menu({ padding: '' })
+			geneTip: new Menu({ padding: '' }),
+			snvindelCheckbox: null,
+			cnvCheckbox: null,
+			fusionCheckbox: null,
+			svCheckbox: null,
+			runButton: null
 		}
 		if (opts.header) this.dom.header = opts.header.text('GRIN2')
 	}
@@ -139,7 +144,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// ----- Left-side SNV/INDEL checkbox -----
 		const isChecked = this.state.config.settings.dtUsage[dtsnvindel].checked
 		t2.table.style('display', isChecked ? '' : 'none')
-		make_one_checkbox({
+		this.dom.snvindelCheckbox = make_one_checkbox({
 			holder: left,
 			labeltext: 'SNV/INDEL (Mutation)',
 			checked: isChecked,
@@ -147,7 +152,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonFromCheckboxes()
 			}
-		}).attr('data-dt', dtsnvindel)
+		})
 	}
 
 	// Add CNV row
@@ -211,7 +216,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const isChecked = this.state.config.settings.dtUsage[dtcnv].checked
 		t2.table.style('display', isChecked ? '' : 'none')
 
-		make_one_checkbox({
+		this.dom.cnvCheckbox = make_one_checkbox({
 			holder: left,
 			labeltext: 'CNV (Copy Number Variation)',
 			checked: isChecked,
@@ -219,7 +224,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonFromCheckboxes()
 			}
-		}).attr('data-dt', dtcnv)
+		})
 	}
 
 	// Add Fusion row
@@ -252,7 +257,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const isChecked = this.state.config.settings.dtUsage[dtfusionrna].checked
 		t2.table.style('display', isChecked ? '' : 'none')
 
-		make_one_checkbox({
+		this.dom.fusionCheckbox = make_one_checkbox({
 			holder: left,
 			labeltext: 'Fusion (RNA Fusion Events)',
 			checked: isChecked,
@@ -260,7 +265,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonFromCheckboxes()
 			}
-		}).attr('data-dt', dtfusionrna)
+		})
 	}
 
 	// Add SV row
@@ -293,7 +298,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const isChecked = this.state.config.settings.dtUsage[dtsv].checked
 		t2.table.style('display', isChecked ? '' : 'none')
 
-		make_one_checkbox({
+		this.dom.svCheckbox = make_one_checkbox({
 			holder: left,
 			labeltext: 'SV (Structural Variants)',
 			checked: isChecked,
@@ -301,14 +306,14 @@ class GRIN2 extends PlotBase implements RxComponent {
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonFromCheckboxes()
 			}
-		}).attr('data-dt', dtsv)
+		})
 	}
 
 	// Enable the Run button only if at least one data type is checked
 	private updateRunButtonState(dtu?: Record<number, { checked: boolean; label: string }>) {
 		const dtUsage = dtu || (this.state.config.settings.dtUsage as Record<number, { checked: boolean; label: string }>)
 		const anyChecked = Object.values(dtUsage).some(info => info.checked)
-		this.runButton.property('disabled', !anyChecked)
+		this.dom.runButton.property('disabled', !anyChecked)
 	}
 
 	private createConfigTable() {
@@ -329,7 +334,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 
 		// Run Button
-		this.runButton = this.dom.controls
+		this.dom.runButton = this.dom.controls
 			.append('button')
 			.style('margin-left', '100px')
 			.text('Run GRIN2')
@@ -462,7 +467,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			})
 	}
 
-	private getConfigValues(dtUsage?: Record<number, { checked: boolean; label: string }>): any {
+	private getConfigValues(dtUsage: Record<number, { checked: boolean; label: string }>): any {
 		const requestConfig: any = {}
 		const usage = dtUsage || this.state.config.settings.dtUsage
 
@@ -495,15 +500,20 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	private getDtUsageFromCheckboxes(): Record<number, { checked: boolean; label: string }> {
 		const dtUsage = structuredClone(this.state.config.settings.dtUsage)
-		this.dom.controls.selectAll('input[type="checkbox"][data-dt]').each(function (this: HTMLInputElement) {
-			const dtAttr = this.getAttribute('data-dt')
-			if (dtAttr !== null) {
-				const dt = parseInt(dtAttr)
-				if (dtUsage[dt]) {
-					dtUsage[dt].checked = this.checked
-				}
-			}
-		})
+
+		if (dtUsage[dtsnvindel]) {
+			dtUsage[dtsnvindel].checked = this.dom.snvindelCheckbox.property('checked')
+		}
+		if (dtUsage[dtcnv]) {
+			dtUsage[dtcnv].checked = this.dom.cnvCheckbox.property('checked')
+		}
+		if (dtUsage[dtfusionrna]) {
+			dtUsage[dtfusionrna].checked = this.dom.fusionCheckbox.property('checked')
+		}
+		if (dtUsage[dtsv]) {
+			dtUsage[dtsv].checked = this.dom.svCheckbox.property('checked')
+		}
+
 		return dtUsage
 	}
 	private getSelectedConsequences(): string[] {
@@ -527,7 +537,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			// Get checkbox states
 			const dtUsage = this.getDtUsageFromCheckboxes()
 
-			this.runButton.property('disabled', true).text('Running GRIN2...')
+			this.dom.runButton.property('disabled', true).text('Running GRIN2...')
 
 			// Clear previous results
 			this.dom.div.selectAll('*').remove()
@@ -571,7 +581,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		} catch (error) {
 			sayerror(this.dom.div, `Error running GRIN2: ${error instanceof Error ? error.message : error}`)
 		} finally {
-			this.runButton.property('disabled', false).text('Run GRIN2')
+			this.dom.runButton.property('disabled', false).text('Run GRIN2')
 		}
 	}
 
@@ -582,7 +592,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const config = structuredClone(this.state.config)
 		if (config.childType != this.type && config.chartType != this.type) return
 
-		if (!this.runButton) {
+		if (!this.dom.runButton) {
 			this.createConfigTable()
 		}
 	}
