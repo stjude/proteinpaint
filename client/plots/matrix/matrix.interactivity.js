@@ -865,27 +865,15 @@ function setTermActions(self) {
 		//self.dom.tip.show(event.clientX - 20, event.clientY - 20)
 	}
 
-	self.launchGB = async t => {
-		const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
-		sandbox.header.text(t.tw.term.name)
-		const arg = {
-			debugmode: self.app.opts.debug,
-			holder: sandbox.body.append('div').style('margin', '20px'),
-			genome: self.app.opts.genome,
-			nobox: true,
-			query: t.tw.term.name,
-			tklst: [
-				{
-					type: 'mds3',
-					dslabel: self.app.opts.state.vocab.dslabel,
-					filter0: self.state.filter0,
-					// state.filter is frozen. make a copy and pass the writable obj to tk. currently in mds3 it always hydrates filter and modify it
-					filterObj: structuredClone(self.state.filter)
-				}
-			]
-		}
-		const _ = await import('#src/block.init')
-		await _.default(arg)
+	self.launchGB = t => {
+		self.app.dispatch({
+			type: 'plot_create',
+			config: {
+				chartType: 'genomeBrowser',
+				snvindel: { shown: true },
+				geneSearchResult: { geneSymbol: t.tw.term.name }
+			}
+		})
 	}
 
 	self.updateTermLabel = () => {
