@@ -83,6 +83,7 @@ export class View {
 					}
 					// TODO this will cause mds3 tk to show a leftlabel to indicate the filtering, which should be hidden
 				}
+				if (this.state.filter0) tk.filter0 = this.state.filter0
 				if (this.state.config.mclassHiddenValues) {
 					tk.legend = { mclass: { hiddenvalues: new Set(this.state.config.mclassHiddenValues) } }
 				}
@@ -113,6 +114,7 @@ export class View {
 							// no global. only sub
 							t2.filterObj = structuredClone(subtk.filterObj)
 						}
+						if (this.state.filter0) t2.filter0 = this.state.filter0
 						if (subtk.mclassHiddenValues) {
 							t2.legend = { mclass: { hiddenvalues: new Set(subtk.mclassHiddenValues) } }
 						}
