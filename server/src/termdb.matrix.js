@@ -16,7 +16,6 @@ import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import { getCategories } from '../routes/termdb.categories.ts'
 import { authApi } from '#src/auth.js'
-import { filterJoin } from '#shared/filter.js'
 
 /*
 for a list of termwrappers, get the sample annotation data to these terms, by obeying categorization method defined in tw.q{}
@@ -357,25 +356,6 @@ async function mayGetSampleFilterSet4snplst(q, nonDictTerms) {
 	}
 	if (!q.filter) return // no filter, allow snplst/snplocus to return data for all samples
 	return new Set((await get_samples(q, q.ds)).map(i => i.id))
-}
-
-export async function getSamplesPerFilterResponse(q, ds, res) {
-	const samples = await getSamplesPerFilter(q, ds)
-	res.send(samples)
-}
-
-export async function getSamplesPerFilter(q, ds) {
-	q.ds = ds
-	const samples = {}
-	//When called from filterTermValues is ok to adjust filter to not apply the user site filter
-	authApi.mayAdjustFilter(q, ds, q.terms)
-	for (const id in q.filters) {
-		let filter = q.filters[id]
-		if (q.filter) filter = filterJoin([q.filter, q.filters[id]])
-		const result = (await get_samples({ filter, __protected__: q.__protected__ }, q.ds)).map(i => i.id)
-		samples[id] = Array.from(new Set(result))
-	}
-	return samples
 }
 
 export function divideTerms(lst) {

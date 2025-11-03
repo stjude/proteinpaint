@@ -693,17 +693,6 @@ export class TermdbVocab extends Vocab {
 		})
 	}
 
-	async getSamplesPerFilter(opts) {
-		return await dofetch3('termdb', {
-			body: {
-				for: 'getSamplesPerFilter',
-				genome: this.state.vocab.genome,
-				dslabel: this.state.vocab.dslabel,
-				filters: opts.filters
-			}
-		})
-	}
-
 	/*
     The server data sample annotations and refs are both indexed 
     by term id, but will be remapped to be annotated instead with 
