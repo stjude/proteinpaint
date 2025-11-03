@@ -17,6 +17,8 @@ TODO default to unit=log if term enables
 */
 
 class ViolinPlot extends PlotBase {
+	static type = 'violin'
+
 	constructor(opts) {
 		super(opts)
 		this.type = 'violin'
@@ -319,9 +321,18 @@ class ViolinPlot extends PlotBase {
 				this.config.term.term.name + ` <span style="opacity:.6;font-size:1em;margin-left:10px;">Violin Plot</span>`
 			)
 
-		const args = this.validateArgs()
-		this.data = await this.app.vocabApi.getViolinPlotData(args)
+		const [args, initOpts, abortCtrl] = this.validateArgs()
+		let data, stale
+		try {
+			;[data, stale] = await this.api.detectStale(() => this.app.vocabApi.getViolinPlotData(args, null, initOpts), {
+				abortCtrl
+			})
+		} catch (e) {
+			if (stale || e.includes('stale sequenceId')) return
+			throw e
+		}
 
+		this.data = data
 		if (this.data.error) throw this.data.error
 		args.tw.q.descrStats = this.data.descrStats
 
@@ -382,8 +393,9 @@ class ViolinPlot extends PlotBase {
 		}
 
 		if (term0) arg.divideTw = term0
-
-		return arg
+		const abortCtrl = new AbortController()
+		const initOpts = { signal: abortCtrl.signal }
+		return [arg, initOpts, abortCtrl]
 	}
 }
 
