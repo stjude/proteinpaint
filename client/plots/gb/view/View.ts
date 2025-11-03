@@ -1,15 +1,18 @@
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { filterJoin } from '#filter'
+import { TabsRenderer } from './TabsRenderer.ts'
+import { GeneSearchRenderer } from './GeneSearchRenderer.ts'
 
 export class View {
 	state: any
+	blockInstance: any
 	data: any
 	dom: any
 	opts: any
 	interactions: any
-	blockInstance: any
-	constructor(state, data, dom, opts, interactions) {
+	constructor(state, blockInstance, data, dom, opts, interactions) {
 		this.state = state
+		this.blockInstance = blockInstance
 		this.data = data
 		this.dom = dom
 		this.opts = opts
@@ -17,8 +20,22 @@ export class View {
 	}
 
 	async main() {
-		const tklst = await this.generateTracks()
-		await this.launchBlockWithTracks(tklst)
+		if (this.blockInstance && this.data) {
+			// block already launched. update data on the tk and rerender
+			this.updateCustomMds3tk()
+			return
+		}
+		const tabs = new TabsRenderer(this.state, this.dom, this.opts, this.interactions)
+		await tabs.main()
+		const geneSearch = new GeneSearchRenderer(this.state, this.dom.geneSearchDiv, this.opts, this.interactions)
+		geneSearch.main()
+		if (this.state.config.geneSearchResult) {
+			// valid gene search result
+			// launch block
+			this.dom.geneSearchDiv.style('display', 'none')
+			const tklst = await this.generateTracks()
+			await this.launchBlockWithTracks(tklst)
+		}
 	}
 
 	async generateTracks() {
@@ -32,7 +49,7 @@ export class View {
 				// variant data has been precomputed
 				// launch custom mds3 tk to show the variants
 				// TODO move computing logic to official mds3 tk and avoid tricky workaround using custom tk
-				const tk = await this.launchCustomMds3tk(this.data)
+				const tk = await this.launchCustomMds3tk()
 				if (tk) {
 					// tricky! will not return obj when block is already shown, since it updates data for existing tk obj
 					tklst.push(tk)
@@ -122,23 +139,8 @@ export class View {
 		return tklst
 	}
 
-	async launchCustomMds3tk(data) {
-		this.mayGetSampleCounts(data)
-
-		if (this.blockInstance) {
-			// block already launched. update data on the tk and rerender
-			const t2 = this.blockInstance.tklst.find(i => i.type == 'mds3')
-			t2.custom_variants = data.mlst
-
-			// details.groups[] may have changed. update label and tooltip callback etc, of tk numeric axis view mode object
-			furbishViewModeWithSnvindelComputeDetails(
-				this,
-				t2.skewer.viewModes.find(i => i.type == 'numeric')
-			)
-
-			t2.load()
-			return
-		}
+	async launchCustomMds3tk() {
+		this.mayGetSampleCounts()
 
 		const nm = {
 			// numeric mode object; to fill in based on snvindel.details{}
@@ -152,13 +154,30 @@ export class View {
 			// despite having custom data, still provide dslabel for the mds3 tk to function as an official dataset
 			dslabel: this.state.vocab.dslabel,
 			name: 'Variants',
-			custom_variants: data.mlst,
+			custom_variants: this.data.mlst,
 			skewerModes: [nm]
 		}
 		return tk
 	}
 
-	mayGetSampleCounts(data) {
+	updateCustomMds3tk() {
+		if (!this.blockInstance) throw 'blockInstance is missing'
+		this.mayGetSampleCounts()
+
+		const t2 = this.blockInstance.tklst.find(i => i.type == 'mds3')
+		t2.custom_variants = this.data.mlst
+
+		// details.groups[] may have changed. update label and tooltip callback etc, of tk numeric axis view mode object
+		furbishViewModeWithSnvindelComputeDetails(
+			this,
+			t2.skewer.viewModes.find(i => i.type == 'numeric')
+		)
+
+		t2.load()
+	}
+
+	mayGetSampleCounts() {
+		const data = this.data
 		this.mayRenderSampleCount('group1', data.totalSampleCount_group1)
 		this.mayRenderSampleCount('group2', data.totalSampleCount_group2)
 		this.mayRenderPop2Avg(data.pop2average)
@@ -175,7 +194,7 @@ export class View {
 
 	mayRenderPop2Avg(pop2average) {
 		if (!pop2average) return
-		const div = this.dom.tabsDiv.select('#sjpp-gb-pop2avg')
+		const span = this.dom.tabsDiv.select('#sjpp-gb-pop2avg')
 		const lst: any = []
 		for (const k in pop2average) {
 			const value = pop2average[k]
@@ -184,11 +203,10 @@ export class View {
 		}
 		if (lst.length) {
 			// has valid admix values to display
-			div.style('display', 'inline')
-			const txt = div.text()
-			div.text(`${txt}: ${lst.join(', ')}`)
+			span.style('display', 'inline')
+			span.select('#sjpp-gb-pop2avg-values').text(` ${lst.join(', ')}`)
 		} else {
-			div.style('display', 'none')
+			span.style('display', 'none')
 		}
 	}
 
@@ -291,6 +309,13 @@ export class View {
 				this.maySaveTrackUpdatesToState()
 			}
 		}
+
+		if (this.data) {
+			// variant data has been precomputed
+			// need to recompute upon coordinate change
+			arg.onCoordinateChange = this.interactions.onCoordinateChange
+		}
+
 		if (this.state.config.blockIsProteinMode) {
 			// must be in protein mode and requires gene symbol
 			if (!this.state.config.geneSearchResult.geneSymbol) throw 'blockIsProteinMode=true but geneSymbol missing'
@@ -311,8 +336,6 @@ export class View {
 		arg.start = this.state.config.geneSearchResult.start
 		arg.stop = this.state.config.geneSearchResult.stop
 		first_genetrack_tolist(this.opts.genome, arg.tklst)
-
-		arg.onCoordinateChange = this.interactions.onCoordinateChange
 
 		const _ = await import('#src/block')
 		this.blockInstance = new _.Block(arg)

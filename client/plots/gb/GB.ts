@@ -4,8 +4,6 @@ import { Menu, sayerror } from '#dom'
 import { getNormalRoot } from '#filter'
 import { Model } from './model/Model.ts'
 import { View } from './view/View.ts'
-import { TabsRenderer } from './view/TabsRenderer.ts'
-import { GeneSearchRenderer } from './view/GeneSearchRenderer.ts'
 import { Interactions, mayUpdateGroupTestMethodsIdx } from './interactions/Interactions.ts'
 
 class TdbGenomeBrowser extends PlotBase implements RxComponent {
@@ -21,6 +19,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		[name: string]: ComponentApi | { [name: string]: ComponentApi }
 	} = {}
 	interactions: any
+	blockInstance: any
 
 	constructor(opts, api) {
 		super(opts, api)
@@ -72,29 +71,21 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		const state = this.getState(this.app.getState())
 		if (state.config.chartType != this.type) return
 		const opts = this.getOpts()
-		const tabs = new TabsRenderer(state, this.dom, opts, this.interactions)
-		tabs.main()
-		const geneSearch = new GeneSearchRenderer(state, this.dom.geneSearchDiv, opts, this.interactions)
-		geneSearch.main()
-		if (state.config.geneSearchResult) {
-			// valid gene search result
-			// render genome browser
-			try {
-				this.dom.geneSearchDiv.style('display', 'none')
-				const model = new Model(state, this.app)
-				const data = await model.preComputeData()
-				const view = new View(state, data, this.dom, opts, this.interactions)
-				await view.main()
-			} catch (e: any) {
-				this.dom.errDiv.style('display', 'block')
-				sayerror(this.dom.errDiv, 'Error: ' + (e.message || e))
-				if (e.stack) console.log(e.stack)
-			}
+		try {
+			const model = new Model(state, this.app)
+			const data = await model.preComputeData()
+			const view = new View(state, this.blockInstance, data, this.dom, opts, this.interactions)
+			await view.main()
+			this.blockInstance = view.blockInstance
+		} catch (e: any) {
+			this.dom.errDiv.style('display', 'block')
+			sayerror(this.dom.errDiv, 'Error: ' + (e.message || e))
+			if (e.stack) console.log(e.stack)
 		}
 		this.dom.loadingDiv.style('display', 'none')
 	}
 
-	// get options for view model and view
+	// get options for view instance
 	getOpts() {
 		const opts = {
 			genome: this.app.opts.genome,

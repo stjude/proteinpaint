@@ -18,10 +18,10 @@ export class TabsRenderer {
 		this.filterUI = {}
 	}
 
-	main() {
+	async main() {
 		this.dom.tabsDiv.selectAll('*').remove()
 		this.getTabs()
-		this.mayRenderTabs()
+		await this.mayRenderTabs()
 	}
 
 	getTabs() {
@@ -67,7 +67,7 @@ export class TabsRenderer {
 		this.tabs = tabs
 	}
 
-	mayRenderTabs() {
+	async mayRenderTabs() {
 		const tabs = this.tabs
 		if (!tabs?.length) return
 		// has some tabs! initiate the tab ui, then at <div> of each tab, render contents
@@ -101,7 +101,7 @@ export class TabsRenderer {
 				this.dom.group1div = div.append('div').attr('class', 'sjpp-gb-group1')
 				this.dom.group2div = div.append('div').attr('class', 'sjpp-gb-group2')
 				this.dom.testMethodDiv = div.append('div').style('margin-top', '3px')
-				this.mayRenderGroups()
+				await this.mayRenderGroups()
 
 				if (this.state.config.variantFilter) {
 					// the whole holder has white-space=nowrap (likely from sjpp-output-sandbox-content)
@@ -238,13 +238,13 @@ export class TabsRenderer {
 		}
 	}
 
-	mayRenderGroups() {
+	async mayRenderGroups() {
 		const groups = this.state.config.snvindel.details.groups
 		if (!groups) return
 
 		// is equipped with comparison groups, render group ui
-		this.render1group(0)
-		this.render1group(1)
+		await this.render1group(0)
+		await this.render1group(1)
 
 		if (this.state.config.snvindel.details.groupTestMethods) {
 			// render the test method
@@ -272,7 +272,7 @@ export class TabsRenderer {
 		determines which <div> to render to at self.dom.group1/2div
 	group{}: element of same array
 	*/
-	render1group(groupIdx) {
+	async render1group(groupIdx) {
 		const group = this.state.config.snvindel.details.groups[groupIdx]
 		const div = groupIdx == 0 ? this.dom.group1div : this.dom.group2div
 
@@ -297,7 +297,7 @@ export class TabsRenderer {
 
 		if (group.type == 'info') return this.render1group_info(groupIdx, group, div)
 		if (group.type == 'population') return this.render1group_population(groupIdx, group, div)
-		if (group.type == 'filter') return this.render1group_filter(groupIdx, group, div)
+		if (group.type == 'filter') return await this.render1group_filter(groupIdx, group, div)
 		throw 'render1group: unknown group type'
 	}
 
@@ -460,11 +460,11 @@ export class TabsRenderer {
 			*/
 			div
 				.append('span')
-				.style('display', 'none') // hidden for now, will display once pop2average data becomes available (see View.ts)
-				.text(`Group ${groupIdx == 1 ? 1 : 2} average admixture`)
-				.style('margin-left', '20px')
 				.attr('class', 'sja_clbtext')
 				.attr('id', 'sjpp-gb-pop2avg')
+				.style('display', 'none') // hidden for now, will display once pop2average data becomes available (see View.ts)
+				.style('margin-left', '20px')
+				.text(`Group ${groupIdx == 1 ? 1 : 2} average admixture:`)
 				.on('click', event => {
 					this.dom.tip.clear().showunder(event.target).d.append('div').style('margin', '10px').style('width', '500px')
 						.html(`These are average admixture coefficients based on current Group ${groupIdx == 1 ? 1 : 2} samples.
@@ -475,6 +475,8 @@ export class TabsRenderer {
 					This allows to account for ancestry composition difference between the two groups.
 					`)
 				})
+				.append('span')
+				.attr('id', 'sjpp-gb-pop2avg-values') // will fill with values once pop2average data becomes available (see View.ts)
 		}
 	}
 

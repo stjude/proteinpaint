@@ -11,7 +11,12 @@ export class Model {
 	async preComputeData() {
 		// precompute variant data that will be displayed on track
 
-		if (!this.state.config.snvindel?.shown || !this.state.config.snvindel.details) return
+		if (
+			!this.state.config.geneSearchResult ||
+			!this.state.config.snvindel?.shown ||
+			!this.state.config.snvindel?.details
+		)
+			return
 
 		// state.config.snvindel.details{} contains analysis details, cohorts, and compute methods
 		// send to backend to compute and get results back
