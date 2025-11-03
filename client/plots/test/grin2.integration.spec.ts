@@ -29,10 +29,10 @@ tape('grin2', function (test) {
 		}
 	})
 	async function runTests(g) {
-		test.ok(g.Inner.runButton, 'Run button is created')
+		test.ok(g.Inner.dom.runButton, 'Run button is created')
 
 		// click submit button to run analysis
-		g.Inner.runButton.node().dispatchEvent(new Event('click'), { bubbles: true })
+		g.Inner.dom.runButton.node().dispatchEvent(new Event('click'), { bubbles: true })
 		const svg = await detectOne({ elem: g.Inner.dom.div.node(), selector: '[data-testid="sjpp-manhattan"]' })
 		test.ok(svg, '<svg> is rendered')
 

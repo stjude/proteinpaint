@@ -1,1 +1,2 @@
-
+Fixes:
+- GRIN2: Updated integration test to reference new location of run button
