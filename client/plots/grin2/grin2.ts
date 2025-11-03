@@ -426,9 +426,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				divstyle: {
 					'font-size': `${this.tableFontSize}px`
 				},
-				callback: (checked: boolean) => {
-					checkboxDiv.style('display', checked ? '' : 'none')
-				}
+				callback: () => {}
 			})
 
 			// Set title attribute on the label for tooltip
