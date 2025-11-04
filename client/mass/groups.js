@@ -272,36 +272,25 @@ function mayAddGenomebrowserOption(menuDiv, self, samplelstTW) {
 	if (!self.app.vocabApi.termdbConfig.queries?.snvindel) return // for now only allow for snvindel
 	if (self.app.vocabApi.termdbConfig.queries.snvindel.details) return // allows to disable this option for sjlife
 	if (samplelstTW.q.groups.length != 2) return // hardcoded to only support 2 groups
-	const itemdiv = menuDiv
+	menuDiv
 		.append('div')
 		.attr('class', 'sja_menuoption sja_sharp_border')
 		.text('Compare mutations')
 		.on('click', () => {
-			self.tip2.clear().showunderoffset(itemdiv.node())
-			const arg = {
-				tip: self.tip3,
-				genome: self.app.opts.genome,
-				row: self.tip2.d.append('div').style('margin', '10px'),
-				callback: () => {
-					self.tip.hide()
-					self.tip2.hide()
-					self.tip3.hide()
-					const [f1, f2] = makeFiltersFromTwoSampleGroups(samplelstTW)
-					const config = {
-						chartType: 'genomeBrowser',
-						geneSearchResult: result,
-						snvindel: { shown: true, filter: f1 }, // code filter in 1st tk
-						subMds3Tks: [{ filterObj: f2 }] // code filter in 2nd tk
-					}
-					self.app.dispatch({
-						type: 'plot_create',
-						config
-					})
-				}
+			self.tip.hide()
+			self.tip2.hide()
+			self.tip3.hide()
+			const [f1, f2] = makeFiltersFromTwoSampleGroups(samplelstTW)
+			const config = {
+				chartType: 'genomeBrowser',
+				snvindel: { shown: true, filter: f1 }, // code filter in 1st tk
+				subMds3Tks: [{ filterObj: f2 }] // code filter in 2nd tk
 			}
-			const result = addGeneSearchbox(arg)
+			self.app.dispatch({
+				type: 'plot_create',
+				config
+			})
 		})
-	itemdiv.insert('div').html('›').style('float', 'right')
 }
 
 function makeFiltersFromTwoSampleGroups(tw) {
