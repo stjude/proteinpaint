@@ -1668,25 +1668,6 @@ function setTermActions(self) {
 		}
 		return { in: true, join: 'and', type: 'tvslst', lst }
 	}
-
-	self.launchBrowser = event => {
-		event.stopPropagation()
-		const tw = self.activeLabel.tw
-		const custom_variants = []
-		for (const row of self.data.lst) {
-			if (row[tw.$id]?.values) custom_variants.push(...row[tw.$id].values)
-		}
-
-		self.app.dispatch({
-			type: 'plot_create',
-			config: {
-				term: tw,
-				chartType: 'variantBrowser',
-				insertBefore: self.id,
-				custom_variants
-			}
-		})
-	}
 }
 
 function setSampleGroupActions(self) {
