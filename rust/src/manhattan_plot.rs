@@ -264,7 +264,10 @@ fn plot_grin2_manhattan(
 
         let x_pos = chrom_info.start + gene_start as u64;
         for (mtype, (q_idx, n_idx_opt)) in &mutation_indices {
-            let q_val_str = fields.get(*q_idx).expect("q.nsubj index invalid");
+            let q_val_str = match fields.get(*q_idx) {
+                Some(q) => q,
+                None => continue,
+            };
             let q_val: f64 = match q_val_str.parse() {
                 Ok(v) if v > 0.0 => v,
                 _ => continue,
