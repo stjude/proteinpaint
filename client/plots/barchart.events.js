@@ -445,13 +445,6 @@ function handle_click(event, self, chart) {
 		})
 	}
 
-	if (self.opts.bar_click_opts.includes('select_to_gp')) {
-		options.push({
-			label: 'Select to GenomePaint',
-			callback: menuoption_select_to_gp
-		})
-	}
-
 	// TODO: add to cart
 	//
 	// if (self.opts.bar_click_opts.includes('add_to_cart')) {
@@ -797,62 +790,6 @@ function menuoption_listsamples(self, tvslst) {
 
 	dofetch3('termdb?' + arg.join('&')).then(data => {
 		export_data(data.samples.length + ' samples', [{ text: data.samples.join('\n') }])
-	})
-}
-
-function menuoption_select_to_gp(self, tvslst) {
-	const lst = []
-	for (const t of tvslst) {
-		const f = wrapTvs(t)
-		const item = findItemByTermId(self.state.termfilter.filter, t.tvs.term.id)
-		if (!item) lst.push(wrapTvs(t))
-	}
-
-	import('../src/block').then(async _ => {
-		const obj = {
-			genome: self.app.opts.genome,
-			dslabel: self.state.dslabel
-		}
-		const pane = newpane({ x: 100, y: 100 })
-		const filterRoot = getNormalRoot(self.state.termfilter.filter)
-		const filterUiRoot = getFilterItemByTag(filterRoot, filterUiRoot)
-		if (filterUiRoot && filterUiRoot != filterRoot) delete filterUiRoot.tag
-		filterRoot.tag = 'filterUiRoot'
-		if (lst.length) {
-			filterRoot.join = 'and'
-			filterRoot.lst.push(...lst)
-		}
-		const cohortFilter = getFilterItemByTag(filterRoot, 'cohortFilter')
-		if (cohortFilter) {
-			cohortFilter.renderAs = 'htmlSelect'
-			cohortFilter.selectOptionsFrom = 'selectCohort'
-		}
-		new _.Block({
-			hostURL: sessionStorage.getItem('hostURL'),
-			holder: pane.body,
-			genome: obj.genome,
-			nobox: true,
-			chr: obj.genome.defaultcoord.chr,
-			start: obj.genome.defaultcoord.start,
-			stop: obj.genome.defaultcoord.stop,
-			nativetracks: [obj.genome.tracks.find(i => i.__isgene).name.toLowerCase()],
-			tklst: [
-				{
-					type: 'mds2',
-					dslabel: obj.dslabel,
-					vcf: {
-						numerical_axis: {
-							AFtest: {
-								groups: [
-									{ is_termdb: true, filter: filterRoot },
-									{ is_population: true, key: 'gnomAD', allowto_adjust_race: true, adjust_race: true }
-								]
-							}
-						}
-					}
-				}
-			]
-		})
 	})
 }
 
