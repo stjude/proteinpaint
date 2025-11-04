@@ -82,19 +82,20 @@ export type GRIN2Request = {
 	maxGenesToShow?: number // Default: 500
 }
 
-/** Simple Interface to store the complex plot data from the python Manhattan plot */
+/** Simple Interface to store the complex plot data from the rust Manhattan plot */
 interface grin2PlotData {
 	points: Array<{
-		x: number
-		y: number
-		svg_x: number
-		svg_y: number
-		color: string
-		type: string
-		gene: string
-		chrom: string
-		pos: number
-		q_value: number
+		x: number // X-axis position (base pair/genomic position)
+		y: number // Y-axis position (-log10(q-value))
+		color: string // Point color (hexadecimal string representing a color for mutation type)
+		type: string // Mutation type (e.g., 'mutation', 'loss', 'gain', 'fusion', 'sv')
+		gene: string // Gene symbol
+		chrom: string // Chromosome in the form of <chrX>
+		start: number // Starting position of this chromosome in base pairs/genomic coordinates. Used in hover table
+		end: number // Ending position of this chromosome in base pairs/genomic coordinates
+		pos: number // Mid-point of this chromosome in base pairs/genomic coordinates
+		q_value: number // -log10(q-value)
+		nsubj: number // Number of subjects with this mutation. Used for hover table subject count
 	}>
 	chrom_data: Record<
 		string,
