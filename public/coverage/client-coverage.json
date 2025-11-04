@@ -2449,22 +2449,22 @@
   },
   "mass/groups.js": {
     "lines": {
-      "total": 454,
+      "total": 450,
       "covered": 145,
       "skipped": 0,
-      "pct": 31.93
+      "pct": 32.22
     },
     "functions": {
-      "total": 75,
+      "total": 74,
       "covered": 19,
       "skipped": 0,
-      "pct": 25.33
+      "pct": 25.67
     },
     "statements": {
-      "total": 490,
+      "total": 486,
       "covered": 152,
       "skipped": 0,
-      "pct": 31.02
+      "pct": 31.27
     },
     "branches": {
       "total": 210,
@@ -2478,9 +2478,9 @@
       "diff": -2.0400000000000027
     },
     "averagePct": {
-      "curr": 27.1875,
+      "curr": 27.4075,
       "prev": 29.460000000000004,
-      "diff": -2.2725000000000044
+      "diff": -2.0525000000000055
     }
   },
   "filter/test/tvs.integration.spec.js": {
@@ -3637,38 +3637,38 @@
   },
   "plots/barchart.events.js": {
     "lines": {
-      "total": 392,
-      "covered": 115,
+      "total": 369,
+      "covered": 1,
       "skipped": 0,
-      "pct": 29.33
+      "pct": 0.27
     },
     "functions": {
-      "total": 67,
-      "covered": 25,
+      "total": 64,
+      "covered": 0,
       "skipped": 0,
-      "pct": 37.31
+      "pct": 0
     },
     "statements": {
-      "total": 432,
-      "covered": 121,
+      "total": 407,
+      "covered": 1,
       "skipped": 0,
-      "pct": 28
+      "pct": 0.24
     },
     "branches": {
-      "total": 455,
-      "covered": 148,
+      "total": 443,
+      "covered": 0,
       "skipped": 0,
-      "pct": 32.52
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 28,
+      "curr": 0,
       "prev": 34.4,
-      "diff": -6.399999999999999
+      "diff": -34.4
     },
     "averagePct": {
-      "curr": 31.79,
+      "curr": 0.1275,
       "prev": 37.3525,
-      "diff": -5.5625
+      "diff": -37.225
     }
   },
   "plots/disco/viewmodel/ViewModel.ts": {
