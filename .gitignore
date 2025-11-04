@@ -139,4 +139,5 @@ log.txt
 **/*.log
 *-debug.*
 build/sj/env.sh
+build/unpublishedPkgs.txt
 rust/Dockerfile
