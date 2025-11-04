@@ -83,7 +83,6 @@ class profileBarchart extends profilePlot {
 
 	plot() {
 		const config = this.config
-		this.dom.plotDiv.selectAll('*').remove()
 		const hasSubjectiveData = this.configProfileComponent.hasSubjectiveData
 		const width = this.state.activeCohort == ABBREV_COHORT ? 1000 : 1300
 		const height = this.rowCount * 32 + 450
