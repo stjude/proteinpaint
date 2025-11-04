@@ -39,7 +39,7 @@ const orderedVolumes = [
 export const ABBREV_COHORT = 0
 export const FULL_COHORT = 1
 
-export class profilePlot extends PlotBase implements RxComponent {
+export abstract class profilePlot extends PlotBase implements RxComponent {
 	readonly type: string
 	downloadCount: number
 	tip: Menu
@@ -131,7 +131,7 @@ export class profilePlot extends PlotBase implements RxComponent {
 		select('.sjpp-output-sandbox-content').on('scroll', event => {
 			if (this.onMouseOut) this.onMouseOut(event)
 		})
-		//this.dom.rightDiv.on('mousemove', event => this.onMouseOver(event))
+		this.dom.rightDiv.on('mousemove', event => this.onMouseOver(event))
 		this.dom.rightDiv.on('mouseleave', event => this.onMouseOut(event))
 		this.dom.rightDiv.on('mouseout', event => this.onMouseOut(event))
 
@@ -179,8 +179,10 @@ export class profilePlot extends PlotBase implements RxComponent {
 		}
 	}
 
+	abstract onMouseOver(event)
+
 	//tooltip handler to hide the tooltip when mouse leaves the plot area
-	onMouseOut() {
+	onMouseOut(_event) {
 		this.tip.hide()
 	}
 
