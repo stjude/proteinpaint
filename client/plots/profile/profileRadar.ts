@@ -42,7 +42,6 @@ class profileRadar extends profilePlot {
 
 	plot() {
 		const config = this.config
-		this.dom.plotDiv.selectAll('*').remove()
 		const width = this.isComparison ? 1000 : 1050
 		const height = 650
 		this.dom.svg = this.dom.plotDiv

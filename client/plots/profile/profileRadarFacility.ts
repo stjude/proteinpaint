@@ -36,7 +36,6 @@ class profileRadarFacility extends profilePlot {
 	}
 
 	plot() {
-		this.dom.plotDiv.selectAll('*').remove()
 		const width = this.isComparison ? 1000 : 1100
 		const height = 630
 		this.dom.svg = this.dom.plotDiv

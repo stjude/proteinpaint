@@ -7,7 +7,7 @@ import { getCategoricalTermFilter, getCombinedTermFilter } from '#filter'
 import { DownloadMenu } from '#dom/downloadMenu'
 import { importPlot } from '#plots/importPlot.js'
 import { PlotBase } from '../PlotBase.ts'
-import { RxComponent } from '#rx'
+import { type RxComponent } from '#rx'
 /*
 
 The profilePlot is the base class for all the profile plots. It handles the common functionality such as setting controls, fetching data, and initializing the plot elements.
@@ -39,8 +39,7 @@ const orderedVolumes = [
 export const ABBREV_COHORT = 0
 export const FULL_COHORT = 1
 
-export class profilePlot extends PlotBase implements RxComponent{
-
+export class profilePlot extends PlotBase implements RxComponent {
 	readonly type: string
 	downloadCount: number
 	tip: Menu
@@ -59,7 +58,6 @@ export class profilePlot extends PlotBase implements RxComponent{
 	sampleData: any
 	filterG: any
 	filtersCount: any
-
 
 	constructor(opts, type) {
 		super(opts)
@@ -109,9 +107,7 @@ export class profilePlot extends PlotBase implements RxComponent{
 		if (this.opts.header) {
 			let chartName = config.chartType.match(/[A-Z][a-z]+/g)
 			chartName = chartName.join(' ')
-			chartName = config.headerTitle
-				? config.headerTitle + ` / ${state.user}`
-				: chartName + ` / ${state.user}`
+			chartName = config.headerTitle ? config.headerTitle + ` / ${state.user}` : chartName + ` / ${state.user}`
 			this.opts.header.style('text-transform', 'capitalize').text(chartName)
 		}
 		const div = this.opts.holder.append('div').style('display', 'inline-block')
@@ -172,7 +168,7 @@ export class profilePlot extends PlotBase implements RxComponent{
 						return
 					}
 					this.legendG.selectAll('*').remove()
-					let config = structuredClone(this.config)
+					const config = structuredClone(this.config)
 					config.parentId = this.id
 					this.app.dispatch({
 						type: 'plot_create',
@@ -184,13 +180,15 @@ export class profilePlot extends PlotBase implements RxComponent{
 	}
 
 	//tooltip handler to hide the tooltip when mouse leaves the plot area
-	onMouseOut(event) {
+	onMouseOut() {
 		this.tip.hide()
 	}
 
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.settings = this.config.settings[this.type]
+		this.dom.plotDiv.selectAll('*').remove()
+
 		this.isComparison = this.config.parentId || this.state.plots.length > 0
 		//Render second plot for comparison that is a duplicate of this one, that will be rendered to the right of this plot
 		//Child plots need to be rendered by the father plot, a similar approach is used in the report
@@ -284,7 +282,7 @@ export class profilePlot extends PlotBase implements RxComponent{
 				}
 			const chartType = this.type
 			this.dom.controlsDiv.selectAll('*').remove()
-			let inputs: any[] = []
+			const inputs: any[] = []
 			const userSitesFilterInput = {
 				label: 'Use accessible sites only',
 				boxLabel: '',
@@ -535,7 +533,7 @@ export class profilePlot extends PlotBase implements RxComponent{
 
 	addEndUserImpressionNote(uiG) {
 		uiG.attr('font-size', '0.9em')
-		let textElem = uiG.append('text').attr('transform', `translate(0, 115)`)
+		const textElem = uiG.append('text').attr('transform', `translate(0, 115)`)
 		textElem.append('tspan').attr('font-weight', 'bold').text('End-user Impression: ')
 		textElem.append('tspan').text('It is provided by the local liaison who completed the assessment ')
 		uiG
@@ -550,7 +548,7 @@ export class profilePlot extends PlotBase implements RxComponent{
 
 	addPOCNote(uiG) {
 		uiG.attr('font-size', '0.9em')
-		let textElem = uiG.append('text').attr('transform', `translate(0, 115)`)
+		const textElem = uiG.append('text').attr('transform', `translate(0, 115)`)
 		textElem.append('tspan').attr('font-weight', 'bold').text('Point of Care (POC) Staff: ')
 		textElem.append('tspan').text('All members of the assessment team, ')
 		uiG
@@ -593,15 +591,15 @@ export class profilePlot extends PlotBase implements RxComponent{
 	}
 
 	getChartImages() {
-		const entries = Object.entries(this.components.plots)
+		const plots: any[] = Object.values(this.components.plots)
 		const note = '© 2025 St. Jude Children’s Research Hospital'
-		let name = entries.length > 0 ? 'Original' : ''
+		let name = plots.length > 0 ? 'Original' : ''
 		name += ` ${note}`
 		const charts = [{ name, svg: this.dom.svg }]
 		let i = 1
-		for (const [key, plot] of entries) {
+		for (const plot of plots) {
 			//Adding comparison plots
-			const chartImages = (plot as any).getChartImages()
+			const chartImages = plot.getChartImages()
 
 			for (const chartImage of chartImages) {
 				const svg = chartImage.svg
@@ -644,7 +642,7 @@ export function makeChartBtnMenu(holder, chartsInstance, chartType) {
 	}
 
 	function createPlot(plotConfig, chartType, chartsInstance) {
-		let config = structuredClone(plotConfig)
+		const config = structuredClone(plotConfig)
 		config.chartType = chartType
 		chartsInstance.app.dispatch({
 			type: 'plot_create',
