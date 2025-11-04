@@ -77,7 +77,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	const yAxisG = svg
 		.append('g')
 		.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
-	const yScale = scaleLinear().domain([0, data.plotData.y_max]).range([data.plotData.png_height, 0])
+	const yScale = scaleLinear().domain([0, data.plotData.y_max]).range([data.plotData.plot_height, 0])
 	yAxisG.call(d3axis.axisLeft(yScale))
 
 	// Add y-axis label
@@ -94,7 +94,12 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	// Add png image
 	svg
 		.append('image')
-		.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
+		.attr(
+			'transform',
+			`translate(${settings.yAxisX + settings.yAxisSpace - data.plotData.png_dot_radius},${
+				settings.yAxisY - data.plotData.png_dot_radius
+			})`
+		)
 		.attr('width', data.plotData.png_width)
 		.attr('height', data.plotData.png_height)
 		.attr('href', `data:image/png;base64,${data.pngImg || data.png}`)
@@ -102,7 +107,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	// Create scales for positioning elements
 	const xScale = scaleLinear()
 		.domain([-data.plotData.x_buffer, data.plotData.total_genome_length + data.plotData.x_buffer])
-		.range([0, data.plotData.png_width])
+		.range([0, data.plotData.plot_width])
 
 	// Add interactive dots layer
 	if (settings.showInteractiveDots && data.plotData.points && data.plotData.points.length > 0) {
@@ -117,7 +122,8 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 			.append('circle')
 			.attr('cx', d => xScale(d.x)) // Use xScale to convert pre-calculated genomic coordinates because of our chromosome scaling on the x-axis
 			.attr('cy', d => yScale(d.y)) // Use pre-calculated coordinates for y and yScale for proper scaling from the scale we made earlier
-			.attr('r', settings.interactiveDotRadius)
+			// .attr('r', settings.interactiveDotRadius)
+			.attr('r', data.plotData.png_dot_radius)
 			.attr('fill-opacity', 0)
 			.attr('stroke', 'black')
 			.attr('stroke-width', settings.interactiveDotStrokeWidth)
@@ -125,6 +131,13 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 			.on('mouseover', (event, d) => {
 				// Show stroke on hover
 				event.target.setAttribute('stroke-opacity', 1)
+
+				console.log('Hover coordinates:', {
+					genomic_x: d.x,
+					y_value: d.y,
+					pixel_x: xScale(d.x),
+					pixel_y: yScale(d.y)
+				})
 
 				geneTip.clear().show(event.clientX, event.clientY)
 
