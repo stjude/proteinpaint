@@ -27,7 +27,9 @@ use std::collections::HashMap;
 use std::convert::TryInto;
 use std::error::Error;
 use std::fs::File;
+use std::fs::OpenOptions;
 use std::io::Cursor;
+use std::io::Write;
 use std::io::{self, BufRead, BufReader};
 
 // Define the JSON input structure
@@ -103,6 +105,63 @@ fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
     Some((r, g, b))
 }
 
+/// Log coordinates to debug file
+fn log_coordinates_to_file(
+    genomic_x: u64,
+    y_value: f64,
+    pixel_x: f64,
+    pixel_y: f64,
+    gene: &str,
+    chrom: &str,
+    mutation_type: &str,
+) {
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("/tmp/manhattan_coordinates_debug.txt")
+        .expect("Unable to open debug file");
+
+    writeln!(
+        file,
+        "Gene: {}, Chrom: {}, Type: {}, genomic_x: {}, y_value: {:.3}, pixel_x: {:.2}, pixel_y: {:.2}",
+        gene, chrom, mutation_type, genomic_x, y_value, pixel_x, pixel_y
+    )
+    .expect("Unable to write to debug file");
+}
+
+/// Initialize debug file with header information
+fn init_debug_file(png_width: u64, png_height: u64, x_buffer: i64, total_genome_length: i64, y_max: f64) {
+    let mut file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true) // Clear file on new run
+        .open("/tmp/manhattan_coordinates_debug.txt")
+        .expect("Unable to open debug file");
+
+    writeln!(file, "=== Manhattan Plot Coordinate Debug ===").unwrap();
+    writeln!(
+        file,
+        "png_width: {}, png_height: {}, x_buffer: {}, total_genome_length: {}, y_max: {:.3}\n",
+        png_width, png_height, x_buffer, total_genome_length, y_max
+    )
+    .unwrap();
+}
+
+/// Convert genomic x coordinate to pixel space
+fn genomic_to_pixel_x(genomic_x: u64, x_buffer: i64, total_genome_length: i64, png_width: u64) -> f64 {
+    let domain_min = -x_buffer as f64;
+    let domain_max = (total_genome_length + x_buffer) as f64;
+    let domain_range = domain_max - domain_min;
+
+    ((genomic_x as f64 - domain_min) / domain_range) * png_width as f64
+}
+
+/// Convert y value (-log10 q-value) to pixel space
+fn qvalue_to_pixel_y(y_value: f64, y_max: f64, png_height: u64) -> f64 {
+    // Note: Y-axis is inverted in screen coordinates
+    png_height as f64 - ((y_value / y_max) * png_height as f64)
+}
+
 // Function to create the GRIN2 Manhattan plot
 fn plot_grin2_manhattan(
     grin2_result_file: String,
@@ -134,7 +193,7 @@ fn plot_grin2_manhattan(
     let w: u32 = (png_width * device_pixel_ratio as u64)
         .try_into()
         .expect("PNG width too large for u32");
-    let h: u32 = (plot_height * device_pixel_ratio as u64)
+    let h: u32 = (png_height * device_pixel_ratio as u64)
         .try_into()
         .expect("PNG height too large for u32");
     let mut buffer = vec![0u8; w as usize * h as usize * 3];
@@ -328,6 +387,25 @@ fn plot_grin2_manhattan(
         1.0
     };
 
+    // Initialize debug file with plot parameters
+    init_debug_file(png_width, png_height, x_buffer, total_genome_length, y_max);
+
+    // Log all point coordinates for debugging
+    for point in &point_details {
+        let pixel_x = genomic_to_pixel_x(point.x, x_buffer, total_genome_length, png_width);
+        let pixel_y = qvalue_to_pixel_y(point.y, y_max, png_height);
+
+        log_coordinates_to_file(
+            point.x,
+            point.y,
+            pixel_x,
+            pixel_y,
+            &point.gene,
+            &point.chrom,
+            &point.r#type,
+        );
+    }
+
     // In-memory bitmap
     // plotters cannot encode PNG in memory without image crate
     // Despite with_buffer_and_format, there is no write_to method that produces PNG.
@@ -341,7 +419,10 @@ fn plot_grin2_manhattan(
         // ------------------------------------------------
 
         let mut chart = ChartBuilder::on(&root)
-            .margin(0)
+            .margin_left(png_dot_radius as u32)
+            .margin_right(png_dot_radius as u32)
+            .margin_top(png_dot_radius as u32)
+            .margin_bottom(png_dot_radius as u32)
             .set_all_label_area_size(0)
             .build_cartesian_2d((-x_buffer)..(total_genome_length + x_buffer), y_min..y_max)?;
 
