@@ -1,9 +1,9 @@
-import { getCompInit, copyMerge } from '../rx/index.js'
+import { getCompInit, copyMerge } from '../../rx/index.js'
 import { getProfilePlotConfig, profilePlot, getDefaultProfilePlotSettings } from './profilePlot.js'
 import { fillTermWrapper, fillTwLst } from '#termsetting'
 import { axisBottom, axisTop } from 'd3-axis'
 import { scaleLinear as d3Linear } from 'd3-scale'
-import { Tabs } from '../dom/toggleButtons.js'
+import { Tabs } from '../../dom/toggleButtons.js'
 import { roundValueAuto } from '@sjcrh/proteinpaint-shared/roundValue.js'
 
 const YES_NO_TAB = 'Yes/No Barchart'
@@ -11,15 +11,9 @@ const IMPRESSIONS_TAB = 'Impressions'
 const LIKERT_TAB = 'Likert Scale'
 export class profileForms extends profilePlot {
 	id: any
-	type: string
-	opts: { [key: string]: any }
 	svg: any
 	components: any
-	state: any
-	app: any
-	data: any
 	dom: any
-	settings: any
 	xAxisScale: any
 	shift: any
 	twLst: any
@@ -35,9 +29,8 @@ export class profileForms extends profilePlot {
 	id2SCTW: { [key: string]: { [key: string]: any } }
 
 	constructor(opts) {
-		super()
+		super(opts, 'profileForms')
 		this.opts = opts
-		this.type = 'profileForms'
 		this.id2SCTW = {}
 	}
 

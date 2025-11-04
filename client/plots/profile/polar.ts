@@ -5,14 +5,13 @@ import type { TableCell } from '#dom'
 import { getCompInit, copyMerge } from '#rx'
 import { fillTwLst } from '#termsetting'
 import * as d3 from 'd3'
-import { profilePlot, getDefaultProfilePlotSettings, getProfilePlotConfig } from '../profilePlot.js'
+import { profilePlot, getDefaultProfilePlotSettings, getProfilePlotConfig } from './profilePlot.js'
 import { renderTable } from '#dom'
 
 /** TODO: profilePlot must extend RxComponent but file not tsc.
  * Work arounds until profilePlot is migrated to ts.
  */
 class ProfilePolar extends profilePlot {
-	readonly type = 'profilePolar'
 	readonly radius = 250
 	readonly arcGenerator = d3.arc().innerRadius(0)
 	angle!: number
@@ -21,13 +20,13 @@ class ProfilePolar extends profilePlot {
 	filterG!: SvgG
 	/** Once profilePlot is tsc, use extended dom profile plot type */
 	dom: any //ProfilePolarDom
-	config: any //Partial<ProfilePolarConfig> should be extended from a ProfilePlotConfig
 	/** Rm after profilePlot is tsc and extended from RxComponent */
 	id: any
-	state: any
 
-	constructor() {
-		super()
+	constructor(opts) {
+		super(opts, 'profilePolar')
+		this.dom = {}
+		this.id = opts.id
 		this.config = {}
 	}
 
