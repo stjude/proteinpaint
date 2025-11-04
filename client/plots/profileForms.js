@@ -1,1 +1,1 @@
-export * from './profileForms'
+export * from './profile/profileForms'

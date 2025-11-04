@@ -1,4 +1,4 @@
-import { controlsInit } from './controls.js'
+import { controlsInit } from '../controls.js'
 import { fillTermWrapper, fillTwLst } from '#termsetting'
 import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
@@ -6,7 +6,8 @@ import { icons as icon_functions } from '#dom/control.icons'
 import { getCategoricalTermFilter, getCombinedTermFilter } from '#filter'
 import { DownloadMenu } from '#dom/downloadMenu'
 import { importPlot } from '#plots/importPlot.js'
-import { PlotBase } from './PlotBase.js'
+import { PlotBase } from '../PlotBase.ts'
+import { RxComponent } from '#rx'
 /*
 
 The profilePlot is the base class for all the profile plots. It handles the common functionality such as setting controls, fetching data, and initializing the plot elements.
@@ -38,13 +39,35 @@ const orderedVolumes = [
 export const ABBREV_COHORT = 0
 export const FULL_COHORT = 1
 
-export class profilePlot extends PlotBase {
-	constructor(opts) {
+export class profilePlot extends PlotBase implements RxComponent{
+
+	readonly type: string
+	downloadCount: number
+	tip: Menu
+	scoreTerms: any[]
+	scScoreTerms: any[]
+	isRadarFacility: boolean
+	components: any
+	settings: any
+	isComparison: any
+	config: any
+	filter: any
+	legendG: any
+	filteredTermValues: any
+	data: any
+	sites!: any[]
+	sampleData: any
+	filterG: any
+	filtersCount: any
+
+
+	constructor(opts, type) {
 		super(opts)
-		this.type = 'profilePlot'
+		this.type = type
 		this.downloadCount = 0
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
 		this.scoreTerms = []
+		this.scScoreTerms = []
 		this.isRadarFacility = false
 		this.components = { plots: {} }
 	}
@@ -84,12 +107,12 @@ export class profilePlot extends PlotBase {
 		const config = appState.plots.find(p => p.id === this.id)
 		const state = this.getState(appState)
 		if (this.opts.header) {
-			this.chartName = config.chartType.match(/[A-Z][a-z]+/g)
-			this.chartName = this.chartName.join(' ')
-			this.chartName = config.headerTitle
+			let chartName = config.chartType.match(/[A-Z][a-z]+/g)
+			chartName = chartName.join(' ')
+			chartName = config.headerTitle
 				? config.headerTitle + ` / ${state.user}`
-				: this.chartName + ` / ${state.user}`
-			this.opts.header.style('text-transform', 'capitalize').text(this.chartName)
+				: chartName + ` / ${state.user}`
+			this.opts.header.style('text-transform', 'capitalize').text(chartName)
 		}
 		const div = this.opts.holder.append('div').style('display', 'inline-block')
 		const leftDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
@@ -112,7 +135,7 @@ export class profilePlot extends PlotBase {
 		select('.sjpp-output-sandbox-content').on('scroll', event => {
 			if (this.onMouseOut) this.onMouseOut(event)
 		})
-		this.dom.rightDiv.on('mousemove', event => this.onMouseOver(event))
+		//this.dom.rightDiv.on('mousemove', event => this.onMouseOver(event))
 		this.dom.rightDiv.on('mouseleave', event => this.onMouseOut(event))
 		this.dom.rightDiv.on('mouseout', event => this.onMouseOut(event))
 
@@ -189,7 +212,7 @@ export class profilePlot extends PlotBase {
 		}
 	}
 
-	async setControls(additionalInputs = []) {
+	async setControls(additionalInputs: any[] = []) {
 		try {
 			const isRadarFacility = this.isRadarFacility
 			const filters = {}
@@ -207,27 +230,27 @@ export class profilePlot extends PlotBase {
 				filterByUserSites: this.settings.filterByUserSites,
 				showAll: true
 			})
-			this.regions = this.filteredTermValues[this.config.regionTW.id]
-			this.countries = this.filteredTermValues[this.config.countryTW.id]
-			this.incomes = this.filteredTermValues[this.config.incomeTW.id]
-			this.teachingStates = this.filteredTermValues[this.config.teachingStatusTW.id]
-			this.referralStates = this.filteredTermValues[this.config.referralStatusTW.id]
-			this.fundingSources = this.filteredTermValues[this.config.fundingSourceTW.id]
-			this.hospitalVolumes = this.filteredTermValues[this.config.hospitalVolumeTW.id]
-			this.yearsOfImplementation = this.filteredTermValues[this.config.yearOfImplementationTW.id]
-			this.incomes.sort((elem1, elem2) => {
+			const regions = this.filteredTermValues[this.config.regionTW.id]
+			const countries = this.filteredTermValues[this.config.countryTW.id]
+			const incomes = this.filteredTermValues[this.config.incomeTW.id]
+			const teachingStates = this.filteredTermValues[this.config.teachingStatusTW.id]
+			const referralStates = this.filteredTermValues[this.config.referralStatusTW.id]
+			const fundingSources = this.filteredTermValues[this.config.fundingSourceTW.id]
+			const hospitalVolumes = this.filteredTermValues[this.config.hospitalVolumeTW.id]
+			const yearsOfImplementation = this.filteredTermValues[this.config.yearOfImplementationTW.id]
+			incomes.sort((elem1, elem2) => {
 				const i1 = orderedIncomes.indexOf(elem1.value)
 				const i2 = orderedIncomes.indexOf(elem2.value)
 				if (i1 < i2) return -1
 				return 1
 			})
-			this.hospitalVolumes.sort((elem1, elem2) => {
+			hospitalVolumes.sort((elem1, elem2) => {
 				const i1 = orderedVolumes.indexOf(elem1.value)
 				const i2 = orderedVolumes.indexOf(elem2.value)
 				if (i1 < i2) return -1
 				return 1
 			})
-			this.types = this.filteredTermValues[this.config.typeTW.id]
+			const types = this.filteredTermValues[this.config.typeTW.id]
 			const isAggregate = this.isAggregate()
 
 			if (!this.settings[this.config.facilityTW?.term?.id] && this.state.sites?.length == 1 && !isAggregate) {
@@ -261,7 +284,7 @@ export class profilePlot extends PlotBase {
 				}
 			const chartType = this.type
 			this.dom.controlsDiv.selectAll('*').remove()
-			let inputs = []
+			let inputs: any[] = []
 			const userSitesFilterInput = {
 				label: 'Use accessible sites only',
 				boxLabel: '',
@@ -297,7 +320,7 @@ export class profilePlot extends PlotBase {
 							type: 'dropdown',
 							chartType,
 							settingsKey: this.config.regionTW.term.id,
-							options: this.regions,
+							options: regions,
 							callback: value => this.setFilterValue(this.config.regionTW.term.id, value)
 						},
 						{
@@ -305,7 +328,7 @@ export class profilePlot extends PlotBase {
 							type: 'dropdown',
 							chartType,
 							settingsKey: this.config.countryTW.term.id,
-							options: this.countries,
+							options: countries,
 							callback: value => this.setFilterValue(this.config.countryTW.term.id, value)
 						},
 						{
@@ -313,7 +336,7 @@ export class profilePlot extends PlotBase {
 							type: 'dropdown',
 							chartType,
 							settingsKey: this.config.incomeTW.term.id,
-							options: this.incomes,
+							options: incomes,
 							callback: value => this.setFilterValue(this.config.incomeTW.term.id, value)
 						},
 						{
@@ -321,7 +344,7 @@ export class profilePlot extends PlotBase {
 							type: 'dropdown',
 							chartType,
 							settingsKey: this.config.typeTW.term.id,
-							options: this.types,
+							options: types,
 							callback: value => this.setFilterValue(this.config.typeTW.term.id, value)
 						},
 						{
@@ -329,7 +352,7 @@ export class profilePlot extends PlotBase {
 							type: 'dropdown',
 							chartType,
 							settingsKey: this.config.teachingStatusTW.term.id,
-							options: this.teachingStates,
+							options: teachingStates,
 							callback: value => this.setFilterValue(this.config.teachingStatusTW.term.id, value)
 						},
 						{
@@ -337,7 +360,7 @@ export class profilePlot extends PlotBase {
 							type: 'dropdown',
 							chartType,
 							settingsKey: this.config.referralStatusTW.term.id,
-							options: this.referralStates,
+							options: referralStates,
 							callback: value => this.setFilterValue(this.config.referralStatusTW.term.id, value)
 						},
 						{
@@ -345,7 +368,7 @@ export class profilePlot extends PlotBase {
 							type: 'dropdown',
 							chartType,
 							settingsKey: this.config.fundingSourceTW.term.id,
-							options: this.fundingSources,
+							options: fundingSources,
 							callback: value => this.setFilterValue(this.config.fundingSourceTW.term.id, value)
 						},
 						{
@@ -353,7 +376,7 @@ export class profilePlot extends PlotBase {
 							type: 'dropdown',
 							chartType,
 							settingsKey: this.config.hospitalVolumeTW.term.id,
-							options: this.hospitalVolumes,
+							options: hospitalVolumes,
 							callback: value => this.setFilterValue(this.config.hospitalVolumeTW.term.id, value)
 						},
 						{
@@ -361,7 +384,7 @@ export class profilePlot extends PlotBase {
 							type: 'dropdown',
 							chartType,
 							settingsKey: this.config.yearOfImplementationTW.term.id,
-							options: this.yearsOfImplementation,
+							options: yearsOfImplementation,
 							callback: value => this.setFilterValue(this.config.yearOfImplementationTW.term.id, value)
 						}
 					]
@@ -391,10 +414,10 @@ export class profilePlot extends PlotBase {
 						facilitySite: this.settings.facilitySite || null, //need to pass null not undefined, so the parameter is always passed to the server
 						facilityTW: this.config.facilityTW
 					})
-					this.facilitySites = this.sampleData.sites
+					const facilitySites = this.sampleData.sites
 					const facilitySite = this.settings.facilitySite
-						? this.facilitySites.find(s => s.value == this.settings.facilitySite)
-						: this.facilitySites[0]
+						? facilitySites.find(s => s.value == this.settings.facilitySite)
+						: facilitySites[0]
 					if (!facilitySite)
 						//probably a session recovery
 						throw new Error(`Access to ${this.settings.facilitySite} facility not allowed`)
@@ -404,7 +427,7 @@ export class profilePlot extends PlotBase {
 						label: 'Facility site',
 						type: 'dropdown',
 						chartType,
-						options: this.facilitySites,
+						options: facilitySites,
 						callback: value => {
 							this.setFacilitySite(value)
 						}
@@ -578,7 +601,7 @@ export class profilePlot extends PlotBase {
 		let i = 1
 		for (const [key, plot] of entries) {
 			//Adding comparison plots
-			const chartImages = plot.getChartImages()
+			const chartImages = (plot as any).getChartImages()
 
 			for (const chartImage of chartImages) {
 				const svg = chartImage.svg

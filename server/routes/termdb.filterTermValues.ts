@@ -71,6 +71,8 @@ async function getSamplesPerFilter(q, ds) {
 	const userFilter = q.filter ? structuredClone(q.filter) : null
 	//Adjust q filter to not apply user site filter if not requested
 	if (!q.filterByUserSites) {
+		//ignoreTermIds is used when building the user filter to exclude these terms from the filter
+		//When getting the samples per filter, is ok to not apply the user filter unless the filter is the facility term, in which case it must be applied
 		q.__protected__.ignoredTermIds.push(q.facilityTW.term.id)
 		authApi.mayAdjustFilter(q, ds, q.terms)
 	}
