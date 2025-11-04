@@ -82,6 +82,16 @@ if [[ "$HASH" != "" ]]; then
 	IMGREV="$HASH"
 fi
 
+TAGHASH="$IMGVER-$HASH"
+# TAGHASH="ghcr.io/stjude/ppserver:2.155.0-e3bcfdd00"   # uncomment for testing, already published
+INSPECT_STATUS="$(docker manifest inspect $IMGNAME:$TAGHASH > /dev/null ; echo $?)"
+if (( $INSPECT_STATUS == 0 )); then
+	echo "the container registry already has image:tag $IMGNAME:$TAGHASH"
+	exit 1
+fi
+# echo "--- build will continue, end of manifest test --- ($INSPECT_STATUS)" # uncomment for testing
+# exit 1                                                                     # uncomment for testing
+
 PLATFORM=""
 ARCH=$( uname -m )
 if [[ ${ARCH} == "arm64" ]]; then 
