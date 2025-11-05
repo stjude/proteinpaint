@@ -96,9 +96,12 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		.append('image')
 		.attr(
 			'transform',
-			`translate(${settings.yAxisX + settings.yAxisSpace - data.plotData.png_dot_radius},${
-				settings.yAxisY - data.plotData.png_dot_radius
-			})`
+			`translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`
+			// .attr(
+			// 	'transform',
+			// 	`translate(${settings.yAxisX + settings.yAxisSpace - data.plotData.png_dot_radius},${
+			// 		settings.yAxisY - data.plotData.png_dot_radius
+			// 	})`
 		)
 		.attr('width', data.plotData.png_width)
 		.attr('height', data.plotData.png_height)
