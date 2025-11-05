@@ -156,6 +156,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				this.updateRunButtonFromCheckboxes()
 			}
 		})
+		this.dom.snvindelCheckbox.attr('data-testid', 'grin2-checkbox-snvindel')
 	}
 
 	// Add CNV row
@@ -228,6 +229,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				this.updateRunButtonFromCheckboxes()
 			}
 		})
+		this.dom.cnvCheckbox.attr('data-testid', 'grin2-checkbox-cnv')
 	}
 
 	// Add Fusion row
@@ -269,6 +271,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				this.updateRunButtonFromCheckboxes()
 			}
 		})
+		this.dom.fusionCheckbox.attr('data-testid', 'grin2-checkbox-fusion')
 	}
 
 	// Add SV row
@@ -310,6 +313,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				this.updateRunButtonFromCheckboxes()
 			}
 		})
+		this.dom.svCheckbox.attr('data-testid', 'grin2-checkbox-sv')
 	}
 
 	// Enable the run button only if at least one data type is checked
@@ -339,6 +343,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// Run Button
 		this.dom.runButton = this.dom.controls
 			.append('button')
+			.attr('data-testid', 'grin2-run-button')
 			.style('margin-left', '100px')
 			.text('Run GRIN2')
 			.on('click', () => this.runAnalysis())
