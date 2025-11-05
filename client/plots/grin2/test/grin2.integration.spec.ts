@@ -74,6 +74,8 @@ tape('grin2 fusion-only', function (test) {
 			cnvInput.dispatchEvent(new Event('input', { bubbles: true }))
 			fusionInput.checked = true
 			fusionInput.dispatchEvent(new Event('input', { bubbles: true }))
+			svInput.checked = false
+			svInput.dispatchEvent(new Event('input', { bubbles: true }))
 
 			// Run analysis
 			g.Inner.dom.runButton.node().dispatchEvent(new Event('click', { bubbles: true }))
