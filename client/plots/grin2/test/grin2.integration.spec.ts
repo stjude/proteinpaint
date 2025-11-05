@@ -6,6 +6,10 @@ import { detectOne } from '../../../test/test.helpers.js'
  test sections
 
 grin2
+fusion only
+cnv only
+snvindel only
+all data types unchecked
 ***************/
 
 tape('\n', function (test) {
