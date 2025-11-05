@@ -74,6 +74,7 @@ export class VolcanoPlotView {
 			this.addActionButton('Statistics', () => {
 				this.renderStatsMenu()
 			})
+			//TODO: Move this to the viewModel
 			const numSigGenes = this.viewData.statsData.find(d => d.label == 'Number of significant genes')?.value
 			if (numSigGenes) {
 				this.volcanoDom.actions

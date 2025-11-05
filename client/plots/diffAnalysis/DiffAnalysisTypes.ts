@@ -3,11 +3,6 @@ import type { Menu } from '#dom'
 import type { PlotConfig } from '#mass/types/mass'
 import type { TermWrapper } from '#types'
 
-/** TODO
- * - add comments
- * - fix types
- */
-
 export type DiffAnalysisDom = {
 	/** Control panel to the left of the plot. Container is either provided or created */
 	controls: Elem
@@ -45,6 +40,7 @@ export type DiffAnalysisOpts = {
 }
 
 //TODO: Fix this
+//Should be separated by termType and then used in the volcano plot config
 export type DiffAnalysisPlotConfig = PlotConfig & {
 	childType: string
 	/** Data points highlighted in the volcano plot */

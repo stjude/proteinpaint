@@ -201,7 +201,6 @@ class SCViewer extends PlotBase implements RxComponent {
 
 		this.view.update(config.settings, data)
 		this.interactions.toggleLoading(false)
-		console.log('Single cell main() complete')
 	}
 }
 
@@ -212,7 +211,7 @@ export function getPlotConfig(opts: SCConfigOpts, app: MassAppApi) {
 	const config = {
 		chartType: 'sc',
 		hidePlotFilter: true,
-		settings: getDefaultSCAppSettings(opts.overrides || {}, app)
+		settings: getDefaultSCAppSettings(opts.overrides, app)
 	} as any
 
 	return copyMerge(config, opts)
