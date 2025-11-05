@@ -151,12 +151,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 			holder: left,
 			labeltext: 'SNV/INDEL (Mutation)',
 			checked: isChecked,
+			testid: 'grin2-checkbox-snvindel',
 			callback: (checked: boolean) => {
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonFromCheckboxes()
 			}
 		})
-		this.dom.snvindelCheckbox.attr('data-testid', 'grin2-checkbox-snvindel')
 	}
 
 	// Add CNV row
@@ -224,12 +224,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 			holder: left,
 			labeltext: 'CNV (Copy Number Variation)',
 			checked: isChecked,
+			testid: 'grin2-checkbox-cnv',
 			callback: (checked: boolean) => {
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonFromCheckboxes()
 			}
 		})
-		this.dom.cnvCheckbox.attr('data-testid', 'grin2-checkbox-cnv')
 	}
 
 	// Add Fusion row
@@ -266,12 +266,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 			holder: left,
 			labeltext: 'Fusion (RNA Fusion Events)',
 			checked: isChecked,
+			testid: 'grin2-checkbox-fusion',
 			callback: (checked: boolean) => {
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonFromCheckboxes()
 			}
 		})
-		this.dom.fusionCheckbox.attr('data-testid', 'grin2-checkbox-fusion')
 	}
 
 	// Add SV row
@@ -308,12 +308,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 			holder: left,
 			labeltext: 'SV (Structural Variants)',
 			checked: isChecked,
+			testid: 'grin2-checkbox-sv',
 			callback: (checked: boolean) => {
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonFromCheckboxes()
 			}
 		})
-		this.dom.svCheckbox.attr('data-testid', 'grin2-checkbox-sv')
 	}
 
 	// Enable the run button only if at least one data type is checked

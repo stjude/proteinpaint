@@ -240,7 +240,7 @@ tape('grin2 all-data-types-unchecked disables run button', function (test) {
 
 			// Check Run button is disabled
 			const runBtn = g.Inner.dom.runButton.node() as HTMLButtonElement
-			test.equal(runBtn.disabled, true, 'Run button is disabled when no data types selected')
+			test.equal(runBtn.disabled, true, 'Run button is disabled when no data types are selected')
 
 			if (test['_ok']) g.Inner.app.destroy()
 		} catch (e) {
