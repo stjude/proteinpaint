@@ -57,7 +57,7 @@ export class DownloadMenu {
 	}
 }
 
-export async function downloadSVGsAsPdf(chartImages, filename, orientation, filterImgUrl?) {
+export async function downloadSVGsAsPdf(chartImages, filename, orientation, filterImgs: any[] = []) {
 	const JSPDF = await import('jspdf')
 	const { jsPDF } = JSPDF
 	/*
@@ -74,10 +74,11 @@ export async function downloadSVGsAsPdf(chartImages, filename, orientation, filt
 	let y = 50
 	const x = 0.05 * pageWidth
 
-	if (filterImgUrl) {
+	for (const filterImgUrl of filterImgs) {
 		doc.addImage(filterImgUrl, 'PNG', x, y, 0, 30)
-		y += 80 // 30 for image height + 50 for padding
+		y += 30
 	}
+	y += 50
 
 	for (const chartImage of chartImages) {
 		const name = chartImage.name
