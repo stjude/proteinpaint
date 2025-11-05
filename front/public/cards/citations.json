@@ -63,10 +63,18 @@
             "title": "ppHiC: Interactive exploration of Hi-C results on the ProteinPaint web portal",
             "appHeaderTitle":"ppHiC: Rajput A <em>et al</em>",
             "year": "2024",
-            "journal": "Computational and Structural Biotechnology Journal",
+            "journal": "CSBJ",
             "pmid": "39430404",
             "pmidURL": "https://pubmed.ncbi.nlm.nih.gov/39430404/",
             "doi": "https://doi.org/10.1016/j.csbj.2024.09.020"
+        },
+        {
+            "id": 1008,
+            "title": "The Medulloblastoma Meta-Analysis Portal Enables Integrative Exploration of Clinical and Genomic Data from Patients",
+            "appHeaderTitle":"MBPortal: Gangwani K <em>et al</em>",
+            "year": "2025",
+            "journal": "Cancer Research",
+            "doi": "https://doi.org/10.1158/0008-5472.CAN-24-4976"
         }
     ]
 }
