@@ -1,6 +1,6 @@
 import tape from 'tape'
-import { getRunPp } from '../../test/front.helpers.js'
-import { detectOne } from '../../test/test.helpers.js'
+import { getRunPp } from '../../../test/front.helpers.js'
+import { detectOne } from '../../../test/test.helpers.js'
 
 /**************
  test sections
