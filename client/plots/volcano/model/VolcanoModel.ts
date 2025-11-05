@@ -22,7 +22,7 @@ export class VolcanoModel {
 	async getData() {
 		if (this.termType === TermTypes.GENE_EXPRESSION) {
 			const body = await this.getGERequestBody()
-			return await dofetch3('DEanalysis', { body })
+			return await dofetch3('termdb/DE', { body })
 		}
 		if (this.termType === TermTypes.SINGLECELL_CELLTYPE) {
 			const body = await this.getSCCTRequestBody()

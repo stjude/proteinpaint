@@ -412,7 +412,7 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 					filter0: self.state.termfilter.filter0,
 					preAnalysis: true
 				}
-				const preAnalysisData = await dofetch3('DEanalysis', { body })
+				const preAnalysisData = await dofetch3('termdb/DE', { body })
 
 				const tip = self.tip2
 				if (!preAnalysisData?.data) {
