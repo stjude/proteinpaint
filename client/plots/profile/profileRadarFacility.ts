@@ -9,7 +9,7 @@ class profileRadarFacility extends profilePlot {
 	radius: number
 	lineGenerator: any
 	arcGenerator: any
-	angle!: number
+	angle?: number
 	radarG: any
 
 	constructor(opts) {

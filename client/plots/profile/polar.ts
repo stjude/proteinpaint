@@ -18,16 +18,9 @@ class ProfilePolar extends profilePlot {
 	polarG!: SvgG
 	legendG!: SvgG
 	filterG!: SvgG
-	/** Once profilePlot is tsc, use extended dom profile plot type */
-	dom: any //ProfilePolarDom
-	/** Rm after profilePlot is tsc and extended from RxComponent */
-	id: any
 
 	constructor(opts) {
 		super(opts, 'profilePolar')
-		this.dom = {}
-		this.id = opts.id
-		this.config = {}
 	}
 
 	async init(appState: MassState) {
