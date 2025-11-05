@@ -179,10 +179,10 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 		}
 	}
 
-	abstract onMouseOver(event)
+	abstract onMouseOver(event: MouseEvent): void
 
 	//tooltip handler to hide the tooltip when mouse leaves the plot area
-	onMouseOut(_event) {
+	onMouseOut(_event: MouseEvent) {
 		this.tip.hide()
 	}
 

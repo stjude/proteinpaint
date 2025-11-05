@@ -9,7 +9,7 @@ class profileRadar extends profilePlot {
 	radius: number
 	lineGenerator: any
 	arcGenerator: any
-	angle!: number
+	angle?: number
 	radarG: any
 	legendG: any
 	filterG: any
@@ -30,13 +30,13 @@ class profileRadar extends profilePlot {
 			this.scoreTerms.push(row.term2)
 		}
 		this.arcGenerator = d3.arc().innerRadius(0)
+		this.angle = (Math.PI * 2) / config.terms.length
 	}
 
 	async main() {
 		await super.main()
 
 		await this.setControls()
-		this.angle = (Math.PI * 2) / this.config.terms.length
 		this.plot()
 	}
 
