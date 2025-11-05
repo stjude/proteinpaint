@@ -78,13 +78,11 @@ tape('grin2 fusion-only', function (test) {
 			// Run analysis
 			g.Inner.dom.runButton.node().dispatchEvent(new Event('click', { bubbles: true }))
 
-			// await new Promise(r => setTimeout(r, 1000))
 			// Confirm plot rendered
 			const svg = await detectOne({
 				elem: g.Inner.dom.div.node(),
 				selector: '[data-testid="sjpp-manhattan"]'
 			})
-			// await new Promise(r => setTimeout(r, 10000))
 			test.ok(svg, 'Fusion-only run rendered <svg>')
 
 			if (test['_ok']) g.Inner.app.destroy()
