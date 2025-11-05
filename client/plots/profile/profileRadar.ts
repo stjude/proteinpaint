@@ -95,8 +95,9 @@ class profileRadar extends profilePlot {
 		let i = 0
 		const data = [], //term1
 			data2 = [] //term2
+		const angle = this.angle!
 		for (const { module, term1, term2 } of this.config.terms) {
-			const iangle = i * this.angle - Math.PI / 2
+			const iangle = i * angle - Math.PI / 2
 			const item = this.config.terms[i]
 			const percentage1 = this.getPercentage(term1)
 			const percentage2 = this.getPercentage(term2)
@@ -109,8 +110,8 @@ class profileRadar extends profilePlot {
 					'd',
 					this.arcGenerator({
 						outerRadius: this.radius,
-						startAngle: i * this.angle - this.angle / 2,
-						endAngle: (i + 1) * this.angle - this.angle / 2
+						startAngle: i * angle - angle / 2,
+						endAngle: (i + 1) * angle - angle / 2
 					})
 				)
 				.on('click', event => this.onMouseOver(event))
@@ -212,7 +213,7 @@ class profileRadar extends profilePlot {
 	addPoligon(percent) {
 		const data: any[] = []
 		for (let i = 0; i < this.config.terms.length; i++) {
-			const iangle = i * this.angle - Math.PI / 2
+			const iangle = i * this.angle! - Math.PI / 2
 			const iradius = (percent / 100) * this.radius
 			const x = iradius * Math.cos(iangle)
 			const y = iradius * Math.sin(iangle)
