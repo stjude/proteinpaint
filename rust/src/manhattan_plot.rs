@@ -418,11 +418,12 @@ fn plot_grin2_manhattan(
         // 7. Build the chart (no axes, no margins)
         // ------------------------------------------------
 
+        let m = (png_dot_radius as f64 * device_pixel_ratio) as u32;
         let mut chart = ChartBuilder::on(&root)
-            .margin_left(png_dot_radius as u32)
-            .margin_right(png_dot_radius as u32)
-            .margin_top(png_dot_radius as u32)
-            .margin_bottom(png_dot_radius as u32)
+            .margin_left(m)
+            .margin_right(m)
+            .margin_top(m)
+            .margin_bottom(m)
             .set_all_label_area_size(0)
             .build_cartesian_2d((-x_buffer)..(total_genome_length + x_buffer), y_min..y_max)?;
 
