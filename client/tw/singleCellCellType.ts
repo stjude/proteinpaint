@@ -19,10 +19,10 @@ export class SingleCellCellTypeBase {
 	}
 
 	static validate(term: RawSingleCellCellTypeTerm) {
-		if (typeof term !== 'object') throw 'term is not an object'
-		if (term.type != termType) throw `incorrect term.type='${term?.type}', expecting '${termType}'`
-		if (!term?.sample) throw 'missing term.sample'
-		if (!term?.plot) throw 'missing term.plot'
+		if (typeof term !== 'object') throw new Error('term is not an object')
+		if (term.type != termType) throw new Error(`incorrect term.type='${term?.type}', expecting '${termType}'`)
+		if (!term?.sample) throw new Error('missing term.sample')
+		if (!term?.plot) throw new Error('missing term.plot')
 	}
 
 	// option to construct an object instance and not mutate the input raw term
