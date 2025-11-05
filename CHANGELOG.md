@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- GRIN2: Adding more integration tests for the lesion datatype checkboxes
+
 
 ## 2.155.0
 

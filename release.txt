@@ -1,2 +1,1 @@
-Features:
-- GRIN2: Adding more integration tests for the lesion datatype checkboxes
+
