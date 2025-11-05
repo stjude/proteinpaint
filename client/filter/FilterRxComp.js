@@ -24,7 +24,7 @@ class FilterRxComp extends Filter {
 					background: 'white'
 				}
 			})
-			if (dataUrl == 'data:,')
+			if (dataUrl === 'data:,')
 				//empty filter
 				return null
 			return dataUrl

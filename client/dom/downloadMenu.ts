@@ -78,7 +78,7 @@ export async function downloadSVGsAsPdf(chartImages, filename, orientation, filt
 		doc.addImage(filterImgUrl, 'PNG', x, y, 0, 30)
 		y += 30
 	}
-	y += 50
+	if (filterImgs.length > 0) y += 50
 
 	for (const chartImage of chartImages) {
 		const name = chartImage.name
