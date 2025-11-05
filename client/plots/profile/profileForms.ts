@@ -36,7 +36,6 @@ export class profileForms extends profilePlot {
 
 	async init(appState) {
 		super.init(appState)
-		const rightDiv = this.dom.rightDiv
 		const config = structuredClone(appState.plots.find(p => p.id === this.id))
 		this.twLst = await this.app.vocabApi.getMultivalueTWs({ parent_id: config.tw.term.id })
 		const settings = config.settings.profileForms
@@ -65,7 +64,7 @@ export class profileForms extends profilePlot {
 			}
 			this.tabs.push(tab)
 		}
-
+		const rightDiv = this.dom.rightDiv
 		const topDiv = rightDiv.append('div')
 		const domainDiv = topDiv.append('div').style('padding-bottom', '10px').style('font-weight', 'bold')
 
@@ -126,7 +125,10 @@ export class profileForms extends profilePlot {
 		const domain = parents.slice(1).join(' / ')
 		this.dom.domainDiv.text(domain)
 		this.categories = new Set()
-
+		this.dom.mainG.selectAll('*').remove()
+		this.dom.gridG.selectAll('*').remove()
+		this.dom.xAxisG.selectAll('*').remove()
+		this.dom.legendG.selectAll('*').remove()
 		await this.setControls()
 		this.renderPlot()
 		this.filterG.selectAll('*').remove()
@@ -136,10 +138,6 @@ export class profileForms extends profilePlot {
 	renderPlot() {
 		try {
 			this.dom.headerDiv.style('display', 'none')
-			this.dom.mainG.selectAll('*').remove()
-			this.dom.gridG.selectAll('*').remove()
-			this.dom.xAxisG.selectAll('*').remove()
-			this.dom.legendG.selectAll('*').remove()
 
 			switch (this.activePlot.name) {
 				case IMPRESSIONS_TAB:
