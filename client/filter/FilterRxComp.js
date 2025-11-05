@@ -17,13 +17,17 @@ class FilterRxComp extends Filter {
 		api.main = this.main.bind(this)
 		api.getNormalRoot = () => getNormalRoot(this.rawFilter)
 		api.getFilterImage = async () => {
-			// demo only, most likely you just want to return dataURL and add that to your PDF
-			const dataUrl = await htmlToImage.toPng(this.dom.filterContainer.node(), {
+			//clone node and append to body temporarily to ensure that the node is rendered properly. Otherwise if the filter is not visible on screen, the image will be blank.
+			const node = this.dom.filterContainer.node().cloneNode(true)
+			document.body.appendChild(node)
+
+			const dataUrl = await htmlToImage.toPng(node, {
 				quality: 0.95,
 				style: {
 					background: 'white'
 				}
 			})
+			document.body.removeChild(node)
 			if (dataUrl === 'data:,')
 				//empty filter
 				return null
