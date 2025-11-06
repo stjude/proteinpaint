@@ -12,6 +12,7 @@ import { VolcanoInteractions } from './interactions/VolcanoInteractions'
 import { VolcanoPlotView } from './view/VolcanoPlotView'
 import { VolcanoControlInputs } from './VolcanoControlInputs'
 import { getCombinedTermFilter } from '#filter'
+import { TermTypes } from '#shared/terms.js'
 
 class Volcano extends PlotBase implements RxComponent {
 	static type = 'volcano'
@@ -109,6 +110,7 @@ class Volcano extends PlotBase implements RxComponent {
 
 	async main() {
 		const config = structuredClone(this.state.config)
+		//TODO: Fix this to use parentId instead
 		if (config.chartType != this.type && config.childType != this.type) return
 
 		const settings = config.settings.volcano
@@ -153,28 +155,46 @@ class Volcano extends PlotBase implements RxComponent {
 export const volcanoInit = getCompInit(Volcano)
 export const componentInit = volcanoInit
 
-export async function getPlotConfig(opts: VolcanoOpts, app: MassAppApi) {
+export async function getPlotConfig(opts: any, app: MassAppApi) {
 	if (!opts.termType) throw new Error('.termType is required')
-	if (opts.confounderTws) {
-		try {
-			for (const tw of opts.confounderTws) {
-				await fillTermWrapper(tw, app.vocabApi)
-			}
-		} catch (e: any) {
-			console.error(`${e}`)
-			throw new Error(`volcano getPlotConfig() failed`)
-		}
-	}
 
 	const config = {
-		confounderTws: opts.confounderTws || [],
-		highlightedData: opts.highlightedData || [],
-		samplelst: opts.samplelst,
 		settings: {
-			volcano: getDefaultVolcanoSettings(opts.overrides || {}, opts)
+			volcano: getDefaultVolcanoSettings(opts.overrides, opts)
 		},
 		termType: opts.termType
 	}
+
+	//Define Gene Expression config
+	if (opts.termType == TermTypes.GENE_EXPRESSION) {
+		if (opts.confounderTws) {
+			try {
+				for (const tw of opts.confounderTws) {
+					await fillTermWrapper(tw, app.vocabApi)
+				}
+			} catch (e: any) {
+				console.error(`${e}`)
+				throw new Error(`Volcano getPlotConfig() failed to fill confounder term wrappers: ${e}`)
+			}
+		}
+		Object.assign(config, {
+			confounderTws: opts.confounderTws || [],
+			highlightedData: opts.highlightedData || [],
+			samplelst: opts.samplelst
+		})
+	}
+
+	//Define Single Cell Cell Type config
+	if (opts.termType == TermTypes.SINGLECELL_CELLTYPE) {
+		Object.assign(config, {
+			//TODO: Fix this logic
+			sample: opts.experimentID || opts.sample || opts.samples?.[0]?.experiments[0]?.experimentID
+			//This should be type, data type, category, etc.
+			// columnName: app.termdbConfig.queries.singleCell.DEgenes.columnName,
+			// categoryName: this.state.config.cluster
+		})
+	}
+
 	//Validate user submitted unavailable/inappropriate settings
 	validateVolcanoSettings(config, opts)
 
