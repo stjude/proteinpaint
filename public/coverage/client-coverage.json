@@ -1837,22 +1837,22 @@
   },
   "plots/diffAnalysis/test/diffAnalysis.integration.spec.ts": {
     "lines": {
-      "total": 27,
-      "covered": 26,
+      "total": 33,
+      "covered": 27,
       "skipped": 0,
-      "pct": 96.29
+      "pct": 81.81
     },
     "functions": {
-      "total": 5,
+      "total": 7,
       "covered": 5,
       "skipped": 0,
-      "pct": 100
+      "pct": 71.42
     },
     "statements": {
-      "total": 30,
-      "covered": 28,
+      "total": 36,
+      "covered": 29,
       "skipped": 0,
-      "pct": 93.33
+      "pct": 80.55
     },
     "branches": {
       "total": 6,
@@ -1862,13 +1862,13 @@
     },
     "lowestPct": {
       "curr": 50,
-      "prev": 0,
-      "diff": 50
+      "prev": 50,
+      "diff": 0
     },
     "averagePct": {
-      "curr": 84.905,
-      "prev": 0,
-      "diff": 84.905
+      "curr": 70.94500000000001,
+      "prev": 84.905,
+      "diff": -13.959999999999994
     }
   },
   "plots/diffAnalysis/DifferentialAnalysis.ts": {
@@ -1934,13 +1934,13 @@
     },
     "lowestPct": {
       "curr": 75,
-      "prev": 0,
-      "diff": 75
+      "prev": 75,
+      "diff": 0
     },
     "averagePct": {
       "curr": 87.7825,
-      "prev": 0,
-      "diff": 87.7825
+      "prev": 87.7825,
+      "diff": 0
     }
   },
   "plots/eventCount/test/eventcount.integration.spec.js": {
