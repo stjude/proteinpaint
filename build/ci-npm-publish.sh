@@ -39,7 +39,7 @@ for WS in ${WORKSPACES}; do
     cd $WS
     echo "publishing $WS-$CURRENTVER"
     # npm 11 requires a tag for pre-release version, default to latest regardless of type of release
-    # npm publish --provenance --access public --tag latest
+    npm publish --provenance --access public --tag latest
     cd $PPDIR
   fi
 done
