@@ -56,7 +56,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		legendFontSize: 12,
 		showInteractiveDots: true,
 		showDownload: true,
-		interactiveDotRadius: 3,
+		interactiveDotRadius: 2,
 		interactiveDotStrokeWidth: 1,
 		...settings
 	}
@@ -94,15 +94,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	// Add png image
 	svg
 		.append('image')
-		.attr(
-			'transform',
-			`translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`
-			// .attr(
-			// 	'transform',
-			// 	`translate(${settings.yAxisX + settings.yAxisSpace - data.plotData.png_dot_radius},${
-			// 		settings.yAxisY - data.plotData.png_dot_radius
-			// 	})`
-		)
+		.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
 		.attr('width', data.plotData.png_width)
 		.attr('height', data.plotData.png_height)
 		.attr('href', `data:image/png;base64,${data.pngImg || data.png}`)
@@ -123,10 +115,9 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 			.data(data.plotData.points)
 			.enter()
 			.append('circle')
-			.attr('cx', d => d.pixel_x) // Use xScale to convert pre-calculated genomic coordinates because of our chromosome scaling on the x-axis
-			.attr('cy', d => d.pixel_y) // Use pre-calculated coordinates for y and yScale for proper scaling from the scale we made earlier
-			// .attr('r', settings.interactiveDotRadius)
-			.attr('r', data.plotData.png_dot_radius * devicePixelRatio)
+			.attr('cx', d => d.pixel_x)
+			.attr('cy', d => d.pixel_y)
+			.attr('r', settings.interactiveDotRadius * devicePixelRatio) // We need to scale with devicePixelRatio otherwise we just have a tine dot on high-DPI screens perfectly aligned with the PNG dots
 			.attr('fill-opacity', 0)
 			.attr('stroke', 'black')
 			.attr('stroke-width', settings.interactiveDotStrokeWidth)
