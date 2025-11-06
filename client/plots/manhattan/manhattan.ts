@@ -77,7 +77,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	const yAxisG = svg
 		.append('g')
 		.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
-	const yScale = scaleLinear().domain([0, data.plotData.y_max]).range([data.plotData.plot_height, 0])
+	const yScale = scaleLinear().domain([0, data.plotData.y_max]).range([data.plotData.png_height, 0])
 	yAxisG.call(d3axis.axisLeft(yScale))
 
 	// Add y-axis label
@@ -110,7 +110,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	// Create scales for positioning elements
 	const xScale = scaleLinear()
 		.domain([-data.plotData.x_buffer, data.plotData.total_genome_length + data.plotData.x_buffer])
-		.range([0, data.plotData.plot_width])
+		.range([0, data.plotData.png_width])
 
 	// Add interactive dots layer
 	if (settings.showInteractiveDots && data.plotData.points && data.plotData.points.length > 0) {
@@ -123,10 +123,10 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 			.data(data.plotData.points)
 			.enter()
 			.append('circle')
-			.attr('cx', d => xScale(d.x)) // Use xScale to convert pre-calculated genomic coordinates because of our chromosome scaling on the x-axis
-			.attr('cy', d => yScale(d.y)) // Use pre-calculated coordinates for y and yScale for proper scaling from the scale we made earlier
+			.attr('cx', d => d.pixel_x) // Use xScale to convert pre-calculated genomic coordinates because of our chromosome scaling on the x-axis
+			.attr('cy', d => d.pixel_y) // Use pre-calculated coordinates for y and yScale for proper scaling from the scale we made earlier
 			// .attr('r', settings.interactiveDotRadius)
-			.attr('r', data.plotData.png_dot_radius)
+			.attr('r', data.plotData.png_dot_radius * devicePixelRatio)
 			.attr('fill-opacity', 0)
 			.attr('stroke', 'black')
 			.attr('stroke-width', settings.interactiveDotStrokeWidth)
@@ -139,7 +139,11 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 					genomic_x: d.x,
 					y_value: d.y,
 					pixel_x: xScale(d.x),
-					pixel_y: yScale(d.y)
+					pixel_y: yScale(d.y),
+					pixel_x2: d.pixel_x,
+					pixel_y2: d.pixel_y,
+					gene: d.gene,
+					chrom: d.chrom
 				})
 
 				geneTip.clear().show(event.clientX, event.clientY)
