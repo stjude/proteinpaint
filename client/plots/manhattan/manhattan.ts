@@ -117,7 +117,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 			.append('circle')
 			.attr('cx', d => d.pixel_x)
 			.attr('cy', d => d.pixel_y)
-			.attr('r', settings.interactiveDotRadius * devicePixelRatio) // We need to scale with devicePixelRatio otherwise we just have a tine dot on high-DPI screens perfectly aligned with the PNG dots
+			.attr('r', data.plotData.png_dot_radius * devicePixelRatio) // We need to scale with devicePixelRatio otherwise we just have a tine dot on high-DPI screens perfectly aligned with the PNG dots
 			.attr('fill-opacity', 0)
 			.attr('stroke', 'black')
 			.attr('stroke-width', settings.interactiveDotStrokeWidth)

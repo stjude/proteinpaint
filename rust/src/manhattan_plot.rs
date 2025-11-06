@@ -1,8 +1,6 @@
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use plotters::prelude::*;
 use plotters::style::ShapeStyle;
-use resvg::render;
-use resvg::tiny_skia::{Pixmap, Transform};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::collections::HashMap;
@@ -10,7 +8,7 @@ use std::convert::TryInto;
 use std::error::Error;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
-use usvg::{Options, Tree, fontdb};
+use tiny_skia::{FillRule, PathBuilder, Pixmap, Transform};
 
 // Define the JSON input structure
 #[derive(Deserialize, Debug)]
@@ -64,8 +62,8 @@ struct InteractiveData {
     y_max: f64,
     plot_width: u64,
     plot_height: u64,
-    png_width: u64,
-    png_height: u64,
+    png_width: u64,  // high-DPR width in pixels
+    png_height: u64, // high0DPR height in pixels
     device_pixel_ratio: f64,
     png_dot_radius: u64,
 }
@@ -300,9 +298,6 @@ fn plot_grin2_manhattan(
     let mut ys = Vec::new();
     let mut colors_vec = Vec::new();
     let mut point_details = Vec::new();
-    let mut y_axis_scaled = false;
-    let mut scale_factor_y = 1.0;
-    let y_min = 0.0;
 
     if let Ok((x, y, c, pd)) = grin2_file_read(&grin2_result_file, &chrom_data) {
         xs = x;
@@ -314,7 +309,10 @@ fn plot_grin2_manhattan(
     // ------------------------------------------------
     // 3. Y-axis scaling
     // ------------------------------------------------
-
+    let y_padding = png_dot_radius as f64;
+    let mut y_axis_scaled = false;
+    let mut scale_factor_y = 1.0;
+    let y_min = 0.0 - y_padding;
     let y_max = if !ys.is_empty() {
         let max_y = ys.iter().cloned().fold(f64::MIN, f64::max);
         if max_y > 40.0 {
@@ -329,23 +327,40 @@ fn plot_grin2_manhattan(
                 p.y *= scale_factor_y;
             }
             let scaled_max = ys.iter().cloned().fold(f64::MIN, f64::max);
-            scaled_max + 0.35
+            scaled_max + 0.35 + y_padding
         } else {
-            max_y + 0.35
+            max_y + 0.35 + y_padding
         }
     } else {
-        1.0
+        1.0 + y_padding
     };
 
     // ------------------------------------------------
-    // 4. Render chart to SVG in memory
+    // 4. Setup high-DPR bitmap dimensions
     // ------------------------------------------------
 
-    let mut svg_text = String::new();
-    let mut pixel_positions: Vec<(f64, f64)> = Vec::new();
+    let dpr = device_pixel_ratio.max(1.0);
+
+    let png_width = plot_width + 2 * png_dot_radius;
+    let png_height = plot_height + 2 * png_dot_radius;
+    //let png_width = plot_width;
+    //let png_height = plot_height;
+
+    let w: u32 = (png_width * device_pixel_ratio as u64)
+        .try_into()
+        .expect("PNG width too large for u32");
+    let h: u32 = (png_height * device_pixel_ratio as u64)
+        .try_into()
+        .expect("PNG height too large for u32");
+
+    // Create RGB buffer for Plotters
+    let mut buffer = vec![0u8; w as usize * h as usize * 3];
+
+    // Make Plotters backend that draws into the RGB buffer (scale-aware)
+
+    let mut pixel_positions: Vec<(f64, f64)> = Vec::with_capacity(xs.len());
     {
-        // "dummy" size - SVG is vector so base size doesn't matter
-        let backend = SVGBackend::with_string(&mut svg_text, (plot_width as u32, plot_height as u32));
+        let backend = BitMapBackend::with_buffer(&mut buffer, (w, h));
         let root = backend.into_drawing_area();
         root.fill(&WHITE)?;
 
@@ -372,7 +387,10 @@ fn plot_grin2_manhattan(
                 let bg = if i % 2 == 0 { WHITE } else { RGBColor(211, 211, 211) };
                 let fill_style: ShapeStyle = bg.mix(0.5).filled();
                 let rect = Rectangle::new(
-                    [(info.start as i64, y_min), ((info.start + info.size) as i64, y_max)],
+                    [
+                        (info.start as i64, (y_min + y_padding)),
+                        ((info.start + info.size) as i64, (y_max - y_padding)),
+                    ],
                     fill_style,
                 );
                 chart.draw_series(vec![rect])?;
@@ -380,8 +398,9 @@ fn plot_grin2_manhattan(
         }
 
         // ------------------------------------------------
-        // 7. Scatter points
-        //    Draw circles (No DPR scaling here - SVG handles it)
+        // 7. capture high-DPR pixel mapping for the points
+        //    we do not draw the points with plotters (will use tiny-skia for AA)
+        //    but use charts.backend_coord to map data->pixel in the high-DPR backend
         // ------------------------------------------------
 
         if !xs.is_empty() {
@@ -392,67 +411,73 @@ fn plot_grin2_manhattan(
             //    let fill_style: ShapeStyle = RGBColor(r, g, b).mix(0.7).filled();
             //    Circle::new((*x as i64, *y), png_dot_radius as u32, fill_style)
             //}))?;
-            for ((x, y), hex) in xs.iter().zip(ys.iter()).zip(colors_vec.iter()) {
-                let (r, g, b) = hex_to_rgb(hex).unwrap_or((136, 136, 136));
-                let fill_style: ShapeStyle = RGBColor(r, g, b).mix(0.7).filled();
-                // Draw the SVG circle
-                chart.draw_series(std::iter::once(Circle::new(
-                    (*x as i64, *y),
-                    png_dot_radius as u32,
-                    fill_style,
-                )))?;
-
-                // Capture the EXACT pixel position that Plotters maps to
+            for (x, y) in xs.iter().zip(ys.iter()) {
+                // convert data coords -> high-DPR pixel coords
                 let (px, py) = chart.backend_coord(&(*x as i64, *y));
                 pixel_positions.push((px as f64, py as f64));
+                //let (r, g, b) = hex_to_rgb(hex).unwrap_or((136, 136, 136));
+                //let fill_style: ShapeStyle = RGBColor(r, g, b).mix(0.7).filled();
             }
+        };
+
+        for p in point_details.iter_mut() {
+            let (px, py) = pixel_positions[p.idx];
+            p.pixel_x = px;
+            p.pixel_y = py;
+        }
+
+        // flush root drawing area
+        root.present()?;
+    }
+
+    // Convert Plotters RGB buffer into tiny-skia RGBA pixmap
+    let mut pixmap = Pixmap::new(w, h).ok_or("Failed to create pixmap")?;
+    {
+        let data = pixmap.data_mut();
+        let mut src_i = 0usize;
+        let mut dst_i = 0usize;
+        for _ in 0..(w as usize * h as usize) {
+            let r = buffer[src_i];
+            let g = buffer[src_i + 1];
+            let b = buffer[src_i + 2];
+            data[dst_i] = r;
+            data[dst_i + 1] = g;
+            data[dst_i + 2] = b;
+            data[dst_i + 3] = 255u8; // opaque alpha
+            src_i += 3;
+            dst_i += 4;
+        }
+    }
+
+    // Draw anti-aliased circles using tiny-skia into the pixmap
+    // radius in HIGH-DPR pixels:
+    let radius_high_dpr = (png_dot_radius as f32) * (dpr as f32);
+
+    // Paint template
+    let mut paint = tiny_skia::Paint::default();
+
+    // for perfomance: reuse a PathBuilder to create circles
+    // will create a small path per point
+    for i in 0..xs.len() {
+        let (px, py) = pixel_positions[i]; // pixel coordinates for this point
+        let color_hex = &colors_vec[i];
+
+        let (r_u8, g_u8, b_u8) = match hex_to_rgb(color_hex) {
+            Some(rgb) => rgb,
+            None => (136u8, 136u8, 136u8),
+        };
+        paint.set_color_rgba8(r_u8, g_u8, b_u8, 255u8);
+        let mut pb = PathBuilder::new();
+        pb.push_circle(px as f32, py as f32, radius_high_dpr);
+
+        if let Some(path) = pb.finish() {
+            pixmap.fill_path(&path, &paint, FillRule::Winding, Transform::identity(), None);
         };
     }
 
-    // Parse SVG using usvg
-    let opt = Options::default();
-
-    // build a fontdb::Database and load system fonts
-    let mut db = fontdb::Database::new();
-    db.load_system_fonts();
-
-    let svg_str = svg_text.as_str();
-    let tree = Tree::from_str(svg_str, &opt, &db)?;
-
-    // Rasterize with resvg (perfect AA)
-
-    //let png_width = plot_width + 2 * png_dot_radius;
-    //let png_height = plot_height + 2 * png_dot_radius;
-    let png_width = plot_width;
-    let png_height = plot_height;
-
-    let w: u32 = (png_width * device_pixel_ratio as u64)
-        .try_into()
-        .expect("PNG width too large for u32");
-    let h: u32 = (png_height * device_pixel_ratio as u64)
-        .try_into()
-        .expect("PNG height too large for u32");
-
-    let mut pixmap = Pixmap::new(w, h).ok_or("Failed to create pixmap")?;
-
-    // Compute scaling transform
-    let scale_x = w as f32 / tree.size().width() as f32;
-    let scale_y = h as f32 / tree.size().height() as f32;
-    let transform = Transform::from_scale(scale_x, scale_y);
-    // Rasterize SVG into pixmap
-    let mut pixmap_mut = pixmap.as_mut();
-    render(&tree, transform, &mut pixmap_mut);
-
+    // encode pixmap to PNG bytes
     let png_bytes = pixmap.encode_png()?;
     let png_data = BASE64.encode(&png_bytes);
-
-    // scaling pixel_x and pixel_y
-    // use idx in point_details to extract the corresponding pixel_position
-    for p in point_details.iter_mut() {
-        let (px, py) = pixel_positions[p.idx];
-        p.pixel_x = (px as f32 * scale_x) as f64;
-        p.pixel_y = (py as f32 * scale_y) as f64;
-    }
 
     // ------------------------------------------------
     // 8. Generate interactive data
