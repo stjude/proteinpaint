@@ -13,6 +13,7 @@ export function getDefaultVolcanoSettings(overrides = {}, opts: any): ValidatedV
 		defaultSignColor: 'red',
 		defaultNonSignColor: 'black',
 		defaultHighlightColor: '#ffa200', // orange-yellow
+		foldChangeCutoff: 0,
 		height: 400,
 		pValue: roundValue(-Math.log10(0.05), 2),
 		pValueType: 'adjusted',
@@ -27,21 +28,20 @@ export function getDefaultVolcanoSettings(overrides = {}, opts: any): ValidatedV
 	return Object.assign(defaults, overrides)
 }
 
-function addGEDefaults(termType, defaults) {
+function addGEDefaults(termType: string, defaults: Partial<GEVolcanoSettings>) {
 	if (termType != TermTypes.GENE_EXPRESSION) return
 
 	const features = JSON.parse(sessionStorage.getItem('optionalFeatures') as string)
 	const method = features?.runDE_methods?.includes('Wilcoxon') ? 'wilcoxon' : 'edgeR'
 
 	defaults.cpmCutoff = 1
-	defaults.foldChangeCutoff = 0
 	defaults.method = method
 	defaults.minCount = 10
 	defaults.minTotalCount = 15
 	defaults.rankBy = 'abs(foldChange)'
 }
 
-function addSCCTDefaults(termType) {
+function addSCCTDefaults(termType: string) {
 	if (termType != TermTypes.SINGLECELL_CELLTYPE) return
 	//add SCCT specific defaults when there are any
 }

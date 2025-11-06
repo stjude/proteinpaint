@@ -5,6 +5,8 @@ export type DefaultVolcanoSettings = {
 	defaultNonSignColor: string
 	/** Default color for highlighted data points. */
 	defaultHighlightColor: string
+	/** The fold change threshold to determine biological significance */
+	foldChangeCutoff: number
 	/** Height of the plot in pixels */
 	height: number
 	/** The p-value threshold to determine statistical significance */
@@ -20,8 +22,6 @@ export type DefaultVolcanoSettings = {
 export type GEVolcanoSettings = DefaultVolcanoSettings & {
 	/** The minimum normalized expression threshold to retain only genes with sufficient expression */
 	cpmCutoff: number
-	/** The fold change threshold to determine biological significance */
-	foldChangeCutoff: number
 	/** Toggle between analysis methods */
 	method: 'edgeR' | 'wilcoxon' | 'limma'
 	/** The smallest number of reads required for a gene to be considered in the analysis */

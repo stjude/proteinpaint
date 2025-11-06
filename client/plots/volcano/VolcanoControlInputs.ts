@@ -55,6 +55,15 @@ export class VolcanoControlInputs {
 					{ label: 'Original', value: 'original' }
 				]
 			},
+			{
+				label: 'Fold change (log)',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'foldChangeCutoff',
+				title: 'The fold change threshold to determine biological significance',
+				min: -10,
+				max: 10
+			},
 			//Preferably, keep all the display (e.g. colors, sizes, etc.) controls
 			//at the bottom of the list or at least together
 			{
@@ -82,7 +91,7 @@ export class VolcanoControlInputs {
 				title: 'Default color for significant data points.',
 				settingsKey: 'defaultSignColor',
 				getDisplayStyle: () => {
-					if (this.config.typeType == TermTypes.SINGLECELL_CELLTYPE) return ''
+					if (this.config.typeType == TermTypes.SINGLECELL_CELLTYPE) return 'none'
 					const controlColor = this.config.tw?.term?.values?.[this.config.samplelst.groups[0].name]?.color
 					const caseColor = this.config.tw?.term?.values?.[this.config.samplelst.groups[1].name].color
 					if (controlColor && caseColor) return 'none'
@@ -142,15 +151,6 @@ export class VolcanoControlInputs {
 				settingsKey: 'cpmCutoff',
 				title: 'The minimum normalized expression threshold to retain only genes with sufficient expression',
 				min: 0
-			},
-			{
-				label: 'Fold change (log)',
-				type: 'number',
-				chartType: 'volcano',
-				settingsKey: 'foldChangeCutoff',
-				title: 'The fold change threshold to determine biological significance',
-				min: -10,
-				max: 10
 			},
 			{
 				label: 'Method',
