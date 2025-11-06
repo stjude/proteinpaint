@@ -42,9 +42,8 @@ export class VolcanoViewModel {
 		this.pValueCutoff = settings.pValue
 		this.plotX = this.horizPad + this.offset * 2
 
-		const controlColor = this.config.tw?.term?.values?.[this.config?.samplelst?.groups[0].name]?.color || 'red'
-		const caseColor = this.config.tw?.term?.values?.[this.config?.samplelst?.groups[1].name].color || 'blue'
-
+		const controlColor = this.config?.tw?.term?.values?.[this.config?.samplelst?.groups[0].name]?.color || 'red'
+		const caseColor = this.config?.tw?.term?.values?.[this.config?.samplelst?.groups[1].name].color || 'blue'
 		//Set colors equal to the groups colors if present
 		const barplot = caseColor && controlColor ? { colorNegative: controlColor, colorPositive: caseColor } : {}
 
@@ -84,7 +83,7 @@ export class VolcanoViewModel {
 
 	setDataType() {
 		if (this.termType == TermTypes.GENE_EXPRESSION) return 'genes'
-		else if (this.termType == TermTypes.SINGLECELL_CELLTYPE) return 'cells'
+		else if (this.termType == TermTypes.SINGLECELL_CELLTYPE) return 'genes' //'cells'??
 		else throw new Error(`Unknown termType: ${this.termType}`)
 	}
 
@@ -209,19 +208,14 @@ export class VolcanoViewModel {
 	}
 
 	isSignificant(d: DataPointEntry) {
-		if (this.termType == TermTypes.GENE_EXPRESSION) {
-			return (
-				-Math.log10(d[`${this.settings.pValueType}_p_value`]) > this.pValueCutoff &&
-				Math.abs(d.fold_change) > this.settings.foldChangeCutoff
-			)
-		} else {
-			//CHANGEME: Adjust for single cell cell type
-			return true
-		}
+		return (
+			-Math.log10(d[`${this.settings.pValueType}_p_value`]) > this.pValueCutoff &&
+			Math.abs(d.fold_change) > this.settings.foldChangeCutoff
+		)
 	}
 
 	getGenesColor(d: DataPointEntry, significant: boolean, controlColor: string, caseColor: string) {
-		if (this.termType != TermTypes.GENE_EXPRESSION) return
+		// if (this.termType != TermTypes.GENE_EXPRESSION) return
 		if (!d.gene_name) throw new Error(`Missing gene_name in data: ${JSON.stringify(d)}`)
 		if (significant) {
 			if (controlColor && caseColor) d.color = d.fold_change > 0 ? caseColor : controlColor
@@ -230,7 +224,6 @@ export class VolcanoViewModel {
 	}
 
 	setStatsData() {
-		if (this.termType != TermTypes.GENE_EXPRESSION) return []
 		const tableRows = [
 			{
 				label: `Percentage of significant ${this.dataType}`,
@@ -243,16 +236,20 @@ export class VolcanoViewModel {
 			{
 				label: `Number of total ${this.dataType}`,
 				value: this.numSignificant + this.numNonSignificant
-			},
-			{
-				label: this.config.samplelst.groups[0].name + ' sample size (control group)',
-				value: this.response.sample_size1
-			},
-			{
-				label: this.config.samplelst.groups[1].name + ' sample size (case group)',
-				value: this.response.sample_size2
 			}
 		]
+		if (this.termType == TermTypes.GENE_EXPRESSION) {
+			tableRows.push(
+				{
+					label: this.config.samplelst.groups[0].name + ' sample size (control group)',
+					value: this.response.sample_size1
+				},
+				{
+					label: this.config.samplelst.groups[1].name + ' sample size (case group)',
+					value: this.response.sample_size2
+				}
+			)
+		}
 
 		if (this.response.bcv !== undefined && this.response.bcv !== null) {
 			tableRows.push({

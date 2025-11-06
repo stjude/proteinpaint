@@ -68,51 +68,44 @@ export class VolcanoPlotView {
 		//Images may have a large margin. Hide the overflow.
 		this.dom.actionsTip.d.style('overflow', 'hidden')
 		this.volcanoDom.actions.style('margin-left', '20px').style('padding', '5px')
-		if (this.termType == TermTypes.GENE_EXPRESSION) {
-			this.addActionButton('Confounding factors', () => this.interactions.confoundersMenu())
-			this.addActionButton('Highlight genes', () => this.interactions.launchGeneSetEdit())
-			this.addActionButton('Statistics', () => {
-				this.renderStatsMenu()
-			})
-			//TODO: Move this to the viewModel
-			const numSigGenes = this.viewData.statsData.find(d => d.label == 'Number of significant genes')?.value
-			if (numSigGenes) {
-				this.volcanoDom.actions
-					.append('span')
-					.text(`${numSigGenes} DE genes:`)
-					.style('margin-left', '10px')
-					.style('font-weight', 'bold')
-
-				this.addActionButton('Show p-value table', () => {
-					this.volcanoDom.pValueTable.style(
-						'display',
-						this.volcanoDom.pValueTable.style('display') == 'none' ? 'inline-block' : 'none'
-					)
-				})
-			}
-
-			if (numSigGenes && numSigGenes >= 3) {
-				// Launch hierCluster for DEGs between the two groups
-				this.addActionButton(
-					`Hierarchical clustering of ${numSigGenes > 100 ? 'top 100' : numSigGenes} DE genes`,
-					async () => {
-						await this.interactions.launchDEGClustering()
-					}
-				)
-			}
+		this.addActionButton('Confounding factors', [TermTypes.GENE_EXPRESSION], () => this.interactions.confoundersMenu())
+		this.addActionButton('Highlight genes', [TermTypes.GENE_EXPRESSION], () => this.interactions.launchGeneSetEdit())
+		this.addActionButton('Statistics', [TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTYPE], () => {
+			this.renderStatsMenu()
+		})
+		//TODO: Move this to the viewModel
+		const numSigGenes = this.viewData.statsData.find(d => d.label == 'Number of significant genes')?.value
+		if (numSigGenes) {
+			this.volcanoDom.actions
+				.append('span')
+				.text(`${numSigGenes} DE genes:`)
+				.style('margin-left', '10px')
+				.style('font-weight', 'bold')
 		}
-		if (this.termType == TermTypes.SINGLECELL_CELLTYPE) {
-			this.addActionButton('Show p-value table', () => {
-				this.volcanoDom.pValueTable.style(
-					'display',
-					this.volcanoDom.pValueTable.style('display') == 'none' ? 'inline-block' : 'none'
-				)
-			})
+
+		this.addActionButton('Show p-value table', [TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTYPE], () => {
+			this.volcanoDom.pValueTable.style(
+				'display',
+				this.volcanoDom.pValueTable.style('display') == 'none' ? 'inline-block' : 'none'
+			)
+		})
+
+		if (numSigGenes && numSigGenes >= 3) {
+			// Launch hierCluster for DEGs between the two groups
+			this.addActionButton(
+				`Hierarchical clustering of ${numSigGenes > 100 ? 'top 100' : numSigGenes} DE genes`,
+				[TermTypes.GENE_EXPRESSION],
+				async () => {
+					await this.interactions.launchDEGClustering()
+				}
+			)
 		}
 	}
 
-	addActionButton(text: string, callback: any) {
+	/** Use the termTypes arr to render the buttons in a consistent order */
+	addActionButton(text: string, termTypes: string[], callback: any) {
 		if (this.viewData.userActions.noShow.has(text)) return
+		if (!termTypes.includes(this.termType)) return
 		const button = this.volcanoDom.actions
 			.append('button')
 			.attr('class', 'sja_menuoption')
@@ -212,7 +205,7 @@ export class VolcanoPlotView {
 
 	renderStatsMenu() {
 		//Render any images. viewModel returns the response array of images or []
-		for (const img of this.viewData.images) {
+		for (const img of this.viewData.images || []) {
 			this.dom.actionsTip.d
 				.append('img')
 				.style('display', 'inline-block')
@@ -225,11 +218,11 @@ export class VolcanoPlotView {
 		const tableHolder = this.dom.actionsTip.d
 			.append('div')
 			//Show the stats table underneath the images if > 1 image or to the right if only 1 image
-			.style('display', this.viewData.images.length > 1 ? 'block' : 'inline-block')
+			.style('display', this.viewData.images.length == 1 ? 'inline-block' : 'block')
 			//Top margin is roughly inline with image however the margins are set by server
 			//Likewise the image margins are undetectable.
 			//This is a roughly satistifes the different image margin scenarios.
-			.style('margin', `${this.viewData.images.length > 1 ? `0px 0px` : `40px 10px`} 0px 5px`)
+			.style('margin', `${this.viewData.images.length == 1 ? `40px 10px` : `0px 0px`} 0px 5px`)
 			.style('vertical-align', 'top')
 		const table = table2col({ holder: tableHolder })
 		for (const d of this.viewData.statsData) {
