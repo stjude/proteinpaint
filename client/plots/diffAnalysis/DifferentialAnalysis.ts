@@ -5,7 +5,7 @@ import { PlotBase } from '../PlotBase'
 import { importPlot } from '../importPlot.js'
 import { Menu } from '#dom'
 import { termType2label, TermTypes } from '#shared/terms.js'
-import type { DiffAnalysisDom, DiffAnalysisOpts, DiffAnalysisPlotConfig } from './DiffAnalysisTypes'
+import type { DiffAnalysisDom, /*DiffAnalysisOpts,*/ DiffAnalysisPlotConfig } from './DiffAnalysisTypes'
 import { DiffAnalysisView } from './view/DiffAnalysisView'
 import { getDefaultVolcanoSettings, validateVolcanoSettings } from '../volcano/settings/defaults.ts'
 import { getDefaultGseaSettings } from '#plots/gsea.js'
@@ -65,7 +65,6 @@ class DifferentialAnalysis extends PlotBase implements RxComponent {
 				`No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 			)
 		}
-
 		return {
 			config
 		}
@@ -121,7 +120,7 @@ class DifferentialAnalysis extends PlotBase implements RxComponent {
 		this.plotsControlsDiv[config.childType].style('display', '')
 
 		if (this.dom.header) {
-			this.dom.header.terms.text(config.tw.term.name)
+			if (config.tw) this.dom.header.terms.text(config.tw.term.name)
 			const typeStr = termType2label(config.termType).toUpperCase()
 			this.dom.header.title.text(` DIFFERENTIAL ${typeStr} ANALYSIS`)
 		}
@@ -136,7 +135,7 @@ export const componentInit = DiffAnalysisInit
 //Use this as a sanity check.
 const enabledTermTypes = [TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTYPE]
 
-export function getPlotConfig(opts: DiffAnalysisOpts) {
+export function getPlotConfig(opts: any) {
 	if (!opts.termType) throw new Error('.termType is required')
 	if (!enabledTermTypes.includes(opts.termType))
 		throw new Error(`termType = '${opts.termType}' not supported by Differential Analysis`)
@@ -152,9 +151,19 @@ export function getPlotConfig(opts: DiffAnalysisOpts) {
 	if (opts.termType == TermTypes.GENE_EXPRESSION) {
 		config.highlightedData = opts.highlightedData || []
 	}
+	/** TODO: Fix this config. This only applies to the
+	 * gdc and won't work long term for terms */
+	if (opts.termType == TermTypes.SINGLECELL_CELLTYPE) {
+		Object.assign(config, {
+			// cluster: opts.cluster || '',
+			categoryName: opts.categoryName || '',
+			columnName: opts.columnName || '',
+			sample: opts.sample || ''
+		})
+	}
 
-	config.settings.volcano = getDefaultVolcanoSettings(opts.overrides || {}, opts)
-	config.settings.gsea = getDefaultGseaSettings(opts.overrides || {})
+	config.settings.volcano = getDefaultVolcanoSettings(opts.overrides, opts)
+	config.settings.gsea = getDefaultGseaSettings(opts.overrides)
 
 	validateVolcanoSettings(config, opts)
 

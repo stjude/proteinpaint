@@ -42,8 +42,8 @@ export class VolcanoViewModel {
 		this.pValueCutoff = settings.pValue
 		this.plotX = this.horizPad + this.offset * 2
 
-		const controlColor = this.config.tw?.term?.values?.[this.config.samplelst.groups[0].name]?.color || 'red'
-		const caseColor = this.config.tw?.term?.values?.[this.config.samplelst.groups[1].name].color || 'blue'
+		const controlColor = this.config.tw?.term?.values?.[this.config?.samplelst?.groups[0].name]?.color || 'red'
+		const caseColor = this.config.tw?.term?.values?.[this.config?.samplelst?.groups[1].name].color || 'blue'
 
 		//Set colors equal to the groups colors if present
 		const barplot = caseColor && controlColor ? { colorNegative: controlColor, colorPositive: caseColor } : {}
@@ -54,6 +54,7 @@ export class VolcanoViewModel {
 				{ label: 'Original p-value', sortable: true },
 				{ label: 'Adjusted p-value', sortable: true }
 			],
+			//Arr set in setPointData()
 			rows: [],
 			height: settings.height + this.topPad
 		}
@@ -179,7 +180,7 @@ export class VolcanoViewModel {
 		const radius = Math.max(this.settings.width, this.settings.height) / 80
 		const dataCopy: any = structuredClone(this.response.data)
 		for (const d of dataCopy) {
-			d.highlighted = this.config.highlightedData.includes(d.gene_name)
+			d.highlighted = this.config?.highlightedData?.includes(d.gene_name)
 			d.significant = this.isSignificant(d)
 			this.getGenesColor(d, d.significant, controlColor, caseColor)
 			if (d.significant) {
@@ -189,9 +190,9 @@ export class VolcanoViewModel {
 					{ value: roundValueAuto(d.original_p_value) },
 					{ value: roundValueAuto(d.adjusted_p_value) }
 				]
-				if (this.dataType == 'genes') {
-					row.splice(0, 0, { value: d.gene_name })
-				}
+				// if (this.dataType == 'genes') {
+				row.splice(0, 0, { value: d.gene_name })
+				// }
 				this.pValueTable.rows.push(row)
 			} else {
 				this.numNonSignificant++
@@ -208,10 +209,15 @@ export class VolcanoViewModel {
 	}
 
 	isSignificant(d: DataPointEntry) {
-		return (
-			-Math.log10(d[`${this.settings.pValueType}_p_value`]) > this.pValueCutoff &&
-			Math.abs(d.fold_change) > this.settings.foldChangeCutoff
-		)
+		if (this.termType == TermTypes.GENE_EXPRESSION) {
+			return (
+				-Math.log10(d[`${this.settings.pValueType}_p_value`]) > this.pValueCutoff &&
+				Math.abs(d.fold_change) > this.settings.foldChangeCutoff
+			)
+		} else {
+			//CHANGEME: Adjust for single cell cell type
+			return true
+		}
 	}
 
 	getGenesColor(d: DataPointEntry, significant: boolean, controlColor: string, caseColor: string) {
@@ -224,6 +230,7 @@ export class VolcanoViewModel {
 	}
 
 	setStatsData() {
+		if (this.termType != TermTypes.GENE_EXPRESSION) return []
 		const tableRows = [
 			{
 				label: `Percentage of significant ${this.dataType}`,
@@ -257,9 +264,9 @@ export class VolcanoViewModel {
 	}
 
 	setPTableColumns() {
-		if (this.termType == TermTypes.GENE_EXPRESSION) {
-			this.pValueTable.columns.splice(0, 0, { label: 'Gene Name', sortable: true })
-		}
+		// if (this.termType == TermTypes.GENE_EXPRESSION) {
+		this.pValueTable.columns.splice(0, 0, { label: 'Gene Name', sortable: true })
+		// }
 	}
 
 	setUserActions() {

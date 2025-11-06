@@ -26,10 +26,11 @@ function init({ genomes }) {
 		let result
 		try {
 			const g = genomes[q.genome]
-			if (!g) throw 'invalid genome name'
+			if (!g) throw new Error('invalid genome name')
 			const ds = g.datasets[q.dslabel]
-			if (!ds) throw 'invalid dataset name'
-			if (!ds.queries?.singleCell?.DEgenes) throw 'not supported on this dataset'
+			if (!ds) throw new Error('invalid dataset name')
+			if (!ds.queries?.singleCell?.DEgenes || !ds.queries.singleCell.DEgenes.get)
+				throw new Error('DE genes not supported on this dataset.')
 			result = await ds.queries.singleCell.DEgenes.get(q)
 			if (!result || !result.data || !result?.data?.length) {
 				result = {
@@ -51,8 +52,10 @@ function init({ genomes }) {
 export async function validate_query_singleCell_DEgenes(ds: any) {
 	if (ds.queries.singleCell.DEgenes.src == 'gdcapi') {
 		gdc_validate_query_singleCell_DEgenes(ds)
-	} else {
-		throw 'unknown singleCell.DEgenes.src'
+	}
+	//TODO: Implement query valiation for non gdc ds
+	else {
+		throw new Error('unknown singleCell.DEgenes.src')
 	}
 	// DEgenes.get() added
 }

@@ -101,6 +101,14 @@ export class VolcanoPlotView {
 				)
 			}
 		}
+		if (this.termType == TermTypes.SINGLECELL_CELLTYPE) {
+			this.addActionButton('Show p-value table', () => {
+				this.volcanoDom.pValueTable.style(
+					'display',
+					this.volcanoDom.pValueTable.style('display') == 'none' ? 'inline-block' : 'none'
+				)
+			})
+		}
 	}
 
 	addActionButton(text: string, callback: any) {

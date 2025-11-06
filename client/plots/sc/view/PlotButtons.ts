@@ -138,15 +138,18 @@ export class PlotButtons {
 				label: 'Differential expression',
 				isVisible: () => this.scTermdbConfig.DEgenes,
 				open: this.termDropdownMenu,
-				getPlotConfig: (value, term) => {
+				getPlotConfig: value => {
 					//TODO: refine this config
 					return {
 						chartType: 'differentialAnalysis',
 						termType: 'singleCellCellType',
-						term: {
-							name: term
-						},
-						category: value
+						//Eventually category will be updated to a term
+						// term: {
+						// 	name: term
+						// },
+						categoryName: `${value}`,
+						columnName: this.data.plots[0].colorBy || 'Cluster', //CHANGEME
+						sample: this.item!.experiment || this.item!.sample
 					}
 				}
 			}
@@ -201,12 +204,12 @@ export class PlotButtons {
 
 		const regex = new RegExp(_plot.colorBy, 'g')
 		for (const cluster of _plot.clusters) {
-			select.append('option').attr('value', cluster.replace(regex, '')).text(cluster)
+			select.append('option').attr('value', cluster.replace(regex, '').trim()).text(cluster)
 		}
 	}
 
 	//********** Plot Config Helpers **********/
-	async getViolinConfig(gene) {
+	async getViolinConfig(gene): Promise<object> {
 		if (!this.item) throw new Error('No item selected')
 		return {
 			chartType: 'violin',
@@ -242,7 +245,7 @@ export class PlotButtons {
 		}
 	}
 
-	async getScatterConfig(geneLst) {
+	async getScatterConfig(geneLst): Promise<object> {
 		if (!this.item) throw new Error('No item selected')
 		const gene1 = geneLst[0].gene
 		const gene2 = geneLst[1].gene
@@ -280,7 +283,8 @@ export class PlotButtons {
 		}
 	}
 
-	getClusteringConfig(geneLst) {
+	getClusteringConfig(geneLst): object {
+		if (!this.item) throw new Error('No item selected')
 		//limit to 100 genes for performance
 		const tws = geneLst.slice(0, 100).map(g => {
 			return {
@@ -302,11 +306,11 @@ export class PlotButtons {
 		}
 	}
 
-	async getSingleCellConfig(plotName) {
+	async getSingleCellConfig(plotName): Promise<object> {
 		if (!this.item) throw new Error('No item selected')
 		const plot = this.scTermdbConfig.data.plots.find(p => p.name == plotName)
-		if (!plot) throw `No plot by name ${plotName} in data.plots [PlotButtons.ts getSingleCellConfig()]`
-		const cfg = {
+		if (!plot) throw new Error(`No plot by name ${plotName} in data.plots [PlotButtons.ts getSingleCellConfig()]`)
+		const cfg: any = {
 			chartType: 'sampleScatter',
 			singleCellPlot: {
 				name: plotName,
@@ -315,7 +319,7 @@ export class PlotButtons {
 					eID: this.item.experiment
 				}
 			}
-		} as any // avoids tsc err
+		}
 		if (plot.colorColumns?.[0]) {
 			// apply optional color term. hardcodes to 1st of the array
 			cfg.colorTW = {
