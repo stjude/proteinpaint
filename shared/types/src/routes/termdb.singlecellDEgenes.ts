@@ -18,14 +18,16 @@ export type TermdbSingleCellDEgenesRequest = {
 
 export type HasDataResponse = {
 	/** list of significant DE genes for the given category in the sample */
-	genes: {
+	data: {
 		/** gene name */
-		name: string
+		gene_name: string
 		/** adjusted p-value */
-		p_val_adj: number
-		/** log foldchange */
-		avg_log2FC: number
-	}[]
+		adjusted_p_value: number
+		/** original p-value */
+		original_p_value: number
+		/** log2 fold change */
+		fold_change: number
+	} /*TODO: May replace with DataEntry from termdb.DE.ts in the future*/[]
 }
 
 export type TermdbSingleCellDEgenesResponse = ErrorResponse | HasDataResponse
