@@ -2156,7 +2156,6 @@ async function getSinglecellDEgenes(q, degFileId, ds) {
 			const p_val_adj = Number(l[5])
 			if (Number.isNaN(p_val_adj)) throw 'p_val_adj not number for a line ' + line
 			//Updated response object to match DEResponse type
-			//Data returned usable in other plots
 			genes.push({ gene_name: name, fold_change: avg_log2FC, original_p_value: p_val, adjusted_p_value: p_val_adj })
 		}
 	}
