@@ -248,7 +248,8 @@ export class VolcanoPlotView {
 				this.interactions.highlightDataPoint(gene)
 			},
 			hoverEffects: (tr, row) => {
-				if (this.termType != TermTypes.GENE_EXPRESSION) return
+				//May restrict termTypes later
+				// if (this.termType != TermTypes.GENE_EXPRESSION) return
 				//Highlight the data point when hovering over the table row
 				//Previously highlighted data points are not affected
 				const circles = this.volcanoDom.plot.selectAll('circle').nodes()

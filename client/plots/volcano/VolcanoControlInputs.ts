@@ -91,7 +91,7 @@ export class VolcanoControlInputs {
 				title: 'Default color for significant data points.',
 				settingsKey: 'defaultSignColor',
 				getDisplayStyle: () => {
-					if (this.config.typeType == TermTypes.SINGLECELL_CELLTYPE) return 'none'
+					if (this.config.termType == TermTypes.SINGLECELL_CELLTYPE) return 'none'
 					const controlColor = this.config.tw?.term?.values?.[this.config.samplelst.groups[0].name]?.color
 					const caseColor = this.config.tw?.term?.values?.[this.config.samplelst.groups[1].name].color
 					if (controlColor && caseColor) return 'none'
