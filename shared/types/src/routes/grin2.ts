@@ -85,8 +85,8 @@ export type GRIN2Request = {
 /** Simple Interface to store the complex plot data from the rust Manhattan plot */
 interface grin2PlotData {
 	points: Array<{
-		x: number // X-axis position (base pair/genomic position)
-		y: number // Y-axis position (-log10(q-value))
+		x: number // X-axis position (base pair/genomic position in the pixel space)
+		y: number // Y-axis position (-log10(q-value) in the pixel space)
 		color: string // Point color (hexadecimal string representing a color for mutation type)
 		type: string // Mutation type (e.g., 'mutation', 'loss', 'gain', 'fusion', 'sv')
 		gene: string // Gene symbol
