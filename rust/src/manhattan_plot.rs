@@ -47,6 +47,9 @@ struct PointDetail {
     pos: u64,
     q_value: f64,
     nsubj: Option<i64>,
+    pixel_x: f64,
+    pixel_y: f64,
+    idx: usize,
 }
 
 #[derive(Serialize)]
@@ -182,6 +185,7 @@ fn grin2_file_read(
         .expect("Missing 'loc.end' column");
 
     // loop all lines
+    let mut mut_num: usize = 0;
     for line_result in reader.lines() {
         let line = match line_result {
             Ok(l) => l,
@@ -250,8 +254,12 @@ fn grin2_file_read(
                     pos: gene_start,
                     q_value: q_val,
                     nsubj: n_subj_count,
+                    pixel_x: 0.0,
+                    pixel_y: 0.0,
+                    idx: mut_num,
                 });
-            }
+            };
+            mut_num += 1;
         }
     }
 
@@ -334,22 +342,17 @@ fn plot_grin2_manhattan(
     // ------------------------------------------------
 
     let mut svg_text = String::new();
+    let mut pixel_positions: Vec<(f64, f64)> = Vec::new();
     {
         // "dummy" size - SVG is vector so base size doesn't matter
-        let pad = png_dot_radius as u32;
-        let svg_w = plot_width as u32 + 2 * pad;
-        let svg_h = plot_height as u32 + 2 * pad;
-        //let backend = SVGBackend::with_string(&mut svg_text, (plot_width as u32, plot_height as u32));
-        let backend = SVGBackend::with_string(&mut svg_text, (svg_w, svg_h));
+        let backend = SVGBackend::with_string(&mut svg_text, (plot_width as u32, plot_height as u32));
         let root = backend.into_drawing_area();
         root.fill(&WHITE)?;
 
         // ------------------------------------------------
         // 5. Build the chart (no axes, no margins)
         // ------------------------------------------------
-        // shift the drawing origin
-        let drawing_area = root.margin(pad, pad, pad, pad);
-        let mut chart = ChartBuilder::on(&drawing_area)
+        let mut chart = ChartBuilder::on(&root)
             .margin(0)
             .set_all_label_area_size(0)
             .build_cartesian_2d((-x_buffer)..(total_genome_length + x_buffer), y_min..y_max)?;
@@ -384,11 +387,25 @@ fn plot_grin2_manhattan(
         if !xs.is_empty() {
             //let pixel_radius = png_dot_radius as u32 * device_pixel_ratio as u32;
             //let pixel_radius_internal = pixel_radius * supersample;
-            chart.draw_series(xs.iter().zip(ys.iter()).zip(colors_vec.iter()).map(|((x, y), hex)| {
+            //chart.draw_series(xs.iter().zip(ys.iter()).zip(colors_vec.iter()).map(|((x, y), hex)| {
+            //    let (r, g, b) = hex_to_rgb(hex).unwrap_or((136, 136, 136));
+            //    let fill_style: ShapeStyle = RGBColor(r, g, b).mix(0.7).filled();
+            //    Circle::new((*x as i64, *y), png_dot_radius as u32, fill_style)
+            //}))?;
+            for ((x, y), hex) in xs.iter().zip(ys.iter()).zip(colors_vec.iter()) {
                 let (r, g, b) = hex_to_rgb(hex).unwrap_or((136, 136, 136));
                 let fill_style: ShapeStyle = RGBColor(r, g, b).mix(0.7).filled();
-                Circle::new((*x as i64, *y), png_dot_radius as u32, fill_style)
-            }))?;
+                // Draw the SVG circle
+                chart.draw_series(std::iter::once(Circle::new(
+                    (*x as i64, *y),
+                    png_dot_radius as u32,
+                    fill_style,
+                )))?;
+
+                // Capture the EXACT pixel position that Plotters maps to
+                let (px, py) = chart.backend_coord(&(*x as i64, *y));
+                pixel_positions.push((px as f64, py as f64));
+            }
         };
     }
 
@@ -404,8 +421,10 @@ fn plot_grin2_manhattan(
 
     // Rasterize with resvg (perfect AA)
 
-    let png_width = plot_width + 2 * png_dot_radius;
-    let png_height = plot_height + 2 * png_dot_radius;
+    //let png_width = plot_width + 2 * png_dot_radius;
+    //let png_height = plot_height + 2 * png_dot_radius;
+    let png_width = plot_width;
+    let png_height = plot_height;
 
     let w: u32 = (png_width * device_pixel_ratio as u64)
         .try_into()
@@ -427,8 +446,16 @@ fn plot_grin2_manhattan(
     let png_bytes = pixmap.encode_png()?;
     let png_data = BASE64.encode(&png_bytes);
 
+    // scaling pixel_x and pixel_y
+    // use idx in point_details to extract the corresponding pixel_position
+    for p in point_details.iter_mut() {
+        let (px, py) = pixel_positions[p.idx];
+        p.pixel_x = (px as f32 * scale_x) as f64;
+        p.pixel_y = (py as f32 * scale_y) as f64;
+    }
+
     // ------------------------------------------------
-    // 7. Generate interactive data
+    // 8. Generate interactive data
     // ------------------------------------------------
     let interactive_data = InteractiveData {
         points: point_details,
@@ -441,8 +468,8 @@ fn plot_grin2_manhattan(
         y_max,
         plot_width,
         plot_height,
-        png_width,
-        png_height,
+        png_width: w as u64,
+        png_height: h as u64,
         device_pixel_ratio,
         png_dot_radius,
     };
