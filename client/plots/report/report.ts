@@ -164,7 +164,6 @@ export async function getPlotConfig(opts, app) {
 	//if (!opts.colorTW) throw 'sampleScatter getPlotConfig: opts.colorTW{} missing'
 	//if (!opts.name && !(opts.term && opts.term2)) throw 'sampleScatter getPlotConfig: missing coordinates input'
 
-	const authFilter = app.vocabApi?.termdbConfig?.authFilter
 	const settings = getDefaultReportSettings()
 
 	const plot: any = {
@@ -181,7 +180,7 @@ export async function getPlotConfig(opts, app) {
 	try {
 		const config = app.vocabApi?.termdbConfig?.plotConfigByCohort?.default?.report
 		// the filter should always start with the authFilter, avoids issues with previous filters from previous sessions with different user access
-		opts.filter = authFilter
+		opts.filter = app.vocabApi?.termdbConfig?.authFilter
 		copyMerge(plot, config, opts)
 
 		return plot

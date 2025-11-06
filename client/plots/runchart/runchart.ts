@@ -64,6 +64,7 @@ export class Runchart extends Scatter {
 export async function getPlotConfig(opts, app) {
 	//if (!opts.colorTW) throw 'runChart getPlotConfig: opts.colorTW{} missing'
 	//if (!opts.name && !(opts.term && opts.term2)) throw 'runChart getPlotConfig: missing coordinates input'
+
 	const defaultConfig = app.vocabApi.termdbConfig?.plotConfigByCohort?.default?.[opts.chartType]
 	const settings = copyMerge(getDefaultRunChartSettings(), defaultConfig?.settings)
 	const plot: any = {
@@ -76,6 +77,8 @@ export async function getPlotConfig(opts, app) {
 			stopColor: {} //dict to store the stop color of the gradient for each chart when using continuous color
 		}
 	}
+	//pass auth filter to apply it by default in the runchart
+	opts.filter = app.vocabApi?.termdbConfig?.authFilter
 	copyMerge(plot, defaultConfig, opts)
 
 	try {
