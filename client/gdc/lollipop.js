@@ -3,14 +3,18 @@ import { first_genetrack_tolist } from '../common/1stGenetk'
 import { dofetch3 } from '#common/dofetch'
 import blockinit from '#src/block.init'
 
-/* designed to work for lollipop & cnv apps in GDC Analysis Tools Framework
+/*
+************* GDC view ********************
+designed to work for lollipop & cnv apps in GDC Analysis Tools Framework
 https://github.com/NCI-GDC/gdc-frontend-framework/blob/develop/packages/portal-proto/src/features/proteinpaint/ProteinPaintWrapper.tsx
 
-test with http://localhost:3000/example.gdc.html
+test with:
+	http://localhost:3000/example.gdc.html
+	http://localhost:3000/example.mds3.numeric.html
 
-to launch lollipop:
+to launch gdc lollipop:
 	runpp({ geneSearch4GDCmds3:true })
-to launch cnv tool:
+to launch gdc cnv tool:
 	runpp({
 		geneSearch4GDCmds3:{
 			hardcodeCnvOnly:1
@@ -18,8 +22,12 @@ to launch cnv tool:
 	})
 
 
-********* parameters
+************* Non-GDC view ********************
+launch as:
+	runpp({ geneSearch4GDCmds3:true, genome:'xx', dslabel:'yy' })
 
+
+*************  parameters  ********************
 arg = {}
 	// this is the runpp() argument object
 	geneSearch4GDCmds3:{}
@@ -38,27 +46,26 @@ arg = {}
 		// for auto updating app on GFF cohort change
 	.tracks[]
 		// for future use, allows to add extra annotation tracks in addition to mds3
+
+	.genome:str
+	.dslabel:str
+		// allow to work for non-gdc ds
+
 holder
 genomes = { hg38 : {} }
 
 
-********* returns
-
+*************  returns  ********************
 api object. required to work with react wrapper
-
-TODO 
-make it a generic mechanism to type in gene and launch any tk
-the hardcoded "GDC mutations" phrase should be configurable as well...
-- unlikely given all the gdc specific logic
 */
 
-const gdcGenome = 'hg38'
-const gdcDslabel = 'GDC' // label of this dataset on this pp instance
 const tip = new Menu({ padding: '' })
 
 export async function init(arg, holder, genomes) {
-	const genome = genomes[gdcGenome]
-	if (!genome) throw gdcGenome + ' missing'
+	const useGenome = arg.genome || 'hg38'
+	const useDslabel = arg.dslabel || 'GDC'
+	const genome = genomes[useGenome]
+	if (!genome) throw useGenome + ' missing'
 	if (arg.geneSearch4GDCmds3.onloadalltk_always && typeof arg.geneSearch4GDCmds3.onloadalltk_always != 'function')
 		throw 'arg.geneSearch4GDCmds3.onloadalltk_always not function'
 	if (arg.geneSearch4GDCmds3.postRender && typeof arg.geneSearch4GDCmds3.postRender != 'function')
@@ -74,8 +81,8 @@ export async function init(arg, holder, genomes) {
 		.append('div')
 		.text(
 			arg.geneSearch4GDCmds3.hardcodeCnvOnly
-				? 'To view GDC CNV segments over a gene or region, enter genomic position (chr11:108195437-108267444), dbSNP accesion, or gene name (MYC).'
-				: 'To view GDC mutations on a gene, enter one of gene symbol (MYC), alias (c-Myc), GENCODE accession (ENSG00000136997, ENST00000621592), or RefSeq accession (NM_002467).'
+				? `To view ${useDslabel} CNV segments over a gene or region, enter genomic position (chr11:108195437-108267444), dbSNP accesion, or gene name (MYC).`
+				: `To view ${useDslabel} mutations on a gene, enter one of gene symbol (MYC), alias (c-Myc), GENCODE accession (ENSG00000136997, ENST00000621592), or RefSeq accession (NM_002467).`
 		)
 
 	// second row, display graph
@@ -136,7 +143,7 @@ export async function init(arg, holder, genomes) {
 			// generate mds3 tk
 			const tk = {
 				type: 'mds3',
-				dslabel: gdcDslabel,
+				dslabel: useDslabel,
 				allow2selectSamples: arg.allow2selectSamples,
 				filter0: arg.filter0
 			}
@@ -177,7 +184,7 @@ export async function init(arg, holder, genomes) {
 					// updates of arg.filter0 should still render
 				}
 				// a bit inefficient but must retrieve all gene models to find out if any is coding or all are noncoding
-				const gmlst = (await dofetch3(`genelookup?deep=1&input=${coordInput.geneSymbol}&genome=${gdcGenome}`)).gmlst
+				const gmlst = (await dofetch3(`genelookup?deep=1&input=${coordInput.geneSymbol}&genome=${useGenome}`)).gmlst
 				if (!Array.isArray(gmlst) || gmlst.length == 0) throw 'gmlst is not non-empty array'
 				pa.query = getSelectedIsoform(coordInput, gmlst)
 				if (gmlst.some(i => i.coding)) pa.gmmode = 'protein'

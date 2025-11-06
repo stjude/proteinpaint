@@ -4,9 +4,6 @@ when no flags are matched, returns undefined
 */
 export async function mayLaunchGdcPlotFromRunpp(arg, app) {
 	if (arg.geneSearch4GDCmds3) {
-		/* can generalize by changing to geneSearch4tk:{tkobj}
-		so it's no longer hardcoded for one dataset of one track type
-		*/
 		const _ = await import('./lollipop.js')
 		return await _.init(arg, app.holder0, app.genomes)
 	}
