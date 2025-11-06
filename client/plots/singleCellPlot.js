@@ -711,7 +711,7 @@ class singleCellPlot {
 				tableDiv.text(result.error)
 				return
 			}
-			if (!result.genes || !result?.genes?.length) {
+			if (!result.data || !result?.data?.length) {
 				tableDiv.text('No differentially expressed genes found.')
 				return
 			}
@@ -765,15 +765,19 @@ class singleCellPlot {
 		const rows = []
 		this.genes = []
 		this.fold_changes = []
-		result.genes.sort((a, b) => b.avg_log2FC - a.avg_log2FC)
+		result.data.sort((a, b) => b.fold_change - a.fold_change)
 		const selectedRows = []
 		let i = 0
-		for (const gene of result.genes) {
-			const row = [{ value: gene.name }, { value: gene.avg_log2FC }, { value: roundValueAuto(gene.p_val_adj) }]
+		for (const gene of result.data) {
+			const row = [
+				{ value: gene.gene_name },
+				{ value: gene.fold_change },
+				{ value: roundValueAuto(gene.adjusted_p_value) }
+			]
 			rows.push(row)
-			this.genes.push(gene.name)
-			this.fold_changes.push(gene.avg_log2FC)
-			if (gene.name == this.state.config.gene) selectedRows.push(i)
+			this.genes.push(gene.gene_name)
+			this.fold_changes.push(gene.fold_change)
+			if (gene.gene_name == this.state.config.gene) selectedRows.push(i)
 			i++
 		}
 		this.DETable = { rows, columns }
@@ -785,7 +789,7 @@ class singleCellPlot {
 			div: tableDivContent,
 			singleMode: true,
 			noButtonCallback: (i, node) => {
-				const gene = result.genes[i].name
+				const gene = result.data[i].gene_name
 				this.app.dispatch({
 					type: 'plot_edit',
 					id: this.id,

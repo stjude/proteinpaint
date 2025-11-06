@@ -2052,7 +2052,7 @@ export function gdc_validate_query_singleCell_DEgenes(ds) {
 		const degFileId = await getSinglecellDEfile(caseuuid, q, ds)
 
 		const genes = await getSinglecellDEgenes(q, degFileId, ds)
-		return { genes }
+		return { data: genes }
 	}
 }
 
@@ -2151,9 +2151,13 @@ async function getSinglecellDEgenes(q, degFileId, ds) {
 			if (!name) throw 'gene_names blank for a line: ' + line
 			const avg_log2FC = Number(l[3])
 			if (Number.isNaN(avg_log2FC)) throw 'avg_log2FC not number for a line ' + line
+			const p_val = Number(l[4])
+			if (Number.isNaN(p_val)) throw 'p_val not number for a line ' + line
 			const p_val_adj = Number(l[5])
 			if (Number.isNaN(p_val_adj)) throw 'p_val_adj not number for a line ' + line
-			genes.push({ name, avg_log2FC, p_val_adj })
+			//Updated response object to match DEResponse type
+			//Data returned usable in other plots
+			genes.push({ gene_name: name, fold_change: avg_log2FC, original_p_value: p_val, adjusted_p_value: p_val_adj })
 		}
 	}
 	return genes
