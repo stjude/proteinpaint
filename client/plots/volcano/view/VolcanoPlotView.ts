@@ -73,7 +73,6 @@ export class VolcanoPlotView {
 		this.addActionButton('Statistics', [TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTYPE], () => {
 			this.renderStatsMenu()
 		})
-		//TODO: Move this to the viewModel
 		const numSigGenes = this.viewData.statsData.find(d => d.label == 'Number of significant genes')?.value
 		if (numSigGenes) {
 			this.volcanoDom.actions
@@ -81,15 +80,14 @@ export class VolcanoPlotView {
 				.text(`${numSigGenes} DE genes:`)
 				.style('margin-left', '10px')
 				.style('font-weight', 'bold')
+
+			this.addActionButton('Show p-value table', [TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTYPE], () => {
+				this.volcanoDom.pValueTable.style(
+					'display',
+					this.volcanoDom.pValueTable.style('display') == 'none' ? 'inline-block' : 'none'
+				)
+			})
 		}
-
-		this.addActionButton('Show p-value table', [TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTYPE], () => {
-			this.volcanoDom.pValueTable.style(
-				'display',
-				this.volcanoDom.pValueTable.style('display') == 'none' ? 'inline-block' : 'none'
-			)
-		})
-
 		if (numSigGenes && numSigGenes >= 3) {
 			// Launch hierCluster for DEGs between the two groups
 			this.addActionButton(
