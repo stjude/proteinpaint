@@ -27,7 +27,7 @@ export type HasDataResponse = {
 		original_p_value: number
 		/** log2 fold change */
 		fold_change: number
-	} /*TODO: May replace with DataEntry from termdb.DE.ts in the future*/[]
+	}[] // TODO: May replace with DataEntry from termdb.DE.ts in the future
 }
 
 export type TermdbSingleCellDEgenesResponse = ErrorResponse | HasDataResponse
