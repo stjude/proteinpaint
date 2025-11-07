@@ -145,17 +145,14 @@ export function getPlotConfig(opts: any) {
 		childType: 'volcano',
 		termType: opts.termType,
 		settings: {},
+		highlightedData: opts.highlightedData || [],
 		hidePlotFilter: true //TODO: Support filtering and reactivity in child plots
 	} as any
 
-	if (opts.termType == TermTypes.GENE_EXPRESSION) {
-		config.highlightedData = opts.highlightedData || []
-	}
 	/** TODO: Fix this config. This only applies to the
 	 * gdc and won't work long term for terms */
 	if (opts.termType == TermTypes.SINGLECELL_CELLTYPE) {
 		Object.assign(config, {
-			// cluster: opts.cluster || '',
 			categoryName: opts.categoryName || '',
 			columnName: opts.columnName || '',
 			sample: opts.sample || ''
