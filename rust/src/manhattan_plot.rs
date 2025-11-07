@@ -404,19 +404,10 @@ fn plot_grin2_manhattan(
         // ------------------------------------------------
 
         if !xs.is_empty() {
-            //let pixel_radius = png_dot_radius as u32 * device_pixel_ratio as u32;
-            //let pixel_radius_internal = pixel_radius * supersample;
-            //chart.draw_series(xs.iter().zip(ys.iter()).zip(colors_vec.iter()).map(|((x, y), hex)| {
-            //    let (r, g, b) = hex_to_rgb(hex).unwrap_or((136, 136, 136));
-            //    let fill_style: ShapeStyle = RGBColor(r, g, b).mix(0.7).filled();
-            //    Circle::new((*x as i64, *y), png_dot_radius as u32, fill_style)
-            //}))?;
             for (x, y) in xs.iter().zip(ys.iter()) {
                 // convert data coords -> high-DPR pixel coords
                 let (px, py) = chart.backend_coord(&(*x as i64, *y));
                 pixel_positions.push((px as f64, py as f64));
-                //let (r, g, b) = hex_to_rgb(hex).unwrap_or((136, 136, 136));
-                //let fill_style: ShapeStyle = RGBColor(r, g, b).mix(0.7).filled();
             }
         };
 
