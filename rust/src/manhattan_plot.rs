@@ -58,8 +58,6 @@ struct InteractiveData {
     x_buffer: i64,
     y_min: f64,
     y_max: f64,
-    png_width: u64,  // high-DPR width in pixels
-    png_height: u64, // high0DPR height in pixels
 }
 
 #[derive(Serialize)]
@@ -469,8 +467,6 @@ fn plot_grin2_manhattan(
         x_buffer,
         y_min,
         y_max,
-        png_width: w as u64,
-        png_height: h as u64,
     };
     Ok((png_data, interactive_data))
 }

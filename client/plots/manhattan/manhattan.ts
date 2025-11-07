@@ -9,8 +9,8 @@ import { to_svg } from '#src/client'
  * @param {Object} div - div element to contain the plot
  * @param {Object} data - Plot data
  * @param {Object} settings - Display configuration options:
- *   @param {number} [settings.plotWidth=1000] - Plot area width
- *   @param {number} [settings.plotHeight=400] - Plot area height
+ *   @param {number} [settings.plotWidth=500] - Plot area width
+ *   @param {number} [settings.plotHeight=200] - Plot area height
  *   @param {boolean} [settings.showLegend=true] - Whether to display legend
  *   @param {boolean} [settings.showDownload=true] - Whether to show download button
  *   @param {boolean} [settings.showInteractiveDots=true] - Whether to show hoverable data points
@@ -53,8 +53,11 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	const svg = div
 		.append('svg')
 		.attr('data-testid', 'sjpp-manhattan')
-		.attr('width', data.plotData.png_width + settings.yAxisX + settings.yAxisSpace)
-		.attr('height', data.plotData.png_height + settings.yAxisY * 4) // Extra space for x-axis labels, legend, and title
+		.attr(
+			'width',
+			devicePixelRatio * (settings.plotWidth + 2 * settings.pngDotRadius) + settings.yAxisX + settings.yAxisSpace
+		)
+		.attr('height', devicePixelRatio * (settings.plotHeight + 2 * settings.pngDotRadius) + settings.yAxisY * 4) // Extra space for x-axis labels, legend, and title
 
 	// Add y-axis
 	// yPlot       → full padded scale, aligns exactly with PNG coordinates
@@ -75,7 +78,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	//    - Range  = full PNG pixel height (0 is top, png_height is bottom)
 	const yPlot = scaleLinear()
 		.domain([data.plotData.y_min, data.plotData.y_max]) // padded domain from Rust
-		.range([data.plotData.png_height, 0]) // full PNG height
+		.range([devicePixelRatio * (settings.plotHeight + 2 * settings.pngDotRadius), 0]) // full PNG height
 
 	// 2) yAxisScale: used only for the visible axis labels/ticks
 	//    - Domain = true data values (no padding)
@@ -98,7 +101,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	// Add y-axis label
 	svg
 		.append('text')
-		.attr('x', -(data.plotData.png_height / 2) - settings.yAxisY)
+		.attr('x', -((devicePixelRatio * (settings.plotHeight + 2 * settings.pngDotRadius)) / 2) - settings.yAxisY)
 		.attr('y', settings.yAxisX / 2)
 		.attr('transform', 'rotate(-90)')
 		.attr('text-anchor', 'middle')
@@ -110,14 +113,14 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	svg
 		.append('image')
 		.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
-		.attr('width', data.plotData.png_width)
-		.attr('height', data.plotData.png_height)
+		.attr('width', devicePixelRatio * (settings.plotWidth + 2 * settings.pngDotRadius))
+		.attr('height', devicePixelRatio * (settings.plotHeight + 2 * settings.pngDotRadius))
 		.attr('href', `data:image/png;base64,${data.pngImg || data.png}`)
 
 	// Create scales for positioning elements
 	const xScale = scaleLinear()
 		.domain([-data.plotData.x_buffer, data.plotData.total_genome_length + data.plotData.x_buffer])
-		.range([0, data.plotData.png_width])
+		.range([0, devicePixelRatio * (settings.plotWidth + 2 * settings.pngDotRadius)])
 
 	// Add interactive dots layer
 	if (settings.showInteractiveDots && data.plotData.points && data.plotData.points.length > 0) {
@@ -168,7 +171,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 	// Add chromosome labels
 	if (data.plotData.chrom_data) {
-		const chromLabelY = data.plotData.png_height + settings.yAxisY
+		const chromLabelY = devicePixelRatio * (settings.plotHeight + 2 * settings.pngDotRadius) + settings.yAxisY
 
 		Object.entries(data.plotData.chrom_data).forEach(([chrom, chromData]: [string, any]) => {
 			const chromLabel = chrom.replace('chr', '')
@@ -193,8 +196,14 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	// Add x-axis label
 	svg
 		.append('text')
-		.attr('x', settings.yAxisX + settings.yAxisSpace + data.plotData.png_width / 2)
-		.attr('y', data.plotData.png_height + settings.yAxisY + settings.xAxisLabelPad)
+		.attr(
+			'x',
+			settings.yAxisX + settings.yAxisSpace + (devicePixelRatio * (settings.plotWidth + 2 * settings.pngDotRadius)) / 2
+		)
+		.attr(
+			'y',
+			devicePixelRatio * (settings.plotHeight + 2 * settings.pngDotRadius) + settings.yAxisY + settings.xAxisLabelPad
+		)
 		.attr('text-anchor', 'middle')
 		.attr('font-size', `${settings.fontSize + 4}px`)
 		.attr('fill', 'black')
@@ -245,7 +254,11 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		const legendY = settings.yAxisY / 2
 		const totalWidth = legendData.length * settings.legendItemWidth
 		const legendX =
-			settings.yAxisX + settings.yAxisSpace + data.plotData.png_width - totalWidth - settings.legendRightOffset
+			settings.yAxisX +
+			settings.yAxisSpace +
+			devicePixelRatio * (settings.plotWidth + 2 * settings.pngDotRadius) -
+			totalWidth -
+			settings.legendRightOffset
 
 		legendData.forEach((item, i) => {
 			const x = legendX + i * settings.legendItemWidth
