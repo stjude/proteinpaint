@@ -846,6 +846,7 @@ export function getDefaultSettings(opts) {
 			yAxisSpace: 20,
 			xAxisLabelPad: 20,
 			yAxisPad: 5,
+			axisColor: '#545454',
 
 			// Typography
 			fontSize: 12,
