@@ -7879,8 +7879,8 @@
     },
     "averagePct": {
       "curr": 7.535,
-      "prev": 0,
-      "diff": 7.535
+      "prev": 7.535,
+      "diff": 0
     }
   },
   "dom/test/violinRenderer.unit.spec.js": {
@@ -8925,6 +8925,42 @@
       "curr": 88.645,
       "prev": 0,
       "diff": 88.645
+    }
+  },
+  "plots/volcano/settings/defaults.ts": {
+    "lines": {
+      "total": 42,
+      "covered": 3,
+      "skipped": 0,
+      "pct": 7.14
+    },
+    "functions": {
+      "total": 8,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
+    },
+    "statements": {
+      "total": 48,
+      "covered": 3,
+      "skipped": 0,
+      "pct": 6.25
+    },
+    "branches": {
+      "total": 31,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
+    },
+    "lowestPct": {
+      "curr": 0,
+      "prev": 0,
+      "diff": 0
+    },
+    "averagePct": {
+      "curr": 3.3475,
+      "prev": 0,
+      "diff": 3.3475
     }
   }
 }
