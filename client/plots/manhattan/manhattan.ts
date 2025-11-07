@@ -56,7 +56,6 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		legendFontSize: 12,
 		showInteractiveDots: true,
 		showDownload: true,
-		interactiveDotRadius: 2,
 		interactiveDotStrokeWidth: 1,
 		...settings
 	}
@@ -74,11 +73,43 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		.attr('height', data.plotData.png_height + settings.yAxisY * 4) // Extra space for x-axis labels, legend, and title
 
 	// Add y-axis
-	const yAxisG = svg
+	// yPlot       → full padded scale, aligns exactly with PNG coordinates
+	// yAxisScale  → trimmed scale for axis labels, ignores PNG padding
+	// --- Y-Axis Setup ---
+	// This section builds two linked scales:
+	//
+	//   1) yPlot       → full PNG-aligned scale (includes padding added by Rust)
+	//   2) yAxisScale  → visual axis scale (no padding; shows only real data values)
+	//
+	// The reason for two scales is that the PNG image itself was rendered
+	// with top/bottom padding for dot radius. We need one scale to stay
+	// pixel-perfect with the PNG (for dots, overlays, etc.), and another
+	// scale to make the visible y-axis line up only with the *real* data region.
+
+	// 1) yPlot: true positioning scale used for all pixel-aligned elements
+	//    - Domain = padded range from Rust (includes buffer above/below real data)
+	//    - Range  = full PNG pixel height (0 is top, png_height is bottom)
+	const yPlot = scaleLinear()
+		.domain([data.plotData.y_min, data.plotData.y_max]) // padded domain from Rust
+		.range([data.plotData.png_height, 0]) // full PNG height
+
+	// 2) yAxisScale: used only for the visible axis labels/ticks
+	//    - Domain = true data values (no padding)
+	//    - Range  = subset of pixel space between yPlot(0) and yPlot(realMax [data.plotData.y_max - data.plotData.png_dot_radius])
+	//               so the axis sits entirely within the real data area
+	const yAxisScale = scaleLinear()
+		.domain([0, data.plotData.y_max - data.plotData.png_dot_radius])
+		.range([yPlot(0), yPlot(data.plotData.y_max - data.plotData.png_dot_radius)])
+
+	// Axis group
+	const axisG = svg
 		.append('g')
 		.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
-	const yScale = scaleLinear().domain([0, data.plotData.y_max]).range([data.plotData.png_height, 0])
-	yAxisG.call(d3axis.axisLeft(yScale))
+		.style('font-size', `${settings.fontSize + 2}px`)
+
+	axisG.call(
+		d3axis.axisLeft(yAxisScale).tickSizeOuter(0) // removes top/bottom cap lines for clean look
+	)
 
 	// Add y-axis label
 	svg
@@ -87,7 +118,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		.attr('y', settings.yAxisX / 2)
 		.attr('transform', 'rotate(-90)')
 		.attr('text-anchor', 'middle')
-		.attr('font-size', `${settings.fontSize}px`)
+		.attr('font-size', `${settings.fontSize + 4}px`)
 		.attr('fill', 'black')
 		.text('-log₁₀(q-value)')
 
@@ -125,17 +156,6 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 			.on('mouseover', (event, d) => {
 				// Show stroke on hover
 				event.target.setAttribute('stroke-opacity', 1)
-
-				console.log('Hover coordinates:', {
-					genomic_x: d.x,
-					y_value: d.y,
-					pixel_x: xScale(d.x),
-					pixel_y: yScale(d.y),
-					pixel_x2: d.pixel_x,
-					pixel_y2: d.pixel_y,
-					gene: d.gene,
-					chrom: d.chrom
-				})
 
 				geneTip.clear().show(event.clientX, event.clientY)
 
@@ -181,7 +201,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				.attr('x', centerPos)
 				.attr('y', chromLabelY)
 				.attr('text-anchor', 'middle')
-				.attr('font-size', `${settings.fontSize - 2}px`)
+				.attr('font-size', `${settings.fontSize + 2}px`)
 				.text(chromLabel)
 		})
 	}
@@ -192,7 +212,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		.attr('x', settings.yAxisX + settings.yAxisSpace + data.plotData.png_width / 2)
 		.attr('y', data.plotData.png_height + settings.yAxisY + 45)
 		.attr('text-anchor', 'middle')
-		.attr('font-size', `${settings.fontSize}px`)
+		.attr('font-size', `${settings.fontSize + 4}px`)
 		.attr('fill', 'black')
 		.text('Chromosomes')
 
@@ -259,7 +279,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				.append('text')
 				.attr('x', x + 8 + settings.legendTextOffset)
 				.attr('y', legendY + settings.legendVerticalOffset)
-				.attr('font-size', `${settings.legendFontSize}px`)
+				.attr('font-size', `${settings.legendFontSize + 2}px`)
 				.text(item.type)
 		})
 	}
