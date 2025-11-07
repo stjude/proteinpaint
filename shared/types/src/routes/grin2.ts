@@ -111,7 +111,6 @@ interface grin2PlotData {
 	plot_width: number
 	plot_height: number
 	device_pixel_ratio: number
-	dpi: number
 }
 
 /**
