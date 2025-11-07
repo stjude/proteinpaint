@@ -20,10 +20,10 @@ export type GRIN2Request = {
 	/** Device pixel ratio for rendering */
 	devicePixelRatio?: number
 
-	/** Desired plot width in pixels (default: 1000) */
+	/** Desired plot width in pixels (default: 500) */
 	width?: number
 
-	/** Desired plot height in pixels (default: 400) */
+	/** Desired plot height in pixels (default: 200) */
 	height?: number
 
 	/** Radius of the PNG rendered dots (default: 2) */
