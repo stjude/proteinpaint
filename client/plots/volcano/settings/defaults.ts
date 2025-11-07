@@ -13,7 +13,7 @@ export function getDefaultVolcanoSettings(overrides = {}, opts: any): ValidatedV
 		defaultSignColor: 'red',
 		defaultNonSignColor: 'black',
 		defaultHighlightColor: '#ffa200', // orange-yellow
-		foldChangeCutoff: 0,
+		foldChangeCutoff: 0.3,
 		height: 400,
 		pValue: roundValue(-Math.log10(0.05), 2),
 		pValueType: 'adjusted',
@@ -69,7 +69,7 @@ export function getSampleNum(config: any) {
 		return config.samplelst.groups.reduce((sum: number, g: any) => sum + g.values.length, 0)
 	}
 	if (config.termType == TermTypes.SINGLECELL_CELLTYPE) {
-		//TODO: Set max sample cutoff and calculate number of samples
+		//Only returning maxSampleCutoff for now.
 		return maxSampleCutoff
 	}
 }
