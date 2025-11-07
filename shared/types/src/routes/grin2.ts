@@ -98,6 +98,7 @@ interface grin2PlotData {
 		nsubj: number // Number of subjects with this mutation. Used for hover table subject count
 	}>
 	chrom_data: Record<
+		// Data for chromosome plot labels on x-axis
 		string,
 		{
 			start: number
@@ -105,12 +106,8 @@ interface grin2PlotData {
 			center: number
 		}
 	>
-	y_axis_scaled: boolean
-	scale_factor: number
-	total_genome_length: number
-	plot_width: number
-	plot_height: number
-	device_pixel_ratio: number
+	y_axis_scaled: boolean // If y-axis is scaled (has -log10(q-value) > 40
+	scale_factor: number // What the scaling factor is
 }
 
 /**
