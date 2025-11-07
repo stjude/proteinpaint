@@ -1,5 +1,5 @@
-import type { MassState, BasePlotConfig, MassAppApi } from '#mass/types/mass'
-import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import type { MassState, BasePlotConfig } from '#mass/types/mass'
+import { getCompInit, copyMerge, type RxComponent, type AppApi } from '#rx'
 import { PlotBase } from '../PlotBase'
 import { fillTermWrapper } from '#termsetting'
 import { Menu, sayerror } from '#dom'
@@ -155,13 +155,14 @@ class Volcano extends PlotBase implements RxComponent {
 export const volcanoInit = getCompInit(Volcano)
 export const componentInit = volcanoInit
 
-export async function getPlotConfig(opts: any, app: MassAppApi) {
+export async function getPlotConfig(opts: any, app: AppApi) {
 	if (!opts.termType) throw new Error('.termType is required')
 
 	const config = {
 		settings: {
 			volcano: getDefaultVolcanoSettings(opts.overrides, opts)
 		},
+		highlightedData: opts.highlightedData || [],
 		termType: opts.termType
 	}
 
@@ -179,7 +180,6 @@ export async function getPlotConfig(opts: any, app: MassAppApi) {
 		}
 		Object.assign(config, {
 			confounderTws: opts.confounderTws || [],
-			highlightedData: opts.highlightedData || [],
 			samplelst: opts.samplelst
 		})
 	}
@@ -188,10 +188,12 @@ export async function getPlotConfig(opts: any, app: MassAppApi) {
 	if (opts.termType == TermTypes.SINGLECELL_CELLTYPE) {
 		Object.assign(config, {
 			//TODO: Fix this logic
-			sample: opts.experimentID || opts.sample || opts.samples?.[0]?.experiments[0]?.experimentID
+			sample: opts.experimentID || opts.sample || opts.samples?.[0]?.experiments[0]?.experimentID,
 			//This should be type, data type, category, etc.
-			// columnName: app.termdbConfig.queries.singleCell.DEgenes.columnName,
-			// categoryName: this.state.config.cluster
+			columnName: app.vocabApi.termdbConfig.queries.singleCell.DEgenes.columnName,
+			//TODO: 'Cluster' is a fallback for development
+			//Should require opts.categoryName in the future
+			categoryName: opts.categoryName || 'Cluster'
 		})
 	}
 

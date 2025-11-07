@@ -4,7 +4,7 @@ import { TermTypes } from '#shared/terms.js'
 
 /*
 Tests:
-    - Default single cell cell type diffAnalysis
+    - Default single cell cell type volcano
  */
 
 /**************
@@ -12,14 +12,15 @@ Tests:
 ***************/
 
 tape('\n', function (test) {
-	test.comment('-***- plots/DiffAnalysis/DifferentialAnalysis -***-')
+	test.comment('-***- plots/volcano/Volcano -***-')
 	test.end()
 })
 
 /******** DO NOT ENABLE IN PROD ********
  * This test for development only. When data available in
- * termdbtest, will update runpp() call and move to integration file.*/
-tape('Default single cell cell type diffAnalysis', function (test) {
+ * termdbtest, will update runpp() call and create an
+ * integration file.*/
+tape('Default single cell cell type volcano', function (test) {
 	test.timeoutAfter(100000)
 
 	const gdc_runpp = helpers.getRunPp('mass', {
@@ -39,8 +40,7 @@ tape('Default single cell cell type diffAnalysis', function (test) {
 		state: {
 			plots: [
 				{
-					chartType: 'differentialAnalysis',
-					childType: 'volcano',
+					chartType: 'volcano',
 					termType: TermTypes.SINGLECELL_CELLTYPE,
 					categoryName: '2',
 					columnName: 'Cluster',
@@ -48,18 +48,18 @@ tape('Default single cell cell type diffAnalysis', function (test) {
 				}
 			]
 		},
-		differentialAnalysis: {
+		volcano: {
 			callbacks: {
 				'postRender.test': runTests
 			}
 		}
 	})
 
-	function runTests(differentialAnalysis: any) {
-		differentialAnalysis.on('postRender.test', null)
-		// console.log('differentialAnalysis.Inner', differentialAnalysis.Inner)
+	function runTests(volcano: any) {
+		volcano.on('postRender.test', null)
+		// console.log('volcano.Inner', volcano.Inner)
 
-		// if (test['_ok']) differentialAnalysis.Inner.app.destroy()
+		// if (test['_ok']) volcano.Inner.app.destroy()
 		test.end()
 	}
 })
