@@ -5,7 +5,6 @@ import { TermTypes } from '#shared/terms.js'
 /*
 Tests:
 	- Default gene expression diffAnalysis
-	- Default single cell cell type diffAnalysis
  */
 
 /*************************
@@ -184,54 +183,6 @@ tape('Default gene expression diffAnalysis', test => {
 		test.true(plotsDiv.volcano.select('.sjpp-volcano-svg'), `Should render volcano plot by default`)
 
 		if (test['_ok']) differentialAnalysis.Inner.app.destroy()
-		test.end()
-	}
-})
-
-/******** DO NOT ENABLE IN PROD ********
- * This test for development only. When data available in
- * termdbtest, will update runpp() call.*/
-tape.only('Default single cell cell type diffAnalysis', function (test) {
-	test.timeoutAfter(100000)
-
-	const gdc_runpp = helpers.getRunPp('mass', {
-		state: {
-			nav: {
-				header_mode: 'hidden'
-			},
-			vocab: {
-				dslabel: 'GDC',
-				genome: 'hg38'
-			}
-		},
-		debug: 1
-	})
-
-	gdc_runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'differentialAnalysis',
-					childType: 'volcano',
-					termType: TermTypes.SINGLECELL_CELLTYPE,
-					categoryName: '2',
-					columnName: 'Cluster',
-					sample: '2c33dcbd-454a-468f-89fc-71fd20b5d30c'
-				}
-			]
-		},
-		differentialAnalysis: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
-
-	function runTests(differentialAnalysis: any) {
-		differentialAnalysis.on('postRender.test', null)
-		// console.log('differentialAnalysis.Inner', differentialAnalysis.Inner)
-
-		// if (test['_ok']) differentialAnalysis.Inner.app.destroy()
 		test.end()
 	}
 })

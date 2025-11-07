@@ -56,7 +56,7 @@ export class VolcanoControlInputs {
 				]
 			},
 			{
-				label: 'Fold change (log)',
+				label: 'Fold change (log₂)',
 				type: 'number',
 				chartType: 'volcano',
 				settingsKey: 'foldChangeCutoff',
@@ -173,23 +173,6 @@ export class VolcanoControlInputs {
 			// 	//TODO: will enable this feature when there is backhand support
 			// 	getDisplayStyle: () => 'none'
 			// }
-			//Not enabling this feature
-			//needs more discussion
-			//Better as a control above the volcano plot?
-			// {
-			// 	label: 'Gene Set Overrepresentation Analysis',
-			// 	type: 'radio',
-			// 	chartType: 'volcano',
-			// 	settingsKey: 'geneORA',
-			//     styles: { display: 'block' },
-			// 	title: 'Toggle to check if certain gene sets are overrepresented among upregulated, downregulated, or both sets of genes',
-			// 	options: [
-			// 		{ label: 'Upregulated', value: 'upregulated' },
-			// 		{ label: 'Downregulated', value: 'downregulated' },
-			// 		{ label: 'Both', value: 'both' }
-			// 	],
-			//     getDisplayStyle: () => (this.app.opts.genome.termdbs ? '' : 'none')
-			// },
 		]
 
 		this.inputs.splice(0, 0, ...geInputs)
