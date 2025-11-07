@@ -1,7 +1,7 @@
 import type { AppApi } from '#rx'
 import type { BoxPlotSettings } from '../../plots/boxplot/BoxPlotTypes'
 import type { CorrVolcanoSettings } from '#plots/corrVolcano/CorrelationVolcanoTypes.ts'
-import type { VolcanoSettings } from '../../plots/volcano/VolcanoTypes.ts'
+import type { ValidatedVolcanoSettings } from '#plots/volcano/settings/Settings.ts'
 import type { GRIN2Settings } from '#plots/grin2/GRIN2Types.ts'
 import type { ChatSettings } from '#plots/chat/chatTypes.ts'
 //import { TermWrapper } from '#types'
@@ -85,7 +85,7 @@ type PlotSettings = {
 	gsea?: any
 	sampleScatter?: any
 	violin?: any
-	volcano?: VolcanoSettings
+	volcano?: ValidatedVolcanoSettings
 }
 
 export type PlotConfig = BasePlotConfig & {
