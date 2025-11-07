@@ -36,16 +36,19 @@ export class TabsRenderer {
 		if (this.state.config.trackLst?.facets) {
 			// one tab for each facet table
 			// quick fix to hardcode showing facet table as first tab. allow customization later
+			const activeTracks = this.state.config.trackLst.activeTracks
 			for (const facet of this.state.config.trackLst.facets) {
-				tabs.push({ label: facet.name || 'Facet Table' })
+				const shown = facet.tracks.some(t => activeTracks.includes(t.name))
+				tabs.push({ label: facet.name || 'Facet Table', active: shown })
 			}
 		}
 
 		if (this.state.config.snvindel) {
+			const shown = this.state.config.snvindel.shown
 			// has snvindel. some logic to decide if show tab for it
 			if (this.state.config.snvindel.details) {
 				// has details for data precomputing, must show tab in order to generate contents
-				tabs.push({ label: 'Variant Values' })
+				tabs.push({ label: 'Variant Values', active: shown })
 
 				if (this.state.config.variantFilter) {
 					// for now, this filter only works with snvindel.details
@@ -55,14 +58,15 @@ export class TabsRenderer {
 				// no computing detail.
 				if (this.state.config.trackLst) {
 					// also there is trackLst. in order *not to show trackLst tab alone*, also show snvindel tab and allow to toggle mds3 tk on/off
-					tabs.push({ label: 'Variants' })
+					tabs.push({ label: 'Variants', active: shown })
 				} else {
 					// do not add tab, to avoid showing a lone snvindel tab
 				}
 			}
 		}
 		if (this.state.config.ld) {
-			tabs.push({ label: 'LD Map' })
+			const shown = this.state.config.ld.tracks.some(t => t.shown)
+			tabs.push({ label: 'LD Map', active: shown })
 		}
 		this.tabs = tabs
 	}
