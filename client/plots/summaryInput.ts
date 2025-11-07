@@ -56,16 +56,19 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 			{
 				type: 'term',
 				configKey: 'term',
+				usecase: { target: 'summaryInput', detail: 'term' },
 				label: controlLabels.term1?.label || 'Primary variable'
 			},
 			{
 				type: 'term',
 				configKey: 'term2',
+				usecase: { target: 'summaryInput', detail: 'term2' },
 				label: controlLabels.term2.label
 			},
 			{
 				type: 'term',
 				configKey: 'term0',
+				usecase: { target: 'summaryInput', detail: 'term0' },
 				label: controlLabels.term0.label
 			}
 		]

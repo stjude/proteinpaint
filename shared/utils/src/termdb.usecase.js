@@ -83,6 +83,13 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 			if (hasAllowedChildTypes(child_types, ['survival'])) uses.add('branch')
 			return uses
 
+		case 'summaryInput':
+			if (usecase.detail === 'term2' || usecase.detail == 'term0') {
+				if (term.type && term.type !== 'survival') uses.add('plot')
+				if (hasAllowedChildTypes(child_types, ['survival'])) uses.add('branch')
+				return uses
+			}
+
 		case 'matrix':
 			if (term.type) uses.add('plot')
 			if (!term.isleaf) uses.add('branch')
