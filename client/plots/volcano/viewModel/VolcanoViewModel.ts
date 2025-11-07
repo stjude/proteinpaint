@@ -189,6 +189,7 @@ export class VolcanoViewModel {
 					{ value: roundValueAuto(d.original_p_value) },
 					{ value: roundValueAuto(d.adjusted_p_value) }
 				]
+				//May reimplement this later if other data types are added
 				// if (this.dataType == 'genes') {
 				row.splice(0, 0, { value: d.gene_name })
 				// }
