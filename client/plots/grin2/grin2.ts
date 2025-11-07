@@ -596,7 +596,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 	}
 
 	private renderResults(result: any) {
-		console.log('Result: ', result)
 		// Display Manhattan plot
 		if (result.pngImg) {
 			const plotData = result
