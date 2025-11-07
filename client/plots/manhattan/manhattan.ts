@@ -41,8 +41,6 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	// Default settings
 	settings = {
 		pngDotRadius: 2,
-		plotWidth: 1000,
-		plotHeight: 400,
 		yAxisX: 70,
 		yAxisY: 40,
 		yAxisSpace: 40,
