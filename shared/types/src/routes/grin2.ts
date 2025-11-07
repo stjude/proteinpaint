@@ -105,7 +105,7 @@ interface grin2PlotData {
 			center: number
 		}
 	>
-	total_genome_length: number // Gives us the full length of the genome so we can easily append x buffer space
+	total_genome_length: number // Gives us the full length of the genome so we can easily append x buffer space when building d3 x-axis
 }
 
 /**

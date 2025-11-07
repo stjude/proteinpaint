@@ -82,8 +82,8 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	//    - Range  = subset of pixel space between yPlot(0) and yPlot(realMax [data.plotData.y_max - data.plotData.png_dot_radius])
 	//               so the axis sits entirely within the real data area
 	const yAxisScale = scaleLinear()
-		.domain([0, data.plotData.y_max - data.plotData.png_dot_radius])
-		.range([yPlot(0), yPlot(data.plotData.y_max - data.plotData.png_dot_radius)])
+		.domain([0, data.plotData.y_max - settings.pngDotRadius])
+		.range([yPlot(0), yPlot(data.plotData.y_max - settings.pngDotRadius)])
 
 	// Axis group
 	const axisG = svg
@@ -194,7 +194,6 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	svg
 		.append('text')
 		.attr('x', settings.yAxisX + settings.yAxisSpace + data.plotData.png_width / 2)
-		// .attr('y', data.plotData.png_height + settings.yAxisY + 20)
 		.attr('y', data.plotData.png_height + settings.yAxisY + settings.xAxisLabelPad)
 		.attr('text-anchor', 'middle')
 		.attr('font-size', `${settings.fontSize + 4}px`)
