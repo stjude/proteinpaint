@@ -25,7 +25,7 @@ import { to_svg } from '#src/client'
  *   @param {number} [settings.legendTextOffset=12] - Distance between dot and text
  *   @param {number} [settings.legendVerticalOffset=4] - Vertical offset for legend items
  *   @param {number} [settings.legendFontSize=12] - Font size for legend text
- *   @param {number} [settings.interactiveDotRadius=3] - Radius of interactive dots
+ *   @param {number} [settings.interactiveDotRadius=2] - Radius of interactive dots
  *   @param {number} [settings.xAxisLabelPad=20] - Amount of padding we give for x-axis title padding
  *   @param {number} [settings.interactiveDotStrokeWidth=1] - Stroke width for interactive dots
  * @param {Object} [app] - Optional app context for dispatching events
