@@ -88,7 +88,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	// Axis group
 	const axisG = svg
 		.append('g')
-		.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
+		.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace - settings.yAxisPad},${settings.yAxisY})`)
 		.style('font-size', `${settings.fontSize + 2}px`)
 
 	axisG.call(

@@ -846,6 +846,7 @@ export function getDefaultSettings(opts) {
 			yAxisY: 40,
 			yAxisSpace: 20,
 			xAxisLabelPad: 20,
+			yAxisPad: 5,
 
 			// Typography
 			fontSize: 12,
