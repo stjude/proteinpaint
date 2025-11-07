@@ -99,13 +99,16 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 			.on('click', () => {
 				const config = structuredClone(this.config)
 				if (!config.term) throw 'config.term is missing'
-				config.chartType = 'summary'
 				if (config.term.term.type == 'survival') {
+					// term1 is surival term, launch survival plot
 					config.chartType = 'survival'
-					// remove q from term2 and term0 so that they use defaultQ
+					// remove q from term2 and term0 so that they use t0_t2_defaultQ
 					// specified in getPlotConfig() of survival plot
 					if (config.term2) config.term2 = { term: config.term2.term }
 					if (config.term0) config.term0 = { term: config.term0.term }
+				} else {
+					// term1 is not survival term, launch summary plot
+					config.chartType = 'summary'
 				}
 				this.app.dispatch({
 					type: 'plot_create',
