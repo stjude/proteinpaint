@@ -847,6 +847,7 @@ export function getDefaultSettings(opts) {
 			xAxisLabelPad: 20,
 			yAxisPad: 5,
 			axisColor: '#545454',
+			showYAxisLine: true,
 
 			// Typography
 			fontSize: 12,

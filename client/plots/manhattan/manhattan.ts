@@ -28,7 +28,8 @@ import { to_svg } from '#src/client'
  *   @param {number} [settings.interactiveDotRadius=2] - Radius of interactive dots
  *   @param {number} [settings.xAxisLabelPad=20] - Amount of padding we give for x-axis title padding
  *   @param {number} [settings.interactiveDotStrokeWidth=1] - Stroke width for interactive dots
- *   @param {string} [settings.axisColor='#545454'] - Color for axis lines and labels
+ *   @param {string} [settings.axisColor='#545454'] - Color for y-axis
+ *   @param {boolean} [settings.showYAxisLine=true] - Whether to show y-axis line
  * @param {Object} [app] - Optional app context for dispatching events
  *
  *
@@ -99,7 +100,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		axis: axisG,
 		color: settings.axisColor,
 		fontsize: settings.fontSize + 2,
-		showline: true
+		showline: settings.showYAxisLine
 	})
 
 	// Add y-axis label
