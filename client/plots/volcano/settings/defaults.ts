@@ -65,7 +65,13 @@ export function validateVolcanoSettings(config: any, opts: any) {
 }
 
 export function getSampleNum(config: any) {
-	return config.samplelst.groups.reduce((sum: number, g: any) => sum + g.values.length, 0)
+	if (config.termType == TermTypes.GENE_EXPRESSION) {
+		return config.samplelst.groups.reduce((sum: number, g: any) => sum + g.values.length, 0)
+	}
+	if (config.termType == TermTypes.SINGLECELL_CELLTYPE) {
+		//TODO: Set max sample cutoff and calculate number of samples
+		return maxSampleCutoff
+	}
 }
 
 function validateGESettings(termType: string, settings: GEVolcanoSettings, sampleNum: number, opts: any) {

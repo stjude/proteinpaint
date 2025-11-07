@@ -69,7 +69,9 @@ export class VolcanoPlotView {
 		this.dom.actionsTip.d.style('overflow', 'hidden')
 		this.volcanoDom.actions.style('margin-left', '20px').style('padding', '5px')
 		this.addActionButton('Confounding factors', [TermTypes.GENE_EXPRESSION], () => this.interactions.confoundersMenu())
-		this.addActionButton('Highlight genes', [TermTypes.GENE_EXPRESSION], () => this.interactions.launchGeneSetEdit())
+		this.addActionButton('Highlight genes', [TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTYPE], () =>
+			this.interactions.launchGeneSetEdit()
+		)
 		this.addActionButton('Statistics', [TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTYPE], () => {
 			this.renderStatsMenu()
 		})
@@ -242,7 +244,7 @@ export class VolcanoPlotView {
 			noRadioBtn: true,
 			noButtonCallback: (i: number) => {
 				//On click, persistently highlight the data point
-				if (this.termType != TermTypes.GENE_EXPRESSION) return
+				// if (this.termType != TermTypes.GENE_EXPRESSION) return
 				const gene = this.viewData.pValueTableData.rows[i][0].value as string
 				if (!gene) return
 				this.interactions.highlightDataPoint(gene)
