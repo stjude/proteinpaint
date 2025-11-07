@@ -596,6 +596,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 	}
 
 	private renderResults(result: any) {
+		console.log('Result: ', result)
 		// Display Manhattan plot
 		if (result.pngImg) {
 			const plotData = result
@@ -843,7 +844,8 @@ export function getDefaultSettings(opts) {
 			// Layout spacing
 			yAxisX: 70,
 			yAxisY: 40,
-			yAxisSpace: 40,
+			yAxisSpace: 20,
+			xAxisLabelPad: 20,
 
 			// Typography
 			fontSize: 12,
@@ -859,7 +861,7 @@ export function getDefaultSettings(opts) {
 
 			// Interactive dots
 			showInteractiveDots: true,
-			interactiveDotRadius: 3,
+			interactiveDotRadius: 2,
 			interactiveDotStrokeWidth: 1,
 
 			// Download options
