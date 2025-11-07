@@ -1,2 +1,1 @@
-Features:
-- GRIN2: Replaced python matplotlib based manhattan plot with rust plotters based implementation. Other relevant changes to client code to suppor the change. Other misc cleanups
+

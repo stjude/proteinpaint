@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - Implemented prototype differential single cell cell type analysis in the DA app. This functionality is also accessible through the SC app (in development) and independently in the Volcano plot.
+- GRIN2: Replaced python matplotlib based manhattan plot with rust plotters based implementation. Other relevant changes to client code to suppor the change. Other misc cleanups
 
 
 ## 2.156.0
