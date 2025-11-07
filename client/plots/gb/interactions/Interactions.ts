@@ -1,4 +1,5 @@
 import type { MassAppApi } from '#mass/types/mass'
+import { getNormalRoot } from '#filter'
 
 export class Interactions {
 	app: MassAppApi
@@ -12,7 +13,7 @@ export class Interactions {
 
 	// using arrow function to bind "this" to the Interactions class
 	// otherwise "this" can refer to the Block class
-	onCoordinateChange = async rglst => {
+	onCoordinateChange = rglst => {
 		this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
@@ -20,7 +21,7 @@ export class Interactions {
 		})
 	}
 
-	onGeneSearch = async (result, blockIsProteinMode) => {
+	onGeneSearch = (result, blockIsProteinMode) => {
 		this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
@@ -31,7 +32,56 @@ export class Interactions {
 		})
 	}
 
-	saveToState = async config => {
+	// copied from "GB.ts", should try to inherit it instead
+	getState(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
+		if (!config) throw `No plot with id='${this.id}' found`
+		return {
+			config,
+			filter: getNormalRoot(appState.termfilter.filter),
+			vocab: appState.vocab
+		}
+	}
+
+	maySaveTrackUpdatesToState = blockInstance => {
+		/* following changes will be saved in state:
+		- when a mds3 subtk is created/updated, its tk.filterObj should be saved to state so it can be recovered from session
+		- a facet track is removed by user via block ui */
+		if (!blockInstance) return
+		// since maySaveTrackUpdatesToState() is used as callback in block.js,
+		// this.state.config will become stale; therefore need to regenerate
+		// live plot state
+		const state = this.getState(this.app.getState())
+		const config = structuredClone(state.config)
+		config.subMds3Tks = []
+		for (const t of blockInstance.tklst) {
+			if (t.type == 'mds3' && t.filterObj) {
+				const mclassHiddenValues = t.legend?.mclass?.hiddenvalues
+				if (!t.subtk) {
+					// "main" track
+					if (mclassHiddenValues) {
+						// track has hidden mclass values, store in config root
+						config.mclassHiddenValues = [...mclassHiddenValues]
+					}
+					// do not add this track to subMds3Tks[], as it would cause an issue of auto-creating unwanted subtk on global filter change
+					continue
+				} else {
+					// sub track
+					const subtk: any = { filterObj: t.filterObj }
+					if (mclassHiddenValues) {
+						// track has hidden mclass values, store in subtk obj
+						subtk.mclassHiddenValues = [...mclassHiddenValues]
+					}
+					config.subMds3Tks.push(subtk)
+					// filter0?
+				}
+			}
+		}
+		if (config.trackLst?.activeTracks) {
+			// active facet tracks are inuse; if user deletes such tracks from block ui, must update state
+			const newLst = config.trackLst.activeTracks.filter(n => blockInstance.tklst.find(i => i.name == n))
+			config.trackLst.activeTracks = newLst
+		}
 		this.app.save({
 			type: 'plot_edit',
 			id: this.id,
@@ -39,7 +89,7 @@ export class Interactions {
 		})
 	}
 
-	launchFacet = async config => {
+	launchFacet = config => {
 		this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
