@@ -54,17 +54,12 @@ struct PointDetail {
 struct InteractiveData {
     points: Vec<PointDetail>,
     chrom_data: HashMap<String, ChromInfo>,
-    y_axis_scaled: bool,
-    scale_factor: f64,
     total_genome_length: i64,
     x_buffer: i64,
     y_min: f64,
     y_max: f64,
-    plot_width: u64,
-    plot_height: u64,
     png_width: u64,  // high-DPR width in pixels
     png_height: u64, // high0DPR height in pixels
-    device_pixel_ratio: f64,
     png_dot_radius: u64,
 }
 
@@ -310,15 +305,12 @@ fn plot_grin2_manhattan(
     // 3. Y-axis scaling
     // ------------------------------------------------
     let y_padding = png_dot_radius as f64;
-    let mut y_axis_scaled = false;
-    let mut scale_factor_y = 1.0;
     let y_min = 0.0 - y_padding;
     let y_max = if !ys.is_empty() {
         let max_y = ys.iter().cloned().fold(f64::MIN, f64::max);
         if max_y > 40.0 {
             let target = 40.0;
-            scale_factor_y = target / max_y;
-            y_axis_scaled = true;
+            let scale_factor_y = target / max_y;
 
             for y in ys.iter_mut() {
                 *y *= scale_factor_y;
@@ -476,17 +468,12 @@ fn plot_grin2_manhattan(
     let interactive_data = InteractiveData {
         points: point_details,
         chrom_data,
-        y_axis_scaled,
-        scale_factor: scale_factor_y,
         total_genome_length,
         x_buffer,
         y_min,
         y_max,
-        plot_width,
-        plot_height,
         png_width: w as u64,
         png_height: h as u64,
-        device_pixel_ratio,
         png_dot_radius,
     };
     Ok((png_data, interactive_data))

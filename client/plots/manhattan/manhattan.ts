@@ -26,6 +26,7 @@ import { to_svg } from '#src/client'
  *   @param {number} [settings.legendVerticalOffset=4] - Vertical offset for legend items
  *   @param {number} [settings.legendFontSize=12] - Font size for legend text
  *   @param {number} [settings.interactiveDotRadius=3] - Radius of interactive dots
+ *   @param {number} [settings.xAxisLabelPad=20] - Amount of padding we give for x-axis title padding
  *   @param {number} [settings.interactiveDotStrokeWidth=1] - Stroke width for interactive dots
  * @param {Object} [app] - Optional app context for dispatching events
  *
@@ -38,23 +39,8 @@ import { to_svg } from '#src/client'
  */
 
 export function plotManhattan(div: any, data: any, settings: any, app?: any) {
-	// Default settings
+	// Get our settings
 	settings = {
-		pngDotRadius: 2,
-		yAxisX: 70,
-		yAxisY: 40,
-		yAxisSpace: 40,
-		fontSize: 12,
-		showLegend: true,
-		legendItemWidth: 80,
-		legendDotRadius: 3,
-		legendRightOffset: 15,
-		legendTextOffset: 12,
-		legendVerticalOffset: 4,
-		legendFontSize: 12,
-		showInteractiveDots: true,
-		showDownload: true,
-		interactiveDotStrokeWidth: 1,
 		...settings
 	}
 
@@ -146,7 +132,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 			.append('circle')
 			.attr('cx', d => d.pixel_x)
 			.attr('cy', d => d.pixel_y)
-			.attr('r', data.plotData.png_dot_radius * devicePixelRatio) // We need to scale with devicePixelRatio otherwise we just have a tine dot on high-DPI screens perfectly aligned with the PNG dots
+			.attr('r', settings.interactiveDotRadius * devicePixelRatio) // We need to scale with devicePixelRatio otherwise we just have a tine dot on high-DPI screens perfectly aligned with the PNG dots
 			.attr('fill-opacity', 0)
 			.attr('stroke', 'black')
 			.attr('stroke-width', settings.interactiveDotStrokeWidth)
@@ -182,7 +168,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 	// Add chromosome labels
 	if (data.plotData.chrom_data) {
-		const chromLabelY = data.plotData.png_height + settings.yAxisY + 20
+		const chromLabelY = data.plotData.png_height + settings.yAxisY
 
 		Object.entries(data.plotData.chrom_data).forEach(([chrom, chromData]: [string, any]) => {
 			const chromLabel = chrom.replace('chr', '')
@@ -208,7 +194,8 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	svg
 		.append('text')
 		.attr('x', settings.yAxisX + settings.yAxisSpace + data.plotData.png_width / 2)
-		.attr('y', data.plotData.png_height + settings.yAxisY + 45)
+		// .attr('y', data.plotData.png_height + settings.yAxisY + 20)
+		.attr('y', data.plotData.png_height + settings.yAxisY + settings.xAxisLabelPad)
 		.attr('text-anchor', 'middle')
 		.attr('font-size', `${settings.fontSize + 4}px`)
 		.attr('fill', 'black')

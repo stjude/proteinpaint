@@ -94,11 +94,10 @@ interface grin2PlotData {
 		start: number // Starting position of this chromosome in base pairs/genomic coordinates. Used in hover table
 		end: number // Ending position of this chromosome in base pairs/genomic coordinates
 		pos: number // Mid-point of this chromosome in base pairs/genomic coordinates
-		q_value: number // -log10(q-value)
 		nsubj: number // Number of subjects with this mutation. Used for hover table subject count
 	}>
 	chrom_data: Record<
-		// Data for chromosome plot labels on x-axis
+		// Data for chromosome labels and positioning on the x-axis
 		string,
 		{
 			start: number
@@ -106,6 +105,7 @@ interface grin2PlotData {
 			center: number
 		}
 	>
+	total_genome_length: number // Gives us the full length of the genome so we can easily append x buffer space
 }
 
 /**
