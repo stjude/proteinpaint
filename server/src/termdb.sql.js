@@ -91,6 +91,8 @@ return an array of sample names passing through the filter
 
 // we need to pass a type and count by type to differentiate root samples from samples
 export async function get_samplecount(q, ds) {
+	authApi.mayAdjustFilter(q, ds, []) //we don't include terms to ensure that no additional filter is applied and we count all the samples
+
 	/*
 must have q.filter (somehow it can either be str or {})
 as this is for showing number of samples pass a filter in header
