@@ -81,7 +81,9 @@ function validateGESettings(termType: string, settings: GEVolcanoSettings, sampl
 	if (!opts.overrides && largeNum) {
 		settings.method = 'wilcoxon'
 	} else if (largeNum && settings.method != 'wilcoxon') {
-		throw `${settings.method} is not supported for ${sampleNum} samples when termtype = ${termType}. Please use Wilcoxon.`
+		throw new Error(
+			`${settings.method} is not supported for ${sampleNum} samples when termtype = ${termType}. Please use Wilcoxon.`
+		)
 	}
 }
 

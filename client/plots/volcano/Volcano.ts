@@ -174,7 +174,7 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 					await fillTermWrapper(tw, app.vocabApi)
 				}
 			} catch (e: any) {
-				console.error(`${e}`)
+				console.error(e.message || e)
 				throw new Error(`Volcano getPlotConfig() failed to fill confounder term wrappers: ${e}`)
 			}
 		}
