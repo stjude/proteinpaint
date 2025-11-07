@@ -836,8 +836,8 @@ export function getDefaultSettings(opts) {
 	const defaults = {
 		manhattan: {
 			// Core plot dimensions
-			plotWidth: 500,
-			plotHeight: 200,
+			plotWidth: 1000,
+			plotHeight: 400,
 			pngDotRadius: 2,
 
 			// Layout spacing
