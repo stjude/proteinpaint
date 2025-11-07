@@ -61,11 +61,11 @@ export class View {
 					dslabel: this.state.vocab.dslabel,
 					onClose: () => {
 						// on closing subtk, the filterObj corresponding to the subtk will be "removed" from subMds3Tks[], by regenerating the array
-						this.maySaveTrackUpdatesToState()
+						this.interactions.maySaveTrackUpdatesToState(this.blockInstance)
 					},
 					callbackOnRender: () => {
 						// will allow legend filtering changes to be saved to state
-						this.maySaveTrackUpdatesToState()
+						this.interactions.maySaveTrackUpdatesToState(this.blockInstance)
 					},
 					// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
 					newChartHolder: this.opts.plotDiv
@@ -98,11 +98,11 @@ export class View {
 							dslabel: this.state.vocab.dslabel,
 							onClose: () => {
 								// on closing subtk, the filterObj corresponding to the subtk will be "removed" from subMds3Tks[], by regenerating the array
-								this.maySaveTrackUpdatesToState()
+								this.interactions.maySaveTrackUpdatesToState(this.blockInstance)
 							},
-							callbackOnRender: async () => {
+							callbackOnRender: () => {
 								// will allow legend filtering changes to be saved to state
-								this.maySaveTrackUpdatesToState()
+								this.interactions.maySaveTrackUpdatesToState(this.blockInstance)
 							},
 							// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
 							newChartHolder: this.opts.plotDiv
@@ -212,44 +212,6 @@ export class View {
 		}
 	}
 
-	maySaveTrackUpdatesToState = () => {
-		/* following changes will be saved in state:
-		- when a mds3 subtk is created/updated, its tk.filterObj should be saved to state so it can be recovered from session
-		- a facet track is removed by user via block ui */
-		if (!this.blockInstance) return
-		const config = structuredClone(this.state.config)
-		config.subMds3Tks = []
-		for (const t of this.blockInstance.tklst) {
-			if (t.type == 'mds3' && t.filterObj) {
-				const mclassHiddenValues = t.legend?.mclass?.hiddenvalues
-				if (!t.subtk) {
-					// "main" track
-					if (mclassHiddenValues) {
-						// track has hidden mclass values, store in config root
-						config.mclassHiddenValues = [...mclassHiddenValues]
-					}
-					// do not add this track to subMds3Tks[], as it would cause an issue of auto-creating unwanted subtk on global filter change
-					continue
-				} else {
-					// sub track
-					const subtk: any = { filterObj: t.filterObj }
-					if (mclassHiddenValues) {
-						// track has hidden mclass values, store in subtk obj
-						subtk.mclassHiddenValues = [...mclassHiddenValues]
-					}
-					config.subMds3Tks.push(subtk)
-					// filter0?
-				}
-			}
-		}
-		if (config.trackLst?.activeTracks) {
-			// active facet tracks are inuse; if user deletes such tracks from block ui, must update state
-			const newLst = config.trackLst.activeTracks.filter(n => this.blockInstance.tklst.find(i => i.name == n))
-			config.trackLst.activeTracks = newLst
-		}
-		this.interactions.saveToState(config)
-	}
-
 	/* tricky logic */
 	async launchBlockWithTracks(tklst) {
 		if (this.blockInstance) {
@@ -314,7 +276,7 @@ export class View {
 			tklst,
 			debugmode: this.opts.debug,
 			onAddRemoveTk: () => {
-				this.maySaveTrackUpdatesToState()
+				this.interactions.maySaveTrackUpdatesToState(this.blockInstance)
 			}
 		}
 
