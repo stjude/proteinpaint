@@ -106,8 +106,6 @@ interface grin2PlotData {
 			center: number
 		}
 	>
-	y_axis_scaled: boolean // If y-axis is scaled (has -log10(q-value) > 40
-	scale_factor: number // What the scaling factor is
 }
 
 /**
