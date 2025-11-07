@@ -1,6 +1,6 @@
 import { scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
-import { Menu, table2col, icons } from '#dom'
+import { Menu, table2col, icons, axisstyle } from '#dom'
 import { to_svg } from '#src/client'
 
 /**
@@ -28,6 +28,7 @@ import { to_svg } from '#src/client'
  *   @param {number} [settings.interactiveDotRadius=2] - Radius of interactive dots
  *   @param {number} [settings.xAxisLabelPad=20] - Amount of padding we give for x-axis title padding
  *   @param {number} [settings.interactiveDotStrokeWidth=1] - Stroke width for interactive dots
+ *   @param {string} [settings.axisColor='#545454'] - Color for axis lines and labels
  * @param {Object} [app] - Optional app context for dispatching events
  *
  *
@@ -89,11 +90,17 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	const axisG = svg
 		.append('g')
 		.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace - settings.yAxisPad},${settings.yAxisY})`)
-		.style('font-size', `${settings.fontSize + 2}px`)
 
 	axisG.call(
 		d3axis.axisLeft(yAxisScale).tickSizeOuter(0) // removes top/bottom cap lines for clean look
 	)
+
+	axisstyle({
+		axis: axisG,
+		color: settings.axisColor,
+		fontsize: settings.fontSize + 2,
+		showline: true
+	})
 
 	// Add y-axis label
 	svg
