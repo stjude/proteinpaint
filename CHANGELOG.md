@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.157.0
 
 Features:
 - Implemented prototype differential single cell cell type analysis in the DA app. This functionality is also accessible through the SC app (in development) and independently in the Volcano plot.
