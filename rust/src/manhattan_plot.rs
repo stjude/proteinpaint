@@ -47,7 +47,6 @@ struct PointDetail {
     nsubj: Option<i64>,
     pixel_x: f64,
     pixel_y: f64,
-    idx: usize,
 }
 
 #[derive(Serialize)]
@@ -120,7 +119,7 @@ fn cumulative_chrom(
 fn grin2_file_read(
     grin2_file: &str,
     chrom_data: &HashMap<String, ChromInfo>,
-) -> Result<(Vec<u64>, Vec<f64>, Vec<String>, Vec<PointDetail>), Box<dyn Error>> {
+) -> Result<(Vec<u64>, Vec<f64>, Vec<String>, Vec<PointDetail>, Vec<usize>), Box<dyn Error>> {
     // Default colours
     let mut colors: HashMap<String, String> = HashMap::new();
     colors.insert("gain".into(), "#FF4444".into());
@@ -133,6 +132,7 @@ fn grin2_file_read(
     let mut ys = Vec::new();
     let mut colors_vec = Vec::new();
     let mut point_details = Vec::new();
+    let mut sig_indices: Vec<usize> = Vec::new();
 
     let grin2_file = File::open(grin2_file).expect("Failed to open grin2_result_file");
     let mut reader = BufReader::new(grin2_file);
@@ -246,14 +246,14 @@ fn grin2_file_read(
                     nsubj: n_subj_count,
                     pixel_x: 0.0,
                     pixel_y: 0.0,
-                    idx: mut_num,
                 });
+                sig_indices.push(mut_num);
             };
             mut_num += 1;
         }
     }
 
-    Ok((xs, ys, colors_vec, point_details))
+    Ok((xs, ys, colors_vec, point_details, sig_indices))
 }
 
 // Function to create the GRIN2 Manhattan plot
@@ -290,12 +290,14 @@ fn plot_grin2_manhattan(
     let mut ys = Vec::new();
     let mut colors_vec = Vec::new();
     let mut point_details = Vec::new();
+    let mut sig_indices = Vec::new();
 
-    if let Ok((x, y, c, pd)) = grin2_file_read(&grin2_result_file, &chrom_data) {
+    if let Ok((x, y, c, pd, si)) = grin2_file_read(&grin2_result_file, &chrom_data) {
         xs = x;
         ys = y;
         colors_vec = c;
         point_details = pd;
+        sig_indices = si;
     }
 
     // ------------------------------------------------
@@ -398,8 +400,8 @@ fn plot_grin2_manhattan(
             }
         };
 
-        for p in point_details.iter_mut() {
-            let (px, py) = pixel_positions[p.idx];
+        for (i, p) in point_details.iter_mut().enumerate() {
+            let (px, py) = pixel_positions[*&sig_indices[i]];
             p.pixel_x = px;
             p.pixel_y = py;
         }
