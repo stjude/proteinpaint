@@ -1488,6 +1488,7 @@ keep this setting here for reason of:
 	}
 	*/
 	q?: any
+	/** mclass override (color, label etc) */
 	mclass?: Mclass
 	lollipop?: any
 	hasAncestry?: boolean

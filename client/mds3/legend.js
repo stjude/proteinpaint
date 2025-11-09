@@ -558,7 +558,7 @@ function update_mclass(tk) {
 		printCategory({
 			holder: tk.legend.mclass.holder,
 			key: c.k,
-			label,
+			label: tk.mds.termdbConfig?.mclass?.[c.k]?.label || label,
 			color,
 			count: c.count,
 			click: () => {
