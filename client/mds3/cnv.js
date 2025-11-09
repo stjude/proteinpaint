@@ -1,5 +1,5 @@
 import { scaleLinear } from 'd3-scale'
-import { mclass, mclasscnvgain, mclasscnvloss } from '#shared/common.js'
+import { mclass } from '#shared/common.js'
 import { table_cnv, itemtable_oneItem } from './itemtable'
 import { axisRight } from 'd3-axis'
 import { table2col, axisstyle } from '#dom'

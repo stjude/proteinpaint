@@ -560,12 +560,13 @@ export function table_cnv(arg, table) {
 
 export function cnv2str(m, tk) {
 	const cs = {}
-	// TODO need queries.cnv.type=cat/lr/cn
+	// TODO need queries.cnv.type=categorical/logratio/integer copy number
 	// with type, will be able to make better indication
 	if (Number.isFinite(m.value)) {
 		cs.value = `<span style="background:${tk.cnv.colorScale(m.value)}">&nbsp;&nbsp;</span> ${m.value}`
 	} else {
-		cs.value = `<span style="background:${mclass[m.class].color}">&nbsp;&nbsp;</span> ${mclass[m.class].label}`
+		cs.value = `<span style="background:${mclass[m.class].color}">&nbsp;&nbsp;</span> 
+			${tk.mds.termdbConfig?.mclass?.[m.class]?.label || mclass[m.class].label}`
 	}
 	cs.pos = `${m.chr}:${m.start}-${m.stop} <span style="font-size:.8em">${bplen(m.stop - m.start)}</span>`
 	return cs

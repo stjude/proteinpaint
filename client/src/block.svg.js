@@ -132,6 +132,14 @@ function mclassorigin(block, height) {
 
 	for (const [cls, count] of mclass2show) {
 		const { color, label } = common.mds3tkMclass(cls)
+
+		// a mds3 ds may provide mclass override, which is accessible from the mds3 tk
+		let label2 = label
+		const tk = block.tklst.find(i => i.type == 'mds3')
+		if (tk) {
+			label2 = tk.mds?.termdbConfig?.mclass?.[cls]?.label || label
+		}
+
 		const row = g.append('g').attr('transform', 'translate(0,' + h + ')')
 		row
 			.append('circle')
@@ -141,7 +149,7 @@ function mclassorigin(block, height) {
 			.attr('fill', color)
 		row
 			.append('text')
-			.text(`${label}, n=${count}`)
+			.text(`${label2}, n=${count}`)
 			.attr('x', rowh + 10)
 			.attr('y', rowh / 2)
 			.attr('dominant-baseline', 'central')
