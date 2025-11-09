@@ -466,13 +466,9 @@ export default function setViolinRenderer(self) {
 							[0, -20],
 							[settings.svgw, 20]
 						])
-						.on('end', async event => {
-							const selection = event.selection
-
-							if (!selection) return
-
-							self.displayBrushMenu(t1, t2, self, plot, selection, svgData.axisScale, isH)
-
+						.on('end', event => {
+							if (!event.selection) return
+							self.displayBrushMenu(t1, t2, self, plot, event, svgData.axisScale, isH)
 							document.body.addEventListener('pointerdown', onClickOut, true)
 						})
 				: brushY()
@@ -480,13 +476,9 @@ export default function setViolinRenderer(self) {
 							[-20, 0],
 							[20, settings.svgw]
 						])
-						.on('end', async event => {
-							const selection = event.selection
-
-							if (!selection) return
-
-							self.displayBrushMenu(t1, t2, self, plot, selection, svgData.axisScale, isH)
-
+						.on('end', event => {
+							if (!event.selection) return
+							self.displayBrushMenu(t1, t2, self, plot, event, svgData.axisScale, isH)
 							document.body.addEventListener('pointerdown', onClickOut, true)
 						})
 

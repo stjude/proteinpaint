@@ -70,7 +70,8 @@ export function setInteractivity(self) {
 		self.displayMenu(event, options, plot)
 	}
 
-	self.displayBrushMenu = function (t1, t2, self, plot, selection, scale, isH) {
+	self.displayBrushMenu = function (t1, t2, self, plot, event, scale, isH) {
+		const selection = event.selection
 		const [start, end] = isH
 			? [scale.invert(selection[0]), scale.invert(selection[1])]
 			: [scale.invert(selection[1]), scale.invert(selection[0])]
@@ -87,14 +88,14 @@ export function setInteractivity(self) {
 			options.push({
 				label: `List samples`,
 				testid: 'sjpp-violinBrushOpt-list',
-				callback: async () => self.callListSamples(event, t1, t2, plot, start, end)
+				callback: async () => self.callListSamples(event.sourceEvent, t1, t2, plot, start, end)
 			})
 		}
-		self.displayMenu(event, options, plot, start, end)
+		self.displayMenu(event.sourceEvent, options, plot, start, end)
 	}
 
 	self.displayMenu = function (event, options, plot, start, end) {
-		const tip = self.dom.clicktip.clear().showunder(event.target)
+		const tip = self.dom.clicktip.clear().show(event.clientX, event.clientY)
 
 		const isBrush = start != null && end != null
 
