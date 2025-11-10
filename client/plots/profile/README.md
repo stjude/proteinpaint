@@ -1,8 +1,48 @@
-## Technical Architecture
+
+## Introduction
 
 The PrOFILE dashboard provides several interactive visualizations to explore and analyze data from participating hospitals. These plots are configured in[`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts) and are available for both "Full" and "Abbreviated" PrOFILE versions. The Full Version is a “look within” – an institutional journey meant for institutions that want to define a local improvement strategy. The Abbreviated Version is a “look across” institutions; it is a multisite, collaborative journey that illustrates the PHO resource landscape for a subnational, national, or regional group of facilities.
 
  The plots within the PrOFILE dashboard inherit from the base [`profilePlot`]((../profilePlot.js)) that encapsulates common functionalities such as the data fetching and the creation of the chart filters. Each specific plot type (e.g., `profilePolar`, `profileBarchart`) inherits from this base component extending its logic to render their unique visualization. This structure promotes code reuse and consistency across the different plots. These plots collectively provide a comprehensive toolkit for users to analyze PrOFILE data from a high-level summary down to individual data points.
+
+Each plot in the PrOFILE dashboard includes a set of filters implemented by the `profilePlot` class. These filters allow users to refine the data displayed in the visualizations based on key attributes of participating hospitals or survey responses.
+
+### How Filters Are Implemented
+
+- Filters are defined in the plot configuration (see `filterTWs` in the code).
+- The `profilePlot` class uses these filter term wrappers to build dropdowns and other input controls for the user interface.
+- Filter options are dynamically populated based on the current dataset and user role.
+
+### Typical Filters Added to Each Plot
+
+The following filters are commonly available across all profile plots:
+
+- **Region:** Selects the WHO region of the facility.
+- **Country:** Filters by country.
+- **Income Group:** Filters by World Bank income classification.
+- **Facility Type:** Filters by the type of healthcare facility.
+- **Teaching Status:** Filters by whether the facility is a teaching hospital.
+- **Referral Status:** Filters by whether the facility is a referral center.
+- **Funding Source:** Filters by the primary funding source.
+- **Hospital Volume:** Filters by the annual number of new diagnoses.
+- **Year of Implementation:** Filters by the year the PrOFILE was implemented.
+- **Sites:** Allows selection of one or more specific sites (for users with access).
+
+### How Filters Work
+
+- When a user selects a filter value, the plot settings are updated and the data is re-fetched to reflect the new filter.
+- Filters are role-aware: admins see all sites, site-level users see only their assigned sites, and public users see only aggregated data.
+- Filter controls are rendered in the plot’s UI, and their state is managed by the `profilePlot` class.
+
+### Code Reference
+
+- The main logic for adding and managing filters is in the `setControls` method of `profilePlot`.
+- Filter term wrappers (`filterTWs`) are loaded and populated in the configuration setup (`loadFilterTerms`).
+- Actual filter values are stored in the plot’s `settings` object and used to query the backend for filtered data.
+
+---
+
+Profile filters in `profilePlot` provide a flexible, role-aware way for users to slice and analyze PrOFILE data by key hospital and survey attributes. They are implemented as dynamic UI controls, populated from the dataset, and used to fetch and display filtered results in each plot.
 
 ### Data Access and Filtering
 
