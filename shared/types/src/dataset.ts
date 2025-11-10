@@ -1452,6 +1452,9 @@ keep this setting here for reason of:
 		scrnaExperimentId?: UrlTemplateBase
 	}
 
+	/** ds-supplied async callback to build dictionary. sets termdb.q{}. no return */
+	buildDictionary?: () => null
+
 	termtypeByCohort?: any // FIXME see below
 	/** TODO not declared due to tsc err
 	ds-defined or dynamically created. the array has an extra "nested" property
