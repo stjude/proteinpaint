@@ -306,10 +306,13 @@ export async function validate_termdb(ds) {
 	tdb.sampleTypes = {}
 
 	if (tdb.q) {
-	} else if (tdb?.dictionary?.gdcapi) {
+	} else if (tdb.buildDictionary) {
+		if (typeof tdb.buildDictionary != 'function') throw 'termdb.buildDictionary() is not function'
+		await tdb.buildDictionary()
+	} else if (tdb.dictionary?.gdcapi) {
 		await gdcBuildDictionary(ds)
 		// ds.cohort.termdb.q={} created
-	} else if (tdb?.dictionary?.dbFile) {
+	} else if (tdb.dictionary?.dbFile) {
 		ds.cohort.db = { file: tdb.dictionary.dbFile }
 		delete tdb.dictionary.dbFile
 		server_init_db_queries(ds)
