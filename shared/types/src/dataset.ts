@@ -1452,8 +1452,12 @@ keep this setting here for reason of:
 		scrnaExperimentId?: UrlTemplateBase
 	}
 
-	/** ds-supplied async callback to build dictionary. sets termdb.q{}. no return */
-	buildDictionary?: () => null
+	/** ds-supplied async callback to build dictionary
+	argument: dataset object
+	sets termdb.q{}
+	no return
+	*/
+	buildDictionary?: (ds: any) => null
 
 	termtypeByCohort?: any // FIXME see below
 	/** TODO not declared due to tsc err
