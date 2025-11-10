@@ -596,6 +596,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 	}
 
 	private renderResults(result: any) {
+		console.log('this: ', this)
 		// Display Manhattan plot
 		if (result.pngImg) {
 			const plotData = result
@@ -648,14 +649,16 @@ class GRIN2 extends PlotBase implements RxComponent {
 			let lastTouchedGene: string | null = null
 
 			// Define lesion type colors and q-value threshold
-			const lesionTypeColors = {
-				mutation: '#44AA44', // green
-				loss: '#4444FF', // blue
-				gain: '#FF4444', // red
-				fusion: '#FFA500', // orange
-				sv: '#9932CC' // purple
-			}
-			const qValueThreshold = 0.05
+			// const lesionTypeColors = {
+			// 	mutation: '#44AA44', // green
+			// 	loss: '#4444FF', // blue
+			// 	gain: '#FF4444', // red
+			// 	fusion: '#FFA500', // orange
+			// 	sv: '#9932CC' // purple
+			// }
+			const lesionTypeColors = this.state.config.settings.manhattan.lesionTypeColors
+			// const qValueThreshold = 0.05
+			const qValueThreshold = this.state.config.settings.manhattan.qValueThreshold
 
 			// Find column indices for q-values
 			const columns = result.topGeneTable.columns
@@ -924,7 +927,19 @@ export function getDefaultSettings(opts) {
 			showDownload: true,
 
 			// Max genes to show in table
-			maxGenesToShow: 500
+			maxGenesToShow: 500,
+
+			// Q-value threshold for significance indicators in the table
+			qValueThreshold: 0.05,
+
+			// Colors for lesion types (currently used for table significance indicators. Long term will also be used for the rust code colors)
+			lesionTypeColors: {
+				mutation: '#44AA44', // green
+				loss: '#4444FF', // blue
+				gain: '#FF4444', // red
+				fusion: '#FFA500', // orange
+				sv: '#9932CC' // purple
+			}
 		}
 	}
 
