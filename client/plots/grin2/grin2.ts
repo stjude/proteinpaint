@@ -627,7 +627,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.text('Matrix (0 genes selected)')
 				.property('disabled', true)
 				.on('click', () => {
-					matrixBtn.property('disabled', true) // matrix is expensive. disable to prevent repeated clicking
+					matrixBtn.property('disabled', true)
 					this.createMatrixFromGenes(selectedGenes)
 				})
 
@@ -642,32 +642,89 @@ class GRIN2 extends PlotBase implements RxComponent {
 						createLollipopFromGene(lastTouchedGene, this.app)
 					}
 				})
+
 			const tableDiv = tableContainer.append('div')
 			const selectedGenes: string[] = []
 			let lastTouchedGene: string | null = null
 
+			// Define lesion type colors and q-value threshold
+			const lesionTypeColors = {
+				mutation: '#4CAF50', // green
+				loss: '#2196F3', // blue
+				gain: '#F44336', // red
+				fusion: '#FF9800', // orange
+				sv: '#9C27B0' // purple
+			}
+			const qValueThreshold = 0.05
+
+			// Find column indices for q-values
+			const columns = result.topGeneTable.columns
+			const qValueColumns = {
+				mutation: columns.findIndex(col => col.label === 'Q-value (Mutation)' || col.label === 'Q-value (SNV/INDEL)'),
+				loss: columns.findIndex(col => col.label === 'Q-value (Copy Loss)' || col.label === 'Q-value (Loss)'),
+				gain: columns.findIndex(col => col.label === 'Q-value (Copy Gain)' || col.label === 'Q-value (Gain)'),
+				fusion: columns.findIndex(
+					col => col.label === 'Q-value (Fusion)' || col.label === 'Q-value (RNA Fusion Events)'
+				),
+				sv: columns.findIndex(col => col.label === 'Q-value (SV)' || col.label === 'Q-value (Structural Variant)')
+			}
+
+			// Add significance column to the beginning
+			const modifiedColumns = [
+				{ label: '', width: '50px' }, // New column for significance indicators
+				...result.topGeneTable.columns
+			]
+
+			// Process rows to add significance indicators in new column
+			const processedRows = result.topGeneTable.rows.map(row => {
+				const significantTypes: string[] = []
+
+				// Check each lesion type for significance
+				for (const [type, colIndex] of Object.entries(qValueColumns)) {
+					if (colIndex !== -1) {
+						const qValue = row[colIndex]?.value
+						// Handle both numeric values and '1' as non-significant
+						if (qValue !== undefined && qValue !== 1 && qValue < qValueThreshold) {
+							significantTypes.push(type)
+						}
+					}
+				}
+
+				// Create HTML with colored circles
+				const circles =
+					significantTypes.length > 0
+						? significantTypes
+								.map(
+									type =>
+										`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${lesionTypeColors[type]};margin-right:3px;"></span>`
+								)
+								.join('')
+						: ''
+
+				// Add significance column at the beginning
+				return [{ value: '', html: circles }, ...row]
+			})
+
 			renderTable({
-				columns: result.topGeneTable.columns,
-				rows: result.topGeneTable.rows,
+				columns: modifiedColumns,
+				rows: processedRows,
 				div: tableDiv,
 				maxHeight: '400px',
 				maxWidth: '100%',
 				dataTestId: 'grin2-top-genes-table',
 				noButtonCallback: (rowIndex, checkboxNode) => {
-					// Get the gene name from the first column of the selected row
+					// Get the gene name from the second column now (index 1) since we added a column
 					const geneName = result.topGeneTable.rows[rowIndex][0]?.value
 
 					if (checkboxNode.checked) {
 						selectedGenes.push(geneName)
-						lastTouchedGene = geneName // When checking, use the gene just checked
+						lastTouchedGene = geneName
 					} else {
-						// Remove gene from array
 						selectedGenes.splice(selectedGenes.indexOf(geneName), 1)
-						// When unchecking, use the last gene still in the array
 						lastTouchedGene = selectedGenes.length > 0 ? selectedGenes[selectedGenes.length - 1] : null
 					}
 
-					// Update lollipop button - only enable if at least one gene is selected
+					// Update lollipop button
 					if (selectedGenes.length > 0) {
 						lollipopBtn.text(`Lollipop (${lastTouchedGene})`)
 						lollipopBtn.property('disabled', false)
@@ -676,7 +733,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 						lollipopBtn.property('disabled', true)
 					}
 
-					// Update matrix button text after selection changes
 					matrixBtn.text(`Matrix (${selectedGenes.length} genes selected)`).property('disabled', !selectedGenes.length)
 				},
 				selectAll: false,
