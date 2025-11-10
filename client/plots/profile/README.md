@@ -1,9 +1,9 @@
 
 ## Introduction
 
-The PrOFILE dashboard provides several interactive visualizations to explore and analyze data from participating hospitals. These plots are configured in[`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts) and are available for both "Full" and "Abbreviated" PrOFILE versions. The Full Version is a “look within” – an institutional journey meant for institutions that want to define a local improvement strategy. The Abbreviated Version is a “look across” institutions; it is a multisite, collaborative journey that illustrates the PHO resource landscape for a subnational, national, or regional group of facilities.
+The PrOFILE dashboard provides several interactive visualizations to explore and analyze data from participating hospitals. These plots are configured in[`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts) and are available for both "Full" and "Abbreviated" PrOFILE versions. The Full Version is a “look within”, an institutional journey meant for institutions that want to define a local improvement strategy. The Abbreviated Version is a “look across” institutions; it is a multisite, collaborative journey that illustrates the PHO resource landscape for a subnational, national, or regional group of facilities.
 
- The plots within the PrOFILE dashboard inherit from the base [`profilePlot`]((../profilePlot.js)) that encapsulates common functionalities such as the data fetching and the creation of the chart filters. Each specific plot type (e.g., `profilePolar`, `profileBarchart`) inherits from this base component extending its logic to render their unique visualization. This structure promotes code reuse and consistency across the different plots. These plots collectively provide a comprehensive toolkit for users to analyze PrOFILE data from a high-level summary down to individual data points.
+ The plots within the PrOFILE dashboard inherit from the base [`profilePlot`]((../profilePlot.js)) that encapsulates common functionalities such as the data fetching and the creation of the chart filters. Each specific plot type (e.g., `profilePolar`, `profileBarchart`) inherits from this base component extending its logic to render their unique visualization. This structure promotes code reuse and consistency across the different plots. 
 
 Each plot in the PrOFILE dashboard includes a set of filters implemented by the `profilePlot` class. These filters allow users to refine the data displayed in the visualizations based on key attributes of participating hospitals or survey responses.
 
@@ -33,9 +33,6 @@ The following filters are commonly available across all profile plots:
 - When a user selects a filter value, the plot settings are updated and the data is re-fetched to reflect the new filter.
 - Filters are role-aware: admins see all sites, site-level users see only their assigned sites, and public users see only aggregated data.
 - Filter controls are rendered in the plot’s UI, and their state is managed by the `profilePlot` class.
-
-### Code Reference
-
 - The main logic for adding and managing filters is in the `setControls` method of `profilePlot`.
 - Filter term wrappers (`filterTWs`) are loaded and populated in the configuration setup (`loadFilterTerms`).
 - Actual filter values are stored in the plot’s `settings` object and used to query the backend for filtered data.
@@ -105,6 +102,9 @@ This chart compares two different metrics for the same respondent group for each
 **Plot Types:**
 	- Yes/No Barchart: For questions with "Yes", "No", or "Do Not Know" as possible answers, this chart shows the distribution of responses.
 	- Likert Scale: For questions based on a Likert scale (e.g., 'Almost Never' to 'Almost Always'), this chart displays the frequency of each response, often colored by module to maintain consistency with other plots.
+
+## Conclusion
+These plots collectively provide a comprehensive toolkit for users to analyze PrOFILE data from a high-level summary down to individual data points. The PrOFILE dashboard is designed to empower institutions and collaborative groups to explore, benchmark, and improve pediatric oncology care using interactive, data-driven visualizations. With flexible filters, site-based access, and a variety of plot types, users can gain insights from high-level summaries down to individual survey responses.
 
 
 
