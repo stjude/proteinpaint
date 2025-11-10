@@ -6913,38 +6913,38 @@
   },
   "plots/violin.interactivity.js": {
     "lines": {
-      "total": 141,
-      "covered": 1,
+      "total": 142,
+      "covered": 100,
       "skipped": 0,
-      "pct": 0.7
+      "pct": 70.42
     },
     "functions": {
       "total": 26,
-      "covered": 0,
+      "covered": 18,
       "skipped": 0,
-      "pct": 0
+      "pct": 69.23
     },
     "statements": {
-      "total": 150,
-      "covered": 1,
+      "total": 151,
+      "covered": 102,
       "skipped": 0,
-      "pct": 0.66
+      "pct": 67.54
     },
     "branches": {
       "total": 120,
-      "covered": 0,
+      "covered": 62,
       "skipped": 0,
-      "pct": 0
+      "pct": 51.66
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 51.66,
       "prev": 49.1,
-      "diff": -49.1
+      "diff": 2.559999999999995
     },
     "averagePct": {
-      "curr": 0.33999999999999997,
+      "curr": 64.7125,
       "prev": 63.57749999999999,
-      "diff": -63.23749999999999
+      "diff": 1.1350000000000122
     }
   },
   "plots/violin.js": {
@@ -6985,38 +6985,38 @@
   },
   "plots/violin.renderer.js": {
     "lines": {
-      "total": 231,
-      "covered": 1,
+      "total": 229,
+      "covered": 202,
       "skipped": 0,
-      "pct": 0.43
+      "pct": 88.2
     },
     "functions": {
       "total": 44,
-      "covered": 0,
+      "covered": 37,
       "skipped": 0,
-      "pct": 0
+      "pct": 84.09
     },
     "statements": {
-      "total": 257,
-      "covered": 1,
+      "total": 255,
+      "covered": 219,
       "skipped": 0,
-      "pct": 0.38
+      "pct": 85.88
     },
     "branches": {
       "total": 263,
-      "covered": 0,
+      "covered": 203,
       "skipped": 0,
-      "pct": 0
+      "pct": 77.18
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 77.18,
       "prev": 79.21,
-      "diff": -79.21
+      "diff": -2.029999999999987
     },
     "averagePct": {
-      "curr": 0.2025,
+      "curr": 83.8375,
       "prev": 85.84,
-      "diff": -85.6375
+      "diff": -2.0024999999999977
     }
   },
   "src/block.tk.bam.js": {
