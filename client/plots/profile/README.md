@@ -1,11 +1,11 @@
 
 ## Introduction
 
-The PrOFILE dashboard provides several interactive visualizations to explore and analyze data from participating hospitals. These plots are configured in[`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts) and are available for both "Full" and "Abbreviated" PrOFILE versions. The Full Version is a “look within”, an institutional journey meant for institutions that want to define a local improvement strategy. The Abbreviated Version is a “look across” institutions; it is a multisite, collaborative journey that illustrates the PHO resource landscape for a subnational, national, or regional group of facilities.
+The [`PrOFILE dashboard`](http://localhost:3000/profile/?role=admin) provides several interactive visualizations to explore and analyze data from participating hospitals. These plots are configured in[`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts) and are available for both "Full" and "Abbreviated" PrOFILE versions. The Full Version is a “look within”, an institutional journey meant for institutions that want to define a local improvement strategy. The Abbreviated Version is a “look across” institutions; it is a multisite, collaborative journey that illustrates the PHO resource landscape for a subnational, national, or regional group of facilities.
 
  The plots within the PrOFILE dashboard inherit from the base [`profilePlot`]((../profilePlot.js)) that encapsulates common functionalities such as the data fetching and the creation of the chart filters. Each specific plot type (e.g., `profilePolar`, `profileBarchart`) inherits from this base component extending its logic to render their unique visualization. This structure promotes code reuse and consistency across the different plots. 
 
-The charts retrieve their data by calling either the termdb.profileScores or termdb.profileFormScores endpoint, depending on the type of visualization. Most plots—such as polar, radar, and the profile barchart use the termdb.profileScores endpoint to obtain aggregated scores for each module and attribute, like region, country, income group, and facility type. In contrast, the profileForms plot calls the termdb.profileFormScores endpoint to fetch detailed, question-level survey responses per module. 
+The charts retrieve their data by calling either the termdb.profileScores or termdb.profileFormScores endpoint, depending on the type of visualization. Most plots, such as polar, radar, and the profile barchart use the termdb.profileScores endpoint to obtain aggregated scores for each module or domain. In contrast, the profileForms plot calls the termdb.profileFormScores endpoint to fetch detailed, question-level survey responses per domain. 
 
 ### How Filters Are Implemented
 
@@ -13,7 +13,7 @@ Each plot in the PrOFILE dashboard includes a set of filters implemented by the 
 
 - Filters are defined in the plot configuration (see `filterTWs` in the code).
 - The `profilePlot` class uses these filter term wrappers to build dropdowns and other input controls for the user interface.
-- Filter options are dynamically populated based on the current dataset and user role.
+- Filter options are dynamically populated based on the current settings.
 
 ### Typical Filters Added to Each Plot
 
@@ -31,14 +31,14 @@ The following filters are available across all profile plots:
 - **Sites:** Allows selection of one or more specific sites (for users with access).
 
 The sites filter is not shown in the public view, as the public users can only see aggregated data. In the user view they are shown, restricting the list of 
-sites to the onew accessible to the user.
+sites to the ones accessible to the user.
 
 When a user selects a filter value, the plot settings are updated and the data is re-fetched to reflect the new filter. Filter controls are rendered in the plot’s UI, and their state is managed by the `profilePlot` class. The main logic for adding and managing filters is in the `setControls` method of `profilePlot`.
 Filter term wrappers (`filterTWs`) are loaded and populated in the configuration setup (`loadFilterTerms`).
 
-### Data Access and Filtering
+### Data Access and User Filter
 
-Data visibility is strictly controlled based on the user's role, which is determined upon login. The `sjglobal.profile.ts` configuration defines how filters are applied for each role:
+Data visibility is strictly controlled based on the user's role and access to sites, which is determined upon login. The `sjglobal.profile.ts` configuration defines how filters are applied for each role:
 
 *   **Admin:** Administrators have unrestricted access to all data across all participating institutions. No site-based filters are applied.
 *   **Site-Level User:** Users are associated with one or more institutions. A filter is automatically applied to most of the queries to restrict data to only their assigned sites, unless the data returned is aggregated and therefor deidentified. This allows the users to see their own data and compare it with aggregated data from all other sites.
@@ -53,7 +53,7 @@ Here is a breakdown of the main plot types:
 **Class:** [profilePolar.js](../profilePolar.js)
 **Title:** Score-based Results by PrOFILE Module
 **Description:** This chart provides a high-level overview of the aggregated performance across different PrOFILE modules. Each slice of the polar represents a module (e.g., 'National Context', 'Personnel', 'Diagnostics').
-**Calculation:** For each module, a percentage score is calculated for every participating institution by dividing its score by the maximum possible score. The value shown on the chart for each module is the **median** of these percentage scores across all institutions included in the current filter (which depends on the user's role and any active global filters). This gives a snapshot of the central tendency of performance in each area.
+**Calculation:** For each module, a percentage score is calculated for every participating institution by dividing its score by the maximum possible score. The value shown on the chart for each module is the **median** of these percentage scores across all institutions included in the current filter. This gives a snapshot of the central tendency of performance in each area.
 
 
 ### Facility Radar Chart
@@ -91,7 +91,7 @@ This chart compares two different metrics for the same respondent group for each
 	- For Abbreviated PrOFILE: For each module, it displays the calculated scores for its constituent domains and also shows the overall "End-user Impression" score for that module as a separate bar for comparison.
 
 
-### Forms
+### Templates/Forms
 **Class:** [profileForms.js](../profileForms.js)
 **Description:** This section allows for the visualization of responses to individual questions from the PrOFILE survey, which are not aggregated into scores. This is useful for detailed analysis of specific data points.
 **Plot Types:**
