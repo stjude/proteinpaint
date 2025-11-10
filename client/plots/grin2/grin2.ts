@@ -664,39 +664,33 @@ class GRIN2 extends PlotBase implements RxComponent {
 			}
 
 			// Add significance column to the beginning
-			const modifiedColumns = [
-				{ label: '', width: '50px' }, // New column for significance indicators
-				...result.topGeneTable.columns
-			]
+			const modifiedColumns = [{ label: '', width: '20px' }, ...result.topGeneTable.columns]
+
+			// Cache the circles HTML outside the map
+			const lesionTypeCircleCache = new Map<string, string>()
+			for (const type in lesionTypeColors) {
+				lesionTypeCircleCache.set(
+					type,
+					`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${lesionTypeColors[type]};margin-right:3px;"></span>`
+				)
+			}
+
+			// Convert qValueColumns entries to array once
+			const qValueEntries = Object.entries(qValueColumns).filter(([_, colIndex]) => colIndex !== -1)
 
 			// Process rows to add significance indicators in new column
 			const processedRows = result.topGeneTable.rows.map(row => {
-				const significantTypes: string[] = []
+				const circles: string[] = []
 
-				// Check each lesion type for significance
-				for (const [type, colIndex] of Object.entries(qValueColumns)) {
-					if (colIndex !== -1) {
-						const qValue = row[colIndex]?.value
-						// Handle both numeric values and '1' as non-significant
-						if (typeof qValue === 'number' && !isNaN(qValue) && qValue < qValueThreshold) {
-							significantTypes.push(type)
-						}
+				// Single pass through qValueEntries
+				for (const [type, colIndex] of qValueEntries) {
+					const qValue = row[colIndex]?.value
+					if (typeof qValue === 'number' && qValue < qValueThreshold) {
+						circles.push(lesionTypeCircleCache.get(type)!)
 					}
 				}
 
-				// Create HTML with colored circles
-				const circles =
-					significantTypes.length > 0
-						? significantTypes
-								.map(
-									type =>
-										`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${lesionTypeColors[type]};margin-right:3px;"></span>`
-								)
-								.join('')
-						: ''
-
-				// Add significance column at the beginning
-				return [{ value: '', html: circles }, ...row]
+				return [{ value: '', html: circles.join('') }, ...row]
 			})
 
 			renderTable({
