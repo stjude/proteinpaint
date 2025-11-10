@@ -308,7 +308,7 @@ export async function validate_termdb(ds) {
 	if (tdb.q) {
 	} else if (tdb.buildDictionary) {
 		if (typeof tdb.buildDictionary != 'function') throw 'termdb.buildDictionary() is not function'
-		await tdb.buildDictionary()
+		await tdb.buildDictionary(ds)
 	} else if (tdb.dictionary?.gdcapi) {
 		await gdcBuildDictionary(ds)
 		// ds.cohort.termdb.q={} created
