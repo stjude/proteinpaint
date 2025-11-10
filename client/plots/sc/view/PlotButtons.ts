@@ -259,12 +259,12 @@ export class PlotButtons {
 					gene: gene1,
 					id: gene1,
 					name: gene1,
-					q: { mode: 'continuous' },
 					sample: {
 						sID: this.item.sample,
 						eID: this.item.experiment
 					}
-				}
+				},
+				q: { mode: 'continuous' }
 			},
 			term2: {
 				$id: await digestMessage(`${gene2}-${this.item.sample}-${this.item.experiment}`),
@@ -273,12 +273,12 @@ export class PlotButtons {
 					gene: gene2,
 					id: gene2,
 					name: gene2,
-					q: { mode: 'continuous' },
 					sample: {
 						sID: this.item.sample,
 						eID: this.item.experiment
 					}
-				}
+				},
+				q: { mode: 'continuous' }
 			}
 		}
 	}
