@@ -39,8 +39,6 @@ runs:
         # should detect and pull latest tag in branch and build from it,
         # and avoid building from branch HEAD/tip that may have already moved
         TAG="v$(node -p "require('./package.json').version")"
-        git fetch --tags --quiet origin $TAG # always use tagged commit for build 
-        git checkout $TAG
 
         cd container;
         ./build2.sh -r "ghcr.io/stjude/" server;
