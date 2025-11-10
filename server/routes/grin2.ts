@@ -193,7 +193,9 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		plot_width: request.width,
 		plot_height: request.height,
 		device_pixel_ratio: request.devicePixelRatio,
-		png_dot_radius: request.pngDotRadius
+		png_dot_radius: request.pngDotRadius,
+		lesion_type_colors: request.lesionTypeColors,
+		q_value_threshold: request.qValueThreshold
 	}
 
 	// Step 6: Generate manhattan plot via rust
