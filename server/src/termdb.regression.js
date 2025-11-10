@@ -1,6 +1,6 @@
 import path from 'path'
 import fs from 'fs'
-import imagesize from 'image-size'
+import { imageSize } from 'image-size'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import serverconfig from './serverconfig.js'
@@ -694,9 +694,10 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 			if (!analysisResult.data.splinePlots) analysisResult.data.splinePlots = []
 			for (const file of data.splinePlotFiles) {
 				const plot = await fs.promises.readFile(file)
+				const { width, height } = imageSize(file)
 				const obj = {
 					src: 'data:image/svg+xml;base64,' + new Buffer.from(plot).toString('base64'),
-					size: imagesize(file)
+					size: `${width}x${height}`
 				}
 				const type = path.basename(file, '.svg').split('_')[1]
 				if (type == 'univariate' || type == 'multivariate') obj.type = type

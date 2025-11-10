@@ -8,7 +8,7 @@ import { get_ds_tdb } from '../src/termdb.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { mayLog } from '#src/helpers.ts'
 import serverconfig from '../src/serverconfig.js'
-import imagesize from 'image-size'
+import { imageSize } from 'image-size'
 import { get_header_txt } from '#src/utils.js'
 import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
 
@@ -333,9 +333,10 @@ function validateGroups(sample_size1: number, sample_size2: number, group1names:
 async function readFileAndDelete(file, key, response) {
 	const plot = await fs.promises.readFile(file)
 	const plotBuffer = Buffer.from(plot).toString('base64')
+	const { width, height } = imageSize(file)
 	const obj = {
 		src: `data:image/png;base64,${plotBuffer}`,
-		size: imagesize(file),
+		size: `${width}x${height}`,
 		key
 	}
 	response[key] = obj
