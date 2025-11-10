@@ -198,11 +198,13 @@ export class PlotButtons {
 			.on('change', async function () {
 				self.plotBtnsDom.tip.hide()
 				const value = select.node()!.value
+				if (value.indexOf('Select') == 0) return //ignore prompt option
 				const config = plot.getPlotConfig(value, _plot.colorBy)
 				await self.interactions.createSubplot(config)
 			})
 
 		const regex = new RegExp(_plot.colorBy, 'g')
+		_plot.clusters.splice(0, 0, `Select ${_plot.colorBy}...`)
 		for (const cluster of _plot.clusters) {
 			select.append('option').attr('value', cluster.replace(regex, '').trim()).text(cluster)
 		}
