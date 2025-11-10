@@ -649,11 +649,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			// Define lesion type colors and q-value threshold
 			const lesionTypeColors = {
-				mutation: '#4CAF50', // green
-				loss: '#2196F3', // blue
-				gain: '#F44336', // red
-				fusion: '#FF9800', // orange
-				sv: '#9C27B0' // purple
+				mutation: '#44AA44', // green
+				loss: '#4444FF', // blue
+				gain: '#FF4444', // red
+				fusion: '#FFA500', // orange
+				sv: '#9932CC' // purple
 			}
 			const qValueThreshold = 0.05
 
