@@ -660,13 +660,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 			// Find column indices for q-values
 			const columns = result.topGeneTable.columns
 			const qValueColumns = {
-				mutation: columns.findIndex(col => col.label === 'Q-value (Mutation)' || col.label === 'Q-value (SNV/INDEL)'),
-				loss: columns.findIndex(col => col.label === 'Q-value (Copy Loss)' || col.label === 'Q-value (Loss)'),
-				gain: columns.findIndex(col => col.label === 'Q-value (Copy Gain)' || col.label === 'Q-value (Gain)'),
-				fusion: columns.findIndex(
-					col => col.label === 'Q-value (Fusion)' || col.label === 'Q-value (RNA Fusion Events)'
-				),
-				sv: columns.findIndex(col => col.label === 'Q-value (SV)' || col.label === 'Q-value (Structural Variant)')
+				mutation: columns.findIndex(col => col.label === 'Q-value (Mutation)'),
+				loss: columns.findIndex(col => col.label === 'Q-value (Copy Loss)'),
+				gain: columns.findIndex(col => col.label === 'Q-value (Copy Gain)'),
+				fusion: columns.findIndex(col => col.label === 'Q-value (Fusion)'),
+				sv: columns.findIndex(col => col.label === 'Q-value (Structural Variant)')
 			}
 
 			// Add significance column to the beginning
