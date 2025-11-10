@@ -80,7 +80,7 @@
     "express-basic-auth": "^1.1.5",
     "express-session": "^1.18.1",
     "got": "^14.2.0",
-    "image-size": "^0.5.5",
+    "image-size": "^0.9.7",
     "jsonwebtoken": "^9.0.0",
     "ky": "^1.2.1",
     "micromatch": "^4.0.5",
