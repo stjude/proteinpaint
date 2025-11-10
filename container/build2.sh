@@ -87,7 +87,7 @@ TAGHASH="$IMGVER-$HASH"
 INSPECT_STATUS="$(docker manifest inspect $IMGNAME:$TAGHASH > /dev/null ; echo $?)"
 if (( $INSPECT_STATUS == 0 )); then
 	echo "the container registry already has image:tag $IMGNAME:$TAGHASH"
-	exit 1
+#	exit 1  # uncomment to stop build if image already exists
 fi
 # echo "--- build will continue, end of manifest test --- ($INSPECT_STATUS)" # uncomment for testing
 # exit 1                                                                     # uncomment for testing

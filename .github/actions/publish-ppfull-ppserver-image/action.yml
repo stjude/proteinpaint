@@ -39,36 +39,22 @@ runs:
         # should detect and pull latest tag in branch and build from it,
         # and avoid building from branch HEAD/tip that may have already moved
         TAG="v$(node -p "require('./package.json').version")"
+        git fetch --tags --quiet origin $TAG # always use tagged commit for build 
+        git checkout $TAG
 
         cd container;
         ./build2.sh -r "ghcr.io/stjude/" server;
         TAG="$(node -p "require('./server/package.json').version")";
         HASH="$(git rev-parse --short HEAD)";
-
-        # push server image only if the tag doesn't already exist
-        # IMG_SERVER="ghcr.io/stjude/ppserver:${TAG}-${HASH}"
-        # IMG_SERVER_LATEST="ghcr.io/stjude/ppserver:latest"
-        # if docker manifest inspect "$IMG_SERVER" > /dev/null 2>&1; then
-        #  echo "Image $IMG_SERVER already exists on registry - skipping push for server image"
-        # else
-        #  docker push "$IMG_SERVER"
-        #  docker push "$IMG_SERVER_LATEST"
-        #fi
+        docker push "ghcr.io/stjude/ppserver:$TAG-$HASH";
+        docker push "ghcr.io/stjude/ppserver:latest";
         
         ./build2.sh -r "ghcr.io/stjude/" full;
         TAG="$(node -p "require('./full/package.json').version")";
-
-        # push full image only if the tag doesn't already exist
-        IMG_FULL="ghcr.io/stjude/ppfull:${TAG}-${HASH}"
-        IMG_FULL_LATEST="ghcr.io/stjude/ppfull:latest"
-        if docker manifest inspect "$IMG_FULL" > /dev/null 2>&1; then
-          echo "Image $IMG_FULL already exists on registry - skipping push for full image"
-        else
-          docker push "$IMG_FULL"
-          docker push "$IMG_FULL_LATEST"
-        fi
+        docker push "ghcr.io/stjude/ppfull:$TAG-$HASH";
+        docker push "ghcr.io/stjude/ppfull:latest";
         
-        echo "::set-output name=docker_version::$TAG-$HASH"
+        echo "::set-output name=docker_version::$TAG-$HASH";
 
     - name: get pp version
       id: pp-version
