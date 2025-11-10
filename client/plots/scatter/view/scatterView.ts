@@ -221,7 +221,7 @@ export class ScatterView {
 					type: 'number',
 					chartType: 'sampleScatter',
 					settingsKey: 'contourThresholds',
-					title: 'Dot size',
+					title: 'Increase to enhance contour detail.',
 					min: 5,
 					max: 30,
 					step: 5
