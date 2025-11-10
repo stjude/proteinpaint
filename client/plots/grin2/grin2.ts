@@ -655,6 +655,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			// Find column indices for q-values
 			const columns = result.topGeneTable.columns
+			// TODO: Get this from state
 			const qValueColumns = {
 				mutation: columns.findIndex(col => col.label === 'Q-value (Mutation)'),
 				loss: columns.findIndex(col => col.label === 'Q-value (Copy Loss)'),
