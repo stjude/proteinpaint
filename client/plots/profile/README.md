@@ -5,9 +5,11 @@ The PrOFILE dashboard provides several interactive visualizations to explore and
 
  The plots within the PrOFILE dashboard inherit from the base [`profilePlot`]((../profilePlot.js)) that encapsulates common functionalities such as the data fetching and the creation of the chart filters. Each specific plot type (e.g., `profilePolar`, `profileBarchart`) inherits from this base component extending its logic to render their unique visualization. This structure promotes code reuse and consistency across the different plots. 
 
-Each plot in the PrOFILE dashboard includes a set of filters implemented by the `profilePlot` class. These filters allow users to refine the data displayed in the visualizations based on key attributes of participating hospitals or survey responses.
+The charts retrieve their data by calling either the termdb.profileScores or termdb.profileFormScores endpoint, depending on the type of visualization. Most plots—such as polar, radar, and the profile barchart use the termdb.profileScores endpoint to obtain aggregated scores for each module and attribute, like region, country, income group, and facility type. In contrast, the profileForms plot calls the termdb.profileFormScores endpoint to fetch detailed, question-level survey responses per module. 
 
 ### How Filters Are Implemented
+
+Each plot in the PrOFILE dashboard includes a set of filters implemented by the `profilePlot` class. These filters allow users to refine the data displayed in the visualizations based on key attributes of participating hospitals or survey responses.
 
 - Filters are defined in the plot configuration (see `filterTWs` in the code).
 - The `profilePlot` class uses these filter term wrappers to build dropdowns and other input controls for the user interface.
