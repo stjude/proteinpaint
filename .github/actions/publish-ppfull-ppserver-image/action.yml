@@ -46,15 +46,31 @@ runs:
         ./build2.sh -r "ghcr.io/stjude/" server;
         TAG="$(node -p "require('./server/package.json').version")";
         HASH="$(git rev-parse --short HEAD)";
-        docker push "ghcr.io/stjude/ppserver:$TAG-$HASH";
-        docker push "ghcr.io/stjude/ppserver:latest";
+
+        # push server image only if the tag doesn't already exist
+        IMG_SERVER="ghcr.io/stjude/ppserver:${TAG}-${HASH}"
+        IMG_SERVER_LATEST="ghcr.io/stjude/ppserver:latest"
+        if docker manifest inspect "$IMG_SERVER" > /dev/null 2>&1; then
+          echo "Image $IMG_SERVER already exists on registry - skipping push for server image"
+        else
+          docker push "$IMG_SERVER"
+          docker push "$IMG_SERVER_LATEST"
+        fi
         
         ./build2.sh -r "ghcr.io/stjude/" full;
         TAG="$(node -p "require('./full/package.json').version")";
-        docker push "ghcr.io/stjude/ppfull:$TAG-$HASH";
-        docker push "ghcr.io/stjude/ppfull:latest";
+
+        # push full image only if the tag doesn't already exist
+        IMG_FULL="ghcr.io/stjude/ppfull:${TAG}-${HASH}"
+        IMG_FULL_LATEST="ghcr.io/stjude/ppfull:latest"
+        if docker manifest inspect "$IMG_FULL" > /dev/null 2>&1; then
+          echo "Image $IMG_FULL already exists on registry - skipping push for full image"
+        else
+          docker push "$IMG_FULL"
+          docker push "$IMG_FULL_LATEST"
+        fi
         
-        echo "::set-output name=docker_version::$TAG-$HASH";
+        echo "::set-output name=docker_version::$TAG-$HASH"
 
     - name: get pp version
       id: pp-version
