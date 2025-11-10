@@ -120,7 +120,7 @@ class TdbConfigUiInit {
 	render(isOpen) {
 		this.dom.holder
 			.style('visibility', isOpen ? 'visible' : 'hidden')
-			.style('max-width', isOpen ? '700px' : '50px')
+			.style('max-width', isOpen ? '' : '50px') //Previously 700px max when open, but we dont want to clip the data in the profile
 			.style('height', isOpen ? '' : 0)
 			.style('resize', isOpen ? 'both' : 'none')
 
@@ -523,7 +523,8 @@ function setDropdownInput(opts) {
 		})
 
 	if (opts.multiple) self.dom.select.attr('size', opts.options.length > 10 ? 10 : opts.options.length)
-	self.dom.select.style('max-width', '300px')
+	//Commented max-width to not clip the data in the profile
+	//self.dom.select.style('max-width', '300px')
 	self.dom.select
 		.selectAll('option')
 		.data(opts.options)
