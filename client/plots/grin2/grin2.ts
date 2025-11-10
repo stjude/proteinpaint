@@ -678,7 +678,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 					if (colIndex !== -1) {
 						const qValue = row[colIndex]?.value
 						// Handle both numeric values and '1' as non-significant
-						if (qValue !== undefined && qValue !== 1 && qValue < qValueThreshold) {
+						if (typeof qValue === 'number' && !isNaN(qValue) && qValue < qValueThreshold) {
 							significantTypes.push(type)
 						}
 					}
