@@ -15,7 +15,7 @@ Each plot in the PrOFILE dashboard includes a set of filters implemented by the 
 
 ### Typical Filters Added to Each Plot
 
-The following filters are commonly available across all profile plots:
+The following filters are available across all profile plots:
 
 - **Region:** Selects the WHO region of the facility.
 - **Country:** Filters by country.
@@ -28,18 +28,11 @@ The following filters are commonly available across all profile plots:
 - **Year of Implementation:** Filters by the year the PrOFILE was implemented.
 - **Sites:** Allows selection of one or more specific sites (for users with access).
 
-### How Filters Work
+The sites filter is not shown in the public view, as the public users can only see aggregated data. In the user view they are shown, restricting the list of 
+sites to the onew accessible to the user.
 
-- When a user selects a filter value, the plot settings are updated and the data is re-fetched to reflect the new filter.
-- Filters are role-aware: admins see all sites, site-level users see only their assigned sites, and public users see only aggregated data.
-- Filter controls are rendered in the plot’s UI, and their state is managed by the `profilePlot` class.
-- The main logic for adding and managing filters is in the `setControls` method of `profilePlot`.
-- Filter term wrappers (`filterTWs`) are loaded and populated in the configuration setup (`loadFilterTerms`).
-- Actual filter values are stored in the plot’s `settings` object and used to query the backend for filtered data.
-
----
-
-Profile filters in `profilePlot` provide a flexible, role-aware way for users to slice and analyze PrOFILE data by key hospital and survey attributes. They are implemented as dynamic UI controls, populated from the dataset, and used to fetch and display filtered results in each plot.
+When a user selects a filter value, the plot settings are updated and the data is re-fetched to reflect the new filter. Filter controls are rendered in the plot’s UI, and their state is managed by the `profilePlot` class. The main logic for adding and managing filters is in the `setControls` method of `profilePlot`.
+Filter term wrappers (`filterTWs`) are loaded and populated in the configuration setup (`loadFilterTerms`).
 
 ### Data Access and Filtering
 
