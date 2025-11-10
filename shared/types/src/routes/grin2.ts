@@ -29,6 +29,12 @@ export type GRIN2Request = {
 	/** Radius of the PNG rendered dots (default: 2) */
 	pngDotRadius?: number
 
+	/** Lesion type colors */
+	lesionTypeColors?: any
+
+	/** Threshold for q-values to be included as interactive dots */
+	qValueThreshold?: number
+
 	/** Filter from existing PP infrastructure */
 	filter?: any // Filter object passed to get_samples(filter, ds)
 

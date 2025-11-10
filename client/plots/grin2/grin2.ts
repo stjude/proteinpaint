@@ -550,6 +550,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 				pngDotRadius: this.state.config.settings.manhattan?.pngDotRadius,
 				devicePixelRatio: window.devicePixelRatio,
 				maxGenesToShow: this.state.config.settings?.manhattan?.maxGenesToShow,
+				lesionTypeColors: this.state.config.settings?.manhattan?.lesionTypeColors,
+				qValueThreshold: this.state.config.settings?.manhattan?.qValueThreshold,
 				...configValues
 			}
 
@@ -596,7 +598,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 	}
 
 	private renderResults(result: any) {
-		console.log('this: ', this)
 		// Display Manhattan plot
 		if (result.pngImg) {
 			const plotData = result
@@ -649,15 +650,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			let lastTouchedGene: string | null = null
 
 			// Define lesion type colors and q-value threshold
-			// const lesionTypeColors = {
-			// 	mutation: '#44AA44', // green
-			// 	loss: '#4444FF', // blue
-			// 	gain: '#FF4444', // red
-			// 	fusion: '#FFA500', // orange
-			// 	sv: '#9932CC' // purple
-			// }
 			const lesionTypeColors = this.state.config.settings.manhattan.lesionTypeColors
-			// const qValueThreshold = 0.05
 			const qValueThreshold = this.state.config.settings.manhattan.qValueThreshold
 
 			// Find column indices for q-values
