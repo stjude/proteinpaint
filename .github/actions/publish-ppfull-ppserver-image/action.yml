@@ -46,14 +46,14 @@ runs:
         HASH="$(git rev-parse --short HEAD)";
 
         # push server image only if the tag doesn't already exist
-        IMG_SERVER="ghcr.io/stjude/ppserver:${TAG}-${HASH}"
-        IMG_SERVER_LATEST="ghcr.io/stjude/ppserver:latest"
-        if docker manifest inspect "$IMG_SERVER" > /dev/null 2>&1; then
-          echo "Image $IMG_SERVER already exists on registry - skipping push for server image"
-        else
-          docker push "$IMG_SERVER"
-          docker push "$IMG_SERVER_LATEST"
-        fi
+        # IMG_SERVER="ghcr.io/stjude/ppserver:${TAG}-${HASH}"
+        # IMG_SERVER_LATEST="ghcr.io/stjude/ppserver:latest"
+        # if docker manifest inspect "$IMG_SERVER" > /dev/null 2>&1; then
+        #  echo "Image $IMG_SERVER already exists on registry - skipping push for server image"
+        # else
+        #  docker push "$IMG_SERVER"
+        #  docker push "$IMG_SERVER_LATEST"
+        #fi
         
         ./build2.sh -r "ghcr.io/stjude/" full;
         TAG="$(node -p "require('./full/package.json').version")";
