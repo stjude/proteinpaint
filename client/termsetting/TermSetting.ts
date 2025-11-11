@@ -188,10 +188,13 @@ export class TermSetting {
 				case 'QualTWValues':
 				case 'QualTWPredefinedGS':
 				case 'QualTWCustomGS': {
+					/* commenting out, otherwise may reuse handler with stale termsetting instance
+					(e.g. categorical term as independent variable in regression -> apply groupsetting -> re-open edit menu -> incorrect groupsetting
+					because getGroups() from QualValues is used instead of getGroups() from QualCustomGS)
 					if (this.handlerByType.qualitative) {
 						this.handler = this.handlerByType.qualitative
 						return
-					}
+					}*/
 					const { GroupSet } = await import('./handlers/qualitative.ts')
 					this.handler = new GroupSet({ termsetting: this })
 					this.handlerByType.qualitative = this.handler
@@ -203,10 +206,11 @@ export class TermSetting {
 				case 'NumTWCont':
 				case 'NumTWBinary':
 				case 'NumTWSpline': {
+					/* commenting out for same reason as above
 					if (this.handlerByType.numeric) {
 						this.handler = this.handlerByType.numeric
 						return
-					}
+					}*/
 					const { NumericHandler } = await import('./handlers/NumericHandler.ts')
 					this.handler = new NumericHandler({ termsetting: this })
 					this.handlerByType.numeric = this.handler
