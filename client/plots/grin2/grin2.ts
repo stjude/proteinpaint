@@ -98,16 +98,25 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// Options table
 		const t2 = table2col({ holder: right })
 
+		const stateSnvindel = this.state.config.settings?.snvindelOptions
+
 		// Top numeric options
 		this.dom.snvindel_minTotalDepth = this.addOptionRowToTable(
 			t2,
 			'Min Total Depth',
-			10, // default TODO: get from queries.snvindel once available
+			stateSnvindel?.minTotalDepth ?? 10, // default. Getting from state and defaulting to 10 if not available
 			0, // min
 			1e6, // max
 			1 // step
 		)
-		this.dom.snvindel_minAltAlleleCount = this.addOptionRowToTable(t2, 'Min Alt Allele Count', 2, 0, 1e6, 1) // TODO: get from queries.snvindel once available
+		this.dom.snvindel_minAltAlleleCount = this.addOptionRowToTable(
+			t2,
+			'Min Alt Allele Count',
+			stateSnvindel?.minAltAlleleCount ?? 2, // default. Getting from state and defaulting to 2 if not available
+			0,
+			1e6,
+			1
+		)
 
 		// if 5/3 flanking size will be needed in future, can create a helper this.addFlankingOption() to dedup
 
@@ -166,11 +175,18 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// CNV options table
 		const t2 = table2col({ holder: right })
 
+		const cnvQuery = this.app.vocabApi.termdbConfig.queries.cnv
+		const settings = this.state.config.settings || {}
+
+		// Only trust saved CNV settings if they came from a completed run
+		const useSaved = settings.runAnalysis === true
+		const savedCnv = useSaved ? settings.cnvOptions : undefined
+
 		// Loss Threshold
 		this.dom.cnv_lossThreshold = this.addOptionRowToTable(
 			t2,
 			'Loss Threshold',
-			this.app.vocabApi.termdbConfig.queries.cnv.cnvLossCutoff, // default
+			savedCnv?.lossThreshold ?? cnvQuery.cnvLossCutoff,
 			-5, // min
 			0, // max
 			0.05 // step
@@ -180,7 +196,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		this.dom.cnv_gainThreshold = this.addOptionRowToTable(
 			t2,
 			'Gain Threshold',
-			this.app.vocabApi.termdbConfig.queries.cnv.cnvGainCutoff, // default
+			savedCnv?.gainThreshold ?? cnvQuery.cnvGainCutoff,
 			0, // min
 			5, // max
 			0.05 // step
@@ -190,7 +206,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		this.dom.cnv_maxSegLength = this.addOptionRowToTable(
 			t2,
 			'Max Segment Length',
-			this.app.vocabApi.termdbConfig.queries.cnv.cnvMaxLength, // default (2 Mb)
+			savedCnv?.maxSegLength ?? 2000000, // default 2 MB
 			0, // min
 			1e9, // max
 			1000 // step
@@ -217,7 +233,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// )
 
 		// ----- Left-side CNV checkbox -----
-		const isChecked = this.state.config.settings.dtUsage[dtcnv].checked
+		const dtUsage = settings.dtUsage || {}
+		const isChecked = useSaved && dtUsage[dtcnv]?.checked !== undefined ? dtUsage[dtcnv].checked : !!cnvQuery
+
 		t2.table.style('display', isChecked ? '' : 'none')
 
 		this.dom.cnvCheckbox = make_one_checkbox({
@@ -390,12 +408,17 @@ class GRIN2 extends PlotBase implements RxComponent {
 			([key, cls]: [string, any]) => cls.dt === dtsnvindel && key !== 'Blank' && key !== 'WT'
 		)
 
-		// Define default checked consequences
-		const defaultChecked = new Set<string>(proteinChangingMutations)
-		defaultChecked.add('StartLost')
-		defaultChecked.add('StopLost')
+		const settings = this.state.config.settings || {}
+		const saved = settings.snvindelOptions?.consequences as string[] | undefined
+		const useSaved = settings.runAnalysis === true && !!saved && saved.length > 0
 
-		// Create Select All/Clear All/Default buttons
+		// Canonical default set = protein-changing + StartLost + StopLost
+		const canonicalDefault = new Set<string>([...proteinChangingMutations, 'StartLost', 'StopLost'])
+
+		// What we use for initial rendering:
+		const initialChecked = useSaved ? new Set<string>(saved!) : canonicalDefault
+
+		// --- Controls row ---
 		const controlDiv = container
 			.append('div')
 			.style('margin-bottom', '6px')
@@ -417,48 +440,44 @@ class GRIN2 extends PlotBase implements RxComponent {
 			.style('font-size', `${this.tableFontSize}px`)
 			.text('Default')
 
-		// Create consequence checkbox container
+		// --- Checkbox list ---
 		const checkboxContainer = container
 			.append('div')
 			.style('max-height', this.checkboxContainerMaxHeight)
 			.style('overflow-y', 'auto')
 			.style('border', this.checkboxContainerBorder)
 
-		// Create individual consequence checkboxes
+		this.dom.consequenceCheckboxes = {}
+
 		snvIndelClasses.forEach(([classKey, classInfo]: [string, any]) => {
 			const checkboxDiv = checkboxContainer.append('div').style('margin-bottom', this.checkboxMarginBottom)
 
 			const checkbox = make_one_checkbox({
 				holder: checkboxDiv,
 				labeltext: classInfo.label,
-				checked: defaultChecked.has(classKey),
-				divstyle: {
-					'font-size': `${this.tableFontSize}px`
-				},
+				checked: initialChecked.has(classKey),
+				divstyle: { 'font-size': `${this.tableFontSize}px` },
 				callback: () => {}
 			})
 
-			// Set title attribute on the label for tooltip
 			checkboxDiv.select('label').attr('title', classInfo.desc)
-
-			// Store checkbox reference by classKey
 			this.dom.consequenceCheckboxes[classKey] = checkbox
 		})
 
-		// Select All button functionality
+		// Select All
 		this.dom.snvindelSelectAllBtn.on('click', () => {
-			Object.values(this.dom.consequenceCheckboxes).forEach(checkbox => checkbox.property('checked', true))
+			Object.values(this.dom.consequenceCheckboxes).forEach(cb => cb.property('checked', true))
 		})
 
-		// Clear All button functionality
+		// Clear All
 		this.dom.snvindelClearAllBtn.on('click', () => {
-			Object.values(this.dom.consequenceCheckboxes).forEach(checkbox => checkbox.property('checked', false))
+			Object.values(this.dom.consequenceCheckboxes).forEach(cb => cb.property('checked', false))
 		})
 
-		// Default button functionality
+		// Default → always reset to canonical (protein-changing + StartLost + StopLost)
 		this.dom.snvindelDefaultBtn.on('click', () => {
 			Object.entries(this.dom.consequenceCheckboxes).forEach(([classKey, checkbox]) => {
-				checkbox.property('checked', defaultChecked.has(classKey))
+				checkbox.property('checked', canonicalDefault.has(classKey))
 			})
 		})
 	}
@@ -568,6 +587,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				...this.state.config,
 				settings: {
 					...this.state.config.settings,
+					...configValues,
 					dtUsage: dtUsage,
 					runAnalysis: true
 				}
