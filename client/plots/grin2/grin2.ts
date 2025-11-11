@@ -655,25 +655,25 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			// Find column indices for q-values
 			const columns = result.topGeneTable.columns
-			console.log('this:', this)
-			// Map dtUsage keys to their Q-value column labels
-			const dtToQValueColumn: Record<number, string[]> = {
-				[dtsnvindel]: ['Q-value (Mutation)'],
-				[dtfusionrna]: ['Q-value (Fusion)'],
-				[dtcnv]: ['Q-value (Copy Loss)', 'Q-value (Copy Gain)'],
-				[dtsv]: ['Q-value (Structural Variant)']
+
+			// Map dt types to their column labels and lesion types
+			const dtMapping = {
+				[dtsnvindel]: [{ col: 'Q-value (Mutation)', type: 'mutation' }],
+				[dtfusionrna]: [{ col: 'Q-value (Fusion)', type: 'fusion' }],
+				[dtcnv]: [
+					{ col: 'Q-value (Copy Loss)', type: 'loss' },
+					{ col: 'Q-value (Copy Gain)', type: 'gain' }
+				],
+				[dtsv]: [{ col: 'Q-value (Structural Variant)', type: 'sv' }]
 			}
 
-			// Only search for columns that are actually checked
-			const qValueColumns: Record<string, number> = {}
+			// Build qValue entries for enabled data types
+			const qValueEntries: Array<{ colIndex: number; type: string }> = []
 			Object.entries(this.state.config.settings.dtUsage).forEach(([key, isChecked]) => {
-				const dtKey = Number(key)
-				if (isChecked && dtToQValueColumn[dtKey]) {
-					dtToQValueColumn[dtKey].forEach(colLabel => {
-						const colIndex = columns.findIndex(col => col.label === colLabel)
-						if (colIndex !== -1) {
-							qValueColumns[colLabel] = colIndex
-						}
+				if (isChecked && dtMapping[key]) {
+					dtMapping[key].forEach(({ col, type }) => {
+						const colIndex = columns.findIndex(c => c.label === col)
+						if (colIndex !== -1) qValueEntries.push({ colIndex, type })
 					})
 				}
 			})
@@ -681,40 +681,22 @@ class GRIN2 extends PlotBase implements RxComponent {
 			// Add significance column to the beginning
 			const modifiedColumns = [{ label: '', width: '20px' }, ...result.topGeneTable.columns]
 
-			// Cache the circles HTML outside the map
-			const lesionTypeCircleCache = new Map<string, string>()
-			for (const type in lesionTypeColors) {
-				lesionTypeCircleCache.set(
+			// Cache the circles HTML
+			const lesionTypeCircleCache = new Map(
+				Object.entries(lesionTypeColors).map(([type, color]) => [
 					type,
-					`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${lesionTypeColors[type]};margin-right:3px;"></span>`
-				)
-			}
+					`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${color};margin-right:3px;"></span>`
+				])
+			)
 
-			// Convert qValueColumns entries to array once
-			const qValueEntries = Object.entries(qValueColumns).filter(([_, colIndex]) => colIndex !== -1)
-
-			const qValueToLesionType: Record<string, string> = {
-				'Q-value (Mutation)': 'mutation',
-				'Q-value (Copy Loss)': 'loss',
-				'Q-value (Copy Gain)': 'gain',
-				'Q-value (Fusion)': 'fusion',
-				'Q-value (Structural Variant)': 'sv'
-			}
-
-			// Process rows to add significance indicators in new column
+			// Process rows to add significance indicators
 			const processedRows = result.topGeneTable.rows.map(row => {
-				const circles: string[] = []
-
-				// Single pass through qValueEntries
-				for (const [colLabel, colIndex] of qValueEntries) {
-					const qValue = row[colIndex]?.value
-					if (typeof qValue === 'number' && qValue < qValueThreshold) {
-						const lesionType = qValueToLesionType[colLabel]
-						if (lesionType) {
-							circles.push(lesionTypeCircleCache.get(lesionType)!)
-						}
-					}
-				}
+				const circles = qValueEntries
+					.filter(({ colIndex }) => {
+						const qValue = row[colIndex]?.value
+						return typeof qValue === 'number' && qValue < qValueThreshold
+					})
+					.map(({ type }) => lesionTypeCircleCache.get(type)!)
 
 				return [{ value: '', html: circles.join('') }, ...row]
 			})
