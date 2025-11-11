@@ -82,26 +82,20 @@ def assign_lesion_colors(lesion_types):
 
 def sort_grin2_data(data):
 	"""
-	Sort Mutation data based on available p.nsubj columns with priority system
-	Priority order:
-		1. p.nsubj.mutation (highest priority - if available, always use this)
-		2. p.nsubj.gain (medium priority - use if mutation not available)
-		3. p.nsubj.loss (use if neither mutation nor gain available)
-		4. p.nsubj.fusion (use if mutation, gain, loss not available)
-		5. p.nsubj.sv (lowest priority - use only if no other columns available)
+	Sort by P-value in ascending order (smallest/most significant first)
+	Priority: mutation > gain > loss > fusion > sv
+	Checks both that columns exist AND have meaningful data
 	"""
-	# Define possible columns in priority order
-	possible_cols = ["p.nsubj.mutation", "p.nsubj.gain", "p.nsubj.loss", "p.nsubj.fusion", "p.nsubj.sv"]
-	# Find the first existing column
-	for col in possible_cols:
-		if col in data.columns:
-			sort_column = col
-			break
-	else:
-		raise ValueError("No sorting columns (p.nsubj.*) found in data")
-	# Sort data
-	sorted_data = data.sort_values(by=sort_column, ascending=True)
-	return sorted_data
+	# Get available p-value columns
+	result = get_sig_values(data)
+	p_cols = result["p_cols"]
+	
+	# Try each p-value column in priority order
+	for col in p_cols:
+		if col in data.columns and has_data(data[col]):
+			return data.sort_values(col, ascending=True)
+	
+	raise ValueError("No p-value columns with data found for sorting")
 
 def get_chrom_key(chrom):
 	"""
@@ -211,9 +205,11 @@ def smart_format(value):
     else:
         # Convert to 4 significant digits and back to float
         return float(f"{value:.3g}")  # .3g gives 4 significant digits total
+
 def simple_column_filter(sorted_results, num_rows_to_process=50):
 	"""
-	Dynamically generate columns and rows for topGeneTable based on available data
+	Dynamically generate columns and rows for topGeneTable based on available data.
+	Note: sorted_results is already sorted by sort_grin2_data() before being passed in.
 	"""
 	result = get_sig_values(sorted_results)
 	p_cols = result["p_cols"]
@@ -238,42 +234,6 @@ def simple_column_filter(sorted_results, num_rows_to_process=50):
 	q4_exists = 'q4.nsubj' in sorted_results.columns
 	p5_exists = 'p5.nsubj' in sorted_results.columns
 	q5_exists = 'q5.nsubj' in sorted_results.columns
-	
-	# Sorting logic: Sort by P-value in ascending order (smallest/most significant first)
-	# Priority: mutation > gain > loss > fusion > sv
-	# Check both that the column exists AND has meaningful data
-	sorted_column = None
-
-	# Try mutation first
-	if 'p.nsubj.mutation' in p_cols and 'p.nsubj.mutation' in sorted_results.columns:
-		if has_data(sorted_results['p.nsubj.mutation']):
-			sorted_column = 'p.nsubj.mutation'
-
-	# Try gain
-	if not sorted_column and 'p.nsubj.gain' in p_cols and 'p.nsubj.gain' in sorted_results.columns:
-		if has_data(sorted_results['p.nsubj.gain']):
-			sorted_column = 'p.nsubj.gain'
-
-	# Try loss
-	if not sorted_column and 'p.nsubj.loss' in p_cols and 'p.nsubj.loss' in sorted_results.columns:
-		if has_data(sorted_results['p.nsubj.loss']):
-			sorted_column = 'p.nsubj.loss'
-
-	# Try fusion
-	if not sorted_column and 'p.nsubj.fusion' in p_cols and 'p.nsubj.fusion' in sorted_results.columns:
-		if has_data(sorted_results['p.nsubj.fusion']):
-			sorted_column = 'p.nsubj.fusion'
-
-	# Try sv
-	if not sorted_column and 'p.nsubj.sv' in p_cols and 'p.nsubj.sv' in sorted_results.columns:
-		if has_data(sorted_results['p.nsubj.sv']):
-			sorted_column = 'p.nsubj.sv'
-
-	# Sort by the selected p-value column (ascending = smallest/best p-values first)
-	if sorted_column:
-		sorted_results = sorted_results.sort_values(sorted_column, ascending=True)
-	else:
-		raise ValueError("No p-value columns with data found for sorting")
 
 	# Build columns list
 	columns = [
@@ -314,38 +274,30 @@ def simple_column_filter(sorted_results, num_rows_to_process=50):
 		])
 	
 	# Add constellation columns based on what GRIN2 computed
-	# The GRIN2 algorithm determines which constellation tests are relevant
-	# We just display whichever constellation columns exist in the results
-	
-	# p1/q1: Gene affected by exactly 1 lesion type
 	if p1_exists and q1_exists:
 		columns.extend([
 			{"label": get_user_friendly_label("p1.nsubj"), "sortable": True},
 			{"label": get_user_friendly_label("q1.nsubj"), "sortable": True}
 		])
 	
-	# p2/q2: Gene affected by exactly 2 lesion types
 	if p2_exists and q2_exists:
 		columns.extend([
 			{"label": get_user_friendly_label("p2.nsubj"), "sortable": True},
 			{"label": get_user_friendly_label("q2.nsubj"), "sortable": True}
 		])
 	
-	# p3/q3: Gene affected by exactly 3 lesion types
 	if p3_exists and q3_exists:
 		columns.extend([
 			{"label": get_user_friendly_label("p3.nsubj"), "sortable": True},
 			{"label": get_user_friendly_label("q3.nsubj"), "sortable": True}
 		])
 
-	# p4/q4: Gene affected by exactly 4 lesion types
 	if p4_exists and q4_exists:
 		columns.extend([
 			{"label": get_user_friendly_label("p4.nsubj"), "sortable": True},
 			{"label": get_user_friendly_label("q4.nsubj"), "sortable": True}
 		])
 	
-	# p5/q5: Gene affected by all 5 lesion types
 	if p5_exists and q5_exists:
 		columns.extend([
 			{"label": get_user_friendly_label("p5.nsubj"), "sortable": True},
@@ -392,7 +344,7 @@ def simple_column_filter(sorted_results, num_rows_to_process=50):
 				{"value": smart_format(sorted_results.iloc[i][n_cols[4]])}
 			])
 		
-		# Add constellation data - just check if columns exist
+		# Add constellation data
 		if p1_exists and q1_exists:
 			row_data.extend([
 				{"value": smart_format(sorted_results.iloc[i]["p1.nsubj"])},
