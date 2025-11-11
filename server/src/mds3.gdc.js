@@ -738,7 +738,7 @@ async function getCnvFusion4oneCase(opts, ds) {
 		fusionfiles = []
 
 	for (const h of re.data.hits) {
-		if (!h.cases?.[0]) throw 'h.cases[0] missing'
+		if (!h.cases?.[0]) throw new Error(`h.cases[0] missing for file =${h.file_id}`)
 		if (h.data_format == 'BEDPE') {
 			if (h.experimental_strategy != 'RNA-Seq') continue
 			if (h.analysis?.workflow_type != 'Arriba') continue
