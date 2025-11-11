@@ -49,7 +49,7 @@ export default class LegendRenderer {
 				}
 			)
 		})
-		const altCnv = viewModel.appState.args.alternativeDataByDt?.[dtcnv] as AlternativeCnvSet[]
+		const altCnv: AlternativeCnvSet[] = viewModel.appState.args.alternativeDataByDt?.[dtcnv]
 
 		if (altCnv && altCnv.length > 0) {
 			const legendG = holder.select('g[data-testid="sjpp_disco_plot_legend"]')
