@@ -5833,10 +5833,10 @@
   },
   "termsetting/TermSetting.ts": {
     "lines": {
-      "total": 92,
-      "covered": 69,
+      "total": 89,
+      "covered": 76,
       "skipped": 0,
-      "pct": 75
+      "pct": 85.39
     },
     "functions": {
       "total": 8,
@@ -5845,26 +5845,26 @@
       "pct": 87.5
     },
     "statements": {
-      "total": 114,
-      "covered": 75,
+      "total": 111,
+      "covered": 80,
       "skipped": 0,
-      "pct": 65.78
+      "pct": 72.07
     },
     "branches": {
-      "total": 95,
-      "covered": 45,
+      "total": 93,
+      "covered": 56,
       "skipped": 0,
-      "pct": 47.36
+      "pct": 60.21
     },
     "lowestPct": {
-      "curr": 47.36,
+      "curr": 60.21,
       "prev": 78.4,
-      "diff": -31.040000000000006
+      "diff": -18.190000000000005
     },
     "averagePct": {
-      "curr": 68.91,
+      "curr": 76.29249999999999,
       "prev": 91.16999999999999,
-      "diff": -22.25999999999999
+      "diff": -14.877499999999998
     }
   },
   "termsetting/index.ts": {
@@ -7741,38 +7741,38 @@
   },
   "tw/qualitative.ts": {
     "lines": {
-      "total": 125,
-      "covered": 6,
+      "total": 126,
+      "covered": 51,
       "skipped": 0,
-      "pct": 4.8
+      "pct": 40.47
     },
     "functions": {
       "total": 23,
-      "covered": 1,
+      "covered": 9,
       "skipped": 0,
-      "pct": 4.34
+      "pct": 39.13
     },
     "statements": {
-      "total": 151,
-      "covered": 6,
+      "total": 152,
+      "covered": 56,
       "skipped": 0,
-      "pct": 3.97
+      "pct": 36.84
     },
     "branches": {
-      "total": 115,
-      "covered": 0,
+      "total": 117,
+      "covered": 38,
       "skipped": 0,
-      "pct": 0
+      "pct": 32.47
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 32.47,
       "prev": 17.88,
-      "diff": -17.88
+      "diff": 14.59
     },
     "averagePct": {
-      "curr": 3.2775000000000003,
+      "curr": 37.2275,
       "prev": 25.11,
-      "diff": -21.8325
+      "diff": 12.1175
     }
   },
   "termsetting/handlers/qualitative.ts": {
@@ -8467,10 +8467,10 @@
       "pct": 68.88
     },
     "functions": {
-      "total": 47,
+      "total": 48,
       "covered": 29,
       "skipped": 0,
-      "pct": 61.7
+      "pct": 60.41
     },
     "statements": {
       "total": 355,
@@ -8486,13 +8486,13 @@
     },
     "lowestPct": {
       "curr": 59.5,
-      "prev": 0,
-      "diff": 59.5
+      "prev": 59.5,
+      "diff": 0
     },
     "averagePct": {
-      "curr": 63.434999999999995,
-      "prev": 0,
-      "diff": 63.434999999999995
+      "curr": 63.1125,
+      "prev": 63.434999999999995,
+      "diff": -0.322499999999998
     }
   },
   "plots/regression.js": {
