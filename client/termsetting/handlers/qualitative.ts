@@ -216,10 +216,10 @@ export class GroupSet extends HandlerBase implements Handler {
 			customgroup.values = groupValues
 			customset.groups.push(customgroup)
 		}
-		self.q = {
+		Object.assign(self.q, {
 			type: 'custom-groupset',
 			customset
-		}
+		})
 	}
 
 	async initGroupDiv(group: GrpEntryWithDom) {

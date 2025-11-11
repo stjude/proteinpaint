@@ -363,11 +363,12 @@ export class QualCustomGS extends QualitativeBase {
 		const q = this.q
 		for (const [i, g] of q.customset.groups.entries()) {
 			const group = g as any // TODO: improve typing
+			const uncomputable = Object.keys(group).includes('uncomputable') ? group.uncomputable : i === 0
 			groups.push({
 				currentIdx: i,
 				type: group.type,
 				name: group.name,
-				uncomputable: group.uncomputable
+				uncomputable
 			})
 			grpIdxes.delete(i)
 			if (group.type != 'values') throw `group.type should equal 'values'`

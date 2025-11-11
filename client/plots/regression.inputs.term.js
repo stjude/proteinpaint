@@ -572,7 +572,7 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 		}
 		if (q.type == 'custom-groupset') {
 			const gs = q.customset
-			if (gs.groups.length == 2) return
+			if (gs.groups.filter(g => !g.uncomputable).length == 2) return
 		}
 	}
 
