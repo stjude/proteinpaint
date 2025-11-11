@@ -220,6 +220,13 @@ export class GroupSet extends HandlerBase implements Handler {
 			type: 'custom-groupset',
 			customset
 		})
+		// need to also assign to this.tw.q, otherwise edit menu will not
+		// display updated groupsetting
+		// FIXME: should not need to do this
+		Object.assign(this.tw.q, {
+			type: 'custom-groupset',
+			customset
+		})
 	}
 
 	async initGroupDiv(group: GrpEntryWithDom) {
