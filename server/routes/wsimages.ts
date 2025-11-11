@@ -102,7 +102,16 @@ async function getSessionId(
 ): Promise<SessionData> {
 	const sessionManager = SessionManager.getInstance()
 
-	const invalidateResult = await sessionManager.syncAndInvalidateSessions(wsimage)
+	const maxSessions = serverconfig.features?.tileserver?.maxSessions
+	const maxIdleTime = serverconfig.features?.tileserver?.maxIdleTime
+	const invalidationThreshold = serverconfig.features?.tileserver?.invalidationThreshold
+
+	const invalidateResult = await sessionManager.syncAndInvalidateSessions(
+		wsimage,
+		maxSessions,
+		maxIdleTime,
+		invalidationThreshold
+	)
 
 	if (!invalidateResult) throw new Error('Session invalidation failed')
 
