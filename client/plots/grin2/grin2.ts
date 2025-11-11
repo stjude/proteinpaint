@@ -655,14 +655,28 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			// Find column indices for q-values
 			const columns = result.topGeneTable.columns
-			// TODO: Get this from state
-			const qValueColumns = {
-				mutation: columns.findIndex(col => col.label === 'Q-value (Mutation)'),
-				loss: columns.findIndex(col => col.label === 'Q-value (Copy Loss)'),
-				gain: columns.findIndex(col => col.label === 'Q-value (Copy Gain)'),
-				fusion: columns.findIndex(col => col.label === 'Q-value (Fusion)'),
-				sv: columns.findIndex(col => col.label === 'Q-value (Structural Variant)')
+			console.log('this:', this)
+			// Map dtUsage keys to their Q-value column labels
+			const dtToQValueColumn: Record<number, string[]> = {
+				[dtsnvindel]: ['Q-value (Mutation)'],
+				[dtfusionrna]: ['Q-value (Fusion)'],
+				[dtcnv]: ['Q-value (Copy Loss)', 'Q-value (Copy Gain)'],
+				[dtsv]: ['Q-value (Structural Variant)']
 			}
+
+			// Only search for columns that are actually checked
+			const qValueColumns: Record<string, number> = {}
+			Object.entries(this.state.config.settings.dtUsage).forEach(([key, isChecked]) => {
+				const dtKey = Number(key)
+				if (isChecked && dtToQValueColumn[dtKey]) {
+					dtToQValueColumn[dtKey].forEach(colLabel => {
+						const colIndex = columns.findIndex(col => col.label === colLabel)
+						if (colIndex !== -1) {
+							qValueColumns[colLabel] = colIndex
+						}
+					})
+				}
+			})
 
 			// Add significance column to the beginning
 			const modifiedColumns = [{ label: '', width: '20px' }, ...result.topGeneTable.columns]
@@ -679,15 +693,26 @@ class GRIN2 extends PlotBase implements RxComponent {
 			// Convert qValueColumns entries to array once
 			const qValueEntries = Object.entries(qValueColumns).filter(([_, colIndex]) => colIndex !== -1)
 
+			const qValueToLesionType: Record<string, string> = {
+				'Q-value (Mutation)': 'mutation',
+				'Q-value (Copy Loss)': 'loss',
+				'Q-value (Copy Gain)': 'gain',
+				'Q-value (Fusion)': 'fusion',
+				'Q-value (Structural Variant)': 'sv'
+			}
+
 			// Process rows to add significance indicators in new column
 			const processedRows = result.topGeneTable.rows.map(row => {
 				const circles: string[] = []
 
 				// Single pass through qValueEntries
-				for (const [type, colIndex] of qValueEntries) {
+				for (const [colLabel, colIndex] of qValueEntries) {
 					const qValue = row[colIndex]?.value
 					if (typeof qValue === 'number' && qValue < qValueThreshold) {
-						circles.push(lesionTypeCircleCache.get(type)!)
+						const lesionType = qValueToLesionType[colLabel]
+						if (lesionType) {
+							circles.push(lesionTypeCircleCache.get(lesionType)!)
+						}
 					}
 				}
 
