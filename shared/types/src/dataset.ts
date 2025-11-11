@@ -1405,6 +1405,12 @@ export type Termdb = {
 	}
 	/** if true, backend is allowed to send sample names to client in charts */
 	displaySampleIds?: (clientAuthResult: any) => boolean
+	/** ds-supplied async callback to build dictionary
+	argument: dataset object
+	sets termdb.q{}
+	no return
+	*/
+	buildDictionary?: (ds: any) => void
 	converSampleIds?: boolean
 	alwaysShowBranchTerms?: boolean
 	minimumSampleAllowed4filter?: number
@@ -1451,13 +1457,6 @@ keep this setting here for reason of:
 		/** allow to add link to "Experiment" field of singlecell app sample table */
 		scrnaExperimentId?: UrlTemplateBase
 	}
-
-	/** ds-supplied async callback to build dictionary
-	argument: dataset object
-	sets termdb.q{}
-	no return
-	*/
-	buildDictionary?: (ds: any) => null
 
 	termtypeByCohort?: any // FIXME see below
 	/** TODO not declared due to tsc err
