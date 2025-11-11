@@ -10,8 +10,7 @@ export type AlternativeCnvSet = {
 	attrs?: { [key: string]: string }
 }
 
-const cnvMenu = new Menu()
-
+let isOpen = false
 function parseSetLabel(set: AlternativeCnvSet, index: number) {
 	let text = set.name || `Set ${index + 1}`
 	let href: string | undefined
@@ -60,7 +59,6 @@ export function renderCnvSourceLegend(
 		.attr('class', 'sjpp-cnv-source')
 		.attr('transform', `translate(${gBBox.width},${gBBox.y + fontSize})`)
 
-	const btnLabel = 'Change CNV data source'.toUpperCase()
 	const btnPaddingX = Math.round(fontSize * 0.8)
 	const btnHgt = Math.round(fontSize * 1.8)
 
@@ -80,7 +78,7 @@ export function renderCnvSourceLegend(
 		.attr('font-size', fontSize)
 		.attr('text-anchor', 'start')
 		.attr('dominant-baseline', 'middle')
-		.text(btnLabel)
+		.text('Select source ▲'.toUpperCase())
 
 	const textW = btnText.node() ? Math.ceil(btnText.node()!.getBBox().width) : 0
 	const btnWdt = textW + btnPaddingX * 2
@@ -94,6 +92,13 @@ export function renderCnvSourceLegend(
 		.style('fill', '#f2f2f2')
 
 	btnText.attr('x', btnWdt / 2).attr('text-anchor', 'middle')
+
+	const cnvMenu = new Menu({
+		onHide: () => {
+			isOpen = !isOpen
+			btnText.text(isOpen ? 'Select source ▼'.toUpperCase() : 'Select source ▲'.toUpperCase())
+		}
+	})
 
 	function showCnvMenu(dom: Element) {
 		cnvMenu.clear().showunder(dom)
