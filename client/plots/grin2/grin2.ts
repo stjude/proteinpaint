@@ -176,11 +176,13 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const t2 = table2col({ holder: right })
 
 		const cnvQuery = this.app.vocabApi.termdbConfig.queries.cnv
-		const settings = this.state.config.settings || {}
+		console.log('cnvQuery', cnvQuery)
+		const settings = this.state.config.settings
 
 		// Only trust saved CNV settings if they came from a completed run
 		const useSaved = settings.runAnalysis === true
 		const savedCnv = useSaved ? settings.cnvOptions : undefined
+		console.log('savedCnv', savedCnv)
 
 		// Loss Threshold
 		this.dom.cnv_lossThreshold = this.addOptionRowToTable(
@@ -206,7 +208,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		this.dom.cnv_maxSegLength = this.addOptionRowToTable(
 			t2,
 			'Max Segment Length',
-			savedCnv?.maxSegLength ?? 2000000, // default 2 MB
+			savedCnv?.maxSegLength ?? cnvQuery.cnvMaxLength, // default 2Mb
 			0, // min
 			1e9, // max
 			1000 // step
