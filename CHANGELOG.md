@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - GRIN2: Adding lesion significance indicators. Other minor cleanups
 
+Fixes:
+- GRIN2: Now sorting top gene table by lesion p-values instead of number of subjects
+
 
 ## 2.157.0
 
