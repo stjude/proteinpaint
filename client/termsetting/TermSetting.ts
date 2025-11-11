@@ -206,11 +206,10 @@ export class TermSetting {
 				case 'NumTWCont':
 				case 'NumTWBinary':
 				case 'NumTWSpline': {
-					/* commenting out for same reason as above
 					if (this.handlerByType.numeric) {
 						this.handler = this.handlerByType.numeric
 						return
-					}*/
+					}
 					const { NumericHandler } = await import('./handlers/NumericHandler.ts')
 					this.handler = new NumericHandler({ termsetting: this })
 					this.handlerByType.numeric = this.handler
