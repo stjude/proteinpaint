@@ -100,7 +100,7 @@ def sort_grin2_data(data):
 	else:
 		raise ValueError("No sorting columns (p.nsubj.*) found in data")
 	# Sort data
-	sorted_data = data.sort_values(by=sort_column)
+	sorted_data = data.sort_values(by=sort_column, ascending=True)
 	return sorted_data
 
 def get_chrom_key(chrom):
@@ -239,42 +239,41 @@ def simple_column_filter(sorted_results, num_rows_to_process=50):
 	p5_exists = 'p5.nsubj' in sorted_results.columns
 	q5_exists = 'q5.nsubj' in sorted_results.columns
 	
-	# Sorting logic: Sort by Subject Count in descending order (largest first)
+	# Sorting logic: Sort by P-value in ascending order (smallest/most significant first)
 	# Priority: mutation > gain > loss > fusion > sv
 	# Check both that the column exists AND has meaningful data
 	sorted_column = None
-	
+
 	# Try mutation first
-	if 'nsubj.mutation' in n_cols and 'nsubj.mutation' in sorted_results.columns:
-		if has_data(sorted_results['nsubj.mutation']):
-			sorted_column = 'nsubj.mutation'
-	
+	if 'p.nsubj.mutation' in p_cols and 'p.nsubj.mutation' in sorted_results.columns:
+		if has_data(sorted_results['p.nsubj.mutation']):
+			sorted_column = 'p.nsubj.mutation'
+
 	# Try gain
-	if not sorted_column and 'nsubj.gain' in n_cols and 'nsubj.gain' in sorted_results.columns:
-		if has_data(sorted_results['nsubj.gain']):
-			sorted_column = 'nsubj.gain'
-	
+	if not sorted_column and 'p.nsubj.gain' in p_cols and 'p.nsubj.gain' in sorted_results.columns:
+		if has_data(sorted_results['p.nsubj.gain']):
+			sorted_column = 'p.nsubj.gain'
+
 	# Try loss
-	if not sorted_column and 'nsubj.loss' in n_cols and 'nsubj.loss' in sorted_results.columns:
-		if has_data(sorted_results['nsubj.loss']):
-			sorted_column = 'nsubj.loss'
-	
+	if not sorted_column and 'p.nsubj.loss' in p_cols and 'p.nsubj.loss' in sorted_results.columns:
+		if has_data(sorted_results['p.nsubj.loss']):
+			sorted_column = 'p.nsubj.loss'
+
 	# Try fusion
-	if not sorted_column and 'nsubj.fusion' in n_cols and 'nsubj.fusion' in sorted_results.columns:
-		if has_data(sorted_results['nsubj.fusion']):
-			sorted_column = 'nsubj.fusion'
-	
+	if not sorted_column and 'p.nsubj.fusion' in p_cols and 'p.nsubj.fusion' in sorted_results.columns:
+		if has_data(sorted_results['p.nsubj.fusion']):
+			sorted_column = 'p.nsubj.fusion'
+
 	# Try sv
-	if not sorted_column and 'nsubj.sv' in n_cols and 'nsubj.sv' in sorted_results.columns:
-		if has_data(sorted_results['nsubj.sv']):
-			sorted_column = 'nsubj.sv'
-	
-	# Final fallback to p-value sorting if no subject count data available
-	if not sorted_column and 'p.nsubj.mutation' in sorted_results.columns:
-		sorted_column = 'p.nsubj.mutation'
+	if not sorted_column and 'p.nsubj.sv' in p_cols and 'p.nsubj.sv' in sorted_results.columns:
+		if has_data(sorted_results['p.nsubj.sv']):
+			sorted_column = 'p.nsubj.sv'
+
+	# Sort by the selected p-value column (ascending = smallest/best p-values first)
+	if sorted_column:
 		sorted_results = sorted_results.sort_values(sorted_column, ascending=True)
-	elif sorted_column:
-		sorted_results = sorted_results.sort_values(sorted_column, ascending=False)
+	else:
+		raise ValueError("No p-value columns with data found for sorting")
 
 	# Build columns list
 	columns = [
