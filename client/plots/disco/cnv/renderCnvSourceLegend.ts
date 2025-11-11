@@ -10,7 +10,6 @@ export type AlternativeCnvSet = {
 	attrs?: { [key: string]: string }
 }
 
-let isOpen = false
 function parseSetLabel(set: AlternativeCnvSet, index: number) {
 	let text = set.name || `Set ${index + 1}`
 	let href: string | undefined
@@ -48,6 +47,7 @@ export function renderCnvSourceLegend(
 	fontSize: number,
 	onChange: (index: number) => void
 ) {
+	let isOpen = false
 	if (!legendG || legendG.empty()) throw new Error('legendG is required')
 	if (!datasets || datasets.length === 0) throw new Error('at least one dataset is required')
 
