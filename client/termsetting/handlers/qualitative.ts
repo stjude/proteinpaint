@@ -132,7 +132,7 @@ export class GroupSet extends HandlerBase implements Handler {
 				newGrpNum++
 				this.data.groups.push({
 					currentIdx: this.data.groups.length,
-					type: 'value',
+					type: 'values',
 					name: `New Group${newGrpNum != 1 ? ` ${newGrpNum}` : ''}`
 				})
 				const group = this.data.groups[this.data.groups.length - 1]
