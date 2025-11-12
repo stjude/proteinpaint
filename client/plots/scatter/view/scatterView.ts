@@ -229,7 +229,7 @@ export class ScatterView {
 					type: 'number',
 					chartType: 'sampleScatter',
 					settingsKey: 'contourBandwidth',
-					title: 'Reduce to increase resolution. ',
+					title: 'Reduce to increase resolution.',
 					min: 5,
 					max: 50,
 					step: 5
