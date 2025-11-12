@@ -341,28 +341,36 @@ export class ScatterView {
 						type: 'number',
 						chartType: 'sampleScatter',
 						settingsKey: 'minXScale',
-						title: 'Set the minimum X axis value'
+						title: 'Set the minimum X axis value',
+						width: 105,
+						placeholder: 'Input value'
 					},
 					{
 						label: 'X axis max value',
 						type: 'number',
 						chartType: 'sampleScatter',
 						settingsKey: 'maxXScale',
-						title: 'Set the maximum X axis value'
+						title: 'Set the maximum X axis value',
+						width: 105,
+						placeholder: 'Input value'
 					},
 					{
 						label: 'Y axis min value',
 						type: 'number',
 						chartType: 'sampleScatter',
 						settingsKey: 'minYScale',
-						title: 'Set the minimum Y axis value'
+						title: 'Set the minimum Y axis value',
+						width: 105,
+						placeholder: 'Input value'
 					},
 					{
 						label: 'Y axis max value',
 						type: 'number',
 						chartType: 'sampleScatter',
 						settingsKey: 'maxYScale',
-						title: 'Set the maximum Y axis value'
+						title: 'Set the maximum Y axis value',
+						width: 105,
+						placeholder: 'Input value'
 					}
 				]
 			)

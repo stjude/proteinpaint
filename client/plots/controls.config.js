@@ -158,7 +158,7 @@ function setNumberInput(opts) {
 		values: {}
 	}
 
-	if (!opts.inputs)
+	if (!opts.inputs) {
 		opts.inputs = [
 			{
 				min: opts.min,
@@ -168,6 +168,8 @@ function setNumberInput(opts) {
 				settingsKey: opts.settingsKey
 			}
 		]
+		if (opts.placeholder) opts.inputs[0].placeholder = opts.placeholder
+	}
 
 	// debounce by default
 	const debounceTimeout =
@@ -211,6 +213,7 @@ function setNumberInput(opts) {
 				.append('input')
 				.attr('aria-labelledby', self.id)
 				.attr('type', 'number')
+				.attr('placeholder', 'placeholder' in input ? input.placeholder : '')
 				.attr('min', 'min' in input ? input.min : null) // verify that null gives the default html input behavior
 				.attr('max', 'max' in input ? input.max : null) // same
 				.attr('step', input.step || opts.step || null) //step gives the amount by which user can increment
