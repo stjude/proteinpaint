@@ -98,13 +98,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// Options table
 		const t2 = table2col({ holder: right })
 
-		const stateSnvindel = this.state.config.settings?.snvindelOptions
-
 		// Top numeric options
 		this.dom.snvindel_minTotalDepth = this.addOptionRowToTable(
 			t2,
 			'Min Total Depth',
-			stateSnvindel?.minTotalDepth ?? 10, // default. Getting from state and defaulting to 10 if not available
+			this.state.config.settings?.snvindelOptions?.minTotalDepth ?? 10, // default. Getting from state and defaulting to 10 if not available
 			0, // min
 			1e6, // max
 			1 // step
@@ -112,7 +110,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		this.dom.snvindel_minAltAlleleCount = this.addOptionRowToTable(
 			t2,
 			'Min Alt Allele Count',
-			stateSnvindel?.minAltAlleleCount ?? 2, // default. Getting from state and defaulting to 2 if not available
+			this.state.config.settings?.snvindelOptions?.minAltAlleleCount ?? 2, // default. Getting from state and defaulting to 2 if not available
 			0,
 			1e6,
 			1
@@ -175,20 +173,16 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// CNV options table
 		const t2 = table2col({ holder: right })
 
-		const cnvQuery = this.app.vocabApi.termdbConfig.queries.cnv
-		console.log('cnvQuery', cnvQuery)
-		const settings = this.state.config.settings
-
-		// Only trust saved CNV settings if they came from a completed run
-		const useSaved = settings.runAnalysis === true
-		const savedCnv = useSaved ? settings.cnvOptions : undefined
-		console.log('savedCnv', savedCnv)
+		// We need this extra useSaved because of having a ds specific value set. Only use saved CNV settings if we know they came from a completed run
+		// TODO: Long term we will need to do this for snvindel once we support ds specific values there also
+		const useSaved = this.state.config.settings.runAnalysis === true
+		const savedCnv = useSaved ? this.state.config.settings.cnvOptions : undefined
 
 		// Loss Threshold
 		this.dom.cnv_lossThreshold = this.addOptionRowToTable(
 			t2,
 			'Loss Threshold',
-			savedCnv?.lossThreshold ?? cnvQuery.cnvLossCutoff,
+			savedCnv?.lossThreshold ?? this.app.vocabApi.termdbConfig.queries.cnv?.cnvLossCutoff ?? -0.4, // default. We first check if we have saved state, then we check the ds specific value, if that is undefined we fall back to the default/null we then set the default value
 			-5, // min
 			0, // max
 			0.05 // step
@@ -198,7 +192,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		this.dom.cnv_gainThreshold = this.addOptionRowToTable(
 			t2,
 			'Gain Threshold',
-			savedCnv?.gainThreshold ?? cnvQuery.cnvGainCutoff,
+			savedCnv?.gainThreshold ?? this.app.vocabApi.termdbConfig.queries.cnv?.cnvGainCutoff ?? 0.4, // default. We first check if we have saved state, then we check the ds specific value, if that is undefined we fall back to the default/null we then set the default value
 			0, // min
 			5, // max
 			0.05 // step
@@ -208,7 +202,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		this.dom.cnv_maxSegLength = this.addOptionRowToTable(
 			t2,
 			'Max Segment Length',
-			savedCnv?.maxSegLength ?? cnvQuery.cnvMaxLength, // default 2Mb
+			savedCnv?.maxSegLength ?? this.app.vocabApi.termdbConfig.queries.cnv?.cnvMaxLength ?? 2e6, // default 2Mb. We first check the save state, then the ds specific value, if that is undefined we fall back to the default/null we then set the default value
 			0, // min
 			1e9, // max
 			1000 // step
@@ -235,8 +229,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// )
 
 		// ----- Left-side CNV checkbox -----
-		const dtUsage = settings.dtUsage || {}
-		const isChecked = useSaved && dtUsage[dtcnv]?.checked !== undefined ? dtUsage[dtcnv].checked : !!cnvQuery
+		const dtUsage = this.state.config.settings.dtUsage
+		const isChecked =
+			useSaved && dtUsage[dtcnv]?.checked !== undefined
+				? dtUsage[dtcnv].checked
+				: !!this.app.vocabApi.termdbConfig.queries.cnv
 
 		t2.table.style('display', isChecked ? '' : 'none')
 
@@ -476,7 +473,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			Object.values(this.dom.consequenceCheckboxes).forEach(cb => cb.property('checked', false))
 		})
 
-		// Default → always reset to canonical (protein-changing + StartLost + StopLost)
+		// Default: always reset to canonical (protein-changing + StartLost + StopLost)
 		this.dom.snvindelDefaultBtn.on('click', () => {
 			Object.entries(this.dom.consequenceCheckboxes).forEach(([classKey, checkbox]) => {
 				checkbox.property('checked', canonicalDefault.has(classKey))
