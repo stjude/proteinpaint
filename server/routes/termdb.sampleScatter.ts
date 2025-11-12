@@ -71,7 +71,7 @@ function init({ genomes }) {
 				ds,
 				true // FIXME 3rd arg hardcoded to true
 			)
-			if (data.error) throw data.error
+			if (data.error) throw new Error(data.error)
 			let result
 			if (q.coordTWs.length > 0) {
 				const tmp = await getSampleCoordinatesByTerms(req, q, ds, data as ValidGetDataResponse)
@@ -79,10 +79,10 @@ function init({ genomes }) {
 				// coordTwData = tmp[1]
 			} else {
 				// no coordinate terms. check prebuilt map
-				if (!q.plotName) throw `Neither plot name or coordinates where provided`
-				if (!Array.isArray(ds.cohort?.scatterplots?.plots)) throw 'not supported'
+				if (!q.plotName) throw new Error('Neither plot name or coordinates where provided')
+				if (!Array.isArray(ds.cohort?.scatterplots?.plots)) throw new Error('not supported')
 				const plot = ds.cohort.scatterplots.plots.find(p => p.name == q.plotName)
-				if (!plot) throw `plot not found with plotName ${q.plotName}`
+				if (!plot) throw new Error(`plot not found with plotName ${q.plotName}`)
 
 				const tmp = await getSamples(ds, plot)
 				refSamples = tmp[0]
@@ -591,13 +591,13 @@ async function loadFile(p: any, ds: any) {
 // called in mds3.init
 export async function mayInitiateScatterplots(ds) {
 	if (!ds.cohort.scatterplots) return
-	if (!Array.isArray(ds.cohort.scatterplots.plots)) throw 'cohort.scatterplots.plots is not array'
+	if (!Array.isArray(ds.cohort.scatterplots.plots)) throw new Error('cohort.scatterplots.plots is not array')
 	for (const p of ds.cohort.scatterplots.plots) {
-		if (!p.name) throw '.name missing from one of scatterplots.plots[]'
+		if (!p.name) throw new Error('.name missing from one of scatterplots.plots[]')
 		if (p.file) {
 			// file is potentially big and can slow down server launch. only load it the first time the plot is accessed
 		} else {
-			throw 'unknown data source of one of scatterplots.plots[]'
+			throw new Error('unknown data source of one of scatterplots.plots[]')
 		}
 	}
 }
