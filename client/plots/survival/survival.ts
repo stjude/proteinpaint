@@ -20,7 +20,7 @@ import { downloadChart } from '#common/svg.download'
 import { getCombinedTermFilter } from '#filter'
 import { DownloadMenu } from '#dom/downloadMenu'
 
-const t0_t2_defaultQ = structuredClone(term0_term2_defaultQ)
+export const t0_t2_defaultQ = structuredClone(term0_term2_defaultQ)
 Object.assign(t0_t2_defaultQ, {
 	numeric: {
 		mode: 'discrete',
