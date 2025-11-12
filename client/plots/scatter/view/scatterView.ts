@@ -66,7 +66,13 @@ export class ScatterView {
 			title: 'Scale sample by term value',
 			label: 'Scale by',
 			vocabApi: this.scatter.app.vocabApi,
-			numericEditMenuVersion: ['continuous']
+			numericEditMenuVersion: ['continuous'],
+			//Eventually this will be corrected with usecase.detail
+			//When single cell, only relevant terms will be displayed
+			//in the tree
+			getDisplayStyle: () => {
+				return this.scatter.config?.singleCellPlot ? 'none' : ''
+			}
 		}
 		const shapeOption = {
 			type: 'term',
@@ -77,6 +83,12 @@ export class ScatterView {
 			label: 'Shape',
 			vocabApi: this.scatter.app.vocabApi,
 			numericEditMenuVersion: ['discrete'],
+			//Eventually this will be corrected with usecase.detail
+			//When single cell, only relevant terms will be displayed
+			//in the tree
+			getDisplayStyle: () => {
+				return this.scatter.config?.singleCellPlot ? 'none' : ''
+			},
 			processInput: async tw => {
 				//only discrete mode allowed so set discrete mode and fill term wrapper to add the bins
 				if (isNumericTerm(tw?.term)) {
@@ -153,7 +165,13 @@ export class ScatterView {
 				title: 'Categories to color the samples',
 				label: 'Color',
 				vocabApi: this.scatter.app.vocabApi,
-				numericEditMenuVersion: ['continuous', 'discrete']
+				numericEditMenuVersion: ['continuous', 'discrete'],
+				//Eventually this will be corrected with usecase.detail
+				//When single cell, only relevant terms will be displayed
+				//in the tree
+				getDisplayStyle: () => {
+					return this.scatter.config?.singleCellPlot ? 'none' : ''
+				}
 			},
 
 			{
@@ -252,7 +270,7 @@ export class ScatterView {
 			inputs.push(sampleCategory)
 		}
 
-		if (!this.scatter.model.is2DLarge) {
+		if (!this.scatter.model.is2DLarge && !this.scatter.config.singleCellPlot) {
 			const isPremade = this.scatter.config.name !== undefined && !this.scatter.config.term
 			inputs.unshift({
 				type: 'term',
@@ -267,7 +285,7 @@ export class ScatterView {
 					if (!isPremade && isNumericTerm(tw?.term)) tw.q = { mode: 'continuous' } //use continuous mode by default if not premade plot
 				}
 			})
-		} else {
+		} else if (!this.scatter.config.singleCellPlot) {
 			inputs.push(
 				{
 					label: 'Sample size',
