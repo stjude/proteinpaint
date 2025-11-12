@@ -27,13 +27,13 @@ class ProfilePolar extends profilePlot {
 		await super.init(appState)
 		const config = appState.plots.find(p => p.id === this.id) as any
 		this.scoreTerms = config.terms
+		this.angle = (Math.PI * 2) / config.terms.length
 	}
 
 	async main() {
 		await super.main()
 		//gets filters and scores data
 		await this.setControls()
-		this.angle = (Math.PI * 2) / this.config.terms.length
 		this.plot()
 	}
 

@@ -9,7 +9,7 @@ const stepx = 500
 const barwidth = 400
 
 class profileBarchart extends profilePlot {
-	profileComponentInput: any
+	additionalInputs: any[]
 	componentNames!: { value: string; label: string }[]
 	configProfileComponent: any
 	rowCount: number = 0
@@ -17,6 +17,7 @@ class profileBarchart extends profilePlot {
 
 	constructor(opts) {
 		super(opts, 'profileBarchart')
+		this.additionalInputs = []
 	}
 
 	async init(appState) {
@@ -25,7 +26,7 @@ class profileBarchart extends profilePlot {
 		this.componentNames = config.plotByComponent.map(elem => {
 			return { value: elem.profileComponent.name, label: elem.profileComponent.name }
 		})
-		this.profileComponentInput = {
+		const profileComponentInput = {
 			label: 'Component',
 			type: 'dropdown',
 			chartType: 'profileBarchart',
@@ -33,6 +34,7 @@ class profileBarchart extends profilePlot {
 			settingsKey: 'profileComponent',
 			callback: value => this.setProfileComponent(value)
 		}
+		this.additionalInputs.push(profileComponentInput)
 	}
 
 	setProfileComponent(value) {
@@ -47,6 +49,7 @@ class profileBarchart extends profilePlot {
 				this.config.plotByComponent.find(comp => comp.profileComponent.name == this.settings.profileComponent) ||
 				this.config.plotByComponent[0]
 			this.rowCount = 0
+			this.scoreTerms = []
 			for (const group of this.configProfileComponent.groups)
 				for (const row of group.rows) {
 					this.rowCount++
@@ -57,8 +60,7 @@ class profileBarchart extends profilePlot {
 						this.scoreTerms.push(row.term2)
 					}
 				}
-			const additionalInputs: any[] = [this.profileComponentInput]
-			await this.setControls(additionalInputs)
+			await this.setControls(this.additionalInputs)
 			this.profileComponent = this.settings.profileComponent || this.componentNames[0].value
 			this.plot()
 		} catch (e) {
