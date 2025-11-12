@@ -83,7 +83,11 @@ async function fillMenu(self, div, tvs) {
 
 	let cnvMaxLength
 	if (cnv.cnvMaxLength) {
-		cnvMaxLength = tvs.cnvMaxLength || cnv.cnvMaxLength
+		cnvMaxLength = Number.isFinite(tvs.cnvMaxLength)
+			? tvs.cnvMaxLength
+			: tvs.cnvMaxLength === null
+			? -1
+			: cnv.cnvMaxLength
 		const cnvLengthDiv = settingsDiv.append('div').style('margin-bottom', '5px')
 		cnvLengthDiv.append('span').style('opacity', 0.7).text('CNV Max Length')
 		cnvLengthDiv
@@ -99,9 +103,7 @@ async function fillMenu(self, div, tvs) {
 					event.target.value = cnvMaxLength
 					return
 				}
-				const newValue = Number(value)
-				// no max length if value == -1
-				cnvMaxLength = newValue == -1 ? null : newValue
+				cnvMaxLength = Number(value)
 			})
 			.on('mouseover', event => {
 				tip.clear()
@@ -145,9 +147,10 @@ async function fillMenu(self, div, tvs) {
 			const new_tvs = structuredClone(tvs)
 			new_tvs.continuousCnv = true
 			new_tvs.cnvWT = cnvWT
-			if (cnvGainCutoff) new_tvs.cnvGainCutoff = cnvGainCutoff
-			if (cnvLossCutoff) new_tvs.cnvLossCutoff = cnvLossCutoff
-			if (cnvMaxLength) new_tvs.cnvMaxLength = cnvMaxLength
+			new_tvs.cnvGainCutoff = cnvGainCutoff
+			new_tvs.cnvLossCutoff = cnvLossCutoff
+			// no max length if value == -1
+			new_tvs.cnvMaxLength = cnvMaxLength == -1 ? null : cnvMaxLength
 			self.dom.tip.hide()
 			self.opts.callback(new_tvs)
 		})
