@@ -238,8 +238,17 @@ function handleColorClick(d, self, color) {
 		for (const [key, value] of Object.entries(term.term.values)) if (value.label == d.dataId) dataId = key
 	if (term.term.values?.[dataId]) term.term.values[dataId].color = color
 	if (term.term.type == 'geneVariant') {
-		if (!term.term.values) term.term.values = {}
-		term.term.values[d.dataId] = { label: d.dataId, color }
+		let groupset
+		if (term.q.type == 'predefined-groupset') {
+			groupset = term.term.groupsetting.lst[term.q.predefined_groupset_idx]
+		} else if (term.q.type == 'custom-groupset') {
+			groupset = term.q.customset
+		} else {
+			throw 'unexpected q.type'
+		}
+		const group = groupset.groups.find(g => g.name == d.dataId)
+		if (!group) throw 'group not found'
+		group.color = color
 	}
 	let binColored = null
 	if (self.bins[2].length > 0) {
