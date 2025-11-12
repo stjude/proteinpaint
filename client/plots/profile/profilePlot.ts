@@ -391,7 +391,7 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 				)
 			}
 			if (this.state.logged) {
-				if (isAggregate && (this.state.sites?.length > 1 || this.state.user == 'admin')) {
+				if (isAggregate && this.sites.length > 1) {
 					const sitesInput = {
 						label: 'Sites',
 						type: 'dropdown',
