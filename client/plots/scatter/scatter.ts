@@ -16,6 +16,7 @@ import { select2Terms } from '#dom/select2Terms'
 import type { MassState } from '../../../client/mass/types/mass.js'
 import { DownloadMenu } from '#dom/downloadMenu'
 import { PlotBase } from '#plots/PlotBase.js'
+import type { Settings } from './Settings.ts'
 
 export class Scatter extends PlotBase implements RxComponent {
 	static type = 'sampleScatter'
@@ -34,12 +35,12 @@ export class Scatter extends PlotBase implements RxComponent {
 	model!: ScatterModel
 	vm!: any
 	interactivity!: ScatterInteractivity
-	settings: any
+	settings!: Settings
 	charts: any
 	opts: any
 	state!: any
 	transform: any
-	zoom: any
+	zoom: number
 
 	constructor(opts, api) {
 		super(opts, api)
@@ -283,7 +284,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	}
 }
 
-export function getDefaultScatterSettings() {
+export function getDefaultScatterSettings(): Settings {
 	return {
 		size: 0.8,
 		minShapeSize: 0.5,
@@ -322,7 +323,11 @@ export function getDefaultScatterSettings() {
 		contourThresholds: 10,
 		duration: 500,
 		useGlobalMinMax: true,
-		saveZoomTransform: false
+		saveZoomTransform: false,
+		minXScale: null,
+		maxXScale: null,
+		minYScale: null,
+		maxYScale: null
 	}
 }
 
