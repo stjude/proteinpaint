@@ -1,6 +1,8 @@
 import { PlotBase, defaultUiLabels } from './PlotBase.ts'
-import { getCompInit, type ComponentApi, type RxComponent } from '#rx'
-import { controlsInit } from './controls'
+import { getCompInit, copyMerge, type ComponentApi, type RxComponent } from '#rx'
+import { controlsInit, term0_term2_defaultQ } from './controls'
+import { t0_t2_defaultQ as term0_term2_defaultQ_surv } from './survival/survival.ts'
+import { fillTermWrapper } from '#termsetting'
 
 class SummaryInputPlot extends PlotBase implements RxComponent {
 	static type = 'summaryInput'
@@ -51,7 +53,7 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 
 	async setControls() {
 		this.dom.controls.selectAll('*').remove()
-		const controlLabels = this.state.config.controlLabels
+		const controlLabels = this.config.controlLabels
 		const inputs = [
 			{
 				type: 'term',
@@ -63,13 +65,15 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 				type: 'term',
 				configKey: 'term2',
 				usecase: { target: 'summaryInput', detail: 'term2' },
-				label: controlLabels.term2.label
+				label: controlLabels.term2.label,
+				defaultQ4fillTW: this.config.term?.term.type == 'survival' ? term0_term2_defaultQ_surv : term0_term2_defaultQ
 			},
 			{
 				type: 'term',
 				configKey: 'term0',
 				usecase: { target: 'summaryInput', detail: 'term0' },
-				label: controlLabels.term0.label
+				label: controlLabels.term0.label,
+				defaultQ4fillTW: this.config.term?.term.type == 'survival' ? term0_term2_defaultQ_surv : term0_term2_defaultQ
 			}
 		]
 
@@ -99,17 +103,9 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 			.on('click', () => {
 				const config = structuredClone(this.config)
 				if (!config.term) throw 'config.term is missing'
-				if (config.term.term.type == 'survival') {
-					// term1 is surival term, launch survival plot
-					config.chartType = 'survival'
-					// remove q from term2 and term0 so that they use t0_t2_defaultQ
-					// specified in getPlotConfig() of survival plot
-					if (config.term2) config.term2 = { term: config.term2.term }
-					if (config.term0) config.term0 = { term: config.term0.term }
-				} else {
-					// term1 is not survival term, launch summary plot
-					config.chartType = 'summary'
-				}
+				// if term1 is surival term, launch survival plot
+				// otherwise, launch summary plot
+				config.chartType = config.term.term.type == 'survival' ? 'survival' : 'summary'
 				this.app.dispatch({
 					type: 'plot_create',
 					config
@@ -131,11 +127,39 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 export const summaryInputInit = getCompInit(SummaryInputPlot)
 export const componentInit = summaryInputInit
 
-export function getPlotConfig(_opts, app) {
+export async function getPlotConfig(opts, app) {
+	try {
+		if (opts.term) {
+			await fillTermWrapper(opts.term, app.vocabApi, opts.term.q || { geneVariant: { type: 'predefined-groupset' } })
+		}
+		// supply term0_term2_defaultQ if opts.term0/2.bins/q is undefined
+		// e.g. for scatterplot, opts.term2.q.mode='continuous' so will not
+		// want to override with q.mode from term0_term2_defaultQ
+		if (opts.term2) {
+			await fillTermWrapper(
+				opts.term2,
+				app.vocabApi,
+				opts.term2.bins || opts.term2.q ? undefined : term0_term2_defaultQ
+			)
+		}
+		if (opts.term0) {
+			await fillTermWrapper(
+				opts.term0,
+				app.vocabApi,
+				opts.term0.bins || opts.term0.q ? undefined : term0_term2_defaultQ
+			)
+		}
+	} catch (e: any) {
+		if (e.stack) console.log(e.stack)
+		throw `${e} [summaryInput getPlotConfig()]`
+	}
+
 	const config = {
 		chartType: 'summaryInput',
 		settings: {},
 		controlLabels: Object.assign({}, defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {})
 	}
-	return config
+
+	// may apply term-specific changes to the default object
+	return copyMerge(config, opts)
 }
