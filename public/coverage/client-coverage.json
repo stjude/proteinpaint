@@ -2845,38 +2845,38 @@
   },
   "filter/tvs.numeric.js": {
     "lines": {
-      "total": 232,
-      "covered": 90,
+      "total": 228,
+      "covered": 86,
       "skipped": 0,
-      "pct": 38.79
+      "pct": 37.71
     },
     "functions": {
-      "total": 31,
-      "covered": 12,
+      "total": 30,
+      "covered": 11,
       "skipped": 0,
-      "pct": 38.7
+      "pct": 36.66
     },
     "statements": {
-      "total": 255,
-      "covered": 92,
+      "total": 251,
+      "covered": 88,
       "skipped": 0,
-      "pct": 36.07
+      "pct": 35.05
     },
     "branches": {
-      "total": 166,
-      "covered": 30,
+      "total": 162,
+      "covered": 27,
       "skipped": 0,
-      "pct": 18.07
+      "pct": 16.66
     },
     "lowestPct": {
-      "curr": 18.07,
+      "curr": 16.66,
       "prev": 18.07,
-      "diff": 0
+      "diff": -1.4100000000000001
     },
     "averagePct": {
-      "curr": 32.9075,
+      "curr": 31.52,
       "prev": 33.1625,
-      "diff": -0.25500000000000256
+      "diff": -1.6425000000000018
     }
   },
   "filter/tvs.survival.js": {
