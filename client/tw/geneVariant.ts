@@ -79,19 +79,6 @@ export class GvBase extends TwBase {
 		// fill child dt terms
 		if (!tw.term.childTerms) await getChildTerms(tw.term, opts.vocabApi)
 
-		{
-			// apply optional ds-level configs for this specific term
-			const c = opts.vocabApi.termdbConfig.queries.cnv
-			if (c && tw.term.name) {
-				//if (c) valid js code but `&& tw.term.name` required to avoid type error
-				// order of overide: 1) do not override existing settings in tw.q{} 2) c.cnvCutoffsByGene[thisGene] 3) default cutoffs in c
-				const { cnvMaxLength, cnvGainCutoff, cnvLossCutoff } = c
-				const defaultCnvCutoff =
-					cnvMaxLength || cnvGainCutoff || cnvLossCutoff ? { cnvMaxLength, cnvGainCutoff, cnvLossCutoff } : {}
-				Object.assign(tw.q, defaultCnvCutoff, c.cnvCutoffsByGene?.[tw.term.name] || {}, tw.q)
-			}
-		}
-
 		/* 
 			Pre-fill the tw.type, since it's required for ROUTING to the
 			correct fill() function. Tsc will be able to use tw.type as a 
