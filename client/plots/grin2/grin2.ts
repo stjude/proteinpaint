@@ -182,7 +182,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		this.dom.cnv_lossThreshold = this.addOptionRowToTable(
 			t2,
 			'Loss Threshold',
-			savedCnv?.lossThreshold ?? this.app.vocabApi.termdbConfig.queries.cnv?.cnvLossCutoff ?? -0.4, // default. We first check if we have saved state, then we check the ds specific value, if that is undefined we fall back to the default/null we then set the default value
+			savedCnv?.lossThreshold ?? this.app.vocabApi.termdbConfig.queries.cnv?.cnvLossCutoff ?? -0.4, // default. We first check if we have saved state, then we check the ds specific value, if that is undefined we fall back to the hardcoded default value
 			-5, // min
 			0, // max
 			0.05 // step
@@ -192,7 +192,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		this.dom.cnv_gainThreshold = this.addOptionRowToTable(
 			t2,
 			'Gain Threshold',
-			savedCnv?.gainThreshold ?? this.app.vocabApi.termdbConfig.queries.cnv?.cnvGainCutoff ?? 0.4, // default. We first check if we have saved state, then we check the ds specific value, if that is undefined we fall back to the default/null we then set the default value
+			savedCnv?.gainThreshold ?? this.app.vocabApi.termdbConfig.queries.cnv?.cnvGainCutoff ?? 0.4, // default. We first check if we have saved state, then we check the ds specific value, if that is undefined we fall back to the hardcoded default value
 			0, // min
 			5, // max
 			0.05 // step
@@ -202,7 +202,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		this.dom.cnv_maxSegLength = this.addOptionRowToTable(
 			t2,
 			'Max Segment Length',
-			savedCnv?.maxSegLength ?? this.app.vocabApi.termdbConfig.queries.cnv?.cnvMaxLength ?? 2e6, // default 2Mb. We first check the save state, then the ds specific value, if that is undefined we fall back to the default/null we then set the default value
+			savedCnv?.maxSegLength ?? this.app.vocabApi.termdbConfig.queries.cnv?.cnvMaxLength ?? 2e6, // default 2Mb. We first check if we have saved state, then we check the ds specific value, if that is undefined we fall back to the hardcoded default value
 			0, // min
 			1e9, // max
 			1000 // step
