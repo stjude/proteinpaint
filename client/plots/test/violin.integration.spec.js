@@ -54,6 +54,7 @@ tape('\n', function (test) {
 })
 
 tape('agedx/sex, basic rendering', function (test) {
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			plots: [open_state]
@@ -178,6 +179,7 @@ tape('agedx/sex, basic rendering', function (test) {
 })
 
 tape('agedx/sex, basic controls', function (test) {
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			plots: [open_state]
@@ -373,6 +375,7 @@ tape('agedx/sex, basic controls', function (test) {
 })
 
 tape('test label clicking, filtering and hovering', function (test) {
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			nav: {
@@ -470,6 +473,7 @@ tape('test label clicking, filtering and hovering', function (test) {
 })
 
 tape('test hide option on label clicking', function (test) {
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			nav: {
@@ -544,6 +548,7 @@ tape('test hide option on label clicking', function (test) {
 })
 
 tape('term1=categorical, term2=numeric', function (test) {
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			plots: [
@@ -569,7 +574,9 @@ tape('term1=categorical, term2=numeric', function (test) {
 		test.end()
 	}
 })
+
 tape('term1=numeric, term2=cat groupsetting', function (test) {
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			plots: [
@@ -622,6 +629,7 @@ tape('term1=numeric, term2=survival', function (test) {
 		test.end()
 	}
 })
+
 tape('term1=numeric, term2=geneVariant', function (test) {
 	runpp({
 		state: {
@@ -648,6 +656,7 @@ tape('term1=numeric, term2=geneVariant', function (test) {
 		test.end()
 	}
 })
+
 tape('term1=numeric, term2=geneVariant geneset', function (test) {
 	runpp({
 		state: {
@@ -743,6 +752,7 @@ tape('term1=geneExp, term2=categorical', function (test) {
 		test.end()
 	}
 })
+
 tape('term1=geneExp, term2=cat groupsetting', function (test) {
 	runpp({
 		state: {
@@ -772,6 +782,7 @@ tape('term1=geneExp, term2=cat groupsetting', function (test) {
 		test.end()
 	}
 })
+
 tape('term1=geneExp, term2=geneVariant', function (test) {
 	runpp({
 		state: {
@@ -801,6 +812,7 @@ tape('term1=geneExp, term2=geneVariant', function (test) {
 		test.end()
 	}
 })
+
 tape('term1=geneExp, term2=geneVariant geneset', function (test) {
 	runpp({
 		state: {
@@ -830,6 +842,7 @@ tape('term1=geneExp, term2=geneVariant geneset', function (test) {
 		test.end()
 	}
 })
+
 tape('term1=ssgsea, term2=categorical', function (test) {
 	runpp({
 		state: {
@@ -858,6 +871,7 @@ tape('term1=ssgsea, term2=categorical', function (test) {
 		test.end()
 	}
 })
+
 tape('term1=ssgsea, term2=cat groupsetting', function (test) {
 	runpp({
 		state: {
@@ -884,6 +898,7 @@ tape('term1=ssgsea, term2=cat groupsetting', function (test) {
 		test.end()
 	}
 })
+
 tape('term1=ssgsea, term2=geneVariant', function (test) {
 	runpp({
 		state: {
@@ -910,6 +925,7 @@ tape('term1=ssgsea, term2=geneVariant', function (test) {
 		test.end()
 	}
 })
+
 tape('term1=ssgsea, term2=geneVariant geneset', function (test) {
 	runpp({
 		state: {
@@ -1239,6 +1255,7 @@ tape('term1=numeric, term2=numeric, term0=categorical', function (test) {
 })
 
 tape('test uncomputable categories legend', function (test) {
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			nav: {
@@ -1302,6 +1319,7 @@ tape('test uncomputable categories legend', function (test) {
 })
 
 tape('Load linear regression-violin UI', function (test) {
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			plots: [
@@ -1332,6 +1350,7 @@ tape('Load linear regression-violin UI', function (test) {
 })
 
 tape('term1=singleCellExpression, term2=singleCellCellType', function (test) {
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			plots: [

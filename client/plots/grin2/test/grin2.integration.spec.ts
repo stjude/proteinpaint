@@ -18,6 +18,7 @@ tape('\n', function (test) {
 })
 
 tape('grin2', function (test) {
+	test.timeoutAfter(10000)
 	runpp({
 		state: {
 			plots: [
@@ -46,6 +47,7 @@ tape('grin2', function (test) {
 })
 
 tape('grin2 fusion-only', function (test) {
+	test.timeoutAfter(10000)
 	runpp({
 		state: {
 			plots: [{ chartType: 'grin2' }]
@@ -99,6 +101,7 @@ tape('grin2 fusion-only', function (test) {
 // TODO: No SV data in termdbtest. Will write one once we have some
 
 tape('grin2 cnv-only', function (test) {
+	test.timeoutAfter(10000)
 	runpp({
 		state: {
 			plots: [{ chartType: 'grin2' }]
@@ -150,6 +153,7 @@ tape('grin2 cnv-only', function (test) {
 })
 
 tape('grin2 snvindel-only', function (test) {
+	test.timeoutAfter(10000)
 	runpp({
 		state: {
 			plots: [{ chartType: 'grin2' }]
@@ -201,6 +205,7 @@ tape('grin2 snvindel-only', function (test) {
 })
 
 tape('grin2 all-data-types-unchecked disables run button', function (test) {
+	test.timeoutAfter(10000)
 	runpp({
 		state: {
 			plots: [{ chartType: 'grin2' }]
