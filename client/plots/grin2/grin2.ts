@@ -778,54 +778,83 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.style('font-size', `${this.headerFontSize}px`)
 				.text('GRIN2 Processing Summary')
 
-			// Using table2col for processing summary
-			const table = table2col({
-				holder: this.dom.div.append('div'),
-				margin: this.btnMargin
+			// Container for tables
+			const tablesContainer = this.dom.div.append('div')
+
+			// General stats using table2col
+			const generalTable = table2col({
+				holder: tablesContainer.append('div'),
+				margin: '0'
 			})
 
-			table.addRow('Total Samples', result.processingSummary.totalSamples.toLocaleString())
-			table.addRow('Processed Samples', result.processingSummary.processedSamples.toLocaleString())
-			table.addRow('Unprocessed Samples', (result.processingSummary.unprocessedSamples ?? 0).toLocaleString())
-			table.addRow('Failed Samples', result.processingSummary.failedSamples.toLocaleString())
-			table.addRow(
+			generalTable.addRow('Total Samples', result.processingSummary.totalSamples.toLocaleString())
+			generalTable.addRow('Processed Samples', result.processingSummary.processedSamples.toLocaleString())
+			generalTable.addRow('Unprocessed Samples', (result.processingSummary.unprocessedSamples ?? 0).toLocaleString())
+			generalTable.addRow('Failed Samples', result.processingSummary.failedSamples.toLocaleString())
+			generalTable.addRow(
 				'Failed Files',
 				result.processingSummary.failedFiles?.length
 					? result.processingSummary.failedFiles.map(f => f.sampleName).join(', ')
 					: '0'
 			)
-			table.addRow('Total Lesions', result.processingSummary.totalLesions.toLocaleString())
-			table.addRow('Processed Lesions', result.processingSummary.processedLesions.toLocaleString())
+			generalTable.addRow('Total Lesions', result.processingSummary.totalLesions.toLocaleString())
+			generalTable.addRow('Processed Lesions', result.processingSummary.processedLesions.toLocaleString())
 
-			// Add lesion counts if available
-			if (result.processingSummary.lesionCounts) {
-				// Add each lesion type as its own row
-				if (result.processingSummary.lesionCounts.byType) {
-					const byType = result.processingSummary.lesionCounts.byType
+			// Lesion type details in a proper table
+			if (result.processingSummary.lesionCounts?.byType) {
+				const byType = result.processingSummary.lesionCounts.byType
 
-					// Define friendly names for lesion types
-					const typeLabels: Record<string, string> = {
-						mutation: 'Mutations',
-						gain: 'Copy Gains',
-						loss: 'Copy Losses',
-						fusion: 'Fusions',
-						sv: 'Structural Variants'
-					}
+				const typeLabels: Record<string, string> = {
+					mutation: 'Mutations',
+					gain: 'Copy Gains',
+					loss: 'Copy Losses',
+					fusion: 'Fusions',
+					sv: 'Structural Variants'
+				}
 
-					// Add a row for each lesion type
-					for (const [type, typeData] of Object.entries(byType)) {
-						const label = typeLabels[type]
-						const typeInfo = typeData as { count: number; capped: boolean; samples: number }
+				const table = tablesContainer
+					.append('div')
+					.style('margin', this.btnMargin)
+					.append('table')
+					.style('border-collapse', 'collapse')
+					.style('width', 'auto')
+					.style('font-size', 'inherit')
 
-						// Add count row
-						table.addRow(`  ${label}`, typeInfo.count.toLocaleString())
+				// Helper to apply cell styles
+				const styleCell = (cell: any, align?: string, isFirstCol = false) => {
+					const padding = isFirstCol ? '8px 16px 8px 0' : '8px 16px' // No left padding for first column
+					cell.style('padding', padding).style('border-bottom', '1px solid #eee')
+					if (align) cell.style('text-align', align)
+					return cell
+				}
 
-						// Add capped status row
-						table.addRow(`    ${label} Capped`, typeInfo.capped ? 'Yes' : 'No')
+				// Headers
+				const headerRow = table.append('thead').append('tr')
+				;[
+					['Lesion Type', 'left'],
+					['Count', 'right'],
+					['Capped', 'center'],
+					['Samples', 'right']
+				].forEach(([text, align], index) => {
+					headerRow
+						.append('th')
+						.style('text-align', align)
+						.style('padding', index === 0 ? '8px 16px 8px 0' : '8px 16px')
+						.style('border-bottom', '2px solid #ddd')
+						.style('font-weight', 'normal')
+						.text(text)
+				})
 
-						// Add sample count row
-						table.addRow(`    ${label} Samples`, (typeInfo.samples ?? 0).toLocaleString())
-					}
+				// Data rows
+				const tbody = table.append('tbody')
+				for (const [type, typeData] of Object.entries(byType)) {
+					const { count, capped, samples } = typeData as { count: number; capped: boolean; samples: number }
+					const row = tbody.append('tr')
+
+					styleCell(row.append('td'), undefined, true).text(typeLabels[type] || type) // First column
+					styleCell(row.append('td'), 'right').text(count.toLocaleString())
+					styleCell(row.append('td'), 'center').text(capped ? 'Yes' : 'No')
+					styleCell(row.append('td'), 'right').text((samples ?? 0).toLocaleString())
 				}
 			}
 		}
