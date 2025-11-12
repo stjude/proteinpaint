@@ -204,7 +204,7 @@ export class PlotButtons {
 			})
 
 		const regex = new RegExp(_plot.colorBy, 'g')
-		_plot.clusters.splice(0, 0, `Select ${_plot.colorBy}...`)
+		_plot.clusters.unshift(`Select ${_plot.colorBy}...`)
 		for (const cluster of _plot.clusters) {
 			select.append('option').attr('value', cluster.replace(regex, '').trim()).text(cluster)
 		}
