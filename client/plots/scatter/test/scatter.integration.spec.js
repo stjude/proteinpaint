@@ -1088,6 +1088,7 @@ tape('Click zoom in, zoom out, and reset buttons', function (test) {
 })
 
 tape('colorTW=geneVariant with no groupsetting', function (test) {
+	test.timeoutAfter(6000)
 	runpp({
 		state: {
 			plots: [
@@ -1110,7 +1111,9 @@ tape('colorTW=geneVariant with no groupsetting', function (test) {
 		test.end()
 	}
 })
+
 tape('colorTW=geneVariant with groupsetting', function (test) {
+	test.timeoutAfter(6000)
 	runpp({
 		state: {
 			plots: [
@@ -1134,7 +1137,9 @@ tape('colorTW=geneVariant with groupsetting', function (test) {
 		test.end()
 	}
 })
+
 tape('colorTW=geneVariant with gene list', function (test) {
+	test.timeoutAfter(6000)
 	runpp({
 		state: {
 			plots: [
@@ -1158,7 +1163,9 @@ tape('colorTW=geneVariant with gene list', function (test) {
 		test.end()
 	}
 })
+
 tape('colorTW=ssgsea', function (test) {
+	test.timeoutAfter(6000)
 	runpp({
 		state: {
 			plots: [
@@ -1183,6 +1190,7 @@ tape('colorTW=ssgsea', function (test) {
 })
 
 tape('singlecell', function (test) {
+	test.timeoutAfter(6000)
 	runpp({
 		state: {
 			plots: [
