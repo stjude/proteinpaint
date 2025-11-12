@@ -1386,12 +1386,11 @@ export type Termdb = {
 		/** req.query as processed through app middleware (pre-parsed, may have req.body props, __protectec__, etc) */
 		q: any,
 		data: {
-			/** the number of samples with matching data from one or more queried terms */
-			sampleCount: number
-			/** option to specify sample names that is accessible to the current user,
-			 * not using sample ID since portal embedder and token generator does not
-			 * know the internal sample ID-to-name mapping */
-			sampleNames?: string[]
+			/** the number of samples or sites with matching data from one or more queried terms */
+			count: number
+			/** option to specify sample names or sites that are accessible to the current user,
+			 */
+			names?: string[]
 		}
 	) => {
 		/** the required minimum sample size for the current user,
@@ -1562,6 +1561,7 @@ keep this setting here for reason of:
 	}
 	//terms  are shown in the dictionary based on term and user role.
 	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
+	hiddenIds?: string[]
 	getAdditionalFilter?: (__protected__: any, term: any) => Filter | undefined
 }
 

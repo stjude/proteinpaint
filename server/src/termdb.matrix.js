@@ -1027,14 +1027,21 @@ function checkAccessToSampleData(data, ds, q) {
 	// handle the option to require a minimum sample size for data
 	if (!ds.cohort.termdb.checkAccessToSampleData) return
 	// quick check
+
 	const sampleIds = Object.keys(data.samples)
-	const samples = ds.cohort.db.connection
-		.prepare(`SELECT name FROM sampleidmap WHERE id in (${sampleIds.map(s => '?').join(',')})`)
-		.all(sampleIds)
+	const hiddenIds = ds.cohort.termdb.hiddenIds || []
+	const names = ds.cohort.db.connection
+		.prepare(
+			`SELECT value as name FROM anno_categorical WHERE term_id in (${hiddenIds
+				.map(s => '?')
+				.join(',')}) and sample in (${sampleIds.map(s => '?').join(',')})`
+		)
+		.all([...hiddenIds, ...sampleIds])
+	const namesSet = new Set(names.map(s => s.name))
 	// pass sampleNames since portal token does not know internal sample ID-to-name mapping
 	const access = ds.cohort.termdb.checkAccessToSampleData(q, {
-		sampleCount: sampleIds.length,
-		sampleNames: samples.map(s => s.name)
+		count: namesSet.size,
+		names: [...namesSet]
 	})
 	if (!access.canAccess)
 		throw {
