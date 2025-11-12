@@ -334,8 +334,8 @@ function enterRange(self, tr, brush, i) {
 	async function apply(new_range) {
 		try {
 			brush.range = new_range
-			const minvalue = self.num_obj.density_data.minvalue
-			const maxvalue = self.num_obj.density_data.maxvalue
+			const minvalue = self.num_obj.density_data.min
+			const maxvalue = self.num_obj.density_data.max
 
 			const start =
 				new_range.value != undefined ? new_range.value : new_range.start != undefined ? new_range.start : minvalue
