@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.158.0
 
 Features:
 - GRIN2: Adding lesion significance indicators. Other minor cleanups
