@@ -407,9 +407,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 			([key, cls]: [string, any]) => cls.dt === dtsnvindel && key !== 'Blank' && key !== 'WT'
 		)
 
-		const settings = this.state.config.settings || {}
-		const saved = settings.snvindelOptions?.consequences as string[] | undefined
-		const useSaved = settings.runAnalysis === true && !!saved && saved.length > 0
+		const saved = this.state.config.settings.snvindelOptions?.consequences as string[] | undefined
+		const useSaved = this.state.config.settings.runAnalysis === true && !!saved && saved.length > 0
 
 		// Canonical default set = protein-changing + StartLost + StopLost
 		const canonicalDefault = new Set<string>([...proteinChangingMutations, 'StartLost', 'StopLost'])

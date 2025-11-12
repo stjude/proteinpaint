@@ -1,1 +1,2 @@
-
+Features:
+- GRIN2: Saving filter settings to state. Other minor cleanups
