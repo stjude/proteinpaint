@@ -3195,9 +3195,7 @@ async function getSvfusionByTerm(ds, term, genome, q) {
 	throw 'unknown queries.svfusion method'
 }
 async function getCnvByTw(ds, tw, genome, q) {
-	/* tw.term.type is "geneVariant"
-	tw.q{} carries optional cutoffs (max length and min value) to filter cnv segments
-	*/
+	// tw.term.type is "geneVariant"
 
 	if (ds.queries.cnv.requiresHardcodeCnvOnlyFlag && !q.hardcodeCnvOnly) {
 		// in gdc, the cnv segment datatype can only work for "cnv tool" but not any other case; this allow it to be disabled in oncomatrix and summary tool; these tools will use geneCnv instead
@@ -3205,13 +3203,12 @@ async function getCnvByTw(ds, tw, genome, q) {
 		return
 	}
 
+	// note: do not set cnvGainCutoff, cnvLossCutoff, or cnvMaxLength cutoffs here
+	// as these will be applied when filtering by groupsetting (see filterByItem())
 	const arg = {
 		addFormatValues: true,
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
-		cnvMaxLength: tw?.q?.cnvMaxLength,
-		cnvGainCutoff: tw?.q?.cnvGainCutoff,
-		cnvLossCutoff: tw?.q?.cnvLossCutoff,
 		sessionid: q.sessionid
 	}
 	await mayMapGeneName2coord(tw.term, genome)
