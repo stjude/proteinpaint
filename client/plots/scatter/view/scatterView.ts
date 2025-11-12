@@ -2,8 +2,10 @@ import { fillTermWrapper } from '#termsetting'
 import { Menu } from '#dom'
 import type { Scatter } from '../scatter.js'
 import { isNumericTerm } from '#shared/terms.js'
+
 export const minShapeSize = 0.2
 export const maxShapeSize = 6
+
 export class ScatterView {
 	opts: any
 	dom: any
@@ -333,6 +335,34 @@ export class ScatterView {
 						vocabApi: this.scatter.app.vocabApi,
 						menuOptions: '!remove',
 						numericEditMenuVersion: ['continuous']
+					},
+					{
+						label: 'X axis min value',
+						type: 'number',
+						chartType: 'sampleScatter',
+						settingsKey: 'minXScale',
+						title: 'Set the minimum X axis value'
+					},
+					{
+						label: 'X axis max value',
+						type: 'number',
+						chartType: 'sampleScatter',
+						settingsKey: 'maxXScale',
+						title: 'Set the maximum X axis value'
+					},
+					{
+						label: 'Y axis min value',
+						type: 'number',
+						chartType: 'sampleScatter',
+						settingsKey: 'minYScale',
+						title: 'Set the minimum Y axis value'
+					},
+					{
+						label: 'Y axis max value',
+						type: 'number',
+						chartType: 'sampleScatter',
+						settingsKey: 'maxYScale',
+						title: 'Set the maximum Y axis value'
 					}
 				]
 			)

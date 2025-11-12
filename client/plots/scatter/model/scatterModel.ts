@@ -84,7 +84,7 @@ export class ScatterModel {
 			}
 			this.initRanges()
 		} catch (e: any) {
-			console.log(e)
+			console.error(e)
 			throw e.message || e
 		}
 	}
@@ -116,12 +116,13 @@ export class ScatterModel {
 			],
 			[s0.x, s0.x, s0.y, s0.y, s0.z, s0.z, s0.scale, s0.scale]
 		)
+		const settings = this.scatter.settings
 		for (const chart of this.charts) {
 			chart.ranges = {
-				xMin: this.scatter.settings.useGlobalMinMax ? this.range.xMin : xMin,
-				xMax: this.scatter.settings.useGlobalMinMax ? this.range.xMax : xMax,
-				yMin: this.scatter.settings.useGlobalMinMax ? this.range.yMin : yMin,
-				yMax: this.scatter.settings.useGlobalMinMax ? this.range.yMax : yMax,
+				xMin: settings.minXScale != null ? settings.minXScale : settings.useGlobalMinMax ? this.range.xMin : xMin,
+				xMax: settings.maxXScale != null ? settings.maxXScale : settings.useGlobalMinMax ? this.range.xMax : xMax,
+				yMin: settings.minYScale != null ? settings.minYScale : settings.useGlobalMinMax ? this.range.yMin : yMin,
+				yMax: settings.maxYScale != null ? settings.maxYScale : settings.useGlobalMinMax ? this.range.yMax : yMax,
 				zMin,
 				zMax,
 				scaleMin,
@@ -152,8 +153,22 @@ export class ScatterModel {
 	}
 
 	getCoordinates(chart, c) {
-		const x = chart.xAxisScale(c.x)
-		const y = chart.yAxisScale(c.y)
+		const cx = () => {
+			if (this.scatter.settings.minXScale != null && c.x < this.scatter.settings.minXScale)
+				return this.scatter.settings.minXScale
+			if (this.scatter.settings.maxXScale != null && c.x > this.scatter.settings.maxXScale)
+				return this.scatter.settings.maxXScale
+			return c.x
+		}
+		const cy = () => {
+			if (this.scatter.settings.minYScale != null && c.y < this.scatter.settings.minYScale)
+				return this.scatter.settings.minYScale
+			if (this.scatter.settings.maxYScale != null && c.y > this.scatter.settings.maxYScale)
+				return this.scatter.settings.maxYScale
+			return c.y
+		}
+		const x = chart.xAxisScale(cx())
+		const y = chart.yAxisScale(cy())
 		return { x, y }
 	}
 
@@ -239,9 +254,10 @@ export class ScatterModel {
 			let regression
 			const data: any = []
 			await chart.cohortSamples.forEach(c => {
-				const x = chart.xAxisScale!(c.x)
-				const y = chart.yAxisScale!(c.y)
-				data.push({ x, y })
+				// const x = chart.xAxisScale!(c.x)
+				// const y = chart.yAxisScale!(c.y)
+				// data.push({ x, y })
+				data.push(this.getCoordinates(chart, c))
 			})
 			let regressionCurve
 			// if (regressionType == 'Loess') {
