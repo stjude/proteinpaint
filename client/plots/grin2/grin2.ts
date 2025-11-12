@@ -34,6 +34,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 	readonly btnSmallPadding = '2px 8px' // for Select All/Clear All
 	readonly btnBorderRadius = '3px'
 	readonly btnMargin = '10px'
+	readonly tableMargin = '10px'
 	readonly tableCellPadding = '8px'
 	readonly controlsMargin = '5px'
 	readonly controlsPadding = '10px'
@@ -802,8 +803,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			// Lesion type details in a proper table
 			if (result.processingSummary.lesionCounts?.byType) {
-				const byType = result.processingSummary.lesionCounts.byType
-
+				// TODO: Refactor this to use common labels which will be used in mapping from common.js long term
 				const typeLabels: Record<string, string> = {
 					mutation: 'Mutations',
 					gain: 'Copy Gains',
@@ -814,11 +814,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 				const table = tablesContainer
 					.append('div')
-					.style('margin', this.btnMargin)
+					.style('margin', this.tableMargin)
 					.append('table')
 					.style('border-collapse', 'collapse')
 					.style('width', 'auto')
-					.style('font-size', 'inherit')
+					.style('font-size', `${this.optionsTextFontSize}px`)
 
 				// Helper to apply cell styles
 				const styleCell = (cell: any, align?: string, isFirstCol = false) => {
@@ -832,29 +832,27 @@ class GRIN2 extends PlotBase implements RxComponent {
 				const headerRow = table.append('thead').append('tr')
 				;[
 					['Lesion Type', 'left'],
-					['Count', 'right'],
-					['Capped', 'center'],
-					['Samples', 'right']
+					['Count', 'left'],
+					['Capped', 'left'],
+					['Samples', 'left']
 				].forEach(([text, align], index) => {
 					headerRow
 						.append('th')
 						.style('text-align', align)
 						.style('padding', index === 0 ? '8px 16px 8px 0' : '8px 16px')
-						.style('border-bottom', '2px solid #ddd')
-						.style('font-weight', 'normal')
 						.text(text)
 				})
 
 				// Data rows
 				const tbody = table.append('tbody')
-				for (const [type, typeData] of Object.entries(byType)) {
+				for (const [type, typeData] of Object.entries(result.processingSummary.lesionCounts.byType)) {
 					const { count, capped, samples } = typeData as { count: number; capped: boolean; samples: number }
 					const row = tbody.append('tr')
 
-					styleCell(row.append('td'), undefined, true).text(typeLabels[type] || type) // First column
-					styleCell(row.append('td'), 'right').text(count.toLocaleString())
-					styleCell(row.append('td'), 'center').text(capped ? 'Yes' : 'No')
-					styleCell(row.append('td'), 'right').text((samples ?? 0).toLocaleString())
+					styleCell(row.append('td'), undefined, true).text(typeLabels[type]) // First column
+					styleCell(row.append('td'), 'left').text(count.toLocaleString())
+					styleCell(row.append('td'), 'left').text(capped ? 'Yes' : 'No')
+					styleCell(row.append('td'), 'left').text((samples ?? 0).toLocaleString())
 				}
 			}
 		}
