@@ -335,42 +335,6 @@ export class ScatterView {
 						vocabApi: this.scatter.app.vocabApi,
 						menuOptions: '!remove',
 						numericEditMenuVersion: ['continuous']
-					},
-					{
-						label: 'X axis min value',
-						type: 'number',
-						chartType: 'sampleScatter',
-						settingsKey: 'minXScale',
-						title: 'Set the minimum X axis value',
-						width: 105,
-						placeholder: 'Input value'
-					},
-					{
-						label: 'X axis max value',
-						type: 'number',
-						chartType: 'sampleScatter',
-						settingsKey: 'maxXScale',
-						title: 'Set the maximum X axis value',
-						width: 105,
-						placeholder: 'Input value'
-					},
-					{
-						label: 'Y axis min value',
-						type: 'number',
-						chartType: 'sampleScatter',
-						settingsKey: 'minYScale',
-						title: 'Set the minimum Y axis value',
-						width: 105,
-						placeholder: 'Input value'
-					},
-					{
-						label: 'Y axis max value',
-						type: 'number',
-						chartType: 'sampleScatter',
-						settingsKey: 'maxYScale',
-						title: 'Set the maximum Y axis value',
-						width: 105,
-						placeholder: 'Input value'
 					}
 				]
 			)
@@ -414,7 +378,49 @@ export class ScatterView {
 					settingsKey: 'fov'
 				})
 			}
-			inputs.push(showAxes)
+			inputs.push(
+				showAxes,
+				{
+					label: 'X axis minimum',
+					type: 'number',
+					chartType: 'sampleScatter',
+					settingsKey: 'minXScale',
+					title: 'Set the minimum X axis value',
+					min: this.scatter.model.range.xMin,
+					max: this.scatter.model.range.xMax,
+					step: (this.scatter.model.range.xMax - this.scatter.model.range.xMin) / 10
+				},
+				{
+					label: 'X axis maximum',
+					type: 'number',
+					chartType: 'sampleScatter',
+					settingsKey: 'maxXScale',
+					title: 'Set the maximum X axis value',
+					min: this.scatter.model.range.xMin,
+					max: this.scatter.model.range.xMax,
+					step: (this.scatter.model.range.xMax - this.scatter.model.range.xMin) / 10
+				},
+				{
+					label: 'Y axis minimum',
+					type: 'number',
+					chartType: 'sampleScatter',
+					settingsKey: 'minYScale',
+					title: 'Set the minimum Y axis value',
+					min: this.scatter.model.range.yMin,
+					max: this.scatter.model.range.yMax,
+					step: (this.scatter.model.range.yMax - this.scatter.model.range.yMin) / 10
+				},
+				{
+					label: 'Y axis maximum',
+					type: 'number',
+					chartType: 'sampleScatter',
+					settingsKey: 'maxYScale',
+					title: 'Set the maximum Y axis value',
+					min: this.scatter.model.range.yMin,
+					max: this.scatter.model.range.yMax,
+					step: (this.scatter.model.range.yMax - this.scatter.model.range.yMin) / 10
+				}
+			)
 
 			inputs.push({
 				label: 'Default color',
