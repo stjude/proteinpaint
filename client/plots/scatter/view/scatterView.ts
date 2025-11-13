@@ -2,6 +2,7 @@ import { fillTermWrapper } from '#termsetting'
 import { Menu } from '#dom'
 import type { Scatter } from '../scatter.js'
 import { isNumericTerm } from '#shared/terms.js'
+import { roundValueAuto } from '#shared/roundValue.js'
 
 export const minShapeSize = 0.2
 export const maxShapeSize = 6
@@ -378,6 +379,11 @@ export class ScatterView {
 					settingsKey: 'fov'
 				})
 			}
+			const xMin = roundValueAuto(this.scatter.model.range.xMin)
+			const xMax = roundValueAuto(this.scatter.model.range.xMax)
+			const yMin = roundValueAuto(this.scatter.model.range.yMin)
+			const yMax = roundValueAuto(this.scatter.model.range.yMax)
+
 			inputs.push(
 				showAxes,
 				{
@@ -385,40 +391,44 @@ export class ScatterView {
 					type: 'number',
 					chartType: 'sampleScatter',
 					settingsKey: 'minXScale',
-					title: 'Set the minimum X axis value',
-					min: this.scatter.model.range.xMin,
-					max: this.scatter.model.range.xMax,
-					step: (this.scatter.model.range.xMax - this.scatter.model.range.xMin) / 10
+					title: `Set the minimum X axis value between ${xMin} and ${xMax}`,
+					placeholder: `${xMin}`,
+					min: xMin,
+					max: xMax,
+					step: (xMax - xMin) / 10
 				},
 				{
 					label: 'X axis maximum',
 					type: 'number',
 					chartType: 'sampleScatter',
 					settingsKey: 'maxXScale',
-					title: 'Set the maximum X axis value',
-					min: this.scatter.model.range.xMin,
-					max: this.scatter.model.range.xMax,
-					step: (this.scatter.model.range.xMax - this.scatter.model.range.xMin) / 10
+					title: `Set the maximum X axis value between ${xMin} and ${xMax}`,
+					placeholder: `${xMax}`,
+					min: xMin,
+					max: xMax,
+					step: (xMax - xMin) / 10
 				},
 				{
 					label: 'Y axis minimum',
 					type: 'number',
 					chartType: 'sampleScatter',
 					settingsKey: 'minYScale',
-					title: 'Set the minimum Y axis value',
-					min: this.scatter.model.range.yMin,
-					max: this.scatter.model.range.yMax,
-					step: (this.scatter.model.range.yMax - this.scatter.model.range.yMin) / 10
+					title: `Set the minimum Y axis value between ${yMin} and ${yMax}`,
+					placeholder: `${yMin}`,
+					min: yMin,
+					max: yMax,
+					step: (yMax - yMin) / 10
 				},
 				{
 					label: 'Y axis maximum',
 					type: 'number',
 					chartType: 'sampleScatter',
 					settingsKey: 'maxYScale',
-					title: 'Set the maximum Y axis value',
-					min: this.scatter.model.range.yMin,
-					max: this.scatter.model.range.yMax,
-					step: (this.scatter.model.range.yMax - this.scatter.model.range.yMin) / 10
+					title: `Set the maximum Y axis value between ${yMin} and ${yMax}`,
+					placeholder: `${yMax}`,
+					min: yMin,
+					max: yMax,
+					step: (yMax - yMin) / 10
 				}
 			)
 
