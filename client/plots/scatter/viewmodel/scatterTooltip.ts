@@ -93,19 +93,9 @@ export class ScatterTooltip {
 		this.tree = []
 		const showCoords = this.scatter.config.term ? true : false
 
-		const Xmin = chart.xAxisScale.invert(0)
-		const Xmax = chart.xAxisScale.invert(chart.width)
-		const Ymin = chart.yAxisScale.invert(chart.height)
-		const Ymax = chart.yAxisScale.invert(0)
-
-		const getCoords = sample => {
-			const x = getCoordinate(sample.x, Xmin, Xmax)
-			const y = getCoordinate(sample.y, Ymin, Ymax)
-			return `${roundValueAuto(x)},${roundValueAuto(y)}`
-		}
 		//Building tree
 		for (const sample of samples) {
-			const id = getCoords(sample)
+			const id = `${roundValueAuto(sample.x)},${roundValueAuto(sample.y)}`
 			let node = this.tree.find(item => item.id == id)
 			if (!node) {
 				node = { id, parentId: null, samples: [sample], level: 1, category: null, children: [] }
