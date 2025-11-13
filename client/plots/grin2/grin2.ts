@@ -28,6 +28,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 	readonly headerFontSize: number = 14
 	readonly headerFontWeight: number = 600
 	readonly tableFontSize: number = 11
+	readonly statsTableFontWeight: string = 'bold'
 
 	// Spacing & Layout
 	readonly btnPadding = '8px 16px'
@@ -756,7 +757,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				header: {
 					allowSort: true,
 					style: {
-						'font-weight': 'bold',
+						'font-weight': this.statsTableFontWeight,
 						'background-color': this.backgroundColor
 					}
 				}
@@ -778,55 +779,76 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.style('font-size', `${this.headerFontSize}px`)
 				.text('GRIN2 Processing Summary')
 
-			// Using table2col for processing summary
-			const table = table2col({
-				holder: this.dom.div.append('div'),
-				margin: this.btnMargin
+			// Container for tables
+			const tablesContainer = this.dom.div.append('div')
+
+			// General stats using table2col
+			const generalTable = table2col({
+				holder: tablesContainer.append('div')
 			})
 
-			table.addRow('Total Samples', result.processingSummary.totalSamples.toLocaleString())
-			table.addRow('Processed Samples', result.processingSummary.processedSamples.toLocaleString())
-			table.addRow('Unprocessed Samples', (result.processingSummary.unprocessedSamples ?? 0).toLocaleString())
-			table.addRow('Failed Samples', result.processingSummary.failedSamples.toLocaleString())
-			table.addRow(
+			generalTable.addRow('Total Samples', result.processingSummary.totalSamples.toLocaleString())
+			generalTable.addRow('Processed Samples', result.processingSummary.processedSamples.toLocaleString())
+			generalTable.addRow('Unprocessed Samples', (result.processingSummary.unprocessedSamples ?? 0).toLocaleString())
+			generalTable.addRow('Failed Samples', result.processingSummary.failedSamples.toLocaleString())
+			generalTable.addRow(
 				'Failed Files',
 				result.processingSummary.failedFiles?.length
 					? result.processingSummary.failedFiles.map(f => f.sampleName).join(', ')
 					: '0'
 			)
-			table.addRow('Total Lesions', result.processingSummary.totalLesions.toLocaleString())
-			table.addRow('Processed Lesions', result.processingSummary.processedLesions.toLocaleString())
+			generalTable.addRow('Total Lesions', result.processingSummary.totalLesions.toLocaleString())
+			generalTable.addRow('Processed Lesions', result.processingSummary.processedLesions.toLocaleString())
 
-			// Add lesion counts if available
-			if (result.processingSummary.lesionCounts) {
-				// Add each lesion type as its own row
-				if (result.processingSummary.lesionCounts.byType) {
-					const byType = result.processingSummary.lesionCounts.byType
-
-					// Define friendly names for lesion types
-					const typeLabels: Record<string, string> = {
-						mutation: 'Mutations',
-						gain: 'Copy Gains',
-						loss: 'Copy Losses',
-						fusion: 'Fusions',
-						sv: 'Structural Variants'
-					}
-
-					// Add a row for each lesion type
-					for (const [type, typeData] of Object.entries(byType)) {
-						const label = typeLabels[type]
-						const typeInfo = typeData as { count: number; capped: boolean; samples: number }
-
-						// Add count row
-						table.addRow(`  ${label}`, typeInfo.count.toLocaleString())
-
-						// Add capped status row
-						table.addRow(`    ${label} Capped`, typeInfo.capped ? 'Yes' : 'No')
-
-						// Add sample count row
-						table.addRow(`    ${label} Samples`, (typeInfo.samples ?? 0).toLocaleString())
-					}
+			// Lesion type details
+			if (result.processingSummary.lesionCounts?.byType) {
+				// TODO: Once we have a map in common.js for all these labels, use it here
+				const typeLabels: Record<string, string> = {
+					mutation: 'Mutations',
+					gain: 'Copy Gains',
+					loss: 'Copy Losses',
+					fusion: 'Fusions',
+					sv: 'Structural Variants'
 				}
+
+				const columns = [
+					{ label: 'Lesion Type' },
+					{ label: 'Count', sortable: true },
+					{ label: 'Capped' },
+					{ label: 'Samples', sortable: true }
+				]
+
+				const rows = Object.entries(result.processingSummary.lesionCounts.byType).map(([type, typeData]) => {
+					const { count, capped, samples } = typeData as { count: number; capped: boolean; samples: number }
+					return [
+						{ value: typeLabels[type] || type },
+						{ value: count.toLocaleString() },
+						{ value: capped ? 'Yes' : 'No' },
+						{ value: (samples ?? 0).toLocaleString() }
+					]
+				})
+
+				renderTable({
+					columns,
+					rows,
+					dataTestId: 'grin2-lesion-counts-table',
+					div: tablesContainer.append('div'),
+					showLines: false,
+					striped: true,
+					maxHeight: 'none',
+					maxWidth: '100%',
+					resize: false,
+					download: {
+						fileName: `grin2_lesion_stats_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}.tsv`
+					},
+					header: {
+						style: {
+							'font-weight': this.statsTableFontWeight,
+							'background-color': this.backgroundColor
+						},
+						allowSort: true
+					}
+				})
 			}
 		}
 
