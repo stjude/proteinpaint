@@ -50,16 +50,16 @@ Here is a breakdown of the main plot types:
 
 
 ### Polar Chart
-**Class:** [profilePolar.js](../profilePolar.js)
-**Title:** Score-based Results by PrOFILE Module
-**Description:** This chart provides a high-level overview of the aggregated performance across different PrOFILE modules. Each slice of the polar represents a module (e.g., 'National Context', 'Personnel', 'Diagnostics').
+**Class:** [profilePolar.js](../profilePolar.js)  
+**Title:** Score-based Results by PrOFILE Module  
+**Description:** This chart provides a high-level overview of the aggregated performance across different PrOFILE modules. Each slice of the polar represents a module (e.g., 'National Context', 'Personnel', 'Diagnostics').  
 **Calculation:** For each module, a percentage score is calculated for every participating institution by dividing its score by the maximum possible score. The value shown on the chart for each module is the **median** of these percentage scores across all institutions included in the current filter. This gives a snapshot of the central tendency of performance in each area.
 
 
 ### Facility Radar Chart
-**Class:** [profileRadarFacility.js](../profileRadarFacility.js)
-**Title:** Comparison of Institutional and Aggregated Score-based Results by Module
-**Description:** This radar chart is designed for authenticated users (Site-Level Users and Administrators) to compare their own institution's performance against the aggregated results from all participating institutions.
+**Class:** [profileRadarFacility.js](../profileRadarFacility.js)  
+**Title:** Comparison of Institutional and Aggregated Score-based Results by Module  
+**Description:** This radar chart is designed for authenticated users (Site-Level Users and Administrators) to compare their own institution's performance against the aggregated results from all participating institutions.  
 **Functionality:**
 	- Institutional Score: The score of the user's specific institution for each module.
 	- Aggregated Score: The aggregated score for each module across all institutions.
@@ -67,7 +67,6 @@ Here is a breakdown of the main plot types:
 
 
 ### Radar Chart
-**Class:** [profileRadar.js](../profileRadar.js)
 This chart type has different configurations for the "Full" and "Abbreviated" PrOFILE versions.
 
 #### Full PrOFILE
@@ -77,14 +76,15 @@ This chart allows for a comparison between two different respondent groups withi
 
 #### Abbreviated PrOFILE
 This chart compares two different metrics for the same respondent group for each module.
-**Title:** Comparison of Score-based Results and End-User Impressions by Module
-**Functionality:** It plots the calculated Total Score against the subjective End-User Impression for each module, allowing users to see how objective capabilities align with perceived performance.
+**Class:** [profileRadar.js](../profileRadar.js)  
+**Title:** Comparison of Score-based Results and End-User Impressions by Module  
+**Functionality:** It plots the calculated Total Score against the subjective End-User Impression for each module, allowing users to see how objective capabilities align with perceived performance.  
 
 
 ### Bar Chart
-**Class:** [profileBarchart.js](../profileBarchart.js)
-**Title:** Score-based Results for the Component by Module and Domain Compared with End-User Impression
-**Description:** This is a detailed, multi-level bar chart that breaks down the scores into more granular levels. It groups domains within larger components (like 'Context', 'Workforce', 'Diagnostics', 'Therapy', and 'Patients and Outcomes').
+**Class:** [profileBarchart.js](../profileBarchart.js)  
+**Title:** Score-based Results for the Component by Module and Domain Compared with End-User Impression  
+**Description:** This is a detailed, multi-level bar chart that breaks down the scores into more granular levels. It groups domains within larger components (like 'Context', 'Workforce', 'Diagnostics', 'Therapy', and 'Patients and Outcomes').  
 **Functionality:**
 	- It visualizes scores for each domain within a module.
 	- For Full PrOFILE: It presents a side-by-side comparison of scores derived from "Objective data" (from Site Coordinator and MD Lead) and "Subjective data" (from Point of Care Staff).
@@ -92,8 +92,8 @@ This chart compares two different metrics for the same respondent group for each
 
 
 ### Templates/Forms
-**Class:** [profileForms.js](../profileForms.js)
-**Description:** This type of chart known as Templates for the users, allows for the visualization of the amount of response per type of response for each individual questions from the PrOFILE survey, which are not aggregated into scores. This is useful for detailed analysis of specific data points.
+**Class:** [profileForms.js](../profileForms.js)  
+**Description:** This type of chart known as Templates for the users, allows for the visualization of the amount of response per type of response for each individual questions from the PrOFILE survey, which are not aggregated into scores. This is useful for detailed analysis of specific data points.  
 **Plot Types:**
 	- Yes/No Barchart: For questions with "Yes", "No", or "Do Not Know" as possible answers, this chart shows the distribution of responses.
 	- Likert Scale: For questions based on a Likert scale (e.g., 'Almost Never' to 'Almost Always'), this chart displays the frequency of each response, often colored by module to maintain consistency with other plots.
