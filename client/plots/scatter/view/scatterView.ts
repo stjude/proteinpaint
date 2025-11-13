@@ -56,7 +56,7 @@ export class ScatterView {
 		}
 	}
 
-	getControlInputs(disable_terms) {
+	getControlInputs() {
 		const hasRef = this.scatter.model.charts[0]?.data.samples.find(s => !('sampleId' in s)) || false
 		const scaleDotOption = {
 			type: 'term',
@@ -65,7 +65,6 @@ export class ScatterView {
 			usecase: { target: 'sampleScatter', detail: 'numeric' },
 			title: 'Scale sample by term value',
 			label: 'Scale by',
-			disable_terms,
 			vocabApi: this.scatter.app.vocabApi,
 			numericEditMenuVersion: ['continuous'],
 			//Eventually this will be corrected with usecase.detail
@@ -82,7 +81,6 @@ export class ScatterView {
 			usecase: { target: 'sampleScatter', detail: 'shapeTW' },
 			title: 'Categories to assign a shape',
 			label: 'Shape',
-			disable_terms,
 			vocabApi: this.scatter.app.vocabApi,
 			numericEditMenuVersion: ['discrete'],
 			//Eventually this will be corrected with usecase.detail
@@ -166,7 +164,6 @@ export class ScatterView {
 				usecase: { target: 'sampleScatter', detail: 'colorTW' },
 				title: 'Categories to color the samples',
 				label: 'Color',
-				disable_terms,
 				vocabApi: this.scatter.app.vocabApi,
 				numericEditMenuVersion: ['continuous', 'discrete'],
 				//Eventually this will be corrected with usecase.detail
@@ -282,7 +279,6 @@ export class ScatterView {
 				usecase: { target: 'sampleScatter', detail: 'term0' },
 				title: 'Term to to divide by categories or to use as Z coordinate',
 				label: 'Z / Divide by',
-				disable_terms,
 				vocabApi: this.scatter.app.vocabApi,
 				numericEditMenuVersion: ['discrete', 'continuous'],
 				processInput: tw => {
@@ -323,7 +319,6 @@ export class ScatterView {
 						usecase: { target: 'sampleScatter', detail: 'numeric' },
 						title: 'X coordinate to plot the samples',
 						label: 'X',
-						disable_terms,
 						vocabApi: this.scatter.app.vocabApi,
 						menuOptions: '!remove',
 						numericEditMenuVersion: ['continuous']
@@ -335,7 +330,6 @@ export class ScatterView {
 						usecase: { target: 'sampleScatter', detail: 'numeric' },
 						title: 'Y coordinate to plot the samples',
 						label: 'Y',
-						disable_terms,
 						vocabApi: this.scatter.app.vocabApi,
 						menuOptions: '!remove',
 						numericEditMenuVersion: ['continuous']
@@ -404,6 +398,18 @@ export class ScatterView {
 			}
 			inputs.push(showAxes)
 		}
+
+		// for each term input, disable terms that are already selected
+		const disable_terms: any[] = []
+		const termInputs = inputs.filter(i => i.type == 'term')
+		// collect selected terms into disable_terms[]
+		for (const termInput of termInputs) {
+			const tw = this.scatter.config[termInput.configKey]
+			if (tw) disable_terms.push(tw.term)
+		}
+		// apply disable_terms[] to each term input
+		for (const termInput of termInputs) termInput.disable_terms = disable_terms
+
 		return inputs
 	}
 
