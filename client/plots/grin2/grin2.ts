@@ -35,9 +35,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 	readonly btnSmallPadding = '2px 8px' // for Select All/Clear All
 	readonly btnBorderRadius = '3px'
 	readonly btnMargin = '10px'
-	readonly tableMargin = '10px'
-	readonly processingSummaryPadVertical = '8px'
-	readonly processingSummaryPadHorizontal = '16px'
 	readonly tableCellPadding = '8px'
 	readonly controlsMargin = '5px'
 	readonly controlsPadding = '10px'
@@ -824,7 +821,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				const rows = Object.entries(result.processingSummary.lesionCounts.byType).map(([type, typeData]) => {
 					const { count, capped, samples } = typeData as { count: number; capped: boolean; samples: number }
 					return [
-						{ value: typeLabels[type] },
+						{ value: typeLabels[type] || type },
 						{ value: count.toLocaleString() },
 						{ value: capped ? 'Yes' : 'No' },
 						{ value: (samples ?? 0).toLocaleString() }
