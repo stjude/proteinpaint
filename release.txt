@@ -1,2 +1,1 @@
-Feature
-- New axis capping controls for the dynamic scatter plot. Users are able to input the min and max value for both axis from the burger menu.
+

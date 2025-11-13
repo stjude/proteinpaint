@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Features:
 - GRIN2: Saving filter settings to state. Other minor cleanups
 - GRIN2: Now displaying lesion stats horizontally instead of vertically
+- New axis capping controls for the dynamic scatter plot. Users are able to input the min and max value for both axis from the burger menu.
 
 
 ## 2.158.0
