@@ -96,16 +96,10 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	// Function to enable or disable the controls for cloaking
 	private setControlsDisabled(disabled: boolean) {
-		const controlsDiv = this.dom.controls.node() as HTMLElement
-
 		if (disabled) {
-			// Add overlay to block clicks
-			controlsDiv.style.pointerEvents = 'none'
-			controlsDiv.style.opacity = '0.5'
+			this.dom.controls.style('pointer-events', 'none').style('opacity', '0.5')
 		} else {
-			// Remove overlay
-			controlsDiv.style.pointerEvents = 'auto'
-			controlsDiv.style.opacity = '1'
+			this.dom.controls.style('pointer-events', 'auto').style('opacity', '1')
 		}
 	}
 
@@ -380,18 +374,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 			.attr('data-testid', 'grin2-run-button')
 			.style('margin-left', '100px')
 			.text('Run GRIN2')
-			.on('click', async () => {
-				this.setControlsDisabled(true)
-				try {
-					await this.runAnalysis()
-				} finally {
-					this.setControlsDisabled(false)
-				}
+			.on('click', () => {
+				this.runAnalysis()
 			})
 
 		if (this.state.config.settings.runAnalysis) {
-			this.setControlsDisabled(true)
-			this.runAnalysis().finally(() => this.setControlsDisabled(false))
+			this.runAnalysis()
 		} else {
 			// Set initial button state
 			this.updateRunButtonState()
@@ -572,6 +560,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		this.updateRunButtonState(dtUsage)
 	}
 	private async runAnalysis() {
+		this.setControlsDisabled(true)
 		try {
 			// Get checkbox states
 			const dtUsage = this.getDtUsageFromCheckboxes()
@@ -624,6 +613,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		} catch (error) {
 			sayerror(this.dom.div, `Error running GRIN2: ${error instanceof Error ? error.message : error}`)
 		} finally {
+			this.setControlsDisabled(false)
 			this.dom.runButton.property('disabled', false).text('Run GRIN2')
 		}
 	}
