@@ -93,6 +93,22 @@ class GRIN2 extends PlotBase implements RxComponent {
 			config
 		}
 	}
+
+	// Function to enable or disable the controls for cloaking
+	private setControlsDisabled(disabled: boolean) {
+		const controlsDiv = this.dom.controls.node() as HTMLElement
+
+		if (disabled) {
+			// Add overlay to block clicks
+			controlsDiv.style.pointerEvents = 'none'
+			controlsDiv.style.opacity = '0.5'
+		} else {
+			// Remove overlay
+			controlsDiv.style.pointerEvents = 'auto'
+			controlsDiv.style.opacity = '1'
+		}
+	}
+
 	private addSnvindelRow = (table: any) => {
 		const [left, right] = table.addRow()
 
@@ -364,10 +380,18 @@ class GRIN2 extends PlotBase implements RxComponent {
 			.attr('data-testid', 'grin2-run-button')
 			.style('margin-left', '100px')
 			.text('Run GRIN2')
-			.on('click', () => this.runAnalysis())
+			.on('click', async () => {
+				this.setControlsDisabled(true)
+				try {
+					await this.runAnalysis()
+				} finally {
+					this.setControlsDisabled(false)
+				}
+			})
 
 		if (this.state.config.settings.runAnalysis) {
-			this.runAnalysis()
+			this.setControlsDisabled(true)
+			this.runAnalysis().finally(() => this.setControlsDisabled(false))
 		} else {
 			// Set initial button state
 			this.updateRunButtonState()
