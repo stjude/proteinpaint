@@ -1,1 +1,2 @@
-
+Features:
+- GRIN2: Added cloaking of UI controls while analysis is running

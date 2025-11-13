@@ -93,6 +93,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			config
 		}
 	}
+
 	private addSnvindelRow = (table: any) => {
 		const [left, right] = table.addRow()
 
@@ -364,7 +365,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 			.attr('data-testid', 'grin2-run-button')
 			.style('margin-left', '100px')
 			.text('Run GRIN2')
-			.on('click', () => this.runAnalysis())
+			.on('click', () => {
+				this.runAnalysis()
+			})
 
 		if (this.state.config.settings.runAnalysis) {
 			this.runAnalysis()
@@ -548,6 +551,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		this.updateRunButtonState(dtUsage)
 	}
 	private async runAnalysis() {
+		this.dom.controls.style('pointer-events', 'none').style('opacity', '0.5')
 		try {
 			// Get checkbox states
 			const dtUsage = this.getDtUsageFromCheckboxes()
@@ -600,6 +604,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		} catch (error) {
 			sayerror(this.dom.div, `Error running GRIN2: ${error instanceof Error ? error.message : error}`)
 		} finally {
+			this.dom.controls.style('pointer-events', 'auto').style('opacity', '1')
 			this.dom.runButton.property('disabled', false).text('Run GRIN2')
 		}
 	}
