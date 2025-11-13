@@ -1,2 +1,1 @@
-Features:
-- GRIN2: Now displaying lesion stats horizontally instead of vertically
+

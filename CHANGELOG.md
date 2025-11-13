@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - GRIN2: Saving filter settings to state. Other minor cleanups
+- GRIN2: Now displaying lesion stats horizontally instead of vertically
 
 
 ## 2.158.0
