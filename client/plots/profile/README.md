@@ -67,16 +67,17 @@ Here is a breakdown of the main plot types:
 
 
 ### Radar Chart
+**Class:** [profileRadar.js](../profileRadar.js)  
+
 This chart type has different configurations for the "Full" and "Abbreviated" PrOFILE versions.
 
 #### Full PrOFILE
-This chart allows for a comparison between two different respondent groups within an institution. Users can select from two different comparison views:
-	- **Impressions Comparison:** Compares the subjective "impressions" (on a scale of 1-10) of the Site Coordinator versus the Point of Care (POC) Staff for each module.
-	- **Score-based Results Comparison:** Compares the objective, calculated scores from the responses of the Site Coordinator versus the POC Staff for each module.
+This chart allows for a comparison between two different respondent groups within an institution. Users can select from two different comparison views:  
+	- **Impressions Comparison:** Compares the subjective "impressions" (on a scale of 1-10) of the Site Coordinator versus the Point of Care (POC) Staff for each module.  
+	- **Score-based Results Comparison:** Compares the objective, calculated scores from the responses of the Site Coordinator versus the POC Staff for each module.  
 
 #### Abbreviated PrOFILE
-This chart compares two different metrics for the same respondent group for each module.
-**Class:** [profileRadar.js](../profileRadar.js)  
+This chart compares two different metrics for the same respondent group for each module.  
 **Title:** Comparison of Score-based Results and End-User Impressions by Module  
 **Functionality:** It plots the calculated Total Score against the subjective End-User Impression for each module, allowing users to see how objective capabilities align with perceived performance.  
 
