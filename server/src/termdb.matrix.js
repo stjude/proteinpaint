@@ -1035,7 +1035,7 @@ function checkAccessToSampleData(data, ds, q) {
 	if (hiddenIds?.length) {
 		rows = ds.cohort.db.connection
 			.prepare(
-				`SELECT distict value as name FROM anno_categorical WHERE term_id in (${hiddenIds
+				`SELECT distinct value as name FROM anno_categorical WHERE term_id in (${hiddenIds
 					.map(s => '?')
 					.join(',')}) and sample in (${sampleIds.map(s => '?').join(',')})`
 			)
