@@ -28,6 +28,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 	readonly headerFontSize: number = 14
 	readonly headerFontWeight: number = 600
 	readonly tableFontSize: number = 11
+	readonly statsTableFontWeight: string = 'bold'
 
 	// Spacing & Layout
 	readonly btnPadding = '8px 16px'
@@ -35,6 +36,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 	readonly btnBorderRadius = '3px'
 	readonly btnMargin = '10px'
 	readonly tableMargin = '10px'
+	readonly processingSummaryPadVertical = '8px'
+	readonly processingSummaryPadHorizontal = '16px'
 	readonly tableCellPadding = '8px'
 	readonly controlsMargin = '5px'
 	readonly controlsPadding = '10px'
@@ -757,7 +760,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				header: {
 					allowSort: true,
 					style: {
-						'font-weight': 'bold',
+						'font-weight': this.statsTableFontWeight,
 						'background-color': this.backgroundColor
 					}
 				}
@@ -784,8 +787,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			// General stats using table2col
 			const generalTable = table2col({
-				holder: tablesContainer.append('div'),
-				margin: '0'
+				holder: tablesContainer.append('div')
 			})
 
 			generalTable.addRow('Total Samples', result.processingSummary.totalSamples.toLocaleString())
@@ -801,9 +803,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 			generalTable.addRow('Total Lesions', result.processingSummary.totalLesions.toLocaleString())
 			generalTable.addRow('Processed Lesions', result.processingSummary.processedLesions.toLocaleString())
 
-			// Lesion type details in a proper table
+			// Lesion type details
 			if (result.processingSummary.lesionCounts?.byType) {
-				// TODO: Refactor this to use common labels which will be used in mapping from common.js long term
+				// TODO: Once we have a map in common.js for all these labels, use it here
 				const typeLabels: Record<string, string> = {
 					mutation: 'Mutations',
 					gain: 'Copy Gains',
@@ -812,48 +814,44 @@ class GRIN2 extends PlotBase implements RxComponent {
 					sv: 'Structural Variants'
 				}
 
-				const table = tablesContainer
-					.append('div')
-					.style('margin', this.tableMargin)
-					.append('table')
-					.style('border-collapse', 'collapse')
-					.style('width', 'auto')
-					.style('font-size', `${this.optionsTextFontSize}px`)
+				const columns = [
+					{ label: 'Lesion Type' },
+					{ label: 'Count', sortable: true },
+					{ label: 'Capped' },
+					{ label: 'Samples', sortable: true }
+				]
 
-				// Helper to apply cell styles
-				const styleCell = (cell: any, align?: string, isFirstCol = false) => {
-					const padding = isFirstCol ? '8px 16px 8px 0' : '8px 16px' // No left padding for first column
-					cell.style('padding', padding).style('border-bottom', '1px solid #eee')
-					if (align) cell.style('text-align', align)
-					return cell
-				}
-
-				// Headers
-				const headerRow = table.append('thead').append('tr')
-				;[
-					['Lesion Type', 'left'],
-					['Count', 'left'],
-					['Capped', 'left'],
-					['Samples', 'left']
-				].forEach(([text, align], index) => {
-					headerRow
-						.append('th')
-						.style('text-align', align)
-						.style('padding', index === 0 ? '8px 16px 8px 0' : '8px 16px')
-						.text(text)
+				const rows = Object.entries(result.processingSummary.lesionCounts.byType).map(([type, typeData]) => {
+					const { count, capped, samples } = typeData as { count: number; capped: boolean; samples: number }
+					return [
+						{ value: typeLabels[type] },
+						{ value: count.toLocaleString() },
+						{ value: capped ? 'Yes' : 'No' },
+						{ value: (samples ?? 0).toLocaleString() }
+					]
 				})
 
-				// Data rows
-				const tbody = table.append('tbody')
-				for (const [type, typeData] of Object.entries(result.processingSummary.lesionCounts.byType)) {
-					const { count, capped, samples } = typeData as { count: number; capped: boolean; samples: number }
-					const row = tbody.append('tr')
-
-					styleCell(row.append('td'), undefined, true).text(typeLabels[type]) // First column
-					styleCell(row.append('td'), 'left').text(count.toLocaleString())
-					styleCell(row.append('td'), 'left').text(capped ? 'Yes' : 'No')
-					styleCell(row.append('td'), 'left').text((samples ?? 0).toLocaleString())
-				}
+				renderTable({
+					columns,
+					rows,
+					dataTestId: 'grin2-lesion-counts-table',
+					div: tablesContainer.append('div'),
+					showLines: false,
+					striped: true,
+					maxHeight: 'none',
+					maxWidth: '100%',
+					resize: false,
+					download: {
+						fileName: `grin2_lesion_stats_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}.tsv`
+					},
+					header: {
+						style: {
+							'font-weight': this.statsTableFontWeight,
+							'background-color': this.backgroundColor
+						},
+						allowSort: true
+					}
+				})
 			}
 		}
 
