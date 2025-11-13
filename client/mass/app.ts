@@ -211,8 +211,8 @@ class MassApp extends AppBase implements RxApp {
 	async downloadPlots() {
 		const chartImagesAll: any[] = []
 		let i = 1
-		const entries: any[] = Object.entries(this.components.plots)
-		for (const [, plot] of entries) {
+		const values: any[] = Object.values(this.components.plots)
+		for (const plot of values) {
 			const chart = plot.type == 'plot' ? plot.getComponents('chart') : plot // implies summary plot
 			const chartImages = chart.getChartImages ? chart.getChartImages() : null
 			if (!chartImages) {
@@ -221,13 +221,17 @@ class MassApp extends AppBase implements RxApp {
 			}
 
 			for (const chartImage of chartImages) {
-				if (entries.length > 1) chartImage.name = `${i}. ${chartImage.name}`
+				if (values.length > 1) chartImage.name = `${i}. ${chartImage.name}`
 				chartImagesAll.push(chartImage)
 			}
 			i++
 		}
-		if (chartImagesAll.length > 0) downloadSVGsAsPdf(chartImagesAll, 'plots', 'landscape')
-		else alert('No chart images available for download')
+		if (chartImagesAll.length > 0) {
+			const filters: any[] = []
+			const globalFilterImg = await this.components.nav.getComponents('filter').getFilterImage()
+			if (globalFilterImg) filters.push(globalFilterImg)
+			downloadSVGsAsPdf(chartImagesAll, 'plots', 'landscape', filters)
+		} else alert('No chart images available for download')
 	}
 }
 

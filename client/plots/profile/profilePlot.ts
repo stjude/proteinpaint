@@ -592,6 +592,11 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 		menu.show(event.clientX, event.clientY)
 	}
 
+	preApiFreeze(api) {
+		api.download = this.download
+		api.getChartImages = () => this.getChartImages()
+	}
+
 	getChartImages() {
 		const plots: any[] = Object.values(this.components.plots)
 		const note = '© 2025 St. Jude Children’s Research Hospital'
