@@ -454,6 +454,12 @@ export class ScatterView {
 			}
 			inputs.push(showAxes)
 		}
+
+		// disable already-selected terms in all term inputs
+		const termInputs = inputs.filter(i => i.type === 'term')
+		const selectedTerms = termInputs.map(i => this.scatter.config[i.configKey]?.term).filter(Boolean)
+		for (const i of termInputs) i.disable_terms = selectedTerms
+
 		return inputs
 	}
 
