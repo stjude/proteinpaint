@@ -53,8 +53,15 @@ export class ScatterTooltip {
 		this.chart = chart
 		this.displaySample = 'sample' in s2
 		const threshold = 5 / this.scatter.zoom //Threshold should consider the zoom
+		/** Avoid calculating the min and max for x and y
+		 * multiple times in the distance function.
+		 * Supply them as parameters.*/
+		const xMin = chart.xAxisScale.invert(0)
+		const xMax = chart.xAxisScale.invert(chart.width)
+		const yMin = chart.yAxisScale.invert(chart.height)
+		const yMax = chart.yAxisScale.invert(0)
 		const samples = chart.data.samples.filter(s => {
-			const dist = distance(s.x, s.y, s2.x, s2.y, chart)
+			const dist = distance(s.x, s.y, s2.x, s2.y, chart, xMin, xMax, yMin, yMax)
 			if (!('sampleId' in s) && (!this.scatter.settings.showRef || this.scatter.settings.refSize == 0)) return false
 			return this.scatter.model.getOpacity(s) > 0 && dist < threshold
 		})
@@ -86,9 +93,14 @@ export class ScatterTooltip {
 		this.tree = []
 		const showCoords = this.scatter.config.term ? true : false
 
+		const Xmin = chart.xAxisScale.invert(0)
+		const Xmax = chart.xAxisScale.invert(chart.width)
+		const Ymin = chart.yAxisScale.invert(chart.height)
+		const Ymax = chart.yAxisScale.invert(0)
+
 		const getCoords = sample => {
-			const x = getCoordinate(sample.x, chart.xAxisScale.invert(0), chart.xAxisScale.invert(chart.width))
-			const y = getCoordinate(sample.y, chart.yAxisScale.invert(chart.height), chart.yAxisScale.invert(0))
+			const x = getCoordinate(sample.x, Xmin, Xmax)
+			const y = getCoordinate(sample.y, Ymin, Ymax)
 			return `${roundValueAuto(x)},${roundValueAuto(y)}`
 		}
 		//Building tree
@@ -327,11 +339,11 @@ export class ScatterTooltip {
 	}
 }
 
-export function distance(x1: number, y1: number, x2: number, y2: number, chart: any) {
-	const convertedX1 = getCoordinate(x1, chart.xAxisScale.invert(0), chart.xAxisScale.invert(chart.width))
-	const convertedX2 = getCoordinate(x2, chart.xAxisScale.invert(0), chart.xAxisScale.invert(chart.width))
-	const convertedY1 = getCoordinate(y1, chart.yAxisScale.invert(chart.height), chart.yAxisScale.invert(0))
-	const convertedY2 = getCoordinate(y2, chart.yAxisScale.invert(chart.height), chart.yAxisScale.invert(0))
+export function distance(x1: number, y1: number, x2: number, y2: number, chart: any, xMin, xMax, yMin, yMax): number {
+	const convertedX1 = getCoordinate(x1, xMin, xMax)
+	const convertedX2 = getCoordinate(x2, xMin, xMax)
+	const convertedY1 = getCoordinate(y1, yMin, yMax)
+	const convertedY2 = getCoordinate(y2, yMin, yMax)
 	const x = chart.xAxisScale(convertedX2) - chart.xAxisScale(convertedX1)
 	const y = chart.yAxisScale(convertedY2) - chart.yAxisScale(convertedY1)
 	const distance = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2))

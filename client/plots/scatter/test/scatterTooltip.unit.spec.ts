@@ -12,8 +12,13 @@ const mockChart = {
 	xAxisScale: d3Linear().domain([0, 100]).range([0, 500]),
 	yAxisScale: d3Linear().domain([0, 100]).range([500, 0]),
 	width: 600,
-	heigth: 600
+	height: 600
 }
+
+const xMin = mockChart.xAxisScale.invert(0)
+const xMax = mockChart.xAxisScale.invert(mockChart.width)
+const yMin = mockChart.yAxisScale.invert(mockChart.height)
+const yMax = mockChart.yAxisScale.invert(0)
 
 /**************
  test sections
@@ -24,15 +29,16 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('Distance() should return the correct value when in range', function (test) {
+tape.only('Distance() should return the correct value when in range', function (test) {
 	test.timeoutAfter(100)
 
 	const x1 = 10
 	const y1 = 20
 	const x2 = 30
 	const y2 = 40
+
 	const expected = 141.4213562373095
-	const dist = distance(x1, y1, x2, y2, mockChart)
+	const dist = distance(x1, y1, x2, y2, mockChart, xMin, xMax, yMin, yMax)
 
 	test.ok(typeof dist === 'number', 'distance should return a number')
 	test.equal(dist, expected, 'Should return the correct value for distance')
@@ -47,7 +53,7 @@ tape('Distance() should return in range value for out-of-bounds x value', functi
 	const x2 = 105
 	const y2 = 40
 	const expected = 485.41219597368996
-	const dist = distance(x1, y1, x2, y2, mockChart)
+	const dist = distance(x1, y1, x2, y2, mockChart, xMin, xMax, yMin, yMax)
 
 	test.ok(typeof dist === 'number', 'distance should return a number')
 	test.equal(dist, expected, 'Should return the correct value for distance')
@@ -62,7 +68,7 @@ tape('Distance() should return in range value for out-of-bounds y value', functi
 	const x2 = 30
 	const y2 = 40
 	const expected = 316.22776601683796
-	const dist = distance(x1, y1, x2, y2, mockChart)
+	const dist = distance(x1, y1, x2, y2, mockChart, xMin, xMax, yMin, yMax)
 
 	test.ok(typeof dist === 'number', 'distance should return a number')
 	test.equal(dist, expected, 'Should return the correct value for distance')
