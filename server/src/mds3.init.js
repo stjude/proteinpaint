@@ -288,7 +288,7 @@ export async function validate_termdb(ds) {
 	if (tdb.q) {
 		// equipped with ds-supplied methods
 	} else {
-		if (!ds.cohort.termdb.dictionary) {
+		if (!ds.cohort.termdb.dictionary && !ds.cohort.termdb.buildDictionary) {
 			if (!ds.cohort.db) throw 'ds.cohort is set but cohort.db{} missing'
 			if (!ds.cohort.db.file && !ds.cohort.db.file_fullpath) throw 'ds.cohort.db.file missing'
 		}
@@ -306,10 +306,13 @@ export async function validate_termdb(ds) {
 	tdb.sampleTypes = {}
 
 	if (tdb.q) {
-	} else if (tdb?.dictionary?.gdcapi) {
+	} else if (tdb.buildDictionary) {
+		if (typeof tdb.buildDictionary != 'function') throw 'termdb.buildDictionary() is not function'
+		await tdb.buildDictionary(ds)
+	} else if (tdb.dictionary?.gdcapi) {
 		await gdcBuildDictionary(ds)
 		// ds.cohort.termdb.q={} created
-	} else if (tdb?.dictionary?.dbFile) {
+	} else if (tdb.dictionary?.dbFile) {
 		ds.cohort.db = { file: tdb.dictionary.dbFile }
 		delete tdb.dictionary.dbFile
 		server_init_db_queries(ds)

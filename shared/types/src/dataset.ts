@@ -1403,6 +1403,12 @@ export type Termdb = {
 	}
 	/** if true, backend is allowed to send sample names to client in charts */
 	displaySampleIds?: (clientAuthResult: any) => boolean
+	/** ds-supplied async callback to build dictionary
+	argument: dataset object
+	sets termdb.q{}
+	no return
+	*/
+	buildDictionary?: (ds: any) => void
 	converSampleIds?: boolean
 	alwaysShowBranchTerms?: boolean
 	minimumSampleAllowed4filter?: number
