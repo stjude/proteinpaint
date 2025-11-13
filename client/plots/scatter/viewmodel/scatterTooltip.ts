@@ -5,6 +5,7 @@ import { getDateStrFromNumber } from '#shared/terms.js'
 import { rgb } from 'd3-color'
 import type { Scatter } from '../scatter.js'
 import { table2col } from '#dom'
+import { getCoordinate } from '../model/scatterModel.ts'
 
 export class ScatterTooltip {
 	scatter: Scatter
@@ -84,7 +85,12 @@ export class ScatterTooltip {
 		if (samples.length == 0) return
 		this.tree = []
 		const showCoords = this.scatter.config.term ? true : false
-		const getCoords = sample => `${roundValueAuto(sample.x)},${roundValueAuto(sample.y)}`
+
+		const getCoords = sample => {
+			const x = getCoordinate(sample.x, chart.xAxisScale.invert(0), chart.xAxisScale.invert(chart.width))
+			const y = getCoordinate(sample.y, chart.yAxisScale.invert(chart.height), chart.yAxisScale.invert(0))
+			return `${roundValueAuto(x)},${roundValueAuto(y)}`
+		}
 		//Building tree
 		for (const sample of samples) {
 			const id = getCoords(sample)
@@ -322,8 +328,12 @@ export class ScatterTooltip {
 }
 
 function distance(x1, y1, x2, y2, chart) {
-	const x = chart.xAxisScale(x2) - chart.xAxisScale(x1)
-	const y = chart.yAxisScale(y2) - chart.yAxisScale(y1)
+	const convertedX1 = getCoordinate(x1, chart.xAxisScale.invert(0), chart.xAxisScale.invert(chart.width))
+	const convertedX2 = getCoordinate(x2, chart.xAxisScale.invert(0), chart.xAxisScale.invert(chart.width))
+	const convertedY1 = getCoordinate(y1, chart.yAxisScale.invert(chart.height), chart.yAxisScale.invert(0))
+	const convertedY2 = getCoordinate(y2, chart.yAxisScale.invert(chart.height), chart.yAxisScale.invert(0))
+	const x = chart.xAxisScale(convertedX2) - chart.xAxisScale(convertedX1)
+	const y = chart.yAxisScale(convertedY2) - chart.yAxisScale(convertedY1)
 	const distance = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2))
 	return distance
 }

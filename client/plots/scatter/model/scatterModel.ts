@@ -155,16 +155,11 @@ export class ScatterModel {
 	/** Returns the calculated coordinate or the min/max axis
 	 * cap set by the user. */
 	getCoordinates(chart, c) {
-		const coord = (val, min, max) => {
-			if (min != null && val < min) return min
-			if (max != null && val > max) return max
-			return val
-		}
 		const cx = () => {
-			return coord(c.x, this.scatter.settings.minXScale, this.scatter.settings.maxXScale)
+			return getCoordinate(c.x, this.scatter.settings.minXScale, this.scatter.settings.maxXScale)
 		}
 		const cy = () => {
-			return coord(c.y, this.scatter.settings.minYScale, this.scatter.settings.maxYScale)
+			return getCoordinate(c.y, this.scatter.settings.minYScale, this.scatter.settings.maxYScale)
 		}
 		const x = chart.xAxisScale(cx())
 		const y = chart.yAxisScale(cy())
@@ -399,4 +394,10 @@ export class ScatterModel {
 			chart.currentColorRange = { min, max }
 		}
 	}
+}
+
+export function getCoordinate(val, min, max) {
+	if (min != null && val < min) return min
+	if (max != null && val > max) return max
+	return val
 }
