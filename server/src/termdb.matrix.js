@@ -1029,26 +1029,27 @@ function checkAccessToSampleData(data, ds, q) {
 	// quick check
 
 	const sampleIds = Object.keys(data.samples)
+	if (!sampleIds.length) return
 	const hiddenIds = ds.cohort.termdb.hiddenIds
-	let names
-	if (hiddenIds) {
-		names = ds.cohort.db.connection
+	let rows
+	if (hiddenIds?.length) {
+		rows = ds.cohort.db.connection
 			.prepare(
-				`SELECT value as name FROM anno_categorical WHERE term_id in (${hiddenIds
+				`SELECT distict value as name FROM anno_categorical WHERE term_id in (${hiddenIds
 					.map(s => '?')
 					.join(',')}) and sample in (${sampleIds.map(s => '?').join(',')})`
 			)
 			.all([...hiddenIds, ...sampleIds])
 	} else {
-		names = ds.cohort.db.connection
+		rows = ds.cohort.db.connection
 			.prepare(`SELECT name FROM sampleidmap WHERE id in (${sampleIds.map(s => '?').join(',')})`)
 			.all(sampleIds)
 	}
-	const namesSet = new Set(names.map(s => s.name))
+	const names = rows.map(s => s.name)
 	// pass sampleNames since portal token does not know internal sample ID-to-name mapping
 	const access = ds.cohort.termdb.checkAccessToSampleData(q, {
-		count: namesSet.size,
-		names: [...namesSet]
+		count: names.length,
+		names
 	})
 	if (!access.canAccess)
 		throw {
