@@ -152,6 +152,8 @@ export class ScatterModel {
 		return shapes[index]
 	}
 
+	/** Returns the calculated coordinate or the min/max axis
+	 * cap set by the user. */
 	getCoordinates(chart, c) {
 		const cx = () => {
 			if (this.scatter.settings.minXScale != null && c.x < this.scatter.settings.minXScale)
@@ -200,9 +202,10 @@ export class ScatterModel {
 	transform(chart, c, factor = 1) {
 		const scale = this.getScale(chart, c, factor)
 		const particleSize = 16 * scale
-		const x = chart.xAxisScale(c.x) - particleSize / 2
-		const y = chart.yAxisScale(c.y) - particleSize / 2
-		const transform = `translate(${x},${y}) scale(${scale})` // original icons are scaled to 0.3
+		const { x, y } = this.getCoordinates(chart, c)
+		const offSetX = x - particleSize / 2
+		const offSetY = y - particleSize / 2
+		const transform = `translate(${offSetX},${offSetY}) scale(${scale})` // original icons are scaled to 0.3
 		return transform
 	}
 
@@ -254,9 +257,6 @@ export class ScatterModel {
 			let regression
 			const data: any = []
 			await chart.cohortSamples.forEach(c => {
-				// const x = chart.xAxisScale!(c.x)
-				// const y = chart.yAxisScale!(c.y)
-				// data.push({ x, y })
 				data.push(this.getCoordinates(chart, c))
 			})
 			let regressionCurve
