@@ -1380,7 +1380,7 @@ export type Termdb = {
 	 * in order to minimize the ease of extracting identifiable information from aggregate data
 	 * in server response
 	 *
-	 * returns: {minSampleSize, canAccess}, see below
+	 * returns: {minSize, canAccess}, see below
 	 */
 	checkAccessToSampleData?: (
 		/** req.query as processed through app middleware (pre-parsed, may have req.body props, __protectec__, etc) */
@@ -1393,10 +1393,10 @@ export type Termdb = {
 			names?: string[]
 		}
 	) => {
-		/** the required minimum sample size for the current user,
+		/** the required minimum size for the current user to access certain data,
 		 * may be dependent on login status or other context
 		 * */
-		minSampleSize: number
+		minSize: number
 		/** whether downstreadm backend code can proceed */
 		canAccess: boolean
 	}

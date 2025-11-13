@@ -4,7 +4,7 @@ import type { Mds3 } from '#types'
 // - in container-based CI, the installed @sjrch/proteinpaint-server/dataset has js files only
 import termdbTestInit from './termdb.test.js'
 
-const minSampleSize = 10
+const minSize = 10
 
 // export a function to allow reuse of this dataset without causing conflicts
 // for the different use cases in runtime/tests
@@ -14,8 +14,8 @@ export default function (): Mds3 {
 	if (!ds.cohort) ds.cohort = { termdb: {} }
 	ds.cohort.termdb.checkAccessToSampleData = (_, data) => {
 		return {
-			minSampleSize,
-			canAccess: data.sampleCount >= minSampleSize
+			minSize,
+			canAccess: data.count >= minSize
 		}
 	}
 	return ds
