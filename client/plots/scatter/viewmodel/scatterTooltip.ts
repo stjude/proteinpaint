@@ -327,7 +327,7 @@ export class ScatterTooltip {
 	}
 }
 
-function distance(x1, y1, x2, y2, chart) {
+export function distance(x1: number, y1: number, x2: number, y2: number, chart: any) {
 	const convertedX1 = getCoordinate(x1, chart.xAxisScale.invert(0), chart.xAxisScale.invert(chart.width))
 	const convertedX2 = getCoordinate(x2, chart.xAxisScale.invert(0), chart.xAxisScale.invert(chart.width))
 	const convertedY1 = getCoordinate(y1, chart.yAxisScale.invert(chart.height), chart.yAxisScale.invert(0))

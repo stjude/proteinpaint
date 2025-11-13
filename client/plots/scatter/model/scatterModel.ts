@@ -396,7 +396,7 @@ export class ScatterModel {
 	}
 }
 
-export function getCoordinate(val, min, max) {
+export function getCoordinate(val: number, min: number | null, max: number | null) {
 	if (min != null && val < min) return min
 	if (max != null && val > max) return max
 	return val
