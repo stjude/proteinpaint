@@ -1,14 +1,20 @@
 
-# Scatters, Run Chart, and Frequency Chart Documentation
+# Scatters
 
-This folder provides several types of scatter plots and related visualizations for exploring relationships between variables in your data. The available scatter plot types include:
+This folder contains the scatter plot and related components. The scatter plot allows to see the relationship between two or three numerical variables in your data. A scatter plot may also be generated using date variables as input, please see the runchart and the frequency chart fore more details.
+
+
+- [Run Chart README](../runchart/README.md) 
+- [Frequency Chart README](../frequencyChart/README.md)
+
+The available scatter plot types include:
 
 - **Standard Scatter Plot:** For visualizing the relationship between two variables or a predefined scatter plot such as a TSNE or UMAP.
 - **2D Large Scatter Plot:** Optimized for high-density datasets with thousands or millions of points.
 - **3D Scatter Plot:** For exploring relationships among three variables in three-dimensional space.
 
 Each plot type supports adding variables for coloring, filtering, and provides an interactive exploration, making them suitable for a wide range of data analysis tasks.
----
+
 
 ## Component Organization and MVVM Pattern
 
@@ -22,13 +28,35 @@ The scatter plot components are organized using the Model-View-ViewModel (MVVM) 
 
 
 ## Scatter Plot
+
 **Class:** [scatter.js](./scatter.js)  
 **Title:** Scatter Plot for Bivariate Data  
-**Description:** The scatter plot visualizes the relationship between two quantitative variables for each data point. The data point may also have a color, shape or size, based on additional variables.   
+**Description:** The scatter plot visualizes the relationship between two quantitative variables for each data point. The data point may also have a color, shape or size, based on additional variables.  
+
+**ViewModel Architecture:** Each scatter plot is managed by its own ViewModel, which is a subclass of [`ScatterViewModelBase`](../scatter/viewmode/scatterViewModelBase.js). This base class provides shared logic for managing state, user interactions, and data transformations. Each specific scatter plot type (2D, 3D, large) creates its own ViewModel instance, extending or customizing the base functionality as needed. This design ensures consistency and reusability across different scatter plot implementations.
+
 **Functionality:**
 - Visualizes correlation or association between two variables.
 - Supports tooltips, zoom, and pan for interactive exploration.
-- Can be configured to highlight or filter by group, cohort, or other attributes.
+- Interactive controls allow users to customize the visualization:
+	- **Color by:** Assign colors to points based on a selected variable (categorical or continuous), making it easy to distinguish groups or visualize gradients.
+	- **Shape by:** Assign different shapes to points based on a categorical variable, visually separating sample groups.
+	- **Size by:** Adjust the size of points globally or map to a variable (e.g., sample size, reference size) for additional data encoding.
+	- **Opacity:** Control the transparency of points, which is especially useful for visualizing dense datasets and reducing overplotting.
+	- **Axes and Layout:** Options to show/hide axes, set chart width/height, and save zoom/pan state for flexible display.
+	- **Contour Map:** Overlay a density contour map, optionally weighted by a continuous variable, to highlight data distributions.
+	- **Scale Order:** Choose ascending or descending order for scaling point sizes, supporting different analytical perspectives.
+	- **Other Controls:** Additional options for minimum/maximum shape size and more, enabling fine-tuned customization.
+
+### Main Methods: ScatterModel
+- **initData:** Fetches and initializes chart data, processes server response, and sets up chart objects.
+- **createChart:** Constructs chart objects, determines if large rendering is needed, and builds legends.
+- **initRanges:** Calculates axis ranges (min/max) for all charts, supporting user overrides and global settings.
+
+### Main Methods: ScatterViewModel
+- **renderSerie:** Renders the main chart series, including points and optional contours; delegates to base logic and adds custom features.
+- **renderContours:** Draws density contours on the chart using D3, supporting both categorical and continuous variables.
+- **addLegendSVG:** Creates and inserts the SVG legend for color and shape mappings.
 
 ---
 
@@ -40,7 +68,14 @@ The scatter plot components are organized using the Model-View-ViewModel (MVVM) 
 - Visualizes associations among three variables in a 3D space.
 - Supports interactive rotation and zoom for data exploration.
 
----
+**Overwritten Methods:**
+The 3D scatter plot is managed by `ScatterViewModel3D`, which extends the base `ScatterViewModel`. The key method overwritten is `renderSerie`, which:
+- Sets up a 3D scene using THREE.js, including camera, axes, and interactive controls (OrbitControls).
+- Maps data points to 3D coordinates and colors, using buffer geometry for efficient rendering.
+- Handles contour map overlays and dynamic axis labeling for enhanced visualization.
+- Implements custom event handling for zoom and rotation, providing a rich interactive experience.
+Other helper methods, such as `renderContourMap` and `addLabels`, are also customized to support 3D-specific features.
+
 
 
 ## 2D Large Scatter Plot
@@ -52,53 +87,16 @@ The scatter plot components are organized using the Model-View-ViewModel (MVVM) 
 - Supports zoom, pan, and selection for detailed exploration.
 - Can be configured to highlight clusters, outliers, or specific groups.
 
----
-## Customization: Colors, Shapes, and Controls
-
-Scatter plots in this library support extensive customization through interactive controls, allowing users to tailor the visualization to their analysis needs. These controls are dynamically generated in the UI via the `setControls` and `getControlInputs` methods.
-
-### Supported Controls
-
-- **Color:** Assigns colors to points based on a selected variable (categorical or continuous). This helps distinguish groups or highlight gradients in the data.
-- **Shape:** Assigns different shapes to points based on a categorical variable, making it easy to visually separate groups.
-- **Size:** Adjusts the size of points, either globally or by mapping to a variable (e.g., sample size, reference size).
-- **Opacity:** Controls the transparency of points, useful for visualizing dense datasets.
-- **Axes and Layout:** Options to show/hide axes, set chart width/height, and save zoom/pan state.
-- **Contour Map:** Option to overlay a density contour map, which can be weighted by a continuous variable.
-- **Scale Order:** Allows users to choose ascending or descending order for scaling.
-- **Other:** Additional controls for minimum/maximum shape size, and more.
-
-These controls are accessible in the plot’s UI and are managed by the ViewModel, ensuring that changes are immediately reflected in the visualization. This flexibility enables users to explore their data from multiple perspectives and uncover deeper insights.
----
+**Overwritten Methods:**
+The 2D large scatter plot is managed by `ScatterViewModel2DLarge`, which extends the base `ScatterViewModel`. The main method overwritten is `renderSerie`, which:
+- Uses THREE.js to render large numbers of points efficiently on a canvas.
+- Maps data points to 2D coordinates and colors, using buffer geometry and custom textures.
+- Implements drag controls and custom zoom handling for smooth navigation.
 
 
-## Run Chart
-**Class:** [runchart.js](./runchart.js)  
-**Title:** Run Chart for Temporal Trends  
-**Description:** The run chart displays data points in chronological order, typically to visualize trends, shifts, or cycles over time. It is commonly used for quality improvement, monitoring processes, or any time-based data analysis.  
-**Functionality:**
-- Plots values over time to reveal trends or changes.
-- Supports annotations for events or interventions.
-- Allows filtering or highlighting by group or time period.
 
----
-
-
-## Frequency Chart
-**Class:** [frequencyChart.js](./frequencyChart.js)  
-**Title:** Frequency Chart for Distribution Analysis  
-**Description:** The frequency chart shows the number of events of the variable requested, accumulated over time
-**Functionality:**
-- Visualizes the distribution and spread of data.
-
----
-
-
-## Data Access and Filtering
-
-All charts retrieve their data from backend endpoints, using filter settings and user context to ensure appropriate data access. 
 
 
 ## Conclusion
 
-These visualizations provide users with powerful tools to analyze relationships and trends in their data. By supporting multiple customizations from the controls, the scatter, run, and frequency charts help users gain actionable insights from complex datasets across a wide range of applications.
+Scatter plots in this library offer a flexible and interactive framework for exploring complex relationships in multidimensional datasets. With support for advanced customization—such as coloring, shaping, sizing, and density contours—users can tailor visualizations to highlight patterns, clusters, and outliers. The modular MVVM architecture ensures maintainability and extensibility, while efficient rendering techniques enable analysis of both small and very large datasets. By leveraging these features, users can gain deeper insights, drive hypothesis generation, and support decision-making across diverse scientific and analytical domains.
