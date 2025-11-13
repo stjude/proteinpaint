@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.159.0
 
 Features:
 - GRIN2: Saving filter settings to state. Other minor cleanups
