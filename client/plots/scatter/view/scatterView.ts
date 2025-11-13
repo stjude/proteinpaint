@@ -399,16 +399,10 @@ export class ScatterView {
 			inputs.push(showAxes)
 		}
 
-		// for each term input, disable terms that are already selected
-		const disable_terms: any[] = []
-		const termInputs = inputs.filter(i => i.type == 'term')
-		// collect selected terms into disable_terms[]
-		for (const termInput of termInputs) {
-			const tw = this.scatter.config[termInput.configKey]
-			if (tw) disable_terms.push(tw.term)
-		}
-		// apply disable_terms[] to each term input
-		for (const termInput of termInputs) termInput.disable_terms = disable_terms
+		// disable already-selected terms in all term inputs
+		const termInputs = inputs.filter(i => i.type === 'term')
+		const selectedTerms = termInputs.map(i => this.scatter.config[i.configKey]?.term).filter(Boolean)
+		for (const i of termInputs) i.disable_terms = selectedTerms
 
 		return inputs
 	}
