@@ -381,8 +381,10 @@ export class ScatterView {
 			}
 			const xMin = roundValueAuto(this.scatter.model.range.xMin)
 			const xMax = roundValueAuto(this.scatter.model.range.xMax)
+			const xStep = (xMax - xMin) / 10
 			const yMin = roundValueAuto(this.scatter.model.range.yMin)
 			const yMax = roundValueAuto(this.scatter.model.range.yMax)
+			const yStep = (yMax - yMin) / 10
 
 			inputs.push(
 				showAxes,
@@ -395,7 +397,7 @@ export class ScatterView {
 					placeholder: `${xMin}`,
 					min: xMin,
 					max: xMax,
-					step: (xMax - xMin) / 10
+					step: xStep
 				},
 				{
 					label: 'X axis maximum',
@@ -406,7 +408,7 @@ export class ScatterView {
 					placeholder: `${xMax}`,
 					min: xMin,
 					max: xMax,
-					step: (xMax - xMin) / 10
+					step: xStep
 				},
 				{
 					label: 'Y axis minimum',
@@ -417,7 +419,7 @@ export class ScatterView {
 					placeholder: `${yMin}`,
 					min: yMin,
 					max: yMax,
-					step: (yMax - yMin) / 10
+					step: yStep
 				},
 				{
 					label: 'Y axis maximum',
@@ -428,7 +430,7 @@ export class ScatterView {
 					placeholder: `${yMax}`,
 					min: yMin,
 					max: yMax,
-					step: (yMax - yMin) / 10
+					step: yStep
 				}
 			)
 
