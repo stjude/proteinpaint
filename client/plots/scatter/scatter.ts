@@ -40,11 +40,13 @@ export class Scatter extends PlotBase implements RxComponent {
 	state!: any
 	transform: any
 	zoom: any
+	disable_terms: any[]
 
 	constructor(opts, api) {
 		super(opts, api)
 		this.type = Scatter.type
 		this.zoom = 1
+		this.disable_terms = []
 	}
 
 	async init(appState) {
@@ -102,6 +104,7 @@ export class Scatter extends PlotBase implements RxComponent {
 		if (this.model.is3D) this.vm = new ScatterViewModel3D(this)
 		else if (this.model.is2DLarge) this.vm = new ScatterViewModel2DLarge(this)
 		else this.vm = new ScatterViewModel(this)
+		this.setDisableTerms()
 		if (!this.config.colorColumn) await this.setControls()
 		await this.model.processData()
 		this.vm.render()
@@ -136,9 +139,21 @@ export class Scatter extends PlotBase implements RxComponent {
 		return filter
 	}
 
+	// disable terms that are already selected
+	setDisableTerms() {
+		const disable_terms: any[] = []
+		if (this.config.scaleDotTW) disable_terms.push(this.config.scaleDotTW.term)
+		if (this.config.shapeTW) disable_terms.push(this.config.shapeTW.term)
+		if (this.config.colorTW) disable_terms.push(this.config.colorTW.term)
+		if (this.config.term0) disable_terms.push(this.config.term0.term)
+		if (this.config.term) disable_terms.push(this.config.term.term)
+		if (this.config.term2) disable_terms.push(this.config.term2.term)
+		this.disable_terms = disable_terms
+	}
+
 	async setControls() {
 		this.view.dom.controlsHolder.selectAll('*').remove()
-		const inputs = this.view.getControlInputs()
+		const inputs = this.view.getControlInputs(this.disable_terms)
 		this.components = {
 			controls: await controlsInit({
 				app: this.app,

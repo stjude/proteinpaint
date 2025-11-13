@@ -786,6 +786,7 @@ async function setTermInput(opts) {
 		holder: self.dom.inputTd.append('div'),
 		debug: opts.debug,
 		usecase: opts.usecase,
+		disable_terms: opts.disable_terms,
 		getBodyParams: opts.getBodyParams,
 		defaultQ4fillTW: opts.defaultQ4fillTW,
 		geneVariantEditMenuOnlyGrp: opts.geneVariantEditMenuOnlyGrp,
