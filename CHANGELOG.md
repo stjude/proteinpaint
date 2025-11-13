@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- GRIN2: Added cloaking of UI controls while analysis is running
+
 
 ## 2.159.0
 
