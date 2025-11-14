@@ -228,7 +228,7 @@ class MassApp extends AppBase implements RxApp {
 		}
 		if (chartImagesAll.length > 0) {
 			const filters: any[] = []
-			const globalFilterImg = await this.components.nav.getComponents('filter').getFilterImage()
+			const globalFilterImg = await (this.components.nav as ComponentApi).getComponents('filter').getFilterImage()
 			if (globalFilterImg) filters.push(globalFilterImg)
 			downloadSVGsAsPdf(chartImagesAll, 'plots', 'landscape', filters)
 		} else alert('No chart images available for download')
