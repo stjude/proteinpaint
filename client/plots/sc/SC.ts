@@ -70,7 +70,9 @@ class SCViewer extends PlotBase implements RxComponent {
 	getState(appState: any): SCFormattedState {
 		const config = appState.plots.find((p: BasePlotConfig) => p.id === this.id)
 		if (!config) {
-			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)? [SC getState()]`
+			throw new Error(
+				`No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+			)
 		}
 		return {
 			config,
@@ -99,7 +101,7 @@ class SCViewer extends PlotBase implements RxComponent {
 		} catch (e: any) {
 			if (e instanceof Error) console.error(`${e.message || e} [SC init()]`)
 			else if (e.stack) console.log(e.stack)
-			throw `${e.message || e} [SC init()]`
+			throw new Error(e.message || e)
 		}
 		this.interactions = new SCInteractions(this.app, this.dom, this.id, () => this.getState(this.app.getState()))
 		//Init view model and view
@@ -168,10 +170,10 @@ class SCViewer extends PlotBase implements RxComponent {
 		const state = this.getState(this.app.getState()) as SCFormattedState
 		const config = state.config
 
-		if (!this.model) throw `Model not initialized [SC main()]`
-		if (!this.viewModel) throw `ViewModel not initialized [SC main()]`
-		if (!this.view) throw `View not initialized [SC main()]`
-		if (!this.interactions) throw `Interactions not initialized [SC main()]`
+		if (!this.model) throw new Error(`Model not initialized`)
+		if (!this.viewModel) throw new Error(`ViewModel not initialized`)
+		if (!this.view) throw new Error(`View not initialized`)
+		if (!this.interactions) throw new Error(`Interactions not initialized`)
 
 		this.interactions.toggleLoading(true)
 
@@ -194,7 +196,7 @@ class SCViewer extends PlotBase implements RxComponent {
 				this.interactions.toggleLoading(false)
 				if (e instanceof Error) console.error(`${e.message || e} [SC main()]`)
 				else if (e.stack) console.log(e.stack)
-				throw `${e.message || e} [SC main()]`
+				throw new Error(e.message || e)
 			}
 			data.plots = formatPlotData(data.plots)
 		}

@@ -25,10 +25,10 @@ function init({ genomes }) {
 		let result
 		try {
 			const g = genomes[q.genome]
-			if (!g) throw 'invalid genome name'
+			if (!g) throw new Error('invalid genome name')
 			const ds = g.datasets[q.dslabel]
-			if (!ds) throw 'invalid dataset name'
-			if (!ds.queries?.singleCell) throw 'no singlecell data on this dataset'
+			if (!ds) throw new Error('invalid dataset name')
+			if (!ds.queries?.singleCell) throw new Error('no singlecell data on this dataset')
 			result = await ds.queries.singleCell.data.get(q)
 		} catch (e: any) {
 			if (e.stack) console.log(e)
