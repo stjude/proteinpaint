@@ -408,7 +408,18 @@ export class ScatterView {
 					placeholder: `${xMax}`,
 					min: xMin,
 					max: xMax,
-					step: xStep
+					step: xStep,
+					processInput: value => {
+						/** When the user deletes a value, setNumberInput()
+						 * in controls.config.js sets it to input.min. Instead,
+						 * reset to default value to allow the user to delete
+						 * the value. */
+						const n = this.dom.controlsHolder.selectAll('input').filter(function (this: any) {
+							return this.placeholder == `${xMax}`
+						})
+						if (!n.node().value) return xMax
+						else return value
+					}
 				},
 				{
 					label: 'Y axis minimum',
@@ -430,7 +441,18 @@ export class ScatterView {
 					placeholder: `${yMax}`,
 					min: yMin,
 					max: yMax,
-					step: yStep
+					step: yStep,
+					processInput: value => {
+						/** When the user deletes a value, setNumberInput()
+						 * in controls.config.js sets it to input.min. Instead,
+						 * reset to default value to allow the user to delete
+						 * the value. */
+						const n = this.dom.controlsHolder.selectAll('input').filter(function (this: any) {
+							return this.placeholder == `${yMax}`
+						})
+						if (!n.node().value) return yMax
+						else return value
+					}
 				}
 			)
 
