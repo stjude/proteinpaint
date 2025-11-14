@@ -5,7 +5,7 @@
 
 
 ## Introduction
-The frequency chart was designed to build the sjcares regsitry accrual plot.  The accrual is a visualization tool, often used in clinical trials, that tracks the rate at which participants are recruited over time. The frequency chart receives as input a date variable and shows the accumulated frequency of events over time.
+The frequency chart was designed to build the sjcares registry accrual plot.  The accrual is a visualization tool, often used in clinical trials, that tracks the rate at which participants are recruited over time. The frequency chart receives as input a date variable and shows the accumulated frequency of events over time.
 
 
 ## How Frequency Chart Plotting Works
