@@ -756,28 +756,40 @@ export type SingleCellSamples = {
 	extraSampleTabLabel?: string
 }
 
-export type SingleCellDataGdc = {
-	src: 'gdcapi'
+type SingleCellDataBase = {
+	/** when a sample has multiple tsne plots, this flag allows allows all plots to share one cell type legend */
 	sameLegend: boolean
-	get?: (q: any) => any
+	/** name of ref cells? */
 	refName?: string
+	/** dynamically added getter */
+	get?: (q: any) => any
+	/** width and height of the plots */
+	settings?: { [key: string]: any }
+	/** In development
+	 * Replacing colorColumns in gdc plot objs.*/
+	twLst?: object[]
+}
+
+export type SingleCellDataGdc = SingleCellDataBase & {
+	src: 'gdcapi'
 	plots: GDCSingleCellPlot[]
-	settings?: { [key: string]: string }
 }
 
 export type SingleCellDEgeneGdc = {
 	src: 'gdcapi'
-	/** Column name.
-this must be the colorColumn from one of the plots. so that at the client app, as soon as the plot data have been loaded and maps rendered, client will find out the cell groups based on this columnName value, and show a drop down of these groups on UI. user selects a group, and pass it as request body to backend to get DE genes for this group
+	/** termId = Column name.
+this must be the colorColumn from one of the plots. In the client app, as soon as the plot data loads and maps renders, client finds the cell groups based on this columnName value, and shows a drop down of these groups on UI. user selects a group, and passes it as request body to backend to get DE genes for this group
 */
-	columnName: string
+	termId: string
 }
 
 type GDCSingleCellPlot = {
 	name: string
 	colorColumns: ColorColumn[]
 	coordsColumns: { x: number; y: number }
-	/** if true the plot is shown by default. otherwise hidden */
+	/** if true the plot is shown by default. otherwise hidden
+	 * Will not be needed when the singleCellPlot is depreciated.
+	 */
 	selected?: boolean
 }
 
@@ -818,19 +830,10 @@ type SingleCellPlot = {
 	/** if true the plot is shown by default. otherwise hidden */
 	selected?: boolean
 }
-export type SingleCellDataNative = {
+export type SingleCellDataNative = SingleCellDataBase & {
 	src: 'native'
-	/** when a sample has multiple tsne plots, this flag allows allows all plots to share one cell type legend */
-	sameLegend: boolean
 	/** available tsne type of plots for each sample */
 	plots: SingleCellPlot[]
-	/** name of ref cells? */
-	refName?: string
-	/** dynamically added getter */
-	get?: (q: any) => any
-	/** width and height of the plots */
-
-	settings?: { [key: string]: any }
 }
 
 export type SingleCellQuery = {
