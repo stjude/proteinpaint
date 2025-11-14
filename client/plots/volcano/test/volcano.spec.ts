@@ -43,7 +43,7 @@ tape('Default single cell cell type volcano', function (test) {
 					chartType: 'volcano',
 					termType: TermTypes.SINGLECELL_CELLTYPE,
 					categoryName: '2',
-					columnName: 'Cluster',
+					termId: 'Cluster',
 					sample: '2c33dcbd-454a-468f-89fc-71fd20b5d30c'
 				}
 			]

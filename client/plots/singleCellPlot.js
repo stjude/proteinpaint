@@ -693,7 +693,7 @@ class singleCellPlot {
 		const categoryName = this.state.config.cluster
 		this.dom.deselect.node().value = categoryName != undefined ? `Cluster ${categoryName}` : ''
 		if (!categoryName) return
-		const columnName = this.state.termdbConfig.queries.singleCell.DEgenes.columnName
+		const columnName = this.state.termdbConfig.queries.singleCell.DEgenes.termId
 		const sample =
 			this.state.config.experimentID || this.state.config.sample || this.samples?.[0]?.experiments[0]?.experimentID
 
