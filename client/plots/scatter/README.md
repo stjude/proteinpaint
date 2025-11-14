@@ -1,40 +1,21 @@
 
 # Scatters
 
-This folder contains the scatter plot and related components. The scatter plot allows to see the relationship between two or three numerical variables in your data. A scatter plot may also be generated using date variables as input, please see the runchart and the frequency chart for more details.
+This folder contains the scatter plot and related components. The scatter plot allows to see the relationship between two or three numerical variables in your data. 
+The available scatter plot types include:
+
+- **Standard Scatter Plot:** For visualizing the relationship between two variables or a predefined scatter plot such as a TSNE or UMAP.
+- **2D Large Scatter Plot:** Optimized for high-density plots with thousands or millions of points.
+- **3D Scatter Plot:** For exploring relationships among three variables in three-dimensional space.
+
+A scatter plot may also be generated using __date__ variables as input, please see the runchart and the frequency chart for more details.
 
 
 - [Run Chart README](../runchart/README.md) 
 - [Frequency Chart README](../frequencyChart/README.md)
 
-The available scatter plot types include:
 
-- **Standard Scatter Plot:** For visualizing the relationship between two variables or a predefined scatter plot such as a TSNE or UMAP.
-- **2D Large Scatter Plot:** Optimized for high-density datasets with thousands or millions of points.
-- **3D Scatter Plot:** For exploring relationships among three variables in three-dimensional space.
-
-Each plot type supports adding variables for coloring, filtering, and provides an interactive exploration, making them suitable for a wide range of data analysis tasks.
-
-
-## Component Organization and MVVM Pattern
-
-The scatter plot components are organized using the Model-View-ViewModel (MVVM) architectural pattern. This approach separates the data (Model), the user interface (View), and the logic that connects them (ViewModel), resulting in a modular and maintainable codebase.
-
-- **Model:** Handles the underlying data, including the dataset to be visualized, filtering, and any computed properties or statistics.
-- **View:** Responsible for rendering the user interface, such as SVG elements, axes, points, tooltips, and interactive controls. The view listens for changes in the ViewModel and updates the display accordingly.
-- **ViewModel:** Acts as an intermediary between the Model and the View. It manages the state, responds to user interactions, applies filters, and updates the Model or View as needed. The ViewModel exposes observables or events that the View can subscribe to for reactive updates.
-
----
-
-
-## Scatter Plot
-
-**Class:** [scatter.js](./scatter.js)  
-**Title:** Scatter Plot for Bivariate Data  
-**Description:** The scatter plot visualizes the relationship between two quantitative variables for each data point. The data point may also have a color, shape or size, based on additional variables.  
-
-**ViewModel Architecture:** Each scatter plot is managed by its own ViewModel, which is a subclass of [`ScatterViewModelBase`](../scatter/viewModel/scatterViewModelBase.js). This base class provides shared logic for managing state, user interactions, and data transformations. Each specific scatter plot type (2D, 3D, large) creates its own ViewModel instance, extending or customizing the base functionality as needed. This design ensures consistency and reusability across different scatter plot implementations.
-
+**ViewModel Architecture:** Each scatter plot is managed by its own ViewModel, which is a subclass of [`ScatterViewModelBase`](./viewmodel/scatterViewModelBase.ts). This base class provides shared logic for managing state, user interactions, and data transformations. Each specific scatter plot type (2D, 3D, large) creates its own ViewModel instance, extending or customizing the base functionality as needed. This design ensures consistency and reusability across different scatter plot implementations.
 **Functionality:**
 - Visualizes correlation or association between two variables.
 - Supports tooltips, zoom, and pan for interactive exploration.
@@ -47,6 +28,33 @@ The scatter plot components are organized using the Model-View-ViewModel (MVVM) 
 	- **Contour Map:** Overlay a density contour map, optionally weighted by a continuous variable, to highlight data distributions.
 	- **Scale Order:** Choose ascending or descending order for scaling point sizes, supporting different analytical perspectives.
 	- **Other Controls:** Additional options for minimum/maximum shape size and more, enabling fine-tuned customization.
+
+
+## Component Organization and MVVM Pattern
+
+The scatter plot components are organized using the Model-View-ViewModel (MVVM) architectural pattern. This approach separates the data (Model), the user interface (View), and the logic that connects them (ViewModel), resulting in a modular and maintainable codebase.
+
+- **Model:** Handles the underlying data, including the dataset to be visualized, filtering, and any computed properties or statistics.
+- **View:** Responsible for rendering the user interface, such as SVG elements, axes, points, tooltips, and interactive controls. The view listens for changes in the ViewModel and updates the display accordingly.
+- **ViewModel:** Acts as an intermediary between the Model and the View. It manages the state, responds to user interactions, applies filters, and updates the Model or View as needed. The ViewModel exposes observables or events that the View can subscribe to for reactive updates.
+
+---
+
+**Classes Involved:**
+- [`scatter.ts`](./scatter.ts): Main scatter plot component, orchestrates rendering and user interaction.
+- [`model/scatterModel.ts`](./model/scatterModel.ts): Handles data loading, filtering and chart setup.
+- [`viewmodel/scatterViewModelBase.ts`](./viewmodel/scatterViewModelBase.ts): Base ViewModel class, provides shared logic for state management and interactivity.
+- [`viewmodel/scatterViewModel.ts`](./viewmodel/scatterViewModel.ts): Standard 2D scatter ViewModel, extends base functionality for SVG rendering and controls.
+- [`viewmodel/scatterViewModel2DLarge.ts`](./viewmodel/scatterViewModel2DLarge.ts): ViewModel for high-density 2D scatter plots, optimized for large datasets and canvas rendering.
+- [`viewmodel/scatterViewModel3D.ts`](./viewmodel/scatterViewModel3D.ts): ViewModel for 3D scatter plots, manages THREE.js scene and 3D interactivity.
+- [`viewmodel/scatterLasso.ts`](./viewmodel/scatterLasso.ts): Implements lasso selection for interactive sample grouping.
+- [`viewmodel/scatterLegend.ts`](./viewmodel/scatterLegend.ts): Manages color and shape legends for the chart.
+- [`viewmodel/scatterTooltip.ts`](./viewmodel/scatterTooltip.ts): Handles tooltips and sample information display.
+- [`viewmodel/scatterZoom.ts`](./viewmodel/scatterZoom.ts): Provides zoom and pan functionality for chart navigation.
+- [`viewmodel/scatterInteractivity.ts`](./viewmodel/scatterInteractivity.ts): Manages user interactions and event handling.
+- [`viewmodel/scatterLegendInteractivity.ts`](./viewmodel/scatterLegendInteractivity.ts): Adds interactivity to legend elements.
+- [`scatterTypes.ts`](./scatterTypes.ts): Type definitions for chart, legend, and sample objects.
+
 
 ### Main Methods: ScatterModel
 - **initData:** Fetches and initializes chart data, processes server response, and sets up chart objects.
@@ -61,7 +69,7 @@ The scatter plot components are organized using the Model-View-ViewModel (MVVM) 
 ---
 
 ## 3D Scatter Plot
-**Class:** [scatter3d.js](./scatter3d.js)  
+**Class:** [viewmodel/scatterViewModel3D.ts](./viewmodel/scatterViewModel3D.ts)  
 **Title:** 3D Scatter Plot for Multivariate Data  
 **Description:** The 3D scatter plot visualizes the relationship among three quantitative variables for each data point. Each point is positioned in three-dimensional space according to its X, Y, and Z values, allowing users to explore more complex data relationships and patterns.  
 **Functionality:**
@@ -79,7 +87,7 @@ Other helper methods, such as `renderContourMap` and `addLabels`, are also custo
 
 
 ## 2D Large Scatter Plot
-**Class:** [scatterLarge.js](./scatterLarge.js)  
+**Class:** [viewmodel/scatterViewModel2DLarge.ts](./viewmodel/scatterViewModel2DLarge.ts)  
 **Title:** 2D Large Scatter Plot for High-Density Data  
 **Description:** The 2D large scatter plot is optimized for visualizing very large datasets with thousands or millions of points. It uses efficient rendering techniques to display dense data without sacrificing interactivity.  
 **Functionality:**
