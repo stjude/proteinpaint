@@ -8998,5 +8998,41 @@
       "prev": 0,
       "diff": 100
     }
+  },
+  "plots/facet.js": {
+    "lines": {
+      "total": 184,
+      "covered": 94,
+      "skipped": 0,
+      "pct": 51.08
+    },
+    "functions": {
+      "total": 41,
+      "covered": 18,
+      "skipped": 0,
+      "pct": 43.9
+    },
+    "statements": {
+      "total": 193,
+      "covered": 95,
+      "skipped": 0,
+      "pct": 49.22
+    },
+    "branches": {
+      "total": 77,
+      "covered": 34,
+      "skipped": 0,
+      "pct": 44.15
+    },
+    "lowestPct": {
+      "curr": 43.9,
+      "prev": 0,
+      "diff": 43.9
+    },
+    "averagePct": {
+      "curr": 47.0875,
+      "prev": 0,
+      "diff": 47.0875
+    }
   }
 }
