@@ -97,7 +97,7 @@ export class ScatterModel {
 		this.charts.push({ id, data, cohortSamples, colorLegend, shapeLegend })
 	}
 
-	initRanges() {
+	async initRanges() {
 		let samples: any[] = []
 		for (const chart of this.charts) samples = samples.concat(chart.data.samples)
 		if (samples.length > numberOfSamplesCutoff) this.is2DLarge = true
