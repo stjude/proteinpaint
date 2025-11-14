@@ -154,7 +154,7 @@ export function getPlotConfig(opts: any) {
 	if (opts.termType == TermTypes.SINGLECELL_CELLTYPE) {
 		Object.assign(config, {
 			categoryName: opts.categoryName || '',
-			columnName: opts.columnName || '',
+			termId: opts.termId || '',
 			sample: opts.sample || ''
 		})
 	}

@@ -291,7 +291,7 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 			q2.singleCell.geneExpression = {}
 		}
 		if (q.singleCell.DEgenes) {
-			q2.singleCell.DEgenes = { columnName: q.singleCell.DEgenes.columnName }
+			q2.singleCell.DEgenes = { termId: q.singleCell.DEgenes.termId }
 		}
 	}
 	if (q.images) {

@@ -189,8 +189,7 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 		Object.assign(config, {
 			//TODO: Fix this logic
 			sample: opts.experimentID || opts.sample || opts.samples?.[0]?.experiments[0]?.experimentID,
-			//This should be type, data type, category, etc.
-			columnName: app.vocabApi.termdbConfig.queries.singleCell.DEgenes.columnName,
+			termId: app.vocabApi.termdbConfig.queries.singleCell.DEgenes.termId,
 			//TODO: 'Cluster' is a fallback for development
 			//Should require opts.categoryName in the future
 			categoryName: opts.categoryName || 'Cluster'

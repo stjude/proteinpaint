@@ -39,7 +39,7 @@ type DEVolcanoPlotConfig = PlotConfig & {
 
 type SCCTPlotConfig = PlotConfig & {
 	sample: string
-	columnName: string
+	termId: string
 	categoryName: string
 	termType: 'singleCellCellType'
 }
