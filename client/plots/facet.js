@@ -120,6 +120,7 @@ class Facet extends PlotBase {
 				const samples = result.lst.filter(
 					s => s[config.columnTw.$id]?.key == category && s[config.rowTw.$id]?.key == category2
 				)
+				const percent = ((samples.length / result.lst.length) * 100).toFixed(1)
 				cells[category2][category] = { samples, selected: false }
 				const td = tr.append('td')
 				if (!samples.length) td.classed('highlightable-cell', true)
@@ -128,7 +129,7 @@ class Facet extends PlotBase {
 					td.classed('sja_menuoption', true)
 						.style('text-align', 'center')
 						.style('border', '2.5px solid white')
-						.text(samples.length)
+						.text(`${samples.length} (${percent}%)`)
 						.on('mouseover', () => {
 							this.highlightColRow(tbody, tr, colIdx, '#fffec8')
 						})
