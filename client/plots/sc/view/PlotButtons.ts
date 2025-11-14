@@ -148,7 +148,7 @@ export class PlotButtons {
 						// 	name: term
 						// },
 						categoryName: `${value}`,
-						columnName: this.data.plots[0].colorBy || 'Cluster', //CHANGEME
+						termId: this.data.plots[0].colorBy || 'Cluster', //CHANGEME
 						sample: this.item!.experiment || this.item!.sample
 					}
 				}

@@ -63,7 +63,7 @@ export class VolcanoModel {
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
 			sample: this.config.sample,
-			columnName: this.config.columnName,
+			termId: this.config.termId,
 			categoryName: this.config.categoryName
 		}
 		return body
