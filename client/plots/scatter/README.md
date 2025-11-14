@@ -33,7 +33,7 @@ The scatter plot components are organized using the Model-View-ViewModel (MVVM) 
 **Title:** Scatter Plot for Bivariate Data  
 **Description:** The scatter plot visualizes the relationship between two quantitative variables for each data point. The data point may also have a color, shape or size, based on additional variables.  
 
-**ViewModel Architecture:** Each scatter plot is managed by its own ViewModel, which is a subclass of [`ScatterViewModelBase`](../scatter/viewmode/scatterViewModelBase.js). This base class provides shared logic for managing state, user interactions, and data transformations. Each specific scatter plot type (2D, 3D, large) creates its own ViewModel instance, extending or customizing the base functionality as needed. This design ensures consistency and reusability across different scatter plot implementations.
+**ViewModel Architecture:** Each scatter plot is managed by its own ViewModel, which is a subclass of [`ScatterViewModelBase`](../scatter/viewModel/scatterViewModelBase.js). This base class provides shared logic for managing state, user interactions, and data transformations. Each specific scatter plot type (2D, 3D, large) creates its own ViewModel instance, extending or customizing the base functionality as needed. This design ensures consistency and reusability across different scatter plot implementations.
 
 **Functionality:**
 - Visualizes correlation or association between two variables.
