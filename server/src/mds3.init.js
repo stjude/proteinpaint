@@ -2723,23 +2723,6 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 		const sample2mlst = new Map() // collect genomic query results indexed by sample; key: sample id, value: array
 		const data = new Map() // to return
-		const dts = [] // list of dt values to be queried for this ds
-		if (ds.queries.snvindel) dts.push(dtsnvindel)
-		if (ds.queries.svfusion) {
-			// may support sv, fusion, or both
-			// supported dts are defined in dtLst
-			const dtLst = ds.queries.svfusion.dtLst
-			if (!dtLst) throw 'svfusion dtLst is missing'
-			dts.push(...dtLst)
-		}
-		if (ds.queries.geneCnv || ds.queries.cnv) {
-			/* if dt has either cnv or geneCnv, or even both, just add dt=dtcnv once
-			see below, only one type of cnv will be queried
-			avoid introducing adhoc dt value dt="geneCnv",
-			this breaks ds declaration of assayAvailability.byDt, also causes trouble for summary plot
-			*/
-			dts.push(dtcnv)
-		}
 
 		// retrieve mutation data for each gene
 		// query genes concurrently to speed up geneset query
@@ -2753,121 +2736,124 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			await Promise.all(genes.map(gene => getGeneMlst(gene)))
 		}
 		async function getGeneMlst(gene) {
+			const dts = [] // track queried dts, will be used for assay availability
 			if (!gene.gene && !(gene.chr && Number.isInteger(gene.start) && Number.isInteger(gene.stop)))
 				throw 'no gene or position specified'
+			const mlst = []
+			if (ds.queries.snvindel) {
+				dts.push(dtsnvindel)
+				const snvIndelMlst = await getSnvindelByTerm(ds, gene, genome, q)
+				mlst.push(...snvIndelMlst)
+			}
+			if (ds.queries.svfusion) {
+				const dtLst = ds.queries.svfusion.dtLst // will contain dts for sv and/or fusion
+				if (!dtLst) throw 'svfusion dtLst is missing'
+				dts.push(...dtLst)
+				// important to query getSvfusionByTerm() once and not multiple times
+				// for each svfusion dt, otherwise mutations will get duplicated for samples
+				const svFusionMlst = await getSvfusionByTerm(ds, gene, genome, q)
+				mlst.push(...svFusionMlst)
+			}
+			if (ds.queries.geneCnv || ds.queries.cnv) {
+				/******************
+					 tricky!!
+				*******************
+				gdc has both geneCnv and cnv
+				hardcodes that mayGetGeneVariantData() only calls geneCnv but not cnv
+				for gdc, mayGetGeneVariantData() is used for oncomatrix/summary, which should only use gene-level cnv,
+				thus this hardcoded logic suits the need
+				for now only gdc has both geneCnv and cnv, thus this is not an issue for non-gdc ds
+
+				even later we may have another ds with both, may not make sense to load both here
+				*/
+				dts.push(dtcnv)
+				const cnvMlst = ds.queries.geneCnv
+					? await getGenecnvByTerm(ds, gene, genome, q)
+					: await getCnvByTw(ds, { term: gene, q: tw.q }, genome, q)
+				mlst.push(...cnvMlst)
+			}
+
+			//////////////////////////////////////
+			// MUST NOT QUIT when mlst.length==0!
+			//////////////////////////////////////
+			// if ds has assayAvailability, on empty mlst, it should proceed to add wt status to all assayed samples
+
+			for (const m of mlst) {
+				/*
+				m={
+					dt
+					class
+					mname
+					samples:[
+						{
+						sample_id: int or string
+						...
+						},
+					]
+				}
+
+				for official datasets using a sqlite db that contains integer2string sample mapping, "sample_id" is integer id 
+				for gdc dataset not using a sqlite db, no sample integer id is kept on server. "sample_id" is string id
+				*/
+
+				if (!Array.isArray(m.samples)) continue
+
+				for (const s of m.samples) {
+					// create new m2{} for each mutation in each sample
+					const m2 = {
+						gene: gene.name,
+						isoform: m.isoform,
+						dt: m.dt,
+						chr: gene.chr,
+						class: m.class,
+						mname: m.mname,
+						label: termdbmclass?.[m.class]?.label || mclass[m.class].label
+					}
+					if (m.start) m2.start = m.start
+					if (m.stop) m2.stop = m.stop
+					if (m.pos) m2.pos = m.pos
+
+					if ('value' in m) {
+						// for what?
+						m2.value = m.value
+					}
+
+					if (s.formatK2v) {
+						// flatten the format values
+						for (const k in s.formatK2v) {
+							if (k == 'origin' && !ds.assayAvailability?.byDt?.[m.dt]?.byOrigin) {
+								// possible that a dt can have origin
+								// annotations in data file, but not
+								// in ds.assayAvailability{}, because
+								// some data files use fake origin
+								// annotations for compatibility
+								// purposes (see mbmeta CNV data file)
+								continue
+							}
+							m2[k] = s.formatK2v[k]
+						}
+					}
+
+					// can supply dt specific attributes
+					if (m.dt == dtsnvindel) {
+						if (s.GT) {
+							// is sample genotype from snp query
+							m2.value = s.GT
+							m2.key = s.GT
+						}
+					} else if (m.dt == dtfusionrna || m.dt == dtsv) {
+						m2.pairlst = m.pairlst
+					}
+
+					if (!sample2mlst.has(s.sample_id)) sample2mlst.set(s.sample_id, [])
+					const lst = sample2mlst.get(s.sample_id)
+					lst.push(m2)
+					sample2mlst.set(s.sample_id, lst)
+				}
+			}
+
+			// add data availability for each dt
 			for (const dt of dts) {
-				let mlst = []
-				switch (dt) {
-					case dtsnvindel:
-						mlst = await getSnvindelByTerm(ds, gene, genome, q)
-						break
-					case dtfusionrna:
-					case dtsv:
-						mlst = await getSvfusionByTerm(ds, gene, genome, q)
-						break
-					case dtcnv:
-						/******************
-							 tricky!!
-						*******************
-						gdc has both geneCnv and cnv
-						hardcodes that mayGetGeneVariantData() only calls geneCnv but not cnv
-						for gdc, mayGetGeneVariantData() is used for oncomatrix/summary, which should only use gene-level cnv,
-						thus this hardcoded logic suits the need
-						for now only gdc has both geneCnv and cnv, thus this is not an issue for non-gdc ds
-
-						even later we may have another ds with both, may not make sense to load both here
-						*/
-						if (ds.queries.geneCnv) {
-							mlst = await getGenecnvByTerm(ds, gene, genome, q)
-						} else {
-							mlst = await getCnvByTw(ds, { term: gene, q: tw.q }, genome, q)
-						}
-						break
-					default:
-						throw 'unknown dt'
-				}
-
-				if (!mlst) continue // cnv seg query now may return undefined
-
-				//////////////////////////////////////
-				// MUST NOT QUIT when mlst.length==0!
-				//////////////////////////////////////
-				// if ds has assayAvailability, on empty mlst, it should proceed to add wt status to all assayed samples
-
-				for (const m of mlst) {
-					/*
-					m={
-						dt
-						class
-						mname
-						samples:[
-							{
-							sample_id: int or string
-							...
-							},
-						]
-					}
-
-					for official datasets using a sqlite db that contains integer2string sample mapping, "sample_id" is integer id 
-					for gdc dataset not using a sqlite db, no sample integer id is kept on server. "sample_id" is string id
-					*/
-
-					if (!Array.isArray(m.samples)) continue
-
-					for (const s of m.samples) {
-						// create new m2{} for each mutation in each sample
-						const m2 = {
-							gene: gene.name,
-							isoform: m.isoform,
-							dt: m.dt,
-							chr: gene.chr,
-							class: m.class,
-							mname: m.mname,
-							label: termdbmclass?.[m.class]?.label || mclass[m.class].label
-						}
-						if (m.start) m2.start = m.start
-						if (m.stop) m2.stop = m.stop
-						if (m.pos) m2.pos = m.pos
-
-						if ('value' in m) {
-							// for what?
-							m2.value = m.value
-						}
-
-						if (s.formatK2v) {
-							// flatten the format values
-							for (const k in s.formatK2v) {
-								if (k == 'origin' && !ds.assayAvailability?.byDt?.[dt]?.byOrigin) {
-									// possible that a dt can have origin
-									// annotations in data file, but not
-									// in ds.assayAvailability{}, because
-									// some data files use fake origin
-									// annotations for compatibility
-									// purposes (see mbmeta CNV data file)
-									continue
-								}
-								m2[k] = s.formatK2v[k]
-							}
-						}
-
-						// can supply dt specific attributes
-						if (m.dt == dtsnvindel) {
-							if (s.GT) {
-								// is sample genotype from snp query
-								m2.value = s.GT
-								m2.key = s.GT
-							}
-						} else if (m.dt == dtfusionrna || m.dt == dtsv) {
-							m2.pairlst = m.pairlst
-						}
-
-						if (!sample2mlst.has(s.sample_id)) sample2mlst.set(s.sample_id, [])
-						const lst = sample2mlst.get(s.sample_id)
-						lst.push(m2)
-						sample2mlst.set(s.sample_id, lst)
-					}
-				}
-
 				await mayAddDataAvailability(sample2mlst, dt, ds, gene, q)
 			}
 		}
