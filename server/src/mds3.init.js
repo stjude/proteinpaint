@@ -2725,7 +2725,13 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		const data = new Map() // to return
 		const dts = [] // list of dt values to be queried for this ds
 		if (ds.queries.snvindel) dts.push(dtsnvindel)
-		if (ds.queries.svfusion) dts.push(dtfusionrna)
+		if (ds.queries.svfusion) {
+			// may support sv, fusion, or both
+			// supported dts are defined in dtLst
+			const dtLst = ds.queries.svfusion.dtLst
+			if (!dtLst) throw 'svfusion dtLst is missing'
+			dts.push(...dtLst)
+		}
 		if (ds.queries.geneCnv || ds.queries.cnv) {
 			/* if dt has either cnv or geneCnv, or even both, just add dt=dtcnv once
 			see below, only one type of cnv will be queried
