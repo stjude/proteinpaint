@@ -29,7 +29,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape.only('Distance() should return the correct value when in range', function (test) {
+tape('Distance() should return the correct value when in range', function (test) {
 	test.timeoutAfter(100)
 
 	const x1 = 10

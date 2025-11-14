@@ -2216,8 +2216,8 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 		9-13  tSNE_1	tSNE_2	tSNE3d_1	tSNE3d_2	tSNE3d_3
 		14-23 PC_1	PC_2	PC_3	PC_4	PC_5	PC_6	PC_7	PC_8	PC_9	PC_10
 
-		!! important !! file column index must match with x/y values of each plot in dataset/gdc.hg38.ts 
-		*/
+		!! important !! file column index must match with `coordsColumns:{x,y}` 
+		values of each plot in dataset/gdc.hg38.ts */
 		const seuratClusterTerm = { id: 'cluster', name: 'Seurat cluster', type: 'categorical', values: {} }
 		const plots = q.plots.map(p => ({ expCells: [], noExpCells: [], name: p }))
 
@@ -2232,13 +2232,13 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 			const line = lines[i]
 			const l = line.split('\t')
 			const cellId = l[0]
-			if (!cellId) throw 'cellId missing from a line: ' + line
+			if (!cellId) throw new Error('cellId missing from a line: ' + line)
 			const clusterId = l[3]
-			if (!clusterId) throw 'seuratCluster missing from a line'
+			if (!clusterId) throw new Error('seuratCluster missing from a line')
 			seuratClusterTerm.values[clusterId] = { label: 'Cluster ' + clusterId }
 			for (const plot of plots) {
 				const datasetPlot = datasetPlots.find(p => p.name == plot.name)
-				if (!datasetPlot) throw 'datasetPlot not found for plot ' + plot.name
+				if (!datasetPlot) throw new Error('datasetPlot not found for plot ' + plot.name)
 				const colorColumn =
 					datasetPlot.colorColumns.find(c => c.name == q.colorBy?.[plot.name]) || datasetPlot.colorColumns[0]
 				plot.colorBy = colorColumn.name
@@ -2248,8 +2248,8 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 				const ypos = datasetPlot.coordsColumns.y
 				const x = Number(l[xpos])
 				const y = Number(l[ypos])
-				if (Number.isNaN(x)) throw 'x is nan in plot ' + plot.name
-				if (Number.isNaN(y)) throw 'x is nan in plot ' + plot.name
+				if (Number.isNaN(x)) throw new Error('x is NaN in plot ' + plot.name)
+				if (Number.isNaN(y)) throw new Error('y is NaN in plot ' + plot.name)
 				const category = `Cluster ${clusterId}`
 				const cell = { cellId, x, y, category }
 				if (geneExpMap) {
@@ -2260,7 +2260,7 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 				} else plot.noExpCells.push(cell)
 			}
 		}
-		return { plots }
+		return { plots, seuratClusterTerm }
 	}
 }
 
