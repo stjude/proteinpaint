@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - GRIN2: Added cloaking of UI controls while analysis is running
 
+Fixes:
+- ensure tooltips work for out-of-bounds samples when custom ranges applied in dynamic scatter
+
 
 ## 2.159.0
 

@@ -1,2 +1,1 @@
-Fixes:
-- ensure tooltips work for out-of-bounds samples when custom ranges applied in dynamic scatter
+
