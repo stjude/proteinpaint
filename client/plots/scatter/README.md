@@ -1,7 +1,7 @@
 
 # Scatters
 
-This folder contains the scatter plot and related components. The scatter plot allows to see the relationship between two or three numerical variables in your data. A scatter plot may also be generated using date variables as input, please see the runchart and the frequency chart fore more details.
+This folder contains the scatter plot and related components. The scatter plot allows to see the relationship between two or three numerical variables in your data. A scatter plot may also be generated using date variables as input, please see the runchart and the frequency chart for more details.
 
 
 - [Run Chart README](../runchart/README.md) 
