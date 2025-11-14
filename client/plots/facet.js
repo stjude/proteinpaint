@@ -341,12 +341,10 @@ class Facet extends PlotBase {
 			this.addRowLabel(tr, label)
 			for (const col of row[1]) {
 				const label = col[1].value > 0 ? col[1].value : ''
-				if (!label) continue
 				const percent = roundValueAuto((col[1].value / totalSamples) * 100, true, 1)
-				tr.append('td')
-					.style('background-color', '#FAFAFA')
-					.style('text-align', 'center')
-					.text(`${label} (${percent}%)`)
+				const td = tr.append('td')
+
+				if (label) td.classed('sja_menuoption', true).style('text-align', 'center').text(`${label} (${percent}%)`)
 			}
 		}
 	}
