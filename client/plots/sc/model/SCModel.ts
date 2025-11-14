@@ -64,8 +64,7 @@ export class SCModel {
 	getDataRequestOpts() {
 		const state = this.app.getState()
 		const singleCellTermdbConfig = state.termdbConfig?.queries?.singleCell
-		if (!singleCellTermdbConfig?.data)
-			throw 'No singleCell.data defined in termdbConfig.queries [SC Model getDataRequestOpts()]'
+		if (!singleCellTermdbConfig?.data) throw new Error('No singleCell.data defined in termdbConfig.queries')
 
 		const config = state.plots.find((p: any) => p.id === this.id)
 		if (!config.settings.sc.item) return

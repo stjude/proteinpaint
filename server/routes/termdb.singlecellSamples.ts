@@ -47,10 +47,10 @@ function init({ genomes }) {
 		let result
 		try {
 			const g = genomes[q.genome]
-			if (!g) throw 'invalid genome name'
+			if (!g) throw new Error('invalid genome name')
 			const ds = g.datasets[q.dslabel]
-			if (!ds) throw 'invalid dataset name'
-			if (!ds.queries?.singleCell) throw 'no singlecell data on this dataset'
+			if (!ds) throw new Error('invalid dataset name')
+			if (!ds.queries?.singleCell) throw new Error('no singlecell data on this dataset')
 			result = await ds.queries.singleCell.samples.get(q)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
@@ -65,57 +65,57 @@ function init({ genomes }) {
 
 /////////////////// ds query validator
 export async function validate_query_singleCell(ds: any, genome: any) {
-	const q = ds.queries.singleCell as SingleCellQuery
+	const q: SingleCellQuery = ds.queries.singleCell
 	if (!q) return
 
 	// validates all settings of single-cell dataset
 
 	// validate required q.samples{}
-	if (typeof q.samples != 'object') throw 'singleCell.samples{} not object'
+	if (typeof q.samples != 'object') throw new Error('singleCell.samples{} not object')
 	if (typeof q.samples.get == 'function') {
 		// ds-supplied
 	} else {
 		// add q.samples.get() for native ds
-		await validateSamplesNative(q.samples as SingleCellSamples, q.data as SingleCellDataNative, ds)
+		await validateSamplesNative(q.samples, q.data as SingleCellDataNative, ds)
 	}
 
 	// validate required q.data{}
-	if (typeof q.data != 'object') throw 'singleCell.data{} not object'
+	if (typeof q.data != 'object') throw new Error('singleCell.data{} not object')
 	if (q.data.src == 'gdcapi') {
 		gdc_validate_query_singleCell_data(ds, genome) // todo change to ds-supplied q.data.get()
 	} else if (q.data.src == 'native') {
 		validateDataNative(q.data as SingleCellDataNative, ds)
 	} else {
-		throw 'unknown singleCell.data.src'
+		throw new Error('unknown singleCell.data.src')
 	}
 
 	// validate optional settings below
 
 	if (q.geneExpression) {
-		if (typeof q.geneExpression != 'object') throw 'singleCell.geneExpression not object'
+		if (typeof q.geneExpression != 'object') throw new Error('singleCell.geneExpression not object')
 		if (q.geneExpression.src == 'native') {
 			validateGeneExpressionNative(q.geneExpression as SingleCellGeneExpressionNative)
 		} else if (q.geneExpression.src == 'gdcapi') {
 			gdc_validateGeneExpression(q.geneExpression, ds, genome)
 		} else {
-			throw 'unknown singleCell.geneExpression.src'
+			throw new Error('unknown singleCell.geneExpression.src')
 		}
 	}
 	if (q.DEgenes) {
-		if (typeof q.DEgenes != 'object') throw 'singleCell.DEgenes not object'
+		if (typeof q.DEgenes != 'object') throw new Error('singleCell.DEgenes not object')
 		validate_query_singleCell_DEgenes(ds)
 	}
 
 	if (q.images) {
-		if (typeof q.images != 'object') throw 'singleCell.images not object'
+		if (typeof q.images != 'object') throw new Error('singleCell.images not object')
 		validateImages(q.images)
 	}
 }
 
 function validateImages(images) {
-	if (!images.folder) throw 'images.folder missing'
+	if (!images.folder) throw new Error('images.folder missing')
 	if (!images.label) images.label = 'Images'
-	if (!images.fileName) throw 'images.fileName missing'
+	if (!images.fileName) throw new Error('images.fileName missing')
 }
 
 async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNative, ds: any) {
@@ -130,12 +130,12 @@ async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNati
 			let sampleName = fn
 			if (plot.fileSuffix) {
 				if (!fn.endsWith(plot.fileSuffix))
-					throw `singlecell.sample file name ${fn} does not end with required suffix ${plot.fileSuffix}`
+					throw new Error(`singlecell.sample file name ${fn} does not end with required suffix ${plot.fileSuffix}`)
 				sampleName = fn.split(plot.fileSuffix)[0]
 			}
-			if (!sampleName) throw `singlecell.sample: cannot derive sample name from file name ${fn}`
+			if (!sampleName) throw new Error(`singlecell.sample: cannot derive sample name from file name ${fn}`)
 			const sid = ds.cohort.termdb.q.sampleName2id(sampleName)
-			if (sid == undefined) throw `singlecell.sample: unknown sample name ${sampleName}`
+			if (sid == undefined) throw new Error(`singlecell.sample: unknown sample name ${sampleName}`)
 			// is valid sample, add to holder
 			samples.set(sid, { sample: sampleName })
 		}
@@ -146,7 +146,7 @@ async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNati
 		for (const { termid } of S.sampleColumns) {
 			// get term obj to verify termid
 			const term = ds.cohort.termdb.q.termjsonByOneid(termid)
-			if (!term) throw 'unknown termid from singlecell.samples.sampleColumns[]'
+			if (!term) throw new Error('unknown termid from singlecell.samples.sampleColumns[]')
 			const s2v = ds.cohort.termdb.q.getAllValues4term(termid) // map. k: sampleid, v: term value
 			for (const [sid, v] of s2v.entries()) {
 				if (!samples.has(sid)) continue // ignore sample without sc data
@@ -164,9 +164,9 @@ async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNati
 function validateDataNative(D: SingleCellDataNative, ds: any) {
 	const nameSet = new Set() // guard against duplicating plot names
 	for (const plot of D.plots) {
-		if (nameSet.has(plot.name)) throw 'duplicate plot.name'
+		if (nameSet.has(plot.name)) throw new Error('duplicate plot.name')
 		nameSet.add(plot.name)
-		if (!plot.folder) throw 'plot.folder missing'
+		if (!plot.folder) throw new Error('plot.folder missing')
 	}
 
 	// caches files contents between requests so each file is only loaded once
@@ -174,7 +174,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 
 	D.get = async (q: TermdbSingleCellDataRequest) => {
 		// if sample is int, may convert to string
-		const plots = [] as Plot[] // given a sample name, collect every plot data for this sample and return
+		const plots: Plot[] = [] // given a sample name, collect every plot data for this sample and return
 		let geneExpMap
 		if (ds.queries.singleCell.geneExpression && q.gene) {
 			geneExpMap = await ds.queries.singleCell.geneExpression.get({ sample: q.sample, gene: q.gene })
@@ -188,7 +188,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 				const text = await read_file(tsvfile)
 				const lines = text.trim().split('\n')
 				let first = true
-				const lines2 = [] as string[][]
+				const lines2: string[][] = []
 				for (const line of lines) {
 					if (first) {
 						first = false
@@ -200,16 +200,16 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 			}
 
 			const colorColumn = plot.colorColumns.find(c => c.name == q.colorBy?.[plot.name]) || plot.colorColumns[0]
-			const expCells = [] as Cell[]
-			const noExpCells = [] as Cell[]
+			const expCells: Cell[] = []
+			const noExpCells: Cell[] = []
 
 			for (const l of file2Lines[tsvfile]) {
 				const cellId = l[0],
 					x = Number(l[plot.coordsColumns.x]),
 					y = Number(l[plot.coordsColumns.y])
 				const category = l[colorColumn?.index] || ''
-				if (!cellId) throw 'cell id missing'
-				if (!Number.isFinite(x) || !Number.isFinite(y)) throw 'x/y not number'
+				if (!cellId) throw new Error('cell id missing')
+				if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error('x/y not number')
 				const cell: Cell = { cellId, x, y, category }
 				if (geneExpMap) {
 					if (geneExpMap[cellId] !== undefined) {
@@ -260,7 +260,7 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
 
 		const result = JSON.parse(rust_output)
 		const out = result.query_output[query_gene]?.samples
-		if (!out) throw `No expression data for ${query_gene}`
+		if (!out) throw new Error(`No expression data for ${query_gene}`)
 
 		return out
 	}
@@ -287,15 +287,14 @@ function gdc_validateGeneExpression(G, ds, genome) {
 			const fileid = q.sample.eID
 			if (ds.__gdc.scrnaAnalysis2hdf5.size == 0) {
 				// blank map. must be that gdc data caching is disabled; no need to detect if it's being cached because this particular query is very fast
-				throw 'GDC scRNA file mapping is not cached'
+				throw new Error('GDC scRNA file mapping is not cached')
 			}
 			const hdf5id = ds.__gdc.scrnaAnalysis2hdf5.get(fileid)
-			if (!hdf5id) throw 'cannot map eID to hdf5 id'
+			if (!hdf5id) throw new Error('cannot map eID to hdf5 id')
 
 			const aliasLst = genome.genedb.getAliasByName.all(q.gene)
 			const gencodeId = aliasLst.find(a => a?.alias.toUpperCase().startsWith('ENSG'))?.alias
-			if (!gencodeId) throw 'cannot map gene symbol to GENCODE'
-
+			if (!gencodeId) throw new Error('cannot map gene symbol to GENCODE')
 			const body = {
 				gene_ids: [gencodeId],
 				file_id: hdf5id
@@ -305,7 +304,7 @@ function gdc_validateGeneExpression(G, ds, genome) {
 
 			const t = Date.now()
 			const response = await ky.post(joinUrl(host.rest, 'scrna_seq/gene_expression'), { timeout: false, json: body })
-			if (!response.ok) throw `HTTP Error: ${response.status} ${response.statusText}`
+			if (!response.ok) throw new Error(`HTTP Error: ${response.status} ${response.statusText}`)
 			const out = await response.json()
 			mayLog('gdc scrna gene exp', q.gene, Date.now() - t)
 
