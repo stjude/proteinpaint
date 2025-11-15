@@ -171,3 +171,91 @@ export function getSsgseaTw(isBin = false) {
 			: { mode: 'continuous' }
 	}
 }
+
+export function getFilter_agedx() {
+	return {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [
+			{
+				tag: 'filterUiRoot',
+				type: 'tvslst',
+				join: '',
+				lst: [
+					{
+						tvs: {
+							term: { id: 'agedx' },
+							ranges: [
+								{
+									start: 10,
+									startinclusive: false,
+									startunbounded: false,
+									stop: 16,
+									stopinclusive: false,
+									stopunbounded: false
+								}
+							]
+						},
+						type: 'tvs'
+					}
+				]
+			}
+		]
+	}
+}
+export function getFilter_genemutationset(isnot = false) {
+	return {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [
+			{
+				tag: 'cohortFilter',
+				type: 'tvs',
+				tvs: { term: { id: 'subcohort', type: 'multivalue' }, values: [{ key: 'ABC', label: 'ABC' }] }
+			},
+			{
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: [
+					{
+						type: 'tvs',
+						tvs: {
+							term: {
+								id: 'snvindel_somatic',
+								query: 'snvindel',
+								name: 'SNV/indel (somatic)',
+								parent_id: null,
+								isleaf: true,
+								type: 'dtsnvindel',
+								dt: 1,
+								values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
+								name_noOrigin: 'SNV/indel',
+								origin: 'somatic',
+								parentTerm: {
+									type: 'geneVariant',
+									id: 'HALLMARK_ADIPOGENESIS',
+									name: 'HALLMARK_ADIPOGENESIS',
+									genes: [
+										{ kind: 'gene', id: 'TP53', gene: 'TP53', name: 'TP53', type: 'geneVariant' },
+										{ kind: 'gene', id: 'AKT1', gene: 'AKT1', name: 'AKT1', type: 'geneVariant' },
+										{ kind: 'gene', id: 'KRAS', gene: 'KRAS', name: 'KRAS', type: 'geneVariant' },
+										{ kind: 'gene', id: 'BCR', gene: 'BCR', name: 'BCR', type: 'geneVariant' }
+									]
+								}
+							},
+							values: [
+								{ key: 'M', label: 'MISSENSE', value: 'M', bar_width_frac: null },
+								{ key: 'F', label: 'FRAMESHIFT', value: 'F', bar_width_frac: null }
+							],
+							isnot
+						}
+					}
+				],
+				tag: 'filterUiRoot'
+			}
+		]
+	}
+}
