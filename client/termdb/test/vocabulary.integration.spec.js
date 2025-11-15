@@ -7,6 +7,7 @@ import * as d3s from 'd3-selection'
 import { TermTypeGroups } from '#shared/terms.js'
 import { testAppInit } from '../../test/test.helpers'
 import { termjson } from '../../test/testdata/termjson'
+import { getFilter_genemutationset, getFilter_agedx } from '../../test/testdata/data'
 import * as helpers from '../../test/front.helpers.js'
 
 /*
@@ -750,30 +751,19 @@ tape.skip('getCohortSampleCount()', async test => {
 	test.end()
 })
 
-tape('getFilteredSampleCount()', async test => {
+tape.only('getFilteredSampleCount()', async test => {
 	test.timeoutAfter(300)
 
-	let result, filterJSON, getSampleLst, message
+	let result, message
 
 	const termdbVocabApi = await getTermdbVocabApi()
 
 	//Data error
 	message = `Should throw for data error`
 	try {
-		filterJSON = {
-			type: 'tvslst',
-			in: true,
-			join: 'and',
-			lst: [
-				{
-					tag: 'filterUiRoot',
-					type: 'tvslst',
-					join: '',
-					lst: [{ tvs: { term: termjson['agedx'] }, type: 'tvs' }]
-				}
-			]
-		}
-		result = await termdbVocabApi.getFilteredSampleCount(filterJSON)
+		const f = getFilter_agedx()
+		delete f.lst[0].lst[0].tvs.ranges
+		result = await termdbVocabApi.getFilteredSampleCount(f)
 		test.fail(message)
 	} catch (e) {
 		test.pass(`${message}: ${e}`)
@@ -782,54 +772,22 @@ tape('getFilteredSampleCount()', async test => {
 	//Data error
 	message = `Should throw for missing data`
 	try {
-		filterJSON = {
-			type: 'tvslst',
-			in: true,
-			join: 'and',
-			lst: [{ tag: 'filterUiRoot', type: 'tvslst', join: '', lst: [{}] }]
-		}
-		result = await termdbVocabApi.getFilteredSampleCount(filterJSON)
+		const f = getFilter_agedx()
+		f.lst[0].lst[0] = {}
+		result = await termdbVocabApi.getFilteredSampleCount(f)
 		test.fail(message)
 	} catch (e) {
 		test.pass(`${message}: ${e}`)
 	}
 
-	//Valid JSON
-	filterJSON = {
-		type: 'tvslst',
-		in: true,
-		join: 'and',
-		lst: [
-			{
-				tag: 'filterUiRoot',
-				type: 'tvslst',
-				join: '',
-				lst: [
-					{
-						tvs: {
-							term: termjson['agedx'],
-							ranges: [
-								{
-									start: 10,
-									startinclusive: false,
-									startunbounded: false,
-									stop: 16,
-									stopinclusive: false,
-									stopunbounded: false
-								}
-							]
-						},
-						type: 'tvs'
-					}
-				]
-			}
-		]
-	}
-	result = await termdbVocabApi.getFilteredSampleCount(filterJSON)
+	result = await termdbVocabApi.getFilteredSampleCount(getFilter_agedx())
 	test.equal(result, '24 samples', `Should return '24 samples'`)
 
-	result = await termdbVocabApi.getFilteredSampleList(filterJSON)
+	result = await termdbVocabApi.getFilteredSampleList(getFilter_agedx())
 	test.ok(Array.isArray(result), `Should return an array of sample objects`)
+
+	result = await termdbVocabApi.getFilteredSampleCount(getFilter_genemutationset(true))
+	test.equal(result, '57 samples', 'Should return "57 samples"')
 
 	test.end()
 })
