@@ -18,6 +18,7 @@ export default function discoDefaults(overrides: any = {}, app?: any): Settings 
 			isOpen: false,
 			prioritizeGeneLabelsByGeneSets: false,
 			showPrioritizeGeneLabelsByGeneSets: false,
+			mutationWaterfallPlot: false,
 			cnvRenderingType: CnvRenderingType.heatmap,
 			cnvPercentile: 90, // 90th percentile for removing outliers
 			cnvCutoffMode: 'percentile',
@@ -31,6 +32,7 @@ export default function discoDefaults(overrides: any = {}, app?: any): Settings 
 			snvRingWidth: 20,
 			lohRingWidth: 20,
 			cnvRingWidth: 30,
+			mutationWaterfallRingWidth: 35,
 
 			snvRingFilters: ['exonic'],
 

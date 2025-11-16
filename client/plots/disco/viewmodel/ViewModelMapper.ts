@@ -52,6 +52,7 @@ export class ViewModelMapper {
 		this.settings.rings.snvRingWidth *= scale
 		this.settings.rings.lohRingWidth *= scale
 		this.settings.rings.cnvRingWidth *= scale
+		this.settings.rings.mutationWaterfallRingWidth *= scale
 		this.settings.label.fontSize *= scale
 		this.settings.legend.fontSize *= scale
 	}

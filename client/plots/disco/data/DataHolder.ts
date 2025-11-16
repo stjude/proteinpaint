@@ -1,5 +1,9 @@
 import type Data from '#plots/disco/data/Data.ts'
 import type { InvalidDataInfo } from '#dom'
+import type {
+	MutationWaterfallDatum,
+	MutationWaterfallLogRange
+} from '#plots/disco/waterfall/MutationWaterfallDatum.ts'
 
 export interface DataHolder {
 	labelData: Array<Data>
@@ -25,6 +29,7 @@ export interface DataHolder {
 	fusionRadius: number
 
 	hasPrioritizedGenes: boolean
+	hasWaterfallEligibleChromosome: boolean
 
 	cnvGainMaxValue?: number
 	cnvLossMaxValue?: number
@@ -35,6 +40,10 @@ export interface DataHolder {
 
 	lohMaxValue?: number
 	lohMinValue?: number
+
+	mutationWaterfallData?: Array<MutationWaterfallDatum>
+	mutationWaterfallInnerRadius?: number
+	mutationWaterfallLogRange?: MutationWaterfallLogRange
 
 	invalidDataInfo?: InvalidDataInfo
 }

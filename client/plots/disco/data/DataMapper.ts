@@ -6,6 +6,7 @@ import { ViewModelMapper } from '#plots/disco/viewmodel/ViewModelMapper.ts'
 import type { DataHolder } from '#plots/disco/data/DataHolder.ts'
 import { dtsnvindel, dtfusionrna, dtsv, dtcnv, dtloh } from '#shared/common.js'
 import { PercentileMapper } from '#plots/disco/data/PercentileMapper.ts'
+import type { MutationWaterfallDatum } from '#plots/disco/waterfall/MutationWaterfallDatum.ts'
 
 export default class DataMapper {
 	// remove fields and extract filters to seperate classes
@@ -22,6 +23,7 @@ export default class DataMapper {
 	private bpx = 0
 	private onePxArcAngle = 0
 	private filteredSnvData: Array<Data> = []
+	private filteredSnvCountByChr: Map<string, number> = new Map()
 
 	private lohData: Array<Data> = []
 	private lohInnerRadius = 0
@@ -33,6 +35,7 @@ export default class DataMapper {
 	private fusionRadius = 0
 
 	private hasPrioritizedGenes = false
+	private hasWaterfallEligibleChromosome = false
 
 	private invalidEntries: { dataType: string; reason: string }[] = []
 
@@ -44,6 +47,11 @@ export default class DataMapper {
 	private percentilePositive = 0
 	private percentileNegative = 0
 	private cnvMaxPercentileAbs = 0
+
+	private mutationWaterfallData: Array<MutationWaterfallDatum> = []
+	private mutationWaterfallInnerRadius = 0
+	private mutationWaterfallRangeMin = Infinity
+	private mutationWaterfallRangeMax = -Infinity
 
 	private lohMaxValue?: number = undefined
 	private lohMinValue?: number = undefined
@@ -114,6 +122,13 @@ export default class DataMapper {
 
 	map(data: any) {
 		const dataArray: Array<Data> = []
+
+		this.filteredSnvCountByChr.clear()
+		this.hasWaterfallEligibleChromosome = false
+		this.mutationWaterfallData = []
+		this.mutationWaterfallInnerRadius = 0
+		this.mutationWaterfallRangeMin = Infinity
+		this.mutationWaterfallRangeMax = -Infinity
 
 		data.forEach(dObject => {
 			const index = this.reference.chromosomesOrder.indexOf(dObject.chr)
@@ -211,6 +226,12 @@ export default class DataMapper {
 			this.filterSnvs(data)
 		})
 
+		this.hasWaterfallEligibleChromosome = Array.from(this.filteredSnvCountByChr.values()).some(count => count >= 2)
+
+		if (this.settings.Disco.mutationWaterfallPlot && this.hasWaterfallEligibleChromosome) {
+			this.prepareMutationWaterfallData()
+		}
+
 		sortedData.forEach(data => {
 			this.filterLohs(data)
 		})
@@ -279,6 +300,7 @@ export default class DataMapper {
 			fusionRadius: this.fusionRadius,
 
 			hasPrioritizedGenes: this.hasPrioritizedGenes,
+			hasWaterfallEligibleChromosome: this.hasWaterfallEligibleChromosome,
 
 			cnvGainMaxValue: this.cnvGainMaxValue,
 			cnvLossMaxValue: this.cnvLossMaxValue,
@@ -289,6 +311,13 @@ export default class DataMapper {
 
 			lohMaxValue: this.lohMaxValue,
 			lohMinValue: this.lohMinValue,
+
+			mutationWaterfallData: this.mutationWaterfallData,
+			mutationWaterfallInnerRadius: this.mutationWaterfallInnerRadius,
+			mutationWaterfallLogRange: this.mutationWaterfallData.length
+				? { min: this.mutationWaterfallRangeMin, max: this.mutationWaterfallRangeMax }
+				: undefined,
+
 			invalidDataInfo: {
 				entries: this.invalidEntries,
 				errorMsg: `Entries listed above were skipped due to invalid or unsupported chromosome information.`
@@ -333,6 +362,9 @@ export default class DataMapper {
 
 				this.filteredSnvData.push(data)
 				this.labelData.push(data)
+
+				const currentCount = this.filteredSnvCountByChr.get(data.chr) || 0
+				this.filteredSnvCountByChr.set(data.chr, currentCount + 1)
 
 				const arcAngle = this.calculateArcAngle(data)
 				let dataArray = this.snvRingDataMap.get(arcAngle)
@@ -382,6 +414,45 @@ export default class DataMapper {
 				this.cnvLossMaxValue = data.value
 			}
 			this.cnvData.push(data)
+		}
+	}
+
+	private prepareMutationWaterfallData() {
+		this.mutationWaterfallInnerRadius = this.lastInnerRadious - this.settings.rings.mutationWaterfallRingWidth
+		this.lastInnerRadious = this.mutationWaterfallInnerRadius
+
+		const groupedSnvs: Map<string, Array<Data>> = new Map()
+		for (const snv of this.filteredSnvData) {
+			const list = groupedSnvs.get(snv.chr) || []
+			list.push(snv)
+			groupedSnvs.set(snv.chr, list)
+		}
+
+		for (const [, snvs] of groupedSnvs) {
+			if (snvs.length < 2) continue
+			snvs.sort((a, b) => a.position - b.position)
+			for (let i = 1; i < snvs.length; i++) {
+				const prev = snvs[i - 1]
+				const curr = snvs[i]
+				const distance = Math.max(1, Math.abs(curr.position - prev.position))
+				const logDistance = Math.log10(distance)
+				this.mutationWaterfallData.push({
+					chr: curr.chr,
+					position: curr.position,
+					logDistance
+				})
+				if (logDistance < this.mutationWaterfallRangeMin) {
+					this.mutationWaterfallRangeMin = logDistance
+				}
+				if (logDistance > this.mutationWaterfallRangeMax) {
+					this.mutationWaterfallRangeMax = logDistance
+				}
+			}
+		}
+
+		if (!this.mutationWaterfallData.length) {
+			this.mutationWaterfallRangeMin = 0
+			this.mutationWaterfallRangeMax = 0
 		}
 	}
 

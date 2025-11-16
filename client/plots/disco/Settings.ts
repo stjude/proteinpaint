@@ -21,6 +21,7 @@ export default interface Settings {
 		cnvCutoffMode: string
 		/** Chromosomes not rendered */
 		hiddenChromosomes: string[]
+		mutationWaterfallPlot: boolean
 	}
 
 	rings: {
@@ -35,6 +36,7 @@ export default interface Settings {
 		snvRingWidth: number
 		lohRingWidth: number
 		cnvRingWidth: number
+		mutationWaterfallRingWidth: number
 
 		labelsToLinesGap: number
 		labelsToLinesDistance: number
