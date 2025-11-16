@@ -21,6 +21,7 @@ import type ViewModel from '#plots/disco/viewmodel/ViewModel.ts'
 import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
 import { InvalidDataUI } from '#dom'
 import { dtcnv, dtloh } from '#shared/common.js'
+import MutationWaterfallRenderer from './waterfall/MutationWaterfallRenderer.ts'
 
 export default class Disco {
 	// following attributes are required by rx
@@ -168,7 +169,16 @@ export default class Disco {
 		]
 
 		configInputsOptions.push(...dimensionOptions)
-
+		if (viewModel.canShowMutationWaterfallPlot && viewModel.snvDataLength > 0) {
+			configInputsOptions.push({
+				boxLabel: '',
+				label: 'Mutation Waterfall Plot',
+				type: 'checkbox',
+				chartType: 'Disco',
+				settingsKey: 'mutationWaterfallPlot',
+				title: 'Render log10 intermutation distance ring for SNV/indel data'
+			})
+		}
 		return configInputsOptions
 	}
 
@@ -249,12 +259,14 @@ export default class Disco {
 				? new CnvHeatmapRenderer(viewModel.positivePercentile, viewModel.negativePercentile)
 				: new CnvBarRenderer()
 		const lohRenderer = new LohRenderer()
+		const mutationWaterfallRenderer = new MutationWaterfallRenderer()
 
 		const renderersMap: Map<RingType, IRenderer> = new Map()
 		renderersMap.set(RingType.CHROMOSOME, chromosomesRenderer)
 		renderersMap.set(RingType.LABEL, labelsRenderer)
 		renderersMap.set(RingType.NONEXONICSNV, nonExonicSnvRenderer)
 		renderersMap.set(RingType.SNV, snvRenderer)
+		renderersMap.set(RingType.MUTATION_WATERFALL, mutationWaterfallRenderer)
 		renderersMap.set(RingType.CNV, cnvRenderer)
 		renderersMap.set(RingType.LOH, lohRenderer)
 

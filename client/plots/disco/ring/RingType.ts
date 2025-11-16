@@ -3,7 +3,8 @@ export enum RingType {
 	LABEL,
 	NONEXONICSNV,
 	SNV,
+	MUTATION_WATERFALL,
 	CNV,
 	LOH,
-	FUSION,
+	FUSION
 }

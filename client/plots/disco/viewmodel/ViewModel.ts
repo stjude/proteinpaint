@@ -33,6 +33,7 @@ export default class ViewModel {
 	negativePercentile?: number
 	positivePercentile?: number
 	invalidDataInfo?: InvalidDataInfo
+	canShowMutationWaterfallPlot: boolean
 
 	constructor(
 		settings: Settings,
@@ -82,6 +83,7 @@ export default class ViewModel {
 		this.negativePercentile = dataHolder.percentileNegative
 		this.positivePercentile = dataHolder.percentilePositive
 		this.invalidDataInfo = dataHolder.invalidDataInfo
+		this.canShowMutationWaterfallPlot = dataHolder.hasWaterfallEligibleChromosome
 	}
 
 	getElements(ringType: RingType): Array<Arc> {
@@ -98,6 +100,8 @@ export default class ViewModel {
 				return this.rings.cnvArcRing ? this.rings.cnvArcRing.elements : []
 			case RingType.LOH:
 				return this.rings.lohArcRing ? this.rings.lohArcRing.elements : []
+			case RingType.MUTATION_WATERFALL:
+				return this.rings.mutationWaterfallRing ? this.rings.mutationWaterfallRing.elements : []
 			default:
 				throw new Error(`ringType ${ringType} not defined`)
 		}

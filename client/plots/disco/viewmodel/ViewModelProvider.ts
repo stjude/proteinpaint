@@ -18,6 +18,8 @@ import LohArcMapper from '#plots/disco/loh/LohArcMapper.ts'
 import Rings from '#plots/disco/ring/Rings.ts'
 import { dtsnvindel } from '#shared/common.js'
 import type { DiscoInteractions } from '../interactions/DiscoInteractions.ts'
+import MutationWaterfallMapper from '#plots/disco/waterfall/MutationWaterfallMapper.ts'
+import type MutationWaterfallPoint from '#plots/disco/waterfall/MutationWaterfallPoint.ts'
 
 export default class ViewModelProvider {
 	private settings: Settings
@@ -33,6 +35,7 @@ export default class ViewModelProvider {
 	private lohArcRing?: Ring<LohArc>
 	private cnvArcsMapper?: CnvArcsMapper
 	private cnvArcRing?: Ring<CnvArc>
+	private mutationWaterfallRing?: Ring<MutationWaterfallPoint>
 
 	constructor(
 		settings: Settings,
@@ -128,6 +131,30 @@ export default class ViewModelProvider {
 			this.cnvArcRing = new Ring(dataHolder.cnvInnerRadius, this.settings.rings.cnvRingWidth, cnvData)
 		}
 
+		if (
+			this.settings.Disco.mutationWaterfallPlot &&
+			dataHolder.mutationWaterfallData?.length &&
+			dataHolder.mutationWaterfallInnerRadius !== undefined &&
+			(dataHolder.mutationWaterfallInnerRadius ?? 0) > 0 &&
+			dataHolder.mutationWaterfallLogRange
+		) {
+			const mutationWaterfallMapper = new MutationWaterfallMapper(
+				dataHolder.mutationWaterfallInnerRadius,
+				this.settings.rings.mutationWaterfallRingWidth,
+				this.reference,
+				dataHolder.mutationWaterfallLogRange
+			)
+
+			const waterfallData = mutationWaterfallMapper.map(dataHolder.mutationWaterfallData)
+			if (waterfallData.length > 0) {
+				this.mutationWaterfallRing = new Ring(
+					dataHolder.mutationWaterfallInnerRadius,
+					this.settings.rings.mutationWaterfallRingWidth,
+					waterfallData
+				)
+			}
+		}
+
 		const fusionMapper = new FusionMapper(dataHolder.fusionRadius, this.sampleName, this.reference)
 
 		const fusions = fusionMapper.map(dataHolder.fusionData)
@@ -159,17 +186,18 @@ export default class ViewModelProvider {
 			this.nonExonicArcRing,
 			this.snvArcRing,
 			this.cnvArcRing,
-			this.lohArcRing
+			this.lohArcRing,
+			this.mutationWaterfallRing
 		)
 
-                return new ViewModel(
-                        this.settings,
-                        rings,
-                        legend,
-                        fusions,
-                        dataHolder,
-                        this.genesetName,
-                        data.filter(i => i.dt == dtsnvindel).length
-                )
-        }
+		return new ViewModel(
+			this.settings,
+			rings,
+			legend,
+			fusions,
+			dataHolder,
+			this.genesetName,
+			data.filter(i => i.dt == dtsnvindel).length
+		)
+	}
 }
