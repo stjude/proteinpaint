@@ -135,6 +135,7 @@ export default class ViewModelProvider {
 			this.settings.Disco.mutationWaterfallPlot &&
 			dataHolder.mutationWaterfallData?.length &&
 			dataHolder.mutationWaterfallInnerRadius !== undefined &&
+			//Added this check to prevent TypeScript error "mutationWaterfallInnerRadius might be undefined"
 			(dataHolder.mutationWaterfallInnerRadius ?? 0) > 0 &&
 			dataHolder.mutationWaterfallLogRange
 		) {
