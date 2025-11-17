@@ -91,14 +91,5 @@ export default class MutationWaterfallRenderer implements IRenderer {
 				.style('fill', '#4d4d4d')
 				.text(`10^${formatted} bp`)
 		})
-
-		axisGroup
-			.append('text')
-			.attr('x', 0)
-			.attr('y', -(topRadius + 10))
-			.attr('text-anchor', 'middle')
-			.style('font-size', '10px')
-			.style('fill', '#4d4d4d')
-			.text('Intermutation distance (log10 bp)')
 	}
 }

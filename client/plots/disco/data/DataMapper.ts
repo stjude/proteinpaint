@@ -422,6 +422,7 @@ export default class DataMapper {
 		this.lastInnerRadious = this.mutationWaterfallInnerRadius
 
 		const groupedSnvs: Map<string, Array<Data>> = new Map()
+		const firstMutationByChr: MutationWaterfallDatum[] = []
 		for (const snv of this.filteredSnvData) {
 			const list = groupedSnvs.get(snv.chr) || []
 			list.push(snv)
@@ -431,6 +432,11 @@ export default class DataMapper {
 		for (const [, snvs] of groupedSnvs) {
 			if (snvs.length < 2) continue
 			snvs.sort((a, b) => a.position - b.position)
+			firstMutationByChr.push({
+				chr: snvs[0].chr,
+				position: snvs[0].position,
+				logDistance: 0 // placeholder updated after range computed
+			})
 			for (let i = 1; i < snvs.length; i++) {
 				const prev = snvs[i - 1]
 				const curr = snvs[i]
@@ -453,6 +459,14 @@ export default class DataMapper {
 		if (!this.mutationWaterfallData.length) {
 			this.mutationWaterfallRangeMin = 0
 			this.mutationWaterfallRangeMax = 0
+		}
+
+		const topLogDistance = this.mutationWaterfallRangeMax
+		for (const first of firstMutationByChr) {
+			this.mutationWaterfallData.push({
+				...first,
+				logDistance: topLogDistance
+			})
 		}
 	}
 
