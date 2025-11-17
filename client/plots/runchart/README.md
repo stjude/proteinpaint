@@ -5,9 +5,13 @@
 
 
 ## Introduction
-Run charts are used to visualize data points in chronological order, revealing trends, shifts, or cycles over time. They are commonly used for quality improvement and time-based data analysis. It uses as input a date variable from the dictionary, it may be date of admission, for example.  Then orders the dates in chronological order and groups them by month. The X axis shows a time scale, where each month becomes a tick. Each patient(date) is then plotted in its corresponding month, centered, and the number of patients in a month represents the Y value for that month. Then the runchart connects the scatter plot dots generated and also adds a medial line by calculating the middle value of your data and drawing a horizontal line across the chart.
+Run charts are used to visualize data points in chronological order, revealing trends, shifts, or cycles over time. They are commonly used for quality improvement and time-based data analysis.
 
+The chart uses as input a date variable from the dictionary. This may be the date of admission, for example. The dates are then ordered chronologically and grouped by month.
 
+The X axis shows a time scale, where each month becomes a tick. Each patient (date) is plotted in its corresponding month, centered, and the number of patients in a month represents the Y value for that month.
+
+The run chart connects the scatter plot dots generated and also adds a median line by calculating the middle value of your data and drawing a horizontal line across the chart.
 ## Features
 - Plots values over time for one or more groups.
 - Interactive controls inheritted from the scatter. Of particular interest is the divideBy, where you can divide by date, to analyze the data divided by time periods.
