@@ -5,7 +5,10 @@
 
 
 ## Introduction
-The frequency chart receives as input a date variable and shows the accumulated frequency of values over time, ordered by month. Similar to the runchart, it orders the dates in chronological order and groups them by month. The X axis shows a time scale, where each month becomes a tick, each patient(date) is plotted in its corresponding month, centered, and the number of patients registered until that time point represents the Y value. In the frequency chart, the number of patients per month(dates) is counted accumulatively. Each month counts all the previous patients and adds the patients from its own month. The frequency chart was designed to build the sjcares registry accrual plot.  The accrual is a visualization tool, often used in clinical trials, that tracks the rate at which participants are recruited over time. 
+The frequency chart receives as input a date variable and shows the accumulated frequency of values over time, ordered by month. Similar to the runchart, it orders the dates in chronological order and groups them by month.
+The X axis shows a time scale, where each month becomes a tick. Each patient (date) is plotted in its corresponding month, centered. The number of patients registered until that time point represents the Y value.
+In the frequency chart, the number of patients per month (dates) is counted accumulatively. Each month counts all the previous patients and adds the patients from its own month.
+The frequency chart was designed to build the sjcares registry accrual plot. The accrual is a visualization tool, often used in clinical trials, that tracks the rate at which participants are recruited over time.
 
 
 ## How Frequency Chart Plotting Works
