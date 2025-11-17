@@ -1081,10 +1081,10 @@
   },
   "plots/volcano/Volcano.ts": {
     "lines": {
-      "total": 69,
+      "total": 73,
       "covered": 44,
       "skipped": 0,
-      "pct": 63.76
+      "pct": 60.27
     },
     "functions": {
       "total": 14,
@@ -1093,46 +1093,46 @@
       "pct": 64.28
     },
     "statements": {
-      "total": 79,
+      "total": 83,
       "covered": 44,
       "skipped": 0,
-      "pct": 55.69
+      "pct": 53.01
     },
     "branches": {
-      "total": 56,
+      "total": 65,
       "covered": 15,
       "skipped": 0,
-      "pct": 26.78
+      "pct": 23.07
     },
     "lowestPct": {
-      "curr": 26.78,
-      "prev": 0,
-      "diff": 26.78
+      "curr": 23.07,
+      "prev": 26.78,
+      "diff": -3.710000000000001
     },
     "averagePct": {
-      "curr": 52.6275,
-      "prev": 8.41,
-      "diff": 44.2175
+      "curr": 50.1575,
+      "prev": 52.6275,
+      "diff": -2.469999999999999
     }
   },
   "plots/volcano/model/VolcanoModel.ts": {
     "lines": {
-      "total": 28,
-      "covered": 18,
+      "total": 32,
+      "covered": 17,
       "skipped": 0,
-      "pct": 64.28
+      "pct": 53.12
     },
     "functions": {
-      "total": 7,
+      "total": 8,
       "covered": 5,
       "skipped": 0,
-      "pct": 71.42
+      "pct": 62.5
     },
     "statements": {
-      "total": 30,
-      "covered": 19,
+      "total": 34,
+      "covered": 18,
       "skipped": 0,
-      "pct": 63.33
+      "pct": 52.94
     },
     "branches": {
       "total": 12,
@@ -1142,13 +1142,13 @@
     },
     "lowestPct": {
       "curr": 25,
-      "prev": 0,
-      "diff": 25
+      "prev": 25,
+      "diff": 0
     },
     "averagePct": {
-      "curr": 56.00749999999999,
-      "prev": 3.7075,
-      "diff": 52.29999999999999
+      "curr": 48.39,
+      "prev": 56.00749999999999,
+      "diff": -7.617499999999993
     }
   },
   "plots/volcano/test/volcano.unit.spec.ts": {
@@ -1874,9 +1874,9 @@
   "plots/diffAnalysis/DifferentialAnalysis.ts": {
     "lines": {
       "total": 65,
-      "covered": 55,
+      "covered": 54,
       "skipped": 0,
-      "pct": 84.61
+      "pct": 83.07
     },
     "functions": {
       "total": 9,
@@ -1885,26 +1885,26 @@
       "pct": 88.88
     },
     "statements": {
-      "total": 74,
+      "total": 75,
       "covered": 57,
       "skipped": 0,
-      "pct": 77.02
+      "pct": 76
     },
     "branches": {
-      "total": 44,
-      "covered": 19,
+      "total": 46,
+      "covered": 15,
       "skipped": 0,
-      "pct": 43.18
+      "pct": 32.6
     },
     "lowestPct": {
-      "curr": 43.18,
+      "curr": 32.6,
       "prev": 50,
-      "diff": -6.82
+      "diff": -17.4
     },
     "averagePct": {
-      "curr": 73.4225,
+      "curr": 70.1375,
       "prev": 80.035,
-      "diff": -6.612499999999997
+      "diff": -9.897499999999994
     }
   },
   "plots/diffAnalysis/view/DiffAnalysisView.ts": {
@@ -2341,38 +2341,38 @@
   },
   "plots/scatter/viewmodel/scatterTooltip.ts": {
     "lines": {
-      "total": 186,
-      "covered": 121,
+      "total": 193,
+      "covered": 2,
       "skipped": 0,
-      "pct": 65.05
+      "pct": 1.03
     },
     "functions": {
-      "total": 20,
-      "covered": 14,
+      "total": 19,
+      "covered": 0,
       "skipped": 0,
-      "pct": 70
+      "pct": 0
     },
     "statements": {
-      "total": 216,
-      "covered": 133,
+      "total": 223,
+      "covered": 2,
       "skipped": 0,
-      "pct": 61.57
+      "pct": 0.89
     },
     "branches": {
       "total": 159,
-      "covered": 78,
+      "covered": 0,
       "skipped": 0,
-      "pct": 49.05
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 49.05,
+      "curr": 0,
       "prev": 49.05,
-      "diff": 0
+      "diff": -49.05
     },
     "averagePct": {
-      "curr": 61.417500000000004,
+      "curr": 0.48,
       "prev": 61.417500000000004,
-      "diff": 0
+      "diff": -60.93750000000001
     }
   },
   "plots/scatter/viewmodel/scatterViewModel3D.ts": {
