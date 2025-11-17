@@ -732,8 +732,10 @@ function addGvCols(tw, columns) {
 		if (tw.q.type == 'predefined-groupset') {
 			const groupset = tw.term.groupsetting.lst[tw.q.predefined_groupset_idx]
 			columns.push({ label: dt2label[groupset.dt] })
+		} else if (tw.q.type == 'custom-groupset') {
+			columns.push({ label: 'Genotype' })
 		} else {
-			columns.push({ label: seriesId })
+			throw 'unexpected tw.q.type'
 		}
 	}
 }
