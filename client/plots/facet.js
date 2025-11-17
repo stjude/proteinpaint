@@ -348,10 +348,14 @@ class Facet extends PlotBase {
 			for (const col of row[1]) {
 				const label = col[1].value > 0 ? col[1].value : ''
 				const percent = this.config.settings.facet.showPercents
-					? `<span style="color:gray;"> &nbsp;(${roundValueAuto((col[1].value / totalSamples) * 100, true, 1)}%)</span>`
+					? `<span style="color:gray;"> (${roundValueAuto((col[1].value / totalSamples) * 100, true, 1)}%)</span>`
 					: ''
 				const td = tr.append('td')
-				if (label) td.classed('sja_menuoption', true).style('text-align', 'center').html(`${label}${percent}`)
+				if (label)
+					td.classed('sja_menuoption', true)
+						.style('border', '2.5px solid white')
+						.style('text-align', 'center')
+						.html(`${label}${percent}`)
 			}
 		}
 	}
