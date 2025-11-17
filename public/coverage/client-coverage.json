@@ -3673,74 +3673,74 @@
   },
   "plots/disco/viewmodel/ViewModel.ts": {
     "lines": {
-      "total": 36,
-      "covered": 25,
+      "total": 39,
+      "covered": 2,
       "skipped": 0,
-      "pct": 69.44
+      "pct": 5.12
     },
     "functions": {
       "total": 5,
-      "covered": 2,
+      "covered": 0,
       "skipped": 0,
-      "pct": 40
+      "pct": 0
     },
     "statements": {
-      "total": 36,
-      "covered": 25,
+      "total": 39,
+      "covered": 2,
       "skipped": 0,
-      "pct": 69.44
+      "pct": 5.12
     },
     "branches": {
-      "total": 21,
-      "covered": 1,
+      "total": 24,
+      "covered": 0,
       "skipped": 0,
-      "pct": 4.76
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 4.76,
-      "prev": 0,
-      "diff": 4.76
+      "curr": 0,
+      "prev": 4.76,
+      "diff": -4.76
     },
     "averagePct": {
-      "curr": 45.91,
-      "prev": 0,
-      "diff": 45.91
+      "curr": 2.56,
+      "prev": 45.91,
+      "diff": -43.349999999999994
     }
   },
   "plots/disco/viewmodel/ViewModelMapper.ts": {
     "lines": {
-      "total": 29,
-      "covered": 29,
+      "total": 33,
+      "covered": 3,
       "skipped": 0,
-      "pct": 100
+      "pct": 9.09
     },
     "functions": {
       "total": 4,
-      "covered": 4,
+      "covered": 1,
       "skipped": 0,
-      "pct": 100
+      "pct": 25
     },
     "statements": {
-      "total": 30,
-      "covered": 29,
-      "skipped": 0,
-      "pct": 96.66
-    },
-    "branches": {
-      "total": 6,
+      "total": 34,
       "covered": 3,
       "skipped": 0,
-      "pct": 50
+      "pct": 8.82
+    },
+    "branches": {
+      "total": 8,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 50,
-      "prev": 0,
-      "diff": 50
+      "curr": 0,
+      "prev": 50,
+      "diff": -50
     },
     "averagePct": {
-      "curr": 86.66499999999999,
-      "prev": 0,
-      "diff": 86.66499999999999
+      "curr": 10.727500000000001,
+      "prev": 86.66499999999999,
+      "diff": -75.93749999999999
     }
   },
   "plots/disco/viewmodel/test/ViewModelMapper.unit.spec.ts": {
@@ -9033,6 +9033,42 @@
       "curr": 46.480000000000004,
       "prev": 47.0875,
       "diff": -0.6074999999999946
+    }
+  },
+  "plots/disco/data/DataMapper.ts": {
+    "lines": {
+      "total": 227,
+      "covered": 108,
+      "skipped": 0,
+      "pct": 47.57
+    },
+    "functions": {
+      "total": 29,
+      "covered": 18,
+      "skipped": 0,
+      "pct": 62.06
+    },
+    "statements": {
+      "total": 231,
+      "covered": 111,
+      "skipped": 0,
+      "pct": 48.05
+    },
+    "branches": {
+      "total": 182,
+      "covered": 52,
+      "skipped": 0,
+      "pct": 28.57
+    },
+    "lowestPct": {
+      "curr": 28.57,
+      "prev": 0,
+      "diff": 28.57
+    },
+    "averagePct": {
+      "curr": 46.5625,
+      "prev": 0,
+      "diff": 46.5625
     }
   }
 }
