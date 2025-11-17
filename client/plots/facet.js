@@ -122,7 +122,11 @@ class Facet extends PlotBase {
 					s => s[config.columnTw.$id]?.key == category && s[config.rowTw.$id]?.key == category2
 				)
 				const percent = this.config.settings.facet.showPercents
-					? ` (${roundValueAuto((samples.length / result.lst.length) * 100, true, 1)}%)`
+					? ` <span style="color:gray;"> (${roundValueAuto(
+							(samples.length / result.lst.length) * 100,
+							true,
+							1
+					  )}%)</span>`
 					: ''
 				cells[category2][category] = { samples, selected: false }
 				const td = tr.append('td')
@@ -132,7 +136,7 @@ class Facet extends PlotBase {
 					td.classed('sja_menuoption', true)
 						.style('text-align', 'center')
 						.style('border', '2.5px solid white')
-						.text(`${samples.length}${percent}`)
+						.html(`${samples.length}${percent}`)
 						.on('mouseover', () => {
 							this.highlightColRow(tbody, tr, colIdx, '#fffec8')
 						})
@@ -344,10 +348,10 @@ class Facet extends PlotBase {
 			for (const col of row[1]) {
 				const label = col[1].value > 0 ? col[1].value : ''
 				const percent = this.config.settings.facet.showPercents
-					? ` (${roundValueAuto((col[1].value / totalSamples) * 100, true, 1)}%)`
+					? `<span style="color:gray;"> &nbsp;(${roundValueAuto((col[1].value / totalSamples) * 100, true, 1)}%)</span>`
 					: ''
 				const td = tr.append('td')
-				if (label) td.classed('sja_menuoption', true).style('text-align', 'center').text(`${label}${percent}`)
+				if (label) td.classed('sja_menuoption', true).style('text-align', 'center').html(`${label}${percent}`)
 			}
 		}
 	}
