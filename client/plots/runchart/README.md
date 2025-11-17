@@ -14,7 +14,7 @@ The X axis shows a time scale, where each month becomes a tick. Each patient (da
 The run chart connects the scatter plot dots generated and also adds a median line by calculating the middle value of your data and drawing a horizontal line across the chart.
 ## Features
 - Plots values over time for one or more groups.
-- Interactive controls inheritted from the scatter. Of particular interest is the divideBy, where you can divide by date, to analyze the data divided by time periods.
+- Interactive controls inherited from the scatter. Of particular interest is the divideBy, where you can divide by date, to analyze the data divided by time periods.
 
 ## Architecture
 Run charts follow a modular design, with separation of data, view, and logic. The core of the run chart implementation is its ViewModel, [`RunChartViewModel`](./runChart.js), which extends the [`ScatterViewModelBase`](../scatter/scatter.js) used for scatter plots. This means the run chart inherits all the interactive features, state management, and customization options of the scatter plot, while adding specific logic for handling time-series data and run chart visualization. 
