@@ -106,7 +106,7 @@ class Facet extends PlotBase {
 				const label = config.columnTw.term.values?.[col.seriesId]?.label || col.seriesId
 				this.addHeader(headerRow, label)
 			}
-			this.renderStaticTable(tbody, config, rows, filteredCols, total)
+			this.renderStaticTable(tbody, config, rows, total)
 		}
 	}
 
@@ -121,7 +121,9 @@ class Facet extends PlotBase {
 				const samples = result.lst.filter(
 					s => s[config.columnTw.$id]?.key == category && s[config.rowTw.$id]?.key == category2
 				)
-				const percent = roundValueAuto((samples.length / result.lst.length) * 100, true, 1)
+				const percent = this.config.settings.facet.showPercents
+					? ` (${roundValueAuto((samples.length / result.lst.length) * 100, true, 1)}%)`
+					: ''
 				cells[category2][category] = { samples, selected: false }
 				const td = tr.append('td')
 				if (!samples.length) td.classed('highlightable-cell', true)
@@ -130,7 +132,7 @@ class Facet extends PlotBase {
 					td.classed('sja_menuoption', true)
 						.style('text-align', 'center')
 						.style('border', '2.5px solid white')
-						.text(`${samples.length} (${percent}%)`)
+						.text(`${samples.length}${percent}`)
 						.on('mouseover', () => {
 							this.highlightColRow(tbody, tr, colIdx, '#fffec8')
 						})
@@ -334,17 +336,18 @@ class Facet extends PlotBase {
 		return [...tmpNums.sort((a, b) => a.key - b.key).map(i => i.label), ...tmpStrings.sort()]
 	}
 
-	renderStaticTable(tbody, config, rows, filteredCols, totalSamples) {
+	renderStaticTable(tbody, config, rows, totalSamples) {
 		for (const row of rows) {
 			const tr = tbody.append('tr')
 			const label = config.rowTw.term.values?.[row[0]]?.label || row[0]
 			this.addRowLabel(tr, label)
 			for (const col of row[1]) {
 				const label = col[1].value > 0 ? col[1].value : ''
-				const percent = roundValueAuto((col[1].value / totalSamples) * 100, true, 1)
+				const percent = this.config.settings.facet.showPercents
+					? ` (${roundValueAuto((col[1].value / totalSamples) * 100, true, 1)}%)`
+					: ''
 				const td = tr.append('td')
-
-				if (label) td.classed('sja_menuoption', true).style('text-align', 'center').text(`${label} (${percent}%)`)
+				if (label) td.classed('sja_menuoption', true).style('text-align', 'center').text(`${label}${percent}`)
 			}
 		}
 	}
@@ -459,6 +462,14 @@ class Facet extends PlotBase {
 				label: 'Rows',
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: ['discrete']
+			},
+			{
+				boxLabel: '',
+				label: 'Show percents',
+				type: 'checkbox',
+				chartType: 'facet',
+				settingsKey: 'showPercents',
+				title: `Option to show/hide percents per cell`
 			}
 		]
 
@@ -497,7 +508,11 @@ export const facetInit = getCompInit(Facet)
 export const componentInit = facetInit
 
 export async function getPlotConfig(opts, app) {
-	const config = { settings: {} }
+	const config = {
+		settings: {
+			facet: { showPercents: false }
+		}
+	}
 	if (!opts.columnTw) throw '.columnTw{} missing'
 	await fillTermWrapper(opts.columnTw, app.vocabApi)
 	if (!opts.rowTw) throw '.rowTw{} missing'
