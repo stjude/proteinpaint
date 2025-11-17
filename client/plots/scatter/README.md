@@ -11,8 +11,8 @@ The available scatter plot types include:
 A scatter plot may also be generated using __date__ variables as input, please see the runchart and the frequency chart for more details.
 
 
-- [Run Chart README](../runchart/README.md) 
-- [Frequency Chart README](../frequencyChart/README.md)
+- [Run Chart README](../runchart/README.md): The runchart uses as input a date from the dictionary, it orders dates in chronological order and groups them by month. It uses as input a date variable from the dictionary, it may be date of admission, for example.  Then orders the dates in chronological order and groups them by month. The X axis shows a time scale, where each month becomes a tick. Each patient(date) is then plotted in its corresponding month, centered, and the number of patients that fall in a month become represents the Y value for that month.
+- [Frequency Chart README](../frequencyChart/README.md): Similar to the runchart, it orders the dates in chronological order and groups them by month. The X axis shows a time scale, where each month becomes a tick. Each patient is plotted in its corresponding month, centered, and the number of patients registered until that time point becomes then the Y axis. In the frequency chart, the number of patients per month(dates) is counted accumulatively.
 
 
 **ViewModel Architecture:** Each scatter plot is managed by its own ViewModel, which is a subclass of [`ScatterViewModelBase`](./viewmodel/scatterViewModelBase.ts). This base class provides shared logic for managing state, user interactions, and data transformations. Each specific scatter plot type (2D, 3D, large) creates its own ViewModel instance, extending or customizing the base functionality as needed. This design ensures consistency and reusability across different scatter plot implementations.
