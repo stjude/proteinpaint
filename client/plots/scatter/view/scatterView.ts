@@ -477,12 +477,35 @@ export class ScatterView {
 			inputs.push(showAxes)
 		}
 
+		this.mayAddControlLabels(inputs)
+
 		// disable already-selected terms in all term inputs
 		const termInputs = inputs.filter(i => i.type === 'term')
 		const selectedTerms = termInputs.map(i => this.scatter.config[i.configKey]?.term).filter(Boolean)
 		for (const i of termInputs) i.disable_terms = selectedTerms
 
 		return inputs
+	}
+
+	mayAddControlLabels(inputs) {
+		const controlLabels = structuredClone(this.scatter.config.controlLabels)
+		if (!controlLabels) return
+		let term1input, term2input, term0input
+		for (const i of inputs) {
+			if (i.configKey == 'term') term1input = i
+			else if (i.configKey == 'term2') term2input = i
+			else if (i.configKey == 'term0') term0input = i
+		}
+		if (term1input && term2input) {
+			// term1 and term2 inputs
+			// append X/Y/Z labels to controlLabels
+			// note: should not append when term1 and term2 inputs
+			// are absent (e.g. tSNE), because having only a Z coordinate
+			// does not make sense
+			if (controlLabels.term1) term1input.label = controlLabels.term1.label + ' (X)'
+			if (controlLabels.term2) term2input.label = controlLabels.term2.label + ' (Y)'
+			if (term0input && controlLabels.term0) term0input.label = controlLabels.term0.label + ' (Z)'
+		}
 	}
 
 	saveZoomTransform(value: any) {
