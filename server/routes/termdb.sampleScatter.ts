@@ -504,7 +504,7 @@ async function getSampleCoordinatesByTerms(
 		const values = data.samples[sampleId]
 		const x = values[q.coordTWs[0].$id]?.value
 		let y = values[q.coordTWs[1]?.$id]?.value
-		if (y == undefined && (q.chartType == 'runchart' || q.chartType == 'frequencyChart')) y = 0 //runchart and freqChart scatters generate the y
+		if (y === undefined && (q.chartType == 'runchart' || q.chartType == 'frequencyChart')) y = 0 //runchart and freqChart scatters generate the y
 		const z = q.divideByTW ? values[q.divideByTW?.$id]?.value : 0
 		if (x == undefined || y == undefined || z == undefined) continue
 
