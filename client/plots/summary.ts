@@ -432,7 +432,7 @@ export async function getPlotConfig(opts, app) {
 		//id: opts.term.term.id,
 		term: opts.term,
 		groups: [],
-		controlLabels: copyMerge(defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {}),
+		controlLabels: Object.assign({}, defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {}),
 		settings: {
 			controls: {
 				isOpen: false
