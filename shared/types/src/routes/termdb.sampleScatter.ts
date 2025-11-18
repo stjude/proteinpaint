@@ -13,6 +13,7 @@ export type TermdbSampleScatterRequest = {
 	plotName?: string
 	filter?: any
 	filter0?: any
+	chartType?: string
 	__protected__?: any // auth token for accessing protected data
 }
 

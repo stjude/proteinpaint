@@ -43,6 +43,7 @@ export class ScatterModel {
 	// later on, add methods with same name to FrontendVocab
 	getDataRequestOpts() {
 		const c: any = this.scatter.config
+
 		if (c.singleCellPlot) return c
 		const coordTWs: any = []
 		if (c.term) coordTWs.push(c.term)
@@ -53,7 +54,8 @@ export class ScatterModel {
 			name: c.name, // the actual identifier of the plot, for retrieving data from server
 			colorTW: c.colorTW,
 			filter,
-			coordTWs
+			coordTWs,
+			chartType: this.scatter.type
 		}
 		if (this.scatter.state.termfilter.filter0) opts.filter0 = this.scatter.state.termfilter.filter0
 		if (c.colorColumn) opts.colorColumn = c.colorColumn
