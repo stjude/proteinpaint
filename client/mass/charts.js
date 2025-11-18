@@ -481,8 +481,8 @@ function setRenderers(self) {
 
 	self.showGenesetEditUI = async chart => {
 		const app = self.app
-		const holder = self.dom.tip
-		const optionalItem = [
+		//Opt pertains to flyout menu options in #dom
+		const additionalItems = [
 			{
 				label: 'Differential Gene Expression Analysis',
 				isSubmenu: true,
@@ -495,7 +495,7 @@ function setRenderers(self) {
 				}
 			}
 		]
-		new GeneExpChartMenu(app, holder, optionalItem)
+		new GeneExpChartMenu(app, self.dom.tip, additionalItems)
 	}
 
 	self.showTree_selectlst = async chart => {

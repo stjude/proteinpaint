@@ -1,17 +1,23 @@
 import { Menu } from '#dom'
 
 /** Tentative implementation of a reusable flyout menu
- * Intended to support nested submenus
+ * Intended to support nested flyouts, e.g., for submenus.
  *
  * Notes:
- * - .options is nested for easier implementation of submenus
- * All the options for one submenu can be kept together instead of one flat list
+ * - .options is nested for easier implementation of submenus.
+ * All the options for one submenu can be separate into a nested
+ * list or const instead of one, difficult to maintain, flat list.
  *
  * - the final callback is responsible for closing the active menus
+ *
+ * - Not all scenarios are tested. Prototype implementation.
  */
 
 type FlyoutMenuOptions = {
+	/** Either provide an existing Menu
+	 * or one will be created on init. */
 	tip?: Menu
+	/** Bolder header above the menu options */
 	header?: string
 	options: FlyoutMenuOption[]
 }
@@ -19,30 +25,50 @@ type FlyoutMenuOptions = {
 export type FlyoutMenuOption = {
 	label: string
 	callback: (...args: any[]) => void
+	/** Set to enable a flyout submenu*/
 	isSubmenu?: boolean
 	options?: FlyoutMenuOption[]
+	/** Creates a span */
 	text?: string
 	html?: string
 }
 
 export class FlyoutMenu {
-	opts: FlyoutMenuOptions
+	/** Parent menu */
 	mainTip: Menu
-	options: FlyoutMenuOption[]
+	/** Map of active menus by their depth level */
 	activeMenus: Map<number, Menu>
+	/** Current menu depth level */
 	level: number
 
 	constructor(opts: FlyoutMenuOptions) {
-		this.opts = opts
-		this.mainTip = opts.tip || new Menu({ padding: '0px' })
-		this.options = opts.options
+		this.validateOpts(opts)
+		this.mainTip = opts?.tip || new Menu({ padding: '0px' })
 		this.level = 0
 		this.activeMenus = new Map([[this.level, this.mainTip]])
 
-		if (this.opts.header) {
-			this.mainTip.d.append('div').style('font-weight', 'bold').style('padding', '5px').text(this.opts.header)
+		if (opts.header) {
+			this.mainTip.d.append('div').style('font-weight', 'bold').style('padding', '5px').text(opts.header)
 		}
-		this.render(this.mainTip, this.options)
+		this.render(this.mainTip, opts.options)
+	}
+
+	validateOpts(opts: FlyoutMenuOptions) {
+		if (!opts.options || !opts?.options?.length) {
+			throw new Error('FlyoutMenu requires at least one option.')
+		}
+		for (const opt of opts.options) {
+			if (!opt.label || !opt.callback) {
+				throw new Error('Each FlyoutMenuOption requires a label and callback function.')
+			}
+			if (opt.text && opt.html) {
+				throw new Error('FlyoutMenuOption cannot have both text and html properties.')
+			}
+			if ((opt.text || opt.html) && (opt.isSubmenu || opt.options)) {
+				throw new Error('FlyoutMenuOption with text or html cannot have submenu properties.')
+			}
+		}
+		return opts
 	}
 
 	render(tip: Menu, options: FlyoutMenuOption[]) {
@@ -58,15 +84,17 @@ export class FlyoutMenu {
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text(opt.label)
-			.on('click', () => {
+			.on('click', event => {
+				event.stopPropagation()
+
 				if (opt?.options?.length || opt.isSubmenu) {
 					this.level = level + 1
-					const submenuTip = this.newFlyoutMenu(optDiv, tip)
+					const flyoutTip = this.getFlyout(optDiv, tip)
 					if (opt?.options) {
-						this.render(submenuTip.d, opt.options)
+						this.render(flyoutTip.d, opt.options)
 						return
 					}
-					opt.callback(submenuTip.d)
+					opt.callback(flyoutTip.d)
 					return
 				}
 				opt.callback()
@@ -75,18 +103,19 @@ export class FlyoutMenu {
 		if (opt.isSubmenu) optDiv.insert('div').html('›').style('float', 'right')
 	}
 
-	newFlyoutMenu(div: any, tip: Menu) {
-		let submenuTip
+	/** When possible, reuse existing flyout */
+	getFlyout(div: any, tip: Menu) {
+		let flyoutTip
 		if (this.activeMenus.has(this.level)) {
-			submenuTip = this.activeMenus.get(this.level)
-			submenuTip.clear()
+			flyoutTip = this.activeMenus.get(this.level)
+			flyoutTip.clear()
 		} else {
-			submenuTip = new Menu({ padding: '0px', parent_menu: tip.d.node() })
-			this.activeMenus.set(this.level, submenuTip)
+			flyoutTip = new Menu({ padding: '0px', parent_menu: tip.d.node() })
+			this.activeMenus.set(this.level, flyoutTip)
 		}
 		const rect = div.node().getBoundingClientRect()
-		submenuTip.show(rect.width, rect.y)
-		return submenuTip
+		flyoutTip.show(rect.width, rect.y)
+		return flyoutTip
 	}
 
 	closeMenus(): void {
@@ -97,7 +126,6 @@ export class FlyoutMenu {
 				tip.destroy?.() // If Menu has cleanup method
 			}
 		}
-		// Keep only the main menu
 		this.activeMenus.clear()
 		this.activeMenus.set(0, this.mainTip)
 		this.level = 0

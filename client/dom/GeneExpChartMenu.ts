@@ -1,6 +1,6 @@
 import type { ClientGenome } from '../types/clientGenome'
 import type { AppApi } from 'rx/src/AppApi'
-import { addGeneSearchbox, FlyoutMenu, type FlyoutMenuOption, GeneSetEditUI, Menu } from '#dom'
+import { addGeneSearchbox, FlyoutMenu, type FlyoutMenuOption, GeneSetEditUI, Menu, sayerror } from '#dom'
 import { TermTypes } from '#shared/terms.js'
 
 /****** For mass plots only *******
@@ -12,6 +12,13 @@ import { TermTypes } from '#shared/terms.js'
  *
  * Should clear and show tip before calling this menu instance.
  * See .clickTo() implementation in charts.js */
+
+type GeneExpressionTerm = {
+	gene?: string
+	name?: string
+	type: string
+}
+
 export class GeneExpChartMenu {
 	app: AppApi
 	genome: ClientGenome
@@ -19,9 +26,10 @@ export class GeneExpChartMenu {
 	unit: string
 	message?: string
 	flyout?: FlyoutMenu
+	//Supports adding menu options for special use cases
 	additionalOptions: FlyoutMenuOption[]
 
-	constructor(app: AppApi, tip: Menu, options = []) {
+	constructor(app: AppApi, tip: Menu, options: FlyoutMenuOption[] = []) {
 		this.app = app
 		this.genome = app.opts.genome
 		this.tip = tip
@@ -102,8 +110,8 @@ export class GeneExpChartMenu {
 	/** Guide the user to select the first gene then
 	 * a second to launch the summary plot on submit.*/
 	renderTwoGeneSelect(holder) {
-		const term: { [index: string]: string } = { type: TermTypes.GENE_EXPRESSION }
-		const term2: { [index: string]: string } = { type: TermTypes.GENE_EXPRESSION }
+		const term: GeneExpressionTerm = { type: TermTypes.GENE_EXPRESSION }
+		const term2: GeneExpressionTerm = { type: TermTypes.GENE_EXPRESSION }
 
 		const gene1row = holder.append('div').style('padding', '5px')
 		const gene2row = holder.append('div').style('padding', '5px').style('display', 'none')
@@ -141,8 +149,14 @@ export class GeneExpChartMenu {
 			.text('Submit')
 			.style('margin', '5px')
 			.on('click', () => {
-				if (!term.name || !term.gene) return alert('Missing first gene. Please provide a valid gene.')
-				if (!term2.name || !term2.gene) return alert('Missing second gene. Please provide a valid gene.')
+				if (!term.name || !term.gene) {
+					sayerror(holder, 'Missing first gene. Please provide a valid gene.')
+					return
+				}
+				if (!term2.name || !term2.gene) {
+					sayerror(holder, 'Missing second gene. Please provide a valid gene.')
+					return
+				}
 
 				this.flyout?.closeMenus()
 				this.app.dispatch({
