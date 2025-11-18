@@ -3050,8 +3050,6 @@ export function filterByItem(filter, mlst, values) {
 	if (mlst_tested.length) {
 		// sample is tested for the dt of the filter
 		tested = true
-		// determine if sample genotype matches filter genotype
-		let sampleHasGenotype
 		if (tvs.continuousCnv) {
 			// continuous cnv data
 			if (tvs.term.dt != dtcnv) throw 'unexpected dt value'
@@ -3062,20 +3060,26 @@ export function filterByItem(filter, mlst, values) {
 			// with gain events will be extracted, but some of these samples
 			// may also have loss events because the gain events still satisfied
 			// the gain cutoff criterion
-			const sampleHasCnv = mlst_tested.some(m => {
+			const mlst_genotype = mlst_tested.filter(m => {
 				const cnvLength = m.stop - m.start
 				if (tvs.cnvMaxLength && cnvLength > tvs.cnvMaxLength) return false
+				let intvs
 				if (m.value > 0) {
 					// cnv gain
-					return tvs.cnvGainCutoff ? m.value >= tvs.cnvGainCutoff : true
-				}
-				if (m.value < 0) {
+					intvs = tvs.cnvGainCutoff ? m.value >= tvs.cnvGainCutoff : true
+				} else if (m.value < 0) {
 					// cnv loss
-					return tvs.cnvLossCutoff ? m.value <= tvs.cnvLossCutoff : true
+					intvs = tvs.cnvLossCutoff ? m.value <= tvs.cnvLossCutoff : true
 				}
+				return tvs.isnot ? !intvs : intvs
 			})
-			sampleHasGenotype = tvs.cnvWT ? !sampleHasCnv : sampleHasCnv
-			pass = tvs.isnot ? !sampleHasGenotype : sampleHasGenotype
+			const sampleHasCnv = mlst_genotype.length > 0
+			pass = tvs.cnvWT ? !sampleHasCnv : sampleHasCnv
+			if (values) {
+				// in case of empty mlst_genotype[] (e.g. wildtype samples), use mlst_tested[]
+				if (mlst_genotype.length) values.push(...mlst_genotype)
+				else values.push(...mlst_tested)
+			}
 		} else {
 			// categorical mutation data
 			// get mutations that match the genotype of the filter
