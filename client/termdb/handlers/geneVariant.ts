@@ -129,7 +129,7 @@ export class SearchHandler {
 			genome: this.opts.genomeObj,
 			vocabApi: this.opts.app.vocabApi,
 			nameInput: true,
-			maxNumGenes: 100,
+			//maxNumGenes: 100, // can enable to set max limit for # genes
 			callback: async result => await this.selectGeneSet(result)
 		})
 		this.dom.searchDiv.select('.sja_genesetinput').style('padding', '0px').style('margin-top', '-10px')
