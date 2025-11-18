@@ -42,7 +42,7 @@ export class AppApi {
 	state: any
 
 	#latestActionSequenceId: number
-	#abortControllers: Set<AbortController>
+	#abortControllers: Map<any, AbortController>
 	#componentsByType: {
 		[chartType: string]: {
 			[plotId: string]: ComponentApi
@@ -79,7 +79,7 @@ export class AppApi {
 		self.bus = new Bus(this, self.eventTypes, opts.callbacks)
 
 		this.#latestActionSequenceId = 0
-		this.#abortControllers = new Set()
+		this.#abortControllers = new Map()
 	}
 
 	async init() {
@@ -91,6 +91,11 @@ export class AppApi {
 	async dispatch(action?: any) {
 		const self = this.#App
 		self.bus.emit('preDispatch')
+		for (const signal of this.#abortControllers.keys()) {
+			this.#abortControllers.get(signal)?.abort('stale sequenceId')
+			this.#abortControllers.delete(signal)
+		}
+
 		try {
 			if (this.#middlewares.length) {
 				for (const fxn of this.#middlewares.slice()) {
@@ -236,7 +241,19 @@ export class AppApi {
 	}
 
 	printError(e) {
+		console.log(238, e)
 		if (this.#App.printError) this.#App.printError(e)
 		else alert(e)
+	}
+
+	getAbortSignal() {
+		const abortCtrl = new AbortController()
+		this.#abortControllers.set(abortCtrl.signal, abortCtrl)
+		return abortCtrl.signal
+	}
+
+	deleteAbortCtrl(signal) {
+		if (!this.#abortControllers.has(signal)) return
+		this.#abortControllers.delete(signal)
 	}
 }

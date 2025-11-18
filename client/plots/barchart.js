@@ -348,20 +348,10 @@ export class Barchart extends PlotBase {
 
 			this.toggleLoadingDiv()
 
-			const [reqOpts, abortCtrl] = this.getDataRequestOpts()
+			const reqOpts = this.getDataRequestOpts()
 			await this.getDescrStats()
 			await this.setControls() //needs to be called after getDescrStats() to set hasStats
-			//const results = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
-
-			const [results, stale] = await this.api.detectStale(() =>
-				this.app.vocabApi.getNestedChartSeriesData(reqOpts, { abortCtrl })
-			)
-
-			if (stale) {
-				console.warn('stale barchart data request - aborted')
-				return
-			}
-
+			const results = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
 			if (results.error) throw results
 			const data = results.data
 			this.charts = data.charts
@@ -389,6 +379,7 @@ export class Barchart extends PlotBase {
 			this.render()
 			this.dom.barDiv.style('display', 'flex')
 		} catch (e) {
+			if (e.includes('stale sequenceId')) return
 			this.toggleLoadingDiv('none')
 			this.dom.barDiv.style('display', 'none')
 			throw e
@@ -398,12 +389,11 @@ export class Barchart extends PlotBase {
 	// creates an opts object for the vocabApi.getNestedChartsData()
 	getDataRequestOpts() {
 		const c = this.config
-		const abortCtrl = new AbortController()
-		const opts = { term: c.term, filter: this.state.termfilter.filter, signal: abortCtrl.signal }
+		const opts = { term: c.term, filter: this.state.termfilter.filter }
 		if (this.state.termfilter.filter0) opts.filter0 = this.state.termfilter.filter0
 		if (c.term2) opts.term2 = c.term2
 		if (c.term0) opts.term0 = c.term0
-		return [opts, abortCtrl]
+		return opts
 	}
 
 	async getDescrStats() {

@@ -321,14 +321,12 @@ class ViolinPlot extends PlotBase {
 				this.config.term.term.name + ` <span style="opacity:.6;font-size:1em;margin-left:10px;">Violin Plot</span>`
 			)
 
-		const [args, initOpts, abortCtrl] = this.validateArgs()
-		let data, stale
+		const args = this.validateArgs()
+		let data
 		try {
-			;[data, stale] = await this.api.detectStale(() => this.app.vocabApi.getViolinPlotData(args, null, initOpts), {
-				abortCtrl
-			})
+			data = await this.app.vocabApi.getViolinPlotData(args, null)
 		} catch (e) {
-			if (stale || e.includes('stale sequenceId')) return
+			if (e.includes?.('stale sequenceId')) return
 			throw e
 		}
 
@@ -393,9 +391,7 @@ class ViolinPlot extends PlotBase {
 		}
 
 		if (term0) arg.divideTw = term0
-		const abortCtrl = new AbortController()
-		const initOpts = { signal: abortCtrl.signal }
-		return [arg, initOpts, abortCtrl]
+		return arg
 	}
 }
 
