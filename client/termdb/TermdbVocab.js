@@ -989,7 +989,8 @@ export class TermdbVocab extends Vocab {
 			filter: getNormalRoot(opts.filter),
 			filter0: opts.filter0,
 			embedder: window.location.hostname,
-			singleCellPlot: opts.singleCellPlot
+			singleCellPlot: opts.singleCellPlot,
+			chartType: opts.chartType
 		}
 		if (opts.colorColumn) body.colorColumn = opts.colorColumn
 		if (opts.colorTW) body.colorTW = this.getTwMinCopy(opts.colorTW)
