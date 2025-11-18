@@ -165,7 +165,6 @@ export class profileForms extends profilePlot {
 		const height = (this.scoreTerms.length + 2) * step
 		this.dom.svg.attr('height', height + 120)
 		this.categories = new Set<string>()
-
 		for (const tw of this.scoreTerms) {
 			if (tw.term.type != 'multivalue') continue
 			const dict = this.getPercentageDict(tw) //get the dict with the counts for each category  for the list of samples
@@ -281,15 +280,17 @@ export class profileForms extends profilePlot {
 		const itemG = this.dom.mainG.append('g')
 		let total = 0
 		for (const key in dict) total += dict[key]
-
+		const key2num = {}
+		for (const key in tw.term.values) {
+			const category = tw.term.values[key].label.toUpperCase()
+			key2num[category] = Number(key)
+		}
 		let x = 0
-		const keys = Object.keys(tw.term.values)
-			.filter(key => key !== '')
-			.sort((a, b) => Number(a) - Number(b))
+		const keys = Object.keys(dict).sort((a, b) => key2num[a.toUpperCase()] - key2num[b.toUpperCase()])
 		for (const key of keys) {
-			const category = tw.term.values[key].label
-			this.categories.add(category)
-			const width = this.renderCategory(category, dict, itemG, x, height, total)
+			//const category = tw.term.values[key].label
+			this.categories.add(key)
+			const width = this.renderCategory(key, dict, itemG, x, height, total)
 			x += width
 		}
 		const text = getText(tw.term.name)
