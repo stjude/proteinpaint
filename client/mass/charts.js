@@ -482,12 +482,20 @@ function setRenderers(self) {
 	self.showGenesetEditUI = async chart => {
 		const app = self.app
 		const holder = self.dom.tip
-		const message = `For differential gene expression analysis, please: <ul>
+		const optionalItem = [
+			{
+				label: 'Differential Gene Expression Analysis',
+				isSubmenu: true,
+				callback: holder => {
+					const message = `For Differential Gene Expression Analysis, please: <ul>
 		<li>Navigate to the Groups tab at the top. Create two groups from the UI.</li>
 		<li>Create a new variable from the two group and click on the new variable button.</li><li>Select 'Differential Gene Expression Analysis' from the list.</li>
 		</ul>`
-
-		new GeneExpChartMenu(app, holder, message)
+					holder.append('div').style('padding', '10px').html(message)
+				}
+			}
+		]
+		new GeneExpChartMenu(app, holder, optionalItem)
 	}
 
 	self.showTree_selectlst = async chart => {

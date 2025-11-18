@@ -1,6 +1,6 @@
 import type { ClientGenome } from '../types/clientGenome'
 import type { AppApi } from 'rx/src/AppApi'
-import { addGeneSearchbox, FlyoutMenu, GeneSetEditUI, Menu } from '#dom'
+import { addGeneSearchbox, FlyoutMenu, type FlyoutMenuOption, GeneSetEditUI, Menu } from '#dom'
 import { TermTypes } from '#shared/terms.js'
 
 /****** For mass plots only *******
@@ -19,21 +19,21 @@ export class GeneExpChartMenu {
 	unit: string
 	message?: string
 	flyout?: FlyoutMenu
+	additionalOptions: FlyoutMenuOption[]
 
-	constructor(app: AppApi, tip: Menu, message?: string) {
+	constructor(app: AppApi, tip: Menu, options = []) {
 		this.app = app
 		this.genome = app.opts.genome
 		this.tip = tip
 		this.unit = this.app.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression'
-		if (message) this.message = message
+		this.additionalOptions = options
 
 		this.renderMenu()
 	}
 
 	renderMenu() {
-		const options = [
+		const _options = [
 			{
-				id: 'single',
 				label: 'Single gene summary',
 				isSubmenu: true,
 				callback: holder => {
@@ -41,7 +41,6 @@ export class GeneExpChartMenu {
 				}
 			},
 			{
-				id: 'two',
 				label: 'Two gene comparison',
 				isSubmenu: true,
 				callback: holder => {
@@ -49,7 +48,6 @@ export class GeneExpChartMenu {
 				}
 			},
 			{
-				id: 'multi',
 				label: 'Multiple genes for hierarchical clustering ',
 				isSubmenu: true,
 				callback: holder => {
@@ -61,7 +59,7 @@ export class GeneExpChartMenu {
 		this.flyout = new FlyoutMenu({
 			tip: this.tip,
 			header: `Choose ${this.unit != 'Gene Expression' ? this.unit : ''} gene expression:`,
-			options
+			options: [..._options, ...this.additionalOptions]
 		})
 
 		if (this.message) {
