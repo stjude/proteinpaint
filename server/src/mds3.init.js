@@ -3075,11 +3075,7 @@ export function filterByItem(filter, mlst, values) {
 			})
 			const sampleHasCnv = mlst_genotype.length > 0
 			pass = tvs.cnvWT ? !sampleHasCnv : sampleHasCnv
-			if (values) {
-				// in case of empty mlst_genotype[] (e.g. wildtype samples), use mlst_tested[]
-				if (mlst_genotype.length) values.push(...mlst_genotype)
-				else values.push(...mlst_tested)
-			}
+			if (values) values.push(...mlst_genotype)
 		} else {
 			// categorical mutation data
 			// get mutations that match the genotype of the filter
