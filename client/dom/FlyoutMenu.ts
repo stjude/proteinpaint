@@ -16,7 +16,7 @@ type FlyoutMenuOptions = {
 	options: FlyoutMenuOption[]
 }
 
-type FlyoutMenuOption = {
+export type FlyoutMenuOption = {
 	label: string
 	callback: (...args: any[]) => void
 	isSubmenu?: boolean
