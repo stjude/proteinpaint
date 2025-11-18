@@ -366,7 +366,7 @@ function getChartTypeList(self, state) {
 			clickTo: self.prepPlot
 		},
 		{
-			label: self.getBtnLabel_summarizeMutationTerm(state, 'Diagnosis'),
+			label: self.getBtnLabel_summarizeMutationTerm(state, 'Disease Type'),
 			chartType: 'summarizeMutationDiagnosis', // type names of other similar charts should all begin with `summarize` to indcate they are based on summary plot
 			usecase: { target: 'summarizeMutationDiagnosis' },
 			clickTo: self.loadChartSpecificMenu
