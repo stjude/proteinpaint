@@ -1,8 +1,7 @@
 import { getCompInit } from '#rx'
-import { Menu } from '#dom'
+import { Menu, GeneExpChartMenu } from '#dom'
 import { getNormalRoot } from '#filter/filter'
 import { NumericModes, TermTypes } from '#shared/terms.js'
-import { GeneSetEditUI } from '../dom/GeneSetEdit/GeneSetEditUI.ts' // cannot use '#dom/', breaks
 import { importPlot } from '#plots/importPlot.js'
 
 class MassCharts {
@@ -481,102 +480,14 @@ function setRenderers(self) {
 	}
 
 	self.showGenesetEditUI = async chart => {
-		const geneList = []
 		const app = self.app
-		const tip = self.dom.tip
-		const holder = self.dom.tip.d
-		holder.selectAll('*').remove()
-		const div = holder.append('div').style('padding', '5px')
-		const label = div.append('label')
-		label.append('span').text('Create ')
-		let name
-		const nameInput = label
-			.append('input')
-			.style('margin', '2px 5px')
-			.style('width', '210px')
-			.attr('placeholder', 'Group Name')
-			.on('input', () => {
-				name = nameInput.property('value')
-			})
-		const selectedGroup = {
-			index: 0,
-			name,
-			label: name,
-			lst: [],
-			status: 'new'
-		}
+		const holder = self.dom.tip
+		const message = `For differential gene expression analysis, please: <ul>
+		<li>Navigate to the Groups tab at the top. Create two groups from the UI.</li>
+		<li>Create a new variable from the two group and click on the new variable button.</li><li>Select 'Differential Gene Expression Analysis' from the list.</li>
+		</ul>`
 
-		new GeneSetEditUI({
-			holder: holder.append('div'),
-			/* running hier clustering and the editing group is the group used for clustering
-		pass this mode value to inform ui to support the optional button "top variably exp gene"
-		this is hardcoded for the purpose of gene expression and should be improved
-		*/
-			genome: app.opts.genome,
-			geneList,
-			mode: 'geneExpression',
-			vocabApi: app.vocabApi,
-			callback: async ({ geneList, groupName }) => {
-				if (!selectedGroup) throw `missing selectedGroup`
-				tip.hide()
-				const group = { name: groupName || name, lst: [], type: 'hierCluster' }
-				const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
-				const tws = await Promise.all(
-					geneList.map(async d => {
-						const gene = d.symbol || d.gene
-						const unit = app.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression'
-						const name = `${gene} ${unit}`
-						const term = { gene, name, type: 'geneExpression' }
-						//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
-						let tw = group.lst.find(tw => tw.term.name == name)
-						if (!tw) {
-							tw = { term, q: {} }
-						}
-						return tw
-					})
-				)
-
-				if (tws.length == 1) {
-					const tw = tws[0]
-					app.dispatch({
-						type: 'plot_create',
-						config: {
-							chartType: 'summary',
-							term: tw
-						}
-					})
-					return
-				}
-
-				if (tws.length == 2) {
-					const tw = tws[0]
-					const tw2 = tws[1]
-					app.dispatch({
-						type: 'plot_create',
-						config: {
-							chartType: 'summary',
-							term: tw,
-							term2: tw2
-						}
-					})
-					return
-				}
-				group.lst = [...lst, ...tws]
-				if (!group.lst.length) tg.splice(selectedGroup.index, 1)
-
-				// close geneset edit ui after clicking submit
-				holder.selectAll('*').remove()
-
-				app.dispatch({
-					type: 'plot_create',
-					config: {
-						chartType: 'hierCluster',
-						termgroups: [group],
-						dataType: TermTypes.GENE_EXPRESSION
-					}
-				})
-			}
-		})
+		new GeneExpChartMenu(app, holder, message)
 	}
 
 	self.showTree_selectlst = async chart => {
