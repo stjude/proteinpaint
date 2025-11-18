@@ -154,8 +154,6 @@ async function getSessionId(
 			await ds.queries.WSImages.getPredictionLayers(projectId, wsimage)
 
 		if (predictionLayers) {
-			const mount = serverconfig.features?.tileserver?.mount
-
 			const resolveFilename = (key: string): string | undefined => {
 				if (!predictionLayers) return undefined
 				if (predictionLayers instanceof Map) return predictionLayers.get(key) ?? undefined
@@ -167,11 +165,10 @@ async function getSessionId(
 				key: 'Prediction' | 'Uncertainty',
 				predictionOverlayType: 'Prediction' | 'Uncertainty'
 			) => {
-				const filename = resolveFilename(key)
-				if (!filename) return
-				const overlayFilePath = path.join(`${mount}/${ds.queries.WSImages.aiToolImageFolder}/`, filename)
+				const overlayPath = resolveFilename(key)
+				if (!overlayPath) return
 				const annotationsData = qs.stringify({
-					overlay_path: overlayFilePath
+					overlay_path: overlayPath
 				})
 
 				const layerNumber: string = await ky
