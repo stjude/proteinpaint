@@ -4,6 +4,7 @@ import { mclass, dt2label } from '#shared/common.js'
 import { newpane, export_data } from '../src/client'
 import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId, normalizeProps } from '#filter'
 import { rgb } from 'd3-color'
+import { create } from 'd3-selection'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { isNumericTerm } from '#shared/terms.js'
 import { negateTermLabel } from './barchart'
@@ -712,13 +713,23 @@ function addGvRowVals(sample, tw, row) {
 
 function mlst2htmls(mlst) {
 	const htmls = mlst.map(m => {
-		const mname = m.mname || ''
+		const mname = m.mname || '' // e.g. aa change
+		const value = m.value ? roundValueAuto(m.value, false, 3) : '' // e.g. cnv value
 		const color = mclass[m.class].color
 		const label = mclass[m.class].label.toUpperCase()
-		const html = `<span>${mname}</span><span style="margin-left: ${
-			mname ? '5px' : '0px'
-		}; color: ${color}; font-size: .8em;">${label}</span>`
-		return html
+
+		const holder = create('div')
+
+		holder.append('span').text(mname || value)
+
+		holder
+			.append('span')
+			.style('margin-left', mname || value ? '5px' : '0px')
+			.style('color', color)
+			.style('font-size', '.8em')
+			.text(label)
+
+		return holder.html()
 	})
 	return htmls
 }
