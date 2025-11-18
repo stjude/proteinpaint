@@ -1,6 +1,6 @@
 import type { ClientGenome } from '../types/clientGenome'
 import type { AppApi } from 'rx/src/AppApi'
-import { addGeneSearchbox, GeneSetEditUI, make_radios, Menu } from '#dom'
+import { addGeneSearchbox, FlyoutMenu, GeneSetEditUI, Menu } from '#dom'
 import { TermTypes } from '#shared/terms.js'
 
 /****** For mass plots only *******
@@ -15,17 +15,15 @@ import { TermTypes } from '#shared/terms.js'
 export class GeneExpChartMenu {
 	app: AppApi
 	genome: ClientGenome
-	holder: any
 	tip: Menu
 	unit: string
 	message?: string
+	flyout?: FlyoutMenu
 
 	constructor(app: AppApi, tip: Menu, message?: string) {
 		this.app = app
 		this.genome = app.opts.genome
 		this.tip = tip
-		//Append a div to prevent styling applying to later tip contents
-		this.holder = this.tip.d.append('div').attr('class', 'sjpp-gene-exp-chart-menu').style('padding', '10px')
 		this.unit = this.app.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression'
 		if (message) this.message = message
 
@@ -33,54 +31,48 @@ export class GeneExpChartMenu {
 	}
 
 	renderMenu() {
-		const radioWrapper = this.holder.append('div')
-		radioWrapper.append('span').style('font-weight', 'bold').text('Choose gene expression option:')
-
-		make_radios({
-			holder: radioWrapper.append('div').style('padding-top', '5px'),
-			options: [
-				{ value: 1, label: '1 gene for expression' /** title: 'Show expression chart for 1 gene'*/ },
-				{ value: 2, label: '2 genes for summary' /** title: 'Show summary chart for 2 genes'*/ },
-				{
-					value: 3,
-					label:
-						'Multiple genes for hierarchical clustering' /** title: 'Show hierarchical clustering for multiple genes'*/
+		const options = [
+			{
+				id: 'single',
+				label: 'Single gene summary',
+				isSubmenu: true,
+				callback: holder => {
+					this.renderGeneSelect(holder)
 				}
-			],
-			styles: { margin: '5px' },
-			inputName: 'gene-exp-chart-type',
-			callback: (value: number) => {
-				radioWrapper.remove()
-				if (value === 1) this.renderGeneSelect()
-				else if (value === 2) this.renderTwoGeneSelect()
-				else this.renderGeneMultiSelect()
+			},
+			{
+				id: 'two',
+				label: 'Two gene comparison',
+				isSubmenu: true,
+				callback: holder => {
+					this.renderTwoGeneSelect(holder)
+				}
+			},
+			{
+				id: 'multi',
+				label: 'Multiple genes for hierarchical clustering ',
+				isSubmenu: true,
+				callback: holder => {
+					this.renderGeneMultiSelect(holder)
+				}
 			}
+		]
+
+		this.flyout = new FlyoutMenu({
+			tip: this.tip,
+			header: `Choose ${this.unit != 'Gene Expression' ? this.unit : ''} gene expression:`,
+			options
 		})
 
 		if (this.message) {
-			radioWrapper.append('div').style('padding-top', '10px').style('opacity', '0.7').html(this.message)
+			this.tip.d.append('div').style('padding-top', '10px').style('opacity', '0.7').html(this.message)
 		}
-	}
-
-	/** Delete all contents and return to the radio
-	 *  buttons for option selection. */
-	renderBackBtn() {
-		this.holder
-			.append('span')
-			.classed('sja_clbtext', true)
-			.style('padding-bottom', '5px')
-			.html('&laquo; Back')
-			.on('click', () => {
-				this.holder.selectAll('*').remove()
-				this.renderMenu()
-			})
 	}
 
 	/** Launch summary plot for gene expression data
 	 * for one gene. */
-	renderGeneSelect() {
-		this.renderBackBtn()
-		const tip = this.holder
+	renderGeneSelect(holder) {
+		const tip = holder
 		const row = tip.append('div').style('padding', '5px')
 		row.append('span').style('font-weight', 'bold').text('Select a gene:')
 
@@ -97,7 +89,7 @@ export class GeneExpChartMenu {
 						type: TermTypes.GENE_EXPRESSION
 					}
 				}
-				this.tip.hide()
+				this.flyout?.closeMenus()
 				this.app.dispatch({
 					type: 'plot_create',
 					config: {
@@ -111,13 +103,12 @@ export class GeneExpChartMenu {
 
 	/** Guide the user to select the first gene then
 	 * a second to launch the summary plot on submit.*/
-	renderTwoGeneSelect() {
-		this.renderBackBtn()
+	renderTwoGeneSelect(holder) {
 		const term: { [index: string]: string } = { type: TermTypes.GENE_EXPRESSION }
 		const term2: { [index: string]: string } = { type: TermTypes.GENE_EXPRESSION }
 
-		const gene1row = this.holder.append('div').style('padding', '5px')
-		const gene2row = this.holder.append('div').style('padding', '5px').style('display', 'none')
+		const gene1row = holder.append('div').style('padding', '5px')
+		const gene2row = holder.append('div').style('padding', '5px').style('display', 'none')
 
 		gene1row.append('span').style('font-weight', 'bold').text('Select 1st gene:')
 		const geneSearch1 = addGeneSearchbox({
@@ -147,7 +138,7 @@ export class GeneExpChartMenu {
 		})
 
 		//Submit button
-		this.holder
+		holder
 			.append('button')
 			.text('Submit')
 			.style('margin', '5px')
@@ -155,7 +146,7 @@ export class GeneExpChartMenu {
 				if (!term.name || !term.gene) return alert('Missing first gene. Please provide a valid gene.')
 				if (!term2.name || !term2.gene) return alert('Missing second gene. Please provide a valid gene.')
 
-				this.tip.hide()
+				this.flyout?.closeMenus()
 				this.app.dispatch({
 					type: 'plot_create',
 					config: {
@@ -169,9 +160,8 @@ export class GeneExpChartMenu {
 
 	/** Render the GeneSetEdit UI for selection and then
 	 * launch the hierarchical clustering on submit.*/
-	renderGeneMultiSelect() {
-		this.renderBackBtn()
-		const grpWrapper = this.holder.append('div').style('padding', '5px')
+	renderGeneMultiSelect(holder) {
+		const grpWrapper = holder.append('div').style('padding', '5px')
 		grpWrapper.append('span').style('font-weight', 'bold').text('Group name:')
 
 		let customName: string = 'New custom group'
@@ -185,7 +175,7 @@ export class GeneExpChartMenu {
 			})
 
 		new GeneSetEditUI({
-			holder: this.holder.append('div'),
+			holder: holder.append('div'),
 			/** running hier clustering and the editing group
 			 * is the group used for clustering pass this mode
 			 * value to inform ui to support the optional button
@@ -201,7 +191,6 @@ export class GeneExpChartMenu {
 				if (geneList.length <= 2) {
 					return alert('At least three genes are required for hierarchical clustering. Please select more genes.')
 				}
-				this.tip.hide()
 
 				const group: { name: string; lst: { [index: string]: any }[]; type: string } = {
 					name: name || customName,
@@ -231,6 +220,7 @@ export class GeneExpChartMenu {
 					tws.splice(selectedGroup.index, 1)
 				}
 
+				this.flyout?.closeMenus()
 				this.app.dispatch({
 					type: 'plot_create',
 					config: {
