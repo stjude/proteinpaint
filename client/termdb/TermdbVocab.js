@@ -90,8 +90,9 @@ export class TermdbVocab extends Vocab {
 		const [route, body] = this.getTdbDataUrl(opts)
 		const headers = this.mayGetAuthHeaders('termdb')
 		const initOpts = { headers, body }
-		if (opts.signal) initOpts.signal = opts.signal
+		if (this.app?.getAbortSignal) initOpts.signal = this.app.getAbortSignal()
 		const data = await dofetch3(route, initOpts, this.opts.fetchOpts)
+		if (initOpts.signal) this.app.deleteAbortCtrl(initOpts.signal)
 		if (data.error) throw data.error
 
 		const valuesByTermId = {}
@@ -442,7 +443,7 @@ export class TermdbVocab extends Vocab {
 		return data.count
 	}
 
-	async getViolinPlotData(arg, _body = {}, initOpts) {
+	async getViolinPlotData(arg, _body = {}) {
 		const headers = this.mayGetAuthHeaders('termdb')
 		arg.tw = this.getTwMinCopy(arg.tw)
 		if (arg.overlayTw) arg.overlayTw = this.getTwMinCopy(arg.overlayTw)
@@ -468,8 +469,10 @@ export class TermdbVocab extends Vocab {
 		)
 		if (body.filter) body.filter = getNormalRoot(body.filter)
 		const init = { headers, body }
-		if (initOpts.signal) init.signal = initOpts.signal
-		return await dofetch3('termdb/violin', init)
+		if (this.app?.getAbortSignal) init.signal = this.app.getAbortSignal()
+		const data = await dofetch3('termdb/violin', init)
+		if (init.signal) this.app.deleteAbortCtrl(init.signal)
+		return data
 	}
 
 	async getBoxPlotData(arg, _body = {}) {
