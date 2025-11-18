@@ -3195,14 +3195,18 @@ async function getCnvByTw(ds, tw, genome, q) {
 		return
 	}
 
+	// note: when there is groupsetting, do not set cnvGainCutoff, cnvLossCutoff, or cnvMaxLength cutoffs here
+	// as these will be applied when filtering by groupsetting (see filterByItem())
 	const arg = {
 		addFormatValues: true,
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 		sessionid: q.sessionid,
-		cnvMaxLength: tw?.q?.cnvMaxLength,
-		cnvGainCutoff: tw?.q?.cnvGainCutoff,
-		cnvLossCutoff: tw?.q?.cnvLossCutoff
+		...(tw?.q?.type === 'values' && {
+			cnvMaxLength: tw?.q?.cnvMaxLength,
+			cnvGainCutoff: tw?.q?.cnvGainCutoff,
+			cnvLossCutoff: tw?.q?.cnvLossCutoff
+		})
 	}
 	await mayMapGeneName2coord(tw.term, genome)
 	// tw.term.chr/start/stop are set
