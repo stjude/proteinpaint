@@ -15,7 +15,7 @@ import { controlsInit } from '../controls'
 import { select2Terms } from '#dom/select2Terms'
 import type { MassState } from '../../../client/mass/types/mass.js'
 import { DownloadMenu } from '#dom/downloadMenu'
-import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
+import { PlotBase } from '#plots/PlotBase.js'
 import type { Settings } from './Settings.ts'
 
 export class Scatter extends PlotBase implements RxComponent {
@@ -181,7 +181,9 @@ export async function getPlotConfig(opts, app) {
 
 	const plot: any = {
 		groups: [],
-		controlLabels: Object.assign({}, defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {}),
+		// scatter controls should not use defaultUiLabels as they
+		// follow a different labeling schema
+		controlLabels: Object.assign({}, /* defaultUiLabels,*/ app.vocabApi.termdbConfig.uiLabels || {}),
 		settings: {
 			controls: {
 				isOpen: false // control panel is hidden by default
