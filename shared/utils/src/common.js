@@ -80,10 +80,11 @@ export const dt2label = {
 }
 
 // Maps dt types to UI labels and lesion types for GRIN2
+// All dt types use lesionTypes array for consistency
 export const dt2lesion = {
 	[dtsnvindel]: {
 		uilabel: 'SNV/INDEL (Mutation)',
-		lesionType: 'mutation'
+		lesionTypes: [{ name: 'Mutation', lesionType: 'mutation' }]
 	},
 	[dtcnv]: {
 		uilabel: 'CNV (Copy Number Variation)',
@@ -94,11 +95,11 @@ export const dt2lesion = {
 	},
 	[dtsv]: {
 		uilabel: 'SV (Structural Variants)',
-		lesionType: 'sv'
+		lesionTypes: [{ name: 'Sv', lesionType: 'sv' }]
 	},
 	[dtfusionrna]: {
 		uilabel: 'Fusion (RNA Fusion Events)',
-		lesionType: 'fusion'
+		lesionTypes: [{ name: 'Fusion', lesionType: 'fusion' }]
 	}
 }
 
