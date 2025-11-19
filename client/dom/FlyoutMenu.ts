@@ -1,11 +1,12 @@
 import { Menu } from '#dom'
+import type { Div } from '../types/d3'
 
 /** Tentative implementation of a reusable flyout menu
  * Intended to support nested flyouts, e.g., for submenus.
  *
  ******** USAGE ********:
  * Multiple ways to code up the menu options.
- * - use .text to add a span of text (e.g. custom notes to the user)
+ * - use .text to add opaque text (e.g. section header, small note)
  * - use .html to add custom html content (e.g. list groups with color span)
  * - use .label and .callback to add a clickable menu option. This
  * is the base menu item. Allows for the flyout menu to include menu
@@ -18,6 +19,9 @@ import { Menu } from '#dom'
  * active menus. Include flyout.closeMenus() in the callback(s). *******
  *
  ******** NOTES ********:
+ * - a flyout is the div itself
+ * - the submenu is a nested menu within the flyout div
+ *
  * - .options is nested for easier implementation of submenus.
  * All the options for one submenu can be separated into a nested
  * list or const instead of one, difficult to maintain, flat list.
@@ -79,12 +83,12 @@ export class FlyoutMenu {
 		this.menuLevels = new Map([[this.level, { menu: this.mainTip }]])
 
 		if (opts.header) {
-			this.mainTip.d.append('div').style('font-weight', 'bold').style('padding', '5px').text(opts.header)
+			this.addText(this.mainTip.d, opts.header)
 		}
 		this.renderMenu(this.mainTip, opts.options)
 	}
 
-	validateOpts(opts: FlyoutMenuOptions) {
+	private validateOpts(opts: FlyoutMenuOptions): FlyoutMenuOptions {
 		if (!opts.options || !opts?.options?.length) {
 			throw new Error('FlyoutMenu requires at least one option.')
 		}
@@ -108,17 +112,22 @@ export class FlyoutMenu {
 		return opts
 	}
 
+	/** Centralize styling for header and text options  */
+	private addText(div: Div, text: string): void {
+		div.append('div').style('padding', '5px').style('opacity', '0.75').text(text)
+	}
+
 	/** Starting with the root parent menu, will recursively render
 	 * all menu options and submenus in tandem with addMenuItem(). */
-	private renderMenu(tip: Menu, options: FlyoutMenuOption[]) {
+	private renderMenu(tip: Menu, options: FlyoutMenuOption[]): void {
 		for (const opt of options) {
-			if (opt.text) tip.d.append('div').style('padding', '5px').style('opacity', '0.75').text(opt.text)
+			if (opt.text) this.addText(tip.d, opt.text)
 			else if (opt.html) tip.d.append('div').html(opt.html)
 			else this.addMenuItem(opt, tip, this.level)
 		}
 	}
 
-	private addMenuItem(opt: FlyoutMenuOption, tip: Menu, level: number) {
+	private addMenuItem(opt: FlyoutMenuOption, tip: Menu, level: number): void {
 		const optDiv = tip.d
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
