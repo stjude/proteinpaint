@@ -1787,7 +1787,6 @@ export type Mds = BaseMds & {
 	cohort?: any
 	queries?: any
 	mutationAttribute?: any
-	dbFile?: string
 	version?: { label: string; link: string }
 	gene2mutcount?: any
 	locusAttribute?: any
