@@ -290,7 +290,7 @@ export class ScatterModel {
 		const xMax = chart.ranges.xMax
 		const yMin = chart.ranges.yMin
 		const yMax = chart.ranges.yMax
-		//unless there is a capping in the min/max values add a min extra space in the plot
+		//unless there is a capping in the min/max values add a minimal extra space in the plot
 		const extraSpaceX = (this.scatter.settings.minXScale != null || this.scatter.settings.maxXScale != null) ? 0 : (xMax - xMin) * 0.01 //extra space added to avoid clipping the particles on the X axis
 		const extraSpaceY = (this.scatter.settings.minYScale != null || this.scatter.settings.maxYScale != null) ? 0 : (yMax - yMin) * 0.01 //extra space added to avoid clipping the particles on the Y axis
 		chart.xAxisScale = d3Linear()
