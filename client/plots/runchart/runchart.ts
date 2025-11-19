@@ -188,6 +188,10 @@ export function getDefaultRunChartSettings() {
 		// Null indicates this hasn't been set yet
 		colorScaleMaxFixed: null, // User-defined maximum value for fixed mode
 		saveZoomTransform: false,
-		excludeOutliers: false
+		excludeOutliers: false,
+		minXScale: null,
+		maxXScale: null,
+		minYScale: null,
+		maxYScale: null
 	}
 }

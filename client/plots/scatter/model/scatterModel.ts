@@ -290,12 +290,12 @@ export class ScatterModel {
 		const xMax = chart.ranges.xMax
 		const yMin = chart.ranges.yMin
 		const yMax = chart.ranges.yMax
-		const extraSpaceX = (xMax - xMin) * 0.01 //extra space added to avoid clipping the particles on the X axis
-		const extraSpaceY = (yMax - yMin) * 0.01 //extra space added to avoid clipping the particles on the Y axis
+		//unless there is a capping in the min/max values add a min extra space in the plot
+		const extraSpaceX = this.scatter.settings.minXScale || this.scatter.settings.maxXScale ? 0 : (xMax - xMin) * 0.01 //extra space added to avoid clipping the particles on the X axis
+		const extraSpaceY = this.scatter.settings.minYScale || this.scatter.settings.maxYScale ? 0 : (yMax - yMin) * 0.01 //extra space added to avoid clipping the particles on the Y axis
 		chart.xAxisScale = d3Linear()
 			.domain([xMin - extraSpaceX, xMax + extraSpaceX])
 			.range([offsetX, this.scatter.settings.svgw + offsetX])
-
 		if (this.scatter.config.term && this.scatter.config.term.term.type == 'date') {
 			const xMinDate = getDateFromNumber(xMin - extraSpaceX)
 			const xMaxDate = getDateFromNumber(xMax + extraSpaceX)
