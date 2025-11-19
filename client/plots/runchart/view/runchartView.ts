@@ -208,6 +208,7 @@ export class RunchartView extends ScatterView {
 					{ label: 'Polynomial', value: 'Polynomial' }
 				]
 			})
+		inputs.push(...this.getMinMaxInputs())
 		return inputs
 	}
 }

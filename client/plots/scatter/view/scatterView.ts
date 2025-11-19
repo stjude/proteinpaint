@@ -379,82 +379,8 @@ export class ScatterView {
 					settingsKey: 'fov'
 				})
 			}
-			const xMin = roundValueAuto(this.scatter.model.range.xMin)
-			const xMax = roundValueAuto(this.scatter.model.range.xMax)
-			const xStep = (xMax - xMin) / 10
-			const yMin = roundValueAuto(this.scatter.model.range.yMin)
-			const yMax = roundValueAuto(this.scatter.model.range.yMax)
-			const yStep = (yMax - yMin) / 10
 
-			inputs.push(
-				showAxes,
-				{
-					label: 'X axis minimum',
-					type: 'number',
-					chartType: 'sampleScatter',
-					settingsKey: 'minXScale',
-					title: `Set the minimum X axis value between ${xMin} and ${xMax}`,
-					placeholder: `${xMin}`,
-					min: xMin,
-					max: xMax,
-					step: xStep
-				},
-				{
-					label: 'X axis maximum',
-					type: 'number',
-					chartType: 'sampleScatter',
-					settingsKey: 'maxXScale',
-					title: `Set the maximum X axis value between ${xMin} and ${xMax}`,
-					placeholder: `${xMax}`,
-					min: xMin,
-					max: xMax,
-					step: xStep,
-					processInput: value => {
-						/** When the user deletes a value, setNumberInput()
-						 * in controls.config.js sets it to input.min. Instead,
-						 * reset to default value to allow the user to delete
-						 * the value. */
-						const n = this.dom.controlsHolder.selectAll('input').filter(function (this: any) {
-							return this.placeholder == `${xMax}`
-						})
-						if (!n.node().value) return xMax
-						else return value
-					}
-				},
-				{
-					label: 'Y axis minimum',
-					type: 'number',
-					chartType: 'sampleScatter',
-					settingsKey: 'minYScale',
-					title: `Set the minimum Y axis value between ${yMin} and ${yMax}`,
-					placeholder: `${yMin}`,
-					min: yMin,
-					max: yMax,
-					step: yStep
-				},
-				{
-					label: 'Y axis maximum',
-					type: 'number',
-					chartType: 'sampleScatter',
-					settingsKey: 'maxYScale',
-					title: `Set the maximum Y axis value between ${yMin} and ${yMax}`,
-					placeholder: `${yMax}`,
-					min: yMin,
-					max: yMax,
-					step: yStep,
-					processInput: value => {
-						/** When the user deletes a value, setNumberInput()
-						 * in controls.config.js sets it to input.min. Instead,
-						 * reset to default value to allow the user to delete
-						 * the value. */
-						const n = this.dom.controlsHolder.selectAll('input').filter(function (this: any) {
-							return this.placeholder == `${yMax}`
-						})
-						if (!n.node().value) return yMax
-						else return value
-					}
-				}
-			)
+			inputs.push(showAxes, ...this.getMinMaxInputs())
 
 			inputs.push({
 				label: 'Default color',
@@ -484,6 +410,85 @@ export class ScatterView {
 		const selectedTerms = termInputs.map(i => this.scatter.config[i.configKey]?.term).filter(Boolean)
 		for (const i of termInputs) i.disable_terms = selectedTerms
 
+		return inputs
+	}
+
+	getMinMaxInputs() {
+		const xMin = roundValueAuto(this.scatter.model.range.xMin)
+		const xMax = roundValueAuto(this.scatter.model.range.xMax)
+		const xStep = (xMax - xMin) / 10
+		const yMin = roundValueAuto(this.scatter.model.range.yMin)
+		const yMax = roundValueAuto(this.scatter.model.range.yMax)
+		const yStep = (yMax - yMin) / 10
+
+		const inputs = [
+			{
+				label: 'X axis minimum',
+				type: 'number',
+				chartType: this.scatter.type,
+				settingsKey: 'minXScale',
+				title: `Set the minimum X axis value between ${xMin} and ${xMax}`,
+				placeholder: `${xMin}`,
+				min: xMin,
+				max: xMax,
+				step: xStep
+			},
+			{
+				label: 'X axis maximum',
+				type: 'number',
+				chartType: this.scatter.type,
+				settingsKey: 'maxXScale',
+				title: `Set the maximum X axis value between ${xMin} and ${xMax}`,
+				placeholder: `${xMax}`,
+				min: xMin,
+				max: xMax,
+				step: xStep,
+				processInput: value => {
+					/** When the user deletes a value, setNumberInput()
+					 * in controls.config.js sets it to input.min. Instead,
+					 * reset to default value to allow the user to delete
+					 * the value. */
+					const n = this.dom.controlsHolder.selectAll('input').filter(function (this: any) {
+						return this.placeholder == `${xMax}`
+					})
+					if (!n.node().value) return xMax
+					else return value
+				}
+			},
+			{
+				label: 'Y axis minimum',
+				type: 'number',
+				chartType: this.scatter.type,
+				settingsKey: 'minYScale',
+				title: `Set the minimum Y axis value between ${yMin} and ${yMax}`,
+				placeholder: `${yMin}`,
+				min: yMin,
+				max: yMax,
+				step: yStep
+			},
+			{
+				label: 'Y axis maximum',
+				type: 'number',
+				chartType: this.scatter.type,
+				settingsKey: 'maxYScale',
+				title: `Set the maximum Y axis value between ${yMin} and ${yMax}`,
+				placeholder: `${yMax}`,
+				min: yMin,
+				max: yMax,
+				step: yStep,
+				processInput: value => {
+					/** When the user deletes a value, setNumberInput()
+					 * in controls.config.js sets it to input.min. Instead,
+					 * reset to default value to allow the user to delete
+					 * the value. */
+					const n = this.dom.controlsHolder.selectAll('input').filter(function (this: any) {
+						return this.placeholder == `${yMax}`
+					})
+					if (!n.node().value) return yMax
+					else return value
+				}
+			}
+		]
 		return inputs
 	}
 
