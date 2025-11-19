@@ -4,7 +4,7 @@ import type { GRIN2Dom, GRIN2Opts } from './GRIN2Types'
 import { dofetch3 } from '#common/dofetch'
 import { getNormalRoot } from '#filter'
 import { Menu, renderTable, table2col, make_one_checkbox, sayerror } from '#dom'
-import { dtsnvindel, mclass, dtcnv, dtfusionrna, dtsv, proteinChangingMutations } from '#shared/common.js'
+import { dtsnvindel, mclass, dtcnv, dtfusionrna, dtsv, proteinChangingMutations, dt2lesion } from '#shared/common.js'
 import { get$id } from '#termsetting'
 import { PlotBase } from '#plots/PlotBase.ts'
 import { plotManhattan, createLollipopFromGene } from '#plots/manhattan/manhattan.ts'
@@ -681,15 +681,25 @@ class GRIN2 extends PlotBase implements RxComponent {
 			const columns = result.topGeneTable.columns
 
 			// Map dt types to their column labels and lesion types
-			const dtMapping = {
-				[dtsnvindel]: [{ col: 'Q-value (Mutation)', type: 'mutation' }],
-				[dtfusionrna]: [{ col: 'Q-value (Fusion)', type: 'fusion' }],
-				[dtcnv]: [
-					{ col: 'Q-value (Copy Loss)', type: 'loss' },
-					{ col: 'Q-value (Copy Gain)', type: 'gain' }
-				],
-				[dtsv]: [{ col: 'Q-value (Structural Variant)', type: 'sv' }]
-			}
+			const dtMapping = {}
+			Object.entries(dt2lesion).forEach(([dt, config]) => {
+				if (config.lesionTypes) {
+					// CNV case with multiple lesion types
+					dtMapping[dt] = config.lesionTypes.map(lt => ({
+						col: `Q-value (${lt.name})`,
+						type: lt.lesionType
+					}))
+				} else {
+					// Single lesion type case
+					const displayName = config.lesionType.charAt(0).toUpperCase() + config.lesionType.slice(1)
+					dtMapping[dt] = [
+						{
+							col: `Q-value (${displayName})`,
+							type: config.lesionType
+						}
+					]
+				}
+			})
 
 			// Build qValue entries for enabled data types
 			const qValueEntries: Array<{ colIndex: number; type: string }> = []
@@ -733,7 +743,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 				maxWidth: '100%',
 				dataTestId: 'grin2-top-genes-table',
 				noButtonCallback: (rowIndex, checkboxNode) => {
-					// Get the gene name from the second column now (index 1) since we added a column
 					const geneName = result.topGeneTable.rows[rowIndex][0]?.value
 
 					if (checkboxNode.checked) {
@@ -807,20 +816,25 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			// Lesion type details
 			if (result.processingSummary.lesionCounts?.byType) {
-				// TODO: Once we have a map in common.js for all these labels, use it here
-				const typeLabels: Record<string, string> = {
-					mutation: 'Mutations',
-					gain: 'Copy Gains',
-					loss: 'Copy Losses',
-					fusion: 'Fusions',
-					sv: 'Structural Variants'
-				}
+				// Build typeLabels from dt2lesion
+				const typeLabels: Record<string, string> = {}
+				Object.values(dt2lesion).forEach(config => {
+					if (config.lesionTypes) {
+						// CNV case - multiple lesion types
+						config.lesionTypes.forEach(lt => {
+							typeLabels[lt.lesionType] = lt.name
+						})
+					} else {
+						// Single lesion type
+						typeLabels[config.lesionType] = config.lesionType.charAt(0).toUpperCase() + config.lesionType.slice(1)
+					}
+				})
 
 				const columns = [
 					{ label: 'Lesion Type' },
 					{ label: 'Count', sortable: true },
-					{ label: 'Capped' },
-					{ label: 'Samples', sortable: true }
+					{ label: 'Samples', sortable: true },
+					{ label: 'Capped' }
 				]
 
 				const rows = Object.entries(result.processingSummary.lesionCounts.byType).map(([type, typeData]) => {
@@ -828,8 +842,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 					return [
 						{ value: typeLabels[type] || type },
 						{ value: count.toLocaleString() },
-						{ value: capped ? 'Yes' : 'No' },
-						{ value: (samples ?? 0).toLocaleString() }
+						{ value: samples?.toLocaleString() ?? '0' },
+						{ value: capped ? 'Yes' : 'No' }
 					]
 				})
 
@@ -865,7 +879,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.style('font-size', `${this.optionsTextFontSize}px`)
 				.style('color', this.optionsTextColor)
 				.text(
-					`Analysis completed in ${result.timing.totalTime}s (Processing: ${result.timing.processingTime}s, GRIN2: ${result.timing.grin2Time}s)`
+					`Analysis completed in ${result.timing.totalTime}s (Processing: ${result.timing.processingTime}s, GRIN2: ${result.timing.grin2Time}s, Plotting: ${result.timing.plottingTime}s)`
 				)
 		}
 
@@ -994,19 +1008,19 @@ export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 
 	// Dynamically add data type options based on availability
 	if (queries?.snvindel) {
-		dtUsage[dtsnvindel] = { checked: true, label: 'SNV/INDEL (Mutation)' }
+		dtUsage[dtsnvindel] = { checked: true, label: dt2lesion[dtsnvindel].uilabel }
 	}
 
 	if (queries?.cnv) {
-		dtUsage[dtcnv] = { checked: true, label: 'CNV (Copy Number Variation)' }
+		dtUsage[dtcnv] = { checked: true, label: dt2lesion[dtcnv].uilabel }
 	}
 
 	if (queries?.svfusion) {
 		if (queries.svfusion.dtLst.includes(dtfusionrna)) {
-			dtUsage[dtfusionrna] = { checked: false, label: 'Fusion (RNA Fusion Events)' }
+			dtUsage[dtfusionrna] = { checked: false, label: dt2lesion[dtfusionrna].uilabel }
 		}
 		if (queries.svfusion.dtLst.includes(dtsv)) {
-			dtUsage[dtsv] = { checked: false, label: 'SV (Structural Variants)' }
+			dtUsage[dtsv] = { checked: false, label: dt2lesion[dtsv].uilabel }
 		}
 	}
 

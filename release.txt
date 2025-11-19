@@ -1,1 +1,2 @@
-
+Features:
+- GRIN2: Now have a unified mapping for dt types to relevant GRIN2 ui elements and data structures

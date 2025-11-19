@@ -121,10 +121,10 @@ def get_user_friendly_label(col_name):
 	# Mapping for lesion types
 	lesion_type_map = {
 		"mutation": "Mutation",
-		"gain": "Copy Gain",
-		"loss": "Copy Loss",
+		"gain": "Gain",
+		"loss": "Loss",
 		"fusion": "Fusion",
-		"sv": "Structural Variant"
+		"sv": "Sv"
 	}
 	
 	# Mapping for constellation tests
