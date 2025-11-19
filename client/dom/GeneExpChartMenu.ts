@@ -33,7 +33,7 @@ export class GeneExpChartMenu {
 		this.app = app
 		this.genome = app.opts.genome
 		this.tip = tip
-		this.unit = this.app.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression'
+		this.unit = this.app.vocabApi.termdbConfig.queries?.geneExpression?.unit || 'Gene Expression'
 		this.additionalOptions = options
 
 		this.renderMenu()

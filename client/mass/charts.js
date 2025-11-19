@@ -482,8 +482,9 @@ function setRenderers(self) {
 	self.showGenesetEditUI = async chart => {
 		const app = self.app
 		//Opt pertains to flyout menu options in #dom
-		const additionalItems = [
-			{
+		const additionalItems = []
+		if (app.vocabApi.termdbConfig?.queries?.rnaseqGeneCount) {
+			additionalItems.push({
 				label: 'Differential Gene Expression Analysis',
 				isSubmenu: true,
 				callback: holder => {
@@ -493,8 +494,8 @@ function setRenderers(self) {
 		</ul>`
 					holder.append('div').style('padding', '10px').html(message)
 				}
-			}
-		]
+			})
+		}
 		new GeneExpChartMenu(app, self.dom.tip, additionalItems)
 	}
 
