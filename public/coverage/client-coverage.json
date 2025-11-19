@@ -7057,38 +7057,38 @@
   },
   "plots/boxplot/BoxPlot.ts": {
     "lines": {
-      "total": 127,
-      "covered": 8,
+      "total": 129,
+      "covered": 89,
       "skipped": 0,
-      "pct": 6.29
+      "pct": 68.99
     },
     "functions": {
       "total": 22,
-      "covered": 2,
+      "covered": 14,
       "skipped": 0,
-      "pct": 9.09
+      "pct": 63.63
     },
     "statements": {
-      "total": 145,
-      "covered": 8,
+      "total": 147,
+      "covered": 93,
       "skipped": 0,
-      "pct": 5.51
+      "pct": 63.26
     },
     "branches": {
-      "total": 82,
-      "covered": 1,
+      "total": 84,
+      "covered": 41,
       "skipped": 0,
-      "pct": 1.21
+      "pct": 48.8
     },
     "lowestPct": {
-      "curr": 1.21,
+      "curr": 48.8,
       "prev": 51.51,
-      "diff": -50.3
+      "diff": -2.710000000000001
     },
     "averagePct": {
-      "curr": 5.525,
+      "curr": 61.17,
       "prev": 63.474999999999994,
-      "diff": -57.949999999999996
+      "diff": -2.3049999999999926
     }
   },
   "plots/boxplot/model/Model.ts": {
