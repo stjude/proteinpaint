@@ -103,6 +103,14 @@ export const dt2lesion = {
 	}
 }
 
+// Maps GRIN2 option types to their corresponding dt values
+export const optionToDt = {
+	snvindelOptions: dtsnvindel,
+	cnvOptions: dtcnv,
+	fusionOptions: dtfusionrna,
+	svOptions: dtsv
+}
+
 export const mclass = {
 	M: {
 		label: 'MISSENSE',

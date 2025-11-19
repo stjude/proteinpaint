@@ -7,7 +7,7 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { mayLog } from '#src/helpers.ts'
 import { get_samples } from '#src/termdb.sql.js'
 import { read_file, file_is_readable } from '#src/utils.js'
-import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dt2lesion } from '#shared/common.js'
+import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dt2lesion, optionToDt } from '#shared/common.js'
 import crypto from 'crypto'
 
 /**
@@ -105,6 +105,35 @@ function getAvailableDataTypes(request: any): string[] {
 	return availableOptions
 }
 
+// Building the lesion map to send to python
+function buildLesionTypeMap(availableOptions: string[]): Record<string, string> {
+	const lesionTypeMap: Record<string, string> = {}
+
+	for (const option of availableOptions) {
+		const dt = optionToDt[option]
+		if (!dt || !dt2lesion[dt]) continue
+
+		dt2lesion[dt].lesionTypes.forEach(lt => {
+			lesionTypeMap[lt.lesionType] = lt.name
+		})
+	}
+
+	return lesionTypeMap
+}
+
+// Function to get CNV lesion type based on gain or loss in a more robust way
+function getCnvLesionType(isGain: boolean): string {
+	const cnvConfig = dt2lesion[dtcnv]
+	const targetName = isGain ? 'Gain' : 'Loss'
+
+	const lesionType = cnvConfig.lesionTypes.find(lt => lt.name === targetName)
+	if (!lesionType) {
+		throw new Error(`CNV lesion type '${targetName}' not found`)
+	}
+
+	return lesionType.lesionType
+}
+
 async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Response> {
 	const startTime = Date.now()
 
@@ -149,13 +178,15 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	}
 
 	// Step 3: Prepare input for Python script
+	const availableDataTypes = getAvailableDataTypes(request)
 	const pyInput = {
 		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 		chromosomelist: {} as { [key: string]: number },
 		lesion: JSON.stringify(lesions),
 		cacheFileName: generateCacheFileName(),
-		availableDataTypes: getAvailableDataTypes(request),
-		maxGenesToShow: request.maxGenesToShow
+		availableDataTypes: availableDataTypes,
+		maxGenesToShow: request.maxGenesToShow,
+		lesionTypeMap: buildLesionTypeMap(availableDataTypes)
 	}
 
 	// Build chromosome list from genome reference
@@ -569,9 +600,7 @@ function filterAndConvertCnv(sampleName: string, entry: any, options: GRIN2Reque
 	const isGain = entry.value >= options.gainThreshold
 	const isLoss = entry.value <= options.lossThreshold
 	if (!isGain && !isLoss) return null
-	const lesionType = isGain
-		? dt2lesion[dtcnv].lesionTypes[1].lesionType // Gain
-		: dt2lesion[dtcnv].lesionTypes[0].lesionType // Loss
+	const lesionType = getCnvLesionType(isGain)
 
 	// TODO: implement hypermutator threshold filter (maybe calculate number of mutations per sample?)
 
