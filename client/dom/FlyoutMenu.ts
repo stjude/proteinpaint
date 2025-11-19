@@ -292,12 +292,10 @@ export class FlyoutMenu {
 	public closeMenus(): void {
 		for (const [level, menuLevel] of this.menuLevels) {
 			if (level > 0) {
-				// Don't close the main tip
 				menuLevel.menu.hide()
-				menuLevel.menu.destroy?.() // If Menu has cleanup method
+				//May destroy all menus in the future.
 			}
 		}
-
 		// Clear all except main menu
 		this.menuLevels.clear()
 		this.menuLevels.set(0, { menu: this.mainTip })
