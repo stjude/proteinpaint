@@ -1513,38 +1513,38 @@
   },
   "plots/scatter/scatter.ts": {
     "lines": {
-      "total": 119,
-      "covered": 73,
+      "total": 122,
+      "covered": 7,
       "skipped": 0,
-      "pct": 61.34
+      "pct": 5.73
     },
     "functions": {
       "total": 21,
-      "covered": 14,
+      "covered": 2,
       "skipped": 0,
-      "pct": 66.66
+      "pct": 9.52
     },
     "statements": {
-      "total": 140,
-      "covered": 83,
+      "total": 144,
+      "covered": 7,
       "skipped": 0,
-      "pct": 59.28
+      "pct": 4.86
     },
     "branches": {
-      "total": 95,
-      "covered": 47,
+      "total": 99,
+      "covered": 0,
       "skipped": 0,
-      "pct": 49.47
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 49.47,
+      "curr": 0,
       "prev": 51.54,
-      "diff": -2.0700000000000003
+      "diff": -51.54
     },
     "averagePct": {
-      "curr": 59.1875,
+      "curr": 5.0275,
       "prev": 59.91,
-      "diff": -0.7224999999999966
+      "diff": -54.88249999999999
     }
   },
   "plots/scatter/viewmodel/scatterViewModel2DLarge.ts": {
@@ -3061,10 +3061,10 @@
   },
   "plots/barchart.js": {
     "lines": {
-      "total": 416,
-      "covered": 346,
+      "total": 417,
+      "covered": 347,
       "skipped": 0,
-      "pct": 83.17
+      "pct": 83.21
     },
     "functions": {
       "total": 90,
@@ -3073,26 +3073,26 @@
       "pct": 83.33
     },
     "statements": {
-      "total": 465,
-      "covered": 365,
+      "total": 467,
+      "covered": 366,
       "skipped": 0,
-      "pct": 78.49
+      "pct": 78.37
     },
     "branches": {
-      "total": 425,
-      "covered": 287,
+      "total": 427,
+      "covered": 288,
       "skipped": 0,
-      "pct": 67.52
+      "pct": 67.44
     },
     "lowestPct": {
-      "curr": 67.52,
+      "curr": 67.44,
       "prev": 68.85,
-      "diff": -1.3299999999999983
+      "diff": -1.4099999999999966
     },
     "averagePct": {
-      "curr": 78.1275,
+      "curr": 78.0875,
       "prev": 80.86250000000001,
-      "diff": -2.7350000000000136
+      "diff": -2.7750000000000057
     }
   },
   "mass/test/barchart.integration.spec.js": {
@@ -6949,38 +6949,38 @@
   },
   "plots/violin.js": {
     "lines": {
-      "total": 86,
-      "covered": 4,
+      "total": 91,
+      "covered": 7,
       "skipped": 0,
-      "pct": 4.65
+      "pct": 7.69
     },
     "functions": {
       "total": 17,
-      "covered": 0,
+      "covered": 1,
       "skipped": 0,
-      "pct": 0
+      "pct": 5.88
     },
     "statements": {
-      "total": 97,
-      "covered": 4,
+      "total": 103,
+      "covered": 7,
       "skipped": 0,
-      "pct": 4.12
+      "pct": 6.79
     },
     "branches": {
-      "total": 75,
-      "covered": 0,
+      "total": 77,
+      "covered": 1,
       "skipped": 0,
-      "pct": 0
+      "pct": 1.29
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 1.29,
       "prev": 80,
-      "diff": -80
+      "diff": -78.71
     },
     "averagePct": {
-      "curr": 2.1925,
+      "curr": 5.4125,
       "prev": 87.11,
-      "diff": -84.9175
+      "diff": -81.6975
     }
   },
   "plots/violin.renderer.js": {
@@ -7057,38 +7057,38 @@
   },
   "plots/boxplot/BoxPlot.ts": {
     "lines": {
-      "total": 126,
-      "covered": 88,
+      "total": 127,
+      "covered": 8,
       "skipped": 0,
-      "pct": 69.84
+      "pct": 6.29
     },
     "functions": {
       "total": 22,
-      "covered": 14,
+      "covered": 2,
       "skipped": 0,
-      "pct": 63.63
+      "pct": 9.09
     },
     "statements": {
-      "total": 143,
-      "covered": 92,
+      "total": 145,
+      "covered": 8,
       "skipped": 0,
-      "pct": 64.33
+      "pct": 5.51
     },
     "branches": {
-      "total": 80,
-      "covered": 40,
+      "total": 82,
+      "covered": 1,
       "skipped": 0,
-      "pct": 50
+      "pct": 1.21
     },
     "lowestPct": {
-      "curr": 50,
+      "curr": 1.21,
       "prev": 51.51,
-      "diff": -1.509999999999998
+      "diff": -50.3
     },
     "averagePct": {
-      "curr": 61.95,
+      "curr": 5.525,
       "prev": 63.474999999999994,
-      "diff": -1.5249999999999915
+      "diff": -57.949999999999996
     }
   },
   "plots/boxplot/model/Model.ts": {
