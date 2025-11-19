@@ -490,8 +490,10 @@ export class TermdbVocab extends Vocab {
 			_body
 		)
 		if (body.filter) body.filter = getNormalRoot(body.filter)
-		const d = await dofetch3('termdb/boxplot', { headers, body })
 
+		const signal = this.app?.getAbortSignal?.()
+		const d = await dofetch3('termdb/boxplot', { headers, body, signal })
+		if (signal) this.app.deleteAbortCtrl(signal)
 		return d
 	}
 
@@ -1008,7 +1010,10 @@ export class TermdbVocab extends Vocab {
 		if (opts.divideByTW) body.divideByTW = this.getTwMinCopy(opts.divideByTW)
 		if (opts.scaleDotTW) body.scaleDotTW = this.getTwMinCopy(opts.scaleDotTW)
 		body.excludeOutliers = opts.excludeOutliers
-		return await dofetch3('termdb/sampleScatter', { headers, body })
+		const signal = this.app?.getAbortSignal?.()
+		const data = await dofetch3('termdb/sampleScatter', { headers, body, signal })
+		if (signal) this.app.deleteAbortCtrl(signal)
+		return data
 	}
 
 	async getDefaultBins(opts) {

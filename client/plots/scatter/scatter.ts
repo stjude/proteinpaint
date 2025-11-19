@@ -99,7 +99,12 @@ export class Scatter extends PlotBase implements RxComponent {
 			this.view.dom.loadingDiv.style('display', 'block').html('Processing data...')
 		}
 		this.settings = structuredClone(this.config.settings.sampleScatter)
-		await this.model.initData()
+		try {
+			await this.model.initData()
+		} catch (e: any) {
+			if (e.includes?.('stale sequenceId')) return
+			throw e
+		}
 		if (this.model.is3D) this.vm = new ScatterViewModel3D(this)
 		else if (this.model.is2DLarge) this.vm = new ScatterViewModel2DLarge(this)
 		else this.vm = new ScatterViewModel(this)
