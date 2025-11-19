@@ -197,9 +197,6 @@ export class GeneExpChartMenu {
 			mode: 'geneExpression',
 			vocabApi: this.app.vocabApi,
 			callback: async ({ geneList, name }) => {
-				if (geneList.length === 0) {
-					return alert('No genes selected. Please select at least one gene.')
-				}
 				if (geneList.length <= 2) {
 					return alert('At least three genes are required for hierarchical clustering. Please select more genes.')
 				}
