@@ -209,28 +209,38 @@ export class GeneExpChartMenu {
 					lst: [],
 					type: 'hierCluster'
 				}
-				const lst = group.lst.filter((tw: { [index: string]: any }) => tw.term.type != 'geneVariant')
+				/** Unclear why group.lst logic from the initialized const
+				 * above was originally implemented. Logic copied several
+				 * times from matrix -> hierClust -> charts -> this file
+				 * without changes.
+				 * Leave for now until the reason becomes apparent or
+				 * delete at a later date. */
+				// const lst = group.lst.filter((tw: { [index: string]: any }) => tw.term.type != 'geneVariant')
 				const tws = await Promise.all(
 					geneList.map(async (d: any) => {
 						const gene: string = d.symbol || d.gene
 						const name = `${gene} ${this.unit}`
 						const term = { gene, name, type: TermTypes.GENE_EXPRESSION }
 						//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
-						const tw: { [index: string]: any } = group.lst.find((tw: any) => tw.term.name == name) || { term, q: {} }
-						return tw
+						// let tw: any = group.lst.find((tw: any) => tw.term.name == name)
+						// if (!tw) tw = { term, q: {} }
+						return { term, q: {} }
 					})
 				)
-				group.lst = [...lst, ...tws]
-				if (!group.lst.length) {
-					const selectedGroup = {
-						index: 0,
-						name,
-						label: name,
-						lst: [],
-						status: 'new'
-					}
-					tws.splice(selectedGroup.index, 1)
-				}
+				group.lst = [...tws]
+				/** Hold over code from previous implementation in charts.js
+				 * If group.lst is empty, do not remove any genes from tws. */
+				// group.lst = [...lst, ...tws]
+				// if (!group.lst.length) {
+				// 	const selectedGroup = {
+				// 		index: 0,
+				// 		name,
+				// 		label: name,
+				// 		lst: [],
+				// 		status: 'new'
+				// 	}
+				// 	tg.splice(selectedGroup.index, 1)
+				// }
 
 				this.flyout?.closeMenus()
 				this.app.dispatch({
