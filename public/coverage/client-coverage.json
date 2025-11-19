@@ -397,38 +397,38 @@
   },
   "tw/geneVariant.ts": {
     "lines": {
-      "total": 88,
-      "covered": 5,
+      "total": 93,
+      "covered": 55,
       "skipped": 0,
-      "pct": 5.68
+      "pct": 59.13
     },
     "functions": {
       "total": 14,
-      "covered": 0,
+      "covered": 4,
       "skipped": 0,
-      "pct": 0
+      "pct": 28.57
     },
     "statements": {
-      "total": 118,
-      "covered": 5,
+      "total": 123,
+      "covered": 64,
       "skipped": 0,
-      "pct": 4.23
+      "pct": 52.03
     },
     "branches": {
-      "total": 99,
-      "covered": 0,
+      "total": 110,
+      "covered": 58,
       "skipped": 0,
-      "pct": 0
+      "pct": 52.72
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 28.57,
       "prev": 33.33,
-      "diff": -33.33
+      "diff": -4.759999999999998
     },
     "averagePct": {
-      "curr": 2.4775,
+      "curr": 48.112500000000004,
       "prev": 45.035000000000004,
-      "diff": -42.557500000000005
+      "diff": 3.0775000000000006
     }
   },
   "dom/genesearch.ts": {

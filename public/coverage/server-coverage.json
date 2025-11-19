@@ -415,20 +415,20 @@
       "pct": 58.31
     },
     "branches": {
-      "total": 1256,
-      "covered": 406,
+      "total": 1258,
+      "covered": 408,
       "skipped": 0,
-      "pct": 32.32
+      "pct": 32.43
     },
     "lowestPct": {
-      "curr": 32.32,
-      "prev": 32.27,
-      "diff": 0.04999999999999716
+      "curr": 32.43,
+      "prev": 32.32,
+      "diff": 0.10999999999999943
     },
     "averagePct": {
-      "curr": 49.552499999999995,
-      "prev": 49.515,
-      "diff": 0.037499999999994316
+      "curr": 49.58,
+      "prev": 49.552499999999995,
+      "diff": 0.02750000000000341
     }
   },
   "src/adHocDictionary/BuildHelpers.ts": {
