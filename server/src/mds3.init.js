@@ -283,17 +283,6 @@ export async function validate_termdb(ds) {
 	const tdb = ds.cohort.termdb
 	if (!tdb) throw 'ds.cohort is set but cohort.termdb{} missing'
 
-	///////// TODO FIXME mess!! ds file should use ds.cohort.termdb.dbFile /////////////
-
-	if (tdb.q) {
-		// equipped with ds-supplied methods
-	} else {
-		if (!ds.cohort.termdb.dictionary && !ds.cohort.termdb.buildDictionary) {
-			if (!ds.cohort.db) throw 'ds.cohort is set but cohort.db{} missing'
-			if (!ds.cohort.db.file && !ds.cohort.db.file_fullpath) throw 'ds.cohort.db.file missing'
-		}
-	}
-
 	/***********************************************************
 	 ** new properties created on tdb{} must be duplicated at  **
 	 ** server/src/test/load.testds.js load_termjson()         **
@@ -306,21 +295,20 @@ export async function validate_termdb(ds) {
 	tdb.sampleTypes = {}
 
 	if (tdb.q) {
+		// equipped with ds-supplied methods
+		if (typeof tdb.q != 'object') throw 'ds-supplied tdb.q{} not object'
 	} else if (tdb.buildDictionary) {
 		if (typeof tdb.buildDictionary != 'function') throw 'termdb.buildDictionary() is not function'
 		await tdb.buildDictionary(ds)
 	} else if (tdb.dictionary?.gdcapi) {
 		await gdcBuildDictionary(ds)
-		// ds.cohort.termdb.q={} created
-	} else if (tdb.dictionary?.dbFile) {
-		ds.cohort.db = { file: tdb.dictionary.dbFile }
-		delete tdb.dictionary.dbFile
-		server_init_db_queries(ds)
 	} else if (ds.cohort.db) {
+		if (!ds.cohort.db.file && !ds.cohort.db.file_fullpath) throw 'ds.cohort.db.file missing'
 		server_init_db_queries(ds)
 	} else {
 		throw 'unknown method to initiate dictionary'
 	}
+	// ds.cohort.termdb.q={} ready
 
 	if (tdb.termid2totalsize2) {
 		if (tdb.termid2totalsize2.gdcapi) {
@@ -745,7 +733,7 @@ async function validate_query_snvindel(ds, genome) {
 
 	if (q.byisoform) {
 		if (typeof q.byisoform.get == 'function') {
-			// ds supplied getter, don't need anything else
+			// ds supplied getter
 		} else if (q.byisoform.gdcapi) {
 			gdc.validate_query_snvindel_byisoform(ds)
 			// q.byisoform.get() added
