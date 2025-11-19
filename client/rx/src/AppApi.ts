@@ -195,6 +195,10 @@ export class AppApi {
 	triggerAbort(reason = '') {
 		const self = this.#App
 		if (reason) if (reason) console.info(`triggerAbort()`, reason)
+		for (const signal of this.#abortControllers.keys()) {
+			this.#abortControllers.get(signal)?.abort('stale sequenceId')
+			this.#abortControllers.delete(signal)
+		}
 		for (const name of Object.keys(self.components)) {
 			const component = self.components[name]
 			if (!component) continue
