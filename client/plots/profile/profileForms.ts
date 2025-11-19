@@ -232,7 +232,7 @@ export class profileForms extends profilePlot {
 				.attr('y', showSCBar ? y : y + step / 2)
 				.text(getText(tw.term.name))
 				.attr('font-size', '0.8em')
-				.on('mouseenter', event => this.showText(event, tw.term.name, 100))
+				.on('mouseenter', event => this.showText(event, tw.term.name))
 				.on('mouseleave', () => this.tip.hide())
 
 			y += step + 40
@@ -300,7 +300,7 @@ export class profileForms extends profilePlot {
 			.text(text)
 			.attr('y', (height * 2) / 3)
 			.style('font-size', '0.85em')
-			.on('mouseenter', event => this.showText(event, tw.term.name, 80))
+			.on('mouseenter', event => this.showText(event, tw.term.name))
 			.on('mouseleave', () => this.tip.hide())
 
 		itemG.attr('transform', `translate(0, ${y})`)
@@ -418,7 +418,7 @@ export class profileForms extends profilePlot {
 			.text(text)
 	}
 
-	showText(event, text, size) {
+	showText(event, text, size = 110) {
 		if (text.length <= size) return
 		const menu = this.tip.clear()
 		menu.d.style('padding', '5px').text(text)
