@@ -816,7 +816,9 @@ export class TermdbVocab extends Vocab {
 					embedder: window.location.hostname
 				}
 			}
-			if (opts.signal) init.signal = opts.signal // an AbortController.signal to trigger a fetch cancellation
+			if (opts.signal) init.signal = opts.signal
+			else if (this.app?.getAbortSignal) init.signal = this.app.getAbortSignal()
+
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 			if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
 			if (
@@ -830,6 +832,7 @@ export class TermdbVocab extends Vocab {
 			}
 			promises.push(
 				dofetch3('termdb', init, { cacheAs: 'decoded' }).then(data => {
+					if (init.signal && !opts.signal) this.app.deleteAbortCtrl(init.signal)
 					if (data.error) throw data.error
 					if (!data.refs.bySampleId) data.refs.bySampleId = {}
 					for (const tw of copies) {
