@@ -488,10 +488,12 @@ function setRenderers(self) {
 				label: 'Differential Gene Expression Analysis',
 				isSubmenu: true,
 				callback: holder => {
-					const message = `For Differential Gene Expression Analysis, please: <ul>
-		<li>Navigate to the Groups tab at the top. Create two groups from the UI.</li>
-		<li>Create a new variable from the two group and click on the new variable button.</li><li>Select 'Differential Gene Expression Analysis' from the list.</li>
-		</ul>`
+					const message = `For Differential Gene Expression Analysis, please follow steps:
+		<ol>
+		<li>Navigate to the <span style="opacity:.5">GROUPS</span> tab at the top, and create two groups.</li>
+		<li>Create a new variable from the two groups and click on the new variable button.</li>
+		<li>Select <span class=sja_menuoption style="font-size:.8em">Differential Gene Expression Analysis</span> from the menu options and run the analysis.</li>
+		</ol>`
 					holder.append('div').style('padding', '10px').html(message)
 				}
 			})
