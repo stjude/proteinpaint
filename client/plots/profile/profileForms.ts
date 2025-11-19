@@ -76,7 +76,7 @@ export class profileForms extends profilePlot {
 				tabs: this.tabs
 			}).main()
 
-		const shift = 620
+		const shift = 690
 		const shiftTop = 50
 		const width = settings.svgw + shift + 500
 		const svg = rightDiv.style('padding', '20px').append('svg').attr('width', width)
@@ -230,7 +230,7 @@ export class profileForms extends profilePlot {
 				.append('text')
 				.attr('x', -this.shift)
 				.attr('y', showSCBar ? y : y + step / 2)
-				.text(getText(tw.term.name, 100))
+				.text(getText(tw.term.name))
 				.attr('font-size', '0.8em')
 				.on('mouseenter', event => this.showText(event, tw.term.name, 100))
 				.on('mouseleave', () => this.tip.hide())
@@ -461,7 +461,7 @@ export const profileFormsInit = getCompInit(profileForms)
 // this alias will allow abstracted dynamic imports
 export const componentInit = profileFormsInit
 
-function getText(name, size = 80) {
+function getText(name, size = 110) {
 	if (name.length > size) name = name.slice(0, size) + '...'
 	return name
 }
