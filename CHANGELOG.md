@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- New menu for gene expression chart buttons, for the mass UI. Provides user three preset options to launch gene expression data and additional options for varying use cases. Replaces logic in charts.js
+- New flyout component to support nested submenus appearing in flyout divs. This reusable, rendering component is stateless and does not rely on mass API methods.
+
 
 ## 2.160.0
 
