@@ -23,6 +23,7 @@
 #  cacheFileName: string - will save GRIN2 results to this file in cache directory
 #  availableDataTypes: [string]
 #  maxGenesToShow: int (default=500) 
+#  lesionTypeMap: dict {lesionType: displayName}
 # }
 
 # Output JSON:
@@ -114,18 +115,10 @@ def get_chrom_key(chrom):
 			return 24
 		else:
 			return 100
-def get_user_friendly_label(col_name):
+def get_user_friendly_label(col_name, lesion_type_map):
 	"""
 	Convert technical GRIN2 column names to user-friendly labels
 	"""
-	# Mapping for lesion types
-	lesion_type_map = {
-		"mutation": "Mutation",
-		"gain": "Gain",
-		"loss": "Loss",
-		"fusion": "Fusion",
-		"sv": "Sv"
-	}
 	
 	# Mapping for constellation tests
 	constellation_map = {
@@ -206,10 +199,14 @@ def smart_format(value):
         # Convert to 4 significant digits and back to float
         return float(f"{value:.3g}")  # .3g gives 4 significant digits total
 
-def simple_column_filter(sorted_results, num_rows_to_process=50):
+def simple_column_filter(sorted_results, num_rows_to_process=50, lesion_type_map=None):
 	"""
 	Dynamically generate columns and rows for topGeneTable based on available data.
 	Note: sorted_results is already sorted by sort_grin2_data() before being passed in.
+	Args:
+		sorted_results: DataFrame already sorted by sort_grin2_data()
+		num_rows_to_process: Number of top genes to include in the table
+		lesion_type_map: Dict mapping lesion types to display names (from client)
 	"""
 	result = get_sig_values(sorted_results)
 	p_cols = result["p_cols"]
@@ -244,64 +241,64 @@ def simple_column_filter(sorted_results, num_rows_to_process=50):
 	# Add individual mutation type columns based on what data exists
 	if mutation_has_data:
 		columns.extend([
-			{"label": get_user_friendly_label(p_cols[0]), "sortable": True},
-			{"label": get_user_friendly_label(q_cols[0]), "sortable": True},
-			{"label": get_user_friendly_label(n_cols[0]), "sortable": True}
+			{"label": get_user_friendly_label(p_cols[0], lesion_type_map), "sortable": True},
+			{"label": get_user_friendly_label(q_cols[0], lesion_type_map), "sortable": True},
+			{"label": get_user_friendly_label(n_cols[0], lesion_type_map), "sortable": True}
 		])
 	if cnv_gain_has_data:
 		columns.extend([
-			{"label": get_user_friendly_label(p_cols[1]), "sortable": True},
-			{"label": get_user_friendly_label(q_cols[1]), "sortable": True},
-			{"label": get_user_friendly_label(n_cols[1]), "sortable": True}
+			{"label": get_user_friendly_label(p_cols[1], lesion_type_map), "sortable": True},
+			{"label": get_user_friendly_label(q_cols[1], lesion_type_map), "sortable": True},
+			{"label": get_user_friendly_label(n_cols[1], lesion_type_map), "sortable": True}
 		])
 	if cnv_loss_has_data:
 		columns.extend([
-			{"label": get_user_friendly_label(p_cols[2]), "sortable": True},
-			{"label": get_user_friendly_label(q_cols[2]), "sortable": True},
-			{"label": get_user_friendly_label(n_cols[2]), "sortable": True}
+			{"label": get_user_friendly_label(p_cols[2], lesion_type_map), "sortable": True},
+			{"label": get_user_friendly_label(q_cols[2], lesion_type_map), "sortable": True},
+			{"label": get_user_friendly_label(n_cols[2], lesion_type_map), "sortable": True}
 		])
 	if fusion_has_data:
 		columns.extend([
-			{"label": get_user_friendly_label(p_cols[3]), "sortable": True},
-			{"label": get_user_friendly_label(q_cols[3]), "sortable": True},
-			{"label": get_user_friendly_label(n_cols[3]), "sortable": True}
+			{"label": get_user_friendly_label(p_cols[3], lesion_type_map), "sortable": True},
+			{"label": get_user_friendly_label(q_cols[3], lesion_type_map), "sortable": True},
+			{"label": get_user_friendly_label(n_cols[3], lesion_type_map), "sortable": True}
 		])
 	if sv_has_data:
 		columns.extend([
-			{"label": get_user_friendly_label(p_cols[4]), "sortable": True},
-			{"label": get_user_friendly_label(q_cols[4]), "sortable": True},
-			{"label": get_user_friendly_label(n_cols[4]), "sortable": True}
+			{"label": get_user_friendly_label(p_cols[4], lesion_type_map), "sortable": True},
+			{"label": get_user_friendly_label(q_cols[4], lesion_type_map), "sortable": True},
+			{"label": get_user_friendly_label(n_cols[4], lesion_type_map), "sortable": True}
 		])
 	
 	# Add constellation columns based on what GRIN2 computed
 	if p1_exists and q1_exists:
 		columns.extend([
-			{"label": get_user_friendly_label("p1.nsubj"), "sortable": True},
-			{"label": get_user_friendly_label("q1.nsubj"), "sortable": True}
+			{"label": get_user_friendly_label("p1.nsubj", lesion_type_map), "sortable": True},
+			{"label": get_user_friendly_label("q1.nsubj", lesion_type_map), "sortable": True}
 		])
 	
 	if p2_exists and q2_exists:
 		columns.extend([
-			{"label": get_user_friendly_label("p2.nsubj"), "sortable": True},
-			{"label": get_user_friendly_label("q2.nsubj"), "sortable": True}
+			{"label": get_user_friendly_label("p2.nsubj", lesion_type_map), "sortable": True},
+			{"label": get_user_friendly_label("q2.nsubj", lesion_type_map), "sortable": True}
 		])
 	
 	if p3_exists and q3_exists:
 		columns.extend([
-			{"label": get_user_friendly_label("p3.nsubj"), "sortable": True},
-			{"label": get_user_friendly_label("q3.nsubj"), "sortable": True}
+			{"label": get_user_friendly_label("p3.nsubj", lesion_type_map), "sortable": True},
+			{"label": get_user_friendly_label("q3.nsubj", lesion_type_map), "sortable": True}
 		])
 
 	if p4_exists and q4_exists:
 		columns.extend([
-			{"label": get_user_friendly_label("p4.nsubj"), "sortable": True},
-			{"label": get_user_friendly_label("q4.nsubj"), "sortable": True}
+			{"label": get_user_friendly_label("p4.nsubj", lesion_type_map), "sortable": True},
+			{"label": get_user_friendly_label("q4.nsubj", lesion_type_map), "sortable": True}
 		])
 	
 	if p5_exists and q5_exists:
 		columns.extend([
-			{"label": get_user_friendly_label("p5.nsubj"), "sortable": True},
-			{"label": get_user_friendly_label("q5.nsubj"), "sortable": True}
+			{"label": get_user_friendly_label("p5.nsubj", lesion_type_map), "sortable": True},
+			{"label": get_user_friendly_label("q5.nsubj", lesion_type_map), "sortable": True}
 		])
 	
 	# Build rows to match the active columns
@@ -390,6 +387,10 @@ try:
 		sys.exit(1)
 	try:
 		input_data = json.loads(json_input)
+		lesion_type_map = input_data.get("lesionTypeMap")
+		if not lesion_type_map:
+			write_error("lesionTypeMap not provided in input")
+			sys.exit(1)
 	except json.JSONDecodeError as e:
 		write_error(f"Invalid JSON input: {str(e)}")
 		sys.exit(1)
@@ -546,7 +547,7 @@ try:
 	# 6. Generate topGeneTable
 	max_genes_to_show = input_data.get("maxGenesToShow")
 	num_rows_to_process = min(len(sorted_results), max_genes_to_show)
-	table_result = simple_column_filter(sorted_results, num_rows_to_process)
+	table_result = simple_column_filter(sorted_results, num_rows_to_process, lesion_type_map)
 	columns = table_result["columns"]
 	topgene_table_data = table_result["rows"]
 
