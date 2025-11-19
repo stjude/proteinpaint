@@ -357,6 +357,7 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 			const textColor = settings.displayMode == 'dark' ? 'white' : 'black'
 			if (legend.length) new LegendRenderer(this.dom.legend, legend, this.interactions, textColor)
 		} catch (e: any) {
+			if (e.includes?.('stale sequenceId')) return
 			if (e.stack) console.log(e.stack)
 			if (e instanceof Error) console.error(e.message || e)
 			throw e
