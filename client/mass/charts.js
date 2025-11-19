@@ -484,19 +484,27 @@ function setRenderers(self) {
 		//Opt pertains to flyout menu options in #dom
 		const additionalItems = []
 		if (app.vocabApi.termdbConfig?.queries?.rnaseqGeneCount) {
-			additionalItems.push({
-				label: 'Differential Gene Expression Analysis',
-				isSubmenu: true,
-				callback: holder => {
-					const message = `For Differential Gene Expression Analysis, please follow steps:
+			additionalItems.push(
+				{
+					//Section heading
+					text: 'Differential Gene Expression Analysis'
+				},
+				{
+					/** TODO: In the future, may replace these instructions
+					 * with DA button that is in development. */
+					label: 'View Instructions',
+					isSubmenu: true,
+					callback: holder => {
+						const message = `For Differential Gene Expression Analysis, please follow steps:
 		<ol>
 		<li>Navigate to the <span style="opacity:.5">GROUPS</span> tab at the top, and create two groups.</li>
 		<li>Create a new variable from the two groups and click on the new variable button.</li>
 		<li>Select <span class=sja_menuoption style="font-size:.8em">Differential Gene Expression Analysis</span> from the menu options and run the analysis.</li>
 		</ol>`
-					holder.append('div').style('padding', '10px').html(message)
+						holder.append('div').style('padding', '10px').html(message)
+					}
 				}
-			})
+			)
 		}
 		new GeneExpChartMenu(app, self.dom.tip, additionalItems)
 	}
