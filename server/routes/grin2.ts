@@ -31,8 +31,8 @@ import crypto from 'crypto'
  *    - Fusion: Filter by 5' and 3' flanking sizes
  *    - SV: Filter by 5' and 3' flanking sizes
  *    - Hypermutator: To be implemented at later date
- * 4. Convert filtered data to lesion format and apply filter caps per type
- * 5. Pass lesion data, device pixel ratio, maxGenesToShow, and cacheFileName to Python for GRIN2 statistical analysis and plot generation (Long term we will make the plot generation be done by rust and just use the cache file of results from python)
+ * 4. Convert filtered data to lesion format and apply filter caps per type. Note: For CNV, count gains and losses separately but share capped status and sample count
+ * 5. Pass lesion data, device pixel ratio, maxGenesToShow, and cacheFileName to Python for GRIN2 statistical analysis and plot generation
  * 6. Return Manhattan plot as base64 string, top gene table, timing information, statistically significant results that are displayed as an interactive svg, and cache file name for future use
  */
 
@@ -346,44 +346,21 @@ async function processSampleData(
 		const lesionType = lesion[4] // Get the lesion type from the 5th element
 		lesionTypeCounts[lesionType] = (lesionTypeCounts[lesionType] || 0) + 1
 	}
+
 	for (const [type, info] of tracker.entries()) {
 		const isCapped = info.count >= MAX_LESIONS_PER_TYPE
+		const sampleCount = samplesPerType.get(type)?.size || 0
+		const dtConfig = dt2lesion[type]
 
-		switch (type) {
-			case dtsnvindel:
-				lesionCounts.byType[dt2lesion[dtsnvindel].lesionType] = {
-					count: lesionTypeCounts[dt2lesion[dtsnvindel].lesionType] || 0,
-					capped: isCapped,
-					samples: samplesPerType.get(type)?.size || 0
-				}
-				break
-			case dtcnv: {
-				// For CNV, count gains and losses separately but share capped status and sample count
-				const sampleCount = samplesPerType.get(type)?.size || 0
-				dt2lesion[dtcnv].lesionTypes.forEach(lt => {
-					lesionCounts.byType[lt.lesionType] = {
-						count: lesionTypeCounts[lt.lesionType] || 0,
-						capped: isCapped,
-						samples: sampleCount
-					}
-				})
-				break
+		if (!dtConfig) continue
+
+		dtConfig.lesionTypes.forEach(lt => {
+			lesionCounts.byType[lt.lesionType] = {
+				count: lesionTypeCounts[lt.lesionType] || 0,
+				capped: isCapped,
+				samples: sampleCount
 			}
-			case dtfusionrna:
-				lesionCounts.byType[dt2lesion[dtfusionrna].lesionType] = {
-					count: lesionTypeCounts[dt2lesion[dtfusionrna].lesionType] || 0,
-					capped: isCapped,
-					samples: samplesPerType.get(type)?.size || 0
-				}
-				break
-			case dtsv:
-				lesionCounts.byType[dt2lesion[dtsv].lesionType] = {
-					count: lesionTypeCounts[dt2lesion[dtsv].lesionType] || 0,
-					capped: isCapped,
-					samples: samplesPerType.get(type)?.size || 0
-				}
-				break
-		}
+		})
 	}
 
 	// Add lesionCounts to processingSummary
@@ -560,7 +537,7 @@ function filterAndConvertSnvIndel(
 
 	// TODO: implement hypermutator threshold filter (maybe calculate number of mutations per sample?)
 
-	return [sampleName, entry.chr, start, end, dt2lesion[dtsnvindel].lesionType]
+	return [sampleName, entry.chr, start, end, dt2lesion[dtsnvindel].lesionTypes[0].lesionType]
 }
 
 function filterAndConvertCnv(sampleName: string, entry: any, options: GRIN2Request['cnvOptions']): string[] | null {
@@ -592,7 +569,9 @@ function filterAndConvertCnv(sampleName: string, entry: any, options: GRIN2Reque
 	const isGain = entry.value >= options.gainThreshold
 	const isLoss = entry.value <= options.lossThreshold
 	if (!isGain && !isLoss) return null
-	const lesionType = isGain ? dt2lesion[dtcnv].lesionTypes[1].lesionType : dt2lesion[dtcnv].lesionTypes[0].lesionType
+	const lesionType = isGain
+		? dt2lesion[dtcnv].lesionTypes[1].lesionType // Gain
+		: dt2lesion[dtcnv].lesionTypes[0].lesionType // Loss
 
 	// TODO: implement hypermutator threshold filter (maybe calculate number of mutations per sample?)
 
@@ -623,7 +602,7 @@ function filterAndConvertFusion(
 	const startA = entry.posA
 	const endA = entry.posA
 
-	const lesionA: string[] = [sampleName, entry.chrA, startA, endA, dt2lesion[dtfusionrna].lesionType]
+	const lesionA: string[] = [sampleName, entry.chrA, startA, endA, dt2lesion[dtfusionrna].lesionTypes[0].lesionType]
 
 	// Check if there's a second breakpoint on chrB
 	if (entry.chrB && entry.posB !== undefined) {
@@ -631,7 +610,7 @@ function filterAndConvertFusion(
 		const startB = entry.posB
 		const endB = entry.posB
 
-		const lesionB: string[] = [sampleName, entry.chrB, startB, endB, dt2lesion[dtfusionrna].lesionType]
+		const lesionB: string[] = [sampleName, entry.chrB, startB, endB, dt2lesion[dtfusionrna].lesionTypes[0].lesionType]
 
 		// Return both breakpoints as separate lesions
 		// This will correctly identify genes affected at both fusion partners
@@ -660,7 +639,7 @@ function filterAndConvertSV(
 	const startA = entry.posA
 	const endA = entry.posA
 
-	const lesionA: string[] = [sampleName, entry.chrA, startA, endA, dt2lesion[dtsv].lesionType]
+	const lesionA: string[] = [sampleName, entry.chrA, startA, endA, dt2lesion[dtsv].lesionTypes[0].lesionType]
 
 	// Check if there's a second breakpoint on chrB
 	if (entry.chrB && entry.posB !== undefined) {
@@ -668,7 +647,7 @@ function filterAndConvertSV(
 		const startB = entry.posB
 		const endB = entry.posB
 
-		const lesionB: string[] = [sampleName, entry.chrB, startB, endB, dt2lesion[dtsv].lesionType]
+		const lesionB: string[] = [sampleName, entry.chrB, startB, endB, dt2lesion[dtsv].lesionTypes[0].lesionType]
 
 		// Return both breakpoints as separate lesions
 		return [lesionA, lesionB]

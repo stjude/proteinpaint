@@ -683,22 +683,10 @@ class GRIN2 extends PlotBase implements RxComponent {
 			// Map dt types to their column labels and lesion types
 			const dtMapping = {}
 			Object.entries(dt2lesion).forEach(([dt, config]) => {
-				if (config.lesionTypes) {
-					// CNV case with multiple lesion types
-					dtMapping[dt] = config.lesionTypes.map(lt => ({
-						col: `Q-value (${lt.name})`,
-						type: lt.lesionType
-					}))
-				} else {
-					// Single lesion type case
-					const displayName = config.lesionType.charAt(0).toUpperCase() + config.lesionType.slice(1)
-					dtMapping[dt] = [
-						{
-							col: `Q-value (${displayName})`,
-							type: config.lesionType
-						}
-					]
-				}
+				dtMapping[dt] = config.lesionTypes.map(lt => ({
+					col: `Q-value (${lt.name})`,
+					type: lt.lesionType
+				}))
 			})
 
 			// Build qValue entries for enabled data types
@@ -816,18 +804,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			// Lesion type details
 			if (result.processingSummary.lesionCounts?.byType) {
-				// Build typeLabels from dt2lesion
 				const typeLabels: Record<string, string> = {}
 				Object.values(dt2lesion).forEach(config => {
-					if (config.lesionTypes) {
-						// CNV case - multiple lesion types
-						config.lesionTypes.forEach(lt => {
-							typeLabels[lt.lesionType] = lt.name
-						})
-					} else {
-						// Single lesion type
-						typeLabels[config.lesionType] = config.lesionType.charAt(0).toUpperCase() + config.lesionType.slice(1)
-					}
+					config.lesionTypes.forEach(lt => {
+						typeLabels[lt.lesionType] = lt.name
+					})
 				})
 
 				const columns = [
