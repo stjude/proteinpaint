@@ -43,7 +43,8 @@ export type FlyoutMenuOption = {
 	 * html content set in the callback or a submenu from .options[] */
 	isSubmenu?: boolean
 	options?: FlyoutMenuOption[]
-	/** Creates a span */
+	/** Shows slightly opaque text.
+	 * Best for section headings.*/
 	text?: string
 	/** Allows for custom HTML content. */
 	html?: string
@@ -107,11 +108,11 @@ export class FlyoutMenu {
 		return opts
 	}
 
-	/** Starting with the root parent menu will recursively render
+	/** Starting with the root parent menu, will recursively render
 	 * all menu options and submenus in tandem with addMenuItem(). */
 	private renderMenu(tip: Menu, options: FlyoutMenuOption[]) {
 		for (const opt of options) {
-			if (opt.text) tip.d.append('span').style('opacity', '0.7').text(opt.text)
+			if (opt.text) tip.d.append('div').style('padding', '5px').style('opacity', '0.75').text(opt.text)
 			else if (opt.html) tip.d.append('div').html(opt.html)
 			else this.addMenuItem(opt, tip, this.level)
 		}
