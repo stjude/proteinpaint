@@ -61,7 +61,7 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 	async setControls() {
 		const state = this.getState(this.app.getState())
 		const controlLabels = state.config.controlLabels
-		if (!controlLabels) throw 'controls labels not found'
+		if (!controlLabels) throw new Error('controls labels not found')
 		const inputs = [
 			{
 				type: 'term',
@@ -223,6 +223,12 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 		this.components.controls.on('helpClick.boxplot', () => {
 			this.interactions!.help()
 		})
+
+		if (state.vocab.dslabel.toLowerCase() == 'gdc') {
+			//Remove for now. May add gdc specific user guide
+			//in interactions.help later.
+			this.dom.controls.select('div[aria-label="Documentation"]').remove()
+		}
 	}
 
 	reactsTo(action) {
@@ -238,13 +244,16 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 	getState(appState: MassState) {
 		const config = appState.plots.find((p: any) => p.id === this.id)
 		if (!config) {
-			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+			throw new Error(
+				`No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+			)
 		}
 		const parentConfig = appState.plots.find(p => p.id === this.parentId)
 		const termfilter = getCombinedTermFilter(appState, config.filter || parentConfig?.filter)
 
 		return {
 			termfilter,
+			vocab: appState.vocab,
 			config: Object.assign({}, config, {
 				settings: {
 					boxplot: config.settings.boxplot
@@ -264,14 +273,14 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 			const config = structuredClone(this.state.config)
 			if (config.childType != this.type && config.chartType != this.type) return
 
-			if (!this.interactions) throw 'Interactions not initialized [box plot main()]'
+			if (!this.interactions) throw new Error('Interactions not initialized [box plot main()]')
 
 			const settings = config.settings.boxplot
 			const model = new Model(config, this.state, this.app, settings)
 			const data = await model.getData()
 			config.term.q.descrStats = data.descrStats
 
-			if (data.error) throw data.error
+			if (data.error) throw new Error(data.error)
 			if (!data.charts || !Object.keys(data.charts).length) {
 				this.interactions!.clearDom()
 				this.dom.error.style('padding', '20px 20px 20px 60px').text('No visible box plot data to render')
@@ -360,7 +369,7 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 			if (e.includes?.('stale sequenceId')) return
 			if (e.stack) console.log(e.stack)
 			if (e instanceof Error) console.error(e.message || e)
-			throw e
+			throw new Error(e)
 		}
 	}
 
@@ -405,14 +414,14 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 }
 
 export async function getPlotConfig(opts: BoxPlotConfigOpts, app: MassAppApi) {
-	if (!opts.term) throw 'opts.term{} missing [boxplot getPlotConfig()]'
+	if (!opts.term) throw new Error('opts.term{} missing')
 	try {
 		await fillTermWrapper(opts.term, app.vocabApi)
 		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
 		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
 	} catch (e) {
 		console.error(new Error(`${e} [boxplot getPlotConfig()]`))
-		throw `boxplot getPlotConfig() failed`
+		throw new Error(`boxplot getPlotConfig() failed`)
 	}
 
 	const config = {
