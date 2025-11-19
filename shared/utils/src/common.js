@@ -79,6 +79,29 @@ export const dt2label = {
 	[dtmetaboliteintensity]: 'Metabolite Intensity'
 }
 
+// Maps dt types to UI labels and lesion types for GRIN2
+export const dt2lesion = {
+	[dtsnvindel]: {
+		uilabel: 'SNV/INDEL (Mutation)',
+		lesionType: 'mutation'
+	},
+	[dtcnv]: {
+		uilabel: 'CNV (Copy Number Variation)',
+		lesionTypes: [
+			{ name: 'Loss', lesionType: 'loss' },
+			{ name: 'Gain', lesionType: 'gain' }
+		]
+	},
+	[dtsv]: {
+		uilabel: 'SV (Structural Variants)',
+		lesionType: 'sv'
+	},
+	[dtfusionrna]: {
+		uilabel: 'Fusion (RNA Fusion Events)',
+		lesionType: 'fusion'
+	}
+}
+
 export const mclass = {
 	M: {
 		label: 'MISSENSE',

@@ -151,6 +151,8 @@ export type GRIN2Response = {
 		processingTime: number
 		/** Time taken to run GRIN2 processing */
 		grin2Time: number
+		/** Time taken to run Manhattan plot generation */
+		plottingTime: number
 		/** Total time taken for the entire run */
 		totalTime: number
 	}
