@@ -50,23 +50,29 @@ tape('avoid race condition', async test => {
 	// !!!
 	// to allow an app or chart code to fail due to race condition,
 	// hardcode a constant value or comment out the ++ for the sequenceID
-	// in rx/index.js getStoreApi().write()
+	// in rx/src/StoreApi.write()
 	// !!!
 	test.timeoutAfter(4000)
-	test.plan(3)
+	test.plan(4)
 	const { app, hc } = await getHierClusterApp({ terms: getGenes() })
 	const termgroups = structuredClone(hc.config.termgroups)
-	termgroups[0].lst = await Promise.all([
+	const lst = await Promise.all([
+		fillTermWrapper({ term: { gene: 'KRAS', name: 'KRAS', type: 'geneExpression' } }, app.vocabApi),
 		fillTermWrapper({ term: { gene: 'AKT1', name: 'AKT1', type: 'geneExpression' } }, app.vocabApi),
-		fillTermWrapper({ term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' } }, app.vocabApi)
+		fillTermWrapper({ term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' } }, app.vocabApi),
+		fillTermWrapper({ term: { gene: 'BCR', name: 'BCR', type: 'geneExpression' } }, app.vocabApi)
 	])
+	termgroups[0].lst = lst
 	const responseDelay = 250
-	hc.__wait = responseDelay
 	hc.origRequestData = hc.requestData
 	hc.requestData = async () => {
 		const lst = hc.config.termgroups[0].lst
-		await sleep(hc.__wait || 0)
-		return await hc.origRequestData({})
+		const data = await hc.origRequestData({})
+		if (lst.length === 3) return data
+		// artificially delay response to first request, to simulate a race condition
+		await sleep(250)
+		console.log(70, lst, lst.length === 3 ? 0 : responseDelay)
+		return data
 	}
 
 	const prom = {}
@@ -85,14 +91,10 @@ tape('avoid race condition', async test => {
 			config: { termgroups }
 		}),
 		(async () => {
-			await sleep(1)
-			hc.__wait = 0
+			await sleep(0)
+			//hc.__wait = 0
 			const termgroups = structuredClone(hc.config.termgroups)
-			termgroups[0].lst = await Promise.all([
-				fillTermWrapper({ term: { gene: 'AKT1', name: 'AKT1', type: 'geneExpression' } }, app.vocabApi),
-				fillTermWrapper({ term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' } }, app.vocabApi),
-				fillTermWrapper({ term: { gene: 'KRAS', name: 'KRAS', type: 'geneExpression' } }, app.vocabApi)
-			])
+			termgroups[0].lst = lst.slice(0, 3)
 			await app.dispatch({
 				type: 'plot_edit',
 				id: hc.id,
@@ -113,7 +115,17 @@ tape('avoid race condition', async test => {
 		'should have the expected total number of matrix cell rects, inlcuding WT and not tested'
 	)
 	test.equal(hits.size(), 180, 'should have the expected number of matrix cell rects with hits')
-	if (test._ok) app.destroy()
+	test.equal(
+		app.Inner.dom.holder
+			.selectAll('.sja_errorbar')
+			.filter(function () {
+				return this.style.display != 'none'
+			})
+			.size(),
+		0,
+		'should not display errors'
+	)
+	//if (test._ok) app.destroy()
 })
 
 tape('dendrogram click', async function (test) {

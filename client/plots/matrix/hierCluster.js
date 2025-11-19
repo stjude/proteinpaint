@@ -92,9 +92,10 @@ export class HierCluster extends Matrix {
 
 	async setHierClusterData(_data = {}) {
 		this.prevServerData = this.currServerData
-		const abortCtrl = new AbortController()
-		const [d, stale] = await this.api.detectStale(() => this.requestData({ signal: abortCtrl.signal }), { abortCtrl })
-		if (stale) throw `stale sequenceId`
+		//const abortCtrl = new AbortController()
+		//const [d, stale] = await this.api.detectStale(() => this.requestData({ signal: abortCtrl.signal }), { abortCtrl })
+		const d = await this.requestData({})
+		//if (stale) throw `stale sequenceId`
 		if (d.error) throw d.error
 		this.currServerData = structuredClone(d)
 		if (!deepEqual(this.prevServerData, this.currServerData)) {
@@ -128,6 +129,8 @@ export class HierCluster extends Matrix {
 			samples[column.name] = { sample: column.name }
 			for (const [j, row] of c.row.order.entries()) {
 				const tw = twlst.find(tw => tw.$id === row.name || tw.id === row.name)
+				if (!tw) console.log(row.name)
+				//if (!tw) continue
 				const value = c.matrix[j][i]
 				samples[column.name][tw.$id] = {
 					key: tw.term.name,
@@ -191,9 +194,12 @@ export class HierCluster extends Matrix {
 		}
 	}
 
-	async requestData({ signal }) {
+	async requestData() {
+		// may revert to using {signal} argument if detectStale() is used to wrap this function
+		const signal = this.app.getAbortSignal?.()
 		const body = this.currRequestOpts?.hierCluster || this.getHCRequestBody(this.state)
 		const data = await dofetch3('termdb/cluster', { body, signal })
+		if (this.app.deleteAbortCtrl) this.app.deleteAbortCtrl(signal)
 		return data
 	}
 

@@ -241,7 +241,6 @@ export class AppApi {
 	}
 
 	printError(e) {
-		console.log(238, e)
 		if (this.#App.printError) this.#App.printError(e)
 		else alert(e)
 	}

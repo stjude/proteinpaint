@@ -95,10 +95,7 @@ export async function setData(_data) {
 	const abortCtrl = new AbortController()
 	opts.signal = abortCtrl.signal
 	opts.loadingDiv = this.chartType != 'hierCluster' && this.dom.loadingDiv
-	const [data, stale] = await this.api.detectStale(() => this.app.vocabApi.getAnnotatedSampleData(opts, _data), {
-		abortCtrl
-	})
-	if (stale) throw `stale sequenceId`
+	const data = await this.app.vocabApi.getAnnotatedSampleData(opts, _data)
 	this.data = data
 	this.origData = structuredClone(this.data)
 	this.sampleIdMap = {}
