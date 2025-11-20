@@ -84,22 +84,22 @@ export const dt2label = {
 export const dt2lesion = {
 	[dtsnvindel]: {
 		uilabel: 'SNV/INDEL (Mutation)',
-		lesionTypes: [{ name: 'Mutation', lesionType: 'mutation' }]
+		lesionTypes: [{ name: 'Mutation', lesionType: 'mutation', color: '#44AA44' }]
 	},
 	[dtcnv]: {
 		uilabel: 'CNV (Copy Number Variation)',
 		lesionTypes: [
-			{ name: 'Loss', lesionType: 'loss' },
-			{ name: 'Gain', lesionType: 'gain' }
+			{ name: 'Loss', lesionType: 'loss', color: '#4444FF' },
+			{ name: 'Gain', lesionType: 'gain', color: '#FF4444' }
 		]
 	},
 	[dtsv]: {
 		uilabel: 'SV (Structural Variation)',
-		lesionTypes: [{ name: 'SV', lesionType: 'sv' }]
+		lesionTypes: [{ name: 'SV', lesionType: 'sv', color: '#9932CC' }]
 	},
 	[dtfusionrna]: {
 		uilabel: 'Fusion (RNA Fusion)',
-		lesionTypes: [{ name: 'Fusion', lesionType: 'fusion' }]
+		lesionTypes: [{ name: 'Fusion', lesionType: 'fusion', color: '#FFA500' }]
 	}
 }
 
