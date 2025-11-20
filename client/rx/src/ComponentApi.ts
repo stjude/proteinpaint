@@ -248,6 +248,14 @@ export class ComponentApi {
 		}
 	}
 
+	getSequenceId() {
+		return this.#latestActionSequenceId
+	}
+
+	isStaleSequenceId(sequenceId) {
+		return sequenceId != this.#latestActionSequenceId
+	}
+
 	destroy() {
 		const self = this.#Component
 		// delete references to other objects to make it easier

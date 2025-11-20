@@ -234,7 +234,9 @@ export class AppApi {
 	}
 
 	isAbortError(e) {
-		return e.includes('stale sequenceId') || e.includes('AbortError')
+		if (e instanceof DOMException) return e.name === 'AbortError'
+		if (typeof e == 'string') return e.includes('stale sequenceId') || e.includes('AbortError')
+		return false
 	}
 
 	destroy() {
