@@ -1,1 +1,3 @@
-
+Fixes:
+- bar chart: add option to click and add as group. 
+- bar chart: for terms with custom groups, support click and add as filter (samplelst)
