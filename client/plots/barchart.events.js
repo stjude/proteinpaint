@@ -8,7 +8,7 @@ import { create } from 'd3-selection'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { isNumericTerm } from '#shared/terms.js'
 import { negateTermLabel } from './barchart'
-import { getSamplelstFilter } from '../mass/groups.js'
+import { getSamplelstFilter, getSamplelstTW, getFilter, addNewGroup } from '../mass/groups.js'
 
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
@@ -440,10 +440,24 @@ function handle_click(event, self, chart) {
 		if (!item) {
 			options.push({
 				label: 'Add as filter',
-				callback: menuoption_add_filter
+				callback: async (self, tvslst) => {
+					const arg = getListSamplesArg(event, self, data.seriesId, data.dataId, chart.chartId)
+					await menuoption_add_filter(self, tvslst, arg)
+				}
 			})
 		}
 	}
+
+	if (self.config.displaySampleIds) {
+		options.push({
+			label: 'Add as group',
+			callback: async () => {
+				const arg = getListSamplesArg(event, self, data.seriesId, data.dataId, chart.chartId)
+				await addAsGroup(arg)
+			}
+		})
+	}
+
 	//disable sample listing temporarily
 	if (self.config.displaySampleIds) {
 		options.push({
@@ -657,6 +671,44 @@ export async function listSamples(arg) {
 		dataTestId: 'sjpp-listsampletable'
 	})
 }
+async function getSampleGrp(arg) {
+	// query sample data
+	const { event, self, terms, tvslst, geneVariant, tip } = arg
+	const opts = {
+		terms,
+		filter: filterJoin([self.state.termfilter.filter, tvslst]),
+		filter0: self.state.termfilter.filter0,
+		isSummary: true
+	}
+	const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
+	const samples = []
+	for (const sample of data.lst) {
+		const pass = mayFilterByGeneVariant(sample, self, geneVariant)
+		if (!pass) continue
+		const t1entry = sample[self.config.term.$id]
+		if (!t1entry) continue
+		if (self.config.term.q?.hiddenValues && self.config.term.q.hiddenValues[t1entry.value]) continue
+		samples.push({ sampleId: sample.sample })
+	}
+
+	const group = {
+		name: 'Group',
+		items: samples
+	}
+	return group
+}
+
+export async function addAsGroup(arg) {
+	// validate arg
+	for (const k of Object.keys(arg)) {
+		const param = arg[k]
+		if (!param) throw `parameter '${k}' is undefined`
+	}
+	const group = await getSampleGrp(arg)
+	const tw = getSamplelstTW([group])
+	const filter = getFilter(tw)
+	addNewGroup(arg.self.app, filter, arg.self.state.groups)
+}
 
 // if geneVariant term is present, filter sample by its geneVariant group assignment
 function mayFilterByGeneVariant(sample, self, geneVariant) {
@@ -751,28 +803,45 @@ function addGvCols(tw, columns) {
 	}
 }
 
-function menuoption_add_filter(self, tvslst) {
+async function menuoption_add_filter(self, tvslst, arg) {
 	/*
 	self: the tree object
 	tvslst: an array of 1 or 2 term-value setting objects
 		this is to be added to the obj.termfilter.filter[]
 		if barchart is single-term, tvslst will have only one element
 		if barchart is two-term overlay, tvslst will have two elements, one for term1, the other for term2
+	arg: object of parameters used by getSampleGrp to get sample group
   	*/
 	if (!tvslst) return
 	if (!self.state.termfilter || self.state.nav?.header_mode !== 'with_tabs') {
 		// do not display ui, and do not collect callbacks
 		return
 	}
+	// validate arg
+	for (const k of Object.keys(arg)) {
+		const param = arg[k]
+		if (!param) throw `parameter '${k}' is undefined`
+	}
+
+	const hasGrpSetting = arg.terms.find(t => t.q?.type == 'predefined-groupset' || t.q?.type == 'custom-groupset')
+	let samplelstTW
+	if (hasGrpSetting) {
+		// if any term has group setting, add filter as samplelst
+		const group = await getSampleGrp(arg)
+		samplelstTW = getSamplelstTW([group])
+	}
+
 	const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
 	const filter = filterJoin([
 		filterUiRoot,
-		{
-			type: 'tvslst',
-			in: true,
-			join: tvslst.length > 1 ? 'and' : '',
-			lst: [...tvslst.map(wrapTvs)]
-		}
+		samplelstTW
+			? getFilter(samplelstTW)
+			: {
+					type: 'tvslst',
+					in: true,
+					join: tvslst.length > 1 ? 'and' : '',
+					lst: [...tvslst.map(wrapTvs)]
+			  }
 	])
 	filter.tag = 'filterUiRoot'
 	self.app.dispatch({
