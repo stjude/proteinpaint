@@ -34,32 +34,28 @@ from grin2_core import grin_stats
 
 warnings.filterwarnings('ignore')
 
+# Constants
+OPTION_TO_LESION = {
+	'snvindelOptions': ['mutation'],
+	'cnvOptions': ['gain', 'loss'],
+	'fusionOptions': ['fusion'],
+	'svOptions': ['sv']
+}
+
 def write_error(msg):
 	print(f"ERROR: {msg}", file=sys.stderr)
 
 def get_sig_values(data, lesion_types):
 	"""Find existing p/q/n columns for the specified lesion types"""
 	available_cols = set(data.columns)
-	
-	# Build column names for the lesion types we're analyzing
 	p_cols = [f"p.nsubj.{lt}" for lt in lesion_types if f"p.nsubj.{lt}" in available_cols]
 	n_cols = [f"nsubj.{lt}" for lt in lesion_types if f"nsubj.{lt}" in available_cols]
 	q_cols = [f"q.nsubj.{lt}" for lt in lesion_types if f"q.nsubj.{lt}" in available_cols]
-	
 	return {"p_cols": p_cols, "q_cols": q_cols, "n_cols": n_cols}
-
-def get_chrom_key(chrom):
-	"""Create sorting key for chromosomes"""
-	num = chrom.replace("chr", "")
-	try:
-		return int(num)
-	except ValueError:
-		return {"X": 23, "Y": 24}.get(num, 100)
 
 def has_data(column_data, sample_size=20):
 	"""Check if column has meaningful data"""
-	sample = column_data.head(sample_size)
-	return (sample.notna() & (sample != "")).any()
+	return (column_data.head(sample_size).notna() & (column_data.head(sample_size) != "")).any()
 
 def smart_format(value):
 	"""Format to 4 significant digits"""
@@ -77,24 +73,23 @@ def sort_grin2_data(data, lesion_types):
 
 def get_user_friendly_label(col_name, lesion_type_map):
 	"""Convert column names to user-friendly labels"""
-	# Constellation columns
-	if col_name.startswith(('p', 'q')) and col_name.endswith('.nsubj'):
-		try:
-			num = int(col_name[1])
-			pq = "P-value" if col_name[0] == 'p' else "Q-value"
-			plural = 's' if num > 1 else ''
-			return f"{pq} ({num} Lesion Type{plural})"
-		except (ValueError, IndexError):
-			pass
+	# Constellation pattern: p1.nsubj, q2.nsubj, etc.
+	if len(col_name) > 1 and col_name[0] in 'pq' and col_name[1].isdigit() and col_name.endswith('.nsubj'):
+		num = int(col_name[1])
+		pq = 'P-value' if col_name[0] == 'p' else 'Q-value'
+		return f"{pq} ({num} Lesion Type{'s' if num > 1 else ''})"
 	
-	# Data type columns
-	for lesion_type, friendly_name in lesion_type_map.items():
-		if col_name == f"p.nsubj.{lesion_type}":
-			return f"P-value ({friendly_name})"
-		elif col_name == f"q.nsubj.{lesion_type}":
-			return f"Q-value ({friendly_name})"
-		elif col_name == f"nsubj.{lesion_type}":
-			return f"Subject Count ({friendly_name})"
+	# Data type patterns
+	patterns = {
+		'p.nsubj.': 'P-value',
+		'q.nsubj.': 'Q-value',
+		'nsubj.': 'Subject Count'
+	}
+	for prefix, label in patterns.items():
+		if col_name.startswith(prefix):
+			lesion_type = col_name[len(prefix):]
+			if lesion_type in lesion_type_map:
+				return f"{label} ({lesion_type_map[lesion_type]})"
 	
 	return col_name
 
@@ -104,12 +99,9 @@ def simple_column_filter(sorted_results, num_rows, lesion_type_map, lesion_types
 	p_cols, q_cols, n_cols = result["p_cols"], result["q_cols"], result["n_cols"]
 	
 	# Check data availability once
-	data_type_has_data = [
-		has_data(sorted_results[p_cols[i]]) 
-		for i in range(len(p_cols))
-	]
+	data_type_has_data = [has_data(sorted_results[p_cols[i]]) for i in range(len(p_cols))]
 	constellation_exists = [
-		(f'p{i}.nsubj' in sorted_results.columns and f'q{i}.nsubj' in sorted_results.columns)
+		f'p{i}.nsubj' in sorted_results.columns and f'q{i}.nsubj' in sorted_results.columns
 		for i in range(1, 6)
 	]
 	
@@ -119,31 +111,31 @@ def simple_column_filter(sorted_results, num_rows, lesion_type_map, lesion_types
 		{"label": "Chromosome", "sortable": True}
 	]
 	
-	for i, has_data_flag in enumerate(data_type_has_data):
-		if has_data_flag:
-			for col in [p_cols[i], q_cols[i], n_cols[i]]:
-				columns.append({
-					"label": get_user_friendly_label(col, lesion_type_map), 
-					"sortable": True
-				})
+	# Add data type columns
+	columns.extend([
+		{"label": get_user_friendly_label(col, lesion_type_map), "sortable": True}
+		for i, has_data_flag in enumerate(data_type_has_data) if has_data_flag
+		for col in [p_cols[i], q_cols[i], n_cols[i]]
+	])
 	
-	for i, exists in enumerate(constellation_exists, 1):
-		if exists:
-			for pq in ['p', 'q']:
-				columns.append({
-					"label": get_user_friendly_label(f"{pq}{i}.nsubj", lesion_type_map),
-					"sortable": True
-				})
+	# Add constellation columns
+	columns.extend([
+		{"label": get_user_friendly_label(f"{pq}{i}.nsubj", lesion_type_map), "sortable": True}
+		for i, exists in enumerate(constellation_exists, 1) if exists
+		for pq in ['p', 'q']
+	])
 	
-	# Build rows - use .loc for faster access
+	# Build subset of columns to extract
 	subset_cols = ['gene', 'chrom']
-	for i, has_data_flag in enumerate(data_type_has_data):
-		if has_data_flag:
-			subset_cols.extend([p_cols[i], q_cols[i], n_cols[i]])
-	
-	for i, exists in enumerate(constellation_exists, 1):
-		if exists:
-			subset_cols.extend([f'p{i}.nsubj', f'q{i}.nsubj'])
+	subset_cols.extend([
+		col for i, has_data_flag in enumerate(data_type_has_data) if has_data_flag
+		for col in [p_cols[i], q_cols[i], n_cols[i]]
+	])
+	subset_cols.extend([
+		f'{pq}{i}.nsubj' 
+		for i, exists in enumerate(constellation_exists, 1) if exists
+		for pq in ['p', 'q']
+	])
 	
 	# Extract only needed rows and columns at once
 	subset_df = sorted_results.loc[:num_rows-1, subset_cols]
@@ -157,20 +149,19 @@ def simple_column_filter(sorted_results, num_rows, lesion_type_map, lesion_types
 			{"value": row_vals["chrom"]}
 		]
 		
-		for i, has_data_flag in enumerate(data_type_has_data):
-			if has_data_flag:
-				row_data.extend([
-					{"value": smart_format(row_vals[p_cols[i]])},
-					{"value": smart_format(row_vals[q_cols[i]])},
-					{"value": smart_format(row_vals[n_cols[i]])}
-				])
+		# Add data type values
+		row_data.extend([
+			{"value": smart_format(row_vals[col])}
+			for i, has_data_flag in enumerate(data_type_has_data) if has_data_flag
+			for col in [p_cols[i], q_cols[i], n_cols[i]]
+		])
 		
-		for i, exists in enumerate(constellation_exists, 1):
-			if exists:
-				row_data.extend([
-					{"value": smart_format(row_vals[f'p{i}.nsubj'])},
-					{"value": smart_format(row_vals[f'q{i}.nsubj'])}
-				])
+		# Add constellation values
+		row_data.extend([
+			{"value": smart_format(row_vals[f'{pq}{i}.nsubj'])}
+			for i, exists in enumerate(constellation_exists, 1) if exists
+			for pq in ['p', 'q']
+		])
 		
 		rows.append(row_data)
 	
@@ -184,8 +175,6 @@ try:
 		sys.exit(1)
 	
 	input_data = json.loads(json_input)
-	
-	# Validate required inputs from client
 	lesion_type_map = input_data.get("lesionTypeMap")
 	if not lesion_type_map:
 		write_error("lesionTypeMap not provided")
@@ -193,10 +182,7 @@ try:
 	
 	# 2. Load gene annotations
 	with sqlite3.connect(input_data["genedb"]) as con:
-		gene_anno = pd.read_sql_query(
-			"SELECT name, chr, start, stop FROM gene2coord", 
-			con
-		)
+		gene_anno = pd.read_sql_query("SELECT name, chr, start, stop FROM gene2coord", con)
 	
 	if gene_anno.empty:
 		write_error("No data in gene2coord table")
@@ -219,7 +205,8 @@ try:
 		"chrom": list(chromosomelist.keys()),
 		"size": pd.to_numeric(list(chromosomelist.values())).astype("int64")
 	}).assign(
-		sort_key=lambda x: x["chrom"].apply(get_chrom_key)
+		sort_key=lambda x: x["chrom"].map(lambda c: int(c.replace("chr", "")) if c.replace("chr", "").isdigit() 
+		                                   else {"X": 23, "Y": 24}.get(c.replace("chr", ""), 100))
 	).sort_values("sort_key").drop(columns="sort_key")
 	
 	# 4. Parse lesion data
@@ -241,19 +228,11 @@ try:
 	
 	lesion_counts = lesion_df["lsn.type"].value_counts()
 	
-	# Map availableDataTypes to lesion types
-	option_to_lesion_types = {
-		'snvindelOptions': ['mutation'],
-		'cnvOptions': ['gain', 'loss'],
-		'fusionOptions': ['fusion'],
-		'svOptions': ['sv']
-	}
-	
-	# Extract lesion types from available options (this is what we're analyzing)
+	# Extract lesion types from available options
 	lesion_types = [
 		lesion_type
 		for option in input_data.get("availableDataTypes", [])
-		for lesion_type in option_to_lesion_types.get(option, [])
+		for lesion_type in OPTION_TO_LESION.get(option, [])
 	]
 	
 	# 5. Run GRIN2
@@ -267,19 +246,15 @@ try:
 	
 	cache_file_path = input_data.get("cacheFileName")
 	if cache_file_path:
-		cache_columns = ['gene', 'chrom']
-		for t in lesion_types:
-			for prefix in ['nsubj', 'q.nsubj']:
-				col = f'{prefix}.{t}'
-				if col in sorted_results.columns:
-					cache_columns.append(col)
+		cache_columns = ['gene', 'chrom'] + [
+			f'{prefix}.{t}'
+			for t in lesion_types
+			for prefix in ['nsubj', 'q.nsubj']
+			if f'{prefix}.{t}' in sorted_results.columns
+		]
 		
 		# Save cache file
-		results_to_cache = sorted_results[
-			cache_columns + ['loc.start', 'loc.end']
-		].copy()
-		
-		# Reorder
+		results_to_cache = sorted_results[cache_columns + ['loc.start', 'loc.end']].copy()
 		col_order = ['gene', 'chrom', 'loc.start', 'loc.end'] + [
 			c for c in cache_columns if c not in ['gene', 'chrom']
 		]
