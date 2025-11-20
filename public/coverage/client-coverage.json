@@ -1694,37 +1694,37 @@
   "plots/scatter/model/scatterModel.ts": {
     "lines": {
       "total": 194,
-      "covered": 9,
+      "covered": 5,
       "skipped": 0,
-      "pct": 4.63
+      "pct": 2.57
     },
     "functions": {
       "total": 30,
-      "covered": 1,
+      "covered": 0,
       "skipped": 0,
-      "pct": 3.33
+      "pct": 0
     },
     "statements": {
       "total": 217,
-      "covered": 11,
+      "covered": 5,
       "skipped": 0,
-      "pct": 5.06
+      "pct": 2.3
     },
     "branches": {
-      "total": 164,
-      "covered": 8,
+      "total": 172,
+      "covered": 0,
       "skipped": 0,
-      "pct": 4.87
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 3.33,
+      "curr": 0,
       "prev": 68.9,
-      "diff": -65.57000000000001
+      "diff": -68.9
     },
     "averagePct": {
-      "curr": 4.4725,
+      "curr": 1.2174999999999998,
       "prev": 73.82,
-      "diff": -69.3475
+      "diff": -72.60249999999999
     }
   },
   "plots/scatter/viewmodel/scatterLegend.ts": {
@@ -2413,38 +2413,38 @@
   },
   "plots/scatter/view/scatterView.ts": {
     "lines": {
-      "total": 95,
-      "covered": 72,
+      "total": 117,
+      "covered": 4,
       "skipped": 0,
-      "pct": 75.78
+      "pct": 3.41
     },
     "functions": {
-      "total": 15,
-      "covered": 11,
+      "total": 21,
+      "covered": 0,
       "skipped": 0,
-      "pct": 73.33
+      "pct": 0
     },
     "statements": {
-      "total": 103,
-      "covered": 75,
+      "total": 134,
+      "covered": 4,
       "skipped": 0,
-      "pct": 72.81
+      "pct": 2.98
     },
     "branches": {
-      "total": 60,
-      "covered": 33,
+      "total": 84,
+      "covered": 0,
       "skipped": 0,
-      "pct": 55
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 55,
+      "curr": 0,
       "prev": 55,
-      "diff": 0
+      "diff": -55
     },
     "averagePct": {
-      "curr": 69.23,
-      "prev": 67.735,
-      "diff": 1.4950000000000045
+      "curr": 1.5975000000000001,
+      "prev": 69.23,
+      "diff": -67.63250000000001
     }
   },
   "mass/groups.js": {
@@ -8239,8 +8239,8 @@
     },
     "averagePct": {
       "curr": 78.53,
-      "prev": 78.0025,
-      "diff": 0.5275000000000034
+      "prev": 78.53,
+      "diff": 0
     }
   },
   "plots/test/grin2.integration.spec.ts": {
