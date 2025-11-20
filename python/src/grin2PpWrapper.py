@@ -151,7 +151,6 @@ def simple_column_filter(sorted_results, num_rows, lesion_type_map, lesion_types
 			subset_cols.extend([f'p{i}.nsubj', f'q{i}.nsubj'])
 	
 	# Extract only needed rows and columns at once
-	# Use iloc for row slicing (handles bounds naturally) and column selection
 	subset_df = sorted_results.iloc[:num_rows][subset_cols]
 	
 	# Build row data
