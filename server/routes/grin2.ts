@@ -92,19 +92,6 @@ function generateCacheFileName(): string {
 	return path.join(serverconfig.cachedir, 'grin2', cacheFileName)
 }
 
-// Function to extract the different data types from the request to pass for python
-function getAvailableDataTypes(request: any): string[] {
-	const availableOptions: string[] = []
-
-	for (const key in request) {
-		if (key.endsWith('Options')) {
-			availableOptions.push(key)
-		}
-	}
-
-	return availableOptions
-}
-
 // Building the lesion map to send to python
 function buildLesionTypeMap(availableOptions: string[]): Record<string, string> {
 	const lesionTypeMap: Record<string, string> = {}
@@ -138,8 +125,6 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	const startTime = Date.now()
 
 	// Step 1: Get samples using cohort infrastructure
-	//mayLog('[GRIN2] Getting samples from cohort filter...')
-
 	const samples = await get_samples(
 		request,
 		ds,
@@ -154,7 +139,6 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	}
 
 	// Step 2: Process sample data, convert to lesion format, and apply filter caps per type
-	// mayLog('[GRIN2] Processing sample data...')
 	const tracker = getLesionTracker(request)
 	const processingStartTime = Date.now()
 
@@ -178,15 +162,14 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	}
 
 	// Step 3: Prepare input for Python script
-	const availableDataTypes = getAvailableDataTypes(request)
 	const pyInput = {
 		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 		chromosomelist: {} as { [key: string]: number },
 		lesion: JSON.stringify(lesions),
 		cacheFileName: generateCacheFileName(),
-		availableDataTypes: availableDataTypes,
+		availableDataTypes: Object.keys(optionToDt).filter(key => key in request),
 		maxGenesToShow: request.maxGenesToShow,
-		lesionTypeMap: buildLesionTypeMap(availableDataTypes)
+		lesionTypeMap: buildLesionTypeMap(Object.keys(optionToDt).filter(key => key in request))
 	}
 
 	// Build chromosome list from genome reference
