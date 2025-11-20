@@ -34,19 +34,19 @@ from grin2_core import grin_stats
 
 warnings.filterwarnings('ignore')
 
-# Constants
-DATA_TYPES = ['mutation', 'gain', 'loss', 'fusion', 'sv']
-
-OPTION_TYPE_MAPPING = {
-	'snvindelOptions': ['mutation'],
-	'cnvOptions': ['gain', 'loss'],
-	'fusionOptions': ['fusion'],
-	'svOptions': ['sv']
-}
-
 def write_error(msg):
 	print(f"ERROR: {msg}", file=sys.stderr)
 
+def get_sig_values(data, lesion_types):
+	"""Find existing p/q/n columns for the specified lesion types"""
+	available_cols = set(data.columns)
+	
+	# Build column names for the lesion types we're analyzing
+	p_cols = [f"p.nsubj.{lt}" for lt in lesion_types if f"p.nsubj.{lt}" in available_cols]
+	n_cols = [f"nsubj.{lt}" for lt in lesion_types if f"nsubj.{lt}" in available_cols]
+	q_cols = [f"q.nsubj.{lt}" for lt in lesion_types if f"q.nsubj.{lt}" in available_cols]
+	
+	return {"p_cols": p_cols, "q_cols": q_cols, "n_cols": n_cols}
 
 def get_chrom_key(chrom):
 	"""Create sorting key for chromosomes"""
@@ -67,17 +67,9 @@ def smart_format(value):
 		return None
 	return 0 if value == 0 else float(f"{value:.3g}")
 
-def get_sig_values(data):
-	"""Find existing p/q/n columns"""
-	available_cols = set(data.columns)
-	p_cols = [f"p.nsubj.{ct}" for ct in DATA_TYPES if f"p.nsubj.{ct}" in available_cols]
-	n_cols = [f"nsubj.{ct}" for ct in DATA_TYPES if f"nsubj.{ct}" in available_cols]
-	q_cols = [col.replace("p.nsubj.", "q.nsubj.") for col in p_cols]
-	return {"p_cols": p_cols, "q_cols": q_cols, "n_cols": n_cols}
-
-def sort_grin2_data(data):
+def sort_grin2_data(data, lesion_types):
 	"""Sort by first available p-value with data"""
-	p_cols = get_sig_values(data)["p_cols"]
+	p_cols = get_sig_values(data, lesion_types)["p_cols"]
 	for col in p_cols:
 		if has_data(data[col]):
 			return data.sort_values(col, ascending=True)
@@ -106,9 +98,9 @@ def get_user_friendly_label(col_name, lesion_type_map):
 	
 	return col_name
 
-def simple_column_filter(sorted_results, num_rows, lesion_type_map):
+def simple_column_filter(sorted_results, num_rows, lesion_type_map, lesion_types):
 	"""Generate columns and rows for topGeneTable"""
-	result = get_sig_values(sorted_results)
+	result = get_sig_values(sorted_results, lesion_types)
 	p_cols, q_cols, n_cols = result["p_cols"], result["q_cols"], result["n_cols"]
 	
 	# Check data availability once
@@ -192,6 +184,8 @@ try:
 		sys.exit(1)
 	
 	input_data = json.loads(json_input)
+	
+	# Validate required inputs from client
 	lesion_type_map = input_data.get("lesionTypeMap")
 	if not lesion_type_map:
 		write_error("lesionTypeMap not provided")
@@ -247,6 +241,21 @@ try:
 	
 	lesion_counts = lesion_df["lsn.type"].value_counts()
 	
+	# Map availableDataTypes to lesion types
+	option_to_lesion_types = {
+		'snvindelOptions': ['mutation'],
+		'cnvOptions': ['gain', 'loss'],
+		'fusionOptions': ['fusion'],
+		'svOptions': ['sv']
+	}
+	
+	# Extract lesion types from available options (this is what we're analyzing)
+	lesion_types = [
+		lesion_type
+		for option in input_data.get("availableDataTypes", [])
+		for lesion_type in option_to_lesion_types.get(option, [])
+	]
+	
 	# 5. Run GRIN2
 	grin_results = grin_stats(lesion_df, gene_anno, chrom_size)
 	if not isinstance(grin_results, dict):
@@ -254,18 +263,12 @@ try:
 		sys.exit(1)
 	
 	# 6. Sort and cache results
-	sorted_results = sort_grin2_data(grin_results["gene.hits"])
+	sorted_results = sort_grin2_data(grin_results["gene.hits"], lesion_types)
 	
 	cache_file_path = input_data.get("cacheFileName")
 	if cache_file_path:
-		# Determine cache columns
-		data_types = [
-			dt for option in input_data.get("availableDataTypes", [])
-			for dt in OPTION_TYPE_MAPPING.get(option, [])
-		]
-		
 		cache_columns = ['gene', 'chrom']
-		for t in data_types:
+		for t in lesion_types:
 			for prefix in ['nsubj', 'q.nsubj']:
 				col = f'{prefix}.{t}'
 				if col in sorted_results.columns:
@@ -285,7 +288,7 @@ try:
 	# 7. Generate table
 	max_genes = input_data.get("maxGenesToShow", 500)
 	num_rows = min(len(sorted_results), max_genes)
-	table_result = simple_column_filter(sorted_results, num_rows, lesion_type_map)
+	table_result = simple_column_filter(sorted_results, num_rows, lesion_type_map, lesion_types)
 	
 	# 8. Output response
 	print(json.dumps({
