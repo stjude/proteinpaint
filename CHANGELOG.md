@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.161.0
 
 Features:
 - New menu for gene expression chart buttons, for the mass UI. Provides user three preset options to launch gene expression data and additional options for varying use cases. Replaces logic in charts.js
