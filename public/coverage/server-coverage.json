@@ -685,10 +685,10 @@
   },
   "src/mds3.load.js": {
     "lines": {
-      "total": 231,
-      "covered": 54,
+      "total": 234,
+      "covered": 55,
       "skipped": 0,
-      "pct": 23.37
+      "pct": 23.5
     },
     "functions": {
       "total": 18,
@@ -697,26 +697,26 @@
       "pct": 27.77
     },
     "statements": {
-      "total": 265,
-      "covered": 55,
+      "total": 269,
+      "covered": 56,
       "skipped": 0,
-      "pct": 20.75
+      "pct": 20.81
     },
     "branches": {
-      "total": 212,
-      "covered": 39,
+      "total": 214,
+      "covered": 40,
       "skipped": 0,
-      "pct": 18.39
+      "pct": 18.69
     },
     "lowestPct": {
-      "curr": 18.39,
-      "prev": 0,
-      "diff": 18.39
+      "curr": 18.69,
+      "prev": 18.39,
+      "diff": 0.3000000000000007
     },
     "averagePct": {
-      "curr": 22.57,
-      "prev": 0,
-      "diff": 22.57
+      "curr": 22.6925,
+      "prev": 22.57,
+      "diff": 0.12249999999999872
     }
   },
   "src/mds3.variant.js": {
