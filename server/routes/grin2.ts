@@ -12,7 +12,7 @@ import crypto from 'crypto'
 
 /**
  * General GRIN2 analysis handler
- * Processes user-provided snvindel, CNV, and fusion filters and performs GRIN2 analysis
+ * Processes user-provided snvindel, CNV, fusion, and sv filters and performs GRIN2 analysis
  *
  * Data Flow:
  * 1. Extract samples via the cohort filter
@@ -24,7 +24,7 @@ import crypto from 'crypto'
  *        - chrom: Chromosome name (e.g., "chr1")
  *        - loc.start: Start position of the lesion
  *        - loc.end: End position of the lesion
- *        - lsn.type: Type of lesion ("mutation", "gain", "loss", "fusion")
+ *        - lsn.type: Type of lesion ("mutation", "gain", "loss", "fusion", "sv")
  * 3. Read and filter file contents based on snvindelOptions, cnvOptions, fusionOptions, and svOptions:
  *    - SNV/indel: Filter by total depth, alternate allele count, consequence types, and 5' and 3' flanking sizes
  *    - CNV: Filter by copy number thresholds, max segment length, and 5' and 3' flanking sizes
@@ -32,8 +32,8 @@ import crypto from 'crypto'
  *    - SV: Filter by 5' and 3' flanking sizes
  *    - Hypermutator: To be implemented at later date
  * 4. Convert filtered data to lesion format and apply filter caps per type. Note: For CNV, count gains and losses separately but share capped status and sample count
- * 5. Pass lesion data, device pixel ratio, maxGenesToShow, and cacheFileName to Python for GRIN2 statistical analysis and plot generation
- * 6. Return Manhattan plot as base64 string, top gene table, timing information, statistically significant results that are displayed as an interactive svg, and cache file name for future use
+ * 5. Pass lesion data, maxGenesToShow, and cacheFileName to Python for GRIN2 statistical analysis and then pass device pixel ratio, width, and height to Rust for plot generation
+ * 6. Return Manhattan plot from Rust as base64 string, top gene table, timing information, statistically significant results that are displayed as an interactive svg, and cache file name for future use
  */
 
 // Constants & types
