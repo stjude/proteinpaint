@@ -94,11 +94,11 @@ export const dt2lesion = {
 		]
 	},
 	[dtsv]: {
-		uilabel: 'SV (Structural Variants)',
-		lesionTypes: [{ name: 'Sv', lesionType: 'sv' }]
+		uilabel: 'SV (Structural Variation)',
+		lesionTypes: [{ name: 'SV', lesionType: 'sv' }]
 	},
 	[dtfusionrna]: {
-		uilabel: 'Fusion (RNA Fusion Events)',
+		uilabel: 'Fusion (RNA Fusion)',
 		lesionTypes: [{ name: 'Fusion', lesionType: 'fusion' }]
 	}
 }
