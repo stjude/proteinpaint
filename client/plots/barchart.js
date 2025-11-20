@@ -82,7 +82,7 @@ export class Barchart extends PlotBase {
 			// and will not set up bar click menu
 		} else if (!this.opts.bar_click_opts) {
 			this.opts.bar_click_opts = ['hide_bar']
-			if (this.app.getState().nav.header_mode === 'with_tabs') this.opts.bar_click_opts.push('add_filter')
+			if (this.app.getState().nav.header_mode === 'with_tabs') this.opts.bar_click_opts.push('add_filter', 'add_group')
 		}
 	}
 

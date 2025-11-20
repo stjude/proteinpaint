@@ -448,7 +448,7 @@ function handle_click(event, self, chart) {
 		}
 	}
 
-	if (self.config.displaySampleIds) {
+	if (self.opts.bar_click_opts.includes('add_group') && self.config.displaySampleIds) {
 		options.push({
 			label: 'Add as group',
 			callback: async () => {
