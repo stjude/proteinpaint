@@ -1,2 +1,1 @@
-Fixes:
-- GRIN2: Additional place  dt-lesion mapping can be used
+

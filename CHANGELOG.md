@@ -9,6 +9,9 @@ Features:
 - New flyout component to support nested submenus appearing in flyout divs. This reusable, rendering component is stateless and does not rely on mass API methods.
 - GRIN2: Now have a unified mapping for dt types to relevant GRIN2 ui elements and data structures
 
+Fixes:
+- GRIN2: Additional place  dt-lesion mapping can be used
+
 
 ## 2.160.0
 
