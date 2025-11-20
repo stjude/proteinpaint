@@ -158,7 +158,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		t2.table.style('display', isChecked ? '' : 'none')
 		this.dom.snvindelCheckbox = make_one_checkbox({
 			holder: left,
-			labeltext: 'SNV/INDEL (Mutation)',
+			labeltext: dt2lesion[dtsnvindel].uilabel,
 			checked: isChecked,
 			testid: 'grin2-checkbox-snvindel',
 			callback: (checked: boolean) => {
@@ -241,7 +241,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 		this.dom.cnvCheckbox = make_one_checkbox({
 			holder: left,
-			labeltext: 'CNV (Copy Number Variation)',
+			labeltext: dt2lesion[dtcnv].uilabel,
 			checked: isChecked,
 			testid: 'grin2-checkbox-cnv',
 			callback: (checked: boolean) => {
@@ -283,7 +283,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 		this.dom.fusionCheckbox = make_one_checkbox({
 			holder: left,
-			labeltext: 'Fusion (RNA Fusion Events)',
+			labeltext: dt2lesion[dtfusionrna].uilabel,
 			checked: isChecked,
 			testid: 'grin2-checkbox-fusion',
 			callback: (checked: boolean) => {
@@ -325,7 +325,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 		this.dom.svCheckbox = make_one_checkbox({
 			holder: left,
-			labeltext: 'SV (Structural Variants)',
+			labeltext: dt2lesion[dtsv].uilabel,
 			checked: isChecked,
 			testid: 'grin2-checkbox-sv',
 			callback: (checked: boolean) => {
