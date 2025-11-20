@@ -11,6 +11,8 @@ Features:
 
 Fixes:
 - GRIN2: Additional place  dt-lesion mapping can be used
+- bar chart: add option to click and add as group.
+- bar chart: for terms with custom groups, support click and add as filter (samplelst)
 
 
 ## 2.160.0
