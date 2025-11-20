@@ -39,17 +39,11 @@
 # }
 """
 
-import warnings, json, sys, os
+import warnings, json, sys
 import sqlite3
-import base64
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib as mpl
 import numpy as np
-from io import BytesIO
-from grin2_core import order_index_gene_data, order_index_lsn_data, prep_gene_lsn_data, find_gene_lsn_overlaps, count_hits, row_bern_conv
-from grin2_core import row_prob_subj_hit, p_order, process_block_in_chunks, prob_hits, grin_stats, write_grin_xlsx
-from typing import Dict, Optional
+from grin2_core import  grin_stats
 
 # Suppress all warnings 
 warnings.filterwarnings('ignore')
@@ -109,12 +103,8 @@ def get_chrom_key(chrom):
 		return int(num)
 	except ValueError:
 		# Assign fixed values for non-numeric
-		if num == "X":
-			return 23
-		elif num == "Y":
-			return 24
-		else:
-			return 100
+		return {"X": 23, "Y": 24}.get(num, 100)
+
 def get_user_friendly_label(col_name, lesion_type_map):
 	"""
 	Convert technical GRIN2 column names to user-friendly labels
@@ -122,17 +112,13 @@ def get_user_friendly_label(col_name, lesion_type_map):
 	
 	# Mapping for constellation tests
 	constellation_map = {
-		"p1.nsubj": "P-value (1 Lesion Type)",
-		"q1.nsubj": "Q-value (1 Lesion Type)",
-		"p2.nsubj": "P-value (2 Lesion Types)",
-		"q2.nsubj": "Q-value (2 Lesion Types)",
-		"p3.nsubj": "P-value (3 Lesion Types)",
-		"q3.nsubj": "Q-value (3 Lesion Types)",
-		"p4.nsubj": "P-value (4 Lesion Types)",
-		"q4.nsubj": "Q-value (4 Lesion Types)",
-		"p5.nsubj": "P-value (5 Lesion Types)",
-		"q5.nsubj": "Q-value (5 Lesion Types)"
+		f"p{i}.nsubj": f"P-value ({i} Lesion Type{'s' if i > 1 else ''})"
+		for i in range(1, 6)
 	}
+	constellation_map.update({
+		f"q{i}.nsubj": f"Q-value ({i} Lesion Type{'s' if i > 1 else ''})"
+		for i in range(1, 6)
+	})
 	
 	# Check if it's a constellation column
 	if col_name in constellation_map:
@@ -175,6 +161,7 @@ def get_sig_values(data):
 		"q_cols": existing_q_cols,
 		"n_cols": existing_n_cols
 	}
+
 def has_data(column_data, sample_size=20):
 	"""
 	Check if a column has meaningful data
@@ -199,6 +186,41 @@ def smart_format(value):
         # Convert to 4 significant digits and back to float
         return float(f"{value:.3g}")  # .3g gives 4 significant digits total
 
+def check_data_types(sorted_results, p_cols):
+	"""Check which data types have meaningful data"""
+	data_types = ['mutation', 'gain', 'loss', 'fusion', 'sv']
+	return {
+		dt: has_data(sorted_results[p_cols[i]]) 
+		for i, dt in enumerate(data_types) 
+		if i < len(p_cols) and p_cols[i] in sorted_results.columns
+	}
+
+def check_constellation_columns(sorted_results):
+	"""Check which constellation columns exist"""
+	return {
+		i: {
+			'p': f'p{i}.nsubj' in sorted_results.columns,
+			'q': f'q{i}.nsubj' in sorted_results.columns
+		}
+		for i in range(1, 6)
+	}
+
+def add_column_group(columns, p_col, q_col, n_col, lesion_type_map):
+	"""Add a group of three columns (p-value, q-value, subject count)"""
+	columns.extend([
+		{"label": get_user_friendly_label(p_col, lesion_type_map), "sortable": True},
+		{"label": get_user_friendly_label(q_col, lesion_type_map), "sortable": True},
+		{"label": get_user_friendly_label(n_col, lesion_type_map), "sortable": True}
+	])
+
+def add_row_values(row_data, sorted_results, i, p_col, q_col, n_col):
+	"""Add three values to a row (p-value, q-value, subject count)"""
+	row_data.extend([
+		{"value": smart_format(sorted_results.iloc[i][p_col])},
+		{"value": smart_format(sorted_results.iloc[i][q_col])},
+		{"value": smart_format(sorted_results.iloc[i][n_col])}
+	])
+
 def simple_column_filter(sorted_results, num_rows_to_process=50, lesion_type_map=None):
 	"""
 	Dynamically generate columns and rows for topGeneTable based on available data.
@@ -213,24 +235,9 @@ def simple_column_filter(sorted_results, num_rows_to_process=50, lesion_type_map
 	q_cols = result["q_cols"]
 	n_cols = result["n_cols"]
 	
-	# Check which column groups have data
-	mutation_has_data = has_data(sorted_results[p_cols[0]]) if len(p_cols) > 0 and p_cols[0] in sorted_results.columns else False
-	cnv_gain_has_data = has_data(sorted_results[p_cols[1]]) if len(p_cols) > 1 and p_cols[1] in sorted_results.columns else False
-	cnv_loss_has_data = has_data(sorted_results[p_cols[2]]) if len(p_cols) > 2 and p_cols[2] in sorted_results.columns else False
-	fusion_has_data = has_data(sorted_results[p_cols[3]]) if len(p_cols) > 3 and p_cols[3] in sorted_results.columns else False
-	sv_has_data = has_data(sorted_results[p_cols[4]]) if len(p_cols) > 4 and p_cols[4] in sorted_results.columns else False
-	
-	# Check if constellation columns actually exist in the GRIN2 results
-	p1_exists = 'p1.nsubj' in sorted_results.columns
-	q1_exists = 'q1.nsubj' in sorted_results.columns
-	p2_exists = 'p2.nsubj' in sorted_results.columns
-	q2_exists = 'q2.nsubj' in sorted_results.columns
-	p3_exists = 'p3.nsubj' in sorted_results.columns
-	q3_exists = 'q3.nsubj' in sorted_results.columns
-	p4_exists = 'p4.nsubj' in sorted_results.columns
-	q4_exists = 'q4.nsubj' in sorted_results.columns
-	p5_exists = 'p5.nsubj' in sorted_results.columns
-	q5_exists = 'q5.nsubj' in sorted_results.columns
+	# Check which data types and constellation columns have data
+	data_type_status = check_data_types(sorted_results, p_cols)
+	constellation_status = check_constellation_columns(sorted_results)
 
 	# Build columns list
 	columns = [
@@ -238,139 +245,40 @@ def simple_column_filter(sorted_results, num_rows_to_process=50, lesion_type_map
 		{"label": "Chromosome", "sortable": True}
 	]
 	
-	# Add individual mutation type columns based on what data exists
-	if mutation_has_data:
-		columns.extend([
-			{"label": get_user_friendly_label(p_cols[0], lesion_type_map), "sortable": True},
-			{"label": get_user_friendly_label(q_cols[0], lesion_type_map), "sortable": True},
-			{"label": get_user_friendly_label(n_cols[0], lesion_type_map), "sortable": True}
-		])
-	if cnv_gain_has_data:
-		columns.extend([
-			{"label": get_user_friendly_label(p_cols[1], lesion_type_map), "sortable": True},
-			{"label": get_user_friendly_label(q_cols[1], lesion_type_map), "sortable": True},
-			{"label": get_user_friendly_label(n_cols[1], lesion_type_map), "sortable": True}
-		])
-	if cnv_loss_has_data:
-		columns.extend([
-			{"label": get_user_friendly_label(p_cols[2], lesion_type_map), "sortable": True},
-			{"label": get_user_friendly_label(q_cols[2], lesion_type_map), "sortable": True},
-			{"label": get_user_friendly_label(n_cols[2], lesion_type_map), "sortable": True}
-		])
-	if fusion_has_data:
-		columns.extend([
-			{"label": get_user_friendly_label(p_cols[3], lesion_type_map), "sortable": True},
-			{"label": get_user_friendly_label(q_cols[3], lesion_type_map), "sortable": True},
-			{"label": get_user_friendly_label(n_cols[3], lesion_type_map), "sortable": True}
-		])
-	if sv_has_data:
-		columns.extend([
-			{"label": get_user_friendly_label(p_cols[4], lesion_type_map), "sortable": True},
-			{"label": get_user_friendly_label(q_cols[4], lesion_type_map), "sortable": True},
-			{"label": get_user_friendly_label(n_cols[4], lesion_type_map), "sortable": True}
-		])
+	# Add columns for each data type that has data
+	data_types = ['mutation', 'gain', 'loss', 'fusion', 'sv']
+	for i, dt in enumerate(data_types):
+		if data_type_status.get(dt, False):
+			add_column_group(columns, p_cols[i], q_cols[i], n_cols[i], lesion_type_map)
 	
-	# Add constellation columns based on what GRIN2 computed
-	if p1_exists and q1_exists:
-		columns.extend([
-			{"label": get_user_friendly_label("p1.nsubj", lesion_type_map), "sortable": True},
-			{"label": get_user_friendly_label("q1.nsubj", lesion_type_map), "sortable": True}
-		])
-	
-	if p2_exists and q2_exists:
-		columns.extend([
-			{"label": get_user_friendly_label("p2.nsubj", lesion_type_map), "sortable": True},
-			{"label": get_user_friendly_label("q2.nsubj", lesion_type_map), "sortable": True}
-		])
-	
-	if p3_exists and q3_exists:
-		columns.extend([
-			{"label": get_user_friendly_label("p3.nsubj", lesion_type_map), "sortable": True},
-			{"label": get_user_friendly_label("q3.nsubj", lesion_type_map), "sortable": True}
-		])
+	# Add constellation columns if they exist
+	for i in range(1, 6):
+		if constellation_status[i]['p'] and constellation_status[i]['q']:
+			columns.extend([
+				{"label": get_user_friendly_label(f"p{i}.nsubj", lesion_type_map), "sortable": True},
+				{"label": get_user_friendly_label(f"q{i}.nsubj", lesion_type_map), "sortable": True}
+			])
 
-	if p4_exists and q4_exists:
-		columns.extend([
-			{"label": get_user_friendly_label("p4.nsubj", lesion_type_map), "sortable": True},
-			{"label": get_user_friendly_label("q4.nsubj", lesion_type_map), "sortable": True}
-		])
-	
-	if p5_exists and q5_exists:
-		columns.extend([
-			{"label": get_user_friendly_label("p5.nsubj", lesion_type_map), "sortable": True},
-			{"label": get_user_friendly_label("q5.nsubj", lesion_type_map), "sortable": True}
-		])
-	
-	# Build rows to match the active columns
+	# Build rows
 	topgene_table_data = []
-	for i in range(min(len(sorted_results), num_rows_to_process)):
+	for i in range(num_rows_to_process):
 		row_data = [
-			{"value": str(sorted_results.iloc[i]["gene"])},
-			{"value": str(sorted_results.iloc[i]["chrom"])}
+			{"value": sorted_results.iloc[i]["gene"]},
+			{"value": sorted_results.iloc[i]["chrom"]}
 		]
 		
-		# Add individual mutation type data based on what exists
-		if mutation_has_data:
-			row_data.extend([
-				{"value": smart_format(sorted_results.iloc[i][p_cols[0]])},
-				{"value": smart_format(sorted_results.iloc[i][q_cols[0]])},
-				{"value": smart_format(sorted_results.iloc[i][n_cols[0]])}
-			])
-		if cnv_gain_has_data:
-			row_data.extend([
-				{"value": smart_format(sorted_results.iloc[i][p_cols[1]])},
-				{"value": smart_format(sorted_results.iloc[i][q_cols[1]])},
-				{"value": smart_format(sorted_results.iloc[i][n_cols[1]])}
-			])
-		if cnv_loss_has_data:
-			row_data.extend([
-				{"value": smart_format(sorted_results.iloc[i][p_cols[2]])},
-				{"value": smart_format(sorted_results.iloc[i][q_cols[2]])},
-				{"value": smart_format(sorted_results.iloc[i][n_cols[2]])}
-			])
-		if fusion_has_data:
-			row_data.extend([
-				{"value": smart_format(sorted_results.iloc[i][p_cols[3]])},
-				{"value": smart_format(sorted_results.iloc[i][q_cols[3]])},
-				{"value": smart_format(sorted_results.iloc[i][n_cols[3]])}
-			])
-		if sv_has_data:
-			row_data.extend([
-				{"value": smart_format(sorted_results.iloc[i][p_cols[4]])},
-				{"value": smart_format(sorted_results.iloc[i][q_cols[4]])},
-				{"value": smart_format(sorted_results.iloc[i][n_cols[4]])}
-			])
+		# Add data for each type that has data
+		for idx, dt in enumerate(data_types):
+			if data_type_status.get(dt, False):
+				add_row_values(row_data, sorted_results, i, p_cols[idx], q_cols[idx], n_cols[idx])
 		
 		# Add constellation data
-		if p1_exists and q1_exists:
-			row_data.extend([
-				{"value": smart_format(sorted_results.iloc[i]["p1.nsubj"])},
-				{"value": smart_format(sorted_results.iloc[i]["q1.nsubj"])}
-			])
-		
-		if p2_exists and q2_exists:
-			row_data.extend([
-				{"value": smart_format(sorted_results.iloc[i]["p2.nsubj"])},
-				{"value": smart_format(sorted_results.iloc[i]["q2.nsubj"])}
-			])
-		
-		if p3_exists and q3_exists:
-			row_data.extend([
-				{"value": smart_format(sorted_results.iloc[i]["p3.nsubj"])},
-				{"value": smart_format(sorted_results.iloc[i]["q3.nsubj"])}
-			])
-		
-		if p4_exists and q4_exists:
-			row_data.extend([
-				{"value": smart_format(sorted_results.iloc[i]["p4.nsubj"])},
-				{"value": smart_format(sorted_results.iloc[i]["q4.nsubj"])}
-			])
-		
-		if p5_exists and q5_exists:
-			row_data.extend([
-				{"value": smart_format(sorted_results.iloc[i]["p5.nsubj"])},
-				{"value": smart_format(sorted_results.iloc[i]["q5.nsubj"])}
-			])
+		for j in range(1, 6):
+			if constellation_status[j]['p'] and constellation_status[j]['q']:
+				row_data.extend([
+					{"value": smart_format(sorted_results.iloc[i][f"p{j}.nsubj"])},
+					{"value": smart_format(sorted_results.iloc[i][f"q{j}.nsubj"])}
+				])
 		
 		topgene_table_data.append(row_data)
 	
@@ -385,6 +293,7 @@ try:
 	if not json_input:
 		write_error("No input data provided")
 		sys.exit(1)
+	
 	try:
 		input_data = json.loads(json_input)
 		lesion_type_map = input_data.get("lesionTypeMap")
@@ -394,6 +303,7 @@ try:
 	except json.JSONDecodeError as e:
 		write_error(f"Invalid JSON input: {str(e)}")
 		sys.exit(1)
+	
 	# 2. Generate gene annotation table from gene2coord
 	dbfile = input_data["genedb"]
 	try:
@@ -404,6 +314,7 @@ try:
 	except Exception as e:
 		write_error(f"Failed to connect or query the gene database: {str(e)}")
 		sys.exit(1)
+	
 	if gene_anno.empty:
 		write_error("No data retrieved from gene2coord table")
 		sys.exit(1)
@@ -415,6 +326,7 @@ try:
 		(gene_anno["start"] == "start") &
 		(gene_anno["stop"] == "stop"))
 	]
+	
 	# Ensure start and stop are integers and normalize chromosome names
 	try:
 		gene_anno = gene_anno.assign(
@@ -425,6 +337,7 @@ try:
 	except Exception as e:
 		write_error(f"Failed to convert start/stop to integers: {str(e)}")
 		sys.exit(1)
+	
 	# Rename columns and add gene column
 	gene_anno = gene_anno.rename(columns={
 		"name": "gene.name",
@@ -500,44 +413,45 @@ try:
 
 		cache_file_path = input_data.get("cacheFileName")
 		available_types = input_data.get("availableDataTypes")
+		
 		# Dictionary to map data types coming from client to data types for cache file columns
 		option_type_mapping = {
-		'snvindelOptions': ['mutation'],
-		'cnvOptions': ['gain', 'loss'],
-		'fusionOptions': ['fusion'],
-		'svOptions': ['sv']
+			'snvindelOptions': ['mutation'],
+			'cnvOptions': ['gain', 'loss'],
+			'fusionOptions': ['fusion'],
+			'svOptions': ['sv']
 		}
 
 		# Determine which data types to include based on available options
-		data_types = [data_type 
-              for option in available_types 
-              for data_type in option_type_mapping.get(option)]
+		data_types = [
+			data_type 
+			for option in available_types 
+			for data_type in option_type_mapping.get(option, [])
+		]
 		
 		if cache_file_path:
 			cache_columns = ['gene', 'chrom']
 			for t in data_types:
-				nsub_col = f'nsubj.{t}'
-				q_col = f'q.nsubj.{t}'
+				for col_type in ['nsubj', 'q.nsubj']:
+					col_name = f'{col_type}.{t}'
+					if col_name in sorted_results.columns:
+						cache_columns.append(col_name)
+			
+			# Create filtered dataframe with only cache columns
+			results_to_cache = sorted_results[cache_columns].copy()
 
-				if nsub_col in sorted_results.columns:
-					cache_columns.append(nsub_col)
-				if q_col in sorted_results.columns:
-					cache_columns.append(q_col)
-				
-				# Create filtered dataframe with only cache columns
-				results_to_cache = sorted_results[cache_columns].copy()
+			# Add location columns
+			results_to_cache['loc.start'] = sorted_results['loc.start']
+			results_to_cache['loc.end'] = sorted_results['loc.end']
+			 
+			# Reorder columns to put pos right after chrom
+			column_order = ['gene', 'chrom', 'loc.start', 'loc.end'] + [
+				col for col in cache_columns if col not in ['gene', 'chrom']
+			]
+			results_to_cache = results_to_cache[column_order]
 
-				# Calculate pos as midpoint of loc.start and loc.end and make it an integer
-				results_to_cache['loc.start'] = sorted_results['loc.start']
-				results_to_cache['loc.end'] = sorted_results['loc.end']
-				 
-				 # Reorder columns to put pos right after chrom
-				column_order = ['gene', 'chrom', 'loc.start', 'loc.end'] + [col for col in cache_columns if col not in ['gene', 'chrom']]
-				results_to_cache = results_to_cache[column_order]
-
-
-				# Save to TSV
-				results_to_cache.to_csv(cache_file_path, index=False, sep='\t')
+			# Save to TSV
+			results_to_cache.to_csv(cache_file_path, index=False, sep='\t')
 
 	except Exception as e:
 		write_error(f"Failed to extract gene.hits or sort grin_table: {str(e)}")
