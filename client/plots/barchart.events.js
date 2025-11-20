@@ -435,7 +435,7 @@ function handle_click(event, self, chart) {
 		}
 	}
 
-	if (self.opts.bar_click_opts.includes('add_filter') && (!term2 || !term2.isgenotype)) {
+	if (self.opts.bar_click_opts.includes('add_filter') && !term2) {
 		const item = findItemByTermId(self.state.termfilter.filter, self.config.term.term.id)
 		if (!item) {
 			options.push({
