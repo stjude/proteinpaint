@@ -86,6 +86,7 @@ export class ScatterModel {
 			}
 			this.initRanges()
 		} catch (e: any) {
+			if (this.scatter.app.isAbortError(e)) return
 			console.error(e)
 			throw e.message || e
 		}
@@ -291,8 +292,10 @@ export class ScatterModel {
 		const yMin = chart.ranges.yMin
 		const yMax = chart.ranges.yMax
 		//unless there is a capping in the min/max values add a minimal extra space in the plot
-		const extraSpaceX = (this.scatter.settings.minXScale != null || this.scatter.settings.maxXScale != null) ? 0 : (xMax - xMin) * 0.01 //extra space added to avoid clipping the particles on the X axis
-		const extraSpaceY = (this.scatter.settings.minYScale != null || this.scatter.settings.maxYScale != null) ? 0 : (yMax - yMin) * 0.01 //extra space added to avoid clipping the particles on the Y axis
+		const extraSpaceX =
+			this.scatter.settings.minXScale != null || this.scatter.settings.maxXScale != null ? 0 : (xMax - xMin) * 0.01 //extra space added to avoid clipping the particles on the X axis
+		const extraSpaceY =
+			this.scatter.settings.minYScale != null || this.scatter.settings.maxYScale != null ? 0 : (yMax - yMin) * 0.01 //extra space added to avoid clipping the particles on the Y axis
 		chart.xAxisScale = d3Linear()
 			.domain([xMin - extraSpaceX, xMax + extraSpaceX])
 			.range([offsetX, this.scatter.settings.svgw + offsetX])

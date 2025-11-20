@@ -42,7 +42,7 @@ export class AppApi {
 	state: any
 
 	#latestActionSequenceId: number
-	#abortController: AbortController
+	#abortController?: AbortController
 	#componentsByType: {
 		[chartType: string]: {
 			[plotId: string]: ComponentApi
@@ -94,7 +94,7 @@ export class AppApi {
 		// any active but stale async operation, like fetch, should be canceled
 		// if a new dispatch supercedes previous dispatches.
 		// NOTE: this cancellation should not affect synchronous steps
-		this.#abortController.abort('stale sequenceId')
+		if (this.#abortController) this.#abortController.abort('stale sequenceId')
 		this.#abortController = new AbortController()
 
 		try {
@@ -128,6 +128,7 @@ export class AppApi {
 		}
 		// do not emit a postRender event if the action has become stale
 		if (self.bus && this.#latestActionSequenceId == action?.sequenceId) self.bus.emit('postRender')
+		this.#abortController = undefined
 	}
 
 	// action: RxAction
@@ -194,7 +195,7 @@ export class AppApi {
 	}
 
 	getAbortSignal() {
-		return this.#abortController.signal
+		return this.#abortController?.signal
 		// NOTE: the same signal can be reused to cancel different fetch requests, as tested pasting and running the following in the browser console:
 		// > const ac = new AbortController(); for(let i=0; i<3; i++) fetch('/healthcheck', {signal: ac.signal}).then(r=>r.json()).then(console.log).catch(console.log); const t = setTimeout(()=>ac.abort('stale sequenceId'), 0);
 		// stale sequenceId // repeats 3x
@@ -204,7 +205,7 @@ export class AppApi {
 	triggerAbort(reason = '') {
 		const self = this.#App
 		if (reason) if (reason) console.info(`triggerAbort()`, reason)
-		this.#abortController.abort('stale sequenceId')
+		if (this.#abortController) this.#abortController.abort('stale sequenceId')
 		for (const name of Object.keys(self.components)) {
 			const component = self.components[name]
 			if (!component) continue
@@ -222,6 +223,18 @@ export class AppApi {
 				}
 			}
 		}
+	}
+
+	getSequenceId() {
+		return this.#latestActionSequenceId
+	}
+
+	isStaleSequenceId(sequenceId) {
+		return sequenceId != this.#latestActionSequenceId
+	}
+
+	isAbortError(e) {
+		return e.includes('stale sequenceId') || e.includes('AbortError')
 	}
 
 	destroy() {
