@@ -3637,38 +3637,38 @@
   },
   "plots/barchart.events.js": {
     "lines": {
-      "total": 381,
-      "covered": 114,
+      "total": 417,
+      "covered": 174,
       "skipped": 0,
-      "pct": 29.92
+      "pct": 41.72
     },
     "functions": {
-      "total": 65,
-      "covered": 25,
+      "total": 70,
+      "covered": 33,
       "skipped": 0,
-      "pct": 38.46
+      "pct": 47.14
     },
     "statements": {
-      "total": 419,
-      "covered": 120,
+      "total": 460,
+      "covered": 182,
       "skipped": 0,
-      "pct": 28.63
+      "pct": 39.56
     },
     "branches": {
-      "total": 455,
-      "covered": 147,
+      "total": 475,
+      "covered": 186,
       "skipped": 0,
-      "pct": 32.3
+      "pct": 39.15
     },
     "lowestPct": {
-      "curr": 28.63,
+      "curr": 39.15,
       "prev": 34.4,
-      "diff": -5.77
+      "diff": 4.75
     },
     "averagePct": {
-      "curr": 32.3275,
+      "curr": 41.892500000000005,
       "prev": 37.3525,
-      "diff": -5.024999999999999
+      "diff": 4.540000000000006
     }
   },
   "plots/disco/viewmodel/ViewModel.ts": {
@@ -7993,38 +7993,38 @@
   },
   "plots/test/barchart.integration.spec.js": {
     "lines": {
-      "total": 417,
-      "covered": 417,
+      "total": 408,
+      "covered": 408,
       "skipped": 0,
       "pct": 100
     },
     "functions": {
-      "total": 103,
-      "covered": 100,
+      "total": 101,
+      "covered": 98,
       "skipped": 0,
-      "pct": 97.08
+      "pct": 97.02
     },
     "statements": {
-      "total": 445,
-      "covered": 442,
+      "total": 435,
+      "covered": 432,
       "skipped": 0,
-      "pct": 99.32
+      "pct": 99.31
     },
     "branches": {
-      "total": 76,
-      "covered": 44,
+      "total": 74,
+      "covered": 43,
       "skipped": 0,
-      "pct": 57.89
+      "pct": 58.1
     },
     "lowestPct": {
-      "curr": 57.89,
+      "curr": 58.1,
       "prev": 58.57,
-      "diff": -0.6799999999999997
+      "diff": -0.46999999999999886
     },
     "averagePct": {
-      "curr": 88.57249999999999,
+      "curr": 88.6075,
       "prev": 88.7225,
-      "diff": -0.15000000000000568
+      "diff": -0.11499999999999488
     }
   },
   "plots/runchart/test/runchart.integration.spec.js": {
