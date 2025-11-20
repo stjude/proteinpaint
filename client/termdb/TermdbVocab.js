@@ -90,9 +90,8 @@ export class TermdbVocab extends Vocab {
 		const [route, body] = this.getTdbDataUrl(opts)
 		const headers = this.mayGetAuthHeaders('termdb')
 		const initOpts = { headers, body }
-		if (this.app?.getAbortSignal) initOpts.signal = this.app.getAbortSignal()
+		initOpts.signal = this.app?.getAbortSignal?.()
 		const data = await dofetch3(route, initOpts, this.opts.fetchOpts)
-		if (initOpts.signal) this.app.deleteAbortCtrl(initOpts.signal)
 		if (data.error) throw data.error
 
 		const valuesByTermId = {}
@@ -468,10 +467,8 @@ export class TermdbVocab extends Vocab {
 			_body
 		)
 		if (body.filter) body.filter = getNormalRoot(body.filter)
-		const init = { headers, body }
-		if (this.app?.getAbortSignal) init.signal = this.app.getAbortSignal()
+		const init = { headers, body, signal: this.app?.getAbortSignal?.() }
 		const data = await dofetch3('termdb/violin', init)
-		if (init.signal) this.app.deleteAbortCtrl(init.signal)
 		return data
 	}
 
@@ -490,10 +487,7 @@ export class TermdbVocab extends Vocab {
 			_body
 		)
 		if (body.filter) body.filter = getNormalRoot(body.filter)
-
-		const signal = this.app?.getAbortSignal?.()
-		const d = await dofetch3('termdb/boxplot', { headers, body, signal })
-		if (signal) this.app.deleteAbortCtrl(signal)
+		const d = await dofetch3('termdb/boxplot', { headers, body, signal: this.app?.getAbortSignal?.() })
 		return d
 	}
 
@@ -819,7 +813,7 @@ export class TermdbVocab extends Vocab {
 				}
 			}
 			if (opts.signal) init.signal = opts.signal
-			else if (this.app?.getAbortSignal) init.signal = this.app.getAbortSignal()
+			else init.signal = this.app?.getAbortSignal?.()
 
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 			if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
@@ -834,7 +828,6 @@ export class TermdbVocab extends Vocab {
 			}
 			promises.push(
 				dofetch3('termdb', init, { cacheAs: 'decoded' }).then(data => {
-					if (init.signal && !opts.signal) this.app.deleteAbortCtrl(init.signal)
 					if (data.error) throw data.error
 					if (!data.refs.bySampleId) data.refs.bySampleId = {}
 					for (const tw of copies) {
@@ -1010,9 +1003,7 @@ export class TermdbVocab extends Vocab {
 		if (opts.divideByTW) body.divideByTW = this.getTwMinCopy(opts.divideByTW)
 		if (opts.scaleDotTW) body.scaleDotTW = this.getTwMinCopy(opts.scaleDotTW)
 		body.excludeOutliers = opts.excludeOutliers
-		const signal = this.app?.getAbortSignal?.()
-		const data = await dofetch3('termdb/sampleScatter', { headers, body, signal })
-		if (signal) this.app.deleteAbortCtrl(signal)
+		const data = await dofetch3('termdb/sampleScatter', { headers, body, signal: this.app?.getAbortSignal?.() })
 		return data
 	}
 

@@ -196,10 +196,8 @@ export class HierCluster extends Matrix {
 
 	async requestData() {
 		// may revert to using {signal} argument if detectStale() is used to wrap this function
-		const signal = this.app.getAbortSignal?.()
 		const body = this.currRequestOpts?.hierCluster || this.getHCRequestBody(this.state)
-		const data = await dofetch3('termdb/cluster', { body, signal })
-		if (this.app.deleteAbortCtrl) this.app.deleteAbortCtrl(signal)
+		const data = await dofetch3('termdb/cluster', { body, signal: this.app.getAbortSignal?.() })
 		return data
 	}
 
