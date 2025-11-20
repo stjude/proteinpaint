@@ -36,13 +36,7 @@ warnings.filterwarnings('ignore')
 
 # Constants
 DATA_TYPES = ['mutation', 'gain', 'loss', 'fusion', 'sv']
-COLOR_MAP = {
-	"mutation": "#44AA44",   
-	"gain": "#FF4444",       
-	"loss": "#4444FF",
-	"fusion": "#FFA500",
-	"sv": "#9932CC"
-}
+
 OPTION_TYPE_MAPPING = {
 	'snvindelOptions': ['mutation'],
 	'cnvOptions': ['gain', 'loss'],
@@ -53,13 +47,6 @@ OPTION_TYPE_MAPPING = {
 def write_error(msg):
 	print(f"ERROR: {msg}", file=sys.stderr)
 
-def assign_lesion_colors(lesion_types):
-	"""Return color map for lesion types present in data"""
-	unique_types = lesion_types.unique()
-	unknown = set(unique_types) - set(COLOR_MAP.keys())
-	if unknown:
-		warnings.warn(f"Unknown lesion types: {', '.join(unknown)}")
-	return {k: COLOR_MAP[k] for k in unique_types if k in COLOR_MAP}
 
 def get_chrom_key(chrom):
 	"""Create sorting key for chromosomes"""
@@ -259,7 +246,6 @@ try:
 	)
 	
 	lesion_counts = lesion_df["lsn.type"].value_counts()
-	lsn_colors = assign_lesion_colors(lesion_df["lsn.type"])
 	
 	# 5. Run GRIN2
 	grin_results = grin_stats(lesion_df, gene_anno, chrom_size)
