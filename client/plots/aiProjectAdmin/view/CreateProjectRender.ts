@@ -4,6 +4,7 @@ import type { Elem } from '../../../types/d3'
 // import { InvalidDataUI, sayerror } from '#dom'
 import type { AIProjectAdminInteractions } from '../interactions/AIProjectAdminInteractions'
 import { SelectorTableRender } from './SelectorTableRender'
+import { UsersRender } from './UsersRender' // added import
 
 export class CreateProjectRender {
 	dom: {
@@ -11,21 +12,47 @@ export class CreateProjectRender {
 		errorDiv: Elem
 		filterDiv: Elem
 		classDiv: Elem
+		usersDiv?: Elem
 	}
 	app: any
 	interactions: AIProjectAdminInteractions
 	filter: any
 	classesTable?: ClassesTableRender
+	usersRender?: UsersRender // new property
 
 	constructor(dom: any, app: any, interactions: AIProjectAdminInteractions) {
 		dom.holder.style('padding', '10px 20px').attr('class', 'sjpp-deletable-ai-prjt-admin-div')
 
+		// create elements first using local variables (avoid using this.dom before assignment)
+		const filterDiv = dom.holder.append('div').attr('id', 'sjpp-ai-prjt-admin-filter-div')
+
+		const wrapper = dom.holder
+			.append('div')
+			.attr('id', 'sjpp-ai-prjt-admin-classes-users-wrapper')
+			.style('display', 'flex')
+			.style('gap', '20px')
+			.style('align-items', 'flex-start')
+			.style('padding', '20px 0px')
+
+		// Keep the left column from stretching to fill the entire wrapper so the right
+		// column sits directly next to it. Allow the left column to size to its content.
+		const left = wrapper.append('div').attr('id', 'sjpp-ai-prjt-admin-classes-table').style('flex', '0 1 auto')
+		// Place the users panel immediately to the right of the classes panel with a small gap.
+		const right = wrapper
+			.append('div')
+			.attr('id', 'sjpp-ai-prjt-admin-users')
+			.style('width', '320px')
+			.style('margin-left', '8px')
+
+		// assign this.dom once
 		this.dom = {
 			holder: dom.holder,
 			errorDiv: dom.errorDiv,
-			filterDiv: dom.holder.append('div').attr('id', 'sjpp-ai-prjt-admin-filter-div'),
-			classDiv: dom.holder.append('div').attr('id', 'sjpp-ai-prjt-admin-classes-table').style('padding', '20px 0px')
+			filterDiv,
+			classDiv: left,
+			usersDiv: right
 		}
+
 		this.app = app
 		this.interactions = interactions
 		this.filter = null
@@ -34,6 +61,13 @@ export class CreateProjectRender {
 	render() {
 		this.renderFilter()
 		this.classesTable = new ClassesTableRender(this.dom.classDiv)
+
+		// render users to the right of the labels/classes
+		if (this.dom.usersDiv) {
+			this.usersRender = new UsersRender({ holder: this.dom.usersDiv, errorDiv: this.dom.errorDiv }, [])
+			this.usersRender.render()
+		}
+
 		this.renderApplyBtn()
 	}
 

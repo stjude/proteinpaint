@@ -100,7 +100,7 @@ class AIProjectAdmin extends PlotBase implements RxComponent {
 					config: { settings: { project: { id: existingProject.id } } }
 				})
 			}
-			this.interactions.launchViewer(this.dom.holder, [])
+			await this.interactions.launchViewer(this.dom.holder, [])
 		}
 	}
 }
