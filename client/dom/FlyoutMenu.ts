@@ -128,24 +128,36 @@ export class FlyoutMenu {
 	}
 
 	private addMenuItem(opt: FlyoutMenuOption, tip: Menu, level: number): void {
-		const optDiv = tip.d
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text(opt.label!)
-			.on('click', event => {
-				event.stopPropagation()
-				if (opt?.options?.length || opt.isSubmenu) {
-					this.level = level + 1
-					const flyoutTip = this.getFlyout(optDiv, tip)
-					if (opt?.options) {
-						this.renderMenu(flyoutTip, opt.options)
-						return
-					}
-					opt.callback!(flyoutTip.d)!
+		const optionCallback = () => {
+			if (opt?.options?.length || opt.isSubmenu) {
+				this.level = level + 1
+				const flyoutTip = this.getFlyout(optDiv, tip)
+				if (opt?.options) {
+					this.renderMenu(flyoutTip, opt.options)
 					return
 				}
-				opt.callback!()
+				opt.callback!(flyoutTip.d)!
 				return
+			}
+			opt.callback!()
+			return
+		}
+		const optDiv = tip.d
+			.append('div')
+			.text(opt.label!)
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.attr('tabindex', 0)
+			.attr('role', 'button')
+			.on('click', event => {
+				event.stopPropagation()
+				optionCallback()
+			})
+			/** Allows users tabbing through menu options to
+			 * activate the callback with either Enter or Space keys.*/
+			.on('keydown', event => {
+				if (event.key !== 'Enter' || event.key !== ' ') return
+				event.preventDefault()
+				optionCallback()
 			})
 		if (opt.isSubmenu) optDiv.insert('div').html('›').style('float', 'right')
 	}
@@ -300,11 +312,8 @@ export class FlyoutMenu {
 	 * This method should be called within the final callback
 	 * in .options[] */
 	public closeMenus(): void {
-		for (const [level, menuLevel] of this.menuLevels) {
-			if (level > 0) {
-				menuLevel.menu.hide()
-				//May destroy all menus in the future.
-			}
+		for (const [, menuLevel] of this.menuLevels) {
+			menuLevel.menu.hide()
 		}
 		// Clear all except main menu
 		this.menuLevels.clear()
