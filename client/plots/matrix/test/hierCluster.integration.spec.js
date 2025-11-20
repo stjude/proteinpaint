@@ -46,7 +46,7 @@ tape('filter', async test => {
 	test.end()
 })
 
-tape('avoid race condition', async test => {
+tape('avoid race condition - specified gene list', async test => {
 	// !!!
 	// to allow an app or chart code to fail due to race condition,
 	// hardcode a constant value or comment out the ++ for the sequenceID
@@ -71,7 +71,6 @@ tape('avoid race condition', async test => {
 		if (lst.length === 3) return data
 		// artificially delay response to first request, to simulate a race condition
 		await sleep(250)
-		console.log(70, lst, lst.length === 3 ? 0 : responseDelay)
 		return data
 	}
 
@@ -92,7 +91,6 @@ tape('avoid race condition', async test => {
 		}),
 		(async () => {
 			await sleep(0)
-			//hc.__wait = 0
 			const termgroups = structuredClone(hc.config.termgroups)
 			termgroups[0].lst = lst.slice(0, 3)
 			await app.dispatch({
@@ -125,7 +123,84 @@ tape('avoid race condition', async test => {
 		0,
 		'should not display errors'
 	)
-	//if (test._ok) app.destroy()
+	if (test._ok) app.destroy()
+})
+
+tape('avoid race condition - reused fetch response cache', async test => {
+	// !!!
+	// to allow an app or chart code to fail due to race condition,
+	// hardcode a constant value or comment out the ++ for the sequenceID
+	// in rx/src/StoreApi.write()
+	// !!!
+	test.timeoutAfter(4000)
+	test.plan(4)
+	// the same terms lst as the previous tape() test above will trigger the reuse of cached fetch response
+	const { app, hc } = await getHierClusterApp({ terms: getGenes() })
+	const termgroups = structuredClone(hc.config.termgroups)
+	const responseDelay = 250
+	hc.origRequestData = hc.requestData
+	hc.requestData = async () => {
+		const lst = hc.config.termgroups[0].lst
+		const data = await hc.origRequestData({})
+		if (lst.length === 3) return data
+		return data
+		// artificially delay response to first request, to simulate a race condition
+		await sleep(responseDelay)
+		return data
+	}
+
+	const prom = {}
+	const postRenderTest = new Promise(resolve => {
+		prom.resolve = resolve
+	})
+	app.on('postRender.test1', () => {
+		app.on('postRender.test1', null)
+		prom.resolve()
+	})
+
+	await Promise.all([
+		app.dispatch({
+			type: 'plot_edit',
+			id: hc.id,
+			config: { termgroups }
+		}),
+		(async () => {
+			// sleep() >1 second will not cause an error when reusing a cached fetch response;
+			// sleep(0) below is worst case for testing
+			await sleep(0)
+			const _termgroups = structuredClone(termgroups)
+			_termgroups[0].lst = _termgroups[0].lst.slice(0, 3)
+			await app.dispatch({
+				type: 'plot_edit',
+				id: hc.id,
+				config: { termgroups: _termgroups }
+			})
+		})()
+	])
+
+	await postRenderTest
+	await sleep(responseDelay + 500)
+	// run tests after the delayed response, as part of simulating the race condition
+	test.equal(hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size(), 3, 'should render 3 gene rows')
+	const rects = hc.dom.seriesesG.selectAll('.sjpp-mass-series-g rect')
+	const hits = rects.filter(d => d.key !== 'BCR' && d.value.class != 'WT' && d.value.class != 'Blank')
+	test.equal(
+		rects.size(),
+		180,
+		'should have the expected total number of matrix cell rects, inlcuding WT and not tested'
+	)
+	test.equal(hits.size(), 180, 'should have the expected number of matrix cell rects with hits')
+	test.equal(
+		app.Inner.dom.holder
+			.selectAll('.sja_errorbar')
+			.filter(function () {
+				return this.style.display != 'none'
+			})
+			.size(),
+		0,
+		'should not display errors'
+	)
+	if (test._ok) app.destroy()
 })
 
 tape('dendrogram click', async function (test) {

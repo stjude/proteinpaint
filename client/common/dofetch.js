@@ -1,4 +1,4 @@
-import { deepFreeze } from '#rx'
+import { deepFreeze, sleep } from '#rx'
 import { encode, getDataName, processResponse } from '#shared/index.js'
 import { mayShowAuthUi, mayAddJwtToRequest, includeEmbedder, setDsAuthOk } from './auth.js'
 export * from './auth.js'
@@ -147,10 +147,20 @@ export async function namedFetch(url, init, opts = {}) {
 
 	let result
 	const dataName = await getDataName(url, init)
-	if (opts.serverData[dataName])
+	if (opts.serverData[dataName]) {
+		if (init.signal) {
+			// should not reuse a response if the abortController.signal option has been aborted,
+			// sleep() below allows sufficient time for the abort() to be called in rx AppApi.dispatch() or elsewhere,
+			// otherwise the cached response copy will be returned too soon and cause race-condition issues;
+			// this fix is tested in hierCluster.integration.spec.js 'avoid race condition - reused fetch response cache'
+			await sleep(0)
+			if (init.signal.aborted) throw `stale sequenceId`
+		}
+
 		result = opts.serverData[dataName].clone
 			? await processResponse(opts.serverData[dataName].clone())
 			: structuredClone(opts.serverData[dataName])
+	}
 
 	if (!result || (typeof result != 'object' && !(result instanceof Promise))) {
 		delete opts.serverData[dataName]

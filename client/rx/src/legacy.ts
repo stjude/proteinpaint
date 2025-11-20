@@ -630,6 +630,12 @@ export function getComponentApi(self) {
 				}
 			}
 		},
+		getSequenceId() {
+			return latestActionSequenceId
+		},
+		isStaleSequenceId(sequenceId) {
+			return sequenceId != latestActionSequenceId
+		},
 		destroy() {
 			// delete references to other objects to make it easier
 			// for automatic garbage collection to find unreferenced objects

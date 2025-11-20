@@ -143,7 +143,7 @@ export function plotDendrogramHclust(plotOnly) {
 			}
 
 			this.renderImage(
-				this.app,
+				this.api,
 				this.dom.topDendrogram,
 				canvas,
 				width,
@@ -248,20 +248,20 @@ export function plotDendrogramHclust(plotOnly) {
 				s.scrollHeight +
 				// left dendrogram image must be lower than the top dendrogram image height
 				yDendrogramHeight
-			this.renderImage(this.app, this.dom.leftDendrogram, canvas, width, height, 0, y)
+			this.renderImage(this.api, this.dom.leftDendrogram, canvas, width, height, 0, y)
 
 			row.mergedClusters = mergedClusters
 		}
 	}
 }
 
-export async function renderImage(app, g, canvas, width, height, x, y) {
-	const sequenceId = app.getSequenceId()
+export async function renderImage(componentApi, g, canvas, width, height, x, y) {
+	const sequenceId = componentApi.getSequenceId()
 	const reader = new FileReader()
 	reader.addEventListener(
 		'load',
 		() => {
-			if (app.isStaleSequenceId(sequenceId)) return
+			if (componentApi.isStaleSequenceId(sequenceId)) return
 			// remove a previously rendered image, if applicable, right before replacing it
 			// so that there will be no flicker on update
 			g.selectAll('*').remove()
