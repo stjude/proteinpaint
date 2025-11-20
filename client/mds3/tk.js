@@ -9,7 +9,7 @@ import { unannotatedKey } from './legend'
 
 /*
 loadTk
-	getData
+	getTkData
 		dataFromCustomVariants
 			mayDoLDoverlay
 		getParameter
@@ -43,7 +43,7 @@ export async function loadTk(tk, block) {
 			await makeTk(tk, block)
 		}
 
-		const data = await getData(tk, block)
+		const data = await getTkData(tk, block)
 		if (tk.uninitialized) {
 			tk.clear()
 			delete tk.uninitialized
@@ -206,7 +206,7 @@ returned data{}:
 .mclass2variantcount[]
 	mclass breakdown of skewer[]
 */
-async function getData(tk, block) {
+async function getTkData(tk, block) {
 	let data
 	if (tk.custom_variants) {
 		// has custom data on client side, no need to request from server
