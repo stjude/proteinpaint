@@ -447,7 +447,6 @@ class MassCumInc {
 		}
 		if (c.term2) opts.term2 = c.term2
 		if (c.term0) opts.term0 = c.term0
-		if (this.state.ssid) opts.ssid = this.state.ssid
 		return opts
 	}
 
