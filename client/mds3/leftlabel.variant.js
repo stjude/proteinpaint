@@ -24,6 +24,7 @@ export function makeVariantLabel(data, tk, block, laby) {
 	if (!tk.leftlabels.doms.variants) {
 		tk.leftlabels.doms.variants = makelabel(tk, block, laby)
 		tk.leftlabels.doms.variants.attr('data-testid', 'sja_variants_label')
+		if (data.variantAlerts?.length) tk.leftlabels.doms.variants.attr('fill', 'red')
 	}
 
 	const [labeltext, totalcount, showcount] = getVariantLabelText(data, tk, block)
@@ -45,7 +46,7 @@ export function makeVariantLabel(data, tk, block, laby) {
 		.text(labeltext)
 		.on('click', event => {
 			tk.menutip.clear().showunder(event.target)
-			menu_variants(tk, block)
+			menu_variants(data, tk, block)
 		})
 }
 
@@ -125,7 +126,13 @@ export function getVariantLabelText(data, tk, block) {
 	]
 }
 
-function menu_variants(tk, block) {
+function menu_variants(data, tk, block) {
+	if (data.variantAlerts?.length) {
+		for (const m of data.variantAlerts) {
+			tk.menutip.d.append('div').style('margin', '10px').style('font-size', '.8em').style('color', 'red').text(m)
+		}
+	}
+
 	// in case only showing cnv density but no skewer, disable all options from this menu as they do not apply to cnv density
 	if ((!tk.skewer?.rawmlst || tk.skewer.rawmlst?.length == 0) && tk.cnv?.cnvInDensity) {
 		tk.menutip.d

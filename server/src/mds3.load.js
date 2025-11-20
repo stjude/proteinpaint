@@ -290,7 +290,9 @@ export async function load_driver(q, ds) {
 
 	if (q.forTrack) {
 		// to load things for block track
-		const result = {}
+		const result = {
+			variantAlerts: [] // this array is named "variant". it collects snv/cnv/fusion related alerts and will all be indicated in the "variant" leftlabel
+		}
 
 		if (q.skewer) {
 			// get skewer data
@@ -307,7 +309,19 @@ export async function load_driver(q, ds) {
 					samples:[ {sample_id}, ... ]
 				}
 				*/
-				result.skewer.push(...mlst)
+
+				if (mlst.length > 2000) {
+					/********* TEMP FIX
+					later:
+					const data=byisoform.get()
+					if(data.alert) result.variantAlerts.push(data.alert)
+					result.skewer.push(...data.mlst)
+					*/
+					result.variantAlerts.push(`Too many mutations (${mlst.length}). Only subset is shown.`)
+					for (let i = 0; i < 2000; i++) result.skewer.push(mlst[i])
+				} else {
+					result.skewer.push(...mlst)
+				}
 			}
 
 			if (ds.queries.svfusion && !q.hardcodeCnvOnly) {
