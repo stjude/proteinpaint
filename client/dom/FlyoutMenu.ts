@@ -120,14 +120,33 @@ export class FlyoutMenu {
 	/** Starting with the root parent menu, will recursively render
 	 * all menu options and submenus in tandem with addMenuItem(). */
 	private renderMenu(tip: Menu, options: FlyoutMenuOption[]): void {
+		let currentMenu = this.menuLevels.get(this.level)
+		if (!currentMenu) {
+			currentMenu = { menu: tip }
+		}
+
+		// Pass the position info to all menu items for consistent styling
+		const menuItems: { div: any; opt: FlyoutMenuOption }[] = []
+
 		for (const opt of options) {
 			if (opt.text) this.addText(tip.d, opt.text)
 			else if (opt.html) tip.d.append('div').html(opt.html)
-			else this.addMenuItem(opt, tip, this.level)
+			else {
+				const optDiv = this.addMenuItem(opt, tip, this.level)
+				menuItems.push({ div: optDiv, opt })
+			}
+		}
+		//Allow all the elements to render then analyze position once
+		if (!currentMenu.position) {
+			currentMenu.position = this.analyzeMenuPosition(tip.dnode!)
+			this.menuLevels.set(this.level, currentMenu)
+		}
+		for (const { div, opt } of menuItems) {
+			this.updateMenuText(div, opt, currentMenu.position)
 		}
 	}
 
-	private addMenuItem(opt: FlyoutMenuOption, tip: Menu, level: number): void {
+	private addMenuItem(opt: FlyoutMenuOption, tip: Menu, level: number): Div {
 		const optionCallback = () => {
 			if (opt?.options?.length || opt.isSubmenu) {
 				this.level = level + 1
@@ -159,7 +178,20 @@ export class FlyoutMenu {
 				event.preventDefault()
 				optionCallback()
 			})
-		if (opt.isSubmenu) optDiv.insert('div').html('›').style('float', 'right')
+
+		return optDiv
+	}
+
+	private updateMenuText(div: Div, opt: FlyoutMenuOption, position: MenuPosition) {
+		const side = position.side
+		div.style('text-align', side)
+
+		if (opt.isSubmenu) {
+			div
+				.insert('div')
+				.html(side === 'left' ? '›' : '‹')
+				.style('float', side === 'left' ? 'right' : 'left')
+		}
 	}
 
 	/** If the menu appears less than half the viewport width, it's considered left.
@@ -246,9 +278,9 @@ export class FlyoutMenu {
 
 		let x: number, y: number
 
-		if (side === 'right') x = parentPos.rect.right
+		if (side === 'right') x = parentPos.rect.right + 10
 		else x = parentPos.rect.left - flyoutWth - 2
-		y = triggerRect.top
+		y = triggerRect.top + 10
 
 		// Adjust x and y to keep within viewport
 		const maxY = window.innerHeight - flyoutHth
@@ -283,7 +315,6 @@ export class FlyoutMenu {
 			})
 			this.menuLevels.set(this.level, { menu: flyoutTip })
 		}
-
 		const position = this.calculateFlyoutPosition(div.node(), tip)
 		flyoutTip.show(position.x, position.y, false, true, false)
 
