@@ -14,6 +14,7 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import { getCombinedTermFilter } from '#filter'
 import { DownloadMenu } from '#dom/downloadMenu'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
+import { rebaseGroupFilter } from '../mass/groups.js'
 
 export class Barchart extends PlotBase {
 	constructor(opts) {
@@ -330,7 +331,8 @@ export class Barchart extends PlotBase {
 				displaySampleIds: appState.termdbConfig.displaySampleIds && this.app.vocabApi.hasVerifiedToken()
 			}),
 			multipleTestingCorrection: appState.termdbConfig.multipleTestingCorrection,
-			bar_click_menu: appState.bar_click_menu || {}
+			bar_click_menu: appState.bar_click_menu || {},
+			groups: rebaseGroupFilter(appState)
 		}
 	}
 
