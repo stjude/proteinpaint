@@ -3655,20 +3655,20 @@
       "pct": 39.56
     },
     "branches": {
-      "total": 475,
-      "covered": 186,
+      "total": 474,
+      "covered": 185,
       "skipped": 0,
-      "pct": 39.15
+      "pct": 39.02
     },
     "lowestPct": {
-      "curr": 39.15,
-      "prev": 34.4,
-      "diff": 4.75
+      "curr": 39.02,
+      "prev": 39.15,
+      "diff": -0.12999999999999545
     },
     "averagePct": {
-      "curr": 41.892500000000005,
-      "prev": 37.3525,
-      "diff": 4.540000000000006
+      "curr": 41.86000000000001,
+      "prev": 41.892500000000005,
+      "diff": -0.03249999999999886
     }
   },
   "plots/disco/viewmodel/ViewModel.ts": {
