@@ -42,7 +42,7 @@ export class AppApi {
 	state: any
 
 	#latestActionSequenceId: number
-	#abortControllers: Map<any, AbortController>
+	#abortController: AbortController
 	#componentsByType: {
 		[chartType: string]: {
 			[plotId: string]: ComponentApi
@@ -79,7 +79,7 @@ export class AppApi {
 		self.bus = new Bus(this, self.eventTypes, opts.callbacks)
 
 		this.#latestActionSequenceId = 0
-		this.#abortControllers = new Map()
+		this.#abortController = new AbortController()
 	}
 
 	async init() {
@@ -91,10 +91,11 @@ export class AppApi {
 	async dispatch(action?: any) {
 		const self = this.#App
 		self.bus.emit('preDispatch')
-		for (const signal of this.#abortControllers.keys()) {
-			this.#abortControllers.get(signal)?.abort('stale sequenceId')
-			this.#abortControllers.delete(signal)
-		}
+		// any active but stale async operation, like fetch, should be canceled
+		// if a new dispatch supercedes previous dispatches.
+		// NOTE: this cancellation should not affect synchronous steps
+		this.#abortController.abort('stale sequenceId')
+		this.#abortController = new AbortController()
 
 		try {
 			if (this.#middlewares.length) {
@@ -192,13 +193,18 @@ export class AppApi {
 		if (this.#componentsByType[api.type]?.[api.id]) delete this.#componentsByType[api.type][api.id]
 	}
 
+	getAbortSignal() {
+		return this.#abortController.signal
+		// NOTE: the same signal can be reused to cancel different fetch requests, as tested pasting and running the following in the browser console:
+		// > const ac = new AbortController(); for(let i=0; i<3; i++) fetch('/healthcheck', {signal: ac.signal}).then(r=>r.json()).then(console.log).catch(console.log); const t = setTimeout(()=>ac.abort('stale sequenceId'), 0);
+		// stale sequenceId // repeats 3x
+		// // can also change timeout to 1000, to see that aborting is okay after the signaled fetch completes
+	}
+
 	triggerAbort(reason = '') {
 		const self = this.#App
 		if (reason) if (reason) console.info(`triggerAbort()`, reason)
-		for (const signal of this.#abortControllers.keys()) {
-			this.#abortControllers.get(signal)?.abort('stale sequenceId')
-			this.#abortControllers.delete(signal)
-		}
+		this.#abortController.abort('stale sequenceId')
 		for (const name of Object.keys(self.components)) {
 			const component = self.components[name]
 			if (!component) continue
@@ -247,16 +253,5 @@ export class AppApi {
 	printError(e) {
 		if (this.#App.printError) this.#App.printError(e)
 		else alert(e)
-	}
-
-	getAbortSignal() {
-		const abortCtrl = new AbortController()
-		this.#abortControllers.set(abortCtrl.signal, abortCtrl)
-		return abortCtrl.signal
-	}
-
-	deleteAbortCtrl(signal) {
-		if (!this.#abortControllers.has(signal)) return
-		this.#abortControllers.delete(signal)
 	}
 }
