@@ -509,7 +509,7 @@ export function validate_query_snvindel_byisoform(ds) {
 	}
 }
 
-function mayMapRefseq2ensembl(q, ds) {
+export function mayMapRefseq2ensembl(q, ds) {
 	/*
 	q: { isoform: str }
 	if this isoform starts with N, consider it as refseq and try to map to ensembl

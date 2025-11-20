@@ -362,7 +362,7 @@ async function query_snvindel(q, ds) {
 		// client supplies isoform, see if isoform query is supported
 		if (ds.queries.snvindel.byisoform) {
 			// querying by isoform is supported
-			return await ds.queries.snvindel.byisoform.get(q)
+			return await ds.queries.snvindel.byisoform.get(q, ds)
 		} else {
 			// querying by isoform is not supported, continue to check if can query by range
 		}
