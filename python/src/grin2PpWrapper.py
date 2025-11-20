@@ -45,13 +45,25 @@ OPTION_TO_LESION = {
 def write_error(msg):
 	print(f"ERROR: {msg}", file=sys.stderr)
 
-def get_sig_values(data, lesion_types):
-	"""Find existing p/q/n columns for the specified lesion types"""
-	available_cols = set(data.columns)
-	p_cols = [f"p.nsubj.{lt}" for lt in lesion_types if f"p.nsubj.{lt}" in available_cols]
-	n_cols = [f"nsubj.{lt}" for lt in lesion_types if f"nsubj.{lt}" in available_cols]
-	q_cols = [f"q.nsubj.{lt}" for lt in lesion_types if f"q.nsubj.{lt}" in available_cols]
-	return {"p_cols": p_cols, "q_cols": q_cols, "n_cols": n_cols}
+def get_sig_values(data):
+	"""Find existing p/q/n columns for all data types"""
+	# Define all possible column types to check for
+	column_types = ["mutation", "gain", "loss", "fusion", "sv"]
+	# Get all column names from the dataframe
+	available_cols = data.columns
+	# Create expected p-value column names
+	expected_p_cols = [f"p.nsubj.{ct}" for ct in column_types]
+	expected_n_cols = [f"nsubj.{ct}" for ct in column_types]
+	# Find which p-value columns actually exist
+	existing_p_cols = [col for col in expected_p_cols if col in available_cols]
+	existing_n_cols = [col for col in expected_n_cols if col in available_cols]
+	# Create corresponding q-value column names (assume they exist if p exists)
+	existing_q_cols = [col.replace("p.nsubj.", "q.nsubj.") for col in existing_p_cols]
+	return {
+		"p_cols": existing_p_cols,
+		"q_cols": existing_q_cols,
+		"n_cols": existing_n_cols
+	}
 
 def has_data(column_data, sample_size=20):
 	"""Check if column has meaningful data"""
@@ -65,7 +77,7 @@ def smart_format(value):
 
 def sort_grin2_data(data, lesion_types):
 	"""Sort by first available p-value with data"""
-	p_cols = get_sig_values(data, lesion_types)["p_cols"]
+	p_cols = get_sig_values(data)["p_cols"]
 	for col in p_cols:
 		if has_data(data[col]):
 			return data.sort_values(col, ascending=True)
@@ -95,7 +107,7 @@ def get_user_friendly_label(col_name, lesion_type_map):
 
 def simple_column_filter(sorted_results, num_rows, lesion_type_map, lesion_types):
 	"""Generate columns and rows for topGeneTable"""
-	result = get_sig_values(sorted_results, lesion_types)
+	result = get_sig_values(sorted_results)
 	p_cols, q_cols, n_cols = result["p_cols"], result["q_cols"], result["n_cols"]
 	
 	# Check data availability once
@@ -111,34 +123,36 @@ def simple_column_filter(sorted_results, num_rows, lesion_type_map, lesion_types
 		{"label": "Chromosome", "sortable": True}
 	]
 	
-	# Add data type columns
-	columns.extend([
-		{"label": get_user_friendly_label(col, lesion_type_map), "sortable": True}
-		for i, has_data_flag in enumerate(data_type_has_data) if has_data_flag
-		for col in [p_cols[i], q_cols[i], n_cols[i]]
-	])
+	# Add data type columns - safely check n_cols length
+	for i, has_data_flag in enumerate(data_type_has_data):
+		if has_data_flag and i < len(n_cols):
+			columns.extend([
+				{"label": get_user_friendly_label(p_cols[i], lesion_type_map), "sortable": True},
+				{"label": get_user_friendly_label(q_cols[i], lesion_type_map), "sortable": True},
+				{"label": get_user_friendly_label(n_cols[i], lesion_type_map), "sortable": True}
+			])
 	
 	# Add constellation columns
-	columns.extend([
-		{"label": get_user_friendly_label(f"{pq}{i}.nsubj", lesion_type_map), "sortable": True}
-		for i, exists in enumerate(constellation_exists, 1) if exists
-		for pq in ['p', 'q']
-	])
+	for i, exists in enumerate(constellation_exists, 1):
+		if exists:
+			columns.extend([
+				{"label": get_user_friendly_label(f"p{i}.nsubj", lesion_type_map), "sortable": True},
+				{"label": get_user_friendly_label(f"q{i}.nsubj", lesion_type_map), "sortable": True}
+			])
 	
-	# Build subset of columns to extract
+	# Build subset of columns to extract - safely check n_cols length
 	subset_cols = ['gene', 'chrom']
-	subset_cols.extend([
-		col for i, has_data_flag in enumerate(data_type_has_data) if has_data_flag
-		for col in [p_cols[i], q_cols[i], n_cols[i]]
-	])
-	subset_cols.extend([
-		f'{pq}{i}.nsubj' 
-		for i, exists in enumerate(constellation_exists, 1) if exists
-		for pq in ['p', 'q']
-	])
+	for i, has_data_flag in enumerate(data_type_has_data):
+		if has_data_flag and i < len(n_cols):
+			subset_cols.extend([p_cols[i], q_cols[i], n_cols[i]])
+	
+	for i, exists in enumerate(constellation_exists, 1):
+		if exists:
+			subset_cols.extend([f'p{i}.nsubj', f'q{i}.nsubj'])
 	
 	# Extract only needed rows and columns at once
-	subset_df = sorted_results.loc[:num_rows-1, subset_cols]
+	# Use iloc for row slicing (handles bounds naturally) and column selection
+	subset_df = sorted_results.iloc[:num_rows][subset_cols]
 	
 	# Build row data
 	rows = []
@@ -149,19 +163,22 @@ def simple_column_filter(sorted_results, num_rows, lesion_type_map, lesion_types
 			{"value": row_vals["chrom"]}
 		]
 		
-		# Add data type values
-		row_data.extend([
-			{"value": smart_format(row_vals[col])}
-			for i, has_data_flag in enumerate(data_type_has_data) if has_data_flag
-			for col in [p_cols[i], q_cols[i], n_cols[i]]
-		])
+		# Add data type values - safely check n_cols length
+		for i, has_data_flag in enumerate(data_type_has_data):
+			if has_data_flag and i < len(n_cols):
+				row_data.extend([
+					{"value": smart_format(row_vals[p_cols[i]])},
+					{"value": smart_format(row_vals[q_cols[i]])},
+					{"value": smart_format(row_vals[n_cols[i]])}
+				])
 		
 		# Add constellation values
-		row_data.extend([
-			{"value": smart_format(row_vals[f'{pq}{i}.nsubj'])}
-			for i, exists in enumerate(constellation_exists, 1) if exists
-			for pq in ['p', 'q']
-		])
+		for i, exists in enumerate(constellation_exists, 1):
+			if exists:
+				row_data.extend([
+					{"value": smart_format(row_vals[f'p{i}.nsubj'])},
+					{"value": smart_format(row_vals[f'q{i}.nsubj'])}
+				])
 		
 		rows.append(row_data)
 	
