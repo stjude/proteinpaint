@@ -498,7 +498,7 @@ export function getComponentApi(self) {
 	const abortControllers = new Set()
 
 	// remember the action.sequenceId that caused the last state change
-	let latestActionSequenceId
+	let latestActionSequenceId, abortController
 
 	const api = {
 		type: self.type,
@@ -513,6 +513,7 @@ export function getComponentApi(self) {
 			// if the current and pending state is not equal
 			if (!current.action || !deepEqual(componentState, self.state)) {
 				if (current.action) latestActionSequenceId = current.action.sequenceId
+				if (abortController) abortController.abort()
 				if (self.mainArg == 'state') {
 					// some components may require passing state to its .main() method,
 					// for example when extending a simple object class into an rx-component
@@ -528,6 +529,7 @@ export function getComponentApi(self) {
 						}
 					}
 				}
+				abortController = undefined
 			}
 			try {
 				// notify children
@@ -601,6 +603,14 @@ export function getComponentApi(self) {
 				if (typeof e == 'string' && e.includes('sequenceId')) console.warn(e)
 				throw e
 			}
+		},
+		getAbortSignal() {
+			if (!abortController) abortController = new AbortController()
+			return abortController?.signal
+			// NOTE: the same signal can be reused to cancel different fetch requests, as tested pasting and running the following in the browser console:
+			// > const ac = new AbortController(); for(let i=0; i<3; i++) fetch('/healthcheck', {signal: ac.signal}).then(r=>r.json()).then(console.log).catch(console.log); const t = setTimeout(()=>ac.abort('stale sequenceId'), 0);
+			// stale sequenceId // repeats 3x
+			// // can also change timeout to 1000, to see that aborting is okay after the signaled fetch completes
 		},
 		triggerAbort(reason = '') {
 			if (reason) console.info(`triggerAbort()`, reason)

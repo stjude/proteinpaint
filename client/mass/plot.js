@@ -10,8 +10,10 @@ import { filterRxCompInit } from '#filter'
 	It creates expected plot-specific elements like an error div, undo-redo buttons, and local filter.
 */
 class MassPlot {
+	static type = 'plot'
+
 	constructor(opts) {
-		this.type = 'plot'
+		this.type = MassPlot.type
 		setRenderers(this)
 		this.initUi(opts)
 	}
@@ -20,7 +22,8 @@ class MassPlot {
 		if (action.type.includes('cache_termq')) return true
 		if (action.type.endsWith('_group')) return true
 		if (action.type.startsWith('plot_')) {
-			//action.parentId == this.id is a special case to react when deleting a child plot of this plot, for example in the profile comparison, when closing one of the comparison plots
+			// action.parentId == this.id is a special case to react when deleting a child plot of this plot,
+			// for example in the profile comparison, when closing one of the comparison plots
 			return (
 				action.id === this.id ||
 				action.id == this.parentId ||

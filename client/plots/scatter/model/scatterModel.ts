@@ -75,7 +75,10 @@ export class ScatterModel {
 		try {
 			const reqOpts = this.getDataRequestOpts()
 			if (reqOpts.coordTWs?.length == 1 && this.scatter.type == 'sampleScatter') return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
-			const data: ScatterResponse = await this.scatter.app.vocabApi.getScatterData(reqOpts)
+			const data: ScatterResponse = await this.scatter.app.vocabApi.getScatterData(
+				reqOpts,
+				this.scatter.api?.getAbortSignal()
+			)
 			this.is3D = this.scatter.config.term0?.q.mode == 'continuous'
 			if ('error' in data) throw data.error
 			this.range = data.range

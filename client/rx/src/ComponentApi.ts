@@ -39,7 +39,10 @@ export class ComponentApi {
 	#Component: RxComponent
 	Inner?: RxComponent // only in debugmode
 	#latestActionSequenceId: number
+	#abortController?: AbortController
 	#abortControllers: Set<AbortController>
+	// TODO: may use #incompleteUpdate property, if the shared app abortController signal is used
+	// #incompleteUpdate: boolean = true
 	#bus?: Bus
 
 	static getInitFxn(__Class__) {
@@ -110,14 +113,17 @@ export class ComponentApi {
 	// current: {action: RxAction, appState}
 	async update(current) {
 		const self = this.#Component
-		if (current.action && self.reactsTo && !self.reactsTo(current.action)) return
+		// TODO: may use #incompleteUpdate property, if the shared app abortController signal is used
+		if (/*!this.#incompleteUpdate &&*/ current.action && self.reactsTo && !self.reactsTo(current.action)) return
 		const componentState = self.getState ? self.getState(current.appState) : current.appState
 		// no new state computed for this component
 		if (!componentState) return
 		// force update if there is no action, or
 		// if the current and pending state is not equal
-		if (!current.action || !deepEqual(componentState, self.state)) {
+		if (!current.action /*|| this.#incompleteUpdate*/ || !deepEqual(componentState, self.state)) {
+			//this.#incompleteUpdate = true
 			if (current.action) this.#latestActionSequenceId = current.action.sequenceId
+			if (this.#abortController) this.#abortController.abort()
 			if (self.mainArg == 'state') {
 				// some components may require passing state to its .main() method,
 				// for example when extending a simple object class into an rx-component
@@ -133,12 +139,14 @@ export class ComponentApi {
 					}
 				}
 			}
+			this.#abortController = undefined
 		}
 		try {
 			// notify children
 			await notifyComponents(self.components, current)
 			if (self.bus && (!current.action || current.action.sequenceId === this.#latestActionSequenceId))
 				self.bus.emit('postRender')
+			//this.#incompleteUpdate = false
 			return this
 		} catch (e: any) {
 			if (self.printError) self.printError(e)
@@ -216,6 +224,15 @@ export class ComponentApi {
 			if (typeof e == 'string' && e.includes('sequenceId')) console.warn(e)
 			throw e
 		}
+	}
+
+	getAbortSignal() {
+		if (!this.#abortController) this.#abortController = new AbortController()
+		return this.#abortController?.signal
+		// NOTE: the same signal can be reused to cancel different fetch requests, as tested pasting and running the following in the browser console:
+		// > const ac = new AbortController(); for(let i=0; i<3; i++) fetch('/healthcheck', {signal: ac.signal}).then(r=>r.json()).then(console.log).catch(console.log); const t = setTimeout(()=>ac.abort('stale sequenceId'), 0);
+		// stale sequenceId // repeats 3x
+		// // can also change timeout to 1000, to see that aborting is okay after the signaled fetch completes
 	}
 
 	triggerAbort(reason = '') {

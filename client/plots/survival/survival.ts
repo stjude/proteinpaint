@@ -320,7 +320,14 @@ class TdbSurvival extends PlotBase implements RxComponent {
 		this.settings.hidden = this.settings.customHidden || this.settings.defaultHidden
 		this.settings.xTitleLabel = this.getXtitleLabel()
 		const reqOpts = this.getDataRequestOpts()
-		const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+		let data
+		try {
+			// do not directly set this.serverData to response, since it could be an error
+			data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts, this.api?.getAbortSignal())
+		} catch (e) {
+			if (this.app.isAbortError(e)) return
+			throw e
+		}
 		this.serverData = data
 		this.toggleLoadingDiv('none')
 		this.app.vocabApi.syncTermData(this.state.config, data)

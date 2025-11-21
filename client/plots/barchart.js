@@ -17,10 +17,12 @@ import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
 import { rebaseGroupFilter } from '../mass/groups.js'
 
 export class Barchart extends PlotBase {
+	static type = 'barchart'
+
 	constructor(opts) {
 		// rx.getComponentInit() will set this.app, this.id, this.opts
 		super(opts)
-		this.type = 'barchart'
+		this.type = Barchart.type
 	}
 	//freeze the api of this class. don't want embedder functions to modify it.
 	preApiFreeze(api) {
@@ -348,7 +350,7 @@ export class Barchart extends PlotBase {
 			const reqOpts = this.getDataRequestOpts()
 			await this.getDescrStats()
 			await this.setControls() //needs to be called after getDescrStats() to set hasStats
-			const results = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+			const results = await this.app.vocabApi.getNestedChartSeriesData(reqOpts, this.api.getAbortSignal())
 			if (results.error) throw results
 			const data = results.data
 			this.charts = data.charts
@@ -376,7 +378,7 @@ export class Barchart extends PlotBase {
 			this.render()
 			this.dom.barDiv.style('display', 'flex')
 		} catch (e) {
-			if (e.includes('stale sequenceId')) return
+			if (this.app.isAbortError(e)) return
 			this.toggleLoadingDiv('none')
 			this.dom.barDiv.style('display', 'none')
 			throw e
