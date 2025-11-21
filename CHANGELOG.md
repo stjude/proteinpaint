@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- GRIN2: Refactored grin2PpWrapper.py
+
 Fixes:
 - quick fix for lollipop to be showing under 2K disks to avoid crashing browser with GDC TTN
 
