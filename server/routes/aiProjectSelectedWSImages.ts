@@ -31,9 +31,29 @@ function init({ genomes }) {
 			const ds = g.datasets[query.dslabel]
 			if (!ds) throw 'invalid dataset name'
 			const projectId = query.projectId
-			const wsimagesFilenames = query.wsimagesFilenames
+
+			const wsimagesFilenamesArg = query.wsimagesFilenames as string[]
+			let wsimagesFilenames: Array<string> = []
 
 			const wsimages: WSImage[] = []
+
+			// if client requested ["all"], attempt to get full WSI filename list from ds.queries helper
+			if (
+				Array.isArray(wsimagesFilenamesArg) &&
+				wsimagesFilenamesArg.length === 1 &&
+				wsimagesFilenamesArg[0] === 'all'
+			) {
+				// prefer using dataset-provided query helper if available
+				if (ds.queries?.WSImages?.getAllWSImages) {
+					try {
+						wsimagesFilenames = await ds.queries.WSImages.getAllWSImages(projectId)
+					} catch (e) {
+						console.error('Failed to get WSI image list via helper, falling back to provided param', e)
+					}
+				}
+			} else {
+				wsimagesFilenames = wsimagesFilenamesArg
+			}
 
 			if (ds.queries.WSImages.getWSIAnnotations) {
 				for (const wsimageFilename of wsimagesFilenames) {
@@ -117,6 +137,14 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
         ORDER BY pa.timestamp DESC, pa.id DESC
     `
 
+	// SQL to list all WSI filenames for a project (used when client asks for ["all"])
+	const GET_PROJECT_IMAGES_SQL = `
+        SELECT DISTINCT pi.image_path AS image_path
+        FROM project_images pi
+        WHERE pi.project_id = ?
+        ORDER BY pi.id
+    `
+
 	if (!ds.queries) ds.queries = {}
 	if (!ds.queries.WSImages) ds.queries.WSImages = {}
 
@@ -141,11 +169,24 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 
 				return {
 					zoomCoordinates: coords,
-					class: r.label ?? ''
+					class: r.label ?? '',
+					timestamp: r.timestamp
 				}
 			})
 		} catch (error) {
 			console.error('Error loading annotations:', error)
+			return []
+		}
+	}
+
+	// expose helper that returns all image filenames for a project
+	ds.queries.WSImages.getAllWSImages = async (projectId: number): Promise<string[]> => {
+		try {
+			const stmt = connection.prepare<[number], { image_path: string }>(GET_PROJECT_IMAGES_SQL)
+			const rows = stmt.all(projectId)
+			return (rows || []).map(r => r.image_path)
+		} catch (error) {
+			console.error('Error loading project images list:', error)
 			return []
 		}
 	}

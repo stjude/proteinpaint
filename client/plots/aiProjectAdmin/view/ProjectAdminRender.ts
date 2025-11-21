@@ -107,6 +107,19 @@ export class ProjectAdminRender {
 				}
 			},
 			{
+				// Export button - pass only project.id and export will be CSV
+				text: 'Export',
+				class: 'sja_menuoption',
+				callback: async (_, idx) => {
+					const project = this.projects[idx]
+					try {
+						await this.interactions.exportAnnotations(project.id)
+					} catch (_: any) {
+						sayerror(this.dom.errorDiv, 'Failed to export annotations')
+					}
+				}
+			},
+			{
 				//TODO: Add logic for admins only once user roles are implemented
 				//Leave here for development
 				text: 'Delete',
