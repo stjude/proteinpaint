@@ -118,7 +118,6 @@ export class CreateProjectRender {
 						classes: this.classesTable!.rows.map((row, i) => {
 							return { label: row[1].value, color: row[2].color, key_shortcut: `Digit${i + 1}` }
 						}),
-						// include users from the UsersRender (emails)
 						users: this.usersRender?.users || []
 					}
 				})
