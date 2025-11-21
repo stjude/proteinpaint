@@ -9,6 +9,7 @@ Features:
 
 Fixes:
 - quick fix for lollipop to be showing under 2K disks to avoid crashing browser with GDC TTN
+- Restored GDCGRIN2
 
 
 ## 2.161.0
