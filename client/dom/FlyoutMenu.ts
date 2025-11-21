@@ -76,6 +76,8 @@ export class FlyoutMenu {
 	private menuLevels: Map<number, MenuLevel>
 	/** Current menu depth level */
 	level: number
+	/** Pixel offset for positioning menus */
+	#offset = 10
 
 	constructor(opts: FlyoutMenuOptions) {
 		this.validateOpts(opts)
@@ -289,18 +291,18 @@ export class FlyoutMenu {
 
 		let x: number, y: number
 
-		if (side === 'right') x = parentPos.rect.right + 10
+		if (side === 'right') x = parentPos.rect.right + this.#offset
 		else x = parentPos.rect.left - flyoutWth - 2
-		y = triggerRect.top + 10
+		y = triggerRect.top + this.#offset
 
 		// Adjust x and y to keep within viewport
 		const maxY = window.innerHeight - flyoutHth
 		if (y > maxY) y = maxY
 		if (y < 0) y = 0
 
-		if (x < 0) x = 10
+		if (x < 0) x = this.#offset
 		else if (x + flyoutWth > vpWidth) {
-			x = vpWidth - flyoutWth - 10
+			x = vpWidth - flyoutWth - this.#offset
 		}
 
 		return { x, y, side }
