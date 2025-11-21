@@ -317,7 +317,11 @@ async function colorAndShapeSamples(
 				if (tvalue && 'color' in tvalue) {
 					value.color = tvalue.color
 				} else if (isNumericTerm(q.colorTW.term)) {
-					const bins = data.refs.byTermId[q.colorTW.$id].bins
+					// TODO: supporting q.colorTW.term.id since term.id is still
+					// used as key of byTermId{} for gdc (see mayApplyBinning() in server/src/mds3.gdc.js)
+					// should only use tw.$id instead of tw.term.id
+					const term = data.refs.byTermId[q.colorTW.$id] || data.refs.byTermId[q.colorTW.term.id]
+					const bins = term.bins
 					const bin = bins.find(bin => bin.label == category)
 					if (bin?.color) value.color = bin.color
 					else {
@@ -460,6 +464,9 @@ function order(map: any, tw: TermWrapper, refs: any) {
 	if (!tw || map.size == 0) return entries
 	entries = Object.entries(map)
 
+	// see TODO above regarding tw.$id and tw.term.id
+	const term = refs?.byTermId[tw.$id!] || refs?.byTermId[tw.term.id!]
+
 	if (hasOrder) {
 		entries.sort((a, b) => {
 			let v1, v2
@@ -476,8 +483,8 @@ function order(map: any, tw: TermWrapper, refs: any) {
 			else if (v1 < v2) return -1
 			return 0
 		})
-	} else if (refs?.byTermId[tw.$id!]?.bins) {
-		const bins = refs.byTermId[tw.$id!].bins
+	} else if (term?.bins) {
+		const bins = term.bins
 		entries.sort((a, b) => {
 			const binA = bins.findIndex(bin => bin.label == a[0])
 			const binB = bins.findIndex(bin => bin.label == b[0])
