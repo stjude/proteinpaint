@@ -4,7 +4,7 @@ import type { Elem } from '../../../types/d3'
 // import { InvalidDataUI, sayerror } from '#dom'
 import type { AIProjectAdminInteractions } from '../interactions/AIProjectAdminInteractions'
 import { SelectorTableRender } from './SelectorTableRender'
-import { UsersRender } from './UsersRender' // added import
+import { UsersRender } from './UsersRender'
 
 export class CreateProjectRender {
 	dom: {
@@ -23,7 +23,6 @@ export class CreateProjectRender {
 	constructor(dom: any, app: any, interactions: AIProjectAdminInteractions) {
 		dom.holder.style('padding', '10px 20px').attr('class', 'sjpp-deletable-ai-prjt-admin-div')
 
-		// create elements first using local variables (avoid using this.dom before assignment)
 		const filterDiv = dom.holder.append('div').attr('id', 'sjpp-ai-prjt-admin-filter-div')
 
 		const wrapper = dom.holder
@@ -34,17 +33,14 @@ export class CreateProjectRender {
 			.style('align-items', 'flex-start')
 			.style('padding', '20px 0px')
 
-		// Keep the left column from stretching to fill the entire wrapper so the right
-		// column sits directly next to it. Allow the left column to size to its content.
 		const left = wrapper.append('div').attr('id', 'sjpp-ai-prjt-admin-classes-table').style('flex', '0 1 auto')
-		// Place the users panel immediately to the right of the classes panel with a small gap.
+
 		const right = wrapper
 			.append('div')
 			.attr('id', 'sjpp-ai-prjt-admin-users')
 			.style('width', '320px')
 			.style('margin-left', '8px')
 
-		// assign this.dom once
 		this.dom = {
 			holder: dom.holder,
 			errorDiv: dom.errorDiv,
