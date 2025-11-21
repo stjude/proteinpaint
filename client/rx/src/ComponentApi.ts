@@ -123,7 +123,11 @@ export class ComponentApi {
 		if (!current.action /*|| this.#incompleteUpdate*/ || !deepEqual(componentState, self.state)) {
 			//this.#incompleteUpdate = true
 			if (current.action) this.#latestActionSequenceId = current.action.sequenceId
-			if (this.#abortController) this.#abortController.abort('stale sequenceId')
+			if (this.#abortController) {
+				this.#abortController.abort('stale sequenceId')
+				this.#abortController = undefined //new AbortController()
+			}
+
 			if (self.mainArg == 'state') {
 				// some components may require passing state to its .main() method,
 				// for example when extending a simple object class into an rx-component
@@ -142,6 +146,7 @@ export class ComponentApi {
 						this.#abortController = undefined
 					} catch (e) {
 						this.#abortController = undefined
+						if (self.app.isAbortError(e)) return
 						if (self.bus) self.bus.emit('error')
 						throw e
 					}

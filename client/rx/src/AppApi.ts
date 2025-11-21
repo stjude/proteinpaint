@@ -79,7 +79,6 @@ export class AppApi {
 		self.bus = new Bus(this, self.eventTypes, opts.callbacks)
 
 		this.#latestActionSequenceId = 0
-		this.#abortController = new AbortController()
 	}
 
 	async init() {
@@ -94,8 +93,10 @@ export class AppApi {
 		// any active but stale async operation, like fetch, should be canceled
 		// if a new dispatch supercedes previous dispatches.
 		// NOTE: this cancellation should not affect synchronous steps
-		if (this.#abortController) this.#abortController.abort('stale sequenceId')
-		this.#abortController = new AbortController()
+		if (this.#abortController) {
+			this.#abortController.abort('stale sequenceId')
+			this.#abortController = undefined
+		}
 
 		try {
 			if (this.#middlewares.length) {
@@ -195,6 +196,7 @@ export class AppApi {
 	}
 
 	getAbortSignal() {
+		if (!this.#abortController) this.#abortController = new AbortController()
 		return this.#abortController?.signal
 		// NOTE: the same signal can be reused to cancel different fetch requests, as tested pasting and running the following in the browser console:
 		// > const ac = new AbortController(); for(let i=0; i<3; i++) fetch('/healthcheck', {signal: ac.signal}).then(r=>r.json()).then(console.log).catch(console.log); const t = setTimeout(()=>ac.abort('stale sequenceId'), 0);

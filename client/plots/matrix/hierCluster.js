@@ -11,10 +11,12 @@ import { TermTypes, TermTypes2Dt, NUMERIC_DICTIONARY_TERM } from '#shared/terms.
 import { colorScaleMap } from '#shared/common.js'
 
 export class HierCluster extends Matrix {
+	static type = 'hierCluster'
+
 	constructor(opts) {
 		super(opts)
-		this.type = 'hierCluster'
-		this.chartType = 'hierCluster'
+		this.type = HierCluster.type
+		this.chartType = HierCluster.type
 	}
 
 	async init(appState) {
@@ -196,7 +198,7 @@ export class HierCluster extends Matrix {
 		// may revert to using {signal} argument if detectStale() is used to wrap this function
 		const body = this.currRequestOpts?.hierCluster || this.getHCRequestBody(this.state)
 		const twlst = this.hcTermGroup.lst
-		const data = await dofetch3('termdb/cluster', { body, signal: this.app.getAbortSignal?.() })
+		const data = await dofetch3('termdb/cluster', { body, signal: this.api.getAbortSignal?.() })
 		// return the twlst that was submitted in the data request, this data-to-twlst reference will not be affected by race condition
 		return [data, twlst]
 	}
