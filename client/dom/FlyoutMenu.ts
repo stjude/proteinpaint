@@ -343,7 +343,11 @@ export class FlyoutMenu {
 	 * This method should be called within the final callback
 	 * in .options[] */
 	public closeMenus(): void {
-		for (const [, menuLevel] of this.menuLevels) {
+		for (const [level, menuLevel] of this.menuLevels) {
+			if (level > 0) {
+				//Destroy all child menus
+				menuLevel.menu.d.remove()
+			}
 			menuLevel.menu.hide()
 		}
 		// Clear all except main menu
