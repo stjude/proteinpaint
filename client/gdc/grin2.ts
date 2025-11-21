@@ -23,7 +23,7 @@ import {
 	createDataTypeRow,
 	createInfoPanel
 } from './grin2/ui-components'
-import { plotManhattan } from '#plots/manhattan/manhattan.ts'
+import { plotManhattanGDC } from '#plots/manhattan/manhattanGDC.ts'
 
 // ================================================================================
 // TYPE DEFINITIONS, INTERFACES, & DEFAULTS
@@ -1780,7 +1780,7 @@ async function getFilesAndShowTable(obj) {
 
 			const plotDiv = resultContainer.append('div')
 
-			plotManhattan(plotDiv, plotData, {})
+			plotManhattanGDC(plotDiv, plotData, { yAxisSpace: 0 })
 
 			// Add error handler for image
 			resultContainer.node().onerror = () => {

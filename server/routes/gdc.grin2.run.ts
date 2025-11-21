@@ -134,7 +134,7 @@ async function runGrin2(genomes: any, req: any, res: any) {
 
 	// Call the python script
 	const grin2AnalysisStart = Date.now()
-	const pyResult = await run_python('grin2PpWrapper.py', JSON.stringify(pyInput))
+	const pyResult = await run_python('grin2PpWrapperGDC.py', JSON.stringify(pyInput))
 
 	// mayLog(`[GRIN2] python execution completed, result: ${pyResult}`)
 	if (pyResult.stderr?.trim()) {
