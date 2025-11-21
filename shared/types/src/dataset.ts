@@ -1574,6 +1574,23 @@ keep this setting here for reason of:
 	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
 	hiddenIds?: string[]
 	getAdditionalFilter?: (__protected__: any, term: any) => Filter | undefined
+	/** collections of numeric dictionary terms that are related and can be used together in some plots
+	 */
+	numericTermCollections?: NumericTermCollection[]
+}
+
+type NumericTermCollection = {
+	/** human readable name for this collection */
+	name: string
+	/** array of dictionary numeric term ids belonging to this collection */
+	termIds: string[]
+	/** preconfigured cohort-level plots for this collection */
+	plots?: {
+		/** name of this plot */
+		name: string
+		/** json file path of this plot */
+		file: string
+	}[]
 }
 
 type SampleType = {
