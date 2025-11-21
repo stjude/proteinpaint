@@ -860,7 +860,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.style('font-size', `${this.optionsTextFontSize}px`)
 				.style('color', this.optionsTextColor)
 				.text(
-					`Analysis completed in ${result.timing.totalTime}s (Processing: ${result.timing.processingTime}s, GRIN2: ${result.timing.grin2Time}s, Plotting: ${result.timing.plottingTime}s)`
+					`Analysis completed in ${result.timing.totalTime} (Processing: ${result.timing.processingTime}, GRIN2: ${result.timing.grin2Time}, Plotting: ${result.timing.plottingTime})`
 				)
 		}
 

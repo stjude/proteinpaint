@@ -148,13 +148,13 @@ export type GRIN2Response = {
 	/** Timing info for the analysis */
 	timing?: {
 		/** Time taken to run data processing */
-		processingTime: number
+		processingTime: string
 		/** Time taken to run GRIN2 processing */
-		grin2Time: number
+		grin2Time: string
 		/** Time taken to run Manhattan plot generation */
-		plottingTime: number
+		plottingTime: string
 		/** Total time taken for the entire run */
-		totalTime: number
+		totalTime: string
 	}
 	/** Detailed processing summary */
 	processingSummary?: {

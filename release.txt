@@ -1,1 +1,2 @@
-
+Features:
+- GRIN2: Improved precision of reported time for GRIN2 steps
