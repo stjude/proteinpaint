@@ -9,9 +9,10 @@ import { get_samples } from '#src/termdb.sql.js'
 import { read_file, file_is_readable } from '#src/utils.js'
 import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dt2lesion, optionToDt } from '#shared/common.js'
 import crypto from 'crypto'
+import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.ts'
 
 /**
- * General GRIN2 analysis handler
+ * General GRIN2 analysis route
  * Processes user-provided snvindel, CNV, fusion, and sv filters and performs GRIN2 analysis
  *
  * Data Flow:
@@ -24,7 +25,7 @@ import crypto from 'crypto'
  *        - chrom: Chromosome name (e.g., "chr1")
  *        - loc.start: Start position of the lesion
  *        - loc.end: End position of the lesion
- *        - lsn.type: Type of lesion ("mutation", "gain", "loss", "fusion", "sv")
+ *        - lsn.type: Type of lesion ("mutation", "gain", "loss", "fusion", "sv"). A comprehensive set of lesion types can be found in dt2lesion
  * 3. Read and filter file contents based on snvindelOptions, cnvOptions, fusionOptions, and svOptions:
  *    - SNV/indel: Filter by total depth, alternate allele count, consequence types, and 5' and 3' flanking sizes
  *    - CNV: Filter by copy number thresholds, max segment length, and 5' and 3' flanking sizes
@@ -132,7 +133,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	)
 
 	const cohortTime = Date.now() - startTime
-	mayLog(`[GRIN2] Retrieved ${samples.length.toLocaleString()} samples in ${Math.round(cohortTime / 1000)} seconds`)
+	mayLog(`[GRIN2] Retrieved ${samples.length.toLocaleString()} samples in ${formatElapsedTime(cohortTime)}`)
 
 	if (samples.length === 0) {
 		throw new Error('No samples found matching the provided filter criteria')
@@ -145,8 +146,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	const { lesions, processingSummary } = await processSampleData(samples, ds, request, tracker)
 
 	const processingTime = Date.now() - processingStartTime
-	const processingTimeToPrint = Math.round(processingTime / 1000)
-	mayLog(`[GRIN2] Data processing took ${processingTimeToPrint} seconds`)
+	mayLog(`[GRIN2] Data processing took ${formatElapsedTime(processingTime)}`)
 	mayLog(
 		`[GRIN2] Processing summary: ${processingSummary?.processedSamples ?? 0}/${
 			processingSummary?.totalSamples ?? samples.length
@@ -195,8 +195,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	}
 
 	const grin2AnalysisTime = Date.now() - grin2AnalysisStart
-	const grin2AnalysisTimeToPrint = Math.round(grin2AnalysisTime / 1000)
-	mayLog(`[GRIN2] Python processing took ${grin2AnalysisTimeToPrint} seconds`)
+	mayLog(`[GRIN2] Python processing took ${formatElapsedTime(grin2AnalysisTime)}`)
 
 	const resultData = JSON.parse(pyResult)
 
@@ -217,8 +216,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	const manhattanPlotStart = Date.now()
 	const rsResult = await run_rust('manhattan_plot', JSON.stringify(rustInput))
 	const manhattanPlotTime = Date.now() - manhattanPlotStart
-	const manhattanPlotTimeToPrint = Math.round(manhattanPlotTime / 1000)
-	mayLog(`[GRIN2] Manhattan plot generation took ${manhattanPlotTimeToPrint} seconds`)
+	mayLog(`[GRIN2] Manhattan plot generation took ${formatElapsedTime(manhattanPlotTime)}`)
 
 	const manhattanPlotData = JSON.parse(rsResult)
 
@@ -229,7 +227,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		throw new Error('Invalid Rust output: missing PNG data')
 	}
 
-	const totalTime = processingTimeToPrint + grin2AnalysisTimeToPrint + manhattanPlotTimeToPrint
+	const totalTime = processingTime + grin2AnalysisTime + manhattanPlotTime
 
 	const response: GRIN2Response = {
 		status: 'success',
@@ -239,10 +237,10 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		totalGenes: resultData.totalGenes,
 		showingTop: resultData.showingTop,
 		timing: {
-			processingTime: processingTimeToPrint,
-			grin2Time: grin2AnalysisTimeToPrint,
-			plottingTime: manhattanPlotTimeToPrint,
-			totalTime: totalTime
+			processingTime: formatElapsedTime(processingTime),
+			grin2Time: formatElapsedTime(grin2AnalysisTime),
+			plottingTime: formatElapsedTime(manhattanPlotTime),
+			totalTime: formatElapsedTime(totalTime)
 		},
 		processingSummary: processingSummary,
 		cacheFileName: resultData.cacheFileName
