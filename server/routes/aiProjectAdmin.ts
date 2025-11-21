@@ -53,13 +53,10 @@ function init({ genomes }) {
 				/** If the url is too long, the method will be changed to POST
 				 * in dofetch. Checking if project.type == 'new' ensures the project
 				 * is added to the db.*/
-				if (req.method === 'PUT' || query.project.type === 'new') {
-					addProject(connection, query.project)
-				} else if (req.method === 'POST') {
-					editProject(connection, query.project)
-				} else if (req.method === 'DELETE') {
-					deleteProject(connection, query.project.id)
-				} else throw new Error('Invalid request method for="admin" in aiProjectAdmin route.')
+				if (req.method === 'PUT' || query.project.type === 'new') addProject(connection, query.project)
+				else if (req.method === 'POST') editProject(connection, query.project)
+				else if (req.method === 'DELETE') deleteProject(connection, query.project.id)
+				else throw new Error('Invalid request method for="admin" in aiProjectAdmin route.')
 
 				let projectId = query.project.id
 
