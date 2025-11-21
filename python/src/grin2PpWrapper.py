@@ -70,7 +70,7 @@ def has_data(column_data, sample_size=20):
 	return (column_data.head(sample_size).notna() & (column_data.head(sample_size) != "")).any()
 
 def smart_format(value):
-	"""Format to 4 significant digits"""
+	"""Format to 3 significant digits"""
 	if pd.isna(value) or not np.isfinite(value):
 		return None
 	return 0 if value == 0 else float(f"{value:.3g}")
@@ -85,7 +85,8 @@ def sort_grin2_data(data, lesion_types):
 
 def get_user_friendly_label(col_name, lesion_type_map):
 	"""Convert column names to user-friendly labels"""
-	# Constellation pattern: p1.nsubj, q2.nsubj, etc.
+	# Constellation pattern: p1.nsubj, p2.nsubj, etc.
+	# Note: Assumes single-digit constellation numbers (p1-p9), not double-digit like p10
 	if len(col_name) > 1 and col_name[0] in 'pq' and col_name[1].isdigit() and col_name.endswith('.nsubj'):
 		num = int(col_name[1])
 		pq = 'P-value' if col_name[0] == 'p' else 'Q-value'
@@ -210,7 +211,7 @@ try:
 	].assign(
 		start=lambda x: pd.to_numeric(x["start"], errors="coerce").astype("int64"),
 		stop=lambda x: pd.to_numeric(x["stop"], errors="coerce").astype("int64"),
-		chr=lambda x: "chr" + x["chr"].str.replace("chr", "")
+		chr=lambda x: x["chr"].apply(lambda c: c if c.startswith("chr") else f"chr{c}")
 	).rename(columns={
 		"name": "gene", "chr": "chrom", "start": "loc.start", "stop": "loc.end"
 	})[["gene", "chrom", "loc.start", "loc.end"]]
@@ -221,8 +222,8 @@ try:
 		"chrom": list(chromosomelist.keys()),
 		"size": pd.to_numeric(list(chromosomelist.values())).astype("int64")
 	}).assign(
-		sort_key=lambda x: x["chrom"].map(lambda c: int(c.replace("chr", "")) if c.replace("chr", "").isdigit() 
-		                                   else {"X": 23, "Y": 24}.get(c.replace("chr", ""), 100))
+		sort_key=lambda x: x["chrom"].map(lambda c: int(c[3:]) if c.startswith("chr") and c[3:].isdigit() 
+		                                   else {"chrX": 23, "chrY": 24}.get(c, 100))
 	).sort_values("sort_key").drop(columns="sort_key")
 	
 	# 4. Parse lesion data
@@ -239,7 +240,7 @@ try:
 		"loc.start": "int64", "loc.end": "int64", 
 		"lsn.type": str
 	}).assign(
-		chrom=lambda x: "chr" + x["chrom"].str.replace("chr", "")
+		chrom=lambda x: x["chrom"].apply(lambda c: c if c.startswith("chr") else f"chr{c}")
 	)
 	
 	lesion_counts = lesion_df["lsn.type"].value_counts()
