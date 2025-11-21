@@ -44,22 +44,22 @@ export class GeneExpChartMenu {
 			{
 				label: 'Single gene summary',
 				isSubmenu: true,
-				callback: holder => {
-					this.renderGeneSelect(holder)
+				callback: (holder, closeMenus) => {
+					this.renderGeneSelect(holder, closeMenus)
 				}
 			},
 			{
 				label: 'Two gene comparison',
 				isSubmenu: true,
-				callback: holder => {
-					this.renderTwoGeneSelect(holder)
+				callback: (holder, closeMenus) => {
+					this.renderTwoGeneSelect(holder, closeMenus)
 				}
 			},
 			{
 				label: 'Multiple genes for hierarchical clustering ',
 				isSubmenu: true,
-				callback: holder => {
-					this.renderGeneMultiSelect(holder)
+				callback: (holder, closeMenus) => {
+					this.renderGeneMultiSelect(holder, closeMenus)
 				}
 			}
 		]
@@ -77,7 +77,7 @@ export class GeneExpChartMenu {
 
 	/** Launch summary plot for gene expression data
 	 * for one gene. */
-	renderGeneSelect(holder) {
+	renderGeneSelect(holder, closeMenus) {
 		const tip = holder
 		const row = tip.append('div').style('padding', '5px')
 		row.append('span').style('font-weight', 'bold').text('Select a gene:')
@@ -95,7 +95,7 @@ export class GeneExpChartMenu {
 						type: TermTypes.GENE_EXPRESSION
 					}
 				}
-				this.flyout?.closeMenus()
+				closeMenus()
 				this.app.dispatch({
 					type: 'plot_create',
 					config: {
@@ -109,7 +109,7 @@ export class GeneExpChartMenu {
 
 	/** Guide the user to select the first gene then
 	 * a second to launch the summary plot on submit.*/
-	renderTwoGeneSelect(holder) {
+	renderTwoGeneSelect(holder, closeMenus) {
 		const term: GeneExpressionTerm = { type: TermTypes.GENE_EXPRESSION }
 		const term2: GeneExpressionTerm = { type: TermTypes.GENE_EXPRESSION }
 
@@ -158,7 +158,7 @@ export class GeneExpChartMenu {
 					return
 				}
 
-				this.flyout?.closeMenus()
+				closeMenus()
 				this.app.dispatch({
 					type: 'plot_create',
 					config: {
@@ -172,7 +172,7 @@ export class GeneExpChartMenu {
 
 	/** Render the GeneSetEdit UI for selection and then
 	 * launch the hierarchical clustering on submit.*/
-	renderGeneMultiSelect(holder) {
+	renderGeneMultiSelect(holder, closeMenus) {
 		const grpWrapper = holder.append('div').style('padding', '5px')
 		grpWrapper.append('span').style('font-weight', 'bold').text('Group name:')
 
@@ -239,7 +239,7 @@ export class GeneExpChartMenu {
 				// 	tg.splice(selectedGroup.index, 1)
 				// }
 
-				this.flyout?.closeMenus()
+				closeMenus()
 				this.app.dispatch({
 					type: 'plot_create',
 					config: {
