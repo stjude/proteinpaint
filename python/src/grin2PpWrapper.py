@@ -75,7 +75,7 @@ def smart_format(value):
 		return None
 	return 0 if value == 0 else float(f"{value:.3g}")
 
-def sort_grin2_data(data, lesion_types):
+def sort_grin2_data(data):
 	"""Sort by first available p-value with data"""
 	p_cols = get_sig_values(data)["p_cols"]
 	for col in p_cols:
@@ -106,7 +106,7 @@ def get_user_friendly_label(col_name, lesion_type_map):
 	
 	return col_name
 
-def simple_column_filter(sorted_results, num_rows, lesion_type_map, lesion_types):
+def simple_column_filter(sorted_results, num_rows, lesion_type_map):
 	"""Generate columns and rows for topGeneTable"""
 	result = get_sig_values(sorted_results)
 	p_cols, q_cols, n_cols = result["p_cols"], result["q_cols"], result["n_cols"]
@@ -259,7 +259,7 @@ try:
 		sys.exit(1)
 	
 	# 6. Sort and cache results
-	sorted_results = sort_grin2_data(grin_results["gene.hits"], lesion_types)
+	sorted_results = sort_grin2_data(grin_results["gene.hits"])
 	
 	cache_file_path = input_data.get("cacheFileName")
 	if cache_file_path:
@@ -280,7 +280,7 @@ try:
 	# 7. Generate table
 	max_genes = input_data.get("maxGenesToShow", 500)
 	num_rows = min(len(sorted_results), max_genes)
-	table_result = simple_column_filter(sorted_results, num_rows, lesion_type_map, lesion_types)
+	table_result = simple_column_filter(sorted_results, num_rows, lesion_type_map)
 	
 	# 8. Output response
 	print(json.dumps({
