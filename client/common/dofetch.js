@@ -148,6 +148,7 @@ export async function namedFetch(url, init, opts = {}) {
 	let result
 	const dataName = await getDataName(url, init)
 	if (opts.serverData[dataName]) {
+		// if (init.signal?.aborted) throw `stale sequenceId`
 		if (init.signal) {
 			// should not reuse a response if the abortController.signal option has been aborted,
 			// sleep() below allows sufficient time for the abort() to be called in rx AppApi.dispatch() or elsewhere,
