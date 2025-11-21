@@ -106,9 +106,7 @@ export class CreateProjectRender {
 					return
 				}
 
-				// Ensure at least one user is present before proceeding
 				if (!this.usersRender || !Array.isArray(this.usersRender.users) || this.usersRender.users.length === 0) {
-					// show inline error and re-enable the apply button
 					alert('Please add at least one user.')
 					btn.attr('disabled', null)
 					return
