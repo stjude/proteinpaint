@@ -18,7 +18,7 @@ export class CreateProjectRender {
 	interactions: AIProjectAdminInteractions
 	filter: any
 	classesTable?: ClassesTableRender
-	usersRender?: UsersRender // new property
+	usersRender?: UsersRender
 
 	constructor(dom: any, app: any, interactions: AIProjectAdminInteractions) {
 		dom.holder.style('padding', '10px 20px').attr('class', 'sjpp-deletable-ai-prjt-admin-div')
