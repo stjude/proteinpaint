@@ -86,11 +86,11 @@ export class TermdbVocab extends Vocab {
     Output:
         a structure from the termdb/barsql route
     */
-	async getNestedChartSeriesData(opts) {
+	async getNestedChartSeriesData(opts, signal = undefined) {
 		const [route, body] = this.getTdbDataUrl(opts)
 		const headers = this.mayGetAuthHeaders('termdb')
 		const initOpts = { headers, body }
-		initOpts.signal = this.app?.getAbortSignal?.()
+		initOpts.signal = signal
 		const data = await dofetch3(route, initOpts, this.opts.fetchOpts)
 		if (data.error) throw data.error
 
@@ -442,7 +442,7 @@ export class TermdbVocab extends Vocab {
 		return data.count
 	}
 
-	async getViolinPlotData(arg, _body = {}) {
+	async getViolinPlotData(arg, _body = {}, signal = undefined) {
 		const headers = this.mayGetAuthHeaders('termdb')
 		arg.tw = this.getTwMinCopy(arg.tw)
 		if (arg.overlayTw) arg.overlayTw = this.getTwMinCopy(arg.overlayTw)
@@ -467,12 +467,12 @@ export class TermdbVocab extends Vocab {
 			_body
 		)
 		if (body.filter) body.filter = getNormalRoot(body.filter)
-		const init = { headers, body, signal: this.app?.getAbortSignal?.() }
+		const init = { headers, body, signal }
 		const data = await dofetch3('termdb/violin', init)
 		return data
 	}
 
-	async getBoxPlotData(arg, _body = {}) {
+	async getBoxPlotData(arg, signal = undefined) {
 		const headers = this.mayGetAuthHeaders('termdb')
 		arg.tw = this.getTwMinCopy(arg.tw)
 
@@ -483,11 +483,10 @@ export class TermdbVocab extends Vocab {
 				genome: this.vocab.genome,
 				dslabel: this.vocab.dslabel
 			},
-			arg,
-			_body
+			arg
 		)
 		if (body.filter) body.filter = getNormalRoot(body.filter)
-		const d = await dofetch3('termdb/boxplot', { headers, body, signal: this.app?.getAbortSignal?.() })
+		const d = await dofetch3('termdb/boxplot', { headers, body, signal })
 		return d
 	}
 
@@ -813,7 +812,6 @@ export class TermdbVocab extends Vocab {
 				}
 			}
 			if (opts.signal) init.signal = opts.signal
-			else init.signal = this.app?.getAbortSignal?.()
 
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 			if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
@@ -980,7 +978,7 @@ export class TermdbVocab extends Vocab {
 		return await dofetch3('termdb', { body })
 	}
 
-	async getScatterData(opts) {
+	async getScatterData(opts, signal = undefined) {
 		// the scatter plot may still render when not in session,
 		// but not have an option to list samples
 		const headers = this.mayGetAuthHeaders('termdb')
@@ -1003,7 +1001,7 @@ export class TermdbVocab extends Vocab {
 		if (opts.divideByTW) body.divideByTW = this.getTwMinCopy(opts.divideByTW)
 		if (opts.scaleDotTW) body.scaleDotTW = this.getTwMinCopy(opts.scaleDotTW)
 		body.excludeOutliers = opts.excludeOutliers
-		const data = await dofetch3('termdb/sampleScatter', { headers, body, signal: this.app?.getAbortSignal?.() })
+		const data = await dofetch3('termdb/sampleScatter', { headers, body, signal })
 		return data
 	}
 

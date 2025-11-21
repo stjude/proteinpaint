@@ -101,7 +101,7 @@ export class Scatter extends PlotBase implements RxComponent {
 		try {
 			await this.model.initData()
 		} catch (e: any) {
-			if (e.includes?.('stale sequenceId')) return
+			if (this.app.isAbortError(e)) return
 			throw e
 		}
 		if (this.model.is3D) this.vm = new ScatterViewModel3D(this)

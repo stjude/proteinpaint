@@ -710,7 +710,7 @@ function setTermActions(self) {
 
 		await self.pill.main(
 			Object.assign(
-				{ tw: t.tw, menuOptions: self.getMenuOptions(t), filter: self.state.filter },
+				{ menuOptions: self.getMenuOptions(t), filter: self.state.filter },
 				t.tw ? t.tw : { term: null, q: null }
 			)
 		)

@@ -19,7 +19,7 @@ export type BoxPlotConfigOpts = {
 	overrides?: any
 }
 
-export type BoxPlotConfig = PlotConfig
+export type BoxPlotConfig = PlotConfig & { settings: { boxplot: BoxPlotSettings } }
 
 /** User controlled settings. Some settings are calculated based on
  * the number of boxplots */

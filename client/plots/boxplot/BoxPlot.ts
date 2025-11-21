@@ -16,7 +16,8 @@ import { DownloadMenu } from '#dom'
 import { getChartTitle } from './viewModel/ViewModel'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.ts'
-class TdbBoxplot extends PlotBase implements RxComponent {
+
+export class TdbBoxplot extends PlotBase implements RxComponent {
 	static type = 'boxplot'
 	type: string
 	components: { controls: any }
@@ -276,7 +277,7 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 			if (!this.interactions) throw new Error('Interactions not initialized [box plot main()]')
 
 			const settings = config.settings.boxplot
-			const model = new Model(config, this.state, this.app, settings)
+			const model = new Model(this, config)
 			const data = await model.getData()
 			config.term.q.descrStats = data.descrStats
 
@@ -366,7 +367,7 @@ class TdbBoxplot extends PlotBase implements RxComponent {
 			const textColor = settings.displayMode == 'dark' ? 'white' : 'black'
 			if (legend.length) new LegendRenderer(this.dom.legend, legend, this.interactions, textColor)
 		} catch (e: any) {
-			if (e.includes?.('stale sequenceId')) return
+			if (this.app.isAbortError(e)) return
 			if (e.stack) console.log(e.stack)
 			if (e instanceof Error) console.error(e.message || e)
 			throw new Error(e)

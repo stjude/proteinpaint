@@ -92,10 +92,7 @@ export class HierCluster extends Matrix {
 
 	async setHierClusterData(_data = {}) {
 		this.prevServerData = this.currServerData
-		//const abortCtrl = new AbortController()
-		//const [d, stale] = await this.api.detectStale(() => this.requestData({ signal: abortCtrl.signal }), { abortCtrl })
-		const d = await this.requestData({})
-		//if (stale) throw `stale sequenceId`
+		const [d, twlst] = await this.requestData({})
 		if (d.error) throw d.error
 		this.currServerData = structuredClone(d)
 		if (!deepEqual(this.prevServerData, this.currServerData)) {
@@ -105,7 +102,6 @@ export class HierCluster extends Matrix {
 			delete this.clickedLeftClusterIds
 		}
 		const s = this.settings.hierCluster
-		const twlst = this.hcTermGroup.lst
 
 		if (!d.clustering) {
 			// stop-gap data validation, lacks essential data part
@@ -129,8 +125,10 @@ export class HierCluster extends Matrix {
 			samples[column.name] = { sample: column.name }
 			for (const [j, row] of c.row.order.entries()) {
 				const tw = twlst.find(tw => tw.$id === row.name || tw.id === row.name)
-				if (!tw) console.log(row.name)
-				//if (!tw) continue
+				// if (!tw) {
+				// 	console.warn(`no matching tw for row.name='${row.name}'`)
+				// 	continue
+				// }
 				const value = c.matrix[j][i]
 				samples[column.name][tw.$id] = {
 					key: tw.term.name,
@@ -197,8 +195,10 @@ export class HierCluster extends Matrix {
 	async requestData() {
 		// may revert to using {signal} argument if detectStale() is used to wrap this function
 		const body = this.currRequestOpts?.hierCluster || this.getHCRequestBody(this.state)
+		const twlst = this.hcTermGroup.lst
 		const data = await dofetch3('termdb/cluster', { body, signal: this.app.getAbortSignal?.() })
-		return data
+		// return the twlst that was submitted in the data request, this data-to-twlst reference will not be affected by race condition
+		return [data, twlst]
 	}
 
 	getHCRequestBody(state) {

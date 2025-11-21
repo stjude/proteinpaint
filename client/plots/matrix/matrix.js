@@ -159,7 +159,10 @@ export class Matrix extends PlotBase {
 		try {
 			this.config = structuredClone(this.state.config)
 			if (this.mayRequireToken()) return
-			this.termGroups = getTermGroups(this.config.termgroups, this.app)
+			// do not assign this.termgroups until the data request is complete, to avoid stale value in a race condition;
+			// this termGroups value is directly associated with the submitted data request, and the response will match
+			// the tw.$id's in these term groups
+			const termGroups = getTermGroups(this.config.termgroups, this.app)
 
 			const prevTranspose = this.settings.transpose
 			// controlsRenderer.getSettings() supplies settings that are not tracked in the global app and plot state
@@ -193,7 +196,7 @@ export class Matrix extends PlotBase {
 				if (e == 'no data') {
 					this.showNoMatchingDataMessage()
 					return
-				} else if (e == 'stale sequenceId' || e.name == 'AbortError') {
+				} else if (this.app.isAbortError(e)) {
 					// ignore this error, but skip this update since a subsequent action is being processed
 					return
 				} else {
@@ -202,6 +205,7 @@ export class Matrix extends PlotBase {
 				}
 			}
 
+			this.termGroups = termGroups // onl assign this as instance value after the data request, to prevent incorrect reference in a race condition
 			this.dom.loadingDiv.html('Updating ...').style('display', '')
 			this.termOrder = this.getTermOrder(this.data)
 			this.sampleGroups = this.getSampleGroups(this.hierClusterSamples || this.data)

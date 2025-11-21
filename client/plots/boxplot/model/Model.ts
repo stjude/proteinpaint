@@ -1,5 +1,6 @@
 import type { MassAppApi } from '#mass/types/mass'
 import type { BoxPlotSettings, BoxPlotConfig } from '../BoxPlotTypes'
+import type { TdbBoxplot } from '../BoxPlot.ts'
 import type { BoxPlotResponse } from '#types'
 import type { MassState } from '#mass/types/mass'
 import { isNumericTerm } from '#shared/terms.js'
@@ -9,20 +10,26 @@ import { isNumericTerm } from '#shared/terms.js'
  * Add more methods for formating the request opts and api requests.
  */
 export class Model {
+	boxplot: TdbBoxplot
 	config: BoxPlotConfig
 	state: MassState
 	app: MassAppApi
 	settings: BoxPlotSettings
-	constructor(config: BoxPlotConfig, state: MassState, app: MassAppApi, settings: BoxPlotSettings) {
+
+	constructor(boxplot: TdbBoxplot, config: BoxPlotConfig) {
+		this.boxplot = boxplot
 		this.config = config
-		this.state = state
-		this.app = app
-		this.settings = settings
+		this.state = boxplot.state
+		this.app = boxplot.app
+		this.settings = config.settings.boxplot
 	}
 
 	async getData() {
 		const boxPlotDataArgs = this.setRequestOpts()
-		const data: BoxPlotResponse = await this.app.vocabApi.getBoxPlotData(boxPlotDataArgs)
+		const data: BoxPlotResponse = await this.app.vocabApi.getBoxPlotData(
+			boxPlotDataArgs,
+			this.boxplot.api.getAbortSignal()
+		)
 		return data
 	}
 

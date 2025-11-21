@@ -322,9 +322,9 @@ class ViolinPlot extends PlotBase {
 		const args = this.validateArgs()
 		let data
 		try {
-			data = await this.app.vocabApi.getViolinPlotData(args, null)
+			data = await this.app.vocabApi.getViolinPlotData(args, null, this.api.getAbortSignal())
 		} catch (e) {
-			if (e.includes?.('stale sequenceId')) return
+			if (this.app.isAbortError(e)) return
 			throw e
 		}
 
