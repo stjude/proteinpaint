@@ -154,6 +154,17 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 			}
 			return uses
 
+		case 'CompositePercentage':
+			if (!usecase.detail?.exclude?.includes(term.id)) {
+				if (isNumericTerm(term)) {
+					uses.add('plot')
+				}
+				if (hasNumericChild(child_types)) {
+					uses.add('branch')
+				}
+			}
+			return uses
+
 		case 'profileForms':
 			if (!term.isleaf) {
 				const ancestors = term.id.split('__').length //depends on using the __ naming convension!
