@@ -10,6 +10,8 @@ Features:
 Fixes:
 - quick fix for lollipop to be showing under 2K disks to avoid crashing browser with GDC TTN
 - Restored GDCGRIN2
+- prevent race condition issues in correlation plots
+- show menu when clicking on a hierCluster row label
 
 
 ## 2.161.0

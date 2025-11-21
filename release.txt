@@ -1,3 +1,1 @@
-Fixes:
-- prevent race condition issues in correlation plots
-- show menu when clicking on a hierCluster row label
+
