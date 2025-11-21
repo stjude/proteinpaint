@@ -99,8 +99,10 @@ export class FlyoutMenu {
 			throw new Error('FlyoutMenu requires at least one option.')
 		}
 		for (const opt of opts.options) {
-			if ((opt.label && !opt.callback && !opt.isSubmenu) || (!opt.label && opt.callback && !opt.isSubmenu)) {
-				throw new Error('If label or callback is provided in FlyoutMenuOption, both must be provided.')
+			if ((opt.label && !opt.callback && !opt.isSubmenu) || (!opt.label && opt.callback)) {
+				throw new Error(
+					'If .label for a non-submenu or .callback() is provided in FlyoutMenuOption, both must be provided.'
+				)
 			}
 			if (opt.isSubmenu && !opt.callback && !opt.options) {
 				throw new Error('FlyoutMenuOption with isSubmenu=true must provide either a callback or options array.')
@@ -187,7 +189,7 @@ export class FlyoutMenu {
 			/** Allows users tabbing through menu options to
 			 * activate the callback with either Enter or Space keys.*/
 			.on('keydown', event => {
-				if (event.key !== 'Enter' || event.key !== ' ') return
+				if (event.key !== 'Enter' && event.key !== ' ') return
 				event.preventDefault()
 				optionCallback()
 			})
