@@ -44,6 +44,13 @@ export class ScatterViewModelBase {
 				const div = select(divs[i])
 				this.renderChart(chart, div)
 			})
+		if (!this.model.charts?.length) {
+			// no data
+			this.view.dom.bannerDiv.html(`<span>No visible scatter plot data to render</span>`).style('display', 'block')
+			return
+		} else {
+			this.view.dom.bannerDiv.style('display', 'none')
+		}
 	}
 
 	renderChart(chart, div, removePrevious = true) {

@@ -41,11 +41,13 @@ export class Scatter extends PlotBase implements RxComponent {
 	state!: any
 	transform: any
 	zoom: number
+	loadingWait: number
 
 	constructor(opts, api) {
 		super(opts, api)
 		this.type = Scatter.type
 		this.zoom = 1
+		this.loadingWait = 1000
 	}
 
 	async init(appState) {
@@ -93,11 +95,8 @@ export class Scatter extends PlotBase implements RxComponent {
 	}
 
 	async main() {
+		this.toggleLoadingDiv()
 		this.config = structuredClone(this.state.config)
-		if (this.config.settings.sampleScatter.regression !== 'None' && this.config.term0) {
-			if (this.charts) for (const chart of this.charts) chart.chartDiv.selectAll('*').remove()
-			this.view.dom.loadingDiv.style('display', 'block').html('Processing data...')
-		}
 		this.settings = structuredClone(this.config.settings.sampleScatter)
 		try {
 			await this.model.initData()
@@ -111,9 +110,23 @@ export class Scatter extends PlotBase implements RxComponent {
 		if (!this.config.colorColumn) await this.setControls()
 		await this.model.processData()
 		this.vm.render()
-		this.view.dom.loadingDiv.style('display', 'none')
+		this.toggleLoadingDiv('none')
 
 		if (!this.model.is3D) this.vm.setTools()
+	}
+
+	// helper so that 'Loading...' does not flash when not needed
+	toggleLoadingDiv(display = '') {
+		if (display != 'none') {
+			this.view.dom.loadingDiv
+				.style('opacity', 0)
+				.style('display', display)
+				.transition()
+				.duration(this.loadingWait)
+				.style('opacity', 1)
+		} else {
+			this.view.dom.loadingDiv.style('display', display)
+		}
 	}
 
 	getFilter() {

@@ -33,12 +33,7 @@ export class Barchart extends PlotBase {
 		const controls = this.opts.controls ? null : opts.holder.append('div')
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
 		this.dom = {
-			loadingDiv: holder
-				.append('div')
-				.style('position', 'absolute')
-				.style('display', 'none')
-				.style('padding', '20px')
-				.html('Loading ...'),
+			loadingDiv: holder.append('div').style('display', 'none').style('padding', '24px').html('Loading ...'),
 			header: opts.header,
 			controls,
 			holder,

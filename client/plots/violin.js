@@ -42,17 +42,15 @@ class ViolinPlot extends PlotBase {
 			header: this.opts.header,
 			loadingDiv: this.opts.holder
 				.append('div')
-				.style('position', 'absolute')
 				.style('display', this.opts.mode != 'minimal' ? 'inline-block' : 'none')
-				.style('padding-left', '10px')
-				.style('padding-top', '20px')
+				.style('padding', '24px')
 				.text('Loading ...'),
 			controls,
 			banner: holder
 				.append('div')
 				.style('display', 'none')
 				.style('text-align', 'center')
-				.style('padding', '20px')
+				.style('padding', '24px')
 				.style('font-size', '16px')
 				.style('color', '#aaa'),
 			violinDiv: holder

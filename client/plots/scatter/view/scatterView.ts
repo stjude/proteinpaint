@@ -29,6 +29,18 @@ export class ScatterView {
 			.attr('class', 'pp-termdb-plot-controls')
 
 		const rightDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const loadingDiv = rightDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('padding', '24px')
+			.text('Loading ...')
+		const bannerDiv = rightDiv
+			.append('div')
+			.style('display', 'none')
+			.style('text-align', 'center')
+			.style('padding', '24px')
+			.style('font-size', '16px')
+			.style('color', '#aaa')
 		const headerDiv = rightDiv.append('div')
 		const mainDiv = rightDiv
 			.append('div')
@@ -38,11 +50,12 @@ export class ScatterView {
 			.style('max-width', '100vw')
 
 		this.dom = {
+			loadingDiv,
+			bannerDiv,
 			headerDiv,
 			mainDiv,
 			header: this.opts.header,
 			//holder,
-			loadingDiv: this.opts.holder.append('div').style('position', 'absolute').style('left', '45%').style('top', '60%'),
 			tip: new Menu({ padding: '0px' }),
 			tooltip: new Menu({ padding: '2px', offsetX: 10, offsetY: 0 }),
 			controlsHolder,
