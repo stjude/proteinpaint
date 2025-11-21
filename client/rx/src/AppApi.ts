@@ -205,7 +205,10 @@ export class AppApi {
 	triggerAbort(reason = '') {
 		const self = this.#App
 		if (reason) if (reason) console.info(`triggerAbort()`, reason)
-		if (this.#abortController) this.#abortController.abort('stale sequenceId')
+		if (this.#abortController) {
+			this.#abortController.abort('stale sequenceId')
+			this.#abortController = undefined
+		}
 		for (const name of Object.keys(self.components)) {
 			const component = self.components[name]
 			if (!component) continue

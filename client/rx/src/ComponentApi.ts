@@ -244,6 +244,10 @@ export class ComponentApi {
 
 	triggerAbort(reason = '') {
 		if (reason) console.info(`triggerAbort()`, reason)
+		if (this.#abortController) {
+			this.#abortController.abort('stale sequenceId')
+			this.#abortController = undefined
+		}
 		for (const c of this.#abortControllers.values()) {
 			try {
 				c.abort()
