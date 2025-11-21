@@ -62,11 +62,8 @@ export class CreateProjectRender {
 		this.renderFilter()
 		this.classesTable = new ClassesTableRender(this.dom.classDiv)
 
-		// render users to the right of the labels/classes
-		if (this.dom.usersDiv) {
-			this.usersRender = new UsersRender({ holder: this.dom.usersDiv, errorDiv: this.dom.errorDiv }, [])
-			this.usersRender.render()
-		}
+		this.usersRender = new UsersRender({ holder: this.dom.usersDiv, errorDiv: this.dom.errorDiv }, [])
+		this.usersRender.render()
 
 		this.renderApplyBtn()
 	}
@@ -113,12 +110,22 @@ export class CreateProjectRender {
 					return
 				}
 
+				// Ensure at least one user is present before proceeding
+				if (!this.usersRender || !Array.isArray(this.usersRender.users) || this.usersRender.users.length === 0) {
+					// show inline error and re-enable the apply button
+					alert('Please add at least one user.')
+					btn.attr('disabled', null)
+					return
+				}
+
 				await this.interactions.addProject({
 					project: {
 						filter: this.filter,
 						classes: this.classesTable!.rows.map((row, i) => {
 							return { label: row[1].value, color: row[2].color, key_shortcut: `Digit${i + 1}` }
-						})
+						}),
+						// include users from the UsersRender (emails)
+						users: this.usersRender?.users || []
 					}
 				})
 				this.dom.holder.selectAll('*').remove()

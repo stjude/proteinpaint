@@ -53,10 +53,13 @@ function init({ genomes }) {
 				/** If the url is too long, the method will be changed to POST
 				 * in dofetch. Checking if project.type == 'new' ensures the project
 				 * is added to the db.*/
-				if (req.method === 'PUT' || query.project.type === 'new') addProject(connection, query.project)
-				else if (req.method === 'POST') editProject(connection, query.project)
-				else if (req.method === 'DELETE') deleteProject(connection, query.project.id)
-				else throw new Error('Invalid request method for="admin" in aiProjectAdmin route.')
+				if (req.method === 'PUT' || query.project.type === 'new') {
+					addProject(connection, query.project)
+				} else if (req.method === 'POST') {
+					editProject(connection, query.project)
+				} else if (req.method === 'DELETE') {
+					deleteProject(connection, query.project.id)
+				} else throw new Error('Invalid request method for="admin" in aiProjectAdmin route.')
 
 				let projectId = query.project.id
 
@@ -194,17 +197,26 @@ function deleteProject(connection: Database.Database, projectId: number): void {
 }
 
 function addProject(connection: Database.Database, project: any): void {
+	// Ensure users are provided
+	if (!project.users || !Array.isArray(project.users) || project.users.length === 0) {
+		throw new Error('project.users must be a non-empty array of emails')
+	}
+
 	//Add project record
-	const projectSql = `INSERT INTO project (name, filter) VALUES (?, ?)`
+	const projectSql = `INSERT INTO project (name, filter)
+                        VALUES (?, ?)`
 	const projectParams = [project.name, JSON.stringify(project.filter)]
 	const row = runSQL(connection, projectSql, projectParams, 'add') as Database.RunResult
 
-	const userSql = `INSERT INTO project_users (project_id, email) VALUES (?, ?)`
-	const userParams = [row.lastInsertRowid, 'user@domain.com'] as string[]
-	runSQL(connection, userSql, userParams, 'add')
+	// Persist provided users (if any). Use batch insert to match existing multi-insert pattern.
+	const userSql = `INSERT INTO project_users (project_id, email)
+                     VALUES (?, ?)`
+	const userParams = project.users.map((email: string) => [row.lastInsertRowid, email])
+	runMultiStmtSQL(connection, [{ sql: userSql, params: userParams }], 'add')
 
 	//Add corresponding project classes
-	const classSql = `INSERT INTO project_classes (project_id, label, color, key_shortcut) VALUES (?, ?, ?, ?)`
+	const classSql = `INSERT INTO project_classes (project_id, label, color, key_shortcut)
+                      VALUES (?, ?, ?, ?)`
 	const classParams = project.classes.map((c: any) => [row.lastInsertRowid, c.label, c.color, c.key_shortcut || ''])
 	runMultiStmtSQL(connection, [{ sql: classSql, params: classParams }], 'add')
 }

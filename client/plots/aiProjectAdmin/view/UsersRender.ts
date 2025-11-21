@@ -88,7 +88,7 @@ export class UsersRender {
 
 		const columnButtons = [
 			{
-				text: 'Delete',
+				text: '×',
 				class: 'sja_menuoption',
 				callback: (_, idx: number) => {
 					// remove user and re-render
@@ -103,10 +103,16 @@ export class UsersRender {
 		renderTable({
 			div: tableDiv,
 			rows: this.users.map(u => [{ value: u }]),
-			header: { allowSort: true },
 			columns,
-			singleMode: true,
-			columnButtons
+			columnButtons,
+			singleMode: false,
+			striped: false,
+			showLines: false,
+			resize: true
 		})
+
+		// Replace the delete button inner HTML so it matches the requested structure.
+		// Keep the existing event handlers bound by only changing inner HTML.
+		tableDiv.selectAll('.sja_menuoption').html('×<div></div>')
 	}
 }
