@@ -34,6 +34,7 @@ export class MatrixControls {
 			this.setCNVBtn()
 		}
 		this.setVariablesBtn(s)
+		this.setCompositePercentageBtn(s)
 		this.setDimensionsBtn(s)
 		this.setLegendBtn(s)
 		this.setDownloadBtn(s)
@@ -448,6 +449,19 @@ export class MatrixControls {
 					}
 				],
 				customInputs: this.appendDictInputs
+			})
+			.html(d => d.label)
+			.style('margin', '2px 0')
+			.on('click', (event, d) => this.callback(event, d))
+	}
+
+	setCompositePercentageBtn(s) {
+		this.opts.holder
+			.append('button')
+			.datum({
+				label: `Composite Percentage`,
+				rows: [],
+				customInputs: this.appendCompositePercentageDictInputs
 			})
 			.html(d => d.label)
 			.style('margin', '2px 0')
@@ -1468,6 +1482,15 @@ export class MatrixControls {
 		self.addDictMenu(app, parent, app.tip.d.append('div'))
 	}
 
+	appendCompositePercentageDictInputs(self, app, parent, table) {
+		tip.clear()
+		app.tip.d.append('hr')
+		const usecase = {
+			target: 'CompositePercentage',
+			detail: { exclude: parent.state.termdbConfig.matrix?.compositePercentageExclude }
+		}
+		self.addDictMenu(app, parent, app.tip.d.append('div'), usecase)
+	}
 	generateCNVItems(self, app, parent, table) {
 		table.attr('class', null) // remove the hoverover background for CNV button
 		const m = parent.config.settings.matrix
@@ -1523,7 +1546,7 @@ export class MatrixControls {
 		}
 	}
 
-	async addDictMenu(app, parent, tr, holder = undefined) {
+	async addDictMenu(app, parent, holder = undefined, usecase) {
 		//app.tip.clear()
 
 		const termdb = await import('#termdb/app')
@@ -1538,12 +1561,12 @@ export class MatrixControls {
 					header_mode: 'search_only'
 				},
 				tree: {
-					usecase: { target: 'matrix', detail: 'termgroups' }
+					usecase: usecase || { target: 'matrix', detail: 'termgroups' }
 				}
 			},
 			tree: {
 				submit_lst: termlst => {
-					this.submit_lst(termlst)
+					this.submit_lst(termlst, usecase)
 					app.tip.hide()
 				}
 			},
@@ -1553,7 +1576,7 @@ export class MatrixControls {
 		})
 	}
 
-	async submit_lst(termlst) {
+	async submit_lst(termlst, usecase) {
 		const newterms = await Promise.all(
 			termlst.map(async _term => {
 				const term = structuredClone(_term)
@@ -1565,6 +1588,32 @@ export class MatrixControls {
 
 		const s = this.parent.settings.matrix
 		const termgroups = structuredClone(this.parent.config.termgroups)
+
+		if (usecase.target == 'CompositePercentage') {
+			if (termgroups.findIndex(g => g.name == 'Composite Percentage') !== -1) {
+				const grp = termgroups[i]
+				grp.lst.push(...newterms)
+				this.parent.app.dispatch({
+					type: 'plot_nestedEdits',
+					id: this.parent.id,
+					edits: [
+						{
+							nestedKeys: ['termgroups', i, 'lst'],
+							value: grp.lst
+						}
+					]
+				})
+			} else {
+				const grp = { name: 'Composite Percentage', lst: newterms }
+				termgroups.push(grp)
+				this.parent.app.dispatch({
+					type: 'plot_edit',
+					id: this.parent.id,
+					config: { termgroups }
+				})
+			}
+			return
+		}
 		const i = termgroups.findIndex(g => g.name == 'Variables')
 		if (i !== -1) {
 			const grp = termgroups[i]
