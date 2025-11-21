@@ -1,2 +1,2 @@
 Features:
-- GRIN2: Re-factored grin2PpWrapper.py
+- GRIN2: Refactored grin2PpWrapper.py

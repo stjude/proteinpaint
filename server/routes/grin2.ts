@@ -162,14 +162,15 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	}
 
 	// Step 3: Prepare input for Python script
+	const availableDataTypes = Object.keys(optionToDt).filter(key => key in request)
 	const pyInput = {
 		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 		chromosomelist: {} as { [key: string]: number },
 		lesion: JSON.stringify(lesions),
 		cacheFileName: generateCacheFileName(),
-		availableDataTypes: Object.keys(optionToDt).filter(key => key in request),
+		availableDataTypes: availableDataTypes,
 		maxGenesToShow: request.maxGenesToShow,
-		lesionTypeMap: buildLesionTypeMap(Object.keys(optionToDt).filter(key => key in request))
+		lesionTypeMap: buildLesionTypeMap(availableDataTypes)
 	}
 
 	// Build chromosome list from genome reference
