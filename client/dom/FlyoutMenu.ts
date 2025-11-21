@@ -30,10 +30,11 @@ import type { Div } from '../types/d3'
  */
 
 type FlyoutMenuOptions = {
-	/** Either provide an existing Menu
-	 * or one will be created on init. */
+	/** Either provide an existing Menu or one will be created on init.
+	 * ** Recommended ** to create one or reuse an existing menu and show
+	 * before calling the FlyoutMenu constructor.*/
 	tip?: Menu
-	/** Bolded header above the menu options */
+	/** Opaque header above the menu options */
 	header?: string
 	options: FlyoutMenuOption[]
 }
@@ -85,6 +86,9 @@ export class FlyoutMenu {
 		if (opts.header) {
 			this.addText(this.mainTip.d, opts.header)
 		}
+		if (this.mainTip.d.style('display') === 'none') {
+			this.mainTip.show()
+		}
 		this.renderMenu(this.mainTip, opts.options)
 	}
 
@@ -93,7 +97,7 @@ export class FlyoutMenu {
 			throw new Error('FlyoutMenu requires at least one option.')
 		}
 		for (const opt of opts.options) {
-			if ((opt.label && !opt.callback) || (!opt.label && opt.callback)) {
+			if ((opt.label && !opt.callback && !opt.isSubmenu) || (!opt.label && opt.callback && !opt.isSubmenu)) {
 				throw new Error('If label or callback is provided in FlyoutMenuOption, both must be provided.')
 			}
 			if (opt.isSubmenu && !opt.callback && !opt.options) {
@@ -155,10 +159,17 @@ export class FlyoutMenu {
 					this.renderMenu(flyoutTip, opt.options)
 					return
 				}
-				opt.callback!(flyoutTip.d)!
+				opt.callback!(flyoutTip.d, this.closeMenus.bind(this))!
 				return
 			}
-			opt.callback!()
+			/** For now, supplying closeMenu method to callback for greater
+			 * caller control. For example if the menus should close
+			 * before an app.dispatch, the caller can control that sequence (e.g
+			 * the user see the loading message, changes, etc. unimpeded by
+			 * the menu divs)
+			 * May add in an immediate close option or flag to immediately
+			 * close later. */
+			opt.callback!(this.closeMenus.bind(this))
 			return
 		}
 		const optDiv = tip.d
