@@ -397,10 +397,10 @@
   },
   "src/mds3.init.js": {
     "lines": {
-      "total": 1527,
+      "total": 1524,
       "covered": 866,
       "skipped": 0,
-      "pct": 56.71
+      "pct": 56.82
     },
     "functions": {
       "total": 114,
@@ -409,26 +409,26 @@
       "pct": 50.87
     },
     "statements": {
-      "total": 1804,
+      "total": 1802,
       "covered": 1052,
       "skipped": 0,
-      "pct": 58.31
+      "pct": 58.37
     },
     "branches": {
-      "total": 1258,
+      "total": 1256,
       "covered": 408,
       "skipped": 0,
-      "pct": 32.43
+      "pct": 32.48
     },
     "lowestPct": {
-      "curr": 32.43,
-      "prev": 32.32,
-      "diff": 0.10999999999999943
+      "curr": 32.48,
+      "prev": 32.43,
+      "diff": 0.04999999999999716
     },
     "averagePct": {
-      "curr": 49.58,
-      "prev": 49.552499999999995,
-      "diff": 0.02750000000000341
+      "curr": 49.635,
+      "prev": 49.58,
+      "diff": 0.054999999999999716
     }
   },
   "src/adHocDictionary/BuildHelpers.ts": {
@@ -614,9 +614,9 @@
   "src/mds3.gdc.js": {
     "lines": {
       "total": 1011,
-      "covered": 33,
+      "covered": 34,
       "skipped": 0,
-      "pct": 3.26
+      "pct": 3.36
     },
     "functions": {
       "total": 100,
@@ -625,10 +625,10 @@
       "pct": 0
     },
     "statements": {
-      "total": 1183,
-      "covered": 33,
+      "total": 1184,
+      "covered": 34,
       "skipped": 0,
-      "pct": 2.78
+      "pct": 2.87
     },
     "branches": {
       "total": 703,
@@ -642,9 +642,9 @@
       "diff": 0
     },
     "averagePct": {
-      "curr": 1.5099999999999998,
+      "curr": 1.5575,
       "prev": 1.5099999999999998,
-      "diff": 0
+      "diff": 0.04750000000000032
     }
   },
   "src/mds3.filter.js": {
@@ -710,13 +710,13 @@
     },
     "lowestPct": {
       "curr": 18.69,
-      "prev": 18.39,
-      "diff": 0.3000000000000007
+      "prev": 18.69,
+      "diff": 0
     },
     "averagePct": {
       "curr": 22.6925,
-      "prev": 22.57,
-      "diff": 0.12249999999999872
+      "prev": 22.6925,
+      "diff": 0
     }
   },
   "src/mds3.variant.js": {
