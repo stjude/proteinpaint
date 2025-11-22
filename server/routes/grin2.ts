@@ -9,7 +9,7 @@ import { get_samples } from '#src/termdb.sql.js'
 import { read_file, file_is_readable } from '#src/utils.js'
 import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dt2lesion, optionToDt } from '#shared/common.js'
 import crypto from 'crypto'
-import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.ts'
+import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
 
 /**
  * General GRIN2 analysis route

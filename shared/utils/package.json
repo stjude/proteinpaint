@@ -6,6 +6,7 @@
   "main": "src/index.js",
   "exports": {
     ".": "./src/index.js",
+    "./*.ts": "./src/*.ts_SHOULD_BE_js",
     "./*": "./src/*"
   },
   "scripts": {
