@@ -13,7 +13,7 @@ import { dofetch3 } from '#common/dofetch'
 import { renderTable, sayerror, make_one_checkbox } from '#dom'
 import { select } from 'd3-selection'
 import type { GdcGRIN2listRequest } from '#types'
-import { mclass, dtsnvindel, class2SOterm, bplen } from '@sjcrh/proteinpaint-shared/common.js'
+import { mclass, dtsnvindel, class2SOterm, bplen } from '#shared'
 import {
 	STYLES,
 	applyStyles,

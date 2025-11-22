@@ -16,12 +16,10 @@ import { termdbSampleScatterPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import path from 'path'
 import serverconfig from '../src/serverconfig.js'
-import { schemeCategory20, getColors } from '#shared/common.js'
-import { mclass, dt2label, morigin } from '#shared/common.js'
+import { schemeCategory20, getColors, mclass, dt2label, morigin, isNumericTerm } from '#shared'
 import { authApi } from '../src/auth.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { read_file } from '../src/utils.js'
-import { isNumericTerm } from '@sjcrh/proteinpaint-shared/terms.js'
 import { getDescrStats } from '#routes/termdb.descrstats.ts'
 
 export const api: RouteApi = {

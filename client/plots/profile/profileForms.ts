@@ -4,7 +4,7 @@ import { fillTermWrapper, fillTwLst } from '#termsetting'
 import { axisBottom, axisTop } from 'd3-axis'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { Tabs } from '../../dom/toggleButtons.js'
-import { roundValueAuto } from '@sjcrh/proteinpaint-shared/roundValue.js'
+import { roundValueAuto } from '#shared'
 
 const YES_NO_TAB = 'Yes/No Barchart'
 const IMPRESSIONS_TAB = 'Impressions'

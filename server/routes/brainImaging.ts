@@ -3,7 +3,7 @@ import serverconfig from '#src/serverconfig.js'
 import type { QualTW, BrainImagingRequest, BrainImagingResponse, FilesByCategory, RouteApi } from '#types'
 import { brainImagingPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
-import { isNumericTerm } from '@sjcrh/proteinpaint-shared/terms.js'
+import { isNumericTerm } from '#shared'
 import { getColors } from '#shared/common.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 
