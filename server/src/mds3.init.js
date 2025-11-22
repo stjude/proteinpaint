@@ -260,18 +260,6 @@ export function client_copy(ds) {
 	return ds2_client
 }
 
-/*
-two formats
-
-ds.termdb = {
-	dictionary: {}
-}
-
-ds.cohort = {
-	db:{}
-	termdb: {}
-}
-*/
 export async function validate_termdb(ds) {
 	if (ds.termdb) {
 		// legacy support, reshape deprecated nesting order
@@ -289,7 +277,7 @@ export async function validate_termdb(ds) {
 	 ** server/src/test/load.testds.js load_termjson()         **
 	 ************************************************************/
 
-	/* at minimum, an empty holder is needed for all ds (later gdc should populate this to distinguish sample types)
+	/* the "sampleTypes{}" empty holder is needed for all ds, even if the ds doesn't have different sample types
 	k: sample type key
 	v: {name, plural_name, parent_id}
 	*/
@@ -366,6 +354,24 @@ export async function validate_termdb(ds) {
 			// convertSampleId.get() added
 		} else {
 			throw 'unknown implementation of tdb.convertSampleId'
+		}
+	}
+	if (tdb.numericTermCollections) {
+		if (!Array.isArray(tdb.numericTermCollections)) throw 'termdb.numericTermCollections not array'
+		for (const c of tdb.numericTermCollections) {
+			if (!c.name) throw 'unamed tdb.numericTermCollections'
+			if (!Array.isArray(c.termIds)) throw 'termdb.numericTermCollections[].termIds[] not array'
+			for (const i of c.termIds) {
+				if (!tdb.q.termjsonByOneid(i)) throw `invalid term id "${i}" from termdb.numericTermCollections[].${c.name}`
+			}
+			if (c.plots) {
+				if (!Array.isArray(c.plots)) throw 'c.plots[] not array'
+				for (const p of c.plots) {
+					if (!p.name) throw 'plot.name missing'
+					if (!p.file) throw 'plot.file missing'
+				}
+			}
+			// validate additional properties
 		}
 	}
 
