@@ -16,6 +16,7 @@
     "#plots/*": "./plots/*",
     "#plots/disco/*": "./plots/disco/*",
     "#rx": "./rx/index.js",
+    "#shared": "@sjcrh/proteinpaint-shared",
     "#shared/*": "@sjcrh/proteinpaint-shared/*",
     "#src/*": "./src/*.js",
     "#termdb/*": "./termdb/*.js",

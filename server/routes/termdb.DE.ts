@@ -10,7 +10,7 @@ import { mayLog } from '#src/helpers.ts'
 import serverconfig from '../src/serverconfig.js'
 import { imageSize } from 'image-size'
 import { get_header_txt } from '#src/utils.js'
-import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
+import { formatElapsedTime } from '#shared'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/DE',

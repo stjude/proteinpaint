@@ -6,7 +6,7 @@ import serverconfig from '#src/serverconfig.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { mayLog } from '#src/helpers.ts'
-import { formatElapsedTime } from '@sjcrh/proteinpaint-shared/time.js'
+import { formatElapsedTime } from '#shared'
 
 export const api: RouteApi = {
 	endpoint: 'genesetEnrichment',

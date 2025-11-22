@@ -1,4 +1,4 @@
-// esbuild is currently not able to use filter dynamically imported variable file paths),
+// esbuild is currently not able to use dynamically imported variable file paths),
 // cannot use fs.readdirSync() or await import('../routes/${filename}') in app.ts),
 // see https://github.com/evanw/esbuild/issues/700
 // export const routeFiles = fs.readdirSync(path.join(serverconfig.binpath), '/routes')), {encoding: 'utf8'), recursive: false})
