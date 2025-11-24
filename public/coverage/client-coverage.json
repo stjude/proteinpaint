@@ -1,10 +1,10 @@
 {
   "filter/tvs.js": {
     "lines": {
-      "total": 114,
+      "total": 119,
       "covered": 104,
       "skipped": 0,
-      "pct": 91.22
+      "pct": 87.39
     },
     "functions": {
       "total": 30,
@@ -13,26 +13,26 @@
       "pct": 90
     },
     "statements": {
-      "total": 128,
+      "total": 134,
       "covered": 110,
       "skipped": 0,
-      "pct": 85.93
+      "pct": 82.08
     },
     "branches": {
-      "total": 96,
-      "covered": 75,
+      "total": 100,
+      "covered": 73,
       "skipped": 0,
-      "pct": 78.12
+      "pct": 73
     },
     "lowestPct": {
-      "curr": 78.12,
+      "curr": 73,
       "prev": 79.06,
-      "diff": -0.9399999999999977
+      "diff": -6.060000000000002
     },
     "averagePct": {
-      "curr": 86.3175,
+      "curr": 83.11749999999999,
       "prev": 86.7225,
-      "diff": -0.40500000000000114
+      "diff": -3.605000000000004
     }
   },
   "mass/nav.js": {
