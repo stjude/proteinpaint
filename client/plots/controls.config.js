@@ -43,6 +43,8 @@ class TdbConfigUiInit {
 			this.inputs = {} // non-rx notified
 			const componentPromises = {} // rx-notified
 
+			this.disableSelectedTerms()
+
 			for (const key of this.opts.inputs) {
 				if (typeof key == 'object') {
 					const obj = key // reassign to be less confusing
@@ -105,6 +107,15 @@ class TdbConfigUiInit {
 			config,
 			isOpen: this.opts.isOpen()
 		}
+	}
+
+	// disable selected terms in all term inputs
+	// to prevent entering the same term in multiple inputs
+	disableSelectedTerms() {
+		const state = this.getState(this.app.getState())
+		const termInputs = this.opts.inputs.filter(i => i.type === 'term')
+		const selectedTerms = termInputs.map(i => state.config[i.configKey]?.term).filter(Boolean)
+		for (const i of termInputs) i.disable_terms = selectedTerms
 	}
 
 	main() {
