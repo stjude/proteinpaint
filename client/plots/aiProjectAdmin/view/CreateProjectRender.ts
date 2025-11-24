@@ -4,6 +4,7 @@ import type { Elem } from '../../../types/d3'
 // import { InvalidDataUI, sayerror } from '#dom'
 import type { AIProjectAdminInteractions } from '../interactions/AIProjectAdminInteractions'
 import { SelectorTableRender } from './SelectorTableRender'
+import { UsersRender } from './UsersRender'
 
 export class CreateProjectRender {
 	dom: {
@@ -11,21 +12,43 @@ export class CreateProjectRender {
 		errorDiv: Elem
 		filterDiv: Elem
 		classDiv: Elem
+		usersDiv?: Elem
 	}
 	app: any
 	interactions: AIProjectAdminInteractions
 	filter: any
 	classesTable?: ClassesTableRender
+	usersRender?: UsersRender
 
 	constructor(dom: any, app: any, interactions: AIProjectAdminInteractions) {
 		dom.holder.style('padding', '10px 20px').attr('class', 'sjpp-deletable-ai-prjt-admin-div')
 
+		const filterDiv = dom.holder.append('div').attr('id', 'sjpp-ai-prjt-admin-filter-div')
+
+		const wrapper = dom.holder
+			.append('div')
+			.attr('id', 'sjpp-ai-prjt-admin-classes-users-wrapper')
+			.style('display', 'flex')
+			.style('gap', '20px')
+			.style('align-items', 'flex-start')
+			.style('padding', '20px 0px')
+
+		const left = wrapper.append('div').attr('id', 'sjpp-ai-prjt-admin-classes-table').style('flex', '0 1 auto')
+
+		const right = wrapper
+			.append('div')
+			.attr('id', 'sjpp-ai-prjt-admin-users')
+			.style('width', '320px')
+			.style('margin-left', '8px')
+
 		this.dom = {
 			holder: dom.holder,
 			errorDiv: dom.errorDiv,
-			filterDiv: dom.holder.append('div').attr('id', 'sjpp-ai-prjt-admin-filter-div'),
-			classDiv: dom.holder.append('div').attr('id', 'sjpp-ai-prjt-admin-classes-table').style('padding', '20px 0px')
+			filterDiv: filterDiv,
+			classDiv: left,
+			usersDiv: right
 		}
+
 		this.app = app
 		this.interactions = interactions
 		this.filter = null
@@ -34,6 +57,10 @@ export class CreateProjectRender {
 	render() {
 		this.renderFilter()
 		this.classesTable = new ClassesTableRender(this.dom.classDiv)
+
+		this.usersRender = new UsersRender({ holder: this.dom.usersDiv, errorDiv: this.dom.errorDiv }, [])
+		this.usersRender.render()
+
 		this.renderApplyBtn()
 	}
 
@@ -79,12 +106,19 @@ export class CreateProjectRender {
 					return
 				}
 
+				if (!this.usersRender || !Array.isArray(this.usersRender.users) || this.usersRender.users.length === 0) {
+					alert('Please add at least one user.')
+					btn.attr('disabled', null)
+					return
+				}
+
 				await this.interactions.addProject({
 					project: {
 						filter: this.filter,
 						classes: this.classesTable!.rows.map((row, i) => {
 							return { label: row[1].value, color: row[2].color, key_shortcut: `Digit${i + 1}` }
-						})
+						}),
+						users: this.usersRender.users
 					}
 				})
 				this.dom.holder.selectAll('*').remove()
