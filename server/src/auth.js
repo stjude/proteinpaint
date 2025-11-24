@@ -3,6 +3,7 @@ import path from 'path'
 import jsonwebtoken from 'jsonwebtoken'
 import { sleep } from './utils.js'
 import mm from 'micromatch'
+import { generateFakeTokens } from './fakeTokens.js'
 
 const { isMatch } = mm
 
@@ -115,6 +116,7 @@ async function validateDsCredentials(creds, serverconfig) {
 		const json = await fs.readFile(creds[key], 'utf8')
 		creds[key] = JSON.parse(json)
 	}
+
 	// track which domains are allowed to embed proteinpaint with credentials,
 	// to be used by app middleware to set CORS response headers
 	const credEmbedders = new Set()
@@ -162,6 +164,10 @@ async function validateDsCredentials(creds, serverconfig) {
 				cred.dslabel = dslabel
 				cred.route = serverRoute
 				cred.cookieId = (serverRoute == 'termdb' && cred.headerKey) || `${dslabel}-${serverRoute}-${embedderHost}-Id`
+
+				if (serverconfig.debugmode && !serverconfig.features?.fakeTokens?.[dslabel]) {
+					generateFakeTokens(dslabel, cred, jsonwebtoken)
+				}
 			}
 		}
 	}
