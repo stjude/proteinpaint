@@ -6,7 +6,7 @@ export class UsersRender {
 
 	constructor(dom: any, users: string[] = []) {
 		this.dom = dom
-		this.users = users.slice() // clone
+		this.users = users.slice()
 	}
 
 	render() {

@@ -44,7 +44,7 @@ export class CreateProjectRender {
 		this.dom = {
 			holder: dom.holder,
 			errorDiv: dom.errorDiv,
-			filterDiv,
+			filterDiv: filterDiv,
 			classDiv: left,
 			usersDiv: right
 		}
