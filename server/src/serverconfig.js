@@ -161,6 +161,12 @@ if (serverconfig.debugmode && !serverconfig.binpath.includes('sjcrh/')) {
 	// since the serverconfig.binpath prefix may
 	// have been applied to locate optional routeSetter files
 	serverconfig.routeSetters = routeSetters
+
+	if (!serverconfig.features.fakeTokens) serverconfig.features.fakeTokens = {}
+	;(async () => {
+		const { setFakeTokens } = await import('./fakeTokens.js')
+		setFakeTokens(serverconfig.features.fakeTokens)
+	})()
 }
 
 if (serverconfig.debugmode) {
