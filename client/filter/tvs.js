@@ -282,9 +282,14 @@ export async function showTvsMenu(opts) {
 	}
 	self.filter = opts.filter
 	//addExcludeCheckbox(opts.holder, self.tvs)
+
+	const loadingDiv = opts.holder.append('div').style('padding', '10px').text('Loading ...')
+
 	await self.setHandler()
 	if (self.handler.setTvsDefaults) self.handler.setTvsDefaults(self.tvs)
-	self.handler.fillMenu(self, opts.holder, self.tvs)
+	await self.handler.fillMenu(self, opts.holder, self.tvs)
+
+	loadingDiv.style('display', 'none')
 }
 
 function addExcludeCheckbox(holder, tvs, self) {
