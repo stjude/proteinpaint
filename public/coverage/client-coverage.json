@@ -2413,38 +2413,38 @@
   },
   "plots/scatter/view/scatterView.ts": {
     "lines": {
-      "total": 119,
-      "covered": 4,
+      "total": 116,
+      "covered": 85,
       "skipped": 0,
-      "pct": 3.36
+      "pct": 73.27
     },
     "functions": {
-      "total": 21,
-      "covered": 0,
+      "total": 19,
+      "covered": 11,
       "skipped": 0,
-      "pct": 0
+      "pct": 57.89
     },
     "statements": {
-      "total": 136,
-      "covered": 4,
+      "total": 132,
+      "covered": 90,
       "skipped": 0,
-      "pct": 2.94
+      "pct": 68.18
     },
     "branches": {
       "total": 84,
-      "covered": 0,
+      "covered": 49,
       "skipped": 0,
-      "pct": 0
+      "pct": 58.33
     },
     "lowestPct": {
-      "curr": 0,
+      "curr": 57.89,
       "prev": 55,
-      "diff": -55
+      "diff": 2.8900000000000006
     },
     "averagePct": {
-      "curr": 1.575,
+      "curr": 64.4175,
       "prev": 69.23,
-      "diff": -67.655
+      "diff": -4.8125
     }
   },
   "mass/groups.js": {
