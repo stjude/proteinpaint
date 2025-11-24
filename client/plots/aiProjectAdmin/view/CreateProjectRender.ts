@@ -118,7 +118,7 @@ export class CreateProjectRender {
 						classes: this.classesTable!.rows.map((row, i) => {
 							return { label: row[1].value, color: row[2].color, key_shortcut: `Digit${i + 1}` }
 						}),
-						users: this.usersRender?.users || []
+						users: this.usersRender.users
 					}
 				})
 				this.dom.holder.selectAll('*').remove()
