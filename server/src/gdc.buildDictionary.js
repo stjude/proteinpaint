@@ -597,7 +597,7 @@ function maySkipFieldLine(line) {
 		line.startsWith('ssm') ||
 		line.startsWith('case.observation') ||
 		line.startsWith('case.available_variation_data') ||
-		line.startsWith('case.samples') // terms under this branch have multiple values (one for each sample), skipping for now until we can support them
+		line.startsWith('case.samples') // these terms have multiple values per case (one for each sample), skipping for now until we can support them
 	) {
 		// skip lines beginning with these
 		// uncomment to see what's skipped
