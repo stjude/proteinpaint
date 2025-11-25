@@ -229,11 +229,21 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 			height: 16,
 			title: 'Download Manhattan plot',
 			handler: () => {
-				to_svg(
-					svg.node() as SVGSVGElement,
-					`manhattan_plot_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}`,
-					{ apply_dom_styles: true }
-				)
+				// Clone the SVG to avoid modifying the displayed version
+				const svgNode = svg.node() as SVGSVGElement
+				const clone = svgNode.cloneNode(true) as SVGSVGElement
+
+				// Get the bounding box of all content
+				const bbox = svgNode.getBBox()
+
+				// Set the clone's dimensions to match the full content
+				clone.setAttribute('width', bbox.width.toString())
+				clone.setAttribute('height', bbox.height.toString())
+				clone.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`)
+
+				to_svg(clone, `manhattan_plot_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}`, {
+					apply_dom_styles: true
+				})
 			}
 		})
 	}
