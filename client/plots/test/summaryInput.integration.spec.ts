@@ -1,10 +1,20 @@
 import tape from 'tape'
 import * as helpers from '../../test/front.helpers.js'
-//import { sleep, detectLst, detectGte, detectOne } from '../../test/test.helpers.js'
-//import * as d3s from 'd3-selection'
+import { detectLst, detectGte, detectOne } from '../../test/test.helpers.js'
+import { getGeneVariantTw } from '../../test/testdata/data.ts'
 
 /*
-test sections
+Test sections
+
+term1=categorical
+term1=categorical; term2=numeric
+term1=categorical; term2=numeric; term0=categorical
+term1=geneVariant
+term1=geneExpression
+term1=survival; term2=categorical
+term1=survival; term2=numeric
+term1=survival; term2=geneVariant
+term1=survival; term2=geneExpression
 */
 
 tape('\n', function (test) {
@@ -12,7 +22,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('test', function (test) {
+tape('term1=categorical', function (test) {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -33,22 +43,276 @@ tape('test', function (test) {
 
 	async function runTests(chart) {
 		chart.on('postRender.test', null)
-		/*const controlRows = chart.Inner.dom.controls.selectAll('tr')
-        const t1row = controlRows.filter((_, i) => i === 0)
-        const t1btn = await detectOne({ elem: t1row.node(), selector: '.sja_filter_tag_btn.add_term_btn' })
-        //const t1btn = t1row.select('.sja_filter_tag_btn add_term_btn').node()
-        t1btn.click()
-        await sleep(300)
-        const termDivs = d3s.select('body').selectAll('.termdiv')
-        const parentTermDiv = termDivs.filter(d => d.name === 'Cancer-related Variables')
-        parentTermDiv.select('div[data-testid="sjpp_termdbbutton"]').node().click()
-        await sleep(300)
-        const childDiv = parentTermDiv.select('.termchilddiv')
-        const childTermDiv = childDiv.select('.termdiv')
-        childTermDiv.select('div[data-testid="sjpp_termdbbutton"]').node().click()
-        await sleep(300)
-        // FIXME: branches are getting duplicated upon clicking. See "client/termdb/test/tree.integration.spec.js" for how to navigate through termdb tree.*/
-		//if (test._ok) chart.Inner.app.destroy()
+		const submitBtn = chart.Inner.dom.submit.select('button').node()
+		submitBtn.click()
+		const barsSvg = await detectOne({ elem: document, selector: '.pp-bars-svg' })
+		test.ok(barsSvg, 'Should render barchart svg')
+		const bars = await detectGte({ elem: barsSvg, selector: '.bars-cell-grp', count: 1 })
+		test.ok(bars.length, 'Should render at least one bar')
+		if (test['_ok']) chart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term1=categorical; term2=numeric', function (test) {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summaryInput',
+					term: { id: 'diaggrp' },
+					term2: { id: 'agedx' }
+				}
+			]
+		},
+		summaryInput: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(chart) {
+		chart.on('postRender.test', null)
+		const submitBtn = chart.Inner.dom.submit.select('button').node()
+		submitBtn.click()
+		const barsSvg = await detectOne({ elem: document, selector: '.pp-bars-svg' })
+		test.ok(barsSvg, 'Should render barchart svg')
+		const bars = await detectGte({ elem: barsSvg, selector: '.bars-cell-grp', count: 1 })
+		test.ok(bars.length, 'Should render at least one bar')
+		const overlays = await detectGte({ elem: barsSvg, selector: '.bars-cell', count: 1 })
+		test.ok(overlays.length > bars.length, 'Should have more overlays than bars')
+		if (test['_ok']) chart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term1=categorical; term2=numeric; term0=categorical', function (test) {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summaryInput',
+					term: { id: 'diaggrp' },
+					term2: { id: 'agedx' },
+					term0: { id: 'sex' }
+				}
+			]
+		},
+		summaryInput: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(chart) {
+		chart.on('postRender.test', null)
+		const submitBtn = chart.Inner.dom.submit.select('button').node()
+		submitBtn.click()
+		const barsSvgs = await detectGte({ elem: document, selector: '.pp-bars-svg', count: 1 })
+		test.equal(barsSvgs.length, 2, 'Should render 2 barchart svgs')
+		if (test['_ok']) chart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term1=geneVariant', function (test) {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summaryInput',
+					term: getGeneVariantTw()
+				}
+			]
+		},
+		summaryInput: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(chart) {
+		chart.on('postRender.test', null)
+		const submitBtn = chart.Inner.dom.submit.select('button').node()
+		submitBtn.click()
+		const barsSvg = await detectOne({ elem: document, selector: '.pp-bars-svg' })
+		test.ok(barsSvg, 'Should render barchart svg')
+		const bars = await detectGte({ elem: barsSvg, selector: '.bars-cell-grp', count: 1 })
+		test.ok(bars.length, 'Should render at least one bar')
+		if (test['_ok']) chart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term1=geneExpression', function (test) {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summaryInput',
+					term: { term: { type: 'geneExpression', gene: 'TP53' } }
+				}
+			]
+		},
+		summaryInput: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(chart) {
+		chart.on('postRender.test', null)
+		const submitBtn = chart.Inner.dom.submit.select('button').node()
+		submitBtn.click()
+		const violinSvg = await detectOne({ elem: document, selector: '.sjpp-violin-plot' })
+		test.ok(violinSvg, 'Should render violin svg')
+		const violinPaths = await detectLst({ elem: violinSvg, selector: '.sjpp-vp-path', count: 2 })
+		test.equal(violinPaths.length, 2, 'Should render a single violin plot with 2 paths')
+		if (test['_ok']) chart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term1=survival; term2=categorical', function (test) {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summaryInput',
+					term: { id: 'os' },
+					term2: { id: 'sex' }
+				}
+			]
+		},
+		summaryInput: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(chart) {
+		chart.on('postRender.test', null)
+		const submitBtn = chart.Inner.dom.submit.select('button').node()
+		submitBtn.click()
+		const survivalSvg = await detectOne({ elem: document, selector: '.pp-survival-svg' })
+		test.ok(survivalSvg, 'Should render survival svg')
+		const serieses = await detectLst({ elem: survivalSvg, selector: '.sjpp-survival-series', count: 2 })
+		test.equal(serieses.length, 2, 'Should render 2 survival series')
+		if (test['_ok']) chart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term1=survival; term2=numeric', function (test) {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summaryInput',
+					term: { id: 'os' },
+					term2: { id: 'agedx' }
+				}
+			]
+		},
+		summaryInput: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(chart) {
+		chart.on('postRender.test', null)
+		const submitBtn = chart.Inner.dom.submit.select('button').node()
+		submitBtn.click()
+		const survivalSvg = await detectOne({ elem: document, selector: '.pp-survival-svg' })
+		test.ok(survivalSvg, 'Should render survival svg')
+		const serieses = await detectLst({ elem: survivalSvg, selector: '.sjpp-survival-series', count: 2 })
+		test.equal(serieses.length, 2, 'Should render 2 survival series')
+		if (test['_ok']) chart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term1=survival; term2=geneVariant', function (test) {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summaryInput',
+					term: { id: 'os' },
+					term2: getGeneVariantTw()
+				}
+			]
+		},
+		summaryInput: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(chart) {
+		chart.on('postRender.test', null)
+		const submitBtn = chart.Inner.dom.submit.select('button').node()
+		submitBtn.click()
+		const survivalSvg = await detectOne({ elem: document, selector: '.pp-survival-svg' })
+		test.ok(survivalSvg, 'Should render survival svg')
+		const serieses = await detectLst({ elem: survivalSvg, selector: '.sjpp-survival-series', count: 2 })
+		test.equal(serieses.length, 2, 'Should render 2 survival series')
+		if (test['_ok']) chart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term1=survival; term2=geneExpression', function (test) {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summaryInput',
+					term: { id: 'os' },
+					term2: { term: { type: 'geneExpression', gene: 'TP53' } }
+				}
+			]
+		},
+		summaryInput: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(chart) {
+		chart.on('postRender.test', null)
+		const submitBtn = chart.Inner.dom.submit.select('button').node()
+		submitBtn.click()
+		const survivalSvg = await detectOne({ elem: document, selector: '.pp-survival-svg' })
+		test.ok(survivalSvg, 'Should render survival svg')
+		const serieses = await detectLst({ elem: survivalSvg, selector: '.sjpp-survival-series', count: 2 })
+		test.equal(serieses.length, 2, 'Should render 2 survival series')
+		if (test['_ok']) chart.Inner.app.destroy()
 		test.end()
 	}
 })
