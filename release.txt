@@ -1,1 +1,2 @@
-
+Fixes:
+- GRIN2: Now capturing all of Manhattan plot when saving. Other minor improvements
