@@ -37,7 +37,7 @@ import crypto from 'crypto'
  */
 
 // Constants & types
-const MAX_LESIONS_PER_TYPE = 50000 // Maximum number of lesions to process per type to avoid overwhelming the production server
+const MAX_LESIONS_PER_TYPE = serverconfig.features.grin2maxLesionPerType || 50000 // Maximum number of lesions to process per type to avoid overwhelming the production server
 type TrackState = { count: number }
 type LesionTracker = Map<number, TrackState>
 
