@@ -1,74 +1,74 @@
 {
   "src/serverconfig.js": {
     "lines": {
-      "total": 120,
-      "covered": 70,
+      "total": 133,
+      "covered": 82,
       "skipped": 0,
-      "pct": 58.33
+      "pct": 61.65
     },
     "functions": {
-      "total": 4,
-      "covered": 3,
+      "total": 7,
+      "covered": 6,
       "skipped": 0,
-      "pct": 75
+      "pct": 85.71
     },
     "statements": {
-      "total": 149,
-      "covered": 85,
+      "total": 166,
+      "covered": 100,
       "skipped": 0,
-      "pct": 57.04
+      "pct": 60.24
     },
     "branches": {
-      "total": 153,
-      "covered": 57,
+      "total": 167,
+      "covered": 64,
       "skipped": 0,
-      "pct": 37.25
+      "pct": 38.32
     },
     "lowestPct": {
-      "curr": 37.25,
-      "prev": 37.24,
-      "diff": 0.00999999999999801
+      "curr": 38.32,
+      "prev": 37.25,
+      "diff": 1.0700000000000003
     },
     "averagePct": {
-      "curr": 56.904999999999994,
+      "curr": 61.48,
       "prev": 56.970000000000006,
-      "diff": -0.06500000000001194
+      "diff": 4.509999999999991
     }
   },
   "src/auth.js": {
     "lines": {
-      "total": 434,
-      "covered": 430,
+      "total": 444,
+      "covered": 440,
       "skipped": 0,
-      "pct": 99.07
+      "pct": 99.09
     },
     "functions": {
-      "total": 39,
-      "covered": 38,
+      "total": 42,
+      "covered": 41,
       "skipped": 0,
-      "pct": 97.43
+      "pct": 97.61
     },
     "statements": {
-      "total": 504,
-      "covered": 499,
+      "total": 515,
+      "covered": 510,
       "skipped": 0,
-      "pct": 99
+      "pct": 99.02
     },
     "branches": {
-      "total": 395,
-      "covered": 269,
+      "total": 407,
+      "covered": 277,
       "skipped": 0,
-      "pct": 68.1
+      "pct": 68.05
     },
     "lowestPct": {
-      "curr": 68.1,
+      "curr": 68.05,
       "prev": 68.67,
-      "diff": -0.5700000000000074
+      "diff": -0.6200000000000045
     },
     "averagePct": {
-      "curr": 90.9,
+      "curr": 90.9425,
       "prev": 90.9,
-      "diff": 0
+      "diff": 0.04249999999998977
     }
   },
   "src/test/auth.unit.spec.js": {
