@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.163.0
 
 Features:
 - GRIN2: Improved precision of reported time for GRIN2 steps
