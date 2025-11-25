@@ -105,7 +105,7 @@ class MassSessionBtn {
 					}
 					this.dom.tip.hide()
 				} else if (loc == 'server') {
-					const headers = this.app.vocabApi.mayGetAuthHeaders(this.route)
+					const headers = await this.app.vocabApi.mayGetAuthHeaders(this.route)
 					const body = { id, route: this.route, dslabel: this.dslabel, embedder: window.location.hostname }
 					const res = await dofetch3(`/massSession?`, { headers, body })
 					if (!res.state) throw res.error || 'unable to get the cached session from the server'
@@ -342,7 +342,7 @@ class MassSessionBtn {
 	}
 
 	async getSessionUrl(filename = '') {
-		const headers = this.app.vocabApi.mayGetAuthHeaders('termdb')
+		const headers = await this.app.vocabApi.mayGetAuthHeaders('termdb')
 		const state = structuredClone(this.app.getState())
 		const { protocol, host, search, origin, href } = window.location
 		state.embedder = { protocol, host, search, origin, href }
@@ -476,7 +476,7 @@ class MassSessionBtn {
 				}
 				localStorage.setItem('savedMassSessions', JSON.stringify(this.savedSessions))
 				try {
-					const headers = this.app.vocabApi.mayGetAuthHeaders('termdb')
+					const headers = await this.app.vocabApi.mayGetAuthHeaders('termdb')
 					const body = {
 						ids: sessionIdsDeletedFromServer,
 						route: this.route,

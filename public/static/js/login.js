@@ -29,39 +29,32 @@ function getJwtByDsRoute() {
 	return JSON.parse(jwtByDsRouteStr)
 }
 
-async function login(dataset, role = 'public') {
-	const jwt = await getJwt(dataset, role)
+async function login(dslabel, role = 'public') {
+	const jwt = await getJwt(dslabel, role)
 	if (!jwt) return
 	return jwt
 }
 
-async function getJwt(dataset, role) {
+async function getJwt(dslabel, role) {
 	const params = getParams()
 	if (!params.role) params.role = role
 
-	// The fakeTokens allows simulating valid, signed jwt by dataset and role.
+	// The fakeTokens allows simulating valid, signed jwt by dslabel and role.
 	// It assumes there is only one protected route entry for serverconfig.features.fakeTokens[<dslabel>],
 	// and there can be 1 or more role:jwt key-values nested under it.
 	//
 	// NOTE: Verified fake tokens will be passed to `setTokenByDsRoute()` in `dofetch()`, to be
 	// saved in localStorage 'jwtByDsCredentials' and returned by getJwtByDsRoute() above.
 	//
-	let jwt = JSON.parse(sessionStorage.getItem('optionalFeatures') || '{}').fakeTokens?.[dataset]?.[params.role] //; console.log(params.role, jwt)
+
 	// !!! NOTE: to clear/refresh the stored fake jwt's, use the dslogout() function above or force the condition below to true !!!
 	// otherwise, should reuse saved fake tokens that have not changed in serverconfig.features
-	if (!jwt) {
-		await fetch(`/genomes`, {})
-			.then(r => r.json())
-			.then(async data => {
-				if (data.features) {
-					sessionStorage.setItem('optionalFeatures', JSON.stringify(data.features))
-					jwt = data.features.fakeTokens?.[dataset]?.[params.role]
-				}
-			})
-			.catch(console.error)
-	}
-
-	return jwt
+	const body = JSON.stringify({ dslabel, role })
+	const res = await fetch('/demoToken', { method: 'POST', body })
+		.then(r => r.json())
+		.catch(console.error)
+	//console.log(55, 'res.fakeTokensByRole[role]', res.fakeTokensByRole[role])
+	return res.fakeTokensByRole[role]
 }
 
 // URL search params can be used to trigger user roles or other behaviour

@@ -3,14 +3,13 @@ import path from 'path'
 import jsonwebtoken from 'jsonwebtoken'
 import { sleep } from './utils.js'
 import mm from 'micromatch'
-import { mayGenerateFakeTokens, maySetFakeTokens } from './fakeTokens.js'
 
 const { isMatch } = mm
 
 // these server routes should not be protected by default,
 // since a user that is not logged should be able to have a way to login,
 // also logout should be supported regardless
-const forcedOpenRoutes = new Set(['/dslogin', '/jwt-status', '/dslogout', '/healthcheck'])
+const forcedOpenRoutes = new Set(['/dslogin', '/jwt-status', '/dslogout', '/healthcheck', '/demoToken'])
 
 const defaultApiMethods = {
 	maySetAuthRoutes, // declared below
@@ -158,10 +157,6 @@ async function validateDsCredentials(creds, serverconfig) {
 					// TODO: this headerKey should be unique to a dslabel + route, to avoid conflicts
 					if (!cred.headerKey) cred.headerKey = headerKey
 					if (cred.processor) cred.processor = (await import(cred.processor))?.default
-					if (serverconfig.debugmode && !serverconfig.features?.fakeTokens?.[dslabel]) {
-						await mayGenerateFakeTokens(dslabel, cred)
-						await maySetFakeTokens(serverconfig.features?.fakeTokens, dslabel)
-					}
 				} else if (cred.type != 'forbidden' && cred.type != 'open') {
 					throw `unknown cred.type='${cred.type}' for dsCredentials[${dslabel}][${embedderHost}][${serverRoute}]`
 				}
@@ -372,7 +367,7 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 		// if no creds[dslabel], match to wildcard dslabel if specified
 		const ds0 = creds[q.dslabel] || creds['*']
 		if (ds0) {
-			if (path == '/jwt-status') {
+			if (path == '/jwt-status' || path == '/demoToken') {
 				const route = ds0[q.route] || ds0['termdb'] || ds0['/**']
 				return route && (route[q.embedder] || route['*'])
 			} else if (path == '/dslogin') {
@@ -560,6 +555,40 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 			const time = new Date()
 			await fs.appendFile(actionsFile, `${q.dslabel}\t${email}\t${time}\t${q.action}\t${JSON.stringify(q.details)}\n`)
 			res.send({ status: 'ok' })
+		} catch (e) {
+			res.status(401)
+			res.send(typeof e == 'object' ? e : { error: e })
+		}
+	})
+
+	const demoJwtInputs = await validateDemoJwtInputs(serverconfig.features?.demoJwtInputs)
+	app.post(basepath + '/demoToken', async (req, res) => {
+		const q = req.query
+		try {
+			// TODO: later, other routes besides /termdb may require tracking
+			const cred = getRequiredCred(q, '/demoToken')
+			if (!cred) {
+				res.send({ status: 'ok' })
+				return
+			}
+			if (!demoJwtInputs[q.dslabel]) throw `unauthorized`
+			const iat = Math.floor(Date.now() / 1000)
+			const defaultToken = {
+				iat,
+				exp: iat + 60, // 1 minute expiration, /jwt-status will generate a session token with a longer lifetime
+				email: 'username@test.tld',
+				ip: '127.0.0.1'
+			}
+			const fakeTokensByRole = {}
+			for (const [role, payload] of Object.entries(demoJwtInputs[q.dslabel])) {
+				if (q.role && role != q.role) continue
+				const fullPayload = Object.assign({}, defaultToken, payload)
+				fakeTokensByRole[role] = cred.processor
+					? cred.processor.generatePayload(fullPayload, cred)
+					: jsonwebtoken.sign(fullPayload, cred.secret)
+				console.log(`Faketoken computed for ds=${q.dslabel}, role=${role}`)
+			}
+			res.send({ status: 'ok', fakeTokensByRole })
 		} catch (e) {
 			res.status(401)
 			res.send(typeof e == 'object' ? e : { error: e })
@@ -999,4 +1028,39 @@ function checkIPaddress(req, ip, cred) {
 	if (!ip) throw `Server error: missing ip address in saved session`
 	if (req.ip != ip && req.ips?.[0] != ip && req.connection?.remoteAddress != ip)
 		throw `Your connection has changed, please refresh your page or sign in again.`
+}
+
+/*
+	Validate the demoJwtInputs object + entries during server startup,
+	to catch potential demo token payload errors sooner, instead of discovering 
+	payload errors later only after a user requests a signed demo token. 
+	The jwt signing and verification library itself is reliable, 
+	but the payload may have special requirements/key-values that are not related to jwt signing.
+
+	demoJwtInputsFile: a js/ts file that exports a const object for each dslabel with demo tokens
+	example:
+		export const ASH = {
+			public: {
+				"datasets": [
+			    "ASH"
+			  ],
+			  "clientAuthResult": {}
+			}
+		} 
+*/
+async function validateDemoJwtInputs(demoJwtInputsFile) {
+	if (!demoJwtInputsFile) return {} // okay to not have an inputs file, no fake tokens will be computed by `/demoToken` route
+	const demoJwtInputs = await import(demoJwtInputsFile)
+	for (const [dslabel, payloadByRole] of Object.entries(demoJwtInputs)) {
+		for (const [role, payload] of Object.entries(payloadByRole)) {
+			if (typeof payload != 'object') throw `demoJwtInputs[${dslabel}][${role}] payload is not an object`
+			if (!Object.keys(payload).length) throw `demoJwtInputs[${dslabel}][${role}] payload is empty`
+			if (payload.iat && isNaN(payload.iat)) throw `demoJwtInputs[${dslabel}][${role}].iat isNaN`
+			if (payload.exp && isNaN(payload.exp)) throw `demoJwtInputs[${dslabel}][${role}].exp isNaN`
+			if (payload.email && (typeof payload.email != 'string' || !payload.email.includes('@')))
+				throw `invalid demoJwtInputs[${dslabel}][${role}].email`
+			// may add other validation logic for expected jwt payload key/values
+		}
+	}
+	return demoJwtInputs
 }

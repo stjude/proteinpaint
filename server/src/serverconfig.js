@@ -161,14 +161,6 @@ if (serverconfig.debugmode && !serverconfig.binpath.includes('sjcrh/')) {
 	// since the serverconfig.binpath prefix may
 	// have been applied to locate optional routeSetter files
 	serverconfig.routeSetters = routeSetters
-
-	// fakeTokens may be auto-generated for a dslabel entry in serverconfig.dsCredentials,
-	// to verify credentials handling in local dev or to demo features that require user login in prod,
-	// see the logic in server/src/fakeTokens.js for details
-	// NOTES:
-	// - manual entries in serverconfig.features.fakeTokens will not be overridden by auto-generated tokens
-	// - see https://github.com/stjude/proteinpaint/wiki/Dataset-Tokens for instructions
-	if (!serverconfig.features.fakeTokens) serverconfig.features.fakeTokens = {}
 }
 
 if (serverconfig.debugmode) {
