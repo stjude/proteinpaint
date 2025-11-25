@@ -118,7 +118,7 @@ export class Vocab {
 		return this.verifiedToken && true
 	}
 
-	mayGetAuthHeaders(route = '') {
+	async mayGetAuthHeaders(route = '') {
 		const dslabel = this.state.vocab.dslabel
 		const auth = this.state.termdbConfig?.requiredAuth?.find(a => a.route == route) || getRequiredAuth(dslabel, route)
 
@@ -142,7 +142,7 @@ export class Vocab {
 		// at this point, should prefer to use a saved PP-server generated jwt instead of reusing an
 		// embedder's jwt callback, because a PP-issued jwt would already have a tracked session id
 		// so it's easier to verify
-		const jwt = getSavedToken(dslabel, route) || this.opts.getDatasetAccessToken?.(route)
+		const jwt = getSavedToken(dslabel, route) || (await this.opts.getDatasetAccessToken?.(route))
 		if (jwt) headers.authorization = `Bearer ${btoa(jwt)}`
 		return headers
 	}
@@ -154,7 +154,7 @@ export class Vocab {
 	async trackDsAction({ action, details }) {
 		const headers = { 'x-sjppds-sessionid': this.sessionId }
 		// NOTE: do not hardcode the .termdb route here, there may be more tracked actions later
-		const jwt = this.opts.getDatasetAccessToken?.('termdb')
+		const jwt = await this.opts.getDatasetAccessToken?.('termdb')
 		if (jwt) headers.authorization = 'Bearer ' + btoa(jwt)
 		await dofetch3('/authorizedActions', {
 			method: 'POST',

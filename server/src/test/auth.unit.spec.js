@@ -168,7 +168,7 @@ tape(`initialization, non-empty credentials`, async test => {
 		routes.sort()
 		test.deepEqual(
 			routes,
-			['/authorizedActions', '/dslogin', '/dslogout', '/jwt-status'],
+			['/authorizedActions', '/demoToken', '/dslogin', '/dslogout', '/jwt-status'],
 			'should set the expected routes when there is a non-empty dsCredentials entry in serverconfig'
 		)
 	}
