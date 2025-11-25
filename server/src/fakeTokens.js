@@ -1,6 +1,12 @@
 import serverconfig from './serverconfig.js'
 import fs from 'fs'
 import path from 'path'
+import jsonwebtoken from 'jsonwebtoken'
+
+/*
+	See https://github.com/stjude/proteinpaint/wiki/Dataset-Tokens
+	for step-by-step instructions of triggering these code
+*/
 
 const fakeToken = {
 	dir: path.join(serverconfig.cachedir, 'fakeTokens'),
@@ -8,18 +14,23 @@ const fakeToken = {
 	expiration: 3600 * 24 * 365 // one year, in seconds
 }
 
-export async function generateFakeTokens(dslabel, cred, jsonwebtoken) {
-	if (!fs.existsSync(fakeToken.dir)) return
+if (!fs.existsSync(fakeToken.dir)) fs.mkdirSync(fakeToken.dir)
 
+// generateFakeTokens()
+// - read example payloads from `${fakeTokens.dir}/${dslabel}/payload.json` to generate `fakeJwt.json` in the same dir
+//
+// dslabel: dataset name for an entry in serverconfig.genomes[].datasets[]
+// cred: a dsCredential entry, at the level of dslabel-route-embedder, as processed by auth.js
+//
+export async function mayGenerateFakeTokens(dslabel, cred) {
 	const outputFile = path.join(fakeToken.dir, dslabel, 'fakeJwt.json')
-	// ok to not have a file, will generate fake tokens if an input file is found below
+	// ok to not have an output file, will generate it if an input file is found below
 	if (fs.existsSync(outputFile)) return
 
 	const inputFile = path.join(fakeToken.dir, dslabel, 'payload.json')
-	// ok to not have a file, will not generate fake tokens;
-	if (!fs.existsSync(inputFile)) return
-	await fs.access(inputFile)
+	if (!fs.existsSync(inputFile)) return // ok to not have an input file, will not generate fake tokens for the dslabel
 	const { default: payloadByRole } = await import(inputFile, { with: { type: 'json' } })
+
 	const fakeTokensByRole = {}
 	for (const [role, payload] of Object.entries(payloadByRole)) {
 		const fullPayload = Object.assign(
@@ -39,14 +50,21 @@ export async function generateFakeTokens(dslabel, cred, jsonwebtoken) {
 			fakeTokensByRole[role] = _.default.generatePayload(fullPayload, cred)
 		}
 	}
-	if (Object.keys(fakeTokensByRole).length) fs.writeFile(outputFile, JSON.stringify(fakeTokensByRole, null, '  '))
+	if (Object.keys(fakeTokensByRole).length) fs.writeFileSync(outputFile, JSON.stringify(fakeTokensByRole, null, '  '))
 }
 
-export async function setFakeTokens(fakeTokens) {
-	if (!fs.existsSync(fakeToken.dir)) return
-	const dslabels = fs.readdirSync(fakeToken.dir)
+// setFakeTokens()
+// - adds an entry to serverconfig.features.fakeTokens{} for each `${fakeTokens.dir}/${dslabel}/fakeJwt.json` that's read by `setFakeTokens()`
+export async function maySetFakeTokens(fakeTokens, _dslabel) {
+	if (!fakeTokens) return
+	const dslabels = _dslabel ? [_dslabel] : fs.readdirSync(fakeToken.dir)
+
 	for (const dslabel of dslabels) {
-		if (dslabel[0] === '.') continue
-		fakeTokens[dslabel] = (await import(`${fakeToken.dir}/${dslabel}/fakeJwt.json`, { with: { type: 'json' } })).default
+		if (dslabel[0] === '.') continue // skip hidden files
+		if (!fs.existsSync(`${fakeToken.dir}/${dslabel}/fakeJwt.json`)) continue
+		fakeTokens[dslabel] = Object.assign(
+			(await import(`${fakeToken.dir}/${dslabel}/fakeJwt.json`, { with: { type: 'json' } })).default,
+			fakeTokens[dslabel] || {} // manual entries in serverconfig.json should not be overriden by auto-generated entries in fakeJwt.json
+		)
 	}
 }
