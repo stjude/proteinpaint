@@ -158,16 +158,16 @@ async function validateDsCredentials(creds, serverconfig) {
 					// TODO: this headerKey should be unique to a dslabel + route, to avoid conflicts
 					if (!cred.headerKey) cred.headerKey = headerKey
 					if (cred.processor) cred.processor = (await import(cred.processor))?.default
+					if (serverconfig.debugmode && !serverconfig.features?.fakeTokens?.[dslabel]) {
+						await mayGenerateFakeTokens(dslabel, cred)
+						await maySetFakeTokens(serverconfig.features?.fakeTokens, dslabel)
+					}
 				} else if (cred.type != 'forbidden' && cred.type != 'open') {
 					throw `unknown cred.type='${cred.type}' for dsCredentials[${dslabel}][${embedderHost}][${serverRoute}]`
 				}
 				cred.dslabel = dslabel
 				cred.route = serverRoute
 				cred.cookieId = (serverRoute == 'termdb' && cred.headerKey) || `${dslabel}-${serverRoute}-${embedderHost}-Id`
-				if (serverconfig.debugmode && !serverconfig.features?.fakeTokens?.[dslabel]) {
-					await mayGenerateFakeTokens(dslabel, cred)
-					await maySetFakeTokens(serverconfig.features?.fakeTokens, dslabel)
-				}
 			}
 		}
 	}

@@ -46,8 +46,7 @@ export async function mayGenerateFakeTokens(dslabel, cred) {
 		if (!cred?.processor) {
 			fakeTokensByRole[role] = jsonwebtoken.sign(fullPayload, cred.secret)
 		} else {
-			const _ = await import(cred.processor)
-			fakeTokensByRole[role] = _.default.generatePayload(fullPayload, cred)
+			fakeTokensByRole[role] = cred.processor.generatePayload(fullPayload, cred)
 		}
 	}
 	if (Object.keys(fakeTokensByRole).length) fs.writeFileSync(outputFile, JSON.stringify(fakeTokensByRole, null, '  '))
@@ -61,9 +60,12 @@ export async function maySetFakeTokens(fakeTokens, _dslabel) {
 
 	for (const dslabel of dslabels) {
 		if (dslabel[0] === '.') continue // skip hidden files
-		if (!fs.existsSync(`${fakeToken.dir}/${dslabel}/fakeJwt.json`)) continue
+		const outfile = `${fakeToken.dir}/${dslabel}/fakeJwt.json`
+		if (!fs.existsSync(outfile)) continue
+		const jwtStr = fs.readFileSync(outfile, { encoding: 'utf8' })
+		const jwtByRole = JSON.parse(jwtStr)
 		fakeTokens[dslabel] = Object.assign(
-			(await import(`${fakeToken.dir}/${dslabel}/fakeJwt.json`, { with: { type: 'json' } })).default,
+			jwtByRole,
 			fakeTokens[dslabel] || {} // manual entries in serverconfig.json should not be overriden by auto-generated entries in fakeJwt.json
 		)
 	}
