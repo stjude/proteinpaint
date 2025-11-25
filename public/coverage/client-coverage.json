@@ -5617,38 +5617,38 @@
   },
   "termsetting/TermSettingApi.ts": {
     "lines": {
-      "total": 128,
-      "covered": 30,
+      "total": 130,
+      "covered": 3,
       "skipped": 0,
-      "pct": 23.43
+      "pct": 2.3
     },
     "functions": {
       "total": 24,
-      "covered": 3,
+      "covered": 0,
       "skipped": 0,
-      "pct": 12.5
+      "pct": 0
     },
     "statements": {
-      "total": 148,
-      "covered": 35,
+      "total": 150,
+      "covered": 3,
       "skipped": 0,
-      "pct": 23.64
+      "pct": 2
     },
     "branches": {
       "total": 129,
-      "covered": 23,
+      "covered": 0,
       "skipped": 0,
-      "pct": 17.82
+      "pct": 0
     },
     "lowestPct": {
-      "curr": 12.5,
+      "curr": 0,
       "prev": 58.33,
-      "diff": -45.83
+      "diff": -58.33
     },
     "averagePct": {
-      "curr": 19.3475,
+      "curr": 1.075,
       "prev": 64.475,
-      "diff": -45.1275
+      "diff": -63.39999999999999
     }
   },
   "termsetting/TermSettingInner.ts": {
