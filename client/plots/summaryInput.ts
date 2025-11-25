@@ -129,25 +129,28 @@ export const componentInit = summaryInputInit
 
 export async function getPlotConfig(opts, app) {
 	try {
+		// don't supply defaultQ if term.bins or term.q is defined (e.g. if q.mode='continuous', shouldn't override it with defaultQ)
 		if (opts.term) {
-			await fillTermWrapper(opts.term, app.vocabApi, opts.term.q || { geneVariant: { type: 'predefined-groupset' } })
+			const defaultQ: any = opts.term.bins || opts.term.q ? undefined : { geneVariant: { type: 'predefined-groupset' } }
+			await fillTermWrapper(opts.term, app.vocabApi, defaultQ)
 		}
-		// supply term0_term2_defaultQ if opts.term0/2.bins/q is undefined
-		// e.g. for scatterplot, opts.term2.q.mode='continuous' so will not
-		// want to override with q.mode from term0_term2_defaultQ
 		if (opts.term2) {
-			await fillTermWrapper(
-				opts.term2,
-				app.vocabApi,
-				opts.term2.bins || opts.term2.q ? undefined : term0_term2_defaultQ
-			)
+			const defaultQ =
+				opts.term2.bins || opts.term2.q
+					? undefined
+					: opts.term.term.type == 'survival'
+					? term0_term2_defaultQ_surv
+					: term0_term2_defaultQ
+			await fillTermWrapper(opts.term2, app.vocabApi, defaultQ)
 		}
 		if (opts.term0) {
-			await fillTermWrapper(
-				opts.term0,
-				app.vocabApi,
-				opts.term0.bins || opts.term0.q ? undefined : term0_term2_defaultQ
-			)
+			const defaultQ =
+				opts.term0.bins || opts.term0.q
+					? undefined
+					: opts.term.term.type == 'survival'
+					? term0_term2_defaultQ_surv
+					: term0_term2_defaultQ
+			await fillTermWrapper(opts.term0, app.vocabApi, defaultQ)
 		}
 	} catch (e: any) {
 		if (e.stack) console.log(e.stack)
