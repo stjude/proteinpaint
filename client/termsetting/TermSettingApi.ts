@@ -106,6 +106,11 @@ export class TermSettingApi {
 			tree: {
 				disable_terms: self.disable_terms,
 				click_term: async t => {
+					// display loading message after certain amount of time
+					setTimeout(() => {
+						self.dom.nopilldiv.text('Loading ...')
+						self.dom.pilldiv.text('Loading ...')
+					}, 200)
 					self.dom.tip.hide()
 
 					let tw
