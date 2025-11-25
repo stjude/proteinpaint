@@ -16,7 +16,7 @@ const fakeToken = {
 
 if (!fs.existsSync(fakeToken.dir)) fs.mkdirSync(fakeToken.dir)
 
-// generateFakeTokens()
+// mayGenerateFakeTokens()
 // - read example payloads from `${fakeTokens.dir}/${dslabel}/payload.json` to generate `fakeJwt.json` in the same dir
 //
 // dslabel: dataset name for an entry in serverconfig.genomes[].datasets[]
@@ -48,11 +48,12 @@ export async function mayGenerateFakeTokens(dslabel, cred) {
 		} else {
 			fakeTokensByRole[role] = cred.processor.generatePayload(fullPayload, cred)
 		}
+		console.log(`Faketoken computed for ds=${dslabel}, role=${role}`)
 	}
 	if (Object.keys(fakeTokensByRole).length) fs.writeFileSync(outputFile, JSON.stringify(fakeTokensByRole, null, '  '))
 }
 
-// setFakeTokens()
+// maySetFakeTokens()
 // - adds an entry to serverconfig.features.fakeTokens{} for each `${fakeTokens.dir}/${dslabel}/fakeJwt.json` that's read by `setFakeTokens()`
 export async function maySetFakeTokens(fakeTokens, _dslabel) {
 	if (!fakeTokens) return
