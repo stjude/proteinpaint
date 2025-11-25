@@ -1,10 +1,10 @@
 {
   "src/serverconfig.js": {
     "lines": {
-      "total": 133,
-      "covered": 82,
+      "total": 132,
+      "covered": 81,
       "skipped": 0,
-      "pct": 61.65
+      "pct": 61.36
     },
     "functions": {
       "total": 7,
@@ -13,62 +13,62 @@
       "pct": 85.71
     },
     "statements": {
-      "total": 166,
-      "covered": 100,
+      "total": 164,
+      "covered": 98,
       "skipped": 0,
-      "pct": 60.24
+      "pct": 59.75
     },
     "branches": {
-      "total": 167,
-      "covered": 64,
+      "total": 165,
+      "covered": 63,
       "skipped": 0,
-      "pct": 38.32
+      "pct": 38.18
     },
     "lowestPct": {
-      "curr": 38.32,
-      "prev": 37.25,
-      "diff": 1.0700000000000003
+      "curr": 38.18,
+      "prev": 38.32,
+      "diff": -0.14000000000000057
     },
     "averagePct": {
-      "curr": 61.48,
-      "prev": 56.970000000000006,
-      "diff": 4.509999999999991
+      "curr": 61.25,
+      "prev": 61.48,
+      "diff": -0.22999999999999687
     }
   },
   "src/auth.js": {
     "lines": {
-      "total": 444,
-      "covered": 440,
+      "total": 472,
+      "covered": 468,
+      "skipped": 0,
+      "pct": 99.15
+    },
+    "functions": {
+      "total": 44,
+      "covered": 43,
+      "skipped": 0,
+      "pct": 97.72
+    },
+    "statements": {
+      "total": 550,
+      "covered": 545,
       "skipped": 0,
       "pct": 99.09
     },
-    "functions": {
-      "total": 42,
-      "covered": 41,
-      "skipped": 0,
-      "pct": 97.61
-    },
-    "statements": {
-      "total": 515,
-      "covered": 510,
-      "skipped": 0,
-      "pct": 99.02
-    },
     "branches": {
-      "total": 407,
-      "covered": 277,
+      "total": 436,
+      "covered": 296,
       "skipped": 0,
-      "pct": 68.05
+      "pct": 67.88
     },
     "lowestPct": {
-      "curr": 68.05,
+      "curr": 67.88,
       "prev": 68.67,
-      "diff": -0.6200000000000045
+      "diff": -0.7900000000000063
     },
     "averagePct": {
-      "curr": 90.9425,
-      "prev": 90.9,
-      "diff": 0.04249999999998977
+      "curr": 90.96000000000001,
+      "prev": 90.9425,
+      "diff": 0.017500000000012506
     }
   },
   "src/test/auth.unit.spec.js": {
@@ -103,8 +103,8 @@
     },
     "averagePct": {
       "curr": 75.2175,
-      "prev": 74.915,
-      "diff": 0.3024999999999949
+      "prev": 75.2175,
+      "diff": 0
     }
   },
   "src/CacheManager.ts": {
