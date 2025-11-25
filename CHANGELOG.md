@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- GRIN2: Now capturing all of Manhattan plot when saving. Other minor improvements
+
 
 ## 2.163.0
 
