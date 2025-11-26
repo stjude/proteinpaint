@@ -277,7 +277,7 @@ export async function load_driver(q, ds) {
 
 	if (q.variant2samples) {
 		if (!ds.variant2samples) throw 'not supported by server'
-		const out = await ds.variant2samples.get(q)
+		const out = await ds.variant2samples.get(q, ds)
 		return { variant2samples: out }
 	}
 

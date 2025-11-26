@@ -621,7 +621,7 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 		*/
 	}
 
-	const data = await q.ds.variant2samples.get(q2)
+	const data = await q.ds.variant2samples.get(q2, q.ds)
 	/* data={samples[], byTermId{}}
 	data.samples[] is converted to samples{}
 	data.byTermId{} is returned without change

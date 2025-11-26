@@ -76,7 +76,10 @@ export async function validate_variant2samples(ds) {
 		}
 	}
 
-	if (vs.gdcapi) {
+	// create getter
+	if (typeof vs.getMutatedSamples == 'function') {
+		// ds supplied getter. avoids below to validate presence of samples for native ds
+	} else if (vs.gdcapi) {
 		// only a boolean flag
 	} else {
 		// look for server-side vcf/bcf/tabix file
@@ -222,6 +225,10 @@ output: (output is an object to be easily extendable of adding additional attr, 
 }
 */
 async function queryMutatedSamples(q, ds) {
+	if (typeof ds.variant2samples.getMutatedSamples == 'function') {
+		// ds supplied getter
+		return await ds.variant2samples.getMutatedSamples(q, ds)
+	}
 	/*
     !!! tricky !!!
 

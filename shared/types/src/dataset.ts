@@ -1611,6 +1611,8 @@ type Variant2Samples = GdcApi & {
 	variantkey: string
 	twLst?: Tw[]
 	sunburst_twLst?: Tw[]
+	/** ds-supplied getter */
+	getMutatedSamples?: (q: any, ds: any) => void
 }
 
 type MutationSet = {
