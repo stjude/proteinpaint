@@ -106,9 +106,15 @@ export class TermSettingApi {
 			tree: {
 				disable_terms: self.disable_terms,
 				click_term: async t => {
-					// display loading message
-					self.dom.nopilldiv.text('Loading ...')
-					self.dom.pilldiv.text('Loading ...')
+					// set up timer to display loading message
+					let showLoading = true
+					const loadingTimer = setTimeout(() => {
+						if (showLoading) {
+							self.dom.nopilldiv.text('Loading ...')
+							self.dom.pilldiv.text('Loading ...')
+						}
+					}, 200)
+
 					self.dom.tip.hide()
 
 					let tw
@@ -123,6 +129,10 @@ export class TermSettingApi {
 					// tw is now furbished
 
 					self.opts.callback!(tw)
+
+					// stop the loading message from appearing
+					showLoading = false
+					clearTimeout(loadingTimer)
 				}
 			}
 		})
