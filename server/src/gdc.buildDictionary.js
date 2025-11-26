@@ -590,7 +590,8 @@ const skipFieldLines = new Set([
 	'case.days_to_consent',
 	'case.days_to_index',
 	// 3-8-2024 sample_type has been deprecated from the data dictionary but will remain available in the  GDC API  response until v1 is retired
-	'case.samples.sample_type'
+	'case.samples.sample_type',
+	'case.state'
 ])
 function maySkipFieldLine(line) {
 	if (
