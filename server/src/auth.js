@@ -3,6 +3,7 @@ import path from 'path'
 import jsonwebtoken from 'jsonwebtoken'
 import { sleep } from './utils.js'
 import mm from 'micromatch'
+import crypto from 'crypto'
 
 const { isMatch } = mm
 
@@ -163,6 +164,35 @@ async function validateDsCredentials(creds, serverconfig) {
 				cred.dslabel = dslabel
 				cred.route = serverRoute
 				cred.cookieId = (serverRoute == 'termdb' && cred.headerKey) || `${dslabel}-${serverRoute}-${embedderHost}-Id`
+
+				if (cred.demoToken) {
+					// it's safe to not throw or block server startup on any of the errors below
+					// an invalid cred.demoToken means demo tokens will not be issued
+					if (typeof cred.demoToken != 'object') {
+						delete cred.demoToken
+						console.warn(`${dslabel} cred.demoToken must be an object`)
+					} else {
+						// the demoToken secret must be different from the embedder's signing secret,
+						// to make it simpler to invalidate demoToken and derived session tokens without
+						// having to coordinate with the embedder portal maintainers
+						// prettier-ignore
+						if (typeof cred.demoToken.secret != 'string' || cred.demoToken.secret.length < 10) { // pragma: allowlist secret
+							// ok to not specify a secret, will automatically compute one
+							console.warn(
+								`(!) warning: ${dslabel} cred.demoToken.secret is invalid or weak, replaced with a random string value`
+							)
+							cred.demoToken.secret = crypto.randomBytes(20).toString('hex')
+						}
+						if (!Array.isArray(cred.demoToken.roles)) {
+							cred.demoToken.roles = [] // an empty roles array means no matching demoJwtInput role will be found
+							console.warn(`(!) warning: ${dslabel} cred.demoToken.roles forced into an array`)
+						}
+						if (!Array.isArray(cred.demoToken.referers)) {
+							cred.demoToken.referers = [] // an empty referers array means a req.headers.referer will not be matched
+							console.warn(`(!) ${dslabel} cred.demoToken.referers forced into an array`)
+						}
+					}
+				}
 			}
 		}
 	}
@@ -562,6 +592,7 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 	})
 
 	app.post(basepath + '/demoToken', async (req, res) => {
+		let cookieId
 		try {
 			const q = req.query
 			const genome = genomes[q.genome]
@@ -570,11 +601,20 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 			if (!ds) throw 'invalid dslabel'
 			if (!ds.demoJwtInput) throw `missing ds.demoJwtInput`
 
-			// TODO: later, other routes besides /termdb may require tracking
 			const cred = getRequiredCred(q, '/demoToken')
 			if (!cred) {
 				res.send({ status: 'ok' })
 				return
+			}
+			cookieId = cred.cookieId
+			if (!cred.demoToken) throw `${q.dslabel} demoToken requests are not accepted by this portal`
+			else {
+				if (!cred.demoToken.roles.includes(q.role)) {
+					throw `${q.dslabel} demoToken is not supported for role=${q.role}`
+				}
+				if (!cred.demoToken.referers.find(r => req.headers.referer.includes(r))) {
+					throw `${q.dslabel} demoToken requests are not accepted from ${req.headers.referer}`
+				}
 			}
 
 			const iat = Math.floor(Date.now() / 1000)
@@ -590,11 +630,12 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 				const fullPayload = Object.assign({}, defaultToken, payload)
 				fakeTokensByRole[role] = cred.processor
 					? cred.processor.generatePayload(fullPayload, cred)
-					: jsonwebtoken.sign(fullPayload, cred.secret)
+					: jsonwebtoken.sign(fullPayload, cred.demoToken.secret)
 				console.log(`Faketoken computed for ds=${q.dslabel}, role=${role}`)
 			}
 			res.send({ status: 'ok', fakeTokensByRole })
 		} catch (e) {
+			if (cookieId) res.header('Set-Cookie', `${cookieId}=; HttpOnly; SameSite=None; Secure; Max-Age=0`)
 			res.status(401)
 			res.send(typeof e == 'object' ? e : { error: e })
 		}
@@ -715,7 +756,10 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 		const [type, b64token] = req.headers.authorization.split(' ')
 		if (type.toLowerCase() != 'bearer') throw `unsupported authorization type='${type}', allowed: 'Bearer'`
 		const token = Buffer.from(b64token, 'base64').toString()
-		const payload = jsonwebtoken.verify(token, cred.secret)
+		const secret = cred.demoToken?.referers.find(r => r.includes(req.headers.referer))
+			? cred.demoToken.secret
+			: cred.secret
+		const payload = jsonwebtoken.verify(token, secret)
 		return payload || {}
 	}
 
@@ -929,7 +973,10 @@ function mayAddSessionFromJwt(sessions, req, cred) {
 	const token = Buffer.from(b64token, 'base64').toString()
 	const id = getSessionIdFromJwt(token)
 	try {
-		const payload = sessions[dslabel]?.[id] || jsonwebtoken.verify(token, cred.secret)
+		const secret = cred.demoToken?.referers.find(r => r.includes(req.headers.referer))
+			? cred.demoToken.secret
+			: cred.secret
+		const payload = sessions[dslabel]?.[id] || jsonwebtoken.verify(token, secret)
 		// signed payload dataset must match the requested dataset
 		if (payload.dslabel) {
 			if (payload.dslabel != dslabel) return
@@ -960,26 +1007,26 @@ function mayAddSessionFromJwt(sessions, req, cred) {
 
 /*
 	Arguments
+	q: req.query
+	headers: req.headers
 	cred: object returned by getRequiredCred
-	
+	session: (optional) a tracked session object
 
-
-	NOTE: Embedder/login jwt is expect to not include a dslabel property,
-	while a session jwt is expected to a dslabel property.
+	NOTE: Embedder/login jwt is expected to not include a dslabel property,
+	while a session jwt is expected to have a dslabel property.
 */
-function getJwtPayload(q, headers, cred, _time, session = null) {
+function getJwtPayload(q, headers, cred, session = null) {
 	if (!cred) return
 	if (!q.embedder) throw `missing q.embedder`
 	// const embedder = cred.embedders[q.embedder]
 	// if (!embedder) throw `unknown q.embedder='${q.embedder}'`
-	const secret = cred.secret
-	if (!secret)
+	if (!cred.secret)
 		throw {
 			status: 'error',
 			error: `no credentials set up for this embedder`,
 			code: 403
 		}
-	const time = Math.floor((_time || Date.now()) / 1000)
+	const time = Math.floor(Date.now() / 1000)
 
 	const rawToken = headers[cred.headerKey]
 	if (!rawToken) throw `missing header['${cred.headerKey}']`
@@ -990,6 +1037,7 @@ function getJwtPayload(q, headers, cred, _time, session = null) {
 	// use a handleToken() if available for an embedder, for example to decrypt a fully encrypted jwt
 	const token = processor.handleToken?.(rawToken) || rawToken
 	// this verification will throw if the token is invalid in any way
+	const secret = cred.demoToken?.referers.find(r => headers.referer.includes(r)) ? cred.demoToken.secret : cred.secret
 	const payload = jsonwebtoken.verify(token, secret)
 	// if there is a session, handle the expiration outside of this function
 	if (session)
