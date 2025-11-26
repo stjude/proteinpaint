@@ -142,6 +142,7 @@ export class NumericHandler extends HandlerBase implements Handler {
 
 	async showEditMenu(div) {
 		div.selectAll('*').remove()
+		this.dom.loadingDiv = div.append('div').style('margin', '15px').text('Loading ...')
 		this.tw = this.termsetting.tw as NumRegularBin | NumCustomBins | NumCont | NumSpline // TODO: do not force type
 
 		const self = this.tw
@@ -167,6 +168,8 @@ export class NumericHandler extends HandlerBase implements Handler {
 		} else {
 			this.editHandler.showEditMenu(this.dom.editDiv)
 		}
+
+		this.dom.loadingDiv.style('display', 'none')
 	}
 
 	renderButtons(btnDiv) {
