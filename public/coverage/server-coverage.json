@@ -37,38 +37,38 @@
   },
   "src/auth.js": {
     "lines": {
-      "total": 472,
-      "covered": 468,
+      "total": 463,
+      "covered": 459,
       "skipped": 0,
-      "pct": 99.15
+      "pct": 99.13
     },
     "functions": {
-      "total": 44,
-      "covered": 43,
+      "total": 43,
+      "covered": 42,
       "skipped": 0,
-      "pct": 97.72
+      "pct": 97.67
     },
     "statements": {
-      "total": 550,
-      "covered": 545,
+      "total": 538,
+      "covered": 533,
       "skipped": 0,
-      "pct": 99.09
+      "pct": 99.07
     },
     "branches": {
-      "total": 436,
-      "covered": 296,
+      "total": 421,
+      "covered": 285,
       "skipped": 0,
-      "pct": 67.88
+      "pct": 67.69
     },
     "lowestPct": {
-      "curr": 67.88,
+      "curr": 67.69,
       "prev": 68.67,
-      "diff": -0.7900000000000063
+      "diff": -0.980000000000004
     },
     "averagePct": {
-      "curr": 90.96000000000001,
-      "prev": 90.9425,
-      "diff": 0.017500000000012506
+      "curr": 90.89,
+      "prev": 90.96000000000001,
+      "diff": -0.07000000000000739
     }
   },
   "src/test/auth.unit.spec.js": {
@@ -397,38 +397,38 @@
   },
   "src/mds3.init.js": {
     "lines": {
-      "total": 1524,
-      "covered": 866,
+      "total": 1536,
+      "covered": 877,
       "skipped": 0,
-      "pct": 56.82
+      "pct": 57.09
     },
     "functions": {
-      "total": 114,
-      "covered": 58,
+      "total": 115,
+      "covered": 59,
       "skipped": 0,
-      "pct": 50.87
+      "pct": 51.3
     },
     "statements": {
-      "total": 1802,
-      "covered": 1052,
+      "total": 1820,
+      "covered": 1069,
       "skipped": 0,
-      "pct": 58.37
+      "pct": 58.73
     },
     "branches": {
-      "total": 1256,
-      "covered": 408,
+      "total": 1277,
+      "covered": 422,
       "skipped": 0,
-      "pct": 32.48
+      "pct": 33.04
     },
     "lowestPct": {
-      "curr": 32.48,
-      "prev": 32.43,
-      "diff": 0.04999999999999716
+      "curr": 33.04,
+      "prev": 32.48,
+      "diff": 0.5600000000000023
     },
     "averagePct": {
-      "curr": 49.635,
-      "prev": 49.58,
-      "diff": 0.054999999999999716
+      "curr": 50.04,
+      "prev": 49.635,
+      "diff": 0.40500000000000114
     }
   },
   "src/adHocDictionary/BuildHelpers.ts": {
