@@ -49,7 +49,7 @@ async function getJwt(dslabel, role) {
 
 	// !!! NOTE: to clear/refresh the stored fake jwt's, use the dslogout() function above or force the condition below to true !!!
 	// otherwise, should reuse saved fake tokens that have not changed in serverconfig.features
-	const body = JSON.stringify({ dslabel, role })
+	const body = JSON.stringify({ genome: 'hg38', dslabel, role })
 	const res = await fetch('/demoToken', { method: 'POST', body })
 		.then(r => r.json())
 		.catch(console.error)

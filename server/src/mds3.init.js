@@ -154,6 +154,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 
 	// must validate termdb first
 	await validate_termdb(ds)
+	validateDemoJwtInputs(ds)
 
 	if (ds.queries) {
 		// must validate snvindel query before variant2sample
@@ -3305,5 +3306,38 @@ async function getAssayAvailablility(ds, dt) {
 		if (dt.yes.value.includes(value)) dt.yesSamples.add(sample)
 		else if (dt.no.value.includes(value)) dt.noSamples.add(sample)
 		//else throw `value of term ${dt.term_id} is invalid`
+	}
+}
+
+/*
+	Validate the demoJwtInputs object + entries during server startup,
+	to catch potential demo token payload errors sooner, instead of discovering 
+	payload errors later only after a user requests a signed demo token. 
+	The jwt signing and verification library itself is reliable, 
+	but the payload may have special requirements/key-values that are not related to jwt signing.
+
+	demoJwtInputsFile: a js/ts file that exports a const object for each dslabel with demo tokens
+	example:
+		export const ASH = {
+			public: {
+				"datasets": [
+			    "ASH"
+			  ],
+			  "clientAuthResult": {}
+			}
+		} 
+*/
+function validateDemoJwtInputs(ds) {
+	if (!ds.demoJwtInput) return // okay to not have ds.demoJwtInput
+	const demoJwtInput = ds.demoJwtInput
+	if (typeof demoJwtInput != 'object') throw `ds.demoJwtInput is not an object`
+	for (const [role, payload] of Object.entries(demoJwtInput)) {
+		if (typeof payload != 'object') throw `${ds.label} ds.demoJwtInputs[${role}] payload is not an object`
+		if (!Object.keys(payload).length) throw `${ds.label} demoJwtInputs[${role}] payload is empty`
+		if (payload.iat && isNaN(payload.iat)) throw `${ds.label} demoJwtInputs[${role}].iat isNaN`
+		if (payload.exp && isNaN(payload.exp)) throw `${ds.label} demoJwtInputs[${role}].exp isNaN`
+		if (payload.email && (typeof payload.email != 'string' || !payload.email.includes('@')))
+			throw `${ds.label} demoJwtInputs[${role}].email`
+		// may add other validation logic for expected jwt payload key/values
 	}
 }
