@@ -69,16 +69,11 @@ export class GroupSet extends HandlerBase implements Handler {
 	async showEditMenu() {
 		const self = this.termsetting
 		const holder = this.dom.holder
-		this.dom.loadingDiv = holder
-			.append('div')
-			.style('margin', '10px')
-			.style('padding', '10px')
-			.text('Getting categories...')
+		this.dom.loadingDiv = holder.append('div').style('margin', '15px').text('Getting categories...')
 		this.dom.menuWrapper = holder.append('div')
 
 		//for rendering groupsetting menu
 		const body = self.opts.getBodyParams?.() || {}
-		this.dom.loadingDiv.style('display', 'block')
 		const data = await self.vocabApi.getCategories(self.term, self.filter, body)
 		this.dom.loadingDiv.style('display', 'none')
 		/** Original code created a separate array (self.category2samplecount) and pushed only the key and label.
