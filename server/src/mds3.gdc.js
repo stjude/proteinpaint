@@ -1087,7 +1087,7 @@ args:
 
 todo unit test
 */
-function flattenCaseByFields(sample, caseObj, tw, startIdx = 1) {
+export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1) {
 	const fields = tw.term.id.split('.')
 
 	query(caseObj, startIdx)
