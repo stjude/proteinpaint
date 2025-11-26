@@ -1922,12 +1922,33 @@ export type Mds3 = BaseMds & {
 		data during post-processing */
 		postProcessDtFilter?: boolean
 	}
+	demoJwtInput?: {
+		[role: string]: {
+			datasets?: string[]
+			clientAuthResult?: // sjcares, panMB, SJLife
+			| ClientAuthResult
+				// profile
+				| {
+						[cohort: string]: ClientAuthResult
+				  }
+			// below will be assigned by /demoToken route handler if not specified
+			iat?: number // jwt issued at time, unix time in seconds
+			exp?: number // jwt expiration, unix time in seconds
+			email?: string
+		}
+	}
 	// !!! TODO: improve these type definitions below !!!
 	getHostHeaders?: (q?: any) => any
 	serverconfigFeatures?: any
 	getHealth?: (ds: any) => {
 		[key: string]: any
 	}
+}
+
+export type ClientAuthResult = {
+	role?: string
+	datasets?: string[]
+	sites?: string[]
 }
 
 export type Mds3WithCohort = Mds3 & {

@@ -561,17 +561,22 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 		}
 	})
 
-	const demoJwtInputs = await validateDemoJwtInputs(serverconfig.features?.demoJwtInputs)
 	app.post(basepath + '/demoToken', async (req, res) => {
-		const q = req.query
 		try {
+			const q = req.query
+			const genome = genomes[q.genome]
+			if (!genome) throw 'invalid genome'
+			const ds = genome.datasets[q.dslabel]
+			if (!ds) throw 'invalid dslabel'
+			if (!ds.demoJwtInput) throw `missing ds.demoJwtInput`
+
 			// TODO: later, other routes besides /termdb may require tracking
 			const cred = getRequiredCred(q, '/demoToken')
 			if (!cred) {
 				res.send({ status: 'ok' })
 				return
 			}
-			if (!demoJwtInputs[q.dslabel]) throw `unauthorized`
+
 			const iat = Math.floor(Date.now() / 1000)
 			const defaultToken = {
 				iat,
@@ -580,7 +585,7 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 				ip: '127.0.0.1'
 			}
 			const fakeTokensByRole = {}
-			for (const [role, payload] of Object.entries(demoJwtInputs[q.dslabel])) {
+			for (const [role, payload] of Object.entries(ds.demoJwtInput)) {
 				if (q.role && role != q.role) continue
 				const fullPayload = Object.assign({}, defaultToken, payload)
 				fakeTokensByRole[role] = cred.processor
@@ -1028,39 +1033,4 @@ function checkIPaddress(req, ip, cred) {
 	if (!ip) throw `Server error: missing ip address in saved session`
 	if (req.ip != ip && req.ips?.[0] != ip && req.connection?.remoteAddress != ip)
 		throw `Your connection has changed, please refresh your page or sign in again.`
-}
-
-/*
-	Validate the demoJwtInputs object + entries during server startup,
-	to catch potential demo token payload errors sooner, instead of discovering 
-	payload errors later only after a user requests a signed demo token. 
-	The jwt signing and verification library itself is reliable, 
-	but the payload may have special requirements/key-values that are not related to jwt signing.
-
-	demoJwtInputsFile: a js/ts file that exports a const object for each dslabel with demo tokens
-	example:
-		export const ASH = {
-			public: {
-				"datasets": [
-			    "ASH"
-			  ],
-			  "clientAuthResult": {}
-			}
-		} 
-*/
-async function validateDemoJwtInputs(demoJwtInputsFile) {
-	if (!demoJwtInputsFile) return {} // okay to not have an inputs file, no fake tokens will be computed by `/demoToken` route
-	const demoJwtInputs = await import(demoJwtInputsFile)
-	for (const [dslabel, payloadByRole] of Object.entries(demoJwtInputs)) {
-		for (const [role, payload] of Object.entries(payloadByRole)) {
-			if (typeof payload != 'object') throw `demoJwtInputs[${dslabel}][${role}] payload is not an object`
-			if (!Object.keys(payload).length) throw `demoJwtInputs[${dslabel}][${role}] payload is empty`
-			if (payload.iat && isNaN(payload.iat)) throw `demoJwtInputs[${dslabel}][${role}].iat isNaN`
-			if (payload.exp && isNaN(payload.exp)) throw `demoJwtInputs[${dslabel}][${role}].exp isNaN`
-			if (payload.email && (typeof payload.email != 'string' || !payload.email.includes('@')))
-				throw `invalid demoJwtInputs[${dslabel}][${role}].email`
-			// may add other validation logic for expected jwt payload key/values
-		}
-	}
-	return demoJwtInputs
 }
