@@ -1270,8 +1270,6 @@ type Matrix = {
 	filter?: any
 	/** matrix criteria for a CNV alteration */
 	cnvCutoffs?: any
-	/** list of numeric term ids that will be excluded from Composite Percentage group, add to usecase.detail to exclude terms*/
-	compositePercentageExclude?: string[]
 }
 
 // specific hierCluster type settings, should be named as "dataTYpe + Cluster"
