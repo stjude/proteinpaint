@@ -166,31 +166,37 @@ async function validateDsCredentials(creds, serverconfig) {
 				cred.cookieId = (serverRoute == 'termdb' && cred.headerKey) || `${dslabel}-${serverRoute}-${embedderHost}-Id`
 
 				if (cred.demoToken) {
-					// it's safe to not throw or block server startup on any of the errors below
+					// it's safe to not throw and block server startup on any of the errors below;
 					// an invalid cred.demoToken means demo tokens will not be issued
 					if (typeof cred.demoToken != 'object') {
 						delete cred.demoToken
-						console.warn(`${dslabel} cred.demoToken must be an object`)
+						console.warn(`(!) ${dslabel} cred.demoToken must be an object`)
 					} else {
 						// the demoToken secret must be different from the embedder's signing secret,
 						// to make it simpler to invalidate demoToken and derived session tokens without
 						// having to coordinate with the embedder portal maintainers
 						// prettier-ignore
-						if (typeof cred.demoToken.secret != 'string' || cred.demoToken.secret.length < 10) { // pragma: allowlist secret
-							// ok to not specify a secret, will automatically compute one
-							console.warn(
-								`(!) warning: ${dslabel} cred.demoToken.secret is invalid or weak, replaced with a random string value`
-							)
-							cred.demoToken.secret = crypto.randomBytes(20).toString('hex')
+						if (typeof cred.demoToken.secret != 'string') { // pragma: allowlist secret
+							delete cred.demoToken.secret
+							// demoToken.secret cannot be randomly generated per server instance, 
+							// since this PP server may be in a server farm that has to accept each other's issued jwt
+							console.warn(`(!) invalid ${dslabel} demoToken.secret, will not issue`)
 						}
 						if (!Array.isArray(cred.demoToken.roles)) {
 							cred.demoToken.roles = [] // an empty roles array means no matching demoJwtInput role will be found
-							console.warn(`(!) warning: ${dslabel} cred.demoToken.roles forced into an array`)
+							console.warn(`(!) ${dslabel} demoToken.roles forced into an empty array`)
 						}
 						if (!Array.isArray(cred.demoToken.referers)) {
 							cred.demoToken.referers = [] // an empty referers array means a req.headers.referer will not be matched
-							console.warn(`(!) ${dslabel} cred.demoToken.referers forced into an array`)
+							console.warn(`(!) ${dslabel} demoToken.referers forced into an empty array`)
 						}
+						// this will track and reuse issued JWT's that are not close to expiring
+						// key: role (public, user, admin, etc) as allowed in cred.demoTokens.roles[]
+						// value: {
+						//  jwt,
+						//  exp: expiration time in milliseconds
+						// }
+						cred.demoToken.computedByRole = {}
 					}
 				}
 			}
@@ -563,7 +569,7 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 			// difficult to setup CORS cookie, will deprecate support
 			res.send({ status: 'ok', jwt, route: cred.route, clientAuthResult })
 		} catch (e) {
-			console.log(e)
+			//console.log(e)
 			res.status(code)
 			res.header('Set-Cookie', `${cred.cookieId}=; HttpOnly; SameSite=None; Secure; Max-Age=0`)
 			res.send(e instanceof Error || typeof e != 'object' ? { error: e } : e)
@@ -609,7 +615,7 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 			cookieId = cred.cookieId
 			if (!cred.demoToken) throw `${q.dslabel} demoToken requests are not accepted by this portal`
 			else {
-				if (!cred.demoToken.roles.includes(q.role)) {
+				if (!cred.demoToken.roles.includes(q.role) || !ds.demoJwtInput[q.role]) {
 					throw `${q.dslabel} demoToken is not supported for role=${q.role}`
 				}
 				if (!cred.demoToken.referers.find(r => req.headers.referer.includes(r))) {
@@ -617,23 +623,28 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 				}
 			}
 
+			const computed = cred.demoToken.computedByRole[q.role] //; console.log(626, computed.exp, Date.now() + 60000, computed.exp - Date.now() + 60000)
+			if (computed && computed.exp > Date.now() + 60000) {
+				// reuse a previously computed jwt that is not close to expiring;
+				// both computed.exp and time buffer (60000) are in milliseconds
+				res.send({ status: 'ok', fakeTokensByRole: { [q.role]: computed.jwt } })
+				return
+			}
+
 			const iat = Math.floor(Date.now() / 1000)
 			const defaultToken = {
 				iat,
-				exp: iat + 60, // 1 minute expiration, /jwt-status will generate a session token with a longer lifetime
+				exp: iat + 86400, // 60*60*24 = 1 day expiration, /jwt-status will generate a session token with a longer lifetime
 				email: 'username@test.tld',
 				ip: '127.0.0.1'
 			}
-			const fakeTokensByRole = {}
-			for (const [role, payload] of Object.entries(ds.demoJwtInput)) {
-				if (q.role && role != q.role) continue
-				const fullPayload = Object.assign({}, defaultToken, payload)
-				fakeTokensByRole[role] = cred.processor
-					? cred.processor.generatePayload(fullPayload, cred)
-					: jsonwebtoken.sign(fullPayload, cred.demoToken.secret)
-				console.log(`Faketoken computed for ds=${q.dslabel}, role=${role}`)
-			}
-			res.send({ status: 'ok', fakeTokensByRole })
+			const fullPayload = Object.assign({}, defaultToken, ds.demoJwtInput[q.role])
+			const jwt = cred.processor
+				? cred.processor.generatePayload(fullPayload, cred)
+				: jsonwebtoken.sign(fullPayload, cred.demoToken.secret)
+			console.log(`~~ Faketoken computed for ds=${q.dslabel}, role=${q.role}`)
+			cred.demoToken.computedByRole[q.role] = { jwt, exp: fullPayload.exp * 1000 } // track expiration in milliseconds
+			res.send({ status: 'ok', fakeTokensByRole: { [q.role]: jwt } })
 		} catch (e) {
 			if (cookieId) res.header('Set-Cookie', `${cookieId}=; HttpOnly; SameSite=None; Secure; Max-Age=0`)
 			res.status(401)
