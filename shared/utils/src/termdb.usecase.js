@@ -154,15 +154,9 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 			}
 			return uses
 
-		case 'CompositePercentage':
-			if (!usecase.detail?.exclude?.includes(term.id)) {
-				if (isNumericTerm(term)) {
-					uses.add('plot')
-				}
-				if (hasNumericChild(child_types)) {
-					uses.add('branch')
-				}
-			}
+		case 'numericTermCollections':
+			if (usecase.detail?.termIds?.includes(term.id)) uses.add('plot')
+			if (usecase.detail?.branchIds?.includes(term.id)) uses.add('branch')
 			return uses
 
 		case 'profileForms':

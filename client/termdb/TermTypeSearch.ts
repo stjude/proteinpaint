@@ -61,7 +61,7 @@ const useCasesExcluded = {
 		TermTypeGroups.METABOLITE_INTENSITY,
 		TermTypeGroups.SSGSEA
 	],
-	CompositePercentage: [
+	numericTermCollections: [
 		TermTypeGroups.SNP_LOCUS,
 		TermTypeGroups.SNP_LIST,
 		TermTypeGroups.MUTATION_CNV_FUSION,
