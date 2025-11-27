@@ -172,29 +172,38 @@ jobs:
           echo "# Coverage report for relevant spec tests" >> $GITHUB_STEP_SUMMARY
           echo -e "$(node test/emitSpecMarkdown.mjs)" >> $GITHUB_STEP_SUMMARY
 
-      - name: Commit updated coverage file
-        run: |
-          BRANCH=$(git rev-parse --abbrev-ref HEAD)
-          # evalSpecCoveResults() will stage <workspace>-coverage.json(s) if applicable
-          STAGEDFILES=$(git diff --cached --name-only | sed 's| |\\ |g')
-          echo -e "STAGEDFILES=[\n$STAGEDFILES\n]\n"
+      # TODO: Find a simpler way to determine acceptance criteria for test coverage,
+      #       since this automated comparison against previously committed test results
+      #       is generating too many commits with low information. It's also hard to follow
+      #       the constantly "moving target" for passing results by file.
+      # 
+      #       Maybe commit test coverage results only once per week for all spec files,
+      #       so then the criteria will be more stable and easier to follow. There should
+      #       be a separate Set Coverage Criteria workflow.
+      # 
+      # - name: Commit updated coverage file
+      #   run: |
+      #     BRANCH=$(git rev-parse --abbrev-ref HEAD)
+      #     # evalSpecCoveResults() will stage <workspace>-coverage.json(s) if applicable
+      #     STAGEDFILES=$(git diff --cached --name-only | sed 's| |\\ |g')
+      #     echo -e "STAGEDFILES=[\n$STAGEDFILES\n]\n"
           
-          # this CI is intended to run on approving and closing a PR
-          if [[ "$BRANCH" == "master" && "$STAGEDFILES" != "" ]]; then
-            git config --global user.email "PPTeam@STJUDE.ORG"
-            git config --global user.name "PPTeam CI"
+      #     # this CI is intended to run on approving and closing a PR
+      #     if [[ "$BRANCH" == "master" && "$STAGEDFILES" != "" ]]; then
+      #       git config --global user.email "PPTeam@STJUDE.ORG"
+      #       git config --global user.name "PPTeam CI"
 
-            git diff --staged --name-only   # display staged changes to be committed later, expected to be workspace coverage json
-            git commit -m "update relevant workspace coverage json(s)"
+      #       git diff --staged --name-only   # display staged changes to be committed later, expected to be workspace coverage json
+      #       git commit -m "update relevant workspace coverage json(s)"
             
-            echo "$(git rev-parse HEAD)" > public/coverage/commitRef   # save the last rebased commit hash as reference for computing changed files
-            git add public/coverage/commitRef                          # cannot combine this commit with the last one, since the commitRef must have the updated workspace coverage json 
-            git commit -m "update public/coverage/commitRef"
+      #       echo "$(git rev-parse HEAD)" > public/coverage/commitRef   # save the last rebased commit hash as reference for computing changed files
+      #       git add public/coverage/commitRef                          # cannot combine this commit with the last one, since the commitRef must have the updated workspace coverage json 
+      #       git commit -m "update public/coverage/commitRef"
 
-            git push origin $BRANCH
-          fi
+      #       git push origin $BRANCH
+      #     fi
 
-      - name: Post build results on Slack
+      - name: Post test results on Slack
         if:  ${{ env.TEST_FAILED == 'true' }}
         uses: slackapi/slack-github-action@v1.23.0
         with:
