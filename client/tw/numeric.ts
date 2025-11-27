@@ -96,6 +96,10 @@ export class NumericBase extends TwBase {
 		// set q.type based on q.mode
 		switch (tw.q.mode) {
 			case 'discrete':
+				if (tw.q.type != 'regular-bin') {
+					// support malformed tw.q that combines properties from different modes, such as continuous and discrete
+					if (Array.isArray((tw as RawNumTWCustomBin).q.lst)) tw.q.type = 'custom-bin'
+				}
 				if (!tw.q.type) {
 					if (tw.term.bins) mayFillQWithPresetBins(tw)
 					else tw.q.type = 'regular-bin'
