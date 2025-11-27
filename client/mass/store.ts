@@ -95,6 +95,8 @@ class MassStore extends StoreBase implements RxStore {
 		[actionType: string]: (action: { type: string; [prop: string]: any }) => void | Promise<void>
 	}
 
+	plotAdjusters = new WeakMap()
+
 	constructor(opts, api) {
 		super(opts)
 		this.app = opts.app
@@ -150,7 +152,11 @@ class MassStore extends StoreBase implements RxStore {
 				}
 				this.state.plots[i] = plot
 				if (!('id' in plot)) plot.id = `_AUTOID_${id++}_${i}`
-				if (plot.mayAdjustConfig) plot.mayAdjustConfig(plot)
+				if (plot.mayAdjustConfig) {
+					plot.mayAdjustConfig(plot)
+					this.plotAdjusters.set(plot, plot.mayAdjustConfig)
+					delete plot.mayAdjustConfig
+				}
 			}
 			if (invalidPlots.length) {
 				for (const i of invalidPlots) {
@@ -276,9 +282,10 @@ MassStore.prototype.actions = {
 		await Promise.all(promises)
 
 		for (const plot of this.state.plots) {
-			if (plot.mayAdjustConfig && !subactionPlotIds.has(plot.id)) {
+			const mayAdjustConfig = this.plotAdjusters.get(plot)
+			if (mayAdjustConfig && !subactionPlotIds.has(plot.id)) {
 				// assume that mayAdjustConfig() is not async
-				plot.mayAdjustConfig(plot, action.config)
+				mayAdjustConfig(plot, action.config)
 			}
 		}
 	},
@@ -317,7 +324,9 @@ MassStore.prototype.actions = {
 		if (!('id' in action)) action.id = getId()
 		plot.id = action.id
 		if (plot.mayAdjustConfig) {
-			plot.mayAdjustConfig(plot, action.config)
+			plot.mayAdjustConfig(plot)
+			this.plotAdjusters.set(plot, plot.mayAdjustConfig)
+			delete plot.mayAdjustConfig
 		}
 		this.state.plots.push(plot)
 		// Parent plots may have child plots, organized in sections to ease the visualization and analysis. For example the sjcares report,
@@ -357,9 +366,8 @@ MassStore.prototype.actions = {
 		const plot = this.state.plots.find(p => p.id === action.id)
 		if (!plot) throw `missing plot id='${action.id}' in store.plot_edit()`
 		this.copyMerge(plot, action.config, action.opts ? action.opts : {})
-		if (plot.mayAdjustConfig) {
-			plot.mayAdjustConfig(plot, action.config)
-		}
+		const mayAdjustConfig = this.plotAdjusters.get(plot)
+		if (mayAdjustConfig) mayAdjustConfig(plot, action.config)
 
 		if (action.config && 'cutoff' in action.config) {
 			plot.cutoff = action.config.cutoff
