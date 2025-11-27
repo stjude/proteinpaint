@@ -48,16 +48,21 @@ export function deepFreeze(obj) {
 	}
 }
 
-export function deepCopyFreeze(input) {
+// input: object to copy
+// ref: may reuse another copy that's already frozen, if it already equals the input
+export function deepCopyFreeze(input, ref?: any) {
 	if (input === null || typeof input != 'object' || input.constructor.name !== 'Object') return input
+	if (ref && Object.isFrozen(ref) && deepEqual(input, ref)) return ref
 	const copy = {}
 	// not using for..in loop, in order to not descend into inherited props/methods
 	for (const [key, value] of Object.entries(input)) {
 		if (Array.isArray(value)) {
 			copy[key] = []
-			for (const v of value) copy[key].push(deepCopyFreeze(v))
+			for (const v of value) {
+				copy[key].push(deepCopyFreeze(v, ref?.[key]))
+			}
 		} else {
-			copy[key] = deepCopyFreeze(value)
+			copy[key] = deepCopyFreeze(value, ref?.[key])
 		}
 	}
 	return Object.freeze(copy)
