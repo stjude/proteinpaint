@@ -102,6 +102,7 @@ export function setLabelsAndScales() {
 	let totalHtAdjustments = 0
 
 	for (const t of this.termOrder) {
+		console.log('this.termOrder', this.termOrder)
 		const countedSamples = new Set()
 		t.counts = { samples: 0, hits: 0 }
 		const renderedContinuousVs = []
@@ -281,21 +282,17 @@ export function setLabelsAndScales() {
 				t.counts.maxval = (t.counts.maxval - mean) / std
 			}
 
-			if (!twSettings.contBarH) twSettings.contBarH = s.barh
+			if (!twSettings.contBarH)
+				twSettings.contBarH = t.tw.type == 'compositePercentage' ? Math.min(120, t.grp.lst.length * s.barh) : s.barh
 			if (!('gap' in twSettings)) twSettings.contBarGap = 4
 			const barh = twSettings.contBarH
+			if (t.tw.type == 'compositePercentage') t.counts = { maxval: 100, minval: 0 }
 
 			const absMin = Math.abs(t.counts.minval)
 			const rangeSpansZero = t.counts.minval < 0 && t.counts.maxval > 0
 			const ratio = t.counts.minval >= 0 ? 1 : t.counts.maxval / (absMin + t.counts.maxval)
 			t.counts.posMaxHt = ratio * barh
-
-			const tickValues =
-				// rangeSpansZero || t.counts.maxval <= 0
-				// 	? [t.counts.minval, t.counts.maxval]
-				// 	: [t.counts.maxval, t.counts.minval]
-				[t.counts.maxval, t.counts.minval]
-
+			const tickValues = [t.counts.maxval, t.counts.minval]
 			t.scales = {
 				tickValues,
 				full: scaleLinear().domain(tickValues).range([1, barh])
@@ -321,7 +318,8 @@ export function setLabelsAndScales() {
 				: ht
 		// adjustment is the difference in actual computed row height - "standard" row
 		// need to subtract s.rowspace for hierCluster row to remove gaps between heatmap rows
-		const adjustment = t.rowHt - ht - (t.grp.type == 'hierCluster' ? s.rowspace : 0)
+		const adjustment =
+			t.rowHt - (t.tw.type == 'compositePercentage' ? 0 : ht) - (t.grp.type == 'hierCluster' ? s.rowspace : 0)
 		totalHtAdjustments += adjustment
 
 		// adjustment when last row is in continous mode

@@ -34,7 +34,7 @@ export class MatrixControls {
 			this.setCNVBtn()
 		}
 		this.setVariablesBtn(s)
-		this.setCompositePercentageBtn(s)
+		if (state.termdbConfig?.numericTermCollections?.find(c => c.name == 'Mutation Signature')) this.setMutSigBtn(s)
 		this.setDimensionsBtn(s)
 		this.setLegendBtn(s)
 		this.setDownloadBtn(s)
@@ -455,13 +455,13 @@ export class MatrixControls {
 			.on('click', (event, d) => this.callback(event, d))
 	}
 
-	setCompositePercentageBtn(s) {
+	setMutSigBtn(s) {
 		this.opts.holder
 			.append('button')
 			.datum({
-				label: `Composite Percentage`,
+				label: `Mutation Signature`,
 				rows: [],
-				customInputs: this.appendCompositePercentageDictInputs
+				customInputs: this.appendMutSigDictInputs
 			})
 			.html(d => d.label)
 			.style('margin', '2px 0')
@@ -1482,12 +1482,19 @@ export class MatrixControls {
 		self.addDictMenu(app, parent, app.tip.d.append('div'))
 	}
 
-	appendCompositePercentageDictInputs(self, app, parent, table) {
+	appendMutSigDictInputs(self, app, parent, table) {
 		tip.clear()
 		app.tip.d.append('hr')
+		const mutSigCollection = parent.state.termdbConfig.numericTermCollections?.find(c => c.name == 'Mutation Signature')
+		if (!mutSigCollection) throw 'no mutation signature collection defined'
 		const usecase = {
-			target: 'CompositePercentage',
-			detail: { exclude: parent.state.termdbConfig.matrix?.compositePercentageExclude }
+			target: 'numericTermCollections',
+			detail: {
+				termIds: mutSigCollection.termIds,
+				branchIds: mutSigCollection.branchIds,
+				name: 'Mutation Signature',
+				type: 'compositePercentage'
+			}
 		}
 		self.addDictMenu(app, parent, app.tip.d.append('div'), usecase)
 	}
@@ -1581,37 +1588,28 @@ export class MatrixControls {
 			termlst.map(async _term => {
 				const term = structuredClone(_term)
 				const tw = 'id' in term ? { id: term.id, term } : { term }
+				if (usecase?.target == 'numericTermCollections') tw.q = { ...tw.q, mode: 'continuous' }
 				await fillTermWrapper(tw, this.opts.app.vocabApi)
 				return tw
 			})
 		)
 
-		const s = this.parent.settings.matrix
 		const termgroups = structuredClone(this.parent.config.termgroups)
 
-		if (usecase.target == 'CompositePercentage') {
-			if (termgroups.findIndex(g => g.name == 'Composite Percentage') !== -1) {
+		if (usecase?.target == 'numericTermCollections') {
+			const i = termgroups.findIndex(g => g.type == usecase.detail.type && g.name == usecase.detail.name)
+			if (i !== -1) {
 				const grp = termgroups[i]
-				grp.lst.push(...newterms)
-				this.parent.app.dispatch({
-					type: 'plot_nestedEdits',
-					id: this.parent.id,
-					edits: [
-						{
-							nestedKeys: ['termgroups', i, 'lst'],
-							value: grp.lst
-						}
-					]
-				})
+				grp.lst = [...newterms]
 			} else {
-				const grp = { name: 'Composite Percentage', lst: newterms }
+				const grp = { lst: newterms, type: usecase.detail.type, name: usecase.detail.name }
 				termgroups.push(grp)
-				this.parent.app.dispatch({
-					type: 'plot_edit',
-					id: this.parent.id,
-					config: { termgroups }
-				})
 			}
+			this.parent.app.dispatch({
+				type: 'plot_edit',
+				id: this.parent.id,
+				config: { termgroups }
+			})
 			return
 		}
 		const i = termgroups.findIndex(g => g.name == 'Variables')

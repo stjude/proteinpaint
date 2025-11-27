@@ -223,7 +223,7 @@ export class TermSetting {
 		}
 
 		// TODO: should use TwRouter here??? or expect tw to be already filled-in/instantiated???
-		if (!termtype) {
+		if (!termtype || termtype == 'compositePercentage') {
 			this.handler = this.handlerByType.default as Handler
 			return
 		}

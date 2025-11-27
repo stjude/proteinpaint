@@ -692,6 +692,8 @@ function setTermActions(self) {
 			? '{remove,}'
 			: t.tw.term.type == 'geneVariant'
 			? '{edit,replace,remove}'
+			: t.grp.type == 'compositePercentage'
+			? {}
 			: '*'
 	}
 
@@ -716,12 +718,13 @@ function setTermActions(self) {
 		)
 		termMenuWaitDiv.remove()
 
-		self.dom.shortcutDiv = self.dom.menutop.append('div').style('z-index', 10000)
-		self.showShortcuts(t, self.dom.shortcutDiv)
-
+		if (t.grp.type !== 'compositePercentage') {
+			self.dom.shortcutDiv = self.dom.menutop.append('div').style('z-index', 10000)
+			self.showShortcuts(t, self.dom.shortcutDiv)
+		}
 		self.dom.twMenuDiv = self.dom.menutop.append('div')
 		const labelEditDiv = self.dom.twMenuDiv.append('div').style('text-align', 'center')
-		labelEditDiv.append('span').text(`${l.Term} `)
+		if (t.grp.type !== 'compositePercentage') labelEditDiv.append('span').text(`${l.Term} `)
 
 		const twlabel = t.tw.label || t.tw.term.name
 		const vartype =
@@ -730,29 +733,32 @@ function setTermActions(self) {
 				: t.tw.term.type == TermTypes.METABOLITE_INTENSITY
 				? 'metabolite'
 				: 'variable'
-		self.dom.twLabelInput = labelEditDiv
-			.append('input')
-			.attr('type', 'text')
-			.attr('size', twlabel.length + 3)
-			.attr('aria-label', `Type to edit the ${vartype} label`)
-			.style('padding', '1px 5px')
-			.style('text-align', 'center')
-			.property('value', twlabel)
-			.on('input', () => {
-				const value = self.dom.twLabelInput.property('value')
-				self.dom.twLabelInput.attr('size', value.length + 3)
-				self.dom.twLabelEditBtn.style('display', value.trim() === twlabel ? 'none' : 'inline')
-			})
 
-		self.dom.twLabelEditBtn = labelEditDiv
-			.append('button')
-			.style('display', 'none')
-			.style('margin-left', '5px')
-			.html('submit')
-			.on('click', () => {
-				if (twlabel != self.dom.twLabelInput.property('value').trim()) self.updateTermLabel()
-				self.dom.tip.hide()
-			})
+		if (t.grp.type !== 'compositePercentage')
+			self.dom.twLabelInput = labelEditDiv
+				.append('input')
+				.attr('type', 'text')
+				.attr('size', twlabel.length + 3)
+				.attr('aria-label', `Type to edit the ${vartype} label`)
+				.style('padding', '1px 5px')
+				.style('text-align', 'center')
+				.property('value', twlabel)
+				.on('input', () => {
+					const value = self.dom.twLabelInput.property('value')
+					self.dom.twLabelInput.attr('size', value.length + 3)
+					self.dom.twLabelEditBtn.style('display', value.trim() === twlabel ? 'none' : 'inline')
+				})
+
+		if (t.grp.type !== 'compositePercentage')
+			self.dom.twLabelEditBtn = labelEditDiv
+				.append('button')
+				.style('display', 'none')
+				.style('margin-left', '5px')
+				.html('submit')
+				.on('click', () => {
+					if (twlabel != self.dom.twLabelInput.property('value').trim()) self.updateTermLabel()
+					self.dom.tip.hide()
+				})
 
 		if (vartype == 'gene') {
 			// is gene, may show extra button for quick data access
@@ -823,6 +829,7 @@ function setTermActions(self) {
 			t.grp?.type !== 'hierCluster' &&
 			t.tw?.q?.mode == 'continuous' &&
 			t.tw.term.type != 'survival' &&
+			t.tw.term.type != 'compositePercentage' &&
 			t.tw.q.convert2ZScore != true
 		) {
 			rowHeightColorEditDiv.append('span').text('Bar Color')
@@ -3024,8 +3031,12 @@ function setLengendActions(self) {
 		/** targetItemData may either be the target or parent data (i.e. the original parent mclass key for a merged
 		 * legend item.) */
 		const addMenuOptions = targetItemData => {
+			const term = self.termOrder.find(t => t.tw.$id == targetItemData.$id)?.tw?.term
 			//Add the hard filter option
-			if (!targetItemData.dt || self.type !== 'hierCluster' || legendFilterIndex !== -1) {
+			if (
+				term?.type !== 'compositePercentage' &&
+				(!targetItemData.dt || self.type !== 'hierCluster' || legendFilterIndex !== -1)
+			) {
 				// Do not show the hard filter option for hierCluster geneVariant legend items.
 
 				// ********* TODO  ********
@@ -3162,7 +3173,7 @@ function setLengendActions(self) {
 
 			if (targetItemData.isLegendItem) {
 				// Add the soft filter option only for the not already hidden geneVariant legend
-				if (targetItemData.dt && legendFilterIndex == -1) {
+				if (targetItemData.dt && legendFilterIndex == -1 && term?.type !== 'compositePercentage') {
 					// only when filtering a not already hidden geneVariant legend, show the soft filter
 					div
 						.append('div')
@@ -3220,7 +3231,7 @@ function setLengendActions(self) {
 				}
 
 				//Add the show only option only for non-genevariant legend
-				if (!targetItemData.dt) {
+				if (!targetItemData.dt && term?.type !== 'compositePercentage') {
 					div
 						.append('div')
 						.attr('class', 'sja_menuoption sja_sharp_border')
@@ -3309,7 +3320,7 @@ function setLengendActions(self) {
 				}
 
 				//Add the show all option only for non-genevariant legend
-				if (!targetItemData.dt) {
+				if (!targetItemData.dt && term?.type !== 'compositePercentage') {
 					div
 						.append('div')
 						.attr('class', 'sja_menuoption sja_sharp_border')

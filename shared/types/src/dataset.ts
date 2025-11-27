@@ -1584,6 +1584,8 @@ type NumericTermCollection = {
 	name: string
 	/** array of dictionary numeric term ids belonging to this collection */
 	termIds: string[]
+	/** array of branch term ids belonging to this collection */
+	branchIds: string[]
 	/** preconfigured cohort-level plots for this collection */
 	plots?: {
 		/** name of this plot */

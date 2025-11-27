@@ -60,7 +60,7 @@ export function getSerieses(data) {
 
 			const values = anno.filteredValues || anno.values || [anno.value]
 
-			const numRects = s.cellEncoding == 'oncoprint' ? 1 : values.length
+			const numRects = s.cellEncoding == 'oncoprint' || t.grp?.type == 'compositePercentage' ? 1 : values.length
 			const height = !s.transpose ? s.rowh / numRects : colw
 			const width = !s.transpose ? colw : colw / values.length
 			const siblingCells = []
@@ -77,7 +77,9 @@ export function getSerieses(data) {
 				cell.valueIndex = i
 
 				let legend
-				if (typeof t.tw.setCellProps == 'function') {
+				if (t.grp.type == 'compositePercentage') {
+					legend = setCellProps['compositePercentage'](cell, t.tw, anno, value, s, t, this, width, height, dx, dy, i)
+				} else if (typeof t.tw.setCellProps == 'function') {
 					// use extended tw method if present
 					legend = t.tw.setCellProps(cell, anno, value, s, t, this, width, height, dx, dy, i)
 				} else {

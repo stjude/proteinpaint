@@ -319,6 +319,31 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 	}
 }
 
+export function setComPerCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
+	const twSpecificSettings = self.config.settings.matrix.twSpecificSettings
+	if (!twSpecificSettings[tw.$id]) twSpecificSettings[tw.$id] = {}
+	const twSettings = twSpecificSettings[tw.$id]
+
+	if (!twSettings.contBarH) twSettings.contBarH = s.barh
+	if (!('gap' in twSettings)) twSettings.contBarGap = 4
+
+	cell.height = t.scales.pos(value.value)
+	cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+	cell.y = t.counts.posMaxHt + twSettings.contBarGap - t.scales.pos(value.pre_val_sum) - cell.height
+	cell.label = value.label
+	cell.fill = twSettings[value.label]?.color || value.color
+	cell.value = value.value
+
+	// return the corresponding legend item data
+	return {
+		ref: t.ref,
+		group: tw.$id,
+		value: value.label,
+		order: -1,
+		entry: { key: value.label, label: value.label, fill: value.color }
+	}
+}
+
 export function setHierClusterCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
 	const values = anno.renderedValues || anno.filteredValues || anno.values || [anno.value]
 	cell.label = value.value
@@ -393,7 +418,8 @@ export const setCellProps = {
 	geneVariant: setGeneVariantCellProps,
 	hierCluster: setHierClusterCellProps,
 	[TermTypes.GENE_EXPRESSION]: setNumericCellProps,
-	[TermTypes.METABOLITE_INTENSITY]: setNumericCellProps
+	[TermTypes.METABOLITE_INTENSITY]: setNumericCellProps,
+	compositePercentage: setComPerCellProps
 }
 
 export const maySetEmptyCell = {

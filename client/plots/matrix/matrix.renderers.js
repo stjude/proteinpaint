@@ -330,13 +330,14 @@ export function setRenderers(self) {
 		const s = self.settings.matrix
 		const d = self.dimensions
 		const len = (lab.processedLst || lab.grp.lst).length
+		const x = lab.tw?.q?.mode == 'continuous' ? 20 : 0
 		const y =
 			lab.grpIndex * s.rowgspace +
 			lab.prevGrpTotalIndex * d.dy +
 			(len * d.dy) / 2 +
 			s.grpLabelFontSize / 2 +
 			lab.totalHtAdjustments
-		return `translate(0,${y})`
+		return `translate(${x},${y})`
 	}
 
 	self.rowAxisGTransform = (lab, grpIndex) => {
