@@ -37,38 +37,38 @@
   },
   "src/auth.js": {
     "lines": {
-      "total": 463,
-      "covered": 459,
+      "total": 487,
+      "covered": 470,
       "skipped": 0,
-      "pct": 99.13
+      "pct": 96.5
     },
     "functions": {
-      "total": 43,
-      "covered": 42,
+      "total": 47,
+      "covered": 44,
       "skipped": 0,
-      "pct": 97.67
+      "pct": 93.61
     },
     "statements": {
-      "total": 538,
-      "covered": 533,
+      "total": 564,
+      "covered": 546,
       "skipped": 0,
-      "pct": 99.07
+      "pct": 96.8
     },
     "branches": {
-      "total": 421,
-      "covered": 285,
+      "total": 445,
+      "covered": 291,
       "skipped": 0,
-      "pct": 67.69
+      "pct": 65.39
     },
     "lowestPct": {
-      "curr": 67.69,
+      "curr": 65.39,
       "prev": 68.67,
-      "diff": -0.980000000000004
+      "diff": -3.280000000000001
     },
     "averagePct": {
-      "curr": 90.89,
+      "curr": 88.075,
       "prev": 90.96000000000001,
-      "diff": -0.07000000000000739
+      "diff": -2.885000000000005
     }
   },
   "src/test/auth.unit.spec.js": {
