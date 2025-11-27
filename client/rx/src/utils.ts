@@ -48,6 +48,21 @@ export function deepFreeze(obj) {
 	}
 }
 
+export function deepCopyFreeze(input) {
+	if (input === null || typeof input != 'object' || input.constructor.name !== 'Object') return input
+	const copy = {}
+	// not using for..in loop, in order to not descend into inherited props/methods
+	for (const [key, value] of Object.entries(input)) {
+		if (Array.isArray(value)) {
+			copy[key] = []
+			for (const v of value) copy[key].push(deepCopyFreeze(v))
+		} else {
+			copy[key] = deepCopyFreeze(value)
+		}
+	}
+	return Object.freeze(copy)
+}
+
 export async function notifyComponents(components, current) {
 	if (!components) return // allow component-less app
 	const called: any[] = []
@@ -101,22 +116,21 @@ export async function notifyComponents(components, current) {
 export function copyMerge(base, ...args) {
 	const target = typeof base == 'string' ? fromJson(base) : base
 	for (const arg of args) {
-		if (arg) {
-			const source = typeof base == 'string' ? fromJson(toJson(arg)) : arg
-			for (const key in source) {
-				if (
-					!target[key] ||
-					Array.isArray(target[key]) ||
-					typeof target[key] !== 'object' ||
-					source === null ||
-					source === undefined ||
-					source.isAtomic ||
-					target?.isAtomic ||
-					target[key]?.isAtomic
-				)
-					target[key] = source[key]
-				else copyMerge(target[key], source[key])
-			}
+		if (!arg) continue
+		const source = typeof base == 'string' ? fromJson(toJson(arg)) : arg
+		for (const [key, value] of Object.entries(source)) {
+			if (
+				!target[key] ||
+				Array.isArray(target[key]) ||
+				typeof target[key] !== 'object' ||
+				source === null ||
+				source === undefined ||
+				source.isAtomic ||
+				target?.isAtomic ||
+				target[key]?.isAtomic
+			) {
+				target[key] = value
+			} else copyMerge(target[key], value)
 		}
 	}
 	return target

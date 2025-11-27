@@ -1,3 +1,5 @@
+import { deepCopyFreeze } from './utils.ts'
+
 export interface RxStore {
 	type: string
 	api?: StoreApi
@@ -109,9 +111,11 @@ export class StoreApi {
 	}
 
 	async copyState() {
-		const self = this.#Store
-		const stateCopy = self.fromJson(self.toJson(self.state))
-		self.deepFreeze(stateCopy)
-		return stateCopy
+		const copy = deepCopyFreeze(this.#Store.state)
+		return copy
+		// const self = this.#Store
+		// const stateCopy = self.fromJson(self.toJson(self.state))
+		// self.deepFreeze(stateCopy)
+		// return stateCopy
 	}
 }
