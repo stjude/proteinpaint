@@ -505,38 +505,38 @@
   },
   "plots/matrix/matrix.cells.js": {
     "lines": {
-      "total": 202,
+      "total": 226,
       "covered": 79,
       "skipped": 0,
-      "pct": 39.1
+      "pct": 34.95
     },
     "functions": {
-      "total": 12,
+      "total": 13,
       "covered": 4,
       "skipped": 0,
-      "pct": 33.33
+      "pct": 30.76
     },
     "statements": {
-      "total": 213,
+      "total": 242,
       "covered": 80,
       "skipped": 0,
-      "pct": 37.55
+      "pct": 33.05
     },
     "branches": {
-      "total": 209,
-      "covered": 68,
+      "total": 222,
+      "covered": 67,
       "skipped": 0,
-      "pct": 32.53
+      "pct": 30.18
     },
     "lowestPct": {
-      "curr": 32.53,
-      "prev": 0,
-      "diff": 32.53
+      "curr": 30.18,
+      "prev": 32.53,
+      "diff": -2.3500000000000014
     },
     "averagePct": {
-      "curr": 35.6275,
-      "prev": 0,
-      "diff": 35.6275
+      "curr": 32.235,
+      "prev": 35.6275,
+      "diff": -3.3924999999999983
     }
   },
   "plots/matrix/matrix.cluster.js": {
@@ -613,38 +613,38 @@
   },
   "plots/matrix/matrix.controls.js": {
     "lines": {
-      "total": 415,
-      "covered": 77,
-      "skipped": 0,
-      "pct": 18.55
-    },
-    "functions": {
-      "total": 142,
-      "covered": 26,
-      "skipped": 0,
-      "pct": 18.3
-    },
-    "statements": {
       "total": 432,
       "covered": 77,
       "skipped": 0,
       "pct": 17.82
     },
-    "branches": {
-      "total": 394,
-      "covered": 40,
+    "functions": {
+      "total": 149,
+      "covered": 26,
       "skipped": 0,
-      "pct": 10.15
+      "pct": 17.44
+    },
+    "statements": {
+      "total": 452,
+      "covered": 77,
+      "skipped": 0,
+      "pct": 17.03
+    },
+    "branches": {
+      "total": 408,
+      "covered": 44,
+      "skipped": 0,
+      "pct": 10.78
     },
     "lowestPct": {
-      "curr": 10.15,
+      "curr": 10.78,
       "prev": 10.69,
-      "diff": -0.5399999999999991
+      "diff": 0.08999999999999986
     },
     "averagePct": {
-      "curr": 16.205000000000002,
+      "curr": 15.767500000000002,
       "prev": 17.022499999999997,
-      "diff": -0.8174999999999955
+      "diff": -1.2549999999999955
     }
   },
   "plots/matrix/matrix.data.js": {
@@ -721,118 +721,118 @@
   },
   "plots/matrix/matrix.groups.js": {
     "lines": {
-      "total": 138,
+      "total": 159,
       "covered": 122,
       "skipped": 0,
-      "pct": 88.4
+      "pct": 76.72
     },
     "functions": {
-      "total": 25,
+      "total": 27,
       "covered": 18,
       "skipped": 0,
-      "pct": 72
+      "pct": 66.66
     },
     "statements": {
-      "total": 156,
+      "total": 179,
       "covered": 129,
       "skipped": 0,
-      "pct": 82.69
+      "pct": 72.06
     },
     "branches": {
-      "total": 139,
-      "covered": 92,
+      "total": 147,
+      "covered": 93,
       "skipped": 0,
-      "pct": 66.18
+      "pct": 63.26
     },
     "lowestPct": {
-      "curr": 66.18,
-      "prev": 0,
-      "diff": 66.18
+      "curr": 63.26,
+      "prev": 66.18,
+      "diff": -2.920000000000009
     },
     "averagePct": {
-      "curr": 77.3175,
-      "prev": 0,
-      "diff": 77.3175
+      "curr": 69.675,
+      "prev": 77.3175,
+      "diff": -7.642499999999998
     }
   },
   "plots/matrix/matrix.interactivity.js": {
     "lines": {
-      "total": 1531,
-      "covered": 109,
+      "total": 1524,
+      "covered": 287,
       "skipped": 0,
-      "pct": 7.11
+      "pct": 18.83
     },
     "functions": {
       "total": 259,
-      "covered": 14,
+      "covered": 62,
       "skipped": 0,
-      "pct": 5.4
+      "pct": 23.93
     },
     "statements": {
-      "total": 1629,
-      "covered": 114,
+      "total": 1622,
+      "covered": 300,
       "skipped": 0,
-      "pct": 6.99
+      "pct": 18.49
     },
     "branches": {
-      "total": 1197,
-      "covered": 9,
+      "total": 1210,
+      "covered": 170,
       "skipped": 0,
-      "pct": 0.75
+      "pct": 14.04
     },
     "lowestPct": {
-      "curr": 0.75,
+      "curr": 14.04,
       "prev": 14.04,
-      "diff": -13.29
+      "diff": 0
     },
     "averagePct": {
-      "curr": 5.0625,
+      "curr": 18.822499999999998,
       "prev": 19.185,
-      "diff": -14.122499999999999
+      "diff": -0.3625000000000007
     }
   },
   "plots/matrix/matrix.js": {
     "lines": {
-      "total": 170,
-      "covered": 100,
+      "total": 175,
+      "covered": 112,
       "skipped": 0,
-      "pct": 58.82
+      "pct": 64
     },
     "functions": {
-      "total": 39,
-      "covered": 18,
+      "total": 41,
+      "covered": 20,
+      "skipped": 0,
+      "pct": 48.78
+    },
+    "statements": {
+      "total": 187,
+      "covered": 114,
+      "skipped": 0,
+      "pct": 60.96
+    },
+    "branches": {
+      "total": 91,
+      "covered": 42,
       "skipped": 0,
       "pct": 46.15
     },
-    "statements": {
-      "total": 181,
-      "covered": 102,
-      "skipped": 0,
-      "pct": 56.35
-    },
-    "branches": {
-      "total": 89,
-      "covered": 40,
-      "skipped": 0,
-      "pct": 44.94
-    },
     "lowestPct": {
-      "curr": 44.94,
-      "prev": 0,
-      "diff": 44.94
+      "curr": 46.15,
+      "prev": 44.94,
+      "diff": 1.2100000000000009
     },
     "averagePct": {
-      "curr": 51.565,
-      "prev": 0,
-      "diff": 51.565
+      "curr": 54.972500000000004,
+      "prev": 51.565,
+      "diff": 3.407500000000006
     }
   },
   "plots/matrix/matrix.layout.js": {
     "lines": {
-      "total": 257,
-      "covered": 198,
+      "total": 260,
+      "covered": 201,
       "skipped": 0,
-      "pct": 77.04
+      "pct": 77.3
     },
     "functions": {
       "total": 14,
@@ -841,26 +841,26 @@
       "pct": 64.28
     },
     "statements": {
-      "total": 278,
-      "covered": 212,
+      "total": 281,
+      "covered": 214,
       "skipped": 0,
-      "pct": 76.25
+      "pct": 76.15
     },
     "branches": {
-      "total": 247,
-      "covered": 154,
+      "total": 253,
+      "covered": 157,
       "skipped": 0,
-      "pct": 62.34
+      "pct": 62.05
     },
     "lowestPct": {
-      "curr": 62.34,
+      "curr": 62.05,
       "prev": 63.37,
-      "diff": -1.029999999999994
+      "diff": -1.3200000000000003
     },
     "averagePct": {
-      "curr": 69.97749999999999,
+      "curr": 69.945,
       "prev": 70.44,
-      "diff": -0.4625000000000057
+      "diff": -0.49500000000000455
     }
   },
   "plots/matrix/matrix.legend.js": {
@@ -901,46 +901,46 @@
   },
   "plots/matrix/matrix.renderers.js": {
     "lines": {
-      "total": 253,
-      "covered": 170,
+      "total": 254,
+      "covered": 168,
       "skipped": 0,
-      "pct": 67.19
+      "pct": 66.14
     },
     "functions": {
       "total": 36,
-      "covered": 25,
+      "covered": 22,
       "skipped": 0,
-      "pct": 69.44
+      "pct": 61.11
     },
     "statements": {
-      "total": 266,
-      "covered": 176,
+      "total": 267,
+      "covered": 173,
       "skipped": 0,
-      "pct": 66.16
+      "pct": 64.79
     },
     "branches": {
-      "total": 186,
-      "covered": 91,
+      "total": 188,
+      "covered": 90,
       "skipped": 0,
-      "pct": 48.92
+      "pct": 47.87
     },
     "lowestPct": {
-      "curr": 48.92,
-      "prev": 0,
-      "diff": 48.92
+      "curr": 47.87,
+      "prev": 48.92,
+      "diff": -1.0500000000000043
     },
     "averagePct": {
-      "curr": 62.927499999999995,
-      "prev": 0,
-      "diff": 62.927499999999995
+      "curr": 59.977500000000006,
+      "prev": 62.927499999999995,
+      "diff": -2.9499999999999886
     }
   },
   "plots/matrix/matrix.serieses.js": {
     "lines": {
-      "total": 87,
-      "covered": 80,
+      "total": 89,
+      "covered": 81,
       "skipped": 0,
-      "pct": 91.95
+      "pct": 91.01
     },
     "functions": {
       "total": 3,
@@ -949,26 +949,26 @@
       "pct": 100
     },
     "statements": {
-      "total": 97,
-      "covered": 85,
+      "total": 99,
+      "covered": 86,
       "skipped": 0,
-      "pct": 87.62
+      "pct": 86.86
     },
     "branches": {
-      "total": 108,
-      "covered": 77,
+      "total": 112,
+      "covered": 80,
       "skipped": 0,
-      "pct": 71.29
+      "pct": 71.42
     },
     "lowestPct": {
-      "curr": 71.29,
-      "prev": 71.02,
-      "diff": 0.27000000000001023
+      "curr": 71.42,
+      "prev": 71.29,
+      "diff": 0.12999999999999545
     },
     "averagePct": {
-      "curr": 87.715,
-      "prev": 87.6475,
-      "diff": 0.06750000000000966
+      "curr": 87.3225,
+      "prev": 87.715,
+      "diff": -0.3924999999999983
     }
   },
   "plots/matrix/matrix.xtw.ts": {
@@ -5834,9 +5834,9 @@
   "termsetting/TermSetting.ts": {
     "lines": {
       "total": 89,
-      "covered": 76,
+      "covered": 70,
       "skipped": 0,
-      "pct": 85.39
+      "pct": 78.65
     },
     "functions": {
       "total": 8,
@@ -5846,25 +5846,25 @@
     },
     "statements": {
       "total": 111,
-      "covered": 80,
+      "covered": 77,
       "skipped": 0,
-      "pct": 72.07
+      "pct": 69.36
     },
     "branches": {
-      "total": 93,
-      "covered": 56,
+      "total": 95,
+      "covered": 52,
       "skipped": 0,
-      "pct": 60.21
+      "pct": 54.73
     },
     "lowestPct": {
-      "curr": 60.21,
+      "curr": 54.73,
       "prev": 78.4,
-      "diff": -18.190000000000005
+      "diff": -23.67000000000001
     },
     "averagePct": {
-      "curr": 76.29249999999999,
+      "curr": 72.56,
       "prev": 91.16999999999999,
-      "diff": -14.877499999999998
+      "diff": -18.609999999999985
     }
   },
   "termsetting/index.ts": {

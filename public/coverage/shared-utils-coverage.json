@@ -145,10 +145,10 @@
   },
   "src/termdb.usecase.js": {
     "lines": {
-      "total": 124,
+      "total": 127,
       "covered": 46,
       "skipped": 0,
-      "pct": 37.09
+      "pct": 36.22
     },
     "functions": {
       "total": 6,
@@ -157,26 +157,26 @@
       "pct": 66.66
     },
     "statements": {
-      "total": 169,
+      "total": 174,
       "covered": 63,
       "skipped": 0,
-      "pct": 37.27
+      "pct": 36.2
     },
     "branches": {
-      "total": 207,
+      "total": 212,
       "covered": 71,
       "skipped": 0,
-      "pct": 34.29
+      "pct": 33.49
     },
     "lowestPct": {
-      "curr": 34.29,
+      "curr": 33.49,
       "prev": 36.22,
-      "diff": -1.9299999999999997
+      "diff": -2.729999999999997
     },
     "averagePct": {
-      "curr": 43.8275,
+      "curr": 43.1425,
       "prev": 44.964999999999996,
-      "diff": -1.1374999999999957
+      "diff": -1.822499999999998
     }
   },
   "src/test/termdb.usecase.unit.spec.js": {
