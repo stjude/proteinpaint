@@ -114,6 +114,8 @@ async function mayUseTwRouterFill(
 	// there will be some code duplication between TwRouter and the legacy code;
 	// the latter will be deleted once the refactor/migration is done
 	const fullTw = await TwRouter.fill(tw, { vocabApi, defaultQByTsHandler })
+	// TODO: return fullTW instead of mutating the input tw below,
+	// which is not type-safe, e.g., q.mode=continuous may have discrete q properties mixed-in
 	Object.assign(tw, fullTw)
 	mayValidateQmode(tw)
 	// this should be moved to the term-type specific handler??
