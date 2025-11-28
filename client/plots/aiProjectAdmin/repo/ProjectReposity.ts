@@ -60,4 +60,32 @@ export class ProjectReposity {
 			throw error
 		}
 	}
+
+	async getAnnotations(genome: string, dslabel: string, projectId: number) {
+		try {
+			const body = {
+				genome,
+				dslabel,
+				projectId,
+				wsimagesFilenames: ['all']
+			}
+			const response: any = await dofetch3('aiProjectSelectedWSImages', { body })
+			const wsimages = response?.wsimages || []
+			const annotations: any[] = []
+			for (const w of wsimages) {
+				const anns = w.annotations || []
+				const filename = w.filename
+				if (Array.isArray(anns)) {
+					for (const a of anns) {
+						// attach filename so consumers know which WSI each annotation came from
+						annotations.push(Object.assign({ filename }, a))
+					}
+				}
+			}
+			return annotations
+		} catch (error) {
+			console.error('Error fetching annotations from server:', error)
+			throw error
+		}
+	}
 }

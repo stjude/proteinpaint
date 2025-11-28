@@ -1,7 +1,6 @@
 import { filterInit, getNormalRoot } from '#filter'
 import { ClassesTableRender } from './ClassesTableRender'
 import type { Elem } from '../../../types/d3'
-// import { InvalidDataUI, sayerror } from '#dom'
 import type { AIProjectAdminInteractions } from '../interactions/AIProjectAdminInteractions'
 import { SelectorTableRender } from './SelectorTableRender'
 import { UsersRender } from './UsersRender'
@@ -105,12 +104,12 @@ export class CreateProjectRender {
 					alert('No images match your filter criteria.')
 					return
 				}
-
-				if (!this.usersRender || !Array.isArray(this.usersRender.users) || this.usersRender.users.length === 0) {
-					alert('Please add at least one user.')
-					btn.attr('disabled', null)
-					return
-				}
+				// TODO: Enable user assignment after SSO is ready
+				// if (!this.usersRender || !Array.isArray(this.usersRender.users) || this.usersRender.users.length === 0) {
+				// 	alert('Please add at least one user.')
+				// 	btn.attr('disabled', null)
+				// 	return
+				// }
 
 				await this.interactions.addProject({
 					project: {
@@ -118,7 +117,7 @@ export class CreateProjectRender {
 						classes: this.classesTable!.rows.map((row, i) => {
 							return { label: row[1].value, color: row[2].color, key_shortcut: `Digit${i + 1}` }
 						}),
-						users: this.usersRender.users
+						users: this.usersRender?.users || []
 					}
 				})
 				this.dom.holder.selectAll('*').remove()
