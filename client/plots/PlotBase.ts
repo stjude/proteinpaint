@@ -43,11 +43,13 @@ export class PlotBase {
 		for (const key of this.configTermKeys) {
 			const value = config[key]
 			if (!value) continue
-			if (Array.isArray(value)) {
+			if (value.type && value.contructor?.name != 'Object') continue
+			else if (Array.isArray(value)) {
 				for (const [i, tw] of value.entries()) {
+					if (tw.type && tw.contructor?.name != 'Object') continue
 					if (routedTermTypes.has(tw.term?.type)) config[key][i] = TwRouter.init(tw, opts)
 				}
-			} else if (routedTermTypes.has(value.term?.type)) {
+			} else if (value.contructor?.name == 'Object' && routedTermTypes.has(value.term?.type)) {
 				config[key] = await TwRouter.initRaw(value, opts)
 			}
 		}

@@ -30,6 +30,7 @@ export class StoreApi {
 
 	#Store: RxStore
 	Inner?: RxStore // only in debugmode
+	#frozenStateCopy: any = Object.freeze({})
 
 	static getInitFxn(__Class__) {
 		return async opts => {
@@ -111,8 +112,8 @@ export class StoreApi {
 	}
 
 	async copyState() {
-		const copy = deepCopyFreeze(this.#Store.state)
-		return copy
+		this.#frozenStateCopy = deepCopyFreeze(this.#Store.state, this.#frozenStateCopy)
+		return this.#frozenStateCopy
 		// const self = this.#Store
 		// const stateCopy = self.fromJson(self.toJson(self.state))
 		// self.deepFreeze(stateCopy)

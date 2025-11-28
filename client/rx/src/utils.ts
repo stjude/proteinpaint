@@ -46,14 +46,21 @@ export function deepFreeze(obj) {
 	for (const value of Object.values(obj)) {
 		if (value !== null && typeof value == 'object') deepFreeze(value)
 	}
+	return obj
 }
 
 // input: object to copy
 // ref: may reuse another copy that's already frozen, if it already equals the input
 export function deepCopyFreeze(input, ref?: any) {
-	if (input === null || typeof input != 'object' || input.constructor.name !== 'Object') return input
+	// non-objects will be returned as-is
+	if (input === null || typeof input != 'object') return input
+	if (input.constructor.name !== 'Object' && input.constructor.name !== 'Array') {
+		// class instances (non-literal objects) will be returned as-is but frozen,
+		// assumes the object's nested properties are already frozen
+		return Object.freeze(input)
+	}
 	if (ref && Object.isFrozen(ref) && deepEqual(input, ref)) return ref
-	const copy = {}
+	const copy = Array.isArray(input) ? [] : {}
 	// not using for..in loop, in order to not descend into inherited props/methods
 	for (const [key, value] of Object.entries(input)) {
 		if (Array.isArray(value)) {
