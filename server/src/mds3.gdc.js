@@ -1829,7 +1829,7 @@ async function querySamplesTwlstForGeneexpclustering(q, twLst, ds) {
 	return [byTermId, samples]
 }
 
-function may_add_readdepth(acase, sample) {
+export function may_add_readdepth(acase, sample) {
 	if (!acase.observation) return
 	// per Zhenyu, the ensemble workflow unifies the depth from all callers, can display just the first
 	const dat = acase.observation[0]
