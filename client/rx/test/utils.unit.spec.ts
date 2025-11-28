@@ -65,20 +65,59 @@ tape('deepFreeze()', test => {
 
 tape('deepCopyFreeze()', test => {
 	class Abc {}
-	const objFromClass = new Abc()
-	const orig = { b: 1, c: { x: 'test', y: [0, 1], z: { r: 2 }, g: { h: 'nested' }, objFromClass } }
+	const abc = new Abc()
+	const abc2 = new Abc()
+	const filter = { join: '', lst: [{ tvs: { values: [] } }, { lst: [{ tvs: { values: [] } }] }] }
+	const orig = { filter, b: 1, c: { x: 'test', y: [0, 1, abc2], z: { r: 2 }, g: { h: 'nested' }, abc } }
 	const copy = deepCopyFreeze(orig)
 	test.notEqual(orig, copy, `should not return the original literal object as a copy`)
-	test.equal(orig.c.objFromClass, objFromClass, `should return an original class instance as a copy`)
-	test.deepEqual(orig, copy, `should produce a matching copy`)
+	test.equal(orig.c.abc, abc, `should return an original class instance as a copy`)
+	test.deepEqual(orig, copy, `should produce a matching fully nested copy`)
 
-	const b = { c: { g: { i: 'new prop' } } }
 	const message = 'should not allow any edits to a deep frozen copy'
 	try {
-		copyMerge(copy, b)
+		copyMerge(copy, { c: { g: { i: 'new prop' } } })
 		test.fail(message)
 	} catch (e) {
 		test.pass(message + ': ' + e)
 	}
+
+	orig.c.g.h = 'edited'
+	const matched = new Set()
+	const copy2 = deepCopyFreeze(orig, copy, matched)
+	test.equal(matched.size, 13, `should have 13 matched objects`)
+	test.deepEqual(copy2.c.y, copy.c.y, `should reuse the frozen nested y[] entries`)
+	test.equal(copy2.c.y[2], copy.c.y[2], `should reuse the frozen nested y[] non-literal object entries`)
+	test.equal(copy2.c.z, copy.c.z, `should reuse the frozen nested z object as-is`)
+
+	{
+		;(orig as any).nonUniqueAbc = abc
+		//;(orig as any).nonUniqueAbc2 = abc; console.log(91, Object.keys(orig))
+		const message = 'should throw on finding non-unique object references within the input object'
+		try {
+			deepCopyFreeze(orig, copy)
+			test.fail(message)
+		} catch (e) {
+			console.info(e)
+			test.pass(message)
+		}
+	}
+
+	{
+		const clone = structuredClone(orig)
+		clone.c.y[2] = abc2 // manually enforce the expected reuse of a class instance, here and below,
+		clone.c.abc = abc // since structuredClone will create fresh copies of all objects
+		deepFreeze(clone)
+		const frozenCopy = deepCopyFreeze(orig, clone)
+		test.equal(clone, frozenCopy, `should reuse a frozen clone in full`)
+
+		// Simulate a filter edit that empties a nested filterUiRoot array, where a previous coding bug
+		// resulted in the incorrect matching of the cohortFilter.lst[0] entry against the filterUiRoot.lst.
+		// This test makes sure the same bug is not reintroduced.
+		orig.filter.lst[1].lst?.pop()
+		const frozenCopy2 = deepCopyFreeze(orig, frozenCopy)
+		test.deepEqual(frozenCopy2, orig, `should reuse a frozen reference clone's properties that have not changed`)
+	}
+
 	test.end()
 })
