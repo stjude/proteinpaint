@@ -34,7 +34,7 @@ export class PlotBase {
 	async getMutableConfig() {
 		// TODO: may improve to not require a full copy??
 		const config = structuredClone(this.state.config)
-		if (!this.configTermKeys) return config
+		if (!config || !this.configTermKeys) return structuredClone(config)
 
 		const opts = {
 			vocabApi: this.app.vocabApi
@@ -42,14 +42,19 @@ export class PlotBase {
 
 		for (const key of this.configTermKeys) {
 			const value = config[key]
+			const orig = this.state.config[key]
+			if (orig) console.log(45, orig.term?.name, orig.constructor.name)
 			if (!value) continue
-			if (value.type && value.contructor?.name != 'Object') continue
-			else if (Array.isArray(value)) {
+			if (Array.isArray(value)) {
 				for (const [i, tw] of value.entries()) {
-					if (tw.type && tw.contructor?.name != 'Object') continue
-					if (routedTermTypes.has(tw.term?.type)) config[key][i] = TwRouter.init(tw, opts)
+					const xtw = orig[i]
+					if (xtw.type && xtw.contructor?.name != 'Object') config[key][i] = xtw
+					else if (routedTermTypes.has(tw.term?.type)) config[key][i] = TwRouter.init(tw, opts)
 				}
-			} else if (value.contructor?.name == 'Object' && routedTermTypes.has(value.term?.type)) {
+			} else if (typeof orig == 'object' && orig.contructor?.name != 'Object') {
+				console.log(53, orig)
+				config[key] = orig
+			} else if (routedTermTypes.has(value.term?.type)) {
 				config[key] = await TwRouter.initRaw(value, opts)
 			}
 		}
