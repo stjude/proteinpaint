@@ -1,7 +1,7 @@
 import type { TermSettingOpts } from './types'
 import { TermSetting } from './TermSetting.ts'
 import type { Term, TermWrapper, Filter, GvPredefinedGsTW } from '#types'
-import { call_fillTW, get$id } from './utils.ts'
+import { call_fillTW, get$id, fillTermWrapper } from './utils.ts'
 import { minimatch } from 'minimatch'
 import { isNumericTerm } from '#shared/terms.js'
 import { copyMerge, deepEqual } from '#rx'
@@ -124,8 +124,10 @@ export class TermSettingApi {
 						tw = { term, q: { isAtomic: true }, isAtomic: true }
 					}
 
-					if (self.opts.customFillTw) self.opts.customFillTw(tw)
-					await call_fillTW(tw, self.vocabApi, self.opts.defaultQ4fillTW)
+					if (self.opts.customFillTw) tw = self.opts.customFillTw(tw)
+					//tw = await call_fillTW(tw, self.vocabApi, self.opts.defaultQ4fillTW)
+					tw = await fillTermWrapper(tw, self.vocabApi, self.opts.defaultQ4fillTW)
+					console.log(129, tw)
 					// tw is now furbished
 
 					self.opts.callback!(tw)

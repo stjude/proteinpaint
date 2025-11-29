@@ -1,6 +1,6 @@
 import type { QualQ, Q, RawValuesQ, RawGvQ, TermWrapper, TwLst, NumericQ, SnpsQ, Term } from '#types'
 import type { VocabApi } from './types'
-import { TwRouter, routedTermTypes } from '#tw/TwRouter'
+import { TwRouter, routedTermTypes, type TwBase } from '#tw'
 
 /*
 ********************* EXPORTED
@@ -76,7 +76,7 @@ export async function fillTwLst(
 	defaultQByTsHandler?: DefaultQByTsHandler
 ): Promise<void> {
 	await mayHydrateDictTwLst(twlst, vocabApi)
-	const promises: Promise<TermWrapper>[] = []
+	const promises: Promise<TermWrapper | TwBase>[] = []
 	for (const tw of twlst) {
 		promises.push(fillTermWrapper(tw, vocabApi, defaultQByTsHandler))
 	}
@@ -108,8 +108,11 @@ async function mayUseTwRouterFill(
 	tw: TermWrapper,
 	vocabApi: VocabApi,
 	defaultQByTsHandler?: DefaultQByTsHandler
-): Promise<TermWrapper | false> {
+): Promise<TermWrapper | false | TwBase> {
 	if (!routedTermTypes.has(tw.term?.type)) return false
+	if (tw.constructor.name != 'Object') return tw
+	return await TwRouter.initRaw(tw, { vocabApi, defaultQByTsHandler })
+
 	// NOTE: while the tw refactor is not done for all term types and q.types/modes,
 	// there will be some code duplication between TwRouter and the legacy code;
 	// the latter will be deleted once the refactor/migration is done
@@ -128,14 +131,15 @@ export async function fillTermWrapper(
 	tw: TermWrapper,
 	vocabApi: VocabApi,
 	defaultQByTsHandler?: DefaultQByTsHandler
-): Promise<TermWrapper> {
+): Promise<TermWrapper | TwBase> {
 	tw.isAtomic = true
 	if (!tw.term && tw.id) {
 		// hydrate tw.term using tw.id
 		await mayHydrateDictTwLst([tw], vocabApi)
 	}
 
-	if (await mayUseTwRouterFill(tw, vocabApi, defaultQByTsHandler)) return tw
+	const xtw = await mayUseTwRouterFill(tw, vocabApi, defaultQByTsHandler)
+	if (xtw) return xtw
 
 	// tw.id is no longer needed
 	delete tw.id
