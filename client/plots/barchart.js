@@ -19,6 +19,8 @@ import { rebaseGroupFilter } from '../mass/groups.js'
 export class Barchart extends PlotBase {
 	static type = 'barchart'
 
+	configTermKeys = ['term', 'term0', 'term2']
+
 	constructor(opts) {
 		// rx.getComponentInit() will set this.app, this.id, this.opts
 		super(opts)
@@ -346,7 +348,7 @@ export class Barchart extends PlotBase {
 		const c = this.state.config
 		if (c.chartType != this.type && c.childType != this.type) return
 		try {
-			this.config = structuredClone(c)
+			this.config = await this.getMutableConfig(c)
 			if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
 			this.prevConfig = this.config || {}
 			if (this.dom.header)
@@ -1299,9 +1301,9 @@ export function getDefaultBarSettings(app) {
 export async function getPlotConfig(opts, app) {
 	if (!opts.term) throw 'barchart getPlotConfig: opts.term{} missing'
 	try {
-		await fillTermWrapper(opts.term, app.vocabApi)
-		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
-		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
+		opts.tw = await fillTermWrapper(opts.term, app.vocabApi)
+		if (opts.term2) opts.term2 = await fillTermWrapper(opts.term2, app.vocabApi)
+		if (opts.term0) opts.term0 = await fillTermWrapper(opts.term0, app.vocabApi)
 	} catch (e) {
 		console.log('Error reading config: ' + JSON.stringify(opts))
 		console.error(e)
