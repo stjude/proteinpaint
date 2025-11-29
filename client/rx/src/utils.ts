@@ -65,14 +65,15 @@ const nonUniqueErrorMessage = `object is referenced as a value in multiple neste
 
 // input: object to copy
 // ref: may reuse another copy that's already frozen, if it already equals the input
-// matched: supply as 3rd argument to deepEqual()
+// matched: tracker to supply as 3rd argument to deepEqual()
+// reused: tracker to detect matched objects that have already been reused in the generated copy
 export function deepCopyFreeze(input, ref: any = {}, matched = new Set(), reused = new Set()) {
 	// non-objects will be returned as-is
 	if (input === null || typeof input != 'object') return input
 	if (reused.has(input)) throw { error: nonUniqueErrorMessage, input }
 	if (input.constructor.name !== 'Object' && input.constructor.name !== 'Array') {
 		// class instances (non-literal objects) will be returned as-is but frozen,
-		// assumes the object's nested properties are already frozen
+		// assumes the input object's nested properties are already frozen
 		matched.add(input)
 		reused.add(input)
 		return Object.freeze(input)

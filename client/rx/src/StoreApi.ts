@@ -112,11 +112,12 @@ export class StoreApi {
 	}
 
 	async copyState() {
+		// const time = Date.now()
 		this.#frozenStateCopy = deepCopyFreeze(this.#Store.state, this.#frozenStateCopy)
-		return this.#frozenStateCopy
 		// const self = this.#Store
-		// const stateCopy = self.fromJson(self.toJson(self.state))
-		// self.deepFreeze(stateCopy)
-		// return stateCopy
+		// this.#frozenStateCopy = self.fromJson(self.toJson(self.state))
+		// self.deepFreeze(this.#frozenStateCopy)
+		// console.log('copyState() time', Date.now() - time)
+		return this.#frozenStateCopy
 	}
 }
