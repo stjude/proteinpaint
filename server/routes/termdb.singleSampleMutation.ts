@@ -40,7 +40,9 @@ function init({ genomes }) {
 export async function validate_query_singleSampleMutation(ds: any, genome: any) {
 	const _q = ds.queries.singleSampleMutation
 	if (!_q) return
-	if (_q.src == 'gdcapi') {
+	if (typeof _q.get == 'function') {
+		// ds supplied
+	} else if (_q.src == 'gdcapi') {
 		gdcValidate_query_singleSampleMutation(ds, genome)
 	} else if (_q.src == 'native') {
 		/* using a folder to store text files for individual samples

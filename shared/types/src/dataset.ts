@@ -384,19 +384,12 @@ type SvFusion = {
 }
 
 type SingleSampleMutationQuery = {
-	/** for native ds, each file should contain a stringified json array with elements below
-	see file server/test/tp/files/hg38/TermdbTest/mutationpersample/3318 for example
-	for non-native ds, the getter should return an json array with same structure
+	/** ds supplied getter
+	returns same json array as native. see example below
 	*/
-	src: 'native' | 'gdcapi' | string
-	/** which property of client mutation object to retrieve sample identifier for
-	 * querying single sample data with */
+	get?: (f: any) => void
+	/** which property of client mutation object to retrieve sample identifier for querying single sample data with */
 	sample_id_key: string
-	/** only required for src=native
-	folder contains a set of files, one file per sample, file named by sample name
-	each file contains a stringified json array of mutation/cnv/sv entries (aka mlst)
-	*/
-	folder?: string
 	/** disco plot will be launched when singleSampleMutation is enabled. supply customization options here */
 	discoPlot?: {
 		/** if true, disco plot will hide chrM, due to reason e.g. this dataset doesn't have data on chrM */
@@ -404,6 +397,16 @@ type SingleSampleMutationQuery = {
 		/** if true, filter mutations by predefined geneset by default */
 		prioritizeGeneLabelsByGeneSets?: true
 	}
+	/** rest of properties are required for native ds without ds-supplied getter
+	TODO migrate gdc to get() and delete .src=native
+	*/
+	src?: 'native' | 'gdcapi' | string
+	/** only required for src=native
+	folder contains a set of files, one file per sample, file named by sample name
+	each file contains a stringified json array of mutation/cnv/sv entries (aka mlst). see example
+	https://github.com/stjude/proteinpaint/blob/master/server/test/tp/files/hg38/TermdbTest/mutationpersample/3318
+	*/
+	folder?: string
 }
 
 type NIdataQuery = {
