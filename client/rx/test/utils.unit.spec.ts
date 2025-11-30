@@ -84,8 +84,12 @@ tape('deepCopyFreeze()', test => {
 
 	orig.c.g.h = 'edited'
 	const matched = new Set()
-	const copy2 = deepCopyFreeze(orig, copy, matched)
+	const reused = new Set()
+	const copy2 = deepCopyFreeze(orig, copy, matched, reused)
 	test.equal(matched.size, 13, `should have 13 matched objects`)
+	// some of the reused objects may have the other matched objects nested in it,
+	// so the total reused objects would be less than the number of matched objects
+	test.equal(reused.size, 4, `should have 4 reused frozen objects`)
 	test.deepEqual(copy2.c.y, copy.c.y, `should reuse the frozen nested y[] entries`)
 	test.equal(copy2.c.y[2], copy.c.y[2], `should reuse the frozen nested y[] non-literal object entries`)
 	test.equal(copy2.c.z, copy.c.z, `should reuse the frozen nested z object as-is`)
