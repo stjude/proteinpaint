@@ -30,11 +30,11 @@ Utility Classes
 //          using deepEqual() in deepCopyFreeze(), since it returns early when
 //          some value does not match, but there may have been other nested objects
 //          that have already been matched that do not need to be inspected again.
-export function deepEqual(x, y, matched?: Set<any>) {
+export function deepEqual(x, y, matched?: WeakSet<any> | Set<any>) {
 	if (x === y) {
 		return true
 	} else if (typeof x == 'object' && x != null && typeof y == 'object' && y != null) {
-		//if (matched?.has(x)) return true
+		if (matched?.has(x)) return true
 		const xEntries = Object.entries(x)
 		const yKeys = Object.keys(y)
 		if (xEntries.length != yKeys.length) return false
@@ -67,7 +67,12 @@ const nonUniqueErrorMessage = `object is referenced as a value in multiple neste
 // ref: may reuse another copy that's already frozen, if it already equals the input
 // matched: tracker to supply as 3rd argument to deepEqual()
 // reused: tracker to detect matched objects that have already been reused in the generated copy
-export function deepCopyFreeze(input, ref: any = {}, matched = new Set(), reused = new Set()) {
+export function deepCopyFreeze(
+	input,
+	ref: any = {},
+	matched: WeakSet<any> | Set<any> = new WeakSet(),
+	reused: WeakSet<any> | Set<any> = new WeakSet()
+) {
 	// non-objects will be returned as-is
 	if (input === null || typeof input != 'object') return input
 	if (reused.has(input)) throw { error: nonUniqueErrorMessage, input }
@@ -95,10 +100,6 @@ export function deepCopyFreeze(input, ref: any = {}, matched = new Set(), reused
 		} else {
 			copy[key] = deepCopyFreeze(value, ref[key], matched, reused)
 		}
-	}
-	if (arguments.length < 3) {
-		matched.clear()
-		reused.clear()
 	}
 	return Object.freeze(copy)
 }
