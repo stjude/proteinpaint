@@ -5,8 +5,24 @@ import { roundValue } from '#shared/roundValue.js'
 export class SessionWSImage extends WSImage {
 	sessionsTileSelections?: TileSelection[]
 
-	constructor(filename: string) {
-		super(filename)
+	constructor(ws: WSImage, sessionsTileSelections?: TileSelection[]) {
+		// Initialize base with filename
+		super(ws.filename)
+
+		// copy common properties from provided WSImage
+		this.id = ws.id
+		this.metadata = ws.metadata
+		this.predictionLayers = ws.predictionLayers
+		this.annotations = ws.annotations || []
+		this.classes = ws.classes
+		this.uncertainty = ws.uncertainty
+		this.activePatchColor = ws.activePatchColor
+		this.tileSize = ws.tileSize
+
+		this.predictions = ws.predictions
+
+		// optionally initialize sessions tile selections (may be set later from settings)
+		this.sessionsTileSelections = sessionsTileSelections
 	}
 
 	public static removeTileSelection(currentIndex: number, sessionWSImage: SessionWSImage): TileSelection[] {
@@ -22,30 +38,21 @@ export class SessionWSImage extends WSImage {
 
 	public static getTileSelections(sessionWSImage: SessionWSImage): TileSelection[] {
 		const annotations: Annotation[] = sessionWSImage.annotations || []
-		const annotationKeys = new Set(annotations.map(a => `${a.zoomCoordinates[0]},${a.zoomCoordinates[1]}`))
 
-		const sessionsTileSelections: TileSelection[] = (sessionWSImage.sessionsTileSelections || []).filter(
-			s => !annotationKeys.has(`${s.zoomCoordinates[0]},${s.zoomCoordinates[1]}`)
-		)
+		const sessionsTileSelections: TileSelection[] = sessionWSImage.sessionsTileSelections || []
 
-		const predictions: Prediction[] = (sessionWSImage.predictions || []).filter(
-			p => !annotationKeys.has(`${p.zoomCoordinates[0]},${p.zoomCoordinates[1]}`)
-		)
+		const predictions: Prediction[] = sessionWSImage.predictions || []
 
 		return [...sessionsTileSelections, ...predictions, ...annotations]
 	}
 
 	public static getTilesTableRows(sessionWSImage: SessionWSImage, selectedTileIndex: number): any[] {
 		const annotations = sessionWSImage.annotations || []
-		const annotationKeys = new Set(annotations.map(a => `${a.zoomCoordinates[0]},${a.zoomCoordinates[1]}`))
 
-		const sessionsFiltered = (sessionWSImage.sessionsTileSelections || []).filter(
-			s => !annotationKeys.has(`${s.zoomCoordinates[0]},${s.zoomCoordinates[1]}`)
-		)
-
+		const sessionsTileSelections = sessionWSImage.sessionsTileSelections || []
 		const selectedColor = '#fcfc8b'
 
-		const sessionsRows: any[] = sessionsFiltered.map((d, i) => {
+		const sessionsRows: any[] = sessionsTileSelections.map((d, i) => {
 			const idx = i
 			const firstCell: any = { value: idx }
 			// Mark original/background hint for renderers. Keep column shape unchanged.
@@ -95,6 +102,14 @@ export class SessionWSImage extends WSImage {
 		})
 
 		return [...sessionsRows, ...predictionRows, ...annotationsRows]
+	}
+
+	public static isPrediction(currentIndex: number, sessionWSImage: SessionWSImage): boolean {
+		const sessionsCount = sessionWSImage.sessionsTileSelections?.length ?? 0
+
+		const predictionsCount = (sessionWSImage.predictions || []).length
+
+		return currentIndex >= sessionsCount && currentIndex < sessionsCount + predictionsCount
 	}
 
 	public static isSessionTileSelection(currentIndex: number, sessionWSImage: SessionWSImage): boolean {

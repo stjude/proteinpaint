@@ -59,7 +59,7 @@ import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
 import { dtTermTypes } from '#shared/terms.js'
 import { makeAdHocDicTermdbQueries } from './adHocDictionary/buildAdHocDictionary.ts'
 import { validate_query_saveWSIAnnotation } from '#routes/saveWSIAnnotation.ts'
-import { validate_query_deleteWSIAnnotation } from '#routes/deleteWSIAnnotation.ts'
+import { validate_query_deleteWSIAnnotation } from '#routes/deleteWSITileSelection.ts'
 
 /*
 init
