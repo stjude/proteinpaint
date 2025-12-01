@@ -96,9 +96,11 @@ const gdcGenome = 'hg38'
 const gdcDslabel = 'GDC'
 
 export async function init(arg, holder, genomes) {
-	const genome = genomes[gdcGenome]
+	const toolGenome = arg.genome || gdcGenome
+	const toolDslabel = arg.dslabel || gdcDslabel
+	const genome = genomes[toolGenome]
 	try {
-		if (!genome) throw gdcGenome + ' missing'
+		if (!genome) throw toolGenome + ' missing'
 
 		// these options will allow session recovery by an embedder
 		const settings = arg.settings || {}
@@ -112,7 +114,7 @@ export async function init(arg, holder, genomes) {
 		if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
 
 		const vocabApi = await vocabInit({
-			state: { vocab: { genome: gdcGenome, dslabel: gdcDslabel } }
+			state: { vocab: { genome: toolGenome, dslabel: toolDslabel } }
 		})
 		vocabApi.getTermdbConfig()
 
@@ -121,8 +123,8 @@ export async function init(arg, holder, genomes) {
 			genome,
 			state: copyMerge(
 				{
-					genome: gdcGenome,
-					dslabel: gdcDslabel,
+					genome: toolGenome,
+					dslabel: toolDslabel,
 					termfilter: { filter0: arg.filter0 },
 					plots: [
 						// initialize with a geneset component, in case the genes lst is empty.
