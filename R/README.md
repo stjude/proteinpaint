@@ -31,15 +31,18 @@ Verify that the correct version of R was installed
 R --version
 ```
 
-Install R packages
+# R dependencies
+
+## Install R dependencies
+
 ```sh
 Rscript ~/dev/sjpp/proteinpaint/R/utils/install.pkgs.R
 ```
 
-# New R dependencies
+## Add new R dependencies
 
-To add an R package as a new dependency:
-- For a CRAN package, add it to "utils/cran.pkgs.txt"
-- For a Bioconductor package, add it to "utils/bioconductor.pkgs.txt"
+Add CRAN packages to `utils/cran.pkgs.txt`
+
+Add Bioconductor packages to `utils/bioconductor.pkgs.txt`
 
 Then re-build the deps image, as described here: https://github.com/stjude/proteinpaint/wiki/Buiding-a-deps-image
