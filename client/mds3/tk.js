@@ -152,12 +152,12 @@ function getParameter(tk, block) {
 
 	rangequery_rglst(tk, block, par)
 
-	if (tk.legend.mclass.hiddenvalues.size) {
+	if (tk.legend?.mclass.hiddenvalues.size) {
 		// contains mixture of mclass(str) and dt(int), pass json array instead of comma-joined string
 		par.hiddenmclasslst = JSON.stringify([...tk.legend.mclass.hiddenvalues])
 	}
 
-	if (tk.legend.bcfInfo) {
+	if (tk.legend?.bcfInfo) {
 		// add info fields to filter variants
 		const infoFilter = {}
 		for (const k in tk.legend.bcfInfo) {
@@ -170,7 +170,7 @@ function getParameter(tk, block) {
 		}
 	}
 
-	if (tk.legend.formatFilter) {
+	if (tk.legend?.formatFilter) {
 		// add format fields to filter samples
 		const filter = {}
 		for (const k in tk.legend.formatFilter) {
@@ -355,12 +355,12 @@ async function dataFromCustomVariants(tk, block) {
 	}
 
 	for (const m of tk.custom_variants) {
-		if (tk.legend.bcfInfo) {
+		if (tk.legend?.bcfInfo) {
 			let skip = false
 			for (const infoKey in tk.legend.bcfInfo) {
 				if (tk.legend.bcfInfo[infoKey].hiddenvalues?.size) {
 					const v = m.info?.[infoKey] || unannotatedKey
-					if (tk.legend.bcfInfo[infoKey].hiddenvalues.has(v)) {
+					if (tk.legend?.bcfInfo[infoKey].hiddenvalues.has(v)) {
 						skip = true
 						break
 					}
@@ -381,7 +381,7 @@ async function dataFromCustomVariants(tk, block) {
 			if (!m.class) m.class = 'X' // missing class
 			if (!mclass[m.class]) m.class = 'X' // invalid class
 
-			if (tk.legend.mclass.hiddenvalues.has(m.class)) continue
+			if (tk.legend?.mclass.hiddenvalues.has(m.class)) continue
 
 			data.skewer.push(m)
 		} else {
