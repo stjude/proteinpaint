@@ -72,7 +72,7 @@ const mockOptions: FlyoutMenuOption[] = [
 		]
 	},
 	{
-		label: 'Option 2 with flyout',
+		label: 'Option 3 with flyout',
 		isSubmenu: true,
 		callback: holder => {
 			holder.append('div').style('padding', '10px').text('Custom flyout content. Click out to close.')
