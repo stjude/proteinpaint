@@ -1474,7 +1474,7 @@ function mayFilterBySurvival(filter, d) {
 	}
 }
 
-function mapGenes2isoforms(geneTwLst, genome) {
+export function mapGenes2isoforms(geneTwLst, genome) {
 	if (!Array.isArray(geneTwLst)) throw 'geneTwLst not array'
 	const isoforms = []
 	for (const tw of geneTwLst) {
