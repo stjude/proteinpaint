@@ -721,7 +721,7 @@ function addV2Sgetter_native(tk, block) {
 		// add in parameters that will filter samples
 		par.skewerRim = tk.mds.queries.snvindel?.skewerRim
 
-		if (tk.legend.formatFilter) {
+		if (tk.legend?.formatFilter) {
 			// add format fields to filter samples
 			const filter = {}
 			for (const k in tk.legend.formatFilter) {
@@ -734,7 +734,7 @@ function addV2Sgetter_native(tk, block) {
 			}
 		}
 
-		if (tk.legend.mclass?.hiddenvalues?.size) {
+		if (tk.legend?.mclass?.hiddenvalues?.size) {
 			// since hiddenvalues set contains mixture of mclass(str) and dt(int), pass json array instead of comma-joined string
 			par.hiddenmclasslst = JSON.stringify([...tk.legend.mclass.hiddenvalues])
 		}

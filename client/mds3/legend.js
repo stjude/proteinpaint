@@ -54,9 +54,8 @@ const unknown_infoCategory_color = 'black'
 export const unannotatedKey = 'Unannotated'
 
 export function initLegend(tk, block) {
-	/*
-run only once, called by makeTk
-*/
+	// run only once, called by makeTk
+	if (!block.legend) return // block has no legend. could be due to hidegenelegend flag
 	if (!tk.legend) tk.legend = {}
 	tk.legend.tip = new Menu({ padding: '0px' })
 
