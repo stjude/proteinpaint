@@ -11,7 +11,7 @@ import type Settings from '#plots/wsiviewer/Settings.ts'
 import type { Prediction, TileSelection } from '@sjcrh/proteinpaint-types'
 import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.ts'
-import type { DeleteWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/deleteWSIAnnotation.js'
+import type { DeleteWSITileSelectionRequest } from '@sjcrh/proteinpaint-types/routes/deleteWSITileSelection.ts'
 
 export class WSIViewerInteractions {
 	thumbnailClickListener: (index: number) => void
@@ -26,8 +26,6 @@ export class WSIViewerInteractions {
 		holder: any,
 		sessionWSImage: SessionWSImage,
 		map: OLMap,
-		activeImageExtent: any,
-		activePatchColor: string,
 		aiProjectID: number,
 		shortcuts?: string[]
 	) => void
@@ -105,8 +103,6 @@ export class WSIViewerInteractions {
 			holder: any,
 			sessionWSImage: SessionWSImage,
 			map: OLMap,
-			activeImageExtent: any,
-			activePatchColor: string,
 			aiProjectID: number,
 			shortcuts: string[] = []
 		) => {
@@ -437,24 +433,35 @@ export class WSIViewerInteractions {
 			source?.removeFeature(annotationBorderFeat)
 		}
 
-		const body: DeleteWSIAnnotationRequest = {
+		if (SessionWSImage.isSessionTileSelection(currentIndex, sessionWSImage)) {
+			SessionWSImage.removeTileSelection(currentIndex, sessionWSImage)
+			return
+		}
+
+		const isPrediction = SessionWSImage.isPrediction(currentIndex, sessionWSImage)
+
+		const tileSelectionType = isPrediction ? 0 : 1
+
+		const prediction = tileSelections[currentIndex] as Prediction
+
+		const body: DeleteWSITileSelectionRequest = {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,
 			projectId: state.aiProjectID,
-			annotation: tileSelections[currentIndex],
+			tileSelection: tileSelections[currentIndex],
+			predictionClassId: prediction.class,
+			tileSelectionType: tileSelectionType,
 			wsimage: sessionWSImage.filename
 		}
+
 		try {
-			await dofetch3('deleteWSIAnnotation', { method: 'DELETE', body })
+			await dofetch3('deleteWSITileSelection', { method: 'DELETE', body })
+			console.log('deleted existing annotation')
 		} catch (e: any) {
-			console.error('Error in deleteWSIAnnotation request:', e.message || e)
+			console.error('Error in deleteWSITileSelection request:', e.message || e)
 		}
 		// TODO find another way to clear server cache
 		clearServerDataCache()
-
-		if (SessionWSImage.isSessionTileSelection(currentIndex, sessionWSImage)) {
-			SessionWSImage.removeTileSelection(currentIndex, sessionWSImage)
-		}
 
 		const sessionsTileSelection: TileSelection[] = sessionWSImage.sessionsTileSelections ?? []
 		wsiApp.app.dispatch({

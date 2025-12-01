@@ -186,8 +186,6 @@ class WSIViewer extends PlotBase implements RxComponent {
 					holder,
 					viewModel.sampleWSImages[settings.displayedImageIndex],
 					this.map,
-					activeImageExtent,
-					imageViewData.activePatchColor!,
 					aiProjectID,
 					imageViewData.shortcuts
 				)
