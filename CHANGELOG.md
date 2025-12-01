@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- support runpp({hidegenelegend})
+
+
 ## 2.163.1
 
 Fixes:
