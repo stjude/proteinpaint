@@ -3144,7 +3144,7 @@ async function getSnvindelByTerm(ds, term, genome, q) {
 		}
 		// term.isoform is set
 		arg.isoform = term.isoform
-		return await ds.queries.snvindel.byisoform.get(arg)
+		return await ds.queries.snvindel.byisoform.get(arg, ds)
 	}
 	if (ds.queries.snvindel.byrange) {
 		// returns canonical isoform (if any). assign to arg{} so byrange.get() will be able to return csq by canonical isoform
