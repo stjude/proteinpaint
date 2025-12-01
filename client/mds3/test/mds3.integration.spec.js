@@ -12,6 +12,8 @@ Official data on TP53, extensive ui test
 Official - mclass filtering
 Official - sample summaries table, create subtrack (tk.filterObj)
 Official - allow2selectSamples
+Official - hidegenelegend
+Official - hardcodeCnvOnly hidegenelegend
 Official - hardcodeCnvOnly
 Incorrect dslabel
 Custom cnv only, no sample
@@ -430,6 +432,38 @@ must use a gene with both single and multi occurrence mutations to test
 	}
 }
 
+tape('Official - hidegenelegend', test => {
+	const holder = getHolder()
+	runproteinpaint({
+		holder,
+		genome: 'hg38-test',
+		gene: 'TP53',
+		hidegenelegend: true,
+		tracks: [{ type: 'mds3', dslabel: 'TermdbTest', callbackOnRender }]
+	})
+	async function callbackOnRender(tk, bb) {
+		test.equal(bb.tklst.length, 2, 'should have two tracks')
+		test.notOk(tk.legend, 'tk.legend is not created')
+		if (test._ok) holder.remove()
+		test.end()
+	}
+})
+tape('Official - hardcodeCnvOnly hidegenelegend', test => {
+	const holder = getHolder()
+	runproteinpaint({
+		holder,
+		genome: 'hg38-test',
+		gene: 'TP53',
+		hidegenelegend: true,
+		tracks: [{ type: 'mds3', dslabel: 'TermdbTest', hardcodeCnvOnly: true, callbackOnRender }]
+	})
+	async function callbackOnRender(tk, bb) {
+		test.equal(bb.tklst.length, 2, 'should have two tracks')
+		test.notOk(tk.legend, 'tk.legend is not created')
+		if (test._ok) holder.remove()
+		test.end()
+	}
+})
 tape('Official - hardcodeCnvOnly', test => {
 	const holder = getHolder()
 	const gene = 'TP53'
