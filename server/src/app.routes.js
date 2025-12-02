@@ -12,7 +12,6 @@ export const routeFiles = [
 	import('../routes/alphaGenome.ts'),
 	import('../routes/alphaGenomeTypes.ts'),
 	import('../routes/brainImaging.ts'),
-	import('../routes/chatBot.ts'),
 	import('../routes/brainImagingSamples.ts'),
 	import('../routes/burden.ts'),
 	import('../routes/correlationVolcano.ts'),

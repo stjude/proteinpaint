@@ -4,6 +4,7 @@ import type { BasePlotConfig, MassState } from '#mass/types/mass'
 import { Menu } from '#dom'
 import { keyupEnter } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
+import { getId } from '#mass/nav'
 
 /**
 
@@ -80,8 +81,23 @@ class Chat extends PlotBase implements RxComponent {
 				try {
 					const data = await dofetch3('termdb/chat', { body })
 					if (data.error) throw data.error
-					serverBubble.html('Got result..')
-					console.log(data)
+
+					const result = JSON.parse(data)
+					const plotConfig = result.plot
+					const answer = result.answer
+
+					if (plotConfig) {
+						// generate a plot as answer
+						this.app.dispatch({
+							type: 'plot_create',
+							id: getId(),
+							config: plotConfig
+						})
+						serverBubble.html('Please refer to the plot generated above')
+					} else {
+						// text answer
+						serverBubble.html(answer)
+					}
 					/* may switch by data.type
 					type=chat: server returns a chat msg
 					type=plot: server returns a plot obj
@@ -123,4 +139,9 @@ export async function getPlotConfig(opts: any) {
 		chartType: 'chat'
 	}
 	return copyMerge(config, opts)
+}
+
+export function makeChartBtnMenu(_holder, chartsInstance) {
+	const chart = { config: { chartType: 'chat' } }
+	chartsInstance.prepPlot(chart)
 }
