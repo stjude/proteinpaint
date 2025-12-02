@@ -125,7 +125,7 @@ export class ScatterLegendInteractivity {
 				: { key: key, label: key }
 
 		if (!hide) delete tw.q.hiddenValues[key]
-		else tw.q.hiddenValues[key] = value
+		else tw.q.hiddenValues[key] = structuredClone(value) // TODO: do not require structuredClone()
 		if (key == 'Ref') {
 			this.scatter.settings.showRef = !hide
 			this.scatter.app.dispatch({

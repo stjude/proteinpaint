@@ -95,7 +95,8 @@ tape('detectStale', async function (test) {
 			app.getState(),
 			{
 				appWait: 3,
-				partWait: 0
+				partWait: 0,
+				_scope_: undefined
 			},
 			`app should have the last dispatched state`
 		)

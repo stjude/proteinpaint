@@ -111,20 +111,20 @@ async function mayUseTwRouterFill(
 ): Promise<TermWrapper | false | TwBase> {
 	if (!routedTermTypes.has(tw.term?.type)) return false
 	if (tw.constructor.name != 'Object') return tw
-	return await TwRouter.initRaw(tw, { vocabApi, defaultQByTsHandler })
+	const xtw = await TwRouter.initRaw(tw, { vocabApi, defaultQByTsHandler })
 
 	// NOTE: while the tw refactor is not done for all term types and q.types/modes,
 	// there will be some code duplication between TwRouter and the legacy code;
 	// the latter will be deleted once the refactor/migration is done
-	// const fullTw = await TwRouter.fill(tw, { vocabApi, defaultQByTsHandler })
-	// // TODO: return fullTW instead of mutating the input tw below,
-	// // which is not type-safe, e.g., q.mode=continuous may have discrete q properties mixed-in
-	// Object.assign(tw, fullTw)
-	// mayValidateQmode(tw)
+	// fill-in the tw argument since consumer code may not be expecting a returned tw
+	Object.assign(tw, xtw)
+	mayValidateQmode(tw)
 	// // this should be moved to the term-type specific handler??
-	// if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
-	// if (tw.q) tw.q.isAtomic = true
-	// return tw
+	if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
+	if (tw.q) tw.q.isAtomic = true
+	// safe to return the xtw, it's compatible with either
+	// code that expects literal tw or class instance tw
+	return xtw
 }
 
 export async function fillTermWrapper(
