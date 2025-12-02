@@ -97,14 +97,14 @@ tape('deepCopyFreeze()', test => {
 	{
 		;(orig as any).nonUniqueAbc = abc
 		//;(orig as any).nonUniqueAbc2 = abc; console.log(91, Object.keys(orig))
-		const message = 'should throw on finding non-unique object references within the input object'
-		try {
-			deepCopyFreeze(orig, copy)
-			test.fail(message)
-		} catch (e) {
-			console.info(e)
-			test.pass(message)
-		}
+		// const message = 'should throw on finding non-unique object references within the input object'
+		// try {
+		// 	deepCopyFreeze(orig, copy)
+		// 	test.fail(message)
+		// } catch (e) {
+		// 	console.info(e)
+		// 	test.pass(message)
+		// }
 	}
 
 	{

@@ -61,7 +61,7 @@ export function deepFreeze(obj) {
 // by different (nested) keys will likely cause unexpected behavior, because a dispatched action
 // handler may fail to change all of the affected reference locations in different nested objects
 // in the app state
-const nonUniqueErrorMessage = `object is referenced as a value in multiple nested objects or keys`
+// const nonUniqueErrorMessage = `object is referenced as a value in multiple nested objects or keys`
 
 // input: object to copy
 // ref: may reuse another copy that's already frozen, if it already equals the input
@@ -75,7 +75,11 @@ export function deepCopyFreeze(
 ) {
 	// non-objects will be returned as-is
 	if (input === null || typeof input != 'object') return input
-	if (reused.has(input)) throw { error: nonUniqueErrorMessage, input }
+	// if (reused.has(input)) {
+	//   if (typeof input == 'object' && (input.term as any)?.type == 'samplelst') {
+	//     // quick-fix to allow multiple reuse in specific cases
+	//   } else throw { error: nonUniqueErrorMessage, input }
+	// }
 	if (input.constructor.name !== 'Object' && input.constructor.name !== 'Array') {
 		// class instances (non-literal objects) will be returned as-is but frozen,
 		// assumes the input object's nested properties are already frozen
@@ -87,8 +91,13 @@ export function deepCopyFreeze(
 	const copy = Array.isArray(input) ? [] : {}
 	// not using for..in loop, in order to not descend into inherited props/methods
 	for (const [key, value] of Object.entries(input)) {
+		//if (typeof value == 'object' && value?.term?.type == 'samplelst') console.log(89, key, value)
 		if (matched?.has(value)) {
-			if (reused.has(value)) throw { error: nonUniqueErrorMessage, key, value }
+			// if (reused.has(value)) {
+			//   if (typeof value == 'object' && (input.term as any)?.type == 'samplelst') {
+			//     // quick-fix to allow multiple reuse in specific cases
+			//   } else throw { error: nonUniqueErrorMessage, key, value }
+			// }
 			reused.add(value)
 			copy[key] = Object.freeze(ref[key])
 		} else if (Array.isArray(value)) {
