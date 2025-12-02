@@ -680,6 +680,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	metaboliteIntensity: ({ ds }) => ds.queries?.metaboliteIntensity,
 	DA: ({ ds }) => ds.queries?.rnaseqGeneCount,
 	brainImaging: ({ ds }) => ds.queries?.NIdata,
+	chatBot: ({ ds }) => ds.queries?.chat,
 	DziViewer: ({ ds }) => ds.queries?.DZImages, // replaced by WSIViewer, but keep it here just in case
 	WSIViewer: ({ ds }) => ds.queries?.WSImages,
 	imagePlot: ({ ds }) => ds.queries?.images,
