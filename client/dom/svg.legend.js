@@ -178,7 +178,11 @@ export default function svgLegend(opts) {
 		})
 
 		const bbox = itemlabel.node().getBBox()
-		const width = d.width || settings.iconw
+		let width = d.width || settings.iconw
+		if (d.colorPicker) {
+			width += (d.inputWidth || 30) + settings.padx
+		}
+		if (d.skipIcon) width = 0
 		currlinex += bbox.width + width
 		if (settings.linesep || currlinex > settings.svgw - settings.padright) {
 			currliney += settings.lineh
@@ -230,16 +234,42 @@ export default function svgLegend(opts) {
 			if (opts.labels) currlinex += bbox.width + 25 + 15 * settings.padx
 			else currlinex += 10 * settings.padx
 		} else {
-			g.append('rect')
-				.attr('height', settings.iconh)
-				.attr('width', width)
-				//.attr('x', bbox.width)
-				.attr('y', y)
-				.attr('fill', colorGradientId ? `url(#${colorGradientId})` : opts.rectFillFxn)
-				.attr('stroke', opts.iconStroke)
-				.attr('shape-rendering', 'crispEdges')
+			if (d.colorPicker) {
+				const inputHeight = d.inputHeight || settings.iconh + 6
+				const inputWidth = d.inputWidth || 30
 
-			currlinex += 2.5 * settings.padx
+				const colorInput = g
+					.append('foreignObject')
+					.attr('x', bbox.width + settings.padx)
+					.attr('y', y + settings.iconh / 2 - inputHeight / 2)
+					.attr('width', inputWidth)
+					.attr('height', inputHeight)
+					.append('xhtml:input')
+					.attr('type', 'color')
+					.attr('value', d.color || '#4d4d4d')
+					.style('width', `${inputWidth}px`)
+					.style('height', `${inputHeight}px`)
+					.style('padding', '0')
+					.style('border', '1px solid #ccc')
+					.style('border-radius', '4px')
+
+				if (typeof d.onColorChange === 'function') {
+					colorInput.on('input', event => {
+						d.onColorChange(event.target.value)
+					})
+				}
+			} else if (!d.skipIcon) {
+				g.append('rect')
+					.attr('height', settings.iconh)
+					.attr('width', width)
+					//.attr('x', bbox.width)
+					.attr('y', y)
+					.attr('fill', colorGradientId ? `url(#${colorGradientId})` : opts.rectFillFxn)
+					.attr('stroke', opts.iconStroke)
+					.attr('shape-rendering', 'crispEdges')
+
+				currlinex += 2.5 * settings.padx
+			}
 		}
 
 		if (Math.abs(bbox.y + bbox.height / 2) > 1) {
