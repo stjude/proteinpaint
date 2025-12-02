@@ -124,85 +124,118 @@ function getCnvLesionType(isGain: boolean): string {
 async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Response> {
 	const startTime = Date.now()
 
-	// Step 1: Get samples using cohort infrastructure
-	const samples = await get_samples(
-		request,
-		ds,
-		true // must set to true to return sample name to be able to access file. FIXME this can let names revealed to grin2 client, may need to apply access control
-	)
+	// Cache file check
+	let cacheFileName: string
+	let resultData: any
+	let processingTime = 0
+	let grin2AnalysisTime = 0
+	let chromosomelist: { [key: string]: number } = {}
+	let processingSummary: any = undefined
 
-	const cohortTime = Date.now() - startTime
-	mayLog(`[GRIN2] Retrieved ${samples.length.toLocaleString()} samples in ${formatElapsedTime(cohortTime)}`)
+	// Check if we're re-plotting with an existing cache file
+	if (request.cacheFileName && (await file_is_readable(request.cacheFileName))) {
+		// Use existing cache file
+		mayLog(`[GRIN2] Re-plotting with existing cache: ${request.cacheFileName}`)
+		cacheFileName = request.cacheFileName
 
-	if (samples.length === 0) {
-		throw new Error('No samples found matching the provided filter criteria')
-	}
-
-	// Step 2: Process sample data, convert to lesion format, and apply filter caps per type
-	const tracker = getLesionTracker(request)
-	const processingStartTime = Date.now()
-
-	const { lesions, processingSummary } = await processSampleData(samples, ds, request, tracker)
-
-	const processingTime = Date.now() - processingStartTime
-	mayLog(`[GRIN2] Data processing took ${formatElapsedTime(processingTime)}`)
-	mayLog(
-		`[GRIN2] Processing summary: ${processingSummary?.processedSamples ?? 0}/${
-			processingSummary?.totalSamples ?? samples.length
-		} samples processed successfully`
-	)
-
-	if (processingSummary?.failedSamples !== undefined && processingSummary.failedSamples > 0) {
-		mayLog(`[GRIN2] Warning: ${processingSummary.failedSamples} samples failed to process`)
-	}
-
-	if (lesions.length === 0) {
-		throw new Error('No lesions found after processing all samples. Check filter criteria and input data.')
-	}
-
-	// Step 3: Prepare input for Python script
-	const availableDataTypes = Object.keys(optionToDt).filter(key => key in request)
-	const pyInput = {
-		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
-		chromosomelist: {} as { [key: string]: number },
-		lesion: JSON.stringify(lesions),
-		cacheFileName: generateCacheFileName(),
-		availableDataTypes: availableDataTypes,
-		maxGenesToShow: request.maxGenesToShow,
-		lesionTypeMap: buildLesionTypeMap(availableDataTypes)
-	}
-
-	// Build chromosome list from genome reference
-	for (const c in g.majorchr) {
-		// List is short so a small penalty for accessing the flag in the loop
-		if (ds.queries.singleSampleMutation.discoPlot?.skipChrM) {
-			// Skip chrM; this property is set in gdc ds but still assess it to avoid hardcoding the logic, in case code maybe reused for non-gdc ds
-			if (c.toLowerCase() == 'chrm') continue
+		// Still need chromosome list for Rust
+		for (const c in g.majorchr) {
+			if (ds.queries.singleSampleMutation.discoPlot?.skipChrM) {
+				if (c.toLowerCase() == 'chrm') continue
+			}
+			chromosomelist[c] = g.majorchr[c]
 		}
-		pyInput.chromosomelist[c] = g.majorchr[c]
-	}
 
-	// Step 4: Run GRIN2 analysis via Python
-	const grin2AnalysisStart = Date.now()
-	const pyResult = await run_python('grin2PpWrapper.py', JSON.stringify(pyInput))
-
-	if (pyResult.stderr?.trim()) {
-		mayLog(`[GRIN2] Python stderr: ${pyResult.stderr}`)
-		if (pyResult.stderr.includes('ERROR:')) {
-			throw new Error(`Python script error: ${pyResult.stderr}`)
+		// Create minimal resultData - not updating gene table on re-plot
+		resultData = {
+			cacheFileName: cacheFileName,
+			topGeneTable: null,
+			totalGenes: null,
+			showingTop: null
 		}
+	} else {
+		// Run complete pipeline
+		mayLog(`[GRIN2] Running full GRIN2 analysis pipeline`)
+
+		// Step 1: Get samples using cohort infrastructure
+		const samples = await get_samples(request, ds, true)
+
+		const cohortTime = Date.now() - startTime
+		mayLog(`[GRIN2] Retrieved ${samples.length.toLocaleString()} samples in ${formatElapsedTime(cohortTime)}`)
+
+		if (samples.length === 0) {
+			throw new Error('No samples found matching the provided filter criteria')
+		}
+
+		// Step 2: Process sample data
+		const tracker = getLesionTracker(request)
+		const processingStartTime = Date.now()
+
+		const result = await processSampleData(samples, ds, request, tracker)
+		const lesions = result.lesions
+		processingSummary = result.processingSummary
+
+		processingTime = Date.now() - processingStartTime
+		mayLog(`[GRIN2] Data processing took ${formatElapsedTime(processingTime)}`)
+		mayLog(
+			`[GRIN2] Processing summary: ${processingSummary?.processedSamples ?? 0}/${
+				processingSummary?.totalSamples ?? samples.length
+			} samples processed successfully`
+		)
+
+		if (processingSummary?.failedSamples !== undefined && processingSummary.failedSamples > 0) {
+			mayLog(`[GRIN2] Warning: ${processingSummary.failedSamples} samples failed to process`)
+		}
+
+		if (lesions.length === 0) {
+			throw new Error('No lesions found after processing all samples.')
+		}
+
+		// Step 3: Prepare Python input
+		const availableDataTypes = Object.keys(optionToDt).filter(key => key in request)
+		const pyInput = {
+			genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
+			chromosomelist: {} as { [key: string]: number },
+			lesion: JSON.stringify(lesions),
+			cacheFileName: generateCacheFileName(),
+			availableDataTypes: availableDataTypes,
+			maxGenesToShow: request.maxGenesToShow,
+			lesionTypeMap: buildLesionTypeMap(availableDataTypes)
+		}
+
+		// Build chromosome list
+		for (const c in g.majorchr) {
+			if (ds.queries.singleSampleMutation.discoPlot?.skipChrM) {
+				if (c.toLowerCase() == 'chrm') continue
+			}
+			pyInput.chromosomelist[c] = g.majorchr[c]
+		}
+
+		chromosomelist = pyInput.chromosomelist
+
+		// Step 4: Run Python GRIN2 analysis
+		const grin2AnalysisStart = Date.now()
+		const pyResult = await run_python('grin2PpWrapper.py', JSON.stringify(pyInput))
+
+		if (pyResult.stderr?.trim()) {
+			mayLog(`[GRIN2] Python stderr: ${pyResult.stderr}`)
+			if (pyResult.stderr.includes('ERROR:')) {
+				throw new Error(`Python script error: ${pyResult.stderr}`)
+			}
+		}
+
+		grin2AnalysisTime = Date.now() - grin2AnalysisStart
+		mayLog(`[GRIN2] Python processing took ${formatElapsedTime(grin2AnalysisTime)}`)
+
+		resultData = JSON.parse(pyResult)
+		cacheFileName = resultData.cacheFileName
 	}
-
-	const grin2AnalysisTime = Date.now() - grin2AnalysisStart
-	mayLog(`[GRIN2] Python processing took ${formatElapsedTime(grin2AnalysisTime)}`)
-
-	const resultData = JSON.parse(pyResult)
 
 	// Step 5: Prepare Rust input
 	const rustInput = {
 		file: resultData.cacheFileName,
 		type: 'grin2',
-		chrSizes: pyInput.chromosomelist,
+		chrSizes: chromosomelist,
 		plot_width: request.width,
 		plot_height: request.height,
 		device_pixel_ratio: request.devicePixelRatio,

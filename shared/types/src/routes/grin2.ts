@@ -86,6 +86,7 @@ export type GRIN2Request = {
 		threePrimeFlankSize?: number
 	}
 	maxGenesToShow?: number // Default: 500
+	cacheFileName?: string // Cache file path for re-plotting
 }
 
 /** Simple Interface to store the complex plot data from the rust Manhattan plot */
