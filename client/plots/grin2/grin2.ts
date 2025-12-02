@@ -8,10 +8,18 @@ import { dtsnvindel, mclass, dtcnv, dtfusionrna, dtsv, proteinChangingMutations,
 import { get$id } from '#termsetting'
 import { PlotBase } from '#plots/PlotBase.ts'
 import { plotManhattan, createLollipopFromGene } from '#plots/manhattan/manhattan.ts'
+import { controlsInit } from '#plots/controls.js'
 
 class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
+	components: { controls: any }
 	dom: GRIN2Dom
+	private lastApiResponse: any = null
+
+	// Track previous dimensions and plot elements
+	private previousDimensions: { width?: number; height?: number } = {}
+	private plotSection: any = null
+	private plotDiv: any = null
 
 	// Colors
 	readonly borderColor = '#eee'
@@ -64,10 +72,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	constructor(opts: any, api) {
 		super(opts, api)
+		this.components = { controls: {} }
 		this.opts = opts
 		opts.holder.classed('sjpp-grin2-main', true)
 		this.dom = {
-			controls: opts.holder.append('div'), // controls ui on top
+			grin2Controls: opts.holder.append('div'),
+			plotControls: opts.holder.append('div'),
 			div: opts.holder.append('div').style('margin', '20px'), // result ui on bottom
 			tip: new Menu({ padding: '' }),
 			geneTip: new Menu({ padding: '' }),
@@ -82,6 +92,41 @@ class GRIN2 extends PlotBase implements RxComponent {
 			snvindelDefaultBtn: null
 		}
 		if (opts.header) this.dom.header = opts.header.text('GRIN2')
+	}
+
+	async setControls() {
+		const inputs = [
+			{
+				label: 'Plot width',
+				title: 'Set the width of the Manhattan plot',
+				type: 'number',
+				chartType: 'manhattan',
+				settingsKey: 'plotWidth',
+				min: 300,
+				max: 1500,
+				debounceInterval: 500
+			},
+			{
+				label: 'Plot height',
+				title: 'Set the height of the Manhattan plot',
+				type: 'number',
+				chartType: 'manhattan',
+				settingsKey: 'plotHeight',
+				min: 150,
+				max: 800,
+				debounceInterval: 500
+			}
+		]
+
+		this.components.controls = await controlsInit({
+			app: this.app,
+			id: this.id,
+			holder: this.dom.plotControls,
+			inputs
+		})
+
+		// Hide controls initially
+		this.dom.plotControls.style('display', 'none')
 	}
 
 	getState(appState: MassState) {
@@ -344,14 +389,14 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	private createConfigTable() {
 		// Add citation text
-		this.dom.controls
+		this.dom.grin2Controls
 			.append('div')
 			.style('margin', '15px')
 			.html(
 				'GRIN2 stands for Genomic Random Interval (GRIN) statistical model. For details, see <a href=https://pubmed.ncbi.nlm.nih.gov/23842812/ target=_blank>Pounds, S. et al. Bioinformatics 2013</a>.'
 			)
 
-		const table = table2col({ holder: this.dom.controls, disableScroll: true })
+		const table = table2col({ holder: this.dom.grin2Controls, disableScroll: true })
 		const queries = this.app.vocabApi.termdbConfig.queries
 		if (queries.snvindel) {
 			this.addSnvindelRow(table)
@@ -368,7 +413,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 
 		// Run Button
-		this.dom.runButton = this.dom.controls
+		this.dom.runButton = this.dom.grin2Controls
 			.append('button')
 			.attr('data-testid', 'grin2-run-button')
 			.style('margin-left', '100px')
@@ -559,7 +604,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		this.updateRunButtonState(dtUsage)
 	}
 	private async runAnalysis() {
-		this.dom.controls.style('pointer-events', 'none').style('opacity', '0.5')
+		this.dom.grin2Controls.style('pointer-events', 'none').style('opacity', '0.5')
 		try {
 			// Get checkbox states
 			const dtUsage = this.getDtUsageFromCheckboxes()
@@ -591,6 +636,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			if (response.status === 'error') throw `GRIN2 analysis failed: ${response.error}`
 
+			// Store the response and dimensions for potential re-rendering
+			response.requestWidth = requestData.width
+			response.requestHeight = requestData.height
+			response.requestPngDotRadius = requestData.pngDotRadius
+			this.lastApiResponse = response
+
 			this.renderResults(response)
 
 			// After the analysis completes successfully, dispatch with the updated config to save state
@@ -612,12 +663,83 @@ class GRIN2 extends PlotBase implements RxComponent {
 		} catch (error) {
 			sayerror(this.dom.div, `Error running GRIN2: ${error instanceof Error ? error.message : error}`)
 		} finally {
-			this.dom.controls.style('pointer-events', 'auto').style('opacity', '1')
+			this.dom.grin2Controls.style('pointer-events', 'auto').style('opacity', '1')
 			this.dom.runButton.property('disabled', false).text('Run GRIN2')
 		}
 	}
 
-	async init() {}
+	async init() {
+		await this.setControls()
+	}
+
+	/**
+	 * Re-fetch the plot with new dimensions
+	 * Backend will use cache if analysis parameters haven't changed
+	 */
+	private async refetchWithNewDimensions(width: number, height: number) {
+		try {
+			// Get the last configuration used
+			const dtUsage = this.getDtUsageFromCheckboxes()
+			const configValues = this.getConfigValues(dtUsage)
+
+			const requestData = {
+				genome: this.app.vocabApi.vocab.genome,
+				dslabel: this.app.vocabApi.vocab.dslabel,
+				filter: getNormalRoot(this.app.vocabApi.state.termfilter.filter),
+				width: width,
+				height: height,
+				pngDotRadius: this.state.config.settings.manhattan?.pngDotRadius,
+				devicePixelRatio: window.devicePixelRatio,
+				maxGenesToShow: this.state.config.settings?.manhattan?.maxGenesToShow,
+				lesionTypeColors: this.state.config.settings?.manhattan?.lesionTypeColors,
+				qValueThreshold: this.state.config.settings?.manhattan?.qValueThreshold,
+				...configValues
+			}
+
+			// Show loading indicator on the plot section only
+			if (this.plotDiv && !this.plotDiv.empty()) {
+				this.plotDiv.style('opacity', '0.5')
+			}
+
+			const response = await dofetch3('/grin2', {
+				body: requestData
+			})
+
+			if (response.status === 'error') throw `GRIN2 re-render failed: ${response.error}`
+
+			// Store the new dimensions in response for future comparisons
+			response.requestWidth = width
+			response.requestHeight = height
+			response.requestPngDotRadius = this.state.config.settings.manhattan?.pngDotRadius
+			this.lastApiResponse = response
+
+			// Only update the plot, keep the table
+			if (this.plotDiv && !this.plotDiv.empty()) {
+				// Clear just the plot div content
+				this.plotDiv.selectAll('*').remove()
+
+				// Re-render the plot
+				const plotData = response
+				const manhattanSettings = this.state.config.settings.manhattan
+				plotManhattan(this.plotDiv, plotData, manhattanSettings, this.app)
+
+				// Restore opacity
+				this.plotDiv.style('opacity', '1')
+			}
+		} catch (error) {
+			console.error('Error refetching with new dimensions:', error)
+			sayerror(this.dom.div, `Error re-rendering plot: ${error instanceof Error ? error.message : error}`)
+		}
+	}
+
+	private updatePlotVisualsOnly() {
+		// Re-render plot with current data but new visual settings (no server call)
+		if (this.plotDiv && !this.plotDiv.empty() && this.lastApiResponse) {
+			this.plotDiv.selectAll('*').remove()
+			const manhattanSettings = this.state.config.settings.manhattan
+			plotManhattan(this.plotDiv, this.lastApiResponse, manhattanSettings, this.app)
+		}
+	}
 
 	async main() {
 		// Initialize the table with the different data types and options
@@ -627,15 +749,60 @@ class GRIN2 extends PlotBase implements RxComponent {
 		if (!this.dom.runButton) {
 			this.createConfigTable()
 		}
+
+		// Check if dimensions have changed and we have a previous result to re-render
+		if (this.lastApiResponse && this.state.config.settings.runAnalysis) {
+			const currentWidth = this.state.config.settings.manhattan?.plotWidth
+			const currentHeight = this.state.config.settings.manhattan?.plotHeight
+			const currentPngDotRadius = this.state.config.settings.manhattan?.pngDotRadius
+
+			// Check if dimensions or PNG dot radius changed (require server re-render)
+			const dimensionsChanged =
+				this.lastApiResponse.requestWidth !== currentWidth ||
+				this.lastApiResponse.requestHeight !== currentHeight ||
+				this.lastApiResponse.requestPngDotRadius !== currentPngDotRadius
+
+			if (dimensionsChanged) {
+				// Re-fetch with new dimensions/PNG dot radius (will use cache on backend)
+				await this.refetchWithNewDimensions(currentWidth, currentHeight)
+			}
+		}
 	}
 
 	private renderResults(result: any) {
+		// // Display Manhattan plot
+		// if (result.pngImg) {
+		// 	const plotData = result
+		// 	const plotDiv = this.dom.div
+		// 	const manhattanSettings = this.state.config.settings.manhattan
+		// 	plotManhattan(plotDiv, plotData, manhattanSettings, this.app)
+		// }
+
 		// Display Manhattan plot
 		if (result.pngImg) {
 			const plotData = result
-			const plotDiv = this.dom.div
 			const manhattanSettings = this.state.config.settings.manhattan
-			plotManhattan(plotDiv, plotData, manhattanSettings, this.app)
+
+			// Create a wrapper for the plot section (or reuse if exists)
+			if (!this.plotSection || this.plotSection.empty()) {
+				this.plotSection = this.dom.div.append('div').style('margin-top', '20px')
+
+				// Move the controls into this section
+				this.dom.plotControls.node().remove() // Remove from original location
+				this.plotSection.node().appendChild(this.dom.plotControls.node()) // Add to plot section
+
+				// Create the plot div next to controls
+				this.plotDiv = this.plotSection.append('div')
+
+				// Make them inline
+				this.dom.plotControls.style('display', 'inline-block').style('vertical-align', 'top')
+				this.plotDiv.style('display', 'inline-block').style('vertical-align', 'top')
+			} else {
+				// Clear existing plot content
+				this.plotDiv.selectAll('*').remove()
+			}
+
+			plotManhattan(this.plotDiv, plotData, manhattanSettings, this.app)
 		}
 
 		// Display top genes table

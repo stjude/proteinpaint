@@ -1,7 +1,8 @@
 import type { Menu } from '#dom'
 
 export interface GRIN2Dom {
-	controls: any
+	grin2Controls: any
+	plotControls: any
 	div: any
 	tip: Menu
 	geneTip: Menu
