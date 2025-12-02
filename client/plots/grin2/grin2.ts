@@ -346,10 +346,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// Add citation text
 		this.dom.controls
 			.append('div')
-			.style('font-size', `${this.optionsTextFontSize + 4}px`)
-			.style('color', this.optionsTextColor)
-			.text(
-				'GRIN2 stands for Genomic Random Interval (GRIN) statistical model. For details, see Pounds, S. et al. Bioinformatics 2013'
+			.style('margin', '15px')
+			.html(
+				'GRIN2 stands for Genomic Random Interval (GRIN) statistical model. For details, see <a href=https://pubmed.ncbi.nlm.nih.gov/23842812/ target=_blank>Pounds, S. et al. Bioinformatics 2013</a>.'
 			)
 
 		const table = table2col({ holder: this.dom.controls, disableScroll: true })
