@@ -1,2 +1,1 @@
-Features:
-- GRIN2: Added citation for GRIN2
+

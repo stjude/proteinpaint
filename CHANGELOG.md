@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- GRIN2: Added citation for GRIN2
+
 Fixes:
 - support runpp({hidegenelegend})
 
