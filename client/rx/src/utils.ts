@@ -30,20 +30,29 @@ Utility Classes
 //          using deepEqual() in deepCopyFreeze(), since it returns early when
 //          some value does not match, but there may have been other nested objects
 //          that have already been matched that do not need to be inspected again.
-export function deepEqual(x, y, matched?: WeakSet<any> | Set<any>) {
+//
+// NOTE: The 2nd argument will be frozen if added to the optional matched argument.
+//       May improve the matched argument later into an opts{} argument, as needed.
+export function deepEqual(x, y, matched?: WeakMap<any, WeakSet<any>> | Map<any, WeakSet<any>>) {
 	if (x === y) {
 		return true
 	} else if (typeof x == 'object' && x != null && typeof y == 'object' && y != null) {
-		if (matched?.has(x)) return true
+		if (matched?.get(x)?.has(y)) return true
 		const xEntries = Object.entries(x)
 		const yKeys = Object.keys(y)
 		if (xEntries.length != yKeys.length) return false
+		// an empty object and empty array should not equal each other
+		if (!xEntries.length && x.constructor.name !== y.constructor.name) return false
 		// not using for..in loop, in order to not descend into inherited props/methods
 		for (const [key, val] of xEntries) {
 			if (!yKeys.includes(key)) return false
 			if (!deepEqual(val, y[key], matched)) return false
 		}
-		if (matched) matched.add(x)
+		if (matched) {
+			Object.freeze(y)
+			if (!matched.has(x)) matched.set(x, new WeakSet())
+			matched.get(x)!.add(y)
+		}
 		return true
 	} else return false
 }
@@ -57,58 +66,28 @@ export function deepFreeze(obj) {
 	return obj
 }
 
-// for the rx use case of copying state objects, the same object being referenced from
-// by different (nested) keys will likely cause unexpected behavior, because a dispatched action
-// handler may fail to change all of the affected reference locations in different nested objects
-// in the app state
-// const nonUniqueErrorMessage = `object is referenced as a value in multiple nested objects or keys`
-
 // input: object to copy
 // ref: may reuse another copy that's already frozen, if it already equals the input
-// matched: tracker to supply as 3rd argument to deepEqual()
-// reused: tracker to detect matched objects that have already been reused in the generated copy
+// matched: a tracker to supply as 3rd argument to deepEqual(), to track objects
+//          that equal the second argument.
 export function deepCopyFreeze(
 	input,
 	ref: any = {},
-	matched: WeakSet<any> | Set<any> = new WeakSet(),
-	reused: WeakSet<any> | Set<any> = new WeakSet()
+	matched: WeakMap<any, WeakSet<any>> | Map<any, WeakSet<any>> = new Map()
 ) {
 	// non-objects will be returned as-is
 	if (input === null || typeof input != 'object') return input
-	// if (reused.has(input)) {
-	//   if (typeof input == 'object' && (input.term as any)?.type == 'samplelst') {
-	//     // quick-fix to allow multiple reuse in specific cases
-	//   } else throw { error: nonUniqueErrorMessage, input }
-	// }
 	if (input.constructor.name !== 'Object' && input.constructor.name !== 'Array') {
-		// class instances (non-literal objects) will be returned as-is but frozen,
-		// assumes the input object's nested properties are already frozen
-		matched.add(input)
-		reused.add(input)
-		return Object.freeze(input)
+		// class instances (non-literal objects) will be returned as-is but frozen
+		if (!matched.has(input)) matched.set(input, new WeakSet())
+		matched.get(input)!.add(input)
+		return deepFreeze(input)
 	}
-	if (Object.isFrozen(ref) && deepEqual(input, ref, matched)) return ref
+	if (deepEqual(input, ref, matched)) return ref
 	const copy = Array.isArray(input) ? [] : {}
 	// not using for..in loop, in order to not descend into inherited props/methods
 	for (const [key, value] of Object.entries(input)) {
-		//if (typeof value == 'object' && value?.term?.type == 'samplelst') console.log(89, key, value)
-		if (matched?.has(value)) {
-			// if (reused.has(value)) {
-			//   if (typeof value == 'object' && (input.term as any)?.type == 'samplelst') {
-			//     // quick-fix to allow multiple reuse in specific cases
-			//   } else throw { error: nonUniqueErrorMessage, key, value }
-			// }
-			reused.add(value)
-			copy[key] = Object.freeze(ref[key])
-		} else if (Array.isArray(value)) {
-			copy[key] = []
-			const refVal = Array.isArray(ref[key]) ? ref[key] : []
-			for (const [k, v] of value.entries()) {
-				copy[key].push(deepCopyFreeze(v, refVal[k], matched, reused))
-			}
-		} else {
-			copy[key] = deepCopyFreeze(value, ref[key], matched, reused)
-		}
+		copy[key] = deepCopyFreeze(value, ref[key], matched)
 	}
 	return Object.freeze(copy)
 }
