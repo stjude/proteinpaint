@@ -9,6 +9,7 @@ export class DiscoInteractions {
 		max?: number
 		percentile?: number
 	}) => void
+	onMutationWaterfallColorChange: (color: string) => void
 
 	constructor(discoApp: any) {
 		// note: discoApp will be set when discoApp.state{} is created
@@ -88,6 +89,14 @@ export class DiscoInteractions {
 				})
 			} else if (obj.cutoffMode == 'percentile') callAppDispatch({ cnvPercentile: obj.percentile })
 			else throw new Error('Unknown cutoff mode returned from dom/ColorScale')
+		}
+
+		this.onMutationWaterfallColorChange = (color: string) => {
+			this.discoApp.app.dispatch({
+				type: 'plot_edit',
+				id: this.discoApp.id,
+				config: { settings: { Disco: { mutationWaterfallColor: color } } }
+			})
 		}
 	}
 }

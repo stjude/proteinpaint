@@ -143,7 +143,8 @@ export default class ViewModelProvider {
 				dataHolder.mutationWaterfallInnerRadius,
 				this.settings.rings.mutationWaterfallRingWidth,
 				this.reference,
-				dataHolder.mutationWaterfallLogRange
+				dataHolder.mutationWaterfallLogRange,
+				this.settings.Disco.mutationWaterfallColor || '#4d4d4d'
 			)
 
 			const waterfallData = mutationWaterfallMapper.map(dataHolder.mutationWaterfallData)
@@ -178,7 +179,13 @@ export default class ViewModelProvider {
 			this.settings.Disco.cnvRenderingType,
 			fusions.length > 0,
 			this.discoInteractions,
-			lohLegend
+			lohLegend,
+			this.settings.Disco.mutationWaterfallPlot && this.mutationWaterfallRing
+				? {
+						color: this.settings.Disco.mutationWaterfallColor || '#4d4d4d',
+						onColorChange: this.discoInteractions.onMutationWaterfallColorChange
+				  }
+				: undefined
 		)
 
 		const rings = new Rings(

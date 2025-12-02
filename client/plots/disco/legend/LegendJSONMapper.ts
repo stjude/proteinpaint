@@ -35,6 +35,10 @@ export default class LegendJSONMapper {
 			this.mapFusion(legend, legendJSON, order++)
 		}
 
+		if (legend.mutationWaterfallLegend) {
+			this.mapMutationWaterfall(legend, legendJSON, order++)
+		}
+
 		return legendJSON
 	}
 
@@ -242,6 +246,39 @@ export default class LegendJSONMapper {
 			name: legend.fusionTitle,
 			order: order,
 			items: fusionItems
+		})
+	}
+
+	private mapMutationWaterfall(legend: Legend, legendJSON: Array<any>, order: number) {
+		if (!legend.mutationWaterfallLegend) return
+
+		const waterfallItems: Array<any> = []
+
+		waterfallItems.push({
+			termid: 'Mutation Waterfall Plot',
+			key: 'mutation-waterfall-color',
+			text: 'Dot color',
+			color: legend.mutationWaterfallLegend.color,
+			order: 0,
+			colorPicker: true,
+			inputWidth: 28,
+			width: 0,
+			onColorChange: legend.mutationWaterfallLegend.onColorChange
+		})
+
+		waterfallItems.push({
+			termid: 'Mutation Waterfall Plot',
+			key: 'mutation-waterfall-axis',
+			text: 'Axis: log10 intermutation distance',
+			order: 1,
+			skipIcon: true,
+			width: 0
+		})
+
+		legendJSON.push({
+			name: 'Mutation Waterfall Plot',
+			order: order,
+			items: waterfallItems
 		})
 	}
 }
