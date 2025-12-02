@@ -2881,16 +2881,8 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					if (group.type != 'filter') throw 'unexpected group.type'
 					values = []
 					const filter = group.filter
-					const passLst = []
-					// test filter against mutations from each gene separately
-					for (const gene of tw.term.genes) {
-						const geneMlst = mlst.filter(m => m.gene == gene.name)
-						const [pass, tested] = filterByTvsLst(filter, geneMlst, values)
-						passLst.push(pass)
-					}
-					// samples passes filter if mutations from at least
-					// one gene passes filter
-					return passLst.some(pass => pass)
+					const [pass, tested] = filterByTvsLst(filter, mlst, values)
+					return pass
 				})
 
 				if (!group || group.uncomputable) continue
@@ -3076,13 +3068,32 @@ export function filterByItem(filter, mlst, values) {
 			if (values) values.push(...mlst_genotype)
 		} else {
 			// categorical mutation data
-			// get mutations that match the genotype of the filter
-			const mlst_genotype = mlst_tested.filter(m => {
-				const intvs = tvs.values.some(v => v.key == m.class)
-				return tvs.isnot ? !intvs : intvs
-			})
-			pass = mlst_genotype.length > 0
-			if (values) values.push(...mlst_genotype)
+			// get genotypes that match the filter
+			let intvs = false
+			const mlst_intvs = []
+			for (const value of tvs.values) {
+				// get sample genotypes that match the filter value
+				const mlst_match = mlst_tested.filter(m => m.class == value.key)
+				if (value.key == mclass['WT'].key) {
+					// wiltype filter value
+					// sample matches filter if all its genotypes are wildtype
+					if (mlst_match.length == mlst_tested.length) intvs = true
+				} else {
+					// mutant filter value
+					// sample matches filter if at least one of its genotypes matches the value
+					if (mlst_match.length) intvs = true
+				}
+				mlst_intvs.push(...mlst_match)
+			}
+			if (tvs.isnot) {
+				// sample passes if none of its genotypes match the filter
+				pass = !intvs
+				if (values) values.push(...mlst_tested.filter(m => !mlst_intvs.includes(m)))
+			} else {
+				// sample passes if at least one of its genotypes matches the filter
+				pass = intvs
+				if (values) values.push(...mlst_intvs)
+			}
 		}
 	} else {
 		// sample is not tested for the dt of the filter
