@@ -59,7 +59,7 @@ export class DiscoRenderer {
 		this.legendRenderer.render(
 			mainG,
 			viewModel.legend,
-			-1 * (viewModel.settings.rings.labelLinesInnerRadius + viewModel.settings.rings.labelsToLinesDistance + 50),
+			-1 * (viewModel.settings.rings.labelLinesInnerRadius + viewModel.settings.rings.labelsToLinesDistance + 75),
 			viewModel.width,
 			viewModel.height / 2,
 			viewModel,
