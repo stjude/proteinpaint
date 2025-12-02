@@ -786,12 +786,11 @@ tape('getFilteredSampleCount()', async test => {
 	result = await termdbVocabApi.getFilteredSampleList(getFilter_agedx())
 	test.ok(Array.isArray(result), `Should return an array of sample objects`)
 
-	/*******
-	this test is disabled
-	negating a geneset tvs is hard to support and not priority; may disable negation on ui
+	result = await termdbVocabApi.getFilteredSampleCount(getFilter_genemutationset())
+	test.equal(result, '4 samples', 'Should return "4 samples"')
+
 	result = await termdbVocabApi.getFilteredSampleCount(getFilter_genemutationset(true))
-	test.equal(result, '57 samples', 'Should return "57 samples"')
-	*/
+	test.equal(result, '56 samples', 'Should return "56 samples"')
 
 	test.end()
 })
