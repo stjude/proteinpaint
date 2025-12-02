@@ -27,7 +27,7 @@ export default class MutationWaterfallRenderer implements IRenderer {
 			.attr('cx', d => Math.cos(d.startAngle - Math.PI / 2) * d.innerRadius)
 			.attr('cy', d => Math.sin(d.startAngle - Math.PI / 2) * d.innerRadius)
 			.attr('r', this.dotRadius)
-			.attr('fill', '#4d4d4d')
+			.attr('fill', d => d.color)
 			.attr('opacity', 0.9)
 			.on('mouseover', (event: MouseEvent, d: MutationWaterfallPoint) => {
 				const distance = Math.round(Math.pow(10, d.logDistance))
@@ -46,7 +46,7 @@ export default class MutationWaterfallRenderer implements IRenderer {
 				{
 					const [td1, td2] = table.addRow()
 					td1.text('Intermutation distance')
-					td2.text(`${bplen(distance)} (${d.logDistance.toFixed(2)})`)
+					td2.text(`${bplen(distance)}`)
 				}
 				menu.show(event.x, event.y)
 			})
