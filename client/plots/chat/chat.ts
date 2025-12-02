@@ -81,6 +81,8 @@ class Chat extends PlotBase implements RxComponent {
 				try {
 					const data = await dofetch3('termdb/chat', { body })
 					if (data.error) throw data.error
+					serverBubble.html('Got result..')
+					console.log(data)
 
 					const result = JSON.parse(data)
 					const plotConfig = result.plot
@@ -99,9 +101,9 @@ class Chat extends PlotBase implements RxComponent {
 						serverBubble.html(answer)
 					}
 					/* may switch by data.type
-					type=chat: server returns a chat msg
-					type=plot: server returns a plot obj
-					*/
+                    type=chat: server returns a chat msg
+                    type=plot: server returns a plot obj
+                    */
 				} catch (e: any) {
 					if (e.stack) console.log(e.stack)
 					serverBubble.html(`Error: ${e.message || e}`)
@@ -112,13 +114,13 @@ class Chat extends PlotBase implements RxComponent {
 	}
 	addBubble(arg: { msg: string; me?: number }) {
 		/* 
-		{
-			msg: add a chat bubble for this msg; msg is html as it might contain hyperlinks
-			me: if 1, is me; otherwise is ai
-		}
+        {
+                msg: add a chat bubble for this msg; msg is html as it might contain hyperlinks
+                me: if 1, is me; otherwise is ai
+        }
 
-		return the created bubble and allow to be modified
-		*/
+        return the created bubble and allow to be modified
+        */
 		const bubble = this.dom.bubbleDiv
 			.append('div')
 			.style('padding', '10px')
