@@ -343,6 +343,15 @@ class GRIN2 extends PlotBase implements RxComponent {
 	}
 
 	private createConfigTable() {
+		// Add citation text
+		this.dom.controls
+			.append('div')
+			.style('font-size', `${this.optionsTextFontSize + 4}px`)
+			.style('color', this.optionsTextColor)
+			.text(
+				'GRIN2 stands for Genomic Random Interval (GRIN) statistical model. For details, see Pounds, S. et al. Bioinformatics 2013'
+			)
+
 		const table = table2col({ holder: this.dom.controls, disableScroll: true })
 		const queries = this.app.vocabApi.termdbConfig.queries
 		if (queries.snvindel) {
