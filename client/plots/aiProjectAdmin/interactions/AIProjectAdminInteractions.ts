@@ -1,5 +1,6 @@
 import type { ProjectReposity } from '../repo/ProjectReposity'
 import type { AIProjectAdminResponse } from '#types'
+import { buildAnnotationsCsv } from '#plots/wsiviewer/interactions/annotationsCsv.ts'
 
 export class AIProjectAdminInteractions {
 	app: any
@@ -118,5 +119,53 @@ export class AIProjectAdminInteractions {
 
 	private getConfig(): any {
 		return this.app.getState().plots.find((p: any) => p.id === this.id)
+	}
+
+	public async exportAnnotations(projectId: number): Promise<void> {
+		const config = this.getConfig()
+		if (!config || !config.settings) throw new Error(`No plot with id='${this.id}' found.`)
+
+		// fetch annotations for the entire project (server endpoint will expand ['all'] to all images)
+		let annotations: any[] = []
+		try {
+			annotations = await this.prjtRepo.getAnnotations(this.genome, this.dslabel, projectId)
+		} catch (e: any) {
+			console.error('Error fetching annotations for export:', e?.message || e)
+			throw e
+		}
+
+		// Always produce CSV
+		const mime = 'text/csv;charset=utf-8;'
+		let content: string
+
+		if (!Array.isArray(annotations) || annotations.length === 0) {
+			content = ''
+		} else {
+			// use shared CSV builder; let it pick per-annotation filename (a.filename || a.image)
+			content = buildAnnotationsCsv(annotations as any[])
+		}
+
+		// build a safe filename for download: prefer project name, fallback to projectId
+		const rawName =
+			config.settings && config.settings.project && config.settings.project.name
+				? String(config.settings.project.name)
+				: `project-${projectId}`
+		const safeName = rawName.replace(/[^a-z0-9_.-]/gi, '_').slice(0, 200)
+		const filename = `${safeName}-annotations.csv`
+
+		try {
+			const blob = new Blob([content], { type: mime })
+			const url = URL.createObjectURL(blob)
+			const a = document.createElement('a')
+			a.href = url
+			a.download = filename
+			document.body.appendChild(a)
+			a.click()
+			a.remove()
+			setTimeout(() => URL.revokeObjectURL(url), 1000)
+		} catch (e: any) {
+			console.error('Error creating annotation download:', e?.message || e)
+			throw e
+		}
 	}
 }

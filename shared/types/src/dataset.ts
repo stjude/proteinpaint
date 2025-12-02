@@ -1050,6 +1050,9 @@ export type WSImages = {
 	/** dynamically added on launch with built in logic */
 	deleteWSIAnnotation?: (annotation: DeleteWSIAnnotationRequest) => Promise<void>
 
+	/** dynamically added on launch with built in logic - returns all image filenames for a project */
+	getAllWSImages?: (projectId: string) => Promise<string[]>
+
 	/** either ds supplied or dynamically added on launch with built in logic (retrieve the sample list from the wsimages table) */
 	getSamples?: () => Promise<Array<WSISample>>
 	/** either ds supplied or dynamically added on launch with built in logic */

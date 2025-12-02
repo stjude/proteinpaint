@@ -10,62 +10,65 @@ export class UsersRender {
 	}
 
 	render() {
-		// container
-		const container = this.dom.holder
-			.append('div')
-			.attr('id', 'sjpp-users-render')
-			.attr('class', 'sjpp-deletable-ai-prjt-admin-div')
-			.style('padding', '10px')
+		// TODO remove this if check after sso is enabled
+		if (this.users.length > 0) {
+			// container
+			const container = this.dom.holder
+				.append('div')
+				.attr('id', 'sjpp-users-render')
+				.attr('class', 'sjpp-deletable-ai-prjt-admin-div')
+				.style('padding', '10px')
 
-		const inputRow = container.append('div').attr('class', 'sjpp-users-input-row').style('margin-bottom', '10px')
+			const inputRow = container.append('div').attr('class', 'sjpp-users-input-row').style('margin-bottom', '10px')
 
-		const input = inputRow
-			.append('input')
-			.attr('type', 'text')
-			.attr('placeholder', 'user@example.com')
-			.attr('id', 'sjpp-user-email-input')
-			.style('margin-right', '8px')
-			.style('width', '300px')
+			const input = inputRow
+				.append('input')
+				.attr('type', 'text')
+				.attr('placeholder', 'user@example.com')
+				.attr('id', 'sjpp-user-email-input')
+				.style('margin-right', '8px')
+				.style('width', '300px')
 
-		const addBtn = inputRow
-			.append('div')
-			.text('Add')
-			.classed('sja_menuoption', true)
-			.style('display', 'inline-block')
-			.property('disabled', true)
-			.on('click', () => {
-				const email = input.property('value').trim()
-				const showError = (msg: string) => {
-					sayerror(this.dom.errorDiv, msg)
-					// clear after 3s
-					setTimeout(() => this.dom.errorDiv.selectAll('*').remove(), 3000)
-				}
+			const addBtn = inputRow
+				.append('div')
+				.text('Add')
+				.classed('sja_menuoption', true)
+				.style('display', 'inline-block')
+				.property('disabled', true)
+				.on('click', () => {
+					const email = input.property('value').trim()
+					const showError = (msg: string) => {
+						sayerror(this.dom.errorDiv, msg)
+						// clear after 3s
+						setTimeout(() => this.dom.errorDiv.selectAll('*').remove(), 3000)
+					}
 
-				if (email.length === 0) {
-					return showError('Email cannot be empty')
-				}
+					if (email.length === 0) {
+						return showError('Email cannot be empty')
+					}
 
-				const emailRe = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
+					const emailRe = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
 
-				if (!emailRe.test(email)) {
-					return showError('Invalid email address')
-				}
+					if (!emailRe.test(email)) {
+						return showError('Invalid email address')
+					}
 
-				if (this.users.includes(email)) {
-					return showError('Email already added')
-				}
+					if (this.users.includes(email)) {
+						return showError('Email already added')
+					}
 
-				this.users.push(email)
-				input.property('value', '')
-				addBtn.property('disabled', true)
-				this.renderTableArea(container)
+					this.users.push(email)
+					input.property('value', '')
+					addBtn.property('disabled', true)
+					this.renderTableArea(container)
+				})
+
+			input.on('input', () => {
+				addBtn.property('disabled', input.property('value').trim().length === 0)
 			})
 
-		input.on('input', () => {
-			addBtn.property('disabled', input.property('value').trim().length === 0)
-		})
-
-		this.renderTableArea(container)
+			this.renderTableArea(container)
+		}
 	}
 
 	private renderTableArea(container: any) {

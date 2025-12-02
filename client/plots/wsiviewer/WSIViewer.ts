@@ -17,6 +17,7 @@ import type OLMap from 'ol/Map'
 import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
 import type { ViewModel } from '#plots/wsiviewer/viewModel/ViewModel.ts'
 import { sayerror } from '#dom'
+import { DownloadCSVButtonRenderer } from '#plots/wsiviewer/view/DownloadCSVButtonRenderer.ts'
 
 class WSIViewer extends PlotBase implements RxComponent {
 	static type = 'WSIViewer'
@@ -141,7 +142,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 			this.thumbnailsContainer = this.thumbnailRenderer.render(
 				this.dom.mapHolder,
 				this.thumbnailsContainer,
-				wsimageLayers.map(layer => layer ? layer.wsimage : null),
+				wsimageLayers.map(layer => (layer ? layer.wsimage : null)),
 				settings,
 				this.wsiViewerInteractions,
 				numTotalFiles
@@ -163,11 +164,13 @@ class WSIViewer extends PlotBase implements RxComponent {
 
 		if (settings.renderAnnotationTable && this.map) {
 			const modelTrainerRenderer = new ModelTrainerRenderer(this.wsiViewerInteractions)
+			const downloadCSVButtonRenderer = new DownloadCSVButtonRenderer()
 
 			const wsiAnnotationsRenderer = new WSIAnnotationsRenderer(this, settings, this.wsiViewerInteractions)
 			this.annotationTable = wsiAnnotationsRenderer.render(this.dom.annotationsHolder, imageViewData)
 			this.dom.legendHolder.selectAll('*').remove()
 			modelTrainerRenderer.render(this.dom.legendHolder, aiProjectID, genome, dslabel)
+			downloadCSVButtonRenderer.render(this.dom.legendHolder, viewModel.sampleWSImages[settings.displayedImageIndex])
 			this.legendRenderer.render(this.dom.legendHolder, imageViewData)
 
 			const initialZoomInCoordinate = viewModel.getInitialZoomInCoordinate(settings)

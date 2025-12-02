@@ -21,6 +21,7 @@ export interface TileSelection {
 
 export interface Annotation extends TileSelection {
 	class: string
+	timestamp?: string
 }
 
 export interface Prediction extends TileSelection {
