@@ -93,9 +93,7 @@
     "webpack": "^5.90.3",
     "webpack-cli": "^4.10.0",
     "webpack-node-externals": "^3.0.0",
-    "webpack-notifier": "^1.15.0"
-  },
-  "peerDependencies": {
+    "webpack-notifier": "^1.15.0",
     "postcss": "^8.4.41",
     "postcss-import": "^14.1.0"
   },
