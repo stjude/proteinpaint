@@ -96,7 +96,7 @@ export class Scatter extends PlotBase implements RxComponent {
 
 	async main() {
 		this.toggleLoadingDiv()
-		this.config = structuredClone(this.state.config)
+		this.config = await this.getMutableConfig()
 		this.settings = structuredClone(this.config.settings.sampleScatter)
 		try {
 			await this.model.initData()
