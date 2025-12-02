@@ -3,6 +3,7 @@ import { ChatPayload } from '#types/checkers'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
+import { run_python } from '@sjcrh/proteinpaint-python'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/chat',
@@ -26,8 +27,25 @@ function init({ genomes }) {
 			if (!g) throw 'invalid genome'
 			const ds = g.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid dslabel'
-			console.log('serverconfig:', serverconfig)
 
+			if (serverconfig.features.pythonChatBot) {
+				// Use the chat bot based on langGraph
+				//const df = path.join(serverconfig.tpmasterdir, ds.queries.chat.termsDescriptions)
+				const chatbot_input = {
+					prompt: q.prompt,
+					genome: q.genome,
+					dslabel: q.dslabel
+					//terms_tsv_path: df
+				}
+				try {
+					const ai_output_data = await run_python('chatBot.py', JSON.stringify(chatbot_input))
+					res.send(ai_output_data as ChatResponse)
+				} catch (error) {
+					const errmsg = 'Error running chatBot Python script:' + error
+					throw new Error(errmsg)
+				}
+				return
+			}
 			const serverconfig_ds_entries = serverconfig.genomes
 				.find(genome => genome.name == q.genome)
 				.datasets.find(dslabel => dslabel.name == ds.label)

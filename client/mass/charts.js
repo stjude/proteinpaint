@@ -304,11 +304,11 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
-			label: 'chatBot',
+			label: 'Chat',
 			clickTo: self.loadChartSpecificMenu,
-			chartType: 'chatBot',
+			chartType: 'chat',
 			config: {
-				chartType: 'chatBot'
+				chartType: 'chat'
 			}
 		},
 		{
