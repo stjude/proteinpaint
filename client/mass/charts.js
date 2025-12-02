@@ -304,6 +304,14 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
+			label: 'chatBot',
+			clickTo: self.loadChartSpecificMenu,
+			chartType: 'chatBot',
+			config: {
+				chartType: 'chatBot'
+			}
+		},
+		{
 			label: 'Single Cell Plot',
 			clickTo: self.prepPlot,
 			chartType: 'singleCellPlot',

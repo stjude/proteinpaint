@@ -40,7 +40,7 @@ export type plot = {
 }
 
 export type ChatResponse = {
-	type: 'html' | 'plot'
+	type: 'html' | 'plot' | 'json'
 	/** when type=html, this value is set meaning server returns a chat response */
 	html?: string
 	/** when type=plot. value is json */
