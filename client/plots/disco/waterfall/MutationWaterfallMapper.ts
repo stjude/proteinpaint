@@ -35,21 +35,45 @@ export default class MutationWaterfallMapper {
 			const normalized = Math.max(0, Math.min(1, (datum.logDistance - min) / span))
 			const radius = this.innerRadius + this.ringWidth * normalized
 
+			let mclass = 'SNV' 
+			if (datum.type === 'CNV_amp') mclass = 'CNV_amp'
+			else if (datum.type === 'CNV_loss') mclass = 'CNV_loss'
+			
+			let color = '#4d4d4d' 
+			if (mclass === 'CNV_amp') color = '#FF4136' 
+			else if (mclass === 'CNV_loss') color = '#0074D9' 
+
+			const existing = points.find(p => 
+				p.chr === datum.chr &&
+				p.position === datum.position &&
+				(p.class === 'CNV_amp' || p.class === 'CNV_loss')
+			)
+
+			if (existing) {
+				existing.samples = [...(existing.samples ?? []), ...(datum.sample ? [datum.sample] : [])]
+				continue 
+			}
+
+
+
 			points.push({
-				startAngle: angle,
-				endAngle: angle,
-				innerRadius: radius,
-				outerRadius: radius,
-				text: chromosome.text,
-				color: '#4d4d4d',
-				chr: datum.chr,
-				position: datum.position,
-				logDistance: datum.logDistance,
-				ringInnerRadius: this.innerRadius,
-				ringWidth: this.ringWidth,
-				rangeMin: min,
-				rangeMax: max
+			startAngle: angle,
+			endAngle: angle,
+			innerRadius: radius,
+			outerRadius: radius,
+			text: chromosome.text,
+			color: color,      
+			class: mclass,     
+			chr: datum.chr,
+			position: datum.position,
+			logDistance: datum.logDistance,
+			ringInnerRadius: this.innerRadius,
+			ringWidth: this.ringWidth,
+			rangeMin: min,
+			rangeMax: max,
+			samples: datum.samples ?? (datum.sample ? [datum.sample] : [])
 			})
+
 		}
 
 		return points

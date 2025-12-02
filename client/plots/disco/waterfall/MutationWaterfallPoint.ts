@@ -8,4 +8,8 @@ export default interface MutationWaterfallPoint extends Arc {
 	readonly ringWidth: number
 	readonly rangeMin: number
 	readonly rangeMax: number
+
+	class?: string          
+	samples?: string[]      
 }
+
