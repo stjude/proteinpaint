@@ -122,6 +122,7 @@ def expression_agent(state: State) -> State:
         return state
     payload = {
         "title": f"{gene} expression",
+        "prog_language": "python",
         "plot": {
             "chartType": "summary",
             "childType": "violin",
@@ -143,6 +144,7 @@ def transcriptome_embedding_agent(state: State) -> State:
     title = f"Transcriptome {method}"
     payload = {
         "title": title,
+        "prog_language": "python",
         "plot": {
             "chartType": "sampleScatter",
             "name": title
@@ -159,6 +161,7 @@ def multi_expression_agent(state: State) -> State:
         state.setdefault("artifacts", {})["result"] = {"answer": "I couldn’t identify multiple genes from the request."}
         return state
     payload = {
+        "prog_language": "python",
         "plot": {
             "chartType": "hierCluster",
             "dataType": "geneExpression",
