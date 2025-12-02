@@ -125,9 +125,7 @@ export class TermSettingApi {
 					}
 
 					if (self.opts.customFillTw) tw = self.opts.customFillTw(tw)
-					//tw = await call_fillTW(tw, self.vocabApi, self.opts.defaultQ4fillTW)
 					tw = await fillTermWrapper(tw, self.vocabApi, self.opts.defaultQ4fillTW)
-					console.log(129, tw)
 					// tw is now furbished
 
 					self.opts.callback!(tw)

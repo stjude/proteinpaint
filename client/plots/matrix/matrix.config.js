@@ -208,9 +208,9 @@ export async function getPlotConfig(opts = {}, app) {
 		if (window.location.hash == '#canvas') m.svgCanvasSwitch = 0
 	}
 
-	const promises = []
 	for (const grp of config.termgroups) {
-		grp.lst = JSON.parse(JSON.stringify(grp.lst))
+		const promises = []
+		//grp.lst = JSON.parse(JSON.stringify(grp.lst))
 		for (const tw of grp.lst) {
 			// may force the saved session to request the most up-to-data dictionary term data from server
 			// TODO: should skip samplelst term here
@@ -223,9 +223,9 @@ export async function getPlotConfig(opts = {}, app) {
 			}
 			promises.push(fillTermWrapper(tw, app.vocabApi))
 		}
+		grp.lst = await Promise.all(promises)
 	}
-	if (config.divideBy) promises.push(fillTermWrapper(config.divideBy, app.vocabApi))
-	await Promise.all(promises)
+	if (config.divideBy) config.divideBy = await fillTermWrapper(config.divideBy, app.vocabApi)
 	return config
 }
 
