@@ -3,7 +3,7 @@ import type { TwOpts, TwBase } from './TwBase'
 import { mayHydrateDictTwLst, get$id } from '#termsetting'
 // TODO: may convert these to dynamic imports
 import { QualValues, QualPredefinedGS, QualCustomGS } from './qualitative.ts'
-import { GvBase, GvPredefinedGS, GvCustomGS } from './geneVariant.ts'
+import { GvBase, GvValues, GvPredefinedGS, GvCustomGS } from './geneVariant.ts'
 import { NumericBase, NumRegularBin, NumCustomBins, NumCont, NumSpline } from './numeric.ts'
 
 export const routedTermTypes = new Set([
@@ -47,6 +47,8 @@ export class TwRouter {
 			case 'NumTWSpline':
 				return new NumSpline(tw, opts)
 
+			case 'GvValuesTW':
+				return new GvValues(tw, opts)
 			case 'GvPredefinedGsTW':
 				return new GvPredefinedGS(tw, opts)
 			case 'GvCustomGsTW':

@@ -139,7 +139,8 @@ async function getResult(q: TermdbClusterRequest, ds: any) {
 
 async function getNumericDictTermAnnotation(q, ds) {
 	const getDataArgs = {
-		terms: q.terms.map(term => ({ term, q: { mode: 'continuous' } })),
+		// TODO: figure out when term is not a termwrapper
+		terms: q.terms.map(tw => (tw.term ? tw : { term: tw, q: { mode: 'continuous' } })),
 		filter: q.filter,
 		filter0: q.filter0,
 		__protected__: q.__protected__

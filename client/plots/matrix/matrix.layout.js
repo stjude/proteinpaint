@@ -102,7 +102,6 @@ export function setLabelsAndScales() {
 	let totalHtAdjustments = 0
 
 	for (const t of this.termOrder) {
-		console.log('this.termOrder', this.termOrder)
 		const countedSamples = new Set()
 		t.counts = { samples: 0, hits: 0 }
 		const renderedContinuousVs = []

@@ -157,7 +157,7 @@ export class HierCluster extends Matrix {
 				: this.settings.hierCluster.sortClusterRows == 'byName'
 				? twlst.map(t => t.term.name).sort()
 				: this.config.dataType === NUMERIC_DICTIONARY_TERM
-				? c.row.order.map(row => twlst.find(t => t.term.id == row.name)?.term.name)
+				? c.row.order.map(row => twlst.find(t => t.$id == row.name || t.term.id == row.name)?.term.name)
 				: c.row.order.map(row => twlst.find(t => t.$id == row.name)?.term.name)
 
 		if (this.hcTermNameOrder.includes(undefined)) throw `unable to map row.name to term.name`
@@ -308,7 +308,7 @@ export class HierCluster extends Matrix {
 
 	*/
 	getClusterRowTermsAsParameter() {
-		const lst = structuredClone(this.hcTermGroup.lst)
+		const lst = this.hcTermGroup.lst.map(this.opts.app.vocabApi.getTwMinCopy)
 		// this helps caching by having a more consistent URL string
 		lst.sort((a, b) => (a.term.name < b.term.name ? -1 : 1))
 		return lst

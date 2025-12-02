@@ -116,15 +116,15 @@ async function mayUseTwRouterFill(
 	// NOTE: while the tw refactor is not done for all term types and q.types/modes,
 	// there will be some code duplication between TwRouter and the legacy code;
 	// the latter will be deleted once the refactor/migration is done
-	const fullTw = await TwRouter.fill(tw, { vocabApi, defaultQByTsHandler })
-	// TODO: return fullTW instead of mutating the input tw below,
-	// which is not type-safe, e.g., q.mode=continuous may have discrete q properties mixed-in
-	Object.assign(tw, fullTw)
-	mayValidateQmode(tw)
-	// this should be moved to the term-type specific handler??
-	if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
-	if (tw.q) tw.q.isAtomic = true
-	return tw
+	// const fullTw = await TwRouter.fill(tw, { vocabApi, defaultQByTsHandler })
+	// // TODO: return fullTW instead of mutating the input tw below,
+	// // which is not type-safe, e.g., q.mode=continuous may have discrete q properties mixed-in
+	// Object.assign(tw, fullTw)
+	// mayValidateQmode(tw)
+	// // this should be moved to the term-type specific handler??
+	// if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
+	// if (tw.q) tw.q.isAtomic = true
+	// return tw
 }
 
 export async function fillTermWrapper(

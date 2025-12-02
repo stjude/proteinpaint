@@ -157,7 +157,7 @@ export class Matrix extends PlotBase {
 
 	async main() {
 		try {
-			this.config = structuredClone(this.state.config)
+			this.config = await this.getMutableConfig()
 			if (this.mayRequireToken()) return
 			// do not assign this.termgroups until the data request is complete, to avoid stale value in a race condition;
 			// this termGroups value is directly associated with the submitted data request, and the response will match
