@@ -7,13 +7,13 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
 
 # ──────────────────────────────────────────────────────────────────────────────
-# LLM setup (you can swap the key handling to env in prod)
+# LLM setup (you need to set OPENAI_API_KEY as env variable)
 # ──────────────────────────────────────────────────────────────────────────────
+OPENAI_API_KEY=os.environ["OPENAI_API_KEY"]
 LLM = ChatOpenAI(
     model="gpt-4o-mini",
     temperature=0.2,
-    api_key=OPENAI_API_KEY,
-    http_client=httpx.Client(verify=False)
+    api_key=OPENAI_API_KEY
 )
 
 # ──────────────────────────────────────────────────────────────────────────────
