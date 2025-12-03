@@ -106,6 +106,7 @@
     "src/app.js",
     "src/serverconfig.js",
     "src/mds3.gdc.filter.js",
+    "src/mds3.gdc.js",
     "src/checkReadingFrame.js",
     "src/bedj.parseBed.js",
     "LICENSE/*"
