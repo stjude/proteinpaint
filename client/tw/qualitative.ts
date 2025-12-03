@@ -2,6 +2,7 @@ import type {
 	Term,
 	QualTerm,
 	QualQ,
+	GroupEntry,
 	ValuesQ,
 	PredefinedGroupSettingQ,
 	CustomGroupSettingQ,
@@ -40,7 +41,7 @@ export class QualitativeBase extends TwBase {
 	}
 
 	/** tw.term must already be filled-in at this point */
-	static fill(tw: RawQualTW, opts: TwOpts = {}): QualTW {
+	static async fill(tw: RawQualTW, opts: TwOpts = {}): Promise<QualTW> {
 		if (!tw.term) throw `missing tw.term`
 		if (typeof tw.term != 'object') throw `tw.term is not an object`
 		if (!QualitativeBase.termTypes.has(tw.term.type)) throw `non-qualitative term.type='${tw.term.type}'`
@@ -75,7 +76,25 @@ export class QualitativeBase extends TwBase {
 		// NOTE: many code that process categorical tw already assume discrete mode, without checking q.mode,
 		// except for applications that allow or require q.mode='binary'
 		if (!tw.q.mode) tw.q.mode = 'discrete'
-		if (!tw.q) tw.q = { type: 'values', isAtomic: true }
+
+		// set q.type based on q.mode
+		switch (tw.q.mode) {
+			case 'discrete':
+				if (!tw.q.type) tw.q.type = 'values'
+				break
+
+			case 'binary':
+				if (tw.term.values && Object.keys(tw.term.values).length == 2) {
+					// term only has 2 values, should not allow groupset
+					tw.q.type = 'values'
+				} else {
+					tw.q.type = 'custom-groupset'
+				}
+				break
+
+			default:
+				throw 'tw.q.mode not supported'
+		}
 
 		/* 
 			Pre-fill the tw.type, since it's required for ROUTING to the
@@ -111,13 +130,13 @@ export class QualitativeBase extends TwBase {
 		*/
 		switch (tw.type) {
 			case 'QualTWValues':
-				return QualValues.fill(tw)
+				return await QualValues.fill(tw)
 
 			case 'QualTWPredefinedGS':
-				return QualPredefinedGS.fill(tw)
+				return await QualPredefinedGS.fill(tw)
 
 			case 'QualTWCustomGS':
-				return QualCustomGS.fill(tw)
+				return await QualCustomGS.fill(tw, opts)
 
 			default:
 				throw `tw.type='${tw.type} (q.mode:q.type=${tw.q.mode}:${tw.q.type}' is not supported by QualitativeBase.fill()`
@@ -153,7 +172,7 @@ export class QualValues extends QualitativeBase {
 	}
 
 	// See the relevant comments in the QualitativeBase.fill() function above
-	static fill(tw: RawQualTWValues): QualTWValues {
+	static async fill(tw: RawQualTWValues): Promise<QualTWValues> {
 		if (!tw.type) tw.type = 'QualTWValues'
 		else if (tw.type != 'QualTWValues') throw `expecting tw.type='QualTWValues', got '${tw.type}'`
 
@@ -249,7 +268,7 @@ export class QualPredefinedGS extends QualitativeBase {
 		return this.#tw
 	}
 
-	static fill(tw: RawQualTWPredefinedGS): QualTWPredefinedGS {
+	static async fill(tw: RawQualTWPredefinedGS): Promise<QualTWPredefinedGS> {
 		if (!tw.type) tw.type = 'QualTWPredefinedGS'
 		else if (tw.type != 'QualTWPredefinedGS') throw `expecting tw.type='QualTWPredefinedGS', got '${tw.type}'`
 
@@ -309,35 +328,16 @@ export class QualCustomGS extends QualitativeBase {
 	}
 
 	// See the relevant comments in the QualitativeBase.fill() function above
-	static fill(tw: RawQualTWCustomGS): QualTWCustomGS {
+	static async fill(tw: RawQualTWCustomGS, opts: TwOpts): Promise<QualTWCustomGS> {
 		if (!tw.type) tw.type = 'QualTWCustomGS'
 		else if (tw.type != 'QualTWCustomGS') throw `expecting tw.type='QualTWCustomGS', got '${tw.type}'`
 
 		if (tw.q.type != 'custom-groupset') throw `expecting tw.q.type='custom-groupset', got '${tw.q.type}'`
 
 		const { term, q } = tw
-		if (!q.customset) throw `missing tw.q.customset`
+		if (!q.customset) await mayFillCustomSet(q, term, opts.vocabApi)
 		if (q.mode == 'binary') {
-			// skipping the following check to allow 3 groups to be specified by maySetTwoGroups() in client/plots/regression.inputs.term.js (1 for excluded group and 2 for included groups)
-			// TODO: refactor client/termsetting/handlers/qualitative.ts to not consider the first group (i.e. group.currentIdx === 0) as the excluded group, but rather to consider group.excluded=true as the excluded group
-			//if (q.customset.groups.length != 2) throw 'there must be exactly two groups'
-
-			// TODO:
-			// - add validation that both groups have samplecount > 0 or some other minimum count
-			// - rough example
-			// const data = vocabApi.getQualegories() or maybe this.countSamples()
-			// if (data.sampleCounts) {
-			// 	for (const grp of groupset.groups) {
-			// 		if (!data.sampleCounts.find(d => d.label === grp.name))
-			// 			throw `there are no samples for the required binary value=${grp.name}`
-			// 	}
-			// }
-			if (tw.term.type == 'categorical' && q.sampleCounts && tw.term.values) {
-				for (const key in tw.term.values) {
-					if (!q.sampleCounts.find(d => d.key === key))
-						throw `there are no samples for the required binary value=${key}`
-				}
-			}
+			if (q.customset.groups.filter((g: any) => !g.uncomputable).length != 2) throw 'there must be exactly two groups'
 		}
 		set_hiddenvalues(q, term as Term) // TODO: do not force type
 		// TODO: figure out not having to force the returned type
@@ -390,5 +390,47 @@ export class QualCustomGS extends QualitativeBase {
 			}
 		}
 		return { groups, values }
+	}
+}
+
+async function mayFillCustomSet(q, term, vocabApi) {
+	if (q.mode == 'binary') {
+		// binary mode, divide categories evenly into two groups
+		const data = await vocabApi.getCategories(term, vocabApi.state.termfilter.filter)
+		const sorted = [...data.lst].sort((a, b) => b.samplecount - a.samplecount)
+		const group1: GroupEntry = { name: 'Group 1', type: 'values', values: [] }
+		const group2: GroupEntry = { name: 'Group 2', type: 'values', values: [] }
+		let sum1 = 0
+		let sum2 = 0
+		for (const item of sorted) {
+			if (sum1 <= sum2) {
+				group1.values.push({ key: item.key, label: item.label })
+				sum1 += item.samplecount
+			} else {
+				group2.values.push({ key: item.key, label: item.label })
+				sum2 += item.samplecount
+			}
+		}
+
+		if (sum1 == 0 || sum2 == 0) throw 'both groups must have non-zero sample counts'
+
+		const customset: BaseGroupSet = {
+			// creating 3 groups instead of 2 groups since current groupset UI expects first group to be excluded group
+			// TODO: refactor client/termsetting/handlers/qualitative.ts to not consider the first group (i.e. group.currentIdx === 0) as the excluded group, but rather to consider group.excluded=true as the excluded group
+			groups: [
+				{
+					name: 'Excluded categories',
+					type: 'values',
+					values: [],
+					uncomputable: true
+				},
+				group1,
+				group2
+			]
+		}
+		q.customset = customset
+	} else {
+		// discrete mode, should already have custom set
+		throw 'tw.q.customset is required for q.mode=discrete'
 	}
 }
