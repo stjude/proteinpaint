@@ -192,7 +192,14 @@ export async function gdcBuildDictionary(ds) {
 		for (let i = 1; i < termLevels.length; i++) {
 			const parentId = termLevels.slice(0, i).join('.')
 			const currentId = parentId + '.' + termLevels[i]
-			const name = termLevels[i][0].toUpperCase() + termLevels[i].slice(1).replace(/_/g, ' ')
+			let name = termLevels[i][0].toUpperCase() + termLevels[i].slice(1).replace(/_/g, ' ')
+
+			// Per Executive Directive: https://gdc-ctds.atlassian.net/browse/FEAT-900
+			if (name == 'Gender') {
+				name = 'Sex'
+			} else if (name.toLowerCase().endsWith('gender')) {
+				name = name.slice(0, name.length - 6) + 'sex'
+			}
 
 			// always create an object for currentId
 			// when recording this term in id2term{}, force term id to be lower case
