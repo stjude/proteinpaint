@@ -45,7 +45,6 @@ curl --parallel \
 # Ensures index files are newer than data files so tabix won't break
 touch genomes/*.fai genomes/*.gzi
 touch anno/*.tbi
-touch hg38/*.csi
 
 # Releases the "hicFragment/" and "hicTAD/" folders under anno/
 cd anno
