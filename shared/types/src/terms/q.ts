@@ -22,7 +22,7 @@ export type CategoricalBaseQ = MinBaseQ & {
 	mode?: 'discrete' | 'binary'
 }
 
-export type RawValuesQ = MinBaseQ & { type?: 'values'; mode?: 'binary' }
+export type RawValuesQ = MinBaseQ & { type?: 'values'; mode?: 'binary' | 'discrete' }
 
 export type RawPredefinedGroupsetQ = MinBaseQ & {
 	type: 'predefined-groupset'
