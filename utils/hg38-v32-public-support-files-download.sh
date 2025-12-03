@@ -12,6 +12,8 @@ TP_FOLDER="${1:-$PWD}"
 mkdir -pv "$TP_FOLDER"
 cd "$TP_FOLDER"
 
+# Please note that following dbSNP slice file is only for testing your ProteinPaint server;
+# if you need genome-wide SNP information, download the full file from UCSC instead.
 curl --parallel \
     --remote-name-all --continue-at - --create-dirs --output-dir genomes/ \
     \
@@ -25,8 +27,6 @@ curl --parallel \
     https://proteinpaint.stjude.org/ppSupport/gencode.v32.hg38.gz \
     https://proteinpaint.stjude.org/ppSupport/gencode.v32.hg38.gz.tbi \
     https://proteinpaint.stjude.org/ppSupport/genes.hg38.mmrf.db \
-    `# Please note that following dbSNP slice file is only for testing your ProteinPaint server;` \
-    `# if you need genome-wide SNP information, download the full file from UCSC instead.` \
     https://proteinpaint.stjude.org/ppSupport/dbsnp-slice/dbsnp.hg38.bb \
     https://proteinpaint.stjude.org/ppSupport/rmsk.hg38.gz \
     https://proteinpaint.stjude.org/ppSupport/rmsk.hg38.gz.tbi \
@@ -37,8 +37,6 @@ curl --parallel \
     \
     --next --remote-name-all --continue-at - --create-dirs --output-dir anno/msigdb/ \
     https://proteinpaint.stjude.org/ppSupport/msigdb/db_2023.2.Hs \
-    \
-    --next --remote-name-all --continue-at - --create-dirs --output-dir hg38/ \
     \
     --next --remote-name-all --continue-at - --create-dirs --output-dir utils/meme/motif_databases/HUMAN/ \
     https://proteinpaint.stjude.org/ppSupport/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme \
