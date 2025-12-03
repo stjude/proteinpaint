@@ -86,10 +86,13 @@ class TdbConfigUiInit {
 				.style('max-width', '50px')
 				.style('height', 0)
 				.style('vertical-align', 'top')
-				.style('transition', '0.2s ease-in-out')
+				/** Commenting out `transition` attrs. Causes
+				 * the control inputs to flicker on close instead
+				 * of smoothly fading out. */
+				// .style('transition', '0.2s ease-in-out')
 				//.style('overflow', 'hidden')
 				.style('visibility', 'hidden')
-				.style('transition', '0.2s')
+			// .style('transition', '0.2s')
 		}
 
 		this.dom.table = this.dom.holder.append('table').attr('cellpadding', 0).attr('cellspacing', 0)
