@@ -183,19 +183,10 @@ export class QualValues extends QualitativeBase {
 		// GDC or other dataset may allow missing term.values
 		if (!term.values) term.values = {}
 
-		/*
-		logistic regression outcome variable will have q.mode='binary' and q.type='values' and will error out at here when Object.keys(tw.term.values).length != 2
-		for a quick fix, will skip this check
-		this will allow binary groups to be filled by maySetTwoGroups() in client/plots/regression.inputs.term.js
-		for long-term fix:
-			- In QualitativeBase.fill(), when tw.q.mode='binary', should route the tw to QualValues.fill() when Object.keys(tw.term.values).length == 2 to ensure that no groups are created
-			- Otherwise should route to QualCustomGS.fill() to fill 2 custom groups
-		*/
-		/*if (q.mode == 'binary') {
+		if (q.mode == 'binary') {
 			// a tw with q.type = 'values' can only have mode='binary' if it has exactly 2 values
-			if (tw.term.type == 'categorical' && Object.keys(tw.term.values).length != 2)
-				throw 'term.values must have exactly two keys'
-		}*/
+			if (Object.keys(term.values).length != 2) throw 'term.values must have two keys'
+		}
 
 		set_hiddenvalues(q, term as Term) // TODO: do not force type
 		// TODO: figure out not having to force the returned type
