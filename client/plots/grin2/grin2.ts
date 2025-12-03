@@ -125,20 +125,20 @@ class GRIN2 extends PlotBase implements RxComponent {
 				max: 10
 			},
 			{
-				label: 'Legend dot radius',
-				title: 'Set the radius of dots in the legend',
-				type: 'number',
-				chartType: 'manhattan',
-				settingsKey: 'legendDotRadius',
-				min: 1,
-				max: 10
-			},
-			{
 				label: 'Interactive dot radius',
 				title: 'Set the radius of interactive dots in the plot',
 				type: 'number',
 				chartType: 'manhattan',
 				settingsKey: 'interactiveDotRadius',
+				min: 1,
+				max: 10
+			},
+			{
+				label: 'Legend dot radius',
+				title: 'Set the radius of dots in the legend',
+				type: 'number',
+				chartType: 'manhattan',
+				settingsKey: 'legendDotRadius',
 				min: 1,
 				max: 10
 			}
@@ -1172,7 +1172,7 @@ export function getDefaultSettings(opts) {
 			// Legend settings
 			showLegend: true,
 			legendItemWidth: 80,
-			legendDotRadius: 3,
+			legendDotRadius: 2,
 			legendRightOffset: 15,
 			legendTextOffset: 12,
 			legendVerticalOffset: 4,
