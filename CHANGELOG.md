@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- GDC replace gender with sex in term name per executive directive
+
 
 ## 2.164.0
 

@@ -1,2 +1,1 @@
-Fixes:
-- GDC replace gender with sex in term name per executive directive
+
