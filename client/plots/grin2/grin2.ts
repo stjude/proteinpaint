@@ -104,8 +104,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				chartType: 'manhattan',
 				settingsKey: 'plotWidth',
 				min: 300,
-				max: 1500,
-				debounceInterval: 500
+				max: 3000
 			},
 			{
 				label: 'Plot height',
@@ -114,8 +113,34 @@ class GRIN2 extends PlotBase implements RxComponent {
 				chartType: 'manhattan',
 				settingsKey: 'plotHeight',
 				min: 150,
-				max: 800,
-				debounceInterval: 500
+				max: 800
+			},
+			{
+				label: 'PNG dot radius',
+				title: 'Set the radius of dots in the PNG plot',
+				type: 'number',
+				chartType: 'manhattan',
+				settingsKey: 'pngDotRadius',
+				min: 1,
+				max: 10
+			},
+			{
+				label: 'Legend dot radius',
+				title: 'Set the radius of dots in the legend',
+				type: 'number',
+				chartType: 'manhattan',
+				settingsKey: 'legendDotRadius',
+				min: 1,
+				max: 10
+			},
+			{
+				label: 'Interactive dot radius',
+				title: 'Set the radius of interactive dots in the plot',
+				type: 'number',
+				chartType: 'manhattan',
+				settingsKey: 'interactiveDotRadius',
+				min: 1,
+				max: 10
 			}
 		]
 
@@ -645,6 +670,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			response.requestWidth = requestData.width
 			response.requestHeight = requestData.height
 			response.requestPngDotRadius = requestData.pngDotRadius
+			response.requestLegendDotRadius = this.state.config.settings.manhattan?.legendDotRadius
 			this.lastApiResponse = response
 
 			this.renderResults(response)
@@ -716,6 +742,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			response.requestWidth = width
 			response.requestHeight = height
 			response.requestPngDotRadius = this.state.config.settings.manhattan?.pngDotRadius
+			response.requestLegendDotRadius = this.state.config.settings.manhattan?.legendDotRadius
 			this.lastApiResponse = response
 
 			// Only update the plot, keep the table
@@ -737,15 +764,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 	}
 
-	private updatePlotVisualsOnly() {
-		// Re-render plot with current data but new visual settings (no server call)
-		if (this.plotDiv && !this.plotDiv.empty() && this.lastApiResponse) {
-			this.plotDiv.selectAll('*').remove()
-			const manhattanSettings = this.state.config.settings.manhattan
-			plotManhattan(this.plotDiv, this.lastApiResponse, manhattanSettings, this.app)
-		}
-	}
-
 	private downloadPlot() {
 		const svgNode = this.plotDiv.select('svg').node() as SVGSVGElement
 
@@ -764,6 +782,15 @@ class GRIN2 extends PlotBase implements RxComponent {
 		to_svg(clone, `manhattan_plot_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}`)
 	}
 
+	private updatePlotVisualsOnly() {
+		// Re-renders plot instantly with new visual settings
+		if (this.plotDiv && !this.plotDiv.empty() && this.lastApiResponse) {
+			this.plotDiv.selectAll('*').remove()
+			const manhattanSettings = this.state.config.settings.manhattan
+			plotManhattan(this.plotDiv, this.lastApiResponse, manhattanSettings, this.app)
+		}
+	}
+
 	async main() {
 		// Initialize the table with the different data types and options
 		const config = structuredClone(this.state.config)
@@ -778,6 +805,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 			const currentWidth = this.state.config.settings.manhattan?.plotWidth
 			const currentHeight = this.state.config.settings.manhattan?.plotHeight
 			const currentPngDotRadius = this.state.config.settings.manhattan?.pngDotRadius
+			const currentLegendDotRadius = this.state.config.settings.manhattan?.legendDotRadius
+			const currentInteractiveDotRadius = this.state.config.settings.manhattan?.interactiveDotRadius
+			const visualSettingsChanged =
+				this.lastApiResponse.requestLegendDotRadius !== currentLegendDotRadius ||
+				this.lastApiResponse.requestInteractiveDotRadius !== currentInteractiveDotRadius
 
 			// Check if dimensions or PNG dot radius changed (require server re-render)
 			const dimensionsChanged =
@@ -788,6 +820,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 			if (dimensionsChanged) {
 				// Re-fetch with new dimensions/PNG dot radius (will use cache on backend)
 				await this.refetchWithNewDimensions(currentWidth, currentHeight)
+			} else if (visualSettingsChanged) {
+				// Only visual settings changed - re-render plot directly
+				this.updatePlotVisualsOnly()
 			}
 		}
 	}
@@ -798,7 +833,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			const plotData = result
 			const manhattanSettings = this.state.config.settings.manhattan
 
-			// Create a wrapper for the plot section (or reuse if exists)
+			// Create a wrapper for the plot section
 			if (!this.plotSection || this.plotSection.empty()) {
 				this.plotSection = this.dom.div.append('div').style('margin-top', '20px')
 
@@ -1147,9 +1182,6 @@ export function getDefaultSettings(opts) {
 			showInteractiveDots: true,
 			interactiveDotRadius: 2,
 			interactiveDotStrokeWidth: 1,
-
-			// Download options
-			showDownload: true,
 
 			// Max genes to show in table
 			maxGenesToShow: 500,
