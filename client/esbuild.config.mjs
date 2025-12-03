@@ -39,7 +39,7 @@ const ctx = await context({
 	sourcemap: true,
 	splitting: true,
 	format: 'esm',
-	plugins: [...libReplacers, dirnamePlugin(), cssLoader(), logRebuild()],
+	plugins: [...libReplacers, dirnamePlugin(), cssLoader(), logRebuild(), emitTsDeclaration()],
 	logLevel: 'warning'
 })
 
@@ -212,6 +212,22 @@ function cssLoader() {
 				`
 
 				return { contents, loader: 'js' }
+			})
+		}
+	}
+}
+
+function emitTsDeclaration() {
+	const dtsFile = path.join(__dirname, 'dist/app.d.ts')
+	return {
+		name: 'emitTsDeclaration',
+		setup({ onEnd }) {
+			onEnd(result => {
+				if (!fs.existsSync(dtsFile)) {
+					console.log(`emitting ${dtsFile} ...`)
+					fs.writeFileSync(dtsFile, `declare module '@sjcrh/proteinpaint-client'`, { encoding: 'utf8' })
+				}
+				if (ENV != 'dev') ctx.dispose()
 			})
 		}
 	}

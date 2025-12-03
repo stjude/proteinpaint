@@ -6,6 +6,7 @@
   "main": "dist/app.js",
   "module": "dist/app.js",
   "browser": "dist/app.js",
+  "types": "dist/app.d.ts",
   "imports": {
     "#common/*": "./common/*.js",
     "#dom": "./dom/index.ts",
