@@ -78,11 +78,12 @@ class TdbPlotControls {
 	}
 
 	setDom() {
-		const topbar = this.opts.holder.append('div')
-		const config_div = this.opts.holder.append('div')
+		const testId = `sjpp-plot-controls-${this.id}`
+		const topbar = this.opts.holder.append('div').attr('data-testid', `${testId}-topbar`)
+		const config_div = this.opts.holder.append('div').attr('data-testid', `${testId}-config`)
 
 		this.dom = {
-			holder: this.opts.holder.style('vertical-align', 'top').style('transition', '0.5s'),
+			holder: this.opts.holder.style('vertical-align', 'top').attr('data-testid', `${testId}-holder`),
 			// these are listed in the displayed top-down order of input elements
 			topbar,
 			config_div

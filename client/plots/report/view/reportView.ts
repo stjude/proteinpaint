@@ -10,10 +10,7 @@ export class ReportView {
 		this.opts = report.opts
 		this.report = report
 		const leftDiv = this.opts.holder.insert('div').style('display', 'inline-block')
-		const controlsHolder = leftDiv
-			.insert('div')
-			.style('display', 'inline-block')
-			.attr('class', 'pp-termdb-plot-controls')
+		const controlsHolder = leftDiv.insert('div').style('display', 'inline-block')
 		const mainDiv = this.opts.holder
 			.insert('div')
 			.style('display', 'inline-block')
