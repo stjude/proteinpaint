@@ -168,7 +168,7 @@ class CorrelationVolcano extends PlotBase implements RxComponent {
 		this.components.controls = await controlsInit({
 			app: this.app,
 			id: this.id,
-			holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
+			holder: this.dom.controls.style('display', 'inline-block'),
 			inputs
 		})
 

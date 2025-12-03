@@ -23,10 +23,7 @@ export class ScatterView {
 		this.scatter = scatter
 
 		const leftDiv = this.opts.holder.insert('div').style('display', 'inline-block')
-		const controlsHolder = leftDiv
-			.insert('div')
-			.style('display', 'inline-block')
-			.attr('class', 'pp-termdb-plot-controls')
+		const controlsHolder = leftDiv.insert('div').style('display', 'inline-block')
 
 		const rightDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const loadingDiv = rightDiv
