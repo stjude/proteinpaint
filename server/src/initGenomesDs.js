@@ -6,7 +6,6 @@ import { checkDependenciesAndVersions } from './checkDependenciesAndVersions.js'
 import { initLegacyDataset } from './initLegacyDataset.js'
 import serverconfig from './serverconfig.js'
 import { server_init_db_queries, listDbTables } from './termdb.server.init.ts'
-import { server_updateAttr } from './dsUpdateAttr.js'
 import { mds_init } from './mds.init.js'
 import * as mds3_init from './mds3.init.js'
 import { parse_textfilewithheader } from './parse_textfilewithheader.js'
@@ -152,31 +151,7 @@ export async function initGenomesDs(serverconfig) {
 		}
 
 		if (g.updateAttr) {
-			for (const row of g.updateAttr) {
-				let pointer = g2
-				for (const [i, field] of row.entries()) {
-					// to guard against invalid keys, could be manual errors or updated dataset spec
-					if (!pointer) continue
-
-					if (typeof field == 'object') {
-						// apply the key-value overrides to the object that is pointed to
-						for (const k in field) {
-							pointer[k] = field[k]
-						}
-					} else {
-						if (typeof pointer[field] == 'string') {
-							//terminal
-							if (row[i + 1]) {
-								pointer[field] = row[i + 1]
-							}
-							break
-						}
-
-						// reset the reference to a subnested object
-						pointer = pointer[field]
-					}
-				}
-			}
+			utils.doUpdateAttr(g2, g.updateAttr)
 		}
 		if (g?.hideOnClient) {
 			g2.hideOnClient = g.hideOnClient
@@ -436,7 +411,11 @@ export async function initGenomesDs(serverconfig) {
 					? await _ds.default(common, { serverconfig, clinsig })
 					: _ds.default || _ds
 
-			server_updateAttr(ds, d)
+			if (d.updateAttr) {
+				utils.doUpdateAttr(ds, d.updateAttr)
+				// do not re-update the attributes in case a dataset is reloaded, by itself without a full server restart
+				if (ds.label) delete d.updateAttr
+			}
 			ds.noHandleOnClient = d.noHandleOnClient
 			ds.label = d.name
 			ds.genomename = genomename

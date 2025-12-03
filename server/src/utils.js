@@ -896,3 +896,27 @@ export const SAMTOOLS_ERR_MSG = {
 	// from "samtools quickcheck"
 	quickcheck: 'was missing EOF block when one should be present.'
 }
+
+// obj: object to be updated
+// updates: array of path sets
+export function doUpdateAttr(obj, updates) {
+	if (!Array.isArray(updates)) throw 'updates[] path set is not array'
+	for (const upd of updates) {
+		if (!Array.isArray(upd)) throw 'one path set is not an array'
+		if (upd.length < 2) throw 'one path set length<2'
+		const value = upd[upd.length - 1]
+		const path = upd.slice(0, -1)
+		let o = obj
+		for (let i = 0; i < path.length - 1; i++) {
+			o = o[path[i]]
+			if (o == undefined) {
+				// invalid path
+				break
+			}
+		}
+		if (o) {
+			// target is valid. update
+			o[path[path.length - 1]] = value
+		}
+	}
+}

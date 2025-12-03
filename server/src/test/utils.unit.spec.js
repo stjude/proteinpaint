@@ -9,6 +9,7 @@ stripJsScript
 cachedFetch
 validateRglst
 illegalpath()
+doUpdateAttr
 */
 
 tape('\n', function (test) {
@@ -223,6 +224,37 @@ tape('illegalpath()', test => {
 	// since serverconfig is loaded once in the same runtime,
 	// must clear whitelistPaths that could affect other unit or integration specs
 	delete serverconfig.whiteListPaths
+
+	test.end()
+})
+
+tape('doUpdateAttr', test => {
+	{
+		const obj = { key1: 'value1' }
+		utils.doUpdateAttr(obj, [['key1', 'xxx']])
+		test.equal(obj.key1, 'xxx', 'key1 updated to "xxx"')
+		utils.doUpdateAttr(obj, [['key1', 1]])
+		test.equal(obj.key1, 1, 'key1 updated to 1')
+		utils.doUpdateAttr(obj, [['key1', 0]])
+		test.equal(obj.key1, 0, 'key1 updated to 0')
+		utils.doUpdateAttr(obj, [['key1', undefined]]) // deletion
+		test.equal(obj.key1, undefined, 'key1 is set to undefined')
+	}
+	{
+		// compound obj and multi line update instruction with array
+		const obj = {
+			key1: { key2: { key3: 'value1' } },
+			key4: [{ key5: 'value5' }, { key6: 'value6' }]
+		}
+		utils.doUpdateAttr(obj, [
+			['key1', 'key2', 'key3', 'xxx'],
+			['key4', 1, 'key6', 'zzz']
+		])
+		test.equal(obj.key1.key2.key3, 'xxx', 'key1.key2.key3 updated to "xxx"')
+		test.equal(obj.key4[1].key6, 'zzz', 'key4[1].key6 updated to "zzz"')
+		utils.doUpdateAttr(obj, [['key1', 'key2', 'xxx']]) // truncation
+		test.equal(obj.key1.key2, 'xxx', 'key1.key2 updated to "xxx" replacing {key3:value}')
+	}
 
 	test.end()
 })
