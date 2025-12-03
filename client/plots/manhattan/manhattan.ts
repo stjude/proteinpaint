@@ -1,7 +1,6 @@
 import { scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
-import { Menu, table2col, icons, axisstyle } from '#dom'
-import { to_svg } from '#src/client'
+import { Menu, table2col, axisstyle } from '#dom'
 
 /**
  * Creates an interactive Manhattan plot on top of a PNG background plot image.
@@ -9,10 +8,9 @@ import { to_svg } from '#src/client'
  * @param {Object} div - div element to contain the plot
  * @param {Object} data - Plot data
  * @param {Object} settings - Display configuration options:
- *   @param {number} [settings.plotWidth=500] - Plot area width
- *   @param {number} [settings.plotHeight=200] - Plot area height
+ *   @param {number} [settings.plotWidth=1000] - Plot area width
+ *   @param {number} [settings.plotHeight=400] - Plot area height
  *   @param {boolean} [settings.showLegend=true] - Whether to display legend
- *   @param {boolean} [settings.showDownload=true] - Whether to show download button
  *   @param {boolean} [settings.showInteractiveDots=true] - Whether to show hoverable data points
  *   @param {number} [settings.yAxisX=70] - Y-axis positioning
  *   @param {number} [settings.yAxisSpace=40] - Space between Y-axis and plot
@@ -45,9 +43,6 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	settings = {
 		...settings
 	}
-
-	// Set the  positioning up for download button to work properly
-	div.style('position', 'relative')
 
 	// Create tooltip menu
 	const geneTip = new Menu({ padding: '' })
@@ -216,37 +211,6 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		.attr('font-weight', 'bold')
 		.attr('font-size', `${settings.fontSize + 2}px`)
 		.text('Manhattan Plot')
-
-	if (settings.showDownload) {
-		const downloadDiv = div
-			.append('div')
-			.style('position', 'absolute')
-			.style('top', '5px')
-			.style('left', `${settings.yAxisX + settings.yAxisSpace + 108}px`)
-
-		icons['download'](downloadDiv, {
-			width: 16,
-			height: 16,
-			title: 'Download Manhattan plot',
-			handler: () => {
-				// Clone the SVG to avoid modifying the displayed version
-				const svgNode = svg.node() as SVGSVGElement
-				const clone = svgNode.cloneNode(true) as SVGSVGElement
-
-				// Get the bounding box of all content
-				const bbox = svgNode.getBBox()
-
-				// Set the clone's dimensions to match the full content
-				clone.setAttribute('width', bbox.width.toString())
-				clone.setAttribute('height', bbox.height.toString())
-				clone.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`)
-
-				to_svg(clone, `manhattan_plot_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}`, {
-					apply_dom_styles: true
-				})
-			}
-		})
-	}
 
 	// Generate legend data
 	const mutationTypes = [...new Set(data.plotData.points.map((p: any) => p.type))]

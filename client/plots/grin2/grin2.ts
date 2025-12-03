@@ -9,6 +9,7 @@ import { get$id } from '#termsetting'
 import { PlotBase } from '#plots/PlotBase.ts'
 import { plotManhattan, createLollipopFromGene } from '#plots/manhattan/manhattan.ts'
 import { controlsInit } from '#plots/controls.js'
+import { to_svg } from '#src/client'
 
 class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
@@ -127,6 +128,10 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 		// Hide controls initially
 		this.dom.plotControls.style('display', 'none')
+
+		this.components.controls.on('downloadClick.grin2', () => {
+			this.downloadPlot()
+		})
 	}
 
 	getState(appState: MassState) {
@@ -741,6 +746,24 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 	}
 
+	private downloadPlot() {
+		const svgNode = this.plotDiv.select('svg').node() as SVGSVGElement
+
+		// Clone the SVG to avoid modifying the displayed version
+		const clone = svgNode.cloneNode(true) as SVGSVGElement
+
+		// Get the bounding box of all content
+		const bbox = svgNode.getBBox()
+
+		// Set the clone's dimensions to match the full content
+		clone.setAttribute('width', bbox.width.toString())
+		clone.setAttribute('height', bbox.height.toString())
+		clone.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`)
+
+		// Download the SVG
+		to_svg(clone, `manhattan_plot_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}`)
+	}
+
 	async main() {
 		// Initialize the table with the different data types and options
 		const config = structuredClone(this.state.config)
@@ -770,14 +793,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 	}
 
 	private renderResults(result: any) {
-		// // Display Manhattan plot
-		// if (result.pngImg) {
-		// 	const plotData = result
-		// 	const plotDiv = this.dom.div
-		// 	const manhattanSettings = this.state.config.settings.manhattan
-		// 	plotManhattan(plotDiv, plotData, manhattanSettings, this.app)
-		// }
-
 		// Display Manhattan plot
 		if (result.pngImg) {
 			const plotData = result
