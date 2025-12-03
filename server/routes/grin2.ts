@@ -9,6 +9,7 @@ import { get_samples } from '#src/termdb.sql.js'
 import { read_file, file_is_readable } from '#src/utils.js'
 import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dt2lesion, optionToDt, formatElapsedTime } from '#shared'
 import crypto from 'crypto'
+import { promises as fs } from 'fs'
 
 /**
  * General GRIN2 analysis route
@@ -84,12 +85,13 @@ function init({ genomes }) {
 	}
 }
 
-// Function to generate a unique cache file name for each GRIN2 request
-function generateCacheFileName(): string {
-	// Generate 16 bytes of random data = 32 hex characters
-	const randomHex = crypto.randomBytes(16).toString('hex')
-	const cacheFileName = `grin2_results_${randomHex}.txt`
-	return path.join(serverconfig.cachedir, 'grin2', cacheFileName)
+async function fileExistsAndReadable(filePath: string): Promise<boolean> {
+	try {
+		await fs.access(filePath, fs.constants.R_OK)
+		return true
+	} catch {
+		return false
+	}
 }
 
 // Building the lesion map to send to python
@@ -121,8 +123,50 @@ function getCnvLesionType(isGain: boolean): string {
 	return lesionType.lesionType
 }
 
+// Build the subset of the request that actually affects the GRIN2 analysis
+// (NOT the plot-only settings).
+function buildCacheKeyRequest(request: GRIN2Request): any {
+	// Shallow copy so we don't mutate the original request
+	const analysisRequest: any = { ...request }
+
+	// Strip plot-only / cosmetic / transient fields
+	delete analysisRequest.width
+	delete analysisRequest.height
+	delete analysisRequest.devicePixelRatio
+	delete analysisRequest.pngDotRadius
+	delete analysisRequest.lesionTypeColors
+	delete analysisRequest.qValueThreshold
+	delete analysisRequest.cacheFileName // ignore any user-provided value
+
+	return analysisRequest
+}
+
+// Stable stringify so the same logical request always hashes identically
+function stableStringify(value: any): string {
+	if (value === null || typeof value !== 'object') return JSON.stringify(value)
+
+	if (Array.isArray(value)) {
+		return '[' + value.map(v => stableStringify(v)).join(',') + ']'
+	}
+
+	const keys = Object.keys(value).sort()
+	return '{' + keys.map(k => JSON.stringify(k) + ':' + stableStringify(value[k])).join(',') + '}'
+}
+
+// Generate a deterministic cache filename for a GRIN2 analysis request
+function generateCacheFileName(request: GRIN2Request): string {
+	const cacheKeyObject = buildCacheKeyRequest(request)
+	const cacheKeyString = stableStringify(cacheKeyObject)
+
+	// 32-hex-character hash, same length as your old random id
+	const hash = crypto.createHash('sha256').update(cacheKeyString).digest('hex').slice(0, 32)
+	const cacheFileName = `grin2_results_${hash}.txt`
+	return path.join(serverconfig.cachedir, 'grin2', cacheFileName)
+}
+
 async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Response> {
 	const startTime = Date.now()
+	const cacheFileNameCandidate = generateCacheFileName(request)
 
 	// Cache file check
 	let cacheFileName: string
@@ -133,10 +177,13 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	let processingSummary: any = undefined
 
 	// Check if we're re-plotting with an existing cache file
-	if (request.cacheFileName && (await file_is_readable(request.cacheFileName))) {
-		// Use existing cache file
-		mayLog(`[GRIN2] Re-plotting with existing cache: ${request.cacheFileName}`)
-		cacheFileName = request.cacheFileName
+	mayLog(`[GRIN2] Checking for existing cache file...`)
+	mayLog(`[GRIN2] Provided cache file: ${request.cacheFileName || 'none'}`)
+	// mayLog(`[GRIN2] Cache file path: ${await file_is_readable(request.cacheFileName || '')}`)
+	if (await fileExistsAndReadable(cacheFileNameCandidate)) {
+		// Use existing cache file (no Python)
+		mayLog(`[GRIN2] Re-plotting with existing cache: ${cacheFileNameCandidate}`)
+		cacheFileName = cacheFileNameCandidate
 
 		// Still need chromosome list for Rust
 		for (const c in g.majorchr) {
@@ -146,9 +193,9 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 			chromosomelist[c] = g.majorchr[c]
 		}
 
-		// Create minimal resultData - not updating gene table on re-plot
+		// We don't recompute top table on re-plot
 		resultData = {
-			cacheFileName: cacheFileName,
+			cacheFileName,
 			topGeneTable: null,
 			totalGenes: null,
 			showingTop: null
@@ -197,7 +244,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 			genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 			chromosomelist: {} as { [key: string]: number },
 			lesion: JSON.stringify(lesions),
-			cacheFileName: generateCacheFileName(),
+			cacheFileName: generateCacheFileName(request),
 			availableDataTypes: availableDataTypes,
 			maxGenesToShow: request.maxGenesToShow,
 			lesionTypeMap: buildLesionTypeMap(availableDataTypes)

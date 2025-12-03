@@ -10,6 +10,15 @@ import { PlotBase } from '#plots/PlotBase.ts'
 import { plotManhattan, createLollipopFromGene } from '#plots/manhattan/manhattan.ts'
 import { controlsInit } from '#plots/controls.js'
 import { to_svg } from '#src/client'
+import {
+	type GRIN2PlotControlInput,
+	PLOT_WIDTH_MIN,
+	PLOT_WIDTH_MAX,
+	PLOT_HEIGHT_MIN,
+	PLOT_HEIGHT_MAX,
+	DOT_RADIUS_MIN,
+	DOT_RADIUS_MAX
+} from './GRIN2Types'
 
 class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
@@ -95,63 +104,73 @@ class GRIN2 extends PlotBase implements RxComponent {
 		if (opts.header) this.dom.header = opts.header.text('GRIN2')
 	}
 
-	async setControls() {
-		const inputs = [
+	private async setControls() {
+		const baseNumberInput = {
+			type: 'number' as const,
+			chartType: 'manhattan' as const
+		}
+
+		const inputs: GRIN2PlotControlInput[] = [
 			{
+				...baseNumberInput,
 				label: 'Plot width',
 				title: 'Set the width of the Manhattan plot',
-				type: 'number',
-				chartType: 'manhattan',
 				settingsKey: 'plotWidth',
-				min: 300,
-				max: 3000
+				min: PLOT_WIDTH_MIN,
+				max: PLOT_WIDTH_MAX,
+				step: 50
 			},
 			{
+				...baseNumberInput,
 				label: 'Plot height',
 				title: 'Set the height of the Manhattan plot',
-				type: 'number',
-				chartType: 'manhattan',
 				settingsKey: 'plotHeight',
-				min: 150,
-				max: 800
+				min: PLOT_HEIGHT_MIN,
+				max: PLOT_HEIGHT_MAX,
+				step: 25
 			},
 			{
+				...baseNumberInput,
 				label: 'PNG dot radius',
 				title: 'Set the radius of dots in the PNG plot',
-				type: 'number',
-				chartType: 'manhattan',
 				settingsKey: 'pngDotRadius',
-				min: 1,
-				max: 10
+				min: DOT_RADIUS_MIN,
+				max: DOT_RADIUS_MAX,
+				step: 1
 			},
 			{
+				...baseNumberInput,
 				label: 'Interactive dot radius',
 				title: 'Set the radius of interactive dots in the plot',
-				type: 'number',
-				chartType: 'manhattan',
 				settingsKey: 'interactiveDotRadius',
-				min: 1,
-				max: 10
+				min: DOT_RADIUS_MIN,
+				max: DOT_RADIUS_MAX,
+				step: 1
 			},
 			{
+				...baseNumberInput,
 				label: 'Legend dot radius',
 				title: 'Set the radius of dots in the legend',
-				type: 'number',
-				chartType: 'manhattan',
 				settingsKey: 'legendDotRadius',
-				min: 1,
-				max: 10
+				min: DOT_RADIUS_MIN,
+				max: DOT_RADIUS_MAX,
+				step: 1
 			}
 		]
+
+		this.dom.plotControls.style('display', 'inline-block').style('vertical-align', 'top')
 
 		this.components.controls = await controlsInit({
 			app: this.app,
 			id: this.id,
 			holder: this.dom.plotControls,
-			inputs
+			inputs,
+			title: 'Manhattan Plot Controls',
+			isOpen: false,
+			showTopBar: true
 		})
 
-		// Hide controls initially
+		// Hidden until the first successful run; after that, just flip display to 'block'
 		this.dom.plotControls.style('display', 'none')
 
 		this.components.controls.on('downloadClick.grin2', () => {

@@ -51,7 +51,6 @@ export interface GRIN2Opts {
 	showInteractiveDots?: boolean
 	interactiveDotRadius?: number
 	interactiveDotStrokeWidth?: number
-	showDownload?: boolean
 	/** Override default settings */
 	overrides?: Partial<GRIN2Settings>
 	/** Any additional options */
@@ -96,3 +95,31 @@ export interface GRIN2Settings {
 		[key: string]: any
 	}
 }
+
+/** Keys we expose as numeric controls in the Manhattan plot burger menu */
+export type GRIN2PlotSettingKey =
+	| 'plotWidth'
+	| 'plotHeight'
+	| 'pngDotRadius'
+	| 'interactiveDotRadius'
+	| 'legendDotRadius'
+
+/** Descriptor for a single burger-menu control */
+export interface GRIN2PlotControlInput {
+	label: string
+	title: string
+	type: 'number'
+	chartType: 'manhattan'
+	settingsKey: GRIN2PlotSettingKey
+	min: number
+	max: number
+	step?: number
+}
+
+/** Shared bounds for plot controls */
+export const PLOT_WIDTH_MIN = 300
+export const PLOT_WIDTH_MAX = 3000
+export const PLOT_HEIGHT_MIN = 150
+export const PLOT_HEIGHT_MAX = 800
+export const DOT_RADIUS_MIN = 1
+export const DOT_RADIUS_MAX = 10
