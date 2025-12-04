@@ -223,11 +223,11 @@ function emitTsDeclaration() {
 		name: 'emitTsDeclaration',
 		setup({ onEnd }) {
 			onEnd(result => {
+				if (ENV != 'prod') return
 				if (!fs.existsSync(dtsFile)) {
 					console.log(`emitting ${dtsFile} ...`)
 					fs.writeFileSync(dtsFile, `declare module '@sjcrh/proteinpaint-client'`, { encoding: 'utf8' })
 				}
-				if (ENV != 'dev') ctx.dispose()
 			})
 		}
 	}
