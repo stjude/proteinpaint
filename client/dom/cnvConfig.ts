@@ -1,17 +1,27 @@
 import { Menu } from '../dom/menu'
 
 /* TODOs
+- document arg
 - are there cases when some cutoffs are defined (e.g. cnvGainCutoff and cnvLossCutoff), but not others (e.g. cnvMaxLength)?
 */
 
-export async function renderCnvConfig(arg) {
+export function renderCnvConfig(arg) {
 	const div = arg.holder
 	div.style('margin', '10px')
 	const tip = new Menu({ padding: '5px' })
 
 	div.append('div').style('margin-bottom', '10px').text('Specify criteria for a CNV alteration:')
 
-	const settingsDiv = div.append('div').style('margin-left', '10px')
+	const settingsDiv = div.append('div').style('margin-left', '10px') // TODO: may rename settingsDiv
+
+	let WTtoggle = true
+	if (Object.keys(arg).includes('WTtoggle')) {
+		if (typeof arg.WTtoggle === 'boolean') {
+			WTtoggle = arg.WTtoggle
+		} else {
+			throw 'arg.WTtoggle must be a boolean value'
+		}
+	}
 
 	// CNV gain input
 	const cnvGainCutoff = arg.cnvGainCutoff
@@ -92,21 +102,24 @@ export async function renderCnvConfig(arg) {
 		})
 
 	// CNV wildtype checkbox
-	const cnvWT = arg.cnvWT
-	const wtDiv = settingsDiv.append('div').style('margin-bottom', '5px')
-	wtDiv.append('span').style('margin-right', '3px').style('opacity', 0.7).text('Wildtype')
-	const wtCheckbox = wtDiv
-		.append('input')
-		.attr('type', 'checkbox')
-		.property('checked', cnvWT)
-		.style('vertical-align', 'middle')
-		.style('margin-right', '3px')
-	wtDiv
-		.append('span')
-		.style('opacity', 0.7)
-		.style('font-size', '0.7em')
-		.style('margin-left', '10px')
-		.text('wildtype for alteration specified above')
+	let wtCheckbox
+	if (WTtoggle) {
+		const cnvWT = arg.cnvWT
+		const wtDiv = settingsDiv.append('div').style('margin-bottom', '5px')
+		wtDiv.append('span').style('margin-right', '3px').style('opacity', 0.7).text('Wildtype')
+		wtCheckbox = wtDiv
+			.append('input')
+			.attr('type', 'checkbox')
+			.property('checked', cnvWT)
+			.style('vertical-align', 'middle')
+			.style('margin-right', '3px')
+		wtDiv
+			.append('span')
+			.style('opacity', 0.7)
+			.style('font-size', '0.7em')
+			.style('margin-left', '10px')
+			.text('wildtype for alteration specified above')
+	}
 
 	// Apply button
 	div
@@ -118,12 +131,12 @@ export async function renderCnvConfig(arg) {
 		.style('font-size', '.8em')
 		.text('APPLY')
 		.on('click', () => {
-			const config = {
+			const config: any = {
 				cnvGainCutoff: Number(cnvGainInput.property('value')),
 				cnvLossCutoff: Number(cnvLossInput.property('value')),
-				cnvMaxLength: Number(cnvLengthInput.property('value')),
-				cnvWT: wtCheckbox.property('checked')
+				cnvMaxLength: Number(cnvLengthInput.property('value'))
 			}
+			if (WTtoggle) config.cnvWT = wtCheckbox.property('checked')
 			arg.callback(config)
 		})
 }
