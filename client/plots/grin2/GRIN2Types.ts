@@ -97,12 +97,7 @@ export interface GRIN2Settings {
 }
 
 /** Keys we expose as numeric controls in the Manhattan plot burger menu */
-export type GRIN2PlotSettingKey =
-	| 'plotWidth'
-	| 'plotHeight'
-	| 'pngDotRadius'
-	| 'interactiveDotRadius'
-	| 'legendDotRadius'
+export type GRIN2PlotSettingKey = 'plotWidth' | 'plotHeight' | 'pngDotRadius'
 
 /** Descriptor for a single burger-menu control */
 export interface GRIN2PlotControlInput {

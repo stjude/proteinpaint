@@ -18,12 +18,10 @@ import { Menu, table2col, axisstyle } from '#dom'
  *   @param {number} [settings.fontSize=12] - Base font size
  *   @param {number} [settings.pngDotRadius=2] - Radius of dots in PNG plot
  *   @param {number} [settings.legendItemWidth=80] - Horizontal space per legend item
- *   @param {number} [settings.legendDotRadius=3] - Size of legend dots
  *   @param {number} [settings.legendRightOffset=15] - Offset from right edge
  *   @param {number} [settings.legendTextOffset=12] - Distance between dot and text
  *   @param {number} [settings.legendVerticalOffset=4] - Vertical offset for legend items
  *   @param {number} [settings.legendFontSize=12] - Font size for legend text
- *   @param {number} [settings.interactiveDotRadius=2] - Radius of interactive dots
  *   @param {number} [settings.xAxisLabelPad=20] - Amount of padding we give for x-axis title padding
  *   @param {number} [settings.interactiveDotStrokeWidth=1] - Stroke width for interactive dots
  *   @param {string} [settings.axisColor='#545454'] - Color for y-axis
@@ -135,7 +133,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 			.append('circle')
 			.attr('cx', d => d.pixel_x / devicePixelRatio)
 			.attr('cy', d => d.pixel_y / devicePixelRatio)
-			.attr('r', settings.interactiveDotRadius)
+			.attr('r', settings.pngDotRadius)
 			.attr('fill-opacity', 0)
 			.attr('stroke', 'black')
 			.attr('stroke-width', settings.interactiveDotStrokeWidth)
@@ -241,7 +239,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				.append('circle')
 				.attr('cx', x + 8)
 				.attr('cy', legendY)
-				.attr('r', settings.legendDotRadius)
+				.attr('r', settings.pngDotRadius)
 				.attr('fill', item.color)
 
 			// Legend text

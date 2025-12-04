@@ -85,6 +85,7 @@ function init({ genomes }) {
 	}
 }
 
+// Check if cache file exists and is readable (need the boolean return)
 async function fileExistsAndReadable(filePath: string): Promise<boolean> {
 	try {
 		await fs.access(filePath, fs.constants.R_OK)
@@ -123,31 +124,31 @@ function getCnvLesionType(isGain: boolean): string {
 	return lesionType.lesionType
 }
 
+// Generate a unique cache file name for GRIN2 results
 function generateCacheFileName(): string {
-	const randomHex = crypto.randomBytes(16).toString('hex') // 32 hex chars
+	const randomHex = crypto.randomBytes(16).toString('hex')
 	const cacheFileName = `grin2_results_${randomHex}.txt`
 	return path.join(serverconfig.cachedir, 'grin2', cacheFileName)
 }
 
+// Core GRIN2 analysis function
 async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Response> {
 	const startTime = Date.now()
 
-	// May be undefined for a brand new analysis
-	let cacheFileName = request.cacheFileName || ''
+	let cacheFileName = request.cacheFileName
 	let resultData: any
 	let processingTime = 0
 	let grin2AnalysisTime = 0
 	let chromosomelist: { [key: string]: number } = {}
 	let processingSummary: any = undefined
 
-	// --- Decide: re-plot vs full pipeline ---
+	// Re-plot vs full pipeline
 	mayLog('[GRIN2] Checking for existing cache file...')
 	mayLog(`[GRIN2] Provided cache file: ${cacheFileName || 'none'}`)
 
 	if (cacheFileName && (await fileExistsAndReadable(cacheFileName))) {
-		// -----------------------------
-		// RE-PLOT ONLY (no Python)
-		// -----------------------------
+		// Re-plot only
+
 		mayLog(`[GRIN2] Re-plotting with existing cache: ${cacheFileName}`)
 
 		// Still need chromosome list for Rust
@@ -166,9 +167,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 			showingTop: null
 		}
 	} else {
-		// -----------------------------
-		// FULL ANALYSIS PIPELINE
-		// -----------------------------
+		// Full analysis pipeline
 		mayLog('[GRIN2] Running full GRIN2 analysis pipeline')
 
 		// Always start a new cache file for a new analysis run
@@ -214,7 +213,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 			genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 			chromosomelist: {} as { [key: string]: number },
 			lesion: JSON.stringify(lesions),
-			cacheFileName, // <-- use the new per-analysis cache file
+			cacheFileName,
 			availableDataTypes,
 			maxGenesToShow: request.maxGenesToShow,
 			lesionTypeMap: buildLesionTypeMap(availableDataTypes)
@@ -245,17 +244,12 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 
 		resultData = JSON.parse((pyResult as any).stdout ?? pyResult)
 
-		// Prefer Python-reported cacheFileName if present
 		if (resultData.cacheFileName) {
 			cacheFileName = resultData.cacheFileName
-		} else {
-			resultData.cacheFileName = cacheFileName
 		}
 	}
 
-	// -----------------------------
 	// Step 5: Prepare Rust input
-	// -----------------------------
 	const rustInput = {
 		file: cacheFileName,
 		type: 'grin2',
@@ -541,7 +535,7 @@ async function processSampleMlst(
 						// Multiple lesions (two breakpoints)
 						for (const lesion of les as string[][]) {
 							sampleLesions.push(lesion)
-							sv.count++ // ← Increment for each lesion added
+							sv.count++
 						}
 					} else {
 						// Single lesion
