@@ -1,1 +1,2 @@
-
+Features:
+- GRIN2: Enabled user customization of Manhattan plot width, height, and dot size. Other minor cleanups.

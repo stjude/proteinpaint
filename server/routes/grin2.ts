@@ -35,6 +35,7 @@ import { promises as fs } from 'fs'
  * 4. Convert filtered data to lesion format and apply filter caps per type. Note: For CNV, count gains and losses separately but share capped status and sample count
  * 5. Pass lesion data, maxGenesToShow, and cacheFileName to Python for GRIN2 statistical analysis and then pass device pixel ratio, width, and height to Rust for plot generation
  * 6. Return Manhattan plot from Rust as base64 string, top gene table, timing information, statistically significant results that are displayed as an interactive svg, and cache file name for future use
+ * 7. On subsequent requests with the same cache file name, skip steps 1-4 and re-plot directly from the cache file instead of re-running the full analysis
  */
 
 // Constants & types
