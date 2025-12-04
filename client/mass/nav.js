@@ -79,7 +79,7 @@ class TdbNav {
 				filter: filterRxCompInit({
 					app: this.app,
 					vocabApi: this.app.vocabApi,
-					holder: this.dom.subheader.filter.append('div'),
+					holder: this.dom.subheader.filter.append('div').style('margin', '5px'),
 					hideLabel: this.opts.header_mode === 'with_tabs',
 					emptyLabel: '+Add new filter',
 					callback: filter => {
@@ -247,11 +247,7 @@ function setRenderers(self) {
 
 			helpDiv: controlsDiv.append('div').style('display', 'none'),
 			sessionElapsedMessageDiv: controlsDiv.append('div').style('display', 'none'),
-			subheaderDiv: self.opts.holder
-				.append('div')
-				.style('display', 'block')
-				.style('padding-top', '5px')
-				.style('border-bottom', '1px solid #000'),
+			subheaderDiv: self.opts.holder.append('div').style('display', 'block').style('border-bottom', '1px solid #000'),
 			messageDiv: self.opts.holder.append('div').style('margin', '30px').style('display', 'none'),
 			titleDiv,
 			tip: new Menu({ padding: '5px' })

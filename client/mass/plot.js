@@ -151,11 +151,8 @@ function setRenderers(self) {
 					.style('padding-left', '7px')
 					.style('vertical-align', 'sub'),
 				localRecoverDiv: holder.header.append('div').style('display', 'inline-block'),
-				filterDiv: holder.header.append('div').style('display', 'inline-block'),
-				body: holder.body
-					// .style('margin-top', '-1px')
-					.style('white-space', 'nowrap')
-					.style('overflow-x', 'auto'),
+				filterDiv: holder.header.append('div').style('display', 'inline-block').style('zoom', 0.9),
+				body: holder.body.style('white-space', 'nowrap').style('overflow-x', 'auto'),
 
 				// will hold no data notice or the page title in multichart views
 				errdiv: holder.body
