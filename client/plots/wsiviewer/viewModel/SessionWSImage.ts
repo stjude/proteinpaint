@@ -33,7 +33,9 @@ export class SessionWSImage extends WSImage {
 		if (!sessionsTileSelection) return []
 		if (currentIndex < 0 || currentIndex >= sessionWSImage.sessionsTileSelections.length) return []
 
-		return sessionWSImage.sessionsTileSelections.splice(currentIndex, 1)
+		sessionWSImage.sessionsTileSelections.splice(currentIndex, 1)
+
+		return sessionWSImage.sessionsTileSelections
 	}
 
 	public static getTileSelections(sessionWSImage: SessionWSImage): TileSelection[] {

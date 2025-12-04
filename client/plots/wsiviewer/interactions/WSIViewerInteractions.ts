@@ -231,8 +231,6 @@ export class WSIViewerInteractions {
 				return coordinateX >= x0 && coordinateX < x1 && coordinateY >= y0 && coordinateY < y1
 			})
 
-			console.log('selectedTileSelectionIndex', selectedTileSelectionIndex)
-
 			if (selectedTileSelectionIndex !== -1) {
 				wsiApp.app.dispatch({
 					type: 'plot_edit',
@@ -274,8 +272,6 @@ export class WSIViewerInteractions {
 			//Add border feature
 
 			source?.addFeature(borderFeature)
-
-			console.log('newTileSelection', newTileSelection)
 
 			wsiApp.app.dispatch({
 				type: 'plot_edit',
@@ -440,7 +436,21 @@ export class WSIViewerInteractions {
 		}
 
 		if (SessionWSImage.isSessionTileSelection(currentIndex, sessionWSImage)) {
-			SessionWSImage.removeTileSelection(currentIndex, sessionWSImage)
+			const sessionsTileSelection = SessionWSImage.removeTileSelection(currentIndex, sessionWSImage)
+
+			wsiApp.app.dispatch({
+				type: 'plot_edit',
+				id: wsiApp.id,
+				config: {
+					settings: {
+						renderWSIViewer: false,
+						renderAnnotationTable: true,
+						activeAnnotation: 0,
+						changeTrigger: Date.now(),
+						sessionsTileSelection: sessionsTileSelection
+					}
+				}
+			})
 			return
 		}
 
