@@ -472,7 +472,10 @@ class SampleView {
 		for (const sample of this.state.samples) {
 			sampleData[sample.sampleId] = await this.app.vocabApi.getSingleSampleData({
 				sampleId: sample.sampleId,
-				filter: this.state.termfilter.filter
+				/** term_ids is required for getSingleSampleData but not
+				 * available in this instance. Pass empty array.*/
+				term_ids: [],
+				filter: this.state.termfilter.filter || []
 			})
 			lines += `\t${sample.sampleName}`
 		}
