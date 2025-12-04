@@ -39,7 +39,8 @@ export const TermTypes = {
 	SINGLECELL_GENE_EXPRESSION: 'singleCellGeneExpression',
 	SINGLECELL_CELLTYPE: 'singleCellCellType',
 	MULTIVALUE: 'multivalue',
-	DATE: 'date'
+	DATE: 'date',
+	COMPOSITE_PERCENTAGE: 'compositePercentage'
 }
 export const dtTermTypes = new Set(dtTerms.map(t => t.type))
 for (const dtTermType of dtTermTypes) {
@@ -68,7 +69,8 @@ export const typeGroup = {
 	[TermTypes.SNP_LOCUS]: TermTypeGroups.SNP_LOCUS,
 	[TermTypes.GENE_EXPRESSION]: TermTypeGroups.GENE_EXPRESSION,
 	[TermTypes.SSGSEA]: TermTypeGroups.SSGSEA,
-	[TermTypes.METABOLITE_INTENSITY]: TermTypeGroups.METABOLITE_INTENSITY
+	[TermTypes.METABOLITE_INTENSITY]: TermTypeGroups.METABOLITE_INTENSITY,
+	[TermTypes.COMPOSITE_PERCENTAGE]: TermTypeGroups.COMPOSITE_PERCENTAGE
 }
 
 const nonDictTypes = new Set([
@@ -218,7 +220,8 @@ const typeMap = {
 	snplocus: 'SNP Locus',
 	snp: 'SNP',
 	snplst: 'SNP List',
-	numericDictTerm: 'Numeric Dictionary Term'
+	numericDictTerm: 'Numeric Dictionary Term',
+	compositePercentage: 'Composite Percentage'
 }
 
 export function termType2label(type) {

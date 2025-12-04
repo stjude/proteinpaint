@@ -67,7 +67,12 @@ const useCasesExcluded = {
 		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.GENE_EXPRESSION,
 		TermTypeGroups.METABOLITE_INTENSITY,
-		TermTypeGroups.SSGSEA
+		TermTypeGroups.SSGSEA,
+		// we are still using dictionary tab to select mutation signature terms. The reason why we
+		// add the COMPOSITE_PERCENTAGE term type is to show it at the first level of tabs. After clicking
+		// COMPOSITE_PERCENTAGE tab, we use DICTIONARY tab to select the mutation signature terms, and all other tabs
+		// will be hidden by default.
+		TermTypeGroups.COMPOSITE_PERCENTAGE
 	]
 }
 

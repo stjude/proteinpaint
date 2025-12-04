@@ -692,7 +692,7 @@ function setTermActions(self) {
 			? '{remove,}'
 			: t.tw.term.type == 'geneVariant'
 			? '{edit,replace,remove}'
-			: t.grp.type == 'compositePercentage'
+			: t.tw.term.type == 'compositePercentage'
 			? {}
 			: '*'
 	}
@@ -718,13 +718,13 @@ function setTermActions(self) {
 		)
 		termMenuWaitDiv.remove()
 
-		if (t.grp.type !== 'compositePercentage') {
+		if (t.tw?.term?.type && t.tw.term.type !== 'compositePercentage') {
 			self.dom.shortcutDiv = self.dom.menutop.append('div').style('z-index', 10000)
 			self.showShortcuts(t, self.dom.shortcutDiv)
 		}
 		self.dom.twMenuDiv = self.dom.menutop.append('div')
 		const labelEditDiv = self.dom.twMenuDiv.append('div').style('text-align', 'center')
-		if (t.grp.type !== 'compositePercentage') labelEditDiv.append('span').text(`${l.Term} `)
+		if (t.tw?.term?.type && t.tw.term.type !== 'compositePercentage') labelEditDiv.append('span').text(`${l.Term} `)
 
 		const twlabel = t.tw.label || t.tw.term.name
 		const vartype =
@@ -734,7 +734,7 @@ function setTermActions(self) {
 				? 'metabolite'
 				: 'variable'
 
-		if (t.grp.type !== 'compositePercentage')
+		if (t.tw?.term?.type && t.tw.term.type !== 'compositePercentage')
 			self.dom.twLabelInput = labelEditDiv
 				.append('input')
 				.attr('type', 'text')
@@ -749,7 +749,7 @@ function setTermActions(self) {
 					self.dom.twLabelEditBtn.style('display', value.trim() === twlabel ? 'none' : 'inline')
 				})
 
-		if (t.grp.type !== 'compositePercentage')
+		if (t.tw?.term?.type && t.tw.term.type !== 'compositePercentage')
 			self.dom.twLabelEditBtn = labelEditDiv
 				.append('button')
 				.style('display', 'none')
@@ -852,7 +852,7 @@ function setTermActions(self) {
 				})
 		}
 
-		if (self.config.settings.matrix.maxSample) {
+		if (self.config.settings.matrix.maxSample && t.counts.samples && t.allCounts.samples) {
 			self.dom.twMenuDiv
 				.append('div')
 				.style('text-align', 'center')

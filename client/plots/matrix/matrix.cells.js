@@ -340,7 +340,7 @@ export function setComPerCellProps(cell, tw, anno, value, s, t, self, width, hei
 		group: tw.$id,
 		value: value.label,
 		order: -1,
-		entry: { key: value.label, label: value.label, fill: value.color }
+		entry: { key: value.label, label: value.label, fill: twSettings[value.label]?.color || value.color }
 	}
 }
 

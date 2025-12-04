@@ -96,7 +96,7 @@ export function getTermOrder(data) {
 			})
 		}
 
-		totalIndex += grp.type == 'compositePercentage' ? 1 : processedLst.length
+		totalIndex += processedLst.length
 		visibleGrpIndex += 1
 	}
 	this.numTerms = termOrder.length

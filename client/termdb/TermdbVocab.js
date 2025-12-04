@@ -851,7 +851,30 @@ export class TermdbVocab extends Vocab {
 								}
 								samples[sampleId] = s
 							}
-							if (tw.$id in sample) samples[sampleId][tw.$id] = sample[tw.$id]
+							if (tw.$id in sample) {
+								if (tw.type == 'compositePercentage') {
+									const termsValue = JSON.parse(sample[tw.$id].value)
+									const sum = termsValue.reduce((a, o) => a + Object.values(o)[0], 0)
+
+									let pre_val_sum = 0
+									const values = []
+									for (const termV of termsValue) {
+										const label = Object.keys(termV)[0]
+										const value = (Object.values(termV)[0] / sum) * 100
+										const color = tw.term.termlst.find(t => t.name == label).color
+										values.push({
+											label,
+											value,
+											pre_val_sum,
+											color
+										})
+										pre_val_sum += value
+									}
+									sample[tw.$id].values = values
+									delete sample[tw.$id].value
+								}
+								samples[sampleId][tw.$id] = sample[tw.$id]
+							}
 						}
 
 						for (const sampleId in data.refs.bySampleId) {
