@@ -282,7 +282,8 @@ export function setLabelsAndScales() {
 			}
 
 			if (!twSettings.contBarH)
-				twSettings.contBarH = t.tw.type == 'compositePercentage' ? Math.min(120, t.grp.lst.length * s.barh) : s.barh
+				twSettings.contBarH =
+					t.tw.type == 'compositePercentage' ? Math.min(120, t.tw.term.termlst.length * s.barh) : s.barh
 			if (!('gap' in twSettings)) twSettings.contBarGap = 4
 			const barh = twSettings.contBarH
 			if (t.tw.type == 'compositePercentage') t.counts = { maxval: 100, minval: 0 }
@@ -317,8 +318,7 @@ export function setLabelsAndScales() {
 				: ht
 		// adjustment is the difference in actual computed row height - "standard" row
 		// need to subtract s.rowspace for hierCluster row to remove gaps between heatmap rows
-		const adjustment =
-			t.rowHt - (t.tw.type == 'compositePercentage' ? 0 : ht) - (t.grp.type == 'hierCluster' ? s.rowspace : 0)
+		const adjustment = t.rowHt - ht - (t.grp.type == 'hierCluster' ? s.rowspace : 0)
 		totalHtAdjustments += adjustment
 
 		// adjustment when last row is in continous mode

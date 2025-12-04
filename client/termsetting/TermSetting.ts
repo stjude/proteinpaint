@@ -141,7 +141,8 @@ export class TermSetting {
 			if (!d.term.type) throw 'data.term.type missing'
 			// hardcode non
 			if (isDictionaryType(d.term.type)) {
-				if (!d.term.id && d.term.type != TermTypes.SAMPLELST) throw 'data.term.id missing'
+				if (!d.term.id && d.term.type != TermTypes.SAMPLELST && d.term.type != TermTypes.COMPOSITE_PERCENTAGE)
+					throw 'data.term.id missing'
 				if (!d.term.name) throw 'data.term.name missing'
 			}
 		}

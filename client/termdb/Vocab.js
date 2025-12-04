@@ -183,6 +183,7 @@ export class Vocab {
 				if (tw.term.type) copy.term.type = tw.term.type
 				if (tw.term.values) copy.term.values = tw.term.values
 				if (tw.term.groupsetting) copy.term.groupsetting = tw.term.groupsetting
+				if (tw.term.termlst) copy.term.termlst = tw.term.termlst
 			} else {
 				// non-dictionary term
 				// pass entire tw.term because non-dictionary terms

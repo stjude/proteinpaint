@@ -5,6 +5,7 @@ import * as categoricalSql from './termdb.sql.categorical.js'
 import * as conditionSql from './termdb.sql.condition.js'
 import { sampleLstSql } from './termdb.sql.samplelst.js'
 import { multivalueCTE } from './termdb.sql.multivalue.js'
+import { compositePercentageCTE } from './termdb.sql.compositePercentage.js'
 import { boxplot_getvalue } from './utils.js'
 import { DEFAULT_SAMPLE_TYPE, isNumericTerm, annoNumericTypes } from '#shared/terms.js'
 import { authApi } from '#src/auth.js'
@@ -416,7 +417,7 @@ export async function get_term_cte(q, values, index, filter, termWrapper = null)
 	const twterm = (termWrapper && termWrapper.term) || q[`term${index}`]
 	const termid = twterm ? twterm.id : q['term' + index + '_id']
 
-	if (twterm?.type != 'samplelst') {
+	if (twterm?.type != 'samplelst' && twterm?.type != 'compositePercentage') {
 		// legacy code support: index=1 is assumed to be barchart term
 		// when there is no termWrapper argument
 		if (!termWrapper && index == 1) {
@@ -474,6 +475,8 @@ export async function get_term_cte(q, values, index, filter, termWrapper = null)
 		CTE = await sampleLstSql.getCTE(q.ds, tablename, termWrapper || { term, q: termq }, values)
 	} else if (term.type == 'multivalue') {
 		CTE = await multivalueCTE.getCTE(tablename, termWrapper || { term, q: termq }, values)
+	} else if (term.type == 'compositePercentage') {
+		CTE = await compositePercentageCTE.getCTE(tablename, termWrapper || { term, q: termq }, values)
 	} else {
 		throw 'unknown term type [get_term_cte() server/src/termdb.sql.js]'
 	}
