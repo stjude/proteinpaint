@@ -1,5 +1,5 @@
 import { handler as _handler } from './tvs.dt.js'
-import { renderCnvConfig } from '../dom/cnvConfig'
+import { renderCnvConfig } from '#dom'
 
 /*
 TVS handler for dtcnv term (continuous cnv data)
@@ -7,7 +7,7 @@ TVS handler for dtcnv term (continuous cnv data)
 
 export const handler = Object.assign({}, _handler, { type: 'dtcnv', fillMenu, get_pill_label })
 
-async function fillMenu(self, div, tvs) {
+function fillMenu(self, div, tvs) {
 	// render cnv cutoff values
 	const termdbConfig = self.opts.vocabApi.termdbConfig || self.opts.vocabApi.parent_termdbConfig
 	const dscnv = termdbConfig.queries?.cnv
@@ -42,7 +42,7 @@ async function fillMenu(self, div, tvs) {
 		}
 	}
 	// render cnv config
-	await renderCnvConfig(arg)
+	renderCnvConfig(arg)
 }
 
 function get_pill_label(tvs) {
