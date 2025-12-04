@@ -136,6 +136,7 @@ function generateCacheFileName(): string {
 async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Response> {
 	const startTime = Date.now()
 
+	// We set things like the analyis and processing time to 0 here so that on re-plots we have them defined and we don't get errors
 	let cacheFileName = request.cacheFileName
 	let resultData: any
 	let processingTime = 0
