@@ -3,6 +3,8 @@ import type { Menu } from '#dom'
 export interface GRIN2Dom {
 	grin2Controls: any
 	plotControls: any
+	plotSection: any
+	plotDiv: any
 	div: any
 	tip: Menu
 	geneTip: Menu

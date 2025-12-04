@@ -26,11 +26,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 	dom: GRIN2Dom
 	private lastPlotResult: any = null
 
-	// Track previous dimensions and plot elements
-	private previousDimensions: { width?: number; height?: number } = {}
-	private plotSection: any = null
-	private plotDiv: any = null
-
 	// Colors
 	readonly borderColor = '#eee'
 	readonly backgroundColor = '#f8f8f8'
@@ -99,7 +94,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 			consequenceCheckboxes: {},
 			snvindelSelectAllBtn: null,
 			snvindelClearAllBtn: null,
-			snvindelDefaultBtn: null
+			snvindelDefaultBtn: null,
+			plotSection: null,
+			plotDiv: null
 		}
 		if (opts.header) this.dom.header = opts.header.text('GRIN2')
 	}
@@ -759,8 +756,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 			}
 
 			// Show loading indicator on the plot section only
-			if (this.plotDiv) {
-				this.plotDiv.style('opacity', '0.5')
+			if (this.dom.plotDiv) {
+				this.dom.plotDiv.style('opacity', '0.5')
 			}
 
 			const response = await dofetch3('/grin2', { body: requestData })
@@ -778,13 +775,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 			this.lastPlotResult = response
 
 			// Replace plot content
-			if (this.plotDiv && !this.plotDiv.empty()) {
-				this.plotDiv.selectAll('*').remove()
+			if (this.dom.plotDiv && !this.dom.plotDiv.empty()) {
+				this.dom.plotDiv.selectAll('*').remove()
 
 				const manhattanSettings = this.state.config.settings.manhattan
-				plotManhattan(this.plotDiv, response, manhattanSettings, this.app)
-
-				this.plotDiv.style('opacity', '1')
+				plotManhattan(this.dom.plotDiv, response, manhattanSettings, this.app)
+				this.dom.plotDiv.style('opacity', '1')
 			}
 		} catch (error) {
 			sayerror(this.dom.div, `Error re-rendering GRIN2: ${error instanceof Error ? error.message : error}`)
@@ -792,7 +788,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 	}
 
 	private downloadPlot() {
-		const svgNode = this.plotDiv.select('svg').node() as SVGSVGElement
+		const svgNode = this.dom.plotDiv.select('svg').node() as SVGSVGElement
 
 		// Clone the SVG to avoid modifying the displayed version
 		const clone = svgNode.cloneNode(true) as SVGSVGElement
@@ -844,25 +840,25 @@ class GRIN2 extends PlotBase implements RxComponent {
 			const manhattanSettings = this.state.config.settings.manhattan
 
 			// Create a wrapper for the plot section
-			if (!this.plotSection || this.plotSection.empty()) {
-				this.plotSection = this.dom.div.append('div').style('margin-top', '20px')
+			if (!this.dom.plotSection || this.dom.plotSection.empty()) {
+				this.dom.plotSection = this.dom.div.append('div').style('margin-top', '20px')
 
 				// Move the controls into this section
 				this.dom.plotControls.node().remove() // Remove from original location
-				this.plotSection.node().appendChild(this.dom.plotControls.node()) // Add to plot section
+				this.dom.plotSection.node().appendChild(this.dom.plotControls.node()) // Add to plot section
 
 				// Create the plot div next to controls
-				this.plotDiv = this.plotSection.append('div')
+				this.dom.plotDiv = this.dom.plotSection.append('div')
 
 				// Make them inline
 				this.dom.plotControls.style('display', 'inline-block').style('vertical-align', 'top')
-				this.plotDiv.style('display', 'inline-block').style('vertical-align', 'top')
+				this.dom.plotDiv.style('display', 'inline-block').style('vertical-align', 'top')
 			} else {
 				// Clear existing plot content
-				this.plotDiv.selectAll('*').remove()
+				this.dom.plotDiv.selectAll('*').remove()
 			}
 
-			plotManhattan(this.plotDiv, plotData, manhattanSettings, this.app)
+			plotManhattan(this.dom.plotDiv, plotData, manhattanSettings, this.app)
 		}
 
 		// Display top genes table
