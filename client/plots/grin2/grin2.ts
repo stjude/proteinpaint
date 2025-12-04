@@ -152,6 +152,23 @@ class GRIN2 extends PlotBase implements RxComponent {
 			showTopBar: true
 		})
 
+		// Normalize number inputs to the integer values we actually use on the backend.
+		// This and the backend sanitatization allow the server to not error if the user types in invalid values (e.g. decimals) and hang the re-render
+		this.dom.plotControls
+			.selectAll('input[type="number"]')
+			.on('change.grin2IntSanitize', function (this: HTMLInputElement) {
+				if (!this.value) return
+
+				const n = Number(this.value)
+				if (!Number.isFinite(n)) return
+
+				const min = this.min !== '' ? Number(this.min) : -Infinity
+				const max = this.max !== '' ? Number(this.max) : Infinity
+				const intVal = Math.max(min, Math.min(max, Math.floor(n)))
+
+				this.value = String(intVal)
+			})
+
 		// Hidden until the first successful run; after that, just flip display to 'block'
 		this.dom.plotControls.style('display', 'none')
 
@@ -706,11 +723,22 @@ class GRIN2 extends PlotBase implements RxComponent {
 	}
 
 	/**
-	 * Re-fetch the plot with new dimensions
-	 * Backend will use cache if analysis parameters haven't changed
+	 * Re-render the plot on the server using updated plot settings.
+	 * Reuses existing cache to avoid rerunning analysis.
 	 */
-	private async refetchWithNewDimensions(width: number, height: number) {
+	private async updatePlotRender(width: number, height: number, pngDotRadius: number) {
 		try {
+			// Guard: cache must exist (first run must be full)
+			if (!this.lastPlotResult?.cacheFileName) {
+				console.warn('[GRIN2] No cacheFileName available; run full GRIN2 analysis first.')
+				return
+			}
+
+			// Sanitize numeric inputs
+			const sanitized_width = Math.floor(Number(width))
+			const sanitized_height = Math.floor(Number(height))
+			const sanitized_r = Math.floor(Number(pngDotRadius))
+
 			// Get the last configuration used
 			const dtUsage = this.getDtUsageFromCheckboxes()
 			const configValues = this.getConfigValues(dtUsage)
@@ -719,9 +747,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 				genome: this.app.vocabApi.vocab.genome,
 				dslabel: this.app.vocabApi.vocab.dslabel,
 				filter: getNormalRoot(this.app.vocabApi.state.termfilter.filter),
-				width: width,
-				height: height,
-				pngDotRadius: this.state.config.settings.manhattan?.pngDotRadius,
+				width: sanitized_width,
+				height: sanitized_height,
+				pngDotRadius: sanitized_r,
 				devicePixelRatio: window.devicePixelRatio,
 				maxGenesToShow: this.state.config.settings?.manhattan?.maxGenesToShow,
 				lesionTypeColors: this.state.config.settings?.manhattan?.lesionTypeColors,
@@ -735,33 +763,27 @@ class GRIN2 extends PlotBase implements RxComponent {
 				this.plotDiv.style('opacity', '0.5')
 			}
 
-			const response = await dofetch3('/grin2', {
-				body: requestData
-			})
+			const response = await dofetch3('/grin2', { body: requestData })
 
 			if (response.status === 'error') {
 				sayerror(this.dom.div, `Error updating Manhattan plot: ${response.error}`)
-
 				return
 			}
 
-			// Store the new dimensions in response for future comparisons
-			response.requestWidth = width
-			response.requestHeight = height
-			response.requestPngDotRadius = this.state.config.settings.manhattan?.pngDotRadius
-			response.requestLegendDotRadius = this.state.config.settings.manhattan?.legendDotRadius
+			// Update local state
+			response.requestWidth = sanitized_width
+			response.requestHeight = sanitized_height
+			response.requestPngDotRadius = sanitized_r
+			response.requestLegendDotRadius = sanitized_r
 			this.lastPlotResult = response
 
-			// Only update the plot, keep the table
+			// Replace plot content
 			if (this.plotDiv && !this.plotDiv.empty()) {
 				this.plotDiv.selectAll('*').remove()
 
-				// Re-render the plot
-				const plotData = response
 				const manhattanSettings = this.state.config.settings.manhattan
-				plotManhattan(this.plotDiv, plotData, manhattanSettings, this.app)
+				plotManhattan(this.plotDiv, response, manhattanSettings, this.app)
 
-				// Restore opacity
 				this.plotDiv.style('opacity', '1')
 			}
 		} catch (error) {
@@ -802,7 +824,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			const currentHeight = this.state.config.settings.manhattan?.plotHeight
 			const currentPngDotRadius = this.state.config.settings.manhattan?.pngDotRadius
 
-			// Check if dimensions or PNG dot radius changed (require server re-render)
+			// Check if dimensions or PNG dot radius changed
 			const dimensionsChanged =
 				this.lastPlotResult.requestWidth !== currentWidth ||
 				this.lastPlotResult.requestHeight !== currentHeight ||
@@ -810,7 +832,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			if (dimensionsChanged) {
 				// Re-fetch with new dimensions/PNG dot radius (will use cache on backend)
-				await this.refetchWithNewDimensions(currentWidth, currentHeight)
+				await this.updatePlotRender(currentWidth, currentHeight, currentPngDotRadius)
 			}
 		}
 	}
