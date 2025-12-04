@@ -13,8 +13,10 @@ if [[ ${ARCH} == "arm64" ]]; then
 #	PLATFORM="--platform=linux/arm64"
 fi
 
+rust_version=$(grep '^channel' ../../rust/rust-toolchain.toml | awk -F'"' '{print $2}')
 # The podman buildx build command
 docker buildx build . \
   --file ./Dockerfile \
+  --build-arg rust_version=$rust_version \
   --tag "ghcr.io/stjude/rust:$TAG" \
   $PLATFORM
