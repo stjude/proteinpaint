@@ -686,7 +686,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			response.requestWidth = requestData.width
 			response.requestHeight = requestData.height
 			response.requestPngDotRadius = requestData.pngDotRadius
-			response.requestLegendDotRadius = this.state.config.settings.manhattan?.legendDotRadius
+			response.requestLegendDotRadius = requestData.pngDotRadius
 			this.lastPlotResult = response
 
 			this.renderResults(response)
