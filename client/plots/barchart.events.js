@@ -88,8 +88,12 @@ export default function getHandlers(self) {
 							negateTerm2Label = visibleTerm2Labels[0] == term2Label ? visibleTerm2Labels[1] : visibleTerm2Labels[0]
 					}
 
-					rows.push(
-						`<tr>
+					//Only show the p-value and 2x2 table in tooltip
+					//when the user enabled association tests
+					//from control panel
+					if (self.settings.showAssociationTests) {
+						rows.push(
+							`<tr>
 							<td style='padding:3px; color:#aaa'>p-value</td>
 							<td style='padding:3px; text-align:center'>${
 								skipped ? 'N/A' : pvalue > 1e-4 ? Number(pvalue.toFixed(4)) : roundValueAuto(Number(pvalue))
@@ -112,7 +116,8 @@ export default function getHandlers(self) {
 								<td>${tableValues.R2C2}</td>
 							</tr>
 						</table>`
-					)
+						)
+					}
 				}
 				if (!t1.type == 'condition' && (!t2 || !t2.type == 'condition')) {
 					rows.push(
@@ -811,7 +816,7 @@ async function menuoption_add_filter(self, tvslst, arg) {
 		if barchart is single-term, tvslst will have only one element
 		if barchart is two-term overlay, tvslst will have two elements, one for term1, the other for term2
 	arg: object of parameters used by getSampleGrp to get sample group
-  	*/
+		*/
 	if (!tvslst) return
 	if (!self.state.termfilter || self.state.nav?.header_mode !== 'with_tabs') {
 		// do not display ui, and do not collect callbacks
@@ -905,7 +910,7 @@ function menuoption_select_group_add_to_cart(self, tvslst) {
 
 function getTermValues(d, self) {
 	/*
-    d: clicked bar data
+	d: clicked bar data
   */
 	const termValues = []
 	if (self.state.nav?.header_mode == 'with_cohortHtmlSelect') {
