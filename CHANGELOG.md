@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Added hg38 v32 public support files download script.
+
 
 ## 2.164.1
 
