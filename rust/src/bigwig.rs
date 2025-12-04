@@ -158,19 +158,11 @@ fn main() {
 }
 
 fn determine_max(n1: f64, n2: f64) -> f64 {
-    if n1 >= n2 {
-        n1
-    } else {
-        n2
-    }
+    if n1 >= n2 { n1 } else { n2 }
 }
 
 fn determine_min(n1: f64, n2: f64) -> f64 {
-    if n1 < n2 {
-        n1
-    } else {
-        n2
-    }
+    if n1 < n2 { n1 } else { n2 }
 }
 
 #[allow(dead_code)]
@@ -179,12 +171,8 @@ fn calculate_appropriate_zoom_level(zoom_headers: Vec<ZoomHeader>, difference: f
     let mut closest_level = Option::<u32>::None; // Zoom level will be none at base-pair resolution
     let mut unity_added = false;
     let max_entries_parsed_limit = 100000; // Maximum number of entries that should be parsed from bigwig file. A very high number will lead to better accuracy as this will lead to selection of a lower zoom level. In contrast, a lower value will decrease run time at the cost of accuracy.
-                                           // Parsing out various zoom levels from bigwig file
-    for reduction_level in zoom_headers
-        .into_iter()
-        .map(|entry| (entry.reduction_level))
-        .rev()
-    {
+    // Parsing out various zoom levels from bigwig file
+    for reduction_level in zoom_headers.into_iter().map(|entry| entry.reduction_level).rev() {
         reduction_levels.push(reduction_level as u32);
     }
     if reduction_levels.contains(&1) == false {
@@ -206,21 +194,14 @@ fn calculate_appropriate_zoom_level(zoom_headers: Vec<ZoomHeader>, difference: f
     closest_level
 }
 
-fn calculate_appropriate_zoom_level_ucsc(
-    zoom_headers: Vec<ZoomHeader>,
-    exact_offset: f64,
-) -> Option<u32> {
+fn calculate_appropriate_zoom_level_ucsc(zoom_headers: Vec<ZoomHeader>, exact_offset: f64) -> Option<u32> {
     let mut reduction_levels = Vec::<u32>::new();
     let mut closest_level = Option::<u32>::None; // Zoom level will be none at base-pair resolution
     let desired_reduction: u32 = ((exact_offset as f64) / 2.0).floor() as u32;
     let mut unity_added = false;
     if desired_reduction > 1 {
         // Parsing out various zoom levels from bigwig file
-        for reduction_level in zoom_headers
-            .into_iter()
-            .map(|entry| (entry.reduction_level))
-            .rev()
-        {
+        for reduction_level in zoom_headers.into_iter().map(|entry| entry.reduction_level).rev() {
             reduction_levels.push(reduction_level as u32);
         }
         if reduction_levels.contains(&1) == false {
@@ -304,11 +285,9 @@ fn calculate_datapoints<
                                 continue;
                             } else {
                                 if (v.start as f64 <= start_region && end_region < v.end as f64)
-                                    || (v.start as f64 >= start_region
-                                        && (v.start as f64) < end_region)
+                                    || (v.start as f64 >= start_region && (v.start as f64) < end_region)
                                     || (v.end as f64 >= start_region && (v.end as f64) < end_region)
-                                    || (start_region >= v.start as f64
-                                        && (v.end as f64) < end_region)
+                                    || (start_region >= v.start as f64 && (v.end as f64) < end_region)
                                 {
                                     // Calculate sum and number for this region
                                     //println!("i:{}", i);
@@ -316,16 +295,10 @@ fn calculate_datapoints<
                                     //println!("v.end:{}", v.end);
                                     //println!("start_region:{}", start_region);
                                     //println!("end_region:{}", end_region);
-                                    let start_entry_within_region =
-                                        determine_max(v.start as f64, start_region);
-                                    let stop_entry_within_region =
-                                        determine_min(v.end as f64, end_region);
-                                    datapoints_num[i] += (stop_entry_within_region
-                                        - start_entry_within_region)
-                                        as f64;
-                                    datapoints_sum[i] += (stop_entry_within_region
-                                        - start_entry_within_region)
-                                        as f64
+                                    let start_entry_within_region = determine_max(v.start as f64, start_region);
+                                    let stop_entry_within_region = determine_min(v.end as f64, end_region);
+                                    datapoints_num[i] += (stop_entry_within_region - start_entry_within_region) as f64;
+                                    datapoints_sum[i] += (stop_entry_within_region - start_entry_within_region) as f64
                                         * ((v.summary.sum as f64) / v.summary.bases_covered as f64);
                                     //println!(
                                     //    "start_entry_within_region:{}",
@@ -346,30 +319,21 @@ fn calculate_datapoints<
                                     //println!("v.end:{}", v.end);
                                     //println!("start_region:{}", start_region);
                                     //println!("end_region:{}", end_region);
-                                    if ((v.start as f64 <= start_region
-                                        && end_region < v.end as f64)
-                                        || (v.start as f64 >= start_region
-                                            && (v.start as f64) < end_region)
-                                        || (v.end as f64 >= start_region
-                                            && (v.end as f64) < end_region)
-                                        || (start_region >= v.start as f64
-                                            && (v.end as f64) < end_region))
+                                    if ((v.start as f64 <= start_region && end_region < v.end as f64)
+                                        || (v.start as f64 >= start_region && (v.start as f64) < end_region)
+                                        || (v.end as f64 >= start_region && (v.end as f64) < end_region)
+                                        || (start_region >= v.start as f64 && (v.end as f64) < end_region))
                                         && iter > 1
                                     {
                                         // Calculate sum and number for this region
                                         //println!("Hello");
-                                        let start_entry_within_region =
-                                            determine_max(v.start as f64, start_region);
-                                        let stop_entry_within_region =
-                                            determine_min(v.end as f64, end_region);
-                                        datapoints_num[i] += (stop_entry_within_region
-                                            - start_entry_within_region)
-                                            as f64;
-                                        datapoints_sum[i] += (stop_entry_within_region
-                                            - start_entry_within_region)
+                                        let start_entry_within_region = determine_max(v.start as f64, start_region);
+                                        let stop_entry_within_region = determine_min(v.end as f64, end_region);
+                                        datapoints_num[i] +=
+                                            (stop_entry_within_region - start_entry_within_region) as f64;
+                                        datapoints_sum[i] += (stop_entry_within_region - start_entry_within_region)
                                             as f64
-                                            * ((v.summary.sum as f64)
-                                                / v.summary.bases_covered as f64);
+                                            * ((v.summary.sum as f64) / v.summary.bases_covered as f64);
                                         //println!(
                                         //    "start_entry_within_region inside:{}",
                                         //    start_entry_within_region
@@ -401,9 +365,7 @@ fn calculate_datapoints<
             }
             None => {
                 // To be used in nucleotide resolution
-                let bigwig_output = reader
-                    .get_interval(&chrom, start_pos as u32, stop_pos as u32)
-                    .unwrap();
+                let bigwig_output = reader.get_interval(&chrom, start_pos as u32, stop_pos as u32).unwrap();
                 let mut i = 0;
                 let mut start_region = datapoints_list[i];
                 let mut end_region = datapoints_list[i + 1];
@@ -415,11 +377,9 @@ fn calculate_datapoints<
                                 continue;
                             } else {
                                 if (v.start as f64 <= start_region && end_region < v.end as f64)
-                                    || (v.start as f64 >= start_region
-                                        && (v.start as f64) < end_region)
+                                    || (v.start as f64 >= start_region && (v.start as f64) < end_region)
                                     || (v.end as f64 >= start_region && (v.end as f64) < end_region)
-                                    || (start_region >= v.start as f64
-                                        && (v.end as f64) < end_region)
+                                    || (start_region >= v.start as f64 && (v.end as f64) < end_region)
                                 {
                                     // Calculate sum and number for this region
                                     //println!("i:{}", i);
@@ -427,17 +387,11 @@ fn calculate_datapoints<
                                     //println!("v.end:{}", v.end);
                                     //println!("start_region:{}", start_region);
                                     //println!("end_region:{}", end_region);
-                                    let start_entry_within_region =
-                                        determine_max(v.start as f64, start_region);
-                                    let stop_entry_within_region =
-                                        determine_min(v.end as f64, end_region);
-                                    datapoints_num[i] += (stop_entry_within_region
-                                        - start_entry_within_region)
-                                        as f64;
-                                    datapoints_sum[i] += (stop_entry_within_region
-                                        - start_entry_within_region)
-                                        as f64
-                                        * v.value as f64;
+                                    let start_entry_within_region = determine_max(v.start as f64, start_region);
+                                    let stop_entry_within_region = determine_min(v.end as f64, end_region);
+                                    datapoints_num[i] += (stop_entry_within_region - start_entry_within_region) as f64;
+                                    datapoints_sum[i] +=
+                                        (stop_entry_within_region - start_entry_within_region) as f64 * v.value as f64;
                                     //println!(
                                     //    "start_entry_within_region:{}",
                                     //    start_entry_within_region
@@ -457,27 +411,19 @@ fn calculate_datapoints<
                                     //println!("v.end:{}", v.end);
                                     //println!("start_region:{}", start_region);
                                     //println!("end_region:{}", end_region);
-                                    if ((v.start as f64 <= start_region
-                                        && end_region < v.end as f64)
-                                        || (v.start as f64 >= start_region
-                                            && (v.start as f64) < end_region)
-                                        || (v.end as f64 >= start_region
-                                            && (v.end as f64) < end_region)
-                                        || (start_region >= v.start as f64
-                                            && (v.end as f64) < end_region))
+                                    if ((v.start as f64 <= start_region && end_region < v.end as f64)
+                                        || (v.start as f64 >= start_region && (v.start as f64) < end_region)
+                                        || (v.end as f64 >= start_region && (v.end as f64) < end_region)
+                                        || (start_region >= v.start as f64 && (v.end as f64) < end_region))
                                         && iter > 1
                                     {
                                         // Calculate sum and number for this region
                                         //println!("Hello");
-                                        let start_entry_within_region =
-                                            determine_max(v.start as f64, start_region);
-                                        let stop_entry_within_region =
-                                            determine_min(v.end as f64, end_region);
-                                        datapoints_num[i] += (stop_entry_within_region
-                                            - start_entry_within_region)
-                                            as f64;
-                                        datapoints_sum[i] += (stop_entry_within_region
-                                            - start_entry_within_region)
+                                        let start_entry_within_region = determine_max(v.start as f64, start_region);
+                                        let stop_entry_within_region = determine_min(v.end as f64, end_region);
+                                        datapoints_num[i] +=
+                                            (stop_entry_within_region - start_entry_within_region) as f64;
+                                        datapoints_sum[i] += (stop_entry_within_region - start_entry_within_region)
                                             as f64
                                             * v.value as f64;
                                         //println!(
@@ -536,11 +482,9 @@ fn calculate_datapoints<
                                 continue;
                             } else {
                                 if (v.start as f64 <= start_region && end_region < v.end as f64)
-                                    || (v.start as f64 >= start_region
-                                        && (v.start as f64) < end_region)
+                                    || (v.start as f64 >= start_region && (v.start as f64) < end_region)
                                     || (v.end as f64 >= start_region && (v.end as f64) < end_region)
-                                    || (start_region >= v.start as f64
-                                        && (v.end as f64) < end_region)
+                                    || (start_region >= v.start as f64 && (v.end as f64) < end_region)
                                 {
                                     // Calculate sum and number for this region
                                     //println!("i:{}", i);
@@ -548,16 +492,10 @@ fn calculate_datapoints<
                                     //println!("v.end:{}", v.end);
                                     //println!("start_region:{}", start_region);
                                     //println!("end_region:{}", end_region);
-                                    let start_entry_within_region =
-                                        determine_max(v.start as f64, start_region);
-                                    let stop_entry_within_region =
-                                        determine_min(v.end as f64, end_region);
-                                    datapoints_num[i] += (stop_entry_within_region
-                                        - start_entry_within_region)
-                                        as f64;
-                                    datapoints_sum[i] += (stop_entry_within_region
-                                        - start_entry_within_region)
-                                        as f64
+                                    let start_entry_within_region = determine_max(v.start as f64, start_region);
+                                    let stop_entry_within_region = determine_min(v.end as f64, end_region);
+                                    datapoints_num[i] += (stop_entry_within_region - start_entry_within_region) as f64;
+                                    datapoints_sum[i] += (stop_entry_within_region - start_entry_within_region) as f64
                                         * ((v.summary.sum as f64) / v.summary.bases_covered as f64);
                                     //println!(
                                     //    "start_entry_within_region:{}",
@@ -578,29 +516,20 @@ fn calculate_datapoints<
                                     //println!("v.end:{}", v.end);
                                     //println!("start_region:{}", start_region);
                                     //println!("end_region:{}", end_region);
-                                    if ((v.start as f64 <= start_region
-                                        && end_region < v.end as f64)
-                                        || (v.start as f64 >= start_region
-                                            && (v.start as f64) < end_region)
-                                        || (v.end as f64 >= start_region
-                                            && (v.end as f64) < end_region)
-                                        || (start_region >= v.start as f64
-                                            && (v.end as f64) < end_region))
+                                    if ((v.start as f64 <= start_region && end_region < v.end as f64)
+                                        || (v.start as f64 >= start_region && (v.start as f64) < end_region)
+                                        || (v.end as f64 >= start_region && (v.end as f64) < end_region)
+                                        || (start_region >= v.start as f64 && (v.end as f64) < end_region))
                                         && iter > 1
                                     {
                                         // Calculate sum and number for this region
-                                        let start_entry_within_region =
-                                            determine_max(v.start as f64, start_region);
-                                        let stop_entry_within_region =
-                                            determine_min(v.end as f64, end_region);
-                                        datapoints_num[i] += (stop_entry_within_region
-                                            - start_entry_within_region)
-                                            as f64;
-                                        datapoints_sum[i] += (stop_entry_within_region
-                                            - start_entry_within_region)
+                                        let start_entry_within_region = determine_max(v.start as f64, start_region);
+                                        let stop_entry_within_region = determine_min(v.end as f64, end_region);
+                                        datapoints_num[i] +=
+                                            (stop_entry_within_region - start_entry_within_region) as f64;
+                                        datapoints_sum[i] += (stop_entry_within_region - start_entry_within_region)
                                             as f64
-                                            * ((v.summary.sum as f64)
-                                                / v.summary.bases_covered as f64);
+                                            * ((v.summary.sum as f64) / v.summary.bases_covered as f64);
                                         //println!(
                                         //    "start_entry_within_region inside:{}",
                                         //    start_entry_within_region
@@ -634,9 +563,7 @@ fn calculate_datapoints<
             }
             None => {
                 // To be used in nucleotide resolution
-                let bigwig_output = reader
-                    .get_interval(&chrom, start_pos as u32, stop_pos as u32)
-                    .unwrap();
+                let bigwig_output = reader.get_interval(&chrom, start_pos as u32, stop_pos as u32).unwrap();
                 let mut i = 0;
                 let mut start_region = datapoints_list[i];
                 let mut end_region = datapoints_list[i + 1];
@@ -648,11 +575,9 @@ fn calculate_datapoints<
                                 continue;
                             } else {
                                 if (v.start as f64 <= start_region && end_region < v.end as f64)
-                                    || (v.start as f64 >= start_region
-                                        && (v.start as f64) < end_region)
+                                    || (v.start as f64 >= start_region && (v.start as f64) < end_region)
                                     || (v.end as f64 >= start_region && (v.end as f64) < end_region)
-                                    || (start_region >= v.start as f64
-                                        && (v.end as f64) < end_region)
+                                    || (start_region >= v.start as f64 && (v.end as f64) < end_region)
                                 {
                                     // Calculate sum and number for this region
                                     //println!("i:{}", i);
@@ -660,17 +585,11 @@ fn calculate_datapoints<
                                     //println!("v.end:{}", v.end);
                                     //println!("start_region:{}", start_region);
                                     //println!("end_region:{}", end_region);
-                                    let start_entry_within_region =
-                                        determine_max(v.start as f64, start_region);
-                                    let stop_entry_within_region =
-                                        determine_min(v.end as f64, end_region);
-                                    datapoints_num[i] += (stop_entry_within_region
-                                        - start_entry_within_region)
-                                        as f64;
-                                    datapoints_sum[i] += (stop_entry_within_region
-                                        - start_entry_within_region)
-                                        as f64
-                                        * v.value as f64;
+                                    let start_entry_within_region = determine_max(v.start as f64, start_region);
+                                    let stop_entry_within_region = determine_min(v.end as f64, end_region);
+                                    datapoints_num[i] += (stop_entry_within_region - start_entry_within_region) as f64;
+                                    datapoints_sum[i] +=
+                                        (stop_entry_within_region - start_entry_within_region) as f64 * v.value as f64;
                                     //println!(
                                     //    "start_entry_within_region:{}",
                                     //    start_entry_within_region
@@ -690,27 +609,19 @@ fn calculate_datapoints<
                                     //println!("v.end:{}", v.end);
                                     //println!("start_region:{}", start_region);
                                     //println!("end_region:{}", end_region);
-                                    if ((v.start as f64 <= start_region
-                                        && end_region < v.end as f64)
-                                        || (v.start as f64 >= start_region
-                                            && (v.start as f64) < end_region)
-                                        || (v.end as f64 >= start_region
-                                            && (v.end as f64) < end_region)
-                                        || (start_region >= v.start as f64
-                                            && (v.end as f64) < end_region))
+                                    if ((v.start as f64 <= start_region && end_region < v.end as f64)
+                                        || (v.start as f64 >= start_region && (v.start as f64) < end_region)
+                                        || (v.end as f64 >= start_region && (v.end as f64) < end_region)
+                                        || (start_region >= v.start as f64 && (v.end as f64) < end_region))
                                         && iter > 1
                                     {
                                         // Calculate sum and number for this region
                                         //println!("Hello");
-                                        let start_entry_within_region =
-                                            determine_max(v.start as f64, start_region);
-                                        let stop_entry_within_region =
-                                            determine_min(v.end as f64, end_region);
-                                        datapoints_num[i] += (stop_entry_within_region
-                                            - start_entry_within_region)
-                                            as f64;
-                                        datapoints_sum[i] += (stop_entry_within_region
-                                            - start_entry_within_region)
+                                        let start_entry_within_region = determine_max(v.start as f64, start_region);
+                                        let stop_entry_within_region = determine_min(v.end as f64, end_region);
+                                        datapoints_num[i] +=
+                                            (stop_entry_within_region - start_entry_within_region) as f64;
+                                        datapoints_sum[i] += (stop_entry_within_region - start_entry_within_region)
                                             as f64
                                             * v.value as f64;
                                         //println!(

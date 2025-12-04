@@ -729,6 +729,7 @@ impl From<rig::completion::ToolDefinition> for ToolDefinition {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[allow(dead_code)]
 pub struct ToolCall {
     // pub id: String,
     #[serde(default, rename = "type")]
@@ -737,11 +738,13 @@ pub struct ToolCall {
 }
 #[derive(Default, Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "lowercase")]
+#[allow(dead_code)]
 pub enum ToolType {
     #[default]
     Function,
 }
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[allow(dead_code)]
 pub struct Function {
     pub name: String,
     pub arguments: Value,
@@ -938,6 +941,7 @@ impl From<rig::message::ToolCall> for ToolCall {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[allow(dead_code)]
 pub struct SystemContent {
     #[serde(default)]
     r#type: SystemContentType,
@@ -971,6 +975,7 @@ impl FromStr for SystemContent {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[allow(dead_code)]
 pub struct AssistantContent {
     pub text: String,
 }
@@ -984,6 +989,7 @@ impl FromStr for AssistantContent {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
+#[allow(dead_code)]
 pub enum UserContent {
     Text { text: String },
     Image { image_url: ImageUrl },
@@ -998,6 +1004,7 @@ impl FromStr for UserContent {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[allow(dead_code)]
 pub struct ImageUrl {
     pub url: String,
     #[serde(default)]
