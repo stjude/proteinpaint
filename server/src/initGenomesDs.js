@@ -10,6 +10,18 @@ import { mds_init } from './mds.init.js'
 import * as mds3_init from './mds3.init.js'
 import { parse_textfilewithheader } from './parse_textfilewithheader.js'
 import { clinsig } from '../dataset/clinvar.ts'
+// will pass below as argument to mds3_init()
+import { mayMapRefseq2ensembl, flattenCaseByFields, may_add_readdepth, mapGenes2isoforms } from './mds3.gdc.js'
+import { isUsableTerm, joinUrl } from '@sjcrh/proteinpaint-shared'
+
+const dsHelpers = {
+	mayMapRefseq2ensembl,
+	flattenCaseByFields,
+	may_add_readdepth,
+	mapGenes2isoforms,
+	isUsableTerm,
+	joinUrl
+}
 
 export const genomes = {} // { hg19: {...}, ... }
 
@@ -406,9 +418,9 @@ export async function initGenomesDs(serverconfig) {
 			const _ds = (await import(dsFile)).default
 			const ds =
 				typeof _ds == 'function'
-					? await _ds(common, { serverconfig, clinsig })
+					? await _ds(common, { serverconfig, clinsig, dsHelpers })
 					: typeof _ds?.default == 'function'
-					? await _ds.default(common, { serverconfig, clinsig })
+					? await _ds.default(common, { serverconfig, clinsig, dsHelpers })
 					: _ds.default || _ds
 
 			if (d.updateAttr) {
