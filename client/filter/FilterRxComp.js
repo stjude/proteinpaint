@@ -63,11 +63,9 @@ class FilterRxComp extends Filter {
 
 	initHolder() {
 		const div = this.dom.holder
-			.attr('class', 'filter_div')
+			.attr('class', 'sjpp_filter_div')
 			.style('position', 'relative')
 			.style('width', 'fit-content')
-			.style('margin', '10px')
-			.style('margin-top', '5px')
 			.style('display', 'table')
 			.style('border', this.opts.hideLabel ? 'none' : 'solid 1px #ddd')
 
