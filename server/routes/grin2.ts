@@ -136,7 +136,7 @@ function generateCacheFileName(): string {
 async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Response> {
 	const startTime = Date.now()
 
-	// We set things like the analyis and processing time to 0 here so that on re-plots we have them defined and we don't get errors
+	// We set things like the analysis and processing time to 0 here so that on re-plots we have them defined and we don't get errors
 	let cacheFileName = request.cacheFileName
 	let resultData: any
 	let processingTime = 0
@@ -148,6 +148,14 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	mayLog('[GRIN2] Checking for existing cache file...')
 	mayLog(`[GRIN2] Provided cache file: ${cacheFileName || 'none'}`)
 
+	// Validate cache file path to prevent directory traversal attacks
+	if (cacheFileName) {
+		const resolvedPath = path.resolve(cacheFileName)
+		const expectedDir = path.resolve(serverconfig.cachedir, 'grin2')
+		if (!resolvedPath.startsWith(expectedDir + path.sep)) {
+			throw new Error('Invalid cache file path')
+		}
+	}
 	if (cacheFileName && (await fileExistsAndReadable(cacheFileName))) {
 		// Re-plot only
 

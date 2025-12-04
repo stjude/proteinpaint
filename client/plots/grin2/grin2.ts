@@ -150,7 +150,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		})
 
 		// Normalize number inputs to the integer values we actually use on the backend.
-		// This and the backend sanitatization allow the server to not error if the user types in invalid values (e.g. decimals) and hang the re-render
+		// This and the backend sanitization allow the server to not error if the user types in invalid values (e.g. decimals) and hang the re-render
 		this.dom.plotControls
 			.selectAll('input[type="number"]')
 			.on('change.grin2IntSanitize', function (this: HTMLInputElement) {
@@ -683,10 +683,10 @@ class GRIN2 extends PlotBase implements RxComponent {
 			if (response.status === 'error') throw `GRIN2 analysis failed: ${response.error}`
 
 			// Store the response and dimensions for potential re-rendering
-			response.requestWidth = requestData.width
-			response.requestHeight = requestData.height
-			response.requestPngDotRadius = requestData.pngDotRadius
-			response.requestLegendDotRadius = requestData.pngDotRadius
+			response.requestWidth = Number(requestData.width)
+			response.requestHeight = Number(requestData.height)
+			response.requestPngDotRadius = Number(requestData.pngDotRadius)
+			response.requestLegendDotRadius = Number(requestData.pngDotRadius)
 			this.lastPlotResult = response
 
 			this.renderResults(response)
@@ -783,12 +783,19 @@ class GRIN2 extends PlotBase implements RxComponent {
 				this.dom.plotDiv.style('opacity', '1')
 			}
 		} catch (error) {
+			if (this.dom.plotDiv) {
+				this.dom.plotDiv.style('opacity', '1')
+			}
 			sayerror(this.dom.div, `Error re-rendering GRIN2: ${error instanceof Error ? error.message : error}`)
 		}
 	}
 
 	private downloadPlot() {
 		const svgNode = this.dom.plotDiv.select('svg').node() as SVGSVGElement
+		if (!svgNode) {
+			console.error('No SVG element found to download')
+			return
+		}
 
 		// Clone the SVG to avoid modifying the displayed version
 		const clone = svgNode.cloneNode(true) as SVGSVGElement
