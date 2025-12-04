@@ -728,6 +728,13 @@ class GRIN2 extends PlotBase implements RxComponent {
 	 */
 	private async refetchWithNewDimensions(width: number, height: number) {
 		try {
+			// If we don't have a previous response (and thus no cache file),
+			// there's nothing to re-plot from; bail early or fall back to full run.
+			if (!this.lastApiResponse?.cacheFileName) {
+				console.warn('[GRIN2] No cacheFileName available; run GRIN2 analysis first.')
+				return
+			}
+
 			// Get the last configuration used
 			const dtUsage = this.getDtUsageFromCheckboxes()
 			const configValues = this.getConfigValues(dtUsage)
@@ -743,6 +750,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				maxGenesToShow: this.state.config.settings?.manhattan?.maxGenesToShow,
 				lesionTypeColors: this.state.config.settings?.manhattan?.lesionTypeColors,
 				qValueThreshold: this.state.config.settings?.manhattan?.qValueThreshold,
+				cacheFileName: this.lastApiResponse.cacheFileName,
 				...configValues
 			}
 
@@ -766,7 +774,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			// Only update the plot, keep the table
 			if (this.plotDiv && !this.plotDiv.empty()) {
-				// Clear just the plot div content
 				this.plotDiv.selectAll('*').remove()
 
 				// Re-render the plot
@@ -778,8 +785,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				this.plotDiv.style('opacity', '1')
 			}
 		} catch (error) {
-			console.error('Error refetching with new dimensions:', error)
-			sayerror(this.dom.div, `Error re-rendering plot: ${error instanceof Error ? error.message : error}`)
+			sayerror(this.dom.div, `Error re-rendering GRIN2: ${error instanceof Error ? error.message : error}`)
 		}
 	}
 

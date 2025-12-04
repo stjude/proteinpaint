@@ -123,67 +123,32 @@ function getCnvLesionType(isGain: boolean): string {
 	return lesionType.lesionType
 }
 
-// Build the subset of the request that actually affects the GRIN2 analysis
-// (NOT the plot-only settings).
-function buildCacheKeyRequest(request: GRIN2Request): any {
-	// Shallow copy so we don't mutate the original request
-	const analysisRequest: any = { ...request }
-
-	// Strip plot-only / cosmetic / transient fields
-	delete analysisRequest.width
-	delete analysisRequest.height
-	delete analysisRequest.devicePixelRatio
-	delete analysisRequest.pngDotRadius
-	delete analysisRequest.lesionTypeColors
-	delete analysisRequest.qValueThreshold
-	delete analysisRequest.cacheFileName // ignore any user-provided value
-
-	return analysisRequest
-}
-
-// Stable stringify so the same logical request always hashes identically
-function stableStringify(value: any): string {
-	if (value === null || typeof value !== 'object') return JSON.stringify(value)
-
-	if (Array.isArray(value)) {
-		return '[' + value.map(v => stableStringify(v)).join(',') + ']'
-	}
-
-	const keys = Object.keys(value).sort()
-	return '{' + keys.map(k => JSON.stringify(k) + ':' + stableStringify(value[k])).join(',') + '}'
-}
-
-// Generate a deterministic cache filename for a GRIN2 analysis request
-function generateCacheFileName(request: GRIN2Request): string {
-	const cacheKeyObject = buildCacheKeyRequest(request)
-	const cacheKeyString = stableStringify(cacheKeyObject)
-
-	// 32-hex-character hash, same length as your old random id
-	const hash = crypto.createHash('sha256').update(cacheKeyString).digest('hex').slice(0, 32)
-	const cacheFileName = `grin2_results_${hash}.txt`
+function generateCacheFileName(): string {
+	const randomHex = crypto.randomBytes(16).toString('hex') // 32 hex chars
+	const cacheFileName = `grin2_results_${randomHex}.txt`
 	return path.join(serverconfig.cachedir, 'grin2', cacheFileName)
 }
 
 async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Response> {
 	const startTime = Date.now()
-	const cacheFileNameCandidate = generateCacheFileName(request)
 
-	// Cache file check
-	let cacheFileName: string
+	// May be undefined for a brand new analysis
+	let cacheFileName = request.cacheFileName || ''
 	let resultData: any
 	let processingTime = 0
 	let grin2AnalysisTime = 0
 	let chromosomelist: { [key: string]: number } = {}
 	let processingSummary: any = undefined
 
-	// Check if we're re-plotting with an existing cache file
-	mayLog(`[GRIN2] Checking for existing cache file...`)
-	mayLog(`[GRIN2] Provided cache file: ${request.cacheFileName || 'none'}`)
-	// mayLog(`[GRIN2] Cache file path: ${await file_is_readable(request.cacheFileName || '')}`)
-	if (await fileExistsAndReadable(cacheFileNameCandidate)) {
-		// Use existing cache file (no Python)
-		mayLog(`[GRIN2] Re-plotting with existing cache: ${cacheFileNameCandidate}`)
-		cacheFileName = cacheFileNameCandidate
+	// --- Decide: re-plot vs full pipeline ---
+	mayLog('[GRIN2] Checking for existing cache file...')
+	mayLog(`[GRIN2] Provided cache file: ${cacheFileName || 'none'}`)
+
+	if (cacheFileName && (await fileExistsAndReadable(cacheFileName))) {
+		// -----------------------------
+		// RE-PLOT ONLY (no Python)
+		// -----------------------------
+		mayLog(`[GRIN2] Re-plotting with existing cache: ${cacheFileName}`)
 
 		// Still need chromosome list for Rust
 		for (const c in g.majorchr) {
@@ -193,7 +158,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 			chromosomelist[c] = g.majorchr[c]
 		}
 
-		// We don't recompute top table on re-plot
+		// We don't recompute top gene table on re-plot
 		resultData = {
 			cacheFileName,
 			topGeneTable: null,
@@ -201,8 +166,13 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 			showingTop: null
 		}
 	} else {
-		// Run complete pipeline
-		mayLog(`[GRIN2] Running full GRIN2 analysis pipeline`)
+		// -----------------------------
+		// FULL ANALYSIS PIPELINE
+		// -----------------------------
+		mayLog('[GRIN2] Running full GRIN2 analysis pipeline')
+
+		// Always start a new cache file for a new analysis run
+		cacheFileName = generateCacheFileName()
 
 		// Step 1: Get samples using cohort infrastructure
 		const samples = await get_samples(request, ds, true)
@@ -244,8 +214,8 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 			genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 			chromosomelist: {} as { [key: string]: number },
 			lesion: JSON.stringify(lesions),
-			cacheFileName: generateCacheFileName(request),
-			availableDataTypes: availableDataTypes,
+			cacheFileName, // <-- use the new per-analysis cache file
+			availableDataTypes,
 			maxGenesToShow: request.maxGenesToShow,
 			lesionTypeMap: buildLesionTypeMap(availableDataTypes)
 		}
@@ -257,30 +227,37 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 			}
 			pyInput.chromosomelist[c] = g.majorchr[c]
 		}
-
 		chromosomelist = pyInput.chromosomelist
 
 		// Step 4: Run Python GRIN2 analysis
 		const grin2AnalysisStart = Date.now()
 		const pyResult = await run_python('grin2PpWrapper.py', JSON.stringify(pyInput))
 
-		if (pyResult.stderr?.trim()) {
-			mayLog(`[GRIN2] Python stderr: ${pyResult.stderr}`)
-			if (pyResult.stderr.includes('ERROR:')) {
-				throw new Error(`Python script error: ${pyResult.stderr}`)
+		if ((pyResult as any).stderr?.trim()) {
+			mayLog(`[GRIN2] Python stderr: ${(pyResult as any).stderr}`)
+			if ((pyResult as any).stderr.includes('ERROR:')) {
+				throw new Error(`Python script error: ${(pyResult as any).stderr}`)
 			}
 		}
 
 		grin2AnalysisTime = Date.now() - grin2AnalysisStart
 		mayLog(`[GRIN2] Python processing took ${formatElapsedTime(grin2AnalysisTime)}`)
 
-		resultData = JSON.parse(pyResult)
-		cacheFileName = resultData.cacheFileName
+		resultData = JSON.parse((pyResult as any).stdout ?? pyResult)
+
+		// Prefer Python-reported cacheFileName if present
+		if (resultData.cacheFileName) {
+			cacheFileName = resultData.cacheFileName
+		} else {
+			resultData.cacheFileName = cacheFileName
+		}
 	}
 
+	// -----------------------------
 	// Step 5: Prepare Rust input
+	// -----------------------------
 	const rustInput = {
-		file: resultData.cacheFileName,
+		file: cacheFileName,
 		type: 'grin2',
 		chrSizes: chromosomelist,
 		plot_width: request.width,
@@ -291,15 +268,13 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		q_value_threshold: request.qValueThreshold
 	}
 
-	// Step 6: Generate manhattan plot via rust
+	// Step 6: Generate Manhattan plot via Rust
 	const manhattanPlotStart = Date.now()
 	const rsResult = await run_rust('manhattan_plot', JSON.stringify(rustInput))
 	const manhattanPlotTime = Date.now() - manhattanPlotStart
 	mayLog(`[GRIN2] Manhattan plot generation took ${formatElapsedTime(manhattanPlotTime)}`)
 
 	const manhattanPlotData = JSON.parse(rsResult)
-
-	// Step 6: Parse results and respond
 
 	// Validate Rust script output
 	if (!manhattanPlotData?.png) {
@@ -321,8 +296,8 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 			plottingTime: formatElapsedTime(manhattanPlotTime),
 			totalTime: formatElapsedTime(totalTime)
 		},
-		processingSummary: processingSummary,
-		cacheFileName: resultData.cacheFileName
+		processingSummary,
+		cacheFileName
 	}
 
 	return response
