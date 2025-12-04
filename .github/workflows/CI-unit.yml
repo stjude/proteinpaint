@@ -107,11 +107,20 @@ jobs:
             ./rust/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Calculate rust version
+        id: get_rust_version  # <--- 1. Give the step an ID
+        run: |
+          # Get rust version from toolchain file
+          version=$(grep '^channel' ./rust/rust-toolchain.toml | awk -F'"' '{print $2}')
+          # 2. Write it to GITHUB_OUTPUT
+          echo "rust_version=$version" >> "$GITHUB_OUTPUT"
+
+
       - name: Setup Rust Toolchain for GitHub CI
         uses: actions-rust-lang/setup-rust-toolchain@v1.15.0
         if: contains(env.WS_TO_TEST, 'rust')
         with:
-          toolchain: 1.89.0
+          toolchain: ${{ steps.get_rust_version.outputs.rust_version }}
           override: true
           rust-src-dir: rust
 
