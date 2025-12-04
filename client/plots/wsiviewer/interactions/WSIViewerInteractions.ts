@@ -221,17 +221,19 @@ export class WSIViewerInteractions {
 
 			sessionWSImage.sessionsTileSelections = sessionsTileSelection
 
-			const annotationsData = SessionWSImage.getTileSelections(sessionWSImage)
+			const tileSelections = SessionWSImage.getTileSelections(sessionWSImage)
 
 			// Check if click falls inside an existing annotation
-			const selectedAnnotationIndex = annotationsData.findIndex(annotation => {
-				const [x0, y0] = annotation.zoomCoordinates
+			const selectedTileSelectionIndex = tileSelections.findIndex(tileSelection => {
+				const [x0, y0] = tileSelection.zoomCoordinates
 				const x1 = x0 + settings.tileSize
 				const y1 = y0 + settings.tileSize
 				return coordinateX >= x0 && coordinateX < x1 && coordinateY >= y0 && coordinateY < y1
 			})
 
-			if (selectedAnnotationIndex !== -1) {
+			console.log('selectedTileSelectionIndex', selectedTileSelectionIndex)
+
+			if (selectedTileSelectionIndex !== -1) {
 				wsiApp.app.dispatch({
 					type: 'plot_edit',
 					id: wsiApp.id,
@@ -239,7 +241,8 @@ export class WSIViewerInteractions {
 						settings: {
 							renderWSIViewer: false,
 							renderAnnotationTable: true,
-							activeAnnotation: selectedAnnotationIndex,
+							changeTrigger: Date.now(),
+							activeAnnotation: selectedTileSelectionIndex,
 							sessionsTileSelection: [...sessionsTileSelection]
 						}
 					}
@@ -272,6 +275,8 @@ export class WSIViewerInteractions {
 
 			source?.addFeature(borderFeature)
 
+			console.log('newTileSelection', newTileSelection)
+
 			wsiApp.app.dispatch({
 				type: 'plot_edit',
 				id: wsiApp.id,
@@ -279,6 +284,7 @@ export class WSIViewerInteractions {
 					settings: {
 						renderWSIViewer: false,
 						renderAnnotationTable: true,
+						activeAnnotation: 0,
 						changeTrigger: Date.now(),
 						sessionsTileSelection: [newTileSelection, ...sessionsTileSelection]
 					}
@@ -590,7 +596,6 @@ export class WSIViewerInteractions {
 			config: {
 				settings: {
 					renderWSIViewer: false,
-					// TODO figure out how to avoid Math.random()
 					changeTrigger: Date.now(),
 					activeAnnotation: 0,
 					sessionsTileSelection: sessionsTileSelection
