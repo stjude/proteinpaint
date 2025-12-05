@@ -710,6 +710,21 @@ export async function mayInitiateNumericDictionaryTermplots(ds) {
 	}
 }
 
+export async function mayInitiatemutationSignatureplots(ds) {
+	if (!ds.cohort.mutationSignatureplots?.plots) return
+	if (!Array.isArray(ds.cohort.mutationSignatureplots.plots)) throw 'cohort.mutationSignatureplots.plots is not array'
+	for (const p of ds.cohort.mutationSignatureplots.plots) {
+		if (!p.name) throw '.name missing from one of mutationSignatureplots.plots[]'
+		if (p.file) {
+			const mutationSignatureplotsConfig = await read_file(path.join(serverconfig.tpmasterdir, p.file))
+			p.mutationSignatureplotsConfig = JSON.parse(mutationSignatureplotsConfig)
+			if (p.getConfig) p.mutationSignatureplotsConfig = p.getConfig(p.mutationSignatureplotsConfig)
+		} else {
+			throw 'unknown data source of one of mutationSignatureplots.plots[]'
+		}
+	}
+}
+
 async function findListOfBins(q, tw, ds) {
 	// for non-dict terms which may lack tw.term.bins
 	if (tw.q.type == 'custom-bin') {

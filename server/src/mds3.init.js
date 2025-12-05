@@ -32,7 +32,11 @@ import { get_samples, get_active_groupset } from './termdb.sql.js'
 import { server_init_db_queries } from './termdb.server.init.ts'
 import { barchart_data } from './termdb.barchart.js'
 import { mayInitiateScatterplots } from '../routes/termdb.sampleScatter.ts'
-import { mayInitiateMatrixplots, mayInitiateNumericDictionaryTermplots } from './termdb.matrix.js'
+import {
+	mayInitiateMatrixplots,
+	mayInitiateNumericDictionaryTermplots,
+	mayInitiatemutationSignatureplots
+} from './termdb.matrix.js'
 import { add_bcf_variant_filter } from './termdb.snp.js'
 import { validate_correlationVolcano } from '#routes/correlationVolcano.ts'
 import { validate_query_singleCell } from '#routes/termdb.singlecellSamples.ts'
@@ -337,6 +341,7 @@ export async function validate_termdb(ds) {
 	await mayInitiateScatterplots(ds)
 	await mayInitiateMatrixplots(ds)
 	await mayInitiateNumericDictionaryTermplots(ds)
+	await mayInitiatemutationSignatureplots(ds)
 	await validate_correlationVolcano(ds)
 
 	if ('minTimeSinceDx' in tdb) {

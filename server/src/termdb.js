@@ -70,6 +70,7 @@ export function handle_request_closure(genomes) {
 			if (q.for == 'termTypes') return res.send(await ds.getTermTypes(q))
 			if (q.for == 'matrix') return await get_matrix(q, req, res, ds, genome)
 			if (q.for == 'numericDictTermCluster') return await get_numericDictTermCluster(q, req, res, ds, genome)
+			if (q.for == 'mutationSignature') return await get_mutationSignatureplots(q, req, res, ds, genome)
 			if (q.for == 'mds3variantData') return await get_mds3variantData(q, res, ds, genome)
 			if (q.for == 'getMultivalueTWs') return res.send(tdb.q.get_multivalue_tws(q.parent_id))
 			if (q.for == 'validateToken') {
@@ -273,6 +274,18 @@ async function get_numericDictTermCluster(q, req, res, ds, genome) {
 		const plot = ds.cohort.termdb.numericDictTermCluster.plots.find(p => p.name === q.getPlotDataByName)
 		if (!plot) throw 'invalid name of premade numericDictTermCluster plot' // invalid name could be attack string, avoid returning it so it won't be printed in html
 		res.send(plot.numericDictTermClusterConfig)
+		return
+	}
+}
+
+async function get_mutationSignatureplots(q, req, res, ds, genome) {
+	if (q.getPlotDataByName) {
+		// send back the config for premade numericDictTermCluster plot
+		if (!ds.cohort?.mutationSignatureplots?.plots)
+			throw 'ds.cohort.mutationSignatureplots.plots missing for the dataset'
+		const plot = ds.cohort.mutationSignatureplots.plots.find(p => p.name === q.getPlotDataByName)
+		if (!plot) throw 'invalid name of premade mutationSignature plot' // invalid name could be attack string, avoid returning it so it won't be printed in html
+		res.send(plot.mutationSignatureplotsConfig)
 		return
 	}
 }

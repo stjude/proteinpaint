@@ -1211,6 +1211,17 @@ export class TermdbVocab extends Vocab {
 		})
 	}
 
+	async getMutationSignatureByName(name) {
+		// find a pre-built numericDictTermCluster by name from this dataset
+		return await dofetch3('termdb', {
+			body: {
+				for: 'mutationSignature',
+				getPlotDataByName: name,
+				genome: this.state.vocab.genome,
+				dslabel: this.state.vocab.dslabel
+			}
+		})
+	}
 	async getTopVariablyExpressedGenes(arg) {
 		return await dofetch3('termdb/topVariablyExpressedGenes', { method: 'GET', body: arg })
 	}
