@@ -12,7 +12,7 @@ TODOs
 */
 
 type Arg = {
-	holder: d3.Selection<HTMLElement, any, any, any> // D3 holder where UI is rendered
+	holder: any // D3 holder where UI is rendered
 	cnvGainCutoff: number // minimum positive value (log2 ratio) to consider a CNV as gain
 	cnvLossCutoff: number // maximum negative value (log2 ratio) to consider a CNV as loss
 	cnvMaxLength: number | null // max segment length in base pairs; null = no length limit (UI shows -1)
@@ -42,6 +42,7 @@ export function renderCnvConfig(arg: Arg) {
 	cnvGainDiv.append('span').style('opacity', 0.7).text('Minimum CNV Gain (log2 ratio)') // TODO: verify that this will always be log2 ratio
 	const cnvGainInput = cnvGainDiv
 		.append('input')
+		.attr('data-testid', 'sjpp-cnv-gain-input')
 		.attr('type', 'number')
 		.property('value', cnvGainCutoff)
 		.style('width', '100px')
@@ -67,6 +68,7 @@ export function renderCnvConfig(arg: Arg) {
 	cnvLossDiv.append('span').style('opacity', 0.7).text('Maximum CNV Loss (log2 ratio)') // TODO: verify that this will always be log2 ratio
 	const cnvLossInput = cnvLossDiv
 		.append('input')
+		.attr('data-testid', 'sjpp-cnv-loss-input')
 		.attr('type', 'number')
 		.property('value', cnvLossCutoff)
 		.style('width', '100px')
@@ -92,6 +94,7 @@ export function renderCnvConfig(arg: Arg) {
 	cnvLengthDiv.append('span').style('opacity', 0.7).text('CNV Max Length')
 	const cnvLengthInput = cnvLengthDiv
 		.append('input')
+		.attr('data-testid', 'sjpp-cnv-length-input')
 		.attr('type', 'number')
 		.property('value', cnvMaxLength)
 		.style('width', '100px')
