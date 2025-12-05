@@ -16,34 +16,37 @@ NOTE: dataset-specific overrides may be applied when the TermTypeSearch is initi
 
 const useCasesExcluded = {
 	matrix: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
-	filter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
-	dictionary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
-	summary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
-	barchart: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
-	violin: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
-	sampleScatter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
+	filter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.COMPOSITE_PERCENTAGE],
+	dictionary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.COMPOSITE_PERCENTAGE],
+	summary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.COMPOSITE_PERCENTAGE],
+	barchart: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.COMPOSITE_PERCENTAGE],
+	violin: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.COMPOSITE_PERCENTAGE],
+	sampleScatter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.COMPOSITE_PERCENTAGE],
 	cuminc: [
 		TermTypeGroups.SNP_LOCUS,
 		TermTypeGroups.SNP_LIST,
 		TermTypeGroups.MUTATION_CNV_FUSION,
-		TermTypeGroups.METABOLITE_INTENSITY
+		TermTypeGroups.METABOLITE_INTENSITY,
+		TermTypeGroups.COMPOSITE_PERCENTAGE
 	],
 	dataDownload: [
 		//TermTypeGroups.SNP_LOCUS, //this tabs require that the handler for this term type to be implemented
 		//TermTypeGroups.SNP_LIST, //this tabs require that the handler for this term type to be implemented
-		TermTypeGroups.MUTATION_CNV_FUSION
+		TermTypeGroups.MUTATION_CNV_FUSION,
+		TermTypeGroups.COMPOSITE_PERCENTAGE
 	], //Later on can support other term types like snplocus, snplst, geneVariant, non dictionary terms
-	survival: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
+	survival: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.COMPOSITE_PERCENTAGE],
 	//Used from the termsetting when searching for a term, as any term with categories is allowed
-	default: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
-	regression: [TermTypeGroups.SNP_LIST, TermTypeGroups.SNP_LOCUS],
+	default: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.COMPOSITE_PERCENTAGE],
+	regression: [TermTypeGroups.SNP_LIST, TermTypeGroups.SNP_LOCUS, TermTypeGroups.COMPOSITE_PERCENTAGE],
 	metaboliteIntensity: [
 		TermTypeGroups.SNP_LOCUS,
 		TermTypeGroups.SNP_LIST,
 		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.DICTIONARY_VARIABLES,
 		TermTypeGroups.GENE_EXPRESSION,
-		TermTypeGroups.SSGSEA
+		TermTypeGroups.SSGSEA,
+		TermTypeGroups.COMPOSITE_PERCENTAGE
 	],
 	geneExpression: [
 		TermTypeGroups.SNP_LOCUS,
@@ -51,7 +54,8 @@ const useCasesExcluded = {
 		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.DICTIONARY_VARIABLES,
 		TermTypeGroups.METABOLITE_INTENSITY,
-		TermTypeGroups.SSGSEA
+		TermTypeGroups.SSGSEA,
+		TermTypeGroups.COMPOSITE_PERCENTAGE
 	],
 	numericDictTermCluster: [
 		TermTypeGroups.SNP_LOCUS,
@@ -59,7 +63,8 @@ const useCasesExcluded = {
 		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.GENE_EXPRESSION,
 		TermTypeGroups.METABOLITE_INTENSITY,
-		TermTypeGroups.SSGSEA
+		TermTypeGroups.SSGSEA,
+		TermTypeGroups.COMPOSITE_PERCENTAGE
 	],
 	numericTermCollections: [
 		TermTypeGroups.SNP_LOCUS,
