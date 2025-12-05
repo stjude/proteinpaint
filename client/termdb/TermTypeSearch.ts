@@ -301,6 +301,12 @@ export class TermTypeSearch {
 				} catch (e) {
 					throw `error with handler='./handlers/${type}.ts': ${e}`
 				}
+				if (type == TermTypes.COMPOSITE_PERCENTAGE) {
+					const length = this.app.vocabApi?.termdbConfig?.numericTermCollections?.length
+					if (length == 1) {
+						label = this.app.vocabApi?.termdbConfig?.numericTermCollections[0].name
+					}
+				}
 				this.tabs.push({ label, callback: () => this.setTermTypeGroup(type, termTypeGroup), termTypeGroup })
 			}
 		}

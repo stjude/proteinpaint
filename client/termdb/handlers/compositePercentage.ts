@@ -4,7 +4,6 @@ export class SearchHandler {
 	callback: any
 	app: any
 	async init(opts) {
-		console.log('opts', opts)
 		this.callback = opts.callback
 		this.app = opts.app
 		const usecase = {

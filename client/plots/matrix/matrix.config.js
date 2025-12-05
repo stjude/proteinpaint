@@ -219,7 +219,7 @@ export async function getPlotConfig(opts = {}, app) {
 					if (!tw.term.id) throw `missing tw.id and tw.term.id`
 					tw.id = tw.term.id // tw.id will be used to rehydrate tw with new term data from server. tw.id will be deleted following rehydration.
 				}
-				if (tw.term?.type != 'samplelst' && tw.term.type != 'compositePercentage') delete tw.term
+				if (tw.term?.type != 'samplelst' && tw.term?.type != 'compositePercentage') delete tw.term
 			}
 			promises.push(fillTermWrapper(tw, app.vocabApi))
 		}
