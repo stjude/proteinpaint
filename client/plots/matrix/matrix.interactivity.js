@@ -215,6 +215,10 @@ export function setInteractivity(self) {
 						c1.html('')
 						c2.html(timeToEventKey)
 					}
+				} else if (d.term.type == TermTypes.COMPOSITE_PERCENTAGE) {
+					const [c1, c2] = table.addRow()
+					c1.html(d.label)
+					c2.html(`${d.value.toFixed(2)}%`)
 				} else {
 					const colorSquare =
 						(d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous') || d.tw.q.mode !== 'continuous'
