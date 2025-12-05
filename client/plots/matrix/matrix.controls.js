@@ -34,7 +34,6 @@ export class MatrixControls {
 			this.setCNVBtn()
 		}
 		this.setVariablesBtn(s)
-		if (state.termdbConfig?.numericTermCollections?.find(c => c.name == 'Mutation Signature')) this.setMutSigBtn(s)
 		this.setDimensionsBtn(s)
 		this.setLegendBtn(s)
 		this.setDownloadBtn(s)
@@ -449,19 +448,6 @@ export class MatrixControls {
 					}
 				],
 				customInputs: this.appendDictInputs
-			})
-			.html(d => d.label)
-			.style('margin', '2px 0')
-			.on('click', (event, d) => this.callback(event, d))
-	}
-
-	setMutSigBtn(s) {
-		this.opts.holder
-			.append('button')
-			.datum({
-				label: `Mutation Signature`,
-				rows: [],
-				customInputs: this.appendMutSigDictInputs
 			})
 			.html(d => d.label)
 			.style('margin', '2px 0')
@@ -1482,22 +1468,6 @@ export class MatrixControls {
 		self.addDictMenu(app, parent, app.tip.d.append('div'))
 	}
 
-	appendMutSigDictInputs(self, app, parent, table) {
-		tip.clear()
-		app.tip.d.append('hr')
-		const mutSigCollection = parent.state.termdbConfig.numericTermCollections?.find(c => c.name == 'Mutation Signature')
-		if (!mutSigCollection) throw 'no mutation signature collection defined'
-		const usecase = {
-			target: 'numericTermCollections',
-			detail: {
-				termIds: mutSigCollection.termIds,
-				branchIds: mutSigCollection.branchIds,
-				name: 'Mutation Signature',
-				type: 'compositePercentage'
-			}
-		}
-		self.addDictMenu(app, parent, app.tip.d.append('div'), usecase)
-	}
 	generateCNVItems(self, app, parent, table) {
 		table.attr('class', null) // remove the hoverover background for CNV button
 		const m = parent.config.settings.matrix
@@ -1553,7 +1523,7 @@ export class MatrixControls {
 		}
 	}
 
-	async addDictMenu(app, parent, holder = undefined, usecase) {
+	async addDictMenu(app, parent, holder = undefined) {
 		//app.tip.clear()
 
 		const termdb = await import('#termdb/app')
@@ -1568,12 +1538,12 @@ export class MatrixControls {
 					header_mode: 'search_only'
 				},
 				tree: {
-					usecase: usecase || { target: 'matrix', detail: 'termgroups' }
+					usecase: { target: 'matrix', detail: 'termgroups' }
 				}
 			},
 			tree: {
 				submit_lst: termlst => {
-					this.submit_lst(termlst, usecase)
+					this.submit_lst(termlst)
 					app.tip.hide()
 				}
 			},
@@ -1583,12 +1553,11 @@ export class MatrixControls {
 		})
 	}
 
-	async submit_lst(termlst, usecase) {
+	async submit_lst(termlst) {
 		const newterms = await Promise.all(
 			termlst.map(async _term => {
 				const term = structuredClone(_term)
 				const tw = 'id' in term ? { id: term.id, term } : { term }
-				if (usecase?.target == 'numericTermCollections') tw.q = { ...tw.q, mode: 'continuous' }
 				await fillTermWrapper(tw, this.opts.app.vocabApi)
 				return tw
 			})
@@ -1596,22 +1565,6 @@ export class MatrixControls {
 
 		const termgroups = structuredClone(this.parent.config.termgroups)
 
-		if (usecase?.target == 'numericTermCollections') {
-			const i = termgroups.findIndex(g => g.type == usecase.detail.type && g.name == usecase.detail.name)
-			if (i !== -1) {
-				const grp = termgroups[i]
-				grp.lst = [...newterms]
-			} else {
-				const grp = { lst: newterms, type: usecase.detail.type, name: usecase.detail.name }
-				termgroups.push(grp)
-			}
-			this.parent.app.dispatch({
-				type: 'plot_edit',
-				id: this.parent.id,
-				config: { termgroups }
-			})
-			return
-		}
 		const i = termgroups.findIndex(g => g.name == 'Variables')
 		if (i !== -1) {
 			const grp = termgroups[i]

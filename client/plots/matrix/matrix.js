@@ -210,7 +210,6 @@ export class Matrix extends PlotBase {
 			this.termOrder = this.getTermOrder(this.data)
 			this.sampleGroups = this.getSampleGroups(this.hierClusterSamples || this.data)
 			this.sampleOrder = this.getSampleOrder(this.data)
-			if (this.termGroups.some(tg => tg.type == 'compositePercentage')) this.combineComPerTerms(this)
 			// even though there may not be sampleOrder (matrix columns) to render,
 			// should still compute empty series data, legendData, etc to not break
 			// controls/interactions handlers that use those data
