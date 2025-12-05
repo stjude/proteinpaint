@@ -2867,8 +2867,7 @@ function setLengendActions(self) {
 					holder: cnvSetDiv,
 					cnvGainCutoff: cnv.cnvGainCutoff,
 					cnvLossCutoff: cnv.cnvLossCutoff,
-					cnvMaxLength: cnv.cnvMaxLength === null ? -1 : cnv.cnvMaxLength,
-					WTtoggle: false,
+					cnvMaxLength: cnv.cnvMaxLength,
 					callback: config => {
 						menuGrp.hide()
 						self.config.cnvCutoffs = structuredClone(config)
