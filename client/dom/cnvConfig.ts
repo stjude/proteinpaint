@@ -14,15 +14,6 @@ export function renderCnvConfig(arg) {
 
 	const settingsDiv = div.append('div').style('margin-left', '10px') // TODO: may rename settingsDiv
 
-	let WTtoggle = true
-	if (Object.keys(arg).includes('WTtoggle')) {
-		if (typeof arg.WTtoggle === 'boolean') {
-			WTtoggle = arg.WTtoggle
-		} else {
-			throw 'arg.WTtoggle must be a boolean value'
-		}
-	}
-
 	// CNV gain input
 	const cnvGainCutoff = arg.cnvGainCutoff
 	if (!isValidNumber(cnvGainCutoff)) throw 'cnvGainCutoff is not a valid number'
@@ -74,7 +65,7 @@ export function renderCnvConfig(arg) {
 		})
 
 	// CNV max length input
-	const cnvMaxLength = arg.cnvMaxLength
+	const cnvMaxLength = arg.cnvMaxLength === null ? -1 : arg.cnvMaxLength
 	if (!isValidNumber(cnvMaxLength)) throw 'cnvMaxLength is not a valid number'
 	const cnvLengthDiv = settingsDiv.append('div').style('margin-bottom', '5px')
 	cnvLengthDiv.append('span').style('opacity', 0.7).text('CNV Max Length')
@@ -103,8 +94,8 @@ export function renderCnvConfig(arg) {
 
 	// CNV wildtype checkbox
 	let wtCheckbox
-	if (WTtoggle) {
-		const cnvWT = arg.cnvWT
+	if (arg.WTtoggle) {
+		const cnvWT = arg.cnvWT || false
 		const wtDiv = settingsDiv.append('div').style('margin-bottom', '5px')
 		wtDiv.append('span').style('margin-right', '3px').style('opacity', 0.7).text('Wildtype')
 		wtCheckbox = wtDiv
@@ -131,12 +122,14 @@ export function renderCnvConfig(arg) {
 		.style('font-size', '.8em')
 		.text('APPLY')
 		.on('click', () => {
+			const tempCnvMaxLength = Number(cnvLengthInput.property('value'))
 			const config: any = {
 				cnvGainCutoff: Number(cnvGainInput.property('value')),
 				cnvLossCutoff: Number(cnvLossInput.property('value')),
-				cnvMaxLength: Number(cnvLengthInput.property('value'))
+				// no max length if value == -1
+				cnvMaxLength: tempCnvMaxLength == -1 ? null : tempCnvMaxLength
 			}
-			if (WTtoggle) config.cnvWT = wtCheckbox.property('checked')
+			if (arg.WTtoggle) config.cnvWT = wtCheckbox.property('checked')
 			arg.callback(config)
 		})
 }
