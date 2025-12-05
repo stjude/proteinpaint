@@ -969,8 +969,9 @@ export function getDefaultSettings(opts) {
 			// Download options
 			showDownload: true,
 
-			// Max genes to show in table
+			// Max genes to show in table and interactive dots cap
 			maxGenesToShow: 500,
+			interactiveDotsCap: 5000,
 
 			// Q-value threshold for significance indicators in the table
 			qValueThreshold: 0.05,
