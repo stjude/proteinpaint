@@ -6,9 +6,17 @@ export class SearchHandler {
 	async init(opts) {
 		this.callback = opts.callback
 		this.app = opts.app
+		const details = this.app.vocabApi.termdbConfig.numericTermCollections.reduce(
+			(acc, item, i) => ({
+				name: i === 0 ? item.name : acc.name + '/' + item.name,
+				termIds: [...acc.termIds, ...item.termIds],
+				branchIds: [...acc.branchIds, ...item.branchIds]
+			}),
+			{ name: '', termIds: [], branchIds: [] }
+		)
 		const usecase = {
 			target: 'numericTermCollections',
-			detail: { type: 'compositePercentage', ...this.app.vocabApi.termdbConfig.numericTermCollections[0] }
+			detail: { type: 'compositePercentage', ...details }
 		}
 		await appInit({
 			holder: opts.holder,
