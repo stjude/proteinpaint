@@ -3,6 +3,9 @@ FROM debian:trixie
 LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.version="latest"
 
+# Define an argument with a rust version value, this will be defined in the build script 
+ARG rust_version=1 # Default value, will be overwritten during run-time of the build script
+
 # Install dependencies
 RUN apt-get update && apt-get install -y \
     curl \
@@ -22,9 +25,9 @@ RUN apt-get update && apt-get install -y \
  && rm -rf /var/lib/apt/lists/*
 
 # Install Rust with rustup and set default toolchain
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.89.0 && \
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $rust_version && \
     . "$HOME/.cargo/env" && \
-    rustup default 1.89.0
+    rustup default $version
 
 # Add Rust to PATH
 ENV PATH="/root/.cargo/bin:${PATH}"

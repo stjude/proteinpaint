@@ -542,6 +542,8 @@ export function server_init_db_queries(ds) {
 
 	q.getSingleSampleData = async function (q, ds) {
 		const { sampleId, term_ids } = q
+		if (!sampleId) throw new Error('sampleId is missing for q.getSingleSampleData() request.')
+		if (!term_ids) throw new Error('term_ids are missing for q.getSingleSampleData() request.')
 
 		if (ds.cohort.termdb.checkAccessToSampleData) {
 			const samples = ds.cohort.db.connection.prepare(`SELECT name FROM sampleidmap WHERE id=?`).all(sampleId)
@@ -553,7 +555,7 @@ export function server_init_db_queries(ds) {
 			if (!access.canAccess) throw access.message || 'No accessible data found for the sample provided'
 		}
 
-		const termClause = !term_ids.length ? '' : `and term_id in (${term_ids.map(() => '?').join(',')})`
+		const termClause = !term_ids?.length ? '' : `and term_id in (${term_ids.map(() => '?').join(',')})`
 		const query = `
 		select term_id, value, jsondata from ( select term_id, value 
 		from anno_categorical 

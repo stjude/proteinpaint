@@ -15,7 +15,8 @@ jobs:
 
       - name: build rust
         run: |
-          rustup default 1.89.0
+          version=$(grep '^channel' ./rust/rust-toolchain.toml | awk -F'"' '{print $2}')
+          rustup default $version
           cd rust && cargo build --release
           ./extract_binaries.sh
 
