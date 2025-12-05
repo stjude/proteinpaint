@@ -1,6 +1,7 @@
 import type { Term, TermWrapper, Q } from '#types'
 import type { SetCellPropsSignature } from '../plots/matrix/matrix.xtw.ts'
 import { type UseCase } from '#termsetting'
+import { isDictionaryType } from '#shared'
 
 export type TwOpts = {
 	vocabApi?: any // TODO
@@ -21,6 +22,7 @@ export class TwBase {
 	type: string
 	$id?: string
 	isAtomic = true
+	#tw: TermWrapper
 
 	// define addons below, to be set using Object.defineProperties(this)
 	// by defining allowed method names here, subclasses that inherit from
@@ -33,6 +35,7 @@ export class TwBase {
 	valueFilter?: any
 
 	constructor(tw: TermWrapper, opts: TwOpts) {
+		this.#tw = tw
 		this.type = tw.type
 		this.isAtomic = true
 		if (tw.$id) this.$id = tw.$id
@@ -67,5 +70,27 @@ export class TwBase {
 	getStatus(_?: UseCase, __?: any) {
 		//if (_) {}
 		return { text: '' }
+	}
+
+	getMinCopy() {
+		const tw = this.#tw
+		const copy: any = { term: {}, q: tw.q }
+		if (tw.$id) copy.$id = tw.$id
+		if (tw.term) {
+			if (isDictionaryType(tw.term.type)) {
+				// dictionary term
+				if (tw.term.id) copy.term.id = tw.term.id
+				if (tw.term.name) copy.term.name = tw.term.name
+				if (tw.term.type) copy.term.type = tw.term.type
+				if (tw.term.values) copy.term.values = tw.term.values
+				if ((tw.term as any).groupsetting) copy.term.groupsetting = (tw.term as any).groupsetting
+			} else {
+				// non-dictionary term
+				// pass entire tw.term because non-dictionary terms
+				// cannot get rehydrated on server-side
+				copy.term = structuredClone(tw.term)
+			}
+		}
+		return copy
 	}
 }

@@ -1,3 +1,5 @@
+import { deepCopyFreeze } from './utils.ts'
+
 export interface RxStore {
 	type: string
 	api?: StoreApi
@@ -28,6 +30,7 @@ export class StoreApi {
 
 	#Store: RxStore
 	Inner?: RxStore // only in debugmode
+	#frozenStateCopy: any = Object.freeze({})
 
 	static getInitFxn(__Class__) {
 		return async opts => {
@@ -109,9 +112,12 @@ export class StoreApi {
 	}
 
 	async copyState() {
-		const self = this.#Store
-		const stateCopy = self.fromJson(self.toJson(self.state))
-		self.deepFreeze(stateCopy)
-		return stateCopy
+		// const time = Date.now()
+		this.#frozenStateCopy = deepCopyFreeze(this.#Store.state, this.#frozenStateCopy)
+		// const self = this.#Store
+		// this.#frozenStateCopy = self.fromJson(self.toJson(self.state))
+		// self.deepFreeze(this.#frozenStateCopy)
+		// console.log('copyState() time', Date.now() - time)
+		return this.#frozenStateCopy
 	}
 }

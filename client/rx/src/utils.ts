@@ -24,17 +24,34 @@ Utility Classes
 	  inheritance using the "extends" keyword
 */
 
-export function deepEqual(x, y) {
+// x, y: objects to compare
+// matched: a tracker for x nested object values that's already been inspected
+//          and found to match the corresponding value in y. This is useful when
+//          using deepEqual() in deepCopyFreeze(), since it returns early when
+//          some value does not match, but there may have been other nested objects
+//          that have already been matched that do not need to be inspected again.
+//
+// NOTE: The 2nd argument will be frozen if added to the optional matched argument.
+//       May improve the matched argument later into an opts{} argument, as needed.
+export function deepEqual(x, y, matched?: WeakMap<any, WeakSet<any>> | Map<any, WeakSet<any>>) {
 	if (x === y) {
 		return true
 	} else if (typeof x == 'object' && x != null && typeof y == 'object' && y != null) {
+		if (matched?.get(x)?.has(y)) return true
 		const xEntries = Object.entries(x)
 		const yKeys = Object.keys(y)
 		if (xEntries.length != yKeys.length) return false
+		// an empty object and empty array should not equal each other
+		if (!xEntries.length && x.constructor.name !== y.constructor.name) return false
 		// not using for..in loop, in order to not descend into inherited props/methods
 		for (const [key, val] of xEntries) {
 			if (!yKeys.includes(key)) return false
-			if (!deepEqual(val, y[key])) return false
+			if (!deepEqual(val, y[key], matched)) return false
+		}
+		if (matched) {
+			Object.freeze(y)
+			if (!matched.has(x)) matched.set(x, new WeakSet())
+			matched.get(x)!.add(y)
 		}
 		return true
 	} else return false
@@ -46,6 +63,33 @@ export function deepFreeze(obj) {
 	for (const value of Object.values(obj)) {
 		if (value !== null && typeof value == 'object') deepFreeze(value)
 	}
+	return obj
+}
+
+// input: object to copy
+// ref: may reuse another copy that's already frozen, if it already equals the input
+// matched: a tracker to supply as 3rd argument to deepEqual(), to track objects
+//          that equal the second argument.
+export function deepCopyFreeze(
+	input,
+	ref: any = {},
+	matched: WeakMap<any, WeakSet<any>> | Map<any, WeakSet<any>> = new Map()
+) {
+	// non-objects will be returned as-is
+	if (input === null || typeof input != 'object') return input
+	if (input.constructor.name !== 'Object' && input.constructor.name !== 'Array') {
+		// class instances (non-literal objects) will be returned as-is but frozen
+		if (!matched.has(input)) matched.set(input, new WeakSet())
+		matched.get(input)!.add(input)
+		return deepFreeze(input)
+	}
+	if (deepEqual(input, ref, matched)) return ref
+	const copy = Array.isArray(input) ? [] : {}
+	// not using for..in loop, in order to not descend into inherited props/methods
+	for (const [key, value] of Object.entries(input)) {
+		copy[key] = deepCopyFreeze(value, ref[key], matched)
+	}
+	return Object.freeze(copy)
 }
 
 export async function notifyComponents(components, current) {
@@ -101,22 +145,21 @@ export async function notifyComponents(components, current) {
 export function copyMerge(base, ...args) {
 	const target = typeof base == 'string' ? fromJson(base) : base
 	for (const arg of args) {
-		if (arg) {
-			const source = typeof base == 'string' ? fromJson(toJson(arg)) : arg
-			for (const key in source) {
-				if (
-					!target[key] ||
-					Array.isArray(target[key]) ||
-					typeof target[key] !== 'object' ||
-					source === null ||
-					source === undefined ||
-					source.isAtomic ||
-					target?.isAtomic ||
-					target[key]?.isAtomic
-				)
-					target[key] = source[key]
-				else copyMerge(target[key], source[key])
-			}
+		if (!arg) continue
+		const source = typeof base == 'string' ? fromJson(toJson(arg)) : arg
+		for (const [key, value] of Object.entries(source)) {
+			if (
+				!target[key] ||
+				Array.isArray(target[key]) ||
+				typeof target[key] !== 'object' ||
+				source === null ||
+				source === undefined ||
+				source.isAtomic ||
+				target?.isAtomic ||
+				target[key]?.isAtomic
+			) {
+				target[key] = value
+			} else copyMerge(target[key], value)
 		}
 	}
 	return target

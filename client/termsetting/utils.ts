@@ -1,6 +1,6 @@
 import type { QualQ, Q, RawValuesQ, RawGvQ, TermWrapper, TwLst, NumericQ, SnpsQ, Term } from '#types'
 import type { VocabApi } from './types'
-import { TwRouter, routedTermTypes } from '#tw/TwRouter'
+import { TwRouter, routedTermTypes, type TwBase } from '#tw'
 
 /*
 ********************* EXPORTED
@@ -76,7 +76,7 @@ export async function fillTwLst(
 	defaultQByTsHandler?: DefaultQByTsHandler
 ): Promise<void> {
 	await mayHydrateDictTwLst(twlst, vocabApi)
-	const promises: Promise<TermWrapper>[] = []
+	const promises: Promise<TermWrapper | TwBase>[] = []
 	for (const tw of twlst) {
 		promises.push(fillTermWrapper(tw, vocabApi, defaultQByTsHandler))
 	}
@@ -108,34 +108,38 @@ async function mayUseTwRouterFill(
 	tw: TermWrapper,
 	vocabApi: VocabApi,
 	defaultQByTsHandler?: DefaultQByTsHandler
-): Promise<TermWrapper | false> {
+): Promise<TermWrapper | false | TwBase> {
 	if (!routedTermTypes.has(tw.term?.type)) return false
+	if (tw.constructor.name != 'Object') return tw
+	const xtw = await TwRouter.initRaw(tw, { vocabApi, defaultQByTsHandler })
+
 	// NOTE: while the tw refactor is not done for all term types and q.types/modes,
 	// there will be some code duplication between TwRouter and the legacy code;
 	// the latter will be deleted once the refactor/migration is done
-	const fullTw = await TwRouter.fill(tw, { vocabApi, defaultQByTsHandler })
-	// TODO: return fullTW instead of mutating the input tw below,
-	// which is not type-safe, e.g., q.mode=continuous may have discrete q properties mixed-in
-	Object.assign(tw, fullTw)
+	// fill-in the tw argument since consumer code may not be expecting a returned tw
+	Object.assign(tw, xtw)
 	mayValidateQmode(tw)
-	// this should be moved to the term-type specific handler??
+	// // this should be moved to the term-type specific handler??
 	if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
 	if (tw.q) tw.q.isAtomic = true
-	return tw
+	// safe to return the xtw, it's compatible with either
+	// code that expects literal tw or class instance tw
+	return xtw
 }
 
 export async function fillTermWrapper(
 	tw: TermWrapper,
 	vocabApi: VocabApi,
 	defaultQByTsHandler?: DefaultQByTsHandler
-): Promise<TermWrapper> {
+): Promise<TermWrapper | TwBase> {
 	tw.isAtomic = true
 	if (!tw.term && tw.id) {
 		// hydrate tw.term using tw.id
 		await mayHydrateDictTwLst([tw], vocabApi)
 	}
 
-	if (await mayUseTwRouterFill(tw, vocabApi, defaultQByTsHandler)) return tw
+	const xtw = await mayUseTwRouterFill(tw, vocabApi, defaultQByTsHandler)
+	if (xtw) return xtw
 
 	// tw.id is no longer needed
 	delete tw.id

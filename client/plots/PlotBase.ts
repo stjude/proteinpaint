@@ -34,7 +34,7 @@ export class PlotBase {
 	async getMutableConfig() {
 		// TODO: may improve to not require a full copy??
 		const config = structuredClone(this.state.config)
-		if (!this.configTermKeys) return config
+		if (!config || !this.configTermKeys?.length) return structuredClone(config)
 
 		const opts = {
 			vocabApi: this.app.vocabApi
@@ -42,12 +42,17 @@ export class PlotBase {
 
 		for (const key of this.configTermKeys) {
 			const value = config[key]
+			// const orig = this.state.config[key] // TODO: may reuse the original copy if there's a better way to mutate
 			if (!value) continue
 			if (Array.isArray(value)) {
 				for (const [i, tw] of value.entries()) {
-					if (routedTermTypes.has(tw.term?.type)) config[key][i] = TwRouter.init(tw, opts)
+					/*const xtw = orig[i]
+					if (xtw.type && xtw.contructor?.name != 'Object') config[key][i] = xtw
+					else*/ if (routedTermTypes.has(tw.term?.type)) config[key][i] = TwRouter.init(tw, opts)
 				}
-			} else if (routedTermTypes.has(value.term?.type)) {
+			} /*else if (typeof orig == 'object' && orig.contructor?.name != 'Object') {
+				config[key] = orig
+			}*/ else if (routedTermTypes.has(value.term?.type)) {
 				config[key] = await TwRouter.initRaw(value, opts)
 			}
 		}
