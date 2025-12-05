@@ -145,13 +145,14 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 			.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
 
 		const originalDevicePixelRatio = 2 // Use the DPR from when plot was generated
+
 		// Add transparent cover for mousemove detection
 		const cover = pointsLayer
 			.append('rect')
 			.attr('x', 0)
 			.attr('y', 0)
-			.attr('width', settings.plotWidth)
-			.attr('height', settings.plotHeight)
+			.attr('width', settings.plotWidth + 2 * settings.pngDotRadius)
+			.attr('height', settings.plotHeight + 2 * settings.pngDotRadius)
 			.attr('fill', 'transparent')
 			.attr('pointer-events', 'all')
 
@@ -160,10 +161,10 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 		cover
 			.on('mousemove', event => {
-				const [mx, my] = pointer(event, pointsLayer.node())
+				const [mx, my] = pointer(event, cover.node())
 
 				// Find all dots within hit radius
-				const hitRadius = settings.interactiveDotRadius + 2 // slightly larger than visual radius
+				const hitRadius = settings.interactiveDotRadius + 2
 				const nearbyDots: ManhattanPoint[] = []
 
 				for (const point of data.plotData.points) {
@@ -173,26 +174,34 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 					if (distance <= hitRadius) {
 						nearbyDots.push(point)
-						if (nearbyDots.length >= 5) break // Limit to 5 dots
+						if (nearbyDots.length >= 5) break
 					}
 				}
 
-				// Clear previous highlights
-				pointsLayer.selectAll('.interactive-dot').attr('stroke-opacity', 0)
+				// Update hover circles - remove old ones and create new ones
+				pointsLayer.selectAll('.hover-circle').remove()
 
 				if (nearbyDots.length > 0) {
-					// Highlight the found dots
-					highlightedDots = nearbyDots
+					// Create circles only for nearby dots
 					pointsLayer
-						.selectAll('.interactive-dot')
-						.filter(d => nearbyDots.includes(d))
-						.attr('stroke-opacity', 1)
+						.selectAll('.hover-circle')
+						.data(nearbyDots)
+						.enter()
+						.append('circle')
+						.attr('class', 'hover-circle')
+						.attr('cx', d => d.pixel_x / originalDevicePixelRatio)
+						.attr('cy', d => d.pixel_y / originalDevicePixelRatio)
+						.attr('r', settings.interactiveDotRadius)
+						.attr('fill', 'none')
+						.attr('stroke', 'black')
+						.attr('stroke-width', settings.interactiveDotStrokeWidth)
 
-					// Show tooltip with table (dots as rows, stats as columns)
+					highlightedDots = nearbyDots
+
+					// Show tooltip with table
 					geneTip.clear().show(event.clientX, event.clientY)
 
 					const holder = geneTip.d.append('div').style('margin', '10px')
-
 					const table = holder.append('table').style('border-collapse', 'collapse')
 
 					// Header row
@@ -228,37 +237,27 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 						.style('border', '1px solid #ddd')
 						.style('font-weight', 'bold')
 
-					// Data rows (one per dot)
+					// Data rows
 					nearbyDots.forEach(d => {
 						const row = table.append('tr')
-
-						// Gene
 						row.append('td').text(d.gene).style('padding', '5px').style('border', '1px solid #ddd')
-
-						// Position
 						row
 							.append('td')
 							.text(`${d.chrom}:${d.start}-${d.end}`)
 							.style('padding', '5px')
 							.style('border', '1px solid #ddd')
 							.style('font-size', '0.9em')
-
-						// Type
 						row
 							.append('td')
 							.html(`<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`)
 							.style('padding', '5px')
 							.style('border', '1px solid #ddd')
-
-						// -log10(q-value)
 						row
 							.append('td')
 							.text(d.y.toFixed(3))
 							.style('padding', '5px')
 							.style('border', '1px solid #ddd')
 							.style('text-align', 'right')
-
-						// Subject count
 						row
 							.append('td')
 							.text(d.nsubj)
@@ -273,8 +272,8 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				}
 			})
 			.on('mouseout', () => {
-				// Clear highlights and hide tooltip when leaving the plot area
-				pointsLayer.selectAll('.interactive-dot').attr('stroke-opacity', 0)
+				// Remove all hover circles and hide tooltip
+				pointsLayer.selectAll('.hover-circle').remove()
 				highlightedDots = []
 				geneTip.hide()
 			})
