@@ -361,6 +361,11 @@ function getChartTypeList(self, state) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
+			label: 'Mutation Signature',
+			chartType: 'mutationSignature',
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
 			label: 'Correlation Volcano',
 			chartType: 'correlationVolcano',
 			usecase: { target: 'correlationVolcano', detail: 'numeric' },

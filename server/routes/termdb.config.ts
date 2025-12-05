@@ -121,6 +121,7 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	addRestrictAncestries(c, tdb)
 	addScatterplots(c, ds)
 	addMatrixplots(c, ds)
+	addMutationSignatureplots(c, ds)
 	addNonDictionaryQueries(c, ds, genome)
 
 	/////////////// CAUTION //////////////
@@ -164,6 +165,14 @@ function addMatrixplots(c, ds) {
 	if (!ds.cohort.matrixplots) return
 	// this dataset has premade matrixplots. reveal matrix plot names to client
 	c.matrixplots = ds.cohort.matrixplots.plots.map(p => {
+		return { name: p.name }
+	})
+}
+
+function addMutationSignatureplots(c, ds) {
+	if (!ds.cohort.mutationSignatureplots) return
+	// this dataset has premade mutationSignatureplots. reveal mutationSignature plot names to client
+	c.mutationSignatureplots = ds.cohort.mutationSignatureplots.plots.map(p => {
 		return { name: p.name }
 	})
 }
