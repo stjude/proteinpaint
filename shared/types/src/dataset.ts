@@ -1952,12 +1952,8 @@ export type Mds3 = BaseMds & {
 	demoJwtInput?: {
 		[role: string]: {
 			datasets?: string[]
-			clientAuthResult?: // sjcares, panMB, SJLife
-			| ClientAuthResult
-				// profile
-				| {
-						[cohort: string]: ClientAuthResult
-				  }
+			/** unstructured json object */
+			clientAuthResult?: object
 			// below will be assigned by /demoToken route handler if not specified
 			iat?: number // jwt issued at time, unix time in seconds
 			exp?: number // jwt expiration, unix time in seconds
@@ -1970,12 +1966,6 @@ export type Mds3 = BaseMds & {
 	getHealth?: (ds: any) => {
 		[key: string]: any
 	}
-}
-
-export type ClientAuthResult = {
-	role?: string
-	datasets?: string[]
-	sites?: string[]
 }
 
 export type Mds3WithCohort = Mds3 & {
