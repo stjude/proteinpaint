@@ -1,7 +1,9 @@
 import { scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
-import { Menu, table2col, icons, axisstyle } from '#dom'
+import { Menu, icons, axisstyle } from '#dom'
 import { to_svg } from '#src/client'
+import { pointer } from 'd3-selection'
+import type { ManhattanPoint } from './manhattanTypes'
 
 /**
  * Creates an interactive Manhattan plot on top of a PNG background plot image.
@@ -30,6 +32,7 @@ import { to_svg } from '#src/client'
  *   @param {number} [settings.interactiveDotStrokeWidth=1] - Stroke width for interactive dots
  *   @param {string} [settings.axisColor='#545454'] - Color for y-axis
  *   @param {boolean} [settings.showYAxisLine=true] - Whether to show y-axis line
+ *   @param {number} [settings.interactiveDotsCap=5000] - Interactive dots cap
  * @param {Object} [app] - Optional app context for dispatching events
  *
  *
@@ -44,6 +47,14 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	// Get our settings
 	settings = {
 		...settings
+	}
+
+	// Check size of interactive data
+	if (data.plotData.points.length > settings.interactiveDotsCap) {
+		// Sort points by y value (-log10(q-value)) descending and take top N up to interactiveDotsCap
+		data.plotData.points = data.plotData.points
+			.sort((a: any, b: any) => b.y - a.y)
+			.slice(0, settings.interactiveDotsCap)
 	}
 
 	// Set the  positioning up for download button to work properly
@@ -133,44 +144,145 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 			.append('g')
 			.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
 
-		pointsLayer
-			.selectAll('circle')
-			.data(data.plotData.points)
-			.enter()
-			.append('circle')
-			.attr('cx', d => d.pixel_x / devicePixelRatio)
-			.attr('cy', d => d.pixel_y / devicePixelRatio)
-			.attr('r', settings.interactiveDotRadius)
-			.attr('fill-opacity', 0)
-			.attr('stroke', 'black')
-			.attr('stroke-width', settings.interactiveDotStrokeWidth)
-			.attr('stroke-opacity', 0)
-			.on('mouseover', (event, d) => {
-				// Show stroke on hover
-				event.target.setAttribute('stroke-opacity', 1)
+		const originalDevicePixelRatio = 2 // Use the DPR from when plot was generated
+		// Add transparent cover for mousemove detection
+		const cover = pointsLayer
+			.append('rect')
+			.attr('x', 0)
+			.attr('y', 0)
+			.attr('width', settings.plotWidth)
+			.attr('height', settings.plotHeight)
+			.attr('fill', 'transparent')
+			.attr('pointer-events', 'all')
 
-				geneTip.clear().show(event.clientX, event.clientY)
+		// Track which dots are currently highlighted
+		let highlightedDots: ManhattanPoint[] = []
 
-				const table = table2col({
-					holder: geneTip.d.append('div'),
-					margin: '10px'
-				})
-				table.addRow('Gene', d.gene)
-				table.addRow('Position', `${d.chrom}:${d.start}-${d.end}`)
-				const [t1, t2] = table.addRow()
-				t1.text('Type')
-				t2.html(`<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`)
-				table.addRow('-log₁₀(q-value)', d.y.toFixed(3))
-				table.addRow('Subject count', d.nsubj)
+		cover
+			.on('mousemove', event => {
+				const [mx, my] = pointer(event, pointsLayer.node())
+
+				// Find all dots within hit radius
+				const hitRadius = settings.interactiveDotRadius + 2 // slightly larger than visual radius
+				const nearbyDots: ManhattanPoint[] = []
+
+				for (const point of data.plotData.points) {
+					const px = point.pixel_x / originalDevicePixelRatio
+					const py = point.pixel_y / originalDevicePixelRatio
+					const distance = Math.sqrt((mx - px) ** 2 + (my - py) ** 2)
+
+					if (distance <= hitRadius) {
+						nearbyDots.push(point)
+						if (nearbyDots.length >= 5) break // Limit to 5 dots
+					}
+				}
+
+				// Clear previous highlights
+				pointsLayer.selectAll('.interactive-dot').attr('stroke-opacity', 0)
+
+				if (nearbyDots.length > 0) {
+					// Highlight the found dots
+					highlightedDots = nearbyDots
+					pointsLayer
+						.selectAll('.interactive-dot')
+						.filter(d => nearbyDots.includes(d))
+						.attr('stroke-opacity', 1)
+
+					// Show tooltip with table (dots as rows, stats as columns)
+					geneTip.clear().show(event.clientX, event.clientY)
+
+					const holder = geneTip.d.append('div').style('margin', '10px')
+
+					const table = holder.append('table').style('border-collapse', 'collapse')
+
+					// Header row
+					const headerRow = table.append('tr')
+					headerRow
+						.append('th')
+						.text('Gene')
+						.style('padding', '5px')
+						.style('border', '1px solid #ddd')
+						.style('font-weight', 'bold')
+					headerRow
+						.append('th')
+						.text('Position')
+						.style('padding', '5px')
+						.style('border', '1px solid #ddd')
+						.style('font-weight', 'bold')
+					headerRow
+						.append('th')
+						.text('Type')
+						.style('padding', '5px')
+						.style('border', '1px solid #ddd')
+						.style('font-weight', 'bold')
+					headerRow
+						.append('th')
+						.text('-log₁₀(q-value)')
+						.style('padding', '5px')
+						.style('border', '1px solid #ddd')
+						.style('font-weight', 'bold')
+					headerRow
+						.append('th')
+						.text('Subject count')
+						.style('padding', '5px')
+						.style('border', '1px solid #ddd')
+						.style('font-weight', 'bold')
+
+					// Data rows (one per dot)
+					nearbyDots.forEach(d => {
+						const row = table.append('tr')
+
+						// Gene
+						row.append('td').text(d.gene).style('padding', '5px').style('border', '1px solid #ddd')
+
+						// Position
+						row
+							.append('td')
+							.text(`${d.chrom}:${d.start}-${d.end}`)
+							.style('padding', '5px')
+							.style('border', '1px solid #ddd')
+							.style('font-size', '0.9em')
+
+						// Type
+						row
+							.append('td')
+							.html(`<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`)
+							.style('padding', '5px')
+							.style('border', '1px solid #ddd')
+
+						// -log10(q-value)
+						row
+							.append('td')
+							.text(d.y.toFixed(3))
+							.style('padding', '5px')
+							.style('border', '1px solid #ddd')
+							.style('text-align', 'right')
+
+						// Subject count
+						row
+							.append('td')
+							.text(d.nsubj)
+							.style('padding', '5px')
+							.style('border', '1px solid #ddd')
+							.style('text-align', 'right')
+					})
+				} else {
+					// No dots nearby, hide tooltip
+					highlightedDots = []
+					geneTip.hide()
+				}
 			})
-			.on('mouseout', event => {
-				// Hide stroke on mouseout
-				event.target.setAttribute('stroke-opacity', 0)
+			.on('mouseout', () => {
+				// Clear highlights and hide tooltip when leaving the plot area
+				pointsLayer.selectAll('.interactive-dot').attr('stroke-opacity', 0)
+				highlightedDots = []
 				geneTip.hide()
 			})
-			.on('click', (event, d) => {
-				// if app is avaialble, open the genome browser with the current gene that is being clicked on
-				if (app) createLollipopFromGene(d.gene, app)
+			.on('click', _event => {
+				// Click on the first highlighted dot if any
+				if (highlightedDots.length > 0 && app) {
+					createLollipopFromGene(highlightedDots[0].gene, app)
+				}
 			})
 	}
 
