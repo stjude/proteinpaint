@@ -1,5 +1,5 @@
 import { legend_newrow } from '#src/block.legend'
-import { Menu, ColorScale, icons, shapes } from '#dom'
+import { Menu, ColorScale, icons, shapes, renderCnvConfig } from '#dom'
 import {
 	mds3tkMclass,
 	mclass,
@@ -868,21 +868,24 @@ function may_create_cnv(tk, block) {
 		.style('font-size', '.9em')
 		.attr('class', 'sja_clbtext')
 		.on('click', () => {
-			menu.clear().showunder(R.cnvFilterPrompt.node()) // TODO as this prompt is usually at bottom of page, best to show menu above prompt
-			menu.d.append('div').text('Max segment length. Set 0 for not restricting by max length.')
-			menu.d
-				.append('input')
-				.attr('type', 'number')
-				.attr('value', Number.isFinite(tk.cnv.cnvMaxLength) ? tk.cnv.cnvMaxLength : 0)
-				.on('change', event => {
-					const v = Number(event.target.value)
-					tk.cnv.cnvMaxLength = v <= 0 ? null : v
+			// show menu above prompt
+			const p = R.cnvFilterPrompt.node().getBoundingClientRect()
+			const x = p.left + window.scrollX
+			const y = p.top + window.scrollY
+			menu.clear().show(x, y, false, false, false)
+			// render cnv config
+			const arg = {
+				holder: menu.d.append('div'),
+				cnvGainCutoff: tk.cnv.cnvGainCutoff,
+				cnvLossCutoff: tk.cnv.cnvLossCutoff,
+				cnvMaxLength: tk.cnv.cnvMaxLength,
+				callback: config => {
+					Object.assign(tk.cnv, config)
 					menu.hide()
 					tk.load()
-				})
-			if (Number.isFinite(tk.cnv.cnvGainCutoff)) {
-				console.log('todo show prompt')
+				}
 			}
+			renderCnvConfig(arg)
 		})
 }
 
@@ -984,10 +987,19 @@ function may_update_cnv(tk) {
 
 	// update filter prompt. each applicable filter criteria generates a phrase. concatenated phrases are shown in prompt
 	// must do this even if no cnv is shown, which could be caused by filter param and allow to change here
-	const lst = [
-		Number.isFinite(tk.cnv.cnvMaxLength) ? `segment length <= ${bplen(tk.cnv.cnvMaxLength)}` : 'no length limit'
-	]
-	tk.legend.cnv.cnvFilterPrompt.text(`Filter: ${lst.join(', ')}`)
+	const lst = []
+	if (Number.isFinite(tk.cnv.cnvGainCutoff)) {
+		lst.push(`CNV gain ≥ ${tk.cnv.cnvGainCutoff}`)
+	}
+	if (Number.isFinite(tk.cnv.cnvLossCutoff)) {
+		lst.push(`CNV loss ≤ ${tk.cnv.cnvLossCutoff}`)
+	}
+	if (Number.isFinite(tk.cnv.cnvMaxLength)) {
+		lst.push(`CNV length ≤ ${bplen(tk.cnv.cnvMaxLength)}`)
+	} else {
+		lst.push('no length limit')
+	}
+	tk.legend.cnv.cnvFilterPrompt.text(`Filter: ${lst.join('; ')}`)
 }
 
 function createLegendTipMenu(opts, tk, elem) {
