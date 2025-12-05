@@ -5,19 +5,17 @@ This directory holds the source code for rust-compiled utilities.
 
 ## Rust version
 
-Current rust version is 1.89.0. TODO introduce `rust-toolchain` file, and pin the rust version there.
+The current rust version is defined in `rust/rust-toolchain.toml`. When updating the rust version inside the rust docker image the `container/rust/build.sh` script parses the rust version from `rust-toolchain.toml` into `container/rust/Dockerfile` at runtime. This ensures consistency between local PP builds and the docker container in CI and production.
 
-Currently the version is hardcoded in:
+The Github Actions workflow file `.github/workflows/CD-rust-build.yml` and `.github/workflows/CI-unit.yml` also parses the rust version from the `rust-toolchain.toml` to ensure the correct rust version is used for compiling the current rust code.
 
-the Github Actions workflow file `.github/workflows/CD-rust-build.yml`.
-
-The Github Actions workflow file `.github/workflows/CI-unit.yml`.
-
-The rust build docker file `container/rust/Dockerfile`.
-
-When bumping the rust version, please update these files accordingly, and publish the new rust build env image using:
+When bumping the rust version and publish the new rust build env image using:
 
 https://github.com/stjude/proteinpaint/actions/workflows/CD-publish-rust-bookworm-env-image.yml
+
+For publishing updated rust binaries, use this workflow.
+
+https://github.com/stjude/proteinpaint/actions/workflows/CD-publish-rust-binaries.yml
 
 ## Code layout
 
