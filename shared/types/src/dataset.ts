@@ -1509,8 +1509,14 @@ keep this setting here for reason of:
 	/** set to true for genome-level geneset db */
 	isGeneSetTermdb?: boolean
 
-	//GDC
-	termid2totalsize2?: GdcApi
+	/** method to get total sample size per category for a dict term. to use in mds3 tk sample summary
+	 */
+	termid2totalsize2?: {
+		// ds-supplied getter. if missing, should be using native termdb
+		get?: (twLst: any, q: any, combination: any, ds: any) => void
+		// gdc flag for outdated design
+		gdcapi?: true
+	}
 	/** Do not use a union here. */
 	dictionary?: GdcApi & AiApi
 	allowCaseDetails?: AllowCaseDetails

@@ -299,32 +299,7 @@ export async function validate_termdb(ds) {
 	}
 	// ds.cohort.termdb.q={} ready
 
-	if (tdb.termid2totalsize2) {
-		if (tdb.termid2totalsize2.gdcapi) {
-			// validate gdcapi
-		} else {
-			// query through termdb methods
-			// since termdb.dictionary is a required attribute
-		}
-
-		/* add getter
-		input:
-			twLst=[ tw, ...]
-			q={}
-				.tid2value={id1:v1, ...}
-				.ssm_id_lst=str
-			combination={}
-				optional, not used for computing
-		output:
-			a map, key is termid, value is array, each element: [category, total]
-		*/
-		tdb.termid2totalsize2.get = async (twLst, q = {}, combination = null) => {
-			if (tdb.termid2totalsize2.gdcapi) {
-				return await gdc.get_termlst2size(twLst, q, combination, ds)
-			}
-			return await call_barchart_data(twLst, q, combination, ds)
-		}
-	}
+	mayInitTermid2totalsize2(tdb, ds)
 
 	if (tdb.isTermVisible) {
 		if (typeof tdb.isTermVisible != 'function') throw 'tdb.isTermVisible not function'
@@ -3356,5 +3331,34 @@ function validateDemoJwtInputs(ds) {
 		if (payload.email && (typeof payload.email != 'string' || !payload.email.includes('@')))
 			throw `${ds.label} demoJwtInputs[${role}].email`
 		// may add other validation logic for expected jwt payload key/values
+	}
+}
+
+function mayInitTermid2totalsize2(tdb, ds) {
+	if (!tdb.termid2totalsize2) return
+	if (typeof tdb.termid2totalsize2.get == 'function') return
+	if (tdb.termid2totalsize2.gdcapi) {
+		// validate gdcapi
+	} else {
+		// query through termdb methods
+		// since termdb.dictionary is a required attribute
+	}
+
+	/* add getter
+		input:
+			twLst=[ tw, ...]
+			q={}
+				.tid2value={id1:v1, ...}
+				.ssm_id_lst=str
+			combination={}
+				optional, not used for computing
+		output:
+			a map, key is termid, value is array, each element: [category, total]
+		*/
+	tdb.termid2totalsize2.get = async (twLst, q = {}, combination = null) => {
+		if (tdb.termid2totalsize2.gdcapi) {
+			return await gdc.get_termlst2size(twLst, q, combination, ds)
+		}
+		return await call_barchart_data(twLst, q, combination, ds)
 	}
 }
