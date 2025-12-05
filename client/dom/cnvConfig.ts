@@ -1,23 +1,44 @@
 import { Menu } from '../dom/menu'
 
-/* TODOs
-- document arg
+/*
+Renderer for CNV config UI
+
+ - Create inputs for CNV gain cutoff, loss cutoff, and max length
+ - Optional wildtype checkbox
+ - Resulting CNV config is provided through callback function
+
+TODOs
 - are there cases when some cutoffs are defined (e.g. cnvGainCutoff and cnvLossCutoff), but not others (e.g. cnvMaxLength)?
 */
 
-export function renderCnvConfig(arg) {
+type Arg = {
+	holder: d3.Selection<HTMLElement, any, any, any> // D3 holder where UI is rendered
+	cnvGainCutoff: number // minimum positive value (log2 ratio) to consider a CNV as gain
+	cnvLossCutoff: number // maximum negative value (log2 ratio) to consider a CNV as loss
+	cnvMaxLength: number | null // max segment length in base pairs; null = no length limit (UI shows -1)
+	callback: (config: {
+		cnvGainCutoff: number
+		cnvLossCutoff: number
+		cnvMaxLength: number | null
+		cnvWT?: boolean
+	}) => void // called when user clicks APPLY
+	cnvWT?: boolean // wildtype for CNV alteration specified by cnvGainCutoff, cnvLossCutoff, and cnvMaxLength
+	WTtoggle?: boolean // display wildtype checkbox
+}
+
+export function renderCnvConfig(arg: Arg) {
 	const div = arg.holder
 	div.style('margin', '10px')
 	const tip = new Menu({ padding: '5px' })
 
 	div.append('div').style('margin-bottom', '10px').text('Specify criteria for a CNV alteration:')
 
-	const settingsDiv = div.append('div').style('margin-left', '10px') // TODO: may rename settingsDiv
+	const configDiv = div.append('div').style('margin-left', '10px')
 
 	// CNV gain input
 	const cnvGainCutoff = arg.cnvGainCutoff
-	if (!isValidNumber(cnvGainCutoff)) throw 'cnvGainCutoff is not a valid number'
-	const cnvGainDiv = settingsDiv.append('div').style('margin-bottom', '5px')
+	if (!Number.isFinite(cnvGainCutoff)) throw 'cnvGainCutoff is not a valid number'
+	const cnvGainDiv = configDiv.append('div').style('margin-bottom', '5px')
 	cnvGainDiv.append('span').style('opacity', 0.7).text('Minimum CNV Gain (log2 ratio)') // TODO: verify that this will always be log2 ratio
 	const cnvGainInput = cnvGainDiv
 		.append('input')
@@ -41,8 +62,8 @@ export function renderCnvConfig(arg) {
 
 	// CNV loss input
 	const cnvLossCutoff = arg.cnvLossCutoff
-	if (!isValidNumber(cnvLossCutoff)) throw 'cnvLossCutoff is not a valid number'
-	const cnvLossDiv = settingsDiv.append('div').style('margin-bottom', '5px')
+	if (!Number.isFinite(cnvLossCutoff)) throw 'cnvLossCutoff is not a valid number'
+	const cnvLossDiv = configDiv.append('div').style('margin-bottom', '5px')
 	cnvLossDiv.append('span').style('opacity', 0.7).text('Maximum CNV Loss (log2 ratio)') // TODO: verify that this will always be log2 ratio
 	const cnvLossInput = cnvLossDiv
 		.append('input')
@@ -66,8 +87,8 @@ export function renderCnvConfig(arg) {
 
 	// CNV max length input
 	const cnvMaxLength = arg.cnvMaxLength === null ? -1 : arg.cnvMaxLength
-	if (!isValidNumber(cnvMaxLength)) throw 'cnvMaxLength is not a valid number'
-	const cnvLengthDiv = settingsDiv.append('div').style('margin-bottom', '5px')
+	if (!Number.isFinite(cnvMaxLength)) throw 'cnvMaxLength is not a valid number'
+	const cnvLengthDiv = configDiv.append('div').style('margin-bottom', '5px')
 	cnvLengthDiv.append('span').style('opacity', 0.7).text('CNV Max Length')
 	const cnvLengthInput = cnvLengthDiv
 		.append('input')
@@ -96,7 +117,7 @@ export function renderCnvConfig(arg) {
 	let wtCheckbox
 	if (arg.WTtoggle) {
 		const cnvWT = arg.cnvWT || false
-		const wtDiv = settingsDiv.append('div').style('margin-bottom', '5px')
+		const wtDiv = configDiv.append('div').style('margin-bottom', '5px')
 		wtDiv.append('span').style('margin-right', '3px').style('opacity', 0.7).text('Wildtype')
 		wtCheckbox = wtDiv
 			.append('input')
