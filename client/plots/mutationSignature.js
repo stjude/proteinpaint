@@ -62,7 +62,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			}
 			// 2 or more terms, launch matrix
 			const termNames = termlst.map(o => o.id).join(',')
-			const termName = `% SNVs (${termNames})`
+			const termNameLabel = `% SNVs (${termNames})`
+			const termName = termNameLabel.length <= 26 ? termNameLabel : termNameLabel.slice(0, 26) + '...'
 			const term = { name: termName, type: 'compositePercentage', isleaf: true, termlst }
 
 			action.config.chartType = 'matrix'
