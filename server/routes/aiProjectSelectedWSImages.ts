@@ -72,10 +72,34 @@ function init({ genomes }) {
 						const predictions = await ds.queries.WSImages.getWSIPredictionPatches(projectId, wsimageFilename)
 
 						const classMap = new Map<number, string>((wsimage.classes || []).map((c: any) => [c.id, c.label]))
-						wsimage.predictions = (predictions || []).map((p: any) => {
-							const label = classMap.get(p.class) ?? p.class
-							return { ...p, class: label }
-						})
+
+						// build set of annotation keys (x,y) to filter overlapping predictions
+						const annotationKeys = new Set<string>(
+							(wsimage.annotations || [])
+								.map((a: Annotation) => {
+									const zc = a.zoomCoordinates || [NaN, NaN]
+									return `${zc[0]},${zc[1]}`
+								})
+								.filter(Boolean)
+						)
+
+						// get flagged prediction coordinate keys for this project (may be empty)
+						let flaggedPredictions = new Set<string>()
+						if (typeof ds.queries.WSImages.getFlaggedPredictions === 'function') {
+							flaggedPredictions = await ds.queries.WSImages.getFlaggedPredictions(projectId)
+						}
+
+						// map class ids to labels then filter out predictions that overlap annotations
+						// or that were flagged in project_flagged_predictions
+						wsimage.predictions = (predictions || [])
+							.map((p: any) => {
+								const label = classMap.get(p.class) ?? p.class
+								return { ...p, class: label } as any
+							})
+							.filter((p: any) => {
+								const key = `${p.zoomCoordinates[0]},${p.zoomCoordinates[1]}`
+								return !annotationKeys.has(key) && !flaggedPredictions.has(key)
+							})
 					}
 
 					wsimages.push(wsimage)
@@ -145,6 +169,13 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
         ORDER BY pi.id
     `
 
+	// SQL to get flagged prediction coordinates for a project
+	const GET_FLAGGED_PREDICTIONS_SQL = `
+        SELECT coordinates
+        FROM project_flagged_predictions
+        WHERE project_id = ?
+    `
+
 	if (!ds.queries) ds.queries = {}
 	if (!ds.queries.WSImages) ds.queries.WSImages = {}
 
@@ -170,6 +201,7 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 				return {
 					zoomCoordinates: coords,
 					class: r.label ?? '',
+					status: r.status,
 					timestamp: r.timestamp
 				}
 			})
@@ -188,6 +220,34 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 		} catch (error) {
 			console.error('Error loading project images list:', error)
 			return []
+		}
+	}
+
+	// expose helper that returns a Set of flagged prediction coordinate keys for a project
+	ds.queries.WSImages.getFlaggedPredictions = async (projectId: number): Promise<Set<string>> => {
+		try {
+			const stmt = connection.prepare<[number], { coordinates: any }>(GET_FLAGGED_PREDICTIONS_SQL)
+			const rows = stmt.all(projectId) || []
+
+			const keys = new Set<string>()
+			for (const r of rows) {
+				try {
+					const parsed = typeof r.coordinates === 'string' ? JSON.parse(r.coordinates) : r.coordinates
+					if (Array.isArray(parsed) && parsed.length >= 2) {
+						const x = Number(parsed[0])
+						const y = Number(parsed[1])
+						if (!Number.isNaN(x) && !Number.isNaN(y)) {
+							keys.add(`${x},${y}`)
+						}
+					}
+				} catch {
+					// ignore parse errors
+				}
+			}
+			return keys
+		} catch (error) {
+			console.error('Error loading flagged predictions:', error)
+			return new Set()
 		}
 	}
 }

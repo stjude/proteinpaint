@@ -19,29 +19,9 @@ export class ViewModel {
 		wsimageLayersLoadError: string | undefined,
 		settings: Settings
 	) {
-		// Convert incoming WSImage[] into SessionWSImage[] and filter predictions that overlap annotations
-		this.sampleWSImages = (sampleWSImages || []).map(ws => {
-			const s = new SessionWSImage(ws.filename)
-			// copy common properties
-			s.id = ws.id
-			s.metadata = ws.metadata
-			s.predictionLayers = ws.predictionLayers
-			s.annotations = ws.annotations
-			s.classes = ws.classes
-			s.uncertainty = ws.uncertainty
-			s.activePatchColor = ws.activePatchColor
-			s.tileSize = ws.tileSize
+		// Convert incoming WSImage[] into SessionWSImage[]
+		this.sampleWSImages = (sampleWSImages || []).map(ws => new SessionWSImage(ws))
 
-			// filter predictions that share coordinates with annotations
-			const annotations = ws.annotations || []
-			const annotationKeys = new Set(annotations.map(a => `${a.zoomCoordinates[0]},${a.zoomCoordinates[1]}`))
-			s.predictions = (ws.predictions || []).filter(
-				p => !annotationKeys.has(`${p.zoomCoordinates[0]},${p.zoomCoordinates[1]}`)
-			)
-
-			// sessionsTileSelections will be set from settings for the displayed image below if needed
-			return s
-		})
 		if (this.sampleWSImages[settings.displayedImageIndex]) {
 			this.sampleWSImages[settings.displayedImageIndex].sessionsTileSelections = settings.sessionsTileSelection
 		}
