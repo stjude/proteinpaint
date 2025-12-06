@@ -364,6 +364,20 @@ export class TermTypeSearch {
 		if (this.click_term) this.click_term(term)
 		else if (this.submit_lst) {
 			const t = term.term || term
+			if (term.type == TermTypes.COMPOSITE_PERCENTAGE) {
+				const seletedTerms = [...term.seletedTerms]
+				const termNames = seletedTerms.map(o => o.id).join(',')
+				const termNamesLabel = `${term.name} (${termNames})`
+				const termName = termNamesLabel.length <= 26 ? termNamesLabel : termNamesLabel.slice(0, 26) + '...'
+				const newTerm = { name: termName, type: 'compositePercentage', isleaf: true, termlst: seletedTerms }
+				this.app.dispatch({
+					type: 'app_refresh',
+					state: {
+						selectedTerms: [newTerm]
+					}
+				})
+				return
+			}
 			this.app.dispatch({
 				type: 'app_refresh',
 				state: {

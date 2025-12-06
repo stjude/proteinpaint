@@ -1,4 +1,5 @@
 import { appInit } from '../app.ts'
+import { TermTypes } from '#shared/terms.js'
 
 export class SearchHandler {
 	callback: any
@@ -18,7 +19,8 @@ export class SearchHandler {
 			target: 'numericTermCollections',
 			detail: { type: 'compositePercentage', ...details }
 		}
-		await appInit({
+		const seletedTerms = new Set()
+		const innerTree = await appInit({
 			holder: opts.holder,
 			vocabApi: this.app.vocabApi,
 			focus: 'off',
@@ -27,16 +29,21 @@ export class SearchHandler {
 				tree: { usecase }
 			},
 			tree: {
-				submit_lst: async termlst => {
-					const termNames = termlst.map(o => o.id).join(',')
-					const termName = usecase.detail.name == 'Mutation Signature' ? `% SNVs (${termNames})` : 'percentage'
-					const term = { name: termName, type: 'compositePercentage', isleaf: true, termlst }
-					this.callback(term)
+				click_term: (term: any) => {
+					if (seletedTerms.has(term)) seletedTerms.delete(term)
+					else seletedTerms.add(term)
+					innerTree.dispatch({
+						type: 'app_refresh',
+						state: {
+							selectedTerms: [...seletedTerms]
+						}
+					})
+					this.callback({
+						seletedTerms,
+						type: TermTypes.COMPOSITE_PERCENTAGE,
+						name: usecase.detail.name == 'Mutation Signature' ? `% SNVs` : `Percentage`
+					})
 				}
-				// click_term: (term: any) => {
-				// 	term.forComPer = true
-				// 	this.callback(term)
-				// }
 			},
 			search: {
 				focus: 'off'
