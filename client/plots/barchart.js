@@ -2,19 +2,22 @@ import { getCompInit, copyMerge, deepEqual } from '../rx'
 import getHandlers from './barchart.events'
 import barsRenderer from './bars.renderer'
 import rendererSettings from './bars.settings'
-import { htmlLegend, svgLegend, renderTable } from '#dom'
+import { htmlLegend, /** svgLegend, */ renderTable, DownloadMenu } from '#dom'
 import { select } from 'd3-selection'
 import { rgb } from 'd3-color'
 import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from './controls'
-import { to_svg } from '../src/client'
+// import { to_svg } from '../src/client'
 import { fillTermWrapper } from '#termsetting'
 import { getColors, mclass, plotColor } from '#shared/common.js'
 import { isNumericTerm } from '#shared/terms.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getCombinedTermFilter } from '#filter'
-import { DownloadMenu } from '#dom/downloadMenu'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
 import { rebaseGroupFilter } from '../mass/groups.js'
+
+/** The length of the entire plot (i.e. width
+ * when horizontal, height when vertical) */
+export const defaultPlotLength = 300
 
 export class Barchart extends PlotBase {
 	static type = 'barchart'
@@ -272,6 +275,17 @@ export class Barchart extends PlotBase {
 					//getDisplayStyle: plot => (plot.settings.barchart.colorBars || plot.term2 ? 'none' : 'table-row')
 				})
 
+			inputs.push({
+				label: 'Plot length',
+				title: 'Set the plot length of the entire plot in pixels between 300 and 800.',
+				type: 'number',
+				chartType: 'barchart',
+				settingsKey: 'plotLength',
+				min: 300,
+				max: 800,
+				step: 10
+			})
+
 			const multipleTestingCorrection = this.app.getState().termdbConfig.multipleTestingCorrection
 			if (multipleTestingCorrection) {
 				// a checkbox to allow users to show or hide asterisks on bars
@@ -436,11 +450,12 @@ export class Barchart extends PlotBase {
 			defaultColor: config.settings.barchart.defaultColor,
 			colorBars: config.settings.barchart.colorBars,
 			dedup: config.settings.barchart.dedup,
+			plotLength: config.settings.barchart.plotLength,
 			// normalize bar thickness regardless of orientation
-			colw: config.settings.common.barwidth,
-			rowh: config.settings.common.barwidth,
-			colspace: config.settings.common.barspace,
-			rowspace: config.settings.common.barspace,
+			colw: config.settings.barchart.barwidth,
+			rowh: config.settings.barchart.barwidth,
+			colspace: config.settings.barchart.barspace,
+			rowspace: config.settings.barchart.barspace,
 			colorUsing: config.settings.barchart.colorUsing,
 			showStats: config.settings.barchart.showStats,
 			showAssociationTests: config.settings.barchart.showAssociationTests
@@ -1281,6 +1296,9 @@ function setInteractivity(self) {
 
 export function getDefaultBarSettings(app) {
 	return {
+		barspace: 2,
+		barwidth: 200,
+		plotLength: defaultPlotLength,
 		orientation: 'horizontal',
 		unit: 'abs',
 		overlay: 'none',
@@ -1320,10 +1338,11 @@ export async function getPlotConfig(opts, app) {
 			},
 			common: {
 				use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
-				use_percentage: false,
-				barheight: 300, // maximum bar length
-				barwidth: 20, // bar thickness
-				barspace: 2 // space between two bars
+				use_percentage: false
+				// Moved to barchart settings
+				// barheight: 300, // maximum bar length
+				// barwidth: 20, // bar thickness
+				// barspace: 2 // space between two bars
 			},
 			barchart: getDefaultBarSettings(app)
 		}

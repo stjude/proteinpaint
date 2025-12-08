@@ -443,10 +443,11 @@ export async function getPlotConfig(opts, app) {
 			},
 			common: {
 				use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
-				use_percentage: false,
-				barheight: 300, // maximum bar length
-				barwidth: 20, // bar thickness
-				barspace: 2 // space between two bars
+				use_percentage: false
+				// Move to barchart settings
+				// barheight: 300, // maximum bar length
+				// barwidth: 20, // bar thickness
+				// barspace: 2 // space between two bars
 			},
 
 			barchart: getDefaultBarSettings(app),

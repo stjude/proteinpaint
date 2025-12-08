@@ -1,5 +1,10 @@
+import { defaultPlotLength } from './barchart.js'
 // barchart renderer settings
 export default JSON.stringify({
+	plotLength: defaultPlotLength, // maximum bar length
+	barwidth: 20, // bar thickness
+	barspace: 2, // space between two bars
+
 	orientation: 'horizontal', // vertical | horizontal
 	h: {},
 	relayTiles: false,
