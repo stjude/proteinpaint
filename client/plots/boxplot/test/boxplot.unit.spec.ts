@@ -31,7 +31,7 @@ function getMockData() {
 	}
 
 	const mockSettings = {
-		boxplotWidth: 20,
+		plotLength: 20,
 		color: 'blue',
 		displayMode: 'default',
 		labelPad: 10,

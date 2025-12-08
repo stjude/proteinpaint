@@ -66,7 +66,7 @@ export class ViewModel {
 			//Add 1 to the max is big enough so the upper line to boxplot isn't cutoff
 			//Note: ts is complaining absMax could be null. Ignore. Error in server request.
 			domain: [data.absMin, data.absMax! <= 1 ? data.absMax : data.absMax! + 1],
-			range: [0, settings.boxplotWidth],
+			range: [0, settings.plotLength],
 			svg,
 			chartTitle: getChartTitle(config, data.chartId),
 			title: this.setTitleDimensions(config, settings, svg.height),
@@ -111,7 +111,7 @@ export class ViewModel {
 	setSvgDimensions(settings: BoxPlotSettings, data: BoxPlotChartEntry) {
 		const plotsSpace =
 			data.plots.filter(p => !p.isHidden).length * this.totalRowSize + this.topPad + this.bottomPad + this.incrPad
-		const depth = settings.boxplotWidth + this.totalLabelSize + this.horizPad / 2
+		const depth = settings.plotLength + this.totalLabelSize + this.horizPad / 2
 		return {
 			width: settings.isVertical ? plotsSpace + this.horizPad : depth,
 			height: settings.isVertical ? depth : plotsSpace
@@ -119,7 +119,7 @@ export class ViewModel {
 	}
 
 	setTitleDimensions(config: any, settings: BoxPlotSettings, height: number) {
-		const depth = this.totalLabelSize + settings.boxplotWidth / 2
+		const depth = this.totalLabelSize + settings.plotLength / 2
 		return {
 			x: settings.isVertical ? this.horizPad / 2 : depth,
 			y: settings.isVertical ? height - depth - this.horizPad / 2 : this.topPad + this.incrPad / 2,
@@ -166,7 +166,7 @@ export class ViewModel {
 			plot.boxplot.rectFill =
 				settings.displayMode == 'dark' ? 'black' : settings.displayMode == 'filled' ? color : 'white'
 			plot.x = settings.isVertical ? this.horizPad / 2 + this.incrPad : this.totalLabelSize
-			plot.y = this.topPad + (settings.isVertical ? settings.boxplotWidth + settings.labelPad : this.incrPad)
+			plot.y = this.topPad + (settings.isVertical ? settings.plotLength + settings.labelPad : this.incrPad)
 			this.incrPad += this.totalRowSize
 		}
 		return plots
