@@ -51,6 +51,8 @@ export type BoxPlotSettings = {
 	rowSpace: number
 	/** If true, remove outliers from the analysis */
 	removeOutliers: boolean
+	/** If true, show association tests table */
+	showAssocTests: boolean
 }
 
 /** Descriptions of the dom elements for the box plot */

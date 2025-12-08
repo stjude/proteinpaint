@@ -211,6 +211,14 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 				chartType: 'boxplot',
 				settingsKey: 'removeOutliers',
 				title: `Option to remove outliers from the analysis`
+			},
+			{
+				label: 'Show association tests',
+				boxLabel: '',
+				type: 'checkbox',
+				chartType: 'boxplot',
+				settingsKey: 'showAssocTests',
+				title: `Option to remove outliers from the analysis`
 			}
 		]
 		this.components.controls = await controlsInit({
@@ -411,7 +419,8 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 		orderByMedian: false,
 		rowHeight: 50,
 		rowSpace: 15,
-		removeOutliers: false
+		removeOutliers: false,
+		showAssocTests: false
 	}
 	return Object.assign(defaults, overrides)
 }

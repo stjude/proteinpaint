@@ -107,7 +107,7 @@ async function processData(data, q) {
 
 		charts[chart] = { chartId: chart, plots }
 	}
-	if (overlayTerm) await getWilcoxonData(charts)
+	if (q.showAssocTests == true && overlayTerm) await getWilcoxonData(charts)
 
 	return { absMin, absMax, charts, uncomputableValues, descrStats, outlierMin, outlierMax }
 }
