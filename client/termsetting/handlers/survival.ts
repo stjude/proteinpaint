@@ -22,7 +22,8 @@ export function getHandler(self: TermSettingInstance) {
 
 export function fillTW(tw: TermWrapper, vocabApi: VocabApi) {
 	if (tw) {
-		//ignore: statement to prevent eslint warning
+		if (!tw.term.name) tw.term.name = tw.term.id
+		if (!tw.term.values) tw.term.values = {}
 	}
 	if (vocabApi) {
 		//ignore: statement to prevent eslint warning

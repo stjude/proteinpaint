@@ -342,7 +342,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 	maySetSandboxHeader() {
 		if (!this.dom.header) return
 		const { term, term2 } = this.state.config
-		const mainTerm = term.term.name
+		const mainTerm = term.term.name || term.term.id
 		if (term2?.type) {
 			this.dom.header.html(`${term2.getTitleText?.() || term2.term.name}  vs ${mainTerm}`)
 		} else {
