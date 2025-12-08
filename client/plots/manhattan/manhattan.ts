@@ -3,6 +3,7 @@ import * as d3axis from 'd3-axis'
 import { Menu, icons, axisstyle } from '#dom'
 import { to_svg } from '#src/client'
 import { pointer } from 'd3-selection'
+import { quadtree } from 'd3-quadtree'
 import type { ManhattanPoint } from './manhattanTypes'
 
 /**
@@ -33,6 +34,7 @@ import type { ManhattanPoint } from './manhattanTypes'
  *   @param {string} [settings.axisColor='#545454'] - Color for y-axis
  *   @param {boolean} [settings.showYAxisLine=true] - Whether to show y-axis line
  *   @param {number} [settings.interactiveDotsCap=5000] - Interactive dots cap
+ *   @param {number} [settings.maxTooltipGenes=5] - Maximum number of genes to show in tooltip
  * @param {Object} [app] - Optional app context for dispatching events
  *
  *
@@ -190,6 +192,12 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		// Track which dots are currently highlighted
 		let highlightedDots: ManhattanPoint[] = []
 
+		// Add this after processing points, before the mousemove handler
+		const pointQuadtree = quadtree<ManhattanPoint>()
+			.x(d => d.pixel_x / originalDevicePixelRatio)
+			.y(d => d.pixel_y / originalDevicePixelRatio)
+			.addAll(data.plotData.points)
+
 		cover
 			.on('mousemove', event => {
 				const [mx, my] = pointer(event, cover.node())
@@ -198,20 +206,29 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				// TODO: Could make this a user configurable setting in the future
 				const hitRadius = settings.interactiveDotRadius + 2
 				const nearbyDots: ManhattanPoint[] = []
-
-				for (const point of data.plotData.points) {
-					const px = point.pixel_x / originalDevicePixelRatio
-					const py = point.pixel_y / originalDevicePixelRatio
-					const distance = Math.sqrt((mx - px) ** 2 + (my - py) ** 2)
-
-					if (distance <= hitRadius) {
-						nearbyDots.push(point)
-						if (nearbyDots.length >= 5) break
+				pointQuadtree.visit((node, x1, y1, x2, y2) => {
+					// Skip this node if it's outside the search radius
+					if (x1 > mx + hitRadius || x2 < mx - hitRadius || y1 > my + hitRadius || y2 < my - hitRadius) {
+						return true // Skip this branch
 					}
-				}
 
-				// Update hover circles - remove old ones and create new ones
-				pointsLayer.selectAll('.hover-circle').remove()
+					// If this is a leaf node, check the point
+					if (!node.length) {
+						const point = node.data
+						if (point) {
+							const px = point.pixel_x / originalDevicePixelRatio
+							const py = point.pixel_y / originalDevicePixelRatio
+							const distance = Math.sqrt((mx - px) ** 2 + (my - py) ** 2)
+
+							if (distance <= hitRadius) {
+								nearbyDots.push(point)
+								if (nearbyDots.length >= 5) return true // Stop searching
+							}
+						}
+					}
+
+					return nearbyDots.length >= 5 // Stop if we found 5
+				})
 
 				if (nearbyDots.length > 0) {
 					// Create circles only for nearby dots
@@ -236,16 +253,18 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 					const holder = geneTip.d.append('div').style('margin', '10px')
 					const table = holder.append('table').style('border-collapse', 'collapse')
 
-					// Header row
-					const headerRow = table.append('tr')
+					// Add thead element for header row
+					const thead = table.append('thead')
+					const headerRow = thead.append('tr')
 					const headers = ['Gene', 'Position', 'Type', '-log₁₀(q-value)', 'Subject count']
 					headers.forEach(text => {
 						styleGeneTipHeader(headerRow.append('th').text(text))
 					})
 
-					// Data rows
+					// Add tbody element for data rows
+					const tbody = table.append('tbody')
 					nearbyDots.forEach(d => {
-						const row = table.append('tr')
+						const row = tbody.append('tr')
 						styleGeneTipCell(row.append('td').text(d.gene))
 						styleGeneTipCell(row.append('td').text(`${d.chrom}:${d.start}-${d.end}`), 'positionCell')
 						styleGeneTipCell(
