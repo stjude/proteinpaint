@@ -343,7 +343,7 @@ export class WSIViewerInteractions {
 				type: 'plot_edit',
 				id: opts.id,
 				config: {
-					settings: { thumbnailRangeStart: start, renderWSIViewer: true }
+					settings: { thumbnailRangeStart: start, displayedImageIndex: start, direnderWSIViewer: true }
 				}
 			})
 		}
