@@ -33,9 +33,9 @@ function init({ genomes }) {
 		let data
 		try {
 			const g = genomes[q.genome]
-			if (!g) throw 'invalid genome name'
+			if (!g) throw new Error('invalid genome name')
 			const ds = g.datasets?.[q.dslabel]
-			if (!ds) throw 'invalid ds'
+			if (!ds) throw new Error('invalid ds')
 			data = await getViolin(q, ds)
 		} catch (e: any) {
 			data = { error: e?.message || e }
@@ -46,10 +46,10 @@ function init({ genomes }) {
 }
 
 async function getViolin(q: ViolinRequest, ds: any) {
-	if (typeof q.tw?.term != 'object' || typeof q.tw?.q != 'object') throw 'q.tw not of {term,q}'
+	if (typeof q.tw?.term != 'object' || typeof q.tw?.q != 'object') throw new Error('q.tw not of {term,q}')
 	const term = q.tw.term
 	if (!q.tw.q.mode) q.tw.q.mode = 'continuous'
-	if (!isNumericTerm(term) && term.type !== 'survival') throw 'term type is not numeric or survival'
+	if (!isNumericTerm(term) && term.type !== 'survival') throw new Error('term type is not numeric or survival')
 
 	const terms = [q.tw]
 	if (q.overlayTw) terms.push(q.overlayTw)
@@ -65,8 +65,8 @@ async function getViolin(q: ViolinRequest, ds: any) {
 		},
 		ds
 	)
-	if (!data) throw 'getData() returns nothing'
-	if (data.error) throw data.error
+	if (!data) throw new Error('getData() returns nothing')
+	if (data.error) throw new Error(data.error)
 
 	const samples = Object.values(data.samples)
 	let values = samples
@@ -76,7 +76,7 @@ async function getViolin(q: ViolinRequest, ds: any) {
 	//calculate stats here and pass them to client to avoid second request on client for getting stats
 	const descrStats = getDescrStats(values)
 	const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
-	if (data.error) throw data.error
+	if (data.error) throw new Error(data.error)
 	//get ordered labels to sort keys in plot2values
 	if (q.overlayTw && data.refs.byTermId[q.overlayTw.$id]) {
 		data.refs.byTermId[q.overlayTw.$id].orderedLabels = getOrderedLabels(
@@ -118,7 +118,6 @@ export async function getWilcoxonData(result: { [index: string]: any }) {
 				wilcoxInput.push({ group1_id, group1_values, group2_id, group2_values })
 			}
 		}
-
 		const wilcoxOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxInput)))
 		chart.pvalues = []
 		for (const test of wilcoxOutput) {
@@ -236,7 +235,7 @@ function setResponse(valuesObject: any, data: ValidGetDataResponse, q: ViolinReq
 async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any }, ds: { [index: string]: any }) {
 	if (!q.radius) q.radius = 5
 	// assign defaults as needed
-	if (q.radius <= 0) throw 'q.radius is not a number'
+	if (q.radius <= 0) throw new Error('q.radius is not a number')
 	else q.radius = +q.radius // ensure numeric value, not string
 	const isH = q.orientation == 'horizontal'
 
