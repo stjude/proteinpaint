@@ -83,11 +83,10 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	}
 
 	// Check size of interactive data
+	let interactivePoints = data.plotData.points
 	if (data.plotData.points.length > settings.interactiveDotsCap) {
 		// Sort points by y value (-log10(q-value)) descending and take top N up to interactiveDotsCap
-		data.plotData.points = data.plotData.points
-			.sort((a: any, b: any) => b.y - a.y)
-			.slice(0, settings.interactiveDotsCap)
+		interactivePoints = data.plotData.points.sort((a: any, b: any) => b.y - a.y).slice(0, settings.interactiveDotsCap)
 	}
 
 	// Set the  positioning up for download button to work properly
@@ -177,8 +176,6 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 			.append('g')
 			.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
 
-		const originalDevicePixelRatio = window.devicePixelRatio
-
 		// Add transparent cover for mousemove detection with dots underneath
 		const cover = pointsLayer
 			.append('rect')
@@ -192,15 +189,30 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		// Track which dots are currently highlighted
 		let highlightedDots: ManhattanPoint[] = []
 
+		const originalDevicePixelRatio = data.plotData.device_pixel_ratio
+		console.log('=== DEBUG INFO ===')
+		console.log('Data DPR:', originalDevicePixelRatio)
+		console.log('Window DPR:', window.devicePixelRatio)
+		console.log('Sample point before division:', data.plotData.points[0])
+		console.log('Sample point after division:', {
+			x: data.plotData.points[0].pixel_x / originalDevicePixelRatio,
+			y: data.plotData.points[0].pixel_y / originalDevicePixelRatio
+		})
+		console.log('SVG viewport dimensions:', {
+			width: settings.plotWidth + 2 * settings.pngDotRadius,
+			height: settings.plotHeight + 2 * settings.pngDotRadius
+		})
+		// const originalDevicePixelRatio = data.plotData.device_pixel_ratio
 		// Add this after processing points, before the mousemove handler
 		const pointQuadtree = quadtree<ManhattanPoint>()
-			.x(d => d.pixel_x / originalDevicePixelRatio)
-			.y(d => d.pixel_y / originalDevicePixelRatio)
-			.addAll(data.plotData.points)
+			.x(d => d.pixel_x)
+			.y(d => d.pixel_y)
+			.addAll(interactivePoints)
 
 		cover
 			.on('mousemove', event => {
 				const [mx, my] = pointer(event, cover.node())
+				console.log('Mouse position:', mx, my)
 
 				// Find all dots within hit radius
 				// TODO: Could make this a user configurable setting in the future
@@ -219,8 +231,8 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 					if (!node.length) {
 						const point = node.data
 						if (point) {
-							const px = point.pixel_x / originalDevicePixelRatio
-							const py = point.pixel_y / originalDevicePixelRatio
+							const px = point.pixel_x
+							const py = point.pixel_y
 							const distance = Math.sqrt((mx - px) ** 2 + (my - py) ** 2)
 
 							if (distance <= hitRadius) {
@@ -234,6 +246,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 				// Sort by distance and take the 5 closest points
 				candidates.sort((a, b) => a.distance - b.distance)
+				// console.log('First 3 candidates:', candidates.slice(0, 3))
 				const nearbyDots = candidates.slice(0, 5).map(c => c.point)
 
 				// Always remove old circles first
@@ -245,9 +258,9 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 						pointsLayer
 							.append('circle')
 							.attr('class', 'hover-circle')
-							.attr('cx', d.pixel_x / originalDevicePixelRatio)
-							.attr('cy', d.pixel_y / originalDevicePixelRatio)
-							.attr('r', settings.interactiveDotRadius)
+							.attr('cx', d.pixel_x)
+							.attr('cy', d.pixel_y)
+							.attr('r', settings.pngDotRadius * originalDevicePixelRatio)
 							.attr('fill', 'none')
 							.attr('stroke', 'black')
 							.attr('stroke-width', settings.interactiveDotStrokeWidth)
