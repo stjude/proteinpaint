@@ -127,21 +127,19 @@ export class FlyoutMenu {
 
 	/** Starting with the root parent menu, will recursively render
 	 * all menu options and submenus in tandem with addMenuItem(). */
-	private renderMenu(tip: Menu, options: FlyoutMenuOption[]): void {
+	private renderMenu(tip: Menu, options: FlyoutMenuOption[]): { div: any; opt: FlyoutMenuOption }[] {
 		let currentMenu = this.menuLevels.get(this.level)
 		if (!currentMenu) {
 			currentMenu = { menu: tip }
 		}
-
 		// Pass the position info to all menu items for consistent styling
-		const menuItems: { div: any; opt: FlyoutMenuOption }[] = []
-
+		const renderedOpts: { div: any; opt: FlyoutMenuOption }[] = []
 		for (const opt of options) {
 			if (opt.text) this.addText(tip.d, opt.text)
 			else if (opt.html) tip.d.append('div').html(opt.html)
 			else {
 				const optDiv = this.addMenuItem(opt, tip, this.level)
-				menuItems.push({ div: optDiv, opt })
+				renderedOpts.push({ div: optDiv, opt })
 			}
 		}
 		//Allow all the elements to render then analyze position once
@@ -149,9 +147,10 @@ export class FlyoutMenu {
 			currentMenu.position = this.analyzeMenuPosition(tip.dnode!)
 			this.menuLevels.set(this.level, currentMenu)
 		}
-		for (const { div, opt } of menuItems) {
+		for (const { div, opt } of renderedOpts) {
 			this.updateMenuText(div, opt, currentMenu.position)
 		}
+		return renderedOpts
 	}
 
 	private addMenuItem(opt: FlyoutMenuOption, tip: Menu, level: number): Div {
@@ -160,7 +159,14 @@ export class FlyoutMenu {
 				this.level = level + 1
 				const flyoutTip = this.getFlyout(optDiv, tip)
 				if (opt?.options) {
-					this.renderMenu(flyoutTip, opt.options)
+					const renderedOpts = this.renderMenu(flyoutTip, opt.options)
+					/** Always focus on the first option.
+					 * This circumvents the user tabbing through other
+					 * menu options before focusing on the newly
+					 * opened submenu. */
+					if (renderedOpts.length > 0) {
+						renderedOpts[0].div.node().focus()
+					}
 					return
 				}
 				opt.callback!(flyoutTip.d, this.closeMenus.bind(this))!
