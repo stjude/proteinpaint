@@ -4,6 +4,7 @@ import { getData } from '../src/termdb.matrix.js'
 import { boxplot_getvalue } from '../src/utils.js'
 import { sortPlot2Values } from './termdb.violin.ts'
 import { getDescrStats } from './termdb.descrstats.ts'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/boxplot',
@@ -33,7 +34,10 @@ function init({ genomes }) {
 			const data = await getData({ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__ }, ds)
 			if (data.error) throw new Error(data.error)
 
-			const { absMin, absMax, charts, uncomputableValues, descrStats, outlierMin, outlierMax } = processData(data, q)
+			const { absMin, absMax, charts, uncomputableValues, descrStats, outlierMin, outlierMax } = await processData(
+				data,
+				q
+			)
 
 			const returnData: BoxPlotResponse = {
 				absMin: q.removeOutliers ? outlierMin : absMin,
@@ -53,7 +57,7 @@ function init({ genomes }) {
 
 /** Process the returned data from getData() for entire chart
  * and each individual box plot.*/
-function processData(data, q) {
+async function processData(data, q) {
 	const samples = Object.values(data.samples)
 	const values = samples
 		.map(s => s?.[q.tw.$id!]?.value)
@@ -103,6 +107,8 @@ function processData(data, q) {
 
 		charts[chart] = { chartId: chart, plots }
 	}
+	if (overlayTerm) await getWilcoxonData(charts)
+
 	return { absMin, absMax, charts, uncomputableValues, descrStats, outlierMin, outlierMax }
 }
 
@@ -183,6 +189,41 @@ function setUncomputableValues(values: Record<string, number>) {
 	if (Object.entries(values)?.length) {
 		return Object.entries(values).map(([label, v]) => ({ label, value: v as number }))
 	} else return null
+}
+
+async function getWilcoxonData(charts: { [chartId: string]: any }) {
+	for (const chart of Object.values(charts)) {
+		const numPlots = chart.plots?.length
+		if (numPlots < 2) continue
+
+		const wilcoxonInput: { [index: string]: any }[] = []
+
+		for (let i = 0; i < numPlots; i++) {
+			const group1_id = chart.plots[i].boxplot.label
+			const group1_values = chart.plots[i].boxplot.out.map(v => v.value)
+			for (let j = i + 1; j < numPlots; j++) {
+				const group2_id = chart.plots[j].boxplot.label
+				const group2_values = chart.plots[j].boxplot.out.map(v => v.value)
+				wilcoxonInput.push({ group1_id, group1_values, group2_id, group2_values })
+			}
+		}
+
+		const wilcoxonOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxonInput)))
+		//May change this if there are other tests to add in the future
+		chart.wilcoxon = []
+		for (const test of wilcoxonOutput) {
+			//Output is formated for #dom/table.js to render
+			if (test.wilcoxon == null || test.wilcoxon == 'null') {
+				chart.wilcoxon.push([{ value: test.group1_id }, { value: test.group2_id }, { html: 'NA' }])
+			} else {
+				chart.wilcoxon.push([
+					{ value: test.group1_id },
+					{ value: test.group2_id },
+					{ html: test.wilcoxon.toPrecision(4) }
+				])
+			}
+		}
+	}
 }
 
 /**********************************************************
