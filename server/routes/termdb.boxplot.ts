@@ -24,14 +24,14 @@ function init({ genomes }) {
 		const q: BoxPlotRequest = req.query
 		try {
 			const genome = genomes[q.genome]
-			if (!genome) throw 'invalid genome name'
+			if (!genome) throw new Error('invalid genome name')
 			const ds = genome.datasets?.[q.dslabel]
-			if (!ds) throw 'invalid ds'
+			if (!ds) throw new Error('invalid ds')
 			const terms = [q.tw]
 			if (q.overlayTw) terms.push(q.overlayTw)
 			if (q.divideTw) terms.push(q.divideTw)
 			const data = await getData({ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__ }, ds)
-			if (data.error) throw data.error
+			if (data.error) throw new Error(data.error)
 
 			const { absMin, absMax, charts, uncomputableValues, descrStats, outlierMin, outlierMax } = processData(data, q)
 
@@ -73,8 +73,8 @@ function processData(data, q) {
 		divideTerm
 	)
 
-	if (!absMin && absMin !== 0) throw 'absMin is undefined [termdb.boxplot init()]'
-	if (!absMax && absMax !== 0) throw 'absMax is undefined [termdb.boxplot init()]'
+	if (!absMin && absMin !== 0) throw new Error('absMin is undefined')
+	if (!absMax && absMax !== 0) throw new Error('absMax is undefined')
 	const charts: any = {}
 	let outlierMin = Number.POSITIVE_INFINITY,
 		outlierMax = Number.NEGATIVE_INFINITY
@@ -133,7 +133,7 @@ function setPlotData(
 	}
 
 	const boxplot = boxplot_getvalue(vs, q.removeOutliers)
-	if (!boxplot) throw 'boxplot_getvalue failed [termdb.boxplot init()]'
+	if (!boxplot) throw new Error('boxplot_getvalue failed [termdb.boxplot init()]')
 	const _plot = {
 		boxplot,
 		descrStats
