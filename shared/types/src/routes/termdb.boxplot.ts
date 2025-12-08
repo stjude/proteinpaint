@@ -14,6 +14,9 @@ export type BoxPlotRequest = {
 	isLogScale: boolean
 	/** sort plots by median value */
 	orderByMedian: boolean
+	removeOutliers?: boolean
+	/** If true, show association tests table */
+	showAssocTests?: boolean
 	/** term2 */
 	overlayTw?: TermWrapper
 	/** term0 */
@@ -21,7 +24,6 @@ export type BoxPlotRequest = {
 	filter?: Filter
 	filter0?: any
 	__protected__: any
-	removeOutliers?: boolean
 }
 
 export type BoxPlotResponse = {

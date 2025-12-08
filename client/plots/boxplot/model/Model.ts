@@ -37,16 +37,17 @@ export class Model {
 		const opts: { [index: string]: any } = {
 			tw: this.getContinousTerm(),
 			filter: this.state.termfilter.filter,
-			filter0: this.state.termfilter.filter0
+			filter0: this.state.termfilter.filter0,
+			orderByMedian: this.settings.orderByMedian,
+			isLogScale: this.settings.isLogScale,
+			removeOutliers: this.settings.removeOutliers,
+			showAssocTests: this.settings.showAssocTests
 		}
 		if (this.config.term2)
 			opts.overlayTw = this.getContinousTerm() == this.config.term ? this.config.term2 : this.config.term
 
 		if (this.config.term0) opts.divideTw = this.config.term0
 
-		opts.orderByMedian = this.settings.orderByMedian
-		opts.isLogScale = this.settings.isLogScale
-		opts.removeOutliers = this.settings.removeOutliers
 		return opts
 	}
 
