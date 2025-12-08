@@ -1297,7 +1297,7 @@ function setInteractivity(self) {
 export function getDefaultBarSettings(app) {
 	return {
 		barspace: 2,
-		barwidth: 200,
+		barwidth: 20,
 		plotLength: defaultPlotLength,
 		orientation: 'horizontal',
 		unit: 'abs',
