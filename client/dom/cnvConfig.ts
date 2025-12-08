@@ -3,23 +3,20 @@ import { Menu } from '../dom/menu'
 /*
 Renderer for CNV config UI
 
- - Create inputs for CNV gain cutoff, loss cutoff, and max length
- - Optional wildtype checkbox
+ - Inputs for CNV gain cutoff, loss cutoff, and max length
+ - Checkbox for toggling wildtype genotype
  - Resulting CNV config is provided through callback function
-
-TODOs
-- are there cases when some cutoffs are defined (e.g. cnvGainCutoff and cnvLossCutoff), but not others (e.g. cnvMaxLength)?
 */
 
 type Arg = {
 	holder: any // D3 holder where UI is rendered
-	cnvGainCutoff: number // minimum positive value (log2 ratio) to consider a CNV as gain
-	cnvLossCutoff: number // maximum negative value (log2 ratio) to consider a CNV as loss
-	cnvMaxLength: number | null // max segment length in base pairs; null = no length limit (UI shows -1)
+	cnvGainCutoff?: number // minimum positive value (log2 ratio) to consider a CNV as gain
+	cnvLossCutoff?: number // maximum negative value (log2 ratio) to consider a CNV as loss
+	cnvMaxLength?: number | null // max segment length in base pairs; null = no length limit (UI shows -1)
 	callback: (config: {
-		cnvGainCutoff: number
-		cnvLossCutoff: number
-		cnvMaxLength: number | null
+		cnvGainCutoff?: number
+		cnvLossCutoff?: number
+		cnvMaxLength?: number | null
 		cnvWT?: boolean
 	}) => void // called when user clicks APPLY
 	cnvWT?: boolean // wildtype for CNV alteration specified by cnvGainCutoff, cnvLossCutoff, and cnvMaxLength
@@ -27,6 +24,14 @@ type Arg = {
 }
 
 export function renderCnvConfig(arg: Arg) {
+	const { cnvGainCutoff, cnvLossCutoff } = arg
+	const cnvMaxLength = arg.cnvMaxLength === null ? -1 : arg.cnvMaxLength
+
+	if (!Number.isFinite(cnvGainCutoff) && !Number.isFinite(cnvLossCutoff) && !Number.isFinite(cnvMaxLength)) {
+		// no cutoffs defined, do not render config UI
+		return
+	}
+
 	const div = arg.holder
 	div.style('margin', '10px')
 	const tip = new Menu({ padding: '5px' })
@@ -36,85 +41,88 @@ export function renderCnvConfig(arg: Arg) {
 	const configDiv = div.append('div').style('margin-left', '10px')
 
 	// CNV gain input
-	const cnvGainCutoff = arg.cnvGainCutoff
-	if (!Number.isFinite(cnvGainCutoff)) throw 'cnvGainCutoff is not a valid number'
-	const cnvGainDiv = configDiv.append('div').style('margin-bottom', '5px')
-	cnvGainDiv.append('span').style('opacity', 0.7).text('Minimum CNV Gain (log2 ratio)') // TODO: verify that this will always be log2 ratio
-	const cnvGainInput = cnvGainDiv
-		.append('input')
-		.attr('data-testid', 'sjpp-cnv-gain-input')
-		.attr('type', 'number')
-		.property('value', cnvGainCutoff)
-		.style('width', '100px')
-		.style('margin-left', '15px')
-		.on('change', event => {
-			const value = event.target.value
-			if (!isValidNumber(value)) {
-				window.alert('Please enter a numeric value.')
-				event.target.value = cnvGainCutoff
-				return
-			}
-			if (Number(value) < 0) {
-				window.alert('Value must be a positive value.')
-				event.target.value = cnvGainCutoff
-				return
-			}
-		})
+	let cnvGainInput
+	if (Number.isFinite(cnvGainCutoff)) {
+		const cnvGainDiv = configDiv.append('div').style('margin-bottom', '5px')
+		cnvGainDiv.append('span').style('opacity', 0.7).text('Minimum CNV Gain (log2 ratio)') // TODO: verify that this will always be log2 ratio
+		cnvGainInput = cnvGainDiv
+			.append('input')
+			.attr('data-testid', 'sjpp-cnv-gain-input')
+			.attr('type', 'number')
+			.property('value', cnvGainCutoff)
+			.style('width', '100px')
+			.style('margin-left', '15px')
+			.on('change', event => {
+				const value = event.target.value
+				if (!isValidNumber(value)) {
+					window.alert('Please enter a numeric value.')
+					event.target.value = cnvGainCutoff
+					return
+				}
+				if (Number(value) < 0) {
+					window.alert('Value must be a positive value.')
+					event.target.value = cnvGainCutoff
+					return
+				}
+			})
+	}
 
 	// CNV loss input
-	const cnvLossCutoff = arg.cnvLossCutoff
-	if (!Number.isFinite(cnvLossCutoff)) throw 'cnvLossCutoff is not a valid number'
-	const cnvLossDiv = configDiv.append('div').style('margin-bottom', '5px')
-	cnvLossDiv.append('span').style('opacity', 0.7).text('Maximum CNV Loss (log2 ratio)') // TODO: verify that this will always be log2 ratio
-	const cnvLossInput = cnvLossDiv
-		.append('input')
-		.attr('data-testid', 'sjpp-cnv-loss-input')
-		.attr('type', 'number')
-		.property('value', cnvLossCutoff)
-		.style('width', '100px')
-		.style('margin-left', '15px')
-		.on('change', event => {
-			const value = event.target.value
-			if (!isValidNumber(value)) {
-				window.alert('Please enter a numeric value.')
-				event.target.value = cnvLossCutoff
-				return
-			}
-			if (Number(value) > 0) {
-				window.alert('Value must be a negative value.')
-				event.target.value = cnvLossCutoff
-				return
-			}
-		})
+	let cnvLossInput
+	if (Number.isFinite(cnvLossCutoff)) {
+		const cnvLossDiv = configDiv.append('div').style('margin-bottom', '5px')
+		cnvLossDiv.append('span').style('opacity', 0.7).text('Maximum CNV Loss (log2 ratio)') // TODO: verify that this will always be log2 ratio
+		cnvLossInput = cnvLossDiv
+			.append('input')
+			.attr('data-testid', 'sjpp-cnv-loss-input')
+			.attr('type', 'number')
+			.property('value', cnvLossCutoff)
+			.style('width', '100px')
+			.style('margin-left', '15px')
+			.on('change', event => {
+				const value = event.target.value
+				if (!isValidNumber(value)) {
+					window.alert('Please enter a numeric value.')
+					event.target.value = cnvLossCutoff
+					return
+				}
+				if (Number(value) > 0) {
+					window.alert('Value must be a negative value.')
+					event.target.value = cnvLossCutoff
+					return
+				}
+			})
+	}
 
 	// CNV max length input
-	const cnvMaxLength = arg.cnvMaxLength === null ? -1 : arg.cnvMaxLength
-	if (!Number.isFinite(cnvMaxLength)) throw 'cnvMaxLength is not a valid number'
-	const cnvLengthDiv = configDiv.append('div').style('margin-bottom', '5px')
-	cnvLengthDiv.append('span').style('opacity', 0.7).text('CNV Max Length')
-	const cnvLengthInput = cnvLengthDiv
-		.append('input')
-		.attr('data-testid', 'sjpp-cnv-length-input')
-		.attr('type', 'number')
-		.property('value', cnvMaxLength)
-		.style('width', '100px')
-		.style('margin-left', '15px')
-		.on('change', event => {
-			const value = event.target.value
-			if (!isValidNumber(value)) {
-				window.alert('Please enter a numeric value.')
-				event.target.value = cnvMaxLength
-				return
-			}
-		})
-		.on('mouseover', event => {
-			tip.clear()
-			tip.d.append('div').text('Please enter a positive value. To include all CNV segments, enter -1.')
-			tip.showunder(event.target)
-		})
-		.on('mouseout', () => {
-			tip.hide()
-		})
+	let cnvLengthInput
+	if (Number.isFinite(cnvMaxLength)) {
+		const cnvLengthDiv = configDiv.append('div').style('margin-bottom', '5px')
+		cnvLengthDiv.append('span').style('opacity', 0.7).text('CNV Max Length')
+		cnvLengthInput = cnvLengthDiv
+			.append('input')
+			.attr('data-testid', 'sjpp-cnv-length-input')
+			.attr('type', 'number')
+			.property('value', cnvMaxLength)
+			.style('width', '100px')
+			.style('margin-left', '15px')
+			.on('change', event => {
+				const value = event.target.value
+				if (!isValidNumber(value)) {
+					window.alert('Please enter a numeric value.')
+					event.target.value = cnvMaxLength
+					return
+				}
+			})
+			.on('mouseover', event => {
+				tip.clear()
+				tip.d.append('div').text('Please enter a positive value. To include all CNV segments, enter -1.')
+				tip.showunder(event.target)
+			})
+			.on('mouseout', () => {
+				tip.hide()
+			})
+	}
 
 	// CNV wildtype checkbox
 	let wtCheckbox
@@ -146,14 +154,15 @@ export function renderCnvConfig(arg: Arg) {
 		.style('font-size', '.8em')
 		.text('APPLY')
 		.on('click', () => {
-			const tempCnvMaxLength = Number(cnvLengthInput.property('value'))
-			const config: any = {
-				cnvGainCutoff: Number(cnvGainInput.property('value')),
-				cnvLossCutoff: Number(cnvLossInput.property('value')),
+			const config: any = {}
+			if (cnvGainInput) config.cnvGainCutoff = Number(cnvGainInput.property('value'))
+			if (cnvLossInput) config.cnvLossCutoff = Number(cnvLossInput.property('value'))
+			if (cnvLengthInput) {
+				const tempCnvMaxLength = Number(cnvLengthInput.property('value'))
 				// no max length if value == -1
-				cnvMaxLength: tempCnvMaxLength == -1 ? null : tempCnvMaxLength
+				config.cnvMaxLength = tempCnvMaxLength == -1 ? null : tempCnvMaxLength
 			}
-			if (arg.WTtoggle) config.cnvWT = wtCheckbox.property('checked')
+			if (wtCheckbox) config.cnvWT = wtCheckbox.property('checked')
 			arg.callback(config)
 		})
 }
