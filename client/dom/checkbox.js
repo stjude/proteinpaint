@@ -2,19 +2,21 @@
 
 ******* required
 .holder
-.labeltext
 .callback()
 	async
 	one boolean argument corresponding to whether the box is checked or not
 ******* optional
 .divstyle{}
+.labeltext
+.title
 .checked
 	if set to true, box is checked by default
+.id
 .testid
     sets input data-testid="", for testing
 */
 export function make_one_checkbox(arg) {
-	const { holder, labeltext, callback, checked, divstyle, id, testid } = arg
+	const { holder, labeltext, title, callback, checked, divstyle, id, testid } = arg
 
 	const div = holder.append('div')
 	if (divstyle) {
@@ -33,8 +35,9 @@ export function make_one_checkbox(arg) {
 			await callback(input.property('checked'))
 			input.property('disabled', false)
 		})
+	if (title) input.attr('title', title)
 	if (id) input.attr('id', id)
 	if (testid) input.attr('data-testid', testid)
-	label.append('span').html('&nbsp;' + labeltext)
+	if (labeltext) label.append('span').html('&nbsp;' + labeltext)
 	return input
 }

@@ -278,7 +278,7 @@ tape('Return correct rows on button click', async test => {
 		]
 	})
 
-	const selectAllBtn = holder.select('input#checkboxHeader').node()
+	const selectAllBtn = holder.select('input[data-testid=sjpp-table-checkall]').node()
 	selectAllBtn.click() //Select all
 	const testBtn = holder.select('button.test-btn').node()
 	testBtn.click()

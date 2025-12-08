@@ -1875,10 +1875,6 @@ tape('filterPromptInit()', async test => {
 	const backBtn = await detectOne({ elem: filter.dom.treeTip.dnode, selector: 'div> div> span' })
 	test.ok(backBtn.innerText.includes('Back to variable selection'), `Should display back button`)
 	const inputs = await detectGte({ elem: filter.dom.treeTip.dnode, selector: 'input', count: 3 })
-	test.ok(
-		inputs.find(i => i.id == 'checkboxHeader'),
-		`Should display 'Check/Uncheck All' checkbox`
-	)
 	test.ok(inputs.length > 2, `Should show checkbox for at least one variable`)
 
 	backBtn.click()

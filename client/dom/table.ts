@@ -1,5 +1,5 @@
 import { select } from 'd3-selection'
-import { icons, axisstyle } from '#dom'
+import { icons, axisstyle, make_one_checkbox } from '#dom'
 import { axisTop } from 'd3-axis'
 import { format as d3format } from 'd3-format'
 import { scaleLinear } from 'd3-scale'
@@ -131,19 +131,17 @@ export function renderTable({
 			// create column for radio button
 			const cell = theadRow.append('td').attr('class', 'sjpp_table_header').style('width', '1.5vw')
 			if (!singleMode) {
-				const checkboxH = cell
-					.append('input')
-					// TODO: should use a globally-unique element id for the checkbox
-					.attr('id', 'checkboxHeader')
-					.attr('type', 'checkbox')
-					.attr('title', 'Check or uncheck all')
-					.on('change', () => {
-						const nodes = tbody.selectAll('input').nodes()
-						tbody.selectAll('input').property('checked', checkboxH.node().checked)
+				make_one_checkbox({
+					holder: cell,
+					checked: selectAll,
+					testid: 'sjpp-table-checkall',
+					callback: checked => {
+						const nodes = tbody.selectAll('input[type=checkbox]').nodes() // must restrict to type=checkbox and avoid selecting color button <input>
+						tbody.selectAll('input').property('checked', checked)
 						if (buttons) updateButtons()
 						if (noButtonCallback) for (const [i, node] of nodes.entries()) noButtonCallback(i, node)
-					})
-				checkboxH.node().checked = selectAll
+					}
+				})
 				if (!showHeader)
 					theadRow.append('th').text('Check/Uncheck All').attr('class', 'sjpp_table_header sjpp_table_item')
 			}

@@ -665,7 +665,7 @@ async function updateUI(self) {
 			{}, // blank cell to add delete button
 			{ value: g.name }, // to allow click to show <input>
 			{ color: g.color },
-			{ value: 'n=' + (await self.app.vocabApi.getFilteredSampleCount(g.filter)) },
+			{ value: 'Loading...' }, // sample count is lazily retrieved to not to hold up table rendering
 			{} // blank cell to show filter ui
 		])
 	}
@@ -706,7 +706,7 @@ async function updateUI(self) {
 				self.app.vocabApi.deleteGroup(group.name)
 			})
 
-		// create fitlter ui in its cell
+		// create filter ui in its cell
 		const group = groups[i]
 		filterInit({
 			holder: row[4].__td,
@@ -727,6 +727,8 @@ async function updateUI(self) {
 				})
 			}
 		}).main(group.filter)
+
+		self.app.vocabApi.getFilteredSampleCount(groups[i].filter).then(n => row[3].__td.text(n))
 	}
 
 	self.updateLaunchButton()
@@ -772,7 +774,6 @@ export function rebaseGroupFilter(s) {
 		const f = getNormalRoot(structuredClone(s.termfilter.filter))
 		const f2 = getFilterItemByTag(g.filter, 'filterUiRoot')
 		if (!f2) {
-			//console.log('filterUiRoot not found')
 			groups.push(g)
 			continue
 		}
