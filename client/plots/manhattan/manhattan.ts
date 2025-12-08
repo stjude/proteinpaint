@@ -43,6 +43,37 @@ import type { ManhattanPoint } from './manhattanTypes'
  * including axes, labels, legend, and top genes (represented as interactive dots) for detailed information on hover.
  */
 
+// Define styles once at the top of your file or in a constants section
+const TABLE_STYLES = {
+	cell: [
+		['padding', '5px'],
+		['border', '1px solid #ddd']
+	] as const,
+	header: [
+		['padding', '5px'],
+		['border', '1px solid #ddd'],
+		['font-weight', 'bold']
+	] as const,
+	positionCell: [
+		['padding', '5px'],
+		['border', '1px solid #ddd'],
+		['font-size', '0.9em']
+	] as const
+}
+
+function styleGeneTipCell(td: any, styleType: keyof typeof TABLE_STYLES = 'cell') {
+	TABLE_STYLES[styleType].forEach(style => {
+		const [prop, value] = style
+		td.style(prop, value)
+	})
+	return td
+}
+
+function styleGeneTipHeader(th: any) {
+	TABLE_STYLES.header.forEach(([prop, value]) => th.style(prop, value))
+	return th
+}
+
 export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	// Get our settings
 	settings = {
@@ -144,7 +175,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 			.append('g')
 			.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
 
-		const originalDevicePixelRatio = 2 // Use the DPR from when plot was generated
+		const originalDevicePixelRatio = window.devicePixelRatio // Use the device pixel ratio from when plot was generated otherwise positions will be off when zoomed in/out
 
 		// Add transparent cover for mousemove detection
 		const cover = pointsLayer
@@ -206,64 +237,23 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 					// Header row
 					const headerRow = table.append('tr')
-					headerRow
-						.append('th')
-						.text('Gene')
-						.style('padding', '5px')
-						.style('border', '1px solid #ddd')
-						.style('font-weight', 'bold')
-					headerRow
-						.append('th')
-						.text('Position')
-						.style('padding', '5px')
-						.style('border', '1px solid #ddd')
-						.style('font-weight', 'bold')
-					headerRow
-						.append('th')
-						.text('Type')
-						.style('padding', '5px')
-						.style('border', '1px solid #ddd')
-						.style('font-weight', 'bold')
-					headerRow
-						.append('th')
-						.text('-log₁₀(q-value)')
-						.style('padding', '5px')
-						.style('border', '1px solid #ddd')
-						.style('font-weight', 'bold')
-					headerRow
-						.append('th')
-						.text('Subject count')
-						.style('padding', '5px')
-						.style('border', '1px solid #ddd')
-						.style('font-weight', 'bold')
+					const headers = ['Gene', 'Position', 'Type', '-log₁₀(q-value)', 'Subject count']
+					headers.forEach(text => {
+						styleGeneTipHeader(headerRow.append('th').text(text))
+					})
 
 					// Data rows
 					nearbyDots.forEach(d => {
 						const row = table.append('tr')
-						row.append('td').text(d.gene).style('padding', '5px').style('border', '1px solid #ddd')
-						row
-							.append('td')
-							.text(`${d.chrom}:${d.start}-${d.end}`)
-							.style('padding', '5px')
-							.style('border', '1px solid #ddd')
-							.style('font-size', '0.9em')
-						row
-							.append('td')
-							.html(`<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`)
-							.style('padding', '5px')
-							.style('border', '1px solid #ddd')
-						row
-							.append('td')
-							.text(d.y.toFixed(3))
-							.style('padding', '5px')
-							.style('border', '1px solid #ddd')
-							.style('text-align', 'right')
-						row
-							.append('td')
-							.text(d.nsubj)
-							.style('padding', '5px')
-							.style('border', '1px solid #ddd')
-							.style('text-align', 'right')
+						styleGeneTipCell(row.append('td').text(d.gene))
+						styleGeneTipCell(row.append('td').text(`${d.chrom}:${d.start}-${d.end}`), 'positionCell')
+						styleGeneTipCell(
+							row
+								.append('td')
+								.html(`<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`)
+						)
+						styleGeneTipCell(row.append('td').text(d.y.toFixed(3)))
+						styleGeneTipCell(row.append('td').text(d.nsubj))
 					})
 				} else {
 					// No dots nearby, hide tooltip
