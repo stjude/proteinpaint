@@ -22,9 +22,9 @@ export type geneExpression = {
 
 export type SummaryChart = {
 	/** plot config for summary chart */ chartType: 'summary'
-	term?: termid
-	term2?: termid
-	geneExpression?: geneExpression
+	term?: termid | { term: geneExpression }
+	term2?: termid | { term: geneExpression }
+	//geneExpression?: geneExpression
 }
 
 class Chat extends PlotBase implements RxComponent {
@@ -121,7 +121,7 @@ class Chat extends PlotBase implements RxComponent {
 					} else {
 						// Rust version
 						if (result.action == 'summary') {
-							const plotConfig: SummaryChart = {
+							const SummaryPlotConfig: SummaryChart = {
 								chartType: 'summary'
 							}
 							if (result.summaryterms) {
@@ -129,35 +129,42 @@ class Chat extends PlotBase implements RxComponent {
 								let i = 0
 								for (const term of result.summaryterms) {
 									if (term.clinical) {
-										console.log('clinical:', term.clinical)
+										const termid: termid = { id: term.clinical }
 										if (i == 0) {
-											plotConfig.term = term.clinical
+											SummaryPlotConfig.term = termid
 										} else if (i == 1) {
-											plotConfig.term2 = term.clinical
+											SummaryPlotConfig.term2 = termid
 										} else {
 											// More than 2 dictionary terms are not supported probably, need to check
 											console.log('More than 2 terms, please check!')
 										}
-										i += 1
 									} else if (term.geneExpression) {
 										const geneExp: geneExpression = { gene: term.geneExpression, type: 'geneExpression' }
-										plotConfig.geneExpression = geneExp
+										if (i == 0) {
+											SummaryPlotConfig.term = { term: geneExp }
+										} else if (i == 1) {
+											SummaryPlotConfig.term2 = { term: geneExp }
+										} else {
+											// More than 2 dictionary terms are not supported probably, need to check
+											console.log('More than 2 terms, please check!')
+										}
 									}
+									i += 1
 								}
-								console.log('plotConfig:', plotConfig)
+								//console.log('SummaryPlotConfig:', SummaryPlotConfig)
 								this.app.dispatch({
 									type: 'plot_create',
 									id: getId(),
-									config: plotConfig
+									config: SummaryPlotConfig
 								})
 								serverBubble.html('Please refer to the plot generated above')
 							}
 						} // Will add other plots later
 					}
 					/* may switch by data.type
-                    type=chat: server returns a chat msg
-                    type=plot: server returns a plot obj
-                    */
+type=chat: server returns a chat msg
+type=plot: server returns a plot obj
+*/
 				} catch (e: any) {
 					if (e.stack) console.log(e.stack)
 					serverBubble.html(`Error: ${e.message || e}`)
@@ -168,13 +175,13 @@ class Chat extends PlotBase implements RxComponent {
 	}
 	addBubble(arg: { msg: string; me?: number }) {
 		/* 
-        {
-                msg: add a chat bubble for this msg; msg is html as it might contain hyperlinks
-                me: if 1, is me; otherwise is ai
-        }
+{
+        msg: add a chat bubble for this msg; msg is html as it might contain hyperlinks
+        me: if 1, is me; otherwise is ai
+}
 
-        return the created bubble and allow to be modified
-        */
+return the created bubble and allow to be modified
+*/
 		const bubble = this.dom.bubbleDiv
 			.append('div')
 			.style('padding', '10px')
