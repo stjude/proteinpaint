@@ -1,6 +1,6 @@
 import { scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
-import { Menu, icons, axisstyle } from '#dom'
+import { Menu, icons, axisstyle, table2col } from '#dom'
 import { to_svg } from '#src/client'
 import { pointer } from 'd3-selection'
 import { quadtree } from 'd3-quadtree'
@@ -252,7 +252,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				// Always remove old circles first
 				pointsLayer.selectAll('.hover-circle').remove()
 
-				if (nearbyDots.length > 0) {
+				if (nearbyDots.length > 1) {
 					// Add new hover circles for nearby dots
 					nearbyDots.forEach(d => {
 						pointsLayer
@@ -296,6 +296,37 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 						styleGeneTipCell(row.append('td').text(d.y.toFixed(3)))
 						styleGeneTipCell(row.append('td').text(d.nsubj))
 					})
+				} else if (nearbyDots.length === 1) {
+					// Single gene - use table2col format
+					const d = nearbyDots[0]
+
+					// Add hover circle for the single dot
+					pointsLayer
+						.append('circle')
+						.attr('class', 'hover-circle')
+						.attr('cx', d.pixel_x)
+						.attr('cy', d.pixel_y)
+						.attr('r', settings.pngDotRadius * originalDevicePixelRatio)
+						.attr('fill', 'none')
+						.attr('stroke', 'black')
+						.attr('stroke-width', settings.interactiveDotStrokeWidth)
+
+					highlightedDots = nearbyDots
+
+					// Show tooltip with table2col format
+					geneTip.clear().show(event.clientX, event.clientY)
+
+					const table = table2col({
+						holder: geneTip.d.append('div'),
+						margin: '10px'
+					})
+					table.addRow('Gene', d.gene)
+					table.addRow('Position', `${d.chrom}:${d.start}-${d.end}`)
+					const [t1, t2] = table.addRow()
+					t1.text('Type')
+					t2.html(`<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`)
+					table.addRow('-log₁₀(q-value)', d.y.toFixed(3))
+					table.addRow('Subject count', d.nsubj)
 				} else {
 					// No dots nearby, hide tooltip
 					highlightedDots = []
