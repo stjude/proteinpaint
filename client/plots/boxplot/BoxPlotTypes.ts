@@ -24,8 +24,8 @@ export type BoxPlotConfig = PlotConfig & { settings: { boxplot: BoxPlotSettings 
 /** User controlled settings. Some settings are calculated based on
  * the number of boxplots */
 export type BoxPlotSettings = {
-	/** Width of the boxplots and scale, excluding labels */
-	boxplotWidth: number
+	/** Length of the boxplots and scale, excluding labels */
+	plotLength: number
 	/** Default is common plot color.  */
 	color: string
 	/** Toggle between different display modes

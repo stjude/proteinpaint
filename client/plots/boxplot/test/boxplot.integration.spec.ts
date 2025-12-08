@@ -240,7 +240,7 @@ tape('Box plot with user settings', test => {
 	test.timeoutAfter(3000)
 
 	const settings = {
-		boxplotWidth: 300,
+		plotLength: 300,
 		color: 'rgb(255, 255, 0)',
 		labelPad: 40,
 		rowHeight: 30,

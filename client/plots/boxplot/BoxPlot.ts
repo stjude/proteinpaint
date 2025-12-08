@@ -137,12 +137,14 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 				]
 			},
 			{
-				label: 'Width',
-				title: 'Set the width of the entire plot',
+				label: 'Plot length',
+				title: 'Set the plot length of the entire plot in pixels, >=200',
 				type: 'number',
 				chartType: 'boxplot',
-				settingsKey: 'boxplotWidth',
-				debounceInterval: 500
+				settingsKey: 'plotLength',
+				debounceInterval: 500,
+				min: 200,
+				step: 10
 			},
 			{
 				label: 'Plot height',
@@ -400,7 +402,7 @@ export const componentInit = boxplotInit
 
 export function getDefaultBoxplotSettings(app, overrides = {}) {
 	const defaults: BoxPlotSettings = {
-		boxplotWidth: 550,
+		plotLength: 550,
 		color: plotColor,
 		displayMode: 'default',
 		labelPad: 10,
