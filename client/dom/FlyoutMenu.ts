@@ -164,7 +164,9 @@ export class FlyoutMenu {
 					 * This circumvents the user tabbing through other
 					 * menu options before focusing on the newly
 					 * opened submenu. */
-					renderedOpts[0].div.node().focus()
+					if (renderedOpts.length > 0) {
+						renderedOpts[0].div.node().focus()
+					}
 					return
 				}
 				opt.callback!(flyoutTip.d, this.closeMenus.bind(this))!
