@@ -32,84 +32,8 @@ function init({ genomes }) {
 			if (q.divideTw) terms.push(q.divideTw)
 			const data = await getData({ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__ }, ds)
 			if (data.error) throw data.error
-			const samples = Object.values(data.samples)
-			const values = samples
-				.map(s => s?.[q.tw.$id!]?.value)
-				.filter(v => typeof v === 'number' && !q.tw.term.values?.[v]?.uncomputable)
-			//calculate stats here and pass them to client to avoid second request on client for getting stats
-			const descrStats: DescrStats = getDescrStats(values, q.removeOutliers)
 
-			const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
-			const overlayTerm = q.overlayTw
-			const divideTerm = q.divideTw
-			const { absMin, absMax, chart2plot2values, uncomputableValues } = parseValues(
-				q,
-				data as ValidGetDataResponse,
-				sampleType,
-				q.isLogScale,
-				overlayTerm,
-				divideTerm
-			)
-
-			if (!absMin && absMin !== 0) throw 'absMin is undefined [termdb.boxplot init()]'
-			if (!absMax && absMax !== 0) throw 'absMax is undefined [termdb.boxplot init()]'
-			const charts: any = {}
-			let outlierMin = Number.POSITIVE_INFINITY,
-				outlierMax = Number.NEGATIVE_INFINITY
-			for (const [chart, plot2values] of chart2plot2values) {
-				const plots: any = []
-				for (const [key, values] of sortPlot2Values(data as ValidGetDataResponse, plot2values, overlayTerm)) {
-					const sortedValues = values.sort((a, b) => a - b)
-
-					const vs = sortedValues.map((v: number) => {
-						const value = { value: v }
-						return value
-					})
-
-					if (q.removeOutliers) {
-						outlierMin = Math.min(outlierMin, descrStats.outlierMin.value)
-						outlierMax = Math.max(outlierMax, descrStats.outlierMax.value)
-					}
-
-					const boxplot = boxplot_getvalue(vs, q.removeOutliers)
-					if (!boxplot) throw 'boxplot_getvalue failed [termdb.boxplot init()]'
-					const _plot = {
-						boxplot,
-						descrStats
-					}
-
-					//Set rendering properties for the plot
-					if (overlayTerm) {
-						const _key = overlayTerm?.term?.values?.[key]?.label || key
-						const plotLabel = `${_key}, n=${values.length}`
-						const overlayBins = numericBins(overlayTerm, data)
-						const plot = Object.assign(_plot, {
-							color: overlayTerm?.term?.values?.[key]?.color || null,
-							key: _key,
-							overlayBins: overlayBins.has(key) ? overlayBins.get(key) : null,
-							seriesId: key
-						})
-						plot.boxplot.label = plotLabel
-						plots.push(plot)
-					} else {
-						const plotLabel = `${sampleType}, n=${values.length}`
-						const plot = Object.assign(_plot, {
-							key: sampleType
-						})
-						plot.boxplot.label = plotLabel
-						plots.push(plot)
-					}
-				}
-
-				if (q.tw.term?.values) setHiddenPlots(q.tw, plots)
-				if (overlayTerm && overlayTerm.term?.values) setHiddenPlots(overlayTerm, plots)
-
-				if (q.orderByMedian == true) {
-					plots.sort((a, b) => a.boxplot.p50 - b.boxplot.p50)
-				}
-
-				charts[chart] = { chartId: chart, plots }
-			}
+			const { absMin, absMax, charts, uncomputableValues, descrStats, outlierMin, outlierMax } = processData(data, q)
 
 			const returnData: BoxPlotResponse = {
 				absMin: q.removeOutliers ? outlierMin : absMin,
@@ -125,6 +49,118 @@ function init({ genomes }) {
 			if (e instanceof Error && e.stack) console.error(e)
 		}
 	}
+}
+
+/** Process the returned data from getData() for entire chart
+ * and each individual box plot.*/
+function processData(data, q) {
+	const samples = Object.values(data.samples)
+	const values = samples
+		.map(s => s?.[q.tw.$id!]?.value)
+		.filter(v => typeof v === 'number' && !q.tw.term.values?.[v]?.uncomputable)
+	//calculate stats here and pass them to client to avoid second request on client for getting stats
+	const descrStats: DescrStats = getDescrStats(values, q.removeOutliers)
+
+	const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
+	const overlayTerm = q.overlayTw
+	const divideTerm = q.divideTw
+	const { absMin, absMax, chart2plot2values, uncomputableValues } = parseValues(
+		q,
+		data as ValidGetDataResponse,
+		sampleType,
+		q.isLogScale,
+		overlayTerm,
+		divideTerm
+	)
+
+	if (!absMin && absMin !== 0) throw 'absMin is undefined [termdb.boxplot init()]'
+	if (!absMax && absMax !== 0) throw 'absMax is undefined [termdb.boxplot init()]'
+	const charts: any = {}
+	let outlierMin = Number.POSITIVE_INFINITY,
+		outlierMax = Number.NEGATIVE_INFINITY
+	for (const [chart, plot2values] of chart2plot2values) {
+		const plots: any = []
+		for (const [key, values] of sortPlot2Values(data as ValidGetDataResponse, plot2values, overlayTerm)) {
+			;[outlierMax, outlierMin] = setPlotData(
+				plots,
+				values,
+				key,
+				sampleType,
+				descrStats,
+				q,
+				data as ValidGetDataResponse,
+				outlierMin,
+				outlierMax,
+				overlayTerm
+			)
+		}
+		if (q.tw.term?.values) setHiddenPlots(q.tw, plots)
+		if (overlayTerm && overlayTerm.term?.values) setHiddenPlots(overlayTerm, plots)
+
+		if (q.orderByMedian == true) {
+			plots.sort((a, b) => a.boxplot.p50 - b.boxplot.p50)
+		}
+
+		charts[chart] = { chartId: chart, plots }
+	}
+	return { absMin, absMax, charts, uncomputableValues, descrStats, outlierMin, outlierMax }
+}
+
+/** Set the data (e.g. values, titles, outliers, etc.)
+ * for individual box plots */
+function setPlotData(
+	plots,
+	values: number[],
+	key: string,
+	sampleType: string,
+	descrStats: DescrStats,
+	q: BoxPlotRequest,
+	data: ValidGetDataResponse,
+	outlierMin: number,
+	outlierMax: number,
+	overlayTerm?: any
+) {
+	const sortedValues = values.sort((a, b) => a - b)
+
+	const vs = sortedValues.map((v: number) => {
+		const value = { value: v }
+		return value
+	})
+
+	if (q.removeOutliers) {
+		outlierMin = Math.min(outlierMin, descrStats.outlierMin.value)
+		outlierMax = Math.max(outlierMax, descrStats.outlierMax.value)
+	}
+
+	const boxplot = boxplot_getvalue(vs, q.removeOutliers)
+	if (!boxplot) throw 'boxplot_getvalue failed [termdb.boxplot init()]'
+	const _plot = {
+		boxplot,
+		descrStats
+	}
+
+	//Set rendering properties for the plot
+	if (overlayTerm) {
+		const _key = overlayTerm?.term?.values?.[key]?.label || key
+		const plotLabel = `${_key}, n=${values.length}`
+		const overlayBins = numericBins(overlayTerm, data)
+		const plot = Object.assign(_plot, {
+			color: overlayTerm?.term?.values?.[key]?.color || null,
+			key: _key,
+			overlayBins: overlayBins.has(key) ? overlayBins.get(key) : null,
+			seriesId: key
+		})
+		plot.boxplot.label = plotLabel
+		plots.push(plot)
+	} else {
+		const plotLabel = `${sampleType}, n=${values.length}`
+		const plot = Object.assign(_plot, {
+			key: sampleType
+		})
+		plot.boxplot.label = plotLabel
+		plots.push(plot)
+	}
+	return [outlierMax, outlierMin]
 }
 
 /** Set hidden status for plots */
