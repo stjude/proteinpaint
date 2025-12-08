@@ -195,6 +195,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				const [mx, my] = pointer(event, cover.node())
 
 				// Find all dots within hit radius
+				// TODO: Could make this a user configurable setting in the future
 				const hitRadius = settings.interactiveDotRadius + 2
 				const nearbyDots: ManhattanPoint[] = []
 
