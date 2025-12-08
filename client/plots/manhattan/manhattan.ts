@@ -177,9 +177,9 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 			.append('g')
 			.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
 
-		const originalDevicePixelRatio = window.devicePixelRatio // Use the device pixel ratio from when plot was generated otherwise positions will be off when zoomed in/out
+		const originalDevicePixelRatio = window.devicePixelRatio
 
-		// Add transparent cover for mousemove detection
+		// Add transparent cover for mousemove detection with dots underneath
 		const cover = pointsLayer
 			.append('rect')
 			.attr('x', 0)
@@ -205,7 +205,10 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				// Find all dots within hit radius
 				// TODO: Could make this a user configurable setting in the future
 				const hitRadius = settings.interactiveDotRadius + 2
-				const nearbyDots: ManhattanPoint[] = []
+
+				// Find all points within hit radius with their distances
+				const candidates: Array<{ point: ManhattanPoint; distance: number }> = []
+
 				pointQuadtree.visit((node, x1, y1, x2, y2) => {
 					// Skip this node if it's outside the search radius
 					if (x1 > mx + hitRadius || x2 < mx - hitRadius || y1 > my + hitRadius || y2 < my - hitRadius) {
@@ -221,29 +224,34 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 							const distance = Math.sqrt((mx - px) ** 2 + (my - py) ** 2)
 
 							if (distance <= hitRadius) {
-								nearbyDots.push(point)
-								if (nearbyDots.length >= 5) return true // Stop searching
+								candidates.push({ point, distance })
 							}
 						}
 					}
 
-					return nearbyDots.length >= 5 // Stop if we found 5
+					return false // Don't stop early - check all nodes in radius
 				})
 
+				// Sort by distance and take the 5 closest points
+				candidates.sort((a, b) => a.distance - b.distance)
+				const nearbyDots = candidates.slice(0, 5).map(c => c.point)
+
+				// Always remove old circles first
+				pointsLayer.selectAll('.hover-circle').remove()
+
 				if (nearbyDots.length > 0) {
-					// Create circles only for nearby dots
-					pointsLayer
-						.selectAll('.hover-circle')
-						.data(nearbyDots)
-						.enter()
-						.append('circle')
-						.attr('class', 'hover-circle')
-						.attr('cx', d => d.pixel_x / originalDevicePixelRatio)
-						.attr('cy', d => d.pixel_y / originalDevicePixelRatio)
-						.attr('r', settings.interactiveDotRadius)
-						.attr('fill', 'none')
-						.attr('stroke', 'black')
-						.attr('stroke-width', settings.interactiveDotStrokeWidth)
+					// Add new hover circles for nearby dots
+					nearbyDots.forEach(d => {
+						pointsLayer
+							.append('circle')
+							.attr('class', 'hover-circle')
+							.attr('cx', d.pixel_x / originalDevicePixelRatio)
+							.attr('cy', d.pixel_y / originalDevicePixelRatio)
+							.attr('r', settings.interactiveDotRadius)
+							.attr('fill', 'none')
+							.attr('stroke', 'black')
+							.attr('stroke-width', settings.interactiveDotStrokeWidth)
+					})
 
 					highlightedDots = nearbyDots
 
