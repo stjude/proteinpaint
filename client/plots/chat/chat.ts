@@ -5,10 +5,27 @@ import { Menu } from '#dom'
 import { keyupEnter } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
 import { getId } from '#mass/nav'
+//import { SummaryChart } from '#shared/types/src/routes/termdb.chat.ts'
 
 /**
 
  */
+
+export type termid = {
+	id: string
+}
+
+export type geneExpression = {
+	gene: string
+	type: 'geneExpression'
+}
+
+export type SummaryChart = {
+	/** plot config for summary chart */ chartType: 'summary'
+	term?: termid
+	term2?: termid
+	geneExpression?: geneExpression
+}
 
 class Chat extends PlotBase implements RxComponent {
 	static type = 'chat'
@@ -85,20 +102,57 @@ class Chat extends PlotBase implements RxComponent {
 					console.log(data)
 
 					const result = JSON.parse(data)
-					const plotConfig = result.plot
-					const answer = result.answer
+					if (result.prog_language == 'python') {
+						const plotConfig = result.plot
+						const answer = result.answer
 
-					if (plotConfig) {
-						// generate a plot as answer
-						this.app.dispatch({
-							type: 'plot_create',
-							id: getId(),
-							config: plotConfig
-						})
-						serverBubble.html('Please refer to the plot generated above')
+						if (plotConfig) {
+							// generate a plot as answer
+							this.app.dispatch({
+								type: 'plot_create',
+								id: getId(),
+								config: plotConfig
+							})
+							serverBubble.html('Please refer to the plot generated above')
+						} else {
+							// text answer
+							serverBubble.html(answer)
+						}
 					} else {
-						// text answer
-						serverBubble.html(answer)
+						// Rust version
+						if (result.action == 'summary') {
+							const plotConfig: SummaryChart = {
+								chartType: 'summary'
+							}
+							if (result.summaryterms) {
+								console.log('result.summaryterms:', Object.values(result.summaryterms))
+								let i = 0
+								for (const term of result.summaryterms) {
+									if (term.clinical) {
+										console.log('clinical:', term.clinical)
+										if (i == 0) {
+											plotConfig.term = term.clinical
+										} else if (i == 1) {
+											plotConfig.term2 = term.clinical
+										} else {
+											// More than 2 dictionary terms are not supported probably, need to check
+											console.log('More than 2 terms, please check!')
+										}
+										i += 1
+									} else if (term.geneExpression) {
+										const geneExp: geneExpression = { gene: term.geneExpression, type: 'geneExpression' }
+										plotConfig.geneExpression = geneExp
+									}
+								}
+								console.log('plotConfig:', plotConfig)
+								this.app.dispatch({
+									type: 'plot_create',
+									id: getId(),
+									config: plotConfig
+								})
+								serverBubble.html('Please refer to the plot generated above')
+							}
+						} // Will add other plots later
 					}
 					/* may switch by data.type
                     type=chat: server returns a chat msg
