@@ -972,6 +972,7 @@ export function getDefaultSettings(opts) {
 			// Max genes to show in table and interactive dots cap
 			maxGenesToShow: 500,
 			interactiveDotsCap: 5000,
+			maxTooltipGenes: 5,
 
 			// Q-value threshold for significance indicators in the table
 			qValueThreshold: 0.05,
