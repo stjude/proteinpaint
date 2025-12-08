@@ -1,4 +1,4 @@
-import { getCompInit, copyMerge } from '../rx'
+import { getCompInit, copyMerge, deepEqual } from '../rx'
 import getHandlers from './barchart.events'
 import barsRenderer from './bars.renderer'
 import rendererSettings from './bars.settings'
@@ -212,7 +212,16 @@ export class Barchart extends PlotBase {
 					settingsKey: 'dedup',
 					boxLabel: 'Yes',
 					getDisplayStyle: plot =>
-						this.chartsData?.charts.find(c => c.serieses.length != c.dedupedSerieses.length) ? 'table-row' : 'none'
+						this.chartsData?.charts.find(
+							c =>
+								c.dedupedSerieses?.length &&
+								!deepEqual(
+									c.serieses.map(s => s.seriesId),
+									c.dedupedSerieses.map(s => s.seriesId)
+								)
+						)
+							? 'table-row'
+							: 'none'
 				}
 			]
 			if (isNumericTerm(this.config.term.term))
