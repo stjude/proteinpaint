@@ -133,7 +133,23 @@ export class ViewModel {
 			/** Set rendering properties for the plot */
 
 			//Set the color for all plots
-			const color = config?.term2?.term?.values?.[plot.seriesId]?.color || settings.color
+			let color
+			const term2 = config.term2
+			if (term2) {
+				if (term2.q.type == 'predefined-groupset' || term2.q.type == 'custom-groupset') {
+					const groupset =
+						term2.q.type == 'predefined-groupset'
+							? term2.term.groupsetting.lst[term2.q.predefined_groupset_idx]
+							: term2.q.customset
+					if (!groupset) throw 'groupset is missing'
+					const group = groupset.groups.find(g => g.name == plot.seriesId)
+					if (group?.color) color = group.color
+				} else {
+					color = term2.term.values?.[plot.seriesId]?.color
+				}
+			}
+			if (!color) color = settings.color
+
 			if (!plot.color) plot.color = color
 			//Brighten the colors in dark mode for better visibility
 			if (settings.displayMode == 'dark') plot.color = rgb(plot.color).brighter(0.75)

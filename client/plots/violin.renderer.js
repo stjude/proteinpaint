@@ -325,7 +325,21 @@ export default function setViolinRenderer(self) {
 		const catTerm = self.config.term.q.mode == 'discrete' ? self.config.term : self.config.term2
 		const category = catTerm?.term.values ? Object.values(catTerm.term.values).find(o => o.label == label) : null
 
-		const color = category?.color ? category.color : self.config.settings.violin.defaultColor
+		let color
+		if (catTerm.q.type == 'predefined-groupset' || catTerm.q.type == 'custom-groupset') {
+			const groupset =
+				catTerm.q.type == 'predefined-groupset'
+					? catTerm.term.groupsetting.lst[catTerm.q.predefined_groupset_idx]
+					: catTerm.q.customset
+			if (!groupset) throw 'groupset is missing'
+			const group = groupset.groups.find(g => g.name == label)
+			if (group?.color) color = group.color
+		} else {
+			color = category?.color
+		}
+
+		if (!color) color = self.config.settings.violin.defaultColor
+
 		if (!plot.color) plot.color = color
 		if (category && !category.color) category.color = color
 		// <g> of one plot
