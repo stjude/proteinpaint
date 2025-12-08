@@ -1,2 +1,1 @@
-Fixes:
-- mass groups ui will not hang when recovering session with large/complex filter
+
