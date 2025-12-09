@@ -19,11 +19,11 @@ function init({ genomes }) {
 		try {
 			const query = req.query satisfies DeleteWSITileSelectionRequest
 
-			if (!query.genome) throw new Error('.genome is required for deleteWSIAnnotation request.')
-			if (!query.dslabel) throw new Error('.dslabel is required for deleteWSIAnnotation request.')
-			if (!query.tileSelection) throw new Error('.annotation:{} is required for deleteWSIAnnotation request.')
-			if (!query.projectId) throw new Error('.projectId is required for deleteWSIAnnotation request.')
-			if (!query.wsimage) throw new Error('.wsimage is required for deleteWSIAnnotation request.')
+			if (!query.genome) throw new Error('.genome is required for deleteWSITileSelection request.')
+			if (!query.dslabel) throw new Error('.dslabel is required for deleteWSITileSelection request.')
+			if (!query.tileSelection) throw new Error('.annotation:{} is required for deleteWSITileSelection request.')
+			if (!query.projectId) throw new Error('.projectId is required for deleteWSITileSelection request.')
+			if (!query.wsimage) throw new Error('.wsimage is required for deleteWSITileSelection request.')
 
 			const g = genomes[query.genome]
 			if (!g) throw new Error('invalid genome name')
