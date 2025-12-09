@@ -26,7 +26,7 @@ export function getSerieses(data) {
 			cells: [],
 			y,
 			hoverY0,
-			hoverY1: hoverY0 + (twSpecificSettings[$id]?.contBarColor || cellht)
+			hoverY1: hoverY0 + (twSpecificSettings[$id]?.contBarH || cellht)
 		}
 
 		for (const so of this.unfilteredSampleOrder) {
