@@ -10,8 +10,8 @@ test sections:
 	- no gain/loss cutoffs
 	- no cutoffs
     - apply callback
-    - wildtype toggle
-    - no wildtype toggle
+    - genotype toggle
+    - no genotype toggle
 */
 
 tape('\n', test => {
@@ -164,7 +164,7 @@ tape('apply callback', test => {
 	test.end()
 })
 
-tape('wildtype toggle', test => {
+tape('genotype toggle', test => {
 	const holder = select(document.body).append('div')
 	let newConfig
 
@@ -173,16 +173,16 @@ tape('wildtype toggle', test => {
 		cnvGainCutoff: 0.5,
 		cnvLossCutoff: -0.5,
 		cnvMaxLength: 1000,
-		WTtoggle: true,
+		genotypeToggle: true,
 		cnvWT: false,
 		callback: config => (newConfig = config)
 	})
 
-	const wtCheckbox = holder.select('input[type="checkbox"]').node() as HTMLInputElement
-	test.ok(wtCheckbox, 'wildtype checkbox rendered when WTtoggle=true')
+	const genotypeRadio = holder.selectAll('input[type="radio"]').nodes() as HTMLInputElement[]
+	test.equal(genotypeRadio.length, 2, 'should render 2 genotype radio buttons')
 
-	// toggle checkbox
-	wtCheckbox.checked = true
+	// select different radio
+	genotypeRadio[1].checked = true
 	const applyBtn = holder.select('button').node() as HTMLButtonElement
 	applyBtn.click()
 
@@ -192,20 +192,20 @@ tape('wildtype toggle', test => {
 	test.end()
 })
 
-tape('no wildtype toggle', test => {
-	const holder = select(document.body).append('div').attr('id', 'test-cnv-5')
+tape('no genotype toggle', test => {
+	const holder = select(document.body).append('div')
 
 	renderCnvConfig({
 		holder,
 		cnvGainCutoff: 0.5,
 		cnvLossCutoff: -0.5,
 		cnvMaxLength: 1000,
-		WTtoggle: false,
+		genotypeToggle: false,
 		callback: () => {}
 	})
 
-	const wtCheckbox = holder.select('input[type="checkbox"]').node()
-	test.notOk(wtCheckbox, 'wildtype checkbox not rendered when WTtoggle=false')
+	const genotypeRadio = holder.selectAll('input[type="radio"]').nodes() as HTMLInputElement[]
+	test.equal(genotypeRadio.length, 0, 'should not render genotype radio buttons')
 
 	holder.remove()
 	test.end()
