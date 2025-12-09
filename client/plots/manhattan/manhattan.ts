@@ -2,7 +2,6 @@ import { scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
 import { Menu, icons, axisstyle, table2col } from '#dom'
 import { to_svg } from '#src/client'
-import { pointer } from 'd3-selection'
 import { quadtree } from 'd3-quadtree'
 import type { ManhattanPoint } from './manhattanTypes'
 
@@ -189,20 +188,40 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		// Track which dots are currently highlighted
 		let highlightedDots: ManhattanPoint[] = []
 
-		const dpr = data.plotData.device_pixel_ratio // In rust, it is clamped to a minimum of 1.0. If browser is zoomed out it can be < 1.0 and cause an error. Hence we use the value from rust directly instead of window.devicePixelRatio
+		const dpr = data.plotData.device_pixel_ratio
+
+		// Normalize pixel coordinates from high-DPR space to CSS pixel space
+		const normalizedPoints = interactivePoints.map((p: ManhattanPoint) => ({
+			...p,
+			pixel_x: p.pixel_x / dpr,
+			pixel_y: p.pixel_y / dpr
+		}))
 
 		const pointQuadtree = quadtree<ManhattanPoint>()
-			.x(d => d.pixel_x / dpr)
-			.y(d => d.pixel_y / dpr)
-			.addAll(interactivePoints)
+			.x(d => d.pixel_x)
+			.y(d => d.pixel_y)
+			.addAll(normalizedPoints)
 
 		cover
 			.on('mousemove', event => {
-				const [mx, my] = pointer(event, cover.node())
+				// Use SVG's native coordinate transformation instead of d3's pointer()
+				// This properly handles browser zoom that we have been seeing issues with
+				const svgElement = cover.node().ownerSVGElement
+				const ctm = cover.node().getScreenCTM()
+				let mx: number, my: number
+
+				if (ctm && svgElement) {
+					const point = svgElement.createSVGPoint()
+					point.x = event.clientX
+					point.y = event.clientY
+					const svgPoint = point.matrixTransform(ctm.inverse())
+					mx = svgPoint.x
+					my = svgPoint.y
+				}
 
 				// Find all dots within hit radius
-				// TODO: Could make this a user configurable setting in the future
-				const hitRadius = settings.interactiveDotRadius + 2
+				// TODO: Make hit radius  user configurable with its own setting
+				const hitRadius = settings.pngDotRadius + 3
 
 				// Find all points within hit radius with their distances
 				const candidates: Array<{ point: ManhattanPoint; distance: number }> = []
@@ -243,9 +262,9 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 						pointsLayer
 							.append('circle')
 							.attr('class', 'hover-circle')
-							.attr('cx', d.pixel_x / dpr)
-							.attr('cy', d.pixel_y / dpr)
-							.attr('r', settings.pngDotRadius * dpr)
+							.attr('cx', d.pixel_x)
+							.attr('cy', d.pixel_y)
+							.attr('r', settings.pngDotRadius)
 							.attr('fill', 'none')
 							.attr('stroke', 'black')
 							.attr('stroke-width', settings.interactiveDotStrokeWidth)
@@ -289,9 +308,9 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 					pointsLayer
 						.append('circle')
 						.attr('class', 'hover-circle')
-						.attr('cx', d.pixel_x / dpr)
-						.attr('cy', d.pixel_y / dpr)
-						.attr('r', settings.pngDotRadius * dpr)
+						.attr('cx', d.pixel_x)
+						.attr('cy', d.pixel_y)
+						.attr('r', settings.pngDotRadius)
 						.attr('fill', 'none')
 						.attr('stroke', 'black')
 						.attr('stroke-width', settings.interactiveDotStrokeWidth)
