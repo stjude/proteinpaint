@@ -208,6 +208,11 @@ export function setRenderers(self) {
 				const labelText = side.label(lab)
 				const text = g.select(':scope>text').attr('fill', '#000')
 
+				let continuousBarHAdjust
+				const twSpecificSettings = self.config.settings.matrix.twSpecificSettings
+				const twSettingsBarH = twSpecificSettings[lab.tw?.$id]?.contBarH
+				if (twSettingsBarH && s.barh) continuousBarHAdjust = (twSettingsBarH - s.barh) * 0.5
+
 				text
 					//.transition()
 					//.duration(textduration)
@@ -221,7 +226,10 @@ export function setRenderers(self) {
 					)
 					.attr('font-size', lab.grp?.type === 'hierCluster' ? Math.max(4, s.clusterRowh - 4) : side.attr.fontSize)
 					.attr('text-anchor', side.attr.labelAnchor)
-					.attr('transform', side.attr.labelTransform)
+					.attr(
+						'transform',
+						side.attr.labelTransform + (continuousBarHAdjust ? ` translate(0,${continuousBarHAdjust})` : '')
+					)
 					.attr('cursor', 'pointer')
 					.attr(side.attr.textpos.coord, side.attr.textpos.factor * (showContAxis ? 30 : 0))
 
