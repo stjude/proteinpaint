@@ -472,7 +472,6 @@ export class WSIViewerInteractions {
 
 		try {
 			await dofetch3('deleteWSITileSelection', { method: 'DELETE', body })
-			console.log('deleted existing annotation')
 		} catch (e: any) {
 			console.error('Error in deleteWSITileSelection request:', e.message || e)
 		}
