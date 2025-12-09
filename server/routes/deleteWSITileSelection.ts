@@ -75,7 +75,7 @@ function validateQuery(ds: any, connection: Database.Database) {
 				// Derive prediction_id from common fields on the tileSelection payload
 				const predictionId = query.predictionClassId
 				const zoomCoordinates = JSON.stringify(query.tileSelection.zoomCoordinates)
-				const flagType = 0 // TODO remove harcode
+				const flagType = 0 // TODO remove hardcode
 
 				if (predictionId == null) {
 					return {
