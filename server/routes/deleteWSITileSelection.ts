@@ -61,6 +61,7 @@ export async function validate_query_deleteWSIAnnotation(ds: Mds3) {
 
 function validateQuery(ds: any, connection: Database.Database) {
 	ds.queries.WSImages.deleteAnnotation = async (query: DeleteWSITileSelectionRequest) => {
+		// tileSelectionType: 0 = predictions, 1 = annotations
 		if (query.tileSelectionType === 0) {
 			try {
 				const projectId = query.projectId
