@@ -202,22 +202,147 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 			width: settings.plotWidth + 2 * settings.pngDotRadius,
 			height: settings.plotHeight + 2 * settings.pngDotRadius
 		})
-		// const originalDevicePixelRatio = data.plotData.device_pixel_ratio
+
+		const normalizedPoints = interactivePoints.map((p: ManhattanPoint) => ({
+			...p,
+			pixel_x: p.pixel_x / originalDevicePixelRatio,
+			pixel_y: p.pixel_y / originalDevicePixelRatio
+		}))
+
+		// DEBUG: Check distribution of all normalized points
+		console.log('=== ALL NORMALIZED POINTS ===')
+		console.log('Total points:', normalizedPoints.length)
+		const xCoords = normalizedPoints.map(p => p.pixel_x)
+		const yCoords = normalizedPoints.map(p => p.pixel_y)
+		console.log('X range:', Math.min(...xCoords).toFixed(1), 'to', Math.max(...xCoords).toFixed(1))
+		console.log('Y range:', Math.min(...yCoords).toFixed(1), 'to', Math.max(...yCoords).toFixed(1))
+		console.log('Expected X range: 0 to', settings.plotWidth + 2 * settings.pngDotRadius)
+		console.log('Expected Y range: 0 to', settings.plotHeight + 2 * settings.pngDotRadius)
+		// Show first 5 points
+		console.log(
+			'First 5 points:',
+			normalizedPoints.slice(0, 5).map(p => ({
+				px: p.pixel_x.toFixed(1),
+				py: p.pixel_y.toFixed(1)
+			}))
+		)
+
+		// Debug: verify normalization
+		console.log('=== NORMALIZED DEBUG ===')
+		console.log('Original DPR from server:', originalDevicePixelRatio)
+		console.log('First point BEFORE normalization:', {
+			pixel_x: interactivePoints[0]?.pixel_x,
+			pixel_y: interactivePoints[0]?.pixel_y
+		})
+		console.log('First point AFTER normalization:', {
+			pixel_x: normalizedPoints[0]?.pixel_x,
+			pixel_y: normalizedPoints[0]?.pixel_y
+		})
+		console.log(
+			'Expected range: 0 to',
+			settings.plotWidth + 2 * settings.pngDotRadius,
+			'(width),',
+			'0 to',
+			settings.plotHeight + 2 * settings.pngDotRadius,
+			'(height)'
+		)
+
+		// DEBUG: Draw a red circle at the first normalized point to verify alignment
+		if (normalizedPoints.length > 0) {
+			const firstPoint = normalizedPoints[0]
+			pointsLayer
+				.append('circle')
+				.attr('cx', firstPoint.pixel_x)
+				.attr('cy', firstPoint.pixel_y)
+				.attr('r', 5)
+				.attr('fill', 'yellow')
+				.attr('opacity', 0.7)
+			console.log('DEBUG: Drew red circle at:', { x: firstPoint.pixel_x, y: firstPoint.pixel_y })
+		}
+
 		// Add this after processing points, before the mousemove handler
 		const pointQuadtree = quadtree<ManhattanPoint>()
 			.x(d => d.pixel_x)
 			.y(d => d.pixel_y)
-			.addAll(interactivePoints)
+			.addAll(normalizedPoints)
 
+		// DEBUG: Draw red outline circles at ALL normalized points
+		normalizedPoints.forEach(p => {
+			pointsLayer
+				.append('circle')
+				.attr('cx', p.pixel_x)
+				.attr('cy', p.pixel_y)
+				.attr('r', 4)
+				.attr('fill', 'none')
+				.attr('stroke', 'red')
+				.attr('stroke-width', 1)
+		})
+		console.log('Drew', normalizedPoints.length, 'debug circles')
+
+		// DEBUG: Check element sizing
+		const coverRect = cover.node().getBoundingClientRect()
+		const expectedWidth = settings.plotWidth + 2 * settings.pngDotRadius
+		const expectedHeight = settings.plotHeight + 2 * settings.pngDotRadius
+		console.log('=== ELEMENT SIZING DEBUG ===')
+		console.log('Cover bounding rect:', { width: coverRect.width, height: coverRect.height })
+		console.log('Expected size:', { width: expectedWidth, height: expectedHeight })
+		console.log('Zoom ratio:', coverRect.width / expectedWidth)
 		cover
 			.on('mousemove', event => {
-				const [mx, my] = pointer(event, cover.node())
-				console.log('Mouse position:', mx, my)
+				// const [mx, my] = pointer(event, cover.node())
+				const svgElement = cover.node().ownerSVGElement
+				const ctm = cover.node().getScreenCTM()
+				let mx: number, my: number
+
+				if (ctm && svgElement) {
+					const point = svgElement.createSVGPoint()
+					point.x = event.clientX
+					point.y = event.clientY
+					const svgPoint = point.matrixTransform(ctm.inverse())
+					mx = svgPoint.x
+					my = svgPoint.y
+				} else {
+					;[mx, my] = pointer(event, cover.node())
+				}
+
+				// DEBUG: Compare old vs new method
+				const [pointerMx, pointerMy] = pointer(event, cover.node())
+				console.log('CTM method:', { mx: mx.toFixed(1), my: my.toFixed(1) }, 'pointer() method:', {
+					pointerMx: pointerMx.toFixed(1),
+					pointerMy: pointerMy.toFixed(1)
+				})
+
+				// // DEBUG: Log mouse position and check if we can find points
+				// console.log('Mouse position:', { mx, my }, 'First normalized point:', {
+				// 	px: normalizedPoints[0]?.pixel_x,
+				// 	py: normalizedPoints[0]?.pixel_y
+				// })
+
+				let closestPoint: ManhattanPoint | null = null
+				let closestDistance = Infinity
+				normalizedPoints.forEach(p => {
+					const dist = Math.sqrt((mx - p.pixel_x) ** 2 + (my - p.pixel_y) ** 2)
+					if (dist < closestDistance) {
+						closestDistance = dist
+						closestPoint = p
+					}
+				})
 
 				// Find all dots within hit radius
 				// TODO: Could make this a user configurable setting in the future
-				const hitRadius = settings.interactiveDotRadius + 2
+				// const hitRadius = settings.interactiveDotRadius + 2
+				const hitRadius = settings.interactiveDotRadius + 6
 
+				console.log(
+					'Mouse:',
+					{ mx: mx.toFixed(1), my: my.toFixed(1) },
+					'Closest point:',
+					closestPoint,
+					'at distance:',
+					closestDistance.toFixed(1),
+					'hitRadius:',
+					hitRadius
+				)
 				// Find all points within hit radius with their distances
 				const candidates: Array<{ point: ManhattanPoint; distance: number }> = []
 
@@ -246,8 +371,15 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 				// Sort by distance and take the 5 closest points
 				candidates.sort((a, b) => a.distance - b.distance)
-				// console.log('First 3 candidates:', candidates.slice(0, 3))
 				const nearbyDots = candidates.slice(0, 5).map(c => c.point)
+				// DEBUG: See what the quadtree actually found
+				console.log('Candidates found:', candidates.length, 'nearbyDots:', nearbyDots.length)
+				if (nearbyDots.length > 0) {
+					console.log('First nearbyDot pixel coords:', {
+						px: nearbyDots[0].pixel_x,
+						py: nearbyDots[0].pixel_y
+					})
+				}
 
 				// Always remove old circles first
 				pointsLayer.selectAll('.hover-circle').remove()
@@ -260,7 +392,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 							.attr('class', 'hover-circle')
 							.attr('cx', d.pixel_x)
 							.attr('cy', d.pixel_y)
-							.attr('r', settings.pngDotRadius * originalDevicePixelRatio)
+							.attr('r', settings.pngDotRadius * window.devicePixelRatio)
 							.attr('fill', 'none')
 							.attr('stroke', 'black')
 							.attr('stroke-width', settings.interactiveDotStrokeWidth)
@@ -306,7 +438,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 						.attr('class', 'hover-circle')
 						.attr('cx', d.pixel_x)
 						.attr('cy', d.pixel_y)
-						.attr('r', settings.pngDotRadius * originalDevicePixelRatio)
+						.attr('r', settings.pngDotRadius * window.devicePixelRatio)
 						.attr('fill', 'none')
 						.attr('stroke', 'black')
 						.attr('stroke-width', settings.interactiveDotStrokeWidth)
