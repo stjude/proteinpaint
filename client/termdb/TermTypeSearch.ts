@@ -272,6 +272,8 @@ export class TermTypeSearch {
 				if (state.usecase.target == 'regression') {
 					if (type == TermTypes.SNP) continue // same funcationality is covered by snplst/snplocus terms
 					if (type == TermTypes.GENE_VARIANT && state.usecase.detail != 'independent') continue
+					if (type == TermTypes.GENE_EXPRESSION && state.usecase.detail != 'independent') continue
+					if (type == TermTypes.SSGSEA && state.usecase.detail != 'independent') continue
 				}
 
 				if (state.usecase.target == 'sampleScatter') {
