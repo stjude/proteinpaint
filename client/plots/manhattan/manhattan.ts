@@ -189,21 +189,6 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		// Track which dots are currently highlighted
 		let highlightedDots: ManhattanPoint[] = []
 
-		const originalDevicePixelRatio = data.plotData.device_pixel_ratio
-		console.log('=== DEBUG INFO ===')
-		console.log('Data DPR:', originalDevicePixelRatio)
-		console.log('Window DPR:', window.devicePixelRatio)
-		console.log('Sample point before division:', data.plotData.points[0])
-		console.log('Sample point after division:', {
-			x: data.plotData.points[0].pixel_x / originalDevicePixelRatio,
-			y: data.plotData.points[0].pixel_y / originalDevicePixelRatio
-		})
-		console.log('SVG viewport dimensions:', {
-			width: settings.plotWidth + 2 * settings.pngDotRadius,
-			height: settings.plotHeight + 2 * settings.pngDotRadius
-		})
-		// const originalDevicePixelRatio = data.plotData.device_pixel_ratio
-		// Add this after processing points, before the mousemove handler
 		const pointQuadtree = quadtree<ManhattanPoint>()
 			.x(d => d.pixel_x)
 			.y(d => d.pixel_y)
@@ -212,7 +197,6 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		cover
 			.on('mousemove', event => {
 				const [mx, my] = pointer(event, cover.node())
-				console.log('Mouse position:', mx, my)
 
 				// Find all dots within hit radius
 				// TODO: Could make this a user configurable setting in the future
@@ -246,7 +230,6 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 				// Sort by distance and take the 5 closest points
 				candidates.sort((a, b) => a.distance - b.distance)
-				// console.log('First 3 candidates:', candidates.slice(0, 3))
 				const nearbyDots = candidates.slice(0, 5).map(c => c.point)
 
 				// Always remove old circles first
@@ -260,7 +243,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 							.attr('class', 'hover-circle')
 							.attr('cx', d.pixel_x)
 							.attr('cy', d.pixel_y)
-							.attr('r', settings.pngDotRadius * originalDevicePixelRatio)
+							.attr('r', settings.pngDotRadius)
 							.attr('fill', 'none')
 							.attr('stroke', 'black')
 							.attr('stroke-width', settings.interactiveDotStrokeWidth)
@@ -306,7 +289,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 						.attr('class', 'hover-circle')
 						.attr('cx', d.pixel_x)
 						.attr('cy', d.pixel_y)
-						.attr('r', settings.pngDotRadius * originalDevicePixelRatio)
+						.attr('r', settings.pngDotRadius)
 						.attr('fill', 'none')
 						.attr('stroke', 'black')
 						.attr('stroke-width', settings.interactiveDotStrokeWidth)
