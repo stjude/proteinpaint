@@ -170,9 +170,12 @@ function addMatrixplots(c, ds) {
 }
 
 function addMutationSignatureplots(c, ds) {
-	if (!ds.cohort.mutationSignatureplots) return
+	const mutationSignatureplots = ds.cohort.termdb.numericTermCollections?.find(
+		ntc => ntc.name == 'Mutation Signature'
+	)?.plots
+	if (!mutationSignatureplots) return
 	// this dataset has premade mutationSignatureplots. reveal mutationSignature plot names to client
-	c.mutationSignatureplots = ds.cohort.mutationSignatureplots.plots.map(p => {
+	c.mutationSignatureplots = mutationSignatureplots.map(p => {
 		return { name: p.name }
 	})
 }

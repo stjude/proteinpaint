@@ -10,8 +10,11 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 
 	chartsInstance.dom.tip.clear()
 	const menuDiv = holder.append('div')
-	if (chartsInstance.state.termdbConfig.mutationSignatureplots) {
-		for (const plot of chartsInstance.state.termdbConfig.mutationSignatureplots) {
+	const mutSigPreBuiltPlots = chartsInstance.state.termdbConfig.numericTermCollections?.find(
+		ntc => ntc.name == 'Mutation Signature'
+	)?.plots
+	if (mutSigPreBuiltPlots) {
+		for (const plot of mutSigPreBuiltPlots) {
 			/* plot: 
 			{
 				name=str
@@ -62,14 +65,14 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			}
 			// 2 or more terms, launch matrix
 			const termNames = termlst.map(o => o.id).join(',')
-			const termNameLabel = `% SNVs (${termNames})`
+			const termNameLabel = `Mutation Signature (%SNVs,${termNames})`
 			const termName = termNameLabel.length <= 26 ? termNameLabel : termNameLabel.slice(0, 26) + '...'
 			const term = { name: termName, type: 'compositePercentage', isleaf: true, termlst }
 
 			action.config.chartType = 'matrix'
 			action.config.termgroups = [
 				{
-					name: `Mutation Signature (${termNames})`,
+					name: 'Mutation Signature',
 					lst: [{ term, type: 'compositePercentage' }]
 				}
 			]
