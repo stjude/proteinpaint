@@ -57,6 +57,7 @@ struct InteractiveData {
     x_buffer: i64,
     y_min: f64,
     y_max: f64,
+    device_pixel_ratio: f64,
 }
 
 #[derive(Serialize)]
@@ -335,10 +336,10 @@ fn plot_grin2_manhattan(
     let png_width = plot_width + 2 * png_dot_radius;
     let png_height = plot_height + 2 * png_dot_radius;
 
-    let w: u32 = (png_width * device_pixel_ratio as u64)
+    let w: u32 = (png_width * dpr as u64)
         .try_into()
         .expect("PNG width too large for u32");
-    let h: u32 = (png_height * device_pixel_ratio as u64)
+    let h: u32 = (png_height * dpr as u64)
         .try_into()
         .expect("PNG height too large for u32");
 
@@ -469,6 +470,7 @@ fn plot_grin2_manhattan(
         x_buffer,
         y_min,
         y_max,
+        device_pixel_ratio: dpr,
     };
     Ok((png_data, interactive_data))
 }
