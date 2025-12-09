@@ -1,8 +1,7 @@
-import type { Menu } from '#dom'
 import type { MassAppApi, MassState } from '#mass/types/mass'
 import type { BoxPlotInteractions } from '../interactions/BoxPlotInteractions'
 import type { RenderedPlot } from './RenderedPlot'
-import { renderTable } from '#dom'
+import { renderTable, type Menu } from '#dom'
 import { rgb } from 'd3-color'
 
 /** Menu is available when more than one boxplot is rendered. */
