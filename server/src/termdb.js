@@ -280,10 +280,13 @@ async function get_numericDictTermCluster(q, req, res, ds, genome) {
 
 async function get_mutationSignatureplots(q, req, res, ds, genome) {
 	if (q.getPlotDataByName) {
+		const mutationSignatureplots = ds.cohort.termdb.numericTermCollections?.find(
+			ntc => ntc.name == 'Mutation Signature'
+		)?.plots
 		// send back the config for premade numericDictTermCluster plot
-		if (!ds.cohort?.mutationSignatureplots?.plots)
-			throw 'ds.cohort.mutationSignatureplots.plots missing for the dataset'
-		const plot = ds.cohort.mutationSignatureplots.plots.find(p => p.name === q.getPlotDataByName)
+		if (!mutationSignatureplots)
+			throw 'ds.cohort.termdb.numericTermCollections mutation signature plots missing for the dataset'
+		const plot = mutationSignatureplots.find(p => p.name === q.getPlotDataByName)
 		if (!plot) throw 'invalid name of premade mutationSignature plot' // invalid name could be attack string, avoid returning it so it won't be printed in html
 		res.send(plot.mutationSignatureplotsConfig)
 		return
