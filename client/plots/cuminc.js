@@ -942,7 +942,6 @@ function setRenderers(self) {
 			g: atRiskG,
 			s,
 			chart,
-			term2values: self.config.term2?.values,
 			term2toColor: self.term2toColor,
 			onSerieClick: self.legendClick
 		})
