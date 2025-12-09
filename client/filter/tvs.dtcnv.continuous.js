@@ -26,7 +26,7 @@ function fillMenu(self, div, tvs) {
 		cnvLossCutoff: cnv.cnvLossCutoff,
 		cnvMaxLength: cnv.cnvMaxLength,
 		cnvWT: cnv.cnvWT,
-		WTtoggle: true,
+		genotypeToggle: true,
 		callback: config => {
 			const new_tvs = structuredClone(tvs)
 			Object.assign(new_tvs, config)

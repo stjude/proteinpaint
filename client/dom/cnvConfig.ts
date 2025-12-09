@@ -1,26 +1,25 @@
-import { Menu } from '../dom/menu'
+import { Menu, make_radios } from '#dom'
 
 /*
 Renderer for CNV config UI
-
- - Inputs for CNV gain cutoff, loss cutoff, and max length
- - Checkbox for toggling wildtype genotype
- - Resulting CNV config is provided through callback function
+	- radio buttons for toggling altered vs. wildtype
+	- inputs for CNV gain cutoff, loss cutoff, and max length
+	- resulting CNV config is provided through callback function
 */
 
 type Arg = {
 	holder: any // D3 holder where UI is rendered
-	cnvGainCutoff?: number // minimum positive value (log2 ratio) to consider a CNV as gain
-	cnvLossCutoff?: number // maximum negative value (log2 ratio) to consider a CNV as loss
-	cnvMaxLength?: number | null // max segment length in base pairs; null = no length limit (UI shows -1)
+	cnvGainCutoff?: number // minimum positive value (log2 ratio) for CNV gain
+	cnvLossCutoff?: number // maximum negative value (log2 ratio) for CNV loss
+	cnvMaxLength?: number | null // max segment bp length; null = no length limit (UI shows -1)
 	callback: (config: {
 		cnvGainCutoff?: number
 		cnvLossCutoff?: number
 		cnvMaxLength?: number | null
 		cnvWT?: boolean
-	}) => void // called when user clicks APPLY
-	cnvWT?: boolean // wildtype for CNV alteration specified by cnvGainCutoff, cnvLossCutoff, and cnvMaxLength
-	WTtoggle?: boolean // display wildtype checkbox
+	}) => void // called upon clicking apply
+	cnvWT?: boolean // wildtype for CNV specified by cutoffs
+	genotypeToggle?: boolean // display altered vs. wildtype genotype toggle
 }
 
 export function renderCnvConfig(arg: Arg) {
@@ -36,14 +35,37 @@ export function renderCnvConfig(arg: Arg) {
 	div.style('margin', '10px')
 	const tip = new Menu({ padding: '5px' })
 
-	div.append('div').style('margin-bottom', '10px').text('Specify criteria for a CNV alteration:')
+	const genotypeDiv = div.append('div').style('margin-bottom', '10px')
 
-	const configDiv = div.append('div').style('margin-left', '10px')
+	// CNV genotype radio buttons
+	let genotypeRadio
+	if (arg.genotypeToggle) {
+		const cnvWT = arg.cnvWT || false
+		genotypeDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('margin-right', '5px')
+			.style('opacity', 0.7)
+			.text('CNV genotype')
+		genotypeRadio = make_radios({
+			holder: genotypeDiv,
+			styles: { display: 'inline-block' },
+			options: [
+				{ label: 'Altered', value: 'altered', checked: !cnvWT },
+				{ label: 'Wildtype', value: 'wildtype', checked: cnvWT }
+			],
+			callback: () => {}
+		})
+	}
+
+	const cutoffsDiv = div.append('div')
+	cutoffsDiv.append('div').style('opacity', 0.7).style('margin-bottom', '10px').text('CNV cutoffs:')
+	const inputsDiv = cutoffsDiv.append('div').style('margin-left', '10px')
 
 	// CNV gain input
 	let cnvGainInput
 	if (Number.isFinite(cnvGainCutoff)) {
-		const cnvGainDiv = configDiv.append('div').style('margin-bottom', '5px')
+		const cnvGainDiv = inputsDiv.append('div').style('margin-bottom', '5px')
 		cnvGainDiv.append('span').style('opacity', 0.7).text('Minimum CNV Gain (log2 ratio)') // TODO: verify that this will always be log2 ratio
 		cnvGainInput = cnvGainDiv
 			.append('input')
@@ -70,7 +92,7 @@ export function renderCnvConfig(arg: Arg) {
 	// CNV loss input
 	let cnvLossInput
 	if (Number.isFinite(cnvLossCutoff)) {
-		const cnvLossDiv = configDiv.append('div').style('margin-bottom', '5px')
+		const cnvLossDiv = inputsDiv.append('div').style('margin-bottom', '5px')
 		cnvLossDiv.append('span').style('opacity', 0.7).text('Maximum CNV Loss (log2 ratio)') // TODO: verify that this will always be log2 ratio
 		cnvLossInput = cnvLossDiv
 			.append('input')
@@ -97,7 +119,7 @@ export function renderCnvConfig(arg: Arg) {
 	// CNV max length input
 	let cnvLengthInput
 	if (Number.isFinite(cnvMaxLength)) {
-		const cnvLengthDiv = configDiv.append('div').style('margin-bottom', '5px')
+		const cnvLengthDiv = inputsDiv.append('div').style('margin-bottom', '5px')
 		cnvLengthDiv.append('span').style('opacity', 0.7).text('CNV Max Length')
 		cnvLengthInput = cnvLengthDiv
 			.append('input')
@@ -124,26 +146,6 @@ export function renderCnvConfig(arg: Arg) {
 			})
 	}
 
-	// CNV wildtype checkbox
-	let wtCheckbox
-	if (arg.WTtoggle) {
-		const cnvWT = arg.cnvWT || false
-		const wtDiv = configDiv.append('div').style('margin-bottom', '5px')
-		wtDiv.append('span').style('margin-right', '3px').style('opacity', 0.7).text('Wildtype')
-		wtCheckbox = wtDiv
-			.append('input')
-			.attr('type', 'checkbox')
-			.property('checked', cnvWT)
-			.style('vertical-align', 'middle')
-			.style('margin-right', '3px')
-		wtDiv
-			.append('span')
-			.style('opacity', 0.7)
-			.style('font-size', '0.7em')
-			.style('margin-left', '10px')
-			.text('wildtype for alteration specified above')
-	}
-
 	// Apply button
 	div
 		.append('div')
@@ -162,7 +164,12 @@ export function renderCnvConfig(arg: Arg) {
 				// no max length if value == -1
 				config.cnvMaxLength = tempCnvMaxLength == -1 ? null : tempCnvMaxLength
 			}
-			if (wtCheckbox) config.cnvWT = wtCheckbox.property('checked')
+			if (genotypeRadio) {
+				const radios = genotypeRadio.inputs.nodes()
+				const selected = radios.find(r => r.checked)
+				if (!selected) throw 'no selected radio found'
+				config.cnvWT = selected.value == 'wildtype'
+			}
 			arg.callback(config)
 		})
 }
