@@ -942,9 +942,57 @@ struct SummaryType {
     // Schemars uses this for schema generation.
     #[schemars(rename = "action")]
     action: String,
-    summaryterms: Vec<SummaryTerms>,
-    filter: Option<Vec<FilterTerm>>,
+    plot: SummaryPlot,
     message: Option<String>,
+}
+
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+struct SummaryPlot {
+    // Serde uses this for deserialization.
+    #[serde(default = "get_summary_string")]
+    chartType: String,
+    term: SummaryTerms,
+    term2: Option<SummaryTerms>,
+    filter: Option<FilterTerms>,
+}
+
+fn get_tvs_string() -> String {
+    "tvslst".to_string()
+}
+
+fn get_in_string() -> bool {
+    true
+}
+
+struct FilterTerms {
+    // Serde uses this for deserialization.
+    #[serde(default = "get_tvs_string")]
+    r#type: String,
+    // Serde uses this for deserialization.
+    #[serde(default = "get_in_string")]
+    r#in: bool,
+    join: FilterJoin,
+    lst: Vec<FilterVariables>,
+}
+
+fn get_filtervariable_type() -> String {
+    "tvs".to_string()
+}
+
+struct FilterVariables {
+    // Serde uses this for deserialization.
+    #[serde(default = "get_filtervariable_type")]
+    r#type: String,
+    tvs: TVSterm,
+}
+
+enum FilterJoin {
+    #[serde(rename = "and")]
+    and,
+    #[serde(rename = "or")]
+    or,
+    #[serde(rename = "")]
+    null,
 }
 
 impl SummaryType {
@@ -963,9 +1011,24 @@ impl SummaryType {
 #[derive(PartialEq, Eq, Ord, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 enum SummaryTerms {
     #[allow(non_camel_case_types)]
-    clinical(String),
+    clinical(ClinicalTerm),
     #[allow(non_camel_case_types)]
-    geneExpression(String),
+    geneExpression(GeneExpressionTerm),
+}
+
+struct ClinicalTerm {
+    id: String,
+}
+
+fn get_geneExpression_string() -> String {
+    "geneExpression".to_string()
+}
+
+struct GeneExpressionTerm {
+    gene: String,
+    // Serde uses this for deserialization.
+    #[serde(default = "get_geneExpression_string")]
+    r#type: String,
 }
 
 impl PartialOrd for SummaryTerms {
