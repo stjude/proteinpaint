@@ -215,7 +215,7 @@ export function setInteractivity(self) {
 						c1.html('')
 						c2.html(timeToEventKey)
 					}
-				} else if (d.term.type == TermTypes.COMPOSITE_PERCENTAGE) {
+				} else if (d.term.type == TermTypes.TERM_COLLECTION) {
 					const renderedValues = d.row[d.$id].renderedValues
 					for (const renderedValue of renderedValues) {
 						const colorSquare = `<span style="display:inline-block; width:12px; height:12px; background-color:${renderedValue.color}"></span>`
@@ -700,7 +700,7 @@ function setTermActions(self) {
 			? '{remove,}'
 			: t.tw.term.type == 'geneVariant'
 			? '{edit,replace,remove}'
-			: t.tw.term.type == 'compositePercentage'
+			: t.tw.term.type == 'termCollection'
 			? {}
 			: '*'
 	}
@@ -726,13 +726,13 @@ function setTermActions(self) {
 		)
 		termMenuWaitDiv.remove()
 
-		if (t.tw?.term?.type && t.tw.term.type !== 'compositePercentage') {
+		if (t.tw?.term?.type && t.tw.term.type !== 'termCollection') {
 			self.dom.shortcutDiv = self.dom.menutop.append('div').style('z-index', 10000)
 			self.showShortcuts(t, self.dom.shortcutDiv)
 		}
 		self.dom.twMenuDiv = self.dom.menutop.append('div')
 		const labelEditDiv = self.dom.twMenuDiv.append('div').style('text-align', 'center')
-		if (t.tw?.term?.type && t.tw.term.type !== 'compositePercentage') labelEditDiv.append('span').text(`${l.Term} `)
+		if (t.tw?.term?.type && t.tw.term.type !== 'termCollection') labelEditDiv.append('span').text(`${l.Term} `)
 
 		const twlabel = t.tw.label || t.tw.term.name
 		const vartype =
@@ -742,7 +742,7 @@ function setTermActions(self) {
 				? 'metabolite'
 				: 'variable'
 
-		if (t.tw?.term?.type && t.tw.term.type !== 'compositePercentage')
+		if (t.tw?.term?.type && t.tw.term.type !== 'termCollection')
 			self.dom.twLabelInput = labelEditDiv
 				.append('input')
 				.attr('type', 'text')
@@ -757,7 +757,7 @@ function setTermActions(self) {
 					self.dom.twLabelEditBtn.style('display', value.trim() === twlabel ? 'none' : 'inline')
 				})
 
-		if (t.tw?.term?.type && t.tw.term.type !== 'compositePercentage')
+		if (t.tw?.term?.type && t.tw.term.type !== 'termCollection')
 			self.dom.twLabelEditBtn = labelEditDiv
 				.append('button')
 				.style('display', 'none')
@@ -837,7 +837,7 @@ function setTermActions(self) {
 			t.grp?.type !== 'hierCluster' &&
 			t.tw?.q?.mode == 'continuous' &&
 			t.tw.term.type != 'survival' &&
-			t.tw.term.type != 'compositePercentage' &&
+			t.tw.term.type != 'termCollection' &&
 			t.tw.q.convert2ZScore != true
 		) {
 			rowHeightColorEditDiv.append('span').text('Bar Color')
@@ -2957,7 +2957,7 @@ function setLengendActions(self) {
 			const term = self.termOrder.find(t => t.tw.$id == targetItemData.$id)?.tw?.term
 			//Add the hard filter option
 			if (
-				term?.type !== 'compositePercentage' &&
+				term?.type !== 'termCollection' &&
 				(!targetItemData.dt || self.type !== 'hierCluster' || legendFilterIndex !== -1)
 			) {
 				// Do not show the hard filter option for hierCluster geneVariant legend items.
@@ -3096,7 +3096,7 @@ function setLengendActions(self) {
 
 			if (targetItemData.isLegendItem) {
 				// Add the soft filter option only for the not already hidden geneVariant legend
-				if (targetItemData.dt && legendFilterIndex == -1 && term?.type !== 'compositePercentage') {
+				if (targetItemData.dt && legendFilterIndex == -1 && term?.type !== 'termCollection') {
 					// only when filtering a not already hidden geneVariant legend, show the soft filter
 					div
 						.append('div')
@@ -3154,7 +3154,7 @@ function setLengendActions(self) {
 				}
 
 				//Add the show only option only for non-genevariant legend
-				if (!targetItemData.dt && term?.type !== 'compositePercentage') {
+				if (!targetItemData.dt && term?.type !== 'termCollection') {
 					div
 						.append('div')
 						.attr('class', 'sja_menuoption sja_sharp_border')
@@ -3243,7 +3243,7 @@ function setLengendActions(self) {
 				}
 
 				//Add the show all option only for non-genevariant legend
-				if (!targetItemData.dt && term?.type !== 'compositePercentage') {
+				if (!targetItemData.dt && term?.type !== 'termCollection') {
 					div
 						.append('div')
 						.attr('class', 'sja_menuoption sja_sharp_border')

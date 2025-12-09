@@ -852,7 +852,7 @@ export class TermdbVocab extends Vocab {
 								samples[sampleId] = s
 							}
 							if (tw.$id in sample) {
-								if (tw.type == 'compositePercentage') {
+								if (tw.type == 'termCollection') {
 									const termsValue = JSON.parse(sample[tw.$id].value)
 									const sum = termsValue.reduce((a, o) => a + Object.values(o)[0], 0)
 

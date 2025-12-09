@@ -17,7 +17,7 @@ export class SearchHandler {
 		)
 		const usecase = {
 			target: 'numericTermCollections',
-			detail: { type: 'compositePercentage', ...details }
+			detail: { ...details }
 		}
 		const seletedTerms = new Set()
 		const innerTree = await appInit({
@@ -40,7 +40,7 @@ export class SearchHandler {
 					})
 					this.callback({
 						seletedTerms,
-						type: TermTypes.COMPOSITE_PERCENTAGE,
+						type: TermTypes.TERM_COLLECTION,
 						name: usecase.detail.name == 'Mutation Signature' ? `% SNVs` : `Percentage`
 					})
 				}
