@@ -1073,13 +1073,13 @@ tape('tvs: Gene Variant - CNV - continuous', async test => {
 			'Value of third input should be max length'
 		)
 
-		const wildtypeCheckbox = tipd.selectAll("input[type='checkbox']").node()
-		test.ok(wildtypeCheckbox, 'Should have a wildtype checkbox')
+		const genotypeRadio = tipd.selectAll("input[type='radio']").nodes()
+		test.equal(genotypeRadio.length, 2, 'Should have 2 genotype radio buttons')
 
 		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
 		test.ok(applyBtn, 'Should have 1 button to apply changes')
 
-		wildtypeCheckbox.click()
+		genotypeRadio[1].checked = true
 		valueBtn = await detectChildText({
 			target: pill,
 			selector: '.value_btn',
