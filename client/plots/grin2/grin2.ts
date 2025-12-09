@@ -589,7 +589,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 				body: requestData
 			})
 
-			console.log('GRIN2 response:', response)
 			if (response.status === 'error') throw `GRIN2 analysis failed: ${response.error}`
 
 			this.renderResults(response)
