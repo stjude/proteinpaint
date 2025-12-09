@@ -1,7 +1,7 @@
 import { getCompInit, copyMerge, deepEqual } from '../rx'
 import getHandlers from './barchart.events'
 import barsRenderer from './bars.renderer'
-import rendererSettings from './bars.settings'
+import { rendererSettings, defaults } from './bars.settings'
 import { htmlLegend, /** svgLegend, */ renderTable, DownloadMenu } from '#dom'
 import { select } from 'd3-selection'
 import { rgb } from 'd3-color'
@@ -14,10 +14,6 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
 import { rebaseGroupFilter } from '../mass/groups.js'
-
-/** The length of the entire plot (i.e. width
- * when horizontal, height when vertical) */
-export const defaultPlotLength = 300
 
 export class Barchart extends PlotBase {
 	static type = 'barchart'
@@ -277,12 +273,12 @@ export class Barchart extends PlotBase {
 
 			inputs.push({
 				label: 'Plot length',
-				title: 'Set the plot length of the entire plot in pixels between 300 and 800.',
+				title: `Set the entire plot length in pixels between ${defaults.minPlotLength} and ${defaults.maxPlotLength}.`,
 				type: 'number',
 				chartType: 'barchart',
 				settingsKey: 'plotLength',
-				min: 300,
-				max: 800,
+				min: defaults.minPlotLength,
+				max: defaults.maxPlotLength,
 				step: 10
 			})
 
@@ -1298,7 +1294,7 @@ export function getDefaultBarSettings(app) {
 	return {
 		barspace: 2,
 		barwidth: 20,
-		plotLength: defaultPlotLength,
+		plotLength: defaults.plotLength,
 		orientation: 'horizontal',
 		unit: 'abs',
 		overlay: 'none',
