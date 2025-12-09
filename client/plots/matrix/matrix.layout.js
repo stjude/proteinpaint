@@ -281,9 +281,7 @@ export function setLabelsAndScales() {
 				t.counts.maxval = (t.counts.maxval - mean) / std
 			}
 
-			if (!twSettings.contBarH)
-				twSettings.contBarH =
-					t.tw.type == 'compositePercentage' ? Math.min(120, t.tw.term.termlst.length * s.barh) : s.barh
+			if (!twSettings.contBarH) twSettings.contBarH = t.tw.type == 'compositePercentage' ? 150 : s.barh
 			if (!('gap' in twSettings)) twSettings.contBarGap = 4
 			const barh = twSettings.contBarH
 			if (t.tw.type == 'compositePercentage') t.counts = { maxval: 100, minval: 0 }
