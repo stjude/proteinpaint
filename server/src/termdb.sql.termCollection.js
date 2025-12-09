@@ -1,4 +1,4 @@
-export const compositePercentageCTE = {
+export const termCollectionCTE = {
 	getCTE(tablename, tw, values) {
 		values.push(...tw.term.termlst.map(term => term.id))
 		// For now, use sample as key for matrix, could update key later if used for other types of plots.

@@ -281,10 +281,10 @@ export function setLabelsAndScales() {
 				t.counts.maxval = (t.counts.maxval - mean) / std
 			}
 
-			if (!twSettings.contBarH) twSettings.contBarH = t.tw.type == 'compositePercentage' ? 150 : s.barh
+			if (!twSettings.contBarH) twSettings.contBarH = t.tw.type == 'termCollection' ? 150 : s.barh
 			if (!('gap' in twSettings)) twSettings.contBarGap = 4
 			const barh = twSettings.contBarH
-			if (t.tw.type == 'compositePercentage') t.counts = { maxval: 100, minval: 0 }
+			if (t.tw.type == 'termCollection') t.counts = { maxval: 100, minval: 0 }
 
 			const absMin = Math.abs(t.counts.minval)
 			const rangeSpansZero = t.counts.minval < 0 && t.counts.maxval > 0

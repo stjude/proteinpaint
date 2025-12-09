@@ -319,7 +319,7 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 	}
 }
 
-export function setComPerCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
+export function setTermCollectionCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
 	const twSpecificSettings = self.config.settings.matrix.twSpecificSettings
 	if (!twSpecificSettings[tw.$id]) twSpecificSettings[tw.$id] = {}
 	const twSettings = twSpecificSettings[tw.$id]
@@ -419,7 +419,7 @@ export const setCellProps = {
 	hierCluster: setHierClusterCellProps,
 	[TermTypes.GENE_EXPRESSION]: setNumericCellProps,
 	[TermTypes.METABOLITE_INTENSITY]: setNumericCellProps,
-	compositePercentage: setComPerCellProps
+	termCollection: setTermCollectionCellProps
 }
 
 export const maySetEmptyCell = {

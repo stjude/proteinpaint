@@ -16,29 +16,29 @@ NOTE: dataset-specific overrides may be applied when the TermTypeSearch is initi
 
 const useCasesExcluded = {
 	matrix: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
-	filter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.COMPOSITE_PERCENTAGE],
-	dictionary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.COMPOSITE_PERCENTAGE],
-	summary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.COMPOSITE_PERCENTAGE],
-	barchart: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.COMPOSITE_PERCENTAGE],
-	violin: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.COMPOSITE_PERCENTAGE],
-	sampleScatter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.COMPOSITE_PERCENTAGE],
+	filter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
+	dictionary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
+	summary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
+	barchart: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
+	violin: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
+	sampleScatter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
 	cuminc: [
 		TermTypeGroups.SNP_LOCUS,
 		TermTypeGroups.SNP_LIST,
 		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.METABOLITE_INTENSITY,
-		TermTypeGroups.COMPOSITE_PERCENTAGE
+		TermTypeGroups.TERM_COLLECTION
 	],
 	dataDownload: [
 		//TermTypeGroups.SNP_LOCUS, //this tabs require that the handler for this term type to be implemented
 		//TermTypeGroups.SNP_LIST, //this tabs require that the handler for this term type to be implemented
 		TermTypeGroups.MUTATION_CNV_FUSION,
-		TermTypeGroups.COMPOSITE_PERCENTAGE
+		TermTypeGroups.TERM_COLLECTION
 	], //Later on can support other term types like snplocus, snplst, geneVariant, non dictionary terms
-	survival: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.COMPOSITE_PERCENTAGE],
+	survival: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
 	//Used from the termsetting when searching for a term, as any term with categories is allowed
-	default: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.COMPOSITE_PERCENTAGE],
-	regression: [TermTypeGroups.SNP_LIST, TermTypeGroups.SNP_LOCUS, TermTypeGroups.COMPOSITE_PERCENTAGE],
+	default: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
+	regression: [TermTypeGroups.SNP_LIST, TermTypeGroups.SNP_LOCUS, TermTypeGroups.TERM_COLLECTION],
 	metaboliteIntensity: [
 		TermTypeGroups.SNP_LOCUS,
 		TermTypeGroups.SNP_LIST,
@@ -46,7 +46,7 @@ const useCasesExcluded = {
 		TermTypeGroups.DICTIONARY_VARIABLES,
 		TermTypeGroups.GENE_EXPRESSION,
 		TermTypeGroups.SSGSEA,
-		TermTypeGroups.COMPOSITE_PERCENTAGE
+		TermTypeGroups.TERM_COLLECTION
 	],
 	geneExpression: [
 		TermTypeGroups.SNP_LOCUS,
@@ -55,7 +55,7 @@ const useCasesExcluded = {
 		TermTypeGroups.DICTIONARY_VARIABLES,
 		TermTypeGroups.METABOLITE_INTENSITY,
 		TermTypeGroups.SSGSEA,
-		TermTypeGroups.COMPOSITE_PERCENTAGE
+		TermTypeGroups.TERM_COLLECTION
 	],
 	numericDictTermCluster: [
 		TermTypeGroups.SNP_LOCUS,
@@ -64,7 +64,7 @@ const useCasesExcluded = {
 		TermTypeGroups.GENE_EXPRESSION,
 		TermTypeGroups.METABOLITE_INTENSITY,
 		TermTypeGroups.SSGSEA,
-		TermTypeGroups.COMPOSITE_PERCENTAGE
+		TermTypeGroups.TERM_COLLECTION
 	],
 	numericTermCollections: [
 		TermTypeGroups.SNP_LOCUS,
@@ -74,10 +74,10 @@ const useCasesExcluded = {
 		TermTypeGroups.METABOLITE_INTENSITY,
 		TermTypeGroups.SSGSEA,
 		// we are still using dictionary tab to select mutation signature terms. The reason why we
-		// add the COMPOSITE_PERCENTAGE term type is to show it at the first level of tabs. After clicking
-		// COMPOSITE_PERCENTAGE tab, we use DICTIONARY tab to select the mutation signature terms, and all other tabs
+		// add the TERM_COLLECTION term type is to show it at the first level of tabs. After clicking
+		// TERM_COLLECTION tab, we use DICTIONARY tab to select the mutation signature terms, and all other tabs
 		// will be hidden by default.
-		TermTypeGroups.COMPOSITE_PERCENTAGE
+		TermTypeGroups.TERM_COLLECTION
 	]
 }
 
@@ -303,7 +303,7 @@ export class TermTypeSearch {
 				} catch (e) {
 					throw `error with handler='./handlers/${type}.ts': ${e}`
 				}
-				if (type == TermTypes.COMPOSITE_PERCENTAGE) {
+				if (type == TermTypes.TERM_COLLECTION) {
 					label = this.app.vocabApi?.termdbConfig?.numericTermCollections.map(ntc => ntc.name).join('/')
 				}
 				this.tabs.push({ label, callback: () => this.setTermTypeGroup(type, termTypeGroup), termTypeGroup })
@@ -366,12 +366,12 @@ export class TermTypeSearch {
 		if (this.click_term) this.click_term(term)
 		else if (this.submit_lst) {
 			const t = term.term || term
-			if (term.type == TermTypes.COMPOSITE_PERCENTAGE) {
+			if (term.type == TermTypes.TERM_COLLECTION) {
 				const seletedTerms = [...term.seletedTerms]
 				const termNames = seletedTerms.map(o => o.id).join(',')
 				const termNamesLabel = `${term.name} (${termNames})`
 				const termName = termNamesLabel.length <= 26 ? termNamesLabel : termNamesLabel.slice(0, 26) + '...'
-				const newTerm = { name: termName, type: 'compositePercentage', isleaf: true, termlst: seletedTerms }
+				const newTerm = { name: termName, type: 'termCollection', isleaf: true, termlst: seletedTerms }
 				this.app.dispatch({
 					type: 'app_refresh',
 					state: {

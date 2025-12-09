@@ -31,7 +31,7 @@ export const TermTypeGroups = {
 	SNP_LIST: 'SNP List',
 	SNP_LOCUS: 'SNP Locus',
 	SSGSEA: 'Geneset Expression',
-	COMPOSITE_PERCENTAGE: 'Composite Percentage'
+	TERM_COLLECTION: 'Term Collection'
 }
 
 export const defaultcolor = rgb('#8AB1D4').darker()

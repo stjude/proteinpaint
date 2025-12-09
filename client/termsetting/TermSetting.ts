@@ -141,7 +141,7 @@ export class TermSetting {
 			if (!d.term.type) throw 'data.term.type missing'
 			// hardcode non
 			if (isDictionaryType(d.term.type)) {
-				if (!d.term.id && d.term.type != TermTypes.SAMPLELST && d.term.type != TermTypes.COMPOSITE_PERCENTAGE)
+				if (!d.term.id && d.term.type != TermTypes.SAMPLELST && d.term.type != TermTypes.TERM_COLLECTION)
 					throw 'data.term.id missing'
 				if (!d.term.name) throw 'data.term.name missing'
 			}
@@ -224,7 +224,7 @@ export class TermSetting {
 		}
 
 		// TODO: should use TwRouter here??? or expect tw to be already filled-in/instantiated???
-		if (!termtype || termtype == 'compositePercentage') {
+		if (!termtype || termtype == 'termCollection') {
 			this.handler = this.handlerByType.default as Handler
 			return
 		}
