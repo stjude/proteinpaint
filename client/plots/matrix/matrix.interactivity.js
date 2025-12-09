@@ -216,9 +216,13 @@ export function setInteractivity(self) {
 						c2.html(timeToEventKey)
 					}
 				} else if (d.term.type == TermTypes.COMPOSITE_PERCENTAGE) {
-					const [c1, c2] = table.addRow()
-					c1.html(d.label)
-					c2.html(`${d.value.toFixed(2)}%`)
+					const renderedValues = d.row[d.$id].renderedValues
+					for (const renderedValue of renderedValues) {
+						const colorSquare = `<span style="display:inline-block; width:12px; height:12px; background-color:${renderedValue.color}"></span>`
+						const [c1, c2] = table.addRow()
+						c1.html(`${colorSquare} ${renderedValue.label}`)
+						c2.html(`${renderedValue.value.toFixed(2)}%`)
+					}
 				} else {
 					const colorSquare =
 						(d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous') || d.tw.q.mode !== 'continuous'
