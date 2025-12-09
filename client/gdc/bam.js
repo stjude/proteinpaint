@@ -601,6 +601,8 @@ export async function bamsliceui(
 			}
 		}
 
+		let lastTabbedTime = Date.now()
+
 		handle
 			.classed('sja_clbtext', true) // not to override the class name used for testing
 			.attr('tabindex', 0)
@@ -626,6 +628,19 @@ export async function bamsliceui(
 							}
 						})
 					}
+
+					row
+						.select('input')
+						.on('keydown', event => {
+							if (event.key == 'Tab' && event.shiftKey) lastTabbedTime = Date.now()
+						})
+						.on('blur', () => {
+							if (Date.now() - lastTabbedTime > 500) return
+							handle.node().focus()
+							tip.hide()
+						})
+						.node()
+						.focus()
 				}
 				const tableDiv = tip.d.append('div')
 				makeTable(tableDiv)
