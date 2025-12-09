@@ -201,12 +201,33 @@ export class Menu {
 	// opts{}: can supply offsetX and offsetY
 	// necessary because .showunder() uses .show(shift=false), which
 	// ignores offsetY in the constructor option
-	showunder(dom, _opts = {}) {
+	showunder(elem, _opts = {}) {
 		// route to .show()
 		const opts = Object.assign({ offsetX: 0, offsetY: 0 }, _opts)
-		const p = dom.getBoundingClientRect()
+		const p = elem.getBoundingClientRect()
 		const x = p.left + window.scrollX + opts.offsetX
 		const y = p.top + p.height + window.scrollY + 5 + opts.offsetY
+
+		// For Section 508 compliance: assume that the elem triggered showing the menu
+		// and support back-navigation to it from the menu using shift-tab
+		const firstFocusableChildElem = this.d.select(
+			'a[href], button, input, textarea, select, details, [tabindex]:not([tabindex="-1"])'
+		)
+		if (firstFocusableChildElem.size()) {
+			let lastTabbedTime = Date.now()
+			firstFocusableChildElem
+				.on('keydown', event => {
+					if (event.key == 'Tab' && event.shiftKey) lastTabbedTime = Date.now()
+				})
+				.on('blur', () => {
+					if (Date.now() - lastTabbedTime > 500) return
+					elem.focus() // shift focus back to the clicked elem that launched the menu, when shift-tabbing from the firt focusable child element
+					this.hide()
+				})
+				.node()
+				.focus()
+		}
+
 		return this.show(x, y, false, true, false)
 
 		/*
