@@ -10,12 +10,12 @@ input parameter:
     g: selection
     s: {} self.settings
     chart: {} chart object
-    term2values: TODO: is this ever defined?
+    order: [] array of series ids to specify series order
     term2toColor: {} map term2 values to colors
 }
 */
 
-export function renderAtRiskG({ g, s, chart, term2values, term2toColor, onSerieClick }) {
+export function renderAtRiskG({ g, s, chart, order, term2toColor, onSerieClick }) {
 	const bySeries = {}
 
 	// do not compute at-risk counts of tick values that are
@@ -63,22 +63,7 @@ export function renderAtRiskG({ g, s, chart, term2values, term2toColor, onSerieC
 	// fully rerender, later may reuse previously rendered elements
 	// g.selectAll('*').remove()
 
-	const seriesOrder = chart.serieses.map(s => s.seriesId)
-	if (term2values) {
-		seriesOrder.sort((aId, bId) => {
-			const av = term2values[aId]
-			const bv = term2values[bId]
-			if (av && bv) {
-				if ('order' in av && 'order' in bv) return av.order - bv.order
-				if (av.order) return av.order
-				if (bv.order) return bv.order
-				return 0
-			}
-			if (av) return av.order || 0
-			if (bv) return bv.order || 0
-			return 0
-		})
-	}
+	const seriesOrder = order || chart.serieses.map(s => s.seriesId)
 
 	let data
 	g.selectAll('.sjpp-atrisk-title').remove()

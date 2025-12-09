@@ -65,8 +65,8 @@ class TdbSurvival extends PlotBase implements RxComponent {
 	serverData?: any
 	currData?: any
 	legendData?: any
+	legendOrder: any[] = []
 	hiddenData?: any
-	legendValues: { [name: string]: any } = {}
 	tests?: { [name: string]: any }
 	term2toColor: { [name: string]: { orig: string; rgb: any; adjusted: string; hex: string } } = {}
 
@@ -491,34 +491,11 @@ class TdbSurvival extends PlotBase implements RxComponent {
 			const s = this.refs.orderedKeys.series
 			legendItems.sort((a, b) => s.indexOf(a.seriesId) - s.indexOf(b.seriesId))
 		}
-		this.legendValues = {}
-		legendItems.forEach((item, i) => {
-			this.legendValues[item.seriesId] = {
-				seriesId: item.seriesId,
-				order: 'order' in item ? item.order : i,
-				color: this.term2toColor[item.seriesId].orig
-			}
-		})
-		const v = this.state.config.term2?.values
-		if (v) {
-			legendItems.sort((a, b) => {
-				const av = v[a.seriesId]
-				const bv = v[b.seriesId]
-				if (av && bv) {
-					if ('order' in av && 'order' in bv) return av.order - bv.order
-					if (av.order) return av.order
-					if (bv.order) return bv.order
-					return 0
-				}
-				if (av) return av.order || 0
-				if (bv) return bv.order || 0
-				// default order
-				return a.order - b.order
-			})
 
-			legendItems.forEach((item, i) => {
-				this.legendValues[item.seriesId].order = i
-			})
+		if (!this.legendOrder.length) {
+			this.legendOrder = legendItems.map(item => item.seriesId)
+		} else {
+			legendItems.sort((a, b) => this.legendOrder.indexOf(a.seriesId) - this.legendOrder.indexOf(b.seriesId))
 		}
 
 		if ((config.term.term.type == 'survival' || config.term2) && legendItems.length) {
@@ -776,7 +753,7 @@ function setRenderers(self) {
 			g: atRiskG,
 			s,
 			chart,
-			term2values: self.state.config.term2?.values,
+			order: self.legendOrder,
 			term2toColor: self.term2toColor,
 			onSerieClick: self.legendClick
 		})
@@ -1149,14 +1126,14 @@ function setInteractivity(self) {
 			options.push({
 				label: 'Move&nbsp;',
 				setInput: holder => {
-					const legendIndex = self.legendValues[d.seriesId].order
+					const legendIndex = self.legendOrder.indexOf(d.seriesId)
 					if (legendIndex != 0)
 						holder
 							.append('button')
 							.html('up')
 							.on('click', () => {
 								menu.hide()
-								self.adjustValueOrder(d, -1)
+								self.adjustLegendOrder(d, -1)
 							})
 					if (legendIndex < self.legendData[0]?.items.length - 1)
 						holder
@@ -1164,7 +1141,7 @@ function setInteractivity(self) {
 							.html('down')
 							.on('click', () => {
 								menu.hide()
-								self.adjustValueOrder(d, 1)
+								self.adjustLegendOrder(d, 1)
 							})
 				}
 			})
@@ -1213,37 +1190,20 @@ function setInteractivity(self) {
 		menu.show(x, y)
 	}
 
-	self.adjustValueOrder = (d, increment) => {
-		const values = JSON.parse(JSON.stringify(self.state.config.term2?.values || self.legendValues))
-		if (!values[d.seriesId]) {
-			values[d.seriesId] = Object.assign({}, self.state.config.term2?.term?.values || {})
-		}
-
-		for (const id in values) {
-			if (!('order' in values[id])) values[id].order = self.legendValues[id].order
-		}
-
-		const v = values[d.seriesId]
-		v.order += increment
-		for (const id in values) {
-			if (id == d.seriesId) continue
-			if ('order' in values[id] && values[id].order === v.order) {
-				values[id].order += -1 * increment
-				break
-			}
-		}
-
-		const term2 = JSON.parse(JSON.stringify(self.state.config.term2))
-		term2.values = values
-
+	self.adjustLegendOrder = (d, increment) => {
+		const oldIndex = self.legendOrder.indexOf(d.seriesId)
+		if (oldIndex == -1) return
+		let newIndex = oldIndex + increment
+		// clamp to array bounds
+		newIndex = Math.max(0, Math.min(self.legendOrder.length - 1, newIndex))
+		// remove item
+		self.legendOrder.splice(oldIndex, 1)
+		// insert at new index
+		self.legendOrder.splice(newIndex, 0, d.seriesId)
+		console.log('self.legendOrder:', self.legendOrder)
 		self.app.dispatch({
-			type: 'plot_edit',
-			id: self.id,
-			config: {
-				term2
-			}
+			type: 'app_refresh'
 		})
-
 		self.app.tip.hide()
 	}
 
