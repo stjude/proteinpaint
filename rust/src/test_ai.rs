@@ -42,6 +42,7 @@ mod tests {
         let top_p: f32 = 0.95;
         let serverconfig_file_path = Path::new("../../serverconfig.json");
         let absolute_path = serverconfig_file_path.canonicalize().unwrap();
+        let testing = true; // This causes the JSON being output from run_pipeline() to be in LLM JSON format
 
         // Read the file
         let data = fs::read_to_string(absolute_path).unwrap();
@@ -83,7 +84,6 @@ mod tests {
                                 .expect("Ollama server not found");
                             let embedding_model = ollama_client.embedding_model(ollama_embedding_model_name);
                             let comp_model = ollama_client.completion_model(ollama_comp_model_name);
-
                             for chart in ai_json.charts.clone() {
                                 match chart {
                                     super::super::Charts::Summary(testdata) => {
@@ -100,6 +100,7 @@ mod tests {
                                                 &dataset_db,
                                                 &genedb,
                                                 &ai_json,
+                                                testing,
                                             )
                                             .await;
                                             let mut llm_json_value: super::super::SummaryType = serde_json::from_str(&llm_output.unwrap()).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
@@ -142,6 +143,7 @@ mod tests {
                                                     &dataset_db,
                                                     &genedb,
                                                     &ai_json,
+                                                    testing,
                                                 )
                                                 .await;
                                                 let mut llm_json_value: super::super::SummaryType = serde_json::from_str(&llm_output.unwrap()).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
