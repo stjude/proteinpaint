@@ -125,43 +125,13 @@ class Chat extends PlotBase implements RxComponent {
 							serverBubble.html(result.message)
 						} else {
 							if (result.action == 'summary') {
-								const SummaryPlotConfig: SummaryChart = {
-									chartType: 'summary'
-								}
-								if (result.summaryterms) {
-									let i = 0
-									for (const term of result.summaryterms) {
-										if (term.clinical) {
-											const termid: termid = { id: term.clinical }
-											if (i == 0) {
-												SummaryPlotConfig.term = termid
-											} else if (i == 1) {
-												SummaryPlotConfig.term2 = termid
-											} else {
-												// More than 2 dictionary terms are not supported probably, need to check
-												console.log('More than 2 terms, please check!')
-											}
-										} else if (term.geneExpression) {
-											const geneExp: geneExpression = { gene: term.geneExpression, type: 'geneExpression' }
-											if (i == 0) {
-												SummaryPlotConfig.term = { term: geneExp }
-											} else if (i == 1) {
-												SummaryPlotConfig.term2 = { term: geneExp }
-											} else {
-												// More than 2 dictionary terms are not supported probably, need to check
-												console.log('More than 2 terms, please check!')
-											}
-										}
-										i += 1
-									}
-
-									this.app.dispatch({
-										type: 'plot_create',
-										id: getId(),
-										config: SummaryPlotConfig
-									})
-									serverBubble.html('Please refer to the plot generated above')
-								}
+								const SummaryPlotConfig = result.plot
+								this.app.dispatch({
+									type: 'plot_create',
+									id: getId(),
+									config: SummaryPlotConfig
+								})
+								serverBubble.html('Please refer to the plot generated above')
 							} // Will add other plots later
 						}
 					}
