@@ -74,7 +74,7 @@ const observer = new MutationObserver(function (mutationsList, observer) {
 			selem
 				// svg elems will be grouped
 				.attr('tabindex', 0) //svgClickable.has(elem.tagName) ? -1 : 0)
-				.on('keyup', event => {
+				.on('keyup.root_observer', event => {
 					if (event.key == 'Enter') {
 						const box = event.target.getBoundingClientRect()
 						const clientX = box.x + 0.5 * box.width
