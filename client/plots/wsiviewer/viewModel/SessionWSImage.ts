@@ -6,9 +6,7 @@ export class SessionWSImage extends WSImage {
 	sessionsTileSelections?: TileSelection[]
 
 	constructor(ws: WSImage, sessionsTileSelections?: TileSelection[]) {
-		// Initialize base with filename
 		super(ws.filename)
-
 		// copy common properties from provided WSImage
 		this.id = ws.id
 		this.metadata = ws.metadata
@@ -18,10 +16,7 @@ export class SessionWSImage extends WSImage {
 		this.uncertainty = ws.uncertainty
 		this.activePatchColor = ws.activePatchColor
 		this.tileSize = ws.tileSize
-
 		this.predictions = ws.predictions
-
-		// optionally initialize sessions tile selections (may be set later from settings)
 		this.sessionsTileSelections = sessionsTileSelections
 	}
 
