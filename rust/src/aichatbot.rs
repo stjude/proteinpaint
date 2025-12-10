@@ -160,7 +160,7 @@ async fn main() -> Result<()> {
                     let temperature: f64 = 0.01;
                     let max_new_tokens: usize = 512;
                     let top_p: f32 = 0.95;
-
+                    let testing = false; // This variable is always false in production, this is true in test_ai.rs for testing code
                     if llm_backend_name != "ollama" && llm_backend_name != "SJ" {
                         panic!(
                             "This code currently supports only Ollama and SJ provider. llm_backend_name must be \"ollama\" or \"SJ\""
@@ -185,6 +185,7 @@ async fn main() -> Result<()> {
                             &dataset_db,
                             &genedb,
                             &ai_json,
+                            testing,
                         )
                         .await;
                     } else if llm_backend_name == "SJ".to_string() {
@@ -207,6 +208,7 @@ async fn main() -> Result<()> {
                             &dataset_db,
                             &genedb,
                             &ai_json,
+                            testing,
                         )
                         .await;
                     }
@@ -239,6 +241,7 @@ pub async fn run_pipeline(
     dataset_db: &str,
     genedb: &str,
     ai_json: &AiJsonFormat,
+    testing: bool,
 ) -> Option<String> {
     let mut classification: String = classify_query_by_dataset_type(
         user_input,
@@ -282,6 +285,7 @@ pub async fn run_pipeline(
             dataset_db,
             genedb,
             ai_json,
+            testing,
         )
         .await;
     } else if classification == "hierarchical".to_string() {
@@ -801,6 +805,7 @@ async fn extract_summary_information(
     dataset_db: &str,
     genedb: &str,
     ai_json: &AiJsonFormat,
+    testing: bool,
 ) -> String {
     let (rag_docs, db_vec) = parse_dataset_db(dataset_db).await;
     let additional;
@@ -919,7 +924,8 @@ async fn extract_summary_information(
                 }
             }
             //println!("final_llm_json:{}", final_llm_json);
-            let final_validated_json = validate_summary_output(final_llm_json.clone(), db_vec, common_genes, ai_json);
+            let final_validated_json =
+                validate_summary_output(final_llm_json.clone(), db_vec, common_genes, ai_json, testing);
             final_validated_json
         }
         None => {
@@ -1063,6 +1069,7 @@ fn validate_summary_output(
     db_vec: Vec<DbRows>,
     common_genes: Vec<String>,
     ai_json: &AiJsonFormat,
+    testing: bool,
 ) -> String {
     let json_value: SummaryType =
        serde_json::from_str(&raw_llm_json).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
@@ -1238,7 +1245,7 @@ fn validate_summary_output(
     }
 
     // Removing terms that are found both in filter term as well summary
-    let validated_summary_terms_final = Vec::<SummaryTerms>::new();
+    let mut validated_summary_terms_final = Vec::<SummaryTerms>::new();
 
     let mut sum_iter = 0;
     let mut pp_json: Value; // New JSON value that will contain items of the final PP compliant JSON
@@ -1327,7 +1334,7 @@ fn validate_summary_output(
                     }
                 }
             }
-            //validated_summary_terms_final.push(summary_term.clone())
+            validated_summary_terms_final.push(summary_term.clone())
         }
         sum_iter += 1
     }
@@ -1358,7 +1365,13 @@ fn validate_summary_output(
         }
     }
 
-    serde_json::to_string(&pp_json).unwrap()
+    if testing == true {
+        // When testing script output native LLM JSON
+        serde_json::to_string(&new_json).unwrap()
+    } else {
+        // When in production output PP compliant JSON
+        serde_json::to_string(&pp_json).unwrap()
+    }
 }
 
 fn getGeneExpression() -> String {
