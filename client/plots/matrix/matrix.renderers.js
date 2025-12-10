@@ -381,15 +381,11 @@ export function setRenderers(self) {
 			.append('g')
 			.attr('class', 'sjpp-matrix-divide-by-label')
 			.attr('transform', `translate(0, ${y})`)
-
-		const textElem = g
-			.append('text')
-			.attr('text-anchor', anchor)
-			.attr('font-weight', 600)
-			.text(text)
 			.on('click', (event, d) => {
 				pill.showMenu(event, textElem.node())
 			})
+
+		const textElem = g.append('text').attr('text-anchor', anchor).attr('font-weight', 600).text(text)
 
 		g.append('title').text(`${cl.Samples} are grouped by this gene or variable. Click to edit.`)
 

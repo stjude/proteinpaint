@@ -1,6 +1,6 @@
 import { select as d3select } from 'd3-selection'
 import { get_base_zindex } from '#common/globals'
-import { focusableSjClasses, renderWait } from '#src/app.observer'
+import { clickableSjClasses, renderWait } from '#src/app.observer'
 import { sleep } from '#rx'
 
 /*
@@ -30,7 +30,9 @@ arg{}
 
 export const focusableSelector =
 	`a[href], button, input, textarea, select, details, [tabindex]:not([tabindex="-1"]), ` +
-	focusableSjClasses.map(c => `.${c}`).join(',')
+	clickableSjClasses.map(c => `.${c}`).join(',')
+
+const showMenuTriggers = new Set([/*'mousemove',*/ 'mousedown', 'mouseup', 'click'])
 
 export class Menu {
 	constructor(arg = {}) {
@@ -134,8 +136,10 @@ export class Menu {
 	/*
 	 To note: if shift and scroll are true, shift sets x & y.
 	 Set shift to false to use scroll
+   
+   _elem: the element for which the menu was launched, optional
 	*/
-	show(_x, _y, shift = true, down = true, scroll = true) {
+	show(_x, _y, shift = true, down = true, scroll = true, elem = null) {
 		let x = _x
 		let y = _y
 		this.prevX = _x
@@ -167,10 +171,18 @@ export class Menu {
 			this.d.style('top', null).style('bottom', height - y + 'px')
 		else this.d.style('top', y + 'px').style('bottom', null)
 		this.d.transition().style('opacity', 1)
+
+		if (elem) this.setTabNavigation(elem)
+		// assume the global event.target corresponds to a clicked/"moused" element that launched the menu
+		else if (showMenuTriggers.has(window.event?.type)) this.setTabNavigation(window.event.target)
+
 		return this
 	}
 
 	// simplified alternative to show(), with less arguments
+	// _x, _y: desired position in the client window
+	// opts{}:
+	//   elem: the element for which the menu was launched, will get focus when tabbing back from the menu
 	show2(_x, _y, opts = {}) {
 		let x = _x
 		let y = _y
@@ -217,8 +229,7 @@ export class Menu {
 		const x = p.left + window.scrollX + opts.offsetX
 		const y = p.top + p.height + window.scrollY + 5 + opts.offsetY
 
-		this.setTabNavigation(elem)
-		return this.show(x, y, false, true, false)
+		return this.show(x, y, false, true, false, elem)
 
 		/*
 		this.d
@@ -236,16 +247,16 @@ export class Menu {
 		// For Section 508 compliance: assume that the elem triggered showing the menu
 		// and support back-navigation to it from the menu using shift-tab
 
-		const focusableElems = this.d.node().querySelectorAll(focusableSelector)
-		if (!focusableElems.length) {
+		const clickableElems = this.d.node().querySelectorAll(focusableSelector)
+		if (!clickableElems.length) {
 			// give time for menu focusable elements to be rendered, up to a number of a certain of tries
 			if (numTries < 30) setTimeout(() => this.setTabNavigation(elem, numTries++), 100)
 			return
 		}
 
-		const firstFocusableChildElem = d3select(focusableElems[0])
+		const firstFocusableChildElem = d3select(clickableElems[0])
 
-		for (const elem of focusableElems) {
+		for (const elem of clickableElems) {
 			const s = d3select(elem)
 			if (!elem.getAttribute('tabindex')) s.attr('tabindex', 0)
 			if (!s.on('keyup'))
@@ -267,9 +278,9 @@ export class Menu {
 				this.hide()
 			})
 		// .node()
-		// .focus(); console.log(270, focusableElems[0]);
+		// .focus(); console.log(270, clickableElems[0]);
 
-		setTimeout(() => focusableElems[0].focus(), renderWait)
+		setTimeout(() => clickableElems[0].focus(), renderWait)
 	}
 
 	showunderoffset(dom) {
