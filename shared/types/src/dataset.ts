@@ -2,7 +2,7 @@ import type { Mclass } from './Mclass.ts'
 import type { WSImage } from './routes/samplewsimages.ts'
 import type { WSISample } from './routes/wsisamples.ts'
 import type { SaveWSIAnnotationRequest } from './routes/saveWSIAnnotation.ts'
-import type { DeleteWSIAnnotationRequest } from './routes/deleteWSIAnnotation.ts'
+import type { DeleteWSITileSelectionRequest } from './routes/deleteWSITileSelection.ts'
 import type { Prediction } from './routes/aiProjectSelectedWSImages.ts'
 
 /*** General usage types ***/
@@ -1048,7 +1048,7 @@ export type WSImages = {
 	saveWSIAnnotation?: (annotation: SaveWSIAnnotationRequest) => Promise<void>
 
 	/** dynamically added on launch with built in logic */
-	deleteWSIAnnotation?: (annotation: DeleteWSIAnnotationRequest) => Promise<void>
+	deleteWSIAnnotation?: (annotation: DeleteWSITileSelectionRequest) => Promise<void>
 
 	/** dynamically added on launch with built in logic - returns all image filenames for a project */
 	getAllWSImages?: (projectId: string) => Promise<string[]>

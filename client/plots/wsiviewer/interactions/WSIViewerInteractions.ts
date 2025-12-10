@@ -11,7 +11,7 @@ import type Settings from '#plots/wsiviewer/Settings.ts'
 import type { Prediction, TileSelection } from '@sjcrh/proteinpaint-types'
 import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.ts'
-import type { DeleteWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/deleteWSIAnnotation.js'
+import type { DeleteWSITileSelectionRequest } from '@sjcrh/proteinpaint-types/routes/deleteWSITileSelection.ts'
 
 export class WSIViewerInteractions {
 	thumbnailClickListener: (index: number) => void
@@ -26,8 +26,6 @@ export class WSIViewerInteractions {
 		holder: any,
 		sessionWSImage: SessionWSImage,
 		map: OLMap,
-		activeImageExtent: any,
-		activePatchColor: string,
 		aiProjectID: number,
 		shortcuts?: string[]
 	) => void
@@ -105,8 +103,6 @@ export class WSIViewerInteractions {
 			holder: any,
 			sessionWSImage: SessionWSImage,
 			map: OLMap,
-			activeImageExtent: any,
-			activePatchColor: string,
 			aiProjectID: number,
 			shortcuts: string[] = []
 		) => {
@@ -225,17 +221,17 @@ export class WSIViewerInteractions {
 
 			sessionWSImage.sessionsTileSelections = sessionsTileSelection
 
-			const annotationsData = SessionWSImage.getTileSelections(sessionWSImage)
+			const tileSelections = SessionWSImage.getTileSelections(sessionWSImage)
 
 			// Check if click falls inside an existing annotation
-			const selectedAnnotationIndex = annotationsData.findIndex(annotation => {
-				const [x0, y0] = annotation.zoomCoordinates
+			const selectedTileSelectionIndex = tileSelections.findIndex(tileSelection => {
+				const [x0, y0] = tileSelection.zoomCoordinates
 				const x1 = x0 + settings.tileSize
 				const y1 = y0 + settings.tileSize
 				return coordinateX >= x0 && coordinateX < x1 && coordinateY >= y0 && coordinateY < y1
 			})
 
-			if (selectedAnnotationIndex !== -1) {
+			if (selectedTileSelectionIndex !== -1) {
 				wsiApp.app.dispatch({
 					type: 'plot_edit',
 					id: wsiApp.id,
@@ -243,7 +239,8 @@ export class WSIViewerInteractions {
 						settings: {
 							renderWSIViewer: false,
 							renderAnnotationTable: true,
-							activeAnnotation: selectedAnnotationIndex,
+							changeTrigger: Date.now(),
+							activeAnnotation: selectedTileSelectionIndex,
 							sessionsTileSelection: [...sessionsTileSelection]
 						}
 					}
@@ -283,6 +280,7 @@ export class WSIViewerInteractions {
 					settings: {
 						renderWSIViewer: false,
 						renderAnnotationTable: true,
+						activeAnnotation: 0,
 						changeTrigger: Date.now(),
 						sessionsTileSelection: [newTileSelection, ...sessionsTileSelection]
 					}
@@ -345,7 +343,7 @@ export class WSIViewerInteractions {
 				type: 'plot_edit',
 				id: opts.id,
 				config: {
-					settings: { thumbnailRangeStart: start, renderWSIViewer: true }
+					settings: { thumbnailRangeStart: start, displayedImageIndex: start, renderWSIViewer: true }
 				}
 			})
 		}
@@ -437,24 +435,48 @@ export class WSIViewerInteractions {
 			source?.removeFeature(annotationBorderFeat)
 		}
 
-		const body: DeleteWSIAnnotationRequest = {
+		if (SessionWSImage.isSessionTileSelection(currentIndex, sessionWSImage)) {
+			const sessionsTileSelection = SessionWSImage.removeTileSelection(currentIndex, sessionWSImage)
+
+			wsiApp.app.dispatch({
+				type: 'plot_edit',
+				id: wsiApp.id,
+				config: {
+					settings: {
+						renderWSIViewer: false,
+						renderAnnotationTable: true,
+						activeAnnotation: 0,
+						changeTrigger: Date.now(),
+						sessionsTileSelection: sessionsTileSelection
+					}
+				}
+			})
+			return
+		}
+
+		const isPrediction = SessionWSImage.isPrediction(currentIndex, sessionWSImage)
+
+		const tileSelectionType = isPrediction ? 0 : 1
+
+		const prediction = tileSelections[currentIndex] as Prediction
+
+		const body: DeleteWSITileSelectionRequest = {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,
 			projectId: state.aiProjectID,
-			annotation: tileSelections[currentIndex],
+			tileSelection: tileSelections[currentIndex],
+			predictionClassId: prediction.class,
+			tileSelectionType: tileSelectionType,
 			wsimage: sessionWSImage.filename
 		}
+
 		try {
-			await dofetch3('deleteWSIAnnotation', { method: 'DELETE', body })
+			await dofetch3('deleteWSITileSelection', { method: 'DELETE', body })
 		} catch (e: any) {
-			console.error('Error in deleteWSIAnnotation request:', e.message || e)
+			console.error('Error in deleteWSITileSelection request:', e.message || e)
 		}
 		// TODO find another way to clear server cache
 		clearServerDataCache()
-
-		if (SessionWSImage.isSessionTileSelection(currentIndex, sessionWSImage)) {
-			SessionWSImage.removeTileSelection(currentIndex, sessionWSImage)
-		}
 
 		const sessionsTileSelection: TileSelection[] = sessionWSImage.sessionsTileSelections ?? []
 		wsiApp.app.dispatch({
@@ -583,7 +605,6 @@ export class WSIViewerInteractions {
 			config: {
 				settings: {
 					renderWSIViewer: false,
-					// TODO figure out how to avoid Math.random()
 					changeTrigger: Date.now(),
 					activeAnnotation: 0,
 					sessionsTileSelection: sessionsTileSelection
