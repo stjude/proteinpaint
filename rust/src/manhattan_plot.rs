@@ -336,12 +336,8 @@ fn plot_grin2_manhattan(
     let png_width = plot_width + 2 * png_dot_radius;
     let png_height = plot_height + 2 * png_dot_radius;
 
-    let w: u32 = (png_width * dpr as u64)
-        .try_into()
-        .expect("PNG width too large for u32");
-    let h: u32 = (png_height * dpr as u64)
-        .try_into()
-        .expect("PNG height too large for u32");
+    let w: u32 = ((png_width as f64) * dpr) as u32;
+    let h: u32 = ((png_height as f64) * dpr) as u32;
 
     // Create RGB buffer for Plotters
     let mut buffer = vec![0u8; w as usize * h as usize * 3];
@@ -403,8 +399,8 @@ fn plot_grin2_manhattan(
 
         for (i, p) in point_details.iter_mut().enumerate() {
             let (px, py) = pixel_positions[*&sig_indices[i]];
-            p.pixel_x = px;
-            p.pixel_y = py;
+            p.pixel_x = px / dpr;
+            p.pixel_y = py / dpr;
         }
 
         // flush root drawing area
