@@ -1,6 +1,6 @@
 import { scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
-import { Menu, icons, axisstyle, table2col } from '#dom'
+import { Menu, icons, axisstyle, table2col, renderTable } from '#dom'
 import { to_svg } from '#src/client'
 import { quadtree } from 'd3-quadtree'
 import type { ManhattanPoint } from './manhattanTypes'
@@ -43,37 +43,6 @@ import type { ManhattanPoint } from './manhattanTypes'
  * and proper axis scaling. The plot combines a static PNG plot image of all points with dynamic SVG elements
  * including axes, labels, legend, and top genes (represented as interactive dots) for detailed information on hover.
  */
-
-// Define styles once at the top of your file or in a constants section
-const TABLE_STYLES = {
-	cell: [
-		['padding', '5px'],
-		['border', '1px solid #ddd']
-	] as const,
-	header: [
-		['padding', '5px'],
-		['border', '1px solid #ddd'],
-		['font-weight', 'bold']
-	] as const,
-	positionCell: [
-		['padding', '5px'],
-		['border', '1px solid #ddd'],
-		['font-size', '0.9em']
-	] as const
-}
-
-function styleGeneTipCell(td: any, styleType: keyof typeof TABLE_STYLES = 'cell') {
-	TABLE_STYLES[styleType].forEach(style => {
-		const [prop, value] = style
-		td.style(prop, value)
-	})
-	return td
-}
-
-function styleGeneTipHeader(th: any) {
-	TABLE_STYLES.header.forEach(([prop, value]) => th.style(prop, value))
-	return th
-}
 
 export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	// Get our settings
@@ -267,31 +236,30 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 					// Show tooltip
 					geneTip.clear().show(event.clientX, event.clientY)
-
 					if (nearbyDots.length > 1) {
-						// Multiple genes - use table format
+						// Multiple genes - use renderTable
 						const holder = geneTip.d.append('div').style('margin', '10px')
-						const table = holder.append('table').style('border-collapse', 'collapse')
 
-						const thead = table.append('thead')
-						const headerRow = thead.append('tr')
-						const headers = ['Gene', 'Position', 'Type', '-log₁₀(q-value)', 'Subject count']
-						headers.forEach(text => {
-							styleGeneTipHeader(headerRow.append('th').text(text))
-						})
-
-						const tbody = table.append('tbody')
-						nearbyDots.forEach(d => {
-							const row = tbody.append('tr')
-							styleGeneTipCell(row.append('td').text(d.gene))
-							styleGeneTipCell(row.append('td').text(`${d.chrom}:${d.start}-${d.end}`), 'positionCell')
-							styleGeneTipCell(
-								row
-									.append('td')
-									.html(`<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`)
-							)
-							styleGeneTipCell(row.append('td').text(d.y.toFixed(3)))
-							styleGeneTipCell(row.append('td').text(d.nsubj))
+						renderTable({
+							div: holder,
+							columns: [
+								{ label: 'Gene' },
+								{ label: 'Position' },
+								{ label: 'Type' },
+								{ label: '-log₁₀(q-value)' },
+								{ label: 'Subject count' }
+							],
+							rows: nearbyDots.map(d => [
+								{ value: d.gene },
+								{ value: `${d.chrom}:${d.start}-${d.end}` },
+								{ html: `<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}` },
+								{ value: d.y.toFixed(3) },
+								{ value: d.nsubj }
+							]),
+							showLines: false,
+							showHeader: true,
+							striped: true,
+							resize: false
 						})
 					} else {
 						// Single gene - use table2col format
