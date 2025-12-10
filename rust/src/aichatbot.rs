@@ -1238,7 +1238,15 @@ fn validate_summary_output(
     }
 
     // Removing terms that are found both in filter term as well summary
-    let mut validated_summary_terms_final = Vec::<SummaryTerms>::new();
+    let validated_summary_terms_final = Vec::<SummaryTerms>::new();
+
+    let mut sum_iter = 0;
+    let mut pp_json: Value; // New JSON value that will contain items of the final validated JSON
+    pp_json = serde_json::from_str(&"{\"action\":\"summary\"}").expect("Not a valid JSON");
+
+    if let Some(obj) = pp_json.as_object_mut() {
+        obj.insert(String::from("chartType"), serde_json::json!("summary"));
+    }
 
     for summary_term in &validated_summary_terms {
         let mut hit = 0;
@@ -1276,9 +1284,51 @@ fn validate_summary_output(
                 }
             }
         }
+
         if hit == 0 {
-            validated_summary_terms_final.push(summary_term.clone())
+            let mut termidpp: Option<TermIDPP> = None;
+            let mut geneexp: Option<GeneExpressionPP> = None;
+            match summary_term {
+                SummaryTerms::clinical(clinical_term) => {
+                    termidpp = Some(TermIDPP {
+                        id: clinical_term.to_string(),
+                    });
+                }
+                SummaryTerms::geneExpression(gene) => {
+                    geneexp = Some(GeneExpressionPP {
+                        gene: gene.to_string(),
+                        r#type: "geneExpression".to_string(),
+                    });
+                }
+            }
+            if sum_iter == 0 {
+                if termidpp.is_some() {
+                    if let Some(obj) = pp_json.as_object_mut() {
+                        obj.insert(String::from("term"), serde_json::json!(Some(termidpp)));
+                    }
+                }
+
+                if geneexp.is_some() {
+                    if let Some(obj) = pp_json.as_object_mut() {
+                        obj.insert(String::from("term"), serde_json::json!(Some(geneexp)));
+                    }
+                }
+            } else if sum_iter == 1 {
+                if termidpp.is_some() {
+                    if let Some(obj) = pp_json.as_object_mut() {
+                        obj.insert(String::from("term2"), serde_json::json!(Some(termidpp)));
+                    }
+                }
+
+                if geneexp.is_some() {
+                    if let Some(obj) = pp_json.as_object_mut() {
+                        obj.insert(String::from("term2"), serde_json::json!(Some(geneexp)));
+                    }
+                }
+            }
+            //validated_summary_terms_final.push(summary_term.clone())
         }
+        sum_iter += 1
     }
 
     if let Some(obj) = new_json.as_object_mut() {
@@ -1289,13 +1339,36 @@ fn validate_summary_output(
     }
 
     if message.len() > 0 {
+        if let Some(obj) = pp_json.as_object_mut() {
+            // The `if let` ensures we only proceed if the top-level JSON is an object.
+            // Append a new string field.
+            obj.insert(String::from("message"), serde_json::json!(message));
+        }
         if let Some(obj) = new_json.as_object_mut() {
             // The `if let` ensures we only proceed if the top-level JSON is an object.
             // Append a new string field.
             obj.insert(String::from("message"), serde_json::json!(message));
         }
     }
-    serde_json::to_string(&new_json).unwrap()
+
+    serde_json::to_string(&pp_json).unwrap()
+}
+
+fn getGeneExpression() -> String {
+    "geneExpression".to_string()
+}
+
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+struct TermIDPP {
+    id: String,
+}
+
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+struct GeneExpressionPP {
+    gene: String,
+    // Serde uses this for deserialization.
+    #[serde(default = "getGeneExpression")]
+    r#type: String,
 }
 
 #[derive(Debug, Clone)]
