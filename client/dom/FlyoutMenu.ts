@@ -337,7 +337,7 @@ export class FlyoutMenu {
 			this.menuLevels.set(this.level, { menu: flyoutTip })
 		}
 		const position = this.calculateFlyoutPosition(div.node(), tip)
-		flyoutTip.show(position.x, position.y, false, true, false)
+		flyoutTip.show(position.x, position.y, false, true, false, div.node())
 
 		// setTimeout(() => {
 		//     if (!flyoutTip.dnode) throw new Error('FlyoutTip DOM node is not available.')
