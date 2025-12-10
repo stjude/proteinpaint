@@ -217,7 +217,9 @@ export function setInteractivity(self) {
 					}
 				} else if (d.term.type == TermTypes.TERM_COLLECTION) {
 					const renderedValues = d.row[d.$id].renderedValues
-					for (const renderedValue of renderedValues) {
+					const sortedRenderedValues = renderedValues.filter(rv => rv.value !== 0).sort((a, b) => b.value - a.value)
+
+					for (const renderedValue of sortedRenderedValues) {
 						const colorSquare = `<span style="display:inline-block; width:12px; height:12px; background-color:${renderedValue.color}"></span>`
 						const [c1, c2] = table.addRow()
 						c1.html(`${colorSquare} ${renderedValue.label}`)
@@ -551,6 +553,16 @@ export function setInteractivity(self) {
 						c1.html('')
 						c2.html(timeToEventKey)
 					}
+				} else if (sampleData.term.type == TermTypes.TERM_COLLECTION) {
+					const renderedValues = sampleData.row[sampleData.$id].renderedValues
+					const sortedRenderedValues = renderedValues.filter(rv => rv.value !== 0).sort((a, b) => b.value - a.value)
+
+					for (const renderedValue of sortedRenderedValues) {
+						const colorSquare = `<span style="display:inline-block; width:12px; height:12px; background-color:${renderedValue.color}"></span>`
+						const [c1, c2] = table.addRow()
+						c1.html(`${colorSquare} ${renderedValue.label}`)
+						c2.html(`${renderedValue.value.toFixed(2)}%`)
+					}
 				} else {
 					const colorSquare =
 						(sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous') ||
@@ -701,7 +713,7 @@ function setTermActions(self) {
 			: t.tw.term.type == 'geneVariant'
 			? '{edit,replace,remove}'
 			: t.tw.term.type == 'termCollection'
-			? {}
+			? '{replace,remove}'
 			: '*'
 	}
 
@@ -732,7 +744,7 @@ function setTermActions(self) {
 		}
 		self.dom.twMenuDiv = self.dom.menutop.append('div')
 		const labelEditDiv = self.dom.twMenuDiv.append('div').style('text-align', 'center')
-		if (t.tw?.term?.type && t.tw.term.type !== 'termCollection') labelEditDiv.append('span').text(`${l.Term} `)
+		if (t.tw?.term?.type) labelEditDiv.append('span').text(`${l.Term} `)
 
 		const twlabel = t.tw.label || t.tw.term.name
 		const vartype =
@@ -742,7 +754,7 @@ function setTermActions(self) {
 				? 'metabolite'
 				: 'variable'
 
-		if (t.tw?.term?.type && t.tw.term.type !== 'termCollection')
+		if (t.tw?.term?.type)
 			self.dom.twLabelInput = labelEditDiv
 				.append('input')
 				.attr('type', 'text')
@@ -757,7 +769,7 @@ function setTermActions(self) {
 					self.dom.twLabelEditBtn.style('display', value.trim() === twlabel ? 'none' : 'inline')
 				})
 
-		if (t.tw?.term?.type && t.tw.term.type !== 'termCollection')
+		if (t.tw?.term?.type)
 			self.dom.twLabelEditBtn = labelEditDiv
 				.append('button')
 				.style('display', 'none')
