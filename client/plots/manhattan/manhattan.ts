@@ -188,14 +188,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		// Track which dots are currently highlighted
 		let highlightedDots: ManhattanPoint[] = []
 
-		const dpr = data.plotData.device_pixel_ratio // In rust, it is clamped to a minimum of 1.0. If browser is zoomed out it can be < 1.0 and cause an error. Hence we use the value from rust directly instead of window.devicePixelRatio
-
-		// Normalize pixel coordinates from high-DPR space to CSS pixel space
-		const normalizedPoints = interactivePoints.map((p: ManhattanPoint) => ({
-			...p,
-			pixel_x: p.pixel_x / dpr,
-			pixel_y: p.pixel_y / dpr
-		}))
+		const normalizedPoints = interactivePoints
 
 		const pointQuadtree = quadtree<ManhattanPoint>()
 			.x(d => d.pixel_x)
