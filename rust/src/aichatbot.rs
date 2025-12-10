@@ -1308,8 +1308,9 @@ fn validate_summary_output(
                 }
 
                 if geneexp.is_some() {
+                    let gene_term = GeneTerm { term: geneexp.unwrap() };
                     if let Some(obj) = pp_plot_json.as_object_mut() {
-                        obj.insert(String::from("term"), serde_json::json!(Some(geneexp)));
+                        obj.insert(String::from("term"), serde_json::json!(gene_term));
                     }
                 }
             } else if sum_iter == 1 {
@@ -1320,8 +1321,9 @@ fn validate_summary_output(
                 }
 
                 if geneexp.is_some() {
+                    let gene_term = GeneTerm { term: geneexp.unwrap() };
                     if let Some(obj) = pp_plot_json.as_object_mut() {
-                        obj.insert(String::from("term2"), serde_json::json!(Some(geneexp)));
+                        obj.insert(String::from("term2"), serde_json::json!(gene_term));
                     }
                 }
             }
@@ -1366,6 +1368,11 @@ fn getGeneExpression() -> String {
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct TermIDPP {
     id: String,
+}
+
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+struct GeneTerm {
+    term: GeneExpressionPP,
 }
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
