@@ -1241,12 +1241,11 @@ fn validate_summary_output(
     let validated_summary_terms_final = Vec::<SummaryTerms>::new();
 
     let mut sum_iter = 0;
-    let mut pp_json: Value; // New JSON value that will contain items of the final validated JSON
+    let mut pp_json: Value; // New JSON value that will contain items of the final PP compliant JSON
     pp_json = serde_json::from_str(&"{\"action\":\"summary\"}").expect("Not a valid JSON");
 
-    if let Some(obj) = pp_json.as_object_mut() {
-        obj.insert(String::from("chartType"), serde_json::json!("summary"));
-    }
+    let mut pp_plot_json: Value; // The PP compliant plot JSON
+    pp_plot_json = serde_json::from_str(&"{\"chartType\":\"summary\"}").expect("Not a valid JSON");
 
     for summary_term in &validated_summary_terms {
         let mut hit = 0;
@@ -1303,25 +1302,25 @@ fn validate_summary_output(
             }
             if sum_iter == 0 {
                 if termidpp.is_some() {
-                    if let Some(obj) = pp_json.as_object_mut() {
+                    if let Some(obj) = pp_plot_json.as_object_mut() {
                         obj.insert(String::from("term"), serde_json::json!(Some(termidpp)));
                     }
                 }
 
                 if geneexp.is_some() {
-                    if let Some(obj) = pp_json.as_object_mut() {
+                    if let Some(obj) = pp_plot_json.as_object_mut() {
                         obj.insert(String::from("term"), serde_json::json!(Some(geneexp)));
                     }
                 }
             } else if sum_iter == 1 {
                 if termidpp.is_some() {
-                    if let Some(obj) = pp_json.as_object_mut() {
+                    if let Some(obj) = pp_plot_json.as_object_mut() {
                         obj.insert(String::from("term2"), serde_json::json!(Some(termidpp)));
                     }
                 }
 
                 if geneexp.is_some() {
-                    if let Some(obj) = pp_json.as_object_mut() {
+                    if let Some(obj) = pp_plot_json.as_object_mut() {
                         obj.insert(String::from("term2"), serde_json::json!(Some(geneexp)));
                     }
                 }
@@ -1336,6 +1335,12 @@ fn validate_summary_output(
             String::from("summaryterms"),
             serde_json::json!(validated_summary_terms_final),
         );
+    }
+
+    if let Some(obj) = pp_json.as_object_mut() {
+        // The `if let` ensures we only proceed if the top-level JSON is an object.
+        // Append a new string field.
+        obj.insert(String::from("plot"), serde_json::json!(pp_plot_json));
     }
 
     if message.len() > 0 {
