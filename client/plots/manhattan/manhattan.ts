@@ -1,5 +1,6 @@
 import { scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
+import { select } from 'd3-selection'
 import { Menu, icons, axisstyle, table2col, renderTable } from '#dom'
 import { to_svg } from '#src/client'
 import { quadtree } from 'd3-quadtree'
@@ -140,19 +141,21 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 	// Add interactive dots layer
 	if (settings.showInteractiveDots && data.plotData.points && data.plotData.points.length > 0) {
+		// Create a group for hover circles inside the SVG
 		const pointsLayer = svg
 			.append('g')
 			.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
 
-		// Add transparent cover for mousemove detection with dots underneath
-		const cover = pointsLayer
-			.append('rect')
-			.attr('x', 0)
-			.attr('y', 0)
-			.attr('width', settings.plotWidth + 2 * settings.pngDotRadius)
-			.attr('height', settings.plotHeight + 2 * settings.pngDotRadius)
-			.attr('fill', 'transparent')
-			.attr('pointer-events', 'all')
+		// Create cover as a sibling div positioned over the plot area
+		// This avoids mouse event issues when nested inside SVG
+		const cover = select(svg.node().parentNode as HTMLElement)
+			.append('div')
+			.style('position', 'absolute')
+			.style('left', `${settings.yAxisX + settings.yAxisSpace}px`)
+			.style('top', `${settings.yAxisY}px`)
+			.style('width', `${settings.plotWidth + 2 * settings.pngDotRadius}px`)
+			.style('height', `${settings.plotHeight + 2 * settings.pngDotRadius}px`)
+			.style('pointer-events', 'all')
 
 		// Track which dots are currently highlighted
 		let highlightedDots: ManhattanPoint[] = []
@@ -166,23 +169,13 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 		cover
 			.on('mousemove', event => {
-				// Use SVG's native coordinate transformation instead of d3's pointer()
-				// This properly handles browser zoom that we have been seeing issues with
-				const svgElement = cover.node().ownerSVGElement
-				const ctm = cover.node().getScreenCTM()
-				let mx: number, my: number
-
-				if (ctm && svgElement) {
-					const point = svgElement.createSVGPoint()
-					point.x = event.clientX
-					point.y = event.clientY
-					const svgPoint = point.matrixTransform(ctm.inverse())
-					mx = svgPoint.x
-					my = svgPoint.y
-				}
+				// Get mouse position relative to the cover div
+				const rect = (cover.node() as HTMLElement).getBoundingClientRect()
+				const mx = event.clientX - rect.left
+				const my = event.clientY - rect.top
 
 				// Find all dots within hit radius
-				// TODO: Make hit radius  user configurable with its own setting
+				// TODO: Make hit radius user configurable with its own setting
 				const hitRadius = settings.pngDotRadius + 3
 
 				// Find all points within hit radius with their distances
@@ -211,9 +204,10 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 					return false // Don't stop early - check all nodes in radius
 				})
 
-				// Sort by distance and take the 5 closest points
+				// Sort by distance and take the closest points based on settings.maxTooltipGenes setting
 				candidates.sort((a, b) => a.distance - b.distance)
-				const nearbyDots = candidates.slice(0, 5).map(c => c.point)
+				const nearbyDots = candidates.slice(0, settings.maxTooltipGenes).map(c => c.point)
+				const additionalCount = candidates.length - settings.maxTooltipGenes
 
 				// Always remove old circles first
 				pointsLayer.selectAll('.hover-circle').remove()
@@ -261,6 +255,17 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 							striped: true,
 							resize: false
 						})
+
+						// Show message if there are more dots beyond the settings.maxTooltipGenes shown
+						// TODO: Make these settings abstracted out and can improve this later
+						if (additionalCount > 0) {
+							holder
+								.append('div')
+								.style('font-size', '0.85em')
+								.style('color', '#666')
+								.style('font-style', 'italic')
+								.text(`and ${additionalCount} more gene${additionalCount > 1 ? 's' : ''}...`)
+						}
 					} else {
 						// Single gene - use table2col format
 						const d = nearbyDots[0]
@@ -282,7 +287,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 					geneTip.hide()
 				}
 			})
-			.on('mouseout', () => {
+			.on('mouseleave', () => {
 				// Remove all hover circles and hide tooltip
 				pointsLayer.selectAll('.hover-circle').remove()
 				highlightedDots = []
