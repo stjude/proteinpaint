@@ -5,27 +5,6 @@ import { Menu } from '#dom'
 import { keyupEnter } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
 import { getId } from '#mass/nav'
-//import { SummaryChart } from '#shared/types/src/routes/termdb.chat.ts'
-
-/**
-
- */
-
-export type termid = {
-	id: string
-}
-
-export type geneExpression = {
-	gene: string
-	type: 'geneExpression'
-}
-
-export type SummaryChart = {
-	/** plot config for summary chart */ chartType: 'summary'
-	term?: termid | { term: geneExpression }
-	term2?: termid | { term: geneExpression }
-	//geneExpression?: geneExpression
-}
 
 class Chat extends PlotBase implements RxComponent {
 	static type = 'chat'
