@@ -10,6 +10,7 @@ Features:
 
 Fixes:
 - mass groups ui will not hang when recovering session with large/complex filter
+- detect navigable svg text and g elements in lollipop SSM and matrix plots, to include in navigation by keyboard
 
 
 ## 2.165.0

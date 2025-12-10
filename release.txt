@@ -1,2 +1,1 @@
-Fixes:
-- detect navigable svg text and g elements in lollipop SSM and matrix plots, to include in navigation by keyboard
+
