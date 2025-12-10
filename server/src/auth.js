@@ -314,11 +314,14 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 	// credentials and if yes, if there is already a valid session
 	// for a ds label
 	app.use((req, res, next) => {
+		console.log(316, req.headers)
 		req.query.__protected__ = {
 			ignoredTermIds: [], // when provided the filter on these terms will be ignored
 			// NOTE: sessionid is from a domain-based cookie for GDC,
 			//       for SJ sites, the cookie key is determined by dsCredentials entry
-			sessionid: req.cookies.sessionid // may be undefined
+			sessionid: req.cookies.sessionid, // may be undefined
+			'X-Forwarded-Agent': req.headers['User-Agent'],
+			'X-Forwarded-For': req.headers['X-Forwarded-For'] // TODO: + ', ' + <server IP address>
 		}
 
 		if (forcedOpenRoutes.has(req.path)) {
