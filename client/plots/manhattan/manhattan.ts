@@ -249,8 +249,8 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				// Always remove old circles first
 				pointsLayer.selectAll('.hover-circle').remove()
 
-				if (nearbyDots.length > 1) {
-					// Add new hover circles for nearby dots
+				if (nearbyDots.length > 0) {
+					// Add hover circles for all nearby dots
 					nearbyDots.forEach(d => {
 						pointsLayer
 							.append('circle')
@@ -265,65 +265,49 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 					highlightedDots = nearbyDots
 
-					// Show tooltip with table
+					// Show tooltip
 					geneTip.clear().show(event.clientX, event.clientY)
 
-					const holder = geneTip.d.append('div').style('margin', '10px')
-					const table = holder.append('table').style('border-collapse', 'collapse')
+					if (nearbyDots.length > 1) {
+						// Multiple genes - use table format
+						const holder = geneTip.d.append('div').style('margin', '10px')
+						const table = holder.append('table').style('border-collapse', 'collapse')
 
-					// Add thead element for header row
-					const thead = table.append('thead')
-					const headerRow = thead.append('tr')
-					const headers = ['Gene', 'Position', 'Type', '-log₁₀(q-value)', 'Subject count']
-					headers.forEach(text => {
-						styleGeneTipHeader(headerRow.append('th').text(text))
-					})
+						const thead = table.append('thead')
+						const headerRow = thead.append('tr')
+						const headers = ['Gene', 'Position', 'Type', '-log₁₀(q-value)', 'Subject count']
+						headers.forEach(text => {
+							styleGeneTipHeader(headerRow.append('th').text(text))
+						})
 
-					// Add tbody element for data rows
-					const tbody = table.append('tbody')
-					nearbyDots.forEach(d => {
-						const row = tbody.append('tr')
-						styleGeneTipCell(row.append('td').text(d.gene))
-						styleGeneTipCell(row.append('td').text(`${d.chrom}:${d.start}-${d.end}`), 'positionCell')
-						styleGeneTipCell(
-							row
-								.append('td')
-								.html(`<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`)
-						)
-						styleGeneTipCell(row.append('td').text(d.y.toFixed(3)))
-						styleGeneTipCell(row.append('td').text(d.nsubj))
-					})
-				} else if (nearbyDots.length === 1) {
-					// Single gene - use table2col format
-					const d = nearbyDots[0]
-
-					// Add hover circle for the single dot
-					pointsLayer
-						.append('circle')
-						.attr('class', 'hover-circle')
-						.attr('cx', d.pixel_x)
-						.attr('cy', d.pixel_y)
-						.attr('r', settings.pngDotRadius)
-						.attr('fill', 'none')
-						.attr('stroke', 'black')
-						.attr('stroke-width', settings.interactiveDotStrokeWidth)
-
-					highlightedDots = nearbyDots
-
-					// Show tooltip with table2col format
-					geneTip.clear().show(event.clientX, event.clientY)
-
-					const table = table2col({
-						holder: geneTip.d.append('div'),
-						margin: '10px'
-					})
-					table.addRow('Gene', d.gene)
-					table.addRow('Position', `${d.chrom}:${d.start}-${d.end}`)
-					const [t1, t2] = table.addRow()
-					t1.text('Type')
-					t2.html(`<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`)
-					table.addRow('-log₁₀(q-value)', d.y.toFixed(3))
-					table.addRow('Subject count', d.nsubj)
+						const tbody = table.append('tbody')
+						nearbyDots.forEach(d => {
+							const row = tbody.append('tr')
+							styleGeneTipCell(row.append('td').text(d.gene))
+							styleGeneTipCell(row.append('td').text(`${d.chrom}:${d.start}-${d.end}`), 'positionCell')
+							styleGeneTipCell(
+								row
+									.append('td')
+									.html(`<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`)
+							)
+							styleGeneTipCell(row.append('td').text(d.y.toFixed(3)))
+							styleGeneTipCell(row.append('td').text(d.nsubj))
+						})
+					} else {
+						// Single gene - use table2col format
+						const d = nearbyDots[0]
+						const table = table2col({
+							holder: geneTip.d.append('div'),
+							margin: '10px'
+						})
+						table.addRow('Gene', d.gene)
+						table.addRow('Position', `${d.chrom}:${d.start}-${d.end}`)
+						const [t1, t2] = table.addRow()
+						t1.text('Type')
+						t2.html(`<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`)
+						table.addRow('-log₁₀(q-value)', d.y.toFixed(3))
+						table.addRow('Subject count', d.nsubj)
+					}
 				} else {
 					// No dots nearby, hide tooltip
 					highlightedDots = []
