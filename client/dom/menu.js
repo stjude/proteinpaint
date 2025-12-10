@@ -1,5 +1,7 @@
 import { select as d3select } from 'd3-selection'
 import { get_base_zindex } from '#common/globals'
+import { focusableSjClasses, renderWait } from '#src/app.observer'
+import { sleep } from '#rx'
 
 /*
 arg{}
@@ -25,6 +27,11 @@ arg{}
 	onHide()
 		- override default hide() with callback
 */
+
+export const focusableSelector =
+	`a[href], button, input, textarea, select, details, [tabindex]:not([tabindex="-1"]), ` +
+	focusableSjClasses.map(c => `.${c}`).join(',')
+
 export class Menu {
 	constructor(arg = {}) {
 		this.typename = Math.random().toString()
@@ -164,7 +171,7 @@ export class Menu {
 	}
 
 	// simplified alternative to show(), with less arguments
-	show2(_x, _y) {
+	show2(_x, _y, opts = {}) {
 		let x = _x
 		let y = _y
 		this.prevX = _x
@@ -195,6 +202,8 @@ export class Menu {
 		// TODO: reposition the menu to make it at least partially visible.
 		this.d.style('top', y + 'px').style('bottom', '')
 		this.d.transition().style('opacity', 1)
+
+		if (opts.elem) this.setTabNavigation(opts.elem)
 		return this
 	}
 
@@ -208,26 +217,7 @@ export class Menu {
 		const x = p.left + window.scrollX + opts.offsetX
 		const y = p.top + p.height + window.scrollY + 5 + opts.offsetY
 
-		// For Section 508 compliance: assume that the elem triggered showing the menu
-		// and support back-navigation to it from the menu using shift-tab
-		const firstFocusableChildElem = this.d.select(
-			'a[href], button, input, textarea, select, details, [tabindex]:not([tabindex="-1"])'
-		)
-		if (firstFocusableChildElem.size()) {
-			let lastTabbedTime = Date.now()
-			firstFocusableChildElem
-				.on('keydown', event => {
-					if (event.key == 'Tab' && event.shiftKey) lastTabbedTime = Date.now()
-				})
-				.on('blur', () => {
-					if (Date.now() - lastTabbedTime > 500) return
-					elem.focus() // shift focus back to the clicked elem that launched the menu, when shift-tabbing from the firt focusable child element
-					this.hide()
-				})
-				.node()
-				.focus()
-		}
-
+		this.setTabNavigation(elem)
 		return this.show(x, y, false, true, false)
 
 		/*
@@ -240,6 +230,46 @@ export class Menu {
 			.transition().style('opacity',1)
 		return this
 		*/
+	}
+
+	async setTabNavigation(elem, numTries = 0) {
+		// For Section 508 compliance: assume that the elem triggered showing the menu
+		// and support back-navigation to it from the menu using shift-tab
+
+		const focusableElems = this.d.node().querySelectorAll(focusableSelector)
+		if (!focusableElems.length) {
+			// give time for menu focusable elements to be rendered, up to a number of a certain of tries
+			if (numTries < 30) setTimeout(() => this.setTabNavigation(elem, numTries++), 100)
+			return
+		}
+
+		const firstFocusableChildElem = d3select(focusableElems[0])
+
+		for (const elem of focusableElems) {
+			const s = d3select(elem)
+			if (!elem.getAttribute('tabindex')) s.attr('tabindex', 0)
+			if (!s.on('keyup'))
+				setTimeout(() => {
+					s.on('keyup', event => {
+						if (event.key == 'Enter') elem.click()
+					})
+				}, renderWait)
+		}
+
+		let lastTabbedTime = Date.now()
+		firstFocusableChildElem
+			.on('keydown', event => {
+				if (event.key == 'Tab' && event.shiftKey) lastTabbedTime = Date.now()
+			})
+			.on('blur', () => {
+				if (Date.now() - lastTabbedTime > renderWait) return
+				elem.focus() // shift focus back to the clicked elem that launched the menu, when shift-tabbing from the firt focusable child element
+				this.hide()
+			})
+		// .node()
+		// .focus(); console.log(270, focusableElems[0]);
+
+		setTimeout(() => focusableElems[0].focus(), renderWait)
 	}
 
 	showunderoffset(dom) {

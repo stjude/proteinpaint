@@ -531,13 +531,13 @@ export class Block {
 				this.resized = false
 				const p = event.target.getBoundingClientRect()
 				import('./block.tk.menu').then(q => {
-					q.default(this, tip, p.left - 100, p.top + p.height - 15)
+					q.default(this, tip, p.left - 100, p.top + p.height - 15, button.node())
 				})
 			})
 		}
 
 		{
-			butrow
+			const moreBtn = butrow
 				.append('button')
 				.style('margin-left', '10px')
 				.text('More')
@@ -546,7 +546,7 @@ export class Block {
 					const p = event.target.getBoundingClientRect()
 					this.moremenu(headerTip)
 					// must create menu contents first then show, so the height-placement will work
-					headerTip.show(p.left - 50, p.top + p.height - 15)
+					headerTip.show2(p.left - 50, p.top + p.height - 15, { elem: moreBtn.node() })
 				})
 		}
 

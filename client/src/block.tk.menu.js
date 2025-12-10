@@ -37,7 +37,7 @@ facettrigger
 
 const colorfunc = scaleOrdinal(schemeCategory10)
 
-export default function (block, tip, x, y) {
+export default function (block, tip, x, y, button) {
 	/*
 	make the most current menu, consisted of:
 		"one search" and result display
@@ -95,7 +95,7 @@ export default function (block, tip, x, y) {
 			})
 	}
 
-	tip.show(x, y)
+	tip.show2(x, y, { elem: button })
 }
 
 function onesearchui(block, div) {

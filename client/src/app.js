@@ -20,6 +20,7 @@ import urlmap from '#common/urlmap'
 import { Menu, renderSandboxFormDiv, sayerror } from '#dom'
 import { mayLaunchGdcPlotFromRunpp } from '../gdc/launch.ts'
 import { childCorsMessage } from '#common/embedder-helpers'
+import { observeElem } from './app.observer.js'
 
 /*
 exports a function runproteinpaint(), referred to as "runpp"
@@ -140,6 +141,8 @@ export function runproteinpaint(arg) {
 			// clicks on other elements, such as radio inputs, checkboxes, etc, should still work
 			if (e.target.tagName == 'BUTTON') e.preventDefault()
 		})
+
+	observeElem(app.holder.node())
 
 	app.sandbox_header = arg.sandbox_header || undefined
 
