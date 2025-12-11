@@ -85,14 +85,12 @@ class Chat extends PlotBase implements RxComponent {
 						// Show error message in chatbot and exit, do not show any plot
 						serverBubble.html(result.html)
 					} else if (result.type == 'plot') {
-						if (result.action == 'summary') {
-							this.app.dispatch({
-								type: 'plot_create',
-								id: getId(),
-								config: result.plot
-							})
-							serverBubble.html('Please refer to the plot generated above')
-						} // Will add other chart types later
+						this.app.dispatch({
+							type: 'plot_create',
+							id: getId(),
+							config: result.plot
+						})
+						serverBubble.html('Please refer to the plot generated above')
 					}
 					/* may switch by data.type
 type=chat: server returns a chat msg

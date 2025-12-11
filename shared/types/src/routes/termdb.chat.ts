@@ -19,26 +19,8 @@ type HtmlResponse = {
 export type PlotResponse = {
 	type: 'plot'
 	/** plot state. Currently only supports summary chart, will add other chart types later */
-	plot: SummaryResponse
+	plot: object
 	/** Specifies what action to take e.g. Summary plot or no action. Will add more chart types later */
-	action: 'summary' | 'none'
-}
-
-type SummaryResponse = {
-	chartType: 'summary'
-	term: TermType | GeneExpression
-	term2?: TermType | GeneExpression
-}
-
-type TermType = {
-	/** Term id */
-	id: string
-}
-
-type GeneExpression = {
-	/** Gene name */
-	gene: string
-	type: 'geneExpression'
 }
 
 export type ChatResponse = HtmlResponse | PlotResponse
