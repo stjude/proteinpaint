@@ -108,6 +108,9 @@ async function processData(data, q) {
 		charts[chart] = { chartId: chart, plots }
 	}
 	if (q.showAssocTests == true && overlayTerm) await getWilcoxonData(charts)
+	//quick fix to not return values to the client
+	//will fix when addressing issues with descriptive stats and other logic errs
+	Object.keys(charts).forEach(c => charts[c].plots.forEach(p => delete p.tempValues))
 
 	return { absMin, absMax, charts, uncomputableValues, descrStats, outlierMin, outlierMax }
 }
@@ -142,7 +145,10 @@ function setPlotData(
 	if (!boxplot) throw new Error('boxplot_getvalue failed [termdb.boxplot init()]')
 	const _plot = {
 		boxplot,
-		descrStats
+		descrStats,
+		//quick fix
+		//to delete later
+		tempValues: sortedValues
 	}
 
 	//Set rendering properties for the plot
@@ -199,27 +205,26 @@ async function getWilcoxonData(charts: { [chartId: string]: any }) {
 		const wilcoxonInput: { [index: string]: any }[] = []
 
 		for (let i = 0; i < numPlots; i++) {
-			const group1_id = chart.plots[i].boxplot.label
-			const group1_values = chart.plots[i].boxplot.out.map(v => v.value)
+			const group1_id = chart.plots[i].boxplot.label.replace(/, n=\d+$/, '')
+			const group1_values = chart.plots[i].tempValues
 			for (let j = i + 1; j < numPlots; j++) {
-				const group2_id = chart.plots[j].boxplot.label
-				const group2_values = chart.plots[j].boxplot.out.map(v => v.value)
+				const group2_id = chart.plots[j].boxplot.label.replace(/, n=\d+$/, '')
+				const group2_values = chart.plots[j].tempValues
 				wilcoxonInput.push({ group1_id, group1_values, group2_id, group2_values })
 			}
 		}
-
 		const wilcoxonOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxonInput)))
 		//May change this if there are other tests to add in the future
 		chart.wilcoxon = []
 		for (const test of wilcoxonOutput) {
 			//Output is formated for #dom/table.js to render
-			if (test.wilcoxon == null || test.wilcoxon == 'null') {
+			if (test.pvalue == null || test.pvalue == 'null') {
 				chart.wilcoxon.push([{ value: test.group1_id }, { value: test.group2_id }, { html: 'NA' }])
 			} else {
 				chart.wilcoxon.push([
 					{ value: test.group1_id },
 					{ value: test.group2_id },
-					{ html: test.wilcoxon.toPrecision(4) }
+					{ html: test.pvalue.toPrecision(4) }
 				])
 			}
 		}
