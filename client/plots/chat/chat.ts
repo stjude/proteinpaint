@@ -5,6 +5,7 @@ import { Menu } from '#dom'
 import { keyupEnter } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
 import { getId } from '#mass/nav'
+import type { ChatResponse } from '#types'
 
 class Chat extends PlotBase implements RxComponent {
 	static type = 'chat'
@@ -77,14 +78,13 @@ class Chat extends PlotBase implements RxComponent {
 				try {
 					const data = await dofetch3('termdb/chat', { body })
 					if (data.error) throw data.error
-					serverBubble.html('Got result..')
 					console.log(data)
 
-					const result = JSON.parse(data)
-					if (result.message) {
+					const result: ChatResponse = JSON.parse(data)
+					if (result.type == 'html') {
 						// Show error message in chatbot and exit, do not show any plot
-						serverBubble.html(result.message)
-					} else {
+						serverBubble.html(result.html)
+					} else if (result.type == 'plot') {
 						if (result.action == 'summary') {
 							const SummaryPlotConfig = result.plot
 							this.app.dispatch({
@@ -93,12 +93,12 @@ class Chat extends PlotBase implements RxComponent {
 								config: SummaryPlotConfig
 							})
 							serverBubble.html('Please refer to the plot generated above')
-						} // Will add other plots later
+						} // Will add other chart types later
 					}
 					/* may switch by data.type
-				type=chat: server returns a chat msg
-				type=plot: server returns a plot obj
-				*/
+            type=chat: server returns a chat msg
+            type=plot: server returns a plot obj
+            */
 				} catch (e: any) {
 					if (e.stack) console.log(e.stack)
 					serverBubble.html(`Error: ${e.message || e}`)
