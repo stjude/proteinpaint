@@ -1,2 +1,1 @@
-Features:
-- New plot length control in barchart.
+

@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - GRIN2: New gene tooltip display and logic
+- New plot length control in barchart.
 
 
 ## 2.166.0
