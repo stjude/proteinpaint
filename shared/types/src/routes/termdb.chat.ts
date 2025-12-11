@@ -16,14 +16,12 @@ type HtmlResponse = {
 	/** for display only */
 	html: string
 }
-type PlotResponse = {
+export type PlotResponse = {
 	type: 'plot'
 	/** plot state. Currently only supports summary chart, will add other chart types later */
 	plot: SummaryResponse
 	/** Specifies what action to take e.g. Summary plot or no action. Will add more chart types later */
 	action: 'summary' | 'none'
-	/** Contains the error message, in case the chat request fails */
-	message?: string
 }
 
 type SummaryResponse = {

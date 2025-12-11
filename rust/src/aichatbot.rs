@@ -1249,7 +1249,7 @@ fn validate_summary_output(
 
     let mut sum_iter = 0;
     let mut pp_json: Value; // New JSON value that will contain items of the final PP compliant JSON
-    pp_json = serde_json::from_str(&"{\"action\":\"summary\"}").expect("Not a valid JSON");
+    pp_json = serde_json::from_str(&"{\"action\":\"summary\", \"type\":\"plot\"}").expect("Not a valid JSON");
 
     let mut pp_plot_json: Value; // The PP compliant plot JSON
     pp_plot_json = serde_json::from_str(&"{\"chartType\":\"summary\"}").expect("Not a valid JSON");
@@ -1352,25 +1352,32 @@ fn validate_summary_output(
         obj.insert(String::from("plot"), serde_json::json!(pp_plot_json));
     }
 
+    let mut err_json: Value; // Error JSON containing the error message (if present)
     if message.len() > 0 {
-        if let Some(obj) = pp_json.as_object_mut() {
-            // The `if let` ensures we only proceed if the top-level JSON is an object.
-            // Append a new string field.
-            obj.insert(String::from("message"), serde_json::json!(message));
+        if testing == false {
+            err_json = serde_json::from_str(&"{\"type\":\"html\"}").expect("Not a valid JSON");
+            if let Some(obj) = err_json.as_object_mut() {
+                // The `if let` ensures we only proceed if the top-level JSON is an object.
+                // Append a new string field.
+                obj.insert(String::from("html"), serde_json::json!(message));
+            };
+            serde_json::to_string(&err_json).unwrap()
+        } else {
+            if let Some(obj) = new_json.as_object_mut() {
+                // The `if let` ensures we only proceed if the top-level JSON is an object.
+                // Append a new string field.
+                obj.insert(String::from("message"), serde_json::json!(message));
+            };
+            serde_json::to_string(&new_json).unwrap()
         }
-        if let Some(obj) = new_json.as_object_mut() {
-            // The `if let` ensures we only proceed if the top-level JSON is an object.
-            // Append a new string field.
-            obj.insert(String::from("message"), serde_json::json!(message));
-        }
-    }
-
-    if testing == true {
-        // When testing script output native LLM JSON
-        serde_json::to_string(&new_json).unwrap()
     } else {
-        // When in production output PP compliant JSON
-        serde_json::to_string(&pp_json).unwrap()
+        if testing == true {
+            // When testing script output native LLM JSON
+            serde_json::to_string(&new_json).unwrap()
+        } else {
+            // When in production output PP compliant JSON
+            serde_json::to_string(&pp_json).unwrap()
+        }
     }
 }
 
