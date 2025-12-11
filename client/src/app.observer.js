@@ -18,7 +18,10 @@ export const clickableSjClasses = [
 // are for elements that do not natively support keyboard navigation,
 // and will be detected as requiring support if they have one of the
 // clickableSjClasses
-const svgClickable = new Set(['text' /*, 'rect'*/])
+// TODO: find a way to group svg text when tabbing, before re-enabling
+const svgClickable = new Set([
+	/*'text' /*, 'rect'*/
+])
 const targetTagNames = new Set(['DIV', 'SPAN', 'TEXT', 'LABEL', 'g', ...[...svgClickable]])
 
 export const renderWait = 500
