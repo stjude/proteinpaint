@@ -2,7 +2,6 @@ import { select } from 'd3-selection'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisLeft, axisTop } from 'd3-axis'
 import { format } from 'd3-format'
-import { defaults as settingsDefaults } from './bars.settings.js'
 
 /*
 arguments: 
@@ -307,8 +306,11 @@ export default function barsRenderer(barsapp, holder) {
 		const spacing =
 			hm.cols.length * hm.colspace + (hm.colgrps.length - 1) * hm.colgspace + hm.rowlabelw + hm.rowgrplabelw
 		if (hm.orientation == 'horizontal') {
+			/** This is the previous implementation to calculate the width
+			 * when plot is horizontal. New default and user input for plot length
+			 * is used now. Delete later if no issues arise. */
 			// hm.svgw = Math.min(400, (0.92 * window.innerWidth) / maxChartsPerRow)
-			hm.svgw = hm.plotLength
+			hm.svgw = hm.plotLength + hm.rowlabelw
 			hm.rowh = Math.max(14, Math.min(22, (0.7 * window.innerHeight) / hm.cols.length))
 			hm.svgh =
 				hm.cols.length * (hm.rowh + hm.colspace) -
@@ -325,9 +327,11 @@ export default function barsRenderer(barsapp, holder) {
 				(hm.colgrps.length - 1) * hm.colgspace +
 				hm.rowlabelw +
 				hm.rowgrplabelw
-			const numChartRows = Math.ceil(hm.numCharts / maxChartsPerRow)
+			/** Same comment as above, save this applies to when the plot
+			 * is vertical.*/
+			// const numChartRows = Math.ceil(hm.numCharts / maxChartsPerRow)
 			// hm.svgh = Math.max(350, Math.min(400, window.innerHeight * 0.5)) / (numChartRows > 3 ? 2 : 1)
-			hm.svgh = hm.plotLength
+			hm.svgh = hm.plotLength + hm.rowlabelw
 		}
 		chart.svgh = hm.svgh
 
