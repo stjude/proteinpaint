@@ -1308,7 +1308,7 @@ fn validate_summary_output(
 
     let mut sum_iter = 0;
     let mut pp_json: Value; // New JSON value that will contain items of the final PP compliant JSON
-    pp_json = serde_json::from_str(&"{\"action\":\"summary\", \"type\":\"plot\"}").expect("Not a valid JSON");
+    pp_json = serde_json::from_str(&"{\"type\":\"plot\"}").expect("Not a valid JSON");
 
     let mut pp_plot_json: Value; // The PP compliant plot JSON
     pp_plot_json = serde_json::from_str(&"{\"chartType\":\"summary\"}").expect("Not a valid JSON");
