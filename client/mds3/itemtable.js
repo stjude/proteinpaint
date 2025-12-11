@@ -1,6 +1,6 @@
 import { mclass, dtsnvindel, dtfusionrna, dtsv, dtcnv, bplen, dt2label } from '#shared/common.js'
 import { init_sampletable } from './sampletable'
-import { appear, renderTable, table2col, makeSsmLink, Menu } from '#dom'
+import { appear, renderTable, table2col, makeSsmLink } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 
 /*
@@ -281,24 +281,6 @@ async function table_snvindel({ mlst, tk, block }, table) {
 		// do not pretend m is mutation if ref/alt is missing
 		td1.text(m.ref && m.alt ? 'Mutation' : 'Position')
 		print_snv(td2, m, tk, block)
-		// if (tk.mds.termdbConfig?.queries?.alphaGenome && m.ref && m.alt && m.ref != '-' && m.alt != '-') {
-		// 	if (!ontologyTerms) await dofetch3('alphaGenomeTypes', {}).then(data => (ontologyTerms = data.ontologyTerms))
-
-		// 	const [td3, td4] = table.addRow()
-		// 	// do not pretend m is mutation if ref/alt is missing
-		// 	td3.text('Alpha Genome')
-		// 	const select = td4.append('select')
-		// 	for (const term of ontologyTerms) select.append('option').attr('value', term.value).text(term.label)
-		// 	const ontologyTerm = tk.mds.termdbConfig.queries.alphaGenome?.ontologyTerm
-		// 	if (ontologyTerm) select.node().value = ontologyTerm
-
-		// 	td4
-		// 		.append('button')
-		// 		.text('View')
-		// 		.on('click', async () => {
-		// 			openAlphaGenome(m, select.node().value)
-		// 		})
-		// }
 	}
 	if (m.occurrence > 1) {
 		const [td1, td2] = table.addRow()
@@ -352,29 +334,6 @@ async function table_snvindel({ mlst, tk, block }, table) {
 		}
 	}
 }
-
-/*
-const menu = new Menu({ padding: '2px' })
-async function openAlphaGenome(m, ontologyTerm) {
-	const params = {
-		chromosome: m.chr,
-		position: m.pos + 1,
-		reference: m.ref,
-		alternate: m.alt,
-		ontologyTerms: [ontologyTerm]
-	}
-
-	const data = await dofetch3('alphaGenome', { body: params })
-	if (data.error) {
-		console.error(data.error)
-		alert('Error fetching alpha genome: ' + (data.error.message || data.error))
-		return
-	}
-	menu.clear()
-	menu.d.append('img').attr('width', '1250px').attr('src', data.plotImage)
-	menu.show(0, 0)
-}
-*/
 
 function table_snvindel_mayInsertNumericValueRow(m, tk, table) {
 	const currentMode = tk.skewer.viewModes.find(i => i.inuse)
@@ -563,7 +522,12 @@ export function cnv2str(m, tk) {
 	// TODO need queries.cnv.type=categorical/logratio/integer copy number
 	// with type, will be able to make better indication
 	if (Number.isFinite(m.value)) {
-		cs.value = `<span style="background:${tk.cnv.colorScale(m.value)}">&nbsp;&nbsp;</span> ${m.value}`
+		if (tk.cnv.colorScale) {
+			cs.value = `<span style="background:${tk.cnv.colorScale(m.value)}">&nbsp;&nbsp;</span> ${m.value}`
+		} else {
+			// color scale will be missing when cnv in density mode, and a cnv event can still be displayed in sample table!
+			cs.value = m.value
+		}
 	} else {
 		cs.value = `<span style="background:${mclass[m.class].color}">&nbsp;&nbsp;</span> 
 			${tk.mds.termdbConfig?.mclass?.[m.class]?.label || mclass[m.class].label}`

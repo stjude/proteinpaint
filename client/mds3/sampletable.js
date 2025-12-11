@@ -1,6 +1,7 @@
+import { rgb } from 'd3-color'
 import { fillbar, renderTable, newSandboxDiv, table2col } from '#dom'
 import { mclass, dtsnvindel, dtsv, dtfusionrna, dtcnv } from '#shared/common.js'
-import { rgb } from 'd3-color'
+import { guessSsmid } from '#shared/mds3tk.js'
 import { print_snv, printSvPair, cnv2str } from './itemtable'
 import { convertUnits } from '#shared/helpers.js'
 
@@ -495,7 +496,7 @@ export async function samples2columnsRows(samples, tk) {
 							)
 						}
 
-						htmls.push(oneHtml.join(' '))
+						htmls.push(`<span style="white-space:nowrap">${oneHtml.join(' ')}</span>`)
 					} else {
 						// m datapoint not found on client
 						htmls.push(ssm_id + '?')
@@ -521,9 +522,14 @@ export async function samples2columnsRows(samples, tk) {
 				const htmls = []
 				for (const ssmid of ssm_id_lst) {
 					const value = sample.ssmid2format?.[ssmid]?.[fkey]
-					htmls.push(printFormat(fobj, value))
+					if (value == undefined) {
+						// in multi-sample table, when a sample has multiple ssms, both ssm names & format fields are shown as multiple rows. for a missing format value like this, must insert space to ensure the format field rows are aligned with ssm name rows
+						htmls.push('&nbsp;')
+					} else {
+						htmls.push(printFormat(fobj, value))
+					}
 				}
-				row.push({ html: htmls.join('<br>') })
+				row.push({ html: `<span style="white-space:nowrap">${htmls.join('<br>')}</span>` }) // whitespace-nowrap prevents rows from misaligning
 			}
 		}
 
@@ -568,9 +574,25 @@ export function findMbyId(str, tk) {
 		const m = lst.find(i => i.ssm_id == str)
 		if (m) return m
 	}
-	if (tk.cnv?.cnvLst) {
-		const m = tk.cnv.cnvLst.find(i => i.ssm_id == str)
-		if (m) return m
+	if (tk.cnv) {
+		if (tk.cnv.cnvLst) {
+			// not in density mode. if str is id for cnv, then it should match from cnvLst[]
+			const m = tk.cnv.cnvLst.find(i => i.ssm_id == str)
+			if (m) return m
+		} else {
+			// cnvLst missing, cnv is in density mode. if the str is cnv id, it won't match. to avoid showing a dry string, try to guess if it is cnv
+			const m = guessSsmid(str)
+			if (m.dt == dtcnv) {
+				return {
+					dt: dtcnv,
+					chr: m.l[0],
+					start: m.l[1],
+					stop: m.l[2],
+					class: m.l[3],
+					value: m.l[4]
+				}
+			}
+		}
 	}
 	return null
 }

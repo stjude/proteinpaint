@@ -1,9 +1,10 @@
 import tape from 'tape'
-import { summarize_mclass } from '../mds3tk.js'
+import { summarize_mclass, guessSsmid } from '../mds3tk.js'
 
 /* Tests
 
 summarize_mclass()
+guessSsmid()
 
 */
 
@@ -63,6 +64,49 @@ tape('summarize_mclass()', function (test) {
 		],
 		'correct with numeric cnv'
 	)
+
+	test.end()
+})
+
+tape('guessSsmid()', async function (test) {
+	test.throws(() => guessSsmid('invalid'), /unknown ssmid/, 'should throw')
+
+	// snvindel
+	test.throws(() => guessSsmid('chr1__invalidPos__A__T'), /ssmid snvindel pos not integer/, 'should throw')
+	test.deepEqual(guessSsmid('chr1__123__A__T'), { dt: 1, l: ['chr1', 123, 'A', 'T'] }, 'good snvindel')
+
+	// cnv
+	test.throws(
+		() => guessSsmid('chr1__invalidstart__456__CNV_amp__1'),
+		/ssmid cnv start\/stop not integer/,
+		'should throw'
+	)
+	test.deepEqual(
+		guessSsmid('chr1__123__456__CNV_amp__1'),
+		{ dt: 4, l: ['chr1', 123, 456, 'CNV_amp', 1] },
+		'cnv with value'
+	)
+	test.deepEqual(
+		guessSsmid('chr1__123__456__CNV_amp__1__sample1'),
+		{ dt: 4, l: ['chr1', 123, 456, 'CNV_amp', 1, 'sample1'] },
+		'cnv with value, with sample'
+	)
+	test.deepEqual(
+		guessSsmid('chr1__123__456__CNV_amp__'),
+		{ dt: 4, l: ['chr1', 123, 456, 'CNV_amp', null] },
+		'cnv with no value'
+	)
+	test.deepEqual(
+		guessSsmid('chr1__123__456__CNV_amp____sample1'),
+		{ dt: 4, l: ['chr1', 123, 456, 'CNV_amp', null, 'sample1'] },
+		'cnv with no value, with sample'
+	)
+
+	// svfusion
+	test.throws(() => guessSsmid('invalidDt__chr1__111__+__1__xx'), /ssmid dt not sv\/fusion/, 'should throw')
+	test.throws(() => guessSsmid('2__chr1__invaliPos__+__1__xx'), /ssmid svfusion position not integer/, 'should throw')
+	test.deepEqual(guessSsmid('2__chr1__123__+__1__xx'), { dt: 2, l: [2, 'chr1', 123, '+', 1, 'xx'] }, 'good fusion')
+	test.deepEqual(guessSsmid('5__chr1__123__+__1__xx'), { dt: 5, l: [5, 'chr1', 123, '+', 1, 'xx'] }, 'good sv')
 
 	test.end()
 })

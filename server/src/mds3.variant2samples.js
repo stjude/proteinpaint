@@ -5,7 +5,7 @@ import * as utils from './utils.js'
 import { dtsnvindel, dtcnv, dtfusionrna, dtsv } from '#shared/common.js'
 import * as geneDbSearch from './gene.js'
 import { getSampleData_dictionaryTerms_termdb } from './termdb.matrix.js'
-import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
+import { ssmIdFieldsSeparator, guessSsmid } from '#shared/mds3tk.js'
 
 /*
 validate_variant2samples()
@@ -883,51 +883,4 @@ function summary2barchart(input, q) {
 		})
 	}
 	return data
-}
-
-/*
-ssmid is not specific for ssm, it covers all alterations
-gdc ssm are identified by a specific uuid, thus the design
-*/
-export function guessSsmid(ssmid) {
-	const l = ssmid.split(ssmIdFieldsSeparator)
-	if (l.length == 4) {
-		const [chr, tmp, ref, alt] = l
-		const pos = Number(tmp)
-		if (Number.isNaN(pos)) throw 'ssmid snvindel pos not integer'
-		return { dt: dtsnvindel, l: [chr, pos, ref, alt] }
-	}
-	if (l.length == 5) {
-		// cnv. if type=cat, _value is blank string
-		const [chr, _start, _stop, _class, _value] = l
-		const start = Number(_start),
-			stop = Number(_stop),
-			value = _value == '' ? null : Number(_value)
-		if (Number.isNaN(start) || Number.isNaN(stop)) throw 'ssmid cnv start/stop not integer'
-		return { dt: dtcnv, l: [chr, start, stop, _class, value] }
-	}
-	if (l.length == 6) {
-		if (l[3] == '+' || l[3] == '-') {
-			// sv/fusion
-			const [_dt, chr, _pos, strand, _pi, _mname] = l
-
-			// mname is encoded in case it contains comma (and is same as ssmIdFieldsSeparator)
-			const mname = decodeURIComponent(_mname)
-			const dt = Number(_dt)
-			if (dt != dtsv && dt != dtfusionrna) throw 'ssmid dt not sv/fusion'
-			const pos = Number(_pos)
-			if (Number.isNaN(pos)) throw 'ssmid svfusion position not integer'
-			const pairlstIdx = Number(_pi)
-			if (Number.isNaN(pairlstIdx)) throw 'ssmid pairlstIdx not integer'
-			return { dt, l: [dt, chr, pos, strand, pairlstIdx, mname] }
-		}
-		// cnv with sample
-		const [chr, _start, _stop, _class, _value, sample] = l
-		const start = Number(_start),
-			stop = Number(_stop),
-			value = _value == '' ? null : Number(_value) // if cnv not using value, must avoid `Number('')=0`
-		if (Number.isNaN(start) || Number.isNaN(stop)) throw 'ssmid cnv start/stop not integer'
-		return { dt: dtcnv, l: [chr, start, stop, _class, value, sample] }
-	}
-	throw 'unknown ssmid'
 }
