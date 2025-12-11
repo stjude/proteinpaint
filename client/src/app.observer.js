@@ -40,6 +40,7 @@ const observedElems = new WeakSet()
   The 'client/menu.js' code has `setTabNavigation()` for this reason.
 */
 export function observeElem(elem) {
+	if (window.location.pathname === '/puppet.html') return
 	if (observedElems.has(elem)) return
 	observedElems.add(elem)
 	observer.observe(elem, { childList: true, subtree: true })
