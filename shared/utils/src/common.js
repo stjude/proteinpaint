@@ -1324,7 +1324,7 @@ const dtTerms_temp = [
 		type: 'dtsnvindel',
 		dt: dtsnvindel,
 		values: Object.fromEntries(
-			mutationClasses.filter(key => key != 'Blank').map(key => [key, { label: mclass[key].label }])
+			mutationClasses.filter(key => key != 'Blank' && key != 'WT').map(key => [key, { label: mclass[key].label }])
 		)
 	},
 	{
