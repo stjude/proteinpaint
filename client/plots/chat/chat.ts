@@ -81,43 +81,24 @@ class Chat extends PlotBase implements RxComponent {
 					console.log(data)
 
 					const result = JSON.parse(data)
-					if (result.prog_language == 'python') {
-						const plotConfig = result.plot
-						const answer = result.answer
-
-						if (plotConfig) {
-							// generate a plot as answer
+					if (result.message) {
+						// Show error message in chatbot and exit, do not show any plot
+						serverBubble.html(result.message)
+					} else {
+						if (result.action == 'summary') {
+							const SummaryPlotConfig = result.plot
 							this.app.dispatch({
 								type: 'plot_create',
 								id: getId(),
-								config: plotConfig
+								config: SummaryPlotConfig
 							})
 							serverBubble.html('Please refer to the plot generated above')
-						} else {
-							// text answer
-							serverBubble.html(answer)
-						}
-					} else {
-						// Rust version
-						if (result.message) {
-							// Show error message in chatbot and exit, do not show any plot
-							serverBubble.html(result.message)
-						} else {
-							if (result.action == 'summary') {
-								const SummaryPlotConfig = result.plot
-								this.app.dispatch({
-									type: 'plot_create',
-									id: getId(),
-									config: SummaryPlotConfig
-								})
-								serverBubble.html('Please refer to the plot generated above')
-							} // Will add other plots later
-						}
+						} // Will add other plots later
 					}
 					/* may switch by data.type
-type=chat: server returns a chat msg
-type=plot: server returns a plot obj
-*/
+				type=chat: server returns a chat msg
+				type=plot: server returns a plot obj
+				*/
 				} catch (e: any) {
 					if (e.stack) console.log(e.stack)
 					serverBubble.html(`Error: ${e.message || e}`)
