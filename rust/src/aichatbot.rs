@@ -1129,7 +1129,7 @@ fn validate_summary_output(
                         if num_gene_verification == 0 || common_genes.len() == 0 {
                             if message.to_lowercase().contains(&gene.to_lowercase()) { // Check if the LLM has already added the message, if not then add it
                             } else {
-                                message = message + &"\"" + &gene + &"\"" + &" not found in genedb.";
+                                message = message + &"'" + &gene + &"'" + &" not found in genedb.";
                             }
                         }
                     }
@@ -1175,21 +1175,21 @@ fn validate_summary_output(
                             validated_filter_terms.push(categorical_filter_term);
                         }
                         if term_verification.correct_field.is_none() {
-                            message = message + &"\"" + &categorical.term + &"\" filter term not found in db";
+                            message = message + &"'" + &categorical.term + &"' filter term not found in db";
                         }
                         if value_verification.is_none() {
                             message = message
-                                + &"\""
+                                + &"'"
                                 + &categorical.value
-                                + &"\" filter value not found for filter field \""
+                                + &"' filter value not found for filter field '"
                                 + &categorical.term
-                                + "\" in db";
+                                + "' in db";
                         }
                     }
                     FilterTerm::Numeric(numeric) => {
                         let term_verification = verify_json_field(&numeric.term, &db_vec);
                         if term_verification.correct_field.is_none() {
-                            message = message + &"\"" + &numeric.term + &"\" filter term not found in db";
+                            message = message + &"'" + &numeric.term + &"' filter term not found in db";
                         } else {
                             let numeric_filter_term: FilterTerm = FilterTerm::Numeric(numeric.clone());
                             validated_filter_terms.push(numeric_filter_term);
