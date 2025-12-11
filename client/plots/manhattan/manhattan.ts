@@ -238,14 +238,14 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 							div: holder,
 							columns: [
 								{ label: 'Gene' },
-								{ label: 'Position' },
+								{ label: `${nearbyDots[0].chrom} pos` },
 								{ label: 'Type' },
 								{ label: '-log₁₀(q-value)' },
 								{ label: 'Subject count' }
 							],
 							rows: nearbyDots.map(d => [
 								{ value: d.gene },
-								{ value: `${d.chrom}:${d.start}-${d.end}` },
+								{ html: `<span style="font-size:.8em">${d.start}-${d.end}</span>` },
 								{ html: `<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}` },
 								{ value: d.y.toFixed(3) },
 								{ value: d.nsubj }
