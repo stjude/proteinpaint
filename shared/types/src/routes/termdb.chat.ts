@@ -8,7 +8,7 @@ export type ChatRequest = {
 	filter?: Filter
 	/** user prompt */
 	prompt: string
-	__protected__: any
+	__protected__?: any
 }
 
 type HtmlResponse = {
