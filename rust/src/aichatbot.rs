@@ -266,13 +266,20 @@ pub async fn run_pipeline(
             top_p,
         )
         .await;
-        final_output = format!(
-            "{{\"{}\":\"{}\",\"{}\":[{}}}",
-            "action",
-            "dge",
-            "DE_output",
-            de_result + &"]"
-        );
+        if testing == true {
+            final_output = format!(
+                "{{\"{}\":\"{}\",\"{}\":[{}}}",
+                "action",
+                "dge",
+                "DE_output",
+                de_result + &"]"
+            );
+        } else {
+            final_output = format!(
+                "{{\"{}\":\"{}\",\"{}\":\"{}\"}}",
+                "type", "html", "html", "DE agent not implemented yet"
+            );
+        }
     } else if classification == "summary".to_string() {
         final_output = extract_summary_information(
             user_input,
@@ -290,26 +297,78 @@ pub async fn run_pipeline(
         .await;
     } else if classification == "hierarchical".to_string() {
         // Not implemented yet
-        final_output = format!("{{\"{}\":\"{}\"}}", "action", "hierarchical");
+        if testing == true {
+            final_output = format!("{{\"{}\":\"{}\"}}", "action", "hierarchical");
+        } else {
+            final_output = format!(
+                "{{\"{}\":\"{}\",\"{}\":\"{}\"}}",
+                "type", "html", "html", "hierarchical clustering agent not implemented yet"
+            );
+        }
     } else if classification == "snv_indel".to_string() {
         // Not implemented yet
-        final_output = format!("{{\"{}\":\"{}\"}}", "action", "snv_indel");
+        if testing == true {
+            final_output = format!("{{\"{}\":\"{}\"}}", "action", "snv_indel");
+        } else {
+            final_output = format!(
+                "{{\"{}\":\"{}\",\"{}\":\"{}\"}}",
+                "type", "html", "html", "snv_indel agent not implemented yet"
+            );
+        }
     } else if classification == "cnv".to_string() {
         // Not implemented yet
-        final_output = format!("{{\"{}\":\"{}\"}}", "action", "cnv");
+        if testing == true {
+            final_output = format!("{{\"{}\":\"{}\"}}", "action", "cnv");
+        } else {
+            final_output = format!(
+                "{{\"{}\":\"{}\",\"{}\":\"{}\"}}",
+                "type", "html", "html", "cnv agent not implemented yet"
+            );
+        }
     } else if classification == "variant_calling".to_string() {
         // Not implemented yet and will never be supported. Need a separate messages for this
-        final_output = format!("{{\"{}\":\"{}\"}}", "action", "variant_calling");
+        if testing == true {
+            final_output = format!("{{\"{}\":\"{}\"}}", "action", "variant_calling");
+        } else {
+            final_output = format!(
+                "{{\"{}\":\"{}\",\"{}\":\"{}\"}}",
+                "type", "html", "html", "variant_calling agent not implemented yet"
+            );
+        }
     } else if classification == "survival".to_string() {
         // Not implemented yet
-        final_output = format!("{{\"{}\":\"{}\"}}", "action", "surivial");
+        if testing == true {
+            final_output = format!("{{\"{}\":\"{}\"}}", "action", "surivial");
+        } else {
+            final_output = format!(
+                "{{\"{}\":\"{}\",\"{}\":\"{}\"}}",
+                "type", "html", "html", "survival agent not implemented yet"
+            );
+        }
     } else if classification == "none".to_string() {
-        final_output = format!(
-            "{{\"{}\":\"{}\",\"{}\":\"{}\"}}",
-            "action", "none", "message", "The input query did not match any known features in Proteinpaint"
-        );
+        if testing == true {
+            final_output = format!(
+                "{{\"{}\":\"{}\",\"{}\":\"{}\"}}",
+                "action", "none", "message", "The input query did not match any known features in Proteinpaint"
+            );
+        } else {
+            final_output = format!(
+                "{{\"{}\":\"{}\",\"{}\":\"{}\"}}",
+                "type", "html", "html", "The input query did not match any known features in Proteinpaint"
+            );
+        }
     } else {
-        final_output = format!("{{\"{}\":\"{}\"}}", "action", "unknown:".to_string() + &classification);
+        if testing == true {
+            final_output = format!("{{\"{}\":\"{}\"}}", "action", "unknown:".to_string() + &classification);
+        } else {
+            final_output = format!(
+                "{{\"{}\":\"{}\",\"{}\":\"{}\"}}",
+                "type",
+                "html",
+                "html",
+                "unknown:".to_string() + &classification
+            );
+        }
     }
     Some(final_output)
 }
