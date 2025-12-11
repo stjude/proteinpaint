@@ -1,4 +1,4 @@
-export const plotLength = 400
+export const plotLength = 300
 
 // Example barchart renderer settings
 export const rendererSettings = JSON.stringify({
