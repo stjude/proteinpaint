@@ -18,9 +18,31 @@ type HtmlResponse = {
 }
 type PlotResponse = {
 	type: 'plot'
-	/** plot state */
-	plot: object
+	/** plot state. Currently only supports summary chart, will add other chart types later */
+	plot: SummaryResponse
+	/** Specifies what action to take e.g. Summary plot or no action. Will add more chart types later */
+	action: 'summary' | 'none'
+	/** Contains the error message, in case the chat request fails */
+	message?: string
 }
+
+type SummaryResponse = {
+	chartType: 'summary'
+	term: TermType | GeneExpression
+	term2?: TermType | GeneExpression
+}
+
+type TermType = {
+	/** Term id */
+	id: string
+}
+
+type GeneExpression = {
+	/** Gene name */
+	gene: string
+	type: 'geneExpression'
+}
+
 export type ChatResponse = HtmlResponse | PlotResponse
 
 export const ChatPayload: RoutePayload = {
