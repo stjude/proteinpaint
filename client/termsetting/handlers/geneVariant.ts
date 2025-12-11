@@ -410,8 +410,7 @@ export async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi
 				type: 'tvs',
 				tvs: {
 					term: dtTerm,
-					values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }],
-					isnot: true,
+					values: Object.entries(dtTerm.values).map(([k, v]: any[]) => ({ key: k, label: v.label, value: k })),
 					excludeGeneName: true
 				}
 			}
@@ -427,7 +426,12 @@ export async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi
 		const grp2Filter = getWrappedTvslst([
 			{
 				type: 'tvs',
-				tvs: { term: dtTerm, values: [{ key: 'WT', label: 'Wildtype', value: 'WT' }], excludeGeneName: true }
+				tvs: {
+					term: dtTerm,
+					values: [],
+					wt: true,
+					excludeGeneName: true
+				}
 			}
 		])
 		groupset.groups.push({
