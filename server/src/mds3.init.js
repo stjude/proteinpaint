@@ -3009,6 +3009,7 @@ export function filterByItem(filter, mlst, values) {
 	if (filter.type != 'tvs') throw 'unexpected filter.type'
 	const tvs = filter.tvs
 	if (!dtTermTypes.has(tvs.term.type)) throw 'tvs term is not dt term'
+	if (tvs.isnot) throw 'tvs.isnot is not supported for geneVariant term'
 	// get all tested mutations for the dt (and origin) of the filter
 	const mlst_tested = mlst.filter(m => {
 		if (tvs.term.dt != m.dt) return false
@@ -3048,31 +3049,17 @@ export function filterByItem(filter, mlst, values) {
 			if (values) values.push(...mlst_genotype)
 		} else {
 			// categorical mutation data
-			// get genotypes that match the filter
-			let intvs = false
-			const mlst_intvs = []
-			for (const value of tvs.values) {
-				// get sample genotypes that match the filter value
-				const mlst_match = mlst_tested.filter(m => m.class == value.key)
-				if (value.key == mclass['WT'].key) {
-					// wiltype filter value
-					// sample matches filter if all its genotypes are wildtype
-					if (mlst_match.length == mlst_tested.length) intvs = true
-				} else {
-					// mutant filter value
-					// sample matches filter if at least one of its genotypes matches the value
-					if (mlst_match.length) intvs = true
-				}
-				mlst_intvs.push(...mlst_match)
-			}
-			if (tvs.isnot) {
-				// sample passes if none of its genotypes match the filter
-				pass = !intvs
-				if (values) values.push(...mlst_tested.filter(m => !mlst_intvs.includes(m)))
-			} else {
-				// sample passes if at least one of its genotypes matches the filter
-				pass = intvs
+			if (!tvs.wt) {
+				// mutant tvs
+				// sample passes if it has at least one mutation specified in tvs
+				const mlst_intvs = mlst_tested.filter(m => tvs.values.some(v => v.key == m.class))
+				pass = mlst_intvs.length > 0
 				if (values) values.push(...mlst_intvs)
+			} else {
+				// wildtype tvs
+				// sample passes if it is wildtype (across all genes)
+				pass = mlst_tested.every(m => m.class == mclass['WT'].key)
+				if (values) values.push(...mlst_tested)
 			}
 		}
 	} else {
