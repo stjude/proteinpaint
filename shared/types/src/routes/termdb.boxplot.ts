@@ -54,6 +54,7 @@ export type BoxPlotChartEntry = {
 	absMin?: number
 	absMax?: number
 	uncomputableValues?: { label: string; value: number }[] | null
+	wilcoxon: any
 }
 
 // individual boxplot

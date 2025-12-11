@@ -13,6 +13,7 @@ import { BoxPlotInteractions } from './interactions/BoxPlotInteractions'
 import { LegendRenderer } from './view/LegendRender'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.ts'
+import { AssociationTableRender } from './view/AssociationTableRender'
 
 export class TdbBoxplot extends PlotBase implements RxComponent {
 	static type = 'boxplot'
@@ -215,7 +216,10 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 				type: 'checkbox',
 				chartType: 'boxplot',
 				settingsKey: 'showAssocTests',
-				title: `Option to remove outliers from the analysis`
+				title: `Option to remove outliers from the analysis`,
+				getDisplayStyle: plot => {
+					return plot?.term2 ? '' : 'none'
+				}
 			}
 		]
 		this.components.controls = await controlsInit({
@@ -297,7 +301,8 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 			this.data = data
 			this.dom.charts.selectAll('*').remove()
 
-			// determine max label length across all charts
+			/** TODO: Refactor all of the code below into mvvm
+			 * pattern. This breaks maintainability and separation of concerns. */
 			const labels: any = []
 			const tempsvg = this.dom.charts.append('svg')
 			for (const key of Object.keys(data.charts)) {
@@ -325,6 +330,8 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 					(viewModel.rowSpace !== settings.rowSpace || viewModel.rowHeight !== settings.rowHeight) &&
 					this.useDefaultSettings == true
 				) {
+					/** Fix this. Move to ViewModel, figure out for all plots once, only call app.save once.*/
+
 					/** If the row height or space changed during data processing,
 					 * save the new settings without calling app.dispatch.
 					 * Will show updated value in the controls. */
@@ -359,15 +366,23 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 					.style('text-align', 'center')
 					.style('font-size', '1.1em')
 					.style('margin-bottom', '20px')
+				//Temp fix
+				const assocTableDiv = chartDiv
+					.append('div')
+					.attr('class', 'sjpp-boxplot-assocTableDiv')
+					.style('display', 'inline-block')
 				const chartDom = Object.assign({}, this.dom, {
 					svg: chartSvg,
 					chartTitle,
 					plotTitle: chartSvg.append('text'),
 					axis: chartSvg.append('g'),
-					boxplots: chartSvg.append('g')
+					boxplots: chartSvg.append('g'),
+					assocTableDiv: assocTableDiv
 				})
 				// render the view
 				new View(viewModel.viewData, settings, chartDom, this.app, this.interactions)
+				//Temp fix: This should be handled by the view
+				if (chart.wilcoxon) new AssociationTableRender(chartDom.assocTableDiv, chart.wilcoxon)
 			}
 			// render legend (applies to all charts)
 			this.dom.legend.selectAll('*').remove()
@@ -417,7 +432,7 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 		rowHeight: 50,
 		rowSpace: 15,
 		removeOutliers: false,
-		showAssocTests: false
+		showAssocTests: true
 	}
 	return Object.assign(defaults, overrides)
 }
