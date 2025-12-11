@@ -5,9 +5,8 @@ import { dofetch3 } from '#common/dofetch'
 import { getNormalRoot } from '#filter'
 import { Menu, renderTable, table2col, make_one_checkbox, sayerror } from '#dom'
 import { dtsnvindel, mclass, dtcnv, dtfusionrna, dtsv, proteinChangingMutations, dt2lesion } from '#shared/common.js'
-import { get$id } from '#termsetting'
 import { PlotBase } from '#plots/PlotBase.ts'
-import { plotManhattan, createLollipopFromGene } from '#plots/manhattan/manhattan.ts'
+import { plotManhattan, createLollipopFromGene, createMatrixFromGenes } from '#plots/manhattan/manhattan.ts'
 
 class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
@@ -662,7 +661,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.property('disabled', true)
 				.on('click', () => {
 					matrixBtn.property('disabled', true)
-					this.createMatrixFromGenes(selectedGenes)
+					createMatrixFromGenes(selectedGenes, this.app)
 				})
 
 			// Add the lollipop button
@@ -884,47 +883,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 					`Note: Per-type lesion caps were reached before all samples could be processed. ` +
 						`Analysis ran on ${result.processingSummary.processedSamples.toLocaleString()} of ${expectedToProcessSamples.toLocaleString()} samples.`
 				)
-		}
-	}
-
-	private async createMatrixFromGenes(geneSymbols: string[]): Promise<void> {
-		try {
-			// Create termwrappers for mutation data
-			const termwrappers = await Promise.all(
-				geneSymbols.map(async (gene: string) => {
-					const term = {
-						type: 'geneVariant',
-						gene: gene,
-						name: gene
-					}
-
-					// Get minimal copy for $id generation
-					const minTwCopy = this.app.vocabApi.getTwMinCopy({ term })
-
-					return {
-						$id: await get$id(minTwCopy),
-						term,
-						q: {}
-					}
-				})
-			)
-
-			// Create and dispatch matrix
-			this.app.dispatch({
-				type: 'plot_create',
-				config: {
-					chartType: 'matrix',
-					dataType: 'geneVariant',
-					termgroups: [
-						{
-							name: 'Genomic alterations',
-							lst: termwrappers
-						}
-					]
-				}
-			})
-		} catch (error) {
-			sayerror(this.dom.div, `Error creating matrix: ${error instanceof Error ? error.message : error}`)
 		}
 	}
 }

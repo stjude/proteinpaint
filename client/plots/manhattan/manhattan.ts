@@ -5,6 +5,7 @@ import { Menu, icons, axisstyle, table2col, renderTable } from '#dom'
 import { to_svg } from '#src/client'
 import { quadtree } from 'd3-quadtree'
 import type { ManhattanPoint } from './manhattanTypes'
+import { get$id } from '#termsetting'
 
 /**
  * Creates an interactive Manhattan plot on top of a PNG background plot image.
@@ -63,6 +64,14 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 	// Create tooltip menu
 	const geneTip = new Menu({ padding: '' })
+	// Create click menu for showing all nearby genes
+	let clickMenuIsShown = false
+	const clickMenu = new Menu({
+		padding: '',
+		onHide: () => {
+			clickMenuIsShown = false
+		}
+	})
 
 	const svg = div
 		.append('svg')
@@ -169,6 +178,8 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 		cover
 			.on('mousemove', event => {
+				// Don't show hover tooltip if click menu is open
+				if (clickMenuIsShown) return
 				// Get mouse position relative to the cover div
 				const rect = (cover.node() as HTMLElement).getBoundingClientRect()
 				const mx = event.clientX - rect.left
@@ -236,12 +247,13 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 						renderTable({
 							div: holder,
+							header: { allowSort: true },
 							columns: [
 								{ label: 'Gene' },
 								{ label: `${nearbyDots[0].chrom} pos` },
 								{ label: 'Type' },
-								{ label: '-log₁₀(q-value)' },
-								{ label: 'Subject count' }
+								{ label: '-log₁₀(q-value)', sortable: true },
+								{ label: 'Subject count', sortable: true }
 							],
 							rows: nearbyDots.map(d => [
 								{ value: d.gene },
@@ -293,10 +305,133 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				highlightedDots = []
 				geneTip.hide()
 			})
-			.on('click', _event => {
-				// Click on the first highlighted dot if any
-				if (highlightedDots.length > 0 && app) {
-					createLollipopFromGene(highlightedDots[0].gene, app)
+			.on('click', event => {
+				// Don't do anything if no dots nearby or no app context
+				if (highlightedDots.length === 0 || !app) return
+
+				// Hide the hover tooltip
+				geneTip.hide()
+
+				// Get ALL candidates within hit radius (reusing the quadtree search)
+				const rect = (cover.node() as HTMLElement).getBoundingClientRect()
+				const mx = event.clientX - rect.left
+				const my = event.clientY - rect.top
+				const hitRadius = settings.pngDotRadius + 3
+
+				const allCandidates: Array<{ point: ManhattanPoint; distance: number }> = []
+
+				pointQuadtree.visit((node, x1, y1, x2, y2) => {
+					if (x1 > mx + hitRadius || x2 < mx - hitRadius || y1 > my + hitRadius || y2 < my - hitRadius) {
+						return true
+					}
+					if (!node.length) {
+						const point = node.data
+						if (point) {
+							const px = point.pixel_x
+							const py = point.pixel_y
+							const distance = Math.sqrt((mx - px) ** 2 + (my - py) ** 2)
+							if (distance <= hitRadius) {
+								allCandidates.push({ point, distance })
+							}
+						}
+					}
+					return false
+				})
+
+				allCandidates.sort((a, b) => a.distance - b.distance)
+				const allNearbyDots = allCandidates.map(c => c.point)
+
+				if (allNearbyDots.length === 1) {
+					// Single gene - launch directly
+					createLollipopFromGene(allNearbyDots[0].gene, app)
+				} else if (allNearbyDots.length > 1) {
+					// Multiple genes - show click menu with table
+					clickMenu.clear().show(event.clientX, event.clientY)
+					clickMenuIsShown = true
+
+					const holder = clickMenu.d.append('div').style('margin', '10px')
+
+					// Header with buttons
+					const headerDiv = holder
+						.append('div')
+						.style('display', 'flex')
+						.style('align-items', 'center')
+						.style('gap', '8px')
+						.style('margin-bottom', '8px')
+
+					headerDiv.append('span').style('font-weight', 'bold').text('Select genes:')
+
+					// Matrix button
+					const matrixBtn = headerDiv
+						.append('button')
+						.text('Matrix (0)')
+						.property('disabled', true)
+						.on('click', () => {
+							matrixBtn.property('disabled', true)
+							clickMenu.hide()
+							createMatrixFromGenes(selectedGenes, app)
+						})
+
+					// Lollipop button
+					const lollipopBtn = headerDiv
+						.append('button')
+						.text('Lollipop')
+						.property('disabled', true)
+						.on('click', () => {
+							if (lastTouchedGene) {
+								lollipopBtn.property('disabled', true)
+								clickMenu.hide()
+								createLollipopFromGene(lastTouchedGene, app)
+							}
+						})
+
+					const selectedGenes: string[] = []
+					let lastTouchedGene: string | null = null
+
+					renderTable({
+						div: holder,
+						header: { allowSort: true },
+						columns: [
+							{ label: 'Gene' },
+							{ label: `${allNearbyDots[0].chrom} pos` },
+							{ label: 'Type' },
+							{ label: '-log₁₀(q-value)', sortable: true },
+							{ label: 'Subject count', sortable: true }
+						],
+						rows: allNearbyDots.map(d => [
+							{ value: d.gene },
+							{ html: `<span style="font-size:.8em">${d.start}-${d.end}</span>` },
+							{ html: `<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}` },
+							{ value: d.y.toFixed(3) },
+							{ value: d.nsubj }
+						]),
+						showLines: false,
+						showHeader: true,
+						striped: true,
+						resize: false,
+						noButtonCallback: (rowIndex: number, checkboxNode: HTMLInputElement) => {
+							const geneName = allNearbyDots[rowIndex].gene
+
+							if (checkboxNode.checked) {
+								selectedGenes.push(geneName)
+								lastTouchedGene = geneName
+							} else {
+								selectedGenes.splice(selectedGenes.indexOf(geneName), 1)
+								lastTouchedGene = selectedGenes.length > 0 ? selectedGenes[selectedGenes.length - 1] : null
+							}
+
+							// Update lollipop button
+							if (selectedGenes.length > 0) {
+								lollipopBtn.text(`Lollipop (${lastTouchedGene})`)
+								lollipopBtn.property('disabled', false)
+							} else {
+								lollipopBtn.text('Lollipop')
+								lollipopBtn.property('disabled', true)
+							}
+
+							matrixBtn.text(`Matrix (${selectedGenes.length})`).property('disabled', !selectedGenes.length)
+						}
+					})
 				}
 			})
 	}
@@ -433,4 +568,36 @@ export function createLollipopFromGene(geneSymbol: string, app: any) {
 		// cannot do cfg.config.trackLst={activeTracks:[]}; breaks
 	}
 	app.dispatch(cfg)
+}
+
+export async function createMatrixFromGenes(geneSymbols: string[], app: any): Promise<void> {
+	const termwrappers = await Promise.all(
+		geneSymbols.map(async (gene: string) => {
+			const term = {
+				type: 'geneVariant',
+				gene: gene,
+				name: gene
+			}
+			const minTwCopy = app.vocabApi.getTwMinCopy({ term, q: {} })
+			return {
+				$id: await get$id(minTwCopy),
+				term,
+				q: {}
+			}
+		})
+	)
+
+	app.dispatch({
+		type: 'plot_create',
+		config: {
+			chartType: 'matrix',
+			dataType: 'geneVariant',
+			termgroups: [
+				{
+					name: 'Alterations',
+					lst: termwrappers
+				}
+			]
+		}
+	})
 }
