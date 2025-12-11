@@ -87,13 +87,42 @@ function init({ genomes }) {
 			const ai_output_data = await run_rust('aichatbot', JSON.stringify(chatbot_input))
 			const time2 = new Date().valueOf()
 			mayLog('Time taken to run rust AI chatbot:', time2 - time1, 'ms')
-			let ai_output_json: ChatResponse | string = ''
+			let ai_output_json: any
 			for (const line of ai_output_data.split('\n')) {
 				// The reason we are parsing each line from rust is because we want to debug what is causing the wrong output. As the AI pipeline matures, the rust code will be modified to always return a single JSON
 				if (line.startsWith('final_output:') == true) {
 					ai_output_json = JSON.parse(line.replace('final_output:', ''))
 				} else {
 					mayLog(line)
+				}
+			}
+			if (ai_output_json.type == 'plot') {
+				if (typeof ai_output_json.plot != 'object') throw '.plot{} missing when .type=plot'
+				if (ai_output_json.plot.simpleFilter) {
+					// simpleFilter= [ {term:str, category:str} ]
+					if (!Array.isArray(ai_output_json.plot.simpleFilter)) throw 'ai_output_json.plot.simpleFilter is not array'
+					const localfilter = { type: 'tvslst', in: true, join: '', lst: [] as any[] }
+					for (const f of ai_output_json.plot.simpleFilter) {
+						const term = ds.cohort.termdb.q.termjsonByOneid(f.term)
+						if (!term) throw 'invalid term id from simpleFilter[].term'
+						if (term.type != 'categorical') throw 'term not categorical' // TODO to support numeric term later
+						let cat
+						for (const ck in term.values) {
+							if (ck == f.category) cat = ck
+							else if (term.values[ck].label == f.category) cat = ck
+						}
+						if (!cat) throw 'invalid category from ' + JSON.stringify(f)
+						// term and category validated
+						localfilter.lst.push({
+							type: 'tvs',
+							tvs: {
+								term,
+								values: [{ key: cat }]
+							}
+						})
+					}
+					delete ai_output_json.plot.simpleFilter
+					ai_output_json.plot.filter = localfilter
 				}
 			}
 			res.send(ai_output_json as ChatResponse)
