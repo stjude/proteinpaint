@@ -1,19 +1,8 @@
-/** TODO: Consolidate the example, const, and
- * getDefaults() method. */
-
-/** Use this obj to collect default dimensions,
- * control min/maxs, etc. */
-export const defaults = {
-	/** The length of the entire plot (i.e. width
-	 * when horizontal, height when vertical) */
-	plotLength: 400,
-	minPlotLength: 200,
-	maxPlotLength: 800
-}
+export const plotLength = 400
 
 // Example barchart renderer settings
 export const rendererSettings = JSON.stringify({
-	plotLength: defaults.plotLength, // maximum bar length
+	plotLength: plotLength, // maximum bar length
 	barwidth: 20, // bar thickness
 	barspace: 2, // space between two bars
 

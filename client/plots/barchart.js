@@ -1,7 +1,7 @@
 import { getCompInit, copyMerge, deepEqual } from '../rx'
 import getHandlers from './barchart.events'
 import barsRenderer from './bars.renderer'
-import { rendererSettings, defaults } from './bars.settings'
+import { rendererSettings, plotLength } from './bars.settings'
 import { htmlLegend, /** svgLegend, */ renderTable, DownloadMenu } from '#dom'
 import { select } from 'd3-selection'
 import { rgb } from 'd3-color'
@@ -273,12 +273,12 @@ export class Barchart extends PlotBase {
 
 			inputs.push({
 				label: 'Plot length',
-				title: `Set the entire plot length in pixels between ${defaults.minPlotLength} and ${defaults.maxPlotLength}.`,
+				title: `Set the plot length in pixels between 200 and 800.`,
 				type: 'number',
 				chartType: 'barchart',
 				settingsKey: 'plotLength',
-				min: defaults.minPlotLength,
-				max: defaults.maxPlotLength,
+				min: 200,
+				max: 800,
 				step: 10
 			})
 
@@ -1294,7 +1294,7 @@ export function getDefaultBarSettings(app) {
 	return {
 		barspace: 2,
 		barwidth: 20,
-		plotLength: defaults.plotLength,
+		plotLength,
 		orientation: 'horizontal',
 		unit: 'abs',
 		overlay: 'none',
