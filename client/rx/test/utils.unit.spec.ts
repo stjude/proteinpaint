@@ -115,5 +115,45 @@ tape('deepCopyFreeze()', test => {
 		test.deepEqual(frozenCopy2, orig, `should reuse a frozen reference clone's properties that have not changed`)
 	}
 
+	{
+		// this test is based on a previous failing scatter.integration test,
+		// where a direct reference of term.values[key] as q.hiddenValues[key]
+		// caused the frozen copy's hiddenValues[key] to be undefined when using
+		// a second argument. To make this test fail, change the following in
+		// deepCopyFreeze():
+		// `if (matched?.get(x)?.has(y)) return true`  // this was the fix
+		//  to
+		// `if (matched?.has(x)) return true` // this caused the issue
+		const ALL = {
+			label: 'Acute lymphoblastic leukemia',
+			color: 'rgb(255, 78, 125)'
+		}
+		const tw = {
+			id: 'diaggrp',
+			term: {
+				type: 'categorical',
+				values: {
+					'Acute lymphoblastic leukemia': ALL
+				},
+				groupsetting: {},
+				name: 'Diagnosis Group',
+				id: 'diaggrp',
+				isleaf: true,
+				hashtmldetail: true
+			},
+			q: {
+				mode: 'discrete',
+				type: 'values',
+				hiddenValues: {}
+			},
+			type: 'QualTWValues'
+		}
+
+		const copy1 = deepCopyFreeze(tw)
+		tw.q.hiddenValues['ALL'] = ALL
+		const copy2 = deepCopyFreeze(tw, copy1)
+		test.deepEqual(copy2, tw, `should not reuse an outdated reference to an undefined value`)
+	}
+
 	test.end()
 })
