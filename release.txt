@@ -1,1 +1,2 @@
-
+Features:
+- GRIN2: Added gene table click event for multi-gene tooltip
