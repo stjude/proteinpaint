@@ -353,43 +353,11 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 					const holder = clickMenu.d.append('div').style('margin', '10px')
 
-					// Header with buttons
-					const headerDiv = holder
-						.append('div')
-						.style('display', 'flex')
-						.style('align-items', 'center')
-						.style('gap', '8px')
-						.style('margin-bottom', '8px')
-
-					headerDiv.append('span').style('font-weight', 'bold').text('Select genes:')
-
-					// Matrix button
-					const matrixBtn = headerDiv
-						.append('button')
-						.text('Matrix (0)')
-						.property('disabled', true)
-						.on('click', () => {
-							matrixBtn.property('disabled', true)
-							clickMenu.hide()
-							createMatrixFromGenes(selectedGenes, app)
-						})
-
-					// Lollipop button
-					const lollipopBtn = headerDiv
-						.append('button')
-						.text('Lollipop')
-						.property('disabled', true)
-						.on('click', () => {
-							if (lastTouchedGene) {
-								lollipopBtn.property('disabled', true)
-								clickMenu.hide()
-								createLollipopFromGene(lastTouchedGene, app)
-							}
-						})
-
-					let selectedGenes: string[] = []
+					// Track most recently selected gene for lollipop
 					let lastTouchedGene: string | null = null
+					let selectionOrder: number[] = [] // Track order genes were selected
 
+					// Render table with integrated buttons
 					renderTable({
 						div: holder,
 						header: { allowSort: true },
@@ -411,28 +379,51 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 						showHeader: true,
 						striped: true,
 						resize: false,
-						noButtonCallback: (rowIndex: number, checkboxNode: HTMLInputElement) => {
-							const geneName = allNearbyDots[rowIndex].gene
+						buttonsToLeft: true,
+						buttons: [
+							{
+								text: 'Matrix (0)',
+								callback: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
+									if (app && selectedIndices.length > 0) {
+										buttonNode.disabled = true
+										const selectedGenes = selectedIndices.map(idx => allNearbyDots[idx].gene)
+										clickMenu.hide()
+										createMatrixFromGenes(selectedGenes, app)
+									}
+								},
+								onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
+									buttonNode.textContent = `Matrix (${selectedIndices.length})`
+								}
+							},
+							{
+								text: 'Lollipop',
+								callback: (_selectedIndices: number[], buttonNode: HTMLButtonElement) => {
+									if (app && lastTouchedGene) {
+										buttonNode.disabled = true
+										clickMenu.hide()
+										createLollipopFromGene(lastTouchedGene, app)
+									}
+								},
+								onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
+									// Find newly selected items
+									const newlySelected = selectedIndices.filter(idx => !selectionOrder.includes(idx))
 
-							if (checkboxNode.checked) {
-								selectedGenes.push(geneName)
-								lastTouchedGene = geneName
-							} else {
-								selectedGenes = selectedGenes.filter(g => g !== geneName)
-								lastTouchedGene = selectedGenes.length > 0 ? selectedGenes[selectedGenes.length - 1] : null
+									// Update selection order: remove deselected items, add newly selected ones
+									selectionOrder = selectionOrder.filter(idx => selectedIndices.includes(idx))
+									selectionOrder.push(...newlySelected)
+
+									if (selectionOrder.length > 0) {
+										// Get the most recently selected gene (last in selectionOrder)
+										const lastSelectedIdx = selectionOrder[selectionOrder.length - 1]
+										lastTouchedGene = allNearbyDots[lastSelectedIdx].gene
+										buttonNode.textContent = `Lollipop (${lastTouchedGene})`
+									} else {
+										lastTouchedGene = null
+										buttonNode.textContent = 'Lollipop'
+									}
+								}
 							}
-
-							// Update lollipop button
-							if (selectedGenes.length > 0) {
-								lollipopBtn.text(`Lollipop (${lastTouchedGene})`)
-								lollipopBtn.property('disabled', false)
-							} else {
-								lollipopBtn.text('Lollipop')
-								lollipopBtn.property('disabled', true)
-							}
-
-							matrixBtn.text(`Matrix (${selectedGenes.length})`).property('disabled', !selectedGenes.length)
-						}
+						]
 					})
 				}
 			})

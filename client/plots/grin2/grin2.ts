@@ -641,7 +641,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		if (result.topGeneTable) {
 			const tableContainer = this.dom.div.append('div').style('margin', this.sectionMargin)
 
-			// Create header with title and Matrix button
+			// Create header with title
 			const headerDiv = tableContainer
 				.append('div')
 				.style('display', 'flex')
@@ -654,31 +654,11 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.style('font-size', `${this.headerFontSize}px`)
 				.text(`Top Genes (showing ${result.showingTop?.toLocaleString()} of ${result.totalGenes?.toLocaleString()})`)
 
-			// Add Matrix button
-			const matrixBtn = headerDiv
-				.append('button')
-				.text('Matrix (0 genes selected)')
-				.property('disabled', true)
-				.on('click', () => {
-					matrixBtn.property('disabled', true)
-					createMatrixFromGenes(selectedGenes, this.app)
-				})
-
-			// Add the lollipop button
-			const lollipopBtn = headerDiv
-				.append('button')
-				.text('Lollipop')
-				.property('disabled', true)
-				.on('click', () => {
-					if (lastTouchedGene) {
-						lollipopBtn.property('disabled', true)
-						createLollipopFromGene(lastTouchedGene, this.app)
-					}
-				})
-
 			const tableDiv = tableContainer.append('div')
-			const selectedGenes: string[] = []
+
+			// Track most recently selected gene for lollipop
 			let lastTouchedGene: string | null = null
+			let selectionOrder: number[] = [] // Track order genes were selected
 
 			// Define lesion type colors and q-value threshold
 			const lesionTypeColors = this.state.config.settings.manhattan.lesionTypeColors
@@ -737,29 +717,50 @@ class GRIN2 extends PlotBase implements RxComponent {
 				maxHeight: '400px',
 				maxWidth: '100%',
 				dataTestId: 'grin2-top-genes-table',
-				noButtonCallback: (rowIndex, checkboxNode) => {
-					const geneName = result.topGeneTable.rows[rowIndex][0]?.value
-
-					if (checkboxNode.checked) {
-						selectedGenes.push(geneName)
-						lastTouchedGene = geneName
-					} else {
-						selectedGenes.splice(selectedGenes.indexOf(geneName), 1)
-						lastTouchedGene = selectedGenes.length > 0 ? selectedGenes[selectedGenes.length - 1] : null
-					}
-
-					// Update lollipop button
-					if (selectedGenes.length > 0) {
-						lollipopBtn.text(`Lollipop (${lastTouchedGene})`)
-						lollipopBtn.property('disabled', false)
-					} else {
-						lollipopBtn.text('Lollipop')
-						lollipopBtn.property('disabled', true)
-					}
-
-					matrixBtn.text(`Matrix (${selectedGenes.length} genes selected)`).property('disabled', !selectedGenes.length)
-				},
 				selectAll: false,
+				buttonsToLeft: true,
+				buttons: [
+					{
+						text: 'Matrix (0 genes selected)',
+						callback: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
+							if (this.app && selectedIndices.length > 0) {
+								buttonNode.disabled = true
+								const selectedGenes = selectedIndices.map(idx => result.topGeneTable.rows[idx][0]?.value)
+								createMatrixFromGenes(selectedGenes, this.app)
+							}
+						},
+						onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
+							buttonNode.textContent = `Matrix (${selectedIndices.length} genes selected)`
+						}
+					},
+					{
+						text: 'Lollipop',
+						callback: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
+							if (this.app && lastTouchedGene) {
+								buttonNode.disabled = true
+								createLollipopFromGene(lastTouchedGene, this.app)
+							}
+						},
+						onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
+							// Find newly selected items
+							const newlySelected = selectedIndices.filter(idx => !selectionOrder.includes(idx))
+
+							// Update selection order: remove deselected items, add newly selected ones
+							selectionOrder = selectionOrder.filter(idx => selectedIndices.includes(idx))
+							selectionOrder.push(...newlySelected)
+
+							if (selectionOrder.length > 0) {
+								// Get the most recently selected gene (last in selectionOrder)
+								const lastSelectedIdx = selectionOrder[selectionOrder.length - 1]
+								lastTouchedGene = result.topGeneTable.rows[lastSelectedIdx][0]?.value
+								buttonNode.textContent = `Lollipop (${lastTouchedGene})`
+							} else {
+								lastTouchedGene = null
+								buttonNode.textContent = 'Lollipop'
+							}
+						}
+					}
+				],
 				download: {
 					fileName: `grin2_top_genes_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}.tsv`
 				},
@@ -781,6 +782,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.style('display', 'flex')
 				.style('align-items', 'center')
 				.style('margin', this.btnMargin)
+				.style('margin-top', '40px') // Extra space for buttons from table above
 
 			headerDiv
 				.append('h3')
