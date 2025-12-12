@@ -1,5 +1,5 @@
 import type { AppApi } from '#rx'
-import type { BoxPlotSettings } from '../../plots/boxplot/BoxPlotTypes'
+import type { BoxPlotSettings } from '../../plots/boxplot/Settings'
 import type { CorrVolcanoSettings } from '#plots/corrVolcano/CorrelationVolcanoTypes.ts'
 import type { ValidatedVolcanoSettings } from '#plots/volcano/settings/Settings.ts'
 import type { GRIN2Settings } from '#plots/grin2/GRIN2Types.ts'
@@ -23,7 +23,7 @@ export type MassState = {
 	plots: BasePlotConfig[]
 	termfilter: any
 	termdbConfig: {
-		boxplots: any
+		boxplots?: any
 		allowedChartTypes: string[]
 		allowedTermTypes: string[]
 		displaySampleIds?: (clientAuthResult: any) => boolean

@@ -1,8 +1,9 @@
 import type { MassAppApi, MassState } from '#mass/types/mass'
-import type { BoxPlotSettings, BoxPlotConfig } from '../BoxPlotTypes'
+import type { BoxPlotConfig } from '../BoxPlotTypes'
 import type { TdbBoxplot } from '../BoxPlot.ts'
 import type { BoxPlotResponse } from '#types'
 import { isNumericTerm } from '#shared/terms.js'
+import type { BoxPlotSettings } from '../Settings.ts'
 
 /**
  * Requests data for the boxplots.
