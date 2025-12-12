@@ -27,6 +27,7 @@ export function renderTable({
 	div,
 	columnButtons,
 	buttons,
+	buttonsToLeft,
 	noButtonCallback,
 	singleMode = false,
 	noRadioBtn = false,
@@ -364,7 +365,7 @@ export function renderTable({
 			.append('div')
 			.insert('div')
 			.style('display', 'inline-block')
-			.style('float', 'right')
+			.style('float', buttonsToLeft ? 'left' : 'right')
 			.style('padding-bottom', '5px')
 
 		for (const bCfg of buttons) {
