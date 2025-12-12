@@ -51,6 +51,61 @@ function findPointsInRadius(
 }
 
 /**
+ * Updates selection order tracking and determines the last touched gene.
+ * This function is used by interactive selection buttons (Lollipop, Matrix) to track
+ * which item was most recently selected, even when multiple items are selected.
+ *
+ * @param {number[]} currentSelectionOrder - Current array tracking selection order (indices in order of selection)
+ * @param {number[]} selectedIndices - New array of selected indices from the selection UI
+ * @param {Array<{gene: string} | Array<{value: string}>>} dataSource - Array of data items containing gene information
+ *   Can be either ManhattanPoints with `gene` property or table rows with `value` property
+ * @returns {{selectionOrder: number[], lastTouchedGene: string | null, buttonText: string, buttonDisabled: boolean}}
+ *   - selectionOrder: Updated array of indices in selection order
+ *   - lastTouchedGene: Gene symbol of most recently selected item, or null if no selection
+ *   - buttonText: Suggested button text including gene name if available
+ *   - buttonDisabled: Whether the button should be disabled (true when no gene is selected)
+ */
+export function updateSelectionTracking(
+	currentSelectionOrder: number[],
+	selectedIndices: number[],
+	dataSource: Array<{ gene: string } | Array<{ value: string }>>
+): { selectionOrder: number[]; lastTouchedGene: string | null; buttonText: string; buttonDisabled: boolean } {
+	// Find newly selected items
+	const newlySelected = selectedIndices.filter(idx => !currentSelectionOrder.includes(idx))
+
+	// Update selection order: remove deselected items, add newly selected ones
+	const updatedSelectionOrder = currentSelectionOrder.filter(idx => selectedIndices.includes(idx))
+	updatedSelectionOrder.push(...newlySelected)
+
+	let lastTouchedGene: string | null = null
+	let buttonText = 'Lollipop'
+
+	if (updatedSelectionOrder.length > 0) {
+		// Get the most recently selected gene (last in selectionOrder)
+		const lastSelectedIdx = updatedSelectionOrder[updatedSelectionOrder.length - 1]
+		const dataItem = dataSource[lastSelectedIdx]
+
+		// Handle both ManhattanPoint objects (with 'gene' property) and table rows (arrays with value property)
+		if (Array.isArray(dataItem)) {
+			// Table row format: array of cells with value property
+			lastTouchedGene = dataItem[0]?.value || null
+		} else {
+			// ManhattanPoint format: object with gene property
+			lastTouchedGene = (dataItem as { gene: string }).gene
+		}
+
+		buttonText = `Lollipop (${lastTouchedGene})`
+	}
+
+	return {
+		selectionOrder: updatedSelectionOrder,
+		lastTouchedGene,
+		buttonText,
+		buttonDisabled: lastTouchedGene === null
+	}
+}
+
+/**
  * Creates an interactive Manhattan plot on top of a PNG background plot image.
  *
  * @param {Object} div - div element to contain the plot
@@ -353,43 +408,11 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 					const holder = clickMenu.d.append('div').style('margin', '10px')
 
-					// Header with buttons
-					const headerDiv = holder
-						.append('div')
-						.style('display', 'flex')
-						.style('align-items', 'center')
-						.style('gap', '8px')
-						.style('margin-bottom', '8px')
-
-					headerDiv.append('span').style('font-weight', 'bold').text('Select genes:')
-
-					// Matrix button
-					const matrixBtn = headerDiv
-						.append('button')
-						.text('Matrix (0)')
-						.property('disabled', true)
-						.on('click', () => {
-							matrixBtn.property('disabled', true)
-							clickMenu.hide()
-							createMatrixFromGenes(selectedGenes, app)
-						})
-
-					// Lollipop button
-					const lollipopBtn = headerDiv
-						.append('button')
-						.text('Lollipop')
-						.property('disabled', true)
-						.on('click', () => {
-							if (lastTouchedGene) {
-								lollipopBtn.property('disabled', true)
-								clickMenu.hide()
-								createLollipopFromGene(lastTouchedGene, app)
-							}
-						})
-
-					let selectedGenes: string[] = []
+					// Track most recently selected gene for lollipop
 					let lastTouchedGene: string | null = null
+					let selectionOrder: number[] = [] // Track order genes were selected
 
+					// Render table with integrated buttons
 					renderTable({
 						div: holder,
 						header: { allowSort: true },
@@ -411,28 +434,41 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 						showHeader: true,
 						striped: true,
 						resize: false,
-						noButtonCallback: (rowIndex: number, checkboxNode: HTMLInputElement) => {
-							const geneName = allNearbyDots[rowIndex].gene
-
-							if (checkboxNode.checked) {
-								selectedGenes.push(geneName)
-								lastTouchedGene = geneName
-							} else {
-								selectedGenes = selectedGenes.filter(g => g !== geneName)
-								lastTouchedGene = selectedGenes.length > 0 ? selectedGenes[selectedGenes.length - 1] : null
+						buttonsToLeft: true,
+						buttons: [
+							{
+								text: 'Matrix (0)',
+								callback: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
+									if (app && selectedIndices.length > 0) {
+										buttonNode.disabled = true
+										const selectedGenes = selectedIndices.map(idx => allNearbyDots[idx].gene)
+										clickMenu.hide()
+										createMatrixFromGenes(selectedGenes, app)
+									}
+								},
+								onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
+									buttonNode.textContent = `Matrix (${selectedIndices.length})`
+									buttonNode.disabled = selectedIndices.length === 0
+								}
+							},
+							{
+								text: 'Lollipop',
+								callback: (_selectedIndices: number[], buttonNode: HTMLButtonElement) => {
+									if (app && lastTouchedGene) {
+										buttonNode.disabled = true
+										clickMenu.hide()
+										createLollipopFromGene(lastTouchedGene, app)
+									}
+								},
+								onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
+									const result = updateSelectionTracking(selectionOrder, selectedIndices, allNearbyDots)
+									selectionOrder = result.selectionOrder
+									lastTouchedGene = result.lastTouchedGene
+									buttonNode.textContent = result.buttonText
+									buttonNode.disabled = result.buttonDisabled
+								}
 							}
-
-							// Update lollipop button
-							if (selectedGenes.length > 0) {
-								lollipopBtn.text(`Lollipop (${lastTouchedGene})`)
-								lollipopBtn.property('disabled', false)
-							} else {
-								lollipopBtn.text('Lollipop')
-								lollipopBtn.property('disabled', true)
-							}
-
-							matrixBtn.text(`Matrix (${selectedGenes.length})`).property('disabled', !selectedGenes.length)
-						}
+						]
 					})
 				}
 			})
