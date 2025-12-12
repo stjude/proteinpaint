@@ -1303,6 +1303,7 @@ fn validate_summary_output(
                     }
                 } else {
                     let mut validated_filter_terms_PP: String = "[".to_string();
+
                     let mut filter_hits = 0;
                     for validated_term in validated_filter_terms {
                         match validated_term {
