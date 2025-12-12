@@ -1,14 +1,37 @@
 import { make_radios, renderTable } from '#dom'
 
-export function renderSnvIndelConfig(arg) {
-	const { mutations, selectedMutations } = arg
-	const wt = arg.wt || false
+export type Value = {
+	key: string
+	label: string
+	value: string
+}
+
+type Config = {
+	wt: boolean
+	values: Value[]
+	mcount?: string
+}
+
+type Arg = {
+	holder: any // D3 holder where UI is rendered
+	values: Value[] // mutation values
+	selectedValues?: Value[] // selected mutation values
+	mcount?: 'any' | 'single' | 'multiple' // mutation count
+	wt?: boolean // whether genotype is wildtype
+	callback: (config: Config) => void
+}
+
+export function renderSnvIndelConfig(arg: Arg) {
 	const div = arg.holder
+	const wt = arg.wt || false
+	const values = arg.values
+	const selectedValues = arg.selectedValues?.length ? arg.selectedValues : values
+	const mcount = arg.mcount || 'any'
 
 	div.style('margin', '10px')
 
 	// genotype radio buttons
-	const genotypeDiv = div.append('div').style('margin-bottom', '10px')
+	const genotypeDiv = div.append('div').attr('data-testid', 'sjpp-snvindel-genotype-div').style('margin-bottom', '10px')
 	genotypeDiv
 		.append('div')
 		.style('display', 'inline-block')
@@ -28,15 +51,18 @@ export function renderSnvIndelConfig(arg) {
 	})
 
 	// mutations table
-	const mutationsDiv = div.append('div').style('display', wt ? 'none' : 'block')
+	const mutationsDiv = div
+		.append('div')
+		.attr('data-testid', 'sjpp-snvindel-mutations-div')
+		.style('display', wt ? 'none' : 'block')
 	mutationsDiv.append('div').style('opacity', 0.7).style('margin-bottom', '10px').text('Mutations:')
 	const tableDiv = mutationsDiv.append('div').style('margin-left', '10px').style('font-size', '0.8rem')
 	const rows: any[] = []
 	const selectedIdxs: number[] = []
-	for (const [i, m] of mutations.entries()) {
+	for (const [i, m] of values.entries()) {
 		const label = m.label || m.key
 		rows.push([{ value: label }])
-		if (selectedMutations.find(s => s.key == m.key)) selectedIdxs.push(i)
+		if (selectedValues.find(s => s.key == m.key)) selectedIdxs.push(i)
 	}
 	const columns: any[] = [{ label: 'tvs' }]
 	renderTable({
@@ -60,14 +86,18 @@ export function renderSnvIndelConfig(arg) {
 		.style('margin-right', '5px')
 		.style('opacity', 0.7)
 		.text('Mutation occurrence')
+	const countOpts = [
+		{ label: 'Any', value: 'any' },
+		{ label: 'Single', value: 'single' },
+		{ label: 'Multiple', value: 'multiple' }
+	]
+	countOpts.forEach((opt: any) => {
+		if (opt.value == mcount) opt.checked = true
+	})
 	const countRadio = make_radios({
 		holder: countDiv,
 		styles: { display: 'inline-block' },
-		options: [
-			{ label: 'Any', value: 'any', checked: !wt },
-			{ label: 'Single', value: 'single', checked: wt },
-			{ label: 'Multiple', value: 'multiple', checked: wt }
-		],
+		options: countOpts,
 		callback: () => {}
 	})
 
@@ -81,17 +111,18 @@ export function renderSnvIndelConfig(arg) {
 		.style('font-size', '.8em')
 		.text('APPLY')
 		.on('click', () => {
-			const config: any = {}
-			const selectedGenotype = genotypeRadio.inputs.nodes().find(r => r.checked)
-			config.wt = selectedGenotype.value == 'wildtype'
+			const selectedGenotype: any = genotypeRadio.inputs.nodes().find(r => r.checked)
+			if (!selectedGenotype) throw 'no genotype selected'
+			const config: Config = { values: [], wt: selectedGenotype.value == 'wildtype' }
 			if (!config.wt) {
 				const checkboxes = mutationsDiv.select('tbody').selectAll('input').nodes()
 				const checkedIdxs: number[] = []
 				for (const [i, c] of checkboxes.entries()) {
 					if (c.checked) checkedIdxs.push(i)
 				}
-				config.selectedMutations = mutations.filter((v, i) => checkedIdxs.includes(i))
-				const selectedCount = countRadio.inputs.nodes().find(r => r.checked)
+				config.values = values.filter((v, i) => checkedIdxs.includes(i))
+				const selectedCount: any = countRadio.inputs.nodes().find(r => r.checked)
+				if (!selectedCount) throw 'no mutation count selected'
 				config.mcount = selectedCount.value
 			}
 			arg.callback(config)
