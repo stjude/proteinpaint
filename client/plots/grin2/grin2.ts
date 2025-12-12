@@ -736,6 +736,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 						},
 						onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
 							buttonNode.textContent = `Matrix (${selectedIndices.length} genes selected)`
+							buttonNode.disabled = selectedIndices.length === 0
 						}
 					},
 					{
@@ -751,6 +752,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 							selectionOrder = trackingResult.selectionOrder
 							lastTouchedGene = trackingResult.lastTouchedGene
 							buttonNode.textContent = trackingResult.buttonText
+							buttonNode.disabled = trackingResult.buttonDisabled
 						}
 					}
 				],
