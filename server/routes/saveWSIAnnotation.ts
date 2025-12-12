@@ -103,7 +103,12 @@ function validateQuery(ds: any, connection: Database.Database) {
 
 			// Query first user id from project_users table, later replace with actual user management
 			const userRow = connection
-				.prepare(`SELECT id FROM project_users WHERE project_id = ? ORDER BY id ASC LIMIT 1`)
+				.prepare(
+					`SELECT id
+						  FROM project_users
+						  ORDER BY id
+						  LIMIT 1`
+				)
 				.get(projectId) as { id: number } | undefined
 
 			const userId = userRow?.id
