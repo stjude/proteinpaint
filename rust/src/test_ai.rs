@@ -146,6 +146,9 @@ mod tests {
                                                     testing,
                                                 )
                                                 .await;
+                                                //println!("user_input:{}", user_input);
+                                                //println!("llm_answer:{:?}", llm_output);
+                                                //println!("expected answer:{:?}", &ques_ans.answer);
                                                 let mut llm_json_value: super::super::SummaryType = serde_json::from_str(&llm_output.unwrap()).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
                                                 let mut expected_json_value: super::super::SummaryType = serde_json::from_str(&ques_ans.answer).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
                                                 assert_eq!(

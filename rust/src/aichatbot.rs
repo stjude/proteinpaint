@@ -1313,7 +1313,6 @@ fn validate_summary_output(
                                     + &categorical_filter.value
                                     + &"\"},";
                                 validated_filter_terms_PP += &string_json;
-
                                 filter_hits += 1; // Once numeric term is also implemented, this statement will go outside the match block
                             }
                             FilterTerm::Numeric(_numeric_term) => {} // To be implemented later
