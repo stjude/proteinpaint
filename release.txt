@@ -1,1 +1,2 @@
-
+Fixes:
+- Return the descriptive stats for the individual box plot data for tooltips, not the entire chart, to show in the tooltips
