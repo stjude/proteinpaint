@@ -3,6 +3,8 @@ import { debounce } from 'debounce'
 import { dofetch3 } from '#common/dofetch'
 import { invalidcoord, string2pos } from '#src/coord'
 import type { ClientGenome } from '../types/clientGenome'
+//import type {Menu} from '#dom'
+//import type { Div } from '../types/d3'
 
 /*
 exports:
@@ -24,7 +26,6 @@ typical usage:
 
 
 TODO
--- need ci tests
 -- allow to hide searchStat dom
 -- dedup code with block.js
 -- dedup code with app header
@@ -32,9 +33,9 @@ TODO
 */
 
 type GeneSearchBoxArg = {
-	/** required. menu instance to show list of matching genes */
-	tip: any
-	/** required. d3 element in which <input> is created */
+	/** menu instance to show list of matching genes */
+	tip: any // applying Menu & Div types here gives many tsc err
+	/** d3 element in which <input> is created */
 	row: any
 	/** Optional. The default is 'Gene, position' */
 	placeholder?: string
@@ -339,7 +340,10 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		// see if input is gene
 		if (arg?.searchOnly != 'snp') {
 			const gene = await dofetch3('genelookup', { body: { genome: arg.genome.name, input: v } })
-			if (gene.error) throw gene.error
+			if (gene.error) {
+				tip.d.append('div').style('margin', '5px').text(gene.error)
+				return
+			}
 			if (gene.hits?.length) {
 				tip.d
 					.selectAll('div')
