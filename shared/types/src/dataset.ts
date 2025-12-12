@@ -1172,6 +1172,12 @@ type CorrelationVolcano = {
 	}
 }
 
+/** Configurations for box plots */
+type BoxPlots = {
+	/** If true, allows user to 'remove outliers' from burger menu */
+	removeOutliers: boolean
+}
+
 type UiLabels = {
 	[propName: string]: string | { label: string; [otherAttr: string]: string }
 }
@@ -1739,6 +1745,7 @@ export type Cohort = {
 	scatterplots?: Scatterplots
 	termdb: Termdb
 	hiddenTermIds?: string[]
+	boxplots?: BoxPlots
 }
 
 /** Customizations specific to the mass nav component */
