@@ -1,1 +1,3 @@
-
+Features
+- A new table for wilcoxon association test results appears by default when an overlay term is applied in the box plot. The table can be hidden by clicking "Show association tests" checkbox in the burger menu controls.
+- The "Remove outliers" box plot control is hidden unless defined by the dataset. 
