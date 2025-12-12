@@ -12,14 +12,12 @@ async function fillMenu(self, div, tvs) {
 	const data = await self.opts.vocabApi.getCategories(tvs.term, self.filter, self.opts.getCategoriesArguments || {})
 	const arg = {
 		holder: div,
-		mutations: data.lst,
-		selectedMutations: tvs.values,
+		values: data.lst,
+		selectedValues: tvs.values,
 		wt: tvs.wt,
 		callback: config => {
 			const new_tvs = structuredClone(tvs)
-			new_tvs.wt = config.wt
-			new_tvs.values = config.selectedMutations || []
-			new_tvs.mcount = config.mcount
+			Object.assign(new_tvs, config)
 			self.dom.tip.hide()
 			self.opts.callback(new_tvs)
 		}
