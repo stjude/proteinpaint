@@ -5,6 +5,7 @@ import { mayHydrateDictTwLst, get$id } from '#termsetting'
 import { QualValues, QualPredefinedGS, QualCustomGS } from './qualitative.ts'
 import { GvBase, GvValues, GvPredefinedGS, GvCustomGS } from './geneVariant.ts'
 import { NumericBase, NumRegularBin, NumCustomBins, NumCont, NumSpline } from './numeric.ts'
+import { TermCollectionValues } from './termCollection.ts'
 
 export const routedTermTypes = new Set([
 	'categorical',
@@ -17,7 +18,8 @@ export const routedTermTypes = new Set([
 	'ssGSEA',
 	'snp',
 	'singleCellGeneExpression',
-	'singleCellCellType'
+	'singleCellCellType',
+	'termCollection'
 ])
 
 export type UseCase = {
@@ -61,6 +63,9 @@ export class TwRouter {
 			case 'QualTWCustomGS':
 				return new QualCustomGS(tw, opts)
 
+			case 'TermCollectionValues':
+				return new TermCollectionValues(tw, opts)
+
 			default:
 				throw `unable to init(tw)`
 		}
@@ -103,6 +108,9 @@ export class TwRouter {
 
 			case 'geneVariant':
 				return await GvBase.fill(tw, opts)
+
+			case 'termCollection':
+				return await TermCollectionValues.fill(tw, opts)
 
 			default:
 				throw `unrecognized tw.term?.type='${tw.term?.type}'`
