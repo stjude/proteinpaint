@@ -1,19 +1,20 @@
 import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { PlotBase, defaultUiLabels } from '#plots/PlotBase.ts'
 import { fillTermWrapper } from '#termsetting'
-import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from '../controls'
+import { getCombinedTermFilter } from '#filter'
 import { Menu, getMaxLabelWidth, DownloadMenu } from '#dom'
 import type { Elem } from '../../types/d3'
 import type { MassAppApi, MassState } from '#mass/types/mass'
 import type { TdbBoxPlotOpts, BoxPlotDom, BoxPlotConfigOpts } from './BoxPlotTypes'
 import { Model } from './model/Model'
 import { ViewModel, getChartTitle } from './viewModel/ViewModel'
-import { View } from './view/View'
 import { BoxPlotInteractions } from './interactions/BoxPlotInteractions'
 import { LegendRenderer } from './view/LegendRender'
-import { getCombinedTermFilter } from '#filter'
-import { PlotBase, defaultUiLabels } from '#plots/PlotBase.ts'
 import { AssociationTableRender } from './view/AssociationTableRender'
+import { View } from './view/View'
 import { getDefaultBoxplotSettings } from './defaults'
+import { setBoxPlotControlInputs } from './BoxPlotControlInputs'
+import { controlsInit } from '#plots/controls.js'
 
 export class TdbBoxplot extends PlotBase implements RxComponent {
 	static type = 'boxplot'
@@ -59,173 +60,15 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 
 	async setControls() {
 		const state = this.getState(this.app.getState())
-		const controlLabels = state.config.controlLabels
-		if (!controlLabels) throw new Error('controls labels not found')
-		const inputs: { [index: string]: any }[] = [
-			{
-				type: 'term',
-				configKey: 'term',
-				chartType: 'boxplot',
-				usecase: { target: 'boxplot', detail: 'term' },
-				label: controlLabels.term1?.label || renderTerm1Label,
-				vocabApi: this.app.vocabApi,
-				menuOptions: 'edit'
+		const inputs = setBoxPlotControlInputs(
+			state,
+			this.app,
+			this.opts,
+			() => {
+				return this.data
 			},
-			{
-				type: 'term',
-				configKey: 'term2',
-				chartType: 'boxplot',
-				usecase: { target: 'boxplot', detail: 'term2' },
-				title: controlLabels.term2.title || controlLabels.term2.label,
-				label: controlLabels.term2.label,
-				vocabApi: this.app.vocabApi,
-				numericEditMenuVersion: this.opts.numericEditMenuVersion || ['continuous', 'discrete'],
-				defaultQ4fillTW: term0_term2_defaultQ
-			},
-			{
-				type: 'term',
-				configKey: 'term0',
-				chartType: 'boxplot',
-				usecase: { target: 'boxplot', detail: 'term0' },
-				title: controlLabels.term0.title || controlLabels.term0.label,
-				label: controlLabels.term0.label,
-				vocabApi: this.app.vocabApi,
-				numericEditMenuVersion: this.opts.numericEditMenuVersion || ['continuous', 'discrete'],
-				defaultQ4fillTW: term0_term2_defaultQ
-			},
-			{
-				label: 'Order by',
-				title: 'Order box plots by parameters',
-				type: 'radio',
-				chartType: 'boxplot',
-				settingsKey: 'orderByMedian',
-				options: [
-					{ label: 'Default', value: false },
-					{ label: 'Median values', value: true }
-				],
-				getDisplayStyle: () => {
-					let style = 'none'
-					for (const k of Object.keys(this.data.charts)) {
-						const chart = this.data.charts[k]
-						if (chart.plots.length > 1) style = ''
-					}
-					return style
-				}
-			},
-			{
-				label: 'Scale',
-				title: 'Change the axis scale',
-				type: 'radio',
-				chartType: 'boxplot',
-				settingsKey: 'isLogScale',
-				options: [
-					{ label: 'Linear', value: false },
-					{ label: 'Log10', value: true }
-				]
-			},
-			{
-				label: 'Orientation',
-				title: 'Change the orientation of the box plots',
-				type: 'radio',
-				chartType: 'boxplot',
-				settingsKey: 'isVertical',
-				options: [
-					{ label: 'Vertical', value: true },
-					{ label: 'Horizontal', value: false }
-				]
-			},
-			{
-				label: 'Plot length',
-				title: 'Set the plot length of the entire plot in pixels, >=200',
-				type: 'number',
-				chartType: 'boxplot',
-				settingsKey: 'plotLength',
-				debounceInterval: 500,
-				min: 200,
-				step: 10
-			},
-			{
-				label: 'Plot height',
-				title: 'Set the height of each box plot between 20 and 50',
-				type: 'number',
-				chartType: 'boxplot',
-				settingsKey: 'rowHeight',
-				step: 1,
-				max: 50,
-				min: 20,
-				debounceInterval: 500,
-				processInput: (val: number) => {
-					/**TODO: This is a hack. */
-					if (this.useDefaultSettings == true) this.useDefaultSettings = false
-					return val
-				}
-			},
-			{
-				label: 'Plot padding',
-				title: 'Set the space between each box plot. Number must be between 10 and 20',
-				type: 'number',
-				chartType: 'boxplot',
-				settingsKey: 'rowSpace',
-				step: 1,
-				max: 20,
-				min: 10,
-				debounceInterval: 500,
-				processInput: (val: number) => {
-					/**TODO: This is a hack. */
-					if (this.useDefaultSettings == true) this.useDefaultSettings = false
-					return val
-				}
-			},
-			{
-				label: 'Default color',
-				type: 'color',
-				chartType: 'boxplot',
-				settingsKey: 'color',
-				getDisplayStyle: () => {
-					let style = ''
-					for (const k of Object.keys(this.data.charts)) {
-						const chart = this.data.charts[k]
-						if (chart.plots.length > 1) style = 'none'
-					}
-					return style
-				}
-			},
-			{
-				label: 'Display mode',
-				title: 'Apply a dark theme to the plot',
-				type: 'radio',
-				chartType: 'boxplot',
-				settingsKey: 'displayMode',
-				options: [
-					{ label: 'Default', value: 'default' },
-					{ label: 'Filled', value: 'filled' },
-					{ label: 'Dark mode', value: 'dark' }
-				]
-			},
-			{
-				label: 'Show association tests',
-				boxLabel: '',
-				type: 'checkbox',
-				chartType: 'boxplot',
-				settingsKey: 'showAssocTests',
-				title: `Show association tests next to the box plots.`,
-				getDisplayStyle: plot => {
-					return plot?.term2 ? '' : 'none'
-				}
-			}
-		]
-
-		if (state.termdbConfig?.boxplots?.removeOutliers) {
-			inputs.push({
-				label: 'Remove outliers',
-				boxLabel: '',
-				type: 'checkbox',
-				chartType: 'boxplot',
-				settingsKey: 'removeOutliers',
-				title: `Option to remove outliers from the analysis`
-			})
-		}
-
+			this.useDefaultSettings
+		)
 		this.components.controls = await controlsInit({
 			app: this.app,
 			id: this.id,
@@ -285,14 +128,15 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 	}
 
 	async main() {
+		const config = structuredClone(this.state.config)
+		if (config.childType != this.type && config.chartType != this.type) return
+
+		if (!this.interactions) throw new Error('Interactions not initialized [box plot main()]')
+
+		const settings = config.settings.boxplot
+		const model = new Model(this, config)
+
 		try {
-			const config = structuredClone(this.state.config)
-			if (config.childType != this.type && config.chartType != this.type) return
-
-			if (!this.interactions) throw new Error('Interactions not initialized [box plot main()]')
-
-			const settings = config.settings.boxplot
-			const model = new Model(this, config)
 			const data = await model.getData()
 			config.term.q.descrStats = data.descrStats
 
@@ -414,7 +258,6 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 
 	download(event) {
 		if (!this.state) return
-
 		const name2svg = this.getChartImages()
 		const dm = new DownloadMenu(name2svg, this.state.config.term.term.name)
 		dm.show(event.clientX, event.clientY)
