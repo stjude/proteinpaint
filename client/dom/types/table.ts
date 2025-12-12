@@ -68,7 +68,7 @@ export type TableButton = {
 	disabled?: (index: number) => boolean
 	/** Attached on render */
 	button?: any
-	/** Called when selecting rows, it would update the button text */
+	/** Called when selecting rows. 2nd arg is the button <dom>, so the callback can update the text */
 	onChange?: (idx: number[], button: any) => void
 	/** to customize button style or to assist detection in testing */
 	class?: string
@@ -93,6 +93,8 @@ export type TableArgs = {
 	columnButtons?: TableButton[]
 	/** List of buttons to do actions after the table is edited */
 	buttons?: TableButton[]
+	/** show buttons to left. default to right */
+	buttonsToLeft?: true
 	/** Function that will be called when a row is selected */
 	noButtonCallback?: (i: number, node: any) => void
 	/** true for single-selection. use radio button instead of checkboxes for multiselect */
