@@ -4,6 +4,7 @@ import type { SampleLstQ } from './samplelst.ts'
 import type { NumTW, NumericQ } from './numeric.ts'
 import type { GvTW, GvQ } from './geneVariant.ts'
 import type { QualTW, QualQ } from './qualitative.ts'
+import type { TermCollectionTW, TermCollectionQ } from './termCollection.ts'
 
 export type BaseTW = {
 	id?: string
@@ -20,9 +21,9 @@ export type BaseTW = {
 	valueFilter?: any
 }
 
-export type TermWrapper = NumTW | GvTW | ConditionTW | SnpsTW | QualTW
+export type TermWrapper = NumTW | GvTW | ConditionTW | SnpsTW | QualTW | TermCollectionTW
 
-export type Q = NumericQ | GvQ | ConditionQ | SnpsQ | SampleLstQ | QualQ // | other q
+export type Q = NumericQ | GvQ | ConditionQ | SnpsQ | SampleLstQ | QualQ | TermCollectionQ // | other q
 
 //export type TermWrapper = CategoricalTW | NumericTW | SnpsTW | (BaseTW & { term: Term; q: Q })
 export type TwLst = TermWrapper[]
