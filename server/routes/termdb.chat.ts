@@ -94,6 +94,9 @@ function init({ genomes }) {
 				} else {
 					mayLog(line)
 				}
+				//else {
+				//    mayLog(line)
+				//}
 			}
 
 			if (ai_output_json.type == 'plot') {
@@ -102,30 +105,56 @@ function init({ genomes }) {
 					// simpleFilter= [ {term:str, category:str} ]
 					if (!Array.isArray(ai_output_json.plot.simpleFilter)) throw 'ai_output_json.plot.simpleFilter is not array'
 					const localfilter = { type: 'tvslst', in: true, join: '', lst: [] as any[] }
+					if (ai_output_json.plot.simpleFilter.length > 1) localfilter.join = 'and' // For now hardcoding join as 'and' if number of filter terms > 1. Will later implement more comprehensive logic
 					for (const f of ai_output_json.plot.simpleFilter) {
 						const term = ds.cohort.termdb.q.termjsonByOneid(f.term)
 						if (!term) throw 'invalid term id from simpleFilter[].term'
-						if (term.type != 'categorical') throw 'term not categorical' // TODO to support numeric term later
-						let cat
-						for (const ck in term.values) {
-							if (ck == f.category) cat = ck
-							else if (term.values[ck].label == f.category) cat = ck
-						}
-						if (!cat) throw 'invalid category from ' + JSON.stringify(f)
-						// term and category validated
-						localfilter.lst.push({
-							type: 'tvs',
-							tvs: {
-								term,
-								values: [{ key: cat }]
+						if (term.type == 'categorical') {
+							let cat
+							for (const ck in term.values) {
+								if (ck == f.category) cat = ck
+								else if (term.values[ck].label == f.category) cat = ck
 							}
-						})
+							if (!cat) throw 'invalid category from ' + JSON.stringify(f)
+							// term and category validated
+							localfilter.lst.push({
+								type: 'tvs',
+								tvs: {
+									term,
+									values: [{ key: cat }]
+								}
+							})
+						} else if (term.type == 'float') {
+							const numeric: any = {
+								type: 'tvs',
+								tvs: {
+									term,
+									ranges: []
+								}
+							}
+							const range: any = {}
+							if (f.gt && !f.lt) {
+								range.start = Number(f.gt)
+								range.stopunbounded = true
+							} else if (f.lt && !f.gt) {
+								range.stop = Number(f.lt)
+								range.startunbounded = true
+							} else if (f.gt && f.lt) {
+								range.start = Number(f.gt)
+								range.stop = Number(f.lt)
+							} else {
+								throw 'Neither greater or lesser defined'
+							}
+							numeric.tvs.ranges.push(range)
+							localfilter.lst.push(numeric)
+						}
 					}
 					delete ai_output_json.plot.simpleFilter
 					ai_output_json.plot.filter = localfilter
 				}
+				console.log('ai_output_json:', ai_output_json.plot.filter.lst[1].tvs)
+				res.send(ai_output_json as ChatResponse)
 			}
-			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			res.send({ error: e?.message || e })

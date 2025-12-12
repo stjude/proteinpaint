@@ -1014,7 +1014,7 @@ struct SummaryType {
 
 impl SummaryType {
     #[allow(dead_code)]
-    pub fn sort_summarytype_struct(&mut self) {
+    pub fn sort_summarytype_struct(mut self) -> SummaryType {
         // This function is necessary for testing (test_ai.rs) to see if two variables of type "SummaryType" are equal or not. Without this a vector of two Summarytype holding the same values but in different order will be classified separately.
         self.summaryterms.sort();
 
@@ -1022,6 +1022,7 @@ impl SummaryType {
             Some(ref mut filterterms) => filterterms.sort(),
             None => {}
         }
+        self.clone()
     }
 }
 
@@ -1039,7 +1040,7 @@ impl PartialOrd for SummaryTerms {
             (SummaryTerms::clinical(_), SummaryTerms::clinical(_)) => Some(std::cmp::Ordering::Equal),
             (SummaryTerms::geneExpression(_), SummaryTerms::geneExpression(_)) => Some(std::cmp::Ordering::Equal),
             (SummaryTerms::clinical(_), SummaryTerms::geneExpression(_)) => Some(std::cmp::Ordering::Greater),
-            (SummaryTerms::geneExpression(_), SummaryTerms::clinical(_)) => Some(std::cmp::Ordering::Greater),
+            (SummaryTerms::geneExpression(_), SummaryTerms::clinical(_)) => Some(std::cmp::Ordering::Less),
         }
     }
 }
@@ -1313,10 +1314,40 @@ fn validate_summary_output(
                                     + &categorical_filter.value
                                     + &"\"},";
                                 validated_filter_terms_PP += &string_json;
-                                filter_hits += 1; // Once numeric term is also implemented, this statement will go outside the match block
                             }
-                            FilterTerm::Numeric(_numeric_term) => {} // To be implemented later
+                            FilterTerm::Numeric(numeric_filter) => {
+                                let string_json;
+                                if numeric_filter.greaterThan.is_some() && numeric_filter.lessThan.is_none() {
+                                    string_json = "{\"term\":\"".to_string()
+                                        + &numeric_filter.term
+                                        + &"\", \"gt\":\""
+                                        + &numeric_filter.greaterThan.unwrap().to_string()
+                                        + &"\"},";
+                                } else if numeric_filter.greaterThan.is_none() && numeric_filter.lessThan.is_some() {
+                                    string_json = "{\"term\":\"".to_string()
+                                        + &numeric_filter.term
+                                        + &"\", \"lt\":\""
+                                        + &numeric_filter.lessThan.unwrap().to_string()
+                                        + &"\"},";
+                                } else if numeric_filter.greaterThan.is_some() && numeric_filter.lessThan.is_some() {
+                                    string_json = "{\"term\":\"".to_string()
+                                        + &numeric_filter.term
+                                        + &"\", \"lt\":\""
+                                        + &numeric_filter.lessThan.unwrap().to_string()
+                                        + &"\", \"gt\":\""
+                                        + &numeric_filter.greaterThan.unwrap().to_string()
+                                        + &"\"},";
+                                } else {
+                                    // When both greater and less than are none
+                                    panic!(
+                                        "Numeric filter term {} is missing both greater than and less than values. One of them must be defined",
+                                        &numeric_filter.term
+                                    );
+                                }
+                                validated_filter_terms_PP += &string_json;
+                            } // To be implemented later
                         };
+                        filter_hits += 1;
                     }
                     println!("validated_filter_terms_PP:{}", validated_filter_terms_PP);
                     if filter_hits > 0 {

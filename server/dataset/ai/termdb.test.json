@@ -16,8 +16,8 @@
           ],
           "TestData":[
 	       {"question":"Show correlation between kras gene expression and race","answer":"{\"action\":\"summary\",\"summaryterms\":[{\"geneExpression\":\"KRAS\"},{\"clinical\":\"genetic_race\"}]}"},
-	       {"question":"Show molecular subtypes for men greater than 60 yrs", "answer":"{\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"sex\",\"value\":\"1\"}},{\"Numeric\":{\"greaterThan\":60.0,\"lessThan\":null,\"term\":\"agedx\"}}],\"summaryterms\":[{\"clinical\":\"diaggrp\"}]}"},
-	       {"question":"Show TP53 gene expression between genders","answer":"{\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"Sex\"},{\"geneExpression\":\"TP53\"}]}"}
+	       {"question":"Show molecular subtypes for men greater than 60 yrs only", "answer":"{\"action\":\"summary\",\"filter\":[{\"Categorical\":{\"term\":\"sex\",\"value\":\"1\"}},{\"Numeric\":{\"greaterThan\":60.0,\"lessThan\":null,\"term\":\"agedx\"}}],\"summaryterms\":[{\"clinical\":\"diaggrp\"}]}"},
+	       {"question":"Show TP53 gene expression between genders","answer":"{\"action\":\"summary\",\"summaryterms\":[{\"clinical\":\"sex\"},{\"geneExpression\":\"TP53\"}]}"}
           ]	 
        }
     },
