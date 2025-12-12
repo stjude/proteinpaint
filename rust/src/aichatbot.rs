@@ -1014,14 +1014,17 @@ struct SummaryType {
 
 impl SummaryType {
     #[allow(dead_code)]
-    pub fn sort_summarytype_struct(&mut self) {
+    pub fn sort_summarytype_struct(mut self) -> SummaryType {
         // This function is necessary for testing (test_ai.rs) to see if two variables of type "SummaryType" are equal or not. Without this a vector of two Summarytype holding the same values but in different order will be classified separately.
+        let mut sum_type: SummaryType;
         self.summaryterms.sort();
 
         match self.filter.clone() {
             Some(ref mut filterterms) => filterterms.sort(),
             None => {}
         }
+        println!("sort:{:?}", self);
+        self.clone()
     }
 }
 
