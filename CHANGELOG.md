@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.167.0
 
 Features:
 - GRIN2: New gene tooltip display and logic
