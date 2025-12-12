@@ -725,6 +725,7 @@ trait ParseDbRows {
 
 impl ParseDbRows for DbRows {
     fn parse_db_rows(&self) -> String {
+        println!("self:{:?}", self);
         let mut output: String = "Name of field is \"".to_string() + &self.name + &"\". ";
 
         match &self.term_type {
@@ -820,8 +821,16 @@ async fn parse_dataset_db(db: &str) -> (Vec<String>, Vec<DbRows>) {
                 let mut keys = Vec::<String>::new();
                 match values_json {
                     Some(values) => {
-                        for (key, _value) in values {
-                            keys.push(key.to_string())
+                        for (_key, value) in values {
+                            //keys.push(key.to_string()) // Better to not use keys because keys can can sometimes be "1","2" and therefore not clear to the LLM what they stand for. Better to parse the labels.
+                            //println!("row:{:?}", row);
+                            //println!("value:{:?}", value.as_object().unwrap()["label"]);
+
+                            //let label_json: Value =
+                            //    serde_json::from_str(&value.as_object().unwrap()).expect("Not a JSON");
+                            //println!("label_json:{:?}", label_json);
+                            //let label = label_json["label"].as_str().unwrap();
+                            keys.push(value.as_object().unwrap()["label"].to_string())
                         }
                     }
                     None => {}
