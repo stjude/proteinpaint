@@ -8,6 +8,8 @@ Features:
 - GRIN2: New gene tooltip display and logic
 - New plot length control in barchart.
 - GRIN2: Added gene table click event for multi-gene tooltip
+- A new table for wilcoxon association test results appears by default when an overlay term is applied in the box plot. The table can be hidden by clicking "Show association tests" checkbox in the burger menu controls.
+- The "Remove outliers" box plot control is hidden unless defined by the dataset.
 
 Fixes:
 - mds3 tk sample table, format field values are properly aligned with ssm name, and indicate cnv from ssm_id in density mode
