@@ -106,12 +106,18 @@ mod tests {
                                             )
                                             .await;
                                             let llm_json_value: super::super::SummaryType = serde_json::from_str(&llm_output.unwrap()).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
-                                            let sum: super::super::SummaryType = ques_ans.answer;
-                                            //println!("expected answer:{:?}", &sum);
-                                            assert_eq!(
-                                                llm_json_value.sort_summarytype_struct(),
-                                                sum.sort_summarytype_struct()
-                                            );
+                                            match ques_ans.answer {
+                                                super::super::AnswerFormat::summary_type(sum) => {
+                                                    //println!("expected answer:{:?}", &sum);
+                                                    assert_eq!(
+                                                        llm_json_value.sort_summarytype_struct(),
+                                                        sum.sort_summarytype_struct()
+                                                    );
+                                                }
+                                                super::super::AnswerFormat::DE_type(_) => {
+                                                    panic!("DE type not valid for summary")
+                                                }
+                                            }
                                         }
                                     }
                                     super::super::Charts::DE(_testdata) => {} // To do
@@ -162,12 +168,18 @@ mod tests {
                                                 //    "expected answer:{:?}",
                                                 //    &expected_json_value.clone().sort_summarytype_struct()
                                                 //);
-                                                let sum: super::super::SummaryType = ques_ans.answer;
-                                                //println!("expected answer:{:?}", &sum);
-                                                assert_eq!(
-                                                    llm_json_value.sort_summarytype_struct(),
-                                                    sum.sort_summarytype_struct()
-                                                );
+                                                match ques_ans.answer {
+                                                    super::super::AnswerFormat::summary_type(sum) => {
+                                                        //println!("expected answer:{:?}", &sum);
+                                                        assert_eq!(
+                                                            llm_json_value.sort_summarytype_struct(),
+                                                            sum.sort_summarytype_struct()
+                                                        );
+                                                    }
+                                                    super::super::AnswerFormat::DE_type(_) => {
+                                                        panic!("DE type not valid for summary")
+                                                    }
+                                                }
                                             } else {
                                                 panic!("The user input is empty");
                                             }

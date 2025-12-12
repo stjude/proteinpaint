@@ -8,7 +8,7 @@ use rig::completion::Prompt;
 use rig::embeddings::builder::EmbeddingsBuilder;
 use rig::vector_store::in_memory_store::InMemoryVectorStore;
 use schemars::JsonSchema;
-use serde_json::{Map, Value, json};
+use serde_json::{json, Map, Value};
 use std::collections::HashMap;
 use std::fs;
 use std::io;
@@ -24,40 +24,29 @@ pub struct AiJsonFormat {
     hasGeneExpression: bool,
     db: String,     // Dataset db
     genedb: String, // Gene db
-    charts: Vec<Charts>,
+    charts: Vec<TrainTestData>,
 }
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
-enum Charts {
-    // More chart types will be added here later
-    Summary(TrainTestDataSummary),
-    DE(TrainTestDataDE),
-}
-
-#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
-struct TrainTestDataSummary {
+struct TrainTestData {
+    r#type: String,
     SystemPrompt: String,
-    TrainingData: Vec<QuestionAnswerSummary>,
-    TestData: Vec<QuestionAnswerSummary>,
+    TrainingData: Vec<QuestionAnswer>,
+    TestData: Vec<QuestionAnswer>,
 }
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
-struct QuestionAnswerSummary {
+struct QuestionAnswer {
     question: String,
-    answer: SummaryType,
+    answer: AnswerFormat,
 }
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
-struct TrainTestDataDE {
-    SystemPrompt: String,
-    TrainingData: Vec<QuestionAnswerDE>,
-    TestData: Vec<QuestionAnswerDE>,
-}
-
-#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
-struct QuestionAnswerDE {
-    question: String,
-    answer: DEType,
+enum AnswerFormat {
+    #[allow(non_camel_case_types)]
+    summary_type(SummaryType),
+    #[allow(non_camel_case_types)]
+    DE_type(DEType),
 }
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
@@ -897,10 +886,10 @@ async fn extract_summary_information(
         .filter(|x| user_words2.contains(&x.to_lowercase()))
         .collect();
 
-    let mut summary_data_check: Option<TrainTestDataSummary> = None;
+    let mut summary_data_check: Option<TrainTestData> = None;
     for chart in ai_json.charts.clone() {
-        if let Charts::Summary(traindata) = chart {
-            summary_data_check = Some(traindata);
+        if chart.r#type == "Summary" {
+            summary_data_check = Some(chart);
             break;
         }
     }
@@ -910,18 +899,23 @@ async fn extract_summary_information(
             let mut training_data: String = String::from("");
             let mut train_iter = 0;
             for ques_ans in summary_data.TrainingData {
-                let summary_answer: SummaryType = ques_ans.answer;
-                train_iter += 1;
-                training_data += "Example question";
-                training_data += &train_iter.to_string();
-                training_data += &":";
-                training_data += &ques_ans.question;
-                training_data += &" ";
-                training_data += "Example answer";
-                training_data += &train_iter.to_string();
-                training_data += &":";
-                training_data += &serde_json::to_string(&summary_answer).unwrap();
-                training_data += &"\n";
+                match ques_ans.answer {
+                    AnswerFormat::summary_type(sum) => {
+                        let summary_answer: SummaryType = sum;
+                        train_iter += 1;
+                        training_data += "Example question";
+                        training_data += &train_iter.to_string();
+                        training_data += &":";
+                        training_data += &ques_ans.question;
+                        training_data += &" ";
+                        training_data += "Example answer";
+                        training_data += &train_iter.to_string();
+                        training_data += &":";
+                        training_data += &serde_json::to_string(&summary_answer).unwrap();
+                        training_data += &"\n";
+                    }
+                    AnswerFormat::DE_type(_) => panic!("DE type not valid for summary"),
+                }
             }
 
             let system_prompt: String = String::from(
