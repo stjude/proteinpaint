@@ -125,7 +125,6 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, charts:
 			chartType: 'boxplot',
 			settingsKey: 'color',
 			getDisplayStyle: () => {
-				console.log(Object.keys(charts))
 				let style = ''
 				for (const k of Object.keys(charts)) {
 					const chart = charts[k]
