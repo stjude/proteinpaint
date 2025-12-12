@@ -1204,6 +1204,8 @@ fn validate_summary_output(
         }
     }
 
+    let mut pp_plot_json: Value; // The PP compliant plot JSON
+    pp_plot_json = serde_json::from_str(&"{\"chartType\":\"summary\"}").expect("Not a valid JSON");
     match &json_value.filter {
         Some(filter_terms_array) => {
             let mut validated_filter_terms = Vec::<FilterTerm>::new();
@@ -1295,8 +1297,38 @@ fn validate_summary_output(
             }
 
             if validated_filter_terms.len() > 0 {
-                if let Some(obj) = new_json.as_object_mut() {
-                    obj.insert(String::from("filter"), serde_json::json!(validated_filter_terms));
+                if testing == true {
+                    if let Some(obj) = new_json.as_object_mut() {
+                        obj.insert(String::from("filter"), serde_json::json!(validated_filter_terms));
+                    }
+                } else {
+                    let mut validated_filter_terms_PP: String = "[".to_string();
+                    let mut filter_hits = 0;
+                    for validated_term in validated_filter_terms {
+                        match validated_term {
+                            FilterTerm::Categorical(categorical_filter) => {
+                                let string_json = "{\"term\":\"".to_string()
+                                    + &categorical_filter.term
+                                    + &"\", \"category\":\""
+                                    + &categorical_filter.value
+                                    + &"\"},";
+                                validated_filter_terms_PP += &string_json;
+                                filter_hits += 1; // Once numeric term is also implemented, this statement will go outside the match block
+                            }
+                            FilterTerm::Numeric(_numeric_term) => {} // To be implemented later
+                        };
+                    }
+                    println!("validated_filter_terms_PP:{}", validated_filter_terms_PP);
+                    if filter_hits > 0 {
+                        validated_filter_terms_PP.pop();
+                        validated_filter_terms_PP += &"]";
+                        if let Some(obj) = pp_plot_json.as_object_mut() {
+                            obj.insert(
+                                String::from("simpleFilter"),
+                                serde_json::from_str(&validated_filter_terms_PP).expect("Not a valid JSON"),
+                            );
+                        }
+                    }
                 }
             }
         }
@@ -1309,9 +1341,6 @@ fn validate_summary_output(
     let mut sum_iter = 0;
     let mut pp_json: Value; // New JSON value that will contain items of the final PP compliant JSON
     pp_json = serde_json::from_str(&"{\"type\":\"plot\"}").expect("Not a valid JSON");
-
-    let mut pp_plot_json: Value; // The PP compliant plot JSON
-    pp_plot_json = serde_json::from_str(&"{\"chartType\":\"summary\"}").expect("Not a valid JSON");
 
     for summary_term in &validated_summary_terms {
         let mut hit = 0;
