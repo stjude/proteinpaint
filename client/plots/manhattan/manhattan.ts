@@ -1,11 +1,54 @@
 import { scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
 import { select } from 'd3-selection'
-import { Menu, icons, axisstyle, table2col, renderTable } from '#dom'
+import { Menu, icons, axisstyle, table2col, renderTable, sayerror } from '#dom'
 import { to_svg } from '#src/client'
-import { quadtree } from 'd3-quadtree'
+import { quadtree, type Quadtree } from 'd3-quadtree'
 import type { ManhattanPoint } from './manhattanTypes'
 import { get$id } from '#termsetting'
+
+/**
+ * Searches a quadtree for all points within a specified radius of target coordinates.
+ *
+ * @param {Object} quadtree - D3 quadtree containing ManhattanPoint data
+ * @param {number} mx - Target x coordinate (in pixels)
+ * @param {number} my - Target y coordinate (in pixels)
+ * @param {number} hitRadius - Search radius (in pixels)
+ * @returns {Array<{point: ManhattanPoint, distance: number}>} Array of points within radius with their distances
+ */
+function findPointsInRadius(
+	quadtree: Quadtree<ManhattanPoint>,
+	mx: number,
+	my: number,
+	hitRadius: number
+): Array<{ point: ManhattanPoint; distance: number }> {
+	const candidates: Array<{ point: ManhattanPoint; distance: number }> = []
+
+	quadtree.visit((node, x1, y1, x2, y2) => {
+		// Skip this node if it's outside the search radius
+		if (x1 > mx + hitRadius || x2 < mx - hitRadius || y1 > my + hitRadius || y2 < my - hitRadius) {
+			return true // Skip this branch
+		}
+
+		// If this is a leaf node, check the point
+		if (!node.length) {
+			const point = node.data
+			if (point) {
+				const px = point.pixel_x
+				const py = point.pixel_y
+				const distance = Math.sqrt((mx - px) ** 2 + (my - py) ** 2)
+
+				if (distance <= hitRadius) {
+					candidates.push({ point, distance })
+				}
+			}
+		}
+
+		return false // Don't stop early - check all nodes in radius
+	})
+
+	return candidates
+}
 
 /**
  * Creates an interactive Manhattan plot on top of a PNG background plot image.
@@ -190,30 +233,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				const hitRadius = settings.pngDotRadius + 3
 
 				// Find all points within hit radius with their distances
-				const candidates: Array<{ point: ManhattanPoint; distance: number }> = []
-
-				pointQuadtree.visit((node, x1, y1, x2, y2) => {
-					// Skip this node if it's outside the search radius
-					if (x1 > mx + hitRadius || x2 < mx - hitRadius || y1 > my + hitRadius || y2 < my - hitRadius) {
-						return true // Skip this branch
-					}
-
-					// If this is a leaf node, check the point
-					if (!node.length) {
-						const point = node.data
-						if (point) {
-							const px = point.pixel_x
-							const py = point.pixel_y
-							const distance = Math.sqrt((mx - px) ** 2 + (my - py) ** 2)
-
-							if (distance <= hitRadius) {
-								candidates.push({ point, distance })
-							}
-						}
-					}
-
-					return false // Don't stop early - check all nodes in radius
-				})
+				const candidates = findPointsInRadius(pointQuadtree, mx, my, hitRadius)
 
 				// Sort by distance and take the closest points based on settings.maxTooltipGenes setting
 				candidates.sort((a, b) => a.distance - b.distance)
@@ -318,25 +338,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				const my = event.clientY - rect.top
 				const hitRadius = settings.pngDotRadius + 3
 
-				const allCandidates: Array<{ point: ManhattanPoint; distance: number }> = []
-
-				pointQuadtree.visit((node, x1, y1, x2, y2) => {
-					if (x1 > mx + hitRadius || x2 < mx - hitRadius || y1 > my + hitRadius || y2 < my - hitRadius) {
-						return true
-					}
-					if (!node.length) {
-						const point = node.data
-						if (point) {
-							const px = point.pixel_x
-							const py = point.pixel_y
-							const distance = Math.sqrt((mx - px) ** 2 + (my - py) ** 2)
-							if (distance <= hitRadius) {
-								allCandidates.push({ point, distance })
-							}
-						}
-					}
-					return false
-				})
+				const allCandidates = findPointsInRadius(pointQuadtree, mx, my, hitRadius)
 
 				allCandidates.sort((a, b) => a.distance - b.distance)
 				const allNearbyDots = allCandidates.map(c => c.point)
@@ -385,7 +387,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 							}
 						})
 
-					const selectedGenes: string[] = []
+					let selectedGenes: string[] = []
 					let lastTouchedGene: string | null = null
 
 					renderTable({
@@ -416,7 +418,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 								selectedGenes.push(geneName)
 								lastTouchedGene = geneName
 							} else {
-								selectedGenes.splice(selectedGenes.indexOf(geneName), 1)
+								selectedGenes = selectedGenes.filter(g => g !== geneName)
 								lastTouchedGene = selectedGenes.length > 0 ? selectedGenes[selectedGenes.length - 1] : null
 							}
 
@@ -571,33 +573,37 @@ export function createLollipopFromGene(geneSymbol: string, app: any) {
 }
 
 export async function createMatrixFromGenes(geneSymbols: string[], app: any): Promise<void> {
-	const termwrappers = await Promise.all(
-		geneSymbols.map(async (gene: string) => {
-			const term = {
-				type: 'geneVariant',
-				gene: gene,
-				name: gene
-			}
-			const minTwCopy = app.vocabApi.getTwMinCopy({ term, q: {} })
-			return {
-				$id: await get$id(minTwCopy),
-				term,
-				q: {}
+	try {
+		const termwrappers = await Promise.all(
+			geneSymbols.map(async (gene: string) => {
+				const term = {
+					type: 'geneVariant',
+					gene: gene,
+					name: gene
+				}
+				const minTwCopy = app.vocabApi.getTwMinCopy({ term, q: {} })
+				return {
+					$id: await get$id(minTwCopy),
+					term,
+					q: {}
+				}
+			})
+		)
+
+		app.dispatch({
+			type: 'plot_create',
+			config: {
+				chartType: 'matrix',
+				dataType: 'geneVariant',
+				termgroups: [
+					{
+						name: 'Genomic Alterations',
+						lst: termwrappers
+					}
+				]
 			}
 		})
-	)
-
-	app.dispatch({
-		type: 'plot_create',
-		config: {
-			chartType: 'matrix',
-			dataType: 'geneVariant',
-			termgroups: [
-				{
-					name: 'Alterations',
-					lst: termwrappers
-				}
-			]
-		}
-	})
+	} catch (error) {
+		sayerror(app.dom.div, `Error creating matrix: ${error instanceof Error ? error.message : error}`)
+	}
 }
