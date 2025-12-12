@@ -19,6 +19,7 @@ async function fillMenu(self, div, tvs) {
 			const new_tvs = structuredClone(tvs)
 			new_tvs.wt = config.wt
 			new_tvs.values = config.selectedMutations || []
+			new_tvs.mcount = config.mcount
 			self.dom.tip.hide()
 			self.opts.callback(new_tvs)
 		}

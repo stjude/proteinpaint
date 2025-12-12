@@ -3051,13 +3051,23 @@ export function filterByItem(filter, mlst, values) {
 			// categorical mutation data
 			if (!tvs.wt) {
 				// mutant tvs
-				// sample passes if it has at least one mutation specified in tvs
+				// get mutations in sample that match tvs
 				const mlst_intvs = mlst_tested.filter(m => tvs.values.some(v => v.key == m.class))
-				pass = mlst_intvs.length > 0
+				// sample passes if number of matching mutations
+				// passes mutation count cutoff
+				pass =
+					tvs.mcount == 'any'
+						? mlst_intvs.length > 0
+						: tvs.mcount == 'single'
+						? mlst_intvs.length == 1
+						: tvs.mcount == 'multiple'
+						? mlst_intvs.length > 1
+						: null
+				if (pass === null) throw 'unexpected tvs.mcount'
 				if (values) values.push(...mlst_intvs)
 			} else {
 				// wildtype tvs
-				// sample passes if it is wildtype (across all genes)
+				// sample passes if it is wildtype (across all queried genes)
 				pass = mlst_tested.every(m => m.class == mclass['WT'].key)
 				if (values) values.push(...mlst_tested)
 			}

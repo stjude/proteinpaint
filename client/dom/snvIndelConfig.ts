@@ -52,6 +52,25 @@ export function renderSnvIndelConfig(arg) {
 		selectedRows: selectedIdxs
 	})
 
+	// mutation count
+	const countDiv = mutationsDiv.append('div').style('margin-bottom', '10px')
+	countDiv
+		.append('div')
+		.style('display', 'inline-block')
+		.style('margin-right', '5px')
+		.style('opacity', 0.7)
+		.text('Mutation occurrence')
+	const countRadio = make_radios({
+		holder: countDiv,
+		styles: { display: 'inline-block' },
+		options: [
+			{ label: 'Any', value: 'any', checked: !wt },
+			{ label: 'Single', value: 'single', checked: wt },
+			{ label: 'Multiple', value: 'multiple', checked: wt }
+		],
+		callback: () => {}
+	})
+
 	// Apply button
 	div
 		.append('div')
@@ -72,6 +91,8 @@ export function renderSnvIndelConfig(arg) {
 					if (c.checked) checkedIdxs.push(i)
 				}
 				config.selectedMutations = mutations.filter((v, i) => checkedIdxs.includes(i))
+				const selectedCount = countRadio.inputs.nodes().find(r => r.checked)
+				config.mcount = selectedCount.value
 			}
 			arg.callback(config)
 		})
