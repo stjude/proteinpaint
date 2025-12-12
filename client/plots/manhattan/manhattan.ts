@@ -59,16 +59,17 @@ function findPointsInRadius(
  * @param {number[]} selectedIndices - New array of selected indices from the selection UI
  * @param {Array<{gene: string} | Array<{value: string}>>} dataSource - Array of data items containing gene information
  *   Can be either ManhattanPoints with `gene` property or table rows with `value` property
- * @returns {{selectionOrder: number[], lastTouchedGene: string | null, buttonText: string}}
+ * @returns {{selectionOrder: number[], lastTouchedGene: string | null, buttonText: string, buttonDisabled: boolean}}
  *   - selectionOrder: Updated array of indices in selection order
  *   - lastTouchedGene: Gene symbol of most recently selected item, or null if no selection
  *   - buttonText: Suggested button text including gene name if available
+ *   - buttonDisabled: Whether the button should be disabled (true when no gene is selected)
  */
 export function updateSelectionTracking(
 	currentSelectionOrder: number[],
 	selectedIndices: number[],
 	dataSource: Array<{ gene: string } | Array<{ value: string }>>
-): { selectionOrder: number[]; lastTouchedGene: string | null; buttonText: string } {
+): { selectionOrder: number[]; lastTouchedGene: string | null; buttonText: string; buttonDisabled: boolean } {
 	// Find newly selected items
 	const newlySelected = selectedIndices.filter(idx => !currentSelectionOrder.includes(idx))
 
@@ -99,7 +100,8 @@ export function updateSelectionTracking(
 	return {
 		selectionOrder: updatedSelectionOrder,
 		lastTouchedGene,
-		buttonText
+		buttonText,
+		buttonDisabled: lastTouchedGene === null
 	}
 }
 
@@ -446,6 +448,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 								},
 								onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
 									buttonNode.textContent = `Matrix (${selectedIndices.length})`
+									buttonNode.disabled = selectedIndices.length === 0
 								}
 							},
 							{
@@ -462,6 +465,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 									selectionOrder = result.selectionOrder
 									lastTouchedGene = result.lastTouchedGene
 									buttonNode.textContent = result.buttonText
+									buttonNode.disabled = result.buttonDisabled
 								}
 							}
 						]
