@@ -6,7 +6,12 @@ import { getNormalRoot } from '#filter'
 import { Menu, renderTable, table2col, make_one_checkbox, sayerror } from '#dom'
 import { dtsnvindel, mclass, dtcnv, dtfusionrna, dtsv, proteinChangingMutations, dt2lesion } from '#shared/common.js'
 import { PlotBase } from '#plots/PlotBase.ts'
-import { plotManhattan, createLollipopFromGene, createMatrixFromGenes } from '#plots/manhattan/manhattan.ts'
+import {
+	plotManhattan,
+	createLollipopFromGene,
+	createMatrixFromGenes,
+	updateSelectionTracking
+} from '#plots/manhattan/manhattan.ts'
 
 class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
@@ -742,22 +747,10 @@ class GRIN2 extends PlotBase implements RxComponent {
 							}
 						},
 						onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
-							// Find newly selected items
-							const newlySelected = selectedIndices.filter(idx => !selectionOrder.includes(idx))
-
-							// Update selection order: remove deselected items, add newly selected ones
-							selectionOrder = selectionOrder.filter(idx => selectedIndices.includes(idx))
-							selectionOrder.push(...newlySelected)
-
-							if (selectionOrder.length > 0) {
-								// Get the most recently selected gene (last in selectionOrder)
-								const lastSelectedIdx = selectionOrder[selectionOrder.length - 1]
-								lastTouchedGene = result.topGeneTable.rows[lastSelectedIdx][0]?.value
-								buttonNode.textContent = `Lollipop (${lastTouchedGene})`
-							} else {
-								lastTouchedGene = null
-								buttonNode.textContent = 'Lollipop'
-							}
+							const trackingResult = updateSelectionTracking(selectionOrder, selectedIndices, result.topGeneTable.rows)
+							selectionOrder = trackingResult.selectionOrder
+							lastTouchedGene = trackingResult.lastTouchedGene
+							buttonNode.textContent = trackingResult.buttonText
 						}
 					}
 				],

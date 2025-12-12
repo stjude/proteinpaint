@@ -51,6 +51,59 @@ function findPointsInRadius(
 }
 
 /**
+ * Updates selection order tracking and determines the last touched gene.
+ * This function is used by interactive selection buttons (Lollipop, Matrix) to track
+ * which item was most recently selected, even when multiple items are selected.
+ *
+ * @param {number[]} currentSelectionOrder - Current array tracking selection order (indices in order of selection)
+ * @param {number[]} selectedIndices - New array of selected indices from the selection UI
+ * @param {Array<{gene: string} | Array<{value: string}>>} dataSource - Array of data items containing gene information
+ *   Can be either ManhattanPoints with `gene` property or table rows with `value` property
+ * @returns {{selectionOrder: number[], lastTouchedGene: string | null, buttonText: string}}
+ *   - selectionOrder: Updated array of indices in selection order
+ *   - lastTouchedGene: Gene symbol of most recently selected item, or null if no selection
+ *   - buttonText: Suggested button text including gene name if available
+ */
+export function updateSelectionTracking(
+	currentSelectionOrder: number[],
+	selectedIndices: number[],
+	dataSource: Array<{ gene: string } | Array<{ value: string }>>
+): { selectionOrder: number[]; lastTouchedGene: string | null; buttonText: string } {
+	// Find newly selected items
+	const newlySelected = selectedIndices.filter(idx => !currentSelectionOrder.includes(idx))
+
+	// Update selection order: remove deselected items, add newly selected ones
+	const updatedSelectionOrder = currentSelectionOrder.filter(idx => selectedIndices.includes(idx))
+	updatedSelectionOrder.push(...newlySelected)
+
+	let lastTouchedGene: string | null = null
+	let buttonText = 'Lollipop'
+
+	if (updatedSelectionOrder.length > 0) {
+		// Get the most recently selected gene (last in selectionOrder)
+		const lastSelectedIdx = updatedSelectionOrder[updatedSelectionOrder.length - 1]
+		const dataItem = dataSource[lastSelectedIdx]
+
+		// Handle both ManhattanPoint objects (with 'gene' property) and table rows (arrays with value property)
+		if (Array.isArray(dataItem)) {
+			// Table row format: array of cells with value property
+			lastTouchedGene = dataItem[0]?.value || null
+		} else {
+			// ManhattanPoint format: object with gene property
+			lastTouchedGene = (dataItem as { gene: string }).gene
+		}
+
+		buttonText = `Lollipop (${lastTouchedGene})`
+	}
+
+	return {
+		selectionOrder: updatedSelectionOrder,
+		lastTouchedGene,
+		buttonText
+	}
+}
+
+/**
  * Creates an interactive Manhattan plot on top of a PNG background plot image.
  *
  * @param {Object} div - div element to contain the plot
@@ -405,22 +458,10 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 									}
 								},
 								onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
-									// Find newly selected items
-									const newlySelected = selectedIndices.filter(idx => !selectionOrder.includes(idx))
-
-									// Update selection order: remove deselected items, add newly selected ones
-									selectionOrder = selectionOrder.filter(idx => selectedIndices.includes(idx))
-									selectionOrder.push(...newlySelected)
-
-									if (selectionOrder.length > 0) {
-										// Get the most recently selected gene (last in selectionOrder)
-										const lastSelectedIdx = selectionOrder[selectionOrder.length - 1]
-										lastTouchedGene = allNearbyDots[lastSelectedIdx].gene
-										buttonNode.textContent = `Lollipop (${lastTouchedGene})`
-									} else {
-										lastTouchedGene = null
-										buttonNode.textContent = 'Lollipop'
-									}
+									const result = updateSelectionTracking(selectionOrder, selectedIndices, allNearbyDots)
+									selectionOrder = result.selectionOrder
+									lastTouchedGene = result.lastTouchedGene
+									buttonNode.textContent = result.buttonText
 								}
 							}
 						]
