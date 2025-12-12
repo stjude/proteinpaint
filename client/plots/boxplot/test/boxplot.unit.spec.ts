@@ -41,7 +41,8 @@ function getMockData() {
 		rowHeight: 20,
 		rowSpace: 10,
 		useDefaultSettings: true,
-		removeOutliers: false
+		removeOutliers: false,
+		showAssocTests: true
 	}
 
 	const mockConfig = {
