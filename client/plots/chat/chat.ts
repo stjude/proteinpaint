@@ -80,7 +80,7 @@ class Chat extends PlotBase implements RxComponent {
 					if (data.error) throw data.error
 					console.log(data)
 
-					const result: ChatResponse = JSON.parse(data)
+					const result: ChatResponse = data
 					if (result.type == 'html') {
 						// Show error message in chatbot and exit, do not show any plot
 						serverBubble.html(result.html)

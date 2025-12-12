@@ -49,7 +49,6 @@ function init({ genomes }) {
 			const serverconfig_ds_entries = serverconfig.genomes
 				.find(genome => genome.name == q.genome)
 				.datasets.find(dslabel => dslabel.name == ds.label)
-			console.log('serverconfig_ds_entries:', serverconfig_ds_entries)
 
 			if (!serverconfig_ds_entries.aifiles) {
 				throw 'aifiles are missing for chatbot to work'
@@ -91,11 +90,12 @@ function init({ genomes }) {
 			for (const line of ai_output_data.split('\n')) {
 				// The reason we are parsing each line from rust is because we want to debug what is causing the wrong output. As the AI pipeline matures, the rust code will be modified to always return a single JSON
 				if (line.startsWith('final_output:') == true) {
-					ai_output_json = JSON.parse(line.replace('final_output:', ''))
+					ai_output_json = JSON.parse(JSON.parse(line.replace('final_output:', '')))
 				} else {
 					mayLog(line)
 				}
 			}
+
 			if (ai_output_json.type == 'plot') {
 				if (typeof ai_output_json.plot != 'object') throw '.plot{} missing when .type=plot'
 				if (ai_output_json.plot.simpleFilter) {
