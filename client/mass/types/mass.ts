@@ -23,6 +23,7 @@ export type MassState = {
 	plots: BasePlotConfig[]
 	termfilter: any
 	termdbConfig: {
+		boxplots: any
 		allowedChartTypes: string[]
 		allowedTermTypes: string[]
 		displaySampleIds?: (clientAuthResult: any) => boolean

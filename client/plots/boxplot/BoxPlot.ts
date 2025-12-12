@@ -61,7 +61,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 		const state = this.getState(this.app.getState())
 		const controlLabels = state.config.controlLabels
 		if (!controlLabels) throw new Error('controls labels not found')
-		const inputs = [
+		const inputs: { [index: string]: any }[] = [
 			{
 				type: 'term',
 				configKey: 'term',
@@ -203,14 +203,6 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 				]
 			},
 			{
-				label: 'Remove outliers',
-				boxLabel: '',
-				type: 'checkbox',
-				chartType: 'boxplot',
-				settingsKey: 'removeOutliers',
-				title: `Option to remove outliers from the analysis`
-			},
-			{
 				label: 'Show association tests',
 				boxLabel: '',
 				type: 'checkbox',
@@ -222,6 +214,18 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 				}
 			}
 		]
+
+		if (state.termdbConfig?.boxplots?.removeOutliers) {
+			inputs.push({
+				label: 'Remove outliers',
+				boxLabel: '',
+				type: 'checkbox',
+				chartType: 'boxplot',
+				settingsKey: 'removeOutliers',
+				title: `Option to remove outliers from the analysis`
+			})
+		}
+
 		this.components.controls = await controlsInit({
 			app: this.app,
 			id: this.id,
@@ -262,8 +266,8 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 		}
 		const parentConfig = appState.plots.find(p => p.id === this.parentId)
 		const termfilter = getCombinedTermFilter(appState, config.filter || parentConfig?.filter)
-
 		return {
+			termdbConfig: appState.termdbConfig,
 			termfilter,
 			vocab: appState.vocab,
 			config: Object.assign({}, config, {

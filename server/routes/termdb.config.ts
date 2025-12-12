@@ -118,6 +118,7 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	if (tdb.numericTermCollections) c.numericTermCollections = tdb.numericTermCollections
 	if (ds.assayAvailability) c.assayAvailability = ds.assayAvailability
 	if (ds.cohort.correlationVolcano) c.correlationVolcano = ds.cohort.correlationVolcano
+	if (ds.cohort.boxplots) c.boxplots = ds.cohort.boxplots
 	addRestrictAncestries(c, tdb)
 	addScatterplots(c, ds)
 	addMatrixplots(c, ds)
