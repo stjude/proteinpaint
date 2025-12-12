@@ -3,8 +3,9 @@ import { boxplotPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import { boxplot_getvalue } from '../src/utils.js'
 import { sortPlot2Values } from './termdb.violin.ts'
-import { getDescrStats } from './termdb.descrstats.ts'
+import { getDescrStats, getStdDev, getMean } from './termdb.descrstats.ts'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
+import { roundValueAuto } from '#shared/roundValue.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/boxplot',
@@ -23,14 +24,15 @@ export const api: RouteApi = {
 function init({ genomes }) {
 	return async (req, res) => {
 		const q: BoxPlotRequest = req.query
+		const genome = genomes[q.genome]
+		if (!genome) throw new Error('invalid genome name')
+		const ds = genome.datasets?.[q.dslabel]
+		if (!ds) throw new Error('invalid ds')
+		const terms = [q.tw]
+		if (q.overlayTw) terms.push(q.overlayTw)
+		if (q.divideTw) terms.push(q.divideTw)
+
 		try {
-			const genome = genomes[q.genome]
-			if (!genome) throw new Error('invalid genome name')
-			const ds = genome.datasets?.[q.dslabel]
-			if (!ds) throw new Error('invalid ds')
-			const terms = [q.tw]
-			if (q.overlayTw) terms.push(q.overlayTw)
-			if (q.divideTw) terms.push(q.divideTw)
 			const data = await getData({ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__ }, ds)
 			if (data.error) throw new Error(data.error)
 
@@ -145,7 +147,7 @@ function setPlotData(
 	if (!boxplot) throw new Error('boxplot_getvalue failed [termdb.boxplot init()]')
 	const _plot = {
 		boxplot,
-		descrStats,
+		descrStats: setIndividualBoxPlotStats(boxplot, sortedValues),
 		//quick fix
 		//to delete later
 		tempValues: sortedValues
@@ -173,6 +175,30 @@ function setPlotData(
 		plots.push(plot)
 	}
 	return [outlierMax, outlierMin]
+}
+
+/** DO NOT attach the overall stats for the entire chart to
+ * individual plots again. That is incorrect.
+ *
+ * boxplot_getvalue() already calculates most of these values.
+ * This function formats the data appropriately for the client.
+ */
+function setIndividualBoxPlotStats(boxplot, values) {
+	const stats = {
+		min: { key: 'min', label: 'Minimum', value: values[0] },
+		p25: { key: 'p25', label: '1st quartile', value: boxplot.p25 },
+		median: { key: 'median', label: 'Median', value: boxplot.p50 },
+		p75: { key: 'p75', label: '3rd quartile', value: boxplot.p75 },
+		mean: { key: 'mean', label: 'Mean', value: getMean(values) },
+		max: { key: 'max', label: 'Maximum', value: values[values.length - 1] },
+		stdDev: { key: 'stdDev', label: 'Standard deviation', value: getStdDev(values) },
+		total: { key: 'total', label: 'Total', value: values.length }
+	}
+
+	for (const key of Object.keys(stats)) {
+		stats[key].value = roundValueAuto(stats[key].value)
+	}
+	return stats
 }
 
 /** Set hidden status for plots */
