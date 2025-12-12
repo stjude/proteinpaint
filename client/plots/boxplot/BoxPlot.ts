@@ -216,7 +216,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 				type: 'checkbox',
 				chartType: 'boxplot',
 				settingsKey: 'showAssocTests',
-				title: `Option to remove outliers from the analysis`,
+				title: `Show association tests next to the box plots.`,
 				getDisplayStyle: plot => {
 					return plot?.term2 ? '' : 'none'
 				}
