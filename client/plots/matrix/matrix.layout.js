@@ -50,7 +50,7 @@ export function setAutoDimensions(xOffset) {
 		const colwNoSpace = Math.max(s.colwMin, Math.min(noSpacedColw, s.colwMax))
 
 		// when cell has very small width, do not show colspace and set colw without considering colspace
-		if (colwNoSpace * s.zoomLevel < 2) {
+		if (colwNoSpace * s.zoomLevel < 7) {
 			// do not show colspace
 			this.computedSettings.colw = noSpacedColw
 			this.computedSettings.colspace = 0

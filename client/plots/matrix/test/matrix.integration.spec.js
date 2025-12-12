@@ -2483,7 +2483,7 @@ tape('cell brush zoom in', function (test) {
 
 		matrix.on('postRender.test', () => {
 			matrix.on('postRender.test', null)
-			test.deepEqual(matrix.Inner.settings.matrix.zoomLevel, 4, 'should have the expected zoom level after zoom in')
+			test.deepEqual(matrix.Inner.settings.matrix.zoomLevel, 3.2, 'should have the expected zoom level after zoom in')
 			if (test._ok) matrix.Inner.app.destroy()
 			test.end()
 		})
