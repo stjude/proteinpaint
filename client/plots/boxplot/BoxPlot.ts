@@ -1,11 +1,10 @@
 import { getCompInit, copyMerge, type RxComponent } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from '../controls'
-import { plotColor } from '#shared/common.js'
 import { Menu, getMaxLabelWidth, DownloadMenu } from '#dom'
 import type { Elem } from '../../types/d3'
 import type { MassAppApi, MassState } from '#mass/types/mass'
-import type { TdbBoxPlotOpts, BoxPlotSettings, BoxPlotDom, BoxPlotConfigOpts } from './BoxPlotTypes'
+import type { TdbBoxPlotOpts, BoxPlotDom, BoxPlotConfigOpts } from './BoxPlotTypes'
 import { Model } from './model/Model'
 import { ViewModel, getChartTitle } from './viewModel/ViewModel'
 import { View } from './view/View'
@@ -14,6 +13,7 @@ import { LegendRenderer } from './view/LegendRender'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.ts'
 import { AssociationTableRender } from './view/AssociationTableRender'
+import { getDefaultBoxplotSettings } from './defaults'
 
 export class TdbBoxplot extends PlotBase implements RxComponent {
 	static type = 'boxplot'
@@ -423,23 +423,6 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 
 export const boxplotInit = getCompInit(TdbBoxplot)
 export const componentInit = boxplotInit
-
-export function getDefaultBoxplotSettings(app, overrides = {}) {
-	const defaults: BoxPlotSettings = {
-		plotLength: 550,
-		color: plotColor,
-		displayMode: 'default',
-		labelPad: 10,
-		isLogScale: false,
-		isVertical: false,
-		orderByMedian: false,
-		rowHeight: 50,
-		rowSpace: 15,
-		removeOutliers: false,
-		showAssocTests: true
-	}
-	return Object.assign(defaults, overrides)
-}
 
 export async function getPlotConfig(opts: BoxPlotConfigOpts, app: MassAppApi) {
 	if (!opts.term) throw new Error('opts.term{} missing')

@@ -2,7 +2,8 @@ import { format } from 'd3-format'
 import { decimalPlacesUntilFirstNonZero } from '#shared/roundValue.js'
 import { rgb } from 'd3-color'
 import type { BoxPlotChartEntry } from '#types'
-import type { BoxPlotSettings, PlotDimensions, ViewData, BoxPlotConfig } from '../BoxPlotTypes'
+import type { BoxPlotSettings } from '../Settings'
+import type { PlotDimensions, ViewData, BoxPlotConfig } from '../BoxPlotTypes'
 import { LegendDataMapper } from './LegendDataMapper'
 
 export class ViewModel {
