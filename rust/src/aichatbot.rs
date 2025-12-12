@@ -8,7 +8,7 @@ use rig::completion::Prompt;
 use rig::embeddings::builder::EmbeddingsBuilder;
 use rig::vector_store::in_memory_store::InMemoryVectorStore;
 use schemars::JsonSchema;
-use serde_json::{Map, Value, json};
+use serde_json::{json, Map, Value};
 use std::collections::HashMap;
 use std::fs;
 use std::io;
