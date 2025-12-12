@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Features:
 - GRIN2: New gene tooltip display and logic
 - New plot length control in barchart.
+- GRIN2: Added gene table click event for multi-gene tooltip
 
 Fixes:
 - mds3 tk sample table, format field values are properly aligned with ssm name, and indicate cnv from ssm_id in density mode
