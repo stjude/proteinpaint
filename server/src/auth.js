@@ -636,7 +636,7 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 				iat,
 				exp: iat + 86400, // 60*60*24 = 1 day expiration, /jwt-status will generate a session token with a longer lifetime
 				email: 'username@test.tld',
-				ip: '127.0.0.1'
+				ip: req.ip || null
 			}
 			const fullPayload = Object.assign({}, defaultToken, ds.demoJwtInput[q.role])
 			const jwt = cred.processor
