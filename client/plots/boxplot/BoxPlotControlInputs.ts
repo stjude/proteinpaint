@@ -88,8 +88,8 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, charts:
 			step: 10
 		},
 		{
-			label: 'Plot height',
-			title: 'Set the height of each box plot between 20 and 50',
+			label: 'Box size',
+			title: 'Set the box size or thickness in pixels of each box plot between 20 and 50',
 			type: 'number',
 			chartType: 'boxplot',
 			settingsKey: 'rowHeight',
@@ -104,7 +104,7 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, charts:
 			}
 		},
 		{
-			label: 'Plot padding',
+			label: 'Plots padding',
 			title: 'Set the space between each box plot. Number must be between 10 and 20',
 			type: 'number',
 			chartType: 'boxplot',
