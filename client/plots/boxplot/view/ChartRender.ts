@@ -1,0 +1,156 @@
+import { drawBoxplot, Menu } from '#dom'
+import { scaleLinear, scaleLog, type ScaleLinear } from 'd3-scale'
+import { axisstyle } from '#src/client'
+import { axisTop, axisLeft } from 'd3-axis'
+import type { PlotDimensions, FormattedBoxPlotChartsEntry } from '../BoxPlotTypes'
+import type { BoxPlotSettings } from '../Settings'
+import type { RenderedPlot } from './RenderedPlot'
+import { BoxPlotToolTips } from './BoxPlotToolTips'
+import { BoxPlotLabelMenu } from './BoxPlotLabelMenu'
+import { AssociationTableRender } from './AssociationTableRender'
+
+/** Handles the rendering for each chart */
+export class ChartRender {
+	app: any
+	interactions: any
+	textColor: string
+
+	constructor(
+		dom: any,
+		settings: BoxPlotSettings,
+		app,
+		interactions,
+		chart: FormattedBoxPlotChartsEntry,
+		backgroundColor: string,
+		textColor: string
+	) {
+		this.app = app
+		this.interactions = interactions
+		this.textColor = textColor
+
+		const plotDim = chart.plotDim
+
+		dom.svg
+			.transition()
+			.attr('width', plotDim.svg.width)
+			.attr('height', plotDim.svg.height)
+			//Fix for white background when downloading dark mode image.
+			.style('fill', backgroundColor)
+
+		const setScaleFunc = settings.isLogScale ? scaleLog().base(10) : scaleLinear()
+		const scale = setScaleFunc.domain(plotDim.domain).range(plotDim.range)
+
+		this.renderTitles(plotDim, dom, settings)
+		this.renderBoxPlots(dom, chart, scale, settings)
+		this.renderAxis(plotDim, dom, scale, settings)
+
+		if (chart.wilcoxon && dom.assocTableDiv) {
+			//add text and background color to the association table div
+			//for display mode
+			new AssociationTableRender(dom.assocTableDiv, chart.wilcoxon)
+		}
+	}
+
+	renderTitles(plotDim: PlotDimensions, dom: any, settings: BoxPlotSettings) {
+		//Title of the plot
+		const transformStr = `translate(${plotDim.title.x}, ${plotDim.title.y})${settings.isVertical ? `,rotate(-90)` : ''}`
+		dom.title
+			.attr('class', 'sjpp-boxplot-title')
+			.style('font-weight', 600)
+			.attr('text-anchor', 'middle')
+			.attr('transform', transformStr)
+			.attr('fill', this.textColor)
+			.text(plotDim.title.text.length > 80 ? plotDim.title.text.slice(0, 80) + '...' : plotDim.title.text)
+
+		/** If divide by term applied, show the value above
+		 * the chart with sample count */
+		if (plotDim.subtitle.text) {
+			const subTransformStr = `translate(${plotDim.subtitle.x}, ${plotDim.subtitle.y})${
+				settings.isVertical ? `,rotate(-90)` : ''
+			}`
+			dom.subtitle
+				.attr('class', 'sjpp-boxplot-subtitle')
+				.style('font-size', '0.9em')
+				.attr('text-anchor', 'middle')
+				.attr('transform', subTransformStr)
+				.attr('fill', this.textColor)
+				.text(plotDim.subtitle.text.length > 80 ? plotDim.subtitle.text.slice(0, 80) + '...' : plotDim.subtitle.text)
+		}
+	}
+
+	renderAxis(plotDim: PlotDimensions, dom: any, scale: ScaleLinear<number, number, never>, settings: BoxPlotSettings) {
+		//Fix for the axis rendering min -> max when the plot is vertical
+		/** draw_boxplot renders the boxplot from min-max but the scale
+		 * renders the axis from max - min. Render the box plots, then change
+		 * the scale vector to match. */
+		if (settings.isVertical) scale.range([scale.range()[1], scale.range()[0]])
+		const ticks = scale.ticks()
+		const tickValues = plotDim.axis.values(ticks)
+		dom.axis
+			.attr('class', 'sjpp-boxplot-axis')
+			.attr('transform', `translate(${plotDim.axis.x}, ${plotDim.axis.y})`)
+			.transition()
+			.call(
+				settings.isVertical
+					? axisLeft(scale)
+							.tickValues(tickValues)
+							.tickFormat(d => plotDim.axis.format(d as number))
+							.tickPadding(8)
+					: axisTop(scale)
+							.tickValues(tickValues)
+							.tickFormat(d => plotDim.axis.format(d as number))
+			)
+
+		axisstyle({
+			axis: dom.axis,
+			showline: true,
+			fontsize: 12,
+			color: this.textColor
+		})
+	}
+
+	renderBoxPlots(
+		dom: any,
+		chart: FormattedBoxPlotChartsEntry,
+		scale: ScaleLinear<number, number, never>,
+		settings: BoxPlotSettings
+	) {
+		/** Draw boxplots, incrementing by the total row height */
+		for (const plot of chart.plots) {
+			const g = dom.boxplots.append('g').attr('class', 'sjpp-boxplot-plot').attr('padding', '5px')
+			drawBoxplot({
+				bp: plot.boxplot,
+				g,
+				color: settings.displayMode == 'filled' ? 'black' : plot.color,
+				scale: scale,
+				rowheight: settings.rowHeight,
+				labpad: settings.labelPad,
+				labColor: this.textColor
+			})
+
+			const transformStr = `translate(${plot.x}, ${plot.y})${settings.isVertical ? `, rotate(-90)` : ''}`
+			g.attr('transform', transformStr)
+
+			if (settings.isVertical) {
+				//Rotate the text slightly in veritcal orientation
+				g.select('text').attr('transform', 'rotate(45)')
+			}
+
+			new BoxPlotToolTips(plot, g, dom.tip, settings.isVertical)
+			if (chart.plots.length > 1) {
+				//Do not try to use the same tip for the menu as the tooltips.
+				//When the boxplots are rendered close together, the menu
+				//disappears to show the tooltip for the next boxplot.
+				//The user can't make a selection in time.
+				const labelMenuTip = new Menu({ padding: '' })
+				new BoxPlotLabelMenu(
+					plot as unknown as RenderedPlot,
+					this.app,
+					this.interactions,
+					labelMenuTip,
+					settings.isVertical
+				)
+			}
+		}
+	}
+}
