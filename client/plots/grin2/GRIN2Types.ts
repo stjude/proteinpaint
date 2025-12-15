@@ -1,4 +1,5 @@
 import type { Menu } from '#dom'
+import type { ManhattanPoint } from '#plots/manhattan/manhattanTypes.ts'
 
 export interface GRIN2Dom {
 	controls: any
@@ -95,6 +96,11 @@ export interface GRIN2Settings {
 		[key: string]: any
 	}
 }
+/** A row from the top genes table where the first cell contains the gene name */
+export type GeneTableRow = Array<{ value?: string; [key: string]: any }>
+
+/** Data item for gene selection tracking - either a ManhattanPoint or a table row */
+export type GeneDataItem = ManhattanPoint | GeneTableRow
 
 /**
  * Options for showGrin2ResultTable

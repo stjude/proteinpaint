@@ -18,9 +18,9 @@ import type { ManhattanPoint } from '#plots/manhattan/manhattanTypes.ts'
  * Renders a GRIN2 result table for gene data.
  * Used by Manhattan plot for hover tooltips, click menus, and the top genes table.
  *
- * @param tableDiv - D3 selection where the table will be rendered
- * @param hits - Array of ManhattanPoint gene results (used when columns/rows not provided)
- * @param newPlotDiv - D3 selection where Matrix/Lollipop plots will be shown (requires app for functionality)
+ * @param tableDiv - Div selection where the table will be rendered
+ * @param hits - Array of ManhattanPoint gene results (used when columns/rows not provided [e.g. when making the tooltip tables])
+ * @param newPlotDiv - Div where Matrix/Lollipop plots will be shown
  * @param opts - Optional configuration options
  */
 export function showGrin2ResultTable(

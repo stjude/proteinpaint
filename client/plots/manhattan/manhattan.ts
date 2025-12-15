@@ -7,6 +7,7 @@ import { quadtree, type Quadtree } from 'd3-quadtree'
 import type { ManhattanPoint } from './manhattanTypes'
 import { get$id } from '#termsetting'
 import { showGrin2ResultTable } from '../grin2/grin2.ts'
+import type { GeneDataItem } from '../grin2/GRIN2Types.ts'
 
 /**
  * Searches a quadtree for all points within a specified radius of target coordinates.
@@ -69,7 +70,7 @@ function findPointsInRadius(
 export function updateSelectionTracking(
 	currentSelectionOrder: number[],
 	selectedIndices: number[],
-	dataSource: Array<{ gene: string } | Array<{ value: string }>>
+	dataSource: GeneDataItem[]
 ): { selectionOrder: number[]; lastTouchedGene: string | null; buttonText: string; buttonDisabled: boolean } {
 	// Find newly selected items
 	const newlySelected = selectedIndices.filter(idx => !currentSelectionOrder.includes(idx))
