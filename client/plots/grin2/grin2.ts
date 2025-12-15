@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge, type RxComponent } from '#rx'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
-import type { GRIN2Dom, GRIN2Opts } from './GRIN2Types'
+import type { GRIN2Dom, GRIN2Opts, ShowGrin2ResultTableOpts } from './GRIN2Types'
 import { dofetch3 } from '#common/dofetch'
 import { getNormalRoot } from '#filter'
 import { Menu, renderTable, table2col, make_one_checkbox, sayerror } from '#dom'
@@ -13,28 +13,6 @@ import {
 	updateSelectionTracking
 } from '#plots/manhattan/manhattan.ts'
 import type { ManhattanPoint } from '#plots/manhattan/manhattanTypes.ts'
-
-/**
- * Options for showGrin2ResultTable
- */
-interface ShowGrin2ResultTableOpts {
-	/** App context for dispatching Matrix/Lollipop actions */
-	app?: any
-	/** Menu instance to hide on button actions */
-	clickMenu?: any
-	/** Pre-built columns (for top genes table). If not provided, builds from hits. */
-	columns?: any[]
-	/** Pre-built rows (for top genes table). If not provided, builds from hits. */
-	rows?: any[]
-	/** Original data items for button callbacks and selection tracking. Defaults to hits. */
-	dataItems?: any[]
-	/** Function to extract gene name from a data item. Defaults to (item) => item.gene */
-	getGene?: (item: any) => string
-	/** Format for matrix button text. Use {n} as placeholder for count. Defaults to "Matrix ({n})" */
-	matrixButtonFormat?: string
-	/** Additional options passed directly to renderTable */
-	[key: string]: any
-}
 
 /**
  * Renders a GRIN2 result table for gene data.
