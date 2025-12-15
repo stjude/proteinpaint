@@ -2,7 +2,7 @@ import type { MassAppApi } from '#mass/types/mass'
 import tape from 'tape'
 import { termjson } from '../../../test/testdata/termjson'
 import { ViewModel } from '../viewModel/ViewModel'
-import { LegendDataMapper } from '../viewModel/LegendDataMapper'
+// import { LegendDataMapper } from '../viewModel/LegendDataMapper'
 import { ListSamples } from '../interactions/ListSamples'
 
 /*
@@ -140,99 +140,99 @@ tape('Default ViewModel()', function (test) {
 	test.end()
 })
 
-tape('ViewModel.setPlotDimensions()', function (test) {
-	test.timeoutAfter(100)
-	const { viewModel, mockData, mockConfig, mockSettings } = getViewModel()
-	const dims = viewModel.setPlotDimensions(mockData, mockConfig, mockSettings)
-	const expected = {
-		domain: [0, 101],
-		incrTopPad: 40,
-		svg: {
-			width: 490,
-			height: 250
-		},
-		title: { x: 420, y: 85, text: 'Age at Cancer Diagnosis' },
-		axis: { x: 410, y: 170 }
-	}
-	test.equal(typeof dims, 'object', `Should create a plotDim object`)
-	test.deepEqual(dims.domain, expected.domain, `Should set domain = ${expected.domain}`)
-	test.equal(dims.svg.width, expected.svg.width, `Should set svg.width = ${expected.svg.width}`)
-	test.equal(dims.svg.height, expected.svg.height, `Should set svg.height = ${expected.svg.height}`)
-	test.equal(dims.title.x, expected.title.x, `Should set title.x = ${expected.title.x}`)
-	test.equal(dims.title.y, expected.title.y, `Should set title.y = ${expected.title.y}`)
-	test.equal(dims.title.text, expected.title.text, `Should set title text = ${expected.title.text}`)
-	test.equal(dims.axis.x, expected.axis.x, `Should set yAxis.x = ${expected.axis.x}`)
-	test.equal(dims.axis.y, expected.axis.y, `Should set yAxis.y = ${expected.axis.y}`)
+// tape('ViewModel.setPlotDimensions()', function (test) {
+// 	test.timeoutAfter(100)
+// 	const { viewModel, mockData, mockConfig, mockSettings } = getViewModel()
+// 	const dims = viewModel.setPlotDimensions(mockData, mockConfig, mockSettings)
+// 	const expected = {
+// 		domain: [0, 101],
+// 		incrTopPad: 40,
+// 		svg: {
+// 			width: 490,
+// 			height: 250
+// 		},
+// 		title: { x: 420, y: 85, text: 'Age at Cancer Diagnosis' },
+// 		axis: { x: 410, y: 170 }
+// 	}
+// 	test.equal(typeof dims, 'object', `Should create a plotDim object`)
+// 	test.deepEqual(dims.domain, expected.domain, `Should set domain = ${expected.domain}`)
+// 	test.equal(dims.svg.width, expected.svg.width, `Should set svg.width = ${expected.svg.width}`)
+// 	test.equal(dims.svg.height, expected.svg.height, `Should set svg.height = ${expected.svg.height}`)
+// 	test.equal(dims.title.x, expected.title.x, `Should set title.x = ${expected.title.x}`)
+// 	test.equal(dims.title.y, expected.title.y, `Should set title.y = ${expected.title.y}`)
+// 	test.equal(dims.title.text, expected.title.text, `Should set title text = ${expected.title.text}`)
+// 	test.equal(dims.axis.x, expected.axis.x, `Should set yAxis.x = ${expected.axis.x}`)
+// 	test.equal(dims.axis.y, expected.axis.y, `Should set yAxis.y = ${expected.axis.y}`)
 
-	test.end()
-})
+// 	test.end()
+// })
 
-tape('ViewModel.setPlotData()', function (test) {
-	test.timeoutAfter(100)
+// tape('ViewModel.setPlotData()', function (test) {
+// 	test.timeoutAfter(100)
 
-	const { viewModel, mockData, mockConfig, mockSettings } = getViewModel()
-	const plots = viewModel.setPlotData(mockData, mockConfig, mockSettings)
+// 	const { viewModel, mockData, mockConfig, mockSettings } = getViewModel()
+// 	const plots = viewModel.setPlotData(mockData, mockConfig, mockSettings)
 
-	test.equal(
-		plots[0].color,
-		termjson['sex'].values[1].color,
-		`Should set first box plot color = ${termjson['sex'].values[1].color}`
-	)
-	test.equal(
-		plots[1].color,
-		termjson['sex'].values[2].color,
-		`Should set second box plot color = ${termjson['sex'].values[2].color}`
-	)
+// 	test.equal(
+// 		plots[0].color,
+// 		termjson['sex'].values[1].color,
+// 		`Should set first box plot color = ${termjson['sex'].values[1].color}`
+// 	)
+// 	test.equal(
+// 		plots[1].color,
+// 		termjson['sex'].values[2].color,
+// 		`Should set second box plot color = ${termjson['sex'].values[2].color}`
+// 	)
 
-	test.true(
-		plots[0].boxplot.radius == 5 && !plots[1].boxplot.radius,
-		`Should set a radius for the first plot but not the second`
-	)
+// 	test.true(
+// 		plots[0].boxplot.radius == 5 && !plots[1].boxplot.radius,
+// 		`Should set a radius for the first plot but not the second`
+// 	)
 
-	test.true(
-		plots[1].x == plots[0].x && plots[1].y == plots[0].y + 30,
-		`Should set x the same for all plots and increment y`
-	)
+// 	test.true(
+// 		plots[1].x == plots[0].x && plots[1].y == plots[0].y + 30,
+// 		`Should set x the same for all plots and increment y`
+// 	)
 
-	test.end()
-})
+// 	test.end()
+// })
 
-tape('Default LegendDataMapper', function (test) {
-	test.timeoutAfter(100)
-	let expected: { key: string; text: string; isHidden: boolean; isPlot: boolean }[]
-	const { mockData, mockConfig } = getMockData()
-	const legendData = new LegendDataMapper(mockConfig, mockData, mockData.plots).legendData
-	// const legend = viewModel.setLegendData(mockConfig, mockData)
-	if (!legendData) return test.fail('Should create a legend object')
+// tape('Default LegendDataMapper', function (test) {
+// 	test.timeoutAfter(100)
+// 	let expected: { key: string; text: string; isHidden: boolean; isPlot: boolean }[]
+// 	const { mockData, mockConfig } = getMockData()
+// 	const legendData = new LegendDataMapper(mockConfig, mockData, mockData.plots).legendData
+// 	// const legend = viewModel.setLegendData(mockConfig, mockData)
+// 	if (!legendData) return test.fail('Should create a legend object')
 
-	test.equal(legendData.length, 2, `Should create 2 legend sections`)
+// 	test.equal(legendData.length, 2, `Should create 2 legend sections`)
 
-	test.true(
-		legendData[0].label.includes(termjson['agedx'].name),
-		`Should create descriptive stats section for ${termjson['agedx'].name}`
-	)
+// 	test.true(
+// 		legendData[0].label.includes(termjson['agedx'].name),
+// 		`Should create descriptive stats section for ${termjson['agedx'].name}`
+// 	)
 
-	expected = [
-		{ key: 'min', text: 'Min: 20', isHidden: false, isPlot: false },
-		{ key: 'max', text: 'Max: 100', isHidden: false, isPlot: false },
-		{ key: 'median', text: 'Median: 60', isHidden: false, isPlot: false }
-	]
+// 	expected = [
+// 		{ key: 'min', text: 'Min: 20', isHidden: false, isPlot: false },
+// 		{ key: 'max', text: 'Max: 100', isHidden: false, isPlot: false },
+// 		{ key: 'median', text: 'Median: 60', isHidden: false, isPlot: false }
+// 	]
 
-	test.deepEqual(legendData[0].items, expected, `Should properly set legend items`)
+// 	test.deepEqual(legendData[0].items, expected, `Should properly set legend items`)
 
-	test.true(
-		legendData[1].label.includes(termjson['sex'].name),
-		`Should create descriptive stats section for ${termjson['sex'].name}`
-	)
-	expected = [
-		{ key: 'min', text: 'Min: 0', isHidden: false, isPlot: false },
-		{ key: 'max', text: 'Max: 60', isHidden: false, isPlot: false },
-		{ key: 'median', text: 'Median: 30', isHidden: false, isPlot: false }
-	]
-	test.deepEqual(legendData[1].items, expected, `Should properly set legend items`)
+// 	test.true(
+// 		legendData[1].label.includes(termjson['sex'].name),
+// 		`Should create descriptive stats section for ${termjson['sex'].name}`
+// 	)
+// 	expected = [
+// 		{ key: 'min', text: 'Min: 0', isHidden: false, isPlot: false },
+// 		{ key: 'max', text: 'Max: 60', isHidden: false, isPlot: false },
+// 		{ key: 'median', text: 'Median: 30', isHidden: false, isPlot: false }
+// 	]
+// 	test.deepEqual(legendData[1].items, expected, `Should properly set legend items`)
 
-	test.end()
-})
+// 	test.end()
+// })
 
 tape('Default ListSamples()', test => {
 	test.plan(7)

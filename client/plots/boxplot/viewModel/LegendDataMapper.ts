@@ -1,48 +1,76 @@
-import type { FormattedPlotEntry, LegendData, LegendItemEntry, BoxPlotConfig } from '../BoxPlotTypes'
+import type { LegendData, LegendItemEntry, BoxPlotConfig } from '../BoxPlotTypes'
 import type { BoxPlotChartEntry, DescrStats } from '#types'
 
 export class LegendDataMapper {
 	legendData: LegendData = []
-	constructor(config: BoxPlotConfig, data: BoxPlotChartEntry, plots: FormattedPlotEntry[]) {
+	config: BoxPlotConfig
+
+	constructor(config: BoxPlotConfig) {
+		this.config = config
+
 		const isTerm2 = config?.term2
+		const isTerm0 = config?.term0
+
 		if (config.term.q?.descrStats) {
 			this.legendData.push({
 				label: `Descriptive Statistics${isTerm2 ? `: ${config.term.term.name}` : ''}`,
-				items: this.getDescrStatItems(config.term.q.descrStats)
+				items: this.setDescrStatItems(config.term.q.descrStats)
 			})
 		}
-		if (isTerm2 && isTerm2.q?.descrStats) {
+		if (isTerm2 && isTerm2.q?.descrStats && !isTerm0) {
 			this.legendData.push({
 				label: `Descriptive Statistics: ${config.term2.term.name}`,
-				items: this.getDescrStatItems(isTerm2.q.descrStats)
+				items: this.setDescrStatItems(isTerm2.q.descrStats)
 			})
-		}
-		const hiddenPlots =
-			plots
-				.filter(p => p.isHidden)
-				?.map(p => {
-					const total = p.descrStats.total
-					if (!total || !total.value) throw `Missing total value for ${p.key}`
-					return { key: p.key, text: p.key, n: total.value, isHidden: true, isPlot: true }
-				}) || []
-		if (config.term.term?.values) {
-			const term1Label = config.term2 ? config.term.term.name : 'Other categories'
-			const term1Data = this.setHiddenCategoryItems(config.term, term1Label, hiddenPlots, data.uncomputableValues || [])
-			if (term1Data) this.legendData.push(term1Data)
-		}
-
-		if (config.term2?.term?.values) {
-			const term2Data = this.setHiddenCategoryItems(
-				config.term2,
-				config.term2.term.name,
-				hiddenPlots,
-				data.uncomputableValues || []
-			)
-			if (term2Data) this.legendData.push(term2Data)
 		}
 	}
 
-	getDescrStatItems(stats: DescrStats) {
+	map(charts: { [index: string]: BoxPlotChartEntry }, uncomputableValues: { label: string; value: number }[]) {
+		const hiddenPlots = this.getHiddenPlots(charts)
+
+		if (this.config.term.term?.values) {
+			const term1Label = this.config.term2 ? this.config.term.term.name : 'Other categories'
+			const term1Data = this.setHiddenCategoryItems(this.config.term, term1Label, hiddenPlots, uncomputableValues || [])
+			if (term1Data) this.legendData.push(term1Data)
+		}
+
+		if (this.config.term2?.term?.values) {
+			const term2Data = this.setHiddenCategoryItems(
+				this.config.term2,
+				this.config.term2.term.name,
+				hiddenPlots,
+				uncomputableValues || []
+			)
+			if (term2Data) this.legendData.push(term2Data)
+		}
+
+		return this.legendData
+	}
+
+	getHiddenPlots(charts: { [index: string]: BoxPlotChartEntry }) {
+		const hiddenPlots = Object.values(charts)
+			.reduce((acc: Map<string, any>, chart: any) => {
+				for (const p of chart.plots ?? []) {
+					if (!p.isHidden || acc.has(p.key)) continue
+
+					const n = p?.descrStats?.total?.value
+					if (n == null) throw new Error(`Missing total value for ${p.key}`)
+
+					acc.set(p.key, {
+						key: p.key,
+						text: p.key,
+						n,
+						isHidden: true,
+						isPlot: true
+					})
+				}
+				return acc
+			}, new Map<string, any>())
+			.values()
+		return Array.from(hiddenPlots)
+	}
+
+	setDescrStatItems(stats: DescrStats) {
 		return Object.values(stats).map(s => ({
 			key: s.key,
 			text: `${s.label}: ${s.value}`,
