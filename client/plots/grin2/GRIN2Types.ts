@@ -106,6 +106,12 @@ export type GeneDataItem = ManhattanPoint | GeneTableRow
  * Options for showGrin2ResultTable
  */
 export interface ShowGrin2ResultTableOpts {
+	/** Div selection where the table will be rendered */
+	tableDiv: any
+	/** Array of ManhattanPoint gene results (used when columns/rows not provided) */
+	hits?: ManhattanPoint[]
+	/** Div where Matrix/Lollipop plots will be shown */
+	newPlotDiv?: any
 	/** App context for dispatching Matrix/Lollipop actions */
 	app?: any
 	/** Menu instance to hide on button actions */

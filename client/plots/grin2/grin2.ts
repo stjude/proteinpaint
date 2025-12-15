@@ -12,24 +12,17 @@ import {
 	createMatrixFromGenes,
 	updateSelectionTracking
 } from '#plots/manhattan/manhattan.ts'
-import type { ManhattanPoint } from '#plots/manhattan/manhattanTypes.ts'
 
 /**
  * Renders a GRIN2 result table for gene data.
  * Used by Manhattan plot for hover tooltips, click menus, and the top genes table.
  *
- * @param tableDiv - Div selection where the table will be rendered
- * @param hits - Array of ManhattanPoint gene results (used when columns/rows not provided [e.g. when making the tooltip tables])
- * @param newPlotDiv - Div where Matrix/Lollipop plots will be shown
- * @param opts - Optional configuration options
+ * @param opts - Configuration options including tableDiv, hits, and optional settings
  */
-export function showGrin2ResultTable(
-	tableDiv: any,
-	hits: ManhattanPoint[],
-	newPlotDiv: any,
-	opts?: ShowGrin2ResultTableOpts
-): void {
+export function showGrin2ResultTable(opts: ShowGrin2ResultTableOpts): void {
 	const {
+		tableDiv,
+		hits,
 		app,
 		clickMenu,
 		columns: prebuiltColumns,
@@ -38,7 +31,7 @@ export function showGrin2ResultTable(
 		getGene = (item: any) => item.gene,
 		matrixButtonFormat = 'Matrix ({n})',
 		...renderTableOpts
-	} = opts || {}
+	} = opts
 
 	// Determine data source for button callbacks and selection tracking
 	const dataItems = prebuiltDataItems || hits
@@ -49,7 +42,7 @@ export function showGrin2ResultTable(
 	// Use pre-built columns/rows if provided, otherwise build from hits
 	const columns = prebuiltColumns || [
 		{ label: 'Gene' },
-		{ label: `${hits[0].chrom} pos` },
+		{ label: `${hits![0].chrom} pos` },
 		{ label: 'Type' },
 		{ label: '-log₁₀(q-value)', sortable: true },
 		{ label: 'Subject count', sortable: true }
@@ -57,14 +50,13 @@ export function showGrin2ResultTable(
 
 	const rows =
 		prebuiltRows ||
-		hits.map(d => [
+		hits!.map(d => [
 			{ value: d.gene },
 			{ html: `<span style="font-size:.8em">${d.start}-${d.end}</span>` },
 			{ html: `<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}` },
 			{ value: d.y.toFixed(3) },
 			{ value: d.nsubj }
 		])
-
 	// Base table options
 	const tableOptions: any = {
 		div: tableDiv,
@@ -822,7 +814,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 			})
 
 			// Use showGrin2ResultTable for consistent table rendering
-			showGrin2ResultTable(tableDiv, [], null, {
+			showGrin2ResultTable({
+				tableDiv,
 				app: this.app,
 				columns: modifiedColumns,
 				rows: processedRows,
