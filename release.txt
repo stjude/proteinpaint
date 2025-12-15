@@ -1,2 +1,2 @@
 Features:
-- GRIN2: Using renderTable's button's parameter for tooltip and top gene table
+- GRIN2: Using renderTable's buttons parameter for tooltip and top gene table
