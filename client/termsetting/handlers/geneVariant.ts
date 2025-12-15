@@ -411,6 +411,7 @@ export async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi
 				tvs: {
 					term: dtTerm,
 					values: Object.entries(dtTerm.values).map(([k, v]: any[]) => ({ key: k, label: v.label, value: k })),
+					mcount: 'any',
 					excludeGeneName: true
 				}
 			}
