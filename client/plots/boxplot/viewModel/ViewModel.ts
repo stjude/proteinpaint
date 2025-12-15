@@ -1,6 +1,6 @@
 import type { BoxPlotSettings } from '../Settings'
 import type { /**ViewData,*/ BoxPlotConfig } from '../BoxPlotTypes'
-// import { LegendDataMapper } from './LegendDataMapper'
+import { LegendDataMapper } from './LegendDataMapper'
 import { ChartDataMapper } from './ChartDataMapper'
 
 export class ViewModel {
@@ -15,14 +15,15 @@ export class ViewModel {
 		useDefaultSettings: boolean
 	) {
 		const chartMapper = new ChartDataMapper(data, settings, maxLabelLgth, useDefaultSettings)
+		const legendMapper = new LegendDataMapper(config)
+
+		const charts = chartMapper.map(config)
 
 		this.viewData = {
 			backgroundColor: settings.displayMode == 'dark' ? 'black' : 'white',
 			textColor: settings.displayMode == 'dark' ? 'white' : 'black',
-			charts: chartMapper.map(config)
-			// legend: new LegendDataMapper(config, data, plots).legendData
+			charts,
+			legend: legendMapper.map(charts, data.uncomputableValues || [])
 		}
-
-		// console.log('BoxPlot ViewModel', this.viewData)
 	}
 }
