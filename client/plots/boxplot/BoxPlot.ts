@@ -2,16 +2,17 @@ import { getCompInit, copyMerge, type RxComponent } from '#rx'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.ts'
 import { fillTermWrapper } from '#termsetting'
 import { getCombinedTermFilter } from '#filter'
-import { Menu, getMaxLabelWidth, DownloadMenu } from '#dom'
+import { Menu, /**getMaxLabelWidth,*/ DownloadMenu } from '#dom'
 import type { Elem } from '../../types/d3'
 import type { MassAppApi, MassState } from '#mass/types/mass'
 import type { TdbBoxPlotOpts, BoxPlotDom, BoxPlotConfigOpts } from './BoxPlotTypes'
 import { Model } from './model/Model'
-import { ViewModel, getChartTitle } from './viewModel/ViewModel'
+import { ViewModel } from './viewModel/ViewModel'
+import { getChartSubtitle } from './viewModel/ChartDataMapper'
 import { BoxPlotInteractions } from './interactions/BoxPlotInteractions'
-import { LegendRenderer } from './view/LegendRender'
-import { AssociationTableRender } from './view/AssociationTableRender'
-import { View } from './view/View'
+// import { LegendRenderer } from './view/LegendRender'
+// import { AssociationTableRender } from './view/AssociationTableRender'
+// import { View } from './view/View'
 import { getDefaultBoxplotSettings } from './defaults'
 import { setBoxPlotControlInputs } from './BoxPlotControlInputs'
 import { controlsInit } from '#plots/controls.js'
@@ -142,106 +143,111 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 
 			if (data.error) throw new Error(data.error)
 			if (!data.charts || !Object.keys(data.charts).length) {
-				this.interactions!.clearDom()
+				this.interactions.clearDom()
 				this.dom.error.style('padding', '20px 20px 20px 60px').text('No visible box plot data to render')
 				return
 			}
 			this.data = data
-			this.dom.charts.selectAll('*').remove()
-
-			/** TODO: Refactor all of the code below into mvvm
-			 * pattern. This breaks maintainability and separation of concerns. */
-			const labels: any = []
-			const tempsvg = this.dom.charts.append('svg')
-			for (const key of Object.keys(data.charts)) {
-				const chart = data.charts[key]
-				const chartLabels = chart.plots.filter(p => !p.isHidden).map(p => p.boxplot.label)
-				labels.push(...chartLabels)
-			}
-			const maxLabelLgth = getMaxLabelWidth(tempsvg.append('g'), labels)
-			tempsvg.remove()
-
-			// plot charts
-			const legend: any = [] // legend items across charts
-			for (const key of Object.keys(data.charts)) {
-				const chart = data.charts[key]
-				chart.absMin = data.absMin
-				chart.absMax = data.absMax
-				chart.uncomputableValues = data.uncomputableValues
-				// get view model of chart
-				const viewModel = new ViewModel(config, chart, settings, maxLabelLgth, this.useDefaultSettings)
-				// collect legend items
-				for (const l of viewModel.viewData.legend) {
-					if (!legend.find(x => x.label == l.label)) legend.push(l)
-				}
-				if (
-					(viewModel.rowSpace !== settings.rowSpace || viewModel.rowHeight !== settings.rowHeight) &&
-					this.useDefaultSettings == true
-				) {
-					/** Fix this. Move to ViewModel, figure out for all plots once, only call app.save once.*/
-
-					/** If the row height or space changed during data processing,
-					 * save the new settings without calling app.dispatch.
-					 * Will show updated value in the controls. */
-					settings.rowSpace = viewModel.rowSpace
-					settings.rowHeight = viewModel.rowHeight
-
-					this.app.save({
-						type: 'plot_edit',
-						id: this.id,
-						config: {
-							settings: {
-								boxplot: {
-									rowSpace: viewModel.rowSpace,
-									rowHeight: viewModel.rowHeight
-								}
-							}
-						}
-					})
-				}
-				// render view of chart
-				// setup a dom{} object for the chart
-				const chartDiv = this.dom.charts
-					.append('div')
-					.attr('class', 'sjpp-boxplot-chartDiv')
-					.style('padding', Object.keys(data.charts).length > 1 ? '20px 20px 0px 0px' : '0px')
-				const chartSvg = chartDiv.append('svg')
-				chart.svg = chartSvg // for downloading svg
-				const chartTitle = chartDiv
-					.append('div')
-					.attr('class', 'pp-chart-title')
-					.style('display', config.term0 ? 'block' : 'none')
-					.style('text-align', 'center')
-					.style('font-size', '1.1em')
-					.style('margin-bottom', '20px')
-				//Temp fix
-				const assocTableDiv = chartDiv
-					.append('div')
-					.attr('class', 'sjpp-boxplot-assocTableDiv')
-					.style('display', 'inline-block')
-				const chartDom = Object.assign({}, this.dom, {
-					svg: chartSvg,
-					chartTitle,
-					plotTitle: chartSvg.append('text'),
-					axis: chartSvg.append('g'),
-					boxplots: chartSvg.append('g'),
-					assocTableDiv: assocTableDiv
-				})
-				// render the view
-				new View(viewModel.viewData, settings, chartDom, this.app, this.interactions)
-				//Temp fix: This should be handled by the view
-				if (chart.wilcoxon) new AssociationTableRender(chartDom.assocTableDiv, chart.wilcoxon)
-			}
-			// render legend (applies to all charts)
-			this.dom.legend.selectAll('*').remove()
-			const textColor = settings.displayMode == 'dark' ? 'white' : 'black'
-			if (legend.length) new LegendRenderer(this.dom.legend, legend, this.interactions, textColor)
 		} catch (e: any) {
 			if (this.app.isAbortError(e)) return
 			if (e.stack) console.log(e.stack)
 			if (e instanceof Error) console.error(e.message || e)
 			throw new Error(e)
 		}
+
+		this.dom.charts.selectAll('*').remove()
+
+		//TODO: Reimplement maxLabelLgth calculation before merging
+		new ViewModel(config, this.data, settings, 100, this.useDefaultSettings)
+		// console.log(viewModel)
+
+		// /** TODO: Refactor all of the code below into mvvm
+		//  * pattern. This breaks maintainability and separation of concerns. */
+		// const labels: any = []
+		// const tempsvg = this.dom.charts.append('svg')
+		// for (const key of Object.keys(this.data.charts)) {
+		// 	const chart = this.data.charts[key]
+		// 	const chartLabels = chart.plots.filter(p => !p.isHidden).map(p => p.boxplot.label)
+		// 	labels.push(...chartLabels)
+		// }
+		// const maxLabelLgth = getMaxLabelWidth(tempsvg.append('g'), labels)
+		// tempsvg.remove()
+
+		// // plot charts
+		// const legend: any = [] // legend items across charts
+		// for (const key of Object.keys(this.data.charts)) {
+		// 	const chart = this.data.charts[key]
+		// 	chart.absMin = this.data.absMin
+		// 	chart.absMax = this.data.absMax
+		// 	chart.uncomputableValues = this.data.uncomputableValues
+		// 	// get view model of chart
+		// 	const viewModel = new ViewModel(config, chart, settings, maxLabelLgth, this.useDefaultSettings)
+		// 	// collect legend items
+		// 	for (const l of viewModel.viewData.legend) {
+		// 		if (!legend.find(x => x.label == l.label)) legend.push(l)
+		// 	}
+		// 	if (
+		// 		(viewModel.rowSpace !== settings.rowSpace || viewModel.rowHeight !== settings.rowHeight) &&
+		// 		this.useDefaultSettings == true
+		// 	) {
+		// 		/** Fix this. Move to ViewModel, figure out for all plots once, only call app.save once.*/
+
+		// 		/** If the row height or space changed during data processing,
+		// 		 * save the new settings without calling app.dispatch.
+		// 		 * Will show updated value in the controls. */
+		// 		settings.rowSpace = viewModel.rowSpace
+		// 		settings.rowHeight = viewModel.rowHeight
+
+		// 		this.app.save({
+		// 			type: 'plot_edit',
+		// 			id: this.id,
+		// 			config: {
+		// 				settings: {
+		// 					boxplot: {
+		// 						rowSpace: viewModel.rowSpace,
+		// 						rowHeight: viewModel.rowHeight
+		// 					}
+		// 				}
+		// 			}
+		// 		})
+		// 	}
+		// 	// render view of chart
+		// 	// setup a dom{} object for the chart
+		// 	const chartDiv = this.dom.charts
+		// 		.append('div')
+		// 		.attr('class', 'sjpp-boxplot-chartDiv')
+		// 		.style('padding', Object.keys(this.data.charts).length > 1 ? '20px 20px 0px 0px' : '0px')
+		// 	const chartSvg = chartDiv.append('svg')
+		// 	chart.svg = chartSvg // for downloading svg
+		// 	const chartTitle = chartDiv
+		// 		.append('div')
+		// 		.attr('class', 'pp-chart-title')
+		// 		.style('display', config.term0 ? 'block' : 'none')
+		// 		.style('text-align', 'center')
+		// 		.style('font-size', '1.1em')
+		// 		.style('margin-bottom', '20px')
+		// 	//Temp fix
+		// 	const assocTableDiv = chartDiv
+		// 		.append('div')
+		// 		.attr('class', 'sjpp-boxplot-assocTableDiv')
+		// 		.style('display', 'inline-block')
+		// 	const chartDom = Object.assign({}, this.dom, {
+		// 		svg: chartSvg,
+		// 		chartTitle,
+		// 		plotTitle: chartSvg.append('text'),
+		// 		axis: chartSvg.append('g'),
+		// 		boxplots: chartSvg.append('g'),
+		// 		assocTableDiv: assocTableDiv
+		// 	})
+		// 	// render the view
+		// 	new View(viewModel.viewData, settings, chartDom, this.app, this.interactions)
+		// 	//Temp fix: This should be handled by the view
+		// 	if (chart.wilcoxon) new AssociationTableRender(chartDom.assocTableDiv, chart.wilcoxon)
+		// }
+		// // render legend (applies to all charts)
+		// this.dom.legend.selectAll('*').remove()
+		// const textColor = settings.displayMode == 'dark' ? 'white' : 'black'
+		// if (legend.length) new LegendRenderer(this.dom.legend, legend, this.interactions, textColor)
 	}
 
 	getChartImages() {
@@ -249,7 +255,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 		const charts: any[] = this.data.charts
 		for (const [key, chart] of Object.entries(charts)) {
 			const svg: any = chart.svg
-			const title = getChartTitle(this.state.config, key)
+			const title = getChartSubtitle(this.state.config, key)
 			const name = `${this.state.config.term.term.name}  ${title}`
 			chartImages.push({ name, svg })
 		}
@@ -289,5 +295,6 @@ export async function getPlotConfig(opts: BoxPlotConfigOpts, app: MassAppApi) {
 			boxplot: getDefaultBoxplotSettings(app, opts.overrides || {})
 		}
 	}
+
 	return copyMerge(config, opts)
 }

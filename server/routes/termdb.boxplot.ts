@@ -107,9 +107,15 @@ async function processData(data, q) {
 			plots.sort((a, b) => a.boxplot.p50 - b.boxplot.p50)
 		}
 
-		charts[chart] = { chartId: chart, plots }
+		/** Descr stats not calculated per chart. Set the total num of samples per chart */
+		const sampleCount = plots.reduce((total, p) => {
+			if (p.hidden) return total
+			return total + p.descrStats.total.value
+		}, 0)
+
+		charts[chart] = { chartId: chart, plots, sampleCount: sampleCount }
 	}
-	if (q.showAssocTests == true && overlayTerm) await getWilcoxonData(charts)
+	if (q.showAssocTests && overlayTerm) await getWilcoxonData(charts)
 	//quick fix to not return values to the client
 	//will fix when addressing issues with descriptive stats and other logic errs
 	Object.keys(charts).forEach(c => charts[c].plots.forEach(p => delete p.tempValues))
@@ -183,16 +189,19 @@ function setPlotData(
  * boxplot_getvalue() already calculates most of these values.
  * This function formats the data appropriately for the client.
  */
-function setIndividualBoxPlotStats(boxplot, values) {
+function setIndividualBoxPlotStats(
+	boxplot,
+	values: number[]
+): { [key: string]: { key: string; label: string; value: number } } {
 	const stats = {
+		total: { key: 'total', label: 'Total', value: values.length },
 		min: { key: 'min', label: 'Minimum', value: values[0] },
 		p25: { key: 'p25', label: '1st quartile', value: boxplot.p25 },
 		median: { key: 'median', label: 'Median', value: boxplot.p50 },
 		p75: { key: 'p75', label: '3rd quartile', value: boxplot.p75 },
 		mean: { key: 'mean', label: 'Mean', value: getMean(values) },
 		max: { key: 'max', label: 'Maximum', value: values[values.length - 1] },
-		stdDev: { key: 'stdDev', label: 'Standard deviation', value: getStdDev(values) },
-		total: { key: 'total', label: 'Total', value: values.length }
+		stdDev: { key: 'stdDev', label: 'Standard deviation', value: getStdDev(values) }
 	}
 
 	for (const key of Object.keys(stats)) {
