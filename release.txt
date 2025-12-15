@@ -1,2 +1,0 @@
-Fixes:
-- do not hardcode the signed ip address in the `/demoToken` handler
