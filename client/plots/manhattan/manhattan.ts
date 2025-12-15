@@ -322,7 +322,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 						// Multiple genes
 						const holder = geneTip.d.append('div').style('margin', '10px')
 
-						showGrin2ResultTable(holder, nearbyDots, null)
+						showGrin2ResultTable({ tableDiv: holder, hits: nearbyDots })
 
 						// Show message if there are more dots beyond the settings.maxTooltipGenes shown
 						// TODO: Make these settings abstracted out and can improve this later
@@ -389,7 +389,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 					const holder = clickMenu.d.append('div').style('margin', '10px')
 
-					showGrin2ResultTable(holder, allNearbyDots, null, { app, clickMenu })
+					showGrin2ResultTable({ tableDiv: holder, hits: allNearbyDots, app, clickMenu })
 				}
 			})
 	}
