@@ -251,6 +251,7 @@ function setRenderers(self) {
 			striped: false,
 			showLines: false,
 			selectedRows: selectedIdxs,
+			noAutoScroll: true,
 			selectedRowStyle: {
 				'text-decoration': tvs.isnot ? 'line-through' : ''
 			}

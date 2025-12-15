@@ -150,4 +150,6 @@ export type TableArgs = {
 	 * use noButtonCallback instead
 	 */
 	hoverEffects?: (tr: Tr, row: TableRow) => void
+	/** Table will not auto-scroll to selected row. quick fix. see comments in code */
+	noAutoScroll?: boolean
 }
