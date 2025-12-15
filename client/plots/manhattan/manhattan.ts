@@ -1,11 +1,12 @@
 import { scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
 import { select } from 'd3-selection'
-import { Menu, icons, axisstyle, table2col, renderTable, sayerror } from '#dom'
+import { Menu, icons, axisstyle, table2col, sayerror } from '#dom'
 import { to_svg } from '#src/client'
 import { quadtree, type Quadtree } from 'd3-quadtree'
 import type { ManhattanPoint } from './manhattanTypes'
 import { get$id } from '#termsetting'
+import { showGrin2ResultTable } from '../grin2/grin2.ts'
 
 /**
  * Searches a quadtree for all points within a specified radius of target coordinates.
@@ -317,31 +318,10 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 					// Show tooltip
 					geneTip.clear().show(event.clientX, event.clientY)
 					if (nearbyDots.length > 1) {
-						// Multiple genes - use renderTable
+						// Multiple genes
 						const holder = geneTip.d.append('div').style('margin', '10px')
 
-						renderTable({
-							div: holder,
-							header: { allowSort: true },
-							columns: [
-								{ label: 'Gene' },
-								{ label: `${nearbyDots[0].chrom} pos` },
-								{ label: 'Type' },
-								{ label: '-log₁₀(q-value)', sortable: true },
-								{ label: 'Subject count', sortable: true }
-							],
-							rows: nearbyDots.map(d => [
-								{ value: d.gene },
-								{ html: `<span style="font-size:.8em">${d.start}-${d.end}</span>` },
-								{ html: `<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}` },
-								{ value: d.y.toFixed(3) },
-								{ value: d.nsubj }
-							]),
-							showLines: false,
-							showHeader: true,
-							striped: true,
-							resize: false
-						})
+						showGrin2ResultTable(holder, nearbyDots, null)
 
 						// Show message if there are more dots beyond the settings.maxTooltipGenes shown
 						// TODO: Make these settings abstracted out and can improve this later
@@ -408,68 +388,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 					const holder = clickMenu.d.append('div').style('margin', '10px')
 
-					// Track most recently selected gene for lollipop
-					let lastTouchedGene: string | null = null
-					let selectionOrder: number[] = [] // Track order genes were selected
-
-					// Render table with integrated buttons
-					renderTable({
-						div: holder,
-						header: { allowSort: true },
-						columns: [
-							{ label: 'Gene' },
-							{ label: `${allNearbyDots[0].chrom} pos` },
-							{ label: 'Type' },
-							{ label: '-log₁₀(q-value)', sortable: true },
-							{ label: 'Subject count', sortable: true }
-						],
-						rows: allNearbyDots.map(d => [
-							{ value: d.gene },
-							{ html: `<span style="font-size:.8em">${d.start}-${d.end}</span>` },
-							{ html: `<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}` },
-							{ value: d.y.toFixed(3) },
-							{ value: d.nsubj }
-						]),
-						showLines: false,
-						showHeader: true,
-						striped: true,
-						resize: false,
-						buttonsToLeft: true,
-						buttons: [
-							{
-								text: 'Matrix (0)',
-								callback: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
-									if (app && selectedIndices.length > 0) {
-										buttonNode.disabled = true
-										const selectedGenes = selectedIndices.map(idx => allNearbyDots[idx].gene)
-										clickMenu.hide()
-										createMatrixFromGenes(selectedGenes, app)
-									}
-								},
-								onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
-									buttonNode.textContent = `Matrix (${selectedIndices.length})`
-									buttonNode.disabled = selectedIndices.length === 0
-								}
-							},
-							{
-								text: 'Lollipop',
-								callback: (_selectedIndices: number[], buttonNode: HTMLButtonElement) => {
-									if (app && lastTouchedGene) {
-										buttonNode.disabled = true
-										clickMenu.hide()
-										createLollipopFromGene(lastTouchedGene, app)
-									}
-								},
-								onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
-									const result = updateSelectionTracking(selectionOrder, selectedIndices, allNearbyDots)
-									selectionOrder = result.selectionOrder
-									lastTouchedGene = result.lastTouchedGene
-									buttonNode.textContent = result.buttonText
-									buttonNode.disabled = result.buttonDisabled
-								}
-							}
-						]
-					})
+					showGrin2ResultTable(holder, allNearbyDots, null, { app, clickMenu })
 				}
 			})
 	}

@@ -12,6 +12,103 @@ import {
 	createMatrixFromGenes,
 	updateSelectionTracking
 } from '#plots/manhattan/manhattan.ts'
+import type { ManhattanPoint } from '#plots/manhattan/manhattanTypes.ts'
+
+/**
+ * Renders a GRIN2 result table for a list of gene hits.
+ * Used by Manhattan plot for both hover tooltips and click menus.
+ *
+ * @param tableDiv - D3 selection where the table will be rendered
+ * @param hits - Array of ManhattanPoint gene results to display
+ * @param newPlotDiv - D3 selection where Matrix/Lollipop plots will be shown (requires app for functionality)
+ * @param opts - Optional options object
+ * @param opts.app - App context for dispatching Matrix/Lollipop actions
+ * @param opts.clickMenu - Menu instance to hide on button actions
+ */
+export function showGrin2ResultTable(
+	tableDiv: any,
+	hits: ManhattanPoint[],
+	newPlotDiv: any,
+	opts?: { app?: any; clickMenu?: any }
+): void {
+	if (!hits || hits.length === 0) return
+
+	const { app, clickMenu } = opts || {}
+
+	// Build columns - use first hit's chrom for position column label
+	const columns = [
+		{ label: 'Gene' },
+		{ label: `${hits[0].chrom} pos` },
+		{ label: 'Type' },
+		{ label: '-log₁₀(q-value)', sortable: true },
+		{ label: 'Subject count', sortable: true }
+	]
+
+	// Build rows from hits
+	const rows = hits.map(d => [
+		{ value: d.gene },
+		{ html: `<span style="font-size:.8em">${d.start}-${d.end}</span>` },
+		{ html: `<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}` },
+		{ value: d.y.toFixed(3) },
+		{ value: d.nsubj }
+	])
+
+	// Base table options (used for hover tooltip - no buttons)
+	const tableOptions: any = {
+		div: tableDiv,
+		header: { allowSort: true },
+		columns,
+		rows,
+		showLines: false,
+		showHeader: true,
+		striped: true,
+		resize: false
+	}
+
+	// If app is provided, add Matrix/Lollipop buttons with selection tracking
+	if (app) {
+		let lastTouchedGene: string | null = null
+		let selectionOrder: number[] = []
+
+		tableOptions.buttonsToLeft = true
+		tableOptions.buttons = [
+			{
+				text: 'Matrix (0)',
+				callback: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
+					if (selectedIndices.length > 0) {
+						buttonNode.disabled = true
+						const selectedGenes = selectedIndices.map(idx => hits[idx].gene)
+						clickMenu?.hide()
+						createMatrixFromGenes(selectedGenes, app)
+					}
+				},
+				onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
+					buttonNode.textContent = `Matrix (${selectedIndices.length})`
+					buttonNode.disabled = selectedIndices.length === 0
+				}
+			},
+			{
+				text: 'Lollipop',
+				callback: (_selectedIndices: number[], buttonNode: HTMLButtonElement) => {
+					if (lastTouchedGene) {
+						buttonNode.disabled = true
+						clickMenu?.hide()
+						createLollipopFromGene(lastTouchedGene, app)
+					}
+				},
+				onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
+					const result = updateSelectionTracking(selectionOrder, selectedIndices, hits)
+					selectionOrder = result.selectionOrder
+					lastTouchedGene = result.lastTouchedGene
+					buttonNode.textContent = result.buttonText
+					buttonNode.disabled = result.buttonDisabled
+				}
+			}
+		]
+	}
+
+	renderTable(tableOptions)
+}
 
 class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
