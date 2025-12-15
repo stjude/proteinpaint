@@ -96,7 +96,7 @@ export function renderPvalues({ title, holder, plot, tests, s, bins, tip, setAct
 			.enter()
 			.append('td')
 			.style('padding', '1px 8px 1px 2px')
-			.style('color', '#858585')
+			.style('color', '#555')
 			.style('position', 'sticky')
 			.style('top', '0px')
 			.style('background', 'white')

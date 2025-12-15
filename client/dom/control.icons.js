@@ -539,7 +539,22 @@ function getHolder(elem, opts) {
 
 		// for Section 508: a clickable element should have a recognized aria-role,
 		// either implied by element tagName (button, submit, etc) or via "role" attribute
-		if (elem.node().tagName != 'BUTTON') elem.attr('role', 'button').attr('tabindex', 0).style('cursor', 'pointer')
+		if (elem.node().tagName != 'BUTTON')
+			elem
+				.attr('role', 'button')
+				.attr('tabindex', 0)
+				.style('cursor', 'pointer')
+				.on('keyup.control_icons', event => {
+					if (event.key == 'Enter') {
+						const box = event.target.getBoundingClientRect()
+						const clientX = box.x + 0.5 * box.width
+						const clientY = box.y + box.height
+						//event.target.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX, clientY }))
+						//event.target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX, clientY }))
+						//event.target.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX, clientY }))
+						event.target.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX, clientY }))
+					}
+				})
 	}
 	if (opts.title) {
 		elem.attr('aria-label', opts.title).style('z-index', 1) // to have aria-label based tooltip appear above other elements
