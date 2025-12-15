@@ -40,6 +40,12 @@ export type BoxPlotDom = {
 	tip: Menu
 }
 
+export type FormattedBoxPlotChartsEntry = {
+	plotDim: PlotDimensions
+	plots: FormattedPlotEntry[]
+	wilcoxon: [{ value: string }, { value: string }, { html: string }][]
+}
+
 /** Processed box plot obj with dimensions needs for
  * rendering in the view. */
 export type FormattedPlotEntry = BoxPlotEntry & {
@@ -102,10 +108,15 @@ export type PlotDimensions = {
 	title: { x: number; y: number; text: string }
 	/** axis coordinates */
 	axis: { x: number; y: number; values(ticks: number[]): number[]; format(d: number): string }
+	subtitle: { x: number | null; y: number | null; text: string | null }
 }
 
 export type ViewData = {
-	plotDim: PlotDimensions
-	plots: FormattedPlotEntry[]
+	/** Color changes based on the displayMode selection */
+	backgroundColor: string
+	/** Color changes based on the displayMode selection */
+	textColor: string
+	/** Formatted data */
+	charts: { [key: string]: FormattedBoxPlotChartsEntry }
 	legend: { label: string; items: LegendItemEntry[] }[]
 }

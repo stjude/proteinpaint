@@ -2,8 +2,8 @@ import { format } from 'd3-format'
 import { decimalPlacesUntilFirstNonZero } from '#shared/roundValue.js'
 import { rgb } from 'd3-color'
 import type { BoxPlotChartEntry } from '#types'
-// import type { PlotDimensions, BoxPlotConfig } from '../BoxPlotTypes'
 import type { BoxPlotSettings } from '../Settings'
+import type { BoxPlotConfig } from '../BoxPlotTypes'
 
 export class ChartDataMapper {
 	/** Top padding for the svg */
@@ -62,6 +62,7 @@ export class ChartDataMapper {
 			throw new Error('Missing absMin or absMax in data provided to ChartDataMapper')
 	}
 
+	/** Set the row settings based on all plots */
 	getRowSettings(charts) {
 		let totalNumPlots = 0
 		for (const chart of charts) {
@@ -74,7 +75,7 @@ export class ChartDataMapper {
 		return { rowHeight, rowSpace }
 	}
 
-	map(config) {
+	map(config: BoxPlotConfig) {
 		const chartData = {}
 		for (const chart of this.charts) {
 			/** Increasing padding to space out the boxplots and determine position */
@@ -86,7 +87,8 @@ export class ChartDataMapper {
 
 			chartData[chart.chartId] = {
 				plotDim: plotDim,
-				plots: this.setPlotData(chart, config, this.settings, incrPad)
+				plots: this.setPlotData(chart, config, this.settings, incrPad),
+				wilcoxon: chart?.wilcoxon || null
 			}
 		}
 		return chartData

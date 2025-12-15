@@ -2,6 +2,7 @@ import { getCompInit, copyMerge, type RxComponent } from '#rx'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.ts'
 import { fillTermWrapper } from '#termsetting'
 import { getCombinedTermFilter } from '#filter'
+import { controlsInit } from '#plots/controls.js'
 import { Menu, /**getMaxLabelWidth,*/ DownloadMenu } from '#dom'
 import type { Elem } from '../../types/d3'
 import type { MassAppApi, MassState } from '#mass/types/mass'
@@ -10,12 +11,9 @@ import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { getChartSubtitle } from './viewModel/ChartDataMapper'
 import { BoxPlotInteractions } from './interactions/BoxPlotInteractions'
-// import { LegendRenderer } from './view/LegendRender'
-// import { AssociationTableRender } from './view/AssociationTableRender'
-// import { View } from './view/View'
+import { View } from './view/View'
 import { getDefaultBoxplotSettings } from './defaults'
 import { setBoxPlotControlInputs } from './BoxPlotControlInputs'
-import { controlsInit } from '#plots/controls.js'
 
 export class TdbBoxplot extends PlotBase implements RxComponent {
 	static type = 'boxplot'
@@ -158,8 +156,35 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 		this.dom.charts.selectAll('*').remove()
 
 		//TODO: Reimplement maxLabelLgth calculation before merging
-		new ViewModel(config, this.data, settings, 100, this.useDefaultSettings)
-		// console.log(viewModel)
+		// const maxLabelLgth = getMaxLabelWidth(tempsvg.append('g'), labels)
+		const viewModel = new ViewModel(config, this.data, settings, 100, this.useDefaultSettings)
+		if (!viewModel.viewData) throw new Error('No viewData from ViewModel')
+
+		if (
+			(viewModel.rowSpace !== settings.rowSpace || viewModel.rowHeight !== settings.rowHeight) &&
+			this.useDefaultSettings == true
+		) {
+			/** If the row height or space changed during data processing,
+			 * save the new settings without calling app.dispatch.
+			 * Will show updated value in the controls. */
+			settings.rowSpace = viewModel.rowSpace
+			settings.rowHeight = viewModel.rowHeight
+
+			this.app.save({
+				type: 'plot_edit',
+				id: this.id,
+				config: {
+					settings: {
+						boxplot: {
+							rowSpace: viewModel.rowSpace,
+							rowHeight: viewModel.rowHeight
+						}
+					}
+				}
+			})
+		}
+
+		new View(viewModel.viewData, settings, this.dom, this.app, this.interactions)
 
 		// /** TODO: Refactor all of the code below into mvvm
 		//  * pattern. This breaks maintainability and separation of concerns. */
@@ -170,7 +195,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 		// 	const chartLabels = chart.plots.filter(p => !p.isHidden).map(p => p.boxplot.label)
 		// 	labels.push(...chartLabels)
 		// }
-		// const maxLabelLgth = getMaxLabelWidth(tempsvg.append('g'), labels)
+		//
 		// tempsvg.remove()
 
 		// // plot charts

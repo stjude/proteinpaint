@@ -1,5 +1,6 @@
 import { renderTable } from '#dom'
 
+/** If wilcoxon test results are available, render the association table */
 export class AssociationTableRender {
 	constructor(div, data) {
 		const wrapper = div.style('vertical-align', 'top').style('margin-top', '30px')
