@@ -44,6 +44,7 @@ export function renderTable({
 	inputName = null,
 	dataTestId = null,
 	download = undefined,
+	noAutoScroll = false,
 	hoverEffects
 }: TableArgs) {
 	validateInput()
@@ -250,14 +251,20 @@ export function renderTable({
 							tr.style(key, checked ? _selectedRowStyle[key] : '')
 						}
 					})
-				//Do not scroll when all rows are selected. Problem appears when sorting.
-				if (selectedRows.length != rows.length && rowIdx === selectedRows[0] && tr.node()) {
-					// if there is at least one selected row (but not all rows are selected),
-					// scroll to the  table row,so that it's visible and obvious to the user
-					// which rows are pre-selected
-					setTimeout(() => {
-						tr.node()?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-					}, 500)
+				if (noAutoScroll) {
+					// this setting prevents auto scrolling. this is needed due to an unresolved defect that on showing a small table e.g. categorical tvs, the page scrolls undesirably
+					// Edgar's comment: so the fix should just be to take the table height/table cell screen position into account. Somehow, scrollIntoView() is not accurate for the embedded table row
+				} else {
+					// table is allowed to auto scroll to selected rows. this is desirable to auto-show selected rows from a large table
+					//Do not scroll when all rows are selected. Problem appears when sorting.
+					if (selectedRows.length != rows.length && rowIdx === selectedRows[0] && tr.node()) {
+						// if there is at least one selected row (but not all rows are selected),
+						// scroll to the  table row,so that it's visible and obvious to the user
+						// which rows are pre-selected
+						setTimeout(() => {
+							tr.node()?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+						}, 500)
+					}
 				}
 
 				const checked = checkbox.property('checked')
