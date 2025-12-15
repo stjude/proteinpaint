@@ -59,7 +59,7 @@ function findPointsInRadius(
  *
  * @param {number[]} currentSelectionOrder - Current array tracking selection order (indices in order of selection)
  * @param {number[]} selectedIndices - New array of selected indices from the selection UI
- * @param {Array<{gene: string} | Array<{value: string}>>} dataSource - Array of data items containing gene information
+ * @param {GeneDataItem[]} dataSource - Array of data items containing gene information
  *   Can be either ManhattanPoints with `gene` property or table rows with `value` property
  * @returns {{selectionOrder: number[], lastTouchedGene: string | null, buttonText: string, buttonDisabled: boolean}}
  *   - selectionOrder: Updated array of indices in selection order
