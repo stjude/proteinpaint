@@ -27,7 +27,7 @@ export class ViewModel {
 			backgroundColor: settings.displayMode == 'dark' ? 'black' : 'white',
 			textColor: settings.displayMode == 'dark' ? 'white' : 'black',
 			charts,
-			legend: legendMapper.map(charts, data.uncomputableValues || [])
+			legend: legendMapper.map(data.charts, data.uncomputableValues || [])
 		}
 	}
 }

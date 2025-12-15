@@ -9,11 +9,14 @@ export class ChartDataMapper {
 	/** Top padding for the svg */
 	#topPad = 20
 	/** Bottom padding for the svg */
-	#bottomPad = 40
+	#bottomPad = 25
 	/** Horizontal, or right and left padding */
 	#horizPad = 120
 	/** For outliers, set a radius rather than using the default. */
 	#outRadius = 5
+	/** Offset applied when divide by term is present
+	 * Creates space for the subtitle*/
+	#divideByOffset = 20
 	/** Range is 20 - 50 */
 	rowHeight: number
 	/** Range is 10 - 20 */
@@ -82,6 +85,8 @@ export class ChartDataMapper {
 			let incrPad = 40
 
 			const plotDim = this.setPlotDimensions(chart, config, this.settings, incrPad)
+			//Include extra space for the subtitle
+			if (config?.term0) incrPad += this.#divideByOffset
 			//20 for the axis offset (above), 10 more for the first boxplot
 			incrPad += 30
 
@@ -96,13 +101,22 @@ export class ChartDataMapper {
 
 	setPlotDimensions(chart: BoxPlotChartEntry, config: any, settings: BoxPlotSettings, incrPad: number) {
 		const svg = this.setSvgDimensions(settings, chart, incrPad, config)
+		const plotCenter = this.totalLabelSize + settings.plotLength / 2
 		const plotDim = {
 			//Add 1 to the max is big enough so the upper line to boxplot isn't cutoff
 			domain: [this.absMin, this.absMax <= 1 ? this.absMax : this.absMax + 1],
 			range: [0, settings.plotLength],
 			svg,
-			subtitle: this.setSubtitleDimensions(config, settings, svg.height, chart.sampleCount, incrPad),
-			title: this.setTitleDimensions(config, settings, svg.height, incrPad),
+			subtitle: this.setSubtitleDimensions(
+				config,
+				settings,
+				svg.height,
+				chart.chartId,
+				chart.sampleCount,
+				plotCenter,
+				incrPad
+			),
+			title: this.setTitleDimensions(config, settings, svg.height, plotCenter, incrPad),
 			axis: {
 				x: settings.isVertical ? this.#horizPad / 2 + incrPad + this.#topPad : this.totalLabelSize,
 				y: this.#topPad + (settings.isVertical ? settings.labelPad : incrPad + 20),
@@ -122,6 +136,11 @@ export class ChartDataMapper {
 			}
 		}
 
+		if (config?.term0) {
+			if (settings.isVertical) plotDim.axis.x += this.#divideByOffset
+			else plotDim.axis.y += this.#divideByOffset
+		}
+
 		return plotDim
 	}
 
@@ -131,12 +150,10 @@ export class ChartDataMapper {
 		incrPad: number,
 		config: any
 	): { width: number; height: number } {
-		const plotsSpace =
-			chart.plots.filter(p => !p.isHidden).length * this.totalBoxSize +
-			this.#topPad +
-			this.#bottomPad +
-			incrPad +
-			(config.term0 ? this.#topPad + incrPad : 0)
+		let plotsSpace =
+			chart.plots.filter(p => !p.isHidden).length * this.totalBoxSize + this.#topPad + this.#bottomPad + incrPad
+		if (config?.term0) plotsSpace += this.#divideByOffset + incrPad
+
 		const length = settings.plotLength + this.totalLabelSize + this.#horizPad / 2
 		return {
 			width: settings.isVertical ? plotsSpace + this.#horizPad : length,
@@ -148,7 +165,9 @@ export class ChartDataMapper {
 		config: any,
 		settings: BoxPlotSettings,
 		height: number,
+		chartId: string,
 		sampleCount: number,
+		plotCenter: number,
 		incrPad: number
 	): { x: number | null; y: number | null; text: string | null } {
 		const dim: { x: number | null; y: number | null; text: string | null } = {
@@ -157,25 +176,24 @@ export class ChartDataMapper {
 			text: null
 		}
 		if (config.term0) {
-			dim.text = `${getChartSubtitle(config, config.term0.term.name)} n=${sampleCount}`
-			if (settings.isVertical) {
-				dim.x = height - this.totalLabelSize - this.#horizPad / 2
-				dim.y = this.#topPad + incrPad / 2 + 15
-			} else {
-				dim.x = this.totalLabelSize
-				dim.y = this.#topPad + incrPad / 2 + 15
-			}
+			dim.x = settings.isVertical ? this.#horizPad / 2 : plotCenter
+			dim.y = settings.isVertical ? height - plotCenter - this.#horizPad / 2 : this.#topPad + incrPad / 2
+			dim.text = `${getChartSubtitle(config, chartId)} (n=${sampleCount})`
 		}
 		return dim
 	}
 
-	setTitleDimensions(config: any, settings: BoxPlotSettings, height: number, incrPad: number) {
-		const depth = this.totalLabelSize + settings.plotLength / 2
-		return {
-			x: settings.isVertical ? this.#horizPad / 2 : depth,
-			y: settings.isVertical ? height - depth - this.#horizPad / 2 : this.#topPad + incrPad / 2,
+	setTitleDimensions(config: any, settings: BoxPlotSettings, height: number, plotCenter: number, incrPad: number) {
+		const dim = {
+			x: settings.isVertical ? this.#horizPad / 2 : plotCenter,
+			y: settings.isVertical ? height - plotCenter - this.#horizPad / 2 : this.#topPad + incrPad / 2,
 			text: config.term.q.mode == 'continuous' ? config.term.term.name : config.term2.term.name
 		}
+		if (config?.term0) {
+			if (settings.isVertical) dim.x += this.#divideByOffset + 10
+			else dim.y += this.#divideByOffset + 10
+		}
+		return dim
 	}
 
 	filterTickValues(ticks: number[]) {
@@ -194,7 +212,7 @@ export class ChartDataMapper {
 	}
 
 	setPlotData(chart: any, config: any, settings: BoxPlotSettings, incrPad: number) {
-		const plots = structuredClone(chart.plots)
+		const plots = structuredClone(chart.plots.filter(p => !p.isHidden))
 		for (const plot of plots) {
 			/** Set rendering properties for the plot */
 

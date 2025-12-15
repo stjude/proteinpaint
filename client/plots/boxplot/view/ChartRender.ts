@@ -70,7 +70,7 @@ export class ChartRender {
 			}`
 			dom.subtitle
 				.attr('class', 'sjpp-boxplot-subtitle')
-				.style('font-size', '0.9em')
+				.style('font-size', '1.1em')
 				.attr('text-anchor', 'middle')
 				.attr('transform', subTransformStr)
 				.attr('fill', this.textColor)
