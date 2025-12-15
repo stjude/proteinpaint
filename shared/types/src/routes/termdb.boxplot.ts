@@ -35,10 +35,11 @@ export type BoxPlotResponse = {
 	charts: {
 		[chartId: string]: BoxPlotChartEntry
 	}
+	/** Descriptive statistics for the entire response */
+	descrStats: DescrStats
 	/** Categories not shown in the final plot */
 	uncomputableValues: { label: string; value: number }[] | null
 	error?: any
-	descrStats: DescrStats
 }
 
 // chart containing a set of boxplots
@@ -47,14 +48,11 @@ export type BoxPlotChartEntry = {
 	chartId: string
 	/** Boxplot data within the chart */
 	plots: BoxPlotEntry[]
-	/** svg of chart, necessary for svg download */
-	svg?: any
-	/** Copied from BoxPlotResponse, necessary for
-	ViewModel to process chart data */
-	absMin?: number
-	absMax?: number
-	uncomputableValues?: { label: string; value: number }[] | null
-	wilcoxon: any
+	/** Number of samples represented in the chart */
+	sampleCount: number
+	/** Wilcoxon test results for the chart formatted
+	 * for #dom/table.js */
+	wilcoxon?: [{ value: string }, { value: string }, { html: string }][]
 }
 
 // individual boxplot
