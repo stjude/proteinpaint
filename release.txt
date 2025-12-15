@@ -1,2 +1,1 @@
-Fixes:
-- Genevariant tvs edit menu no longer auto-scrolls to selected row that causes page to scroll
+

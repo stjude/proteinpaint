@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Genevariant tvs edit menu no longer auto-scrolls to selected row that causes page to scroll
+
+
 ## 2.167.0
 
 Features:
