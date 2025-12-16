@@ -10,6 +10,7 @@ Features:
 Fixes:
 - GRIN2: Improved rust plotting logic to not filter out q-value = 0 values
 - GRIN2: Fixed top gene table sorting logic to keep genes if any lesion data type meets the significance threshold
+- increase the contrast of chart sandbox title and legend header text colors
 
 
 ## 2.168.0
