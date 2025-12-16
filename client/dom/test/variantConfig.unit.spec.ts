@@ -193,13 +193,12 @@ tape('genotype toggle', test => {
 
 tape('any mutation count', test => {
 	const holder = select(document.body).append('div')
-	let newConfig
 
 	renderVariantConfig({
 		holder,
 		values,
 		mcount: 'any',
-		callback: config => (newConfig = config)
+		callback: () => {}
 	})
 
 	const variantsDiv = holder.select('[data-testid="sjpp-variantConfig-variant"]')
