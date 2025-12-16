@@ -15,11 +15,8 @@ Tests:
 	filterByItem: wildtype, origin
 	filterByItem: continuous CNV
 	filterByTvsLst: single tvs
-
-
-	TODO: update the following tests:
-	filterByTvsLst: multiple tvs, AND join
 	filterByTvsLst: multiple tvs, OR join
+	filterByTvsLst: multiple tvs, AND join
 	filterByTvsLst: in=false
 	filterByTvsLst: nested tvslst
 */
@@ -498,6 +495,7 @@ test('filterByItem: wildtype, origin', t => {
 })
 
 test('filterByItem: continuous CNV', t => {
+	t.plan(20)
 	const filter = {
 		type: 'tvs',
 		tvs: {
@@ -579,6 +577,7 @@ test('filterByItem: continuous CNV', t => {
 })
 
 test('filterByTvsLst: single tvs', t => {
+	t.plan(12)
 	const filter = {
 		type: 'tvslst',
 		in: true,
@@ -641,15 +640,49 @@ test('filterByTvsLst: single tvs', t => {
 	t.end()
 })
 
-/*test('filterByTvsLst: multiple tvs, AND join', t => {
+test('filterByTvsLst: multiple tvs, OR join', t => {
+	t.plan(12)
 	const filter = {
 		type: 'tvslst',
-		join: 'and',
 		in: true,
+		join: 'or',
 		lst: [
-			{ type: 'tvs', tvs: { term: { dt: 1, type: 'dtsnvindel' }, values: [{ key: 'M' }] } },
-			{ type: 'tvs', tvs: { term: { dt: 4, type: 'dtcnv' }, values: [{ key: 'CNV_amp' }] } }
+			{
+				type: 'tvs',
+				tvs: {
+					term: { dt: 1, type: 'dtsnvindel' },
+					values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
+					mcount: 'any'
+				}
+			},
+			{
+				type: 'tvs',
+				tvs: {
+					term: { dt: 4, type: 'dtcnv' },
+					values: [{ key: 'CNV_amp', label: 'Gain', value: 'CNV_amp' }],
+					mcount: 'any'
+				}
+			}
 		]
+	}
+
+	{
+		const mlst = [
+			{ dt: 1, class: 'M' },
+			{ dt: 4, class: 'WT' }
+		]
+		const [pass, tested] = filterByTvsLst(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [
+			{ dt: 1, class: 'WT' },
+			{ dt: 4, class: 'CNV_amp' }
+		]
+		const [pass, tested] = filterByTvsLst(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
 	}
 	{
 		const mlst = [
@@ -657,8 +690,26 @@ test('filterByTvsLst: single tvs', t => {
 			{ dt: 4, class: 'CNV_amp' }
 		]
 		const [pass, tested] = filterByTvsLst(filter, mlst)
-		t.equal(pass, true, 'Sample with matches to both tvs should pass')
-		t.equal(tested, true, 'Sample is tested for both mutation types')
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [
+			{ dt: 1, class: 'WT' },
+			{ dt: 4, class: 'WT' }
+		]
+		const [pass, tested] = filterByTvsLst(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [
+			{ dt: 1, class: 'WT' },
+			{ dt: 4, class: 'Blank' }
+		]
+		const [pass, tested] = filterByTvsLst(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, false, 'Sample is not tested')
 	}
 	{
 		const mlst = [
@@ -666,30 +717,55 @@ test('filterByTvsLst: single tvs', t => {
 			{ dt: 4, class: 'Blank' }
 		]
 		const [pass, tested] = filterByTvsLst(filter, mlst)
-		t.equal(pass, false, 'Sample with match to only one tvs should not pass')
-		t.equal(tested, false, 'Sample is not tested for all mutation types')
-	}
-	{
-		const mlst = [
-			{ dt: 1, class: 'M' },
-			{ dt: 4, class: 'CNV_loss' }
-		]
-		const [pass, tested] = filterByTvsLst(filter, mlst)
-		t.equal(pass, false, 'Sample with match to one tvs and partial match to second tvs should not pass')
-		t.equal(tested, true, 'Sample is tested for all mutation types')
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, false, 'Sample is not tested')
 	}
 	t.end()
 })
 
-test('filterByTvsLst: multiple tvs, OR join', t => {
+test('filterByTvsLst: multiple tvs, AND join', t => {
+	t.plan(12)
 	const filter = {
 		type: 'tvslst',
-		join: 'or',
 		in: true,
+		join: 'and',
 		lst: [
-			{ type: 'tvs', tvs: { term: { dt: 1, type: 'dtsnvindel' }, values: [{ key: 'M' }] } },
-			{ type: 'tvs', tvs: { term: { dt: 4, type: 'dtcnv' }, values: [{ key: 'CNV_amp' }] } }
+			{
+				type: 'tvs',
+				tvs: {
+					term: { dt: 1, type: 'dtsnvindel' },
+					values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
+					mcount: 'any'
+				}
+			},
+			{
+				type: 'tvs',
+				tvs: {
+					term: { dt: 4, type: 'dtcnv' },
+					values: [{ key: 'CNV_amp', label: 'Gain', value: 'CNV_amp' }],
+					mcount: 'any'
+				}
+			}
 		]
+	}
+
+	{
+		const mlst = [
+			{ dt: 1, class: 'M' },
+			{ dt: 4, class: 'WT' }
+		]
+		const [pass, tested] = filterByTvsLst(filter, mlst)
+		t.equal(pass, false, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [
+			{ dt: 1, class: 'WT' },
+			{ dt: 4, class: 'CNV_amp' }
+		]
+		const [pass, tested] = filterByTvsLst(filter, mlst)
+		t.equal(pass, false, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
 	}
 	{
 		const mlst = [
@@ -697,8 +773,26 @@ test('filterByTvsLst: multiple tvs, OR join', t => {
 			{ dt: 4, class: 'CNV_amp' }
 		]
 		const [pass, tested] = filterByTvsLst(filter, mlst)
-		t.equal(pass, true, 'Sample with matches to both tvs should pass')
-		t.equal(tested, true, 'Sample is tested for both mutation types')
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [
+			{ dt: 1, class: 'WT' },
+			{ dt: 4, class: 'WT' }
+		]
+		const [pass, tested] = filterByTvsLst(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [
+			{ dt: 1, class: 'WT' },
+			{ dt: 4, class: 'Blank' }
+		]
+		const [pass, tested] = filterByTvsLst(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, false, 'Sample is not tested')
 	}
 	{
 		const mlst = [
@@ -706,123 +800,167 @@ test('filterByTvsLst: multiple tvs, OR join', t => {
 			{ dt: 4, class: 'Blank' }
 		]
 		const [pass, tested] = filterByTvsLst(filter, mlst)
-		t.equal(pass, true, 'Sample with match to at least one tvs should pass')
-		t.equal(tested, false, 'Sample is not tested for both mutation types')
-	}
-	{
-		const mlst = [
-			{ dt: 1, class: 'M' },
-			{ dt: 4, class: 'CNV_loss' }
-		]
-		const [pass, tested] = filterByTvsLst(filter, mlst)
-		t.equal(pass, true, 'Sample with match to one tvs and partial match to second tvs should pass')
-		t.equal(tested, true, 'Sample is tested for both mutation types')
-	}
-	{
-		const mlst = [
-			{ dt: 1, class: 'F' },
-			{ dt: 4, class: 'Blank' }
-		]
-		const [pass, tested] = filterByTvsLst(filter, mlst)
-		t.equal(pass, false, 'Sample with partial match to one tvs should not pass')
-		t.equal(tested, false, 'Sample is not tested for both mutation types')
-	}
-	{
-		const mlst = [
-			{ dt: 1, class: 'F' },
-			{ dt: 4, class: 'CNV_loss' }
-		]
-		const [pass, tested] = filterByTvsLst(filter, mlst)
-		t.equal(pass, false, 'Sample with partial match to both tvs should not pass')
-		t.equal(tested, true, 'Sample is tested for both mutation types')
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, false, 'Sample is not tested')
 	}
 	t.end()
 })
 
 test('filterByTvsLst: in=false', t => {
+	t.plan(12)
 	const filter = {
 		type: 'tvslst',
-		join: 'and',
 		in: false,
-		lst: [{ type: 'tvs', tvs: { term: { dt: 1, type: 'dtsnvindel' }, values: [{ key: 'M' }] } }]
+		join: '',
+		lst: [
+			{
+				type: 'tvs',
+				tvs: {
+					term: { dt: 1, type: 'dtsnvindel' },
+					values: [
+						{ key: 'M', label: 'MISSENSE', value: 'M' },
+						{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
+						{ key: 'D', label: 'PROTEINDEL', value: 'D' }
+					],
+					mcount: 'any'
+				}
+			}
+		]
 	}
+
 	{
 		const mlst = [{ dt: 1, class: 'M' }]
 		const [pass, tested] = filterByTvsLst(filter, mlst)
-		t.equal(pass, false, 'Matching sample should not pass filter with in=false')
+		t.equal(pass, false, 'Sample does not pass filter')
 		t.equal(tested, true, 'Sample is tested')
 	}
 	{
-		const mlst = [{ dt: 1, class: 'F' }]
+		const mlst = [
+			{ dt: 1, class: 'L' },
+			{ dt: 1, class: 'F' }
+		]
 		const [pass, tested] = filterByTvsLst(filter, mlst)
-		t.equal(pass, true, 'Mismatching sample should pass filter with in=false')
+		t.equal(pass, false, 'Sample does not pass filter')
 		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [{ dt: 1, class: 'L' }]
+		const [pass, tested] = filterByTvsLst(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [{ dt: 1, class: 'WT' }]
+		const [pass, tested] = filterByTvsLst(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [{ dt: 1, class: 'Blank' }]
+		const [pass, tested] = filterByTvsLst(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, false, 'Sample is not tested')
+	}
+	{
+		const mlst = [{ dt: 4, class: 'CNV_amp' }]
+		const [pass, tested] = filterByTvsLst(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, false, 'Sample is not tested for mutation type')
 	}
 	t.end()
 })
 
 test('filterByTvsLst: nested tvslst', t => {
-	const filter = {
+	t.plan(10)
+	const tvslst_snvindel = {
 		type: 'tvslst',
-		join: 'and',
 		in: true,
+		join: 'or',
 		lst: [
 			{
-				type: 'tvslst',
-				join: 'or',
-				in: true,
-				lst: [
-					{ type: 'tvs', tvs: { term: { dt: 1, origin: 'somatic', type: 'dtsnvindel' }, values: [{ key: 'M' }] } },
-					{ type: 'tvs', tvs: { term: { dt: 1, origin: 'germline', type: 'dtsnvindel' }, values: [{ key: 'M' }] } }
-				]
+				type: 'tvs',
+				tvs: {
+					term: { dt: 1, type: 'dtsnvindel', origin: 'somatic' },
+					values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
+					mcount: 'any'
+				}
 			},
-			{ type: 'tvs', tvs: { term: { dt: 4, type: 'dtcnv' }, values: [{ key: 'CNV_amp' }] } }
+			{
+				type: 'tvs',
+				tvs: {
+					term: { dt: 1, type: 'dtsnvindel', origin: 'germline' },
+					values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
+					mcount: 'any'
+				}
+			}
 		]
 	}
+
+	const tvs_cnv = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 4, type: 'dtcnv' },
+			values: [{ key: 'CNV_amp', label: 'Gain', value: 'CNV_amp' }],
+			mcount: 'any'
+		}
+	}
+
+	const filter = {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [tvslst_snvindel, tvs_cnv]
+	}
+
 	{
 		const mlst = [
 			{ dt: 1, class: 'M', origin: 'somatic' },
+			{ dt: 1, class: 'WT', origin: 'germline' },
 			{ dt: 4, class: 'CNV_amp' }
 		]
 		const [pass, tested] = filterByTvsLst(filter, mlst)
-		t.equal(pass, true, 'Sample with matches to both mutation types should pass (somatic)')
-		t.equal(tested, false, 'Sample is not tested for all origins')
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
 	}
 	{
 		const mlst = [
+			{ dt: 1, class: 'WT', origin: 'somatic' },
 			{ dt: 1, class: 'M', origin: 'germline' },
 			{ dt: 4, class: 'CNV_amp' }
 		]
 		const [pass, tested] = filterByTvsLst(filter, mlst)
-		t.equal(pass, true, 'Sample with matches to both mutation types should pass (germline)')
-		t.equal(tested, false, 'Sample is not tested for all origins')
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
 	}
 	{
 		const mlst = [
 			{ dt: 1, class: 'M', origin: 'somatic' },
-			{ dt: 4, class: 'CNV_loss' }
+			{ dt: 1, class: 'WT', origin: 'germline' },
+			{ dt: 4, class: 'WT' }
 		]
 		const [pass, tested] = filterByTvsLst(filter, mlst)
-		t.equal(pass, false, 'Sample with match to one mutation should not pass')
-		t.equal(tested, false, 'Sample is not tested for all origins')
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [
+			{ dt: 1, class: 'WT', origin: 'somatic' },
+			{ dt: 1, class: 'M', origin: 'germline' },
+			{ dt: 4, class: 'WT' }
+		]
+		const [pass, tested] = filterByTvsLst(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
 	}
 	{
 		const mlst = [
 			{ dt: 1, class: 'M', origin: 'somatic' },
-			{ dt: 4, class: 'Blank' }
+			{ dt: 1, class: 'Blank', origin: 'germline' },
+			{ dt: 4, class: 'CNV_amp' }
 		]
 		const [pass, tested] = filterByTvsLst(filter, mlst)
-		t.equal(pass, false, 'Sample with match to one mutation should not pass')
-		t.equal(tested, false, 'Sample is not tested for all mutation types')
-	}
-	{
-		const mlst = [
-			{ dt: 1, class: 'F', origin: 'somatic' },
-			{ dt: 4, class: 'CNV_loss' }
-		]
-		const [pass, tested] = filterByTvsLst(filter, mlst)
-		t.equal(pass, false, 'Sample with no match should not pass')
-		t.equal(tested, false, 'Sample is not tested for all origins')
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, false, 'Sample is not tested')
 	}
 	t.end()
-})*/
+})
