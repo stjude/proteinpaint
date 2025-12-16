@@ -123,7 +123,7 @@ function init({ genomes }) {
 									values: [{ key: cat }]
 								}
 							})
-						} else if (term.type == 'float') {
+						} else if (term.type == 'float' || term.type == 'integer') {
 							const numeric: any = {
 								type: 'tvs',
 								tvs: {

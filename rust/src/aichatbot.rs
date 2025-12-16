@@ -402,7 +402,7 @@ pub async fn run_pipeline(
 async fn classify_query_by_dataset_type(
     user_input: &str,
     comp_model: impl rig::completion::CompletionModel + 'static,
-    embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
+    _embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
     llm_backend_type: &llm_backend,
     temperature: f64,
     max_new_tokens: usize,
@@ -459,18 +459,18 @@ async fn classify_query_by_dataset_type(
         rag_docs.push(part.trim().to_string())
     }
 
-    //let top_k: usize = 3;
+    //let top_k: usize = 3; // Embedding model not used currently
     // Create embeddings and add to vector store
-    let embeddings = EmbeddingsBuilder::new(embedding_model.clone())
-        .documents(rag_docs)
-        .expect("Reason1")
-        .build()
-        .await
-        .unwrap();
+    //let embeddings = EmbeddingsBuilder::new(embedding_model.clone())
+    //    .documents(rag_docs)
+    //    .expect("Reason1")
+    //    .build()
+    //    .await
+    //    .unwrap();
 
-    // Create vector store
-    let mut vector_store = InMemoryVectorStore::<String>::default();
-    InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
+    //// Create vector store
+    //let mut vector_store = InMemoryVectorStore::<String>::default();
+    //InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
 
     // Create RAG agent
     let agent = AgentBuilder::new(comp_model).preamble(&(String::from("Generate classification for the user query into summary, dge, hierarchical, snv_indel, cnv, variant_calling, sv_fusion and none categories. Return output in JSON with ALWAYS a single word answer { \"answer\": \"dge\" }, that is 'summary' for summary plot, 'dge' for differential gene expression, 'hierarchical' for hierarchical clustering, 'snv_indel' for SNV/Indel, 'cnv' for CNV and 'sv_fusion' for SV/fusion, 'variant_calling' for variant calling, 'surivial' for survival data, 'none' for none of the previously described categories. The summary plot list and summarizes the cohort of patients according to the user query. The answer should always be in lower case\n The options are as follows:\n") + &contents + "\nQuestion= {question} \nanswer")).temperature(temperature).additional_params(additional).build();
@@ -1303,7 +1303,7 @@ fn validate_summary_output(
                                     );
                                 }
                                 validated_filter_terms_PP += &string_json;
-                            } // To be implemented later
+                            }
                         };
                         filter_hits += 1;
                     }
