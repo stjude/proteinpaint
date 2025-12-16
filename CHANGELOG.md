@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.168.0
 
 Features:
 - support different levels of IP check in dsCredentials
