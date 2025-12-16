@@ -65,7 +65,7 @@ export function showGrin2ResultTable(opts: ShowGrin2ResultTableOpts): void {
 		showLines: false,
 		showHeader: true,
 		striped: true,
-		resize: false,
+		resize: 'both',
 		header: { allowSort: true },
 		...renderTableOpts
 	}
@@ -825,6 +825,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				maxHeight: '400px',
 				maxWidth: '100%',
 				dataTestId: 'grin2-top-genes-table',
+				resize: 'both',
 				selectAll: false,
 				download: {
 					fileName: `grin2_top_genes_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}.tsv`
