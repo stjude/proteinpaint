@@ -1,8 +1,6 @@
 /** User controlled settings. Some settings are calculated based on
  * the number of boxplots */
 export type BoxPlotSettings = {
-	/** Length of the boxplots and scale, excluding labels */
-	plotLength: number
 	/** Default is common plot color.  */
 	color: string
 	/** Toggle between different display modes
@@ -22,9 +20,11 @@ export type BoxPlotSettings = {
 	 * Default is by alphanumeric order or by bin
 	 * May change this later to `orderBy` if more options arise */
 	orderByMedian: boolean
-	/** Height of individual boxplots */
+	/** Length of the boxplots and scale, excluding labels */
+	plotLength: number
+	/** Height (i.e. box size or thickness) of individual boxplots */
 	rowHeight: number
-	/** Space between the boxplots */
+	/** Space between the boxplots (i.e. padding between)*/
 	rowSpace: number
 	/** If true, remove outliers from the analysis */
 	removeOutliers: boolean

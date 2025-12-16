@@ -49,22 +49,18 @@ export class LegendDataMapper {
 
 	getHiddenPlots(charts: { [index: string]: BoxPlotChartEntry }) {
 		const hiddenPlots = Object.values(charts)
-			.reduce((acc: Map<string, any>, chart: any) => {
+			.reduce((plotMap: Map<string, any>, chart: any) => {
 				for (const p of chart.plots ?? []) {
-					if (!p.isHidden || acc.has(p.key)) continue
+					if (!p.isHidden || plotMap.has(p.key)) continue
 
-					const n = p?.descrStats?.total?.value
-					if (n == null) throw new Error(`Missing total value for ${p.key}`)
-
-					acc.set(p.key, {
+					plotMap.set(p.key, {
 						key: p.key,
 						text: p.key,
-						n,
 						isHidden: true,
 						isPlot: true
 					})
 				}
-				return acc
+				return plotMap
 			}, new Map<string, any>())
 			.values()
 		return Array.from(hiddenPlots)

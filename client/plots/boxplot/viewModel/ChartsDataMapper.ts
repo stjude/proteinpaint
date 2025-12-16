@@ -17,18 +17,23 @@ export class ChartsDataMapper {
 	/** Offset applied when divide by term is present
 	 * Creates space for the subtitle*/
 	#divideByOffset = 20
+
+	/** Max value from server response */
+	absMax: number
+	/** Min value from server response */
+	absMin: number
+	/** Array of charts from server response */
+	charts: any
 	/** Range is 20 - 50 */
 	rowHeight: number
 	/** Range is 10 - 20 */
 	rowSpace: number
+	/** Settings from the user or default */
+	settings: any
 	/** Total length of the labels. May reflect height or width depending on orientation */
 	totalLabelSize: number
 	/** Total size (ie. thickness) of each box plot. May reflect height or width depending on orientation */
 	totalBoxSize: number
-	absMin: number
-	absMax: number
-	charts: any
-	settings: any
 
 	constructor(data: any, settings: any, maxLabelLgth: number, useDefaultSettings: boolean) {
 		this.validateInputData(data)
