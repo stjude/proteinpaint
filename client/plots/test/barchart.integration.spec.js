@@ -2265,7 +2265,8 @@ const tp53dtTermFilter = {
 						value: 'M',
 						bar_width_frac: null
 					}
-				]
+				],
+				mcount: 'any'
 			}
 		}
 	],

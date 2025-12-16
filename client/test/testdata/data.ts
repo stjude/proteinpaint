@@ -250,7 +250,8 @@ export function getFilter_genemutationset(isnot = false) {
 								{ key: 'M', label: 'MISSENSE', value: 'M', bar_width_frac: null },
 								{ key: 'F', label: 'FRAMESHIFT', value: 'F', bar_width_frac: null }
 							],
-							isnot
+							isnot,
+							mcount: 'any'
 						}
 					}
 				],
