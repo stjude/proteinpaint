@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## 2.167.2
 
+Features:
+- support different levels of IP check in dsCredentials
+
 Fixes:
 - do not hardcode the signed ip address in the `/demoToken` handler
 

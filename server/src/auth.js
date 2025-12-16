@@ -165,6 +165,12 @@ async function validateDsCredentials(creds, serverconfig) {
 				cred.route = serverRoute
 				cred.cookieId = (serverRoute == 'termdb' && cred.headerKey) || `${dslabel}-${serverRoute}-${embedderHost}-Id`
 
+				if (cred.looseIpCheck) {
+					// convert to cred.ipCheck property, see checkIPaddress() function below for logic
+					cred.ipCheck = 'loose'
+					delete cred.looseIpCheck
+				}
+
 				if (cred.demoToken) {
 					// it's safe to not throw and block server startup on any of the errors below;
 					// an invalid cred.demoToken means demo tokens will not be issued
@@ -1085,10 +1091,14 @@ function getJwtPayload(q, headers, cred, session = null) {
 	}
 }
 
+// cred.ipCheck: undefined | 'none' | 'loose'
+// undefined (default) means strict check, by default
+// NOTE: legacy cred.looseIpCheck will be converted to `cred.ipCheck: loose`
 function checkIPaddress(req, ip, cred) {
 	// !!! must have a serverconfig.appEnable: ['trust proxy'] entry !!!
 	// may loosen the IP address check, if IPv6 or missing
-	if (cred.looseIpCheck && (req.ip?.includes(':') || !ip)) return
+	if (cred.ipCheck == 'none') return
+	if (cred.ipCheck == 'loose' && (req.ip?.includes(':') || !ip)) return
 	if (!ip) throw `Server error: missing ip address in saved session`
 	if (req.ip != ip && req.ips?.[0] != ip && req.connection?.remoteAddress != ip)
 		throw `Your connection has changed, please refresh your page or sign in again.`
