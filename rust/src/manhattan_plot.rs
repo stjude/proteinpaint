@@ -217,8 +217,10 @@ fn grin2_file_read(
                 Some(q) => q,
                 None => continue,
             };
+
             let q_val: f64 = match q_val_str.parse() {
                 Ok(v) if v > 0.0 => v,
+                Ok(v) if v == 0.0 => 1e-300, // Treat exact 0 as ~1e-300 so we can still show q-values that are 0 and not filter them out
                 _ => continue,
             };
             let neg_log10_q = -q_val.log10();
