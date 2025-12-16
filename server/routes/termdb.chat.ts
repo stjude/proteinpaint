@@ -46,7 +46,6 @@ function init({ genomes }) {
 				}
 				return
 			}
-			console.log('serverconfig:', serverconfig)
 			const serverconfig_ds_entries = serverconfig.genomes
 				.find(genome => genome.name == q.genome)
 				.datasets.find(dslabel => dslabel.name == ds.label)
@@ -152,7 +151,7 @@ function init({ genomes }) {
 					delete ai_output_json.plot.simpleFilter
 					ai_output_json.plot.filter = localfilter
 				}
-				console.log('ai_output_json:', ai_output_json)
+				//mayLog('ai_output_json:', ai_output_json)
 				res.send(ai_output_json as ChatResponse)
 			}
 		} catch (e: any) {
