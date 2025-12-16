@@ -15,27 +15,58 @@ async function getVocabApi() {
 }
 
 function testCnvGroupset(groupset, test) {
-	test.ok(groupset.groups.length, 'groupset should have at least one group')
+	test.ok(groupset.groups.length > 0, 'groupset should have at least one group')
 }
 
-function testNonCnvGroupset(groupset, test) {
+function testSnvIndelGroupset(groupset, test) {
 	test.equal(groupset.groups.length, 2, 'groupset should have 2 groups')
 	const mutGrp = groupset.groups[0]
 	const mutTvs = mutGrp.filter.lst[0].tvs
 	const wtGrp = groupset.groups[1]
 	const wtTvs = wtGrp.filter.lst[0].tvs
 	test.deepEqual(
-		mutTvs.values[0],
-		{ key: 'WT', label: 'Wildtype', value: 'WT' },
-		'mutant tvs should have wildtype value'
+		mutTvs.values,
+		[
+			{ key: 'M', label: 'MISSENSE', value: 'M' },
+			{ key: 'F', label: 'FRAMESHIFT', value: 'F' }
+		],
+		'mutant tvs should have mutant values'
 	)
-	test.ok(mutTvs.isnot, 'mutant tvs should have isnot=true')
+	test.notOk(mutTvs.wt, 'mutant tvs should have wt=false')
+	test.deepEqual(wtTvs.values, [], 'wildtype tvs should have empty values')
+	test.ok(wtTvs.wt, 'wildtype tvs should have wt=true')
+}
+
+function testFusionGroupset(groupset, test) {
+	test.equal(groupset.groups.length, 2, 'groupset should have 2 groups')
+	const mutGrp = groupset.groups[0]
+	const mutTvs = mutGrp.filter.lst[0].tvs
+	const wtGrp = groupset.groups[1]
+	const wtTvs = wtGrp.filter.lst[0].tvs
 	test.deepEqual(
-		wtTvs.values[0],
-		{ key: 'WT', label: 'Wildtype', value: 'WT' },
-		'wildtype tvs should have wildtype value'
+		mutTvs.values,
+		[{ key: 'Fuserna', label: 'Fusion transcript', value: 'Fuserna' }],
+		'mutant tvs should have mutant values'
 	)
-	test.notok(wtTvs.isnot, 'wildtype tvs should have isnot=false')
+	test.notOk(mutTvs.wt, 'mutant tvs should have wt=false')
+	test.deepEqual(wtTvs.values, [], 'wildtype tvs should have empty values')
+	test.ok(wtTvs.wt, 'wildtype tvs should have wt=true')
+}
+
+function testSvGroupset(groupset, test) {
+	test.equal(groupset.groups.length, 2, 'groupset should have 2 groups')
+	const mutGrp = groupset.groups[0]
+	const mutTvs = mutGrp.filter.lst[0].tvs
+	const wtGrp = groupset.groups[1]
+	const wtTvs = wtGrp.filter.lst[0].tvs
+	test.deepEqual(
+		mutTvs.values,
+		[{ key: 'SV', label: 'Structural variation', value: 'SV' }],
+		'mutant tvs should have mutant values'
+	)
+	test.notOk(mutTvs.wt, 'mutant tvs should have wt=false')
+	test.deepEqual(wtTvs.values, [], 'wildtype tvs should have empty values')
+	test.ok(wtTvs.wt, 'wildtype tvs should have wt=true')
 }
 
 /**************
@@ -135,10 +166,16 @@ tape('fill(): q.type=predefined-groupset', async test => {
 	if (!fullTw.term.groupsetting.lst) throw 'term.groupsetting.lst is missing'
 	test.equal(fullTw.term.groupsetting.lst.length, 5, 'should get 5 predefined groupsets')
 	for (const groupset of fullTw.term.groupsetting.lst) {
-		if (groupset.dt == 4) {
+		if (groupset.dt == 1) {
+			testSnvIndelGroupset(groupset, test)
+		} else if (groupset.dt == 2) {
+			testFusionGroupset(groupset, test)
+		} else if (groupset.dt == 4) {
 			testCnvGroupset(groupset, test)
+		} else if (groupset.dt == 5) {
+			testSvGroupset(groupset, test)
 		} else {
-			testNonCnvGroupset(groupset, test)
+			test.fail('unexpected groupset')
 		}
 	}
 	test.end()

@@ -3009,7 +3009,6 @@ export function filterByItem(filter, mlst, values) {
 	if (filter.type != 'tvs') throw 'unexpected filter.type'
 	const tvs = filter.tvs
 	if (!dtTermTypes.has(tvs.term.type)) throw 'tvs term is not dt term'
-	if (tvs.isnot) throw 'tvs.isnot is not supported for geneVariant term'
 	// get all tested mutations for the dt (and origin) of the filter
 	const mlst_tested = mlst.filter(m => {
 		if (tvs.term.dt != m.dt) return false
@@ -3049,13 +3048,14 @@ export function filterByItem(filter, mlst, values) {
 			if (values) values.push(...mlst_genotype)
 		} else {
 			// categorical mutation data
+			let mlst_intvs, intvs
 			if (!tvs.wt) {
 				// mutant tvs
 				// get mutations in sample that match tvs
-				const mlst_intvs = mlst_tested.filter(m => tvs.values.some(v => v.key == m.class))
-				// sample passes if number of matching mutations
+				mlst_intvs = mlst_tested.filter(m => tvs.values.some(v => v.key == m.class))
+				// sample matches tvs if number of matching mutations
 				// passes mutation count cutoff
-				pass =
+				intvs =
 					tvs.mcount == 'any'
 						? mlst_intvs.length > 0
 						: tvs.mcount == 'single'
@@ -3063,14 +3063,15 @@ export function filterByItem(filter, mlst, values) {
 						: tvs.mcount == 'multiple'
 						? mlst_intvs.length > 1
 						: null
-				if (pass === null) throw 'unexpected tvs.mcount'
-				if (values) values.push(...mlst_intvs)
+				if (intvs === null) throw 'unexpected tvs.mcount'
 			} else {
 				// wildtype tvs
-				// sample passes if it is wildtype (across all queried genes)
-				pass = mlst_tested.every(m => m.class == mclass['WT'].key)
-				if (values) values.push(...mlst_tested)
+				// sample matches tvs if it is wildtype (across all queried genes)
+				mlst_intvs = mlst_tested.filter(m => m.class == mclass['WT'].key)
+				intvs = mlst_intvs.length == mlst_tested.length
 			}
+			pass = tvs.isnot ? !intvs : intvs
+			if (values) values.push(...mlst_intvs)
 		}
 	} else {
 		// sample is not tested for the dt of the filter

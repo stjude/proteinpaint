@@ -372,6 +372,105 @@ test('filterByItem: mcount=multiple', t => {
 	t.end()
 })
 
+test('filterByItem: isnot=true', t => {
+	t.plan(18)
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [
+				{ key: 'M', label: 'MISSENSE', value: 'M' },
+				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
+				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
+			],
+			mcount: 'any',
+			isnot: true
+		}
+	}
+	{
+		const mlst = [{ dt: 1, class: 'M' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [
+			{ dt: 1, class: 'M' },
+			{ dt: 1, class: 'L' }
+		]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [{ dt: 1, class: 'L' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [{ dt: 1, class: 'WT' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [{ dt: 1, class: 'Blank' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, false, 'Sample is not tested')
+	}
+
+	const filter2 = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [
+				{ key: 'M', label: 'MISSENSE', value: 'M' },
+				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
+				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
+			],
+			mcount: 'single',
+			isnot: true
+		}
+	}
+	{
+		const mlst = [{ dt: 1, class: 'M' }]
+		const [pass, tested] = filterByItem(filter2, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [
+			{ dt: 1, class: 'M' },
+			{ dt: 1, class: 'L' }
+		]
+		const [pass, tested] = filterByItem(filter2, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [
+			{ dt: 1, class: 'M' },
+			{ dt: 1, class: 'F' }
+		]
+		const [pass, tested] = filterByItem(filter2, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [
+			{ dt: 1, class: 'M' },
+			{ dt: 1, class: 'F' },
+			{ dt: 1, class: 'D' }
+		]
+		const [pass, tested] = filterByItem(filter2, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	t.end()
+})
+
 test('filterByItem: mutation, origin', t => {
 	t.plan(10)
 	const filter = {
