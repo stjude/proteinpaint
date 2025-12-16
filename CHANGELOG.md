@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.167.2
 
 Fixes:
 - do not hardcode the signed ip address in the `/demoToken` handler
