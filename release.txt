@@ -1,1 +1,2 @@
-
+Fixes:
+- increase the contrast of chart sandbox title and legend header text colors

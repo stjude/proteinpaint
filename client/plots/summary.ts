@@ -55,7 +55,7 @@ class SummaryPlot extends PlotBase implements RxComponent {
 		const paneTitleDiv = holder.header
 			.append('div')
 			.style('display', 'inline-block')
-			.style('color', '#999')
+			.style('color', '#555') // changed from #999 to address Section 508 contrast issue
 			.style('padding-left', '7px')
 
 		return {
