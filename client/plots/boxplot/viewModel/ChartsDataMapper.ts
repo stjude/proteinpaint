@@ -5,7 +5,7 @@ import type { BoxPlotChartEntry } from '#types'
 import type { BoxPlotSettings } from '../Settings'
 import type { BoxPlotConfig } from '../BoxPlotTypes'
 
-export class ChartDataMapper {
+export class ChartsDataMapper {
 	/** Top padding for the svg */
 	#topPad = 20
 	/** Bottom padding for the svg */
