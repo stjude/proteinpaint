@@ -5,9 +5,9 @@ import { getBoxPlotMockData } from './mockBoxPlotData'
 
 /*
 Tests:
-	Default ListSamples()
-	ListSamples() with invalid plot
-    ListSamples.getTvsLst()
+	- Default ListSamples() constructor
+	- ListSamples() throws for invalid plot
+    - ListSamples.getTvsLst() returns obj for categorical term and numeric overlay
 */
 
 tape('\n', function (test) {
@@ -15,39 +15,38 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('Default ListSamples()', test => {
+tape('Default ListSamples() constructor', test => {
 	test.plan(7)
 
 	const mockApp = {} as AppApi
-	const { mockConfig, mockPlot1 } = getBoxPlotMockData()
+	const { mockConfig2, mockPlot1 } = getBoxPlotMockData()
 	const mockState: any = {
-		plots: [mockConfig],
+		plots: [mockConfig2],
 		termfilter: { filter: 'test' }
 	}
 
 	const listSamples = new ListSamples(mockApp, mockState, 'test_test', mockPlot1 as any)
 
-	//Test initialization
-	test.equal(listSamples.app, mockApp, 'app should be set correctly')
-	test.equal(listSamples.plot, mockPlot1, 'plot should be set correctly')
-	test.deepEqual(listSamples.term, mockState.plots[0].term, 'term should be set correctly')
-	test.deepEqual(listSamples.dataOpts.terms, [mockState.plots[0].term], 'dataOpts.terms should be set correctly')
-	test.deepEqual(listSamples.dataOpts.filter.join, 'and', 'dataOpts.filter.join should be set to "and"')
+	test.equal(listSamples.app, mockApp, 'Should set app correctly')
+	test.equal(listSamples.plot, mockPlot1, 'Should set plot correctly')
+	test.deepEqual(listSamples.term, mockState.plots[0].term, 'Should set term correctly')
+	test.deepEqual(listSamples.dataOpts.terms, [mockState.plots[0].term], 'Should set dataOpts.terms correctly')
+	test.deepEqual(listSamples.dataOpts.filter.join, 'and', 'Should set dataOpts.filter.join to "and"')
 	test.deepEqual(
 		listSamples.dataOpts.filter.lst,
 		[mockState.termfilter.filter, listSamples.tvslst],
-		'dataOpts.filter.lst should be set correctly'
+		'Should set dataOpts.filter.lst correctly'
 	)
-	test.equal(listSamples.dataOpts.filter.in, true, 'dataOpts.filter.in should be set to true')
+	test.equal(listSamples.dataOpts.filter.in, true, 'Should set dataOpts.filter.in to true')
 
 	test.end()
 })
 
-tape('ListSamples() with invalid plot', test => {
-	const { mockConfig, mockPlot1 } = getBoxPlotMockData()
+tape('ListSamples() throws for invalid plot', test => {
+	const { mockConfig2, mockPlot1 } = getBoxPlotMockData()
 	const mockApp = {} as AppApi
 	const mockState: any = {
-		plots: [mockConfig],
+		plots: [mockConfig2],
 		termfilter: { filter: 'test' }
 	}
 	const message = `Should throw error if plotConfig is not found`
@@ -61,11 +60,11 @@ tape('ListSamples() with invalid plot', test => {
 	test.end()
 })
 
-tape('ListSamples.getTvsLst()', test => {
-	const { mockConfig, mockPlot1 } = getBoxPlotMockData()
+tape('ListSamples.getTvsLst() returns obj for categorical term and numeric overlay', test => {
+	const { mockConfig1, mockPlot1 } = getBoxPlotMockData()
 	const mockApp = {} as AppApi
 	const mockState: any = {
-		plots: [mockConfig],
+		plots: [mockConfig1],
 		termfilter: { filter: 'test' }
 	}
 	const listSamples = new ListSamples(mockApp, mockState, 'test_test', mockPlot1 as any)
