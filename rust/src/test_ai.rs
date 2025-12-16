@@ -20,6 +20,7 @@ mod tests {
         ollama_comp_model_name: String,
         ollama_embedding_model_name: String,
         genomes: Vec<Genomes>,
+        aiRoute: String,
     }
 
     #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
@@ -49,7 +50,7 @@ mod tests {
 
         // Parse the JSON data
         let serverconfig: ServerConfig = serde_json::from_str(&data).expect("JSON not in serverconfig.json format");
-
+        let airoute = String::from("../../") + &serverconfig.aiRoute;
         for genome in &serverconfig.genomes {
             for dataset in &genome.datasets {
                 match &dataset.aifiles {
@@ -100,6 +101,7 @@ mod tests {
                                                 &dataset_db,
                                                 &genedb,
                                                 &ai_json,
+                                                &airoute,
                                                 testing,
                                             )
                                             .await;
@@ -143,22 +145,23 @@ mod tests {
                                                     &dataset_db,
                                                     &genedb,
                                                     &ai_json,
+                                                    &airoute,
                                                     testing,
                                                 )
                                                 .await;
-                                                println!("user_input:{}", user_input);
+                                                //println!("user_input:{}", user_input);
                                                 //println!("llm_answer:{:?}", llm_output);
                                                 //println!("expected answer:{:?}", &ques_ans.answer);
                                                 let llm_json_value: super::super::SummaryType = serde_json::from_str(&llm_output.unwrap()).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
                                                 let expected_json_value: super::super::SummaryType = serde_json::from_str(&ques_ans.answer).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
-                                                println!(
-                                                    "llm_answer:{:?}",
-                                                    llm_json_value.clone().sort_summarytype_struct()
-                                                );
-                                                println!(
-                                                    "expected answer:{:?}",
-                                                    &expected_json_value.clone().sort_summarytype_struct()
-                                                );
+                                                //println!(
+                                                //    "llm_answer:{:?}",
+                                                //    llm_json_value.clone().sort_summarytype_struct()
+                                                //);
+                                                //println!(
+                                                //    "expected answer:{:?}",
+                                                //    &expected_json_value.clone().sort_summarytype_struct()
+                                                //);
                                                 assert_eq!(
                                                     llm_json_value.sort_summarytype_struct(),
                                                     expected_json_value.sort_summarytype_struct()
