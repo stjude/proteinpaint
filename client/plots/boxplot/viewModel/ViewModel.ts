@@ -1,7 +1,7 @@
 import type { BoxPlotSettings } from '../Settings'
 import type { ViewData, BoxPlotConfig } from '../BoxPlotTypes'
 import { LegendDataMapper } from './LegendDataMapper'
-import { ChartDataMapper } from './ChartDataMapper'
+import { ChartsDataMapper } from './ChartsDataMapper'
 
 export class ViewModel {
 	viewData: ViewData
@@ -15,13 +15,13 @@ export class ViewModel {
 		maxLabelLgth: number,
 		useDefaultSettings: boolean
 	) {
-		const chartMapper = new ChartDataMapper(data, settings, maxLabelLgth, useDefaultSettings)
+		const chartsMapper = new ChartsDataMapper(data, settings, maxLabelLgth, useDefaultSettings)
 		const legendMapper = new LegendDataMapper(config)
 
-		const charts = chartMapper.map(config)
+		const charts = chartsMapper.map(config)
 
-		this.rowHeight = chartMapper.rowHeight
-		this.rowSpace = chartMapper.rowSpace
+		this.rowHeight = chartsMapper.rowHeight
+		this.rowSpace = chartsMapper.rowSpace
 
 		this.viewData = {
 			backgroundColor: settings.displayMode == 'dark' ? 'black' : 'white',
