@@ -77,6 +77,27 @@ async fn main() -> Result<()> {
                         None => panic!("user_input field is missing in input json"),
                     }
 
+                    let dataset_db_json: &JsonValue = &json_string["dataset_db"];
+                    let dataset_db_str: &str;
+                    match dataset_db_json.as_str() {
+                        Some(inp) => dataset_db_str = inp,
+                        None => panic!("dataset_db field is missing in input json"),
+                    }
+
+                    let genedb_json: &JsonValue = &json_string["genedb"];
+                    let genedb_str: &str;
+                    match genedb_json.as_str() {
+                        Some(inp) => genedb_str = inp,
+                        None => panic!("genedb field is missing in input json"),
+                    }
+
+                    let aiRoute_json: &JsonValue = &json_string["aiRoute"];
+                    let aiRoute_str: &str;
+                    match aiRoute_json.as_str() {
+                        Some(inp) => aiRoute_str = inp,
+                        None => panic!("aiRoute field is missing in input json"),
+                    }
+
                     if user_input.len() == 0 {
                         panic!("The user input is empty");
                     }
@@ -124,8 +145,9 @@ async fn main() -> Result<()> {
                     let ai_json: AiJsonFormat =
                         serde_json::from_str(&ai_data).expect("AI JSON file does not have the correct format");
 
-                    let genedb = String::from(tpmasterdir) + &"/" + &ai_json.genedb;
-                    let dataset_db = String::from(tpmasterdir) + &"/" + &ai_json.db;
+                    let genedb = String::from(tpmasterdir) + &"/" + &genedb_str;
+                    let dataset_db = String::from(tpmasterdir) + &"/" + &dataset_db_str;
+                    let airoute = String::from(binpath) + &"/../../" + &aiRoute_str;
 
                     let apilink_json: &JsonValue = &json_string["apilink"];
                     let apilink: &str;
@@ -185,6 +207,7 @@ async fn main() -> Result<()> {
                             &dataset_db,
                             &genedb,
                             &ai_json,
+                            &airoute,
                             testing,
                         )
                         .await;
@@ -208,6 +231,7 @@ async fn main() -> Result<()> {
                             &dataset_db,
                             &genedb,
                             &ai_json,
+                            &airoute,
                             testing,
                         )
                         .await;
@@ -241,6 +265,7 @@ pub async fn run_pipeline(
     dataset_db: &str,
     genedb: &str,
     ai_json: &AiJsonFormat,
+    ai_route: &str,
     testing: bool,
 ) -> Option<String> {
     let mut classification: String = classify_query_by_dataset_type(
@@ -251,6 +276,7 @@ pub async fn run_pipeline(
         temperature,
         max_new_tokens,
         top_p,
+        ai_route,
     )
     .await;
     classification = classification.replace("\"", "");
@@ -381,96 +407,28 @@ async fn classify_query_by_dataset_type(
     temperature: f64,
     max_new_tokens: usize,
     top_p: f32,
+    ai_route: &str,
 ) -> String {
+    // Read the file
+    let ai_route_data = fs::read_to_string(ai_route).unwrap();
+
+    // Parse the JSON data
+    let ai_json: Value = serde_json::from_str(&ai_route_data).expect("AI JSON file does not have the correct format");
+
     // Create a string to hold the file contents
-    let contents = String::from("SNV/SNP or point mutations nucleotide mutations are very common forms of mutations which can often give rise to genetic diseases such as cancer, Alzheimer's disease etc. They can be duw to substitution of nucleotide, or insertion or deletion of a nucleotide. Indels are multi-nucleotide insertion/deletion/substitutions. Complex indels are indels where insertion and deletion have happened in the same genomic locus. Every genomic sample from each patient has its own set of mutations therefore requiring personalized treatment. 
+    let mut contents = String::from("");
 
-If a ProteinPaint dataset contains SNV/Indel/SV data then return JSON with single key, 'snv_indel'.
+    if let Some(object) = ai_json.as_object() {
+        for (_key, value) in object {
+            contents += &value.as_str().unwrap();
+            contents += "---"; // Adding delimiter
+        }
+    }
 
----
-
-Copy number variation (CNV) is a phenomenon in which sections of the genome are repeated and the number of repeats in the genome varies between individuals.[1] Copy number variation is a special type of structural variation: specifically, it is a type of duplication or deletion event that affects a considerable number of base pairs.
-
-If a ProteinPaint dataset contains copy number variation data then return JSON with single key, 'cnv'.
-
----
-
-Structural variants/fusions (SV) are genomic mutations when eith a DNA region is translocated or copied to an entirely different genomic locus. In case of transcriptomic data, when RNA is fused from two different genes its called a gene fusion.
-
-If a ProteinPaint dataset contains structural variation or gene fusion data then return JSON with single key, 'sv_fusion'.
----
-
-Hierarchical clustering of gene expression is an unsupervised learning technique where several number of relevant genes and the samples are clustered so as to determine (previously unknown) cohorts of samples (or patients) or structure in data. It is very commonly used to determine subtypes of a particular disease based on RNA sequencing data. 
-
-If a ProteinPaint dataset contains hierarchical data then return JSON with single key, 'hierarchical'.
-
----
-
-Differential Gene Expression (DGE or DE) is a technique where the most upregulated (or highest) and downregulated (or lowest) genes between two cohorts of samples (or patients) are determined from a pool of THOUSANDS of genes. Differential gene expression CANNOT be computed for a SINGLE gene. A volcano plot is shown with fold-change in the x-axis and adjusted p-value on the y-axis. So, the upregulated and downregulared genes are on opposite sides of the graph and the most significant genes (based on adjusted p-value) is on the top of the graph. Following differential gene expression generally GeneSet Enrichment Analysis (GSEA) is carried out where based on the genes and their corresponding fold changes the upregulation/downregulation of genesets (or pathways) is determined.
-
-Sample Query1: \"Which gene has the highest expression between the two genders\"
-Sample Answer1: { \"answer\": \"dge\" }
-
-Sample Query2: \"Which gene has the lowest expression between the two races\"
-Sample Answer2: { \"answer\": \"dge\" }
-
-Sample Query1: \"Which genes are the most upregulated genes between group A and group B\"
-Sample Answer1: { \"answer\": \"dge\" }
-
-Sample Query3: \"Which gene are overexpressed between male and female\"
-Sample Answer3: { \"answer\": \"dge\" }
-
-Sample Query4: \"Which gene are housekeeping genes between male and female\"
-Sample Answer4: { \"answer\": \"dge\" } 
-
-
-If a ProteinPaint dataset contains differential gene expression data then return JSON with single key, 'dge'.
-
----
-
-Survival analysis (also called time-to-event analysis or duration analysis) is a branch of statistics aimed at analyzing the duration of time from a well-defined time origin until one or more events happen, called survival times or duration times. In other words, in survival analysis, we are interested in a certain event and want to analyze the time until the event happens. Generally in survival analysis survival rates between two (or more) cohorts of patients  is compared. 
-
-There are two main methods of survival analysis:
-
-1) Kaplan-Meier (HM) analysis is a univariate test that only takes into account a single categorical variable.
-2) Cox proportional hazards model (coxph) is a multivariate test that can take into account multiple variables.
-
-   The hazard ratio (HR) is an indicator of the effect of the stimulus (e.g. drug dose, treatment) between two cohorts of patients.
-   HR = 1: No effect
-   HR < 1: Reduction in the hazard
-   HR > 1: Increase in Hazard
-
-Sample Query1: \"Compare survival rates between group A and B\"
-Sample Answer1: { \"answer\": \"survival\" }
-
-
-If a ProteinPaint dataset contains survival data then return JSON with single key, 'survival'.
-
----
-
-Next generation sequencing reads (NGS) are mapped to a human genome using alignment algorithm such as burrows-wheelers alignment algorithm. Then these reads are called using variant calling algorithms such as GATK (Genome Analysis Toolkit). However this type of analysis is too compute intensive and beyond the scope of visualization software such as ProteinPaint.
-
-If a user query asks about variant calling or mapping reads then JSON with single key, 'variant_calling'.
-
----
-
-Summary plot in ProteinPaint shows the various facets of the datasets. Show expression of a SINGLE gene or compare the expression of a SINGLE gene across two different cohorts defined by the user. It may show all the samples according to their respective diagnosis or subtypes of cancer. It is also useful for comparing and correlating different clinical variables. It can show all possible distributions, frequency of a category, overlay, correlate or cross-tabulate with another variable on top of it. If a user query asks about a SINGLE gene expression or correlating clinical variables then return JSON with single key, 'summary'.
-
-Sample Query1: \"Show all fusions for patients with age less than 30\"
-Sample Answer1: { \"answer\": \"summary\" }
-
-Sample Query2: \"List all molecular subtypes of leukemia\"
-Sample Answer2: { \"answer\": \"summary\" } 
-
-Sample Query3: \"is tp53 expression higher in men than women ?\"
-Sample Answer3: { \"answer\": \"summary\" }
-
-Sample Query4: \"Compare ATM expression between races for women greater than 80yrs\"
-Sample Answer4: { \"answer\": \"summary\" }
-
-
-If a query does not match any of the fields described above, then return JSON with single key, 'none'
-");
+    // Removing the last "---" characters
+    contents.pop();
+    contents.pop();
+    contents.pop();
 
     // Split the contents by the delimiter "---"
     let parts: Vec<&str> = contents.split("---").collect();

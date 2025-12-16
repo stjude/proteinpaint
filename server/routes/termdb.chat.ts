@@ -46,6 +46,7 @@ function init({ genomes }) {
 				}
 				return
 			}
+			console.log('serverconfig:', serverconfig)
 			const serverconfig_ds_entries = serverconfig.genomes
 				.find(genome => genome.name == q.genome)
 				.datasets.find(dslabel => dslabel.name == ds.label)
@@ -70,14 +71,16 @@ function init({ genomes }) {
 			}
 
 			const chatbot_input = {
-				// Just hardcoding variables here, these will later be defined in more appropriate places
 				user_input: q.prompt,
 				apilink: apilink,
 				tpmasterdir: serverconfig.tpmasterdir,
 				comp_model_name: comp_model_name,
 				embedding_model_name: embedding_model_name,
+				dataset_db: ds.cohort.db.file,
+				genedb: g.genedb.dbfile,
+				aiRoute: serverconfig.aiRoute, // Route file for classifying chat request into various routes
 				llm_backend_name: serverconfig.llm_backend, // The type of backend (engine) used for running the embedding and completion model. Currently "SJ" and "Ollama" are supported
-				aifiles: serverconfig_ds_entries.aifiles,
+				aifiles: serverconfig_ds_entries.aifiles, // Dataset specific data containing data-specific routes, system prompts for agents and few-shot examples
 				binpath: serverconfig.binpath
 			}
 			//mayLog('chatbot_input:', JSON.stringify(chatbot_input))
@@ -94,9 +97,6 @@ function init({ genomes }) {
 				} else {
 					mayLog(line)
 				}
-				//else {
-				//    mayLog(line)
-				//}
 			}
 
 			if (ai_output_json.type == 'plot') {
@@ -152,7 +152,7 @@ function init({ genomes }) {
 					delete ai_output_json.plot.simpleFilter
 					ai_output_json.plot.filter = localfilter
 				}
-				console.log('ai_output_json:', ai_output_json.plot.filter.lst[1].tvs)
+				console.log('ai_output_json:', ai_output_json)
 				res.send(ai_output_json as ChatResponse)
 			}
 		} catch (e: any) {
