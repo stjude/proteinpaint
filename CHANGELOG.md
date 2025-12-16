@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- GRIN2: Using renderTable's buttons parameter for tooltip and top gene table
+
 Fixes:
 - GRIN2: Improved rust plotting logic to not filter out q-value = 0 values
 - GRIN2: Fixed top gene table sorting logic to keep genes if any lesion data type meets the significance threshold
