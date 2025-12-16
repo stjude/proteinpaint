@@ -247,7 +247,7 @@ export class Menu {
 		// For Section 508 compliance: assume that the elem triggered showing the menu
 		// and support back-navigation to it from the menu using shift-tab
 
-		const clickableElems = this.d.node().querySelectorAll(focusableSelector)
+		const clickableElems = [...this.d.node().querySelectorAll(focusableSelector)].filter(elem => elem.checkVisibility())
 		if (!clickableElems.length) {
 			// give time for menu focusable elements to be rendered, up to a number of a certain of tries
 			if (numTries < 30) setTimeout(() => this.setTabNavigation(elem, numTries++), 100)
@@ -280,7 +280,7 @@ export class Menu {
 		// .node()
 		// .focus(); console.log(270, clickableElems[0]);
 
-		setTimeout(() => clickableElems[0].focus(), renderWait)
+		setTimeout(() => (clickableElems.find(priorityFocusElem) || clickableElems[0]).focus(), renderWait)
 	}
 
 	showunderoffset(dom) {
@@ -383,4 +383,8 @@ export class Menu {
 		//For testing to remove completely from the document.body without using d3select()
 		this.d.remove()
 	}
+}
+
+function priorityFocusElem(elem, i) {
+	return elem.tagName == 'INPUT' && (elem.type == 'search' || elem.type == 'text')
 }
