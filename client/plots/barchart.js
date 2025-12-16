@@ -782,7 +782,8 @@ export class Barchart extends PlotBase {
 		const s = this.settings
 		const t1 = this.config.term
 		const t2 = this.config.term2
-		const headingStyle = 'color: #aaa; font-weight: 400'
+		// changed color from #aaa to address Section 508 contrast issue
+		const headingStyle = 'color: #555; font-weight: 400'
 
 		// descriptive statistics
 		if (t1.q.descrStats && s.showStats) {

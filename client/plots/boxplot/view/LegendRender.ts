@@ -14,7 +14,8 @@ export class LegendRenderer {
 	renderLegend(legendDiv: Div, legendData: LegendData) {
 		legendDiv.attr('id', 'sjpp-boxplot-legend')
 		for (const section of legendData) {
-			legendDiv.append('div').style('opacity', '0.5').style('color', this.textColor).text(section.label)
+			// increased opacity, previously 0.5, to address Section 508 contrast issue
+			legendDiv.append('div').style('opacity', '0.75').style('color', this.textColor).text(section.label)
 			const sectionDiv = legendDiv.append('div').style('padding-left', '10px')
 			for (const item of section.items) {
 				this.addItem(item, sectionDiv)

@@ -541,7 +541,8 @@ function getLegendGrps(termNum, self) {
 	const legendGrps = [],
 		t1 = self.config.term,
 		t2 = self.config.term2,
-		headingStyle = 'color: #aaa; font-weight: 400'
+		// changed color from #aaa to address Section 508 contrast issue
+		headingStyle = 'color: #555; font-weight: 400'
 	if (self.settings.showStats) addDescriptiveStats(t1, legendGrps, headingStyle, self)
 	if (t2?.term.type === 'float' || t2?.q.mode === 'continuous' || t2?.term.type === 'integer')
 		addDescriptiveStats(t2, legendGrps, headingStyle, self)
