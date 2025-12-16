@@ -183,10 +183,10 @@ tape('Box plot with divide term = sex', test => {
 	async function runTests(boxplot) {
 		boxplot.on('postRender.test', null)
 		const dom = boxplot.Inner.dom
-		const chartDivs = await detectGte({ elem: dom.charts.node(), selector: '.sjpp-boxplot-chartDiv' })
-		test.equal(chartDivs.length, 2, 'Should have 2 charts')
-		const boxplots = await detectGte({ elem: dom.charts.node(), selector: '.sjpp-boxplot-plot' })
-		test.equal(boxplots.length, 2, 'Should have 2 boxplots')
+		const chartDivs = await detectGte({ elem: dom.charts.node(), selector: '.sjpp-boxplot-chart-wrapper' })
+		test.equal(chartDivs.length, 2, 'Should render 2 charts')
+		const boxplots = await detectGte({ elem: dom.charts.node(), selector: 'svg[class="sjpp-boxplot-svg"]' })
+		test.equal(boxplots.length, 2, 'Should render 2 boxplots')
 
 		if (test['_ok']) boxplot.Inner.app.destroy()
 		test.end()
@@ -225,10 +225,10 @@ tape('Box plot with overlay term = aaclassic_5 and divide term = sex', test => {
 	async function runTests(boxplot) {
 		boxplot.on('postRender.test', null)
 		const dom = boxplot.Inner.dom
-		const chartDivs = await detectGte({ elem: dom.charts.node(), selector: '.sjpp-boxplot-chartDiv' })
-		test.equal(chartDivs.length, 2, 'Should have 2 charts')
-		const boxplots = await detectGte({ elem: dom.charts.node(), selector: '.sjpp-boxplot-plot' })
-		test.equal(boxplots.length, 10, 'Should have 10 boxplots')
+		const chartDivs = await detectGte({ elem: dom.charts.node(), selector: '.sjpp-boxplot-chart-wrapper' })
+		test.equal(chartDivs.length, 2, 'Should render 2 charts')
+		const boxplots = await detectGte({ elem: dom.charts.node(), selector: 'g[class="sjpp-boxplot-plot"]' })
+		test.equal(boxplots.length, 10, 'Should render 10 boxplots')
 
 		if (test['_ok']) boxplot.Inner.app.destroy()
 		test.end()
