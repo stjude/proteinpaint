@@ -1,1 +1,2 @@
-
+Fixes:
+- GRIN2: Fixed top gene table sorting logic to keep genes if any lesion data type meets the significance threshold

@@ -75,13 +75,20 @@ def smart_format(value):
 		return None
 	return 0 if value == 0 else float(f"{value:.3g}")
 
+# Sort GRIN2 data by minimum p-value across all types. If a gene meets the threshold in any type, it should be included
 def sort_grin2_data(data):
-	"""Sort by first available p-value with data"""
-	p_cols = get_sig_values(data)["p_cols"]
-	for col in p_cols:
-		if has_data(data[col]):
-			return data.sort_values(col, ascending=True)
-	raise ValueError("No p-value columns with data found")
+    p_cols = get_sig_values(data)["p_cols"]
+    valid_p_cols = [col for col in p_cols if has_data(data[col])]
+    
+    if not valid_p_cols:
+        raise ValueError("No p-value columns with data found")
+    
+    data = data.copy()
+    data['_min_p_value'] = data[valid_p_cols].min(axis=1)
+    sorted_data = data.sort_values('_min_p_value', ascending=True)
+    sorted_data = sorted_data.drop(columns=['_min_p_value'])
+    
+    return sorted_data
 
 def get_user_friendly_label(col_name, lesion_type_map):
 	"""Convert column names to user-friendly labels"""
