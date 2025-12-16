@@ -1335,7 +1335,7 @@ const dtTerms_temp = [
 		isleaf: true,
 		type: 'dtcnv',
 		dt: dtcnv,
-		values: Object.fromEntries([...CNVClasses, 'WT'].map(key => [key, { label: mclass[key].label }]))
+		values: Object.fromEntries(CNVClasses.map(key => [key, { label: mclass[key].label }]))
 	},
 	{
 		id: 'fusion',
@@ -1345,7 +1345,7 @@ const dtTerms_temp = [
 		isleaf: true,
 		type: 'dtfusion',
 		dt: dtfusionrna,
-		values: Object.fromEntries([mclassfusionrna, 'WT'].map(key => [key, { label: mclass[key].label }]))
+		values: { [mclassfusionrna]: { label: mclass[mclassfusionrna].label } }
 	},
 	{
 		id: 'sv',
@@ -1355,7 +1355,7 @@ const dtTerms_temp = [
 		isleaf: true,
 		type: 'dtsv',
 		dt: dtsv,
-		values: Object.fromEntries([mclasssv, 'WT'].map(key => [key, { label: mclass[key].label }]))
+		values: { [mclasssv]: { label: mclass[mclasssv].label } }
 	}
 ]
 // add origin annotations to dt terms

@@ -1,5 +1,5 @@
 import { handler as _handler } from './tvs.dt.js'
-import { renderSnvIndelConfig } from '#dom'
+import { renderVariantConfig } from '#dom'
 
 /*
 TVS handler for dtsnvindel term
@@ -23,5 +23,5 @@ async function fillMenu(self, div, tvs) {
 			self.opts.callback(new_tvs)
 		}
 	}
-	renderSnvIndelConfig(arg)
+	renderVariantConfig(arg)
 }

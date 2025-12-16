@@ -388,6 +388,7 @@ export async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi
 					tvs: {
 						term: dtTerm,
 						values: [value],
+						mcount: 'any',
 						excludeGeneName: true
 					}
 				}
