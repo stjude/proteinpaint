@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- GRIN2: Improved rust plotting logic to not filter out q-value = 0 values
+
+
 ## 2.168.0
 
 Features:
