@@ -1,25 +1,34 @@
-import type { MassAppApi, MassState } from '#mass/types/mass'
-import type { RenderedPlot } from '../view/RenderedPlot'
-import type { TermWrapper } from '#types'
+import type { AppApi } from '#rx'
+import type { Filter, TermWrapper } from '#types'
 import type { AnnotatedSampleData } from '../../../types/termdb'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getSamplelstFilter } from '../../../mass/groups.js'
 
+/** Temp type scoped for this file.
+ * Properties required in the plot arg. */
+type Plot = {
+	seriesId: string
+	descrStats: any
+	key: any
+	overlayBins: any
+}
+
 export class ListSamples {
-	app: MassAppApi
+	app: AppApi
 	dataOpts: {
-		terms: any[]
-		filter: any
+		terms: TermWrapper[]
+		filter: Filter
 	}
-	plot: RenderedPlot
-	term: any
+	plot: Plot
+	term: TermWrapper
 	tvslst: any
-	constructor(app: MassAppApi, state: MassState, id: string, plot: RenderedPlot, getRange = true) {
+
+	constructor(app: AppApi, state: any, id: string, plot: Plot, getRange = true) {
 		this.app = app
 		this.plot = plot
 
 		const plotConfig = state.plots.find((p: { id: string }) => p.id === id)
-		if (!plotConfig) throw 'Box plot not found [ListSamples]'
+		if (!plotConfig) throw new Error('Plot config not found')
 
 		try {
 			//ids 'min' and 'max' are always present in the descrStats{}
@@ -32,7 +41,7 @@ export class ListSamples {
 
 		this.term = plotConfig.term.q?.mode === 'continuous' ? plotConfig.term : plotConfig.term2
 
-		const filter = {
+		const filter: Filter = {
 			type: 'tvslst',
 			join: 'and',
 			lst: [state.termfilter.filter, this.tvslst],
@@ -50,11 +59,13 @@ export class ListSamples {
 
 	setRows(data: AnnotatedSampleData) {
 		const rows: [{ value: string }, { value: number }][] = []
-		for (const [c, k] of Object.entries(data.samples))
+		for (const [c, k] of Object.entries(data.samples)) {
+			if (!this.term.$id) throw new Error('Missing term.$id')
 			rows.push([
 				{ value: data.refs.bySampleId[c].label },
 				{ value: Number(roundValueAuto((k as Record<string, { value: number }>)[this.term.$id].value)) }
 			])
+		}
 		return rows
 	}
 
