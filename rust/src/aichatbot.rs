@@ -44,7 +44,32 @@ struct TrainTestData {
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct QuestionAnswer {
     question: String,
-    answer: String,
+    answer: AnswerFormat,
+}
+
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+enum AnswerFormat {
+    #[allow(non_camel_case_types)]
+    summary_type(SummaryType),
+    #[allow(non_camel_case_types)]
+    DE_type(DEType), // Should not be string, will later define this type
+}
+
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+struct DEType {
+    action: String,
+    DE_output: DETerms,
+}
+
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+struct DETerms {
+    group1: GroupType,
+    group2: GroupType,
+}
+
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+struct GroupType {
+    name: String,
 }
 
 #[allow(non_camel_case_types)]
@@ -880,17 +905,23 @@ async fn extract_summary_information(
             let mut training_data: String = String::from("");
             let mut train_iter = 0;
             for ques_ans in summary_data.TrainingData {
-                train_iter += 1;
-                training_data += "Example question";
-                training_data += &train_iter.to_string();
-                training_data += &":";
-                training_data += &ques_ans.question;
-                training_data += &" ";
-                training_data += "Example answer";
-                training_data += &train_iter.to_string();
-                training_data += &":";
-                training_data += &ques_ans.answer;
-                training_data += &"\n";
+                match ques_ans.answer {
+                    AnswerFormat::summary_type(sum) => {
+                        let summary_answer: SummaryType = sum;
+                        train_iter += 1;
+                        training_data += "Example question";
+                        training_data += &train_iter.to_string();
+                        training_data += &":";
+                        training_data += &ques_ans.question;
+                        training_data += &" ";
+                        training_data += "Example answer";
+                        training_data += &train_iter.to_string();
+                        training_data += &":";
+                        training_data += &serde_json::to_string(&summary_answer).unwrap();
+                        training_data += &"\n";
+                    }
+                    AnswerFormat::DE_type(_) => panic!("DE type not valid for summary"),
+                }
             }
 
             let system_prompt: String = String::from(
