@@ -42,9 +42,9 @@ export function showGrin2ResultTable(opts: ShowGrin2ResultTableOpts): void {
 	// Use pre-built columns/rows if provided, otherwise build from hits
 	const columns = prebuiltColumns || [
 		{ label: 'Gene' },
-		{ label: `${hits![0].chrom} pos` },
+		{ label: `${hits![0].chrom.charAt(0).toUpperCase()}${hits![0].chrom.slice(1).toLowerCase()} pos` },
 		{ label: 'Type' },
-		{ label: '-log₁₀(q-value)', sortable: true },
+		{ label: 'Q-value', sortable: true },
 		{ label: 'Subject count', sortable: true }
 	]
 
@@ -54,7 +54,7 @@ export function showGrin2ResultTable(opts: ShowGrin2ResultTableOpts): void {
 			{ value: d.gene },
 			{ html: `<span style="font-size:.8em">${d.start}-${d.end}</span>` },
 			{ html: `<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}` },
-			{ value: d.y.toFixed(3) },
+			{ value: d.q_value.toPrecision(3) },
 			{ value: d.nsubj }
 		])
 	// Base table options
@@ -790,8 +790,13 @@ class GRIN2 extends PlotBase implements RxComponent {
 				}
 			})
 
-			// Add significance column to the beginning
-			const modifiedColumns = [{ label: '', width: '20px' }, ...result.topGeneTable.columns]
+			// Add significance column to the beginning and Loop over columns to change -log10(Q-value) labels to just Q-value
+			const modifiedColumns = [
+				{ label: '', width: '20px' },
+				...result.topGeneTable.columns.map(col =>
+					col.label === '-log₁₀(q-value)' ? { ...col, label: 'Q-value' } : col
+				)
+			]
 
 			// Cache the circles HTML
 			const lesionTypeCircleCache = new Map(
