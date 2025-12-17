@@ -52,7 +52,7 @@ enum AnswerFormat {
     #[allow(non_camel_case_types)]
     summary_type(SummaryType),
     #[allow(non_camel_case_types)]
-    DE_type(DEType), // Should not be string, will later define this type
+    DE_type(DEType),
 }
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
