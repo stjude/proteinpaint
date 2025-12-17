@@ -14,7 +14,8 @@ async function fillMenu(self, div, tvs) {
 		holder: div,
 		values: data.lst,
 		selectedValues: tvs.values,
-		mlabel: 'Altered',
+		dt: tvs.term.dt,
+		mcount: tvs.mcount,
 		wt: tvs.wt,
 		callback: config => {
 			const new_tvs = structuredClone(tvs)
