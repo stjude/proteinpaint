@@ -56,7 +56,7 @@ tape('LegendDataMapper.map() returns an array of legend sections for term and ov
 	test.equal(
 		result[0].label,
 		`Descriptive Statistics: ${mockConfig1.term.term.name}`,
-		'Should correclty set the first section label to match term.'
+		'Should correctly set the first section label to match term.'
 	)
 	test.true(
 		Array.isArray(result[0].items) && result[0].items.length > 0,
@@ -124,7 +124,7 @@ tape(
 		const { mockConfig2 } = getBoxPlotMockData()
 		const legendMapper = new LegendDataMapper(mockConfig2)
 
-		//Not plot and value not applicable to term: diagrrp
+		//Not plot and value not applicable to term: diaggrp
 		const mockHiddenPlots = [{ key: '1', text: '1', isHidden: true, isPlot: true }]
 		const mockUncomputableValues = [{ label: 'test', value: 1 }]
 
