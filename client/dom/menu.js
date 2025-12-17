@@ -34,6 +34,8 @@ export const focusableSelector =
 
 const showMenuTriggers = new Set([/*'mousemove',*/ 'mousedown', 'mouseup', 'click'])
 
+export const ANCHOR_IS_SUPPORTED = CSS.supports('position-anchor', '--anchor-el')
+
 export class Menu {
 	constructor(arg = {}) {
 		this.typename = Math.random().toString()
@@ -223,6 +225,23 @@ export class Menu {
 	// necessary because .showunder() uses .show(shift=false), which
 	// ignores offsetY in the constructor option
 	showunder(elem, _opts = {}) {
+		if (ANCHOR_IS_SUPPORTED) {
+			// TODO: !!! once CSS anchor-name is widely supported, automatically
+			// create that elem style attribute here instead of in the consumer code,
+			// to make positioning easier and scrolling behavior more predictable !!!
+			const anchorName = elem.style.anchorName
+			if (anchorName && anchorName != 'none') {
+				document.body.appendChild(this.dnode)
+				this.d
+					.style('position-anchor', anchorName)
+					.style('top', `calc(anchor(bottom) + 5px)`)
+					.style('left', 'calc(anchor(left) + 5px)')
+					.style('display', 'block')
+				this.d.transition().style('opacity', 1)
+				return
+			}
+		}
+
 		// route to .show()
 		const opts = Object.assign({ offsetX: 0, offsetY: 0 }, _opts)
 		const p = elem.getBoundingClientRect()
@@ -241,6 +260,54 @@ export class Menu {
 			.transition().style('opacity',1)
 		return this
 		*/
+	}
+
+	showunderoffset(elem) {
+		// route to .show()
+		const p = elem.getBoundingClientRect()
+		const y = p.top + p.height + window.scrollY + 5
+		return this.show(p.left, y, true, true, false, elem)
+
+		/*
+    this.d
+      .style('display','block')
+      .style('right',null)
+      .style('bottom',null)
+      .style('left', (p.left+window.scrollX)+'px')
+      .style('top',  (p.top + p.height + window.scrollY + (yspace || 5) )+'px' )
+      .transition().style('opacity',1)
+    return this
+    */
+	}
+
+	// A menu div is appended as an immediate child of the document.body, with
+	// absolute position. If the body is scrolled, the menu will move with the body.
+	// This may be an issue if the clicked element (that launched the menu) has a
+	// fixed or sticky position, causing the menu to scroll independently of that element.
+	// To fix, either
+	// - attach anchorData to an element (d3.selection.datum(...), see the anchorData
+	// code in filter.renderer.js, to use `showAnchored` below
+	// - or
+	async showAnchored(elem, opts) {
+		const anchorData = ANCHOR_IS_SUPPORTED && getAnchorData(elem)
+		if (!anchorData) {
+			// handle like before
+			if (opts) this.showunder(elem, opts)
+			else this.showunderoffset(elem)
+			return
+		}
+
+		document.body.appendChild(this.dnode)
+		this.d.style('position-anchor', anchorData.name)
+		if (!anchorData.position) {
+			this.d.style('top', 'calc(anchor(bottom) + 5px)').style('left', 'calc(anchor(left) + 5px)')
+		} else {
+			for (const p of anchorData.position) {
+				this.d.style(p.side, `calc(anchor(${p.anchorSide}) + ${p.pixelOffset}px)`)
+			}
+		}
+		this.d.style('display', 'block').transition().style('opacity', 1)
+		this.setTabNavigation(elem)
 	}
 
 	async setTabNavigation(elem, numTries = 0) {
@@ -281,24 +348,6 @@ export class Menu {
 		// .focus(); console.log(270, clickableElems[0]);
 
 		setTimeout(() => (clickableElems.find(priorityFocusElem) || clickableElems[0]).focus(), renderWait)
-	}
-
-	showunderoffset(dom) {
-		// route to .show()
-		const p = dom.getBoundingClientRect()
-		const y = p.top + p.height + window.scrollY + 5
-		return this.show(p.left, y, true, true, false)
-
-		/*
-		this.d
-			.style('display','block')
-			.style('right',null)
-			.style('bottom',null)
-			.style('left', (p.left+window.scrollX)+'px')
-			.style('top',  (p.top + p.height + window.scrollY + (yspace || 5) )+'px' )
-			.transition().style('opacity',1)
-		return this
-		*/
 	}
 
 	// this hide() method may be overriden with a custom method by getCustomApi(overrides)
@@ -387,4 +436,11 @@ export class Menu {
 
 function priorityFocusElem(elem, i) {
 	return elem.tagName == 'INPUT' && (elem.type == 'search' || elem.type == 'text')
+}
+
+function getAnchorData(elem) {
+	if (elem?.__data__?.anchorData) return elem.__data__.anchorData
+	//if (elem.style.anchorName && elem.style.anchorName != 'none') return elem.style.anchorName
+	if (elem.classList?.contains('sja_root_holder') || elem.classList?.contains('sja_menu_div')) return
+	return elem.parentNode ? getAnchorData(elem.parentNode) : undefined
 }

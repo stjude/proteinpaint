@@ -8,6 +8,8 @@ import { findItem } from './filter.utils'
 // elements within instance.dom.holder, so no need for this index
 let filterIndex = 0
 
+const menuAnchorName = '--filter-menu-table'
+
 export function setRenderers(self) {
 	self.initUI = async function () {
 		if (self.opts.newBtn) {
@@ -16,8 +18,9 @@ export function setRenderers(self) {
 			self.dom.newBtn = self.dom.holder
 				.append('div')
 				.attr('class', 'sja_new_filter_btn sja_menuoption')
-				.html(self.opts.emptyLabel)
 				.style('display', 'inline-block')
+				.style('anchor-name', `--sjpp-filter-new-btn-${filterIndex++}`)
+				.html(self.opts.emptyLabel)
 				.on('click', self.displayTreeNew)
 		}
 
@@ -38,7 +41,20 @@ export function setRenderers(self) {
 			.html(d => '+' + d.toUpperCase())
 			.on('click', self.displayTreeNew)
 
-		self.dom.table = self.dom.controlsTip.clear().d.append('table').style('border-collapse', 'collapse')
+		const anchorData = {
+			name: menuAnchorName,
+			position: [
+				{ side: 'top', anchorSide: 'top', pixelOffset: 0 },
+				{ side: 'left', anchorSide: 'right', pixelOffset: 5 }
+			]
+		}
+
+		self.dom.table = self.dom.controlsTip
+			.clear()
+			.d.append('table')
+			.style('border-collapse', 'collapse')
+			.style('anchor-name', menuAnchorName)
+			.datum({ anchorData })
 
 		const menuOptions = [
 			{ action: 'edit', html: ['', 'Edit', '&rsaquo;'], handler: self.editTerm },
@@ -137,7 +153,12 @@ export function setRenderers(self) {
 
 		const data = item.type == 'tvslst' ? item.lst : [item]
 		const pills = select(this).selectAll(':scope > .sja_filter_item').data(data, self.getId)
-		pills.enter().append('div').attr('class', 'sja_filter_item').each(self.addItem)
+		pills
+			.enter()
+			.append('div')
+			.attr('class', 'sja_filter_item')
+			.style('anchor-name', d => `--filter_item_${d.$id}`)
+			.each(self.addItem)
 
 		if (self.opts.joinWith.length == 1) {
 			self.dom.last_join_div = select(this)
@@ -248,7 +269,6 @@ export function setRenderers(self) {
 		}
 
 		self.numExpectedItems += 1
-
 		// holder for blue pill
 		const holder = select(this)
 			.style('display', 'inline-block')
@@ -258,6 +278,7 @@ export function setRenderers(self) {
 			.attr('class', 'sja_pill_wrapper')
 			.style('display', 'inline-block')
 			.style('margin', self.opts.joinWith.length > 1 ? '' : '2px')
+			.style('anchor-name', `--pill-wrapper-${item.$id}`)
 			.on('click', item.renderAs === 'htmlSelect' ? null : self.displayControlsMenu)
 
 		self.addJoinLabel(this, filter, item)

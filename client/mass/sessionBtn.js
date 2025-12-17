@@ -6,6 +6,8 @@ import { parentCorsMessage } from '#common/embedder-helpers'
 import { select } from 'd3-selection'
 import { importPlot } from '#plots/importPlot.js'
 
+let btnIndex = 0
+
 class MassSessionBtn {
 	constructor() {
 		this.type = 'sessionBtn'
@@ -18,7 +20,7 @@ class MassSessionBtn {
 		const tip = new Menu({ padding: '0px' })
 		const copytip = new Menu({ padding: '5px' })
 		this.dom = {
-			button: this.opts.button,
+			button: this.opts.button.style('anchor-name', `--sjpp-session-btn-${btnIndex++}`),
 			tip,
 			copytip
 		}

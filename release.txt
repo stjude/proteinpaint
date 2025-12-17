@@ -1,1 +1,2 @@
-
+Fixes:
+- use the CSS position anchor styles to make a menu tooltip stay with the clicked element and not scroll with the document.body

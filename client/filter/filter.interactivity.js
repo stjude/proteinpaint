@@ -1,5 +1,6 @@
 import { select } from 'd3-selection'
 import { findItem, findParent, getWrappedTvslst } from './filter.utils'
+import { ANCHOR_IS_SUPPORTED } from '#dom'
 
 const MENU_OPTION_HIGHLIGHT_COLOR = '#fff'
 
@@ -363,7 +364,7 @@ export function setInteractivity(self) {
 		const item = self.activeData.item
 		self.dom.treeTip.clear()
 		self.pills[item.$id].showMenu(holder)
-		self.dom.treeTip.showunderoffset(elem.lastChild)
+		self.dom.treeTip.showAnchored(elem.lastChild)
 	}
 
 	self.highlightEditRow = function (d) {

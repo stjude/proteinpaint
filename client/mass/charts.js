@@ -431,6 +431,7 @@ function setRenderers(self) {
 			.style('padding', '10px 15px')
 			.style('border-radius', '20px')
 			.style('border-color', '#ededed')
+			.style('anchor-name', (_, i) => `--sjpp-nav-chart-btn-${i}`)
 			.html(d => d.label)
 			.on('click', function (event, chart) {
 				self.dom.tip.clear().showunder(this)
