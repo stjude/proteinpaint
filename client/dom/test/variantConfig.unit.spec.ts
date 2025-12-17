@@ -4,7 +4,8 @@ import { select } from 'd3-selection'
 
 /*
 test sections:
-    - basic render
+    - basic render: snvindel
+	- basic render: cnv
     - callback
     - unselect values
     - preselected values
@@ -21,17 +22,24 @@ const values: Value[] = [
 	{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 ]
 
+const values2: Value[] = [
+	{ key: 'CNV_amp', label: 'Gain', value: 'CNV_amp' },
+	{ key: 'CNV_loss', label: 'Heterozygous Deletion', value: 'CNV_loss' },
+	{ key: 'CNV_amplification', label: 'Amplification', value: 'CNV_amplification' }
+]
+
 tape('\n', test => {
 	test.comment('-***- dom/variantConfig unit tests-***-')
 	test.end()
 })
 
-tape('basic render', test => {
+tape('basic render: snvindel', test => {
 	const holder = select(document.body).append('div')
 
 	renderVariantConfig({
 		holder,
 		values,
+		dt: 1,
 		callback: () => {}
 	})
 
@@ -47,6 +55,43 @@ tape('basic render', test => {
 	const checked = checkboxes.nodes().filter((c: any) => c.checked)
 	test.equal(checked.length, values.length, 'all rows should be checked')
 
+	const countRadio: any = variantsDiv.selectAll('input[type="radio"]').nodes()
+	test.equal(countRadio.length, 3, 'should render 3 mutation count radio buttons')
+	const selectedCount = countRadio.find(r => r.checked)
+	test.equal(selectedCount.value, 'any', 'selected radio button should be any')
+
+	const applyBtn = holder.select('button').node()
+	test.ok(applyBtn, 'should render apply button')
+
+	holder.remove()
+	test.end()
+})
+
+tape('basic render: cnv', test => {
+	const holder = select(document.body).append('div')
+
+	renderVariantConfig({
+		holder,
+		values: values2,
+		dt: 4,
+		callback: () => {}
+	})
+
+	const genotypeDiv = holder.select('[data-testid="sjpp-variantConfig-genotype"]')
+	const genotypeRadio = genotypeDiv.selectAll('input[type="radio"]').nodes()
+	test.equal(genotypeRadio.length, 2, 'should render 2 genotype radio buttons')
+
+	const variantsDiv = holder.select('[data-testid="sjpp-variantConfig-variant"]')
+	const table = variantsDiv.select('table')
+	const rows = table.select('tbody').selectAll('tr')
+	test.equal(rows.nodes().length, values2.length, 'all variants should appear in table')
+	const checkboxes = rows.selectAll('input[type="checkbox"]')
+	const checked = checkboxes.nodes().filter((c: any) => c.checked)
+	test.equal(checked.length, values2.length, 'all rows should be checked')
+
+	const countRadio: any = variantsDiv.selectAll('input[type="radio"]').nodes()
+	test.equal(countRadio.length, 0, 'should not render mutation count radio buttons')
+
 	const applyBtn = holder.select('button').node()
 	test.ok(applyBtn, 'should render apply button')
 
@@ -61,6 +106,7 @@ tape('callback', test => {
 	renderVariantConfig({
 		holder,
 		values,
+		dt: 1,
 		callback: config => (newConfig = config)
 	})
 
@@ -91,6 +137,7 @@ tape('unselect values', test => {
 	renderVariantConfig({
 		holder,
 		values,
+		dt: 1,
 		callback: config => (newConfig = config)
 	})
 
@@ -127,6 +174,7 @@ tape('preselected values', test => {
 		holder,
 		values,
 		selectedValues: [values[0], values[1]],
+		dt: 1,
 		callback: config => (newConfig = config)
 	})
 
@@ -161,6 +209,7 @@ tape('genotype toggle', test => {
 	renderVariantConfig({
 		holder,
 		values,
+		dt: 1,
 		callback: config => (newConfig = config)
 	})
 
@@ -191,28 +240,6 @@ tape('genotype toggle', test => {
 	test.end()
 })
 
-tape('any mutation count', test => {
-	const holder = select(document.body).append('div')
-
-	renderVariantConfig({
-		holder,
-		values,
-		mcount: 'any',
-		callback: () => {}
-	})
-
-	const variantsDiv = holder.select('[data-testid="sjpp-variantConfig-variant"]')
-
-	const countRadio: any = variantsDiv.selectAll('input[type="radio"]').nodes()
-	test.equal(countRadio.length, 3, 'should render 3 mutation count radio buttons')
-
-	const selectedCount = countRadio.find(r => r.checked)
-	test.equal(selectedCount.value, 'any', 'selected radio button should be any')
-
-	holder.remove()
-	test.end()
-})
-
 tape('single mutation count', test => {
 	const holder = select(document.body).append('div')
 	let newConfig
@@ -220,7 +247,7 @@ tape('single mutation count', test => {
 	renderVariantConfig({
 		holder,
 		values,
-		mcount: 'any',
+		dt: 1,
 		callback: config => (newConfig = config)
 	})
 
@@ -245,7 +272,7 @@ tape('multiple mutation count', test => {
 	renderVariantConfig({
 		holder,
 		values,
-		mcount: 'any',
+		dt: 1,
 		callback: config => (newConfig = config)
 	})
 
