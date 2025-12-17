@@ -64,7 +64,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 			this.app,
 			this.opts,
 			() => {
-				return this.data
+				return this.data.charts
 			},
 			this.useDefaultSettings
 		)
@@ -196,6 +196,8 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 		}
 
 		new View(viewModel.viewData, settings, this.dom, this.app, this.interactions)
+		/** Enables downloading the chart images for DownloadMenu after rendering. */
+		this.data.charts = viewModel.viewData.charts
 	}
 
 	getChartImages() {
