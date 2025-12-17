@@ -30,6 +30,11 @@ export class View {
 			const chartWrapper = dom.charts.append('div').attr('class', 'sjpp-boxplot-chart-wrapper')
 
 			const svg = chartWrapper.append('svg').attr('class', 'sjpp-boxplot-svg')
+
+			/** Enables downloading the chart image for
+			 * DownloadMenu after rendering. */
+			chart['svg'] = svg
+
 			const chartDom: any = {
 				svg,
 				tip: dom.tip

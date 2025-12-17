@@ -1,6 +1,6 @@
 import { term0_term2_defaultQ, renderTerm1Label } from '../controls'
 
-export function setBoxPlotControlInputs(state: any, app: any, opts: any, charts: any, useDefaultSettings: boolean) {
+export function setBoxPlotControlInputs(state: any, app: any, opts: any, getCharts: any, useDefaultSettings: boolean) {
 	const controlLabels = state.config.controlLabels
 	if (!controlLabels) throw new Error('controls labels not found')
 
@@ -47,6 +47,7 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, charts:
 				{ label: 'Median values', value: true }
 			],
 			getDisplayStyle: () => {
+				const charts = getCharts()
 				let style = 'none'
 				for (const k of Object.keys(charts)) {
 					const chart = charts[k]
@@ -73,8 +74,8 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, charts:
 			chartType: 'boxplot',
 			settingsKey: 'isVertical',
 			options: [
-				{ label: 'Vertical', value: true },
-				{ label: 'Horizontal', value: false }
+				{ label: 'Horizontal', value: false },
+				{ label: 'Vertical', value: true }
 			]
 		},
 		{
@@ -125,6 +126,7 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, charts:
 			chartType: 'boxplot',
 			settingsKey: 'color',
 			getDisplayStyle: () => {
+				const charts = getCharts()
 				let style = ''
 				for (const k of Object.keys(charts)) {
 					const chart = charts[k]
