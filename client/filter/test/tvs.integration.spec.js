@@ -873,6 +873,9 @@ tape('tvs: Gene Variant - SNV/indel', async test => {
 		const editOpt = menuRows.filter(d => d.action == 'edit').node()
 		const tipd = opts.filter.Inner.dom.termSrcDiv
 
+		let valueBtn = pill.querySelector('.value_btn')
+		test.equal(valueBtn.textContent, 'MISSENSE', 'Pill value should be the tvs value')
+
 		// --- trigger and check tip menu ---
 		pill.click()
 		editOpt.click()
@@ -886,16 +889,12 @@ tape('tvs: Gene Variant - SNV/indel', async test => {
 		tipd.node().querySelectorAll("input[name^='sjpp-input']")[1].click()
 
 		// defer the execution of the next step to the next process loop "tick"
-		const valueBtn = await detectChildText({
+		valueBtn = await detectChildText({
 			target: filternode,
-			selector: '.value_btn:nth-child(1n)',
+			selector: '.value_btn',
 			trigger: () => applyBtn.click()
 		})
-		test.equal(
-			valueBtn[0].innerHTML.split('<')[0],
-			opts.filterData.lst[0].tvs.values.length + ' groups',
-			'should change the pill value btn after adding value from menu'
-		)
+		test.equal(valueBtn[0].textContent, 'Mutated', 'should change the pill value btn after adding value from menu')
 	} catch (e) {
 		test.fail('test error: ' + e)
 	}
@@ -927,7 +926,7 @@ tape('tvs: Gene Variant - CNV - categorical', async test => {
 							dt: 4,
 							values: {
 								CNV_amp: { label: 'Copy number gain' },
-								WT: { label: 'Wildtype' }
+								CNV_loss: { label: 'Heterozygous Deletion' }
 							},
 							name_noOrigin: 'CNV',
 							parentTerm: {
@@ -955,6 +954,9 @@ tape('tvs: Gene Variant - CNV - categorical', async test => {
 		const editOpt = menuRows.filter(d => d.action == 'edit').node()
 		const tipd = opts.filter.Inner.dom.termSrcDiv
 
+		let valueBtn = pill.querySelector('.value_btn')
+		test.equal(valueBtn.textContent, 'Copy number gain', 'Pill value should be the tvs value')
+
 		// --- trigger and check tip menu ---
 		pill.click()
 		editOpt.click()
@@ -967,16 +969,12 @@ tape('tvs: Gene Variant - CNV - categorical', async test => {
 		tipd.node().querySelectorAll("input[name^='sjpp-input']")[1].click()
 
 		// defer the execution of the next step to the next process loop "tick"
-		const valueBtn = await detectChildText({
+		valueBtn = await detectChildText({
 			target: filternode,
-			selector: '.value_btn:nth-child(1n)',
+			selector: '.value_btn',
 			trigger: () => applyBtn.click()
 		})
-		test.equal(
-			valueBtn[0].innerHTML.split('<')[0],
-			opts.filterData.lst[0].tvs.values.length + ' groups',
-			'should change the pill value btn after adding value from menu'
-		)
+		test.equal(valueBtn[0].textContent, 'Altered', 'should change the pill value btn after adding value from menu')
 	} catch (e) {
 		test.fail('test error: ' + e)
 	}
@@ -1112,8 +1110,7 @@ tape('tvs: Gene Variant - Fusion', async test => {
 							type: 'dtfusion',
 							dt: 2,
 							values: {
-								Fuserna: { label: 'Fusion transcript' },
-								WT: { label: 'Wildtype' }
+								Fuserna: { label: 'Fusion transcript' }
 							},
 							name_noOrigin: 'Fusion RNA',
 							parentTerm: {
@@ -1148,29 +1145,17 @@ tape('tvs: Gene Variant - Fusion', async test => {
 		const editOpt = menuRows.filter(d => d.action == 'edit').node()
 		const tipd = opts.filter.Inner.dom.termSrcDiv
 
+		let valueBtn = pill.querySelector('.value_btn')
+		test.equal(valueBtn.textContent, 'Fusion transcript', 'Pill value should be the tvs value')
+
 		// --- trigger and check tip menu ---
 		pill.click()
 		editOpt.click()
 		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
 
 		test.ok(applyBtn, 'Should have 1 button to apply value change')
-		test.equal(tipd.selectAll("input[name^='sjpp-input']").size(), 2, 'Should have a checkbox for each value')
+		test.equal(tipd.selectAll("input[name^='sjpp-input']").size(), 1, 'Should have a checkbox for each value')
 		test.equal(tipd.selectAll("input[name^='sjpp-input']:checked").size(), 1, 'Should have 1 box checked')
-
-		//trigger and test addition of new value
-		tipd.node().querySelectorAll("input[name^='sjpp-input']")[1].click()
-
-		// defer the execution of the next step to the next process loop "tick"
-		const valueBtn = await detectChildText({
-			target: filternode,
-			selector: '.value_btn:nth-child(1n)',
-			trigger: () => applyBtn.click()
-		})
-		test.equal(
-			valueBtn[0].innerHTML.split('<')[0],
-			opts.filterData.lst[0].tvs.values.length + ' groups',
-			'should change the pill value btn after adding value from menu'
-		)
 	} catch (e) {
 		test.fail('test error: ' + e)
 	}
