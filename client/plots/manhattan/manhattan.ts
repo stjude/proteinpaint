@@ -32,17 +32,22 @@ function findPointsInRadius(
 			return true // Skip this branch
 		}
 
-		// If this is a leaf node, check the point
+		// If this is a leaf node, check ALL points (including coincident ones)
 		if (!node.length) {
-			const point = node.data
-			if (point) {
-				const px = point.pixel_x
-				const py = point.pixel_y
-				const distance = Math.sqrt((mx - px) ** 2 + (my - py) ** 2)
+			// Traverse the linked list of coincident points
+			let current: any = node
+			while (current) {
+				const point = current.data
+				if (point) {
+					const px = point.pixel_x
+					const py = point.pixel_y
+					const distance = Math.sqrt((mx - px) ** 2 + (my - py) ** 2)
 
-				if (distance <= hitRadius) {
-					candidates.push({ point, distance })
+					if (distance <= hitRadius) {
+						candidates.push({ point, distance })
+					}
 				}
+				current = current.next // Move to next coincident point
 			}
 		}
 
