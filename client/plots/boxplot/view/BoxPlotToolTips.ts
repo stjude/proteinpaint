@@ -45,14 +45,12 @@ export class BoxPlotToolTips {
 			for (const stat of Object.values(this.plot.descrStats)) {
 				const row = table.append('tr')
 				row.append('td').style('padding', this.tablePadding).style('opacity', 0.5).text(stat.label)
-				const value = row
+				row
 					.append('td')
 					.style('padding', this.tablePadding)
 					.style('text-align', 'center')
+					.style('opacity', stat.value === null || stat.value === undefined ? 0.5 : 1)
 					.text(stat.value ?? 'N/A')
-				if (!stat.value) {
-					value.style('opacity', 0.5)
-				}
 			}
 		})
 		this.boxplot.labelG.on('mouseout', () => {
