@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - GRIN2: Using renderTable's buttons parameter for tooltip and top gene table
+- Added mutation count setting to geneVariant term
 
 Fixes:
 - GRIN2: Improved rust plotting logic to not filter out q-value = 0 values
