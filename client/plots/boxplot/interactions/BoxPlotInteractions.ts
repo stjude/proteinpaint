@@ -20,7 +20,7 @@ export class BoxPlotInteractions {
 	}
 
 	/** Option to add a global filter from the box plot label menu. */
-	addFilter(plot: RenderedPlot) {
+	addFilter(plot: any) {
 		const config = this.app.getState()
 		const sampleList = new ListSamples(this.app, config, this.id, plot, false)
 		const filterUiRoot = getFilterItemByTag(config.termfilter.filter, 'filterUiRoot')
@@ -61,7 +61,7 @@ export class BoxPlotInteractions {
 	}
 
 	/** Option from box plot label to show the samples in a table within the tooltip. */
-	async listSamples(plot: RenderedPlot) {
+	async listSamples(plot: any) {
 		const config = this.app.getState()
 		const sampleList = new ListSamples(this.app, config, this.id, plot)
 		const data = await sampleList.getData()
