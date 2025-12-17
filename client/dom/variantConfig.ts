@@ -15,26 +15,24 @@ type Config = {
 type Arg = {
 	holder: any // D3 holder where UI is rendered
 	values: Value[] // mutation classes
-	selectedValues?: Value[] // selected mutation classes
-	mcount?: 'any' | 'single' | 'multiple' // mutation count. When present, mutation count radio buttons are rendered and provided value is selected. When missing, no radio buttons are rendered and mcount in config will default to 'any'.
-	mlabel?: string // mutated genotype label (e.g. 'Mutated', 'Altered'), will default to 'Mutated'
+	selectedValues?: Value[] // selected mutation classes, when missing will default to all classes
+	dt: number // dt value, rendering of some elements are based on this value
+	mcount?: 'any' | 'single' | 'multiple' // mutation count, when missing will default to 'any'
 	wt?: boolean // whether genotype is wildtype
 	callback: (config: Config) => void
 }
 
 export function renderVariantConfig(arg: Arg) {
-	const div = arg.holder
+	const { holder, values, dt } = arg
 	const wt = arg.wt || false
-	const values = arg.values
 	const selectedValues = arg.selectedValues?.length ? arg.selectedValues : values
-	let mcount
-	if (Object.keys(arg).includes('mcount')) mcount = arg.mcount || 'any'
-	const mlabel = arg.mlabel || 'Mutated'
+	if (!Number.isInteger(dt)) throw 'unexpected dt value'
+	const mcount = arg.mcount || 'any'
 
-	div.style('margin', '10px')
+	holder.style('margin', '10px')
 
 	// genotype radio buttons
-	const genotypeDiv = div.append('div').attr('data-testid', 'sjpp-variantConfig-genotype').style('margin-bottom', '10px')
+	const genotypeDiv = holder.append('div').attr('data-testid', 'sjpp-variantConfig-genotype')
 	genotypeDiv
 		.append('div')
 		.style('display', 'inline-block')
@@ -45,7 +43,7 @@ export function renderVariantConfig(arg: Arg) {
 		holder: genotypeDiv,
 		styles: { display: 'inline-block' },
 		options: [
-			{ label: mlabel, value: 'mutated', checked: !wt },
+			{ label: dt == 1 ? 'Mutated' : 'Altered', value: 'mutated', checked: !wt },
 			{ label: 'Wildtype', value: 'wildtype', checked: wt }
 		],
 		callback: value => {
@@ -54,12 +52,17 @@ export function renderVariantConfig(arg: Arg) {
 	})
 
 	// variants table
-	const variantsDiv = div
+	const variantsDiv = holder
 		.append('div')
 		.attr('data-testid', 'sjpp-variantConfig-variant')
 		.style('display', wt ? 'none' : 'block')
-	variantsDiv.append('div').style('opacity', 0.7).style('margin-bottom', '10px').text('variants:')
-	const tableDiv = variantsDiv.append('div').style('margin-left', '10px').style('font-size', '0.8rem')
+		.style('margin-top', '10px')
+	variantsDiv
+		.append('div')
+		.style('opacity', 0.7)
+		.style('margin-bottom', '5px')
+		.text(dt == 1 ? 'Mutations' : 'Alterations')
+	const tableDiv = variantsDiv.append('div').style('margin-left', '5px').style('font-size', '0.8rem')
 	const rows: any[] = []
 	const selectedIdxs: number[] = []
 	for (const [i, m] of values.entries()) {
@@ -83,8 +86,9 @@ export function renderVariantConfig(arg: Arg) {
 
 	// mutation count
 	let countRadio
-	if (mcount) {
-		const countDiv = variantsDiv.append('div').style('margin-bottom', '10px')
+	if (dt == 1) {
+		// snvindel, render mutation count radios
+		const countDiv = variantsDiv.append('div').style('margin-top', '5px')
 		countDiv
 			.append('div')
 			.style('display', 'inline-block')
@@ -108,7 +112,7 @@ export function renderVariantConfig(arg: Arg) {
 	}
 
 	// Apply button
-	div
+	holder
 		.append('div')
 		.append('button')
 		.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
