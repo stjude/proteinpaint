@@ -30,29 +30,34 @@ pub struct AiJsonFormat {
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 enum Charts {
     // More chart types will be added here later
-    Summary(TrainTestData),
-    DE(TrainTestData),
+    Summary(TrainTestDataSummary),
+    DE(TrainTestDataDE),
 }
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
-struct TrainTestData {
+struct TrainTestDataSummary {
     SystemPrompt: String,
-    TrainingData: Vec<QuestionAnswer>,
-    TestData: Vec<QuestionAnswer>,
+    TrainingData: Vec<QuestionAnswerSummary>,
+    TestData: Vec<QuestionAnswerSummary>,
 }
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
-struct QuestionAnswer {
+struct QuestionAnswerSummary {
     question: String,
-    answer: AnswerFormat,
+    answer: SummaryType,
 }
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
-enum AnswerFormat {
-    #[allow(non_camel_case_types)]
-    summary_type(SummaryType),
-    #[allow(non_camel_case_types)]
-    DE_type(DEType),
+struct TrainTestDataDE {
+    SystemPrompt: String,
+    TrainingData: Vec<QuestionAnswerDE>,
+    TestData: Vec<QuestionAnswerDE>,
+}
+
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+struct QuestionAnswerDE {
+    question: String,
+    answer: DEType,
 }
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
@@ -892,7 +897,7 @@ async fn extract_summary_information(
         .filter(|x| user_words2.contains(&x.to_lowercase()))
         .collect();
 
-    let mut summary_data_check: Option<TrainTestData> = None;
+    let mut summary_data_check: Option<TrainTestDataSummary> = None;
     for chart in ai_json.charts.clone() {
         if let Charts::Summary(traindata) = chart {
             summary_data_check = Some(traindata);
@@ -905,23 +910,18 @@ async fn extract_summary_information(
             let mut training_data: String = String::from("");
             let mut train_iter = 0;
             for ques_ans in summary_data.TrainingData {
-                match ques_ans.answer {
-                    AnswerFormat::summary_type(sum) => {
-                        let summary_answer: SummaryType = sum;
-                        train_iter += 1;
-                        training_data += "Example question";
-                        training_data += &train_iter.to_string();
-                        training_data += &":";
-                        training_data += &ques_ans.question;
-                        training_data += &" ";
-                        training_data += "Example answer";
-                        training_data += &train_iter.to_string();
-                        training_data += &":";
-                        training_data += &serde_json::to_string(&summary_answer).unwrap();
-                        training_data += &"\n";
-                    }
-                    AnswerFormat::DE_type(_) => panic!("DE type not valid for summary"),
-                }
+                let summary_answer: SummaryType = ques_ans.answer;
+                train_iter += 1;
+                training_data += "Example question";
+                training_data += &train_iter.to_string();
+                training_data += &":";
+                training_data += &ques_ans.question;
+                training_data += &" ";
+                training_data += "Example answer";
+                training_data += &train_iter.to_string();
+                training_data += &":";
+                training_data += &serde_json::to_string(&summary_answer).unwrap();
+                training_data += &"\n";
             }
 
             let system_prompt: String = String::from(
