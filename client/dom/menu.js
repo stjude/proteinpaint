@@ -33,6 +33,7 @@ export const focusableSelector =
 	clickableSjClasses.map(c => `.${c}`).join(',')
 
 const showMenuTriggers = new Set([/*'mousemove',*/ 'mousedown', 'mouseup', 'click'])
+const urlpath = window.location.pathname
 
 export class Menu {
 	constructor(arg = {}) {
@@ -225,6 +226,7 @@ export class Menu {
 	showunder(elem, _opts = {}) {
 		// route to .show()
 		const opts = Object.assign({ offsetX: 0, offsetY: 0 }, _opts)
+		if (this.stickyPosition(elem, opts)) return
 		const p = elem.getBoundingClientRect()
 		const x = p.left + window.scrollX + opts.offsetX
 		const y = p.top + p.height + window.scrollY + 5 + opts.offsetY
@@ -284,8 +286,9 @@ export class Menu {
 	}
 
 	showunderoffset(dom) {
-		// route to .show()
 		const p = dom.getBoundingClientRect()
+		if (this.stickyPosition(dom, { offsetY: -p.height, offsetX: p.width })) return
+
 		const y = p.top + p.height + window.scrollY + 5
 		return this.show(p.left, y, true, true, false)
 
@@ -299,6 +302,36 @@ export class Menu {
 			.transition().style('opacity',1)
 		return this
 		*/
+	}
+
+	stickyPosition(elem, _opts = {}) {
+		// getting computed style recursively is expensive, limit when a sticky parentDiv needs to be detected;
+		// in prod, a user click event is an isolated event, unlike in test environment with lots of simulated clicks
+		if (
+			!window.event ||
+			window.event.type != 'click' ||
+			urlpath.includes('testrun.html') ||
+			urlpath.includes('puppet.html')
+		)
+			return
+		const parentDiv = getAncestorWithComputedStyle(elem, 'position', new Set(['sticky', 'fixed']))
+		// if there is no sticky ancestor, allow showunder() and showunderoffset() to work as usual
+		if (!parentDiv) return false
+
+		// append the menu div to the sticky ancestor and position against the clicked element
+		// relative to the sticky div
+		parentDiv.appendChild(this.dnode)
+		const p = parentDiv.getBoundingClientRect()
+		const c = elem.getBoundingClientRect()
+		const opts = Object.assign({ offsetX: 0, offsetY: 0 }, _opts)
+		this.d
+			.style('top', c.y + c.height - p.y + opts.offsetY + 'px')
+			.style('left', c.x - p.x + opts.offsetX + 'px')
+			.style('display', 'block')
+			.transition()
+			.style('opacity', 1)
+
+		return true
 	}
 
 	// this hide() method may be overriden with a custom method by getCustomApi(overrides)
@@ -387,4 +420,21 @@ export class Menu {
 
 function priorityFocusElem(elem, i) {
 	return elem.tagName == 'INPUT' && (elem.type == 'search' || elem.type == 'text')
+}
+
+// find an element that has a matching computed CSS key-value
+// elem: DOM element
+// key: the style property to check
+// values: a Set of desired CSS values
+function getAncestorWithComputedStyle(elem, key, values) {
+	if (!elem || !values.size) return
+	const style = window.getComputedStyle(elem)
+	if (values.has(style[key])) return elem
+	if (
+		elem.tagName != 'DIV' ||
+		elem.classList?.contains('sja_root_holder') ||
+		(elem.classList?.contains('sja_menu_div') && elem.parentNode === document.body)
+	)
+		return
+	return elem.parentNode ? getAncestorWithComputedStyle(elem.parentNode, key, values) : undefined
 }
