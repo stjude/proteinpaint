@@ -151,9 +151,9 @@ function init({ genomes }) {
 					delete ai_output_json.plot.simpleFilter
 					ai_output_json.plot.filter = localfilter
 				}
-				//mayLog('ai_output_json:', ai_output_json)
-				res.send(ai_output_json as ChatResponse)
 			}
+			//mayLog('ai_output_json:', ai_output_json)
+			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			res.send({ error: e?.message || e })
