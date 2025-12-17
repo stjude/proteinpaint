@@ -252,8 +252,11 @@ export function renderTable({
 						}
 					})
 				if (noAutoScroll) {
-					// this setting prevents auto scrolling. this is needed due to an unresolved defect that on showing a small table e.g. categorical tvs, the page scrolls undesirably
-					// Edgar's comment: so the fix should just be to take the table height/table cell screen position into account. Somehow, scrollIntoView() is not accurate for the embedded table row
+					// this setting prevents auto scrolling. this is needed due to an unresolved defect that on showing a small table
+					// e.g. categorical filter tvs, the page scrolls undesirably. This is also useful if it is known that there will only be
+					// a few table rows, so no need to trigger auto-scroll, also applies to filter tvs menu.
+					// NOTE: When this table is embedded in a client/menu.js instance, see the menu.showunder() and showAnchored() methods
+					// on how to prevent the issue where the menu does not scroll together with the clicked element that launched the menu.
 				} else {
 					// table is allowed to auto scroll to selected rows. this is desirable to auto-show selected rows from a large table
 					//Do not scroll when all rows are selected. Problem appears when sorting.
