@@ -8,18 +8,20 @@ import type { RenderedPlot } from './RenderedPlot'
 import { BoxPlotToolTips } from './BoxPlotToolTips'
 import { BoxPlotLabelMenu } from './BoxPlotLabelMenu'
 import { AssociationTableRender } from './AssociationTableRender'
+import type { BoxPlotInteractions } from '../interactions/BoxPlotInteractions'
 
-/** Handles the rendering for each chart */
+/** Handles the rendering for charts individually.
+ * Data is formatted in ChartsDataMapper.*/
 export class ChartRender {
 	app: any
-	interactions: any
+	interactions: BoxPlotInteractions
 	textColor: string
 
 	constructor(
 		dom: any,
 		settings: BoxPlotSettings,
-		app,
-		interactions,
+		app: any,
+		interactions: BoxPlotInteractions,
 		chart: FormattedBoxPlotChartsEntry,
 		backgroundColor: string,
 		textColor: string

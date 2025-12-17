@@ -1,6 +1,10 @@
 import type { LegendData, LegendItemEntry, BoxPlotConfig } from '../BoxPlotTypes'
 import type { BoxPlotChartEntry, DescrStats } from '#types'
 
+/** Combines the overall .descrStats{} response with 1) the
+ * uncomputable and/or hidden term values; and 2) any
+ * previously hidden plots. Formats the result for the
+ * View -> LegendRender. */
 export class LegendDataMapper {
 	legendData: LegendData = []
 	config: BoxPlotConfig

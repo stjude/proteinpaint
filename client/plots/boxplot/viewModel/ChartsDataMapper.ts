@@ -5,6 +5,8 @@ import type { BoxPlotChartEntry } from '#types'
 import type { BoxPlotSettings } from '../Settings'
 import type { BoxPlotConfig } from '../BoxPlotTypes'
 
+/** Formats the .charts{} response data for rendering
+ * in the View -> ChartRender. */
 export class ChartsDataMapper {
 	/** Top padding for the svg */
 	#topPad = 20
@@ -23,7 +25,7 @@ export class ChartsDataMapper {
 	/** Min value from server response */
 	absMin: number
 	/** Array of charts from server response */
-	charts: any
+	charts: BoxPlotChartEntry[]
 	/** Range is 20 - 50 */
 	rowHeight: number
 	/** Range is 10 - 20 */
@@ -71,7 +73,7 @@ export class ChartsDataMapper {
 	}
 
 	/** Set the row settings based on all plots */
-	getRowSettings(charts) {
+	getRowSettings(charts: BoxPlotChartEntry[]) {
 		let totalNumPlots = 0
 		for (const chart of charts) {
 			totalNumPlots = totalNumPlots + chart.plots.filter(p => !p.isHidden).length

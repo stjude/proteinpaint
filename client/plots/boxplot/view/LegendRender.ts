@@ -2,6 +2,8 @@ import type { LegendData, LegendItemEntry } from '../BoxPlotTypes'
 import type { BoxPlotInteractions } from '../interactions/BoxPlotInteractions'
 import type { Div } from '../../../types/d3'
 
+/** Handles rendering legend items formatted
+ * in the LegendDataMapper. */
 export class LegendRenderer {
 	interactions: BoxPlotInteractions
 	textColor: string
