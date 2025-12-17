@@ -15,6 +15,7 @@ export default function setViolinRenderer(self) {
 		const isH = settings.orientation === 'horizontal'
 		const t1 = self.config.term
 		const t2 = self.config.term2
+		const t0 = self.config?.term0
 
 		//termsetting.js 'set_hiddenvalues()' adds uncomputable values from term.values to q.hiddenValues object. Since it will show up on the legend, delete that key-value pair from t2.q.hiddenValues object.
 		const termNum =
@@ -70,18 +71,24 @@ export default function setViolinRenderer(self) {
 			// append the svg object to the body of the page
 			chartDiv.select('.sjpp-violin-plot').remove()
 
+			//Fix for centering the chart title over the chart,
+			//not the entire div.
+			const chartWrapper = chartDiv.append('div').style('display', 'inline-block')
 			// render chart title
-			chartDiv
-				.append('div')
-				.attr('class', 'pp-chart-title')
-				.style('display', chart.chartId ? 'block' : 'none')
-				.style('text-align', 'center')
-				.style('font-size', '1.1em')
-				.style('margin-bottom', '20px')
-				.html(self.getChartTitle(chart.chartId))
+			if (chart.chartId) {
+				const totalCount = chart.plots.reduce((acc, plot) => acc + plot.plotValueCount, 0)
+				chartWrapper
+					.append('div')
+					.attr('class', 'pp-chart-title')
+					.style('display', 'block')
+					.style('text-align', 'center')
+					.style('font-size', '1.1em')
+					.style('margin-bottom', '5px')
+					.html(`${self.getChartTitle(chart.chartId)} (n=${totalCount})`)
+			}
 
 			// render chart data
-			const svgData = renderSvg(t1, plots, chartDiv, self, isH, settings)
+			const svgData = renderSvg(t1, plots, chartWrapper, self, isH, settings)
 			renderScale(t1, t2, settings, isH, svgData, self)
 			let y = 0
 			const thickness = self.settings.plotThickness || self.getAutoThickness()
