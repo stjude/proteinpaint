@@ -1,1 +1,2 @@
-
+Fixes:
+- attach menu div to sticky-positioned ancestor element, instead of body, to prevent confusing scroll behavior
