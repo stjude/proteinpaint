@@ -197,7 +197,7 @@ tape(
 		const result = chartsMapper.setSubtitleDimensions(mockConfig1, mockSettings, 175, 'test', 2, 95, 0)
 		const expected = { x: 95, y: 20, text: 'test (n=2)' }
 		test.equal(typeof result, 'object', `Should create a subtitle dimensions object for divide by term`)
-		test.deepEqual(result, expected, `Should calcualte subtitle dimensions correctly.`)
+		test.deepEqual(result, expected, `Should calculate subtitle dimensions correctly.`)
 
 		test.end()
 	}
