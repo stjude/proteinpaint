@@ -1,1 +1,2 @@
-
+Features:
+- GRIN2: Now displaying q-values in tooltips instead of scaled values

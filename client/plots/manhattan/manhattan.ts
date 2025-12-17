@@ -155,7 +155,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	// Check size of interactive data
 	let interactivePoints = data.plotData.points
 	if (data.plotData.points.length > settings.interactiveDotsCap) {
-		// Sort points by y value (-log10(q-value)) descending and take top N up to interactiveDotsCap
+		// Sort points by y value (q-value) descending and take top N up to interactiveDotsCap
 		interactivePoints = data.plotData.points.sort((a: any, b: any) => b.y - a.y).slice(0, settings.interactiveDotsCap)
 	}
 
@@ -233,7 +233,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		.attr('text-anchor', 'middle')
 		.attr('font-size', `${settings.fontSize + 4}px`)
 		.attr('fill', 'black')
-		.text('-log₁₀(q-value)')
+		.text(data.plotData.y_max >= 40 ? '-log₁₀(q-value) [scaled]' : '-log₁₀(q-value)')
 
 	// Add png image
 	svg
@@ -346,7 +346,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 						const [t1, t2] = table.addRow()
 						t1.text('Type')
 						t2.html(`<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`)
-						table.addRow('-log₁₀(q-value)', d.y.toFixed(3))
+						table.addRow('Q-value', d.q_value.toPrecision(3))
 						table.addRow('Subject count', d.nsubj)
 					}
 				} else {
