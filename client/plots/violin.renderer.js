@@ -15,7 +15,6 @@ export default function setViolinRenderer(self) {
 		const isH = settings.orientation === 'horizontal'
 		const t1 = self.config.term
 		const t2 = self.config.term2
-		const t0 = self.config?.term0
 
 		//termsetting.js 'set_hiddenvalues()' adds uncomputable values from term.values to q.hiddenValues object. Since it will show up on the legend, delete that key-value pair from t2.q.hiddenValues object.
 		const termNum =
