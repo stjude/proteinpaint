@@ -7,12 +7,14 @@ All notable changes to this project will be documented in this file.
 Features:
 - GRIN2: Using renderTable's buttons parameter for tooltip and top gene table
 - Added mutation count setting to geneVariant term
+- New unit tests for the expanded box plot view model code.
 
 Fixes:
 - GRIN2: Improved rust plotting logic to not filter out q-value = 0 values
 - GRIN2: Fixed top gene table sorting logic to keep genes if any lesion data type meets the significance threshold
 - increase the contrast of chart sandbox title and legend header text colors
 - supply genome and dslabel to topMutatedGenes request for OncoMatrix
+- The box plot tooltips show the correct descriptive stats for the individual plot. The descriptive stats for the entire chart is shown in the legend.
 
 
 ## 2.168.0

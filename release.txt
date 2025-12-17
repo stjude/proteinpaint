@@ -1,5 +1,1 @@
-Features
-- New unit tests for the expanded box plot view model code.
 
-Fixes
-- The box plot tooltips show the correct descriptive stats for the individual plot. The descriptive stats for the entire chart is shown in the legend.
