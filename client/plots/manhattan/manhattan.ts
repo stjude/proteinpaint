@@ -155,7 +155,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	// Check size of interactive data
 	let interactivePoints = data.plotData.points
 	if (data.plotData.points.length > settings.interactiveDotsCap) {
-		// Sort points by y value (q-value) descending and take top N up to interactiveDotsCap
+		// Sort points by y value (-log10(q-value)) descending and take top N up to interactiveDotsCap
 		interactivePoints = data.plotData.points.sort((a: any, b: any) => b.y - a.y).slice(0, settings.interactiveDotsCap)
 	}
 
@@ -529,6 +529,7 @@ export function createLollipopFromGene(geneSymbol: string, app: any) {
 }
 
 export async function createMatrixFromGenes(geneSymbols: string[], app: any): Promise<void> {
+	// TODO: Improve this by maybe adding sayInfo that has a little div that shows a message letting the user know the matrix is being created with only the first N genes if they selected too many
 	const MAX_GENES = 100
 	const genesToUse = geneSymbols.slice(0, MAX_GENES)
 
