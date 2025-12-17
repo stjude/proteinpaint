@@ -402,7 +402,6 @@ export async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi
 	// function to get non-cnv (e.g. snv/indel, fusion, etc.) groupset
 	// will compare mutant vs. wildtype
 	function getNonCnvGroupset(groupset, dtTerm, geneName) {
-		colorScale = getColors(2)
 		groupset.groups = []
 		// group 1: mutant
 		const grp1Name = `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Mutated (${dtTerm.origin})` : 'Mutated'}`
@@ -421,7 +420,7 @@ export async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi
 			name: grp1Name,
 			type: 'filter',
 			filter: grp1Filter,
-			color: rgb(colorScale(grp1Name)).formatHex()
+			color: '#e75480'
 		})
 		// group 2: wildtype
 		const grp2Name = `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Wildtype (${dtTerm.origin})` : 'Wildtype'}`
@@ -440,7 +439,7 @@ export async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi
 			name: grp2Name,
 			type: 'filter',
 			filter: grp2Filter,
-			color: rgb(colorScale(grp2Name)).formatHex()
+			color: mclass['WT'].color
 		})
 	}
 }
