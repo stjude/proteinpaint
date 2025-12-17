@@ -529,9 +529,12 @@ export function createLollipopFromGene(geneSymbol: string, app: any) {
 }
 
 export async function createMatrixFromGenes(geneSymbols: string[], app: any): Promise<void> {
+	const MAX_GENES = 100
+	const genesToUse = geneSymbols.slice(0, MAX_GENES)
+
 	try {
 		const termwrappers = await Promise.all(
-			geneSymbols.map(async (gene: string) => {
+			genesToUse.map(async (gene: string) => {
 				const term = {
 					type: 'geneVariant',
 					gene: gene,
