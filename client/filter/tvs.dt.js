@@ -5,7 +5,7 @@ import { renderVariantConfig } from '#dom'
 Base TVS handler for dt terms
 */
 
-export const handler = Object.assign({}, _handler, { fillMenu, term_name_gen })
+export const handler = Object.assign({}, _handler, { fillMenu, term_name_gen, get_pill_label })
 
 async function fillMenu(self, div, tvs) {
 	// render variant config
@@ -30,4 +30,20 @@ async function fillMenu(self, div, tvs) {
 function term_name_gen(d) {
 	const name = d.term.parentTerm && !d.excludeGeneName ? `${d.term.parentTerm.name} ${d.term.name}` : d.term.name
 	return name.length < 31 ? name : '<label title="' + name + '">' + name.substring(0, 28) + '...' + '</label>'
+}
+
+function get_pill_label(tvs) {
+	let txt
+	if (tvs.wt) {
+		// wildtype genotype
+		txt = 'Wildtype'
+	} else if (tvs.values.length == 1) {
+		// single mutation class
+		txt = tvs.values[0].label
+	} else {
+		// multiple mutation classes
+		if (tvs.term.dt == 1) txt = 'Mutated'
+		else txt = 'Altered'
+	}
+	return { txt }
 }
