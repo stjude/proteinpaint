@@ -202,6 +202,9 @@ export class ChartsDataMapper {
 	}
 
 	filterTickValues(ticks: number[]) {
+		if (!ticks || ticks.length == 0) {
+			throw new Error('No ticks provided to filterTickValues')
+		}
 		const signifcantLessThanOne = ticks.filter(t => t < 1).length / ticks.length
 		const range = ticks[ticks.length - 1] - ticks[0]
 		const spread = range > 1000 ? 4 : range > 100 ? 3 : 2
