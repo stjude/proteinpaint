@@ -790,13 +790,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 				}
 			})
 
-			// Add significance column to the beginning and Loop over columns to change -log10(Q-value) labels to just Q-value
-			const modifiedColumns = [
-				{ label: '', width: '20px' },
-				...result.topGeneTable.columns.map(col =>
-					col.label === '-log₁₀(q-value)' ? { ...col, label: 'Q-value' } : col
-				)
-			]
+			// Add significance column to the beginning
+			const modifiedColumns = [{ label: '', width: '20px' }, ...result.topGeneTable.columns]
 
 			// Cache the circles HTML
 			const lesionTypeCircleCache = new Map(
