@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.169.0
 
 Features:
 - GRIN2: Using renderTable's buttons parameter for tooltip and top gene table
