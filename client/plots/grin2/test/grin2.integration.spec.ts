@@ -17,7 +17,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape.only('grin2', function (test) {
+tape('grin2', function (test) {
 	test.timeoutAfter(10000)
 	runpp({
 		state: {
@@ -38,7 +38,6 @@ tape.only('grin2', function (test) {
 
 tape('grin2 fusion-only', function (test) {
 	test.timeoutAfter(10000)
-	let hasRun = false
 	runpp({
 		state: {
 			plots: [{ chartType: 'grin2' }]
@@ -51,33 +50,25 @@ tape('grin2 fusion-only', function (test) {
 	})
 
 	async function runFusionTest(g) {
-		if (hasRun) return
-		hasRun = true
-		try {
-			const { snvInput, cnvInput, fusionInput, svInput } = getGRIN2Checkboxes(g)
+		if (alreadyRun(g)) return
+		const { snvInput, cnvInput, fusionInput, svInput } = getGRIN2Checkboxes(g)
 
-			test.ok(snvInput && cnvInput && fusionInput && svInput, 'All lesion data type checkbox inputs are present')
+		// Toggle checkboxes to fusion only
+		snvInput.checked = false
+		snvInput.dispatchEvent(new Event('input', { bubbles: true }))
+		cnvInput.checked = false
+		cnvInput.dispatchEvent(new Event('input', { bubbles: true }))
+		fusionInput.checked = true
+		fusionInput.dispatchEvent(new Event('input', { bubbles: true }))
+		svInput.checked = false
+		svInput.dispatchEvent(new Event('input', { bubbles: true }))
 
-			// Toggle checkboxes to fusion only
-			snvInput.checked = false
-			snvInput.dispatchEvent(new Event('input', { bubbles: true }))
-			cnvInput.checked = false
-			cnvInput.dispatchEvent(new Event('input', { bubbles: true }))
-			fusionInput.checked = true
-			fusionInput.dispatchEvent(new Event('input', { bubbles: true }))
-			svInput.checked = false
-			svInput.dispatchEvent(new Event('input', { bubbles: true }))
+		// Run analysis
+		g.Inner.dom.runButton.node().dispatchEvent(new Event('click', { bubbles: true }))
 
-			// Run analysis
-			g.Inner.dom.runButton.node().dispatchEvent(new Event('click', { bubbles: true }))
-
-			// Validate results
-			await validateGRIN2(g, test)
-			test.end()
-		} catch (e) {
-			test.fail(e instanceof Error ? e.message : String(e))
-			test.end()
-		}
+		// Validate results
+		await validateGRIN2(g, test)
+		test.end()
 	}
 })
 
@@ -85,7 +76,6 @@ tape('grin2 fusion-only', function (test) {
 
 tape('grin2 cnv-only', function (test) {
 	test.timeoutAfter(10000)
-	let hasRun = false
 
 	runpp({
 		state: {
@@ -99,40 +89,30 @@ tape('grin2 cnv-only', function (test) {
 	})
 
 	async function runCNVTest(g) {
-		if (hasRun) return
-		hasRun = true
+		if (alreadyRun(g)) return
 
-		try {
-			delete g.Inner.app.opts.grin2.callbacks['postRender.test']
+		const { snvInput, cnvInput, fusionInput, svInput } = getGRIN2Checkboxes(g)
 
-			const { snvInput, cnvInput, fusionInput, svInput } = getGRIN2Checkboxes(g)
-			test.ok(snvInput && cnvInput && fusionInput && svInput, 'All lesion data type checkbox inputs are present')
+		// Toggle checkboxes to cnv only
+		snvInput.checked = false
+		snvInput.dispatchEvent(new Event('input', { bubbles: true }))
+		cnvInput.checked = true
+		cnvInput.dispatchEvent(new Event('input', { bubbles: true }))
+		fusionInput.checked = false
+		fusionInput.dispatchEvent(new Event('input', { bubbles: true }))
+		svInput.checked = false
+		svInput.dispatchEvent(new Event('input', { bubbles: true }))
 
-			// Toggle checkboxes to cnv only
-			snvInput.checked = false
-			snvInput.dispatchEvent(new Event('input', { bubbles: true }))
-			cnvInput.checked = true
-			cnvInput.dispatchEvent(new Event('input', { bubbles: true }))
-			fusionInput.checked = false
-			fusionInput.dispatchEvent(new Event('input', { bubbles: true }))
-			svInput.checked = false
-			svInput.dispatchEvent(new Event('input', { bubbles: true }))
+		// Run analysis
+		g.Inner.dom.runButton.node().dispatchEvent(new Event('click', { bubbles: true }))
 
-			// Run analysis
-			g.Inner.dom.runButton.node().dispatchEvent(new Event('click', { bubbles: true }))
-
-			await validateGRIN2(g, test)
-			test.end()
-		} catch (e) {
-			test.fail(e instanceof Error ? e.message : String(e))
-			test.end()
-		}
+		await validateGRIN2(g, test)
+		test.end()
 	}
 })
 
 tape('grin2 snvindel-only', function (test) {
 	test.timeoutAfter(10000)
-	let hasRun = false
 
 	runpp({
 		state: {
@@ -146,40 +126,30 @@ tape('grin2 snvindel-only', function (test) {
 	})
 
 	async function runSNVIndelTest(g) {
-		if (hasRun) return
-		hasRun = true
+		if (alreadyRun(g)) return
 
-		try {
-			delete g.Inner.app.opts.grin2.callbacks['postRender.test']
+		const { snvInput, cnvInput, fusionInput, svInput } = getGRIN2Checkboxes(g)
 
-			const { snvInput, cnvInput, fusionInput, svInput } = getGRIN2Checkboxes(g)
-			test.ok(snvInput && cnvInput && fusionInput && svInput, 'All lesion data type checkbox inputs are present')
+		// Toggle checkboxes to snvindel only
+		snvInput.checked = true
+		snvInput.dispatchEvent(new Event('input', { bubbles: true }))
+		cnvInput.checked = false
+		cnvInput.dispatchEvent(new Event('input', { bubbles: true }))
+		fusionInput.checked = false
+		fusionInput.dispatchEvent(new Event('input', { bubbles: true }))
+		svInput.checked = false
+		svInput.dispatchEvent(new Event('input', { bubbles: true }))
 
-			// Toggle checkboxes to snvindel only
-			snvInput.checked = true
-			snvInput.dispatchEvent(new Event('input', { bubbles: true }))
-			cnvInput.checked = false
-			cnvInput.dispatchEvent(new Event('input', { bubbles: true }))
-			fusionInput.checked = false
-			fusionInput.dispatchEvent(new Event('input', { bubbles: true }))
-			svInput.checked = false
-			svInput.dispatchEvent(new Event('input', { bubbles: true }))
+		// Run analysis
+		g.Inner.dom.runButton.node().dispatchEvent(new Event('click', { bubbles: true }))
 
-			// Run analysis
-			g.Inner.dom.runButton.node().dispatchEvent(new Event('click', { bubbles: true }))
-
-			await validateGRIN2(g, test)
-			test.end()
-		} catch (e) {
-			test.fail(e instanceof Error ? e.message : String(e))
-			test.end()
-		}
+		await validateGRIN2(g, test)
+		test.end()
 	}
 })
 
 tape('grin2 all-data-types-unchecked disables run button', function (test) {
 	test.timeoutAfter(10000)
-	let hasRun = false
 
 	runpp({
 		state: {
@@ -193,35 +163,26 @@ tape('grin2 all-data-types-unchecked disables run button', function (test) {
 	})
 
 	async function runDtUncheckedTest(g) {
-		if (hasRun) return
-		hasRun = true
+		if (alreadyRun(g)) return
 
-		try {
-			delete g.Inner.app.opts.grin2.callbacks['postRender.test']
+		const { snvInput, cnvInput, fusionInput, svInput } = getGRIN2Checkboxes(g)
 
-			const { snvInput, cnvInput, fusionInput, svInput } = getGRIN2Checkboxes(g)
-			test.ok(snvInput && cnvInput && fusionInput && svInput, 'All data type checkboxes exist')
+		// Uncheck all data types
+		snvInput.checked = false
+		snvInput.dispatchEvent(new Event('input', { bubbles: true }))
+		cnvInput.checked = false
+		cnvInput.dispatchEvent(new Event('input', { bubbles: true }))
+		fusionInput.checked = false
+		fusionInput.dispatchEvent(new Event('input', { bubbles: true }))
+		svInput.checked = false
+		svInput.dispatchEvent(new Event('input', { bubbles: true }))
 
-			// Uncheck all data types
-			snvInput.checked = false
-			snvInput.dispatchEvent(new Event('input', { bubbles: true }))
-			cnvInput.checked = false
-			cnvInput.dispatchEvent(new Event('input', { bubbles: true }))
-			fusionInput.checked = false
-			fusionInput.dispatchEvent(new Event('input', { bubbles: true }))
-			svInput.checked = false
-			svInput.dispatchEvent(new Event('input', { bubbles: true }))
+		// Check Run button is disabled
+		const runBtn = g.Inner.dom.runButton.node() as HTMLButtonElement
+		test.equal(runBtn.disabled, true, 'Run button is disabled when no data types are selected')
 
-			// Check Run button is disabled
-			const runBtn = g.Inner.dom.runButton.node() as HTMLButtonElement
-			test.equal(runBtn.disabled, true, 'Run button is disabled when no data types are selected')
-
-			g.Inner.app.destroy()
-			test.end()
-		} catch (e) {
-			test.fail(e instanceof Error ? e.message : String(e))
-			test.end()
-		}
+		g.Inner.app.destroy()
+		test.end()
 	}
 })
 
