@@ -319,6 +319,12 @@ class ViolinPlot extends PlotBase {
 				this.config.term.term.name + ` <span style="opacity:.6;font-size:1em;margin-left:10px;">Violin Plot</span>`
 			)
 
+		//Fix for rm'ing error message when plot re-renders
+		//Leave in main() so the message doesn't linger whilst
+		//the plot is rendering
+		const existingMsg = this.dom.banner.select('span')
+		if (!existingMsg.empty()) existingMsg.remove()
+
 		const args = this.validateArgs()
 		let data
 		try {
