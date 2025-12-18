@@ -266,7 +266,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			holder: left,
 			labeltext: dt2lesion[dtsnvindel].uilabel,
 			checked: isChecked,
-			testid: 'grin2-checkbox-snvindel',
+			testid: 'sjpp-grin2-checkbox-snvindel',
 			callback: (checked: boolean) => {
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonFromCheckboxes()
@@ -349,7 +349,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			holder: left,
 			labeltext: dt2lesion[dtcnv].uilabel,
 			checked: isChecked,
-			testid: 'grin2-checkbox-cnv',
+			testid: 'sjpp-grin2-checkbox-cnv',
 			callback: (checked: boolean) => {
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonFromCheckboxes()
@@ -433,7 +433,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			holder: left,
 			labeltext: dt2lesion[dtsv].uilabel,
 			checked: isChecked,
-			testid: 'grin2-checkbox-sv',
+			testid: 'sjpp-grin2-checkbox-sv',
 			callback: (checked: boolean) => {
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonFromCheckboxes()
@@ -476,7 +476,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// Run Button
 		this.dom.runButton = this.dom.controls
 			.append('button')
-			.attr('data-testid', 'grin2-run-button')
+			.attr('data-testid', 'sjpp-grin2-run-button')
 			.style('margin-left', '100px')
 			.text('Run GRIN2')
 			.on('click', () => {
@@ -824,7 +824,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				matrixButtonFormat: 'Matrix ({n} genes selected)',
 				maxHeight: '400px',
 				maxWidth: '100%',
-				dataTestId: 'grin2-top-genes-table',
+				dataTestId: 'sjpp-grin2-top-genes-table',
 				resize: 'both',
 				selectAll: false,
 				download: {
