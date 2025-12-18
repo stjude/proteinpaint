@@ -46,6 +46,40 @@ tape('grin2', function (test) {
 	}
 })
 
+tape('grin2 top-genes-table renders', function (test) {
+	test.timeoutAfter(10000)
+	runpp({
+		state: {
+			plots: [{ chartType: 'grin2' }]
+		},
+		grin2: {
+			callbacks: {
+				'postRender.test': runTopGenesTableTest
+			}
+		}
+	})
+
+	async function runTopGenesTableTest(g) {
+		try {
+			// Run analysis to generate results
+			g.Inner.dom.runButton.node().dispatchEvent(new Event('click', { bubbles: true }))
+
+			// Detect top genes table
+			const table = await detectOne({
+				elem: g.Inner.dom.div.node(),
+				selector: '[data-testid="sjpp-grin2-top-genes-table"]'
+			})
+			test.ok(table, 'Top genes table is rendered')
+
+			if (test['_ok']) g.Inner.app.destroy()
+		} catch (e) {
+			test.fail(e instanceof Error ? e.message : String(e))
+		} finally {
+			test.end()
+		}
+	}
+})
+
 tape('grin2 fusion-only', function (test) {
 	test.timeoutAfter(10000)
 	runpp({

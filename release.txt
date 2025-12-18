@@ -1,1 +1,2 @@
-
+Features:
+- GRIN2: Added additional integration test for top genes table
