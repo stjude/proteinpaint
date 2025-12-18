@@ -16,6 +16,7 @@ Fixes:
 - increase the contrast of chart sandbox title and legend header text colors
 - supply genome and dslabel to topMutatedGenes request for OncoMatrix
 - The box plot tooltips show the correct descriptive stats for the individual plot. The descriptive stats for the entire chart is shown in the legend.
+- attach menu div to sticky-positioned ancestor element, instead of body, to prevent confusing scroll behavior
 
 
 ## 2.168.0
