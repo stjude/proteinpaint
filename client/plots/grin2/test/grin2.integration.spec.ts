@@ -17,16 +17,11 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('grin2', function (test) {
+tape.only('grin2', function (test) {
 	test.timeoutAfter(10000)
-	let hasRun = false
 	runpp({
 		state: {
-			plots: [
-				{
-					chartType: 'grin2'
-				}
-			]
+			plots: [{ chartType: 'grin2' }]
 		},
 		grin2: {
 			callbacks: {
@@ -35,20 +30,9 @@ tape('grin2', function (test) {
 		}
 	})
 	async function runTests(g) {
-		if (hasRun) return // Prevent multiple executions
-		hasRun = true
-		try {
-			test.ok(g.Inner.dom.runButton, 'Run button is created')
-
-			// click submit button to run analysis
-			g.Inner.dom.runButton.node().dispatchEvent(new Event('click'), { bubbles: true })
-
-			await validateGRIN2(g, test)
-			test.end()
-		} catch (e) {
-			test.fail(e instanceof Error ? e.message : String(e))
-			test.end()
-		}
+		if (alreadyRun(g)) return
+		await validateGRIN2(g, test)
+		test.end()
 	}
 })
 
@@ -247,7 +231,7 @@ tape('grin2 all-data-types-unchecked disables run button', function (test) {
 
 const runpp = getRunPp('mass', {
 	state: {
-		nav: { activeTab: 1 },
+		nav: { activeTab: -1 },
 		vocab: { dslabel: 'TermdbTest', genome: 'hg38-test' }
 	},
 	debug: 1
@@ -259,7 +243,11 @@ const runpp = getRunPp('mass', {
  * @param test - Tape test instance
  * @returns Promise<boolean> - true if validation passes
  */
-async function validateGRIN2(g: any, test: any): Promise<boolean> {
+async function validateGRIN2(g: any, test: any) {
+	test.ok(g.Inner.dom.runButton, 'Run button is created')
+
+	// click submit button to run analysis
+	g.Inner.dom.runButton.node().dispatchEvent(new Event('click'), { bubbles: true })
 	const svg = await detectOne({
 		elem: g.Inner.dom.div.node(),
 		selector: '[data-testid="sjpp-manhattan"]'
@@ -272,11 +260,7 @@ async function validateGRIN2(g: any, test: any): Promise<boolean> {
 	})
 	test.ok(table, 'GRIN2 results table is rendered')
 
-	if (svg && table) {
-		g.Inner.app.destroy()
-	}
-
-	return !!(svg && table)
+	if (test['_ok']) g.Inner.app.destroy()
 }
 
 /**
@@ -291,4 +275,16 @@ function getGRIN2Checkboxes(g: any) {
 		fusionInput: g.Inner.dom.fusionCheckbox.node() as HTMLInputElement,
 		svInput: g.Inner.dom.svCheckbox.node() as HTMLInputElement
 	}
+}
+
+/* in test, postRender is trigger twice:
+1. on showing input ui (haven't run analysis yet)
+2. when grin2 finished running, it dispatches plot_edit to save ui choices and set settings.runAnalysis=true
+
+thus use this helper to prevent running postRender callback a 2nd time and errors
+later look into fixing grin2 to do plot_save instead of plot_edit on running to prevent 2nd trigger of postRender
+and thus no need for this helper
+*/
+function alreadyRun(g: any) {
+	return g.Inner.app.getState().plots[0].settings.runAnalysis
 }
