@@ -1,14 +1,12 @@
 import { getCompInit, copyMerge, type ComponentApi, type RxComponent } from '#rx'
 import { PlotBase, defaultUiLabels } from './PlotBase.ts'
-import { Menu } from '#dom/menu'
+import { Menu, Tabs } from '#dom'
 import { fillTermWrapper } from '#termsetting'
 import { recoverInit } from '../rx/src/recover'
-// import { select } from 'd3-selection'
 import { getDefaultViolinSettings } from './violin.js'
 import { getDefaultBarSettings } from './barchart.js'
 import { getDefaultBoxplotSettings } from './boxplot/defaults'
 import { getDefaultScatterSettings } from './scatter/scatter.js'
-import { Tabs } from '../dom/toggleButtons'
 import { isNumericTerm } from '#shared/terms.js'
 import { term0_term2_defaultQ } from './controls'
 import { importPlot } from './importPlot.js'
@@ -84,7 +82,7 @@ class SummaryPlot extends PlotBase implements RxComponent {
 				.style('vertical-align', 'sub'),
 			chartToggles: paneTitleDiv.append('div').style('display', 'inline-block').style('margin-left', '10px'),
 			localRecoverDiv: paneTitleDiv.append('div').style('display', 'inline-block'),
-			filterDiv: holder.header.append('div').style('display', 'inline-block')
+			filterDiv: holder.header.append('div').style('display', 'inline-block').style('zoom', 0.9)
 		}
 	}
 
