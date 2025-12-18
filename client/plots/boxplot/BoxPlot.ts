@@ -216,7 +216,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 		if (!this.state) return
 		const name2svg = this.getChartImages()
 		const dm = new DownloadMenu(name2svg, this.state.config.term.term.name)
-		dm.show(event.clientX, event.clientY)
+		dm.show(event.clientX, event.clientY, event.target)
 	}
 }
 

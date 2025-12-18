@@ -179,7 +179,7 @@ export class Scatter extends PlotBase implements RxComponent {
 		} else {
 			const name2svg = this.getChartImages()
 			const menu = new DownloadMenu(name2svg, 'scatter')
-			menu.show(event.clientX, event.clientY)
+			menu.show(event.clientX, event.clientY, event.target)
 		}
 	}
 

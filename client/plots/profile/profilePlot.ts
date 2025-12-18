@@ -589,7 +589,7 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 	async download(event) {
 		const chartImages = this.getChartImages()
 		const menu = new DownloadMenu(chartImages, this.getDownloadFilename())
-		menu.show(event.clientX, event.clientY)
+		menu.show(event.clientX, event.clientY, event.target)
 	}
 
 	preApiFreeze(api) {
