@@ -6,6 +6,7 @@ import { detectOne } from '../../../test/test.helpers.js'
  test sections
 
 grin2
+top genes table
 fusion only
 cnv only
 snvindel only
