@@ -1,1 +1,2 @@
-
+Features:
+- GRIN2: Add constant for -log10(q-value) cutoff in Manhattan plot

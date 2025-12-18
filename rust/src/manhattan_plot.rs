@@ -22,6 +22,7 @@ struct Input {
     plot_height: u64,
     device_pixel_ratio: f64,
     png_dot_radius: u64,
+    log_cutoff: f64,
 }
 
 // chromosome info
@@ -267,6 +268,7 @@ fn plot_grin2_manhattan(
     plot_height: u64,
     device_pixel_ratio: f64,
     png_dot_radius: u64,
+    log_cutoff: f64,
 ) -> Result<(String, InteractiveData), Box<dyn Error>> {
     // ------------------------------------------------
     // 1. Build cumulative chromosome map
@@ -310,9 +312,8 @@ fn plot_grin2_manhattan(
     let y_min = 0.0 - y_padding;
     let y_max = if !ys.is_empty() {
         let max_y = ys.iter().cloned().fold(f64::MIN, f64::max);
-        if max_y > 40.0 {
-            let target = 40.0;
-            let scale_factor_y = target / max_y;
+        if max_y > log_cutoff {
+            let scale_factor_y = log_cutoff / max_y;
 
             for y in ys.iter_mut() {
                 *y *= scale_factor_y;
@@ -495,6 +496,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let plot_height = &input_json.plot_height;
                 let device_pixel_ratio = &input_json.device_pixel_ratio;
                 let png_dot_radius = &input_json.png_dot_radius;
+                let log_cutoff = &input_json.log_cutoff;
                 if let Ok((base64_string, plot_data)) = plot_grin2_manhattan(
                     grin2_file.clone(),
                     chrom_size.clone(),
@@ -502,6 +504,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     plot_height.clone(),
                     device_pixel_ratio.clone(),
                     png_dot_radius.clone(),
+                    log_cutoff.clone(),
                 ) {
                     let output = Output {
                         png: base64_string,
