@@ -31,19 +31,10 @@ tape('Default ListSamples constructor', test => {
 		termfilter: { filter: 'test' }
 	}
 
-	const listSamples = new ListSamples(mockApp, mockState, 'test_test', mockPlot1 as any)
+	const listSamples = new ListSamples(mockApp, mockState.termfilter, mockConfig2, mockPlot1 as any)
 
 	test.equal(listSamples.app, mockApp, 'Should set app correctly')
 	test.equal(listSamples.plot, mockPlot1, 'Should set plot correctly')
-	test.deepEqual(listSamples.term, mockState.plots[0].term, 'Should set term correctly')
-	test.deepEqual(listSamples.dataOpts.terms, [mockState.plots[0].term], 'Should set dataOpts.terms correctly')
-	test.deepEqual(listSamples.dataOpts.filter.join, 'and', 'Should set dataOpts.filter.join to "and"')
-	test.deepEqual(
-		listSamples.dataOpts.filter.lst,
-		[mockState.termfilter.filter, listSamples.tvslst],
-		'Should set dataOpts.filter.lst correctly'
-	)
-	test.equal(listSamples.dataOpts.filter.in, true, 'Should set dataOpts.filter.in to true')
 
 	test.end()
 })
@@ -59,7 +50,7 @@ tape('ListSamples constructor throws for invalid plot', test => {
 	}
 	const message = `Should throw error if plotConfig is not found`
 	try {
-		new ListSamples(mockApp, mockState, 'test_test', mockPlot1 as any)
+		new ListSamples(mockApp, mockState.termfilter, mockConfig2, mockPlot1 as any)
 		test.pass(message)
 	} catch (e: any) {
 		test.fail(`${e}: ${message}`)
@@ -77,7 +68,7 @@ tape('ListSamples.getTvsLst() returns obj for categorical term and numeric overl
 		plots: [mockConfig1],
 		termfilter: { filter: 'test' }
 	}
-	const listSamples = new ListSamples(mockApp, mockState, 'test_test', mockPlot1 as any)
+	const listSamples = new ListSamples(mockApp, mockState.termfilter, mockConfig1, mockPlot1 as any)
 
 	const result = listSamples.getTvsLst(20, 100, true, mockState.plots[0].term, mockState.plots[0].term2)
 	const expected = {
