@@ -87,7 +87,7 @@ function burgerBtnInit(opts) {
 function helpBtnInit(opts) {
 	const infoDiv = opts.holder.style('margin', '10px')
 
-	icon_functions['help'](infoDiv, { handler: opts.callback, title: 'Documentation' })
+	icon_functions['help'](infoDiv, { handler: opts.callback, title: opts.title || 'Documentation' })
 
 	const self = {
 		plotTypes: [
@@ -118,7 +118,7 @@ function helpBtnInit(opts) {
 
 function downloadBtnInit(opts) {
 	const downloadDiv = opts.holder.style('margin-left', '10px')
-	icon_functions['download'](downloadDiv, { handler: opts.callback, title: opts.title })
+	icon_functions['download'](downloadDiv, { handler: opts.callback, title: opts.title || 'Download' })
 
 	const self = {
 		plotTypes: ['summary', 'boxplot', 'scatter', 'brainImaging'],
