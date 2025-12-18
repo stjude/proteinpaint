@@ -15,12 +15,13 @@ export class DownloadMenu {
 		this.filename = filename.replace(/\s/g, '_')
 	}
 
-	show(x, y) {
+	show(x, y, elem = null) {
 		this.menu.clear()
 		const menuDiv = this.menu.d.append('div')
 		menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
+			.attr('tabindex', 0)
 			.text('PDF Portrait')
 			.on('click', () => {
 				downloadSVGsAsPdf(this.chartImages, this.filename, 'portrait')
@@ -53,7 +54,7 @@ export class DownloadMenu {
 						downloadSingleSVG(chart.svg, chart.name.replace(/[^a-zA-Z0-9]/g, '_'), chart.svg.node(), chart.name)
 					this.menu.hide()
 				})
-		this.menu.show(x - 20, y - 10)
+		this.menu.show(x - 20, y - 10, true, true, true, elem)
 	}
 }
 

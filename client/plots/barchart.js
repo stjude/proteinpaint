@@ -1155,7 +1155,7 @@ function setInteractivity(self) {
 	self.download = function (event) {
 		const charts = self.getChartImages()
 		const dm = new DownloadMenu(charts, self.config.term.term.name)
-		dm.show(event.clientX, event.clientY)
+		dm.show(event.clientX, event.clientY, event.target)
 	}
 
 	/** Downloads all charts as a single svg image, including the legend for each barchart, needs review as it

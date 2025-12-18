@@ -21,7 +21,7 @@ export function setInteractivity(self) {
 		if (!self.state) return
 		const name2svg = self.getChartImages()
 		const dm = new DownloadMenu(name2svg, self.config.term.term.name)
-		dm.show(event.clientX, event.clientY)
+		dm.show(event.clientX, event.clientY, event.target)
 	}
 
 	self.displayLabelClickMenu = function (t1, t2, plot, event) {

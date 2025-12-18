@@ -1032,7 +1032,7 @@ function setInteractivity(self) {
 	self.download = function (event) {
 		const charts = self.getChartImages()
 		const menu = new DownloadMenu(charts, self.state.config.term.term.name)
-		menu.show(event.clientX, event.clientY)
+		menu.show(event.clientX, event.clientY, event.target)
 	}
 
 	self.getChartImages = function () {
