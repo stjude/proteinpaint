@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- GRIN2: Add constant for -log10(q-value) cutoff in Manhattan plot
+
+
 ## 2.169.0
 
 Features:
