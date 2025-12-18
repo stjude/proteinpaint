@@ -1,2 +1,2 @@
 Fixes:
-- GRIN2: Improved quadtree hover search. Now fully searches tree for co-occuring points
+- GRIN2: Improved quadtree hover search. Now fully searches tree for co-occurring points
