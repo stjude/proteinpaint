@@ -17,6 +17,7 @@ Fixes:
 - supply genome and dslabel to topMutatedGenes request for OncoMatrix
 - The box plot tooltips show the correct descriptive stats for the individual plot. The descriptive stats for the entire chart is shown in the legend.
 - attach menu div to sticky-positioned ancestor element, instead of body, to prevent confusing scroll behavior
+- GRIN2: Improved quadtree hover search. Now fully searches tree for co-occurring points
 
 
 ## 2.168.0
