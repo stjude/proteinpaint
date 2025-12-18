@@ -76,7 +76,7 @@ export default function (cohort, ds2clst, butt, folder, defaulthide, host) {
 
 	toprow
 		.append('input')
-		.attr('type', 'text')
+		.attr('type', 'search')
 		.attr('size', 10)
 		.attr('placeholder', 'Find gene')
 		.style('margin', '0px 20px 0px 5px')
