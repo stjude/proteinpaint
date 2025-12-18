@@ -21,9 +21,11 @@ export class BoxPlotInteractions {
 
 	/** Option to add a global filter from the box plot label menu. */
 	addFilter(plot: any) {
-		const config = this.app.getState()
-		const sampleList = new ListSamples(this.app, config, this.id, plot, false)
-		const filterUiRoot = getFilterItemByTag(config.termfilter.filter, 'filterUiRoot')
+		const state = this.app.getState()
+		const plotConfig = this.app.getState().plots.find((p: BoxPlotConfig) => p.id === this.id)
+		const config = structuredClone(plotConfig)
+		const sampleList = new ListSamples(this.app, state.termfilter, config, plot, false)
+		const filterUiRoot = getFilterItemByTag(state.termfilter.filter, 'filterUiRoot')
 		const filter = filterJoin([filterUiRoot, sampleList.tvslst])
 		filter.tag = 'filterUiRoot'
 		this.app.dispatch({
@@ -62,8 +64,10 @@ export class BoxPlotInteractions {
 
 	/** Option from box plot label to show the samples in a table within the tooltip. */
 	async listSamples(plot: any) {
-		const config = this.app.getState()
-		const sampleList = new ListSamples(this.app, config, this.id, plot)
+		const state = this.app.getState()
+		const plotConfig = this.app.getState().plots.find((p: BoxPlotConfig) => p.id === this.id)
+		const config = structuredClone(plotConfig)
+		const sampleList = new ListSamples(this.app, state.termfilter, config, plot)
 		const data = await sampleList.getData()
 		const rows = sampleList.setRows(data)
 		return rows
