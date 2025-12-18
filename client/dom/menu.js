@@ -279,10 +279,10 @@ export class Menu {
 				elem.focus() // shift focus back to the clicked elem that launched the menu, when shift-tabbing from the firt focusable child element
 				this.hide()
 			})
-		// .node()
-		// .focus(); console.log(270, clickableElems[0]);
 
-		setTimeout(() => (clickableElems.find(priorityFocusElem) || clickableElems[0]).focus(), renderWait)
+		if (elem?.type !== 'search') {
+			setTimeout(() => (clickableElems.find(priorityFocusElem) || clickableElems[0]).focus(), renderWait)
+		}
 	}
 
 	showunderoffset(dom) {
@@ -424,8 +424,10 @@ export class Menu {
 	}
 }
 
+// within the menu, the focus should go to what the user would likely use first,
+// instead of going by the layout order
 function priorityFocusElem(elem, i) {
-	return elem.tagName == 'INPUT' && (elem.type == 'search' || elem.type == 'text')
+	return elem.tagName == 'INPUT' && elem.type == 'search'
 }
 
 // find an element that has a matching computed CSS key-value

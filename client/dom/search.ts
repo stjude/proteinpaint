@@ -51,7 +51,7 @@ export class InputSearch {
 
 	constructor(opts: InputSearchOpts) {
 		this.holder = opts.holder
-		this.input = opts.holder.append('input')
+		this.input = opts.holder.append('input').attr('type', 'search')
 		this.tip = opts.tip || new Menu({ border: '', padding: '0px' })
 		this.style = opts.style || {}
 		this.size = opts.size || 20
