@@ -175,7 +175,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 
 	const searchbox = row
 		.append('input')
-		.attr('type', 'text')
+		.attr('type', 'search')
 		.attr('placeholder', placeholder)
 		.attr('aria-label', 'Gene symbol, position, or alias')
 		.property('disabled', arg.disableInput || false)
