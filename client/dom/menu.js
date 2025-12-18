@@ -304,6 +304,10 @@ export class Menu {
 		*/
 	}
 
+	// when the clicked element is nested under an element with `position: sticky`,
+	// the show*() positioning is correct but the menu will scroll with the document.body
+	// instead of remaining close to the clicked element. This function fixes that behavior,
+	// so that the menu does not scroll with the body.
 	stickyPosition(elem, _opts = {}) {
 		// getting computed style recursively is expensive, limit when a sticky parentDiv needs to be detected;
 		// in prod, a user click event is an isolated event, unlike in test environment with lots of simulated clicks
@@ -313,7 +317,7 @@ export class Menu {
 			urlpath.includes('testrun.html') ||
 			urlpath.includes('puppet.html')
 		)
-			return
+			return false
 		const parentDiv = getAncestorWithComputedStyle(elem, 'position', new Set(['sticky', 'fixed']))
 		// if there is no sticky ancestor, allow showunder() and showunderoffset() to work as usual
 		if (!parentDiv) return false
@@ -330,6 +334,8 @@ export class Menu {
 			.style('display', 'block')
 			.transition()
 			.style('opacity', 1)
+
+		this.setTabNavigation(elem)
 
 		return true
 	}
@@ -431,7 +437,7 @@ function getAncestorWithComputedStyle(elem, key, values) {
 	const style = window.getComputedStyle(elem)
 	if (values.has(style[key])) return elem
 	if (
-		elem.tagName != 'DIV' ||
+		elem.tagName == 'BODY' ||
 		elem.classList?.contains('sja_root_holder') ||
 		(elem.classList?.contains('sja_menu_div') && elem.parentNode === document.body)
 	)
