@@ -432,7 +432,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 			case 'weeks':
 				return (1 / numUnitInOneYear) * 52
 			case 'days':
-				return (1 / numUnitInOneYear) * 365
+				return (1 / numUnitInOneYear) * 365.25
 			default:
 				throw 'unknown time Unit for survival data'
 		}
