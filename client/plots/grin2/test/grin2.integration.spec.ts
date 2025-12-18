@@ -4,7 +4,7 @@ import { detectOne } from '../../../test/test.helpers.js'
 
 /**************
  test sections
-
+For each section we test if the svg plot and table are rendered
 grin2
 fusion only
 cnv only
