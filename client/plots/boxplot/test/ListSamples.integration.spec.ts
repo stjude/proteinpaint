@@ -49,9 +49,10 @@ tape('ListSamples.getData()', async test => {
 		}
 	}
 	const mockApp = getTestApp({ state: opts.state })
-	const listSamples = new ListSamples(mockApp, mockApp.getState(), 'test_test', mockPlot1 as any)
+	const listSamples = new ListSamples(mockApp, mockApp.getState().termfilter, mockConfig2, mockPlot1 as any)
 
 	const data = await listSamples.getData()
-	console.log(data)
+	test.ok(data, 'Should return data from getData()')
+
 	test.end()
 })
