@@ -3,7 +3,7 @@ import { getBoxPlotMockData } from './mockBoxPlotData'
 import { ViewModel } from '../viewModel/ViewModel'
 /*
 Tests:
-	- Default ViewModel()
+	- Default ViewModel constructor
 
 See unit tests for #dom/boxplot for rendering unit tests
 */
@@ -23,7 +23,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('Default ViewModel()', function (test) {
+tape('Default ViewModel constructor', function (test) {
 	test.timeoutAfter(100)
 
 	const { viewModel } = getViewModel()

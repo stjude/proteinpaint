@@ -5,9 +5,15 @@ import { getBoxPlotMockData } from './mockBoxPlotData'
 
 /*
 Tests:
-	- Default ListSamples() constructor
-	- ListSamples() throws for invalid plot
+	- Default ListSamples constructor
+	- ListSamples constructor throws for invalid plot
     - ListSamples.getTvsLst() returns obj for categorical term and numeric overlay
+	--- createTvsLstValues()
+	--- createTvsLstRanges()
+	--- createTvsTerm()
+	--- isContinuousOrBinned()
+	--- assignPlotRangeRanges()
+	--- setRows()
 */
 
 tape('\n', function (test) {
@@ -15,8 +21,8 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('Default ListSamples() constructor', test => {
-	test.plan(7)
+tape('Default ListSamples constructor', test => {
+	test.timeoutAfter(100)
 
 	const mockApp = {} as AppApi
 	const { mockConfig2, mockPlot1 } = getBoxPlotMockData()
@@ -42,7 +48,9 @@ tape('Default ListSamples() constructor', test => {
 	test.end()
 })
 
-tape('ListSamples() throws for invalid plot', test => {
+tape('ListSamples constructor throws for invalid plot', test => {
+	test.timeoutAfter(100)
+
 	const { mockConfig2, mockPlot1 } = getBoxPlotMockData()
 	const mockApp = {} as AppApi
 	const mockState: any = {
@@ -61,6 +69,8 @@ tape('ListSamples() throws for invalid plot', test => {
 })
 
 tape('ListSamples.getTvsLst() returns obj for categorical term and numeric overlay', test => {
+	test.timeoutAfter(100)
+
 	const { mockConfig1, mockPlot1 } = getBoxPlotMockData()
 	const mockApp = {} as AppApi
 	const mockState: any = {
