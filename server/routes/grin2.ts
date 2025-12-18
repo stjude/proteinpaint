@@ -7,9 +7,17 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { mayLog } from '#src/helpers.ts'
 import { get_samples } from '#src/termdb.sql.js'
 import { read_file, file_is_readable } from '#src/utils.js'
-import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dt2lesion, optionToDt, formatElapsedTime } from '#shared'
+import {
+	dtsnvindel,
+	dtcnv,
+	dtfusionrna,
+	dtsv,
+	dt2lesion,
+	optionToDt,
+	formatElapsedTime,
+	MANHATTAN_LOG_QVALUE_CUTOFF
+} from '#shared'
 import crypto from 'crypto'
-import { MANHATTAN_LOG_QVALUE_CUTOFF } from '../../client/plots/manhattan/manhattanTypes.ts'
 
 /**
  * General GRIN2 analysis route

@@ -1,7 +1,3 @@
-// Constants, types, and interfaces for Manhattan plots
-// This constant defines the log cutoff for q-values in Manhattan plots before scaling the y-axis.
-export const MANHATTAN_LOG_QVALUE_CUTOFF = 40
-
 /**
  * Represents a single data point in a Manhattan plot.
  * Each point corresponds to a gene.
