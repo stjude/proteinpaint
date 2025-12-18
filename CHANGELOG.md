@@ -8,6 +8,7 @@ Features:
 - GRIN2: Using renderTable's buttons parameter for tooltip and top gene table
 - Added mutation count setting to geneVariant term
 - New unit tests for the expanded box plot view model code.
+- GRIN2: Now displaying q-values in tooltips instead of scaled values. Limited the number of genes allowed for matrix to 100
 
 Fixes:
 - GRIN2: Improved rust plotting logic to not filter out q-value = 0 values

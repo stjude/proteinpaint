@@ -1,2 +1,1 @@
-Features:
-- GRIN2: Now displaying q-values in tooltips instead of scaled values. Limited the number of genes allowed for matrix to 100
+
