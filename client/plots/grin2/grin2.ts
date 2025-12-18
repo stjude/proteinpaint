@@ -2,7 +2,7 @@ import { getCompInit, copyMerge, type RxComponent } from '#rx'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { GRIN2Dom, GRIN2Opts, ShowGrin2ResultTableOpts } from './GRIN2Types'
 import { dofetch3 } from '#common/dofetch'
-import { getNormalRoot } from '#filter'
+import { getNormalRoot, filterJoin } from '#filter'
 import { Menu, renderTable, table2col, make_one_checkbox, sayerror } from '#dom'
 import { dtsnvindel, mclass, dtcnv, dtfusionrna, dtsv, proteinChangingMutations, dt2lesion } from '#shared/common.js'
 import { PlotBase } from '#plots/PlotBase.ts'
@@ -196,7 +196,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		return {
-			config
+			config,
+			filter: appState.termfilter.filter
 		}
 	}
 
@@ -675,12 +676,15 @@ class GRIN2 extends PlotBase implements RxComponent {
 			// Clear previous results
 			this.dom.div.selectAll('*').remove()
 
+			const globalFilter = getNormalRoot(this.state.filter)
+			const localFilter = this.state.config.filter ? getNormalRoot(this.state.config.filter) : null
+			const mergedFilter = filterJoin([globalFilter, localFilter].filter(f => f !== null))
 			// Get configuration and make request using the dtUsage we just read
 			const configValues = this.getConfigValues(dtUsage)
 			const requestData = {
 				genome: this.app.vocabApi.vocab.genome,
 				dslabel: this.app.vocabApi.vocab.dslabel,
-				filter: getNormalRoot(this.app.vocabApi.state.termfilter.filter),
+				filter: mergedFilter,
 				width: this.state.config.settings.manhattan?.plotWidth,
 				height: this.state.config.settings.manhattan?.plotHeight,
 				pngDotRadius: this.state.config.settings.manhattan?.pngDotRadius,
@@ -1070,7 +1074,7 @@ export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 			fusionOptions: queries?.svfusion?.dtLst?.includes(dtfusionrna) ? {} : undefined,
 			svOptions: queries?.svfusion?.dtLst?.includes(dtsv) ? {} : undefined
 		},
-		hidePlotFilter: true
+		hidePlotFilter: false
 	}
 
 	return copyMerge(config, opts)
