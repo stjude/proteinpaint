@@ -5,6 +5,7 @@ import { Menu, icons, axisstyle, table2col, sayerror } from '#dom'
 import { to_svg } from '#src/client'
 import { quadtree, type Quadtree } from 'd3-quadtree'
 import type { ManhattanPoint } from './manhattanTypes'
+import { MANHATTAN_LOG_QVALUE_CUTOFF } from '#shared'
 import { get$id } from '#termsetting'
 import { showGrin2ResultTable } from '../grin2/grin2.ts'
 import type { GeneDataItem } from '../grin2/GRIN2Types.ts'
@@ -238,7 +239,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		.attr('text-anchor', 'middle')
 		.attr('font-size', `${settings.fontSize + 4}px`)
 		.attr('fill', 'black')
-		.text(data.plotData.y_max >= 40 ? '-log₁₀(q-value) [capped]' : '-log₁₀(q-value)')
+		.text(data.plotData.y_max >= MANHATTAN_LOG_QVALUE_CUTOFF ? '-log₁₀(q-value) [capped]' : '-log₁₀(q-value)')
 
 	// Add png image
 	svg
