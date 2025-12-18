@@ -255,6 +255,8 @@ function handleColorClick(d, self, color) {
 		const group = groupset.groups.find(g => g.name == d.dataId)
 		if (!group) throw 'group not found'
 		group.color = color
+		term.q.type = 'custom-groupset'
+		term.q.customset = groupset
 	}
 	let binColored = null
 	if (self.bins[2].length > 0) {
