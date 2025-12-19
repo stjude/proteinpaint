@@ -62,7 +62,12 @@ export function setInteractivity(self) {
 				label: `List samples`,
 				testid: 'sjpp-violinLabOpt-list',
 				callback: async () => {
-					const [start, end] = [self.data.min, self.data.max * 2]
+					/** self.data.max * 2 appears to be a workaround for a
+					 * previous bug in the list samples logic. Since that logic
+					 * has been refined, this appears to be no longer necessary.
+					 * Commenting out for now, but leaving in place in case.*/
+					// const [start, end] = [self.data.min, self.data.max * 2]
+					const [start, end] = [self.data.min, self.data.max]
 					await self.callListSamples(event, t1, t2, plot, start, end)
 				}
 			})
