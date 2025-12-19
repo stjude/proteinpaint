@@ -22,7 +22,7 @@ struct Input {
     plot_height: u64,
     device_pixel_ratio: f64,
     png_dot_radius: u64,
-    log_cutoff: f64,
+    // log_cutoff: f64,
 }
 
 // chromosome info
@@ -219,12 +219,14 @@ fn grin2_file_read(
                 None => continue,
             };
 
-            let q_val: f64 = match q_val_str.parse() {
-                Ok(v) if v > 0.0 => v,
-                Ok(v) if v == 0.0 => 1e-300, // Treat exact 0 as ~1e-300 so we can still show q-values that are 0 and not filter them out
+            let original_q_val: f64 = match q_val_str.parse() {
+                Ok(v) if v >= 0.0 => v,
+                // Ok(v) if v == 0.0 => 1e-300, // Treat exact 0 as ~1e-300 so we can still show q-values that are 0 and not filter them out
                 _ => continue,
             };
-            let neg_log10_q = -q_val.log10();
+            // Use 1e-300 for log transform when q-value is exactly 0 (avoids -infinity)
+            let q_val_for_log = if original_q_val == 0.0 { 1e-300 } else { original_q_val };
+            let neg_log10_q = -q_val_for_log.log10();
             let n_subj_count: Option<i64> = n_idx_opt
                 .and_then(|i| fields.get(i))
                 .and_then(|s| s.parse::<i64>().ok());
@@ -235,7 +237,7 @@ fn grin2_file_read(
             colors_vec.push(color.clone());
 
             // only add significant points for interactivity
-            if q_val <= 0.05 {
+            if original_q_val <= 0.05 {
                 point_details.push(PointDetail {
                     x: x_pos,
                     y: neg_log10_q,
@@ -246,7 +248,7 @@ fn grin2_file_read(
                     start: gene_start,
                     end: gene_end,
                     pos: gene_start,
-                    q_value: q_val,
+                    q_value: original_q_val,
                     nsubj: n_subj_count,
                     pixel_x: 0.0,
                     pixel_y: 0.0,
@@ -268,7 +270,7 @@ fn plot_grin2_manhattan(
     plot_height: u64,
     device_pixel_ratio: f64,
     png_dot_radius: u64,
-    log_cutoff: f64,
+    // log_cutoff: f64,
 ) -> Result<(String, InteractiveData), Box<dyn Error>> {
     // ------------------------------------------------
     // 1. Build cumulative chromosome map
@@ -310,25 +312,27 @@ fn plot_grin2_manhattan(
     // ------------------------------------------------
     let y_padding = png_dot_radius as f64;
     let y_min = 0.0 - y_padding;
-    let y_max = if !ys.is_empty() {
-        let max_y = ys.iter().cloned().fold(f64::MIN, f64::max);
-        if max_y > log_cutoff {
-            let scale_factor_y = log_cutoff / max_y;
+    let max_y = ys.iter().cloned().fold(f64::MIN, f64::max);
+    let y_max = max_y + 0.35 + y_padding;
+    // let y_max = if !ys.is_empty() {
+    //     let max_y = ys.iter().cloned().fold(f64::MIN, f64::max);
+    //     if max_y > log_cutoff {
+    //         let scale_factor_y = log_cutoff / max_y;
 
-            for y in ys.iter_mut() {
-                *y *= scale_factor_y;
-            }
-            for p in point_details.iter_mut() {
-                p.y *= scale_factor_y;
-            }
-            let scaled_max = ys.iter().cloned().fold(f64::MIN, f64::max);
-            scaled_max + 0.35 + y_padding
-        } else {
-            max_y + 0.35 + y_padding
-        }
-    } else {
-        1.0 + y_padding
-    };
+    //         for y in ys.iter_mut() {
+    //             *y *= scale_factor_y;
+    //         }
+    //         for p in point_details.iter_mut() {
+    //             p.y *= scale_factor_y;
+    //         }
+    //         let scaled_max = ys.iter().cloned().fold(f64::MIN, f64::max);
+    //         scaled_max + 0.35 + y_padding
+    //     } else {
+    //         max_y + 0.35 + y_padding
+    //     }
+    // } else {
+    //     1.0 + y_padding
+    // };
 
     // ------------------------------------------------
     // 4. Setup high-DPR bitmap dimensions
@@ -496,7 +500,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let plot_height = &input_json.plot_height;
                 let device_pixel_ratio = &input_json.device_pixel_ratio;
                 let png_dot_radius = &input_json.png_dot_radius;
-                let log_cutoff = &input_json.log_cutoff;
+                // let log_cutoff = &input_json.log_cutoff;
                 if let Ok((base64_string, plot_data)) = plot_grin2_manhattan(
                     grin2_file.clone(),
                     chrom_size.clone(),
@@ -504,7 +508,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     plot_height.clone(),
                     device_pixel_ratio.clone(),
                     png_dot_radius.clone(),
-                    log_cutoff.clone(),
+                    // log_cutoff.clone(),
                 ) {
                     let output = Output {
                         png: base64_string,
