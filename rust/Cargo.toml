@@ -130,3 +130,7 @@ path="src/aichatbot.rs"
 [[bin]]
 name="manhattan_plot"
 path="src/manhattan_plot.rs"
+
+[[bin]]
+name="query_classification"
+path="src/query_classification.rs"
