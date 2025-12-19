@@ -52,7 +52,10 @@ tape('ListSamples.getData()', async test => {
 	const listSamples = new ListSamples(mockApp, mockApp.getState().termfilter, mockConfig2, mockPlot1 as any)
 
 	const data = await listSamples.getData()
-	test.ok(data, 'Should return data from getData()')
+	test.true(
+		typeof data == 'object' && data.lst && data.refs && data.samples,
+		'Should return correct sample data object from getData()'
+	)
 
 	test.end()
 })
