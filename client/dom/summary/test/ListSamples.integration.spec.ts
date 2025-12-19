@@ -1,7 +1,7 @@
 import type { AppApi } from '#rx'
 import tape from 'tape'
-import { ListSamples } from '../interactions/ListSamples'
-import { getBoxPlotMockData } from './mockBoxPlotData'
+import { ListSamples } from '../ListSamples'
+import { getBoxPlotMockData } from '#plots/boxplot/test/mockBoxPlotData.ts'
 import { vocabInit } from '#termdb/vocabulary'
 
 /*
