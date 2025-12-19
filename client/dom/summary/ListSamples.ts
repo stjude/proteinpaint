@@ -1,8 +1,8 @@
 import type { AppApi } from '#rx'
 import type { TermWrapper } from '#types'
-import type { AnnotatedSampleData } from '../../../types/termdb'
+import type { AnnotatedSampleData } from '../../types/termdb'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { getSamplelstFilter } from '../../../mass/groups.js'
+import { getSamplelstFilter } from '../../mass/groups.js'
 import { TermTypes } from '#shared/terms.js'
 import { filterJoin } from '#filter'
 
