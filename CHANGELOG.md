@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Features:
 - GRIN2: Add constant for -log10(q-value) cutoff in Manhattan plot
 - GRIN2: Added additional integration test for top genes table
+- GRIN2: Enable local filter
 
 
 ## 2.169.0
