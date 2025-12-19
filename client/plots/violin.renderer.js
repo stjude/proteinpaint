@@ -451,7 +451,7 @@ export default function setViolinRenderer(self) {
 				.append('line')
 				.attr('class', 'sjpp-median-line')
 				.style('stroke-width', s.medianThickness)
-				.style('stroke', 'red')
+				.style('stroke', s.medianColor)
 				.style('opacity', '0.5')
 				.attr('y1', isH ? -s.medianLength : median)
 				.attr('y2', isH ? s.medianLength : median)

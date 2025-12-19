@@ -249,6 +249,13 @@ class ViolinPlot extends PlotBase {
 				debounceInterval: 1000
 			},
 			{
+				label: 'Median color',
+				title: 'color of median',
+				type: 'color',
+				chartType: 'violin',
+				settingsKey: 'medianColor'
+			},
+			{
 				label: 'Median thickness',
 				title: 'Width of median',
 				type: 'number',
@@ -259,9 +266,8 @@ class ViolinPlot extends PlotBase {
 				min: 3,
 				debounceInterval: 100
 			},
-
 			{
-				label: 'Default color',
+				label: 'Default violin color',
 				type: 'color',
 				chartType: 'violin',
 				settingsKey: 'defaultColor'
@@ -416,6 +422,7 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		unit: 'abs', // abs: absolute scale, log: log scale
 		rowSpace: 10,
 		medianLength: 7,
+		medianColor: '#FF0000',
 		medianThickness: 3,
 		ticks: 15,
 		defaultColor: plotColor,
