@@ -196,6 +196,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		const parentConfig = appState.plots.find((p: BasePlotConfig) => p.id === this.parentId)
+		// Get combined term filter from global app state and plot-specific config
 		const termfilter = getCombinedTermFilter(appState, config.filter || parentConfig?.filter)
 		return {
 			config,
