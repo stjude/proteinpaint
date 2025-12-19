@@ -163,11 +163,11 @@ function setPlotData(
 	if (overlayTerm) {
 		const _key = overlayTerm?.term?.values?.[key]?.label || key
 		const plotLabel = `${_key}, n=${values.length}`
-		const overlayBins = numericBins(overlayTerm, data)
+		const overlayTwBins = numericBins(overlayTerm, data)
 		const plot = Object.assign(_plot, {
 			color: overlayTerm?.term?.values?.[key]?.color || null,
 			key: _key,
-			overlayBins: overlayBins.has(key) ? overlayBins.get(key) : null,
+			overlayTwBins: overlayTwBins.has(key) ? overlayTwBins.get(key) : null,
 			seriesId: key
 		})
 		plot.boxplot.label = plotLabel
@@ -340,6 +340,6 @@ export function parseValues(
 
 /** Return bins for filtering and list sample label menu options */
 export function numericBins(overlayTerm: any, data: any) {
-	const overlayBins = data.refs.byTermId[overlayTerm?.$id]?.bins ?? []
-	return new Map(overlayBins.map(bin => [bin.label, bin]))
+	const overlayTwBins = data.refs.byTermId[overlayTerm?.$id]?.bins ?? []
+	return new Map(overlayTwBins.map(bin => [bin.label, bin]))
 }
