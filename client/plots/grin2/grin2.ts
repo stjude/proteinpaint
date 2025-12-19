@@ -2,7 +2,7 @@ import { getCompInit, copyMerge, type RxComponent } from '#rx'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { GRIN2Dom, GRIN2Opts, ShowGrin2ResultTableOpts } from './GRIN2Types'
 import { dofetch3 } from '#common/dofetch'
-import { getCombinedTermFilter } from '#filter'
+import { getCombinedTermFilter, getNormalRoot } from '#filter'
 import { Menu, renderTable, table2col, make_one_checkbox, sayerror } from '#dom'
 import { dtsnvindel, mclass, dtcnv, dtfusionrna, dtsv, proteinChangingMutations, dt2lesion } from '#shared/common.js'
 import { PlotBase } from '#plots/PlotBase.ts'
@@ -684,8 +684,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 			const requestData = {
 				genome: this.app.vocabApi.vocab.genome,
 				dslabel: this.app.vocabApi.vocab.dslabel,
-				filter: this.state.termfilter.filter,
-				filter0: this.state.termfilter.filter0,
+				filter: getNormalRoot(this.state.termfilter.filter),
+				filter0: getNormalRoot(this.state.termfilter.filter0),
 				width: this.state.config.settings.manhattan?.plotWidth,
 				height: this.state.config.settings.manhattan?.plotHeight,
 				pngDotRadius: this.state.config.settings.manhattan?.pngDotRadius,
