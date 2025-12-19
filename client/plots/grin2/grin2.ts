@@ -685,7 +685,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				genome: this.app.vocabApi.vocab.genome,
 				dslabel: this.app.vocabApi.vocab.dslabel,
 				filter: getNormalRoot(this.state.termfilter.filter),
-				filter0: getNormalRoot(this.state.termfilter.filter0),
+				filter0: this.state.termfilter.filter0,
 				width: this.state.config.settings.manhattan?.plotWidth,
 				height: this.state.config.settings.manhattan?.plotHeight,
 				pngDotRadius: this.state.config.settings.manhattan?.pngDotRadius,
