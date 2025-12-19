@@ -82,8 +82,7 @@ class TVS {
 	getDtCnvType(term) {
 		// determine dtcnv type by whether cnv data is continuous or categorical
 		if (term.type != 'dtcnv') return
-		const termdbConfig = this.opts.vocabApi.termdbConfig || this.opts.vocabApi.parent_termdbConfig
-		const cnv = termdbConfig.queries?.cnv
+		const cnv = this.opts.vocabApi.termdbConfig.queries?.cnv
 		if (!cnv) throw 'cnv query is missing'
 		const keys = Object.keys(cnv)
 		const mode = keys.includes('cnvGainCutoff') || keys.includes('cnvLossCutoff') ? 'continuous' : 'categorical'

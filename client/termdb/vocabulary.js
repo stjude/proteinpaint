@@ -30,14 +30,6 @@ export function vocabInit(opts) {
 	} else if (vocab.terms) {
 		//const { FrontendVocab } = await import('./FrontendVocab')
 		const vocabApi = new FrontendVocab(opts)
-		if (vocab.parent_termdbConfig) {
-			// parent termdbConfig is provided to track termdbConfig
-			// from parent dataset (e.g. geneVariant term generates
-			// a frontend vocab of dt terms, but this frontend vocab
-			// still needs to track termdbConfig properties from the
-			// parent dataset, see setVocabApi() in client/filter/tvs.dt.js)
-			vocabApi.parent_termdbConfig = vocab.parent_termdbConfig
-		}
 		return vocabApi
 	} else {
 		throw `unable to initialize vocabApi`
