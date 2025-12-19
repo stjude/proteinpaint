@@ -63,11 +63,13 @@ export class BoxPlotInteractions {
 	}
 
 	/** Option from box plot label to show the samples in a table within the tooltip. */
-	async listSamples(plot: any) {
+	async listSamples(plot: any, domain: [number, number]) {
 		const state = this.app.getState()
 		const plotConfig = this.app.getState().plots.find((p: BoxPlotConfig) => p.id === this.id)
 		const config = structuredClone(plotConfig)
-		const sampleList = new ListSamples(this.app, state.termfilter, config, plot)
+		/** Use the domain for the entire chart, not just
+		 * the individual plot's limited range. */
+		const sampleList = new ListSamples(this.app, state.termfilter, config, plot, false, domain[0], domain[1])
 		const data = await sampleList.getData()
 		const rows = sampleList.setRows(data)
 		return rows
