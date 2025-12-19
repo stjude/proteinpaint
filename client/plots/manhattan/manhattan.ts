@@ -5,7 +5,7 @@ import { Menu, icons, axisstyle, table2col, sayerror } from '#dom'
 import { to_svg } from '#src/client'
 import { quadtree, type Quadtree } from 'd3-quadtree'
 import type { ManhattanPoint } from './manhattanTypes'
-import { MANHATTAN_LOG_QVALUE_CUTOFF } from '#shared'
+// import { MANHATTAN_LOG_QVALUE_CUTOFF } from '#shared'
 import { get$id } from '#termsetting'
 import { showGrin2ResultTable } from '../grin2/grin2.ts'
 import type { GeneDataItem } from '../grin2/GRIN2Types.ts'
@@ -137,6 +137,7 @@ export function updateSelectionTracking(
  *   @param {number} [settings.legendFontSize=12] - Font size for legend text
  *   @param {number} [settings.interactiveDotRadius=2] - Radius of interactive dots
  *   @param {number} [settings.xAxisLabelPad=20] - Amount of padding we give for x-axis title padding
+ *   @param {number} [settings.xAxisTickPad=10] - Amount of padding we give for x-axis tick labels
  *   @param {number} [settings.interactiveDotStrokeWidth=1] - Stroke width for interactive dots
  *   @param {string} [settings.axisColor='#545454'] - Color for y-axis
  *   @param {boolean} [settings.showYAxisLine=true] - Whether to show y-axis line
@@ -157,6 +158,9 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	settings = {
 		...settings
 	}
+
+	console.log('Manhattan plot settings:', settings)
+	console.log('Manhattan plot data:', data)
 
 	// Check size of interactive data
 	let interactivePoints = data.plotData.points
@@ -239,7 +243,8 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		.attr('text-anchor', 'middle')
 		.attr('font-size', `${settings.fontSize + 4}px`)
 		.attr('fill', 'black')
-		.text(data.plotData.y_max >= MANHATTAN_LOG_QVALUE_CUTOFF ? '-log₁₀(q-value) [capped]' : '-log₁₀(q-value)')
+		.text('-log₁₀(q-value)')
+	// .text(data.plotData.y_max >= MANHATTAN_LOG_QVALUE_CUTOFF ? '-log₁₀(q-value) [capped]' : '-log₁₀(q-value)')
 
 	// Add png image
 	svg
@@ -402,7 +407,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 	// Add chromosome labels
 	if (data.plotData.chrom_data) {
-		const chromLabelY = settings.plotHeight + 2 * settings.pngDotRadius + settings.yAxisY
+		const chromLabelY = settings.plotHeight + 2 * settings.pngDotRadius + settings.yAxisY + settings.xAxisTickPad
 
 		Object.entries(data.plotData.chrom_data).forEach(([chrom, chromData]: [string, any]) => {
 			const chromLabel = chrom.replace('chr', '')
