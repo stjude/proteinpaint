@@ -78,7 +78,7 @@ export function getBoxPlotMockData() {
 		descrStats: mockDescrStats1,
 		x: 278,
 		y: 155,
-		overlayBins: null
+		overlayTwBins: null
 	}
 
 	const mockPlot2 = {
@@ -100,7 +100,7 @@ export function getBoxPlotMockData() {
 		descrStats: mockDescrStats2,
 		x: 278,
 		y: 155,
-		overlayBins: null
+		overlayTwBins: null
 	}
 
 	//Mock data for mockConfig2
