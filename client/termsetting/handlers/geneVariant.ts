@@ -2,8 +2,9 @@ import { getPillNameDefault } from '../utils.ts'
 import type { RawGvTerm, VocabApi } from '#types'
 import type { PillData } from '../types'
 import { make_radios, renderTable } from '#dom'
-import { dtTerms, getColors, dtcnv, mclass } from '#shared/common.js'
+import { getColors, dtcnv, mclass } from '#shared/common.js'
 import { filterInit, filterPromptInit, getNormalRoot, excludeFilterByTag } from '#filter/filter'
+import { getDtValues } from '#filter/tvs.dt'
 import { rgb } from 'd3-color'
 import { getWrappedTvslst } from '#filter/filter'
 import type { TermSetting } from '../TermSetting.ts'
@@ -238,6 +239,7 @@ async function makeGroupUI(self: TermSetting, div) {
 				terms: self.term.childTerms,
 				parent_termdbConfig: self.vocabApi.termdbConfig
 			},
+			vocabApi: self.vocabApi,
 			//termdbConfig: self.vocabApi.termdbConfig,
 			callback: f => {
 				if (!f || f.lst.length == 0) {
@@ -278,26 +280,26 @@ function addNewGroup(filter, groups, name?: string) {
 export async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 	if (!term.childTerms?.length) throw 'term.childTerms[] is missing'
 	// build predefined groupsets based on child dt terms
-	term.groupsetting = {
-		disabled: false,
-		lst: term.childTerms.map(dtTerm => {
-			const groupset: any = { name: dtTerm.name, dt: dtTerm.dt }
-			if (dtTerm.origin) groupset.origin = dtTerm.origin
-			if (dtTerm.dt == dtcnv) getCnvGroupset(groupset, dtTerm, term.name, vocabApi)
-			else getNonCnvGroupset(groupset, dtTerm, term.name)
-			return groupset
-		})
+	term.groupsetting = { disabled: false }
+	term.groupsetting.lst = []
+	for (const dtTerm of term.childTerms) {
+		const values = await getDtValues(dtTerm, vocabApi)
+		const groupset: any = { name: dtTerm.name, dt: dtTerm.dt }
+		if (dtTerm.origin) groupset.origin = dtTerm.origin
+		if (dtTerm.dt == dtcnv) getCnvGroupset(groupset, dtTerm, term.name, vocabApi, values)
+		else getNonCnvGroupset(groupset, dtTerm, term.name, values)
+		term.groupsetting.lst.push(groupset)
 	}
 
 	// function to get cnv groupset
 	// will route to appropriate function depending on mode of cnv data
-	function getCnvGroupset(groupset, dtTerm, geneName, vocabApi) {
+	function getCnvGroupset(groupset, dtTerm, geneName, vocabApi, values) {
 		const cnv = vocabApi.termdbConfig.queries?.cnv
 		if (!cnv) throw 'cnv query is missing'
 		const keys = Object.keys(cnv)
 		const isContinuous = keys.includes('cnvGainCutoff') || keys.includes('cnvLossCutoff')
 		if (isContinuous) getContCnvGroupset(groupset, dtTerm, geneName, cnv)
-		else getCatCnvGroupset(groupset, dtTerm, geneName)
+		else getCatCnvGroupset(groupset, dtTerm, geneName, values)
 	}
 
 	// function to get cnv groupset for continuous cnv data
@@ -377,31 +379,29 @@ export async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi
 
 	// function to get cnv groupset for categorical cnv data
 	// will compare cnv categories present in the data
-	function getCatCnvGroupset(groupset, dtTerm, geneName) {
+	function getCatCnvGroupset(groupset, dtTerm, geneName, values) {
 		groupset.groups = []
-		for (const key of Object.keys(dtTerm.values)) {
-			const label = dtTerm.values[key].label
-			const value = { key, label, value: key }
+		for (const v of values) {
 			const filter = getWrappedTvslst([
 				{
 					type: 'tvs',
 					tvs: {
 						term: dtTerm,
-						values: [value],
+						values: [v],
 						mcount: 'any',
 						excludeGeneName: true
 					}
 				}
 			])
-			const name = `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `${label} (${dtTerm.origin})` : label}`
-			const color = mclass[key].color
+			const name = `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `${v.label} (${dtTerm.origin})` : v.label}`
+			const color = mclass[v.key].color
 			groupset.groups.push({ name, type: 'filter', filter, color })
 		}
 	}
 
 	// function to get non-cnv (e.g. snv/indel, fusion, etc.) groupset
 	// will compare mutant vs. wildtype
-	function getNonCnvGroupset(groupset, dtTerm, geneName) {
+	function getNonCnvGroupset(groupset, dtTerm, geneName, values) {
 		groupset.groups = []
 		// group 1: mutant
 		const grp1Name = `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Mutated (${dtTerm.origin})` : 'Mutated'}`
@@ -410,7 +410,7 @@ export async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi
 				type: 'tvs',
 				tvs: {
 					term: dtTerm,
-					values: Object.entries(dtTerm.values).map(([k, v]: any[]) => ({ key: k, label: v.label, value: k })),
+					values,
 					mcount: 'any',
 					excludeGeneName: true
 				}
@@ -448,62 +448,4 @@ function clearGroupset(self) {
 	self.q.type = 'values'
 	delete self.q.predefined_groupset_idx
 	delete self.q.customset
-}
-
-// function to get child dt terms
-// filterClasses is a boolean for whether to filter mutation classes
-// filtering requires a getCategories() request, which can be expensive,
-// so will use this boolean to toggle the request
-export async function getChildTerms(term, vocabApi: VocabApi, filterClasses = true) {
-	if (!vocabApi.termdbConfig?.queries) throw 'termdbConfig.queries is missing'
-	const termdbmclass = vocabApi.termdbConfig.mclass // custom mclass labels from dataset
-	// fill child terms with dt terms present in dataset
-	term.childTerms = []
-	for (const _t of dtTerms) {
-		const t = structuredClone(_t)
-		if (!Object.keys(vocabApi.termdbConfig.queries).includes(t.query)) continue // dt is not in dataset
-		const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
-		if (byOrigin) {
-			// dt has origins in dataset
-			if (!t.origin) continue // dt term does not have origin, so skip
-			if (!Object.keys(byOrigin).includes(t.origin)) throw 'unexpected origin of dt term'
-		} else {
-			// dt does not have origins in dataset
-			if (t.origin) continue // dt term has origin, so skip
-		}
-		// add custom mclass labels from dataset
-		for (const k of Object.keys(t.values)) {
-			const v = t.values[k]
-			if (termdbmclass && Object.keys(termdbmclass).includes(k)) v.label = termdbmclass[k].label
-		}
-		term.childTerms.push(t)
-	}
-	if (filterClasses) {
-		// filter mutation classes of dt terms for those present in data
-		if (!term.childTerms?.length) throw 'term.childTerms[] is empty'
-		const filter = vocabApi.state?.termfilter?.filter
-		const filter0 = vocabApi.state?.termfilter?.filter0
-		const body: any = {}
-		if (filter0) {
-			// TODO: currently adding filter0 to body{}, but should
-			// refactor the input of getCategories() to be a single opts{}
-			// object, which can include .term, .filter, .filter0, and
-			// any other properties
-			body.filter0 = filter0
-		}
-		// passing term to getCategories() will get categories across all genes in gene set
-		const categories = await vocabApi.getCategories(term, filter, body)
-		for (const t of term.childTerms) {
-			const data = categories.lst.find(x => x.dt == t.dt)
-			if (!data) continue
-			const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
-			const classes = byOrigin ? data.classes.byOrigin[t.origin] : data.classes
-			// filter for only those mutation classes that are in the dataset
-			const values = Object.fromEntries(Object.entries(t.values).filter(([k, _v]) => Object.keys(classes).includes(k)))
-			t.values = values
-			t.parentTerm = structuredClone(term)
-			delete t.parentTerm.childTerms // remove any nested child terms
-			delete t.parentTerm.groupsetting // remove nested term groupsetting
-		}
-	}
 }
