@@ -7,7 +7,7 @@ import { getBoxPlotMockData } from './mockBoxPlotData'
 Tests:
 	- Default ListSamples constructor
 	- ListSamples constructor throws for invalid plot
-    - ListSamples.getTvsLst() returns obj for categorical term and numeric overlay
+    - ListSamples.getTvsLst() in constructor returns obj for categorical term and numeric overlay
 	--- createTvsLstValues()
 	--- createTvsLstRanges()
 	--- createTvsTerm()
@@ -59,7 +59,7 @@ tape('ListSamples constructor throws for invalid plot', test => {
 	test.end()
 })
 
-tape('ListSamples.getTvsLst() returns obj for categorical term and numeric overlay', test => {
+tape('ListSamples.getTvsLst() in constructor returns obj for categorical term and numeric overlay', test => {
 	test.timeoutAfter(100)
 
 	const { mockConfig1, mockPlot1 } = getBoxPlotMockData()
@@ -70,7 +70,6 @@ tape('ListSamples.getTvsLst() returns obj for categorical term and numeric overl
 	}
 	const listSamples = new ListSamples(mockApp, mockState.termfilter, mockConfig1, mockPlot1 as any)
 
-	const result = listSamples.getTvsLst(20, 100, true, mockState.plots[0].term, mockState.plots[0].term2)
 	const expected = {
 		type: 'tvslst',
 		in: true,
@@ -131,8 +130,7 @@ tape('ListSamples.getTvsLst() returns obj for categorical term and numeric overl
 			}
 		]
 	}
-
-	test.deepEqual(result, expected, `Should return expected tvslst object`)
+	test.deepEqual(listSamples.tvslst, expected, `Should return expected tvslst object`)
 
 	test.end()
 })
