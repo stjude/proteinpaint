@@ -9,8 +9,7 @@ export const handler = Object.assign({}, _handler, { type: 'dtcnv', fillMenu, ge
 
 function fillMenu(self, div, tvs) {
 	// get cnv cutoff values
-	const termdbConfig = self.opts.vocabApi.termdbConfig || self.opts.vocabApi.parent_termdbConfig
-	const dscnv = termdbConfig.queries?.cnv
+	const dscnv = self.opts.vocabApi.termdbConfig.queries?.cnv
 	if (!dscnv) throw 'cnv query is missing'
 	const cnvDefault = dscnv.cnvCutoffsByGene?.[tvs.term.parentTerm.name] || {
 		cnvMaxLength: dscnv.cnvMaxLength,
