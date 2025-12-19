@@ -16,7 +16,8 @@ import type {
 import { TwBase, type TwOpts } from './TwBase.ts'
 import { copyMerge } from '#rx'
 import { set_hiddenvalues } from '#termsetting'
-import { getChildTerms, getPredefinedGroupsets } from '../termsetting/handlers/geneVariant'
+import { getPredefinedGroupsets } from '../termsetting/handlers/geneVariant'
+import { getChildTerms, addParentTerm } from '../termdb/handlers/geneVariant'
 
 export class GvBase extends TwBase {
 	// type, isAtomic, $id are set in ancestor base classes
@@ -77,7 +78,10 @@ export class GvBase extends TwBase {
 		if (!tw.term.groupsetting) tw.term.groupsetting = { disabled: false }
 
 		// fill child dt terms
-		if (!tw.term.childTerms) await getChildTerms(tw.term, opts.vocabApi)
+		if (!tw.term.childTerms) getChildTerms(tw.term, opts.vocabApi)
+
+		// add geneVariant term to each child dt term
+		addParentTerm(tw.term)
 
 		{
 			// apply optional ds-level configs for this specific term

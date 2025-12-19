@@ -1323,9 +1323,7 @@ const dtTerms_temp = [
 		isleaf: true,
 		type: 'dtsnvindel',
 		dt: dtsnvindel,
-		values: Object.fromEntries(
-			mutationClasses.filter(key => key != 'Blank' && key != 'WT').map(key => [key, { label: mclass[key].label }])
-		)
+		values: {}
 	},
 	{
 		id: 'cnv',
@@ -1335,7 +1333,7 @@ const dtTerms_temp = [
 		isleaf: true,
 		type: 'dtcnv',
 		dt: dtcnv,
-		values: Object.fromEntries(CNVClasses.map(key => [key, { label: mclass[key].label }]))
+		values: {}
 	},
 	{
 		id: 'fusion',
@@ -1345,7 +1343,7 @@ const dtTerms_temp = [
 		isleaf: true,
 		type: 'dtfusion',
 		dt: dtfusionrna,
-		values: { [mclassfusionrna]: { label: mclass[mclassfusionrna].label } }
+		values: {}
 	},
 	{
 		id: 'sv',
@@ -1355,7 +1353,7 @@ const dtTerms_temp = [
 		isleaf: true,
 		type: 'dtsv',
 		dt: dtsv,
-		values: { [mclasssv]: { label: mclass[mclasssv].label } }
+		values: {}
 	}
 ]
 // add origin annotations to dt terms

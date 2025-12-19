@@ -1,5 +1,6 @@
 import { Menu, make_radios, addGeneSearchbox, GeneSetEditUI, table2col } from '#dom'
-import { getChildTerms } from '../../termsetting/handlers/geneVariant'
+import type { VocabApi } from '#types'
+import { dtTerms } from '#shared/common.js'
 
 export class SearchHandler {
 	opts: any
@@ -29,7 +30,7 @@ export class SearchHandler {
 		if (opts.msg) this.dom.msgDiv.style('display', 'block').text(opts.msg)
 
 		// get child dt terms
-		await getChildTerms(this.term, this.opts.app.vocabApi, false)
+		getChildTerms(this.term, this.opts.app.vocabApi)
 
 		{
 			const table = table2col({ holder: this.dom.typeSettingDiv, margin: '0px 0px 15px 0px' })
@@ -161,11 +162,43 @@ export class SearchHandler {
 
 	async runCallback() {
 		this.dom.msgDiv.style('display', 'block').text('LOADING ...')
-		// get child dt terms again now that a gene/geneset has
-		// been selected, mutation classes will be filtered
-		// for those present in the data for that gene/geneset
-		await getChildTerms(this.term, this.opts.app.vocabApi)
+		// add parent geneVariant term to each child term now
+		// that gene(s) have been selected
+		addParentTerm(this.term)
 		this.callback({ term: this.term, q: this.q })
 		this.dom.msgDiv.style('display', 'none')
+	}
+}
+
+// function to get child dt terms that are present in dataset
+export function getChildTerms(term, vocabApi: VocabApi) {
+	if (!vocabApi.termdbConfig?.queries) throw 'termdbConfig.queries is missing'
+	term.childTerms = []
+	for (const _t of dtTerms) {
+		const t = structuredClone(_t)
+		if (!Object.keys(vocabApi.termdbConfig.queries).includes(t.query)) continue // dt is not in dataset
+		const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
+		if (byOrigin) {
+			// dt has origins in dataset
+			if (!t.origin) continue // dt term does not have origin, so skip
+			if (!Object.keys(byOrigin).includes(t.origin)) throw 'unexpected origin of dt term'
+		} else {
+			// dt does not have origins in dataset
+			if (t.origin) continue // dt term has origin, so skip
+		}
+		term.childTerms.push(t)
+	}
+}
+
+// add parent geneVariant term to each child dt term
+// note: cannot be done within getChildTerms() because
+// getChildTerms() is called by init() before any genes
+// have been selected
+export function addParentTerm(term) {
+	if (!term.childTerms?.length) throw 'term.childTerms[] is missing'
+	for (const t of term.childTerms) {
+		t.parentTerm = structuredClone(term)
+		delete t.parentTerm.childTerms // remove any nested child terms
+		delete t.parentTerm.groupsetting // remove nested term groupsetting
 	}
 }
