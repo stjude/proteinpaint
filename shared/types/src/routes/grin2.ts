@@ -35,9 +35,6 @@ export type GRIN2Request = {
 	/** Threshold for q-values to be included as interactive dots */
 	qValueThreshold?: number
 
-	/** Log cutoff for Manhattan plot rendering before we scale the y-axis (default: 40). This is not user defined but rather a constant defined in #shared/manhattan.js Sending it	with request for consistency */
-	logCutoff?: number
-
 	/** Filter from existing PP infrastructure */
 	filter?: any // Filter object passed to get_samples(filter, ds)
 
