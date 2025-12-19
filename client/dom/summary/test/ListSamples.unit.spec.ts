@@ -8,6 +8,7 @@ Tests:
 	- Default ListSamples constructor
 	- ListSamples constructor throws for invalid plot
     - ListSamples.getTvsLst() in constructor returns obj for categorical term and numeric overlay
+	------ Need .getTvsLst() gene term
 	--- createTvsLstValues()
 	--- createTvsLstRanges()
 	--- createTvsTerm()
