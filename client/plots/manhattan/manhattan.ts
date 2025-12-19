@@ -137,7 +137,7 @@ export function updateSelectionTracking(
  *   @param {number} [settings.legendFontSize=12] - Font size for legend text
  *   @param {number} [settings.interactiveDotRadius=2] - Radius of interactive dots
  *   @param {number} [settings.xAxisLabelPad=20] - Amount of padding we give for x-axis title padding
- *   @param {number} [settings.xAxisTickPad=10] - Amount of padding we give for x-axis tick labels
+ *   @param {number} [settings.xAxisTickPad=12] - Amount of padding we give for x-axis tick labels
  *   @param {number} [settings.interactiveDotStrokeWidth=1] - Stroke width for interactive dots
  *   @param {string} [settings.axisColor='#545454'] - Color for y-axis
  *   @param {boolean} [settings.showYAxisLine=true] - Whether to show y-axis line
