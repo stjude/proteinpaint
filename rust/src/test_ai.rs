@@ -86,41 +86,38 @@ mod tests {
                             let embedding_model = ollama_client.embedding_model(ollama_embedding_model_name);
                             let comp_model = ollama_client.completion_model(ollama_comp_model_name);
                             for chart in ai_json.charts.clone() {
-                                match chart {
-                                    super::super::Charts::Summary(testdata) => {
-                                        for ques_ans in testdata.TestData {
-                                            let user_input = ques_ans.question;
-                                            let llm_output = super::super::run_pipeline(
-                                                &user_input,
-                                                comp_model.clone(),
-                                                embedding_model.clone(),
-                                                llm_backend_type.clone(),
-                                                temperature,
-                                                max_new_tokens,
-                                                top_p,
-                                                &dataset_db,
-                                                &genedb,
-                                                &ai_json,
-                                                &airoute,
-                                                testing,
-                                            )
-                                            .await;
-                                            let llm_json_value: super::super::SummaryType = serde_json::from_str(&llm_output.unwrap()).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
-                                            match ques_ans.answer {
-                                                super::super::AnswerFormat::summary_type(sum) => {
-                                                    //println!("expected answer:{:?}", &sum);
-                                                    assert_eq!(
-                                                        llm_json_value.sort_summarytype_struct(),
-                                                        sum.sort_summarytype_struct()
-                                                    );
-                                                }
-                                                super::super::AnswerFormat::DE_type(_) => {
-                                                    panic!("DE type not valid for summary")
-                                                }
+                                if chart.r#type == "Summary" {
+                                    for ques_ans in chart.TestData {
+                                        let user_input = ques_ans.question;
+                                        let llm_output = super::super::run_pipeline(
+                                            &user_input,
+                                            comp_model.clone(),
+                                            embedding_model.clone(),
+                                            llm_backend_type.clone(),
+                                            temperature,
+                                            max_new_tokens,
+                                            top_p,
+                                            &dataset_db,
+                                            &genedb,
+                                            &ai_json,
+                                            &airoute,
+                                            testing,
+                                        )
+                                        .await;
+                                        let llm_json_value: super::super::SummaryType = serde_json::from_str(&llm_output.unwrap()).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
+                                        match ques_ans.answer {
+                                            super::super::AnswerFormat::summary_type(sum) => {
+                                                //println!("expected answer:{:?}", &sum);
+                                                assert_eq!(
+                                                    llm_json_value.sort_summarytype_struct(),
+                                                    sum.sort_summarytype_struct()
+                                                );
+                                            }
+                                            super::super::AnswerFormat::DE_type(_) => {
+                                                panic!("DE type not valid for summary")
                                             }
                                         }
                                     }
-                                    super::super::Charts::DE(_testdata) => {} // To do
                                 }
                             }
                         } else if *llm_backend_name == "SJ".to_string() {
@@ -136,56 +133,53 @@ mod tests {
                             let comp_model = sj_client.completion_model(sj_comp_model_name);
 
                             for chart in ai_json.charts.clone() {
-                                match chart {
-                                    super::super::Charts::Summary(testdata) => {
-                                        for ques_ans in testdata.TestData {
-                                            let user_input = ques_ans.question;
-                                            if user_input.len() > 0 {
-                                                let llm_output = super::super::run_pipeline(
-                                                    &user_input,
-                                                    comp_model.clone(),
-                                                    embedding_model.clone(),
-                                                    llm_backend_type.clone(),
-                                                    temperature,
-                                                    max_new_tokens,
-                                                    top_p,
-                                                    &dataset_db,
-                                                    &genedb,
-                                                    &ai_json,
-                                                    &airoute,
-                                                    testing,
-                                                )
-                                                .await;
-                                                //println!("user_input:{}", user_input);
-                                                //println!("llm_answer:{:?}", llm_output);
-                                                //println!("expected answer:{:?}", &ques_ans.answer);
-                                                let llm_json_value: super::super::SummaryType = serde_json::from_str(&llm_output.unwrap()).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
-                                                //println!(
-                                                //    "llm_answer:{:?}",
-                                                //    llm_json_value.clone().sort_summarytype_struct()
-                                                //);
-                                                //println!(
-                                                //    "expected answer:{:?}",
-                                                //    &expected_json_value.clone().sort_summarytype_struct()
-                                                //);
-                                                match ques_ans.answer {
-                                                    super::super::AnswerFormat::summary_type(sum) => {
-                                                        //println!("expected answer:{:?}", &sum);
-                                                        assert_eq!(
-                                                            llm_json_value.sort_summarytype_struct(),
-                                                            sum.sort_summarytype_struct()
-                                                        );
-                                                    }
-                                                    super::super::AnswerFormat::DE_type(_) => {
-                                                        panic!("DE type not valid for summary")
-                                                    }
+                                if chart.r#type == "Summary" {
+                                    for ques_ans in chart.TestData {
+                                        let user_input = ques_ans.question;
+                                        if user_input.len() > 0 {
+                                            let llm_output = super::super::run_pipeline(
+                                                &user_input,
+                                                comp_model.clone(),
+                                                embedding_model.clone(),
+                                                llm_backend_type.clone(),
+                                                temperature,
+                                                max_new_tokens,
+                                                top_p,
+                                                &dataset_db,
+                                                &genedb,
+                                                &ai_json,
+                                                &airoute,
+                                                testing,
+                                            )
+                                            .await;
+                                            //println!("user_input:{}", user_input);
+                                            //println!("llm_answer:{:?}", llm_output);
+                                            //println!("expected answer:{:?}", &ques_ans.answer);
+                                            let llm_json_value: super::super::SummaryType = serde_json::from_str(&llm_output.unwrap()).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
+                                            //println!(
+                                            //    "llm_answer:{:?}",
+                                            //    llm_json_value.clone().sort_summarytype_struct()
+                                            //);
+                                            //println!(
+                                            //    "expected answer:{:?}",
+                                            //    &expected_json_value.clone().sort_summarytype_struct()
+                                            //);
+                                            match ques_ans.answer {
+                                                super::super::AnswerFormat::summary_type(sum) => {
+                                                    //println!("expected answer:{:?}", &sum);
+                                                    assert_eq!(
+                                                        llm_json_value.sort_summarytype_struct(),
+                                                        sum.sort_summarytype_struct()
+                                                    );
                                                 }
-                                            } else {
-                                                panic!("The user input is empty");
+                                                super::super::AnswerFormat::DE_type(_) => {
+                                                    panic!("DE type not valid for summary")
+                                                }
                                             }
+                                        } else {
+                                            panic!("The user input is empty");
                                         }
                                     }
-                                    super::super::Charts::DE(_testdata) => {} // To do
                                 }
                             }
                         }

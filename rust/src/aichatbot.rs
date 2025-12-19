@@ -8,7 +8,7 @@ use rig::completion::Prompt;
 use rig::embeddings::builder::EmbeddingsBuilder;
 use rig::vector_store::in_memory_store::InMemoryVectorStore;
 use schemars::JsonSchema;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 use std::collections::HashMap;
 use std::fs;
 use std::io;
@@ -438,9 +438,12 @@ async fn classify_query_by_dataset_type(
     let mut contents = String::from("");
 
     if let Some(object) = ai_json.as_object() {
-        for (_key, value) in object {
-            contents += &value.as_str().unwrap();
-            contents += "---"; // Adding delimiter
+        contents = object["general"].to_string();
+        for (key, value) in object {
+            if key != "general" {
+                contents += &value.as_str().unwrap();
+                contents += "---"; // Adding delimiter
+            }
         }
     }
 

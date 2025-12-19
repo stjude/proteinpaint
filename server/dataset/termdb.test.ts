@@ -58,7 +58,7 @@ export default function (): Mds3 {
 				}
 			},
 			db: {
-				file: 'files/hg38/TermdbTest/db' // Whenever this db is updated, please also update the db path in proteinpaint/server/dataset/ai/termdb.test.json. This ensures the aichatbot tests run on the updated db
+				file: 'files/hg38/TermdbTest/db'
 			},
 
 			termdb: {
