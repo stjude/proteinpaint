@@ -64,7 +64,7 @@ tape('Search handler layout', async test => {
 	const inputTypeRadiosDiv = holder.select('[data-testid="sjpp-genevariant-genesetTypeRadios"]')
 	test.ok(inputTypeRadiosDiv.selectAll('input[type="radio"]').size() > 0, 'Input type radio buttons should be present')
 	const searchDiv = holder.select('[data-testid="sjpp-genevariant-geneSearchDiv"]')
-	test.equal(searchDiv.selectAll('input[type="text"]').size(), 1, 'Gene search input should be present')
+	test.equal(searchDiv.selectAll('input[type="search"]').size(), 1, 'Gene search input should be present')
 	test.end()
 })
 
@@ -77,7 +77,7 @@ tape('Single gene input', async test => {
 	await initializeSearchHandler({ holder, callback })
 	const geneSearchInput: any = holder
 		.select('[data-testid="sjpp-genevariant-geneSearchDiv"]')
-		.select('input[type="text"]')
+		.select('input[type="search"]')
 		.node()
 	// gene name input
 	geneSearchInput.value = 'TP53'
@@ -108,7 +108,7 @@ tape('Change mutation type', async test => {
 	thirdRadio.click()
 	const geneSearchInput: any = holder
 		.select('[data-testid="sjpp-genevariant-geneSearchDiv"]')
-		.select('input[type="text"]')
+		.select('input[type="search"]')
 		.node()
 	geneSearchInput.value = 'TP53'
 	geneSearchInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }))
@@ -130,7 +130,7 @@ tape('Gene set input', async test => {
 	secondRadio.click()
 	const geneSearchInput: any = holder
 		.select('[data-testid="sjpp-genevariant-geneSearchDiv"]')
-		.select('input[type="text"]')
+		.select('input[type="search"]')
 		.node()
 	geneSearchInput.value = 'TP53'
 	geneSearchInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }))
@@ -160,7 +160,7 @@ tape('Gene set input - custom name', async test => {
 	secondRadio.click()
 	const geneSearchInput: any = holder
 		.select('[data-testid="sjpp-genevariant-geneSearchDiv"]')
-		.select('input[type="text"]')
+		.select('input[type="search"]')
 		.node()
 	geneSearchInput.value = 'TP53'
 	geneSearchInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }))

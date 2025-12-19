@@ -70,7 +70,13 @@ export class InputSearch {
 			.attr('placeholder', this.placeholder)
 			.attr('aria-label', this.title)
 			.on('keyup', async (event: KeyboardEvent) => {
+				if (event.key == 'ArrowDown') {
+					this.tip.d.select('.sja_menuoption').node()?.focus()
+					return
+				}
+
 				if (keyupEnter(event)) await this.enterSearch()
+
 				debounce(this.addSearchItems(), 400)
 			})
 	}

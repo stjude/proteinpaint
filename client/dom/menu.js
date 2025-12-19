@@ -280,8 +280,33 @@ export class Menu {
 				this.hide()
 			})
 
-		if (elem?.type !== 'search') {
+		const searchElem = elem.type === 'search' ? elem : elem.querySelector(`input[type='search']`)
+		if (!searchElem) {
 			setTimeout(() => (clickableElems.find(priorityFocusElem) || clickableElems[0]).focus(), renderWait)
+		} else if (searchElem) {
+			// do not autofocus on menu, since the user may still be typing the text to search
+			const search = d3select(searchElem)
+			if (!search.on('keyup')) {
+				search.on('keyup', event => {
+					if (!event.key.startsWith('Arrow')) return
+					const clickableElems = [...this.d.node().querySelectorAll(focusableSelector)].filter(elem =>
+						elem.checkVisibility()
+					)
+					if (!clickableElems.length) return
+					if (event.key == 'ArrowDown') {
+						clickableElems[0].focus()
+						d3select(clickableElems[0])
+							.on('keydown.menu_tab_nav', event => {
+								if (event.key == 'Tab' && event.shiftKey) lastTabbedTime = Date.now()
+							})
+							.on('blur.menu_tab_nav', () => {
+								if (Date.now() - lastTabbedTime > renderWait) return
+								searchElem.focus() // shift focus back to the clicked elem that launched the menu, when shift-tabbing from the firt focusable child element
+								this.hide()
+							})
+					}
+				})
+			}
 		}
 	}
 
