@@ -1,7 +1,7 @@
 import type { BoxPlotDom, LegendItemEntry, BoxPlotConfig } from '../BoxPlotTypes'
 import type { MassAppApi } from '#mass/types/mass'
 import type { RenderedPlot } from '../view/RenderedPlot'
-import { ListSamples } from './ListSamples'
+import { ListSamples } from '#dom/summary/ListSamples'
 import { filterJoin, getFilterItemByTag } from '#filter'
 
 export class BoxPlotInteractions {
