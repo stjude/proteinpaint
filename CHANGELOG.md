@@ -9,6 +9,9 @@ Features:
 - GRIN2: Added additional integration test for top genes table
 - GRIN2: Enable local filter
 
+Fixes:
+- fix the handling of undefined ref argument to deepCopyFreeze()
+
 
 ## 2.169.0
 

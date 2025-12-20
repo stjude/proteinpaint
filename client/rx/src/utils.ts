@@ -66,6 +66,9 @@ export function deepFreeze(obj) {
 	return obj
 }
 
+// a reusable reference to an empty object
+const emptyFrozenObj = Object.freeze({})
+
 // input: object to copy
 // ref: may reuse another copy that's already frozen, if it already equals the input
 // matched: a tracker to supply as 3rd argument to deepEqual(), to track objects
@@ -81,13 +84,19 @@ export function deepCopyFreeze(
 		// class instances (non-literal objects) will be returned as-is but frozen
 		if (!matched.has(input)) matched.set(input, new WeakSet())
 		matched.get(input)!.add(input)
+		// !!! TODO: may need to detect embedder-created object instances that become part of state !!!
+		// !!! and decide whether it's safe to freeze, or create plain object copy in store.write() !!!
 		return deepFreeze(input)
 	}
 	if (deepEqual(input, ref, matched)) return ref
 	const copy = Array.isArray(input) ? [] : {}
+	// ref argument may be a non-object (string, number, etc), where
+	// ref?.[key] (such as 1['test'] or "abc"['test']) would still work
+	// but is not really an intended, valid comparison with an input object
+	const _ref = ref === null || typeof ref !== 'object' ? emptyFrozenObj : ref
 	// not using for..in loop, in order to not descend into inherited props/methods
 	for (const [key, value] of Object.entries(input)) {
-		copy[key] = deepCopyFreeze(value, ref[key], matched)
+		copy[key] = deepCopyFreeze(value, _ref[key], matched)
 	}
 	return Object.freeze(copy)
 }
