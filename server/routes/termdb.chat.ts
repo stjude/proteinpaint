@@ -85,9 +85,18 @@ function init({ genomes }) {
 			//mayLog('chatbot_input:', JSON.stringify(chatbot_input))
 
 			const time1 = new Date().valueOf()
-			const ai_output_data = await run_rust('aichatbot', JSON.stringify(chatbot_input))
+			const classification = await run_rust('query_classification', JSON.stringify(chatbot_input))
 			const time2 = new Date().valueOf()
-			mayLog('Time taken to run rust AI chatbot:', time2 - time1, 'ms')
+			mayLog('Time taken for classification:', time2 - time1, 'ms')
+
+			if (classification == 'summary') {
+				const time1 = new Date().valueOf()
+				const summary = await run_rust('summary_agent', JSON.stringify(chatbot_input))
+				mayLog('summary:', summary)
+				const time2 = new Date().valueOf()
+				mayLog('Time taken for classification:', time2 - time1, 'ms')
+			}
+
 			let ai_output_json: any
 			for (const line of ai_output_data.split('\n')) {
 				// The reason we are parsing each line from rust is because we want to debug what is causing the wrong output. As the AI pipeline matures, the rust code will be modified to always return a single JSON

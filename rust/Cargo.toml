@@ -124,13 +124,13 @@ name="readH5"
 path="src/readH5.rs"
 
 [[bin]]
-name="aichatbot"
-path="src/aichatbot.rs"
-
-[[bin]]
 name="manhattan_plot"
 path="src/manhattan_plot.rs"
 
 [[bin]]
 name="query_classification"
 path="src/query_classification.rs"
+
+[[bin]]
+name="summary_agent"
+path="src/summary_agent.rs"
