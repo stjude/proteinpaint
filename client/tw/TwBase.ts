@@ -2,6 +2,7 @@ import type { Term, TermWrapper, Q } from '#types'
 import type { SetCellPropsSignature } from '../plots/matrix/matrix.xtw.ts'
 import { type UseCase } from '#termsetting'
 import { isDictionaryType } from '#shared'
+import { deepFreeze } from '#rx'
 
 export type TwOpts = {
 	vocabApi?: any // TODO
@@ -23,6 +24,7 @@ export class TwBase {
 	$id?: string
 	isAtomic = true
 	#tw: TermWrapper
+	#isFrozen = false
 
 	// define addons below, to be set using Object.defineProperties(this)
 	// by defining allowed method names here, subclasses that inherit from
@@ -92,5 +94,12 @@ export class TwBase {
 			}
 		}
 		return copy
+	}
+
+	deepFreeze() {
+		if (this.#isFrozen) return this
+		deepFreeze(this)
+		this.#isFrozen = true
+		return this
 	}
 }

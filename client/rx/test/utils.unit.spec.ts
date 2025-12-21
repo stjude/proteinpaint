@@ -64,7 +64,15 @@ tape('deepFreeze()', test => {
 })
 
 tape('deepCopyFreeze()', test => {
-	class Abc {}
+	class Abc {
+		#isFrozen = false
+		deepFreeze() {
+			if (this.#isFrozen) return this
+			deepFreeze(this)
+			this.#isFrozen = true
+			return this
+		}
+	}
 	const abc = new Abc()
 	const abc2 = new Abc()
 	const filter = { join: '', lst: [{ tvs: { values: [] } }, { lst: [{ tvs: { values: [] } }] }] }
@@ -153,6 +161,17 @@ tape('deepCopyFreeze()', test => {
 		tw.q.hiddenValues['ALL'] = ALL
 		const copy2 = deepCopyFreeze(tw, copy1)
 		test.deepEqual(copy2, tw, `should not reuse an outdated reference to an undefined value`)
+	}
+
+	{
+		// to make this fail, turn off the condition to use the emptyFrozenObj in deepCopyFreeze()
+		const orig = { aa: { b: 1 } }
+		const msg = `should not error on a null ref key-value`
+		try {
+			test.deepEqual(orig, deepCopyFreeze(orig, { aa: null }), msg)
+		} catch (e) {
+			test.fail(msg + ': ' + e)
+		}
 	}
 
 	test.end()

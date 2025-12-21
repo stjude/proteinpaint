@@ -69,7 +69,13 @@ export function deepFreeze(obj) {
 // a reusable reference to an empty object
 const emptyFrozenObj = Object.freeze({})
 
-// input: object to copy
+// deepCopyFreez()
+//
+// input:
+//    - object to copy
+//    - may be mutated to freeze a class instance (or TODO: replace literal objects
+//      with isolated mutable copies that are only accessible to the consumer code,
+//      such as an rx store instance)
 // ref: may reuse another copy that's already frozen, if it already equals the input
 // matched: a tracker to supply as 3rd argument to deepEqual(), to track objects
 //          that equal the second argument.
@@ -80,15 +86,21 @@ export function deepCopyFreeze(
 ) {
 	// non-objects will be returned as-is
 	if (input === null || typeof input != 'object') return input
-	if (input.constructor.name !== 'Object' && input.constructor.name !== 'Array') {
-		// class instances (non-literal objects) will be returned as-is but frozen
+	// detect non-literal objects with a deepFreeze() method; class instances
+	// without that method is assumed to be created by embedder code and should not be mutated,
+	// cannot safely reuse the instance as-is
+	if (
+		input.constructor.name !== 'Object' &&
+		input.constructor.name !== 'Array' &&
+		typeof input.deepFreeze == 'function'
+	) {
+		// class instances (non-literal objects) will be returned as-is but frozen,
+		// i.e., a reference to the instances is returned instead of a copy
 		if (!matched.has(input)) matched.set(input, new WeakSet())
 		matched.get(input)!.add(input)
-		// !!! TODO: may need to detect embedder-created object instances that become part of state !!!
-		// !!! and decide whether it's safe to freeze, or create plain object copy in store.write() !!!
-		return deepFreeze(input)
+		return input.deepFreeze()
 	}
-	if (deepEqual(input, ref, matched)) return ref
+	if (deepEqual(input, ref, matched)) return Object.freeze(ref)
 	const copy = Array.isArray(input) ? [] : {}
 	// ref argument may be a non-object (string, number, etc), where
 	// ref?.[key] (such as 1['test'] or "abc"['test']) would still work
