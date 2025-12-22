@@ -402,7 +402,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 	// Add chromosome labels
 	if (data.plotData.chrom_data) {
-		const chromLabelY = settings.plotHeight + 2 * settings.pngDotRadius + settings.yAxisY
+		const chromLabelY = settings.plotHeight + 2 * settings.pngDotRadius + settings.yAxisY + 10
 
 		Object.entries(data.plotData.chrom_data).forEach(([chrom, chromData]: [string, any]) => {
 			const chromLabel = chrom.replace('chr', '')
