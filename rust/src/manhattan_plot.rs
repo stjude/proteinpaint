@@ -223,8 +223,12 @@ fn grin2_file_read(
                 _ => continue,
             };
 
-            // Use 1e-300 as a floor for log transform when q-value is exactly 0 (avoids issues with -infinity when taking log10 of 0)
-            let neg_log10_q = -original_q_val.max(1e-300).log10();
+            // Use the smallest positive f64 value as a floor for log transform when q-value is exactly 0 (avoids issues with -infinity when taking log10 of 0) else transform the original q-value
+            let neg_log10_q = if original_q_val == 0.0 {
+                -f64::MIN_POSITIVE.log10()
+            } else {
+                -original_q_val.log10()
+            };
 
             let n_subj_count: Option<i64> = n_idx_opt
                 .and_then(|i| fields.get(i))
