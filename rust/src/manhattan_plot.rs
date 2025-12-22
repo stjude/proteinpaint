@@ -22,6 +22,7 @@ struct Input {
     plot_height: u64,
     device_pixel_ratio: f64,
     png_dot_radius: u64,
+    log_cutoff: f64,
 }
 
 // chromosome info
@@ -217,14 +218,14 @@ fn grin2_file_read(
                 Some(q) => q,
                 None => continue,
             };
-
             let original_q_val: f64 = match q_val_str.parse() {
                 Ok(v) if v >= 0.0 => v,
                 _ => continue,
             };
-            // Use 1e-300 for log transform when q-value is exactly 0 (avoids -infinity) else use original q-value
-            let q_val_for_log = if original_q_val == 0.0 { 1e-300 } else { original_q_val };
-            let neg_log10_q = -q_val_for_log.log10();
+
+            // Use 1e-300 as a floor for log transform when q-value is exactly 0 (avoids issues with -infinity when taking log10 of 0)
+            let neg_log10_q = -original_q_val.max(1e-300).log10();
+
             let n_subj_count: Option<i64> = n_idx_opt
                 .and_then(|i| fields.get(i))
                 .and_then(|s| s.parse::<i64>().ok());
@@ -269,6 +270,7 @@ fn plot_grin2_manhattan(
     plot_height: u64,
     device_pixel_ratio: f64,
     png_dot_radius: u64,
+    log_cutoff: f64,
 ) -> Result<(String, InteractiveData), Box<dyn Error>> {
     // ------------------------------------------------
     // 1. Build cumulative chromosome map
@@ -305,13 +307,33 @@ fn plot_grin2_manhattan(
         sig_indices = si;
     }
 
+    // ------------------------------------------------
+    // 3. Y-axis scaling
+    // ------------------------------------------------
     let y_padding = png_dot_radius as f64;
     let y_min = 0.0 - y_padding;
-    let max_y = ys.iter().cloned().fold(f64::MIN, f64::max);
-    let y_max = max_y + 0.35 + y_padding;
+    let y_max = if !ys.is_empty() {
+        let max_y = ys.iter().cloned().fold(f64::MIN, f64::max);
+        if max_y > log_cutoff {
+            let scale_factor_y = log_cutoff / max_y;
+
+            for y in ys.iter_mut() {
+                *y *= scale_factor_y;
+            }
+            for p in point_details.iter_mut() {
+                p.y *= scale_factor_y;
+            }
+            let scaled_max = ys.iter().cloned().fold(f64::MIN, f64::max);
+            scaled_max + 0.35 + y_padding
+        } else {
+            max_y + 0.35 + y_padding
+        }
+    } else {
+        1.0 + y_padding
+    };
 
     // ------------------------------------------------
-    // 3. Setup high-DPR bitmap dimensions
+    // 4. Setup high-DPR bitmap dimensions
     // ------------------------------------------------
 
     let dpr = device_pixel_ratio.max(1.0);
@@ -334,7 +356,7 @@ fn plot_grin2_manhattan(
         root.fill(&WHITE)?;
 
         // ------------------------------------------------
-        // 4. Build the chart (no axes, no margins)
+        // 5. Build the chart (no axes, no margins)
         // ------------------------------------------------
         let mut chart = ChartBuilder::on(&root)
             .margin(0)
@@ -349,7 +371,7 @@ fn plot_grin2_manhattan(
             .draw()?;
 
         // ------------------------------------------------
-        // 5. Alternating chromosome backgrounds
+        // 6. Alternating chromosome backgrounds
         // ------------------------------------------------
         for (i, chrom) in sorted_chroms.iter().enumerate() {
             if let Some(info) = chrom_data.get(chrom) {
@@ -367,7 +389,7 @@ fn plot_grin2_manhattan(
         }
 
         // ------------------------------------------------
-        // 6. Capture high-DPR pixel mapping for the points
+        // 7. Capture high-DPR pixel mapping for the points
         //    we do not draw the points with plotters (will use tiny-skia for AA)
         //    but use charts.backend_coord to map data->pixel in the high-DPR backend
         // ------------------------------------------------
@@ -440,7 +462,7 @@ fn plot_grin2_manhattan(
     let png_data = BASE64.encode(&png_bytes);
 
     // ------------------------------------------------
-    // 7. Generate interactive data
+    // 8. Generate interactive data
     // ------------------------------------------------
     let interactive_data = InteractiveData {
         points: point_details,
@@ -476,6 +498,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let plot_height = &input_json.plot_height;
                 let device_pixel_ratio = &input_json.device_pixel_ratio;
                 let png_dot_radius = &input_json.png_dot_radius;
+                let log_cutoff = &input_json.log_cutoff;
                 if let Ok((base64_string, plot_data)) = plot_grin2_manhattan(
                     grin2_file.clone(),
                     chrom_size.clone(),
@@ -483,6 +506,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     plot_height.clone(),
                     device_pixel_ratio.clone(),
                     png_dot_radius.clone(),
+                    log_cutoff.clone(),
                 ) {
                     let output = Output {
                         png: base64_string,
