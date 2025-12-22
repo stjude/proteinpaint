@@ -59,11 +59,7 @@ function testSvGroupset(groupset, test) {
 	const mutTvs = mutGrp.filter.lst[0].tvs
 	const wtGrp = groupset.groups[1]
 	const wtTvs = wtGrp.filter.lst[0].tvs
-	test.deepEqual(
-		mutTvs.values,
-		[{ key: 'SV', label: 'Structural variation', value: 'SV' }],
-		'mutant tvs should have mutant values'
-	)
+	test.deepEqual(mutTvs.values, [], 'mutant tvs should have empty values because gene does not have SVs in dataset')
 	test.notOk(mutTvs.wt, 'mutant tvs should have wt=false')
 	test.deepEqual(wtTvs.values, [], 'wildtype tvs should have empty values')
 	test.ok(wtTvs.wt, 'wildtype tvs should have wt=true')

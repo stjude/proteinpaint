@@ -599,6 +599,7 @@ export async function listSamples(arg) {
 	const termIsGv = self.config.term.term.type == 'geneVariant'
 	const term2isGv = self.config.term2?.term.type == 'geneVariant'
 	const term2isSurv = self.config.term2?.term.type == 'survival'
+	const termdbmclass = self.app.vocabApi.termdbConfig?.mclass
 	for (const sample of data.lst) {
 		const pass = mayFilterByGeneVariant(sample, self, geneVariant)
 		if (!pass) continue
@@ -619,7 +620,7 @@ export async function listSamples(arg) {
 			const value = t1entry.value
 			row.push({ value: roundValueAuto(value) })
 		} else if (termIsGv) {
-			addGvRowVals(sample, self.config.term, row)
+			addGvRowVals(sample, self.config.term, row, termdbmclass)
 		}
 		if (self.config.term2) {
 			const t2entry = sample[self.config.term2.$id]
@@ -630,7 +631,7 @@ export async function listSamples(arg) {
 				const value = roundValueAuto(t2entry.value)
 				row.push({ value })
 			} else if (term2isGv) {
-				addGvRowVals(sample, self.config.term2, row)
+				addGvRowVals(sample, self.config.term2, row, termdbmclass)
 			} else if (term2isSurv) {
 				const value = self.config.term2.term.values[t2entry.key].label
 				row.push({ value })
@@ -741,7 +742,7 @@ function mayFilterByGeneVariant(sample, self, geneVariant) {
 }
 
 // add geneVariant values to row
-function addGvRowVals(sample, tw, row) {
+function addGvRowVals(sample, tw, row, termdbmclass) {
 	const mlst = sample[tw.$id]?.values
 	const gene2mlst = new Map()
 	// map each gene to its mutations
@@ -754,7 +755,7 @@ function addGvRowVals(sample, tw, row) {
 		// single gene, add its mutations to mutation column
 		const entry = gene2mlst.entries().next().value
 		const mlst = entry[1]
-		const htmls = mlst2htmls(mlst)
+		const htmls = mlst2htmls(mlst, termdbmclass)
 		row.push({ html: htmls.join('<br>') })
 	} else {
 		// multiple genes, add each gene to gene column and its
@@ -763,19 +764,19 @@ function addGvRowVals(sample, tw, row) {
 		const htmls = []
 		for (const [gene, mlst] of gene2mlst) {
 			genes.push(...Array(mlst.length).fill(gene))
-			htmls.push(...mlst2htmls(mlst))
+			htmls.push(...mlst2htmls(mlst, termdbmclass))
 		}
 		row.push({ html: genes.join('<br>') })
 		row.push({ html: htmls.join('<br>') })
 	}
 }
 
-function mlst2htmls(mlst) {
+function mlst2htmls(mlst, termdbmclass) {
 	const htmls = mlst.map(m => {
 		const mname = m.mname || '' // e.g. aa change
 		const value = m.value ? roundValueAuto(m.value, false, 3) : '' // e.g. cnv value
 		const color = mclass[m.class].color
-		const label = mclass[m.class].label.toUpperCase()
+		const label = (termdbmclass?.[m.class]?.label || mclass[m.class].label).toUpperCase()
 
 		const holder = create('div')
 

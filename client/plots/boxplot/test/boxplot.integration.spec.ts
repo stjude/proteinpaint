@@ -1,12 +1,14 @@
 import tape from 'tape'
 import * as helpers from '../../../test/front.helpers.js'
 import { detectGte } from '../../../test/test.helpers.js'
+import { getGeneVariantTw } from '../../../test/testdata/data.ts'
 
 /*
 Tests:
 	- Default box plot
 	- Box plot with overlay term = sex
 	- Box plot with continuous overlay term = agedx
+	- Box plot with overlay term = geneVariant
 	- Box plot with divide term = sex
 	- Box plot with overlay term = aaclassic_5 and divide term = sex
 	- Box plot with user settings
@@ -148,6 +150,40 @@ tape('Box plot with continuous overlay term = agedx', test => {
 		const config = boxplot.Inner.state.config
 		const numValues = Object.keys(config.term.term.values).length
 		test.equal(dom.charts.selectAll('.sjpp-boxplot-plot').size(), numValues, `Should render ${numValues} boxplots`)
+
+		if (test['_ok']) boxplot.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Box plot with overlay term = geneVariant', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'boxplot',
+					term: {
+						id: 'agedx',
+						q: { mode: 'continuous' }
+					},
+					term2: getGeneVariantTw()
+				}
+			]
+		},
+		boxplot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(boxplot) {
+		boxplot.on('postRender.test', null)
+		const dom = boxplot.Inner.dom
+		test.equal(dom.charts.selectAll('.sjpp-boxplot-plot').size(), 2, `Should render 2 boxplots`)
 
 		if (test['_ok']) boxplot.Inner.app.destroy()
 		test.end()
