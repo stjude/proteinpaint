@@ -1254,6 +1254,21 @@ tape('geneVariant term', async test => {
 	test.end()
 })
 
+const parentTerm = {
+	type: 'geneVariant',
+	id: 'TP53',
+	name: 'TP53',
+	genes: [
+		{
+			kind: 'gene',
+			id: 'TP53',
+			gene: 'TP53',
+			name: 'TP53',
+			type: 'geneVariant'
+		}
+	]
+}
+
 const geneVariantTw = {
 	isAtomic: true,
 	type: 'GvPredefinedGsTW',
@@ -1274,20 +1289,7 @@ const geneVariantTw = {
 				},
 				name_noOrigin: 'SNV/indel',
 				origin: 'somatic',
-				parentTerm: {
-					type: 'geneVariant',
-					id: 'TP53',
-					name: 'TP53',
-					genes: [
-						{
-							kind: 'gene',
-							id: 'TP53',
-							gene: 'TP53',
-							name: 'TP53',
-							type: 'geneVariant'
-						}
-					]
-				}
+				parentTerm
 			},
 			{
 				id: 'snvindel_germline',
@@ -1303,20 +1305,7 @@ const geneVariantTw = {
 				},
 				name_noOrigin: 'SNV/indel',
 				origin: 'germline',
-				parentTerm: {
-					type: 'geneVariant',
-					id: 'TP53',
-					name: 'TP53',
-					genes: [
-						{
-							kind: 'gene',
-							id: 'TP53',
-							gene: 'TP53',
-							name: 'TP53',
-							type: 'geneVariant'
-						}
-					]
-				}
+				parentTerm
 			},
 			{
 				id: 'cnv',
@@ -1328,20 +1317,7 @@ const geneVariantTw = {
 				dt: 4,
 				values: { CNV_amp: { key: 'CNV_amp', label: 'Copy number gain' } },
 				name_noOrigin: 'CNV',
-				parentTerm: {
-					type: 'geneVariant',
-					id: 'TP53',
-					name: 'TP53',
-					genes: [
-						{
-							kind: 'gene',
-							id: 'TP53',
-							gene: 'TP53',
-							name: 'TP53',
-							type: 'geneVariant'
-						}
-					]
-				}
+				parentTerm
 			},
 			{
 				id: 'fusion',
@@ -1353,20 +1329,7 @@ const geneVariantTw = {
 				dt: 2,
 				values: { Fuserna: { key: 'Fuserna', label: 'Fusion transcript' } },
 				name_noOrigin: 'Fusion RNA',
-				parentTerm: {
-					type: 'geneVariant',
-					id: 'TP53',
-					name: 'TP53',
-					genes: [
-						{
-							kind: 'gene',
-							id: 'TP53',
-							gene: 'TP53',
-							name: 'TP53',
-							type: 'geneVariant'
-						}
-					]
-				}
+				parentTerm
 			},
 			{
 				id: 'sv',
@@ -1378,20 +1341,7 @@ const geneVariantTw = {
 				dt: 5,
 				values: {},
 				name_noOrigin: 'SV',
-				parentTerm: {
-					type: 'geneVariant',
-					id: 'TP53',
-					name: 'TP53',
-					genes: [
-						{
-							kind: 'gene',
-							id: 'TP53',
-							gene: 'TP53',
-							name: 'TP53',
-							type: 'geneVariant'
-						}
-					]
-				}
+				parentTerm
 			}
 		],
 		id: 'TP53',
@@ -1438,20 +1388,7 @@ const geneVariantTw = {
 												},
 												name_noOrigin: 'SNV/indel',
 												origin: 'somatic',
-												parentTerm: {
-													type: 'geneVariant',
-													id: 'TP53',
-													name: 'TP53',
-													genes: [
-														{
-															kind: 'gene',
-															id: 'TP53',
-															gene: 'TP53',
-															name: 'TP53',
-															type: 'geneVariant'
-														}
-													]
-												}
+												parentTerm
 											},
 											values: [
 												{ key: 'M', label: 'MISSENSE', value: 'M' },
@@ -1490,20 +1427,7 @@ const geneVariantTw = {
 												},
 												name_noOrigin: 'SNV/indel',
 												origin: 'somatic',
-												parentTerm: {
-													type: 'geneVariant',
-													id: 'TP53',
-													name: 'TP53',
-													genes: [
-														{
-															kind: 'gene',
-															id: 'TP53',
-															gene: 'TP53',
-															name: 'TP53',
-															type: 'geneVariant'
-														}
-													]
-												}
+												parentTerm
 											},
 											values: [],
 											wt: true,
@@ -1546,20 +1470,7 @@ const geneVariantTw = {
 												},
 												name_noOrigin: 'SNV/indel',
 												origin: 'germline',
-												parentTerm: {
-													type: 'geneVariant',
-													id: 'TP53',
-													name: 'TP53',
-													genes: [
-														{
-															kind: 'gene',
-															id: 'TP53',
-															gene: 'TP53',
-															name: 'TP53',
-															type: 'geneVariant'
-														}
-													]
-												}
+												parentTerm
 											},
 											values: [
 												{ key: 'M', label: 'MISSENSE', value: 'M' },
@@ -1598,20 +1509,7 @@ const geneVariantTw = {
 												},
 												name_noOrigin: 'SNV/indel',
 												origin: 'germline',
-												parentTerm: {
-													type: 'geneVariant',
-													id: 'TP53',
-													name: 'TP53',
-													genes: [
-														{
-															kind: 'gene',
-															id: 'TP53',
-															gene: 'TP53',
-															name: 'TP53',
-															type: 'geneVariant'
-														}
-													]
-												}
+												parentTerm
 											},
 											values: [],
 											wt: true,
@@ -1651,20 +1549,7 @@ const geneVariantTw = {
 													CNV_amp: { key: 'CNV_amp', label: 'Copy number gain' }
 												},
 												name_noOrigin: 'CNV',
-												parentTerm: {
-													type: 'geneVariant',
-													id: 'TP53',
-													name: 'TP53',
-													genes: [
-														{
-															kind: 'gene',
-															id: 'TP53',
-															gene: 'TP53',
-															name: 'TP53',
-															type: 'geneVariant'
-														}
-													]
-												}
+												parentTerm
 											},
 											values: [
 												{
@@ -1704,20 +1589,7 @@ const geneVariantTw = {
 													CNV_amp: { key: 'CNV_amp', label: 'Copy number gain' }
 												},
 												name_noOrigin: 'CNV',
-												parentTerm: {
-													type: 'geneVariant',
-													id: 'TP53',
-													name: 'TP53',
-													genes: [
-														{
-															kind: 'gene',
-															id: 'TP53',
-															gene: 'TP53',
-															name: 'TP53',
-															type: 'geneVariant'
-														}
-													]
-												}
+												parentTerm
 											},
 											values: [],
 											wt: true,
@@ -1760,20 +1632,7 @@ const geneVariantTw = {
 													}
 												},
 												name_noOrigin: 'Fusion RNA',
-												parentTerm: {
-													type: 'geneVariant',
-													id: 'TP53',
-													name: 'TP53',
-													genes: [
-														{
-															kind: 'gene',
-															id: 'TP53',
-															gene: 'TP53',
-															name: 'TP53',
-															type: 'geneVariant'
-														}
-													]
-												}
+												parentTerm
 											},
 											values: [
 												{
@@ -1816,20 +1675,7 @@ const geneVariantTw = {
 													}
 												},
 												name_noOrigin: 'Fusion RNA',
-												parentTerm: {
-													type: 'geneVariant',
-													id: 'TP53',
-													name: 'TP53',
-													genes: [
-														{
-															kind: 'gene',
-															id: 'TP53',
-															gene: 'TP53',
-															name: 'TP53',
-															type: 'geneVariant'
-														}
-													]
-												}
+												parentTerm
 											},
 											values: [],
 											wt: true,
@@ -1867,20 +1713,7 @@ const geneVariantTw = {
 												dt: 5,
 												values: {},
 												name_noOrigin: 'SV',
-												parentTerm: {
-													type: 'geneVariant',
-													id: 'TP53',
-													name: 'TP53',
-													genes: [
-														{
-															kind: 'gene',
-															id: 'TP53',
-															gene: 'TP53',
-															name: 'TP53',
-															type: 'geneVariant'
-														}
-													]
-												}
+												parentTerm
 											},
 											values: [],
 											mcount: 'any',
@@ -1912,20 +1745,7 @@ const geneVariantTw = {
 												dt: 5,
 												values: {},
 												name_noOrigin: 'SV',
-												parentTerm: {
-													type: 'geneVariant',
-													id: 'TP53',
-													name: 'TP53',
-													genes: [
-														{
-															kind: 'gene',
-															id: 'TP53',
-															gene: 'TP53',
-															name: 'TP53',
-															type: 'geneVariant'
-														}
-													]
-												}
+												parentTerm
 											},
 											values: [],
 											wt: true,
