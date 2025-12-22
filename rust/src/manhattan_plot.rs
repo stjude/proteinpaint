@@ -121,6 +121,7 @@ fn cumulative_chrom(
 fn grin2_file_read(
     grin2_file: &str,
     chrom_data: &HashMap<String, ChromInfo>,
+    log_cutoff: f64,
 ) -> Result<(Vec<u64>, Vec<f64>, Vec<String>, Vec<PointDetail>, Vec<usize>), Box<dyn Error>> {
     // Default colours
     let mut colors: HashMap<String, String> = HashMap::new();
@@ -223,9 +224,9 @@ fn grin2_file_read(
                 _ => continue,
             };
 
-            // Use the smallest positive f64 value as a floor for log transform when q-value is exactly 0 (avoids issues with -infinity when taking log10 of 0) else transform the original q-value
+            // Use log_cutoff for zero q-values to avoid -inf. These will be capped later in plotting at log_cutoff
             let neg_log10_q = if original_q_val == 0.0 {
-                -f64::MIN_POSITIVE.log10()
+                log_cutoff
             } else {
                 -original_q_val.log10()
             };
@@ -303,7 +304,7 @@ fn plot_grin2_manhattan(
     let mut point_details = Vec::new();
     let mut sig_indices = Vec::new();
 
-    if let Ok((x, y, c, pd, si)) = grin2_file_read(&grin2_result_file, &chrom_data) {
+    if let Ok((x, y, c, pd, si)) = grin2_file_read(&grin2_result_file, &chrom_data, log_cutoff) {
         xs = x;
         ys = y;
         colors_vec = c;
@@ -312,23 +313,26 @@ fn plot_grin2_manhattan(
     }
 
     // ------------------------------------------------
-    // 3. Y-axis scaling
+    // 3. Y-axis scaling (cap at 40)
     // ------------------------------------------------
     let y_padding = png_dot_radius as f64;
     let y_min = 0.0 - y_padding;
+    let y_cap = log_cutoff; // typically 40.0. Use the passed log_cutoff value that user will be able to modify in the future
     let y_max = if !ys.is_empty() {
         let max_y = ys.iter().cloned().fold(f64::MIN, f64::max);
-        if max_y > log_cutoff {
-            let scale_factor_y = log_cutoff / max_y;
-
+        if max_y > y_cap {
+            // Clamp values above the cap
             for y in ys.iter_mut() {
-                *y *= scale_factor_y;
+                if *y > y_cap {
+                    *y = y_cap;
+                }
             }
             for p in point_details.iter_mut() {
-                p.y *= scale_factor_y;
+                if p.y > y_cap {
+                    p.y = y_cap;
+                }
             }
-            let scaled_max = ys.iter().cloned().fold(f64::MIN, f64::max);
-            scaled_max + 0.35 + y_padding
+            y_cap + 0.35 + y_padding
         } else {
             max_y + 0.35 + y_padding
         }
