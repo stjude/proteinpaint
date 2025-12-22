@@ -130,10 +130,10 @@ async fn main() -> Result<()> {
 
                     match final_output {
                         Some(fin_out) => {
-                            println!("final_output:{{\"{}\":{}}}", "plot", fin_out);
+                            println!("{{\"{}\":{}}}", "route", fin_out);
                         }
                         None => {
-                            println!("final_output:{{\"{}\":\"{}\"}}", "action", "unknown");
+                            println!("{{\"{}\":\"{}\"}}", "route", "unknown");
                         }
                     }
                 }
