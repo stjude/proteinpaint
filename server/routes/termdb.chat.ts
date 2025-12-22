@@ -85,26 +85,31 @@ function init({ genomes }) {
 			//mayLog('chatbot_input:', JSON.stringify(chatbot_input))
 
 			const time1 = new Date().valueOf()
-			const classification = await run_rust('query_classification', JSON.stringify(chatbot_input))
+			const classResult = JSON.parse(await run_rust('query_classification', JSON.stringify(chatbot_input)))
 			const time2 = new Date().valueOf()
 			mayLog('Time taken for classification:', time2 - time1, 'ms')
 
 			let ai_output_data: any
-			if (JSON.parse(classification.replace('final_output:', '')).plot == 'summary') {
+			let ai_output_json: any
+			if (classResult.route == 'summary') {
 				const time1 = new Date().valueOf()
 				ai_output_data = await run_rust('summary_agent', JSON.stringify(chatbot_input))
 				const time2 = new Date().valueOf()
 				mayLog('Time taken for running summary agent:', time2 - time1, 'ms')
-			}
 
-			let ai_output_json: any
-			for (const line of ai_output_data.split('\n')) {
-				// The reason we are parsing each line from rust is because we want to debug what is causing the wrong output. As the AI pipeline matures, the rust code will be modified to always return a single JSON
-				if (line.startsWith('final_output:') == true) {
-					ai_output_json = JSON.parse(JSON.parse(line.replace('final_output:', '')))
-				} else {
-					mayLog(line)
+				for (const line of ai_output_data.split('\n')) {
+					// The reason we are parsing each line from rust is because we want to debug what is causing the wrong output. As the AI pipeline matures, the rust code will be modified to always return a single JSON
+					if (line.startsWith('final_output:') == true) {
+						ai_output_json = JSON.parse(JSON.parse(line.replace('final_output:', '')))
+					} else {
+						mayLog(line)
+					}
 				}
+			} else if (classResult.route == 'dge') {
+				ai_output_json = { type: 'html', html: 'DE agent not implemented yet' }
+			} else {
+				// Will define all other agents later as desired
+				ai_output_json = { type: 'html', html: 'Unknown classification value' }
 			}
 
 			if (ai_output_json.type == 'plot') {
@@ -161,6 +166,7 @@ function init({ genomes }) {
 					ai_output_json.plot.filter = localfilter
 				}
 			}
+
 			//mayLog('ai_output_json:', ai_output_json)
 			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
