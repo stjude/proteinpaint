@@ -5,6 +5,7 @@ fn main() {}
 
 #[cfg(test)]
 mod tests {
+    use crate::aichatbot::{AiJsonFormat, AnswerFormat, SummaryType, llm_backend, run_pipeline};
     use serde_json;
     use std::fs::{self};
     use std::path::Path;
@@ -62,13 +63,13 @@ mod tests {
                         // Read the file
                         let ai_data = fs::read_to_string(ai_json_file).unwrap();
                         // Parse the JSON data
-                        let ai_json: super::super::AiJsonFormat =
+                        let ai_json: AiJsonFormat =
                             serde_json::from_str(&ai_data).expect("AI JSON file does not have the correct format");
                         //println!("ai_json:{:?}", ai_json);
                         let genedb = String::from(&serverconfig.tpmasterdir) + &"/" + &ai_json.genedb;
                         let dataset_db = String::from(&serverconfig.tpmasterdir) + &"/" + &ai_json.db;
                         let llm_backend_name = &serverconfig.llm_backend;
-                        let llm_backend_type: super::super::llm_backend;
+                        let llm_backend_type: llm_backend;
 
                         if llm_backend_name != "ollama" && llm_backend_name != "SJ" {
                             panic!(
@@ -78,7 +79,7 @@ mod tests {
                             let ollama_host = &serverconfig.ollama_apilink;
                             let ollama_embedding_model_name = &serverconfig.ollama_embedding_model_name;
                             let ollama_comp_model_name = &serverconfig.ollama_comp_model_name;
-                            llm_backend_type = super::super::llm_backend::Ollama();
+                            llm_backend_type = llm_backend::Ollama();
                             let ollama_client = super::super::ollama::Client::builder()
                                 .base_url(ollama_host)
                                 .build()
@@ -89,7 +90,7 @@ mod tests {
                                 if chart.r#type == "Summary" {
                                     for ques_ans in chart.TestData {
                                         let user_input = ques_ans.question;
-                                        let llm_output = super::super::run_pipeline(
+                                        let llm_output = run_pipeline(
                                             &user_input,
                                             comp_model.clone(),
                                             embedding_model.clone(),
@@ -104,16 +105,16 @@ mod tests {
                                             testing,
                                         )
                                         .await;
-                                        let llm_json_value: super::super::SummaryType = serde_json::from_str(&llm_output.unwrap()).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
+                                        let llm_json_value: SummaryType = serde_json::from_str(&llm_output.unwrap()).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
                                         match ques_ans.answer {
-                                            super::super::AnswerFormat::summary_type(sum) => {
+                                            AnswerFormat::summary_type(sum) => {
                                                 //println!("expected answer:{:?}", &sum);
                                                 assert_eq!(
                                                     llm_json_value.sort_summarytype_struct(),
                                                     sum.sort_summarytype_struct()
                                                 );
                                             }
-                                            super::super::AnswerFormat::DE_type(_) => {
+                                            AnswerFormat::DE_type(_) => {
                                                 panic!("DE type not valid for summary")
                                             }
                                         }
@@ -124,7 +125,7 @@ mod tests {
                             let sjprovider_host = &serverconfig.sj_apilink;
                             let sj_embedding_model_name = &serverconfig.sj_embedding_model_name;
                             let sj_comp_model_name = &serverconfig.sj_comp_model_name;
-                            llm_backend_type = super::super::llm_backend::Sj();
+                            llm_backend_type = llm_backend::Sj();
                             let sj_client = super::super::sjprovider::Client::builder()
                                 .base_url(sjprovider_host)
                                 .build()
@@ -137,7 +138,7 @@ mod tests {
                                     for ques_ans in chart.TestData {
                                         let user_input = ques_ans.question;
                                         if user_input.len() > 0 {
-                                            let llm_output = super::super::run_pipeline(
+                                            let llm_output = run_pipeline(
                                                 &user_input,
                                                 comp_model.clone(),
                                                 embedding_model.clone(),
@@ -155,7 +156,7 @@ mod tests {
                                             //println!("user_input:{}", user_input);
                                             //println!("llm_answer:{:?}", llm_output);
                                             //println!("expected answer:{:?}", &ques_ans.answer);
-                                            let llm_json_value: super::super::SummaryType = serde_json::from_str(&llm_output.unwrap()).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
+                                            let llm_json_value: SummaryType = serde_json::from_str(&llm_output.unwrap()).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
                                             //println!(
                                             //    "llm_answer:{:?}",
                                             //    llm_json_value.clone().sort_summarytype_struct()
@@ -165,14 +166,14 @@ mod tests {
                                             //    &expected_json_value.clone().sort_summarytype_struct()
                                             //);
                                             match ques_ans.answer {
-                                                super::super::AnswerFormat::summary_type(sum) => {
+                                                AnswerFormat::summary_type(sum) => {
                                                     //println!("expected answer:{:?}", &sum);
                                                     assert_eq!(
                                                         llm_json_value.sort_summarytype_struct(),
                                                         sum.sort_summarytype_struct()
                                                     );
                                                 }
-                                                super::super::AnswerFormat::DE_type(_) => {
+                                                AnswerFormat::DE_type(_) => {
                                                     panic!("DE type not valid for summary")
                                                 }
                                             }

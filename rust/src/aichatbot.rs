@@ -20,28 +20,28 @@ use std::fs;
 // Struct for intaking data from dataset json
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 pub struct AiJsonFormat {
-    hasGeneExpression: bool,
-    db: String,     // Dataset db
-    genedb: String, // Gene db
-    charts: Vec<TrainTestData>,
+    pub hasGeneExpression: bool,
+    pub db: String,     // Dataset db
+    pub genedb: String, // Gene db
+    pub charts: Vec<TrainTestData>,
 }
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
-struct TrainTestData {
-    r#type: String,
-    SystemPrompt: String,
-    TrainingData: Vec<QuestionAnswer>,
-    TestData: Vec<QuestionAnswer>,
+pub struct TrainTestData {
+    pub r#type: String,
+    pub SystemPrompt: String,
+    pub TrainingData: Vec<QuestionAnswer>,
+    pub TestData: Vec<QuestionAnswer>,
 }
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
-struct QuestionAnswer {
-    question: String,
-    answer: AnswerFormat,
+pub struct QuestionAnswer {
+    pub question: String,
+    pub answer: AnswerFormat,
 }
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
-enum AnswerFormat {
+pub enum AnswerFormat {
     #[allow(non_camel_case_types)]
     summary_type(SummaryType),
     #[allow(non_camel_case_types)]
@@ -49,19 +49,19 @@ enum AnswerFormat {
 }
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
-struct DEType {
+pub struct DEType {
     action: String,
     DE_output: DETerms,
 }
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
-struct DETerms {
+pub struct DETerms {
     group1: GroupType,
     group2: GroupType,
 }
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
-struct GroupType {
+pub struct GroupType {
     name: String,
 }
 
@@ -74,7 +74,7 @@ pub enum llm_backend {
 
 #[derive(Debug, JsonSchema)]
 #[allow(dead_code)]
-struct OutputJson {
+pub struct OutputJson {
     pub answer: String,
 }
 
@@ -972,7 +972,7 @@ fn get_summary_string() -> String {
 //const geneExpression: &str = &"geneExpression";
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
-struct SummaryType {
+pub struct SummaryType {
     // Serde uses this for deserialization.
     #[serde(default = "get_summary_string")]
     // Schemars uses this for schema generation.
