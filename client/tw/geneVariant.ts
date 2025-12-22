@@ -276,7 +276,7 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 	term.groupsetting.lst = []
 	for (const dtTerm of term.childTerms) {
 		// fill dt term values with mutation classes of gene in dataset
-		await getDtTermValues(dtTerm, vocabApi.state.termfilter.filter, vocabApi)
+		await getDtTermValues(dtTerm, vocabApi.state.termfilter?.filter, vocabApi)
 		const groupset: any = { name: dtTerm.name, dt: dtTerm.dt }
 		if (dtTerm.origin) groupset.origin = dtTerm.origin
 		if (dtTerm.dt == dtcnv) getCnvGroupset(groupset, dtTerm, term.name, vocabApi)

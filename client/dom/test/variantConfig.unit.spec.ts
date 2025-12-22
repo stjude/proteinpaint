@@ -1,5 +1,6 @@
 import tape from 'tape'
-import { renderVariantConfig, type Value } from '../variantConfig'
+import { renderVariantConfig } from '../variantConfig'
+import type { TermValues, BaseValue } from '#types'
 import { select } from 'd3-selection'
 
 /*
@@ -15,18 +16,18 @@ test sections:
     - multiple mutation count
 */
 
-const values: Value[] = [
-	{ key: 'M', label: 'MISSENSE', value: 'M' },
-	{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
-	{ key: 'N', label: 'NONSENSE', value: 'N' },
-	{ key: 'D', label: 'PROTEINDEL', value: 'D' }
-]
+const values: TermValues = {
+	M: { key: 'M', label: 'MISSENSE' },
+	F: { key: 'F', label: 'FRAMESHIFT' },
+	N: { key: 'N', label: 'NONSENSE' },
+	D: { key: 'D', label: 'PROTEINDEL' }
+}
 
-const values2: Value[] = [
-	{ key: 'CNV_amp', label: 'Gain', value: 'CNV_amp' },
-	{ key: 'CNV_loss', label: 'Heterozygous Deletion', value: 'CNV_loss' },
-	{ key: 'CNV_amplification', label: 'Amplification', value: 'CNV_amplification' }
-]
+const values2: TermValues = {
+	CNV_amp: { key: 'CNV_amp', label: 'Gain' },
+	CNV_loss: { key: 'CNV_loss', label: 'Heterozygous Deletion' },
+	CNV_amplification: { key: 'CNV_amplification', label: 'Amplification' }
+}
 
 tape('\n', test => {
 	test.comment('-***- dom/variantConfig unit tests-***-')
@@ -50,10 +51,10 @@ tape('basic render: snvindel', test => {
 	const variantsDiv = holder.select('[data-testid="sjpp-variantConfig-variant"]')
 	const table = variantsDiv.select('table')
 	const rows = table.select('tbody').selectAll('tr')
-	test.equal(rows.nodes().length, values.length, 'all variants should appear in table')
+	test.equal(rows.nodes().length, Object.keys(values).length, 'all variants should appear in table')
 	const checkboxes = rows.selectAll('input[type="checkbox"]')
 	const checked = checkboxes.nodes().filter((c: any) => c.checked)
-	test.equal(checked.length, values.length, 'all rows should be checked')
+	test.equal(checked.length, Object.keys(values).length, 'all rows should be checked')
 
 	const countRadio: any = variantsDiv.selectAll('input[type="radio"]').nodes()
 	test.equal(countRadio.length, 3, 'should render 3 mutation count radio buttons')
@@ -84,10 +85,10 @@ tape('basic render: cnv', test => {
 	const variantsDiv = holder.select('[data-testid="sjpp-variantConfig-variant"]')
 	const table = variantsDiv.select('table')
 	const rows = table.select('tbody').selectAll('tr')
-	test.equal(rows.nodes().length, values2.length, 'all variants should appear in table')
+	test.equal(rows.nodes().length, Object.keys(values2).length, 'all variants should appear in table')
 	const checkboxes = rows.selectAll('input[type="checkbox"]')
 	const checked = checkboxes.nodes().filter((c: any) => c.checked)
-	test.equal(checked.length, values2.length, 'all rows should be checked')
+	test.equal(checked.length, Object.keys(values2).length, 'all rows should be checked')
 
 	const countRadio: any = variantsDiv.selectAll('input[type="radio"]').nodes()
 	test.equal(countRadio.length, 0, 'should not render mutation count radio buttons')
@@ -170,10 +171,16 @@ tape('preselected values', test => {
 	const holder = select(document.body).append('div')
 	let newConfig
 
+	const selectedValues: BaseValue[] = Object.entries(values)
+		.map(([k, v]) => {
+			return { key: k, label: v.label, value: k }
+		})
+		.filter((v, i) => i == 0 || i == 1)
+
 	renderVariantConfig({
 		holder,
 		values,
-		selectedValues: [values[0], values[1]],
+		selectedValues,
 		dt: 1,
 		callback: config => (newConfig = config)
 	})

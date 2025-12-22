@@ -60,7 +60,7 @@ export async function getDtTermValues(dtTerm, filter, vocabApi) {
 	}
 	const categories = await vocabApi.getCategories(dtTerm.parentTerm, filter)
 	const data = categories.lst.find(x => x.dt == dtTerm.dt)
-	if (!data) throw 'dt categories not found'
+	if (!data) return
 	const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[dtTerm.dt]?.byOrigin
 	const classes = byOrigin ? data.classes.byOrigin[dtTerm.origin] : data.classes
 	dtTerm.values = Object.fromEntries(
