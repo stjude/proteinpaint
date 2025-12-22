@@ -7,7 +7,16 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { mayLog } from '#src/helpers.ts'
 import { get_samples } from '#src/termdb.sql.js'
 import { read_file, file_is_readable } from '#src/utils.js'
-import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dt2lesion, optionToDt, formatElapsedTime } from '#shared'
+import {
+	dtsnvindel,
+	dtcnv,
+	dtfusionrna,
+	dtsv,
+	dt2lesion,
+	optionToDt,
+	formatElapsedTime,
+	MANHATTAN_LOG_QVALUE_CUTOFF
+} from '#shared'
 import crypto from 'crypto'
 
 /**
@@ -208,7 +217,8 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		device_pixel_ratio: request.devicePixelRatio,
 		png_dot_radius: request.pngDotRadius,
 		lesion_type_colors: request.lesionTypeColors,
-		q_value_threshold: request.qValueThreshold
+		q_value_threshold: request.qValueThreshold,
+		log_cutoff: MANHATTAN_LOG_QVALUE_CUTOFF
 	}
 
 	// Step 6: Generate manhattan plot via rust
