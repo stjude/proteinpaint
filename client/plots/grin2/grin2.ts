@@ -976,7 +976,6 @@ export function getDefaultSettings(opts) {
 			yAxisY: 40,
 			yAxisSpace: 20,
 			xAxisLabelPad: 30,
-			xAxisTickPad: 12,
 			yAxisPad: 5,
 			axisColor: '#545454',
 			showYAxisLine: true,
