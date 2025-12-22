@@ -79,6 +79,93 @@ fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
     Some((r, g, b))
 }
 
+/// Calculate dynamic y-cap using histogram approach - O(n) time, O(1) space
+///
+/// Strategy:
+/// 1. If max_y <= default_cap: no capping needed, return max_y
+/// 2. If points above default_cap <= threshold_pct: use default_cap
+/// 3. Otherwise: find the lowest cap such that <= threshold_pct points are above it
+///
+/// Uses a fixed-size histogram (NUM_BUCKETS) to avoid sorting.
+/// For 10M points, this is ~40MB less memory than storing a sorted copy.
+fn calculate_dynamic_y_cap(
+    ys: &[f64],
+    default_cap: f64,
+    threshold_pct: f64, // e.g., 0.0001 for 0.01%
+) -> f64 {
+    const NUM_BUCKETS: usize = 1000;
+
+    let total_points = ys.len();
+    if total_points == 0 {
+        return default_cap;
+    }
+
+    // Single pass: find max_y and count points above default_cap
+    let mut max_y = f64::MIN;
+    let mut count_above_default = 0usize;
+
+    for &y in ys {
+        if y > max_y {
+            max_y = y;
+        }
+        if y > default_cap {
+            count_above_default += 1;
+        }
+    }
+
+    // Case 1: No points exceed default cap - use actual max
+    if max_y <= default_cap {
+        return max_y;
+    }
+
+    // Case 2: Points above default cap are within threshold - use default cap
+    let threshold_count = ((total_points as f64) * threshold_pct).ceil() as usize;
+    if count_above_default <= threshold_count {
+        return default_cap;
+    }
+
+    // Case 3: Need dynamic cap - build histogram for values in (default_cap, max_y]
+    // We need to find a cap where count_above <= threshold_count
+
+    let range = max_y - default_cap;
+    let bucket_width = range / (NUM_BUCKETS as f64);
+
+    // Histogram: bucket[i] counts points in range (default_cap + i*width, default_cap + (i+1)*width]
+    let mut histogram = [0usize; NUM_BUCKETS];
+
+    for &y in ys {
+        if y > default_cap {
+            // Map y to bucket index
+            let bucket_idx = ((y - default_cap) / bucket_width) as usize;
+            // Clamp to valid range (handles y == max_y edge case)
+            let bucket_idx = bucket_idx.min(NUM_BUCKETS - 1);
+            histogram[bucket_idx] += 1;
+        }
+    }
+
+    // Walk from highest bucket down, accumulating count until we exceed threshold
+    // The cap should be set at the lower edge of the first bucket where
+    // cumulative count from above exceeds threshold
+    let mut cumulative_above = 0usize;
+
+    for i in (0..NUM_BUCKETS).rev() {
+        cumulative_above += histogram[i];
+
+        // If adding this bucket pushes us over threshold, cap at upper edge of this bucket
+        if cumulative_above > threshold_count {
+            // Cap at the upper edge of this bucket
+            // Points in buckets i+1 to NUM_BUCKETS-1 will be capped (they're above this)
+            // We want the cap to be at bucket i's upper edge
+            let cap = default_cap + ((i + 1) as f64) * bucket_width;
+            return cap;
+        }
+    }
+
+    // If we get here, all points above default_cap fit within threshold (shouldn't happen
+    // given our earlier check, but return default_cap as fallback)
+    default_cap
+}
+
 // Function to Build cumulative chromosome map
 fn cumulative_chrom(
     chrom_size: &HashMap<String, u64>,
@@ -313,13 +400,37 @@ fn plot_grin2_manhattan(
     }
 
     // ------------------------------------------------
-    // 3. Y-axis scaling (cap at 40)
+    // 3. Y-axis capping with dynamic cap
     // ------------------------------------------------
     let y_padding = png_dot_radius as f64;
     let y_min = 0.0 - y_padding;
-    let y_cap = log_cutoff; // typically 40.0. Use the passed log_cutoff value that user will be able to modify in the future
+
+    // Dynamic y-cap calculation:
+    // - default_cap: the baseline cap (log_cutoff, typically 40)
+    // - threshold_pct: 0.0001 (0.01%) - if more than this % of points exceed cap, raise it
+    let default_cap = log_cutoff;
+    const THRESHOLD_PCT: f64 = 0.0001; // 0.01%
+
+    let y_cap = calculate_dynamic_y_cap(&ys, default_cap, THRESHOLD_PCT);
+
     let y_max = if !ys.is_empty() {
         let max_y = ys.iter().cloned().fold(f64::MIN, f64::max);
+
+        // If dynamic cap is higher than default (log_cutoff), elevate q=0 points
+        // (which were set to log_cutoff) to the new cap so they remain at the top
+        if y_cap > log_cutoff {
+            for y in ys.iter_mut() {
+                if *y == log_cutoff {
+                    *y = y_cap;
+                }
+            }
+            for p in point_details.iter_mut() {
+                if p.q_value == 0.0 {
+                    p.y = y_cap;
+                }
+            }
+        }
+
         if max_y > y_cap {
             // Clamp values above the cap
             for y in ys.iter_mut() {
