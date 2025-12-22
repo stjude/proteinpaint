@@ -1,8 +1,5 @@
 // Syntax: cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/aichatbot
 #![allow(non_snake_case)]
-//use crate::ollama;
-//use crate::sjprovider; // Importing custom rig module for invoking SJ GPU server
-//use crate::test_ai;
 //use anyhow::Result;
 //use json::JsonValue;
 use r2d2_sqlite::SqliteConnectionManager;
@@ -14,8 +11,6 @@ use schemars::JsonSchema;
 use serde_json::{Map, Value, json};
 use std::collections::HashMap;
 use std::fs;
-//use std::io;
-//use std::path::Path; // Importing custom rig module for invoking ollama server // Test examples for AI chatbot
 
 // Struct for intaking data from dataset json
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
