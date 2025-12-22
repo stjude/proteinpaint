@@ -1000,7 +1000,7 @@ export function getDefaultSettings(opts) {
 			// Download options
 			showDownload: true,
 
-			// Max genes to show in table and interactive dots cap
+			// Max genes to show in table, interactive dots cap, and tooltip genes
 			maxGenesToShow: 500,
 			interactiveDotsCap: 5000,
 			maxTooltipGenes: 5,
