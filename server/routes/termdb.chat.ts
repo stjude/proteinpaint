@@ -89,12 +89,12 @@ function init({ genomes }) {
 			const time2 = new Date().valueOf()
 			mayLog('Time taken for classification:', time2 - time1, 'ms')
 
-			if (classification == 'summary') {
+			let ai_output_data: any
+			if (JSON.parse(classification.replace('final_output:', '')).plot == 'summary') {
 				const time1 = new Date().valueOf()
-				const summary = await run_rust('summary_agent', JSON.stringify(chatbot_input))
-				mayLog('summary:', summary)
+				ai_output_data = await run_rust('summary_agent', JSON.stringify(chatbot_input))
 				const time2 = new Date().valueOf()
-				mayLog('Time taken for classification:', time2 - time1, 'ms')
+				mayLog('Time taken for running summary agent:', time2 - time1, 'ms')
 			}
 
 			let ai_output_json: any
