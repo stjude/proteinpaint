@@ -3,6 +3,8 @@ import type { PillData } from '../types'
 import { make_radios, renderTable } from '#dom'
 import { filterInit, filterPromptInit, getNormalRoot, excludeFilterByTag } from '#filter/filter'
 import type { TermSetting } from '../TermSetting.ts'
+import { vocabInit } from '#termdb/vocabulary'
+import { getDtTermValues } from '#filter/tvs.dt'
 
 // self is the termsetting instance
 export function getHandler(self: TermSetting) {
@@ -135,13 +137,19 @@ async function makeGroupUI(self: TermSetting, div) {
 		self.groups = structuredClone(groupset.groups)
 	}
 
-	// prompt button is an instance to a blank filter, can only make the button after state is filled
-	// but not in instance.init()
-	// create "Add new group" button as needed
+	// fill values of child dt terms with mutation classes of gene in dataset
+	for (const dtTerm of self.term.childTerms) {
+		await getDtTermValues(dtTerm, self.filter, self.vocabApi)
+	}
+
+	// build frontend vocab using child dt terms
+	const vocabApi: any = vocabInit({ vocab: { terms: self.term.childTerms } })
+	vocabApi.termdbConfig = self.vocabApi.termdbConfig
+
+	// filter prompt
 	const filterPrompt = await filterPromptInit({
 		holder: addNewGroupBtnHolder,
-		vocab: { terms: self.term.childTerms },
-		vocabApi: self.vocabApi,
+		vocabApi,
 		emptyLabel: 'Add group',
 		callback: f => {
 			const filter = getNormalRoot(f)
@@ -225,8 +233,7 @@ async function makeGroupUI(self: TermSetting, div) {
 		const group = self.groups[i]
 		filterInit({
 			holder: row[3].__td,
-			vocab: { terms: self.term.childTerms },
-			vocabApi: self.vocabApi,
+			vocabApi,
 			callback: f => {
 				if (!f || f.lst.length == 0) {
 					// blank filter (user removed last tvs from this filter), delete this element from groups[]

@@ -9,14 +9,15 @@ Base TVS handler for dt terms
 export const handler = Object.assign({}, _handler, { fillMenu, term_name_gen, get_pill_label })
 
 async function fillMenu(self, div, tvs) {
-	// get the dt mutations of gene in dataset
-	const values = await getDtValues(tvs.term, self.opts.vocabApi)
+	// get mutations of gene in dataset
+	const term = structuredClone(tvs.term)
+	await getDtTermValues(term, self.filter, self.opts.vocabApi)
 	// render mutations
 	const arg = {
 		holder: div,
-		values,
+		values: term.values,
 		selectedValues: tvs.values,
-		dt: tvs.term.dt,
+		dt: term.dt,
 		mcount: tvs.mcount,
 		wt: tvs.wt,
 		callback: config => {
@@ -50,18 +51,23 @@ function get_pill_label(tvs) {
 	return { txt }
 }
 
-export async function getDtValues(dtTerm, vocabApi) {
-	const termdbmclass = vocabApi.termdbConfig.mclass // custom mclass labels from dataset
-	const filter = vocabApi.state.termfilter.filter
+// get values of dt term
+// these are dt mutation classes of gene in dataset
+export async function getDtTermValues(dtTerm, filter, vocabApi) {
+	if (Object.keys(dtTerm.values).length) {
+		// values already present
+		return
+	}
 	const categories = await vocabApi.getCategories(dtTerm.parentTerm, filter)
 	const data = categories.lst.find(x => x.dt == dtTerm.dt)
 	if (!data) throw 'dt categories not found'
 	const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[dtTerm.dt]?.byOrigin
 	const classes = byOrigin ? data.classes.byOrigin[dtTerm.origin] : data.classes
-	const values = Object.keys(classes)
-		.filter(k => k != 'Blank' && k != 'WT')
-		.map(k => {
-			return { key: k, label: termdbmclass?.[k]?.label || mclass[k].label, value: k }
-		})
-	return values
+	dtTerm.values = Object.fromEntries(
+		Object.keys(classes)
+			.filter(k => k != 'Blank' && k != 'WT')
+			.map(k => {
+				return [k, { key: k, label: vocabApi.termdbConfig.mclass?.[k]?.label || mclass[k].label }]
+			})
+	)
 }

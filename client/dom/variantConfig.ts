@@ -1,21 +1,16 @@
 import { make_radios, renderTable } from '#dom'
-
-export type Value = {
-	key: string
-	label: string
-	value: string
-}
+import type { TermValues, BaseValue } from '#types'
 
 type Config = {
 	wt: boolean
-	values: Value[]
+	values: BaseValue[]
 	mcount?: 'any' | 'single' | 'multiple'
 }
 
 type Arg = {
 	holder: any // D3 holder where UI is rendered
-	values: Value[] // mutation classes
-	selectedValues?: Value[] // selected mutation classes, when missing will default to all classes
+	values: TermValues // mutation classes of term
+	selectedValues?: BaseValue[] // selected mutation classes, when missing will default to all classes of term
 	dt: number // dt value, rendering of some elements are based on this value
 	mcount?: 'any' | 'single' | 'multiple' // mutation count, when missing will default to 'any'
 	wt?: boolean // whether genotype is wildtype
@@ -23,8 +18,11 @@ type Arg = {
 }
 
 export function renderVariantConfig(arg: Arg) {
-	const { holder, values, dt } = arg
+	const { holder, dt } = arg
 	const wt = arg.wt || false
+	const values: BaseValue[] = Object.entries(arg.values).map(([k, v]) => {
+		return { key: k, label: v.label, value: k }
+	})
 	const selectedValues = arg.selectedValues?.length ? arg.selectedValues : values
 	if (!Number.isInteger(dt)) throw 'unexpected dt value'
 	const mcount = arg.mcount || 'any'

@@ -13,13 +13,14 @@ import type {
 	RawGvTW,
 	GvTW,
 	RawGvTerm,
-	VocabApi
+	VocabApi,
+	TermValues
 } from '#types'
 import { TwBase, type TwOpts } from './TwBase.ts'
 import { copyMerge } from '#rx'
 import { set_hiddenvalues } from '#termsetting'
 import { getWrappedTvslst } from '#filter/filter'
-import { getDtValues } from '#filter/tvs.dt'
+import { getDtTermValues } from '#filter/tvs.dt'
 import { getChildTerms, addParentTerm } from '../termdb/handlers/geneVariant'
 import { getColors, dtcnv, mclass } from '#shared/common.js'
 import { rgb } from 'd3-color'
@@ -274,23 +275,24 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 	term.groupsetting = { disabled: false }
 	term.groupsetting.lst = []
 	for (const dtTerm of term.childTerms) {
-		const values = await getDtValues(dtTerm, vocabApi)
+		// fill dt term values with mutation classes of gene in dataset
+		await getDtTermValues(dtTerm, vocabApi.state.termfilter.filter, vocabApi)
 		const groupset: any = { name: dtTerm.name, dt: dtTerm.dt }
 		if (dtTerm.origin) groupset.origin = dtTerm.origin
-		if (dtTerm.dt == dtcnv) getCnvGroupset(groupset, dtTerm, term.name, vocabApi, values)
-		else getNonCnvGroupset(groupset, dtTerm, term.name, values)
+		if (dtTerm.dt == dtcnv) getCnvGroupset(groupset, dtTerm, term.name, vocabApi)
+		else getNonCnvGroupset(groupset, dtTerm, term.name)
 		term.groupsetting.lst.push(groupset)
 	}
 
 	// function to get cnv groupset
 	// will route to appropriate function depending on mode of cnv data
-	function getCnvGroupset(groupset, dtTerm, geneName, vocabApi, values) {
+	function getCnvGroupset(groupset, dtTerm, geneName, vocabApi) {
 		const cnv = vocabApi.termdbConfig.queries?.cnv
 		if (!cnv) throw 'cnv query is missing'
 		const keys = Object.keys(cnv)
 		const isContinuous = keys.includes('cnvGainCutoff') || keys.includes('cnvLossCutoff')
 		if (isContinuous) getContCnvGroupset(groupset, dtTerm, geneName, cnv)
-		else getCatCnvGroupset(groupset, dtTerm, geneName, values)
+		else getCatCnvGroupset(groupset, dtTerm, geneName)
 	}
 
 	// function to get cnv groupset for continuous cnv data
@@ -370,16 +372,17 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 
 	// function to get cnv groupset for categorical cnv data
 	// will compare cnv categories present in the data
-	function getCatCnvGroupset(groupset, dtTerm, geneName, values) {
+	function getCatCnvGroupset(groupset, dtTerm, geneName) {
 		groupset.groups = []
 		// mutant values
-		for (const v of values) {
+		const values = dtTerm.values as TermValues
+		for (const [k, v] of Object.entries(values)) {
 			const filter = getWrappedTvslst([
 				{
 					type: 'tvs',
 					tvs: {
 						term: dtTerm,
-						values: [v],
+						values: [{ key: k, label: v.label, value: k }],
 						mcount: 'any',
 						excludeGeneName: true
 					}
@@ -410,16 +413,19 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 
 	// function to get non-cnv (e.g. snv/indel, fusion, etc.) groupset
 	// will compare mutant vs. wildtype
-	function getNonCnvGroupset(groupset, dtTerm, geneName, values) {
+	function getNonCnvGroupset(groupset, dtTerm, geneName) {
 		groupset.groups = []
 		// group 1: mutant
 		const grp1Name = `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Mutated (${dtTerm.origin})` : 'Mutated'}`
+		const values = dtTerm.values as TermValues
 		const grp1Filter = getWrappedTvslst([
 			{
 				type: 'tvs',
 				tvs: {
 					term: dtTerm,
-					values,
+					values: Object.entries(values).map(([k, v]) => {
+						return { key: k, label: v.label, value: k }
+					}),
 					mcount: 'any',
 					excludeGeneName: true
 				}
