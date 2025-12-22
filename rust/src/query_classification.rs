@@ -133,7 +133,7 @@ async fn main() -> Result<()> {
 
                     match final_output {
                         Some(fin_out) => {
-                            println!("final_output:{:?}", fin_out.replace("\\", ""));
+                            println!("final_output:{{\"{}\":{}}}", "plot", fin_out);
                         }
                         None => {
                             println!("final_output:{{\"{}\":\"{}\"}}", "action", "unknown");
