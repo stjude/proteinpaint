@@ -1,2 +1,1 @@
-Fixes:
-- GRIN2: Fixing display of 0 q-values in manhattan plot
+
