@@ -158,9 +158,6 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		...settings
 	}
 
-	console.log('Manhattan plot settings:', settings)
-	console.log('Manhattan plot data:', data)
-
 	// Check size of interactive data
 	let interactivePoints = data.plotData.points
 	if (data.plotData.points.length > settings.interactiveDotsCap) {
