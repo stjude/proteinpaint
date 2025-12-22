@@ -402,7 +402,7 @@ pub async fn run_pipeline(
 }
 
 #[allow(dead_code)]
-async fn classify_query_by_dataset_type(
+pub async fn classify_query_by_dataset_type(
     user_input: &str,
     comp_model: impl rig::completion::CompletionModel + 'static,
     _embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
