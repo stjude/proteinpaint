@@ -22,6 +22,10 @@ const defaults = {
 		button or prompt to add the 
 		first user-configurable filter item
 
+	.header_mode (e.g. 'hide_search')
+		optional setting for header of tree menu
+		will be supplied to termdb app state in filter.interactivity.js 
+
 
 	Coding convenience:
 	- use $id for data binding to match  

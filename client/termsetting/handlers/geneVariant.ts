@@ -144,8 +144,10 @@ async function makeGroupUI(self: TermSetting, div) {
 
 	// build frontend vocab using child dt terms
 	const vocabApi: any = vocabInit({ vocab: { terms: self.term.childTerms } })
-	// including termdbConfig.queries, as it is needed for cnv tvs (see getDtCnvType() in filter/tvs.js and fillMenu() in filter/tvs.dtcnv.continuous.js)
-	// not passing entire termdbConfig as presence of .allowedTermTypes will trigger term type toggles (see init() in termdb/TermTypeSearch.ts)
+	// need termdbConfig.queries for cnv tvs (see getDtCnvType() in filter/tvs.js and
+	// fillMenu() in filter/tvs.dtcnv.continuous.js)
+	// not passing complete termdbConfig as presence of .allowedTermTypes will
+	// trigger term type toggles (see init() in termdb/TermTypeSearch.ts)
 	vocabApi.termdbConfig = { queries: self.vocabApi.termdbConfig.queries }
 
 	// filter prompt
@@ -153,6 +155,7 @@ async function makeGroupUI(self: TermSetting, div) {
 		holder: addNewGroupBtnHolder,
 		vocabApi,
 		emptyLabel: 'Add group',
+		header_mode: 'hide_search',
 		callback: f => {
 			const filter = getNormalRoot(f)
 			addNewGroup(filter, self.groups)
@@ -236,6 +239,7 @@ async function makeGroupUI(self: TermSetting, div) {
 		filterInit({
 			holder: row[3].__td,
 			vocabApi,
+			header_mode: 'hide_search',
 			callback: f => {
 				if (!f || f.lst.length == 0) {
 					// blank filter (user removed last tvs from this filter), delete this element from groups[]
