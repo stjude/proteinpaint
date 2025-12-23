@@ -23,7 +23,7 @@ struct Input {
     device_pixel_ratio: f64,
     png_dot_radius: u64,
     log_cutoff: f64,
-    threshold_pct: f64,
+    max_capped_points: u64,
     hard_cap: f64,
 }
 
@@ -82,19 +82,17 @@ fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
     Some((r, g, b))
 }
 
-/// Calculate dynamic y-cap using histogram approach - O(n) time, O(1) space
+/// Calculate dynamic y-cap using fixed bin approach - O(n) time, O(1) space
 ///
 /// Strategy:
 /// 1. If max_y <= default_cap: no capping needed, return max_y
-/// 2. If points above default_cap <= threshold_pct: use default_cap
-/// 3. Otherwise: find the lowest cap such that <= threshold_pct points are above it
-/// 4. Never exceed hard_cap (default of 200) regardless of data distribution
+/// 2. If points above default_cap <= max_allowed: use default_cap
+/// 3. Otherwise: find the lowest cap (in increments of 10) where <= max_allowed points are above it
+/// 4. Never exceed hard_cap regardless of data distribution
 ///
-/// Uses a fixed-size histogram (NUM_BUCKETS) to avoid sorting.
-/// For 10M points, this is ~40MB less memory than storing a sorted copy.
-fn calculate_dynamic_y_cap(ys: &[f64], default_cap: f64, threshold_pct: f64, hard_cap: f64) -> f64 {
-    const NUM_BUCKETS: usize = 1000;
-    let hard_cap: f64 = hard_cap; // Absolute maximum y-cap
+/// Uses fixed bins of size 10 on the -log10 scale (40, 50, 60, ..., hard_cap)
+fn calculate_dynamic_y_cap(ys: &[f64], default_cap: f64, max_allowed: usize, hard_cap: f64) -> f64 {
+    const BIN_SIZE: f64 = 10.0;
 
     let total_points = ys.len();
     if total_points == 0 {
@@ -120,51 +118,45 @@ fn calculate_dynamic_y_cap(ys: &[f64], default_cap: f64, threshold_pct: f64, har
     }
 
     // Case 2: Points above default cap are within threshold - use default cap
-    // Use float comparison to handle very small thresholds correctly
-    let threshold_count = (total_points as f64) * threshold_pct;
-    if (count_above_default as f64) <= threshold_count {
+    if count_above_default <= max_allowed {
         return default_cap;
     }
 
-    // Case 3: Need dynamic cap - build histogram for values in (default_cap, max_y]
-    // We need to find a cap where count_above <= threshold_count
+    // Case 3: Need dynamic cap - check each bin level (40, 50, 60, ..., hard_cap)
+    // Find the lowest cap where <= max_allowed points are above it
 
-    let range = max_y - default_cap;
-    let bucket_width = range / (NUM_BUCKETS as f64);
+    // Calculate number of bins from default_cap to hard_cap
+    let num_bins = ((hard_cap - default_cap) / BIN_SIZE) as usize;
 
-    // Histogram: bucket[i] counts points in range (default_cap + i*width, default_cap + (i+1)*width]
-    let mut histogram = [0usize; NUM_BUCKETS];
+    // Build histogram with fixed 10-unit bins
+    let mut histogram = vec![0usize; num_bins];
 
     for &y in ys {
-        if y > default_cap {
-            // Map y to bucket index
-            let bucket_idx = ((y - default_cap) / bucket_width) as usize;
-            // Clamp to valid range (handles y == max_y edge case)
-            let bucket_idx = bucket_idx.min(NUM_BUCKETS - 1);
-            histogram[bucket_idx] += 1;
+        if y > default_cap && y <= hard_cap {
+            let bin_idx = ((y - default_cap) / BIN_SIZE) as usize;
+            let bin_idx = bin_idx.min(num_bins - 1);
+            histogram[bin_idx] += 1;
+        } else if y > hard_cap {
+            // Points above hard_cap go in the last bin
+            histogram[num_bins - 1] += 1;
         }
     }
 
-    // Walk from highest bucket down, accumulating count until we exceed threshold
-    // The cap should be set at the lower edge of the first bucket where
-    // cumulative count from above exceeds threshold
+    // Walk from highest bin down, accumulating count until we exceed threshold
     let mut cumulative_above = 0usize;
 
-    for i in (0..NUM_BUCKETS).rev() {
+    for i in (0..num_bins).rev() {
         cumulative_above += histogram[i];
 
-        // If adding this bucket pushes us over threshold, cap at upper edge of this bucket
-        if (cumulative_above as f64) > threshold_count {
-            // Cap at the upper edge of this bucket
-            // Points in buckets i+1 to NUM_BUCKETS-1 will be capped (they're above this)
-            // We want the cap to be at bucket i's upper edge
-            let cap = default_cap + ((i + 1) as f64) * bucket_width;
+        // If adding this bin pushes us over threshold, cap at upper edge of this bin
+        if cumulative_above > max_allowed {
+            // Cap at the upper edge of this bin (rounded to nearest 10)
+            let cap = default_cap + ((i + 1) as f64) * BIN_SIZE;
             return cap.min(hard_cap);
         }
     }
 
-    // If we get here, all points above default_cap fit within threshold (shouldn't happen
-    // given our earlier check, but return default_cap as fallback)
+    // If we get here, all points fit within threshold at default_cap
     default_cap
 }
 
@@ -365,7 +357,7 @@ fn plot_grin2_manhattan(
     device_pixel_ratio: f64,
     png_dot_radius: u64,
     log_cutoff: f64,
-    threshold_pct: f64,
+    max_capped_points: u64,
     hard_cap: f64,
 ) -> Result<(String, InteractiveData), Box<dyn Error>> {
     // ------------------------------------------------
@@ -411,13 +403,11 @@ fn plot_grin2_manhattan(
 
     // Dynamic y-cap calculation:
     // - default_cap: the baseline cap (log_cutoff, typically 40)
-    // - threshold_pct: 1e-6 (0.0001%) - if more than this % of points exceed cap, raise it
+    // - max_capped_points: maximum number of points allowed above cap before raising it
     let default_cap = log_cutoff;
-    // const THRESHOLD_PCT: f64 = 1e-6; // 0.0001%
-    let threshold_pct: f64 = threshold_pct;
-    let hard_cap: f64 = hard_cap;
+    let max_allowed = max_capped_points as usize;
 
-    let y_cap = calculate_dynamic_y_cap(&ys, default_cap, threshold_pct, hard_cap);
+    let y_cap = calculate_dynamic_y_cap(&ys, default_cap, max_allowed, hard_cap);
 
     // Jitter range: capped points will spread over this range below the cap line
     let jitter_range = (y_cap * 0.05).max(2.0); // 5% of cap or at least 2 units
@@ -656,7 +646,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let device_pixel_ratio = &input_json.device_pixel_ratio;
                 let png_dot_radius = &input_json.png_dot_radius;
                 let log_cutoff = &input_json.log_cutoff;
-                let threshold_pct = &input_json.threshold_pct;
+                let max_capped_points = &input_json.max_capped_points;
                 let hard_cap = &input_json.hard_cap;
                 if let Ok((base64_string, plot_data)) = plot_grin2_manhattan(
                     grin2_file.clone(),
@@ -666,7 +656,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     device_pixel_ratio.clone(),
                     png_dot_radius.clone(),
                     log_cutoff.clone(),
-                    threshold_pct.clone(),
+                    max_capped_points.clone(),
                     hard_cap.clone(),
                 ) {
                     let output = Output {
