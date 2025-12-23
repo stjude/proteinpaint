@@ -144,7 +144,9 @@ async function makeGroupUI(self: TermSetting, div) {
 
 	// build frontend vocab using child dt terms
 	const vocabApi: any = vocabInit({ vocab: { terms: self.term.childTerms } })
-	vocabApi.termdbConfig = { queries: self.vocabApi.termdbConfig.queries } // needed for cnv tvs
+	// including termdbConfig.queries, as it is needed for cnv tvs (see getDtCnvType() in filter/tvs.js and fillMenu() in filter/tvs.dtcnv.continuous.js)
+	// not passing entire termdbConfig as presence of .allowedTermTypes will trigger term type toggles (see init() in termdb/TermTypeSearch.ts)
+	vocabApi.termdbConfig = { queries: self.vocabApi.termdbConfig.queries }
 
 	// filter prompt
 	const filterPrompt = await filterPromptInit({
