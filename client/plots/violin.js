@@ -193,7 +193,7 @@ class ViolinPlot extends PlotBase {
 				chartType: 'violin',
 				settingsKey: 'radius',
 				step: 1,
-				max: 10,
+				max: 30,
 				min: 4
 			},
 			{
@@ -244,7 +244,7 @@ class ViolinPlot extends PlotBase {
 				chartType: 'violin',
 				settingsKey: 'medianLength',
 				step: 1,
-				max: 15,
+				max: 50,
 				min: 3,
 				debounceInterval: 1000
 			},
