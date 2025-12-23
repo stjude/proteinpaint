@@ -228,7 +228,8 @@ export function setInteractivity(self) {
 			state: {
 				activeCohort: self.activeCohort,
 				termfilter: { filter: rootFilterCopy },
-				tree: { usecase: { target: 'filter' } }
+				tree: { usecase: { target: 'filter' } },
+				nav: { header_mode: self.opts.header_mode }
 			},
 			tree: {
 				disable_terms:
@@ -329,7 +330,7 @@ export function setInteractivity(self) {
 			getCategoriesArguments: self.opts.getCategoriesArguments,
 			state: {
 				activeCohort: self.activeCohort,
-				header_mode: 'search_only',
+				nav: { header_mode: self.opts.header_mode || 'search_only' },
 				termfilter: { filter: self.getAdjustedRoot(filter.$id, filter.join) },
 				tree: { usecase: { target: 'filter' } }
 			},
