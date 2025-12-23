@@ -536,7 +536,6 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				.attr('x', legendX + 20)
 				.attr('y', noteY)
 				.attr('font-size', `${settings.legendFontSize}px`)
-				// .attr('fill', '#666')
 				.text('Capped points (jittered for aesthetics)')
 		}
 	}
