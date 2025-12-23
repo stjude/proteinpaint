@@ -119,8 +119,9 @@ fn calculate_dynamic_y_cap(
     }
 
     // Case 2: Points above default cap are within threshold - use default cap
-    let threshold_count = ((total_points as f64) * threshold_pct).ceil() as usize;
-    if count_above_default <= threshold_count {
+    // Use float comparison to handle very small thresholds correctly
+    let threshold_count = (total_points as f64) * threshold_pct;
+    if (count_above_default as f64) <= threshold_count {
         return default_cap;
     }
 
@@ -152,7 +153,7 @@ fn calculate_dynamic_y_cap(
         cumulative_above += histogram[i];
 
         // If adding this bucket pushes us over threshold, cap at upper edge of this bucket
-        if cumulative_above > threshold_count {
+        if (cumulative_above as f64) > threshold_count {
             // Cap at the upper edge of this bucket
             // Points in buckets i+1 to NUM_BUCKETS-1 will be capped (they're above this)
             // We want the cap to be at bucket i's upper edge
@@ -407,40 +408,54 @@ fn plot_grin2_manhattan(
 
     // Dynamic y-cap calculation:
     // - default_cap: the baseline cap (log_cutoff, typically 40)
-    // - threshold_pct: 0.0001 (0.01%) - if more than this % of points exceed cap, raise it
+    // - threshold_pct: 1e-6 (0.0001%) - if more than this % of points exceed cap, raise it
     let default_cap = log_cutoff;
-    const THRESHOLD_PCT: f64 = 0.0001; // 0.01%
+    const THRESHOLD_PCT: f64 = 1e-6; // 0.0001%
 
     let y_cap = calculate_dynamic_y_cap(&ys, default_cap, THRESHOLD_PCT);
+
+    // Jitter range: capped points will spread over this range below the cap line
+    let jitter_range = (y_cap * 0.05).max(1.0); // 5% of cap or at least 1 unit
+
+    // Track if we have any capped points (to draw the indicator band)
+    let mut has_capped_points = false;
 
     let y_max = if !ys.is_empty() {
         let max_y = ys.iter().cloned().fold(f64::MIN, f64::max);
 
         // If dynamic cap is higher than default (log_cutoff), elevate q=0 points
         // (which were set to log_cutoff) to the new cap so they remain at the top
+        // Apply jitter during elevation to spread them out
         if y_cap > log_cutoff {
-            for y in ys.iter_mut() {
+            for (i, y) in ys.iter_mut().enumerate() {
                 if *y == log_cutoff {
-                    *y = y_cap;
+                    let jitter_factor = ((i.wrapping_mul(2654435761)) % 1000) as f64 / 1000.0;
+                    *y = y_cap - (jitter_factor * jitter_range);
+                    has_capped_points = true;
                 }
             }
-            for p in point_details.iter_mut() {
+            for (i, p) in point_details.iter_mut().enumerate() {
                 if p.q_value == 0.0 {
-                    p.y = y_cap;
+                    let jitter_factor = ((sig_indices[i].wrapping_mul(2654435761)) % 1000) as f64 / 1000.0;
+                    p.y = y_cap - (jitter_factor * jitter_range);
                 }
             }
         }
 
         if max_y > y_cap {
-            // Clamp values above the cap
-            for y in ys.iter_mut() {
+            has_capped_points = true;
+            // Clamp values above the cap and apply jitter to spread them out
+            for (i, y) in ys.iter_mut().enumerate() {
                 if *y > y_cap {
-                    *y = y_cap;
+                    // Deterministic jitter based on index - creates a hash-like spread
+                    let jitter_factor = ((i.wrapping_mul(2654435761)) % 1000) as f64 / 1000.0; // 0.0 to 1.0
+                    *y = y_cap - (jitter_factor * jitter_range);
                 }
             }
-            for p in point_details.iter_mut() {
+            for (i, p) in point_details.iter_mut().enumerate() {
                 if p.y > y_cap {
-                    p.y = y_cap;
+                    let jitter_factor = ((sig_indices[i].wrapping_mul(2654435761)) % 1000) as f64 / 1000.0;
+                    p.y = y_cap - (jitter_factor * jitter_range);
                 }
             }
             y_cap + 0.35 + y_padding
@@ -505,6 +520,23 @@ fn plot_grin2_manhattan(
                 );
                 chart.draw_series(vec![rect])?;
             }
+        }
+
+        // ------------------------------------------------
+        // 6b. Draw capped region indicator (shaded band)
+        // ------------------------------------------------
+        if has_capped_points {
+            let band_bottom = y_cap - jitter_range;
+            let band_top = y_cap;
+
+            // Shaded band - light yellow to indicate "capped/jittered" region
+            let band_color = RGBColor(255, 235, 59); // Yellow (#FFEB3B)
+            let band_style: ShapeStyle = band_color.mix(0.35).filled();
+            let band_rect = Rectangle::new(
+                [(-x_buffer, band_bottom), (total_genome_length + x_buffer, band_top)],
+                band_style,
+            );
+            chart.draw_series(vec![band_rect])?;
         }
 
         // ------------------------------------------------
