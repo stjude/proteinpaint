@@ -66,7 +66,7 @@ export type BoxPlotEntry = {
 	isHidden?: boolean
 	key: string
 	/** Formatted bins for numeric terms */
-	overlayBins?: any
+	overlayTwBins?: any
 	/** Usually the same as key, but determined by the tw */
 	seriesId?: string
 }
