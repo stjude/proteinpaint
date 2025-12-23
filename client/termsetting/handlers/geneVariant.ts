@@ -144,7 +144,7 @@ async function makeGroupUI(self: TermSetting, div) {
 
 	// build frontend vocab using child dt terms
 	const vocabApi: any = vocabInit({ vocab: { terms: self.term.childTerms } })
-	vocabApi.termdbConfig = self.vocabApi.termdbConfig
+	vocabApi.termdbConfig = { queries: self.vocabApi.termdbConfig.queries } // needed for cnv tvs
 
 	// filter prompt
 	const filterPrompt = await filterPromptInit({
