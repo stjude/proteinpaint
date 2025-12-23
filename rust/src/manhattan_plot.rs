@@ -23,6 +23,8 @@ struct Input {
     device_pixel_ratio: f64,
     png_dot_radius: u64,
     log_cutoff: f64,
+    threshold_pct: f64,
+    hard_cap: f64,
 }
 
 // chromosome info
@@ -86,17 +88,13 @@ fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
 /// 1. If max_y <= default_cap: no capping needed, return max_y
 /// 2. If points above default_cap <= threshold_pct: use default_cap
 /// 3. Otherwise: find the lowest cap such that <= threshold_pct points are above it
-/// 4. Never exceed HARD_CAP (100) regardless of data distribution
+/// 4. Never exceed hard_cap (default of 100) regardless of data distribution
 ///
 /// Uses a fixed-size histogram (NUM_BUCKETS) to avoid sorting.
 /// For 10M points, this is ~40MB less memory than storing a sorted copy.
-fn calculate_dynamic_y_cap(
-    ys: &[f64],
-    default_cap: f64,
-    threshold_pct: f64, // e.g., 0.0001 for 0.01%
-) -> f64 {
+fn calculate_dynamic_y_cap(ys: &[f64], default_cap: f64, threshold_pct: f64, hard_cap: f64) -> f64 {
     const NUM_BUCKETS: usize = 1000;
-    const HARD_CAP: f64 = 100.0; // Absolute maximum y-cap
+    let hard_cap: f64 = hard_cap; // Absolute maximum y-cap
 
     let total_points = ys.len();
     if total_points == 0 {
@@ -161,7 +159,7 @@ fn calculate_dynamic_y_cap(
             // Points in buckets i+1 to NUM_BUCKETS-1 will be capped (they're above this)
             // We want the cap to be at bucket i's upper edge
             let cap = default_cap + ((i + 1) as f64) * bucket_width;
-            return cap.min(HARD_CAP);
+            return cap.min(hard_cap);
         }
     }
 
@@ -367,6 +365,8 @@ fn plot_grin2_manhattan(
     device_pixel_ratio: f64,
     png_dot_radius: u64,
     log_cutoff: f64,
+    threshold_pct: f64,
+    hard_cap: f64,
 ) -> Result<(String, InteractiveData), Box<dyn Error>> {
     // ------------------------------------------------
     // 1. Build cumulative chromosome map
@@ -413,9 +413,11 @@ fn plot_grin2_manhattan(
     // - default_cap: the baseline cap (log_cutoff, typically 40)
     // - threshold_pct: 1e-6 (0.0001%) - if more than this % of points exceed cap, raise it
     let default_cap = log_cutoff;
-    const THRESHOLD_PCT: f64 = 1e-6; // 0.0001%
+    // const THRESHOLD_PCT: f64 = 1e-6; // 0.0001%
+    let threshold_pct: f64 = threshold_pct;
+    let hard_cap: f64 = hard_cap;
 
-    let y_cap = calculate_dynamic_y_cap(&ys, default_cap, THRESHOLD_PCT);
+    let y_cap = calculate_dynamic_y_cap(&ys, default_cap, threshold_pct, hard_cap);
 
     // Jitter range: capped points will spread over this range below the cap line
     let jitter_range = (y_cap * 0.05).max(2.0); // 5% of cap or at least 2 units
@@ -654,6 +656,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let device_pixel_ratio = &input_json.device_pixel_ratio;
                 let png_dot_radius = &input_json.png_dot_radius;
                 let log_cutoff = &input_json.log_cutoff;
+                let threshold_pct = &input_json.threshold_pct;
+                let hard_cap = &input_json.hard_cap;
                 if let Ok((base64_string, plot_data)) = plot_grin2_manhattan(
                     grin2_file.clone(),
                     chrom_size.clone(),
@@ -662,6 +666,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     device_pixel_ratio.clone(),
                     png_dot_radius.clone(),
                     log_cutoff.clone(),
+                    threshold_pct.clone(),
+                    hard_cap.clone(),
                 ) {
                     let output = Output {
                         png: base64_string,
