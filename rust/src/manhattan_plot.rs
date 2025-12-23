@@ -59,6 +59,7 @@ struct InteractiveData {
     y_min: f64,
     y_max: f64,
     device_pixel_ratio: f64,
+    has_capped_points: bool,
 }
 
 #[derive(Serialize)]
@@ -85,6 +86,7 @@ fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
 /// 1. If max_y <= default_cap: no capping needed, return max_y
 /// 2. If points above default_cap <= threshold_pct: use default_cap
 /// 3. Otherwise: find the lowest cap such that <= threshold_pct points are above it
+/// 4. Never exceed HARD_CAP (100) regardless of data distribution
 ///
 /// Uses a fixed-size histogram (NUM_BUCKETS) to avoid sorting.
 /// For 10M points, this is ~40MB less memory than storing a sorted copy.
@@ -94,6 +96,7 @@ fn calculate_dynamic_y_cap(
     threshold_pct: f64, // e.g., 0.0001 for 0.01%
 ) -> f64 {
     const NUM_BUCKETS: usize = 1000;
+    const HARD_CAP: f64 = 100.0; // Absolute maximum y-cap
 
     let total_points = ys.len();
     if total_points == 0 {
@@ -158,7 +161,7 @@ fn calculate_dynamic_y_cap(
             // Points in buckets i+1 to NUM_BUCKETS-1 will be capped (they're above this)
             // We want the cap to be at bucket i's upper edge
             let cap = default_cap + ((i + 1) as f64) * bucket_width;
-            return cap;
+            return cap.min(HARD_CAP);
         }
     }
 
@@ -415,7 +418,7 @@ fn plot_grin2_manhattan(
     let y_cap = calculate_dynamic_y_cap(&ys, default_cap, THRESHOLD_PCT);
 
     // Jitter range: capped points will spread over this range below the cap line
-    let jitter_range = (y_cap * 0.05).max(1.0); // 5% of cap or at least 1 unit
+    let jitter_range = (y_cap * 0.05).max(2.0); // 5% of cap or at least 2 units
 
     // Track if we have any capped points (to draw the indicator band)
     let mut has_capped_points = false;
@@ -623,6 +626,7 @@ fn plot_grin2_manhattan(
         y_min,
         y_max,
         device_pixel_ratio: dpr,
+        has_capped_points: has_capped_points,
     };
     Ok((png_data, interactive_data))
 }
