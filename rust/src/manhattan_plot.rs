@@ -88,7 +88,7 @@ fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
 /// 1. If max_y <= default_cap: no capping needed, return max_y
 /// 2. If points above default_cap <= threshold_pct: use default_cap
 /// 3. Otherwise: find the lowest cap such that <= threshold_pct points are above it
-/// 4. Never exceed hard_cap (default of 100) regardless of data distribution
+/// 4. Never exceed hard_cap (default of 200) regardless of data distribution
 ///
 /// Uses a fixed-size histogram (NUM_BUCKETS) to avoid sorting.
 /// For 10M points, this is ~40MB less memory than storing a sorted copy.
