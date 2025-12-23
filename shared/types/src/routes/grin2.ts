@@ -40,6 +40,11 @@ export type GRIN2Request = {
 	 * Sending it with request for consistency. In future we will allow user to set scale value or disable scaling if they wish */
 	logCutoff?: number
 
+	/** Threshold percentage for dynamic y-axis capping in Manhattan plots */
+	thresholdPct?: number
+	/** Absolute maximum cap for the y-axis in Manhattan plots regardless of its data distribution */
+	hardCap?: number
+
 	/** Filter from existing PP infrastructure */
 	filter?: any // Filter object passed to get_samples(filter, ds)
 
