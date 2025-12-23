@@ -1,2 +1,1 @@
-Feature:
-- support sorting a termCollection term
+

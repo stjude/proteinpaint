@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+General:
+- support sorting a termCollection term
+
 Features:
 - GRIN2: Add constant for -log10(q-value) cutoff in Manhattan plot
 - GRIN2: Added additional integration test for top genes table
