@@ -122,6 +122,7 @@ interface grin2PlotData {
 		}
 	>
 	total_genome_length: number // Gives us the full length of the genome so we can easily append x buffer space when building d3 x-axis
+	has_capped_points: boolean // Whether we have capped the y-axis due to q-values exceeding the cap
 }
 
 /**
