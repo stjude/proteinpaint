@@ -713,7 +713,7 @@ function setTermActions(self) {
 			: t.tw.term.type == 'geneVariant'
 			? '{edit,replace,remove}'
 			: t.tw.term.type == 'termCollection'
-			? '{replace,remove}'
+			? '{edit,replace,remove}'
 			: '*'
 	}
 
@@ -738,10 +738,8 @@ function setTermActions(self) {
 		)
 		termMenuWaitDiv.remove()
 
-		if (t.tw?.term?.type && t.tw.term.type !== 'termCollection') {
-			self.dom.shortcutDiv = self.dom.menutop.append('div').style('z-index', 10000)
-			self.showShortcuts(t, self.dom.shortcutDiv)
-		}
+		self.dom.shortcutDiv = self.dom.menutop.append('div').style('z-index', 10000)
+		self.showShortcuts(t, self.dom.shortcutDiv)
 		self.dom.twMenuDiv = self.dom.menutop.append('div')
 		const labelEditDiv = self.dom.twMenuDiv.append('div').style('text-align', 'center')
 		if (t.tw?.term?.type) labelEditDiv.append('span').text(`${l.Term} `)

@@ -281,10 +281,10 @@ export function setLabelsAndScales() {
 				t.counts.maxval = (t.counts.maxval - mean) / std
 			}
 
-			if (!twSettings.contBarH) twSettings.contBarH = t.tw.type == 'termCollection' ? 150 : s.barh
+			if (!twSettings.contBarH) twSettings.contBarH = t.tw.term.type == 'termCollection' ? 150 : s.barh
 			if (!('gap' in twSettings)) twSettings.contBarGap = 4
 			const barh = twSettings.contBarH
-			if (t.tw.type == 'termCollection') {
+			if (t.tw.term.type == 'termCollection') {
 				t.counts.maxval = 100
 				t.counts.minval = 0
 			}
