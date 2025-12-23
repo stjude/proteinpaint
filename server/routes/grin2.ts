@@ -219,7 +219,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		lesion_type_colors: request.lesionTypeColors,
 		q_value_threshold: request.qValueThreshold,
 		log_cutoff: MANHATTAN_LOG_QVALUE_CUTOFF,
-		threshold_pct: request.thresholdPct,
+		max_capped_points: request.maxCappedPoints,
 		hard_cap: request.hardCap
 	}
 
