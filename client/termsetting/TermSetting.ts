@@ -224,7 +224,7 @@ export class TermSetting {
 		}
 
 		// TODO: should use TwRouter here??? or expect tw to be already filled-in/instantiated???
-		if (!termtype || termtype == 'termCollection') {
+		if (!termtype) {
 			this.handler = this.handlerByType.default as Handler
 			return
 		}

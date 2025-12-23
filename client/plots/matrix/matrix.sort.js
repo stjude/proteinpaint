@@ -171,6 +171,18 @@ function getSortSamplesByValues(st, self, rows, s) {
 		}
 	}
 
+	if (t.tw.term.type == 'termCollection') {
+		//TODO: add more sorting logic when more termCollection types defined
+		return (a, b) => {
+			if ($id in a && $id in b) {
+				return a[$id]?.numerators_sum - b[$id]?.numerators_sum
+			}
+			if ($id in a) return -1
+			if ($id in b) return 1
+			return 0
+		}
+	}
+
 	if (t.tw.q?.mode == 'continuous') {
 		return (a, b) => {
 			if ($id in a && $id in b) {
