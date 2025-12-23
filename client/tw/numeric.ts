@@ -116,7 +116,7 @@ export class NumericBase extends TwBase {
 				break
 
 			default:
-				throw 'tw.q.mode not supported'
+				throw 'numeric tw.q.mode not supported'
 		}
 
 		/* 

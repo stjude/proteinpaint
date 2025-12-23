@@ -93,7 +93,7 @@ export class QualitativeBase extends TwBase {
 				break
 
 			default:
-				throw 'tw.q.mode not supported'
+				throw 'qualitative tw.q.mode not supported'
 		}
 
 		/* 

@@ -3,263 +3,13 @@
         {
             "name": "",
             "lst": [
-                {
-                    "id": "agedx",
-                    "q": {
-                        "mode": "continuous",
-                        "isAtomic": true,
-                        "hiddenValues": {}
-                    },
-                    "settings": {
-                        "barh": 40,
-                        "gap": 10
-                    },
-                    "isAtomic": true,
-                    "$id": "0_ts_32397046",
-                    "term": {
-                        "type": "float",
-                        "bins": {
-                            "default": {
-                                "type": "regular-bin",
-                                "bin_size": 5,
-                                "startinclusive": true,
-                                "first_bin": {
-                                    "startunbounded": true,
-                                    "stop": 5
-                                }
-                            },
-                            "label_offset": 1
-                        },
-                        "name": "Age (years) at Cancer Diagnosis",
-                        "id": "agedx",
-                        "isleaf": true,
-                        "values": {}
-                    }
-                },
-                {
-                    "id": "sex",
-                    "q": {
-                        "mode": "values",
-                        "isAtomic": true,
-                        "hiddenValues": {},
-                        "type": "values"
-                    },
-                    "isAtomic": true,
-                    "$id": "1_ts_32397046",
-                    "term": {
-                        "type": "categorical",
-                        "values": {
-                            "1": {
-                                "label": "Male",
-                                "color": "#e75480"
-                            },
-                            "2": {
-                                "label": "Female"
-                            }
-                        },
-                        "groupsetting": {
-                            "disabled": true
-                        },
-                        "name": "Sex",
-                        "id": "sex",
-                        "isleaf": true,
-                        "category2samplecount": {
-                            "1": 25,
-                            "2": 35
-                        }
-                    }
-                },
-                {
-                    "id": "diaggrp",
-                    "isAtomic": true,
-                    "$id": "2_ts_32397046",
-                    "term": {
-                        "type": "categorical",
-                        "values": {
-                            "Non-Hodgkin lymphoma": {
-                                "label": "Non-Hodgkin lymphoma"
-                            },
-                            "Hodgkin lymphoma": {
-                                "label": "Hodgkin lymphoma"
-                            },
-                            "Central nervous system (CNS)": {
-                                "label": "Central nervous system (CNS)"
-                            },
-                            "Acute myeloid leukemia": {
-                                "label": "Acute myeloid leukemia"
-                            },
-                            "Wilms tumor": {
-                                "label": "Wilms tumor"
-                            },
-                            "Acute lymphoblastic leukemia": {
-                                "label": "Acute lymphoblastic leukemia"
-                            },
-                            "Ewing sarcoma family of tumors": {
-                                "label": "Ewing sarcoma family of tumors"
-                            },
-                            "Neuroblastoma": {
-                                "label": "Neuroblastoma"
-                            },
-                            "Rhabdomyosarcoma": {
-                                "label": "Rhabdomyosarcoma"
-                            },
-                            "Osteosarcoma": {
-                                "label": "Osteosarcoma"
-                            },
-                            "Other leukemia": {
-                                "label": "Other leukemia"
-                            },
-                            "MDS/Acute myeloid leukemia": {
-                                "label": "MDS/Acute myeloid leukemia"
-                            },
-                            "Germ cell tumor": {
-                                "label": "Germ cell tumor"
-                            },
-                            "Soft tissue sarcoma": {
-                                "label": "Soft tissue sarcoma"
-                            },
-                            "Other malignancy": {
-                                "label": "Other malignancy"
-                            },
-                            "Chronic myeloid leukemia": {
-                                "label": "Chronic myeloid leukemia"
-                            },
-                            "Retinoblastoma": {
-                                "label": "Retinoblastoma"
-                            },
-                            "Melanoma": {
-                                "label": "Melanoma"
-                            },
-                            "Liver malignancies": {
-                                "label": "Liver malignancies"
-                            },
-                            "Nasopharyngeal carcinoma": {
-                                "label": "Nasopharyngeal carcinoma"
-                            },
-                            "Other carcinoma": {
-                                "label": "Other carcinoma"
-                            },
-                            "Non-malignancy": {
-                                "label": "Non-malignancy"
-                            },
-                            "Histiocytosis": {
-                                "label": "Histiocytosis"
-                            },
-                            "Colon carcinoma": {
-                                "label": "Colon carcinoma"
-                            }
-                        },
-                        "groupsetting": {
-                            "disabled": false
-                        },
-                        "name": "Diagnosis Group",
-                        "id": "diaggrp",
-                        "isleaf": true,
-                        "category2samplecount": {
-                            "Acute lymphoblastic leukemia": 36,
-                            "Wilms tumor": 3,
-                            "Acute myeloid leukemia": 2,
-                            "Rhabdomyosarcoma": 2,
-                            "Hodgkin lymphoma": 5,
-                            "Non-Hodgkin lymphoma": 10,
-                            "Neuroblastoma": 2
-                        }
-                    },
-                    "q": {
-                        "isAtomic": true,
-                        "hiddenValues": {},
-                        "type": "values"
-                    }
-                },
-                {
-                    "id": "hrtavg",
-                    "isAtomic": true,
-                    "$id": "3_ts_32397046",
-                    "term": {
-                        "type": "float",
-                        "bins": {
-                            "default": {
-                                "type": "regular-bin",
-                                "startinclusive": true,
-                                "bin_size": 500,
-                                "first_bin": {
-                                    "stop": 500
-                                },
-                                "last_bin": {
-                                    "start": 3500
-                                }
-                            }
-                        },
-                        "values": {
-                            "-8888": {
-                                "label": "exposed, dose unknown",
-                                "uncomputable": true
-                            },
-                            "-9999": {
-                                "label": "unknown exposure",
-                                "uncomputable": true
-                            }
-                        },
-                        "name": "Average dose to heart + TBI, cGy",
-                        "skip0forPercentile": true,
-                        "id": "hrtavg",
-                        "isleaf": true
-                    },
-                    "q": {
-                        "isAtomic": true,
-                        "mode": "discrete",
-                        "type": "regular-bin",
-                        "startinclusive": true,
-                        "bin_size": 500,
-                        "first_bin": {
-                            "stop": 500
-                        },
-                        "last_bin": {
-                            "start": 3500
-                        },
-                        "hiddenValues": {
-                            "-8888": 1,
-                            "-9999": 1
-                        }
-                    }
-                },
+                { "id": "agedx", "q": { "mode": "continuous" } },
+                { "id": "sex" },
+                { "id": "diaggrp" },
+                { "id": "hrtavg", "q": { "mode": "continuous" } },
                 {
                     "id": "cisplateq_5",
-                    "isAtomic": true,
-                    "$id": "4_ts_32397046",
-                    "term": {
-                        "type": "float",
-                        "bins": {
-                            "default": {
-                                "type": "regular-bin",
-                                "bin_size": 1262,
-                                "startinclusive": true,
-                                "first_bin": {
-                                    "startunbounded": true,
-                                    "stop": 1262.76
-                                }
-                            }
-                        },
-                        "values": {
-                            "0": {
-                                "label": "not exposed",
-                                "uncomputable": true
-                            },
-                            "-8888": {
-                                "label": "exposed, dose unknown",
-                                "uncomputable": true
-                            },
-                            "-9999": {
-                                "label": "unknown exposure",
-                                "uncomputable": true
-                            }
-                        },
-                        "name": "Cumulative Platinum Agents (Cisplatin Equivalent Dose)",
-                        "id": "cisplateq_5",
-                        "isleaf": true
-                    },
                     "q": {
-                        "isAtomic": true,
                         "mode": "discrete",
                         "type": "regular-bin",
                         "bin_size": 1262,
@@ -267,56 +17,12 @@
                         "first_bin": {
                             "startunbounded": true,
                             "stop": 1262.76
-                        },
-                        "hiddenValues": {
-                            "0": 1,
-                            "-8888": 1,
-                            "-9999": 1
                         }
                     }
                 },
                 {
                     "id": "aaclassic_5",
-                    "isAtomic": true,
-                    "$id": "5_ts_32397046",
-                    "term": {
-                        "type": "float",
-                        "bins": {
-                            "default": {
-                                "type": "regular-bin",
-                                "bin_size": 5000,
-                                "startinclusive": true,
-                                "first_bin": {
-                                    "startunbounded": true,
-                                    "stop": 5000
-                                },
-                                "last_bin": {
-                                    "stopunbounded": true,
-                                    "start": 30000
-                                }
-                            },
-                            "rounding": "d"
-                        },
-                        "values": {
-                            "0": {
-                                "label": "not exposed",
-                                "uncomputable": true
-                            },
-                            "-8888": {
-                                "label": "exposed, dose unknown",
-                                "uncomputable": true
-                            },
-                            "-9999": {
-                                "label": "unknown exposure",
-                                "uncomputable": true
-                            }
-                        },
-                        "name": "Cumulative Alkylating Agents (Cyclophosphamide Equivalent Dose)",
-                        "id": "aaclassic_5",
-                        "isleaf": true
-                    },
                     "q": {
-                        "isAtomic": true,
                         "mode": "discrete",
                         "type": "regular-bin",
                         "bin_size": 5000,
@@ -328,11 +34,6 @@
                         "last_bin": {
                             "stopunbounded": true,
                             "start": 30000
-                        },
-                        "hiddenValues": {
-                            "0": 1,
-                            "-8888": 1,
-                            "-9999": 1
                         }
                     }
                 }
@@ -353,32 +54,14 @@
             "lst": [
                 {
                     "term": {
-                        "name": "TP53",
                         "gene": "TP53",
                         "type": "geneVariant"
-                    },
-                    "isAtomic": true,
-                    "$id": "6_ts_32397046",
-                    "q": {
-                        "isAtomic": true,
-                        "cnvGainCutoff": 0.1,
-                        "cnvLossCutoff": -0.1,
-                        "cnvMaxLength": 0
                     }
                 },
                 {
                     "term": {
-                        "name": "KRAS",
                         "gene": "KRAS",
                         "type": "geneVariant"
-                    },
-                    "isAtomic": true,
-                    "$id": "7_ts_32397046",
-                    "q": {
-                        "isAtomic": true,
-                        "cnvGainCutoff": 0.1,
-                        "cnvLossCutoff": -0.1,
-                        "cnvMaxLength": 0
                     }
                 }
             ]
