@@ -689,6 +689,24 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
 
     let group1 = json_value.group1;
     let group1_verification: VerifiedField = verify_json_field(&group1.name, &db_vec);
+    let validated_gp1_term;
+    if Some(group1_verification.correct_field.clone()).is_some() && group1_verification.correct_value.clone().is_none()
+    {
+        match group1_verification.correct_field {
+            Some(tm) => validated_gp1_term = tm,
+            None => {
+                message = message + &"'" + &group1.name + &"'" + &" not found in db.";
+            }
+        }
+    } else if Some(group1_verification.correct_field.clone()).is_some()
+        && Some(group1_verification.correct_value.clone()).is_some()
+    {
+        message = message
+            + &group1_verification.correct_value.unwrap()
+            + &"is a value of "
+            + &group1_verification.correct_field.unwrap()
+            + &".";
+    }
     let mut group1_filter_verification: Option<VerifiedField> = None;
     match group1.filter {
         Some(gp1_filter) => {
@@ -698,8 +716,52 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
         None => {}
     }
 
+    let validated_gp1_filter_term;
+    match group1_filter_verification {
+        Some(valid_gp1_filter_term) => {
+            if Some(valid_gp1_filter_term.correct_field.clone()).is_some()
+                && valid_gp1_filter_term.correct_value.clone().is_none()
+            {
+                match valid_gp1_filter_term.correct_field {
+                    Some(tm) => validated_gp1_filter_term = tm,
+                    None => {
+                        message = message + &"'" + &group1.name + &"'" + &" not found in db.";
+                    }
+                }
+            } else if Some(valid_gp1_filter_term.correct_field.clone()).is_some()
+                && Some(valid_gp1_filter_term.correct_value.clone()).is_some()
+            {
+                message = message
+                    + &valid_gp1_filter_term.correct_value.unwrap()
+                    + &"is a value of "
+                    + &valid_gp1_filter_term.correct_field.unwrap()
+                    + &".";
+            }
+        }
+        None => {}
+    }
+
     let group2 = json_value.group2;
     let group2_verification: VerifiedField = verify_json_field(&group2.name, &db_vec);
+    let validated_gp2_term;
+    if Some(group2_verification.correct_field.clone()).is_some() && group2_verification.correct_value.clone().is_none()
+    {
+        match group2_verification.correct_field {
+            Some(tm) => validated_gp2_term = tm,
+            None => {
+                message = message + &"'" + &group2.name + &"'" + &" not found in db.";
+            }
+        }
+    } else if Some(group2_verification.correct_field.clone()).is_some()
+        && Some(group2_verification.correct_value.clone()).is_some()
+    {
+        message = message
+            + &group2_verification.correct_value.unwrap()
+            + &"is a value of "
+            + &group2_verification.correct_field.unwrap()
+            + &".";
+    }
+
     let mut group2_filter_verification: Option<VerifiedField> = None;
     match group2.filter {
         Some(gp2_filter) => {
@@ -708,6 +770,32 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
         }
         None => {}
     }
+
+    let validated_gp2_filter_term;
+    match group2_filter_verification {
+        Some(valid_gp2_filter_term) => {
+            if Some(valid_gp2_filter_term.correct_field.clone()).is_some()
+                && valid_gp2_filter_term.correct_value.clone().is_none()
+            {
+                match valid_gp2_filter_term.correct_field {
+                    Some(tm) => validated_gp2_filter_term = tm,
+                    None => {
+                        message = message + &"'" + &group2.name + &"'" + &" not found in db.";
+                    }
+                }
+            } else if Some(valid_gp2_filter_term.correct_field.clone()).is_some()
+                && Some(valid_gp2_filter_term.correct_value.clone()).is_some()
+            {
+                message = message
+                    + &valid_gp2_filter_term.correct_value.unwrap()
+                    + &"is a value of "
+                    + &valid_gp2_filter_term.correct_field.unwrap()
+                    + &".";
+            }
+        }
+        None => {}
+    }
+
     raw_llm_json // Just to stop compilation errors, will need to be eventually replaced
 }
 
