@@ -50,72 +50,74 @@ export function renderVariantConfig(arg: Arg) {
 		}
 	})
 
-	// variants div
+	// variants
 	const variantsDiv = holder
 		.append('div')
 		.attr('data-testid', 'sjpp-variantConfig-variant')
 		.style('display', wt ? 'none' : 'block')
 		.style('margin-top', '10px')
 
-	variantsDiv
-		.append('div')
-		.style('display', values.length ? 'none' : 'block')
-		.text(`No ${dt == 1 ? 'mutations' : 'alterations'} found`)
-
-	// variant data
-	const variantsData = variantsDiv.append('div').style('display', values.length ? 'block' : 'none')
-	variantsData
-		.append('div')
-		.style('opacity', 0.7)
-		.style('margin-bottom', '5px')
-		.text(dt == 1 ? 'Mutations' : 'Alterations')
-	const tableDiv = variantsData.append('div').style('margin-left', '5px').style('font-size', '0.8rem')
-	const rows: any[] = []
-	const selectedIdxs: number[] = []
-	for (const [i, m] of values.entries()) {
-		const label = m.label || m.key
-		rows.push([{ value: label }])
-		if (selectedValues.find(s => s.key == m.key)) selectedIdxs.push(i)
-	}
-	const columns: any[] = [{ label: 'tvs' }]
-	renderTable({
-		rows,
-		columns,
-		div: tableDiv,
-		maxWidth: '40vw',
-		maxHeight: '40vh',
-		buttons: [],
-		showHeader: false,
-		striped: false,
-		showLines: false,
-		selectedRows: selectedIdxs
-	})
-
-	// mutation count
 	let countRadio
-	if (dt == 1) {
-		// snvindel, render mutation count radios
-		const countDiv = variantsData.append('div').style('margin-top', '5px')
-		countDiv
+	if (values.length) {
+		// variant data present
+		// display data in table
+		variantsDiv
 			.append('div')
-			.style('display', 'inline-block')
-			.style('margin-right', '5px')
 			.style('opacity', 0.7)
-			.text('Mutation occurrence')
-		const countOpts = [
-			{ label: 'Any', value: 'any' },
-			{ label: 'Single', value: 'single' },
-			{ label: 'Multiple', value: 'multiple' }
-		]
-		countOpts.forEach((opt: any) => {
-			if (opt.value == mcount) opt.checked = true
+			.style('margin-bottom', '5px')
+			.text(dt == 1 ? 'Mutations' : 'Alterations')
+		const tableDiv = variantsDiv.append('div').style('margin-left', '5px').style('font-size', '0.8rem')
+		const rows: any[] = []
+		const selectedIdxs: number[] = []
+		for (const [i, m] of values.entries()) {
+			const label = m.label || m.key
+			rows.push([{ value: label }])
+			if (selectedValues.find(s => s.key == m.key)) selectedIdxs.push(i)
+		}
+		const columns: any[] = [{ label: 'tvs' }]
+		renderTable({
+			rows,
+			columns,
+			div: tableDiv,
+			maxWidth: '40vw',
+			maxHeight: '40vh',
+			buttons: [],
+			showHeader: false,
+			striped: false,
+			showLines: false,
+			selectedRows: selectedIdxs
 		})
-		countRadio = make_radios({
-			holder: countDiv,
-			styles: { display: 'inline-block' },
-			options: countOpts,
-			callback: () => {}
-		})
+		// mutation count
+		if (dt == 1) {
+			// snvindel, render mutation count radios
+			const countDiv = variantsDiv.append('div').style('margin-top', '5px')
+			countDiv
+				.append('div')
+				.style('display', 'inline-block')
+				.style('margin-right', '5px')
+				.style('opacity', 0.7)
+				.text('Mutation occurrence')
+			const countOpts = [
+				{ label: 'Any', value: 'any' },
+				{ label: 'Single', value: 'single' },
+				{ label: 'Multiple', value: 'multiple' }
+			]
+			countOpts.forEach((opt: any) => {
+				if (opt.value == mcount) opt.checked = true
+			})
+			countRadio = make_radios({
+				holder: countDiv,
+				styles: { display: 'inline-block' },
+				options: countOpts,
+				callback: () => {}
+			})
+		}
+	} else {
+		// no variant data
+		variantsDiv
+			.append('div')
+			.style('display', values.length ? 'none' : 'block')
+			.text(`No ${dt == 1 ? 'mutations' : 'alterations'} found`)
 	}
 
 	// Apply button
@@ -136,7 +138,7 @@ export function renderVariantConfig(arg: Arg) {
 			if (!config.wt) {
 				// mutant genotype
 				// get selected mutation classes
-				const checkboxes = variantsData.select('tbody').selectAll('input').nodes()
+				const checkboxes = variantsDiv.select('tbody').selectAll('input').nodes()
 				const checkedIdxs: number[] = []
 				for (const [i, c] of checkboxes.entries()) {
 					if (c.checked) checkedIdxs.push(i)
