@@ -390,6 +390,12 @@ function getChartTypeList(self, state) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
+			label: 'Mutation vs CNV',
+			chartType: 'summarizeMutationCnv',
+			usecase: { target: 'summarizeMutationCnv' },
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
 			label: 'CNV vs GeneExp', // this is limited to cnv, and could be generalized to include snvindel/fusion
 			chartType: 'summarizeCnvGeneexp',
 			usecase: { target: 'summarizeCnvGeneexp' },
