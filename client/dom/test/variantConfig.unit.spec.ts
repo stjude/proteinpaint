@@ -11,6 +11,7 @@ test sections:
     - unselect values
     - preselected values
     - genotype toggle
+	- no mutations
 	- any mutation count
     - single mutation count
     - multiple mutation count
@@ -242,6 +243,41 @@ tape('genotype toggle', test => {
 	}
 
 	test.deepEqual(newConfig, expectedConfig, 'config should have wildtype genotype')
+
+	holder.remove()
+	test.end()
+})
+
+tape('no mutations', test => {
+	const holder = select(document.body).append('div')
+
+	renderVariantConfig({
+		holder,
+		values: {},
+		dt: 1,
+		callback: () => {}
+	})
+
+	const genotypeDiv = holder.select('[data-testid="sjpp-variantConfig-genotype"]')
+	const genotypeRadio: any = genotypeDiv.selectAll('input[type="radio"]').nodes()
+	test.equal(genotypeRadio.length, 2, 'should render 2 genotype radio buttons')
+	const selectedGenotype: any = genotypeRadio.find((r: any) => r.checked)
+	test.equal(selectedGenotype.value, 'mutated', 'selected genotype should be mutated')
+
+	const variantsDiv: any = holder.select('[data-testid="sjpp-variantConfig-variant"]')
+	const table = variantsDiv.select('table').node()
+	test.notOk(table, 'should not display variants table')
+	const countRadio: any = variantsDiv.selectAll('input[type="radio"]').nodes()
+	test.equal(countRadio.length, 0, 'should not display mutation count radio buttons')
+
+	test.equal(variantsDiv.text(), 'No mutations found', 'should display no mutations found message')
+
+	const applyBtn: any = holder.select('button')
+	test.ok(applyBtn.property('disabled'), 'apply button should be disabled')
+
+	// select wildtype genotype
+	genotypeRadio.find(r => r.value == 'wildtype').click()
+	test.notOk(applyBtn.property('disabled'), 'apply button should not be disabled')
 
 	holder.remove()
 	test.end()
