@@ -1,6 +1,7 @@
 import { handler as _handler } from './tvs.categorical.js'
 import { renderVariantConfig } from '#dom'
 import { mclass } from '#shared/common.js'
+import { FrontendVocab } from '#termdb/FrontendVocab'
 
 /*
 Base TVS handler for dt terms
@@ -51,18 +52,22 @@ function get_pill_label(tvs) {
 	return { txt }
 }
 
-// get values of dt term
-// these are dt mutation classes of gene in dataset
+// get mutation classes of dt term
+// will store these classes in term.values
 export async function getDtTermValues(dtTerm, filter, vocabApi) {
-	if (Object.keys(dtTerm.values).length) {
-		// values already present
+	if (vocabApi instanceof FrontendVocab) {
+		// frontend vocab, cannot get values from db
+		// values should already be on dt term
 		return
 	}
+	// get mutation classes of gene
 	const categories = await vocabApi.getCategories(dtTerm.parentTerm, filter)
+	// filter for mutations of specific dt
 	const data = categories.lst.find(x => x.dt == dtTerm.dt)
 	if (!data) return
 	const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[dtTerm.dt]?.byOrigin
 	const classes = byOrigin ? data.classes.byOrigin[dtTerm.origin] : data.classes
+	// store mutation classes in term.values
 	dtTerm.values = Object.fromEntries(
 		Object.keys(classes)
 			.filter(k => k != 'Blank' && k != 'WT')
