@@ -1,4 +1,4 @@
-// Syntax: cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/summary_agent
+// Syntax: cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/dge
 #![allow(non_snake_case)]
 use crate::aichatbot::AiJsonFormat;
 use anyhow::Result;
@@ -126,7 +126,7 @@ async fn main() -> Result<()> {
                     let temperature: f64 = 0.01;
                     let max_new_tokens: usize = 512;
                     let top_p: f32 = 0.95;
-                    let testing = false; // This variable is always false in production, this is true in test_ai.rs for testing code
+                    let testing = true; // This variable is always false in production, this is true in test_ai.rs for testing code
                     if llm_backend_name != "ollama" && llm_backend_name != "SJ" {
                         panic!(
                             "This code currently supports only Ollama and SJ provider. llm_backend_name must be \"ollama\" or \"SJ\""
@@ -141,7 +141,7 @@ async fn main() -> Result<()> {
                         let embedding_model = ollama_client.embedding_model(embedding_model_name);
                         let comp_model = ollama_client.completion_model(comp_model_name);
                         final_output = Some(
-                            aichatbot::extract_summary_information(
+                            aichatbot::extract_DE_search_terms_from_query(
                                 user_input,
                                 comp_model,
                                 embedding_model,
@@ -150,7 +150,6 @@ async fn main() -> Result<()> {
                                 max_new_tokens,
                                 top_p,
                                 &dataset_db,
-                                &genedb,
                                 &ai_json,
                                 testing,
                             )
@@ -166,7 +165,7 @@ async fn main() -> Result<()> {
                         let embedding_model = sj_client.embedding_model(embedding_model_name);
                         let comp_model = sj_client.completion_model(comp_model_name);
                         final_output = Some(
-                            aichatbot::extract_summary_information(
+                            aichatbot::extract_DE_search_terms_from_query(
                                 user_input,
                                 comp_model,
                                 embedding_model,
@@ -175,7 +174,6 @@ async fn main() -> Result<()> {
                                 max_new_tokens,
                                 top_p,
                                 &dataset_db,
-                                &genedb,
                                 &ai_json,
                                 testing,
                             )
