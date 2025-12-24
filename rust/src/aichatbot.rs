@@ -5,8 +5,8 @@
 use r2d2_sqlite::SqliteConnectionManager;
 use rig::agent::AgentBuilder;
 use rig::completion::Prompt;
-use rig::embeddings::builder::EmbeddingsBuilder;
-use rig::vector_store::in_memory_store::InMemoryVectorStore;
+//use rig::embeddings::builder::EmbeddingsBuilder;
+//use rig::vector_store::in_memory_store::InMemoryVectorStore;
 use schemars::JsonSchema;
 use serde_json::{Map, Value, json};
 use std::collections::HashMap;
@@ -287,6 +287,9 @@ pub async fn run_pipeline(
             temperature,
             max_new_tokens,
             top_p,
+            dataset_db,
+            ai_json,
+            testing,
         )
         .await;
         if testing == true {
@@ -501,42 +504,50 @@ pub async fn classify_query_by_dataset_type(
 }
 
 // DE JSON output schema
-
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 #[allow(non_camel_case_types)]
-#[derive(Debug, JsonSchema)]
-#[allow(dead_code)]
 enum cutoff_info {
+    #[allow(non_camel_case_types)]
     lesser(f32),
+    #[allow(non_camel_case_types)]
     greater(f32),
+    #[allow(non_camel_case_types)]
     equalto(f32),
 }
 
-#[derive(Debug, JsonSchema)]
-#[allow(dead_code)]
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct Cutoff {
     cutoff_name: cutoff_info,
     units: Option<String>,
 }
 
-#[derive(Debug, JsonSchema)]
-#[allow(dead_code)]
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct Filter {
     name: String,
-    cutoff: Cutoff,
+    cutoff: Option<Vec<Cutoff>>,
 }
 
-#[derive(Debug, JsonSchema)]
-#[allow(dead_code)]
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct Group {
     name: String,
-    filter: Filter,
+    filter: Option<Filter>,
 }
 
-#[derive(Debug, JsonSchema)]
-#[allow(dead_code)]
+fn get_DE_string() -> String {
+    "DE".to_string()
+}
+
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct DEOutput {
+    // Serde uses this for deserialization.
+    #[serde(default = "get_DE_string")]
+    // Schemars uses this for schema generation.
+    #[schemars(rename = "action")]
+    action: String,
     group1: Group,
     group2: Group,
+    filter: Option<Vec<FilterTerm>>,
+    message: Option<String>,
 }
 
 #[allow(dead_code)]
@@ -549,8 +560,12 @@ async fn extract_DE_search_terms_from_query(
     temperature: f64,
     max_new_tokens: usize,
     top_p: f32,
+    dataset_db: &str,
+    ai_json: &AiJsonFormat,
+    testing: bool,
 ) -> String {
-    let contents = String::from("Differential Gene Expression (DGE or DE) is a technique where the most upregulated and downregulated genes between two cohorts of samples (or patients) are determined. A volcano plot is shown with fold-change in the x-axis and adjusted p-value on the y-axis. So, the upregulated and downregulared genes are on opposite sides of the graph and the most significant genes (based on adjusted p-value) is on the top of the graph.
+    let (rag_docs, db_vec) = parse_dataset_db(dataset_db).await;
+    let contents = String::from("Differential Gene Expression (DGE or DE) is a technique where the most upregulated and downregulated genes between two cohorts of samples (or patients) are determined. A volcano plot is shown with fold-change in the x-axis and adjusted p-value on the y-axis. So, the upregulated and downregulared genes are on opposite sides of the graph and the most significant genes (based on adjusted p-value) is on the top of the graph. There are three compulsory fields: \"action\", \"group1\" and \"group2\". In case of DE, the \"action\" field should ALWAYS be \"DE\". The fields \"group1\" and \"group2\" contain 
 
 The user may select a cutoff for a continuous variables such as age. In such cases the group should only include the range specified by the user. Inside the JSON each entry the name of the group must be inside the field \"name\". For the cutoff (if provided) a field called \"cutoff\" must be provided which should contain a subfield \"name\" containing the name of the cutoff, followed by \"greater\"/\"lesser\"/\"equal\" to followed by the numeric value of the cutoff. If the unit of the variable is provided such as cm,m,inches,celsius etc. then add it to a separate field called \"units\".  
 
@@ -596,25 +611,17 @@ Output JSON query5: {\"group1\": {\"name\": \"males\", \"filter\": {\"name\": \"
         }
     }
 
-    // Print the separated parts
-    let mut rag_docs = Vec::<String>::new();
-    for (_i, part) in parts.iter().enumerate() {
-        //println!("Part {}: {}", i + 1, part.trim());
-        rag_docs.push(part.trim().to_string())
-    }
-
-    let rag_docs_length = rag_docs.len();
     // Create embeddings and add to vector store
-    let embeddings = EmbeddingsBuilder::new(embedding_model.clone())
-        .documents(rag_docs)
-        .expect("Reason1")
-        .build()
-        .await
-        .unwrap();
+    //let embeddings = EmbeddingsBuilder::new(embedding_model.clone())
+    //    .documents(rag_docs)
+    //    .expect("Reason1")
+    //    .build()
+    //    .await
+    //    .unwrap();
 
-    // Create vector store
-    let mut vector_store = InMemoryVectorStore::<String>::default();
-    InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
+    //// Create vector store
+    //let mut vector_store = InMemoryVectorStore::<String>::default();
+    //InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
 
     // Create RAG agent
     let router_instructions = String::from(
@@ -622,11 +629,13 @@ Output JSON query5: {\"group1\": {\"name\": \"males\", \"filter\": {\"name\": \"
     ) + &contents
         + " The JSON schema is as follows"
         + &schema_json_string
-        + "\n Examples: User query1: \"Show volcano plot for Asians with age less than 20 and African greater than 80\". Output JSON query1: {\"group1\": {\"name\": \"Asians\", \"filter\": {\"name\": \"age\", \"cutoff\": {\"lesser\": 20}}}, \"group2\": {\"name\": \"African\", \"filter\": {\"name\": \"age\", \"cutoff\": {\"greater\": 80}}}}. User query2: \"Show Differential gene expression plot for males with height greater than 185cm and women with less than 100cm\". Output JSON query2: {\"group1\": {\"name\": \"males\", \"filter\": {\"name\": \"height\", \"cutoff\": {\"greater\": 185, \"units\":\"cm\"}}}, \"group2\": {\"name\": \"women\", \"filter\": {\"name\": \"height\", \"cutoff\": {\"lesser\": 100, \"units\": \"cm\"}}}}. User query3: \"Show DE plot between healthy and diseased groups. Output JSON query3: {\"group1\":{\"name\":\"healthy\"},\"group2\":{\"name\":\"diseased\"}} \nQuestion= {question} \nanswer";
+        + "\n Examples: User query1: \"Show volcano plot for Asians with age less than 20 and African greater than 80\". Output JSON query1: {\"group1\": {\"name\": \"Asians\", \"filter\": {\"name\": \"age\", \"cutoff\": {\"lesser\": 20}}}, \"group2\": {\"name\": \"African\", \"filter\": {\"name\": \"age\", \"cutoff\": {\"greater\": 80}}}}. User query2: \"Show Differential gene expression plot for males with height greater than 185cm and women with less than 100cm\". Output JSON query2: {\"group1\": {\"name\": \"males\", \"filter\": {\"name\": \"height\", \"cutoff\": {\"greater\": 185, \"units\":\"cm\"}}}, \"group2\": {\"name\": \"women\", \"filter\": {\"name\": \"height\", \"cutoff\": {\"lesser\": 100, \"units\": \"cm\"}}}}. User query3: \"Show DE plot between healthy and diseased groups. Output JSON query3: {\"group1\":{\"name\":\"healthy\"},\"group2\":{\"name\":\"diseased\"}} \nQuestion= {question} \nanswer"
+        + "The sqlite db in plain language is as follows:\n"
+        + &rag_docs.join(",");
     //println! {"router_instructions:{}",router_instructions};
     let agent = AgentBuilder::new(comp_model)
         .preamble(&router_instructions)
-        .dynamic_context(rag_docs_length, vector_store.index(embedding_model))
+        //.dynamic_context(rag_docs_length, vector_store.index(embedding_model))
         .temperature(temperature)
         .additional_params(additional)
         .build();
@@ -638,12 +647,13 @@ Output JSON query5: {\"group1\": {\"name\": \"males\", \"filter\": {\"name\": \"
     //println!("result_groups:{}", result);
     let json_value: Value = serde_json::from_str(&result).expect("REASON");
     //println!("json_value:{}", json_value);
+    let final_llm_json;
     match llm_backend_type {
         llm_backend::Ollama() => {
             let json_value2: Value = serde_json::from_str(&json_value["content"].to_string()).expect("REASON2");
-            //println!("json_value2:{:?}", json_value2);
+            //println!("json_;value2:{:?}", json_value2);
             let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON3");
-            json_value3.to_string()
+            final_llm_json = json_value3.to_string();
         }
         llm_backend::Sj() => {
             let json_value2: Value =
@@ -651,9 +661,142 @@ Output JSON query5: {\"group1\": {\"name\": \"males\", \"filter\": {\"name\": \"
             //println!("json_value2:{}", json_value2.as_str().unwrap());
             let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON2");
             //println!("Classification result:{}", json_value3);
-            json_value3.to_string()
+            final_llm_json = json_value3.to_string();
         }
     }
+
+    validate_DE_groups(final_llm_json.clone(), db_vec, ai_json, testing)
+}
+
+fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJsonFormat, testing: bool) -> String {
+    let json_value: DEOutput =
+	serde_json::from_str(&raw_llm_json).expect("Did not get a valid JSON of type {group1: group1, group2: group2, message: message, filter:[{term: term1, value: value1}]} from the LLM");
+    let mut message: String = String::from("");
+    match json_value.message {
+        Some(mes) => {
+            message = message + &mes; // Append any message given by the LLM
+        }
+        None => {}
+    }
+
+    let mut new_json: Value; // New JSON value that will contain items of the final validated JSON
+    if json_value.action != String::from("DE") {
+        message = message + &"Did not return a summary action";
+        new_json = serde_json::json!(null);
+    } else {
+        new_json = serde_json::from_str(&"{\"action\":\"DE\"}").expect("Not a valid JSON");
+    }
+
+    let group1 = json_value.group1;
+    let group1_verification: VerifiedField = verify_json_field(&group1.name, &db_vec);
+    let validated_gp1_term;
+    if Some(group1_verification.correct_field.clone()).is_some() && group1_verification.correct_value.clone().is_none()
+    {
+        match group1_verification.correct_field {
+            Some(tm) => validated_gp1_term = tm,
+            None => {
+                message = message + &"'" + &group1.name + &"'" + &" not found in db.";
+            }
+        }
+    } else if Some(group1_verification.correct_field.clone()).is_some()
+        && Some(group1_verification.correct_value.clone()).is_some()
+    {
+        message = message
+            + &group1_verification.correct_value.unwrap()
+            + &"is a value of "
+            + &group1_verification.correct_field.unwrap()
+            + &".";
+    }
+    let mut group1_filter_verification: Option<VerifiedField> = None;
+    match group1.filter {
+        Some(gp1_filter) => {
+            group1_filter_verification = Some(verify_json_field(&gp1_filter.name, &db_vec));
+            // Checking whether the cutoffs are numeric is probably not needed because schemars already does that
+        }
+        None => {}
+    }
+
+    let validated_gp1_filter_term;
+    match group1_filter_verification {
+        Some(valid_gp1_filter_term) => {
+            if Some(valid_gp1_filter_term.correct_field.clone()).is_some()
+                && valid_gp1_filter_term.correct_value.clone().is_none()
+            {
+                match valid_gp1_filter_term.correct_field {
+                    Some(tm) => validated_gp1_filter_term = tm,
+                    None => {
+                        message = message + &"'" + &group1.name + &"'" + &" not found in db.";
+                    }
+                }
+            } else if Some(valid_gp1_filter_term.correct_field.clone()).is_some()
+                && Some(valid_gp1_filter_term.correct_value.clone()).is_some()
+            {
+                message = message
+                    + &valid_gp1_filter_term.correct_value.unwrap()
+                    + &"is a value of "
+                    + &valid_gp1_filter_term.correct_field.unwrap()
+                    + &".";
+            }
+        }
+        None => {}
+    }
+
+    let group2 = json_value.group2;
+    let group2_verification: VerifiedField = verify_json_field(&group2.name, &db_vec);
+    let validated_gp2_term;
+    if Some(group2_verification.correct_field.clone()).is_some() && group2_verification.correct_value.clone().is_none()
+    {
+        match group2_verification.correct_field {
+            Some(tm) => validated_gp2_term = tm,
+            None => {
+                message = message + &"'" + &group2.name + &"'" + &" not found in db.";
+            }
+        }
+    } else if Some(group2_verification.correct_field.clone()).is_some()
+        && Some(group2_verification.correct_value.clone()).is_some()
+    {
+        message = message
+            + &group2_verification.correct_value.unwrap()
+            + &"is a value of "
+            + &group2_verification.correct_field.unwrap()
+            + &".";
+    }
+
+    let mut group2_filter_verification: Option<VerifiedField> = None;
+    match group2.filter {
+        Some(gp2_filter) => {
+            group2_filter_verification = Some(verify_json_field(&gp2_filter.name, &db_vec));
+            // Checking whether the cutoffs are numeric is probably not needed because schemars already does that
+        }
+        None => {}
+    }
+
+    let validated_gp2_filter_term;
+    match group2_filter_verification {
+        Some(valid_gp2_filter_term) => {
+            if Some(valid_gp2_filter_term.correct_field.clone()).is_some()
+                && valid_gp2_filter_term.correct_value.clone().is_none()
+            {
+                match valid_gp2_filter_term.correct_field {
+                    Some(tm) => validated_gp2_filter_term = tm,
+                    None => {
+                        message = message + &"'" + &group2.name + &"'" + &" not found in db.";
+                    }
+                }
+            } else if Some(valid_gp2_filter_term.correct_field.clone()).is_some()
+                && Some(valid_gp2_filter_term.correct_value.clone()).is_some()
+            {
+                message = message
+                    + &valid_gp2_filter_term.correct_value.unwrap()
+                    + &"is a value of "
+                    + &valid_gp2_filter_term.correct_field.unwrap()
+                    + &".";
+            }
+        }
+        None => {}
+    }
+
+    raw_llm_json // Just to stop compilation errors, will need to be eventually replaced
 }
 
 #[derive(Debug, Clone)]
