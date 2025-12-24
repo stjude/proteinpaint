@@ -29,7 +29,7 @@ export function renderVariantConfig(arg: Arg) {
 
 	holder.style('margin', '10px')
 
-	// genotype radio buttons
+	// mutant vs. wildtype radio buttons
 	const genotypeDiv = holder.append('div').attr('data-testid', 'sjpp-variantConfig-genotype')
 	genotypeDiv
 		.append('div')
@@ -46,21 +46,30 @@ export function renderVariantConfig(arg: Arg) {
 		],
 		callback: value => {
 			variantsDiv.style('display', value == 'mutated' ? 'block' : 'none')
+			applyBtn.property('disabled', value == 'mutated' && !values.length)
 		}
 	})
 
-	// variants table
+	// variants div
 	const variantsDiv = holder
 		.append('div')
 		.attr('data-testid', 'sjpp-variantConfig-variant')
 		.style('display', wt ? 'none' : 'block')
 		.style('margin-top', '10px')
+
 	variantsDiv
+		.append('div')
+		.style('display', values.length ? 'none' : 'block')
+		.text(`No ${dt == 1 ? 'mutations' : 'alterations'} found`)
+
+	// variant data
+	const variantsData = variantsDiv.append('div').style('display', values.length ? 'block' : 'none')
+	variantsData
 		.append('div')
 		.style('opacity', 0.7)
 		.style('margin-bottom', '5px')
 		.text(dt == 1 ? 'Mutations' : 'Alterations')
-	const tableDiv = variantsDiv.append('div').style('margin-left', '5px').style('font-size', '0.8rem')
+	const tableDiv = variantsData.append('div').style('margin-left', '5px').style('font-size', '0.8rem')
 	const rows: any[] = []
 	const selectedIdxs: number[] = []
 	for (const [i, m] of values.entries()) {
@@ -86,7 +95,7 @@ export function renderVariantConfig(arg: Arg) {
 	let countRadio
 	if (dt == 1) {
 		// snvindel, render mutation count radios
-		const countDiv = variantsDiv.append('div').style('margin-top', '5px')
+		const countDiv = variantsData.append('div').style('margin-top', '5px')
 		countDiv
 			.append('div')
 			.style('display', 'inline-block')
@@ -110,13 +119,14 @@ export function renderVariantConfig(arg: Arg) {
 	}
 
 	// Apply button
-	holder
+	const applyBtn = holder
 		.append('div')
 		.append('button')
 		.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
 		.style('border-radius', '13px')
 		.style('margin-top', '15px')
 		.style('font-size', '.8em')
+		.property('disabled', !wt && !values.length)
 		.text('APPLY')
 		.on('click', () => {
 			// get genotype
@@ -126,7 +136,7 @@ export function renderVariantConfig(arg: Arg) {
 			if (!config.wt) {
 				// mutant genotype
 				// get selected mutation classes
-				const checkboxes = variantsDiv.select('tbody').selectAll('input').nodes()
+				const checkboxes = variantsData.select('tbody').selectAll('input').nodes()
 				const checkedIdxs: number[] = []
 				for (const [i, c] of checkboxes.entries()) {
 					if (c.checked) checkedIdxs.push(i)
