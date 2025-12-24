@@ -56,8 +56,8 @@ function get_pill_label(tvs) {
 // will store these classes in term.values
 export async function getDtTermValues(dtTerm, filter, vocabApi) {
 	if (vocabApi instanceof FrontendVocab) {
-		// frontend vocab, cannot get values from db
-		// values should already be on dt term
+		// geneVariant frontend vocab, cannot get values from db
+		// use values already present on dt term
 		return
 	}
 	// get mutation classes of gene

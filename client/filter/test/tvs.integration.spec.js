@@ -14,6 +14,7 @@ Tests:
 	tvs: Cohort-htmlSelect + Numeric
 	tvs: unbounded range
 	tvs: Gene Variant - SNV/indel
+	tvs: Gene Variant - SNV/indel - Wildtype
 	tvs: Gene Variant - CNV - cateogrical
 	tvs: Gene Variant - CNV - continuous
 	tvs: Gene Variant - Fusion
@@ -824,7 +825,9 @@ tape('tvs: unbounded range', async test => {
 })
 
 tape('tvs: Gene Variant - SNV/indel', async test => {
+	const vocabApi = await getVocabApi()
 	const opts = getOpts({
+		vocabApi,
 		filterData: {
 			type: 'tvslst',
 			in: true,
@@ -843,17 +846,23 @@ tape('tvs: Gene Variant - SNV/indel', async test => {
 							dt: 1,
 							values: {
 								M: { label: 'MISSENSE' },
-								F: { label: 'FRAMESHIFT' },
-								WT: { label: 'Wildtype' }
+								F: { label: 'FRAMESHIFT' }
 							},
 							name_noOrigin: 'SNV/indel',
 							origin: 'somatic',
 							parentTerm: {
-								kind: 'gene',
+								type: 'geneVariant',
 								id: 'TP53',
-								gene: 'TP53',
 								name: 'TP53',
-								type: 'geneVariant'
+								genes: [
+									{
+										kind: 'gene',
+										id: 'TP53',
+										gene: 'TP53',
+										name: 'TP53',
+										type: 'geneVariant'
+									}
+								]
 							}
 						},
 						values: [{ key: 'M', label: 'MISSENSE', value: 'M', bar_width_frac: null }]
@@ -882,7 +891,7 @@ tape('tvs: Gene Variant - SNV/indel', async test => {
 		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
 
 		test.ok(applyBtn, 'Should have 1 button to apply value change')
-		test.equal(tipd.selectAll("input[name^='sjpp-input']").size(), 3, 'Should have a checkbox for each value')
+		test.equal(tipd.selectAll("input[name^='sjpp-input']").size(), 2, 'Should have a checkbox for each value')
 		test.equal(tipd.selectAll("input[name^='sjpp-input']:checked").size(), 1, 'Should have 1 box checked')
 
 		//trigger and test addition of new value
@@ -902,9 +911,93 @@ tape('tvs: Gene Variant - SNV/indel', async test => {
 	if (test._ok) opts.holder.remove()
 })
 
+tape('tvs: Gene Variant - SNV/indel - Wildtype', async test => {
+	const vocabApi = await getVocabApi()
+	const opts = getOpts({
+		vocabApi,
+		filterData: {
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: {
+							id: 'snvindel_somatic',
+							query: 'snvindel',
+							name: 'SNV/indel (somatic)',
+							parent_id: null,
+							isleaf: true,
+							type: 'dtsnvindel',
+							dt: 1,
+							values: {
+								M: { label: 'MISSENSE' },
+								F: { label: 'FRAMESHIFT' }
+							},
+							name_noOrigin: 'SNV/indel',
+							origin: 'somatic',
+							parentTerm: {
+								type: 'geneVariant',
+								id: 'TP53',
+								name: 'TP53',
+								genes: [
+									{
+										kind: 'gene',
+										id: 'TP53',
+										gene: 'TP53',
+										name: 'TP53',
+										type: 'geneVariant'
+									}
+								]
+							}
+						},
+						values: [{ key: 'M', label: 'MISSENSE', value: 'M', bar_width_frac: null }]
+					}
+				}
+			]
+		}
+	})
+
+	const filternode = opts.holder.node()
+	await opts.filter.main(opts.filterData)
+
+	try {
+		const pill = await detectOne({ target: filternode, selector: '.tvs_pill' })
+		const controlTipd = opts.filter.Inner.dom.controlsTip.d
+		const menuRows = controlTipd.selectAll('tr')
+		const editOpt = menuRows.filter(d => d.action == 'edit').node()
+		const tipd = opts.filter.Inner.dom.termSrcDiv
+
+		let valueBtn = pill.querySelector('.value_btn')
+		test.equal(valueBtn.textContent, 'MISSENSE', 'Pill value should be the tvs value')
+
+		// --- trigger and check tip menu ---
+		pill.click()
+		editOpt.click()
+		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
+
+		test.ok(applyBtn, 'Should have 1 button to apply value change')
+		test.equal(tipd.selectAll("input[name^='sjpp-input']").size(), 2, 'Should have a checkbox for each value')
+		test.equal(tipd.selectAll("input[name^='sjpp-input']:checked").size(), 1, 'Should have 1 box checked')
+
+		const genotypeDiv = tipd.select('[data-testid="sjpp-variantConfig-genotype"]')
+		const genotypeRadio = genotypeDiv.selectAll('input[type="radio"]').nodes()
+		genotypeRadio.find(r => r.value == 'wildtype').click()
+		valueBtn = await detectChildText({
+			target: filternode,
+			selector: '.value_btn',
+			trigger: () => applyBtn.click()
+		})
+		test.equal(valueBtn[0].textContent, 'Wildtype', 'pill value btn should change to Wildtype')
+	} catch (e) {
+		test.fail('test error: ' + e)
+	}
+	test.end()
+	//if (test._ok) opts.holder.remove()
+})
+
 tape('tvs: Gene Variant - CNV - categorical', async test => {
-	// generating vocabApi here in order to generate
-	// a termdbConfig, which is needed for cnv tvs
 	const vocabApi = await getVocabApi()
 	const opts = getOpts({
 		vocabApi,
@@ -925,16 +1018,22 @@ tape('tvs: Gene Variant - CNV - categorical', async test => {
 							type: 'dtcnv',
 							dt: 4,
 							values: {
-								CNV_amp: { label: 'Copy number gain' },
-								CNV_loss: { label: 'Heterozygous Deletion' }
+								CNV_amp: { label: 'Copy number gain' }
 							},
 							name_noOrigin: 'CNV',
 							parentTerm: {
-								kind: 'gene',
+								type: 'geneVariant',
 								id: 'TP53',
-								gene: 'TP53',
 								name: 'TP53',
-								type: 'geneVariant'
+								genes: [
+									{
+										kind: 'gene',
+										id: 'TP53',
+										gene: 'TP53',
+										name: 'TP53',
+										type: 'geneVariant'
+									}
+								]
 							}
 						},
 						values: [{ key: 'CNV_amp', label: 'Copy number gain', value: 'CNV_amp', bar_width_frac: null }]
@@ -962,19 +1061,8 @@ tape('tvs: Gene Variant - CNV - categorical', async test => {
 		editOpt.click()
 		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
 		test.ok(applyBtn, 'Should have 1 button to apply value change')
-		test.equal(tipd.selectAll("input[name^='sjpp-input']").size(), 2, 'Should have a checkbox for each value')
+		test.equal(tipd.selectAll("input[name^='sjpp-input']").size(), 1, 'Should have a checkbox for each value')
 		test.equal(tipd.selectAll("input[name^='sjpp-input']:checked").size(), 1, 'Should have 1 box checked')
-
-		//trigger and test addition of new value
-		tipd.node().querySelectorAll("input[name^='sjpp-input']")[1].click()
-
-		// defer the execution of the next step to the next process loop "tick"
-		valueBtn = await detectChildText({
-			target: filternode,
-			selector: '.value_btn',
-			trigger: () => applyBtn.click()
-		})
-		test.equal(valueBtn[0].textContent, 'Altered', 'should change the pill value btn after adding value from menu')
 	} catch (e) {
 		test.fail('test error: ' + e)
 	}
@@ -983,8 +1071,6 @@ tape('tvs: Gene Variant - CNV - categorical', async test => {
 })
 
 tape('tvs: Gene Variant - CNV - continuous', async test => {
-	// generating vocabApi here in order to generate
-	// a termdbConfig, which is needed for cnv tvs
 	const vocabApi = await getVocabApi()
 	// set cnv cutoffs
 	// presence of these properties signals that cnv data is continuous
@@ -1012,16 +1098,22 @@ tape('tvs: Gene Variant - CNV - continuous', async test => {
 							type: 'dtcnv',
 							dt: 4,
 							values: {
-								CNV_amp: { label: 'Copy number gain' },
-								WT: { label: 'Wildtype' }
+								CNV_amp: { label: 'Copy number gain' }
 							},
 							name_noOrigin: 'CNV',
 							parentTerm: {
-								kind: 'gene',
+								type: 'geneVariant',
 								id: 'TP53',
-								gene: 'TP53',
 								name: 'TP53',
-								type: 'geneVariant'
+								genes: [
+									{
+										kind: 'gene',
+										id: 'TP53',
+										gene: 'TP53',
+										name: 'TP53',
+										type: 'geneVariant'
+									}
+								]
 							}
 						},
 						values: [],
@@ -1092,7 +1184,9 @@ tape('tvs: Gene Variant - CNV - continuous', async test => {
 })
 
 tape('tvs: Gene Variant - Fusion', async test => {
+	const vocabApi = await getVocabApi()
 	const opts = getOpts({
+		vocabApi,
 		filterData: {
 			type: 'tvslst',
 			in: true,
@@ -1114,11 +1208,18 @@ tape('tvs: Gene Variant - Fusion', async test => {
 							},
 							name_noOrigin: 'Fusion RNA',
 							parentTerm: {
-								kind: 'gene',
+								type: 'geneVariant',
 								id: 'TP53',
-								gene: 'TP53',
 								name: 'TP53',
-								type: 'geneVariant'
+								genes: [
+									{
+										kind: 'gene',
+										id: 'TP53',
+										gene: 'TP53',
+										name: 'TP53',
+										type: 'geneVariant'
+									}
+								]
 							}
 						},
 						values: [
