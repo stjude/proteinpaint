@@ -1,5 +1,6 @@
 import { make_radios, renderTable } from '#dom'
 import type { TermValues, BaseValue } from '#types'
+import { dt2label } from '#shared/common.js'
 
 type Config = {
 	wt: boolean
@@ -41,7 +42,7 @@ export function renderVariantConfig(arg: Arg) {
 		holder: genotypeDiv,
 		styles: { display: 'inline-block' },
 		options: [
-			{ label: dt == 1 ? 'Mutated' : 'Altered', value: 'mutated', checked: !wt },
+			{ label: dt2label[dt], value: 'mutated', checked: !wt },
 			{ label: 'Wildtype', value: 'wildtype', checked: wt }
 		],
 		callback: value => {
@@ -61,11 +62,7 @@ export function renderVariantConfig(arg: Arg) {
 	if (values.length) {
 		// variant data present
 		// display data in table
-		variantsDiv
-			.append('div')
-			.style('opacity', 0.7)
-			.style('margin-bottom', '5px')
-			.text(dt == 1 ? 'Mutations' : 'Alterations')
+		variantsDiv.append('div').style('opacity', 0.7).style('margin-bottom', '5px').text(dt2label[dt])
 		const tableDiv = variantsDiv.append('div').style('margin-left', '5px').style('font-size', '0.8rem')
 		const rows: any[] = []
 		const selectedIdxs: number[] = []
@@ -96,7 +93,7 @@ export function renderVariantConfig(arg: Arg) {
 				.style('display', 'inline-block')
 				.style('margin-right', '5px')
 				.style('opacity', 0.7)
-				.text('Mutation occurrence')
+				.text('Occurrence')
 			const countOpts = [
 				{ label: 'Any', value: 'any' },
 				{ label: 'Single', value: 'single' },
@@ -117,7 +114,7 @@ export function renderVariantConfig(arg: Arg) {
 		variantsDiv
 			.append('div')
 			.style('display', values.length ? 'none' : 'block')
-			.text(`No ${dt == 1 ? 'mutations' : 'alterations'} found`)
+			.text(`No ${dt2label[dt]} found`)
 	}
 
 	// Apply button
