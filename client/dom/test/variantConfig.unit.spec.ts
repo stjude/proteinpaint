@@ -270,7 +270,7 @@ tape('no mutations', test => {
 	const countRadio: any = variantsDiv.selectAll('input[type="radio"]').nodes()
 	test.equal(countRadio.length, 0, 'should not display mutation count radio buttons')
 
-	test.equal(variantsDiv.text(), 'No mutations found', 'should display no mutations found message')
+	test.equal(variantsDiv.text(), 'No SNV/indel found', 'should display no SNV/indel found message')
 
 	const applyBtn: any = holder.select('button')
 	test.ok(applyBtn.property('disabled'), 'apply button should be disabled')
