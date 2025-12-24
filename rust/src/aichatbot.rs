@@ -517,7 +517,7 @@ enum cutoff_info {
 
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct Cutoff {
-    cutoff_name: cutoff_info,
+    cutoff_info: cutoff_info,
     units: Option<String>,
 }
 
@@ -688,12 +688,49 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
     }
 
     let group1 = json_value.group1;
+    let mut group1_verified: Option<Group> = None;
     let group1_verification: VerifiedField = verify_json_field(&group1.name, &db_vec);
-    let validated_gp1_term;
     if Some(group1_verification.correct_field.clone()).is_some() && group1_verification.correct_value.clone().is_none()
     {
         match group1_verification.correct_field {
-            Some(tm) => validated_gp1_term = tm,
+            Some(gp_tm) => {
+                let mut group1_filter_term: Option<Filter> = None;
+                match group1.filter {
+                    Some(ref gp1_filter) => {
+                        let group1_filter_verification: VerifiedField = verify_json_field(&gp1_filter.name, &db_vec);
+                        // Checking whether the cutoffs are numeric is probably not needed because schemars already does that
+                        if Some(group1_filter_verification.correct_field.clone()).is_some()
+                            && group1_filter_verification.correct_value.clone().is_none()
+                        {
+                            match group1_filter_verification.correct_field {
+                                Some(tm) => {
+                                    group1_filter_term = Some(Filter {
+                                        name: tm,
+                                        cutoff: gp1_filter.cutoff.clone(),
+                                    });
+
+                                    group1_verified = Some(Group {
+                                        name: gp_tm,
+                                        filter: group1_filter_term,
+                                    });
+                                }
+                                None => {
+                                    message = message + &"'" + &group1.name + &"'" + &" not found in db.";
+                                }
+                            }
+                        } else if Some(group1_filter_verification.correct_field.clone()).is_some()
+                            && Some(group1_filter_verification.correct_value.clone()).is_some()
+                        {
+                            message = message
+                                + &group1_filter_verification.correct_value.unwrap()
+                                + &"is a value of "
+                                + &group1_filter_verification.correct_field.unwrap()
+                                + &".";
+                        }
+                    }
+                    None => {}
+                }
+            }
             None => {
                 message = message + &"'" + &group1.name + &"'" + &" not found in db.";
             }
@@ -707,47 +744,51 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
             + &group1_verification.correct_field.unwrap()
             + &".";
     }
-    let mut group1_filter_verification: Option<VerifiedField> = None;
-    match group1.filter {
-        Some(gp1_filter) => {
-            group1_filter_verification = Some(verify_json_field(&gp1_filter.name, &db_vec));
-            // Checking whether the cutoffs are numeric is probably not needed because schemars already does that
-        }
-        None => {}
-    }
-
-    let validated_gp1_filter_term;
-    match group1_filter_verification {
-        Some(valid_gp1_filter_term) => {
-            if Some(valid_gp1_filter_term.correct_field.clone()).is_some()
-                && valid_gp1_filter_term.correct_value.clone().is_none()
-            {
-                match valid_gp1_filter_term.correct_field {
-                    Some(tm) => validated_gp1_filter_term = tm,
-                    None => {
-                        message = message + &"'" + &group1.name + &"'" + &" not found in db.";
-                    }
-                }
-            } else if Some(valid_gp1_filter_term.correct_field.clone()).is_some()
-                && Some(valid_gp1_filter_term.correct_value.clone()).is_some()
-            {
-                message = message
-                    + &valid_gp1_filter_term.correct_value.unwrap()
-                    + &"is a value of "
-                    + &valid_gp1_filter_term.correct_field.unwrap()
-                    + &".";
-            }
-        }
-        None => {}
-    }
 
     let group2 = json_value.group2;
+    let mut group2_verified: Option<Group> = None;
     let group2_verification: VerifiedField = verify_json_field(&group2.name, &db_vec);
-    let validated_gp2_term;
     if Some(group2_verification.correct_field.clone()).is_some() && group2_verification.correct_value.clone().is_none()
     {
         match group2_verification.correct_field {
-            Some(tm) => validated_gp2_term = tm,
+            Some(gp_tm) => {
+                let mut group2_filter_term: Option<Filter> = None;
+                match group2.filter {
+                    Some(ref gp2_filter) => {
+                        let group2_filter_verification: VerifiedField = verify_json_field(&gp2_filter.name, &db_vec);
+                        // Checking whether the cutoffs are numeric is probably not needed because schemars already does that
+                        if Some(group2_filter_verification.correct_field.clone()).is_some()
+                            && group2_filter_verification.correct_value.clone().is_none()
+                        {
+                            match group2_filter_verification.correct_field {
+                                Some(tm) => {
+                                    group2_filter_term = Some(Filter {
+                                        name: tm,
+                                        cutoff: gp2_filter.cutoff.clone(),
+                                    });
+
+                                    group2_verified = Some(Group {
+                                        name: gp_tm,
+                                        filter: group2_filter_term,
+                                    });
+                                }
+                                None => {
+                                    message = message + &"'" + &group2.name + &"'" + &" not found in db.";
+                                }
+                            }
+                        } else if Some(group2_filter_verification.correct_field.clone()).is_some()
+                            && Some(group2_filter_verification.correct_value.clone()).is_some()
+                        {
+                            message = message
+                                + &group2_filter_verification.correct_value.unwrap()
+                                + &"is a value of "
+                                + &group2_filter_verification.correct_field.unwrap()
+                                + &".";
+                        }
+                    }
+                    None => {}
+                }
+            }
             None => {
                 message = message + &"'" + &group2.name + &"'" + &" not found in db.";
             }
@@ -760,40 +801,6 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
             + &"is a value of "
             + &group2_verification.correct_field.unwrap()
             + &".";
-    }
-
-    let mut group2_filter_verification: Option<VerifiedField> = None;
-    match group2.filter {
-        Some(gp2_filter) => {
-            group2_filter_verification = Some(verify_json_field(&gp2_filter.name, &db_vec));
-            // Checking whether the cutoffs are numeric is probably not needed because schemars already does that
-        }
-        None => {}
-    }
-
-    let validated_gp2_filter_term;
-    match group2_filter_verification {
-        Some(valid_gp2_filter_term) => {
-            if Some(valid_gp2_filter_term.correct_field.clone()).is_some()
-                && valid_gp2_filter_term.correct_value.clone().is_none()
-            {
-                match valid_gp2_filter_term.correct_field {
-                    Some(tm) => validated_gp2_filter_term = tm,
-                    None => {
-                        message = message + &"'" + &group2.name + &"'" + &" not found in db.";
-                    }
-                }
-            } else if Some(valid_gp2_filter_term.correct_field.clone()).is_some()
-                && Some(valid_gp2_filter_term.correct_value.clone()).is_some()
-            {
-                message = message
-                    + &valid_gp2_filter_term.correct_value.unwrap()
-                    + &"is a value of "
-                    + &valid_gp2_filter_term.correct_field.unwrap()
-                    + &".";
-            }
-        }
-        None => {}
     }
 
     raw_llm_json // Just to stop compilation errors, will need to be eventually replaced
