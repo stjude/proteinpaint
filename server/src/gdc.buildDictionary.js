@@ -701,6 +701,7 @@ function makeTermdbQueries(ds, id2term) {
 				'summarizeMutationDiagnosis',
 				'summarizeCnvGeneexp',
 				'summarizeMutationSurvival',
+				'summarizeMutationCnv',
 				'summarizeGeneexpSurvival'
 			]
 		}

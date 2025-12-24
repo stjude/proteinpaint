@@ -50,6 +50,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'summarizeMutationSurvival':
 			return await import(`./summarizeMutationSurvival.ts`)
 
+		case 'summarizeMutationCnv':
+			return await import(`./summarizeMutationCnv.ts`)
+
 		case 'summaryInput':
 			return await import(`./summaryInput.ts`)
 
