@@ -40,6 +40,11 @@ export type GRIN2Request = {
 	 * Sending it with request for consistency. In future we will allow user to set scale value or disable scaling if they wish */
 	logCutoff?: number
 
+	/** Maximum number of points to cap the dynamic y-axis in Manhattan plots */
+	maxCappedPoints?: number
+	/** Absolute maximum cap for the y-axis in Manhattan plots regardless of its data distribution */
+	hardCap?: number
+
 	/** Filter from existing PP infrastructure */
 	filter?: any // Filter object passed to get_samples(filter, ds)
 
@@ -117,6 +122,7 @@ interface grin2PlotData {
 		}
 	>
 	total_genome_length: number // Gives us the full length of the genome so we can easily append x buffer space when building d3 x-axis
+	has_capped_points: boolean // Whether we have capped the y-axis due to q-values exceeding the cap
 }
 
 /**
