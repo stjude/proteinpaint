@@ -2,14 +2,26 @@ import { Menu, make_radios, addGeneSearchbox, GeneSetEditUI, table2col } from '#
 import type { VocabApi } from '#types'
 import { dtTerms } from '#shared/common.js'
 
+// TODO: output of this handler should not be q.predefined_groupset_idx, instead should be q.dt and q.origin. Then, in client/tw/geneVariant.ts, should fill in q.predefined_groupset_idx based on q.dt and q.origin. This will also allow easy specification of desired dt/origin in url. Will need to make separate radio buttons for dt and origin to support the different q properties.
+
+type Opts = {
+	holder: any
+	app: any
+	genomeObj: any
+	dt?: number // dt to search, if missing will use first available dt in ds
+	msg?: string // message to be displayed below search bar
+	callback: (tw: any) => Promise<void>
+}
+
 export class SearchHandler {
 	opts: any
 	dom: any
+	mutationTypeRadio: any
 	term: any // tw.term
 	q: any // tw.q
 	callback: any
 
-	async init(opts) {
+	async init(opts: Opts) {
 		this.opts = opts
 		this.dom = {}
 		this.term = { type: 'geneVariant' }
@@ -32,23 +44,24 @@ export class SearchHandler {
 		// get child dt terms
 		getChildTerms(this.term, this.opts.app.vocabApi)
 
+		// get index of child dt term to select in mutation type radios
+		const childTermIdx = opts.dt ? this.term.childTerms.findIndex(t => t.dt == opts.dt) : 0
+		if (!Number.isInteger(childTermIdx) || childTermIdx == -1) throw 'invalid child term index'
+
 		{
 			const table = table2col({ holder: this.dom.typeSettingDiv, margin: '0px 0px 15px 0px' })
 			// create radios for mutation type
 			{
 				const [td1, td2] = table.addRow()
 				td1.text('Mutation Type')
-				make_radios({
+				this.mutationTypeRadio = make_radios({
 					holder: td2.attr('data-testid', 'sjpp-genevariant-mutationTypeRadios'),
 					styles: { display: 'inline-block' },
 					options: this.term.childTerms.map((t, i) => {
-						return { label: t.name, value: i, checked: i === 0 }
+						return { label: t.name, value: i, checked: i == childTermIdx }
 					}),
-					callback: i => {
-						this.q.predefined_groupset_idx = i
-					}
+					callback: () => {}
 				})
-				this.q.predefined_groupset_idx = 0
 			}
 			// create radios for type of gene input
 			{
@@ -165,6 +178,8 @@ export class SearchHandler {
 		// add parent geneVariant term to each child term now
 		// that gene(s) have been selected
 		addParentTerm(this.term)
+		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
+		this.q.predefined_groupset_idx = Number(selectedMutationType.value)
 		this.callback({ term: this.term, q: this.q })
 		this.dom.msgDiv.style('display', 'none')
 	}
