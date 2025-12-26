@@ -82,6 +82,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			holder: searchDiv,
 			genomeObj: chartsInstance.app.opts.genome!,
 			app: chartsInstance.app, // required to supply "opts.app.vocabApi" for the search ui
+			dt: dtcnv,
 			callback: async tw => {
 				try {
 					await fillTermWrapper(tw, chartsInstance.app.vocabApi)
