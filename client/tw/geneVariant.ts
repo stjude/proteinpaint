@@ -211,7 +211,8 @@ export class GvPredefinedGS extends GvBase {
 
 		if (tw.term.type != 'geneVariant') throw `expecting tw.term.type='geneVariant', got '${tw.term.type}'`
 		if (tw.q.type != 'predefined-groupset') throw `expecting tw.q.type='predefined-groupset', got '${tw.q.type}'`
-		if (!tw.q.predefined_groupset_idx) tw.q.predefined_groupset_idx = 0
+		if (!Object.keys(tw.q).includes('predefined_groupset_idx')) tw.q.predefined_groupset_idx = 0
+		if (!Number.isInteger(tw.q.predefined_groupset_idx)) throw 'invalid tw.q.predefined_groupset_idx'
 
 		// get predefined groupsets
 		await getPredefinedGroupsets(tw.term, opts.vocabApi)

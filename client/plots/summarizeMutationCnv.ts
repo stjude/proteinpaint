@@ -1,19 +1,16 @@
 import { table2col } from '#dom'
 import { fillTermWrapper } from '#termsetting'
 import { SearchHandler as geneSearch } from '../termdb/handlers/geneVariant.ts'
+import { dtsnvindel, dtcnv } from '#shared/common.js'
+import { launchPlot } from './summarizeMutationDiagnosis'
 
-/* TODO: update this
-this creates the chart button menu to do these:
-1. user searches a gene/region to form snvindel mut-wildtype tw
-2. use default supplied dictionary term or change to a new dict term
-3. hit gene search and launch a summary plot: term1=geneTw, term2=dictTw
-
-this plot is "transient" and does not export componentInit()
-because it will not be directly launched from state.
-it will also not be kept in state, as it only launches summary plot at the end
+/*
+same design as summarizeMutationDiagnosis.ts
 */
 
 export async function makeChartBtnMenu(holder, chartsInstance) {
+	let mutTw, cnvTw
+
 	// 2-col table to organize input ui
 	const table = table2col({
 		holder: holder.append('div'),
@@ -30,15 +27,11 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			holder: searchDiv,
 			app: chartsInstance.app, // required to supply "opts.app.vocabApi" for the search ui
 			genomeObj: chartsInstance.app.opts.genome!,
-			msg: 'Hit ENTER to launch plot.',
+			dt: dtsnvindel,
 			callback: async geneTw => {
 				await fillTermWrapper(geneTw, chartsInstance.app.vocabApi)
-				/*launchPlot({
-					tw1: dictTw,
-					tw2: geneTw,
-					chartsInstance,
-					holder
-				})*/
+				mutTw = geneTw
+				mayEnableSubmit()
 			}
 		})
 		searchDiv.style('padding', '0px 0px 5px 0px')
@@ -53,41 +46,31 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			holder: searchDiv,
 			app: chartsInstance.app, // required to supply "opts.app.vocabApi" for the search ui
 			genomeObj: chartsInstance.app.opts.genome!,
-			msg: 'Hit ENTER to launch plot.',
+			dt: dtcnv,
 			callback: async geneTw => {
 				await fillTermWrapper(geneTw, chartsInstance.app.vocabApi)
-				/*launchPlot({
-					tw1: dictTw,
-					tw2: geneTw,
-					chartsInstance,
-					holder
-				})*/
+				cnvTw = geneTw
+				mayEnableSubmit()
 			}
 		})
 		searchDiv.style('padding', '0px 0px 5px 0px')
 	}
-}
 
-/*
-reused helper to:
-1. dispatch to launch plot
-2. while waiting, display wait message in menu and delay-close menu
+	const submitBtn = holder
+		.append('button')
+		.text('Launch Plot')
+		.style('margin', '0px 15px 15px 15px')
+		.property('disabled', true) // enable when both mut and cnv tws are set
+		.on('click', () => {
+			launchPlot({
+				tw1: mutTw,
+				tw2: cnvTw,
+				chartsInstance,
+				holder
+			})
+		})
 
-assumes that tw1 is dict term, will use its type to set chart type
-*/
-export function launchPlot({ tw1, tw2, chartsInstance, holder }) {
-	const chart = {
-		config: {
-			chartType: tw1?.term?.type == 'survival' ? 'survival' : 'summary',
-			// TODO define sandbox header with gene+term name
-			term: tw1,
-			term2: tw2
-		}
+	function mayEnableSubmit() {
+		submitBtn.property('disabled', !mutTw || !cnvTw)
 	}
-	chartsInstance.plotCreate(chart)
-	holder.selectAll('*').remove() // okay to delete; this ui is "single-use" and will be rerendered on clicking chart button again
-	holder.append('div').style('margin', '20px').text('LOADING CHART ...') // indicate mass chart is loading
-	setTimeout(() => {
-		holder.style('display', 'none')
-	}, 1000)
 }

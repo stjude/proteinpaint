@@ -98,7 +98,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 		.append('button')
 		.text('Launch Plot')
 		.style('margin', '0px 15px 15px 15px')
-		.property('disable', true) // enable when both exp and cnv tws are set
+		.property('disabled', true) // enable when both exp and cnv tws are set
 		.on('click', launch)
 
 	////////////////////        helpers        ////////////////////
