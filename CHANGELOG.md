@@ -11,6 +11,7 @@ Features:
 - GRIN2: Add constant for -log10(q-value) cutoff in Manhattan plot
 - GRIN2: Added additional integration test for top genes table
 - GRIN2: Enable local filter
+- Implemented Mutation vs. CNV plot in GDC correlation plot
 
 Fixes:
 - fix the handling of undefined ref argument to deepCopyFreeze()
