@@ -19,8 +19,7 @@ export class SearchHandler {
 			target: 'numericTermCollections',
 			detail: { ...details }
 		}
-		const seletedTerms = new Set()
-		const innerTree = await appInit({
+		await appInit({
 			holder: opts.holder,
 			vocabApi: this.app.vocabApi,
 			focus: 'off',
@@ -29,19 +28,14 @@ export class SearchHandler {
 				tree: { usecase }
 			},
 			tree: {
-				click_term: (term: any) => {
-					if (seletedTerms.has(term)) seletedTerms.delete(term)
-					else seletedTerms.add(term)
-					innerTree.dispatch({
-						type: 'app_refresh',
-						state: {
-							selectedTerms: [...seletedTerms]
-						}
-					})
+				submit_lst: async termlst => {
+					const seletedTerms = termlst
+					const type = TermTypes.TERM_COLLECTION
+					const name = usecase.detail.name == 'Mutation Signature' ? `% SNVs` : `Percentage`
 					this.callback({
 						seletedTerms,
-						type: TermTypes.TERM_COLLECTION,
-						name: usecase.detail.name == 'Mutation Signature' ? `% SNVs` : `Percentage`
+						type,
+						name
 					})
 				}
 			},

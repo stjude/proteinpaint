@@ -60,7 +60,7 @@ function get_pill_label(tvs) {
 	return { txt: tvs.ranges.length + ' intervals' }
 }
 
-function format_val_text(range, term) {
+export function format_val_text(range, term) {
 	const x = '<span style="font-family:Times;font-style:italic;font-size:1em; vertical-align:top">x</span>'
 	if (range.startunbounded && range.stopunbounded) {
 		const inf = (sign = '') =>
