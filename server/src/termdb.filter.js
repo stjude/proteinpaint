@@ -7,7 +7,7 @@ import {
 	getSampleType,
 	dtTermTypes
 } from '#shared/terms.js'
-import { getSnpData } from './termdb.matrix.js'
+import { getSnpData, getData } from './termdb.matrix.js'
 import { filterByItem } from './mds3.init.js'
 
 /*
@@ -102,6 +102,8 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 			f = get_condition(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'geneVariant') {
 			f = await get_geneVariant(item.tvs, CTEname_i, ds, onlyChildren)
+		} else if (item.tvs.term.type == 'termCollection') {
+			f = await get_termCollection(item.tvs, CTEname_i, ds, onlyChildren)
 		} else if (item.tvs.term.type == 'snp') {
 			f = await get_snp(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'multivalue') {
@@ -253,6 +255,72 @@ async function get_geneVariant(tvs, CTEname, ds, onlyChildren) {
 				}
 			}
 		}
+		if (includeSample) samplenames.push(key)
+	}
+
+	let query = `SELECT id as sample
+				FROM sampleidmap
+				WHERE id IN (${samplenames.map(i => '?').join(', ')})`
+	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
+
+	return {
+		CTEs: [
+			`
+		  ${CTEname} AS (
+				${query}
+			)`
+		],
+		values: [...samplenames],
+		CTEname
+	}
+}
+
+async function get_termCollection(tvs, CTEname, ds, onlyChildren) {
+	const tw = { $id, term: tvs.term, q: {} }
+	const data = await getData(
+		{
+			terms: [tw]
+		},
+		ds
+	)
+	const samplenames = []
+	for (const [key, value] of Object.entries(data.samples)) {
+		const sampleValues = JSON.parse(value[$id].value)
+		/*
+		sampleVlaues here is an array of results for each mutation signature term for the sampleID. e.g.
+ 		[ { SBS1: 83 }, { SBS2: 0 }, { SBS5: 185 } ]
+		*/
+		let numeratorSum = 0
+		let totalSum = 0
+		for (const sampleValue of sampleValues) {
+			for (const [key, value] of Object.entries(sampleValue)) {
+				totalSum += value
+				if (tvs.term.numerators.includes(key)) numeratorSum += value
+			}
+		}
+		const percentage = totalSum == 0 ? 0 : (numeratorSum / totalSum) * 100
+
+		const range = tvs.ranges[0]
+		let left, right
+		if (range.startunbounded) {
+			left = true
+		} else if ('start' in range) {
+			if (range.startinclusive) {
+				left = percentage >= range.start
+			} else {
+				left = percentage > range.start
+			}
+		}
+		if (range.stopunbounded) {
+			right = true
+		} else if ('stop' in range) {
+			if (range.stopinclusive) {
+				right = percentage <= range.stop
+			} else {
+				right = percentage < range.stop
+			}
+		}
+		const includeSample = tvs.isnot ? !(left && right) : left && right
 		if (includeSample) samplenames.push(key)
 	}
 
