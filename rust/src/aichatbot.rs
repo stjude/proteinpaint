@@ -555,7 +555,7 @@ struct DEOutput {
 async fn extract_DE_search_terms_from_query(
     user_input: &str,
     comp_model: impl rig::completion::CompletionModel + 'static,
-    embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
+    _embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
     llm_backend_type: &llm_backend,
     temperature: f64,
     max_new_tokens: usize,
@@ -586,9 +586,6 @@ Output JSON query4: {\"group1\": {\"name\": \"Asians\", \"filter\": {\"name\": \
 
 User query5: \"Show Differential gene expression plot for males with height greater than 185cm and women with less than 100cm\"
 Output JSON query5: {\"group1\": {\"name\": \"males\", \"filter\": {\"name\": \"height\", \"cutoff\": {\"greater\": 185, \"units\":\"cm\"}}}, \"group2\": {\"name\": \"women\", \"filter\": {\"name\": \"height\", \"cutoff\": {\"lesser\": 100, \"units\": \"cm\"}}}}");
-
-    // Split the contents by the delimiter "---"
-    let parts: Vec<&str> = contents.split("---").collect();
 
     let schema_json: Value = serde_json::to_value(schemars::schema_for!(DEOutput)).unwrap(); // error handling here
     let schema_json_string = serde_json::to_string_pretty(&schema_json).unwrap();
@@ -803,7 +800,190 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
             + &".";
     }
 
-    raw_llm_json // Just to stop compilation errors, will need to be eventually replaced
+    let mut validated_filter_terms = Vec::<FilterTerm>::new();
+    match &json_value.filter {
+        Some(filter_terms_array) => {
+            for parsed_filter_term in filter_terms_array {
+                match parsed_filter_term {
+                    FilterTerm::Categorical(categorical) => {
+                        let term_verification = verify_json_field(&categorical.term, &db_vec);
+                        let mut value_verification: Option<String> = None;
+                        for item in &db_vec {
+                            if &item.name == &categorical.term {
+                                for val in &item.values {
+                                    if &categorical.value == val {
+                                        value_verification = Some(val.clone());
+                                        break;
+                                    }
+                                }
+                            }
+                            if value_verification != None {
+                                break;
+                            }
+                        }
+                        if term_verification.correct_field.is_some() && value_verification.is_some() {
+                            let verified_filter = CategoricalFilterTerm {
+                                term: term_verification.correct_field.clone().unwrap(),
+                                value: value_verification.clone().unwrap(),
+                            };
+                            let categorical_filter_term: FilterTerm = FilterTerm::Categorical(verified_filter);
+                            validated_filter_terms.push(categorical_filter_term);
+                        }
+                        if term_verification.correct_field.is_none() {
+                            message = message + &"'" + &categorical.term + &"' filter term not found in db";
+                        }
+                        if value_verification.is_none() {
+                            message = message
+                                + &"'"
+                                + &categorical.value
+                                + &"' filter value not found for filter field '"
+                                + &categorical.term
+                                + "' in db";
+                        }
+                    }
+                    FilterTerm::Numeric(numeric) => {
+                        let term_verification = verify_json_field(&numeric.term, &db_vec);
+                        if term_verification.correct_field.is_none() {
+                            message = message + &"'" + &numeric.term + &"' filter term not found in db";
+                        } else {
+                            let numeric_filter_term: FilterTerm = FilterTerm::Numeric(numeric.clone());
+                            validated_filter_terms.push(numeric_filter_term);
+                        }
+                    }
+                }
+            }
+
+            // This part may need to be implemented for DE. This takes into the possibility that an LLM might put the same term in group1/group2 and also in the filter. Will implement this later
+
+            //for summary_term in &validated_summary_terms {
+            //    match summary_term {
+            //        SummaryTerms::clinical(clinicial_term) => {
+            //            for filter_term in &validated_filter_terms {
+            //                match filter_term {
+            //                    FilterTerm::Categorical(categorical) => {
+            //                        if &categorical.term == clinicial_term {
+            //                            summary_terms_tobe_removed.push(summary_term.clone());
+            //                        }
+            //                    }
+            //                    FilterTerm::Numeric(numeric) => {
+            //                        if &numeric.term == clinicial_term {
+            //                            summary_terms_tobe_removed.push(summary_term.clone());
+            //                        }
+            //                    }
+            //                }
+            //            }
+            //        }
+            //        SummaryTerms::geneExpression(gene) => {
+            //            for filter_term in &validated_filter_terms {
+            //                match filter_term {
+            //                    FilterTerm::Categorical(categorical) => {
+            //                        if &categorical.term == gene {
+            //                            summary_terms_tobe_removed.push(summary_term.clone());
+            //                        }
+            //                    }
+            //                    FilterTerm::Numeric(numeric) => {
+            //                        if &numeric.term == gene {
+            //                            summary_terms_tobe_removed.push(summary_term.clone());
+            //                        }
+            //                    }
+            //                }
+            //            }
+            //        }
+            //    }
+            //}
+
+            if validated_filter_terms.len() > 0 {
+                if testing == true {
+                    if let Some(obj) = new_json.as_object_mut() {
+                        obj.insert(String::from("filter"), serde_json::json!(validated_filter_terms));
+                    }
+                } else {
+                    let mut validated_filter_terms_PP: String = "[".to_string();
+                    let mut filter_hits = 0;
+                    for validated_term in &validated_filter_terms {
+                        match validated_term {
+                            FilterTerm::Categorical(categorical_filter) => {
+                                let string_json = "{\"term\":\"".to_string()
+                                    + &categorical_filter.term
+                                    + &"\", \"category\":\""
+                                    + &categorical_filter.value
+                                    + &"\"},";
+                                validated_filter_terms_PP += &string_json;
+                            }
+                            FilterTerm::Numeric(numeric_filter) => {
+                                let string_json;
+                                if numeric_filter.greaterThan.is_some() && numeric_filter.lessThan.is_none() {
+                                    string_json = "{\"term\":\"".to_string()
+                                        + &numeric_filter.term
+                                        + &"\", \"gt\":\""
+                                        + &numeric_filter.greaterThan.unwrap().to_string()
+                                        + &"\"},";
+                                } else if numeric_filter.greaterThan.is_none() && numeric_filter.lessThan.is_some() {
+                                    string_json = "{\"term\":\"".to_string()
+                                        + &numeric_filter.term
+                                        + &"\", \"lt\":\""
+                                        + &numeric_filter.lessThan.unwrap().to_string()
+                                        + &"\"},";
+                                } else if numeric_filter.greaterThan.is_some() && numeric_filter.lessThan.is_some() {
+                                    string_json = "{\"term\":\"".to_string()
+                                        + &numeric_filter.term
+                                        + &"\", \"lt\":\""
+                                        + &numeric_filter.lessThan.unwrap().to_string()
+                                        + &"\", \"gt\":\""
+                                        + &numeric_filter.greaterThan.unwrap().to_string()
+                                        + &"\"},";
+                                } else {
+                                    // When both greater and less than are none
+                                    panic!(
+                                        "Numeric filter term {} is missing both greater than and less than values. One of them must be defined",
+                                        &numeric_filter.term
+                                    );
+                                }
+                                validated_filter_terms_PP += &string_json;
+                            }
+                        };
+                        filter_hits += 1;
+                    }
+                    println!("validated_filter_terms_PP:{}", validated_filter_terms_PP);
+                    //if filter_hits > 0 {
+                    //    validated_filter_terms_PP.pop();
+                    //    validated_filter_terms_PP += &"]";
+                    //    if let Some(obj) = pp_plot_json.as_object_mut() {
+                    //        obj.insert(
+                    //            String::from("simpleFilter"),
+                    //            serde_json::from_str(&validated_filter_terms_PP).expect("Not a valid JSON"),
+                    //        );
+                    //    }
+                    //}
+                }
+            }
+        }
+        None => {}
+    }
+
+    let mut err_json: Value; // Error JSON containing the error message (if present)
+    if group1_verified.is_some() && group2_verified.is_some() {
+        if let Some(obj) = new_json.as_object_mut() {
+            obj.insert(String::from("group1"), serde_json::json!(group1_verified));
+            obj.insert(String::from("group2"), serde_json::json!(group2_verified));
+        }
+    } else if group1_verified.is_some() && group2_verified.is_none() {
+        message = message + &"Group2 not verified";
+        if let Some(obj) = new_json.as_object_mut() {
+            obj.insert(String::from("message"), serde_json::json!(message));
+        }
+    } else if group1_verified.is_none() && group2_verified.is_some() {
+        message = message + &"Group1 not verified";
+        if let Some(obj) = new_json.as_object_mut() {
+            obj.insert(String::from("message"), serde_json::json!(message));
+        }
+    } else if group1_verified.is_none() && group2_verified.is_none() {
+        message = message + &"Group1 and Group 2 not verified";
+        if let Some(obj) = new_json.as_object_mut() {
+            obj.insert(String::from("message"), serde_json::json!(message));
+        }
+    }
+    serde_json::to_string(&new_json).unwrap() // Need to add support for testing toggle to include PP types
 }
 
 #[derive(Debug, Clone)]
