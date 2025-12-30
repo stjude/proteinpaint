@@ -158,6 +158,8 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		...settings
 	}
 
+	console.log('Manhattan plot data:', data)
+
 	// Check size of interactive data
 	let interactivePoints = data.plotData.points
 	if (data.plotData.points.length > settings.interactiveDotsCap) {
@@ -402,7 +404,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 	// Add chromosome labels
 	if (data.plotData.chrom_data) {
-		const chromLabelY = settings.plotHeight + 2 * settings.pngDotRadius + settings.yAxisY
+		const chromLabelY = settings.plotHeight + 2 * settings.pngDotRadius + settings.yAxisY + 10
 
 		Object.entries(data.plotData.chrom_data).forEach(([chrom, chromData]: [string, any]) => {
 			const chromLabel = chrom.replace('chr', '')
@@ -514,6 +516,28 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				.attr('font-size', `${settings.legendFontSize + 2}px`)
 				.text(item.type)
 		})
+
+		// Add capped region note if applicable
+		if (data.plotData.has_capped_points) {
+			const noteY = legendY + settings.legendVerticalOffset + 16
+
+			// Small gold square
+			svg
+				.append('rect')
+				.attr('x', legendX + 4)
+				.attr('y', noteY - 8)
+				.attr('width', 10)
+				.attr('height', 10)
+				.attr('fill', 'rgba(255, 235, 59, 0.35)')
+
+			// Note text
+			svg
+				.append('text')
+				.attr('x', legendX + 20)
+				.attr('y', noteY)
+				.attr('font-size', `${settings.legendFontSize}px`)
+				.text('Capped points (jittered for aesthetics)')
+		}
 	}
 }
 
