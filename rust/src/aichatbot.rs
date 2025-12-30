@@ -691,7 +691,6 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
     {
         match group1_verification.correct_field {
             Some(gp_tm) => {
-                let mut group1_filter_term: Option<Filter> = None;
                 match group1.filter {
                     Some(ref gp1_filter) => {
                         let group1_filter_verification: VerifiedField = verify_json_field(&gp1_filter.name, &db_vec);
@@ -701,7 +700,7 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
                         {
                             match group1_filter_verification.correct_field {
                                 Some(tm) => {
-                                    group1_filter_term = Some(Filter {
+                                    let group1_filter_term = Some(Filter {
                                         name: tm,
                                         cutoff: gp1_filter.cutoff.clone(),
                                     });
@@ -749,7 +748,6 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
     {
         match group2_verification.correct_field {
             Some(gp_tm) => {
-                let mut group2_filter_term: Option<Filter> = None;
                 match group2.filter {
                     Some(ref gp2_filter) => {
                         let group2_filter_verification: VerifiedField = verify_json_field(&gp2_filter.name, &db_vec);
@@ -759,7 +757,7 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
                         {
                             match group2_filter_verification.correct_field {
                                 Some(tm) => {
-                                    group2_filter_term = Some(Filter {
+                                    let group2_filter_term = Some(Filter {
                                         name: tm,
                                         cutoff: gp2_filter.cutoff.clone(),
                                     });
@@ -983,7 +981,9 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
             obj.insert(String::from("message"), serde_json::json!(message));
         }
     }
-    serde_json::to_string(&new_json).unwrap() // Need to add support for testing toggle to include PP types
+    let final_exp = serde_json::to_string(&new_json).unwrap(); // Need to add support for testing toggle to include PP types
+    println!("final_exp:{}", final_exp);
+    final_exp
 }
 
 #[derive(Debug, Clone)]
