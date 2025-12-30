@@ -1,4 +1,3 @@
-// Syntax: cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/aichatbot
 #![allow(non_snake_case)]
 //use anyhow::Result;
 //use json::JsonValue;
@@ -552,7 +551,7 @@ struct DEOutput {
 
 #[allow(dead_code)]
 #[allow(non_snake_case)]
-async fn extract_DE_search_terms_from_query(
+pub async fn extract_DE_search_terms_from_query(
     user_input: &str,
     comp_model: impl rig::completion::CompletionModel + 'static,
     _embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
@@ -565,27 +564,9 @@ async fn extract_DE_search_terms_from_query(
     testing: bool,
 ) -> String {
     let (rag_docs, db_vec) = parse_dataset_db(dataset_db).await;
-    let contents = String::from("Differential Gene Expression (DGE or DE) is a technique where the most upregulated and downregulated genes between two cohorts of samples (or patients) are determined. A volcano plot is shown with fold-change in the x-axis and adjusted p-value on the y-axis. So, the upregulated and downregulared genes are on opposite sides of the graph and the most significant genes (based on adjusted p-value) is on the top of the graph. There are three compulsory fields: \"action\", \"group1\" and \"group2\". In case of DE, the \"action\" field should ALWAYS be \"DE\". The fields \"group1\" and \"group2\" contain 
+    let contents = String::from("Differential Gene Expression (DGE or DE) is a technique where the most upregulated and downregulated genes between two cohorts of samples (or patients) are determined. A volcano plot is shown with fold-change in the x-axis and adjusted p-value on the y-axis. So, the upregulated and downregulared genes are on opposite sides of the graph and the most significant genes (based on adjusted p-value) is on the top of the graph. There are three compulsory fields: \"action\", \"group1\" and \"group2\". In case of DE, the \"action\" field should ALWAYS be \"DE\". The fields \"group1\" and \"group2\" should either be a field in the sqlite db or a value of any of the fields. 
 
-The user may select a cutoff for a continuous variables such as age. In such cases the group should only include the range specified by the user. Inside the JSON each entry the name of the group must be inside the field \"name\". For the cutoff (if provided) a field called \"cutoff\" must be provided which should contain a subfield \"name\" containing the name of the cutoff, followed by \"greater\"/\"lesser\"/\"equal\" to followed by the numeric value of the cutoff. If the unit of the variable is provided such as cm,m,inches,celsius etc. then add it to a separate field called \"units\".  
-
-Example input user queries:
-When two groups are found give the following JSON output show {\"group1\": \"groupA\", \"group2\": \"groupB\"} 
-User query1: \"Show me the differential gene expression plot for groups groupA and groupB\"
-Output JSON query1: {\"group1\": {\"name\": \"groupA\"}, \"group2\": {\"name\": \"groupB\"}}
-
-User query2: \"Show volcano plot for White vs Black\"
-Output JSON query2: {\"group1\": {\"name\": \"White\"}, \"group2\": {\"name\": \"Black\"}}
-
-In case no suitable groups are found, show {\"output\":\"No suitable two groups found for differential gene expression\"}
-User query3: \"Who wants to have vodka?\"
-Output JSON query3: {\"output\":\"No suitable two groups found for differential gene expression\"}
-
-User query4: \"Show volcano plot for Asians with age less than 20 and African greater than 80\"
-Output JSON query4: {\"group1\": {\"name\": \"Asians\", \"filter\": {\"name\": \"age\", \"cutoff\": {\"lesser\": 20}}}, \"group2\": {\"name\": \"African\", \"filter\": {\"name\": \"age\", \"cutoff\": {\"greater\": 80}}}}
-
-User query5: \"Show Differential gene expression plot for males with height greater than 185cm and women with less than 100cm\"
-Output JSON query5: {\"group1\": {\"name\": \"males\", \"filter\": {\"name\": \"height\", \"cutoff\": {\"greater\": 185, \"units\":\"cm\"}}}, \"group2\": {\"name\": \"women\", \"filter\": {\"name\": \"height\", \"cutoff\": {\"lesser\": 100, \"units\": \"cm\"}}}}");
+The user may select a cutoff for a continuous variables such as age. In such cases the group should only include the range specified by the user. Inside the JSON each entry the name of the group must be inside the field \"name\". For the cutoff (if provided) a field called \"cutoff\" must be provided which should contain a subfield \"name\" containing the name of the cutoff, followed by \"greater\"/\"lesser\"/\"equal\" to followed by the numeric value of the cutoff. If the unit of the variable is provided such as cm,m,inches,celsius etc. then add it to a separate field called \"units\".");
 
     let schema_json: Value = serde_json::to_value(schemars::schema_for!(DEOutput)).unwrap(); // error handling here
     let schema_json_string = serde_json::to_string_pretty(&schema_json).unwrap();
@@ -620,10 +601,14 @@ Output JSON query5: {\"group1\": {\"name\": \"males\", \"filter\": {\"name\": \"
     //let mut vector_store = InMemoryVectorStore::<String>::default();
     //InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
 
+    println!("rag_docs:{:?}", rag_docs);
+
     // Create RAG agent
     let router_instructions = String::from(
-        "Extract the group variable names for differential gene expression from input query. When two groups are found give the following JSON output with no extra comments. Show {{\"group1\": {\"name\": \"groupA\"}, \"group2\": {\"name\": \"groupB\"}}}. In case no suitable groups are found, show {\"output\":\"No suitable two groups found for differential gene expression\"}. In case of a continuous variable such as age, height added additional field to the group called \"filter\". This should contain a sub-field called \"names\" followed by a subfield called \"cutoff\". This sub-field should contain a key either greater, lesser or equalto. If the continuous variable has units provided by the user then add it in a separate field called \"units\".",
-    ) + &contents
+        " I am an assistant that extracts the groups from the user prompt to carry out differential gene expression. The final output must be in the following JSON format with NO extra comments. There are three compulsory fields: \"action\", \"group1\" and \"group2\". In case of DE, the \"action\" field should ALWAYS be \"DE\". The fields \"group1\" and \"group2\" should either be a field in the sqlite db or a value of any of the fields. In case no suitable groups are found, show {\"output\":\"No suitable two groups found for differential gene expression\"}.
+
+The user may select a cutoff for a continuous variables such as age. In such cases the group should only include the range specified by the user. Inside the JSON each entry the name of the group must be inside the field \"name\". For the cutoff (if provided) a field called \"cutoff\" must be provided which should contain a subfield \"name\" containing the name of the cutoff, followed by \"greater\"/\"lesser\"/\"equal\" to followed by the numeric value of the cutoff. If the unit of the variable is provided such as cm,m,inches,celsius etc. then add it to a separate field called \"units\". In case of a continuous variable such as age, height added additional field to the group called \"filter\". This should contain a sub-field called \"names\" followed by a subfield called \"cutoff\". This sub-field should contain a key either greater, lesser or equalto. If the continuous variable has units provided by the user then add it in a separate field called \"units\".",
+    )
         + " The JSON schema is as follows"
         + &schema_json_string
         + "\n Examples: User query1: \"Show volcano plot for Asians with age less than 20 and African greater than 80\". Output JSON query1: {\"group1\": {\"name\": \"Asians\", \"filter\": {\"name\": \"age\", \"cutoff\": {\"lesser\": 20}}}, \"group2\": {\"name\": \"African\", \"filter\": {\"name\": \"age\", \"cutoff\": {\"greater\": 80}}}}. User query2: \"Show Differential gene expression plot for males with height greater than 185cm and women with less than 100cm\". Output JSON query2: {\"group1\": {\"name\": \"males\", \"filter\": {\"name\": \"height\", \"cutoff\": {\"greater\": 185, \"units\":\"cm\"}}}, \"group2\": {\"name\": \"women\", \"filter\": {\"name\": \"height\", \"cutoff\": {\"lesser\": 100, \"units\": \"cm\"}}}}. User query3: \"Show DE plot between healthy and diseased groups. Output JSON query3: {\"group1\":{\"name\":\"healthy\"},\"group2\":{\"name\":\"diseased\"}} \nQuestion= {question} \nanswer"
@@ -643,7 +628,7 @@ Output JSON query5: {\"group1\": {\"name\": \"males\", \"filter\": {\"name\": \"
     let result = response.replace("json", "").replace("```", "");
     //println!("result_groups:{}", result);
     let json_value: Value = serde_json::from_str(&result).expect("REASON");
-    //println!("json_value:{}", json_value);
+    println!("json_value:{}", json_value);
     let final_llm_json;
     match llm_backend_type {
         llm_backend::Ollama() => {

@@ -134,3 +134,7 @@ path="src/query_classification.rs"
 [[bin]]
 name="summary_agent"
 path="src/summary_agent.rs"
+
+[[bin]]
+name="dge"
+path="src/dge.rs"
