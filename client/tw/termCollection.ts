@@ -3,7 +3,8 @@ import type {
 	TermCollection as TermCollectionType,
 	TermCollectionQValues,
 	TermCollectionTW,
-	RawTermCollectionTWValues
+	RawTermCollectionTWValues,
+	TermCollectionTWValues
 } from '#types'
 import { type TwOpts, TwBase } from './TwBase'
 
@@ -48,10 +49,10 @@ export class TermCollectionValues extends TwBase {
 	term: TermCollection
 	q: TermCollectionQValues
 
-	static fill(tw: RawTermCollectionTWValues, opts: TwOpts = {}) {
+	static fill(tw: RawTermCollectionTWValues, opts: TwOpts = {}): TermCollectionTWValues {
 		TermCollection.fill(tw.term, opts)
 		//This comparison appears to be unintentional because the types '"TermCollectionValues"' and '"termCollection"' have no overlap.
-		if (!tw.type || tw.type == 'termCollection') tw.type = 'TermCollectionValues' // only one supported tw.type for now
+		if (!tw.type || tw.type == 'termCollection') tw.type = 'TermCollectionTWValues' // only one supported tw.type for now
 
 		// TODO: when more termCollection types needed, should assign different q.type here.
 		if (!tw.q) tw.q = { mode: 'continuous', type: 'values', lst: [] }
@@ -62,7 +63,7 @@ export class TermCollectionValues extends TwBase {
 
 		//if (!tw.q.lst?.length) throw `invalid tw.q.lst[]`
 
-		return tw
+		return tw as TermCollectionTWValues
 		//TODO: check tw.q.lst against term.lst, should be a subset
 	}
 

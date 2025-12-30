@@ -23,13 +23,14 @@ export type TermCollectionQValues = MinBaseQ & {
 	// groupValuesBy: 'sampleId' | 'termId'
 	/** a selection of term.ids for the current termwrapper, selected from term.lst */
 	lst: string[]
+	numerators?: string[]
 }
 
 // TODO: may add different q types below
 export type TermCollectionQ = TermCollectionQValues
 
 export type TermCollectionTWValues = BaseTW & {
-	type: 'TermCollectionValues'
+	type: 'TermCollectionTWValues'
 	term: TermCollection
 	q: TermCollectionQValues
 }
@@ -38,7 +39,7 @@ export type TermCollectionTWValues = BaseTW & {
 export type TermCollectionTW = TermCollectionTWValues
 
 export type RawTermCollectionTWValues = /*TermCollectionTW &*/ {
-	type?: 'TermCollectionValues' | 'termCollection' // deprecated
+	type?: 'TermCollectionTWValues' | 'termCollection' // deprecated
 	term: RawTermCollection
 	q: TermCollectionQValues
 }

@@ -63,7 +63,7 @@ export class TwRouter {
 			case 'QualTWCustomGS':
 				return new QualCustomGS(tw, opts)
 
-			case 'TermCollectionValues':
+			case 'TermCollectionTWValues':
 				return new TermCollectionValues(tw, opts)
 
 			default:
