@@ -216,6 +216,13 @@ export class TermSetting {
 					this.handlerByType.numeric = this.handler
 					return
 				}
+
+				case 'TermCollectionTWValues': {
+					const { TermCollectionHandler } = await import('./handlers/termCollection.ts')
+					this.handler = new TermCollectionHandler({ termsetting: this })
+					return
+				}
+
 				// TODO: should reinstate throw once all migrated tw's have strict handlers for each tw type
 				default:
 					throw `unsupported tw.type='${tw.type}'`

@@ -38,7 +38,12 @@ export class TermSettingApi {
 			delete self.error
 			self.validateMainData(data)
 			// TODO: use routedTermTypes.has(data.term?.type) instead of just categorical
-			if (!data.tw && (QualitativeBase.termTypes.has(data.term?.type) || NumericBase.termTypes.has(data.term?.type))) {
+			if (
+				!data.tw &&
+				(QualitativeBase.termTypes.has(data.term?.type) ||
+					NumericBase.termTypes.has(data.term?.type) ||
+					data.term?.type == 'termCollection')
+			) {
 				data.tw = await TwRouter.initRaw({ term: data.term, q: data.q })
 			}
 			self.tw = data.tw
