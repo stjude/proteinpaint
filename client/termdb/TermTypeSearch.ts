@@ -16,7 +16,7 @@ NOTE: dataset-specific overrides may be applied when the TermTypeSearch is initi
 
 const useCasesExcluded = {
 	matrix: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
-	filter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
+	filter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
 	dictionary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
 	summary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
 	barchart: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
@@ -367,11 +367,11 @@ export class TermTypeSearch {
 		else if (this.submit_lst) {
 			const t = term.term || term
 			if (term.type == TermTypes.TERM_COLLECTION) {
-				const seletedTerms = [...term.seletedTerms]
-				const termNames = seletedTerms.map(o => o.id).join(',')
+				const selectedTerms = [...term.selectedTerms]
+				const termNames = selectedTerms.map(o => o.id).join(',')
 				const termNamesLabel = `${term.name} (${termNames})`
 				const termName = termNamesLabel.length <= 26 ? termNamesLabel : termNamesLabel.slice(0, 26) + '...'
-				const newTerm = { name: termName, type: 'termCollection', isleaf: true, termlst: seletedTerms }
+				const newTerm = { name: termName, type: 'termCollection', isleaf: true, termlst: selectedTerms }
 				this.app.dispatch({
 					type: 'app_refresh',
 					state: {
@@ -387,13 +387,13 @@ export class TermTypeSearch {
 				}
 			})
 		} else {
-			if (term.type == TermTypes.TERM_COLLECTION) {
-				const seletedTerms = [...term.seletedTerms]
-				const termNames = seletedTerms.map(o => o.id).join(',')
-				const termNamesLabel = `${term.name} (${termNames})`
-				const termName = termNamesLabel.length <= 26 ? termNamesLabel : termNamesLabel.slice(0, 26) + '...'
-				term = { name: termName, type: 'termCollection', isleaf: true, termlst: seletedTerms }
-			}
+			// if (term.type == TermTypes.TERM_COLLECTION) {
+			// 	const seletedTerms = [...term.seletedTerms]
+			// 	const termNames = seletedTerms.map(o => o.id).join(',')
+			// 	const termNamesLabel = `${term.name} (${termNames})`
+			// 	const termName = termNamesLabel.length <= 26 ? termNamesLabel : termNamesLabel.slice(0, 26) + '...'
+			// 	term = { name: termName, type: 'termCollection', isleaf: true, termlst: seletedTerms }
+			// }
 			this.app.dispatch({
 				type: 'submenu_set',
 				submenu: {
