@@ -1596,8 +1596,12 @@ keep this setting here for reason of:
 }
 
 type NumericTermCollection = {
-	/** human readable name for this collection */
+	/** human readable name for this collection, as label of termtypeselect toggle option 
+	>=1 number of such terms can be used to build a term of type=termCollection
+	*/
 	name: string
+	/** name prefix for a termCollection term, e.g. a snv-based mutation signature collection may be prefixed by "%SNV", to distinguish from non-SNV signatures */
+	pillNamePrefix: string
 	/** array of dictionary numeric term ids belonging to this collection */
 	termIds: string[]
 	/** array of branch term ids belonging to this collection */
