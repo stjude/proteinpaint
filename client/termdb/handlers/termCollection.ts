@@ -1,20 +1,13 @@
 import { appInit } from '../app.ts'
-import { TermTypes } from '#shared/terms.js'
 
 export class SearchHandler {
 	callback: any
 	app: any
 	async init(opts) {
+		console.log(7, opts)
 		this.callback = opts.callback
 		this.app = opts.app
-		const details = this.app.vocabApi.termdbConfig.numericTermCollections.reduce(
-			(acc, item, i) => ({
-				name: i === 0 ? item.name : acc.name + '/' + item.name,
-				termIds: [...acc.termIds, ...item.termIds],
-				branchIds: [...acc.branchIds, ...item.branchIds]
-			}),
-			{ name: '', termIds: [], branchIds: [] }
-		)
+		const details = opts.details
 		const usecase = {
 			target: 'numericTermCollections',
 			detail: { ...details }
@@ -38,12 +31,21 @@ export class SearchHandler {
 							selectedTerms: [...selectedTerms]
 						}
 					})
-					//copts.callback(term)
-					opts.callback({
-						selectedTerms,
-						type: TermTypes.TERM_COLLECTION,
-						name: usecase.detail.name == 'Mutation Signature' ? `% SNVs` : `Percentage`
-					})
+
+					// this data is for outer tree
+					const name = usecase.detail.name == 'Mutation Signature' ? `% SNVs` : `Percentage`
+					const termlst = [...selectedTerms]
+					const termNames = termlst.map(o => o.id).join(',')
+					const termNamesLabel = `${name} (${termNames})`
+					const termName = termNamesLabel.length <= 26 ? termNamesLabel : termNamesLabel.slice(0, 26) + '...'
+					const newTerm = {
+						collectionId: details.id || details.name,
+						name: termName,
+						type: 'termCollection',
+						isleaf: true,
+						termlst
+					}
+					opts.callback(newTerm)
 				}
 			},
 			search: {
