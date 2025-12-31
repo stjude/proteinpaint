@@ -4,7 +4,6 @@ export class SearchHandler {
 	callback: any
 	app: any
 	async init(opts) {
-		console.log(7, opts)
 		this.callback = opts.callback
 		this.app = opts.app
 		const details = opts.details
@@ -13,6 +12,7 @@ export class SearchHandler {
 			detail: { ...details }
 		}
 		const selectedTerms = new Set()
+		opts.holder.style('display', '')
 		const innerTree = await appInit({
 			holder: opts.holder,
 			vocabApi: this.app.vocabApi,
@@ -34,16 +34,24 @@ export class SearchHandler {
 
 					// this data is for outer tree
 					const name = usecase.detail.name == 'Mutation Signature' ? `% SNVs` : `Percentage`
-					const termlst = [...selectedTerms]
-					const termNames = termlst.map(o => o.id).join(',')
+					const termlst: any[] = [...selectedTerms]
+					const termNames = termlst.map((o: any) => o.id).join(',')
 					const termNamesLabel = `${name} (${termNames})`
 					const termName = termNamesLabel.length <= 26 ? termNamesLabel : termNamesLabel.slice(0, 26) + '...'
+					const propsByTermId = {}
+					if (details.propsByTermId) {
+						// extract properties (like color, etc) for the selected terms
+						for (const t of termlst) {
+							if (details.propsByTermId[t.id]) propsByTermId[t.id] = details.propsByTermId[t.id]
+						}
+					}
 					const newTerm = {
 						collectionId: details.id || details.name,
 						name: termName,
 						type: 'termCollection',
 						isleaf: true,
-						termlst
+						termlst,
+						propsByTermId
 					}
 					opts.callback(newTerm)
 				}
