@@ -331,7 +331,7 @@ export function setTermCollectionCellProps(cell, tw, anno, value, s, t, self, wi
 	cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 	cell.y = t.counts.posMaxHt + twSettings.contBarGap - t.scales.pos(value.pre_val_sum) - cell.height
 	cell.label = value.label
-	cell.fill = twSettings[value.label]?.color || value.color
+	cell.fill = twSettings[value.label]?.color || value.color || tw.term.propsByTermId?.[value.label]?.color
 	cell.value = value.value
 
 	// return the corresponding legend item data

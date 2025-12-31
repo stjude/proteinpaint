@@ -214,21 +214,13 @@ export default function (): Mds3 {
 						name: 'Fake Collection 1',
 						termIds: ['agedx', 'a_death', 'a_ndi', 'agelastvisit'],
 						branchIds: ['Demographic Variables', 'Age (years)'],
-
-						propsByTermId: {
-							agedx: { color: 'red' },
-							a_death: { color: 'red' }
-						}
+						propsByTermId: {}
 					},
 					{
 						name: 'Fake Collection 2',
 						termIds: ['a_death', 'a_ndi', 'agelastvisit'],
 						branchIds: ['Demographic Variables', 'Age (years)'],
-
-						propsByTermId: {
-							agedx: { color: 'red' },
-							a_death: { color: 'red' }
-						}
+						propsByTermId: {}
 					}
 				]
 			},

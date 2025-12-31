@@ -60,6 +60,7 @@ import { dtTermTypes } from '#shared/terms.js'
 import { makeAdHocDicTermdbQueries } from './adHocDictionary/buildAdHocDictionary.ts'
 import { validate_query_saveWSIAnnotation } from '#routes/saveWSIAnnotation.ts'
 import { validate_query_deleteWSIAnnotation } from '#routes/deleteWSITileSelection.ts'
+import { interpolateHsl } from 'd3-interpolate'
 
 /*
 init
@@ -200,6 +201,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 
 	await mayValidateAssayAvailability(ds)
 	await mayValidateViewModes(ds)
+	await mayValidateNumericTermCollection(ds)
 
 	// uncomment below to manually trigger server crash if there is only 1 dataset;
 	// make sure that serverconfig only has one genome and datasets[] entry,
@@ -3363,5 +3365,30 @@ function mayInitTermid2totalsize2(tdb, ds) {
 			return await gdc.get_termlst2size(twLst, q, combination, ds)
 		}
 		return await call_barchart_data(twLst, q, combination, ds)
+	}
+}
+
+function mayValidateNumericTermCollection(ds) {
+	if (!ds.cohort?.termdb?.numericTermCollections) return
+	const collections = ds.cohort?.termdb?.numericTermCollections
+	if (!Array.isArray(collections)) throw `ds.cohort.termdb.numericTermCollections not an array`
+	if (!collections.length) throw `empty ds.cohort.termdb.numericTermCollections`
+	for (const c of collections) {
+		if (!c.name && !c.name) throw `missing numericTermCollection.name and id`
+		if (!c.id) c.id = c.name
+		else if (!c.name) c.name = c.id
+		if (c.propsByTermId) {
+			for (const termId of c.termIds) {
+				if (!c.propsByTermId[termId]) c.propsByTermId[termId] = {}
+			}
+			const hslColorScale = interpolateHsl('red', 'blue') //(0.5); console.log(65, hslColorScale)
+			let i = 0
+			for (const [k, v] of Object.entries(c.propsByTermId)) {
+				if (!v.color) {
+					v.color = hslColorScale(i)
+					i++
+				}
+			}
+		}
 	}
 }
