@@ -4,6 +4,7 @@ import { renderTable } from '#dom'
 import type { TermCollectionValues } from '#tw'
 import type { TermCollectionQValues } from '#types'
 import type { TermSetting } from '../TermSetting.ts'
+import { mayHydrateDictTwLst } from '#termsetting'
 
 // self is the termsetting instance
 export class TermCollectionHandler extends HandlerBase implements Handler {
@@ -21,16 +22,28 @@ export class TermCollectionHandler extends HandlerBase implements Handler {
 		//this.data = { groups: [], values: [], filters: [] }
 	}
 
-	showEditMenu(div: any) {
+	async showEditMenu(div: any) {
 		const self = this.termsetting
 		div.selectAll('*').remove()
-		const terms = self.term.termlst
+		const termIds =
+			self.vocabApi.termdbConfig.numericTermCollections?.find(c => c.name === self.term.collectionId)?.termIds || []
+		const terms: any[] = []
+		const toBeHydrated: any[] = []
+		for (const id of termIds) {
+			const term = self.term.termlst.find(t => t.id === id)
+			if (term) terms.push(term)
+			else toBeHydrated.push({ id })
+		}
+		if (toBeHydrated.length) {
+			await mayHydrateDictTwLst(toBeHydrated, self.vocabApi)
+			terms.push(...toBeHydrated.map(tw => tw.term))
+		}
 		const groupDiv = div.append('div')
 		const noButtonCallback = (i: number, node: any) => {
 			terms[i].checked = node.checked
 		}
 		const name = 'Terms used for sorting order'
-		addTable(groupDiv, name, terms, noButtonCallback)
+		addTable(groupDiv, name, terms, noButtonCallback, self.term.termlst, (self.q as any).numerators)
 		div
 			.append('div')
 			.append('div')
@@ -41,7 +54,20 @@ export class TermCollectionHandler extends HandlerBase implements Handler {
 			.text('Apply')
 			.on('click', () => {
 				const q = self.q as TermCollectionQValues
-				q.numerators = terms.filter(term => term.checked).map(t => t.id)
+				const trs = groupDiv.select('table').select('tbody').node().querySelectorAll('tr')
+
+				self.term.termlst = terms.filter((term, i) => {
+					const checked = trs[i].querySelectorAll('td')[1].querySelector('input')?.checked
+					return checked === true
+				})
+
+				q.numerators = terms
+					.filter((term, i) => {
+						const checked = trs[i].querySelectorAll('td')[3].querySelector('input')?.checked
+						return checked === true
+					})
+					.map(t => t.id)
+
 				self.api.runCallback()
 			})
 	}
@@ -54,20 +80,27 @@ export class TermCollectionHandler extends HandlerBase implements Handler {
 	// getPillName(d: PillData) {}
 }
 
-function addTable(div: any, name: any, terms: any, noButtonCallback: any) {
-	div
-		.style('padding', '6px')
-		.append('div')
-		.style('margin', '10px')
-		.style('font-size', '0.8rem')
-		.html(`<b> ${name}</b>.`)
+function addTable(div: any, name: any, terms: any, noButtonCallback: any, termlst: any[], numerators: string[]) {
+	// div
+	// 	.style('padding', '6px')
+	// 	.append('div')
+	// 	.style('margin', '10px')
+	// 	.style('font-size', '0.8rem')
+	// 	.html(`<b> ${name}</b>.`)
 	const rows: any = []
 	for (const term of terms) {
-		rows.push([{ value: term.name }])
+		console.log(
+			89,
+			numerators?.find(tid => tid === term.id)
+		)
+		const checked = numerators?.find(tid => tid === term.id) ? 'checked' : ''
+		rows.push([{ value: term.name }, { html: `<input type='checkbox' ${checked} />` }])
 	}
-	const selectedRows: number[] = terms.map((term, index) => (term.checked ? index : -1)).filter(index => index !== -1)
+	const selectedRows: number[] = terms
+		.map((term, index) => (termlst.find(t => t.id === term.id) ? index : -1))
+		.filter(index => index !== -1)
 
-	const columns: any = [{ label: 'Terms' }]
+	const columns: any = [{ label: 'Terms' }, { label: 'Use for sorting' }]
 
 	renderTable({
 		rows,
@@ -77,7 +110,7 @@ function addTable(div: any, name: any, terms: any, noButtonCallback: any) {
 		maxHeight: '40vh',
 		noButtonCallback,
 		striped: false,
-		showHeader: false,
+		showHeader: true, //false,
 		selectedRows,
 		columnButtons: undefined, //Leave until table.js is typed
 		buttons: undefined

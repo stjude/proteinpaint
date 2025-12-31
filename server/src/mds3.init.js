@@ -60,7 +60,7 @@ import { dtTermTypes } from '#shared/terms.js'
 import { makeAdHocDicTermdbQueries } from './adHocDictionary/buildAdHocDictionary.ts'
 import { validate_query_saveWSIAnnotation } from '#routes/saveWSIAnnotation.ts'
 import { validate_query_deleteWSIAnnotation } from '#routes/deleteWSITileSelection.ts'
-import { interpolateHsl } from 'd3-interpolate'
+import { scaleOrdinal } from 'd3-scale'
 
 /*
 init
@@ -3368,6 +3368,29 @@ function mayInitTermid2totalsize2(tdb, ds) {
 	}
 }
 
+const schemeCategory20 = [
+	'#1f77b4',
+	'#aec7e8',
+	'#ff7f0e',
+	'#ffbb78',
+	'#2ca02c',
+	'#98df8a',
+	'#d62728',
+	'#ff9896',
+	'#9467bd',
+	'#c5b0d5',
+	'#8c564b',
+	'#c49c94',
+	'#e377c2',
+	'#f7b6d2',
+	'#7f7f7f',
+	'#c7c7c7',
+	'#bcbd22',
+	'#dbdb8d',
+	'#17becf',
+	'#9edae5'
+]
+
 function mayValidateNumericTermCollection(ds) {
 	if (!ds.cohort?.termdb?.numericTermCollections) return
 	const collections = ds.cohort?.termdb?.numericTermCollections
@@ -3379,12 +3402,10 @@ function mayValidateNumericTermCollection(ds) {
 			for (const termId of c.termIds) {
 				if (!c.propsByTermId[termId]) c.propsByTermId[termId] = {}
 			}
-			const hslColorScale = interpolateHsl('red', 'blue') //(0.5); console.log(65, hslColorScale)
-			let i = 0
+			const colorScale = scaleOrdinal(schemeCategory20)
 			for (const [k, v] of Object.entries(c.propsByTermId)) {
 				if (!v.color) {
-					v.color = hslColorScale(i)
-					i++
+					v.color = colorScale(k)
 				}
 			}
 		}
