@@ -1072,7 +1072,7 @@ pub async fn extract_summary_information(
             let result = response.replace("json", "").replace("```", "");
             //println!("result:{}", result);
             let json_value: Value = serde_json::from_str(&result).expect("REASON");
-            println!("Classification result:{}", json_value);
+            //println!("Classification result:{}", json_value);
 
             let final_llm_json;
             match llm_backend_type {
