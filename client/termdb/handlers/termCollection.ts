@@ -46,7 +46,7 @@ export class SearchHandler {
 						}
 					}
 					const newTerm = {
-						collectionId: details.id || details.name,
+						collectionId: details.name,
 						name: termName,
 						type: 'termCollection',
 						isleaf: true,

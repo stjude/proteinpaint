@@ -3374,9 +3374,7 @@ function mayValidateNumericTermCollection(ds) {
 	if (!Array.isArray(collections)) throw `ds.cohort.termdb.numericTermCollections not an array`
 	if (!collections.length) throw `empty ds.cohort.termdb.numericTermCollections`
 	for (const c of collections) {
-		if (!c.name && !c.name) throw `missing numericTermCollection.name and id`
-		if (!c.id) c.id = c.name
-		else if (!c.name) c.name = c.id
+		if (!c.name) throw `missing numericTermCollection.name`
 		if (c.propsByTermId) {
 			for (const termId of c.termIds) {
 				if (!c.propsByTermId[termId]) c.propsByTermId[termId] = {}
