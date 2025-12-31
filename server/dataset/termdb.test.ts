@@ -208,7 +208,20 @@ export default function (): Mds3 {
 				},
 				defaultTw4correlationPlot: {
 					disease: { id: 'diaggrp', q: {} }
-				}
+				},
+				numericTermCollections: [
+					{
+						name: 'Fake termCollection',
+						termIds: ['agedx', 'a_death', 'a_ndi', 'agelastvisit'],
+						branchIds: ['Demographic Variables', 'Age (years)']
+						// plots: [
+						//   {
+						//     name: 'Complete cohort view',
+						//     file: 'files/hg38/ash/genomics/mutationSignature.12092025.json'
+						//   }
+						// ]
+					}
+				]
 			},
 			scatterplots: {
 				plots: [

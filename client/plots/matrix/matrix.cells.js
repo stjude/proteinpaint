@@ -340,7 +340,7 @@ export function setTermCollectionCellProps(cell, tw, anno, value, s, t, self, wi
 		group: tw.$id,
 		value: value.label,
 		order: -1,
-		entry: { key: value.label, label: value.label, fill: twSettings[value.label]?.color || value.color }
+		entry: { key: value.label, label: value.label, fill: cell.fill }
 	}
 }
 

@@ -20,6 +20,10 @@ export class TermCollection {
 	// - does not have to construct, but may require forced type casting in consumer code
 	static fill(term: RawTermCollection, opts: TwOpts = {}) {
 		if (term instanceof TermCollection) return
+		if (term.termlst && !term.lst) {
+			term.lst = term.termlst
+			//delete term.termlst
+		}
 		if (!term.lst && opts.vocabApi) {
 			const collection = opts.vocabApi.termdbConfig.numericTermCollections.find(
 				c => c.name == term.id || c.name == term.name || term.name.includes(c.name)

@@ -25,7 +25,7 @@ export class SearchHandler {
 			focus: 'off',
 			state: {
 				nav: { header_mode: 'search_only' },
-				tree: { usecase }
+				tree: { usecase, expandedTermIds: details.branchIds }
 			},
 			tree: {
 				submit_lst: async termlst => {

@@ -145,7 +145,10 @@ class TdbApp extends AppBase implements RxApp {
 		const submitBtn = submitDiv
 			.append('button')
 			.property('disabled', true)
-			.on('click', () => this.opts.tree?.submit_lst(this.state.selectedTerms))
+			.on('click', () =>
+				// state is frozen, must submit non-frozen copies
+				this.opts.tree?.submit_lst(this.state.selectedTerms.map(t => structuredClone(t)))
+			)
 
 		const topbar = opts.holder.append('div')
 		const termTypeSearchDiv = topbar.append('div').style('display', 'inline-block')
