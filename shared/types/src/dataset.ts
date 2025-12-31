@@ -1596,12 +1596,18 @@ keep this setting here for reason of:
 }
 
 type NumericTermCollection = {
-	/** human readable name for this collection */
+	/** collection id */
+	id?: string
+	/** human readable name for this collection, may be as collection id if missing */
 	name: string
 	/** array of dictionary numeric term ids belonging to this collection */
 	termIds: string[]
-	/** array of branch term ids belonging to this collection */
+	/** array of branch term ids belonging to this collection,
+	 * may be used as state.tree.expandedTermIds[] option to termdb appInit() */
 	branchIds: string[]
+	propsByTermId: {
+		[termId: string]: any
+	}
 	/** preconfigured cohort-level plots for this collection */
 	plots?: {
 		/** name of this plot */

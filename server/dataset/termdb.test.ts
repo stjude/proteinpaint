@@ -211,15 +211,24 @@ export default function (): Mds3 {
 				},
 				numericTermCollections: [
 					{
-						name: 'Fake termCollection',
+						name: 'Fake Collection 1',
 						termIds: ['agedx', 'a_death', 'a_ndi', 'agelastvisit'],
-						branchIds: ['Demographic Variables', 'Age (years)']
-						// plots: [
-						//   {
-						//     name: 'Complete cohort view',
-						//     file: 'files/hg38/ash/genomics/mutationSignature.12092025.json'
-						//   }
-						// ]
+						branchIds: ['Demographic Variables', 'Age (years)'],
+
+						propsByTermId: {
+							agedx: { color: 'red' },
+							a_death: { color: 'red' }
+						}
+					},
+					{
+						name: 'Fake Collection 2',
+						termIds: ['a_death', 'a_ndi', 'agelastvisit'],
+						branchIds: ['Demographic Variables', 'Age (years)'],
+
+						propsByTermId: {
+							agedx: { color: 'red' },
+							a_death: { color: 'red' }
+						}
 					}
 				]
 			},

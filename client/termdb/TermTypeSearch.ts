@@ -303,10 +303,18 @@ export class TermTypeSearch {
 				} catch (e) {
 					throw `error with handler='./handlers/${type}.ts': ${e}`
 				}
-				if (type == TermTypes.TERM_COLLECTION) {
-					label = this.app.vocabApi?.termdbConfig?.numericTermCollections.map(ntc => ntc.name).join('/')
+				const collections = this.app.vocabApi?.termdbConfig?.numericTermCollections
+				if (type == TermTypes.TERM_COLLECTION && collections) {
+					for (const ntc of collections) {
+						this.tabs.push({
+							label: ntc.name,
+							callback: () => this.setTermTypeGroup(type, termTypeGroup, ntc),
+							termTypeGroup
+						})
+					}
+				} else {
+					this.tabs.push({ label, callback: () => this.setTermTypeGroup(type, termTypeGroup), termTypeGroup })
 				}
-				this.tabs.push({ label, callback: () => this.setTermTypeGroup(type, termTypeGroup), termTypeGroup })
 			}
 		}
 	}
@@ -341,7 +349,7 @@ export class TermTypeSearch {
 			}
 		})
 	}
-	async setTermTypeGroup(type, termTypeGroup) {
+	async setTermTypeGroup(type, termTypeGroup, details = {}) {
 		await this.app.dispatch({ type: 'set_term_type_group', value: termTypeGroup })
 		const tab = this.tabs.find(tab => tab.termTypeGroup == termTypeGroup)
 		if (!tab) return
@@ -357,7 +365,8 @@ export class TermTypeSearch {
 				holder,
 				app: this.app,
 				genomeObj: this.genomeObj,
-				callback: term => this.selectTerm(term)
+				callback: term => this.selectTerm(term),
+				details
 			})
 		}
 	}
@@ -367,15 +376,10 @@ export class TermTypeSearch {
 		else if (this.submit_lst) {
 			const t = term.term || term
 			if (term.type == TermTypes.TERM_COLLECTION) {
-				const selectedTerms = [...term.selectedTerms]
-				const termNames = selectedTerms.map(o => o.id).join(',')
-				const termNamesLabel = `${term.name} (${termNames})`
-				const termName = termNamesLabel.length <= 26 ? termNamesLabel : termNamesLabel.slice(0, 26) + '...'
-				const newTerm = { name: termName, type: 'termCollection', isleaf: true, termlst: selectedTerms }
 				this.app.dispatch({
 					type: 'app_refresh',
 					state: {
-						selectedTerms: [newTerm]
+						selectedTerms: [t]
 					}
 				})
 				return
@@ -387,13 +391,6 @@ export class TermTypeSearch {
 				}
 			})
 		} else {
-			// if (term.type == TermTypes.TERM_COLLECTION) {
-			// 	const seletedTerms = [...term.seletedTerms]
-			// 	const termNames = seletedTerms.map(o => o.id).join(',')
-			// 	const termNamesLabel = `${term.name} (${termNames})`
-			// 	const termName = termNamesLabel.length <= 26 ? termNamesLabel : termNamesLabel.slice(0, 26) + '...'
-			// 	term = { name: termName, type: 'termCollection', isleaf: true, termlst: seletedTerms }
-			// }
 			this.app.dispatch({
 				type: 'submenu_set',
 				submenu: {
