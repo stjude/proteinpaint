@@ -858,7 +858,7 @@ export class TermdbVocab extends Vocab {
 										if (value && tw.q.numerators?.includes(label)) {
 											numerators_sum += value
 										}
-										const color = tw.term.termlst.find(t => t.name == label).color
+										const color = tw.term.termlst.find(t => t.id === label || t.name == label).color
 										values.push({
 											label,
 											value,

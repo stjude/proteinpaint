@@ -11,10 +11,12 @@ export type TermCollection = BaseTerm & {
 	// may be queried from backend, but should be available in frontend for termsetting edit menu
 	/** the full list of term.ids that are available in this collection */
 	lst?: string[]
+	termlst?: string[] // TODO: choose either lst or termlst
 }
 
 export type RawTermCollection = TermCollection & {
 	type?: 'termCollection'
+	termlst?: string[]
 }
 
 export type TermCollectionQValues = MinBaseQ & {
