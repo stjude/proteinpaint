@@ -5,7 +5,6 @@ For term type 'snp'
 */
 
 export type TermCollection = BaseTerm & {
-	id?: string
 	name: string
 	type: 'termCollection'
 	// may be queried from backend, but should be available in frontend for termsetting edit menu
