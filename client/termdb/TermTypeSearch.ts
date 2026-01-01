@@ -16,7 +16,7 @@ NOTE: dataset-specific overrides may be applied when the TermTypeSearch is initi
 
 const useCasesExcluded = {
 	matrix: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
-	filter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
+	filter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
 	dictionary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
 	summary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
 	barchart: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
@@ -355,7 +355,6 @@ export class TermTypeSearch {
 		if (!tab) return
 		const holder = tab.contentHolder
 		holder.selectAll('*').remove()
-
 		if (
 			tab.termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES &&
 			tab.termTypeGroup != TermTypeGroups.METABOLITE_INTENSITY
@@ -366,7 +365,8 @@ export class TermTypeSearch {
 				app: this.app,
 				genomeObj: this.genomeObj,
 				callback: term => this.selectTerm(term),
-				details
+				details,
+				usecase: this.app.getState().tree.usecase
 			})
 		}
 	}

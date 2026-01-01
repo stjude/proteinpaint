@@ -81,18 +81,8 @@ export class TermCollectionHandler extends HandlerBase implements Handler {
 }
 
 function addTable(div: any, name: any, terms: any, noButtonCallback: any, termlst: any[], numerators: string[]) {
-	// div
-	// 	.style('padding', '6px')
-	// 	.append('div')
-	// 	.style('margin', '10px')
-	// 	.style('font-size', '0.8rem')
-	// 	.html(`<b> ${name}</b>.`)
 	const rows: any = []
 	for (const term of terms) {
-		console.log(
-			89,
-			numerators?.find(tid => tid === term.id)
-		)
 		const checked = numerators?.find(tid => tid === term.id) ? 'checked' : ''
 		rows.push([{ value: term.name }, { html: `<input type='checkbox' ${checked} />` }])
 	}

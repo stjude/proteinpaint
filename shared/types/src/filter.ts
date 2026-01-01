@@ -3,6 +3,7 @@ import type { NumericTerm, NumericBin } from './terms/numeric.ts'
 import type { CategoricalTerm } from './terms/categorical.ts'
 import type { DtTerm } from './terms/geneVariant.ts'
 import type { ConditionTerm } from './terms/condition.ts'
+import type { TermCollection } from './terms/termCollection.ts'
 
 /*
 --------EXPORTED--------
@@ -62,9 +63,14 @@ type GeneVariantTvs = BaseTvs & {
 	excludeGeneName?: boolean
 }
 
+export type TermCollectionTvs = BaseTvs & {
+	term: TermCollection
+	ratio: number
+}
+
 /*** types supporting Filter type ***/
 
-export type Tvs = CategoricalTvs | NumericTvs | ConditionTvs | GeneVariantTvs // | SampleLstTvs ...
+export type Tvs = CategoricalTvs | NumericTvs | ConditionTvs | GeneVariantTvs | TermCollectionTvs // | SampleLstTvs ...
 
 export type Filter = {
 	type: 'tvslst'
