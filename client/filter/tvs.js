@@ -21,6 +21,8 @@ setInteractivity()
 addExcludeCheckbox()
 */
 
+const tsHandlers = new Set(['termCollection'])
+
 class TVS {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
@@ -69,7 +71,7 @@ class TVS {
 			: term.type
 		if (!this.handlerByType[type]) {
 			try {
-				const _ = await import(`./tvs.${type}.js`)
+				const _ = tsHandlers.has(type) ? await import(`./tvs.${type}.ts`) : await import(`./tvs.${type}.js`)
 				const handler = _.handler
 				this.handlerByType[type] = handler
 			} catch (e) {
@@ -146,6 +148,7 @@ function setRenderers(self) {
 
 	// optional _holder, for example when called by filter.js
 	self.showMenu = _holder => {
+		console.log(148, 'tvs.showMenu()')
 		const holder = _holder ? _holder : self.dom.tip
 		if (!dtTermTypes.has(self.tvs.term.type)) {
 			addExcludeCheckbox(holder, self.tvs, self)
