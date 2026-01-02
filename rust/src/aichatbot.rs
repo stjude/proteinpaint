@@ -728,7 +728,7 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
                 }
             }
             None => {
-                message = message + &"'" + &group1.name + &"'" + &" not found in db.";
+                //message = message + &"'" + &group1.name + &"'" + &" not found in db.";
             }
         }
     } else if Some(group1_verification.correct_field.clone()).is_some()
@@ -785,7 +785,7 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
                 }
             }
             None => {
-                message = message + &"'" + &group2.name + &"'" + &" not found in db.";
+                //message = message + &"'" + &group2.name + &"'" + &" not found in db.";
             }
         }
     } else if Some(group2_verification.correct_field.clone()).is_some()
