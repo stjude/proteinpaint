@@ -132,9 +132,9 @@ name="query_classification"
 path="src/query_classification.rs"
 
 [[bin]]
-name="summary_agent"
-path="src/summary_agent.rs"
+name="chat_summary"
+path="src/chat_summary.rs"
 
 [[bin]]
-name="dge"
-path="src/dge.rs"
+name="chat_dge"
+path="src/chat_dge.rs"
