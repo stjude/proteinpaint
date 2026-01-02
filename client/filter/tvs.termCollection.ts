@@ -5,6 +5,7 @@ import { mayHydrateDictTwLst } from '#termsetting'
 import type { TermCollectionTvs } from '#types'
 
 export const handler = {
+	type: 'termCollection',
 	term_name_gen,
 	get_pill_label,
 	getSelectRemovePos,
@@ -101,7 +102,7 @@ export async function addFilterTable(opts): Promise<any> {
 		.map((term, index) => (termlst.find(t => t.id === term.id) ? index : -1))
 		.filter(index => index !== -1)
 
-	const columns: any = [{ label: 'Terms' }, { label: 'Use as numerator' }, { label: 'Use as denominator' }]
+	const columns: any = [{ label: 'Terms' }, { label: 'Use in numerator' }, { label: 'Use in denominator' }]
 
 	const tableDiv = opts.holder.append('div')
 

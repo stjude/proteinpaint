@@ -55,7 +55,7 @@ export class SearchHandler {
 			.style('padding', '6px 20px')
 			.append('button')
 			.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
-			.text('Apply')
+			.text('Select')
 			.on('click', () => {
 				const trs = tableDiv.select('table').select('tbody').node().querySelectorAll('tr')
 				const termlst = terms.filter((term, i) => {
