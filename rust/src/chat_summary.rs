@@ -1,4 +1,4 @@
-// Syntax: cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/summary_agent
+// Syntax: cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/chat_summary
 #![allow(non_snake_case)]
 use crate::aichatbot::AiJsonFormat;
 use anyhow::Result;
