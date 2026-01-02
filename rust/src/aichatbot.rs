@@ -678,7 +678,7 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
 
     let mut new_json: Value; // New JSON value that will contain items of the final validated JSON
     if json_value.action != String::from("DE") {
-        message = message + &"Did not return a summary action";
+        message = message + &"Did not return a DE action";
         new_json = serde_json::json!(null);
     } else {
         new_json = serde_json::from_str(&"{\"action\":\"DE\"}").expect("Not a valid JSON");
@@ -686,10 +686,12 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
 
     let group1 = json_value.group1;
     let mut group1_verified: Option<Group> = None;
-    let group1_verification: VerifiedField = verify_json_field(&group1.name, &db_vec);
-    if Some(group1_verification.correct_field.clone()).is_some() && group1_verification.correct_value.clone().is_none()
-    {
-        match group1_verification.correct_field {
+    let group1_verification: VerifiedField = verify_group(&group1.name, &db_vec);
+
+    if group1_verification.message.is_some() {
+        message = message + &group1_verification.message.unwrap();
+    } else if group1_verification.correct_value.is_some() {
+        match group1_verification.correct_value {
             Some(gp_tm) => {
                 match group1.filter {
                     Some(ref gp1_filter) => {
@@ -724,33 +726,32 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
                                 + &".";
                         }
                     }
-                    None => {}
+                    None => {
+                        group1_verified = Some(Group {
+                            name: gp_tm,
+                            filter: None,
+                        });
+                    }
                 }
             }
             None => {
                 //message = message + &"'" + &group1.name + &"'" + &" not found in db.";
             }
         }
-    } else if Some(group1_verification.correct_field.clone()).is_some()
-        && Some(group1_verification.correct_value.clone()).is_some()
-    {
-        message = message
-            + &group1_verification.correct_value.unwrap()
-            + &"is a value of "
-            + &group1_verification.correct_field.unwrap()
-            + &".";
     }
 
     let group2 = json_value.group2;
     let mut group2_verified: Option<Group> = None;
-    let group2_verification: VerifiedField = verify_json_field(&group2.name, &db_vec);
-    if Some(group2_verification.correct_field.clone()).is_some() && group2_verification.correct_value.clone().is_none()
-    {
-        match group2_verification.correct_field {
+    let group2_verification: VerifiedField = verify_group(&group2.name, &db_vec);
+
+    if group2_verification.message.is_some() {
+        message = message + &group2_verification.message.unwrap();
+    } else if group2_verification.correct_value.is_some() {
+        match group2_verification.correct_value {
             Some(gp_tm) => {
                 match group2.filter {
-                    Some(ref gp2_filter) => {
-                        let group2_filter_verification: VerifiedField = verify_json_field(&gp2_filter.name, &db_vec);
+                    Some(ref gp1_filter) => {
+                        let group2_filter_verification: VerifiedField = verify_json_field(&gp1_filter.name, &db_vec);
                         // Checking whether the cutoffs are numeric is probably not needed because schemars already does that
                         if Some(group2_filter_verification.correct_field.clone()).is_some()
                             && group2_filter_verification.correct_value.clone().is_none()
@@ -759,7 +760,7 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
                                 Some(tm) => {
                                     let group2_filter_term = Some(Filter {
                                         name: tm,
-                                        cutoff: gp2_filter.cutoff.clone(),
+                                        cutoff: gp1_filter.cutoff.clone(),
                                     });
 
                                     group2_verified = Some(Group {
@@ -781,21 +782,18 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
                                 + &".";
                         }
                     }
-                    None => {}
+                    None => {
+                        group2_verified = Some(Group {
+                            name: gp_tm,
+                            filter: None,
+                        });
+                    }
                 }
             }
             None => {
                 //message = message + &"'" + &group2.name + &"'" + &" not found in db.";
             }
         }
-    } else if Some(group2_verification.correct_field.clone()).is_some()
-        && Some(group2_verification.correct_value.clone()).is_some()
-    {
-        message = message
-            + &group2_verification.correct_value.unwrap()
-            + &"is a value of "
-            + &group2_verification.correct_field.unwrap()
-            + &".";
     }
 
     let mut validated_filter_terms = Vec::<FilterTerm>::new();
@@ -1820,9 +1818,52 @@ struct GeneExpressionPP {
 
 #[derive(Debug, Clone)]
 struct VerifiedField {
-    correct_field: Option<String>,         // Name of the correct field
+    correct_field: Option<String>, // Name of the correct field
     correct_value: Option<String>, // Name of the correct value if there is a match between incorrect field and one of the values
+    message: Option<String>,
     _probable_fields: Option<Vec<String>>, // If multiple fields are matching to the incomplete query
+}
+
+fn verify_group(llm_field_name: &str, db_vec: &Vec<DbRows>) -> VerifiedField {
+    // Check if llm_field_name exists or not in db name field
+    let verified_result: VerifiedField;
+    if db_vec.iter().any(|item| item.name == llm_field_name) {
+        let message = format!(
+            "The group \"{}\" is a name of a field in db and does not select a subset of samples",
+            llm_field_name
+        );
+        verified_result = VerifiedField {
+            correct_field: None,
+            correct_value: None,
+            message: Some(message),
+            _probable_fields: None,
+        };
+    } else {
+        let (search_field, search_val) = verify_json_value(llm_field_name, &db_vec);
+        match search_field {
+            Some(x) => {
+                verified_result = VerifiedField {
+                    correct_field: Some(String::from(x)),
+                    correct_value: search_val,
+                    message: None,
+                    _probable_fields: None,
+                };
+            }
+            None => {
+                // Incorrect field found neither in any of the fields nor any of the values. This will then invoke embedding match across all the fields and their corresponding values
+
+                let mut search_terms = Vec::<String>::new();
+                search_terms.push(String::from(llm_field_name)); // Added the incorrect field item to the search
+                verified_result = VerifiedField {
+                    correct_field: None,
+                    correct_value: None,
+                    message: None,
+                    _probable_fields: None,
+                };
+            }
+        }
+    }
+    verified_result
 }
 
 fn verify_json_field(llm_field_name: &str, db_vec: &Vec<DbRows>) -> VerifiedField {
@@ -1833,6 +1874,7 @@ fn verify_json_field(llm_field_name: &str, db_vec: &Vec<DbRows>) -> VerifiedFiel
         verified_result = VerifiedField {
             correct_field: Some(String::from(llm_field_name)),
             correct_value: None,
+            message: None,
             _probable_fields: None,
         };
     } else {
@@ -1845,6 +1887,7 @@ fn verify_json_field(llm_field_name: &str, db_vec: &Vec<DbRows>) -> VerifiedFiel
                 verified_result = VerifiedField {
                     correct_field: Some(String::from(x)),
                     correct_value: search_val,
+                    message: None,
                     _probable_fields: None,
                 };
             }
@@ -1856,6 +1899,7 @@ fn verify_json_field(llm_field_name: &str, db_vec: &Vec<DbRows>) -> VerifiedFiel
                 verified_result = VerifiedField {
                     correct_field: None,
                     correct_value: None,
+                    message: None,
                     _probable_fields: None,
                 };
             }
