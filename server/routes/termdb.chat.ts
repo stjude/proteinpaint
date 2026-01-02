@@ -93,7 +93,7 @@ function init({ genomes }) {
 			let ai_output_json: any
 			if (classResult.route == 'summary') {
 				const time1 = new Date().valueOf()
-				ai_output_data = await run_rust('summary_agent', JSON.stringify(chatbot_input))
+				ai_output_data = await run_rust('chat_summary', JSON.stringify(chatbot_input))
 				const time2 = new Date().valueOf()
 				mayLog('Time taken for running summary agent:', time2 - time1, 'ms')
 
