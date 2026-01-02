@@ -49,19 +49,17 @@ async function getPillFilterItem(termType) {
 	}
 
 	if (termType == 'categorical' || termType == 'survival') item.tvs.values = [{ key: Object.keys(term.values)[0] }]
-	if (termType == 'condition') {
+	else if (termType == 'condition') {
 		item.tvs.bar_by_grade = 1
 		item.tvs.values_by_max_grade = 1
 		item.tvs.values = [{ key: 1, label: 'Grade 1' }]
-	}
-	if (termType == 'integer' || termType == 'float') {
+	} else if (termType == 'integer' || termType == 'float') {
 		const values = vocabApi.datarows
 			.filter(a => term.id in a.data)
 			.map(a => a.data[term.id])
 			.sort()
 		item.tvs.ranges = [{ start: values[1], stop: values[2] }]
-	}
-	if (dtTermTypes.has(termType)) {
+	} else if (dtTermTypes.has(termType)) {
 		const cnv = vocabApi.termdbConfig.queries.cnv
 		const cnvKeys = Object.keys(cnv)
 		if (termType == 'dtcnv' && (cnvKeys.includes('cnvGainCutoff') || cnvKeys.includes('cnvLossCutoff'))) {
@@ -73,6 +71,8 @@ async function getPillFilterItem(termType) {
 		} else {
 			item.tvs.values = [{ key: Object.keys(term.values)[0] }]
 		}
+	} else if (termType == 'termCollection') {
+		item.tvs.ranges = [{ start: 0.3, stop: 0.5 }]
 	}
 
 	const filter = {
@@ -315,6 +315,25 @@ tape('geneVariant tvs', async test => {
 			const { pill, filter, item, term } = await getPillFilterItem('dtcnv')
 			await testTvs(test, pill, filter, item, term)
 		}
+	} catch (e) {
+		test.fail('test error: ' + e)
+	}
+	test.end()
+})
+
+tape('termCollection tvs', async test => {
+	const { pill, filter, item, term } = await getPillFilterItem('termCollection')
+	try {
+		await pill.main({ tvs: item.tvs, filter })
+		//test.equal(pill.Inner.dom.holder.node().querySelectorAll('.tvs_pill').length, 1, 'should render 1 pill for a single-tvs filter')
+		const handler = pill.Inner.handler
+		test.equal(handler.type, 'termCollection', 'should use the numeric handler for a termCollection')
+		testHandlerMethodsExists(test, handler)
+		test.equal(handler.term_name_gen({ term }), 'Percentage(agedx)', 'should generate the expected pill name')
+		// TODO: other handler methods may require different tests by term type
+		// and may not be abstracted into a separate function, so put here
+		// ...
+		pill.Inner.dom.holder.remove()
 	} catch (e) {
 		test.fail('test error: ' + e)
 	}

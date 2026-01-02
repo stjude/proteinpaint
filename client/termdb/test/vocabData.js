@@ -105,6 +105,13 @@ export const terms = [
 			1: { label: 'Deceased' },
 			0: { label: 'Alive' }
 		}
+	},
+	{
+		type: 'termCollection',
+		collectionId: 'Fake Collection 1',
+		name: 'age percentages',
+		termlst: [{ id: 'agedx' }, { id: 'a_death' }, { id: 'a_ndi' }, { id: 'agelastvisit' }],
+		numerators: ['agedx']
 	}
 ]
 
