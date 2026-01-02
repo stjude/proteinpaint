@@ -1,12 +1,11 @@
-// Syntax: cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/aichatbot
 #![allow(non_snake_case)]
 //use anyhow::Result;
 //use json::JsonValue;
 use r2d2_sqlite::SqliteConnectionManager;
 use rig::agent::AgentBuilder;
 use rig::completion::Prompt;
-use rig::embeddings::builder::EmbeddingsBuilder;
-use rig::vector_store::in_memory_store::InMemoryVectorStore;
+//use rig::embeddings::builder::EmbeddingsBuilder;
+//use rig::vector_store::in_memory_store::InMemoryVectorStore;
 use schemars::JsonSchema;
 use serde_json::{Map, Value, json};
 use std::collections::HashMap;
@@ -40,24 +39,7 @@ pub enum AnswerFormat {
     #[allow(non_camel_case_types)]
     summary_type(SummaryType),
     #[allow(non_camel_case_types)]
-    DE_type(DEType),
-}
-
-#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
-pub struct DEType {
-    action: String,
-    DE_output: DETerms,
-}
-
-#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
-pub struct DETerms {
-    group1: GroupType,
-    group2: GroupType,
-}
-
-#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
-pub struct GroupType {
-    name: String,
+    DE_type(DEOutput),
 }
 
 #[allow(non_camel_case_types)]
@@ -287,6 +269,9 @@ pub async fn run_pipeline(
             temperature,
             max_new_tokens,
             top_p,
+            dataset_db,
+            ai_json,
+            testing,
         )
         .await;
         if testing == true {
@@ -501,80 +486,67 @@ pub async fn classify_query_by_dataset_type(
 }
 
 // DE JSON output schema
-
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 #[allow(non_camel_case_types)]
-#[derive(Debug, JsonSchema)]
-#[allow(dead_code)]
 enum cutoff_info {
+    #[allow(non_camel_case_types)]
     lesser(f32),
+    #[allow(non_camel_case_types)]
     greater(f32),
+    #[allow(non_camel_case_types)]
     equalto(f32),
 }
 
-#[derive(Debug, JsonSchema)]
-#[allow(dead_code)]
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct Cutoff {
-    cutoff_name: cutoff_info,
+    cutoff_info: cutoff_info,
     units: Option<String>,
 }
 
-#[derive(Debug, JsonSchema)]
-#[allow(dead_code)]
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct Filter {
     name: String,
-    cutoff: Cutoff,
+    cutoff: Option<Vec<Cutoff>>,
 }
 
-#[derive(Debug, JsonSchema)]
-#[allow(dead_code)]
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 struct Group {
     name: String,
-    filter: Filter,
+    filter: Option<Filter>,
 }
 
-#[derive(Debug, JsonSchema)]
-#[allow(dead_code)]
-struct DEOutput {
+fn get_DE_string() -> String {
+    "DE".to_string()
+}
+
+#[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
+pub struct DEOutput {
+    // Serde uses this for deserialization.
+    #[serde(default = "get_DE_string")]
+    // Schemars uses this for schema generation.
+    #[schemars(rename = "action")]
+    action: String,
     group1: Group,
     group2: Group,
+    filter: Option<Vec<FilterTerm>>,
+    message: Option<String>,
 }
 
 #[allow(dead_code)]
 #[allow(non_snake_case)]
-async fn extract_DE_search_terms_from_query(
+pub async fn extract_DE_search_terms_from_query(
     user_input: &str,
     comp_model: impl rig::completion::CompletionModel + 'static,
-    embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
+    _embedding_model: impl rig::embeddings::EmbeddingModel + 'static,
     llm_backend_type: &llm_backend,
     temperature: f64,
     max_new_tokens: usize,
     top_p: f32,
+    dataset_db: &str,
+    ai_json: &AiJsonFormat,
+    testing: bool,
 ) -> String {
-    let contents = String::from("Differential Gene Expression (DGE or DE) is a technique where the most upregulated and downregulated genes between two cohorts of samples (or patients) are determined. A volcano plot is shown with fold-change in the x-axis and adjusted p-value on the y-axis. So, the upregulated and downregulared genes are on opposite sides of the graph and the most significant genes (based on adjusted p-value) is on the top of the graph.
-
-The user may select a cutoff for a continuous variables such as age. In such cases the group should only include the range specified by the user. Inside the JSON each entry the name of the group must be inside the field \"name\". For the cutoff (if provided) a field called \"cutoff\" must be provided which should contain a subfield \"name\" containing the name of the cutoff, followed by \"greater\"/\"lesser\"/\"equal\" to followed by the numeric value of the cutoff. If the unit of the variable is provided such as cm,m,inches,celsius etc. then add it to a separate field called \"units\".  
-
-Example input user queries:
-When two groups are found give the following JSON output show {\"group1\": \"groupA\", \"group2\": \"groupB\"} 
-User query1: \"Show me the differential gene expression plot for groups groupA and groupB\"
-Output JSON query1: {\"group1\": {\"name\": \"groupA\"}, \"group2\": {\"name\": \"groupB\"}}
-
-User query2: \"Show volcano plot for White vs Black\"
-Output JSON query2: {\"group1\": {\"name\": \"White\"}, \"group2\": {\"name\": \"Black\"}}
-
-In case no suitable groups are found, show {\"output\":\"No suitable two groups found for differential gene expression\"}
-User query3: \"Who wants to have vodka?\"
-Output JSON query3: {\"output\":\"No suitable two groups found for differential gene expression\"}
-
-User query4: \"Show volcano plot for Asians with age less than 20 and African greater than 80\"
-Output JSON query4: {\"group1\": {\"name\": \"Asians\", \"filter\": {\"name\": \"age\", \"cutoff\": {\"lesser\": 20}}}, \"group2\": {\"name\": \"African\", \"filter\": {\"name\": \"age\", \"cutoff\": {\"greater\": 80}}}}
-
-User query5: \"Show Differential gene expression plot for males with height greater than 185cm and women with less than 100cm\"
-Output JSON query5: {\"group1\": {\"name\": \"males\", \"filter\": {\"name\": \"height\", \"cutoff\": {\"greater\": 185, \"units\":\"cm\"}}}, \"group2\": {\"name\": \"women\", \"filter\": {\"name\": \"height\", \"cutoff\": {\"lesser\": 100, \"units\": \"cm\"}}}}");
-
-    // Split the contents by the delimiter "---"
-    let parts: Vec<&str> = contents.split("---").collect();
-
+    let (rag_docs, db_vec) = parse_dataset_db(dataset_db).await;
     let schema_json: Value = serde_json::to_value(schemars::schema_for!(DEOutput)).unwrap(); // error handling here
     let schema_json_string = serde_json::to_string_pretty(&schema_json).unwrap();
     //println!("DE schema:{}", schema_json);
@@ -596,64 +568,420 @@ Output JSON query5: {\"group1\": {\"name\": \"males\", \"filter\": {\"name\": \"
         }
     }
 
-    // Print the separated parts
-    let mut rag_docs = Vec::<String>::new();
-    for (_i, part) in parts.iter().enumerate() {
-        //println!("Part {}: {}", i + 1, part.trim());
-        rag_docs.push(part.trim().to_string())
+    let mut DE_data_check: Option<TrainTestData> = None;
+    for chart in ai_json.charts.clone() {
+        if chart.r#type == "DE" {
+            DE_data_check = Some(chart);
+            break;
+        }
     }
 
-    let rag_docs_length = rag_docs.len();
-    // Create embeddings and add to vector store
-    let embeddings = EmbeddingsBuilder::new(embedding_model.clone())
-        .documents(rag_docs)
-        .expect("Reason1")
-        .build()
-        .await
-        .unwrap();
+    match DE_data_check {
+        Some(DE_data) => {
+            let mut training_data: String = String::from("");
+            let mut train_iter = 0;
+            for ques_ans in DE_data.TrainingData {
+                match ques_ans.answer {
+                    AnswerFormat::summary_type(_) => panic!("Summary type not valid for DE"),
+                    AnswerFormat::DE_type(de_term) => {
+                        let DE_answer: DEOutput = de_term;
+                        train_iter += 1;
+                        training_data += "Example question";
+                        training_data += &train_iter.to_string();
+                        training_data += &":";
+                        training_data += &ques_ans.question;
+                        training_data += &" ";
+                        training_data += "Example answer";
+                        training_data += &train_iter.to_string();
+                        training_data += &":";
+                        training_data += &serde_json::to_string(&DE_answer).unwrap();
+                        training_data += &"\n";
+                    }
+                }
+            }
+            // Create embeddings and add to vector store
+            //let embeddings = EmbeddingsBuilder::new(embedding_model.clone())
+            //    .documents(rag_docs)
+            //    .expect("Reason1")
+            //    .build()
+            //    .await
+            //    .unwrap();
 
-    // Create vector store
-    let mut vector_store = InMemoryVectorStore::<String>::default();
-    InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
+            //// Create vector store
+            //let mut vector_store = InMemoryVectorStore::<String>::default();
+            //InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
 
-    // Create RAG agent
-    let router_instructions = String::from(
-        "Extract the group variable names for differential gene expression from input query. When two groups are found give the following JSON output with no extra comments. Show {{\"group1\": {\"name\": \"groupA\"}, \"group2\": {\"name\": \"groupB\"}}}. In case no suitable groups are found, show {\"output\":\"No suitable two groups found for differential gene expression\"}. In case of a continuous variable such as age, height added additional field to the group called \"filter\". This should contain a sub-field called \"names\" followed by a subfield called \"cutoff\". This sub-field should contain a key either greater, lesser or equalto. If the continuous variable has units provided by the user then add it in a separate field called \"units\".",
-    ) + &contents
+            println!("rag_docs:{:?}", rag_docs);
+
+            // Create RAG agent
+            let router_instructions = String::from(
+        " I am an assistant that extracts the groups from the user prompt to carry out differential gene expression. The final output must be in the following JSON format with NO extra comments. There are three compulsory fields: \"action\", \"group1\" and \"group2\". In case of DE, the \"action\" field should ALWAYS be \"DE\". The fields \"group1\" and \"group2\" should ONLY either be a field in the sqlite db or a value of any of the fields inside the db. In case no suitable groups are found, show {\"output\":\"No suitable two groups found for differential gene expression\"}.
+
+The user may select a cutoff for a continuous variables such as age. In such cases the group should only include the range specified by the user. Inside the JSON each entry the name of the group must be inside the field \"name\". For the cutoff (if provided) a field called \"cutoff\" must be provided which should contain a subfield \"name\" containing the name of the cutoff, followed by \"greater\"/\"lesser\"/\"equal\" to followed by the numeric value of the cutoff. If the unit of the variable is provided such as cm,m,inches,celsius etc. then add it to a separate field called \"units\". In case of a continuous variable such as age, height added additional field to the group called \"filter\". This should contain a sub-field called \"names\" followed by a subfield called \"cutoff\". This sub-field should contain a key either greater, lesser or equalto. If the continuous variable has units provided by the user then add it in a separate field called \"units\".",
+    )
         + " The JSON schema is as follows"
-        + &schema_json_string
-        + "\n Examples: User query1: \"Show volcano plot for Asians with age less than 20 and African greater than 80\". Output JSON query1: {\"group1\": {\"name\": \"Asians\", \"filter\": {\"name\": \"age\", \"cutoff\": {\"lesser\": 20}}}, \"group2\": {\"name\": \"African\", \"filter\": {\"name\": \"age\", \"cutoff\": {\"greater\": 80}}}}. User query2: \"Show Differential gene expression plot for males with height greater than 185cm and women with less than 100cm\". Output JSON query2: {\"group1\": {\"name\": \"males\", \"filter\": {\"name\": \"height\", \"cutoff\": {\"greater\": 185, \"units\":\"cm\"}}}, \"group2\": {\"name\": \"women\", \"filter\": {\"name\": \"height\", \"cutoff\": {\"lesser\": 100, \"units\": \"cm\"}}}}. User query3: \"Show DE plot between healthy and diseased groups. Output JSON query3: {\"group1\":{\"name\":\"healthy\"},\"group2\":{\"name\":\"diseased\"}} \nQuestion= {question} \nanswer";
-    //println! {"router_instructions:{}",router_instructions};
-    let agent = AgentBuilder::new(comp_model)
-        .preamble(&router_instructions)
-        .dynamic_context(rag_docs_length, vector_store.index(embedding_model))
-        .temperature(temperature)
-        .additional_params(additional)
-        .build();
+	+ &schema_json_string
+	+ &training_data
+        + "The sqlite db in plain language is as follows:\n"
+        + &rag_docs.join(",");
+            //println! {"router_instructions:{}",router_instructions};
+            let agent = AgentBuilder::new(comp_model)
+                .preamble(&router_instructions)
+                //.dynamic_context(rag_docs_length, vector_store.index(embedding_model))
+                .temperature(temperature)
+                .additional_params(additional)
+                .build();
 
-    let response = agent.prompt(user_input).await.expect("Failed to prompt server");
+            let response = agent.prompt(user_input).await.expect("Failed to prompt server");
 
-    //println!("Ollama_groups: {}", response);
-    let result = response.replace("json", "").replace("```", "");
-    //println!("result_groups:{}", result);
-    let json_value: Value = serde_json::from_str(&result).expect("REASON");
-    //println!("json_value:{}", json_value);
-    match llm_backend_type {
-        llm_backend::Ollama() => {
-            let json_value2: Value = serde_json::from_str(&json_value["content"].to_string()).expect("REASON2");
-            //println!("json_value2:{:?}", json_value2);
-            let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON3");
-            json_value3.to_string()
+            //println!("Ollama_groups: {}", response);
+            let result = response.replace("json", "").replace("```", "");
+            //println!("result_groups:{}", result);
+            let json_value: Value = serde_json::from_str(&result).expect("REASON");
+            println!("json_value:{}", json_value);
+            let final_llm_json;
+            match llm_backend_type {
+                llm_backend::Ollama() => {
+                    let json_value2: Value = serde_json::from_str(&json_value["content"].to_string()).expect("REASON2");
+                    //println!("json_;value2:{:?}", json_value2);
+                    let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON3");
+                    final_llm_json = json_value3.to_string();
+                }
+                llm_backend::Sj() => {
+                    let json_value2: Value =
+                        serde_json::from_str(&json_value[0]["generated_text"].to_string()).expect("REASON2");
+                    //println!("json_value2:{}", json_value2.as_str().unwrap());
+                    let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON2");
+                    //println!("Classification result:{}", json_value3);
+                    final_llm_json = json_value3.to_string();
+                }
+            }
+
+            validate_DE_groups(final_llm_json.clone(), db_vec, ai_json, testing)
         }
-        llm_backend::Sj() => {
-            let json_value2: Value =
-                serde_json::from_str(&json_value[0]["generated_text"].to_string()).expect("REASON2");
-            //println!("json_value2:{}", json_value2.as_str().unwrap());
-            let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON2");
-            //println!("Classification result:{}", json_value3);
-            json_value3.to_string()
+        None => {
+            panic!("DE chart train and test data is not defined in dataset JSON file")
         }
     }
+}
+
+fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJsonFormat, testing: bool) -> String {
+    let json_value: DEOutput =
+	serde_json::from_str(&raw_llm_json).expect("Did not get a valid JSON of type {group1: group1, group2: group2, message: message, filter:[{term: term1, value: value1}]} from the LLM");
+    let mut message: String = String::from("");
+    match json_value.message {
+        Some(mes) => {
+            message = message + &mes; // Append any message given by the LLM
+        }
+        None => {}
+    }
+
+    let mut new_json: Value; // New JSON value that will contain items of the final validated JSON
+    if json_value.action != String::from("DE") {
+        message = message + &"Did not return a DE action";
+        new_json = serde_json::json!(null);
+    } else {
+        new_json = serde_json::from_str(&"{\"action\":\"DE\"}").expect("Not a valid JSON");
+    }
+
+    let group1 = json_value.group1;
+    let mut group1_verified: Option<Group> = None;
+    let group1_verification: VerifiedField = verify_group(&group1.name, &db_vec);
+
+    if group1_verification.message.is_some() {
+        message = message + &group1_verification.message.unwrap();
+    } else if group1_verification.correct_value.is_some() {
+        match group1_verification.correct_value {
+            Some(gp_tm) => {
+                match group1.filter {
+                    Some(ref gp1_filter) => {
+                        let group1_filter_verification: VerifiedField = verify_json_field(&gp1_filter.name, &db_vec);
+                        // Checking whether the cutoffs are numeric is probably not needed because schemars already does that
+                        if Some(group1_filter_verification.correct_field.clone()).is_some()
+                            && group1_filter_verification.correct_value.clone().is_none()
+                        {
+                            match group1_filter_verification.correct_field {
+                                Some(tm) => {
+                                    let group1_filter_term = Some(Filter {
+                                        name: tm,
+                                        cutoff: gp1_filter.cutoff.clone(),
+                                    });
+
+                                    group1_verified = Some(Group {
+                                        name: gp_tm,
+                                        filter: group1_filter_term,
+                                    });
+                                }
+                                None => {
+                                    message = message + &"'" + &group1.name + &"'" + &" not found in db.";
+                                }
+                            }
+                        } else if Some(group1_filter_verification.correct_field.clone()).is_some()
+                            && Some(group1_filter_verification.correct_value.clone()).is_some()
+                        {
+                            message = message
+                                + &group1_filter_verification.correct_value.unwrap()
+                                + &"is a value of "
+                                + &group1_filter_verification.correct_field.unwrap()
+                                + &".";
+                        }
+                    }
+                    None => {
+                        group1_verified = Some(Group {
+                            name: gp_tm,
+                            filter: None,
+                        });
+                    }
+                }
+            }
+            None => {
+                //message = message + &"'" + &group1.name + &"'" + &" not found in db.";
+            }
+        }
+    }
+
+    let group2 = json_value.group2;
+    let mut group2_verified: Option<Group> = None;
+    let group2_verification: VerifiedField = verify_group(&group2.name, &db_vec);
+
+    if group2_verification.message.is_some() {
+        message = message + &group2_verification.message.unwrap();
+    } else if group2_verification.correct_value.is_some() {
+        match group2_verification.correct_value {
+            Some(gp_tm) => {
+                match group2.filter {
+                    Some(ref gp1_filter) => {
+                        let group2_filter_verification: VerifiedField = verify_json_field(&gp1_filter.name, &db_vec);
+                        // Checking whether the cutoffs are numeric is probably not needed because schemars already does that
+                        if Some(group2_filter_verification.correct_field.clone()).is_some()
+                            && group2_filter_verification.correct_value.clone().is_none()
+                        {
+                            match group2_filter_verification.correct_field {
+                                Some(tm) => {
+                                    let group2_filter_term = Some(Filter {
+                                        name: tm,
+                                        cutoff: gp1_filter.cutoff.clone(),
+                                    });
+
+                                    group2_verified = Some(Group {
+                                        name: gp_tm,
+                                        filter: group2_filter_term,
+                                    });
+                                }
+                                None => {
+                                    message = message + &"'" + &group2.name + &"'" + &" not found in db.";
+                                }
+                            }
+                        } else if Some(group2_filter_verification.correct_field.clone()).is_some()
+                            && Some(group2_filter_verification.correct_value.clone()).is_some()
+                        {
+                            message = message
+                                + &group2_filter_verification.correct_value.unwrap()
+                                + &"is a value of "
+                                + &group2_filter_verification.correct_field.unwrap()
+                                + &".";
+                        }
+                    }
+                    None => {
+                        group2_verified = Some(Group {
+                            name: gp_tm,
+                            filter: None,
+                        });
+                    }
+                }
+            }
+            None => {
+                //message = message + &"'" + &group2.name + &"'" + &" not found in db.";
+            }
+        }
+    }
+
+    let mut validated_filter_terms = Vec::<FilterTerm>::new();
+    match &json_value.filter {
+        Some(filter_terms_array) => {
+            for parsed_filter_term in filter_terms_array {
+                match parsed_filter_term {
+                    FilterTerm::Categorical(categorical) => {
+                        let term_verification = verify_json_field(&categorical.term, &db_vec);
+                        let mut value_verification: Option<String> = None;
+                        for item in &db_vec {
+                            if &item.name == &categorical.term {
+                                for val in &item.values {
+                                    if &categorical.value == val {
+                                        value_verification = Some(val.clone());
+                                        break;
+                                    }
+                                }
+                            }
+                            if value_verification != None {
+                                break;
+                            }
+                        }
+                        if term_verification.correct_field.is_some() && value_verification.is_some() {
+                            let verified_filter = CategoricalFilterTerm {
+                                term: term_verification.correct_field.clone().unwrap(),
+                                value: value_verification.clone().unwrap(),
+                            };
+                            let categorical_filter_term: FilterTerm = FilterTerm::Categorical(verified_filter);
+                            validated_filter_terms.push(categorical_filter_term);
+                        }
+                        if term_verification.correct_field.is_none() {
+                            message = message + &"'" + &categorical.term + &"' filter term not found in db";
+                        }
+                        if value_verification.is_none() {
+                            message = message
+                                + &"'"
+                                + &categorical.value
+                                + &"' filter value not found for filter field '"
+                                + &categorical.term
+                                + "' in db";
+                        }
+                    }
+                    FilterTerm::Numeric(numeric) => {
+                        let term_verification = verify_json_field(&numeric.term, &db_vec);
+                        if term_verification.correct_field.is_none() {
+                            message = message + &"'" + &numeric.term + &"' filter term not found in db";
+                        } else {
+                            let numeric_filter_term: FilterTerm = FilterTerm::Numeric(numeric.clone());
+                            validated_filter_terms.push(numeric_filter_term);
+                        }
+                    }
+                }
+            }
+
+            // This part may need to be implemented for DE. This takes into the possibility that an LLM might put the same term in group1/group2 and also in the filter. Will implement this later
+
+            //for summary_term in &validated_summary_terms {
+            //    match summary_term {
+            //        SummaryTerms::clinical(clinicial_term) => {
+            //            for filter_term in &validated_filter_terms {
+            //                match filter_term {
+            //                    FilterTerm::Categorical(categorical) => {
+            //                        if &categorical.term == clinicial_term {
+            //                            summary_terms_tobe_removed.push(summary_term.clone());
+            //                        }
+            //                    }
+            //                    FilterTerm::Numeric(numeric) => {
+            //                        if &numeric.term == clinicial_term {
+            //                            summary_terms_tobe_removed.push(summary_term.clone());
+            //                        }
+            //                    }
+            //                }
+            //            }
+            //        }
+            //        SummaryTerms::geneExpression(gene) => {
+            //            for filter_term in &validated_filter_terms {
+            //                match filter_term {
+            //                    FilterTerm::Categorical(categorical) => {
+            //                        if &categorical.term == gene {
+            //                            summary_terms_tobe_removed.push(summary_term.clone());
+            //                        }
+            //                    }
+            //                    FilterTerm::Numeric(numeric) => {
+            //                        if &numeric.term == gene {
+            //                            summary_terms_tobe_removed.push(summary_term.clone());
+            //                        }
+            //                    }
+            //                }
+            //            }
+            //        }
+            //    }
+            //}
+
+            if validated_filter_terms.len() > 0 {
+                if testing == true {
+                    if let Some(obj) = new_json.as_object_mut() {
+                        obj.insert(String::from("filter"), serde_json::json!(validated_filter_terms));
+                    }
+                } else {
+                    let mut validated_filter_terms_PP: String = "[".to_string();
+                    let mut filter_hits = 0;
+                    for validated_term in &validated_filter_terms {
+                        match validated_term {
+                            FilterTerm::Categorical(categorical_filter) => {
+                                let string_json = "{\"term\":\"".to_string()
+                                    + &categorical_filter.term
+                                    + &"\", \"category\":\""
+                                    + &categorical_filter.value
+                                    + &"\"},";
+                                validated_filter_terms_PP += &string_json;
+                            }
+                            FilterTerm::Numeric(numeric_filter) => {
+                                let string_json;
+                                if numeric_filter.greaterThan.is_some() && numeric_filter.lessThan.is_none() {
+                                    string_json = "{\"term\":\"".to_string()
+                                        + &numeric_filter.term
+                                        + &"\", \"gt\":\""
+                                        + &numeric_filter.greaterThan.unwrap().to_string()
+                                        + &"\"},";
+                                } else if numeric_filter.greaterThan.is_none() && numeric_filter.lessThan.is_some() {
+                                    string_json = "{\"term\":\"".to_string()
+                                        + &numeric_filter.term
+                                        + &"\", \"lt\":\""
+                                        + &numeric_filter.lessThan.unwrap().to_string()
+                                        + &"\"},";
+                                } else if numeric_filter.greaterThan.is_some() && numeric_filter.lessThan.is_some() {
+                                    string_json = "{\"term\":\"".to_string()
+                                        + &numeric_filter.term
+                                        + &"\", \"lt\":\""
+                                        + &numeric_filter.lessThan.unwrap().to_string()
+                                        + &"\", \"gt\":\""
+                                        + &numeric_filter.greaterThan.unwrap().to_string()
+                                        + &"\"},";
+                                } else {
+                                    // When both greater and less than are none
+                                    panic!(
+                                        "Numeric filter term {} is missing both greater than and less than values. One of them must be defined",
+                                        &numeric_filter.term
+                                    );
+                                }
+                                validated_filter_terms_PP += &string_json;
+                            }
+                        };
+                        filter_hits += 1;
+                    }
+                    println!("validated_filter_terms_PP:{}", validated_filter_terms_PP);
+                    //if filter_hits > 0 {
+                    //    validated_filter_terms_PP.pop();
+                    //    validated_filter_terms_PP += &"]";
+                    //    if let Some(obj) = pp_plot_json.as_object_mut() {
+                    //        obj.insert(
+                    //            String::from("simpleFilter"),
+                    //            serde_json::from_str(&validated_filter_terms_PP).expect("Not a valid JSON"),
+                    //        );
+                    //    }
+                    //}
+                }
+            }
+        }
+        None => {}
+    }
+
+    let mut err_json: Value; // Error JSON containing the error message (if present)
+    if group1_verified.is_some() && group2_verified.is_some() {
+        if let Some(obj) = new_json.as_object_mut() {
+            obj.insert(String::from("group1"), serde_json::json!(group1_verified));
+            obj.insert(String::from("group2"), serde_json::json!(group2_verified));
+        }
+    } else if group1_verified.is_some() && group2_verified.is_none() {
+        message = message + &"Group2 not verified";
+        if let Some(obj) = new_json.as_object_mut() {
+            obj.insert(String::from("message"), serde_json::json!(message));
+        }
+    } else if group1_verified.is_none() && group2_verified.is_some() {
+        message = message + &"Group1 not verified";
+        if let Some(obj) = new_json.as_object_mut() {
+            obj.insert(String::from("message"), serde_json::json!(message));
+        }
+    } else if group1_verified.is_none() && group2_verified.is_none() {
+        message = message + &"Group1 and Group 2 not verified";
+        if let Some(obj) = new_json.as_object_mut() {
+            obj.insert(String::from("message"), serde_json::json!(message));
+        }
+    }
+    let final_exp = serde_json::to_string(&new_json).unwrap(); // Need to add support for testing toggle to include PP types
+    println!("final_exp:{}", final_exp);
+    final_exp
 }
 
 #[derive(Debug, Clone)]
@@ -905,7 +1233,7 @@ pub async fn extract_summary_information(
                 String::from(
                     "I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. There are three fields in the JSON to be returned: The \"action\" field will ALWAYS be \"summary\". The \"summaryterms\" field should contain all the variables that the user wants to visualize. The \"clinical\" subfield should ONLY contain names of the fields from the sqlite db. ",
                 ) + &summary_data.SystemPrompt
-                    + &" The \"filter\" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both \"summaryterms\" and \"filter\". There are two kinds of filter variables: \"Categorical\" and \"Numeric\". \"Categorical\" variables are those variables which can have a fixed set of values e.g. gender, molecular subtypes. They are defined by the \"CategoricalFilterTerm\" which consists of \"term\" (a field from the sqlite3 db)  and \"value\" (a value of the field from the sqlite db).  \"Numeric\" variables are those which can have any numeric value. They are defined by \"NumericFilterTerm\" and contain  the subfields \"term\" (a field from the sqlite3 db), \"greaterThan\" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and \"lessThan\" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. The \"message\" field only contain messages of terms in the user input that were not found in their respective databases. The JSON schema is as follows:"
+                    + &" The \"filter\" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both \"summaryterms\" and \"filter\". There are two kinds of filter variables: \"Categorical\" and \"Numeric\". \"Categorical\" variables are those variables which can have a fixed set of values e.g. gender, molecular subtypes. They are defined by the \"CategoricalFilterTerm\" which consists of \"term\" (a field from the sqlite3 db)  and \"value\" (a value of the field from the sqlite db).  \"Numeric\" variables are those which can have any numeric value. They are defined by \"NumericFilterTerm\" and contain  the subfields \"term\" (a field from the sqlite3 db), \"greaterThan\" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and \"lessThan\" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. A numeric filter term MUST have ATLEAST a \"lessThan\" or \"greaterThan\" field to be a valid filter term. The \"message\" field only contain messages of terms in the user input that were not found in their respective databases. The JSON schema is as follows:"
                     + &schema_json_string
                     + &training_data
                     + "The sqlite db in plain language is as follows:\n"
@@ -930,7 +1258,7 @@ pub async fn extract_summary_information(
             let result = response.replace("json", "").replace("```", "");
             //println!("result:{}", result);
             let json_value: Value = serde_json::from_str(&result).expect("REASON");
-            //println!("Classification result:{}", json_value);
+            println!("Classification result:{}", json_value);
 
             let final_llm_json;
             match llm_backend_type {
@@ -1490,9 +1818,52 @@ struct GeneExpressionPP {
 
 #[derive(Debug, Clone)]
 struct VerifiedField {
-    correct_field: Option<String>,         // Name of the correct field
+    correct_field: Option<String>, // Name of the correct field
     correct_value: Option<String>, // Name of the correct value if there is a match between incorrect field and one of the values
+    message: Option<String>,
     _probable_fields: Option<Vec<String>>, // If multiple fields are matching to the incomplete query
+}
+
+fn verify_group(llm_field_name: &str, db_vec: &Vec<DbRows>) -> VerifiedField {
+    // Check if llm_field_name exists or not in db name field
+    let verified_result: VerifiedField;
+    if db_vec.iter().any(|item| item.name == llm_field_name) {
+        let message = format!(
+            "The group \"{}\" is a name of a field in db and does not select a subset of samples",
+            llm_field_name
+        );
+        verified_result = VerifiedField {
+            correct_field: None,
+            correct_value: None,
+            message: Some(message),
+            _probable_fields: None,
+        };
+    } else {
+        let (search_field, search_val) = verify_json_value(llm_field_name, &db_vec);
+        match search_field {
+            Some(x) => {
+                verified_result = VerifiedField {
+                    correct_field: Some(String::from(x)),
+                    correct_value: search_val,
+                    message: None,
+                    _probable_fields: None,
+                };
+            }
+            None => {
+                // Incorrect field found neither in any of the fields nor any of the values. This will then invoke embedding match across all the fields and their corresponding values
+
+                let mut search_terms = Vec::<String>::new();
+                search_terms.push(String::from(llm_field_name)); // Added the incorrect field item to the search
+                verified_result = VerifiedField {
+                    correct_field: None,
+                    correct_value: None,
+                    message: None,
+                    _probable_fields: None,
+                };
+            }
+        }
+    }
+    verified_result
 }
 
 fn verify_json_field(llm_field_name: &str, db_vec: &Vec<DbRows>) -> VerifiedField {
@@ -1503,6 +1874,7 @@ fn verify_json_field(llm_field_name: &str, db_vec: &Vec<DbRows>) -> VerifiedFiel
         verified_result = VerifiedField {
             correct_field: Some(String::from(llm_field_name)),
             correct_value: None,
+            message: None,
             _probable_fields: None,
         };
     } else {
@@ -1515,6 +1887,7 @@ fn verify_json_field(llm_field_name: &str, db_vec: &Vec<DbRows>) -> VerifiedFiel
                 verified_result = VerifiedField {
                     correct_field: Some(String::from(x)),
                     correct_value: search_val,
+                    message: None,
                     _probable_fields: None,
                 };
             }
@@ -1526,6 +1899,7 @@ fn verify_json_field(llm_field_name: &str, db_vec: &Vec<DbRows>) -> VerifiedFiel
                 verified_result = VerifiedField {
                     correct_field: None,
                     correct_value: None,
+                    message: None,
                     _probable_fields: None,
                 };
             }
