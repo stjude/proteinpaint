@@ -26,7 +26,8 @@ import {
 	mclasssv,
 	mclasscnvgain,
 	mclasscnvloss,
-	dtTerms
+	dtTerms,
+	getColors
 } from '#shared/common.js'
 import { get_samples, get_active_groupset } from './termdb.sql.js'
 import { server_init_db_queries } from './termdb.server.init.ts'
@@ -3368,29 +3369,6 @@ function mayInitTermid2totalsize2(tdb, ds) {
 	}
 }
 
-const schemeCategory20 = [
-	'#1f77b4',
-	'#aec7e8',
-	'#ff7f0e',
-	'#ffbb78',
-	'#2ca02c',
-	'#98df8a',
-	'#d62728',
-	'#ff9896',
-	'#9467bd',
-	'#c5b0d5',
-	'#8c564b',
-	'#c49c94',
-	'#e377c2',
-	'#f7b6d2',
-	'#7f7f7f',
-	'#c7c7c7',
-	'#bcbd22',
-	'#dbdb8d',
-	'#17becf',
-	'#9edae5'
-]
-
 function mayValidateNumericTermCollection(ds) {
 	if (!ds.cohort?.termdb?.numericTermCollections) return
 	const collections = ds.cohort?.termdb?.numericTermCollections
@@ -3399,14 +3377,12 @@ function mayValidateNumericTermCollection(ds) {
 	for (const c of collections) {
 		if (!c.name) throw `missing numericTermCollection.name`
 		if (c.propsByTermId) {
+			const colorScale = getColors(c.termIds.length)
 			for (const termId of c.termIds) {
 				if (!c.propsByTermId[termId]) c.propsByTermId[termId] = {}
 			}
-			const colorScale = scaleOrdinal(schemeCategory20)
 			for (const [k, v] of Object.entries(c.propsByTermId)) {
-				if (!v.color) {
-					v.color = colorScale(k)
-				}
+				if (!v.color) v.color = colorScale(k)
 			}
 		}
 	}
