@@ -32,6 +32,7 @@ series visibility - numeric
 series visibility - condition
 
 single barchart, categorical filter
+genevariant barchart, compound filter
 single barchart, TP53 mutation dtTerm filter
 
 click non-group bar to add filter
@@ -896,7 +897,6 @@ tape('series visibility and order - condition', function (test) {
 
 tape('single barchart, categorical filter', function (test) {
 	test.timeoutAfter(3000)
-
 	runpp({
 		state: {
 			termfilter: {
@@ -907,17 +907,11 @@ tape('single barchart, categorical filter', function (test) {
 					lst: [
 						{
 							type: 'tvs',
-							tvs: {
-								term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical' },
-								values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
-							}
+							tvs: { term: { id: 'diaggrp' }, values: [{ key: 'Wilms tumor' }] }
 						},
 						{
 							type: 'tvs',
-							tvs: {
-								term: { id: 'sex', name: 'Sex', type: 'categorical' },
-								values: [{ key: '1', label: 'Male' }]
-							}
+							tvs: { term: { id: 'sex' }, values: [{ key: '1' }] }
 						}
 					]
 				}
@@ -930,6 +924,49 @@ tape('single barchart, categorical filter', function (test) {
 					}
 				}
 			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(barchart) {
+		barchart.on('postRender.test', null)
+		test.equal(
+			barchart.Inner.dom.holder.node().querySelectorAll('.bars-cell-grp').length,
+			1,
+			'should show one bar series'
+		)
+		test.equal(
+			barchart.Inner.dom.holder.node().querySelector('.bars-cell-grp').__data__.seriesId,
+			'1',
+			'should show one bar series that matches filter value'
+		)
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape.only('genevariant barchart, compound filter', function (test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			termfilter: {
+				filter: {
+					type: 'tvslst',
+					join: 'or',
+					in: true,
+					lst: [
+						{ type: 'tvs', tvs: { term: { id: 'sex' }, values: [{ key: '1' }] } },
+						{
+							type: 'tvs',
+							tvs: { term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' }, ranges: [{ start: 1, stop: 10 }] }
+						}
+					]
+				}
+			},
+			plots: [{ chartType: 'barchart', term: { term: { type: 'geneVariant', gene: 'TP53' } } }]
 		},
 		barchart: {
 			callbacks: {
