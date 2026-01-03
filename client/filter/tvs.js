@@ -148,7 +148,6 @@ function setRenderers(self) {
 
 	// optional _holder, for example when called by filter.js
 	self.showMenu = _holder => {
-		console.log(148, 'tvs.showMenu()')
 		const holder = _holder ? _holder : self.dom.tip
 		if (!dtTermTypes.has(self.tvs.term.type)) {
 			addExcludeCheckbox(holder, self.tvs, self)
