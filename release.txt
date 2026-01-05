@@ -1,2 +1,1 @@
-Fixes:
-- correctly handle the case of rawFilter == global filter in getFilterExcludingPill()
+

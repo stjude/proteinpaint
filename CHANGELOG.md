@@ -16,6 +16,7 @@ Features:
 Fixes:
 - fix the handling of undefined ref argument to deepCopyFreeze()
 - GRIN2: Fixing display of 0 q-values in manhattan plot
+- correctly handle the case of rawFilter == global filter in getFilterExcludingPill()
 
 
 ## 2.169.0
