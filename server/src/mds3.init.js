@@ -2839,20 +2839,20 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			}
 		}
 
-		// TODO: need to test when geneVariant term is in global filter for gdc
-		let geneVariantFilter
+		// TODO: need to support geneVariant term in local filter for gdc
+		/*let geneVariantFilter
 		if (q.filter) {
 			geneVariantFilter = structuredClone(q.filter)
-			geneVariantFilter.lst = q.filter.lst.filter(item => dtTermTypes.has(item.tvs?.term.type))
-		}
+			geneVariantFilter.lst = q.filter.lst.filter(item => dtTermTypes.has(item.tvs.term.type))
+		}*/
 		const groupset = get_active_groupset(tw.term, tw.q)
 		for (const [sample, mlst] of sample2mlst) {
 			// may filter samples here by geneVariant data
 			// necessary for gdc, which uses a different filter
 			// structure during data query that is not compatible with
 			// geneVariant data filtering (see filter2GDCfilter() in server/src/mds3.gdc.filter.js)
-			const pass = mayFilterByGeneVariant(geneVariantFilter, mlst, ds)
-			if (!pass) continue
+			//const pass = mayFilterByGeneVariant(geneVariantFilter, mlst, ds)
+			//if (!pass) continue
 			if (groupset) {
 				// groupsetting is active
 				// get first group of groupset that sample can be assigned to
@@ -3085,11 +3085,11 @@ export function filterByItem(filter, mlst, values) {
 	return [pass, tested]
 }
 
-function mayFilterByGeneVariant(filter, mlst, ds) {
+/*function mayFilterByGeneVariant(filter, mlst, ds) {
 	if (!filter?.lst.length || !ds.mayGetGeneVariantDataParam?.postProcessDtFilter) return true
 	const [pass, tested] = filterByTvsLst(filter, mlst)
 	return pass
-}
+}*/
 
 /*
 also returns isoform accession of the model that's used
