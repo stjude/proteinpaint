@@ -86,80 +86,59 @@ fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
 ///
 /// Strategy:
 /// 1. If max_y <= default_cap: no capping needed, return max_y
-/// 2. If points above default_cap <= max_allowed: use default_cap
-/// 3. Otherwise: find the lowest cap (in increments of 10) where <= max_allowed points are above it
-/// 4. Never exceed hard_cap regardless of data distribution
+/// 2. Build histogram and walk from highest bin down to find lowest cap where <= max_allowed points are above it
+/// 3. Never exceed hard_cap regardless of data distribution
 ///
 /// Uses fixed bins of size 10 on the -log10 scale (40, 50, 60, ..., hard_cap)
 fn calculate_dynamic_y_cap(ys: &[f64], default_cap: f64, max_allowed: usize, hard_cap: f64) -> f64 {
     const BIN_SIZE: f64 = 10.0;
 
-    let total_points = ys.len();
-    if total_points == 0 {
-        return default_cap;
-    }
+    let max_y = ys
+        .iter()
+        .copied()
+        .filter(|y| !y.is_nan())
+        .fold(f64::NEG_INFINITY, f64::max);
 
-    // Single pass: find max_y and count points above default_cap
-    let mut max_y = f64::MIN;
-    let mut count_above_default = 0usize;
-
-    for &y in ys {
-        if y > max_y {
-            max_y = y;
-        }
-        if y > default_cap {
-            count_above_default += 1;
-        }
-    }
+    // eprint!!("Max y-value before capping: {:.2}\n", max_y);
 
     // Case 1: No points exceed default cap - use actual max
     if max_y <= default_cap {
         return max_y;
     }
 
-    // Case 2: Points above default cap are within threshold - use default cap
-    if count_above_default <= max_allowed {
-        return default_cap;
-    }
-
-    // Case 3: Need dynamic cap - check each bin level (40, 50, 60, ..., hard_cap)
-    // Find the lowest cap where <= max_allowed points are above it
-
-    // Calculate number of bins from default_cap to hard_cap
+    // Cases 2 & 3: Build histogram and find appropriate cap
     let num_bins = ((hard_cap - default_cap) / BIN_SIZE) as usize;
-
-    // Build histogram with fixed 10-unit bins
     let mut histogram = vec![0usize; num_bins];
 
+    // Build histogram in one pass
     for &y in ys {
-        if y > default_cap && y <= hard_cap {
-            let bin_idx = ((y - default_cap) / BIN_SIZE) as usize;
-            let bin_idx = bin_idx.min(num_bins - 1);
+        if y > default_cap {
+            let bin_idx = if y > hard_cap {
+                num_bins - 1
+            } else {
+                (((y - default_cap) / BIN_SIZE) as usize).min(num_bins - 1)
+            };
             histogram[bin_idx] += 1;
-        } else if y > hard_cap {
-            // Points above hard_cap go in the last bin
-            histogram[num_bins - 1] += 1;
         }
     }
 
-    // Walk from highest bin down, accumulating count until we exceed threshold
-    let mut cumulative_above = 0usize;
+    // Walk UP from default_cap, accumulating points above each potential cap
+    let mut points_above = histogram.iter().sum::<usize>(); // Total points above default_cap
 
-    for i in (0..num_bins).rev() {
-        cumulative_above += histogram[i];
-
-        // If adding this bin pushes us over threshold, cap at upper edge of this bin
-        if cumulative_above > max_allowed {
-            // Cap at the upper edge of this bin (rounded to nearest 10)
+    for i in 0..num_bins {
+        // At this point, points_above = number of points above the upper edge of bin i
+        if points_above <= max_allowed {
+            // This cap works! Return upper edge of bin i
             let cap = default_cap + ((i + 1) as f64) * BIN_SIZE;
-            return cap.min(hard_cap);
+            return cap.min(hard_cap).min(max_y);
         }
+        // Move to next bin - remove points in current bin from count
+        points_above -= histogram[i];
     }
 
-    // If we get here, all points fit within threshold at default_cap
+    // All points fit within threshold - use default cap
     default_cap
 }
-
 // Function to Build cumulative chromosome map
 fn cumulative_chrom(
     chrom_size: &HashMap<String, u64>,
@@ -410,7 +389,8 @@ fn plot_grin2_manhattan(
     let y_cap = calculate_dynamic_y_cap(&ys, default_cap, max_allowed, hard_cap);
 
     // Jitter range: capped points will spread over this range below the cap line
-    let jitter_range = (y_cap * 0.05).max(2.0); // 5% of cap or at least 2 units
+    // let jitter_range = (y_cap * 0.05).max(2.0); // 5% of cap or at least 2 units
+    let jitter_range = (y_cap * 0.1).max(2.0); // 10% of cap or at least 2 units
 
     // Track if we have any capped points (to draw the indicator band)
     let mut has_capped_points = false;
