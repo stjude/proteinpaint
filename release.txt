@@ -1,1 +1,2 @@
-
+Fixes:
+- show a no data error message in numeric tvs edit menu
