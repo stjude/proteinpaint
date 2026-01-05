@@ -676,6 +676,7 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
         None => {}
     }
 
+    let mut pp_json: Value; // New JSON value that will contain items of the final PP compliant JSON
     let mut new_json: Value; // New JSON value that will contain items of the final validated JSON
     if json_value.action != String::from("DE") {
         message = message + &"Did not return a DE action";
@@ -702,15 +703,18 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
                         {
                             match group1_filter_verification.correct_field {
                                 Some(tm) => {
-                                    let group1_filter_term = Some(Filter {
-                                        name: tm,
-                                        cutoff: gp1_filter.cutoff.clone(),
-                                    });
+                                    if testing == true {
+                                        let group1_filter_term = Some(Filter {
+                                            name: tm,
+                                            cutoff: gp1_filter.cutoff.clone(),
+                                        });
 
-                                    group1_verified = Some(Group {
-                                        name: gp_tm,
-                                        filter: group1_filter_term,
-                                    });
+                                        group1_verified = Some(Group {
+                                            name: gp_tm,
+                                            filter: group1_filter_term,
+                                        });
+                                    } else {
+                                    }
                                 }
                                 None => {
                                     message = message + &"'" + &group1.name + &"'" + &" not found in db.";
@@ -1503,55 +1507,9 @@ fn validate_summary_output(
     pp_plot_json = serde_json::from_str(&"{\"chartType\":\"summary\"}").expect("Not a valid JSON");
     match &json_value.filter {
         Some(filter_terms_array) => {
-            let mut validated_filter_terms = Vec::<FilterTerm>::new();
-            for parsed_filter_term in filter_terms_array {
-                match parsed_filter_term {
-                    FilterTerm::Categorical(categorical) => {
-                        let term_verification = verify_json_field(&categorical.term, &db_vec);
-                        let mut value_verification: Option<String> = None;
-                        for item in &db_vec {
-                            if &item.name == &categorical.term {
-                                for val in &item.values {
-                                    if &categorical.value == val {
-                                        value_verification = Some(val.clone());
-                                        break;
-                                    }
-                                }
-                            }
-                            if value_verification != None {
-                                break;
-                            }
-                        }
-                        if term_verification.correct_field.is_some() && value_verification.is_some() {
-                            let verified_filter = CategoricalFilterTerm {
-                                term: term_verification.correct_field.clone().unwrap(),
-                                value: value_verification.clone().unwrap(),
-                            };
-                            let categorical_filter_term: FilterTerm = FilterTerm::Categorical(verified_filter);
-                            validated_filter_terms.push(categorical_filter_term);
-                        }
-                        if term_verification.correct_field.is_none() {
-                            message = message + &"'" + &categorical.term + &"' filter term not found in db";
-                        }
-                        if value_verification.is_none() {
-                            message = message
-                                + &"'"
-                                + &categorical.value
-                                + &"' filter value not found for filter field '"
-                                + &categorical.term
-                                + "' in db";
-                        }
-                    }
-                    FilterTerm::Numeric(numeric) => {
-                        let term_verification = verify_json_field(&numeric.term, &db_vec);
-                        if term_verification.correct_field.is_none() {
-                            message = message + &"'" + &numeric.term + &"' filter term not found in db";
-                        } else {
-                            let numeric_filter_term: FilterTerm = FilterTerm::Numeric(numeric.clone());
-                            validated_filter_terms.push(numeric_filter_term);
-                        }
-                    }
-                }
+            let (validated_filter_terms, filter_message) = validate_filter(filter_terms_array, &message, &db_vec);
+            if filter_message.len() > 0 {
+                message = message + &filter_message
             }
 
             for summary_term in &validated_summary_terms {
@@ -1925,4 +1883,63 @@ fn verify_json_value(llm_value_name: &str, db_vec: &Vec<DbRows>) -> (Option<Stri
         }
     }
     (search_field, search_val)
+}
+
+fn validate_filter(
+    filter_terms_array: &Vec<FilterTerm>,
+    message: &str,
+    db_vec: &Vec<DbRows>,
+) -> (Vec<FilterTerm>, String) {
+    let mut validated_filter_terms = Vec::<FilterTerm>::new();
+    let mut filter_message: String = String::from("");
+    for parsed_filter_term in filter_terms_array {
+        match parsed_filter_term {
+            FilterTerm::Categorical(categorical) => {
+                let term_verification = verify_json_field(&categorical.term, &db_vec);
+                let mut value_verification: Option<String> = None;
+                for item in db_vec {
+                    if &item.name == &categorical.term {
+                        for val in &item.values {
+                            if &categorical.value == val {
+                                value_verification = Some(val.clone());
+                                break;
+                            }
+                        }
+                    }
+                    if value_verification != None {
+                        break;
+                    }
+                }
+                if term_verification.correct_field.is_some() && value_verification.is_some() {
+                    let verified_filter = CategoricalFilterTerm {
+                        term: term_verification.correct_field.clone().unwrap(),
+                        value: value_verification.clone().unwrap(),
+                    };
+                    let categorical_filter_term: FilterTerm = FilterTerm::Categorical(verified_filter);
+                    validated_filter_terms.push(categorical_filter_term);
+                }
+                if term_verification.correct_field.is_none() {
+                    filter_message = message.to_owned() + &"'" + &categorical.term + &"' filter term not found in db";
+                }
+                if value_verification.is_none() {
+                    filter_message = message.to_owned()
+                        + &"'"
+                        + &categorical.value
+                        + &"' filter value not found for filter field '"
+                        + &categorical.term
+                        + "' in db";
+                }
+            }
+            FilterTerm::Numeric(numeric) => {
+                let term_verification = verify_json_field(&numeric.term, &db_vec);
+                if term_verification.correct_field.is_none() {
+                    filter_message = message.to_owned() + &"'" + &numeric.term + &"' filter term not found in db";
+                } else {
+                    let numeric_filter_term: FilterTerm = FilterTerm::Numeric(numeric.clone());
+                    validated_filter_terms.push(numeric_filter_term);
+                }
+            }
+        }
+    }
+    (validated_filter_terms, filter_message)
 }

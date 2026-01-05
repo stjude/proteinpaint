@@ -36,13 +36,6 @@ async fn main() -> Result<()> {
                         None => panic!("dataset_db field is missing in input json"),
                     }
 
-                    let genedb_json: &JsonValue = &json_string["genedb"];
-                    let genedb_str: &str;
-                    match genedb_json.as_str() {
-                        Some(inp) => genedb_str = inp,
-                        None => panic!("genedb field is missing in input json"),
-                    }
-
                     if user_input.len() == 0 {
                         panic!("The user input is empty");
                     }
@@ -89,8 +82,6 @@ async fn main() -> Result<()> {
                     // Parse the JSON data
                     let ai_json: AiJsonFormat =
                         serde_json::from_str(&ai_data).expect("AI JSON file does not have the correct format");
-
-                    let genedb = String::from(tpmasterdir) + &"/" + &genedb_str;
                     let dataset_db = String::from(tpmasterdir) + &"/" + &dataset_db_str;
 
                     let apilink_json: &JsonValue = &json_string["apilink"];
@@ -126,7 +117,7 @@ async fn main() -> Result<()> {
                     let temperature: f64 = 0.01;
                     let max_new_tokens: usize = 512;
                     let top_p: f32 = 0.95;
-                    let testing = true; // This variable is always false in production, this is true in test_ai.rs for testing code
+                    let testing = false; // This variable is always false in production, this is true in test_ai.rs for testing code
                     if llm_backend_name != "ollama" && llm_backend_name != "SJ" {
                         panic!(
                             "This code currently supports only Ollama and SJ provider. llm_backend_name must be \"ollama\" or \"SJ\""
