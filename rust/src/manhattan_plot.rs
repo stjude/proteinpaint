@@ -387,6 +387,7 @@ fn plot_grin2_manhattan(
     let max_allowed = max_capped_points as usize;
 
     let y_cap = calculate_dynamic_y_cap(&ys, default_cap, max_allowed, hard_cap);
+    // eprint!("Determined y-cap at {:.2}\n", y_cap);
 
     // Jitter range: capped points will spread over this range below the cap line
     // let jitter_range = (y_cap * 0.05).max(2.0); // 5% of cap or at least 2 units
@@ -502,15 +503,12 @@ fn plot_grin2_manhattan(
         // ------------------------------------------------
         if has_capped_points {
             let band_bottom = y_cap - jitter_range;
-            let band_top = y_cap;
+            let band_top = y_cap + 0.35;
 
             // Shaded band - light yellow to indicate "capped/jittered" region
             let band_color = RGBColor(255, 235, 59); // Yellow (#FFEB3B)
             let band_style: ShapeStyle = band_color.mix(0.35).filled();
-            let band_rect = Rectangle::new(
-                [(-x_buffer, band_bottom), (total_genome_length + x_buffer, band_top)],
-                band_style,
-            );
+            let band_rect = Rectangle::new([(-x_buffer, band_bottom), (total_genome_length, band_top)], band_style);
             chart.draw_series(vec![band_rect])?;
         }
 
