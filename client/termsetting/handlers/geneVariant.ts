@@ -5,6 +5,10 @@ import { filterInit, filterPromptInit, getNormalRoot, excludeFilterByTag } from 
 import type { TermSetting } from '../TermSetting.ts'
 import { vocabInit } from '#termdb/vocabulary'
 import { getDtTermValues } from '#filter/tvs.dt'
+import { getColors } from '#shared/common.js'
+import { rgb } from 'd3-color'
+
+const colorScale = getColors(5)
 
 // self is the termsetting instance
 export function getHandler(self: TermSetting) {
@@ -271,7 +275,7 @@ function addNewGroup(filter, groups, name?: string) {
 		name,
 		type: 'filter',
 		filter,
-		color: '#000000'
+		color: rgb(colorScale(groups.length)).formatHex()
 	}
 	groups.push(newGroup)
 }
