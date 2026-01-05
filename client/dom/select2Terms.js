@@ -87,8 +87,10 @@ export function select2Terms(tip, app, chartType, detail, callback, detail2) {
 		const disable_terms = []
 		if (xterm) disable_terms.push(xterm)
 		if (yterm) disable_terms.push(yterm)
+		tip2.clear()
+		tip2.showunder(div.node())
 		appInit({
-			holder: tip2.clear().showunder(div.node()).d,
+			holder: tip2.d,
 			vocabApi: app.vocabApi,
 			state: {
 				activeCohort: app.getState().activeCohort,
