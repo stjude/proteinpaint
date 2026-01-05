@@ -3,6 +3,7 @@ import { setInteractivity } from './filter.interactivity'
 import { findItem, findParent, getFilterItemByTag, getNormalRoot, filterJoin } from './filter.utils'
 import { vocabInit } from '#termdb/vocabulary'
 import { Menu } from '#dom/menu'
+import { deepEqual } from '#rx'
 
 const defaults = {
 	joinWith: ['and', 'or']
@@ -37,6 +38,9 @@ const defaults = {
 		non-child elements with the same classnames
 */
 
+// filter it should increment across all filter instances
+// let id=0
+
 export class Filter {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
@@ -61,7 +65,7 @@ export class Filter {
 			})
 		}
 		this.durations = { exit: 500 }
-		this.lastId = 0
+		this.lastId = 0 //id++
 		this.categoryData = {}
 		this.pills = {}
 		setInteractivity(this)
@@ -209,7 +213,11 @@ export class Filter {
 		parentCopy.lst.splice(i, 1)
 		if (parentCopy.lst.length < 2) parentCopy.join = ''
 		const globalFilter = this.app?.getState().termfilter?.filter
-		return getNormalRoot(!globalFilter ? rootCopy : filterJoin([rootCopy, globalFilter]))
+		if (!globalFilter) return rootCopy
+		// detect if the rawFilter is equivalent to the global filter
+		if (deepEqual(getNormalRoot(this.rawFilter), getNormalRoot(globalFilter))) return rootCopy
+		// the rawFilter must be a local (plot) filter
+		return getNormalRoot(filterJoin([rootCopy, globalFilter]))
 		/*
 		!!! 
 			The logic below incorectly assumes that there are at most 2 root tvslst.lst entries,
