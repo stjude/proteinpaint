@@ -226,7 +226,7 @@ export class Menu {
 	showunder(elem, _opts = {}) {
 		// route to .show()
 		const opts = Object.assign({ offsetX: 0, offsetY: 0 }, _opts)
-		if (this.stickyPosition(elem, opts)) return
+		if (this.stickyPosition(elem, opts)) return this
 		const p = elem.getBoundingClientRect()
 		const x = p.left + window.scrollX + opts.offsetX
 		const y = p.top + p.height + window.scrollY + 5 + opts.offsetY
@@ -312,7 +312,7 @@ export class Menu {
 
 	showunderoffset(dom) {
 		const p = dom.getBoundingClientRect()
-		if (this.stickyPosition(dom, { offsetY: -p.height, offsetX: p.width })) return
+		if (this.stickyPosition(dom, { offsetY: -p.height, offsetX: p.width })) return this
 
 		const y = p.top + p.height + window.scrollY + 5
 		return this.show(p.left, y, true, true, false)
