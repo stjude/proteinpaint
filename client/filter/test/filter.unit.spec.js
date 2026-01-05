@@ -1,6 +1,7 @@
 import tape from 'tape'
-import { negateFilter, getCategoricalTermFilter } from '../filter.js'
+import { negateFilter, getCategoricalTermFilter, Filter } from '../filter.js'
 import { termjson } from '../../test/testdata/termjson.js'
+import * as d3s from 'd3-selection'
 
 /**************
  test sections
@@ -153,4 +154,65 @@ tape('getCategoricalTermFilter()', t => {
 	)
 
 	t.end()
+})
+
+tape('getFilterExcludingPill()', async test => {
+	const holder = d3s.select('body').append('div')
+	const f0 = new Filter({ holder, vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' }, callback: () => {} })
+	const root = {
+		type: 'tvslst',
+		join: '',
+		in: true,
+		lst: [{ type: 'tvs', tvs: { term: termjson.sex, values: [{ key: '1' }] }, $id: 0 }]
+	}
+	await f0.main(JSON.stringify(root))
+
+	{
+		const f = f0.getFilterExcludingPill(root.lst[0].$id)
+		test.deepEqual(
+			f,
+			{
+				type: 'tvslst',
+				join: '',
+				in: true,
+				lst: [],
+				$id: 0,
+				tag: 'filterUiRoot'
+			},
+			`should return a root filter copy without the pill tvs (empty lst[])`
+		)
+	}
+
+	// simulate FilterRxComp by adding global state filter
+	const cohortTvs = {
+		tag: 'cohortFilter',
+		type: 'tvs',
+		tvs: { term: { id: 'subcohort', type: 'multivalue' }, values: [{ key: 'ABC', label: 'ABC' }] }
+	}
+	f0.state = {
+		termfilter: {
+			filter: {
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: [structuredClone(cohortTvs)]
+			}
+		}
+	}
+
+	f0.app = {
+		getState: () => f0.state
+	}
+
+	{
+		const f = f0.getFilterExcludingPill(root.lst[0].$id)
+		test.deepEqual(
+			f,
+			{ type: 'tvslst', in: true, join: '', lst: [structuredClone(cohortTvs)] },
+			`should return a root filter copy without the pill tvs, but joined to global filter`
+		)
+	}
+
+	//if (test._ok) f0.destroy()
+	test.end()
 })
