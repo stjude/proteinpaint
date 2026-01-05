@@ -2843,7 +2843,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		let geneVariantFilter
 		if (q.filter) {
 			geneVariantFilter = structuredClone(q.filter)
-			geneVariantFilter.lst = q.filter.lst.filter(item => dtTermTypes.has(item.tvs.term.type))
+			geneVariantFilter.lst = q.filter.lst.filter(item => dtTermTypes.has(item.tvs?.term.type))
 		}
 		const groupset = get_active_groupset(tw.term, tw.q)
 		for (const [sample, mlst] of sample2mlst) {
