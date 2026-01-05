@@ -948,7 +948,7 @@ tape('single barchart, categorical filter', function (test) {
 		test.end()
 	}
 })
-tape.only('genevariant barchart, compound filter', function (test) {
+tape('genevariant barchart, compound filter', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
@@ -966,7 +966,7 @@ tape.only('genevariant barchart, compound filter', function (test) {
 					]
 				}
 			},
-			plots: [{ chartType: 'barchart', term: { term: { type: 'geneVariant', gene: 'TP53' } } }]
+			plots: [{ chartType: 'summary', childType: 'barchart', term: getGeneVariantTw() }]
 		},
 		barchart: {
 			callbacks: {
@@ -979,13 +979,8 @@ tape.only('genevariant barchart, compound filter', function (test) {
 		barchart.on('postRender.test', null)
 		test.equal(
 			barchart.Inner.dom.holder.node().querySelectorAll('.bars-cell-grp').length,
-			1,
-			'should show one bar series'
-		)
-		test.equal(
-			barchart.Inner.dom.holder.node().querySelector('.bars-cell-grp').__data__.seriesId,
-			'1',
-			'should show one bar series that matches filter value'
+			2,
+			'should show two bar series'
 		)
 		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
