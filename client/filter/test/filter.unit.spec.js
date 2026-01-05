@@ -213,6 +213,6 @@ tape('getFilterExcludingPill()', async test => {
 		)
 	}
 
-	//if (test._ok) f0.destroy()
+	if (test._ok) f0.destroy()
 	test.end()
 })
