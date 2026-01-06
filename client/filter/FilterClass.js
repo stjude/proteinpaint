@@ -212,7 +212,7 @@ export class Filter {
 		if (i == -1) return null
 		parentCopy.lst.splice(i, 1)
 		if (parentCopy.lst.length < 2) parentCopy.join = ''
-		const globalFilter = this.app?.getState().termfilter?.filter
+		const globalFilter = this.state?.globalFilter || this.app?.getState().termfilter?.filter
 		if (!globalFilter) return rootCopy
 		// detect if the rawFilter is equivalent to the global filter
 		if (deepEqual(getNormalRoot(this.rawFilter), getNormalRoot(globalFilter))) return rootCopy
