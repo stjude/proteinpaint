@@ -15,6 +15,7 @@ use std::fs;
 #[derive(PartialEq, Debug, Clone, schemars::JsonSchema, serde::Serialize, serde::Deserialize)]
 pub struct AiJsonFormat {
     pub hasGeneExpression: bool,
+    pub hasDE: bool,
     pub db: String,     // Dataset db
     pub genedb: String, // Gene db
     pub charts: Vec<TrainTestData>,
@@ -646,54 +647,152 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
         None => {}
     }
 
-    let mut pp_json: Value; // New JSON value that will contain items of the final PP compliant JSON
-    let mut new_json: Value; // New JSON value that will contain items of the final validated JSON
-    if json_value.action != String::from("DE") {
-        message = message + &"Did not return a DE action";
-        new_json = serde_json::json!(null);
-    } else {
-        new_json = serde_json::from_str(&"{\"action\":\"DE\"}").expect("Not a valid JSON");
-    }
+    let final_exp;
+    if testing == true {
+        let mut new_json: Value; // New JSON value that will contain items of the final validated JSON
+        let err_json: Value; // Error JSON containing the error message (if present)
+        if json_value.action != String::from("DE") {
+            message = message + &"Did not return a DE action";
+            new_json = serde_json::json!(null);
+        } else {
+            new_json = serde_json::from_str(&"{\"action\":\"DE\"}").expect("Not a valid JSON");
+        }
+        match ai_json.hasDE {
+            true => {
+                let mut group1_verified: Option<Vec<FilterTerm>> = None;
+                let (group1_filter_terms, filter_message_group1) =
+                    validate_filter(&json_value.group1, &message, &db_vec);
+                if filter_message_group1.len() > 0 {
+                    message = message + &filter_message_group1;
+                } else {
+                    group1_verified = Some(group1_filter_terms);
+                }
 
-    let mut group1_verified: Option<Vec<FilterTerm>> = None;
-    let (group1_filter_terms, filter_message_group1) = validate_filter(&json_value.group1, &message, &db_vec);
-    if filter_message_group1.len() > 0 {
-        message = message + &filter_message_group1;
-    } else {
-        group1_verified = Some(group1_filter_terms);
-    }
+                let mut group2_verified: Option<Vec<FilterTerm>> = None;
+                let (group2_filter_terms, filter_message_group2) =
+                    validate_filter(&json_value.group2, &message, &db_vec);
+                if filter_message_group2.len() > 0 {
+                    message = message + &filter_message_group2;
+                } else {
+                    group2_verified = Some(group2_filter_terms);
+                }
 
-    let mut group2_verified: Option<Vec<FilterTerm>> = None;
-    let (group2_filter_terms, filter_message_group2) = validate_filter(&json_value.group2, &message, &db_vec);
-    if filter_message_group2.len() > 0 {
-        message = message + &filter_message_group2;
+                if group1_verified.is_some() && group2_verified.is_some() {
+                    if let Some(obj) = new_json.as_object_mut() {
+                        obj.insert(String::from("group1"), serde_json::json!(group1_verified));
+                        obj.insert(String::from("group2"), serde_json::json!(group2_verified));
+                    }
+                } else if group1_verified.is_some() && group2_verified.is_none() {
+                    message = message + &"Group2 not verified";
+                    if let Some(obj) = new_json.as_object_mut() {
+                        obj.insert(String::from("message"), serde_json::json!(message));
+                    }
+                } else if group1_verified.is_none() && group2_verified.is_some() {
+                    message = message + &"Group1 not verified";
+                    if let Some(obj) = new_json.as_object_mut() {
+                        obj.insert(String::from("message"), serde_json::json!(message));
+                    }
+                } else if group1_verified.is_none() && group2_verified.is_none() {
+                    message = message + &"Group1 and Group 2 not verified";
+                    if let Some(obj) = new_json.as_object_mut() {
+                        obj.insert(String::from("message"), serde_json::json!(message));
+                    }
+                }
+            }
+            false => {
+                let missing_DE_data: &str = "Differential gene expression not supported for this dataset";
+                if message.to_lowercase().contains(&missing_DE_data.to_lowercase()) { // Check if the LLM has already added the message, if not then add it
+                } else {
+                    message = message + missing_DE_data;
+                }
+            }
+        }
+        if message.len() > 0 {
+            err_json =
+                serde_json::from_str(&("{\"message\":\"".to_string() + &message + "\"}")).expect("Not a valid JSON");
+            final_exp = serde_json::to_string(&err_json).unwrap();
+        } else {
+            final_exp = serde_json::to_string(&new_json).unwrap();
+        }
     } else {
-        group2_verified = Some(group2_filter_terms);
-    }
+        let mut pp_json: Value; // New JSON value that will contain items of the final validated JSON
+        let mut err_json: Value; // Error JSON containing the error message (if present)
+        if json_value.action != String::from("DE") {
+            message = message + &"Did not return a DE action";
+            pp_json = serde_json::from_str(&"{\"type\":\"html\"}").expect("Not a valid JSON");
+            if let Some(obj) = pp_json.as_object_mut() {
+                // The `if let` ensures we only proceed if the top-level JSON is an object.
+                // Append a new string field.
+                obj.insert(String::from("html"), serde_json::json!(message));
+            };
+        } else {
+            pp_json = serde_json::from_str(&"{\"chartType\":\"differentialAnalysis\"}").expect("Not a valid JSON");
+        }
+        match ai_json.hasDE {
+            true => {
+                let mut group1_verified: Option<Vec<FilterTerm>> = None;
+                let (group1_filter_terms, filter_message_group1) =
+                    validate_filter(&json_value.group1, &message, &db_vec);
+                if filter_message_group1.len() > 0 {
+                    message = message + &filter_message_group1;
+                } else {
+                    group1_verified = Some(group1_filter_terms);
+                }
 
-    let mut err_json: Value; // Error JSON containing the error message (if present)
-    if group1_verified.is_some() && group2_verified.is_some() {
-        if let Some(obj) = new_json.as_object_mut() {
-            obj.insert(String::from("group1"), serde_json::json!(group1_verified));
-            obj.insert(String::from("group2"), serde_json::json!(group2_verified));
+                let mut group2_verified: Option<Vec<FilterTerm>> = None;
+                let (group2_filter_terms, filter_message_group2) =
+                    validate_filter(&json_value.group2, &message, &db_vec);
+                if filter_message_group2.len() > 0 {
+                    message = message + &filter_message_group2;
+                } else {
+                    group2_verified = Some(group2_filter_terms);
+                }
+
+                if group1_verified.is_some() && group2_verified.is_some() {
+                    if let Some(obj) = pp_json.as_object_mut() {
+                        let (group1_verified_string, group1_filter_hits) =
+                            generate_filter_term_for_PP(group1_verified.unwrap());
+                        if group1_filter_hits > 0 {
+                            obj.insert(String::from("group1"), serde_json::json!(group1_verified_string));
+                        } else {
+                            message = message + "group1 array filter terms is empty";
+                        }
+                        let (group2_verified_string, group2_filter_hits) =
+                            generate_filter_term_for_PP(group2_verified.unwrap());
+                        if group2_filter_hits > 0 {
+                            obj.insert(String::from("group2"), serde_json::json!(group2_verified_string));
+                        } else {
+                            message = message + "group2 array filter terms is empty";
+                        }
+                    }
+                } else if group1_verified.is_some() && group2_verified.is_none() {
+                    message = message + &"Group2 not verified";
+                } else if group1_verified.is_none() && group2_verified.is_some() {
+                    message = message + &"Group1 not verified";
+                } else if group1_verified.is_none() && group2_verified.is_none() {
+                    message = message + &"Group1 and Group 2 not verified";
+                }
+            }
+            false => {
+                let missing_DE_data: &str = "Differential gene expression not supported for this dataset";
+                if message.to_lowercase().contains(&missing_DE_data.to_lowercase()) { // Check if the LLM has already added the message, if not then add it
+                } else {
+                    message = message + missing_DE_data;
+                }
+            }
         }
-    } else if group1_verified.is_some() && group2_verified.is_none() {
-        message = message + &"Group2 not verified";
-        if let Some(obj) = new_json.as_object_mut() {
-            obj.insert(String::from("message"), serde_json::json!(message));
-        }
-    } else if group1_verified.is_none() && group2_verified.is_some() {
-        message = message + &"Group1 not verified";
-        if let Some(obj) = new_json.as_object_mut() {
-            obj.insert(String::from("message"), serde_json::json!(message));
-        }
-    } else if group1_verified.is_none() && group2_verified.is_none() {
-        message = message + &"Group1 and Group 2 not verified";
-        if let Some(obj) = new_json.as_object_mut() {
-            obj.insert(String::from("message"), serde_json::json!(message));
+        if message.len() > 0 {
+            err_json = serde_json::from_str(&"{\"type\":\"html\"}").expect("Not a valid JSON");
+            if let Some(obj) = err_json.as_object_mut() {
+                // The `if let` ensures we only proceed if the top-level JSON is an object.
+                // Append a new string field.
+                obj.insert(String::from("html"), serde_json::json!(message));
+            };
+            final_exp = serde_json::to_string(&err_json).unwrap();
+        } else {
+            final_exp = serde_json::to_string(&pp_json).unwrap();
         }
     }
-    let final_exp = serde_json::to_string(&new_json).unwrap(); // Need to add support for testing toggle to include PP types
     println!("final_exp:{}", final_exp);
     final_exp
 }
@@ -1265,56 +1364,9 @@ fn validate_summary_output(
                         obj.insert(String::from("filter"), serde_json::json!(validated_filter_terms));
                     }
                 } else {
-                    let mut validated_filter_terms_PP: String = "[".to_string();
-                    let mut filter_hits = 0;
-                    for validated_term in validated_filter_terms {
-                        match validated_term {
-                            FilterTerm::Categorical(categorical_filter) => {
-                                let string_json = "{\"term\":\"".to_string()
-                                    + &categorical_filter.term
-                                    + &"\", \"category\":\""
-                                    + &categorical_filter.value
-                                    + &"\"},";
-                                validated_filter_terms_PP += &string_json;
-                            }
-                            FilterTerm::Numeric(numeric_filter) => {
-                                let string_json;
-                                if numeric_filter.greaterThan.is_some() && numeric_filter.lessThan.is_none() {
-                                    string_json = "{\"term\":\"".to_string()
-                                        + &numeric_filter.term
-                                        + &"\", \"gt\":\""
-                                        + &numeric_filter.greaterThan.unwrap().to_string()
-                                        + &"\"},";
-                                } else if numeric_filter.greaterThan.is_none() && numeric_filter.lessThan.is_some() {
-                                    string_json = "{\"term\":\"".to_string()
-                                        + &numeric_filter.term
-                                        + &"\", \"lt\":\""
-                                        + &numeric_filter.lessThan.unwrap().to_string()
-                                        + &"\"},";
-                                } else if numeric_filter.greaterThan.is_some() && numeric_filter.lessThan.is_some() {
-                                    string_json = "{\"term\":\"".to_string()
-                                        + &numeric_filter.term
-                                        + &"\", \"lt\":\""
-                                        + &numeric_filter.lessThan.unwrap().to_string()
-                                        + &"\", \"gt\":\""
-                                        + &numeric_filter.greaterThan.unwrap().to_string()
-                                        + &"\"},";
-                                } else {
-                                    // When both greater and less than are none
-                                    panic!(
-                                        "Numeric filter term {} is missing both greater than and less than values. One of them must be defined",
-                                        &numeric_filter.term
-                                    );
-                                }
-                                validated_filter_terms_PP += &string_json;
-                            }
-                        };
-                        filter_hits += 1;
-                    }
+                    let (validated_filter_terms_PP, filter_hits) = generate_filter_term_for_PP(validated_filter_terms);
                     println!("validated_filter_terms_PP:{}", validated_filter_terms_PP);
                     if filter_hits > 0 {
-                        validated_filter_terms_PP.pop();
-                        validated_filter_terms_PP += &"]";
                         if let Some(obj) = pp_plot_json.as_object_mut() {
                             obj.insert(
                                 String::from("simpleFilter"),
@@ -1606,4 +1658,58 @@ fn validate_filter(
         }
     }
     (validated_filter_terms, filter_message)
+}
+
+fn generate_filter_term_for_PP(validated_filter_terms: Vec<FilterTerm>) -> (String, usize) {
+    let mut validated_filter_terms_PP: String = "[".to_string();
+    let mut filter_hits = 0;
+    for validated_term in validated_filter_terms {
+        match validated_term {
+            FilterTerm::Categorical(categorical_filter) => {
+                let string_json = "{\"term\":\"".to_string()
+                    + &categorical_filter.term
+                    + &"\", \"category\":\""
+                    + &categorical_filter.value
+                    + &"\"},";
+                validated_filter_terms_PP += &string_json;
+            }
+            FilterTerm::Numeric(numeric_filter) => {
+                let string_json;
+                if numeric_filter.greaterThan.is_some() && numeric_filter.lessThan.is_none() {
+                    string_json = "{\"term\":\"".to_string()
+                        + &numeric_filter.term
+                        + &"\", \"gt\":\""
+                        + &numeric_filter.greaterThan.unwrap().to_string()
+                        + &"\"},";
+                } else if numeric_filter.greaterThan.is_none() && numeric_filter.lessThan.is_some() {
+                    string_json = "{\"term\":\"".to_string()
+                        + &numeric_filter.term
+                        + &"\", \"lt\":\""
+                        + &numeric_filter.lessThan.unwrap().to_string()
+                        + &"\"},";
+                } else if numeric_filter.greaterThan.is_some() && numeric_filter.lessThan.is_some() {
+                    string_json = "{\"term\":\"".to_string()
+                        + &numeric_filter.term
+                        + &"\", \"lt\":\""
+                        + &numeric_filter.lessThan.unwrap().to_string()
+                        + &"\", \"gt\":\""
+                        + &numeric_filter.greaterThan.unwrap().to_string()
+                        + &"\"},";
+                } else {
+                    // When both greater and less than are none
+                    panic!(
+                        "Numeric filter term {} is missing both greater than and less than values. One of them must be defined",
+                        &numeric_filter.term
+                    );
+                }
+                validated_filter_terms_PP += &string_json;
+            }
+        };
+    }
+    filter_hits += 1;
+    if filter_hits > 0 {
+        validated_filter_terms_PP.pop();
+        validated_filter_terms_PP += &"]";
+    }
+    (validated_filter_terms_PP, filter_hits)
 }
