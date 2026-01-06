@@ -695,6 +695,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				qValueThreshold: this.state.config.settings?.manhattan?.qValueThreshold,
 				maxCappedPoints: this.state.config.settings?.manhattan?.maxCappedPoints,
 				hardCap: this.state.config.settings?.manhattan?.hardCap,
+				binSize: this.state.config.settings?.manhattan?.binSize,
 				...configValues
 			}
 
@@ -1023,6 +1024,9 @@ export function getDefaultSettings(opts) {
 
 			// Threshold for the rust code when determing if we need to raise the cap value from the default
 			maxCappedPoints: 5,
+			// maxCappedPoints: 25,
+			// maxCappedPoints: 50,
+			binSize: 10,
 
 			// Hard cap regardless of data distribution
 			hardCap: 200

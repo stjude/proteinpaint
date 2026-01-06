@@ -25,6 +25,7 @@ struct Input {
     log_cutoff: f64,
     max_capped_points: u64,
     hard_cap: f64,
+    bin_size: f64,
 }
 
 // chromosome info
@@ -82,16 +83,22 @@ fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
     Some((r, g, b))
 }
 
-/// Calculate dynamic y-cap using fixed bin approach - O(n) time, O(1) space
+/// Calculate dynamic y-cap using fixed bin approach
 ///
 /// Strategy:
 /// 1. If max_y <= default_cap: no capping needed, return max_y
-/// 2. Build histogram and walk from highest bin down to find lowest cap where <= max_allowed points are above it
+/// 2. Build histogram and walk up from lowest bin to find lowest cap where <= max_capped_points points are above it
 /// 3. Never exceed hard_cap regardless of data distribution
 ///
-/// Uses fixed bins of size 10 on the -log10 scale (40, 50, 60, ..., hard_cap)
-fn calculate_dynamic_y_cap(ys: &[f64], default_cap: f64, max_allowed: usize, hard_cap: f64) -> f64 {
-    const BIN_SIZE: f64 = 10.0;
+/// Uses fixed bins of size 10 on the -log10 scale starting from the default cap (defined by default_cap coming from constant in manhattan.js up to hard_cap) (default_cap, 50, 60, ..., hard_cap)
+fn calculate_dynamic_y_cap(
+    ys: &[f64],
+    default_cap: f64,
+    max_capped_points: usize,
+    hard_cap: f64,
+    bin_size: f64,
+) -> f64 {
+    // const BIN_SIZE: f64 = 10.0;
 
     let max_y = ys
         .iter()
@@ -107,7 +114,7 @@ fn calculate_dynamic_y_cap(ys: &[f64], default_cap: f64, max_allowed: usize, har
     }
 
     // Cases 2 & 3: Build histogram and find appropriate cap
-    let num_bins = ((hard_cap - default_cap) / BIN_SIZE) as usize;
+    let num_bins = ((hard_cap - default_cap) / bin_size) as usize;
     let mut histogram = vec![0usize; num_bins];
 
     // Build histogram in one pass
@@ -116,20 +123,20 @@ fn calculate_dynamic_y_cap(ys: &[f64], default_cap: f64, max_allowed: usize, har
             let bin_idx = if y > hard_cap {
                 num_bins - 1
             } else {
-                (((y - default_cap) / BIN_SIZE) as usize).min(num_bins - 1)
+                (((y - default_cap) / bin_size) as usize).min(num_bins - 1)
             };
             histogram[bin_idx] += 1;
         }
     }
 
-    // Walk UP from default_cap, accumulating points above each potential cap
+    // Walk up from default_cap, accumulating points above each potential cap
     let mut points_above = histogram.iter().sum::<usize>(); // Total points above default_cap
 
     for i in 0..num_bins {
         // At this point, points_above = number of points above the upper edge of bin i
-        if points_above <= max_allowed {
+        if points_above <= max_capped_points {
             // This cap works! Return upper edge of bin i
-            let cap = default_cap + ((i + 1) as f64) * BIN_SIZE;
+            let cap = default_cap + ((i + 1) as f64) * bin_size;
             return cap.min(hard_cap).min(max_y);
         }
         // Move to next bin - remove points in current bin from count
@@ -139,6 +146,7 @@ fn calculate_dynamic_y_cap(ys: &[f64], default_cap: f64, max_allowed: usize, har
     // All points fit within threshold - use default cap
     default_cap
 }
+
 // Function to Build cumulative chromosome map
 fn cumulative_chrom(
     chrom_size: &HashMap<String, u64>,
@@ -336,6 +344,7 @@ fn plot_grin2_manhattan(
     device_pixel_ratio: f64,
     png_dot_radius: u64,
     log_cutoff: f64,
+    bin_size: f64,
     max_capped_points: u64,
     hard_cap: f64,
 ) -> Result<(String, InteractiveData), Box<dyn Error>> {
@@ -383,14 +392,15 @@ fn plot_grin2_manhattan(
     // Dynamic y-cap calculation:
     // - default_cap: the baseline cap (log_cutoff, typically 40)
     // - max_capped_points: maximum number of points allowed above cap before raising it
+    // - hard_cap: absolute maximum cap regardless of data distribution
+    // - bin_size: size of bins for histogram approach
     let default_cap = log_cutoff;
-    let max_allowed = max_capped_points as usize;
+    let max_capped_points = max_capped_points as usize;
 
-    let y_cap = calculate_dynamic_y_cap(&ys, default_cap, max_allowed, hard_cap);
+    let y_cap = calculate_dynamic_y_cap(&ys, default_cap, max_capped_points, hard_cap, bin_size);
     // eprint!("Determined y-cap at {:.2}\n", y_cap);
 
     // Jitter range: capped points will spread over this range below the cap line
-    // let jitter_range = (y_cap * 0.05).max(2.0); // 5% of cap or at least 2 units
     let jitter_range = (y_cap * 0.1).max(2.0); // 10% of cap or at least 2 units
 
     // Track if we have any capped points (to draw the indicator band)
@@ -626,6 +636,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let log_cutoff = &input_json.log_cutoff;
                 let max_capped_points = &input_json.max_capped_points;
                 let hard_cap = &input_json.hard_cap;
+                let bin_size = &input_json.bin_size;
                 if let Ok((base64_string, plot_data)) = plot_grin2_manhattan(
                     grin2_file.clone(),
                     chrom_size.clone(),
@@ -634,6 +645,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     device_pixel_ratio.clone(),
                     png_dot_radius.clone(),
                     log_cutoff.clone(),
+                    bin_size.clone(),
                     max_capped_points.clone(),
                     hard_cap.clone(),
                 ) {

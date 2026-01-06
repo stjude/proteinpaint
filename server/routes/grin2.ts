@@ -207,6 +207,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 
 	const resultData = JSON.parse(pyResult)
 
+	console.log('Request: ', request)
 	// Step 5: Prepare Rust input
 	const rustInput = {
 		file: resultData.cacheFileName,
@@ -220,7 +221,8 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		q_value_threshold: request.qValueThreshold,
 		log_cutoff: MANHATTAN_LOG_QVALUE_CUTOFF,
 		max_capped_points: request.maxCappedPoints,
-		hard_cap: request.hardCap
+		hard_cap: request.hardCap,
+		bin_size: request.binSize
 	}
 
 	console.log('[GRIN2] Rust input:', rustInput)
