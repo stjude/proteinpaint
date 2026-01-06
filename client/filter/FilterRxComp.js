@@ -42,6 +42,8 @@ class FilterRxComp extends Filter {
 			// if there is parentConfig, assume this is UI for a local filter,
 			// otherwise this UI is for global app filter
 			termfilter: parentConfig ? { filter: parentConfig.filter || defaultFilter } : appState.termfilter,
+			// make all nested  plot pill edit menus react to global filter changes
+			globalFilter: parentConfig ? appState.termfilter.filter : undefined,
 			activeCohort: appState.activeCohort
 		}
 	}
