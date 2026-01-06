@@ -1,5 +1,5 @@
 import { select } from 'd3-selection'
-import { findItem, findParent, getWrappedTvslst } from './filter.utils'
+import { findItem, findParent, getWrappedTvslst, filterJoin } from './filter.utils'
 
 const MENU_OPTION_HIGHLIGHT_COLOR = '#fff'
 
@@ -216,18 +216,16 @@ export function setInteractivity(self) {
 			self.dom.treeTip.clear().showunder(this)
 		}
 
-		const rootFilterCopy = self.activeData
-			? self.getAdjustedRoot(self.activeData.filter.$id, d)
-			: JSON.parse(self.rawCopy)
-
+		const treeFilter = self.getTreeFilter(d)
 		const termdb = await import('../termdb/app')
+
 		termdb.appInit({
 			vocabApi: self.vocabApi,
 			holder: self.dom.termSrcDiv,
 			getCategoriesArguments: self.opts.getCategoriesArguments,
 			state: {
 				activeCohort: self.activeCohort,
-				termfilter: { filter: rootFilterCopy },
+				termfilter: { filter: treeFilter },
 				tree: { usecase: { target: 'filter' } },
 				nav: { header_mode: self.opts.header_mode }
 			},
@@ -244,6 +242,19 @@ export function setInteractivity(self) {
 				}
 			}
 		})
+	}
+
+	self.getTreeFilter = (d, filter) => {
+		const filterCopy = filter
+			? filter
+			: self.activeData
+			? self.getAdjustedRoot(self.activeData.filter.$id, d)
+			: JSON.parse(self.rawCopy)
+
+		if (filterCopy.lst.length < 2) filterCopy.join = ''
+
+		const globalFilter = self.opts?.app?.getState()?.termfilter?.filter
+		return globalFilter ? filterJoin([filterCopy, globalFilter]) : filterCopy
 	}
 
 	/*
@@ -321,7 +332,7 @@ export function setInteractivity(self) {
 		} else {
 			self.dom.treeTip.clear().showunder(elem)
 		}
-		const filter = self.activeData.filter
+		const filter = self.getTreeFilter(d, self.activeData.filter)
 
 		const termdb = await import('../termdb/app')
 		termdb.appInit({
