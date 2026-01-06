@@ -247,8 +247,6 @@ export class ChartsDataMapper {
 			if (!plot.color) plot.color = color
 			//Brighten the colors in dark mode for better visibility
 			if (settings.displayMode == 'dark') plot.color = rgb(plot.color).brighter(0.75)
-			//Ignore if hidden after the color is set
-			if (plot.isHidden) continue
 			if (plot.boxplot.out.length) {
 				const maxOut = plot.boxplot.out.reduce((a: { value: number }, b: { value: number }) =>
 					Math.max(a.value, b.value)
@@ -261,6 +259,9 @@ export class ChartsDataMapper {
 			plot.x = settings.isVertical ? this.#horizPad / 2 + incrPad : this.totalLabelSize
 			plot.y = this.#topPad + (settings.isVertical ? settings.plotLength + settings.labelPad : incrPad)
 			incrPad += this.totalBoxSize
+
+			//Use for data requests in interactions
+			plot.chartId = chart.chartId || ' '
 		}
 		return plots
 	}
