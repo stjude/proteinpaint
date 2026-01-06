@@ -390,11 +390,8 @@ fn plot_grin2_manhattan(
     let max_capped_points = max_capped_points as usize;
 
     let y_cap = calculate_dynamic_y_cap(&ys, default_cap, max_capped_points, hard_cap, bin_size);
+    // eprint!("Determined dynamic y-cap: {}\n", y_cap);
 
-    // Jitter range: capped points will spread over this range below the cap line
-    let jitter_range = (y_cap * 0.1).max(2.0); // 10% of cap or at least 2 units
-
-    // Track if we have any capped points (to draw the indicator band)
     let mut has_capped_points = false;
 
     let y_max = if !ys.is_empty() {
@@ -402,37 +399,31 @@ fn plot_grin2_manhattan(
 
         // If dynamic cap is higher than default (log_cutoff), elevate q=0 points
         // (which were set to log_cutoff) to the new cap so they remain at the top
-        // Apply jitter during elevation to spread them out
         if y_cap > log_cutoff {
-            for (i, y) in ys.iter_mut().enumerate() {
+            for y in ys.iter_mut() {
                 if *y == log_cutoff {
-                    let jitter_factor = ((i.wrapping_mul(2654435761)) % 1000) as f64 / 1000.0;
-                    *y = y_cap - (jitter_factor * jitter_range);
+                    *y = y_cap;
                     has_capped_points = true;
                 }
             }
-            for (i, p) in point_details.iter_mut().enumerate() {
+            for p in point_details.iter_mut() {
                 if p.q_value == 0.0 {
-                    let jitter_factor = ((sig_indices[i].wrapping_mul(2654435761)) % 1000) as f64 / 1000.0;
-                    p.y = y_cap - (jitter_factor * jitter_range);
+                    p.y = y_cap;
                 }
             }
         }
 
         if max_y > y_cap {
             has_capped_points = true;
-            // Clamp values above the cap and apply jitter to spread them out
-            for (i, y) in ys.iter_mut().enumerate() {
+            // Clamp values above the cap
+            for y in ys.iter_mut() {
                 if *y > y_cap {
-                    // Deterministic jitter based on index - creates a hash-like spread
-                    let jitter_factor = ((i.wrapping_mul(2654435761)) % 1000) as f64 / 1000.0; // 0.0 to 1.0
-                    *y = y_cap - (jitter_factor * jitter_range);
+                    *y = y_cap;
                 }
             }
-            for (i, p) in point_details.iter_mut().enumerate() {
+            for p in point_details.iter_mut() {
                 if p.y > y_cap {
-                    let jitter_factor = ((sig_indices[i].wrapping_mul(2654435761)) % 1000) as f64 / 1000.0;
-                    p.y = y_cap - (jitter_factor * jitter_range);
+                    p.y = y_cap;
                 }
             }
             y_cap + 0.35 + y_padding
@@ -502,16 +493,16 @@ fn plot_grin2_manhattan(
         // ------------------------------------------------
         // 6b. Draw capped region indicator (shaded band)
         // ------------------------------------------------
-        if has_capped_points {
-            let band_bottom = y_cap - jitter_range;
-            let band_top = y_cap + 0.35;
+        // if has_capped_points {
+        //     let band_bottom = y_cap - jitter_range;
+        //     let band_top = y_cap + 0.35;
 
-            // Shaded band - light yellow to indicate "capped/jittered" region
-            let band_color = RGBColor(255, 235, 59); // Yellow (#FFEB3B)
-            let band_style: ShapeStyle = band_color.mix(0.35).filled();
-            let band_rect = Rectangle::new([(-x_buffer, band_bottom), (total_genome_length, band_top)], band_style);
-            chart.draw_series(vec![band_rect])?;
-        }
+        //     // Shaded band - light yellow to indicate "capped/jittered" region
+        //     let band_color = RGBColor(255, 235, 59); // Yellow (#FFEB3B)
+        //     let band_style: ShapeStyle = band_color.mix(0.35).filled();
+        //     let band_rect = Rectangle::new([(-x_buffer, band_bottom), (total_genome_length, band_top)], band_style);
+        //     chart.draw_series(vec![band_rect])?;
+        // }
 
         // ------------------------------------------------
         // 7. Capture high-DPR pixel mapping for the points
