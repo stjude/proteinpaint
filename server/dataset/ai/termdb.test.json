@@ -29,7 +29,7 @@
 	       {"question":"Show differential gene expression between men and women","answer":{"DE_type": {"action":"DE","group1":[{"Categorical":{"term":"sex","value":"1"}}],"group2":[{"Categorical":{"term":"sex","value":"2"}}]}}}
           ],
            "TestData":[
-	       {"question":"Show differential gene expression between wilms tumor and neuroblastoma","answer":{"DE_type": {"action":"DE","group1":[{"Categorical":{"term":"diaggrp","value":"BCL2/MYC"}}],"group2":[{"Categorical":{"term":"Molecular subtype","value":"IKZF1"}}]}}}
+	       {"question":"Show differential gene expression between wilms tumor and neuroblastoma","answer":{"DE_type": {"action":"DE","group1":[{"Categorical":{"term":"diaggrp","value":"Wilms tumor"}}],"group2":[{"Categorical":{"term":"diaggrp","value":"Neuroblastoma"}}]}}}
           ]
     }	    
   ]  

@@ -142,7 +142,7 @@ mod tests {
                                                 panic!("Summary type not valid for DE");
                                             }
                                             AnswerFormat::DE_type(de) => {
-                                                //println!("expected answer:{:?}", &sum);
+                                                //println!("expected answer:{:?}", &de);
                                                 assert_eq!(
                                                     llm_json_value.sort_DEoutput_struct(),
                                                     de.sort_DEoutput_struct()
@@ -236,7 +236,7 @@ mod tests {
                                                 panic!("Summary type not valid for DE");
                                             }
                                             AnswerFormat::DE_type(de) => {
-                                                //println!("expected answer:{:?}", &sum);
+                                                //println!("expected answer:{:?}", &de);
                                                 assert_eq!(
                                                     llm_json_value.sort_DEoutput_struct(),
                                                     de.sort_DEoutput_struct()

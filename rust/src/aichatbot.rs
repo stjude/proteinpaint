@@ -262,7 +262,7 @@ pub async fn run_pipeline(
     classification = classification.replace("\"", "");
     let final_output;
     if classification == "dge".to_string() {
-        let de_result = extract_DE_search_terms_from_query(
+        final_output = extract_DE_search_terms_from_query(
             user_input,
             comp_model,
             embedding_model,
@@ -275,20 +275,6 @@ pub async fn run_pipeline(
             testing,
         )
         .await;
-        if testing == true {
-            final_output = format!(
-                "{{\"{}\":\"{}\",\"{}\":[{}}}",
-                "action",
-                "dge",
-                "DE_output",
-                de_result + &"]"
-            );
-        } else {
-            final_output = format!(
-                "{{\"{}\":\"{}\",\"{}\":\"{}\"}}",
-                "type", "html", "html", "DE agent not implemented yet"
-            );
-        }
     } else if classification == "summary".to_string() {
         final_output = extract_summary_information(
             user_input,
@@ -606,7 +592,8 @@ The user may select a cutoff for a continuous variables such as age. In such cas
 	+ &schema_json_string
 	+ &training_data
         + "The sqlite db in plain language is as follows:\n"
-        + &rag_docs.join(",");
+	+ &rag_docs.join(",")
+        + &"\nQuestion: {question} \nanswer:";
                     //println! {"router_instructions:{}",router_instructions};
                     let agent = AgentBuilder::new(comp_model)
                         .preamble(&router_instructions)
@@ -621,7 +608,6 @@ The user may select a cutoff for a continuous variables such as age. In such cas
                     let result = response.replace("json", "").replace("```", "");
                     //println!("result_groups:{}", result);
                     let json_value: Value = serde_json::from_str(&result).expect("REASON");
-                    println!("json_value:{}", json_value);
                     let final_llm_json;
                     match llm_backend_type {
                         llm_backend::Ollama() => {
@@ -737,18 +723,11 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, testing: bool) 
         }
         final_exp = serde_json::to_string(&new_json).unwrap();
     } else {
-        let mut pp_json: Value; // New JSON value that will contain items of the final validated JSON
+        let mut pp_plot_json: Value =
+            serde_json::from_str(&"{\"chartType\":\"differentialAnalysis\"}").expect("Not a valid JSON"); // The PP compliant plot JSON
         let mut err_json: Value; // Error JSON containing the error message (if present)
         if json_value.action != String::from("DE") {
             message = message + &"Did not return a DE action";
-            pp_json = serde_json::from_str(&"{\"type\":\"html\"}").expect("Not a valid JSON");
-            if let Some(obj) = pp_json.as_object_mut() {
-                // The `if let` ensures we only proceed if the top-level JSON is an object.
-                // Append a new string field.
-                obj.insert(String::from("html"), serde_json::json!(message));
-            };
-        } else {
-            pp_json = serde_json::from_str(&"{\"chartType\":\"differentialAnalysis\"}").expect("Not a valid JSON");
         }
 
         let mut group1_verified: Option<Vec<FilterTerm>> = None;
@@ -768,20 +747,26 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, testing: bool) 
         }
 
         if group1_verified.is_some() && group2_verified.is_some() {
-            if let Some(obj) = pp_json.as_object_mut() {
+            if let Some(obj) = pp_plot_json.as_object_mut() {
                 let (group1_verified_string, group1_filter_hits) =
                     generate_filter_term_for_PP(group1_verified.unwrap());
-                if group1_filter_hits > 0 {
-                    obj.insert(String::from("group1"), serde_json::json!(group1_verified_string));
-                } else {
-                    message = message + "group1 array filter terms is empty";
-                }
                 let (group2_verified_string, group2_filter_hits) =
                     generate_filter_term_for_PP(group2_verified.unwrap());
-                if group2_filter_hits > 0 {
-                    obj.insert(String::from("group2"), serde_json::json!(group2_verified_string));
-                } else {
+                if group1_filter_hits > 0 && group2_filter_hits > 0 {
+                    obj.insert(
+                        String::from("group1"),
+                        serde_json::from_str(&group1_verified_string).expect("Not a valid JSON"),
+                    );
+                    obj.insert(
+                        String::from("group2"),
+                        serde_json::from_str(&group2_verified_string).expect("Not a valid JSON"),
+                    );
+                } else if group1_filter_hits == 0 && group2_filter_hits > 0 {
+                    message = message + "group1 array filter terms is empty";
+                } else if group1_filter_hits > 0 && group2_filter_hits == 0 {
                     message = message + "group2 array filter terms is empty";
+                } else {
+                    message = message + "group1 and group2 array filter terms are both empty";
                 }
             }
         } else if group1_verified.is_some() && group2_verified.is_none() {
@@ -800,10 +785,16 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, testing: bool) 
             };
             final_exp = serde_json::to_string(&err_json).unwrap();
         } else {
+            let mut pp_json: Value = serde_json::from_str(&"{\"type\":\"plot\"}").expect("Not a valid JSON");
+            if let Some(obj) = pp_json.as_object_mut() {
+                // The `if let` ensures we only proceed if the top-level JSON is an object.
+                // Append a new string field.
+                obj.insert(String::from("plot"), serde_json::json!(pp_plot_json));
+            }
             final_exp = serde_json::to_string(&pp_json).unwrap();
         }
     }
-    println!("final_exp:{}", final_exp);
+    //println!("final_exp:{}", final_exp);
     final_exp
 }
 
@@ -1081,7 +1072,7 @@ pub async fn extract_summary_information(
             let result = response.replace("json", "").replace("```", "");
             //println!("result:{}", result);
             let json_value: Value = serde_json::from_str(&result).expect("REASON");
-            println!("Classification result:{}", json_value);
+            //println!("Classification result:{}", json_value);
 
             let final_llm_json;
             match llm_backend_type {
