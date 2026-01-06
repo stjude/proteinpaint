@@ -1,4 +1,5 @@
 import type { ChatRequest, ChatResponse, RouteApi } from '#types'
+import { get_samples } from '#src/termdb.sql.js'
 import { ChatPayload } from '#types/checkers'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '../src/serverconfig.js'
@@ -100,12 +101,34 @@ function init({ genomes }) {
 				for (const line of ai_output_data.split('\n')) {
 					// The reason we are parsing each line from rust is because we want to debug what is causing the wrong output. As the AI pipeline matures, the rust code will be modified to always return a single JSON
 					if (line.startsWith('final_output:') == true) {
+						console.log('summary:', line.replace('final_output:', ''))
 						ai_output_json = JSON.parse(JSON.parse(line.replace('final_output:', '')))
 					} else {
 						mayLog(line)
 					}
 				}
 			} else if (classResult.route == 'dge') {
+				const time1 = new Date().valueOf()
+				ai_output_data = await run_rust('chat_dge', JSON.stringify(chatbot_input))
+				const time2 = new Date().valueOf()
+				mayLog('Time taken for running DE agent:', time2 - time1, 'ms')
+
+				for (const line of ai_output_data.split('\n')) {
+					// The reason we are parsing each line from rust is because we want to debug what is causing the wrong output. As the AI pipeline matures, the rust code will be modified to always return a single JSON
+					if (line.startsWith('final_output:') == true) {
+						console.log('dge:', line.replace('final_output:', ''))
+						ai_output_json = JSON.parse(JSON.parse(line.replace('final_output:', '')))
+					} else {
+						mayLog(line)
+					}
+				}
+
+				const f1 = simpleFilter2ppFilter(ai_output_json.group1, ds)
+				const f2 = simpleFilter2ppFilter(ai_output_json.group2, ds)
+				const samples1 = await get_samples({ filter: f1 }, ds, true) // true is to by pass permission check
+				const samples2 = await get_samples({ filter: f2 }, ds, true) // true is to by pass permission check
+				console.log('DE_json:', ai_output_json, samples1, samples2)
+
 				ai_output_json = { type: 'html', html: 'DE agent not implemented yet' }
 			} else {
 				// Will define all other agents later as desired
@@ -116,13 +139,13 @@ function init({ genomes }) {
 				if (typeof ai_output_json.plot != 'object') throw '.plot{} missing when .type=plot'
 				if (ai_output_json.plot.simpleFilter) {
 					// simpleFilter= [ {term:str, category:str} ]
-					const localfilter = simpleFilter2ppFilter(ai_output_json, ds)
+					const localfilter = simpleFilter2ppFilter(ai_output_json.plot.simpleFilter, ds)
 					delete ai_output_json.plot.simpleFilter
 					ai_output_json.plot.filter = localfilter
 				}
 			}
 
-			//mayLog('ai_output_json:', ai_output_json)
+			mayLog('ai_output_json:', ai_output_json.plot.filter.lst)
 			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
@@ -131,11 +154,11 @@ function init({ genomes }) {
 	}
 }
 
-function simpleFilter2ppFilter(ai_output_json: any, ds: any) {
-	if (!Array.isArray(ai_output_json.plot.simpleFilter)) throw 'ai_output_json.plot.simpleFilter is not array'
+function simpleFilter2ppFilter(ai_output_json_array: any, ds: any) {
+	if (!Array.isArray(ai_output_json_array)) throw 'ai_output_json_array is not array'
 	const localfilter = { type: 'tvslst', in: true, join: '', lst: [] as any[] }
-	if (ai_output_json.plot.simpleFilter.length > 1) localfilter.join = 'and' // For now hardcoding join as 'and' if number of filter terms > 1. Will later implement more comprehensive logic
-	for (const f of ai_output_json.plot.simpleFilter) {
+	if (ai_output_json_array.length > 1) localfilter.join = 'and' // For now hardcoding join as 'and' if number of filter terms > 1. Will later implement more comprehensive logic
+	for (const f of ai_output_json_array) {
 		const term = ds.cohort.termdb.q.termjsonByOneid(f.term)
 		if (!term) throw 'invalid term id from simpleFilter[].term'
 		if (term.type == 'categorical') {
