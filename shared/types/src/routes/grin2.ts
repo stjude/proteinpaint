@@ -42,8 +42,12 @@ export type GRIN2Request = {
 
 	/** Maximum number of points to cap the dynamic y-axis in Manhattan plots */
 	maxCappedPoints?: number
+
 	/** Absolute maximum cap for the y-axis in Manhattan plots regardless of its data distribution */
 	hardCap?: number
+
+	/** Bin size for Manhattan plot historgram bin size. Used in the calculation of dynamic y-axis capping process (default: 10) */
+	binSize?: number
 
 	/** Filter from existing PP infrastructure */
 	filter?: any // Filter object passed to get_samples(filter, ds)
