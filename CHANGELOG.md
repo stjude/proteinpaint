@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features
+- (placeholder to force a new minor version and reserve 2.170.* for GDC release)
+
+
 ## 2.170.0
 
 General:
