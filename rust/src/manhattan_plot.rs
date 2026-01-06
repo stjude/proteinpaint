@@ -491,20 +491,6 @@ fn plot_grin2_manhattan(
         }
 
         // ------------------------------------------------
-        // 6b. Draw capped region indicator (shaded band)
-        // ------------------------------------------------
-        // if has_capped_points {
-        //     let band_bottom = y_cap - jitter_range;
-        //     let band_top = y_cap + 0.35;
-
-        //     // Shaded band - light yellow to indicate "capped/jittered" region
-        //     let band_color = RGBColor(255, 235, 59); // Yellow (#FFEB3B)
-        //     let band_style: ShapeStyle = band_color.mix(0.35).filled();
-        //     let band_rect = Rectangle::new([(-x_buffer, band_bottom), (total_genome_length, band_top)], band_style);
-        //     chart.draw_series(vec![band_rect])?;
-        // }
-
-        // ------------------------------------------------
         // 7. Capture high-DPR pixel mapping for the points
         //    we do not draw the points with plotters (will use tiny-skia for AA)
         //    but use charts.backend_coord to map data->pixel in the high-DPR backend
