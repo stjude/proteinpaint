@@ -24,7 +24,7 @@ export class BoxPlotInteractions {
 		const state = this.app.getState()
 		const plotConfig = this.app.getState().plots.find((p: BoxPlotConfig) => p.id === this.id)
 		const config = structuredClone(plotConfig)
-		const sampleList = new ListSamples(this.app, state.termfilter, config, plot, false)
+		const sampleList = new ListSamples(this.app, state.termfilter, config, plot /*false,*/)
 		const filterUiRoot = getFilterItemByTag(state.termfilter.filter, 'filterUiRoot')
 		const filter = filterJoin([filterUiRoot, sampleList.tvslst])
 		filter.tag = 'filterUiRoot'
@@ -69,7 +69,7 @@ export class BoxPlotInteractions {
 		const config = structuredClone(plotConfig)
 		/** Use the domain for the entire chart, not just
 		 * the individual plot's limited range. */
-		const sampleList = new ListSamples(this.app, state.termfilter, config, plot, false, domain[0], domain[1])
+		const sampleList = new ListSamples(this.app, state.termfilter, config, plot, /*false,*/ domain[0], domain[1])
 		const data = await sampleList.getData()
 		const rows = sampleList.setRows(data)
 		return rows
