@@ -150,37 +150,29 @@ function setCategoricalCellProps(cell, tw, anno, value, s, t, self, width, heigh
 }
 
 export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
-	const values = anno.renderedValues || anno.filteredValues || anno.values || [anno.value]
-	const colorFromq = tw.q?.values && tw.q?.values[value.class]?.color // TODO: may fill in tw.q.values{} based on groupsetting
 	if (tw.q?.type == 'predefined-groupset' || tw.q?.type == 'custom-groupset') {
 		// groupsetting in use
 		// value is name of group assignment
 		cell.label = value
-		// TODO: import getColors() from client/shared/common.js
-		cell.fill = ['Mutated', 'Protein-changing', 'Truncating'].includes(value)
-			? '#FF0000'
-			: ['Wildtype', 'Rest'].includes(anno.key)
-			? /*'#D3D3D3'*/ '#0000FF'
-			: anno.key == 'Not tested'
-			? /*'#fff'*/ '#00FF00'
-			: '#000000'
-		cell.value = { value, dt: tw.q.dt, origin: tw.q.origin }
+		const groupset =
+			tw.q.type == 'custom-groupset' ? tw.q.customset : tw.term.groupsetting.lst[tw.q.predefined_groupset_idx]
+		if (!groupset) throw 'groupset not found'
+		const group = groupset.groups.find(group => group.name == value)
+		if (!group) throw 'group not found'
+		cell.fill = group.color
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 		cell.y = height * i
-		const group =
-			tw.legend?.group || tw.q.origin
-				? `${tw.q.origin[0].toUpperCase() + tw.q.origin.slice(1)} ${self.dt2label[tw.q.dt]}`
-				: self.dt2label[tw.q.dt]
 		return {
 			ref: t.ref,
-			group,
-			value: anno.key,
-			order: -2,
-			entry: { key: anno.key, label: cell.label, fill: cell.fill, dt: tw.q.dt, origin: tw.q.origin }
+			group: tw.legend?.group || tw.$id,
+			value,
+			entry: { key: anno.key, label: cell.label, fill: cell.fill }
 		}
 	} else {
 		// groupsetting not in use
 		// value is mutation object
+		const values = anno.renderedValues || anno.filteredValues || anno.values || [anno.value]
+		const colorFromq = tw.q?.values && tw.q?.values[value.class]?.color
 		cell.label = value.label || self.mclass[value.class].label
 		// may be overriden by a color scale by dt, if applicable below
 		cell.fill = self.getValueColor?.(value.value) || colorFromq || value.color || self.mclass[value.class]?.color

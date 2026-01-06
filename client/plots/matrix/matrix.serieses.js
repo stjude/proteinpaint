@@ -82,13 +82,10 @@ export function getSerieses(data) {
 					legend = t.tw.setCellProps(cell, anno, value, s, t, this, width, height, dx, dy, i)
 				} else {
 					// hierCluster terms have their own setCellProps
-					// when groupsetting is used for geneVariant term, should treat as categorical term
 					const cellProps =
 						t.grp.type == 'hierCluster'
 							? setCellProps['hierCluster']
-							: (t.tw.term.type == 'geneVariant' &&
-									(t.tw?.q?.type == 'predefined-groupset' || t.tw?.q?.type == 'custom-groupset')) ||
-							  t.tw.term.type == 'samplelst'
+							: t.tw.term.type == 'samplelst'
 							? setCellProps['categorical']
 							: setCellProps[t.tw.term.type]
 
