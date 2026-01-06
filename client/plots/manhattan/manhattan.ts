@@ -516,28 +516,6 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				.attr('font-size', `${settings.legendFontSize + 2}px`)
 				.text(item.type)
 		})
-
-		// Add capped region note if applicable
-		if (data.plotData.has_capped_points) {
-			const noteY = legendY + settings.legendVerticalOffset + 16
-
-			// Small gold square
-			svg
-				.append('rect')
-				.attr('x', legendX + 4)
-				.attr('y', noteY - 8)
-				.attr('width', 10)
-				.attr('height', 10)
-				.attr('fill', 'rgba(255, 235, 59, 0.35)')
-
-			// Note text
-			svg
-				.append('text')
-				.attr('x', legendX + 20)
-				.attr('y', noteY)
-				.attr('font-size', `${settings.legendFontSize}px`)
-				.text('Capped points (jittered for aesthetics)')
-		}
 	}
 }
 
