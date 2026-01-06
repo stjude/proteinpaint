@@ -1,3 +1,1 @@
-Fixes:
-- show a no data error message in numeric tvs edit menu
-- detect if a global filter exists for a new tvs edit menu and handle similar to an existing tvs pill edit menu
+

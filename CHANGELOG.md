@@ -17,6 +17,8 @@ Fixes:
 - fix the handling of undefined ref argument to deepCopyFreeze()
 - GRIN2: Fixing display of 0 q-values in manhattan plot
 - correctly handle the case of rawFilter == global filter in getFilterExcludingPill()
+- show a no data error message in numeric tvs edit menu
+- detect if a global filter exists for a new tvs edit menu and handle similar to an existing tvs pill edit menu
 
 
 ## 2.169.0
