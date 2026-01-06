@@ -517,75 +517,77 @@ pub async fn extract_DE_search_terms_from_query(
     ai_json: &AiJsonFormat,
     testing: bool,
 ) -> String {
-    let (rag_docs, db_vec) = parse_dataset_db(dataset_db).await;
-    let schema_json: Value = serde_json::to_value(schemars::schema_for!(DEOutput)).unwrap(); // error handling here
-    let schema_json_string = serde_json::to_string_pretty(&schema_json).unwrap();
-    //println!("DE schema:{}", schema_json);
+    match ai_json.hasDE {
+        true => {
+            let (rag_docs, db_vec) = parse_dataset_db(dataset_db).await;
+            let schema_json: Value = serde_json::to_value(schemars::schema_for!(DEOutput)).unwrap(); // error handling here
+            let schema_json_string = serde_json::to_string_pretty(&schema_json).unwrap();
+            //println!("DE schema:{}", schema_json);
 
-    let additional;
-    match llm_backend_type {
-        llm_backend::Ollama() => {
-            additional = json!({
-                    "max_new_tokens": max_new_tokens,
-                    "top_p": top_p,
-                    "schema_json": schema_json_string
-            });
-        }
-        llm_backend::Sj() => {
-            additional = json!({
-                    "max_new_tokens": max_new_tokens,
-                    "top_p": top_p
-            });
-        }
-    }
-
-    let mut DE_data_check: Option<TrainTestData> = None;
-    for chart in ai_json.charts.clone() {
-        if chart.r#type == "DE" {
-            DE_data_check = Some(chart);
-            break;
-        }
-    }
-
-    match DE_data_check {
-        Some(DE_data) => {
-            let mut training_data: String = String::from("");
-            let mut train_iter = 0;
-            for ques_ans in DE_data.TrainingData {
-                match ques_ans.answer {
-                    AnswerFormat::summary_type(_) => panic!("Summary type not valid for DE"),
-                    AnswerFormat::DE_type(de_term) => {
-                        let DE_answer: DEOutput = de_term;
-                        train_iter += 1;
-                        training_data += "Example question";
-                        training_data += &train_iter.to_string();
-                        training_data += &":";
-                        training_data += &ques_ans.question;
-                        training_data += &" ";
-                        training_data += "Example answer";
-                        training_data += &train_iter.to_string();
-                        training_data += &":";
-                        training_data += &serde_json::to_string(&DE_answer).unwrap();
-                        training_data += &"\n";
-                    }
+            let additional;
+            match llm_backend_type {
+                llm_backend::Ollama() => {
+                    additional = json!({
+                            "max_new_tokens": max_new_tokens,
+                            "top_p": top_p,
+                            "schema_json": schema_json_string
+                    });
+                }
+                llm_backend::Sj() => {
+                    additional = json!({
+                            "max_new_tokens": max_new_tokens,
+                            "top_p": top_p
+                    });
                 }
             }
-            // Create embeddings and add to vector store
-            //let embeddings = EmbeddingsBuilder::new(embedding_model.clone())
-            //    .documents(rag_docs)
-            //    .expect("Reason1")
-            //    .build()
-            //    .await
-            //    .unwrap();
 
-            //// Create vector store
-            //let mut vector_store = InMemoryVectorStore::<String>::default();
-            //InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
+            let mut DE_data_check: Option<TrainTestData> = None;
+            for chart in ai_json.charts.clone() {
+                if chart.r#type == "DE" {
+                    DE_data_check = Some(chart);
+                    break;
+                }
+            }
 
-            println!("rag_docs:{:?}", rag_docs);
+            match DE_data_check {
+                Some(DE_data) => {
+                    let mut training_data: String = String::from("");
+                    let mut train_iter = 0;
+                    for ques_ans in DE_data.TrainingData {
+                        match ques_ans.answer {
+                            AnswerFormat::summary_type(_) => panic!("Summary type not valid for DE"),
+                            AnswerFormat::DE_type(de_term) => {
+                                let DE_answer: DEOutput = de_term;
+                                train_iter += 1;
+                                training_data += "Example question";
+                                training_data += &train_iter.to_string();
+                                training_data += &":";
+                                training_data += &ques_ans.question;
+                                training_data += &" ";
+                                training_data += "Example answer";
+                                training_data += &train_iter.to_string();
+                                training_data += &":";
+                                training_data += &serde_json::to_string(&DE_answer).unwrap();
+                                training_data += &"\n";
+                            }
+                        }
+                    }
+                    // Create embeddings and add to vector store
+                    //let embeddings = EmbeddingsBuilder::new(embedding_model.clone())
+                    //    .documents(rag_docs)
+                    //    .expect("Reason1")
+                    //    .build()
+                    //    .await
+                    //    .unwrap();
 
-            // Create RAG agent
-            let router_instructions = String::from(
+                    //// Create vector store
+                    //let mut vector_store = InMemoryVectorStore::<String>::default();
+                    //InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
+
+                    println!("rag_docs:{:?}", rag_docs);
+
+                    // Create RAG agent
+                    let router_instructions = String::from(
         " I am an assistant that extracts the groups from the user prompt to carry out differential gene expression. The final output must be in the following JSON format with NO extra comments. There are three compulsory fields: \"action\", \"group1\" and \"group2\". In case of DE, the \"action\" field should ALWAYS be \"DE\". The fields \"group1\" and \"group2\" should ONLY either be a field in the sqlite db or a value of any of the fields inside the db. In case no suitable groups are found, show {\"output\":\"No suitable two groups found for differential gene expression\"}.
 
 The user may select a cutoff for a continuous variables such as age. In such cases the group should only include the range specified by the user. Inside the JSON each entry the name of the group must be inside the field \"name\". For the cutoff (if provided) a field called \"cutoff\" must be provided which should contain a subfield \"name\" containing the name of the cutoff, followed by \"greater\"/\"lesser\"/\"equal\" to followed by the numeric value of the cutoff. If the unit of the variable is provided such as cm,m,inches,celsius etc. then add it to a separate field called \"units\". In case of a continuous variable such as age, height added additional field to the group called \"filter\". This should contain a sub-field called \"names\" followed by a subfield called \"cutoff\". This sub-field should contain a key either greater, lesser or equalto. If the continuous variable has units provided by the user then add it in a separate field called \"units\".",
@@ -595,48 +597,72 @@ The user may select a cutoff for a continuous variables such as age. In such cas
 	+ &training_data
         + "The sqlite db in plain language is as follows:\n"
         + &rag_docs.join(",");
-            //println! {"router_instructions:{}",router_instructions};
-            let agent = AgentBuilder::new(comp_model)
-                .preamble(&router_instructions)
-                //.dynamic_context(rag_docs_length, vector_store.index(embedding_model))
-                .temperature(temperature)
-                .additional_params(additional)
-                .build();
+                    //println! {"router_instructions:{}",router_instructions};
+                    let agent = AgentBuilder::new(comp_model)
+                        .preamble(&router_instructions)
+                        //.dynamic_context(rag_docs_length, vector_store.index(embedding_model))
+                        .temperature(temperature)
+                        .additional_params(additional)
+                        .build();
 
-            let response = agent.prompt(user_input).await.expect("Failed to prompt server");
+                    let response = agent.prompt(user_input).await.expect("Failed to prompt server");
 
-            //println!("Ollama_groups: {}", response);
-            let result = response.replace("json", "").replace("```", "");
-            //println!("result_groups:{}", result);
-            let json_value: Value = serde_json::from_str(&result).expect("REASON");
-            println!("json_value:{}", json_value);
-            let final_llm_json;
-            match llm_backend_type {
-                llm_backend::Ollama() => {
-                    let json_value2: Value = serde_json::from_str(&json_value["content"].to_string()).expect("REASON2");
-                    //println!("json_;value2:{:?}", json_value2);
-                    let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON3");
-                    final_llm_json = json_value3.to_string();
+                    //println!("Ollama_groups: {}", response);
+                    let result = response.replace("json", "").replace("```", "");
+                    //println!("result_groups:{}", result);
+                    let json_value: Value = serde_json::from_str(&result).expect("REASON");
+                    println!("json_value:{}", json_value);
+                    let final_llm_json;
+                    match llm_backend_type {
+                        llm_backend::Ollama() => {
+                            let json_value2: Value =
+                                serde_json::from_str(&json_value["content"].to_string()).expect("REASON2");
+                            //println!("json_;value2:{:?}", json_value2);
+                            let json_value3: Value =
+                                serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON3");
+                            final_llm_json = json_value3.to_string();
+                        }
+                        llm_backend::Sj() => {
+                            let json_value2: Value =
+                                serde_json::from_str(&json_value[0]["generated_text"].to_string()).expect("REASON2");
+                            //println!("json_value2:{}", json_value2.as_str().unwrap());
+                            let json_value3: Value =
+                                serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON2");
+                            //println!("Classification result:{}", json_value3);
+                            final_llm_json = json_value3.to_string();
+                        }
+                    }
+                    validate_DE_groups(final_llm_json.clone(), db_vec, testing)
                 }
-                llm_backend::Sj() => {
-                    let json_value2: Value =
-                        serde_json::from_str(&json_value[0]["generated_text"].to_string()).expect("REASON2");
-                    //println!("json_value2:{}", json_value2.as_str().unwrap());
-                    let json_value3: Value = serde_json::from_str(&json_value2.as_str().unwrap()).expect("REASON2");
-                    //println!("Classification result:{}", json_value3);
-                    final_llm_json = json_value3.to_string();
+                None => {
+                    panic!("DE chart train and test data is not defined in dataset JSON file")
                 }
             }
-
-            validate_DE_groups(final_llm_json.clone(), db_vec, ai_json, testing)
         }
-        None => {
-            panic!("DE chart train and test data is not defined in dataset JSON file")
+        false => {
+            let final_exp;
+            let message = "Differential gene expression not supported for this dataset";
+            if testing == true {
+                let mut new_json: Value = serde_json::from_str(&"{\"action\":\"DE\"}").expect("Not a valid JSON");
+                if let Some(obj) = new_json.as_object_mut() {
+                    obj.insert(String::from("group1"), serde_json::json!([]));
+                    obj.insert(String::from("group2"), serde_json::json!([]));
+                    obj.insert(String::from("message"), serde_json::json!(message));
+                }
+                final_exp = serde_json::to_string(&new_json).unwrap();
+            } else {
+                let mut err_json: Value = serde_json::from_str(&"{\"type\":\"html\"}").expect("Not a valid JSON");
+                if let Some(obj) = err_json.as_object_mut() {
+                    obj.insert(String::from("html"), serde_json::json!(message));
+                };
+                final_exp = serde_json::to_string(&err_json).unwrap();
+            }
+            final_exp
         }
     }
 }
 
-fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJsonFormat, testing: bool) -> String {
+fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, testing: bool) -> String {
     let json_value: DEOutput =
 	serde_json::from_str(&raw_llm_json).expect("Did not get a valid JSON of type {group1: group1, group2: group2, message: message, filter:[{term: term1, value: value1}]} from the LLM");
     let mut message: String = String::from("");
@@ -650,70 +676,56 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
     let final_exp;
     if testing == true {
         let mut new_json: Value; // New JSON value that will contain items of the final validated JSON
-        let err_json: Value; // Error JSON containing the error message (if present)
         if json_value.action != String::from("DE") {
             message = message + &"Did not return a DE action";
             new_json = serde_json::json!(null);
         } else {
             new_json = serde_json::from_str(&"{\"action\":\"DE\"}").expect("Not a valid JSON");
         }
-        match ai_json.hasDE {
-            true => {
-                let mut group1_verified: Option<Vec<FilterTerm>> = None;
-                let (group1_filter_terms, filter_message_group1) =
-                    validate_filter(&json_value.group1, &message, &db_vec);
-                if filter_message_group1.len() > 0 {
-                    message = message + &filter_message_group1;
-                } else {
-                    group1_verified = Some(group1_filter_terms);
-                }
-
-                let mut group2_verified: Option<Vec<FilterTerm>> = None;
-                let (group2_filter_terms, filter_message_group2) =
-                    validate_filter(&json_value.group2, &message, &db_vec);
-                if filter_message_group2.len() > 0 {
-                    message = message + &filter_message_group2;
-                } else {
-                    group2_verified = Some(group2_filter_terms);
-                }
-
-                if group1_verified.is_some() && group2_verified.is_some() {
-                    if let Some(obj) = new_json.as_object_mut() {
-                        obj.insert(String::from("group1"), serde_json::json!(group1_verified));
-                        obj.insert(String::from("group2"), serde_json::json!(group2_verified));
-                    }
-                } else if group1_verified.is_some() && group2_verified.is_none() {
-                    message = message + &"Group2 not verified";
-                    if let Some(obj) = new_json.as_object_mut() {
-                        obj.insert(String::from("message"), serde_json::json!(message));
-                    }
-                } else if group1_verified.is_none() && group2_verified.is_some() {
-                    message = message + &"Group1 not verified";
-                    if let Some(obj) = new_json.as_object_mut() {
-                        obj.insert(String::from("message"), serde_json::json!(message));
-                    }
-                } else if group1_verified.is_none() && group2_verified.is_none() {
-                    message = message + &"Group1 and Group 2 not verified";
-                    if let Some(obj) = new_json.as_object_mut() {
-                        obj.insert(String::from("message"), serde_json::json!(message));
-                    }
-                }
-            }
-            false => {
-                let missing_DE_data: &str = "Differential gene expression not supported for this dataset";
-                if message.to_lowercase().contains(&missing_DE_data.to_lowercase()) { // Check if the LLM has already added the message, if not then add it
-                } else {
-                    message = message + missing_DE_data;
-                }
-            }
-        }
-        if message.len() > 0 {
-            err_json =
-                serde_json::from_str(&("{\"message\":\"".to_string() + &message + "\"}")).expect("Not a valid JSON");
-            final_exp = serde_json::to_string(&err_json).unwrap();
+        let mut group1_verified: Option<Vec<FilterTerm>> = None;
+        let (group1_filter_terms, filter_message_group1) = validate_filter(&json_value.group1, &message, &db_vec);
+        if filter_message_group1.len() > 0 {
+            message = message + &filter_message_group1;
         } else {
-            final_exp = serde_json::to_string(&new_json).unwrap();
+            group1_verified = Some(group1_filter_terms);
         }
+
+        let mut group2_verified: Option<Vec<FilterTerm>> = None;
+        let (group2_filter_terms, filter_message_group2) = validate_filter(&json_value.group2, &message, &db_vec);
+        if filter_message_group2.len() > 0 {
+            message = message + &filter_message_group2;
+        } else {
+            group2_verified = Some(group2_filter_terms);
+        }
+
+        if group1_verified.is_some() && group2_verified.is_some() {
+            if let Some(obj) = new_json.as_object_mut() {
+                obj.insert(String::from("group1"), serde_json::json!(group1_verified));
+                obj.insert(String::from("group2"), serde_json::json!(group2_verified));
+            }
+        } else if group1_verified.is_some() && group2_verified.is_none() {
+            message = message + &"Group2 not verified";
+            if let Some(obj) = new_json.as_object_mut() {
+                obj.insert(String::from("message"), serde_json::json!(message));
+            }
+        } else if group1_verified.is_none() && group2_verified.is_some() {
+            message = message + &"Group1 not verified";
+            if let Some(obj) = new_json.as_object_mut() {
+                obj.insert(String::from("message"), serde_json::json!(message));
+            }
+        } else if group1_verified.is_none() && group2_verified.is_none() {
+            message = message + &"Group1 and Group 2 not verified";
+            if let Some(obj) = new_json.as_object_mut() {
+                obj.insert(String::from("message"), serde_json::json!(message));
+            }
+        }
+
+        if message.len() > 0 {
+            if let Some(obj) = new_json.as_object_mut() {
+                obj.insert(String::from("message"), serde_json::json!(message));
+            }
+        }
+        final_exp = serde_json::to_string(&new_json).unwrap();
     } else {
         let mut pp_json: Value; // New JSON value that will contain items of the final validated JSON
         let mut err_json: Value; // Error JSON containing the error message (if present)
@@ -728,58 +740,46 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, ai_json: &AiJso
         } else {
             pp_json = serde_json::from_str(&"{\"chartType\":\"differentialAnalysis\"}").expect("Not a valid JSON");
         }
-        match ai_json.hasDE {
-            true => {
-                let mut group1_verified: Option<Vec<FilterTerm>> = None;
-                let (group1_filter_terms, filter_message_group1) =
-                    validate_filter(&json_value.group1, &message, &db_vec);
-                if filter_message_group1.len() > 0 {
-                    message = message + &filter_message_group1;
-                } else {
-                    group1_verified = Some(group1_filter_terms);
-                }
 
-                let mut group2_verified: Option<Vec<FilterTerm>> = None;
-                let (group2_filter_terms, filter_message_group2) =
-                    validate_filter(&json_value.group2, &message, &db_vec);
-                if filter_message_group2.len() > 0 {
-                    message = message + &filter_message_group2;
-                } else {
-                    group2_verified = Some(group2_filter_terms);
-                }
+        let mut group1_verified: Option<Vec<FilterTerm>> = None;
+        let (group1_filter_terms, filter_message_group1) = validate_filter(&json_value.group1, &message, &db_vec);
+        if filter_message_group1.len() > 0 {
+            message = message + &filter_message_group1;
+        } else {
+            group1_verified = Some(group1_filter_terms);
+        }
 
-                if group1_verified.is_some() && group2_verified.is_some() {
-                    if let Some(obj) = pp_json.as_object_mut() {
-                        let (group1_verified_string, group1_filter_hits) =
-                            generate_filter_term_for_PP(group1_verified.unwrap());
-                        if group1_filter_hits > 0 {
-                            obj.insert(String::from("group1"), serde_json::json!(group1_verified_string));
-                        } else {
-                            message = message + "group1 array filter terms is empty";
-                        }
-                        let (group2_verified_string, group2_filter_hits) =
-                            generate_filter_term_for_PP(group2_verified.unwrap());
-                        if group2_filter_hits > 0 {
-                            obj.insert(String::from("group2"), serde_json::json!(group2_verified_string));
-                        } else {
-                            message = message + "group2 array filter terms is empty";
-                        }
-                    }
-                } else if group1_verified.is_some() && group2_verified.is_none() {
-                    message = message + &"Group2 not verified";
-                } else if group1_verified.is_none() && group2_verified.is_some() {
-                    message = message + &"Group1 not verified";
-                } else if group1_verified.is_none() && group2_verified.is_none() {
-                    message = message + &"Group1 and Group 2 not verified";
+        let mut group2_verified: Option<Vec<FilterTerm>> = None;
+        let (group2_filter_terms, filter_message_group2) = validate_filter(&json_value.group2, &message, &db_vec);
+        if filter_message_group2.len() > 0 {
+            message = message + &filter_message_group2;
+        } else {
+            group2_verified = Some(group2_filter_terms);
+        }
+
+        if group1_verified.is_some() && group2_verified.is_some() {
+            if let Some(obj) = pp_json.as_object_mut() {
+                let (group1_verified_string, group1_filter_hits) =
+                    generate_filter_term_for_PP(group1_verified.unwrap());
+                if group1_filter_hits > 0 {
+                    obj.insert(String::from("group1"), serde_json::json!(group1_verified_string));
+                } else {
+                    message = message + "group1 array filter terms is empty";
+                }
+                let (group2_verified_string, group2_filter_hits) =
+                    generate_filter_term_for_PP(group2_verified.unwrap());
+                if group2_filter_hits > 0 {
+                    obj.insert(String::from("group2"), serde_json::json!(group2_verified_string));
+                } else {
+                    message = message + "group2 array filter terms is empty";
                 }
             }
-            false => {
-                let missing_DE_data: &str = "Differential gene expression not supported for this dataset";
-                if message.to_lowercase().contains(&missing_DE_data.to_lowercase()) { // Check if the LLM has already added the message, if not then add it
-                } else {
-                    message = message + missing_DE_data;
-                }
-            }
+        } else if group1_verified.is_some() && group2_verified.is_none() {
+            message = message + &"Group2 not verified";
+        } else if group1_verified.is_none() && group2_verified.is_some() {
+            message = message + &"Group1 not verified";
+        } else if group1_verified.is_none() && group2_verified.is_none() {
+            message = message + &"Group1 and Group 2 not verified";
         }
         if message.len() > 0 {
             err_json = serde_json::from_str(&"{\"type\":\"html\"}").expect("Not a valid JSON");
