@@ -57,6 +57,8 @@ export type FormattedPlotEntry = BoxPlotEntry & {
 		 * instead of using the rather large default */
 		radius?: number
 	}
+	/** If present, value of the divideBy term */
+	chartId: string
 	/** offset for the label div */
 	x: number
 	/** incrementing, descending offset for each new plot  */
