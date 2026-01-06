@@ -1,12 +1,11 @@
 import { table2col, addGeneSearchbox, make_one_checkbox, Menu } from '#dom'
 import { dtsnvindel, dtcnv } from '#shared/common.js'
-import { SearchHandler as geneSearch } from '../termdb/handlers/geneVariant.ts'
 import { select } from 'd3-selection'
 import { launchPlot } from './summarizeMutationDiagnosis'
 import { fillTermWrapper, get$id } from '#termsetting'
 
 /*
-same design as summarizeMutationDiagnosis.ts
+similar design as summarizeCnvGeneexp.ts
 */
 
 const tip = new Menu({ padding: '0px' })
@@ -14,19 +13,19 @@ const tip = new Menu({ padding: '0px' })
 export async function makeChartBtnMenu(holder, chartsInstance) {
 	//////////////////// modifiable variables ////////////////////
 
-	let mutTw, // stores geneexp tw. overwritten by gene search
+	let mutTw, // stores mutation tw. overwritten by gene search
 		cnvTw, // stores cnv tw
 		/* important flag, true/false is set by toggling checkbox
 		- true
-			cnvTw uses same gene as expTw
-			no submit btn needed. on exp gene search will create plot
+			cnvTw uses same gene as mutTw
+			no submit btn needed. on mutation gene search will create plot
 		- false
-			show geneVariant search box
+			show both mutation gene search and cnv gene search
 			show submit btn. btn only enabled when both exp and cnv tws are set
 		*/
 		cnvGeneSameAsMut = true,
-		geneSearchPrompt, // <div> under exp gene search to show prompt
-		cnvTableRow // <tr> of cnv selector. hidden when cnvGeneSameAsExp is true
+		mutSearchPrompt, // <div> under mutation gene search to show prompt
+		cnvTableRow // <tr> of cnv selector. hidden when cnvGeneSameAsMut is true
 
 	////////////////////        make ui        ////////////////////
 
@@ -46,20 +45,20 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 		cellPadding: '10px'
 	})
 
+	// mutation variable
 	{
 		const [td1, td2] = table.addRow()
-		td1.text('Search Gene')
+		td1.text('Search Gene for Mutation')
 		const searchDiv = td2.append('div') // must create both before calling add box
-		geneSearchPrompt = td2.append('div').style('font-size', '.7em')
+		mutSearchPrompt = td2.append('div').style('font-size', '.7em')
 		const result = addGeneSearchbox({
 			row: searchDiv,
 			tip,
 			searchOnly: 'gene',
 			genome: chartsInstance.app.opts.genome!,
 			callback: async () => {
-				geneSearchPrompt.text('LOADING ...')
+				mutSearchPrompt.text('LOADING ...')
 				try {
-					//expTw = { term: { gene: result.geneSymbol, type: 'geneExpression' }, q: {} }
 					const name = result.geneSymbol
 					mutTw = {
 						term: {
@@ -83,39 +82,66 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 					const i = mutTw.term.groupsetting.lst.findIndex(groupset => groupset.dt == dtsnvindel)
 					if (i == -1) throw 'dtsnvindel not found in groupsets'
 					mutTw.q.predefined_groupset_idx = i
-					// update $id after setting q.predefined_groupset_idx (to distinguish from cnvTw)
+					// update $id after setting predefined_groupset_idx (to distinguish from cnvTw)
 					mutTw.$id = await get$id(chartsInstance.app.vocabApi.getTwMinCopy(mutTw))
 
 					await updateUi()
 					if (cnvGeneSameAsMut) launch()
-					geneSearchPrompt.text('')
+					mutSearchPrompt.text('')
 				} catch (e: any) {
-					geneSearchPrompt.text('Error: ' + (e.message || e))
+					mutSearchPrompt.text('Error: ' + (e.message || e))
+					if (e.stack) console.log(e.stack)
 				}
 			}
 		})
 	}
 
+	// cnv variable
 	{
 		const [td1, td2] = table.addRow()
 		cnvTableRow = select(td1.node().parentNode)
-		td1.text('Search Gene/Region For CNV')
-		const searchDiv = td2.append('div'),
-			waitDiv = td2.append('div').style('font-size', '.7em')
-		const geneSearchInst = new geneSearch() // FIXME allow searching chr17:7666658-7688275
-		// TODO set focusOff on it so focus is auto set on exp gene search
-		geneSearchInst.init({
-			holder: searchDiv,
-			genomeObj: chartsInstance.app.opts.genome!,
-			app: chartsInstance.app, // required to supply "opts.app.vocabApi" for the search ui
-			//dt: dtcnv,
-			callback: async tw => {
+		td1.text('Search Gene for CNV')
+		const searchDiv = td2.append('div') // must create both before calling add box
+		const cnvSearchPrompt = td2.append('div').style('font-size', '.7em')
+		const result = addGeneSearchbox({
+			row: searchDiv,
+			tip,
+			searchOnly: 'gene',
+			genome: chartsInstance.app.opts.genome!,
+			callback: async () => {
+				cnvSearchPrompt.text('LOADING ...')
 				try {
-					await fillTermWrapper(tw, chartsInstance.app.vocabApi)
-					cnvTw = tw
+					const name = result.geneSymbol
+					cnvTw = {
+						term: {
+							id: name,
+							name,
+							genes: [
+								{
+									kind: 'gene',
+									id: name,
+									gene: name,
+									name,
+									type: 'geneVariant'
+								}
+							],
+							type: 'geneVariant'
+						},
+						q: { type: 'predefined-groupset' }
+					}
+					await fillTermWrapper(cnvTw, chartsInstance.app.vocabApi)
+					// get index of groupset corresponding to dtcnv
+					const i = cnvTw.term.groupsetting.lst.findIndex(groupset => groupset.dt == dtcnv)
+					if (i == -1) throw 'dtcnv not found in groupsets'
+					cnvTw.q.predefined_groupset_idx = i
+					// update $id after setting predefined_groupset_idx (to distinguish from mutTw)
+					cnvTw.$id = await get$id(chartsInstance.app.vocabApi.getTwMinCopy(cnvTw))
+
 					await updateUi()
+					cnvSearchPrompt.text('')
 				} catch (e: any) {
-					waitDiv.text('Error: ' + (e.message || e))
+					cnvSearchPrompt.text('Error: ' + (e.message || e))
+					if (e.stack) console.log(e.stack)
 				}
 			}
 		})
@@ -143,7 +169,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			}
 		}
 		cnvTableRow.style('display', cnvGeneSameAsMut ? 'none' : '')
-		geneSearchPrompt.text(cnvGeneSameAsMut ? 'Hit ENTER to launch plot.' : '')
+		mutSearchPrompt.text(cnvGeneSameAsMut ? 'Hit ENTER to launch plot.' : '')
 		submitBtn.style('display', cnvGeneSameAsMut ? 'none' : '').property('disabled', !mutTw || !cnvTw)
 	}
 
