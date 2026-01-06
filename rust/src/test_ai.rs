@@ -5,7 +5,7 @@ fn main() {}
 
 #[cfg(test)]
 mod tests {
-    use crate::aichatbot::{AiJsonFormat, AnswerFormat, SummaryType, llm_backend, run_pipeline};
+    use crate::aichatbot::{AiJsonFormat, AnswerFormat, DEOutput, SummaryType, llm_backend, run_pipeline};
     use serde_json;
     use std::fs::{self};
     use std::path::Path;
@@ -59,7 +59,6 @@ mod tests {
                         println!("Testing dataset:{}", dataset.name);
                         let ai_json_file_path = String::from("../../") + ai_json_file;
                         let ai_json_file = Path::new(&ai_json_file_path);
-
                         // Read the file
                         let ai_data = fs::read_to_string(ai_json_file).unwrap();
                         // Parse the JSON data
@@ -116,6 +115,38 @@ mod tests {
                                             }
                                             AnswerFormat::DE_type(_) => {
                                                 panic!("DE type not valid for summary")
+                                            }
+                                        }
+                                    }
+                                } else if chart.r#type == "DE" {
+                                    for ques_ans in chart.TestData {
+                                        let user_input = ques_ans.question;
+                                        let llm_output = run_pipeline(
+                                            &user_input,
+                                            comp_model.clone(),
+                                            embedding_model.clone(),
+                                            llm_backend_type.clone(),
+                                            temperature,
+                                            max_new_tokens,
+                                            top_p,
+                                            &dataset_db,
+                                            &genedb,
+                                            &ai_json,
+                                            &airoute,
+                                            testing,
+                                        )
+                                        .await;
+                                        let llm_json_value: DEOutput = serde_json::from_str(&llm_output.unwrap()).expect("Did not get a valid JSON of type {action: DE, group1: FilterTerm, Group2: FilterTerm from the LLM");
+                                        match ques_ans.answer {
+                                            AnswerFormat::summary_type(_) => {
+                                                panic!("Summary type not valid for DE");
+                                            }
+                                            AnswerFormat::DE_type(de) => {
+                                                //println!("expected answer:{:?}", &sum);
+                                                assert_eq!(
+                                                    llm_json_value.sort_DEoutput_struct(),
+                                                    de.sort_DEoutput_struct()
+                                                );
                                             }
                                         }
                                     }
@@ -179,6 +210,38 @@ mod tests {
                                             }
                                         } else {
                                             panic!("The user input is empty");
+                                        }
+                                    }
+                                } else if chart.r#type == "DE" {
+                                    for ques_ans in chart.TestData {
+                                        let user_input = ques_ans.question;
+                                        let llm_output = run_pipeline(
+                                            &user_input,
+                                            comp_model.clone(),
+                                            embedding_model.clone(),
+                                            llm_backend_type.clone(),
+                                            temperature,
+                                            max_new_tokens,
+                                            top_p,
+                                            &dataset_db,
+                                            &genedb,
+                                            &ai_json,
+                                            &airoute,
+                                            testing,
+                                        )
+                                        .await;
+                                        let llm_json_value: DEOutput = serde_json::from_str(&llm_output.unwrap()).expect("Did not get a valid JSON of type {action: DE, group1: FilterTerm, Group2: FilterTerm from the LLM");
+                                        match ques_ans.answer {
+                                            AnswerFormat::summary_type(_) => {
+                                                panic!("Summary type not valid for DE");
+                                            }
+                                            AnswerFormat::DE_type(de) => {
+                                                //println!("expected answer:{:?}", &sum);
+                                                assert_eq!(
+                                                    llm_json_value.sort_DEoutput_struct(),
+                                                    de.sort_DEoutput_struct()
+                                                );
+                                            }
                                         }
                                     }
                                 }

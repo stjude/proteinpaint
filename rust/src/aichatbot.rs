@@ -503,6 +503,16 @@ pub struct DEOutput {
     message: Option<String>,
 }
 
+impl DEOutput {
+    #[allow(dead_code)]
+    pub fn sort_DEoutput_struct(mut self) -> DEOutput {
+        // This function is necessary for testing (test_ai.rs) to see if two variables of type "SummaryType" are equal or not. Without this a vector of two Summarytype holding the same values but in different order will be classified separately.
+        self.group1.sort();
+        self.group2.sort();
+        self.clone()
+    }
+}
+
 #[allow(dead_code)]
 #[allow(non_snake_case)]
 pub async fn extract_DE_search_terms_from_query(
@@ -584,7 +594,7 @@ pub async fn extract_DE_search_terms_from_query(
                     //let mut vector_store = InMemoryVectorStore::<String>::default();
                     //InMemoryVectorStore::add_documents(&mut vector_store, embeddings);
 
-                    println!("rag_docs:{:?}", rag_docs);
+                    //println!("rag_docs:{:?}", rag_docs);
 
                     // Create RAG agent
                     let router_instructions = String::from(
