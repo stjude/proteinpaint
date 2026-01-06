@@ -98,52 +98,44 @@ fn calculate_dynamic_y_cap(
     hard_cap: f64,
     bin_size: f64,
 ) -> f64 {
-    // const BIN_SIZE: f64 = 10.0;
+    let num_bins = ((hard_cap - default_cap) / bin_size) as usize;
+    let mut histogram = vec![0usize; num_bins];
+    let mut max_y = f64::NEG_INFINITY;
+    let mut points_above_default = 0usize;
 
-    let max_y = ys
-        .iter()
-        .copied()
-        .filter(|y| !y.is_nan())
-        .fold(f64::NEG_INFINITY, f64::max);
-
-    // eprint!!("Max y-value before capping: {:.2}\n", max_y);
+    // Single pass: find max and build histogram simultaneously
+    for &y in ys {
+        if y > max_y {
+            max_y = y;
+        }
+        if y > default_cap {
+            points_above_default += 1;
+            let bin_idx = if y >= hard_cap {
+                num_bins - 1
+            } else {
+                ((y - default_cap) / bin_size) as usize
+            };
+            histogram[bin_idx] += 1;
+        }
+    }
 
     // Case 1: No points exceed default cap - use actual max
     if max_y <= default_cap {
         return max_y;
     }
 
-    // Cases 2 & 3: Build histogram and find appropriate cap
-    let num_bins = ((hard_cap - default_cap) / bin_size) as usize;
-    let mut histogram = vec![0usize; num_bins];
+    // Walk up from default_cap to hard_cap, using pre-computed total
+    let mut points_above = points_above_default;
 
-    // Build histogram in one pass
-    for &y in ys {
-        if y > default_cap {
-            let bin_idx = if y > hard_cap {
-                num_bins - 1
-            } else {
-                (((y - default_cap) / bin_size) as usize).min(num_bins - 1)
-            };
-            histogram[bin_idx] += 1;
-        }
-    }
-
-    // Walk up from default_cap, accumulating points above each potential cap
-    let mut points_above = histogram.iter().sum::<usize>(); // Total points above default_cap
-
-    for i in 0..num_bins {
-        // At this point, points_above = number of points above the upper edge of bin i
+    // Loop through histogram bins (from lowest to highest). Typically very few bins (e.g. 10-20)
+    for (i, &count) in histogram.iter().enumerate() {
         if points_above <= max_capped_points {
-            // This cap works! Return upper edge of bin i
             let cap = default_cap + ((i + 1) as f64) * bin_size;
             return cap.min(hard_cap).min(max_y);
         }
-        // Move to next bin - remove points in current bin from count
-        points_above -= histogram[i];
+        points_above -= count;
     }
 
-    // All points fit within threshold - use default cap
     default_cap
 }
 
@@ -398,7 +390,6 @@ fn plot_grin2_manhattan(
     let max_capped_points = max_capped_points as usize;
 
     let y_cap = calculate_dynamic_y_cap(&ys, default_cap, max_capped_points, hard_cap, bin_size);
-    // eprint!("Determined y-cap at {:.2}\n", y_cap);
 
     // Jitter range: capped points will spread over this range below the cap line
     let jitter_range = (y_cap * 0.1).max(2.0); // 10% of cap or at least 2 units
