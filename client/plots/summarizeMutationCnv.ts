@@ -59,32 +59,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			callback: async () => {
 				mutSearchPrompt.text('LOADING ...')
 				try {
-					const name = result.geneSymbol
-					mutTw = {
-						term: {
-							id: name,
-							name,
-							genes: [
-								{
-									kind: 'gene',
-									id: name,
-									gene: name,
-									name,
-									type: 'geneVariant'
-								}
-							],
-							type: 'geneVariant'
-						},
-						q: { type: 'predefined-groupset' }
-					}
-					await fillTermWrapper(mutTw, chartsInstance.app.vocabApi)
-					// get index of groupset corresponding to dtsnvindel
-					const i = mutTw.term.groupsetting.lst.findIndex(groupset => groupset.dt == dtsnvindel)
-					if (i == -1) throw 'dtsnvindel not found in groupsets'
-					mutTw.q.predefined_groupset_idx = i
-					// update $id after setting predefined_groupset_idx (to distinguish from cnvTw)
-					mutTw.$id = await get$id(chartsInstance.app.vocabApi.getTwMinCopy(mutTw))
-
+					mutTw = await fillGeneTw(result.geneSymbol, dtsnvindel)
 					await updateUi()
 					if (cnvGeneSameAsMut) launch()
 					mutSearchPrompt.text('')
@@ -111,32 +86,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			callback: async () => {
 				cnvSearchPrompt.text('LOADING ...')
 				try {
-					const name = result.geneSymbol
-					cnvTw = {
-						term: {
-							id: name,
-							name,
-							genes: [
-								{
-									kind: 'gene',
-									id: name,
-									gene: name,
-									name,
-									type: 'geneVariant'
-								}
-							],
-							type: 'geneVariant'
-						},
-						q: { type: 'predefined-groupset' }
-					}
-					await fillTermWrapper(cnvTw, chartsInstance.app.vocabApi)
-					// get index of groupset corresponding to dtcnv
-					const i = cnvTw.term.groupsetting.lst.findIndex(groupset => groupset.dt == dtcnv)
-					if (i == -1) throw 'dtcnv not found in groupsets'
-					cnvTw.q.predefined_groupset_idx = i
-					// update $id after setting predefined_groupset_idx (to distinguish from mutTw)
-					cnvTw.$id = await get$id(chartsInstance.app.vocabApi.getTwMinCopy(cnvTw))
-
+					cnvTw = await fillGeneTw(result.geneSymbol, dtcnv)
 					await updateUi()
 					cnvSearchPrompt.text('')
 				} catch (e: any) {
@@ -174,6 +124,35 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 	}
 
 	updateUi()
+
+	async function fillGeneTw(geneSymbol, dt) {
+		const name = geneSymbol
+		const tw: any = {
+			term: {
+				id: name,
+				name,
+				genes: [
+					{
+						kind: 'gene',
+						id: name,
+						gene: name,
+						name,
+						type: 'geneVariant'
+					}
+				],
+				type: 'geneVariant'
+			},
+			q: { type: 'predefined-groupset' }
+		}
+		await fillTermWrapper(tw, chartsInstance.app.vocabApi)
+		// get index of groupset corresponding to dt
+		const i = tw.term.groupsetting.lst.findIndex(groupset => groupset.dt == dt)
+		if (i == -1) throw 'dt not found in groupsets'
+		tw.q.predefined_groupset_idx = i
+		// update $id after setting predefined_groupset_idx (to distinguish from other gene tw)
+		tw.$id = await get$id(chartsInstance.app.vocabApi.getTwMinCopy(tw))
+		return tw
+	}
 
 	function launch() {
 		if (!mutTw || !cnvTw) throw 'either tw is missing'
