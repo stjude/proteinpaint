@@ -148,6 +148,8 @@ class WSIViewer extends PlotBase implements RxComponent {
 				numTotalFiles
 			)
 
+			// TODO extract state from MapRenderer
+
 			this.map = new MapRenderer(
 				activeLayerData,
 				this.wsiViewerInteractions.viewerClickListener,
