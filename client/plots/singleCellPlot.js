@@ -627,7 +627,8 @@ class singleCellPlot {
 									sID: this.state.config.sample,
 									eID: this.state.config.experimentID
 								}
-							}
+							},
+							q: { mode: 'continuous' }
 						},
 						term2: {
 							$id: await digestMessage(`${colorBy}-${this.state.config.sample}-${this.state.config.experimentID}`),
