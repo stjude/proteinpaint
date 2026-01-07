@@ -122,7 +122,6 @@ function init({ genomes }) {
 						mayLog(line)
 					}
 				}
-				mayLog('ai_output_json.plot.group1:', ai_output_json.plot.group1)
 				const f1 = simpleFilter2ppFilter(ai_output_json.plot.group1, ds)
 				const f2 = simpleFilter2ppFilter(ai_output_json.plot.group2, ds)
 				const samples1 = await get_samples({ filter: f1 }, ds, true) // true is to by pass permission check
@@ -135,7 +134,7 @@ function init({ genomes }) {
 					sampleId: item.id,
 					sample: item.name
 				}))
-				console.log('samples1lst:', samples1lst)
+
 				//console.log('samples2:', samples2)
 				const groups = [
 					{
@@ -172,14 +171,21 @@ function init({ genomes }) {
 						}
 					}
 				}
+				ai_output_json.plot.state = {
+					customTerms: [
+						{
+							name: 'group1 vs group2',
+							tw: tw
+						}
+					],
+					groups: groups
+				}
 				ai_output_json.plot.childType = 'volcano'
 				ai_output_json.plot.termType = 'geneExpression'
 				ai_output_json.plot.tw = tw
 				ai_output_json.plot.samplelst = { groups }
 				delete ai_output_json.plot.group1
 				delete ai_output_json.plot.group2
-
-				//ai_output_json = { type: 'html', html: 'DE agent not implemented yet' }
 			} else {
 				// Will define all other agents later as desired
 				ai_output_json = { type: 'html', html: 'Unknown classification value' }
