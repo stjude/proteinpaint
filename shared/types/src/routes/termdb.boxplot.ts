@@ -31,7 +31,11 @@ export type BoxPlotResponse = {
 	absMin?: number
 	/** Absolute max value for all plots */
 	absMax?: number
-	/** Charts data */
+	/** Bins for overlay and/or divide terms */
+	bins?: {
+		[index: string]: any
+	}
+	/** Charts data. chartId corresponds the divide by term value*/
 	charts: {
 		[chartId: string]: BoxPlotChartEntry
 	}
