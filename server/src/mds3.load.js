@@ -30,6 +30,9 @@ method good for somatic variants, in skewer and gp queries:
 .genecnvNosample[]
  */
 
+// max length of result.skewer[] array to return to client. this covers both snvindel & svfusion. user sees an alert when exceeded
+const skewerLstMaxSize = 2000
+
 export function mds3_request_closure(genomes) {
 	return async (req, res) => {
 		try {
@@ -299,7 +302,6 @@ export async function load_driver(q, ds) {
 			result.skewer = [] // for skewer track
 
 			if (ds.queries.snvindel && !q.hardcodeCnvOnly) {
-				// !!
 				// the query will resolve to list of mutations, to be flattened and pushed to .skewer[]
 				const mlst = await query_snvindel(q, ds)
 				/* mlst=[], each element:
@@ -309,23 +311,10 @@ export async function load_driver(q, ds) {
 					samples:[ {sample_id}, ... ]
 				}
 				*/
-
-				if (mlst.length > 2000) {
-					/********* TEMP FIX
-					later:
-					const data=byisoform.get()
-					if(data.alert) result.variantAlerts.push(data.alert)
-					result.skewer.push(...data.mlst)
-					*/
-					result.variantAlerts.push(`Too many mutations (${mlst.length}). Only subset is shown.`)
-					for (let i = 0; i < 2000; i++) result.skewer.push(mlst[i])
-				} else {
-					result.skewer.push(...mlst)
-				}
+				result.skewer.push(...mlst)
 			}
 
 			if (ds.queries.svfusion && !q.hardcodeCnvOnly) {
-				// todo
 				const d = await query_svfusion(q, ds)
 				if (d) result.skewer.push(...d)
 			}
@@ -440,8 +429,11 @@ function filter_data(q, result) {
 			// filter by other variant attributes
 
 			newskewer.push(m)
+			if (newskewer.length >= skewerLstMaxSize) {
+				result.variantAlerts.push(`Too many mutations (${result.skewer.length}). Only subset is shown.`)
+				break
+			}
 		}
-
 		result.skewer = newskewer
 	}
 
