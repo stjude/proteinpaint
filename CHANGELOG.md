@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - (placeholder to force a new minor version and reserve 2.170.* for GDC release)
 
+Fixes:
+- GDC lollipop now displays ssm=2000 for TTN rather than 1999; the limit is applied to both ssm & sv
+
 
 ## 2.170.0
 
