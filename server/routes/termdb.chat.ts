@@ -127,28 +127,59 @@ function init({ genomes }) {
 				const f2 = simpleFilter2ppFilter(ai_output_json.plot.group2, ds)
 				const samples1 = await get_samples({ filter: f1 }, ds, true) // true is to by pass permission check
 				const samples2 = await get_samples({ filter: f2 }, ds, true) // true is to by pass permission check
-				console.log('samples1:', samples1)
-				console.log('samples2:', samples2)
-				//const groups = [
-				//	{
-				//		name: 'group1', // Hardcoding name of group here for now
-				//		values: samples1
-				//	},
-				//	{
-				//		name: 'group2', // Hardcoding name of group here for now
-				//		values: samples2
-				//	}
-				//]
-				//const customterms = [
-				//	{
-				//		name: 'group1 vs group2' // Hardcoding name of custom term here for now
-				//	}
-				//]
+				const samples1lst = samples1.map(item => ({
+					sampleId: item.id,
+					sample: item.name
+				}))
+				const samples2lst = samples2.map(item => ({
+					sampleId: item.id,
+					sample: item.name
+				}))
+				console.log('samples1lst:', samples1lst)
+				//console.log('samples2:', samples2)
+				const groups = [
+					{
+						name: 'group1', // Hardcoding name of group here for now
+						in: true,
+						values: samples1lst
+					},
+					{
+						name: 'group2', // Hardcoding name of group here for now
+						in: true,
+						values: samples2lst
+					}
+				]
+				const tw = {
+					q: {
+						groups
+					},
+					term: {
+						name: 'group1 vs group2', // Hardcoding name of custom term here for now
+						type: 'samplelst',
+						values: {
+							group1: {
+								color: 'purple',
+								key: 'group1',
+								label: 'group1',
+								list: samples1lst
+							},
+							group2: {
+								color: 'blue',
+								key: 'group2',
+								label: 'group2',
+								list: samples2lst
+							}
+						}
+					}
+				}
 				ai_output_json.plot.childType = 'volcano'
 				ai_output_json.plot.termType = 'geneExpression'
-				console.log('DE_json:', ai_output_json)
+				ai_output_json.plot.tw = tw
+				ai_output_json.plot.samplelst = { groups }
+				delete ai_output_json.plot.group1
+				delete ai_output_json.plot.group2
 
-				ai_output_json = { type: 'html', html: 'DE agent not implemented yet' }
+				//ai_output_json = { type: 'html', html: 'DE agent not implemented yet' }
 			} else {
 				// Will define all other agents later as desired
 				ai_output_json = { type: 'html', html: 'Unknown classification value' }
@@ -164,7 +195,7 @@ function init({ genomes }) {
 				}
 			}
 
-			mayLog('ai_output_json:', ai_output_json)
+			//mayLog('ai_output_json:', ai_output_json)
 			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
