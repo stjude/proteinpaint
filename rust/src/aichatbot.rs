@@ -1473,6 +1473,9 @@ fn validate_summary_output(
         sum_iter += 1
     }
 
+    if validated_summary_terms_final.len() == 0 {
+        message += "No valid summary terms found for this query";
+    }
     if let Some(obj) = new_json.as_object_mut() {
         obj.insert(
             String::from("summaryterms"),
