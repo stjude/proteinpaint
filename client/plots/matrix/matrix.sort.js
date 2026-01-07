@@ -48,7 +48,8 @@ export function getSampleSorter(self, settings, rows, opts = {}) {
 			}
 			for (const p of sortPriority) {
 				if (opts.skipSorter?.(p, tw)) continue
-				if (!p.types.includes(tw.term.type)) continue
+				const type = tw.term.type == 'geneVariant' && tw.q.type != 'values' ? 'categorical' : tw.term.type
+				if (!p.types.includes(type)) continue
 				for (const tb of p.tiebreakers) {
 					const sortSamples = Object.assign(structuredClone(tw.sortSamples || {}), tb)
 					const sorter = Object.assign(structuredClone(tw), { sortSamples })
@@ -202,6 +203,14 @@ function getSortSamplesByValues(st, self, rows, s) {
 		values.sort((a, b) => (term.values[a].order < term.values[a].order ? -1 : 1))
 	} else if (t?.ref?.bins) {
 		values.push(...t.ref.bins.map(b => b.name))
+	} else if (t.tw.q?.type == 'predefined-groupset' || t.tw.q?.type == 'custom-groupset') {
+		const groupset =
+			t.tw.q.type == 'predefined-groupset'
+				? t.tw.term.groupsetting.lst[t.tw.q.predefined_groupset_idx]
+				: t.tw.q.customset
+		if (!groupset) throw 'groupset missing'
+		const grpNames = groupset.groups.filter(group => !group.uncomputable).map(group => group.name)
+		values.push(...grpNames)
 	} else {
 		for (const row of rows) {
 			if (!($id in row)) continue
