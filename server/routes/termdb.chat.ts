@@ -122,12 +122,31 @@ function init({ genomes }) {
 						mayLog(line)
 					}
 				}
-
-				const f1 = simpleFilter2ppFilter(ai_output_json.group1, ds)
-				const f2 = simpleFilter2ppFilter(ai_output_json.group2, ds)
+				mayLog('ai_output_json.plot.group1:', ai_output_json.plot.group1)
+				const f1 = simpleFilter2ppFilter(ai_output_json.plot.group1, ds)
+				const f2 = simpleFilter2ppFilter(ai_output_json.plot.group2, ds)
 				const samples1 = await get_samples({ filter: f1 }, ds, true) // true is to by pass permission check
 				const samples2 = await get_samples({ filter: f2 }, ds, true) // true is to by pass permission check
-				console.log('DE_json:', ai_output_json, samples1, samples2)
+				console.log('samples1:', samples1)
+				console.log('samples2:', samples2)
+				//const groups = [
+				//	{
+				//		name: 'group1', // Hardcoding name of group here for now
+				//		values: samples1
+				//	},
+				//	{
+				//		name: 'group2', // Hardcoding name of group here for now
+				//		values: samples2
+				//	}
+				//]
+				//const customterms = [
+				//	{
+				//		name: 'group1 vs group2' // Hardcoding name of custom term here for now
+				//	}
+				//]
+				ai_output_json.plot.childType = 'volcano'
+				ai_output_json.plot.termType = 'geneExpression'
+				console.log('DE_json:', ai_output_json)
 
 				ai_output_json = { type: 'html', html: 'DE agent not implemented yet' }
 			} else {
@@ -145,7 +164,7 @@ function init({ genomes }) {
 				}
 			}
 
-			mayLog('ai_output_json:', ai_output_json.plot.filter.lst)
+			mayLog('ai_output_json:', ai_output_json)
 			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
