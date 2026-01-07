@@ -1,1 +1,2 @@
-
+Fixes:
+- GDC lollipop now displays ssm=2000 for TTN rather than 1999; the limit is applied to both ssm & sv
