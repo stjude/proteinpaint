@@ -122,7 +122,9 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 
 	async init() {
 		this.dom.div.style('display', 'inline-block').style('margin-left', '20px')
-		this.interactions = new BoxPlotInteractions(this.app, this.dom, this.id)
+		this.interactions = new BoxPlotInteractions(this.app, this.dom, this.id, () => {
+			return this.data
+		})
 		await this.setControls()
 	}
 
@@ -138,6 +140,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 		try {
 			const data = await model.getData()
 			config.term.q.descrStats = data.descrStats
+			config.bins = data.bins
 
 			if (data.error) throw new Error(data.error)
 			if (!data.charts || !Object.keys(data.charts).length) {
