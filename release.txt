@@ -1,2 +1,1 @@
-Fixes:
-- restore old singlecell gene exp violin by supplying q.mode=continuous
+
