@@ -8,10 +8,13 @@ export class BoxPlotInteractions {
 	app: MassAppApi
 	dom: BoxPlotDom
 	id: string
-	constructor(app: MassAppApi, dom: BoxPlotDom, id: string) {
+	getResData: () => any
+
+	constructor(app: MassAppApi, dom: BoxPlotDom, id: string, getResData: () => any) {
 		this.app = app
 		this.dom = dom
 		this.id = id
+		this.getResData = getResData
 	}
 
 	help() {
@@ -63,13 +66,21 @@ export class BoxPlotInteractions {
 	}
 
 	/** Option from box plot label to show the samples in a table within the tooltip. */
-	async listSamples(plot: any, domain: [number, number]) {
+	async listSamples(plot: any /*domain: [number, number]*/) {
 		const state = this.app.getState()
 		const plotConfig = this.app.getState().plots.find((p: BoxPlotConfig) => p.id === this.id)
 		const config = structuredClone(plotConfig)
+		config.bins = this.getResData().bins
+		//The continuous term is always used as the tw
+		//Need to update here to match the server req and res
+		const contTerm = config.term.q.mode == 'continuous' ? config.term : config.term2
+		if (config.term != contTerm) {
+			config.term2 = config.term
+			config.term = contTerm
+		}
 		/** Use the domain for the entire chart, not just
 		 * the individual plot's limited range. */
-		const sampleList = new ListSamples(this.app, state.termfilter, config, plot, /*false,*/ domain[0], domain[1])
+		const sampleList = new ListSamples(this.app, state.termfilter, config, plot /*false, domain[0], domain[1]*/)
 		const data = await sampleList.getData()
 		const rows = sampleList.setRows(data)
 		return rows
