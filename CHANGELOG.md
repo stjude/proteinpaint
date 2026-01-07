@@ -9,6 +9,7 @@ Features:
 
 Fixes:
 - GDC lollipop now displays ssm=2000 for TTN rather than 1999; the limit is applied to both ssm & sv
+- restore old singlecell gene exp violin by supplying q.mode=continuous
 
 
 ## 2.170.0
