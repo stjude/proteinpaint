@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- GDC lollipop now displays ssm=2000 for TTN rather than 1999; the limit is applied to both ssm & sv
+
+
 ## 2.170.0
 
 General:
