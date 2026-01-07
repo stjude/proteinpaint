@@ -101,7 +101,6 @@ function init({ genomes }) {
 				for (const line of ai_output_data.split('\n')) {
 					// The reason we are parsing each line from rust is because we want to debug what is causing the wrong output. As the AI pipeline matures, the rust code will be modified to always return a single JSON
 					if (line.startsWith('final_output:') == true) {
-						console.log('summary:', line.replace('final_output:', ''))
 						ai_output_json = JSON.parse(JSON.parse(line.replace('final_output:', '')))
 					} else {
 						mayLog(line)
@@ -116,76 +115,77 @@ function init({ genomes }) {
 				for (const line of ai_output_data.split('\n')) {
 					// The reason we are parsing each line from rust is because we want to debug what is causing the wrong output. As the AI pipeline matures, the rust code will be modified to always return a single JSON
 					if (line.startsWith('final_output:') == true) {
-						console.log('dge:', line.replace('final_output:', ''))
 						ai_output_json = JSON.parse(JSON.parse(line.replace('final_output:', '')))
 					} else {
 						mayLog(line)
 					}
 				}
-				const f1 = simpleFilter2ppFilter(ai_output_json.plot.group1, ds)
-				const f2 = simpleFilter2ppFilter(ai_output_json.plot.group2, ds)
-				const samples1 = await get_samples({ filter: f1 }, ds, true) // true is to by pass permission check
-				const samples2 = await get_samples({ filter: f2 }, ds, true) // true is to by pass permission check
-				const samples1lst = samples1.map(item => ({
-					sampleId: item.id,
-					sample: item.name
-				}))
-				const samples2lst = samples2.map(item => ({
-					sampleId: item.id,
-					sample: item.name
-				}))
 
-				//console.log('samples2:', samples2)
-				const groups = [
-					{
-						name: 'group1', // Hardcoding name of group here for now
-						in: true,
-						values: samples1lst
-					},
-					{
-						name: 'group2', // Hardcoding name of group here for now
-						in: true,
-						values: samples2lst
-					}
-				]
-				const tw = {
-					q: {
-						groups
-					},
-					term: {
-						name: 'group1 vs group2', // Hardcoding name of custom term here for now
-						type: 'samplelst',
-						values: {
-							group1: {
-								color: 'purple',
-								key: 'group1',
-								label: 'group1',
-								list: samples1lst
-							},
-							group2: {
-								color: 'blue',
-								key: 'group2',
-								label: 'group2',
-								list: samples2lst
+				if (ai_output_json.type == 'plot') {
+					const f1 = simpleFilter2ppFilter(ai_output_json.plot.group1, ds)
+					const f2 = simpleFilter2ppFilter(ai_output_json.plot.group2, ds)
+					const samples1 = await get_samples({ filter: f1 }, ds, true) // true is to by pass permission check
+					const samples2 = await get_samples({ filter: f2 }, ds, true) // true is to by pass permission check
+					const samples1lst = samples1.map(item => ({
+						sampleId: item.id,
+						sample: item.name
+					}))
+					const samples2lst = samples2.map(item => ({
+						sampleId: item.id,
+						sample: item.name
+					}))
+
+					const groups = [
+						{
+							name: 'group1', // Hardcoding name of group here for now
+							in: true,
+							values: samples1lst
+						},
+						{
+							name: 'group2', // Hardcoding name of group here for now
+							in: true,
+							values: samples2lst
+						}
+					]
+					const tw = {
+						q: {
+							groups
+						},
+						term: {
+							name: 'group1 vs group2', // Hardcoding name of custom term here for now
+							type: 'samplelst',
+							values: {
+								group1: {
+									color: 'purple',
+									key: 'group1',
+									label: 'group1',
+									list: samples1lst
+								},
+								group2: {
+									color: 'blue',
+									key: 'group2',
+									label: 'group2',
+									list: samples2lst
+								}
 							}
 						}
 					}
+					ai_output_json.plot.state = {
+						customTerms: [
+							{
+								name: 'group1 vs group2',
+								tw: tw
+							}
+						],
+						groups: groups
+					}
+					ai_output_json.plot.childType = 'volcano'
+					ai_output_json.plot.termType = 'geneExpression'
+					ai_output_json.plot.tw = tw
+					ai_output_json.plot.samplelst = { groups }
+					delete ai_output_json.plot.group1
+					delete ai_output_json.plot.group2
 				}
-				ai_output_json.plot.state = {
-					customTerms: [
-						{
-							name: 'group1 vs group2',
-							tw: tw
-						}
-					],
-					groups: groups
-				}
-				ai_output_json.plot.childType = 'volcano'
-				ai_output_json.plot.termType = 'geneExpression'
-				ai_output_json.plot.tw = tw
-				ai_output_json.plot.samplelst = { groups }
-				delete ai_output_json.plot.group1
-				delete ai_output_json.plot.group2
 			} else {
 				// Will define all other agents later as desired
 				ai_output_json = { type: 'html', html: 'Unknown classification value' }
