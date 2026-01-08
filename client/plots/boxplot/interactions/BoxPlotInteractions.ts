@@ -82,8 +82,8 @@ export class BoxPlotInteractions {
 		 * the individual plot's limited range. */
 		const sampleList = new ListSamples(this.app, state.termfilter, config, plot /*false, domain[0], domain[1]*/)
 		const data = await sampleList.getData()
-		const rows = sampleList.setRows(data)
-		return rows
+		const [rows, columns] = sampleList.setTableData(data)
+		return [rows, columns]
 	}
 
 	/** Callback for color picker in plot(s) label menu */

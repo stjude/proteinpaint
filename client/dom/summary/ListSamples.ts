@@ -126,6 +126,7 @@ export class ListSamples {
 		} else {
 			tvs.values = [{ key }]
 		}
+
 		if (tw.term.type === TermTypes.CONDITION) {
 			Object.assign(tvs, {
 				bar_by_grade: tw.q?.bar_by_grade || null,
@@ -180,8 +181,8 @@ export class ListSamples {
 		}
 	}
 
-	//Formats data rows for #dom renderTable()
-	setRows(data: AnnotatedSampleData): { value: string | number }[][] {
+	//Formats data for #dom renderTable()
+	setTableData(data: AnnotatedSampleData): any {
 		const rows: { value: string | number }[][] = []
 
 		const formatValue = (val: any, term: TermWrapper) => {
@@ -192,13 +193,23 @@ export class ListSamples {
 			}
 		}
 
+		/** Only show columns for terms with values */
+		const colSet = new Set()
+		colSet.add('Sample')
+
 		for (const s of Object.values(data.lst)) {
 			const sampleId = typeof s.sample === 'string' ? s.sample : String(s.sample)
 			const row: any[] = [{ value: data.refs.bySampleId[sampleId].label }]
-			if (s[this.t1.$id!]) row.push({ value: formatValue(s[this.t1.$id!].value, this.t1) })
-			if (s[this.t2.$id!]) row.push({ value: formatValue(s[this.t2.$id!].value, this.t2) })
+			if (s[this.t1.$id!]) {
+				row.push({ value: formatValue(s[this.t1.$id!].value, this.t1) })
+				colSet.add(this.t1.term.name)
+			}
+			if (this.t2 && s[this.t2.$id!]) {
+				row.push({ value: formatValue(s[this.t2.$id!].value, this.t2) })
+				colSet.add(this.t2.term.name)
+			}
 			rows.push(row)
 		}
-		return rows
+		return [rows, Array.from(colSet).map(c => ({ label: c }))]
 	}
 }
