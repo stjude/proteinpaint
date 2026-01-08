@@ -19,6 +19,10 @@ type Plot = {
 	overlayTwBins: any
 }
 
+/** Constructs the list sample argument needed for the server request. Maybe used for showing the samples to user or creating filters.
+ *
+ * Note: hold over code to accommodate the violin brush is commented out. Will reimplement if needed.
+ */
 export class ListSamples {
 	app: AppApi
 	termfilter: any
@@ -107,10 +111,11 @@ export class ListSamples {
 
 	getFilterParams(tvs: any, tw: TermWrapper, /*start: number, stop: number,*/ termNum: number): void {
 		const key: any = termNum == 0 ? this.plot.chartId : this.plot.seriesId
-		const isCatOrCond = [TermTypes.CATEGORICAL, TermTypes.CONDITION].includes(tw.term.type)
-		if (isCatOrCond) {
-			this.createTvsValues(tvs, tw, key)
-		} else if (this.isContinuousOrBinned(tw, termNum)) {
+		// const isCatOrCond = [TermTypes.CATEGORICAL, TermTypes.CONDITION].includes(tw.term.type)
+		// if (isCatOrCond) {
+		// 	this.createTvsValues(tvs, tw, key)
+		// } else
+		if (this.isContinuousOrBinned(tw, termNum)) {
 			this.createTvsRanges(tvs, termNum, key)
 			this.createTvsValues(tvs, tw, key)
 		} else {
@@ -145,8 +150,8 @@ export class ListSamples {
 		}
 	}
 
-	isContinuousOrBinned(tw: TermWrapper, termNum: number) {
-		if (!('mode' in tw.q)) return
+	isContinuousOrBinned(tw: TermWrapper, termNum: number): boolean {
+		if (!('mode' in tw.q)) return false
 		return (
 			tw.q?.mode === 'continuous' || (isNumericTerm(tw.term) && Object.keys(this.bins[`term${termNum}`]).length != 0)
 		)
@@ -169,7 +174,7 @@ export class ListSamples {
 	}
 
 	//Formats data rows for #dom renderTable()
-	setRows(data: AnnotatedSampleData) {
+	setRows(data: AnnotatedSampleData): { value: string | number }[][] {
 		const rows: { value: string | number }[][] = []
 
 		const formatValue = (val: any, term: TermWrapper) => {
