@@ -6,10 +6,7 @@ import { getSamplelstFilter } from '../../mass/groups.js'
 import { TermTypes, isNumericTerm } from '#shared/terms.js'
 import { filterJoin } from '#filter'
 
-/**
- * Goal is to make this reusable for other plots.
- *
- * Temp type scoped for this file.
+/** Temp type scoped for this file.
  * Properties required in the plot arg. */
 type Plot = {
 	chartId?: string //value of divideBy term
@@ -19,11 +16,7 @@ type Plot = {
 }
 
 /** Constructs the list sample argument needed for the server request.
- * Maybe used for showing the samples to user or creating filters.
- *
- * Note: hold over code to accommodate the violin brush is commented out.
- * Will reimplement if needed.
- */
+ * Maybe used for showing the samples to user or creating filters. */
 export class ListSamples {
 	app: AppApi
 	termfilter: any
@@ -114,10 +107,6 @@ export class ListSamples {
 
 	getFilterParams(tvs: any, tw: TermWrapper, termNum: number): void {
 		const key: any = termNum == 0 ? this.plot.chartId : this.plot.seriesId
-		// const isCatOrCond = [TermTypes.CATEGORICAL, TermTypes.CONDITION].includes(tw.term.type)
-		// if (isCatOrCond) {
-		// 	this.createTvsValues(tvs, tw, key)
-		// } else
 		if (this.isContinuousOrBinned(tw, termNum)) {
 			this.createTvsRanges(tvs, termNum, key)
 			this.createTvsValues(tvs, tw, key)
