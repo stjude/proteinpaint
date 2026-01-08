@@ -1,7 +1,7 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
 import { DownloadMenu, niceNumLabels, ListSamples } from '#dom'
 import { TermTypes } from '#shared/terms.js'
-import { getSamplelstFilter } from '../mass/groups.js'
+// import { getSamplelstFilter } from '../mass/groups.js'
 import { listSamples } from './barchart.events.js'
 
 export function setInteractivity(self) {
@@ -33,7 +33,7 @@ export function setInteractivity(self) {
 			{
 				label: `Add filter: ${plot.label.split(',')[0]}`,
 				testid: 'sjpp-violinLabOpt-addf',
-				callback: getAddFilterCallback(t1, t2, self, plot, label, false)
+				callback: getAddFilterCallback(self, plot)
 			},
 			{
 				label: `Hide: ${plot.label}`,
@@ -68,11 +68,11 @@ export function setInteractivity(self) {
 					 * Commenting out for now, but leaving in place in case.*/
 					// const [start, end] = [self.data.min, self.data.max * 2]
 					const [start, end] = [self.data.min, self.data.max]
-					await self.callListSamples(event, t1, t2, plot, start, end)
+					await self.callListSamples(event, plot, start, end)
 				}
 			})
 		}
-		self.displayMenu(event, options, plot)
+		self.displayMenu(event, options)
 	}
 
 	self.displayBrushMenu = function (t1, t2, self, plot, event, scale, isH) {
@@ -85,7 +85,7 @@ export function setInteractivity(self) {
 			{
 				label: `Add filter`,
 				testid: 'sjpp-violinBrushOpt-addf',
-				callback: getAddFilterCallback(t1, t2, self, plot, start, end, true)
+				callback: getAddFilterCallback(self, plot, start, end)
 			}
 		]
 
@@ -93,13 +93,13 @@ export function setInteractivity(self) {
 			options.push({
 				label: `List samples`,
 				testid: 'sjpp-violinBrushOpt-list',
-				callback: async () => self.callListSamples(event.sourceEvent, t1, t2, plot, start, end)
+				callback: async () => self.callListSamples(event.sourceEvent, plot, start, end)
 			})
 		}
-		self.displayMenu(event.sourceEvent, options, plot, start, end)
+		self.displayMenu(event.sourceEvent, options, start, end)
 	}
 
-	self.displayMenu = function (event, options, plot, start, end) {
+	self.displayMenu = function (event, options, start, end) {
 		const tip = self.dom.clicktip.clear().show(event.clientX, event.clientY)
 
 		const isBrush = start != null && end != null
@@ -129,11 +129,20 @@ export function setInteractivity(self) {
 			})
 	}
 
-	self.callListSamples = async function (event, t1, t2, plot, start, end) {
+	//get sample list for menu option callbacks
+	self.getSampleList = function (plot, start, end) {
 		const configCopy = self.config
 		configCopy.bins = self.data.bins
 
-		const ls = new ListSamples(self.app, self.state.termfilter.filter, configCopy, plot)
+		const rangeStart = start !== undefined ? start : null
+		const rangeStop = end !== undefined ? end : null
+
+		const ls = new ListSamples(self.app, self.state.termfilter.filter, configCopy, plot, rangeStart, rangeStop)
+		return ls
+	}
+
+	self.callListSamples = async function (event, plot, start, end) {
+		const ls = self.getSampleList(plot, start, end)
 
 		const arg = {
 			event,
@@ -185,7 +194,6 @@ export function setInteractivity(self) {
 				const q = event.target.__data__
 				if (q === undefined) return
 				if (q.isHidden === true && q.isClickable === true) {
-					console.log(11)
 					self.dom.hovertip.clear().show(event.clientX, event.clientY).d.append('span').text('Click to unhide plot')
 				}
 			})
@@ -234,7 +242,7 @@ export function setInteractivity(self) {
 	// }
 }
 
-function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop, isBrush) {
+function getAddFilterCallback(self, plot, rangeStart, rangeStop) {
 	// const tvslst = {
 	// 	type: 'tvslst',
 	// 	in: true,
@@ -279,14 +287,11 @@ function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop, isBrush
 	// 	}
 	// }
 
-	const configCopy = self.config
-	configCopy.bins = self.data.bins
-
-	const listSamples = new ListSamples(self.app, self.state.termfilter.filter, configCopy, plot)
+	const ls = self.getSampleList(plot, rangeStart, rangeStop)
 
 	return () => {
 		const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
-		const filter = filterJoin([filterUiRoot, listSamples.tvslst])
+		const filter = filterJoin([filterUiRoot, ls.tvslst])
 		filter.tag = 'filterUiRoot'
 		self.app.dispatch({
 			type: 'filter_replace',

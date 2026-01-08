@@ -28,29 +28,30 @@ export class ListSamples {
 	app: AppApi
 	termfilter: any
 	plot: Plot
-	terms: TermWrapper[]
+	//from server response
 	bins: any
 
 	t1: TermWrapper
 	t2: TermWrapper
 	t0?: TermWrapper
+	terms: TermWrapper[]
+
+	/** Used a reduced range for filtering samples */
+	useRange: boolean
+	start?: number
+	end?: number
+
+	//Created objects
 	tvslst: {
 		type: 'tvslst'
 		in: true
 		join: 'and'
 		lst: any[]
 	}
+	//Used for possibly filtering gene variant terms
 	geneVariant = {}
 
-	constructor(
-		app: AppApi,
-		termfilter: any,
-		config: any,
-		plot: Plot
-		/*getRange = true, 
-		start?: number,
-		end?: number*/
-	) {
+	constructor(app: AppApi, termfilter: any, config: any, plot: Plot, start?: number, end?: number) {
 		this.app = app
 		this.termfilter = termfilter
 		this.plot = plot
@@ -62,8 +63,14 @@ export class ListSamples {
 
 		this.terms = [this.t1]
 
-		// const rangeStart = start ?? this.plot.descrStats.min.value
-		// const rangeStop = end ?? this.plot.descrStats.max.value
+		if ((start && !end) || (!start && end)) {
+			throw new Error('Both start and end must be provided for range filtering')
+		}
+		if (start && end) {
+			this.useRange = true
+			this.start = start
+			this.end = end
+		} else this.useRange = false
 
 		this.tvslst = {
 			type: 'tvslst',
@@ -72,27 +79,22 @@ export class ListSamples {
 			lst: []
 		}
 
-		this.getTvsLst(/*rangeStart, rangeStop*/)
+		this.getTvsLst()
 	}
 
-	getTvsLst(/*rangeStart: number, rangeStop: number*/) {
-		this.getTvsLstEntry(1 /*rangeStart, rangeStop*/)
+	getTvsLst() {
+		this.getTvsLstEntry(1)
 		if (this.t2) {
 			this.terms.push(this.t2)
-			this.getTvsLstEntry(2 /*rangeStart, rangeStop*/)
+			this.getTvsLstEntry(2)
 		}
 		if (this.t0) {
 			this.terms.push(this.t0)
-			this.getTvsLstEntry(0 /*rangeStart, rangeStop*/)
-		}
-		if (!this.t2 && !this.t0) {
-			// if (getRange) {
-			// 	this.createTvsRanges(rangeStart, rangeStop)
-			// }
+			this.getTvsLstEntry(0)
 		}
 	}
 
-	getTvsLstEntry(termNum: number /*start: number, stop: number*/): void {
+	getTvsLstEntry(termNum: number): void {
 		const tw = termNum === 1 ? this.t1 : termNum === 2 ? this.t2 : this.t0
 		if (!tw) throw new Error('Missing term wrapper')
 		if (tw.type === TermTypes.GENE_VARIANT) {
@@ -106,11 +108,11 @@ export class ListSamples {
 				term: tw.term
 			}
 		}
-		this.getFilterParams(tvsEntry.tvs, tw, /*start, stop,*/ termNum)
+		this.getFilterParams(tvsEntry.tvs, tw, termNum)
 		this.tvslst.lst.push(tvsEntry)
 	}
 
-	getFilterParams(tvs: any, tw: TermWrapper, /*start: number, stop: number,*/ termNum: number): void {
+	getFilterParams(tvs: any, tw: TermWrapper, termNum: number): void {
 		const key: any = termNum == 0 ? this.plot.chartId : this.plot.seriesId
 		// const isCatOrCond = [TermTypes.CATEGORICAL, TermTypes.CONDITION].includes(tw.term.type)
 		// if (isCatOrCond) {
@@ -142,6 +144,19 @@ export class ListSamples {
 	}
 
 	createTvsRanges(tvs, termNum, key) {
+		if (termNum == 1 && this.useRange) {
+			tvs.ranges = [
+				{
+					start: this.start,
+					stop: this.end,
+					startinclusive: true,
+					stopinclusive: true,
+					startunbounded: false,
+					stopunbounded: false
+				}
+			]
+			return
+		}
 		const keyBin = this.bins[`term${termNum}`]?.[`${key}`]
 		if (keyBin) {
 			tvs.ranges = [keyBin]
