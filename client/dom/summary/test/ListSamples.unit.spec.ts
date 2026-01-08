@@ -13,6 +13,10 @@ Tests:
 	- isContinuousOrBinned() returns correct boolean values per term type
 */
 
+/*************************
+ reusable helper functions
+**************************/
+
 function getNewListSamples() {
 	const { mockConfig1, mockPlot1 } = getBoxPlotMockData()
 	const mockApp = {} as AppApi
@@ -25,8 +29,12 @@ function getNewListSamples() {
 	return { listSamples, mockConfig1, mockPlot1, mockApp, mockState }
 }
 
+/**************
+ test section
+***************/
+
 tape('\n', function (test) {
-	test.comment('-***- plots/boxplot/interactions/ListSamples -***-')
+	test.comment('-***- dom/summary/ListSamples -***-')
 	test.end()
 })
 

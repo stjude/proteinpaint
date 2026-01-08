@@ -14,14 +14,15 @@ import { filterJoin } from '#filter'
 type Plot = {
 	chartId?: string //value of divideBy term
 	seriesId?: string //value of overlay term
-	descrStats?: any
-	key: any
-	overlayTwBins: any
+	descrStats?: any //descriptive stats for the plot
+	key: any //value of the plot itself
 }
 
-/** Constructs the list sample argument needed for the server request. Maybe used for showing the samples to user or creating filters.
+/** Constructs the list sample argument needed for the server request.
+ * Maybe used for showing the samples to user or creating filters.
  *
- * Note: hold over code to accommodate the violin brush is commented out. Will reimplement if needed.
+ * Note: hold over code to accommodate the violin brush is commented out.
+ * Will reimplement if needed.
  */
 export class ListSamples {
 	app: AppApi

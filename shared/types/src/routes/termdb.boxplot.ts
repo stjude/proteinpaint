@@ -69,8 +69,6 @@ export type BoxPlotEntry = {
 	 * whether or not the plot is hidden by default */
 	isHidden?: boolean
 	key: string
-	/** Formatted bins for numeric terms */
-	overlayTwBins?: any
 	/** Usually the same as key, but determined by the tw */
 	seriesId?: string
 }

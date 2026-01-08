@@ -31,11 +31,11 @@ function getTestApp(_opts, genome = 'hg38-test', dslabel = 'TermdbTest') {
 }
 
 /**************
- test sections
+ test section
 ***************/
 
 tape('\n', function (test) {
-	test.comment('-***- plots/boxplot/interactions/ListSamples -***-')
+	test.comment('-***- dom/summary/ListSamples -***-')
 	test.end()
 })
 
