@@ -1,1 +1,5 @@
+Features
+- New unit tests for ListSamples, now under #dom/summary. 
 
+Fixes
+- The list samples menu option in the box plot is fixed and includes logic to handle the divide by term. The values are now shown under term headings as well.
