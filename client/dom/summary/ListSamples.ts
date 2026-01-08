@@ -172,19 +172,19 @@ export class ListSamples {
 	setRows(data: AnnotatedSampleData) {
 		const rows: { value: string | number }[][] = []
 
-		const addValue = (val: any, term: TermWrapper) => {
-			if (isNumericTerm(term)) {
-				return { value: roundValueAuto(val) }
+		const formatValue = (val: any, term: TermWrapper) => {
+			if (isNumericTerm(term.term)) {
+				return roundValueAuto(val)
 			} else {
-				return { value: val }
+				return val
 			}
 		}
 
 		for (const s of Object.values(data.lst)) {
 			const sampleId = typeof s.sample === 'string' ? s.sample : String(s.sample)
 			const row: any[] = [{ value: data.refs.bySampleId[sampleId].label }]
-			if (s[this.t1.$id!]) row.push(addValue(s[this.t1.$id!].value, this.t1))
-			if (s[this.t2.$id!]) row.push(addValue(s[this.t2.$id!].value, this.t2))
+			if (s[this.t1.$id!]) row.push({ value: formatValue(s[this.t1.$id!].value, this.t1) })
+			if (s[this.t2.$id!]) row.push({ value: formatValue(s[this.t2.$id!].value, this.t2) })
 			rows.push(row)
 		}
 		return rows
