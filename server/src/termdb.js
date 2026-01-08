@@ -258,10 +258,48 @@ async function get_matrix(q, req, res, ds, genome) {
 	}
 	const data = await getData(q, ds, true) // FIXME hardcoded to true
 	if (authApi.canDisplaySampleIds(req, ds)) {
-		if (data.samples)
-			for (const sample of Object.values(data.samples)) {
-				sample.sampleName = data.refs.bySampleId?.[sample.sample]?.label || sample.sample
+		if (!data.refs.byTermId) data.refs.byTermId = {}
+		data.refs.shortIds = { sample: {}, terms: {} }
+		let i = 0,
+			currShortId = 0,
+			j = 0
+
+		if (data.samples) {
+			if (!data.refs.bySampleId) data.refs.bySampleId = {}
+			for (const [sampleId, sample] of Object.entries(data.samples)) {
+				// if (i >= 25000) {
+				//   delete data.samples[sampleId]
+				//   continue
+				// }
+				// i++
+
+				if (!data.refs.bySampleId[sampleId]) {
+					data.refs.bySampleId[sampleId] = {
+						sample: sample.sample || sampleId,
+						label: sample.sampleName || undefined
+					}
+				}
+				delete sample.sample
+				delete sample.sampleName
+
+				if (!Object.keys(sample).length) {
+					delete data.samples[sampleId]
+					delete data.refs.bySampleId[sampleId]
+				} else {
+					for (const [termId, term] of Object.entries(sample)) {
+						if (!data.refs.byTermId[termId]) data.refs.byTermId[termId] = {}
+						if (!data.refs.byTermId[termId].shortId) {
+							const j = currShortId++
+							data.refs.byTermId[termId].shortId = j
+							data.refs.shortIds.terms[j] = termId
+						}
+						const j = data.refs.byTermId[termId].shortId
+						sample[j] = sample[termId]
+						delete sample[termId]
+					}
+				}
 			}
+		}
 	}
 	res.send(data)
 }
