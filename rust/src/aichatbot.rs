@@ -584,16 +584,13 @@ pub async fn extract_DE_search_terms_from_query(
 
                     // Create RAG agent
                     let router_instructions = String::from(
-        " I am an assistant that extracts the groups from the user prompt to carry out differential gene expression. The final output must be in the following JSON format with NO extra comments. There are three compulsory fields: \"action\", \"group1\" and \"group2\". In case of DE, the \"action\" field should ALWAYS be \"DE\". The fields \"group1\" and \"group2\" should ONLY either be a field in the sqlite db or a value of any of the fields inside the db. In case no suitable groups are found, show {\"output\":\"No suitable two groups found for differential gene expression\"}.
-
-The user may select a cutoff for a continuous variables such as age. In such cases the group should only include the range specified by the user. Inside the JSON each entry the name of the group must be inside the field \"name\". For the cutoff (if provided) a field called \"cutoff\" must be provided which should contain a subfield \"name\" containing the name of the cutoff, followed by \"greater\"/\"lesser\"/\"equal\" to followed by the numeric value of the cutoff. If the unit of the variable is provided such as cm,m,inches,celsius etc. then add it to a separate field called \"units\". In case of a continuous variable such as age, height added additional field to the group called \"filter\". This should contain a sub-field called \"names\" followed by a subfield called \"cutoff\". This sub-field should contain a key either greater, lesser or equalto. If the continuous variable has units provided by the user then add it in a separate field called \"units\".",
-    )
-        + " The JSON schema is as follows"
-	+ &schema_json_string
-	+ &training_data
-        + "The sqlite db in plain language is as follows:\n"
-	+ &rag_docs.join(",")
-        + &"\nQuestion: {question} \nanswer:";
+                        " I am an assistant that extracts the groups from the user prompt to carry out differential gene expression. The final output must be in the following JSON format with NO extra comments. There are three compulsory fields: \"action\", \"group1\" and \"group2\". In case of DE, the \"action\" field should ALWAYS be \"DE\". The fields \"group1\" and \"group2\" should ONLY either be a field in the sqlite db or a value of any of the fields inside the db. The optional \"message\" field contains any error message if required. In case if any of the groups are NOT found the group field should be an EMPTY vector and show the error message in the \"message\" field for e.g. {\"message\":\"The group was not found\"}.",
+                    ) + " The JSON schema is as follows"
+                        + &schema_json_string
+                        + &training_data
+                        + "The sqlite db in plain language is as follows:\n"
+                        + &rag_docs.join(",")
+                        + &"\nQuestion: {question} \nanswer:";
                     //println! {"router_instructions:{}",router_instructions};
                     let agent = AgentBuilder::new(comp_model)
                         .preamble(&router_instructions)
@@ -762,11 +759,23 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, testing: bool) 
                         serde_json::from_str(&group2_verified_string).expect("Not a valid JSON"),
                     );
                 } else if group1_filter_hits == 0 && group2_filter_hits > 0 {
-                    message = message + "group1 array filter terms is empty";
+                    if message.len() > 0 {
+                        message = message + ", group1 array filter terms is empty";
+                    } else {
+                        message = "group1 array filter terms is empty".to_string();
+                    }
                 } else if group1_filter_hits > 0 && group2_filter_hits == 0 {
-                    message = message + "group2 array filter terms is empty";
+                    if message.len() > 0 {
+                        message = message + ", group2 array filter terms is empty";
+                    } else {
+                        message = "group2 array filter terms is empty".to_string();
+                    }
                 } else {
-                    message = message + "group1 and group2 array filter terms are both empty";
+                    if message.len() > 0 {
+                        message = message + ", group1 and group2 array filter terms are empty";
+                    } else {
+                        message = "group1 and group2 array filter terms are empty".to_string();
+                    }
                 }
             }
         } else if group1_verified.is_some() && group2_verified.is_none() {
@@ -1676,6 +1685,7 @@ fn generate_filter_term_for_PP(validated_filter_terms: Vec<FilterTerm>) -> (Stri
                     + &categorical_filter.value
                     + &"\"},";
                 validated_filter_terms_PP += &string_json;
+                filter_hits += 1;
             }
             FilterTerm::Numeric(numeric_filter) => {
                 let string_json;
@@ -1707,10 +1717,10 @@ fn generate_filter_term_for_PP(validated_filter_terms: Vec<FilterTerm>) -> (Stri
                     );
                 }
                 validated_filter_terms_PP += &string_json;
+                filter_hits += 1;
             }
         };
     }
-    filter_hits += 1;
     if filter_hits > 0 {
         validated_filter_terms_PP.pop();
         validated_filter_terms_PP += &"]";

@@ -201,7 +201,7 @@ function init({ genomes }) {
 				}
 			}
 
-			//mayLog('ai_output_json:', ai_output_json)
+			mayLog('ai_output_json:', ai_output_json)
 			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
