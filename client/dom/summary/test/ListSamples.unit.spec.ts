@@ -135,9 +135,3 @@ tape('ListSamples.getTvsLst() in constructor returns obj for categorical term an
 
 	test.end()
 })
-
-tape('ListSamples.createTvsLstValues()', test => {
-	test.timeoutAfter(100)
-
-	test.end()
-})
