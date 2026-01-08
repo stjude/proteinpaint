@@ -822,8 +822,7 @@ export class TermdbVocab extends Vocab {
 					if (data.error) throw data.error
 					if (!data.refs.bySampleId) data.refs.bySampleId = {}
 					for (const tw of copies) {
-						for (const sampleId in data.samples) {
-							const sample = data.samples[sampleId]
+						for (const [sampleId, sample] of Object.entries(data.samples)) {
 							// ignore sample objects that are not annotated by other keys besides 'sample'
 							if (!Object.keys(sample).filter(k => k != 'sample').length) continue
 							samplesToShow.add(sampleId)
@@ -844,7 +843,15 @@ export class TermdbVocab extends Vocab {
 								}
 								samples[sampleId] = s
 							}
-							if (tw.$id in sample) {
+
+							if (!sample.sample) sample.sample = data.refs.bySampleId[sampleId].sample || sampleId
+							if (!sample.sampleName) sample.sampleName = data.refs.bySampleId[sampleId].sampleName || sample.sample
+
+							const shortTermId = data.refs.byTermId[tw.$id].shortId
+							if (shortTermId in sample) {
+								sample[tw.$id] = sample[shortTermId]
+								delete sample[shortTermId]
+
 								if (tw.term.type == 'termCollection') {
 									const termsValue = JSON.parse(sample[tw.$id].value)
 									const sum = termsValue.reduce((a, o) => a + Object.values(o)[0], 0)
