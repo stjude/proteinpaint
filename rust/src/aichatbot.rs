@@ -584,7 +584,7 @@ pub async fn extract_DE_search_terms_from_query(
 
                     // Create RAG agent
                     let router_instructions = String::from(
-                        " I am an assistant that extracts the groups from the user prompt to carry out differential gene expression. The final output must be in the following JSON format with NO extra comments. There are three compulsory fields: \"action\", \"group1\" and \"group2\". In case of DE, the \"action\" field should ALWAYS be \"DE\". The fields \"group1\" and \"group2\" should ONLY either be a field in the sqlite db or a value of any of the fields inside the db. The optional \"message\" field contains any error message if required. In case if any of the groups are NOT found the group field should be an EMPTY vector and show the error message in the \"message\" field for e.g. {\"message\":\"The group was not found\"}.",
+                        " I am an assistant that extracts the groups from the user prompt to carry out differential gene expression. The final output must be in the following JSON format with NO extra comments. There are three compulsory fields: \"action\", \"group1\" and \"group2\". In case of DE, the \"action\" field should ALWAYS be \"DE\". The fields \"group1\" and \"group2\" should ONLY either be a field in the sqlite db or a value of any of the fields inside the db. The optional \"message\" field contains any error message if required. In case if any of the groups are NOT found the group field should be an EMPTY vector and show the error message in the \"message\" field for e.g. {\"message\":\"The group was not found\"}. In case one of the groups contains a field from the database, but not a category or a value of the field, that group field should be EMPTY and the error message in the \"message\" field should be for e.g. {\"message\":\"This group is a field of the db, not one of the possible types or values of a field\"}",
                     ) + " The JSON schema is as follows"
                         + &schema_json_string
                         + &training_data
@@ -656,6 +656,7 @@ pub async fn extract_DE_search_terms_from_query(
 }
 
 fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, testing: bool) -> String {
+    //println!("raw_llm_json:{}", raw_llm_json);
     let json_value: DEOutput =
 	serde_json::from_str(&raw_llm_json).expect("Did not get a valid JSON of type {group1: group1, group2: group2, message: message, filter:[{term: term1, value: value1}]} from the LLM");
     let mut message: String = String::from("");
@@ -745,10 +746,19 @@ fn validate_DE_groups(raw_llm_json: String, db_vec: Vec<DbRows>, testing: bool) 
 
         if group1_verified.is_some() && group2_verified.is_some() {
             if let Some(obj) = pp_plot_json.as_object_mut() {
-                let (group1_verified_string, group1_filter_hits) =
+                let (group1_verified_string, group1_filter_hits, gen_filter_message_group1) =
                     generate_filter_term_for_PP(group1_verified.unwrap());
-                let (group2_verified_string, group2_filter_hits) =
+                let (group2_verified_string, group2_filter_hits, gen_filter_message_group2) =
                     generate_filter_term_for_PP(group2_verified.unwrap());
+
+                if gen_filter_message_group1.len() > 0 {
+                    message = message + &gen_filter_message_group1;
+                }
+
+                if gen_filter_message_group2.len() > 0 {
+                    message = message + &gen_filter_message_group2;
+                }
+
                 if group1_filter_hits > 0 && group2_filter_hits > 0 {
                     obj.insert(
                         String::from("group1"),
@@ -1157,7 +1167,7 @@ impl PartialOrd for SummaryTerms {
             (SummaryTerms::clinical(_), SummaryTerms::clinical(_)) => Some(std::cmp::Ordering::Equal),
             (SummaryTerms::geneExpression(_), SummaryTerms::geneExpression(_)) => Some(std::cmp::Ordering::Equal),
             (SummaryTerms::clinical(_), SummaryTerms::geneExpression(_)) => Some(std::cmp::Ordering::Greater),
-            (SummaryTerms::geneExpression(_), SummaryTerms::clinical(_)) => Some(std::cmp::Ordering::Less),
+            (SummaryTerms::geneExpression(_), SummaryTerms::clinical(_)) => Some(std::cmp::Ordering::Greater),
         }
     }
 }
@@ -1248,6 +1258,7 @@ fn validate_summary_output(
     ai_json: &AiJsonFormat,
     testing: bool,
 ) -> String {
+    println!("raw_llm_json:{:?}", raw_llm_json);
     let json_value: SummaryType =
        serde_json::from_str(&raw_llm_json).expect("Did not get a valid JSON of type {action: summary, summaryterms:[{clinical: term1}, {geneExpression: gene}], filter:[{term: term1, value: value1}]} from the LLM");
     let mut message: String = String::from("");
@@ -1374,7 +1385,12 @@ fn validate_summary_output(
                         obj.insert(String::from("filter"), serde_json::json!(validated_filter_terms));
                     }
                 } else {
-                    let (validated_filter_terms_PP, filter_hits) = generate_filter_term_for_PP(validated_filter_terms);
+                    let (validated_filter_terms_PP, filter_hits, gen_filter_message) =
+                        generate_filter_term_for_PP(validated_filter_terms);
+                    if gen_filter_message.len() > 0 {
+                        message = message + &gen_filter_message;
+                    }
+
                     println!("validated_filter_terms_PP:{}", validated_filter_terms_PP);
                     if filter_hits > 0 {
                         if let Some(obj) = pp_plot_json.as_object_mut() {
@@ -1673,9 +1689,10 @@ fn validate_filter(
     (validated_filter_terms, filter_message)
 }
 
-fn generate_filter_term_for_PP(validated_filter_terms: Vec<FilterTerm>) -> (String, usize) {
+fn generate_filter_term_for_PP(validated_filter_terms: Vec<FilterTerm>) -> (String, usize, String) {
     let mut validated_filter_terms_PP: String = "[".to_string();
     let mut filter_hits = 0;
+    let mut message: String = "".to_string();
     for validated_term in validated_filter_terms {
         match validated_term {
             FilterTerm::Categorical(categorical_filter) => {
@@ -1688,7 +1705,7 @@ fn generate_filter_term_for_PP(validated_filter_terms: Vec<FilterTerm>) -> (Stri
                 filter_hits += 1;
             }
             FilterTerm::Numeric(numeric_filter) => {
-                let string_json;
+                let mut string_json = "".to_string();
                 if numeric_filter.greaterThan.is_some() && numeric_filter.lessThan.is_none() {
                     string_json = "{\"term\":\"".to_string()
                         + &numeric_filter.term
@@ -1711,7 +1728,7 @@ fn generate_filter_term_for_PP(validated_filter_terms: Vec<FilterTerm>) -> (Stri
                         + &"\"},";
                 } else {
                     // When both greater and less than are none
-                    panic!(
+                    message = format!(
                         "Numeric filter term {} is missing both greater than and less than values. One of them must be defined",
                         &numeric_filter.term
                     );
@@ -1725,5 +1742,5 @@ fn generate_filter_term_for_PP(validated_filter_terms: Vec<FilterTerm>) -> (Stri
         validated_filter_terms_PP.pop();
         validated_filter_terms_PP += &"]";
     }
-    (validated_filter_terms_PP, filter_hits)
+    (validated_filter_terms_PP, filter_hits, message)
 }
