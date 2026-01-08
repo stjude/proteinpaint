@@ -120,7 +120,9 @@ export class ListSamples {
 			const ids = tw.term.values[key].list.map(s => s.sampleId)
 			// Returns filter obj with lst array of 1 tvs
 			const tmpTvsLst = getSamplelstFilter(ids).lst[0]
-			tvs.values = tmpTvsLst.lst[0].tvs.values
+			// Below is the original logic. Keep as a reference for now.
+			// tvs.values = tmpTvsLst.lst[0].tvs.values
+			tvs.values = tmpTvsLst.tvs.values
 		} else {
 			tvs.values = [{ key }]
 		}
