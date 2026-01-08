@@ -256,52 +256,124 @@ async function get_matrix(q, req, res, ds, genome) {
 		res.send(plot.matrixConfig)
 		return
 	}
-	const data = await getData(q, ds, true) // FIXME hardcoded to true
-	if (authApi.canDisplaySampleIds(req, ds)) {
-		if (!data.refs.byTermId) data.refs.byTermId = {}
-		data.refs.shortIds = { sample: {}, terms: {} }
-		let i = 0,
-			currShortId = 0,
-			j = 0
+	const data = await getData(q, ds, true)
+	if (data.error) console.trace(259, data) // FIXME hardcoded to true
+	let jsonStr = JSON.stringify(data.refs)
+	console.log(260, 'jsonStr.length=', jsonStr?.length)
 
-		if (data.samples) {
-			if (!data.refs.bySampleId) data.refs.bySampleId = {}
-			for (const [sampleId, sample] of Object.entries(data.samples)) {
-				// if (i >= 25000) {
-				//   delete data.samples[sampleId]
-				//   continue
-				// }
-				// i++
-
-				if (!data.refs.bySampleId[sampleId]) {
-					data.refs.bySampleId[sampleId] = {
-						sample: sample.sample || sampleId,
-						label: sample.sampleName || undefined
-					}
-				}
-				delete sample.sample
-				delete sample.sampleName
-
-				if (!Object.keys(sample).length) {
-					delete data.samples[sampleId]
-					delete data.refs.bySampleId[sampleId]
-				} else {
-					for (const [termId, term] of Object.entries(sample)) {
-						if (!data.refs.byTermId[termId]) data.refs.byTermId[termId] = {}
-						if (!data.refs.byTermId[termId].shortId) {
-							const j = currShortId++
-							data.refs.byTermId[termId].shortId = j
-							data.refs.shortIds.terms[j] = termId
-						}
-						const j = data.refs.byTermId[termId].shortId
-						sample[j] = sample[termId]
-						delete sample[termId]
-					}
+	// samples = {
+	//   <sample1>: {
+	//     byDt: {
+	//       <1>: {
+	//          notTested: '0101001...'
+	//       },
+	//       <4>: {
+	//          notTested: '01010111...'
+	//       }
+	//     },
+	//   },
+	//   <sample2>: { }
+	// }
+	const payload = {
+		samples: {},
+		refs: {
+			bySampleId: {},
+			byTermId: {},
+			byDt: {
+				// should match integer string order
+				genes: [],
+				codes: {
+					0: null, // tested and not wildtype, there should already by samples[termId].values[] entries
+					1: { class: 'Blank', label: 'Not tested' }
+					//2: {}
 				}
 			}
 		}
 	}
-	res.send(data)
+
+	if (authApi.canDisplaySampleIds(req, ds)) {
+		if (!data.refs.byTermId) data.refs.byTermId = {}
+
+		if (data.samples) {
+			const sampleEntries = Object.entries(data.samples)
+			let currShortId = 0,
+				numErrors = 0,
+				sampleIndex = 0
+
+			for (const [sampleId, sample] of sampleEntries) {
+				payload.refs.bySampleId[sampleId] = Object.assign(
+					{
+						sample: sample.sample || sampleId,
+						label: sample.sampleName || undefined
+					},
+					data.refs.bySampleId[sampleId] || {}
+				)
+
+				delete sample.sample
+				delete sample.sampleName
+
+				if (!Object.keys(sample).length) {
+					delete payload.samples[sampleId]
+					delete payload.refs.bySampleId[sampleId]
+				} else {
+					for (const [termId, term] of Object.entries(sample)) {
+						if (!payload.refs.byTermId[termId]) {
+							payload.refs.byTermId[termId] = data.refs.byTermId[termId] || {}
+							payload.refs.byTermId[termId].shortId = currShortId++
+						}
+						const j = payload.refs.byTermId[termId].shortId
+						sample[j] = sample[termId]
+						delete sample[termId]
+					}
+				}
+
+				try {
+					const keyval = JSON.stringify({ [sampleId]: sample })
+					jsonStr += '\n---------------------------------------------------' + keyval
+					payload.samples[sampleId] = sample
+				} catch (e) {
+					if (e instanceof RangeError && e.message.includes('Invalid string length')) {
+						console.log(329, 'jsonStr.length=', jsonStr?.length)
+						payload.error = {
+							code: 'RangeError: Invalid string length',
+							message: `Response data too large - please narrow the cohort or limit the number of variables and/or genes. (Unable to encode data for ${
+								sampleEntries.length - sampleIndex
+							} of ${sampleEntries.length} cases/samples.)`
+						}
+						payload.samples = {}
+					} else throw e
+
+					// payload.error = {
+					//   code: e,
+					//   message: `Data from ${sampleEntries.length - sampleIndex} samples were not included due to exceeding the maximum processed data size that can be handled by the server [${e}]`,
+					// }
+					// console.log(309, sampleId, e, sample)
+					// for(const [k,v] of Object.entries(sample)) {
+					//   if (typeof v != 'object' || !v.values) continue
+					//   console.log(JSON.stringify(v.values))
+					//   for(const _v of v.values) {
+					//     //console.log(314, _v)
+					//     try {
+					//       //console.log(v)
+					//       //JSON.stringify({a: 'small object'})
+					//       const str = JSON.stringify(_v)
+					//       //console.log(str)
+					//     } catch(e) {
+					//       console.log(316, _v)
+					//     }
+					//   }
+					// }
+
+					break
+				}
+				if (payload.error) break
+				sampleIndex++
+			}
+		}
+	}
+	console.log(352)
+	//jsonStr += '}'
+	res.send(payload)
 }
 
 async function get_numericDictTermCluster(q, req, res, ds, genome) {
