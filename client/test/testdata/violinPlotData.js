@@ -15,7 +15,6 @@ export const agedx = {
 					seriesId: 'All samples',
 					plotValueCount: 59,
 					color: null,
-					overlayTwBins: null,
 					density: {
 						bins: [
 							{

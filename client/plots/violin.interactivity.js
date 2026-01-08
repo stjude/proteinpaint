@@ -1,5 +1,5 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
-import { DownloadMenu, niceNumLabels } from '#dom'
+import { DownloadMenu, niceNumLabels, ListSamples } from '#dom'
 import { TermTypes } from '#shared/terms.js'
 import { getSamplelstFilter } from '../mass/groups.js'
 import { listSamples } from './barchart.events.js'
@@ -130,31 +130,17 @@ export function setInteractivity(self) {
 	}
 
 	self.callListSamples = async function (event, t1, t2, plot, start, end) {
-		let tvslst
-		const geneVariant = {}
-		if (t1.term.type == 'geneVariant' || t2?.term.type == 'geneVariant') {
-			// geneVariant filtering will be handled separately by
-			// mayFilterByGeneVariant() in client/plots/barchart.events.js
-			let violinTw
-			if (t1.term.type == 'geneVariant') {
-				geneVariant.t1value = plot.seriesId
-				violinTw = t2
-			} else {
-				geneVariant.t2value = plot.seriesId
-				violinTw = t1
-			}
-			tvslst = self.getTvsLst(violinTw, null, plot, start, end)
-		} else {
-			tvslst = self.getTvsLst(t1, t2, plot, start, end)
-		}
-		const terms = [t1]
-		if (t2) terms.push(t2)
+		const configCopy = self.config
+		configCopy.bins = self.data.bins
+
+		const ls = new ListSamples(self.app, self.state.termfilter.filter, configCopy, plot)
+
 		const arg = {
 			event,
 			self,
-			terms,
-			tvslst,
-			geneVariant,
+			terms: ls.terms,
+			tvslst: ls.tvslst,
+			geneVariant: ls.geneVariant,
 			tip: self.dom.sampletabletip
 		}
 		await listSamples(arg)
@@ -208,94 +194,99 @@ export function setInteractivity(self) {
 			})
 	}
 
-	self.createTvsLstRanges = function (term, tvslst, rangeStart, rangeStop, lstIdx) {
-		createTvsTerm(term, tvslst)
+	// self.createTvsLstRanges = function (term, tvslst, rangeStart, rangeStop, lstIdx) {
+	// 	createTvsTerm(term, tvslst)
 
-		tvslst.lst[lstIdx].tvs.ranges = [
-			{
-				//Only show integers for integer terms
-				start: term.term.type == 'integer' ? Math.round(rangeStart) : rangeStart,
-				stop: term.term.type == 'integer' ? Math.round(rangeStop) : rangeStop,
-				startinclusive: true,
-				stopinclusive: true,
-				startunbounded: false,
-				stopunbounded: false
-			}
-		]
-	}
+	// 	tvslst.lst[lstIdx].tvs.ranges = [
+	// 		{
+	// 			//Only show integers for integer terms
+	// 			start: term.term.type == 'integer' ? Math.round(rangeStart) : rangeStart,
+	// 			stop: term.term.type == 'integer' ? Math.round(rangeStop) : rangeStop,
+	// 			startinclusive: true,
+	// 			stopinclusive: true,
+	// 			startunbounded: false,
+	// 			stopunbounded: false
+	// 		}
+	// 	]
+	// }
 
-	self.getTvsLst = function (t1, t2, plot, rangeStart, rangeStop) {
-		const tvslst = {
-			type: 'tvslst',
-			in: true,
-			join: 'and',
-			lst: []
-		}
+	// self.getTvsLst = function (t1, t2, plot, rangeStart, rangeStop) {
+	// 	const tvslst = {
+	// 		type: 'tvslst',
+	// 		in: true,
+	// 		join: 'and',
+	// 		lst: []
+	// 	}
 
-		if (t2) {
-			if (
-				t2.q?.mode === 'continuous' ||
-				((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.overlayTwBins != null)
-			) {
-				createTvsLstValues(t1, plot, tvslst, 0)
-				self.createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
-			} else {
-				createTvsLstValues(t2, plot, tvslst, 0)
-				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
-			}
-		} else self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
-		return tvslst
-	}
+	// 	if (t2) {
+	// 		if (
+	// 			t2.q?.mode === 'continuous' ||
+	// 			((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.overlayTwBins != null)
+	// 		) {
+	// 			createTvsLstValues(t1, plot, tvslst, 0)
+	// 			self.createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
+	// 		} else {
+	// 			createTvsLstValues(t2, plot, tvslst, 0)
+	// 			self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
+	// 		}
+	// 	} else self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
+	// 	return tvslst
+	// }
 }
 
 function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop, isBrush) {
-	const tvslst = {
-		type: 'tvslst',
-		in: true,
-		join: 'and',
-		lst: []
-	}
+	// const tvslst = {
+	// 	type: 'tvslst',
+	// 	in: true,
+	// 	join: 'and',
+	// 	lst: []
+	// }
 
-	if (t2) {
-		if (t1.term.type === 'categorical' || t1.term.type === 'condition') {
-			createTvsLstValues(t1, plot, tvslst, 0)
+	// if (t2) {
+	// 	if (t1.term.type === 'categorical' || t1.term.type === 'condition') {
+	// 		createTvsLstValues(t1, plot, tvslst, 0)
 
-			if (isBrush) {
-				self.createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
-			}
-		} else if (
-			t2.q?.mode === 'continuous' ||
-			((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.overlayTwBins != null)
-		) {
-			createTvsTerm(t2, tvslst)
-			tvslst.lst[0].tvs.ranges = [
-				{
-					start: plot.overlayTwBins?.start || null,
-					stop: plot.overlayTwBins?.stop || null,
-					startinclusive: plot.overlayTwBins?.startinclusive || true,
-					stopinclusive: plot.overlayTwBins?.stopinclusive || false,
-					startunbounded: plot.overlayTwBins?.startunbounded ? plot.overlayTwBins?.startunbounded : null,
-					stopunbounded: plot.overlayTwBins?.stopunbounded ? plot.overlayTwBins?.stopunbounded : null
-				}
-			]
-			if (isBrush) {
-				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
-			}
-		} else {
-			createTvsLstValues(t2, plot, tvslst, 0)
-			if (isBrush) {
-				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
-			}
-		}
-	} else {
-		if (isBrush) {
-			self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
-		}
-	}
+	// 		if (isBrush) {
+	// 			self.createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
+	// 		}
+	// 	} else if (
+	// 		t2.q?.mode === 'continuous' ||
+	// 		((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.overlayTwBins != null)
+	// 	) {
+	// 		createTvsTerm(t2, tvslst)
+	// 		tvslst.lst[0].tvs.ranges = [
+	// 			{
+	// 				start: plot.overlayTwBins?.start || null,
+	// 				stop: plot.overlayTwBins?.stop || null,
+	// 				startinclusive: plot.overlayTwBins?.startinclusive || true,
+	// 				stopinclusive: plot.overlayTwBins?.stopinclusive || false,
+	// 				startunbounded: plot.overlayTwBins?.startunbounded ? plot.overlayTwBins?.startunbounded : null,
+	// 				stopunbounded: plot.overlayTwBins?.stopunbounded ? plot.overlayTwBins?.stopunbounded : null
+	// 			}
+	// 		]
+	// 		if (isBrush) {
+	// 			self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
+	// 		}
+	// 	} else {
+	// 		createTvsLstValues(t2, plot, tvslst, 0)
+	// 		if (isBrush) {
+	// 			self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
+	// 		}
+	// 	}
+	// } else {
+	// 	if (isBrush) {
+	// 		self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
+	// 	}
+	// }
+
+	const configCopy = self.config
+	configCopy.bins = self.data.bins
+
+	const listSamples = new ListSamples(self.app, self.state.termfilter.filter, configCopy, plot)
 
 	return () => {
 		const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
-		const filter = filterJoin([filterUiRoot, tvslst])
+		const filter = filterJoin([filterUiRoot, listSamples.tvslst])
 		filter.tag = 'filterUiRoot'
 		self.app.dispatch({
 			type: 'filter_replace',
@@ -315,37 +306,37 @@ function getUpdatedQfromClick(plot, term, isHidden = false) {
 	return q
 }
 
-function createTvsLstValues(term, plot, tvslst, lstIdx) {
-	createTvsTerm(term, tvslst)
+// function createTvsLstValues(term, plot, tvslst, lstIdx) {
+// 	createTvsTerm(term, tvslst)
 
-	tvslst.lst[lstIdx].tvs.values = [
-		{
-			key: plot.seriesId,
-			label: plot.label
-		}
-	]
+// 	tvslst.lst[lstIdx].tvs.values = [
+// 		{
+// 			key: plot.seriesId,
+// 			label: plot.label
+// 		}
+// 	]
 
-	if (term.q.type == 'custom-groupset' || term.q.type == 'predefined-groupset') {
-		const groupset =
-			term.q.type == 'custom-groupset' ? term.q.customset : term.term.groupsetting.lst[term.q.predefined_groupset_idx]
-		const group = groupset.groups.find(group => group.name == plot.seriesId)
-		if (!group) throw 'group not found'
-		tvslst.lst[lstIdx].tvs.values = group.values
-	} else if (term.term.type === 'condition') {
-		tvslst.lst[lstIdx].tvs.bar_by_grade = term.q.bar_by_grade
-		tvslst.lst[lstIdx].tvs.value_by_max_grade = term.q.value_by_max_grade
-	} else if (term.term.type === 'samplelst') {
-		const ids = term.term.values[plot.label].list.map(s => s.sampleId)
-		const tvs = getSamplelstFilter(ids).lst[0] // tvslst is an array of 1 tvs
-		tvslst.lst[lstIdx] = tvs
-	}
-}
+// 	if (term.q.type == 'custom-groupset' || term.q.type == 'predefined-groupset') {
+// 		const groupset =
+// 			term.q.type == 'custom-groupset' ? term.q.customset : term.term.groupsetting.lst[term.q.predefined_groupset_idx]
+// 		const group = groupset.groups.find(group => group.name == plot.seriesId)
+// 		if (!group) throw 'group not found'
+// 		tvslst.lst[lstIdx].tvs.values = group.values
+// 	} else if (term.term.type === 'condition') {
+// 		tvslst.lst[lstIdx].tvs.bar_by_grade = term.q.bar_by_grade
+// 		tvslst.lst[lstIdx].tvs.value_by_max_grade = term.q.value_by_max_grade
+// 	} else if (term.term.type === 'samplelst') {
+// 		const ids = term.term.values[plot.label].list.map(s => s.sampleId)
+// 		const tvs = getSamplelstFilter(ids).lst[0] // tvslst is an array of 1 tvs
+// 		tvslst.lst[lstIdx] = tvs
+// 	}
+// }
 
-function createTvsTerm(term, tvslst) {
-	tvslst.lst.push({
-		type: 'tvs',
-		tvs: {
-			term: term.term
-		}
-	})
-}
+// function createTvsTerm(term, tvslst) {
+// 	tvslst.lst.push({
+// 		type: 'tvs',
+// 		tvs: {
+// 			term: term.term
+// 		}
+// 	})
+// }

@@ -82,13 +82,13 @@ type ViolinDensity = {
 export type ViolinPlotEntry = {
 	/** Color to render */
 	color: string
+	chartId: string
 	density: ViolinDensity
-	overlayTwBins: any
 	/** Text for label */
 	label: string
 	/** Number of samples/cases/patients/etc. */
 	plotValueCount: number
-	/** Cooresponds to the tw.$id */
+	/** Corresponds to the tw.$id */
 	seriesId: string
 	/** Plot image to display */
 	src: string
@@ -99,12 +99,20 @@ export type ViolinPlotEntry = {
 export type ViolinResponse = ValidResponse | ErrorResponse
 
 type ValidResponse = {
+	/** Bins used for each term
+	 * Used for listing samples, filtering, etc.*/
+	bins: { [index: string]: any }
+	charts: {
+		[index: string]: {
+			chartId: string
+			plots: ViolinPlotEntry[]
+			pvalues?: PValueEntries[][]
+		}
+	}
 	/** Absolute min value for all plots */
 	min: number
 	/** Absolute max value for all plots */
 	max: number
-	plots: ViolinPlotEntry[]
-	pvalues?: PValueEntries[][]
 	uncomputableValues: { [index: string]: number }[] | null
 }
 
