@@ -54,7 +54,7 @@ tape('ListSamples.getData()', async test => {
 	const data = await listSamples.getData()
 	test.true(
 		typeof data == 'object' && data.lst && data.refs && data.samples,
-		'Should return correct sample data object from getData()'
+		'Should return correct sample data object from getData() with a list, references, and verbose sample info'
 	)
 
 	test.end()
