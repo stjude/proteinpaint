@@ -25,7 +25,7 @@ export class BoxPlotInteractions {
 	/** Option to add a global filter from the box plot label menu. */
 	addFilter(plot: any) {
 		const state = this.app.getState()
-		const plotConfig = this.app.getState().plots.find((p: BoxPlotConfig) => p.id === this.id)
+		const plotConfig = this.getPlotConfig()
 		const config = structuredClone(plotConfig)
 		const sampleList = new ListSamples(this.app, state.termfilter, config, plot /*false,*/)
 		const filterUiRoot = getFilterItemByTag(state.termfilter.filter, 'filterUiRoot')
@@ -39,7 +39,7 @@ export class BoxPlotInteractions {
 
 	/** Option to hide a plot from the box plot label menu. */
 	hidePlot(plot: RenderedPlot) {
-		const plotConfig = this.app.getState().plots.find((p: BoxPlotConfig) => p.id === this.id)
+		const plotConfig = this.getPlotConfig()
 		//Don't try to modify a frozen object
 		const config = structuredClone(plotConfig)
 		const contTerm = config.term.q.mode == 'continuous' ? 'term2' : 'term'
@@ -54,7 +54,7 @@ export class BoxPlotInteractions {
 
 	/** Trigger when clicking on a hidden plot in the legend */
 	unhidePlot(item: LegendItemEntry) {
-		const plotConfig = this.app.getState().plots.find((p: BoxPlotConfig) => p.id === this.id)
+		const plotConfig = this.getPlotConfig()
 		const config = structuredClone(plotConfig)
 		const contTerm = config.term.q.mode == 'continuous' ? 'term2' : 'term'
 		delete config[contTerm].q.hiddenValues[item.key]
@@ -68,7 +68,7 @@ export class BoxPlotInteractions {
 	/** Option from box plot label to show the samples in a table within the tooltip. */
 	async listSamples(plot: any /*domain: [number, number]*/) {
 		const state = this.app.getState()
-		const plotConfig = this.app.getState().plots.find((p: BoxPlotConfig) => p.id === this.id)
+		const plotConfig = this.getPlotConfig()
 		const config = structuredClone(plotConfig)
 		config.bins = this.getResData().bins
 		//The continuous term is always used as the tw
@@ -89,7 +89,7 @@ export class BoxPlotInteractions {
 	/** Callback for color picker in plot(s) label menu */
 	updatePlotColor(plot: RenderedPlot, color: string) {
 		if (!plot.seriesId) return
-		const plotConfig = this.app.getState().plots.find((p: BoxPlotConfig) => p.id === this.id)
+		const plotConfig = this.getPlotConfig()
 		const config = structuredClone(plotConfig)
 		config.term2.term.values[plot.seriesId].color = color
 		this.app.dispatch({
@@ -97,6 +97,10 @@ export class BoxPlotInteractions {
 			id: this.id,
 			config
 		})
+	}
+
+	getPlotConfig() {
+		return this.app.getState().plots.find((p: BoxPlotConfig) => p.id === this.id)
 	}
 
 	clearDom() {

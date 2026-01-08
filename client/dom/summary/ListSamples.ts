@@ -170,12 +170,21 @@ export class ListSamples {
 	//Formats data rows for #dom renderTable()
 	setRows(data: AnnotatedSampleData) {
 		const rows: { value: string | number }[][] = []
-		for (const [c, k] of Object.entries(data.samples)) {
-			if (!this.t1.$id) throw new Error('Missing term.$id')
-			rows.push([
-				{ value: data.refs.bySampleId[c].label },
-				{ value: Number(roundValueAuto((k as Record<string, { value: number }>)[this.t1.$id].value)) }
-			])
+
+		const addValue = (val: any, term: TermWrapper) => {
+			if (isNumericTerm(term)) {
+				return { value: roundValueAuto(val) }
+			} else {
+				return { value: val }
+			}
+		}
+
+		for (const s of Object.values(data.lst)) {
+			const sampleId = typeof s.sample === 'string' ? s.sample : String(s.sample)
+			const row: any[] = [{ value: data.refs.bySampleId[sampleId].label }]
+			if (s[this.t1.$id!]) row.push(addValue(s[this.t1.$id!].value, this.t1))
+			if (s[this.t2.$id!]) row.push(addValue(s[this.t2.$id!].value, this.t2))
+			rows.push(row)
 		}
 		return rows
 	}
