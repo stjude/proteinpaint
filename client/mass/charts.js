@@ -390,7 +390,7 @@ function getChartTypeList(self, state) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
-			label: 'Mutation vs CNV',
+			label: 'CNV vs Mutation',
 			chartType: 'summarizeMutationCnv',
 			usecase: { target: 'summarizeMutationCnv' },
 			clickTo: self.loadChartSpecificMenu
