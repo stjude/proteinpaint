@@ -98,8 +98,7 @@ export function getBoxPlotMockData() {
 		color: '#e75480',
 		descrStats: mockDescrStats2,
 		x: 278,
-		y: 155,
-		overlayTwBins: null
+		y: 155
 	}
 
 	//Mock data for mockConfig2
