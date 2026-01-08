@@ -77,8 +77,7 @@ export function getBoxPlotMockData() {
 		color: 'blue',
 		descrStats: mockDescrStats1,
 		x: 278,
-		y: 155,
-		overlayTwBins: null
+		y: 155
 	}
 
 	const mockPlot2 = {
@@ -107,6 +106,10 @@ export function getBoxPlotMockData() {
 	const mockData: any = {
 		absMin: 0,
 		absMax: 100,
+		bins: {
+			term1: {},
+			term2: {}
+		},
 		charts: {
 			'Acute lymphoblastic leukemia': {
 				chartId: '1',

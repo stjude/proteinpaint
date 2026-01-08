@@ -8,14 +8,22 @@ Tests:
 	- Default ListSamples constructor
 	- ListSamples constructor throws for invalid plot
     - ListSamples.getTvsLst() in constructor returns obj for categorical term and numeric overlay
-	------ Need .getTvsLst() gene term
-	--- createTvsLstValues()
-	--- createTvsLstRanges()
-	--- createTvsTerm()
-	--- isContinuousOrBinned()
-	--- assignPlotRangeRanges()
-	--- setRows()
+	- createTvsValues() returns correct values array for numeric term
+	- createTvsRanges() returns empty array for continuous term without bins
+	- isContinuousOrBinned() returns correct boolean values per term type
 */
+
+function getNewListSamples() {
+	const { mockConfig1, mockPlot1 } = getBoxPlotMockData()
+	const mockApp = {} as AppApi
+	const mockState: any = {
+		plots: [mockConfig1],
+		termfilter: { filter: 'test' }
+	}
+	const listSamples = new ListSamples(mockApp, mockState.termfilter, mockConfig1, mockPlot1 as any)
+
+	return { listSamples, mockConfig1, mockPlot1, mockApp, mockState }
+}
 
 tape('\n', function (test) {
 	test.comment('-***- plots/boxplot/interactions/ListSamples -***-')
@@ -63,32 +71,13 @@ tape('ListSamples constructor throws for invalid plot', test => {
 tape('ListSamples.getTvsLst() in constructor returns obj for categorical term and numeric overlay', test => {
 	test.timeoutAfter(100)
 
-	const { mockConfig1, mockPlot1 } = getBoxPlotMockData()
-	const mockApp = {} as AppApi
-	const mockState: any = {
-		plots: [mockConfig1],
-		termfilter: { filter: 'test' }
-	}
-	const listSamples = new ListSamples(mockApp, mockState.termfilter, mockConfig1, mockPlot1 as any)
+	const { listSamples } = getNewListSamples()
 
 	const expected = {
 		type: 'tvslst',
 		in: true,
 		join: 'and',
 		lst: [
-			{
-				type: 'tvs',
-				tvs: {
-					term: {
-						id: 'sex',
-						name: 'Sex',
-						type: 'categorical',
-						groupsetting: { disabled: true },
-						values: { 1: { label: 'Female', color: 'blue' }, 2: { label: 'Male', color: '#e75480' } }
-					},
-					values: [{ key: '1', label: '1' }]
-				}
-			},
 			{
 				type: 'tvs',
 				tvs: {
@@ -117,21 +106,79 @@ tape('ListSamples.getTvsLst() in constructor returns obj for categorical term an
 						},
 						isleaf: true
 					},
-					ranges: [
-						{
-							start: 20,
-							stop: 100,
-							startinclusive: true,
-							stopinclusive: true,
-							startunbounded: false,
-							stopunbounded: false
-						}
-					]
+					ranges: [],
+					values: [{ key: '1' }]
+				}
+			},
+			{
+				type: 'tvs',
+				tvs: {
+					term: {
+						id: 'sex',
+						name: 'Sex',
+						type: 'categorical',
+						groupsetting: { disabled: true },
+						values: { 1: { label: 'Female', color: 'blue' }, 2: { label: 'Male', color: '#e75480' } }
+					},
+					values: [{ key: '1' }]
 				}
 			}
 		]
 	}
 	test.deepEqual(listSamples.tvslst, expected, `Should return expected tvslst object`)
+
+	test.end()
+})
+
+tape('createTvsValues() returns correct values array for numeric term', test => {
+	test.timeoutAfter(100)
+
+	const { listSamples, mockConfig1 } = getNewListSamples()
+
+	const mockTvs: any = {
+		type: 'tvs',
+		tvs: {
+			term: mockConfig1.term as any
+		}
+	}
+
+	listSamples.createTvsValues(mockTvs.tvs, mockConfig1.term, 'testValueKey')
+	test.true(
+		mockTvs.tvs.values.length == 1 && mockTvs.tvs.values[0].key === 'testValueKey',
+		'Should create values array with the correct entry for continuous term'
+	)
+
+	test.end()
+})
+
+tape('createTvsRanges() returns empty array for continuous term without bins', test => {
+	test.timeoutAfter(100)
+
+	const { listSamples, mockConfig1 } = getNewListSamples()
+
+	const mockTvs: any = {
+		type: 'tvs',
+		tvs: {
+			term: mockConfig1.term as any
+		}
+	}
+
+	listSamples.createTvsRanges(mockTvs.tvs, 1, '')
+	test.equal(mockTvs.tvs.ranges.length, 0, 'Should not create ranges for continuous term without bins')
+
+	test.end()
+})
+
+tape('isContinuousOrBinned() returns correct boolean values per term type', test => {
+	test.timeoutAfter(100)
+
+	const { listSamples, mockConfig1 } = getNewListSamples()
+
+	const term1Result = listSamples.isContinuousOrBinned(mockConfig1.term as any, 1)
+	test.equal(term1Result, true, 'Should return true for continuous or binned term')
+
+	const term2Result = listSamples.isContinuousOrBinned(mockConfig1.term2 as any, 2)
+	test.equal(term2Result, false, 'Should return false for non-numeric term')
 
 	test.end()
 })
