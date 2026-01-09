@@ -213,6 +213,63 @@ tape('getFilterExcludingPill()', async test => {
 		)
 	}
 
+	console.log(216, f0.getTreeFilter, f0)
+
+	if (test._ok) f0.destroy()
+	test.end()
+})
+
+tape('getTreeFilter()', async test => {
+	const holder = d3s.select('body').append('div')
+	const app = {
+		getState: () => f0.state
+	}
+	const f0 = new Filter({ app, holder, vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' }, callback: () => {} })
+	const root = {
+		type: 'tvslst',
+		join: '',
+		in: true,
+		lst: [{ type: 'tvs', tvs: { term: termjson.sex, values: [{ key: '1' }] } }]
+	}
+	await f0.main(JSON.stringify(root))
+
+	// simulate FilterRxComp by adding global state filter
+	const cohortTvs = {
+		tag: 'cohortFilter',
+		type: 'tvs',
+		tvs: { term: { id: 'subcohort', type: 'multivalue' }, values: [{ key: 'ABC', label: 'ABC' }] }
+	}
+	f0.state = {
+		termfilter: {
+			filter: {
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: [structuredClone(cohortTvs)]
+			}
+		}
+	}
+
+	{
+		const f = f0.getTreeFilter('or')
+		test.deepEqual(
+			f,
+			{ type: 'tvslst', in: true, join: '', lst: [] },
+			`should return a tree filter that is NOT joined to global filter if the first argument='or'`
+		)
+	}
+
+	{
+		const f = f0.getTreeFilter('and')
+		const tvs = structuredClone(cohortTvs)
+
+		test.deepEqual(
+			f,
+			{ type: 'tvslst', in: true, join: 'and', lst: [structuredClone(root.lst[0]), structuredClone(cohortTvs)] },
+			`should return a tree filter that IS joined to global filter if the first argument='and'`
+		)
+	}
+
 	if (test._ok) f0.destroy()
 	test.end()
 })
