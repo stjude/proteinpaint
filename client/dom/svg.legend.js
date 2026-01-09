@@ -110,6 +110,7 @@ export default function svgLegend(opts) {
 		} else {
 			currlinex += settings.padleft + grplabel.node().getBBox().width + 2 * settings.padx
 		}
+		d.itemStartX = currlinex
 
 		if (d.sorter) d.items.sort(d.sorter)
 
@@ -129,9 +130,15 @@ export default function svgLegend(opts) {
 
 	function addItem(d, i) {
 		const g = select(this)
-			.attr('transform', 'translate(' + currlinex + ',' + currliney + ')')
 			.style('opacity', settings.itemOpacity)
 			.style('opacity', d.greyedOut ? '0.6' : 1)
+		if (d.newLine) {
+			currliney += settings.lineh
+			const groupData = this.parentNode ? this.parentNode.__data__ : null
+			const leftdist = !settings.hangleft ? settings.padleft : settings.padleft + settings.hangleft + settings.padx
+			currlinex = groupData && groupData.itemStartX != null ? groupData.itemStartX : leftdist
+		}
+		g.attr('transform', 'translate(' + currlinex + ',' + currliney + ')')
 
 		const itemlabel = g
 			.append('text')
@@ -254,7 +261,7 @@ export default function svgLegend(opts) {
 					.style('border-radius', '4px')
 
 				if (typeof d.onColorChange === 'function') {
-					colorInput.on('input', event => {
+					colorInput.on('change', event => {
 						d.onColorChange(event.target.value)
 					})
 				}
