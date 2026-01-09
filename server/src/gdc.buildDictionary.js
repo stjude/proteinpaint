@@ -196,9 +196,10 @@ export async function gdcBuildDictionary(ds) {
 
 			// Per Executive Directive: https://gdc-ctds.atlassian.net/browse/FEAT-900
 			if (name == 'Gender') {
-				name = 'Sex'
+				name = 'Sex at birth'
 			} else if (name.toLowerCase().endsWith('gender')) {
-				name = name.slice(0, name.length - 6) + 'sex'
+				// 'Relationship gender'
+				name = name.slice(0, name.length - 6) + 'sex at birth'
 			}
 
 			// always create an object for currentId
