@@ -244,17 +244,18 @@ export function setInteractivity(self) {
 		})
 	}
 
-	self.getTreeFilter = (d, filter) => {
+	// join='and' | 'or'
+	self.getTreeFilter = (join, filter) => {
 		const filterCopy = filter
 			? filter
 			: self.activeData
-			? self.getAdjustedRoot(self.activeData.filter.$id, d)
+			? self.getAdjustedRoot(self.activeData.filter.$id, join)
 			: JSON.parse(self.rawCopy)
 
 		if (filterCopy.lst.length < 2) filterCopy.join = ''
 
 		const globalFilter = self.opts?.app?.getState()?.termfilter?.filter
-		return globalFilter ? filterJoin([filterCopy, globalFilter]) : filterCopy
+		return globalFilter && join != 'or' ? filterJoin([filterCopy, globalFilter]) : filterCopy
 	}
 
 	/*
