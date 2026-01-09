@@ -829,33 +829,33 @@ export class TermdbVocab extends Vocab {
 
 					const { valueByCode } = data.refs.byDt || { valueByCode: {} }
 
-					for (const [sampleId, sample] of Object.entries(data.samples)) {
-						// ignore sample objects that are not annotated by other keys besides 'sample'
-						if (!Object.keys(sample).filter(k => k != 'sample').length) continue
-						samplesToShow.add(sampleId)
-						//if (!(sampleId in samples)) {
-						// normalize the expected data shape
-						if (!data.refs.bySampleId[sampleId]) data.refs.bySampleId[sampleId] = {}
-						if (typeof data.refs.bySampleId[sampleId] == 'string')
-							data.refs.bySampleId[sampleId] = { label: data.refs.bySampleId[sampleId] }
+					for (const tw of copies) {
+						for (const [sampleId, sample] of Object.entries(data.samples)) {
+							// ignore sample objects that are not annotated by other keys besides 'sample'
+							if (!Object.keys(sample).filter(k => k != 'sample').length) continue
+							samplesToShow.add(sampleId)
+							if (!(sampleId in samples)) {
+								// normalize the expected data shape
+								if (!data.refs.bySampleId[sampleId]) data.refs.bySampleId[sampleId] = {}
+								if (typeof data.refs.bySampleId[sampleId] == 'string')
+									data.refs.bySampleId[sampleId] = { label: data.refs.bySampleId[sampleId] }
 
-						const _ref_ = data.refs.bySampleId[sampleId]
-						// assign default sample ref values here
-						// TODO: may assign an empty string value if not allowed to display sample IDs or names ???
-						if (!_ref_.label) _ref_.label = sampleId
-						const s = {
-							sample: sampleId,
-							// must reserve _ref -> should not be used as a term.id or tw.$id
-							_ref_
-						}
-						samples[sampleId] = s
-						//}
+								const _ref_ = data.refs.bySampleId[sampleId]
+								// assign default sample ref values here
+								// TODO: may assign an empty string value if not allowed to display sample IDs or names ???
+								if (!_ref_.label) _ref_.label = sampleId
+								const s = {
+									sample: sampleId,
+									// must reserve _ref -> should not be used as a term.id or tw.$id
+									_ref_
+								}
+								samples[sampleId] = s
+							}
 
-						// rehydrate
-						if (!sample.sample) sample.sample = data.refs.bySampleId[sampleId].sample || sampleId
-						if (!sample.sampleName) sample.sampleName = data.refs.bySampleId[sampleId].sampleName || sample.sample
+							// rehydrate
+							if (!sample.sample) sample.sample = data.refs.bySampleId[sampleId].sample || sampleId
+							if (!sample.sampleName) sample.sampleName = data.refs.bySampleId[sampleId].sampleName || sample.sample
 
-						for (const tw of copies) {
 							const { shortId, gene } = data.refs.byTermId[tw.$id]
 							if (shortId in sample) {
 								const d = sample[shortId]
@@ -899,19 +899,19 @@ export class TermdbVocab extends Vocab {
 										if (typeof v != 'string') continue
 										const [dt, code] = v.split('_')
 										const m = valueByCode[code]
-										if (m) d.values[i] = Object.assign({ dt, gene }, m)
+										if (m) d.values[i] = Object.assign({ dt: Number(dt), gene }, m)
 									}
 								}
 							}
 
-							refs.byTermId[tw.$id] = tw
-							if (tw.$id in data.refs.byTermId) {
-								refs.byTermId[tw.$id] = Object.assign({}, refs.byTermId[tw.$id], data.refs.byTermId[tw.$id])
+							for (const sampleId in data.refs.bySampleId) {
+								refs.bySampleId[sampleId] = data.refs.bySampleId[sampleId]
 							}
 						}
 
-						for (const sampleId in data.refs.bySampleId) {
-							refs.bySampleId[sampleId] = data.refs.bySampleId[sampleId]
+						refs.byTermId[tw.$id] = tw
+						if (tw.$id in data.refs.byTermId) {
+							refs.byTermId[tw.$id] = Object.assign({}, refs.byTermId[tw.$id], data.refs.byTermId[tw.$id])
 						}
 					}
 					numResponses++

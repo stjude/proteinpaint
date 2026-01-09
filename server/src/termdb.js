@@ -314,7 +314,7 @@ async function get_matrix(q, req, res, ds, genome) {
 				// with 50 genes, not able to do >4000 samples using a byDt[dt] string,
 				// which causes a large iteration of nested loops on the client side
 				// to recover encoded blank/WT data
-				// if (i > 25000) break // !!! FOR TESTING ONLY !!!
+				if (i > 4000) break // !!! FOR TESTING ONLY !!!
 
 				payload.refs.bySampleId[sampleId] = Object.assign(
 					{
