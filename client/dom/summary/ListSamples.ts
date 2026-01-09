@@ -1,10 +1,12 @@
 import type { AppApi } from '#rx'
 import type { TermWrapper } from '#types'
 import type { AnnotatedSampleData } from '../../types/termdb'
+import type { TableColumn, TableRow } from '#dom'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getSamplelstFilter } from '../../mass/groups.js'
 import { TermTypes, isNumericTerm } from '#shared/terms.js'
 import { filterJoin } from '#filter'
+import { addGvRowVals } from '#plots/barchart.events.js'
 
 /** Temp type scoped for this file.
  * Properties required in the plot arg. */
@@ -75,7 +77,7 @@ export class ListSamples {
 		this.getTvsLst()
 	}
 
-	getTvsLst() {
+	getTvsLst(): void {
 		this.getTvsLstEntry(1)
 		if (this.t2) {
 			this.terms.push(this.t2)
@@ -115,7 +117,7 @@ export class ListSamples {
 		}
 	}
 
-	createTvsValues(tvs: any, tw: any, key: string) {
+	createTvsValues(tvs: any, tw: any, key: string): void {
 		if (tw.term.type === TermTypes.SAMPLELST) {
 			const ids = tw.term.values[key].list.map(s => s.sampleId)
 			// Returns filter obj with lst array of 1 tvs
@@ -135,7 +137,7 @@ export class ListSamples {
 		}
 	}
 
-	createTvsRanges(tvs, termNum, key) {
+	createTvsRanges(tvs: any, termNum: number, key: string): void {
 		if (termNum == 1 && this.useRange) {
 			tvs.ranges = [
 				{
@@ -165,7 +167,7 @@ export class ListSamples {
 		)
 	}
 
-	async getData() {
+	async getData(): Promise<AnnotatedSampleData> {
 		try {
 			const opts = {
 				terms: this.terms,
@@ -182,34 +184,45 @@ export class ListSamples {
 	}
 
 	//Formats data for #dom renderTable()
-	setTableData(data: AnnotatedSampleData): any {
+	setTableData(data: AnnotatedSampleData): [TableRow[], TableColumn[]] {
 		const rows: { value: string | number }[][] = []
 
-		const formatValue = (val: any, term: TermWrapper) => {
-			if (isNumericTerm(term.term)) {
-				return roundValueAuto(val)
-			} else {
-				return val
-			}
-		}
-
 		/** Only show columns for terms with values */
-		const colSet = new Set()
+		const colSet = new Set<any>()
 		colSet.add('Sample')
+
+		const urlTemplate = this.app.vocabApi.termdbConfig?.urlTemplates?.sample
 
 		for (const s of Object.values(data.lst)) {
 			const sampleId = typeof s.sample === 'string' ? s.sample : String(s.sample)
 			const row: any[] = [{ value: data.refs.bySampleId[sampleId].label }]
-			if (s[this.t1.$id!]) {
-				row.push({ value: formatValue(s[this.t1.$id!].value, this.t1) })
-				colSet.add(this.t1.term.name)
+			if (urlTemplate) {
+				// sample url template is defined, use it to format sample name as url
+				row[0].url = urlTemplate.base + (s[urlTemplate.namekey] || s.sample)
 			}
+			if (s[this.t1.$id!]) {
+				this.addRowValue(s[this.t1.$id!], this.t1, row)
+				colSet.add(this.t1.term.name)
+			} else continue //skip rows with no term value
 			if (this.t2 && s[this.t2.$id!]) {
-				row.push({ value: formatValue(s[this.t2.$id!].value, this.t2) })
+				this.addRowValue(s[this.t2.$id!], this.t2, row)
 				colSet.add(this.t2.term.name)
 			}
 			rows.push(row)
 		}
 		return [rows, Array.from(colSet).map(c => ({ label: c }))]
+	}
+
+	addRowValue(sample: any, tw: TermWrapper, row: TableRow): void {
+		let formattedVal
+		if (isNumericTerm(tw.term)) {
+			formattedVal = roundValueAuto(sample.value)
+		} else if (tw.term.type === TermTypes.GENE_VARIANT) {
+			addGvRowVals(sample, tw, row, this.app.vocabApi.termdbMatrixClass)
+			return
+		} else {
+			formattedVal = sample.value
+		}
+		row.push({ value: formattedVal })
 	}
 }
