@@ -30,7 +30,7 @@ which python3
 # Gives the absolute path to the python installattion in the virtual environment
 ```
 
-4. Now you should by able to install all the relevant python modules by installing all modules in the requirement.txt file
+4. Now you should be able to install all the relevant python modules by installing all modules in the requirement.txt file
 
 ```sh
 pip3 install -r requirements.txt
