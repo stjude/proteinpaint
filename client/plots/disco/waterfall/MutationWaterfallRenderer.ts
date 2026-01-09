@@ -35,16 +35,6 @@ export default class MutationWaterfallRenderer implements IRenderer {
 				const table = table2col({ holder: menu.d })
 				{
 					const [td1, td2] = table.addRow()
-					td1.text('Chromosome')
-					td2.text(d.chr)
-				}
-				{
-					const [td1, td2] = table.addRow()
-					td1.text('Position')
-					td2.text(`${d.chr}:${d.position}`)
-				}
-				{
-					const [td1, td2] = table.addRow()
 					td1.text('Intermutation distance')
 					td2.text(`${bplen(distance)}`)
 				}
