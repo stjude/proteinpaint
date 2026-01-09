@@ -258,8 +258,10 @@ async function get_matrix(q, req, res, ds, genome) {
 	}
 	const data = await getData(q, ds, true)
 	if (data.error) console.trace(259, data) // FIXME hardcoded to true
-	let jsonStr = JSON.stringify(data.refs)
-	console.log(260, 'jsonStr.length=', jsonStr?.length)
+
+	const maxStrLength = 5.12e8 // based on a 64-bit hard constraint in V8 for string processing
+	let jsonStrlen = JSON.stringify(data.refs).length
+	console.log(260, 'start jsonStr.length=', jsonStrlen)
 
 	// samples = {
 	//   <sample1>: {
@@ -316,7 +318,8 @@ async function get_matrix(q, req, res, ds, genome) {
 					delete payload.samples[sampleId]
 					delete payload.refs.bySampleId[sampleId]
 				} else {
-					for (const [termId, term] of Object.entries(sample)) {
+					for (const [termId, d] of Object.entries(sample)) {
+						delete d._SAMPLEID_
 						if (!payload.refs.byTermId[termId]) {
 							payload.refs.byTermId[termId] = data.refs.byTermId[termId] || {}
 							payload.refs.byTermId[termId].shortId = currShortId++
@@ -324,15 +327,21 @@ async function get_matrix(q, req, res, ds, genome) {
 						const j = payload.refs.byTermId[termId].shortId
 						sample[j] = sample[termId]
 						delete sample[termId]
+						if (d.values) {
+							for (const v of d.values) {
+								delete v._SAMPLEID_
+							}
+						}
 					}
 				}
 
 				try {
-					const keyval = JSON.stringify({ [sampleId]: sample })
-					jsonStr += '\n---------------------------------------------------' + keyval
+					jsonStrlen += JSON.stringify({ [sampleId]: sample }).length + 50
+					if (jsonStrlen > maxStrLength) throw { code: 'RangeError', message: 'Invalid string length' }
 					payload.samples[sampleId] = sample
 				} catch (e) {
-					if (e instanceof RangeError && e.message.includes('Invalid string length')) {
+					console.log(334, 'jsonStrlen=', jsonStrlen, e)
+					if (e.code == 'RangeError' && e.message.includes('Invalid string length')) {
 						console.log(329, 'jsonStr.length=', jsonStr?.length)
 						payload.error = {
 							code: 'RangeError: Invalid string length',
@@ -371,7 +380,7 @@ async function get_matrix(q, req, res, ds, genome) {
 			}
 		}
 	}
-	console.log(352)
+	console.log(374, 'jsonStrlen=', jsonStrlen)
 	//jsonStr += '}'
 	res.send(payload)
 }
