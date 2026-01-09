@@ -73,7 +73,6 @@ export class ListSamples {
 			join: 'and',
 			lst: []
 		}
-
 		this.getTvsLst()
 	}
 
@@ -118,7 +117,13 @@ export class ListSamples {
 	}
 
 	createTvsValues(tvs: any, tw: any, key: string): void {
-		if (tw.term.type === TermTypes.SAMPLELST) {
+		if (tw?.q?.type == 'custom-groupset' || tw?.q?.type == 'predefined-groupset') {
+			const groupset =
+				tw.q.type == 'custom-groupset' ? tw.q.customset : tw.term.groupsetting.lst[tw.q.predefined_groupset_idx]
+			const group = groupset.groups.find(group => group.name == key)
+			if (!group) throw new Error(`Group not found in groupset for ${tw.term.name}: ${key}`)
+			tvs.values = group.values
+		} else if (tw.term.type === TermTypes.SAMPLELST) {
 			const ids = tw.term.values[key].list.map(s => s.sampleId)
 			// Returns filter obj with lst array of 1 tvs
 			const tmpTvsLst = getSamplelstFilter(ids).lst[0]
