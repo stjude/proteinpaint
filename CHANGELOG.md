@@ -12,6 +12,7 @@ Fixes:
 - GDC lollipop now displays ssm=2000 for TTN rather than 1999; the limit is applied to both ssm & sv
 - restore old singlecell gene exp violin by supplying q.mode=continuous
 - The list samples menu option in the box plot is fixed and includes logic to handle the divide by term. The values are now shown under term headings as well.
+- do not join to global filter in getTreeFilter() if the join argument is 'or', so that the edit menu will list all applicable categories
 
 
 ## 2.170.0
