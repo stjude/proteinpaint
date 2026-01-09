@@ -693,8 +693,13 @@ class GRIN2 extends PlotBase implements RxComponent {
 				maxGenesToShow: this.state.config.settings?.manhattan?.maxGenesToShow,
 				lesionTypeColors: this.state.config.settings?.manhattan?.lesionTypeColors,
 				qValueThreshold: this.state.config.settings?.manhattan?.qValueThreshold,
+				maxCappedPoints: this.state.config.settings?.manhattan?.maxCappedPoints,
+				hardCap: this.state.config.settings?.manhattan?.hardCap,
+				binSize: this.state.config.settings?.manhattan?.binSize,
 				...configValues
 			}
+
+			console.log('GRIN2 request data:', requestData)
 
 			const response = await dofetch3('/grin2', {
 				body: requestData
@@ -1015,7 +1020,16 @@ export function getDefaultSettings(opts) {
 				gain: '#FF4444', // red
 				fusion: '#FFA500', // orange
 				sv: '#9932CC' // purple
-			}
+			},
+
+			// Threshold for the rust code when determing if we need to raise the cap value from the default
+			maxCappedPoints: 5,
+			// maxCappedPoints: 25,
+			// maxCappedPoints: 50,
+			binSize: 10,
+
+			// Hard cap regardless of data distribution
+			hardCap: 200
 		}
 	}
 
