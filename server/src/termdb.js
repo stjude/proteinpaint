@@ -256,40 +256,49 @@ async function get_matrix(q, req, res, ds, genome) {
 		res.send(plot.matrixConfig)
 		return
 	}
-	const data = await getData(q, ds, true)
-	if (data.error) console.trace(259, data) // FIXME hardcoded to true
-	let jsonStr = JSON.stringify(data.refs)
-	console.log(260, 'jsonStr.length=', jsonStr?.length)
+	const data = await getData(q, ds, true) // FIXME hardcoded to true
+	if (data.error) console.trace(259, data)
 
-	// samples = {
-	//   <sample1>: {
-	//     byDt: {
-	//       <1>: {
-	//          notTested: '0101001...'
-	//       },
-	//       <4>: {
-	//          notTested: '01010111...'
-	//       }
-	//     },
-	//   },
-	//   <sample2>: { }
-	// }
+	const codeByClassOrigin = {
+		Blank: {
+			'': 1,
+			germline: 2,
+			somatic: 3
+		},
+		WT: {
+			'': 4,
+			germline: 5,
+			somatic: 6
+		}
+	}
+
+	const shortIds = new Set()
+
 	const payload = {
 		samples: {},
 		refs: {
 			bySampleId: {},
 			byTermId: {},
 			byDt: {
+				codeByClassOrigin,
 				// should match integer string order
-				genes: [],
-				codes: {
+				shortIds,
+				valueByCode: {
 					0: null, // tested and not wildtype, there should already by samples[termId].values[] entries
-					1: { class: 'Blank', label: 'Not tested' }
-					//2: {}
+					1: { class: 'Blank', label: 'Not tested' },
+					2: { class: 'Blank', label: 'Not tested', origin: 'germline' },
+					3: { class: 'Blank', label: 'Not tested', origin: 'somatic' },
+					4: { class: 'WT', label: 'Wildtype' },
+					5: { class: 'WT', label: 'Wildtype', origin: 'germline' },
+					6: { class: 'WT', label: 'Wildtype', origin: 'somatic' }
 				}
 			}
 		}
 	}
+
+	let jsonStr = JSON.stringify(Object.assign({ byDt: payload.refs.byDt }, data.refs))
+	console.log(260, 'jsonStr.length=', jsonStr?.length)
+	let i = 0
 
 	if (authApi.canDisplaySampleIds(req, ds)) {
 		if (!data.refs.byTermId) data.refs.byTermId = {}
@@ -301,6 +310,12 @@ async function get_matrix(q, req, res, ds, genome) {
 				sampleIndex = 0
 
 			for (const [sampleId, sample] of sampleEntries) {
+				i++
+				// with 50 genes, not able to do >4000 samples using a byDt[dt] string,
+				// which causes a large iteration of nested loops on the client side
+				// to recover encoded blank/WT data
+				if (i > 4000) break // !!! FOR TESTING ONLY !!!
+
 				payload.refs.bySampleId[sampleId] = Object.assign(
 					{
 						sample: sample.sample || sampleId,
@@ -315,21 +330,57 @@ async function get_matrix(q, req, res, ds, genome) {
 				if (!Object.keys(sample).length) {
 					delete payload.samples[sampleId]
 					delete payload.refs.bySampleId[sampleId]
-				} else {
-					for (const [termId, term] of Object.entries(sample)) {
-						if (!payload.refs.byTermId[termId]) {
-							payload.refs.byTermId[termId] = data.refs.byTermId[termId] || {}
-							payload.refs.byTermId[termId].shortId = currShortId++
+					continue
+				}
+
+				for (const [termId, d] of Object.entries(sample)) {
+					if (d.key === d.label) delete d.label
+					if (!payload.refs.byTermId[termId]) {
+						payload.refs.byTermId[termId] = data.refs.byTermId[termId] || {}
+						const shortId = currShortId++
+						payload.refs.byTermId[termId].shortId = shortId
+					}
+					const j = payload.refs.byTermId[termId].shortId
+					sample[j] = sample[termId]
+					const m = d.values?.[0]
+					if (m?.dt && m.gene && !shortIds.has(j)) {
+						payload.refs.byTermId[termId].gene = m.gene
+						shortIds.add(j)
+					}
+					delete sample[termId]
+				}
+
+				sample.byDt = { 1: '', 4: '' }
+				for (const id of shortIds) {
+					const d = sample[id]
+					if (!d || !d.values) {
+						for (const dtNum of sample.byDt) {
+							sample.byDt[dtNum] += '0'
 						}
-						const j = payload.refs.byTermId[termId].shortId
-						sample[j] = sample[termId]
-						delete sample[termId]
+						continue
+					}
+					const uncodedValues = []
+					for (const v of d.values) {
+						delete v._SAMPLEID_
+						const code = codeByClassOrigin[v.class]?.[v.origin || '']
+						if (code && v.dt) {
+							sample.byDt[v.dt] += code
+						} else {
+							if (v.dt in sample.byDt) sample.byDt[v.dt] += '0'
+							uncodedValues.push(v)
+						}
+					}
+
+					if (!uncodedValues.length) {
+						delete sample[id]
+					} else {
+						d.values = uncodedValues
 					}
 				}
 
 				try {
 					const keyval = JSON.stringify({ [sampleId]: sample })
-					jsonStr += '\n---------------------------------------------------' + keyval
+					jsonStr += '\n' + keyval
 					payload.samples[sampleId] = sample
 				} catch (e) {
 					if (e instanceof RangeError && e.message.includes('Invalid string length')) {
@@ -340,7 +391,7 @@ async function get_matrix(q, req, res, ds, genome) {
 								sampleEntries.length - sampleIndex
 							} of ${sampleEntries.length} cases/samples.)`
 						}
-						payload.samples = {}
+						payload.samples = Object.fromEntries(Object.entries(payload.samples).slice(0, 5))
 					} else throw e
 
 					// payload.error = {
@@ -371,7 +422,9 @@ async function get_matrix(q, req, res, ds, genome) {
 			}
 		}
 	}
-	console.log(352)
+	console.log(420, jsonStr.length)
+
+	payload.refs.byDt.shortIds = [...shortIds]
 	//jsonStr += '}'
 	res.send(payload)
 }

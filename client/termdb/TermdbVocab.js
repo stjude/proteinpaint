@@ -759,7 +759,7 @@ export class TermdbVocab extends Vocab {
 		if (!headers) return
 		const filter = getNormalRoot(opts.filter)
 		const samples = {}
-		const refs = { byTermId: _refs.byTermId || {}, bySampleId: _refs.bySampleId || {} }
+		const refs = { byTermId: _refs.byTermId || {}, bySampleId: _refs.bySampleId || {}, byDt: {} }
 		const promises = []
 		const samplesToShow = new Set()
 
@@ -817,40 +817,68 @@ export class TermdbVocab extends Vocab {
 				//add this to limit to mutated cases
 				init.body.currentGeneNames = currentGeneNames
 			}
+
 			promises.push(
 				dofetch3('termdb', init, { cacheAs: 'decoded' }).then(data => {
-					if (data.error) throw data.error
+					if (data.error) {
+						console.log(822, data)
+						throw data.error
+					}
+					console.log(822, structuredClone(Object.fromEntries(Object.entries(data.samples).slice(0, 5))))
 					if (!data.refs.bySampleId) data.refs.bySampleId = {}
-					for (const tw of copies) {
-						for (const [sampleId, sample] of Object.entries(data.samples)) {
-							// ignore sample objects that are not annotated by other keys besides 'sample'
-							if (!Object.keys(sample).filter(k => k != 'sample').length) continue
-							samplesToShow.add(sampleId)
-							if (!(sampleId in samples)) {
-								// normalize the expected data shape
-								if (!data.refs.bySampleId[sampleId]) data.refs.bySampleId[sampleId] = {}
-								if (typeof data.refs.bySampleId[sampleId] == 'string')
-									data.refs.bySampleId[sampleId] = { label: data.refs.bySampleId[sampleId] }
 
-								const _ref_ = data.refs.bySampleId[sampleId]
-								// assign default sample ref values here
-								// TODO: may assign an empty string value if not allowed to display sample IDs or names ???
-								if (!_ref_.label) _ref_.label = sampleId
-								const s = {
-									sample: sampleId,
-									// must reserve _ref -> should not be used as a term.id or tw.$id
-									_ref_
+					const { shortIds, valueByCode } = data.refs.byDt || { shortIds: [], valueByCode: {} }
+					console.log(826, shortIds)
+
+					for (const [sampleId, sample] of Object.entries(data.samples)) {
+						// ignore sample objects that are not annotated by other keys besides 'sample'
+						if (!Object.keys(sample).filter(k => k != 'sample').length) continue
+						samplesToShow.add(sampleId)
+						//if (!(sampleId in samples)) {
+						// normalize the expected data shape
+						if (!data.refs.bySampleId[sampleId]) data.refs.bySampleId[sampleId] = {}
+						if (typeof data.refs.bySampleId[sampleId] == 'string')
+							data.refs.bySampleId[sampleId] = { label: data.refs.bySampleId[sampleId] }
+
+						const _ref_ = data.refs.bySampleId[sampleId]
+						// assign default sample ref values here
+						// TODO: may assign an empty string value if not allowed to display sample IDs or names ???
+						if (!_ref_.label) _ref_.label = sampleId
+						const s = {
+							sample: sampleId,
+							// must reserve _ref -> should not be used as a term.id or tw.$id
+							_ref_
+						}
+						samples[sampleId] = s
+						//}
+
+						// rehydrate
+						if (!sample.sample) sample.sample = data.refs.bySampleId[sampleId].sample || sampleId
+						if (!sample.sampleName) sample.sampleName = data.refs.bySampleId[sampleId].sampleName || sample.sample
+						if (sample.byDt) {
+							for (const [dt, v] of Object.entries(sample.byDt)) {
+								for (const id of shortIds) {
+									if (!sample[id]) sample[id] = { values: [] }
+									//else if (!sample[id].values) sample[id].values = []
+									for (const code of v.split('')) {
+										const m = valueByCode[code]
+										if (!m) continue
+										sample[id].values.push(Object.assign({ dt }, m))
+									}
 								}
-								samples[sampleId] = s
 							}
+							delete sample.byDt
+						}
 
-							if (!sample.sample) sample.sample = data.refs.bySampleId[sampleId].sample || sampleId
-							if (!sample.sampleName) sample.sampleName = data.refs.bySampleId[sampleId].sampleName || sample.sample
+						for (const tw of copies) {
+							const { shortId, gene } = data.refs.byTermId[tw.$id]
+							if (shortId in sample) {
+								const d = sample[shortId]
+								delete sample[shortId]
+								sample[tw.$id] = d
 
-							const shortTermId = data.refs.byTermId[tw.$id].shortId
-							if (shortTermId in sample) {
-								sample[tw.$id] = sample[shortTermId]
-								delete sample[shortTermId]
+								// rehydrate
+								if (d.key && d.values && !('label' in d)) d.label = d.key
 
 								if (tw.term.type == 'termCollection') {
 									const termsValue = JSON.parse(sample[tw.$id].value)
@@ -874,21 +902,26 @@ export class TermdbVocab extends Vocab {
 										})
 										pre_val_sum += value
 									}
-									sample[tw.$id].values = values
-									sample[tw.$id].numerators_sum = numerators_sum
-									delete sample[tw.$id].value
+									d.values = values
+									d.numerators_sum = numerators_sum
+									delete d.value
 								}
-								samples[sampleId][tw.$id] = sample[tw.$id]
+								samples[sampleId][tw.$id] = d
+								if (gene && d.values) {
+									for (const v of d.values) {
+										if (!v.gene) v.gene = gene
+									}
+								}
+							}
+
+							refs.byTermId[tw.$id] = tw
+							if (tw.$id in data.refs.byTermId) {
+								refs.byTermId[tw.$id] = Object.assign({}, refs.byTermId[tw.$id], data.refs.byTermId[tw.$id])
 							}
 						}
 
 						for (const sampleId in data.refs.bySampleId) {
 							refs.bySampleId[sampleId] = data.refs.bySampleId[sampleId]
-						}
-
-						refs.byTermId[tw.$id] = tw
-						if (tw.$id in data.refs.byTermId) {
-							refs.byTermId[tw.$id] = Object.assign({}, refs.byTermId[tw.$id], data.refs.byTermId[tw.$id])
 						}
 					}
 					numResponses++
@@ -974,6 +1007,7 @@ export class TermdbVocab extends Vocab {
 			for (const tw of opts.terms) {
 				mayFillInCategory2samplecount4term(tw, data.lst, this.termdbConfig)
 			}
+			console.log(976, data)
 			return data
 		} catch (e) {
 			throw e
