@@ -59,7 +59,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			callback: async () => {
 				mutSearchPrompt.text('LOADING ...')
 				try {
-					mutTw = await fillGeneTw(result.geneSymbol, dtsnvindel)
+					mutTw = await fillGvTw(result.geneSymbol, dtsnvindel)
 					await updateUi()
 					if (cnvGeneSameAsMut) launch()
 					mutSearchPrompt.text('')
@@ -86,7 +86,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			callback: async () => {
 				cnvSearchPrompt.text('LOADING ...')
 				try {
-					cnvTw = await fillGeneTw(result.geneSymbol, dtcnv)
+					cnvTw = await fillGvTw(result.geneSymbol, dtcnv)
 					await updateUi()
 					cnvSearchPrompt.text('')
 				} catch (e: any) {
@@ -125,7 +125,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 
 	updateUi()
 
-	async function fillGeneTw(geneSymbol, dt) {
+	async function fillGvTw(geneSymbol, dt) {
 		const name = geneSymbol
 		const tw: any = {
 			term: {
