@@ -1,1 +1,2 @@
-
+Fixes:
+- do not join to global filter in getTreeFilter() if the join argument is 'or', so that the edit menu will list all applicable categories
