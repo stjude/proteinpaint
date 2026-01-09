@@ -3,9 +3,44 @@
 import json
 import sys
 import requests
-from langchain_ollama import ChatOllama
+
+def call_ollama(prompt, model_name, apilink):
+    temperature = 0.01
+    top_p = 0.95    
+    payload = {
+        "model": model_name,
+        "messages": [{"role": "user", "content": prompt}],
+        "raw": False,
+        "stream": False,
+        "keep_alive": 15, #Keep the LLM loaded for 15mins
+        "options": {
+            "top_p": top_p,
+            "temperature": temperature,
+            "num_ctx": 10000
+        }
+    }
+
+    try:
+        response = requests.post(
+            apilink+"/api/chat",
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=2000
+        )
+        response.raise_for_status()
+        result = response.json()
+        print ("answer:",result["message"]["content"])
+        if result and len(result["message"]["content"]) > 0:
+            return result["message"]["content"]
+        else:
+            return f"Error: Received an unexpected response format: {result}"
+
+    except requests.exceptions.RequestException as e:
+        return f"Error: API request failed: {e}"
 
 def call_sj_llm(prompt, model_name, apilink):
+    temperature = 0.01
+    top_p = 0.95
     payload = {
         "inputs": [
             {
@@ -28,10 +63,8 @@ def call_sj_llm(prompt, model_name, apilink):
             timeout=2000
         )
         response.raise_for_status()
-        
         result = response.json()
         if result and "outputs" in result and isinstance(result["outputs"], list) and len(result["outputs"]) > 0:
-            # --- THIS IS THE FIX ---
             # The response is a dict; we need to extract the value from the 'generated_text' key.
             model_output_dict = result["outputs"][0]
             if isinstance(model_output_dict, dict) and 'generated_text' in model_output_dict:
@@ -65,8 +98,12 @@ def classify_query_by_dataset_type(user_input, comp_model_name, llm_backend_type
         if key != "general":
             contents += data[key]
     template = contents + " Question: {" + user_input +"} Answer: {answer}"
-    response = call_sj_llm(template, comp_model_name, apilink)
-    print(response)
+    if llm_backend_type == "SJ": # Local SJ server
+        response = call_sj_llm(template, comp_model_name, apilink)
+    elif llm_backend_type == "ollama": # Ollama backend
+        response = call_ollama(template, comp_model_name, apilink)
+    print (response)
+    #print (json.loads(response)["answer"])
 
     
 # Main function
