@@ -1,7 +1,6 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
-import { DownloadMenu, niceNumLabels, ListSamples } from '#dom'
+import { DownloadMenu, niceNumLabels, ListSamples, renderTable } from '#dom'
 import { TermTypes } from '#shared/terms.js'
-import { listSamples } from './barchart.events.js'
 
 export function setInteractivity(self) {
 	self.getChartImages = function () {
@@ -136,22 +135,27 @@ export function setInteractivity(self) {
 		const rangeStart = start !== undefined ? start : null
 		const rangeStop = end !== undefined ? end : null
 
-		const ls = new ListSamples(self.app, self.state.termfilter.filter, configCopy, plot, rangeStart, rangeStop)
+		const ls = new ListSamples(self.app, self.state.termfilter, configCopy, plot, rangeStart, rangeStop)
 		return ls
 	}
 
 	self.callListSamples = async function (event, plot, start, end) {
 		const ls = self.getSampleList(plot, start, end)
+		const data = await ls.getData()
+		const [rows, columns] = ls.setTableData(data)
 
-		const arg = {
-			event,
-			self,
-			terms: ls.terms,
-			tvslst: ls.tvslst,
-			geneVariant: ls.geneVariant,
-			tip: self.dom.sampletabletip
-		}
-		await listSamples(arg)
+		const tip = self.dom.sampletabletip
+		tip.clear().show(event.clientX, event.clientY, false)
+
+		renderTable({
+			rows,
+			columns,
+			div: tip.d,
+			showLines: true,
+			maxHeight: '40vh',
+			resize: true,
+			dataTestId: 'sjpp-listsampletable'
+		})
 	}
 
 	self.labelHideLegendClicking = function (t2, plot) {

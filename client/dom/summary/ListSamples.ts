@@ -6,7 +6,7 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import { getSamplelstFilter } from '../../mass/groups.js'
 import { TermTypes, isNumericTerm } from '#shared/terms.js'
 import { filterJoin } from '#filter'
-import { addGvRowVals } from '#plots/barchart.events.js'
+import { addGvRowVals, addGvCols } from '#plots/barchart.events.js'
 
 /** Temp type scoped for this file.
  * Properties required in the plot arg. */
@@ -135,10 +135,18 @@ export class ListSamples {
 				value_by_max_grade: tw.q.value_by_max_grade
 			})
 		}
+
+		if (tw.term.type == TermTypes.SURVIVAL) {
+			//TODO: This isn't correct. Need to figure out
+			//how to filter for survival terms
+			const value = tw.term.values[key]
+			if (value) tvs.values[0].label = value.label
+		}
 	}
 
 	createTvsRanges(tvs: any, termNum: number, key: string): void {
 		if (termNum == 1 && this.useRange) {
+			//May limit the range for the first term (i.e. violin brush)
 			tvs.ranges = [
 				{
 					start: this.start,
@@ -198,11 +206,6 @@ export class ListSamples {
 	//Formats data for #dom renderTable()
 	setTableData(data: AnnotatedSampleData): [TableRow[], TableColumn[]] {
 		const rows: { value: string | number }[][] = []
-
-		/** Only show columns for terms with values */
-		const colSet = new Set<any>()
-		colSet.add('Sample')
-
 		const urlTemplate = this.app.vocabApi.termdbConfig?.urlTemplates?.sample
 
 		for (const s of Object.values(data.lst)) {
@@ -213,28 +216,46 @@ export class ListSamples {
 				row[0].url = urlTemplate.base + (s[urlTemplate.namekey] || s.sample)
 			}
 			if (s[this.t1.$id!]) {
-				this.addRowValue(s[this.t1.$id!], this.t1, row)
-				colSet.add(this.t1.term.name)
+				this.addRowValue(s, this.t1, row)
 			} else continue //skip rows with no term value
 			if (this.t2 && s[this.t2.$id!]) {
-				this.addRowValue(s[this.t2.$id!], this.t2, row)
-				colSet.add(this.t2.term.name)
+				this.addRowValue(s, this.t2, row)
 			}
 			rows.push(row)
 		}
-		return [rows, Array.from(colSet).map(c => ({ label: c }))]
+
+		const columns: TableColumn[] = [{ label: 'Sample' }]
+		this.addColValue(this.t1, columns)
+		if (this.t2) this.addColValue(this.t2, columns)
+
+		return [rows, columns]
 	}
 
-	addRowValue(sample: any, tw: TermWrapper, row: TableRow): void {
+	addRowValue(s: any, tw: TermWrapper, row: TableRow): void {
+		const sample = s[tw.$id!]
 		let formattedVal
 		if (isNumericTerm(tw.term)) {
 			formattedVal = roundValueAuto(sample.value)
 		} else if (tw.term.type === TermTypes.GENE_VARIANT) {
-			addGvRowVals(sample, tw, row, this.app.vocabApi.termdbMatrixClass)
+			//This func mutates row directly
+			addGvRowVals(s, tw, row, this.app.vocabApi.termdbMatrixClass)
 			return
 		} else {
-			formattedVal = sample.value
+			formattedVal = tw.term.values?.[sample.value]?.label || sample.value
 		}
 		row.push({ value: formattedVal })
+	}
+
+	addColValue(tw: TermWrapper, columns: TableColumn[]): void {
+		if (tw.term.type === TermTypes.GENE_VARIANT) {
+			//This func mutates columns directly
+			addGvCols(tw, columns)
+		} else if (tw.term.type == TermTypes.SURVIVAL) {
+			//TODO: Skipping for now. Need to figure out how to
+			// filter for survival terms
+			return
+		} else {
+			columns.push({ label: tw.term.name })
+		}
 	}
 }
