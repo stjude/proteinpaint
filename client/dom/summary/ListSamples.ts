@@ -117,7 +117,10 @@ export class ListSamples {
 	}
 
 	createTvsValues(tvs: any, tw: any, key: string): void {
-		if (tw?.q?.type == 'custom-groupset' || tw?.q?.type == 'predefined-groupset') {
+		if (
+			(tw?.q?.type == 'custom-groupset' || tw?.q?.type == 'predefined-groupset') &&
+			tw.term.type !== TermTypes.GENE_VARIANT
+		) {
 			const groupset =
 				tw.q.type == 'custom-groupset' ? tw.q.customset : tw.term.groupsetting.lst[tw.q.predefined_groupset_idx]
 			const group = groupset.groups.find(group => group.name == key)
@@ -144,8 +147,8 @@ export class ListSamples {
 		if (tw.term.type == TermTypes.SURVIVAL) {
 			//TODO: This isn't correct. Need to figure out
 			//how to filter for survival terms
-			const value = tw.term.values[key]
-			if (value) tvs.values[0].label = value.label
+			// const value = tw.term.values[key]
+			// if (value) tvs.values[0].label = value.label
 		}
 	}
 
