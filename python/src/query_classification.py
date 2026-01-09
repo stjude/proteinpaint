@@ -1,4 +1,4 @@
-# cat ~/sjpp/test.txt | python query_classification.py 
+# cat ~/sjpp/test.txt | time python query_classification.py 
 
 import json
 import sys
