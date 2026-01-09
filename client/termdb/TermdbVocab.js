@@ -787,7 +787,7 @@ export class TermdbVocab extends Vocab {
 		const maxNumTerms = opts.terms.length // this.vocab.dslabel === 'GDC' ? opts.terms.length : 1 // revert back to 1 to revert to previous behavior
 		let numResponses = 0
 		if (opts.loadingDiv) opts.loadingDiv.html('Updating data ...')
-
+		const start = Date.now()
 		while (true) {
 			const copies = getTerms2update(allTerms2update, maxNumTerms) // list of unique terms to update in this round
 			if (copies.length == 0) break // at the end of list, break loop
@@ -827,8 +827,7 @@ export class TermdbVocab extends Vocab {
 					console.log(822, structuredClone(Object.fromEntries(Object.entries(data.samples).slice(0, 5))))
 					if (!data.refs.bySampleId) data.refs.bySampleId = {}
 
-					const { shortIds, valueByCode } = data.refs.byDt || { shortIds: [], valueByCode: {} }
-					console.log(826, shortIds)
+					const { valueByCode } = data.refs.byDt || { valueByCode: {} }
 
 					for (const [sampleId, sample] of Object.entries(data.samples)) {
 						// ignore sample objects that are not annotated by other keys besides 'sample'
@@ -855,20 +854,6 @@ export class TermdbVocab extends Vocab {
 						// rehydrate
 						if (!sample.sample) sample.sample = data.refs.bySampleId[sampleId].sample || sampleId
 						if (!sample.sampleName) sample.sampleName = data.refs.bySampleId[sampleId].sampleName || sample.sample
-						if (sample.byDt) {
-							for (const [dt, v] of Object.entries(sample.byDt)) {
-								for (const id of shortIds) {
-									if (!sample[id]) sample[id] = { values: [] }
-									//else if (!sample[id].values) sample[id].values = []
-									for (const code of v.split('')) {
-										const m = valueByCode[code]
-										if (!m) continue
-										sample[id].values.push(Object.assign({ dt }, m))
-									}
-								}
-							}
-							delete sample.byDt
-						}
 
 						for (const tw of copies) {
 							const { shortId, gene } = data.refs.byTermId[tw.$id]
@@ -908,8 +893,13 @@ export class TermdbVocab extends Vocab {
 								}
 								samples[sampleId][tw.$id] = d
 								if (gene && d.values) {
-									for (const v of d.values) {
-										if (!v.gene) v.gene = gene
+									// d.values = d.values.filter(v => typeof v != 'string')
+									const values = []
+									for (const [i, v] of d.values.entries()) {
+										if (typeof v != 'string') continue
+										const [dt, code] = v.split('_')
+										const m = valueByCode[code]
+										if (m) d.values[i] = Object.assign({ dt, gene }, m)
 									}
 								}
 							}
@@ -1007,7 +997,7 @@ export class TermdbVocab extends Vocab {
 			for (const tw of opts.terms) {
 				mayFillInCategory2samplecount4term(tw, data.lst, this.termdbConfig)
 			}
-			console.log(976, data)
+			console.log(976, Date.now() - start, data)
 			return data
 		} catch (e) {
 			throw e

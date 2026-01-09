@@ -282,7 +282,7 @@ async function get_matrix(q, req, res, ds, genome) {
 			byDt: {
 				codeByClassOrigin,
 				// should match integer string order
-				shortIds,
+				// shortIds,
 				valueByCode: {
 					0: null, // tested and not wildtype, there should already by samples[termId].values[] entries
 					1: { class: 'Blank', label: 'Not tested' },
@@ -314,7 +314,7 @@ async function get_matrix(q, req, res, ds, genome) {
 				// with 50 genes, not able to do >4000 samples using a byDt[dt] string,
 				// which causes a large iteration of nested loops on the client side
 				// to recover encoded blank/WT data
-				if (i > 4000) break // !!! FOR TESTING ONLY !!!
+				// if (i > 25000) break // !!! FOR TESTING ONLY !!!
 
 				payload.refs.bySampleId[sampleId] = Object.assign(
 					{
@@ -350,31 +350,16 @@ async function get_matrix(q, req, res, ds, genome) {
 					delete sample[termId]
 				}
 
-				sample.byDt = { 1: '', 4: '' }
 				for (const id of shortIds) {
 					const d = sample[id]
-					if (!d || !d.values) {
-						for (const dtNum of sample.byDt) {
-							sample.byDt[dtNum] += '0'
-						}
-						continue
-					}
-					const uncodedValues = []
-					for (const v of d.values) {
+					if (!d || !d.values) continue
+
+					for (const [i, v] of d.values.entries()) {
 						delete v._SAMPLEID_
 						const code = codeByClassOrigin[v.class]?.[v.origin || '']
 						if (code && v.dt) {
-							sample.byDt[v.dt] += code
-						} else {
-							if (v.dt in sample.byDt) sample.byDt[v.dt] += '0'
-							uncodedValues.push(v)
+							d.values[i] = v.dt + '_' + code
 						}
-					}
-
-					if (!uncodedValues.length) {
-						delete sample[id]
-					} else {
-						d.values = uncodedValues
 					}
 				}
 
@@ -423,8 +408,6 @@ async function get_matrix(q, req, res, ds, genome) {
 		}
 	}
 	console.log(420, jsonStr.length)
-
-	payload.refs.byDt.shortIds = [...shortIds]
 	//jsonStr += '}'
 	res.send(payload)
 }
