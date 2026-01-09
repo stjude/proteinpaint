@@ -152,8 +152,20 @@ export class ListSamples {
 			return
 		}
 		const keyBin = this.bins[`term${termNum}`]?.[`${key}`]
+		const uncomputable = Object.entries(this[`t${termNum}`].term?.values ?? {}).find(
+			([_, v]: [string, any]) => v.label === key && v?.uncomputable
+		)?.[0]
 		if (keyBin) {
 			tvs.ranges = [keyBin]
+		} else if (uncomputable) {
+			/** Uncomputable values will not have bins defined but
+			 * require a value for filtering. Manually adding the
+			 * uncomputable key and label filters appropriately.*/
+			if (!tvs.ranges) tvs.ranges = []
+			tvs.ranges.push({
+				value: uncomputable,
+				label: key
+			})
 		} else {
 			//Continuous terms may not have bins defined
 			tvs.ranges = []
