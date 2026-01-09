@@ -10,4 +10,4 @@ httpx==0.28.1
 pydantic==2.12.3
 typing_extensions==4.15.0
 langchain-openai==1.0.2
-langgraph==1.0.2
+langchain-ollama==1.0.1
