@@ -91,7 +91,7 @@ export class ListSamples {
 	getTvsLstEntry(termNum: number): void {
 		const tw = termNum === 1 ? this.t1 : termNum === 2 ? this.t2 : this.t0
 		if (!tw) throw new Error('Missing term wrapper')
-		if (tw.type === TermTypes.GENE_VARIANT) {
+		if (tw.term.type === TermTypes.GENE_VARIANT) {
 			/** Not essential to the server req, but used later
 			 * for formatting the data rows */
 			this.geneVariant[`t${termNum}value`] = this.plot.seriesId
@@ -147,8 +147,8 @@ export class ListSamples {
 		if (tw.term.type == TermTypes.SURVIVAL) {
 			//TODO: This isn't correct. Need to figure out
 			//how to filter for survival terms
-			// const value = tw.term.values[key]
-			// if (value) tvs.values[0].label = value.label
+			const value = tw.term.values[key]
+			if (value) tvs.values[0].label = value.label
 		}
 	}
 
@@ -213,10 +213,19 @@ export class ListSamples {
 
 	//Formats data for #dom renderTable()
 	setTableData(data: AnnotatedSampleData): [TableRow[], TableColumn[]] {
+		//Validation check
+		const foundInvalidGvTerm = [this.t1, this.t2, this.t0].find(tw => {
+			return tw && tw.term.type === TermTypes.GENE_VARIANT && (tw?.q as any)?.type == 'values'
+		})
+		if (foundInvalidGvTerm) throw new Error('q.type = values are not supported for gene variant terms')
+
+		//Formatting rows
 		const rows: { value: string | number }[][] = []
 		const urlTemplate = this.app.vocabApi.termdbConfig?.urlTemplates?.sample
 
 		for (const s of Object.values(data.lst)) {
+			const filterSample = this.mayFilterGVSample(s)
+			if (filterSample) continue
 			const sampleId = typeof s.sample === 'string' ? s.sample : String(s.sample)
 			const row: any[] = [{ value: data.refs.bySampleId[sampleId].label }]
 			if (urlTemplate) {
@@ -232,11 +241,23 @@ export class ListSamples {
 			rows.push(row)
 		}
 
+		//Formatting columns
 		const columns: TableColumn[] = [{ label: 'Sample' }]
 		this.addColValue(this.t1, columns)
 		if (this.t2) this.addColValue(this.t2, columns)
 
 		return [rows, columns]
+	}
+
+	mayFilterGVSample(sample): boolean {
+		let filterSample = false
+		for (const [idx, tw] of [this.t0, this.t1, this.t2].entries()) {
+			if (!tw) continue
+			if (tw.term.type !== TermTypes.GENE_VARIANT) continue
+			const value = sample[tw.$id!]?.value
+			if (value != this.geneVariant[`t${idx}value`]) filterSample = true
+		}
+		return filterSample
 	}
 
 	addRowValue(s: any, tw: TermWrapper, row: TableRow): void {
