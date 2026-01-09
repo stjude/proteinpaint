@@ -25,9 +25,7 @@ export class BoxPlotInteractions {
 	/** Option to add a global filter from the box plot label menu. */
 	addFilter(plot: any) {
 		const state = this.app.getState()
-		const plotConfig = this.getPlotConfig()
-		const config = structuredClone(plotConfig)
-		const sampleList = new ListSamples(this.app, state.termfilter, config, plot /*false,*/)
+		const sampleList = this.initListSamples(plot)
 		const filterUiRoot = getFilterItemByTag(state.termfilter.filter, 'filterUiRoot')
 		const filter = filterJoin([filterUiRoot, sampleList.tvslst])
 		filter.tag = 'filterUiRoot'
@@ -65,8 +63,7 @@ export class BoxPlotInteractions {
 		})
 	}
 
-	/** Option from box plot label to show the samples in a table within the tooltip. */
-	async listSamples(plot: any /*domain: [number, number]*/) {
+	initListSamples(plot: any) {
 		const state = this.app.getState()
 		const plotConfig = this.getPlotConfig()
 		const config = structuredClone(plotConfig)
@@ -78,9 +75,13 @@ export class BoxPlotInteractions {
 			config.term2 = config.term
 			config.term = contTerm
 		}
-		/** Use the domain for the entire chart, not just
-		 * the individual plot's limited range. */
-		const sampleList = new ListSamples(this.app, state.termfilter, config, plot /*false, domain[0], domain[1]*/)
+		const sampleList = new ListSamples(this.app, state.termfilter, config, plot)
+		return sampleList
+	}
+
+	/** Option from box plot label to show the samples in a table within the tooltip. */
+	async listSamples(plot: any) {
+		const sampleList = this.initListSamples(plot)
 		const data = await sampleList.getData()
 		const [rows, columns] = sampleList.setTableData(data)
 		return [rows, columns]
