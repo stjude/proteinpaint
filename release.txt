@@ -1,2 +1,1 @@
-Fixes
-- Implemented new ListSamples into violin plot. Clickable menu from plot label now correctly list samples and apply filters. Implemented for the brush menu as well.
+
