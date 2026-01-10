@@ -197,15 +197,16 @@ export function sortPlot2Values(
 function setResponse(valuesObject: any, data: ValidGetDataResponse, q: ViolinRequest) {
 	const charts: any = {}
 	const overlayTerm = q.overlayTw
+	const divideTw = q.divideTw
 	for (const [chart, plot2values] of valuesObject.chart2plot2values) {
 		//temp plot type
 		const plots: {
 			label: string
 			values: number[]
-			seriesId?: string
+			seriesId: string
+			chartId: string
 			plotValueCount: number
 			color?: string
-			overlayTwBins?: any
 		}[] = []
 
 		for (const [plot, values] of sortPlot2Values(data, plot2values, overlayTerm)) {
@@ -213,18 +214,27 @@ function setResponse(valuesObject: any, data: ValidGetDataResponse, q: ViolinReq
 				label: overlayTerm?.term?.values?.[plot]?.label || plot,
 				values,
 				seriesId: plot,
+				chartId: chart, //quick fix to get list samples working
 				plotValueCount: values?.length,
-				color: overlayTerm?.term?.values?.[plot]?.color || null,
-				overlayTwBins: isNumericTerm(overlayTerm?.term) ? numericBins(overlayTerm, data) : null
+				color: overlayTerm?.term?.values?.[plot]?.color || null
 			})
 		}
 
 		charts[chart] = { chartId: chart, plots }
 	}
 
+	/** bins are used for constructing filter objs. Specifically for
+	 * listing samples, filterting, etc. */
+	const bins: { [index: string]: any } = {
+		term1: numericBins(q.tw, data)
+	}
+	if (overlayTerm) bins.term2 = numericBins(overlayTerm, data)
+	if (divideTw) bins.term0 = numericBins(divideTw, data)
+
 	const result = {
 		min: valuesObject.min,
 		max: valuesObject.max,
+		bins,
 		charts,
 		uncomputableValues: Object.keys(valuesObject.uncomputableValues).length > 0 ? valuesObject.uncomputableValues : null
 	}

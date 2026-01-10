@@ -31,16 +31,12 @@ export class BoxPlotLabelMenu {
 				callback: async (event: MouseEvent) => {
 					if (isVertical) tip.clear().show(event.clientX, event.clientY)
 					else tip.clear().showunder(plot.boxplot.labelG.node())
-					const rows = await interactions.listSamples(plot /*chart.plotDim.domain*/)
+					const [rows, columns] = await interactions.listSamples(plot)
 
 					const tableDiv = tip.d.append('div')
-					const plotConfig = interactions.getPlotConfig()
-					const columns = [{ label: 'Sample' }, { label: plotConfig.term.term.name || 'Value' }]
-					if (plotConfig.term2) columns.push({ label: plotConfig.term2.term.name || 'Overlay' })
-
 					renderTable({
-						rows,
-						columns,
+						rows: rows as any,
+						columns: columns as any,
 						div: tableDiv,
 						maxWidth: '30vw',
 						maxHeight: '25vh',

@@ -742,7 +742,7 @@ function mayFilterByGeneVariant(sample, self, geneVariant) {
 }
 
 // add geneVariant values to row
-function addGvRowVals(sample, tw, row, termdbmclass) {
+export function addGvRowVals(sample, tw, row, termdbmclass) {
 	const mlst = sample[tw.$id]?.values
 	const gene2mlst = new Map()
 	// map each gene to its mutations
@@ -795,7 +795,7 @@ function mlst2htmls(mlst, termdbmclass) {
 }
 
 // add geneVariant columns
-function addGvCols(tw, columns) {
+export function addGvCols(tw, columns) {
 	if (tw.term.genes.length == 1) {
 		columns.push({ label: tw.term.name })
 	} else {
