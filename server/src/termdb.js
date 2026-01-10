@@ -261,21 +261,8 @@ async function get_matrix(q, req, res, ds, genome) {
 
 	const maxStrLength = 5.12e8 // based on a 64-bit hard constraint in V8 for string processing
 	let jsonStrlen = JSON.stringify(data.refs).length
-	console.log(260, 'start jsonStr.length=', jsonStrlen)
+	//console.log(260, 'start jsonStr.length=', jsonStrlen)
 
-	// samples = {
-	//   <sample1>: {
-	//     byDt: {
-	//       <1>: {
-	//          notTested: '0101001...'
-	//       },
-	//       <4>: {
-	//          notTested: '01010111...'
-	//       }
-	//     },
-	//   },
-	//   <sample2>: { }
-	// }
 	const payload = {
 		samples: {},
 		refs: {
@@ -340,9 +327,8 @@ async function get_matrix(q, req, res, ds, genome) {
 					if (jsonStrlen > maxStrLength) throw { code: 'RangeError', message: 'Invalid string length' }
 					payload.samples[sampleId] = sample
 				} catch (e) {
-					console.log(334, 'jsonStrlen=', jsonStrlen, e)
 					if (e.code == 'RangeError' && e.message.includes('Invalid string length')) {
-						console.log(329, 'jsonStr.length=', jsonStr?.length)
+						//console.log(329, 'jsonStr.length=', jsonStr?.length)
 						payload.error = {
 							code: 'RangeError: Invalid string length',
 							message: `Response data too large - please narrow the cohort or limit the number of variables and/or genes. (Unable to encode data for ${
@@ -351,28 +337,6 @@ async function get_matrix(q, req, res, ds, genome) {
 						}
 						payload.samples = {}
 					} else throw e
-
-					// payload.error = {
-					//   code: e,
-					//   message: `Data from ${sampleEntries.length - sampleIndex} samples were not included due to exceeding the maximum processed data size that can be handled by the server [${e}]`,
-					// }
-					// console.log(309, sampleId, e, sample)
-					// for(const [k,v] of Object.entries(sample)) {
-					//   if (typeof v != 'object' || !v.values) continue
-					//   console.log(JSON.stringify(v.values))
-					//   for(const _v of v.values) {
-					//     //console.log(314, _v)
-					//     try {
-					//       //console.log(v)
-					//       //JSON.stringify({a: 'small object'})
-					//       const str = JSON.stringify(_v)
-					//       //console.log(str)
-					//     } catch(e) {
-					//       console.log(316, _v)
-					//     }
-					//   }
-					// }
-
 					break
 				}
 				if (payload.error) break
@@ -380,8 +344,7 @@ async function get_matrix(q, req, res, ds, genome) {
 			}
 		}
 	}
-	console.log(374, 'jsonStrlen=', jsonStrlen)
-	//jsonStr += '}'
+	//console.log(374, 'jsonStrlen=', jsonStrlen)
 	res.send(payload)
 }
 
