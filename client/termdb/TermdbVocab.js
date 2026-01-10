@@ -823,8 +823,12 @@ export class TermdbVocab extends Vocab {
 			promises.push(
 				dofetch3('termdb', init, { cacheAs: 'decoded' }).then(data => {
 					if (data.error) throw data.error
+					// console.log(825, structuredClone(Object.fromEntries(Object.entries(data.samples).slice(0,5))))
 					if (!data.refs.bySampleId) data.refs.bySampleId = {}
+					const dtValueCodes = data.refs.byDt?.codes || {}
 					for (const tw of copies) {
+						const { shortId, gene } = data.refs.byTermId[tw.$id]
+
 						for (const [sampleId, sample] of Object.entries(data.samples)) {
 							// ignore sample objects that are not annotated by other keys besides 'sample'
 							if (!Object.keys(sample).filter(k => k != 'sample').length) continue
@@ -850,13 +854,13 @@ export class TermdbVocab extends Vocab {
 							if (!sample.sample) sample.sample = data.refs.bySampleId[sampleId].sample || sampleId
 							if (!sample.sampleName) sample.sampleName = data.refs.bySampleId[sampleId].sampleName || sample.sample
 
-							const shortTermId = data.refs.byTermId[tw.$id].shortId
-							if (shortTermId in sample) {
-								sample[tw.$id] = sample[shortTermId]
-								delete sample[shortTermId]
+							if (shortId in sample) {
+								const d = sample[shortId]
+								sample[tw.$id] = d
+								delete sample[shortId]
 
 								if (tw.term.type == 'termCollection') {
-									const termsValue = JSON.parse(sample[tw.$id].value)
+									const termsValue = JSON.parse(d.value)
 									const sum = termsValue.reduce((a, o) => a + Object.values(o)[0], 0)
 
 									let pre_val_sum = 0
@@ -877,11 +881,20 @@ export class TermdbVocab extends Vocab {
 										})
 										pre_val_sum += value
 									}
-									sample[tw.$id].values = values
-									sample[tw.$id].numerators_sum = numerators_sum
-									delete sample[tw.$id].value
+									d.values = values
+									d.numerators_sum = numerators_sum
+									delete d.value
+								} else if (gene && d.values) {
+									for (const v of d.values) {
+										if (!v.class && v.code) {
+											v.gene = gene
+											Object.assign(v, dtValueCodes[v.code])
+											delete v.code
+										}
+									}
 								}
-								samples[sampleId][tw.$id] = sample[tw.$id]
+
+								samples[sampleId][tw.$id] = d
 							}
 						}
 
