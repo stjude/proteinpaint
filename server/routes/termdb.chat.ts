@@ -1,4 +1,5 @@
 import type { ChatRequest, ChatResponse, RouteApi } from '#types'
+import { get_samples } from '#src/termdb.sql.js'
 import { ChatPayload } from '#types/checkers'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '../src/serverconfig.js'
@@ -93,7 +94,7 @@ function init({ genomes }) {
 			let ai_output_json: any
 			if (classResult.route == 'summary') {
 				const time1 = new Date().valueOf()
-				ai_output_data = await run_rust('summary_agent', JSON.stringify(chatbot_input))
+				ai_output_data = await run_rust('chat_summary', JSON.stringify(chatbot_input))
 				const time2 = new Date().valueOf()
 				mayLog('Time taken for running summary agent:', time2 - time1, 'ms')
 
@@ -106,7 +107,85 @@ function init({ genomes }) {
 					}
 				}
 			} else if (classResult.route == 'dge') {
-				ai_output_json = { type: 'html', html: 'DE agent not implemented yet' }
+				const time1 = new Date().valueOf()
+				ai_output_data = await run_rust('chat_dge', JSON.stringify(chatbot_input))
+				const time2 = new Date().valueOf()
+				mayLog('Time taken for running DE agent:', time2 - time1, 'ms')
+
+				for (const line of ai_output_data.split('\n')) {
+					// The reason we are parsing each line from rust is because we want to debug what is causing the wrong output. As the AI pipeline matures, the rust code will be modified to always return a single JSON
+					if (line.startsWith('final_output:') == true) {
+						ai_output_json = JSON.parse(JSON.parse(line.replace('final_output:', '')))
+					} else {
+						mayLog(line)
+					}
+				}
+
+				if (ai_output_json.type == 'plot') {
+					const f1 = simpleFilter2ppFilter(ai_output_json.plot.group1, ds)
+					const f2 = simpleFilter2ppFilter(ai_output_json.plot.group2, ds)
+					const samples1 = await get_samples({ filter: f1 }, ds, true) // true is to by pass permission check
+					const samples2 = await get_samples({ filter: f2 }, ds, true) // true is to by pass permission check
+					const samples1lst = samples1.map(item => ({
+						sampleId: item.id,
+						sample: item.name
+					}))
+					const samples2lst = samples2.map(item => ({
+						sampleId: item.id,
+						sample: item.name
+					}))
+
+					const groups = [
+						{
+							name: 'group1', // Hardcoding name of group here for now
+							in: true,
+							values: samples1lst
+						},
+						{
+							name: 'group2', // Hardcoding name of group here for now
+							in: true,
+							values: samples2lst
+						}
+					]
+					const tw = {
+						q: {
+							groups
+						},
+						term: {
+							name: 'group1 vs group2', // Hardcoding name of custom term here for now
+							type: 'samplelst',
+							values: {
+								group1: {
+									color: 'purple',
+									key: 'group1',
+									label: 'group1',
+									list: samples1lst
+								},
+								group2: {
+									color: 'blue',
+									key: 'group2',
+									label: 'group2',
+									list: samples2lst
+								}
+							}
+						}
+					}
+					ai_output_json.plot.state = {
+						customTerms: [
+							{
+								name: 'group1 vs group2',
+								tw: tw
+							}
+						],
+						groups: groups
+					}
+					ai_output_json.plot.childType = 'volcano'
+					ai_output_json.plot.termType = 'geneExpression'
+					ai_output_json.plot.tw = tw
+					ai_output_json.plot.samplelst = { groups }
+					delete ai_output_json.plot.group1
+					delete ai_output_json.plot.group2
+				}
 			} else {
 				// Will define all other agents later as desired
 				ai_output_json = { type: 'html', html: 'Unknown classification value' }
@@ -116,62 +195,67 @@ function init({ genomes }) {
 				if (typeof ai_output_json.plot != 'object') throw '.plot{} missing when .type=plot'
 				if (ai_output_json.plot.simpleFilter) {
 					// simpleFilter= [ {term:str, category:str} ]
-					if (!Array.isArray(ai_output_json.plot.simpleFilter)) throw 'ai_output_json.plot.simpleFilter is not array'
-					const localfilter = { type: 'tvslst', in: true, join: '', lst: [] as any[] }
-					if (ai_output_json.plot.simpleFilter.length > 1) localfilter.join = 'and' // For now hardcoding join as 'and' if number of filter terms > 1. Will later implement more comprehensive logic
-					for (const f of ai_output_json.plot.simpleFilter) {
-						const term = ds.cohort.termdb.q.termjsonByOneid(f.term)
-						if (!term) throw 'invalid term id from simpleFilter[].term'
-						if (term.type == 'categorical') {
-							let cat
-							for (const ck in term.values) {
-								if (ck == f.category) cat = ck
-								else if (term.values[ck].label == f.category) cat = ck
-							}
-							if (!cat) throw 'invalid category from ' + JSON.stringify(f)
-							// term and category validated
-							localfilter.lst.push({
-								type: 'tvs',
-								tvs: {
-									term,
-									values: [{ key: cat }]
-								}
-							})
-						} else if (term.type == 'float' || term.type == 'integer') {
-							const numeric: any = {
-								type: 'tvs',
-								tvs: {
-									term,
-									ranges: []
-								}
-							}
-							const range: any = {}
-							if (f.gt && !f.lt) {
-								range.start = Number(f.gt)
-								range.stopunbounded = true
-							} else if (f.lt && !f.gt) {
-								range.stop = Number(f.lt)
-								range.startunbounded = true
-							} else if (f.gt && f.lt) {
-								range.start = Number(f.gt)
-								range.stop = Number(f.lt)
-							} else {
-								throw 'Neither greater or lesser defined'
-							}
-							numeric.tvs.ranges.push(range)
-							localfilter.lst.push(numeric)
-						}
-					}
+					const localfilter = simpleFilter2ppFilter(ai_output_json.plot.simpleFilter, ds)
 					delete ai_output_json.plot.simpleFilter
 					ai_output_json.plot.filter = localfilter
 				}
 			}
 
-			//mayLog('ai_output_json:', ai_output_json)
+			mayLog('ai_output_json:', ai_output_json)
 			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			res.send({ error: e?.message || e })
 		}
 	}
+}
+
+function simpleFilter2ppFilter(ai_output_json_array: any, ds: any) {
+	if (!Array.isArray(ai_output_json_array)) throw 'ai_output_json_array is not array'
+	const localfilter = { type: 'tvslst', in: true, join: '', lst: [] as any[] }
+	if (ai_output_json_array.length > 1) localfilter.join = 'and' // For now hardcoding join as 'and' if number of filter terms > 1. Will later implement more comprehensive logic
+	for (const f of ai_output_json_array) {
+		const term = ds.cohort.termdb.q.termjsonByOneid(f.term)
+		if (!term) throw 'invalid term id from simpleFilter[].term'
+		if (term.type == 'categorical') {
+			let cat
+			for (const ck in term.values) {
+				if (ck == f.category) cat = ck
+				else if (term.values[ck].label == f.category) cat = ck
+			}
+			if (!cat) throw 'invalid category from ' + JSON.stringify(f)
+			// term and category validated
+			localfilter.lst.push({
+				type: 'tvs',
+				tvs: {
+					term,
+					values: [{ key: cat }]
+				}
+			})
+		} else if (term.type == 'float' || term.type == 'integer') {
+			const numeric: any = {
+				type: 'tvs',
+				tvs: {
+					term,
+					ranges: []
+				}
+			}
+			const range: any = {}
+			if (f.gt && !f.lt) {
+				range.start = Number(f.gt)
+				range.stopunbounded = true
+			} else if (f.lt && !f.gt) {
+				range.stop = Number(f.lt)
+				range.startunbounded = true
+			} else if (f.gt && f.lt) {
+				range.start = Number(f.gt)
+				range.stop = Number(f.lt)
+			} else {
+				throw 'Neither greater or lesser defined'
+			}
+			numeric.tvs.ranges.push(range)
+			localfilter.lst.push(numeric)
+		}
+	}
+	return localfilter
 }

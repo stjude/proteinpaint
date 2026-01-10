@@ -1,4 +1,4 @@
-// Syntax: cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/aichatbot
+// Syntax: cd .. && cargo build --release && time cat ~/sjpp/test.txt | target/release/chat_dge
 #![allow(non_snake_case)]
 use crate::aichatbot::AiJsonFormat;
 use anyhow::Result;
@@ -34,13 +34,6 @@ async fn main() -> Result<()> {
                     match dataset_db_json.as_str() {
                         Some(inp) => dataset_db_str = inp,
                         None => panic!("dataset_db field is missing in input json"),
-                    }
-
-                    let genedb_json: &JsonValue = &json_string["genedb"];
-                    let genedb_str: &str;
-                    match genedb_json.as_str() {
-                        Some(inp) => genedb_str = inp,
-                        None => panic!("genedb field is missing in input json"),
                     }
 
                     if user_input.len() == 0 {
@@ -89,8 +82,6 @@ async fn main() -> Result<()> {
                     // Parse the JSON data
                     let ai_json: AiJsonFormat =
                         serde_json::from_str(&ai_data).expect("AI JSON file does not have the correct format");
-
-                    let genedb = String::from(tpmasterdir) + &"/" + &genedb_str;
                     let dataset_db = String::from(tpmasterdir) + &"/" + &dataset_db_str;
 
                     let apilink_json: &JsonValue = &json_string["apilink"];
@@ -141,7 +132,7 @@ async fn main() -> Result<()> {
                         let embedding_model = ollama_client.embedding_model(embedding_model_name);
                         let comp_model = ollama_client.completion_model(comp_model_name);
                         final_output = Some(
-                            aichatbot::extract_summary_information(
+                            aichatbot::extract_DE_search_terms_from_query(
                                 user_input,
                                 comp_model,
                                 embedding_model,
@@ -150,7 +141,6 @@ async fn main() -> Result<()> {
                                 max_new_tokens,
                                 top_p,
                                 &dataset_db,
-                                &genedb,
                                 &ai_json,
                                 testing,
                             )
@@ -166,7 +156,7 @@ async fn main() -> Result<()> {
                         let embedding_model = sj_client.embedding_model(embedding_model_name);
                         let comp_model = sj_client.completion_model(comp_model_name);
                         final_output = Some(
-                            aichatbot::extract_summary_information(
+                            aichatbot::extract_DE_search_terms_from_query(
                                 user_input,
                                 comp_model,
                                 embedding_model,
@@ -175,7 +165,6 @@ async fn main() -> Result<()> {
                                 max_new_tokens,
                                 top_p,
                                 &dataset_db,
-                                &genedb,
                                 &ai_json,
                                 testing,
                             )
