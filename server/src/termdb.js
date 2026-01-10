@@ -271,18 +271,33 @@ async function get_matrix(q, req, res, ds, genome) {
 		console.log('get_matrix() start jsonStr.length=', jsonStrlen)
 	}
 
+	const codeByClassOrigin = {
+		Blank: {
+			'': 1,
+			germline: 2,
+			somatic: 3
+		},
+		WT: {
+			'': 4,
+			germline: 5,
+			somatic: 6
+		}
+	}
+
 	const payload = {
 		samples: {},
 		refs: {
 			bySampleId: {},
 			byTermId: {},
 			byDt: {
-				// should match integer string order
-				genes: [],
+				codeByClassOrigin,
 				codes: {
-					0: null, // tested and not wildtype, there should already by samples[termId].values[] entries
-					1: { class: 'Blank', label: 'Not tested' }
-					//2: {}
+					1: { class: 'Blank', label: 'Not tested' },
+					2: { class: 'Blank', label: 'Not tested', origin: 'germline' },
+					3: { class: 'Blank', label: 'Not tested', origin: 'somatic' },
+					4: { class: 'WT', label: 'Wildtype' },
+					5: { class: 'WT', label: 'Wildtype', origin: 'germline' },
+					6: { class: 'WT', label: 'Wildtype', origin: 'somatic' }
 				}
 			}
 		}
@@ -318,6 +333,8 @@ async function get_matrix(q, req, res, ds, genome) {
 						if (!payload.refs.byTermId[termId]) {
 							payload.refs.byTermId[termId] = data.refs.byTermId[termId] || {}
 							payload.refs.byTermId[termId].shortId = currShortId++
+							const gene = d.values?.[0]?.gene
+							if (gene) payload.refs.byTermId[termId].gene = gene
 						}
 						const j = payload.refs.byTermId[termId].shortId
 						sample[j] = sample[termId]
@@ -325,6 +342,15 @@ async function get_matrix(q, req, res, ds, genome) {
 						if (d.values) {
 							for (const v of d.values) {
 								delete v._SAMPLEID_
+								const code = v.dt && codeByClassOrigin[v.class]?.[v.origin || '']
+								if (!code) continue
+								v.code = code
+								// this can be rehydrated from refs.byTermId[tw.$id].gene
+								delete v.gene
+								// these props can be rehydrated from refs.byDt.codes[code]
+								delete v.class
+								delete v.label
+								delete v.origin
 							}
 						}
 					}
