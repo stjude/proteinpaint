@@ -1,5 +1,5 @@
 import * as common from '#shared/common.js'
-import { joinUrl, memFetch } from '#shared/index.js'
+import { joinUrl, ezFetch } from '#shared/index.js'
 import { compute_bins } from '#shared/termdb.bins.js'
 import { getBin } from '#shared/terms.js'
 import ky from 'ky'
@@ -7,7 +7,7 @@ import nodeFetch from 'node-fetch'
 import { combineSamplesById } from './mds3.variant2samples.js'
 import { guessSsmid } from '#shared/mds3tk.js'
 import { filter2GDCfilter } from './mds3.gdc.filter.js'
-import { write_tmpfile } from './utils.js'
+import { write_tmpfile, cachedFetch } from './utils.js'
 import { mayLog } from './helpers.ts'
 import serverconfig from './serverconfig.js'
 
@@ -959,24 +959,37 @@ async function snvindel_byisoform(opts, ds) {
 	const { host, headers } = ds.getHostHeaders(opts)
 
 	// must use POST as filter can be too long for GET
-	const p1 = ky
-		.post(joinUrl(host.rest, query1.endpoint), {
-			timeout: false,
-			headers,
-			json: Object.assign({ size: query1.size, fields: query1.fields.join(',') }, query1.filters(opts))
-		})
-		.json()
-	const p2 = ky
-		.post(joinUrl(host.rest, query2.endpoint), {
-			timeout: false,
-			headers,
-			json: Object.assign({ size: query2.size, fields: query2.fields.join(',') }, query2.filters(opts, ds))
-		})
-		.json()
+	// const p1 = ky
+	// 	.post(joinUrl(host.rest, query1.endpoint), {
+	// 		timeout: false,
+	// 		headers,
+	// 		json: Object.assign({ size: query1.size, fields: query1.fields.join(',') }, query1.filters(opts))
+	// 	})
+	// 	.json()
+	// const p2 = ky
+	// 	.post(joinUrl(host.rest, query2.endpoint), {
+	// 		timeout: false,
+	// 		headers,
+	// 		json: Object.assign({ size: query2.size, fields: query2.fields.join(',') }, query2.filters(opts, ds))
+	// 	})
+	// 	.json()
+
+	const p1 = cachedFetch(joinUrl(host.rest, query1.endpoint), {
+		method: 'POST',
+		timeout: false,
+		headers,
+		body: Object.assign({ size: query1.size, fields: query1.fields.join(',') }, query1.filters(opts))
+	})
+	const p2 = cachedFetch(joinUrl(host.rest, query2.endpoint), {
+		method: 'POST',
+		timeout: false,
+		headers,
+		body: Object.assign({ size: query2.size, fields: query2.fields.join(',') }, query2.filters(opts, ds))
+	})
 
 	const starttime = Date.now()
-
-	const [re_ssms, re_cases] = await Promise.all([p1, p2])
+	const r = await Promise.all([p1, p2])
+	const [re_ssms, re_cases] = [r[0].body, r[1].body]
 
 	mayLog('gdc snvindel tandem queries', Date.now() - starttime)
 
@@ -1569,9 +1582,14 @@ async function querySamplesTwlstNotForGeneexpclustering_withGenomicFilter(q, dic
 
 	const { host, headers } = ds.getHostHeaders(q) // will be reused below
 
-	const re = await ky
-		.post(joinUrl(host.rest, isoform2ssm_query2_getcase.endpoint), { timeout: false, headers, json: param })
-		.json()
+	const response = await cachedFetch(joinUrl(host.rest, isoform2ssm_query2_getcase.endpoint), {
+		method: 'POST',
+		timeout: false,
+		headers,
+		body: param
+	})
+
+	const re = response.body
 
 	delete q.isoforms
 
@@ -1714,7 +1732,7 @@ export async function querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q
 
 	const t1 = Date.now()
 
-	const re = await memFetch(
+	const re = await ezFetch(
 		joinUrl(host.rest, 'cases'),
 		{ method: 'POST', headers, body: JSON.stringify(param) } //,
 		//{ q } // this q does not seem to be a request object reference that is shared across all genes, cannot use as a cache key
@@ -1791,7 +1809,7 @@ async function querySamplesTwlstForGeneexpclustering(q, twLst, ds) {
 	// NOTE: not using ky, until the issue with undici intermittent timeout/socket hangup is
 	// fully resolved, and which hapens only for long-running requests where possibly
 	// garbage collection is not being performed on http socket resources
-	const re = await memFetch(
+	const re = await ezFetch(
 		joinUrl(host.rest, 'cases'),
 		{
 			method: 'POST',
