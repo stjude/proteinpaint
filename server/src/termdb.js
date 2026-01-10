@@ -7,7 +7,6 @@ import { get_regression } from './termdb.regression.js'
 import { validate as snpValidate } from './termdb.snp.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { trigger_getLowessCurve } from '../routes/termdb.sampleScatter.ts'
-import { getData } from './termdb.matrix.js'
 import { get_mds3variantData } from './mds3.variant.js'
 import { get_lines_bigfile, mayCopyFromCookie } from './utils.js'
 import { authApi } from './auth.js'
@@ -18,6 +17,7 @@ import { TermTypeGroups } from '#shared/terms.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import serverconfig from './serverconfig.js'
 import { filterTerms } from './termdb.server.init.ts'
+import { get_matrix } from './termdb.get_matrix.js'
 /*
 ********************** EXPORTED
 handle_request_closure
@@ -245,168 +245,6 @@ function trigger_genesetByTermId(q, res, tdb) {
 	if (typeof q.genesetByTermId != 'string' || q.genesetByTermId.length == 0) throw 'invalid query term id'
 	const geneset = tdb.q.getGenesetByTermId(q.genesetByTermId)
 	res.send(geneset)
-}
-
-async function get_matrix(q, req, res, ds, genome) {
-	if (q.getPlotDataByName) {
-		// send back the config for premade matrix plot
-		if (!ds.cohort?.matrixplots?.plots) throw 'ds.cohort.matrixplots.plots missing for the dataset'
-		const plot = ds.cohort.matrixplots.plots.find(p => p.name === q.getPlotDataByName)
-		if (!plot) throw 'invalid name of premade matrix plot' // invalid name could be attack string, avoid returning it so it won't be printed in html
-		res.send(plot.matrixConfig)
-		return
-	}
-	const data = await getData(q, ds, true) // FIXME hardcoded to true
-	if (data.error) {
-		console.trace(data)
-		res.send({ error: data.error })
-		return
-	}
-
-	const debug = serverconfig.debugmode
-	const maxStrLength = 5.12e8 // based on a 64-bit hard constraint in V8 for string processing
-	let jsonStrlen = ''
-	if (debug) {
-		jsonStrlen = JSON.stringify(data.refs).length
-		console.log('get_matrix() start jsonStr.length=', jsonStrlen)
-	}
-
-	const codeByClassOrigin = {
-		Blank: {
-			'': 1,
-			germline: 2,
-			somatic: 3
-		},
-		WT: {
-			'': 4,
-			germline: 5,
-			somatic: 6
-		}
-	}
-
-	const payload = {
-		samples: {},
-		refs: {
-			bySampleId: {},
-			byTermId: {},
-			byDt: {
-				codeByClassOrigin,
-				codes: {
-					1: { class: 'Blank', label: 'Not tested' },
-					2: { class: 'Blank', label: 'Not tested', origin: 'germline' },
-					3: { class: 'Blank', label: 'Not tested', origin: 'somatic' },
-					4: { class: 'WT', label: 'Wildtype' },
-					5: { class: 'WT', label: 'Wildtype', origin: 'germline' },
-					6: { class: 'WT', label: 'Wildtype', origin: 'somatic' }
-				}
-			}
-		}
-	}
-
-	if (authApi.canDisplaySampleIds(req, ds)) {
-		if (!data.refs.byTermId) data.refs.byTermId = {}
-
-		if (data.samples) {
-			const sampleEntries = Object.entries(data.samples)
-			let currShortId = 0,
-				numErrors = 0,
-				sampleIndex = 0
-
-			for (const [sampleId, sample] of sampleEntries) {
-				payload.refs.bySampleId[sampleId] = Object.assign(
-					{
-						sample: sample.sample || sampleId,
-						label: sample.sampleName || undefined
-					},
-					data.refs.bySampleId[sampleId] || {}
-				)
-
-				delete sample.sample
-				delete sample.sampleName
-
-				if (!Object.keys(sample).length) {
-					delete payload.samples[sampleId]
-					delete payload.refs.bySampleId[sampleId]
-				} else {
-					for (const [termId, d] of Object.entries(sample)) {
-						delete d._SAMPLEID_
-						if (!payload.refs.byTermId[termId]) {
-							payload.refs.byTermId[termId] = data.refs.byTermId[termId] || {}
-							payload.refs.byTermId[termId].shortId = currShortId++
-							const gene = d.values?.[0]?.gene
-							if (gene) payload.refs.byTermId[termId].gene = gene
-						}
-						const j = payload.refs.byTermId[termId].shortId
-						sample[j] = sample[termId]
-						delete sample[termId]
-						if (d.values) {
-							for (const v of d.values) {
-								delete v._SAMPLEID_
-								const code = v.dt && codeByClassOrigin[v.class]?.[v.origin || '']
-								if (!code) continue
-								v.code = code
-								// this can be rehydrated from refs.byTermId[tw.$id].gene
-								delete v.gene
-								// these props can be rehydrated from refs.byDt.codes[code]
-								delete v.class
-								delete v.label
-								delete v.origin
-							}
-						}
-					}
-				}
-
-				try {
-					if (debug) {
-						jsonStrlen += JSON.stringify({ [sampleId]: sample }).length + 50
-						if (jsonStrlen > maxStrLength) throw { code: 'RangeError', message: 'Invalid string length' }
-					}
-					payload.samples[sampleId] = sample
-				} catch (e) {
-					if (e.code == 'RangeError' && e.message.includes('Invalid string length')) {
-						//console.log(329, 'jsonStr.length=', jsonStr?.length)
-						payload.error = {
-							code: 'RangeError: Invalid string length',
-							message: `Response data too large - please narrow the cohort or limit the number of variables and/or genes. (Unable to encode data for ${
-								sampleEntries.length - sampleIndex
-							} of ${sampleEntries.length} cases/samples.)`,
-							jsonStrlen
-						}
-						payload.samples = {}
-					} else throw e
-					break
-				}
-				if (payload.error) break
-				sampleIndex++
-			}
-		}
-	}
-
-	if (debug) {
-		console.log('get_matrix() jsonStrlen=', jsonStrlen)
-		res.send(payload)
-		return
-	}
-
-	try {
-		const jsonStr = JSON.stringify(payload)
-		res.setHeader('Content-Type', 'application/json')
-		res.send(jsonStr)
-	} catch (e) {
-		if (e.code == 'RangeError' && e.message.includes('Invalid string length')) {
-			//console.log(329, 'jsonStr.length=', jsonStr?.length)
-			payload.error = {
-				code: 'RangeError: Invalid string length',
-				message: `Response data too large - please narrow the cohort or limit the number of variables and/or genes. (Unable to encode data for ${
-					sampleEntries.length - sampleIndex
-				} of ${sampleEntries.length} cases/samples.)`,
-				jsonStrlen
-			}
-			payload.samples = {}
-		} else {
-			res.send({ error: e })
-		}
-	}
 }
 
 async function get_numericDictTermCluster(q, req, res, ds, genome) {
