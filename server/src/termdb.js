@@ -256,12 +256,20 @@ async function get_matrix(q, req, res, ds, genome) {
 		res.send(plot.matrixConfig)
 		return
 	}
-	const data = await getData(q, ds, true)
-	if (data.error) console.trace(259, data) // FIXME hardcoded to true
+	const data = await getData(q, ds, true) // FIXME hardcoded to true
+	if (data.error) {
+		console.trace(data)
+		res.send({ error: data.error })
+		return
+	}
 
+	const debug = serverconfig.debugmode
 	const maxStrLength = 5.12e8 // based on a 64-bit hard constraint in V8 for string processing
-	let jsonStrlen = JSON.stringify(data.refs).length
-	//console.log(260, 'start jsonStr.length=', jsonStrlen)
+	let jsonStrlen = ''
+	if (debug) {
+		jsonStrlen = JSON.stringify(data.refs).length
+		console.log('get_matrix() start jsonStr.length=', jsonStrlen)
+	}
 
 	const payload = {
 		samples: {},
@@ -323,8 +331,10 @@ async function get_matrix(q, req, res, ds, genome) {
 				}
 
 				try {
-					jsonStrlen += JSON.stringify({ [sampleId]: sample }).length + 50
-					if (jsonStrlen > maxStrLength) throw { code: 'RangeError', message: 'Invalid string length' }
+					if (debug) {
+						jsonStrlen += JSON.stringify({ [sampleId]: sample }).length + 50
+						if (jsonStrlen > maxStrLength) throw { code: 'RangeError', message: 'Invalid string length' }
+					}
 					payload.samples[sampleId] = sample
 				} catch (e) {
 					if (e.code == 'RangeError' && e.message.includes('Invalid string length')) {
@@ -333,7 +343,8 @@ async function get_matrix(q, req, res, ds, genome) {
 							code: 'RangeError: Invalid string length',
 							message: `Response data too large - please narrow the cohort or limit the number of variables and/or genes. (Unable to encode data for ${
 								sampleEntries.length - sampleIndex
-							} of ${sampleEntries.length} cases/samples.)`
+							} of ${sampleEntries.length} cases/samples.)`,
+							jsonStrlen
 						}
 						payload.samples = {}
 					} else throw e
@@ -344,8 +355,32 @@ async function get_matrix(q, req, res, ds, genome) {
 			}
 		}
 	}
-	//console.log(374, 'jsonStrlen=', jsonStrlen)
-	res.send(payload)
+
+	if (debug) {
+		console.log('get_matrix() jsonStrlen=', jsonStrlen)
+		res.send(payload)
+		return
+	}
+
+	try {
+		const jsonStr = JSON.stringify(payload)
+		res.setHeader('Content-Type', 'application/json')
+		res.send(jsonStr)
+	} catch (e) {
+		if (e.code == 'RangeError' && e.message.includes('Invalid string length')) {
+			//console.log(329, 'jsonStr.length=', jsonStr?.length)
+			payload.error = {
+				code: 'RangeError: Invalid string length',
+				message: `Response data too large - please narrow the cohort or limit the number of variables and/or genes. (Unable to encode data for ${
+					sampleEntries.length - sampleIndex
+				} of ${sampleEntries.length} cases/samples.)`,
+				jsonStrlen
+			}
+			payload.samples = {}
+		} else {
+			res.send({ error: e })
+		}
+	}
 }
 
 async function get_numericDictTermCluster(q, req, res, ds, genome) {
