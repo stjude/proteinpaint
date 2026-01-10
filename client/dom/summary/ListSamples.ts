@@ -1,15 +1,14 @@
 import type { AppApi } from '#rx'
 import type { TermWrapper } from '#types'
 import type { AnnotatedSampleData } from '../../types/termdb'
+import type { TableColumn, TableRow } from '#dom'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getSamplelstFilter } from '../../mass/groups.js'
 import { TermTypes, isNumericTerm } from '#shared/terms.js'
 import { filterJoin } from '#filter'
+import { addGvRowVals, addGvCols } from '#plots/barchart.events.js'
 
-/**
- * Goal is to make this reusable for other plots.
- *
- * Temp type scoped for this file.
+/** Temp type scoped for this file.
  * Properties required in the plot arg. */
 type Plot = {
 	chartId?: string //value of divideBy term
@@ -19,49 +18,54 @@ type Plot = {
 	overlayTwBins: any
 }
 
-/** Constructs the list sample argument needed for the server request. Maybe used for showing the samples to user or creating filters.
- *
- * Note: hold over code to accommodate the violin brush is commented out. Will reimplement if needed.
- */
+/** Constructs the list sample argument needed for the server request.
+ * Maybe used for showing the samples to user or creating filters. */
 export class ListSamples {
 	app: AppApi
 	termfilter: any
 	plot: Plot
-	terms: TermWrapper[]
+	//from server response
 	bins: any
 
 	t1: TermWrapper
 	t2: TermWrapper
 	t0?: TermWrapper
+	terms: TermWrapper[]
+
+	/** Used a reduced range for filtering samples */
+	useRange: boolean
+	start?: number
+	end?: number
+
+	//Created objects
 	tvslst: {
 		type: 'tvslst'
 		in: true
 		join: 'and'
 		lst: any[]
 	}
+	//Used for possibly filtering gene variant terms
 	geneVariant = {}
 
-	constructor(
-		app: AppApi,
-		termfilter: any,
-		config: any,
-		plot: Plot
-		/*getRange = true, 
-		start?: number,
-		end?: number*/
-	) {
+	constructor(app: AppApi, termfilter: any, config: any, plot: Plot, start?: number, end?: number) {
 		this.app = app
 		this.termfilter = termfilter
 		this.plot = plot
-    
+
 		this.t1 = config.term
 		this.t2 = config.term2
 		this.t0 = config?.term0 || null
 
 		this.terms = [this.t1]
 
-		// const rangeStart = start ?? this.plot.descrStats.min.value
-		// const rangeStop = end ?? this.plot.descrStats.max.value
+		if ((start && !end) || (!start && end)) {
+			throw new Error('Both start and end must be provided for range filtering')
+		}
+		if (start && end) {
+			this.useRange = true
+			this.start = start
+			this.end = end
+		} else this.useRange = false
 
 		this.tvslst = {
 			type: 'tvslst',
@@ -69,31 +73,25 @@ export class ListSamples {
 			join: 'and',
 			lst: []
 		}
-
-		this.getTvsLst(/*rangeStart, rangeStop*/)
+		this.getTvsLst()
 	}
 
-	getTvsLst(/*rangeStart: number, rangeStop: number*/) {
-		this.getTvsLstEntry(1 /*rangeStart, rangeStop*/)
+	getTvsLst(): void {
+		this.getTvsLstEntry(1)
 		if (this.t2) {
 			this.terms.push(this.t2)
-			this.getTvsLstEntry(2 /*rangeStart, rangeStop*/)
+			this.getTvsLstEntry(2)
 		}
 		if (this.t0) {
 			this.terms.push(this.t0)
-			this.getTvsLstEntry(0 /*rangeStart, rangeStop*/)
-		}
-		if (!this.t2 && !this.t0) {
-			// if (getRange) {
-			// 	this.createTvsRanges(rangeStart, rangeStop)
-			// }
+			this.getTvsLstEntry(0)
 		}
 	}
 
-	getTvsLstEntry(termNum: number /*start: number, stop: number*/): void {
+	getTvsLstEntry(termNum: number): void {
 		const tw = termNum === 1 ? this.t1 : termNum === 2 ? this.t2 : this.t0
 		if (!tw) throw new Error('Missing term wrapper')
-		if (tw.type === TermTypes.GENE_VARIANT) {
+		if (tw.term.type === TermTypes.GENE_VARIANT) {
 			/** Not essential to the server req, but used later
 			 * for formatting the data rows */
 			this.geneVariant[`t${termNum}value`] = this.plot.seriesId
@@ -104,16 +102,12 @@ export class ListSamples {
 				term: tw.term
 			}
 		}
-		this.getFilterParams(tvsEntry.tvs, tw, /*start, stop,*/ termNum)
+		this.getFilterParams(tvsEntry.tvs, tw, termNum)
 		this.tvslst.lst.push(tvsEntry)
 	}
 
-	getFilterParams(tvs: any, tw: TermWrapper, /*start: number, stop: number,*/ termNum: number): void {
+	getFilterParams(tvs: any, tw: TermWrapper, termNum: number): void {
 		const key: any = termNum == 0 ? this.plot.chartId : this.plot.seriesId
-		// const isCatOrCond = [TermTypes.CATEGORICAL, TermTypes.CONDITION].includes(tw.term.type)
-		// if (isCatOrCond) {
-		// 	this.createTvsValues(tvs, tw, key)
-		// } else
 		if (this.isContinuousOrBinned(tw, termNum)) {
 			this.createTvsRanges(tvs, termNum, key)
 			this.createTvsValues(tvs, tw, key)
@@ -122,27 +116,72 @@ export class ListSamples {
 		}
 	}
 
-	createTvsValues(tvs: any, tw: any, key: string) {
-		if (tw.term.type === TermTypes.SAMPLELST) {
+	createTvsValues(tvs: any, tw: any, key: string): void {
+		if (
+			(tw?.q?.type == 'custom-groupset' || tw?.q?.type == 'predefined-groupset') &&
+			tw.term.type !== TermTypes.GENE_VARIANT
+		) {
+			const groupset =
+				tw.q.type == 'custom-groupset' ? tw.q.customset : tw.term.groupsetting.lst[tw.q.predefined_groupset_idx]
+			const group = groupset.groups.find(group => group.name == key)
+			if (!group) throw new Error(`Group not found in groupset for ${tw.term.name}: ${key}`)
+			tvs.values = group.values
+		} else if (tw.term.type === TermTypes.SAMPLELST) {
 			const ids = tw.term.values[key].list.map(s => s.sampleId)
 			// Returns filter obj with lst array of 1 tvs
 			const tmpTvsLst = getSamplelstFilter(ids).lst[0]
-			tvs.values = tmpTvsLst.lst[0].tvs.values
+			// Below is the original logic. Keep as a reference for now.
+			// tvs.values = tmpTvsLst.lst[0].tvs.values
+			tvs.values = tmpTvsLst.tvs.values
 		} else {
 			tvs.values = [{ key }]
 		}
+
 		if (tw.term.type === TermTypes.CONDITION) {
 			Object.assign(tvs, {
 				bar_by_grade: tw.q?.bar_by_grade || null,
 				value_by_max_grade: tw.q.value_by_max_grade
 			})
 		}
+
+		if (tw.term.type == TermTypes.SURVIVAL) {
+			//TODO: This isn't correct. Need to figure out
+			//how to filter for survival terms
+			const value = tw.term.values[key]
+			if (value) tvs.values[0].label = value.label
+		}
 	}
 
-	createTvsRanges(tvs, termNum, key) {
+	createTvsRanges(tvs: any, termNum: number, key: string): void {
+		if (termNum == 1 && this.useRange) {
+			//May limit the range for the first term (i.e. violin brush)
+			tvs.ranges = [
+				{
+					start: this.start,
+					stop: this.end,
+					startinclusive: true,
+					stopinclusive: true,
+					startunbounded: false,
+					stopunbounded: false
+				}
+			]
+			return
+		}
 		const keyBin = this.bins[`term${termNum}`]?.[`${key}`]
+		const uncomputable = Object.entries(this[`t${termNum}`].term?.values ?? {}).find(
+			([_, v]: [string, any]) => v.label === key && v?.uncomputable
+		)?.[0]
 		if (keyBin) {
 			tvs.ranges = [keyBin]
+		} else if (uncomputable) {
+			/** Uncomputable values will not have bins defined but
+			 * require a value for filtering. Manually adding the
+			 * uncomputable key and label filters appropriately.*/
+			if (!tvs.ranges) tvs.ranges = []
+			tvs.ranges.push({
+				value: uncomputable,
+				label: key
+			})
 		} else {
 			//Continuous terms may not have bins defined
 			tvs.ranges = []
@@ -156,7 +195,7 @@ export class ListSamples {
 		)
 	}
 
-	async getData() {
+	async getData(): Promise<AnnotatedSampleData> {
 		try {
 			const opts = {
 				terms: this.terms,
@@ -172,25 +211,80 @@ export class ListSamples {
 		}
 	}
 
-	//Formats data rows for #dom renderTable()
-	setRows(data: AnnotatedSampleData): { value: string | number }[][] {
-		const rows: { value: string | number }[][] = []
+	//Formats data for #dom renderTable()
+	setTableData(data: AnnotatedSampleData): [TableRow[], TableColumn[]] {
+		//Validation check
+		const foundInvalidGvTerm = [this.t1, this.t2, this.t0].find(tw => {
+			return tw && tw.term.type === TermTypes.GENE_VARIANT && (tw?.q as any)?.type == 'values'
+		})
+		if (foundInvalidGvTerm) throw new Error('q.type = values are not supported for gene variant terms')
 
-		const formatValue = (val: any, term: TermWrapper) => {
-			if (isNumericTerm(term.term)) {
-				return roundValueAuto(val)
-			} else {
-				return val
-			}
-		}
+		//Formatting rows
+		const rows: { value: string | number }[][] = []
+		const urlTemplate = this.app.vocabApi.termdbConfig?.urlTemplates?.sample
 
 		for (const s of Object.values(data.lst)) {
+			const filterSample = this.mayFilterGVSample(s)
+			if (filterSample) continue
 			const sampleId = typeof s.sample === 'string' ? s.sample : String(s.sample)
 			const row: any[] = [{ value: data.refs.bySampleId[sampleId].label }]
-			if (s[this.t1.$id!]) row.push({ value: formatValue(s[this.t1.$id!].value, this.t1) })
-			if (s[this.t2.$id!]) row.push({ value: formatValue(s[this.t2.$id!].value, this.t2) })
+			if (urlTemplate) {
+				// sample url template is defined, use it to format sample name as url
+				row[0].url = urlTemplate.base + (s[urlTemplate.namekey] || s.sample)
+			}
+			if (s[this.t1.$id!]) {
+				this.addRowValue(s, this.t1, row)
+			} else continue //skip rows with no term value
+			if (this.t2 && s[this.t2.$id!]) {
+				this.addRowValue(s, this.t2, row)
+			}
 			rows.push(row)
 		}
-		return rows
+
+		//Formatting columns
+		const columns: TableColumn[] = [{ label: 'Sample' }]
+		this.addColValue(this.t1, columns)
+		if (this.t2) this.addColValue(this.t2, columns)
+
+		return [rows, columns]
+	}
+
+	mayFilterGVSample(sample): boolean {
+		let filterSample = false
+		for (const [idx, tw] of [this.t0, this.t1, this.t2].entries()) {
+			if (!tw) continue
+			if (tw.term.type !== TermTypes.GENE_VARIANT) continue
+			const value = sample[tw.$id!]?.value
+			if (value != this.geneVariant[`t${idx}value`]) filterSample = true
+		}
+		return filterSample
+	}
+
+	addRowValue(s: any, tw: TermWrapper, row: TableRow): void {
+		const sample = s[tw.$id!]
+		let formattedVal
+		if (isNumericTerm(tw.term)) {
+			formattedVal = roundValueAuto(sample.value)
+		} else if (tw.term.type === TermTypes.GENE_VARIANT) {
+			//This func mutates row directly
+			addGvRowVals(s, tw, row, this.app.vocabApi.termdbMatrixClass)
+			return
+		} else {
+			formattedVal = tw.term.values?.[sample.value]?.label || sample.value
+		}
+		row.push({ value: formattedVal })
+	}
+
+	addColValue(tw: TermWrapper, columns: TableColumn[]): void {
+		if (tw.term.type === TermTypes.GENE_VARIANT) {
+			//This func mutates columns directly
+			addGvCols(tw, columns)
+		} else if (tw.term.type == TermTypes.SURVIVAL) {
+			//TODO: Skipping for now. Need to figure out how to
+			// filter for survival terms
+			return
+		} else {
+			columns.push({ label: tw.term.name })
+		}
 	}
 }
