@@ -787,7 +787,7 @@ export class TermdbVocab extends Vocab {
 		// - NOTE: for GDC, 17 genes results in a total of about 150MB in-memory JSON string length
 		//         in the server route handler, which avoids the 512MB hard limit for sting processing
 		//         in the V8 engine
-		const maxNumTerms = 17 //opts.terms.length // this.vocab.dslabel === 'GDC' ? opts.terms.length : 1 // revert back to 1 to revert to previous behavior
+		const maxNumTerms = 17 // opts.terms.length // this.vocab.dslabel === 'GDC' ? opts.terms.length : 1 // revert back to 1 to revert to previous behavior
 		let numResponses = 0
 		if (opts.loadingDiv) opts.loadingDiv.html('Updating data ...')
 
@@ -825,7 +825,10 @@ export class TermdbVocab extends Vocab {
 					if (data.error) throw data.error
 					// console.log(825, structuredClone(Object.fromEntries(Object.entries(data.samples).slice(0,5))))
 					if (!data.refs.bySampleId) data.refs.bySampleId = {}
-					const dtValueCodes = data.refs.byDt?.codes || {}
+
+					const $copyAs = data.refs.$codes.copyAs || {}
+					const $objAssign = data.refs.$codes.objAssign || {}
+
 					for (const tw of copies) {
 						const { shortId, gene } = data.refs.byTermId[tw.$id]
 
@@ -859,6 +862,9 @@ export class TermdbVocab extends Vocab {
 								sample[tw.$id] = d
 								delete sample[shortId]
 
+								// rehydrate stripped props
+								if (d.$) d[$copyAs[d.$]] = d.key
+
 								if (tw.term.type == 'termCollection') {
 									const termsValue = JSON.parse(d.value)
 									const sum = termsValue.reduce((a, o) => a + Object.values(o)[0], 0)
@@ -886,10 +892,11 @@ export class TermdbVocab extends Vocab {
 									delete d.value
 								} else if (gene && d.values) {
 									for (const v of d.values) {
-										if (!v.class && v.code) {
+										if (!v.class && v.$) {
 											v.gene = gene
-											Object.assign(v, dtValueCodes[v.code])
-											delete v.code
+											// rehydrate stripped props
+											Object.assign(v, $objAssign[v.$])
+											delete v.$
 										}
 									}
 								}
