@@ -32,7 +32,15 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 	}
 	const testDataCacheDir = maySetTestDataCacheDir(doneLoading)
 
-	app.use(compression())
+	app.use(
+		compression({
+			filter: (req, res) => {
+				if (req.path === '/termdb' && req.query.for === 'matrix') return false // Skip compression
+				// Fallback to standard filter function
+				return compression.filter(req, res)
+			}
+		})
+	)
 
 	app.use((req, res, next) => {
 		if (req.method.toUpperCase() == 'POST') {
