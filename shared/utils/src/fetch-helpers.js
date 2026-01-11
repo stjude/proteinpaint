@@ -15,7 +15,9 @@ import { encode } from './urljson.js'
 	init{headers?, body?}
 	- first two arguments are same as native fetch
 */
-export async function ezFetch(url, init = {}) {
+export async function ezFetch(_url, init = {}, opts = {}) {
+	const url = opts.autoMethod ? mayAdjustRequest(_url, init) : _url
+
 	return fetch(url, init).then(async r => {
 		const response = await processResponse(r)
 		if (!r.ok) {
