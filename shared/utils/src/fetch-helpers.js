@@ -73,6 +73,9 @@ export async function processResponse(r) {
 		if (ct.startsWith('multipart/form-data')) return processFormData(r)
 		else throw `cannot handle response content-type: '${ct}'`
 	}
+	if (ct == 'application/x-ndjson-nestedkey') {
+		return processNDJSON_nestedKey(r)
+	}
 	// call blob() as catch-all
 	// https://developer.mozilla.org/en-US/docs/Web/API/Response
 	return r.blob()
@@ -113,6 +116,44 @@ export async function processFormData(res) {
 	} catch (e) {
 		throw e
 	}
+}
+
+async function processNDJSON_nestedKey(r) {
+	// 1. Pipe through TextDecoder to convert bytes to text
+	const stream = r.body.pipeThrough(new TextDecoderStream())
+	const reader = stream.getReader()
+	let rootObj = {}
+
+	let buffer = ''
+
+	while (true) {
+		const { value, done } = await reader.read()
+		if (done) break
+
+		// 2. Add new chunk to buffer
+		buffer += value
+
+		// 3. Split by newline
+		let parts = buffer.split('\n')
+
+		// 4. Keep the last partial line in the buffer
+		buffer = parts.pop()
+
+		// 5. Process complete lines
+		for (const line of parts) {
+			if (line.trim()) {
+				const [keys, data] = JSON.parse(line) //; console.log(143, keys, data) // Process JSON data
+				if (!keys.length) rootObj = data
+				else {
+					const lastKey = keys.pop()
+					let target = rootObj
+					for (const k of keys) target = target[k]
+					target[lastKey] = data
+				}
+			}
+		}
+	}
+	return rootObj
 }
 
 // key: request object reference or conputed string dataName

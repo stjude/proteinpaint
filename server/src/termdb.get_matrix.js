@@ -84,7 +84,6 @@ export async function get_matrix(q, req, res, ds, genome) {
 
 	const sampleEntries = Object.entries(data.samples || {})
 	const unsentSampleIds = new Set()
-
 	const lastSampleId = sampleEntries.slice(-1)[0][0]
 	debugLog('lastSampleId=', lastSampleId)
 
@@ -94,24 +93,21 @@ export async function get_matrix(q, req, res, ds, genome) {
 			debugLog('unsentSampleIds.size=', unsentSampleIds.size)
 			if (!hasStarted) {
 				hasStarted = true
-				this.push(`{"samples":{`)
+				this.push(JSON.stringify([[], { samples: {} }]) + '\n')
 			}
 			for (const id of unsentSampleIds) {
-				const endChar = id === lastSampleId ? '}' : ','
-				const str = JSON.stringify(id) + ':' + JSON.stringify(data.samples[id]) + endChar
-				this.push(str)
-				if (endChar == '}') {
-					this.push(`,"refs":` + JSON.stringify(data.refs) + '}')
-					unsentSampleIds.clear()
-					this.push(null)
-					return
-				}
+				this.push(JSON.stringify([['samples', id], data.samples[id]]) + '\n')
+				// delete data.samples[id]
+			}
+			if (unsentSampleIds.has(lastSampleId)) {
+				this.push(JSON.stringify([['refs'], data.refs]) + '\n')
+				this.push(null)
 			}
 			unsentSampleIds.clear()
 		}
 	})
-
-	res.setHeader('Content-Type', 'application/json')
+	// x-vndjson: newline-delimited json data stream for nested object placement
+	res.setHeader('Content-Type', 'application/x-ndjson-nestedkey')
 	res.setHeader('Content-Encoding', 'gzip')
 	res.status(200)
 
@@ -172,6 +168,7 @@ export async function get_matrix(q, req, res, ds, genome) {
 			//if (exceedsMaxLen(sampleId, sample, payload.samples)) break
 			sampleIndex++
 			if (Object.keys(sample).length) unsentSampleIds.add(sampleId)
+			//if (sampleIndex > 50) break
 		}
 	}
 

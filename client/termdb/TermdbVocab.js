@@ -826,7 +826,7 @@ export class TermdbVocab extends Vocab {
 				dofetch3('termdb', init, { cacheAs: 'decoded' }).then(data => {
 					if (data.error) throw data.error
 					if (data.warning) warnings.push(data.warning.message)
-					console.log(825, structuredClone(Object.fromEntries(Object.entries(data.samples).slice(0, 5))))
+					// console.log(825, structuredClone(Object.fromEntries(Object.entries(data.samples).slice(0, 5))))
 					if (!data.refs.bySampleId) data.refs.bySampleId = {}
 
 					const $copyAs = data.refs.$codes.copyAs || {}
@@ -1001,7 +1001,6 @@ export class TermdbVocab extends Vocab {
 			for (const tw of opts.terms) {
 				mayFillInCategory2samplecount4term(tw, data.lst, this.termdbConfig)
 			}
-			console.log(1003, data)
 			return data
 		} catch (e) {
 			throw e
