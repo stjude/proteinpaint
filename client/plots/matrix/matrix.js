@@ -185,6 +185,8 @@ export class Matrix extends PlotBase {
 				promises.push(this.setData())
 				this.dom.loadingDiv.html('Processing data ...')
 				await Promise.all(promises)
+				const warnings = this.data.warnings.join('\n')
+				this.dom.warningDiv.style('display', warnings.length ? '' : 'none').html(warnings)
 				this.applyLegendValueFilter() // need to applyLegendValueFiter before combineData to avoid error for hierCluster
 				if (this.combineData) this.combineData()
 				// tws in the config may be filled-in based on applicable server response data;

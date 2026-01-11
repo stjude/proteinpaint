@@ -133,7 +133,7 @@ export function dofetch2(path, init = {}, opts = {}) {
 const optsServerDataNames = new WeakMap() // do not prevent garbage collection of unneeded opts.serverData in consumer code
 /*
 	namedFetch()
-	- same arguments and behavior as ezFetch() above, except opts.serverData is expected to cache response by computed data name
+	- opts.serverData is expected to cache response by computed data name
 	- preserves the caching expectations from 
 	
 	opts{}
@@ -142,7 +142,7 @@ const optsServerDataNames = new WeakMap() // do not prevent garbage collection o
 		- note that the plain object as storage is to support legacy dofetch code
 */
 export async function namedFetch(url, init, opts = {}) {
-	if (!opts.serverData) throw `use ezFetch() if a fetched response is not meant to be cached`
+	if (!opts.serverData) throw `use ezFetch() from fetch-helpers if a fetched response is not meant to be cached`
 	if (typeof opts.serverData != 'object') throw `opts.serverData is not an object`
 
 	let result

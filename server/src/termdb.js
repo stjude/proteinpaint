@@ -7,7 +7,6 @@ import { get_regression } from './termdb.regression.js'
 import { validate as snpValidate } from './termdb.snp.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { trigger_getLowessCurve } from '../routes/termdb.sampleScatter.ts'
-import { getData } from './termdb.matrix.js'
 import { get_mds3variantData } from './mds3.variant.js'
 import { get_lines_bigfile, mayCopyFromCookie } from './utils.js'
 import { authApi } from './auth.js'
@@ -18,6 +17,7 @@ import { TermTypeGroups } from '#shared/terms.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import serverconfig from './serverconfig.js'
 import { filterTerms } from './termdb.server.init.ts'
+import { get_matrix } from './termdb.get_matrix.js'
 /*
 ********************** EXPORTED
 handle_request_closure
@@ -245,25 +245,6 @@ function trigger_genesetByTermId(q, res, tdb) {
 	if (typeof q.genesetByTermId != 'string' || q.genesetByTermId.length == 0) throw 'invalid query term id'
 	const geneset = tdb.q.getGenesetByTermId(q.genesetByTermId)
 	res.send(geneset)
-}
-
-async function get_matrix(q, req, res, ds, genome) {
-	if (q.getPlotDataByName) {
-		// send back the config for premade matrix plot
-		if (!ds.cohort?.matrixplots?.plots) throw 'ds.cohort.matrixplots.plots missing for the dataset'
-		const plot = ds.cohort.matrixplots.plots.find(p => p.name === q.getPlotDataByName)
-		if (!plot) throw 'invalid name of premade matrix plot' // invalid name could be attack string, avoid returning it so it won't be printed in html
-		res.send(plot.matrixConfig)
-		return
-	}
-	const data = await getData(q, ds, true) // FIXME hardcoded to true
-	if (authApi.canDisplaySampleIds(req, ds)) {
-		if (data.samples)
-			for (const sample of Object.values(data.samples)) {
-				sample.sampleName = data.refs.bySampleId?.[sample.sample]?.label || sample.sample
-			}
-	}
-	res.send(data)
 }
 
 async function get_numericDictTermCluster(q, req, res, ds, genome) {
