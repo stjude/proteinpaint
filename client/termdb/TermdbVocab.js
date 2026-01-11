@@ -787,9 +787,11 @@ export class TermdbVocab extends Vocab {
 		// - NOTE: for GDC, 17 genes results in a total of about 150MB in-memory JSON string length
 		//         in the server route handler, which avoids the 512MB hard limit for sting processing
 		//         in the V8 engine
-		const maxNumTerms = 17 // opts.terms.length // this.vocab.dslabel === 'GDC' ? opts.terms.length : 1 // revert back to 1 to revert to previous behavior
+		const maxNumTerms = opts.terms.length // this.vocab.dslabel === 'GDC' ? opts.terms.length : 1 // revert back to 1 to revert to previous behavior
 		let numResponses = 0
 		if (opts.loadingDiv) opts.loadingDiv.html('Updating data ...')
+
+		const warnings = []
 
 		while (true) {
 			const copies = getTerms2update(allTerms2update, maxNumTerms) // list of unique terms to update in this round
@@ -823,6 +825,7 @@ export class TermdbVocab extends Vocab {
 			promises.push(
 				dofetch3('termdb', init, { cacheAs: 'decoded' }).then(data => {
 					if (data.error) throw data.error
+					if (data.warning) warnings.push(data.warning.message)
 					// console.log(825, structuredClone(Object.fromEntries(Object.entries(data.samples).slice(0,5))))
 					if (!data.refs.bySampleId) data.refs.bySampleId = {}
 
@@ -987,7 +990,8 @@ export class TermdbVocab extends Vocab {
 			const sampleFilter = new RegExp(opts.sampleNameFilter || '.*')
 			const data = {
 				lst: lst.filter(row => samplesToShow.has(row.sample) && sampleFilter.test(row.sample)),
-				refs
+				refs,
+				warnings
 			}
 			data.samples = data.lst.reduce((obj, row) => {
 				obj[row.sample] = row

@@ -2,7 +2,8 @@ import { getData } from './termdb.matrix.js'
 import serverconfig from './serverconfig.js'
 import { authApi } from './auth.js'
 
-const maxStrLength = 5.12e8 // based on a 64-bit hard constraint in V8 for string processing
+// based on a 64-bit hard constraint in V8 for string processing
+const maxStrLength = 5.12e8 - 1e5 // subtract 100KB for error message, etc
 
 // if '$' exists as a data object property, it indicates stripped properties
 // that should be rehydrated on the client side
@@ -68,114 +69,122 @@ export async function get_matrix(q, req, res, ds, genome) {
 		res.send({ error: data.error })
 		return
 	}
-
-	const debug = serverconfig.debugmode
-	let jsonStrlen = ''
-	if (debug) {
-		jsonStrlen = JSON.stringify(data.refs).length
-		console.log('get_matrix() start jsonStr.length=', jsonStrlen)
-	}
+	if (!data.refs.byTermId) data.refs.byTermId = {}
 
 	const payload = {
-		samples: {},
+		samples: [],
 		refs: {
-			bySampleId: {},
-			byTermId: {},
-			$codes
+			byTermId: [],
+			bySampleId: []
 		}
 	}
 
 	const sampleEntries = Object.entries(data.samples || {})
-	let currShortId = 0,
-		sampleIndex = 0
 
-	if (authApi.canDisplaySampleIds(req, ds)) {
-		if (!data.refs.byTermId) data.refs.byTermId = {}
+	let jsonStrlen = 0,
+		currShortId = 1,
+		sampleIndex = 1
 
-		if (sampleEntries.length) {
-			for (const [sampleId, sample] of sampleEntries) {
-				payload.refs.bySampleId[sampleId] = Object.assign(
-					{
-						sample: sample.sample || sampleId,
-						label: sample.sampleName || undefined
-					},
-					data.refs.bySampleId[sampleId] || {}
-				)
+	function exceedsMaxLen(id, obj, tracker) {
+		const str = JSON.stringify(id) + ':' + JSON.stringify(obj)
+		jsonStrlen += str.length + 1 // count pending comma separator
+		if (jsonStrlen > maxStrLength) return true
+		tracker.push(str)
+		return false
+	}
 
-				delete sample.sample
-				delete sample.sampleName
+	if (authApi.canDisplaySampleIds(req, ds) && sampleEntries.length) {
+		const { byTermId, bySampleId } = data.refs
 
-				if (!Object.keys(sample).length) {
-					delete payload.samples[sampleId]
-					delete payload.refs.bySampleId[sampleId]
-				} else {
-					for (const [termId, d] of Object.entries(sample)) {
-						delete d._SAMPLEID_ // not needed in client code
-						if (d.key) {
-							for (const c of $copyAs) {
-								if (d.key !== d[c[1]]) continue
-								delete d[c[1]] // can be copied as data[refs.$codes.copyAs[d.$]] = d.key
-								d.$ = c[0]
-							}
-						}
+		for (const [sampleId, sample] of sampleEntries) {
+			if (!bySampleId[sampleId]) bySampleId[sampleId] = {}
+			const s = bySampleId[sampleId]
+			if (!s.sample) s.sample = sample.sample
+			if (!s.sampleName) s.sampleName = sample.sampleName
+			if (exceedsMaxLen(sampleId, bySampleId[sampleId], payload.refs.bySampleId)) break
 
-						if (!payload.refs.byTermId[termId]) {
-							payload.refs.byTermId[termId] = data.refs.byTermId[termId] || {}
-							payload.refs.byTermId[termId].shortId = currShortId++
-							const gene = d.values?.[0]?.gene
-							if (gene) payload.refs.byTermId[termId].gene = gene
-						}
+			delete sample.sample
+			delete sample.sampleName
+			if (!Object.keys(sample).length) continue
 
-						const { shortId, gene } = payload.refs.byTermId[termId]
-						// termId can be very long and repeated across all samples,
-						// use the shortId to lessen memory use
-						sample[shortId] = sample[termId]
-						delete sample[termId]
+			for (const [termId, d] of Object.entries(sample)) {
+				if (!byTermId[termId]?.shortId) {
+					if (!byTermId[termId]) byTermId[termId] = {}
+					byTermId[termId].shortId = currShortId++
+					const gene = d.values?.[0]?.gene
+					if (gene) byTermId[termId].gene = gene
+					if (exceedsMaxLen(termId, byTermId[termId], payload.refs.byTermId)) break
+				}
 
-						if (gene && d.values) {
-							for (const v of d.values) {
-								delete v._SAMPLEID_
-								const code = v.dt && $objAssign[v.class]?.[v.origin || '']
-								if (!code) continue
-								v.$ = code
-								// this can be rehydrated from refs.byTermId[tw.$id].gene
-								delete v.gene
-								// these props can be rehydrated from refs.$codes.objAssign[code]
-								delete v.class
-								delete v.label
-								delete v.origin
-							}
-						}
+				delete d._SAMPLEID_ // not needed in client code
+				if (d.key) {
+					for (const c of $copyAs) {
+						if (d.key !== d[c[1]]) continue
+						delete d[c[1]] // can be copied as data[refs.$codes.copyAs[d.$]] = d.key
+						d.$ = c[0]
 					}
 				}
 
-				if (debug) {
-					jsonStrlen += JSON.stringify({ [sampleId]: sample }).length + 50
-					if (jsonStrlen > maxStrLength) break
+				const { shortId, gene } = byTermId[termId]
+				// termId can be very long and repeated across all samples,
+				// use the shortId to lessen memory use
+				sample[shortId] = sample[termId]
+				delete sample[termId]
+
+				if (gene && d.values) {
+					for (const v of d.values) {
+						delete v._SAMPLEID_
+						const code = v.dt && $objAssign[v.class]?.[v.origin || '']
+						if (!code) continue
+						v.$ = code
+						// this can be rehydrated from refs.byTermId[tw.$id].gene
+						delete v.gene
+						// these props can be rehydrated from refs.$codes.objAssign[code]
+						delete v.class
+						delete v.label
+						delete v.origin
+					}
 				}
-				payload.samples[sampleId] = sample
-				sampleIndex++
 			}
+			if (exceedsMaxLen(sampleId, sample, payload.samples)) break
+			sampleIndex++
+			//if (sampleIndex > 5) break
 		}
 	}
 
 	try {
-		if (debug) {
-			console.log('get_matrix() jsonStrlen=', jsonStrlen)
-			if (jsonStrlen > maxStrLength) throw new RangeError(`Invalid string length`)
-		}
-		const jsonStr = JSON.stringify(payload)
+		if (serverconfig.debugmode) console.log('get_matrix() jsonStrlen=', jsonStrlen)
+		const jsonStr = [
+			'{',
+			`"samples":{`,
+			payload.samples.join(','),
+			`},`,
+			`"refs":{`,
+			`"byTermId": {`,
+			payload.refs.byTermId.join(','),
+			`},`,
+			`"bySampleId": {`,
+			payload.refs.bySampleId.join(','),
+			`},`,
+			`"$codes":`,
+			JSON.stringify($codes),
+			`},`,
+			`"warning":{`,
+			`"message":`,
+			JSON.stringify(jsonStrlen < maxStrLength ? '' : getRangeErrorMessage(sampleEntries.length, sampleIndex)),
+			`}`,
+			`}`
+		].join('')
 		res.setHeader('Content-Type', 'application/json')
 		res.send(jsonStr)
 	} catch (e) {
+		console.log(e)
 		if (e instanceof RangeError && e.message.includes('Invalid string length')) {
 			// create a more informative error message for end user
-			let message = `Response data too large - please narrow the cohort or limit the number of variables and/or genes.`
-			const n = sampleEntries.length
-			if (debug) message += `(Unable to encode data for ${n - sampleIndex} of ${n} cases/samples.)`
+			const message = getErr
 			payload.error = {
 				code: 'RangeError: Invalid string length',
-				message,
+				message: getRangeErrorMessage(sampleEntries.length, sampleIndex),
 				jsonStrlen
 			}
 			payload.samples = {}
@@ -184,4 +193,10 @@ export async function get_matrix(q, req, res, ds, genome) {
 			res.send({ error: e })
 		}
 	}
+}
+
+function getRangeErrorMessage(totalSamples, sampleIndex) {
+	let message = `Response data too large - please narrow the cohort or limit the number of variables and/or genes.`
+	message += `(Unable to encode data for ${totalSamples - sampleIndex} of ${totalSamples} cases/samples.)`
+	return message
 }
