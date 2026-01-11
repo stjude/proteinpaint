@@ -1732,7 +1732,7 @@ export async function querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q
 
 	const t1 = Date.now()
 
-	const re = await ezFetch(
+	const { body: re } = await cachedFetch(
 		joinUrl(host.rest, 'cases'),
 		{ method: 'POST', headers, body: JSON.stringify(param) } //,
 		//{ q } // this q does not seem to be a request object reference that is shared across all genes, cannot use as a cache key
@@ -1815,11 +1815,11 @@ async function querySamplesTwlstForGeneexpclustering(q, twLst, ds) {
 			method: 'POST',
 			timeout: false,
 			headers,
-			body: JSON.stringify({
+			body: {
 				size: ds.__gdc.casesWithExpData.size,
 				fields: fields.join(','),
 				case_filters: filters.content.length ? filters : undefined
-			})
+			}
 		} //,
 		//{ q } // this q does not seem to be a request object reference that is shared across all genes, cannot use as a cache key
 	)
