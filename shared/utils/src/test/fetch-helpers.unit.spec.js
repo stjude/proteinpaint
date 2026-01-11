@@ -46,20 +46,20 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('init.body handling', async test => {
+tape('init.body handling using opts.autoMethod', async test => {
 	test.teardown(cleanup)
 	root.fetch = (url, init) => {
 		test.equal(url, 'http://api/test?test=abc', 'should encode init.body into URL-params')
 		return mockFetch({ test: 'init.body' })(url, init)
 	}
-	await ezFetch('http://api/test', { body: { test: 'abc' } })
+	await ezFetch('http://api/test', { body: { test: 'abc' } }, { autoMethod: true })
 
 	root.fetch = (url, init) => {
 		test.equal(url, 'http://api/test', 'should not change the url')
 		test.equal(init.body, '{"test":"xyz"}', 'should encode init.body into JSON string')
 		return mockFetch({ test: 'init.body' })(url, init)
 	}
-	await ezFetch('http://api/test', { method: 'POST', body: { test: 'xyz' } })
+	await ezFetch('http://api/test', { method: 'POST', body: { test: 'xyz' } }, { autoMethod: true })
 	test.end()
 })
 
