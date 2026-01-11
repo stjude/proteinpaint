@@ -85,7 +85,7 @@ export async function get_matrix(q, req, res, ds, genome) {
 		currShortId = 1,
 		sampleIndex = 1
 
-	function exceedsMaxLen(id, obj, tracker) {
+	function canAppendJson(id, obj, tracker) {
 		const str = JSON.stringify(id) + ':' + JSON.stringify(obj)
 		jsonStrlen += str.length + 1 // count pending comma separator
 		if (jsonStrlen > maxStrLength) return true
@@ -101,7 +101,7 @@ export async function get_matrix(q, req, res, ds, genome) {
 			const s = bySampleId[sampleId]
 			if (!s.sample) s.sample = sample.sample
 			if (!s.sampleName) s.sampleName = sample.sampleName
-			if (exceedsMaxLen(sampleId, bySampleId[sampleId], payload.refs.bySampleId)) break
+			if (canAppendJson(sampleId, bySampleId[sampleId], payload.refs.bySampleId)) break
 
 			delete sample.sample
 			delete sample.sampleName
@@ -113,7 +113,7 @@ export async function get_matrix(q, req, res, ds, genome) {
 					byTermId[termId].shortId = currShortId++
 					const gene = d.values?.[0]?.gene
 					if (gene) byTermId[termId].gene = gene
-					if (exceedsMaxLen(termId, byTermId[termId], payload.refs.byTermId)) break
+					if (canAppendJson(termId, byTermId[termId], payload.refs.byTermId)) break
 				}
 
 				delete d._SAMPLEID_ // not needed in client code
@@ -146,9 +146,9 @@ export async function get_matrix(q, req, res, ds, genome) {
 					}
 				}
 			}
-			if (exceedsMaxLen(sampleId, sample, payload.samples)) break
+			if (canAppendJson(sampleId, sample, payload.samples)) break
 			sampleIndex++
-			//if (sampleIndex > 5) break
+			delete data.samples[sampleId] // may help with garbage collection, since this sample data is already JSON.stringified()
 		}
 	}
 
