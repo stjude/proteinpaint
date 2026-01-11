@@ -1,6 +1,8 @@
 import { getData } from './termdb.matrix.js'
 import serverconfig from './serverconfig.js'
 import { authApi } from './auth.js'
+import { Readable, pipeline } from 'stream'
+import zlib from 'zlib'
 
 // based on a 64-bit hard constraint in V8 for string processing
 const maxStrLength = 5.12e8 - 1e5 // subtract 100KB for error message, etc
@@ -69,6 +71,7 @@ export async function get_matrix(q, req, res, ds, genome) {
 		res.send({ error: data.error })
 		return
 	}
+	data.refs.$codes = $codes
 	if (!data.refs.byTermId) data.refs.byTermId = {}
 
 	const payload = {
@@ -80,18 +83,41 @@ export async function get_matrix(q, req, res, ds, genome) {
 	}
 
 	const sampleEntries = Object.entries(data.samples || {})
+	const unsentSampleIds = new Set()
+
+	const lastSampleId = sampleEntries.slice(-1)[0][0]
+	debugLog('lastSampleId=', lastSampleId)
+
+	let hasStarted = false
+	const jsonStream = new Readable({
+		read() {
+			debugLog('unsentSampleIds.size=', unsentSampleIds.size)
+			if (!hasStarted) {
+				hasStarted = true
+				this.push(`{"samples":{`)
+			}
+			for (const id of unsentSampleIds) {
+				const endChar = id === lastSampleId ? '}' : ','
+				const str = JSON.stringify(id) + ':' + JSON.stringify(data.samples[id]) + endChar
+				this.push(str)
+				if (endChar == '}') {
+					this.push(`,"refs":` + JSON.stringify(data.refs) + '}')
+					unsentSampleIds.clear()
+					this.push(null)
+					return
+				}
+			}
+			unsentSampleIds.clear()
+		}
+	})
+
+	res.setHeader('Content-Type', 'application/json')
+	res.setHeader('Content-Encoding', 'gzip')
+	res.status(200)
 
 	let jsonStrlen = 0,
 		currShortId = 1,
 		sampleIndex = 1
-
-	function canAppendJson(id, obj, tracker) {
-		const str = JSON.stringify(id) + ':' + JSON.stringify(obj)
-		jsonStrlen += str.length + 1 // count pending comma separator
-		if (jsonStrlen > maxStrLength) return true
-		tracker.push(str)
-		return false
-	}
 
 	if (authApi.canDisplaySampleIds(req, ds) && sampleEntries.length) {
 		const { byTermId, bySampleId } = data.refs
@@ -101,11 +127,8 @@ export async function get_matrix(q, req, res, ds, genome) {
 			const s = bySampleId[sampleId]
 			if (!s.sample) s.sample = sample.sample
 			if (!s.sampleName) s.sampleName = sample.sampleName
-			if (canAppendJson(sampleId, bySampleId[sampleId], payload.refs.bySampleId)) break
-
 			delete sample.sample
 			delete sample.sampleName
-			if (!Object.keys(sample).length) continue
 
 			for (const [termId, d] of Object.entries(sample)) {
 				if (!byTermId[termId]?.shortId) {
@@ -113,7 +136,6 @@ export async function get_matrix(q, req, res, ds, genome) {
 					byTermId[termId].shortId = currShortId++
 					const gene = d.values?.[0]?.gene
 					if (gene) byTermId[termId].gene = gene
-					if (canAppendJson(termId, byTermId[termId], payload.refs.byTermId)) break
 				}
 
 				delete d._SAMPLEID_ // not needed in client code
@@ -146,42 +168,31 @@ export async function get_matrix(q, req, res, ds, genome) {
 					}
 				}
 			}
-			if (canAppendJson(sampleId, sample, payload.samples)) break
+
+			//if (exceedsMaxLen(sampleId, sample, payload.samples)) break
 			sampleIndex++
-			delete data.samples[sampleId] // may help with garbage collection, since this sample data is already JSON.stringified()
+			if (Object.keys(sample).length) unsentSampleIds.add(sampleId)
 		}
 	}
 
 	try {
-		if (serverconfig.debugmode) console.log('get_matrix() jsonStrlen=', jsonStrlen)
-		const jsonStr = [
-			'{',
-			`"samples":{`,
-			payload.samples.join(','),
-			`},`,
-			`"refs":{`,
-			`"byTermId": {`,
-			payload.refs.byTermId.join(','),
-			`},`,
-			`"bySampleId": {`,
-			payload.refs.bySampleId.join(','),
-			`},`,
-			`"$codes":`,
-			JSON.stringify($codes),
-			`},`,
-			`"warning":{`,
-			`"message":`,
-			JSON.stringify(jsonStrlen < maxStrLength ? '' : getRangeErrorMessage(sampleEntries.length, sampleIndex)),
-			`}`,
-			`}`
-		].join('')
-		res.setHeader('Content-Type', 'application/json')
-		res.send(jsonStr)
+		debugLog('get_matrix() jsonStrlen=', jsonStrlen)
+		pipeline(jsonStream, zlib.createGzip(), res, err => {
+			if (err) {
+				console.error('Pipeline failed.', err)
+				// If headers haven't been sent, we can send a 500 error
+				if (!res.headersSent) {
+					res.status(500).send(err)
+				}
+			} else {
+				console.log('Pipeline succeeded.')
+				res.end()
+			}
+		})
 	} catch (e) {
 		console.log(e)
 		if (e instanceof RangeError && e.message.includes('Invalid string length')) {
 			// create a more informative error message for end user
-			const message = getErr
 			payload.error = {
 				code: 'RangeError: Invalid string length',
 				message: getRangeErrorMessage(sampleEntries.length, sampleIndex),
@@ -199,4 +210,8 @@ function getRangeErrorMessage(totalSamples, sampleIndex) {
 	let message = `Response data too large - please narrow the cohort or limit the number of variables and/or genes.`
 	message += `(Unable to encode data for ${totalSamples - sampleIndex} of ${totalSamples} cases/samples.)`
 	return message
+}
+
+function debugLog() {
+	if (serverconfig.debugmode) console.log(...arguments)
 }
