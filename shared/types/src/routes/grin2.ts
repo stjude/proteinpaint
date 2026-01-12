@@ -32,7 +32,7 @@ export type GRIN2Request = {
 	/** Lesion type colors */
 	lesionTypeColors?: any
 
-	/** Threshold for q-values to be included as interactive dots */
+	/** Threshold for q-values to be included as interactive dots, have significance indicators in the table and tooltips */
 	qValueThreshold?: number
 
 	/** Log cutoff for Manhattan plot rendering before we scale the y-axis (default: 40).

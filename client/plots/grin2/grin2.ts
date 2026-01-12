@@ -1008,7 +1008,7 @@ export function getDefaultSettings(opts) {
 			interactiveDotsCap: 5000,
 			maxTooltipGenes: 5,
 
-			// Q-value threshold for significance indicators in the table
+			// Q-value threshold for significance indicators in the table, tooltips, and for determining which dots become interactive
 			qValueThreshold: 0.05,
 
 			// Colors for lesion types (currently used for table significance indicators. Long term will also be used for the rust code colors)
@@ -1022,6 +1022,7 @@ export function getDefaultSettings(opts) {
 
 			// Threshold for the rust code when determining if we need to raise the cap value from the default
 			maxCappedPoints: 5,
+
 			// Bin size for cap calculations
 			binSize: 10,
 
