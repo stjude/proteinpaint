@@ -26,6 +26,7 @@ struct Input {
     max_capped_points: u64,
     hard_cap: f64,
     bin_size: f64,
+    q_value_threshold: f64,
 }
 
 // chromosome info
@@ -225,6 +226,7 @@ fn grin2_file_read(
     grin2_file: &str,
     chrom_data: &HashMap<String, ChromInfo>,
     log_cutoff: f64,
+    q_value_threshold: f64,
 ) -> Result<
     (
         Vec<u64>,
@@ -357,7 +359,7 @@ fn grin2_file_read(
 
             // only add significant points for interactivity
             // We check against the original q-value here so we send back the correct values instead of the 1e-300 used for log transform
-            if original_q_val <= 0.05 {
+            if original_q_val <= q_value_threshold {
                 point_details.push(PointDetail {
                     x: x_pos,
                     y: neg_log10_q,
@@ -394,6 +396,7 @@ fn plot_grin2_manhattan(
     bin_size: f64,
     max_capped_points: u64,
     hard_cap: f64,
+    q_value_threshold: f64,
 ) -> Result<(String, InteractiveData), Box<dyn Error>> {
     // ------------------------------------------------
     // 1. Build cumulative chromosome map
@@ -423,7 +426,7 @@ fn plot_grin2_manhattan(
     let mut sig_indices = Vec::new();
     let mut zero_q_indices: Vec<usize> = Vec::new();
 
-    if let Ok((x, y, c, pd, si, zq)) = grin2_file_read(&grin2_result_file, &chrom_data, log_cutoff) {
+    if let Ok((x, y, c, pd, si, zq)) = grin2_file_read(&grin2_result_file, &chrom_data, log_cutoff, q_value_threshold) {
         xs = x;
         ys = y;
         colors_vec = c;
@@ -658,6 +661,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let max_capped_points = &input_json.max_capped_points;
                 let hard_cap = &input_json.hard_cap;
                 let bin_size = &input_json.bin_size;
+                let q_value_threshold = &input_json.q_value_threshold;
                 if let Ok((base64_string, plot_data)) = plot_grin2_manhattan(
                     grin2_file.clone(),
                     chrom_size.clone(),
@@ -669,6 +673,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     bin_size.clone(),
                     max_capped_points.clone(),
                     hard_cap.clone(),
+                    q_value_threshold.clone(),
                 ) {
                     let output = Output {
                         png: base64_string,
