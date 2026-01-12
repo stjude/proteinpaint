@@ -605,6 +605,7 @@ function maySkipFieldLine(line) {
 	if (
 		line.startsWith('ssm') ||
 		line.startsWith('case.observation') ||
+		line.startsWith('case.exposures') || // 1/12/26 exposures__years_smoked breaks qa-yellow, thus skipping whole branch
 		line.startsWith('case.available_variation_data') ||
 		line.startsWith('case.samples') // these terms have multiple values per case (one for each sample), skipping for now until we can support them
 	) {
