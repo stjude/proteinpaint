@@ -699,8 +699,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 				...configValues
 			}
 
-			console.log('GRIN2 request data:', requestData)
-
 			const response = await dofetch3('/grin2', {
 				body: requestData
 			})
@@ -1024,8 +1022,7 @@ export function getDefaultSettings(opts) {
 
 			// Threshold for the rust code when determing if we need to raise the cap value from the default
 			maxCappedPoints: 5,
-			// maxCappedPoints: 25,
-			// maxCappedPoints: 50,
+			// Bin size for cap calculations
 			binSize: 10,
 
 			// Hard cap regardless of data distribution
