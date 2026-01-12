@@ -23,7 +23,7 @@ export class ListSamples {
 	app: AppApi
 	termfilter: any
 	plot: Plot
-	//from server response
+	/** Created by the server */
 	bins: any
 
 	t1: TermWrapper
@@ -31,19 +31,21 @@ export class ListSamples {
 	t0?: TermWrapper
 	terms: TermWrapper[]
 
-	/** Used a reduced range for filtering samples */
+	/** Indicates a reduced range than then bin (e.g. violin brush) */
 	useRange: boolean
 	start?: number
 	end?: number
 
-	//Created objects
+	/*******************
+	 * Created objects *
+	 *******************/
 	tvslst: {
 		type: 'tvslst'
 		in: true
 		join: 'and'
 		lst: any[]
 	}
-	//Used for possibly filtering gene variant terms
+	/** For filtering gene variant terms later */
 	geneVariant = {}
 
 	constructor(app: AppApi, termfilter: any, config: any, plot: Plot, start?: number, end?: number) {
@@ -58,10 +60,13 @@ export class ListSamples {
 
 		this.terms = [this.t1]
 
-		if ((start && !end) || (!start && end)) {
+		const noValue = v => {
+			return v === null || v === undefined
+		}
+		if ((start && noValue(end)) || (noValue(start) && end)) {
 			throw new Error('Both start and end must be provided for range filtering')
 		}
-		if (start && end) {
+		if (!noValue(start) && !noValue(end)) {
 			this.useRange = true
 			this.start = start
 			this.end = end
@@ -92,9 +97,10 @@ export class ListSamples {
 		const tw = termNum === 1 ? this.t1 : termNum === 2 ? this.t2 : this.t0
 		if (!tw) throw new Error('Missing term wrapper')
 		if (tw.term.type === TermTypes.GENE_VARIANT) {
-			/** Not essential to the server req, but used later
-			 * for formatting the data rows */
+			/** Gene variant terms are not use in the server
+			 * req but later for filtering the res. */
 			this.geneVariant[`t${termNum}value`] = this.plot.seriesId
+			return
 		}
 		const tvsEntry = {
 			type: 'tvs',
@@ -115,7 +121,6 @@ export class ListSamples {
 			this.createTvsValues(tvs, tw, key)
 		}
 	}
-
 	createTvsValues(tvs: any, tw: any, key: string): void {
 		if (
 			(tw?.q?.type == 'custom-groupset' || tw?.q?.type == 'predefined-groupset') &&
@@ -149,6 +154,7 @@ export class ListSamples {
 			//how to filter for survival terms
 			const value = tw.term.values[key]
 			if (value) tvs.values[0].label = value.label
+			tvs.q = {}
 		}
 	}
 
@@ -211,7 +217,7 @@ export class ListSamples {
 		}
 	}
 
-	//Formats data for #dom renderTable()
+	/** Formats the data for #dom/table/renderTable() */
 	setTableData(data: AnnotatedSampleData): [TableRow[], TableColumn[]] {
 		//Validation check
 		const foundInvalidGvTerm = [this.t1, this.t2, this.t0].find(tw => {
@@ -255,7 +261,10 @@ export class ListSamples {
 			if (!tw) continue
 			if (tw.term.type !== TermTypes.GENE_VARIANT) continue
 			const value = sample[tw.$id!]?.value
-			if (value != this.geneVariant[`t${idx}value`]) filterSample = true
+			if (!this.geneVariant[`t${idx}value`]) continue
+			if (value != this.geneVariant[`t${idx}value`]) {
+				filterSample = true
+			}
 		}
 		return filterSample
 	}

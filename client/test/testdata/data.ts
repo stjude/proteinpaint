@@ -152,7 +152,7 @@ export function getGeneVariantTw(position = false) {
 			],
 			type: 'geneVariant'
 		},
-		q: { type: 'predefined-groupset' }
+		q: { type: 'predefined-groupset', predefined_groupset_idx: 0, hiddenValues: {} }
 	}
 }
 
