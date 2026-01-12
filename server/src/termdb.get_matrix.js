@@ -97,16 +97,18 @@ export async function get_matrix(q, req, res, ds, genome) {
 			}
 			for (const id of unsentSampleIds) {
 				this.push(JSON.stringify([['samples', id], data.samples[id]]) + '\n')
-				// delete data.samples[id]
+				delete data.samples[id]
 			}
 			if (unsentSampleIds.has(lastSampleId)) {
 				this.push(JSON.stringify([['refs'], data.refs]) + '\n')
+				// uncomment below to test warning message if rendered by client-side plot code
+				// this.push(JSON.stringify([['warning'], {message: '!!! TEST !!!'}]) + '\n')
 				this.push(null)
 			}
 			unsentSampleIds.clear()
 		}
 	})
-	// x-vndjson: newline-delimited json data stream for nested object placement
+	// x-ndjson-nestedkey: newline-delimited json data stream for nested object placement
 	res.setHeader('Content-Type', 'application/x-ndjson-nestedkey')
 	res.setHeader('Content-Encoding', 'gzip')
 	res.status(200)
@@ -178,12 +180,9 @@ export async function get_matrix(q, req, res, ds, genome) {
 			if (err) {
 				console.error('Pipeline failed.', err)
 				// If headers haven't been sent, we can send a 500 error
-				if (!res.headersSent) {
-					res.status(500).send(err)
-				}
+				if (!res.headersSent) res.status(500).send(err)
 			} else {
-				console.log('Pipeline succeeded.')
-				res.end()
+				if (!res.headersSent) res.end()
 			}
 		})
 	} catch (e) {
