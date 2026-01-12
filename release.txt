@@ -1,2 +1,1 @@
-Features:
-- GRIN2: Added logic for generating dynamic y-axis cap in manhattan plot
+
