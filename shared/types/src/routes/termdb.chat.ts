@@ -34,3 +34,28 @@ export const ChatPayload: RoutePayload = {
 	}
 	//examples: []
 }
+
+export type SummaryType = {
+	action: string
+	summaryterms: SummaryTerm[]
+	simpleFilter?: FilterTerm[]
+}
+
+export type SummaryTerm = {
+	term: string
+}
+
+export type FilterTerm = {
+	FilterTerm: CategoricalFilterTerm | NumericFilterTerm
+}
+
+export type CategoricalFilterTerm = {
+	term: string
+	category: string
+}
+
+export type NumericFilterTerm = {
+	term: string
+	greaterThan: number
+	lessThan: number
+}
