@@ -225,8 +225,6 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		bin_size: request.binSize
 	}
 
-	console.log('[GRIN2] Rust input:', rustInput)
-
 	// Step 6: Generate manhattan plot via rust
 	const manhattanPlotStart = Date.now()
 	const rsResult = await run_rust('manhattan_plot', JSON.stringify(rustInput))
