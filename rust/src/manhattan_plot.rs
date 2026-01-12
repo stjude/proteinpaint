@@ -83,14 +83,39 @@ fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
     Some((r, g, b))
 }
 
-/// Calculate dynamic y-cap using fixed bin approach
+/// Calculates a dynamic y-axis cap for Manhattan plots to handle outliers gracefully.
 ///
-/// Strategy:
-/// 1. If max_y <= default_cap: no capping needed, return max_y
-/// 2. Build histogram and walk up from lowest bin to find lowest cap where <= max_capped_points points are above it
-/// 3. Never exceed hard_cap regardless of data distribution
+/// # Problem
+/// Manhattan plots often have a few extreme outliers (very significant p-values) that
+/// compress the visual range for the majority of points. This function finds an optimal
+/// y-axis cap that:
+/// - Shows most data at true scale
+/// - Caps only a small number of extreme outliers
+/// - Ensures visible outliers (below hard cap) render at their true positions
 ///
-/// Uses fixed bins of size 10 on the -log10 scale starting from the default cap (defined by default_cap coming from constant in manhattan.js up to hard_cap) (default_cap, 50, 60, ..., hard_cap)
+/// # Algorithm
+/// 1. **No outliers**: If `max_y <= default_cap`, return `max_y` (no capping needed)
+/// 2. **Histogram binning**: Partition the range `(default_cap, hard_cap]` into fixed-size bins
+/// 3. **Walk up**: Starting from the lowest bin, find the first cap where at most
+///    `max_capped_points` would be clamped
+/// 4. **Preserve visible outliers**: Ensure the chosen cap is above the highest y-value
+///    that falls below `hard_cap`, so those points render at their true positions
+///
+/// # Parameters
+/// - `ys`: All y-values (-log10 q-values) in the plot
+/// - `default_cap`: Starting threshold; points below this are never capped (e.g., 40)
+/// - `max_capped_points`: Maximum points allowed to be clamped to the cap (e.g., 5)
+/// - `hard_cap`: Absolute maximum y-axis value; points above are always clamped (e.g., 200)
+/// - `bin_size`: Histogram bin width on -log10 scale (e.g., 10)
+///
+/// # Returns
+/// The optimal y-axis cap, guaranteed to be in the range `[max_y.min(default_cap), hard_cap]`
+///
+/// # Example
+/// With `default_cap=40`, `hard_cap=200`, `bin_size=10`, `max_capped_points=5`:
+/// - If 7 points are above 40, but only 5 are at/above 200 and two are at 83 and 183:
+///   Returns 190, so the points at 83 and 183 display at their true positions while
+///   the 5 extreme outliers are clamped to 190
 fn calculate_dynamic_y_cap(
     ys: &[f64],
     default_cap: f64,
@@ -101,6 +126,7 @@ fn calculate_dynamic_y_cap(
     let num_bins = ((hard_cap - default_cap) / bin_size) as usize;
     let mut histogram = vec![0usize; num_bins];
     let mut max_y = f64::NEG_INFINITY;
+    let mut max_y_below_hard_cap = f64::NEG_INFINITY; // Track highest value that's not hard-capped
     let mut points_above_default = 0usize;
 
     // Single pass: find max and build histogram simultaneously
@@ -110,12 +136,16 @@ fn calculate_dynamic_y_cap(
         }
         if y > default_cap {
             points_above_default += 1;
-            let bin_idx = if y >= hard_cap {
-                num_bins - 1
+            if y >= hard_cap {
+                histogram[num_bins - 1] += 1;
             } else {
-                ((y - default_cap) / bin_size) as usize
-            };
-            histogram[bin_idx] += 1;
+                // Track the max y that's below the hard cap
+                if y > max_y_below_hard_cap {
+                    max_y_below_hard_cap = y;
+                }
+                let bin_idx = ((y - default_cap) / bin_size) as usize;
+                histogram[bin_idx] += 1;
+            }
         }
     }
 
@@ -124,19 +154,32 @@ fn calculate_dynamic_y_cap(
         return max_y;
     }
 
-    // Walk up from default_cap to hard_cap, using pre-computed total
+    // Walk up from default_cap to hard_cap
     let mut points_above = points_above_default;
 
-    // Loop through histogram bins (from lowest to highest). Typically very few bins (e.g. 10-20)
     for (i, &count) in histogram.iter().enumerate() {
         if points_above <= max_capped_points {
-            let cap = default_cap + ((i + 1) as f64) * bin_size;
-            return cap.min(hard_cap).min(max_y);
+            // Found acceptable number of capped points
+            let bin_upper_bound = default_cap + ((i + 1) as f64) * bin_size;
+
+            // The cap should be:
+            // 1. At least above max_y_below_hard_cap (so those points render at true position)
+            // 2. At most hard_cap
+            // 3. But if all outliers ARE at/above hard_cap, use the bin boundary
+            let cap = if max_y_below_hard_cap > bin_upper_bound {
+                // There's a visible outlier above this bin - extend cap to show it
+                (max_y_below_hard_cap + bin_size).min(hard_cap)
+            } else {
+                bin_upper_bound.min(hard_cap)
+            };
+
+            return cap;
         }
         points_above -= count;
     }
 
-    default_cap
+    // All points are hard-capped outliers
+    hard_cap
 }
 
 // Function to Build cumulative chromosome map
