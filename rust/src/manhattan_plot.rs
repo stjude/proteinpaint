@@ -165,7 +165,7 @@ fn calculate_dynamic_y_cap(
             // The cap should be:
             // 1. At least above max_y_below_hard_cap (so those points render at true position)
             // 2. At most hard_cap
-            // 3. But if all outliers ARE at/above hard_cap, use the bin boundary
+            // 3. But if all outliers are at/above hard_cap, use the bin boundary
             let cap = if max_y_below_hard_cap > bin_upper_bound {
                 // There's a visible outlier above this bin - extend cap to show it
                 (max_y_below_hard_cap + bin_size).min(hard_cap)
