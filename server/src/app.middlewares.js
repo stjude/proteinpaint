@@ -110,6 +110,12 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 			Object.assign(req.query, req.body)
 		}
 
+		const { genome, dslabel } = req.query
+		if (genome && dslabel) {
+			const altGenome = serverconfig.features?.altGenomeByDslabel?.[dslabel]
+			if (altGenome) req.query.genome = altGenome
+		}
+
 		// log the request before adding protected info
 		log(req)
 		next()
@@ -143,7 +149,8 @@ function setHeaders(req, res, next) {
 	// limit the allowed request methods for the PP server
 	res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS, HEAD')
 
-	const debugtest = serverconfig.debugmode || serverconfig.defaultgenome == 'hg38-test'
+	const debugtest =
+		serverconfig.debugmode || serverconfig.defaultgenome == 'hg38-test' || serverconfig.features?.loosenCORS
 	const origin = req.get('origin') || req.get('referrer') || req.protocol + '://' + (req.get('host') || '*')
 	const getMatchingHost = hostname => hostname == '*' || origin.includes(`://${hostname}`)
 	// detect if the request origin has a matching entry in serverconfig.dsCredentials

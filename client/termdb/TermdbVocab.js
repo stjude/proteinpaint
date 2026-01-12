@@ -792,6 +792,7 @@ export class TermdbVocab extends Vocab {
 		if (opts.loadingDiv) opts.loadingDiv.html('Updating data ...')
 
 		const warnings = []
+		const frozenEmptyObj = Object.freeze({})
 
 		while (true) {
 			const copies = getTerms2update(allTerms2update, maxNumTerms) // list of unique terms to update in this round
@@ -822,6 +823,7 @@ export class TermdbVocab extends Vocab {
 				//add this to limit to mutated cases
 				init.body.currentGeneNames = currentGeneNames
 			}
+
 			promises.push(
 				dofetch3('termdb', init, { cacheAs: 'decoded' }).then(data => {
 					if (data.error) throw data.error
@@ -833,7 +835,7 @@ export class TermdbVocab extends Vocab {
 					const $objAssign = data.refs.$codes.objAssign || {}
 
 					for (const tw of copies) {
-						const { shortId, gene } = data.refs.byTermId[tw.$id]
+						const { shortId, gene } = data.refs.byTermId[tw.$id] || frozenEmptyObj // avoid unnecessarily creating placeholder objects
 
 						for (const [sampleId, sample] of Object.entries(data.samples)) {
 							// ignore sample objects that are not annotated by other keys besides 'sample'
