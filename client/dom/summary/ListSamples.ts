@@ -240,7 +240,7 @@ export class ListSamples {
 			}
 			if (s[this.t1.$id!]) {
 				this.addRowValue(s, this.t1, row)
-			}
+			} else continue //skip rows with no term value
 			if (this.t2 && s[this.t2.$id!]) {
 				this.addRowValue(s, this.t2, row)
 			}
