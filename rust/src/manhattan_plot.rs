@@ -113,9 +113,9 @@ fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
 ///
 /// # Example
 /// With `default_cap=40`, `hard_cap=200`, `bin_size=10`, `max_capped_points=5`:
-/// - If 7 points are above 40, but only 5 are at/above 200 and two are at 83 and 183:
-///   Returns 190, so the points at 83 and 183 display at their true positions while
-///   the 5 extreme outliers are clamped to 190
+/// - If 7 points are above 40, with two at 83 and 183 and five at/above 200:
+///   Returns 200, so the points at 83 and 183 display at their true positions while
+///   the 5 extreme outliers are clamped to 200
 fn calculate_dynamic_y_cap(
     ys: &[f64],
     default_cap: f64,
@@ -136,10 +136,10 @@ fn calculate_dynamic_y_cap(
         }
         if y > default_cap {
             points_above_default += 1;
-            if y >= hard_cap {
+            if y > hard_cap {
                 histogram[num_bins - 1] += 1;
             } else {
-                // Track the max y that's below the hard cap
+                // Track the max y that's at or below the hard cap
                 if y > max_y_below_hard_cap {
                     max_y_below_hard_cap = y;
                 }
@@ -225,7 +225,17 @@ fn grin2_file_read(
     grin2_file: &str,
     chrom_data: &HashMap<String, ChromInfo>,
     log_cutoff: f64,
-) -> Result<(Vec<u64>, Vec<f64>, Vec<String>, Vec<PointDetail>, Vec<usize>), Box<dyn Error>> {
+) -> Result<
+    (
+        Vec<u64>,
+        Vec<f64>,
+        Vec<String>,
+        Vec<PointDetail>,
+        Vec<usize>,
+        Vec<usize>,
+    ),
+    Box<dyn Error>,
+> {
     // Default colours
     let mut colors: HashMap<String, String> = HashMap::new();
     colors.insert("gain".into(), "#FF4444".into());
@@ -239,6 +249,7 @@ fn grin2_file_read(
     let mut colors_vec = Vec::new();
     let mut point_details = Vec::new();
     let mut sig_indices: Vec<usize> = Vec::new();
+    let mut zero_q_indices: Vec<usize> = Vec::new();
 
     let grin2_file = File::open(grin2_file).expect("Failed to open grin2_result_file");
     let mut reader = BufReader::new(grin2_file);
@@ -329,6 +340,7 @@ fn grin2_file_read(
 
             // Use log_cutoff for zero q-values to avoid -inf. These will be capped later in plotting at log_cutoff
             let neg_log10_q = if original_q_val == 0.0 {
+                zero_q_indices.push(mut_num);
                 log_cutoff
             } else {
                 -original_q_val.log10()
@@ -367,7 +379,7 @@ fn grin2_file_read(
         }
     }
 
-    Ok((xs, ys, colors_vec, point_details, sig_indices))
+    Ok((xs, ys, colors_vec, point_details, sig_indices, zero_q_indices))
 }
 
 // Function to create the GRIN2 Manhattan plot
@@ -409,13 +421,15 @@ fn plot_grin2_manhattan(
     let mut colors_vec = Vec::new();
     let mut point_details = Vec::new();
     let mut sig_indices = Vec::new();
+    let mut zero_q_indices: Vec<usize> = Vec::new();
 
-    if let Ok((x, y, c, pd, si)) = grin2_file_read(&grin2_result_file, &chrom_data, log_cutoff) {
+    if let Ok((x, y, c, pd, si, zq)) = grin2_file_read(&grin2_result_file, &chrom_data, log_cutoff) {
         xs = x;
         ys = y;
         colors_vec = c;
         point_details = pd;
         sig_indices = si;
+        zero_q_indices = zq;
     }
 
     // ------------------------------------------------
@@ -433,7 +447,6 @@ fn plot_grin2_manhattan(
     let max_capped_points = max_capped_points as usize;
 
     let y_cap = calculate_dynamic_y_cap(&ys, default_cap, max_capped_points, hard_cap, bin_size);
-    // eprint!("Determined dynamic y-cap: {}\n", y_cap);
 
     let mut has_capped_points = false;
 
@@ -443,11 +456,8 @@ fn plot_grin2_manhattan(
         // If dynamic cap is higher than default (log_cutoff), elevate q=0 points
         // (which were set to log_cutoff) to the new cap so they remain at the top
         if y_cap > log_cutoff {
-            for y in ys.iter_mut() {
-                if *y == log_cutoff {
-                    *y = y_cap;
-                    has_capped_points = true;
-                }
+            for &idx in &zero_q_indices {
+                ys[idx] = y_cap;
             }
             for p in point_details.iter_mut() {
                 if p.q_value == 0.0 {

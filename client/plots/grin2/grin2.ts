@@ -1020,7 +1020,7 @@ export function getDefaultSettings(opts) {
 				sv: '#9932CC' // purple
 			},
 
-			// Threshold for the rust code when determing if we need to raise the cap value from the default
+			// Threshold for the rust code when determining if we need to raise the cap value from the default
 			maxCappedPoints: 5,
 			// Bin size for cap calculations
 			binSize: 10,

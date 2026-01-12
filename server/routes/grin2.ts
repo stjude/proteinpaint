@@ -207,7 +207,6 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 
 	const resultData = JSON.parse(pyResult)
 
-	console.log('Request: ', request)
 	// Step 5: Prepare Rust input
 	const rustInput = {
 		file: resultData.cacheFileName,
