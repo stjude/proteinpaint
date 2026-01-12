@@ -38,10 +38,10 @@ export class BoxPlotLabelMenu {
 						rows: rows as any,
 						columns: columns as any,
 						div: tableDiv,
-						maxWidth: '30vw',
-						maxHeight: '25vh',
+						maxHeight: '35vh',
 						resize: true,
-						showLines: true
+						showLines: true,
+						dataTestId: 'sjpp-listsampletable'
 					})
 				}
 			}
