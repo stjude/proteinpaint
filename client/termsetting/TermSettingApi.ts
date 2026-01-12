@@ -113,10 +113,12 @@ export class TermSettingApi {
 				click_term: async t => {
 					// set up timer to display loading message
 					let showLoading = true
+					let loadingShown = false
 					const loadingTimer = setTimeout(() => {
 						if (showLoading) {
 							self.dom.nopilldiv.text('Loading ...')
 							self.dom.pilldiv.text('Loading ...')
+							loadingShown = true
 						}
 					}, 200)
 
@@ -138,6 +140,10 @@ export class TermSettingApi {
 					// stop the loading message from appearing
 					showLoading = false
 					clearTimeout(loadingTimer)
+					if (loadingShown) {
+						self.dom.nopilldiv.text('')
+						self.dom.pilldiv.text('')
+					}
 				}
 			}
 		})
