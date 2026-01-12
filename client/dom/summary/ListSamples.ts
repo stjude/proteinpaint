@@ -60,10 +60,13 @@ export class ListSamples {
 
 		this.terms = [this.t1]
 
-		if ((start && !end) || (!start && end)) {
+		const noValue = v => {
+			return v === null || v === undefined
+		}
+		if ((start && noValue(end)) || (noValue(start) && end)) {
 			throw new Error('Both start and end must be provided for range filtering')
 		}
-		if (start && end) {
+		if (!noValue(start) && !noValue(end)) {
 			this.useRange = true
 			this.start = start
 			this.end = end
