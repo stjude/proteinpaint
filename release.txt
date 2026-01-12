@@ -1,1 +1,2 @@
-
+Fixes:
+- skip most GDC dict terms under "diagnoses." branch due to diagnoses__days_to_hiv_diagnosis breaking grapqhl in qa-yellow
