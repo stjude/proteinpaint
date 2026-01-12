@@ -188,7 +188,7 @@ tape('Box plot with overlay term = geneVariant', test => {
 	}
 })
 
-tape.only('Box plot: term1=geneExp term2=geneVariant', test => {
+tape('Box plot: term1=geneExp term2=geneVariant', test => {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -216,10 +216,8 @@ tape.only('Box plot: term1=geneExp term2=geneVariant', test => {
 		boxplot.on('postRender.test', null)
 		const dom = boxplot.Inner.dom
 		test.equal(dom.charts.selectAll('.sjpp-boxplot-plot').size(), 2, `Should render 2 boxplots`)
-
-		// TODO reusable helper to click boxplot label and trigger list sample and verify result
-
-		//if (test['_ok']) boxplot.Inner.app.destroy()
+		//Label menu options tested in #dom/summary/ListSamples.integration.spec.ts & #dom/summary/ListSamples.unit.spec.ts
+		if (test['_ok']) boxplot.Inner.app.destroy()
 		test.end()
 	}
 })

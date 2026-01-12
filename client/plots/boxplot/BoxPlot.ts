@@ -25,6 +25,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 	private useDefaultSettings = true
 	parentId?: string
 	api: any
+	configTermKeys = ['term', 'term0', 'term2']
 
 	constructor(opts: TdbBoxPlotOpts, api: MassAppApi) {
 		super(opts)
@@ -129,11 +130,11 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 	}
 
 	async main() {
-		const config = structuredClone(this.state.config)
-		if (config.childType != this.type && config.chartType != this.type) return
-
+		const c = this.state.config
+		if (c.childType != this.type && c.chartType != this.type) return
 		if (!this.interactions) throw new Error('Interactions not initialized [box plot main()]')
 
+		const config = await this.getMutableConfig()
 		const settings = config.settings.boxplot
 		const model = new Model(this, config)
 
