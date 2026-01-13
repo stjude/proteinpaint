@@ -152,7 +152,6 @@ export function updateSelectionTracking(
  */
 
 export function plotManhattan(div: any, data: any, settings: any, app?: any) {
-	console.log('plotData:', data.plotData)
 	// Get our settings
 	settings = {
 		...settings
