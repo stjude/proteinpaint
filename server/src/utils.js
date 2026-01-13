@@ -862,13 +862,15 @@ const RecoverableErrorCodes = new Set([
 const RecoverableHTTPcodes = new Set([500, 502, 503, 504])
 
 // for convenience, combine custom pp status strings with http status number codes
-export const nonFatalStatus = new Set(['done', 'nonblocking', 'recoverableError', ...RecoverableHTTPcodes])
+export const nonFatalStatus = new Set(['started', 'done', 'nonblocking', 'recoverableError', ...RecoverableHTTPcodes])
 
 // only use this helper when catching errors that may be due to
 // external API server errors or network connection failures;
 // the `e` argument is expected to have a network-related error code, some of which
 // may be recovered from (temp maintenance or disconnect), others are fatal
-export function isRecoverableError(e) {
+export function isRecoverableError(e, opts = {}) {
+	if (e.status == 'fatalError') return false
+
 	// detect if status maps to a known HTTP 5xx server error code
 	if (typeof e.status == 'number') return RecoverableHTTPcodes.has(e.status)
 	if (e.status == 'recoverableError') return true

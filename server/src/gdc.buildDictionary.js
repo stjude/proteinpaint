@@ -280,13 +280,23 @@ export async function gdcBuildDictionary(ds) {
 	} catch (e) {
 		if (!ds.__gdc?.recoverableError) {
 			console.log(e.stack || e)
+			// !!! will remove numeric terms from id2term instead of throwing !!!
 			// must abort launch upon err. lack of term.bins system app will not work
-			throw 'assignDefaultBins() failed: ' + (e.message || e)
+			// throw 'assignDefaultBins() failed: ' + (e.message || e)
 		}
+		const error = (ds.init.recoverableError || 'assignDefaultBins()') + ': ' + e
+		// TODO: declare ds._ignoredErrors at the beginning, so can keep
+		// appending to it as needed from different places
+		ds._ignoredErrors = { error, skippedTermIds: [] }
 	}
 
 	for (const t of id2term.values()) {
 		if (!t.type) parentCount++
+		else if ((t.type == 'integer' || t.type == 'float') && !t.bins) {
+			id2term.delete(t.id)
+			if (ds._ignoredErrors?.skippedTermIds) ds._ignoredErrors?.skippedTermIds.push(t.id)
+			continue
+		}
 		// produce required attributes on terms, to be returned from getRootTerms() and getTermChildren()
 		t.included_types = [...t.included_types_set]
 		t.child_types = [...t.child_types_set]
@@ -429,7 +439,7 @@ async function assignDefaultBins(id2term, ds) {
 		}
 	  }
 	}`
-
+	//console.log(438, 'queryStrings=', queryStrings)
 	const variables = {
 		caseFilters: {},
 		filters: {},
@@ -457,6 +467,10 @@ async function assignDefaultBins(id2term, ds) {
 			// should throw to stop code execution here and allow caller to catch
 			throw e
 		})
+
+	// uncomment to test
+	// throw '--- TEST of ds._ignoredErrors ---'
+
 	if (typeof re.data?.viewer?.explore?.cases?.aggregations != 'object')
 		throw 'return not object: re.data.viewer.explore.cases.aggregations{}'
 	for (const [facet, termid] of facet2termid) {
@@ -593,14 +607,18 @@ async function getNumericTermRange(id, ds) {
 
 // hardcoded rules to skip some lines from re.fields[]
 // one thing or the other we do not want these to show up in dictionary
-const skipFieldLines = new Set([
-	'case.consent_type',
-	'case.days_to_consent',
-	'case.days_to_index',
-	// 3-8-2024 sample_type has been deprecated from the data dictionary but will remain available in the  GDC API  response until v1 is retired
-	'case.samples.sample_type',
-	'case.state'
-])
+const skipFieldLines = new Set(
+	[
+		'case.consent_type',
+		'case.days_to_consent',
+		'case.days_to_index',
+		// 3-8-2024 sample_type has been deprecated from the data dictionary but will remain available in the  GDC API  response until v1 is retired
+		'case.samples.sample_type',
+		'case.state'
+	],
+	...(serverconfig.features?.gdcSkipFieldLines || [])
+)
+
 function maySkipFieldLine(line) {
 	if (
 		line.startsWith('ssm') ||

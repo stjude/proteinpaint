@@ -14,7 +14,8 @@ export async function getStat(genomes) {
 		status: auth?.errors?.length ? 'error' : 'ok',
 		genomes: {},
 		versionInfo,
-		auth
+		auth,
+		dsInitStatus: []
 	} satisfies HealthCheckResponse
 
 	setGenomeDbInfo(genomes, health)
@@ -23,8 +24,7 @@ export async function getStat(genomes) {
 
 function setGenomeDbInfo(genomes, health) {
 	// report status of every genome
-	for (const gn in genomes) {
-		const genome = genomes[gn]
+	for (const [gn, genome] of Object.entries(genomes as { [name: string]: any })) {
 		if (!('dbInfo' in genome)) {
 			// set only once and track using the genome object
 			const dbInfo = {} as GenomeBuildInfo // object to store status of this genome
@@ -46,6 +46,18 @@ function setGenomeDbInfo(genomes, health) {
 				}
 			}
 			genome.dbInfo = Object.keys(dbInfo).length ? dbInfo : undefined
+		}
+		if (typeof genome.datasets == 'object') {
+			for (const [label, ds] of Object.entries(genome.datasets as any[])) {
+				const init = structuredClone(ds.init)
+				init.ignoredErrors = ds._ignoredErrors || []
+				health.dsInitStatus.push({
+					genome: gn,
+					label,
+					url: `/healthcheck?dslabel=${label}`,
+					init
+				})
+			}
 		}
 		health.genomes[gn] = genome.dbInfo
 	}
