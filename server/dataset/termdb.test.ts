@@ -28,7 +28,7 @@ export default function (): Mds3 {
 	return {
 		isMds3: true,
 		isSupportedChartOverride: {
-			runChart: () => true,
+			runChart2: () => true,
 			frequencyChart: () => true,
 			report: () => true,
 			summarizeMutationDiagnosis: () => true
