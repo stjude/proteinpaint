@@ -235,6 +235,11 @@ function getChartTypeList(self, state) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
+			label: 'Run Chart2',
+			chartType: 'runChart2',
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
 			label: 'Frequency Chart',
 			chartType: 'frequencyChart',
 			clickTo: self.showTree_select1term,
