@@ -53,6 +53,7 @@ export const routeFiles = [
 	import('../routes/termdb.numericcategories.ts'),
 	import('../routes/termdb.percentile.ts'),
 	import('../routes/termdb.rootterm.ts'),
+	import('../routes/termdb.runChart.ts'),
 	import('../routes/termdb.sampleImages.ts'),
 	import('../routes/termdb.sampleScatter.ts'),
 	import('../routes/termdb.singleSampleMutation.ts'),
