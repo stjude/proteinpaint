@@ -89,14 +89,7 @@ fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
 // If it is too low it can cause an error in the setting up of the histogram bins in the dynamic y-cap calculation.
 fn get_log_cutoff(ys: &[f64], hard_cap: f64) -> f64 {
     let filtered: Vec<f64> = ys.iter().filter(|&&y| y < hard_cap).copied().collect();
-
     let count = filtered.len();
-    // If we have no values below hard cap, return 10.0 as default so we don't
-    // have an error in calculating the mean
-    if count == 0 {
-        return 10.0;
-    }
-
     let sum: f64 = filtered.iter().sum();
     let mean = sum / count as f64;
 
