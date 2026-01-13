@@ -3,6 +3,7 @@ use plotters::prelude::*;
 use plotters::style::ShapeStyle;
 use serde::{Deserialize, Serialize};
 use serde_json;
+// use core::f64;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::error::Error;
@@ -63,7 +64,7 @@ struct InteractiveData {
     y_min: f64,
     y_max: f64,
     device_pixel_ratio: f64,
-    has_capped_points: bool,
+    log_cutoff: f64,
 }
 
 #[derive(Serialize)]
@@ -82,6 +83,27 @@ fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
     let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
     let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
     Some((r, g, b))
+}
+
+// Helper function to calculate default log cutoff value from the data coming from GRIN2 file
+// We just find the mean of the -log10 q-values that is below the hard cap and
+// set it as the default log cutoff. If the mean is less than 10, we set it to 10.
+// We do this because we want to avoid setting the log cutoff too low.
+// If it is too low it can cause an error in the setting up of the histogram bins in the dynamic y-cap calculation.
+fn get_log_cutoff(ys: &[f64], hard_cap: f64) -> f64 {
+    let filtered: Vec<f64> = ys.iter().filter(|&&y| y < hard_cap).copied().collect();
+
+    let count = filtered.len();
+    // If we have no values below hard cap, return 10.0 as default so we don't
+    // have an error in calculating the mean
+    if count == 0 {
+        return 10.0;
+    }
+
+    let sum: f64 = filtered.iter().sum();
+    let mean = sum / count as f64;
+
+    mean.max(10.0)
 }
 
 /// Calculates a dynamic y-axis cap for Manhattan plots to handle outliers gracefully.
@@ -104,7 +126,7 @@ fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
 ///
 /// # Parameters
 /// - `ys`: All y-values (-log10 q-values) in the plot
-/// - `default_cap`: Starting threshold; points below this are never capped (e.g., 40)
+/// - `default_cap`: Starting threshold; points below this are never capped (e.g., whatever log_cutoff is calculated to be from get_log_cutoff)
 /// - `max_capped_points`: Maximum points allowed to be clamped to the cap (e.g., 5)
 /// - `hard_cap`: Absolute maximum y-axis value; points above are always clamped (e.g., 200)
 /// - `bin_size`: Histogram bin width on -log10 scale (e.g., 10)
@@ -117,13 +139,8 @@ fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
 /// - If 7 points are above 40, with two at 83 and 183 and five at/above 200:
 ///   Returns 200, so the points at 83 and 183 display at their true positions while
 ///   the 5 extreme outliers are clamped to 200
-fn calculate_dynamic_y_cap(
-    ys: &[f64],
-    default_cap: f64,
-    max_capped_points: usize,
-    hard_cap: f64,
-    bin_size: f64,
-) -> f64 {
+fn calculate_dynamic_y_cap(ys: &[f64], max_capped_points: usize, hard_cap: f64, bin_size: f64) -> f64 {
+    let default_cap = get_log_cutoff(ys, hard_cap);
     let num_bins = ((hard_cap - default_cap) / bin_size) as usize;
     let mut histogram = vec![0usize; num_bins];
     let mut max_y = f64::NEG_INFINITY;
@@ -446,12 +463,9 @@ fn plot_grin2_manhattan(
     // - max_capped_points: maximum number of points allowed above cap before raising it
     // - hard_cap: absolute maximum cap regardless of data distribution
     // - bin_size: size of bins for histogram approach
-    let default_cap = log_cutoff;
     let max_capped_points = max_capped_points as usize;
 
-    let y_cap = calculate_dynamic_y_cap(&ys, default_cap, max_capped_points, hard_cap, bin_size);
-
-    let mut has_capped_points = false;
+    let y_cap = calculate_dynamic_y_cap(&ys, max_capped_points, hard_cap, bin_size);
 
     let y_max = if !ys.is_empty() {
         let max_y = ys.iter().cloned().fold(f64::MIN, f64::max);
@@ -470,7 +484,6 @@ fn plot_grin2_manhattan(
         }
 
         if max_y > y_cap {
-            has_capped_points = true;
             // Clamp values above the cap
             for y in ys.iter_mut() {
                 if *y > y_cap {
@@ -630,7 +643,7 @@ fn plot_grin2_manhattan(
         y_min,
         y_max,
         device_pixel_ratio: dpr,
-        has_capped_points: has_capped_points,
+        log_cutoff: log_cutoff,
     };
     Ok((png_data, interactive_data))
 }

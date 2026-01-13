@@ -14,8 +14,8 @@ import {
 	dtsv,
 	dt2lesion,
 	optionToDt,
-	formatElapsedTime,
-	MANHATTAN_LOG_QVALUE_CUTOFF
+	formatElapsedTime
+	// MANHATTAN_LOG_QVALUE_CUTOFF
 } from '#shared'
 import crypto from 'crypto'
 
@@ -218,7 +218,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		png_dot_radius: request.pngDotRadius,
 		lesion_type_colors: request.lesionTypeColors,
 		q_value_threshold: request.qValueThreshold,
-		log_cutoff: MANHATTAN_LOG_QVALUE_CUTOFF,
+		// log_cutoff: MANHATTAN_LOG_QVALUE_CUTOFF,
 		max_capped_points: request.maxCappedPoints,
 		hard_cap: request.hardCap,
 		bin_size: request.binSize
