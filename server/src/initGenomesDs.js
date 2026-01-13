@@ -20,6 +20,7 @@ const dsHelpers = {
 	may_add_readdepth,
 	mapGenes2isoforms,
 	isUsableTerm,
+	cachedFetch: utils.cachedFetch,
 	joinUrl
 }
 
