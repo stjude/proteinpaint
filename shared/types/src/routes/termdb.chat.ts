@@ -59,3 +59,15 @@ export type NumericFilterTerm = {
 	greaterThan: number
 	lessThan: number
 }
+
+export type DbRows = {
+	name: string
+	description: string
+	term_type: string
+	values: DbValue[]
+}
+
+export type DbValue = {
+	key: string
+	label: string
+}
