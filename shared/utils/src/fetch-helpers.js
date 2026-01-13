@@ -17,6 +17,7 @@ import { encode } from './urljson.js'
 */
 export async function ezFetch(_url, init = {}, opts = {}) {
 	const url = opts.autoMethod ? mayAdjustRequest(_url, init) : _url
+	if (typeof init.body === 'object') init.body = JSON.stringify(init.body)
 
 	return fetch(url, init).then(async r => {
 		const response = await processResponse(r)
@@ -186,6 +187,7 @@ const maxNumOfDataKeys = 360
 	  - if not provided, then a string cache data key will be computed from the request url, body, headers
 */
 export async function memFetch(url, init, opts = {}) {
+	if (typeof init.body === 'object') init.body = JSON.stringify(init.body)
 	const dataKey = opts.q || (await getDataName(url, init))
 	let result = dataCache.get(dataKey)
 
