@@ -1,5 +1,5 @@
 import fs from 'fs'
-import type { ChatRequest, ChatResponse, RouteApi } from '#types'
+import type { ChatRequest, ChatResponse, RouteApi, DbRows, DbValue } from '#types'
 import { ChatPayload } from '#types/checkers'
 //import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '../src/serverconfig.js'
@@ -65,6 +65,7 @@ function init({ genomes }) {
 			//}
 			//mayLog('chatbot_input:', JSON.stringify(chatbot_input))
 
+			const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
 			const time1 = new Date().valueOf()
 			const classResult = await classify_query_by_dataset_type(
 				q.prompt,
@@ -80,7 +81,7 @@ function init({ genomes }) {
 			//let ai_output_data: any
 			let ai_output_json: any
 			if (classResult == 'summary') {
-				extract_summary_terms(q.prompt, comp_model_name, apilink, ds.cohort.db.file, g.genedb.dbfile)
+				extract_summary_terms(q.prompt, comp_model_name, apilink, dataset_db)
 			}
 
 			//const time1 = new Date().valueOf()
@@ -288,16 +289,53 @@ async function extract_summary_terms(
 	dataset_db: string
 	//genedb: string
 ) {
+	mayLog('dataset_db:', dataset_db)
 	await parse_dataset_db(dataset_db)
 }
 
 async function parse_dataset_db(dataset_db: string) {
 	const db = new Database(dataset_db)
 	// Query the database
-	const rows = db.prepare('SELECT * from termhtmldef').all()
+	const desc_rows = db.prepare('SELECT * from termhtmldef').all()
 
+	const description_map: any = []
 	// Process the retrieved rows
-	rows.forEach(row => {
-		console.log(`${row.id}: ${row.name} is ${row.age} years old`)
+	desc_rows.forEach((row: any) => {
+		const name: string = row.id
+		const jsonhtml = JSON.parse(row.jsonhtml)
+		const description: string = jsonhtml.description[0].value
+		description_map.push({ name: name, description: description })
+	})
+
+	const term_db_rows = db.prepare('SELECT * from terms').all()
+	//const rag_docs = []
+	const db_rows: DbRows[] = []
+
+	term_db_rows.forEach((row: any) => {
+		const found = description_map.find((item: any) => item.name === row.id)
+		if (found) {
+			// Restrict db to only those items that have a description
+			mayLog(row)
+			const jsondata = JSON.parse(row.jsondata)
+			const description = description_map.filter((item: any) => item.name === row.id)
+			mayLog('description:', description)
+			const term_type: string = row.type
+
+			const values: DbValue[] = []
+			if (jsondata.values && jsondata.values.length > 0) {
+				for (const key of Object.keys(jsondata.values)) {
+					const value = jsondata.values[key]
+					const db_val: DbValue = { key: key, label: value }
+					values.push(db_val)
+				}
+			}
+			const db_row: DbRows = {
+				name: row.id,
+				description: description[0].description,
+				values: values,
+				term_type: term_type
+			}
+			db_rows.push(db_row)
+		}
 	})
 }
