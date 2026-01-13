@@ -3,9 +3,12 @@ import serverconfig from './serverconfig.js'
 import { authApi } from './auth.js'
 import { Readable, pipeline } from 'stream'
 import zlib from 'zlib'
+import { mclass } from '#shared/common.js'
 
 // based on a 64-bit hard constraint in V8 for string processing
 const maxStrLength = 5.12e8 - 1e5 // subtract 100KB for error message, etc
+
+const { Blank, WT } = mclass
 
 // if '$' exists as a data object property, it indicates stripped properties
 // that should be rehydrated on the client side
@@ -19,14 +22,16 @@ const $codes = Object.freeze({
 	}),
 	// Below are object properties that need to be merged/applied back to a dehydrated data object.
 	// All the keys from a corresponding code object below will be deleted by the server.
+	// TODO: should let the client rehydrate label, color, etc from commom/mclass,
+	// only need class and origin key-values here
 	objAssign: Object.freeze({
 		// will freeze these when generating $objAssign helper object below
-		1: { class: 'Blank', label: 'Not tested' },
-		2: { class: 'Blank', label: 'Not tested', origin: 'germline' },
-		3: { class: 'Blank', label: 'Not tested', origin: 'somatic' },
-		4: { class: 'WT', label: 'Wildtype' },
-		5: { class: 'WT', label: 'Wildtype', origin: 'germline' },
-		6: { class: 'WT', label: 'Wildtype', origin: 'somatic' }
+		1: { class: Blank.key, label: Blank.label },
+		2: { class: Blank.key, label: Blank.label, origin: 'germline' },
+		3: { class: Blank.key, label: Blank.label, origin: 'somatic' },
+		4: { class: WT.key, label: WT.label },
+		5: { class: WT.key, label: WT.label, origin: 'germline' },
+		6: { class: WT.key, label: WT.label, origin: 'somatic' }
 	})
 })
 
