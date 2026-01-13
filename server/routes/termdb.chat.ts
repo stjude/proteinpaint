@@ -289,8 +289,9 @@ async function extract_summary_terms(
 	dataset_db: string
 	//genedb: string
 ) {
-	mayLog('dataset_db:', dataset_db)
-	await parse_dataset_db(dataset_db)
+	const { db_rows, rag_docs } = await parse_dataset_db(dataset_db)
+	mayLog('db_rows:', db_rows)
+	mayLog('rag_docs:', rag_docs)
 }
 
 async function parse_dataset_db(dataset_db: string) {
@@ -308,7 +309,7 @@ async function parse_dataset_db(dataset_db: string) {
 	})
 
 	const term_db_rows = db.prepare('SELECT * from terms').all()
-	//const rag_docs = []
+	const rag_docs: string[] = []
 	const db_rows: DbRows[] = []
 
 	term_db_rows.forEach((row: any) => {
@@ -335,7 +336,28 @@ async function parse_dataset_db(dataset_db: string) {
 				values: values,
 				term_type: term_type
 			}
+			const stringified_db = parse_db_rows(db_row)
+			rag_docs.push(stringified_db)
 			db_rows.push(db_row)
 		}
 	})
+	return { db_rows, rag_docs }
+}
+
+function parse_db_rows(db_row: DbRows) {
+	let output_string: string =
+		'Name of the field is:' +
+		db_row.name +
+		'. This field is of the type:' +
+		db_row.term_type +
+		'. ' +
+		db_row.description
+
+	if (db_row.values.length > 0) {
+		output_string += 'This field contains the following possible values.'
+		for (const value of db_row.values) {
+			output_string += 'The key is ' + value.key + ' and the label is ' + value.label
+		}
+	}
+	return output_string
 }
