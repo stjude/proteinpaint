@@ -224,7 +224,7 @@ tape('ListSamples.getData() for term=gene exp and term2=gene variant returns the
 	test.end()
 })
 
-tape.skip('ListSamples.getData() for term=numeric and term2=survival returns the correct data object', async test => {
+tape.only('ListSamples.getData() for term=numeric and term2=survival returns the correct data object', async test => {
 	test.timeoutAfter(1000)
 
 	const mockConfig = {

@@ -150,6 +150,7 @@ export class ListSamples {
 		}
 
 		if (tw.term.type == TermTypes.SURVIVAL) {
+			console.log(tw)
 			//TODO: This isn't correct. Need to figure out
 			//how to filter for survival terms
 			const value = tw.term.values[key]
