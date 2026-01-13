@@ -12,6 +12,7 @@ import { mayLog } from './helpers.ts'
 import serverconfig from './serverconfig.js'
 
 const maxCase4geneExpCluster = 1000 // max number of cases allowed for gene exp clustering app; okay just to hardcode in code and not to define in ds
+const maxCase4geneExp = 5000 // gdc gene exp api may not work for more than 5k cases https://gdc-ctds.atlassian.net/browse/SV-2695
 const maxGene4geneExpCluster = 2000 // max #genes allowed for gene exp cluster
 const ascns = 'Allele-specific Copy Number Segment'
 
@@ -33,7 +34,7 @@ validate_query_geneCnv2
 gdc_validate_query_geneExpression
 	geneExpression_getGenes
 	getExpressionData
-		getCases4expclustering
+		getCases4exp
 gdc_validate_query_singleCell_data
 gdc_validate_query_singleCell_DEgenes
 	getSinglecellDEfile
@@ -141,13 +142,12 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 
 		let t2 = new Date()
 
-		let cases4clustering
-		if (q.forClusteringAnalysis) {
-			cases4clustering = await getCases4expclustering(q, ds)
-			const t = new Date()
-			mayLog(cases4clustering.length, 'cases with exp data 4 clustering:', t - t2, 'ms')
-			t2 = t
-		}
+		const cases4clustering = await getCases4exp(q, ds)
+		const t = new Date()
+		mayLog(cases4clustering.length, 'cases with exp data 4 clustering:', t - t2, 'ms')
+		if (cases4clustering.length > maxCase4geneExp)
+			throw `Case count > ${maxCase4geneExp}: please limit the cohort size to view gene expression correlation plot`
+		t2 = t
 
 		// 3/25/2025 gdc backend doesn't index gene exp for sex chr genes. thus prevent these genes from showing up in app
 		const skippedSexChrGenes = [],
@@ -305,13 +305,12 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2id, term2sa
 		//tsv_units: 'median_centered_log2_uqfpkm'
 	}
 
-	if (q.forClusteringAnalysis) {
-		/* is for clustering analysis. must retrieve list of cases passing filter and with exp data, and limit by max
-		otherwise the app will overload
-		*/
+	if (cases4clustering) {
+		// case list is always provided for both clustering & correlation. use it
 		arg.case_ids = cases4clustering
 	} else {
 		// not for clustering analysis. do not limit by cases, so that e.g. a gene exp row will show all values in oncomatrix
+		// this is no longer true as case list is always provided
 		const f = makeCasesFilter(q)
 		arg.case_filters = { op: 'and', content: f }
 	}
@@ -410,8 +409,8 @@ function mayFilterByExpression(filter, value) {
 	}
 }
 
-// should only use for gene exp clustering
-async function getCases4expclustering(q, ds) {
+// get cases for expression query
+async function getCases4exp(q, ds) {
 	const json = {
 		fields: 'case_id',
 		case_filters: makeFilter(q),
@@ -426,8 +425,8 @@ async function getCases4expclustering(q, ds) {
 		for (const h of re.data.hits) {
 			if (h.id && ds.__gdc.casesWithExpData.has(h.id)) {
 				lst.push(h.id)
-				if (lst.length == maxCase4geneExpCluster) {
-					// to not to overload clustering app, stop collecting when max number of cases is reached
+				if (q.forClusteringAnalysis && lst.length == maxCase4geneExpCluster) {
+					// flag indicates it is for clustering. apply this limit to not to overload clustering app, stop collecting when max number of cases is reached
 					break
 				}
 			}
