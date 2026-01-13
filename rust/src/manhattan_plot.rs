@@ -84,9 +84,8 @@ fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
 }
 
 // Helper function to calculate default log cutoff value from the data coming from GRIN2 file
-// We just find the mean of the -log10 q-values that is below the hard cap and
+// We just find the mean of the -log10 q-values that are below the hard cap and
 // set it as the default log cutoff. If the mean is less than 10, we set it to 10.
-// We do this because we want to avoid setting the log cutoff too low.
 // If it is too low it can cause an error in the setting up of the histogram bins in the dynamic y-cap calculation.
 fn get_log_cutoff(ys: &[f64], hard_cap: f64) -> f64 {
     let filtered: Vec<f64> = ys.iter().filter(|&&y| y < hard_cap).copied().collect();
