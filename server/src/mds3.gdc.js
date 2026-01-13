@@ -346,17 +346,25 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2id, term2sa
 	if (typeof re != 'string') throw 'response.body is not tsv text'
 	const lines = re.trim().split('\n')
 
-	const bySampleId = {}
-	if (lines.length <= 1) return bySampleId
+	if (lines.length == 0) throw '/gene_expression/values returns no text'
 
-	// header line:
-	// gene \t case1 \t case 2 \t ...
-	const caseHeader = lines[0].split('\t').slice(1) // order of case uuid in tsv header
+	const bySampleId = {}
+
+	// parse header line: gene \t case1 \t case 2 \t ...
+	const caseHeader = lines[0].split('\t').slice(1)
 
 	for (const c of caseHeader) {
 		const s = ds.__gdc.caseid2submitter.get(c)
 		if (!s) throw 'case submitter id unknown for a uuid'
 		bySampleId[c] = { label: s }
+	}
+	if (lines.length == 1) {
+		/* gene lines with actual expression values missing from api-returned tsv data
+		known issue with api https://gdc-ctds.atlassian.net/browse/SV-2695
+		when cohort is large, this endpoint sometimes returns such data
+		detect when it happened and throw a msg to show on client to be informative, to avoid crashing plot
+		*/
+		throw `API returned tsv data has only a header line of ${caseHeader.length} cases but no gene lines`
 	}
 
 	let geneExprFilter
