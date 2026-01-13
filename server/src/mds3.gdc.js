@@ -142,6 +142,22 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 
 		let t2 = new Date()
 
+		/* 1/13/2026 
+
+		for gene exp term in correlation plot: 
+		  gdc gene exp api may not work when #cases is big. phil suggested imposing a limit
+		  list of cases are always queried from cohort, and checked against the limit.
+		  if over limit, it throws and ask user to lower cohort size
+		  even if the api issue is "sporadic", always checking against limit ensure uniform user experience
+		  rather than the gene exp sometimes works in correlation and sometimes not
+		  this adds a performance penalty to correlation plot
+		  later when api issue is resolved, can revert and only check cases when q.forClusteringAnalysis is true
+
+		for gene exp clustering:
+		  up to 1k cases allowed. when a cohort contains >1k expression cases,
+		  clustering app will still work to display first 1k cases, rather than quitting
+		  this requires list of cases to be always made so app will work with up to 1k cases
+		*/
 		const cases4clustering = await getCases4exp(q, ds)
 		const t = new Date()
 		mayLog(cases4clustering.length, 'cases with exp data 4 clustering:', t - t2, 'ms')
@@ -306,35 +322,15 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2id, term2sa
 	}
 
 	if (cases4clustering) {
-		// case list is always provided for both clustering & correlation. use it
+		// use provided list of cases
 		arg.case_ids = cases4clustering
 	} else {
-		// not for clustering analysis. do not limit by cases, so that e.g. a gene exp row will show all values in oncomatrix
-		// this is no longer true as case list is always provided
+		// case list not provided. supply cohort
 		const f = makeCasesFilter(q)
 		arg.case_filters = { op: 'and', content: f }
 	}
 
 	const { host, headers } = ds.getHostHeaders(q)
-
-	// NOTES:
-	// - For now, will use nodeFetch where simultaneous long-running requests can cause terminated or socket hangup errors.
-	// - In Node 20, it looks like undici (which is used by experimental native fetch in Node 20) may not be performing garbage cleanup
-	// and freeing-up resources like sockets. This issue seems to be fixed in Node 22, which will be active in October 2024.
-	// - In the meantime, replacing ky with node-fetch may be a good enough fix for edge cases of very large, long-running requests.
-	//
-	// --- keeping previous request code below for reference ---
-	//
-	// const re = await ky.post(`${host.rest}/gene_expression/values`, { timeout: false, headers, json: arg }).text()
-	// const lines = re.trim().split('\n')
-	//
-	// const response = await got.post(`${host.rest}/gene_expression/values`, {
-	// 	headers,
-	// 	body: JSON.stringify(arg)
-	// })
-	// if (typeof response.body != 'string') throw 'response.body is not tsv text'
-	// const lines = response.body.trim().split('\n')
-	//
 
 	const re = await nodeFetch(`${host.rest}/gene_expression/values`, {
 		method: 'POST',
