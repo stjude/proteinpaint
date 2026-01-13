@@ -6,6 +6,7 @@ import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 //import { run_python } from '@sjcrh/proteinpaint-python'
 import got from 'got'
+import Database from 'better-sqlite3'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/chat',
@@ -78,8 +79,9 @@ function init({ genomes }) {
 
 			//let ai_output_data: any
 			let ai_output_json: any
-			//if (classResult == 'summary') {
-			//}
+			if (classResult == 'summary') {
+				extract_summary_terms(q.prompt, comp_model_name, apilink, ds.cohort.db.file, g.genedb.dbfile)
+			}
 
 			//const time1 = new Date().valueOf()
 			//const classResult = JSON.parse(await run_rust('query_classification', JSON.stringify(chatbot_input)))
@@ -233,13 +235,8 @@ async function call_sj_llm(prompt: string, model_name: string, apilink: string) 
 			headers: { 'Content-Type': 'application/json' },
 			timeout: { request: timeout }
 		})
-		mayLog('response:', response)
-		const result = JSON.parse(response.body)
-		mayLog('answer:', result.message.content)
-		if (result && result.outputs.length > 0) return result.message.content
-		else {
-			throw 'Error: Received an unexpected response format:' + result
-		}
+		const result = JSON.parse(response.body).outputs[0].generated_text
+		return result
 	} catch (error) {
 		return 'Error: SJ API request failed:' + error
 	}
@@ -280,5 +277,27 @@ async function classify_query_by_dataset_type(
 		// Will later add support for azure server also
 		throw 'Unknown LLM backend'
 	}
+	console.log('response:', response)
 	return JSON.parse(response)['answer']
+}
+
+async function extract_summary_terms(
+	prompt: string,
+	model_name: string,
+	apilink: string,
+	dataset_db: string
+	//genedb: string
+) {
+	await parse_dataset_db(dataset_db)
+}
+
+async function parse_dataset_db(dataset_db: string) {
+	const db = new Database(dataset_db)
+	// Query the database
+	const rows = db.prepare('SELECT * from termhtmldef').all()
+
+	// Process the retrieved rows
+	rows.forEach(row => {
+		console.log(`${row.id}: ${row.name} is ${row.age} years old`)
+	})
 }
