@@ -93,6 +93,11 @@ fn get_log_cutoff(ys: &[f64], hard_cap: f64) -> f64 {
     let sum: f64 = filtered.iter().sum();
     let mean = sum / count as f64;
 
+    // If all values are greater than or equal to hard_cap, default to hard_cap
+    if filtered.is_empty() {
+        return hard_cap;
+    }
+
     mean.max(10.0)
 }
 
@@ -129,9 +134,18 @@ fn get_log_cutoff(ys: &[f64], hard_cap: f64) -> f64 {
 /// - If 7 points are above 40, with two at 83 and 183 and five at/above 200:
 ///   Returns 200, so the points at 83 and 183 display at their true positions while
 ///   the 5 extreme outliers are clamped to 200
-fn calculate_dynamic_y_cap(ys: &[f64], max_capped_points: usize, hard_cap: f64, bin_size: f64) -> f64 {
-    let default_cap = get_log_cutoff(ys, hard_cap);
-    let num_bins = ((hard_cap - default_cap) / bin_size) as usize;
+fn calculate_dynamic_y_cap(
+    ys: &[f64],
+    max_capped_points: usize,
+    default_cap: f64,
+    hard_cap: f64,
+    bin_size: f64,
+) -> f64 {
+    let mut num_bins = ((hard_cap - default_cap) / bin_size) as usize;
+    if num_bins <= 0 {
+        // Have to make sure num_bins is positive to avoid issues with histogram later
+        num_bins = 1;
+    }
     let mut histogram = vec![0usize; num_bins];
     let mut max_y = f64::NEG_INFINITY;
     let mut max_y_below_hard_cap = f64::NEG_INFINITY; // Track highest value that's not hard-capped
@@ -459,7 +473,7 @@ fn plot_grin2_manhattan(
     // - bin_size: size of bins for histogram approach
     let max_capped_points = max_capped_points as usize;
 
-    let y_cap = calculate_dynamic_y_cap(&ys, max_capped_points, hard_cap, bin_size);
+    let y_cap = calculate_dynamic_y_cap(&ys, max_capped_points, log_cutoff, hard_cap, bin_size);
 
     let y_max = if !ys.is_empty() {
         let max_y = ys.iter().cloned().fold(f64::MIN, f64::max);
