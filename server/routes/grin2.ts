@@ -174,11 +174,6 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 
 	// Build chromosome list from genome reference
 	for (const c in g.majorchr) {
-		// List is short so a small penalty for accessing the flag in the loop
-		if (ds.queries.singleSampleMutation.discoPlot?.skipChrM) {
-			// Skip chrM; this property is set in gdc ds but still assess it to avoid hardcoding the logic, in case code maybe reused for non-gdc ds
-			if (c.toLowerCase() == 'chrm') continue
-		}
 		pyInput.chromosomelist[c] = g.majorchr[c]
 	}
 
@@ -320,7 +315,15 @@ async function processSampleData(
 			const mlst = JSON.parse(await read_file(filepath))
 
 			const { sampleLesions, contributedTypes } = await processSampleMlst(sample.name, mlst, request, tracker)
-			lesions.push(...sampleLesions)
+
+			// Filter out chrM lesions
+			// This property is set in gdc ds but still assessed to avoid hardcoding the logic, in case code may be reused for non-gdc ds
+			const skipChrM = ds.queries.singleSampleMutation.discoPlot?.skipChrM
+			const filteredLesions = skipChrM
+				? sampleLesions.filter(lesion => lesion[1].toLowerCase() !== 'chrm')
+				: sampleLesions
+
+			lesions.push(...filteredLesions)
 
 			// Track samples for each type they contributed to
 			for (const type of contributedTypes) {
@@ -328,7 +331,7 @@ async function processSampleData(
 			}
 
 			processingSummary.processedSamples! += 1
-			processingSummary.totalLesions! += sampleLesions.length
+			processingSummary.totalLesions! += filteredLesions.length
 
 			if (allTypesCapped(tracker)) {
 				const remaining = samples.length - 1 - i
