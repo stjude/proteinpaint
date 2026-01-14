@@ -1,4 +1,5 @@
 import fs from 'fs'
+import { ezFetch } from '#shared'
 //import Ajv from 'ajv'
 import { createGenerator } from 'ts-json-schema-generator'
 import type { SchemaGenerator } from 'ts-json-schema-generator'
@@ -9,7 +10,6 @@ import { ChatPayload } from '#types/checkers'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 //import { run_python } from '@sjcrh/proteinpaint-python'
-import got from 'got'
 import Database from 'better-sqlite3'
 
 export const api: RouteApi = {
@@ -198,13 +198,12 @@ async function call_ollama(prompt: string, model_name: string, apilink: string) 
 	}
 
 	try {
-		const response = await got.post(apilink + '/api/chat', {
-			json: payload,
+		const result = await ezFetch(apilink + '/api/chat', {
+			method: 'POST',
+			body: payload, // ezfetch automatically stringifies objects
 			headers: { 'Content-Type': 'application/json' },
-			timeout: { request: timeout }
+			timeout: { request: timeout } // ezfetch accepts milliseconds directly
 		})
-		const result = JSON.parse(response.body)
-		mayLog('answer:', result.message.content)
 		if (result && result.message && result.message.content && result.message.content.length > 0)
 			return result.message.content
 		else {
@@ -235,12 +234,13 @@ async function call_sj_llm(prompt: string, model_name: string, apilink: string) 
 	}
 
 	try {
-		const response = await got.post(apilink, {
-			json: payload,
+		const response = await ezFetch(apilink, {
+			method: 'POST',
+			body: payload, // ezfetch automatically stringifies objects
 			headers: { 'Content-Type': 'application/json' },
-			timeout: { request: timeout }
+			timeout: { request: timeout } // ezfetch accepts milliseconds directly
 		})
-		const result = JSON.parse(response.body).outputs[0].generated_text
+		const result = response.outputs[0].generated_text
 		return result
 	} catch (error) {
 		return 'Error: SJ API request failed:' + error
