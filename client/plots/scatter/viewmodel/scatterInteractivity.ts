@@ -72,7 +72,7 @@ export class ScatterInteractivity {
 		this.scatter.vm.scatterTooltip.onClick = false
 
 		sample.sample_id = sample.sample
-		const sandbox = newSandboxDiv(this.scatter.opts.plotDiv)
+		const sandbox = newSandboxDiv(this.scatter.opts.plotDiv || select(this.scatter.opts.holder.node().parentNode))
 		sandbox.header.text(sample.sample_id)
 		const discoPlotImport = await import('../../plot.disco.js')
 		discoPlotImport.default(
