@@ -18,9 +18,9 @@ async function fillMenu(self, div, tvs) {
 		holder: div,
 		values: term.values,
 		selectedValues: tvs.values,
+		genotype: tvs.genotype,
 		dt: term.dt,
 		mcount: tvs.mcount,
-		wt: tvs.wt,
 		callback: config => {
 			const new_tvs = structuredClone(tvs)
 			Object.assign(new_tvs, config)
