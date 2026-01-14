@@ -4,6 +4,9 @@ import type { TwBase } from '#tw'
 
 export class HandlerBase implements Handler {
 	termsetting: TermSetting
+	dom!: {
+		[name: string]: any
+	}
 	//tw: TwBase
 
 	constructor(opts) {
@@ -35,5 +38,16 @@ export class HandlerBase implements Handler {
 
 	undoEdits() {
 		// ignore
+	}
+
+	showLoading(_div?: any) {
+		const self = this.termsetting
+		const div = _div || self.dom.tip.d
+		div.selectAll('*').remove()
+		this.dom.loadingDiv = div.append('div').style('margin', '15px').text('Loading ...')
+	}
+
+	hideLoading() {
+		this.dom.loadingDiv?.remove()
 	}
 }

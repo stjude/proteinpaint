@@ -64,9 +64,13 @@ export class NumericHandler extends HandlerBase implements Handler {
 		const tabs: TabData[] = []
 		const callback = async (event, tabData) => {
 			if (event) event.stopPropagation()
-			await this.setEditHandler(tabData)
-			//this.dom.editDiv.selectAll('*').remove()
-			await this.editHandler.showEditMenu(tabData.contentHolder) //this.dom.editDiv)
+			try {
+				await this.setEditHandler(tabData)
+				//this.dom.editDiv.selectAll('*').remove()
+				await this.editHandler.showEditMenu(tabData.contentHolder) //this.dom.editDiv)
+			} catch (e) {
+				this.dom.errdiv.style('display', '').text(e)
+			}
 		}
 
 		const numTabs = self.opts.numericEditMenuVersion.length
@@ -141,35 +145,40 @@ export class NumericHandler extends HandlerBase implements Handler {
 	}
 
 	async showEditMenu(div) {
-		div.selectAll('*').remove()
-		this.dom.loadingDiv = div.append('div').style('margin', '15px').text('Loading ...')
-		this.tw = this.termsetting.tw as NumRegularBin | NumCustomBins | NumCont | NumSpline // TODO: do not force type
+		try {
+			this.showLoading(div)
+			this.dom.errdiv = div.append('div').attr('class', 'sja_errorbar').style('display', 'none')
+			this.tw = this.termsetting.tw as NumRegularBin | NumCustomBins | NumCont | NumSpline // TODO: do not force type
 
-		const self = this.tw
-		for (const t of this.tabs) {
-			t.active = this.tabs.length === 1 || self.q.mode == t.mode || (t.mode == 'continuous' && !self.q.mode)
+			const self = this.tw
+			for (const t of this.tabs) {
+				t.active = this.tabs.length === 1 || self.q.mode == t.mode || (t.mode == 'continuous' && !self.q.mode)
+			}
+
+			this.density_data = await this.density.setData()
+			await this.setEditHandler(this.tabs.find(t => t.active))
+			this.dom.editDiv = div.append('div')
+			this.dom.btnDiv = div.append('div')
+			this.renderButtons(this.dom.btnDiv)
+
+			if (this.tabs.length > 1) {
+				this.dom.topBar = this.dom.editDiv.append('div').style('padding', '10px')
+				this.dom.topBar.append('span').html('Use as&nbsp;')
+				new Tabs({
+					holder: this.dom.topBar.append('div').style('display', 'inline-block'),
+					contentHolder: this.dom.editDiv.append('div'),
+					noTopContentStyle: true,
+					tabs: this.tabs
+				}).main()
+			} else {
+				await this.editHandler.showEditMenu(this.dom.editDiv)
+			}
+
+			this.dom.loadingDiv.style('display', 'none')
+		} catch (e: any) {
+			this.hideLoading()
+			this.dom.errdiv.style('display', '').text(typeof e == 'object' ? e.message || e.error || e : e)
 		}
-
-		this.density_data = await this.density.setData()
-		await this.setEditHandler(this.tabs.find(t => t.active))
-		this.dom.editDiv = div.append('div')
-		this.dom.btnDiv = div.append('div')
-		this.renderButtons(this.dom.btnDiv)
-
-		if (this.tabs.length > 1) {
-			this.dom.topBar = this.dom.editDiv.append('div').style('padding', '10px')
-			this.dom.topBar.append('span').html('Use as&nbsp;')
-			new Tabs({
-				holder: this.dom.topBar.append('div').style('display', 'inline-block'),
-				contentHolder: this.dom.editDiv.append('div'),
-				noTopContentStyle: true,
-				tabs: this.tabs
-			}).main()
-		} else {
-			this.editHandler.showEditMenu(this.dom.editDiv)
-		}
-
-		this.dom.loadingDiv.style('display', 'none')
 	}
 
 	renderButtons(btnDiv) {
