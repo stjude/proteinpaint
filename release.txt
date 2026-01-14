@@ -1,2 +1,1 @@
-Features:
-- GRIN2: Calculating default log cutoff based on data mean instead of arbitrary constant
+
