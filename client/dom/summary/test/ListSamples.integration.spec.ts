@@ -3,7 +3,7 @@ import tape from 'tape'
 import { ListSamples } from '../ListSamples'
 import { getBoxPlotMockData } from '#plots/boxplot/test/mockBoxPlotData.ts'
 import { vocabInit } from '#termdb/vocabulary'
-import { getGeneVariantTw } from '../../../test/testdata/data.ts'
+import { getGeneVariantTw, getSamplelstTw } from '../../../test/testdata/data.ts'
 import { termjson } from '../../../test/testdata/termjson'
 
 /*
@@ -13,7 +13,8 @@ Tests:
 	- ListSamples.getData() for term=gene variant returns the correct data object
     - ListSamples.getData() for term=numeric and term2=categorical returns the correct data object
 	- ListSamples.getData() for term=gene exp and term2=gene variant returns the correct data object
-	- ListSamples.getData() for term=numeric and term2=survival returns the correct data object
+	- ListSamples.getData() for term=numeric and term2=samplelst returns the correct data object
+	- (skipped) ListSamples.getData() for term=numeric and term2=survival returns the correct data object
 */
 
 /*************************
@@ -195,10 +196,7 @@ tape('ListSamples.getData() for term=gene exp and term2=gene variant returns the
 			$id: 'term1'
 		},
 		term2: mockTerm2,
-		bins: {
-			term1: {},
-			term2: {}
-		}
+		bins: { term1: {}, term2: {} }
 	}
 	const mockPlot = {
 		seriesId: 'TP53 SNV/indel Mutated (somatic)',
@@ -220,6 +218,39 @@ tape('ListSamples.getData() for term=gene exp and term2=gene variant returns the
 	)
 	test.true(data.refs.byTermId[mockConfig.term.$id], 'Should reference the gene expression term')
 	test.true(data.refs.byTermId[mockConfig.term2.$id], 'Should reference the gene variant term')
+
+	test.end()
+})
+
+tape('ListSamples.getData() for term=numeric and term2=samplelst returns the correct data object', async test => {
+	test.timeoutAfter(1000)
+	const mockTerm2: any = getSamplelstTw()
+	mockTerm2.$id = 'term2'
+	const mockConfig = {
+		term: { term: JSON.parse(JSON.stringify(termjson['agedx'])), q: { mode: 'continuous' }, $id: 'term1' },
+		term2: mockTerm2,
+		bins: { term1: {}, term2: {} }
+	}
+	const mockPlot = {
+		seriesId: 'Group 1',
+		chartId: ''
+	}
+
+	const { listSamples } = await getNewListSamples({ config: mockConfig, plot: mockPlot, start: -2, end: 25 })
+	const data = await listSamples.getData()
+
+	test.true(
+		typeof data == 'object' && data.lst && data.refs && data.samples,
+		'Should return data object from getData() with a list, references, and sample info'
+	)
+	const expected = 13
+	test.equal(
+		data.lst.length,
+		expected,
+		`Should return ${expected} samples matching numeric term and samplelst term filter`
+	)
+	test.true(data.refs.byTermId[mockConfig.term.$id], 'Should reference the numeric term')
+	test.true(data.refs.byTermId[mockConfig.term2.$id], 'Should reference the samplelst term')
 
 	test.end()
 })

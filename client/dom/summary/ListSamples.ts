@@ -100,27 +100,25 @@ export class ListSamples {
 			this.geneVariant[`t${termNum}value`] = this.plot.seriesId
 			return
 		}
-		const tvsEntry = {
+		let tvsEntry = {
 			type: 'tvs',
 			tvs: {
 				term: tw.term
 			}
 		}
-		this.getFilterParams(tvsEntry.tvs, tw, termNum)
+		tvsEntry = this.getFilterParams(tvsEntry, tw, termNum)
 		this.tvslst.lst.push(tvsEntry)
 	}
 
-	getFilterParams(tvs: any, tw: TermWrapper, termNum: number): void {
+	getFilterParams(tvsEntry: any, tw: TermWrapper, termNum: number) {
 		const key: any = termNum == 0 ? this.plot.chartId : this.plot.seriesId
 		if (this.isContinuousOrBinned(tw, termNum)) {
-			this.createTvsRanges(tvs, termNum, key)
-			this.createTvsValues(tvs, tw, key)
-		} else {
-			this.createTvsValues(tvs, tw, key)
+			this.createTvsRanges(tvsEntry.tvs, termNum, key)
 		}
+		return this.createTvsValues(tvsEntry, tw, key)
 	}
 
-	createTvsValues(tvs: any, tw: any, key: string): void {
+	createTvsValues(tvsEntry: any, tw: any, key: string) {
 		if (
 			(tw?.q?.type == 'custom-groupset' || tw?.q?.type == 'predefined-groupset') &&
 			tw.term.type !== TermTypes.GENE_VARIANT
@@ -129,24 +127,23 @@ export class ListSamples {
 				tw.q.type == 'custom-groupset' ? tw.q.customset : tw.term.groupsetting.lst[tw.q.predefined_groupset_idx]
 			const group = groupset.groups.find(group => group.name == key)
 			if (!group) throw new Error(`Group not found in groupset for ${tw.term.name}: ${key}`)
-			tvs.values = group.values
+			tvsEntry.tvs.values = group.values
 		} else if (tw.term.type === TermTypes.SAMPLELST) {
+			if (!tw.term.values?.[key]) throw new Error(`Sample list not found for ${tw.term.name}: ${key}`)
 			const ids = tw.term.values[key].list.map(s => s.sampleId)
 			// Returns filter obj with lst array of 1 tvs
-			const tmpTvsLst = getSamplelstFilter(ids).lst[0]
-			// Below is the original logic. Keep as a reference for now.
-			// tvs.values = tmpTvsLst.lst[0].tvs.values
-			tvs.values = tmpTvsLst.tvs.values
+			const tmpTvsLst = getSamplelstFilter(ids)
+			tvsEntry = tmpTvsLst.lst[0]
 		} else {
-			tvs.values = [{ key }]
+			tvsEntry.tvs.values = [{ key }]
 		}
-
 		if (tw.term.type === TermTypes.CONDITION) {
-			Object.assign(tvs, {
+			Object.assign(tvsEntry.tvs, {
 				bar_by_grade: tw.q?.bar_by_grade || null,
 				value_by_max_grade: tw.q.value_by_max_grade
 			})
 		}
+		return tvsEntry
 	}
 
 	createTvsRanges(tvs: any, termNum: number, key: string): void {

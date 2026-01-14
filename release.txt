@@ -1,1 +1,2 @@
-
+Fixes:
+- ListSamples filters for samplelst terms correctly with new integration test
