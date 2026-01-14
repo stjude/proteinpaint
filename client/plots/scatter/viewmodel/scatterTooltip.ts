@@ -270,10 +270,12 @@ export class ScatterTooltip {
 				tdlabel.text('Sample')
 				td.text(sample.sample)
 				if ('sampleId' in sample && this.onClick) {
-					td.append('button')
-						.style('float', 'right')
-						.text('Sample view')
-						.on('click', () => this.scatter.interactivity.openSampleView(sample))
+					if (this.scatter.state.currentCohortChartTypes.includes('sampleView')) {
+						td.append('button')
+							.style('float', 'right')
+							.text('Sample view')
+							.on('click', () => this.scatter.interactivity.openSampleView(sample))
+					}
 					if (hasDiscoPlot)
 						td.append('button')
 							.style('float', 'right')
