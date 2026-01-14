@@ -1,5 +1,9 @@
 import fs from 'fs'
-import type { ChatRequest, ChatResponse, RouteApi, DbRows, DbValue } from '#types'
+//import Ajv from 'ajv'
+import { createGenerator } from 'ts-json-schema-generator'
+import type { SchemaGenerator } from 'ts-json-schema-generator'
+import path from 'path'
+import type { ChatRequest, ChatResponse, RouteApi, DbRows, DbValue, SummaryType } from '#types'
 import { ChatPayload } from '#types/checkers'
 //import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '../src/serverconfig.js'
@@ -292,6 +296,29 @@ async function extract_summary_terms(
 	const { db_rows, rag_docs } = await parse_dataset_db(dataset_db)
 	mayLog('db_rows:', db_rows)
 	mayLog('rag_docs:', rag_docs)
+
+	const SchemaConfig = {
+		path: path.resolve('termdb.chat.ts'),
+		// Path to your tsconfig (required for proper type resolution)
+		tsconfig: path.resolve(serverconfig.binpath, '../tsconfig.json'),
+		// Name of the exported type we want to convert
+		type: 'SummaryType',
+		// Only expose exported symbols (default)
+		expose: 'export' as 'export' | 'all' | 'none' | undefined,
+		// Put the whole schema under a top‑level $ref (optional but convenient)
+		topRef: true,
+		// Turn off type‑checking for speed (set to true if you want full checks)
+		skipTypeCheck: true
+	}
+	const generator: SchemaGenerator = createGenerator(SchemaConfig)
+	const orderSchema = JSON.stringify(generator.createSchema(SchemaConfig.type))
+	const summary_variable: SummaryType = {
+		// Just defined this variable so that can commit to repo for now. Will be deleted later
+		term: 'abc',
+		action: 'summary'
+	}
+	mayLog('summary_variable:', summary_variable)
+	mayLog('orderSchema:', orderSchema)
 }
 
 async function parse_dataset_db(dataset_db: string) {
