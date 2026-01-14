@@ -49,6 +49,9 @@ export class ListSamples {
 	geneVariant = {}
 
 	constructor(app: AppApi, termfilter: any, config: any, plot: Plot, start?: number, end?: number) {
+		if (!config.term) {
+			throw new Error('Missing term in plot config')
+		}
 		this.app = app
 		this.termfilter = termfilter
 		this.plot = plot
