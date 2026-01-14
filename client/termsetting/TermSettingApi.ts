@@ -3,7 +3,7 @@ import { TermSetting } from './TermSetting.ts'
 import type { Term, TermWrapper, Filter, GvPredefinedGsTW } from '#types'
 import { call_fillTW, get$id, fillTermWrapper } from './utils.ts'
 import { minimatch } from 'minimatch'
-import { isNumericTerm } from '#shared/terms.js'
+// import { isNumericTerm } from '#shared/terms.js'
 import { copyMerge, deepEqual } from '#rx'
 import { select } from 'd3-selection'
 import { TwRouter, CategoricalBase, SnpBase, QualitativeBase, NumericBase } from '#tw'
@@ -187,11 +187,6 @@ export class TermSettingApi {
 			options.push({
 				label: 'Edit',
 				callback: async div => {
-					if (self.term && isNumericTerm(self.term) && !self.term.bins) {
-						const tw = { term: self.term, q: self.q /*, $id: ''*/ }
-						//tw.$id = await get$id(tw)
-						await self.vocabApi.setTermBins(tw as any) // TODO: fix type
-					}
 					await self.handler.showEditMenu(div.append('div'))
 				}
 			} as opt)
