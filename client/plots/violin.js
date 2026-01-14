@@ -340,9 +340,7 @@ class ViolinPlot extends PlotBase {
 		const args = this.validateArgs()
 		let data
 		try {
-			console.log(342)
 			this.toggleLoadingDiv()
-			console.log(343)
 			data = await this.app.vocabApi.getViolinPlotData(args, null, this.api.getAbortSignal())
 		} catch (e) {
 			this.toggleLoadingDiv('none')
