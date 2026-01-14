@@ -97,8 +97,6 @@ export class ListSamples {
 		const tw = termNum === 1 ? this.t1 : termNum === 2 ? this.t2 : this.t0
 		if (!tw) throw new Error('Missing term wrapper')
 		if (tw.term.type === TermTypes.GENE_VARIANT) {
-			/** Gene variant terms are not use in the server
-			 * req but later for filtering the res. */
 			this.geneVariant[`t${termNum}value`] = this.plot.seriesId
 			return
 		}
@@ -121,6 +119,7 @@ export class ListSamples {
 			this.createTvsValues(tvs, tw, key)
 		}
 	}
+
 	createTvsValues(tvs: any, tw: any, key: string): void {
 		if (
 			(tw?.q?.type == 'custom-groupset' || tw?.q?.type == 'predefined-groupset') &&
@@ -147,14 +146,6 @@ export class ListSamples {
 				bar_by_grade: tw.q?.bar_by_grade || null,
 				value_by_max_grade: tw.q.value_by_max_grade
 			})
-		}
-
-		if (tw.term.type == TermTypes.SURVIVAL) {
-			//TODO: This isn't correct. Need to figure out
-			//how to filter for survival terms
-			const value = tw.term.values[key]
-			if (value) tvs.values[0].label = value.label
-			tvs.q = {}
 		}
 	}
 
@@ -239,10 +230,15 @@ export class ListSamples {
 				row[0].url = urlTemplate.base + (s[urlTemplate.namekey] || s.sample)
 			}
 			if (s[this.t1.$id!]) {
-				this.addRowValue(s, this.t1, row)
+				if (this.t1?.q?.hiddenValues && this.t1?.q.hiddenValues[s[this.t1.$id!].value]) {
+					continue //skip hidden values
+				} else this.addRowValue(s, this.t1, row)
 			} else continue //skip rows with no term value
-			if (this.t2 && s[this.t2.$id!]) {
-				this.addRowValue(s, this.t2, row)
+			if (this.t2) {
+				if (this.t2?.q?.hiddenValues && this.t2?.q.hiddenValues[s[this.t2.$id!].value]) {
+					continue
+				}
+				if (s[this.t2.$id!]) this.addRowValue(s, this.t2, row)
 			}
 			rows.push(row)
 		}
@@ -260,8 +256,8 @@ export class ListSamples {
 		for (const [idx, tw] of [this.t0, this.t1, this.t2].entries()) {
 			if (!tw) continue
 			if (tw.term.type !== TermTypes.GENE_VARIANT) continue
-			const value = sample[tw.$id!]?.value
 			if (!this.geneVariant[`t${idx}value`]) continue
+			const value = sample?.[tw.$id!]?.value
 			if (value != this.geneVariant[`t${idx}value`]) {
 				filterSample = true
 			}
@@ -278,6 +274,9 @@ export class ListSamples {
 			//This func mutates row directly
 			addGvRowVals(s, tw, row, this.app.vocabApi.termdbMatrixClass)
 			return
+		} else if (tw.term.type === TermTypes.SURVIVAL) {
+			/** Use key for term value, not value (value == time elapsed) */
+			formattedVal = tw.term.values?.[sample.key]?.label || sample.key
 		} else {
 			formattedVal = tw.term.values?.[sample.value]?.label || sample.value
 		}
@@ -288,11 +287,13 @@ export class ListSamples {
 		if (tw.term.type === TermTypes.GENE_VARIANT) {
 			//This func mutates columns directly
 			addGvCols(tw, columns)
-		} else if (tw.term.type == TermTypes.SURVIVAL) {
-			//TODO: Skipping for now. Need to figure out how to
-			// filter for survival terms
-			return
-		} else {
+		}
+		/** Note: survival fails in termdbtest but not any other
+		 * ds. Leaving commented out for now.*/
+		// else if (tw.term.type === TermTypes.SURVIVAL) {
+		// 	return
+		// }
+		else {
 			columns.push({ label: tw.term.name })
 		}
 	}
