@@ -9,6 +9,7 @@ Features:
 - New unit tests for ListSamples, now under #dom/summary.
 - GRIN2: Added logic for generating dynamic y-axis cap in manhattan plot
 - GRIN2: Calculating default log cutoff based on data mean instead of arbitrary constant
+- GRIN2: Now doing chrM filtering in processSampleData
 
 Fixes:
 - GDC lollipop now displays ssm=2000 for TTN rather than 1999; the limit is applied to both ssm & sv
