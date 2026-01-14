@@ -61,6 +61,19 @@ export class NumDiscreteEditor extends HandlerBase implements Handler {
 		this.dom.density_div = div.append('div')
 		await this.handler.density.showViolin(this.dom.density_div)
 
+		const self = this.termsetting
+		// TODO: should make exceptions for survival or geneExpression terms???
+		if (self.term && !self.term.bins) {
+			self.handler.showLoading(div)
+			const tw = { term: self.term, q: self.q /*, $id: ''*/ }
+			try {
+				await self.vocabApi.setTermBins(tw as any) // TODO: fix type
+			} catch (e) {
+				div.append('div').attr('class', 'sja_errorbar').text(e)
+			}
+			this.handler.hideLoading()
+		}
+
 		this.tw = this.termsetting.tw as NumRegularBin | NumCustomBins // TODO: do not force
 		this.setDefaultBoundaryInclusion()
 		this.renderBoundaryInclusionInput(div)

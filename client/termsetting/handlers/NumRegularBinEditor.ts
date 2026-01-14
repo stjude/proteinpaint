@@ -10,7 +10,7 @@ import type { RegularNumericBinConfig } from '#types'
 
 export class NumRegularBinEditor {
 	tw: NumRegularBin
-	q: RegularNumericBinConfig
+	q!: RegularNumericBinConfig
 	editHandler: NumDiscreteEditor
 	termsetting: TermSetting
 	opts: any
@@ -23,10 +23,10 @@ export class NumRegularBinEditor {
 		this.opts = editHandler.opts
 		this.tw = editHandler.tw
 		this.termsetting = editHandler.termsetting
-		this.q = this.getDefaultQ()
 	}
 
 	render(div) {
+		if (this.q?.type != 'regular-bin') this.q = this.getDefaultQ()
 		this.editHandler.handler.density.setBinLines(this.getBoundaryOpts())
 		if (this.dom.binsTable) {
 			if (this.editHandler.dom.binsDiv?.node().contains(this.dom.binsTable.node())) return

@@ -8,7 +8,7 @@ import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
 
 export class NumCustomBinEditor {
 	tw: NumCustomBins
-	q: CustomNumericBinConfig
+	q!: CustomNumericBinConfig
 	editHandler: NumDiscreteEditor
 	termsetting: TermSetting
 	opts: any
@@ -21,10 +21,10 @@ export class NumCustomBinEditor {
 		this.opts = editHandler.opts
 		this.tw = editHandler.tw
 		this.termsetting = editHandler.termsetting
-		this.q = this.getDefaultQ()
 	}
 
 	async render(div) {
+		if (this.q?.type != 'custom-bin') this.q = this.getDefaultQ()
 		await this.editHandler.handler.density.setBinLines(this.getBoundaryOpts())
 		if (this.dom.inputsDiv) {
 			if (this.editHandler.dom.binsDiv?.node().contains(this.dom.inputsDiv.node())) return
