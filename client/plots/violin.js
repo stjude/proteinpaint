@@ -40,11 +40,6 @@ class ViolinPlot extends PlotBase {
 			clicktip: new Menu({ padding: '0px' }),
 			sampletabletip: new Menu({ padding: '3px' }), // sampletable is lauched from option shown in clicktip which closes on clicking, thus need its own menu..
 			header: this.opts.header,
-			loadingDiv: this.opts.holder
-				.append('div')
-				.style('display', this.opts.mode != 'minimal' ? 'inline-block' : 'none')
-				.style('padding', '24px')
-				.text('Loading ...'),
 			controls,
 			banner: holder
 				.append('div')
@@ -53,6 +48,11 @@ class ViolinPlot extends PlotBase {
 				.style('padding', '24px')
 				.style('font-size', '16px')
 				.style('color', '#aaa'),
+			loadingDiv: holder
+				.append('div')
+				.style('display', this.opts.mode != 'minimal' ? 'inline-block' : 'none')
+				.style('padding', '24px')
+				.text('Loading ...'),
 			violinDiv: holder
 				.append('div')
 				.attr('class', 'sjpp-vp-violinDiv')
@@ -340,6 +340,9 @@ class ViolinPlot extends PlotBase {
 		const args = this.validateArgs()
 		let data
 		try {
+			console.log(342)
+			this.toggleLoadingDiv()
+			console.log(343)
 			data = await this.app.vocabApi.getViolinPlotData(args, null, this.api.getAbortSignal())
 		} catch (e) {
 			this.toggleLoadingDiv('none')
