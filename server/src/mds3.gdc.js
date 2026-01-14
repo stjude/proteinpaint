@@ -314,6 +314,7 @@ export function makeFilter(q) {
 }
 
 async function getExpressionData(q, gene_ids, cases4clustering, ensg2id, term2sample2value, ds) {
+	// throw ' ---- TEST ----' // uncomment to test error handling
 	const arg = {
 		gene_ids,
 		format: 'tsv',
@@ -331,7 +332,6 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2id, term2sa
 	}
 
 	const { host, headers } = ds.getHostHeaders(q)
-
 	const re = await nodeFetch(`${host.rest}/gene_expression/values`, {
 		method: 'POST',
 		timeout: false,

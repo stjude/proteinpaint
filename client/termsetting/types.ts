@@ -159,6 +159,7 @@ export type InstanceDom = {
 export interface Handler {
 	getPillName: (d: any) => string
 	getPillStatus: (f?: any) => { text: string; bgcolor?: string }
+	showLoading: (d?: any) => void
 	showEditMenu: (div: Selection) => void
 	validateQ?: (d: PillData) => void
 	postMain?: () => void
