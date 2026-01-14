@@ -3,7 +3,7 @@ use plotters::prelude::*;
 use plotters::style::ShapeStyle;
 use serde::{Deserialize, Serialize};
 use serde_json;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::error::Error;
 use std::fs::File;
@@ -22,7 +22,6 @@ struct Input {
     plot_height: u64,
     device_pixel_ratio: f64,
     png_dot_radius: u64,
-    log_cutoff: f64,
     max_capped_points: u64,
     hard_cap: f64,
     bin_size: f64,
@@ -63,6 +62,7 @@ struct InteractiveData {
     y_min: f64,
     y_max: f64,
     device_pixel_ratio: f64,
+    default_log_cutoff: f64,
     has_capped_points: bool,
 }
 
@@ -82,6 +82,31 @@ fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
     let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
     let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
     Some((r, g, b))
+}
+
+// Helper function to calculate default log cutoff value from the data coming from GRIN2 file
+// We just find the mean of the -log10 q-values that are below the hard cap and
+// set it as the default log cutoff. If the mean is less than 40, we set it to 40.
+// If it is too low it can cause an error in the setting up of the histogram bins in the dynamic y-cap calculation.
+// The exclude_indices parameter allows us to skip placeholder values (e.g., 0.0 placeholders for zero q-values)
+// that would otherwise contaminate the mean calculation.
+fn get_log_cutoff(ys: &[f64], hard_cap: f64, exclude_indices: &HashSet<usize>) -> f64 {
+    let filtered: Vec<f64> = ys
+        .iter()
+        .enumerate()
+        .filter(|(i, &y)| y < hard_cap && !exclude_indices.contains(i))
+        .map(|(_, &y)| y)
+        .collect();
+    let count = filtered.len();
+    let sum: f64 = filtered.iter().sum();
+
+    // If all values are greater than or equal to hard_cap (or excluded), default to hard_cap
+    if filtered.is_empty() {
+        return hard_cap;
+    }
+    let mean = sum / count as f64;
+
+    mean.max(40.0)
 }
 
 /// Calculates a dynamic y-axis cap for Manhattan plots to handle outliers gracefully.
@@ -104,8 +129,8 @@ fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
 ///
 /// # Parameters
 /// - `ys`: All y-values (-log10 q-values) in the plot
-/// - `default_cap`: Starting threshold; points below this are never capped (e.g., 40)
 /// - `max_capped_points`: Maximum points allowed to be clamped to the cap (e.g., 5)
+/// - `default_cap`: Starting threshold; points below this are never capped (e.g., whatever log_cutoff is calculated to be from get_log_cutoff)
 /// - `hard_cap`: Absolute maximum y-axis value; points above are always clamped (e.g., 200)
 /// - `bin_size`: Histogram bin width on -log10 scale (e.g., 10)
 ///
@@ -119,12 +144,16 @@ fn hex_to_rgb(hex: &str) -> Option<(u8, u8, u8)> {
 ///   the 5 extreme outliers are clamped to 200
 fn calculate_dynamic_y_cap(
     ys: &[f64],
-    default_cap: f64,
     max_capped_points: usize,
+    default_cap: f64,
     hard_cap: f64,
     bin_size: f64,
 ) -> f64 {
-    let num_bins = ((hard_cap - default_cap) / bin_size) as usize;
+    let mut num_bins = ((hard_cap - default_cap) / bin_size) as usize;
+    if num_bins == 0 {
+        // Have to make sure num_bins is positive to avoid issues with histogram later
+        num_bins = 1;
+    }
     let mut histogram = vec![0usize; num_bins];
     let mut max_y = f64::NEG_INFINITY;
     let mut max_y_below_hard_cap = f64::NEG_INFINITY; // Track highest value that's not hard-capped
@@ -225,7 +254,6 @@ fn cumulative_chrom(
 fn grin2_file_read(
     grin2_file: &str,
     chrom_data: &HashMap<String, ChromInfo>,
-    log_cutoff: f64,
     q_value_threshold: f64,
 ) -> Result<
     (
@@ -340,10 +368,11 @@ fn grin2_file_read(
                 _ => continue,
             };
 
-            // Use log_cutoff for zero q-values to avoid -inf. These will be capped later in plotting at log_cutoff
+            // Use a placeholder for zero q-values - these will be updated later
+            // after we calculate the dynamic y_cap from the full dataset
             let neg_log10_q = if original_q_val == 0.0 {
                 zero_q_indices.push(mut_num);
-                log_cutoff
+                0.0 // Placeholder - will be set to y_cap later in plot_grin2_manhattan
             } else {
                 -original_q_val.log10()
             };
@@ -392,7 +421,6 @@ fn plot_grin2_manhattan(
     plot_height: u64,
     device_pixel_ratio: f64,
     png_dot_radius: u64,
-    log_cutoff: f64,
     bin_size: f64,
     max_capped_points: u64,
     hard_cap: f64,
@@ -426,7 +454,7 @@ fn plot_grin2_manhattan(
     let mut sig_indices = Vec::new();
     let mut zero_q_indices: Vec<usize> = Vec::new();
 
-    if let Ok((x, y, c, pd, si, zq)) = grin2_file_read(&grin2_result_file, &chrom_data, log_cutoff, q_value_threshold) {
+    if let Ok((x, y, c, pd, si, zq)) = grin2_file_read(&grin2_result_file, &chrom_data, q_value_threshold) {
         xs = x;
         ys = y;
         colors_vec = c;
@@ -436,41 +464,44 @@ fn plot_grin2_manhattan(
     }
 
     // ------------------------------------------------
-    // 3. Y-axis capping with dynamic cap
+    // 3. Calculate log_cutoff from data and update zero q-values
+    // ------------------------------------------------
+    // Convert zero_q_indices to HashSet for O(1) lookup when excluding placeholders
+    let zero_q_set: HashSet<usize> = zero_q_indices.iter().cloned().collect();
+    let log_cutoff = get_log_cutoff(&ys, hard_cap, &zero_q_set);
+
+    // ------------------------------------------------
+    // 4. Y-axis capping with dynamic cap
     // ------------------------------------------------
     let y_padding = png_dot_radius as f64;
     let y_min = 0.0 - y_padding;
 
     // Dynamic y-cap calculation:
-    // - default_cap: the baseline cap (log_cutoff, typically 40)
+    // - log_cutoff: the baseline cap (calculated from data mean)
     // - max_capped_points: maximum number of points allowed above cap before raising it
     // - hard_cap: absolute maximum cap regardless of data distribution
     // - bin_size: size of bins for histogram approach
-    let default_cap = log_cutoff;
     let max_capped_points = max_capped_points as usize;
 
-    let y_cap = calculate_dynamic_y_cap(&ys, default_cap, max_capped_points, hard_cap, bin_size);
+    let y_cap = calculate_dynamic_y_cap(&ys, max_capped_points, log_cutoff, hard_cap, bin_size);
 
-    let mut has_capped_points = false;
-
-    let y_max = if !ys.is_empty() {
+    let (y_max, has_capped_points) = if !ys.is_empty() {
         let max_y = ys.iter().cloned().fold(f64::MIN, f64::max);
 
-        // If dynamic cap is higher than default (log_cutoff), elevate q=0 points
-        // (which were set to log_cutoff) to the new cap so they remain at the top
-        if y_cap > log_cutoff {
-            for &idx in &zero_q_indices {
-                ys[idx] = y_cap;
-            }
-            for p in point_details.iter_mut() {
-                if p.q_value == 0.0 {
-                    p.y = y_cap;
-                }
+        // has_capped_points is true if any points exceed the default cap (log_cutoff)
+        let has_capped = max_y > log_cutoff;
+
+        // Set q=0 points (currently placeholders at 0.0) to y_cap so they appear at the top
+        for &idx in &zero_q_indices {
+            ys[idx] = y_cap;
+        }
+        for p in point_details.iter_mut() {
+            if p.q_value == 0.0 {
+                p.y = y_cap;
             }
         }
 
         if max_y > y_cap {
-            has_capped_points = true;
             // Clamp values above the cap
             for y in ys.iter_mut() {
                 if *y > y_cap {
@@ -482,12 +513,12 @@ fn plot_grin2_manhattan(
                     p.y = y_cap;
                 }
             }
-            y_cap + 0.35 + y_padding
+            (y_cap + 0.35 + y_padding, has_capped)
         } else {
-            max_y + 0.35 + y_padding
+            (max_y + 0.35 + y_padding, has_capped)
         }
     } else {
-        1.0 + y_padding
+        (1.0 + y_padding, false)
     };
 
     // ------------------------------------------------
@@ -630,7 +661,8 @@ fn plot_grin2_manhattan(
         y_min,
         y_max,
         device_pixel_ratio: dpr,
-        has_capped_points: has_capped_points,
+        default_log_cutoff: log_cutoff,
+        has_capped_points,
     };
     Ok((png_data, interactive_data))
 }
@@ -657,7 +689,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let plot_height = &input_json.plot_height;
                 let device_pixel_ratio = &input_json.device_pixel_ratio;
                 let png_dot_radius = &input_json.png_dot_radius;
-                let log_cutoff = &input_json.log_cutoff;
                 let max_capped_points = &input_json.max_capped_points;
                 let hard_cap = &input_json.hard_cap;
                 let bin_size = &input_json.bin_size;
@@ -669,7 +700,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     plot_height.clone(),
                     device_pixel_ratio.clone(),
                     png_dot_radius.clone(),
-                    log_cutoff.clone(),
                     bin_size.clone(),
                     max_capped_points.clone(),
                     hard_cap.clone(),
