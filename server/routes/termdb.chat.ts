@@ -70,6 +70,7 @@ function init({ genomes }) {
 			//mayLog('chatbot_input:', JSON.stringify(chatbot_input))
 
 			const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
+			const genedb = serverconfig.tpmasterdir + '/' + g.genedb.dbfile
 			const time1 = new Date().valueOf()
 			const classResult = await classify_query_by_dataset_type(
 				q.prompt,
@@ -85,7 +86,7 @@ function init({ genomes }) {
 			//let ai_output_data: any
 			let ai_output_json: any
 			if (classResult == 'summary') {
-				extract_summary_terms(q.prompt, comp_model_name, apilink, dataset_db)
+				extract_summary_terms(q.prompt, comp_model_name, apilink, dataset_db, serverconfig_ds_entries.aifiles, genedb)
 			}
 
 			//const time1 = new Date().valueOf()
@@ -290,13 +291,15 @@ async function extract_summary_terms(
 	prompt: string,
 	model_name: string,
 	apilink: string,
-	dataset_db: string
-	//genedb: string
+	dataset_db: string,
+	ai_json: string,
+	genedb: string
 ) {
 	const { db_rows, rag_docs } = await parse_dataset_db(dataset_db)
-	mayLog('db_rows:', db_rows)
-	mayLog('rag_docs:', rag_docs)
-
+	//mayLog('db_rows:', db_rows)
+	//mayLog('rag_docs:', rag_docs)
+	const genes_list = await parse_geneset_db(genedb)
+	mayLog('genedb:', genes_list)
 	const SchemaConfig = {
 		path: path.resolve('termdb.chat.ts'),
 		// Path to your tsconfig (required for proper type resolution)
@@ -314,11 +317,26 @@ async function extract_summary_terms(
 	const orderSchema = JSON.stringify(generator.createSchema(SchemaConfig.type))
 	const summary_variable: SummaryType = {
 		// Just defined this variable so that can commit to repo for now. Will be deleted later
-		term: 'abc',
-		action: 'summary'
+		term: 'abc'
 	}
 	mayLog('summary_variable:', summary_variable)
 	mayLog('orderSchema:', orderSchema)
+	mayLog(db_rows, rag_docs)
+	const words = prompt.split(/\s+/).map(str => str.toUpperCase()) // Split on whitespace and convert to uppercase
+	const common_genes = words.filter(item => genes_list.includes(item))
+	mayLog('common_genes:', common_genes)
+}
+
+async function parse_geneset_db(genedb: string) {
+	const db = new Database(genedb)
+	// Query the database
+	const desc_rows = db.prepare('SELECT * from codingGenes').all()
+	let genes_list: string[] = []
+	desc_rows.forEach((row: any) => {
+		genes_list.push(row.name)
+	})
+	genes_list = genes_list.map(str => str.toUpperCase()) // Converting to uppercase
+	return genes_list
 }
 
 async function parse_dataset_db(dataset_db: string) {
@@ -343,10 +361,8 @@ async function parse_dataset_db(dataset_db: string) {
 		const found = description_map.find((item: any) => item.name === row.id)
 		if (found) {
 			// Restrict db to only those items that have a description
-			mayLog(row)
 			const jsondata = JSON.parse(row.jsondata)
 			const description = description_map.filter((item: any) => item.name === row.id)
-			mayLog('description:', description)
 			const term_type: string = row.type
 
 			const values: DbValue[] = []
@@ -377,7 +393,7 @@ function parse_db_rows(db_row: DbRows) {
 		db_row.name +
 		'. This field is of the type:' +
 		db_row.term_type +
-		'. ' +
+		'. Description: ' +
 		db_row.description
 
 	if (db_row.values.length > 0) {

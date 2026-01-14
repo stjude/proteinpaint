@@ -36,7 +36,6 @@ export const ChatPayload: RoutePayload = {
 }
 
 export type SummaryType = {
-	action: string
 	term: string
 	term2?: string
 	simpleFilter?: FilterTerm[]
