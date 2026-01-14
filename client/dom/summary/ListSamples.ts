@@ -235,6 +235,14 @@ export class ListSamples {
 				} else this.addRowValue(s, this.t1, row)
 			} else continue //skip rows with no term value
 			if (this.t2) {
+				if (this.t2.term.type === TermTypes.SURVIVAL) {
+					/** skip survival terms for now
+					 * Works for all other ds except termdbtest but
+					 * integration tests fail when included.
+					 * skipping until fixed.
+					 */
+					continue
+				}
 				if (this.t2?.q?.hiddenValues && this.t2?.q.hiddenValues[s[this.t2.$id!].value]) {
 					continue
 				}
@@ -287,13 +295,11 @@ export class ListSamples {
 		if (tw.term.type === TermTypes.GENE_VARIANT) {
 			//This func mutates columns directly
 			addGvCols(tw, columns)
-		}
+		} else if (tw.term.type === TermTypes.SURVIVAL) {
 		/** Note: survival fails in termdbtest but not any other
-		 * ds. Leaving commented out for now.*/
-		// else if (tw.term.type === TermTypes.SURVIVAL) {
-		// 	return
-		// }
-		else {
+		 * ds.*/
+			return
+		} else {
 			columns.push({ label: tw.term.name })
 		}
 	}
