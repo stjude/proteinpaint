@@ -17,6 +17,7 @@ Fixes:
 - The list samples menu option in the box plot is fixed and includes logic to handle the divide by term. The values are now shown under term headings as well.
 - do not join to global filter in getTreeFilter() if the join argument is 'or', so that the edit menu will list all applicable categories
 - Implemented new ListSamples into violin plot. Clickable menu from plot label now correctly list samples and apply filters. Implemented for the brush menu as well.
+- ListSamples filters for samplelst terms correctly with new integration test
 
 
 ## 2.170.0
