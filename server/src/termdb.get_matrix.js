@@ -90,7 +90,7 @@ export async function get_matrix(q, req, res, ds, genome) {
 	const sampleEntries = Object.entries(data.samples || {})
 	const unsentSampleIds = new Set()
 	const lastSampleId = sampleEntries.slice(-1)[0][0]
-	debugLog('lastSampleId=', lastSampleId)
+	//debugLog('lastSampleId=', lastSampleId)
 
 	let hasStarted = false
 	const jsonStream = new Readable({

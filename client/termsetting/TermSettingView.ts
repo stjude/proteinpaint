@@ -38,6 +38,8 @@ export class TermSettingView {
 		}
 
 		if (!self.dom.holder) return // toggle the display of pilldiv and nopilldiv with availability of this.term
+		self.dom.holder.style('position', 'relative')
+
 		self.dom.nopilldiv = self.dom.holder
 			.append('div')
 			.style('cursor', 'pointer')
@@ -45,7 +47,16 @@ export class TermSettingView {
 			.on(`keyup.sjpp-termdb`, event => {
 				if (event.key == 'Enter') self.api.showTree(self.dom.nopilldiv.node(), event)
 			})
+
 		self.dom.pilldiv = self.dom.holder.append('div')
+
+		self.dom.loadingdiv = self.dom.holder
+			.append('div')
+			.style('display', 'none')
+			.style('padding', '5px')
+			.style('max-width', '150px')
+			.style('white-space', 'wrap')
+			.style('vertical-align', 'top')
 
 		// nopilldiv - placeholder label
 		if (self.placeholder) {
@@ -84,7 +95,7 @@ export class TermSettingView {
 
 		if (!self.term) {
 			// no term
-			self.dom.nopilldiv.style('display', 'block')
+			self.dom.nopilldiv.style('display', 'inline-block')
 			self.dom.pilldiv.style('display', 'none')
 			self.dom.btnDiv.style('display', 'none')
 			return

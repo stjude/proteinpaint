@@ -107,12 +107,17 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 				// otherwise, launch summary plot
 				config.chartType = config.term.term.type == 'survival' ? 'survival' : 'summary'
 				this.app.dispatch({
-					type: 'plot_create',
-					config
-				})
-				this.app.dispatch({
-					type: 'plot_delete',
-					id: this.id
+					type: 'app_refresh',
+					subactions: [
+						{
+							type: 'plot_create',
+							config
+						},
+						{
+							type: 'plot_delete',
+							id: this.id
+						}
+					]
 				})
 			})
 	}
