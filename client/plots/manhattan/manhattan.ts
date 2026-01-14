@@ -238,7 +238,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		.attr('text-anchor', 'middle')
 		.attr('font-size', `${settings.fontSize + 4}px`)
 		.attr('fill', 'black')
-		.text(data.plotData.y_max >= data.plotData.default_log_cutoff ? '-log₁₀(q-value) [capped]' : '-log₁₀(q-value)')
+		.text(data.plotData.has_capped_points ? '-log₁₀(q-value) [capped]' : '-log₁₀(q-value)')
 
 	// Add png image
 	svg
