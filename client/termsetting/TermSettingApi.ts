@@ -132,8 +132,14 @@ export class TermSettingApi {
 					}
 
 					if (self.opts.customFillTw) tw = self.opts.customFillTw(tw)
-					tw = await fillTermWrapper(tw, self.vocabApi, self.opts.defaultQ4fillTW)
-					// tw is now furbished
+					try {
+						tw = await fillTermWrapper(tw, self.vocabApi, self.opts.defaultQ4fillTW)
+						// tw is now furbished
+					} catch (e) {
+						self.dom.nopilldiv.text(e)
+						self.dom.pilldiv.text(e)
+						return
+					}
 
 					self.opts.callback!(tw)
 

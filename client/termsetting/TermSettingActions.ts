@@ -1,7 +1,5 @@
 import type { TermSetting } from './TermSetting.ts'
 import { Menu } from '#dom'
-// import { TwRouter } from '#tw'
-import { isNumericTerm } from '#shared/terms.js'
 import { get$id } from './utils.ts'
 
 export class TermSettingActions {
@@ -57,11 +55,6 @@ export class TermSettingActions {
 						// pass in default q{} to customize settings in edit menu
 						if (option.q) self.q = structuredClone(option.q)
 						await self.setHandler(option.termtype)
-						if (isNumericTerm(self.term) && !self.term.bins && self.term.type != 'survival') {
-							const tw = { term: self.term, q: self.q /*, $id: ''*/ }
-							//tw.$id = await get$id(tw)
-							await self.vocabApi.setTermBins(tw as any) // TODO: fix type
-						}
 						if (!self.$id) self.$id = await get$id(self.vocabApi.getTwMinCopy({ term: self.term, q: self.q }))
 						self.handler!.showEditMenu(self.dom.tip.d)
 					} else {
