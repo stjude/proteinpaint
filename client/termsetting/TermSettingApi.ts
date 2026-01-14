@@ -111,17 +111,9 @@ export class TermSettingApi {
 			tree: {
 				disable_terms: self.disable_terms,
 				click_term: async t => {
-					// set up timer to display loading message
-					let showLoading = true
-					let loadingShown = false
-					const loadingTimer = setTimeout(() => {
-						if (showLoading) {
-							self.dom.nopilldiv.text('Loading ...')
-							self.dom.pilldiv.text('Loading ...')
-							loadingShown = true
-						}
-					}, 200)
-
+					self.dom.nopilldiv.style('display', 'none')
+					self.dom.pilldiv.style('display', 'none')
+					self.dom.loadingdiv.text('Loading ...').style('display', 'inline-block')
 					self.dom.tip.hide()
 
 					let tw
@@ -135,21 +127,18 @@ export class TermSettingApi {
 					try {
 						tw = await fillTermWrapper(tw, self.vocabApi, self.opts.defaultQ4fillTW)
 						// tw is now furbished
-					} catch (e) {
-						self.dom.nopilldiv.text(e)
-						self.dom.pilldiv.text(e)
+					} catch (e: any) {
+						const msg = e.message || e.error || e
+						self.dom.loadingdiv.text(`Error loading term ${self.handler?.getPillName?.(tw.term)}: ${msg}`)
+						self.dom.nopilldiv.style('display', !self.term ? 'inline-block' : 'none')
+						self.dom.pilldiv.style('display', self.term ? 'block' : 'none')
 						return
 					}
 
 					self.opts.callback!(tw)
-
-					// stop the loading message from appearing
-					showLoading = false
-					clearTimeout(loadingTimer)
-					if (loadingShown) {
-						self.dom.nopilldiv.text('')
-						self.dom.pilldiv.text('')
-					}
+					self.dom.loadingdiv.style('display', 'none')
+					self.dom.nopilldiv.style('display', !self.term ? 'inline-block' : 'none')
+					self.dom.pilldiv.style('display', self.term ? 'block' : 'none')
 				}
 			}
 		})

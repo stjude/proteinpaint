@@ -96,6 +96,12 @@ class ViolinPlot extends PlotBase {
 	}
 
 	async setControls() {
+		// do not replace this.components.controls on every re-render,
+		// that could lead to missing control.state if there are errors
+		// with config.terms filling, etc. Better to set getDisplayStyle()
+		// option for an input that doesn't have to be rendered for a given
+		// term/term2/term0 combination.
+		if (this.components.controls) return
 		this.dom.controls.selectAll('*').remove()
 		const controlLabels = this.state.config.controlLabels
 		if (!controlLabels) throw 'controls labels not found'
@@ -144,7 +150,6 @@ class ViolinPlot extends PlotBase {
 					{ label: 'Horizontal', value: 'horizontal' }
 				]
 			},
-
 			{
 				label: 'Data symbol',
 				title: 'Symbol type',
@@ -278,16 +283,17 @@ class ViolinPlot extends PlotBase {
 				chartType: 'violin',
 				settingsKey: 'showStats',
 				boxLabel: 'Yes'
-			}
-		]
-		if (this.config.term2)
-			inputs.push({
+			},
+			{
 				label: 'Show association tests',
 				type: 'checkbox',
 				chartType: 'violin',
 				settingsKey: 'showAssociationTests',
-				boxLabel: 'Yes'
-			})
+				boxLabel: 'Yes',
+				getDisplayStyle: plot => (plot.term2 ? 'table-row' : 'none')
+			}
+		]
+
 		this.components.controls = await controlsInit({
 			app: this.app,
 			id: this.id,
@@ -336,12 +342,16 @@ class ViolinPlot extends PlotBase {
 		try {
 			data = await this.app.vocabApi.getViolinPlotData(args, null, this.api.getAbortSignal())
 		} catch (e) {
+			this.toggleLoadingDiv('none')
 			if (this.app.isAbortError(e)) return
 			throw e
 		}
 
 		this.data = data
-		if (this.data.error) throw this.data.error
+		if (this.data.error) {
+			this.toggleLoadingDiv('none')
+			throw this.data.error
+		}
 		args.tw.q.descrStats = this.data.descrStats
 
 		this.toggleLoadingDiv(this.opts.mode == 'minimal' ? 'none' : '')
