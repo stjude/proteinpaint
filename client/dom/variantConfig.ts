@@ -3,7 +3,7 @@ import type { TermValues, BaseValue } from '#types'
 import { dt2label } from '#shared/common.js'
 
 type Config = {
-	wt: boolean
+	genotype: 'variant' | 'wt' | 'nt'
 	values: BaseValue[]
 	mcount?: 'any' | 'single' | 'multiple'
 }
@@ -12,21 +12,23 @@ type Arg = {
 	holder: any // D3 holder where UI is rendered
 	values: TermValues // mutation classes of term
 	selectedValues?: BaseValue[] // selected mutation classes, when missing will default to all classes of term
+	genotype?: 'variant' | 'wt' | 'nt' // genotype (variant, wildtype, not tested)
 	dt: number // dt value, rendering of some elements are based on this value
 	mcount?: 'any' | 'single' | 'multiple' // mutation count, when missing will default to 'any'
-	wt?: boolean // whether genotype is wildtype
 	callback: (config: Config) => void
 }
 
 export function renderVariantConfig(arg: Arg) {
 	const { holder, dt } = arg
-	const wt = arg.wt || false
+	const genotype = arg.genotype || 'variant'
+	if (!['variant', 'wt', 'nt'].includes(genotype)) throw 'invalid genotype'
 	const values: BaseValue[] = Object.entries(arg.values).map(([k, v]) => {
 		return { key: k, label: v.label, value: k }
 	})
 	const selectedValues = arg.selectedValues?.length ? arg.selectedValues : values
 	if (!Number.isInteger(dt)) throw 'unexpected dt value'
 	const mcount = arg.mcount || 'any'
+	if (!['any', 'single', 'multiple'].includes(mcount)) throw 'invalid mcount'
 
 	holder.style('margin', '10px')
 
@@ -42,12 +44,13 @@ export function renderVariantConfig(arg: Arg) {
 		holder: genotypeDiv,
 		styles: { display: 'inline-block' },
 		options: [
-			{ label: dt2label[dt], value: 'mutated', checked: !wt },
-			{ label: 'Wildtype', value: 'wildtype', checked: wt }
+			{ label: dt2label[dt], value: 'variant', checked: genotype == 'variant' },
+			{ label: 'Wildtype', value: 'wt', checked: genotype == 'wt' },
+			{ label: 'Not tested', value: 'nt', checked: genotype == 'nt' }
 		],
 		callback: value => {
-			variantsDiv.style('display', value == 'mutated' ? 'block' : 'none')
-			applyBtn.property('disabled', value == 'mutated' && !values.length)
+			variantsDiv.style('display', value == 'variant' ? 'block' : 'none')
+			applyBtn.property('disabled', value == 'variant' && !values.length)
 		}
 	})
 
@@ -55,7 +58,7 @@ export function renderVariantConfig(arg: Arg) {
 	const variantsDiv = holder
 		.append('div')
 		.attr('data-testid', 'sjpp-variantConfig-variant')
-		.style('display', wt ? 'none' : 'block')
+		.style('display', genotype == 'variant' ? 'block' : 'none')
 		.style('margin-top', '10px')
 
 	let countRadio
@@ -125,15 +128,15 @@ export function renderVariantConfig(arg: Arg) {
 		.style('border-radius', '13px')
 		.style('margin-top', '15px')
 		.style('font-size', '.8em')
-		.property('disabled', !wt && !values.length)
+		.property('disabled', genotype == 'variant' && !values.length)
 		.text('APPLY')
 		.on('click', () => {
 			// get genotype
 			const selectedGenotype: any = genotypeRadio.inputs.nodes().find(r => r.checked)
 			if (!selectedGenotype) throw 'no genotype selected'
-			const config: Config = { values: [], wt: selectedGenotype.value == 'wildtype' }
-			if (!config.wt) {
-				// mutant genotype
+			const config: Config = { values: [], genotype: selectedGenotype.value }
+			if (config.genotype == 'variant') {
+				// variant genotype
 				// get selected mutation classes
 				const checkboxes = variantsDiv.select('tbody').selectAll('input').nodes()
 				const checkedIdxs: number[] = []
