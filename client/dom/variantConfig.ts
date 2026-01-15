@@ -10,6 +10,7 @@ type Config = {
 
 type Arg = {
 	holder: any // D3 holder where UI is rendered
+	header: string // UI header
 	values: TermValues // mutation classes of term
 	selectedValues?: BaseValue[] // selected mutation classes, when missing will default to all classes of term
 	genotype?: 'variant' | 'wt' | 'nt' // genotype (variant, wildtype, not tested)
@@ -32,8 +33,19 @@ export function renderVariantConfig(arg: Arg) {
 
 	holder.style('margin', '10px')
 
+	// header
+	holder
+		.append('div')
+		.style('margin-top', '15px')
+		.style('font-weight', 'bold')
+		.style('font-size', '.9em')
+		.text(arg.header)
+
 	// mutant vs. wildtype radio buttons
-	const genotypeDiv = holder.append('div').attr('data-testid', 'sjpp-variantConfig-genotype')
+	const genotypeDiv = holder
+		.append('div')
+		.attr('data-testid', 'sjpp-variantConfig-genotype')
+		.style('margin-top', '10px')
 	genotypeDiv
 		.append('div')
 		.style('display', 'inline-block')
