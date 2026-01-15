@@ -1,13 +1,16 @@
-import type { RoutePayload } from './routeApi.ts'
+import type { RoutePayload, Point } from './routeApi.ts'
 
 export type RunChartRequest = {
 	genome: string
 	dslabel: string
+	term1: string
+	term2?: string
 	//Other parameters can be added here
 }
 
 export type RunChartResponse = {
 	status: 'ok' | 'error'
+	series: Point[]
 }
 
 export const runChartPayload: RoutePayload = {
