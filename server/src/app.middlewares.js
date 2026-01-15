@@ -32,7 +32,16 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 	}
 	const testDataCacheDir = maySetTestDataCacheDir(doneLoading)
 
-	app.use(compression())
+	app.use(
+		compression({
+			filter: (req, res) => {
+				// some routes use stream.pipeline(..., gzip), so need to avoid recompressing here
+				if (req.path === '/termdb' && req.query.for === 'matrix') return false
+				// Fallback to standard filter function
+				return compression.filter(req, res)
+			}
+		})
+	)
 
 	app.use((req, res, next) => {
 		if (req.method.toUpperCase() == 'POST') {
@@ -102,6 +111,12 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 			Object.assign(req.query, req.body)
 		}
 
+		const { genome, dslabel } = req.query
+		if (genome && dslabel) {
+			const altGenome = serverconfig.features?.altGenomeByDslabel?.[dslabel]
+			if (altGenome) req.query.genome = altGenome
+		}
+
 		// log the request before adding protected info
 		log(req)
 		next()
@@ -135,7 +150,8 @@ function setHeaders(req, res, next) {
 	// limit the allowed request methods for the PP server
 	res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS, HEAD')
 
-	const debugtest = serverconfig.debugmode || serverconfig.defaultgenome == 'hg38-test'
+	const debugtest =
+		serverconfig.debugmode || serverconfig.defaultgenome == 'hg38-test' || serverconfig.features?.loosenCORS
 	const origin = req.get('origin') || req.get('referrer') || req.protocol + '://' + (req.get('host') || '*')
 	const getMatchingHost = hostname => hostname == '*' || origin.includes(`://${hostname}`)
 	// detect if the request origin has a matching entry in serverconfig.dsCredentials

@@ -55,6 +55,7 @@ export type HealthCheckResponse = {
 	}
 	w?: number[]
 	rs?: number
+	dsInitStatus: any[]
 }
 
 export const healthcheckPayload: RoutePayload = {

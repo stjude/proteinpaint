@@ -12,6 +12,7 @@ export function setMatrixDom(opts) {
 		.style('top', this.opts.controls ? 0 : '50px')
 		.style('left', '50px')
 	const errdiv = holder.append('div').attr('class', 'sja_errorbar').style('display', 'none')
+	const warningDiv = holder.append('div').attr('class', 'sja_errorbar').style('display', 'none')
 	const svg = holder
 		.append('svg')
 		.style('margin', '20px')
@@ -40,6 +41,7 @@ export function setMatrixDom(opts) {
 		holder,
 		contentNode: opts.holder.node().closest('.sjpp-output-sandbox-content') || opts.holder.node().parentNode,
 		errdiv,
+		warningDiv,
 		controls,
 		errorDiv,
 		loadingDiv,

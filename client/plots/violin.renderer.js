@@ -520,7 +520,7 @@ export default function setViolinRenderer(self) {
 				.style('opacity', 0)
 				.style('display', display)
 				.transition()
-				.duration('loadingWait' in self ? self.loadingWait : 100000)
+				.duration('loadingWait' in self ? self.loadingWait : 3000)
 				.style('opacity', 1)
 		} else {
 			self.dom.loadingDiv.style('display', display)

@@ -7,7 +7,6 @@ import { get_regression } from './termdb.regression.js'
 import { validate as snpValidate } from './termdb.snp.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { trigger_getLowessCurve } from '../routes/termdb.sampleScatter.ts'
-import { getData } from './termdb.matrix.js'
 import { get_mds3variantData } from './mds3.variant.js'
 import { get_lines_bigfile, mayCopyFromCookie } from './utils.js'
 import { authApi } from './auth.js'
@@ -18,6 +17,7 @@ import { TermTypeGroups } from '#shared/terms.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import serverconfig from './serverconfig.js'
 import { filterTerms } from './termdb.server.init.ts'
+import { get_matrix } from './termdb.get_matrix.js'
 /*
 ********************** EXPORTED
 handle_request_closure
@@ -247,25 +247,6 @@ function trigger_genesetByTermId(q, res, tdb) {
 	res.send(geneset)
 }
 
-async function get_matrix(q, req, res, ds, genome) {
-	if (q.getPlotDataByName) {
-		// send back the config for premade matrix plot
-		if (!ds.cohort?.matrixplots?.plots) throw 'ds.cohort.matrixplots.plots missing for the dataset'
-		const plot = ds.cohort.matrixplots.plots.find(p => p.name === q.getPlotDataByName)
-		if (!plot) throw 'invalid name of premade matrix plot' // invalid name could be attack string, avoid returning it so it won't be printed in html
-		res.send(plot.matrixConfig)
-		return
-	}
-	const data = await getData(q, ds, true) // FIXME hardcoded to true
-	if (authApi.canDisplaySampleIds(req, ds)) {
-		if (data.samples)
-			for (const sample of Object.values(data.samples)) {
-				sample.sampleName = data.refs.bySampleId?.[sample.sample]?.label || sample.sample
-			}
-	}
-	res.send(data)
-}
-
 async function get_numericDictTermCluster(q, req, res, ds, genome) {
 	if (q.getPlotDataByName) {
 		// send back the config for premade numericDictTermCluster plot
@@ -311,7 +292,7 @@ async function get_singleSampleData(q, req, res, ds, tdb) {
 	let result = []
 	if (canDisplay) {
 		try {
-			//TO DO: pass q.filter to apply user filter
+			// TODO: pass q.filter to apply user filter
 			result = await tdb.q.getSingleSampleData(q, ds)
 			res.send(result)
 		} catch (e) {
@@ -331,28 +312,31 @@ async function get_AllSamplesByName(q, req, res, ds) {
 	// return {}, k: sample name, v: id
 	if (!authApi.canDisplaySampleIds(req, ds)) return res.send({})
 
-	let sampleName2Id = new Map()
-
-	if (q.filter) {
-		q.ds = ds
-		const filteredSamples = ds.cohort.termdb.hasSampleAncestry
-			? await get_samples_ancestry(q.filter, q.ds, true)
-			: await get_samples(q, q.ds, true)
-		for (const sample of filteredSamples) {
-			const name = ds.sampleId2Name.get(sample.id)
-			const sample_type = ds.sampleId2Type.get(sample.id)
-			sampleName2Id.set(name, {
-				id: sample.id,
-				name,
-				ancestor_id: sample.ancestor_id,
-				ancestor_name: ds.sampleId2Name.get(sample.ancestor_id),
-				sample_type
-			})
+	try {
+		const sampleName2Id = new Map()
+		if (q.filter) {
+			q.ds = ds
+			const filteredSamples = ds.cohort.termdb.hasSampleAncestry
+				? await get_samples_ancestry(q.filter, q.ds, true)
+				: await get_samples(q, q.ds, true)
+			for (const sample of filteredSamples) {
+				const name = ds.sampleId2Name.get(sample.id)
+				const sample_type = ds.sampleId2Type.get(sample.id)
+				sampleName2Id.set(name, {
+					id: sample.id,
+					name,
+					ancestor_id: sample.ancestor_id,
+					ancestor_name: ds.sampleId2Name.get(sample.ancestor_id),
+					sample_type
+				})
+			}
+		} else {
+			for (const [key, value] of ds.sampleName2Id) sampleName2Id.set(key, { id: value })
 		}
-	} else {
-		for (const [key, value] of ds.sampleName2Id) sampleName2Id.set(key, { id: value })
+		res.send(Object.fromEntries(sampleName2Id))
+	} catch (e) {
+		res.send({ error: e.message || e })
 	}
-	res.send(Object.fromEntries(sampleName2Id))
 }
 
 async function LDoverlay(q, ds, res) {

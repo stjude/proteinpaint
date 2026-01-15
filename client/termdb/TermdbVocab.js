@@ -783,10 +783,16 @@ export class TermdbVocab extends Vocab {
 						.map(tw => (tw.term.chr ? `${tw.term.chr}:${tw.term.start}-${tw.term.stop}` : tw.term.name))
 						.sort() // sort the gene names by the default alphanumeric order to improve cache reuse even when terms are resorted
 		const allTerms2update = opts.terms.slice().sort((a, b) => (a.term.name < b.term.name ? -1 : 1)) // make copy of array as it will be truncated to empty. do not modify original
-		// TODO: do not hardcode, detect from termdbConfig, if this approach is preferred
+		// TODO: do not hardcode maxNumTerms, detect from termdbConfig, if this approach is preferred
+		// - NOTE: for GDC, 17 genes results in a total of about 150MB in-memory JSON string length
+		//         in the server route handler, which avoids the 512MB hard limit for sting processing
+		//         in the V8 engine
 		const maxNumTerms = opts.terms.length // this.vocab.dslabel === 'GDC' ? opts.terms.length : 1 // revert back to 1 to revert to previous behavior
 		let numResponses = 0
 		if (opts.loadingDiv) opts.loadingDiv.html('Updating data ...')
+
+		const warnings = []
+		const frozenEmptyObj = Object.freeze({})
 
 		while (true) {
 			const copies = getTerms2update(allTerms2update, maxNumTerms) // list of unique terms to update in this round
@@ -817,13 +823,21 @@ export class TermdbVocab extends Vocab {
 				//add this to limit to mutated cases
 				init.body.currentGeneNames = currentGeneNames
 			}
+
 			promises.push(
 				dofetch3('termdb', init, { cacheAs: 'decoded' }).then(data => {
 					if (data.error) throw data.error
+					if (data.warning) warnings.push(data.warning.message)
+					// console.log(825, structuredClone(Object.fromEntries(Object.entries(data.samples).slice(0, 5))))
 					if (!data.refs.bySampleId) data.refs.bySampleId = {}
+
+					const $copyAs = data.refs.$codes.copyAs || {}
+					const $objAssign = data.refs.$codes.objAssign || {}
+
 					for (const tw of copies) {
-						for (const sampleId in data.samples) {
-							const sample = data.samples[sampleId]
+						const { shortId, gene } = data.refs.byTermId[tw.$id] || frozenEmptyObj // avoid unnecessarily creating placeholder objects
+
+						for (const [sampleId, sample] of Object.entries(data.samples)) {
 							// ignore sample objects that are not annotated by other keys besides 'sample'
 							if (!Object.keys(sample).filter(k => k != 'sample').length) continue
 							samplesToShow.add(sampleId)
@@ -844,9 +858,21 @@ export class TermdbVocab extends Vocab {
 								}
 								samples[sampleId] = s
 							}
-							if (tw.$id in sample) {
+
+							if (!sample.sample) sample.sample = data.refs.bySampleId[sampleId].sample || sampleId
+							if (!sample.sampleName) sample.sampleName = data.refs.bySampleId[sampleId].sampleName || sample.sample
+
+							const d = shortId ? sample[shortId] : sample[tw.$id]
+							if (!d) continue
+							if (shortId in sample) {
+								sample[tw.$id] = d
+								delete sample[shortId]
+
+								// rehydrate stripped props
+								if (d.$) d[$copyAs[d.$]] = d.key
+
 								if (tw.term.type == 'termCollection') {
-									const termsValue = JSON.parse(sample[tw.$id].value)
+									const termsValue = JSON.parse(d.value)
 									const sum = termsValue.reduce((a, o) => a + Object.values(o)[0], 0)
 
 									let pre_val_sum = 0
@@ -867,12 +893,21 @@ export class TermdbVocab extends Vocab {
 										})
 										pre_val_sum += value
 									}
-									sample[tw.$id].values = values
-									sample[tw.$id].numerators_sum = numerators_sum
-									delete sample[tw.$id].value
+									d.values = values
+									d.numerators_sum = numerators_sum
+									delete d.value
+								} else if (gene && d.values) {
+									for (const v of d.values) {
+										if (!v.class && v.$) {
+											v.gene = gene
+											// rehydrate stripped props
+											Object.assign(v, $objAssign[v.$])
+											delete v.$
+										}
+									}
 								}
-								samples[sampleId][tw.$id] = sample[tw.$id]
 							}
+							samples[sampleId][tw.$id] = d
 						}
 
 						for (const sampleId in data.refs.bySampleId) {
@@ -957,7 +992,8 @@ export class TermdbVocab extends Vocab {
 			const sampleFilter = new RegExp(opts.sampleNameFilter || '.*')
 			const data = {
 				lst: lst.filter(row => samplesToShow.has(row.sample) && sampleFilter.test(row.sample)),
-				refs
+				refs,
+				warnings
 			}
 			data.samples = data.lst.reduce((obj, row) => {
 				obj[row.sample] = row

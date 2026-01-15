@@ -12,7 +12,7 @@ import { parse_textfilewithheader } from './parse_textfilewithheader.js'
 import { clinsig } from '../dataset/clinvar.ts'
 // will pass below as argument to mds3_init()
 import { mayMapRefseq2ensembl, flattenCaseByFields, may_add_readdepth, mapGenes2isoforms } from './mds3.gdc.js'
-import { isUsableTerm, joinUrl } from '@sjcrh/proteinpaint-shared'
+import { isUsableTerm, joinUrl, ezFetch } from '@sjcrh/proteinpaint-shared'
 
 const dsHelpers = {
 	mayMapRefseq2ensembl,
@@ -20,7 +20,9 @@ const dsHelpers = {
 	may_add_readdepth,
 	mapGenes2isoforms,
 	isUsableTerm,
-	joinUrl
+	joinUrl,
+	cachedFetch: utils.cachedFetch,
+	ezFetch
 }
 
 export const genomes = {} // { hg19: {...}, ... }

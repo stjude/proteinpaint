@@ -46,14 +46,20 @@ get_label4key
 */
 //in the future we may need to pass the sample type when there are more types than root and not root
 export async function get_samples(q, ds, canDisplay = false) {
+	if (!ds.cohort?.db?.connection?.prepare) {
+		// avoid crashing server on clicking "sample view" btn in gdc corr plot
+		throw 'this dataset does not support this query'
+	}
+
 	/*
-must have qfilter[]
-as the actual query is embedded in q.filter
-return an array of sample names passing through the filter
-*/
-	// NOTE: no need to call authApi.mayAdjustFilter() here since the app.middleware
-	// already created/adjusted q.filter; would only need to call here if
-	// q.__protected__.ignoreTermIds is modified or if routeTwLst can be supplied at this point
+	must have q.filter[]
+	as the actual query is embedded in q.filter
+	return an array of sample names passing through the filter
+
+	NOTE: no need to call authApi.mayAdjustFilter() here since the app.middleware
+	already created/adjusted q.filter; would only need to call here if
+	q.__protected__.ignoreTermIds is modified or if routeTwLst can be supplied at this point
+	*/
 
 	const filter = await getFilterCTEs(q.filter, ds) // if q.filter is blank, it returns null
 	const sql = filter

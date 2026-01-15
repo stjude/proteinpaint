@@ -1,5 +1,5 @@
 import * as common from '#shared/common.js'
-import { joinUrl, memFetch } from '#shared/index.js'
+import { joinUrl, ezFetch } from '#shared/index.js'
 import { compute_bins } from '#shared/termdb.bins.js'
 import { getBin } from '#shared/terms.js'
 import ky from 'ky'
@@ -7,11 +7,12 @@ import nodeFetch from 'node-fetch'
 import { combineSamplesById } from './mds3.variant2samples.js'
 import { guessSsmid } from '#shared/mds3tk.js'
 import { filter2GDCfilter } from './mds3.gdc.filter.js'
-import { write_tmpfile } from './utils.js'
+import { write_tmpfile, cachedFetch } from './utils.js'
 import { mayLog } from './helpers.ts'
 import serverconfig from './serverconfig.js'
 
 const maxCase4geneExpCluster = 1000 // max number of cases allowed for gene exp clustering app; okay just to hardcode in code and not to define in ds
+const maxCase4geneExp = 5000 // gdc gene exp api may not work for more than 5k cases https://gdc-ctds.atlassian.net/browse/SV-2695
 const maxGene4geneExpCluster = 2000 // max #genes allowed for gene exp cluster
 const ascns = 'Allele-specific Copy Number Segment'
 
@@ -33,7 +34,7 @@ validate_query_geneCnv2
 gdc_validate_query_geneExpression
 	geneExpression_getGenes
 	getExpressionData
-		getCases4expclustering
+		getCases4exp
 gdc_validate_query_singleCell_data
 gdc_validate_query_singleCell_DEgenes
 	getSinglecellDEfile
@@ -141,13 +142,28 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 
 		let t2 = new Date()
 
-		let cases4clustering
-		if (q.forClusteringAnalysis) {
-			cases4clustering = await getCases4expclustering(q, ds)
-			const t = new Date()
-			mayLog(cases4clustering.length, 'cases with exp data 4 clustering:', t - t2, 'ms')
-			t2 = t
-		}
+		/* 1/13/2026 
+
+		for gene exp term in correlation plot: 
+		  gdc gene exp api may not work when #cases is big. phil suggested imposing a limit
+		  list of cases are always queried from cohort, and checked against the limit.
+		  if over limit, it throws and ask user to lower cohort size
+		  even if the api issue is "sporadic", always checking against limit ensure uniform user experience
+		  rather than the gene exp sometimes works in correlation and sometimes not
+		  this adds a performance penalty to correlation plot
+		  later when api issue is resolved, can revert and only check cases when q.forClusteringAnalysis is true
+
+		for gene exp clustering:
+		  up to 1k cases allowed. when a cohort contains >1k expression cases,
+		  clustering app will still work to display first 1k cases, rather than quitting
+		  this requires list of cases to be always made so app will work with up to 1k cases
+		*/
+		const cases4clustering = await getCases4exp(q, ds)
+		const t = new Date()
+		mayLog(cases4clustering.length, 'cases with exp data 4 clustering:', t - t2, 'ms')
+		if (cases4clustering.length > maxCase4geneExp)
+			throw `Case count > ${maxCase4geneExp}: please limit the cohort size to view gene expression correlation plot`
+		t2 = t
 
 		// 3/25/2025 gdc backend doesn't index gene exp for sex chr genes. thus prevent these genes from showing up in app
 		const skippedSexChrGenes = [],
@@ -298,6 +314,7 @@ export function makeFilter(q) {
 }
 
 async function getExpressionData(q, gene_ids, cases4clustering, ensg2id, term2sample2value, ds) {
+	// throw ' ---- TEST ----' // uncomment to test error handling
 	const arg = {
 		gene_ids,
 		format: 'tsv',
@@ -305,38 +322,16 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2id, term2sa
 		//tsv_units: 'median_centered_log2_uqfpkm'
 	}
 
-	if (q.forClusteringAnalysis) {
-		/* is for clustering analysis. must retrieve list of cases passing filter and with exp data, and limit by max
-		otherwise the app will overload
-		*/
+	if (cases4clustering) {
+		// use provided list of cases
 		arg.case_ids = cases4clustering
 	} else {
-		// not for clustering analysis. do not limit by cases, so that e.g. a gene exp row will show all values in oncomatrix
+		// case list not provided. supply cohort
 		const f = makeCasesFilter(q)
 		arg.case_filters = { op: 'and', content: f }
 	}
 
 	const { host, headers } = ds.getHostHeaders(q)
-
-	// NOTES:
-	// - For now, will use nodeFetch where simultaneous long-running requests can cause terminated or socket hangup errors.
-	// - In Node 20, it looks like undici (which is used by experimental native fetch in Node 20) may not be performing garbage cleanup
-	// and freeing-up resources like sockets. This issue seems to be fixed in Node 22, which will be active in October 2024.
-	// - In the meantime, replacing ky with node-fetch may be a good enough fix for edge cases of very large, long-running requests.
-	//
-	// --- keeping previous request code below for reference ---
-	//
-	// const re = await ky.post(`${host.rest}/gene_expression/values`, { timeout: false, headers, json: arg }).text()
-	// const lines = re.trim().split('\n')
-	//
-	// const response = await got.post(`${host.rest}/gene_expression/values`, {
-	// 	headers,
-	// 	body: JSON.stringify(arg)
-	// })
-	// if (typeof response.body != 'string') throw 'response.body is not tsv text'
-	// const lines = response.body.trim().split('\n')
-	//
-
 	const re = await nodeFetch(`${host.rest}/gene_expression/values`, {
 		method: 'POST',
 		timeout: false,
@@ -346,17 +341,25 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2id, term2sa
 	if (typeof re != 'string') throw 'response.body is not tsv text'
 	const lines = re.trim().split('\n')
 
-	const bySampleId = {}
-	if (lines.length <= 1) return bySampleId
+	if (lines.length == 0) throw '/gene_expression/values returns no text'
 
-	// header line:
-	// gene \t case1 \t case 2 \t ...
-	const caseHeader = lines[0].split('\t').slice(1) // order of case uuid in tsv header
+	const bySampleId = {}
+
+	// parse header line: gene \t case1 \t case 2 \t ...
+	const caseHeader = lines[0].split('\t').slice(1)
 
 	for (const c of caseHeader) {
 		const s = ds.__gdc.caseid2submitter.get(c)
 		if (!s) throw 'case submitter id unknown for a uuid'
 		bySampleId[c] = { label: s }
+	}
+	if (lines.length == 1) {
+		/* gene lines with actual expression values missing from api-returned tsv data
+		known issue with api https://gdc-ctds.atlassian.net/browse/SV-2695
+		when cohort is large, this endpoint sometimes returns such data
+		detect when it happened and throw a msg to show on client to be informative, to avoid crashing plot
+		*/
+		throw `API returned tsv data has only a header line of ${caseHeader.length} cases but no gene lines`
 	}
 
 	let geneExprFilter
@@ -402,8 +405,8 @@ function mayFilterByExpression(filter, value) {
 	}
 }
 
-// should only use for gene exp clustering
-async function getCases4expclustering(q, ds) {
+// get cases for expression query
+async function getCases4exp(q, ds) {
 	const json = {
 		fields: 'case_id',
 		case_filters: makeFilter(q),
@@ -418,8 +421,8 @@ async function getCases4expclustering(q, ds) {
 		for (const h of re.data.hits) {
 			if (h.id && ds.__gdc.casesWithExpData.has(h.id)) {
 				lst.push(h.id)
-				if (lst.length == maxCase4geneExpCluster) {
-					// to not to overload clustering app, stop collecting when max number of cases is reached
+				if (q.forClusteringAnalysis && lst.length == maxCase4geneExpCluster) {
+					// flag indicates it is for clustering. apply this limit to not to overload clustering app, stop collecting when max number of cases is reached
 					break
 				}
 			}
@@ -959,24 +962,37 @@ async function snvindel_byisoform(opts, ds) {
 	const { host, headers } = ds.getHostHeaders(opts)
 
 	// must use POST as filter can be too long for GET
-	const p1 = ky
-		.post(joinUrl(host.rest, query1.endpoint), {
-			timeout: false,
-			headers,
-			json: Object.assign({ size: query1.size, fields: query1.fields.join(',') }, query1.filters(opts))
-		})
-		.json()
-	const p2 = ky
-		.post(joinUrl(host.rest, query2.endpoint), {
-			timeout: false,
-			headers,
-			json: Object.assign({ size: query2.size, fields: query2.fields.join(',') }, query2.filters(opts, ds))
-		})
-		.json()
+	// const p1 = ky
+	// 	.post(joinUrl(host.rest, query1.endpoint), {
+	// 		timeout: false,
+	// 		headers,
+	// 		json: Object.assign({ size: query1.size, fields: query1.fields.join(',') }, query1.filters(opts))
+	// 	})
+	// 	.json()
+	// const p2 = ky
+	// 	.post(joinUrl(host.rest, query2.endpoint), {
+	// 		timeout: false,
+	// 		headers,
+	// 		json: Object.assign({ size: query2.size, fields: query2.fields.join(',') }, query2.filters(opts, ds))
+	// 	})
+	// 	.json()
+
+	const p1 = cachedFetch(joinUrl(host.rest, query1.endpoint), {
+		method: 'POST',
+		timeout: false,
+		headers,
+		body: Object.assign({ size: query1.size, fields: query1.fields.join(',') }, query1.filters(opts))
+	})
+	const p2 = cachedFetch(joinUrl(host.rest, query2.endpoint), {
+		method: 'POST',
+		timeout: false,
+		headers,
+		body: Object.assign({ size: query2.size, fields: query2.fields.join(',') }, query2.filters(opts, ds))
+	})
 
 	const starttime = Date.now()
-
-	const [re_ssms, re_cases] = await Promise.all([p1, p2])
+	const r = await Promise.all([p1, p2])
+	const [re_ssms, re_cases] = [r[0].body, r[1].body]
 
 	mayLog('gdc snvindel tandem queries', Date.now() - starttime)
 
@@ -1569,9 +1585,14 @@ async function querySamplesTwlstNotForGeneexpclustering_withGenomicFilter(q, dic
 
 	const { host, headers } = ds.getHostHeaders(q) // will be reused below
 
-	const re = await ky
-		.post(joinUrl(host.rest, isoform2ssm_query2_getcase.endpoint), { timeout: false, headers, json: param })
-		.json()
+	const response = await cachedFetch(joinUrl(host.rest, isoform2ssm_query2_getcase.endpoint), {
+		method: 'POST',
+		timeout: false,
+		headers,
+		body: param
+	})
+
+	const re = response.body
 
 	delete q.isoforms
 
@@ -1714,7 +1735,7 @@ export async function querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q
 
 	const t1 = Date.now()
 
-	const re = await memFetch(
+	const { body: re } = await cachedFetch(
 		joinUrl(host.rest, 'cases'),
 		{ method: 'POST', headers, body: JSON.stringify(param) } //,
 		//{ q } // this q does not seem to be a request object reference that is shared across all genes, cannot use as a cache key
@@ -1791,17 +1812,17 @@ async function querySamplesTwlstForGeneexpclustering(q, twLst, ds) {
 	// NOTE: not using ky, until the issue with undici intermittent timeout/socket hangup is
 	// fully resolved, and which hapens only for long-running requests where possibly
 	// garbage collection is not being performed on http socket resources
-	const re = await memFetch(
+	const re = await ezFetch(
 		joinUrl(host.rest, 'cases'),
 		{
 			method: 'POST',
 			timeout: false,
 			headers,
-			body: JSON.stringify({
+			body: {
 				size: ds.__gdc.casesWithExpData.size,
 				fields: fields.join(','),
 				case_filters: filters.content.length ? filters : undefined
-			})
+			}
 		} //,
 		//{ q } // this q does not seem to be a request object reference that is shared across all genes, cannot use as a cache key
 	)

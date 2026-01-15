@@ -104,8 +104,7 @@ tape('handler methods', async test => {
 			first_bin: { startunbounded: true, stop: 2 },
 			isAtomic: true,
 			mode: 'discrete',
-			hiddenValues: {},
-			label_offset_ignored: false
+			hiddenValues: {}
 		},
 		`should give the expected default tw.q object`
 	)
@@ -120,8 +119,7 @@ tape('handler methods', async test => {
 			first_bin: { startunbounded: true, stop: 2 },
 			isAtomic: true,
 			mode: 'discrete',
-			hiddenValues: {},
-			label_offset_ignored: false
+			hiddenValues: {}
 		},
 		`should give the expected default tw.q object if the mode is not discrete`
 	)

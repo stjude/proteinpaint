@@ -3,7 +3,7 @@ import { TermSetting } from './TermSetting.ts'
 import type { Term, TermWrapper, Filter, GvPredefinedGsTW } from '#types'
 import { call_fillTW, get$id, fillTermWrapper } from './utils.ts'
 import { minimatch } from 'minimatch'
-import { isNumericTerm } from '#shared/terms.js'
+// import { isNumericTerm } from '#shared/terms.js'
 import { copyMerge, deepEqual } from '#rx'
 import { select } from 'd3-selection'
 import { TwRouter, CategoricalBase, SnpBase, QualitativeBase, NumericBase } from '#tw'
@@ -111,15 +111,9 @@ export class TermSettingApi {
 			tree: {
 				disable_terms: self.disable_terms,
 				click_term: async t => {
-					// set up timer to display loading message
-					let showLoading = true
-					const loadingTimer = setTimeout(() => {
-						if (showLoading) {
-							self.dom.nopilldiv.text('Loading ...')
-							self.dom.pilldiv.text('Loading ...')
-						}
-					}, 200)
-
+					self.dom.nopilldiv.style('display', 'none')
+					self.dom.pilldiv.style('display', 'none')
+					self.dom.loadingdiv.text('Loading ...').style('display', 'inline-block')
 					self.dom.tip.hide()
 
 					let tw
@@ -130,14 +124,21 @@ export class TermSettingApi {
 					}
 
 					if (self.opts.customFillTw) tw = self.opts.customFillTw(tw)
-					tw = await fillTermWrapper(tw, self.vocabApi, self.opts.defaultQ4fillTW)
-					// tw is now furbished
+					try {
+						tw = await fillTermWrapper(tw, self.vocabApi, self.opts.defaultQ4fillTW)
+						// tw is now furbished
+					} catch (e: any) {
+						const msg = e.message || e.error || e
+						self.dom.loadingdiv.text(`Error loading term ${self.handler?.getPillName?.(tw.term)}: ${msg}`)
+						self.dom.nopilldiv.style('display', !self.term ? 'inline-block' : 'none')
+						self.dom.pilldiv.style('display', self.term ? 'block' : 'none')
+						return
+					}
 
 					self.opts.callback!(tw)
-
-					// stop the loading message from appearing
-					showLoading = false
-					clearTimeout(loadingTimer)
+					self.dom.loadingdiv.style('display', 'none')
+					self.dom.nopilldiv.style('display', !self.term ? 'inline-block' : 'none')
+					self.dom.pilldiv.style('display', self.term ? 'block' : 'none')
 				}
 			}
 		})
@@ -181,11 +182,6 @@ export class TermSettingApi {
 			options.push({
 				label: 'Edit',
 				callback: async div => {
-					if (self.term && isNumericTerm(self.term) && !self.term.bins) {
-						const tw = { term: self.term, q: self.q /*, $id: ''*/ }
-						//tw.$id = await get$id(tw)
-						await self.vocabApi.setTermBins(tw as any) // TODO: fix type
-					}
 					await self.handler.showEditMenu(div.append('div'))
 				}
 			} as opt)

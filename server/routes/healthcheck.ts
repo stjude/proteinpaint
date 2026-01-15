@@ -12,7 +12,8 @@ export const api: RouteApi = {
 	}
 }
 
-function init({ genomes }) {
+function init(arg) {
+	const genomes: any = arg.genomes
 	return async (req, res): Promise<void> => {
 		try {
 			const q: HealthCheckRequest = req.query

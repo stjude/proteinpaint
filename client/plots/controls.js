@@ -130,7 +130,7 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.toggleVisibility = () => {
-		const controls = self.state.config.settings.controls
+		const controls = self.state?.config.settings.controls
 		if (controls && 'isOpen' in controls) {
 			self.app.dispatch({
 				type: 'plot_edit',

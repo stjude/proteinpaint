@@ -40,6 +40,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 		const controls = opts.controls ? holder : holder.append('div')
 		const div = holder.append('div')
 		const errorDiv = div.append('div').attr('class', 'sjpp-boxplot-error').style('opacity', 0.75)
+		const loading = div.append('div').style('padding', '24px').text('Loading ...')
 		const chartsDiv = div
 			.append('div')
 			.attr('class', 'sjpp-boxplot-charts')
@@ -51,6 +52,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 			controls: controls as Elem,
 			div,
 			error: errorDiv,
+			loading,
 			charts: chartsDiv,
 			legend: div.append('div').attr('class', 'sjpp-boxplot-legend').style('margin-top', '25px'),
 			tip: new Menu()
@@ -134,6 +136,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 		if (c.childType != this.type && c.chartType != this.type) return
 		if (!this.interactions) throw new Error('Interactions not initialized [box plot main()]')
 
+		this.toggleLoadingDiv()
 		const config = await this.getMutableConfig()
 		const settings = config.settings.boxplot
 		const model = new Model(this, config)
@@ -151,6 +154,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 			}
 			this.data = data
 		} catch (e: any) {
+			this.toggleLoadingDiv('none')
 			if (this.app.isAbortError(e)) return
 			if (e.stack) console.log(e.stack)
 			if (e instanceof Error) console.error(e.message || e)
@@ -198,7 +202,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 				}
 			})
 		}
-
+		this.toggleLoadingDiv('none')
 		new View(viewModel.viewData, settings, this.dom, this.app, this.interactions)
 		/** Enables downloading the chart images for DownloadMenu after rendering. */
 		this.data.charts = viewModel.viewData.charts
@@ -221,6 +225,14 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 		const name2svg = this.getChartImages()
 		const dm = new DownloadMenu(name2svg, this.state.config.term.term.name)
 		dm.show(event.clientX, event.clientY, event.target)
+	}
+
+	toggleLoadingDiv(display = '') {
+		if (display != 'none') {
+			this.dom.loading.style('opacity', 0).style('display', display).transition().duration(3000).style('opacity', 1)
+		} else {
+			this.dom.loading.style('display', display)
+		}
 	}
 }
 
