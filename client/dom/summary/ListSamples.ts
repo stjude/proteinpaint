@@ -53,6 +53,8 @@ export class ListSamples {
 		this.app = app
 		this.termfilter = termfilter
 		this.plot = plot
+		//Make bins an arg rather than attaching to plot
+		this.bins = config.bins || {}
 
 		this.t1 = config.term
 		this.t2 = config.term2
