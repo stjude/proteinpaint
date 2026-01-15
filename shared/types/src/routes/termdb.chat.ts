@@ -39,6 +39,7 @@ export type SummaryType = {
 	term: string
 	term2?: string
 	simpleFilter?: FilterTerm[]
+	html?: string
 }
 
 export type FilterTerm = {
@@ -52,8 +53,8 @@ export type CategoricalFilterTerm = {
 
 export type NumericFilterTerm = {
 	term: string
-	greaterThan: number
-	lessThan: number
+	start: number
+	stop: number
 }
 
 export type DbRows = {
