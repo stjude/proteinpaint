@@ -86,7 +86,15 @@ function init({ genomes }) {
 			//let ai_output_data: any
 			let ai_output_json: any
 			if (classResult == 'summary') {
-				extract_summary_terms(q.prompt, comp_model_name, apilink, dataset_db, serverconfig_ds_entries.aifiles, genedb)
+				extract_summary_terms(
+					q.prompt,
+					serverconfig.llm_backend,
+					comp_model_name,
+					apilink,
+					dataset_db,
+					serverconfig_ds_entries.aifiles,
+					genedb
+				)
 			}
 
 			//const time1 = new Date().valueOf()
@@ -289,7 +297,8 @@ async function classify_query_by_dataset_type(
 
 async function extract_summary_terms(
 	prompt: string,
-	model_name: string,
+	llm_backend_type: string,
+	comp_model_name: string,
 	apilink: string,
 	dataset_db: string,
 	ai_json: string,
@@ -299,7 +308,6 @@ async function extract_summary_terms(
 	//mayLog('db_rows:', db_rows)
 	//mayLog('rag_docs:', rag_docs)
 	const genes_list = await parse_geneset_db(genedb)
-	mayLog('genedb:', genes_list)
 	const SchemaConfig = {
 		path: path.resolve('termdb.chat.ts'),
 		// Path to your tsconfig (required for proper type resolution)
@@ -314,17 +322,79 @@ async function extract_summary_terms(
 		skipTypeCheck: true
 	}
 	const generator: SchemaGenerator = createGenerator(SchemaConfig)
-	const orderSchema = JSON.stringify(generator.createSchema(SchemaConfig.type))
+	const StringifiedSchema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // May use a typescript definition in the future which may be generated at server startup
 	const summary_variable: SummaryType = {
 		// Just defined this variable so that can commit to repo for now. Will be deleted later
 		term: 'abc'
 	}
 	mayLog('summary_variable:', summary_variable)
-	mayLog('orderSchema:', orderSchema)
 	mayLog(db_rows, rag_docs)
 	const words = prompt.split(/\s+/).map(str => str.toUpperCase()) // Split on whitespace and convert to uppercase
-	const common_genes = words.filter(item => genes_list.includes(item))
+	const common_genes = words.filter(item => genes_list.includes(item)) // The reason I only want to show common genes that are actually present in the genedb because otherwise showing ~20000 genes would increase the number of tokens significantly and may cause the LLM to loose context. Much easier to parse out relevant genes from the user prompt.
 	mayLog('common_genes:', common_genes)
+
+	// Read dataset JSON file
+	const dataset_json: any = await readJSONFile(ai_json)
+	mayLog('dataset_json.hasGeneExpression:', dataset_json)
+
+	// Parse out training data from the dataset JSON and add it to a string
+	const summary_ds = dataset_json.charts.filter((chart: any) => chart.type == 'Summary')
+	if (summary_ds.length == 0) throw 'summary information not present in dataset file'
+	if (summary_ds[0].TrainingData.length == 0) throw 'no training data provided for summary agent'
+
+	let train_iter = 0
+	let training_data = ''
+	for (const train_data of summary_ds[0].TrainingData) {
+		train_iter += 1
+		training_data +=
+			'Example question' +
+			train_iter.toString() +
+			': ' +
+			train_data.question +
+			' Example answer' +
+			train_iter.toString() +
+			':' +
+			JSON.stringify(train_data.answer) +
+			' '
+	}
+
+	let system_prompt =
+		'I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. The JSON schema is as follows: ' +
+		StringifiedSchema +
+		' term and term2 (if present) should ONLY contain names of the fields from the sqlite db. The "simpleFilter" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both "term"/"term2" and "simpleFilter". There are two kinds of filter variables: "Categorical" and "Numeric". "Categorical" variables are those variables which can have a fixed set of values e.g. gender, race. They are defined by the "CategoricalFilterTerm" which consists of "term" (a field from the sqlite3 db)  and "category" (a value of the field from the sqlite db).  "Numeric" variables are those which can have any numeric value. They are defined by "NumericFilterTerm" and contain  the subfields "term" (a field from the sqlite3 db), "start" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and "stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. The optional "html" field only contain messages of terms in the user input that were not found in their respective databases. The sqlite db in plain language is as follows: ' +
+		rag_docs.join(',') +
+		' training data is as follows:' +
+		training_data
+
+	if (dataset_json.hasGeneExpression) {
+		// If dataset has geneExpression data
+		if (common_genes.length > 0) {
+			system_prompt += '\n List of relevant genes are as follows (separated by comma(,)):' + common_genes.join(',')
+		}
+	} else {
+		if (common_genes.length > 0) {
+			system_prompt +=
+				'\n Dataset does NOT support gene expression. If any relevant genes are found, add a message in "html" field "Dataset does not support gene expression". List of relevant genes are as follows (separated by comma(,)):' +
+				common_genes.join(',')
+		}
+	}
+
+	system_prompt += ' Question: {' + prompt + '} answer:'
+	//mayLog('system_prompt:', system_prompt)
+
+	let response: string
+	if (llm_backend_type == 'SJ') {
+		// Local SJ server
+		response = await call_sj_llm(system_prompt, comp_model_name, apilink)
+	} else if (llm_backend_type == 'ollama') {
+		// Ollama server
+		response = await call_ollama(system_prompt, comp_model_name, apilink)
+	} else {
+		// Will later add support for azure server also
+		throw 'Unknown LLM backend'
+	}
+	mayLog('response:', JSON.parse(response))
+	return JSON.parse(response)
 }
 
 async function parse_geneset_db(genedb: string) {
