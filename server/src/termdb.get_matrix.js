@@ -147,6 +147,10 @@ export async function get_matrix(q, req, res, ds, genome) {
 						if (d.key !== d[c[1]]) continue
 						delete d[c[1]] // can be copied as data[refs.$codes.copyAs[d.$]] = d.key
 						d.$ = c[0]
+						break // can only encode one property at a time, for example:
+						// if d.key == d.value and d.key == d.label,
+						// d.$ right now is able to point to only one encoded property,
+						// and therefore cannot delete both d.value and d.label
 					}
 				}
 
