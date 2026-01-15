@@ -15,10 +15,14 @@ export type RoutePayload = {
 	/** if examples are not provided, will not test */
 	examples?: PayloadExample[]
 }
-
 export type RouteMethod = {
 	typeId: string
 	checker?: any
+}
+/* later replace actual values */
+export type Point = {
+	x: string
+	y: string | number
 }
 
 type RouteInitArg = {
