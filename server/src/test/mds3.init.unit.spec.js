@@ -8,6 +8,8 @@ Tests:
 	filterByItem: sample not tested
 	filterByItem: wildtype sample matches wildtype filter
 	filterByItem: mutated sample does not match wildtype filter
+	filterByItem: not tested sample matches not tested filter
+	filterByItem: wildtype/mutated samples do not match not tested filter
 	filterByItem: mcount=any
 	filterByItem: mcount=single
 	filterByItem: mcount=multiple
@@ -37,6 +39,7 @@ test('filterByItem: mutated sample matches filter', t => {
 				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 			],
+			genotype: 'variant',
 			mcount: 'any'
 		}
 	}
@@ -64,6 +67,7 @@ test('filterByItem: tested sample, but no match', t => {
 				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 			],
+			genotype: 'variant',
 			mcount: 'any'
 		}
 	}
@@ -88,6 +92,7 @@ test('filterByItem: sample not tested', t => {
 				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 			],
+			genotype: 'variant',
 			mcount: 'any'
 		}
 	}
@@ -113,7 +118,7 @@ test('filterByItem: wildtype sample matches wildtype filter', t => {
 		tvs: {
 			term: { dt: 1, type: 'dtsnvindel' },
 			values: [],
-			wt: true
+			genotype: 'wt'
 		}
 	}
 	const mlst = [{ dt: 1, class: 'WT' }]
@@ -130,7 +135,7 @@ test('filterByItem: mutated sample does not match wildtype filter', t => {
 		tvs: {
 			term: { dt: 1, type: 'dtsnvindel' },
 			values: [],
-			wt: true
+			genotype: 'wt'
 		}
 	}
 
@@ -150,6 +155,48 @@ test('filterByItem: mutated sample does not match wildtype filter', t => {
 	t.end()
 })
 
+test('filterByItem: not tested sample matches not tested filter', t => {
+	t.plan(2)
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [],
+			genotype: 'nt'
+		}
+	}
+	const mlst = [{ dt: 1, class: 'Blank' }]
+	const [pass, tested] = filterByItem(filter, mlst)
+	t.equal(pass, true, 'Sample passes filter')
+	t.equal(tested, false, 'Sample is not tested')
+	t.end()
+})
+
+test('filterByItem: wildtype/mutated samples do not match not tested filter', t => {
+	t.plan(6)
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [],
+			genotype: 'nt'
+		}
+	}
+	const mlst = [{ dt: 1, class: 'WT' }]
+	const [pass, tested] = filterByItem(filter, mlst)
+	t.equal(pass, false, 'Sample does not pass filter')
+	t.equal(tested, true, 'Sample is tested')
+
+	const mlst1 = [{ dt: 1, class: 'M' }]
+	const mlst2 = [{ dt: 1, class: 'F' }]
+	for (const mlst of [mlst1, mlst2]) {
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	t.end()
+})
+
 test('filterByItem: mcount=any', t => {
 	t.plan(14)
 	const filter = {
@@ -161,6 +208,7 @@ test('filterByItem: mcount=any', t => {
 				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 			],
+			genotype: 'variant',
 			mcount: 'any'
 		}
 	}
@@ -235,6 +283,7 @@ test('filterByItem: mcount=single', t => {
 				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 			],
+			genotype: 'variant',
 			mcount: 'single'
 		}
 	}
@@ -299,6 +348,7 @@ test('filterByItem: mcount=multiple', t => {
 				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 			],
+			genotype: 'variant',
 			mcount: 'multiple'
 		}
 	}
@@ -383,6 +433,7 @@ test('filterByItem: isnot=true', t => {
 				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 			],
+			genotype: 'variant',
 			mcount: 'any',
 			isnot: true
 		}
@@ -430,6 +481,7 @@ test('filterByItem: isnot=true', t => {
 				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 			],
+			genotype: 'variant',
 			mcount: 'single',
 			isnot: true
 		}
@@ -482,6 +534,7 @@ test('filterByItem: mutation, origin', t => {
 				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 			],
+			genotype: 'variant',
 			mcount: 'any'
 		}
 	}
@@ -541,7 +594,7 @@ test('filterByItem: wildtype, origin', t => {
 		tvs: {
 			term: { dt: 1, type: 'dtsnvindel', origin: 'somatic' },
 			values: [],
-			wt: true
+			genotype: 'wt'
 		}
 	}
 
@@ -691,6 +744,7 @@ test('filterByTvsLst: single tvs', t => {
 						{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 						{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 					],
+					genotype: 'variant',
 					mcount: 'any'
 				}
 			}
@@ -751,6 +805,7 @@ test('filterByTvsLst: multiple tvs, OR join', t => {
 				tvs: {
 					term: { dt: 1, type: 'dtsnvindel' },
 					values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
+					genotype: 'variant',
 					mcount: 'any'
 				}
 			},
@@ -759,6 +814,7 @@ test('filterByTvsLst: multiple tvs, OR join', t => {
 				tvs: {
 					term: { dt: 4, type: 'dtcnv' },
 					values: [{ key: 'CNV_amp', label: 'Gain', value: 'CNV_amp' }],
+					genotype: 'variant',
 					mcount: 'any'
 				}
 			}
@@ -834,6 +890,7 @@ test('filterByTvsLst: multiple tvs, AND join', t => {
 				tvs: {
 					term: { dt: 1, type: 'dtsnvindel' },
 					values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
+					genotype: 'variant',
 					mcount: 'any'
 				}
 			},
@@ -842,6 +899,7 @@ test('filterByTvsLst: multiple tvs, AND join', t => {
 				tvs: {
 					term: { dt: 4, type: 'dtcnv' },
 					values: [{ key: 'CNV_amp', label: 'Gain', value: 'CNV_amp' }],
+					genotype: 'variant',
 					mcount: 'any'
 				}
 			}
@@ -921,6 +979,7 @@ test('filterByTvsLst: in=false', t => {
 						{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 						{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 					],
+					genotype: 'variant',
 					mcount: 'any'
 				}
 			}
@@ -981,6 +1040,7 @@ test('filterByTvsLst: nested tvslst', t => {
 				tvs: {
 					term: { dt: 1, type: 'dtsnvindel', origin: 'somatic' },
 					values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
+					genotype: 'variant',
 					mcount: 'any'
 				}
 			},
@@ -989,6 +1049,7 @@ test('filterByTvsLst: nested tvslst', t => {
 				tvs: {
 					term: { dt: 1, type: 'dtsnvindel', origin: 'germline' },
 					values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
+					genotype: 'variant',
 					mcount: 'any'
 				}
 			}
@@ -1000,6 +1061,7 @@ test('filterByTvsLst: nested tvslst', t => {
 		tvs: {
 			term: { dt: 4, type: 'dtcnv' },
 			values: [{ key: 'CNV_amp', label: 'Gain', value: 'CNV_amp' }],
+			genotype: 'variant',
 			mcount: 'any'
 		}
 	}
