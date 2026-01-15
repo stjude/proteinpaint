@@ -30,21 +30,22 @@ class RunChart2 extends PlotBase implements RxComponent {
 		}
 	}
 
-	//Need to implement getState() and init() here
+	//Need to implement init() here
+	getState(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
+		return { config }
+	}
 
 	async main() {
-		const config = await this.getMutableConfig()
-		console.log('RunChart2 main()', config)
-		const result = await dofetch3('termdb/runChart', this.getRequestArg())
+		const result = await dofetch3('termdb/runChart', { body: await this.getRequestArg() })
 		console.log('RunChart2 runChart result', result)
 	}
-	getRequestArg() {
-		const config = this.state.config
-		console.log('RunChart2 getRequestArg()', config)
+	async getRequestArg() {
+		const config = await this.getMutableConfig()
 		const reqArg: any = {
-			genome: config.genome,
-			dslabel: config.dslabel,
-			term1: config.term1
+			genome: this.app.vocabApi.vocab.genome,
+			dslabel: this.app.vocabApi.vocab.dslabel,
+			term: config.term
 		}
 		if (config.term2) reqArg.term2 = config.term2
 		return reqArg
@@ -55,9 +56,6 @@ export const runChart2Init = getCompInit(RunChart2)
 export const componentInit = runChart2Init
 
 export function getPlotConfig(opts /*app*/) {
-	// if (!opts.term) throw new Error('opts.term{} missing')
-	console.log('RunChart2 getPlotConfig()', opts)
-
 	const config = {
 		//TODO: fill in default config
 	}
