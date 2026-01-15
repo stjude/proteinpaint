@@ -865,7 +865,9 @@ tape('tvs: Gene Variant - SNV/indel', async test => {
 								]
 							}
 						},
-						values: [{ key: 'M', label: 'MISSENSE', value: 'M', bar_width_frac: null }]
+						values: [{ key: 'M', label: 'MISSENSE', value: 'M', bar_width_frac: null }],
+						genotype: 'variant',
+						mcount: 'any'
 					}
 				}
 			]
@@ -952,7 +954,9 @@ tape('tvs: Gene Variant - SNV/indel - Wildtype', async test => {
 								]
 							}
 						},
-						values: [{ key: 'M', label: 'MISSENSE', value: 'M', bar_width_frac: null }]
+						values: [{ key: 'M', label: 'MISSENSE', value: 'M', bar_width_frac: null }],
+						genotype: 'variant',
+						mcount: 'any'
 					}
 				}
 			]
@@ -983,7 +987,7 @@ tape('tvs: Gene Variant - SNV/indel - Wildtype', async test => {
 
 		const genotypeDiv = tipd.select('[data-testid="sjpp-variantConfig-genotype"]')
 		const genotypeRadio = genotypeDiv.selectAll('input[type="radio"]').nodes()
-		genotypeRadio.find(r => r.value == 'wildtype').click()
+		genotypeRadio.find(r => r.value == 'wt').click()
 		valueBtn = await detectChildText({
 			target: filternode,
 			selector: '.value_btn',
@@ -994,7 +998,7 @@ tape('tvs: Gene Variant - SNV/indel - Wildtype', async test => {
 		test.fail('test error: ' + e)
 	}
 	test.end()
-	//if (test._ok) opts.holder.remove()
+	if (test._ok) opts.holder.remove()
 })
 
 tape('tvs: Gene Variant - CNV - categorical', async test => {
@@ -1036,7 +1040,9 @@ tape('tvs: Gene Variant - CNV - categorical', async test => {
 								]
 							}
 						},
-						values: [{ key: 'CNV_amp', label: 'Copy number gain', value: 'CNV_amp', bar_width_frac: null }]
+						values: [{ key: 'CNV_amp', label: 'Copy number gain', value: 'CNV_amp', bar_width_frac: null }],
+						genotype: 'variant',
+						mcount: 'any'
 					}
 				}
 			]
@@ -1229,7 +1235,9 @@ tape('tvs: Gene Variant - Fusion', async test => {
 								value: 'Fuserna',
 								bar_width_frac: null
 							}
-						]
+						],
+						genotype: 'variant',
+						mcount: 'any'
 					}
 				}
 			]
