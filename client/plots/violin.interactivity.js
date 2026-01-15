@@ -1,8 +1,6 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
-import { DownloadMenu, niceNumLabels } from '#dom'
+import { DownloadMenu, niceNumLabels, ListSamples, renderTable } from '#dom'
 import { TermTypes } from '#shared/terms.js'
-import { getSamplelstFilter } from '../mass/groups.js'
-import { listSamples } from './barchart.events.js'
 
 export function setInteractivity(self) {
 	self.getChartImages = function () {
@@ -33,7 +31,7 @@ export function setInteractivity(self) {
 			{
 				label: `Add filter: ${plot.label.split(',')[0]}`,
 				testid: 'sjpp-violinLabOpt-addf',
-				callback: getAddFilterCallback(t1, t2, self, plot, label, false)
+				callback: getAddFilterCallback(self, plot)
 			},
 			{
 				label: `Hide: ${plot.label}`,
@@ -62,12 +60,17 @@ export function setInteractivity(self) {
 				label: `List samples`,
 				testid: 'sjpp-violinLabOpt-list',
 				callback: async () => {
-					const [start, end] = [self.data.min, self.data.max * 2]
-					await self.callListSamples(event, t1, t2, plot, start, end)
+					/** self.data.max * 2 appears to be a workaround for a
+					 * previous bug in the list samples logic. Since that logic
+					 * has been refined, this appears to be no longer necessary.
+					 * Commenting out for now, but leaving in place in case.*/
+					// const [start, end] = [self.data.min, self.data.max * 2]
+					const [start, end] = [self.data.min, self.data.max]
+					await self.callListSamples(event, plot, start, end)
 				}
 			})
 		}
-		self.displayMenu(event, options, plot)
+		self.displayMenu(event, options)
 	}
 
 	self.displayBrushMenu = function (t1, t2, self, plot, event, scale, isH) {
@@ -80,7 +83,7 @@ export function setInteractivity(self) {
 			{
 				label: `Add filter`,
 				testid: 'sjpp-violinBrushOpt-addf',
-				callback: getAddFilterCallback(t1, t2, self, plot, start, end, true)
+				callback: getAddFilterCallback(self, plot, start, end)
 			}
 		]
 
@@ -88,13 +91,13 @@ export function setInteractivity(self) {
 			options.push({
 				label: `List samples`,
 				testid: 'sjpp-violinBrushOpt-list',
-				callback: async () => self.callListSamples(event.sourceEvent, t1, t2, plot, start, end)
+				callback: async () => self.callListSamples(event.sourceEvent, plot, start, end)
 			})
 		}
-		self.displayMenu(event.sourceEvent, options, plot, start, end)
+		self.displayMenu(event.sourceEvent, options, start, end)
 	}
 
-	self.displayMenu = function (event, options, plot, start, end) {
+	self.displayMenu = function (event, options, start, end) {
 		const tip = self.dom.clicktip.clear().show(event.clientX, event.clientY)
 
 		const isBrush = start != null && end != null
@@ -124,35 +127,35 @@ export function setInteractivity(self) {
 			})
 	}
 
-	self.callListSamples = async function (event, t1, t2, plot, start, end) {
-		let tvslst
-		const geneVariant = {}
-		if (t1.term.type == 'geneVariant' || t2?.term.type == 'geneVariant') {
-			// geneVariant filtering will be handled separately by
-			// mayFilterByGeneVariant() in client/plots/barchart.events.js
-			let violinTw
-			if (t1.term.type == 'geneVariant') {
-				geneVariant.t1value = plot.seriesId
-				violinTw = t2
-			} else {
-				geneVariant.t2value = plot.seriesId
-				violinTw = t1
-			}
-			tvslst = self.getTvsLst(violinTw, null, plot, start, end)
-		} else {
-			tvslst = self.getTvsLst(t1, t2, plot, start, end)
-		}
-		const terms = [t1]
-		if (t2) terms.push(t2)
-		const arg = {
-			event,
-			self,
-			terms,
-			tvslst,
-			geneVariant,
-			tip: self.dom.sampletabletip
-		}
-		await listSamples(arg)
+	//get sample list for menu option callbacks
+	self.getSampleList = function (plot, start, end) {
+		const configCopy = self.config
+		configCopy.bins = self.data.bins
+
+		const rangeStart = start !== undefined ? start : null
+		const rangeStop = end !== undefined ? end : null
+
+		const ls = new ListSamples(self.app, self.state.termfilter, configCopy, plot, rangeStart, rangeStop)
+		return ls
+	}
+
+	self.callListSamples = async function (event, plot, start, end) {
+		const ls = self.getSampleList(plot, start, end)
+		const data = await ls.getData()
+		const [rows, columns] = ls.setTableData(data)
+
+		const tip = self.dom.sampletabletip
+		tip.clear().show(event.clientX, event.clientY, false)
+
+		renderTable({
+			rows,
+			columns,
+			div: tip.d,
+			showLines: true,
+			maxHeight: '40vh',
+			resize: true,
+			dataTestId: 'sjpp-listsampletable'
+		})
 	}
 
 	self.labelHideLegendClicking = function (t2, plot) {
@@ -194,7 +197,6 @@ export function setInteractivity(self) {
 				const q = event.target.__data__
 				if (q === undefined) return
 				if (q.isHidden === true && q.isClickable === true) {
-					console.log(11)
 					self.dom.hovertip.clear().show(event.clientX, event.clientY).d.append('span').text('Click to unhide plot')
 				}
 			})
@@ -202,95 +204,14 @@ export function setInteractivity(self) {
 				self.dom.hovertip.hide()
 			})
 	}
-
-	self.createTvsLstRanges = function (term, tvslst, rangeStart, rangeStop, lstIdx) {
-		createTvsTerm(term, tvslst)
-
-		tvslst.lst[lstIdx].tvs.ranges = [
-			{
-				//Only show integers for integer terms
-				start: term.term.type == 'integer' ? Math.round(rangeStart) : rangeStart,
-				stop: term.term.type == 'integer' ? Math.round(rangeStop) : rangeStop,
-				startinclusive: true,
-				stopinclusive: true,
-				startunbounded: false,
-				stopunbounded: false
-			}
-		]
-	}
-
-	self.getTvsLst = function (t1, t2, plot, rangeStart, rangeStop) {
-		const tvslst = {
-			type: 'tvslst',
-			in: true,
-			join: 'and',
-			lst: []
-		}
-
-		if (t2) {
-			if (
-				t2.q?.mode === 'continuous' ||
-				((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.overlayTwBins != null)
-			) {
-				createTvsLstValues(t1, plot, tvslst, 0)
-				self.createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
-			} else {
-				createTvsLstValues(t2, plot, tvslst, 0)
-				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
-			}
-		} else self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
-		return tvslst
-	}
 }
 
-function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop, isBrush) {
-	const tvslst = {
-		type: 'tvslst',
-		in: true,
-		join: 'and',
-		lst: []
-	}
-
-	if (t2) {
-		if (t1.term.type === 'categorical' || t1.term.type === 'condition') {
-			createTvsLstValues(t1, plot, tvslst, 0)
-
-			if (isBrush) {
-				self.createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
-			}
-		} else if (
-			t2.q?.mode === 'continuous' ||
-			((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.overlayTwBins != null)
-		) {
-			createTvsTerm(t2, tvslst)
-			tvslst.lst[0].tvs.ranges = [
-				{
-					start: plot.overlayTwBins?.start || null,
-					stop: plot.overlayTwBins?.stop || null,
-					startinclusive: plot.overlayTwBins?.startinclusive || true,
-					stopinclusive: plot.overlayTwBins?.stopinclusive || false,
-					startunbounded: plot.overlayTwBins?.startunbounded ? plot.overlayTwBins?.startunbounded : null,
-					stopunbounded: plot.overlayTwBins?.stopunbounded ? plot.overlayTwBins?.stopunbounded : null
-				}
-			]
-			if (isBrush) {
-				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
-			}
-		} else {
-			createTvsLstValues(t2, plot, tvslst, 0)
-			if (isBrush) {
-				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
-			}
-		}
-	} else {
-		if (isBrush) {
-			self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
-		}
-	}
+function getAddFilterCallback(self, plot, rangeStart, rangeStop) {
+	const ls = self.getSampleList(plot, rangeStart, rangeStop)
 
 	return () => {
 		const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
-		const filter = filterJoin([filterUiRoot, tvslst])
+		const filter = filterJoin([filterUiRoot, ls.tvslst])
 		filter.tag = 'filterUiRoot'
 		self.app.dispatch({
 			type: 'filter_replace',
@@ -308,39 +229,4 @@ function getUpdatedQfromClick(plot, term, isHidden = false) {
 	if (isHidden) q.hiddenValues[id] = 1
 	else delete q.hiddenValues[id]
 	return q
-}
-
-function createTvsLstValues(term, plot, tvslst, lstIdx) {
-	createTvsTerm(term, tvslst)
-
-	tvslst.lst[lstIdx].tvs.values = [
-		{
-			key: plot.seriesId,
-			label: plot.label
-		}
-	]
-
-	if (term.q.type == 'custom-groupset' || term.q.type == 'predefined-groupset') {
-		const groupset =
-			term.q.type == 'custom-groupset' ? term.q.customset : term.term.groupsetting.lst[term.q.predefined_groupset_idx]
-		const group = groupset.groups.find(group => group.name == plot.seriesId)
-		if (!group) throw 'group not found'
-		tvslst.lst[lstIdx].tvs.values = group.values
-	} else if (term.term.type === 'condition') {
-		tvslst.lst[lstIdx].tvs.bar_by_grade = term.q.bar_by_grade
-		tvslst.lst[lstIdx].tvs.value_by_max_grade = term.q.value_by_max_grade
-	} else if (term.term.type === 'samplelst') {
-		const ids = term.term.values[plot.label].list.map(s => s.sampleId)
-		const tvs = getSamplelstFilter(ids).lst[0] // tvslst is an array of 1 tvs
-		tvslst.lst[lstIdx] = tvs
-	}
-}
-
-function createTvsTerm(term, tvslst) {
-	tvslst.lst.push({
-		type: 'tvs',
-		tvs: {
-			term: term.term
-		}
-	})
 }

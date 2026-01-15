@@ -25,6 +25,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 	private useDefaultSettings = true
 	parentId?: string
 	api: any
+	configTermKeys = ['term', 'term0', 'term2']
 
 	constructor(opts: TdbBoxPlotOpts, api: MassAppApi) {
 		super(opts)
@@ -124,23 +125,26 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 
 	async init() {
 		this.dom.div.style('display', 'inline-block').style('margin-left', '20px')
-		this.interactions = new BoxPlotInteractions(this.app, this.dom, this.id)
+		this.interactions = new BoxPlotInteractions(this.app, this.dom, this.id, () => {
+			return this.data
+		})
 		await this.setControls()
 	}
 
 	async main() {
-		const config = structuredClone(this.state.config)
-		if (config.childType != this.type && config.chartType != this.type) return
-
+		const c = this.state.config
+		if (c.childType != this.type && c.chartType != this.type) return
 		if (!this.interactions) throw new Error('Interactions not initialized [box plot main()]')
 
 		this.toggleLoadingDiv()
+		const config = await this.getMutableConfig()
 		const settings = config.settings.boxplot
 		const model = new Model(this, config)
 
 		try {
 			const data = await model.getData()
 			config.term.q.descrStats = data.descrStats
+			config.bins = data.bins
 
 			if (data.error) throw new Error(data.error)
 			if (!data.charts || !Object.keys(data.charts).length) {

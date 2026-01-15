@@ -151,6 +151,7 @@ export class ChartRender {
 					this.interactions,
 					labelMenuTip,
 					settings.isVertical
+					/*chart*/
 				)
 			}
 		}

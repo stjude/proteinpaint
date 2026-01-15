@@ -6,6 +6,7 @@ import { sortPlot2Values } from './termdb.violin.ts'
 import { getDescrStats, getStdDev, getMean } from './termdb.descrstats.ts'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { roundValueAuto } from '#shared/roundValue.js'
+import { isNumericTerm } from '@sjcrh/proteinpaint-shared'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/boxplot',
@@ -36,14 +37,13 @@ function init({ genomes }) {
 			const data = await getData({ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__ }, ds)
 			if (data.error) throw new Error(data.error)
 
-			const { absMin, absMax, charts, uncomputableValues, descrStats, outlierMin, outlierMax } = await processData(
-				data,
-				q
-			)
+			const { absMin, absMax, bins, charts, uncomputableValues, descrStats, outlierMin, outlierMax } =
+				await processData(data, q)
 
 			const returnData: BoxPlotResponse = {
 				absMin: q.removeOutliers ? outlierMin : absMin,
 				absMax: q.removeOutliers ? outlierMax : absMax,
+				bins,
 				charts,
 				uncomputableValues: setUncomputableValues(uncomputableValues),
 				descrStats
@@ -57,8 +57,7 @@ function init({ genomes }) {
 	}
 }
 
-/** Process the returned data from getData() for entire chart
- * and each individual box plot.*/
+/** Process the returned data from getData() for entire box plot chart.*/
 async function processData(data, q) {
 	const samples = Object.values(data.samples)
 	const values = samples
@@ -68,15 +67,15 @@ async function processData(data, q) {
 	const descrStats: DescrStats = getDescrStats(values, q.removeOutliers)
 
 	const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
-	const overlayTerm = q.overlayTw
-	const divideTerm = q.divideTw
+	const overlayTw = q.overlayTw
+	const divideTw = q.divideTw
 	const { absMin, absMax, chart2plot2values, uncomputableValues } = parseValues(
 		q,
 		data as ValidGetDataResponse,
 		sampleType,
 		q.isLogScale,
-		overlayTerm,
-		divideTerm
+		overlayTw,
+		divideTw
 	)
 
 	if (!absMin && absMin !== 0) throw new Error('absMin is undefined')
@@ -86,7 +85,7 @@ async function processData(data, q) {
 		outlierMax = Number.NEGATIVE_INFINITY
 	for (const [chart, plot2values] of chart2plot2values) {
 		const plots: any = []
-		for (const [key, values] of sortPlot2Values(data as ValidGetDataResponse, plot2values, overlayTerm)) {
+		for (const [key, values] of sortPlot2Values(data as ValidGetDataResponse, plot2values, overlayTw)) {
 			;[outlierMax, outlierMin] = setPlotData(
 				plots,
 				values,
@@ -94,19 +93,18 @@ async function processData(data, q) {
 				sampleType,
 				descrStats,
 				q,
-				data as ValidGetDataResponse,
 				outlierMin,
 				outlierMax,
-				overlayTerm
+				overlayTw
 			)
 		}
 		if (q.tw.term?.values) setHiddenPlots(q.tw, plots)
-		if (overlayTerm && overlayTerm.term?.values) setHiddenPlots(overlayTerm, plots)
+		if (overlayTw && overlayTw.term?.values) setHiddenPlots(overlayTw, plots)
+		if (divideTw && divideTw.term?.values) setHiddenPlots(divideTw, plots)
 
 		if (q.orderByMedian == true) {
 			plots.sort((a, b) => a.boxplot.p50 - b.boxplot.p50)
 		}
-
 		/** Descr stats not calculated per chart. Set the total num of samples per chart */
 		const sampleCount = plots.reduce((total, p) => {
 			if (p.hidden) return total
@@ -115,27 +113,34 @@ async function processData(data, q) {
 
 		charts[chart] = { chartId: chart, plots, sampleCount: sampleCount }
 	}
-	if (q.showAssocTests && overlayTerm) await getWilcoxonData(charts)
+
+	const bins: { [index: string]: any } = {
+		term1: numericBins(q.tw, data)
+	}
+
+	if (overlayTw) bins.term2 = numericBins(overlayTw, data)
+	if (divideTw) bins.term0 = numericBins(divideTw, data)
+
+	if (q.showAssocTests && overlayTw) await getWilcoxonData(charts)
 	//quick fix to not return values to the client
 	//will fix when addressing issues with descriptive stats and other logic errs
 	Object.keys(charts).forEach(c => charts[c].plots.forEach(p => delete p.tempValues))
 
-	return { absMin, absMax, charts, uncomputableValues, descrStats, outlierMin, outlierMax }
+	return { absMin, absMax, bins, charts, uncomputableValues, descrStats, outlierMin, outlierMax }
 }
 
 /** Set the data (e.g. values, titles, outliers, etc.)
- * for individual box plots */
+ * for individual box plots within a chart */
 function setPlotData(
-	plots,
+	plots: any[],
 	values: number[],
 	key: string,
 	sampleType: string,
 	descrStats: DescrStats,
 	q: BoxPlotRequest,
-	data: ValidGetDataResponse,
 	outlierMin: number,
 	outlierMax: number,
-	overlayTerm?: any
+	overlayTw?: any
 ) {
 	const sortedValues = values.sort((a, b) => a - b)
 
@@ -151,7 +156,7 @@ function setPlotData(
 
 	const boxplot = boxplot_getvalue(vs, q.removeOutliers)
 	if (!boxplot) throw new Error('boxplot_getvalue failed [termdb.boxplot init()]')
-	const _plot = {
+	const plot: { [index: string]: any } = {
 		boxplot,
 		descrStats: setIndividualBoxPlotStats(boxplot, sortedValues),
 		//quick fix
@@ -160,26 +165,19 @@ function setPlotData(
 	}
 
 	//Set rendering properties for the plot
-	if (overlayTerm) {
-		const _key = overlayTerm?.term?.values?.[key]?.label || key
-		const plotLabel = `${_key}, n=${values.length}`
-		const overlayBins = numericBins(overlayTerm, data)
-		const plot = Object.assign(_plot, {
-			color: overlayTerm?.term?.values?.[key]?.color || null,
-			key: _key,
-			overlayBins: overlayBins.has(key) ? overlayBins.get(key) : null,
-			seriesId: key
-		})
-		plot.boxplot.label = plotLabel
-		plots.push(plot)
+	if (overlayTw) {
+		const _key = overlayTw?.term?.values?.[key]?.label || key
+
+		plot.color = overlayTw?.term?.values?.[key]?.color || null
+		plot.key = _key
+		plot.seriesId = key
+		plot.boxplot.label = `${_key}, n=${values.length}`
 	} else {
-		const plotLabel = `${sampleType}, n=${values.length}`
-		const plot = Object.assign(_plot, {
-			key: sampleType
-		})
-		plot.boxplot.label = plotLabel
-		plots.push(plot)
+		plot.key = sampleType
+		plot.boxplot.label = `${sampleType}, n=${values.length}`
 	}
+	plots.push(plot)
+
 	return [outlierMax, outlierMin]
 }
 
@@ -275,8 +273,8 @@ export function parseValues(
 	data: ValidGetDataResponse,
 	sampleType: string,
 	isLog: boolean,
-	overlayTerm?: any,
-	divideTerm?: any
+	overlayTw?: any,
+	divideTw?: any
 ) {
 	/** Map samples to terms */
 	const chart2plot2values = new Map()
@@ -304,22 +302,22 @@ export function parseValues(
 
 		let chart: any = '' // chart containing violin plots
 		let plot: any = sampleType // violin plot
-		if (divideTerm) {
-			if (!val[divideTerm?.$id]) continue
-			const value0 = val[divideTerm.$id]
-			if (divideTerm.term?.values?.[value0.key]?.uncomputable) {
+		if (divideTw) {
+			if (!val[divideTw?.$id]) continue
+			const value0 = val[divideTw.$id]
+			if (divideTw.term?.values?.[value0.key]?.uncomputable) {
 				/** same as above but for divide term */
-				const label = divideTerm.term.values[value0?.key]?.label
+				const label = divideTw.term.values[value0?.key]?.label
 				uncomputableValues[label] = (uncomputableValues[label] || 0) + 1
 			}
 			chart = value0.key
 		}
-		if (overlayTerm) {
-			if (!val[overlayTerm?.$id]) continue
-			const value2 = val[overlayTerm.$id]
-			if (overlayTerm.term?.values?.[value2.key]?.uncomputable) {
+		if (overlayTw) {
+			if (!val[overlayTw?.$id]) continue
+			const value2 = val[overlayTw.$id]
+			if (overlayTw.term?.values?.[value2.key]?.uncomputable) {
 				/** same as above but for overlay term */
-				const label = overlayTerm.term.values[value2?.key]?.label
+				const label = overlayTw.term.values[value2?.key]?.label
 				uncomputableValues[label] = (uncomputableValues[label] || 0) + 1
 			}
 			plot = value2.key
@@ -339,7 +337,11 @@ export function parseValues(
 }
 
 /** Return bins for filtering and list sample label menu options */
-export function numericBins(overlayTerm: any, data: any) {
-	const overlayBins = data.refs.byTermId[overlayTerm?.$id]?.bins ?? []
-	return new Map(overlayBins.map(bin => [bin.label, bin]))
+export function numericBins(tw: any, data: any) {
+	const bins = {}
+	if (!isNumericTerm(tw?.term)) return bins
+	for (const bin of data.refs.byTermId[tw?.$id]?.bins || []) {
+		bins[bin.label] = bin
+	}
+	return bins
 }

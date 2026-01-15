@@ -85,9 +85,9 @@ async function getArgs(_settings = {}) {
 		{
 			name: 'Term Group 1',
 			lst: [
-				{ $id: 'aaa', term: terms.aaa },
-				{ $id: 'bbb', term: terms.bbb },
-				{ $id: 'ccc', term: terms.ccc }
+				{ $id: 'aaa', term: terms.aaa, q: { type: 'values' } },
+				{ $id: 'bbb', term: terms.bbb, q: { type: 'values' } },
+				{ $id: 'ccc', term: terms.ccc, q: { type: 'values' } }
 			]
 		}
 	]

@@ -693,6 +693,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 				maxGenesToShow: this.state.config.settings?.manhattan?.maxGenesToShow,
 				lesionTypeColors: this.state.config.settings?.manhattan?.lesionTypeColors,
 				qValueThreshold: this.state.config.settings?.manhattan?.qValueThreshold,
+				maxCappedPoints: this.state.config.settings?.manhattan?.maxCappedPoints,
+				hardCap: this.state.config.settings?.manhattan?.hardCap,
+				binSize: this.state.config.settings?.manhattan?.binSize,
 				...configValues
 			}
 
@@ -1005,7 +1008,7 @@ export function getDefaultSettings(opts) {
 			interactiveDotsCap: 5000,
 			maxTooltipGenes: 5,
 
-			// Q-value threshold for significance indicators in the table
+			// Q-value threshold for significance indicators in the table, tooltips, and for determining which dots become interactive
 			qValueThreshold: 0.05,
 
 			// Colors for lesion types (currently used for table significance indicators. Long term will also be used for the rust code colors)
@@ -1015,7 +1018,16 @@ export function getDefaultSettings(opts) {
 				gain: '#FF4444', // red
 				fusion: '#FFA500', // orange
 				sv: '#9932CC' // purple
-			}
+			},
+
+			// Threshold for the rust code when determining if we need to raise the cap value from the default
+			maxCappedPoints: 5,
+
+			// Bin size for cap calculations
+			binSize: 10,
+
+			// Hard cap regardless of data distribution
+			hardCap: 200
 		}
 	}
 

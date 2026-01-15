@@ -1500,7 +1500,7 @@ function mayFillInCategory2samplecount4term(tw, lst, termdbConfig) {
 	- missing term.values{}
 	- blank term.values{}
 	*/
-	if (termdbConfig.alwaysRefillCategoricalTermValues || !tw.term.values || Object.keys(tw.term.values).length == 0) {
+	if (termdbConfig?.alwaysRefillCategoricalTermValues || !tw.term.values || Object.keys(tw.term.values).length == 0) {
 		tw.term.values = k2label
 	}
 }

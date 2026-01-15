@@ -1577,7 +1577,7 @@ function setTermActions(self) {
 		const matchingSortSamples = activeOption.sortPriority?.find(o => o.types.includes(t.tw?.term?.type))?.tiebreakers[0]
 		const sortSamples = matchingSortSamples
 			? {} // will let matrix.sort fill-in based on the first matching tiebreaker
-			: t.tw?.term?.type == 'geneVariant'
+			: t.tw?.term?.type == 'geneVariant' && t.tw?.q?.type == 'values'
 			? {
 					by: 'class',
 					order: [

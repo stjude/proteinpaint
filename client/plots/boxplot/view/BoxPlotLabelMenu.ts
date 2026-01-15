@@ -6,7 +6,14 @@ import { rgb } from 'd3-color'
 
 /** Menu is available when more than one boxplot is rendered. */
 export class BoxPlotLabelMenu {
-	constructor(plot: RenderedPlot, app: MassAppApi, interactions: BoxPlotInteractions, tip: Menu, isVertical: boolean) {
+	constructor(
+		plot: RenderedPlot,
+		app: MassAppApi,
+		interactions: BoxPlotInteractions,
+		tip: Menu,
+		isVertical: boolean
+		/*chart: any*/
+	) {
 		const options = [
 			{
 				text: `Add filter: ${plot.key}`,
@@ -24,19 +31,17 @@ export class BoxPlotLabelMenu {
 				callback: async (event: MouseEvent) => {
 					if (isVertical) tip.clear().show(event.clientX, event.clientY)
 					else tip.clear().showunder(plot.boxplot.labelG.node())
-					const rows = await interactions.listSamples(plot)
+					const [rows, columns] = await interactions.listSamples(plot)
 
 					const tableDiv = tip.d.append('div')
-					const columns = [{ label: 'Sample' }, { label: 'Value' }]
-
 					renderTable({
-						rows,
-						columns,
+						rows: rows as any,
+						columns: columns as any,
 						div: tableDiv,
-						maxWidth: '30vw',
-						maxHeight: '25vh',
+						maxHeight: '35vh',
 						resize: true,
-						showLines: true
+						showLines: true,
+						dataTestId: 'sjpp-listsampletable'
 					})
 				}
 			}

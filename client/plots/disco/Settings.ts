@@ -22,6 +22,7 @@ export default interface Settings {
 		/** Chromosomes not rendered */
 		hiddenChromosomes: string[]
 		mutationWaterfallPlot: boolean
+		mutationWaterfallColor: string
 	}
 
 	rings: {

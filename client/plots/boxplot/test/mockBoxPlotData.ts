@@ -60,8 +60,9 @@ export function getBoxPlotMockData() {
 	}
 
 	const mockPlot1 = {
-		key: '1',
+		key: 'Male',
 		seriesId: '1',
+		chartId: '',
 		boxplot: {
 			w1: 0.002739726,
 			w2: 22.747930234,
@@ -77,13 +78,13 @@ export function getBoxPlotMockData() {
 		color: 'blue',
 		descrStats: mockDescrStats1,
 		x: 278,
-		y: 155,
-		overlayBins: null
+		y: 155
 	}
 
 	const mockPlot2 = {
-		key: '2',
+		key: 'Female',
 		seriesId: '2',
+		chartId: '',
 		boxplot: {
 			w1: 0.002739726,
 			w2: 22.747930234,
@@ -99,14 +100,17 @@ export function getBoxPlotMockData() {
 		color: '#e75480',
 		descrStats: mockDescrStats2,
 		x: 278,
-		y: 155,
-		overlayBins: null
+		y: 155
 	}
 
 	//Mock data for mockConfig2
 	const mockData: any = {
 		absMin: 0,
 		absMax: 100,
+		bins: {
+			term1: {},
+			term2: {}
+		},
 		charts: {
 			'Acute lymphoblastic leukemia': {
 				chartId: '1',
@@ -118,5 +122,23 @@ export function getBoxPlotMockData() {
 		uncomputableValues: [{ label: 'test', value: 1 }]
 	}
 
-	return { mockDescrStats1, mockDescrStats2, mockSettings, mockConfig1, mockConfig2, mockPlot1, mockPlot2, mockData }
+	const mockFilter = {
+		in: true,
+		join: '',
+		tag: 'filterUiRoot',
+		type: 'tvslst',
+		lst: []
+	}
+
+	return {
+		mockDescrStats1,
+		mockDescrStats2,
+		mockSettings,
+		mockConfig1,
+		mockConfig2,
+		mockPlot1,
+		mockPlot2,
+		mockData,
+		mockFilter
+	}
 }

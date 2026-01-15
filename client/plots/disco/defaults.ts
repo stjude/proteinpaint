@@ -19,6 +19,7 @@ export default function discoDefaults(overrides: any = {}, app?: any): Settings 
 			prioritizeGeneLabelsByGeneSets: false,
 			showPrioritizeGeneLabelsByGeneSets: false,
 			mutationWaterfallPlot: false,
+			mutationWaterfallColor: '#4d4d4d',
 			cnvRenderingType: CnvRenderingType.heatmap,
 			cnvPercentile: 90, // 90th percentile for removing outliers
 			cnvCutoffMode: 'percentile',

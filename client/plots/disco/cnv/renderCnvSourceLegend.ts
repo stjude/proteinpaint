@@ -47,7 +47,6 @@ export function renderCnvSourceLegend(
 	fontSize: number,
 	onChange: (index: number) => void
 ) {
-	let isOpen = false
 	if (!legendG || legendG.empty()) throw new Error('legendG is required')
 	if (!datasets || datasets.length === 0) throw new Error('at least one dataset is required')
 
@@ -95,12 +94,12 @@ export function renderCnvSourceLegend(
 
 	const cnvMenu = new Menu({
 		onHide: () => {
-			isOpen = !isOpen
-			btnText.text(isOpen ? 'Select source ▼'.toUpperCase() : 'Select source ▲'.toUpperCase())
+			btnText.text('Select source ▲'.toUpperCase())
 		}
 	})
 
 	function showCnvMenu(dom: Element) {
+		btnText.text('Select source ▼'.toUpperCase())
 		cnvMenu.clear().showunder(dom)
 
 		cnvMenu.d.append('div').text('Choose data source for CNV:').style('margin', '5px 5px 0 5px')

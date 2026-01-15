@@ -108,8 +108,8 @@ tape('LegendDataMapper.getHiddenPlots() returns correct hidden plots', function 
 
 	const hiddenPlots2 = legendMapper.getHiddenPlots(mockData.charts)
 	const expected2 = [
-		{ key: '1', text: '1', isHidden: true, isPlot: true },
-		{ key: '2', text: '2', isHidden: true, isPlot: true }
+		{ key: 'Male', text: 'Male', isHidden: true, isPlot: true },
+		{ key: 'Female', text: 'Female', isHidden: true, isPlot: true }
 	]
 	test.deepEqual(hiddenPlots2, expected2, 'Should return the correct hidden plots')
 
