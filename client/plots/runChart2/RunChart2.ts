@@ -1,5 +1,6 @@
 import { PlotBase } from '#plots/PlotBase.ts'
 import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { dofetch3 } from '#common/dofetch'
 
 class RunChart2 extends PlotBase implements RxComponent {
 	static type = 'runChart2'
@@ -34,6 +35,19 @@ class RunChart2 extends PlotBase implements RxComponent {
 	async main() {
 		const config = await this.getMutableConfig()
 		console.log('RunChart2 main()', config)
+		const result = await dofetch3('termdb/runChart', this.getRequestArg())
+		console.log('RunChart2 runChart result', result)
+	}
+	getRequestArg() {
+		const config = this.state.config
+		console.log('RunChart2 getRequestArg()', config)
+		const reqArg: any = {
+			genome: config.genome,
+			dslabel: config.dslabel,
+			term1: config.term1
+		}
+		if (config.term2) reqArg.term2 = config.term2
+		return reqArg
 	}
 }
 

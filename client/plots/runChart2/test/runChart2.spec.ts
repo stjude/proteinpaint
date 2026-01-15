@@ -35,7 +35,9 @@ tape('runChart2', test => {
 		state: {
 			plots: [
 				{
-					chartType: 'runChart2'
+					chartType: 'runChart2',
+					term: { id: 'date' },
+					term2: { id: 'hrtavg' }
 				}
 			]
 		},
