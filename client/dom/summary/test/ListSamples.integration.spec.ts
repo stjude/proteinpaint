@@ -12,7 +12,8 @@ Tests:
 	- ListSamples.getData() for term=gene exp returns the correct data object
 	- ListSamples.getData() for term=gene variant returns the correct data object
     - ListSamples.getData() for term=numeric and term2=categorical returns the correct data object
-	- ListSamples.getData() for term=gene exp and term2=gene variant returns the correct data object
+	- ListSamples.getData() for term=gene exp (continuous) and term2=gene variant returns the correct data object
+	- ListSamples.getData() for term=gene variant and term2=gene exp (continuous) returns the correct data object
 	- ListSamples.getData() for term=numeric and term2=samplelst returns the correct data object
 	- (skipped) ListSamples.getData() for term=numeric and term2=survival returns the correct data object
 */
@@ -185,42 +186,85 @@ tape('ListSamples.getData() for term=numeric and term2=categorical returns the c
 	test.end()
 })
 
-tape('ListSamples.getData() for term=gene exp and term2=gene variant returns the correct data object', async test => {
-	test.timeoutAfter(1000)
-	const mockTerm2: any = getGeneVariantTw()
-	mockTerm2.$id = 'term2'
-	const mockConfig = {
-		term: {
-			term: { gene: 'TP53', name: 'TP53 FPKM', type: 'geneExpression' },
-			q: { mode: 'continuous' },
-			$id: 'term1'
-		},
-		term2: mockTerm2,
-		bins: { term1: {}, term2: {} }
+tape(
+	'ListSamples.getData() for term=gene exp (continuous) and term2=gene variant returns the correct data object',
+	async test => {
+		test.timeoutAfter(1000)
+		const mockTerm2: any = getGeneVariantTw()
+		mockTerm2.$id = 'term2'
+		const mockConfig = {
+			term: {
+				term: { gene: 'TP53', name: 'TP53 FPKM', type: 'geneExpression' },
+				q: { mode: 'continuous' },
+				$id: 'term1'
+			},
+			term2: mockTerm2,
+			bins: { term1: {}, term2: {} }
+		}
+		const mockPlot = {
+			seriesId: 'TP53 SNV/indel Mutated (somatic)',
+			chartId: ''
+		}
+
+		const { listSamples } = await getNewListSamples({ config: mockConfig, plot: mockPlot, start: 0, end: 40 })
+		const data = await listSamples.getData()
+
+		test.true(
+			typeof data == 'object' && data.lst && data.refs && data.samples,
+			'Should return data object from getData() with a list, references, and sample info'
+		)
+		const expected = 96
+		test.equal(
+			data.lst.length,
+			expected,
+			`Should return ${expected} samples matching gene exp term and gene variant term filter`
+		)
+		test.true(data.refs.byTermId[mockConfig.term.$id], 'Should reference the gene expression term')
+		test.true(data.refs.byTermId[mockConfig.term2.$id], 'Should reference the gene variant term')
+
+		test.end()
 	}
-	const mockPlot = {
-		seriesId: 'TP53 SNV/indel Mutated (somatic)',
-		chartId: ''
+)
+
+tape(
+	'ListSamples.getData() for term=gene variant and term2=gene exp (continuous) returns the correct data object',
+	async test => {
+		test.timeoutAfter(1000)
+		const mockTerm: any = getGeneVariantTw()
+		mockTerm.$id = 'term1'
+		const mockConfig = {
+			term: mockTerm,
+			term2: {
+				term: { gene: 'TP53', name: 'TP53 FPKM', type: 'geneExpression' },
+				q: { mode: 'continuous' },
+				$id: 'term2'
+			},
+			bins: { term1: {}, term2: {} }
+		}
+		const mockPlot = {
+			seriesId: 'TP53 SNV/indel Mutated (somatic)',
+			chartId: ''
+		}
+
+		const { listSamples } = await getNewListSamples({ config: mockConfig, plot: mockPlot, start: 0, end: 40 })
+		const data = await listSamples.getData()
+
+		test.true(
+			typeof data == 'object' && data.lst && data.refs && data.samples,
+			'Should return data object from getData() with a list, references, and sample info'
+		)
+		const expected = 96
+		test.equal(
+			data.lst.length,
+			expected,
+			`Should return ${expected} samples matching gene variant term and gene expression term filter`
+		)
+		test.true(data.refs.byTermId[mockConfig.term.$id], 'Should reference the gene variant term')
+		test.true(data.refs.byTermId[mockConfig.term2.$id], 'Should reference the gene expression term')
+
+		test.end()
 	}
-
-	const { listSamples } = await getNewListSamples({ config: mockConfig, plot: mockPlot, start: 0, end: 40 })
-	const data = await listSamples.getData()
-
-	test.true(
-		typeof data == 'object' && data.lst && data.refs && data.samples,
-		'Should return data object from getData() with a list, references, and sample info'
-	)
-	const expected = 96
-	test.equal(
-		data.lst.length,
-		expected,
-		`Should return ${expected} samples matching gene exp term and gene variant term filter`
-	)
-	test.true(data.refs.byTermId[mockConfig.term.$id], 'Should reference the gene expression term')
-	test.true(data.refs.byTermId[mockConfig.term2.$id], 'Should reference the gene variant term')
-
-	test.end()
-})
+)
 
 tape('ListSamples.getData() for term=numeric and term2=samplelst returns the correct data object', async test => {
 	test.timeoutAfter(1000)
