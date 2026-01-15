@@ -70,6 +70,8 @@ async function getPillFilterItem(termType) {
 			item.tvs.cnvWT = false
 		} else {
 			item.tvs.values = [{ key: Object.keys(term.values)[0] }]
+			item.tvs.genotype = 'variant'
+			item.tvs.mcount = 'any'
 		}
 	} else if (termType == 'termCollection') {
 		item.tvs.ranges = [{ start: 0.3, stop: 0.5 }]
