@@ -3075,6 +3075,7 @@ export function filterByItem(filter, mlst, values) {
 			} else if (tvs.genotype == 'nt') {
 				// not tested tvs
 				// sample is tested, so it does not match tvs
+				mlst_intvs = []
 				intvs = false
 			} else {
 				throw 'unexpected tvs.genotype'
