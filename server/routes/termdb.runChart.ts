@@ -1,5 +1,6 @@
 import type { RouteApi, RunChartRequest, RunChartResponse } from '#types'
 import { runChartPayload } from '#types/checkers'
+import { getData } from '../src/termdb.matrix.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/runChart',
@@ -24,7 +25,21 @@ function init({ genomes }) {
 			const ds = genome.datasets?.[q.dslabel]
 			if (!ds) throw new Error('invalid ds')
 
-			console.log(q)
+			if (!q.term || !q.term2) throw 'q.term or q.term2 missing'
+
+			const tws = [
+				{ term: q.term, q: { mode: 'continuous' } },
+				{ term: q.term2, q: { mode: 'continuous' } }
+			]
+			const data = await getData(
+				{
+					filter: q.filter,
+					terms: tws,
+					__protected__: q.__protected__
+				},
+				ds
+			)
+			for (const k in data.samples) console.log(data.samples[k])
 
 			const result: RunChartResponse = {
 				status: 'ok',
