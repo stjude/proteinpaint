@@ -3051,7 +3051,6 @@ export function filterByItem(filter, mlst, values) {
 			if (values) values.push(...mlst_genotype)
 		} else {
 			// categorical mutation data
-			if (!['variant', 'wt', 'nt'].includes(tvs.genotype)) throw 'invalid tvs.genotype'
 			let mlst_intvs, intvs
 			if (tvs.genotype == 'variant') {
 				// mutant tvs
@@ -3073,9 +3072,12 @@ export function filterByItem(filter, mlst, values) {
 				// sample matches tvs if it is wildtype (across all queried genes)
 				mlst_intvs = mlst_tested.filter(m => m.class == mclass['WT'].key)
 				intvs = mlst_intvs.length == mlst_tested.length
-			} else {
+			} else if (tvs.genotype == 'nt') {
 				// not tested tvs
+				// sample is tested, so it does not match tvs
 				intvs = false
+			} else {
+				throw 'unexpected tvs.genotype'
 			}
 			pass = tvs.isnot ? !intvs : intvs
 			if (values) values.push(...mlst_intvs)
@@ -3083,11 +3085,7 @@ export function filterByItem(filter, mlst, values) {
 	} else {
 		// sample is not tested for the dt of the filter
 		tested = false
-		if (tvs.genotype) {
-			pass = tvs.genotype == 'nt'
-		} else {
-			pass = false
-		}
+		pass = tvs.genotype ? tvs.genotype == 'nt' : false
 	}
 	return [pass, tested]
 }
