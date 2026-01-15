@@ -251,6 +251,7 @@ export function getFilter_genemutationset(isnot = false) {
 								{ key: 'F', label: 'FRAMESHIFT', value: 'F', bar_width_frac: null }
 							],
 							isnot,
+							genotype: 'variant',
 							mcount: 'any'
 						}
 					}

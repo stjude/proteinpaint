@@ -2298,6 +2298,7 @@ const tp53dtTermFilter = {
 						bar_width_frac: null
 					}
 				],
+				genotype: 'variant',
 				mcount: 'any'
 			}
 		}
