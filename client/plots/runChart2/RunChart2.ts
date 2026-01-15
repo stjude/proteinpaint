@@ -45,9 +45,9 @@ class RunChart2 extends PlotBase implements RxComponent {
 		const reqArg: any = {
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
-			term: config.term
+			term: config.term,
+			term2: config.term2
 		}
-		if (config.term2) reqArg.term2 = config.term2
 		return reqArg
 	}
 }
@@ -55,7 +55,9 @@ class RunChart2 extends PlotBase implements RxComponent {
 export const runChart2Init = getCompInit(RunChart2)
 export const componentInit = runChart2Init
 
-export function getPlotConfig(opts /*app*/) {
+export function getPlotConfig(opts) {
+	if (!opts.term) throw 'opts.term missing' // for X axis
+	if (!opts.term2) throw 'opts.term2 missing' // for Y axis
 	const config = {
 		//TODO: fill in default config
 	}
