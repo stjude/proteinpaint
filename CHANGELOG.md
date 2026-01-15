@@ -9,10 +9,6 @@ Fixes:
 - restore old singlecell gene exp violin by supplying q.mode=continuous
 - skip most GDC dict terms under "diagnoses." branch due to diagnoses__days_to_hiv_diagnosis breaking grapqhl in qa-yellow
 - stream matrix response data to prevent RangeError during json-encoding
-
-Fixes:
-- GDC lollipop now displays ssm=2000 for TTN rather than 1999; the limit is applied to both ssm & sv
-- restore old singlecell gene exp violin by supplying q.mode=continuous
 - do not join to global filter in getTreeFilter() if the join argument is 'or', so that the edit menu will list all applicable categories
 
 
