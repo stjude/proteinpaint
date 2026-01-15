@@ -1,5 +1,6 @@
 import { getCompInit } from '../rx'
 import { showTvsMenu } from '../filter/tvs'
+import { dtTermTypes } from '#shared/terms.js'
 
 class TdbSubmenu {
 	constructor(opts) {
@@ -48,13 +49,15 @@ function setRenderers(self) {
 			.attr('data-testid', 'sja_treesubmenu_backprompt')
 			.on('click', () => self.app.dispatch({ type: 'submenu_set', submenu: {} }))
 
-		self.dom.holder
-			.style('display', 'block')
-			.append('div')
-			.style('margin', '15px 0px 5px 10px')
-			.style('font-weight', 'bold')
-			.style('font-size', '.9em')
-			.text(term.name)
+		if (!dtTermTypes.has(term.type)) {
+			self.dom.holder
+				.style('display', 'block')
+				.append('div')
+				.style('margin', '15px 0px 5px 10px')
+				.style('font-weight', 'bold')
+				.style('font-size', '.9em')
+				.text(term.name)
+		}
 
 		showTvsMenu({
 			term,

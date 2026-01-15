@@ -16,6 +16,7 @@ async function fillMenu(self, div, tvs) {
 	// render mutations
 	const arg = {
 		holder: div,
+		header: term.parentTerm.name + ' ' + term.name,
 		values: term.values,
 		selectedValues: tvs.values,
 		genotype: tvs.genotype,
@@ -38,16 +39,23 @@ function term_name_gen(d) {
 
 function get_pill_label(tvs) {
 	let txt
-	if (tvs.wt) {
+	if (tvs.genotype == 'variant') {
+		if (tvs.values.length == 1) {
+			// single mutation class
+			txt = tvs.values[0].label
+		} else {
+			// multiple mutation classes
+			if (tvs.term.dt == 1) txt = 'Mutated'
+			else txt = 'Altered'
+		}
+	} else if (tvs.genotype == 'wt') {
 		// wildtype genotype
 		txt = 'Wildtype'
-	} else if (tvs.values.length == 1) {
-		// single mutation class
-		txt = tvs.values[0].label
+	} else if (tvs.genotype == 'nt') {
+		// not tested
+		txt = 'Not tested'
 	} else {
-		// multiple mutation classes
-		if (tvs.term.dt == 1) txt = 'Mutated'
-		else txt = 'Altered'
+		throw 'tvs.genotype not recognized'
 	}
 	return { txt }
 }

@@ -384,6 +384,7 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 					tvs: {
 						term: dtTerm,
 						values: [{ key: k, label: v.label, value: k }],
+						genotype: 'variant',
 						mcount: 'any',
 						excludeGeneName: true
 					}
@@ -403,7 +404,7 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 					tvs: {
 						term: dtTerm,
 						values: [],
-						wt: true,
+						genotype: 'wt',
 						excludeGeneName: true
 					}
 				}
@@ -427,6 +428,7 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 					values: Object.entries(values).map(([k, v]) => {
 						return { key: k, label: v.label, value: k }
 					}),
+					genotype: 'variant',
 					mcount: 'any',
 					excludeGeneName: true
 				}
@@ -446,7 +448,7 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 				tvs: {
 					term: dtTerm,
 					values: [],
-					wt: true,
+					genotype: 'wt',
 					excludeGeneName: true
 				}
 			}
