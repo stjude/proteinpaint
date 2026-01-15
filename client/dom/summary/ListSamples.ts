@@ -150,20 +150,6 @@ export class ListSamples {
 	}
 
 	createTvsRanges(tvs: any, termNum: number, key: string): void {
-		if (termNum == 1 && this.useRange) {
-			//May limit the range for the first term (i.e. violin brush)
-			tvs.ranges = [
-				{
-					start: this.start,
-					stop: this.end,
-					startinclusive: true,
-					stopinclusive: true,
-					startunbounded: false,
-					stopunbounded: false
-				}
-			]
-			return
-		}
 		const keyBin = this.bins[`term${termNum}`]?.[`${key}`]
 		const uncomputable = Object.entries(this[`t${termNum}`].term?.values ?? {}).find(
 			([_, v]: [string, any]) => v.label === key && v?.uncomputable
@@ -179,8 +165,27 @@ export class ListSamples {
 				value: uncomputable,
 				label: key
 			})
+		} else if (this.useRange) {
+			/** May need to limit the range (e.g. violin brush) or add
+			 * a range when no bins exist for the query to succeed. */
+			if (tvs.ranges?.start) tvs.ranges.start = this.start
+			if (tvs.ranges?.stop) tvs.ranges.stop = this.end
+			else {
+				tvs.ranges = [
+					{
+						start: this.start,
+						stop: this.end,
+						startinclusive: true,
+						stopinclusive: true,
+						startunbounded: false,
+						stopunbounded: false
+					}
+				]
+				return
+			}
 		} else {
-			//Continuous terms may not have bins defined
+			/** Continuous terms may not have bins defined
+			 * but range property is required. */
 			tvs.ranges = []
 		}
 	}
@@ -296,8 +301,8 @@ export class ListSamples {
 			//This func mutates columns directly
 			addGvCols(tw, columns)
 		} else if (tw.term.type === TermTypes.SURVIVAL) {
-		/** Note: survival fails in termdbtest but not any other
-		 * ds.*/
+			/** Note: survival fails in termdbtest but not any other
+			 * ds.*/
 			return
 		} else {
 			columns.push({ label: tw.term.name })
