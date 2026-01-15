@@ -14,6 +14,768 @@ from numba import njit, prange
 from statsmodels.stats.multitest import fdrcorrection
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import xlsxwriter
+import time
+import sys
+
+###################################################################
+# Numba-optimized convolution (prob_hits helper functions)
+######################################################
+# 6) Compute a convolution of Bernoullis for each row of a Bernoulli success probability matrix (part of the prob.hits function)
+
+@numba.njit(parallel=True, fastmath=True)
+def row_bern_conv(P, max_x):
+    m, n = P.shape
+    Pr = np.zeros((m, max_x + 2))
+    for i in range(m):
+        Pr[i, 0] = 1.0  # initialize P(X=0)=1
+
+    for j in range(n):
+        p_col = P[:, j]
+        for i in numba.prange(m):
+            p = p_col[i]
+            for k in range(max_x, -1, -1):
+                Pr[i, k + 1] += Pr[i, k] * p
+                Pr[i, k] *= (1.0 - p)
+
+    return Pr
+
+@njit(parallel=True)
+def scatter_add_2d(logsum, subj_indices, log_chunk):
+    """
+    Numba-optimized scatter-add: logsum[:, subj_indices[j]] += log_chunk[:, j]
+    """
+    n_genes, n_lesions = log_chunk.shape
+    for j in prange(n_lesions):
+        subj_idx = subj_indices[j]
+        for i in range(n_genes):
+            logsum[i, subj_idx] += log_chunk[i, j]
+
+
+@njit(parallel=True)
+def compute_p_values_from_conv(pr_nsubj, nsubj_vals):
+    """
+    Numba-optimized p-value computation: p[j] = sum(pr_nsubj[j, nsubj_vals[j]:])
+    """
+    n_genes = pr_nsubj.shape[0]
+    n_cols = pr_nsubj.shape[1]
+    p_values = np.zeros(n_genes, dtype=np.float64)
+    
+    for j in prange(n_genes):
+        start_idx = nsubj_vals[j]
+        total = 0.0
+        for k in range(start_idx, n_cols):
+            total += pr_nsubj[j, k]
+        p_values[j] = total
+    
+    return p_values
+
+
+# Pre-compile numba functions to avoid first-call JIT penalty
+def _warmup_numba():
+    _dummy = np.zeros((2, 2), dtype=np.float64)
+    _idx = np.array([0, 1], dtype=np.int64)
+    scatter_add_2d(_dummy, _idx, _dummy)
+    compute_p_values_from_conv(_dummy, _idx)
+    row_bern_conv(_dummy, 1)
+
+_warmup_numba()
+
+###############################################################
+# 0) Function to profile where our bottlenecks are
+def write_error(msg):
+	print(f"ERROR: {msg}", file=sys.stderr)
+
+# def timed_grin_stats(lsn_data, gene_data, chr_size):
+#     """Instrumented version of grin_stats"""
+#     timings = {}
+    
+#     t0 = time.perf_counter()
+#     prep_data = prep_gene_lsn_data_fast(lsn_data, gene_data)
+#     timings['prep_gene_lsn_data'] = time.perf_counter() - t0
+    
+#     t0 = time.perf_counter()
+#     overlaps = find_gene_lsn_overlaps_fast(prep_data)
+#     timings['find_gene_lsn_overlaps'] = time.perf_counter() - t0
+    
+#     t0 = time.perf_counter()
+#     counts_df = count_hits_fast(overlaps)
+#     timings['count_hits'] = time.perf_counter() - t0
+    
+#     t0 = time.perf_counter()
+#     result_df = prob_hits_fast(counts_df, chr_size)
+#     timings['prob_hits'] = time.perf_counter() - t0
+    
+#     # Output to stderr
+#     write_error("\n=== GRIN TIMING ===")
+#     for name, elapsed in sorted(timings.items(), key=lambda x: -x[1]):
+#         write_error(f"  {name}: {elapsed:.3f}s")
+#     write_error(f"  TOTAL: {sum(timings.values()):.3f}s")
+    
+#     return result_df
+
+
+def find_gene_lsn_overlaps_fast(gl_data):
+    """
+    Optimized version of find_gene_lsn_overlaps.
+    Key optimizations:
+    1. Extract numpy arrays before the sweep loop (avoids .iloc overhead)
+    2. Replace iterrows() with vectorized index building
+    3. Use numpy arrays for match accumulation
+    """
+    import pandas as pd
+    import numpy as np
+
+    gene_data = gl_data["gene.data"].copy()
+    lsn_data = gl_data["lsn.data"].copy()
+    gene_lsn_data = gl_data["gene.lsn.data"].copy()
+    gene_index = gl_data["gene.index"]
+    lsn_index = gl_data["lsn.index"]
+
+    m = len(gene_lsn_data)
+
+    # OPTIMIZATION 1: Extract arrays ONCE before the loop
+    # This avoids the enormous overhead of .iloc[i] on each iteration
+    cty_arr = gene_lsn_data["cty"].values
+    gene_row_arr = gene_lsn_data["gene.row"].values
+    lsn_row_arr = gene_lsn_data["lsn.row"].values
+
+    # Pre-allocate with estimated capacity (can grow if needed)
+    # Estimate: average overlap count is roughly min(genes, lesions)
+    estimated_overlaps = min(len(gene_data), len(lsn_data)) * 2
+    gene_row_mtch = []
+    lsn_row_mtch = []
+    
+    current_genes = set()
+    current_lsns = set()
+
+    # Sweep line algorithm - now using array indexing instead of .iloc
+    for i in range(m):
+        cty = cty_arr[i]
+
+        if cty == 1:  # enter gene
+            gene_row = gene_row_arr[i]
+            current_genes.add(gene_row)
+            # Record overlaps with all currently active lesions
+            for l in current_lsns:
+                gene_row_mtch.append(gene_row)
+                lsn_row_mtch.append(l)
+
+        elif cty == 4:  # exit gene
+            current_genes.discard(gene_row_arr[i])
+
+        elif cty == 2:  # enter lesion
+            lsn_row = lsn_row_arr[i]
+            # Record overlaps with all currently active genes
+            for g in current_genes:
+                gene_row_mtch.append(g)
+                lsn_row_mtch.append(lsn_row)
+            current_lsns.add(lsn_row)
+
+        elif cty == 3:  # exit lesion
+            current_lsns.discard(lsn_row_arr[i])
+
+    # Convert to numpy arrays for vectorized operations
+    gene_row_mtch = np.array(gene_row_mtch)
+    lsn_row_mtch = np.array(lsn_row_mtch)
+
+    # OPTIMIZATION 2: Build index maps without iterrows()
+    # Old slow way: {row["gene.row"]: i for i, row in gene_data.reset_index().iterrows()}
+    gene_row_vals = gene_data["gene.row"].values
+    lsn_row_vals = lsn_data["lsn.row"].values
+    
+    gene_row_to_iloc = pd.Series(
+        np.arange(len(gene_data)),
+        index=gene_row_vals
+    )
+    lsn_row_to_iloc = pd.Series(
+        np.arange(len(lsn_data)),
+        index=lsn_row_vals
+    )
+
+    # Vectorized lookup of iloc positions
+    gene_ilocs = gene_row_to_iloc.loc[gene_row_mtch].values
+    lsn_ilocs = lsn_row_to_iloc.loc[lsn_row_mtch].values
+
+    # Final join and formatting
+    gene_cols = ["gene.row", "gene", "chrom", "loc.start", "loc.end"]
+    lsn_cols = ["lsn.row", "ID", "chrom", "loc.start", "loc.end", "lsn.type"]
+
+    gene_hit_data = gene_data.iloc[gene_ilocs][gene_cols].reset_index(drop=True)
+    lsn_hit_data = lsn_data.iloc[lsn_ilocs][lsn_cols].reset_index(drop=True)
+
+    gene_lsn_hits = pd.concat([gene_hit_data, lsn_hit_data], axis=1)
+    gene_lsn_hits.columns = [
+        "gene.row", "gene", "gene.chrom", "gene.loc.start", "gene.loc.end",
+        "lsn.row", "ID", "lsn.chrom", "lsn.loc.start", "lsn.loc.end", "lsn.type"
+    ]
+
+    return {
+        "lsn.data": lsn_data,
+        "gene.data": gene_data,
+        "gene.lsn.data": gene_lsn_data,
+        "gene.lsn.hits": gene_lsn_hits,
+        "gene.index": gene_index,
+        "lsn.index": lsn_index,
+    }
+
+
+def process_block_in_chunks_fast(gene_size, lsn_size, lsn_subj_IDs, chrom_size, chunk_size=5000):
+    """
+    Chunk-based pr_gene_hit and pr_subj computation to reduce memory use.
+    Uses numba-optimized scatter-add kernel.
+    """
+    G = len(gene_size)
+    L = len(lsn_size)
+
+    subj_ids_unique, subj_inv = np.unique(lsn_subj_IDs, return_inverse=True)
+    N_subj = len(subj_ids_unique)
+    logsum = np.zeros((G, N_subj), dtype=np.float64)
+
+    subj_inv = subj_inv.astype(np.int64)
+
+    for start in range(0, L, chunk_size):
+        end = min(start + chunk_size, L)
+        lsn_chunk_size = lsn_size[start:end]
+        subj_chunk_inv = subj_inv[start:end]
+
+        pr_chunk = np.outer(gene_size, np.ones(end - start)) + np.outer(np.ones(G), lsn_chunk_size)
+        pr_chunk /= chrom_size
+        np.clip(pr_chunk, 1e-10, 1 - 1e-10, out=pr_chunk)
+
+        log_chunk = np.log(1.0 - pr_chunk)
+
+        scatter_add_2d(logsum, subj_chunk_inv, log_chunk)
+
+    pr_subj = 1.0 - np.exp(logsum)
+    return None, pr_subj
+
+def prob_hits_fast(hit_cnt, chr_size):
+    lsn_data = hit_cnt["lsn.data"]
+    gene_data = hit_cnt["gene.data"]
+    gene_lsn_data = hit_cnt["gene.lsn.data"]
+    gene_index = hit_cnt["gene.index"]
+    lsn_index = hit_cnt["lsn.index"]
+    nhit_mtx = hit_cnt["nhit.mtx"]
+    nsubj_mtx = hit_cnt["nsubj.mtx"]
+
+    if "lsn.row" in lsn_data.columns:
+        lsn_data = lsn_data.set_index("lsn.row", drop=False)
+
+    num_lsn = lsn_data["lsn.type"].unique()
+
+    gene_lsn_data = gene_lsn_data.sort_values(by=["lsn.type", "lsn.chrom", "gene.row", "ID"]).reset_index(drop=True)
+    m = gene_lsn_data.shape[0]
+    new_sect = np.where(
+        (gene_lsn_data["gene.chrom"].values[1:] != gene_lsn_data["gene.chrom"].values[:-1]) |
+        (gene_lsn_data["lsn.type"].values[1:] != gene_lsn_data["lsn.type"].values[:-1]) |
+        (gene_lsn_data["gene.row"].values[1:] != gene_lsn_data["gene.row"].values[:-1])
+    )[0]
+
+    sect_start = [0] + (new_sect + 1).tolist()
+    sect_end = new_sect.tolist() + [m - 1]
+
+    gene_lsn_index = pd.DataFrame({
+        "lsn.type": gene_lsn_data.iloc[sect_start]["lsn.type"].values,
+        "chrom": gene_lsn_data.loc[sect_start, "gene.chrom"].values,
+        "gene.row": gene_lsn_data.loc[sect_start, "gene.row"].values,
+        "row.start": sect_start,
+        "row.end": sect_end,
+    })
+    gene_lsn_index["n.lsns"] = gene_lsn_index["row.end"] - gene_lsn_index["row.start"] + 1
+
+    k = gene_lsn_index.shape[0]
+    new_chr = gene_lsn_index["chrom"].shift(-1) != gene_lsn_index["chrom"]
+    new_chr = new_chr[:k - 1][new_chr[:k - 1]].index
+    chr_start = [0] + list(new_chr + 1)
+    chr_end = list(new_chr) + [k - 1]
+
+    gene_lsn_chr_index = pd.DataFrame({
+        "lsn.type": gene_lsn_index.loc[chr_start, "lsn.type"].values,
+        "chrom": gene_lsn_index.loc[chr_start, "chrom"].values,
+        "row.start": chr_start,
+        "row.end": chr_end,
+    })
+    gene_lsn_chr_index["n.rows"] = gene_lsn_chr_index["row.end"] - gene_lsn_chr_index["row.start"] + 1
+
+    nr_li = lsn_index.shape[0]
+    cond = (
+            (lsn_index["lsn.type"].shift(-1) != lsn_index["lsn.type"]) |
+            (lsn_index["chrom"].shift(-1) != lsn_index["chrom"])
+    )
+    new_chr = cond[:nr_li - 1][cond[:nr_li - 1]].index
+    chr_start = [0] + list(new_chr + 1)
+    chr_end = list(new_chr) + [nr_li - 1]
+
+    lsn_chr_index = pd.DataFrame({
+        "lsn.type": lsn_index.loc[chr_start, "lsn.type"].values,
+        "chrom": lsn_index.loc[chr_start, "chrom"].values,
+        "row.start": chr_start,
+        "row.end": chr_end,
+    })
+
+    b = gene_lsn_chr_index.shape[0]
+    g, nlt = nhit_mtx.shape
+
+    # =========================================================================
+    # PRE-EXTRACTION: Pull everything into numpy arrays before the loop
+    # =========================================================================
+    
+    # gene_lsn_chr_index arrays
+    glci_row_start = gene_lsn_chr_index["row.start"].values
+    glci_row_end = gene_lsn_chr_index["row.end"].values
+    glci_lsn_type = gene_lsn_chr_index["lsn.type"].values
+    glci_chrom = gene_lsn_chr_index["chrom"].values
+    
+    # gene_lsn_index arrays
+    gli_row_start = gene_lsn_index["row.start"].values
+    gli_row_end = gene_lsn_index["row.end"].values
+    
+    # gene_lsn_data arrays
+    gld_gene_row = gene_lsn_data["gene.row"].values
+    
+    # lsn_chr_index lookup: (lsn_type, chrom) -> (row_start, row_end)
+    lsn_chr_lookup = {}
+    for idx in range(len(lsn_chr_index)):
+        key = (lsn_chr_index["lsn.type"].iloc[idx], lsn_chr_index["chrom"].iloc[idx])
+        lsn_chr_lookup[key] = (
+            lsn_chr_index["row.start"].iloc[idx],
+            lsn_chr_index["row.end"].iloc[idx]
+        )
+    
+    # lsn_index arrays
+    li_row_start = lsn_index["row.start"].values
+    li_row_end = lsn_index["row.end"].values
+    
+    # lsn_data arrays - need to handle the index carefully
+    lsn_data_index = lsn_data.index.values
+    lsn_data_loc_start = lsn_data["loc.start"].values
+    lsn_data_loc_end = lsn_data["loc.end"].values
+    lsn_data_id = lsn_data["ID"].values
+    lsn_data_lsn_type = lsn_data["lsn.type"].values
+    
+    # Build lsn.row -> position mapping
+    lsn_row_to_pos = {row: i for i, row in enumerate(lsn_data_index)}
+    
+    # gene_data arrays
+    gene_data_index = gene_data.index.values
+    gene_data_loc_start = gene_data["loc.start"].values
+    gene_data_loc_end = gene_data["loc.end"].values
+    
+    # Build gene.row -> position mapping
+    gene_row_to_pos = {row: i for i, row in enumerate(gene_data_index)}
+    
+    # chr_size lookup
+    chr_size_lookup = dict(zip(chr_size["chrom"].values, chr_size["size"].values))
+    
+    # nsubj_mtx as numpy array with column mapping
+    nsubj_cols = list(nsubj_mtx.columns)
+    nsubj_col_to_idx = {col: i for i, col in enumerate(nsubj_cols)}
+    nsubj_arr = nsubj_mtx.values.astype(np.float64)
+    
+    # p_nsubj as numpy array (we'll convert back to DataFrame at the end)
+    p_nsubj_arr = np.ones((g, nlt), dtype=np.float64)
+
+    # =========================================================================
+    # MAIN LOOP: Now using only numpy arrays
+    # =========================================================================
+    
+    for i in range(b):
+        # Get block boundaries from pre-extracted arrays
+        gli_start = glci_row_start[i]
+        gli_end = glci_row_end[i]
+        gld_start = gli_row_start[gli_start]
+        gld_end = gli_row_end[gli_end]
+        
+        # Get unique gene rows using numpy
+        gene_rows_all = gld_gene_row[gld_start:gld_end + 1]
+        gene_rows = np.unique(gene_rows_all)
+        n_genes = len(gene_rows)
+        
+        # Lookup lsn_chr info from pre-built dict
+        current_lsn_type = glci_lsn_type[i]
+        current_chrom = glci_chrom[i]
+        
+        lsn_chr_key = (current_lsn_type, current_chrom)
+        if lsn_chr_key not in lsn_chr_lookup:
+            continue
+        
+        lsn_index_start, lsn_index_end = lsn_chr_lookup[lsn_chr_key]
+        lsn_start = li_row_start[lsn_index_start]
+        lsn_end = li_row_end[lsn_index_end]
+        
+        # Get lsn_type from first lesion (via position mapping)
+        lsn_type = current_lsn_type
+        
+        # Chromosome size from pre-built lookup
+        chrom_size_val = chr_size_lookup.get(current_chrom)
+        if chrom_size_val is None:
+            continue
+        
+        # Map gene_rows to positions in gene_data arrays
+        gene_pos = np.array([gene_row_to_pos.get(r, -1) for r in gene_rows], dtype=np.int64)
+        if np.any(gene_pos < 0):
+            continue
+        
+        # Map lsn_rows to positions in lsn_data arrays
+        lsn_rows = np.arange(lsn_start, lsn_end + 1)
+        lsn_pos = np.array([lsn_row_to_pos.get(r, -1) for r in lsn_rows], dtype=np.int64)
+        if np.any(lsn_pos < 0):
+            continue
+        
+        # Compute gene_size and lsn_size from pre-extracted arrays
+        gene_size = (gene_data_loc_end[gene_pos] - gene_data_loc_start[gene_pos] + 1).astype(np.float64)
+        lsn_size = (lsn_data_loc_end[lsn_pos] - lsn_data_loc_start[lsn_pos] + 1).astype(np.float64)
+        lsn_subj_IDs = lsn_data_id[lsn_pos]
+        
+        # Call optimized chunk processor
+        _, pr_subj = process_block_in_chunks(gene_size, lsn_size, lsn_subj_IDs, chrom_size_val, chunk_size=5000)
+        
+        # Get max_nsubj from nsubj array
+        lsn_type_idx = nsubj_col_to_idx[lsn_type]
+        nsubj_for_genes = nsubj_arr[gene_pos, lsn_type_idx]
+        max_nsubj = int(np.max(nsubj_for_genes))
+        
+        # Bernoulli convolution
+        pr_nsubj = row_bern_conv(pr_subj, max_nsubj)
+        
+        # Compute p-values using numba kernel
+        nsubj_vals = nsubj_for_genes.astype(np.int64)
+        p_nsubj_values = compute_p_values_from_conv(pr_nsubj, nsubj_vals)
+        
+        # Store results directly into numpy array
+        p_nsubj_arr[gene_pos, lsn_type_idx] = p_nsubj_values
+
+    # =========================================================================
+    # POST-PROCESSING: Convert back to DataFrames for the rest of the pipeline
+    # =========================================================================
+    
+    p_nsubj = pd.DataFrame(p_nsubj_arr, columns=nsubj_mtx.columns)
+
+    q_nsubj = p_nsubj.copy()
+    for col in p_nsubj.columns:
+        pi_hat = min(1, 2 * p_nsubj[col].mean(skipna=True))
+        q_nsubj[col] = pi_hat * fdrcorrection(p_nsubj[col].fillna(1))[1]
+
+    round_digits = 4
+
+    def sig_round(x):
+        try:
+            if x == 0 or not np.isfinite(x):
+                return 0.0
+            with np.errstate(divide='ignore', invalid='ignore'):
+                return np.round(x, round_digits - int(np.floor(np.log10(abs(x)))) - 1)
+        except Exception:
+            return 0.0
+
+    if len(num_lsn) > 1:
+        p_ord_nsubj = pd.DataFrame(p_order(p_nsubj), columns=p_nsubj.columns)
+        q_ord_nsubj = p_ord_nsubj.copy()
+        for col in p_ord_nsubj.columns:
+            pi_hat = min(1, 2 * p_ord_nsubj[col].mean(skipna=True))
+            q_ord_nsubj[col] = pi_hat * fdrcorrection(p_ord_nsubj[col].fillna(1))[1]
+
+        p_ord_nsubj.columns = [f"p{i + 1}.nsubj" for i in range(p_nsubj.shape[1])]
+        q_ord_nsubj.columns = [f"q{i + 1}.nsubj" for i in range(p_nsubj.shape[1])]
+
+        p_nsubj = p_nsubj.apply(lambda col: col.map(sig_round))
+        q_nsubj = q_nsubj.apply(lambda col: col.map(sig_round))
+        p_ord_nsubj = p_ord_nsubj.apply(lambda col: col.map(sig_round))
+        q_ord_nsubj = q_ord_nsubj.apply(lambda col: col.map(sig_round))
+
+        gene_res = pd.concat([
+            gene_data.drop(columns=["glp.row.start", "glp.row.end"], errors="ignore"),
+            nsubj_mtx.add_prefix("nsubj."),
+            p_nsubj.add_prefix("p.nsubj."),
+            q_nsubj.add_prefix("q.nsubj."),
+            p_ord_nsubj,
+            q_ord_nsubj
+        ], axis=1)
+
+    else:
+        p_nsubj = p_nsubj.apply(lambda col: col.map(sig_round))
+        q_nsubj = q_nsubj.apply(lambda col: col.map(sig_round))
+
+        gene_res = pd.concat([
+            gene_data.drop(columns=["glp.row.start", "glp.row.end"], errors="ignore"),
+            nsubj_mtx.add_prefix("nsubj."),
+            p_nsubj.add_prefix("p.nsubj."),
+            q_nsubj.add_prefix("q.nsubj.")
+        ], axis=1)
+
+    return {
+        "gene.hits": gene_res,
+        "lsn.data": lsn_data,
+        "gene.data": gene_data,
+        "gene.lsn.data": gene_lsn_data,
+        "chr.size": chr_size,
+        "gene.index": gene_index,
+        "lsn.index": lsn_index
+    }
+
+def count_hits_fast(ov_data):
+    lsn_data = ov_data["lsn.data"]
+    lsn_index = ov_data["lsn.index"]
+    gene_lsn_hits = ov_data["gene.lsn.hits"]
+    gene_lsn_data = ov_data["gene.lsn.data"]
+    gene_data = ov_data["gene.data"]
+    gene_index = ov_data["gene.index"]
+
+    gene_row_map = pd.Series(gene_data.index.values, index=gene_data["gene"]).to_dict()
+
+    if gene_lsn_hits["gene.row"].max() > len(gene_data):
+        raise ValueError("gene.row values exceed number of rows in gene_data.")
+
+    gene_lsn_hits["gene.row"] = gene_lsn_hits["gene"].map(gene_row_map)
+
+    g = len(gene_data)
+    lsn_types = sorted(lsn_index["lsn.type"].unique())
+    k = len(lsn_types)
+    
+    # Create column index mapping for fast assignment
+    lsn_type_to_col = {t: i for i, t in enumerate(lsn_types)}
+
+    # OPTIMIZATION: Use numpy array instead of DataFrame for accumulation
+    nhit_arr = np.zeros((g, k), dtype=np.int64)
+    
+    # OPTIMIZATION: Replace iterrows with direct array operations
+    nhit_tbl = pd.crosstab(gene_lsn_hits["gene.row"], gene_lsn_hits["lsn.type"])
+    for col in nhit_tbl.columns:
+        col_idx = lsn_type_to_col[col]
+        row_indices = nhit_tbl.index.values
+        valid_mask = row_indices < g
+        nhit_arr[row_indices[valid_mask], col_idx] = nhit_tbl[col].values[valid_mask]
+    
+    nhit_mtx = pd.DataFrame(nhit_arr, columns=lsn_types)
+
+    # OPTIMIZATION: Use tuple-based deduplication instead of string concatenation
+    # Group by (gene.row, ID, lsn.type) and take first occurrence
+    dedup_cols = ["gene.row", "ID", "lsn.type"]
+    subj_gene_hits = gene_lsn_hits.drop_duplicates(subset=dedup_cols, keep="first")
+
+    # OPTIMIZATION: Same array-based approach for nsubj
+    nsubj_arr = np.zeros((g, k), dtype=np.int64)
+    
+    nsubj_tbl = pd.crosstab(subj_gene_hits["gene.row"], subj_gene_hits["lsn.type"])
+    for col in nsubj_tbl.columns:
+        col_idx = lsn_type_to_col[col]
+        row_indices = nsubj_tbl.index.values
+        valid_mask = row_indices < g
+        nsubj_arr[row_indices[valid_mask], col_idx] = nsubj_tbl[col].values[valid_mask]
+    
+    nsubj_mtx = pd.DataFrame(nsubj_arr, columns=lsn_types)
+
+    return {
+        "lsn.data": lsn_data,
+        "lsn.index": lsn_index,
+        "gene.data": gene_data,
+        "gene.index": gene_index,
+        "nhit.mtx": nhit_mtx,
+        "nsubj.mtx": nsubj_mtx,
+        "gene.lsn.data": gene_lsn_hits,
+        "glp.data": gene_lsn_data,
+    }
+
+def prep_gene_lsn_data_fast(lsn_data, gene_data, mess_freq=10, validate=True):
+    """
+    Optimized version:
+    - Build arrays directly, create DataFrame once at the end
+    - Single combined sort instead of multiple sorts
+    - Numpy-based validation instead of .tolist() comparison
+    """
+    
+    lsn_dset = order_index_lsn_data(lsn_data)
+    lsn_data = lsn_dset['lsn.data']
+    lsn_index = lsn_dset['lsn.index']
+
+    gene_dset = order_index_gene_data(gene_data)
+    gene_data = gene_dset['gene.data']
+    gene_index = gene_dset['gene.index']
+
+    g = len(gene_data)
+    l = len(lsn_data)
+    
+    # Total rows: 2 per gene (start/end) + 2 per lesion (start/end)
+    total_rows = 2 * g + 2 * l
+    
+    # Pre-extract arrays from DataFrames
+    gene_names = gene_data['gene'].values
+    gene_rows = gene_data['gene.row'].values
+    gene_chroms = gene_data['chrom'].values
+    gene_starts = gene_data['loc.start'].values
+    gene_ends = gene_data['loc.end'].values
+    
+    lsn_ids = lsn_data['ID'].values
+    lsn_types = lsn_data['lsn.type'].values
+    lsn_rows = lsn_data['lsn.row'].values
+    lsn_chroms = lsn_data['chrom'].values
+    lsn_starts = lsn_data['loc.start'].values
+    lsn_ends = lsn_data['loc.end'].values
+    
+    # Build combined position array directly
+    # Columns: ID, lsn.type, lsn.row, gene, gene.row, chrom, pos, cty
+    
+    # Allocate arrays
+    all_ids = np.empty(total_rows, dtype=object)
+    all_lsn_types = np.empty(total_rows, dtype=object)
+    all_lsn_rows = np.empty(total_rows, dtype=np.float64)  # float to allow NaN
+    all_genes = np.empty(total_rows, dtype=object)
+    all_gene_rows = np.empty(total_rows, dtype=np.float64)  # float to allow NaN
+    all_chroms = np.empty(total_rows, dtype=object)
+    all_pos = np.empty(total_rows, dtype=np.int64)
+    all_cty = np.empty(total_rows, dtype=np.int8)
+    
+    # Fill gene start entries (cty=1)
+    idx = 0
+    all_ids[idx:idx+g] = ''
+    all_lsn_types[idx:idx+g] = ''
+    all_lsn_rows[idx:idx+g] = np.nan
+    all_genes[idx:idx+g] = gene_names
+    all_gene_rows[idx:idx+g] = gene_rows
+    all_chroms[idx:idx+g] = gene_chroms
+    all_pos[idx:idx+g] = gene_starts
+    all_cty[idx:idx+g] = 1
+    
+    # Fill gene end entries (cty=4)
+    idx = g
+    all_ids[idx:idx+g] = ''
+    all_lsn_types[idx:idx+g] = ''
+    all_lsn_rows[idx:idx+g] = np.nan
+    all_genes[idx:idx+g] = gene_names
+    all_gene_rows[idx:idx+g] = gene_rows
+    all_chroms[idx:idx+g] = gene_chroms
+    all_pos[idx:idx+g] = gene_ends
+    all_cty[idx:idx+g] = 4
+    
+    # Fill lesion start entries (cty=2)
+    idx = 2 * g
+    all_ids[idx:idx+l] = lsn_ids
+    all_lsn_types[idx:idx+l] = lsn_types
+    all_lsn_rows[idx:idx+l] = lsn_rows
+    all_genes[idx:idx+l] = ''
+    all_gene_rows[idx:idx+l] = np.nan
+    all_chroms[idx:idx+l] = lsn_chroms
+    all_pos[idx:idx+l] = lsn_starts
+    all_cty[idx:idx+l] = 2
+    
+    # Fill lesion end entries (cty=3)
+    idx = 2 * g + l
+    all_ids[idx:idx+l] = lsn_ids
+    all_lsn_types[idx:idx+l] = lsn_types
+    all_lsn_rows[idx:idx+l] = lsn_rows
+    all_genes[idx:idx+l] = ''
+    all_gene_rows[idx:idx+l] = np.nan
+    all_chroms[idx:idx+l] = lsn_chroms
+    all_pos[idx:idx+l] = lsn_ends
+    all_cty[idx:idx+l] = 3
+    
+    # Create DataFrame and sort once
+    gene_lsn_data = pd.DataFrame({
+        'ID': all_ids,
+        'lsn.type': all_lsn_types,
+        'lsn.row': all_lsn_rows,
+        'gene': all_genes,
+        'gene.row': all_gene_rows,
+        'chrom': all_chroms,
+        'pos': all_pos,
+        'cty': all_cty
+    })
+    
+    # Single sort for the main ordering
+    gene_lsn_data.sort_values(by=['chrom', 'pos', 'cty'], inplace=True, ignore_index=True)
+    gene_lsn_data['glp.row'] = gene_lsn_data.index + 1  # 1-based
+    
+    # Get sort indices for lsn.row/gene.row ordering
+    # Use numpy argsort for speed - need to handle NaN properly
+    lsn_row_arr = gene_lsn_data['lsn.row'].values.copy()
+    gene_row_arr = gene_lsn_data['gene.row'].values.copy()
+    cty_arr = gene_lsn_data['cty'].values
+    
+    # Replace NaN with large values for sorting purposes
+    lsn_row_for_sort = np.where(np.isnan(lsn_row_arr), 1e18, lsn_row_arr)
+    gene_row_for_sort = np.where(np.isnan(gene_row_arr), 1e18, gene_row_arr)
+    
+    # Lexsort sorts by last key first, so reverse order
+    ord_idx = np.lexsort((cty_arr, gene_row_for_sort, lsn_row_for_sort))
+    
+    # Extract glp.row values
+    glp_row_arr = gene_lsn_data['glp.row'].values
+    
+    # Lesion positions (first 2*l entries in sorted order)
+    lsn_ord_idx = ord_idx[:2 * l]
+    lsn_glp_rows = glp_row_arr[lsn_ord_idx]
+    lsn_data = lsn_data.copy()
+    lsn_data['glp.row.start'] = lsn_glp_rows[::2]
+    lsn_data['glp.row.end'] = lsn_glp_rows[1::2]
+    
+    # Gene positions (remaining entries)
+    gene_ord_idx = ord_idx[2 * l:]
+    gene_glp_rows = glp_row_arr[gene_ord_idx]
+    gene_data = gene_data.copy()
+    gene_data['glp.row.start'] = gene_glp_rows[::2]
+    gene_data['glp.row.end'] = gene_glp_rows[1::2]
+    
+    # Add 0-based indices
+    gene_lsn_data['gene.row.0'] = gene_lsn_data['gene.row'] - 1
+    gene_lsn_data['lsn.row.0'] = gene_lsn_data['lsn.row'] - 1
+    
+    # Validation - use numpy comparison instead of .tolist()
+    if validate:
+        def check_arrays_equal(arr1, arr2):
+            """Fast numpy-based equality check"""
+            if arr1.shape != arr2.shape:
+                return False
+            # Handle object dtypes element-wise
+            return np.all(arr1 == arr2)
+        
+        glp_data_gene = gene_lsn_data['gene'].values
+        glp_data_chrom = gene_lsn_data['chrom'].values
+        glp_data_pos = gene_lsn_data['pos'].values
+        glp_data_id = gene_lsn_data['ID'].values
+        glp_data_lsn_type = gene_lsn_data['lsn.type'].values
+        
+        gene_glp_start_idx = (gene_data['glp.row.start'].values - 1).astype(int)
+        gene_glp_end_idx = (gene_data['glp.row.end'].values - 1).astype(int)
+        lsn_glp_start_idx = (lsn_data['glp.row.start'].values - 1).astype(int)
+        lsn_glp_end_idx = (lsn_data['glp.row.end'].values - 1).astype(int)
+        
+        ok_glp_gene_start = (
+            check_arrays_equal(glp_data_gene[gene_glp_start_idx], gene_data['gene'].values) and
+            check_arrays_equal(glp_data_chrom[gene_glp_start_idx], gene_data['chrom'].values) and
+            check_arrays_equal(glp_data_pos[gene_glp_start_idx], gene_data['loc.start'].values)
+        )
+        
+        ok_glp_gene_end = (
+            check_arrays_equal(glp_data_gene[gene_glp_end_idx], gene_data['gene'].values) and
+            check_arrays_equal(glp_data_chrom[gene_glp_end_idx], gene_data['chrom'].values) and
+            check_arrays_equal(glp_data_pos[gene_glp_end_idx], gene_data['loc.end'].values)
+        )
+        
+        ok_glp_lsn_start = (
+            check_arrays_equal(glp_data_id[lsn_glp_start_idx], lsn_data['ID'].values) and
+            check_arrays_equal(glp_data_chrom[lsn_glp_start_idx], lsn_data['chrom'].values) and
+            check_arrays_equal(glp_data_pos[lsn_glp_start_idx], lsn_data['loc.start'].values) and
+            check_arrays_equal(glp_data_lsn_type[lsn_glp_start_idx], lsn_data['lsn.type'].values)
+        )
+        
+        ok_glp_lsn_end = (
+            check_arrays_equal(glp_data_id[lsn_glp_end_idx], lsn_data['ID'].values) and
+            check_arrays_equal(glp_data_chrom[lsn_glp_end_idx], lsn_data['chrom'].values) and
+            check_arrays_equal(glp_data_pos[lsn_glp_end_idx], lsn_data['loc.end'].values) and
+            check_arrays_equal(glp_data_lsn_type[lsn_glp_end_idx], lsn_data['lsn.type'].values)
+        )
+        
+        all_ok = ok_glp_gene_start and ok_glp_gene_end and ok_glp_lsn_start and ok_glp_lsn_end
+        
+        if not all_ok:
+            raise ValueError("Error in constructing and indexing combined lesion and gene data.")
+    
+    return {
+        'lsn.data': lsn_data,
+        'gene.data': gene_data,
+        'gene.lsn.data': gene_lsn_data,
+        'gene.index': gene_index,
+        'lsn.index': lsn_index
+    }
 
 ###############################################################
 # 1) This function orders and indexes gene annotation data by chromosome, gene start, and gene end positions.
@@ -386,27 +1148,7 @@ def count_hits(ov_data):
         "glp.data": gene_lsn_data,
     }
 
-###################################################################
-# Numba-optimized convolution (prob_hits helper functions)
-######################################################
-# 6) Compute a convolution of Bernoullis for each row of a Bernoulli success probability matrix (part of the prob.hits function)
 
-@numba.njit(parallel=True, fastmath=True)
-def row_bern_conv(P, max_x):
-    m, n = P.shape
-    Pr = np.zeros((m, max_x + 2))
-    for i in range(m):
-        Pr[i, 0] = 1.0  # initialize P(X=0)=1
-
-    for j in range(n):
-        p_col = P[:, j]
-        for i in numba.prange(m):
-            p = p_col[i]
-            for k in range(max_x, -1, -1):
-                Pr[i, k + 1] += Pr[i, k] * p
-                Pr[i, k] *= (1.0 - p)
-
-    return Pr
 
 ######################################################################################################
 # 7) Compute the probability that a subject has a hit for each gene (part of the prob.hits function).
@@ -707,13 +1449,16 @@ def grin_stats(lsn_data, gene_data, chr_size):
     - DataFrame with gene stats, including p-values and q-values
     """
 
-    prep_data = prep_gene_lsn_data(lsn_data, gene_data)
+    prep_data = prep_gene_lsn_data_fast(lsn_data, gene_data)
 
-    overlaps = find_gene_lsn_overlaps(prep_data)
+    # overlaps = find_gene_lsn_overlaps(prep_data)
+    overlaps = find_gene_lsn_overlaps_fast(prep_data)
 
-    counts_df = count_hits(overlaps)
+    # counts_df = count_hits(overlaps)
+    counts_df = count_hits_fast(overlaps)
 
-    result_df = prob_hits(counts_df, chr_size)
+    # result_df = prob_hits(counts_df, chr_size)
+    result_df = prob_hits_fast(counts_df, chr_size)
 
     return result_df
 

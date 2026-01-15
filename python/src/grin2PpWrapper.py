@@ -31,6 +31,7 @@ import sqlite3
 import pandas as pd
 import numpy as np
 from grin2_core import grin_stats
+# from grin2_core import timed_grin_stats
 
 warnings.filterwarnings('ignore')
 
@@ -261,6 +262,7 @@ try:
 	
 	# 5. Run GRIN2
 	grin_results = grin_stats(lesion_df, gene_anno, chrom_size)
+	# grin_results = timed_grin_stats(lesion_df, gene_anno, chrom_size)
 	if not isinstance(grin_results, dict):
 		write_error("grin_stats returned invalid results")
 		sys.exit(1)
