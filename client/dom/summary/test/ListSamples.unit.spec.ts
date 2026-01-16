@@ -14,7 +14,7 @@ Tests:
 	- createTvsValues() returns correct values array for numeric term
 	- createTvsRanges() creates correct range for useRange=true
 	- createTvsRanges() returns empty array for continuous term without bins
-	- createTvsRanges() handles bins from config
+	- createTvsRanges() handles bins
 	- createTvsRanges() handles uncomputable values
 	- isContinuousOrBinned() returns correct boolean values per term type
 	- isContinuousOrBinned() returns false when mode is not in term query
@@ -76,7 +76,7 @@ tape('ListSamples constructor throws for incomplete range parameters', test => {
 
 	const message = 'Should throw error when start is provided without end'
 	try {
-		new ListSamples(mockApp, mockState.termfilter, mockConfig1, mockPlot1 as any, 10, undefined)
+		new ListSamples(mockApp, mockState.termfilter, mockConfig1, mockPlot1 as any, {}, 10, undefined)
 		test.fail(message)
 	} catch (e: any) {
 		test.pass(`${message}: ${e.message || e}`)
@@ -225,7 +225,7 @@ tape('createTvsRanges() creates correct range for useRange=true', test => {
 		plots: [mockConfig1],
 		termfilter: { filter: 'test' }
 	}
-	const listSamples = new ListSamples(mockApp, mockState.termfilter, mockConfig1, mockPlot1 as any, 10, 20)
+	const listSamples = new ListSamples(mockApp, mockState.termfilter, mockConfig1, mockPlot1 as any, {}, 10, 20)
 
 	const mockTvs: any = { ranges: [] }
 	listSamples.createTvsRanges(mockTvs, 1, '')
@@ -257,7 +257,7 @@ tape('createTvsRanges() returns empty array for continuous term without bins', t
 	test.end()
 })
 
-tape('createTvsRanges() handles bins from config', test => {
+tape('createTvsRanges() handles bins', test => {
 	test.timeoutAfter(100)
 
 	const { listSamples } = getNewListSamples()
@@ -268,7 +268,7 @@ tape('createTvsRanges() handles bins from config', test => {
 	const mockTvs: any = {}
 	listSamples.createTvsRanges(mockTvs, 1, 'testKey')
 
-	test.deepEqual(mockTvs.ranges, [mockBin], 'Should use bin from config when available')
+	test.deepEqual(mockTvs.ranges, [mockBin], 'Should use bin when available')
 
 	test.end()
 })

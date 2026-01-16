@@ -67,7 +67,7 @@ export class BoxPlotInteractions {
 		const state = this.app.getState()
 		const plotConfig = this.getPlotConfig()
 		const config = structuredClone(plotConfig)
-		config.bins = this.getResData().bins
+		const bins = this.getResData().bins
 		/** Some continuous terms require a range but no
 		 * bins are calculated for the response. Passing
 		 * the absolute min/max solves this issue. */
@@ -80,7 +80,7 @@ export class BoxPlotInteractions {
 			config.term2 = config.term
 			config.term = contTerm
 		}
-		const sampleList = new ListSamples(this.app, state.termfilter, config, plot, start, stop)
+		const sampleList = new ListSamples(this.app, state.termfilter, config, plot, bins, start, stop)
 		return sampleList
 	}
 
