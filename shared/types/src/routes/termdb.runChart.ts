@@ -3,8 +3,8 @@ import type { RoutePayload, Point } from './routeApi.ts'
 export type RunChartRequest = {
 	genome: string
 	dslabel: string
-	term1: string
-	term2?: string
+	term: string
+	term2: string
 	//Other parameters can be added here
 }
 
