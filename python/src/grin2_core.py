@@ -22,21 +22,38 @@ import sys
 # 6) Compute a convolution of Bernoullis for each row of a Bernoulli success probability matrix (part of the prob.hits function)
 
 @numba.njit(parallel=True, fastmath=True)
-def row_bern_conv(P, max_x):
+def bern_conv_and_pvalue(P, nsubj_vals):
+    """
+    Fused: compute convolution AND p-value in one pass.
+    Avoids allocating the full (genes × max_nsubj) probability matrix.
+    
+    For each gene, we only need P(X >= k) where k = nsubj_vals[gene].
+    """
     m, n = P.shape
-    Pr = np.zeros((m, max_x + 2))
-    for i in range(m):
-        Pr[i, 0] = 1.0  # initialize P(X=0)=1
-
-    for j in range(n):
-        p_col = P[:, j]
-        for i in numba.prange(m):
-            p = p_col[i]
+    max_x = int(np.max(nsubj_vals))
+    
+    p_values = np.zeros(m, dtype=np.float64)
+    
+    for i in numba.prange(m):
+        # Allocate small local array for this gene only
+        Pr = np.zeros(max_x + 2, dtype=np.float64)
+        Pr[0] = 1.0
+        
+        # Convolution for this gene
+        for j in range(n):
+            p = P[i, j]
             for k in range(max_x, -1, -1):
-                Pr[i, k + 1] += Pr[i, k] * p
-                Pr[i, k] *= (1.0 - p)
-
-    return Pr
+                Pr[k + 1] += Pr[k] * p
+                Pr[k] *= (1.0 - p)
+        
+        # Compute p-value: sum from nsubj_vals[i] to end
+        k_start = nsubj_vals[i]
+        total = 0.0
+        for k in range(k_start, max_x + 2):
+            total += Pr[k]
+        p_values[i] = total
+    
+    return p_values
 
 @njit(parallel=True)
 def scatter_add_2d(logsum, subj_indices, log_chunk):
@@ -449,14 +466,10 @@ def prob_hits_fast(hit_cnt, chr_size):
         # Get max_nsubj from nsubj array
         lsn_type_idx = nsubj_col_to_idx[lsn_type]
         nsubj_for_genes = nsubj_arr[gene_pos, lsn_type_idx]
-        max_nsubj = int(np.max(nsubj_for_genes))
+        nsubj_vals = nsubj_for_genes.astype(np.int64)
         
         # Bernoulli convolution
-        pr_nsubj = row_bern_conv(pr_subj, max_nsubj)
-        
-        # Compute p-values using numba kernel
-        nsubj_vals = nsubj_for_genes.astype(np.int64)
-        p_nsubj_values = compute_p_values_from_conv(pr_nsubj, nsubj_vals)
+        p_nsubj_values = bern_conv_and_pvalue(pr_subj, nsubj_vals)
         
         # Store results directly into numpy array
         p_nsubj_arr[gene_pos, lsn_type_idx] = p_nsubj_values
