@@ -5,7 +5,8 @@ export type RunChartRequest = {
 	dslabel: string
 	term: string
 	term2: string
-	//Other parameters can be added here
+	filter?: any
+	__protected__?: any // auth token for accessing protected data
 }
 
 export type RunChartResponse = {
