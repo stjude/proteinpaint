@@ -167,9 +167,7 @@ function get_survival(tvs, CTEname, ds, onlyChildren) {
 	${tvs.q?.cutoff ? 'AND tte >= ' + tvs.q?.cutoff : ''}
 	AND exit_code ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
 
-	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry)
-		query = ` select sa.sample_id as sample from sample_ancestry sa where sa.ancestor_id in (${query}) `
-
+	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
 	return {
 		CTEs: [
 			`
