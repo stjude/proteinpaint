@@ -54,7 +54,7 @@ async function getNewListSamples(opts: any = {}) {
 	const start = opts.start ?? null
 	const end = opts.end ?? null
 
-	const listSamples = new ListSamples(mockApp, mockState.termfilter, config, plot, start, end)
+	const listSamples = new ListSamples(mockApp, mockState.termfilter, config, plot, {}, start, end)
 
 	return { listSamples, config, plot, mockApp, mockState }
 }
@@ -76,15 +76,18 @@ tape('ListSamples.getData() for term=numeric returns the correct data object', a
 			term: JSON.parse(JSON.stringify(termjson['agedx'])),
 			q: { mode: 'continuous' },
 			$id: 'term1'
-		},
-		bins: { term1: {} }
+		}
 	}
-	const mockPlot = {
-		seriesId: 'All samples',
-		chartId: ''
-	}
+	const mockBins = { term1: {} }
+	const mockPlot = { seriesId: 'All samples', chartId: '' }
 
-	const { listSamples } = await getNewListSamples({ config: mockConfig, plot: mockPlot, start: 0, end: 40 })
+	const { listSamples } = await getNewListSamples({
+		config: mockConfig,
+		plot: mockPlot,
+		bins: mockBins,
+		start: 0,
+		end: 40
+	})
 	const data = await listSamples.getData()
 
 	test.true(
@@ -105,15 +108,18 @@ tape('ListSamples.getData() for term=gene exp returns the correct data object', 
 			term: { gene: 'TP53', name: 'TP53 FPKM', type: 'geneExpression' },
 			q: { mode: 'continuous' },
 			$id: 'term1'
-		},
-		bins: { term1: {} }
+		}
 	}
-	const mockPlot = {
-		seriesId: 'TP53 SNV/indel Mutated (somatic)',
-		chartId: ''
-	}
+	const mockBins = { term1: {} }
+	const mockPlot = { seriesId: 'TP53 SNV/indel Mutated (somatic)', chartId: '' }
 
-	const { listSamples } = await getNewListSamples({ config: mockConfig, plot: mockPlot, start: 0, end: 40 })
+	const { listSamples } = await getNewListSamples({
+		config: mockConfig,
+		plot: mockPlot,
+		bins: mockBins,
+		start: 0,
+		end: 40
+	})
 	const data = await listSamples.getData()
 
 	test.true(
@@ -131,16 +137,17 @@ tape('ListSamples.getData() for term=gene variant returns the correct data objec
 	test.timeoutAfter(1000)
 	const mockTerm: any = getGeneVariantTw()
 	mockTerm.$id = 'term2'
-	const mockConfig = {
-		term: mockTerm,
-		bins: { term1: {} }
-	}
-	const mockPlot = {
-		seriesId: 'TP53 SNV/indel Mutated (somatic)',
-		chartId: ''
-	}
+	const mockConfig = { term: mockTerm }
+	const mockBins = { term1: {} }
+	const mockPlot = { seriesId: 'TP53 SNV/indel Mutated (somatic)', chartId: '' }
 
-	const { listSamples } = await getNewListSamples({ config: mockConfig, plot: mockPlot, start: 0, end: 40 })
+	const { listSamples } = await getNewListSamples({
+		config: mockConfig,
+		plot: mockPlot,
+		bins: mockBins,
+		start: 0,
+		end: 40
+	})
 	const data = await listSamples.getData()
 
 	test.true(
@@ -159,15 +166,12 @@ tape('ListSamples.getData() for term=numeric and term2=categorical returns the c
 
 	const mockConfig = {
 		term: { term: JSON.parse(JSON.stringify(termjson['agedx'])), q: { mode: 'continuous' }, $id: 'term1' },
-		term2: { term: JSON.parse(JSON.stringify(termjson['sex'])), q: {}, $id: 'term2' },
-		bins: { term1: {}, term2: {} }
+		term2: { term: JSON.parse(JSON.stringify(termjson['sex'])), q: {}, $id: 'term2' }
 	}
-	const mockPlot = {
-		key: 'Female',
-		seriesId: '2'
-	}
+	const mockBins = { term1: {}, term2: {} }
+	const mockPlot = { key: 'Female', seriesId: '2', chartId: '' }
 
-	const { listSamples, config } = await getNewListSamples({ config: mockConfig, plot: mockPlot })
+	const { listSamples, config } = await getNewListSamples({ config: mockConfig, plot: mockPlot, bins: mockBins })
 	const data = await listSamples.getData()
 
 	test.true(
@@ -198,15 +202,15 @@ tape(
 				q: { mode: 'continuous' },
 				$id: 'term1'
 			},
-			term2: mockTerm2,
-			bins: { term1: {}, term2: {} }
+			term2: mockTerm2
 		}
+		const mockBins = { term1: {}, term2: {} }
 		const mockPlot = {
 			seriesId: 'TP53 SNV/indel Mutated (somatic)',
 			chartId: ''
 		}
 
-		const { listSamples } = await getNewListSamples({ config: mockConfig, plot: mockPlot, start: 0, end: 40 })
+		const { listSamples } = await getNewListSamples({ config: mockConfig, plot: mockPlot, mockBins, start: 0, end: 40 })
 		const data = await listSamples.getData()
 
 		test.true(
@@ -238,15 +242,21 @@ tape(
 				term: { gene: 'TP53', name: 'TP53 FPKM', type: 'geneExpression' },
 				q: { mode: 'continuous' },
 				$id: 'term2'
-			},
-			bins: { term1: {}, term2: {} }
+			}
 		}
 		const mockPlot = {
 			seriesId: 'TP53 SNV/indel Mutated (somatic)',
 			chartId: ''
 		}
+		const mockBins = { term1: {}, term2: {} }
 
-		const { listSamples } = await getNewListSamples({ config: mockConfig, plot: mockPlot, start: 0, end: 40 })
+		const { listSamples } = await getNewListSamples({
+			config: mockConfig,
+			plot: mockPlot,
+			bins: mockBins,
+			start: 0,
+			end: 40
+		})
 		const data = await listSamples.getData()
 
 		test.true(
@@ -272,15 +282,21 @@ tape('ListSamples.getData() for term=numeric and term2=samplelst returns the cor
 	mockTerm2.$id = 'term2'
 	const mockConfig = {
 		term: { term: JSON.parse(JSON.stringify(termjson['agedx'])), q: { mode: 'continuous' }, $id: 'term1' },
-		term2: mockTerm2,
-		bins: { term1: {}, term2: {} }
+		term2: mockTerm2
 	}
+	const mockBins = { term1: {}, term2: {} }
 	const mockPlot = {
 		seriesId: 'Group 1',
 		chartId: ''
 	}
 
-	const { listSamples } = await getNewListSamples({ config: mockConfig, plot: mockPlot, start: -2, end: 25 })
+	const { listSamples } = await getNewListSamples({
+		config: mockConfig,
+		plot: mockPlot,
+		bins: mockBins,
+		start: -2,
+		end: 25
+	})
 	const data = await listSamples.getData()
 
 	test.true(
