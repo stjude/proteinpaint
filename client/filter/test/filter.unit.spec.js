@@ -213,8 +213,6 @@ tape('getFilterExcludingPill()', async test => {
 		)
 	}
 
-	console.log(216, f0.getTreeFilter, f0)
-
 	if (test._ok) f0.destroy()
 	test.end()
 })

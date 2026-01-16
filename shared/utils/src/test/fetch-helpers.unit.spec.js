@@ -28,7 +28,23 @@ function mockFetch(response, ok = true, contentType = 'application/json') {
 			},
 			json: async () => response,
 			text: async () => (typeof response === 'string' ? response : JSON.stringify(response)),
-			blob: async () => response
+			blob: async () => response,
+			body: {
+				pipeThrough() {
+					return {
+						getReader() {
+							const maxIndex = response.length
+							let i = -1
+							return {
+								read: async () => {
+									i++
+									return i >= maxIndex ? { done: true } : { value: JSON.stringify(response[i]) + '\n', done: false }
+								}
+							}
+						}
+					}
+				}
+			}
 		})
 	}
 }
@@ -76,6 +92,40 @@ tape('text response', async test => {
 	root.fetch = mockFetch('plain text response', true, 'text/plain')
 	const result = await ezFetch('http://api/test')
 	test.equal(result, 'plain text response', 'should return text body')
+	test.end()
+})
+
+tape('x-ndjson-nestedkeys', async test => {
+	test.teardown(cleanup)
+
+	//
+	const data = {
+		samples: {
+			SJ001: { data: 'abc', term1: { key: '1', value: 'test' } },
+			SJ002: { data: 'abc', term2: { key: '1', value: 'test' } }
+		},
+		refs: {
+			bySampleId: {
+				SJ001: { name: 'SJ001' },
+				SJ002: { name: 'SJ002' }
+			},
+			byTermId: {
+				term1: { label: 'Term 1' },
+				term2: { label: 'Term 2' }
+			}
+		}
+	}
+
+	const response = [
+		[[], { samples: {}, refs: { bySampleId: {} } }],
+		...Object.entries(data.samples).map(kv => [['samples', kv[0]], kv[1]]),
+		...Object.entries(data.refs.bySampleId).map(kv => [['refs', 'bySampleId', kv[0]], kv[1]]),
+		[['refs', 'byTermId'], data.refs.byTermId]
+	]
+
+	root.fetch = mockFetch(structuredClone(response), true, 'application/x-ndjson-nestedkey')
+	const result = await ezFetch('http://api/test')
+	test.deepEqual(result, data, 'should return parsed and fully built body')
 	test.end()
 })
 
