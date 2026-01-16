@@ -66,5 +66,11 @@ export type DbRows = {
 
 export type DbValue = {
 	key: string
-	label: string
+	value: string
+}
+
+export type ValidTerm = {
+	/** Type for storing validated term and error message */
+	validated_term: string
+	invalid_html: string
 }
