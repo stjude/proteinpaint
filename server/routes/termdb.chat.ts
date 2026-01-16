@@ -1,10 +1,9 @@
 import fs from 'fs'
 import { ezFetch } from '#shared'
-//import Ajv from 'ajv'
 import { createGenerator } from 'ts-json-schema-generator'
 import type { SchemaGenerator } from 'ts-json-schema-generator'
 import path from 'path'
-import type { ChatRequest, ChatResponse, RouteApi, DbRows, DbValue, SummaryType } from '#types'
+import type { ChatRequest, ChatResponse, RouteApi, DbRows, DbValue, SummaryType, ValidTerm } from '#types'
 import { ChatPayload } from '#types/checkers'
 //import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '../src/serverconfig.js'
@@ -269,8 +268,6 @@ async function classify_query_by_dataset_type(
 	aiRoute: string
 ) {
 	const data = await readJSONFile(aiRoute)
-	mayLog('ai_json:', data)
-
 	let contents = data['general'] // The general description should be right at the top of the system prompt
 	for (const key of Object.keys(data)) {
 		// Add descriptions of all other agents after the general description
@@ -323,19 +320,11 @@ async function extract_summary_terms(
 	}
 	const generator: SchemaGenerator = createGenerator(SchemaConfig)
 	const StringifiedSchema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // May use a typescript definition in the future which may be generated at server startup
-	const summary_variable: SummaryType = {
-		// Just defined this variable so that can commit to repo for now. Will be deleted later
-		term: 'abc'
-	}
-	mayLog('summary_variable:', summary_variable)
-	mayLog(db_rows, rag_docs)
 	const words = prompt.split(/\s+/).map(str => str.toUpperCase()) // Split on whitespace and convert to uppercase
-	const common_genes = words.filter(item => genes_list.includes(item)) // The reason I only want to show common genes that are actually present in the genedb because otherwise showing ~20000 genes would increase the number of tokens significantly and may cause the LLM to loose context. Much easier to parse out relevant genes from the user prompt.
-	mayLog('common_genes:', common_genes)
+	const common_genes = words.filter(item => genes_list.includes(item)) // The reason behind showing common genes that are actually present in the genedb is because otherwise showing ~20000 genes would increase the number of tokens significantly and may cause the LLM to loose context. Much easier to parse out relevant genes from the user prompt.
 
 	// Read dataset JSON file
 	const dataset_json: any = await readJSONFile(ai_json)
-	mayLog('dataset_json.hasGeneExpression:', dataset_json)
 
 	// Parse out training data from the dataset JSON and add it to a string
 	const summary_ds = dataset_json.charts.filter((chart: any) => chart.type == 'Summary')
@@ -394,7 +383,72 @@ async function extract_summary_terms(
 		throw 'Unknown LLM backend'
 	}
 	mayLog('response:', JSON.parse(response))
+	validate_summary_response(response, db_rows, common_genes, ai_json)
 	return JSON.parse(response)
+}
+
+function validate_summary_response(response: string, db_rows: DbRows[], common_genes: string[], dataset_json: any) {
+	const response_type = JSON.parse(response)
+	let html = ''
+	if (response_type.html) html = response_type.html
+	if (!response_type.term) html += 'term type is not present in summary output'
+
+	const validated_summary_type: SummaryType = {
+		// Initializing SummaryType
+		term: ''
+	}
+	const term1_validity: ValidTerm = validate_term(response_type.term, db_rows, common_genes, dataset_json, html)
+	if (term1_validity.invalid_html.length > 0) {
+		html += term1_validity.invalid_html
+	} else if (term1_validity.validated_term.length > 0) {
+		validated_summary_type.term = term1_validity.validated_term
+	}
+
+	if (response_type.term2) {
+		const term2_validity: ValidTerm = validate_term(response_type.term2, db_rows, common_genes, dataset_json, html)
+		if (term2_validity.invalid_html.length > 0) {
+			html += term2_validity.invalid_html
+		} else if (term2_validity.validated_term.length > 0) {
+			validated_summary_type.term2 = term2_validity.validated_term
+		}
+	}
+	//if (response_type.simpleFilter) {
+	//
+	//}
+}
+
+function validate_term(term: string, db_rows: DbRows[], common_genes: string[], dataset_json: any, html: string) {
+	mayLog('db_rows:', db_rows[0].values)
+	const validated_row = db_rows.filter((row: DbRows) => row.name == term)
+	const gene_hits = common_genes.filter(gene => gene == term)
+	let invalid_html = ''
+	let validated_term: string = ''
+	if (validated_row.length == 0 && gene_hits.length == 0 && !html.includes('not found in database')) {
+		// If the term is neither a field in dataset db nor a gene that means its a fake term given by the user or cooked up by the LLM. This should be reported on the client side.
+		invalid_html = 'The term ' + term + ' was not found'
+
+		// Check to see if the term is accidentally a key to a term (for e.g. Male instead of Sex), if yes append to error message
+		for (const row of db_rows) {
+			if (Object.keys(row.values).length > 0) {
+				for (const key of Object.keys(row.values)) {
+					if (row.values[key].value.label == term) {
+						invalid_html += 'term ' + term + ' is a category of ' + row.name
+					}
+				}
+			}
+		}
+	} else if (gene_hits.length > 0) {
+		// If the term is a gene, check to see if the dataset supports geneExpression
+		if (dataset_json.hasGeneExpression) {
+			validated_term = term
+		} else if (!html.includes('Dataset does not support gene expression')) {
+			// Check to see if the LLM inserted the sentence. Many times it does not despite being in the system prompt, in such a case manually add this message to the error message
+			invalid_html += ' Dataset does not support gene expression'
+		}
+	} else if (validated_row.length > 0) {
+		validated_term = term
+	}
+	return { validated_term: validated_term, invalid_html: invalid_html } as ValidTerm
 }
 
 async function parse_geneset_db(genedb: string) {
@@ -436,10 +490,10 @@ async function parse_dataset_db(dataset_db: string) {
 			const term_type: string = row.type
 
 			const values: DbValue[] = []
-			if (jsondata.values && jsondata.values.length > 0) {
+			if (jsondata.values && Object.keys(jsondata.values).length > 0) {
 				for (const key of Object.keys(jsondata.values)) {
 					const value = jsondata.values[key]
-					const db_val: DbValue = { key: key, label: value }
+					const db_val: DbValue = { key: key, value: value }
 					values.push(db_val)
 				}
 			}
