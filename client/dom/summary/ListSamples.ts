@@ -23,8 +23,8 @@ export class ListSamples {
 	app: AppApi
 	termfilter: any
 	plot: Plot
-	/** Created by the server */
-	bins: any
+	/** Generated from the server */
+	bins: object
 
 	t1: TermWrapper
 	t2: TermWrapper
@@ -48,14 +48,22 @@ export class ListSamples {
 	/** For filtering gene variant terms later */
 	geneVariant = {}
 
-	constructor(app: AppApi, termfilter: any, config: any, plot: Plot, start?: number, end?: number) {
+	constructor(
+		app: AppApi,
+		termfilter: any,
+		config: any,
+		plot: Plot,
+		bins?: object,
+		start?: number | null,
+		end?: number | null
+	) {
 		if (!config.term) {
 			throw new Error('Missing term in plot config')
 		}
 		this.app = app
 		this.termfilter = termfilter
 		this.plot = plot
-		this.bins = config.bins || {}
+		this.bins = bins || {}
 
 		this.t1 = config.term
 		this.t2 = config.term2
@@ -63,16 +71,14 @@ export class ListSamples {
 
 		this.terms = [this.t1]
 
-		const noValue = v => {
-			return v === null || v === undefined
-		}
-		if ((start && noValue(end)) || (noValue(start) && end)) {
+		if ((start && !Number.isFinite(end)) || (!Number.isFinite(start) && end)) {
 			throw new Error('Both start and end must be provided for range filtering')
 		}
-		if (!noValue(start) && !noValue(end)) {
+
+		if (Number.isFinite(start) && Number.isFinite(end)) {
 			this.useRange = true
-			this.start = start
-			this.end = end
+			this.start = start as number
+			this.end = end as number
 		} else this.useRange = false
 
 		this.tvslst = {
@@ -235,19 +241,11 @@ export class ListSamples {
 				row[0].url = urlTemplate.base + (s[urlTemplate.namekey] || s.sample)
 			}
 			if (s[this.t1.$id!]) {
-				if (this.t1?.q?.hiddenValues && this.t1?.q.hiddenValues[s[this.t1.$id!].value]) {
+				if (this.t1?.q?.hiddenValues && this.t1.q.hiddenValues?.[s[this.t1.$id!]?.value]) {
 					continue //skip hidden values
 				} else this.addRowValue(s, this.t1, row)
 			} else continue //skip rows with no term value
 			if (this.t2) {
-				if (this.t2.term.type === TermTypes.SURVIVAL) {
-					/** skip survival terms for now
-					 * Works for all other ds except termdbtest but
-					 * integration tests fail when included.
-					 * skipping until fixed.
-					 */
-					continue
-				}
 				if (this.t2?.q?.hiddenValues && this.t2?.q.hiddenValues[s[this.t2.$id!].value]) {
 					continue
 				}
@@ -290,6 +288,12 @@ export class ListSamples {
 		} else if (tw.term.type === TermTypes.SURVIVAL) {
 			/** Use key for term value, not value (value == time elapsed) */
 			formattedVal = tw.term.values?.[sample.key]?.label || sample.key
+			/** skip survival terms for now
+			 * Works for all other ds except termdbtest but
+			 * integration tests fail when included.
+			 * skipping until fixed.
+			 */
+			return
 		} else {
 			formattedVal = tw.term.values?.[sample.value]?.label || sample.value
 		}
