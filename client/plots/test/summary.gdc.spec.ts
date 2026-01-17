@@ -1,21 +1,41 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { runproteinpaint, getRunPp } from '../../test/front.helpers.js'
-import { getCnv_categorical } from '../../test/testdata/data.ts'
+import { getCnv_categorical, getGdcDiseaseGroupsetting, getGenesetMutTw } from '../../test/testdata/data.ts'
 import { detectOne } from '../../test/test.helpers'
+import { testViolinByCount } from './violin.integration.spec.js'
 
 /**********************
 Tests for summary plots (barchart, violin, boxplot) in GDC
 
 barchart - categorical
+barchart - catGroupsetting
 barchart - numerical
 barchart - 1geneMutation
 barchart - 2geneMutation
 barchart - 1geneCnv
 barchart - geneExpression
 barchart - categorical/categorical
-barchart - categorical/geneVariant
+barchart - categorical/numerical
+barchart - categorical/1geneMutation
+barchart - categorical/2geneMutation
+barchart - categorical/1geneCnv
 barchart - categorical/geneExpression
+
+barchart - catGroupsetting/categorical
+barchart - catGroupsetting/numerical
+barchart - catGroupsetting/1geneMutation
+barchart - catGroupsetting/2geneMutation
+barchart - catGroupsetting/1geneCnv
+barchart - catGroupsetting/geneExpression
+
+barchart - numerical/catGroupsetting
+barchart - numerical/1geneMutation
+barchart - numerical/2geneMutation
+barchart - numerical/1geneCnv
+barchart - numerical/geneExpression
+barchart - 1geneMutation/geneExpression
+
 violin - numeric
 violin - geneExpression
 violin - geneExpression/categorical
@@ -51,6 +71,29 @@ tape('barchart - categorical', test => {
 	})
 	function runTests(barchart) {
 		testBarchart(test, barchart, 1, 5) // expects more than 5 categories
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('barchart - catGroupsetting', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: getGdcDiseaseGroupsetting()
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	function runTests(barchart) {
+		testBarchart(test, barchart, 1, 10) // showing additional disease types not included in groupsetting
 		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
@@ -105,20 +148,7 @@ tape('barchart - 1geneMutation', test => {
 tape('barchart - 2geneMutation', test => {
 	runpp({
 		state: {
-			plots: [
-				{
-					chartType: 'summary',
-					term: {
-						term: {
-							type: 'geneVariant',
-							genes: [
-								{ type: 'geneVariant', gene: 'KRAS' },
-								{ type: 'geneVariant', gene: 'PTEN' }
-							]
-						}
-					}
-				}
-			]
+			plots: [{ chartType: 'summary', term: getGenesetMutTw() }]
 		},
 		barchart: {
 			callbacks: {
@@ -200,6 +230,30 @@ tape('barchart - categorical/categorical', test => {
 			}
 		}
 	})
+	function runTests(barchart) {
+		testBarchart(test, barchart, 1, 5)
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('barchart - categorical/numerical', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { id: 'case.disease_type' },
+					term2: { id: 'case.diagnoses.age_at_diagnosis' }
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
 
 	function runTests(barchart) {
 		testBarchart(test, barchart, 1, 5)
@@ -208,145 +262,373 @@ tape('barchart - categorical/categorical', test => {
 	}
 })
 
-tape('barchart - categorical/geneVariant', test => {
-	const holder = getHolder()
-	runproteinpaint({
-		holder,
-		mass: {
-			state: {
-				dslabel: 'GDC',
-				genome: 'hg38',
-				// adding filter to reduce number of samples in order to reduce computation time
-				termfilter: {
-					filter0: {
-						op: 'in',
-						content: { field: 'cases.demographic.ethnicity', value: 'hispanic or latino' }
-					}
-				},
-				plots: [
-					{
-						chartType: 'summary',
-						term: { id: 'case.disease_type' },
-						term2: { term: { type: 'geneVariant', gene: 'TP53' } }
-					}
-				],
-				nav: { activeTab: 1 }
-			},
-			barchart: {
-				callbacks: {
-					'postRender.test': runTests
+tape('barchart - categorical/1geneMutation', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { id: 'case.disease_type' },
+					term2: { term: { type: 'geneVariant', gene: 'KRAS' } }
 				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
 			}
 		}
 	})
 
 	function runTests(barchart) {
-		testBarCount(barchart)
+		testBarchart(test, barchart, 1, 5)
 		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
+})
 
-	let barDiv
-	function testBarCount(barchart) {
-		barDiv = barchart.Inner.dom.barDiv
-		const minBars = 5
-		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		const numOverlays = barDiv.selectAll('.bars-cell').size()
-		test.true(numBars > minBars, `should have more than ${minBars} bars`)
-		test.true(numOverlays > numBars, 'number of overlays should be greater than bars')
+tape('barchart - categorical/2geneMutation', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { id: 'case.disease_type' },
+					term2: getGenesetMutTw()
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	function runTests(barchart) {
+		testBarchart(test, barchart, 1, 5)
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('barchart - categorical/1geneCnv', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { id: 'case.disease_type' },
+					term2: getCnv_categorical()
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	function runTests(barchart) {
+		testBarchart(test, barchart, 1, 5)
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
 	}
 })
 
 tape('barchart - categorical/geneExpression', test => {
-	const holder = getHolder()
-	runproteinpaint({
-		holder,
-		mass: {
-			state: {
-				dslabel: 'GDC',
-				genome: 'hg38',
-				// TODO: geneExpression barchart will break without this filter, so need to determine why
-				termfilter: {
-					filter0: {
-						op: 'in',
-						content: { field: 'cases.disease_type', value: ['Gliomas'] }
-					}
-				},
-				plots: [
-					{
-						chartType: 'summary',
-						term: { id: 'case.demographic.ethnicity' },
-						term2: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'discrete' } }
-					}
-				],
-				nav: { activeTab: 1 }
-			},
-			barchart: {
-				callbacks: {
-					'postRender.test': runTests
+	runpp({
+		state: {
+			termfilter: getfilter('gliomas'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { id: 'case.demographic.ethnicity' },
+					term2: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'discrete' } }
 				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	function runTests(barchart) {
+		testBarchart(test, barchart, 1, 5)
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('barchart - catGroupsetting/categorical', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: getGdcDiseaseGroupsetting(),
+					term2: { id: 'case.demographic.cause_of_death' }
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
 			}
 		}
 	})
 
 	function runTests(barchart) {
-		testBarCount(barchart)
+		testBarchart(test, barchart, 1, 5)
 		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
-
-	let barDiv
-	function testBarCount(barchart) {
-		barDiv = barchart.Inner.dom.barDiv
-		const minBars = 2
-		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		const numOverlays = barDiv.selectAll('.bars-cell').size()
-		test.true(numBars > minBars, `should have more than ${minBars} bars`)
-		test.true(numOverlays > numBars, 'number of overlays should be greater than bars')
+})
+tape('barchart - catGroupsetting/numerical', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: getGdcDiseaseGroupsetting(),
+					term2: { id: 'case.diagnoses.age_at_diagnosis' }
+				}
+			]
+		},
+		barchart: { callbacks: { 'postRender.test': runTests } }
+	})
+	function runTests(barchart) {
+		testBarchart(test, barchart, 1, 5)
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('barchart - catGroupsetting/1geneMutation', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: getGdcDiseaseGroupsetting(),
+					term2: { term: { type: 'geneVariant', gene: 'KRAS' } }
+				}
+			]
+		},
+		barchart: { callbacks: { 'postRender.test': runTests } }
+	})
+	function runTests(barchart) {
+		testBarchart(test, barchart, 1, 5)
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('barchart - catGroupsetting/2geneMutation', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: getGdcDiseaseGroupsetting(),
+					term2: getGenesetMutTw()
+				}
+			]
+		},
+		barchart: { callbacks: { 'postRender.test': runTests } }
+	})
+	function runTests(barchart) {
+		testBarchart(test, barchart, 1, 5)
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('barchart - catGroupsetting/1geneCnv', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: getGdcDiseaseGroupsetting(),
+					term2: getCnv_categorical()
+				}
+			]
+		},
+		barchart: { callbacks: { 'postRender.test': runTests } }
+	})
+	function runTests(barchart) {
+		testBarchart(test, barchart, 1, 5)
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('barchart - catGroupsetting/geneExpression', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: getGdcDiseaseGroupsetting(),
+					term2: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'discrete' } }
+				}
+			]
+		},
+		barchart: { callbacks: { 'postRender.test': runTests } }
+	})
+	function runTests(barchart) {
+		testBarchart(test, barchart, 1, 5)
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('barchart - numerical/catGroupsetting', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { id: 'case.diagnoses.age_at_diagnosis' },
+					term2: getGdcDiseaseGroupsetting()
+				}
+			]
+		},
+		barchart: { callbacks: { 'postRender.test': runTests } }
+	})
+	function runTests(barchart) {
+		testBarchart(test, barchart, 1, 3)
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('barchart - numerical/1geneMutation', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { id: 'case.diagnoses.age_at_diagnosis' },
+					term2: { term: { type: 'geneVariant', gene: 'KRAS' } }
+				}
+			]
+		},
+		barchart: { callbacks: { 'postRender.test': runTests } }
+	})
+	function runTests(barchart) {
+		testBarchart(test, barchart, 1, 3)
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('barchart - numerical/2geneMutation', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { id: 'case.diagnoses.age_at_diagnosis' },
+					term2: getGenesetMutTw()
+				}
+			]
+		},
+		barchart: { callbacks: { 'postRender.test': runTests } }
+	})
+	function runTests(barchart) {
+		testBarchart(test, barchart, 1, 3)
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('barchart - numerical/1geneCnv', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { id: 'case.diagnoses.age_at_diagnosis' },
+					term2: getCnv_categorical()
+				}
+			]
+		},
+		barchart: { callbacks: { 'postRender.test': runTests } }
+	})
+	function runTests(barchart) {
+		testBarchart(test, barchart, 1, 3)
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('barchart - numerical/geneExpression', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { id: 'case.diagnoses.age_at_diagnosis' },
+					term2: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'discrete' } }
+				}
+			]
+		},
+		barchart: { callbacks: { 'postRender.test': runTests } }
+	})
+	function runTests(barchart) {
+		testBarchart(test, barchart, 1, 3)
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('barchart - 1geneMutation/geneExpression', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { term: { type: 'geneVariant', gene: 'KRAS' } },
+					term2: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'discrete' } }
+				}
+			]
+		},
+		barchart: { callbacks: { 'postRender.test': runTests } }
+	})
+	function runTests(barchart) {
+		testBarchart(test, barchart, 1, 2)
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
 	}
 })
 
-// TODO: will not skip this test when violin plot of dictionary term is supported
-tape.skip('violin - numeric', test => {
-	test.timeoutAfter(70000)
-	const holder = getHolder()
-	runproteinpaint({
-		holder,
-		mass: {
-			state: {
-				dslabel: 'GDC',
-				genome: 'hg38',
-				plots: [
-					{
-						chartType: 'summary',
-						term: { id: 'case.diagnoses.age_at_diagnosis', q: { mode: 'continuous' } }
-					}
-				],
-				nav: { activeTab: 1 }
-			},
-			violin: {
-				callbacks: {
-					'postRender.test': runTests
+tape.only('violin - numeric', test => {
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					term: { id: 'case.diagnoses.age_at_diagnosis', q: { mode: 'continuous' } }
 				}
+			]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
 			}
 		}
 	})
-
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
-		await testViolinPath(violinDiv)
-		if (test['_ok']) violin.Inner.app.destroy()
+		await testViolinByCount(test, violinDiv, 1)
+		//if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
-	}
-
-	async function testViolinPath(violinDiv) {
-		await detectOne({ elem: violinDiv.node(), selector: 'svg' })
-		const noPlotNum = 0
-		const actualPlotNum = violinDiv.selectAll('.sjpp-violinG').size()
-		test.true(
-			noPlotNum < actualPlotNum,
-			`should have more than ${noPlotNum} plots, actual plot no. is ${actualPlotNum}`
-		)
 	}
 })
 
