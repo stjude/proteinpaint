@@ -261,3 +261,321 @@ export function getFilter_genemutationset(isnot = false) {
 		]
 	}
 }
+
+// for ds using categorical cnv, e.g. gdc
+// TODO shrink size!
+export function getCnv_categorical() {
+	return {
+		term: {
+			type: 'geneVariant',
+			childTerms: [
+				{
+					id: 'snvindel',
+					query: 'snvindel',
+					name: 'SNV/indel',
+					parent_id: null,
+					isleaf: true,
+					type: 'dtsnvindel',
+					dt: 1,
+					values: { M: { key: 'M', label: 'MISSENSE' }, S: { key: 'S', label: 'SILENT' } },
+					name_noOrigin: 'SNV/indel',
+					parentTerm: {
+						type: 'geneVariant',
+						id: 'MYC',
+						name: 'MYC',
+						genes: [{ kind: 'gene', id: 'MYC', gene: 'MYC', name: 'MYC', type: 'geneVariant' }]
+					}
+				},
+				{
+					id: 'cnv',
+					query: 'cnv',
+					name: 'CNV',
+					parent_id: null,
+					isleaf: true,
+					type: 'dtcnv',
+					dt: 4,
+					values: {
+						CNV_amp: { key: 'CNV_amp', label: 'Gain' },
+						CNV_amplification: { key: 'CNV_amplification', label: 'Amplification' },
+						CNV_loss: { key: 'CNV_loss', label: 'Heterozygous Deletion' }
+					},
+					name_noOrigin: 'CNV',
+					parentTerm: {
+						type: 'geneVariant',
+						id: 'MYC',
+						name: 'MYC',
+						genes: [{ kind: 'gene', id: 'MYC', gene: 'MYC', name: 'MYC', type: 'geneVariant' }]
+					}
+				}
+			],
+			id: 'MYC',
+			name: 'MYC',
+			genes: [{ kind: 'gene', id: 'MYC', gene: 'MYC', name: 'MYC', type: 'geneVariant' }],
+			groupsetting: {
+				disabled: false,
+				lst: [
+					{
+						name: 'SNV/indel',
+						dt: 1,
+						groups: [
+							{
+								name: 'MYC SNV/indel Mutated',
+								type: 'filter',
+								filter: {
+									type: 'tvslst',
+									in: true,
+									join: '',
+									lst: [
+										{
+											type: 'tvs',
+											tvs: {
+												term: {
+													id: 'snvindel',
+													query: 'snvindel',
+													name: 'SNV/indel',
+													parent_id: null,
+													isleaf: true,
+													type: 'dtsnvindel',
+													dt: 1,
+													values: { M: { key: 'M', label: 'MISSENSE' }, S: { key: 'S', label: 'SILENT' } },
+													name_noOrigin: 'SNV/indel',
+													parentTerm: {
+														type: 'geneVariant',
+														id: 'MYC',
+														name: 'MYC',
+														genes: [{ kind: 'gene', id: 'MYC', gene: 'MYC', name: 'MYC', type: 'geneVariant' }]
+													}
+												},
+												values: [
+													{ key: 'M', label: 'MISSENSE', value: 'M' },
+													{ key: 'S', label: 'SILENT', value: 'S' }
+												],
+												genotype: 'variant',
+												mcount: 'any',
+												excludeGeneName: true
+											}
+										}
+									]
+								},
+								color: '#e75480'
+							},
+							{
+								name: 'MYC SNV/indel Wildtype',
+								type: 'filter',
+								filter: {
+									type: 'tvslst',
+									in: true,
+									join: '',
+									lst: [
+										{
+											type: 'tvs',
+											tvs: {
+												term: {
+													id: 'snvindel',
+													query: 'snvindel',
+													name: 'SNV/indel',
+													parent_id: null,
+													isleaf: true,
+													type: 'dtsnvindel',
+													dt: 1,
+													values: { M: { key: 'M', label: 'MISSENSE' }, S: { key: 'S', label: 'SILENT' } },
+													name_noOrigin: 'SNV/indel',
+													parentTerm: {
+														type: 'geneVariant',
+														id: 'MYC',
+														name: 'MYC',
+														genes: [{ kind: 'gene', id: 'MYC', gene: 'MYC', name: 'MYC', type: 'geneVariant' }]
+													}
+												},
+												values: [],
+												genotype: 'wt',
+												excludeGeneName: true
+											}
+										}
+									]
+								},
+								color: '#D3D3D3'
+							}
+						]
+					},
+					{
+						name: 'CNV',
+						dt: 4,
+						groups: [
+							{
+								name: 'MYC CNV Gain',
+								type: 'filter',
+								filter: {
+									type: 'tvslst',
+									in: true,
+									join: '',
+									lst: [
+										{
+											type: 'tvs',
+											tvs: {
+												term: {
+													id: 'cnv',
+													query: 'cnv',
+													name: 'CNV',
+													parent_id: null,
+													isleaf: true,
+													type: 'dtcnv',
+													dt: 4,
+													values: {
+														CNV_amp: { key: 'CNV_amp', label: 'Gain' },
+														CNV_amplification: { key: 'CNV_amplification', label: 'Amplification' },
+														CNV_loss: { key: 'CNV_loss', label: 'Heterozygous Deletion' }
+													},
+													name_noOrigin: 'CNV',
+													parentTerm: {
+														type: 'geneVariant',
+														id: 'MYC',
+														name: 'MYC',
+														genes: [{ kind: 'gene', id: 'MYC', gene: 'MYC', name: 'MYC', type: 'geneVariant' }]
+													}
+												},
+												values: [{ key: 'CNV_amp', label: 'Gain', value: 'CNV_amp' }],
+												genotype: 'variant',
+												mcount: 'any',
+												excludeGeneName: true
+											}
+										}
+									]
+								},
+								color: '#e9a3c9'
+							},
+							{
+								name: 'MYC CNV Amplification',
+								type: 'filter',
+								filter: {
+									type: 'tvslst',
+									in: true,
+									join: '',
+									lst: [
+										{
+											type: 'tvs',
+											tvs: {
+												term: {
+													id: 'cnv',
+													query: 'cnv',
+													name: 'CNV',
+													parent_id: null,
+													isleaf: true,
+													type: 'dtcnv',
+													dt: 4,
+													values: {
+														CNV_amp: { key: 'CNV_amp', label: 'Gain' },
+														CNV_amplification: { key: 'CNV_amplification', label: 'Amplification' },
+														CNV_loss: { key: 'CNV_loss', label: 'Heterozygous Deletion' }
+													},
+													name_noOrigin: 'CNV',
+													parentTerm: {
+														type: 'geneVariant',
+														id: 'MYC',
+														name: 'MYC',
+														genes: [{ kind: 'gene', id: 'MYC', gene: 'MYC', name: 'MYC', type: 'geneVariant' }]
+													}
+												},
+												values: [{ key: 'CNV_amplification', label: 'Amplification', value: 'CNV_amplification' }],
+												genotype: 'variant',
+												mcount: 'any',
+												excludeGeneName: true
+											}
+										}
+									]
+								},
+								color: '#ff0000'
+							},
+							{
+								name: 'MYC CNV Heterozygous Deletion',
+								type: 'filter',
+								filter: {
+									type: 'tvslst',
+									in: true,
+									join: '',
+									lst: [
+										{
+											type: 'tvs',
+											tvs: {
+												term: {
+													id: 'cnv',
+													query: 'cnv',
+													name: 'CNV',
+													parent_id: null,
+													isleaf: true,
+													type: 'dtcnv',
+													dt: 4,
+													values: {
+														CNV_amp: { key: 'CNV_amp', label: 'Gain' },
+														CNV_amplification: { key: 'CNV_amplification', label: 'Amplification' },
+														CNV_loss: { key: 'CNV_loss', label: 'Heterozygous Deletion' }
+													},
+													name_noOrigin: 'CNV',
+													parentTerm: {
+														type: 'geneVariant',
+														id: 'MYC',
+														name: 'MYC',
+														genes: [{ kind: 'gene', id: 'MYC', gene: 'MYC', name: 'MYC', type: 'geneVariant' }]
+													}
+												},
+												values: [{ key: 'CNV_loss', label: 'Heterozygous Deletion', value: 'CNV_loss' }],
+												genotype: 'variant',
+												mcount: 'any',
+												excludeGeneName: true
+											}
+										}
+									]
+								},
+								color: '#a1d76a'
+							},
+							{
+								name: 'MYC CNV Wildtype',
+								type: 'filter',
+								filter: {
+									type: 'tvslst',
+									in: true,
+									join: '',
+									lst: [
+										{
+											type: 'tvs',
+											tvs: {
+												term: {
+													id: 'cnv',
+													query: 'cnv',
+													name: 'CNV',
+													parent_id: null,
+													isleaf: true,
+													type: 'dtcnv',
+													dt: 4,
+													values: {
+														CNV_amp: { key: 'CNV_amp', label: 'Gain' },
+														CNV_amplification: { key: 'CNV_amplification', label: 'Amplification' },
+														CNV_loss: { key: 'CNV_loss', label: 'Heterozygous Deletion' }
+													},
+													name_noOrigin: 'CNV',
+													parentTerm: {
+														type: 'geneVariant',
+														id: 'MYC',
+														name: 'MYC',
+														genes: [{ kind: 'gene', id: 'MYC', gene: 'MYC', name: 'MYC', type: 'geneVariant' }]
+													}
+												},
+												values: [],
+												genotype: 'wt',
+												excludeGeneName: true
+											}
+										}
+									]
+								},
+								color: '#D3D3D3'
+							}
+						]
+					}
+				]
+			}
+		},
+		q: { type: 'predefined-groupset', predefined_groupset_idx: 1, cnvMaxLength: 2000000, hiddenValues: {} }
+	}
+}
+
+////////////// following are gdc-specific! may move to separate file
