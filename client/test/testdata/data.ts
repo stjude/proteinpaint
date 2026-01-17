@@ -134,7 +134,8 @@ export function getGenesetMutTw() {
 			genes: [
 				{ kind: 'gene', gene: 'TP53', type: 'geneVariant' },
 				{ kind: 'gene', gene: 'KRAS', type: 'geneVariant' },
-				{ kind: 'gene', gene: 'AKT1', type: 'geneVariant' }
+				{ kind: 'gene', gene: 'AKT1', type: 'geneVariant' },
+				{ kind: 'gene', gene: 'BCR', type: 'geneVariant' }
 			],
 			type: 'geneVariant'
 		},
@@ -262,8 +263,9 @@ export function getFilter_genemutationset(isnot = false) {
 	}
 }
 
-// for ds using categorical cnv, e.g. gdc
+// for ds using categorical cnv, e.g. gdc or mb
 // TODO shrink size!
+// uses kras which exists in tdbtest, and may be used in integration test
 export function getCnv_categorical() {
 	return {
 		term: {
@@ -277,13 +279,18 @@ export function getCnv_categorical() {
 					isleaf: true,
 					type: 'dtsnvindel',
 					dt: 1,
-					values: { M: { key: 'M', label: 'MISSENSE' }, S: { key: 'S', label: 'SILENT' } },
+					values: {
+						M: { key: 'M', label: 'MISSENSE' },
+						S: { key: 'S', label: 'SILENT' },
+						Intron: { key: 'Intron', label: 'INTRON' },
+						D: { key: 'D', label: 'PROTEINDEL' }
+					},
 					name_noOrigin: 'SNV/indel',
 					parentTerm: {
 						type: 'geneVariant',
-						id: 'MYC',
-						name: 'MYC',
-						genes: [{ kind: 'gene', id: 'MYC', gene: 'MYC', name: 'MYC', type: 'geneVariant' }]
+						id: 'KRAS',
+						name: 'KRAS',
+						genes: [{ kind: 'gene', id: 'KRAS', gene: 'KRAS', name: 'KRAS', type: 'geneVariant' }]
 					}
 				},
 				{
@@ -295,22 +302,22 @@ export function getCnv_categorical() {
 					type: 'dtcnv',
 					dt: 4,
 					values: {
-						CNV_amp: { key: 'CNV_amp', label: 'Gain' },
 						CNV_amplification: { key: 'CNV_amplification', label: 'Amplification' },
+						CNV_amp: { key: 'CNV_amp', label: 'Gain' },
 						CNV_loss: { key: 'CNV_loss', label: 'Heterozygous Deletion' }
 					},
 					name_noOrigin: 'CNV',
 					parentTerm: {
 						type: 'geneVariant',
-						id: 'MYC',
-						name: 'MYC',
-						genes: [{ kind: 'gene', id: 'MYC', gene: 'MYC', name: 'MYC', type: 'geneVariant' }]
+						id: 'KRAS',
+						name: 'KRAS',
+						genes: [{ kind: 'gene', id: 'KRAS', gene: 'KRAS', name: 'KRAS', type: 'geneVariant' }]
 					}
 				}
 			],
-			id: 'MYC',
-			name: 'MYC',
-			genes: [{ kind: 'gene', id: 'MYC', gene: 'MYC', name: 'MYC', type: 'geneVariant' }],
+			id: 'KRAS',
+			name: 'KRAS',
+			genes: [{ kind: 'gene', id: 'KRAS', gene: 'KRAS', name: 'KRAS', type: 'geneVariant' }],
 			groupsetting: {
 				disabled: false,
 				lst: [
@@ -319,7 +326,7 @@ export function getCnv_categorical() {
 						dt: 1,
 						groups: [
 							{
-								name: 'MYC SNV/indel Mutated',
+								name: 'KRAS SNV/indel Mutated',
 								type: 'filter',
 								filter: {
 									type: 'tvslst',
@@ -337,18 +344,25 @@ export function getCnv_categorical() {
 													isleaf: true,
 													type: 'dtsnvindel',
 													dt: 1,
-													values: { M: { key: 'M', label: 'MISSENSE' }, S: { key: 'S', label: 'SILENT' } },
+													values: {
+														M: { key: 'M', label: 'MISSENSE' },
+														S: { key: 'S', label: 'SILENT' },
+														Intron: { key: 'Intron', label: 'INTRON' },
+														D: { key: 'D', label: 'PROTEINDEL' }
+													},
 													name_noOrigin: 'SNV/indel',
 													parentTerm: {
 														type: 'geneVariant',
-														id: 'MYC',
-														name: 'MYC',
-														genes: [{ kind: 'gene', id: 'MYC', gene: 'MYC', name: 'MYC', type: 'geneVariant' }]
+														id: 'KRAS',
+														name: 'KRAS',
+														genes: [{ kind: 'gene', id: 'KRAS', gene: 'KRAS', name: 'KRAS', type: 'geneVariant' }]
 													}
 												},
 												values: [
 													{ key: 'M', label: 'MISSENSE', value: 'M' },
-													{ key: 'S', label: 'SILENT', value: 'S' }
+													{ key: 'S', label: 'SILENT', value: 'S' },
+													{ key: 'Intron', label: 'INTRON', value: 'Intron' },
+													{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 												],
 												genotype: 'variant',
 												mcount: 'any',
@@ -360,7 +374,7 @@ export function getCnv_categorical() {
 								color: '#e75480'
 							},
 							{
-								name: 'MYC SNV/indel Wildtype',
+								name: 'KRAS SNV/indel Wildtype',
 								type: 'filter',
 								filter: {
 									type: 'tvslst',
@@ -378,13 +392,18 @@ export function getCnv_categorical() {
 													isleaf: true,
 													type: 'dtsnvindel',
 													dt: 1,
-													values: { M: { key: 'M', label: 'MISSENSE' }, S: { key: 'S', label: 'SILENT' } },
+													values: {
+														M: { key: 'M', label: 'MISSENSE' },
+														S: { key: 'S', label: 'SILENT' },
+														Intron: { key: 'Intron', label: 'INTRON' },
+														D: { key: 'D', label: 'PROTEINDEL' }
+													},
 													name_noOrigin: 'SNV/indel',
 													parentTerm: {
 														type: 'geneVariant',
-														id: 'MYC',
-														name: 'MYC',
-														genes: [{ kind: 'gene', id: 'MYC', gene: 'MYC', name: 'MYC', type: 'geneVariant' }]
+														id: 'KRAS',
+														name: 'KRAS',
+														genes: [{ kind: 'gene', id: 'KRAS', gene: 'KRAS', name: 'KRAS', type: 'geneVariant' }]
 													}
 												},
 												values: [],
@@ -403,7 +422,7 @@ export function getCnv_categorical() {
 						dt: 4,
 						groups: [
 							{
-								name: 'MYC CNV Gain',
+								name: 'KRAS CNV Amplification',
 								type: 'filter',
 								filter: {
 									type: 'tvslst',
@@ -422,58 +441,16 @@ export function getCnv_categorical() {
 													type: 'dtcnv',
 													dt: 4,
 													values: {
-														CNV_amp: { key: 'CNV_amp', label: 'Gain' },
 														CNV_amplification: { key: 'CNV_amplification', label: 'Amplification' },
+														CNV_amp: { key: 'CNV_amp', label: 'Gain' },
 														CNV_loss: { key: 'CNV_loss', label: 'Heterozygous Deletion' }
 													},
 													name_noOrigin: 'CNV',
 													parentTerm: {
 														type: 'geneVariant',
-														id: 'MYC',
-														name: 'MYC',
-														genes: [{ kind: 'gene', id: 'MYC', gene: 'MYC', name: 'MYC', type: 'geneVariant' }]
-													}
-												},
-												values: [{ key: 'CNV_amp', label: 'Gain', value: 'CNV_amp' }],
-												genotype: 'variant',
-												mcount: 'any',
-												excludeGeneName: true
-											}
-										}
-									]
-								},
-								color: '#e9a3c9'
-							},
-							{
-								name: 'MYC CNV Amplification',
-								type: 'filter',
-								filter: {
-									type: 'tvslst',
-									in: true,
-									join: '',
-									lst: [
-										{
-											type: 'tvs',
-											tvs: {
-												term: {
-													id: 'cnv',
-													query: 'cnv',
-													name: 'CNV',
-													parent_id: null,
-													isleaf: true,
-													type: 'dtcnv',
-													dt: 4,
-													values: {
-														CNV_amp: { key: 'CNV_amp', label: 'Gain' },
-														CNV_amplification: { key: 'CNV_amplification', label: 'Amplification' },
-														CNV_loss: { key: 'CNV_loss', label: 'Heterozygous Deletion' }
-													},
-													name_noOrigin: 'CNV',
-													parentTerm: {
-														type: 'geneVariant',
-														id: 'MYC',
-														name: 'MYC',
-														genes: [{ kind: 'gene', id: 'MYC', gene: 'MYC', name: 'MYC', type: 'geneVariant' }]
+														id: 'KRAS',
+														name: 'KRAS',
+														genes: [{ kind: 'gene', id: 'KRAS', gene: 'KRAS', name: 'KRAS', type: 'geneVariant' }]
 													}
 												},
 												values: [{ key: 'CNV_amplification', label: 'Amplification', value: 'CNV_amplification' }],
@@ -487,7 +464,7 @@ export function getCnv_categorical() {
 								color: '#ff0000'
 							},
 							{
-								name: 'MYC CNV Heterozygous Deletion',
+								name: 'KRAS CNV Gain',
 								type: 'filter',
 								filter: {
 									type: 'tvslst',
@@ -506,16 +483,58 @@ export function getCnv_categorical() {
 													type: 'dtcnv',
 													dt: 4,
 													values: {
-														CNV_amp: { key: 'CNV_amp', label: 'Gain' },
 														CNV_amplification: { key: 'CNV_amplification', label: 'Amplification' },
+														CNV_amp: { key: 'CNV_amp', label: 'Gain' },
 														CNV_loss: { key: 'CNV_loss', label: 'Heterozygous Deletion' }
 													},
 													name_noOrigin: 'CNV',
 													parentTerm: {
 														type: 'geneVariant',
-														id: 'MYC',
-														name: 'MYC',
-														genes: [{ kind: 'gene', id: 'MYC', gene: 'MYC', name: 'MYC', type: 'geneVariant' }]
+														id: 'KRAS',
+														name: 'KRAS',
+														genes: [{ kind: 'gene', id: 'KRAS', gene: 'KRAS', name: 'KRAS', type: 'geneVariant' }]
+													}
+												},
+												values: [{ key: 'CNV_amp', label: 'Gain', value: 'CNV_amp' }],
+												genotype: 'variant',
+												mcount: 'any',
+												excludeGeneName: true
+											}
+										}
+									]
+								},
+								color: '#e9a3c9'
+							},
+							{
+								name: 'KRAS CNV Heterozygous Deletion',
+								type: 'filter',
+								filter: {
+									type: 'tvslst',
+									in: true,
+									join: '',
+									lst: [
+										{
+											type: 'tvs',
+											tvs: {
+												term: {
+													id: 'cnv',
+													query: 'cnv',
+													name: 'CNV',
+													parent_id: null,
+													isleaf: true,
+													type: 'dtcnv',
+													dt: 4,
+													values: {
+														CNV_amplification: { key: 'CNV_amplification', label: 'Amplification' },
+														CNV_amp: { key: 'CNV_amp', label: 'Gain' },
+														CNV_loss: { key: 'CNV_loss', label: 'Heterozygous Deletion' }
+													},
+													name_noOrigin: 'CNV',
+													parentTerm: {
+														type: 'geneVariant',
+														id: 'KRAS',
+														name: 'KRAS',
+														genes: [{ kind: 'gene', id: 'KRAS', gene: 'KRAS', name: 'KRAS', type: 'geneVariant' }]
 													}
 												},
 												values: [{ key: 'CNV_loss', label: 'Heterozygous Deletion', value: 'CNV_loss' }],
@@ -529,7 +548,7 @@ export function getCnv_categorical() {
 								color: '#a1d76a'
 							},
 							{
-								name: 'MYC CNV Wildtype',
+								name: 'KRAS CNV Wildtype',
 								type: 'filter',
 								filter: {
 									type: 'tvslst',
@@ -548,16 +567,16 @@ export function getCnv_categorical() {
 													type: 'dtcnv',
 													dt: 4,
 													values: {
-														CNV_amp: { key: 'CNV_amp', label: 'Gain' },
 														CNV_amplification: { key: 'CNV_amplification', label: 'Amplification' },
+														CNV_amp: { key: 'CNV_amp', label: 'Gain' },
 														CNV_loss: { key: 'CNV_loss', label: 'Heterozygous Deletion' }
 													},
 													name_noOrigin: 'CNV',
 													parentTerm: {
 														type: 'geneVariant',
-														id: 'MYC',
-														name: 'MYC',
-														genes: [{ kind: 'gene', id: 'MYC', gene: 'MYC', name: 'MYC', type: 'geneVariant' }]
+														id: 'KRAS',
+														name: 'KRAS',
+														genes: [{ kind: 'gene', id: 'KRAS', gene: 'KRAS', name: 'KRAS', type: 'geneVariant' }]
 													}
 												},
 												values: [],
@@ -579,3 +598,60 @@ export function getCnv_categorical() {
 }
 
 ////////////// following are gdc-specific! may move to separate file
+
+export function getGdcDiseaseGroupsetting() {
+	return {
+		term: { type: 'categorical', id: 'case.disease_type' },
+		q: {
+			mode: 'discrete',
+			type: 'custom-groupset',
+			hiddenValues: {},
+			customset: {
+				groups: [
+					{ name: 'Excluded categories', type: 'values', uncomputable: true, values: [] },
+					{
+						name: 'Group Mix',
+						type: 'values',
+						uncomputable: false,
+						values: [
+							{ key: 'Ductal and Lobular Neoplasms', label: 'Ductal and Lobular Neoplasms', samplecount: 2829 },
+							{ key: 'Complex Epithelial Neoplasms', label: 'Complex Epithelial Neoplasms', samplecount: 69 },
+							{ key: 'Not Applicable', label: 'Not Applicable', samplecount: 9 },
+							{ key: 'Epithelial Neoplasms, NOS', label: 'Epithelial Neoplasms, NOS', samplecount: 1221 },
+							{
+								key: 'Cystic, Mucinous and Serous Neoplasms',
+								label: 'Cystic, Mucinous and Serous Neoplasms',
+								samplecount: 17
+							},
+							{
+								key: 'Adnexal and Skin Appendage Neoplasms',
+								label: 'Adnexal and Skin Appendage Neoplasms',
+								samplecount: 1
+							},
+							{ key: 'Adenomas and Adenocarcinomas', label: 'Adenomas and Adenocarcinomas', samplecount: 18 },
+							{ key: 'Squamous Cell Neoplasms', label: 'Squamous Cell Neoplasms', samplecount: 3 },
+							{ key: 'Nevi and Melanomas', label: 'Nevi and Melanomas', samplecount: 7 },
+							{ key: 'Basal Cell Neoplasms', label: 'Basal Cell Neoplasms', samplecount: 1 },
+							{ key: 'Fibroepithelial Neoplasms', label: 'Fibroepithelial Neoplasms', samplecount: 2 },
+							{ key: 'Neoplasms, NOS', label: 'Neoplasms, NOS', samplecount: 1547 },
+							{
+								key: 'Soft Tissue Tumors and Sarcomas, NOS',
+								label: 'Soft Tissue Tumors and Sarcomas, NOS',
+								samplecount: 30
+							},
+							{ key: 'Not Reported', label: 'Not Reported', samplecount: 34 },
+							{ key: 'Meningiomas', label: 'Meningiomas', samplecount: 29 },
+							{ key: 'Mature B-Cell Lymphomas', label: 'Mature B-Cell Lymphomas', samplecount: 3 },
+							{ key: 'Lymphoid Leukemias' },
+							{ key: 'Myeloid Leukemias' },
+							{ key: 'Acute Lymphoblastic Leukemia' },
+							{ key: 'Neuroepitheliomatous Neoplasms' },
+							{ key: 'Complex Mixed and Stromal Neoplasms' }
+						]
+					},
+					{ name: 'Group Brain', type: 'values', uncomputable: false, values: [{ key: 'Gliomas', label: 'Gliomas' }] }
+				]
+			}
+		}
+	}
+}
