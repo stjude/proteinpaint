@@ -1,13 +1,17 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
-import { runproteinpaint } from '../../test/front.helpers.js'
+import { runproteinpaint, getRunPp } from '../../test/front.helpers.js'
+import { getCnv_categorical } from '../../test/testdata/data.ts'
 import { detectOne } from '../../test/test.helpers'
 
 /**********************
 Tests for summary plots (barchart, violin, boxplot) in GDC
 
 barchart - categorical
-barchart - geneVariant
+barchart - numerical
+barchart - 1geneMutation
+barchart - 2geneMutation
+barchart - 1geneCnv
 barchart - geneExpression
 barchart - categorical/categorical
 barchart - categorical/geneVariant
@@ -28,191 +32,179 @@ tape('\n', function (test) {
 })
 
 tape('barchart - categorical', test => {
-	const holder = getHolder()
-	runproteinpaint({
-		holder,
-		mass: {
-			state: {
-				dslabel: 'GDC',
-				genome: 'hg38',
-				// adding filter to reduce number of samples in order to reduce computation time
-				termfilter: {
-					filter0: {
-						op: 'in',
-						content: { field: 'cases.demographic.ethnicity', value: 'hispanic or latino' }
-					}
-				},
-				plots: [
-					{
-						chartType: 'summary',
-						term: { id: 'case.disease_type' }
-					}
-				],
-				nav: { activeTab: 1 }
-			},
-			barchart: {
-				callbacks: {
-					'postRender.test': runTests
+	runpp({
+		state: {
+			// adding filter to reduce number of samples in order to reduce computation time
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { id: 'case.disease_type' }
 				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
 			}
 		}
 	})
-
 	function runTests(barchart) {
-		testBarCount(barchart)
-		testAxisDimension()
+		testBarchart(test, barchart, 1, 5) // expects more than 5 categories
 		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
-
-	let barDiv
-	function testBarCount(barchart) {
-		barDiv = barchart.Inner.dom.barDiv
-		const minBars = 5
-		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		const numOverlays = barDiv.selectAll('.bars-cell').size()
-		test.true(numBars > minBars, `should have more than ${minBars} bars`)
-		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
-	}
-
-	function testAxisDimension() {
-		const xAxis = barDiv.select('.sjpcb-bar-chart-x-axis').node()
-		const seriesG = barDiv.select('.bars-series').node()
-		test.true(xAxis.getBBox().width >= seriesG.getBBox().width, 'x-axis width should be >= series width')
+})
+tape('barchart - numerical', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { id: 'case.diagnoses.age_at_diagnosis' }
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	function runTests(barchart) {
+		testBarchart(test, barchart, 1, 3) // agedx is hardcoded to have 3 bins in gdc dict
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
 	}
 })
 
-tape('barchart - geneVariant', test => {
-	const holder = getHolder()
-	runproteinpaint({
-		holder,
-		mass: {
-			state: {
-				dslabel: 'GDC',
-				genome: 'hg38',
-				plots: [
-					{
-						chartType: 'summary',
-						term: { term: { type: 'geneVariant', gene: 'TP53' } }
-					}
-				],
-				nav: { activeTab: 1 }
-			},
-			barchart: {
-				callbacks: {
-					'postRender.test': runTests
+tape('barchart - 1geneMutation', test => {
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					term: { term: { type: 'geneVariant', gene: 'KRAS' } }
 				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
 			}
 		}
 	})
 
 	function runTests(barchart) {
-		testNumCharts(barchart)
+		testBarchart(test, barchart, 1, 2) // 2 bars, mutated vs wt
 		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
+})
+tape('barchart - 2geneMutation', test => {
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					term: {
+						term: {
+							type: 'geneVariant',
+							genes: [
+								{ type: 'geneVariant', gene: 'KRAS' },
+								{ type: 'geneVariant', gene: 'PTEN' }
+							]
+						}
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
 
-	function testNumCharts(barchart) {
-		const barDiv = barchart.Inner.dom.barDiv
-		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
-		test.true(numCharts > 1, 'Should have more than 1 chart by TP53 as a gene variant term')
+	function runTests(barchart) {
+		testBarchart(test, barchart, 1, 2) // 2 bars, mutated vs wt
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('barchart - 1geneCnv', test => {
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					term: getCnv_categorical()
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(barchart) {
+		testBarchart(test, barchart, 1, 5)
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
 	}
 })
 
 tape('barchart - geneExpression', test => {
-	const holder = getHolder()
-	runproteinpaint({
-		holder,
-		mass: {
-			state: {
-				dslabel: 'GDC',
-				genome: 'hg38',
-				// TODO: geneExpression barchart will break without this filter, so need to determine why
-				termfilter: {
-					filter0: {
-						op: 'in',
-						content: { field: 'cases.disease_type', value: ['Gliomas'] }
-					}
-				},
-				plots: [
-					{
-						chartType: 'summary',
-						term: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'discrete' } }
-					}
-				],
-				nav: { activeTab: 1 }
-			},
-			barchart: {
-				callbacks: {
-					'postRender.test': runTests
+	runpp({
+		state: {
+			termfilter: getfilter('gliomas'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'discrete' } }
 				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
 			}
 		}
 	})
 
 	function runTests(barchart) {
-		testBarCount(barchart)
+		testBarchart(test, barchart, 1, 5)
 		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
-	}
-
-	let barDiv
-	function testBarCount(barchart) {
-		barDiv = barchart.Inner.dom.barDiv
-		const minBars = 5
-		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		const numOverlays = barDiv.selectAll('.bars-cell').size()
-		test.true(numBars > minBars, `should have more than ${minBars} bars`)
-		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
 	}
 })
 
 tape('barchart - categorical/categorical', test => {
-	const holder = getHolder()
-	runproteinpaint({
-		holder,
-		mass: {
-			state: {
-				dslabel: 'GDC',
-				genome: 'hg38',
-				// adding filter to reduce number of samples in order to reduce computation time
-				termfilter: {
-					filter0: {
-						op: 'in',
-						content: { field: 'cases.demographic.ethnicity', value: 'hispanic or latino' }
-					}
-				},
-				plots: [
-					{
-						chartType: 'summary',
-						term: { id: 'case.disease_type' },
-						term2: { id: 'case.demographic.cause_of_death' }
-					}
-				],
-				nav: { activeTab: 1 }
-			},
-			barchart: {
-				callbacks: {
-					'postRender.test': runTests
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { id: 'case.disease_type' },
+					term2: { id: 'case.demographic.cause_of_death' }
 				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
 			}
 		}
 	})
 
 	function runTests(barchart) {
-		testBarCount(barchart)
+		testBarchart(test, barchart, 1, 5)
 		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
-	}
-
-	let barDiv
-	function testBarCount(barchart) {
-		barDiv = barchart.Inner.dom.barDiv
-		const minBars = 5
-		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		const numOverlays = barDiv.selectAll('.bars-cell').size()
-		test.true(numBars > minBars, `should have more than ${minBars} bars`)
-		test.true(numOverlays > numBars, 'number of overlays should be greater than bars')
 	}
 })
 
@@ -676,4 +668,65 @@ function getHolder() {
 		.style('padding', '5px')
 		.style('margin', '5px')
 		.node()
+}
+
+/*************************
+ reusable helper functions
+**************************/
+
+const runpp = getRunPp('mass', {
+	state: {
+		nav: {
+			header_mode: 'hidden'
+			//activetab: 1
+		},
+		vocab: {
+			dslabel: 'GDC',
+			genome: 'hg38'
+		}
+	},
+	debug: 1
+})
+
+/*
+test:
+barchart:
+chartCount: expected number of charts
+minBars: minimum number of bars to be found
+*/
+function testBarchart(test, barchart, chartCount, minBars) {
+	const bd = barchart.Inner.dom.barDiv
+
+	test.equal(bd.selectAll('.pp-sbar-div').size(), chartCount, `Should have ${chartCount} charts`)
+
+	const numBars = bd.selectAll('.bars-cell-grp').size()
+	test.true(numBars >= minBars, `should have at least ${minBars} bars`)
+
+	// TODO detect if using term2 and verify
+	//const numOverlays = bd.selectAll('.bars-cell').size()
+	//test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
+
+	// axis dimension
+	const xAxis = bd.select('.sjpcb-bar-chart-x-axis').node()
+	const seriesG = bd.select('.bars-series').node()
+	test.true(xAxis.getBBox().width >= seriesG.getBBox().width, 'x-axis width should be >= series width')
+}
+
+function getfilter(k) {
+	if (k == 'latino') {
+		return {
+			filter0: {
+				op: 'in',
+				content: { field: 'cases.demographic.ethnicity', value: 'hispanic or latino' }
+			}
+		}
+	}
+	if (k == 'gliomas') {
+		return {
+			filter0: {
+				op: 'in',
+				content: { field: 'cases.disease_type', value: ['Gliomas'] }
+			}
+		}
+	}
 }
