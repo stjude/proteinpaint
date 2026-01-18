@@ -1498,7 +1498,7 @@ async function testLabelHoverClick(test, violin, violinDiv, labelcount) {
 	}
 }
 // detect given number of violin svg <path>
-async function testViolinByCount(test, violinDiv, count) {
+export async function testViolinByCount(test, violinDiv, count) {
 	// each violin has two path.sjpp-vp-path, thus *2!!
 	const groups = await detectLst({ elem: violinDiv.node(), selector: 'path.sjpp-vp-path', count: count * 2 })
 	test.ok(groups, `Detected ${count} violin <path class=sjpp-vp-path>`)
