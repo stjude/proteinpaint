@@ -34,3 +34,41 @@ export const ChatPayload: RoutePayload = {
 	}
 	//examples: []
 }
+
+export type SummaryType = {
+	term: string
+	term2?: string
+	simpleFilter: FilterTerm[]
+	html?: string
+}
+
+export type FilterTerm = CategoricalFilterTerm | NumericFilterTerm
+
+export type CategoricalFilterTerm = {
+	term: string
+	category: string
+}
+
+export type NumericFilterTerm = {
+	term: string
+	start?: number
+	stop?: number
+}
+
+export type DbRows = {
+	name: string
+	description: string
+	term_type: string
+	values: DbValue[]
+}
+
+export type DbValue = {
+	key: string
+	value: string
+}
+
+export type ValidTerm = {
+	/** Type for storing validated term and error message */
+	validated_term: string
+	invalid_html: string
+}
