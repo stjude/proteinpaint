@@ -46,6 +46,7 @@ violin - numeric/2geneMutation
 violin - geneExpression
 violin - geneExpression/categorical
 violin - geneExpression/1geneMutation
+violin - geneExpression/1geneCnv
 
 boxplot - numeric
 boxplot - geneExpression
@@ -741,6 +742,27 @@ tape('violin - geneExpression/1geneMutation', test => {
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolinByCount(test, violinDiv, 2)
+		if (test['_ok']) violin.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('violin - geneExpression/1geneCnv', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('gliomas'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { term: { type: 'geneExpression', gene: 'KRAS' }, q: { mode: 'continuous' } },
+					term2: getCnv_categorical()
+				}
+			]
+		},
+		violin: { callbacks: { 'postRender.test': runTests } }
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testViolinByCount(test, violinDiv, 4)
 		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
