@@ -1154,7 +1154,7 @@ tape('colorTW=geneVariant with gene list', function (test) {
 	})
 	async function runTests(scatter) {
 		const dots = scatter.Inner.view.dom.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
-		const lab = 'TP53, KRAS, AKT1 SNV/indel Mutated (somatic)'
+		const lab = 'TP53, KRAS, AKT1, BCR SNV/indel Mutated (somatic)'
 		test.true(
 			dots.find(d => d.__data__.category == lab),
 			`A dot with category=${lab}`
