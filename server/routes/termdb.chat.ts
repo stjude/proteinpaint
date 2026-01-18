@@ -3,18 +3,7 @@ import { ezFetch } from '#shared'
 import { createGenerator } from 'ts-json-schema-generator'
 import type { SchemaGenerator } from 'ts-json-schema-generator'
 import path from 'path'
-import type {
-	ChatRequest,
-	ChatResponse,
-	RouteApi,
-	DbRows,
-	DbValue,
-	SummaryType,
-	ValidTerm,
-	FilterTerm,
-	CategoricalFilterTerm,
-	NumericFilterTerm
-} from '#types'
+import type { ChatRequest, ChatResponse, RouteApi, DbRows, DbValue, SummaryType } from '#types'
 import { ChatPayload } from '#types/checkers'
 //import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '../src/serverconfig.js'
@@ -96,15 +85,24 @@ function init({ genomes }) {
 			//let ai_output_data: any
 			let ai_output_json: any
 			if (classResult == 'summary') {
-				extract_summary_terms(
+				const time1 = new Date().valueOf()
+				ai_output_json = await extract_summary_terms(
 					q.prompt,
 					serverconfig.llm_backend,
 					comp_model_name,
 					apilink,
 					dataset_db,
 					serverconfig_ds_entries.aifiles,
-					genedb
+					genedb,
+					ds
 				)
+				const time2 = new Date().valueOf()
+				mayLog('Time taken for summary agent:', time2 - time1, 'ms')
+			} else if (classResult.route == 'dge') {
+				ai_output_json = { type: 'html', html: 'DE agent not implemented yet' }
+			} else {
+				// Will define all other agents later as desired
+				ai_output_json = { type: 'html', html: 'Unknown classification value' }
 			}
 
 			//const time1 = new Date().valueOf()
@@ -190,7 +188,7 @@ function init({ genomes }) {
 			//	}
 			//}
 
-			//mayLog('ai_output_json:', ai_output_json)
+			mayLog('ai_output_json:', JSON.stringify(ai_output_json))
 			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
 			if (e.stack) mayLog(e.stack)
@@ -310,7 +308,8 @@ async function extract_summary_terms(
 	apilink: string,
 	dataset_db: string,
 	ai_json: string,
-	genedb: string
+	genedb: string,
+	ds: any
 ) {
 	const { db_rows, rag_docs } = await parse_dataset_db(dataset_db)
 	//mayLog('db_rows:', db_rows)
@@ -331,7 +330,7 @@ async function extract_summary_terms(
 	}
 	const generator: SchemaGenerator = createGenerator(SchemaConfig)
 	const StringifiedSchema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // May use a typescript definition in the future which may be generated at server startup
-	const words = prompt.split(/\s+/).map(str => str.toUpperCase()) // Split on whitespace and convert to uppercase
+	const words = prompt.split(/\s+/).map(str => str.toLowerCase()) // Split on whitespace and convert to lowercase
 	const common_genes = words.filter(item => genes_list.includes(item)) // The reason behind showing common genes that are actually present in the genedb is because otherwise showing ~20000 genes would increase the number of tokens significantly and may cause the LLM to loose context. Much easier to parse out relevant genes from the user prompt.
 
 	// Read dataset JSON file
@@ -361,21 +360,15 @@ async function extract_summary_terms(
 	let system_prompt =
 		'I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. The JSON schema is as follows: ' +
 		StringifiedSchema +
-		' term and term2 (if present) should ONLY contain names of the fields from the sqlite db. The "simpleFilter" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both "term"/"term2" and "simpleFilter". There are two kinds of filter variables: "Categorical" and "Numeric". "Categorical" variables are those variables which can have a fixed set of values e.g. gender, race. They are defined by the "CategoricalFilterTerm" which consists of "term" (a field from the sqlite3 db)  and "category" (a value of the field from the sqlite db).  "Numeric" variables are those which can have any numeric value. They are defined by "NumericFilterTerm" and contain  the subfields "term" (a field from the sqlite3 db), "start" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and "stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. The optional "html" field only contain messages of terms in the user input that were not found in their respective databases. The sqlite db in plain language is as follows: ' +
+		' term and term2 (if present) should ONLY contain names of the fields from the sqlite db. The "simpleFilter" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both "term"/"term2" and "simpleFilter". There are two kinds of filter variables: "Categorical" and "Numeric". "Categorical" variables are those variables which can have a fixed set of values e.g. gender, race. They are defined by the "CategoricalFilterTerm" which consists of "term" (a field from the sqlite3 db)  and "category" (a value of the field from the sqlite db).  "Numeric" variables are those which can have any numeric value. They are defined by "NumericFilterTerm" and contain  the subfields "term" (a field from the sqlite3 db), "start" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and "stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. ' +
 		rag_docs.join(',') +
 		' training data is as follows:' +
 		training_data
 
-	if (dataset_json.hasGeneExpression) {
+	if (ds.queries.geneExpression) {
 		// If dataset has geneExpression data
 		if (common_genes.length > 0) {
 			system_prompt += '\n List of relevant genes are as follows (separated by comma(,)):' + common_genes.join(',')
-		}
-	} else {
-		if (common_genes.length > 0) {
-			system_prompt +=
-				'\n Dataset does NOT support gene expression. If any relevant genes are found, add a message in "html" field "Dataset does not support gene expression". List of relevant genes are as follows (separated by comma(,)):' +
-				common_genes.join(',')
 		}
 	}
 
@@ -394,147 +387,147 @@ async function extract_summary_terms(
 		throw 'Unknown LLM backend'
 	}
 	mayLog('response:', JSON.parse(response))
-	validate_summary_response(response, db_rows, common_genes, ai_json)
-	return JSON.parse(response)
+	return validate_summary_response(response, db_rows, common_genes, ai_json, ds)
 }
 
-function validate_summary_response(response: string, db_rows: DbRows[], common_genes: string[], dataset_json: any) {
+function validate_summary_response(
+	response: string,
+	db_rows: DbRows[],
+	common_genes: string[],
+	dataset_json: any,
+	ds: any
+) {
 	const response_type = JSON.parse(response)
 	let html = ''
 	if (response_type.html) html = response_type.html
 	if (!response_type.term) html += 'term type is not present in summary output'
-
+	const term: any = ds.cohort.termdb.q.termjsonByOneid(response_type.term)
 	const validated_summary_type: SummaryType = {
 		// Initializing SummaryType
 		term: '',
 		simpleFilter: []
 	}
-	const term1_validity: ValidTerm = validate_term(response_type.term, db_rows, common_genes, dataset_json, html)
-	if (term1_validity.invalid_html.length > 0) {
-		html += term1_validity.invalid_html
-	} else if (term1_validity.validated_term.length > 0) {
-		validated_summary_type.term = term1_validity.validated_term
+	let term_type: any
+	if (!term) {
+		const gene_hits = common_genes.filter(gene => gene == response_type.term.toLowerCase())
+		if (gene_hits.length == 0) {
+			// Neither a clinical term nor a gene
+			html += 'invalid term id:' + response_type.term
+		} else {
+			if (ds.queries.geneExpression) {
+				// Check to see if dataset support gene expression or alternatively: dataset_json.hasGeneExpression
+				validated_summary_type.term = response_type.term.toUpperCase()
+				term_type = { term: { gene: validated_summary_type.term, type: 'geneExpression' } }
+			} else {
+				html += 'Dataset does not support gene expression'
+			}
+		}
+	} else {
+		validated_summary_type.term = term.id
+		term_type = { id: validated_summary_type.term }
 	}
 
+	const pp_plot_json: any = { chartType: 'summary', term: term_type }
+
+	let term_type2: any
 	if (response_type.term2) {
-		const term2_validity: ValidTerm = validate_term(response_type.term2, db_rows, common_genes, dataset_json, html)
-		if (term2_validity.invalid_html.length > 0) {
-			html += term2_validity.invalid_html
-		} else if (term2_validity.validated_term.length > 0) {
-			validated_summary_type.term2 = term2_validity.validated_term
+		mayLog('response_type.term2:', response_type.term2)
+		const term2: any = ds.cohort.termdb.q.termjsonByOneid(response_type.term2)
+		if (!term2) {
+			const gene_hits2 = common_genes.filter(gene => gene == term2.toLowerCase())
+			if (gene_hits2.length == 0) {
+				// Neither a clinical term2 nor a gene
+				html += 'invalid term2 id:' + response_type.term2
+			} else {
+				if (ds.queries.geneExpression) {
+					// Check to see if dataset support gene expression or alternatively: dataset_json.hasGeneExpression
+					validated_summary_type.term2 = response_type.term2.toUpperCase()
+					term_type2 = { term: { gene: validated_summary_type.term2, type: 'geneExpression' } }
+				} else {
+					html += 'Dataset does not support gene expression'
+				}
+			}
+		} else {
+			validated_summary_type.term2 = term2.id
+			term_type2 = { id: validated_summary_type.term2 }
 		}
 	}
+	mayLog('validated_summary_type:', validated_summary_type)
+
 	if (response_type.simpleFilter && response_type.simpleFilter.length > 0) {
-		for (const filter of response_type.simpleFilter) {
-			validate_filter(filter, db_rows, common_genes, dataset_json, html)
+		const validated_filters = validate_filter(response_type.simpleFilter, ds)
+		mayLog('validated_filters:', JSON.stringify(validated_filters.simplefilter.lst))
+		if (validated_filters.html.length > 0) {
+			html += validated_filters.html
+		} else {
+			validated_summary_type.simpleFilter = validated_filters.simplefilter
 		}
+	}
+
+	if (html.length > 0) {
+		return { type: 'html', html: html }
+	} else {
+		if (validated_summary_type.term2) pp_plot_json.term2 = term_type2
+		if (response_type.simpleFilter && response_type.simpleFilter.length > 0)
+			pp_plot_json.filter = validated_summary_type.simpleFilter
+		mayLog({ type: 'plot', plot: pp_plot_json })
+		return { type: 'plot', plot: pp_plot_json }
 	}
 }
 
-function validate_filter(filter: any, db_rows: DbRows[], common_genes: string[], dataset_json: any, html: string) {
-	const validated_simple_filter: FilterTerm[] = []
-	if (filter.category) {
-		// Its a categorical variable
-		const validated_filter_term = validate_term(filter.term, db_rows, common_genes, dataset_json, html)
-		if (validated_filter_term.validated_term.length > 0) {
-			// If the term is valid, only then validate the category
-			const valid_category = validate_category(validated_filter_term.validated_term, filter.category, db_rows)
-			if (valid_category) {
-				const valid_categorical_filter_term: CategoricalFilterTerm = {
-					term: filter.term,
-					category: filter.category
-				}
-				const valid_filter_term: FilterTerm = valid_categorical_filter_term
-				validated_simple_filter.push(valid_filter_term)
-			} else {
-				html += ' Category: ' + filter.category + ' not found for term: ' + filter.term
-			}
-		} else if (validated_filter_term.invalid_html.length > 0) {
-			html += validated_filter_term.invalid_html
-		}
-	} else if (filter.start || filter.stop) {
-		const validated_filter_term = validate_term(filter.term, db_rows, common_genes, dataset_json, html)
-		if (validated_filter_term.validated_term.length > 0) {
-			// Check to see if start/stop (if present) are of numeric type
-			let invalid_html = ''
-			if (filter.start) {
-				if (!Number.isFinite(filter.start)) {
-					invalid_html += filter.start + ' is not numeric'
-				}
-			}
-			if (filter.stop) {
-				if (!Number.isFinite(filter.stop)) {
-					invalid_html += filter.stop + ' is not numeric'
-				}
-			}
-			if (invalid_html.length > 0) {
-				html += invalid_html
-			} else {
-				// Its a valid numeric filter term
-				const valid_numeric_filter_term: NumericFilterTerm = { term: validated_filter_term.validated_term }
-				if (filter.start) {
-					valid_numeric_filter_term.start = filter.start
-				}
-				if (filter.stop) {
-					valid_numeric_filter_term.stop = filter.stop
-				}
-				validated_simple_filter.push(valid_numeric_filter_term)
-			}
-		} else if (validated_filter_term.invalid_html.length > 0) {
-			html += validated_filter_term.invalid_html
-		}
-	}
-	mayLog('filter_html:', html)
-	return { validated_simple_filter: validated_simple_filter, html: html }
-}
-
-function validate_category(term: string, category: string, db_rows: DbRows[]) {
-	let valid_category = false
-	for (const row of db_rows) {
-		if (row.name == term) {
-			for (const key of Object.keys(row.values)) {
-				if (row.values[key].value.label == category) {
-					valid_category = true
-					break
-				}
-			}
-		}
-	}
-	return valid_category
-}
-
-function validate_term(term: string, db_rows: DbRows[], common_genes: string[], dataset_json: any, html: string) {
-	mayLog('db_rows:', db_rows[0].values)
-	const validated_row = db_rows.filter((row: DbRows) => row.name == term)
-	const gene_hits = common_genes.filter(gene => gene == term)
+function validate_filter(filters: any, ds: any): any {
+	if (!Array.isArray(filters)) throw 'filter is not array'
 	let invalid_html = ''
-	let validated_term: string = ''
-	if (validated_row.length == 0 && gene_hits.length == 0 && !html.includes('not found in database')) {
-		// If the term is neither a field in dataset db nor a gene that means its a fake term given by the user or cooked up by the LLM. This should be reported on the client side.
-		invalid_html = 'The term ' + term + ' was not found'
-
-		// Check to see if the term is accidentally a key to a term (for e.g. Male instead of Sex), if yes append to error message
-		for (const row of db_rows) {
-			if (Object.keys(row.values).length > 0) {
-				for (const key of Object.keys(row.values)) {
-					if (row.values[key].value.label == term) {
-						invalid_html += 'term ' + term + ' is a category of ' + row.name
+	const localfilter = { type: 'tvslst', in: true, join: '', lst: [] as any[] }
+	if (filters.length > 1) localfilter.join = 'and' // For now hardcoding join as 'and' if number of filter terms > 1. Will later implement more comprehensive logic
+	for (const f of filters) {
+		const term = ds.cohort.termdb.q.termjsonByOneid(f.term)
+		if (!term) {
+			invalid_html += 'invalid filter id:' + f.term
+		} else {
+			if (term.type == 'categorical') {
+				let cat: any
+				for (const ck in term.values) {
+					if (ck == f.category) cat = ck
+					else if (term.values[ck].label == f.category) cat = ck
+				}
+				if (!cat) invalid_html += 'invalid category from ' + JSON.stringify(f)
+				// term and category validated
+				mayLog('cat:', cat)
+				localfilter.lst.push({
+					type: 'tvs',
+					tvs: {
+						term,
+						values: [{ key: cat }]
+					}
+				})
+			} else if (term.type == 'float' || term.type == 'integer') {
+				const numeric: any = {
+					type: 'tvs',
+					tvs: {
+						term,
+						ranges: []
 					}
 				}
+				const range: any = {}
+				if (f.start && !f.stop) {
+					range.start = Number(f.start)
+					range.stopunbounded = true
+				} else if (f.stop && !f.start) {
+					range.stop = Number(f.stop)
+					range.startunbounded = true
+				} else if (f.start && f.stop) {
+					range.start = Number(f.start)
+					range.stop = Number(f.stop)
+				} else {
+					invalid_html += 'Neither greater or lesser defined'
+				}
+				numeric.tvs.ranges.push(range)
+				localfilter.lst.push(numeric)
 			}
 		}
-	} else if (gene_hits.length > 0) {
-		// If the term is a gene, check to see if the dataset supports geneExpression
-		if (dataset_json.hasGeneExpression) {
-			validated_term = term
-		} else if (!html.includes('Dataset does not support gene expression')) {
-			// Check to see if the LLM inserted the sentence. Many times it does not despite being in the system prompt, in such a case manually add this message to the error message
-			invalid_html += ' Dataset does not support gene expression'
-		}
-	} else if (validated_row.length > 0) {
-		validated_term = term
 	}
-	return { validated_term: validated_term, invalid_html: invalid_html } as ValidTerm
+	return { simplefilter: localfilter, html: invalid_html }
 }
 
 async function parse_geneset_db(genedb: string) {
@@ -545,7 +538,7 @@ async function parse_geneset_db(genedb: string) {
 	desc_rows.forEach((row: any) => {
 		genes_list.push(row.name)
 	})
-	genes_list = genes_list.map(str => str.toUpperCase()) // Converting to uppercase
+	genes_list = genes_list.map(str => str.toLowerCase()) // Converting to lowercase
 	return genes_list
 }
 
@@ -609,7 +602,7 @@ function parse_db_rows(db_row: DbRows) {
 	if (db_row.values.length > 0) {
 		output_string += 'This field contains the following possible values.'
 		for (const value of db_row.values) {
-			output_string += 'The key is ' + value.key + ' and the label is ' + value.label
+			output_string += 'The key is ' + value.key + ' and the label is ' + value.value
 		}
 	}
 	return output_string
