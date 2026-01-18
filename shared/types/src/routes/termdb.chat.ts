@@ -38,13 +38,11 @@ export const ChatPayload: RoutePayload = {
 export type SummaryType = {
 	term: string
 	term2?: string
-	simpleFilter?: FilterTerm[]
+	simpleFilter: FilterTerm[]
 	html?: string
 }
 
-export type FilterTerm = {
-	FilterTerm: CategoricalFilterTerm | NumericFilterTerm
-}
+export type FilterTerm = CategoricalFilterTerm | NumericFilterTerm
 
 export type CategoricalFilterTerm = {
 	term: string
@@ -53,8 +51,8 @@ export type CategoricalFilterTerm = {
 
 export type NumericFilterTerm = {
 	term: string
-	start: number
-	stop: number
+	start?: number
+	stop?: number
 }
 
 export type DbRows = {

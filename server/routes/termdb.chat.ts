@@ -3,7 +3,18 @@ import { ezFetch } from '#shared'
 import { createGenerator } from 'ts-json-schema-generator'
 import type { SchemaGenerator } from 'ts-json-schema-generator'
 import path from 'path'
-import type { ChatRequest, ChatResponse, RouteApi, DbRows, DbValue, SummaryType, ValidTerm } from '#types'
+import type {
+	ChatRequest,
+	ChatResponse,
+	RouteApi,
+	DbRows,
+	DbValue,
+	SummaryType,
+	ValidTerm,
+	FilterTerm,
+	CategoricalFilterTerm,
+	NumericFilterTerm
+} from '#types'
 import { ChatPayload } from '#types/checkers'
 //import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '../src/serverconfig.js'
@@ -395,7 +406,8 @@ function validate_summary_response(response: string, db_rows: DbRows[], common_g
 
 	const validated_summary_type: SummaryType = {
 		// Initializing SummaryType
-		term: ''
+		term: '',
+		simpleFilter: []
 	}
 	const term1_validity: ValidTerm = validate_term(response_type.term, db_rows, common_genes, dataset_json, html)
 	if (term1_validity.invalid_html.length > 0) {
@@ -412,9 +424,83 @@ function validate_summary_response(response: string, db_rows: DbRows[], common_g
 			validated_summary_type.term2 = term2_validity.validated_term
 		}
 	}
-	//if (response_type.simpleFilter) {
-	//
-	//}
+	if (response_type.simpleFilter && response_type.simpleFilter.length > 0) {
+		for (const filter of response_type.simpleFilter) {
+			validate_filter(filter, db_rows, common_genes, dataset_json, html)
+		}
+	}
+}
+
+function validate_filter(filter: any, db_rows: DbRows[], common_genes: string[], dataset_json: any, html: string) {
+	const validated_simple_filter: FilterTerm[] = []
+	if (filter.category) {
+		// Its a categorical variable
+		const validated_filter_term = validate_term(filter.term, db_rows, common_genes, dataset_json, html)
+		if (validated_filter_term.validated_term.length > 0) {
+			// If the term is valid, only then validate the category
+			const valid_category = validate_category(validated_filter_term.validated_term, filter.category, db_rows)
+			if (valid_category) {
+				const valid_categorical_filter_term: CategoricalFilterTerm = {
+					term: filter.term,
+					category: filter.category
+				}
+				const valid_filter_term: FilterTerm = valid_categorical_filter_term
+				validated_simple_filter.push(valid_filter_term)
+			} else {
+				html += ' Category: ' + filter.category + ' not found for term: ' + filter.term
+			}
+		} else if (validated_filter_term.invalid_html.length > 0) {
+			html += validated_filter_term.invalid_html
+		}
+	} else if (filter.start || filter.stop) {
+		const validated_filter_term = validate_term(filter.term, db_rows, common_genes, dataset_json, html)
+		if (validated_filter_term.validated_term.length > 0) {
+			// Check to see if start/stop (if present) are of numeric type
+			let invalid_html = ''
+			if (filter.start) {
+				if (!Number.isFinite(filter.start)) {
+					invalid_html += filter.start + ' is not numeric'
+				}
+			}
+			if (filter.stop) {
+				if (!Number.isFinite(filter.stop)) {
+					invalid_html += filter.stop + ' is not numeric'
+				}
+			}
+			if (invalid_html.length > 0) {
+				html += invalid_html
+			} else {
+				// Its a valid numeric filter term
+				const valid_numeric_filter_term: NumericFilterTerm = { term: validated_filter_term.validated_term }
+				if (filter.start) {
+					valid_numeric_filter_term.start = filter.start
+				}
+				if (filter.stop) {
+					valid_numeric_filter_term.stop = filter.stop
+				}
+				validated_simple_filter.push(valid_numeric_filter_term)
+			}
+		} else if (validated_filter_term.invalid_html.length > 0) {
+			html += validated_filter_term.invalid_html
+		}
+	}
+	mayLog('filter_html:', html)
+	return { validated_simple_filter: validated_simple_filter, html: html }
+}
+
+function validate_category(term: string, category: string, db_rows: DbRows[]) {
+	let valid_category = false
+	for (const row of db_rows) {
+		if (row.name == term) {
+			for (const key of Object.keys(row.values)) {
+				if (row.values[key].value.label == category) {
+					valid_category = true
+					break
+				}
+			}
+		}
+	}
+	return valid_category
 }
 
 function validate_term(term: string, db_rows: DbRows[], common_genes: string[], dataset_json: any, html: string) {
