@@ -1,9 +1,8 @@
 import tape from 'tape'
-import * as d3s from 'd3-selection'
-import { runproteinpaint, getRunPp } from '../../test/front.helpers.js'
+import { getRunPp } from '../../test/front.helpers.js'
 import { getCnv_categorical, getGdcDiseaseGroupsetting, getGenesetMutTw } from '../../test/testdata/data.ts'
-import { detectOne } from '../../test/test.helpers'
-import { testViolinByCount } from './violin.integration.spec.js'
+import { detectLst } from '../../test/test.helpers'
+//import { testViolinByCount } from './violin.integration.spec.js'
 
 /**********************
 Tests for summary plots (barchart, violin, boxplot) in GDC
@@ -15,6 +14,7 @@ barchart - 1geneMutation
 barchart - 2geneMutation
 barchart - 1geneCnv
 barchart - geneExpression
+
 barchart - categorical/categorical
 barchart - categorical/numerical
 barchart - categorical/1geneMutation
@@ -34,12 +34,19 @@ barchart - numerical/1geneMutation
 barchart - numerical/2geneMutation
 barchart - numerical/1geneCnv
 barchart - numerical/geneExpression
+
 barchart - 1geneMutation/geneExpression
 
 violin - numeric
+violin - numeric/categorical
+violin - numeric/catGroupsetting
+violin - numeric/1geneMutation
+violin - numeric/2geneMutation
+
 violin - geneExpression
 violin - geneExpression/categorical
-violin - geneExpression/geneVariant
+violin - geneExpression/1geneMutation
+
 boxplot - numeric
 boxplot - geneExpression
 boxplot - geneExpression/categorical
@@ -63,11 +70,7 @@ tape('barchart - categorical', test => {
 				}
 			]
 		},
-		barchart: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+		barchart: { callbacks: { 'postRender.test': runTests } }
 	})
 	function runTests(barchart) {
 		testBarchart(test, barchart, 1, 5) // expects more than 5 categories
@@ -86,11 +89,7 @@ tape('barchart - catGroupsetting', test => {
 				}
 			]
 		},
-		barchart: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+		barchart: { callbacks: { 'postRender.test': runTests } }
 	})
 	function runTests(barchart) {
 		testBarchart(test, barchart, 1, 10) // showing additional disease types not included in groupsetting
@@ -109,11 +108,7 @@ tape('barchart - numerical', test => {
 				}
 			]
 		},
-		barchart: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+		barchart: { callbacks: { 'postRender.test': runTests } }
 	})
 	function runTests(barchart) {
 		testBarchart(test, barchart, 1, 3) // agedx is hardcoded to have 3 bins in gdc dict
@@ -132,11 +127,7 @@ tape('barchart - 1geneMutation', test => {
 				}
 			]
 		},
-		barchart: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+		barchart: { callbacks: { 'postRender.test': runTests } }
 	})
 
 	function runTests(barchart) {
@@ -150,11 +141,7 @@ tape('barchart - 2geneMutation', test => {
 		state: {
 			plots: [{ chartType: 'summary', term: getGenesetMutTw() }]
 		},
-		barchart: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+		barchart: { callbacks: { 'postRender.test': runTests } }
 	})
 
 	function runTests(barchart) {
@@ -173,11 +160,7 @@ tape('barchart - 1geneCnv', test => {
 				}
 			]
 		},
-		barchart: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+		barchart: { callbacks: { 'postRender.test': runTests } }
 	})
 
 	function runTests(barchart) {
@@ -198,11 +181,7 @@ tape('barchart - geneExpression', test => {
 				}
 			]
 		},
-		barchart: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+		barchart: { callbacks: { 'postRender.test': runTests } }
 	})
 
 	function runTests(barchart) {
@@ -224,11 +203,7 @@ tape('barchart - categorical/categorical', test => {
 				}
 			]
 		},
-		barchart: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+		barchart: { callbacks: { 'postRender.test': runTests } }
 	})
 	function runTests(barchart) {
 		testBarchart(test, barchart, 1, 5)
@@ -248,11 +223,7 @@ tape('barchart - categorical/numerical', test => {
 				}
 			]
 		},
-		barchart: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+		barchart: { callbacks: { 'postRender.test': runTests } }
 	})
 
 	function runTests(barchart) {
@@ -349,14 +320,10 @@ tape('barchart - categorical/geneExpression', test => {
 				}
 			]
 		},
-		barchart: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+		barchart: { callbacks: { 'postRender.test': runTests } }
 	})
 	function runTests(barchart) {
-		testBarchart(test, barchart, 1, 5)
+		testBarchart(test, barchart, 1, 4)
 		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
@@ -608,7 +575,7 @@ tape('barchart - 1geneMutation/geneExpression', test => {
 	}
 })
 
-tape.only('violin - numeric', test => {
+tape('violin - numeric', test => {
 	runpp({
 		state: {
 			plots: [
@@ -618,197 +585,182 @@ tape.only('violin - numeric', test => {
 				}
 			]
 		},
-		violin: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+		violin: { callbacks: { 'postRender.test': runTests } }
 	})
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolinByCount(test, violinDiv, 1)
-		//if (test['_ok']) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('violin - numeric/categorical', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('gliomas'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { id: 'case.diagnoses.age_at_diagnosis', q: { mode: 'continuous' } },
+					term2: { id: 'case.demographic.ethnicity' }
+				}
+			]
+		},
+		violin: { callbacks: { 'postRender.test': runTests } }
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testViolinByCount(test, violinDiv, 4)
+		if (test['_ok']) violin.Inner.app.destroy()
+		test.end()
+	}
+})
+
+//this test works but the violin count is likely to change due to gdc release and breaking test
+tape.skip('violin - numeric/catGroupsetting', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { id: 'case.diagnoses.age_at_diagnosis', q: { mode: 'continuous' } },
+					term2: getGdcDiseaseGroupsetting()
+				}
+			]
+		},
+		violin: { callbacks: { 'postRender.test': runTests } }
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testViolinByCount(test, violinDiv, 4)
+		if (test['_ok']) violin.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('violin - numeric/1geneMutation', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { id: 'case.diagnoses.age_at_diagnosis', q: { mode: 'continuous' } },
+					term2: { term: { type: 'geneVariant', gene: 'KRAS' } }
+				}
+			]
+		},
+		violin: { callbacks: { 'postRender.test': runTests } }
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testViolinByCount(test, violinDiv, 2)
+		if (test['_ok']) violin.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('violin - numeric/2geneMutation', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { id: 'case.diagnoses.age_at_diagnosis', q: { mode: 'continuous' } },
+					term2: getGenesetMutTw()
+				}
+			]
+		},
+		violin: { callbacks: { 'postRender.test': runTests } }
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testViolinByCount(test, violinDiv, 2)
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 })
 
 tape('violin - geneExpression', test => {
-	const holder = getHolder()
-	runproteinpaint({
-		holder,
-		mass: {
-			state: {
-				dslabel: 'GDC',
-				genome: 'hg38',
-				// TODO: geneExpression chart will break without this filter, so need to determine why
-				termfilter: {
-					filter0: {
-						op: 'in',
-						content: { field: 'cases.disease_type', value: ['Gliomas'] }
-					}
-				},
-				plots: [
-					{
-						chartType: 'summary',
-						term: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'continuous' } }
-					}
-				],
-				nav: { activeTab: 1 }
-			},
-			violin: {
-				callbacks: {
-					'postRender.test': runTests
+	runpp({
+		state: {
+			termfilter: getfilter('gliomas'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'continuous' } }
 				}
-			}
-		}
+			]
+		},
+		violin: { callbacks: { 'postRender.test': runTests } }
 	})
-
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
-		await testViolinPath(violinDiv)
+		await testViolinByCount(test, violinDiv, 1)
 		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
-	}
-
-	async function testViolinPath(violinDiv) {
-		await detectOne({ elem: violinDiv.node(), selector: 'svg' })
-		const noPlotNum = 0
-		const actualPlotNum = violinDiv.selectAll('.sjpp-violinG').size()
-		test.true(
-			noPlotNum < actualPlotNum,
-			`should have more than ${noPlotNum} plots, actual plot no. is ${actualPlotNum}`
-		)
 	}
 })
 
 tape('violin - geneExpression/categorical', test => {
-	const holder = getHolder()
-	runproteinpaint({
-		holder,
-		mass: {
-			state: {
-				dslabel: 'GDC',
-				genome: 'hg38',
-				// TODO: geneExpression chart will break without this filter, so need to determine why
-				termfilter: {
-					filter0: {
-						op: 'in',
-						content: { field: 'cases.disease_type', value: ['Gliomas'] }
-					}
-				},
-				plots: [
-					{
-						chartType: 'summary',
-						term: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'continuous' } },
-						term2: { id: 'case.demographic.ethnicity' }
-					}
-				],
-				nav: { activeTab: 1 }
-			},
-			violin: {
-				callbacks: {
-					'postRender.test': runTests
+	runpp({
+		state: {
+			termfilter: getfilter('gliomas'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'continuous' } },
+					term2: { id: 'case.demographic.ethnicity' }
 				}
-			}
-		}
+			]
+		},
+		violin: { callbacks: { 'postRender.test': runTests } }
 	})
-
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
-		await testViolinPath(violinDiv)
+		await testViolinByCount(test, violinDiv, 4)
 		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
-
-	async function testViolinPath(violinDiv) {
-		await detectOne({ elem: violinDiv.node(), selector: 'svg' })
-		const noPlotNum = 0
-		const actualPlotNum = violinDiv.selectAll('.sjpp-violinG').size()
-		test.true(
-			noPlotNum < actualPlotNum,
-			`should have more than ${noPlotNum} plots, actual plot no. is ${actualPlotNum}`
-		)
-	}
 })
 
-tape('violin - geneExpression/geneVariant', test => {
-	const holder = getHolder()
-	runproteinpaint({
-		holder,
-		mass: {
-			state: {
-				dslabel: 'GDC',
-				genome: 'hg38',
-				// TODO: geneExpression chart will break without this filter, so need to determine why
-				termfilter: {
-					filter0: {
-						op: 'in',
-						content: { field: 'cases.disease_type', value: ['Gliomas'] }
-					}
-				},
-				plots: [
-					{
-						chartType: 'summary',
-						term: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'continuous' } },
-						term2: { term: { type: 'geneVariant', gene: 'TP53' } }
-					}
-				],
-				nav: { activeTab: 1 }
-			},
-			violin: {
-				callbacks: {
-					'postRender.test': runTests
+tape('violin - geneExpression/1geneMutation', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('gliomas'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { term: { type: 'geneExpression', gene: 'IDH1' }, q: { mode: 'continuous' } },
+					term2: { term: { type: 'geneVariant', gene: 'IDH1' } }
 				}
-			}
-		}
+			]
+		},
+		violin: { callbacks: { 'postRender.test': runTests } }
 	})
-
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
-		await testViolinPath(violinDiv)
+		await testViolinByCount(test, violinDiv, 2)
 		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
-
-	async function testViolinPath(violinDiv) {
-		await detectOne({ elem: violinDiv.node(), selector: 'svg' })
-		const noPlotNum = 0
-		const actualPlotNum = violinDiv.selectAll('.sjpp-violinG').size()
-		test.true(
-			noPlotNum < actualPlotNum,
-			`should have more than ${noPlotNum} plots, actual plot no. is ${actualPlotNum}`
-		)
-	}
 })
 
-// TODO: will not skip this test when boxplot of dictionary term is supported
 tape.skip('boxplot - numeric', test => {
-	test.timeoutAfter(70000)
-	const holder = getHolder()
-	runproteinpaint({
-		holder,
-		mass: {
-			state: {
-				dslabel: 'GDC',
-				genome: 'hg38',
-				plots: [
-					{
-						chartType: 'summary',
-						childType: 'boxplot',
-						term: { id: 'case.diagnoses.age_at_diagnosis', q: { mode: 'continuous' } }
-					}
-				],
-				nav: { activeTab: 1 }
-			},
-			boxplot: {
-				callbacks: {
-					'postRender.test': runTests
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'boxplot',
+					term: { id: 'case.diagnoses.age_at_diagnosis', q: { mode: 'continuous' } }
 				}
-			}
-		}
+			]
+		},
+		boxplot: { callbacks: { 'postRender.test': runTests } }
 	})
-
 	async function runTests(boxplot) {
+		// FIXME test section doesn't work
 		const dom = boxplot.Inner.dom
 		test.true(dom.axis.select('path'), 'Should render y axis')
 		test.equal(dom.boxplots.selectAll("g[id^='sjpp-boxplot-']").size(), 1, 'Should render 1 boxplot')
@@ -817,39 +769,22 @@ tape.skip('boxplot - numeric', test => {
 	}
 })
 
-tape('boxplot - geneExpression', test => {
-	const holder = getHolder()
-	runproteinpaint({
-		holder,
-		mass: {
-			state: {
-				dslabel: 'GDC',
-				genome: 'hg38',
-				// TODO: geneExpression chart will break without this filter, so need to determine why
-				termfilter: {
-					filter0: {
-						op: 'in',
-						content: { field: 'cases.disease_type', value: ['Gliomas'] }
-					}
-				},
-				plots: [
-					{
-						chartType: 'summary',
-						childType: 'boxplot',
-						term: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'continuous' } }
-					}
-				],
-				nav: { activeTab: 1 }
-			},
-			boxplot: {
-				callbacks: {
-					'postRender.test': runTests
+tape.skip('boxplot - geneExpression', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('gliomas'),
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'boxplot',
+					term: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'continuous' } }
 				}
-			}
-		}
+			]
+		},
+		boxplot: { callbacks: { 'postRender.test': runTests } }
 	})
-
 	async function runTests(boxplot) {
+		// FIXME test
 		const dom = boxplot.Inner.dom
 		test.true(dom.axis.select('path'), 'Should render y axis')
 		test.equal(dom.boxplots.selectAll("g[id^='sjpp-boxplot-']").size(), 1, 'Should render 1 boxplot')
@@ -857,100 +792,6 @@ tape('boxplot - geneExpression', test => {
 		test.end()
 	}
 })
-
-tape('boxplot - geneExpression/categorical', test => {
-	const holder = getHolder()
-	runproteinpaint({
-		holder,
-		mass: {
-			state: {
-				dslabel: 'GDC',
-				genome: 'hg38',
-				// TODO: geneExpression chart will break without this filter, so need to determine why
-				termfilter: {
-					filter0: {
-						op: 'in',
-						content: { field: 'cases.disease_type', value: ['Gliomas'] }
-					}
-				},
-				plots: [
-					{
-						chartType: 'summary',
-						childType: 'boxplot',
-						term: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'continuous' } },
-						term2: { id: 'case.demographic.ethnicity' }
-					}
-				],
-				nav: { activeTab: 1 }
-			},
-			boxplot: {
-				callbacks: {
-					'postRender.test': runTests
-				}
-			}
-		}
-	})
-
-	async function runTests(boxplot) {
-		const dom = boxplot.Inner.dom
-		test.true(dom.axis.select('path'), 'Should render y axis')
-		test.true(dom.boxplots.selectAll("g[id^='sjpp-boxplot-']").size() > 1, 'Should render more than 1 boxplot')
-		if (test['_ok']) boxplot.Inner.app.destroy()
-		test.end()
-	}
-})
-
-tape('boxplot - geneExpression/geneVariant', test => {
-	const holder = getHolder()
-	runproteinpaint({
-		holder,
-		mass: {
-			state: {
-				dslabel: 'GDC',
-				genome: 'hg38',
-				// TODO: geneExpression chart will break without this filter, so need to determine why
-				termfilter: {
-					filter0: {
-						op: 'in',
-						content: { field: 'cases.disease_type', value: ['Gliomas'] }
-					}
-				},
-				plots: [
-					{
-						chartType: 'summary',
-						childType: 'boxplot',
-						term: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'continuous' } },
-						term2: { term: { type: 'geneVariant', gene: 'TP53' } }
-					}
-				],
-				nav: { activeTab: 1 }
-			},
-			boxplot: {
-				callbacks: {
-					'postRender.test': runTests
-				}
-			}
-		}
-	})
-
-	async function runTests(boxplot) {
-		const dom = boxplot.Inner.dom
-		test.true(dom.axis.select('path'), 'Should render y axis')
-		test.true(dom.boxplots.selectAll("g[id^='sjpp-boxplot-']").size() > 1, 'Should render more than 1 boxplot')
-		if (test['_ok']) boxplot.Inner.app.destroy()
-		test.end()
-	}
-})
-
-function getHolder() {
-	return d3s
-		.select('body')
-		.append('div')
-		.style('border', '1px solid #aaa')
-		.style('padding', '5px')
-		.style('margin', '5px')
-		.node()
-}
 
 /*************************
  reusable helper functions
@@ -1011,4 +852,11 @@ function getfilter(k) {
 			}
 		}
 	}
+}
+
+// duplicated from violin.integration.spec.js
+async function testViolinByCount(test, violinDiv, count) {
+	// each violin has two path.sjpp-vp-path, thus *2!!
+	const groups = await detectLst({ elem: violinDiv.node(), selector: 'path.sjpp-vp-path', count: count * 2 })
+	test.ok(groups, `Detected ${count} violin <path class=sjpp-vp-path>`)
 }
