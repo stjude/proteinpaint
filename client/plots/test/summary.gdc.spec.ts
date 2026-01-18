@@ -1,11 +1,12 @@
 import tape from 'tape'
 import { getRunPp } from '../../test/front.helpers.js'
 import { getCnv_categorical, getGdcDiseaseGroupsetting, getGenesetMutTw } from '../../test/testdata/data.ts'
-import { detectLst } from '../../test/test.helpers'
-//import { testViolinByCount } from './violin.integration.spec.js'
+import { testViolinByCount, testSurvivalByCount, testScatter } from './helpers.spec'
 
 /**********************
 Tests for summary plots (barchart, violin, boxplot) in GDC
+
+*** in following barchart tests, all numerical terms are discrete ***
 
 barchart - categorical
 barchart - catGroupsetting
@@ -15,43 +16,60 @@ barchart - 2geneMutation
 barchart - 1geneCnv
 barchart - geneExpression
 
-barchart - categorical/categorical
-barchart - categorical/numerical
-barchart - categorical/1geneMutation
-barchart - categorical/2geneMutation
-barchart - categorical/1geneCnv
-barchart - categorical/geneExpression
+barchart - categorical & categorical
+barchart - categorical & numerical
+barchart - categorical & 1geneMutation
+barchart - categorical & 2geneMutation
+barchart - categorical & 1geneCnv
+barchart - categorical & geneExpression
 
-barchart - catGroupsetting/categorical
-barchart - catGroupsetting/numerical
-barchart - catGroupsetting/1geneMutation
-barchart - catGroupsetting/2geneMutation
-barchart - catGroupsetting/1geneCnv
-barchart - catGroupsetting/geneExpression
+barchart - catGroupsetting & categorical
+barchart - catGroupsetting & numerical
+barchart - catGroupsetting & 1geneMutation
+barchart - catGroupsetting & 2geneMutation
+barchart - catGroupsetting & 1geneCnv
+barchart - catGroupsetting & geneExpression
 
-barchart - numerical/catGroupsetting
-barchart - numerical/1geneMutation
-barchart - numerical/2geneMutation
-barchart - numerical/1geneCnv
-barchart - numerical/geneExpression
+barchart - numerical & catGroupsetting
+barchart - numerical & 1geneMutation
+barchart - numerical & 2geneMutation
+barchart - numerical & 1geneCnv
+barchart - numerical & geneExpression
 
-barchart - 1geneMutation/geneExpression
+barchart - 1geneMutation & geneExpression
+barchart - 1geneMutation & 1geneCnv
+
+*** in following violin & boxplot tests, all term1 are continuous mode, and all term2 are discrete ***
 
 violin - numeric
-violin - numeric/categorical
-violin - numeric/catGroupsetting
-violin - numeric/1geneMutation
-violin - numeric/2geneMutation
+violin - numeric & categorical
+violin - numeric & catGroupsetting
+violin - numeric & 1geneMutation
+violin - numeric & 2geneMutation
 
 violin - geneExpression
-violin - geneExpression/categorical
-violin - geneExpression/1geneMutation
-violin - geneExpression/1geneCnv
+violin - geneExpression & categorical
+violin - geneExpression & 1geneMutation
+violin - geneExpression & 1geneCnv
 
-boxplot - numeric
+boxplot - numeric FIXME
 boxplot - geneExpression
-boxplot - geneExpression/categorical
-boxplot - geneExpression/geneVariant
+
+*** survival ***
+
+survival - no term2
+survival - categorical
+survival - catGroupsetting
+survival - numerical
+FAILED survival - 1geneMutation
+survival - geneExpression
+
+*** scatter ***
+
+scatter - numeric & numeric
+scatter - geneExp & geneExp
+TODO colorTW
+
 ***********************/
 
 tape('\n', function (test) {
@@ -192,7 +210,7 @@ tape('barchart - geneExpression', test => {
 	}
 })
 
-tape('barchart - categorical/categorical', test => {
+tape('barchart - categorical & categorical', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('latino'),
@@ -212,7 +230,7 @@ tape('barchart - categorical/categorical', test => {
 		test.end()
 	}
 })
-tape('barchart - categorical/numerical', test => {
+tape('barchart - categorical & numerical', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('latino'),
@@ -234,7 +252,7 @@ tape('barchart - categorical/numerical', test => {
 	}
 })
 
-tape('barchart - categorical/1geneMutation', test => {
+tape('barchart - categorical & 1geneMutation', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('latino'),
@@ -260,7 +278,7 @@ tape('barchart - categorical/1geneMutation', test => {
 	}
 })
 
-tape('barchart - categorical/2geneMutation', test => {
+tape('barchart - categorical & 2geneMutation', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('latino'),
@@ -284,7 +302,7 @@ tape('barchart - categorical/2geneMutation', test => {
 		test.end()
 	}
 })
-tape('barchart - categorical/1geneCnv', test => {
+tape('barchart - categorical & 1geneCnv', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('latino'),
@@ -309,7 +327,7 @@ tape('barchart - categorical/1geneCnv', test => {
 	}
 })
 
-tape('barchart - categorical/geneExpression', test => {
+tape('barchart - categorical & geneExpression', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('gliomas'),
@@ -330,7 +348,7 @@ tape('barchart - categorical/geneExpression', test => {
 	}
 })
 
-tape('barchart - catGroupsetting/categorical', test => {
+tape('barchart - catGroupsetting & categorical', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('latino'),
@@ -355,7 +373,7 @@ tape('barchart - catGroupsetting/categorical', test => {
 		test.end()
 	}
 })
-tape('barchart - catGroupsetting/numerical', test => {
+tape('barchart - catGroupsetting & numerical', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('latino'),
@@ -375,7 +393,7 @@ tape('barchart - catGroupsetting/numerical', test => {
 		test.end()
 	}
 })
-tape('barchart - catGroupsetting/1geneMutation', test => {
+tape('barchart - catGroupsetting & 1geneMutation', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('latino'),
@@ -395,7 +413,7 @@ tape('barchart - catGroupsetting/1geneMutation', test => {
 		test.end()
 	}
 })
-tape('barchart - catGroupsetting/2geneMutation', test => {
+tape('barchart - catGroupsetting & 2geneMutation', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('latino'),
@@ -415,7 +433,7 @@ tape('barchart - catGroupsetting/2geneMutation', test => {
 		test.end()
 	}
 })
-tape('barchart - catGroupsetting/1geneCnv', test => {
+tape('barchart - catGroupsetting & 1geneCnv', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('latino'),
@@ -435,7 +453,7 @@ tape('barchart - catGroupsetting/1geneCnv', test => {
 		test.end()
 	}
 })
-tape('barchart - catGroupsetting/geneExpression', test => {
+tape('barchart - catGroupsetting & geneExpression', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('latino'),
@@ -455,7 +473,7 @@ tape('barchart - catGroupsetting/geneExpression', test => {
 		test.end()
 	}
 })
-tape('barchart - numerical/catGroupsetting', test => {
+tape('barchart - numerical & catGroupsetting', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('latino'),
@@ -475,7 +493,7 @@ tape('barchart - numerical/catGroupsetting', test => {
 		test.end()
 	}
 })
-tape('barchart - numerical/1geneMutation', test => {
+tape('barchart - numerical & 1geneMutation', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('latino'),
@@ -495,7 +513,7 @@ tape('barchart - numerical/1geneMutation', test => {
 		test.end()
 	}
 })
-tape('barchart - numerical/2geneMutation', test => {
+tape('barchart - numerical & 2geneMutation', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('latino'),
@@ -515,7 +533,7 @@ tape('barchart - numerical/2geneMutation', test => {
 		test.end()
 	}
 })
-tape('barchart - numerical/1geneCnv', test => {
+tape('barchart - numerical & 1geneCnv', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('latino'),
@@ -535,7 +553,7 @@ tape('barchart - numerical/1geneCnv', test => {
 		test.end()
 	}
 })
-tape('barchart - numerical/geneExpression', test => {
+tape('barchart - numerical & geneExpression', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('latino'),
@@ -555,7 +573,7 @@ tape('barchart - numerical/geneExpression', test => {
 		test.end()
 	}
 })
-tape('barchart - 1geneMutation/geneExpression', test => {
+tape('barchart - 1geneMutation & geneExpression', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('latino'),
@@ -564,6 +582,26 @@ tape('barchart - 1geneMutation/geneExpression', test => {
 					chartType: 'summary',
 					term: { term: { type: 'geneVariant', gene: 'KRAS' } },
 					term2: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'discrete' } }
+				}
+			]
+		},
+		barchart: { callbacks: { 'postRender.test': runTests } }
+	})
+	function runTests(barchart) {
+		testBarchart(test, barchart, 1, 2)
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('barchart - 1geneMutation & 1geneCnv', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('latino'),
+			plots: [
+				{
+					chartType: 'summary',
+					term: { term: { type: 'geneVariant', gene: 'KRAS' } },
+					term2: getCnv_categorical()
 				}
 			]
 		},
@@ -595,7 +633,7 @@ tape('violin - numeric', test => {
 		test.end()
 	}
 })
-tape('violin - numeric/categorical', test => {
+tape('violin - numeric & categorical', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('gliomas'),
@@ -618,7 +656,7 @@ tape('violin - numeric/categorical', test => {
 })
 
 //this test works but the violin count is likely to change due to gdc release and breaking test
-tape.skip('violin - numeric/catGroupsetting', test => {
+tape.skip('violin - numeric & catGroupsetting', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('latino'),
@@ -639,7 +677,7 @@ tape.skip('violin - numeric/catGroupsetting', test => {
 		test.end()
 	}
 })
-tape('violin - numeric/1geneMutation', test => {
+tape('violin - numeric & 1geneMutation', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('latino'),
@@ -660,7 +698,7 @@ tape('violin - numeric/1geneMutation', test => {
 		test.end()
 	}
 })
-tape('violin - numeric/2geneMutation', test => {
+tape('violin - numeric & 2geneMutation', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('latino'),
@@ -703,7 +741,7 @@ tape('violin - geneExpression', test => {
 	}
 })
 
-tape('violin - geneExpression/categorical', test => {
+tape('violin - geneExpression & categorical', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('gliomas'),
@@ -725,7 +763,7 @@ tape('violin - geneExpression/categorical', test => {
 	}
 })
 
-tape('violin - geneExpression/1geneMutation', test => {
+tape('violin - geneExpression & 1geneMutation', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('gliomas'),
@@ -746,7 +784,7 @@ tape('violin - geneExpression/1geneMutation', test => {
 		test.end()
 	}
 })
-tape('violin - geneExpression/1geneCnv', test => {
+tape('violin - geneExpression & 1geneCnv', test => {
 	runpp({
 		state: {
 			termfilter: getfilter('gliomas'),
@@ -814,6 +852,167 @@ tape.skip('boxplot - geneExpression', test => {
 		test.end()
 	}
 })
+tape('survival - no term2', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('gliomas'),
+			plots: [
+				{
+					chartType: 'survival',
+					term: { id: 'Overall Survival' }
+				}
+			]
+		},
+		survival: { callbacks: { 'postRender.test': runTests } }
+	})
+	function runTests(chart) {
+		testSurvivalByCount(test, chart, 1)
+		if (test['_ok']) chart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('survival - categorical', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('bb'),
+			plots: [
+				{
+					chartType: 'survival',
+					term: { id: 'Overall Survival' },
+					term2: { id: 'case.primary_site' }
+				}
+			]
+		},
+		survival: { callbacks: { 'postRender.test': runTests } }
+	})
+	function runTests(chart) {
+		testSurvivalByCount(test, chart, 2)
+		if (test['_ok']) chart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('survival - catGroupsetting', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('bb'),
+			plots: [
+				{
+					chartType: 'survival',
+					term: { id: 'Overall Survival' },
+					term2: getGdcDiseaseGroupsetting()
+				}
+			]
+		},
+		survival: { callbacks: { 'postRender.test': runTests } }
+	})
+	function runTests(chart) {
+		testSurvivalByCount(test, chart, 2)
+		if (test['_ok']) chart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('survival - numerical', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('bb'),
+			plots: [
+				{
+					chartType: 'survival',
+					term: { id: 'Overall Survival' },
+					term2: { id: 'case.diagnoses.age_at_diagnosis' }
+				}
+			]
+		},
+		survival: { callbacks: { 'postRender.test': runTests } }
+	})
+	function runTests(chart) {
+		testSurvivalByCount(test, chart, 2)
+		if (test['_ok']) chart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+// FIXME breaks termdb.survival.js "cannot get series key for term=IDH1"
+tape.skip('FAILED survival - 1geneMutation', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('bb'),
+			plots: [
+				{
+					chartType: 'survival',
+					term: { id: 'Overall Survival' },
+					term2: { term: { type: 'geneVariant', gene: 'IDH1' } }
+				}
+			]
+		},
+		survival: { callbacks: { 'postRender.test': runTests } }
+	})
+	function runTests(chart) {
+		testSurvivalByCount(test, chart, 2)
+		if (test['_ok']) chart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('survival - geneExpression', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('bb'),
+			plots: [
+				{
+					chartType: 'survival',
+					term: { id: 'Overall Survival' },
+					term2: { term: { type: 'geneExpression', gene: 'TP53' } }
+				}
+			]
+		},
+		survival: { callbacks: { 'postRender.test': runTests } }
+	})
+	function runTests(chart) {
+		testSurvivalByCount(test, chart, 3) // default to 3 curves (<cutoff, >cutoff, missing data)
+		if (test['_ok']) chart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('scatter - numeric & numeric', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('gliomas'),
+			plots: [
+				{
+					chartType: 'sampleScatter',
+					term: { id: 'case.diagnoses.age_at_diagnosis', q: { mode: 'continuous' } },
+					term2: { id: 'case.demographic.age_at_index', q: { mode: 'continuous' } }
+				}
+			]
+		},
+		sampleScatter: { callbacks: { 'postRender.test': runTests } }
+	})
+	function runTests(chart) {
+		testScatter(test, chart, 1)
+		if (test['_ok']) chart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('scatter - geneExp & geneExp', test => {
+	runpp({
+		state: {
+			termfilter: getfilter('gliomas'),
+			plots: [
+				{
+					chartType: 'sampleScatter',
+					term: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'continuous' } },
+					term2: { term: { type: 'geneExpression', gene: 'IDH1' }, q: { mode: 'continuous' } }
+				}
+			]
+		},
+		sampleScatter: { callbacks: { 'postRender.test': runTests } }
+	})
+	function runTests(chart) {
+		testScatter(test, chart, 1)
+		if (test['_ok']) chart.Inner.app.destroy()
+		test.end()
+	}
+})
 
 /*************************
  reusable helper functions
@@ -823,7 +1022,6 @@ const runpp = getRunPp('mass', {
 	state: {
 		nav: {
 			header_mode: 'hidden'
-			//activetab: 1
 		},
 		vocab: {
 			dslabel: 'GDC',
@@ -858,27 +1056,22 @@ function testBarchart(test, barchart, chartCount, minBars) {
 }
 
 function getfilter(k) {
-	if (k == 'latino') {
-		return {
-			filter0: {
-				op: 'in',
-				content: { field: 'cases.demographic.ethnicity', value: 'hispanic or latino' }
+	switch (k) {
+		case 'latino':
+			return {
+				filter0: {
+					op: 'in',
+					content: { field: 'cases.demographic.ethnicity', value: 'hispanic or latino' }
+				}
 			}
-		}
-	}
-	if (k == 'gliomas') {
-		return {
-			filter0: {
-				op: 'in',
-				content: { field: 'cases.disease_type', value: ['Gliomas'] }
+		case 'gliomas':
+			return {
+				filter0: {
+					op: 'in',
+					content: { field: 'cases.disease_type', value: ['Gliomas'] }
+				}
 			}
-		}
+		case 'bb':
+			return { filter0: { op: 'in', content: { field: 'cases.primary_site', value: ['brain', 'breast'] } } }
 	}
-}
-
-// duplicated from violin.integration.spec.js
-async function testViolinByCount(test, violinDiv, count) {
-	// each violin has two path.sjpp-vp-path, thus *2!!
-	const groups = await detectLst({ elem: violinDiv.node(), selector: 'path.sjpp-vp-path', count: count * 2 })
-	test.ok(groups, `Detected ${count} violin <path class=sjpp-vp-path>`)
 }
