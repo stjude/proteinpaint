@@ -1067,6 +1067,8 @@ export type WSImages = {
 	getAnnotationClasses?: (projectId: string) => Promise<WSIClass[] | undefined>
 	/**  ds supplied */
 	retrainModel?: (projectId: string, wsimages: string[]) => Promise<void>
+	/**  ds supplied */
+	selectWSIImages?: () => Promise<string[]>
 }
 
 export type WSIClass = { id: number; key_shortcut: string; label: string; color: string }
@@ -1985,8 +1987,4 @@ export type Mds3 = BaseMds & {
 	getHealth?: (ds: any) => {
 		[key: string]: any
 	}
-}
-
-export type Mds3WithCohort = Mds3 & {
-	cohort: Cohort
 }

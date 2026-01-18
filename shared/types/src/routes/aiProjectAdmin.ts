@@ -23,8 +23,9 @@ export type AIProjectAdminResponse = {
 	status: 'ok' | 'error'
 	projectId?: number
 	images: string[]
+	selectedImage?: string[]
 	error?: string
-	data?: { cols: any[]; rows: any[]; images: string[] }[]
+	data?: { cols: any[]; rows: any[]; images?: string[]; selectedImages?: string[] }[]
 }
 
 export const aiProjectAdminPayload: RoutePayload = {
