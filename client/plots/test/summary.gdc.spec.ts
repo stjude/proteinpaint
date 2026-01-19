@@ -865,8 +865,8 @@ tape('survival - no term2', test => {
 		},
 		survival: { callbacks: { 'postRender.test': runTests } }
 	})
-	function runTests(chart) {
-		testSurvivalByCount(test, chart, 1)
+	async function runTests(chart) {
+		await testSurvivalByCount(test, chart, 1)
 		if (test['_ok']) chart.Inner.app.destroy()
 		test.end()
 	}
@@ -885,8 +885,8 @@ tape('survival - categorical', test => {
 		},
 		survival: { callbacks: { 'postRender.test': runTests } }
 	})
-	function runTests(chart) {
-		testSurvivalByCount(test, chart, 2)
+	async function runTests(chart) {
+		await testSurvivalByCount(test, chart, 2)
 		if (test['_ok']) chart.Inner.app.destroy()
 		test.end()
 	}
@@ -905,8 +905,8 @@ tape('survival - catGroupsetting', test => {
 		},
 		survival: { callbacks: { 'postRender.test': runTests } }
 	})
-	function runTests(chart) {
-		testSurvivalByCount(test, chart, 2)
+	async function runTests(chart) {
+		await testSurvivalByCount(test, chart, 2)
 		if (test['_ok']) chart.Inner.app.destroy()
 		test.end()
 	}
@@ -925,8 +925,8 @@ tape('survival - numerical', test => {
 		},
 		survival: { callbacks: { 'postRender.test': runTests } }
 	})
-	function runTests(chart) {
-		testSurvivalByCount(test, chart, 2)
+	async function runTests(chart) {
+		await testSurvivalByCount(test, chart, 2)
 		if (test['_ok']) chart.Inner.app.destroy()
 		test.end()
 	}
@@ -947,8 +947,8 @@ tape.skip('FAILED survival - 1geneMutation', test => {
 		},
 		survival: { callbacks: { 'postRender.test': runTests } }
 	})
-	function runTests(chart) {
-		testSurvivalByCount(test, chart, 2)
+	async function runTests(chart) {
+		await testSurvivalByCount(test, chart, 2)
 		if (test['_ok']) chart.Inner.app.destroy()
 		test.end()
 	}
@@ -967,8 +967,8 @@ tape('survival - geneExpression', test => {
 		},
 		survival: { callbacks: { 'postRender.test': runTests } }
 	})
-	function runTests(chart) {
-		testSurvivalByCount(test, chart, 3) // default to 3 curves (<cutoff, >cutoff, missing data)
+	async function runTests(chart) {
+		await testSurvivalByCount(test, chart, 3) // default to 3 curves (<cutoff, >cutoff, missing data)
 		if (test['_ok']) chart.Inner.app.destroy()
 		test.end()
 	}

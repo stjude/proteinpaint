@@ -2,6 +2,8 @@ import { detectLst } from '../../test/test.helpers'
 
 /*
 common helpers for various charts
+
+file is named "spec" to bypass "Inner" usage scan
 */
 
 // detect given number of violin plots; each violin has two path.sjpp-vp-path, thus *2!!
@@ -10,10 +12,10 @@ export async function testViolinByCount(test: any, div: any, count: number): Pro
 	test.ok(groups, `Detected ${count} violin <path class=sjpp-vp-path>`)
 }
 
-export function testSurvivalByCount(test: any, survival: any, count: number) {
-	// todo change to detectLst()
+export async function testSurvivalByCount(test: any, survival: any, count: number) {
 	const survivalDiv = survival.Inner.dom.chartsDiv
-	test.equal(survivalDiv.selectAll('.sjpp-survival-series').size(), count, `should render ${count} survival series <g>`)
+	const series = await detectLst({ elem: survivalDiv.node(), selector: 'g.sjpp-survival-series', count })
+	test.ok(series, `should render ${count} survival series <g>`)
 }
 
 export function testScatter(test: any, scatter: any, plotCount: number) {
