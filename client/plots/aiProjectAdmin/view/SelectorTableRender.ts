@@ -8,12 +8,9 @@ export class SelectorTableRender {
 		tableDiv: Div | Elem
 		btnDiv: Div | Elem
 	}
-	// initialize to avoid undefined
 	images: { rows: any[]; cols: any[] } = { rows: [], cols: [] }
 	interactions: AIProjectAdminInteractions
-	// initialize to avoid undefined
 	selectedRows: Set<number> = new Set<number>()
-	// map from index in the currently-rendered (sorted) rows -> original rows index
 	sortedIndexMap: number[] = []
 
 	constructor(holder: Elem, interactions: AIProjectAdminInteractions, images: any) {
@@ -45,11 +42,7 @@ export class SelectorTableRender {
 		// Build set of selected row indices whose image (assumed in first column value) is in selectedSet
 		this.selectedRows = new Set<number>()
 		;(this.images?.rows ?? []).forEach((row: any, i: number) => {
-			const candidate =
-				row?.[0]?.value ?? // cell object with value
-				row?.image ?? // named field
-				row?.[0] ?? // raw value
-				''
+			const candidate = row?.[0]?.value
 			const n = normalize(candidate)
 			if (selectedSet.has(n)) this.selectedRows.add(i)
 		})
@@ -58,8 +51,7 @@ export class SelectorTableRender {
 	}
 
 	private render() {
-		// Ensure columns is an array
-		const columns = Array.isArray(this.images?.cols) ? this.images.cols.map(c => ({ ...c, sortable: true })) : []
+		const columns = this.images.cols.map(c => ({ ...c, sortable: true })) || []
 
 		// If columns missing, show a friendly message instead of throwing
 		if (!columns.length) {
