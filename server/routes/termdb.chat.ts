@@ -8,6 +8,7 @@ import { ChatPayload } from '#types/checkers'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import Database from 'better-sqlite3'
+import { formatElapsedTime } from '#shared'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/chat',
@@ -61,8 +62,7 @@ function init({ genomes }) {
 				apilink,
 				serverconfig.aiRoute
 			)
-			const time2 = new Date().valueOf()
-			mayLog('Time taken for classification:', time2 - time1, 'ms')
+			mayLog('Time taken for classification:', formatElapsedTime(Date.now() - time1))
 			mayLog('classResult:', classResult)
 
 			//let ai_output_data: any
@@ -79,8 +79,7 @@ function init({ genomes }) {
 					genedb,
 					ds
 				)
-				const time2 = new Date().valueOf()
-				mayLog('Time taken for summary agent:', time2 - time1, 'ms')
+				mayLog('Time taken for summary agent:', formatElapsedTime(Date.now() - time1))
 			} else if (classResult.route == 'dge') {
 				ai_output_json = { type: 'html', html: 'DE agent not implemented yet' }
 			} else {
