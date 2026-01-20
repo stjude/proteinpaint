@@ -18,6 +18,38 @@ Performance optimizations (v2.0):
 References:
     Pounds S, et al (2013) A genomic random interval model for statistical 
     analysis of genomic lesion data. Bioinformatics, 29(17):2088-95
+
+GRIN2 Core Functions
+├── Module docstring (description, optimizations, references)
+├── Imports
+│
+├── NUMBA-OPTIMIZED KERNELS
+│   ├── bern_conv_and_pvalue()      # Fused convolution + p-value
+│   ├── compute_pr_subj_approx()    # O(G×S) probability approximation
+│   ├── compute_p_values_from_conv()
+│   └── scatter_add_2d()
+│
+├── DATA PREPARATION FUNCTIONS
+│   ├── order_index_gene_data()
+│   ├── order_index_lsn_data()
+│   ├── prep_gene_lsn_data_fast()
+│
+├── CORE ANALYSIS FUNCTIONS
+│   ├── find_gene_lsn_overlaps_fast()
+│   ├── count_hits_fast()
+│   ├── process_block_in_chunks_fast()
+│   └── prob_hits_fast()
+│
+├── STATISTICAL HELPER FUNCTIONS
+│   ├── p_order()
+│   └── row_prob_subj_hit()
+│
+├── MAIN ENTRY POINT
+│   └── grin_stats()                # Primary API
+│
+└── UTILITY FUNCTIONS
+    ├── write_error()
+    └── timed_grin_stats()          # For profiling
 """
 
 import sys
