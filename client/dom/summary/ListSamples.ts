@@ -1,20 +1,36 @@
 import type { AppApi } from '#rx'
 import type { TermWrapper } from '#types'
-import type { AnnotatedSampleData } from '../../types/termdb'
+import type { AnnotatedSampleData, AnnotatedSampleEntry } from '../../types/termdb'
 import type { TableColumn, TableRow } from '#dom'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getSamplelstFilter } from '../../mass/groups.js'
 import { TermTypes, isNumericTerm } from '#shared/terms.js'
+import { isStrictNumeric } from '../../../shared/utils/src/helpers.js'
 import { filterJoin } from '#filter'
 import { addGvRowVals, addGvCols } from '#plots/barchart.events.js'
 
 /** Temp type scoped for this file.
  * Properties required in the plot arg. */
-type Plot = {
+type ScopedPlot = {
 	chartId?: string //value of divideBy term
 	seriesId?: string //value of overlay term
 	descrStats?: any //descriptive stats for the plot
 	key: any //value of the plot itself
+}
+
+type ScopedBins = {
+	[key: string]: {
+		[key: string]: {
+			start?: number
+			stop?: number
+			startinclusive?: boolean
+			stopinclusive?: boolean
+			startunbounded?: boolean
+			stopunbounded?: boolean
+			value?: string | number
+			label?: string
+		}
+	}
 }
 
 /** Constructs the list sample argument needed for the server request.
@@ -22,9 +38,9 @@ type Plot = {
 export class ListSamples {
 	app: AppApi
 	termfilter: any
-	plot: Plot
-	/** Generated from the server */
-	bins: object
+	plot: ScopedPlot
+	/** Created by the server */
+	bins: ScopedBins
 
 	t1: TermWrapper
 	t2: TermWrapper
@@ -33,8 +49,8 @@ export class ListSamples {
 
 	/** Indicates a reduced range than then bin (e.g. violin brush) */
 	useRange: boolean
-	start?: number
-	end?: number
+	start?: number | null
+	end?: number | null
 
 	/*******************
 	 * Created objects *
@@ -52,10 +68,10 @@ export class ListSamples {
 		app: AppApi,
 		termfilter: any,
 		config: any,
-		plot: Plot,
-		bins?: object,
-		start?: number | null,
-		end?: number | null
+		plot: ScopedPlot,
+		bins?: ScopedBins,
+		start?: number | null | undefined,
+		end?: number | null | undefined
 	) {
 		if (!config.term) {
 			throw new Error('Missing term in plot config')
@@ -64,6 +80,7 @@ export class ListSamples {
 		this.termfilter = termfilter
 		this.plot = plot
 		this.bins = bins || {}
+		this.useRange = false
 
 		this.t1 = config.term
 		this.t2 = config.term2
@@ -71,15 +88,15 @@ export class ListSamples {
 
 		this.terms = [this.t1]
 
-		if ((start && !Number.isFinite(end)) || (!Number.isFinite(start) && end)) {
+		if ((isStrictNumeric(start) && !isStrictNumeric(end)) || (!isStrictNumeric(start) && isStrictNumeric(end))) {
 			throw new Error('Both start and end must be provided for range filtering')
 		}
 
-		if (Number.isFinite(start) && Number.isFinite(end)) {
+		if (isStrictNumeric(start) && isStrictNumeric(end)) {
 			this.useRange = true
-			this.start = start as number
-			this.end = end as number
-		} else this.useRange = false
+			this.start = start
+			this.end = end
+		}
 
 		this.tvslst = {
 			type: 'tvslst',
@@ -103,7 +120,7 @@ export class ListSamples {
 	}
 
 	getTvsLstEntry(termNum: number): void {
-		const tw = termNum === 1 ? this.t1 : termNum === 2 ? this.t2 : this.t0
+		const tw = this[`t${termNum}`]
 		if (!tw) throw new Error('Missing term wrapper')
 		if (tw.term.type === TermTypes.GENE_VARIANT) {
 			this.geneVariant[`t${termNum}value`] = this.plot.seriesId
@@ -124,7 +141,8 @@ export class ListSamples {
 		if (this.isContinuousOrBinned(tw, termNum)) {
 			this.createTvsRanges(tvsEntry.tvs, termNum, key)
 		}
-		return this.createTvsValues(tvsEntry, tw, key)
+		this.createTvsValues(tvsEntry, tw, key)
+		return tvsEntry
 	}
 
 	createTvsValues(tvsEntry: any, tw: any, key: string) {
@@ -180,9 +198,10 @@ export class ListSamples {
 		if (this.useRange) {
 			/** May need to limit the range (e.g. violin brush) or add
 			 * a range when no bins exist for the query to succeed. */
-			if (tvs.ranges?.start) tvs.ranges.start = this.start
-			if (tvs.ranges?.stop) tvs.ranges.stop = this.end
-			else {
+			if (tvs.ranges.length > 0 && tvs.ranges[0]?.start !== undefined) {
+				tvs.ranges[0].start = this.start
+				tvs.ranges[0].stop = this.end
+			} else {
 				tvs.ranges = [
 					{
 						start: this.start,
@@ -217,7 +236,10 @@ export class ListSamples {
 			if (!data) throw new Error('No sample data returned')
 			return data
 		} catch (e: any) {
-			throw new Error(e)
+			if (e instanceof Error) throw e
+			else {
+				throw new Error(`Error fetching sample data: ${e.message || e}`)
+			}
 		}
 	}
 
@@ -242,16 +264,24 @@ export class ListSamples {
 				// sample url template is defined, use it to format sample name as url
 				row[0].url = urlTemplate.base + (s[urlTemplate.namekey] || s.sample)
 			}
-			if (s[this.t1.$id!]) {
-				if (this.t1?.q?.hiddenValues && this.t1.q.hiddenValues?.[s[this.t1.$id!]?.value]) {
+			const term1Sample = s[this.t1.$id!]
+			if (term1Sample) {
+				/** Forcing 'value' property because ts requires explicit property access
+				 * that contradicts with the AnnotatedSampleEntry type definition.
+				 * Both objs are correct in this case.
+				 *
+				 * If modifying this code, double check the types and usages.*/
+				if (this.t1?.q?.hiddenValues && this.t1.q.hiddenValues?.[term1Sample?.['value']]) {
 					continue //skip hidden values
 				} else this.addRowValue(s, this.t1, row)
 			} else continue //skip rows with no term value
 			if (this.t2) {
-				if (this.t2?.q?.hiddenValues && this.t2?.q.hiddenValues[s[this.t2.$id!].value]) {
+				//See comment above about 'value' property
+				const term2Sample = s[this.t2.$id!]
+				if (this.t2?.q?.hiddenValues && this.t2?.q.hiddenValues[term2Sample?.['value']]) {
 					continue
 				}
-				if (s[this.t2.$id!]) this.addRowValue(s, this.t2, row)
+				if (term2Sample) this.addRowValue(s, this.t2, row)
 			}
 			rows.push(row)
 		}
@@ -264,29 +294,33 @@ export class ListSamples {
 		return [rows, columns]
 	}
 
-	mayFilterGVSample(sample): boolean {
+	mayFilterGVSample(sample: AnnotatedSampleEntry): boolean {
 		let filterSample = false
 		for (const [idx, tw] of [this.t0, this.t1, this.t2].entries()) {
 			if (!tw) continue
 			if (tw.term.type !== TermTypes.GENE_VARIANT) continue
 			if (!this.geneVariant[`t${idx}value`]) continue
-			const value = sample?.[tw.$id!]?.value
+			/** See comment in setTableData() about 'value' property */
+			const value = sample?.[tw.$id!]?.['value']
 			if (value != this.geneVariant[`t${idx}value`]) {
 				filterSample = true
+				break
 			}
 		}
 		return filterSample
 	}
 
 	addRowValue(s: any, tw: TermWrapper, row: TableRow): void {
+		if (tw.term.type === TermTypes.GENE_VARIANT) {
+			//This func mutates row directly
+			addGvRowVals(s, tw, row, this.app.vocabApi.termdbMatrixClass)
+			return
+		}
+
 		const sample = s[tw.$id!]
 		let formattedVal
 		if (isNumericTerm(tw.term)) {
 			formattedVal = roundValueAuto(sample.value)
-		} else if (tw.term.type === TermTypes.GENE_VARIANT) {
-			//This func mutates row directly
-			addGvRowVals(s, tw, row, this.app.vocabApi.termdbMatrixClass)
-			return
 		} else if (tw.term.type === TermTypes.SURVIVAL) {
 			/** Use key for term value, not value (value == time elapsed) */
 			formattedVal = tw.term.values?.[sample.key]?.label || sample.key
