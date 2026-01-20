@@ -63,5 +63,5 @@ export type DbRows = {
 
 export type DbValue = {
 	key: string
-	value: string
+	value: any
 }
