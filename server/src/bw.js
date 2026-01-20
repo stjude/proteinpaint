@@ -235,8 +235,16 @@ export function plotWiggle(q, pa) {
 				for (let i = 0; i < r.values.length; i++) {
 					const v = r.values[i]
 					if (Number.isNaN(v)) continue
-					ctx.fillStyle = v > 0 ? q.pcolor : q.ncolor
+
 					const x2 = Math.ceil(x + (r.reverse ? r.width - pointshift * i : pointshift * i))
+
+					if (q.bgcolor) {
+						// track defines bg color. draw it for all loci with valid value
+						ctx.fillStyle = q.bgcolor
+						ctx.fillRect(x2, 0, pointwidth, q.barheight)
+					}
+
+					ctx.fillStyle = v > 0 ? q.pcolor : q.ncolor
 					const tmp = hscale(v)
 
 					if (v > 0) {

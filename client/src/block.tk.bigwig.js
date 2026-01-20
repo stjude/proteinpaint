@@ -55,9 +55,8 @@ export async function bigwigload(tk, block) {
 	*/
 	block.tkcloakon(tk)
 	const par = block.tkarg_q(tk)
-	if (tk.dotplotfactor) {
-		par.dotplotfactor = tk.dotplotfactor
-	}
+	if (tk.dotplotfactor) par.dotplotfactor = tk.dotplotfactor
+	if (tk.bgcolor) par.bgcolor = tk.bgcolor // bg colors for loci with a valid numerical value, useful when low values are cared about e.g. in dna methylation beta value
 
 	tk.height_main = tk.toppad + tk.barheight + tk.bottompad
 	tk.img.attr('width', block.width).attr('height', tk.barheight)
