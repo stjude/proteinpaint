@@ -5,15 +5,17 @@ import { FrontendVocab } from '#termdb/FrontendVocab'
 
 /*
 Base TVS handler for dt terms
+
+TODO: may move dom/variantConfig here
 */
 
 export const handler = Object.assign({}, _handler, { fillMenu, term_name_gen, get_pill_label })
 
 async function fillMenu(self, div, tvs) {
-	// get mutations of gene in dataset
+	// get mutations from dataset
 	const term = structuredClone(tvs.term)
 	await getDtTermValues(term, self.filter, self.opts.vocabApi)
-	// render mutations
+	// render variant config
 	const arg = {
 		holder: div,
 		header: term.parentTerm.name + ' ' + term.name,
@@ -28,6 +30,12 @@ async function fillMenu(self, div, tvs) {
 			self.dom.tip.hide()
 			self.opts.callback(new_tvs)
 		}
+	}
+	const mafFilter = self.opts.vocabApi.termdbConfig?.queries?.snvindel?.mafFilter
+	if (mafFilter) {
+		// maf filter specified in dataset
+		mafFilter.active = tvs.mafFilter || mafFilter.filter
+		arg.mafFilter = mafFilter
 	}
 	renderVariantConfig(arg)
 }
