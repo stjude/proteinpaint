@@ -19,7 +19,7 @@ References:
     Pounds S, et al (2013) A genomic random interval model for statistical 
     analysis of genomic lesion data. Bioinformatics, 29(17):2088-95
 
-GRIN2 Core Functions
+GRIN2 Core Functions Overview
 ├── Module docstring (description, optimizations, references)
 ├── Imports
 │
@@ -45,7 +45,7 @@ GRIN2 Core Functions
 │   └── row_prob_subj_hit()
 │
 ├── MAIN ENTRY POINT
-│   └── grin_stats()                # Primary API
+│   └── grin_stats()
 │
 └── UTILITY FUNCTIONS
     ├── write_error()
