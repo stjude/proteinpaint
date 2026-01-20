@@ -50,11 +50,12 @@ async function getNewListSamples(opts: any = {}) {
 		termfilter: { filter: mockFilter }
 	}
 	const mockApp = getTestApp({ state: mockState })
+	const mockBins = opts.bins || { term1: {}, term2: {} }
 
 	const start = opts.start ?? null
 	const end = opts.end ?? null
 
-	const listSamples = new ListSamples(mockApp, mockState.termfilter, config, plot, {}, start, end)
+	const listSamples = new ListSamples(mockApp, mockState.termfilter, config, plot, mockBins, start, end)
 
 	return { listSamples, config, plot, mockApp, mockState }
 }
@@ -210,7 +211,13 @@ tape(
 			chartId: ''
 		}
 
-		const { listSamples } = await getNewListSamples({ config: mockConfig, plot: mockPlot, mockBins, start: 0, end: 40 })
+		const { listSamples } = await getNewListSamples({
+			config: mockConfig,
+			plot: mockPlot,
+			bins: mockBins,
+			start: 0,
+			end: 40
+		})
 		const data = await listSamples.getData()
 
 		test.true(
