@@ -1,6 +1,6 @@
 {
   "name": "@sjcrh/proteinpaint-server",
-  "version": "2.152.0",
+  "version": "2.171.0-0",
   "type": "module",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "src/app.js",
@@ -9,6 +9,7 @@
   "imports": {
     "#types": "@sjcrh/proteinpaint-types",
     "#types/checkers": "@sjcrh/proteinpaint-types/checkers",
+    "#shared": "@sjcrh/proteinpaint-shared",
     "#shared/*": "@sjcrh/proteinpaint-shared/*",
     "#src/*": "./src/*",
     "#routes/*": "./routes/*"
@@ -61,11 +62,11 @@
   },
   "dependencies": {
     "@sjcrh/augen": "2.143.0",
-    "@sjcrh/proteinpaint-python": "2.151.0",
-    "@sjcrh/proteinpaint-r": "2.149.0",
-    "@sjcrh/proteinpaint-rust": "2.150.0",
-    "@sjcrh/proteinpaint-shared": "2.152.0",
-    "@sjcrh/proteinpaint-types": "2.152.0",
+    "@sjcrh/proteinpaint-python": "2.171.0-0",
+    "@sjcrh/proteinpaint-r": "2.152.1-0",
+    "@sjcrh/proteinpaint-rust": "2.171.0-0",
+    "@sjcrh/proteinpaint-shared": "2.171.0-0",
+    "@sjcrh/proteinpaint-types": "2.171.0-0",
     "@types/express": "^5.0.0",
     "@types/express-session": "^1.18.1",
     "better-sqlite3": "^12.4.1",
@@ -81,7 +82,7 @@
     "express-session": "^1.18.1",
     "got": "^14.2.0",
     "image-size": "^0.9.7",
-    "jsonwebtoken": "^9.0.0",
+    "jsonwebtoken": "^9.0.3",
     "ky": "^1.2.1",
     "micromatch": "^4.0.5",
     "minimatch": "^10.0.1",
