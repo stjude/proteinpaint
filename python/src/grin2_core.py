@@ -7,12 +7,12 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from scipy.stats import beta
-import numba
-from numba import prange
-from numba import njit
+# import numba
+from numba import prange, njit
+# from numba import njit
 from statsmodels.stats.multitest import fdrcorrection
-from concurrent.futures import ProcessPoolExecutor, as_completed
-import xlsxwriter
+# from concurrent.futures import ProcessPoolExecutor, as_completed
+# import xlsxwriter
 import time
 import sys
 
@@ -21,7 +21,7 @@ import sys
 ######################################################
 # 6) Compute a convolution of Bernoullis for each row of a Bernoulli success probability matrix (part of the prob.hits function)
 
-@numba.njit(parallel=True, fastmath=True)
+@njit(parallel=True, fastmath=True)
 def bern_conv_and_pvalue(P, nsubj_vals):
     """
     Fused: compute convolution AND p-value in one pass.
@@ -34,7 +34,7 @@ def bern_conv_and_pvalue(P, nsubj_vals):
     
     p_values = np.zeros(m, dtype=np.float64)
     
-    for i in numba.prange(m):
+    for i in prange(m):
         # Allocate small local array for this gene only
         Pr = np.zeros(max_x + 2, dtype=np.float64)
         Pr[0] = 1.0
