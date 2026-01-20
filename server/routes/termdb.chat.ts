@@ -251,7 +251,6 @@ async function extract_summary_terms(
 
 	// Read dataset JSON file
 	const dataset_json: any = await readJSONFile(ai_json)
-
 	// Parse out training data from the dataset JSON and add it to a string
 	const summary_ds = dataset_json.charts.filter((chart: any) => chart.type == 'Summary')
 	if (summary_ds.length == 0) throw 'summary information not present in dataset file'
@@ -281,7 +280,7 @@ async function extract_summary_terms(
 		' training data is as follows:' +
 		training_data
 
-	if (ds.queries.geneExpression) {
+	if (dataset_json.hasGeneExpression) {
 		// If dataset has geneExpression data
 		if (common_genes.length > 0) {
 			system_prompt += '\n List of relevant genes are as follows (separated by comma(,)):' + common_genes.join(',')
@@ -303,7 +302,7 @@ async function extract_summary_terms(
 		throw 'Unknown LLM backend'
 	}
 	mayLog('response:', JSON.parse(response))
-	return validate_summary_response(response, db_rows, common_genes, ai_json, ds)
+	return validate_summary_response(response, db_rows, common_genes, dataset_json, ds)
 }
 
 function validate_summary_response(
@@ -330,8 +329,8 @@ function validate_summary_response(
 			// Neither a clinical term nor a gene
 			html += 'invalid term id:' + response_type.term
 		} else {
-			if (ds.queries.geneExpression) {
-				// Check to see if dataset support gene expression or alternatively: dataset_json.hasGeneExpression
+			if (dataset_json.hasGeneExpression) {
+				// Check to see if dataset support gene expression (alternative implementation: ds.queries.geneExpression)
 				validated_summary_type.term = response_type.term.toUpperCase()
 				term_type = { term: { gene: validated_summary_type.term, type: 'geneExpression' } }
 			} else {
@@ -350,13 +349,13 @@ function validate_summary_response(
 		mayLog('response_type.term2:', response_type.term2)
 		const term2: any = ds.cohort.termdb.q.termjsonByOneid(response_type.term2)
 		if (!term2) {
-			const gene_hits2 = common_genes.filter(gene => gene == term2.toLowerCase())
+			const gene_hits2 = common_genes.filter(gene => gene == response_type.term2.toLowerCase())
 			if (gene_hits2.length == 0) {
 				// Neither a clinical term2 nor a gene
 				html += 'invalid term2 id:' + response_type.term2
 			} else {
-				if (ds.queries.geneExpression) {
-					// Check to see if dataset support gene expression or alternatively: dataset_json.hasGeneExpression
+				if (dataset_json.hasGeneExpression) {
+					// Check to see if dataset support gene expression (alternative implementation: ds.queries.geneExpression)
 					validated_summary_type.term2 = response_type.term2.toUpperCase()
 					term_type2 = { term: { gene: validated_summary_type.term2, type: 'geneExpression' } }
 				} else {
@@ -368,7 +367,6 @@ function validate_summary_response(
 			term_type2 = { id: validated_summary_type.term2 }
 		}
 	}
-	mayLog('validated_summary_type:', validated_summary_type)
 
 	if (response_type.simpleFilter && response_type.simpleFilter.length > 0) {
 		const validated_filters = validate_filter(response_type.simpleFilter, ds)
