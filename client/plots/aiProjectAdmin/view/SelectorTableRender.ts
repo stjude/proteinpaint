@@ -31,19 +31,19 @@ export class SelectorTableRender {
 		// Collect selectedImages from any known location
 		const selectedList: string[] = images?.selectedImages as string[]
 
-		// Normalize helper: strip .svs and lowercase for robust comparison
-		const normalize = (s: any) =>
+		// Normalize image helper: strip .svs and lowercase for robust comparison
+		const normalizeImageName = (s: any) =>
 			String(s ?? '')
 				.replace(/\.svs$/i, '')
 				.toLowerCase()
 
-		const selectedSet = new Set((selectedList || []).map(normalize))
+		const selectedSet = new Set((selectedList || []).map(normalizeImageName))
 
 		// Build set of selected row indices whose image (assumed in first column value) is in selectedSet
 		this.selectedRows = new Set<number>()
 		;(this.images?.rows ?? []).forEach((row: any, i: number) => {
 			const candidate = row?.[0]?.value
-			const n = normalize(candidate)
+			const n = normalizeImageName(candidate)
 			if (selectedSet.has(n)) this.selectedRows.add(i)
 		})
 
