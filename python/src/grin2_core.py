@@ -640,30 +640,86 @@ def count_hits_fast(ov_data):
     }
 
 
-def process_block_in_chunks_fast(gene_size, lsn_size, lsn_subj_IDs, chrom_size, chunk_size=5000):
+def _compute_pr_subj_exact(gene_size, lsn_size, lsn_subj_IDs, chrom_size, chunk_size=5000):
     """
-    Compute per-subject hit probabilities using O(G×S) approximation.
+    Exact O(G×L) computation for per-subject hit probabilities.
     
-    Uses log(1-p) ≈ -p approximation which allows pre-aggregating lesion 
-    statistics by subject, reducing complexity from O(G×L) to O(G×S).
+    Used as fallback when lesions are too large for the approximation to be accurate.
+    Processes in chunks to manage memory usage.
     
     Parameters
     ----------
-    gene_size : ndarray
+    gene_size : ndarray, shape (n_genes,)
         Gene sizes in base pairs
-    lsn_size : ndarray
+    lsn_size : ndarray, shape (n_lesions,)
         Lesion sizes in base pairs
-    lsn_subj_IDs : ndarray
+    lsn_subj_IDs : ndarray, shape (n_lesions,)
         Subject ID for each lesion
     chrom_size : float
         Chromosome size in base pairs
-    chunk_size : int, optional
-        Unused, kept for API compatibility
+    chunk_size : int
+        Number of lesions to process per chunk
     
     Returns
     -------
-    tuple
-        (None, pr_subj) where pr_subj is the probability matrix
+    pr_subj : ndarray, shape (n_genes, n_subjects)
+        Probability that each gene is hit in each subject
+    """
+    G = len(gene_size)
+    L = len(lsn_size)
+    
+    # Map subject IDs to indices
+    subj_ids_unique, subj_inv = np.unique(lsn_subj_IDs, return_inverse=True)
+    n_subj = len(subj_ids_unique)
+    
+    # Accumulate log(1 - p) by subject
+    logsum = np.zeros((G, n_subj), dtype=np.float64)
+    
+    for start in range(0, L, chunk_size):
+        end = min(start + chunk_size, L)
+        lsn_chunk_size = lsn_size[start:end]
+        subj_chunk_inv = subj_inv[start:end]
+        
+        # Compute pr_gene_hit for this chunk: (gene_size + lsn_size) / chrom_size
+        # Using broadcasting: (G, 1) + (1, chunk) -> (G, chunk)
+        pr_chunk = (gene_size[:, np.newaxis] + lsn_chunk_size[np.newaxis, :]) / chrom_size
+        np.clip(pr_chunk, 1e-10, 1 - 1e-10, out=pr_chunk)
+        
+        # log(1 - p)
+        log_chunk = np.log(1.0 - pr_chunk)
+        
+        # Accumulate by subject (scatter-add)
+        for j in range(end - start):
+            subj_idx = subj_chunk_inv[j]
+            logsum[:, subj_idx] += log_chunk[:, j]
+    
+    # pr_subj = 1 - exp(sum(log(1 - p))) = 1 - prod(1 - p)
+    pr_subj = 1.0 - np.exp(logsum)
+    
+    return pr_subj
+
+
+def _compute_pr_subj_approx(gene_size, lsn_size, lsn_subj_IDs, chrom_size):
+    """
+    Fast O(G×S) approximation for per-subject hit probabilities.
+    
+    Uses log(1-p) ≈ -p which allows pre-aggregating by subject.
+    
+    Parameters
+    ----------
+    gene_size : ndarray, shape (n_genes,)
+        Gene sizes in base pairs
+    lsn_size : ndarray, shape (n_lesions,)
+        Lesion sizes in base pairs
+    lsn_subj_IDs : ndarray, shape (n_lesions,)
+        Subject ID for each lesion
+    chrom_size : float
+        Chromosome size in base pairs
+    
+    Returns
+    -------
+    pr_subj : ndarray, shape (n_genes, n_subjects)
+        Probability that each gene is hit in each subject
     """
     subj_ids_unique, subj_inv = np.unique(lsn_subj_IDs, return_inverse=True)
     n_subj = len(subj_ids_unique)
@@ -677,10 +733,60 @@ def process_block_in_chunks_fast(gene_size, lsn_size, lsn_subj_IDs, chrom_size, 
         lsn_count_per_subj[s] += 1.0
         lsn_size_per_subj[s] += lsn_size[l]
     
-    # O(G × S) computation
+    # O(G × S) computation using numba kernel
     pr_subj = compute_pr_subj_approx(
         gene_size, lsn_count_per_subj, lsn_size_per_subj, chrom_size
     )
+    
+    return pr_subj
+
+
+# Threshold for switching between approximation and exact computation
+# When max_p < threshold, approximation error < 0.1%
+_APPROX_THRESHOLD = 0.05
+
+
+def process_block_in_chunks_fast(gene_size, lsn_size, lsn_subj_IDs, chrom_size, chunk_size=5000):
+    """
+    Compute per-subject hit probabilities with automatic method selection.
+    
+    Uses fast O(G×S) approximation when lesions are small enough for the
+    approximation to be accurate. Falls back to exact O(G×L) computation
+    for large structural variants where the approximation error would be
+    significant.
+    
+    The approximation log(1-p) ≈ -p has error ~p²/2. With threshold p < 0.05,
+    the maximum error is < 0.1%.
+    
+    Parameters
+    ----------
+    gene_size : ndarray
+        Gene sizes in base pairs
+    lsn_size : ndarray
+        Lesion sizes in base pairs
+    lsn_subj_IDs : ndarray
+        Subject ID for each lesion
+    chrom_size : float
+        Chromosome size in base pairs
+    chunk_size : int, optional
+        Chunk size for exact computation (default 5000)
+    
+    Returns
+    -------
+    tuple
+        (None, pr_subj) where pr_subj is the probability matrix
+    """
+    # Calculate maximum p to decide which method to use
+    max_gene = np.max(gene_size) if len(gene_size) > 0 else 0
+    max_lsn = np.max(lsn_size) if len(lsn_size) > 0 else 0
+    max_p = (max_gene + max_lsn) / chrom_size
+    
+    if max_p < _APPROX_THRESHOLD:
+        # Fast path: O(G×S) approximation
+        pr_subj = _compute_pr_subj_approx(gene_size, lsn_size, lsn_subj_IDs, chrom_size)
+    else:
+        # Slow path: O(G×L) exact computation for large SVs
+        pr_subj = _compute_pr_subj_exact(gene_size, lsn_size, lsn_subj_IDs, chrom_size, chunk_size)
     
     return None, pr_subj
 
