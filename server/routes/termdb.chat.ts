@@ -5,10 +5,8 @@ import type { SchemaGenerator } from 'ts-json-schema-generator'
 import path from 'path'
 import type { ChatRequest, ChatResponse, RouteApi, DbRows, DbValue, SummaryType } from '#types'
 import { ChatPayload } from '#types/checkers'
-//import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
-//import { run_python } from '@sjcrh/proteinpaint-python'
 import Database from 'better-sqlite3'
 
 export const api: RouteApi = {
@@ -53,21 +51,6 @@ function init({ genomes }) {
 				throw "llm_backend either needs to be 'SJ' or 'ollama'" // Currently only 'SJ' and 'ollama' LLM backends are supported
 			}
 
-			//const chatbot_input = {
-			//    user_input: q.prompt,
-			//    apilink: apilink,
-			//    tpmasterdir: serverconfig.tpmasterdir,
-			//    comp_model_name: comp_model_name,
-			//    embedding_model_name: embedding_model_name,
-			//    dataset_db: ds.cohort.db.file,
-			//    genedb: g.genedb.dbfile,
-			//    aiRoute: serverconfig.aiRoute, // Route file for classifying chat request into various routes
-			//    llm_backend_name: serverconfig.llm_backend, // The type of backend (engine) used for running the embedding and completion model. Currently "SJ" and "Ollama" are supported
-			//    aifiles: serverconfig_ds_entries.aifiles, // Dataset specific data containing data-specific routes, system prompts for agents and few-shot examples
-			//    binpath: serverconfig.binpath
-			//}
-			//mayLog('chatbot_input:', JSON.stringify(chatbot_input))
-
 			const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
 			const genedb = serverconfig.tpmasterdir + '/' + g.genedb.dbfile
 			const time1 = new Date().valueOf()
@@ -104,7 +87,6 @@ function init({ genomes }) {
 				// Will define all other agents later as desired
 				ai_output_json = { type: 'html', html: 'Unknown classification value' }
 			}
-			mayLog('ai_output_json:', JSON.stringify(ai_output_json))
 			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
 			if (e.stack) mayLog(e.stack)
@@ -213,7 +195,7 @@ async function classify_query_by_dataset_type(
 		// Will later add support for azure server also
 		throw 'Unknown LLM backend'
 	}
-	console.log('response:', response)
+	//mayLog('response:', response)
 	return JSON.parse(response)['answer']
 }
 
@@ -227,8 +209,7 @@ async function extract_summary_terms(
 	genedb: string,
 	ds: any
 ) {
-	const { db_rows, rag_docs } = await parse_dataset_db(dataset_db)
-	//mayLog('db_rows:', db_rows)
+	const rag_docs = await parse_dataset_db(dataset_db)
 	//mayLog('rag_docs:', rag_docs)
 	const genes_list = await parse_geneset_db(genedb)
 	const SchemaConfig = {
@@ -301,17 +282,11 @@ async function extract_summary_terms(
 		// Will later add support for azure server also
 		throw 'Unknown LLM backend'
 	}
-	mayLog('response:', JSON.parse(response))
-	return validate_summary_response(response, db_rows, common_genes, dataset_json, ds)
+	//mayLog('response:', JSON.parse(response))
+	return validate_summary_response(response, common_genes, dataset_json, ds)
 }
 
-function validate_summary_response(
-	response: string,
-	db_rows: DbRows[],
-	common_genes: string[],
-	dataset_json: any,
-	ds: any
-) {
+function validate_summary_response(response: string, common_genes: string[], dataset_json: any, ds: any) {
 	const response_type = JSON.parse(response)
 	let html = ''
 	if (response_type.html) html = response_type.html
@@ -346,7 +321,6 @@ function validate_summary_response(
 
 	let term_type2: any
 	if (response_type.term2) {
-		mayLog('response_type.term2:', response_type.term2)
 		const term2: any = ds.cohort.termdb.q.termjsonByOneid(response_type.term2)
 		if (!term2) {
 			const gene_hits2 = common_genes.filter(gene => gene == response_type.term2.toLowerCase())
@@ -370,7 +344,6 @@ function validate_summary_response(
 
 	if (response_type.simpleFilter && response_type.simpleFilter.length > 0) {
 		const validated_filters = validate_filter(response_type.simpleFilter, ds)
-		mayLog('validated_filters:', JSON.stringify(validated_filters.simplefilter.lst))
 		if (validated_filters.html.length > 0) {
 			html += validated_filters.html
 		} else {
@@ -384,7 +357,6 @@ function validate_summary_response(
 		if (validated_summary_type.term2) pp_plot_json.term2 = term_type2
 		if (response_type.simpleFilter && response_type.simpleFilter.length > 0)
 			pp_plot_json.filter = validated_summary_type.simpleFilter
-		mayLog({ type: 'plot', plot: pp_plot_json })
 		return { type: 'plot', plot: pp_plot_json }
 	}
 }
@@ -407,7 +379,6 @@ function validate_filter(filters: any, ds: any): any {
 				}
 				if (!cat) invalid_html += 'invalid category from ' + JSON.stringify(f)
 				// term and category validated
-				mayLog('cat:', cat)
 				localfilter.lst.push({
 					type: 'tvs',
 					tvs: {
@@ -501,7 +472,7 @@ async function parse_dataset_db(dataset_db: string) {
 			db_rows.push(db_row)
 		}
 	})
-	return { db_rows, rag_docs }
+	return rag_docs
 }
 
 function parse_db_rows(db_row: DbRows) {
