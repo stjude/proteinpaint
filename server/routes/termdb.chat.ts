@@ -104,90 +104,6 @@ function init({ genomes }) {
 				// Will define all other agents later as desired
 				ai_output_json = { type: 'html', html: 'Unknown classification value' }
 			}
-
-			//const time1 = new Date().valueOf()
-			//const classResult = JSON.parse(await run_rust('query_classification', JSON.stringify(chatbot_input)))
-			//const time2 = new Date().valueOf()
-			//mayLog('Time taken for classification:', time2 - time1, 'ms')
-
-			//let ai_output_data: any
-			//let ai_output_json: any
-			//if (classResult.route == 'summary') {
-			//	const time1 = new Date().valueOf()
-			//	ai_output_data = await run_rust('summary_agent', JSON.stringify(chatbot_input))
-			//	const time2 = new Date().valueOf()
-			//	mayLog('Time taken for running summary agent:', time2 - time1, 'ms')
-
-			//	for (const line of ai_output_data.split('\n')) {
-			//		// The reason we are parsing each line from rust is because we want to debug what is causing the wrong output. As the AI pipeline matures, the rust code will be modified to always return a single JSON
-			//		if (line.startsWith('final_output:') == true) {
-			//			ai_output_json = JSON.parse(JSON.parse(line.replace('final_output:', '')))
-			//		} else {
-			//			mayLog(line)
-			//		}
-			//	}
-			//} else if (classResult.route == 'dge') {
-			//	ai_output_json = { type: 'html', html: 'DE agent not implemented yet' }
-			//} else {
-			//	// Will define all other agents later as desired
-			//	ai_output_json = { type: 'html', html: 'Unknown classification value' }
-			//}
-
-			//     		if (ai_output_json.type == 'plot') {
-			//	if (typeof ai_output_json.plot != 'object') throw '.plot{} missing when .type=plot'
-			//	if (ai_output_json.plot.simpleFilter) {
-			//		// simpleFilter= [ {term:str, category:str} ]
-			//		if (!Array.isArray(ai_output_json.plot.simpleFilter)) throw 'ai_output_json.plot.simpleFilter is not array'
-			//		const localfilter = { type: 'tvslst', in: true, join: '', lst: [] as any[] }
-			//		if (ai_output_json.plot.simpleFilter.length > 1) localfilter.join = 'and' // For now hardcoding join as 'and' if number of filter terms > 1. Will later implement more comprehensive logic
-			//		for (const f of ai_output_json.plot.simpleFilter) {
-			//			const term = ds.cohort.termdb.q.termjsonByOneid(f.term)
-			//			if (!term) throw 'invalid term id from simpleFilter[].term'
-			//			if (term.type == 'categorical') {
-			//				let cat
-			//				for (const ck in term.values) {
-			//					if (ck == f.category) cat = ck
-			//					else if (term.values[ck].label == f.category) cat = ck
-			//				}
-			//				if (!cat) throw 'invalid category from ' + JSON.stringify(f)
-			//				// term and category validated
-			//				localfilter.lst.push({
-			//					type: 'tvs',
-			//					tvs: {
-			//						term,
-			//						values: [{ key: cat }]
-			//					}
-			//				})
-			//			} else if (term.type == 'float' || term.type == 'integer') {
-			//				const numeric: any = {
-			//					type: 'tvs',
-			//					tvs: {
-			//						term,
-			//						ranges: []
-			//					}
-			//				}
-			//				const range: any = {}
-			//				if (f.gt && !f.lt) {
-			//					range.start = Number(f.gt)
-			//					range.stopunbounded = true
-			//				} else if (f.lt && !f.gt) {
-			//					range.stop = Number(f.lt)
-			//					range.startunbounded = true
-			//				} else if (f.gt && f.lt) {
-			//					range.start = Number(f.gt)
-			//					range.stop = Number(f.lt)
-			//				} else {
-			//					throw 'Neither greater or lesser defined'
-			//				}
-			//				numeric.tvs.ranges.push(range)
-			//				localfilter.lst.push(numeric)
-			//			}
-			//		}
-			//		delete ai_output_json.plot.simpleFilter
-			//		ai_output_json.plot.filter = localfilter
-			//	}
-			//}
-
 			mayLog('ai_output_json:', JSON.stringify(ai_output_json))
 			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
@@ -329,7 +245,7 @@ async function extract_summary_terms(
 		skipTypeCheck: true
 	}
 	const generator: SchemaGenerator = createGenerator(SchemaConfig)
-	const StringifiedSchema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // May use a typescript definition in the future which may be generated at server startup
+	const StringifiedSchema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // This will be generated at server startup later
 	const words = prompt.split(/\s+/).map(str => str.toLowerCase()) // Split on whitespace and convert to lowercase
 	const common_genes = words.filter(item => genes_list.includes(item)) // The reason behind showing common genes that are actually present in the genedb is because otherwise showing ~20000 genes would increase the number of tokens significantly and may cause the LLM to loose context. Much easier to parse out relevant genes from the user prompt.
 
@@ -602,7 +518,9 @@ function parse_db_rows(db_row: DbRows) {
 	if (db_row.values.length > 0) {
 		output_string += 'This field contains the following possible values.'
 		for (const value of db_row.values) {
-			output_string += 'The key is ' + value.key + ' and the label is ' + value.value
+			if (value.value && value.value.label) {
+				output_string += 'The key is ' + value.key + ' and the label is ' + value.value.label + '.'
+			}
 		}
 	}
 	return output_string
