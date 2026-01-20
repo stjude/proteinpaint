@@ -200,7 +200,8 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 			// some of the stuff here are to provide user-selectable choices
 			// e.g. computing methods, info fields, populations.
 			details: q.snvindel.details,
-			populations: q.snvindel.populations
+			populations: q.snvindel.populations,
+			mafFilter: q.snvindel.mafFilter
 		}
 		if (q.snvindel.byisoform?.processTwsInOneQuery) q2.snvindel.byisoform = { processTwsInOneQuery: true } // quick fix; may revise later
 	}

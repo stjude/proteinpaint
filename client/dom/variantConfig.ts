@@ -1,5 +1,6 @@
 import { make_radios, renderTable } from '#dom'
 import type { TermValues, BaseValue } from '#types'
+import { filterInit } from '#filter'
 import { dt2label } from '#shared/common.js'
 
 type Config = {
@@ -16,11 +17,12 @@ type Arg = {
 	genotype?: 'variant' | 'wt' | 'nt' // genotype (variant, wildtype, not tested)
 	dt: number // dt value, rendering of some elements are based on this value
 	mcount?: 'any' | 'single' | 'multiple' // mutation count, when missing will default to 'any'
+	mafFilter?: any // maf filter object
 	callback: (config: Config) => void
 }
 
 export function renderVariantConfig(arg: Arg) {
-	const { holder, dt } = arg
+	const { holder, dt, mafFilter } = arg
 	const genotype = arg.genotype || 'variant'
 	if (!['variant', 'wt', 'nt'].includes(genotype)) throw 'invalid genotype'
 	const values: BaseValue[] = Object.entries(arg.values).map(([k, v]) => {
@@ -77,8 +79,7 @@ export function renderVariantConfig(arg: Arg) {
 
 	let countRadio
 	if (values.length) {
-		// variant data present
-		// display data in table
+		// variant data present, display as table
 		variantsDiv.append('div').style('opacity', 0.7).style('margin-bottom', '5px').text(dt2label[dt])
 		const tableDiv = variantsDiv.append('div').style('margin-left', '5px').style('font-size', '0.8rem')
 		const rows: any[] = []
@@ -101,9 +102,9 @@ export function renderVariantConfig(arg: Arg) {
 			showLines: false,
 			selectedRows: selectedIdxs
 		})
-		// mutation count
 		if (dt == 1) {
-			// snvindel, render mutation count radios
+			// snvindel
+			// render mutation count radios
 			const countDiv = variantsDiv.append('div').style('margin-top', '5px')
 			countDiv
 				.append('div')
@@ -125,6 +126,24 @@ export function renderVariantConfig(arg: Arg) {
 				options: countOpts,
 				callback: () => {}
 			})
+			// render maf filter, if defined
+			if (mafFilter) {
+				const mafDiv = variantsDiv.append('div').style('margin-top', '5px')
+				mafDiv
+					.append('div')
+					.style('display', 'inline-block')
+					.style('margin-right', '5px')
+					.style('opacity', 0.7)
+					.text('MAF filter')
+				filterInit({
+					emptyLabel: '+MAF filter',
+					holder: mafDiv,
+					vocab: { terms: mafFilter.terms },
+					callback: async filter => {
+						mafFilter.active = filter
+					}
+				}).main(mafFilter.active)
+			}
 		}
 	} else {
 		// no variant data
@@ -165,6 +184,10 @@ export function renderVariantConfig(arg: Arg) {
 					config.mcount = selectedCount.value
 				} else {
 					config.mcount = 'any'
+				}
+				// get maf filter
+				if (mafFilter) {
+					config.mafFilter = mafFilter.active
 				}
 			}
 			arg.callback(config)

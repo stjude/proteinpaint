@@ -3055,7 +3055,15 @@ export function filterByItem(filter, mlst, values) {
 			if (tvs.genotype == 'variant') {
 				// mutant tvs
 				// get mutations in sample that match tvs
-				mlst_intvs = mlst_tested.filter(m => tvs.values.some(v => v.key == m.class))
+				mlst_intvs = mlst_tested.filter(m => {
+					if (tvs.values.some(v => v.key == m.class)) {
+						// mutation is in tvs
+						if (mayFilterByMaf(tvs.mafFilter, m)) {
+							// mutation passes maf cutoff of tvs
+							return true
+						}
+					}
+				})
 				// sample matches tvs if number of matching mutations
 				// passes mutation count cutoff
 				intvs =
@@ -3089,6 +3097,60 @@ export function filterByItem(filter, mlst, values) {
 		pass = tvs.genotype ? tvs.genotype == 'nt' : false
 	}
 	return [pass, tested]
+}
+
+// filter mutation by maf
+function mayFilterByMaf(mafFilter, m) {
+	if (!mafFilter) {
+		// no maf filter, so mutation passes
+		return true
+	}
+	const filter = mafFilter
+	if (filter.type != 'tvslst') throw 'unexpected filter.type'
+	if (!filter.in) throw 'filter.in must be set to true'
+	//console.log()
+	//console.log('m:', m)
+	const passLst = []
+	for (const item of filter.lst) {
+		let pass = false
+		if (item.type != 'tvs') throw 'unexpected item.type' // not supporting nested tvslst
+		const tvs = item.tvs
+		//console.log('tvs:', tvs)
+		if (Object.keys(m).includes(tvs.term.id)) {
+			// mutation is annotated for maf field
+			const mafField = m[tvs.term.id] // <ref read count>,<alt read count>
+			//console.log('mafField:', mafField)
+			const alleles = mafField.split(',').map(Number)
+			if (alleles.length == 2) {
+				// only handling bi-allelic variants for now
+				// TODO: how to handle multi-allelic variants?
+				const [ref, alt] = alleles
+				if (Number.isFinite(ref) && Number.isFinite(alt)) {
+					const maf = alt / (alt + ref)
+					//console.log('maf:', maf)
+					// test if maf is in range of tvs
+					const intvs = tvs.ranges.every(r => {
+						//console.log('r:', r)
+						let startPass = true
+						let stopPass = true
+						if (Object.keys(r).includes('start')) {
+							startPass = r.startinclusive ? maf >= r.start : maf > r.start
+						}
+						if (Object.keys(r).includes('stop')) {
+							stopPass = r.stopinclusive ? maf <= r.stop : maf < r.stop
+						}
+						return startPass && stopPass
+					})
+					pass = tvs.isnot ? !intvs : intvs
+				}
+			}
+		}
+		//console.log('pass:', pass)
+		passLst.push(pass)
+	}
+	const passFilter = filter.join == 'or' ? passLst.some(pass => pass) : passLst.every(pass => pass)
+	//console.log('passFilter:', passFilter)
+	return passFilter
 }
 
 /*function mayFilterByGeneVariant(filter, mlst, ds) {
