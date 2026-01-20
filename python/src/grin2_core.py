@@ -987,140 +987,140 @@ def grin_stats(lsn_data, gene_data, chr_size):
 
     return result_df
 
-############################################
-# 12) The function Write GRIN results to an excel file with multiple sheets that include:
-# GRIN results, input lesion data, gene annotation data, chromosome size, and methods paragraph.
+# ############################################
+# # 12) The function Write GRIN results to an excel file with multiple sheets that include:
+# # GRIN results, input lesion data, gene annotation data, chromosome size, and methods paragraph.
 
-def write_grin_xlsx(grin_result, output_file):
-    # Extract core result components:
-    rpt_res = {
-        "gene.hits": grin_result["gene.hits"],
-        #"gene.lsn.data": grin_result["gene.lsn.data"],
-        "lsn.data": grin_result["lsn.data"],
-        "gene.data": grin_result["gene.data"],
-        "chr.size": grin_result["chr.size"]
-    }
+# def write_grin_xlsx(grin_result, output_file):
+#     # Extract core result components:
+#     rpt_res = {
+#         "gene.hits": grin_result["gene.hits"],
+#         #"gene.lsn.data": grin_result["gene.lsn.data"],
+#         "lsn.data": grin_result["lsn.data"],
+#         "gene.data": grin_result["gene.data"],
+#         "chr.size": grin_result["chr.size"]
+#     }
 
-    # Description of each sheet
-    sheet_int = pd.DataFrame({
-        "sheet.name": ["gene.hits", "lsn.data", "gene.data", "chr.size"],
-        "col.name": ["entire sheet"] * 4,
-        "meaning": [
-            "GRIN statistical results",
-            "input lesion data",
-            "input gene location data",
-            "input chromosome size data"
-        ]
-    })
+#     # Description of each sheet
+#     sheet_int = pd.DataFrame({
+#         "sheet.name": ["gene.hits", "lsn.data", "gene.data", "chr.size"],
+#         "col.name": ["entire sheet"] * 4,
+#         "meaning": [
+#             "GRIN statistical results",
+#             "input lesion data",
+#             "input gene location data",
+#             "input chromosome size data"
+#         ]
+#     })
 
-    # Interpret gene.hits columns
-    gh = rpt_res["gene.hits"].copy()
-    gh_cols = gh.columns
-    genehit_int = pd.DataFrame({
-        "sheet.name": ["gene.hits"] * len(gh_cols),
-        "col.name": gh_cols,
-        "meaning": gh_cols
-    })
+#     # Interpret gene.hits columns
+#     gh = rpt_res["gene.hits"].copy()
+#     gh_cols = gh.columns
+#     genehit_int = pd.DataFrame({
+#         "sheet.name": ["gene.hits"] * len(gh_cols),
+#         "col.name": gh_cols,
+#         "meaning": gh_cols
+#     })
 
-    default_meanings = {
-        "gene.row": "gene data row index",
-        "gene": "gene name",
-        "loc.start": "locus of left edge of gene",
-        "loc.end": "locus of right edge of gene"
-    }
+#     default_meanings = {
+#         "gene.row": "gene data row index",
+#         "gene": "gene name",
+#         "loc.start": "locus of left edge of gene",
+#         "loc.end": "locus of right edge of gene"
+#     }
 
-    for col, meaning in default_meanings.items():
-        genehit_int.loc[genehit_int["col.name"] == col, "meaning"] = meaning
+#     for col, meaning in default_meanings.items():
+#         genehit_int.loc[genehit_int["col.name"] == col, "meaning"] = meaning
 
-    def update_meaning(col_prefix, label):
-        for col in gh_cols:
-            if col.startswith(col_prefix):
-                subtype = col.split(".", 1)[-1]
-                genehit_int.loc[genehit_int["col.name"] == col, "meaning"] = f"{label} {subtype} lesion overlapping the gene locus"
+#     def update_meaning(col_prefix, label):
+#         for col in gh_cols:
+#             if col.startswith(col_prefix):
+#                 subtype = col.split(".", 1)[-1]
+#                 genehit_int.loc[genehit_int["col.name"] == col, "meaning"] = f"{label} {subtype} lesion overlapping the gene locus"
 
-    update_meaning("nsubj", "Number of subjects with a")
-    update_meaning("p.nsubj", "p-value for the number of subjects with a")
-    update_meaning("q.nsubj", "FDR estimate for the number of subjects with a")
+#     update_meaning("nsubj", "Number of subjects with a")
+#     update_meaning("p.nsubj", "p-value for the number of subjects with a")
+#     update_meaning("q.nsubj", "FDR estimate for the number of subjects with a")
 
-    lsn_types = sorted(grin_result["lsn.data"]["lsn.type"].unique())
-    for i, t in enumerate(lsn_types):
-        for prefix in ["p", "q"]:
-            for suffix in ["nsubj"]:
-                col = f"{prefix}{i+1}.{suffix}"
-                if suffix == "nsubj":
-                    msg = f"{prefix}-value for the number of subjects with any {i+1} type(s) of lesion overlapping the gene locus"
+#     lsn_types = sorted(grin_result["lsn.data"]["lsn.type"].unique())
+#     for i, t in enumerate(lsn_types):
+#         for prefix in ["p", "q"]:
+#             for suffix in ["nsubj"]:
+#                 col = f"{prefix}{i+1}.{suffix}"
+#                 if suffix == "nsubj":
+#                     msg = f"{prefix}-value for the number of subjects with any {i+1} type(s) of lesion overlapping the gene locus"
 
-    # Lesion data interpretation
-    lsn_cols = rpt_res["lsn.data"].columns
-    lsn_int = pd.DataFrame({
-        "sheet.name": "lsn.data",
-        "col.name": lsn_cols,
-        "meaning": lsn_cols
-    })
-    lsn_map = {
-        "ID": "Input Subject Identifier",
-        "chrom": "Input Chromosome",
-        "loc.start": "Input Lesion Left Edge",
-        "loc.end": "Input Lesion Right Edge",
-        "lsn.type": "Input Lesion Type"
-    }
-    for k, v in lsn_map.items():
-        lsn_int.loc[lsn_int["col.name"] == k, "meaning"] = v
+#     # Lesion data interpretation
+#     lsn_cols = rpt_res["lsn.data"].columns
+#     lsn_int = pd.DataFrame({
+#         "sheet.name": "lsn.data",
+#         "col.name": lsn_cols,
+#         "meaning": lsn_cols
+#     })
+#     lsn_map = {
+#         "ID": "Input Subject Identifier",
+#         "chrom": "Input Chromosome",
+#         "loc.start": "Input Lesion Left Edge",
+#         "loc.end": "Input Lesion Right Edge",
+#         "lsn.type": "Input Lesion Type"
+#     }
+#     for k, v in lsn_map.items():
+#         lsn_int.loc[lsn_int["col.name"] == k, "meaning"] = v
 
-    # Gene data interpretation
-    gene_cols = rpt_res["gene.data"].columns
-    gene_int = pd.DataFrame({
-        "sheet.name": "gene.data",
-        "col.name": gene_cols,
-        "meaning": "Echoed from Input"
-    })
-    gene_map = {
-        "gene": "Input Gene Locus Name",
-        "chrom": "Input Gene Locus Chromosome",
-        "loc.start": "Input Gene Locus Left Edge",
-        "loc.end": "Input Gene Locus Right Edge"
-    }
-    for k, v in gene_map.items():
-        gene_int.loc[gene_int["col.name"] == k, "meaning"] = v
+#     # Gene data interpretation
+#     gene_cols = rpt_res["gene.data"].columns
+#     gene_int = pd.DataFrame({
+#         "sheet.name": "gene.data",
+#         "col.name": gene_cols,
+#         "meaning": "Echoed from Input"
+#     })
+#     gene_map = {
+#         "gene": "Input Gene Locus Name",
+#         "chrom": "Input Gene Locus Chromosome",
+#         "loc.start": "Input Gene Locus Left Edge",
+#         "loc.end": "Input Gene Locus Right Edge"
+#     }
+#     for k, v in gene_map.items():
+#         gene_int.loc[gene_int["col.name"] == k, "meaning"] = v
 
-    # Chromosome size interpretation
-    chr_cols = rpt_res["chr.size"].columns
-    chr_int = pd.DataFrame({
-        "sheet.name": "chr.size",
-        "col.name": chr_cols,
-        "meaning": "Echoed from Input"
-    })
-    chr_map = {
-        "chrom": "Input Chromosome",
-        "size": "Input Chromosome Size"
-    }
-    for k, v in chr_map.items():
-        chr_int.loc[chr_int["col.name"] == k, "meaning"] = v
+#     # Chromosome size interpretation
+#     chr_cols = rpt_res["chr.size"].columns
+#     chr_int = pd.DataFrame({
+#         "sheet.name": "chr.size",
+#         "col.name": chr_cols,
+#         "meaning": "Echoed from Input"
+#     })
+#     chr_map = {
+#         "chrom": "Input Chromosome",
+#         "size": "Input Chromosome Size"
+#     }
+#     for k, v in chr_map.items():
+#         chr_int.loc[chr_int["col.name"] == k, "meaning"] = v
 
-    # Combine interpretation
-    interpretation = pd.concat([sheet_int, genehit_int, lsn_int, gene_int, chr_int], ignore_index=True)
-    rpt_res["interpretation"] = interpretation
+#     # Combine interpretation
+#     interpretation = pd.concat([sheet_int, genehit_int, lsn_int, gene_int, chr_int], ignore_index=True)
+#     rpt_res["interpretation"] = interpretation
 
-    # Methods paragraph
-    methods_text = [
-        "The genomic random interval model [ref 1] was used to evaluate the statistical significance of the number of subjects with " +
-        f"each type of lesion ({','.join(lsn_types)}) in each gene.",
-        "For each type of lesion, robust false discovery estimates were computed from p-values using Storey's q-value [ref 2] " +
-        "with the Pounds-Cheng estimator of the proportion of hypothesis tests with a true null [ref 3].",
-        f"Additionally, p-values for the number of subjects with any 1 to {len(lsn_types)} types of lesions " +
-        "were computed using the beta distribution derived for order statistics of the uniform distribution [ref 4].",
-        "",
-        "REFERENCES",
-        "[ref 1] Pounds S, et al (2013) A genomic random interval model for statistical analysis of genomic lesion data. Bioinformatics, 2013 Sep 1;29(17):2088-95 (PMID: 23842812).",
-        "[ref 2] Storey J (2002). A direct approach to false discovery rates. Journal of the Royal Statistical Society Series B. 64(3): 479-498. (doi.org/10.1111/1467-9868.00346).",
-        "[ref 3] Pounds S and Cheng C (2005) Robust estimation of the false discovery rate. Bioinformatics 22(16): 1979-87. (PMID: 16777905).",
-        "[ref 4] Casella G and Berger RL (1990) Statistical Inference. Wadsworth & Brooks/Cole: Pacific Grove, California. Example 5.5.1."
-    ]
-    rpt_res["methods.paragraph"] = pd.DataFrame({"methods.paragraph": methods_text})
+#     # Methods paragraph
+#     methods_text = [
+#         "The genomic random interval model [ref 1] was used to evaluate the statistical significance of the number of subjects with " +
+#         f"each type of lesion ({','.join(lsn_types)}) in each gene.",
+#         "For each type of lesion, robust false discovery estimates were computed from p-values using Storey's q-value [ref 2] " +
+#         "with the Pounds-Cheng estimator of the proportion of hypothesis tests with a true null [ref 3].",
+#         f"Additionally, p-values for the number of subjects with any 1 to {len(lsn_types)} types of lesions " +
+#         "were computed using the beta distribution derived for order statistics of the uniform distribution [ref 4].",
+#         "",
+#         "REFERENCES",
+#         "[ref 1] Pounds S, et al (2013) A genomic random interval model for statistical analysis of genomic lesion data. Bioinformatics, 2013 Sep 1;29(17):2088-95 (PMID: 23842812).",
+#         "[ref 2] Storey J (2002). A direct approach to false discovery rates. Journal of the Royal Statistical Society Series B. 64(3): 479-498. (doi.org/10.1111/1467-9868.00346).",
+#         "[ref 3] Pounds S and Cheng C (2005) Robust estimation of the false discovery rate. Bioinformatics 22(16): 1979-87. (PMID: 16777905).",
+#         "[ref 4] Casella G and Berger RL (1990) Statistical Inference. Wadsworth & Brooks/Cole: Pacific Grove, California. Example 5.5.1."
+#     ]
+#     rpt_res["methods.paragraph"] = pd.DataFrame({"methods.paragraph": methods_text})
 
-    # Write all sheets to Excel
-    with pd.ExcelWriter(output_file, engine="xlsxwriter") as writer:
-        for key, df in rpt_res.items():
-            df.to_excel(writer, sheet_name=key[:31], index=False)
+#     # Write all sheets to Excel
+#     with pd.ExcelWriter(output_file, engine="xlsxwriter") as writer:
+#         for key, df in rpt_res.items():
+#             df.to_excel(writer, sheet_name=key[:31], index=False)
 
-    return None
+#     return None
