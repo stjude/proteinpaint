@@ -1988,3 +1988,7 @@ export type Mds3 = BaseMds & {
 		[key: string]: any
 	}
 }
+
+export type Mds3WithCohort = Mds3 & {
+	cohort: Cohort
+}
