@@ -171,7 +171,13 @@ export class ListSamples {
 				value: uncomputable,
 				label: key
 			})
-		} else if (this.useRange) {
+		} else {
+			/** Continuous terms may not have bins defined
+			 * but range property is required. */
+			tvs.ranges = []
+		}
+
+		if (this.useRange) {
 			/** May need to limit the range (e.g. violin brush) or add
 			 * a range when no bins exist for the query to succeed. */
 			if (tvs.ranges?.start) tvs.ranges.start = this.start
@@ -189,10 +195,6 @@ export class ListSamples {
 				]
 				return
 			}
-		} else {
-			/** Continuous terms may not have bins defined
-			 * but range property is required. */
-			tvs.ranges = []
 		}
 	}
 
@@ -288,12 +290,6 @@ export class ListSamples {
 		} else if (tw.term.type === TermTypes.SURVIVAL) {
 			/** Use key for term value, not value (value == time elapsed) */
 			formattedVal = tw.term.values?.[sample.key]?.label || sample.key
-			/** skip survival terms for now
-			 * Works for all other ds except termdbtest but
-			 * integration tests fail when included.
-			 * skipping until fixed.
-			 */
-			return
 		} else {
 			formattedVal = tw.term.values?.[sample.value]?.label || sample.value
 		}
@@ -304,10 +300,6 @@ export class ListSamples {
 		if (tw.term.type === TermTypes.GENE_VARIANT) {
 			//This func mutates columns directly
 			addGvCols(tw, columns)
-		} else if (tw.term.type === TermTypes.SURVIVAL) {
-			/** Note: survival fails in termdbtest but not any other
-			 * ds.*/
-			return
 		} else {
 			columns.push({ label: tw.term.name })
 		}
