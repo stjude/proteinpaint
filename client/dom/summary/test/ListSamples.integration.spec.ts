@@ -15,7 +15,7 @@ Tests:
 	- ListSamples.getData() for term=gene exp (continuous) and term2=gene variant returns the correct data object
 	- ListSamples.getData() for term=gene variant and term2=gene exp (continuous) returns the correct data object
 	- ListSamples.getData() for term=numeric and term2=samplelst returns the correct data object
-	- (skipped) ListSamples.getData() for term=numeric and term2=survival returns the correct data object
+	- ListSamples.getData() for term=numeric and term2=survival returns the correct data object
 */
 
 /*************************
@@ -315,49 +315,54 @@ tape('ListSamples.getData() for term=numeric and term2=samplelst returns the cor
 	test.end()
 })
 
-/** Issue with survival terms querying correctly but not returning data
- * Commenting out for now until fixed. */
-// tape.skip('ListSamples.getData() for term=numeric and term2=survival returns the correct data object', async test => {
-// 	test.timeoutAfter(1000)
+tape('ListSamples.getData() for term=numeric and term2=survival returns the correct data object', async test => {
+	test.timeoutAfter(1000)
 
-// 	const mockConfig = {
-// 		term: {
-// 			term: JSON.parse(JSON.stringify(termjson['agedx'])),
-// 			q: { mode: 'continuous', hiddenValues: {}},
-// 			$id: 'term1'
-// 		},
-// 		term2: {
-// 			term: {
-// 				id: 'efs',
-// 				type: 'survival',
-// 				name: 'Event-free survival',
-// 				values: [
-// 					{ key: '0', label: 'No Event' },
-// 					{ key: '1', label: 'Event Occurred' }
-// 				]
-// 			},
-// 			$id: 'term2',
-// 			q: {}
-// 		},
-// 		bins: { term1: {}, term2: {} }
-// 	}
-// 	const mockPlot = {
-// 		seriesId: 'No Event',
-// 		chartId: ''
-// 	}
+	const mockConfig = {
+		term: {
+			term: JSON.parse(JSON.stringify(termjson['agedx'])),
+			q: { mode: 'continuous', hiddenValues: {} },
+			$id: 'term1'
+		},
+		term2: {
+			term: {
+				id: 'efs',
+				type: 'survival',
+				name: 'Event-free survival',
+				values: [
+					{ key: '0', label: 'No Event' },
+					{ key: '1', label: 'Event Occurred' }
+				]
+			},
+			$id: 'term2',
+			q: {}
+		}
+	}
+	const mockPlot = {
+		key: 'No Event',
+		seriesId: '0',
+		chartId: ''
+	}
 
-// 	const { listSamples } = await getNewListSamples({ config: mockConfig, plot: mockPlot })
-// 	const data = await listSamples.getData()
-// 	console.log(data)
+	const { listSamples } = await getNewListSamples({
+		config: mockConfig,
+		plot: mockPlot,
+		bins: { term1: {}, term2: {} }
+	})
+	const data = await listSamples.getData()
 
-// 	// test.true(
-// 	// 	typeof data == 'object' && data.lst && data.refs && data.samples,
-// 	// 	'Should return data object from getData() with a list, references, and sample info'
-// 	// )
-// 	// const expected = 96
-// 	// test.equal(data.lst.length, expected, `Should return ${expected} samples matching numeric term and survival term filter`)
-// 	// test.true(data.refs.byTermId[mockConfig.term.$id], 'Should reference the numeric term')
-// 	// test.true(data.refs.byTermId[mockConfig.term2.$id], 'Should reference the survival term')
+	test.true(
+		typeof data == 'object' && data.lst && data.refs && data.samples,
+		'Should return data object from getData() with a list, references, and sample info'
+	)
+	const expected = 10
+	test.equal(
+		data.lst.length,
+		expected,
+		`Should return ${expected} samples matching numeric term and survival term filter`
+	)
+	test.true(data.refs.byTermId[mockConfig.term.$id], 'Should reference the numeric term')
+	test.true(data.refs.byTermId[mockConfig.term2.$id], 'Should reference the survival term')
 
-// 	test.end()
-// })
+	test.end()
+})
