@@ -13,7 +13,6 @@ export type RunChartRequest = {
 	}
 	filter?: any
 	__protected__?: any // auth token for accessing protected data
-	coordTWs?: any // coordinate translation term-windows, for coord-based terms
 }
 
 export type RunChartResponse = {
