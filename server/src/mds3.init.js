@@ -3108,18 +3108,14 @@ function mayFilterByMaf(mafFilter, m) {
 	const filter = mafFilter
 	if (filter.type != 'tvslst') throw 'unexpected filter.type'
 	if (!filter.in) throw 'filter.in must be set to true'
-	//console.log()
-	//console.log('m:', m)
 	const passLst = []
 	for (const item of filter.lst) {
 		let pass = false
 		if (item.type != 'tvs') throw 'unexpected item.type' // not supporting nested tvslst
 		const tvs = item.tvs
-		//console.log('tvs:', tvs)
 		if (Object.keys(m).includes(tvs.term.id)) {
 			// mutation is annotated for maf field
 			const mafField = m[tvs.term.id] // <ref read count>,<alt read count>
-			//console.log('mafField:', mafField)
 			const alleles = mafField.split(',').map(Number)
 			if (alleles.length == 2) {
 				// only handling bi-allelic variants for now
@@ -3127,10 +3123,8 @@ function mayFilterByMaf(mafFilter, m) {
 				const [ref, alt] = alleles
 				if (Number.isFinite(ref) && Number.isFinite(alt)) {
 					const maf = alt / (alt + ref)
-					//console.log('maf:', maf)
 					// test if maf is in range of tvs
 					const intvs = tvs.ranges.every(r => {
-						//console.log('r:', r)
 						let startPass = true
 						let stopPass = true
 						if (Object.keys(r).includes('start')) {
@@ -3145,11 +3139,9 @@ function mayFilterByMaf(mafFilter, m) {
 				}
 			}
 		}
-		//console.log('pass:', pass)
 		passLst.push(pass)
 	}
 	const passFilter = filter.join == 'or' ? passLst.some(pass => pass) : passLst.every(pass => pass)
-	//console.log('passFilter:', passFilter)
 	return passFilter
 }
 

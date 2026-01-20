@@ -2,6 +2,7 @@ import tape from 'tape'
 import { renderVariantConfig } from '../variantConfig'
 import type { TermValues, BaseValue } from '#types'
 import { select } from 'd3-selection'
+import { detectGt } from '../../test/test.helpers.js'
 
 /*
 test sections:
@@ -13,23 +14,10 @@ test sections:
     - wildtype toggle
 	- not tested toggle
 	- no mutations
-	- any mutation count
     - single mutation count
     - multiple mutation count
+	- maf filter
 */
-
-const values: TermValues = {
-	M: { key: 'M', label: 'MISSENSE' },
-	F: { key: 'F', label: 'FRAMESHIFT' },
-	N: { key: 'N', label: 'NONSENSE' },
-	D: { key: 'D', label: 'PROTEINDEL' }
-}
-
-const values2: TermValues = {
-	CNV_amp: { key: 'CNV_amp', label: 'Gain' },
-	CNV_loss: { key: 'CNV_loss', label: 'Heterozygous Deletion' },
-	CNV_amplification: { key: 'CNV_amplification', label: 'Amplification' }
-}
 
 tape('\n', test => {
 	test.comment('-***- dom/variantConfig unit tests-***-')
@@ -368,3 +356,115 @@ tape('multiple mutation count', test => {
 	holder.remove()
 	test.end()
 })
+
+tape('maf filter', async test => {
+	const holder = select(document.body).append('div')
+	let newConfig
+
+	renderVariantConfig({
+		holder,
+		values,
+		dt: 1,
+		mafFilter,
+		callback: config => (newConfig = config)
+	})
+
+	const variantsDiv = holder.select('[data-testid="sjpp-variantConfig-variant"]')
+	const mafFilterDiv = variantsDiv.select('.sja_filter_container')
+	const tvsPills = await detectGt({ target: mafFilterDiv.node(), selector: '.tvs_pill' })
+	test.equal(tvsPills.length, 2, 'should render 2 maf tvs pills')
+
+	const applyBtn: any = holder.select('button').node()
+	applyBtn.click()
+
+	test.deepEqual(newConfig.mafFilter, activeMafFilter, 'should set .mafFilter in config')
+
+	holder.remove()
+	test.end()
+})
+
+/*********
+Variables
+*********/
+
+const values: TermValues = {
+	M: { key: 'M', label: 'MISSENSE' },
+	F: { key: 'F', label: 'FRAMESHIFT' },
+	N: { key: 'N', label: 'NONSENSE' },
+	D: { key: 'D', label: 'PROTEINDEL' }
+}
+
+const values2: TermValues = {
+	CNV_amp: { key: 'CNV_amp', label: 'Gain' },
+	CNV_loss: { key: 'CNV_loss', label: 'Heterozygous Deletion' },
+	CNV_amplification: { key: 'CNV_amplification', label: 'Amplification' }
+}
+
+const activeMafFilter = {
+	type: 'tvslst',
+	join: 'or',
+	in: true,
+	lst: [
+		{
+			type: 'tvs',
+			tvs: {
+				ranges: [{ start: 0.1, startinclusive: true, stopunbounded: true }],
+				term: {
+					id: 'tumor_DNA_WGS',
+					name: 'Tumor WGS',
+					parent_id: null,
+					isleaf: true,
+					type: 'float',
+					min: 0,
+					max: 1
+				}
+			}
+		},
+		{
+			type: 'tvs',
+			tvs: {
+				ranges: [{ start: 0.1, startinclusive: true, stopunbounded: true }],
+				term: {
+					id: 'tumor_DNA_WES',
+					name: 'Tumor WES',
+					parent_id: null,
+					isleaf: true,
+					type: 'float',
+					min: 0,
+					max: 1
+				}
+			}
+		}
+	]
+}
+
+const mafFilter = {
+	filter: activeMafFilter,
+	terms: [
+		{
+			id: 'tumor_DNA_WGS',
+			name: 'Tumor WGS',
+			parent_id: null,
+			isleaf: true,
+			type: 'float',
+			min: 0,
+			max: 1,
+			tvs: {
+				ranges: [{ start: 0.1, startinclusive: true, stopunbounded: true }]
+			}
+		},
+		{
+			id: 'tumor_DNA_WES',
+			name: 'Tumor WES',
+			parent_id: null,
+			isleaf: true,
+			type: 'float',
+			min: 0,
+			max: 1,
+			tvs: {
+				ranges: [{ start: 0.1, startinclusive: true, stopunbounded: true }]
+			}
+		}
+	],
+	active: activeMafFilter
+}
