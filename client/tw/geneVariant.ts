@@ -420,7 +420,7 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 		// group 1: mutant
 		const grp1Name = `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Mutated (${dtTerm.origin})` : 'Mutated'}`
 		const values = dtTerm.values as TermValues
-		const grp1Tvs = {
+		const grp1Tvs: any = {
 			term: dtTerm,
 			values: Object.entries(values).map(([k, v]) => {
 				return { key: k, label: v.label, value: k }

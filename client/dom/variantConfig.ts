@@ -7,6 +7,7 @@ type Config = {
 	genotype: 'variant' | 'wt' | 'nt'
 	values: BaseValue[]
 	mcount?: 'any' | 'single' | 'multiple'
+	mafFilter?: any
 }
 
 type Arg = {
@@ -17,7 +18,7 @@ type Arg = {
 	genotype?: 'variant' | 'wt' | 'nt' // genotype (variant, wildtype, not tested)
 	dt: number // dt value, rendering of some elements are based on this value
 	mcount?: 'any' | 'single' | 'multiple' // mutation count, when missing will default to 'any'
-	mafFilter?: any // maf filter object
+	mafFilter?: any // maf filter
 	callback: (config: Config) => void
 }
 
