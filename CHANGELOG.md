@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.170.2
 
 Fixes:
 - show loading and error messages when switching to barchart tab in summary plot
