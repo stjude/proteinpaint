@@ -137,7 +137,7 @@ export function renderVariantConfig(arg: Arg) {
 					.style('opacity', 0.7)
 					.text('MAF filter')
 				filterInit({
-					emptyLabel: '+MAF filter',
+					emptyLabel: '+',
 					holder: mafDiv,
 					vocab: { terms: mafFilter.terms },
 					callback: async filter => {
