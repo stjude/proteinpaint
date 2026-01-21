@@ -31,6 +31,16 @@ type ScopedBins = {
 	}
 }
 
+type ListSamplesOpts = {
+	app: AppApi
+	termfilter: any
+	config: any
+	plot: ScopedPlot
+	bins?: ScopedBins
+	start?: number | null | undefined
+	end?: number | null | undefined
+}
+
 /** Constructs the list sample argument needed for the server request.
  * Maybe used for showing the samples to user or creating filters. */
 export class ListSamples {
@@ -62,38 +72,33 @@ export class ListSamples {
 	/** For filtering gene variant terms later */
 	geneVariant = {}
 
-	constructor(
-		app: AppApi,
-		termfilter: any,
-		config: any,
-		plot: ScopedPlot,
-		bins?: ScopedBins,
-		start?: number | null | undefined,
-		end?: number | null | undefined
-	) {
-		if (!config.term) {
+	constructor(opts: ListSamplesOpts) {
+		if (!opts.config.term) {
 			throw new Error('Missing term in plot config')
 		}
-		this.app = app
-		this.termfilter = termfilter
-		this.plot = plot
-		this.bins = bins || {}
+		this.app = opts.app
+		this.termfilter = opts.termfilter
+		this.plot = opts.plot
+		this.bins = opts.bins || {}
 		this.useRange = false
 
-		this.t1 = config.term
-		this.t2 = config.term2
-		this.t0 = config?.term0 || null
+		this.t1 = opts.config.term
+		this.t2 = opts.config.term2
+		this.t0 = opts.config?.term0 || null
 
 		this.terms = [this.t1]
 
-		if ((isStrictNumeric(start) && !isStrictNumeric(end)) || (!isStrictNumeric(start) && isStrictNumeric(end))) {
+		if (
+			(isStrictNumeric(opts.start) && !isStrictNumeric(opts.end)) ||
+			(!isStrictNumeric(opts.start) && isStrictNumeric(opts.end))
+		) {
 			throw new Error('Both start and end must be provided for range filtering')
 		}
 
-		if (isStrictNumeric(start) && isStrictNumeric(end)) {
+		if (isStrictNumeric(opts.start) && isStrictNumeric(opts.end)) {
 			this.useRange = true
-			this.start = start
-			this.end = end
+			this.start = opts.start
+			this.end = opts.end
 		}
 
 		this.tvslst = {
@@ -124,23 +129,25 @@ export class ListSamples {
 			this.geneVariant[`t${termNum}value`] = this.plot.seriesId
 			return
 		}
-		let tvsEntry = {
+		const key: any = termNum == 0 ? this.plot.chartId : this.plot.seriesId
+		if (!key) return
+
+		const tvsEntry = {
 			type: 'tvs',
 			tvs: {
 				term: tw.term
 			}
 		}
-		tvsEntry = this.getFilterParams(tvsEntry, tw, termNum)
+		this.getFilterParams(tvsEntry, tw, termNum, key)
 		this.tvslst.lst.push(tvsEntry)
 	}
 
-	getFilterParams(tvsEntry: any, tw: TermWrapper, termNum: number) {
-		const key: any = termNum == 0 ? this.plot.chartId : this.plot.seriesId
+	getFilterParams(tvsEntry: any, tw: TermWrapper, termNum: number, key: string) {
+		//TODO: Change to isNumericTerm()?? and remove tests??
 		if (this.isContinuousOrBinned(tw, termNum)) {
 			this.createTvsRanges(tvsEntry.tvs, termNum, key)
 		}
 		this.createTvsValues(tvsEntry, tw, key)
-		return tvsEntry
 	}
 
 	createTvsValues(tvsEntry: any, tw: any, key: string) {
@@ -168,7 +175,6 @@ export class ListSamples {
 				value_by_max_grade: tw.q.value_by_max_grade
 			})
 		}
-		return tvsEntry
 	}
 
 	createTvsRanges(tvs: any, termNum: number, key: string): void {
@@ -210,7 +216,6 @@ export class ListSamples {
 						stopunbounded: false
 					}
 				]
-				return
 			}
 		}
 	}

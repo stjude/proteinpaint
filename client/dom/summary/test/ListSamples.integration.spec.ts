@@ -55,7 +55,15 @@ async function getNewListSamples(opts: any = {}) {
 	const start = opts.start ?? null
 	const end = opts.end ?? null
 
-	const listSamples = new ListSamples(mockApp, mockState.termfilter, config, plot, mockBins, start, end)
+	const listSamples = new ListSamples({
+		app: mockApp,
+		termfilter: mockState.termfilter,
+		config,
+		plot,
+		bins: mockBins,
+		start,
+		end
+	})
 
 	return { listSamples, config, plot, mockApp, mockState }
 }
