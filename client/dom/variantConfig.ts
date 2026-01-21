@@ -139,6 +139,7 @@ export function renderVariantConfig(arg: Arg) {
 				filterInit({
 					emptyLabel: '+',
 					holder: mafDiv,
+					header_mode: 'hide_search',
 					vocab: { terms: mafFilter.terms },
 					callback: async filter => {
 						mafFilter.active = filter
