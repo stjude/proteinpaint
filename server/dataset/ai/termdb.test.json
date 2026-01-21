@@ -20,16 +20,6 @@
 	       {"question":"Show molecular subtypes for men greater than 60 yrs only", "answer":{"simpleFilter": [{"term":"sex","value":"1"},{"start":60.0,"lessThan":null,"term":"agedx"}],"term":"diaggrp"}},
 	       {"question":"Show TP53 gene expression between genders","answer":{"term":"sex","term2":"TP53"}}
           ]	 
-    },
-    {
-          "type":"DE",
-          "SystemPrompt":"", 
-           "TrainingData":[
-	       {"question":"Show differential gene expression between group A and B","answer":{"DE_type": {"action":"dge","DE_output":{"group1":{"name":"group A"},"group2":{"name":"group B"}}}}}
-          ],
-           "TestData":[
-	       {"question":"Show differential gene expression between group X and Y","answer":{"DE_type": {"action":"dge","DE_output":{"group1":{"name":"group X"},"group2":{"name":"group Y"}}}}}
-          ]
-    }	    
+    } 
   ]  
 }
