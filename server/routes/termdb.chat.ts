@@ -227,7 +227,10 @@ async function extract_summary_terms(
 	}
 	const generator: SchemaGenerator = createGenerator(SchemaConfig)
 	const StringifiedSchema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // This will be generated at server startup later
-	const words = prompt.split(/\s+/).map(str => str.toLowerCase()) // Split on whitespace and convert to lowercase
+	const words = prompt
+		.replace(/[^a-zA-Z0-9\s]/g, '')
+		.split(/\s+/)
+		.map(str => str.toLowerCase()) // Keep only letters, numbers, and whitespace and then split on whitespace and convert to lowercase
 	const common_genes = words.filter(item => genes_list.includes(item)) // The reason behind showing common genes that are actually present in the genedb is because otherwise showing ~20000 genes would increase the number of tokens significantly and may cause the LLM to loose context. Much easier to parse out relevant genes from the user prompt.
 
 	// Read dataset JSON file
@@ -419,7 +422,7 @@ async function parse_geneset_db(genedb: string) {
 	const db = new Database(genedb)
 	try {
 		// Query the database
-		const desc_rows = db.prepare('SELECT * from codingGenes').all()
+		const desc_rows = db.prepare('SELECT name from codingGenes').all()
 		desc_rows.forEach((row: any) => {
 			genes_list.push(row.name)
 		})
