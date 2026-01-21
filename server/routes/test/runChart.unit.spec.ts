@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { buildRunChartFromData } from '../runChart.helper.ts'
+import { buildRunChartFromData } from '../termdb.runChart.ts'
 
 /**************
  test sections
@@ -15,43 +15,54 @@ tape('buildRunChartFromData() mean aggregation', function (test) {
 	const xTermId = 'x'
 	const yTermId = 'y'
 
-	const data = {
+	const inputData = {
 		samples: {
 			s1: {
-				[xTermId]: { value: '2024-01' },
+				[xTermId]: { value: 2023.8328767123287 },
 				[yTermId]: { value: 10 }
 			},
 			s2: {
-				[xTermId]: { value: '2024-01' },
+				[xTermId]: { value: 2023.7095890410958 },
 				[yTermId]: { value: 20 }
 			},
 			s3: {
-				[xTermId]: { value: '2024-02' },
+				[xTermId]: { value: 2020.62021857923 },
 				[yTermId]: { value: 30 }
 			}
 		}
 	}
 
-	const result = buildRunChartFromData(chartType, xTermId, yTermId, data)
+	const expectedOutput = {
+		status: 'ok',
+		series: [
+			{
+				median: 20,
+				points: [
+					{
+						x: 2020.08,
+						xName: 'August 2020',
+						y: 30,
+						sampleCount: 1
+					},
+					{
+						x: 2023.09,
+						xName: 'September 2023',
+						y: 20,
+						sampleCount: 1
+					},
+					{
+						x: 2023.1,
+						xName: 'October 2023',
+						y: 10,
+						sampleCount: 1
+					}
+				]
+			}
+		]
+	}
 
-	test.equal(result.status, 'ok', 'status should be ok')
-	test.equal(result.series.length, 1, 'should return one series')
-
-	const series = result.series[0]
-	test.equal(series.points.length, 2, 'should have two monthly points')
-
-	const jan = series.points[0]
-	const feb = series.points[1]
-
-	test.equal(jan.xName, 'January 2024', 'first point should be January 2024')
-	test.equal(jan.y, 15, 'January mean should be (10 + 20) / 2 = 15')
-	test.equal(jan.sampleCount, 2, 'January sampleCount should be 2')
-
-	test.equal(feb.xName, 'February 2024', 'second point should be February 2024')
-	test.equal(feb.y, 30, 'February mean should be 30')
-	test.equal(feb.sampleCount, 1, 'February sampleCount should be 1')
-
-	test.equal(series.median, 22.5, 'median of [15, 30] should be 22.5')
+	const output = buildRunChartFromData(chartType, xTermId, yTermId, inputData)
+	test.deepEqual(output, expectedOutput, 'output should match expected structure with 2 data points for two months')
 
 	test.end()
 })
@@ -64,15 +75,15 @@ tape('buildRunChartFromData() proportion aggregation', function (test) {
 	const data = {
 		samples: {
 			s1: {
-				[xTermId]: { value: '2024-03' },
-				[yTermId]: { value: true }
+				[xTermId]: { value: 2023.8328767123287 },
+				[yTermId]: { value: 20 }
 			},
 			s2: {
-				[xTermId]: { value: '2024-03' },
-				[yTermId]: { value: false }
+				[xTermId]: { value: 2023.7095890410958 },
+				[yTermId]: { value: null }
 			},
 			s3: {
-				[xTermId]: { value: '2024-03' },
+				[xTermId]: { value: 2020.62021857923 },
 				[yTermId]: { value: 1 }
 			}
 		}
@@ -84,14 +95,15 @@ tape('buildRunChartFromData() proportion aggregation', function (test) {
 	test.equal(result.series.length, 1, 'should return one series')
 
 	const series = result.series[0]
-	test.equal(series.points.length, 1, 'should have one monthly point')
+	test.equal(series.points.length, 2, 'should have two monthly point')
 
 	const p = series.points[0]
-	test.equal(p.xName, 'March 2024', 'point should be March 2024')
-	test.equal(p.sampleCount, 3, 'total should be 3')
-	test.equal(p.y, 0.667, 'proportion should be 2 successes / 3 total, rounded to 3 decimals')
+	test.equal(p.x, 2020.08, 'August x should be 2020.08')
+	test.equal(p.xName, 'August 2020', 'point should be August 2020')
+	test.equal(p.sampleCount, 1, 'total should be 3')
+	test.equal(p.y, 1, 'proportion should be 2 successes / 3 total, rounded to 3 decimals')
 
-	test.equal(series.median, 0.667, 'median with a single point should equal its y value (0.667)')
+	test.equal(series.median, 10.5, 'median with a single point should equal its y value (10.5)')
 
 	test.end()
 })
@@ -104,11 +116,11 @@ tape('buildRunChartFromData() count aggregation', function (test) {
 	const data = {
 		samples: {
 			s1: {
-				[xTermId]: { value: '2024-04' },
+				[xTermId]: { value: 2024.45987654321 },
 				[yTermId]: { value: 5 }
 			},
 			s2: {
-				[xTermId]: { value: '2024-04' },
+				[xTermId]: { value: 2024.256789012345 },
 				[yTermId]: { value: 7 }
 			}
 		}
@@ -120,14 +132,15 @@ tape('buildRunChartFromData() count aggregation', function (test) {
 	test.equal(result.series.length, 1, 'should return one series')
 
 	const series = result.series[0]
-	test.equal(series.points.length, 1, 'should have one monthly point')
+	test.equal(series.points.length, 2, 'should have two monthly point')
 
 	const p = series.points[0]
+	test.equal(p.x, 2024.04, 'April x should be 2024.04')
 	test.equal(p.xName, 'April 2024', 'point should be April 2024')
-	test.equal(p.sampleCount, 2, 'sampleCount should be 2')
-	test.equal(p.y, 12, 'count should be sum of values (5 + 7) = 12')
+	test.equal(p.sampleCount, 1, 'sampleCount should be 1')
+	test.equal(p.y, 7, 'count should be sum of values = 7')
 
-	test.equal(series.median, p.y, 'median with a single point should equal its y value')
+	test.equal(series.median, 6, 'median with a single point should equal its 6 value')
 
 	test.end()
 })
