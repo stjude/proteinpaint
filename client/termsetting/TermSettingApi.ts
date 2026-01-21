@@ -104,6 +104,7 @@ export class TermSettingApi {
 			vocabApi: self.vocabApi,
 			state: {
 				activeCohort: self.activeCohort,
+				termfilter: self.vocabApi.state?.termfilter,
 				tree: {
 					usecase: self.usecase
 				}
