@@ -1395,6 +1395,7 @@ const geneVariantTw = {
 												{ key: 'F', label: 'FRAMESHIFT', value: 'F' }
 											],
 											mcount: 'any',
+											genotype: 'variant',
 											excludeGeneName: true
 										}
 									}
@@ -1430,7 +1431,7 @@ const geneVariantTw = {
 												parentTerm
 											},
 											values: [],
-											wt: true,
+											genotype: 'wt',
 											excludeGeneName: true
 										}
 									}
@@ -1477,6 +1478,7 @@ const geneVariantTw = {
 												{ key: 'F', label: 'FRAMESHIFT', value: 'F' }
 											],
 											mcount: 'any',
+											genotype: 'variant',
 											excludeGeneName: true
 										}
 									}
@@ -1512,7 +1514,7 @@ const geneVariantTw = {
 												parentTerm
 											},
 											values: [],
-											wt: true,
+											genotype: 'wt',
 											excludeGeneName: true
 										}
 									}
@@ -1559,6 +1561,7 @@ const geneVariantTw = {
 												}
 											],
 											mcount: 'any',
+											genotype: 'variant',
 											excludeGeneName: true
 										}
 									}
@@ -1592,7 +1595,7 @@ const geneVariantTw = {
 												parentTerm
 											},
 											values: [],
-											wt: true,
+											genotype: 'wt',
 											excludeGeneName: true
 										}
 									}
@@ -1642,6 +1645,7 @@ const geneVariantTw = {
 												}
 											],
 											mcount: 'any',
+											genotype: 'variant',
 											excludeGeneName: true
 										}
 									}
@@ -1678,7 +1682,7 @@ const geneVariantTw = {
 												parentTerm
 											},
 											values: [],
-											wt: true,
+											genotype: 'wt',
 											excludeGeneName: true
 										}
 									}
@@ -1717,6 +1721,7 @@ const geneVariantTw = {
 											},
 											values: [],
 											mcount: 'any',
+											genotype: 'variant',
 											excludeGeneName: true
 										}
 									}
@@ -1748,7 +1753,7 @@ const geneVariantTw = {
 												parentTerm
 											},
 											values: [],
-											wt: true,
+											genotype: 'wt',
 											excludeGeneName: true
 										}
 									}
