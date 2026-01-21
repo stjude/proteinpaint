@@ -270,7 +270,7 @@ function addNewGroup(filter, groups, name?: string) {
 			if (!groups.find(g => g.name === name)) break
 		}
 	}
-	filter.lst.forEach(item => (item.tvs.excludeGeneName = true)) // no need to show gene name in filter pill
+	excludeGeneNameFromFilter(filter) // no need to show gene name in filter pill
 	const newGroup = {
 		name,
 		type: 'filter',
