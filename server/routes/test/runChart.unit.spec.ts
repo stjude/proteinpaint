@@ -22,7 +22,7 @@ tape('buildRunChartFromData() mean aggregation', function (test) {
 				[yTermId]: { value: 10 }
 			},
 			s2: {
-				[xTermId]: { value: 2023.7095890410958 },
+				[xTermId]: { value: 2023.8328767123287 },
 				[yTermId]: { value: 20 }
 			},
 			s3: {
@@ -36,7 +36,7 @@ tape('buildRunChartFromData() mean aggregation', function (test) {
 		status: 'ok',
 		series: [
 			{
-				median: 20,
+				median: 22.5,
 				points: [
 					{
 						x: 2020.08,
@@ -45,16 +45,10 @@ tape('buildRunChartFromData() mean aggregation', function (test) {
 						sampleCount: 1
 					},
 					{
-						x: 2023.09,
-						xName: 'September 2023',
-						y: 20,
-						sampleCount: 1
-					},
-					{
 						x: 2023.1,
 						xName: 'October 2023',
-						y: 10,
-						sampleCount: 1
+						y: 15,
+						sampleCount: 2
 					}
 				]
 			}
