@@ -1,7 +1,7 @@
 import { make_radios, renderTable } from '#dom'
 import type { TermValues, BaseValue } from '#types'
 import { filterInit } from '#filter'
-import { dt2label } from '#shared/common.js'
+import { dt2label, dtsnvindel } from '#shared/common.js'
 
 type Config = {
 	genotype: 'variant' | 'wt' | 'nt'
@@ -103,7 +103,7 @@ export function renderVariantConfig(arg: Arg) {
 			showLines: false,
 			selectedRows: selectedIdxs
 		})
-		if (dt == 1) {
+		if (dt == dtsnvindel) {
 			// snvindel
 			// render mutation count radios
 			const countDiv = variantsDiv.append('div').style('margin-top', '5px')
