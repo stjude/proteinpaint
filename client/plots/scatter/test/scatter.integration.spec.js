@@ -245,7 +245,11 @@ tape('Render TermdbTest scatter plot and open survival and summary', function (t
 				}
 			})
 			const newSandbox = sandboxes.find(s => !preSandboxes.includes(s))
-			test.equal(newSandbox.querySelectorAll('.sja_errorbar').length, 0, 'Should render survival plot without errors".')
+			test.equal(
+				[...newSandbox.querySelectorAll('.sja_errorbar')].filter(b => b.style.display != 'none').length,
+				0,
+				'Should render survival plot without errors".'
+			)
 		}
 
 		async function testOpenSummaryPlot() {
@@ -263,7 +267,11 @@ tape('Render TermdbTest scatter plot and open survival and summary', function (t
 				}
 			})
 			const newSandbox = sandboxes.find(s => !preSandboxes.includes(s))
-			test.equal(newSandbox.querySelectorAll('.sja_errorbar').length, 0, 'Should render summary plot without errors".')
+			test.equal(
+				[...newSandbox.querySelectorAll('.sja_errorbar')].filter(b => b.style.display != 'none').length,
+				0,
+				'Should render summary plot without errors".'
+			)
 		}
 	}
 })

@@ -1,0 +1,2 @@
+Fixes:
+- show loading and error messages when switching to barchart tab in summary plot
