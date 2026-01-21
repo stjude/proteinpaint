@@ -288,25 +288,66 @@ async function extract_summary_terms(
 
 function validate_summary_response(response: string, common_genes: string[], dataset_json: any, ds: any) {
 	const response_type = JSON.parse(response)
+	const pp_plot_json: any = { chartType: 'summary' }
 	let html = ''
 	if (response_type.html) html = response_type.html
 	if (!response_type.term) html += 'term type is not present in summary output'
-	const term: any = ds.cohort.termdb.q.termjsonByOneid(response_type.term)
 	const validated_summary_type: SummaryType = {
 		// Initializing SummaryType
 		term: '',
 		simpleFilter: []
 	}
+	const term1_validation = validate_term(response_type.term, common_genes, dataset_json, validated_summary_type, ds)
+	if (term1_validation.html.length > 0) {
+		html += term1_validation.html
+	} else {
+		pp_plot_json.term = term1_validation.term_type
+	}
+
+	if (response_type.term2) {
+		const term2_validation = validate_term(response_type.term2, common_genes, dataset_json, validated_summary_type, ds)
+		if (term2_validation.html.length > 0) {
+			html += term2_validation.html
+		} else {
+			pp_plot_json.term2 = term2_validation.term_type
+		}
+	}
+
+	if (response_type.simpleFilter && response_type.simpleFilter.length > 0) {
+		const validated_filters = validate_filter(response_type.simpleFilter, ds)
+		if (validated_filters.html.length > 0) {
+			html += validated_filters.html
+		} else {
+			pp_plot_json.filter = validated_filters.simplefilter
+		}
+	}
+
+	if (html.length > 0) {
+		return { type: 'html', html: html }
+	} else {
+		return { type: 'plot', plot: pp_plot_json }
+	}
+}
+
+function validate_term(
+	response_term: string,
+	common_genes: string[],
+	dataset_json: any,
+	validated_summary_type: SummaryType,
+	ds: any
+) {
+	let html = ''
 	let term_type: any
+	const term: any = ds.cohort.termdb.q.termjsonByOneid(response_term)
 	if (!term) {
-		const gene_hits = common_genes.filter(gene => gene == response_type.term.toLowerCase())
+		const gene_hits = common_genes.filter(gene => gene == response_term.toLowerCase())
 		if (gene_hits.length == 0) {
 			// Neither a clinical term nor a gene
-			html += 'invalid term id:' + response_type.term
+			html += 'invalid term id:' + response_term
 		} else {
 			if (dataset_json.hasGeneExpression) {
 				// Check to see if dataset support gene expression (alternative implementation: ds.queries.geneExpression)
-				validated_summary_type.term = response_type.term.toUpperCase()
+				validated_summary_type.term = response_term.toUpperCase()
 				term_type = { term: { gene: validated_summary_type.term, type: 'geneExpression' } }
 			} else {
 				html += 'Dataset does not support gene expression'
@@ -316,49 +357,7 @@ function validate_summary_response(response: string, common_genes: string[], dat
 		validated_summary_type.term = term.id
 		term_type = { id: validated_summary_type.term }
 	}
-
-	const pp_plot_json: any = { chartType: 'summary', term: term_type }
-
-	let term_type2: any
-	if (response_type.term2) {
-		const term2: any = ds.cohort.termdb.q.termjsonByOneid(response_type.term2)
-		if (!term2) {
-			const gene_hits2 = common_genes.filter(gene => gene == response_type.term2.toLowerCase())
-			if (gene_hits2.length == 0) {
-				// Neither a clinical term2 nor a gene
-				html += 'invalid term2 id:' + response_type.term2
-			} else {
-				if (dataset_json.hasGeneExpression) {
-					// Check to see if dataset support gene expression (alternative implementation: ds.queries.geneExpression)
-					validated_summary_type.term2 = response_type.term2.toUpperCase()
-					term_type2 = { term: { gene: validated_summary_type.term2, type: 'geneExpression' } }
-				} else {
-					html += 'Dataset does not support gene expression'
-				}
-			}
-		} else {
-			validated_summary_type.term2 = term2.id
-			term_type2 = { id: validated_summary_type.term2 }
-		}
-	}
-
-	if (response_type.simpleFilter && response_type.simpleFilter.length > 0) {
-		const validated_filters = validate_filter(response_type.simpleFilter, ds)
-		if (validated_filters.html.length > 0) {
-			html += validated_filters.html
-		} else {
-			validated_summary_type.simpleFilter = validated_filters.simplefilter
-		}
-	}
-
-	if (html.length > 0) {
-		return { type: 'html', html: html }
-	} else {
-		if (validated_summary_type.term2) pp_plot_json.term2 = term_type2
-		if (response_type.simpleFilter && response_type.simpleFilter.length > 0)
-			pp_plot_json.filter = validated_summary_type.simpleFilter
-		return { type: 'plot', plot: pp_plot_json }
-	}
+	return { term_type: term_type, html: html }
 }
 
 function validate_filter(filters: any, ds: any): any {
