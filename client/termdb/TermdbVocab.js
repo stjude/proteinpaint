@@ -1073,7 +1073,13 @@ export class TermdbVocab extends Vocab {
 			tw: opts.tw,
 			embedder: window.location.hostname
 		}
-		const tf = this.opts?.state?.termfilter
+		// this.state.termfilter is updated when there's a dispatch,
+		// while this.opts.state.termfilter is only accurate on init(),
+		// which may be sufficient in a standalone use case, but not when
+		// used for controls.config term input components in a mass app;
+		// comment out `/* this.state.termfilter || */` to simulate the
+		// issue with filter0 (GDC case filter) not being sent when it is updated
+		const tf = this.state.termfilter || this.opts?.state?.termfilter
 		if (tf) {
 			if (tf.filter) body.filter = getNormalRoot(tf.filter)
 			if (tf.filter0) body.filter0 = tf.filter0

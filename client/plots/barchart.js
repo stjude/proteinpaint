@@ -350,13 +350,15 @@ export class Barchart extends PlotBase {
 			}),
 			multipleTestingCorrection: appState.termdbConfig.multipleTestingCorrection,
 			bar_click_menu: appState.bar_click_menu || {},
-			groups: rebaseGroupFilter(appState)
+			groups: rebaseGroupFilter(appState),
+			parentError: this.app.getComponents(`plots.${this.parentId}`)?.getError?.()
 		}
 	}
 
 	async main() {
 		const c = this.state.config
 		if (c.chartType != this.type && c.childType != this.type) return
+		if (this.state.parentError) throw this.state.parentError
 		try {
 			this.config = await this.getMutableConfig(c)
 			if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')

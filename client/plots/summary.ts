@@ -25,6 +25,8 @@ class SummaryPlot extends PlotBase implements RxComponent {
 		[name: string]: ComponentApi | { [name: string]: ComponentApi }
 	} = {}
 
+	error: any
+
 	// expected class-specific props
 	chartsByType: { [chartType: string]: ComponentApi } = {}
 	configTermKeys = ['term', 'term0', 'term2']
@@ -43,6 +45,12 @@ class SummaryPlot extends PlotBase implements RxComponent {
 		this.chartToggles = new Tabs({ holder: this.dom.chartToggles, tabs: this.tabsData, noContent: true })
 		this.components = {
 			plots: {}
+		}
+	}
+
+	preApiFreeze(api) {
+		api.getError = () => {
+			return this.error
 		}
 	}
 
@@ -65,11 +73,9 @@ class SummaryPlot extends PlotBase implements RxComponent {
 				.style('overflow-x', 'auto'),
 
 			// will hold no data notice or the page title in multichart views
-			errdiv: holder.body
-				.append('div')
-				.style('display', 'none')
-				.style('padding', '5px')
-				.style('background-color', 'rgba(255,100,100,0.2)'),
+			errdiv: holder.body.append('div').attr('class', 'sja_errorbar').style('display', 'none').style('padding', '5px'),
+
+			loading: holder.body.append('div').style('display', 'none').style('padding', '5px').html('Loading ...'),
 
 			// dom.viz will hold the rendered view
 			viz: holder.body.append('div'),
@@ -289,7 +295,10 @@ class SummaryPlot extends PlotBase implements RxComponent {
 	}
 
 	async main() {
-		this.dom.errdiv.style('display', 'none').style('background-color', 'rgba(255,100,100,0.2)').html('')
+		delete this.error
+		this.dom.errdiv.style('display', 'none').html('')
+		this.dom.loading.style('display', '')
+
 		this.config = await this.getMutableConfig()
 		this.maySetSandboxHeader()
 
@@ -297,6 +306,7 @@ class SummaryPlot extends PlotBase implements RxComponent {
 			await this.setComponent(this.config)
 		}
 
+		this.dom.loading.style('display', 'none')
 		this.render()
 
 		const activeTabIndex = this.tabsData.findIndex(tab => tab.childType == this.config.childType)
@@ -352,13 +362,21 @@ class SummaryPlot extends PlotBase implements RxComponent {
 
 	async tabClickCallback(event, tab) {
 		if (!tab || !tab.getConfig) return
-		const config = await tab.getConfig()
-		if (config)
-			this.app.dispatch({
-				type: 'plot_edit',
-				id: this.id,
-				config: config
-			})
+		try {
+			this.dom.loading.style('display', '')
+			const config = await tab.getConfig()
+			this.dom.loading.style('display', 'none')
+			if (config)
+				this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config: config
+				})
+		} catch (e: any) {
+			this.dom.loading.style('display', 'none')
+			this.error = e
+			this.dom.errdiv.style('display', '').html(e.message || e.error || e)
+		}
 	}
 
 	async getWrappedTermCopy(term, mode) {
