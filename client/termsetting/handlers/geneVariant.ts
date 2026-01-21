@@ -251,7 +251,7 @@ async function makeGroupUI(self: TermSetting, div) {
 					self.groups.splice(i, 1)
 				} else {
 					// update filter
-					f.lst.forEach(item => (item.tvs.excludeGeneName = true)) // no need to show gene name in filter pill
+					excludeGeneNameFromFilter(f) // no need to show gene name in filter pill
 					group.filter = f
 				}
 				makeGroupUI(self, div)
@@ -278,6 +278,18 @@ function addNewGroup(filter, groups, name?: string) {
 		color: rgb(colorScale(groups.length)).formatHex()
 	}
 	groups.push(newGroup)
+}
+
+function excludeGeneNameFromFilter(filter) {
+	for (const item of filter.lst) {
+		if (item.type == 'tvslst') {
+			excludeGeneNameFromFilter(item)
+		} else if (item.type == 'tvs') {
+			item.tvs.excludeGeneName = true
+		} else {
+			throw 'unexpected item.type'
+		}
+	}
 }
 
 function clearGroupset(self) {
