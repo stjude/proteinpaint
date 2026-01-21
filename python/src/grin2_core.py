@@ -117,7 +117,8 @@ def bern_conv_and_pvalue(P, nsubj_vals):
 
 
 @njit(parallel=True)
-def compute_pr_subj_approx(gene_size, lsn_count_per_subj, lsn_size_per_subj, chrom_size):
+# This starting underscore is to differentiate the numba version from else where
+def _compute_pr_subj_approx_kernel(gene_size, lsn_count_per_subj, lsn_size_per_subj, chrom_size):
     """
     Fast approximation for per-subject hit probabilities.
     
@@ -734,7 +735,7 @@ def compute_pr_subj_approx(gene_size, lsn_size, lsn_subj_IDs, chrom_size):
         lsn_size_per_subj[s] += lsn_size[l]
     
     # O(G × S) computation using numba kernel
-    pr_subj = compute_pr_subj_approx(
+    pr_subj = _compute_pr_subj_approx_kernel(
         gene_size, lsn_count_per_subj, lsn_size_per_subj, chrom_size
     )
     
