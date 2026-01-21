@@ -344,6 +344,7 @@ type SnvIndelQuery = {
 	format4filters?: string[]
 	format?: SnvIndelFormat
 	variant_filter?: VariantFilter
+	mafFilter?: VariantFilter
 	populations?: Population[]
 	/** NOTE **
 this definition can appear either in queries.snvindel{} or termdb{}
