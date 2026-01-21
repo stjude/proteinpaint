@@ -3127,10 +3127,10 @@ function mayFilterByMaf(mafFilter, m) {
 					const intvs = tvs.ranges.every(r => {
 						let startPass = true
 						let stopPass = true
-						if (Object.keys(r).includes('start')) {
+						if (Number.isFinite(r.start)) {
 							startPass = r.startinclusive ? maf >= r.start : maf > r.start
 						}
-						if (Object.keys(r).includes('stop')) {
+						if (Number.isFinite(r.stop)) {
 							stopPass = r.stopinclusive ? maf <= r.stop : maf < r.stop
 						}
 						return startPass && stopPass
