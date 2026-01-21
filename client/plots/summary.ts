@@ -75,7 +75,12 @@ class SummaryPlot extends PlotBase implements RxComponent {
 			// will hold no data notice or the page title in multichart views
 			errdiv: holder.body.append('div').attr('class', 'sja_errorbar').style('display', 'none').style('padding', '5px'),
 
-			loading: holder.body.append('div').style('display', 'none').style('padding', '5px').html('Loading ...'),
+			loading: holder.body
+				.append('div')
+				.style('display', 'none')
+				.style('margin-left', '20px')
+				.style('padding', '5px')
+				.html('Loading ...'),
 
 			// dom.viz will hold the rendered view
 			viz: holder.body.append('div'),
