@@ -1,6 +1,2 @@
-<<<<<<< HEAD
-
-=======
 Features:
-- GRIN2: Sped up multiple core GRIN2 functions through various optimizations
->>>>>>> 3686fe12e (feat: GRIN2: Sped up multiple core GRIN2 functions through various optimizations)
+- GRIN2: Sped up multiple core GRIN2 functions through various optimizations and improvements
