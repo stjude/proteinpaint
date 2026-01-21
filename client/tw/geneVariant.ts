@@ -22,7 +22,7 @@ import { set_hiddenvalues } from '#termsetting'
 import { getWrappedTvslst } from '#filter/filter'
 import { getDtTermValues } from '#filter/tvs.dt'
 import { getChildTerms, addParentTerm } from '../termdb/handlers/geneVariant'
-import { getColors, dtcnv, mclass } from '#shared/common.js'
+import { getColors, dtcnv, dtsnvindel, mclass } from '#shared/common.js'
 import { rgb } from 'd3-color'
 
 let colorScale = getColors(3)
@@ -420,20 +420,20 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 		// group 1: mutant
 		const grp1Name = `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Mutated (${dtTerm.origin})` : 'Mutated'}`
 		const values = dtTerm.values as TermValues
-		const grp1Filter = getWrappedTvslst([
-			{
-				type: 'tvs',
-				tvs: {
-					term: dtTerm,
-					values: Object.entries(values).map(([k, v]) => {
-						return { key: k, label: v.label, value: k }
-					}),
-					genotype: 'variant',
-					mcount: 'any',
-					excludeGeneName: true
-				}
-			}
-		])
+		const grp1Tvs = {
+			term: dtTerm,
+			values: Object.entries(values).map(([k, v]) => {
+				return { key: k, label: v.label, value: k }
+			}),
+			genotype: 'variant',
+			mcount: 'any',
+			excludeGeneName: true
+		}
+		const mafFilter = vocabApi.termdbConfig.queries?.snvindel?.mafFilter
+		if (dtTerm.dt == dtsnvindel && mafFilter) {
+			grp1Tvs.mafFilter = mafFilter.filter
+		}
+		const grp1Filter = getWrappedTvslst([{ type: 'tvs', tvs: grp1Tvs }])
 		groupset.groups.push({
 			name: grp1Name,
 			type: 'filter',
@@ -442,17 +442,13 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 		})
 		// group 2: wildtype
 		const grp2Name = `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Wildtype (${dtTerm.origin})` : 'Wildtype'}`
-		const grp2Filter = getWrappedTvslst([
-			{
-				type: 'tvs',
-				tvs: {
-					term: dtTerm,
-					values: [],
-					genotype: 'wt',
-					excludeGeneName: true
-				}
-			}
-		])
+		const grp2Tvs = {
+			term: dtTerm,
+			values: [],
+			genotype: 'wt',
+			excludeGeneName: true
+		}
+		const grp2Filter = getWrappedTvslst([{ type: 'tvs', tvs: grp2Tvs }])
 		groupset.groups.push({
 			name: grp2Name,
 			type: 'filter',
