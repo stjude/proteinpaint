@@ -153,7 +153,7 @@ export function buildRunChartFromData(
 			}
 		}
 
-		if (chartType === 'proportion') {
+		if (aggregation === 'proportion') {
 			if (typeof yRaw === 'boolean') {
 				buckets[bucketKey].success! += yRaw ? 1 : 0
 				buckets[bucketKey].total! += 1
@@ -175,7 +175,7 @@ export function buildRunChartFromData(
 					buckets[bucketKey].total! += t
 				}
 			}
-		} else if (chartType === 'count') {
+		} else if (aggregation === 'count') {
 			const yn = Number(yRaw)
 			if (!Number.isFinite(yn)) continue
 			buckets[bucketKey].countSum! += yn
@@ -192,12 +192,12 @@ export function buildRunChartFromData(
 	const points = Object.values(buckets)
 		.sort((a, b) => a.sortKey - b.sortKey)
 		.map(b => {
-			if (chartType === 'proportion') {
+			if (aggregation === 'proportion') {
 				const total = b.total || 0
 				const succ = b.success || 0
 				const y = total ? Math.round((succ / total) * 1000) / 1000 : 0
 				return { x: b.x, xName: b.xName, y, sampleCount: total }
-			} else if (chartType === 'count') {
+			} else if (aggregation === 'count') {
 				const y = Math.round((b.countSum || 0) * 100) / 100
 				return { x: b.x, xName: b.xName, y, sampleCount: b.count }
 			} else {
