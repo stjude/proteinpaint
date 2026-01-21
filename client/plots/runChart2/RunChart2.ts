@@ -46,7 +46,8 @@ class RunChart2 extends PlotBase implements RxComponent {
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
 			term: config.term,
-			term2: config.term2
+			term2: config.term2,
+			aggregation: config.aggregation
 		}
 		return reqArg
 	}
@@ -59,7 +60,7 @@ export function getPlotConfig(opts) {
 	if (!opts.term) throw 'opts.term missing' // for X axis
 	if (!opts.term2) throw 'opts.term2 missing' // for Y axis
 	const config = {
-		//TODO: fill in default config
+		aggregation: 'mean'
 	}
 
 	return copyMerge(config, opts)

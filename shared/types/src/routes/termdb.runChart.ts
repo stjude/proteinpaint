@@ -11,6 +11,7 @@ export type RunChartRequest = {
 	term2: {
 		id: string
 	}
+	aggregation: 'mean' | 'median' | 'count'
 	filter?: any
 	__protected__?: any // auth token for accessing protected data
 }

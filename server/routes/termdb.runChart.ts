@@ -51,11 +51,15 @@ export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChart
 
 	if (data.error) throw new Error(data.error)
 
-	const chartType = (q as any).chartType || 'mean' // 'mean' | 'proportion' | 'count'
-	return buildRunChartFromData(chartType, xTermId, yTermId, data)
+	return buildRunChartFromData(q.aggregation, xTermId, yTermId, data)
 }
 
-export function buildRunChartFromData(chartType: any, xTermId: string, yTermId: string, data: any): RunChartResponse {
+export function buildRunChartFromData(
+	aggregation: string,
+	xTermId: string,
+	yTermId: string,
+	data: any
+): RunChartResponse {
 	const buckets: Record<
 		string,
 		{
