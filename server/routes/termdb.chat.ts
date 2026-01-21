@@ -211,6 +211,7 @@ async function extract_summary_terms(
 	const rag_docs = await parse_dataset_db(dataset_db)
 	//mayLog('rag_docs:', rag_docs)
 	const genes_list = await parse_geneset_db(genedb)
+	//mayLog("genes_list:", genes_list)
 	const SchemaConfig = {
 		path: path.resolve('termdb.chat.ts'),
 		// Path to your tsconfig (required for proper type resolution)
@@ -415,62 +416,74 @@ function validate_filter(filters: any, ds: any): any {
 }
 
 async function parse_geneset_db(genedb: string) {
-	const db = new Database(genedb)
-	// Query the database
-	const desc_rows = db.prepare('SELECT * from codingGenes').all()
 	let genes_list: string[] = []
-	desc_rows.forEach((row: any) => {
-		genes_list.push(row.name)
-	})
-	genes_list = genes_list.map(str => str.toLowerCase()) // Converting to lowercase
+	const db = new Database(genedb)
+	try {
+		// Query the database
+		const desc_rows = db.prepare('SELECT * from codingGenes').all()
+		desc_rows.forEach((row: any) => {
+			genes_list.push(row.name)
+		})
+		genes_list = genes_list.map(str => str.toLowerCase()) // Converting to lowercase
+	} catch (error) {
+		throw 'Could not parse geneDB' + error
+	} finally {
+		db.close()
+	}
 	return genes_list
 }
 
 async function parse_dataset_db(dataset_db: string) {
 	const db = new Database(dataset_db)
-	// Query the database
-	const desc_rows = db.prepare('SELECT * from termhtmldef').all()
-
-	const description_map: any = []
-	// Process the retrieved rows
-	desc_rows.forEach((row: any) => {
-		const name: string = row.id
-		const jsonhtml = JSON.parse(row.jsonhtml)
-		const description: string = jsonhtml.description[0].value
-		description_map.push({ name: name, description: description })
-	})
-
-	const term_db_rows = db.prepare('SELECT * from terms').all()
 	const rag_docs: string[] = []
-	const db_rows: DbRows[] = []
+	try {
+		// Query the database
+		const desc_rows = db.prepare('SELECT * from termhtmldef').all()
 
-	term_db_rows.forEach((row: any) => {
-		const found = description_map.find((item: any) => item.name === row.id)
-		if (found) {
-			// Restrict db to only those items that have a description
-			const jsondata = JSON.parse(row.jsondata)
-			const description = description_map.filter((item: any) => item.name === row.id)
-			const term_type: string = row.type
+		const description_map: any = []
+		// Process the retrieved rows
+		desc_rows.forEach((row: any) => {
+			const name: string = row.id
+			const jsonhtml = JSON.parse(row.jsonhtml)
+			const description: string = jsonhtml.description[0].value
+			description_map.push({ name: name, description: description })
+		})
 
-			const values: DbValue[] = []
-			if (jsondata.values && Object.keys(jsondata.values).length > 0) {
-				for (const key of Object.keys(jsondata.values)) {
-					const value = jsondata.values[key]
-					const db_val: DbValue = { key: key, value: value }
-					values.push(db_val)
+		const term_db_rows = db.prepare('SELECT * from terms').all()
+		const db_rows: DbRows[] = []
+
+		term_db_rows.forEach((row: any) => {
+			const found = description_map.find((item: any) => item.name === row.id)
+			if (found) {
+				// Restrict db to only those items that have a description
+				const jsondata = JSON.parse(row.jsondata)
+				const description = description_map.filter((item: any) => item.name === row.id)
+				const term_type: string = row.type
+
+				const values: DbValue[] = []
+				if (jsondata.values && Object.keys(jsondata.values).length > 0) {
+					for (const key of Object.keys(jsondata.values)) {
+						const value = jsondata.values[key]
+						const db_val: DbValue = { key: key, value: value }
+						values.push(db_val)
+					}
 				}
+				const db_row: DbRows = {
+					name: row.id,
+					description: description[0].description,
+					values: values,
+					term_type: term_type
+				}
+				const stringified_db = parse_db_rows(db_row)
+				rag_docs.push(stringified_db)
+				db_rows.push(db_row)
 			}
-			const db_row: DbRows = {
-				name: row.id,
-				description: description[0].description,
-				values: values,
-				term_type: term_type
-			}
-			const stringified_db = parse_db_rows(db_row)
-			rag_docs.push(stringified_db)
-			db_rows.push(db_row)
-		}
-	})
+		})
+	} catch (error) {
+		throw 'Error in parsing dataset DB:' + error
+	} finally {
+		db.close()
+	}
 	return rag_docs
 }
 
