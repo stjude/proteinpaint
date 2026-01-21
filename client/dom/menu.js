@@ -85,13 +85,36 @@ export class Menu {
 		// check if this.d isn't empty before assigning parent_menu
 		if (Object.values(this.d._groups[0]).length) this.dnode.parent_menu = arg.parent_menu //; console.log(74, this.dnode.parent_menu)
 
-		if (arg.ancestor_menus) this.dnode.ancestor_menus = arg.ancestor_menus // attach property to DOM node, since other code does not know about any menu instance directly, but can detect properties of other menus by DOM node
+		this.dnode.ancestor_menus = arg.ancestor_menus || [] // attach property to DOM node, since other code does not know about any menu instance directly, but can detect properties of other menus by DOM node
+
+		// collect all ancestor menus in this.dnode.ancestor_menus
+		// so that they can be detected in the mousedown.menu event listener below
+		if (this.dnode.parent_menu && !this.dnode.ancestor_menus.includes(this.dnode.parent_menu))
+			this.dnode.ancestor_menus.push(this.dnode.parent_menu)
+		const ancestor_menus = this.dnode.ancestor_menus.slice(0)
+		while (ancestor_menus.length) {
+			const m = ancestor_menus.pop()
+			if (!m) {
+				// m may be a null element of ancestor_menus[]
+				// needs to be skipped
+				continue
+			}
+			if (m.parent_menu && !this.dnode.ancestor_menus.includes(m.parent_menu))
+				this.dnode.ancestor_menus.push(m.parent_menu)
+			if (m.ancestor_menus) {
+				for (const mm of m.ancestor_menus) {
+					if (!this.dnode.ancestor_menus.includes(mm)) this.dnode.ancestor_menus.push(mm)
+				}
+			}
+		}
 
 		body.on('mousedown.menu' + this.typename, event => {
 			// when pressing the mouse cursor on the menu itself or any of its submenu, it should stay open
 			if (this.dnode.contains(event.target)) return
 			// this assumes that the mousedown occured on the menu holder itself (not any of its child elements)
 			if (event.target.parent_menu === this.dnode) return
+			// detect if mousedown occurred on any descendent menu
+			if (this.dnode.ancestor_menus?.includes(this.dnode)) return
 			// detect in case the mousedown occurred on a menu's child element,
 			// in which case the menu's parent should still be not hidden
 			const menu = event.target.closest('.sja_menu_div')
