@@ -135,7 +135,15 @@ export function setInteractivity(self) {
 		const rangeStart = start !== undefined ? start : null
 		const rangeStop = end !== undefined ? end : null
 
-		const ls = new ListSamples(self.app, self.state.termfilter, configCopy, plot, bins, rangeStart, rangeStop)
+		const ls = new ListSamples({
+			app: self.app,
+			termfilter: self.state.termfilter,
+			config: configCopy,
+			plot,
+			bins,
+			start: rangeStart,
+			end: rangeStop
+		})
 		return ls
 	}
 

@@ -34,7 +34,13 @@ function getNewListSamples() {
 		termfilter: { filter: 'test' }
 	}
 	const mockBins = { term1: { testKey: { start: 5, stop: 10 } } }
-	const listSamples = new ListSamples(mockApp, mockState.termfilter, mockConfig1, mockPlot1 as any, mockBins)
+	const listSamples = new ListSamples({
+		app: mockApp,
+		termfilter: mockState.termfilter,
+		config: mockConfig1,
+		plot: mockPlot1 as any,
+		bins: mockBins
+	})
 
 	return { listSamples, mockConfig1, mockPlot1, mockApp, mockState }
 }
@@ -58,7 +64,12 @@ tape('Default ListSamples constructor', test => {
 		termfilter: { filter: 'test' }
 	}
 
-	const listSamples = new ListSamples(mockApp, mockState.termfilter, mockConfig2, mockPlot1 as any)
+	const listSamples = new ListSamples({
+		app: mockApp,
+		termfilter: mockState.termfilter,
+		config: mockConfig2,
+		plot: mockPlot1 as any
+	})
 
 	test.equal(listSamples.app, mockApp, 'Should set app correctly')
 	test.equal(listSamples.plot, mockPlot1, 'Should set plot correctly')
@@ -78,7 +89,14 @@ tape('ListSamples constructor throws for incomplete range parameters', test => {
 
 	const message = 'Should throw error when start is provided without end'
 	try {
-		new ListSamples(mockApp, mockState.termfilter, mockConfig1, mockPlot1 as any, {}, 10, undefined)
+		new ListSamples({
+			app: mockApp,
+			termfilter: mockState.termfilter,
+			config: mockConfig1,
+			plot: mockPlot1 as any,
+			start: 10,
+			end: undefined
+		})
 		test.fail(message)
 	} catch (e: any) {
 		test.pass(`${message}: ${e.message || e}`)
@@ -98,7 +116,7 @@ tape('ListSamples constructor throws for invalid config', test => {
 	}
 	const message = `Should throw error if missing .term in config`
 	try {
-		new ListSamples(mockApp, mockState.termfilter, {}, mockPlot1 as any)
+		new ListSamples({ app: mockApp, termfilter: mockState.termfilter, config: {}, plot: mockPlot1 as any })
 		test.fail(message)
 	} catch (e: any) {
 		test.pass(`${e}: ${message}`)
@@ -227,7 +245,14 @@ tape('createTvsRanges() creates correct range for useRange=true', test => {
 		plots: [mockConfig1],
 		termfilter: { filter: 'test' }
 	}
-	const listSamples = new ListSamples(mockApp, mockState.termfilter, mockConfig1, mockPlot1 as any, {}, 10, 20)
+	const listSamples = new ListSamples({
+		app: mockApp,
+		termfilter: mockState.termfilter,
+		config: mockConfig1,
+		plot: mockPlot1 as any,
+		start: 10,
+		end: 20
+	})
 
 	const mockTvs: any = { ranges: [] }
 	listSamples.createTvsRanges(mockTvs, 1, '')
