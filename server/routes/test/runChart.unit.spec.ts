@@ -11,7 +11,7 @@ tape('\n', function (test) {
 })
 
 tape('buildRunChartFromData() mean aggregation', function (test) {
-	const chartType = 'mean'
+	const aggregation = 'mean'
 	const xTermId = 'x'
 	const yTermId = 'y'
 
@@ -55,14 +55,14 @@ tape('buildRunChartFromData() mean aggregation', function (test) {
 		]
 	}
 
-	const output = buildRunChartFromData(chartType, xTermId, yTermId, inputData)
+	const output = buildRunChartFromData(aggregation, xTermId, yTermId, inputData)
 	test.deepEqual(output, expectedOutput, 'output should match expected structure with 2 data points for two months')
 
 	test.end()
 })
 
 tape('buildRunChartFromData() proportion aggregation', function (test) {
-	const chartType = 'proportion'
+	const aggregation = 'proportion'
 	const xTermId = 'x'
 	const yTermId = 'y'
 
@@ -83,7 +83,7 @@ tape('buildRunChartFromData() proportion aggregation', function (test) {
 		}
 	}
 
-	const result = buildRunChartFromData(chartType, xTermId, yTermId, data)
+	const result = buildRunChartFromData(aggregation, xTermId, yTermId, data)
 
 	test.equal(result.status, 'ok', 'status should be ok')
 	test.equal(result.series.length, 1, 'should return one series')
@@ -103,7 +103,7 @@ tape('buildRunChartFromData() proportion aggregation', function (test) {
 })
 
 tape('buildRunChartFromData() count aggregation', function (test) {
-	const chartType = 'count'
+	const aggregation = 'count'
 	const xTermId = 'x'
 	const yTermId = 'y'
 
@@ -120,7 +120,7 @@ tape('buildRunChartFromData() count aggregation', function (test) {
 		}
 	}
 
-	const result = buildRunChartFromData(chartType, xTermId, yTermId, data)
+	const result = buildRunChartFromData(aggregation, xTermId, yTermId, data)
 
 	test.equal(result.status, 'ok', 'status should be ok')
 	test.equal(result.series.length, 1, 'should return one series')
