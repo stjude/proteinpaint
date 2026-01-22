@@ -1,4 +1,4 @@
-import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { GRIN2Dom, GRIN2Opts, ShowGrin2ResultTableOpts } from './GRIN2Types'
 import { dofetch3 } from '#common/dofetch'
@@ -12,6 +12,7 @@ import {
 	createMatrixFromGenes,
 	updateSelectionTracking
 } from '#plots/manhattan/manhattan.ts'
+import { controlsInit } from '#plots/controls.js'
 
 /**
  * Renders a GRIN2 result table for gene data.
@@ -118,6 +119,7 @@ export function showGrin2ResultTable(opts: ShowGrin2ResultTableOpts): void {
 class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
 	dom: GRIN2Dom
+	components: { controls: ComponentApi }
 
 	// Colors
 	readonly borderColor = '#eee'
@@ -171,8 +173,13 @@ class GRIN2 extends PlotBase implements RxComponent {
 	constructor(opts: any, api) {
 		super(opts, api)
 		this.opts = opts
+		this.components = {
+			controls: {} as ComponentApi
+		}
 		opts.holder.classed('sjpp-grin2-main', true)
 		this.dom = {
+			massControls: opts.holder.append('div').style('display', 'inline-block'),
+			headerText: opts.holder.append('div').style('display', 'inline-block'),
 			controls: opts.holder.append('div'), // controls ui on top
 			div: opts.holder.append('div').style('margin', '20px'), // result ui on bottom
 			tip: new Menu({ padding: '' }),
@@ -454,8 +461,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	private createConfigTable() {
 		// Add citation text
-		this.dom.controls
-			.append('div')
+		this.dom.headerText
 			.style('margin', '15px')
 			.html(
 				'GRIN2 stands for Genomic Random Interval (GRIN) statistical model. For details, see <a href=https://pubmed.ncbi.nlm.nih.gov/23842812/ target=_blank>Pounds, S. et al. Bioinformatics 2013</a>.'
@@ -731,7 +737,24 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 	}
 
-	async init() {}
+	async init() {
+		this.components.controls = await controlsInit({
+			app: this.app,
+			id: this.id,
+			holder: this.dom.massControls.style('display', 'inline-block'),
+			inputs: []
+		})
+
+		/** Removing the burger and download btn for now. Will implement later.*/
+		const burgerMenu = this.dom.massControls.select('div > svg.bi.bi-copy')
+		if (burgerMenu) burgerMenu.remove()
+		const downloadBtn = this.dom.massControls.select('div > svg.bi.bi-download')
+		if (downloadBtn) downloadBtn.remove()
+
+		this.components.controls.on('helpClick.grin2', () => {
+			window.open('https://github.com/stjude/proteinpaint/wiki/Grin2')
+		})
+	}
 
 	async main() {
 		// Initialize the table with the different data types and options

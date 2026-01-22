@@ -97,7 +97,8 @@ function helpBtnInit(opts) {
 			'profileRadarFacility',
 			'boxplot',
 			'correlationVolcano',
-			'differentialAnalysis'
+			'differentialAnalysis',
+			'grin2'
 		],
 		dom: {
 			btn: infoDiv
