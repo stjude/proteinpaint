@@ -8,7 +8,7 @@ import type { AnnotatedSampleEntry } from 'types/termdb'
 Tests:
 	- Default ListSamples constructor
 	- ListSamples constructor throws for incomplete range parameters
-	- ListSamples constructor throws for invalid config
+	- ListSamples constructor throws for invalid term
 	- getTvsLst() processes all three terms when present
     - ListSamples.getTvsLst() in constructor returns obj for categorical term and numeric overlay
 	- getTvsLstEntry() handles missing term wrapper
@@ -37,7 +37,8 @@ function getNewListSamples() {
 	const listSamples = new ListSamples({
 		app: mockApp,
 		termfilter: mockState.termfilter,
-		config: mockConfig1,
+		term: mockConfig1.term as any,
+		term2: mockConfig1.term2 as any,
 		plot: mockPlot1 as any,
 		bins: mockBins
 	})
@@ -67,7 +68,8 @@ tape('Default ListSamples constructor', test => {
 	const listSamples = new ListSamples({
 		app: mockApp,
 		termfilter: mockState.termfilter,
-		config: mockConfig2,
+		term: mockConfig2.term as any,
+		term2: mockConfig2.term2 as any,
 		plot: mockPlot1 as any
 	})
 
@@ -92,7 +94,8 @@ tape('ListSamples constructor throws for incomplete range parameters', test => {
 		new ListSamples({
 			app: mockApp,
 			termfilter: mockState.termfilter,
-			config: mockConfig1,
+			term: mockConfig1.term as any,
+			term2: mockConfig1.term2 as any,
 			plot: mockPlot1 as any,
 			start: 10,
 			end: undefined
@@ -105,7 +108,7 @@ tape('ListSamples constructor throws for incomplete range parameters', test => {
 	test.end()
 })
 
-tape('ListSamples constructor throws for invalid config', test => {
+tape('ListSamples constructor throws for invalid term', test => {
 	test.timeoutAfter(100)
 
 	const { mockConfig2, mockPlot1 } = getBoxPlotMockData()
@@ -114,9 +117,14 @@ tape('ListSamples constructor throws for invalid config', test => {
 		plots: [mockConfig2],
 		termfilter: { filter: 'test' }
 	}
-	const message = `Should throw error if missing .term in config`
+	const message = `Should throw error if missing .term`
 	try {
-		new ListSamples({ app: mockApp, termfilter: mockState.termfilter, config: {}, plot: mockPlot1 as any })
+		new ListSamples({
+			app: mockApp,
+			termfilter: mockState.termfilter,
+			term: {} as any,
+			plot: mockPlot1 as any
+		})
 		test.fail(message)
 	} catch (e: any) {
 		test.pass(`${e}: ${message}`)
@@ -248,7 +256,8 @@ tape('createTvsRanges() creates correct range for useRange=true', test => {
 	const listSamples = new ListSamples({
 		app: mockApp,
 		termfilter: mockState.termfilter,
-		config: mockConfig1,
+		term: mockConfig1.term as any,
+		term2: mockConfig1.term2 as any,
 		plot: mockPlot1 as any,
 		start: 10,
 		end: 20

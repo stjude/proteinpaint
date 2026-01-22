@@ -138,7 +138,9 @@ export function setInteractivity(self) {
 		const ls = new ListSamples({
 			app: self.app,
 			termfilter: self.state.termfilter,
-			config: configCopy,
+			term: configCopy.term,
+			term2: configCopy.term2,
+			term0: configCopy.term0,
 			plot,
 			bins,
 			start: rangeStart,
