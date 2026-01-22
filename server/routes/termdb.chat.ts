@@ -3,7 +3,7 @@ import { ezFetch } from '#shared'
 import { createGenerator } from 'ts-json-schema-generator'
 import type { SchemaGenerator } from 'ts-json-schema-generator'
 import path from 'path'
-import type { ChatRequest, ChatResponse, RouteApi, DbRows, DbValue, SummaryType } from '#types'
+import type { ChatRequest, ChatResponse, RouteApi, DbRows, DbValue } from '#types'
 import { ChatPayload } from '#types/checkers'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
@@ -213,7 +213,7 @@ async function extract_summary_terms(
 	const genes_list = await parse_geneset_db(genedb)
 	//mayLog("genes_list:", genes_list)
 	const SchemaConfig = {
-		path: path.resolve('termdb.chat.ts'),
+		path: path.resolve('#types'),
 		// Path to your tsconfig (required for proper type resolution)
 		tsconfig: path.resolve(serverconfig.binpath, '../tsconfig.json'),
 		// Name of the exported type we want to convert
@@ -295,12 +295,7 @@ function validate_summary_response(response: string, common_genes: string[], dat
 	let html = ''
 	if (response_type.html) html = response_type.html
 	if (!response_type.term) html += 'term type is not present in summary output'
-	const validated_summary_type: SummaryType = {
-		// Initializing SummaryType
-		term: '',
-		simpleFilter: []
-	}
-	const term1_validation = validate_term(response_type.term, common_genes, dataset_json, validated_summary_type, ds)
+	const term1_validation = validate_term(response_type.term, common_genes, dataset_json, ds)
 	if (term1_validation.html.length > 0) {
 		html += term1_validation.html
 	} else {
@@ -308,7 +303,7 @@ function validate_summary_response(response: string, common_genes: string[], dat
 	}
 
 	if (response_type.term2) {
-		const term2_validation = validate_term(response_type.term2, common_genes, dataset_json, validated_summary_type, ds)
+		const term2_validation = validate_term(response_type.term2, common_genes, dataset_json, ds)
 		if (term2_validation.html.length > 0) {
 			html += term2_validation.html
 		} else {
@@ -332,13 +327,7 @@ function validate_summary_response(response: string, common_genes: string[], dat
 	}
 }
 
-function validate_term(
-	response_term: string,
-	common_genes: string[],
-	dataset_json: any,
-	validated_summary_type: SummaryType,
-	ds: any
-) {
+function validate_term(response_term: string, common_genes: string[], dataset_json: any, ds: any) {
 	let html = ''
 	let term_type: any
 	const term: any = ds.cohort.termdb.q.termjsonByOneid(response_term)
@@ -349,16 +338,14 @@ function validate_term(
 			html += 'invalid term id:' + response_term
 		} else {
 			if (dataset_json.hasGeneExpression) {
-				// Check to see if dataset support gene expression (alternative implementation: ds.queries.geneExpression)
-				validated_summary_type.term = response_term.toUpperCase()
-				term_type = { term: { gene: validated_summary_type.term, type: 'geneExpression' } }
+				// Check to see if dataset support gene expression
+				term_type = { term: { gene: response_term.toUpperCase(), type: 'geneExpression' } }
 			} else {
 				html += 'Dataset does not support gene expression'
 			}
 		}
 	} else {
-		validated_summary_type.term = term.id
-		term_type = { id: validated_summary_type.term }
+		term_type = { id: term.id }
 	}
 	return { term_type: term_type, html: html }
 }
