@@ -75,64 +75,59 @@ export function buildRunChartFromData(
 		}
 	> = {}
 
+	let skippedSamples = 0
+
 	for (const sampleId in (data.samples || {}) as any) {
 		const sample = (data.samples as any)[sampleId]
 		const xRaw = sample?.[xTermId]?.value ?? sample?.[xTermId]?.key
 		const yRaw = sample?.[yTermId]?.value ?? sample?.[yTermId]?.key
 
-		if (xRaw == null || yRaw == null) continue
+		if (xRaw == null || yRaw == null) {
+			skippedSamples++
+			console.log(
+				`Skipping sample ${sampleId}: Missing x or y value - xTermId=${xTermId} (value: ${xRaw}), yTermId=${yTermId} (value: ${yRaw})`
+			)
+			continue
+		}
+
+		// Only handle numeric values, throw error for strings
+		if (typeof xRaw !== 'number') {
+			throw new Error(
+				`x value must be a number for sample ${sampleId}: xTermId=${xTermId}, received type ${typeof xRaw}, value: ${xRaw}`
+			)
+		}
 
 		let year: number | null = null
 		let month: number | null = null
-		if (typeof xRaw === 'string' && /^\d{4}-\d{2}/.test(xRaw)) {
-			const m = xRaw.match(/(\d{4})-(\d{2})/)
-			if (m) {
-				year = Number(m[1])
-				month = Number(m[2])
-			}
-		} else if (typeof xRaw === 'number') {
-			const parts = String(xRaw).split('.')
-			year = Number(parts[0])
-			if (parts.length > 1) {
-				const decimalPart = parts[1]
-				// If decimal part is exactly 2 digits and represents a valid month (01-12), treat as YYYY.MM
-				if (decimalPart.length === 2) {
-					const monthCandidate = Number(decimalPart)
-					if (monthCandidate >= 1 && monthCandidate <= 12) {
-						month = monthCandidate
-					} else {
-						// Invalid month, treat as fractional year
-						const frac = xRaw - year
-						month = Math.floor(frac * 12) + 1
-					}
+		const parts = String(xRaw).split('.')
+		year = Number(parts[0])
+		if (parts.length > 1) {
+			const decimalPart = parts[1]
+			// If decimal part is exactly 2 digits and represents a valid month (01-12), treat as YYYY.MM
+			if (decimalPart.length === 2) {
+				const monthCandidate = Number(decimalPart)
+				if (monthCandidate >= 1 && monthCandidate <= 12) {
+					month = monthCandidate
 				} else {
-					// Decimal part is not 2 digits, treat as fractional year
+					// Invalid month, treat as fractional year
 					const frac = xRaw - year
 					month = Math.floor(frac * 12) + 1
 				}
 			} else {
-				// No decimal part, invalid date
-				year = null
-			}
-		} else if (typeof xRaw === 'string' && /^\d{4}\.\d+$/.test(xRaw)) {
-			const [y, m] = xRaw.split('.')
-			year = Number(y)
-			// If decimal part is exactly 2 digits, treat as month, otherwise as fractional year
-			if (m.length === 2) {
-				const monthCandidate = Number(m)
-				if (monthCandidate >= 1 && monthCandidate <= 12) {
-					month = monthCandidate
-				} else {
-					const frac = Number(`0.${m}`)
-					month = Math.floor(frac * 12) + 1
-				}
-			} else {
-				const frac = Number(`0.${m}`)
+				// Decimal part is not 2 digits, treat as fractional year
+				const frac = xRaw - year
 				month = Math.floor(frac * 12) + 1
 			}
+		} else {
+			// No decimal part, invalid date
+			year = null
 		}
 
-		if (year == null || month == null || Number.isNaN(year) || Number.isNaN(month)) continue
+		if (year == null || month == null || Number.isNaN(year) || Number.isNaN(month)) {
+			throw new Error(
+				`Invalid date value for sample ${sampleId}: xTermId=${xTermId}, xRaw=${xRaw}, parsed year=${year}, month=${month}`
+			)
+		}
 
 		const bucketKey = `${year}-${String(month).padStart(2, '0')}`
 		const x = Number(`${year}.${String(month).padStart(2, '0')}`)
@@ -159,7 +154,11 @@ export function buildRunChartFromData(
 				buckets[bucketKey].total! += 1
 			} else if (typeof yRaw === 'number') {
 				const yn = Number(yRaw)
-				if (!Number.isFinite(yn)) continue
+				if (!Number.isFinite(yn)) {
+					throw new Error(
+						`Non-finite y value for proportion aggregation in sample ${sampleId}: yTermId=${yTermId}, yRaw=${yRaw}`
+					)
+				}
 				if (yn <= 1 && yn >= 0) {
 					buckets[bucketKey].success! += yn
 					buckets[bucketKey].total! += 1
@@ -170,23 +169,42 @@ export function buildRunChartFromData(
 			} else if (typeof yRaw === 'object' && yRaw != null) {
 				const s = Number((yRaw as any).success ?? (yRaw as any).y ?? (yRaw as any).value ?? NaN)
 				const t = Number((yRaw as any).total ?? (yRaw as any).n ?? 1)
-				if (Number.isFinite(s) && Number.isFinite(t)) {
-					buckets[bucketKey].success! += s
-					buckets[bucketKey].total! += t
+				if (!Number.isFinite(s) || !Number.isFinite(t)) {
+					throw new Error(
+						`Non-finite success or total value for proportion aggregation in sample ${sampleId}: yTermId=${yTermId}, success=${s}, total=${t}`
+					)
 				}
+				buckets[bucketKey].success! += s
+				buckets[bucketKey].total! += t
+			} else {
+				throw new Error(
+					`Invalid y value type for proportion aggregation in sample ${sampleId}: yTermId=${yTermId}, type=${typeof yRaw}, value=${yRaw}`
+				)
 			}
 		} else if (aggregation === 'count') {
 			const yn = Number(yRaw)
-			if (!Number.isFinite(yn)) continue
+			if (!Number.isFinite(yn)) {
+				throw new Error(
+					`Non-finite y value for count aggregation in sample ${sampleId}: yTermId=${yTermId}, yRaw=${yRaw}`
+				)
+			}
 			buckets[bucketKey].countSum! += yn
 			buckets[bucketKey].count += 1
 		} else {
 			const yn = Number(yRaw)
-			if (!Number.isFinite(yn)) continue
+			if (!Number.isFinite(yn)) {
+				throw new Error(
+					`Non-finite y value for mean aggregation in sample ${sampleId}: yTermId=${yTermId}, yRaw=${yRaw}`
+				)
+			}
 			buckets[bucketKey].ySum += yn
 			buckets[bucketKey].count += 1
 			buckets[bucketKey].yValues.push(yn)
 		}
+	}
+
+	if (skippedSamples > 0) {
+		console.log(`buildRunChartFromData: Skipped ${skippedSamples} sample(s) due to missing x or y values`)
 	}
 
 	const points = Object.values(buckets)
