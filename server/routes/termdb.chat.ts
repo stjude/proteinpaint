@@ -124,7 +124,7 @@ async function call_ollama(prompt: string, model_name: string, apilink: string) 
 			throw 'Error: Received an unexpected response format:' + result
 		}
 	} catch (error) {
-		return 'Error: Ollama API request failed:' + error
+		throw 'Ollama API request failed:' + error
 	}
 }
 
@@ -154,10 +154,14 @@ async function call_sj_llm(prompt: string, model_name: string, apilink: string) 
 			headers: { 'Content-Type': 'application/json' },
 			timeout: { request: timeout } // ezfetch accepts milliseconds directly
 		})
-		const result = response.outputs[0].generated_text
-		return result
+		if (response.outputs && response.outputs[0] && response.outputs[0].generated_text) {
+			const result = response.outputs[0].generated_text
+			return result
+		} else {
+			throw 'Error: Received an unexpected response format:' + response
+		}
 	} catch (error) {
-		return 'Error: SJ API request failed:' + error
+		throw 'SJ API request failed:' + error
 	}
 }
 
