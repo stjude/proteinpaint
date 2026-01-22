@@ -1,8 +1,8 @@
 import fs from 'fs'
 import { ezFetch } from '#shared'
-import { createGenerator } from 'ts-json-schema-generator'
-import type { SchemaGenerator } from 'ts-json-schema-generator'
-import path from 'path'
+//import { createGenerator } from 'ts-json-schema-generator'
+//import type { SchemaGenerator } from 'ts-json-schema-generator'
+//import path from 'path'
 import type { ChatRequest, ChatResponse, RouteApi, DbRows, DbValue } from '#types'
 import { ChatPayload } from '#types/checkers'
 import serverconfig from '../src/serverconfig.js'
@@ -216,21 +216,26 @@ async function extract_summary_terms(
 	//mayLog('rag_docs:', rag_docs)
 	const genes_list = await parse_geneset_db(genedb)
 	//mayLog("genes_list:", genes_list)
-	const SchemaConfig = {
-		path: path.resolve('#types'),
-		// Path to your tsconfig (required for proper type resolution)
-		tsconfig: path.resolve(serverconfig.binpath, '../tsconfig.json'),
-		// Name of the exported type we want to convert
-		type: 'SummaryType',
-		// Only expose exported symbols (default)
-		expose: 'export' as 'export' | 'all' | 'none' | undefined,
-		// Put the whole schema under a top‑level $ref (optional but convenient)
-		topRef: true,
-		// Turn off type‑checking for speed (set to true if you want full checks)
-		skipTypeCheck: true
-	}
-	const generator: SchemaGenerator = createGenerator(SchemaConfig)
-	const StringifiedSchema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // This will be generated at server startup later
+
+	//const SchemaConfig = {
+	//    path: path.resolve('#types'),
+	//    // Path to your tsconfig (required for proper type resolution)
+	//    tsconfig: path.resolve(serverconfig.binpath, '../tsconfig.json'),
+	//    // Name of the exported type we want to convert
+	//    type: 'SummaryType',
+	//    // Only expose exported symbols (default)
+	//    expose: 'export' as 'export' | 'all' | 'none' | undefined,
+	//    // Put the whole schema under a top‑level $ref (optional but convenient)
+	//    topRef: true,
+	//    // Turn off type‑checking for speed (set to true if you want full checks)
+	//    skipTypeCheck: true
+	//}
+	//const generator: SchemaGenerator = createGenerator(SchemaConfig)
+	//const StringifiedSchema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // This will be generated at server startup later
+	//mayLog("StringifiedSchema:", StringifiedSchema)
+
+	const StringifiedSchema =
+		'{"$schema":"http://json-schema.org/draft-07/schema#","$ref":"#/definitions/SummaryType","definitions":{"SummaryType":{"type":"object","properties":{"term":{"type":"string"},"term2":{"type":"string"},"simpleFilter":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"}}},"required":["term","simpleFilter"],"additionalProperties":false},"FilterTerm":{"anyOf":[{"$ref":"#/definitions/CategoricalFilterTerm"},{"$ref":"#/definitions/NumericFilterTerm"}]},"CategoricalFilterTerm":{"type":"object","properties":{"term":{"type":"string"},"category":{"type":"string"}},"required":["term","category"],"additionalProperties":false},"NumericFilterTerm":{"type":"object","properties":{"term":{"type":"string"},"start":{"type":"number"},"stop":{"type":"number"}},"required":["term"],"additionalProperties":false}}}'
 	const words = prompt
 		.replace(/[^a-zA-Z0-9\s]/g, '')
 		.split(/\s+/)
