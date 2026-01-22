@@ -19,6 +19,7 @@ import { renderPvalues } from '#dom/renderPvalueTable'
 import { downloadChart } from '#common/svg.download'
 import { getCombinedTermFilter } from '#filter'
 import { DownloadMenu } from '#dom/downloadMenu'
+import { isNumericTerm } from '#shared/terms.js'
 
 export const t0_t2_defaultQ = structuredClone(term0_term2_defaultQ)
 Object.assign(t0_t2_defaultQ, {
@@ -1377,6 +1378,12 @@ function getPj(self) {
 				const seriesId = context.self.seriesId
 				if (t2?.q?.type == 'predefined-groupset' || t2?.q?.type == 'custom-groupset') return seriesId
 				if (t2 && t2.term.values && seriesId in t2.term.values) return t2.term.values[seriesId].label
+				if (isNumericTerm(t2.term)) {
+					// numeric term
+					// seriesId on its own (e.g. "<5") will be vague,
+					// so include term name in series label
+					return t2.term.name + ' ' + seriesId
+				}
 				return seriesId
 			},
 			timeCensored(row) {
