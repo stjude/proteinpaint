@@ -76,11 +76,19 @@ export class BoxPlotInteractions {
 		//The continuous term is always used as the tw
 		//Need to update here to match the server req and res
 		const contTerm = config.term.q.mode == 'continuous' ? config.term : config.term2
-		if (config.term != contTerm) {
-			config.term2 = config.term
-			config.term = contTerm
-		}
-		const sampleList = new ListSamples({ app: this.app, termfilter: state.termfilter, config, plot, bins, start, end })
+		const term = config.term != contTerm ? contTerm : config.term
+		const term2 = config.term != contTerm ? config.term : config.term2
+		const sampleList = new ListSamples({
+			app: this.app,
+			termfilter: state.termfilter,
+			term,
+			term2,
+			term0: config.term0,
+			plot,
+			bins,
+			start,
+			end
+		})
 		return sampleList
 	}
 

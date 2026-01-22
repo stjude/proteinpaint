@@ -12,7 +12,6 @@ import { addGvRowVals, addGvCols } from '#plots/barchart.events.js'
 type ScopedPlot = {
 	chartId?: string //value of divideBy term
 	seriesId?: string //value of overlay term
-	descrStats?: any //descriptive stats for the plot
 	key: any //value of the plot itself
 }
 
@@ -34,7 +33,9 @@ type ScopedBins = {
 type ListSamplesOpts = {
 	app: AppApi
 	termfilter: any
-	config: any
+	term: TermWrapper
+	term2?: TermWrapper
+	term0?: TermWrapper
 	plot: ScopedPlot
 	bins?: ScopedBins
 	start?: number | null | undefined
@@ -45,17 +46,19 @@ type ListSamplesOpts = {
  * Maybe used for showing the samples to user or creating filters. */
 export class ListSamples {
 	app: AppApi
+	/** From the state. Should include .filter:{} and .filter0:{} */
 	termfilter: any
+	/** Rendered plot obj */
 	plot: ScopedPlot
 	/** Created by the server */
 	bins: ScopedBins
 
 	t1: TermWrapper
-	t2: TermWrapper
-	t0?: TermWrapper
+	t2: TermWrapper | null
+	t0?: TermWrapper | null
 	terms: TermWrapper[]
 
-	/** Indicates a reduced range than then bin (e.g. violin brush) */
+	/** Indicates a reduced range for the bin (e.g. violin brush) */
 	useRange: boolean
 	start?: number | null
 	end?: number | null
@@ -73,18 +76,17 @@ export class ListSamples {
 	geneVariant = {}
 
 	constructor(opts: ListSamplesOpts) {
-		if (!opts.config.term) {
-			throw new Error('Missing term in plot config')
-		}
+		if (!opts.term) throw new Error('Missing .term argument')
+
 		this.app = opts.app
 		this.termfilter = opts.termfilter
 		this.plot = opts.plot
 		this.bins = opts.bins || {}
 		this.useRange = false
 
-		this.t1 = opts.config.term
-		this.t2 = opts.config.term2
-		this.t0 = opts.config?.term0 || null
+		this.t1 = opts.term
+		this.t2 = opts.term2 || null
+		this.t0 = opts.term0 || null
 
 		this.terms = [this.t1]
 
@@ -138,16 +140,12 @@ export class ListSamples {
 				term: tw.term
 			}
 		}
-		this.getFilterParams(tvsEntry, tw, termNum, key)
-		this.tvslst.lst.push(tvsEntry)
-	}
-
-	getFilterParams(tvsEntry: any, tw: TermWrapper, termNum: number, key: string) {
-		//TODO: Change to isNumericTerm()?? and remove tests??
+		//TODO: delete isContinuousOrBinned and tests if isNumericTerm works
 		if (this.isContinuousOrBinned(tw, termNum)) {
 			this.createTvsRanges(tvsEntry.tvs, termNum, key)
 		}
 		this.createTvsValues(tvsEntry, tw, key)
+		this.tvslst.lst.push(tvsEntry)
 	}
 
 	createTvsValues(tvsEntry: any, tw: any, key: string) {
@@ -220,6 +218,7 @@ export class ListSamples {
 		}
 	}
 
+	//TODO: Remove entirely??
 	isContinuousOrBinned(tw: TermWrapper, termNum: number): boolean {
 		if (!('mode' in tw.q)) return false
 		return (
