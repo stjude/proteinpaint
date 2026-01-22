@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Grin2 will now display a link to the wiki in the top left hand corner.
+
 Fixes:
 - GDC lollipop now displays ssm=2000 for TTN rather than 1999; the limit is applied to both ssm & sv
 - restore old singlecell gene exp violin by supplying q.mode=continuous

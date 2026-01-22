@@ -1,2 +1,1 @@
-Features
-- Grin2 will now display a link to the wiki in the top left hand corner. 
+
