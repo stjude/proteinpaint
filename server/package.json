@@ -55,6 +55,7 @@
     "nodemon": "^3.1.10",
     "prettier": "^2.8.8",
     "tape": "^5.2.2",
+    "ts-json-schema-generator": "^2.4.0",
     "ts-node": "^10.9.1",
     "ts-patch": "^3.0.2",
     "tsx": "^4.7.1",
