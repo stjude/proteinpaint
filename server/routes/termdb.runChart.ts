@@ -119,8 +119,8 @@ export function buildRunChartFromData(
 				month = Math.floor(frac * 12) + 1
 			}
 		} else {
-			// No decimal part, invalid date
-			year = null
+			// No decimal part: integer year value, resolve to January of that year
+			month = 1
 		}
 
 		if (year == null || month == null || Number.isNaN(year) || Number.isNaN(month)) {
