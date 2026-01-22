@@ -4,6 +4,7 @@ import type { Elem } from '../../../types/d3'
 import type { AIProjectAdminInteractions } from '../interactions/AIProjectAdminInteractions'
 import { SelectorTableRender } from './SelectorTableRender'
 import { UsersRender } from './UsersRender'
+import type { AIProjectAdminResponse } from '@sjcrh/proteinpaint-types'
 
 export class CreateProjectRender {
 	dom: {
@@ -99,8 +100,8 @@ export class CreateProjectRender {
 				// }
 				btn.attr('disabled', true) //Don't allow multiple clicks
 
-				const selections: any = await this.interactions.getFilteredImages(this.filter)
-				if (this.filter && (selections.status != 'ok' || selections.data.length === 0)) {
+				const selections: AIProjectAdminResponse = await this.interactions.getFilteredImages(this.filter)
+				if (this.filter && (selections.status != 'ok' || selections.data?.length === 0)) {
 					alert('No images match your filter criteria.')
 					return
 				}
