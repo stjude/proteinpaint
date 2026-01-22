@@ -32,6 +32,8 @@ tape('grin2', function (test) {
 	async function runTests(g) {
 		if (alreadyRun(g)) return
 		await validateGRIN2(g, test)
+
+		if (test['_ok']) g.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -68,6 +70,8 @@ tape('grin2 fusion-only', function (test) {
 
 		// Validate results
 		await validateGRIN2(g, test)
+
+		if (test['_ok']) g.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -107,6 +111,8 @@ tape('grin2 cnv-only', function (test) {
 		g.Inner.dom.runButton.node().dispatchEvent(new Event('click', { bubbles: true }))
 
 		await validateGRIN2(g, test)
+
+		if (test['_ok']) g.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -144,6 +150,8 @@ tape('grin2 snvindel-only', function (test) {
 		g.Inner.dom.runButton.node().dispatchEvent(new Event('click', { bubbles: true }))
 
 		await validateGRIN2(g, test)
+
+		if (test['_ok']) g.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -181,7 +189,7 @@ tape('grin2 all-data-types-unchecked disables run button', function (test) {
 		const runBtn = g.Inner.dom.runButton.node() as HTMLButtonElement
 		test.equal(runBtn.disabled, true, 'Run button is disabled when no data types are selected')
 
-		g.Inner.app.destroy()
+		if (test['_ok']) g.Inner.app.destroy()
 		test.end()
 	}
 })
