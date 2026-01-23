@@ -1,2 +1,1 @@
-Features:
-- GRIN2: Sped up multiple core GRIN2 functions through various optimizations and improvements
+

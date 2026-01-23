@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- GRIN2: Sped up multiple core GRIN2 functions through various optimizations and improvements
+
+
 ## 2.171.0
 
 Features:
