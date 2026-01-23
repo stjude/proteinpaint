@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.171.0
 
 Features:
 - Grin2 will now display a link to the wiki in the top left hand corner.
