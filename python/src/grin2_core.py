@@ -26,8 +26,6 @@ GRIN2 Core Functions Overview
 ├── NUMBA-OPTIMIZED KERNELS
 │   ├── bern_conv_and_pvalue()      # Fused convolution + p-value
 │   ├── compute_pr_subj_approx()    # O(G×S) probability approximation
-│   ├── compute_p_values_from_conv()
-│   └── scatter_add_2d()
 │
 ├── DATA PREPARATION FUNCTIONS
 │   ├── order_index_gene_data()
@@ -169,49 +167,6 @@ def _compute_pr_subj_approx_kernel(gene_size, lsn_count_per_subj, lsn_size_per_s
     return pr_subj
 
 
-@njit(parallel=True)
-def compute_p_values_from_conv(pr_nsubj, nsubj_vals):
-    """
-    Compute p-values from pre-computed probability distribution.
-    
-    Parameters
-    ----------
-    pr_nsubj : ndarray, shape (n_genes, max_nsubj+2)
-        Probability distribution for each gene.
-    nsubj_vals : ndarray, shape (n_genes,)
-        Observed counts for each gene.
-    
-    Returns
-    -------
-    p_values : ndarray, shape (n_genes,)
-        P-value for each gene.
-    """
-    n_genes = pr_nsubj.shape[0]
-    n_cols = pr_nsubj.shape[1]
-    p_values = np.zeros(n_genes, dtype=np.float64)
-    
-    for j in prange(n_genes):
-        start_idx = nsubj_vals[j]
-        total = 0.0
-        for k in range(start_idx, n_cols):
-            total += pr_nsubj[j, k]
-        p_values[j] = total
-    
-    return p_values
-
-
-@njit(parallel=True)
-def scatter_add_2d(logsum, subj_indices, log_chunk):
-    """
-    Scatter-add operation: logsum[:, subj_indices[j]] += log_chunk[:, j]
-    
-    Used for accumulating log-probabilities by subject.
-    """
-    n_genes, n_lesions = log_chunk.shape
-    for j in prange(n_lesions):
-        subj_idx = subj_indices[j]
-        for i in range(n_genes):
-            logsum[i, subj_idx] += log_chunk[i, j]
 
 
 # =============================================================================
@@ -308,7 +263,7 @@ def order_index_lsn_data(lsn_data):
     }
 
 
-def prep_gene_lsn_data_fast(lsn_data, gene_data, validate=False):
+def prep_gene_lsn_data_fast(lsn_data, gene_data):
     """
     Prepare combined gene-lesion position data for sweep line algorithm.
     
@@ -323,8 +278,6 @@ def prep_gene_lsn_data_fast(lsn_data, gene_data, validate=False):
         Lesion data with columns: ID, chrom, loc.start, loc.end, lsn.type
     gene_data : DataFrame
         Gene data with columns: gene, chrom, loc.start, loc.end
-    validate : bool, optional
-        Whether to run validation checks (default False)
     
     Returns
     -------
@@ -1151,11 +1104,6 @@ def grin_stats(lsn_data, gene_data, chr_size):
         - 'chr.size': Chromosome sizes
         - 'gene.index': Gene index table
         - 'lsn.index': Lesion index table
-    
-    Examples
-    --------
-    >>> result = grin_stats(lesions_df, genes_df, chrom_sizes_df)
-    >>> significant_genes = result['gene.hits'][result['gene.hits']['q.nsubj.SNV'] < 0.1]
     """
     prep_data = prep_gene_lsn_data_fast(lsn_data, gene_data)
     overlaps = find_gene_lsn_overlaps_fast(prep_data)
