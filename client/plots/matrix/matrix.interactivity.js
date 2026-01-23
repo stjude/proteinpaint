@@ -730,12 +730,15 @@ function setTermActions(self) {
 		const termMenuWaitDiv = self.dom.menutop.append('div').style('display', 'block').text('Loading...')
 		self.dom.tip.show(event.clientX - 20, event.clientY - 20)
 
-		await self.pill.main(
-			Object.assign(
-				{ menuOptions: self.getMenuOptions(t), filter: self.state.filter },
-				t.tw ? t.tw : { term: null, q: null }
-			)
+		const pillArg = Object.assign(
+			{ menuOptions: self.getMenuOptions(t), filter: self.state.filter },
+			t.tw ? t.tw : { term: null, q: null }
 		)
+
+		mayAddEditMsg(pillArg, t)
+
+		await self.pill.main(pillArg)
+
 		termMenuWaitDiv.remove()
 
 		self.dom.shortcutDiv = self.dom.menutop.append('div').style('z-index', 10000)
@@ -3777,4 +3780,13 @@ function getLabel(c, v, p) {
 			: mclass[v.class].label
 
 	return label
+}
+
+// if group value filter is defined, then cannot reliably edit term
+// notify user in edit menu
+function mayAddEditMsg(arg, t) {
+	if (!t.grp.valueFilter) return
+	const editMsg =
+		'Cannot edit variable because group value filter is in use.<br>Please add new variable/variable group to enable editing.'
+	arg.editMsg = editMsg
 }
