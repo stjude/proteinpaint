@@ -183,7 +183,11 @@ export class TermSettingApi {
 			options.push({
 				label: 'Edit',
 				callback: async div => {
-					await self.handler.showEditMenu(div.append('div'))
+					if (self.data.editMsg) {
+						div.append('div').style('margin', '10px').html(self.data.editMsg)
+					} else {
+						await self.handler.showEditMenu(div.append('div'))
+					}
 				}
 			} as opt)
 		}
