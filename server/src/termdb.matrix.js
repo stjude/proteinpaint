@@ -141,7 +141,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 	// for each non dictionary term type
 	// query sample data with its own method and append results to "samples"
 	for (const tw of nonDictTerms) {
-		if (tw.term.type == 'snp') {
+		if (tw.term?.type == 'snp') {
 			const sampleGTs = await getSnpData(tw, q)
 			const groupset = get_active_groupset(tw.term, tw.q)
 			for (const s of sampleGTs) {
