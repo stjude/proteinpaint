@@ -119,19 +119,25 @@ export function buildRunChartFromData(
 				month = Math.floor(frac * 12) + 1
 			}
 		} else {
-			// No decimal part: integer year value, resolve to January of that year
-			month = 1
+			// No decimal part, invalid date
+			year = null
 		}
 
 		if (year == null || month == null || Number.isNaN(year) || Number.isNaN(month)) {
-			throw new Error(
-				`Invalid date value for sample ${sampleId}: xTermId=${xTermId}, xRaw=${xRaw}, parsed year=${year}, month=${month}`
+			skippedSamples++
+			console.log(
+				`Skipping sample ${sampleId}: Invalid date value - xTermId=${xTermId}, xRaw=${xRaw}, parsed year=${year}, month=${month}`
 			)
+			continue
 		}
 
-		const bucketKey = `${year}-${String(month).padStart(2, '0')}`
-		const x = Number(`${year}.${String(month).padStart(2, '0')}`)
-		const date = new Date(year, month - 1, 1)
+		// TypeScript narrowing: at this point year and month are guaranteed to be numbers
+		const yearNum = year as number
+		const monthNum = month as number
+
+		const bucketKey = `${yearNum}-${String(monthNum).padStart(2, '0')}`
+		const x = Number(`${yearNum}.${String(monthNum).padStart(2, '0')}`)
+		const date = new Date(yearNum, monthNum - 1, 1)
 		const xName = date.toLocaleString('en-US', { month: 'long', year: 'numeric' })
 
 		if (!buckets[bucketKey]) {
@@ -143,7 +149,7 @@ export function buildRunChartFromData(
 				success: 0,
 				total: 0,
 				countSum: 0,
-				sortKey: year * 100 + month,
+				sortKey: yearNum * 100 + monthNum,
 				yValues: []
 			}
 		}
