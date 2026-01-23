@@ -3,7 +3,7 @@ import { ezFetch } from '#shared'
 //import { createGenerator } from 'ts-json-schema-generator'
 //import type { SchemaGenerator } from 'ts-json-schema-generator'
 //import path from 'path'
-import type { ChatRequest, ChatResponse, RouteApi, DbRows, DbValue } from '#types'
+import type { ChatRequest, ChatResponse, RouteApi, DbRows, DbValue, ClassificationType } from '#types'
 import { ChatPayload } from '#types/checkers'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
@@ -54,37 +54,50 @@ function init({ genomes }) {
 
 			const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
 			const genedb = serverconfig.tpmasterdir + '/' + g.genedb.dbfile
+			// Read dataset JSON file
+			const dataset_json: any = await readJSONFile(serverconfig_ds_entries.aifiles)
 			const time1 = new Date().valueOf()
-			const classResult = await classify_query_by_dataset_type(
+			const class_response: ClassificationType = await classify_query_by_dataset_type(
 				q.prompt,
 				comp_model_name,
 				serverconfig.llm_backend,
 				apilink,
-				serverconfig.aiRoute
+				serverconfig.aiRoute,
+				dataset_json
 			)
-			mayLog('Time taken for classification:', formatElapsedTime(Date.now() - time1))
-			mayLog('classResult:', classResult)
-
-			//let ai_output_data: any
 			let ai_output_json: any
-			if (classResult == 'summary') {
-				const time1 = new Date().valueOf()
-				ai_output_json = await extract_summary_terms(
-					q.prompt,
-					serverconfig.llm_backend,
-					comp_model_name,
-					apilink,
-					dataset_db,
-					serverconfig_ds_entries.aifiles,
-					genedb,
-					ds
-				)
-				mayLog('Time taken for summary agent:', formatElapsedTime(Date.now() - time1))
-			} else if (classResult.route == 'dge') {
-				ai_output_json = { type: 'html', html: 'DE agent not implemented yet' }
+			mayLog('Time taken for classification:', formatElapsedTime(Date.now() - time1))
+			if (class_response.type == 'html') {
+				ai_output_json = class_response
+			} else if (class_response.type == 'plot') {
+				const classResult = class_response.plot
+				mayLog('classResult:', classResult)
+				//let ai_output_data: any
+				if (classResult == 'summary') {
+					const time1 = new Date().valueOf()
+					ai_output_json = await extract_summary_terms(
+						q.prompt,
+						serverconfig.llm_backend,
+						comp_model_name,
+						apilink,
+						dataset_db,
+						dataset_json,
+						genedb,
+						ds
+					)
+					mayLog('Time taken for summary agent:', formatElapsedTime(Date.now() - time1))
+				} else if (classResult == 'dge') {
+					ai_output_json = { type: 'html', html: 'DE agent not implemented yet' }
+				} else {
+					// Will define all other agents later as desired
+					ai_output_json = { type: 'html', html: 'Unknown classification value' }
+				}
 			} else {
-				// Will define all other agents later as desired
-				ai_output_json = { type: 'html', html: 'Unknown classification value' }
+				// Should not happen
+				ai_output_json = {
+					type: 'html',
+					html: 'Unknown classification type'
+				}
 			}
 			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
@@ -175,7 +188,8 @@ async function classify_query_by_dataset_type(
 	comp_model_name: string,
 	llm_backend_type: string,
 	apilink: string,
-	aiRoute: string
+	aiRoute: string,
+	dataset_json: any
 ) {
 	const data = await readJSONFile(aiRoute)
 	let contents = data['general'] // The general description should be right at the top of the system prompt
@@ -185,7 +199,46 @@ async function classify_query_by_dataset_type(
 			contents += data[key]
 		}
 	}
-	const template = contents + ' Question: {' + user_prompt + '} Answer: {answer}'
+	// Parse out training data from the dataset JSON and add it to a string
+	const classification_ds = dataset_json.charts.filter((chart: any) => chart.type == 'Classification')
+	let train_iter = 0
+	let training_data = ''
+	if (classification_ds.length > 0 && classification_ds[0].TrainingData.length > 0) {
+		contents += classification_ds.SystemPrompt
+		for (const train_data of classification_ds[0].TrainingData) {
+			train_iter += 1
+			training_data +=
+				'Example question' +
+				train_iter.toString() +
+				': ' +
+				train_data.question +
+				' Example answer' +
+				train_iter.toString() +
+				':' +
+				JSON.stringify(train_data.answer) +
+				' '
+		}
+	}
+
+	//const SchemaConfig = {
+	//    path: path.resolve('#types'),
+	//    // Path to your tsconfig (required for proper type resolution)
+	//    tsconfig: path.resolve(serverconfig.binpath, '../tsconfig.json'),
+	//    // Name of the exported type we want to convert
+	//    type: 'ClassificationType',
+	//    // Only expose exported symbols (default)
+	//    expose: 'export' as 'export' | 'all' | 'none' | undefined,
+	//    // Put the whole schema under a top‑level $ref (optional but convenient)
+	//    topRef: true,
+	//    // Turn off type‑checking for speed (set to true if you want full checks)
+	//    skipTypeCheck: true
+	//}
+	//const generator: SchemaGenerator = createGenerator(SchemaConfig)
+	//const StringifiedSchema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // This will be generated at server startup later
+	//mayLog("StringifiedSchema:", StringifiedSchema)
+
+	const template =
+		contents + ' training data is as follows:' + training_data + ' Question: {' + user_prompt + '} Answer: {answer}'
 
 	let response: string
 	if (llm_backend_type == 'SJ') {
@@ -198,8 +251,8 @@ async function classify_query_by_dataset_type(
 		// Will later add support for azure server also
 		throw 'Unknown LLM backend'
 	}
-	//mayLog('response:', response)
-	return JSON.parse(response)['answer']
+	mayLog('response:', response)
+	return JSON.parse(response)
 }
 
 async function extract_summary_terms(
@@ -208,7 +261,7 @@ async function extract_summary_terms(
 	comp_model_name: string,
 	apilink: string,
 	dataset_db: string,
-	ai_json: string,
+	dataset_json: any,
 	genedb: string,
 	ds: any
 ) {
@@ -242,8 +295,6 @@ async function extract_summary_terms(
 		.map(str => str.toLowerCase()) // Keep only letters, numbers, and whitespace and then split on whitespace and convert to lowercase
 	const common_genes = words.filter(item => genes_list.includes(item)) // The reason behind showing common genes that are actually present in the genedb is because otherwise showing ~20000 genes would increase the number of tokens significantly and may cause the LLM to loose context. Much easier to parse out relevant genes from the user prompt.
 
-	// Read dataset JSON file
-	const dataset_json: any = await readJSONFile(ai_json)
 	// Parse out training data from the dataset JSON and add it to a string
 	const summary_ds = dataset_json.charts.filter((chart: any) => chart.type == 'Summary')
 	if (summary_ds.length == 0) throw 'summary information not present in dataset file'
@@ -269,6 +320,7 @@ async function extract_summary_terms(
 		'I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. The JSON schema is as follows: ' +
 		StringifiedSchema +
 		' term and term2 (if present) should ONLY contain names of the fields from the sqlite db. The "simpleFilter" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both "term"/"term2" and "simpleFilter". There are two kinds of filter variables: "Categorical" and "Numeric". "Categorical" variables are those variables which can have a fixed set of values e.g. gender, race. They are defined by the "CategoricalFilterTerm" which consists of "term" (a field from the sqlite3 db)  and "category" (a value of the field from the sqlite db).  "Numeric" variables are those which can have any numeric value. They are defined by "NumericFilterTerm" and contain  the subfields "term" (a field from the sqlite3 db), "start" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and "stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. ' +
+		summary_ds.SystemPrompt +
 		rag_docs.join(',') +
 		' training data is as follows:' +
 		training_data
