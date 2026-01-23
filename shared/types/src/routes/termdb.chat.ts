@@ -65,3 +65,15 @@ export type DbValue = {
 	key: string
 	value: any
 }
+
+export type ClassificationType = html_type | plot_type
+
+export type html_type = {
+	type: 'html'
+	html: string
+}
+
+export type plot_type = {
+	type: 'plot'
+	plot: string
+}
