@@ -463,7 +463,7 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, only
 	const types = filter ? filter.sampleTypes : sampleTypes //the filter adds the types in the filter, that need to be considered
 	if (!onlyChildren) onlyChildren = types.size > 1
 	const rows = await getAnnotationRows(q, termWrappers, filter, CTEs, values, types, onlyChildren)
-	const samples = await getSamples(q, rows)
+	const samples = await getSamples(q, rows, termWrappers)
 	return [samples, byTermId]
 }
 
@@ -510,35 +510,44 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs, values, t
 	return rows
 }
 
-export async function getSamples(q, rows) {
+const termTypesWithJsonValue = new Set(['termCollection'])
+
+// returns a data object indexed by sampleId then tw.$id
+// - may also preprocess data by tw.$id
+export async function getSamples(q, rows, termWrappers) {
+	// reshapes the data rows into the following:
+	// samples = {
+	//   [sampleId]: {
+	//      [termId]: {key, value} | {key, values[]}
+	//   }
+	// }
+	const tw$idsWithJson = new Set(termWrappers.filter(tw => termTypesWithJsonValue.has(tw.term?.type)).map(tw => tw.$id))
+
 	const samples = {} // to return
 	// if q.currentGeneNames is in use, must restrict to these samples
 	const limitMutatedSamples = await mayQueryMutatedSamples(q)
 	for (const { sample, key, term_id, value } of rows) {
-		addSample(sample, term_id, key, value)
-	}
-	return samples
-
-	function addSample(sample, term_id, key, value) {
 		if (limitMutatedSamples && !limitMutatedSamples.has(sample)) return // this sample is not mutated for given genes
 		if (!samples[sample]) samples[sample] = { sample }
+		const v = tw$idsWithJson.has(term_id) && typeof value == 'string' ? JSON.parse(value) : value
 		// this assumes unique term key/value for a given sample
 		// samples[sample][term_id] = { key, value }
 		if (!samples[sample][term_id]) {
 			// first value of term for a sample
-			samples[sample][term_id] = { key, value }
+			samples[sample][term_id] = { key, value: v }
 		} else {
 			// samples has multiple values for a term
 			// convert to .values[]
 			if (!samples[sample][term_id].values) {
 				const firstvalue = samples[sample][term_id] // first term value of the sample
-				if (firstvalue.key == key && firstvalue.value == value) return // duplicate
+				if (firstvalue.key === key && firstvalue.value === v) return // duplicate
 				samples[sample][term_id] = { values: [firstvalue] } // convert to object with .values[]
 			}
 			// add next term value to .values[]
-			samples[sample][term_id].values.push({ key, value })
+			samples[sample][term_id].values.push({ key, value: v })
 		}
 	}
+	return samples
 }
 
 // FIXME change currentGeneNames[] into list of tw (but may increase request payload a lot esp for matrix with many genes)

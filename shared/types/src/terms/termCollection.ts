@@ -19,6 +19,11 @@ export type TermCollection = BaseTerm & {
 export type RawTermCollection = TermCollection & {
 	type?: 'termCollection'
 	termlst?: string[]
+	propsByTermId?: {
+		[termId: string]: {
+			[prop: string]: any
+		}
+	}
 }
 
 export type TermCollectionQValues = MinBaseQ & {

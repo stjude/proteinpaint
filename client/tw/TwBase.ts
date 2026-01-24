@@ -64,6 +64,10 @@ export class TwBase {
 		}
 	}
 
+	getTw() {
+		return this.#tw
+	}
+
 	render(a: any): any {
 		console.log(a)
 		throw `should implement this method in subclass code, as needed`
@@ -76,7 +80,7 @@ export class TwBase {
 
 	getMinCopy() {
 		const tw = this.#tw
-		const copy: any = { term: {}, q: tw.q }
+		const copy: any = { term: {}, q: structuredClone(tw.q) }
 		if (tw.$id) copy.$id = tw.$id
 		if (tw.term) {
 			if (isDictionaryType(tw.term.type)) {
@@ -84,7 +88,7 @@ export class TwBase {
 				if (tw.term.id) copy.term.id = tw.term.id
 				if (tw.term.name) copy.term.name = tw.term.name
 				if (tw.term.type) copy.term.type = tw.term.type
-				if (tw.term.values) copy.term.values = tw.term.values
+				//if (tw.term.values) copy.term.values = tw.term.values
 				if ((tw.term as any).groupsetting) copy.term.groupsetting = (tw.term as any).groupsetting
 			} else {
 				// non-dictionary term
@@ -92,6 +96,9 @@ export class TwBase {
 				// cannot get rehydrated on server-side
 				copy.term = structuredClone(tw.term)
 			}
+		}
+		if (copy.q) {
+			delete copy.q.isAtomic
 		}
 		return copy
 	}
