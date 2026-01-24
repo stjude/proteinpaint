@@ -5,10 +5,10 @@
   "charts": [
     {
         "type":"Classification",
-	"SystemPrompt":"The first original publication pertaining to Proteinpaint is https://www.cell.com/cancer-cell/fulltext/S1535-6108(20)30659-0?dgcid=raven_jbs_etoc_email. GenomePaint/Proteinpaint is an interactive visualization platform for whole-genome, whole-exome, transcriptome, and epigenomic data of tumor samples. Its design captures the inter-relatedness between DNA variations and RNA expression, supporting in-depth exploration of both individual cancer genomes and full cohorts. \n Link to survovorship portal https://aacrjournals.org/cancerdiscovery/article/14/8/1403/746507. It shows datasets comprising demographic, diagnosis, treatment, outcome, and genomic data from survivors of childhood cancer.",
+	"SystemPrompt":"The first original publication pertaining to Proteinpaint is https://www.cell.com/cancer-cell/fulltext/S1535-6108(20)30659-0?dgcid=raven_jbs_etoc_email. GenomePaint/Proteinpaint is an interactive visualization platform for whole-genome, whole-exome, transcriptome, and epigenomic data of tumor samples. Its design captures the inter-relatedness between DNA variations and RNA expression, supporting in-depth exploration of both individual cancer genomes and full cohorts. \n Link to survovorship portal https://aacrjournals.org/cancerdiscovery/article/14/8/1403/746507. It shows datasets comprising demographic, diagnosis, treatment, outcome, and genomic data from survivors of childhood cancer. Put weblinks inside HTML <a> tag so that links are clickable",
 	"TrainingData":[
-            {"question":"Show link to survivorship portal", "answer": {"type":"html","html":"https://aacrjournals.org/cancerdiscovery/article/14/8/1403/746507"}},
-	    {"question":"Show main publication for proteinpaint", "answer": {"type":"html","html":"https://www.cell.com/cancer-cell/fulltext/S1535-6108(20)30659-0?dgcid=raven_jbs_etoc_email"}},
+            {"question":"Show link to survivorship portal", "answer": {"type":"html","html":"<a href=\"https://aacrjournals.org/cancerdiscovery/article/14/8/1403/746507\">Visit weblink</a>"}},
+	    {"question":"Show main publication for proteinpaint", "answer": {"type":"html","html":"<a href=\"https://www.cell.com/cancer-cell/fulltext/S1535-6108(20)30659-0?dgcid=raven_jbs_etoc_email\">Visit weblink</a>"}},
             {"question":"compare tp53 expression between genders", "answer": {"type":"plot","plot":"Summary"}},
 	    {"question":"Show summary of all molecular subtypes for patients with age from 10 to 40 years", "answer": {"type":"plot","plot":"Summary"}},
 	    {"question":"Show correlation between diagnosis groups and ancestry", "answer": {"type":"plot","plot":"Summary"}},
