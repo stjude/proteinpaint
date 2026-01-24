@@ -10,15 +10,19 @@ export type TermCollection = BaseTerm & {
 	type: 'termCollection'
 	// may be queried from backend, but should be available in frontend for termsetting edit menu
 	/** the full list of term.ids that are available in this collection */
-	lst?: string[]
-	termlst?: any[] // TODO: choose either lst or termlst
+	termlst: string[]
 	numerators?: string[]
 	newTvs?: boolean
+	propsByTermId: {
+		[termId: string]: {
+			[prop: string]: any
+		}
+	}
 }
 
 export type RawTermCollection = TermCollection & {
 	type?: 'termCollection'
-	termlst?: string[]
+	termlst: string[]
 	propsByTermId?: {
 		[termId: string]: {
 			[prop: string]: any

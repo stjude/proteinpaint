@@ -906,7 +906,7 @@ export class TermdbVocab extends Vocab {
 			await Promise.all(promises)
 			if (opts.loadingDiv) opts.loadingDiv.html('')
 		} catch (e) {
-			console.trace(e)
+			console.log(e)
 			if (typeof e == 'string') {
 				const _e = e.toLowerCase()
 				// TODO: standardize the auth error message across all SJ viz tools/portals,
@@ -983,7 +983,7 @@ export class TermdbVocab extends Vocab {
 			}
 			return data
 		} catch (e) {
-			console.trace(e)
+			console.log(e)
 			throw e
 		}
 	}

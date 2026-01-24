@@ -51,20 +51,20 @@ export class PlotBase {
 						const _v = v[k]
 						if (Array.isArray(_v)) {
 							for (const [j, tw] of (_v as any[]).entries()) {
-								if (routedTermTypes.has(tw.term?.type)) {
+								if (tw.type && routedTermTypes.has(tw.term?.type)) {
 									_v[j] = await TwRouter.init(tw, opts)
 								}
 							}
 						} else {
-							if (routedTermTypes.has(_v.term?.type)) v[k] = await TwRouter.init(_v, opts)
+							if (_v.type && routedTermTypes.has(_v.term?.type)) v[k] = await TwRouter.init(_v, opts)
 						}
 					} else {
-						if (routedTermTypes.has(v.term?.type)) config[key][i] = await TwRouter.init(v, opts)
+						if (v.type && routedTermTypes.has(v.term?.type)) config[key][i] = await TwRouter.init(v, opts)
 					}
 				}
 			} /*else if (typeof orig == 'object' && orig.contructor?.name != 'Object') {
 				config[key] = orig
-			}*/ else if (routedTermTypes.has(value.term?.type)) {
+			}*/ else if (value.type && routedTermTypes.has(value.term?.type)) {
 				config[key] = await TwRouter.initRaw(value, opts)
 			}
 		}

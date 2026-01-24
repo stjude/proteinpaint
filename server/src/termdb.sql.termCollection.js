@@ -6,11 +6,9 @@ export const termCollectionCTE = {
 			sql: `${tablename} AS (
 				SELECT sample,
 				sample as key, 
-                json_group_array(
-                json_object(
+                json_group_object(
                     term_id,
                     value
-                )
                 ) AS value 
 				FROM anno_float
 				WHERE term_id IN (${tw.term.termlst.map(() => '?').join(',')})

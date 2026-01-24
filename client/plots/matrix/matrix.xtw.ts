@@ -1,4 +1,4 @@
-import type { ContinuousXTW, DiscreteXTW, TermCollectionValues } from '#tw'
+import type { ContinuousXTW, DiscreteXTW, TermCollectionValues, TermCollectionTransformedValue } from '#tw'
 import { TwRouter, routedTermTypes } from '#tw'
 import type { TermWrapper } from '#types'
 import { convertUnits } from '#shared/helpers.js'
@@ -29,8 +29,11 @@ export async function getTermGroups(termgroups, app) {
 		if (tG.type == 'hierCluster') continue
 		const xtwlst: (MatrixTWObj | TermWrapper)[] = []
 		for (const tw of tG.lst) {
+			const inputTw = tw.getTw?.() || tw
 			xtwlst.push(
-				tw.type in opts.addons || routedTermTypes.has(tw.term.type) ? await TwRouter.init(tw.getTw?.() || tw, opts) : tw
+				inputTw.type in opts.addons && routedTermTypes.has(inputTw.term.type)
+					? await TwRouter.init(inputTw, opts)
+					: inputTw
 			)
 		}
 		tG.lst = xtwlst
@@ -189,7 +192,7 @@ const TermCollectionValuesAddons = {
 			this: TermCollectionValues,
 			cell: any,
 			anno: any,
-			value: string | number,
+			value: TermCollectionTransformedValue,
 			s: any,
 			t: any,
 			self: any,
@@ -199,7 +202,8 @@ const TermCollectionValuesAddons = {
 			_dy: number,
 			_i: number
 		) {
-			const tw = this.getTw()
+			//
+			const tw = this.getTw() as TermCollectionValues
 			//cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
 			const twSpecificSettings = self.config.settings.matrix.twSpecificSettings
 			if (!twSpecificSettings[tw.$id]) twSpecificSettings[tw.$id] = {}

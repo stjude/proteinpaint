@@ -21,7 +21,7 @@ export type TwOpts = {
 
 export class TwBase {
 	type: string
-	$id?: string
+	$id: string
 	isAtomic = true
 	#tw: TermWrapper
 	#isFrozen = false
@@ -40,7 +40,7 @@ export class TwBase {
 		this.#tw = tw
 		this.type = tw.type
 		this.isAtomic = true
-		if (tw.$id) this.$id = tw.$id
+		this.$id = typeof tw.$id == 'string' ? tw.$id : get$id()
 		if (tw.sortSamples) this.sortSamples = tw.sortSamples
 		if (tw.minNumSamples) this.minNumSamples = tw.minNumSamples
 		if (tw.valueFilter) this.valueFilter = tw.valueFilter
@@ -109,4 +109,11 @@ export class TwBase {
 		this.#isFrozen = true
 		return this
 	}
+}
+
+const idSuffix = `_${Math.random().toString().slice(-5)}_${Date.now().toString().slice(-8, -3)}`
+let i = 0
+
+function get$id(): string {
+	return `TwBase_${i++}_${idSuffix}`
 }
