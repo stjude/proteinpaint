@@ -1,47 +1,33 @@
-import type { RunChart2 } from '../RunChart2.ts'
-import type { RunChartResponse } from '#types'
-
-export type ChartData = {
-	id: string
-	series: {
-		median: number
-		points: Array<{
-			x: number
-			xName: string
-			y: number
-			sampleCount: number
-		}>
-	}
-}
+import type { RunChartRequest, RunChartResponse } from '#types'
+import { dofetch3 } from '#common/dofetch'
 
 export class RunChart2Model {
-	runChart2: RunChart2
-	charts: ChartData[] = []
+	runChart2: any
+	//Use the response type here
+	charts: any[] = []
 	chartData: RunChartResponse | null = null
 
-	constructor(runChart2: RunChart2) {
+	constructor(runChart2: any) {
 		this.runChart2 = runChart2
 	}
 
-	async initData() {
-		const requestArg = await this.runChart2.getRequestArg()
-		const response = await this.runChart2.fetchData(requestArg)
-		this.chartData = response
-		return response
+	async fetchData(config: any) {
+		const body = this.getRequestOpts(config)
+		const result: RunChartResponse = await dofetch3('termdb/runChart', { body })
+		if (result['error']) throw new Error(`RunChart2Model.getData() failed: ${result['error']}`)
+
+		return result.series
 	}
 
-	processData() {
-		if (!this.chartData || this.chartData.status !== 'ok' || !this.chartData.series) {
-			return
-		}
-
-		this.charts = []
-		for (let i = 0; i < this.chartData.series.length; i++) {
-			const series = this.chartData.series[i]
-			this.charts.push({
-				id: `series-${i}`,
-				series
-			})
+	getRequestOpts(config: any): RunChartRequest {
+		const state = this.runChart2.state
+		return {
+			genome: state.vocab.genome,
+			dslabel: state.vocab.dslabel,
+			filter: state.termfilter.filter,
+			term: config.term,
+			term2: config.term2,
+			aggregation: config.settings.runChart2.aggregation
 		}
 	}
 }
