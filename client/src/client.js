@@ -54,9 +54,6 @@ export function disappear(d, remove) {
 		})
 }
 
-export const tip = new Menu({ padding: '' })
-tip.d.style('z-index', 1000)
-
 export function newpane(pm) {
 	/*
 	parameter
