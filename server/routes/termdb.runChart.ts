@@ -17,25 +17,25 @@ export const api: RouteApi = {
 
 export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChartResponse> {
 	// Collect terms from term and term2
-	const terms: any = []
-	let xTermId: string | undefined
-	let yTermId: string | undefined
+	const terms: any = [q.term, q.term2]
+	const xTermId = q.term['$id']
+	const yTermId = q.term2['$id']
 
-	if (q.term && q.term2) {
-		const tws = [
-			{ term: q.term, q: { mode: 'continuous' }, $id: q.term.id },
-			{ term: q.term2, q: { mode: 'continuous' }, $id: q.term2.id }
-		]
-		terms.push(...tws)
-		xTermId = q.term.id
-		yTermId = q.term2.id
-	} else {
-		throw new Error('term and term2 must be provided')
-	}
+	// if (q.term && q.term2) {
+	// 	const tws = [
+	// 		{ term: q.term, q: { mode: 'continuous' }, $id: q.term.id },
+	// 		{ term: q.term2, q: { mode: 'continuous' }, $id: q.term2.id }
+	// 	]
+	// 	terms.push(...tws)
+	// 	xTermId = q.term.id
+	// 	yTermId = q.term2.id
+	// } else {
+	// 	throw new Error('term and term2 must be provided')
+	// }
 
-	if (!xTermId || !yTermId) {
-		throw new Error('Unable to determine term IDs for x and y axes')
-	}
+	// if (!xTermId || !yTermId) {
+	// 	throw new Error('Unable to determine term IDs for x and y axes')
+	// }
 
 	const { getData } = await import('../src/termdb.matrix.js')
 

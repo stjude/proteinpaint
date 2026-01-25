@@ -1,22 +1,24 @@
 import { PlotBase } from '#plots/PlotBase.ts'
-import { getCompInit, copyMerge, type RxComponent } from '#rx'
-import { dofetch3 } from '#common/dofetch'
-import { select2Terms } from '#dom/select2Terms'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi, type AppApi } from '#rx'
+import { select2Terms } from '#dom'
+import { fillTermWrapper } from 'termsetting/utils.ts'
+import { getCombinedTermFilter } from '#filter/filter.utils'
+import { getDefaultRunChart2Settings } from './defaults.ts'
+import { getRunChart2Controls } from './RunChart2Controls.ts'
+import { controlsInit } from '#plots/controls.js'
 import { RunChart2Model } from './model/RunChart2Model.ts'
-import { RunChart2View } from './view/RunChart2View.ts'
-import { RunChart2ViewModel } from './viewmodel/RunChart2ViewModel.ts'
-import { controlsInit } from '../controls.js'
+import { RunChart2ViewModel } from './viewModel/ViewModel.ts'
+import { RunChart2View } from './view/View.ts'
 
-class RunChart2 extends PlotBase implements RxComponent {
+export class RunChart2 extends PlotBase implements RxComponent {
 	static type = 'runChart2'
 	type: string
-	components: { controls: any }
+	components: { controls: ComponentApi }
+	dom: any
 	model!: RunChart2Model
+	viewModel!: RunChart2ViewModel
 	view!: RunChart2View
-	vm!: RunChart2ViewModel
-	settings: any
-	config: any
-
+	//See getMutableConfig() in PlotBase.ts
 	configTermKeys = ['term', 'term2']
 
 	constructor(opts: any, api: any) {
@@ -24,24 +26,28 @@ class RunChart2 extends PlotBase implements RxComponent {
 		this.opts = opts
 		this.api = api
 		this.type = RunChart2.type
+		if (this.opts.parentId) this.parentId = this.opts.parentId
+
 		this.components = {
-			controls: {}
+			controls: {} as ComponentApi
 		}
-		if (opts.holder) {
-			this.dom.holder = opts.holder
+		const controls = opts.controls ? opts.holder : opts.holder.append('div')
+		const chartHolder = opts.holder
+			.append('div')
+			.attr('data-testId', 'sjpp-runChart2-chartHolder')
+			.style('display', 'inline-block')
+		this.dom = {
+			controls,
+			chartHolder,
+			error: chartHolder.append('div').attr('data-testId', 'sjpp-runChart2-error')
+		}
+
+		if (opts.header) {
+			opts.header.append('span').style('font-size', '0.8em').style('opacity', 0.7).text('RUN CHART')
 		}
 	}
 
-	async init(appState: any) {
-		const state: any = this.getState(appState)
-		this.config = structuredClone(state.config)
-		this.settings = this.config.settings?.[this.type] || {}
-		this.view = new RunChart2View(this)
-		this.model = new RunChart2Model(this)
-		this.vm = new RunChart2ViewModel(this)
-	}
-
-	reactsTo(action) {
+	reactsTo(action: any) {
 		if (action.type.includes('cache_termq')) return true
 		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true
@@ -54,69 +60,100 @@ class RunChart2 extends PlotBase implements RxComponent {
 		}
 	}
 
-	//Need to implement init() here
-	getState(appState) {
+	getState(appState: any) {
 		const config = appState.plots.find(p => p.id === this.id)
-		this.state = { config }
-		return { config }
-	}
-
-	async main() {
-		this.config = structuredClone(this.state.config)
-		this.settings = this.config.settings?.[this.type] || {}
-
-		// Show loading
-		this.view.dom.loadingDiv.style('display', 'block')
-
-		try {
-			await this.model.initData()
-			this.model.processData()
-			await this.setControls()
-			this.vm.render()
-			this.view.dom.loadingDiv.style('display', 'none')
-		} catch (error: any) {
-			this.view.dom.loadingDiv.style('display', 'none')
-			this.view.dom.errorDiv.style('display', 'block').text(`Error: ${error.message || error}`)
-			console.error('RunChart2 error:', error)
+		if (!config) {
+			throw new Error(
+				`No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+			)
 		}
-	}
+		const parentConfig = appState.plots.find(p => p.id === this.parentId)
+		const termfilter = getCombinedTermFilter(appState, config.filter || parentConfig?.filter)
 
-	async fetchData(requestArg: any) {
-		const result = await dofetch3('termdb/runChart', { body: requestArg })
-		if (result.error) {
-			throw new Error(result.error)
-		}
-		return result
-	}
-
-	async setControls() {
-		this.view.dom.controlsHolder.selectAll('*').remove()
-		const inputs = await this.view.getControlInputs()
-		this.components = {
-			controls: await controlsInit({
-				app: this.app,
-				id: this.id,
-				holder: this.view.dom.controlsHolder,
-				inputs
+		return {
+			termdbConfig: appState.termdbConfig,
+			termfilter,
+			vocab: appState.vocab,
+			config: Object.assign({}, config, {
+				settings: {
+					runChart2: config.settings.runChart2
+				}
 			})
 		}
 	}
 
-	async getRequestArg() {
+	async initControls() {
+		this.components.controls = await controlsInit({
+			app: this.app,
+			id: this.id,
+			holder: this.dom.controls.style('display', 'inline-block'),
+			inputs: getRunChart2Controls(this.app)
+		})
+
+		/** This will not work until getCharts is implemented
+		 * Remove btn until implementation. */
+		const downloadBtn = this.dom.controls.select('div > svg.bi.bi-download')
+		if (downloadBtn) downloadBtn.remove()
+	}
+
+	async init() {
+		await this.initControls()
+	}
+
+	async main() {
+		const c = this.state.config
+		if (c.childType != this.type && c.chartType != this.type) return
+
 		const config = await this.getMutableConfig()
-		const reqArg: any = {
-			genome: this.app.vocabApi.vocab.genome,
-			dslabel: this.app.vocabApi.vocab.dslabel,
-			term: config.term,
-			term2: config.term2,
-			aggregation: this.settings.aggregation || config.aggregation || 'mean'
+
+		try {
+			this.model = new RunChart2Model(this)
+			const data = await this.model.fetchData(config)
+			if (!data) {
+				this.dom.error.text('No data available for the selected terms and filter.')
+			}
+			const settings = config.settings.runChart2
+			this.viewModel = new RunChart2ViewModel(settings)
+			const viewData = this.viewModel.map(data)
+
+			if (!this.dom.chartHolder.empty()) {
+				this.dom.chartHolder.selectAll('*').remove()
+			}
+			this.view = new RunChart2View(viewData, settings, this.dom.chartHolder)
+		} catch (e) {
+			console.error(e)
+			throw new Error(`RunChart2.main() failed: ${e}`)
 		}
-		return reqArg
 	}
 }
 
 export const runChart2Init = getCompInit(RunChart2)
 export const componentInit = runChart2Init
+
+export async function getPlotConfig(opts: any, app: AppApi) {
+	if (!opts.term) throw new Error('opts.term missing')
+	if (!opts.term2) throw new Error('opts.term2 missing')
+
+	try {
+		await fillTermWrapper(opts.term, app.vocabApi)
+		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
+	} catch (e) {
+		console.error(e)
+		throw new Error(`runChart2 getPlotConfig() failed: ${e}`)
+	}
+
+	const defaultConfig = app.vocabApi.termdbConfig?.plotConfigByCohort?.default?.[opts.chartType]
+
+	const config: any = {
+		//Disable the filter in the sandbox header as this is not implemented yet
+		hidePlotFilter: true,
+		settings: {
+			controls: { isOpen: false },
+			runChart2: getDefaultRunChart2Settings(opts)
+		}
+	}
+	return copyMerge(config, defaultConfig, opts)
+}
 
 export function makeChartBtnMenu(holder, chartsInstance) {
 	/*
@@ -169,37 +206,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			config: {
 				chartType: 'runChart2',
 				term: { term: xterm, q: { mode: 'continuous' } },
-				term2: { term: yterm, q: { mode: 'continuous' } },
-				name: `${xterm.name} vs ${yterm.name}`
+				term2: { term: yterm, q: { mode: 'continuous' } }
 			}
 		})
 	}
-}
-
-export function getDefaultRunChart2Settings() {
-	return {
-		aggregation: 'mean',
-		svgw: 800,
-		svgh: 400,
-		defaultColor: '#1f77b4'
-	}
-}
-
-export function getPlotConfig(opts) {
-	if (!opts.term) throw 'opts.term missing' // for X axis
-	if (!opts.term2) throw 'opts.term2 missing' // for Y axis
-
-	const defaultConfig = opts.app?.vocabApi?.termdbConfig?.plotConfigByCohort?.default?.['runChart2']
-	const settings = copyMerge(getDefaultRunChart2Settings(), defaultConfig?.settings)
-
-	const config: any = {
-		settings: {
-			controls: {
-				isOpen: false
-			},
-			runChart2: settings
-		}
-	}
-
-	return copyMerge(config, defaultConfig, opts)
 }
