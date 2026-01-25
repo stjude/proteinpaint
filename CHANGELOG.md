@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- do not create menu tip until after runpp() call, to prevent errors with missing document.body or arg.holder
+
 
 ## 2.172.0
 
