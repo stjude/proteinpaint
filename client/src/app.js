@@ -76,7 +76,10 @@ launchGdcMaf
 gdcbamslice
 */
 
-let headtip
+// uncomment the early new menu instantiation below, to test by opening http://localhost:3000/front.html,
+// should see `Uncaught TypeError: Cannot set properties of null (setting 'ancestor_menus')` in the
+// browser console; TODO: create an automated test for front bundling to detect bug-fix regressions
+let headtip // = new Menu({ padding: '0px', offsetX: 0, offsetY: 0 }); headtip.d.style('z-index', 5555);
 
 export function runproteinpaint(arg) {
 	if (document.body === null || arg.holder === null) {
