@@ -76,17 +76,30 @@ launchGdcMaf
 gdcbamslice
 */
 
-const headtip = new Menu({ padding: '0px', offsetX: 0, offsetY: 0 })
-headtip.d.style('z-index', 5555)
-// headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
+let headtip
 
 export function runproteinpaint(arg) {
+	if (document.body === null || arg.holder === null) {
+		// sanity check for when an embedder calls runpp() before the holder element is ready;
+		// examples of when this might happen: putting the runpp() call within `<head>`,
+		// which may not work if there are no async steps before the runpp() call
+		const e = `Call runproteinpaint() only after arg.holder is ready`
+		alert(e)
+		console.error(e)
+	}
+
 	if (arg.styles) {
 		// must load portal css overrides after imports of git-tracked css files
 		if (typeof arg.styles != 'string') throw 'arg.styles{} not string'
 		const styles = new CSSStyleSheet()
 		styles.replaceSync(arg.styles)
 		document.adoptedStyleSheets.push(styles)
+	}
+
+	if (!headtip) {
+		headtip = new Menu({ padding: '0px', offsetX: 0, offsetY: 0 })
+		headtip.d.style('z-index', 5555)
+		// headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
 	}
 
 	/* the "app" object is the main Proteinpaint instance, unique for each runproteinpaint() call
@@ -126,6 +139,7 @@ export function runproteinpaint(arg) {
 		d3selectAll('.sja_pane').remove()
 		return
 	}
+
 	// parse embedding arguments
 	app.holder = d3select(arg.holder || document.body)
 		.append('div')
