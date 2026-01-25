@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Decoupled the filter helper class, ListSamples, from the box plot into a reusable component for all summary plots. Implemented in both the violin and box plot. Included in this improvement is new unit and integration tests. The implementation centralizes all use-case logic, improving scalability and maintainability.
+
 Fixes:
 - do not create menu tip until after runpp() call, to prevent errors with missing document.body or arg.holder
 
