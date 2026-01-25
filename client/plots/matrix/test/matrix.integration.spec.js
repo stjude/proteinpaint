@@ -143,6 +143,7 @@ tape('termCollection', function (test) {
 			1,
 			`should render the expected number of serieses`
 		)
+		// TODO: test sorting after simulated use of edit menu
 		if (test._ok) matrix.Inner.app.destroy()
 		test.end()
 	}
@@ -3113,9 +3114,9 @@ function getGenes() {
 }
 function getTermCollection() {
 	return {
-		isAtomic: true,
+		//isAtomic: true,
 		type: 'TermCollectionTWValues',
-		$id: 'TwBase_0__48243_99155',
+		//$id: 'TwBase_0__48243_99155',
 		term: {
 			collectionId: 'Fake Collection 1',
 			type: 'termCollection',
