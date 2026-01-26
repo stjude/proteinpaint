@@ -58,8 +58,15 @@ export class RunChart2ViewModel {
 		}
 
 		// Create scales
+		// For x-axis, use the actual decimal year values (e.g., 2024.01, 2024.02)
+		// This ensures proper spacing between months
+		const xMin = Math.min(...points.map(p => p.x))
+		const xMax = Math.max(...points.map(p => p.x))
+
+		// Add padding to the domain to prevent points from touching the edges
+		const xPadding = (xMax - xMin) * 0.05 || 0.1
 		const xScale = scaleLinear()
-			.domain([Math.min(...points.map(p => p.x)), Math.max(...points.map(p => p.x))])
+			.domain([xMin - xPadding, xMax + xPadding])
 			.range([0, innerWidth])
 
 		const yScale = scaleLinear()
@@ -117,18 +124,25 @@ export class RunChart2ViewModel {
 		}
 
 		// Draw axes
-		const xAxis = axisBottom(xScale).tickFormat(d => {
-			const point = points.find(p => Math.abs(p.x - Number(d)) < 0.01)
-			return point ? point.xName : String(d)
-		})
+		// Use all point x values as tick values to show all months
+		const xTickValues = points.map(p => p.x)
+
+		const xAxis = axisBottom(xScale)
+			.tickValues(xTickValues)
+			.tickFormat(d => {
+				const point = points.find(p => Math.abs(p.x - Number(d)) < 0.01)
+				return point ? point.xName : String(d)
+			})
 
 		const yAxis = axisLeft(yScale)
 
-		g.append('g')
-			.attr('transform', `translate(0,${innerHeight})`)
-			.call(xAxis)
+		const xAxisGroup = g.append('g').attr('transform', `translate(0,${innerHeight})`).call(xAxis)
+
+		// Style all x-axis labels - use smaller font and adjust rotation to minimize overlap
+		xAxisGroup
 			.selectAll('text')
 			.style('text-anchor', 'end')
+			.style('font-size', '10px')
 			.attr('dx', '-.8em')
 			.attr('dy', '.15em')
 			.attr('transform', 'rotate(-45)')

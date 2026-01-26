@@ -7,7 +7,7 @@ import { RunChart2View } from './view/RunChart2View.ts'
 import { RunChart2ViewModel } from './viewmodel/RunChart2ViewModel.ts'
 import { controlsInit } from '../controls.js'
 
-class RunChart2 extends PlotBase implements RxComponent {
+export class RunChart2 extends PlotBase implements RxComponent {
 	static type = 'runChart2'
 	type: string
 	components: { controls: any }
