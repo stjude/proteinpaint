@@ -1,1 +1,2 @@
-
+Features:
+- GRIN2: Inceased max lesions per type cap from 110,000 to 1.6 million
