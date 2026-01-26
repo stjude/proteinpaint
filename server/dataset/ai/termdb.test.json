@@ -1,5 +1,6 @@
 {
   "hasGeneExpression": true,
+  "hasDE": true,  
   "db": "files/hg38/TermdbTest/db",
   "genedb": "anno/genes.hg38.test.db",
   "charts": [
@@ -21,6 +22,19 @@
 	]    
     },	  	
     {
+          "type": "DE",
+          "SystemPrompt":"", 
+          "TrainingData":[
+               {"question":"Show differential gene expression between men and women", "answer": {"group1":[{"term":"sex","category":"1"}],"group2":[{"term":"sex","category":"2"}]}},
+	       {"question":"Show volcano plot between men with age greater than 30 and women with age less than 50", "answer":{"group1":[{"term":"sex","category":"1"},{"term":"agedx", "start":30}],"group2":[{"term":"sex","category":"2"},{"term":"agedx", "stop":50}]}},
+       	       {"question":"Show volcano plot between white men and black women", "answer": {"group1":[{"term":"sex","category":"1"},{"term":"genetic_race","category":"European Ancestry"}],"group2":[{"term":"sex","category":"2"},{"term":"genetic_race","category":"African Ancestry"}]}}
+          ],
+          "TestData":[
+	      {"question":"Show differential gene expression between wilms tumor and neuroblastoma","answer":{"group1":[{"term":"diaggrp","category":"Wilms tumor"}], "group2":[{"term":"diaggrp","category":"Neuroblastoma"}]}},
+	      {"question":"Show differential gene expression between wilms tumor patients with age less than 20  and neuroblastoma patients with age greater than 60", "answer":{"group1":[{"term":"diaggrp","category":"Wilms tumor"},{"term":"agedx", "stop":20}], "group2":[{"term":"diaggrp","category":"Neuroblastoma"},{"term":"agedx", "start":60}]}}
+          ]	 
+    },
+    {
           "type": "Summary",
           "SystemPrompt":"The \"geneExpression\" subfield should ONLY contain genes names from the relevant genes list.", 
           "TrainingData":[
@@ -37,6 +51,6 @@
 	       {"question":"Show molecular subtypes for men greater than 60 yrs only", "answer":{"simpleFilter": [{"term":"sex","value":"1"},{"start":60.0,"lessThan":null,"term":"agedx"}],"term":"diaggrp"}},
 	       {"question":"Show TP53 gene expression between genders","answer":{"term":"sex","term2":"TP53"}}
           ]	 
-    } 
+    }  
   ]  
 }

@@ -87,6 +87,16 @@ function init({ genomes }) {
 					)
 					mayLog('Time taken for summary agent:', formatElapsedTime(Date.now() - time1))
 				} else if (classResult == 'dge') {
+					ai_output_json = extract_DE_search_terms_from_query(
+						q.prompt,
+						serverconfig.llm_backend,
+						comp_model_name,
+						apilink,
+						dataset_db,
+						dataset_json,
+						genedb,
+						ds
+					)
 					ai_output_json = { type: 'html', html: 'DE agent not implemented yet' }
 				} else {
 					// Will define all other agents later as desired
@@ -253,6 +263,48 @@ async function classify_query_by_dataset_type(
 	}
 	mayLog('response:', response)
 	return JSON.parse(response)
+}
+
+async function extract_DE_search_terms_from_query(
+	prompt: string,
+	llm_backend_type: string,
+	comp_model_name: string,
+	apilink: string,
+	dataset_db: string,
+	dataset_json: any,
+	genedb: string,
+	ds: any
+) {
+	if (dataset_json.hasDE) {
+		const rag_docs = await parse_dataset_db(dataset_db)
+		mayLog('rag_docs:', rag_docs)
+		mayLog('prompt:', prompt)
+		mayLog('llm_backend_type:', llm_backend_type)
+		mayLog('comp_model_name:', comp_model_name)
+		mayLog('genedb:', genedb)
+		mayLog('ds:', ds)
+
+		//const SchemaConfig = {
+		//    path: path.resolve('#types'),
+		//    // Path to your tsconfig (required for proper type resolution)
+		//    tsconfig: path.resolve(serverconfig.binpath, '../tsconfig.json'),
+		//    // Name of the exported type we want to convert
+		//    type: 'DEType',
+		//    // Only expose exported symbols (default)
+		//    expose: 'export' as 'export' | 'all' | 'none' | undefined,
+		//    // Put the whole schema under a top‑level $ref (optional but convenient)
+		//    topRef: true,
+		//    // Turn off type‑checking for speed (set to true if you want full checks)
+		//    skipTypeCheck: true
+		//}
+		//const generator: SchemaGenerator = createGenerator(SchemaConfig)
+		//const StringifiedSchema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // This commented out code generates the JSON schema below
+		const StringifiedSchema =
+			'{"$schema":"http://json-schema.org/draft-07/schema#","$ref":"#/definitions/DEType","definitions":{"DEType":{"type":"object","properties":{"group1":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"}},"group2":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"}}},"required":["group1","group2"],"additionalProperties":false},"FilterTerm":{"anyOf":[{"$ref":"#/definitions/CategoricalFilterTerm"},{"$ref":"#/definitions/NumericFilterTerm"}]},"CategoricalFilterTerm":{"type":"object","properties":{"term":{"type":"string"},"category":{"type":"string"}},"required":["term","category"],"additionalProperties":false},"NumericFilterTerm":{"type":"object","properties":{"term":{"type":"string"},"start":{"type":"number"},"stop":{"type":"number"}},"required":["term"],"additionalProperties":false}}}' // Will need to change this JSON schema if DEType changes or underlying FilterTerm changes
+		mayLog('StringifiedSchema:', StringifiedSchema)
+	} else {
+		return { type: 'html', html: 'Differential gene expression not supported for this dataset' }
+	}
 }
 
 async function extract_summary_terms(
@@ -539,9 +591,9 @@ async function parse_dataset_db(dataset_db: string) {
 
 function parse_db_rows(db_row: DbRows) {
 	let output_string: string =
-		'Name of the field is:' +
+		'Name of the field is:"' +
 		db_row.name +
-		'. This field is of the type:' +
+		'". This field is of the type:' +
 		db_row.term_type +
 		'. Description: ' +
 		db_row.description
@@ -550,7 +602,7 @@ function parse_db_rows(db_row: DbRows) {
 		output_string += 'This field contains the following possible values.'
 		for (const value of db_row.values) {
 			if (value.value && value.value.label) {
-				output_string += 'The key is ' + value.key + ' and the label is ' + value.value.label + '.'
+				output_string += 'The key is "' + value.key + '" and the label is "' + value.value.label + '".'
 			}
 		}
 	}
