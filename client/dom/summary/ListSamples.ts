@@ -132,7 +132,7 @@ export class ListSamples {
 			return
 		}
 		const key: any = termNum == 0 ? this.plot.chartId : this.plot.seriesId
-		if (!key) return
+		if (!key && key !== 0) return
 
 		const tvsEntry = {
 			type: 'tvs',
