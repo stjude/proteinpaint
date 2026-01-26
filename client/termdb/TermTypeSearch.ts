@@ -16,6 +16,7 @@ NOTE: dataset-specific overrides may be applied when the TermTypeSearch is initi
 
 const useCasesExcluded = {
 	matrix: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
+	facet: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
 	filter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
 	dictionary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
 	summary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],

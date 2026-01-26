@@ -118,9 +118,17 @@ class Facet extends PlotBase {
 			const label2 = config.rowTw.term.values?.[category2]?.label || category2
 			this.addRowLabel(tr, label2)
 			for (const category of categories) {
-				const samples = result.lst.filter(
-					s => s[config.columnTw.$id]?.key == category && s[config.rowTw.$id]?.key == category2
-				)
+				const samples = result.lst.filter(s => {
+					if (config.rowTw.term.type == 'termCollection') {
+						const value = s[config.rowTw.$id]?.value
+						if (value) {
+							const lst = JSON.parse(value)
+							return s[config.columnTw.$id]?.key == category && lst.some(d => d[category2])
+						}
+					} else {
+						return s[config.columnTw.$id]?.key == category && s[config.rowTw.$id]?.key == category2
+					}
+				})
 				const percent = this.config.settings.facet.showPercents
 					? ` <span style="color:gray;"> (${roundValueAuto(
 							(samples.length / result.lst.length) * 100,
@@ -296,12 +304,26 @@ class Facet extends PlotBase {
 	}
 
 	getCategories(tw, data) {
+		//console.log('tw:', tw)
 		let categories = []
-		for (const sample of data) {
-			let key = sample[tw.$id]?.key
-			if (key) {
-				if (!isNaN(key)) key = Number(key)
-				categories.push(key)
+		if (tw.term.type == 'termCollection') {
+			// termCollection
+			for (const sample of data) {
+				const value = sample[tw.$id]?.value
+				if (value) {
+					const lst = JSON.parse(value)
+					const termids = lst.map(d => Object.keys(d)[0])
+					categories.push(...termids)
+				}
+			}
+		} else {
+			// not termCollection
+			for (const sample of data) {
+				let key = sample[tw.$id]?.key
+				if (key) {
+					if (!isNaN(key)) key = Number(key)
+					categories.push(key)
+				}
 			}
 		}
 		const set = new Set(categories)
