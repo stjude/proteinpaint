@@ -17,7 +17,7 @@ export function mayRequireToken(tokenMessage = '') {
 	}
 }
 
-export function getMatrixRequestOpts(state) {
+export function getMatrixRequestOpts(state, config) {
 	/* requests data for all terms shown in matrix,
 		by creating request argument for getAnnotatedSampleData and run it
 		NOTE this excludes the term group used for hierCluster, as its data request is done separately
@@ -25,13 +25,11 @@ export function getMatrixRequestOpts(state) {
 	const terms = []
 
 	const termgroups =
-		this.chartType == 'hierCluster'
-			? state.config.termgroups.filter(grp => grp.type != 'hierCluster')
-			: state.config.termgroups
+		this.chartType == 'hierCluster' ? config.termgroups.filter(grp => grp.type != 'hierCluster') : config.termgroups
 	for (const grp of termgroups) {
 		terms.push(...getNormalizedTwLstCopy(grp.lst))
 	}
-	if (state.config.divideBy) terms.push(normalizeTwForRequest(structuredClone(state.config.divideBy)))
+	if (config.divideBy) terms.push(normalizeTwForRequest(structuredClone(config.divideBy)))
 
 	// !!! NOTE !!!
 	// all parameters here must remove payload properties that are
@@ -62,13 +60,18 @@ export function getMatrixRequestOpts(state) {
 }
 
 function getNormalizedTwLstCopy(twlst) {
-	const lst = structuredClone(twlst)
+	const lst = []
+	for (const tw of twlst) {
+		if (tw.type && tw.constructor.name != 'Object') lst.push(tw)
+		else lst.push(normalizeTwForRequest(tw))
+	}
 	lst.forEach(normalizeTwForRequest)
 	lst.sort(sortTwLst)
 	return lst
 }
 
-function normalizeTwForRequest(tw) {
+function normalizeTwForRequest(_tw) {
+	const tw = structuredClone(_tw)
 	if (!tw?.term) return
 	// These props are cohort-dependent and should be ignored like termfilter.filter0.
 	// Note that state filter, filter0 are always sent to the server for dataset-related requests,
@@ -90,7 +93,7 @@ function sortTwLst(twa, twb) {
 }
 
 export async function setData(_data) {
-	const opts = this.currRequestOpts?.matrix || this.getMatrixRequestOpts(this.state)
+	const opts = this.currRequestOpts?.matrix || this.getMatrixRequestOpts(this.state, this.config)
 	this.numTerms = opts.terms.length
 	const abortCtrl = new AbortController()
 	opts.signal = abortCtrl.signal

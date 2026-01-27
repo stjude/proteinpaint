@@ -41,18 +41,30 @@ export class PlotBase {
 		}
 
 		for (const key of this.configTermKeys) {
-			const value = config[key]
+			const value = config[key.split('.')[0]]
 			// const orig = this.state.config[key] // TODO: may reuse the original copy if there's a better way to mutate
 			if (!value) continue
 			if (Array.isArray(value)) {
-				for (const [i, tw] of value.entries()) {
-					/*const xtw = orig[i]
-					if (xtw.type && xtw.contructor?.name != 'Object') config[key][i] = xtw
-					else*/ if (routedTermTypes.has(tw.term?.type)) config[key][i] = TwRouter.init(tw, opts)
+				for (const [i, v] of value.entries()) {
+					if (key.includes('.')) {
+						const k = key.split('.')[1]
+						const _v = v[k]
+						if (Array.isArray(_v)) {
+							for (const [j, tw] of (_v as any[]).entries()) {
+								if (tw.type && routedTermTypes.has(tw.term?.type)) {
+									_v[j] = await TwRouter.init(tw, opts)
+								}
+							}
+						} else {
+							if (_v.type && routedTermTypes.has(_v.term?.type)) v[k] = await TwRouter.init(_v, opts)
+						}
+					} else {
+						if (v.type && routedTermTypes.has(v.term?.type)) config[key][i] = await TwRouter.init(v, opts)
+					}
 				}
 			} /*else if (typeof orig == 'object' && orig.contructor?.name != 'Object') {
 				config[key] = orig
-			}*/ else if (routedTermTypes.has(value.term?.type)) {
+			}*/ else if (value.type && routedTermTypes.has(value.term?.type)) {
 				config[key] = await TwRouter.initRaw(value, opts)
 			}
 		}

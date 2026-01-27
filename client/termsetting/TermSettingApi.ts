@@ -6,7 +6,7 @@ import { minimatch } from 'minimatch'
 // import { isNumericTerm } from '#shared/terms.js'
 import { copyMerge, deepEqual } from '#rx'
 import { select } from 'd3-selection'
-import { TwRouter, CategoricalBase, SnpBase, QualitativeBase, NumericBase } from '#tw'
+import { TwRouter, QualitativeBase, NumericBase, routedTermTypes } from '#tw'
 
 export const termsettingInit = opts => {
 	// TODO: may convert to async-await as needed to initialize,
@@ -84,8 +84,7 @@ export class TermSettingApi {
 		}
 		const otw = overrideTw ? JSON.parse(JSON.stringify(overrideTw)) : {}
 		const tw = overrideTw ? copyMerge(JSON.stringify(arg), otw) : arg
-		if (self.tw instanceof CategoricalBase || self.tw instanceof SnpBase || self.tw instanceof NumericBase)
-			self.tw = await TwRouter.initRaw(tw, self.opts)
+		if (routedTermTypes.has(tw.term.type)) self.tw = await TwRouter.initRaw(tw, self.opts)
 		if (self.opts.callback) self.opts.callback(tw)
 	}
 

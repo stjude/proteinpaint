@@ -1,11 +1,11 @@
-import type { ContinuousXTW, DiscreteXTW } from '#tw'
-import { TwRouter } from '#tw'
+import type { ContinuousXTW, DiscreteXTW, TermCollectionValues, TermCollectionTransformedValue } from '#tw'
+import { TwRouter, routedTermTypes } from '#tw'
 import type { TermWrapper } from '#types'
 import { convertUnits } from '#shared/helpers.js'
 
 let addons
 
-export function getTermGroups(termgroups, app) {
+export async function getTermGroups(termgroups, app) {
 	const termGroups = structuredClone(termgroups)
 	// should only set the addons once, it should not vary from one call to the next
 	if (!addons)
@@ -15,7 +15,8 @@ export function getTermGroups(termgroups, app) {
 			QualTWCustomGS: discreteAddons,
 			NumTWRegularBin: discreteAddons,
 			NumTWCustomBin: discreteAddons,
-			NumTWCont: continuousAddons
+			NumTWCont: continuousAddons,
+			TermCollectionTWValues: TermCollectionValuesAddons
 		}
 
 	const opts = {
@@ -28,7 +29,12 @@ export function getTermGroups(termgroups, app) {
 		if (tG.type == 'hierCluster') continue
 		const xtwlst: (MatrixTWObj | TermWrapper)[] = []
 		for (const tw of tG.lst) {
-			xtwlst.push(tw.type in opts.addons ? TwRouter.init(tw, opts) : tw)
+			const inputTw = tw.getTw?.() || tw
+			xtwlst.push(
+				inputTw.type in opts.addons && routedTermTypes.has(inputTw.term.type)
+					? await TwRouter.init(inputTw, opts)
+					: inputTw
+			)
 		}
 		tG.lst = xtwlst
 	}
@@ -175,6 +181,51 @@ const continuousAddons: MatrixTWObj = {
 						? t.counts.posMaxHt + twSettings.contBarGap - cell.height
 						: t.counts.posMaxHt + twSettings.contBarGap
 				cell.convertedValueLabel = !vc ? '' : convertUnits(cell.key, vc.fromUnit, vc.toUnit, vc.scaleFactor)
+			}
+		}
+	}
+}
+
+const TermCollectionValuesAddons = {
+	setCellProps: {
+		value: function (
+			this: TermCollectionValues,
+			cell: any,
+			anno: any,
+			value: TermCollectionTransformedValue,
+			s: any,
+			t: any,
+			self: any,
+			width: number,
+			height: number,
+			dx: number,
+			_dy: number,
+			_i: number
+		) {
+			//
+			const tw = this.getTw() as TermCollectionValues
+			//cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
+			const twSpecificSettings = self.config.settings.matrix.twSpecificSettings
+			if (!twSpecificSettings[tw.$id]) twSpecificSettings[tw.$id] = {}
+			const twSettings = twSpecificSettings[tw.$id]
+
+			if (!twSettings.contBarH) twSettings.contBarH = s.barh
+			if (!('gap' in twSettings)) twSettings.contBarGap = 4
+
+			cell.height = t.scales.pos(value.value)
+			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+			cell.y = t.counts.posMaxHt + twSettings.contBarGap - t.scales.pos(value.pre_val_sum) - cell.height
+			cell.label = value.label
+			cell.fill = twSettings[value.label]?.color || value.color || tw.term.propsByTermId?.[value.label]?.color
+			cell.value = value.value
+
+			// return the corresponding legend item data
+			return {
+				ref: t.ref,
+				group: tw.$id,
+				value: value.label,
+				order: -1,
+				entry: { key: value.label, label: value.label, fill: cell.fill }
 			}
 		}
 	}

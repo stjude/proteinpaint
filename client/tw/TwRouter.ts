@@ -130,7 +130,7 @@ export class TwRouter {
 		}
 
 		if (!tw.q) tw.q = {}
-		tw.q.isAtomic = true
+		if (!tw.q.isAtomic) tw.q.isAtomic = true
 		TwRouter.reshapeLegacyTw(tw)
 	}
 
