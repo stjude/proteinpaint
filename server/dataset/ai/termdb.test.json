@@ -1,6 +1,6 @@
 {
   "hasGeneExpression": true,
-  "hasDE": true,  
+  "hasDE": true,
   "db": "files/hg38/TermdbTest/db",
   "genedb": "anno/genes.hg38.test.db",
   "charts": [
