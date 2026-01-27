@@ -702,6 +702,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				maxCappedPoints: this.state.config.settings?.manhattan?.maxCappedPoints,
 				hardCap: this.state.config.settings?.manhattan?.hardCap,
 				binSize: this.state.config.settings?.manhattan?.binSize,
+				trackMemory: this.state.config.settings?.manhattan?.trackMemory,
 				...configValues
 			}
 
@@ -956,15 +957,28 @@ class GRIN2 extends PlotBase implements RxComponent {
 			}
 		}
 
-		// Display timing information
-		if (result.timing) {
+		// Display timing and peak memory information
+		if (result.timing && result.memoryProfile?.peak) {
 			this.dom.div
 				.append('div')
 				.style('margin', this.sectionMargin)
 				.style('font-size', `${this.optionsTextFontSize}px`)
 				.style('color', this.optionsTextColor)
 				.text(
-					`Analysis completed in ${result.timing.totalTime} (Processing: ${result.timing.processingTime}, GRIN2: ${result.timing.grin2Time}, Plotting: ${result.timing.plottingTime})`
+					`Analysis completed in ${result.timing.totalTime} (Processing: ${result.timing.processingTime}, GRIN2: ${
+						result.timing.grin2Time
+					}, Plotting: ${
+						result.timing.plottingTime
+					}). Peak memory usage: ${result.memoryProfile.peak.toLocaleString()} MB.`
+				)
+		} else if (result.timing) {
+			this.dom.div
+				.append('div')
+				.style('margin', this.sectionMargin)
+				.style('font-size', `${this.optionsTextFontSize}px`)
+				.style('color', this.optionsTextColor)
+				.text(
+					`Analysis completed in ${result.timing.totalTime} (Processing: ${result.timing.processingTime}, GRIN2: ${result.timing.grin2Time}, Plotting: ${result.timing.plottingTime}).`
 				)
 		}
 
@@ -1048,7 +1062,10 @@ export function getDefaultSettings(opts) {
 			binSize: 10,
 
 			// Hard cap regardless of data distribution
-			hardCap: 200
+			hardCap: 200,
+
+			// Track memory usage
+			trackMemory: true
 		}
 	}
 

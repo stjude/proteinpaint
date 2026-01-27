@@ -261,7 +261,7 @@ try:
 	]
 	
 	# 5. Run GRIN2
-	grin_results = grin_stats(lesion_df, gene_anno, chrom_size)
+	grin_results = grin_stats(lesion_df, gene_anno, chrom_size, track_memory=input_data.get("trackMemory", False))
 	# grin_results = timed_grin_stats(lesion_df, gene_anno, chrom_size)
 	if not isinstance(grin_results, dict):
 		write_error("grin_stats returned invalid results")
@@ -297,7 +297,8 @@ try:
 		"totalGenes": len(sorted_results),
 		"showingTop": num_rows,
 		"cacheFileName": cache_file_path,
-		"lesionCounts": {"byType": lesion_counts.to_dict()}
+		"lesionCounts": {"byType": lesion_counts.to_dict()},
+		"memoryProfile": grin_results.get("memory_profile", {})
 	}))
 
 except json.JSONDecodeError as e:
