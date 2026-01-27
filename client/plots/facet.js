@@ -89,7 +89,10 @@ class Facet extends PlotBase {
 				return
 			}
 			for (const category of categories) {
-				const label = config.columnTw.term.values?.[category]?.label || category
+				const label =
+					config.columnTw.term.type == 'termCollection'
+						? getTermCollectionName(config.columnTw, category)
+						: config.columnTw.term.values?.[category]?.label || category
 				this.addHeader(headerRow, label)
 			}
 			this.renderSampleTable(tbody, config, result, categories, categories2)
@@ -112,65 +115,100 @@ class Facet extends PlotBase {
 
 	renderSampleTable(tbody, config, result, categories, categories2) {
 		const cells = {}
-		for (const category2 of categories2) {
-			cells[category2] = {}
-			const tr = tbody.append('tr')
-			const label2 = config.rowTw.term.values?.[category2]?.label || category2
-			this.addRowLabel(tr, label2)
-			for (const category of categories) {
-				const samples = result.lst.filter(s => {
-					if (config.rowTw.term.type == 'termCollection') {
-						const value = s[config.rowTw.$id]?.value
-						if (value) {
-							const lst = JSON.parse(value)
-							return s[config.columnTw.$id]?.key == category && lst.some(d => d[category2])
-						}
-					} else {
-						return s[config.columnTw.$id]?.key == category && s[config.rowTw.$id]?.key == category2
-					}
-				})
-				const percent = this.config.settings.facet.showPercents
-					? ` <span style="color:gray;"> (${roundValueAuto(
-							(samples.length / result.lst.length) * 100,
-							true,
-							1
-					  )}%)</span>`
-					: ''
-				cells[category2][category] = { samples, selected: false }
-				const td = tr.append('td')
-				if (!samples.length) td.classed('highlightable-cell', true)
-				if (samples.length > 0) {
-					const colIdx = categories.indexOf(category) + 2
+		const hasTermCollection =
+			config.columnTw.term.type == 'termCollection' || config.rowTw.term.type == 'termCollection'
+		if (hasTermCollection) {
+			// termCollection term present
+			if (config.columnTw.term.type == 'termCollection' && config.rowTw.term.type == 'termCollection')
+				throw 'both terms cannot be termCollection'
+			for (const category2 of categories2) {
+				cells[category2] = {}
+				const tr = tbody.append('tr')
+				const label2 =
+					config.rowTw.term.type == 'termCollection'
+						? getTermCollectionName(config.rowTw, category2)
+						: config.rowTw.term.values?.[category2]?.label || category2
+				this.addRowLabel(tr, label2)
+				for (const category of categories) {
+					const samples = result.lst.filter(s => {
+						const colPass =
+							config.columnTw.term.type == 'termCollection'
+								? getTermCollectionData(s, config.columnTw, category)
+								: s[config.columnTw.$id]?.key == category
+						const rowPass =
+							config.rowTw.term.type == 'termCollection'
+								? getTermCollectionData(s, config.rowTw, category2)
+								: s[config.rowTw.$id]?.key == category2
+						return colPass && rowPass
+					})
+					const data = samples.map(s =>
+						config.columnTw.term.type == 'termCollection'
+							? getTermCollectionData(s, config.columnTw, category)
+							: getTermCollectionData(s, config.rowTw, category2)
+					)
+					const total = data.reduce((sum, v) => sum + v, 0)
+					const avg = total / data.length
+					const td = tr.append('td')
 					td.classed('sja_menuoption', true)
 						.style('text-align', 'center')
 						.style('border', '2.5px solid white')
-						.html(`${samples.length}${percent}`)
-						.on('mouseover', () => {
-							this.highlightColRow(tbody, tr, colIdx, '#fffec8')
-						})
-						.on('mouseout', () => {
-							this.highlightColRow(tbody, tr, colIdx, 'transparent')
-						})
-						.on('click', () => {
-							const selected = (cells[category2][category].selected = !cells[category2][category].selected)
-							if (selected) {
-								td.style('border', '1px solid blue')
-							} else {
-								td.style('border', '2.5px solid white')
-							}
+						.text(roundValueAuto(avg))
+				}
+			}
+		} else {
+			// no termCollection term present
+			for (const category2 of categories2) {
+				cells[category2] = {}
+				const tr = tbody.append('tr')
+				const label2 = config.rowTw.term.values?.[category2]?.label || category2
+				this.addRowLabel(tr, label2)
+				for (const category of categories) {
+					const samples = result.lst.filter(
+						s => s[config.columnTw.$id]?.key == category && s[config.rowTw.$id]?.key == category2
+					)
+					const percent = this.config.settings.facet.showPercents
+						? ` <span style="color:gray;"> (${roundValueAuto(
+								(samples.length / result.lst.length) * 100,
+								true,
+								1
+						  )}%)</span>`
+						: ''
+					cells[category2][category] = { samples, selected: false }
+					const td = tr.append('td')
+					if (!samples.length) td.classed('highlightable-cell', true)
+					if (samples.length > 0) {
+						const colIdx = categories.indexOf(category) + 2
+						td.classed('sja_menuoption', true)
+							.style('text-align', 'center')
+							.style('border', '2.5px solid white')
+							.html(`${samples.length}${percent}`)
+							.on('mouseover', () => {
+								this.highlightColRow(tbody, tr, colIdx, '#fffec8')
+							})
+							.on('mouseout', () => {
+								this.highlightColRow(tbody, tr, colIdx, 'transparent')
+							})
+							.on('click', () => {
+								const selected = (cells[category2][category].selected = !cells[category2][category].selected)
+								if (selected) {
+									td.style('border', '1px solid blue')
+								} else {
+									td.style('border', '2.5px solid white')
+								}
 
-							for (const category2 of categories2) {
-								for (const category of categories) {
-									if (cells[category2][category].selected) {
-										buttonDiv.style('display', '')
-										prompt.text('Choose how to use samples:')
-										return
+								for (const category2 of categories2) {
+									for (const category of categories) {
+										if (cells[category2][category].selected) {
+											buttonDiv.style('display', '')
+											prompt.text('Choose how to use samples:')
+											return
+										}
 									}
 								}
-							}
-							buttonDiv.style('display', 'none')
-							prompt.text('Click on cells to select samples')
-						})
+								buttonDiv.style('display', 'none')
+								prompt.text('Click on cells to select samples')
+							})
+					}
 				}
 			}
 		}
@@ -179,7 +217,7 @@ class Facet extends PlotBase {
 			.attr('data-testid', 'sjpp-facet-start-prompt')
 			.style('margin', '20px 0px 0px 15px')
 			.style('opacity', '0.7')
-			.text('Click on cells to select samples')
+			.text(hasTermCollection ? 'Average values are displayed' : 'Click on cells to select samples')
 		const buttonDiv = this.dom.mainDiv.append('div').style('margin', '20px 0px 0px 25px').style('display', 'none')
 		const btns = [
 			{
@@ -549,4 +587,21 @@ export async function getPlotConfig(opts, app) {
 	await fillTermWrapper(opts.rowTw, app.vocabApi)
 	const result = copyMerge(config, opts)
 	return result
+}
+
+function getTermCollectionName(tw, termid) {
+	const term = tw.term.lst.find(t => t.id == termid)
+	if (!term) throw 'term is missing'
+	return term.name
+}
+
+function getTermCollectionData(s, tw, termid) {
+	if (tw.term.type != 'termCollection') return
+	const value = s[tw.$id]?.value
+	if (value) {
+		const termlst = JSON.parse(value)
+		const term = termlst.find(t => Object.keys(t)[0] == termid)
+		const data = term[termid]
+		return data
+	}
 }
