@@ -347,15 +347,13 @@ class Facet extends PlotBase {
 	}
 
 	getCategories(tw, data) {
-		//console.log('tw:', tw)
 		let categories = []
 		if (tw.term.type == 'termCollection') {
 			// termCollection
 			for (const sample of data) {
 				const value = sample[tw.$id]?.value
 				if (value) {
-					const lst = JSON.parse(value)
-					const termids = lst.map(d => Object.keys(d)[0])
+					const termids = Object.keys(value)
 					categories.push(...termids)
 				}
 			}
@@ -613,7 +611,7 @@ export async function getPlotConfig(opts, app) {
 }
 
 function getTermCollectionName(tw, termid) {
-	const term = tw.term.lst.find(t => t.id == termid)
+	const term = tw.term.termlst.find(t => t.id == termid)
 	if (!term) throw 'term is missing'
 	return term.name
 }
@@ -622,9 +620,7 @@ function getTermCollectionData(s, tw, termid) {
 	if (tw.term.type != 'termCollection') return
 	const value = s[tw.$id]?.value
 	if (value) {
-		const termlst = JSON.parse(value)
-		const term = termlst.find(t => Object.keys(t)[0] == termid)
-		const data = term[termid]
+		const data = value[termid]
 		return data
 	}
 }
