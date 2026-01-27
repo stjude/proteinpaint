@@ -1,5 +1,6 @@
 import type { RouteApi, RunChartRequest, RunChartResponse } from '#types'
 import { runChartPayload } from '#types/checkers'
+import { getNumberFromDate } from '#shared/terms.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/runChart',
@@ -213,20 +214,36 @@ export function buildRunChartFromData(
 		console.log(`buildRunChartFromData: Skipped ${skippedSamples} sample(s) due to missing x or y values`)
 	}
 
+	function xFromBucket(b: { sortKey: number }) {
+		const yearNum = Math.floor(b.sortKey / 100)
+		const monthNum = b.sortKey % 100
+		const x = getNumberFromDate(new Date(yearNum, monthNum - 1, 15))
+		return Math.round(x * 100) / 100
+	}
+
 	const points = Object.values(buckets)
 		.sort((a, b) => a.sortKey - b.sortKey)
 		.map(b => {
+			const x = xFromBucket(b)
 			if (aggregation === 'proportion') {
 				const total = b.total || 0
 				const succ = b.success || 0
 				const y = total ? Math.round((succ / total) * 1000) / 1000 : 0
-				return { x: b.x, xName: b.xName, y, sampleCount: total }
+				return { x, xName: b.xName, y, sampleCount: total }
 			} else if (aggregation === 'count') {
 				const y = Math.round((b.countSum || 0) * 100) / 100
-				return { x: b.x, xName: b.xName, y, sampleCount: b.count }
+				return { x, xName: b.xName, y, sampleCount: b.count }
 			} else {
-				const avg = b.count ? Math.round((b.ySum / b.count) * 100) / 100 : 0
-				return { x: b.x, xName: b.xName, y: avg, sampleCount: b.count }
+				let y: number
+				if (aggregation === 'median' && (b.yValues?.length ?? 0) > 0) {
+					const sorted = [...b.yValues].sort((a, b) => a - b)
+					const mid = Math.floor(sorted.length / 2)
+					y = sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2
+				} else {
+					y = b.count ? b.ySum / b.count : 0
+				}
+				y = Math.round(y * 100) / 100
+				return { x, xName: b.xName, y, sampleCount: b.count }
 			}
 		})
 

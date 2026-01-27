@@ -3,4 +3,8 @@ export type RunChart2Settings = {
 	svgw: number
 	svgh: number
 	color: string
+	minXScale: null | number
+	maxXScale: null | number
+	minYScale: null | number
+	maxYScale: null | number
 }
