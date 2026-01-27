@@ -181,6 +181,7 @@ export type GRIN2Response = {
 			filePath: string
 			error: string
 		}>
+		lesionCap?: number
 		totalLesions?: number
 		processedLesions?: number
 		unprocessedSamples?: number
@@ -190,7 +191,6 @@ export type GRIN2Response = {
 				string, // Our key is the GRIN2 lesion type
 				{
 					count: number
-					capped: boolean
 					samples: number
 				}
 			>

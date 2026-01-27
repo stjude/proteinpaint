@@ -920,17 +920,15 @@ class GRIN2 extends PlotBase implements RxComponent {
 				const columns = [
 					{ label: 'Lesion Type' },
 					{ label: 'Count', sortable: true },
-					{ label: 'Samples', sortable: true },
-					{ label: 'Capped' }
+					{ label: 'Samples', sortable: true }
 				]
 
 				const rows = Object.entries(result.processingSummary.lesionCounts.byType).map(([type, typeData]) => {
-					const { count, capped, samples } = typeData as { count: number; capped: boolean; samples: number }
+					const { count, samples } = typeData as { count: number; samples: number }
 					return [
 						{ value: typeLabels[type] || type },
 						{ value: count.toLocaleString() },
-						{ value: samples?.toLocaleString() ?? '0' },
-						{ value: capped ? 'Yes' : 'No' }
+						{ value: samples?.toLocaleString() ?? '0' }
 					]
 				})
 
@@ -979,7 +977,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.style('font-size', `${this.optionsTextFontSize}px`)
 				.style('color', this.optionsTextColor)
 				.text(
-					`Note: Per-type lesion caps were reached before all samples could be processed. ` +
+					`Note: Lesion cap of ${result.processingSummary.lesionCap.toLocaleString()} was reached before all samples could be processed. ` +
 						`Analysis ran on ${result.processingSummary.processedSamples.toLocaleString()} of ${expectedToProcessSamples.toLocaleString()} samples.`
 				)
 		}
