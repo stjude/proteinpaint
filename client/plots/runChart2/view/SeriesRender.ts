@@ -1,5 +1,6 @@
 import { line } from 'd3-shape'
 import { rgb } from 'd3-color'
+import { table2col } from '#dom'
 import { roundValueAuto } from '#shared/roundValue.js'
 import type { RunChart2Settings } from '../Settings.ts'
 import type { RunChart2 } from '../RunChart2.ts'
@@ -73,6 +74,8 @@ export class SeriesRender {
 			.attr('stroke', '#fff')
 			.attr('stroke-width', 1)
 			.style('cursor', 'pointer')
+			.on('mouseover', (event: any, d: any) => this.showHoverTip(event, d))
+			.on('mouseout', () => this.hideHoverTip())
 			.on('click', (event: any, d: any) => {
 				if (this.runChart2) {
 					this.showPointMenu(event, d)
@@ -111,33 +114,39 @@ export class SeriesRender {
 		}
 	}
 
+	showHoverTip(event: any, d: any) {
+		const tip = this.runChart2?.dom?.hovertip
+		if (!tip) return
+		const cfg = this.runChart2?.state?.config
+		const xTermName = cfg?.term?.term?.name ?? 'X'
+		const yTermName = cfg?.term2?.term?.name ?? 'Y'
+		tip.clear().show(event.clientX, event.clientY)
+		const table = table2col({ holder: tip.d.append('div') })
+		table.addRow(xTermName, d.xName ?? String(d.x))
+		table.addRow(yTermName, roundValueAuto(d.y, true, 2))
+		table.addRow('Sample Count', String(d.sampleCount ?? ''))
+	}
+
+	hideHoverTip() {
+		this.runChart2?.dom?.hovertip?.hide()
+	}
+
 	showPointMenu(event: any, point: any) {
 		if (!this.runChart2 || !this.runChart2.dom.clickMenu) return
 
+		this.hideHoverTip()
+		const cfg = this.runChart2.state?.config
+		const xTermName = cfg?.term?.term?.name ?? 'X'
+		const yTermName = cfg?.term2?.term?.name ?? 'Y'
 		const menu = this.runChart2.dom.clickMenu
 		menu.clear()
 
 		const menuDiv = menu.d.append('div').attr('class', 'sja_menu_div')
 
 		const options = [
-			{
-				label: `Date: ${point.xName}`,
-				callback: () => {
-					menu.hide()
-				}
-			},
-			{
-				label: `Value: ${roundValueAuto(point.y, true, 2)}`,
-				callback: () => {
-					menu.hide()
-				}
-			},
-			{
-				label: `Sample Count: ${point.sampleCount}`,
-				callback: () => {
-					menu.hide()
-				}
-			}
+			{ label: `${xTermName}: ${point.xName ?? point.x}`, callback: () => menu.hide() },
+			{ label: `${yTermName}: ${roundValueAuto(point.y, true, 2)}`, callback: () => menu.hide() },
+			{ label: `Sample Count: ${point.sampleCount}`, callback: () => menu.hide() }
 		]
 
 		menuDiv
