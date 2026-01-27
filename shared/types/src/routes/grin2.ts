@@ -49,6 +49,9 @@ export type GRIN2Request = {
 	/** Bin size for Manhattan plot histogram bin size. Used in the calculation of dynamic y-axis capping process (default: 10) */
 	binSize: number
 
+	/* Track memory usage during GRIN2 processing */
+	trackMemory?: boolean
+
 	/** Filter from existing PP infrastructure */
 	filter?: any // Filter object passed to get_samples(filter, ds)
 
@@ -198,6 +201,16 @@ export type GRIN2Response = {
 	}
 	/** Cache file name for storing GRIN2 results */
 	cacheFileName?: string
+
+	/** Memory usage profile during GRIN2 processing */
+	memoryProfile?: {
+		start: number
+		after_prep: number
+		after_overlaps: number
+		after_counts: number
+		after_stats: number
+		peak: number
+	}
 }
 
 /**

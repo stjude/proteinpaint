@@ -159,6 +159,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 
 	// Step 3: Prepare input for Python script
 	const availableDataTypes = Object.keys(optionToDt).filter(key => key in request)
+	console.log('[GRIN2] Request:', request)
 	const pyInput = {
 		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 		chromosomelist: {} as { [key: string]: number },
@@ -166,8 +167,10 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		cacheFileName: generateCacheFileName(),
 		availableDataTypes: availableDataTypes,
 		maxGenesToShow: request.maxGenesToShow,
-		lesionTypeMap: buildLesionTypeMap(availableDataTypes)
+		lesionTypeMap: buildLesionTypeMap(availableDataTypes),
+		trackMemory: request.trackMemory
 	}
+	console.log('GRIN2 Python input:', pyInput)
 
 	// Build chromosome list from genome reference
 	for (const c in g.majorchr) {
@@ -189,6 +192,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	mayLog(`[GRIN2] Python processing took ${formatElapsedTime(grin2AnalysisTime)}`)
 
 	const resultData = JSON.parse(pyResult)
+	console.log('[GRIN2] GRIN2 Python result data:', resultData)
 
 	// Step 5: Prepare Rust input
 	const rustInput = {
@@ -237,7 +241,8 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 			totalTime: formatElapsedTime(totalTime)
 		},
 		processingSummary: processingSummary,
-		cacheFileName: resultData.cacheFileName
+		cacheFileName: resultData.cacheFileName,
+		memoryProfile: resultData.memoryProfile
 	}
 
 	return response
