@@ -1,6 +1,6 @@
 import { PlotBase } from '#plots/PlotBase.ts'
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi, type AppApi } from '#rx'
-import { select2Terms } from '#dom'
+import { select2Terms, icons as icon_functions, DownloadMenu, Menu } from '#dom'
 import { fillTermWrapper } from 'termsetting/utils.ts'
 import { getCombinedTermFilter } from '#filter/filter.utils'
 import { getDefaultRunChart2Settings } from './defaults.ts'
@@ -31,19 +31,30 @@ export class RunChart2 extends PlotBase implements RxComponent {
 		this.components = {
 			controls: {} as ComponentApi
 		}
+		// Add header text if header exists
+		if (opts.header) {
+			opts.header.append('span').style('font-size', '0.8em').style('opacity', 0.7).text('RUN CHART')
+		}
+
+		const buttonsDiv = opts.holder
+			.append('div')
+			.attr('data-testId', 'sjpp-runChart2-buttons')
+			.style('display', 'block')
+			.style('margin', '5px 0px')
+			.style('padding-left', '5px')
+
 		const controls = opts.controls ? opts.holder : opts.holder.append('div')
 		const chartHolder = opts.holder
 			.append('div')
 			.attr('data-testId', 'sjpp-runChart2-chartHolder')
 			.style('display', 'inline-block')
+
 		this.dom = {
 			controls,
 			chartHolder,
-			error: chartHolder.append('div').attr('data-testId', 'sjpp-runChart2-error')
-		}
-
-		if (opts.header) {
-			opts.header.append('span').style('font-size', '0.8em').style('opacity', 0.7).text('RUN CHART')
+			error: chartHolder.append('div').attr('data-testId', 'sjpp-runChart2-error'),
+			buttons: buttonsDiv,
+			clickMenu: new Menu({ padding: '5px' })
 		}
 	}
 
@@ -82,22 +93,73 @@ export class RunChart2 extends PlotBase implements RxComponent {
 		}
 	}
 
-	async initControls() {
+	async setControls(viewModel: RunChart2ViewModel) {
+		const range = { xMin: viewModel.xMin, xMax: viewModel.xMax, yMin: viewModel.yMin, yMax: viewModel.yMax }
+		this.dom.controls.selectAll('*').remove()
 		this.components.controls = await controlsInit({
 			app: this.app,
 			id: this.id,
 			holder: this.dom.controls.style('display', 'inline-block'),
-			inputs: getRunChart2Controls(this.app)
+			inputs: getRunChart2Controls(this.app, range)
 		})
+		this.components.controls.on('downloadClick.runChart2', async (event: any) => {
+			await this.download(event)
+		})
+	}
 
-		/** This will not work until getCharts is implemented
-		 * Remove btn until implementation. */
-		const downloadBtn = this.dom.controls.select('div > svg.bi.bi-download')
-		if (downloadBtn) downloadBtn.remove()
+	initButtons() {
+		// Reset button
+		const resetDiv = this.dom.buttons.append('div').style('display', 'inline-block').style('margin', '5px')
+		icon_functions['restart'](resetDiv, {
+			handler: () => this.resetToDefaults(),
+			title: 'Reset plot to defaults'
+		})
+	}
+
+	resetToDefaults() {
+		const defaultSettings = getDefaultRunChart2Settings()
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: {
+				settings: {
+					runChart2: defaultSettings
+				}
+			}
+		})
+	}
+
+	async download(event: any) {
+		const chartImages = this.getChartImages()
+		if (chartImages.length === 0) {
+			console.warn('No chart images available for download')
+			return
+		}
+		const filename = this.getDownloadFilename()
+		const menu = new DownloadMenu(chartImages, filename)
+		menu.show(event.clientX, event.clientY, event.target)
+	}
+
+	getChartImages() {
+		const chartImages: any[] = []
+		if (!this.view || !this.view.chartDom) return chartImages
+
+		const svg = this.view.chartDom.svg
+		if (svg && !svg.empty()) {
+			const chartName = this.state?.config?.term?.term?.name || 'runChart2'
+			chartImages.push({ name: chartName, svg })
+		}
+		return chartImages
+	}
+
+	getDownloadFilename() {
+		const termName = this.state?.config?.term?.term?.name || 'runChart2'
+		const term2Name = this.state?.config?.term2?.term?.name || ''
+		return term2Name ? `${termName}_${term2Name}` : termName
 	}
 
 	async init() {
-		await this.initControls()
+		this.initButtons()
 	}
 
 	async main() {
@@ -116,10 +178,12 @@ export class RunChart2 extends PlotBase implements RxComponent {
 			this.viewModel = new RunChart2ViewModel(settings)
 			const viewData = this.viewModel.map(data)
 
+			await this.setControls(this.viewModel)
+
 			if (!this.dom.chartHolder.empty()) {
 				this.dom.chartHolder.selectAll('*').remove()
 			}
-			this.view = new RunChart2View(viewData, settings, this.dom.chartHolder)
+			this.view = new RunChart2View(viewData, settings, this.dom.chartHolder, config, this)
 		} catch (e) {
 			console.error(e)
 			throw new Error(`RunChart2.main() failed: ${e}`)

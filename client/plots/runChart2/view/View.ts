@@ -7,10 +7,14 @@ export class RunChart2View {
 	viewData: any
 	settings: RunChart2Settings
 	chartDom: any
+	config: any
+	runChart2: any
 
-	constructor(viewData: any, settings: RunChart2Settings, holder: any) {
+	constructor(viewData: any, settings: RunChart2Settings, holder: any, config?: any, runChart2?: any) {
 		this.viewData = viewData
 		this.settings = settings
+		this.config = config
+		this.runChart2 = runChart2
 		const svg = holder.append('svg').attr('data-testId', 'sjpp-runChart2-svg')
 		this.chartDom = {
 			svg,
@@ -24,6 +28,11 @@ export class RunChart2View {
 	render() {
 		const plotDims = this.viewData.plotDims
 
+		this.chartDom.svg.selectAll('*').remove()
+
+		this.chartDom.xAxis = this.chartDom.svg.append('g').attr('data-testId', 'sjpp-runChart2-xAxis')
+		this.chartDom.yAxis = this.chartDom.svg.append('g').attr('data-testId', 'sjpp-runChart2-yAxis')
+
 		this.chartDom.svg.transition().attr('width', plotDims.svg.width).attr('height', plotDims.svg.height)
 
 		this.renderScale(plotDims.xAxis)
@@ -36,14 +45,42 @@ export class RunChart2View {
 			.attr('transform', `translate(${plotDims.xAxis.x}, ${plotDims.yAxis.y})`)
 
 		for (const series of this.viewData.series || []) {
-			new SeriesRender(series, plotDims, this.settings, seriesGroup)
+			new SeriesRender(series, plotDims, this.settings, seriesGroup, this.runChart2)
 		}
+
+		// Add axis labels
+		this.renderAxisLabels(plotDims)
+	}
+
+	renderAxisLabels(plotDims: any) {
+		const xLabel = this.config?.term?.term?.name || 'X Axis'
+		const yLabel = this.config?.term2?.term?.name || 'Y Axis'
+
+		const xAxisLabelY = plotDims.xAxis.y + 35
+		this.chartDom.svg
+			.append('text')
+			.attr('data-testId', 'sjpp-runChart2-xAxisLabel')
+			.attr('transform', `translate(${plotDims.xAxis.x + this.settings.svgw / 2}, ${xAxisLabelY})`)
+			.style('text-anchor', 'middle')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('fill', 'black')
+			.text(xLabel)
+
+		this.chartDom.svg
+			.append('text')
+			.attr('data-testId', 'sjpp-runChart2-yAxisLabel')
+			.attr('transform', `translate(25, ${plotDims.yAxis.y + this.settings.svgh / 2}) rotate(-90)`)
+			.style('text-anchor', 'middle')
+			.style('font-size', '14px')
+			.style('font-weight', '500')
+			.style('fill', 'black')
+			.text(yLabel)
 	}
 
 	renderScale(scale: any, isLeft = false) {
-		const scaleG = this.chartDom[isLeft ? 'yAxis' : 'xAxis']
-			.append('g')
-			.attr('transform', `translate(${scale.x}, ${scale.y})`)
+		const axisGroup = this.chartDom[isLeft ? 'yAxis' : 'xAxis']
+		const scaleG = axisGroup.append('g').attr('transform', `translate(${scale.x}, ${scale.y})`)
 
 		if (isLeft) {
 			// Y-axis: standard formatting
@@ -57,51 +94,36 @@ export class RunChart2View {
 				}
 			}
 
-			// Get unique x values and their corresponding xName labels
-			const xValueMap = new Map<number, string>()
+			const yearMap = new Map<number, number>() // year -> first month x value (e.g., 2024 -> 2024.01)
 			for (const point of allPoints) {
-				if (!xValueMap.has(point.x)) {
-					xValueMap.set(point.x, point.xName)
+				const year = Math.floor(point.x)
+				if (!yearMap.has(year)) {
+					// Store the first occurrence of this year (which should be the first month)
+					yearMap.set(year, point.x)
+				} else {
+					// Keep the smallest x value for this year (first month)
+					const currentX = yearMap.get(year)!
+					if (point.x < currentX) {
+						yearMap.set(year, point.x)
+					}
 				}
 			}
 
-			const xTickValues = Array.from(xValueMap.keys()).sort((a, b) => a - b)
-
-			// Limit number of ticks to prevent overlap (approximately 60px per label)
-			const minLabelSpacing = 60
-			const maxTicks = Math.floor(this.settings.svgw / minLabelSpacing)
-			let finalTickValues = xTickValues
-
-			if (xTickValues.length > maxTicks) {
-				// Select evenly distributed subset
-				const step = Math.ceil(xTickValues.length / maxTicks)
-				finalTickValues = []
-				for (let i = 0; i < xTickValues.length; i += step) {
-					finalTickValues.push(xTickValues[i])
-				}
-				// Always include the last tick
-				if (finalTickValues[finalTickValues.length - 1] !== xTickValues[xTickValues.length - 1]) {
-					finalTickValues.push(xTickValues[xTickValues.length - 1])
-				}
-			}
+			// Get sorted years and their corresponding x values
+			const years = Array.from(yearMap.keys()).sort((a, b) => a - b)
+			const yearTickValues = years.map(year => yearMap.get(year)!).sort((a, b) => a - b)
 
 			const xAxis = axisBottom(scale.scale)
-				.tickValues(finalTickValues)
+				.tickValues(yearTickValues)
 				.tickFormat(d => {
-					const xName = xValueMap.get(Number(d))
-					return xName || String(d)
+					const year = Math.floor(Number(d))
+					return String(year)
 				})
 
 			scaleG.call(xAxis)
 
-			// Rotate x-axis labels to prevent overlap
-			scaleG
-				.selectAll('text')
-				.style('text-anchor', 'end')
-				.style('font-size', '10px')
-				.attr('dx', '-.8em')
-				.attr('dy', '.15em')
-				.attr('transform', 'rotate(-45)')
+			// Style x-axis labels
+			scaleG.selectAll('text').style('text-anchor', 'middle').style('font-size', '12px')
 		}
 
 		axisstyle({

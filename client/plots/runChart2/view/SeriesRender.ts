@@ -2,19 +2,39 @@ import { line } from 'd3-shape'
 import { rgb } from 'd3-color'
 import { roundValueAuto } from '#shared/roundValue.js'
 import type { RunChart2Settings } from '../Settings.ts'
+import type { RunChart2 } from '../RunChart2.ts'
+
+/** Clamp value to [min, max] when set. Returns the capped coordinate (scatter-style axis cap). */
+function getCoordinate(val: number, min: number | null, max: number | null): number {
+	if (min != null && val < min) return min
+	if (max != null && val > max) return max
+	return val
+}
 
 export class SeriesRender {
 	series: any
 	plotDims: any
 	settings: RunChart2Settings
 	seriesGroup: any
+	runChart2: RunChart2 | undefined
 
-	constructor(series: any, plotDims: any, settings: RunChart2Settings, seriesGroup: any) {
+	constructor(series: any, plotDims: any, settings: RunChart2Settings, seriesGroup: any, runChart2?: RunChart2) {
 		this.series = series
 		this.plotDims = plotDims
 		this.settings = settings
 		this.seriesGroup = seriesGroup
+		this.runChart2 = runChart2
 		this.render()
+	}
+
+	/** Returns the calculated coordinate or the min/max axis cap set by the user (matches scatter getCoordinates). */
+	getCoordinates(d: { x: number; y: number }): { x: number; y: number } {
+		const cx = getCoordinate(d.x, this.settings.minXScale, this.settings.maxXScale)
+		const cy = getCoordinate(d.y, this.settings.minYScale, this.settings.maxYScale)
+		return {
+			x: this.plotDims.xAxis.scale(cx),
+			y: this.plotDims.yAxis.scale(cy)
+		}
 	}
 
 	render() {
@@ -26,10 +46,10 @@ export class SeriesRender {
 		// Sort points by x value to ensure proper line drawing
 		const sortedPoints = [...this.series.points].sort((a, b) => a.x - b.x)
 
-		// Draw line connecting all points
+		// Draw line connecting all points (cap y to minYScale/maxYScale before scale, like scatter getCoordinates)
 		const lineBuilder = line<{ x: number; y: number }>()
-			.x(d => this.plotDims.xAxis.scale(d.x))
-			.y(d => this.plotDims.yAxis.scale(d.y))
+			.x(d => this.getCoordinates(d).x)
+			.y(d => this.getCoordinates(d).y)
 
 		this.seriesGroup
 			.append('path')
@@ -46,18 +66,26 @@ export class SeriesRender {
 			.data(sortedPoints)
 			.enter()
 			.append('circle')
-			.attr('cx', d => this.plotDims.xAxis.scale(d.x))
-			.attr('cy', d => this.plotDims.yAxis.scale(d.y))
+			.attr('cx', d => this.getCoordinates(d).x)
+			.attr('cy', d => this.getCoordinates(d).y)
 			.attr('r', 4)
 			.attr('fill', color)
 			.attr('stroke', '#fff')
 			.attr('stroke-width', 1)
+			.style('cursor', 'pointer')
+			.on('click', (event: any, d: any) => {
+				if (this.runChart2) {
+					this.showPointMenu(event, d)
+				}
+			})
 
 		// Draw median line if median is available
 		if (this.series.median != null && !isNaN(this.series.median)) {
-			const yMedian = this.plotDims.yAxis.scale(this.series.median)
-			const xStart = this.plotDims.xAxis.scale(sortedPoints[0].x)
-			const xEnd = this.plotDims.xAxis.scale(sortedPoints[sortedPoints.length - 1].x)
+			const yMedian = this.plotDims.yAxis.scale(
+				getCoordinate(this.series.median, this.settings.minYScale, this.settings.maxYScale)
+			)
+			const xStart = this.getCoordinates(sortedPoints[0]).x
+			const xEnd = this.getCoordinates(sortedPoints[sortedPoints.length - 1]).x
 
 			// Draw median horizontal line
 			this.seriesGroup
@@ -81,5 +109,49 @@ export class SeriesRender {
 				.attr('fill', medianColor.toString())
 				.text(`M=${roundValueAuto(this.series.median, true, 1)}`)
 		}
+	}
+
+	showPointMenu(event: any, point: any) {
+		if (!this.runChart2 || !this.runChart2.dom.clickMenu) return
+
+		const menu = this.runChart2.dom.clickMenu
+		menu.clear()
+
+		const menuDiv = menu.d.append('div').attr('class', 'sja_menu_div')
+
+		const options = [
+			{
+				label: `Date: ${point.xName}`,
+				callback: () => {
+					menu.hide()
+				}
+			},
+			{
+				label: `Value: ${roundValueAuto(point.y, true, 2)}`,
+				callback: () => {
+					menu.hide()
+				}
+			},
+			{
+				label: `Sample Count: ${point.sampleCount}`,
+				callback: () => {
+					menu.hide()
+				}
+			}
+		]
+
+		menuDiv
+			.selectAll('div')
+			.data(options)
+			.enter()
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text(d => d.label)
+			.style('cursor', 'pointer')
+			.on('click', (event: any, d: any) => {
+				d.callback()
+			})
+
+		menu.show(event.clientX, event.clientY)
 	}
 }
