@@ -5,10 +5,12 @@ import path from 'path'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { mayLog } from '#src/helpers.ts'
+import os from 'os'
 import { get_samples } from '#src/termdb.sql.js'
 import { read_file, file_is_readable } from '#src/utils.js'
 import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dt2lesion, optionToDt, formatElapsedTime } from '#shared'
 import crypto from 'crypto'
+import { execSync } from 'child_process'
 
 /**
  * General GRIN2 analysis route
@@ -37,7 +39,13 @@ import crypto from 'crypto'
  */
 
 // Constants & types
-const MAX_LESIONS = serverconfig.features.grin2maxLesions || 500000 // Maximum total number of lesions to process to avoid overwhelming the production server
+// const MAX_LESIONS = serverconfig.features.grin2maxLesions || 500000 // Maximum total number of lesions to process to avoid overwhelming the production server
+const MAX_LESIONS = serverconfig.features.grin2maxLesions || 250000 // Maximum total number of lesions to process to avoid overwhelming the production server
+const GRIN2_MEMORY_BUDGET_MB = 950
+const GRIN2_CONCURRENCY_LIMIT = 10
+const MEMORY_BASE_MB = 260
+const MEMORY_PER_1K_LESIONS = 2.4
+const MIN_LESIONS = 50000
 
 export const api: RouteApi = {
 	endpoint: 'grin2',
@@ -67,7 +75,7 @@ function init({ genomes }) {
 
 			if (!ds.queries?.singleSampleMutation) throw new Error('singleSampleMutation query missing from dataset')
 
-			const result = await runGrin2(g, ds, request)
+			const result = await runGrin2WithLimit(g, ds, request)
 			res.json(result)
 		} catch (e: any) {
 			console.error('[GRIN2] Error stack:', e.stack)
@@ -79,6 +87,78 @@ function init({ genomes }) {
 
 			res.status(500).send(errorResponse)
 		}
+	}
+}
+
+// =============================================================================
+// CONCURRENCY and MEMORY MANAGEMENT
+// =============================================================================
+
+function getAvailableMemoryMB(): number {
+	try {
+		if (process.platform === 'darwin') {
+			// macOS: use vm_stat
+			const output = execSync('vm_stat').toString()
+			const pageSize = 16384 // Apple Silicon uses 16KB pages, Intel uses 4KB
+			const freeMatch = output.match(/Pages free:\s+(\d+)/)
+			const inactiveMatch = output.match(/Pages inactive:\s+(\d+)/)
+
+			const freePages = freeMatch ? parseInt(freeMatch[1]) : 0
+			const inactivePages = inactiveMatch ? parseInt(inactiveMatch[1]) : 0
+
+			// Available ≈ free + inactive
+			return ((freePages + inactivePages) * pageSize) / (1024 * 1024)
+		} else {
+			// Linux: use free command
+			const output = execSync('free -m').toString()
+			const lines = output.split('\n')
+			const memLine = lines.find(l => l.startsWith('Mem:'))
+			if (memLine) {
+				const parts = memLine.split(/\s+/)
+				return parseInt(parts[6]) // "available" column
+			}
+		}
+	} catch (e) {
+		mayLog(`[GRIN2] Memory check failed, using fallback: ${e}`)
+	}
+
+	// Fallback: os.freemem (less accurate but always works)
+	return os.freemem() / (1024 * 1024)
+}
+
+function getMaxLesions(): number {
+	const availableMemoryMB = getAvailableMemoryMB()
+	mayLog(`[GRIN2] Available system memory: ${availableMemoryMB.toFixed(0)} MB`)
+
+	// If server is under heavy load, reduce lesion cap
+	if (availableMemoryMB < GRIN2_MEMORY_BUDGET_MB * 2) {
+		const reducedBudget = availableMemoryMB * 0.4
+		mayLog(`[GRIN2] Reducing lesion cap due to memory constraints. New budget: ${reducedBudget.toFixed(2)} MB`)
+		const calculated = Math.floor((reducedBudget - MEMORY_BASE_MB) / MEMORY_PER_1K_LESIONS) * 1000
+		mayLog(`[GRIN2] Calculated lesion cap based on memory: ${calculated.toLocaleString()}`)
+		return Math.max(MIN_LESIONS, Math.min(MAX_LESIONS, calculated))
+	}
+
+	return MAX_LESIONS
+}
+
+let activeGrin2Jobs = 0
+
+async function runGrin2WithLimit(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Response> {
+	if (activeGrin2Jobs >= GRIN2_CONCURRENCY_LIMIT) {
+		throw new Error(
+			`GRIN2 analysis queue is full (${GRIN2_CONCURRENCY_LIMIT} concurrent analyses). Please try again in a few minutes.`
+		)
+	}
+
+	activeGrin2Jobs++
+	mayLog(`[GRIN2] Starting analysis. Active jobs: ${activeGrin2Jobs}/${GRIN2_CONCURRENCY_LIMIT}`)
+
+	try {
+		return await runGrin2(g, ds, request)
+	} finally {
+		activeGrin2Jobs--
+		mayLog(`[GRIN2] Analysis complete. Active jobs: ${activeGrin2Jobs}/${GRIN2_CONCURRENCY_LIMIT}`)
 	}
 }
 
@@ -159,7 +239,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 
 	// Step 3: Prepare input for Python script
 	const availableDataTypes = Object.keys(optionToDt).filter(key => key in request)
-	console.log('[GRIN2] Request:', request)
+	// console.log('[GRIN2] Request:', request)
 	const pyInput = {
 		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 		chromosomelist: {} as { [key: string]: number },
@@ -170,7 +250,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		lesionTypeMap: buildLesionTypeMap(availableDataTypes),
 		trackMemory: request.trackMemory
 	}
-	console.log('GRIN2 Python input:', pyInput)
+	// console.log('GRIN2 Python input:', pyInput)
 
 	// Build chromosome list from genome reference
 	for (const c in g.majorchr) {
@@ -192,7 +272,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	mayLog(`[GRIN2] Python processing took ${formatElapsedTime(grin2AnalysisTime)}`)
 
 	const resultData = JSON.parse(pyResult)
-	console.log('[GRIN2] GRIN2 Python result data:', resultData)
+	// console.log('[GRIN2] GRIN2 Python result data:', resultData)
 
 	// Step 5: Prepare Rust input
 	const rustInput = {
@@ -260,6 +340,8 @@ async function processSampleData(
 	request: GRIN2Request
 ): Promise<{ lesions: any[]; processingSummary: GRIN2Response['processingSummary'] }> {
 	const lesions: any[] = []
+	const maxLesions = getMaxLesions()
+	mayLog(`[GRIN2] Max lesions for this run: ${maxLesions.toLocaleString()}`)
 
 	// Track unique samples per lesion type for reporting
 	const samplesPerType = new Map<number, Set<string>>()
@@ -284,10 +366,10 @@ async function processSampleData(
 	}
 
 	for (let i = 0; i < samples.length; i++) {
-		if (lesions.length >= MAX_LESIONS) {
+		if (lesions.length >= maxLesions) {
 			const remaining = samples.length - i
 			if (remaining > 0) processingSummary.unprocessedSamples! += remaining
-			mayLog(`[GRIN2] Overall lesion cap (${MAX_LESIONS}) reached; stopping early.`)
+			mayLog(`[GRIN2] Overall lesion cap (${maxLesions}) reached; stopping early.`)
 			break
 		}
 
@@ -307,7 +389,7 @@ async function processSampleData(
 				: sampleLesions
 
 			// Only add lesions up to the cap
-			const remainingCapacity = MAX_LESIONS - lesions.length
+			const remainingCapacity = maxLesions - lesions.length
 			const lesionsToAdd = filteredLesions.slice(0, remainingCapacity)
 			lesions.push(...lesionsToAdd)
 
@@ -330,7 +412,7 @@ async function processSampleData(
 	}
 
 	processingSummary.processedLesions = lesions.length
-	processingSummary.lesionCap = MAX_LESIONS
+	processingSummary.lesionCap = maxLesions
 
 	// Build lesion counts for summary
 	const lesionCounts: any = {
