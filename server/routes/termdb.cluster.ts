@@ -9,8 +9,6 @@ import type {
 	ValidResponse,
 	SingletermResponse,
 	GeneExpressionQuery,
-	GeneExpressionQueryNative,
-	GeneExpressionQueryGdc,
 	RouteApi
 } from '#types'
 import { termdbClusterPayload } from '#types/checkers'
@@ -89,7 +87,7 @@ async function getResult(q: TermdbClusterRequest, ds: any) {
 	if (q.dataType == NUMERIC_DICTIONARY_TERM) {
 		;({ term2sample2value, byTermId, bySampleId } = await getNumericDictTermAnnotation(q, ds))
 	} else {
-		;({ term2sample2value, byTermId, bySampleId, skippedSexChrGenes } = await ds.queries[q.dataType].get(_q))
+		;({ term2sample2value, byTermId, bySampleId, skippedSexChrGenes } = await ds.queries[q.dataType].get(_q, ds)) // 2nd ds param needed for ds-supplied getter
 	}
 
 	/* remove term with a sample2value map of size 0 from term2sample2value
@@ -260,13 +258,15 @@ export async function validate_query_geneExpression(ds: any, genome: any) {
 	if (!q) return
 	q.geneExpression2bins = {} //this dict is used to store the default bin config for each gene searched, so it doesn't have to be recalculated each time
 
+	if (typeof q.get == 'function') return // ds supplied getter
+
 	if (q.src == 'gdcapi') {
-		gdc_validate_query_geneExpression(ds as GeneExpressionQueryGdc, genome)
+		gdc_validate_query_geneExpression(ds as GeneExpressionQuery, genome)
 		// q.get() added
 		return
 	}
 	if (q.src == 'native') {
-		await validateNative(q as GeneExpressionQueryNative, ds)
+		await validateNative(q as GeneExpressionQuery, ds)
 		return
 	}
 	throw 'unknown queries.geneExpression.src'
@@ -309,8 +309,8 @@ async function queryHDF5(hdf5_file, query) {
  * @param q - The gene expression query
  * @param ds - Dataset information
  */
-async function validateNative(q: GeneExpressionQueryNative, ds: any) {
-	q.file = path.join(serverconfig.tpmasterdir, q.file)
+async function validateNative(q: GeneExpressionQuery, ds: any) {
+	q.file = path.join(serverconfig.tpmasterdir, q.file!) // q.file must exist
 	q.samples = []
 
 	try {

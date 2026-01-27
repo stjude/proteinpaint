@@ -694,32 +694,30 @@ export type MetaboliteIntensityQueryNative = {
 
 export type MetaboliteIntensityQuery = MetaboliteIntensityQueryNative
 
-/** the geneExpression query */
-export type GeneExpressionQueryGdc = {
-	src: 'gdcapi'
-	geneExpression2bins?: { [index: string]: any }
-	/** gene expression unit (e.g. 'FPKM') */
-	unit?: string
-}
-
-export type GeneExpressionQueryNative = {
-	src: 'native'
+/** the geneExpression query
+three possibilities
+{ src: 'native', file }
+{ src: 'gdcapi' } // dynamically add get()
+{ src: 'gdcapi', get } // ds supplied get
+*/
+export type GeneExpressionQuery = {
+	src: 'native' | 'gdcapi' // when gdc getter can become supplied, will remove src
+	/** either ds-supplied or dynamically added getter */
+	get?: (param: any, ds: any) => void
 	/** bgzip-compressed, tabix-index file.
-	first line must be "#chr \t start \t stop \t gene \t sample1 \t ..." */
-	file: string
+	first line must be "#chr \t start \t stop \t gene \t sample1 \t ..."
+	(required when src=native and no ds-supplied getter)
+	*/
+	file?: string
 	/** dynamically added during server launch, list of sample integer IDs from file */
 	samples?: number[]
 	/** dynamically added flag during launch */
 	nochr?: boolean
-	/** dynamically added getter */
-	get?: (param: any) => void
 	/** This dictionary is used to store/cache the default bins calculated for a geneExpression term when initialized in the fillTermWrapper */
 	geneExpression2bins?: { [index: string]: any }
 	/** gene expression unit (e.g. 'FPKM') */
 	unit?: string
 }
-
-export type GeneExpressionQuery = GeneExpressionQueryGdc | GeneExpressionQueryNative
 
 export type SingleCellGeneExpressionNative = {
 	src: 'native'

@@ -196,7 +196,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				filter: q.filter,
 				filter0: q.filter0
 			}
-			const data = await q.ds.queries[tw.term.type].get(args)
+			const data = await q.ds.queries[tw.term.type].get(args, q.ds) // 2nd ds parameter is needed for ds-supplied getter
 			const values = data.term2sample2value.get(tw.$id)
 			for (const sampleId in values) {
 				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }

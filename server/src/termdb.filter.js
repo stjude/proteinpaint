@@ -366,7 +366,7 @@ async function get_snp(tvs, CTEname, ds) {
 async function get_geneExpression(tvs, CTEname, ds) {
 	const q = ds.queries?.geneExpression
 	if (!q) throw 'not supported' // guard against request to unsupported data. FIXME may improve filterui to gracefully handle such and avoid showing completely broken mass ui when the request comes from handwrite state or url
-	const data = await q.get({ terms: [{ $id, term: tvs.term }] })
+	const data = await q.get({ terms: [{ $id, term: tvs.term }] }, ds)
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
 async function get_metaboliteIntensity(tvs, CTEname, ds) {
