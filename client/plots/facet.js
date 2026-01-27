@@ -38,9 +38,7 @@ class Facet extends PlotBase {
 		}
 	}
 
-	async init(appState) {
-		await this.setControls()
-	}
+	async init(appState) {}
 
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
@@ -61,6 +59,9 @@ class Facet extends PlotBase {
 
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
+		this.hasTermCollection =
+			this.config.columnTw.term.type == 'termCollection' || this.config.rowTw.term.type == 'termCollection'
+		await this.setControls()
 		await this.renderTable()
 	}
 
@@ -115,12 +116,12 @@ class Facet extends PlotBase {
 
 	renderSampleTable(tbody, config, result, categories, categories2) {
 		const cells = {}
-		const hasTermCollection =
-			config.columnTw.term.type == 'termCollection' || config.rowTw.term.type == 'termCollection'
-		if (hasTermCollection) {
+		const aggregateBy = config.settings.facet.aggregateBy
+		if (this.hasTermCollection) {
 			// termCollection term present
 			if (config.columnTw.term.type == 'termCollection' && config.rowTw.term.type == 'termCollection')
 				throw 'both terms cannot be termCollection'
+			if (aggregateBy != 'avg' && aggregateBy != 'sum') throw 'unexpected aggregateBy value'
 			for (const category2 of categories2) {
 				cells[category2] = {}
 				const tr = tbody.append('tr')
@@ -152,7 +153,7 @@ class Facet extends PlotBase {
 					td.classed('sja_menuoption', true)
 						.style('text-align', 'center')
 						.style('border', '2.5px solid white')
-						.text(roundValueAuto(avg))
+						.text(aggregateBy == 'avg' ? roundValueAuto(avg) : roundValueAuto(total))
 				}
 			}
 		} else {
@@ -217,7 +218,11 @@ class Facet extends PlotBase {
 			.attr('data-testid', 'sjpp-facet-start-prompt')
 			.style('margin', '20px 0px 0px 15px')
 			.style('opacity', '0.7')
-			.text(hasTermCollection ? 'Average values are displayed' : 'Click on cells to select samples')
+			.text(
+				this.hasTermCollection
+					? `${aggregateBy == 'avg' ? 'Average' : 'Summed'} values are displayed`
+					: 'Click on cells to select samples'
+			)
 		const buttonDiv = this.dom.mainDiv.append('div').style('margin', '20px 0px 0px 25px').style('display', 'none')
 		const btns = [
 			{
@@ -510,6 +515,7 @@ class Facet extends PlotBase {
 	}
 
 	async setControls() {
+		this.dom.controlsHolder.selectAll('*').remove()
 		const inputs = [
 			{
 				type: 'term',
@@ -533,13 +539,27 @@ class Facet extends PlotBase {
 			},
 			{
 				boxLabel: '',
-				label: 'Show percents',
+				label: 'Show percent',
 				type: 'checkbox',
 				chartType: 'facet',
 				settingsKey: 'showPercents',
 				title: `Option to show/hide percents per cell`
 			}
 		]
+
+		if (this.hasTermCollection) {
+			inputs.push({
+				label: 'Aggregate by',
+				type: 'radio',
+				chartType: 'facet',
+				settingsKey: 'aggregateBy',
+				title: 'Aggregate values by',
+				options: [
+					{ label: 'Average', value: 'avg' },
+					{ label: 'Sum', value: 'sum' }
+				]
+			})
+		}
 
 		this.components = {
 			controls: await controlsInit({
@@ -578,7 +598,10 @@ export const componentInit = facetInit
 export async function getPlotConfig(opts, app) {
 	const config = {
 		settings: {
-			facet: { showPercents: false }
+			facet: {
+				showPercents: false,
+				aggregateBy: 'avg'
+			}
 		}
 	}
 	if (!opts.columnTw) throw '.columnTw{} missing'
