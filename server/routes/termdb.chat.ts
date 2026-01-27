@@ -96,7 +96,6 @@ function init({ genomes }) {
 						apilink,
 						dataset_db,
 						dataset_json,
-						genedb,
 						ds
 					)
 					mayLog('Time taken for DE agent:', formatElapsedTime(Date.now() - time1))
@@ -274,7 +273,6 @@ async function extract_DE_search_terms_from_query(
 	apilink: string,
 	dataset_db: string,
 	dataset_json: any,
-	genedb: string,
 	ds: any
 ) {
 	if (dataset_json.hasDE) {
@@ -302,7 +300,7 @@ async function extract_DE_search_terms_from_query(
 		//const generator: SchemaGenerator = createGenerator(SchemaConfig)
 		//const StringifiedSchema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // This commented out code generates the JSON schema below
 		const StringifiedSchema =
-			'{/"$schema/":/"http://json-schema.org/draft-07/schema#/",/"$ref/":/"#/definitions/DEType/",/"definitions/":{/"DEType/":{/"type/":/"object/",/"properties/":{/"group1/":{/"type/":/"array/",/"items/":{/"$ref/":/"#/definitions/FilterTerm/"}},/"group2/":{/"type/":/"array/",/"items/":{/"$ref/":/"#/definitions/FilterTerm/"}},/"method/":{/"type/":/"string/",/"enum/":[/"edgeR/",/"limma/",/"wilcoxon/"]}},/"required/":[/"group1/",/"group2/"],/"additionalProperties/":false},/"FilterTerm/":{/"anyOf/":[{/"$ref/":/"#/definitions/CategoricalFilterTerm/"},{/"$ref/":/"#/definitions/NumericFilterTerm/"}]},/"CategoricalFilterTerm/":{/"type/":/"object/",/"properties/":{/"term/":{/"type/":/"string/"},/"category/":{/"type/":/"string/"}},/"required/":[/"term/",/"category/"],/"additionalProperties/":false},/"NumericFilterTerm/":{/"type/":/"object/",/"properties/":{/"term/":{/"type/":/"string/"},/"start/":{/"type/":/"number/"},/"stop/":{/"type/":/"number/"}},/"required/":[/"term/"],/"additionalProperties/":false}}}'
+			'{"$schema":"http://json-schema.org/draft-07/schema#","$ref":"#/definitions/DEType","definitions":{"DEType":{"type":"object","properties":{"group1":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"}},"group2":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"}},"name1":{"type":"string"},"name2":{"type":"string"},"method":{"type":"string","enum":["edgeR","limma","wilcoxon"]}},"required":["group1","group2","name1","name2"],"additionalProperties":false},"FilterTerm":{"anyOf":[{"$ref":"#/definitions/CategoricalFilterTerm"},{"$ref":"#/definitions/NumericFilterTerm"}]},"CategoricalFilterTerm":{"type":"object","properties":{"term":{"type":"string"},"category":{"type":"string"}},"required":["term","category"],"additionalProperties":false},"NumericFilterTerm":{"type":"object","properties":{"term":{"type":"string"},"start":{"type":"number"},"stop":{"type":"number"}},"required":["term"],"additionalProperties":false}}}'
 		//mayLog('StringifiedSchema:', StringifiedSchema)
 
 		// Parse out training data from the dataset JSON and add it to a string
@@ -371,13 +369,14 @@ async function validate_DE_response(response: string, ds: any) {
 		if (validated_filters.html.length > 0) {
 			html += validated_filters.html
 		} else {
-			const samples1 = await get_samples({ filter: validated_filters.simplefilter }, ds, true) // true is to by pass permission check
+			const samples1 = await get_samples({ filter: validated_filters.simplefilter }, ds, true) // true is to bypass permission check
 			samples1lst = samples1.map((item: any) => ({
 				sampleId: item.id,
 				sample: item.name
 			}))
+			//mayLog("response_type.name1:", response_type.name1)
 			group1 = {
-				name: 'group1', // Hardcoding name of group here for now
+				name: 'group1', //response_type.name1, // For some prompts when the AI generated name is added, it throws a UI error
 				in: true,
 				values: samples1lst
 			}
@@ -392,13 +391,14 @@ async function validate_DE_response(response: string, ds: any) {
 		if (validated_filters.html.length > 0) {
 			html += validated_filters.html
 		} else {
-			const samples2 = await get_samples({ filter: validated_filters.simplefilter }, ds, true) // true is to by pass permission check
+			const samples2 = await get_samples({ filter: validated_filters.simplefilter }, ds, true) // true is to bypass permission check
 			samples2lst = samples2.map((item: any) => ({
 				sampleId: item.id,
 				sample: item.name
 			}))
+			//mayLog("response_type.name2:", response_type.name2)
 			group2 = {
-				name: 'group2', // Hardcoding name of group here for now
+				name: 'group2', //response_type.name2, // For some prompts when the AI generated name is added, it throws a UI error
 				in: true,
 				values: samples2lst
 			}
@@ -414,19 +414,19 @@ async function validate_DE_response(response: string, ds: any) {
 				groups
 			},
 			term: {
-				name: 'group1 vs group2', // Hardcoding name of custom term here for now
+				name: response_type.name1 + ' vs ' + response_type.name2, // Hardcoding name of custom term here for now
 				type: 'samplelst',
 				values: {
 					group1: {
 						color: 'purple',
-						key: 'group1',
-						label: 'group1',
+						key: response_type.name1,
+						label: response_type.name1,
 						list: samples1lst
 					},
 					group2: {
 						color: 'blue',
-						key: 'group2',
-						label: 'group2',
+						key: response_type.name2,
+						label: response_type.name2,
 						list: samples2lst
 					}
 				}
@@ -435,7 +435,7 @@ async function validate_DE_response(response: string, ds: any) {
 		pp_plot_json.state = {
 			customTerms: [
 				{
-					name: 'group1 vs group2',
+					name: response_type.name1 + ' vs ' + response_type.name2,
 					tw: tw
 				}
 			],

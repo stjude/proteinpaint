@@ -81,5 +81,7 @@ export type plot_type = {
 export type DEType = {
 	group1: FilterTerm[]
 	group2: FilterTerm[]
+	name1: string
+	name2: string
 	method?: 'edgeR' | 'limma' | 'wilcoxon'
 }
