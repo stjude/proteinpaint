@@ -131,6 +131,7 @@ class Facet extends PlotBase {
 						: config.rowTw.term.values?.[category2]?.label || category2
 				this.addRowLabel(tr, label2)
 				for (const category of categories) {
+					const td = tr.append('td')
 					const samples = result.lst.filter(s => {
 						const colPass =
 							config.columnTw.term.type == 'termCollection'
@@ -142,18 +143,23 @@ class Facet extends PlotBase {
 								: s[config.rowTw.$id]?.key == category2
 						return colPass && rowPass
 					})
-					const data = samples.map(s =>
-						config.columnTw.term.type == 'termCollection'
-							? getTermCollectionData(s, config.columnTw, category)
-							: getTermCollectionData(s, config.rowTw, category2)
-					)
-					const total = data.reduce((sum, v) => sum + v, 0)
-					const avg = total / data.length
-					const td = tr.append('td')
-					td.classed('sja_menuoption', true)
-						.style('text-align', 'center')
-						.style('border', '2.5px solid white')
-						.text(aggregateBy == 'avg' ? roundValueAuto(avg) : roundValueAuto(total))
+					if (samples.length) {
+						// cell has samples
+						const data = samples.map(s =>
+							config.columnTw.term.type == 'termCollection'
+								? getTermCollectionData(s, config.columnTw, category)
+								: getTermCollectionData(s, config.rowTw, category2)
+						)
+						const total = data.reduce((sum, v) => sum + v, 0)
+						const avg = total / data.length
+						td.classed('sja_menuoption', true)
+							.style('text-align', 'center')
+							.style('border', '2.5px solid white')
+							.text(aggregateBy == 'avg' ? roundValueAuto(avg) : roundValueAuto(total))
+					} else {
+						// cell does not have samples
+						td.classed('highlightable-cell', true)
+					}
 				}
 			}
 		} else {
@@ -220,7 +226,7 @@ class Facet extends PlotBase {
 			.style('opacity', '0.7')
 			.text(
 				this.hasTermCollection
-					? `${aggregateBy == 'avg' ? 'Average' : 'Summed'} values are displayed`
+					? `Values in cells are ${aggregateBy == 'avg' ? 'averages' : 'sums'}`
 					: 'Click on cells to select samples'
 			)
 		const buttonDiv = this.dom.mainDiv.append('div').style('margin', '20px 0px 0px 25px').style('display', 'none')
