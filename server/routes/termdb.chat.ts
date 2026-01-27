@@ -374,9 +374,8 @@ async function validate_DE_response(response: string, ds: any) {
 				sampleId: item.id,
 				sample: item.name
 			}))
-			//mayLog("response_type.name1:", response_type.name1)
 			group1 = {
-				name: 'group1', //response_type.name1, // For some prompts when the AI generated name is added, it throws a UI error
+				name: response_type.name1,
 				in: true,
 				values: samples1lst
 			}
@@ -396,9 +395,8 @@ async function validate_DE_response(response: string, ds: any) {
 				sampleId: item.id,
 				sample: item.name
 			}))
-			//mayLog("response_type.name2:", response_type.name2)
 			group2 = {
-				name: 'group2', //response_type.name2, // For some prompts when the AI generated name is added, it throws a UI error
+				name: response_type.name2,
 				in: true,
 				values: samples2lst
 			}
@@ -414,16 +412,16 @@ async function validate_DE_response(response: string, ds: any) {
 				groups
 			},
 			term: {
-				name: response_type.name1 + ' vs ' + response_type.name2, // Hardcoding name of custom term here for now
+				name: response_type.name1 + ' vs ' + response_type.name2,
 				type: 'samplelst',
 				values: {
-					group1: {
+					[response_type.name1]: {
 						color: 'purple',
 						key: response_type.name1,
 						label: response_type.name1,
 						list: samples1lst
 					},
-					group2: {
+					[response_type.name2]: {
 						color: 'blue',
 						key: response_type.name2,
 						label: response_type.name2,
