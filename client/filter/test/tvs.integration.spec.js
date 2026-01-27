@@ -1271,3 +1271,112 @@ tape('tvs: Gene Variant - Fusion', async test => {
 	test.end()
 	if (test._ok) opts.holder.remove()
 })
+
+tape('tvs: termCollection', async test => {
+	test.timeoutAfter(1000)
+	test.plan(2)
+	const vocabApi = await getVocabApi()
+	const ntc = vocabApi.termdbConfig.numericTermCollections[0]
+	const term = Object.assign(
+		{
+			collectionId: ntc.name,
+			name: ' (agedx,a_death)',
+			type: 'termCollection',
+			numerators: ['agedx', 'a_death'],
+			termlst: [
+				{
+					type: 'float',
+					bins: {
+						default: {
+							type: 'regular-bin',
+							bin_size: 5,
+							startinclusive: true,
+							first_bin: { startunbounded: true, stop: 5 }
+						},
+						label_offset: 1
+					},
+					name: 'Age (years) at Cancer Diagnosis',
+					id: 'agedx',
+					isleaf: true,
+					values: {},
+					hashtmldetail: true
+				},
+				{
+					type: 'float',
+					bins: {
+						default: {
+							type: 'regular-bin',
+							startinclusive: true,
+							bin_size: 5,
+							first_bin: { stop: 25 },
+							last_bin: { start: 55 }
+						}
+					},
+					name: 'Age (years) at Death',
+					id: 'a_death',
+					isleaf: true,
+					values: {},
+					hashtmldetail: true
+				}
+			],
+			isleaf: true
+		},
+		ntc,
+		{ branchIds: undefined, termIds: undefined }
+	)
+	const opts = getOpts({
+		vocabApi,
+		filterData: {
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term,
+						ranges: [{ start: 30, startinclusive: false, startunbounded: false, stopunbounded: true }]
+					}
+				}
+			]
+		}
+	})
+
+	const filternode = opts.holder.node()
+	await opts.filter.main(opts.filterData)
+
+	try {
+		const pill = await detectOne({ target: filternode, selector: '.tvs_pill' })
+		const controlTipd = opts.filter.Inner.dom.controlsTip.d
+		const menuRows = controlTipd.selectAll('tr')
+		const editOpt = menuRows.filter(d => d.action == 'edit').node()
+		const tipd = opts.filter.Inner.dom.termSrcDiv
+
+		// --- trigger and check tip menu ---
+		pill.click()
+
+		const rows = await detectGte({
+			target: tipd.node(),
+			selector: `tbody tr`,
+			count: ntc.termIds.length,
+			observe: { subtree: true, childList: true },
+			trigger: () => {
+				editOpt.click()
+			}
+		})
+
+		await sleep(500)
+		const inputs = [...rows].reduce((arr, tr) => {
+			arr.push(...tr.querySelectorAll('input'))
+			return arr
+		}, [])
+		test.equal(inputs.length, ntc.termIds.length * 2, 'Should have 2 checkboxes for each term')
+		const applyBtn = tipd.node().querySelector('.sjpp_apply_btn')
+		test.ok(applyBtn, 'Should have 1 button to apply value change')
+	} catch (e) {
+		test.fail('test error: ' + e)
+	}
+
+	test.end()
+	if (test._ok) opts.holder.remove()
+})

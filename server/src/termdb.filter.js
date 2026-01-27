@@ -283,18 +283,16 @@ async function get_termCollection(tvs, CTEname, ds, onlyChildren) {
 	)
 	const samplenames = []
 	for (const [key, value] of Object.entries(data.samples)) {
-		const sampleValues = JSON.parse(value[$id].value)
+		const sampleValues = value[$id].value
 		/*
-		sampleVlaues here is an array of results for each mutation signature term for the sampleID. e.g.
- 		[ { SBS1: 83 }, { SBS2: 0 }, { SBS5: 185 } ]
+		sampleValues here is an object with a key for each mutation signature term for the sampleID. e.g.
+ 		{ SBS1: 83, SBS2: 0, SBS5: 185 }
 		*/
 		let numeratorSum = 0
 		let totalSum = 0
-		for (const sampleValue of sampleValues) {
-			for (const [key, value] of Object.entries(sampleValue)) {
-				totalSum += value
-				if (tvs.term.numerators.includes(key)) numeratorSum += value
-			}
+		for (const [key, value] of Object.entries(sampleValues)) {
+			totalSum += value
+			if (tvs.term.numerators.includes(key)) numeratorSum += value
 		}
 		const percentage = totalSum == 0 ? 0 : (numeratorSum / totalSum) * 100
 
