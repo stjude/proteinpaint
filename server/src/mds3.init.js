@@ -3101,10 +3101,7 @@ export function filterByItem(filter, mlst, values) {
 
 // filter mutation by maf
 function mayFilterByMaf(mafFilter, m) {
-	if (!mafFilter) {
-		// no maf filter, so mutation passes
-		return true
-	}
+	if (!mafFilter || m.dt != dtsnvindel) return true
 	const filter = mafFilter
 	if (filter.type != 'tvslst') throw 'unexpected filter.type'
 	if (!filter.in) throw 'filter.in must be set to true'
