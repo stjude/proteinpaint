@@ -36,52 +36,83 @@ export const ChatPayload: RoutePayload = {
 }
 
 export type SummaryType = {
+	/** Name of 1st term */
 	term: string
+	/** Name of 2nd term */
 	term2?: string
+	/** Optional simple filter terms */
 	simpleFilter: FilterTerm[]
 }
 
-export type FilterTerm = CategoricalFilterTerm | NumericFilterTerm
+export type FilterTerm =
+	| CategoricalFilterTerm
+	| NumericFilterTerm /** FilterTerm can either be numeric or categorical  */
 
 export type CategoricalFilterTerm = {
+	/** Name of numeric term */
 	term: string
+	/** The category of the term */
 	category: string
+	/** join term to be used only when there there is more than one filter term */
+	join?: 'and' | 'or'
 }
 
 export type NumericFilterTerm = {
+	/** Name of numeric term */
 	term: string
+	/** start position (or lower limit) of numeric term */
 	start?: number
+	/** stop position (or upper limit) of numeric term */
 	stop?: number
+	/** join term to be used only when there there is more than one filter term */
+	join?: 'and' | 'or'
 }
 
 export type DbRows = {
+	/** Name of the term */
 	name: string
+	/** Description of the term in plain language */
 	description: string
+	/** The type of variable stored in the DB (e.g. categorical, float) */
 	term_type: string
+	/** Array of {key,value} terms storing the possible categories for a categorical variable */
 	values: DbValue[]
 }
 
 export type DbValue = {
+	/** Name of the key */
 	key: string
+	/** Object of values corresponding to the key */
 	value: any
 }
 
-export type ClassificationType = html_type | plot_type
+export type ClassificationType =
+	| html_type
+	| plot_type /** Variable containing the type of action the UI needs to take */
 
 export type html_type = {
+	/** When type == html, display the string in the html field */
 	type: 'html'
+	/** The message to be dislayed on the chatbot UI */
 	html: string
 }
 
 export type plot_type = {
+	/** When type == plot, show the corresponding plot in the plot field */
 	type: 'plot'
-	plot: string
+	/** The type of plot to be displayed on the UI. */
+	plot: 'summary' | 'dge' | 'none'
 }
 
 export type DEType = {
+	/** Name of group1 which is an array of filter terms */
 	group1: FilterTerm[]
+	/** Name of group2 which is an array of filter terms */
 	group2: FilterTerm[]
+	/** Name of group1 to be shown in UI */
 	name1: string
+	/** Name of group2 to be shown in UI */
 	name2: string
+	/** Method used for carrying out differential gene expression analysis */
 	method?: 'edgeR' | 'limma' | 'wilcoxon'
 }
