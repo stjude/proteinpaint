@@ -17,21 +17,22 @@ import { getWrappedTvslst } from './filter.js'
 // part of 'common' argument to exported dataset js function, at server runtime
 export const TermTypeGroups = {
 	DICTIONARY_VARIABLES: 'Dictionary Variables',
-	MUTATION_CNV_FUSION: 'Mutation/CNV/Fusion',
-	VARIANT_GENOTYPE: 'Variant Genotype',
 	DNA_METHYLATION: 'DNA Methylation',
 	GENE_DEPENDENCY: 'Gene Dependency',
 	GENE_EXPRESSION: 'Gene Expression',
-	PROTEIN_EXPRESSION: 'Protein Expression',
-	SPLICE_JUNCTION: 'Splice Junction',
-	METABOLITE_INTENSITY: 'Metabolite Intensity',
 	GSEA: 'GSEA',
+	METABOLITE_INTENSITY: 'Metabolite Intensity',
+	MUTATION_CNV_FUSION: 'Mutation/CNV/Fusion',
 	MUTATION_SIGNATURE: 'Mutation Signature',
+	PROTEIN_EXPRESSION: 'Protein Expression',
+	SINGLECELL_CELLTYPE: 'Single-cell Cell Type',
 	SNP: 'SNP Genotype',
 	SNP_LIST: 'SNP List',
 	SNP_LOCUS: 'SNP Locus',
+	SPLICE_JUNCTION: 'Splice Junction',
 	SSGSEA: 'Geneset Expression',
-	TERM_COLLECTION: 'Term Collection'
+	TERM_COLLECTION: 'Term Collection',
+	VARIANT_GENOTYPE: 'Variant Genotype'
 }
 
 export const defaultcolor = rgb('#8AB1D4').darker()
