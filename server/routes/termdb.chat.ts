@@ -1,5 +1,6 @@
 import fs from 'fs'
 import { ezFetch } from '#shared'
+import { get_samples } from '#src/termdb.sql.js'
 //import { createGenerator } from 'ts-json-schema-generator'
 //import type { SchemaGenerator } from 'ts-json-schema-generator'
 //import path from 'path'
@@ -87,7 +88,17 @@ function init({ genomes }) {
 					)
 					mayLog('Time taken for summary agent:', formatElapsedTime(Date.now() - time1))
 				} else if (classResult == 'dge') {
-					ai_output_json = { type: 'html', html: 'DE agent not implemented yet' }
+					const time1 = new Date().valueOf()
+					ai_output_json = await extract_DE_search_terms_from_query(
+						q.prompt,
+						serverconfig.llm_backend,
+						comp_model_name,
+						apilink,
+						dataset_db,
+						dataset_json,
+						ds
+					)
+					mayLog('Time taken for DE agent:', formatElapsedTime(Date.now() - time1))
 				} else {
 					// Will define all other agents later as desired
 					ai_output_json = { type: 'html', html: 'Unknown classification value' }
@@ -253,6 +264,185 @@ async function classify_query_by_dataset_type(
 	}
 	mayLog('response:', response)
 	return JSON.parse(response)
+}
+
+async function extract_DE_search_terms_from_query(
+	prompt: string,
+	llm_backend_type: string,
+	comp_model_name: string,
+	apilink: string,
+	dataset_db: string,
+	dataset_json: any,
+	ds: any
+) {
+	if (dataset_json.hasDE) {
+		const rag_docs = await parse_dataset_db(dataset_db)
+		//mayLog('rag_docs:', rag_docs)
+		//mayLog('prompt:', prompt)
+		//mayLog('llm_backend_type:', llm_backend_type)
+		//mayLog('comp_model_name:', comp_model_name)
+		//mayLog('genedb:', genedb)
+		//mayLog('ds:', ds)
+
+		//const SchemaConfig = {
+		//    path: path.resolve('#types'),
+		//    // Path to your tsconfig (required for proper type resolution)
+		//    tsconfig: path.resolve(serverconfig.binpath, '../tsconfig.json'),
+		//    // Name of the exported type we want to convert
+		//    type: 'DEType',
+		//    // Only expose exported symbols (default)
+		//    expose: 'export' as 'export' | 'all' | 'none' | undefined,
+		//    // Put the whole schema under a top‑level $ref (optional but convenient)
+		//    topRef: true,
+		//    // Turn off type‑checking for speed (set to true if you want full checks)
+		//    skipTypeCheck: true
+		//}
+		//const generator: SchemaGenerator = createGenerator(SchemaConfig)
+		//const StringifiedSchema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // This commented out code generates the JSON schema below
+		const StringifiedSchema =
+			'{"$schema":"http://json-schema.org/draft-07/schema#","$ref":"#/definitions/DEType","definitions":{"DEType":{"type":"object","properties":{"group1":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"}},"group2":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"}},"name1":{"type":"string"},"name2":{"type":"string"},"method":{"type":"string","enum":["edgeR","limma","wilcoxon"]}},"required":["group1","group2","name1","name2"],"additionalProperties":false},"FilterTerm":{"anyOf":[{"$ref":"#/definitions/CategoricalFilterTerm"},{"$ref":"#/definitions/NumericFilterTerm"}]},"CategoricalFilterTerm":{"type":"object","properties":{"term":{"type":"string"},"category":{"type":"string"}},"required":["term","category"],"additionalProperties":false},"NumericFilterTerm":{"type":"object","properties":{"term":{"type":"string"},"start":{"type":"number"},"stop":{"type":"number"}},"required":["term"],"additionalProperties":false}}}'
+		//mayLog('StringifiedSchema:', StringifiedSchema)
+
+		// Parse out training data from the dataset JSON and add it to a string
+		const DE_ds = dataset_json.charts.filter((chart: any) => chart.type == 'DE')
+		if (DE_ds.length == 0) throw 'DE information not present in dataset file'
+		if (DE_ds[0].TrainingData.length == 0) throw 'no training data provided for DE agent'
+
+		let train_iter = 0
+		let training_data = ''
+		for (const train_data of DE_ds[0].TrainingData) {
+			train_iter += 1
+			training_data +=
+				'Example question' +
+				train_iter.toString() +
+				': ' +
+				train_data.question +
+				' Example answer' +
+				train_iter.toString() +
+				':' +
+				JSON.stringify(train_data.answer) +
+				' '
+		}
+
+		const system_prompt =
+			'I am an assistant that extracts the groups from the user prompt to carry out differential gene expression. The final output must be in the following JSON with NO extra comments. The schema is as follows: ' +
+			StringifiedSchema +
+			' . "group1" and "group2" fields are compulsory. Both "group1" and "group2" consist of an array of filter variables. There are two kinds of filter variables: "Categorical" and "Numeric". "Categorical" variables are those variables which can have a fixed set of values e.g. gender, race. They are defined by the "CategoricalFilterTerm" which consists of "term" (a field from the sqlite3 db)  and "category" (a value of the field from the sqlite db).  "Numeric" variables are those which can have any numeric value. They are defined by "NumericFilterTerm" and contain  the subfields "term" (a field from the sqlite3 db), "start" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and "stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. ' +
+			DE_ds.SystemPrompt +
+			'The sqlite db in plain language is as follows:\n' +
+			rag_docs.join(',') +
+			' training data is as follows:' +
+			training_data +
+			' Question: {' +
+			prompt +
+			'} answer:'
+		//mayLog("system_prompt:", system_prompt)
+
+		let response: string
+		if (llm_backend_type == 'SJ') {
+			// Local SJ server
+			response = await call_sj_llm(system_prompt, comp_model_name, apilink)
+		} else if (llm_backend_type == 'ollama') {
+			// Ollama server
+			response = await call_ollama(system_prompt, comp_model_name, apilink)
+		} else {
+			// Will later add support for azure server also
+			throw 'Unknown LLM backend'
+		}
+		mayLog('response:', JSON.parse(response))
+		return await validate_DE_response(response, ds)
+	} else {
+		return { type: 'html', html: 'Differential gene expression not supported for this dataset' }
+	}
+}
+
+async function validate_DE_response(response: string, ds: any) {
+	const response_type = JSON.parse(response)
+	let html = ''
+	let group1: any
+	let samples1lst: any
+	if (!response_type.group1) {
+		html += 'group1 not present in DE output'
+	} else {
+		// Validate filter terms
+		const validated_filters = validate_filter(response_type.group1, ds)
+		if (validated_filters.html.length > 0) {
+			html += validated_filters.html
+		} else {
+			const samples1 = await get_samples({ filter: validated_filters.simplefilter }, ds, true) // true is to bypass permission check
+			samples1lst = samples1.map((item: any) => ({
+				sampleId: item.id,
+				sample: item.name
+			}))
+			group1 = {
+				name: response_type.name1,
+				in: true,
+				values: samples1lst
+			}
+		}
+	}
+	let group2: any
+	let samples2lst: any
+	if (!response_type.group2) {
+		html += 'group2 not present in DE output'
+	} else {
+		const validated_filters = validate_filter(response_type.group2, ds)
+		if (validated_filters.html.length > 0) {
+			html += validated_filters.html
+		} else {
+			const samples2 = await get_samples({ filter: validated_filters.simplefilter }, ds, true) // true is to bypass permission check
+			samples2lst = samples2.map((item: any) => ({
+				sampleId: item.id,
+				sample: item.name
+			}))
+			group2 = {
+				name: response_type.name2,
+				in: true,
+				values: samples2lst
+			}
+		}
+	}
+	if (html.length > 0) {
+		return { type: 'html', html: html }
+	} else {
+		const pp_plot_json: any = { childType: 'volcano', termType: 'geneExpression', chartType: 'differentialAnalysis' }
+		const groups = [group1, group2]
+		const tw = {
+			q: {
+				groups
+			},
+			term: {
+				name: response_type.name1 + ' vs ' + response_type.name2,
+				type: 'samplelst',
+				values: {
+					[response_type.name1]: {
+						color: 'purple',
+						key: response_type.name1,
+						label: response_type.name1,
+						list: samples1lst
+					},
+					[response_type.name2]: {
+						color: 'blue',
+						key: response_type.name2,
+						label: response_type.name2,
+						list: samples2lst
+					}
+				}
+			}
+		}
+		pp_plot_json.state = {
+			customTerms: [
+				{
+					name: response_type.name1 + ' vs ' + response_type.name2,
+					tw: tw
+				}
+			],
+			groups: groups
+		}
+		pp_plot_json.samplelst = { groups }
+		pp_plot_json.tw = tw
+		return { type: 'plot', plot: pp_plot_json }
+	}
 }
 
 async function extract_summary_terms(
@@ -539,9 +729,9 @@ async function parse_dataset_db(dataset_db: string) {
 
 function parse_db_rows(db_row: DbRows) {
 	let output_string: string =
-		'Name of the field is:' +
+		'Name of the field is:"' +
 		db_row.name +
-		'. This field is of the type:' +
+		'". This field is of the type:' +
 		db_row.term_type +
 		'. Description: ' +
 		db_row.description
@@ -550,7 +740,7 @@ function parse_db_rows(db_row: DbRows) {
 		output_string += 'This field contains the following possible values.'
 		for (const value of db_row.values) {
 			if (value.value && value.value.label) {
-				output_string += 'The key is ' + value.key + ' and the label is ' + value.value.label + '.'
+				output_string += 'The key is "' + value.key + '" and the label is "' + value.value.label + '".'
 			}
 		}
 	}
