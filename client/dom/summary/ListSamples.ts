@@ -315,7 +315,7 @@ export class ListSamples {
 	addRowValue(s: any, tw: TermWrapper, row: TableRow): void {
 		if (tw.term.type === TermTypes.GENE_VARIANT) {
 			//This func mutates row directly
-			addGvRowVals(s, tw, row, this.app.vocabApi.termdbMatrixClass)
+			addGvRowVals(s, tw, row, this.app.vocabApi.termdbConfig?.mclass)
 			return
 		}
 
