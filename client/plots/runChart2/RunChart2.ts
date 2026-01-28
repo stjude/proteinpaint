@@ -1,23 +1,55 @@
 import { PlotBase } from '#plots/PlotBase.ts'
-import { getCompInit, copyMerge, type RxComponent } from '#rx'
-import { dofetch3 } from '#common/dofetch'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi, type AppApi } from '#rx'
+import { select2Terms, DownloadMenu, Menu } from '#dom'
+import { fillTermWrapper } from 'termsetting/utils.ts'
+import { getCombinedTermFilter } from '#filter/filter.utils'
+import { getDefaultRunChart2Settings } from './defaults.ts'
+import { getRunChart2Controls } from './RunChart2Controls.ts'
+import { controlsInit } from '#plots/controls.js'
+import { RunChart2Model } from './model/RunChart2Model.ts'
+import { RunChart2ViewModel } from './viewModel/ViewModel.ts'
+import { RunChart2View } from './view/View.ts'
 
-class RunChart2 extends PlotBase implements RxComponent {
+export class RunChart2 extends PlotBase implements RxComponent {
 	static type = 'runChart2'
 	type: string
-	components: { controls: any }
+	components: { controls: ComponentApi }
+	dom: any
+	model!: RunChart2Model
+	viewModel!: RunChart2ViewModel
+	view!: RunChart2View
+	configTermKeys = ['term', 'term2']
 
 	constructor(opts: any, api: any) {
-		super(opts)
+		super(opts, api)
 		this.opts = opts
 		this.api = api
 		this.type = RunChart2.type
+		if (this.opts.parentId) this.parentId = this.opts.parentId
+
 		this.components = {
-			controls: {}
+			controls: {} as ComponentApi
+		}
+		if (opts.header) {
+			opts.header.append('span').style('font-size', '0.8em').style('opacity', 0.7).text('RUN CHART')
+		}
+
+		const controls = opts.controls ? opts.holder : opts.holder.append('div')
+		const chartHolder = opts.holder
+			.append('div')
+			.attr('data-testId', 'sjpp-runChart2-chartHolder')
+			.style('display', 'inline-block')
+
+		this.dom = {
+			controls,
+			chartHolder,
+			error: chartHolder.append('div').attr('data-testId', 'sjpp-runChart2-error'),
+			clickMenu: new Menu({ padding: '5px' }),
+			hovertip: new Menu({ padding: '3px' })
 		}
 	}
 
-	reactsTo(action) {
+	reactsTo(action: any) {
 		if (action.type.includes('cache_termq')) return true
 		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true
@@ -30,38 +62,172 @@ class RunChart2 extends PlotBase implements RxComponent {
 		}
 	}
 
-	//Need to implement init() here
-	getState(appState) {
+	getState(appState: any) {
 		const config = appState.plots.find(p => p.id === this.id)
-		return { config }
+		if (!config) {
+			throw new Error(
+				`No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+			)
+		}
+		const parentConfig = appState.plots.find(p => p.id === this.parentId)
+		const termfilter = getCombinedTermFilter(appState, config.filter || parentConfig?.filter)
+
+		return {
+			termdbConfig: appState.termdbConfig,
+			termfilter,
+			vocab: appState.vocab,
+			config: Object.assign({}, config, {
+				settings: {
+					runChart2: config.settings.runChart2
+				}
+			})
+		}
+	}
+
+	async setControls(viewModel: RunChart2ViewModel) {
+		const range = { xMin: viewModel.xMin, xMax: viewModel.xMax, yMin: viewModel.yMin, yMax: viewModel.yMax }
+		this.dom.controls.selectAll('*').remove()
+		this.components.controls = await controlsInit({
+			app: this.app,
+			id: this.id,
+			holder: this.dom.controls.style('display', 'inline-block'),
+			inputs: getRunChart2Controls(this.app, range, this)
+		})
+		this.components.controls.on('downloadClick.runChart2', async (event: any) => {
+			await this.download(event)
+		})
+	}
+
+	async download(event: any) {
+		const chartImages = this.getChartImages()
+		if (chartImages.length === 0) {
+			console.warn('No chart images available for download')
+			return
+		}
+		const filename = this.getDownloadFilename()
+		const menu = new DownloadMenu(chartImages, filename)
+		menu.show(event.clientX, event.clientY, event.target)
+	}
+
+	getChartImages() {
+		const chartImages: any[] = []
+		if (!this.view || !this.view.chartDom) return chartImages
+
+		const svg = this.view.chartDom.svg
+		if (svg && !svg.empty()) {
+			const chartName = this.state?.config?.term?.term?.name || 'runChart2'
+			chartImages.push({ name: chartName, svg })
+		}
+		return chartImages
+	}
+
+	getDownloadFilename() {
+		const termName = this.state?.config?.term?.term?.name || 'runChart2'
+		const term2Name = this.state?.config?.term2?.term?.name || ''
+		return term2Name ? `${termName}_${term2Name}` : termName
 	}
 
 	async main() {
-		const result = await dofetch3('termdb/runChart', { body: await this.getRequestArg() })
-		console.log('RunChart2 runChart result', result)
-	}
-	async getRequestArg() {
+		const c = this.state.config
+		if (c.childType != this.type && c.chartType != this.type) return
+
 		const config = await this.getMutableConfig()
-		const reqArg: any = {
-			genome: this.app.vocabApi.vocab.genome,
-			dslabel: this.app.vocabApi.vocab.dslabel,
-			term: config.term,
-			term2: config.term2,
-			aggregation: config.aggregation
+
+		try {
+			this.model = new RunChart2Model(this)
+			const data = await this.model.fetchData(config)
+			if (!data) {
+				this.dom.error.text('No data available for the selected terms and filter.')
+			}
+			const settings = config.settings.runChart2
+			this.viewModel = new RunChart2ViewModel(settings)
+			const viewData = this.viewModel.map(data)
+
+			await this.setControls(this.viewModel)
+
+			if (!this.dom.chartHolder.empty()) {
+				this.dom.chartHolder.selectAll('*').remove()
+			}
+			this.view = new RunChart2View(viewData, settings, this.dom.chartHolder, config, this)
+		} catch (e) {
+			console.error(e)
+			throw new Error(`RunChart2.main() failed: ${e}`)
 		}
-		return reqArg
 	}
 }
 
 export const runChart2Init = getCompInit(RunChart2)
 export const componentInit = runChart2Init
 
-export function getPlotConfig(opts) {
-	if (!opts.term) throw 'opts.term missing' // for X axis
-	if (!opts.term2) throw 'opts.term2 missing' // for Y axis
-	const config = {
-		aggregation: 'mean'
+export async function getPlotConfig(opts: any, app: AppApi) {
+	if (!opts.term) throw new Error('opts.term missing')
+	if (!opts.term2) throw new Error('opts.term2 missing')
+
+	try {
+		await fillTermWrapper(opts.term, app.vocabApi)
+		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
+	} catch (e) {
+		console.error(e)
+		throw new Error(`runChart2 getPlotConfig() failed: ${e}`)
 	}
 
-	return copyMerge(config, opts)
+	const defaultConfig = app.vocabApi.termdbConfig?.plotConfigByCohort?.default?.[opts.chartType]
+
+	const config: any = {
+		hidePlotFilter: true, // sandbox filter not implemented
+		settings: {
+			controls: { isOpen: false },
+			runChart2: getDefaultRunChart2Settings(opts)
+		}
+	}
+	return copyMerge(config, defaultConfig, opts)
+}
+
+export function makeChartBtnMenu(holder, chartsInstance) {
+	const menuDiv = holder.append('div')
+	menuDiv
+		.append('button')
+		.style('margin', '5px')
+		.style('padding', '10px 15px')
+		.style('border-radius', '20px')
+		.style('border-color', '#ededed')
+		.style('display', 'block')
+		.text('Select data to plot ...')
+		.on('click', () => {
+			chartsInstance.dom.tip.clear()
+			select2Terms(chartsInstance.dom.tip, chartsInstance.app, 'runChart2', 'date', callback, 'numeric')
+			chartsInstance.dom.tip.show()
+		})
+
+	for (const plot of chartsInstance.state.termdbConfig?.plotConfigByCohort?.default?.runChart2?.plots || []) {
+		const config = structuredClone(plot)
+		menuDiv
+			.append('button')
+			.style('margin', '5px')
+			.style('padding', '10px 15px')
+			.style('border-radius', '20px')
+			.style('border-color', '#ededed')
+			.style('display', 'block')
+			.text(plot.name)
+			.on('click', () => {
+				chartsInstance.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'runChart2',
+						...config
+					}
+				})
+				chartsInstance.dom.tip.hide()
+			})
+	}
+	const callback = (xterm, yterm) => {
+		chartsInstance.app.dispatch({
+			type: 'plot_create',
+			config: {
+				chartType: 'runChart2',
+				term: { term: xterm, q: { mode: 'continuous' } },
+				term2: { term: yterm, q: { mode: 'continuous' } }
+			}
+		})
+	}
 }

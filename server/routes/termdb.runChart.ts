@@ -1,5 +1,6 @@
 import type { RouteApi, RunChartRequest, RunChartResponse } from '#types'
 import { runChartPayload } from '#types/checkers'
+import { getNumberFromDate } from '#shared/terms.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/runChart',
@@ -17,25 +18,25 @@ export const api: RouteApi = {
 
 export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChartResponse> {
 	// Collect terms from term and term2
-	const terms: any = []
-	let xTermId: string | undefined
-	let yTermId: string | undefined
+	const terms: any = [q.term, q.term2]
+	const xTermId = q.term['$id']
+	const yTermId = q.term2['$id']
 
-	if (q.term && q.term2) {
-		const tws = [
-			{ term: q.term, q: { mode: 'continuous' }, $id: q.term.id },
-			{ term: q.term2, q: { mode: 'continuous' }, $id: q.term2.id }
-		]
-		terms.push(...tws)
-		xTermId = q.term.id
-		yTermId = q.term2.id
-	} else {
-		throw new Error('term and term2 must be provided')
-	}
+	// if (q.term && q.term2) {
+	// 	const tws = [
+	// 		{ term: q.term, q: { mode: 'continuous' }, $id: q.term.id },
+	// 		{ term: q.term2, q: { mode: 'continuous' }, $id: q.term2.id }
+	// 	]
+	// 	terms.push(...tws)
+	// 	xTermId = q.term.id
+	// 	yTermId = q.term2.id
+	// } else {
+	// 	throw new Error('term and term2 must be provided')
+	// }
 
-	if (!xTermId || !yTermId) {
-		throw new Error('Unable to determine term IDs for x and y axes')
-	}
+	// if (!xTermId || !yTermId) {
+	// 	throw new Error('Unable to determine term IDs for x and y axes')
+	// }
 
 	const { getData } = await import('../src/termdb.matrix.js')
 
@@ -119,19 +120,25 @@ export function buildRunChartFromData(
 				month = Math.floor(frac * 12) + 1
 			}
 		} else {
-			// No decimal part: integer year value, resolve to January of that year
-			month = 1
+			// No decimal part, invalid date
+			year = null
 		}
 
 		if (year == null || month == null || Number.isNaN(year) || Number.isNaN(month)) {
-			throw new Error(
-				`Invalid date value for sample ${sampleId}: xTermId=${xTermId}, xRaw=${xRaw}, parsed year=${year}, month=${month}`
+			skippedSamples++
+			console.log(
+				`Skipping sample ${sampleId}: Invalid date value - xTermId=${xTermId}, xRaw=${xRaw}, parsed year=${year}, month=${month}`
 			)
+			continue
 		}
 
-		const bucketKey = `${year}-${String(month).padStart(2, '0')}`
-		const x = Number(`${year}.${String(month).padStart(2, '0')}`)
-		const date = new Date(year, month - 1, 1)
+		// TypeScript narrowing: at this point year and month are guaranteed to be numbers
+		const yearNum = year as number
+		const monthNum = month as number
+
+		const bucketKey = `${yearNum}-${String(monthNum).padStart(2, '0')}`
+		const x = Number(`${yearNum}.${String(monthNum).padStart(2, '0')}`)
+		const date = new Date(yearNum, monthNum - 1, 1)
 		const xName = date.toLocaleString('en-US', { month: 'long', year: 'numeric' })
 
 		if (!buckets[bucketKey]) {
@@ -143,7 +150,7 @@ export function buildRunChartFromData(
 				success: 0,
 				total: 0,
 				countSum: 0,
-				sortKey: year * 100 + month,
+				sortKey: yearNum * 100 + monthNum,
 				yValues: []
 			}
 		}
@@ -207,20 +214,36 @@ export function buildRunChartFromData(
 		console.log(`buildRunChartFromData: Skipped ${skippedSamples} sample(s) due to missing x or y values`)
 	}
 
+	function xFromBucket(b: { sortKey: number }) {
+		const yearNum = Math.floor(b.sortKey / 100)
+		const monthNum = b.sortKey % 100
+		const x = getNumberFromDate(new Date(yearNum, monthNum - 1, 15))
+		return Math.round(x * 100) / 100
+	}
+
 	const points = Object.values(buckets)
 		.sort((a, b) => a.sortKey - b.sortKey)
 		.map(b => {
+			const x = xFromBucket(b)
 			if (aggregation === 'proportion') {
 				const total = b.total || 0
 				const succ = b.success || 0
 				const y = total ? Math.round((succ / total) * 1000) / 1000 : 0
-				return { x: b.x, xName: b.xName, y, sampleCount: total }
+				return { x, xName: b.xName, y, sampleCount: total }
 			} else if (aggregation === 'count') {
 				const y = Math.round((b.countSum || 0) * 100) / 100
-				return { x: b.x, xName: b.xName, y, sampleCount: b.count }
+				return { x, xName: b.xName, y, sampleCount: b.count }
 			} else {
-				const avg = b.count ? Math.round((b.ySum / b.count) * 100) / 100 : 0
-				return { x: b.x, xName: b.xName, y: avg, sampleCount: b.count }
+				let y: number
+				if (aggregation === 'median' && (b.yValues?.length ?? 0) > 0) {
+					const sorted = [...b.yValues].sort((a, b) => a - b)
+					const mid = Math.floor(sorted.length / 2)
+					y = sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2
+				} else {
+					y = b.count ? b.ySum / b.count : 0
+				}
+				y = Math.round(y * 100) / 100
+				return { x, xName: b.xName, y, sampleCount: b.count }
 			}
 		})
 
