@@ -1,2 +1,1 @@
-Fixes:
-- display a more user-friendly error message instead of an obscure bin-related error, when there is no numeric data by GDC cohort to compute bins
+
