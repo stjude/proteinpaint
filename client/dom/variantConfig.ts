@@ -164,11 +164,7 @@ export function renderVariantConfig(arg: Arg) {
 			// get genotype
 			const selectedGenotype: any = genotypeRadio.inputs.nodes().find(r => r.checked)
 			if (!selectedGenotype) throw 'no genotype selected'
-			const config: Config = {
-				values: [],
-				genotype: selectedGenotype.value,
-				mcount: 'any'
-			}
+			const config: Config = { values: [], genotype: selectedGenotype.value }
 			if (config.genotype == 'variant') {
 				// variant genotype
 				// get selected mutation classes
@@ -185,6 +181,8 @@ export function renderVariantConfig(arg: Arg) {
 					config.mcount = selectedCount.value
 					// get maf filter
 					if (mafFilter) config.mafFilter = mafFilter.active
+				} else {
+					config.mcount = 'any'
 				}
 			}
 			arg.callback(config)
