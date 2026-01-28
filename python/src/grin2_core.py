@@ -1152,8 +1152,8 @@ def get_memory_mb():
     """Return current process memory usage in MB."""
     try:
         return round(psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024), 2)
-    except:
-        return 0.0
+    except Exception as e:
+         write_error(f"Failed to get memory usage: {e}")
 
 
 def timed_grin_stats(lsn_data, gene_data, chr_size):
