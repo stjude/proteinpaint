@@ -1,6 +1,6 @@
 import { handler as _handler } from './tvs.categorical.js'
 import { renderVariantConfig } from '#dom'
-import { mclass } from '#shared/common.js'
+import { mclass, dtsnvindel } from '#shared/common.js'
 import { FrontendVocab } from '#termdb/FrontendVocab'
 
 /*
@@ -32,7 +32,7 @@ async function fillMenu(self, div, tvs) {
 		}
 	}
 	const mafFilter = self.opts.vocabApi.termdbConfig?.queries?.snvindel?.mafFilter
-	if (mafFilter) {
+	if (mafFilter && term.dt == dtsnvindel) {
 		// maf filter specified in dataset
 		mafFilter.active = tvs.mafFilter || mafFilter.filter
 		arg.mafFilter = mafFilter

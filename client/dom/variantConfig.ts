@@ -169,7 +169,11 @@ export function renderVariantConfig(arg: Arg) {
 			// get genotype
 			const selectedGenotype: any = genotypeRadio.inputs.nodes().find(r => r.checked)
 			if (!selectedGenotype) throw 'no genotype selected'
-			const config: Config = { values: [], genotype: selectedGenotype.value }
+			const config: Config = {
+				values: [],
+				genotype: selectedGenotype.value,
+				mcount: 'any'
+			}
 			if (config.genotype == 'variant') {
 				// variant genotype
 				// get selected mutation classes
@@ -179,17 +183,13 @@ export function renderVariantConfig(arg: Arg) {
 					if (c.checked) checkedIdxs.push(i)
 				}
 				config.values = values.filter((v, i) => checkedIdxs.includes(i))
-				// get mutation count
-				if (countRadio) {
+				if (dt == dtsnvindel) {
+					// get mutation count
 					const selectedCount: any = countRadio.inputs.nodes().find(r => r.checked)
 					if (!selectedCount) throw 'no mutation count selected'
 					config.mcount = selectedCount.value
-				} else {
-					config.mcount = 'any'
-				}
-				// get maf filter
-				if (mafFilter) {
-					config.mafFilter = mafFilter.active
+					// get maf filter
+					if (mafFilter) config.mafFilter = mafFilter.active
 				}
 			}
 			arg.callback(config)
