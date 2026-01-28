@@ -664,7 +664,7 @@ try:
 
 	# 5. Run GRIN2 analysis
 	try:
-		grin_results = grin_stats(lesion_df, gene_anno, chrom_size)
+		grin_results = grin_stats(lesion_df, gene_anno, chrom_size, track_memory=False)
 		if not isinstance(grin_results, dict) or grin_results is None:
 			write_error("grin_stats returned invalid or null results")
 			sys.exit(1)
