@@ -5,7 +5,6 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import type { RunChart2Settings } from '../Settings.ts'
 import type { RunChart2 } from '../RunChart2.ts'
 
-/** Clamp value to [min, max] when set. Returns the capped coordinate (scatter-style axis cap). */
 function getCoordinate(val: number, min: number | null, max: number | null): number {
 	if (min != null && val < min) return min
 	if (max != null && val > max) return max
@@ -28,7 +27,6 @@ export class SeriesRender {
 		this.render()
 	}
 
-	/** Returns the calculated coordinate or the min/max axis cap set by the user (matches scatter getCoordinates). */
 	getCoordinates(d: { x: number; y: number }): { x: number; y: number } {
 		const cx = getCoordinate(d.x, this.settings.minXScale, this.settings.maxXScale)
 		const cy = getCoordinate(d.y, this.settings.minYScale, this.settings.maxYScale)
@@ -43,11 +41,8 @@ export class SeriesRender {
 
 		const color = this.settings.color || '#1f77b4'
 		const medianColor = rgb(color).darker(2)
-
-		// Sort points by x value to ensure proper line drawing
 		const sortedPoints = [...this.series.points].sort((a, b) => a.x - b.x)
 
-		// Draw line connecting all points (cap y to minYScale/maxYScale before scale, like scatter getCoordinates)
 		const lineBuilder = line<{ x: number; y: number }>()
 			.x(d => this.getCoordinates(d).x)
 			.y(d => this.getCoordinates(d).y)
@@ -61,7 +56,6 @@ export class SeriesRender {
 			.attr('stroke-linejoin', 'round')
 			.attr('d', lineBuilder)
 
-		// Draw points (circles)
 		this.seriesGroup
 			.selectAll('circle')
 			.data(sortedPoints)
@@ -81,7 +75,6 @@ export class SeriesRender {
 					this.showPointMenu(event, d)
 				}
 			})
-
 		// Draw median line if median is available
 		if (this.series.median != null && !isNaN(this.series.median)) {
 			const yMedian = this.plotDims.yAxis.scale(
@@ -89,7 +82,6 @@ export class SeriesRender {
 			)
 			const xStart = this.getCoordinates(sortedPoints[0]).x
 			const xEnd = this.getCoordinates(sortedPoints[sortedPoints.length - 1]).x
-
 			// Draw median horizontal line
 			this.seriesGroup
 				.append('line')
@@ -101,7 +93,6 @@ export class SeriesRender {
 				.attr('stroke-width', 1)
 				.attr('stroke-dasharray', '5,5')
 				.attr('opacity', 0.7)
-
 			// Add median label
 			this.seriesGroup
 				.append('text')
@@ -120,11 +111,12 @@ export class SeriesRender {
 		const cfg = this.runChart2?.state?.config
 		const xTermName = cfg?.term?.term?.name ?? 'X'
 		const yTermName = cfg?.term2?.term?.name ?? 'Y'
-		tip.clear().show(event.clientX, event.clientY)
+		tip.clear()
 		const table = table2col({ holder: tip.d.append('div') })
 		table.addRow(xTermName, d.xName ?? String(d.x))
 		table.addRow(yTermName, roundValueAuto(d.y, true, 2))
 		table.addRow('Sample Count', String(d.sampleCount ?? ''))
+		tip.show(event.clientX, event.clientY)
 	}
 
 	hideHoverTip() {

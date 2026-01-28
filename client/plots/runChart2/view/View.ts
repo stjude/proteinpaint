@@ -38,7 +38,6 @@ export class RunChart2View {
 		this.renderScale(plotDims.xAxis)
 		this.renderScale(plotDims.yAxis, true)
 
-		// Create a group for series rendering
 		const seriesGroup = this.chartDom.svg
 			.append('g')
 			.attr('data-testId', 'sjpp-runChart2-seriesGroup')
@@ -48,7 +47,6 @@ export class RunChart2View {
 			new SeriesRender(series, plotDims, this.settings, seriesGroup, this.runChart2)
 		}
 
-		// Add axis labels
 		this.renderAxisLabels(plotDims)
 	}
 
@@ -83,46 +81,23 @@ export class RunChart2View {
 		const scaleG = axisGroup.append('g').attr('transform', `translate(${scale.x}, ${scale.y})`)
 
 		if (isLeft) {
-			// Y-axis: standard formatting
 			scaleG.call(axisLeft(scale.scale))
 		} else {
-			// X-axis: use custom tick values and format with month names
 			const allPoints: Array<{ x: number; xName: string }> = []
 			for (const series of this.viewData.series || []) {
-				if (series.points) {
-					allPoints.push(...series.points)
-				}
+				if (series.points) allPoints.push(...series.points)
 			}
 
-			const yearMap = new Map<number, number>() // year -> first month x value (e.g., 2024 -> 2024.01)
-			for (const point of allPoints) {
-				const year = Math.floor(point.x)
-				if (!yearMap.has(year)) {
-					// Store the first occurrence of this year (which should be the first month)
-					yearMap.set(year, point.x)
-				} else {
-					// Keep the smallest x value for this year (first month)
-					const currentX = yearMap.get(year)!
-					if (point.x < currentX) {
-						yearMap.set(year, point.x)
-					}
-				}
-			}
+			// One tick per year: use integer years so ticks are evenly spaced (month in x caused clustering)
+			console.log('allPoints', allPoints)
+			const yearTickValues = [...new Set(allPoints.map(p => Math.floor(p.x)))].sort((a, b) => a - b)
+			console.log('yearTickValues', yearTickValues)
 
-			// Get sorted years and their corresponding x values
-			const years = Array.from(yearMap.keys()).sort((a, b) => a - b)
-			const yearTickValues = years.map(year => yearMap.get(year)!).sort((a, b) => a - b)
-
-			const xAxis = axisBottom(scale.scale)
-				.tickValues(yearTickValues)
-				.tickFormat(d => {
-					const year = Math.floor(Number(d))
-					return String(year)
-				})
+			const xAxis = axisBottom(scale.scale).tickFormat(d => String(Math.floor(Number(d))))
+			if (yearTickValues.length > 0) xAxis.tickValues(yearTickValues)
+			else xAxis.ticks(6)
 
 			scaleG.call(xAxis)
-
-			// Style x-axis labels
 			scaleG.selectAll('text').style('text-anchor', 'middle').style('font-size', '12px')
 		}
 

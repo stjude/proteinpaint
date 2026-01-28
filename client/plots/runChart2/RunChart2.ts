@@ -18,7 +18,6 @@ export class RunChart2 extends PlotBase implements RxComponent {
 	model!: RunChart2Model
 	viewModel!: RunChart2ViewModel
 	view!: RunChart2View
-	//See getMutableConfig() in PlotBase.ts
 	configTermKeys = ['term', 'term2']
 
 	constructor(opts: any, api: any) {
@@ -31,7 +30,6 @@ export class RunChart2 extends PlotBase implements RxComponent {
 		this.components = {
 			controls: {} as ComponentApi
 		}
-		// Add header text if header exists
 		if (opts.header) {
 			opts.header.append('span').style('font-size', '0.8em').style('opacity', 0.7).text('RUN CHART')
 		}
@@ -93,7 +91,7 @@ export class RunChart2 extends PlotBase implements RxComponent {
 			app: this.app,
 			id: this.id,
 			holder: this.dom.controls.style('display', 'inline-block'),
-			inputs: getRunChart2Controls(this.app, range)
+			inputs: getRunChart2Controls(this.app, range, this)
 		})
 		this.components.controls.on('downloadClick.runChart2', async (event: any) => {
 			await this.download(event)
@@ -176,8 +174,7 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 	const defaultConfig = app.vocabApi.termdbConfig?.plotConfigByCohort?.default?.[opts.chartType]
 
 	const config: any = {
-		//Disable the filter in the sandbox header as this is not implemented yet
-		hidePlotFilter: true,
+		hidePlotFilter: true, // sandbox filter not implemented
 		settings: {
 			controls: { isOpen: false },
 			runChart2: getDefaultRunChart2Settings(opts)
@@ -187,12 +184,6 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 }
 
 export function makeChartBtnMenu(holder, chartsInstance) {
-	/*
-	holder: the holder in the tooltip
-	chartsInstance: MassCharts instance
-		termdbConfig is accessible at chartsInstance.state.termdbConfig{}
-		mass option is accessible at chartsInstance.app.opts{}
-	*/
 	const menuDiv = holder.append('div')
 	menuDiv
 		.append('button')
@@ -205,13 +196,11 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		.on('click', () => {
 			chartsInstance.dom.tip.clear()
 			select2Terms(chartsInstance.dom.tip, chartsInstance.app, 'runChart2', 'date', callback, 'numeric')
-			chartsInstance.dom.tip.show() //re-show the tip after it was cleared
+			chartsInstance.dom.tip.show()
 		})
 
-	// Add buttons for any pre-configured runChart2 plots
 	for (const plot of chartsInstance.state.termdbConfig?.plotConfigByCohort?.default?.runChart2?.plots || []) {
 		const config = structuredClone(plot)
-		console.log('Adding runChart2 plot button for', config)
 		menuDiv
 			.append('button')
 			.style('margin', '5px')
