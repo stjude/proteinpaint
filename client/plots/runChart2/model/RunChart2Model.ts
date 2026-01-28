@@ -3,7 +3,6 @@ import { dofetch3 } from '#common/dofetch'
 
 export class RunChart2Model {
 	runChart2: any
-	//Use the response type here
 	charts: any[] = []
 	chartData: RunChartResponse | null = null
 

@@ -2,15 +2,17 @@ import { term0_term2_defaultQ } from '../controls'
 import type { AppApi } from '#rx'
 import { roundValueAuto } from '#shared/roundValue.js'
 
-/** Returns X and Y axis min/max inputs from data range (matches scatter getMinMaxInputs). */
-export function getMinMaxInputs(range: { xMin: number; xMax: number; yMin: number; yMax: number }) {
+/** Builds X/Y min-max control inputs from data range. Uses fallback 0–1 when range is invalid. */
+export function getMinMaxInputs(
+	range: { xMin: number; xMax: number; yMin: number; yMax: number },
+	runChart2?: { dom: { controls: any } }
+) {
 	const fallback = { xMin: 0, xMax: 1, yMin: 0, yMax: 1 }
-	const r =
+	const valid =
 		[range.xMin, range.xMax, range.yMin, range.yMax].every(n => Number.isFinite(n)) &&
 		range.xMin < range.xMax &&
 		range.yMin < range.yMax
-			? range
-			: fallback
+	const r = valid ? range : fallback
 	const xMin = roundValueAuto(r.xMin)
 	const xMax = roundValueAuto(r.xMax)
 	const xStep = (xMax - xMin) / 10 || 0.1
@@ -28,8 +30,7 @@ export function getMinMaxInputs(range: { xMin: number; xMax: number; yMin: numbe
 			placeholder: `${xMin}`,
 			min: xMin,
 			max: xMax,
-			step: xStep,
-			allowNull: true
+			step: xStep
 		},
 		{
 			label: 'X axis maximum',
@@ -41,7 +42,16 @@ export function getMinMaxInputs(range: { xMin: number; xMax: number; yMin: numbe
 			min: xMin,
 			max: xMax,
 			step: xStep,
-			allowNull: true
+			...(runChart2 && {
+				processInput: (value: number) => {
+					/** When the user deletes a value, setNumberInput() in controls.config.js sets it to input.min. Instead, reset to default to allow the user to delete the value. */
+					const sel = runChart2.dom.controls.selectAll('input').filter(function (this: HTMLInputElement) {
+						return this.placeholder === `${xMax}`
+					})
+					if (!sel.node()?.value) return xMax
+					return value
+				}
+			})
 		},
 		{
 			label: 'Y axis minimum',
@@ -52,8 +62,7 @@ export function getMinMaxInputs(range: { xMin: number; xMax: number; yMin: numbe
 			placeholder: `${yMin}`,
 			min: yMin,
 			max: yMax,
-			step: yStep,
-			allowNull: true
+			step: yStep
 		},
 		{
 			label: 'Y axis maximum',
@@ -65,7 +74,16 @@ export function getMinMaxInputs(range: { xMin: number; xMax: number; yMin: numbe
 			min: yMin,
 			max: yMax,
 			step: yStep,
-			allowNull: true
+			...(runChart2 && {
+				processInput: (value: number) => {
+					/** When the user deletes a value, setNumberInput() in controls.config.js sets it to input.min. Instead, reset to default to allow the user to delete the value. */
+					const sel = runChart2.dom.controls.selectAll('input').filter(function (this: HTMLInputElement) {
+						return this.placeholder === `${yMax}`
+					})
+					if (!sel.node()?.value) return yMax
+					return value
+				}
+			})
 		}
 	]
 }
@@ -89,6 +107,17 @@ function getBaseInputs(app: AppApi) {
 			label: 'Y',
 			vocabApi: app.vocabApi,
 			defaultQ4fillTW: term0_term2_defaultQ
+		},
+		{
+			label: 'Aggregation',
+			type: 'dropdown',
+			chartType: 'runChart2',
+			settingsKey: 'aggregation',
+			options: [
+				{ label: 'Mean', value: 'mean' },
+				{ label: 'Median', value: 'median' },
+				{ label: 'Count', value: 'count' }
+			]
 		},
 		{
 			label: 'Plot height',
@@ -119,11 +148,14 @@ function getBaseInputs(app: AppApi) {
 	]
 }
 
-/** @param range - data range { xMin, xMax, yMin, yMax }; when provided, appends getMinMaxInputs. */
-export function getRunChart2Controls(app: AppApi, range?: { xMin: number; xMax: number; yMin: number; yMax: number }) {
+export function getRunChart2Controls(
+	app: AppApi,
+	range?: { xMin: number; xMax: number; yMin: number; yMax: number },
+	runChart2?: { dom: { controls: any } }
+) {
 	const inputs: any[] = getBaseInputs(app)
 	if (range) {
-		inputs.push(...getMinMaxInputs(range))
+		inputs.push(...getMinMaxInputs(range, runChart2))
 	}
 	return inputs
 }
