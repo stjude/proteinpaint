@@ -114,6 +114,8 @@ export function validate_query_snvindel_byrange(ds) {
 	}
 }
 
+const caseCountLimitError = `Case count > ${maxCase4geneExp}: please limit the cohort size to view gene expression correlation plot`
+
 /*
 q{}
 .filter0
@@ -158,11 +160,18 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 		  clustering app will still work to display first 1k cases, rather than quitting
 		  this requires list of cases to be always made so app will work with up to 1k cases
 		*/
-		const cases4clustering = await getCases4exp(q, ds)
+		const case_filters = makeFilter(q)
+		if (!case_filters.content.length) {
+			// when there is no cohort filter, we know maxCase4geneExp will be exceeded,
+			// no need to request cases4clustering from the GDC API
+			throw caseCountLimitError
+		}
+		const cases4clustering = await getCases4exp(q, ds, case_filters)
 		const t = new Date()
 		mayLog(cases4clustering.length, 'cases with exp data 4 clustering:', t - t2, 'ms')
-		if (cases4clustering.length > maxCase4geneExp)
-			throw `Case count > ${maxCase4geneExp}: please limit the cohort size to view gene expression correlation plot`
+		if (cases4clustering.length > maxCase4geneExp) throw caseCountLimitError
+		if (!cases4clustering.length) return { term2sample2value, byTermId: {}, bySampleId: {}, skippedSexChrGenes: [] }
+
 		t2 = t
 
 		// 3/25/2025 gdc backend doesn't index gene exp for sex chr genes. thus prevent these genes from showing up in app
@@ -406,10 +415,10 @@ function mayFilterByExpression(filter, value) {
 }
 
 // get cases for expression query
-async function getCases4exp(q, ds) {
+async function getCases4exp(q, ds, case_filters) {
 	const json = {
 		fields: 'case_id',
-		case_filters: makeFilter(q),
+		case_filters,
 		// hiercluster app will limit max number of allowed cases by hardcoded value. times 10 is a generous guess to allow for cases without gene exp data, as is from current cohort
 		size: maxCase4geneExpCluster * 10
 	}
