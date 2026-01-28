@@ -253,10 +253,9 @@ export async function getPlotConfig(opts, app) {
 
 		if (plot.term0?.q?.mode == 'continuous' && !app.hasWebGL())
 			throw 'Can not load Z/Divide by term in continuous mode as WebGL is not supported'
-
 		return plot
 	} catch (e) {
-		console.log(e)
+		console.error(e)
 		throw `${e} [sampleScatter getPlotConfig()]`
 	}
 }
@@ -358,7 +357,8 @@ export function getDefaultScatterSettings(): Settings {
 		minXScale: null,
 		maxXScale: null,
 		minYScale: null,
-		maxYScale: null
+		maxYScale: null,
+		itemLabel: 'Sample'
 	}
 }
 

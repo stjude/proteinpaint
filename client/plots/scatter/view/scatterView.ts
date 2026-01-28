@@ -110,11 +110,13 @@ export class ScatterView {
 			}
 		}
 		const shapeSizeOption = {
-			label: 'Sample size',
+			label: `${this.scatter.settings.itemLabel} size`,
 			type: 'number',
 			chartType: 'sampleScatter',
 			settingsKey: 'size',
-			title: 'Sample size, represents the factor used to scale the sample',
+			title: `${
+				this.scatter.settings.itemLabel
+			} size, represents the factor used to scale the ${this.scatter.settings.itemLabel.toLowerCase()}`,
 			min: 0,
 			step: 0.1
 		}

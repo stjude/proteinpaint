@@ -95,4 +95,6 @@ export type Settings = {
 	aggregateData?: any
 	excludeOutliers?: boolean
 	showCumulativeFrequency?: number
+	/** Label for the individual data points in the scatter plot (e.g., "Sample" or "Cell") */
+	itemLabel: string
 }
