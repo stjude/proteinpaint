@@ -108,13 +108,11 @@ class SummaryPlot extends PlotBase implements RxComponent {
 				getConfig: async () => {
 					if (!this.config) return
 					const config: any = { id: this.id, childType: 'barchart' }
-					const term = this.config?.term
-					const term2 = this.config?.term2
+					const { term, term2 } = this.config || {}
 					if (term) {
 						const mode = isNumericTerm(term?.term) ? 'discrete' : term?.q.mode || 'discrete'
 						config.term = await this.getWrappedTermCopy(term, mode)
 					}
-
 					if (term2) {
 						const mode = isNumericTerm(term2.term) ? 'discrete' : term2.q.mode || 'discrete'
 						config.term2 = await this.getWrappedTermCopy(term2, mode)
@@ -367,9 +365,10 @@ class SummaryPlot extends PlotBase implements RxComponent {
 
 	async tabClickCallback(event, tab) {
 		if (!tab || !tab.getConfig) return
+		let config
 		try {
 			this.dom.loading.style('display', '')
-			const config = await tab.getConfig()
+			config = await tab.getConfig()
 			this.dom.loading.style('display', 'none')
 			if (config)
 				this.app.dispatch({
