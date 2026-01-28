@@ -7,7 +7,7 @@ import nodeFetch from 'node-fetch'
 import { combineSamplesById } from './mds3.variant2samples.js'
 import { guessSsmid } from '#shared/mds3tk.js'
 import { filter2GDCfilter } from './mds3.gdc.filter.js'
-import { write_tmpfile, cachedFetch } from './utils.js'
+import { write_tmpfile, cachedFetch, sleep } from './utils.js'
 import { mayLog } from './helpers.ts'
 import serverconfig from './serverconfig.js'
 
@@ -163,7 +163,7 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 		const case_filters = makeFilter(q)
 		if (!case_filters.content.length) {
 			// when there is no cohort filter, we know maxCase4geneExp will be exceeded,
-			// no need to request cases4clustering from the GDC API
+			// no need to trigger any other requests to the GDC API
 			throw caseCountLimitError
 		}
 		const cases4clustering = await getCases4exp(q, ds, case_filters)
@@ -207,13 +207,23 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 			byTermId[id] = { gencodeId: g }
 			term2sample2value.set(id, new Map())
 		}
-
-		const bySampleId = await getExpressionData(q, ensgLst, cases4clustering, ensg2id, term2sample2value, ds)
-		// returns mapping from uuid to submitter id; since uuid is used in term2sample2value, but need to display submitter id on ui
-
-		const t4 = new Date()
-		mayLog('gene-case matrix built,', Object.keys(bySampleId).length, 'cases,', t4 - t3, 'ms')
-
+		const maxRetry = 2
+		let bySampleId
+		for (let i = 0; i < maxRetry; i++) {
+			// 1/27/2026, retry per Phil's suggestion in https://gdc-ctds.atlassian.net/browse/SV-2709
+			try {
+				bySampleId = await getExpressionData(q, ensgLst, cases4clustering, ensg2id, term2sample2value, ds)
+				// returns mapping from uuid to submitter id; since uuid is used in term2sample2value, but need to display submitter id on ui
+				const t4 = new Date()
+				mayLog('gene-case matrix built,', Object.keys(bySampleId).length, 'cases,', t4 - t3, 'ms')
+			} catch (e) {
+				if (!String(e).includes('no gene lines')) throw e
+				// 1/27/2026 the message below is per Himanso's feedback in https://gdc-ctds.atlassian.net/browse/SV-2709
+				if (i >= maxRetry - 1) throw `Something went wrong while loading the gene expression data. Please try again.`
+				await sleep(3000) // wait until the next retry
+				mayLog(`(!) no gene lines error for getExpressionData() request #${i + 1}`)
+			}
+		}
 		return { term2sample2value, byTermId, bySampleId, skippedSexChrGenes }
 	}
 }
@@ -300,7 +310,7 @@ async function geneExpression_getGenes(twlst, cases4clustering, genome, ds, q) {
 		// later can comment above code to double-check as /values is able to return data for HOXA1 so why is it left out here?
 		return [ensgLst2, ensg2symbol]
 	} catch (e) {
-		console.log(252, e)
+		console.trace(e)
 		throw e
 	}
 }
@@ -367,6 +377,8 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2id, term2sa
 		known issue with api https://gdc-ctds.atlassian.net/browse/SV-2695
 		when cohort is large, this endpoint sometimes returns such data
 		detect when it happened and throw a msg to show on client to be informative, to avoid crashing plot
+
+    NOTE: !!! 'no gene lines' is detected for retry in consumer code !!!
 		*/
 		throw `API returned tsv data has only a header line of ${caseHeader.length} cases but no gene lines`
 	}
