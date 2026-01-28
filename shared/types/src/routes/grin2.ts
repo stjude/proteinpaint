@@ -204,12 +204,12 @@ export type GRIN2Response = {
 
 	/** Memory usage profile during GRIN2 processing */
 	memoryProfile?: {
-		start: number
-		after_prep: number
-		after_overlaps: number
-		after_counts: number
-		after_stats: number
-		peak: number
+		start?: number
+		after_prep?: number
+		after_overlaps?: number
+		after_counts?: number
+		after_stats?: number
+		peak?: number
 	}
 }
 
