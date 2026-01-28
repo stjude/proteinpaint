@@ -991,7 +991,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.style('font-size', `${this.optionsTextFontSize}px`)
 				.style('color', this.optionsTextColor)
 				.text(
-					`Note: Lesion cap of ${result.processingSummary.lesionCap.toLocaleString()} was reached before all samples could be processed. ` +
+					`Note: Lesion cap of ${result.processingSummary.lesionCap?.toLocaleString()} was reached before all samples could be processed. ` +
 						`Analysis ran on ${result.processingSummary.processedSamples.toLocaleString()} of ${expectedToProcessSamples.toLocaleString()} samples.`
 				)
 		}

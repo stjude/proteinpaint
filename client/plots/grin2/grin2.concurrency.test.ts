@@ -1,5 +1,5 @@
-// test-grin2-concurrency.js
-// Run with: node test-grin2-concurrency.js
+// test.grin2.concurrency.ts
+// Run with: node test.grin2.concurrency.ts
 import { formatElapsedTime } from '@sjcrh/proteinpaint-shared'
 
 const BASE_URL = 'http://localhost:3000/grin2'

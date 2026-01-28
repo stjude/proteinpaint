@@ -99,12 +99,14 @@ function getAvailableMemoryMB(): number {
 		if (process.platform === 'darwin') {
 			// macOS: use vm_stat
 			const output = execSync('vm_stat').toString()
-			const pageSize = 16384 // Apple Silicon uses 16KB pages, Intel uses 4KB
+			// Parse page size from vm_stat header: "page size of 4096 bytes"
+			const headerLine = output.split('\n')[0] || ''
+			const pageSizeMatch = headerLine.match(/page size of\s+(\d+)\s+bytes/i)
+			const pageSize = pageSizeMatch ? parseInt(pageSizeMatch[1], 10) : 16384
 			const freeMatch = output.match(/Pages free:\s+(\d+)/)
 			const inactiveMatch = output.match(/Pages inactive:\s+(\d+)/)
-
-			const freePages = freeMatch ? parseInt(freeMatch[1]) : 0
-			const inactivePages = inactiveMatch ? parseInt(inactiveMatch[1]) : 0
+			const freePages = freeMatch ? parseInt(freeMatch[1], 10) : 0
+			const inactivePages = inactiveMatch ? parseInt(inactiveMatch[1], 10) : 0
 
 			// Available ≈ free + inactive
 			return ((freePages + inactivePages) * pageSize) / (1024 * 1024)
