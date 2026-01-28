@@ -1092,8 +1092,13 @@ export class TermdbVocab extends Vocab {
 	// and not as a persisted object elsewhere
 	async setTermBins({ $id, term, q }) {
 		//TODO use the PresetNumericBins type for presetBins
-		const presetBins = await this.getDefaultBins({ tw: { $id, term, q } })
+		let presetBins = await this.getDefaultBins({ tw: { $id, term, q } })
 		if ('error' in presetBins) throw presetBins.error
+		if (presetBins.default?.bin_size === null || presetBins.default?.first_bin.stop === null) {
+			// allow no data error to be caught by plot code, to display a more
+			// user-friendly error message instead of obscure bin-related error message
+			presetBins = { default: { type: 'regular-bin', bin_size: 1, first_bin: { startunbounded: true, stop: 2 } } } // dummyBin
+		}
 		// NOTE: if term is frozen, creating an unfrozen copy here will
 		// not propagate changes to the original term
 		term.bins = presetBins

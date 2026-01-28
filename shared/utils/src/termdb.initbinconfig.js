@@ -6,6 +6,7 @@ Initialize a bin configuration for a numeric dataset
     {format: 'string'}: output bin config as JSON string
 */
 export default function initBinConfig(data, opts = {}) {
+	if (!data.length) return { type: 'regular-bin', startinclusive: true, bin_size: null, first_bin: { stop: null } }
 	if (data.find(d => !Number.isFinite(d))) throw new Error('non-numeric values found')
 
 	let binConfig
