@@ -5,7 +5,8 @@ import { detectGte } from '../../test/test.helpers.js'
 /* 
 Tests:
     - Render facet table
-	- termCollection facet table
+	- termCollection (row), categorical (col)
+	- categorical (row), termCollection (col)
 */
 
 /*************************
@@ -85,7 +86,7 @@ tape('Render facet table', test => {
 	}
 })
 
-tape('termCollection facet table', test => {
+tape('termCollection (row), categorical (col)', test => {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -111,6 +112,51 @@ tape('termCollection facet table', test => {
 		const headerNum = table.selectAll('th[data-testid="sjpp-facet-col-header"]').size()
 		test.equal(headerNum, 2, 'Should render 2 headers')
 		const rowNum = table.selectAll('td[data-testid="sjpp-facet-row-label"]').size()
+		test.equal(rowNum, 3, 'Should render 3 rows')
+
+		const prompt = table.select('div[data-testid="sjpp-facet-start-prompt"]')
+		test.true(
+			prompt && prompt.text() == 'Values in cells are averages',
+			'Should render prompt that cells are averages.'
+		)
+
+		const cells = await detectGte({
+			elem: table.node(),
+			selector: 'td.sja_menuoption'
+		})
+		test.equal(cells.length, 6, 'Should render 6 cells.')
+
+		if (test['_ok']) facet.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('categorical (row), termCollection (col)', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'facet',
+					columnTw: getTermCollection(),
+					rowTw: { id: 'sex' }
+				}
+			]
+		},
+		facet: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(facet) {
+		const table = facet.Inner.dom.mainDiv
+
+		const headerNum = table.selectAll('th[data-testid="sjpp-facet-col-header"]').size()
+		test.equal(headerNum, 3, 'Should render 3 headers')
+		const rowNum = table.selectAll('td[data-testid="sjpp-facet-row-label"]').size()
 		test.equal(rowNum, 2, 'Should render 2 rows')
 
 		const prompt = table.select('div[data-testid="sjpp-facet-start-prompt"]')
@@ -123,7 +169,7 @@ tape('termCollection facet table', test => {
 			elem: table.node(),
 			selector: 'td.sja_menuoption'
 		})
-		test.equal(cells.length, 4, 'Should render 4 cells.')
+		test.equal(cells.length, 6, 'Should render 6 cells.')
 
 		if (test['_ok']) facet.Inner.app.destroy()
 		test.end()
@@ -161,13 +207,31 @@ function getTermCollection() {
 					name: 'Age at last ABC assessment',
 					id: 'agelastvisit',
 					isleaf: true
+				},
+				{
+					type: 'float',
+					bins: {
+						default: {
+							type: 'regular-bin',
+							startinclusive: true,
+							bin_size: 5,
+							first_bin: { stop: 25 },
+							last_bin: { start: 55 }
+						}
+					},
+					name: 'Age (years) at Death',
+					id: 'a_death',
+					isleaf: true,
+					values: {},
+					hashtmldetail: true
 				}
 			],
-			name: '(agedx,agelastvisit)',
+			name: '(agedx,agelastvisit,a_death)',
 			isleaf: true,
 			propsByTermId: {
 				agedx: { color: '#1b9e77' },
-				agelastvisit: { color: '#e7298a' }
+				agelastvisit: { color: '#e7298a' },
+				a_death: { color: '#d95f02' }
 			}
 		},
 		q: { isAtomic: true, mode: 'continuous', lst: [] }
