@@ -2874,13 +2874,13 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				// key will be the name of the assigned group
 				data.set(sample, {
 					sample,
-					[tw.$id]: { key: group.name, label: group.name, value: group.name, values }
+					[tw.$id]: { key: group.name, value: group.name, values }
 				})
 			} else {
 				// groupsetting is not active
 				data.set(sample, {
 					sample,
-					[tw.$id]: { key: tw.term.name, label: tw.term.name, values: mlst }
+					[tw.$id]: { key: tw.term.name, values: mlst }
 				})
 			}
 		}
