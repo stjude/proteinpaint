@@ -528,7 +528,8 @@ class Facet extends PlotBase {
 				title: 'Facet column categories',
 				label: 'Columns',
 				vocabApi: this.app.vocabApi,
-				numericEditMenuVersion: ['discrete']
+				numericEditMenuVersion: ['discrete'],
+				defaultQ4fillTW: term0_term2_defaultQ
 			},
 			{
 				type: 'term',
@@ -538,7 +539,8 @@ class Facet extends PlotBase {
 				title: 'Facet row categories',
 				label: 'Rows',
 				vocabApi: this.app.vocabApi,
-				numericEditMenuVersion: ['discrete']
+				numericEditMenuVersion: ['discrete'],
+				defaultQ4fillTW: term0_term2_defaultQ
 			},
 			{
 				boxLabel: '',
