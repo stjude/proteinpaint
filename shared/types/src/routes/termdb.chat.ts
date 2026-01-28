@@ -53,7 +53,7 @@ export type CategoricalFilterTerm = {
 	term: string
 	/** The category of the term */
 	category: string
-	/** join term to be used only when there there is more than one filter term */
+	/** join term to be used only when there there is more than one filter term and is not the last term of the filter */
 	join?: 'and' | 'or'
 }
 
@@ -64,7 +64,7 @@ export type NumericFilterTerm = {
 	start?: number
 	/** stop position (or upper limit) of numeric term */
 	stop?: number
-	/** join term to be used only when there there is more than one filter term */
+	/** join term to be used only when there there is more than one filter term and is not the last term of the filter */
 	join?: 'and' | 'or'
 }
 
