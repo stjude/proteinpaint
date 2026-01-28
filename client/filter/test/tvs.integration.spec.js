@@ -1365,7 +1365,6 @@ tape('tvs: termCollection', async test => {
 			}
 		})
 
-		await sleep(500)
 		const inputs = [...rows].reduce((arr, tr) => {
 			arr.push(...tr.querySelectorAll('input'))
 			return arr
