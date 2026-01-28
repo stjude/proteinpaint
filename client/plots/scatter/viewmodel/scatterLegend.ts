@@ -71,7 +71,9 @@ export class ScatterLegend {
 		let title0 = this.scatter.config.term0
 			? `${this.scatter.config.term0.term.name + ' ' + chart.id}, n=${chart.cohortSamples.length}`
 			: `${chart.cohortSamples.length} ${
-					this.scatter.config.sampleType ? this.scatter.config.sampleType + 's' : 'samples'
+					this.scatter.config.sampleType
+						? this.scatter.config.sampleType + 's'
+						: `${this.scatter.settings.itemLabel?.toLowerCase()}s`
 			  }`
 		if (this.model.filterSampleStr) title0 += `, search = ${this.model.filterSampleStr}`
 		legendG.append('text').attr('x', 0).attr('y', offsetY).text(title0).style('font-weight', 'bold')
