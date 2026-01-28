@@ -38,12 +38,7 @@ export function renderVariantConfig(arg: Arg) {
 
 	// header
 	if (arg.header) {
-		holder
-			.append('div')
-			.style('margin-top', '15px')
-			.style('font-weight', 'bold')
-			.style('font-size', '.9em')
-			.text(arg.header)
+		holder.append('div').style('font-weight', 'bold').style('font-size', '.9em').text(arg.header)
 	}
 
 	// mutant vs. wildtype radio buttons

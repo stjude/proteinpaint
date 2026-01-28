@@ -147,12 +147,19 @@ function setRenderers(self) {
 	}
 
 	// optional _holder, for example when called by filter.js
-	self.showMenu = _holder => {
+	self.showMenu = async _holder => {
 		const holder = _holder ? _holder : self.dom.tip
-		if (!dtTermTypes.has(self.tvs.term.type)) {
-			addExcludeCheckbox(holder, self.tvs, self)
+		const loadingDiv = holder.append('div').style('padding', '10px').text('Loading ...')
+		try {
+			if (!dtTermTypes.has(self.tvs.term.type)) {
+				addExcludeCheckbox(holder, self.tvs, self)
+			}
+			await self.handler.fillMenu(self, holder, self.tvs)
+			loadingDiv.remove()
+		} catch (e) {
+			loadingDiv.text('Error: ' + (e.message || e))
+			if (e.stack) console.log(e)
 		}
-		self.handler.fillMenu(self, holder, self.tvs)
 	}
 
 	self.updatePill = async function () {

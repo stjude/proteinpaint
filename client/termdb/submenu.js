@@ -42,7 +42,7 @@ function setRenderers(self) {
 		self.dom.holder
 			.style('display', 'block')
 			.append('div')
-			.style('margin', '10px')
+			.style('margin', '10px 10px 15px 10px')
 			.append('span')
 			.html('&laquo; ' + (self.app.opts.tree?.backToSelectionText || 'Back to variable selection'))
 			.attr('class', 'sja_clbtext')
@@ -53,7 +53,7 @@ function setRenderers(self) {
 			self.dom.holder
 				.style('display', 'block')
 				.append('div')
-				.style('margin', '15px 0px 5px 10px')
+				.style('margin', '10px 0px 5px 10px')
 				.style('font-weight', 'bold')
 				.style('font-size', '.9em')
 				.text(term.name)
