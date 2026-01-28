@@ -119,43 +119,42 @@ class Facet extends PlotBase {
 		const aggregateBy = config.settings.facet.aggregateBy
 		if (this.hasTermCollection) {
 			// termCollection term present
-			if (config.columnTw.term.type == 'termCollection' && config.rowTw.term.type == 'termCollection')
-				throw 'both terms cannot be termCollection'
+			const isColTermCollection = config.columnTw.term.type == 'termCollection'
+			const isRowTermCollection = config.rowTw.term.type == 'termCollection'
+			if (isColTermCollection && isRowTermCollection) throw 'row and col terms cannot both be termCollection'
 			if (aggregateBy != 'avg' && aggregateBy != 'sum') throw 'unexpected aggregateBy value'
 			for (const category2 of categories2) {
 				cells[category2] = {}
 				const tr = tbody.append('tr')
-				const label2 =
-					config.rowTw.term.type == 'termCollection'
-						? getTermCollectionName(config.rowTw, category2)
-						: config.rowTw.term.values?.[category2]?.label || category2
+				const label2 = isRowTermCollection
+					? getTermCollectionName(config.rowTw, category2)
+					: config.rowTw.term.values?.[category2]?.label || category2
 				this.addRowLabel(tr, label2)
 				for (const category of categories) {
 					const td = tr.append('td')
 					const samples = result.lst.filter(s => {
-						const colPass =
-							config.columnTw.term.type == 'termCollection'
-								? getTermCollectionData(s, config.columnTw, category)
-								: s[config.columnTw.$id]?.key == category
-						const rowPass =
-							config.rowTw.term.type == 'termCollection'
-								? getTermCollectionData(s, config.rowTw, category2)
-								: s[config.rowTw.$id]?.key == category2
+						const colPass = isColTermCollection
+							? getTermCollectionData(s, config.columnTw, category)
+							: s[config.columnTw.$id]?.key == category
+						const rowPass = isRowTermCollection
+							? getTermCollectionData(s, config.rowTw, category2)
+							: s[config.rowTw.$id]?.key == category2
 						return colPass && rowPass
 					})
 					if (samples.length) {
-						// cell has samples
+						// samples have data for both categories
+						// render aggregate termCollection data in cell
 						const data = samples.map(s =>
-							config.columnTw.term.type == 'termCollection'
+							isColTermCollection
 								? getTermCollectionData(s, config.columnTw, category)
 								: getTermCollectionData(s, config.rowTw, category2)
 						)
 						const total = data.reduce((sum, v) => sum + v, 0)
-						const avg = total / data.length
+						const value = aggregateBy == 'avg' ? total / data.length : total
 						td.classed('sja_menuoption', true)
 							.style('text-align', 'center')
 							.style('border', '2.5px solid white')
-							.text(aggregateBy == 'avg' ? roundValueAuto(avg) : roundValueAuto(total))
+							.text(roundValueAuto(value))
 					} else {
 						// cell does not have samples
 						td.classed('highlightable-cell', true)
