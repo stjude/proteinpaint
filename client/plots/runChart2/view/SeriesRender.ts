@@ -47,13 +47,15 @@ export class SeriesRender {
 			.x(d => this.getCoordinates(d).x)
 			.y(d => this.getCoordinates(d).y)
 
+		const opacity = this.settings.opacity ?? 0.6
 		this.seriesGroup
 			.append('path')
 			.datum(sortedPoints)
 			.attr('fill', 'none')
 			.attr('stroke', color)
-			.attr('stroke-width', 2)
+			.attr('stroke-width', 1)
 			.attr('stroke-linejoin', 'round')
+			.attr('opacity', opacity)
 			.attr('d', lineBuilder)
 
 		this.seriesGroup
@@ -63,7 +65,7 @@ export class SeriesRender {
 			.append('circle')
 			.attr('cx', d => this.getCoordinates(d).x)
 			.attr('cy', d => this.getCoordinates(d).y)
-			.attr('r', 4)
+			.attr('r', 2.5)
 			.attr('fill', color)
 			.attr('stroke', '#fff')
 			.attr('stroke-width', 1)
@@ -91,8 +93,7 @@ export class SeriesRender {
 				.attr('y2', yMedian)
 				.attr('stroke', medianColor.toString())
 				.attr('stroke-width', 1)
-				.attr('stroke-dasharray', '5,5')
-				.attr('opacity', 0.7)
+				.attr('opacity', 0.5)
 			// Add median label
 			this.seriesGroup
 				.append('text')

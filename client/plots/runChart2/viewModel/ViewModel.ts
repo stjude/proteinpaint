@@ -4,8 +4,10 @@ import { scaleLinear } from 'd3-scale'
 export class RunChart2ViewModel {
 	#horizPad = 70
 	#vertPad = 40
-	#bottomLabelPad = 40
+	#bottomLabelPad = 55
 	#leftLabelPad = 50
+	#xAxisLabelOffset = 50
+	#yAxisLabelX = 55
 
 	settings: RunChart2Settings
 	xMin = Infinity
@@ -24,6 +26,7 @@ export class RunChart2ViewModel {
 	}
 
 	map(data: any) {
+		let totalSampleCount = 0
 		for (const series of data) {
 			if (!series.points || series.points.length === 0) continue
 
@@ -32,6 +35,7 @@ export class RunChart2ViewModel {
 				this.xMax = Math.max(point.x, this.xMax)
 				this.yMin = Math.min(point.y, this.yMin)
 				this.yMax = Math.max(point.y, this.yMax)
+				totalSampleCount += point.sampleCount ?? 0
 			}
 		}
 
@@ -52,7 +56,7 @@ export class RunChart2ViewModel {
 
 			const usePaddingY = this.settings.minYScale == null && this.settings.maxYScale == null
 			const yPadded = usePaddingY ? this.setDomain(this.yMin, this.yMax, 0.1) : null
-			yMinForDomain = this.settings.minYScale ?? (yPadded ? Math.max(0, yPadded[0]) : this.yMin)
+			yMinForDomain = this.settings.minYScale ?? (yPadded ? yPadded[0] : this.yMin)
 			yMaxForDomain = this.settings.maxYScale ?? (yPadded ? yPadded[1] : this.yMax)
 		} else {
 			xMinForDomain = 0
@@ -63,6 +67,7 @@ export class RunChart2ViewModel {
 
 		return {
 			series: data,
+			totalSampleCount: totalSampleCount > 0 ? totalSampleCount : undefined,
 			plotDims: this.getPlotDimensions({
 				xMin: xMinForDomain,
 				xMax: xMaxForDomain,
@@ -82,13 +87,15 @@ export class RunChart2ViewModel {
 			xAxis: {
 				scale: scaleLinear().domain([xMin, xMax]).range([0, this.settings.svgw]),
 				x: this.#horizPad + this.#leftLabelPad,
-				y: this.settings.svgh + this.#vertPad
+				y: this.settings.svgh + this.#vertPad,
+				labelOffset: this.#xAxisLabelOffset
 			},
 			yAxis: {
 				// range [svgh, 0]: y grows bottom-to-top
 				scale: scaleLinear().domain([yMin, yMax]).range([this.settings.svgh, 0]),
 				x: this.#horizPad + this.#leftLabelPad,
-				y: this.#vertPad
+				y: this.#vertPad,
+				labelX: this.#yAxisLabelX
 			}
 		}
 	}
