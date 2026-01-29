@@ -1,6 +1,6 @@
 import { line } from 'd3-shape'
 import { rgb } from 'd3-color'
-import { table2col } from '#dom'
+// import { table2col } from '#dom'
 import { roundValueAuto } from '#shared/roundValue.js'
 import type { RunChart2Settings } from '../Settings.ts'
 import type { RunChart2 } from '../RunChart2.ts'
@@ -69,14 +69,17 @@ export class SeriesRender {
 			.attr('fill', color)
 			.attr('stroke', '#fff')
 			.attr('stroke-width', 1)
-			.style('cursor', 'pointer')
-			.on('mouseover', (event: any, d: any) => this.showHoverTip(event, d))
-			.on('mouseout', () => this.hideHoverTip())
-			.on('click', (event: any, d: any) => {
-				if (this.runChart2) {
-					this.showPointMenu(event, d)
-				}
-			})
+		// Temporarily disabled
+		/*
+		 .style('cursor', 'pointer')
+		 .on('mouseover', (event: any, d: any) => this.showHoverTip(event, d))
+		 .on('mouseout', () => this.hideHoverTip())
+		 .on('click', (event: any, d: any) => {
+		 	if (this.runChart2) {
+		 		this.showPointMenu(event, d)
+		 	}
+		 })
+		*/
 		// Draw median line if median is available
 		if (this.series.median != null && !isNaN(this.series.median)) {
 			const yMedian = this.plotDims.yAxis.scale(
@@ -106,54 +109,57 @@ export class SeriesRender {
 		}
 	}
 
-	showHoverTip(event: any, d: any) {
-		const tip = this.runChart2?.dom?.hovertip
-		if (!tip) return
-		const cfg = this.runChart2?.state?.config
-		const xTermName = cfg?.term?.term?.name ?? 'X'
-		const yTermName = cfg?.term2?.term?.name ?? 'Y'
-		tip.clear()
-		const table = table2col({ holder: tip.d.append('div') })
-		table.addRow(xTermName, d.xName ?? String(d.x))
-		table.addRow(yTermName, roundValueAuto(d.y, true, 2))
-		table.addRow('Sample Count', String(d.sampleCount ?? ''))
-		tip.show(event.clientX, event.clientY)
-	}
+	// Hover tooltip and click menu commented out until menu actions are implemented
+	/*
+	 showHoverTip(event: any, d: any) {
+	 	const tip = this.runChart2?.dom?.hovertip
+	 	if (!tip) return
+	 	const cfg = this.runChart2?.state?.config
+	 	const xTermName = cfg?.term?.term?.name ?? 'X'
+	 	const yTermName = cfg?.term2?.term?.name ?? 'Y'
+	 	tip.clear()
+	 	const table = table2col({ holder: tip.d.append('div') })
+	 	table.addRow(xTermName, d.xName ?? String(d.x))
+	 	table.addRow(yTermName, roundValueAuto(d.y, true, 2))
+	 	table.addRow('Sample Count', String(d.sampleCount ?? ''))
+	 	tip.show(event.clientX, event.clientY)
+	 }
 
-	hideHoverTip() {
-		this.runChart2?.dom?.hovertip?.hide()
-	}
+	 hideHoverTip() {
+	 	this.runChart2?.dom?.hovertip?.hide()
+	 }
 
-	showPointMenu(event: any, point: any) {
-		if (!this.runChart2 || !this.runChart2.dom.clickMenu) return
+	 showPointMenu(event: any, point: any) {
+	 	if (!this.runChart2 || !this.runChart2.dom.clickMenu) return
 
-		this.hideHoverTip()
-		const cfg = this.runChart2.state?.config
-		const xTermName = cfg?.term?.term?.name ?? 'X'
-		const yTermName = cfg?.term2?.term?.name ?? 'Y'
-		const menu = this.runChart2.dom.clickMenu
-		menu.clear()
+	 	this.hideHoverTip()
+	 	const cfg = this.runChart2.state?.config
+	 	const xTermName = cfg?.term?.term?.name ?? 'X'
+	 	const yTermName = cfg?.term2?.term?.name ?? 'Y'
+	 	const menu = this.runChart2.dom.clickMenu
+	 	menu.clear()
 
-		const menuDiv = menu.d.append('div').attr('class', 'sja_menu_div')
+	 	const menuDiv = menu.d.append('div').attr('class', 'sja_menu_div')
 
-		const options = [
-			{ label: `${xTermName}: ${point.xName ?? point.x}`, callback: () => menu.hide() },
-			{ label: `${yTermName}: ${roundValueAuto(point.y, true, 2)}`, callback: () => menu.hide() },
-			{ label: `Sample Count: ${point.sampleCount}`, callback: () => menu.hide() }
-		]
+	 	const options = [
+	 		{ label: `${xTermName}: ${point.xName ?? point.x}`, callback: () => menu.hide() },
+	 		{ label: `${yTermName}: ${roundValueAuto(point.y, true, 2)}`, callback: () => menu.hide() },
+	 		{ label: `Sample Count: ${point.sampleCount}`, callback: () => menu.hide() }
+	 	]
 
-		menuDiv
-			.selectAll('div')
-			.data(options)
-			.enter()
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text(d => d.label)
-			.style('cursor', 'pointer')
-			.on('click', (event: any, d: any) => {
-				d.callback()
-			})
+	 	menuDiv
+	 		.selectAll('div')
+	 		.data(options)
+	 		.enter()
+	 		.append('div')
+	 		.attr('class', 'sja_menuoption sja_sharp_border')
+	 		.text(d => d.label)
+	 		.style('cursor', 'pointer')
+	 		.on('click', (event: any, d: any) => {
+	 			d.callback()
+	 		})
 
-		menu.show(event.clientX, event.clientY)
-	}
+	 	menu.show(event.clientX, event.clientY)
+	 }
+	*/
 }
