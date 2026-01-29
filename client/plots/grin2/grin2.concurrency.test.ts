@@ -1,5 +1,5 @@
-// test.grin2.concurrency.ts
-// Run with: node test.grin2.concurrency.ts
+// grin2.concurrency.test.ts
+// Run with: node grin2.concurrency.test.ts
 import { formatElapsedTime } from '@sjcrh/proteinpaint-shared'
 
 const BASE_URL = 'http://localhost:3000/grin2'
@@ -85,12 +85,17 @@ async function makeRequest(id, url) {
 			console.log(`Request ${id}: SUCCESS in ${elapsed}`)
 			return { id, success: true, elapsed }
 		} else {
-			console.log(`Request ${id}: FAILED (${response.status}) in ${elapsed} - ${data.error || 'Unknown error'}`)
-			return { id, success: false, elapsed, error: data.error }
+			// Extract just the error message, not the full stack
+			const errorMsg = data.error || `HTTP ${response.status}`
+			console.log(`Request ${id}: FAILED in ${elapsed} - ${errorMsg}`)
+			return { id, success: false, elapsed, error: errorMsg }
 		}
-	} catch (_e) {
+	} catch (e) {
 		const elapsed = formatElapsedTime(Date.now() - startTime)
-		return { id, success: false, elapsed }
+		// Extract just the message from the error object
+		const errorMsg = e instanceof Error ? e.message : String(e)
+		console.log(`Request ${id}: ERROR in ${elapsed} - ${errorMsg}`)
+		return { id, success: false, elapsed, error: errorMsg }
 	}
 }
 
