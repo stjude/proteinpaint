@@ -1097,7 +1097,15 @@ export class TermdbVocab extends Vocab {
 		if (presetBins.default?.bin_size === null || presetBins.default?.first_bin.stop === null) {
 			// allow no data error to be caught by plot code, to display a more
 			// user-friendly error message instead of obscure bin-related error message
-			presetBins = { default: { type: 'regular-bin', bin_size: 1, first_bin: { startunbounded: true, stop: 2 } } } // dummy presetBins
+			presetBins = {
+				default: {
+					mode: 'discrete',
+					type: 'regular-bin',
+					bin_size: 1,
+					first_bin: { startunbounded: true, stop: 2 },
+					isDummyPreset: true
+				}
+			} // dummy presetBins
 		}
 		// NOTE: if term is frozen, creating an unfrozen copy here will
 		// not propagate changes to the original term
