@@ -92,7 +92,8 @@ tape('ListSamples.getTvsLst() in constructor returns obj for categorical term an
 								type: 'regular-bin',
 								label_offset: 1,
 								bin_size: 3,
-								first_bin: { startunbounded: true, stop: 2 }
+								first_bin: { startunbounded: true, stop: 2 },
+								mode: 'discrete'
 								//label_offset_ignored: false
 							},
 							less: {

@@ -267,6 +267,7 @@ export function get_bin_label(bin, binconfig, valueConversion) {
 	/*
   Generate a numeric bin label given a bin configuration and an optional term valueConversion object
 */
+	if (!bin) return 'missing bin.label'
 	if (bin.label) return bin.label
 
 	const bc = binconfig

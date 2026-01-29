@@ -119,6 +119,11 @@ export type RegularNumericBinConfig = MinBaseQ & {
 	 * Note that the generated bin labels may use integer values in some cases for less clutter, such as when bins.size = 1.
 	 *  */
 	rounding?: string
+	/** indicates the bin config was set when not enough data is available to compute bins,
+	 * may trigger resetting term.bins to avoid using dummy presetBins in TermdbVocab.setTermBins()
+	 * when the cohort changes
+	 */
+	isDummyPreset?: boolean
 }
 
 export type CustomNumericBinConfigLst = [NumericBin, ...NumericBin[]]
@@ -130,6 +135,11 @@ export type CustomNumericBinConfig = MinBaseQ & {
 	// use this workaround to define a non-empty array
 	lst: CustomNumericBinConfigLst
 	preferredBins?: 'median'
+	/** indicates the bin config was set when not enough data is available to compute bins,
+	 * may trigger resetting term.bins to avoid using dummy presetBins in TermdbVocab.setTermBins()
+	 * when the cohort changes
+	 */
+	isDummyPreset?: boolean
 }
 
 export type PresetNumericBins = {
