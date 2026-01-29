@@ -51,28 +51,27 @@ export class RunChart2View {
 	}
 
 	renderAxisLabels(plotDims: any) {
-		const xLabel = this.config?.term?.term?.name || 'X Axis'
+		const xName = this.config?.term?.term?.name || 'X Axis'
+		const xLabel =
+			this.viewData.totalSampleCount != null ? `${xName}, n=${this.viewData.totalSampleCount.toLocaleString()}` : xName
 		const yLabel = this.config?.term2?.term?.name || 'Y Axis'
 
-		const xAxisLabelY = plotDims.xAxis.y + 35
+		const xAxisLabelY = plotDims.xAxis.y + (plotDims.xAxis.labelOffset ?? 50)
 		this.chartDom.svg
 			.append('text')
 			.attr('data-testId', 'sjpp-runChart2-xAxisLabel')
 			.attr('transform', `translate(${plotDims.xAxis.x + this.settings.svgw / 2}, ${xAxisLabelY})`)
-			.style('text-anchor', 'middle')
-			.style('font-size', '14px')
-			.style('font-weight', '500')
-			.style('fill', 'black')
+			.attr('text-anchor', 'middle')
+			.style('font-size', '0.9em')
 			.text(xLabel)
 
+		const yAxisLabelX = plotDims.yAxis.labelX ?? 55
 		this.chartDom.svg
 			.append('text')
 			.attr('data-testId', 'sjpp-runChart2-yAxisLabel')
-			.attr('transform', `translate(25, ${plotDims.yAxis.y + this.settings.svgh / 2}) rotate(-90)`)
-			.style('text-anchor', 'middle')
-			.style('font-size', '14px')
-			.style('font-weight', '500')
-			.style('fill', 'black')
+			.attr('transform', `translate(${yAxisLabelX}, ${plotDims.yAxis.y + this.settings.svgh / 2}) rotate(-90)`)
+			.attr('text-anchor', 'middle')
+			.style('font-size', '0.9em')
 			.text(yLabel)
 	}
 
@@ -89,10 +88,7 @@ export class RunChart2View {
 			}
 
 			// One tick per year: use integer years so ticks are evenly spaced (month in x caused clustering)
-			console.log('allPoints', allPoints)
 			const yearTickValues = [...new Set(allPoints.map(p => Math.floor(p.x)))].sort((a, b) => a - b)
-			console.log('yearTickValues', yearTickValues)
-
 			const xAxis = axisBottom(scale.scale).tickFormat(d => String(Math.floor(Number(d))))
 			if (yearTickValues.length > 0) xAxis.tickValues(yearTickValues)
 			else xAxis.ticks(6)
