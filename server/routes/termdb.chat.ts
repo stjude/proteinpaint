@@ -456,7 +456,7 @@ async function extract_summary_terms(
 	ds: any
 ) {
 	const rag_docs = await parse_dataset_db(dataset_db)
-	mayLog('rag_docs:', rag_docs)
+	//mayLog('rag_docs:', rag_docs)
 	const genes_list = await parse_geneset_db(genedb)
 	//mayLog("genes_list:", genes_list)
 
@@ -541,7 +541,7 @@ async function extract_summary_terms(
 
 function validate_summary_response(response: string, common_genes: string[], dataset_json: any, ds: any) {
 	const response_type = JSON.parse(response)
-	mayLog('response_type:', response_type)
+	//mayLog('response_type:', response_type)
 	const pp_plot_json: any = { chartType: 'summary' }
 	let html = ''
 	if (response_type.html) html = response_type.html
@@ -604,18 +604,22 @@ function validate_term(response_term: string, common_genes: string[], dataset_js
 function validate_filter(filters: any, ds: any): any {
 	if (!Array.isArray(filters)) throw 'filter is not array'
 	const filter_result: any = generate_filter_term(filters, ds)
-	if (filters.length > 1 && filter_result.simplefilter) filter_result.simplefilter.join = 'and' // For now hardcoding join as 'and' if number of filter terms > 1. Will later implement more comprehensive logic
+	//if (filters.length > 1 && filter_result.simplefilter) filter_result.simplefilter.join = filter_result.join // For now assuming there is a max of two filter terms
 	return { simplefilter: filter_result.simplefilter, html: filter_result.html }
 }
 
 function generate_filter_term(filters: any, ds: any) {
 	let invalid_html = ''
-	const localfilter = { type: 'tvslst', in: true, join: '', lst: [] as any[] }
+	const localfilter: any = { type: 'tvslst', in: true, lst: [] as any[] }
 	for (const f of filters) {
+		mayLog('f:', f)
 		const term = ds.cohort.termdb.q.termjsonByOneid(f.term)
 		if (!term) {
 			invalid_html += 'invalid filter id:' + f.term
 		} else {
+			if (f.join) {
+				localfilter.join = f.join
+			}
 			if (term.type == 'categorical') {
 				let cat: any
 				for (const ck in term.values) {
@@ -657,6 +661,7 @@ function generate_filter_term(filters: any, ds: any) {
 			}
 		}
 	}
+	mayLog('locafilter:', localfilter)
 	return { simplefilter: localfilter, html: invalid_html }
 }
 
