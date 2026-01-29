@@ -199,34 +199,48 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			chartsInstance.dom.tip.show()
 		})
 
-	for (const plot of chartsInstance.state.termdbConfig?.plotConfigByCohort?.default?.runChart2?.plots || []) {
+	const byDefault = chartsInstance.state.termdbConfig?.plotConfigByCohort?.default
+	const runChart2Plots = byDefault?.runChart2?.plots ?? byDefault?.runChart?.plots ?? []
+	for (const plot of runChart2Plots) {
 		const config = structuredClone(plot)
+		const dispatchPlot = () => {
+			chartsInstance.app.dispatch({
+				type: 'plot_create',
+				config: {
+					chartType: 'runChart2',
+					...config
+				}
+			})
+			chartsInstance.dom.tip.hide()
+		}
 		menuDiv
 			.append('button')
+			.attr('class', 'sja_menuoption sja_sharp_border')
 			.style('margin', '5px')
 			.style('padding', '10px 15px')
 			.style('border-radius', '20px')
 			.style('border-color', '#ededed')
 			.style('display', 'block')
 			.text(plot.name)
-			.on('click', () => {
-				chartsInstance.app.dispatch({
-					type: 'plot_create',
-					config: {
-						chartType: 'runChart2',
-						...config
-					}
-				})
+			.on('mousedown', (event: any) => {
+				event.preventDefault()
+				event.stopPropagation()
+				dispatchPlot()
+			})
+			.on('click', (event: any) => {
+				event.preventDefault()
+				event.stopPropagation()
 				chartsInstance.dom.tip.hide()
 			})
 	}
-	const callback = (xterm, yterm) => {
+	const callback = (xterm: any, yterm: any) => {
 		chartsInstance.app.dispatch({
 			type: 'plot_create',
 			config: {
 				chartType: 'runChart2',
 				term: { term: xterm, q: { mode: 'continuous' } },
-				term2: { term: yterm, q: { mode: 'continuous' } }
+				term2: { term: yterm, q: { mode: 'continuous' } },
+				name: `${xterm.name} vs ${yterm.name}`
 			}
 		})
 	}

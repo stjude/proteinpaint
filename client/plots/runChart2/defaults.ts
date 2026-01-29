@@ -5,7 +5,7 @@ export function getDefaultRunChart2Settings(overrides = {}): RunChart2Settings {
 		aggregation: 'mean',
 		svgw: 800,
 		svgh: 400,
-		color: '#1f77b4',
+		color: '#ce768e',
 		minXScale: null as null | number,
 		maxXScale: null as null | number,
 		minYScale: null as null | number,

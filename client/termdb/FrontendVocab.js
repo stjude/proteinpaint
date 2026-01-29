@@ -275,6 +275,12 @@ export class FrontendVocab extends Vocab {
 		return terms
 	}
 
+	async getRunChartData() {
+		throw new Error(
+			'Run Chart2 requires a dataset with genome + dslabel (TermdbVocab). Custom/frontend data mode does not support termdb/runChart.'
+		)
+	}
+
 	async getterm(termid) {
 		if (!termid) throw 'getterm: termid missing'
 		return this.vocab.terms.find(d => d.id == termid)
