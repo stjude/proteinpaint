@@ -5,6 +5,8 @@ import { detectGte } from '../../test/test.helpers.js'
 /* 
 Tests:
     - Render facet table
+	- geneVariant facet table
+	- geneExpression facet table
 	- termCollection (row), categorical (col)
 	- categorical (row), termCollection (col)
 */
@@ -80,6 +82,102 @@ tape('Render facet table', test => {
 			selector: 'td.sja_menuoption'
 		})
 		test.equal(clickableCells.length, 17, 'Should render 17 clickable cells.')
+
+		if (test['_ok']) facet.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('geneVariant facet table', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'facet',
+					columnTw: { id: 'sex' },
+					rowTw: { term: { type: 'geneVariant', gene: 'TP53' } }
+				}
+			]
+		},
+		facet: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(facet) {
+		const table = facet.Inner.dom.mainDiv
+
+		const headerNum = table.selectAll('th[data-testid="sjpp-facet-col-header"]').size()
+		test.equal(headerNum, 2, 'Should render 2 headers')
+		const rowNum = table.selectAll('td[data-testid="sjpp-facet-row-label"]').size()
+		test.equal(rowNum, 2, 'Should render 2 rows')
+
+		const prompt = table.select('div[data-testid="sjpp-facet-start-prompt"]')
+		test.true(
+			prompt && prompt.text() == 'Click on cells to select samples',
+			'Should render prompt to select cells on render.'
+		)
+
+		const clickableCells = await detectGte({
+			elem: table.node(),
+			selector: 'td.sja_menuoption'
+		})
+		test.equal(clickableCells.length, 4, 'Should render 4 clickable cells.')
+
+		if (test['_ok']) facet.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('geneExpression facet table', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'facet',
+					columnTw: { id: 'sex' },
+					rowTw: { term: { type: 'geneExpression', gene: 'TP53' } }
+				}
+			]
+		},
+		facet: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(facet) {
+		const table = facet.Inner.dom.mainDiv
+
+		const headerNum = table.selectAll('th[data-testid="sjpp-facet-col-header"]').size()
+		test.equal(headerNum, 2, 'Should render 2 headers')
+		const rowNum = table.selectAll('td[data-testid="sjpp-facet-row-label"]').size()
+		test.equal(rowNum, 8, 'Should render 8 rows')
+
+		const prompt = table.select('div[data-testid="sjpp-facet-start-prompt"]')
+		test.true(
+			prompt && prompt.text() == 'Click on cells to select samples',
+			'Should render prompt to select cells on render.'
+		)
+
+		const blankCells = await detectGte({
+			elem: table.node(),
+			selector: 'td.highlightable-cell'
+		})
+		test.equal(blankCells.length, 2, 'Should render 2 blank, highlightable cells.')
+
+		const clickableCells = await detectGte({
+			elem: table.node(),
+			selector: 'td.sja_menuoption'
+		})
+		test.equal(clickableCells.length, 14, 'Should render 14 clickable cells.')
 
 		if (test['_ok']) facet.Inner.app.destroy()
 		test.end()
