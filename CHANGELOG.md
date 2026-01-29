@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes
+- display a more user-friendly error message instead of an obscure bin-related error, when there is no numeric data by GDC cohort to compute bins
+
+
 ## 2.170.2
 
 Fixes:

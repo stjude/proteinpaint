@@ -223,6 +223,7 @@ export class NumRegularBin extends NumericBase {
 
 		if (!tw.q.first_bin || !isNumeric(tw.q.bin_size)) mayFillQWithPresetBins(tw)
 
+		if (tw.q.bin_size === null) throw new TypeError(`No ${tw.term.name} numeric data to create bins`)
 		if (!isNumeric(tw.q.bin_size)) throw `tw.q.bin_size=${tw.q.bin_size} is not numeric`
 		if (!tw.q.first_bin) throw `missing tw.q.first_bin`
 		if (!isNumeric(tw.q.first_bin?.stop)) throw `tw.q.first_bin.stop is not numeric`
