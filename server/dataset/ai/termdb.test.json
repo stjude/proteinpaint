@@ -26,6 +26,7 @@
           "SystemPrompt":"", 
           "TrainingData":[
               {"question":"Show differential gene expression between men and women", "answer": {"group1":[{"term":"sex","category":"1"}],"group2":[{"term":"sex","category":"2"}],"name1":"Male","name2":"Female"}},
+	      {"question":"Show differential gene expression between non-hodgkin lymphoma, aml and neuroblastoma, all", "answer": {"group1":[{"term":"diaggrp","category":"Non-Hodgkin lymphoma", "join":"or"},{"term":"diaggrp","category":"Acute myeloid leukemia"}],"group2":[{"term":"diaggrp","category":"Neuroblastoma", "join":"or"},{"term":"diaggrp","category":"Acute lymphoblastic leukemia"}],"name1":"non-hodgkin|aml","name2":"neuroblastoma|all"}},
 	      {"question":"Show volcano plot between men with age greater than 30 and women with age less than 50", "answer":{"group1":[{"term":"sex","category":"1","join": "and"},{"term":"agedx", "start":30}],"group2":[{"term":"sex","category":"2","join": "and"},{"term":"agedx", "stop":50}],"name1":"Male&agedx>30","name2":"Female&agedx<50"}},
        	       {"question":"Show volcano plot between white men and black women", "answer": {"group1":[{"term":"sex","category":"1","join": "and"},{"term":"genetic_race","category":"European Ancestry"}],"group2":[{"term":"sex","category":"2","join":"and"},{"term":"genetic_race","category":"African Ancestry"}]},"name1":"European Male","name2":"African Female"}
           ],
