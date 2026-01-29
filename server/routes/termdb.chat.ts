@@ -246,7 +246,7 @@ async function classify_query_by_dataset_type(
 	//}
 	//const generator: SchemaGenerator = createGenerator(SchemaConfig)
 	//const StringifiedSchema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // This will be generated at server startup later
-	//mayLog("StringifiedSchema:", StringifiedSchema)
+	//mayLog("ClassificationType StringifiedSchema:", StringifiedSchema)
 
 	const template =
 		contents + ' training data is as follows:' + training_data + ' Question: {' + user_prompt + '} Answer: {answer}'
@@ -300,8 +300,8 @@ async function extract_DE_search_terms_from_query(
 		//const generator: SchemaGenerator = createGenerator(SchemaConfig)
 		//const StringifiedSchema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // This commented out code generates the JSON schema below
 		const StringifiedSchema =
-			'{"$schema":"http://json-schema.org/draft-07/schema#","$ref":"#/definitions/DEType","definitions":{"DEType":{"type":"object","properties":{"group1":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"}},"group2":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"}},"name1":{"type":"string"},"name2":{"type":"string"},"method":{"type":"string","enum":["edgeR","limma","wilcoxon"]}},"required":["group1","group2","name1","name2"],"additionalProperties":false},"FilterTerm":{"anyOf":[{"$ref":"#/definitions/CategoricalFilterTerm"},{"$ref":"#/definitions/NumericFilterTerm"}]},"CategoricalFilterTerm":{"type":"object","properties":{"term":{"type":"string"},"category":{"type":"string"}},"required":["term","category"],"additionalProperties":false},"NumericFilterTerm":{"type":"object","properties":{"term":{"type":"string"},"start":{"type":"number"},"stop":{"type":"number"}},"required":["term"],"additionalProperties":false}}}'
-		//mayLog('StringifiedSchema:', StringifiedSchema)
+			'{"$schema":"http://json-schema.org/draft-07/schema#","$ref":"#/definitions/DEType","definitions":{"DEType":{"type":"object","properties":{"group1":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"},"description":"Name of group1 which is an array of filter terms"},"group2":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"},"description":"Name of group2 which is an array of filter terms"},"name1":{"type":"string","description":"Name of group1 to be shown in UI"},"name2":{"type":"string","description":"Name of group2 to be shown in UI"},"method":{"type":"string","enum":["edgeR","limma","wilcoxon"],"description":"Method used for carrying out differential gene expression analysis"}},"required":["group1","group2","name1","name2"],"additionalProperties":false},"FilterTerm":{"anyOf":[{"$ref":"#/definitions/CategoricalFilterTerm"},{"$ref":"#/definitions/NumericFilterTerm"}]},"CategoricalFilterTerm":{"type":"object","properties":{"term":{"type":"string","description":"Name of numeric term"},"category":{"type":"string","description":"The category of the term"},"join":{"type":"string","enum":["and","or"],"description":"join term to be used only when there there is more than one filter term and is not the last term of the filter"}},"required":["term","category"],"additionalProperties":false},"NumericFilterTerm":{"type":"object","properties":{"term":{"type":"string","description":"Name of numeric term"},"start":{"type":"number","description":"start position (or lower limit) of numeric term"},"stop":{"type":"number","description":"stop position (or upper limit) of numeric term"},"join":{"type":"string","enum":["and","or"],"description":"join term to be used only when there there is more than one filter term and is not the last term of the filter"}},"required":["term"],"additionalProperties":false}}}'
+		//mayLog('DEType StringifiedSchema:', StringifiedSchema)
 
 		// Parse out training data from the dataset JSON and add it to a string
 		const DE_ds = dataset_json.charts.filter((chart: any) => chart.type == 'DE')
@@ -475,10 +475,9 @@ async function extract_summary_terms(
 	//}
 	//const generator: SchemaGenerator = createGenerator(SchemaConfig)
 	//const StringifiedSchema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // This will be generated at server startup later
-	//mayLog("StringifiedSchema:", StringifiedSchema)
-
 	const StringifiedSchema =
-		'{"$schema":"http://json-schema.org/draft-07/schema#","$ref":"#/definitions/SummaryType","definitions":{"SummaryType":{"type":"object","properties":{"term":{"type":"string"},"term2":{"type":"string"},"simpleFilter":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"}}},"required":["term","simpleFilter"],"additionalProperties":false},"FilterTerm":{"anyOf":[{"$ref":"#/definitions/CategoricalFilterTerm"},{"$ref":"#/definitions/NumericFilterTerm"}]},"CategoricalFilterTerm":{"type":"object","properties":{"term":{"type":"string"},"category":{"type":"string"}},"required":["term","category"],"additionalProperties":false},"NumericFilterTerm":{"type":"object","properties":{"term":{"type":"string"},"start":{"type":"number"},"stop":{"type":"number"}},"required":["term"],"additionalProperties":false}}}' // Make sure if there is any change in SummaryType, update this JSON schema
+		'{"$schema":"http://json-schema.org/draft-07/schema#","$ref":"#/definitions/SummaryType","definitions":{"SummaryType":{"type":"object","properties":{"term":{"type":"string","description":"Name of 1st term"},"term2":{"type":"string","description":"Name of 2nd term"},"simpleFilter":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"},"description":"Optional simple filter terms"}},"required":["term","simpleFilter"],"additionalProperties":false},"FilterTerm":{"anyOf":[{"$ref":"#/definitions/CategoricalFilterTerm"},{"$ref":"#/definitions/NumericFilterTerm"}]},"CategoricalFilterTerm":{"type":"object","properties":{"term":{"type":"string","description":"Name of numeric term"},"category":{"type":"string","description":"The category of the term"},"join":{"type":"string","enum":["and","or"],"description":"join term to be used only when there there is more than one filter term"}},"required":["term","category"],"additionalProperties":false},"NumericFilterTerm":{"type":"object","properties":{"term":{"type":"string","description":"Name of numeric term"},"start":{"type":"number","description":"start position (or lower limit) of numeric term"},"stop":{"type":"number","description":"stop position (or upper limit) of numeric term"},"join":{"type":"string","enum":["and","or"],"description":"join term to be used only when there there is more than one filter term"}},"required":["term"],"additionalProperties":false}}}'
+	//mayLog("SummaryType StringifiedSchema:", StringifiedSchema)
 	const words = prompt
 		.replace(/[^a-zA-Z0-9\s]/g, '')
 		.split(/\s+/)
@@ -542,6 +541,7 @@ async function extract_summary_terms(
 
 function validate_summary_response(response: string, common_genes: string[], dataset_json: any, ds: any) {
 	const response_type = JSON.parse(response)
+	//mayLog('response_type:', response_type)
 	const pp_plot_json: any = { chartType: 'summary' }
 	let html = ''
 	if (response_type.html) html = response_type.html
@@ -603,14 +603,22 @@ function validate_term(response_term: string, common_genes: string[], dataset_js
 
 function validate_filter(filters: any, ds: any): any {
 	if (!Array.isArray(filters)) throw 'filter is not array'
+	const filter_result: any = generate_filter_term(filters, ds)
+	//if (filters.length > 1 && filter_result.simplefilter) filter_result.simplefilter.join = filter_result.join // For now assuming there is a max of two filter terms
+	return { simplefilter: filter_result.simplefilter, html: filter_result.html }
+}
+
+function generate_filter_term(filters: any, ds: any) {
 	let invalid_html = ''
-	const localfilter = { type: 'tvslst', in: true, join: '', lst: [] as any[] }
-	if (filters.length > 1) localfilter.join = 'and' // For now hardcoding join as 'and' if number of filter terms > 1. Will later implement more comprehensive logic
+	const localfilter: any = { type: 'tvslst', in: true, lst: [] as any[] }
 	for (const f of filters) {
 		const term = ds.cohort.termdb.q.termjsonByOneid(f.term)
 		if (!term) {
 			invalid_html += 'invalid filter id:' + f.term
 		} else {
+			if (f.join) {
+				localfilter.join = f.join
+			}
 			if (term.type == 'categorical') {
 				let cat: any
 				for (const ck in term.values) {
@@ -652,6 +660,7 @@ function validate_filter(filters: any, ds: any): any {
 			}
 		}
 	}
+	mayLog('locafilter:', localfilter)
 	return { simplefilter: localfilter, html: invalid_html }
 }
 
