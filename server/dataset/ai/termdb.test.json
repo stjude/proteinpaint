@@ -26,12 +26,12 @@
           "SystemPrompt":"", 
           "TrainingData":[
               {"question":"Show differential gene expression between men and women", "answer": {"group1":[{"term":"sex","category":"1"}],"group2":[{"term":"sex","category":"2"}],"name1":"Male","name2":"Female"}},
-	      {"question":"Show volcano plot between men with age greater than 30 and women with age less than 50", "answer":{"group1":[{"term":"sex","category":"1"},{"term":"agedx", "start":30}],"group2":[{"term":"sex","category":"2"},{"term":"agedx", "stop":50}],"name1":"Male,agedx>30","name2":"Female,agedx<50"}},
-       	       {"question":"Show volcano plot between white men and black women", "answer": {"group1":[{"term":"sex","category":"1"},{"term":"genetic_race","category":"European Ancestry"}],"group2":[{"term":"sex","category":"2"},{"term":"genetic_race","category":"African Ancestry"}]},"name1":"European Male","name2":"African Female"}
+	      {"question":"Show volcano plot between men with age greater than 30 and women with age less than 50", "answer":{"group1":[{"term":"sex","category":"1","join": "and"},{"term":"agedx", "start":30}],"group2":[{"term":"sex","category":"2","join": "and"},{"term":"agedx", "stop":50}],"name1":"Male&agedx>30","name2":"Female&agedx<50"}},
+       	       {"question":"Show volcano plot between white men and black women", "answer": {"group1":[{"term":"sex","category":"1","join": "and"},{"term":"genetic_race","category":"European Ancestry"}],"group2":[{"term":"sex","category":"2","join":"and"},{"term":"genetic_race","category":"African Ancestry"}]},"name1":"European Male","name2":"African Female"}
           ],
           "TestData":[
 	      {"question":"Show differential gene expression between wilms tumor and neuroblastoma","answer":{"group1":[{"term":"diaggrp","category":"Wilms tumor"}], "group2":[{"term":"diaggrp","category":"Neuroblastoma"}],"name1":"Wilms tumor","name2":"Neuroblastoma"}},
-	      {"question":"Show differential gene expression between wilms tumor patients with age less than 20  and neuroblastoma patients with age greater than 60", "answer":{"group1":[{"term":"diaggrp","category":"Wilms tumor"},{"term":"agedx", "stop":20}], "group2":[{"term":"diaggrp","category":"Neuroblastoma"},{"term":"agedx", "start":60}],"name1":"Wilms tumor, agedx<20","name2":"neuroblastoma,agdx>60"}}
+	      {"question":"Show differential gene expression between wilms tumor patients with age less than 20  and neuroblastoma patients with age greater than 60", "answer":{"group1":[{"term":"diaggrp","category":"Wilms tumor","join": "and"},{"term":"agedx", "stop":20}], "group2":[{"term":"diaggrp","category":"Neuroblastoma","join": "and"},{"term":"agedx", "start":60}],"name1":"Wilms tumor&agedx<20","name2":"neuroblastoma&agdx>60"}}
           ]	 
     },
     {
