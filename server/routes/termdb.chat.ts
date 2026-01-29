@@ -541,7 +541,7 @@ async function extract_summary_terms(
 
 function validate_summary_response(response: string, common_genes: string[], dataset_json: any, ds: any) {
 	const response_type = JSON.parse(response)
-	//mayLog('response_type:', response_type)
+	mayLog('response_type:', response_type)
 	const pp_plot_json: any = { chartType: 'summary' }
 	let html = ''
 	if (response_type.html) html = response_type.html
@@ -660,6 +660,8 @@ function generate_filter_term(filters: any, ds: any) {
 			}
 		}
 	}
+	if (filters.length > 1 && !localfilter.join)
+		invalid_html += 'Connection (and/or) between the filter terms is not clear, please try to rephrase your question'
 	mayLog('locafilter:', localfilter)
 	return { simplefilter: localfilter, html: invalid_html }
 }
