@@ -1041,6 +1041,20 @@ export class TermdbVocab extends Vocab {
 		return data
 	}
 
+	async getRunChartData(opts, signal = undefined) {
+		const headers = await this.mayGetAuthHeaders('termdb')
+		const body = {
+			genome: this.state.vocab.genome,
+			dslabel: this.state.vocab.dslabel,
+			filter: getNormalRoot(opts.filter),
+			term: this.getTwMinCopy(opts.term),
+			term2: this.getTwMinCopy(opts.term2),
+			aggregation: opts.aggregation
+		}
+		const data = await dofetch3('termdb/runChart', { headers, body, signal })
+		return data
+	}
+
 	async getDefaultBins(opts) {
 		// the scatter plot may still render when not in session,
 		// but not have an option to list samples
