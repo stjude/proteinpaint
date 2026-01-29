@@ -148,9 +148,13 @@ let activeGrin2Jobs = 0
 
 async function runGrin2WithLimit(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Response> {
 	if (activeGrin2Jobs >= GRIN2_CONCURRENCY_LIMIT) {
-		throw new Error(
+		const error: any = new Error(
 			`GRIN2 analysis queue is full (${GRIN2_CONCURRENCY_LIMIT} concurrent analyses). Please try again in a few minutes.`
 		)
+
+		error.status = 429
+		error.statusCode = 429
+		throw error
 	}
 
 	activeGrin2Jobs++
