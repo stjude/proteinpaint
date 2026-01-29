@@ -612,7 +612,6 @@ function generate_filter_term(filters: any, ds: any) {
 	let invalid_html = ''
 	const localfilter: any = { type: 'tvslst', in: true, lst: [] as any[] }
 	for (const f of filters) {
-		mayLog('f:', f)
 		const term = ds.cohort.termdb.q.termjsonByOneid(f.term)
 		if (!term) {
 			invalid_html += 'invalid filter id:' + f.term
