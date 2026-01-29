@@ -209,7 +209,7 @@ export class NumRegularBin extends NumericBase {
 
 		if (tw.q.type && tw.q.type != 'regular-bin') throw `expecting tw.q.type='regular-bin', got '${tw.q.type}'`
 
-		if (!tw.term.bins || tw.term.bins.default.isDummyPreset) {
+		if (!tw.term.bins || tw.term.bins.default?.isDummyPreset) {
 			/* non-dictionary term (e.g. gene term) may be missing bin definition, this is expected as it's not valid to apply same bin to genes with vastly different exp range,
 			and not worth it to precompute each gene's default bin with its actual exp data as cohort filter can not be predicted
 			here make a request to determine default bin for this term based on its data
