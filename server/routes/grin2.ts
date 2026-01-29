@@ -10,7 +10,8 @@ import { get_samples } from '#src/termdb.sql.js'
 import { read_file, file_is_readable } from '#src/utils.js'
 import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dt2lesion, optionToDt, formatElapsedTime } from '#shared'
 import crypto from 'crypto'
-import { execSync } from 'child_process'
+import { promisify } from 'node:util'
+import { exec as execCallback } from 'node:child_process'
 
 /**
  * General GRIN2 analysis route
@@ -93,12 +94,16 @@ function init({ genomes }) {
 // CONCURRENCY and MEMORY MANAGEMENT
 // =============================================================================
 
-function getAvailableMemoryMB(): number {
+const exec = promisify(execCallback)
+
+async function getAvailableMemoryMB(): Promise<number> {
 	try {
 		if (process.platform === 'darwin') {
 			// macOS: use vm_stat
-			const output = execSync('vm_stat').toString()
-			// Parse page size from vm_stat header: "page size of 4096 bytes for Apple sillicon. 16384 bytes for Intel macs"
+			const { stdout } = await exec('vm_stat')
+			const output = stdout.toString()
+
+			// Parse page size from vm_stat header: "page size of 4096 bytes for Apple silicon, 16384 bytes for Intel macs"
 			const headerLine = output.split('\n')[0] || ''
 			const pageSizeMatch = headerLine.match(/page size of\s+(\d+)\s+bytes/i)
 			const pageSize = pageSizeMatch ? parseInt(pageSizeMatch[1], 10) : 16384
@@ -111,7 +116,8 @@ function getAvailableMemoryMB(): number {
 			return ((freePages + inactivePages) * pageSize) / (1024 * 1024)
 		} else {
 			// Linux: use free command
-			const output = execSync('free -m').toString()
+			const { stdout } = await exec('free -m')
+			const output = stdout.toString()
 			const lines = output.split('\n')
 			const memLine = lines.find(l => l.startsWith('Mem:'))
 			if (memLine) {
@@ -127,8 +133,8 @@ function getAvailableMemoryMB(): number {
 	return os.freemem() / (1024 * 1024)
 }
 
-function getMaxLesions(): number {
-	const availableMemoryMB = getAvailableMemoryMB()
+async function getMaxLesions(): Promise<number> {
+	const availableMemoryMB = await getAvailableMemoryMB()
 	mayLog(`[GRIN2] Available system memory: ${availableMemoryMB.toFixed(0)} MB`)
 
 	// If server is under heavy load, reduce lesion cap. Our calculation assumes each 1,000 lesions use ~2.4MB of memory plus a base overhead (i.e. a linear relationship).
@@ -344,7 +350,7 @@ async function processSampleData(
 	request: GRIN2Request
 ): Promise<{ lesions: any[]; processingSummary: GRIN2Response['processingSummary'] }> {
 	const lesions: any[] = []
-	const maxLesions = getMaxLesions()
+	const maxLesions = await getMaxLesions()
 	mayLog(`[GRIN2] Max lesions for this run: ${maxLesions.toLocaleString()}`)
 
 	// Track unique samples per lesion type for reporting
