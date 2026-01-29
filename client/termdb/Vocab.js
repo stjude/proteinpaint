@@ -190,6 +190,8 @@ export class Vocab {
 				// pass entire tw.term because non-dictionary terms
 				// cannot get rehydrated on server-side
 				copy.term = structuredClone(tw.term)
+				// dummy preset bins should not affect the uniqueness of a request payload
+				if (copy.term.bins?.default?.isDummyPreset) delete copy.term.bins
 			}
 		}
 		return copy
