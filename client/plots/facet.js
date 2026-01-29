@@ -376,14 +376,17 @@ class Facet extends PlotBase {
 		categories = Array.from(set).sort()
 
 		if (isNumericTerm(tw.term)) {
-			Object.values(tw.term.values).forEach(i => {
-				if (i?.uncomputable) {
-					const index = categories.indexOf(i.label)
-					if (index > -1) categories.splice(index, 1)
-				}
-			})
+			if (tw.term.values) {
+				Object.values(tw.term.values).forEach(i => {
+					if (i?.uncomputable) {
+						const index = categories.indexOf(i.label)
+						if (index > -1) categories.splice(index, 1)
+					}
+				})
+			}
 			categories = this.orderColNames(categories)
 		}
+
 		return categories
 	}
 
