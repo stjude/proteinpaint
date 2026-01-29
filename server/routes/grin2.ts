@@ -39,7 +39,6 @@ import { execSync } from 'child_process'
  */
 
 // Constants & types
-// const MAX_LESIONS = serverconfig.features.grin2maxLesions || 500000 // Maximum total number of lesions to process to avoid overwhelming the production server
 const MAX_LESIONS = serverconfig.features.grin2maxLesions || 250000 // Maximum total number of lesions to process to avoid overwhelming the production server
 const GRIN2_MEMORY_BUDGET_MB = 950
 const GRIN2_CONCURRENCY_LIMIT = 10
@@ -99,7 +98,7 @@ function getAvailableMemoryMB(): number {
 		if (process.platform === 'darwin') {
 			// macOS: use vm_stat
 			const output = execSync('vm_stat').toString()
-			// Parse page size from vm_stat header: "page size of 4096 bytes"
+			// Parse page size from vm_stat header: "page size of 4096 bytes for Apple sillicon. 16384 bytes for Intel macs"
 			const headerLine = output.split('\n')[0] || ''
 			const pageSizeMatch = headerLine.match(/page size of\s+(\d+)\s+bytes/i)
 			const pageSize = pageSizeMatch ? parseInt(pageSizeMatch[1], 10) : 16384
@@ -132,7 +131,7 @@ function getMaxLesions(): number {
 	const availableMemoryMB = getAvailableMemoryMB()
 	mayLog(`[GRIN2] Available system memory: ${availableMemoryMB.toFixed(0)} MB`)
 
-	// If server is under heavy load, reduce lesion cap
+	// If server is under heavy load, reduce lesion cap. Our calculation assumes each 1,000 lesions use ~2.4MB of memory plus a base overhead (i.e. a linear relationship).
 	if (availableMemoryMB < GRIN2_MEMORY_BUDGET_MB * 2) {
 		const reducedBudget = availableMemoryMB * 0.4
 		mayLog(`[GRIN2] Reducing lesion cap due to memory constraints. New budget: ${reducedBudget.toFixed(2)} MB`)
@@ -152,6 +151,7 @@ async function runGrin2WithLimit(g: any, ds: any, request: GRIN2Request): Promis
 			`GRIN2 analysis queue is full (${GRIN2_CONCURRENCY_LIMIT} concurrent analyses). Please try again in a few minutes.`
 		)
 
+		// Explicitly set status code for rate limiting so we ensure this error doesn't get cached
 		error.status = 429
 		error.statusCode = 429
 		throw error
@@ -245,7 +245,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 
 	// Step 3: Prepare input for Python script
 	const availableDataTypes = Object.keys(optionToDt).filter(key => key in request)
-	// console.log('[GRIN2] Request:', request)
+
 	const pyInput = {
 		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 		chromosomelist: {} as { [key: string]: number },
@@ -256,7 +256,6 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		lesionTypeMap: buildLesionTypeMap(availableDataTypes),
 		trackMemory: request.trackMemory
 	}
-	// console.log('GRIN2 Python input:', pyInput)
 
 	// Build chromosome list from genome reference
 	for (const c in g.majorchr) {
@@ -278,7 +277,6 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	mayLog(`[GRIN2] Python processing took ${formatElapsedTime(grin2AnalysisTime)}`)
 
 	const resultData = JSON.parse(pyResult)
-	// console.log('[GRIN2] GRIN2 Python result data:', resultData)
 
 	// Step 5: Prepare Rust input
 	const rustInput = {

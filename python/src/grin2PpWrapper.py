@@ -14,6 +14,7 @@ Input JSON:
  availableDataTypes: [string]
  maxGenesToShow: int (default=500) 
  lesionTypeMap: dict {lesionType: displayName}
+ trackMemory: bool
 }
 
 Output JSON:
