@@ -50,7 +50,7 @@ export class RunChart2ViewModel {
 		let xMinForDomain: number, xMaxForDomain: number, yMinForDomain: number, yMaxForDomain: number
 		if (hasValidRange) {
 			const usePaddingX = this.settings.minXScale == null && this.settings.maxXScale == null
-			const xPadded = usePaddingX ? this.setDomain(this.xMin, this.xMax, 0.05) : null
+			const xPadded = usePaddingX ? this.setDomain(this.xMin, this.xMax, 0.02) : null
 			xMinForDomain = this.settings.minXScale ?? (xPadded ? xPadded[0] : this.xMin)
 			xMaxForDomain = this.settings.maxXScale ?? (xPadded ? xPadded[1] : this.xMax)
 
