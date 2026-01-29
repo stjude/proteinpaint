@@ -702,6 +702,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				maxCappedPoints: this.state.config.settings?.manhattan?.maxCappedPoints,
 				hardCap: this.state.config.settings?.manhattan?.hardCap,
 				binSize: this.state.config.settings?.manhattan?.binSize,
+				trackMemory: this.state.config.settings?.manhattan?.trackMemory,
 				...configValues
 			}
 
@@ -920,17 +921,15 @@ class GRIN2 extends PlotBase implements RxComponent {
 				const columns = [
 					{ label: 'Lesion Type' },
 					{ label: 'Count', sortable: true },
-					{ label: 'Samples', sortable: true },
-					{ label: 'Capped' }
+					{ label: 'Samples', sortable: true }
 				]
 
 				const rows = Object.entries(result.processingSummary.lesionCounts.byType).map(([type, typeData]) => {
-					const { count, capped, samples } = typeData as { count: number; capped: boolean; samples: number }
+					const { count, samples } = typeData as { count: number; samples: number }
 					return [
 						{ value: typeLabels[type] || type },
 						{ value: count.toLocaleString() },
-						{ value: samples?.toLocaleString() ?? '0' },
-						{ value: capped ? 'Yes' : 'No' }
+						{ value: samples?.toLocaleString() ?? '0' }
 					]
 				})
 
@@ -958,15 +957,28 @@ class GRIN2 extends PlotBase implements RxComponent {
 			}
 		}
 
-		// Display timing information
-		if (result.timing) {
+		// Display timing and peak memory information
+		if (result.timing && result.memoryProfile?.peak) {
 			this.dom.div
 				.append('div')
 				.style('margin', this.sectionMargin)
 				.style('font-size', `${this.optionsTextFontSize}px`)
 				.style('color', this.optionsTextColor)
 				.text(
-					`Analysis completed in ${result.timing.totalTime} (Processing: ${result.timing.processingTime}, GRIN2: ${result.timing.grin2Time}, Plotting: ${result.timing.plottingTime})`
+					`Analysis completed in ${result.timing.totalTime} (Processing: ${result.timing.processingTime}, GRIN2: ${
+						result.timing.grin2Time
+					}, Plotting: ${
+						result.timing.plottingTime
+					}). Peak memory usage: ${result.memoryProfile.peak.toLocaleString()} MB.`
+				)
+		} else if (result.timing) {
+			this.dom.div
+				.append('div')
+				.style('margin', this.sectionMargin)
+				.style('font-size', `${this.optionsTextFontSize}px`)
+				.style('color', this.optionsTextColor)
+				.text(
+					`Analysis completed in ${result.timing.totalTime} (Processing: ${result.timing.processingTime}, GRIN2: ${result.timing.grin2Time}, Plotting: ${result.timing.plottingTime}).`
 				)
 		}
 
@@ -979,7 +991,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.style('font-size', `${this.optionsTextFontSize}px`)
 				.style('color', this.optionsTextColor)
 				.text(
-					`Note: Per-type lesion caps were reached before all samples could be processed. ` +
+					`Note: Lesion cap of ${result.processingSummary.lesionCap?.toLocaleString()} was reached before all samples could be processed. ` +
 						`Analysis ran on ${result.processingSummary.processedSamples.toLocaleString()} of ${expectedToProcessSamples.toLocaleString()} samples.`
 				)
 		}
@@ -1050,7 +1062,10 @@ export function getDefaultSettings(opts) {
 			binSize: 10,
 
 			// Hard cap regardless of data distribution
-			hardCap: 200
+			hardCap: 200,
+
+			// Track memory usage
+			trackMemory: true
 		}
 	}
 
