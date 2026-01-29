@@ -160,8 +160,8 @@ export const runChart2Init = getCompInit(RunChart2)
 export const componentInit = runChart2Init
 
 export async function getPlotConfig(opts: any, app: AppApi) {
-	if (!opts.term) throw new Error('opts.term missing')
-	if (!opts.term2) throw new Error('opts.term2 missing')
+	if (!opts.term) throw new Error('opts.term is required for the X axis')
+	if (!opts.term2) throw new Error('opts.term2 is required for the Y axis')
 
 	try {
 		await fillTermWrapper(opts.term, app.vocabApi)
@@ -185,6 +185,19 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 
 export function makeChartBtnMenu(holder, chartsInstance) {
 	const menuDiv = holder.append('div')
+
+	const callback = (xterm: any, yterm: any) => {
+		chartsInstance.app.dispatch({
+			type: 'plot_create',
+			config: {
+				chartType: 'runChart2',
+				term: { term: xterm, q: { mode: 'continuous' } },
+				term2: { term: yterm, q: { mode: 'continuous' } },
+				name: `${xterm.name} vs ${yterm.name}`
+			}
+		})
+	}
+
 	menuDiv
 		.append('button')
 		.style('margin', '5px')
@@ -232,16 +245,5 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 				event.stopPropagation()
 				chartsInstance.dom.tip.hide()
 			})
-	}
-	const callback = (xterm: any, yterm: any) => {
-		chartsInstance.app.dispatch({
-			type: 'plot_create',
-			config: {
-				chartType: 'runChart2',
-				term: { term: xterm, q: { mode: 'continuous' } },
-				term2: { term: yterm, q: { mode: 'continuous' } },
-				name: `${xterm.name} vs ${yterm.name}`
-			}
-		})
 	}
 }
