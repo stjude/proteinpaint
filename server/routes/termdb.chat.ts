@@ -284,8 +284,8 @@ async function extract_DE_search_terms_from_query(
 	ds: any
 ) {
 	if (dataset_json.hasDE) {
-		const rag_docs = await parse_dataset_db(dataset_db)
-		//mayLog('rag_docs:', rag_docs)
+		const dataset_db_output = await parse_dataset_db(dataset_db)
+		//mayLog('rag_docs:', dataset_db_output.rag_docs)
 		//mayLog('prompt:', prompt)
 		//mayLog('llm_backend_type:', llm_backend_type)
 		//mayLog('comp_model_name:', comp_model_name)
@@ -339,7 +339,7 @@ async function extract_DE_search_terms_from_query(
 			checkField(dataset_json.dataset_prompt) +
 			checkField(DE_ds[0].SystemPrompt) +
 			'The sqlite db in plain language is as follows:\n' +
-			rag_docs.join(',') +
+			dataset_db_output.rag_docs.join(',') +
 			' training data is as follows:' +
 			training_data +
 			' Question: {' +
@@ -359,17 +359,19 @@ async function extract_DE_search_terms_from_query(
 			throw 'Unknown LLM backend'
 		}
 		mayLog('response:', JSON.parse(response))
-		return await validate_DE_response(response, ds)
+		return await validate_DE_response(response, ds, dataset_db_output.db_rows)
 	} else {
 		return { type: 'html', html: 'Differential gene expression not supported for this dataset' }
 	}
 }
 
-async function validate_DE_response(response: string, ds: any) {
+async function validate_DE_response(response: string, ds: any, db_rows: DbRows[]) {
 	const response_type = JSON.parse(response)
 	let html = ''
 	let group1: any
 	let samples1lst: any
+	const name1 = generate_name(response_type.group1, db_rows)
+	//let name1 = response_type.name1 // AI generated names are currently commented out, will probably deprecate this in the future
 	if (!response_type.group1) {
 		html += 'group1 not present in DE output'
 	} else {
@@ -384,7 +386,7 @@ async function validate_DE_response(response: string, ds: any) {
 				sample: item.name
 			}))
 			group1 = {
-				name: response_type.name1,
+				name: name1,
 				in: true,
 				values: samples1lst
 			}
@@ -392,6 +394,8 @@ async function validate_DE_response(response: string, ds: any) {
 	}
 	let group2: any
 	let samples2lst: any
+	const name2 = generate_name(response_type.group2, db_rows)
+	// let name2 = response_type.name2 // AI generated names are currently commented out, will probably deprecate this in the future
 	if (!response_type.group2) {
 		html += 'group2 not present in DE output'
 	} else {
@@ -405,7 +409,7 @@ async function validate_DE_response(response: string, ds: any) {
 				sample: item.name
 			}))
 			group2 = {
-				name: response_type.name2,
+				name: name2,
 				in: true,
 				values: samples2lst
 			}
@@ -421,19 +425,19 @@ async function validate_DE_response(response: string, ds: any) {
 				groups
 			},
 			term: {
-				name: response_type.name1 + ' vs ' + response_type.name2,
+				name: name1 + ' vs ' + name2,
 				type: 'samplelst',
 				values: {
-					[response_type.name1]: {
+					[name1]: {
 						color: 'purple',
-						key: response_type.name1,
-						label: response_type.name1,
+						key: name1,
+						label: name1,
 						list: samples1lst
 					},
-					[response_type.name2]: {
+					[name2]: {
 						color: 'blue',
-						key: response_type.name2,
-						label: response_type.name2,
+						key: name2,
+						label: name2,
 						list: samples2lst
 					}
 				}
@@ -454,6 +458,47 @@ async function validate_DE_response(response: string, ds: any) {
 	}
 }
 
+function generate_name(filters: any[], db_rows: DbRows[]): string {
+	let name = ''
+	for (const filter of filters) {
+		if (filter.join && filter.join == 'and') {
+			name += '&'
+		}
+		if (filter.join && filter.join == 'or') {
+			name += '|'
+		}
+		if (filter.category) {
+			// Categorical variable
+			name += find_label(filter, db_rows)
+		}
+		if (filter.start) {
+			// Integer or float variable
+			name += filter.term + '>' + filter.start.toString()
+		}
+		if (filter.stop) {
+			// Integer or float variable
+			name += filter.term + '<' + filter.stop.toString()
+		}
+	}
+	return name
+}
+
+function find_label(filter: any, db_rows: DbRows[]): string {
+	let label = ''
+	for (const row of db_rows) {
+		if (row.name == filter.term) {
+			for (const value of row.values) {
+				if (value.value && value.value.label && filter.category == value.key) {
+					label = value.value.label
+					break
+				}
+			}
+			break
+		}
+	}
+	return label
+}
+
 async function extract_summary_terms(
 	prompt: string,
 	llm_backend_type: string,
@@ -464,8 +509,8 @@ async function extract_summary_terms(
 	genedb: string,
 	ds: any
 ) {
-	const rag_docs = await parse_dataset_db(dataset_db)
-	//mayLog('rag_docs:', rag_docs)
+	const dataset_db_output = await parse_dataset_db(dataset_db)
+	//mayLog('rag_docs:', dataset_db_output.rag_docs)
 	const genes_list = await parse_geneset_db(genedb)
 	//mayLog("genes_list:", genes_list)
 
@@ -521,7 +566,7 @@ async function extract_summary_terms(
 		checkField(dataset_json.dataset_prompt) +
 		checkField(summary_ds[0].SystemPrompt) +
 		'\n The DB content is as follows: ' +
-		rag_docs.join(',') +
+		dataset_db_output.rag_docs.join(',') +
 		' training data is as follows:' +
 		training_data
 
@@ -720,6 +765,7 @@ async function parse_geneset_db(genedb: string) {
 async function parse_dataset_db(dataset_db: string) {
 	const db = new Database(dataset_db)
 	const rag_docs: string[] = []
+	const db_rows: DbRows[] = []
 	try {
 		// Query the database
 		const desc_rows = db.prepare('SELECT * from termhtmldef').all()
@@ -734,7 +780,6 @@ async function parse_dataset_db(dataset_db: string) {
 		})
 
 		const term_db_rows = db.prepare('SELECT * from terms').all()
-		const db_rows: DbRows[] = []
 
 		term_db_rows.forEach((row: any) => {
 			const found = description_map.find((item: any) => item.name === row.id)
@@ -768,7 +813,7 @@ async function parse_dataset_db(dataset_db: string) {
 	} finally {
 		db.close()
 	}
-	return rag_docs
+	return { db_rows: db_rows, rag_docs: rag_docs }
 }
 
 function parse_db_rows(db_row: DbRows) {
