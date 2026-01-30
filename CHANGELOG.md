@@ -2,14 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.170.3
 
 Features:
 - GRIN2: Increased max lesion cap to 250,000. Refactored per lesion type cap to a single overall cap. Introduced memory profilling and dynamic lesion cap generation based on available memory in a particular environment. Other improvements.
-
-Fixes:
-- display a more user-friendly error message instead of an obscure bin-related error, when there is no numeric data by GDC cohort to compute bins
-- do not allow a user to double-click on gene search while loading the coordinate
 
 
 ## 2.173.0
@@ -39,6 +35,39 @@ Fixes:
 - stream matrix response data to prevent RangeError during json-encoding
 - do not join to global filter in getTreeFilter() if the join argument is 'or', so that the edit menu will list all applicable categories
 - show loading and error messages when switching to barchart tab in summary plot
+
+
+## 2.170.4
+
+Fixes:
+- may detect the end of matrix data streaming using sampleIndex instead of the lastSampleId, which may not have data
+
+
+## 2.170.3
+
+Fixes
+- display a more user-friendly error message instead of an obscure bin-related error, when there is no numeric data by GDC cohort to compute bins
+- do not allow a user to double-click on gene search while loading the coordinate
+
+
+## 2.170.2
+
+Fixes:
+- show loading and error messages when switching to barchart tab in summary plot
+
+
+## 2.170.1
+
+Fixes:
+- GDC lollipop now displays ssm=2000 for TTN rather than 1999; the limit is applied to both ssm & sv
+- restore old singlecell gene exp violin by supplying q.mode=continuous
+- skip most GDC dict terms under "diagnoses." branch due to diagnoses__days_to_hiv_diagnosis breaking grapqhl in qa-yellow
+- stream matrix response data to prevent RangeError during json-encoding
+- new unit tests for ListSamples, now under #dom/summary
+- The list samples menu option in the box plot is fixed and includes logic to handle the divide by term. The values are now shown under term headings as well.
+- do not join to global filter in getTreeFilter() if the join argument is 'or', so that the edit menu will list all applicable categories
+- Implemented new ListSamples into violin plot. Clickable menu from plot label now correctly list samples and apply filters. Implemented for the brush menu as well.
+- ListSamples filters for samplelst terms correctly with new integration test
 
 
 ## 2.170.0
