@@ -217,12 +217,13 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 		for (let i = 0; i < retryMax + 1; i++) {
 			// 1/27/2026, retry per Phil's suggestion in https://gdc-ctds.atlassian.net/browse/SV-2709
 			try {
-				// throw new Error('nosss gene lines') // uncomment to test
+				// throw new Error('no gene lines') // uncomment to test
 				bySampleId = await getExpressionData(q, ensgLst, cases4clustering, ensg2id, term2sample2value, ds)
 				// returns mapping from uuid to submitter id; since uuid is used in term2sample2value, but need to display submitter id on ui
 				const t4 = new Date()
 				mayLog('gene-case matrix built,', Object.keys(bySampleId).length, 'cases,', t4 - t3, 'ms')
 			} catch (e) {
+				// TODO: use custom Error class/name/code to reliably detect
 				if (!String(e).includes('no gene lines')) throw e
 				// 1/27/2026 the message below is per Himanso's feedback in https://gdc-ctds.atlassian.net/browse/SV-2709
 				if (i >= retryMax) throw unknownApiError
