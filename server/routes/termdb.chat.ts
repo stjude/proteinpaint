@@ -253,8 +253,8 @@ async function classify_query_by_dataset_type(
 	//    skipTypeCheck: true
 	//}
 	//const generator: SchemaGenerator = createGenerator(SchemaConfig)
-	//const StringifiedSchema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // This will be generated at server startup later
-	//mayLog("ClassificationType StringifiedSchema:", StringifiedSchema)
+	//const Schema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // This will be generated at server startup later
+	//mayLog("ClassificationType StringifiedSchema:", Schema)
 
 	const template =
 		contents + ' training data is as follows:' + training_data + ' Question: {' + user_prompt + '} Answer: {answer}'
@@ -306,10 +306,70 @@ async function extract_DE_search_terms_from_query(
 		//    skipTypeCheck: true
 		//}
 		//const generator: SchemaGenerator = createGenerator(SchemaConfig)
-		//const StringifiedSchema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // This commented out code generates the JSON schema below
-		const StringifiedSchema =
-			'{"$schema":"http://json-schema.org/draft-07/schema#","$ref":"#/definitions/DEType","definitions":{"DEType":{"type":"object","properties":{"group1":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"},"description":"Name of group1 which is an array of filter terms"},"group2":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"},"description":"Name of group2 which is an array of filter terms"},"name1":{"type":"string","description":"Name of group1 to be shown in UI"},"name2":{"type":"string","description":"Name of group2 to be shown in UI"},"method":{"type":"string","enum":["edgeR","limma","wilcoxon"],"description":"Method used for carrying out differential gene expression analysis"}},"required":["group1","group2","name1","name2"],"additionalProperties":false},"FilterTerm":{"anyOf":[{"$ref":"#/definitions/CategoricalFilterTerm"},{"$ref":"#/definitions/NumericFilterTerm"}]},"CategoricalFilterTerm":{"type":"object","properties":{"term":{"type":"string","description":"Name of numeric term"},"category":{"type":"string","description":"The category of the term"},"join":{"type":"string","enum":["and","or"],"description":"join term to be used only when there there is more than one filter term and should be placed in the 2nd filter term describing how it connects to the 1st term"}},"required":["term","category"],"additionalProperties":false},"NumericFilterTerm":{"type":"object","properties":{"term":{"type":"string","description":"Name of numeric term"},"start":{"type":"number","description":"start position (or lower limit) of numeric term"},"stop":{"type":"number","description":"stop position (or upper limit) of numeric term"},"join":{"type":"string","enum":["and","or"],"description":"join term to be used only when there there is more than one filter term and should be placed in the 2nd filter term describing how it connects to the 1st term"}},"required":["term"],"additionalProperties":false}}}'
-		//mayLog('DEType StringifiedSchema:', StringifiedSchema)
+		//const Schema = generator.createSchema(SchemaConfig.type) // This commented out code generates the JSON schema below
+		const Schema = {
+			$schema: 'http://json-schema.org/draft-07/schema#',
+			$ref: '#/definitions/DEType',
+			definitions: {
+				DEType: {
+					type: 'object',
+					properties: {
+						group1: {
+							type: 'array',
+							items: { $ref: '#/definitions/FilterTerm' },
+							description: 'Name of group1 which is an array of filter terms'
+						},
+						group2: {
+							type: 'array',
+							items: { $ref: '#/definitions/FilterTerm' },
+							description: 'Name of group2 which is an array of filter terms'
+						},
+						method: {
+							type: 'string',
+							enum: ['edgeR', 'limma', 'wilcoxon'],
+							description: 'Method used for carrying out differential gene expression analysis'
+						}
+					},
+					required: ['group1', 'group2'],
+					additionalProperties: false
+				},
+				FilterTerm: {
+					anyOf: [{ $ref: '#/definitions/CategoricalFilterTerm' }, { $ref: '#/definitions/NumericFilterTerm' }]
+				},
+				CategoricalFilterTerm: {
+					type: 'object',
+					properties: {
+						term: { type: 'string', description: 'Name of numeric term' },
+						category: { type: 'string', description: 'The category of the term' },
+						join: {
+							type: 'string',
+							enum: ['and', 'or'],
+							description:
+								'join term to be used only when there there is more than one filter term and should be placed in the 2nd filter term describing how it connects to the 1st term'
+						}
+					},
+					required: ['term', 'category'],
+					additionalProperties: false
+				},
+				NumericFilterTerm: {
+					type: 'object',
+					properties: {
+						term: { type: 'string', description: 'Name of numeric term' },
+						start: { type: 'number', description: 'start position (or lower limit) of numeric term' },
+						stop: { type: 'number', description: 'stop position (or upper limit) of numeric term' },
+						join: {
+							type: 'string',
+							enum: ['and', 'or'],
+							description:
+								'join term to be used only when there there is more than one filter term and should be placed in the 2nd filter term describing how it connects to the 1st term'
+						}
+					},
+					required: ['term'],
+					additionalProperties: false
+				}
+			}
+		} // This JSON schema is generated by ts-json-schema-generator. When DEType is updated, please update this schema by uncommenting the above code and running it locally
+		//mayLog('DEType Schema:', JSON.stringify(Schema))
 
 		// Parse out training data from the dataset JSON and add it to a string
 		const DE_ds = dataset_json.charts.filter((chart: any) => chart.type == 'DE')
@@ -334,8 +394,8 @@ async function extract_DE_search_terms_from_query(
 
 		const system_prompt =
 			'I am an assistant that extracts the groups from the user prompt to carry out differential gene expression. The final output must be in the following JSON with NO extra comments. The schema is as follows: ' +
-			StringifiedSchema +
-			' . "group1" and "group2" fields are compulsory. Both "group1" and "group2" consist of an array of filter variables. There are two kinds of filter variables: "Categorical" and "Numeric". "Categorical" variables are those variables which can have a fixed set of values e.g. gender, race. They are defined by the "CategoricalFilterTerm" which consists of "term" (a field from the sqlite3 db)  and "category" (a value of the field from the sqlite db).  "Numeric" variables are those which can have any numeric value. They are defined by "NumericFilterTerm" and contain  the subfields "term" (a field from the sqlite3 db), "start" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and "stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. ' +
+			JSON.stringify(Schema) +
+			' . "group1" and "group2" fields are compulsory. Both "group1" and "group2" consist of an array of filter variables. There are two kinds of filter variables: "Categorical" and "Numeric". "Categorical" variables are those variables which can have a fixed set of values e.g. gender, race. They are defined by the "CategoricalFilterTerm" which consists of "term" (a field from the sqlite3 db)  and "category" (a value of the field from the sqlite db).  "Numeric" variables are those which can have any numeric value. They are defined by "NumericFilterTerm" and contain  the subfields "term" (a field from the sqlite3 db), "start" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and "stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. ' + // May consider deprecating this natural language description after units tests are implemented
 			checkField(dataset_json.dataset_prompt) +
 			checkField(DE_ds[0].SystemPrompt) +
 			'The sqlite db in plain language is as follows:\n' +
@@ -370,8 +430,7 @@ async function validate_DE_response(response: string, ds: any, db_rows: DbRows[]
 	let html = ''
 	let group1: any
 	let samples1lst: any
-	const name1 = generate_name(response_type.group1, db_rows)
-	//let name1 = response_type.name1 // AI generated names are currently commented out, will probably deprecate this in the future
+	const name1 = generate_group_name(response_type.group1, db_rows)
 	if (!response_type.group1) {
 		html += 'group1 not present in DE output'
 	} else {
@@ -394,8 +453,7 @@ async function validate_DE_response(response: string, ds: any, db_rows: DbRows[]
 	}
 	let group2: any
 	let samples2lst: any
-	const name2 = generate_name(response_type.group2, db_rows)
-	// let name2 = response_type.name2 // AI generated names are currently commented out, will probably deprecate this in the future
+	const name2 = generate_group_name(response_type.group2, db_rows)
 	if (!response_type.group2) {
 		html += 'group2 not present in DE output'
 	} else {
@@ -446,7 +504,7 @@ async function validate_DE_response(response: string, ds: any, db_rows: DbRows[]
 		pp_plot_json.state = {
 			customTerms: [
 				{
-					name: response_type.name1 + ' vs ' + response_type.name2,
+					name: name1 + ' vs ' + name2,
 					tw: tw
 				}
 			],
@@ -458,7 +516,7 @@ async function validate_DE_response(response: string, ds: any, db_rows: DbRows[]
 	}
 }
 
-function generate_name(filters: any[], db_rows: DbRows[]): string {
+function generate_group_name(filters: any[], db_rows: DbRows[]): string {
 	let name = ''
 	for (const filter of filters) {
 		if (filter.join && filter.join == 'and') {
@@ -528,10 +586,62 @@ async function extract_summary_terms(
 	//    skipTypeCheck: true
 	//}
 	//const generator: SchemaGenerator = createGenerator(SchemaConfig)
-	//const StringifiedSchema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // This will be generated at server startup later
-	const StringifiedSchema =
-		'{"$schema":"http://json-schema.org/draft-07/schema#","$ref":"#/definitions/SummaryType","definitions":{"SummaryType":{"type":"object","properties":{"term":{"type":"string","description":"Name of 1st term"},"term2":{"type":"string","description":"Name of 2nd term"},"simpleFilter":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"},"description":"Optional simple filter terms"}},"required":["term","simpleFilter"],"additionalProperties":false},"FilterTerm":{"anyOf":[{"$ref":"#/definitions/CategoricalFilterTerm"},{"$ref":"#/definitions/NumericFilterTerm"}]},"CategoricalFilterTerm":{"type":"object","properties":{"term":{"type":"string","description":"Name of numeric term"},"category":{"type":"string","description":"The category of the term"},"join":{"type":"string","enum":["and","or"],"description":"join term to be used only when there there is more than one filter term and should be placed in the 2nd filter term describing how it connects to the 1st term"}},"required":["term","category"],"additionalProperties":false},"NumericFilterTerm":{"type":"object","properties":{"term":{"type":"string","description":"Name of numeric term"},"start":{"type":"number","description":"start position (or lower limit) of numeric term"},"stop":{"type":"number","description":"stop position (or upper limit) of numeric term"},"join":{"type":"string","enum":["and","or"],"description":"join term to be used only when there there is more than one filter term and should be placed in the 2nd filter term describing how it connects to the 1st term"}},"required":["term"],"additionalProperties":false}}}'
-	//mayLog("SummaryType StringifiedSchema:", StringifiedSchema)
+	//const Schema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // This will be generated at server startup later
+	const Schema = {
+		$schema: 'http://json-schema.org/draft-07/schema#',
+		$ref: '#/definitions/SummaryType',
+		definitions: {
+			SummaryType: {
+				type: 'object',
+				properties: {
+					term: { type: 'string', description: 'Name of 1st term' },
+					term2: { type: 'string', description: 'Name of 2nd term' },
+					simpleFilter: {
+						type: 'array',
+						items: { $ref: '#/definitions/FilterTerm' },
+						description: 'Optional simple filter terms'
+					}
+				},
+				required: ['term', 'simpleFilter'],
+				additionalProperties: false
+			},
+			FilterTerm: {
+				anyOf: [{ $ref: '#/definitions/CategoricalFilterTerm' }, { $ref: '#/definitions/NumericFilterTerm' }]
+			},
+			CategoricalFilterTerm: {
+				type: 'object',
+				properties: {
+					term: { type: 'string', description: 'Name of numeric term' },
+					category: { type: 'string', description: 'The category of the term' },
+					join: {
+						type: 'string',
+						enum: ['and', 'or'],
+						description:
+							'join term to be used only when there there is more than one filter term and should be placed in the 2nd filter term describing how it connects to the 1st term'
+					}
+				},
+				required: ['term', 'category'],
+				additionalProperties: false
+			},
+			NumericFilterTerm: {
+				type: 'object',
+				properties: {
+					term: { type: 'string', description: 'Name of numeric term' },
+					start: { type: 'number', description: 'start position (or lower limit) of numeric term' },
+					stop: { type: 'number', description: 'stop position (or upper limit) of numeric term' },
+					join: {
+						type: 'string',
+						enum: ['and', 'or'],
+						description:
+							'join term to be used only when there there is more than one filter term and should be placed in the 2nd filter term describing how it connects to the 1st term'
+					}
+				},
+				required: ['term'],
+				additionalProperties: false
+			}
+		}
+	} // This JSON schema is generated by ts-json-schema-generator. When SummaryType is updated, please update this schema by uncommenting the above code and running it locally
+	//mayLog("SummaryType Schema:", Schema)
 	const words = prompt
 		.replace(/[^a-zA-Z0-9\s]/g, '')
 		.split(/\s+/)
@@ -561,8 +671,8 @@ async function extract_summary_terms(
 
 	let system_prompt =
 		'I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. The JSON schema is as follows: ' +
-		StringifiedSchema +
-		' term and term2 (if present) should ONLY contain names of the fields from the sqlite db. The "simpleFilter" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both "term"/"term2" and "simpleFilter". There are two kinds of filter variables: "Categorical" and "Numeric". "Categorical" variables are those variables which can have a fixed set of values e.g. gender, race. They are defined by the "CategoricalFilterTerm" which consists of "term" (a field from the sqlite3 db)  and "category" (a value of the field from the sqlite db).  "Numeric" variables are those which can have any numeric value. They are defined by "NumericFilterTerm" and contain  the subfields "term" (a field from the sqlite3 db), "start" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and "stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. ' +
+		JSON.stringify(Schema) +
+		' term and term2 (if present) should ONLY contain names of the fields from the sqlite db. The "simpleFilter" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both "term"/"term2" and "simpleFilter". There are two kinds of filter variables: "Categorical" and "Numeric". "Categorical" variables are those variables which can have a fixed set of values e.g. gender, race. They are defined by the "CategoricalFilterTerm" which consists of "term" (a field from the sqlite3 db)  and "category" (a value of the field from the sqlite db).  "Numeric" variables are those which can have any numeric value. They are defined by "NumericFilterTerm" and contain  the subfields "term" (a field from the sqlite3 db), "start" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and "stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. ' + // May consider deprecating this natural language description after units tests are implemented
 		checkField(dataset_json.dataset_prompt) +
 		checkField(summary_ds[0].SystemPrompt) +
 		'\n The DB content is as follows: ' +
