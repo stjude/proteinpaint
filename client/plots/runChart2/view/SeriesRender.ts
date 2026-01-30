@@ -73,11 +73,6 @@ export class SeriesRender {
 			.style('cursor', 'pointer')
 			.on('mouseover', (event: any, d: any) => this.showHoverTip(event, d))
 			.on('mouseout', () => this.hideHoverTip())
-			.on('click', (event: any, d: any) => {
-				if (this.runChart2) {
-					this.showPointMenu(event, d)
-				}
-			})
 
 		// Draw median line if median is available
 		if (this.series.median != null && !isNaN(this.series.median)) {
@@ -126,36 +121,30 @@ export class SeriesRender {
 		this.runChart2?.dom?.hovertip?.hide()
 	}
 
-	showPointMenu(event: any, point: any) {
-		if (!this.runChart2 || !this.runChart2.dom.clickMenu) return
-
-		this.hideHoverTip()
-		const cfg = this.runChart2.state?.config
-		const xTermName = cfg?.term?.term?.name ?? 'X'
-		const yTermName = cfg?.term2?.term?.name ?? 'Y'
-		const menu = this.runChart2.dom.clickMenu
-		menu.clear()
-
-		const menuDiv = menu.d.append('div').attr('class', 'sja_menu_div')
-
-		const options = [
-			{ label: `${xTermName}: ${point.xName ?? point.x}`, callback: () => menu.hide() },
-			{ label: `${yTermName}: ${roundValueAuto(point.y, true, 2)}`, callback: () => menu.hide() },
-			{ label: `Sample Count: ${point.sampleCount}`, callback: () => menu.hide() }
-		]
-
-		menuDiv
-			.selectAll('div')
-			.data(options)
-			.enter()
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text(d => d.label)
-			.style('cursor', 'pointer')
-			.on('click', (event: any, d: any) => {
-				d.callback()
-			})
-
-		menu.show(event.clientX, event.clientY)
-	}
+	// Click menu disabled until menu options have real actions (currently only close the menu)
+	// showPointMenu(event: any, point: any) {
+	// 	if (!this.runChart2 || !this.runChart2.dom.clickMenu) return
+	// 	this.hideHoverTip()
+	// 	const cfg = this.runChart2.state?.config
+	// 	const xTermName = cfg?.term?.term?.name ?? 'X'
+	// 	const yTermName = cfg?.term2?.term?.name ?? 'Y'
+	// 	const menu = this.runChart2.dom.clickMenu
+	// 	menu.clear()
+	// 	const menuDiv = menu.d.append('div').attr('class', 'sja_menu_div')
+	// 	const options = [
+	// 		{ label: `${xTermName}: ${point.xName ?? point.x}`, callback: () => menu.hide() },
+	// 		{ label: `${yTermName}: ${roundValueAuto(point.y, true, 2)}`, callback: () => menu.hide() },
+	// 		{ label: `Sample Count: ${point.sampleCount}`, callback: () => menu.hide() }
+	// 	]
+	// 	menuDiv
+	// 		.selectAll('div')
+	// 		.data(options)
+	// 		.enter()
+	// 		.append('div')
+	// 		.attr('class', 'sja_menuoption sja_sharp_border')
+	// 		.text(d => d.label)
+	// 		.style('cursor', 'pointer')
+	// 		.on('click', (event: any, d: any) => { d.callback() })
+	// 	menu.show(event.clientX, event.clientY)
+	// }
 }
