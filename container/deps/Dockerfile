@@ -119,11 +119,15 @@ RUN if [ "$ARCH" = "x86_64" ]; then \
         wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedInfo -P /home/root/pp/tools/ && \
         wget https://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/blat/gfClient -P /home/root/pp/tools/ && \
         chmod -R 755 /home/root/pp/tools; \
-    # We will need a binary for this platform as the link is now broken
+    # TODO: We will need a version 1.2.4 binary for this platform as the link is now broken. Adding a workaround letting the user know for now.
     # elif [ "$ARCH" = "aarch64" ]; then \
     #     curl http://www.clustal.org/omega/clustal-omega-1.2.4.tar.gz -O && tar -xvf clustal-omega-1.2.4.tar.gz && \
     #     cd clustal-omega-1.2.4 && ./configure --prefix="/usr/local" --build=${ARCH}-unknown-linux-gnu && make && make install && \
     #     chmod 755 /usr/local/bin/clustalo; \
+     elif [ "$ARCH" = "aarch64" ]; then \
+        echo "ARCH='$ARCH' is currently not supported: clustalo binary for aarch64 is not available in this image." && \
+        echo "Please provide a suitable clustalo binary or update this Dockerfile to build clustalo for ARCH='$ARCH' before building." && \
+        exit 1; \
     else \
         echo "unknown ARCH='$ARCH'" && \
         exit 1; \
