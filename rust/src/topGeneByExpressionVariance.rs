@@ -821,7 +821,7 @@ fn main() {
                         match input_data_hdf5(&file_name, &samples_list) {
                             Ok(result) => result,
                             Err(err) => {
-                                eprintln!("ERROR in HDF5 new format reader: {:?}", err);
+                                eprintln!("ERROR in HDF5 reader: {:?}", err);
                                 return;
                             }
                         }
