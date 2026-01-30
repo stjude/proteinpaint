@@ -62,10 +62,18 @@ also the caller should just call dofetch2() without a serverData{}
 rather than dofetch3
 */
 export async function processResponse(r) {
+	// if (!r.ok) {
+	//   throw new Error(`HTTP error! status: ${r.status}`)
+	// }
 	const ct = r.headers.get('content-type') // content type is always present
 	if (!ct) throw `missing response.header['content-type']`
 	if (ct.includes('/json')) {
-		return r.json()
+		const payload = r.json()
+		// server should use a standard HTTP response status 400+, 500+
+		// so that !r.ok will already be caught when wrapping fetch with try-catch
+		if (payload.error) throw payload.error
+		if (payload.status === 'error') throw payload.message || payload
+		return payload
 	}
 	if (ct.includes('/text') || ct.includes('text/')) {
 		return r.text()
