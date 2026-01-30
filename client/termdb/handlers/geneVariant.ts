@@ -88,6 +88,12 @@ export class SearchHandler {
 			tip: new Menu({ padding: '0px' }),
 			genome: this.opts.genomeObj,
 			row: this.dom.searchDiv,
+			/* only allowing gene search for now because:
+			- coordinate search is not yet supported for gdc
+			- for other datasets, even though coordinate search is supported, it is not compatible with input type radios (single gene vs. geneset) because a coordinate may include one or more genes.
+			TODO: fully support coordinate search
+			*/
+			searchOnly: 'gene',
 			callback: async () => await this.selectGene(geneSearch)
 		})
 		this.dom.searchDiv.select('.sja_genesearchinput').style('margin', '0px')
