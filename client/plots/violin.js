@@ -334,7 +334,7 @@ class ViolinPlot extends PlotBase {
 		//Fix for rm'ing error message when plot re-renders
 		//Leave in main() so the message doesn't linger whilst
 		//the plot is rendering
-		const existingMsg = this.dom.banner.select('span')
+		const existingMsg = this.dom.banner.style('display', 'none').select('span')
 		if (!existingMsg.empty()) existingMsg.remove()
 
 		const args = this.validateArgs()
