@@ -46,8 +46,7 @@ class ViolinPlot extends PlotBase {
 				.style('display', 'none')
 				.style('text-align', 'center')
 				.style('padding', '24px')
-				.style('font-size', '16px')
-				.style('color', '#aaa'),
+				.style('font-size', '16px'),
 			loadingDiv: holder
 				.append('div')
 				.style('display', this.opts.mode != 'minimal' ? 'inline-block' : 'none')
