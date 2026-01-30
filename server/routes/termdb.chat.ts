@@ -370,7 +370,7 @@ async function validate_DE_response(response: string, ds: any, db_rows: DbRows[]
 	let html = ''
 	let group1: any
 	let samples1lst: any
-	const name1 = generate_name(response_type.group1, db_rows)
+	const name1 = generate_group_name(response_type.group1, db_rows)
 	//let name1 = response_type.name1 // AI generated names are currently commented out, will probably deprecate this in the future
 	if (!response_type.group1) {
 		html += 'group1 not present in DE output'
@@ -394,7 +394,7 @@ async function validate_DE_response(response: string, ds: any, db_rows: DbRows[]
 	}
 	let group2: any
 	let samples2lst: any
-	const name2 = generate_name(response_type.group2, db_rows)
+	const name2 = generate_group_name(response_type.group2, db_rows)
 	// let name2 = response_type.name2 // AI generated names are currently commented out, will probably deprecate this in the future
 	if (!response_type.group2) {
 		html += 'group2 not present in DE output'
@@ -458,7 +458,7 @@ async function validate_DE_response(response: string, ds: any, db_rows: DbRows[]
 	}
 }
 
-function generate_name(filters: any[], db_rows: DbRows[]): string {
+function generate_group_name(filters: any[], db_rows: DbRows[]): string {
 	let name = ''
 	for (const filter of filters) {
 		if (filter.join && filter.join == 'and') {
