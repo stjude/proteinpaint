@@ -54,7 +54,8 @@ use ndarray::Dim;
 /// A Result containing either:
 /// - A tuple with expression matrix and gene symbols list on success, or
 /// - An error with details formatted as JSON
-fn input_data_hdf5(
+#[allow(dead_code)]
+fn input_data_hdf5_old(
     filename: &String,
     sample_list: &Vec<&str>,
 ) -> Result<(Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>, Vec<String>)> {
@@ -307,7 +308,7 @@ fn input_data_hdf5(
 }
 
 // Similar to input_data_hdf5, but specifically for new H5 format
-fn input_data_hdf5_newformat(
+fn input_data_hdf5(
     filename: &String,
     sample_list: &Vec<&str>,
 ) -> Result<(Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>, Vec<String>)> {
@@ -724,12 +725,12 @@ fn main() {
                     }
 
                     // Determine if the H5 file is new format
-                    let new_format: bool = match &json_string {
-                        json::JsonValue::Object(ref obj) => {
-                            obj.get("newformat").and_then(|v| v.as_bool()).map_or(false, |b| b)
-                        }
-                        _ => false,
-                    };
+                    //let new_format: bool = match &json_string {
+                    //    json::JsonValue::Object(ref obj) => {
+                    //        obj.get("newformat").and_then(|v| v.as_bool()).map_or(false, |b| b)
+                    //    }
+                    //    _ => false,
+                    //};
 
                     let rank_type = &json_string["rank_type"] // Value provide must be either "var" or "iqr"
                         .to_owned()
@@ -817,25 +818,11 @@ fn main() {
                     // eprintln!("Reading data from {} file: {}", file_type, file_name);
                     let (input_matrix, gene_names) = if file_type == "hdf5" {
                         // eprintln!("Using HDF5 reader function...");
-                        if new_format {
-                            match input_data_hdf5_newformat(&file_name, &samples_list) {
-                                Ok(result) => result,
-                                Err(err) => {
-                                    eprintln!("ERROR in HDF5 new format reader: {:?}", err);
-                                    return;
-                                }
-                            }
-                        } else {
-                            match input_data_hdf5(&file_name, &samples_list) {
-                                Ok(result) => {
-                                    // eprintln!("Successfully read HDF5 data");
-                                    result
-                                }
-                                Err(err) => {
-                                    eprintln!("ERROR in HDF5 reader: {:?}", err);
-                                    // Error has already been printed to stdout in JSON format by the function
-                                    return;
-                                }
+                        match input_data_hdf5(&file_name, &samples_list) {
+                            Ok(result) => result,
+                            Err(err) => {
+                                eprintln!("ERROR in HDF5 new format reader: {:?}", err);
+                                return;
                             }
                         }
                     } else {
