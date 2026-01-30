@@ -37,7 +37,6 @@ export class ScatterView {
 			.style('text-align', 'center')
 			.style('padding', '24px')
 			.style('font-size', '16px')
-			.style('color', '#aaa')
 		const headerDiv = rightDiv.append('div')
 		const mainDiv = rightDiv
 			.append('div')

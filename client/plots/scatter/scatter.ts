@@ -99,16 +99,26 @@ export class Scatter extends PlotBase implements RxComponent {
 		this.config = await this.getMutableConfig()
 		this.settings = structuredClone(this.config.settings.sampleScatter)
 		try {
+			this.dom.bannerDiv.style('display', '').selectAll('*').remove()
 			await this.model.initData()
 		} catch (e: any) {
+			this.toggleLoadingDiv('none')
 			if (this.app.isAbortError(e)) return
 			throw e
 		}
+		if (!this.model.charts?.length) {
+			this.toggleLoadingDiv('none')
+			this.dom.mainDiv.style('display', 'none')
+			this.dom.bannerDiv.style('display', 'block').html(`<span>No visible barchart data to render</span>`)
+			return
+		}
+
 		if (this.model.is3D) this.vm = new ScatterViewModel3D(this)
 		else if (this.model.is2DLarge) this.vm = new ScatterViewModel2DLarge(this)
 		else this.vm = new ScatterViewModel(this)
 		if (!this.config.colorColumn) await this.setControls()
 		await this.model.processData()
+		this.dom.mainDiv.style('display', '')
 		this.vm.render()
 		this.toggleLoadingDiv('none')
 
