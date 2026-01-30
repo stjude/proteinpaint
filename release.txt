@@ -1,1 +1,2 @@
-
+Fixes:
+- Now fetching clustalo binary from PP instead of defunct URL
