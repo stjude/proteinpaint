@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.170.4
 
 Fixes:
 - may detect the end of matrix data streaming using sampleIndex instead of the lastSampleId, which may not have data
