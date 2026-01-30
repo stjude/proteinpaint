@@ -22,7 +22,10 @@ export function sayerror(holder: any, o: any) {
 		if (o.stack) console.log(o.stack) // print out stack
 	}
 	holder.style('padding-left', '10px') //to align with sandbox padding
-	const div = holder.append('div').attr('class', 'sja_errorbar').style('border-radius', '5px')
+	const div = holder
+		.append('div')
+		.attr('class', holder.classed('sja_errorbar') ? null : 'sja_errorbar')
+		.style('border-radius', '5px')
 	div
 		.append('div')
 		.style('padding-right', '8px')

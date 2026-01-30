@@ -67,7 +67,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 			this.app,
 			this.opts,
 			() => {
-				return this.data.charts
+				return this.data?.charts || []
 			},
 			this.useDefaultSettings
 		)

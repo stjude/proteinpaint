@@ -468,6 +468,7 @@ export class TermdbVocab extends Vocab {
 		if (body.filter) body.filter = getNormalRoot(body.filter)
 		const init = { headers, body, signal }
 		const data = await dofetch3('termdb/violin', init)
+		if (data.error) throw data.error
 		return data
 	}
 
