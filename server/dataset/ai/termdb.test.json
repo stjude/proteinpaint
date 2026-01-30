@@ -45,8 +45,10 @@
        	       {"question":"show summary of molecular subtype for men under 40 years only", "answer": {"term": "diaggrp","simpleFilter":[{"term":"sex","category":"1"},{"start":null,"stop":40.0,"term":"agedx","join": "and"}]}},
        	       {"question":"compare tp53 expression between genders", "answer": {"term": "sex", "term2": "TP53"}},
        	       {"question":"is tmem88b overexpressed in men?", "answer": {"term":"sex","term2":"TMEM88B"}},
-       	       {"question":"Show ancestry for aml and neuroblastoma subtypes", "answer": {"term":"genetic_race","simpleFilter":[{"term":"diaggrp","category":"Acute myeloid leukemia"},{"term":"diaggrp","category":"Neuroblastoma","join": "or"}]}},	      
+       	       {"question":"Show ancestry for aml and neuroblastoma subtypes", "answer": {"term":"genetic_race","simpleFilter":[{"term":"diaggrp","category":"Acute myeloid leukemia"},{"term":"diaggrp","category":"Neuroblastoma","join": "or"}]}},
+	       {"question":"show molecular subtype for black women", "answer": {"term":"diaggrp", "simpleFilter":[{"term":"genetic_race","category":"African Ancestry"},{"term":"sex","category":"2","join":"and"}]}},
                {"question":"is myc overexpressed in women?", "answer": {"term":"sex", "simpleFilter":[{"term":"sex","category":"2"}]}},
+	       {"question":"show ancestry for wilms tumor, neuroblastoma patients with age < 20yrs", "answer": {"term":"genetic_race", "simpleFilter":[{"term":"diaggrp","category":"Wilms tumor"},{"term":"diaggrp","category":"Neuroblastoma","join":"or"},{"stop":20.0,"term":"agedx","join": "and"}]}},
 	       {"question":"Show molecular subtypes for patients with early onset of cancer", "answer": {"term":"diaggrp"}, "simpleFilter":[{"term":"agedx", "stop":15}]}
           ],
           "TestData":[

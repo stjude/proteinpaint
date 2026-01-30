@@ -646,7 +646,6 @@ function generate_filter_term(filters: any, ds: any) {
 			if (!term) {
 				invalid_html += 'invalid filter id:' + f.term
 			} else {
-				mayLog('f:', f)
 				if (f.join) {
 					localfilter.join = f.join
 				}
@@ -692,9 +691,11 @@ function generate_filter_term(filters: any, ds: any) {
 			}
 		}
 	}
-	if (filters.length > 1 && !localfilter.join)
-		invalid_html += 'Connection (and/or) between the filter terms is not clear, please try to rephrase your question'
-	mayLog('locafilter:', localfilter)
+	if (filters.length > 1 && !localfilter.join) {
+		localfilter.join = 'and' // Hardcoding and when the LLM is not able to detect the connection
+		//invalid_html += 'Connection (and/or) between the filter terms is not clear, please try to rephrase your question'
+	}
+	//mayLog('locafilter:', localfilter)
 	return { simplefilter: localfilter, html: invalid_html }
 }
 
