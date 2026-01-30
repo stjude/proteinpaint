@@ -109,7 +109,7 @@ export class Scatter extends PlotBase implements RxComponent {
 		if (!this.model.charts?.length) {
 			this.toggleLoadingDiv('none')
 			this.dom.mainDiv.style('display', 'none')
-			this.dom.bannerDiv.style('display', 'block').html(`<span>No visible barchart data to render</span>`)
+			this.dom.bannerDiv.style('display', 'block').html(`<span>No visible scatter data to render</span>`)
 			return
 		}
 
