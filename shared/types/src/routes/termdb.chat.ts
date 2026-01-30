@@ -109,10 +109,6 @@ export type DEType = {
 	group1: FilterTerm[]
 	/** Name of group2 which is an array of filter terms */
 	group2: FilterTerm[]
-	/** Name of group1 to be shown in UI */
-	name1: string
-	/** Name of group2 to be shown in UI */
-	name2: string
 	/** Method used for carrying out differential gene expression analysis */
 	method?: 'edgeR' | 'limma' | 'wilcoxon'
 }
