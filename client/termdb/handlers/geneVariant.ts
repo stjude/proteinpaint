@@ -180,7 +180,7 @@ export class SearchHandler {
 		addParentTerm(this.term)
 		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
 		this.q.predefined_groupset_idx = Number(selectedMutationType.value)
-		this.callback({ term: this.term, q: this.q })
+		await this.callback({ term: this.term, q: this.q })
 		this.dom.msgDiv.style('display', 'none')
 	}
 }
