@@ -27,13 +27,13 @@
           "SystemPrompt":"", 
           "TrainingData":[
               {"question":"Show differential gene expression between men and women", "answer": {"group1":[{"term":"sex","category":"1"}],"group2":[{"term":"sex","category":"2"}],"name1":"Male","name2":"Female"}},
-	      {"question":"Show differential gene expression between non-hodgkin lymphoma, aml and neuroblastoma, all", "answer": {"group1":[{"term":"diaggrp","category":"Non-Hodgkin lymphoma", "join":"or"},{"term":"diaggrp","category":"Acute myeloid leukemia"}],"group2":[{"term":"diaggrp","category":"Neuroblastoma", "join":"or"},{"term":"diaggrp","category":"Acute lymphoblastic leukemia"}],"name1":"non-hodgkin|aml","name2":"neuroblastoma|all"}},
-	      {"question":"Show volcano plot between men with age greater than 30 and women with age less than 50", "answer":{"group1":[{"term":"sex","category":"1","join": "and"},{"term":"agedx", "start":30}],"group2":[{"term":"sex","category":"2","join": "and"},{"term":"agedx", "stop":50}],"name1":"Male&agedx>30","name2":"Female&agedx<50"}},
-       	       {"question":"Show volcano plot between white men and black women", "answer": {"group1":[{"term":"sex","category":"1","join": "and"},{"term":"genetic_race","category":"European Ancestry"}],"group2":[{"term":"sex","category":"2","join":"and"},{"term":"genetic_race","category":"African Ancestry"}]},"name1":"European Male","name2":"African Female"}
+	      {"question":"Show differential gene expression between non-hodgkin lymphoma, aml and neuroblastoma, all", "answer": {"group1":[{"term":"diaggrp","category":"Non-Hodgkin lymphoma"},{"term":"diaggrp","category":"Acute myeloid leukemia", "join":"or"}],"group2":[{"term":"diaggrp","category":"Neuroblastoma"},{"term":"diaggrp","category":"Acute lymphoblastic leukemia", "join":"or"}],"name1":"non-hodgkin|aml","name2":"neuroblastoma|all"}},
+	      {"question":"Show volcano plot between men with age greater than 30 and women with age less than 50", "answer":{"group1":[{"term":"sex","category":"1"},{"term":"agedx", "start":30,"join": "and"}],"group2":[{"term":"sex","category":"2"},{"term":"agedx", "stop":50, "join": "and"}],"name1":"Male&agedx>30","name2":"Female&agedx<50"}},
+       	       {"question":"Show volcano plot between white men and black women", "answer": {"group1":[{"term":"sex","category":"1"},{"term":"genetic_race","category":"European Ancestry","join": "and"}],"group2":[{"term":"sex","category":"2"},{"term":"genetic_race","category":"African Ancestry","join":"and"}]},"name1":"European Male","name2":"African Female"}
           ],
           "TestData":[
 	      {"question":"Show differential gene expression between wilms tumor and neuroblastoma","answer":{"group1":[{"term":"diaggrp","category":"Wilms tumor"}], "group2":[{"term":"diaggrp","category":"Neuroblastoma"}],"name1":"Wilms tumor","name2":"Neuroblastoma"}},
-	      {"question":"Show differential gene expression between wilms tumor patients with age less than 20  and neuroblastoma patients with age greater than 60", "answer":{"group1":[{"term":"diaggrp","category":"Wilms tumor","join": "and"},{"term":"agedx", "stop":20}], "group2":[{"term":"diaggrp","category":"Neuroblastoma","join": "and"},{"term":"agedx", "start":60}],"name1":"Wilms tumor&agedx<20","name2":"neuroblastoma&agdx>60"}}
+	      {"question":"Show differential gene expression between wilms tumor patients with age less than 20  and neuroblastoma patients with age greater than 60", "answer":{"group1":[{"term":"diaggrp","category":"Wilms tumor"},{"term":"agedx","stop":20,"join":"and"}], "group2":[{"term":"diaggrp","category":"Neuroblastoma"},{"term":"agedx", "start":60,"join": "and"}],"name1":"Wilms tumor&agedx<20","name2":"neuroblastoma&agdx>60"}}
           ]	 
     },
     {
@@ -42,16 +42,16 @@
           "TrainingData":[
                {"question":"Show summary of all molecular subtypes for patients with age from 10 to 40 years", "answer": {"term": "diaggrp", "simpleFilter":[ {"term":"agedx", "start":10, "stop":40}]}},
 	       {"question":"Show correlation between diagnosis groups and ancestry", "answer":{"term": "diaggrp","term2":"genetic_race"}},
-       	       {"question":"show summary of molecular subtype for men under 40 years only", "answer": {"term": "diaggrp","simpleFilter":[{"term":"sex","category":"1","join": "and"},{"start":null,"stop":40.0,"term":"agedx"}]}},
+       	       {"question":"show summary of molecular subtype for men under 40 years only", "answer": {"term": "diaggrp","simpleFilter":[{"term":"sex","category":"1"},{"start":null,"stop":40.0,"term":"agedx","join": "and"}]}},
        	       {"question":"compare tp53 expression between genders", "answer": {"term": "sex", "term2": "TP53"}},
        	       {"question":"is tmem88b overexpressed in men?", "answer": {"term":"sex","term2":"TMEM88B"}},
-       	       {"question":"Show ancestry for aml and neuroblastoma subtypes", "answer": {"term":"genetic_race","simpleFilter":[{"term":"diaggrp","category":"Acute myeloid leukemia","join": "or"},{"term":"diaggrp","category":"Neuroblastoma"}]}},	      
+       	       {"question":"Show ancestry for aml and neuroblastoma subtypes", "answer": {"term":"genetic_race","simpleFilter":[{"term":"diaggrp","category":"Acute myeloid leukemia"},{"term":"diaggrp","category":"Neuroblastoma","join": "or"}]}},	      
                {"question":"is myc overexpressed in women?", "answer": {"term":"sex", "simpleFilter":[{"term":"sex","category":"2"}]}},
 	       {"question":"Show molecular subtypes for patients with early onset of cancer", "answer": {"term":"diaggrp"}, "simpleFilter":[{"term":"agedx", "stop":15}]}
           ],
           "TestData":[
 	       {"question":"Show correlation between kras gene expression and race","answer":{"term":"KRAS","term2":"genetic_race"}},
-	      {"question":"Show molecular subtypes for men greater than 60 yrs only", "answer":{"simpleFilter": [{"term":"sex","value":"1","join":"and"},{"start":60.0,"lessThan":null,"term":"agedx"}],"term":"diaggrp"}},
+	       {"question":"Show molecular subtypes for men greater than 60 yrs only", "answer":{"simpleFilter": [{"term":"sex","value":"1"},{"start":60.0,"lessThan":null,"term":"agedx","join":"and"}],"term":"diaggrp"}},
 	       {"question":"Show TP53 gene expression between genders","answer":{"term":"sex","term2":"TP53"}}
           ]	 
     }  

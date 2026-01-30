@@ -308,7 +308,7 @@ async function extract_DE_search_terms_from_query(
 		//const generator: SchemaGenerator = createGenerator(SchemaConfig)
 		//const StringifiedSchema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // This commented out code generates the JSON schema below
 		const StringifiedSchema =
-			'{"$schema":"http://json-schema.org/draft-07/schema#","$ref":"#/definitions/DEType","definitions":{"DEType":{"type":"object","properties":{"group1":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"},"description":"Name of group1 which is an array of filter terms"},"group2":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"},"description":"Name of group2 which is an array of filter terms"},"name1":{"type":"string","description":"Name of group1 to be shown in UI"},"name2":{"type":"string","description":"Name of group2 to be shown in UI"},"method":{"type":"string","enum":["edgeR","limma","wilcoxon"],"description":"Method used for carrying out differential gene expression analysis"}},"required":["group1","group2","name1","name2"],"additionalProperties":false},"FilterTerm":{"anyOf":[{"$ref":"#/definitions/CategoricalFilterTerm"},{"$ref":"#/definitions/NumericFilterTerm"}]},"CategoricalFilterTerm":{"type":"object","properties":{"term":{"type":"string","description":"Name of numeric term"},"category":{"type":"string","description":"The category of the term"},"join":{"type":"string","enum":["and","or"],"description":"join term to be used only when there there is more than one filter term and is not the last term of the filter"}},"required":["term","category"],"additionalProperties":false},"NumericFilterTerm":{"type":"object","properties":{"term":{"type":"string","description":"Name of numeric term"},"start":{"type":"number","description":"start position (or lower limit) of numeric term"},"stop":{"type":"number","description":"stop position (or upper limit) of numeric term"},"join":{"type":"string","enum":["and","or"],"description":"join term to be used only when there there is more than one filter term and is not the last term of the filter"}},"required":["term"],"additionalProperties":false}}}'
+			'{"$schema":"http://json-schema.org/draft-07/schema#","$ref":"#/definitions/DEType","definitions":{"DEType":{"type":"object","properties":{"group1":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"},"description":"Name of group1 which is an array of filter terms"},"group2":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"},"description":"Name of group2 which is an array of filter terms"},"name1":{"type":"string","description":"Name of group1 to be shown in UI"},"name2":{"type":"string","description":"Name of group2 to be shown in UI"},"method":{"type":"string","enum":["edgeR","limma","wilcoxon"],"description":"Method used for carrying out differential gene expression analysis"}},"required":["group1","group2","name1","name2"],"additionalProperties":false},"FilterTerm":{"anyOf":[{"$ref":"#/definitions/CategoricalFilterTerm"},{"$ref":"#/definitions/NumericFilterTerm"}]},"CategoricalFilterTerm":{"type":"object","properties":{"term":{"type":"string","description":"Name of numeric term"},"category":{"type":"string","description":"The category of the term"},"join":{"type":"string","enum":["and","or"],"description":"join term to be used only when there there is more than one filter term and should be placed in the 2nd filter term describing how it connects to the 1st term"}},"required":["term","category"],"additionalProperties":false},"NumericFilterTerm":{"type":"object","properties":{"term":{"type":"string","description":"Name of numeric term"},"start":{"type":"number","description":"start position (or lower limit) of numeric term"},"stop":{"type":"number","description":"stop position (or upper limit) of numeric term"},"join":{"type":"string","enum":["and","or"],"description":"join term to be used only when there there is more than one filter term and should be placed in the 2nd filter term describing how it connects to the 1st term"}},"required":["term"],"additionalProperties":false}}}'
 		//mayLog('DEType StringifiedSchema:', StringifiedSchema)
 
 		// Parse out training data from the dataset JSON and add it to a string
@@ -485,7 +485,7 @@ async function extract_summary_terms(
 	//const generator: SchemaGenerator = createGenerator(SchemaConfig)
 	//const StringifiedSchema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // This will be generated at server startup later
 	const StringifiedSchema =
-		'{"$schema":"http://json-schema.org/draft-07/schema#","$ref":"#/definitions/SummaryType","definitions":{"SummaryType":{"type":"object","properties":{"term":{"type":"string","description":"Name of 1st term"},"term2":{"type":"string","description":"Name of 2nd term"},"simpleFilter":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"},"description":"Optional simple filter terms"}},"required":["term","simpleFilter"],"additionalProperties":false},"FilterTerm":{"anyOf":[{"$ref":"#/definitions/CategoricalFilterTerm"},{"$ref":"#/definitions/NumericFilterTerm"}]},"CategoricalFilterTerm":{"type":"object","properties":{"term":{"type":"string","description":"Name of numeric term"},"category":{"type":"string","description":"The category of the term"},"join":{"type":"string","enum":["and","or"],"description":"join term to be used only when there there is more than one filter term"}},"required":["term","category"],"additionalProperties":false},"NumericFilterTerm":{"type":"object","properties":{"term":{"type":"string","description":"Name of numeric term"},"start":{"type":"number","description":"start position (or lower limit) of numeric term"},"stop":{"type":"number","description":"stop position (or upper limit) of numeric term"},"join":{"type":"string","enum":["and","or"],"description":"join term to be used only when there there is more than one filter term"}},"required":["term"],"additionalProperties":false}}}'
+		'{"$schema":"http://json-schema.org/draft-07/schema#","$ref":"#/definitions/SummaryType","definitions":{"SummaryType":{"type":"object","properties":{"term":{"type":"string","description":"Name of 1st term"},"term2":{"type":"string","description":"Name of 2nd term"},"simpleFilter":{"type":"array","items":{"$ref":"#/definitions/FilterTerm"},"description":"Optional simple filter terms"}},"required":["term","simpleFilter"],"additionalProperties":false},"FilterTerm":{"anyOf":[{"$ref":"#/definitions/CategoricalFilterTerm"},{"$ref":"#/definitions/NumericFilterTerm"}]},"CategoricalFilterTerm":{"type":"object","properties":{"term":{"type":"string","description":"Name of numeric term"},"category":{"type":"string","description":"The category of the term"},"join":{"type":"string","enum":["and","or"],"description":"join term to be used only when there there is more than one filter term and should be placed in the 2nd filter term describing how it connects to the 1st term"}},"required":["term","category"],"additionalProperties":false},"NumericFilterTerm":{"type":"object","properties":{"term":{"type":"string","description":"Name of numeric term"},"start":{"type":"number","description":"start position (or lower limit) of numeric term"},"stop":{"type":"number","description":"stop position (or upper limit) of numeric term"},"join":{"type":"string","enum":["and","or"],"description":"join term to be used only when there there is more than one filter term and should be placed in the 2nd filter term describing how it connects to the 1st term"}},"required":["term"],"additionalProperties":false}}}'
 	//mayLog("SummaryType StringifiedSchema:", StringifiedSchema)
 	const words = prompt
 		.replace(/[^a-zA-Z0-9\s]/g, '')
@@ -612,10 +612,26 @@ function validate_term(response_term: string, common_genes: string[], dataset_js
 	return { term_type: term_type, html: html }
 }
 
-function validate_filter(filters: any, ds: any): any {
+function validate_filter(filters: any[], ds: any): any {
 	if (!Array.isArray(filters)) throw 'filter is not array'
-	const filter_result: any = generate_filter_term(filters, ds)
-	//if (filters.length > 1 && filter_result.simplefilter) filter_result.simplefilter.join = filter_result.join // For now assuming there is a max of two filter terms
+
+	let filter_result: any
+	if (filters.length <= 2) {
+		// If number of filter terms <=2 then simply a single iteration of generate_filter_term() is sufficient
+		filter_result = generate_filter_term(filters, ds)
+	} else {
+		// When number of filter terms is greater than 2, then in each iteration the first two terms are taken and a filter object is created which is passed in the following iteration as a filter term
+		for (let i = 0; i < filters.length - 1; i++) {
+			const filter_lst = [] as any[]
+			if (i == 0) {
+				filter_lst.push(filters[i])
+			} else {
+				filter_lst.push(filter_result.simplefilter)
+			}
+			filter_lst.push(filters[i + 1])
+			filter_result = generate_filter_term(filter_lst, ds)
+		}
+	}
 	return { simplefilter: filter_result.simplefilter, html: filter_result.html }
 }
 
@@ -623,51 +639,56 @@ function generate_filter_term(filters: any, ds: any) {
 	let invalid_html = ''
 	const localfilter: any = { type: 'tvslst', in: true, lst: [] as any[] }
 	for (const f of filters) {
-		const term = ds.cohort.termdb.q.termjsonByOneid(f.term)
-		if (!term) {
-			invalid_html += 'invalid filter id:' + f.term
+		if (f.type == 'tvslst') {
+			localfilter.lst.push(f)
 		} else {
-			if (f.join) {
-				localfilter.join = f.join
-			}
-			if (term.type == 'categorical') {
-				let cat: any
-				for (const ck in term.values) {
-					if (ck == f.category) cat = ck
-					else if (term.values[ck].label == f.category) cat = ck
+			const term = ds.cohort.termdb.q.termjsonByOneid(f.term)
+			if (!term) {
+				invalid_html += 'invalid filter id:' + f.term
+			} else {
+				mayLog('f:', f)
+				if (f.join) {
+					localfilter.join = f.join
 				}
-				if (!cat) invalid_html += 'invalid category from ' + JSON.stringify(f)
-				// term and category validated
-				localfilter.lst.push({
-					type: 'tvs',
-					tvs: {
-						term,
-						values: [{ key: cat }]
+				if (term.type == 'categorical') {
+					let cat: any
+					for (const ck in term.values) {
+						if (ck == f.category) cat = ck
+						else if (term.values[ck].label == f.category) cat = ck
 					}
-				})
-			} else if (term.type == 'float' || term.type == 'integer') {
-				const numeric: any = {
-					type: 'tvs',
-					tvs: {
-						term,
-						ranges: []
+					if (!cat) invalid_html += 'invalid category from ' + JSON.stringify(f)
+					// term and category validated
+					localfilter.lst.push({
+						type: 'tvs',
+						tvs: {
+							term,
+							values: [{ key: cat }]
+						}
+					})
+				} else if (term.type == 'float' || term.type == 'integer') {
+					const numeric: any = {
+						type: 'tvs',
+						tvs: {
+							term,
+							ranges: []
+						}
 					}
+					const range: any = {}
+					if (f.start && !f.stop) {
+						range.start = Number(f.start)
+						range.stopunbounded = true
+					} else if (f.stop && !f.start) {
+						range.stop = Number(f.stop)
+						range.startunbounded = true
+					} else if (f.start && f.stop) {
+						range.start = Number(f.start)
+						range.stop = Number(f.stop)
+					} else {
+						invalid_html += 'Neither greater or lesser defined'
+					}
+					numeric.tvs.ranges.push(range)
+					localfilter.lst.push(numeric)
 				}
-				const range: any = {}
-				if (f.start && !f.stop) {
-					range.start = Number(f.start)
-					range.stopunbounded = true
-				} else if (f.stop && !f.start) {
-					range.stop = Number(f.stop)
-					range.startunbounded = true
-				} else if (f.start && f.stop) {
-					range.start = Number(f.start)
-					range.stop = Number(f.stop)
-				} else {
-					invalid_html += 'Neither greater or lesser defined'
-				}
-				numeric.tvs.ranges.push(range)
-				localfilter.lst.push(numeric)
 			}
 		}
 	}
