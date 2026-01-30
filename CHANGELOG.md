@@ -9,6 +9,7 @@ Features:
 
 Fixes:
 - display a more user-friendly error message instead of an obscure bin-related error, when there is no numeric data by GDC cohort to compute bins
+- do not allow a user to double-click on gene search while loading the coordinate
 
 
 ## 2.173.0
