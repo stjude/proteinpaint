@@ -45,8 +45,7 @@ export class Barchart extends PlotBase {
 				.style('display', 'none')
 				.style('text-align', 'center')
 				.style('padding', '24px')
-				.style('font-size', '16px')
-				.style('color', '#aaa'),
+				.style('font-size', '16px'),
 			barDiv: holder
 				.append('div')
 				.style('display', 'flex')

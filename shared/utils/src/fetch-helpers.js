@@ -68,7 +68,7 @@ export async function processResponse(r) {
 	const ct = r.headers.get('content-type') // content type is always present
 	if (!ct) throw `missing response.header['content-type']`
 	if (ct.includes('/json')) {
-		const payload = r.json()
+		const payload = await r.json()
 		// server should use a standard HTTP response status 400+, 500+
 		// so that !r.ok will already be caught when wrapping fetch with try-catch
 		if (payload.error) throw payload.error

@@ -18,7 +18,7 @@ export type ScatterDataResponse = { range: DataRange; result: { [index: string]:
 
 export type ErrorResponse = { error: string }
 
-export type ScatterResponse = ScatterDataResponse | ErrorResponse
+export type ScatterResponse = ScatterDataResponse //| ErrorResponse
 
 export type ColorLegendEntry = [label: string, item: ColorLegendItem]
 export type ShapeLegendEntry = [label: string, item: ShapeLegendItem]

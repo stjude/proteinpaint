@@ -443,7 +443,10 @@ async function getCases4exp(q, ds, case_filters) {
 	}
 	try {
 		const { host, headers } = ds.getHostHeaders(q)
-		const re = await ky.post(joinUrl(host.rest, 'cases'), { timeout: false, headers, json }).json()
+		//const {body: re} = await cachedFetch(joinUrl(host.rest, 'cases'), { method: 'POST', timeout: false, headers, body })
+		const r0 = await ky.post(joinUrl(host.rest, 'cases'), { timeout: false, headers, json })
+		if (!r0.ok) throw r0
+		const re = await r0.json()
 		if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
 		const lst = []
 		for (const h of re.data.hits) {

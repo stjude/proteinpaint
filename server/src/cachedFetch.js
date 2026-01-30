@@ -58,12 +58,24 @@ export async function cachedFetch(url, opts = {}, use = {}) {
 			.digest('hex')
 	const cacheFile = cacheDir && path.join(cacheDir, id)
 
+	// default headers
+	// forced lowercase keys, the client is expected to normalize the HTTP request header
+	// to the correct casing, not done in this function
+	const headers = { 'content-type': 'application/json', accept: 'application/json' }
+	if (opts.headers) {
+		// opts.headers can override the expected default JSON content-type
+		for (const key in opts.headers) {
+			// force lowercase to ensure override
+			headers[key.toLowerCase()] = opts.headers[key].toLowerCase()
+		}
+	}
+
 	let body
 	if (cacheFile && fs.existsSync(cacheFile) && !use.noCache) {
 		try {
 			// console.log(`Using cache file ${cacheFile}`)
-			const json = fs.readFileSync(cacheFile)?.toString('utf-8').trim()
-			body = JSON.parse(json)
+			const content = fs.readFileSync(cacheFile)?.toString('utf-8').trim()
+			body = headers.accept.includes('json') ? JSON.parse(content) : content
 			const err = use.getErrMessage?.(body) || ''
 			if (err) throw err
 		} catch (e) {
@@ -74,17 +86,6 @@ export async function cachedFetch(url, opts = {}, use = {}) {
 
 	if (!body) {
 		try {
-			// default headers
-			// forced lowercase keys, the client is expected to normalize the HTTP request header
-			// to the correct casing, not done in this function
-			const headers = { 'content-type': 'application/json', accept: 'application/json' }
-			if (opts.headers) {
-				// opts.headers can override the expected default JSON content-type
-				for (const key in opts.headers) {
-					// force lowercase to ensure override
-					headers[key.toLowerCase()] = opts.headers[key].toLowerCase()
-				}
-			}
 			const method = opts.method?.toLowerCase() || 'get'
 			let jsonBody
 			if (!use.client) {
