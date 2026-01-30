@@ -185,9 +185,10 @@ class ViolinPlot extends PlotBase {
 				],
 				getDisplayStyle: () => {
 					let style = 'none'
-					for (const k of Object.keys(this.data.charts)) {
-						const chart = this.data.charts[k]
-						if (chart.plots.length > 1) style = ''
+					const charts = this.data?.charts || {}
+					for (const k of Object.keys(charts)) {
+						const chart = charts[k]
+						if (chart?.plots.length > 1) style = ''
 					}
 					return style
 				}

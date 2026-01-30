@@ -379,7 +379,7 @@ class SummaryPlot extends PlotBase implements RxComponent {
 		} catch (e: any) {
 			this.dom.loading.style('display', 'none')
 			this.error = e
-			this.dom.errdiv.style('display', '').html(e.message || e.error || e)
+			this.dom.errdiv.style('display', '').html(`Error: ` + (e.message || e.error || e))
 		}
 	}
 
