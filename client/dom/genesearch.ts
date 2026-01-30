@@ -215,6 +215,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 			}
 
 			if (keyupEnter(event)) {
+				searchbox.property('disabled', true)
 				// pressed enter
 
 				// this call may repeat the last debounced checkInput using debouncer(),
@@ -241,12 +242,14 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 						} else {
 							await geneCoordSearch(geneSymbol)
 						}
+						searchbox.property('disabled', false)
 						// must not clear tip, genes on multiple loci will show as further options
 						return
 					}
 				}
 				if (arg?.searchOnly == 'gene') {
 					getResult(null, 'Gene not found')
+					searchbox.property('disabled', false)
 					return
 				}
 
@@ -255,6 +258,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 					const variant = await string2variant(v, arg.genome)
 					if (variant) {
 						getResult(variant, v)
+						searchbox.property('disabled', false)
 						return
 					}
 				}
@@ -269,6 +273,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 						{ chr: hit.chrom, start: hit.chromStart, stop: hit.chromEnd, ref: hit.ref, alt: hit.alt },
 						hit.name || v
 					)
+					searchbox.property('disabled', false)
 					return
 				}
 
@@ -281,11 +286,13 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 				const pos = string2pos(v, arg.genome)
 				if (pos) {
 					getResult(pos, 'Valid coordinate')
+					searchbox.property('disabled', false)
 					return
 				}
 
 				// no match
 				getResult(null, 'No match')
+				searchbox.property('disabled', false)
 				return
 			}
 
