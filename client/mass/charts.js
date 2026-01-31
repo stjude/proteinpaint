@@ -1,5 +1,5 @@
 import { getCompInit } from '#rx'
-import { Menu, GeneExpChartMenu } from '#dom'
+import { Menu, GeneExpChartMenu, getAncestorWithComputedStyle } from '#dom'
 import { getNormalRoot } from '#filter/filter'
 import { NumericModes, TermTypes } from '#shared/terms.js'
 import { importPlot } from '#plots/importPlot.js'
@@ -7,6 +7,7 @@ import { importPlot } from '#plots/importPlot.js'
 class MassCharts {
 	constructor(opts = {}) {
 		this.type = 'charts'
+		this.stickyAncestor = getAncestorWithComputedStyle(opts.holder.node(), 'position', new Set(['sticky', 'fixed']))
 		setRenderers(this)
 	}
 
@@ -421,11 +422,10 @@ function getChartTypeList(self, state) {
 		}
 	]
 
-	for (const field in state?.termdbConfig.renamedChartTypes || []) {
-		const btn = buttons.find(b => b.chartType === field)
-		if (btn) {
-			btn.label = state.termdbConfig.renamedChartTypes[field]
-		}
+	const renamedChartTypes = state?.termdbConfig.renamedChartTypes || {}
+	for (const btn of buttons) {
+		btn.stickyAncestor = self.stickyAncestor
+		if (renamedChartTypes[btn.chartType]) btn.label = renamedChartTypes[btn.chartType]
 	}
 	return buttons
 }
