@@ -35,6 +35,8 @@ export const focusableSelector =
 const showMenuTriggers = new Set([/*'mousemove',*/ 'mousedown', 'mouseup', 'click'])
 const urlpath = window.location.pathname
 
+let stickyDiv
+
 export class Menu {
 	constructor(arg = {}) {
 		this.typename = Math.random().toString()
@@ -201,6 +203,7 @@ export class Menu {
 		// assume the global event.target corresponds to a clicked/"moused" element that launched the menu
 		else if (showMenuTriggers.has(window.event?.type)) this.setTabNavigation(window.event.target)
 
+		if (elem) this.stickyPosition(elem)
 		return this
 	}
 
@@ -250,7 +253,6 @@ export class Menu {
 	showunder(elem, _opts = {}) {
 		// route to .show()
 		const opts = Object.assign({ offsetX: 0, offsetY: 0 }, _opts)
-		if (this.stickyPosition(elem, opts)) return this
 		const p = elem.getBoundingClientRect()
 		const x = p.left + window.scrollX + opts.offsetX
 		const y = p.top + p.height + window.scrollY + 5 + opts.offsetY
@@ -336,8 +338,6 @@ export class Menu {
 
 	showunderoffset(dom) {
 		const p = dom.getBoundingClientRect()
-		if (this.stickyPosition(dom, { offsetY: -p.height, offsetX: p.width })) return this
-
 		const y = p.top + p.height + window.scrollY + 5
 		return this.show(p.left, y, true, true, false)
 
@@ -353,13 +353,11 @@ export class Menu {
 		*/
 	}
 
-	// when the clicked element is nested under an element with `position: sticky`,
-	// the show*() positioning is correct but the menu will scroll with the document.body
-	// instead of remaining close to the clicked element. This function fixes that behavior,
-	// so that the menu does not scroll with the body.
+	// stickyPosition() prevents the menu from being scrolled away (above or below) the 'anchor' element,
+	// an issue seen when the clicked "anchor" element is nested inside a sticky-positioned div such as
+	// the MASS nav header, whereas the menu div that's attached to the body will scroll freely past the
+	// 'stuck' clicked element
 	stickyPosition(elem, _opts = {}) {
-		// getting computed style recursively is expensive, limit when a sticky parentDiv needs to be detected;
-		// in prod, a user click event is an isolated event, unlike in test environment with lots of simulated clicks
 		if (
 			!window.event ||
 			window.event.type != 'click' ||
@@ -367,26 +365,48 @@ export class Menu {
 			urlpath.includes('puppet.html')
 		)
 			return false
-		const parentDiv = getAncestorWithComputedStyle(elem, 'position', new Set(['sticky', 'fixed']))
+
+		const stickyAncestor = elem.__data__?.stickyAncestor
 		// if there is no sticky ancestor, allow showunder() and showunderoffset() to work as usual
-		if (!parentDiv) return false
+		if (!stickyAncestor) return false
 
-		// append the menu div to the sticky ancestor and position against the clicked element
-		// relative to the sticky div
-		parentDiv.appendChild(this.dnode)
-		const p = parentDiv.getBoundingClientRect()
-		const c = elem.getBoundingClientRect()
-		const opts = Object.assign({ offsetX: 0, offsetY: 0 }, _opts)
-		this.d
-			.style('top', c.y + c.height - p.y + opts.offsetY + 'px')
-			.style('left', c.x - p.x + opts.offsetX + 'px')
-			.style('display', 'block')
-			.transition()
-			.style('opacity', 1)
+		const yPos = Number(this.d.style('top').replace('px', '')) // y-position before any relevant scrolling has occurred
+		let yStickyScroll = 0
 
-		this.setTabNavigation(elem)
+		// The IntersectionObserver approach below is much reliable than a previous fix
+		// of moving the menu div from the body to be nested under the sticky ancestor.
+		// That previous fix broke when there is an ancestor div with `overflow-y: clip`,
+		// causing some of the menu inputs to be hidden and unusable (see https://gdc-ctds.atlassian.net/browse/SV-2716).
+		// Previous fix at https://github.com/stjude/proteinpaint/blob/364183d8afb9d961cc948dec2496e48dc79f6dbe/client/dom/menu.js#L360)
+		const observerOptions = {
+			// Use a negative margin equal to the 'top' CSS value to trigger
+			// the callback when the element reaches its sticky position.
+			rootMargin: '-0.1px 0px 0px 0px', // Use a small negative value like -0.1px or -1px
+			threshold: [0.95, 1.0] // Triggers when the target is xx% visible, when it starts getting stuck or moving again
+		}
 
-		return true
+		this.stickyObserver = new IntersectionObserver(([entry]) => {
+			// entry.intersectionRatio < 1 means the element is not fully within
+			// the calculated root bounds (i.e., it is pinned).
+			if (entry.intersectionRatio >= 1) {
+				// observed element moves with scroll, before becoming sticky as there is space
+				// between the bottom of the observed element and the viewport
+				this.d.style('top', `${yPos}px`).style('position', 'absolute')
+				yStickyScroll = window.scrollY
+			} else if (entry.intersectionRatio < 0.95) {
+				// observed element again moves with scroll, after becoming sticky and
+				// as the bottom of the scrolled div reaches the bottom of the stuck observed element;
+				// need to add the skipped scroll pixels to the
+				this.d.style('top', `${yPos + window.scrollY - yStickyScroll}px`).style('position', 'absolute')
+			} else {
+				// observed element is now 'stuck' while scrolling
+				yStickyScroll = window.scrollY
+				const yStuck = this.d.node().getBoundingClientRect().y
+				this.d.style('top', `${yStuck}px`).style('position', 'fixed')
+			}
+		}, observerOptions)
+
+		this.stickyObserver.observe(stickyAncestor)
 	}
 
 	// this hide() method may be overriden with a custom method by getCustomApi(overrides)
@@ -402,10 +422,13 @@ export class Menu {
 		}
 		if (!this.fadeTimeout) this.d.style('display', 'none').style('opacity', 0)
 		if (this.onHide) this.onHide()
+
+		this.stopObserver()
 		return this
 	}
 
 	fadeout() {
+		this.stopObserver()
 		this.d
 			.transition()
 			.style('opacity', 0)
@@ -467,7 +490,14 @@ export class Menu {
 		return api
 	}
 
+	stopObserver() {
+		if (!this.stickyObserver) return
+		this.stickyObserver.disconnect()
+		delete this.stickyObserver
+	}
+
 	destroy() {
+		this.stopObserver()
 		//For testing to remove completely from the document.body without using d3select()
 		this.d.remove()
 	}
@@ -483,7 +513,7 @@ function priorityFocusElem(elem, i) {
 // elem: DOM element
 // key: the style property to check
 // values: a Set of desired CSS values
-function getAncestorWithComputedStyle(elem, key, values) {
+export function getAncestorWithComputedStyle(elem, key, values) {
 	if (!elem || !values.size) return
 	const style = window.getComputedStyle(elem)
 	if (values.has(style[key])) return elem
