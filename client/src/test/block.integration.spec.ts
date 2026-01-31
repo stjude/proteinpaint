@@ -52,7 +52,7 @@ tape('basic bedj & bw test, could be expanded', test => {
 			const b = t.img.node().getBBox()
 			test.ok(b.width == 0 && b.height == 0, 'bad bed <image> width=height=0')
 			test.ok(
-				t.gerror.text().startsWith('[E::hts_open_format] Failed to open file'),
+				t.gerror && t.gerror.text().startsWith('[E::hts_open_format] Failed to open file'),
 				'gerror text begins with "[E::hts_open_format] Failed to open file"'
 			)
 		}

@@ -46,8 +46,7 @@ class ViolinPlot extends PlotBase {
 				.style('display', 'none')
 				.style('text-align', 'center')
 				.style('padding', '24px')
-				.style('font-size', '16px')
-				.style('color', '#aaa'),
+				.style('font-size', '16px'),
 			loadingDiv: holder
 				.append('div')
 				.style('display', this.opts.mode != 'minimal' ? 'inline-block' : 'none')
@@ -185,9 +184,10 @@ class ViolinPlot extends PlotBase {
 				],
 				getDisplayStyle: () => {
 					let style = 'none'
-					for (const k of Object.keys(this.data.charts)) {
-						const chart = this.data.charts[k]
-						if (chart.plots.length > 1) style = ''
+					const charts = this.data?.charts || {}
+					for (const k of Object.keys(charts)) {
+						const chart = charts[k]
+						if (chart?.plots.length > 1) style = ''
 					}
 					return style
 				}
@@ -334,7 +334,7 @@ class ViolinPlot extends PlotBase {
 		//Fix for rm'ing error message when plot re-renders
 		//Leave in main() so the message doesn't linger whilst
 		//the plot is rendering
-		const existingMsg = this.dom.banner.select('span')
+		const existingMsg = this.dom.banner.style('display', 'none').select('span')
 		if (!existingMsg.empty()) existingMsg.remove()
 
 		const args = this.validateArgs()

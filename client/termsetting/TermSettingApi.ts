@@ -44,7 +44,7 @@ export class TermSettingApi {
 					NumericBase.termTypes.has(data.term?.type) ||
 					data.term?.type == 'termCollection')
 			) {
-				data.tw = await TwRouter.initRaw({ term: data.term, q: data.q })
+				data.tw = await TwRouter.initRaw({ term: data.term, q: data.q }, { vocabApi: self.vocabApi })
 			}
 			self.tw = data.tw
 			// may need original values for comparing edited settings

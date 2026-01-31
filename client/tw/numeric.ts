@@ -209,7 +209,7 @@ export class NumRegularBin extends NumericBase {
 
 		if (tw.q.type && tw.q.type != 'regular-bin') throw `expecting tw.q.type='regular-bin', got '${tw.q.type}'`
 
-		if (!tw.term.bins) {
+		if (!tw.term.bins || tw.term.bins.default?.isDummyPreset) {
 			/* non-dictionary term (e.g. gene term) may be missing bin definition, this is expected as it's not valid to apply same bin to genes with vastly different exp range,
 			and not worth it to precompute each gene's default bin with its actual exp data as cohort filter can not be predicted
 			here make a request to determine default bin for this term based on its data
@@ -221,9 +221,9 @@ export class NumRegularBin extends NumericBase {
 			await opts.vocabApi.setTermBins(tw)
 		}
 
-		if (!tw.q.first_bin || !isNumeric(tw.q.bin_size)) mayFillQWithPresetBins(tw)
+		if (tw.q.isDummyPreset || !tw.q.first_bin || !isNumeric(tw.q.bin_size)) mayFillQWithPresetBins(tw)
 
-		if (tw.q.bin_size === null) throw new TypeError(`No ${tw.term.name} numeric data to create bins`)
+		if (tw.q.bin_size === null) throw new Error(`No ${tw.term.name} numeric data to create bins`)
 		if (!isNumeric(tw.q.bin_size)) throw `tw.q.bin_size=${tw.q.bin_size} is not numeric`
 		if (!tw.q.first_bin) throw `missing tw.q.first_bin`
 		if (!isNumeric(tw.q.first_bin?.stop)) throw `tw.q.first_bin.stop is not numeric`
@@ -407,15 +407,21 @@ function mayFillQWithPresetBins(tw) {
 		if (!Object.keys(tw.term.bins).includes(preferredBins))
 			throw `term.bins does not have a preset '${preferredBins}' key`
 		const bins = tw.term.bins[preferredBins]
+		if (!bins.mode) bins.mode = 'discrete'
 		if (tw.q.type && tw.q.type != bins.type) throw `mismatched tw.q.type and term.bins[preferredBins].type`
-		const qkeys = Object.keys(tw.q)
-		for (const [k, v] of Object.entries(bins)) {
-			// only override tw.q values that don't already exist in tw.q;
-			// NOTES:
-			// - Object.hasOwn(tw.q, k) will work with lib: ["es2022"], but that causes other tsc errors
-			// - using tw.q.hasOwnProperty(k) causes an eslint error, no-prototype-builtins
-			if (!qkeys.includes(k)) tw.q[k] = v
+		if (tw.q.isDummyPreset) {
+			tw.q = structuredClone(bins) // replace atomically
+			delete tw.q.descrStats
+		} else {
+			const qkeys = Object.keys(tw.q)
+			for (const [k, v] of Object.entries(bins)) {
+				// only override tw.q values that don't already exist in tw.q;
+				// NOTES:
+				// - Object.hasOwn(tw.q, k) will work with lib: ["es2022"], but that causes other tsc errors
+				// - using tw.q.hasOwnProperty(k) causes an eslint error, no-prototype-builtins
+				if (!qkeys.includes(k)) tw.q[k] = v
+			}
+			delete tw.q.preferredBins
 		}
-		delete tw.q.preferredBins
 	}
 }

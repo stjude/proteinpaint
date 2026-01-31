@@ -78,9 +78,9 @@ export class TwBase {
 		return { text: '' }
 	}
 
-	getMinCopy() {
+	getMinCopy(override: any = {}) {
 		const tw = this.#tw
-		const copy: any = { term: {}, q: structuredClone(tw.q) }
+		const copy: any = { term: {}, q: structuredClone(override.q || tw.q) }
 		if (tw.$id) copy.$id = tw.$id
 		if (tw.term) {
 			if (isDictionaryType(tw.term.type)) {
@@ -95,6 +95,8 @@ export class TwBase {
 				// pass entire tw.term because non-dictionary terms
 				// cannot get rehydrated on server-side
 				copy.term = structuredClone(tw.term)
+				// dummy preset bins should not affect the uniqueness of a request payload
+				if (copy.term.bins?.default?.isDummyPreset) delete copy.term.bins
 			}
 		}
 		if (copy.q) {

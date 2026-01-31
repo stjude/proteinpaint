@@ -362,9 +362,11 @@ class SummaryPlot extends PlotBase implements RxComponent {
 		if (!tab || !tab.getConfig) return
 		let config
 		try {
+			this.dom.viz.style('display', 'none')
 			this.dom.loading.style('display', '')
 			config = await tab.getConfig()
 			this.dom.loading.style('display', 'none')
+			this.dom.viz.style('display', '')
 			if (config)
 				this.app.dispatch({
 					type: 'plot_edit',
@@ -374,7 +376,7 @@ class SummaryPlot extends PlotBase implements RxComponent {
 		} catch (e: any) {
 			this.dom.loading.style('display', 'none')
 			this.error = e
-			this.dom.errdiv.style('display', '').html(e.message || e.error || e)
+			this.dom.errdiv.style('display', '').html(`Error: ${e.message || e.error || e}`)
 		}
 	}
 

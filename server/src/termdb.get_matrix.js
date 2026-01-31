@@ -104,7 +104,7 @@ export async function get_matrix(q, req, res, ds, genome) {
 				this.push(JSON.stringify([['samples', id], data.samples[id]]) + '\n')
 				delete data.samples[id]
 			}
-			if (unsentSampleIds.has(lastSampleId)) {
+			if (unsentSampleIds.has(lastSampleId) || sampleIndex >= sampleEntries.length) {
 				this.push(JSON.stringify([['refs'], data.refs]) + '\n')
 				// uncomment below to test warning message if rendered by client-side plot code
 				// this.push(JSON.stringify([['warning'], {message: '!!! TEST !!!'}]) + '\n')

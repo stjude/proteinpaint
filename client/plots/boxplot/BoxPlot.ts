@@ -39,7 +39,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 		const holder = opts.holder.classed('sjpp-boxplot-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
 		const div = holder.append('div')
-		const errorDiv = div.append('div').attr('class', 'sjpp-boxplot-error').style('opacity', 0.75)
+		const errorDiv = div.append('div').attr('class', 'sjpp-boxplot-error') //.style('opacity', 0.75)
 		const loading = div.append('div').style('padding', '24px').text('Loading ...')
 		const chartsDiv = div
 			.append('div')
@@ -67,7 +67,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 			this.app,
 			this.opts,
 			() => {
-				return this.data.charts
+				return this.data?.charts || []
 			},
 			this.useDefaultSettings
 		)
@@ -150,6 +150,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 			if (!data.charts || !Object.keys(data.charts).length) {
 				this.interactions.clearDom()
 				this.dom.error.style('padding', '20px 20px 20px 60px').text('No visible box plot data to render')
+				this.toggleLoadingDiv('none')
 				return
 			}
 			this.data = data

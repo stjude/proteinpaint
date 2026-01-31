@@ -114,7 +114,13 @@ export function validate_query_snvindel_byrange(ds) {
 	}
 }
 
+// these constants are temp fixes for the GDC API issue where
+// /gene_expression/values may randomly not return data or second tsv line
 const caseCountLimitError = `Case count > ${maxCase4geneExp}: please limit the cohort size to view gene expression correlation plot`
+const retryMax = serverconfig.features?.gdcGeneExpRetryMax || 0
+const retryDelay = serverconfig.features?.gdcGeneExpRetryDelay || 3000
+// user-friendly error message, to be followed by the technical message in parentheses
+const unknownApiError = `Something went wrong while loading the gene expression data. Please try again.`
 
 /*
 q{}
@@ -207,20 +213,22 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 			byTermId[id] = { gencodeId: g }
 			term2sample2value.set(id, new Map())
 		}
-		const maxRetry = 2
 		let bySampleId
-		for (let i = 0; i < maxRetry; i++) {
+		for (let i = 0; i < retryMax + 1; i++) {
 			// 1/27/2026, retry per Phil's suggestion in https://gdc-ctds.atlassian.net/browse/SV-2709
 			try {
+				// throw new Error('no gene lines') // uncomment to test
 				bySampleId = await getExpressionData(q, ensgLst, cases4clustering, ensg2id, term2sample2value, ds)
 				// returns mapping from uuid to submitter id; since uuid is used in term2sample2value, but need to display submitter id on ui
 				const t4 = new Date()
 				mayLog('gene-case matrix built,', Object.keys(bySampleId).length, 'cases,', t4 - t3, 'ms')
 			} catch (e) {
+				// TODO: use custom Error class/name/code to reliably detect
 				if (!String(e).includes('no gene lines')) throw e
 				// 1/27/2026 the message below is per Himanso's feedback in https://gdc-ctds.atlassian.net/browse/SV-2709
-				if (i >= maxRetry - 1) throw `Something went wrong while loading the gene expression data. Please try again.`
-				await sleep(3000) // wait until the next retry
+				if (i >= retryMax) throw unknownApiError
+				const delay = Math.random() * (retryDelay * Math.pow(2, i)) // exponential backoff with random jitter
+				await sleep(delay) // wait until the next retry
 				mayLog(`(!) no gene lines error for getExpressionData() request #${i + 1}`)
 			}
 		}
@@ -357,10 +365,10 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2id, term2sa
 		headers,
 		body: JSON.stringify(arg)
 	}).then(r => r.text())
-	if (typeof re != 'string') throw 'response.body is not tsv text'
+	if (typeof re != 'string') throw `${unknownApiError} (response.body is not tsv text)`
 	const lines = re.trim().split('\n')
 
-	if (lines.length == 0) throw '/gene_expression/values returns no text'
+	if (lines.length == 0) throw `${unknownApiError} (/gene_expression/values returns empty text)`
 
 	const bySampleId = {}
 
@@ -436,7 +444,10 @@ async function getCases4exp(q, ds, case_filters) {
 	}
 	try {
 		const { host, headers } = ds.getHostHeaders(q)
-		const re = await ky.post(joinUrl(host.rest, 'cases'), { timeout: false, headers, json }).json()
+		//const {body: re} = await cachedFetch(joinUrl(host.rest, 'cases'), { method: 'POST', timeout: false, headers, body })
+		const r0 = await ky.post(joinUrl(host.rest, 'cases'), { timeout: false, headers, json })
+		if (!r0.ok) throw r0
+		const re = await r0.json()
 		if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
 		const lst = []
 		for (const h of re.data.hits) {

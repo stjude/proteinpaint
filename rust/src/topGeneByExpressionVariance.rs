@@ -34,7 +34,7 @@ use std::io;
 use std::io::Read;
 use std::str::FromStr;
 // use std::time::Instant;
-use hdf5::types::{VarLenAscii, VarLenUnicode};
+use hdf5::types::VarLenUnicode;
 use hdf5::{File, Result};
 use ndarray::Dim;
 
@@ -55,259 +55,6 @@ use ndarray::Dim;
 /// - A tuple with expression matrix and gene symbols list on success, or
 /// - An error with details formatted as JSON
 fn input_data_hdf5(
-    filename: &String,
-    sample_list: &Vec<&str>,
-) -> Result<(Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>, Vec<String>)> {
-    // let now = Instant::now();
-    // eprintln!("Reading HDF5 file: {}", filename);
-
-    // Open the HDF5 file
-    let file = match File::open(filename) {
-        Ok(f) => f,
-        Err(err) => {
-            // eprintln!("Failed to open HDF5 file: {}", err);
-            // println!(
-            //     "{}",
-            //     serde_json::json!({
-            //         "status": "error",
-            //         "message": format!("Failed to open HDF5 file: {}", err),
-            //         "file_path": filename
-            //     })
-            // );
-            return Err(hdf5::Error::Internal(format!("Failed to open HDF5 file: {}", err)));
-        }
-    };
-
-    // Read gene symbols dataset
-    let genes_dataset = match file.dataset("gene_names") {
-        Ok(ds) => ds,
-        Err(err) => {
-            // eprintln!("Failed to open gene_names dataset: {}", err);
-            // println!(
-            //     "{}",
-            //     serde_json::json!({
-            //         "status": "error",
-            //         "message": format!("Failed to open gene_names dataset: {}", err),
-            //         "file_path": filename
-            //     })
-            // );
-            return Err(hdf5::Error::Internal(format!(
-                "Failed to open gene_names dataset: {}",
-                err
-            )));
-        }
-    };
-
-    // Read genes as VarLenAscii
-    let genes_varlen = match genes_dataset.read_1d::<VarLenAscii>() {
-        Ok(g) => g,
-        Err(err) => {
-            // eprintln!("Failed to read gene symbols: {}", err);
-            // println!(
-            //     "{}",
-            //     serde_json::json!({
-            //         "status": "error",
-            //         "message": format!("Failed to read gene symbols: {}", err),
-            //         "file_path": filename
-            //     })
-            // );
-            return Err(hdf5::Error::Internal(format!("Failed to read gene symbols: {}", err)));
-        }
-    };
-
-    // Convert to Vec<String> for easier handling
-    let gene_names: Vec<String> = genes_varlen.iter().map(|g| g.to_string()).collect();
-    let num_genes = gene_names.len();
-    // eprintln!("Found {} gene symbols", num_genes);
-
-    // Read sample names
-    let samples_dataset = match file.dataset("samples") {
-        Ok(ds) => ds,
-        Err(err) => {
-            // eprintln!("Failed to open samples dataset: {}", err);
-            println!(
-                "{}",
-                serde_json::json!({
-                    "status": "error",
-                    "message": format!("Failed to open samples dataset: {}", err),
-                    "file_path": filename
-                })
-            );
-            return Err(hdf5::Error::Internal(format!(
-                "Failed to open samples dataset: {}",
-                err
-            )));
-        }
-    };
-
-    // Read samples as VarLenAscii
-    let samples_varlen = match samples_dataset.read_1d::<VarLenAscii>() {
-        Ok(s) => s,
-        Err(err) => {
-            // eprintln!("Failed to read sample names: {}", err);
-            println!(
-                "{}",
-                serde_json::json!({
-                    "status": "error",
-                    "message": format!("Failed to read sample names: {}", err),
-                    "file_path": filename
-                })
-            );
-            return Err(hdf5::Error::Internal(format!("Failed to read sample names: {}", err)));
-        }
-    };
-
-    // Convert to Vec<String> for easier handling
-    let all_samples: Vec<String> = samples_varlen.iter().map(|s| s.to_string()).collect();
-    // eprintln!("Found {} total samples", all_samples.len());
-
-    // Find indices of requested samples
-    let mut column_indices: Vec<usize> = Vec::with_capacity(sample_list.len());
-    for sample in sample_list {
-        if let Some(index) = all_samples.iter().position(|s| s == sample) {
-            column_indices.push(index);
-        } else {
-            // eprintln!("Sample {} not found in the dataset", sample);
-            // println!(
-            //     "{}",
-            //     serde_json::json!({
-            //         "status": "error",
-            //         "message": format!("Sample '{}' not found in the dataset", sample),
-            //         "file_path": filename,
-            //         "available_samples": all_samples
-            //     })
-            // );
-            return Err(hdf5::Error::Internal(format!(
-                "Sample '{}' not found in the dataset",
-                sample
-            )));
-        }
-    }
-
-    // Read the counts dataset
-    let counts_dataset = match file.dataset("counts") {
-        Ok(ds) => ds,
-        Err(err) => {
-            // eprintln!("Failed to open counts dataset: {}", err);
-            // println!(
-            //     "{}",
-            //     serde_json::json!({
-            //         "status": "error",
-            //         "message": format!("Failed to open counts dataset: {}", err),
-            //         "file_path": filename
-            //     })
-            // );
-            return Err(hdf5::Error::Internal(format!("Failed to open counts dataset: {}", err)));
-        }
-    };
-
-    // Get dataset dimensions for validation
-    let dataset_shape = counts_dataset.shape();
-    if dataset_shape.len() != 2 {
-        // eprintln!("Counts dataset does not have the expected 2D shape");
-        // println!(
-        //     "{}",
-        //     serde_json::json!({
-        //         "status": "error",
-        //         "message": "Expected a 2D dataset for counts",
-        //         "file_path": filename,
-        //         "actual_shape": dataset_shape
-        //     })
-        // );
-        return Err(hdf5::Error::Internal("Expected a 2D dataset for counts".to_string()));
-    }
-
-    // Check dimensions match expected values
-    if dataset_shape[0] != num_genes {
-        // eprintln!(
-        //     "Counts dataset first dimension ({}) doesn't match number of genes ({})",
-        //     dataset_shape[0], num_genes
-        // );
-        // println!(
-        //     "{}",
-        //     serde_json::json!({
-        //         "status": "error",
-        //         "message": format!("Counts dataset first dimension ({}) doesn't match number of genes ({})",
-        //                         dataset_shape[0], num_genes),
-        //         "file_path": filename
-        //     })
-        // );
-        return Err(hdf5::Error::Internal(format!(
-            "Counts dataset first dimension ({}) doesn't match number of genes ({})",
-            dataset_shape[0], num_genes
-        )));
-    }
-
-    if dataset_shape[1] != all_samples.len() {
-        // eprintln!(
-        //     "Counts dataset second dimension ({}) doesn't match number of samples ({})",
-        //     dataset_shape[1],
-        //     all_samples.len()
-        // );
-        // println!(
-        //     "{}",
-        //     serde_json::json!({
-        //         "status": "error",
-        //         "message": format!("Counts dataset second dimension ({}) doesn't match number of samples ({})",
-        //                         dataset_shape[1], all_samples.len()),
-        //         "file_path": filename
-        //     })
-        // );
-        return Err(hdf5::Error::Internal(format!(
-            "Counts dataset second dimension ({}) doesn't match number of samples ({})",
-            dataset_shape[1],
-            all_samples.len()
-        )));
-    }
-
-    // Read the counts dataset
-    let all_counts = match counts_dataset.read::<f64, Dim<[usize; 2]>>() {
-        Ok(data) => data,
-        Err(err) => {
-            // eprintln!("Failed to read expression data: {}", err);
-            // println!(
-            //     "{}",
-            //     serde_json::json!({
-            //         "status": "error",
-            //         "message": format!("Failed to read expression data: {}", err),
-            //         "file_path": filename
-            //     })
-            // );
-            return Err(hdf5::Error::Internal(format!(
-                "Failed to read expression data: {}",
-                err
-            )));
-        }
-    };
-
-    // Extract only the columns corresponding to the requested samples
-    // eprintln!(
-    //     "Extracting data for {} requested samples",
-    //     sample_list.len()
-    // );
-    let mut input_vector: Vec<f64> = Vec::with_capacity(num_genes * sample_list.len());
-
-    for gene_idx in 0..num_genes {
-        for &col_idx in &column_indices {
-            input_vector.push(all_counts[[gene_idx, col_idx]]);
-        }
-    }
-
-    // Create matrix from the extracted data
-    let dm = DMatrix::from_row_slice(num_genes, sample_list.len(), &input_vector);
-
-    // eprintln!("Time for reading HDF5 data: {:?}", now.elapsed());
-    // eprintln!(
-    //     "Successfully extracted expression data matrix of size {}x{}",
-    //     dm.nrows(),
-    //     dm.ncols()
-    // );
-
-    Ok((dm, gene_names))
-}
-
-// Similar to input_data_hdf5, but specifically for new H5 format
-fn input_data_hdf5_newformat(
     filename: &String,
     sample_list: &Vec<&str>,
 ) -> Result<(Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>, Vec<String>)> {
@@ -724,12 +471,12 @@ fn main() {
                     }
 
                     // Determine if the H5 file is new format
-                    let new_format: bool = match &json_string {
-                        json::JsonValue::Object(ref obj) => {
-                            obj.get("newformat").and_then(|v| v.as_bool()).map_or(false, |b| b)
-                        }
-                        _ => false,
-                    };
+                    //let new_format: bool = match &json_string {
+                    //    json::JsonValue::Object(ref obj) => {
+                    //        obj.get("newformat").and_then(|v| v.as_bool()).map_or(false, |b| b)
+                    //    }
+                    //    _ => false,
+                    //};
 
                     let rank_type = &json_string["rank_type"] // Value provide must be either "var" or "iqr"
                         .to_owned()
@@ -817,25 +564,11 @@ fn main() {
                     // eprintln!("Reading data from {} file: {}", file_type, file_name);
                     let (input_matrix, gene_names) = if file_type == "hdf5" {
                         // eprintln!("Using HDF5 reader function...");
-                        if new_format {
-                            match input_data_hdf5_newformat(&file_name, &samples_list) {
-                                Ok(result) => result,
-                                Err(err) => {
-                                    eprintln!("ERROR in HDF5 new format reader: {:?}", err);
-                                    return;
-                                }
-                            }
-                        } else {
-                            match input_data_hdf5(&file_name, &samples_list) {
-                                Ok(result) => {
-                                    // eprintln!("Successfully read HDF5 data");
-                                    result
-                                }
-                                Err(err) => {
-                                    eprintln!("ERROR in HDF5 reader: {:?}", err);
-                                    // Error has already been printed to stdout in JSON format by the function
-                                    return;
-                                }
+                        match input_data_hdf5(&file_name, &samples_list) {
+                            Ok(result) => result,
+                            Err(err) => {
+                                eprintln!("ERROR in HDF5 reader: {:?}", err);
+                                return;
                             }
                         }
                     } else {

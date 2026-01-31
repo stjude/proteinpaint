@@ -468,6 +468,7 @@ export class TermdbVocab extends Vocab {
 		if (body.filter) body.filter = getNormalRoot(body.filter)
 		const init = { headers, body, signal }
 		const data = await dofetch3('termdb/violin', init)
+		if (data.error) throw data.error
 		return data
 	}
 
@@ -1049,7 +1050,7 @@ export class TermdbVocab extends Vocab {
 			for: 'getDefaultBins',
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
-			tw: opts.tw,
+			tw: opts.tw.getMinCopy?.({ q: {} }) || this.getTwMinCopy({ term: opts.tw.term, q: {} }),
 			embedder: window.location.hostname
 		}
 		// this.state.termfilter is updated when there's a dispatch,
@@ -1076,7 +1077,15 @@ export class TermdbVocab extends Vocab {
 		if (presetBins.default?.bin_size === null || presetBins.default?.first_bin.stop === null) {
 			// allow no data error to be caught by plot code, to display a more
 			// user-friendly error message instead of obscure bin-related error message
-			presetBins = { default: { type: 'regular-bin', bin_size: 1, first_bin: { startunbounded: true, stop: 2 } } } // dummy presetBins
+			presetBins = {
+				default: {
+					mode: 'discrete',
+					type: 'regular-bin',
+					bin_size: 1,
+					first_bin: { startunbounded: true, stop: 2 },
+					isDummyPreset: true
+				}
+			} // dummy presetBins
 		}
 		// NOTE: if term is frozen, creating an unfrozen copy here will
 		// not propagate changes to the original term
