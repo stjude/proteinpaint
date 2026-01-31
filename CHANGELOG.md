@@ -9,6 +9,7 @@ Features:
 
 Fixes:
 - Now fetching clustalo binary from PP instead of defunct URL
+- convert legacy qualitative q.mode='values' to discrete
 
 
 ## 2.173.0
