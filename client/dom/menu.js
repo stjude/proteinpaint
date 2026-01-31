@@ -35,6 +35,8 @@ export const focusableSelector =
 const showMenuTriggers = new Set([/*'mousemove',*/ 'mousedown', 'mouseup', 'click'])
 const urlpath = window.location.pathname
 
+let stickyDiv
+
 export class Menu {
 	constructor(arg = {}) {
 		this.typename = Math.random().toString()
@@ -177,6 +179,8 @@ export class Menu {
 		// assume the global event.target corresponds to a clicked/"moused" element that launched the menu
 		else if (showMenuTriggers.has(window.event?.type)) this.setTabNavigation(window.event.target)
 
+		if (elem) this.stickyPosition(elem)
+
 		return this
 	}
 
@@ -226,7 +230,6 @@ export class Menu {
 	showunder(elem, _opts = {}) {
 		// route to .show()
 		const opts = Object.assign({ offsetX: 0, offsetY: 0 }, _opts)
-		if (this.stickyPosition(elem, opts)) return this
 		const p = elem.getBoundingClientRect()
 		const x = p.left + window.scrollX + opts.offsetX
 		const y = p.top + p.height + window.scrollY + 5 + opts.offsetY
@@ -312,8 +315,6 @@ export class Menu {
 
 	showunderoffset(dom) {
 		const p = dom.getBoundingClientRect()
-		if (this.stickyPosition(dom, { offsetY: -p.height, offsetX: p.width })) return this
-
 		const y = p.top + p.height + window.scrollY + 5
 		return this.show(p.left, y, true, true, false)
 
@@ -329,13 +330,21 @@ export class Menu {
 		*/
 	}
 
-	// when the clicked element is nested under an element with `position: sticky`,
-	// the show*() positioning is correct but the menu will scroll with the document.body
-	// instead of remaining close to the clicked element. This function fixes that behavior,
-	// so that the menu does not scroll with the body.
+	//
+	// NOTE: stickyPosition() used to be called in tip.show*() methods to prevent the menu
+	// from being scrolled above or below the 'anchor' element. However, the approach
+	// of appending the menu div to a sticky ancestor works only if there is no clipped
+	// ancestor div. If there is (e.g., `overflow-y: clip`, the menu will be hidden by a
+	// later-rendered element like a footer, making some menu inputs unusable.
+	//
 	stickyPosition(elem, _opts = {}) {
-		// getting computed style recursively is expensive, limit when a sticky parentDiv needs to be detected;
-		// in prod, a user click event is an isolated event, unlike in test environment with lots of simulated clicks
+		// Deprecated for now, until a more reliable approach can be coded.
+		// See https://github.com/stjude/proteinpaint/blob/364183d8afb9d961cc948dec2496e48dc79f6dbe/client/dom/menu.js#L360
+		// for the previous implementation.
+		return false
+
+		//
+		// Rough idea for a more reliable implementation:
 		if (
 			!window.event ||
 			window.event.type != 'click' ||
@@ -343,26 +352,38 @@ export class Menu {
 			urlpath.includes('puppet.html')
 		)
 			return false
-		const parentDiv = getAncestorWithComputedStyle(elem, 'position', new Set(['sticky', 'fixed']))
+
+		const stickyAncestor = getAncestorWithComputedStyle(elem, 'position', new Set(['sticky', 'fixed']))
 		// if there is no sticky ancestor, allow showunder() and showunderoffset() to work as usual
-		if (!parentDiv) return false
+		if (!stickyAncestor) return false
 
-		// append the menu div to the sticky ancestor and position against the clicked element
-		// relative to the sticky div
-		parentDiv.appendChild(this.dnode)
-		const p = parentDiv.getBoundingClientRect()
-		const c = elem.getBoundingClientRect()
-		const opts = Object.assign({ offsetX: 0, offsetY: 0 }, _opts)
-		this.d
-			.style('top', c.y + c.height - p.y + opts.offsetY + 'px')
-			.style('left', c.x - p.x + opts.offsetX + 'px')
-			.style('display', 'block')
-			.transition()
-			.style('opacity', 1)
+		const yPos = Number(this.d.style('top').replace('px', ''))
+		const yBox = this.d.node().getBoundingClientRect().y
+		console.log(355, yPos, yBox)
 
-		this.setTabNavigation(elem)
+		// The options object determines when the observer's callback is executed.
+		const observerOptions = {
+			// Use a negative margin equal to the 'top' CSS value to trigger
+			// the callback when the element reaches its sticky position.
+			rootMargin: '-0.1px 0px 0px 0px', // Use a small negative value like -0.1px or -1px
+			threshold: [1.0] // Triggers when 100% of the target is visible
+		}
 
-		return true
+		const observer = new IntersectionObserver(([entry]) => {
+			// entry.intersectionRatio < 1 means the element is not fully within
+			// the calculated root bounds (i.e., it is pinned).
+			console.log(371, entry)
+			if (entry.intersectionRatio < 1) {
+				const yStuck = this.d.node().getBoundingClientRect().y
+				console.log(372, yStuck, yPos - (yBox - yStuck), `clamp(${yPos - (yBox - yStuck)}px,${yPos}px,2000px)`)
+				//this.d.style('top', `clamp(${yPos - (yBox - yStuck)}px,${yPos}px,2000px)`); console.log(373, this.d.style('top'))
+				this.d.style('top', `${yPos - (yBox - yStuck)}px`)
+				//observer.disconnect()
+			}
+		}, observerOptions)
+		//
+		observer.observe(stickyAncestor)
+		return false
 	}
 
 	// this hide() method may be overriden with a custom method by getCustomApi(overrides)
