@@ -1,1 +1,2 @@
-
+Fixes:
+- convert legacy qualitative q.mode='values' to discrete
