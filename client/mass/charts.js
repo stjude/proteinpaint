@@ -7,6 +7,8 @@ import { importPlot } from '#plots/importPlot.js'
 class MassCharts {
 	constructor(opts = {}) {
 		this.type = 'charts'
+		// stickyAncestor will attached to button data, to be used by menu.stickyPosition()
+		// when showing the menu tip near a clicked chart button
 		this.stickyAncestor = getAncestorWithComputedStyle(opts.holder.node(), 'position', new Set(['sticky', 'fixed']))
 		setRenderers(this)
 	}
