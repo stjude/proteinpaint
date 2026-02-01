@@ -370,7 +370,9 @@ export class Menu {
 		// if there is no sticky ancestor, allow showunder() and showunderoffset() to work as usual
 		if (!stickyAncestor) return false
 
-		const yPos = Number(this.d.style('top').replace('px', '')) // y-position before any relevant scrolling has occurred
+		const top = this.d.style('top')
+		if (!top.endsWith('px')) return
+		const yPos = Number(top.replace('px', '')) // y-position before any relevant scrolling has occurred
 		let yStickyScroll = 0
 
 		// The IntersectionObserver approach below is much reliable than a previous fix
