@@ -34,6 +34,7 @@ export const focusableSelector =
 
 const showMenuTriggers = new Set([/*'mousemove',*/ 'mousedown', 'mouseup', 'click'])
 const urlpath = window.location.pathname
+const isTestPage = urlpath.includes('testrun.html') || urlpath.includes('puppet.html')
 
 let stickyDiv
 
@@ -334,17 +335,9 @@ export class Menu {
 	// the MASS nav header, whereas the menu div that's attached to the body will scroll freely past the
 	// 'stuck' clicked element
 	stickyPosition(elem, _opts = {}) {
-		if (
-			!window.event ||
-			window.event.type != 'click' ||
-			urlpath.includes('testrun.html') ||
-			urlpath.includes('puppet.html')
-		)
-			return false
-
-		const stickyAncestor = elem.__data__?.stickyAncestor
-		// if there is no sticky ancestor, allow showunder() and showunderoffset() to work as usual
-		if (!stickyAncestor) return false
+		// only setup an observer on click event, not other transient mouse events such as mousemove,
+		// to limit the performance penalty to known static button/label interactions
+		if (!window.event || window.event.type != 'click' || !elem.__data__?.stickyAncestor) return
 
 		const top = this.d.style('top')
 		if (!top.endsWith('px')) return
@@ -384,7 +377,7 @@ export class Menu {
 			}
 		}, observerOptions)
 
-		this.stickyObserver.observe(stickyAncestor)
+		this.stickyObserver.observe(elem.__data__.stickyAncestor)
 	}
 
 	// this hide() method may be overriden with a custom method by getCustomApi(overrides)
@@ -492,7 +485,7 @@ function priorityFocusElem(elem, i) {
 // key: the style property to check
 // values: a Set of desired CSS values
 export function getAncestorWithComputedStyle(elem, key, values) {
-	if (!elem || !values.size) return
+	if (isTestPage || !elem || !values.size) return
 	const style = window.getComputedStyle(elem)
 	if (values.has(style[key])) return elem
 	if (
