@@ -259,8 +259,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		cacheFileName: generateCacheFileName(),
 		availableDataTypes: availableDataTypes,
 		maxGenesToShow: request.maxGenesToShow,
-		lesionTypeMap: buildLesionTypeMap(availableDataTypes),
-		trackMemory: request.trackMemory
+		lesionTypeMap: buildLesionTypeMap(availableDataTypes)
 	}
 
 	// Build chromosome list from genome reference

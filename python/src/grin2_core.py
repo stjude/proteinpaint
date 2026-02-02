@@ -1077,7 +1077,7 @@ def row_prob_subj_hit(P, IDs):
 # MAIN ENTRY POINT
 # =============================================================================
 
-def grin_stats(lsn_data, gene_data, chr_size, track_memory=False):
+def grin_stats(lsn_data, gene_data, chr_size):
     """
     Run full GRIN statistical analysis pipeline.
     
@@ -1109,32 +1109,27 @@ def grin_stats(lsn_data, gene_data, chr_size, track_memory=False):
         - 'chr.size': Chromosome sizes
         - 'gene.index': Gene index table
         - 'lsn.index': Lesion index table
-        - 'memory_profile': (optional) Memory usage at each step in MB
+        - 'memory_profile': Memory usage at each step in MB
     """
     memory_profile = {}
     
-    if track_memory:
-        memory_profile["start"] = get_memory_mb()
+    memory_profile["start"] = get_memory_mb()
     
     prep_data = prep_gene_lsn_data_fast(lsn_data, gene_data)
-    if track_memory:
-        memory_profile["after_prep"] = get_memory_mb()
+    memory_profile["after_prep"] = get_memory_mb()
     
     overlaps = find_gene_lsn_overlaps_fast(prep_data)
-    if track_memory:
-        memory_profile["after_overlaps"] = get_memory_mb()
+    memory_profile["after_overlaps"] = get_memory_mb()
     
     counts_df = count_hits_fast(overlaps)
-    if track_memory:
-        memory_profile["after_counts"] = get_memory_mb()
+    memory_profile["after_counts"] = get_memory_mb()
     
     result_df = prob_hits_fast(counts_df, chr_size)
-    if track_memory:
-        memory_profile["after_stats"] = get_memory_mb()
-        memory_profile["peak"] = max(memory_profile.values())
+    memory_profile["after_stats"] = get_memory_mb()
+    memory_profile["peak"] = max(memory_profile.values())
     
-    if track_memory:
-        result_df["memory_profile"] = memory_profile
+    
+    result_df["memory_profile"] = memory_profile
     
     return result_df
 
