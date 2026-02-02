@@ -610,7 +610,7 @@ function setRenderers(self) {
 		//.style('border', '1px solid #eee')
 		//.style('box-shadow', '0px 0px 1px 0px #ccc')
 
-		const titleDiv = div
+		/*const titleDiv =*/ div
 			.append('div')
 			.style('width', s.svgw + 50 + 'px')
 			.style('height', s.chartTitleDivHt + 'px')
@@ -623,10 +623,10 @@ function setRenderers(self) {
 			.style('width', 'fit-content')
 			.datum(chart)
 			.html(chart => chart.chartId)
-			.style('cursor', 'pointer')
-			.on('mouseover', () => titleDiv.style('text-decoration', 'underline'))
-			.on('mouseout', () => titleDiv.style('text-decoration', ''))
-			.on('click', self.showMenuForSelectedChart)
+		//.style('cursor', 'pointer')
+		// .on('mouseover', () => titleDiv.style('text-decoration', 'underline'))
+		// .on('mouseout', () => titleDiv.style('text-decoration', ''))
+		//.on('click', self.showMenuForSelectedChart)
 
 		if (chart.serieses) {
 			const svg = div.append('svg').attr('class', 'pp-survival-svg')
@@ -1234,6 +1234,8 @@ function setInteractivity(self) {
 		self.app.tip.hide()
 	}
 
+	// disabled as a click handler for now, need to review
+	// before completely removing this code
 	self.showMenuForSelectedChart = function () {
 		self.dom.tip.clear()
 		self.activeMenu = true

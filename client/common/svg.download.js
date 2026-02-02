@@ -120,7 +120,7 @@ export function downloadChart(mainGsel, svgName, styleParent = null) {
 			if (prop.startsWith('font')) title.style(prop, titles[i].styles.getPropertyValue(prop))
 		}
 
-		select(mainG).attr('transform', 'translate(' + corner.x + ',' + (corner.y + tboxh) + ')')
+		//select(mainG).attr('transform', 'translate(' + corner.x + ',' + (corner.y + tboxh) + ')')
 		svg.appendChild(mainG)
 	})
 
