@@ -14,7 +14,6 @@ Input JSON:
  availableDataTypes: [string]
  maxGenesToShow: int (default=500) 
  lesionTypeMap: dict {lesionType: displayName}
- trackMemory: bool
 }
 
 Output JSON:
@@ -262,7 +261,7 @@ try:
 	]
 	
 	# 5. Run GRIN2
-	grin_results = grin_stats(lesion_df, gene_anno, chrom_size, track_memory=input_data.get("trackMemory", False))
+	grin_results = grin_stats(lesion_df, gene_anno, chrom_size)
 	# grin_results = timed_grin_stats(lesion_df, gene_anno, chrom_size)
 	if not isinstance(grin_results, dict):
 		write_error("grin_stats returned invalid results")

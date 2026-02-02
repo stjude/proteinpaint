@@ -702,7 +702,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 				maxCappedPoints: this.state.config.settings?.manhattan?.maxCappedPoints,
 				hardCap: this.state.config.settings?.manhattan?.hardCap,
 				binSize: this.state.config.settings?.manhattan?.binSize,
-				trackMemory: this.state.config.settings?.manhattan?.trackMemory,
 				...configValues
 			}
 
@@ -1062,10 +1061,7 @@ export function getDefaultSettings(opts) {
 			binSize: 10,
 
 			// Hard cap regardless of data distribution
-			hardCap: 200,
-
-			// Track memory usage
-			trackMemory: true
+			hardCap: 200
 		}
 	}
 
