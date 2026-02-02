@@ -97,7 +97,8 @@ function getBaseInputs(app: AppApi) {
 			usecase: { target: 'runChart2', detail: 'term' },
 			label: 'X',
 			vocabApi: app.vocabApi,
-			menuOptions: 'edit'
+			menuOptions: 'edit',
+			numericEditMenuVersion: ['continuous', 'discrete']
 		},
 		{
 			type: 'term',
@@ -106,7 +107,8 @@ function getBaseInputs(app: AppApi) {
 			usecase: { target: 'runChart2', detail: 'term2' },
 			label: 'Y',
 			vocabApi: app.vocabApi,
-			defaultQ4fillTW: term0_term2_defaultQ
+			defaultQ4fillTW: term0_term2_defaultQ,
+			numericEditMenuVersion: ['continuous', 'discrete']
 		},
 		{
 			label: 'Aggregation',

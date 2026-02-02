@@ -164,8 +164,13 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 	if (!opts.term2) throw new Error('opts.term2 is required for the Y axis')
 
 	try {
+		// term/term2 q.mode: continuous = 1 series, discrete = multiple series.
+		if (!opts.term.q) opts.term.q = {}
+		if (!opts.term2.q) opts.term2.q = {}
+		opts.term.q.mode = opts.term.q.mode ?? 'continuous'
+		opts.term2.q.mode = opts.term2.q.mode ?? 'continuous'
 		await fillTermWrapper(opts.term, app.vocabApi)
-		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
+		await fillTermWrapper(opts.term2, app.vocabApi)
 	} catch (e) {
 		console.error(e)
 		throw new Error(`runChart2 getPlotConfig() failed: ${e}`)
