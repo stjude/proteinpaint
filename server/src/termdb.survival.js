@@ -59,30 +59,37 @@ export async function get_survival(q, ds) {
 			// time-to-event
 			const time = s.value
 			if (time < 0) continue // do not include data when years_to_event < 0
-			// status codes
-			// 0=censored; 1=dead
-			// codes match the codes expected by Surv() in R
+			// status code
+			// 0=censored; 1=dead (codes expected by Surv() in R)
 			const status = s.key
+
 			// series data
 			let series
 			if (ot) {
+				// overlay term defined
 				series = getTermData(d, ot)
-				if (!series) continue
+				if (!series && series !== 0) continue // sample does not have data for term, so skip
 			} else {
-				// would set to empty string here, but R errors on empty string series value
+				// overlay term not defined
+				// would set series to empty string, but R errors on empty string series value
 				// so use '*' and will replace with empty string later
 				series = '*'
 			}
 			keys.series.add(series)
+
 			// chart data
 			let chart
 			if (dt) {
+				// divideBy term defined
 				chart = getTermData(d, dt)
-				if (!chart) continue
+				if (!chart && chart !== 0) continue // sample does not have data for term, so skip
 			} else {
+				// divideBy term not defined
 				chart = ''
 			}
-			if (!Object.keys(byChartSeries).includes(chart)) {
+
+			// fill byChartSeries{}
+			if (!byChartSeries.hasOwnProperty(chart)) {
 				byChartSeries[chart] = []
 				keys.chart.add(chart)
 			}
@@ -180,11 +187,11 @@ function getSampleArray(data, st) {
 
 function getTermData(d, t) {
 	let data
-	if (Object.keys(t).includes('id')) {
-		if (!Object.keys(d).includes(t.id)) return // sample does not have data for term
+	if (t.hasOwnProperty('id')) {
+		if (!d.hasOwnProperty(t.id)) return // sample does not have data for term
 		data = d[t.id].key
 	} else if (t.type == 'samplelst') {
-		if (!Object.keys(d).includes(t.name)) return // sample does not have data for term
+		if (!d.hasOwnProperty(t.name)) return // sample does not have data for term
 		data = d[t.name].key
 	} else {
 		const n = t.name
@@ -193,7 +200,7 @@ function getTermData(d, t) {
 		} else if (d[t.name]) {
 			data = d[t.name].key
 		} else {
-			throw `cannot get series key for term='${n}'`
+			throw `cannot get key for term='${n}'`
 		}
 	}
 	return data
