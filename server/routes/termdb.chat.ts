@@ -543,11 +543,11 @@ function generate_group_name(filters: any[], db_rows: DbRows[]): string {
 		}
 		if (filter.start) {
 			// Integer or float variable
-			name += filter.term + '>' + filter.start.toString()
+			name += filter.term + '>=' + filter.start.toString()
 		}
 		if (filter.stop) {
 			// Integer or float variable
-			name += filter.term + '<' + filter.stop.toString()
+			name += filter.term + '<=' + filter.stop.toString()
 		}
 	}
 	return name
@@ -782,21 +782,28 @@ function validate_term(response_term: string, common_genes: string[], dataset_js
 function validate_filter(filters: any[], ds: any): any {
 	if (!Array.isArray(filters)) throw 'filter is not array'
 
-	let filter_result: any
+	const num_filter_cutoff = 3 // The maximum number of filter terms that can be entered and parsed using the chatbot
+	let filter_result: any = { html: '' }
+	mayLog('filters.length:', filters.length)
 	if (filters.length <= 2) {
 		// If number of filter terms <=2 then simply a single iteration of generate_filter_term() is sufficient
 		filter_result = generate_filter_term(filters, ds)
 	} else {
-		// When number of filter terms is greater than 2, then in each iteration the first two terms are taken and a filter object is created which is passed in the following iteration as a filter term
-		for (let i = 0; i < filters.length - 1; i++) {
-			const filter_lst = [] as any[]
-			if (i == 0) {
-				filter_lst.push(filters[i])
-			} else {
-				filter_lst.push(filter_result.simplefilter)
+		if (filters.length > num_filter_cutoff) {
+			filter_result.html =
+				'For now, the maximum number of filter terms supported through the chatbot is ' + num_filter_cutoff // Added temporary logic to restrict the number of filter terms to num_filter_cutoff.
+		} else {
+			// When number of filter terms is greater than 2, then in each iteration the first two terms are taken and a filter object is created which is passed in the following iteration as a filter term
+			for (let i = 0; i < filters.length - 1; i++) {
+				const filter_lst = [] as any[]
+				if (i == 0) {
+					filter_lst.push(filters[i])
+				} else {
+					filter_lst.push(filter_result.simplefilter)
+				}
+				filter_lst.push(filters[i + 1])
+				filter_result = generate_filter_term(filter_lst, ds)
 			}
-			filter_lst.push(filters[i + 1])
-			filter_result = generate_filter_term(filter_lst, ds)
 		}
 	}
 	return { simplefilter: filter_result.simplefilter, html: filter_result.html }
