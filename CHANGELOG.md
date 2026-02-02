@@ -10,6 +10,7 @@ Features:
 Fixes:
 - Now fetching clustalo binary from PP instead of defunct URL
 - convert legacy qualitative q.mode='values' to discrete
+- Deleted GRIN2 concurrency testing script as it has been moved to sjpp repo
 
 
 ## 2.173.0
