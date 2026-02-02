@@ -60,7 +60,7 @@ export function getSeriesTip(line, rect, _tip = null) {
 		if (seriesHtmls.length) {
 			tip
 				.show(event.clientX, event.clientY)
-				.d.html(`${opts.xTitleLabel}: ${xVal}<br>` + seriesHtmls.map(d => d).join(opts.separator))
+				.d.html(`<span>${opts.xTitleLabel}: ${xVal}</span><br>` + seriesHtmls.map(d => d).join(opts.separator))
 		} else {
 			tip.hide()
 		}

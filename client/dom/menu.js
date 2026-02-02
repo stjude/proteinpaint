@@ -133,8 +133,19 @@ export class Menu {
 	}
 
 	clear() {
-		if (this.clearSelector) this.d.select(this.clearSelector).selectAll('*').remove()
-		else this.d.selectAll('*').remove()
+		// always use d3-selection.remove() in case it handles cancelling event listeners or other
+		// housekeeping tasks, but this does not remove html text that are not nested inside tags like <span>
+		// TODO: research if d3-selection.remove() has no advantage over native replaceChildren()
+		if (this.clearSelector) {
+			const elem = this.d.select(this.clearSelector)
+			elem.selectAll('*').remove()
+			// this will remove all text that are not nested inside html tags
+			elem.node().replaceChildren()
+		} else {
+			this.d.selectAll('*').remove()
+			// this will remove all text that are not nested inside html tags
+			this.dnode.replaceChildren()
+		}
 		return this
 	}
 	/*
