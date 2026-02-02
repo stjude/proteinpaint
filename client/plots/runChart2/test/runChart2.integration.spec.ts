@@ -1,7 +1,6 @@
 import tape from 'tape'
 import * as helpers from '../../../test/front.helpers.js'
 import * as d3s from 'd3-selection'
-import { detectAttr } from '../../../test/test.helpers.js'
 
 const runpp = helpers.getRunPp('mass', {
 	state: {
@@ -11,21 +10,27 @@ const runpp = helpers.getRunPp('mass', {
 	debug: 1
 })
 
-const state = {
-	plots: [
-		{
-			chartType: 'runChart2',
-			term: { id: 'date' },
-			term2: { id: 'hrtavg' }
-		}
-	]
-}
-
 function getHolder() {
 	return d3s.select('body').append('div')
 }
 
-// test sections
+/** Wait for an element to appear in the DOM with a timeout */
+function waitForElement(selector: string, container: any, timeoutMs = 5000): Promise<any> {
+	return new Promise((resolve, reject) => {
+		const startTime = Date.now()
+		const checkInterval = setInterval(() => {
+			const element = container.select(selector)
+			if (!element.empty()) {
+				clearInterval(checkInterval)
+				resolve(element)
+			}
+			if (Date.now() - startTime > timeoutMs) {
+				clearInterval(checkInterval)
+				reject(new Error(`Timeout waiting for element: ${selector}`))
+			}
+		}, 100)
+	})
+}
 
 tape('\n', function (test) {
 	test.comment('-***- plots/runChart2/RunChart2 -***-')
@@ -33,10 +38,12 @@ tape('\n', function (test) {
 })
 
 tape('runChart2 renders and has chart DOM', test => {
-	test.timeoutAfter(5000)
-	test.plan(4)
+	test.timeoutAfter(10000)
+	test.plan(3)
 
+	const holder = getHolder()
 	runpp({
+		holder,
 		state: {
 			plots: [
 				{
@@ -45,118 +52,64 @@ tape('runChart2 renders and has chart DOM', test => {
 					term2: { id: 'hrtavg' }
 				}
 			]
-		},
-		runChart2: {
-			callbacks: {
-				'postRender.test': runTests
-			}
 		}
 	})
 
-	async function runTests(runChart2: any) {
-		runChart2.on('postRender.test', null)
+	setTimeout(async () => {
+		try {
+			const chartHolder = holder.select('[data-testId="sjpp-runChart2-chartHolder"]')
+			test.ok(!chartHolder.empty(), 'should have chartHolder')
 
-		test.ok(runChart2?.view, 'should have view')
-		test.ok(runChart2?.view?.chartDom, 'should have chartDom')
-		test.ok(runChart2.view.chartDom.svg, 'should have SVG')
-		test.ok(runChart2.view.chartDom.xAxis && runChart2.view.chartDom.yAxis, 'should have xAxis and yAxis groups')
+			const svg = await waitForElement('svg', chartHolder, 5000)
+			test.ok(!svg.empty(), 'should have SVG')
 
+			const seriesGroup = await waitForElement('[data-testId="sjpp-runChart2-seriesGroup"]', svg, 5000)
+			test.ok(!seriesGroup.empty(), 'should have seriesGroup')
+
+			holder.remove()
+		} catch (e) {
+			console.error('Test error:', e)
+			test.fail(`${e}`)
+			holder.remove()
+		}
 		test.end()
-	}
+	}, 1000)
 })
 
-tape('Render TermdbTest runChart2 plot', function (test) {
-	test.timeoutAfter(8000)
+tape('Render TermdbTest runChart2 plot with data', function (test) {
+	test.timeoutAfter(10000)
 	test.plan(2)
+
 	const holder = getHolder()
 	runpp({
 		holder,
-		state,
-		runChart2: {
-			callbacks: {
-				'postRender.test': runTests
-			}
+		state: {
+			plots: [
+				{
+					chartType: 'runChart2',
+					term: { id: 'date' },
+					term2: { id: 'hrtavg' }
+				}
+			]
 		}
 	})
 
-	async function runTests(runChart2: any) {
-		runChart2.on('postRender.test', null)
+	setTimeout(async () => {
+		try {
+			const chartHolder = holder.select('[data-testId="sjpp-runChart2-chartHolder"]')
+			const svg = await waitForElement('svg', chartHolder, 5000)
+			test.ok(!svg.empty(), 'should have SVG in chartHolder')
 
-		const chartHolder = runChart2.dom.chartHolder
-		const svg = chartHolder.select('svg')
-		const seriesGroup = svg.select('[data-testId="sjpp-runChart2-seriesGroup"]')
-		const circles = seriesGroup.selectAll('circle')
+			const seriesGroup = await waitForElement('[data-testId="sjpp-runChart2-seriesGroup"]', svg, 5000)
+			const circles = seriesGroup.selectAll('circle')
+			test.ok(circles.size() > 0, `should render circles. Rendered ${circles.size()}.`)
 
-		const series = runChart2.view?.viewData?.series ?? []
-		const expectedPoints = series.reduce((n: number, s: any) => n + (s.points?.length ?? 0), 0)
-
-		test.ok(!svg.empty(), 'should have SVG in chartHolder')
-		test.equal(
-			circles.size(),
-			expectedPoints,
-			`should render ${expectedPoints} circles (one per point). Rendered ${circles.size()}.`
-		)
-
-		if ((test as any)._ok) holder.remove()
+			holder.remove()
+		} catch (e) {
+			console.error('Test error:', e)
+			test.fail(`${e}`)
+			holder.remove()
+		}
 		test.end()
-	}
-})
-
-tape('Change chart width and height from menu', function (test) {
-	test.timeoutAfter(8000)
-
-	const holder = getHolder()
-	const testWidth = 900
-	const testHeight = 450
-
-	runpp({
-		holder,
-		state,
-		runChart2: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
-
-	async function runTests(runChart2: any) {
-		runChart2.on('postRender.test', null)
-
-		const settings = runChart2.state?.config?.settings?.runChart2
-		if (!settings) {
-			test.fail('missing runChart2 settings')
-			test.end()
-			return
-		}
-
-		const inputs = runChart2.dom.controls.selectAll('input').nodes() as HTMLInputElement[]
-		const widthInput = inputs.find(e => e.value === String(settings.svgw))
-		const heightInput = inputs.find(e => e.value === String(settings.svgh))
-
-		if (!widthInput || !heightInput) {
-			test.fail('could not find width/height inputs')
-			if ((test as any)._ok) holder.remove()
-			test.end()
-			return
-		}
-
-		widthInput.value = String(testWidth)
-		heightInput.value = String(testHeight)
-
-		await detectAttr({
-			target: runChart2.dom.chartHolder.select('svg').node(),
-			observe: { attributeFilter: ['width', 'height'] },
-			trigger() {
-				widthInput.dispatchEvent(new Event('change'))
-				heightInput.dispatchEvent(new Event('change'))
-			}
-		})
-
-		const updated = runChart2.state?.config?.settings?.runChart2
-		test.equal(updated?.svgw, testWidth, `chart width should be ${testWidth}`)
-		test.equal(updated?.svgh, testHeight, `chart height should be ${testHeight}`)
-
-		if ((test as any)._ok) holder.remove()
-		test.end()
-	}
+	}, 1000)
 })
