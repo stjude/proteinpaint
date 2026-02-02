@@ -41,6 +41,8 @@ export async function get_survival(q, ds) {
 		const st = q[`term${survTermIndex}`]
 		// ot: overlay term, the series term
 		const ot = q[`term${survTermIndex == 1 ? 2 : 1}`]
+		// dt: divideBy term, the chart term
+		const dt = q.term0
 		const data = await getData(
 			{ terms: twLst, filter: q.filter, filter0: q.filter0, __protected__: q.__protected__ },
 			ds,
@@ -61,27 +63,32 @@ export async function get_survival(q, ds) {
 			// 0=censored; 1=dead
 			// codes match the codes expected by Surv() in R
 			const status = s.key
-			// series ID for distinct overlays
-			// R errors on empty string series value, so replace with '*' (will reconvert later)
+			// series data
 			let series
-			if (!ot) series = '*'
-			else if ('id' in ot) {
-				if (!(ot.id in d)) continue //This sample is not in any group
-				series = d[ot.id].key
-			} else if (ot.type == 'samplelst') {
-				if (!(ot.name in d)) continue //This sample is not in any group
-				series = d[ot.name].key
-			} else series = getSeriesKey(ot, d)
-
-			keys.series.add(series)
-			// enter chart data
-			const d0 = (q.term0 && d[q.term0.id || q.term0.name]) || { key: '' }
-			if (!(d0.key in byChartSeries)) {
-				byChartSeries[d0.key] = []
-				keys.chart.add(d0.key)
+			if (ot) {
+				series = getTermData(d, ot)
+				if (!series) continue
+			} else {
+				// would set to empty string here, but R errors on empty string series value
+				// so use '*' and will replace with empty string later
+				series = '*'
 			}
-			byChartSeries[d0.key].push({ time, status, series })
+			keys.series.add(series)
+			// chart data
+			let chart
+			if (dt) {
+				chart = getTermData(d, dt)
+				if (!chart) continue
+			} else {
+				chart = ''
+			}
+			if (!Object.keys(byChartSeries).includes(chart)) {
+				byChartSeries[chart] = []
+				keys.chart.add(chart)
+			}
+			byChartSeries[chart].push({ time, status, series })
 		}
+
 		const bins = (q.term2_id && data.refs[q.term2.id]?.bins) || []
 		const final_data = {
 			keys: ['chartId', 'seriesId', 'time', 'survival', 'lower', 'upper', 'nevent', 'ncensor', 'nrisk'],
@@ -171,15 +178,25 @@ function getSampleArray(data, st) {
 	return lst.sort((a, b) => (a[st.id].value < b[st.id].value ? -1 : 1))
 }
 
-function getSeriesKey(ot, d) {
-	const n = ot.name
-	if (ot.type == TermTypes.GENE_EXPRESSION) {
-		return d[ot.name]?.key || 'Missing data'
-	} else if (d[ot.name]) {
-		return d[ot.name].key
+function getTermData(d, t) {
+	let data
+	if (Object.keys(t).includes('id')) {
+		if (!Object.keys(d).includes(t.id)) return // sample does not have data for term
+		data = d[t.id].key
+	} else if (t.type == 'samplelst') {
+		if (!Object.keys(d).includes(t.name)) return // sample does not have data for term
+		data = d[t.name].key
 	} else {
-		throw `cannot get series key for term='${n}'`
+		const n = t.name
+		if (t.type == TermTypes.GENE_EXPRESSION) {
+			data = d[t.name]?.key || 'Missing data'
+		} else if (d[t.name]) {
+			data = d[t.name].key
+		} else {
+			throw `cannot get series key for term='${n}'`
+		}
 	}
+	return data
 }
 
 function getOrderedLabels(term, bins = []) {
