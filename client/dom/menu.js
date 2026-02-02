@@ -354,8 +354,8 @@ export class Menu {
 		*/
 	}
 
-	// stickyPosition() prevents the menu from being scrolled away (above or below) the 'anchor' element,
-	// an issue seen when the clicked "anchor" element is nested inside a sticky-positioned div such as
+	// stickyPosition() prevents the menu from being scrolled away (above or below) the clicked element,
+	// an issue seen when the clicked element is nested inside a sticky-positioned div such as
 	// the MASS nav header, whereas the menu div that's attached to the body will scroll freely past the
 	// 'stuck' clicked element
 	stickyPosition(elem, _opts = {}) {
@@ -365,8 +365,10 @@ export class Menu {
 
 		const top = this.d.style('top')
 		if (!top.endsWith('px')) return
+		const { height: elemHeight } = elem.getBoundingClientRect()
+		const scrollStartY = window.scrollY
 		const yPos = Number(top.replace('px', '')) // y-position before any relevant scrolling has occurred
-		let yStickyScroll = 0
+		let startRatio
 
 		// The IntersectionObserver approach below is much reliable than a previous fix
 		// of moving the menu div from the body to be nested under the sticky ancestor.
@@ -377,27 +379,32 @@ export class Menu {
 			// Use a negative margin equal to the 'top' CSS value to trigger
 			// the callback when the element reaches its sticky position.
 			rootMargin: '-0.1px 0px 0px 0px', // Use a small negative value like -0.1px or -1px
-			threshold: [0.95, 1.0] // Triggers when the target is xx% visible, when it starts getting stuck or moving again
+			threshold: [/*0.7, 0.8,*/ 0.95, 1.0] // Triggers when the target is xx% visible, when it starts getting stuck or moving again
 		}
 
 		this.stickyObserver = new IntersectionObserver(([entry]) => {
+			if (startRatio === undefined) startRatio = entry.intersectionRatio
 			// entry.intersectionRatio < 1 means the element is not fully within
 			// the calculated root bounds (i.e., it is pinned).
 			if (entry.intersectionRatio >= 1) {
+				const yAdjust = startRatio >= 1 ? 0 : window.scrollY - scrollStartY + entry.intersectionRect.y
 				// observed element moves with scroll, before becoming sticky as there is space
 				// between the bottom of the observed element and the viewport
-				this.d.style('top', `${yPos}px`).style('position', 'absolute')
-				yStickyScroll = window.scrollY
+				this.d.style('top', `${yPos + yAdjust}px`).style('position', 'absolute')
 			} else if (entry.intersectionRatio < 0.95) {
+				// do not adjust the position style if, before the menu was shown,
+				// the window is already scrolled and the observed element is already unstuck moving again,
+				// since the current absolute top position would already scroll with the window as intended
+				if (startRatio < 0.95) return
 				// observed element again moves with scroll, after becoming sticky and
 				// as the bottom of the scrolled div reaches the bottom of the stuck observed element;
-				// need to add the skipped scroll pixels to the
-				this.d.style('top', `${yPos + window.scrollY - yStickyScroll}px`).style('position', 'absolute')
+				// need to add back the skipped scroll pixels to the top position
+				this.d
+					.style('top', `${yPos + window.scrollY - scrollStartY - entry.intersectionRect.height}px`)
+					.style('position', 'absolute')
 			} else {
-				// observed element is now 'stuck' while scrolling
-				yStickyScroll = window.scrollY
-				const yStuck = this.d.node().getBoundingClientRect().y
-				this.d.style('top', `${yStuck}px`).style('position', 'fixed')
+				// the observed element is currently sticky, the menu position should stay fixed near the clicked elem
+				this.d.style('top', `${elem.getBoundingClientRect().y + elemHeight}px`).style('position', 'fixed')
 			}
 		}, observerOptions)
 
