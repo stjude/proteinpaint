@@ -473,6 +473,17 @@ async function validate_DE_response(response: string, ds: any, db_rows: DbRows[]
 			}
 		}
 	}
+
+	// Parse DE method from LLM output
+	let settings: any
+	if (response_type.method) {
+		if (response_type.method == 'edgeR' || response_type.method == 'limma' || response_type.method == 'wilcoxon') {
+			settings = { volcano: { method: response_type.method } }
+		} else {
+			html += 'Unknown DE method: ' + response_type.method
+		}
+	}
+
 	if (html.length > 0) {
 		return { type: 'html', html: html }
 	} else {
@@ -512,6 +523,7 @@ async function validate_DE_response(response: string, ds: any, db_rows: DbRows[]
 		}
 		pp_plot_json.samplelst = { groups }
 		pp_plot_json.tw = tw
+		pp_plot_json.settings = settings
 		return { type: 'plot', plot: pp_plot_json }
 	}
 }
