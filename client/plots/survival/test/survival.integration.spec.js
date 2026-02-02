@@ -146,10 +146,6 @@ tape('survival term as term1, with numeric overlay', function (test) {
 	async function runTests(survival) {
 		survivalDiv = survival.Inner.dom.chartsDiv
 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 2, 'should render 2 surv series g')
-		console.log(
-			"survivalDiv.selectAll('.sjpp-survival-censored-x').size():",
-			survivalDiv.selectAll('.sjpp-survival-censored-x').size()
-		)
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored-x').size(),
 			10,
