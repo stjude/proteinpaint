@@ -58,7 +58,9 @@ export class RunChart2View {
 	renderAxisLabels(plotDims: any) {
 		const xName = this.config?.term?.term?.name || 'X Axis'
 		const xLabel =
-			this.viewData.totalSampleCount != null ? `${xName}, n=${this.viewData.totalSampleCount.toLocaleString()}` : xName
+			this.viewData.totalSampleCount != null && this.config?.term?.q?.mode != 'discrete'
+				? `${xName}, n=${this.viewData.totalSampleCount.toLocaleString()}`
+				: xName
 		const yLabel = this.config?.term2?.term?.name || 'Y Axis'
 
 		const xAxisLabelY = plotDims.xAxis.y + (plotDims.xAxis.labelOffset ?? 50)
@@ -70,6 +72,24 @@ export class RunChart2View {
 			.style('font-size', '0.9em')
 			.text(xLabel)
 
+		const seriesList = this.viewData.series || []
+		if (seriesList.length > 0 && this.config?.term?.q?.mode == 'discrete') {
+			const firstSeries = seriesList[0]
+			const firstSeriesId = firstSeries?.seriesId
+			if (firstSeriesId != null) {
+				const periodN = firstSeries?.points?.reduce((sum: number, p: any) => sum + (Number(p.sampleCount) || 0), 0) ?? 0
+				const labelText =
+					periodN > 0 ? `${String(firstSeriesId)}, n=${periodN.toLocaleString()}` : String(firstSeriesId)
+				this.chartDom.svg
+					.append('text')
+					.attr('data-testId', 'sjpp-runChart2-xAxisSeriesIds')
+					.attr('transform', `translate(${plotDims.xAxis.x + this.settings.svgw / 2}, ${xAxisLabelY + 20})`)
+					.attr('text-anchor', 'middle')
+					.style('font-size', '0.9em')
+					.style('opacity', 1)
+					.text(labelText)
+			}
+		}
 		const yAxisLabelX = plotDims.yAxis.labelX ?? 55
 		this.chartDom.svg
 			.append('text')

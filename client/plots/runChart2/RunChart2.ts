@@ -18,7 +18,7 @@ export class RunChart2 extends PlotBase implements RxComponent {
 	model!: RunChart2Model
 	viewModel!: RunChart2ViewModel
 	view!: RunChart2View
-	configTermKeys = ['term', 'term2']
+	configTermKeys = ['term', 'term2', 'divideBy']
 
 	constructor(opts: any, api: any) {
 		super(opts, api)
@@ -98,7 +98,6 @@ export class RunChart2 extends PlotBase implements RxComponent {
 		this.components.controls.on('downloadClick.runChart2', async (event: any) => {
 			await this.download(event)
 		})
-		// Force controls to render with current state (ensures term0/Divide by displays)
 		const appState = this.app.getState()
 		this.components.controls.update?.({ appState })
 	}
@@ -169,7 +168,7 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 	if (!opts.term2) throw new Error('opts.term2 is required for the Y axis')
 
 	try {
-		// term/term2 q.mode: continuous = 1 series, discrete = multiple series. term0 = divide by.
+		// term/term2 q.mode: continuous = 1 series, discrete = multiple series. divideBy = partition (period only).
 		if (!opts.term.q) opts.term.q = {}
 		if (!opts.term2.q) opts.term2.q = {}
 		opts.term.q.mode = opts.term.q.mode ?? 'continuous'
@@ -183,8 +182,15 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 
 	const defaultConfig = app.vocabApi.termdbConfig?.plotConfigByCohort?.default?.[opts.chartType]
 
+	let defaultDivideBy: any = null
+	if (opts.term?.q?.mode === 'discrete' && opts.term?.term?.id) {
+		const termQ = opts.term.q ?? {}
+		defaultDivideBy = { term: opts.term.term, q: { ...termQ, mode: 'discrete' as const }, $id: opts.term.$id }
+	}
+
 	const config: any = {
 		hidePlotFilter: true, // sandbox filter not implemented
+		divideBy: defaultDivideBy ?? null,
 		settings: {
 			controls: { isOpen: false },
 			runChart2: getDefaultRunChart2Settings(opts)
