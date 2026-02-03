@@ -17,26 +17,12 @@ export const api: RouteApi = {
 }
 
 export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChartResponse> {
-	// Collect terms from term and term2
-	const terms: any = [q.term, q.term2]
-	const xTermId = q.term['$id']
-	const yTermId = q.term2['$id']
+	const terms: any = [q.xtw, q.ytw]
+	if (q.divideByTW) terms.push(q.divideByTW)
 
-	// if (q.term && q.term2) {
-	// 	const tws = [
-	// 		{ term: q.term, q: { mode: 'continuous' }, $id: q.term.id },
-	// 		{ term: q.term2, q: { mode: 'continuous' }, $id: q.term2.id }
-	// 	]
-	// 	terms.push(...tws)
-	// 	xTermId = q.term.id
-	// 	yTermId = q.term2.id
-	// } else {
-	// 	throw new Error('term and term2 must be provided')
-	// }
-
-	// if (!xTermId || !yTermId) {
-	// 	throw new Error('Unable to determine term IDs for x and y axes')
-	// }
+	const xTermId = q.xtw['$id'] ?? q.xtw.term?.id
+	const yTermId = q.ytw['$id'] ?? q.ytw.term?.id
+	const divideByTermId = q.divideByTW ? q.divideByTW['$id'] ?? q.divideByTW.term?.id : null
 
 	const { getData } = await import('../src/termdb.matrix.js')
 
@@ -52,15 +38,48 @@ export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChart
 
 	if (data.error) throw new Error(data.error)
 
-	return buildRunChartFromData(q.aggregation, xTermId, yTermId, data)
+	// divideByTW (term0) takes precedence; else partition by xtw when xtw is discrete
+	const partitionByTermId = divideByTermId || (q.xtw?.q?.mode === 'discrete' ? xTermId : null)
+	return buildRunChartFromData(q.aggregation, xTermId, yTermId, data, partitionByTermId)
 }
 
 export function buildRunChartFromData(
 	aggregation: string,
 	xTermId: string,
 	yTermId: string,
-	data: any
+	data: any,
+	partitionByTermId?: string | null
 ): RunChartResponse {
+	const allSamples = (data.samples || {}) as Record<string, any>
+
+	if (partitionByTermId) {
+		// runChart2Period: partition samples by divide-by term's bin key (period)
+		const period2Samples: Record<string, Record<string, any>> = {}
+		for (const sampleId in allSamples) {
+			const sample = allSamples[sampleId]
+			const periodKey = sample?.[partitionByTermId]?.key ?? sample?.[partitionByTermId]?.value ?? 'Default'
+			if (!period2Samples[periodKey]) period2Samples[periodKey] = {}
+			period2Samples[periodKey][sampleId] = sample
+		}
+		const periodKeys = Object.keys(period2Samples).sort()
+		const series = periodKeys.map(seriesId => {
+			const subset = { samples: period2Samples[seriesId] }
+			const one = buildOneSeries(aggregation, xTermId, yTermId, subset)
+			return { seriesId, ...one }
+		})
+		return { status: 'ok', series }
+	}
+
+	const one = buildOneSeries(aggregation, xTermId, yTermId, data)
+	return { status: 'ok', series: [{ ...one }] }
+}
+
+function buildOneSeries(
+	aggregation: string,
+	xTermId: string,
+	yTermId: string,
+	data: any
+): { median: number; points: any[] } {
 	const buckets: Record<
 		string,
 		{
@@ -80,6 +99,7 @@ export function buildRunChartFromData(
 
 	for (const sampleId in (data.samples || {}) as any) {
 		const sample = (data.samples as any)[sampleId]
+		// For discrete xtw, use .value (raw date) for x positioning; .key is the period label
 		const xRaw = sample?.[xTermId]?.value ?? sample?.[xTermId]?.key
 		const yRaw = sample?.[yTermId]?.value ?? sample?.[yTermId]?.key
 
@@ -257,15 +277,7 @@ export function buildRunChartFromData(
 			  })()
 			: 0
 
-	return {
-		status: 'ok',
-		series: [
-			{
-				median,
-				points
-			}
-		]
-	}
+	return { median, points }
 }
 
 function init({ genomes }) {

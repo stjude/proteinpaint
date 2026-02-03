@@ -2,6 +2,7 @@ import { SeriesRender } from './SeriesRender.ts'
 import type { RunChart2Settings } from '../Settings'
 import { axisstyle } from '#src/client'
 import { axisBottom, axisLeft } from 'd3-axis'
+import { getColors } from '#shared/common.js'
 
 export class RunChart2View {
 	viewData: any
@@ -43,8 +44,12 @@ export class RunChart2View {
 			.attr('data-testId', 'sjpp-runChart2-seriesGroup')
 			.attr('transform', `translate(${plotDims.xAxis.x}, ${plotDims.yAxis.y})`)
 
-		for (const series of this.viewData.series || []) {
-			new SeriesRender(series, plotDims, this.settings, seriesGroup, this.runChart2)
+		const seriesList = this.viewData.series || []
+		const cat2Color = seriesList.length > 1 ? getColors(seriesList.length) : null
+		for (let i = 0; i < seriesList.length; i++) {
+			const series = seriesList[i]
+			const seriesColor = cat2Color ? cat2Color(series.seriesId ?? String(i)) : undefined
+			new SeriesRender(series, plotDims, this.settings, seriesGroup, this.runChart2, seriesColor)
 		}
 
 		this.renderAxisLabels(plotDims)
