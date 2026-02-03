@@ -790,7 +790,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.append('h3')
 				.style('margin', this.headerMargin)
 				.style('font-size', `${this.headerFontSize}px`)
-				.text(`Top Genes (showing ${result.showingTop?.toLocaleString()} of ${result.totalGenes?.toLocaleString()})`)
+				.text(
+					`Top Genes (showing ${result.stats.showingTop?.toLocaleString()} of ${result.stats.totalGenes?.toLocaleString()})`
+				)
 
 			const tableDiv = tableContainer.append('div')
 
@@ -872,7 +874,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 
 		// Display run stats information
-		if (result.processingSummary) {
+		if (result.stats.processing) {
 			// Create header with title
 			const headerDiv = this.dom.div
 				.append('div')
@@ -890,26 +892,55 @@ class GRIN2 extends PlotBase implements RxComponent {
 			// Container for tables
 			const tablesContainer = this.dom.div.append('div')
 
-			// General stats using table2col
+			// General stats
 			const generalTable = table2col({
 				holder: tablesContainer.append('div')
 			})
 
-			generalTable.addRow('Total Samples', result.processingSummary.totalSamples.toLocaleString())
-			generalTable.addRow('Processed Samples', result.processingSummary.processedSamples.toLocaleString())
-			generalTable.addRow('Unprocessed Samples', (result.processingSummary.unprocessedSamples ?? 0).toLocaleString())
-			generalTable.addRow('Failed Samples', result.processingSummary.failedSamples.toLocaleString())
+			generalTable.addRow('Total Samples', result.stats.processing.totalSamples.toLocaleString())
+			generalTable.addRow('Processed Samples', result.stats.processing.processedSamples.toLocaleString())
+			generalTable.addRow('Unprocessed Samples', (result.stats.processing.unprocessedSamples ?? 0).toLocaleString())
+			generalTable.addRow('Failed Samples', result.stats.processing.failedSamples.toLocaleString())
 			generalTable.addRow(
 				'Failed Files',
-				result.processingSummary.failedFiles?.length
-					? result.processingSummary.failedFiles.map(f => f.sampleName).join(', ')
+				result.stats.processing.failedFiles?.length
+					? result.stats.processing.failedFiles.map(f => f.sampleName).join(', ')
 					: '0'
 			)
-			generalTable.addRow('Total Lesions', result.processingSummary.totalLesions.toLocaleString())
-			generalTable.addRow('Processed Lesions', result.processingSummary.processedLesions.toLocaleString())
+			generalTable.addRow('Total Lesions', result.stats.processing.totalLesions.toLocaleString())
+			generalTable.addRow('Processed Lesions', result.stats.processing.processedLesions.toLocaleString())
 
-			// Lesion type details
-			if (result.processingSummary.lesionCounts?.byType) {
+			// Memory usage table
+			if (result.stats.memory) {
+				tablesContainer
+					.append('h4')
+					.style('margin', this.headerMargin)
+					.style('margin-top', '15px')
+					.style('font-size', `${this.headerFontSize - 2}px`)
+					.text('Memory Usage')
+
+				const mem = result.stats.memory
+				const memTable = table2col({
+					holder: tablesContainer.append('div'),
+					margin: '2px 8px'
+				})
+				memTable.addRow('Start', `${mem.start} MB`)
+				memTable.addRow('After prep', `${mem.after_prep} MB`)
+				memTable.addRow('After overlaps', `${mem.after_overlaps} MB`)
+				memTable.addRow('After counts', `${mem.after_counts} MB`)
+				memTable.addRow('After stats', `${mem.after_stats} MB`)
+				memTable.addRow('Peak', `${mem.peak} MB`)
+			}
+
+			// Lesion type details table
+			if (result.stats.processing.lesionCounts?.byType) {
+				tablesContainer
+					.append('h4')
+					.style('margin', this.headerMargin)
+					.style('margin-top', '15px')
+					.style('font-size', `${this.headerFontSize - 2}px`)
+					.text('Lesion Stats by Type')
+
 				const typeLabels: Record<string, string> = {}
 				Object.values(dt2lesion).forEach(config => {
 					config.lesionTypes.forEach(lt => {
@@ -923,7 +954,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 					{ label: 'Samples', sortable: true }
 				]
 
-				const rows = Object.entries(result.processingSummary.lesionCounts.byType).map(([type, typeData]) => {
+				const rows = Object.entries(result.stats.processing.lesionCounts.byType).map(([type, typeData]) => {
 					const { count, samples } = typeData as { count: number; samples: number }
 					return [
 						{ value: typeLabels[type] || type },
@@ -954,44 +985,31 @@ class GRIN2 extends PlotBase implements RxComponent {
 					}
 				})
 			}
-		}
 
-		// Display timing and peak memory information
-		if (result.timing && result.memoryProfile?.peak) {
-			this.dom.div
-				.append('div')
-				.style('margin', this.sectionMargin)
-				.style('font-size', `${this.optionsTextFontSize}px`)
-				.style('color', this.optionsTextColor)
-				.text(
-					`Analysis completed in ${result.timing.totalTime} (Processing: ${result.timing.processingTime}, GRIN2: ${
-						result.timing.grin2Time
-					}, Plotting: ${
-						result.timing.plottingTime
-					}). Peak memory usage: ${result.memoryProfile.peak.toLocaleString()} MB.`
-				)
-		} else if (result.timing) {
-			this.dom.div
-				.append('div')
-				.style('margin', this.sectionMargin)
-				.style('font-size', `${this.optionsTextFontSize}px`)
-				.style('color', this.optionsTextColor)
-				.text(
-					`Analysis completed in ${result.timing.totalTime} (Processing: ${result.timing.processingTime}, GRIN2: ${result.timing.grin2Time}, Plotting: ${result.timing.plottingTime}).`
-				)
+			// Timing info
+			if (result.stats.timing) {
+				this.dom.div
+					.append('div')
+					.style('margin', this.sectionMargin)
+					.style('font-size', `${this.optionsTextFontSize}px`)
+					.style('color', this.optionsTextColor)
+					.text(
+						`Analysis completed in ${result.stats.timing.totalTime} (Processing: ${result.stats.timing.processingTime}, GRIN2: ${result.stats.timing.grin2Time}, Plotting: ${result.stats.timing.plottingTime})`
+					)
+			}
 		}
 
 		// If we didn't process all samples, note that caps truncated the run
-		const expectedToProcessSamples = result.processingSummary.totalSamples - result.processingSummary.failedSamples
-		if (result.processingSummary.processedSamples < expectedToProcessSamples) {
+		const expectedToProcessSamples = result.stats.processing.totalSamples - result.stats.processing.failedSamples
+		if (result.stats.processing.processedSamples < expectedToProcessSamples) {
 			this.dom.div
 				.append('div')
 				.style('margin', this.sectionMargin)
 				.style('font-size', `${this.optionsTextFontSize}px`)
 				.style('color', this.optionsTextColor)
 				.text(
-					`Note: Lesion cap of ${result.processingSummary.lesionCap?.toLocaleString()} was reached before all samples could be processed. ` +
-						`Analysis ran on ${result.processingSummary.processedSamples.toLocaleString()} of ${expectedToProcessSamples.toLocaleString()} samples.`
+					`Note: Lesion cap of ${result.stats.processing.lesionCap?.toLocaleString()} was reached before all samples could be processed. ` +
+						`Analysis ran on ${result.stats.processing.processedSamples.toLocaleString()} of ${expectedToProcessSamples.toLocaleString()} samples.`
 				)
 		}
 	}
