@@ -1,5 +1,6 @@
 import type { RouteApi, RunChartRequest, RunChartResponse } from '#types'
 import { runChartPayload } from '#types/checkers'
+import { compute_bins } from '#shared'
 import { getNumberFromDate } from '#shared/terms.js'
 
 export const api: RouteApi = {
@@ -40,7 +41,31 @@ export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChart
 
 	// divideByTW (term0) takes precedence; else partition by xtw when xtw is discrete
 	const partitionByTermId = divideByTermId || (q.xtw?.q?.mode === 'discrete' ? xTermId : null)
+
+	if (q.xtw?.q?.mode === 'discrete') {
+		const xValues = getXValuesFromData(data.samples, xTermId)
+		const min = xValues.length ? Math.min(...xValues) : 0
+		const max = xValues.length ? Math.max(...xValues) : 1
+		try {
+			const bins = compute_bins(q.xtw.q, () => ({ min, max }))
+			console.log(bins)
+		} catch (e) {
+			console.warn('runChart: compute_bins for period failed', e)
+		}
+	}
+
 	return buildRunChartFromData(q.aggregation, xTermId, yTermId, data, partitionByTermId)
+}
+
+/** Collect numeric X values from samples for min/max (e.g. for period binning). */
+function getXValuesFromData(samples: Record<string, any> | undefined, xTermId: string): number[] {
+	const vals: number[] = []
+	if (!samples) return vals
+	for (const sampleId in samples) {
+		const v = samples[sampleId]?.[xTermId]?.value ?? samples[sampleId]?.[xTermId]?.key
+		if (typeof v === 'number' && Number.isFinite(v)) vals.push(v)
+	}
+	return vals
 }
 
 export function buildRunChartFromData(
