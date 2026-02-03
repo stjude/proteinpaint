@@ -11,6 +11,7 @@ import { mayLog } from '#src/helpers.ts'
 import Database from 'better-sqlite3'
 import { formatElapsedTime } from '#shared'
 
+const num_filter_cutoff = 3 // The maximum number of filter terms that can be entered and parsed using the chatbot
 export const api: RouteApi = {
 	endpoint: 'termdb/chat',
 	methods: {
@@ -435,7 +436,7 @@ async function validate_DE_response(response: string, ds: any, db_rows: DbRows[]
 		html += 'group1 not present in DE output'
 	} else {
 		// Validate filter terms
-		const validated_filters = validate_filter(response_type.group1, ds)
+		const validated_filters = validate_filter(response_type.group1, ds, name1)
 		if (validated_filters.html.length > 0) {
 			html += validated_filters.html
 		} else {
@@ -457,7 +458,7 @@ async function validate_DE_response(response: string, ds: any, db_rows: DbRows[]
 	if (!response_type.group2) {
 		html += 'group2 not present in DE output'
 	} else {
-		const validated_filters = validate_filter(response_type.group2, ds)
+		const validated_filters = validate_filter(response_type.group2, ds, name2)
 		if (validated_filters.html.length > 0) {
 			html += validated_filters.html
 		} else {
@@ -485,6 +486,10 @@ async function validate_DE_response(response: string, ds: any, db_rows: DbRows[]
 	}
 
 	if (html.length > 0) {
+		html = removeLastOccurrence(
+			html,
+			'For now, the maximum number of filter terms supported through the chatbot is ' + num_filter_cutoff
+		)
 		return { type: 'html', html: html }
 	} else {
 		const pp_plot_json: any = { childType: 'volcano', termType: 'geneExpression', chartType: 'differentialAnalysis' }
@@ -741,7 +746,7 @@ function validate_summary_response(response: string, common_genes: string[], dat
 	}
 
 	if (response_type.simpleFilter && response_type.simpleFilter.length > 0) {
-		const validated_filters = validate_filter(response_type.simpleFilter, ds)
+		const validated_filters = validate_filter(response_type.simpleFilter, ds, '')
 		if (validated_filters.html.length > 0) {
 			html += validated_filters.html
 		} else {
@@ -779,19 +784,49 @@ function validate_term(response_term: string, common_genes: string[], dataset_js
 	return { term_type: term_type, html: html }
 }
 
-function validate_filter(filters: any[], ds: any): any {
+function countOccurrences(str: string, word: string): number {
+	if (word === '') return 0 // avoid infinite loops
+	let count = 0
+	let pos = 0
+
+	while ((pos = str.indexOf(word, pos)) !== -1) {
+		count++
+		pos += word.length // move past this match
+	}
+	return count
+}
+
+function removeLastOccurrence(str: string, word: string): string {
+	const index = str.lastIndexOf(word)
+	if (index === -1) return str // word not found
+
+	const occurrences = countOccurrences(str, word)
+	if (occurrences == 1) {
+		return str
+	} else {
+		// Slice out the word and concatenate the surrounding parts
+		return str.slice(0, index) + str.slice(index + word.length)
+	}
+}
+
+function validate_filter(filters: any[], ds: any, group_name: string): any {
 	if (!Array.isArray(filters)) throw 'filter is not array'
 
-	const num_filter_cutoff = 3 // The maximum number of filter terms that can be entered and parsed using the chatbot
 	let filter_result: any = { html: '' }
-	mayLog('filters.length:', filters.length)
 	if (filters.length <= 2) {
 		// If number of filter terms <=2 then simply a single iteration of generate_filter_term() is sufficient
 		filter_result = generate_filter_term(filters, ds)
 	} else {
 		if (filters.length > num_filter_cutoff) {
 			filter_result.html =
-				'For now, the maximum number of filter terms supported through the chatbot is ' + num_filter_cutoff // Added temporary logic to restrict the number of filter terms to num_filter_cutoff.
+				'For now, the maximum number of filter terms supported through the chatbot is ' + num_filter_cutoff
+			if (group_name.length > 0) {
+				// Group name is blank for summary filter, this is case for groups
+				filter_result.html += ' . The number of filter terms for group ' + group_name + ' is ' + filters.length + '\n' // Added temporary logic to restrict the number of filter terms to num_filter_cutoff.
+			} else {
+				// For summary filter prompts which do not have a group
+				filter_result.html += 'The number of filter terms for this query is ' + filters.length
+			}
 		} else {
 			// When number of filter terms is greater than 2, then in each iteration the first two terms are taken and a filter object is created which is passed in the following iteration as a filter term
 			for (let i = 0; i < filters.length - 1; i++) {
