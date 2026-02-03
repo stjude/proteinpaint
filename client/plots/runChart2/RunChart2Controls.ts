@@ -94,9 +94,9 @@ function getBaseInputs(app: AppApi) {
 	return [
 		{
 			type: 'term',
-			configKey: 'term',
+			configKey: 'xtw',
 			chartType: 'runChart2',
-			usecase: { target: 'runChart2', detail: 'term' },
+			usecase: { target: 'runChart2', detail: 'xtw' },
 			label: 'X',
 			vocabApi: app.vocabApi,
 			menuOptions: 'edit',
@@ -104,9 +104,9 @@ function getBaseInputs(app: AppApi) {
 		},
 		{
 			type: 'term',
-			configKey: 'term2',
+			configKey: 'ytw',
 			chartType: 'runChart2',
-			usecase: { target: 'runChart2', detail: 'term2' },
+			usecase: { target: 'runChart2', detail: 'ytw' },
 			label: 'Y',
 			vocabApi: app.vocabApi,
 			defaultQ4fillTW: term0_term2_defaultQ,
@@ -139,7 +139,7 @@ function getBaseInputs(app: AppApi) {
 				}
 				return tw
 			},
-			getDisplayStyle: (plot: any) => (plot?.config?.term?.q?.mode === 'discrete' ? 'table-row' : 'none')
+			getDisplayStyle: (plot: any) => (plot?.config?.xtw?.q?.mode === 'discrete' ? 'table-row' : 'none')
 		},
 		{
 			label: 'Plot height',

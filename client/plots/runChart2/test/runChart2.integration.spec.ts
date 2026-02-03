@@ -53,8 +53,8 @@ tape('Render TermdbTest runChart2 plot with data', async function (test) {
 			plots: [
 				{
 					chartType: 'runChart2',
-					term: { id: 'date' },
-					term2: { id: 'hrtavg' }
+					xtw: { term: { id: 'date' }, q: { mode: 'continuous' } },
+					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
 				}
 			]
 		}
@@ -77,7 +77,7 @@ tape('Render TermdbTest runChart2 plot with data', async function (test) {
 	test.end()
 })
 
-tape('runChart2Period (divide-by term0) renders series and data points', async test => {
+tape('runChart2Period (period) renders series and data points', async test => {
 	test.timeoutAfter(10000)
 	test.plan(3)
 
@@ -88,9 +88,9 @@ tape('runChart2Period (divide-by term0) renders series and data points', async t
 			plots: [
 				{
 					chartType: 'runChart2',
-					term: { id: 'date' },
-					term2: { id: 'hrtavg' },
-					term0: { id: 'date', q: { mode: 'discrete' } }
+					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
+					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } },
+					period: { term: { id: 'date' }, q: { mode: 'discrete' } }
 				}
 			]
 		}
@@ -130,9 +130,9 @@ tape('runChart2Period has x-axis and y-axis groups', async test => {
 			plots: [
 				{
 					chartType: 'runChart2',
-					term: { id: 'date' },
-					term2: { id: 'hrtavg' },
-					term0: { id: 'date', q: { mode: 'discrete' } }
+					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
+					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } },
+					period: { term: { id: 'date' }, q: { mode: 'discrete' } }
 				}
 			]
 		}
@@ -167,9 +167,9 @@ tape('runChart2Period has axis labels', async test => {
 			plots: [
 				{
 					chartType: 'runChart2',
-					term: { id: 'date' },
-					term2: { id: 'hrtavg' },
-					term0: { id: 'date', q: { mode: 'discrete' } }
+					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
+					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } },
+					period: { term: { id: 'date' }, q: { mode: 'discrete' } }
 				}
 			]
 		}
@@ -204,9 +204,9 @@ tape('runChart2Period chart SVG is valid for download', async test => {
 			plots: [
 				{
 					chartType: 'runChart2',
-					term: { id: 'date' },
-					term2: { id: 'hrtavg' },
-					term0: { id: 'date', q: { mode: 'discrete' } }
+					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
+					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } },
+					period: { term: { id: 'date' }, q: { mode: 'discrete' } }
 				}
 			]
 		}
@@ -239,8 +239,8 @@ tape('RunChart2 control panel initializes and renders', async test => {
 			plots: [
 				{
 					chartType: 'runChart2',
-					term: { id: 'date' },
-					term2: { id: 'hrtavg' }
+					xtw: { term: { id: 'date' }, q: { mode: 'continuous' } },
+					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
 				}
 			]
 		}
@@ -277,8 +277,8 @@ tape('RunChart2 chart images can be extracted for download', async test => {
 			plots: [
 				{
 					chartType: 'runChart2',
-					term: { id: 'date' },
-					term2: { id: 'hrtavg' }
+					xtw: { term: { id: 'date' }, q: { mode: 'continuous' } },
+					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
 				}
 			]
 		}
@@ -313,9 +313,9 @@ tape('RunChart2Period should render median lines for each series', async test =>
 			plots: [
 				{
 					chartType: 'runChart2',
-					term: { id: 'date' },
-					term2: { id: 'hrtavg' },
-					term0: { id: 'date', q: { mode: 'discrete' } }
+					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
+					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } },
+					period: { term: { id: 'date' }, q: { mode: 'discrete' } }
 				}
 			]
 		}
@@ -359,8 +359,8 @@ tape('RunChart2 Y-axis baseline should be 0 for positive-only data', async test 
 			plots: [
 				{
 					chartType: 'runChart2',
-					term: { id: 'date' },
-					term2: { id: 'hrtavg' } // All positive values
+					xtw: { term: { id: 'date' }, q: { mode: 'continuous' } },
+					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } } // All positive values
 				}
 			]
 		}
@@ -403,9 +403,9 @@ tape('RunChart2Period should render series with different colors', async test =>
 			plots: [
 				{
 					chartType: 'runChart2',
-					term: { id: 'date' },
-					term2: { id: 'hrtavg' },
-					term0: { id: 'date', q: { mode: 'discrete' } }
+					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
+					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } },
+					period: { term: { id: 'date' }, q: { mode: 'discrete' } }
 				}
 			]
 		}
@@ -450,8 +450,8 @@ tape('RunChart2 with mean aggregation should render correctly', async test => {
 			plots: [
 				{
 					chartType: 'runChart2',
-					term: { id: 'date' },
-					term2: { id: 'hrtavg' },
+					xtw: { term: { id: 'date' }, q: { mode: 'continuous' } },
+					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } },
 					settings: {
 						runChart2: {
 							aggregation: 'mean'
@@ -490,8 +490,8 @@ tape('RunChart2 axis labels and tick marks should render correctly', async test 
 			plots: [
 				{
 					chartType: 'runChart2',
-					term: { id: 'date' },
-					term2: { id: 'hrtavg' }
+					xtw: { term: { id: 'date' }, q: { mode: 'continuous' } },
+					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
 				}
 			]
 		}
@@ -517,6 +517,134 @@ tape('RunChart2 axis labels and tick marks should render correctly', async test 
 
 		const yAxisLabel = svg.select('[data-testId="sjpp-runChart2-yAxisLabel"]')
 		test.ok(!yAxisLabel.empty(), 'should have Y-axis label')
+	} catch (e) {
+		console.error('Test error:', e)
+		test.fail(`${e}`)
+	} finally {
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('RunChart2 with count aggregation should render correctly', async test => {
+	test.plan(2)
+	test.timeoutAfter(5000)
+
+	const holder = getHolder()
+
+	runpp({
+		holder,
+		state: {
+			plots: [
+				{
+					chartType: 'runChart2',
+					xtw: { id: 'date' },
+					ytw: { id: 'hrtavg' },
+					settings: {
+						runChart2: {
+							aggregation: 'count'
+						}
+					}
+				}
+			]
+		}
+	})
+
+	try {
+		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		test.ok(chartHolder, 'should render with count aggregation')
+
+		const svg = await waitForElement('svg', chartHolder, 5000)
+		const circles = svg.selectAll('circle')
+		test.ok(circles.size() > 0, `should render data points with count aggregation. Found ${circles.size()}.`)
+	} catch (e) {
+		console.error('Test error:', e)
+		test.fail(`${e}`)
+	} finally {
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('RunChart2 with discrete X-axis should partition data into series', async test => {
+	test.plan(3)
+	test.timeoutAfter(5000)
+
+	const holder = getHolder()
+
+	runpp({
+		holder,
+		state: {
+			plots: [
+				{
+					chartType: 'runChart2',
+					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
+					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
+				}
+			]
+		}
+	})
+
+	try {
+		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const svg = await waitForElement('svg', chartHolder, 5000)
+		const seriesGroup = await waitForElement('[data-testId="sjpp-runChart2-seriesGroup"]', svg, 5000)
+
+		// Discrete mode should create multiple series (one per discrete bin/period)
+		const paths = seriesGroup.selectAll('path')
+		test.ok(paths.size() >= 1, `discrete mode should render series paths. Found ${paths.size()}.`)
+
+		// Should have data points across series
+		const circles = seriesGroup.selectAll('circle')
+		test.ok(circles.size() > 0, `discrete mode should render data points. Found ${circles.size()}.`)
+
+		// Should have multiple paths when X-axis is discrete (one path per series/period)
+		test.ok(
+			paths.size() > 1,
+			`discrete mode should partition into multiple series. Found ${paths.size()} series paths.`
+		)
+	} catch (e) {
+		console.error('Test error:', e)
+		test.fail(`${e}`)
+	} finally {
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('RunChart2 with continuous X-axis should render single series', async test => {
+	test.plan(2)
+	test.timeoutAfter(5000)
+
+	const holder = getHolder()
+
+	runpp({
+		holder,
+		state: {
+			plots: [
+				{
+					chartType: 'runChart2',
+					xtw: { term: { id: 'date' }, q: { mode: 'continuous' } },
+					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
+				}
+			]
+		}
+	})
+
+	try {
+		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const svg = await waitForElement('svg', chartHolder, 5000)
+
+		// Continuous mode should have a single series with all data points
+		const circles = svg.selectAll('circle')
+		test.ok(circles.size() > 0, `continuous mode should render data points. Found ${circles.size()}.`)
+
+		// Verify it's a single series (no partitioning)
+		const paths = svg.selectAll('[data-testId="sjpp-runChart2-seriesGroup"] path')
+		test.ok(
+			paths.size() === 1 || paths.size() === 0,
+			`continuous mode should have single series. Found ${paths.size()} paths.`
+		)
 	} catch (e) {
 		console.error('Test error:', e)
 		test.fail(`${e}`)
