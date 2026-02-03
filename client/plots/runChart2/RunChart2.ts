@@ -18,7 +18,7 @@ export class RunChart2 extends PlotBase implements RxComponent {
 	model!: RunChart2Model
 	viewModel!: RunChart2ViewModel
 	view!: RunChart2View
-	configTermKeys = ['term', 'term2', 'divideBy']
+	configTermKeys = ['xtw', 'ytw', 'divideBy']
 
 	constructor(opts: any, api: any) {
 		super(opts, api)
@@ -119,15 +119,15 @@ export class RunChart2 extends PlotBase implements RxComponent {
 
 		const svg = this.view.chartDom.svg
 		if (svg && !svg.empty()) {
-			const chartName = this.state?.config?.term?.term?.name || 'runChart2'
+			const chartName = this.state?.config?.xtw?.term?.name || 'runChart2'
 			chartImages.push({ name: chartName, svg })
 		}
 		return chartImages
 	}
 
 	getDownloadFilename() {
-		const termName = this.state?.config?.term?.term?.name || 'runChart2'
-		const term2Name = this.state?.config?.term2?.term?.name || ''
+		const termName = this.state?.config?.xtw?.term?.name || 'runChart2'
+		const term2Name = this.state?.config?.ytw?.term?.name || ''
 		return term2Name ? `${termName}_${term2Name}` : termName
 	}
 
@@ -163,18 +163,28 @@ export class RunChart2 extends PlotBase implements RxComponent {
 export const runChart2Init = getCompInit(RunChart2)
 export const componentInit = runChart2Init
 
+async function ensureTermHydrated(tw: any, vocabApi: AppApi['vocabApi']) {
+	const term = tw?.term
+	if (!term?.id || term.type != null) return
+	const terms = await vocabApi.getTerms([term.id])
+	const full = terms[term.id]
+	if (full) tw.term = full
+}
+
 export async function getPlotConfig(opts: any, app: AppApi) {
-	if (!opts.term) throw new Error('opts.term is required for the X axis')
-	if (!opts.term2) throw new Error('opts.term2 is required for the Y axis')
+	const xtw = opts.xtw
+	const ytw = opts.ytw
 
 	try {
-		// term/term2 q.mode: continuous = 1 series, discrete = multiple series. divideBy = partition (period only).
-		if (!opts.term.q) opts.term.q = {}
-		if (!opts.term2.q) opts.term2.q = {}
-		opts.term.q.mode = opts.term.q.mode ?? 'continuous'
-		opts.term2.q.mode = opts.term2.q.mode ?? 'continuous'
-		await fillTermWrapper(opts.term, app.vocabApi)
-		await fillTermWrapper(opts.term2, app.vocabApi)
+		await ensureTermHydrated(xtw, app.vocabApi)
+		await ensureTermHydrated(ytw, app.vocabApi)
+
+		if (!xtw.q) xtw.q = {}
+		if (!ytw.q) ytw.q = {}
+		xtw.q.mode = xtw.q.mode ?? 'continuous'
+		ytw.q.mode = ytw.q.mode ?? 'continuous'
+		await fillTermWrapper(xtw, app.vocabApi)
+		await fillTermWrapper(ytw, app.vocabApi)
 	} catch (e) {
 		console.error(e)
 		throw new Error(`runChart2 getPlotConfig() failed: ${e}`)
@@ -183,13 +193,15 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 	const defaultConfig = app.vocabApi.termdbConfig?.plotConfigByCohort?.default?.[opts.chartType]
 
 	let defaultDivideBy: any = null
-	if (opts.term?.q?.mode === 'discrete' && opts.term?.term?.id) {
-		const termQ = opts.term.q ?? {}
-		defaultDivideBy = { term: opts.term.term, q: { ...termQ, mode: 'discrete' as const }, $id: opts.term.$id }
+	if (xtw?.q?.mode === 'discrete' && xtw?.term?.id) {
+		const termQ = xtw.q ?? {}
+		defaultDivideBy = { term: xtw.term, q: { ...termQ, mode: 'discrete' as const }, $id: xtw.$id }
 	}
 
 	const config: any = {
 		hidePlotFilter: true, // sandbox filter not implemented
+		xtw,
+		ytw,
 		divideBy: defaultDivideBy ?? null,
 		settings: {
 			controls: { isOpen: false },
@@ -207,8 +219,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			type: 'plot_create',
 			config: {
 				chartType: 'runChart2',
-				term: { term: xterm, q: { mode: 'continuous' } },
-				term2: { term: yterm, q: { mode: 'continuous' } },
+				xtw: { term: xterm, q: { mode: 'continuous' } },
+				ytw: { term: yterm, q: { mode: 'continuous' } },
 				name: `${xterm.name} vs ${yterm.name}`
 			}
 		})

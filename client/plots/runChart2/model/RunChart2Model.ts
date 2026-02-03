@@ -39,8 +39,8 @@ export class RunChart2Model {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,
 			filter: state.termfilter?.filter,
-			xtw: config.term,
-			ytw: config.term2,
+			xtw: config.xtw,
+			ytw: config.ytw,
 			aggregation: config.settings.runChart2.aggregation
 		}
 		return opts

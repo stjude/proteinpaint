@@ -116,8 +116,8 @@ export class SeriesRender {
 		const tip = this.runChart2?.dom?.hovertip
 		if (!tip) return
 		const cfg = this.runChart2?.state?.config
-		const xTermName = cfg?.term?.term?.name ?? 'X'
-		const yTermName = cfg?.term2?.term?.name ?? 'Y'
+		const xTermName = cfg?.xtw?.term?.name ?? 'X'
+		const yTermName = cfg?.ytw?.term?.name ?? 'Y'
 		tip.clear()
 		const table = table2col({ holder: tip.d.append('div') })
 		if (this.series.seriesId) table.addRow('Period', this.series.seriesId)
