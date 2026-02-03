@@ -157,56 +157,63 @@ export type GRIN2Response = {
 			}>
 		>
 	}
-	/** Summary statistics */
-	totalGenes?: number
-	showingTop?: number
-	/** Timing info for the analysis */
-	timing?: {
-		/** Time taken to run data processing */
-		processingTime: string
-		/** Time taken to run GRIN2 processing */
-		grin2Time: string
-		/** Time taken to run Manhattan plot generation */
-		plottingTime: string
-		/** Total time taken for the entire run */
-		totalTime: string
-	}
-	/** Detailed processing summary */
-	processingSummary?: {
-		totalSamples?: number
-		processedSamples?: number
-		failedSamples?: number
-		failedFiles?: Array<{
-			sampleName: string
-			filePath: string
-			error: string
-		}>
-		lesionCap?: number
-		totalLesions?: number
-		processedLesions?: number
-		unprocessedSamples?: number
-		lesionCounts?: {
-			total?: number
-			byType?: Record<
-				string, // Our key is the GRIN2 lesion type
-				{
-					count: number
-					samples: number
-				}
-			>
-		}
-	}
-	/** Cache file name for storing GRIN2 results */
-	cacheFileName?: string
 
-	/** Memory usage profile during GRIN2 processing */
-	memoryProfile?: {
-		start?: number
-		after_prep?: number
-		after_overlaps?: number
-		after_counts?: number
-		after_stats?: number
-		peak?: number
+	// ==========================================================================================================
+	// GRIN2 Run Stats — consolidated from processing, timing, memory, and includes totalGenes/showingTop
+	// ==========================================================================================================
+
+	stats?: {
+		/** Summary statistics */
+		totalGenes?: number
+		showingTop?: number
+		/** Cache file name for storing GRIN2 results */
+		cacheFileName?: string
+		/** Timing info for the analysis */
+		timing?: {
+			/** Time taken to run data processing */
+			processingTime: string
+			/** Time taken to run GRIN2 processing */
+			grin2Time: string
+			/** Time taken to run Manhattan plot generation */
+			plottingTime: string
+			/** Total time taken for the entire run */
+			totalTime: string
+		}
+		/** Detailed processing summary */
+		processing?: {
+			totalSamples?: number
+			processedSamples?: number
+			failedSamples?: number
+			failedFiles?: Array<{
+				sampleName: string
+				filePath: string
+				error: string
+			}>
+			lesionCap?: number
+			totalLesions?: number
+			processedLesions?: number
+			unprocessedSamples?: number
+			lesionCounts?: {
+				total?: number
+				byType?: Record<
+					string, // Our key is the GRIN2 lesion type
+					{
+						count: number
+						samples: number
+					}
+				>
+			}
+		}
+
+		/** Memory usage profile during GRIN2 processing. Using snake_case as this comes from python */
+		memory: {
+			start: number
+			after_prep: number
+			after_overlaps: number
+			after_counts: number
+			after_stats: number
+			peak: number
+		}
 	}
 }
 

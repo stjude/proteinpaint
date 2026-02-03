@@ -231,18 +231,18 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	// Step 2: Process sample data, convert to lesion format, and apply overall lesion cap
 	const processingStartTime = Date.now()
 
-	const { lesions, processingSummary } = await processSampleData(samples, ds, request)
+	const { lesions, processing } = await processSampleData(samples, ds, request)
 
 	const processingTime = Date.now() - processingStartTime
 	mayLog(`[GRIN2] Data processing took ${formatElapsedTime(processingTime)}`)
 	mayLog(
-		`[GRIN2] Processing summary: ${processingSummary?.processedSamples ?? 0}/${
-			processingSummary?.totalSamples ?? samples.length
+		`[GRIN2] Processing summary: ${processing?.processedSamples ?? 0}/${
+			processing?.totalSamples ?? samples.length
 		} samples processed successfully`
 	)
 
-	if (processingSummary?.failedSamples !== undefined && processingSummary.failedSamples > 0) {
-		mayLog(`[GRIN2] Warning: ${processingSummary.failedSamples} samples failed to process`)
+	if (processing?.failedSamples !== undefined && processing.failedSamples > 0) {
+		mayLog(`[GRIN2] Warning: ${processing.failedSamples} samples failed to process`)
 	}
 
 	if (lesions.length === 0) {
@@ -321,17 +321,19 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		pngImg: manhattanPlotData.png,
 		plotData: manhattanPlotData.plot_data,
 		topGeneTable: resultData.topGeneTable,
-		totalGenes: resultData.totalGenes,
-		showingTop: resultData.showingTop,
-		timing: {
-			processingTime: formatElapsedTime(processingTime),
-			grin2Time: formatElapsedTime(grin2AnalysisTime),
-			plottingTime: formatElapsedTime(manhattanPlotTime),
-			totalTime: formatElapsedTime(totalTime)
-		},
-		processingSummary: processingSummary,
-		cacheFileName: resultData.cacheFileName,
-		memoryProfile: resultData.memoryProfile
+		stats: {
+			totalGenes: resultData.totalGenes,
+			showingTop: resultData.showingTop,
+			processing: processing,
+			timing: {
+				processingTime: formatElapsedTime(processingTime),
+				grin2Time: formatElapsedTime(grin2AnalysisTime),
+				plottingTime: formatElapsedTime(manhattanPlotTime),
+				totalTime: formatElapsedTime(totalTime)
+			},
+			memory: resultData.memory,
+			cacheFileName: resultData.cacheFileName
+		}
 	}
 
 	return response
@@ -347,7 +349,7 @@ async function processSampleData(
 	samples: any[],
 	ds: any,
 	request: GRIN2Request
-): Promise<{ lesions: any[]; processingSummary: GRIN2Response['processingSummary'] }> {
+): Promise<{ lesions: any[]; processing: NonNullable<GRIN2Response['stats']>['processing'] }> {
 	const lesions: any[] = []
 	const maxLesions = await getMaxLesions()
 	mayLog(`[GRIN2] Max lesions for this run: ${maxLesions.toLocaleString()}`)
@@ -364,7 +366,7 @@ async function processSampleData(
 		samplesPerType.set(type, new Set<string>())
 	}
 
-	const processingSummary: GRIN2Response['processingSummary'] = {
+	const processing: NonNullable<GRIN2Response['stats']>['processing'] = {
 		totalSamples: samples.length,
 		processedSamples: 0,
 		failedSamples: 0,
@@ -377,7 +379,7 @@ async function processSampleData(
 	for (let i = 0; i < samples.length; i++) {
 		if (lesions.length >= maxLesions) {
 			const remaining = samples.length - i
-			if (remaining > 0) processingSummary.unprocessedSamples! += remaining
+			if (remaining > 0) processing.unprocessedSamples! += remaining
 			mayLog(`[GRIN2] Overall lesion cap (${maxLesions}) reached; stopping early.`)
 			break
 		}
@@ -407,11 +409,11 @@ async function processSampleData(
 				samplesPerType.get(type)?.add(sample.name)
 			}
 
-			processingSummary.processedSamples! += 1
-			processingSummary.totalLesions! += filteredLesions.length
+			processing.processedSamples! += 1
+			processing.totalLesions! += filteredLesions.length
 		} catch (error) {
-			processingSummary.failedSamples! += 1
-			processingSummary.failedFiles!.push({
+			processing.failedSamples! += 1
+			processing.failedFiles!.push({
 				sampleName: sample.name,
 				filePath: filepath,
 				error: error instanceof Error ? error.message || 'Unknown error' : String(error)
@@ -420,8 +422,8 @@ async function processSampleData(
 		}
 	}
 
-	processingSummary.processedLesions = lesions.length
-	processingSummary.lesionCap = maxLesions
+	processing.processedLesions = lesions.length
+	processing.lesionCap = maxLesions
 
 	// Build lesion counts for summary
 	const lesionCounts: any = {
@@ -450,9 +452,9 @@ async function processSampleData(
 		})
 	}
 
-	processingSummary.lesionCounts = lesionCounts
+	processing.lesionCounts = lesionCounts
 
-	return { lesions, processingSummary }
+	return { lesions, processing }
 }
 
 /** Process the MLST data for each sample - no per-type caps, just filter and convert */

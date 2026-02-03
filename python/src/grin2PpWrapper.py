@@ -298,7 +298,7 @@ try:
 		"showingTop": num_rows,
 		"cacheFileName": cache_file_path,
 		"lesionCounts": {"byType": lesion_counts.to_dict()},
-		"memoryProfile": grin_results.get("memory_profile", {})
+		"memory": grin_results.get("memory_profile", {})
 	}))
 
 except json.JSONDecodeError as e:
