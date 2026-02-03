@@ -1,6 +1,5 @@
 import type { RouteApi, RunChartRequest, RunChartResponse } from '#types'
 import { runChartPayload } from '#types/checkers'
-import { compute_bins } from '#shared'
 import { getNumberFromDate } from '#shared/terms.js'
 
 export const api: RouteApi = {
@@ -38,32 +37,9 @@ export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChart
 	if (data.error) throw new Error(data.error)
 
 	// Partition by xtw when xtw is in discrete mode
-	const partitionByTermId = q.xtw?.q?.mode === 'discrete' ? xTermId : null
+	const xTermBin = q.xtw?.q?.mode === 'discrete'
 
-	if (q.xtw?.q?.mode === 'discrete') {
-		const xValues = getXValuesFromData(data.samples, xTermId)
-		const min = xValues.length ? Math.min(...xValues) : 0
-		const max = xValues.length ? Math.max(...xValues) : 1
-		try {
-			const bins = compute_bins(q.xtw.q, () => ({ min, max }))
-			console.log(bins)
-		} catch (e) {
-			console.warn('runChart: compute_bins for period failed', e)
-		}
-	}
-
-	return buildRunChartFromData(q.aggregation, xTermId, yTermId, data, partitionByTermId)
-}
-
-/** Collect numeric X values from samples for min/max (e.g. for period binning). */
-function getXValuesFromData(samples: Record<string, any> | undefined, xTermId: string): number[] {
-	const vals: number[] = []
-	if (!samples) return vals
-	for (const sampleId in samples) {
-		const v = samples[sampleId]?.[xTermId]?.value ?? samples[sampleId]?.[xTermId]?.key
-		if (typeof v === 'number' && Number.isFinite(v)) vals.push(v)
-	}
-	return vals
+	return buildRunChartFromData(q.aggregation, xTermId, yTermId, data, xTermBin)
 }
 
 export function buildRunChartFromData(
@@ -71,23 +47,32 @@ export function buildRunChartFromData(
 	xTermId: string,
 	yTermId: string,
 	data: any,
-	partitionByTermId?: string | null
+	xTermBin: boolean
 ): RunChartResponse {
 	const allSamples = (data.samples || {}) as Record<string, any>
 
-	if (partitionByTermId) {
+	if (xTermBin) {
 		// runChart2Period: partition samples by divide-by term's bin key (period)
 		const period2Samples: Record<string, Record<string, any>> = {}
 		for (const sampleId in allSamples) {
 			const sample = allSamples[sampleId]
-			const periodKey = sample?.[partitionByTermId]?.key ?? sample?.[partitionByTermId]?.value ?? 'Default'
+			const xTerm = sample?.[xTermId]
+			if (xTerm?.key == null) {
+				throw new Error(`Missing key for xTermId=${xTermId} in sample ${sampleId}`)
+			}
+			const periodKey = xTerm.key
 			if (!period2Samples[periodKey]) period2Samples[periodKey] = {}
 			period2Samples[periodKey][sampleId] = sample
 		}
 		const periodKeys = Object.keys(period2Samples).sort()
+		console.log(`[runChart2Period] Partitioned into ${periodKeys.length} periods: ${periodKeys.join(', ')}`)
 		const series = periodKeys.map(seriesId => {
 			const subset = { samples: period2Samples[seriesId] }
-			const one = buildOneSeries(aggregation, xTermId, yTermId, subset)
+			console.log(
+				`[runChart2Period] Building series for period: ${seriesId} (${Object.keys(subset.samples).length} samples)`
+			)
+			const one = buildOneSeries(aggregation, xTermId, yTermId, subset, seriesId)
+			console.log(`[runChart2Period] Period ${seriesId}: rendered ${one.points.length} data points`)
 			return { seriesId, ...one }
 		})
 		return { status: 'ok', series }
@@ -101,7 +86,8 @@ function buildOneSeries(
 	aggregation: string,
 	xTermId: string,
 	yTermId: string,
-	data: any
+	data: any,
+	periodLabel?: string
 ): { median: number; points: any[] } {
 	const buckets: Record<
 		string,
@@ -128,8 +114,9 @@ function buildOneSeries(
 
 		if (xRaw == null || yRaw == null) {
 			skippedSamples++
+			const periodInfo = periodLabel ? ` [Period: ${periodLabel}]` : ''
 			console.log(
-				`Skipping sample ${sampleId}: Missing x or y value - xTermId=${xTermId} (value: ${xRaw}), yTermId=${yTermId} (value: ${yRaw})`
+				`Skipping sample ${sampleId}${periodInfo}: Missing x or y value - xTermId=${xTermId} (value: ${xRaw}), yTermId=${yTermId} (value: ${yRaw})`
 			)
 			continue
 		}
@@ -169,8 +156,9 @@ function buildOneSeries(
 
 		if (year == null || month == null || Number.isNaN(year) || Number.isNaN(month)) {
 			skippedSamples++
+			const periodInfo = periodLabel ? ` [Period: ${periodLabel}]` : ''
 			console.log(
-				`Skipping sample ${sampleId}: Invalid date value - xTermId=${xTermId}, xRaw=${xRaw}, parsed year=${year}, month=${month}`
+				`Skipping sample ${sampleId}${periodInfo}: Invalid date value - xTermId=${xTermId}, xRaw=${xRaw}, parsed year=${year}, month=${month}`
 			)
 			continue
 		}
@@ -299,6 +287,11 @@ function buildOneSeries(
 					return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
 			  })()
 			: 0
+
+	if (skippedSamples > 0) {
+		const periodInfo = periodLabel ? ` in period "${periodLabel}"` : ''
+		console.log(`buildOneSeries: Skipped ${skippedSamples} sample(s)${periodInfo} due to missing/invalid data`)
+	}
 
 	return { median, points }
 }
