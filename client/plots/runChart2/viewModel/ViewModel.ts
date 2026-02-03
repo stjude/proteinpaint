@@ -4,7 +4,7 @@ import { scaleLinear } from 'd3-scale'
 export class RunChart2ViewModel {
 	#horizPad = 70
 	#vertPad = 40
-	#bottomLabelPad = 55
+	#bottomLabelPad = 72
 	#leftLabelPad = 50
 	#xAxisLabelOffset = 50
 	#yAxisLabelX = 55

@@ -1,6 +1,8 @@
 import { term0_term2_defaultQ } from '../controls'
 import type { AppApi } from '#rx'
 import { roundValueAuto } from '#shared/roundValue.js'
+import { fillTermWrapper } from '#termsetting'
+import { isNumericTerm } from '#shared/terms.js'
 
 /** Builds X/Y min-max control inputs from data range. Uses fallback 0–1 when range is invalid. */
 export function getMinMaxInputs(
@@ -120,6 +122,24 @@ function getBaseInputs(app: AppApi) {
 				{ label: 'Median', value: 'median' },
 				{ label: 'Count', value: 'count' }
 			]
+		},
+		{
+			type: 'term',
+			configKey: 'divideBy',
+			chartType: 'runChart2',
+			usecase: { target: 'runChart2', detail: 'divideBy' },
+			title: 'Term to divide by categories',
+			label: 'Divide by',
+			vocabApi: app.vocabApi,
+			numericEditMenuVersion: ['discrete'],
+			processInput: async (tw: any) => {
+				if (tw?.term && isNumericTerm(tw.term)) {
+					tw.q = { ...tw.q, mode: 'discrete' }
+					await fillTermWrapper(tw, app.vocabApi)
+				}
+				return tw
+			},
+			getDisplayStyle: (plot: any) => (plot?.config?.term?.q?.mode === 'discrete' ? 'table-row' : 'none')
 		},
 		{
 			label: 'Plot height',

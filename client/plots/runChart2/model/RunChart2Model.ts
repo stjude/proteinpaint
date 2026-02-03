@@ -21,12 +21,11 @@ export class RunChart2Model {
 		const body: any = {
 			genome: opts.genome,
 			dslabel: opts.dslabel,
-			filter: getNormalRoot(opts.filter),
+			filter: getNormalRoot(opts.filter ?? undefined),
 			xtw: opts.xtw,
 			ytw: opts.ytw,
-			aggregation: opts.aggregation
+			aggregation: opts.aggregation ?? 'mean'
 		}
-		if (opts.divideByTW) body.divideByTW = opts.divideByTW
 		const result: RunChartResponse = await dofetch3('termdb/runChart', { body })
 
 		if (result['error']) throw new Error(`RunChart2Model.fetchData() failed: ${result['error']}`)
@@ -39,7 +38,7 @@ export class RunChart2Model {
 		const opts: RunChartRequest = {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,
-			filter: state.termfilter.filter,
+			filter: state.termfilter?.filter,
 			xtw: config.term,
 			ytw: config.term2,
 			aggregation: config.settings.runChart2.aggregation
