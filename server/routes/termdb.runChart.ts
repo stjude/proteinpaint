@@ -19,11 +19,9 @@ export const api: RouteApi = {
 
 export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChartResponse> {
 	const terms: any = [q.xtw, q.ytw]
-	if (q.divideByTW) terms.push(q.divideByTW)
 
 	const xTermId = q.xtw['$id'] ?? q.xtw.term?.id
 	const yTermId = q.ytw['$id'] ?? q.ytw.term?.id
-	const divideByTermId = q.divideByTW ? q.divideByTW['$id'] ?? q.divideByTW.term?.id : null
 
 	const { getData } = await import('../src/termdb.matrix.js')
 
@@ -39,8 +37,8 @@ export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChart
 
 	if (data.error) throw new Error(data.error)
 
-	// divideByTW (term0) takes precedence; else partition by xtw when xtw is discrete
-	const partitionByTermId = divideByTermId || (q.xtw?.q?.mode === 'discrete' ? xTermId : null)
+	// Partition by xtw when xtw is in discrete mode
+	const partitionByTermId = q.xtw?.q?.mode === 'discrete' ? xTermId : null
 
 	if (q.xtw?.q?.mode === 'discrete') {
 		const xValues = getXValuesFromData(data.samples, xTermId)
