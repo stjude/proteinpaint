@@ -65,14 +65,9 @@ export function buildRunChartFromData(
 			period2Samples[periodKey][sampleId] = sample
 		}
 		const periodKeys = Object.keys(period2Samples).sort()
-		console.log(`[runChart2Period] Partitioned into ${periodKeys.length} periods: ${periodKeys.join(', ')}`)
 		const series = periodKeys.map(seriesId => {
 			const subset = { samples: period2Samples[seriesId] }
-			console.log(
-				`[runChart2Period] Building series for period: ${seriesId} (${Object.keys(subset.samples).length} samples)`
-			)
-			const one = buildOneSeries(aggregation, xTermId, yTermId, subset, seriesId)
-			console.log(`[runChart2Period] Period ${seriesId}: rendered ${one.points.length} data points`)
+			const one = buildOneSeries(aggregation, xTermId, yTermId, subset)
 			return { seriesId, ...one }
 		})
 		return { status: 'ok', series }
@@ -86,8 +81,7 @@ function buildOneSeries(
 	aggregation: string,
 	xTermId: string,
 	yTermId: string,
-	data: any,
-	periodLabel?: string
+	data: any
 ): { median: number; points: any[] } {
 	const buckets: Record<
 		string,
@@ -104,8 +98,6 @@ function buildOneSeries(
 		}
 	> = {}
 
-	let skippedSamples = 0
-
 	for (const sampleId in (data.samples || {}) as any) {
 		const sample = (data.samples as any)[sampleId]
 		// For discrete xtw, use .value (raw date) for x positioning; .key is the period label
@@ -113,11 +105,6 @@ function buildOneSeries(
 		const yRaw = sample?.[yTermId]?.value ?? sample?.[yTermId]?.key
 
 		if (xRaw == null || yRaw == null) {
-			skippedSamples++
-			const periodInfo = periodLabel ? ` [Period: ${periodLabel}]` : ''
-			console.log(
-				`Skipping sample ${sampleId}${periodInfo}: Missing x or y value - xTermId=${xTermId} (value: ${xRaw}), yTermId=${yTermId} (value: ${yRaw})`
-			)
 			continue
 		}
 
@@ -155,11 +142,6 @@ function buildOneSeries(
 		}
 
 		if (year == null || month == null || Number.isNaN(year) || Number.isNaN(month)) {
-			skippedSamples++
-			const periodInfo = periodLabel ? ` [Period: ${periodLabel}]` : ''
-			console.log(
-				`Skipping sample ${sampleId}${periodInfo}: Invalid date value - xTermId=${xTermId}, xRaw=${xRaw}, parsed year=${year}, month=${month}`
-			)
 			continue
 		}
 
@@ -241,10 +223,6 @@ function buildOneSeries(
 		}
 	}
 
-	if (skippedSamples > 0) {
-		console.log(`buildRunChartFromData: Skipped ${skippedSamples} sample(s) due to missing x or y values`)
-	}
-
 	function xFromBucket(b: { sortKey: number }) {
 		const yearNum = Math.floor(b.sortKey / 100)
 		const monthNum = b.sortKey % 100
@@ -288,11 +266,6 @@ function buildOneSeries(
 			  })()
 			: 0
 
-	if (skippedSamples > 0) {
-		const periodInfo = periodLabel ? ` in period "${periodLabel}"` : ''
-		console.log(`buildOneSeries: Skipped ${skippedSamples} sample(s)${periodInfo} due to missing/invalid data`)
-	}
-
 	return { median, points }
 }
 
@@ -308,7 +281,6 @@ function init({ genomes }) {
 			const result = await getRunChart(q, ds)
 			res.send(result)
 		} catch (e: any) {
-			console.log(e.stack)
 			res.send({ error: e.message || e })
 		}
 	}
