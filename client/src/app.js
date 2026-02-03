@@ -291,7 +291,7 @@ export function runproteinpaint(arg) {
 			return appInstance
 		})
 		.catch(err => {
-			app.holder.text(err.message || err)
+			if (!app.holder.text()?.includes(err.message || err)) app.holder.text(err.message || err)
 			if (err.stack) console.log(err.stack)
 		})
 }

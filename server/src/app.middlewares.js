@@ -111,10 +111,35 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 			Object.assign(req.query, req.body)
 		}
 
-		const { genome, dslabel } = req.query
+		let { genome, dslabel, mds3, dsname } = req.query
+		dslabel = dslabel || mds3 || dsname
 		if (genome && dslabel) {
 			const altGenome = serverconfig.features?.altGenomeByDslabel?.[dslabel]
-			if (altGenome) req.query.genome = altGenome
+			if (altGenome) {
+				req.query.genome = altGenome
+				genome = altGenome
+			}
+
+			// TODO: all server routes handlers that check for valid genome, dslabel
+			// should be edited to only check for prefilled req.query.[__protected__??].genome/ds instead,
+			// since these simple checks can be centralized in this middleware
+			const g = genomes[genome]
+			if (!g) {
+				res.send({ error: 'invalid genome' })
+				return
+			}
+			const ds = g.datasets?.[dslabel]
+			// do not check genome-level termdb, not dataset-level termdb
+			if (!ds && !g.termdbs?.[dslabel]) {
+				const paramName = mds3 ? 'mds3' : dsname ? 'dsname' : 'dslabel'
+				res.send({ error: `invalid ${paramName}` })
+				return
+			}
+			// TODO: use generalized ds properties (like ds.init and .cachingMessage) for the check below
+			if (dslabel == 'GDC' && !ds.__gdc?.doneCaching) {
+				res.send({ error: 'The server has not finished caching the case IDs: try again in about 2 minutes.' })
+				return
+			}
 		}
 
 		// log the request before adding protected info
