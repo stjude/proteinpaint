@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- only allow searching by gene, and not coordinate, for geneVariant term
+- fix the visibility of chart button menu when there is a footer div with overflow-y: 'clip'
+- handle missing data for divideBy term in survival plot
+- disable the chart-specific download option in survival plot
+- remove all untagged html text in menu.clear(), previously only tagged children were removed
+
+
 ## 2.170.4
 
 Fixes:
