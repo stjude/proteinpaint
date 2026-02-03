@@ -233,6 +233,9 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 
 	const { lesions, processing } = await processSampleData(samples, ds, request)
 
+	// Guard against undefined processing summary so eslint doesn't complain
+	if (!processing) throw new Error('Processing summary is missing')
+
 	const processingTime = Date.now() - processingStartTime
 	mayLog(`[GRIN2] Data processing took ${formatElapsedTime(processingTime)}`)
 	mayLog(
@@ -316,23 +319,71 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 
 	const totalTime = processingTime + grin2AnalysisTime + manhattanPlotTime
 
+	// Build lesion type display rows
+	const lesionTypeRows: string[][] = []
+	if (processing.lesionCounts?.byType) {
+		const typeLabels: Record<string, string> = {}
+		Object.values(dt2lesion).forEach(config => {
+			config.lesionTypes.forEach(lt => {
+				typeLabels[lt.lesionType] = lt.name
+			})
+		})
+		for (const [type, data] of Object.entries(processing.lesionCounts.byType)) {
+			const { count, samples } = data as { count: number; samples: number }
+			lesionTypeRows.push([typeLabels[type] || type, `${count.toLocaleString()} (${samples} samples)`])
+		}
+	}
+
+	// Build cap warning if applicable
+	const capWarningRows: string[][] = []
+	const expectedToProcess = processing.totalSamples! - processing.failedSamples!
+	if (processing.processedSamples! < expectedToProcess) {
+		capWarningRows.push(
+			['', ''],
+			[
+				'⚠ Note',
+				`Lesion cap of ${processing.lesionCap?.toLocaleString()} was reached before all samples could be processed. ` +
+					`Analysis ran on ${processing.processedSamples!.toLocaleString()} of ${expectedToProcess.toLocaleString()} samples.`
+			]
+		)
+	}
+
 	const response: GRIN2Response = {
 		status: 'success',
 		pngImg: manhattanPlotData.png,
 		plotData: manhattanPlotData.plot_data,
 		topGeneTable: resultData.topGeneTable,
 		stats: {
-			totalGenes: resultData.totalGenes,
-			showingTop: resultData.showingTop,
-			processing: processing,
-			timing: {
-				processingTime: formatElapsedTime(processingTime),
-				grin2Time: formatElapsedTime(grin2AnalysisTime),
-				plottingTime: formatElapsedTime(manhattanPlotTime),
-				totalTime: formatElapsedTime(totalTime)
-			},
-			memory: resultData.memory,
-			cacheFileName: resultData.cacheFileName
+			lst: [
+				['Total Genes: ', resultData.totalGenes.toLocaleString()],
+				['Showing Top', resultData.showingTop.toLocaleString()],
+				['Cache File Name:', resultData.cacheFileName],
+				['Total Samples', processing.totalSamples!.toLocaleString()],
+				['Processed Samples', processing.processedSamples!.toLocaleString()],
+				['Unprocessed Samples', (processing.unprocessedSamples ?? 0).toLocaleString()],
+				['Failed Samples', processing.failedSamples!.toLocaleString()],
+				['Failed Files', (processing.failedFiles?.length ?? 0).toLocaleString()],
+				['Total Lesions', processing.totalLesions!.toLocaleString()],
+				['Processed Lesions', processing.processedLesions!.toLocaleString()],
+				['', ''],
+				['Lesion Counts', ''],
+				...lesionTypeRows,
+				['', ''],
+				['Memory Usage', ''],
+				['Start', `${resultData.memory?.start} MB`],
+				['After prep', `${resultData.memory?.after_prep} MB`],
+				['After overlaps', `${resultData.memory?.after_overlaps} MB`],
+				['After counts', `${resultData.memory?.after_counts} MB`],
+				['After stats', `${resultData.memory?.after_stats} MB`],
+				['Peak', `${resultData.memory?.peak} MB`],
+				['', ''],
+				['Timing', ''],
+				['Processing', formatElapsedTime(processingTime)],
+				['GRIN2', formatElapsedTime(grin2AnalysisTime)],
+				['Plotting', formatElapsedTime(manhattanPlotTime)],
+				['Total', formatElapsedTime(totalTime)],
+				...capWarningRows
+			]
 		}
 	}
 
@@ -349,7 +400,23 @@ async function processSampleData(
 	samples: any[],
 	ds: any,
 	request: GRIN2Request
-): Promise<{ lesions: any[]; processing: NonNullable<GRIN2Response['stats']>['processing'] }> {
+): Promise<{
+	lesions: any[]
+	processing: {
+		totalSamples: number
+		processedSamples: number
+		failedSamples: number
+		failedFiles: Array<{ sampleName: string; filePath: string; error: string }>
+		totalLesions: number
+		processedLesions: number
+		unprocessedSamples: number
+		lesionCap?: number
+		lesionCounts?: {
+			total: number
+			byType: Record<string, { count: number; samples: number }>
+		}
+	}
+}> {
 	const lesions: any[] = []
 	const maxLesions = await getMaxLesions()
 	mayLog(`[GRIN2] Max lesions for this run: ${maxLesions.toLocaleString()}`)
@@ -366,7 +433,7 @@ async function processSampleData(
 		samplesPerType.set(type, new Set<string>())
 	}
 
-	const processing: NonNullable<GRIN2Response['stats']>['processing'] = {
+	const processing = {
 		totalSamples: samples.length,
 		processedSamples: 0,
 		failedSamples: 0,
@@ -374,6 +441,19 @@ async function processSampleData(
 		totalLesions: 0,
 		processedLesions: 0,
 		unprocessedSamples: 0
+	} as {
+		totalSamples: number
+		processedSamples: number
+		failedSamples: number
+		failedFiles: Array<{ sampleName: string; filePath: string; error: string }>
+		totalLesions: number
+		processedLesions: number
+		unprocessedSamples: number
+		lesionCap?: number
+		lesionCounts?: {
+			total: number
+			byType: Record<string, { count: number; samples: number }>
+		}
 	}
 
 	for (let i = 0; i < samples.length; i++) {

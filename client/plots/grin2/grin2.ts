@@ -791,7 +791,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.style('margin', this.headerMargin)
 				.style('font-size', `${this.headerFontSize}px`)
 				.text(
-					`Top Genes (showing ${result.stats.showingTop?.toLocaleString()} of ${result.stats.totalGenes?.toLocaleString()})`
+					`Top Genes (showing ${result.stats.lst[1][1].toLocaleString()} of ${result.stats.lst[0][1].toLocaleString()})`
 				)
 
 			const tableDiv = tableContainer.append('div')
@@ -874,14 +874,13 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 
 		// Display run stats information
-		if (result.stats.processing) {
-			// Create header with title
+		if (result.stats?.lst) {
 			const headerDiv = this.dom.div
 				.append('div')
 				.style('display', 'flex')
 				.style('align-items', 'center')
 				.style('margin', this.btnMargin)
-				.style('margin-top', '40px') // Extra space for buttons from table above
+				.style('margin-top', '40px')
 
 			headerDiv
 				.append('h3')
@@ -889,128 +888,26 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.style('font-size', `${this.headerFontSize}px`)
 				.text('GRIN2 Processing Summary')
 
-			// Container for tables
 			const tablesContainer = this.dom.div.append('div')
+			let currentTable = table2col({ holder: tablesContainer.append('div') })
 
-			// General stats
-			const generalTable = table2col({
-				holder: tablesContainer.append('div')
-			})
-
-			generalTable.addRow('Total Samples', result.stats.processing.totalSamples.toLocaleString())
-			generalTable.addRow('Processed Samples', result.stats.processing.processedSamples.toLocaleString())
-			generalTable.addRow('Unprocessed Samples', (result.stats.processing.unprocessedSamples ?? 0).toLocaleString())
-			generalTable.addRow('Failed Samples', result.stats.processing.failedSamples.toLocaleString())
-			generalTable.addRow(
-				'Failed Files',
-				result.stats.processing.failedFiles?.length
-					? result.stats.processing.failedFiles.map(f => f.sampleName).join(', ')
-					: '0'
-			)
-			generalTable.addRow('Total Lesions', result.stats.processing.totalLesions.toLocaleString())
-			generalTable.addRow('Processed Lesions', result.stats.processing.processedLesions.toLocaleString())
-
-			// Memory usage table
-			if (result.stats.memory) {
-				tablesContainer
-					.append('h4')
-					.style('margin', this.headerMargin)
-					.style('margin-top', '15px')
-					.style('font-size', `${this.headerFontSize - 2}px`)
-					.text('Memory Usage')
-
-				const mem = result.stats.memory
-				const memTable = table2col({
-					holder: tablesContainer.append('div'),
-					margin: '2px 8px'
-				})
-				memTable.addRow('Start', `${mem.start} MB`)
-				memTable.addRow('After prep', `${mem.after_prep} MB`)
-				memTable.addRow('After overlaps', `${mem.after_overlaps} MB`)
-				memTable.addRow('After counts', `${mem.after_counts} MB`)
-				memTable.addRow('After stats', `${mem.after_stats} MB`)
-				memTable.addRow('Peak', `${mem.peak} MB`)
+			for (const [k, v] of result.stats.lst) {
+				if (k === '' && v === '') {
+					// Section break — just skip, the next header will start a new table
+					continue
+				} else if (v === '') {
+					// Section header — render header, then start a new table below it
+					tablesContainer
+						.append('h4')
+						.style('margin', this.headerMargin)
+						.style('margin-top', '15px')
+						.style('font-size', `${this.headerFontSize - 2}px`)
+						.text(k)
+					currentTable = table2col({ holder: tablesContainer.append('div'), margin: '2px 8px' })
+				} else {
+					currentTable.addRow(k, v)
+				}
 			}
-
-			// Lesion type details table
-			if (result.stats.processing.lesionCounts?.byType) {
-				tablesContainer
-					.append('h4')
-					.style('margin', this.headerMargin)
-					.style('margin-top', '15px')
-					.style('font-size', `${this.headerFontSize - 2}px`)
-					.text('Lesion Stats by Type')
-
-				const typeLabels: Record<string, string> = {}
-				Object.values(dt2lesion).forEach(config => {
-					config.lesionTypes.forEach(lt => {
-						typeLabels[lt.lesionType] = lt.name
-					})
-				})
-
-				const columns = [
-					{ label: 'Lesion Type' },
-					{ label: 'Count', sortable: true },
-					{ label: 'Samples', sortable: true }
-				]
-
-				const rows = Object.entries(result.stats.processing.lesionCounts.byType).map(([type, typeData]) => {
-					const { count, samples } = typeData as { count: number; samples: number }
-					return [
-						{ value: typeLabels[type] || type },
-						{ value: count.toLocaleString() },
-						{ value: samples?.toLocaleString() ?? '0' }
-					]
-				})
-
-				renderTable({
-					columns,
-					rows,
-					dataTestId: 'grin2-lesion-counts-table',
-					div: tablesContainer.append('div'),
-					showLines: false,
-					striped: true,
-					maxHeight: 'none',
-					maxWidth: '100%',
-					resize: false,
-					download: {
-						fileName: `grin2_lesion_stats_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}.tsv`
-					},
-					header: {
-						style: {
-							'font-weight': this.statsTableFontWeight,
-							'background-color': this.backgroundColor
-						},
-						allowSort: true
-					}
-				})
-			}
-
-			// Timing info
-			if (result.stats.timing) {
-				this.dom.div
-					.append('div')
-					.style('margin', this.sectionMargin)
-					.style('font-size', `${this.optionsTextFontSize}px`)
-					.style('color', this.optionsTextColor)
-					.text(
-						`Analysis completed in ${result.stats.timing.totalTime} (Processing: ${result.stats.timing.processingTime}, GRIN2: ${result.stats.timing.grin2Time}, Plotting: ${result.stats.timing.plottingTime})`
-					)
-			}
-		}
-
-		// If we didn't process all samples, note that caps truncated the run
-		const expectedToProcessSamples = result.stats.processing.totalSamples - result.stats.processing.failedSamples
-		if (result.stats.processing.processedSamples < expectedToProcessSamples) {
-			this.dom.div
-				.append('div')
-				.style('margin', this.sectionMargin)
-				.style('font-size', `${this.optionsTextFontSize}px`)
-				.style('color', this.optionsTextColor)
-				.text(
-					`Note: Lesion cap of ${result.stats.processing.lesionCap?.toLocaleString()} was reached before all samples could be processed. ` +
-						`Analysis ran on ${result.stats.processing.processedSamples.toLocaleString()} of ${expectedToProcessSamples.toLocaleString()} samples.`
-				)
 		}
 	}
 }
