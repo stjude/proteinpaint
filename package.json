@@ -1,5 +1,5 @@
 {
-  "version": "2.170.4",
+  "version": "2.170.5",
   "name": "@sjcrh/proteinpaint",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "type": "module",

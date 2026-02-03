@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.170.5
 
 Fixes:
 - only allow searching by gene, and not coordinate, for geneVariant term
