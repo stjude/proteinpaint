@@ -1095,8 +1095,6 @@ def grin_stats(lsn_data, gene_data, chr_size):
         Gene annotations with columns: gene, chrom, loc.start, loc.end
     chr_size : DataFrame
         Chromosome sizes with columns: chrom, size
-    track_memory : bool, default=False
-        If True, include memory profiling in results
     
     Returns
     -------
