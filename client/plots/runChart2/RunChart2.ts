@@ -34,14 +34,16 @@ export class RunChart2 extends PlotBase implements RxComponent {
 			opts.header.append('span').style('font-size', '0.8em').style('opacity', 0.7).text('RUN CHART')
 		}
 
-		const controls = opts.controls ? opts.holder : opts.holder.append('div')
+		const leftDiv = opts.holder.insert('div').style('display', 'inline-block')
+		const controlsHolder = leftDiv.append('div').style('display', 'inline-block')
 		const chartHolder = opts.holder
 			.append('div')
 			.attr('data-testId', 'sjpp-runChart2-chartHolder')
 			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
 
 		this.dom = {
-			controls,
+			controls: controlsHolder,
 			chartHolder,
 			error: chartHolder.append('div').attr('data-testId', 'sjpp-runChart2-error'),
 			clickMenu: new Menu({ padding: '5px' }),
@@ -78,7 +80,7 @@ export class RunChart2 extends PlotBase implements RxComponent {
 			vocab: appState.vocab,
 			config: Object.assign({}, config, {
 				settings: {
-					runChart2: config.settings.runChart2
+					runChart2: config.settings?.runChart2
 				}
 			})
 		}
@@ -96,6 +98,9 @@ export class RunChart2 extends PlotBase implements RxComponent {
 		this.components.controls.on('downloadClick.runChart2', async (event: any) => {
 			await this.download(event)
 		})
+		// Force controls to render with current state (ensures term0/Divide by displays)
+		const appState = this.app.getState()
+		this.components.controls.update?.({ appState })
 	}
 
 	async download(event: any) {
@@ -164,7 +169,7 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 	if (!opts.term2) throw new Error('opts.term2 is required for the Y axis')
 
 	try {
-		// term/term2 q.mode: continuous = 1 series, discrete = multiple series.
+		// term/term2 q.mode: continuous = 1 series, discrete = multiple series. term0 = divide by.
 		if (!opts.term.q) opts.term.q = {}
 		if (!opts.term2.q) opts.term2.q = {}
 		opts.term.q.mode = opts.term.q.mode ?? 'continuous'

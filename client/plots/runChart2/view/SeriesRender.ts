@@ -17,13 +17,22 @@ export class SeriesRender {
 	settings: RunChart2Settings
 	seriesGroup: any
 	runChart2: RunChart2 | undefined
+	seriesColor?: string
 
-	constructor(series: any, plotDims: any, settings: RunChart2Settings, seriesGroup: any, runChart2?: RunChart2) {
+	constructor(
+		series: any,
+		plotDims: any,
+		settings: RunChart2Settings,
+		seriesGroup: any,
+		runChart2?: RunChart2,
+		seriesColor?: string
+	) {
 		this.series = series
 		this.plotDims = plotDims
 		this.settings = settings
 		this.seriesGroup = seriesGroup
 		this.runChart2 = runChart2
+		this.seriesColor = seriesColor
 		this.render()
 	}
 
@@ -39,7 +48,7 @@ export class SeriesRender {
 	render() {
 		if (!this.series.points || this.series.points.length === 0) return
 
-		const color = this.settings.color || '#1f77b4'
+		const color = this.seriesColor ?? this.settings.color ?? '#1f77b4'
 		const medianColor = rgb(color).darker(2)
 		const sortedPoints = [...this.series.points].sort((a, b) => a.x - b.x)
 
@@ -111,6 +120,7 @@ export class SeriesRender {
 		const yTermName = cfg?.term2?.term?.name ?? 'Y'
 		tip.clear()
 		const table = table2col({ holder: tip.d.append('div') })
+		if (this.series.seriesId) table.addRow('Period', this.series.seriesId)
 		table.addRow(xTermName, d.xName ?? String(d.x))
 		table.addRow(yTermName, roundValueAuto(d.y, true, 2))
 		table.addRow('Sample Count', String(d.sampleCount ?? ''))
