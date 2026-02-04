@@ -101,7 +101,7 @@ export type plot_type = {
 	/** When type == plot, show the corresponding plot in the plot field */
 	type: 'plot'
 	/** The type of plot to be displayed on the UI. */
-	plot: 'summary' | 'dge' | 'none'
+	plot: 'summary' | 'dge' | 'none' | 'survival'
 }
 
 export type DEType = {
