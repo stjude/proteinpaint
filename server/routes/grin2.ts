@@ -341,7 +341,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		capWarningRows.push(
 			['', ''],
 			[
-				'⚠ Note',
+				'Note',
 				`Lesion cap of ${processing.lesionCap?.toLocaleString()} was reached before all samples could be processed. ` +
 					`Analysis ran on ${processing.processedSamples!.toLocaleString()} of ${expectedToProcess.toLocaleString()} samples.`
 			]
@@ -355,34 +355,46 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		topGeneTable: resultData.topGeneTable,
 		stats: {
 			lst: [
-				['Total Genes: ', resultData.totalGenes.toLocaleString()],
-				['Showing Top', resultData.showingTop.toLocaleString()],
-				['Cache File Name:', resultData.cacheFileName],
-				['Total Samples', processing.totalSamples!.toLocaleString()],
-				['Processed Samples', processing.processedSamples!.toLocaleString()],
-				['Unprocessed Samples', (processing.unprocessedSamples ?? 0).toLocaleString()],
-				['Failed Samples', processing.failedSamples!.toLocaleString()],
-				['Failed Files', (processing.failedFiles?.length ?? 0).toLocaleString()],
-				['Total Lesions', processing.totalLesions!.toLocaleString()],
-				['Processed Lesions', processing.processedLesions!.toLocaleString()],
-				['', ''],
-				['Lesion Counts', ''],
-				...lesionTypeRows,
-				['', ''],
-				['Memory Usage', ''],
-				['Start', `${resultData.memory?.start} MB`],
-				['After prep', `${resultData.memory?.after_prep} MB`],
-				['After overlaps', `${resultData.memory?.after_overlaps} MB`],
-				['After counts', `${resultData.memory?.after_counts} MB`],
-				['After stats', `${resultData.memory?.after_stats} MB`],
-				['Peak', `${resultData.memory?.peak} MB`],
-				['', ''],
-				['Timing', ''],
-				['Processing', formatElapsedTime(processingTime)],
-				['GRIN2', formatElapsedTime(grin2AnalysisTime)],
-				['Plotting', formatElapsedTime(manhattanPlotTime)],
-				['Total', formatElapsedTime(totalTime)],
-				...capWarningRows
+				{
+					name: 'GRIN2 Processing Summary',
+					rows: [
+						['Total Genes', resultData.totalGenes.toLocaleString()],
+						['Showing Top', resultData.showingTop.toLocaleString()],
+						['Cache File Name', resultData.cacheFileName],
+						['Total Samples', processing.totalSamples!.toLocaleString()],
+						['Processed Samples', processing.processedSamples!.toLocaleString()],
+						['Unprocessed Samples', (processing.unprocessedSamples ?? 0).toLocaleString()],
+						['Failed Samples', processing.failedSamples!.toLocaleString()],
+						['Failed Files', (processing.failedFiles?.length ?? 0).toLocaleString()],
+						['Total Lesions', processing.totalLesions!.toLocaleString()],
+						['Processed Lesions', processing.processedLesions!.toLocaleString()]
+					]
+				},
+				{
+					name: 'Lesion Counts',
+					rows: lesionTypeRows
+				},
+				{
+					name: 'Memory Usage',
+					rows: [
+						['Start', `${resultData.memory?.start} MB`],
+						['After prep', `${resultData.memory?.after_prep} MB`],
+						['After overlaps', `${resultData.memory?.after_overlaps} MB`],
+						['After counts', `${resultData.memory?.after_counts} MB`],
+						['After stats', `${resultData.memory?.after_stats} MB`],
+						['Peak', `${resultData.memory?.peak} MB`]
+					]
+				},
+				{
+					name: 'Timing',
+					rows: [
+						['Processing', formatElapsedTime(processingTime)],
+						['GRIN2', formatElapsedTime(grin2AnalysisTime)],
+						['Plotting', formatElapsedTime(manhattanPlotTime)],
+						['Total', formatElapsedTime(totalTime)],
+						...capWarningRows
+					]
+				}
 			]
 		}
 	}
