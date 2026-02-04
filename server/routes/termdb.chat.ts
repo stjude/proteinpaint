@@ -100,6 +100,8 @@ function init({ genomes }) {
 						ds
 					)
 					mayLog('Time taken for DE agent:', formatElapsedTime(Date.now() - time1))
+				} else if (classResult == 'survival') {
+					ai_output_json = { type: 'html', html: 'survival agent has not been implemented yet' }
 				} else {
 					// Will define all other agents later as desired
 					ai_output_json = { type: 'html', html: 'Unknown classification value' }
@@ -400,6 +402,7 @@ async function extract_DE_search_terms_from_query(
 			prompt +
 			'} answer:'
 
+		mayLog('DE system prompt:', system_prompt)
 		let response: string
 		if (llm_backend_type == 'SJ') {
 			// Local SJ server
@@ -526,7 +529,12 @@ async function validate_DE_response(response: string, ds: any, db_rows: DbRows[]
 
 function generate_group_name(filters: any[], db_rows: DbRows[]): string {
 	let name = ''
+	let iter = 0
 	for (const filter of filters) {
+		if (iter > 0 && !filter.join) {
+			// Sometimes the LLM misses join terms. In such cases, hardcoding & operator
+			name += '&'
+		}
 		if (filter.join && filter.join == 'and') {
 			name += '&'
 		}
@@ -545,6 +553,7 @@ function generate_group_name(filters: any[], db_rows: DbRows[]): string {
 			// Integer or float variable
 			name += filter.term + '<=' + filter.stop.toString()
 		}
+		iter += 1
 	}
 	return name
 }
