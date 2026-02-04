@@ -335,13 +335,13 @@ async function extract_DE_search_terms_from_query(
 				CategoricalFilterTerm: {
 					type: 'object',
 					properties: {
-						term: { type: 'string', description: 'Name of numeric term' },
+						term: { type: 'string', description: 'Name of categorical term' },
 						category: { type: 'string', description: 'The category of the term' },
 						join: {
 							type: 'string',
 							enum: ['and', 'or'],
 							description:
-								'join term to be used only when there there is more than one filter term and should be placed in the 2nd filter term describing how it connects to the 1st term'
+								'join term to be used only when there is more than one filter term and should be placed from the 2nd filter term onwards describing how it connects to the previous term'
 						}
 					},
 					required: ['term', 'category'],
@@ -357,7 +357,7 @@ async function extract_DE_search_terms_from_query(
 							type: 'string',
 							enum: ['and', 'or'],
 							description:
-								'join term to be used only when there there is more than one filter term and should be placed in the 2nd filter term describing how it connects to the 1st term'
+								'join term to be used only when there is more than one filter term and should be placed from the 2nd filter term onwards describing how it connects to the previous term'
 						}
 					},
 					required: ['term'],
@@ -626,7 +626,7 @@ async function extract_summary_terms(
 			CategoricalFilterTerm: {
 				type: 'object',
 				properties: {
-					term: { type: 'string', description: 'Name of numeric term' },
+					term: { type: 'string', description: 'Name of categorical term' },
 					category: { type: 'string', description: 'The category of the term' },
 					join: {
 						type: 'string',
@@ -687,7 +687,7 @@ async function extract_summary_terms(
 	let system_prompt =
 		'I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. The JSON schema is as follows: ' +
 		JSON.stringify(Schema) +
-		' term and term2 (if present) should ONLY contain names of the fields from the sqlite db. The "simpleFilter" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both "term"/"term2" and "simpleFilter". There are two kinds of filter variables: "Categorical" and "Numeric". "Categorical" variables are those variables which can have a fixed set of values e.g. gender, race. They are defined by the "CategoricalFilterTerm" which consists of "term" (a field from the sqlite3 db)  and "category" (a value of the field from the sqlite db).  "Numeric" variables are those which can have any numeric value. They are defined by "NumericFilterTerm" and contain  the subfields "term" (a field from the sqlite3 db), "start" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and "stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. ' + // May consider deprecating this natural language description after units tests are implemented
+		' term and term2 (if present) should ONLY contain names of the fields from the sqlite db. The "simpleFilter" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both "term"/"term2" and "simpleFilter". There are two kinds of filter variables: "Categorical" and "Numeric". "Categorical" variables are those variables which can have a fixed set of values e.g. gender, race. They are defined by the "CategoricalFilterTerm" which consists of "term" (a field from the sqlite3 db)  and "category" (a value of the field from the sqlite db).  "Numeric" variables are those which can have any numeric value. They are defined by "NumericFilterTerm" and contain  the subfields "term" (a field from the sqlite3 db), "start" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and "stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. ' + // May consider deprecating this natural language description after unit tests are implemented
 		checkField(dataset_json.dataset_prompt) +
 		checkField(summary_ds[0].SystemPrompt) +
 		'\n The DB content is as follows: ' +
@@ -796,7 +796,7 @@ function removeLastOccurrence(str: string, word: string): string {
 	if (index === -1) return str // word not found
 
 	const occurrences = countOccurrences(str, word)
-	if (occurrences == 1) {
+	if (occurrences === 1) {
 		return str
 	} else {
 		// Slice out the word and concatenate the surrounding parts
