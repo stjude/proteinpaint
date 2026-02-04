@@ -1,1 +1,2 @@
-
+Fixes:
+- GRIN2: Removed unnecessary data copy. Now using dynamic lesion types sent by client

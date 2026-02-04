@@ -11,9 +11,8 @@ Input JSON:
  chromosomelist={ <key>: <len>, }
  lesion: JSON string containing array of lesion data
  cacheFileName: string - will save GRIN2 results to this file
- availableDataTypes: [string]
  maxGenesToShow: int (default=500) 
- lesionTypeMap: dict {lesionType: displayName}
+ lesionTypeMap: dict {lesionType: displayName} - maps GRIN2 lesion types to user-friendly names
 }
 
 Output JSON:
@@ -35,31 +34,16 @@ from grin2_core import grin_stats
 
 warnings.filterwarnings('ignore')
 
-# Constants
-OPTION_TO_LESION = {
-	'snvindelOptions': ['mutation'],
-	'cnvOptions': ['gain', 'loss'],
-	'fusionOptions': ['fusion'],
-	'svOptions': ['sv']
-}
-
 def write_error(msg):
 	print(f"ERROR: {msg}", file=sys.stderr)
 
 def get_sig_values(data):
-	"""Find existing p/q/n columns for all data types"""
-	# Define all possible column types to check for
-	column_types = ["mutation", "gain", "loss", "fusion", "sv"]
-	# Get all column names from the dataframe
-	available_cols = data.columns
-	# Create expected p-value column names
-	expected_p_cols = [f"p.nsubj.{ct}" for ct in column_types]
-	expected_n_cols = [f"nsubj.{ct}" for ct in column_types]
-	# Find which p-value columns actually exist
-	existing_p_cols = [col for col in expected_p_cols if col in available_cols]
-	existing_n_cols = [col for col in expected_n_cols if col in available_cols]
-	# Create corresponding q-value column names (assume they exist if p exists)
+	"""Find existing p/q/n columns for all data types by discovering them from column names"""
+	p_prefix = "p.nsubj."
+	# Discover lesion types from actual column names
+	existing_p_cols = [col for col in data.columns if col.startswith(p_prefix)]
 	existing_q_cols = [col.replace("p.nsubj.", "q.nsubj.") for col in existing_p_cols]
+	existing_n_cols = [col.replace("p.nsubj.", "nsubj.") for col in existing_p_cols]
 	return {
 		"p_cols": existing_p_cols,
 		"q_cols": existing_q_cols,
@@ -84,12 +68,8 @@ def sort_grin2_data(data):
     if not valid_p_cols:
         raise ValueError("No p-value columns with data found")
     
-    data = data.copy()
-    data['_min_p_value'] = data[valid_p_cols].min(axis=1)
-    sorted_data = data.sort_values('_min_p_value', ascending=True)
-    sorted_data = sorted_data.drop(columns=['_min_p_value'])
-    
-    return sorted_data
+    min_p_values = data[valid_p_cols].min(axis=1)
+    return data.iloc[min_p_values.argsort()]
 
 def get_user_friendly_label(col_name, lesion_type_map):
 	"""Convert column names to user-friendly labels"""
@@ -253,12 +233,8 @@ try:
 	
 	lesion_counts = lesion_df["lsn.type"].value_counts()
 	
-	# Extract lesion types from available options
-	lesion_types = [
-		lesion_type
-		for option in input_data.get("availableDataTypes", [])
-		for lesion_type in OPTION_TO_LESION.get(option, [])
-	]
+	# Lesion types are the keys of lesionTypeMap (e.g. "mutation", "gain", "loss")
+	lesion_types = list(lesion_type_map.keys())
 	
 	# 5. Run GRIN2
 	grin_results = grin_stats(lesion_df, gene_anno, chrom_size)
