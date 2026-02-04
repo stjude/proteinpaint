@@ -9,17 +9,20 @@ GDC filter: https://docs.gdc.cancer.gov/API/Users_Guide/Search_and_Retrieval/
 
 TODO !!support nested filter!!
 */
-export function filter2GDCfilter(f) {
-	console.log(12, 'filter2GDCfilter(f) arg', f)
+export function filter2GDCfilter(f, level = 0) {
+	// console.log(12, 'filter2GDCfilter(f) arg', f)
 	// gdc filter that will be returned
 	let obj = {
 		op: f.join || 'and',
 		content: []
 	}
-	if (!f.in) obj = { op: 'not', content: obj }
 	if (!Array.isArray(f.lst)) throw 'filter.lst[] not array'
 	for (const item of f.lst) {
-		if (item.type != 'tvs') obj.content.push(filter2GDCfilter) // !!! TODO: TEST recursive handling of nested filter !!!
+		if (item.type != 'tvs') {
+			const f = filter2GDCfilter(item, level + 1)
+			if (f) obj.content.push(f) // !!! TODO: TEST recursive handling of nested filter !!!
+			continue
+		}
 		if (!item.tvs) throw 'item.tvs missing'
 		if (!item.tvs.term) throw 'item.tvs.term missing'
 		if (dtTermTypes.has(item.tvs.term.type)) {
@@ -28,10 +31,12 @@ export function filter2GDCfilter(f) {
 			continue
 		}
 		if (item.tvs.term.type == 'geneExpression') {
+			if (level > 0) throw `gene expression filters are only supported at the root level of a nested filter`
 			// geneExpression term filtering will be performed during post-processing (see mayFilterByExpression() in server/src/mds3.gdc.js)
 			continue
 		}
 		if (item.tvs.term.type == 'survival') {
+			if (level > 0) throw `survival filters are only supported at the root level of a nested filter`
 			// survival term filtering will be performed during post-processing (see mayFilterBySurvival() in server/src/mds3.gdc.js)
 			continue
 		}
@@ -54,8 +59,6 @@ export function filter2GDCfilter(f) {
 				content: []
 			}
 
-			if (item.tvs.isnot) f = { op: 'not', content: f }
-
 			for (const range of item.tvs.ranges) {
 				if (range.startunbounded) {
 					f.content.push({
@@ -71,51 +74,27 @@ export function filter2GDCfilter(f) {
 					})
 					continue
 				}
-				if (item.tvs.isnot) {
-					f.content.push({
-						op: 'or',
-						content: [
-							{
-								op: 'and',
-								content: [
-									{
-										op: range.startinclusive ? '<' : '<=',
-										content: { field: mayChangeCase2Cases(item.tvs.term), value: range.start }
-									}
-								]
-							},
-							{
-								op: 'and',
-								content: [
-									{
-										op: range.stopinclusive ? '>' : '>=',
-										content: { field: mayChangeCase2Cases(item.tvs.term), value: range.stop }
-									}
-								]
-							}
-						]
-					})
-				} else {
-					f.content.push({
-						op: 'and',
-						content: [
-							{
-								op: range.startinclusive ? '>=' : '>',
-								content: { field: mayChangeCase2Cases(item.tvs.term), value: range.start }
-							},
-							{
-								op: range.stopinclusive ? '<=' : '<',
-								content: { field: mayChangeCase2Cases(item.tvs.term), value: range.stop }
-							}
-						]
-					})
-				}
+				f.content.push({
+					op: 'and',
+					content: [
+						{
+							op: range.startinclusive ? '>=' : '>',
+							content: { field: mayChangeCase2Cases(item.tvs.term), value: range.start }
+						},
+						{
+							op: range.stopinclusive ? '<=' : '<',
+							content: { field: mayChangeCase2Cases(item.tvs.term), value: range.stop }
+						}
+					]
+				})
 			}
+			if (item.tvs.isnot) f = { op: 'not', content: f }
 			obj.content.push(f)
 			continue
 		}
 		throw 'unknown tvs structure when converting to gdc filter'
 	}
+	if (!f.in) obj = { op: 'not', content: obj }
 	return obj.content.length ? obj : null
 }
 
