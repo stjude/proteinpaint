@@ -49,11 +49,11 @@ export type FilterTerm =
 	| NumericFilterTerm /** FilterTerm can either be numeric or categorical  */
 
 export type CategoricalFilterTerm = {
-	/** Name of numeric term */
+	/** Name of categorical term */
 	term: string
 	/** The category of the term */
 	category: string
-	/** join term to be used only when there there is more than one filter term and should be placed in the 2nd filter term describing how it connects to the 1st term */
+	/** join term to be used only when there is more than one filter term and should be placed from the 2nd filter term onwards describing how it connects to the previous term */
 	join?: 'and' | 'or'
 }
 
@@ -64,7 +64,7 @@ export type NumericFilterTerm = {
 	start?: number
 	/** stop position (or upper limit) of numeric term */
 	stop?: number
-	/** join term to be used only when there there is more than one filter term and should be placed in the 2nd filter term describing how it connects to the 1st term */
+	/** join term to be used only when there is more than one filter term and should be placed from the 2nd filter term onwards describing how it connects to the previous term */
 	join?: 'and' | 'or'
 }
 
