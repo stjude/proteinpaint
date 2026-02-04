@@ -3,7 +3,7 @@
   "hasDE": true,
   "db": "files/hg38/TermdbTest/db",
   "genedb": "anno/genes.hg38.test.db",
-  "dataset_prompt": "",  
+  "DatasetPrompt": "",  
   "charts": [
     {
         "type":"Classification",

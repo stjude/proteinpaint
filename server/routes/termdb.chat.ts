@@ -226,7 +226,7 @@ async function classify_query_by_dataset_type(
 	let train_iter = 0
 	let training_data = ''
 	if (classification_ds.length > 0 && classification_ds[0].TrainingData.length > 0) {
-		contents += checkField(dataset_json.dataset_prompt) + checkField(classification_ds[0].SystemPrompt)
+		contents += checkField(dataset_json.DatasetPrompt) + checkField(classification_ds[0].SystemPrompt)
 		for (const train_data of classification_ds[0].TrainingData) {
 			train_iter += 1
 			training_data +=
@@ -392,7 +392,7 @@ async function extract_DE_search_terms_from_query(
 			'I am an assistant that extracts the groups from the user prompt to carry out differential gene expression. The final output must be in the following JSON with NO extra comments. The schema is as follows: ' +
 			JSON.stringify(Schema) +
 			' . "group1" and "group2" fields are compulsory. Both "group1" and "group2" consist of an array of filter variables. There are two kinds of filter variables: "Categorical" and "Numeric". "Categorical" variables are those variables which can have a fixed set of values e.g. gender, race. They are defined by the "CategoricalFilterTerm" which consists of "term" (a field from the sqlite3 db)  and "category" (a value of the field from the sqlite db).  "Numeric" variables are those which can have any numeric value. They are defined by "NumericFilterTerm" and contain  the subfields "term" (a field from the sqlite3 db), "start" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and "stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. ' + // May consider deprecating this natural language description after units tests are implemented
-			checkField(dataset_json.dataset_prompt) +
+			checkField(dataset_json.DatasetPrompt) +
 			checkField(DE_ds[0].SystemPrompt) +
 			'The sqlite db in plain language is as follows:\n' +
 			dataset_db_output.rag_docs.join(',') +
@@ -686,7 +686,7 @@ async function extract_summary_terms(
 		'I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. The JSON schema is as follows: ' +
 		JSON.stringify(Schema) +
 		' term and term2 (if present) should ONLY contain names of the fields from the sqlite db. The "simpleFilter" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both "term"/"term2" and "simpleFilter". There are two kinds of filter variables: "Categorical" and "Numeric". "Categorical" variables are those variables which can have a fixed set of values e.g. gender, race. They are defined by the "CategoricalFilterTerm" which consists of "term" (a field from the sqlite3 db)  and "category" (a value of the field from the sqlite db).  "Numeric" variables are those which can have any numeric value. They are defined by "NumericFilterTerm" and contain  the subfields "term" (a field from the sqlite3 db), "start" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and "stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. ' + // May consider deprecating this natural language description after unit tests are implemented
-		checkField(dataset_json.dataset_prompt) +
+		checkField(dataset_json.DatasetPrompt) +
 		checkField(summary_ds[0].SystemPrompt) +
 		'\n The DB content is as follows: ' +
 		dataset_db_output.rag_docs.join(',') +
