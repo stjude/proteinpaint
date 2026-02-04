@@ -126,6 +126,14 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
   }
 */
 	const bc = binconfig
+	if (bc?.type == 'regular-bin' && !bc.first_bin && typeof summaryfxn == 'function') {
+		const preSummary = summaryfxn([0, 100])
+		if (preSummary && Number.isFinite(preSummary.min)) {
+			const size = Number(bc.bin_size)
+			const alignedStop = Number.isFinite(size) && size > 0 ? Math.floor(preSummary.min / size) * size : preSummary.min
+			bc.first_bin = { startunbounded: true, stop: alignedStop }
+		}
+	}
 	validate_bins(bc)
 	if (bc.lst) {
 		const k2c = getColors(bc.lst.length) //to color bins
