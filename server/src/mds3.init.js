@@ -2704,6 +2704,9 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 		const sample2mlst = new Map() // collect genomic query results indexed by sample; key: sample id, value: array
 		const data = new Map() // to return
+		// get samples/cases that pass filter
+		// will be used in addDataAvailability() to filter samples
+		const sampleFilter = await filterSamples4assayAvailability(q, ds)
 
 		// retrieve mutation data for each gene
 		// query genes concurrently to speed up geneset query
@@ -2835,7 +2838,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 			// add data availability for each dt
 			for (const dt of dts) {
-				await mayAddDataAvailability(sample2mlst, dt, ds, gene, q)
+				await mayAddDataAvailability(sample2mlst, dt, ds, gene, sampleFilter)
 			}
 		}
 
@@ -2889,7 +2892,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 	}
 }
 
-async function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, q) {
+async function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter) {
 	if (!ds.assayAvailability?.byDt) return // this ds is not equipped with assay availability by dt
 	const _dt = ds.assayAvailability.byDt[dtKey]
 	if (!_dt) return // this ds has assay availability but lacks setting for this dt. this is allowed e.g. we only specify availability for cnv but not snvindel.
@@ -2903,9 +2906,6 @@ async function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, q) {
 	} else {
 		dts.push({ ..._dt })
 	}
-
-	// get the list of samples/cases that passed filter
-	const sampleFilter = await filterSamples4assayAvailability(q, ds)
 
 	for (const dt of dts) {
 		for (const sid of dt.yesSamples) {
