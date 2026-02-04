@@ -6,7 +6,7 @@ import type {
 	ColorScaleMenuOpts,
 	NumericInputs
 } from '../types/colorScale'
-import { scaleLinear, scaleOrdinal } from 'd3-scale'
+import { scaleLinear } from 'd3-scale'
 import { axisBottom, axisTop } from 'd3-axis'
 import { font } from '../../src/client'
 import { axisstyle, niceNumLabels } from '#dom'
@@ -46,7 +46,7 @@ export class ColorScale {
 
 		this.validateOpts(opts)
 
-		this.tickValues = niceNumLabels([opts.domain[0], 0, opts.domain.slice(-1)[0]])
+		this.tickValues = niceNumLabels(opts.domain)
 
 		let scaleSvg: SvgSvg //
 		if (opts.width || opts.height) {
@@ -144,7 +144,7 @@ export class ColorScale {
 
 		const scaleAxis = div.append('g').attr('data-testid', 'sjpp-color-scale-axis')
 		if (this.topTicks === false) scaleAxis.attr('transform', `translate(0, ${this.barheight})`)
-		const scale = scaleOrdinal().domain(this.tickValues).range(this.getRange())
+		const scale = scaleLinear().domain(this.tickValues).range(this.getRange())
 
 		return { scale, scaleAxis }
 	}
@@ -262,11 +262,11 @@ export class ColorScale {
 		// const colorInt = interpolateRgb.apply(null, this.colors)
 		// const color = colorInt(x)
 		// if (color) {
-		// 	const colorMap = color.match(/\d+/g)?.map(Number)
-		// 	const [r, g, b] = colorMap.map(v => v / 255)
-		// 	const contrast = 0.2126 * r + 0.7152 * g + 0.0722 * b
-		// 	if (contrast < 0.5) this.dom.label.attr('fill', 'white').attr('stroke', 'black').attr('stroke-width', 0.3)
-		// 	else this.dom.label.attr('fill', 'black').attr('stroke', 'none')
+		//   const colorMap = color.match(/\d+/g)?.map(Number)
+		//   const [r, g, b] = colorMap.map(v => v / 255)
+		//   const contrast = 0.2126 * r + 0.7152 * g + 0.0722 * b
+		//   if (contrast < 0.5) this.dom.label.attr('fill', 'white').attr('stroke', 'black').attr('stroke-width', 0.3)
+		//   else this.dom.label.attr('fill', 'black').attr('stroke', 'none')
 		// }
 	}
 

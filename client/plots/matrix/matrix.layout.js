@@ -333,7 +333,7 @@ export function setLabelsAndScales() {
 	let cnvLegendDomainRange // if cnv data is present, compute once and reuse across geneVariant tw's
 
 	if (this.cnvValues.length) {
-		this.cnvValues = removeOutliers(this.cnvValues)
+		this.cnvValues = removeOutliers(this.cnvValues, 0.025, 0.975)
 		const minLoss = this.cnvValues[0] < 0 ? this.cnvValues[0] : undefined
 		const maxGain =
 			this.cnvValues[this.cnvValues.length - 1] > 0 ? this.cnvValues[this.cnvValues.length - 1] : undefined
