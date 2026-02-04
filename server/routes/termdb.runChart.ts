@@ -90,6 +90,7 @@ function buildOneSeries(
 			xName: string
 			ySum: number
 			count: number
+			missingCount?: number
 			success?: number
 			total?: number
 			countSum?: number
@@ -104,7 +105,7 @@ function buildOneSeries(
 		const xRaw = sample?.[xTermId]?.value ?? sample?.[xTermId]?.key
 		const yRaw = sample?.[yTermId]?.value ?? sample?.[yTermId]?.key
 
-		if (xRaw == null || yRaw == null) {
+		if (xRaw == null) {
 			continue
 		}
 
@@ -137,8 +138,8 @@ function buildOneSeries(
 				month = Math.floor(frac * 12) + 1
 			}
 		} else {
-			// No decimal part, invalid date
-			year = null
+			// No decimal part (year-only). Default to January so the year renders.
+			month = 1
 		}
 
 		if (year == null || month == null || Number.isNaN(year) || Number.isNaN(month)) {
@@ -160,12 +161,19 @@ function buildOneSeries(
 				xName,
 				ySum: 0,
 				count: 0,
+				missingCount: 0,
 				success: 0,
 				total: 0,
 				countSum: 0,
 				sortKey: yearNum * 100 + monthNum,
 				yValues: []
 			}
+		}
+
+		// If y is missing, track the bucket but do not add to aggregates
+		if (yRaw == null) {
+			buckets[bucketKey].missingCount = (buckets[bucketKey].missingCount || 0) + 1
+			continue
 		}
 
 		if (aggregation === 'proportion') {
@@ -252,7 +260,8 @@ function buildOneSeries(
 					y = b.count ? b.ySum / b.count : 0
 				}
 				y = Math.round(y * 100) / 100
-				return { x, xName: b.xName, y, sampleCount: b.count }
+				const sampleCount = b.count > 0 ? b.count : b.missingCount || 0
+				return { x, xName: b.xName, y, sampleCount }
 			}
 		})
 

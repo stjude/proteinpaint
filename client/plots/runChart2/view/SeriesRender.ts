@@ -57,7 +57,12 @@ export class SeriesRender {
 			.y(d => this.getCoordinates(d).y)
 
 		const opacity = this.settings.opacity ?? 0.6
-		this.seriesGroup
+		const seriesG = this.seriesGroup
+			.append('g')
+			.attr('data-testId', 'sjpp-runChart2-series')
+			.attr('data-series-id', this.series.seriesId ?? '')
+
+		seriesG
 			.append('path')
 			.datum(sortedPoints)
 			.attr('fill', 'none')
@@ -67,7 +72,7 @@ export class SeriesRender {
 			.attr('opacity', opacity)
 			.attr('d', lineBuilder)
 
-		this.seriesGroup
+		seriesG
 			.selectAll('circle')
 			.data(sortedPoints)
 			.enter()
@@ -91,7 +96,7 @@ export class SeriesRender {
 			const xStart = this.getCoordinates(sortedPoints[0]).x
 			const xEnd = this.getCoordinates(sortedPoints[sortedPoints.length - 1]).x
 			// Draw median horizontal line
-			this.seriesGroup
+			seriesG
 				.append('line')
 				.attr('x1', xStart)
 				.attr('y1', yMedian)
@@ -101,7 +106,7 @@ export class SeriesRender {
 				.attr('stroke-width', 1)
 				.attr('opacity', 0.5)
 			// Add median label
-			this.seriesGroup
+			seriesG
 				.append('text')
 				.attr('x', xEnd - 10)
 				.attr('y', yMedian - 5)

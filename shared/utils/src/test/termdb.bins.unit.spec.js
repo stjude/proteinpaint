@@ -20,7 +20,11 @@ tape('compute_bins() error handling, type=regular-bin', function (test) {
 
 	tryBin(test, { bin_size: 0 }, 'should throw on bin_size <= 0', 'bin_size must be greater than 0')
 
-	tryBin(test, { bin_size: 5 }, 'should throw on missing first_bin', 'first_bin{} missing')
+	{
+		const bins = b.compute_bins({ bin_size: 5 }, get_summary)
+		test.ok(Array.isArray(bins) && bins.length, 'infers first_bin when missing')
+		test.equal(bins[0].stop, 0, 'inferred first_bin.stop from min')
+	}
 
 	tryBin(
 		test,
