@@ -58,7 +58,7 @@ export class RunChart2View {
 	renderAxisLabels(plotDims: any) {
 		const xName = this.config?.xtw?.term?.name || 'X Axis'
 		const xLabel =
-			this.viewData.totalSampleCount != null && this.config?.xtw?.q?.mode != 'discrete'
+			this.viewData.totalSampleCount != null && this.config?.xtw?.q?.mode !== 'discrete'
 				? `${xName}, n=${this.viewData.totalSampleCount.toLocaleString()}`
 				: xName
 		const yLabel = this.config?.ytw?.term?.name || 'Y Axis'
@@ -73,7 +73,7 @@ export class RunChart2View {
 			.text(xLabel)
 
 		const seriesList = this.viewData.series || []
-		if (seriesList.length > 0 && this.config?.xtw?.q?.mode == 'discrete') {
+		if (seriesList.length > 0 && this.config?.xtw?.q?.mode === 'discrete') {
 			const firstSeries = seriesList[0]
 			const firstSeriesId = firstSeries?.seriesId
 			if (firstSeriesId != null) {
