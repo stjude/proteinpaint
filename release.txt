@@ -1,2 +1,3 @@
 Fixes:
 - correctly translate tvs.ranges into the expected GDC API filter shape
+- make the case count limit message applicable to both correlation plot and gene exp clustering
