@@ -45,226 +45,16 @@ tape('various filter situations', async function (test) {
 		const f = filter2GDCfilter(filterNum.ppfilter)
 		test.deepEqual(f, filterNum.gdcfilter, 'geneExpression tvs is ignored')
 	}
-
-	test.end()
-})
-
-tape('nested filter', async function (test) {
-	const f = {
-		type: 'tvslst',
-		in: true,
-		join: 'and',
-		lst: [
-			{
-				type: 'tvslst',
-				join: 'or',
-				lst: [
-					{
-						type: 'tvs',
-						tvs: {
-							term: {
-								id: 'case.demographic.cause_of_death',
-								name: 'Cause of death',
-								groupsetting: {
-									disabled: false
-								},
-								isleaf: true,
-								type: 'categorical',
-								parent_id: 'case.demographic',
-								included_types: ['categorical'],
-								child_types: [],
-								cohort: '',
-								__ancestors: ['case.demographic', 'case.demographic.cause_of_death'],
-								__ancestorNames: ['case.demographic', 'case.demographic.cause_of_death']
-							},
-							values: [
-								{
-									samplecount: 155,
-									key: 'Cancer Related',
-									label: 'Cancer Related',
-									bar_width_frac: 1
-								}
-							]
-						}
-					},
-					{
-						type: 'tvs',
-						tvs: {
-							term: {
-								id: 'case.diagnoses.age_at_diagnosis',
-								name: 'Age at diagnosis',
-								groupsetting: {
-									disabled: false
-								},
-								isleaf: true,
-								type: 'integer',
-								valueConversion: {
-									scaleFactor: 0.0027378507871321013,
-									fromUnit: 'day',
-									toUnit: 'year'
-								},
-								parent_id: 'case.diagnoses',
-								bins: {
-									default: {
-										type: 'custom-bin',
-										mode: 'discrete',
-										lst: [
-											{
-												startunbounded: true,
-												stop: 10950,
-												stopinclusive: true,
-												label: '<=30 years'
-											},
-											{
-												start: 10950,
-												stop: 21900,
-												stopinclusive: true,
-												label: '30-60 years'
-											},
-											{
-												start: 21900,
-												stopunbounded: true,
-												startinclusive: false,
-												label: '>60years'
-											}
-										]
-									}
-								},
-								included_types: ['integer'],
-								child_types: [],
-								cohort: ''
-							},
-							ranges: [
-								{
-									start: 10157,
-									stop: 16729,
-									startinclusive: false,
-									stopinclusive: false,
-									startunbounded: false,
-									stopunbounded: false
-								}
-							]
-						}
-					}
-				],
-				in: true
-			},
-			{
-				type: 'tvs',
-				tvs: {
-					term: {
-						id: 'case.demographic.year_of_birth',
-						name: 'Year of birth',
-						groupsetting: {
-							disabled: false
-						},
-						isleaf: true,
-						type: 'integer',
-						parent_id: 'case.demographic',
-						bins: {
-							default: {
-								mode: 'discrete',
-								type: 'regular-bin',
-								bin_size: 20,
-								startinclusive: false,
-								stopinclusive: true,
-								first_bin: {
-									startunbounded: true,
-									stop: 1938
-								}
-							}
-						},
-						included_types: ['integer'],
-						child_types: [],
-						cohort: ''
-					},
-					ranges: [
-						{
-							start: 1967,
-							stop: 1971,
-							startinclusive: false,
-							stopinclusive: false,
-							startunbounded: false,
-							stopunbounded: false
-						}
-					]
-				}
-			}
-		]
+	{
+		const f = filter2GDCfilter(filterNested.ppfilter)
+		test.deepEqual(f, filterNested.gdcfilter, 'nested filter is converted')
 	}
 
-	const expected = {
-		op: 'and',
-		content: [
-			{
-				op: 'or',
-				content: [
-					{
-						op: 'in',
-						content: {
-							field: 'cases.demographic.cause_of_death',
-							value: ['Cancer Related']
-						}
-					},
-					{
-						op: 'or',
-						content: [
-							{
-								op: 'and',
-								content: [
-									{
-										op: '>',
-										content: {
-											field: 'cases.diagnoses.age_at_diagnosis',
-											value: 10157
-										}
-									},
-									{
-										op: '<',
-										content: {
-											field: 'cases.diagnoses.age_at_diagnosis',
-											value: 16729
-										}
-									}
-								]
-							}
-						]
-					}
-				]
-			},
-			{
-				op: 'or',
-				content: [
-					{
-						op: 'and',
-						content: [
-							{
-								op: '>',
-								content: {
-									field: 'cases.demographic.year_of_birth',
-									value: 1967
-								}
-							},
-							{
-								op: '<',
-								content: {
-									field: 'cases.demographic.year_of_birth',
-									value: 1971
-								}
-							}
-						]
-					}
-				]
-			}
-		]
-	}
-
-	console.log(JSON.stringify(expected, null, '  '))
-	test.deepEqual(filter2GDCfilter(f), expected, 'dtTerm tvs is ignored')
 	test.end()
 })
 
 ///////// constants
+
 const filterCategorical = {
 	ppfilter: {
 		type: 'tvslst',
@@ -278,12 +68,7 @@ const filterCategorical = {
 						id: 'case.demographic.gender',
 						name: 'Gender',
 						isleaf: true,
-						type: 'categorical',
-						parent_id: 'case.demographic',
-						included_types: ['categorical'],
-						child_types: [],
-						values: {},
-						samplecount: {}
+						type: 'categorical'
 					},
 					values: [{ key: 'female' }],
 					isnot: true
@@ -391,4 +176,196 @@ const filterNum = {
 	}
 }
 
-// TODO when fixed, test nested filter here
+const filterNested = {
+	ppfilter: {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [
+			{
+				type: 'tvslst',
+				join: 'or',
+				lst: [
+					{
+						type: 'tvs',
+						tvs: {
+							term: {
+								id: 'case.demographic.cause_of_death',
+								name: 'Cause of death',
+								isleaf: true,
+								type: 'categorical'
+							},
+							values: [{ key: 'Cancer Related' }]
+						}
+					},
+					{
+						type: 'tvs',
+						tvs: {
+							term: {
+								id: 'case.diagnoses.age_at_diagnosis',
+								name: 'Age at diagnosis',
+								groupsetting: {
+									disabled: false
+								},
+								isleaf: true,
+								type: 'integer',
+								valueConversion: {
+									scaleFactor: 0.0027378507871321013,
+									fromUnit: 'day',
+									toUnit: 'year'
+								},
+								parent_id: 'case.diagnoses',
+								bins: {
+									default: {
+										type: 'custom-bin',
+										mode: 'discrete',
+										lst: [
+											{
+												startunbounded: true,
+												stop: 10950,
+												stopinclusive: true,
+												label: '<=30 years'
+											},
+											{
+												start: 10950,
+												stop: 21900,
+												stopinclusive: true,
+												label: '30-60 years'
+											},
+											{
+												start: 21900,
+												stopunbounded: true,
+												startinclusive: false,
+												label: '>60years'
+											}
+										]
+									}
+								},
+								included_types: ['integer'],
+								child_types: [],
+								cohort: ''
+							},
+							ranges: [
+								{
+									start: 10157,
+									stop: 16729,
+									startinclusive: false,
+									stopinclusive: false,
+									startunbounded: false,
+									stopunbounded: false
+								}
+							]
+						}
+					}
+				],
+				in: true
+			},
+			{
+				type: 'tvs',
+				tvs: {
+					term: {
+						id: 'case.demographic.year_of_birth',
+						name: 'Year of birth',
+						groupsetting: {
+							disabled: false
+						},
+						isleaf: true,
+						type: 'integer',
+						parent_id: 'case.demographic',
+						bins: {
+							default: {
+								mode: 'discrete',
+								type: 'regular-bin',
+								bin_size: 20,
+								startinclusive: false,
+								stopinclusive: true,
+								first_bin: {
+									startunbounded: true,
+									stop: 1938
+								}
+							}
+						},
+						included_types: ['integer'],
+						child_types: [],
+						cohort: ''
+					},
+					ranges: [
+						{
+							start: 1967,
+							stop: 1971,
+							startinclusive: false,
+							stopinclusive: false,
+							startunbounded: false,
+							stopunbounded: false
+						}
+					]
+				}
+			}
+		]
+	},
+	gdcfilter: {
+		op: 'and',
+		content: [
+			{
+				op: 'or',
+				content: [
+					{
+						op: 'in',
+						content: {
+							field: 'cases.demographic.cause_of_death',
+							value: ['Cancer Related']
+						}
+					},
+					{
+						op: 'or',
+						content: [
+							{
+								op: 'and',
+								content: [
+									{
+										op: '>',
+										content: {
+											field: 'cases.diagnoses.age_at_diagnosis',
+											value: 10157
+										}
+									},
+									{
+										op: '<',
+										content: {
+											field: 'cases.diagnoses.age_at_diagnosis',
+											value: 16729
+										}
+									}
+								]
+							}
+						]
+					}
+				]
+			},
+			{
+				op: 'or',
+				content: [
+					{
+						op: 'and',
+						content: [
+							{
+								op: '>',
+								content: {
+									field: 'cases.demographic.year_of_birth',
+									value: 1967
+								}
+							},
+							{
+								op: '<',
+								content: {
+									field: 'cases.demographic.year_of_birth',
+									value: 1971
+								}
+							}
+						]
+					}
+				]
+			}
+		]
+	}
+}
