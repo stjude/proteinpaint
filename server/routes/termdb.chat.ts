@@ -221,8 +221,8 @@ async function classify_query_by_dataset_type(
 
 	// Parse out training data from the dataset JSON and add it to a string
 	const classification_ds = dataset_json.charts.filter((chart: any) => chart.type == 'Classification')
-	if (classification_ds.length == 0) throw 'classification information not present in dataset file'
-	if (classification_ds[0].TrainingData.length == 0) throw 'no training data provided for classification agent'
+	if (classification_ds.length == 0) throw 'Classification information is not present in the dataset file.'
+	if (classification_ds[0].TrainingData.length == 0) throw 'No training data is provided for the classification agent.'
 	let train_iter = 0
 	let training_data = ''
 	if (classification_ds.length > 0 && classification_ds[0].TrainingData.length > 0) {
@@ -369,8 +369,8 @@ async function extract_DE_search_terms_from_query(
 
 		// Parse out training data from the dataset JSON and add it to a string
 		const DE_ds = dataset_json.charts.filter((chart: any) => chart.type == 'DE')
-		if (DE_ds.length == 0) throw 'DE information not present in dataset file'
-		if (DE_ds[0].TrainingData.length == 0) throw 'no training data provided for DE agent'
+		if (DE_ds.length == 0) throw 'DE information is not present in the dataset file.'
+		if (DE_ds[0].TrainingData.length == 0) throw 'No training data is provided for the DE agent.'
 
 		let train_iter = 0
 		let training_data = ''
@@ -665,8 +665,8 @@ async function extract_summary_terms(
 
 	// Parse out training data from the dataset JSON and add it to a string
 	const summary_ds = dataset_json.charts.filter((chart: any) => chart.type == 'Summary')
-	if (summary_ds.length == 0) throw 'summary information not present in dataset file'
-	if (summary_ds[0].TrainingData.length == 0) throw 'no training data provided for summary agent'
+	if (summary_ds.length == 0) throw 'Summary information is not present in the dataset file.'
+	if (summary_ds[0].TrainingData.length == 0) throw 'No training data is provided for the summary agent.'
 
 	let train_iter = 0
 	let training_data = ''
