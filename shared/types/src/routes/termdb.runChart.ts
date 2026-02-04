@@ -11,8 +11,6 @@ export type RunChartRequest = {
 	xtw: { term: { id: string }; q?: { mode?: 'continuous' | 'discrete' }; $id?: string }
 	/** term wrapper for y axis: { term, q } */
 	ytw: { term: { id: string }; q?: { mode?: string }; $id?: string }
-	/** term wrapper for divide-by (discrete). When set, partitions into multiple series. */
-	divideByTW?: { term: { id: string }; q?: { mode?: 'discrete' }; $id?: string }
 	aggregation: 'mean' | 'median' | 'count'
 	filter?: any
 	__protected__?: any // auth token for accessing protected data
@@ -22,7 +20,7 @@ export type RunChartResponse = {
 	status: 'ok' | 'error'
 	/** each series is one curve, with a median. a runchart may show 1 or multiple curves */
 	series: {
-		/** period/series identifier (runChart2Period divide-by) */
+		/** period/series identifier */
 		seriesId?: string
 		/** calculated Y median value for this curve */
 		median: number

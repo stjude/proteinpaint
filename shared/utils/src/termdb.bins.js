@@ -133,7 +133,8 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 		const preSummary = summaryfxn([0, 100])
 		if (preSummary && Number.isFinite(preSummary.min)) {
 			const size = Number(bc.bin_size)
-			const alignedStop = Number.isFinite(size) && size > 0 ? Math.floor(preSummary.min / size) * size : preSummary.min
+			const alignedStop =
+				Number.isFinite(size) && size > 0 ? Math.floor(preSummary.min / size) * size + size : preSummary.min + 1
 			bc.first_bin = { startunbounded: true, stop: alignedStop }
 		} else if (!preSummary || (!Number.isFinite(preSummary.min) && !Number.isFinite(preSummary.max))) {
 			// When summary data is unavailable or invalid, provide a default first_bin

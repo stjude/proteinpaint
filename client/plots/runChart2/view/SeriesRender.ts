@@ -62,6 +62,41 @@ export class SeriesRender {
 			.attr('data-testId', 'sjpp-runChart2-series')
 			.attr('data-series-id', this.series.seriesId ?? '')
 
+		// Median line and text FIRST (background layer)
+		if (this.series.median != null && !isNaN(this.series.median)) {
+			const yMedian = this.plotDims.yAxis.scale(
+				getCoordinate(this.series.median, this.settings.minYScale, this.settings.maxYScale)
+			)
+			const xStart = this.getCoordinates(sortedPoints[0]).x
+			const xEnd = this.getCoordinates(sortedPoints[sortedPoints.length - 1]).x
+
+			// Create background group for median line and text
+			const medianG = seriesG.append('g').attr('data-testId', 'sjpp-runChart2-median-bg')
+
+			// Draw median horizontal line
+			medianG
+				.append('line')
+				.attr('x1', xStart)
+				.attr('y1', yMedian)
+				.attr('x2', xEnd)
+				.attr('y2', yMedian)
+				.attr('stroke', medianColor.toString())
+				.attr('stroke-width', 1)
+				.attr('opacity', 0.5)
+
+			// Add median label
+			medianG
+				.append('text')
+				.attr('x', xEnd - 10)
+				.attr('y', yMedian - 5)
+				.attr('text-anchor', 'end')
+				.attr('font-size', '12px')
+				.attr('fill', medianColor.toString())
+				.attr('pointer-events', 'none')
+				.text(`M=${roundValueAuto(this.series.median, true, 1)}`)
+		}
+
+		// Curve and dots SECOND (foreground layer)
 		seriesG
 			.append('path')
 			.datum(sortedPoints)
@@ -83,38 +118,9 @@ export class SeriesRender {
 			.attr('fill', color)
 			.attr('stroke', '#fff')
 			.attr('stroke-width', 1)
-
 			.style('cursor', 'pointer')
 			.on('mouseover', (event: any, d: any) => this.showHoverTip(event, d))
 			.on('mouseout', () => this.hideHoverTip())
-
-		// Draw median line if median is available
-		if (this.series.median != null && !isNaN(this.series.median)) {
-			const yMedian = this.plotDims.yAxis.scale(
-				getCoordinate(this.series.median, this.settings.minYScale, this.settings.maxYScale)
-			)
-			const xStart = this.getCoordinates(sortedPoints[0]).x
-			const xEnd = this.getCoordinates(sortedPoints[sortedPoints.length - 1]).x
-			// Draw median horizontal line
-			seriesG
-				.append('line')
-				.attr('x1', xStart)
-				.attr('y1', yMedian)
-				.attr('x2', xEnd)
-				.attr('y2', yMedian)
-				.attr('stroke', medianColor.toString())
-				.attr('stroke-width', 1)
-				.attr('opacity', 0.5)
-			// Add median label
-			seriesG
-				.append('text')
-				.attr('x', xEnd - 10)
-				.attr('y', yMedian - 5)
-				.attr('text-anchor', 'end')
-				.attr('font-size', '12px')
-				.attr('fill', medianColor.toString())
-				.text(`M=${roundValueAuto(this.series.median, true, 1)}`)
-		}
 	}
 
 	showHoverTip(event: any, d: any) {
