@@ -2,7 +2,7 @@ import { getCompInit, copyMerge, type ComponentApi, type RxComponent } from '#rx
 import { PlotBase, defaultUiLabels } from './PlotBase.ts'
 import { Menu, Tabs } from '#dom'
 import { fillTermWrapper } from '#termsetting'
-import { recoverInit } from '../rx/src/recover'
+// import { recoverInit } from '../rx/src/recover'
 import { getDefaultViolinSettings } from './violin.js'
 import { getDefaultBarSettings } from './barchart.js'
 import { getDefaultBoxplotSettings } from './boxplot/defaults'
@@ -244,15 +244,15 @@ class SummaryPlot extends PlotBase implements RxComponent {
 		const config = structuredClone(state.config)
 		this.initUi(this.opts, config)
 
-		this.components.recover = await recoverInit({
-			app: this.app,
-			holder: this.dom.localRecoverDiv,
-			getState: appState => this.getState(appState),
-			reactsTo: action => action.id == this.id && action.type == 'plot_edit' && action._scope_ != 'none',
-			plot_id: this.id,
-			maxHistoryLen: 10,
-			margin: '5px 10px' //Prevents a gap appearing between the tabs and sandbox content
-		})
+		// this.components.recover = await recoverInit({
+		// 	app: this.app,
+		// 	holder: this.dom.localRecoverDiv,
+		// 	getState: appState => this.getState(appState),
+		// 	reactsTo: action => action.id == this.id && action.type == 'plot_edit' && action._scope_ != 'none',
+		// 	plot_id: this.id,
+		// 	maxHistoryLen: 10,
+		// 	margin: '5px 10px' //Prevents a gap appearing between the tabs and sandbox content
+		// })
 		this.components.filter = await filterRxCompInit({
 			app: this.app,
 			vocabApi: this.app.vocabApi,
