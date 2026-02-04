@@ -202,6 +202,94 @@ tape.skip('runChart2Period has axis labels', async test => {
 	test.end()
 })
 
+tape('runChart2Period renders with mocked discrete data', async test => {
+	test.timeoutAfter(10000)
+	test.plan(7)
+
+	const holder = getHolder()
+	const originalFetch = window.fetch
+	const mockResponse = {
+		status: 'ok',
+		series: [
+			{
+				seriesId: '2020',
+				median: 15,
+				points: [
+					{ x: 2020.12, xName: 'February 2020', y: 10, sampleCount: 2 },
+					{ x: 2020.54, xName: 'July 2020', y: 20, sampleCount: 3 }
+				]
+			},
+			{
+				seriesId: '2021',
+				median: 30,
+				points: [{ x: 2021.25, xName: 'March 2021', y: 30, sampleCount: 1 }]
+			}
+		]
+	}
+
+	window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+		const url = typeof input === 'string' ? input : (input as Request).url
+		if (url.includes('termdb/runChart')) {
+			return Promise.resolve(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		}
+		return originalFetch(input as RequestInfo, init)
+	}
+
+	runpp({
+		holder,
+		state: {
+			plots: [
+				{
+					chartType: 'runChart2',
+					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
+					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
+				}
+			]
+		}
+	})
+
+	try {
+		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const svg = await waitForElement('svg', chartHolder, 5000)
+		const seriesGroup = await waitForElement('[data-testId="sjpp-runChart2-seriesGroup"]', svg, 5000)
+
+		const seriesGs = seriesGroup.selectAll('[data-testId="sjpp-runChart2-series"]')
+		test.equal(seriesGs.size(), 2, 'should render two series groups')
+
+		const series2020 = seriesGroup.select('[data-series-id="2020"]')
+		test.ok(!series2020.empty(), 'should render series group for 2020')
+
+		const series2021 = seriesGroup.select('[data-series-id="2021"]')
+		test.ok(!series2021.empty(), 'should render series group for 2021')
+
+		const circles = seriesGroup.selectAll('circle')
+		test.ok(circles.size() >= 3, `should render data points. Rendered ${circles.size()}.`)
+
+		// Test rendering order: median background group should come first
+		const series2020Group = seriesGroup.select('[data-series-id="2020"]')
+		const medianBgGroup = series2020Group.select('[data-testId="sjpp-runChart2-median-bg"]')
+		test.ok(!medianBgGroup.empty(), 'should render median background group for layering')
+
+		// Verify median text has pointer-events none (non-interactive)
+		const medianText = medianBgGroup.select('text')
+		test.ok(!medianText.empty(), 'should render median text label')
+		const pointerEvents = medianText.attr('pointer-events')
+		test.equal(pointerEvents, 'none', 'median text should have pointer-events: none to not block interactions')
+	} catch (e) {
+		console.error('Test error:', e)
+		test.fail(`${e}`)
+	} finally {
+		window.fetch = originalFetch
+		holder.remove()
+	}
+	test.end()
+})
+
 tape.skip('runChart2Period chart SVG is valid for download', async test => {
 	test.timeoutAfter(10000)
 	test.plan(2)
