@@ -11,7 +11,7 @@ import { write_tmpfile, cachedFetch, sleep } from './utils.js'
 import { mayLog } from './helpers.ts'
 import serverconfig from './serverconfig.js'
 
-const maxCase4geneExpCluster = 1000 // max number of cases allowed for gene exp clustering app; okay just to hardcode in code and not to define in ds
+const maxCase4geneExpCluster = 1000 // max number of cases that will be used for gene exp clustering; okay just to hardcode in code and not to define in ds
 const maxCase4geneExp = 5000 // gdc gene exp api may not work for more than 5k cases https://gdc-ctds.atlassian.net/browse/SV-2695
 const maxGene4geneExpCluster = 2000 // max #genes allowed for gene exp cluster
 const ascns = 'Allele-specific Copy Number Segment'
@@ -150,32 +150,46 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 
 		let t2 = new Date()
 
-		/* 1/13/2026 
+		/* 2/4/2026 
+		/gene_expression/values endpoint may not work when #cases is big (https://gdc-ctds.atlassian.net/browse/SV-2695)
+		phil suggested imposing a limit
+		here, full list of cases are always queried from cohort...
 
-		for gene exp term in correlation plot: 
-		  gdc gene exp api may not work when #cases is big. phil suggested imposing a limit
-		  list of cases are always queried from cohort, and checked against the limit.
+		- for gene exp term in correlation plot: 
+		  case size is checked against limit maxCase4geneExp
 		  if over limit, it throws and ask user to lower cohort size
 		  even if the api issue is "sporadic", always checking against limit ensure uniform user experience
 		  rather than the gene exp sometimes works in correlation and sometimes not
 		  this adds a performance penalty to correlation plot
 		  later when api issue is resolved, can revert and only check cases when q.forClusteringAnalysis is true
 
-		for gene exp clustering:
-		  up to 1k cases allowed. when a cohort contains >1k expression cases,
-		  clustering app will still work to display first 1k cases, rather than quitting
+		- for gene exp clustering:
+		  case size is not limited by maxCase4geneExp
+		  even if exceeds limit, downstream code limits to first maxCase4geneExpCluster to be used in app
 		  this requires list of cases to be always made so app will work with up to 1k cases
 		*/
 		const case_filters = makeFilter(q)
-		if (!case_filters.content.length) {
-			// when there is no cohort filter, we know maxCase4geneExp will be exceeded,
-			// no need to trigger any other requests to the GDC API
-			throw caseCountLimitError
+
+		if (q.forClusteringAnalysis) {
+			// for gene exp clustering. empty cohort filter is allowed
+		} else {
+			// not for gene exp clustering.
+			if (!case_filters.content.length) {
+				// when there is no cohort filter, we know maxCase4geneExp will be exceeded,
+				// no need to trigger any other requests to the GDC API
+				throw caseCountLimitError
+			}
 		}
-		const cases4clustering = await getCases4exp(q, ds, case_filters)
 		const t = new Date()
+		const cases4clustering = await getCases4exp(q, ds, case_filters)
 		mayLog(cases4clustering.length, 'cases with exp data 4 clustering:', t - t2, 'ms')
-		if (cases4clustering.length > maxCase4geneExp) throw caseCountLimitError
+
+		if (q.forClusteringAnalysis) {
+			// doing geneexp clustering. do not restrict cohort size. subsequent code will restrict to first number of cases by maxCase4geneExpCluster
+		} else {
+			// not geneexp clustering. impose limit
+			if (cases4clustering.length > maxCase4geneExp) throw caseCountLimitError
+		}
 		if (!cases4clustering.length) return { term2sample2value, byTermId: {}, bySampleId: {}, skippedSexChrGenes: [] }
 
 		t2 = t
@@ -436,6 +450,17 @@ function mayFilterByExpression(filter, value) {
 
 // get cases for expression query
 async function getCases4exp(q, ds, case_filters) {
+	const lst = []
+	if (!case_filters.content.length) {
+		// blank cohort filter. all cached cases with exp data are eligible and just use the cache
+		// avoid querying /cases/ which costs a whole minute!
+		for (const i of ds.__gdc.casesWithExpData) {
+			lst.push(i)
+			if (q.forClusteringAnalysis && lst.length == maxCase4geneExpCluster) break
+		}
+		return lst
+	}
+
 	const json = {
 		fields: 'case_id',
 		case_filters,
@@ -444,12 +469,10 @@ async function getCases4exp(q, ds, case_filters) {
 	}
 	try {
 		const { host, headers } = ds.getHostHeaders(q)
-		//const {body: re} = await cachedFetch(joinUrl(host.rest, 'cases'), { method: 'POST', timeout: false, headers, body })
 		const r0 = await ky.post(joinUrl(host.rest, 'cases'), { timeout: false, headers, json })
 		if (!r0.ok) throw r0
 		const re = await r0.json()
 		if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
-		const lst = []
 		for (const h of re.data.hits) {
 			if (h.id && ds.__gdc.casesWithExpData.has(h.id)) {
 				lst.push(h.id)
