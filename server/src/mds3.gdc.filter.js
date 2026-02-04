@@ -10,14 +10,16 @@ GDC filter: https://docs.gdc.cancer.gov/API/Users_Guide/Search_and_Retrieval/
 TODO !!support nested filter!!
 */
 export function filter2GDCfilter(f) {
+	console.log(12, 'filter2GDCfilter(f) arg', f)
 	// gdc filter that will be returned
-	const obj = {
-		op: f.in ? 'and' : 'not',
+	let obj = {
+		op: f.join || 'and',
 		content: []
 	}
+	if (!f.in) obj = { op: 'not', content: obj }
 	if (!Array.isArray(f.lst)) throw 'filter.lst[] not array'
 	for (const item of f.lst) {
-		if (item.type != 'tvs') throw 'filter.lst[] item.type!="tvs"'
+		if (item.type != 'tvs') obj.content.push(filter2GDCfilter) // !!! TODO: TEST recursive handling of nested filter !!!
 		if (!item.tvs) throw 'item.tvs missing'
 		if (!item.tvs.term) throw 'item.tvs.term missing'
 		if (dtTermTypes.has(item.tvs.term.type)) {
@@ -47,23 +49,30 @@ export function filter2GDCfilter(f) {
 			continue
 		}
 		if (item.tvs.ranges) {
+			let f = {
+				op: 'or',
+				content: []
+			}
+
+			if (item.tvs.isnot) f = { op: 'not', content: f }
+
 			for (const range of item.tvs.ranges) {
 				if (range.startunbounded) {
-					obj.content.push({
+					f.content.push({
 						op: range.stopinclusive ? (item.tvs.isnot ? '>' : '<=') : item.tvs.isnot ? '>=' : '<',
 						content: { field: mayChangeCase2Cases(item.tvs.term), value: range.stop }
 					})
 					continue
 				}
 				if (range.stopunbounded) {
-					obj.content.push({
+					f.content.push({
 						op: range.startinclusive ? (item.tvs.isnot ? '<' : '>=') : item.tvs.isnot ? '<=' : '>',
 						content: { field: mayChangeCase2Cases(item.tvs.term), value: range.start }
 					})
 					continue
 				}
 				if (item.tvs.isnot) {
-					obj.content.push({
+					f.content.push({
 						op: 'or',
 						content: [
 							{
@@ -87,7 +96,7 @@ export function filter2GDCfilter(f) {
 						]
 					})
 				} else {
-					obj.content.push({
+					f.content.push({
 						op: 'and',
 						content: [
 							{
@@ -102,6 +111,7 @@ export function filter2GDCfilter(f) {
 					})
 				}
 			}
+			obj.content.push(f)
 			continue
 		}
 		throw 'unknown tvs structure when converting to gdc filter'
