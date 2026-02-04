@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge, multiInit } from '#rx'
 import { Menu } from '#dom/menu'
-import { recoverInit } from '../rx/src/recover'
+// import { recoverInit } from '../rx/src/recover'
 import { select as d3select } from 'd3-selection'
 import { importPlot } from '#plots/importPlot.js'
 import { filterRxCompInit } from '#filter'
@@ -61,18 +61,18 @@ class MassPlot {
 	async setComponents(opts) {
 		const _ = await importPlot(opts.chartType)
 		const promises = {
-			recover: recoverInit({
-				app: this.app,
-				holder: this.dom.localRecoverDiv,
-				getState: appState => this.getState(appState),
-				reactsTo: action =>
-					action.id == this.id &&
-					(action.type == 'plot_edit' || action.type == 'plot_nestedEdits') &&
-					action._track_ != 'none',
-				plot_id: this.id,
-				maxHistoryLen: 10,
-				hideLabel: true
-			}),
+			// recover: recoverInit({
+			// 	app: this.app,
+			// 	holder: this.dom.localRecoverDiv,
+			// 	getState: appState => this.getState(appState),
+			// 	reactsTo: action =>
+			// 		action.id == this.id &&
+			// 		(action.type == 'plot_edit' || action.type == 'plot_nestedEdits') &&
+			// 		action._track_ != 'none',
+			// 	plot_id: this.id,
+			// 	maxHistoryLen: 10,
+			// 	hideLabel: true
+			// }),
 			chart: _.componentInit({
 				app: this.app,
 				holder: this.dom.viz,
