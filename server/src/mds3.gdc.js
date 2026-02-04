@@ -116,7 +116,7 @@ export function validate_query_snvindel_byrange(ds) {
 
 // these constants are temp fixes for the GDC API issue where
 // /gene_expression/values may randomly not return data or second tsv line
-const caseCountLimitError = `Case count > ${maxCase4geneExp}: please limit the cohort size to view gene expression correlation plot`
+const caseCountLimitError = `Case count > ${maxCase4geneExp}: please limit the cohort size to access gene expression data`
 const retryMax = serverconfig.features?.gdcGeneExpRetryMax || 0
 const retryDelay = serverconfig.features?.gdcGeneExpRetryDelay || 3000
 // user-friendly error message, to be followed by the technical message in parentheses
