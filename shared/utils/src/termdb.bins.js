@@ -1,6 +1,6 @@
 import { format } from 'd3-format'
 import { getColors } from './common.js'
-import { isStrictNumeric, convertUnits } from './helpers.js'
+import { isNumeric, isStrictNumeric, convertUnits } from './helpers.js'
 
 export default function validate_bins(binconfig) {
 	// Number.isFinite('1') returns false, which is desired
@@ -126,12 +126,18 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
   }
 */
 	const bc = binconfig
+	// assign default type (same as in validate_bins)
+	if (bc && typeof bc === 'object' && !('type' in bc)) bc.type = 'regular-bin'
+
 	if (bc?.type == 'regular-bin' && !bc.first_bin && typeof summaryfxn == 'function') {
 		const preSummary = summaryfxn([0, 100])
 		if (preSummary && Number.isFinite(preSummary.min)) {
 			const size = Number(bc.bin_size)
 			const alignedStop = Number.isFinite(size) && size > 0 ? Math.floor(preSummary.min / size) * size : preSummary.min
 			bc.first_bin = { startunbounded: true, stop: alignedStop }
+		} else if (!preSummary || (!Number.isFinite(preSummary.min) && !Number.isFinite(preSummary.max))) {
+			// When summary data is unavailable or invalid, provide a default first_bin
+			bc.first_bin = { startunbounded: true, stop: 0 }
 		}
 	}
 	validate_bins(bc)
@@ -147,7 +153,6 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 	bc.results = { summary }
 	if (!bc.binLabelFormatter) bc.binLabelFormatter = getNumDecimalsFormatter(bc)
 
-	const orderedLabels = []
 	// round the min and max values for use as bin start and stop
 	// in the first and last bins, respectively
 	const minFloor = Math.floor(summary.min * 100) / 100
@@ -369,7 +374,7 @@ export function get_bin_range_equation(bin, binconfig) {
 	const x = '<span style="font-family:Times;font-style:italic;">x</span>'
 	let range_eq
 	// should always use computed (not user-customized) bin label to determine bin range text
-	const copy = structuredClone(bin)
+	const copy = JSON.parse(JSON.stringify(bin))
 	copy.label = '' // mutate only the copy, and not the original bin argument
 	const bin_label = get_bin_label(copy, binconfig)
 	if (bin.startunbounded || bin.stopunbounded) {
