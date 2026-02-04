@@ -1762,7 +1762,7 @@ export async function querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q
 
 	const f = makeCasesFilter(q)
 	param.case_filters = { op: 'and', content: f }
-
+	// throw param.case_filters // make it easier to inspect in browser console as an error object
 	const { host, headers } = ds.getHostHeaders(q) // will be reused below
 
 	const t1 = Date.now()

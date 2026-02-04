@@ -1,2 +1,3 @@
 Fixes:
 - remove all untagged html text in menu.clear(), previously only tagged children were removed
+- correctly translate tvs.ranges into the expected GDC API filter shape
