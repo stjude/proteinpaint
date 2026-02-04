@@ -264,11 +264,11 @@ tape('buildRunChartFromData() period partitioning (xTermBin=true)', function (te
 	test.ok(series2020, 'should have 2020 series')
 	test.ok(series2021, 'should have 2021 series')
 
-	test.equal(series2020.points.length, 2, '2020 series should have 2 points')
-	test.equal(series2021.points.length, 2, '2021 series should have 2 points')
+	test.equal(series2020!.points.length, 2, '2020 series should have 2 points')
+	test.equal(series2021!.points.length, 2, '2021 series should have 2 points')
 
-	test.equal(series2020.median, 15, '2020 median should be (10+20)/2 = 15')
-	test.equal(series2021.median, 35, '2021 median should be (30+40)/2 = 35')
+	test.equal(series2020!.median, 15, '2020 median should be (10+20)/2 = 15')
+	test.equal(series2021!.median, 35, '2021 median should be (30+40)/2 = 35')
 
 	test.end()
 })
