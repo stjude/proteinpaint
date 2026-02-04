@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - GRIN2: Increased max lesion cap to 250,000. Refactored per lesion type cap to a single overall cap. Introduced memory profilling and dynamic lesion cap generation based on available memory in a particular environment. Other improvements.
+- GRIN2: Simplified several stats related outputs under a much concise stats object. Now displaying all memory usage information as new table
 
 Fixes:
 - Now fetching clustalo binary from PP instead of defunct URL

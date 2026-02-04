@@ -1,2 +1,1 @@
-Features:
-- GRIN2: Simplified several stats related outputs under a much concise stats object. Now displaying all memory usage information as new table
+
