@@ -6,7 +6,7 @@ import type {
 	ColorScaleMenuOpts,
 	NumericInputs
 } from '../types/colorScale'
-import { scaleLinear } from 'd3-scale'
+import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { axisBottom, axisTop } from 'd3-axis'
 import { font } from '../../src/client'
 import { axisstyle, niceNumLabels } from '#dom'
@@ -38,6 +38,7 @@ export class ColorScale {
 		this.barwidth = opts.barwidth || 100
 		this.colors = opts?.colors?.length ? opts.colors : ['white', 'red']
 		this.domain = opts.domain
+		console.log(40, this.domain.slice(-10))
 		this.fontSize = opts.fontSize || 10
 		this.markedValue = opts.markedValue && opts.markedValue > 0.001 ? opts.markedValue : null
 		this.ticks = opts.ticks || 5
@@ -46,7 +47,8 @@ export class ColorScale {
 
 		this.validateOpts(opts)
 
-		this.tickValues = niceNumLabels(opts.domain)
+		this.tickValues = [opts.domain[0], 0, opts.domain.slice(-1)[0]]
+		console.log(49, this.tickValues)
 
 		let scaleSvg: SvgSvg //
 		if (opts.width || opts.height) {
@@ -68,6 +70,7 @@ export class ColorScale {
 
 		if (this.topTicks === true) {
 			const { scale, scaleAxis } = this.makeAxis(barG, id)
+			console.log(70, scale)
 			this.makeColorBar(gradient)
 			this.dom = { gradient, scale, scaleAxis, barG }
 		} else {
@@ -144,7 +147,8 @@ export class ColorScale {
 
 		const scaleAxis = div.append('g').attr('data-testid', 'sjpp-color-scale-axis')
 		if (this.topTicks === false) scaleAxis.attr('transform', `translate(0, ${this.barheight})`)
-		const scale = scaleLinear().domain(this.tickValues).range(this.getRange())
+		console.log(146, this.tickValues)
+		const scale = scaleOrdinal().domain(this.tickValues).range(this.getRange())
 
 		return { scale, scaleAxis }
 	}
@@ -214,7 +218,14 @@ export class ColorScale {
 
 	getAxis() {
 		const axis = this.topTicks === true ? axisTop(this.dom.scale) : axisBottom(this.dom.scale)
-		axis.ticks(this.ticks).tickSize(this.tickSize)
+		console.log(217, this.domain)
+		axis
+			.ticks(this.ticks)
+			.tickSize(this.tickSize)
+			.tickFormat((n: number) => {
+				//if (i !== 0 && i !== this.domain.length - 1) return null
+				return niceNumLabels([n])[0]
+			})
 		return axis
 	}
 
@@ -226,8 +237,8 @@ export class ColorScale {
 	updateAxis() {
 		this.dom.scaleAxis.selectAll('*').remove()
 
-		this.tickValues = niceNumLabels(this.domain)
-		this.dom.scale = scaleLinear().domain(this.tickValues).range(this.getRange())
+		this.tickValues = this.domain //niceNumLabels(this.domain); console.log(229, this.tickValues)
+		this.dom.scale = scaleLinear().domain(this.tickValues).range(this.getRange()) //.tickFormat(n => niceNumLabels())
 
 		this.dom.scaleAxis
 			.transition()
