@@ -338,14 +338,11 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 	const capWarningRows: string[][] = []
 	const expectedToProcess = processing.totalSamples! - processing.failedSamples!
 	if (processing.processedSamples! < expectedToProcess) {
-		capWarningRows.push(
-			['', ''],
-			[
-				'Note',
-				`Lesion cap of ${processing.lesionCap?.toLocaleString()} was reached before all samples could be processed. ` +
-					`Analysis ran on ${processing.processedSamples!.toLocaleString()} of ${expectedToProcess.toLocaleString()} samples.`
-			]
-		)
+		capWarningRows.push([
+			'Note',
+			`Lesion cap of ${processing.lesionCap?.toLocaleString()} was reached before all samples could be processed. ` +
+				`Analysis ran on ${processing.processedSamples!.toLocaleString()} of ${expectedToProcess.toLocaleString()} samples.`
+		])
 	}
 
 	const response: GRIN2Response = {
