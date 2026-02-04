@@ -225,7 +225,7 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 			if (t.scales && value.class.startsWith('CNV_')) {
 				const max = t.scales.max // value.value < 0 ? self.cnvValues.maxLoss : self.cnvValues.maxGain
 				const { maxLoss, maxGain, minLoss, minGain } = t.scales
-				value.scaledValue = value.value //value.value < 0 ? value.value / maxLoss : value.value / maxGain
+				value.scaledValue = value.value < 0 ? value.value / minLoss : value.value / maxGain
 				cell.fill = value.value < 0 ? t.scales.loss(value.scaledValue) : t.scales.gain(value.scaledValue)
 
 				return {
