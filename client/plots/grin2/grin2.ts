@@ -790,9 +790,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.append('h3')
 				.style('margin', this.headerMargin)
 				.style('font-size', `${this.headerFontSize}px`)
-				.text(
-					`Top Genes (showing ${result.stats.lst[1][1].toLocaleString()} of ${result.stats.lst[0][1].toLocaleString()})`
-				)
+				.text(`Top Genes (showing ${result.stats.lst[0].rows[1][1]} of ${result.stats.lst[0].rows[0][1]})`)
 
 			const tableDiv = tableContainer.append('div')
 
@@ -875,37 +873,19 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 		// Display run stats information
 		if (result.stats?.lst) {
-			const headerDiv = this.dom.div
-				.append('div')
-				.style('display', 'flex')
-				.style('align-items', 'center')
-				.style('margin', this.btnMargin)
-				.style('margin-top', '40px')
+			const tablesContainer = this.dom.div.append('div').style('margin-top', '50px')
 
-			headerDiv
-				.append('h3')
-				.style('margin', this.headerMargin)
-				.style('font-size', `${this.headerFontSize}px`)
-				.text('GRIN2 Processing Summary')
+			for (const section of result.stats.lst) {
+				tablesContainer
+					.append('h4')
+					.style('margin', this.headerMargin)
+					.style('margin-top', '15px')
+					.style('font-size', `${this.headerFontSize - 2}px`)
+					.text(section.name)
 
-			const tablesContainer = this.dom.div.append('div')
-			let currentTable = table2col({ holder: tablesContainer.append('div') })
-
-			for (const [k, v] of result.stats.lst) {
-				if (k === '' && v === '') {
-					// Section break — just skip, the next header will start a new table
-					continue
-				} else if (v === '') {
-					// Section header — render header, then start a new table below it
-					tablesContainer
-						.append('h4')
-						.style('margin', this.headerMargin)
-						.style('margin-top', '15px')
-						.style('font-size', `${this.headerFontSize - 2}px`)
-						.text(k)
-					currentTable = table2col({ holder: tablesContainer.append('div'), margin: '2px 8px' })
-				} else {
-					currentTable.addRow(k, v)
+				const table = table2col({ holder: tablesContainer.append('div'), margin: '2px 8px' })
+				for (const [k, v] of section.rows) {
+					table.addRow(k, v)
 				}
 			}
 		}

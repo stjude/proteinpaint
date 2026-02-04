@@ -159,8 +159,10 @@ export type GRIN2Response = {
 	}
 
 	stats?: {
-		/** Pre-built label/value pairs for all run statistics */
-		lst: string[][]
+		lst: Array<{
+			name: string
+			rows: string[][]
+		}>
 	}
 }
 
