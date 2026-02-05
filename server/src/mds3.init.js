@@ -2894,7 +2894,10 @@ function getDtsToQuery(tw, ds) {
 	const dts = new Set()
 	if (tw.q.dtLst?.length) {
 		// dts specified in tw, use these
-		for (const dt of tw.q.dtLst) dts.add(dt)
+		for (const dt of tw.q.dtLst) {
+			if (!Number.isInteger(dt)) throw 'unexpected dt value'
+			dts.add(dt)
+		}
 	} else {
 		// dts not specified in tw, use those specified in dataset
 		if (ds.queries.snvindel) {
