@@ -11,13 +11,29 @@ export type GvBaseQ = MinBaseQ & {
 }
 
 type RawGvValuesQ = GvBaseQ & { type?: 'values' }
-type RawGvPredefinedGsQ = GvBaseQ & { type: 'predefined-groupset'; predefined_groupset_idx?: number }
-type RawGvCustomGsQ = GvBaseQ & { type: 'custom-groupset'; customset?: BaseGroupSet }
+type RawGvPredefinedGsQ = GvBaseQ & {
+	type: 'predefined-groupset'
+	predefined_groupset_idx?: number
+	dtLst?: any[] // dts to query
+}
+type RawGvCustomGsQ = GvBaseQ & {
+	type: 'custom-groupset'
+	customset?: BaseGroupSet
+	dtLst?: any[] // dts to query
+}
 export type RawGvQ = RawGvValuesQ | RawGvPredefinedGsQ | RawGvCustomGsQ
 
 export type GvValuesQ = GvBaseQ & { type: 'values' }
-export type GvPredefinedGsQ = GvBaseQ & { type: 'predefined-groupset'; predefined_groupset_idx: number }
-export type GvCustomGsQ = GvBaseQ & { type: 'custom-groupset'; customset: BaseGroupSet }
+export type GvPredefinedGsQ = GvBaseQ & {
+	type: 'predefined-groupset'
+	predefined_groupset_idx: number
+	dtLst: any[] // dts to query
+}
+export type GvCustomGsQ = GvBaseQ & {
+	type: 'custom-groupset'
+	customset: BaseGroupSet
+	dtLst: any[] // dts to query
+}
 
 export type GvQ = GvValuesQ | GvPredefinedGsQ | GvCustomGsQ
 
