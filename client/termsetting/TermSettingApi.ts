@@ -1,6 +1,6 @@
 import type { TermSettingOpts } from './types'
 import { TermSetting } from './TermSetting.ts'
-import type { Term, TermWrapper, Filter, GvPredefinedGsTW } from '#types'
+import type { Term, TermWrapper, Filter } from '#types'
 import { call_fillTW, get$id, fillTermWrapper } from './utils.ts'
 import { minimatch } from 'minimatch'
 // import { isNumericTerm } from '#shared/terms.js'
@@ -200,7 +200,7 @@ export class TermSettingApi {
 				options.push({
 					label: groupset.name,
 					callback: async () => {
-						const tw: GvPredefinedGsTW = {
+						const tw: any = {
 							type: 'GvPredefinedGsTW',
 							isAtomic: true,
 							term: self.term,
