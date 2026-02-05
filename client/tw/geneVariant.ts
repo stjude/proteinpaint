@@ -220,7 +220,12 @@ export class GvPredefinedGS extends GvBase {
 
 		const { term, q } = tw
 		if (!term.groupsetting?.lst?.length) throw 'term.groupsetting.lst[] is empty'
-		if (!q.dtLst?.length) q.dtLst = [term.groupsetting.lst[q.predefined_groupset_idx].dt]
+		if (!q.dtLst?.length) {
+			// TODO: remove these type assertions
+			const idx = q.predefined_groupset_idx as number
+			const lst = term.groupsetting.lst as any[]
+			q.dtLst = [lst[idx].dt]
+		}
 		set_hiddenvalues(q, term)
 		return tw as GvPredefinedGsTW
 	}
