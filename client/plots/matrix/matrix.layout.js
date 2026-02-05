@@ -4,6 +4,7 @@ import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-ch
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common.js'
 import { colorDelta, getInterpolatedDomainRange, removeInterpolatedOutliers, removeOutliers } from '#dom'
+import { roundValueAuto } from '#shared/roundValue.js'
 
 export function setAutoDimensions(xOffset) {
 	const m = this.state.config.settings.matrix
@@ -333,7 +334,11 @@ export function setLabelsAndScales() {
 	let cnvLegendDomainRange // if cnv data is present, compute once and reuse across geneVariant tw's
 
 	if (this.cnvValues.length) {
-		this.cnvValues = removeOutliers(this.cnvValues, 0.025, 0.975)
+		if (s.cnvValues.cutoffMode == 'percentile') {
+			const max = s.cnvValues.percentile
+			const min = roundValueAuto(1 - max)
+			this.cnvValues = removeOutliers(this.cnvValues, min, max)
+		}
 		const minLoss = this.cnvValues[0] < 0 ? this.cnvValues[0] : undefined
 		const maxGain =
 			this.cnvValues[this.cnvValues.length - 1] > 0 ? this.cnvValues[this.cnvValues.length - 1] : undefined
