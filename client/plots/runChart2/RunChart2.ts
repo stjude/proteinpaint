@@ -18,7 +18,7 @@ export class RunChart2 extends PlotBase implements RxComponent {
 	model!: RunChart2Model
 	viewModel!: RunChart2ViewModel
 	view!: RunChart2View
-	configTermKeys = ['xtw', 'ytw', 'divideBy']
+	configTermKeys = ['xtw', 'ytw']
 
 	constructor(opts: any, api: any) {
 		super(opts, api)
@@ -192,17 +192,10 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 
 	const defaultConfig = app.vocabApi.termdbConfig?.plotConfigByCohort?.default?.[opts.chartType]
 
-	let defaultDivideBy: any = null
-	if (xtw?.q?.mode === 'discrete' && xtw?.term?.id) {
-		const termQ = xtw.q ?? {}
-		defaultDivideBy = { term: xtw.term, q: { ...termQ, mode: 'discrete' as const }, $id: xtw.$id }
-	}
-
 	const config: any = {
 		hidePlotFilter: true, // sandbox filter not implemented
 		xtw,
 		ytw,
-		divideBy: defaultDivideBy ?? null,
 		settings: {
 			controls: { isOpen: false },
 			runChart2: getDefaultRunChart2Settings(opts)

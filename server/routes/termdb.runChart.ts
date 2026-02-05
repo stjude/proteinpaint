@@ -37,9 +37,9 @@ export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChart
 	if (data.error) throw new Error(data.error)
 
 	// Partition by xtw when xtw is in discrete mode
-	const xTermBin = q.xtw?.q?.mode === 'discrete'
+	const shouldPartition = q.xtw?.q?.mode === 'discrete'
 
-	return buildRunChartFromData(q.aggregation, xTermId, yTermId, data, xTermBin)
+	return buildRunChartFromData(q.aggregation, xTermId, yTermId, data, shouldPartition, xTermId)
 }
 
 export function buildRunChartFromData(
@@ -47,20 +47,22 @@ export function buildRunChartFromData(
 	xTermId: string,
 	yTermId: string,
 	data: any,
-	xTermBin: boolean
+	shouldPartition: boolean,
+	partitionTermId?: string
 ): RunChartResponse {
 	const allSamples = (data.samples || {}) as Record<string, any>
 
-	if (xTermBin) {
+	if (shouldPartition && partitionTermId) {
 		// runChart2Period: partition samples by divide-by term's bin key (period)
 		const period2Samples: Record<string, Record<string, any>> = {}
 		for (const sampleId in allSamples) {
 			const sample = allSamples[sampleId]
-			const xTerm = sample?.[xTermId]
-			if (xTerm?.key == null) {
-				throw new Error(`Missing key for xTermId=${xTermId} in sample ${sampleId}`)
+			const partitionTerm = sample?.[partitionTermId]
+			if (partitionTerm?.key == null) {
+				// Skip samples that don't have a value for the partition term
+				continue
 			}
-			const periodKey = xTerm.key
+			const periodKey = partitionTerm.key
 			if (!period2Samples[periodKey]) period2Samples[periodKey] = {}
 			period2Samples[periodKey][sampleId] = sample
 		}
