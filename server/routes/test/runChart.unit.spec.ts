@@ -239,7 +239,7 @@ tape('buildRunChartFromData() all missing Y values for a time bucket', function 
 	test.end()
 })
 
-tape('buildRunChartFromData() period partitioning (xTermBin=true)', function (test) {
+tape('buildRunChartFromData() period partitioning (shouldPartition=true)', function (test) {
 	const aggregation = 'median'
 	const xTermId = 'x'
 	const yTermId = 'y'
@@ -253,7 +253,7 @@ tape('buildRunChartFromData() period partitioning (xTermBin=true)', function (te
 		}
 	}
 
-	const result = buildRunChartFromData(aggregation, xTermId, yTermId, data, true)
+	const result = buildRunChartFromData(aggregation, xTermId, yTermId, data, true, xTermId)
 
 	test.equal(result.status, 'ok', 'status should be ok')
 	test.equal(result.series.length, 2, 'should return two series (one per period)')

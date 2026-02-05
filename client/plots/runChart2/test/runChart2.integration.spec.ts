@@ -98,8 +98,7 @@ tape.skip('runChart2Period (period) renders series and data points', async test 
 				{
 					chartType: 'runChart2',
 					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
-					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } },
-					period: { term: { id: 'date' }, q: { mode: 'discrete' } }
+					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
 				}
 			]
 		}
@@ -140,8 +139,7 @@ tape.skip('runChart2Period has x-axis and y-axis groups', async test => {
 				{
 					chartType: 'runChart2',
 					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
-					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } },
-					period: { term: { id: 'date' }, q: { mode: 'discrete' } }
+					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
 				}
 			]
 		}
@@ -177,8 +175,7 @@ tape.skip('runChart2Period has axis labels', async test => {
 				{
 					chartType: 'runChart2',
 					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
-					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } },
-					period: { term: { id: 'date' }, q: { mode: 'discrete' } }
+					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
 				}
 			]
 		}
@@ -302,8 +299,7 @@ tape.skip('runChart2Period chart SVG is valid for download', async test => {
 				{
 					chartType: 'runChart2',
 					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
-					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } },
-					period: { term: { id: 'date' }, q: { mode: 'discrete' } }
+					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
 				}
 			]
 		}
@@ -411,8 +407,7 @@ tape.skip('RunChart2Period should render median lines for each series', async te
 				{
 					chartType: 'runChart2',
 					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
-					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } },
-					period: { term: { id: 'date' }, q: { mode: 'discrete' } }
+					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
 				}
 			]
 		}
@@ -501,8 +496,7 @@ tape.skip('RunChart2Period should render series with different colors', async te
 				{
 					chartType: 'runChart2',
 					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
-					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } },
-					period: { term: { id: 'date' }, q: { mode: 'discrete' } }
+					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
 				}
 			]
 		}
