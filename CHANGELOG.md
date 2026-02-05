@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.174.0
 
 Features:
 - GRIN2: Increased max lesion cap to 250,000. Refactored per lesion type cap to a single overall cap. Introduced memory profilling and dynamic lesion cap generation based on available memory in a particular environment. Other improvements.
