@@ -23,6 +23,7 @@ import { getWrappedTvslst } from '#filter/filter'
 import { getDtTermValues } from '#filter/tvs.dt'
 import { getChildTerms, addParentTerm } from '../termdb/handlers/geneVariant'
 import { getColors, dtcnv, dtsnvindel, mclass } from '#shared/common.js'
+import { getDtsFromGroups } from '../termsetting/handlers/geneVariant'
 import { rgb } from 'd3-color'
 
 let colorScale = getColors(3)
@@ -219,6 +220,7 @@ export class GvPredefinedGS extends GvBase {
 
 		const { term, q } = tw
 		if (!term.groupsetting?.lst?.length) throw 'term.groupsetting.lst[] is empty'
+		if (!q.dtLst?.length) q.dtLst = [term.groupsetting.lst[q.predefined_groupset_idx].dt]
 		set_hiddenvalues(q, term)
 		return tw as GvPredefinedGsTW
 	}
@@ -261,6 +263,7 @@ export class GvCustomGS extends GvBase {
 		const { term, q } = tw
 		if (!q.customset) throw 'missing tw.q.customset'
 		if (!q.customset.groups.length) throw 'customset.groups[] is empty'
+		if (!q.dtLst?.length) q.dtLst = getDtsFromGroups(q.customset.groups)
 		set_hiddenvalues(q, term)
 		return tw as GvCustomGsTW
 	}

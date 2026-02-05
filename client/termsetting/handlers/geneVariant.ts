@@ -96,7 +96,8 @@ async function makeEditMenu(self: TermSetting, _div: any) {
 					return
 				} else {
 					// groups created, assign to custom groupset
-					Object.assign(q, { type: 'custom-groupset', customset: { groups: self.groups } })
+					const dtLst = getDtsFromGroups(self.groups)
+					Object.assign(q, { type: 'custom-groupset', customset: { groups: self.groups }, dtLst })
 				}
 			} else {
 				// no groupsetting
@@ -104,6 +105,31 @@ async function makeEditMenu(self: TermSetting, _div: any) {
 			}
 			self.api.runCallback()
 		})
+}
+
+export function getDtsFromGroups(groups) {
+	const dts = new Set()
+	for (const group of groups) {
+		const filter = group.filter
+		for (const dt of getDtsFromFilter(filter)) {
+			dts.add(dt)
+		}
+	}
+	const dtLst = [...dts]
+	return dtLst
+}
+
+function getDtsFromFilter(filter) {
+	const dts = new Set()
+	for (const item of filter.lst) {
+		if (item.type == 'tvslst') {
+			for (const dt of getDtsFromFilter(item)) dts.add(dt)
+		} else {
+			const tvs = item.tvs
+			dts.add(tvs.term.dt)
+		}
+	}
+	return dts
 }
 
 // make UI for grouping variants

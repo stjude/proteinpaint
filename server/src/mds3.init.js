@@ -2708,6 +2708,9 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		// will be used in addDataAvailability() to filter samples
 		const sampleFilter = await filterSamples4assayAvailability(q, ds)
 
+		// collect dts to query
+		const dts = getDtsToQuery(tw, ds)
+
 		// retrieve mutation data for each gene
 		// query genes concurrently to speed up geneset query
 		// limit to 50 genes at a time (otherwise gdc query can fail)
@@ -2720,25 +2723,20 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			await Promise.all(genes.map(gene => getGeneMlst(gene)))
 		}
 		async function getGeneMlst(gene) {
-			const dts = [] // track queried dts, will be used for assay availability
 			if (!gene.gene && !(gene.chr && Number.isInteger(gene.start) && Number.isInteger(gene.stop)))
 				throw 'no gene or position specified'
 			const mlst = []
-			if (ds.queries.snvindel) {
-				dts.push(dtsnvindel)
+			if (dts.includes(dtsnvindel)) {
 				const snvIndelMlst = await getSnvindelByTerm(ds, gene, genome, q)
 				mlst.push(...snvIndelMlst)
 			}
-			if (ds.queries.svfusion) {
-				const dtLst = ds.queries.svfusion.dtLst // will contain dts for sv and/or fusion
-				if (!dtLst) throw 'svfusion dtLst is missing'
-				dts.push(...dtLst)
+			if (dts.includes(dtfusionrna) || dts.includes(dtsv)) {
 				// important to query getSvfusionByTerm() once and not multiple times
 				// for each svfusion dt, otherwise mutations will get duplicated for samples
 				const svFusionMlst = await getSvfusionByTerm(ds, gene, genome, q)
 				mlst.push(...svFusionMlst)
 			}
-			if (ds.queries.geneCnv || ds.queries.cnv) {
+			if (dts.includes(dtcnv)) {
 				/******************
 					 tricky!!
 				*******************
@@ -2750,7 +2748,6 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 				even later we may have another ds with both, may not make sense to load both here
 				*/
-				dts.push(dtcnv)
 				const cnvMlst = ds.queries.geneCnv
 					? await getGenecnvByTerm(ds, gene, genome, q)
 					: await getCnvByTw(ds, { term: gene, q: tw.q }, genome, q)
@@ -2838,7 +2835,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 			// add data availability for each dt
 			for (const dt of dts) {
-				await mayAddDataAvailability(sample2mlst, dt, ds, gene, sampleFilter)
+				mayAddDataAvailability(sample2mlst, dt, ds, gene, sampleFilter)
 			}
 		}
 
@@ -2892,7 +2889,30 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 	}
 }
 
-async function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter) {
+// get dts to query
+function getDtsToQuery(tw, ds) {
+	const dts = new Set()
+	if (tw.q.dtLst?.length) {
+		// dts specified in tw, use these
+		for (const dt of tw.q.dtLst) dts.add(dt)
+	} else {
+		// dts not specified in tw, use those specified in dataset
+		if (ds.queries.snvindel) {
+			dts.add(dtsnvindel)
+		}
+		if (ds.queries.svfusion) {
+			const dtLst = ds.queries.svfusion.dtLst // will contain dts for sv and/or fusion
+			if (!dtLst) throw 'svfusion dtLst is missing'
+			for (const dt of dtLst) dts.add(dt)
+		}
+		if (ds.queries.geneCnv || ds.queries.cnv) {
+			dts.add(dtcnv)
+		}
+	}
+	return [...dts]
+}
+
+function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter) {
 	if (!ds.assayAvailability?.byDt) return // this ds is not equipped with assay availability by dt
 	const _dt = ds.assayAvailability.byDt[dtKey]
 	if (!_dt) return // this ds has assay availability but lacks setting for this dt. this is allowed e.g. we only specify availability for cnv but not snvindel.
