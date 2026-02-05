@@ -875,6 +875,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 		if (result.stats?.lst) {
 			const tablesContainer = this.dom.div.append('div').style('margin-top', '50px')
 
+			// Fields to hide from display
+			const hiddenFields = new Set(['Total Genes', 'Showing Top', 'Cache File Name'])
+
 			for (const section of result.stats.lst) {
 				tablesContainer
 					.append('h4')
@@ -885,7 +888,10 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 				const table = table2col({ holder: tablesContainer.append('div'), margin: '2px 8px' })
 				for (const [k, v] of section.rows) {
-					table.addRow(k, v)
+					// Only add row if the key is not in the hidden fields set
+					if (!hiddenFields.has(k)) {
+						table.addRow(k, v)
+					}
 				}
 			}
 		}
