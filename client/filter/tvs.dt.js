@@ -61,7 +61,8 @@ export async function getDtTermValues(dtTerm, filter, vocabApi) {
 		return
 	}
 	// get mutation classes of gene
-	const categories = await vocabApi.getCategories(dtTerm.parentTerm, filter)
+	const body = { term1_q: { dtLst: [dtTerm.dt] } }
+	const categories = await vocabApi.getCategories(dtTerm.parentTerm, filter, body)
 	// filter for mutations of specific dt
 	const data = categories.lst.find(x => x.dt == dtTerm.dt)
 	if (!data) return
