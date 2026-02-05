@@ -141,7 +141,13 @@ export async function getPlotConfig(opts = {}, app) {
 				showHints: [],
 				// settings for a specific tw
 				twSpecificSettings: {},
-				oncoPrintSNVindelCellBorder: false // whether to show white cell border for SNVindel in oncoPrint mode
+				oncoPrintSNVindelCellBorder: false, // whether to show white cell border for SNVindel in oncoPrint mode
+				cnvValues: {
+					cutoffMode: 'percentile',
+					min: null,
+					max: null,
+					percentile: 0.99
+				}
 			}
 		}
 	}
