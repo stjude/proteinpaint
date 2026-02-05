@@ -2726,17 +2726,17 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			if (!gene.gene && !(gene.chr && Number.isInteger(gene.start) && Number.isInteger(gene.stop)))
 				throw 'no gene or position specified'
 			const mlst = []
-			if (dts.includes(dtsnvindel)) {
+			if (ds.queries.snvindel && dts.includes(dtsnvindel)) {
 				const snvIndelMlst = await getSnvindelByTerm(ds, gene, genome, q)
 				mlst.push(...snvIndelMlst)
 			}
-			if (dts.includes(dtfusionrna) || dts.includes(dtsv)) {
+			if (ds.queries.svfusion && (dts.includes(dtfusionrna) || dts.includes(dtsv))) {
 				// important to query getSvfusionByTerm() once and not multiple times
 				// for each svfusion dt, otherwise mutations will get duplicated for samples
 				const svFusionMlst = await getSvfusionByTerm(ds, gene, genome, q)
 				mlst.push(...svFusionMlst)
 			}
-			if (dts.includes(dtcnv)) {
+			if ((ds.queries.geneCnv || ds.queries.cnv) && dts.includes(dtcnv)) {
 				/******************
 					 tricky!!
 				*******************
