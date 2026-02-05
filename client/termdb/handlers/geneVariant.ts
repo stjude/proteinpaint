@@ -20,6 +20,7 @@ export class SearchHandler {
 	term: any // tw.term
 	q: any // tw.q
 	callback: any
+	maxNumGenes: any
 
 	async init(opts: Opts) {
 		this.opts = opts
@@ -27,6 +28,7 @@ export class SearchHandler {
 		this.term = { type: 'geneVariant' }
 		this.q = { type: 'predefined-groupset' }
 		this.callback = opts.callback
+		this.maxNumGenes = this.opts.app.vocabApi.termdbConfig?.maxGeneVariantGeneSetSize || 200 // max # genes allowed
 		opts.holder.style('padding', '5px 10px 10px 25px')
 		this.dom.typeSettingDiv = opts.holder.append('div')
 		this.dom.searchDiv = opts.holder
@@ -149,7 +151,7 @@ export class SearchHandler {
 			genome: this.opts.genomeObj,
 			vocabApi: this.opts.app.vocabApi,
 			nameInput: true,
-			maxNumGenes: 200, // max limit for # genes
+			maxNumGenes: this.maxNumGenes,
 			callback: async result => await this.selectGeneSet(result)
 		})
 		this.dom.searchDiv.select('.sja_genesetinput').style('padding', '0px').style('margin-top', '-10px')
