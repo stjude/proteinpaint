@@ -174,6 +174,7 @@ export function getLegendData(legendGroups, refs, self) {
 						domain,
 						name: 'CNV gain/loss',
 						scale: scaleLinear().domain(domain).range(colors),
+						scales: loss.scales, //Prevent the colors and domain recalculating below
 						minLabel: domain[0], //loss.maxLabel,
 						maxLabel: domain.slice(-1)[0],
 						labels: { left: 'Loss', right: 'Gain' },
