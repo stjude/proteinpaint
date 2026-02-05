@@ -113,14 +113,12 @@ export const discrete = {
 						${excludevalues.length ? 'value NOT IN (' + excludevalues.join(',') + ') AND' : ''}
 						(
 							b.startunbounded = 1
-							OR value > b.start
-							OR (b.startinclusive=1 AND value = b.start)
+							OR value >= b.start
 						)
 						AND
 						(
 							b.stopunbounded
 							OR value < b.stop
-							OR (b.stopinclusive=1 AND value = b.stop)
 						)
 					)
 				WHERE
