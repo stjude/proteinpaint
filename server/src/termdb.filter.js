@@ -413,7 +413,7 @@ function numericSampleData2tvs(tvs, CTEname, termData) {
 }
 
 async function get_dtTerm(tvs, CTEname, ds) {
-	const tw = { $id, term: tvs.term.parentTerm, q: {} }
+	const tw = { $id, term: tvs.term.parentTerm, q: { dtLst: [tvs.term.dt] } }
 	const data = await ds.mayGetGeneVariantData(tw, { genome: ds.genomename })
 
 	const samples = []

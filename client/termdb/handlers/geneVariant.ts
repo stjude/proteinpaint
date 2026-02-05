@@ -185,7 +185,9 @@ export class SearchHandler {
 		// that gene(s) have been selected
 		addParentTerm(this.term)
 		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
-		this.q.predefined_groupset_idx = Number(selectedMutationType.value)
+		const childTermIdx = Number(selectedMutationType.value)
+		this.q.predefined_groupset_idx = childTermIdx
+		this.q.dtLst = [this.term.childTerms[childTermIdx].dt]
 		await this.callback({ term: this.term, q: this.q })
 		this.dom.msgDiv.style('display', 'none')
 	}
