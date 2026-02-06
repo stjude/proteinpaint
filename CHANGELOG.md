@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- correctly translate tvs.ranges into the expected GDC API filter shape
+- remove all untagged html text in menu.clear(), previously only tagged children were removed
+- hide not-fully functional undo-redo buttons in plot and summary components
+- make the case count limit message applicable to both correlation plot and gene exp clustering
+- remove 5K case limit when doing hiercluster; avoid 1min /cases/ query on empty cohort filter
+- lessen GDC API requests by generating sample filter only once in mayGetGeneVariantData()
+- add max limit to number of genes supplied to geneVariant gene set
+
+
 ## 2.170.5
 
 Fixes:
@@ -9,7 +21,6 @@ Fixes:
 - fix the visibility of chart button menu when there is a footer div with overflow-y: 'clip'
 - handle missing data for divideBy term in survival plot
 - disable the chart-specific download option in survival plot
-- remove all untagged html text in menu.clear(), previously only tagged children were removed
 
 
 ## 2.170.4
