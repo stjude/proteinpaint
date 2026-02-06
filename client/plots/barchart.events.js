@@ -563,6 +563,7 @@ function getTvs(termIndex, value, self, geneVariant) {
 		tvs.tvs.values = group.values
 	} else if (isNumericTerm(term.term)) {
 		const bins = self.bins[termIndex]
+		if (!bins?.length) return null
 		tvs.tvs.ranges = [bins.find(bin => bin.label == value)]
 	} else if (term.term.type == 'samplelst') {
 		const list = term.term.values?.[value]?.list || []
