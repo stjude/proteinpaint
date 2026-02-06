@@ -132,6 +132,9 @@ export type TermSettingOpts = BaseTermSettingOpts & {
 
 	/** to pass in purpose and context-specific arguments that will be merged to client request parameters */
 	getBodyParams?: () => any
+
+	/** d3 selection of divs that can be shown/hidden based on tw data-loading status */
+	loadingMasks: any[]
 }
 
 /*** types supporting TermSettingInstance type ***/
