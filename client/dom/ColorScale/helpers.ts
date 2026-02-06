@@ -43,7 +43,7 @@ export function getInterpolatedDomainRange({
 	} else if (negInterpolator) {
 		return {
 			domain: [-absMax, ...neg.values, 0],
-			range: [negInterpolator(0), ...neg.colors, negInterpolator(1)]
+			range: [negInterpolator(1), ...neg.colors, negInterpolator(0)]
 		}
 	} else if (posInterpolator) {
 		return {

@@ -229,7 +229,7 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 				 * The color interpolators use a 0-1 arg.
 				 * Dividing the raw value by the max abs loss/gain calculates
 				 * a value in the 0-1 range. This will match the color in the
-				 * legend and cell accordingly to the equidistant range
+				 * legend and cell according to the equidistant range,
 				 * displayed in the legend. See the scale creation is in
 				 * matrix.layout.js for more details.*/
 				value.scaledValue = value.value < 0 ? value.value / -absMax : value.value / absMax

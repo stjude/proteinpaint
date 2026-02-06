@@ -334,6 +334,8 @@ export function setLabelsAndScales() {
 	let cnvLegendDomainRange // if cnv data is present, compute once and reuse across geneVariant tw's
 
 	if (this.cnvValues.length) {
+		//Percentile is default with no UI to change
+		//Will address this logic in future PR.
 		if (s.cnvValues.cutoffMode == 'percentile') {
 			const max = s.cnvValues.percentile
 			const min = roundValueAuto(1 - max)
@@ -378,7 +380,7 @@ export function setLabelsAndScales() {
 					cnvLegendDomainRange = getInterpolatedDomainRange({
 						absMin: 0,
 						absMax,
-						stepSize: 100,
+						numSteps: 100,
 						negInterpolator: minLoss !== undefined && interpolateBlues,
 						posInterpolator: maxGain !== undefined && interpolateReds,
 						// force this middleColor to white, knowing that interpolateBlues and interpolateReds,
@@ -391,7 +393,7 @@ export function setLabelsAndScales() {
 				// const max = cnvLegendDomainRange.domain[cnvLegendDomainRange.domain.length - 1]
 				// const domainRange = Math.abs(max - min)
 				// if (((min === 0 || max === 0) && domainRange > 1) || domainRange > 5)
-				// 	cnvLegendDomainRange = removeInterpolatedOutliers(cnvLegendDomainRange)
+				// cnvLegendDomainRange = removeInterpolatedOutliers(cnvLegendDomainRange)
 
 				t.scales = {
 					loss: interpolateBlues,
