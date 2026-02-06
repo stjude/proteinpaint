@@ -38,7 +38,8 @@ export function filter2GDCfilter(f, level = 0) {
 			continue
 		}
 
-		if (item.tvs.values) {
+		// sometimes, numeric filters have a values entry
+		if (item.tvs.values && !item.tvs.ranges) {
 			// categorical
 			const f = {
 				op: item.tvs.isnot ? '!=' : 'in',

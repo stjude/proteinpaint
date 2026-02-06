@@ -116,9 +116,9 @@ export class ListSamples {
 
 	getFilterParams(tvs: any, tw: TermWrapper, termNum: number): void {
 		const key: any = termNum == 0 ? this.plot.chartId : this.plot.seriesId
-		if (this.isContinuousOrBinned(tw, termNum)) {
+		if (isNumericTerm(tw.term)) {
 			this.createTvsRanges(tvs, termNum, key)
-			this.createTvsValues(tvs, tw, key)
+			this.createTvsValues(tvs, tw, key) // TODO: most likely not needed
 		} else {
 			this.createTvsValues(tvs, tw, key)
 		}

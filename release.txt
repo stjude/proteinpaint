@@ -1,3 +1,4 @@
 Fixes:
 - prevent the submission of plot edits while input variable data is still being loaded
 - downgrade missing plot config into a warning, instead of displaying an irrelevant error message
+- remove add-to-filter option from correlation plot selection of rendered data; fix the returned GDC API  bins from getData()
