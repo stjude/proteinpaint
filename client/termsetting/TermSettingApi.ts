@@ -4,7 +4,7 @@ import type { Term, TermWrapper, Filter } from '#types'
 import { call_fillTW, get$id, fillTermWrapper } from './utils.ts'
 import { minimatch } from 'minimatch'
 // import { isNumericTerm } from '#shared/terms.js'
-import { copyMerge, deepEqual } from '#rx'
+import { copyMerge, deepEqual, sleep } from '#rx'
 import { select } from 'd3-selection'
 import { TwRouter, CategoricalBase, SnpBase, QualitativeBase, NumericBase } from '#tw'
 
@@ -14,12 +14,16 @@ export const termsettingInit = opts => {
 	return new TermSettingApi(opts)
 }
 
+const testClickTermDelay = 0 // 5000
+
 export class TermSettingApi {
 	#termsetting: TermSetting
 	Inner?: TermSetting
+	loadingMasks: any[] = []
 
 	constructor(opts: TermSettingOpts) {
-		opts.api = this //; console.log(14, opts)
+		opts.api = this
+		if (opts.loadingMasks) this.loadingMasks.push(...opts.loadingMasks)
 		this.#termsetting = new TermSetting(opts)
 		// to be used for test-code only
 		if (opts.debug) this.Inner = this.#termsetting
@@ -116,6 +120,8 @@ export class TermSettingApi {
 					self.dom.pilldiv.style('display', 'none')
 					self.dom.loadingdiv.text('Loading ...').style('display', 'inline-block')
 					self.dom.tip.hide()
+					this.toggleOptionalLoadingMasks('')
+					if (testClickTermDelay) await sleep(testClickTermDelay)
 
 					let tw
 					if (t.term) tw = t as TermWrapper
@@ -140,6 +146,7 @@ export class TermSettingApi {
 					self.dom.loadingdiv.style('display', 'none')
 					self.dom.nopilldiv.style('display', !self.term ? 'inline-block' : 'none')
 					self.dom.pilldiv.style('display', self.term ? 'block' : 'none')
+					this.toggleOptionalLoadingMasks('none')
 				}
 			}
 		})
@@ -326,6 +333,13 @@ export class TermSettingApi {
 		} catch (e) {
 			this.#termsetting.hasError = true
 			throw e
+		}
+	}
+
+	toggleOptionalLoadingMasks(display = '') {
+		if (!this.loadingMasks) return
+		for (const m of this.loadingMasks) {
+			m.style('display', display || '')
 		}
 	}
 

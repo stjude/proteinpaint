@@ -44,7 +44,8 @@ class TdbPlotControls {
 					holder: this.dom.config_div,
 					isOpen: () => this.isOpen,
 					tip: this.app.tip,
-					inputs: this.opts.inputs
+					inputs: this.opts.inputs,
+					loadingMasks: this.opts.loadingMasks
 				})
 			}
 			if (this.showTopBar) {
