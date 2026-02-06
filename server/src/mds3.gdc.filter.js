@@ -11,7 +11,6 @@ export function filter2GDCfilter(f, level = 0) {
 	// gdc filter that will be returned
 	let obj = {
 		op: f.join || 'and',
-
 		content: []
 	}
 	if (!Array.isArray(f.lst)) throw new Error('filter.lst[] not array')
