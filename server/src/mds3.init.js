@@ -340,6 +340,7 @@ export async function validate_termdb(ds) {
 		}
 	}
 	if (tdb.numericTermCollections) {
+		throw 'xxx'
 		if (!Array.isArray(tdb.numericTermCollections)) throw 'termdb.numericTermCollections not array'
 		for (const c of tdb.numericTermCollections) {
 			if (!c.name) throw 'unamed tdb.numericTermCollections'
