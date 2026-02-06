@@ -121,7 +121,12 @@ export class AppApi {
 			if (self.main) await self.main()
 			const current = { action, appState: self.state }
 			await notifyComponents(current.action?._notificationRoot_ || self.components, current)
-		} catch (e) {
+		} catch (e: any) {
+			if (e.level === 'warn') {
+				self.bus.emit('postRender')
+				console.warn(String(e))
+				return
+			}
 			if (self.wasDestroyed) return
 			if (self.bus && this.#latestActionSequenceId == action?.sequenceId) self.bus.emit('error')
 			if (self.printError) self.printError(e)
