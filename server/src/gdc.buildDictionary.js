@@ -691,7 +691,11 @@ function makeTermdbQueries(ds, id2term) {
 		const terms = []
 		for (const term of id2term.values()) {
 			if (usecase && !isUsableTerm(term, usecase)) continue
-			if (term.id.includes(searchStr)) terms.push(JSON.parse(JSON.stringify(term)))
+			const id = term.id.toLowerCase()
+			const name = term.name.toLowerCase()
+			// allow to search both id and name to accommodate differences between
+			// these properties (e.g. for gender term, id=*gender* and name=*sex*)
+			if (id.includes(searchStr) || name.includes(searchStr)) terms.push(JSON.parse(JSON.stringify(term)))
 		}
 		await mayAddSamplecount4treeFilter(terms, treeFilter)
 		return terms
@@ -711,7 +715,14 @@ function makeTermdbQueries(ds, id2term) {
 		}
 		return ancestorIds
 	}
-	q.getAncestorNames = q.getAncestorIDs
+	q.getAncestorNames = id => {
+		const ancestorIds = q.getAncestorIDs(id)
+		const ancestorNames = ancestorIds.map(ancestorId => {
+			const ancestorTerm = id2term.get(ancestorId)
+			return ancestorTerm.name
+		})
+		return ancestorNames
+	}
 
 	q.termjsonByOneid = id => {
 		const t = id2term.get(id)
