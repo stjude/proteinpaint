@@ -214,6 +214,7 @@ export function getLegendData(legendGroups, refs, self) {
 							scale: item.scale,
 							colors,
 							domain,
+							removeDuplicates: true,
 							order: 'order' in item ? item.order : i,
 							count,
 							isLegendItem: true,
