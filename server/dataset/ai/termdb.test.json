@@ -7,7 +7,7 @@
   "charts": [
     {
         "type":"Classification",
-	"SystemPrompt":"The first original publication pertaining to Proteinpaint is https://www.cell.com/cancer-cell/fulltext/S1535-6108(20)30659-0?dgcid=raven_jbs_etoc_email. GenomePaint/Proteinpaint is an interactive visualization platform for whole-genome, whole-exome, transcriptome, and epigenomic data of tumor samples. Its design captures the inter-relatedness between DNA variations and RNA expression, supporting in-depth exploration of both individual cancer genomes and full cohorts. \n Link to survovorship portal https://aacrjournals.org/cancerdiscovery/article/14/8/1403/746507. It shows datasets comprising demographic, diagnosis, treatment, outcome, and genomic data from survivors of childhood cancer. Put weblinks inside HTML <a> tag so that links are clickable",
+	"SystemPrompt":"The first original publication pertaining to Proteinpaint is https://www.cell.com/cancer-cell/fulltext/S1535-6108(20)30659-0?dgcid=raven_jbs_etoc_email. GenomePaint/Proteinpaint is an interactive visualization platform for whole-genome, whole-exome, transcriptome, and epigenomic data of tumor samples. Its design captures the inter-relatedness between DNA variations and RNA expression, supporting in-depth exploration of both individual cancer genomes and full cohorts. \n Link to survivorship portal https://aacrjournals.org/cancerdiscovery/article/14/8/1403/746507. It shows datasets comprising demographic, diagnosis, treatment, outcome, and genomic data from survivors of childhood cancer. Put weblinks inside HTML <a> tag so that links are clickable",
 	"TrainingData":[
             {"question":"Show link to survivorship portal", "answer": {"type":"html","html":"<a href=\"https://aacrjournals.org/cancerdiscovery/article/14/8/1403/746507\">Visit weblink</a>"}},
 	    {"question":"Show main publication for proteinpaint", "answer": {"type":"html","html":"<a href=\"https://www.cell.com/cancer-cell/fulltext/S1535-6108(20)30659-0?dgcid=raven_jbs_etoc_email\">Visit weblink</a>"}},
@@ -20,7 +20,7 @@
 	    {"question":"Show differential gene expression between men and women","answer":{"type":"plot","plot":"DE"}},
 	    {"question":"Show volcano plot between men with age greater than 30 and women with age less than 50","answer":{"type":"plot","plot":"DE"}},
 	    {"question":"Show differential gene expression between men and women","answer":{"type":"plot","plot":"DE"}}
-	]    
+	]
     },	  	
     {
           "type": "DE",
@@ -31,10 +31,6 @@
 	      {"question":"Show volcano plot between men with age greater than 30 and women with age less than 50 using limma", "answer":{"group1":[{"term":"sex","category":"1"},{"term":"agedx", "start":30,"join": "and"}],"group2":[{"term":"sex","category":"2"},{"term":"agedx", "stop":50, "join": "and"}],"method": "limma"}},
 	      {"question":"Show volcano plot between white or black men vs black or asian women", "answer": {"group1":[{"term":"genetic_race","category":"European Ancestry"},{"term":"genetic_race","category":"African Ancestry","join": "or"},{"term":"sex","category":"1","join":"and"}],"group2":[{"term":"genetic_race","category":"African Ancestry"},{"term":"genetic_race","category":"Asian Ancestry","join":"or"},{"term":"sex","category":"2","join":"and"}],"method": "edgeR"}},
        	      {"question":"Show volcano plot between white men and black women using edgeR", "answer": {"group1":[{"term":"sex","category":"1"},{"term":"genetic_race","category":"European Ancestry","join": "and"}],"group2":[{"term":"sex","category":"2"},{"term":"genetic_race","category":"African Ancestry","join":"and"}],"method": "edgeR"}}
-          ],
-          "TestData":[
-	      {"question":"Show differential gene expression between wilms tumor and neuroblastoma using limma","answer":{"group1":[{"term":"diaggrp","category":"Wilms tumor"}], "group2":[{"term":"diaggrp","category":"Neuroblastoma"}],"method": "limma"}},
-	      {"question":"Show differential gene expression between wilms tumor patients with age less than 20  and neuroblastoma patients with age greater than 60", "answer":{"group1":[{"term":"diaggrp","category":"Wilms tumor"},{"term":"agedx","stop":20,"join":"and"}], "group2":[{"term":"diaggrp","category":"Neuroblastoma"},{"term":"agedx", "start":60,"join": "and"}],"method": "edgeR"}}
           ]	 
     },
     {
@@ -51,12 +47,16 @@
                {"question":"is myc overexpressed in women?", "answer": {"term":"sex", "simpleFilter":[{"term":"sex","category":"2"}]}},
 	       {"question":"show ancestry for wilms tumor, neuroblastoma patients with age < 20yrs", "answer": {"term":"genetic_race", "simpleFilter":[{"term":"diaggrp","category":"Wilms tumor"},{"term":"diaggrp","category":"Neuroblastoma","join":"or"},{"stop":20.0,"term":"agedx","join": "and"}]}},
 	       {"question":"Show molecular subtypes for patients with early onset of cancer", "answer": {"term":"diaggrp"}, "simpleFilter":[{"term":"agedx", "stop":15}]}
-          ],
-          "TestData":[
-	       {"question":"Show correlation between kras gene expression and race","answer":{"term":"KRAS","term2":"genetic_race"}},
-	       {"question":"Show molecular subtypes for men greater than 60 yrs only", "answer":{"simpleFilter": [{"term":"sex","value":"1"},{"start":60.0,"lessThan":null,"term":"agedx","join":"and"}],"term":"diaggrp"}},
-	       {"question":"Show TP53 gene expression between genders","answer":{"term":"sex","term2":"TP53"}}
           ]	 
     }  
-  ]  
+  ],
+  "TestData":[
+            {"question":"Please show link to survivorship portal", "answer": {"type":"html","html":"<a href=\"https://aacrjournals.org/cancerdiscovery/article/14/8/1403/746507\">Visit weblink</a>"}},
+	    {"question":"Correlate molecular subtype with gender", "answer": {"type":"plot","plot":"Summary"}},
+	    {"question":"Show differential gene expression between wilms tumor and neuroblastoma using limma","answer":{"group1":[{"term":"diaggrp","category":"Wilms tumor"}], "group2":[{"term":"diaggrp","category":"Neuroblastoma"}],"method": "limma"}},
+	    {"question":"Show differential gene expression between wilms tumor patients with age less than 20  and neuroblastoma patients with age greater than 60", "answer":{"group1":[{"term":"diaggrp","category":"Wilms tumor"},{"term":"agedx","stop":20,"join":"and"}], "group2":[{"term":"diaggrp","category":"Neuroblastoma"},{"term":"agedx", "start":60,"join": "and"}],"method": "edgeR"}},
+	    {"question":"Show correlation between kras gene expression and race","answer":{"term":"KRAS","term2":"genetic_race"}},
+	    {"question":"Show molecular subtypes for men greater than 60 yrs only", "answer":{"simpleFilter": [{"term":"sex","value":"1"},{"start":60.0,"lessThan":null,"term":"agedx","join":"and"}],"term":"diaggrp"}},
+	    {"question":"Show TP53 gene expression between genders","answer":{"term":"sex","term2":"TP53"}}
+  ]
 }
