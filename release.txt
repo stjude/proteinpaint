@@ -1,0 +1,2 @@
+Fixes:
+- remove add-to-filter option from correlation plot selection of rendered data; fix the returned GDC API  bins from getData()

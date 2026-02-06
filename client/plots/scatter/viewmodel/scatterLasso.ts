@@ -92,23 +92,27 @@ export class ScatterLasso {
 				)
 			})
 
-		menuDiv
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text('Add to a group')
-			.on('click', async () => {
-				this.createGroup(samples)
-				this.view.dom.tip.hide()
-			})
-		menuDiv
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text('Add to a group and filter')
-			.on('click', () => {
-				const tw = this.createGroup(samples)
-				this.interactivity.addToFilter(tw)
-				this.view.dom.tip.hide()
-			})
+		if (this.scatter.app.getState().nav.header_mode === 'with_tabs')
+			menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Add to a group')
+				.on('click', async () => {
+					this.createGroup(samples)
+					this.view.dom.tip.hide()
+				})
+
+		if (this.scatter.app.getState().nav.header_mode === 'with_tabs')
+			menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Add to a group and filter')
+				.on('click', () => {
+					const tw = this.createGroup(samples)
+					this.interactivity.addToFilter(tw)
+					this.view.dom.tip.hide()
+				})
+
 		if ('sample' in samples[0])
 			menuDiv
 				.append('div')

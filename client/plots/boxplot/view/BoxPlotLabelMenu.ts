@@ -14,18 +14,22 @@ export class BoxPlotLabelMenu {
 		isVertical: boolean
 		/*chart: any*/
 	) {
-		const options = [
-			{
+		const options: any[] = []
+		if (app.getState().nav.header_mode === 'with_tabs')
+			options.push({
 				text: `Add filter: ${plot.key}`,
 				isVisible: () => true,
 				callback: () => interactions.addFilter(plot)
-			},
-			{
-				text: `Hide ${plot.key}`,
-				isVisible: () => true,
-				callback: () => interactions.hidePlot(plot)
-			},
-			{
+			})
+
+		options.push({
+			text: `Hide ${plot.key}`,
+			isVisible: () => true,
+			callback: () => interactions.hidePlot(plot)
+		})
+
+		if (app.getState().nav.header_mode === 'with_tabs')
+			options.push({
 				text: `List samples`,
 				isVisible: (state: MassState) => state.termdbConfig.displaySampleIds && app.vocabApi.hasVerifiedToken(),
 				callback: async (event: MouseEvent) => {
@@ -44,8 +48,8 @@ export class BoxPlotLabelMenu {
 						dataTestId: 'sjpp-listsampletable'
 					})
 				}
-			}
-		]
+			})
+
 		plot.boxplot.labelG.on('click', (event: MouseEvent) => {
 			tip.clear()
 			if (isVertical) tip.show(event.clientX, event.clientY)

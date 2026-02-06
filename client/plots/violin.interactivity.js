@@ -27,34 +27,35 @@ export function setInteractivity(self) {
 		if (self.config.term.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) return // is sc gene exp data, none of the options below work, thus disable
 
 		const label = t1.q.mode === 'continuous' ? 'term2' : 'term'
-		const options = [
-			{
+		const options = []
+		if (this.app.getState().nav.header_mode === 'with_tabs')
+			options.push({
 				label: `Add filter: ${plot.label.split(',')[0]}`,
 				testid: 'sjpp-violinLabOpt-addf',
 				callback: getAddFilterCallback(self, plot)
-			},
-			{
-				label: `Hide: ${plot.label}`,
-				testid: 'sjpp-violinLabOpt-hide',
-				callback: () => {
-					const term = self.config[label]
+			})
 
-					const isHidden = true
+		options.push({
+			label: `Hide: ${plot.label}`,
+			testid: 'sjpp-violinLabOpt-hide',
+			callback: () => {
+				const term = self.config[label]
 
-					self.app.dispatch({
-						type: 'plot_edit',
-						id: self.id,
-						config: {
-							[label]: {
-								isAtomic: true,
-								term: term.term,
-								q: getUpdatedQfromClick(plot, term, isHidden)
-							}
+				const isHidden = true
+
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.id,
+					config: {
+						[label]: {
+							isAtomic: true,
+							term: term.term,
+							q: getUpdatedQfromClick(plot, term, isHidden)
 						}
-					})
-				}
+					}
+				})
 			}
-		]
+		})
 		if (self.state.displaySampleIds && self.state.hasVerifiedToken) {
 			options.push({
 				label: `List samples`,
@@ -79,13 +80,14 @@ export function setInteractivity(self) {
 			? [scale.invert(selection[0]), scale.invert(selection[1])]
 			: [scale.invert(selection[1]), scale.invert(selection[0])]
 
-		const options = [
-			{
+		const options = []
+
+		if (this.app.getState().nav.header_mode === 'with_tabs')
+			options.push({
 				label: `Add filter`,
 				testid: 'sjpp-violinBrushOpt-addf',
 				callback: getAddFilterCallback(self, plot, start, end)
-			}
-		]
+			})
 
 		if (self.state.displaySampleIds && self.state.hasVerifiedToken) {
 			options.push({
