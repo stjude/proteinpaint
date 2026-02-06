@@ -52,39 +52,16 @@ export function filter2GDCfilter(f, level = 0) {
 			continue
 		}
 		if (item.tvs.ranges) {
-			let f = {
-				op: 'or',
-				content: []
-			}
-
-			for (const range of item.tvs.ranges) {
-				if (range.startunbounded) {
-					f.content.push({
-						op: range.stopinclusive ? (item.tvs.isnot ? '>' : '<=') : item.tvs.isnot ? '>=' : '<',
-						content: { field: mayChangeCase2Cases(item.tvs.term), value: range.stop }
-					})
-					continue
+			let f
+			if (!item.tvs.ranges.length) throw new Error('item.tvs.ranges[] is empty')
+			if (item.tvs.ranges.length == 1) {
+				const range = item.tvs.ranges[0]
+				f = range2GDCrange(range, item)
+			} else {
+				f = { op: 'or', content: [] }
+				for (const range of item.tvs.ranges) {
+					f.content.push(range2GDCrange(range, item))
 				}
-				if (range.stopunbounded) {
-					f.content.push({
-						op: range.startinclusive ? (item.tvs.isnot ? '<' : '>=') : item.tvs.isnot ? '<=' : '>',
-						content: { field: mayChangeCase2Cases(item.tvs.term), value: range.start }
-					})
-					continue
-				}
-				f.content.push({
-					op: 'and',
-					content: [
-						{
-							op: range.startinclusive ? '>=' : '>',
-							content: { field: mayChangeCase2Cases(item.tvs.term), value: range.start }
-						},
-						{
-							op: range.stopinclusive ? '<=' : '<',
-							content: { field: mayChangeCase2Cases(item.tvs.term), value: range.stop }
-						}
-					]
-				})
 			}
 			if (item.tvs.isnot) f = { op: 'not', content: f }
 			obj.content.push(f)
@@ -109,4 +86,32 @@ function mayChangeCase2Cases(t) {
 	const l = s.split('.')
 	if (l[0] == 'case') l[0] = 'cases'
 	return l.join('.')
+}
+
+function range2GDCrange(range, item) {
+	if (range.startunbounded) {
+		return {
+			op: range.stopinclusive ? (item.tvs.isnot ? '>' : '<=') : item.tvs.isnot ? '>=' : '<',
+			content: { field: mayChangeCase2Cases(item.tvs.term), value: range.stop }
+		}
+	}
+	if (range.stopunbounded) {
+		return {
+			op: range.startinclusive ? (item.tvs.isnot ? '<' : '>=') : item.tvs.isnot ? '<=' : '>',
+			content: { field: mayChangeCase2Cases(item.tvs.term), value: range.start }
+		}
+	}
+	return {
+		op: 'and',
+		content: [
+			{
+				op: range.startinclusive ? '>=' : '>',
+				content: { field: mayChangeCase2Cases(item.tvs.term), value: range.start }
+			},
+			{
+				op: range.stopinclusive ? '<=' : '<',
+				content: { field: mayChangeCase2Cases(item.tvs.term), value: range.stop }
+			}
+		]
+	}
 }
