@@ -1,0 +1,3 @@
+Fixes:
+- prevent the submission of plot edits while input variable data is still being loaded
+- downgrade missing plot config into a warning, instead of displaying an irrelevant error message

@@ -139,6 +139,7 @@ export class TermSettingApi {
 						self.dom.loadingdiv.text(`Error loading term ${self.handler?.getPillName?.(tw.term)}: ${msg}`)
 						self.dom.nopilldiv.style('display', !self.term ? 'inline-block' : 'none')
 						self.dom.pilldiv.style('display', self.term ? 'block' : 'none')
+						this.toggleOptionalLoadingMasks('none')
 						return
 					}
 
