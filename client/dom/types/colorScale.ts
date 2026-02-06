@@ -57,6 +57,8 @@ export type ColorScaleOpts = {
 	/** Optional. Placement of numbered ticks. Default is false (i.e. placement
 	 * below the color bar). */
 	topTicks?: boolean
+	/** Optional. If true, removes duplicate color and tick values */
+	removeDuplicates?: boolean
 }
 
 export type ColorScaleDom = {
