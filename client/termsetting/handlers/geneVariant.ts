@@ -1,5 +1,4 @@
 import { getPillNameDefault } from '../utils.ts'
-import type { PillData } from '../types'
 import { make_radios, renderTable } from '#dom'
 import { filterInit, filterPromptInit, getNormalRoot, excludeFilterByTag } from '#filter/filter'
 import type { TermSetting } from '../TermSetting.ts'
@@ -13,8 +12,14 @@ const colorScale = getColors(5)
 // self is the termsetting instance
 export function getHandler(self: TermSetting) {
 	return {
-		getPillName(d: PillData) {
-			return getPillNameDefault(self, d)
+		getPillName(d: any) {
+			let name = d.name
+			if (!name) {
+				if (d.genes) name = d.genes.map(g => g.gene).join(', ')
+				else if (d.chr) name = `${d.chr}:${d.start}-${d.stop}`
+				else name = d.id || 'geneVariant'
+			}
+			return getPillNameDefault(self, { name })
 		},
 
 		getPillStatus() {
@@ -22,7 +27,7 @@ export function getHandler(self: TermSetting) {
 			const q = self.q as any // TODO: migrate this handler to use client/tw code
 			if (q.type == 'predefined-groupset') {
 				const groupsetting = self.term.groupsetting
-				if (!groupsetting.lst?.length) throw 'no predefined groupsets found'
+				if (!groupsetting?.lst?.length) throw 'no predefined groupsets found'
 				const groupset = groupsetting.lst[q.predefined_groupset_idx]
 				text = groupset.name
 			} else if (q.type == 'custom-groupset') {
