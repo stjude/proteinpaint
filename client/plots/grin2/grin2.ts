@@ -31,6 +31,7 @@ export function showGrin2ResultTable(opts: ShowGrin2ResultTableOpts): void {
 		dataItems: prebuiltDataItems,
 		getGene = (item: any) => item.gene,
 		matrixButtonFormat = 'Matrix ({n})',
+		onResetSort,
 		...renderTableOpts
 	} = opts
 
@@ -71,7 +72,7 @@ export function showGrin2ResultTable(opts: ShowGrin2ResultTableOpts): void {
 		...renderTableOpts
 	}
 
-	// If app is provided, add Matrix/Lollipop buttons with selection tracking
+	// If app is provided, add Matrix/Lollipop buttons with selection tracking. If additional onResetSort callback is provided, also add Reset Sort button and logic to enable it when user clicks a sort button in the header
 	if (app) {
 		let lastTouchedGene: string | null = null
 		let selectionOrder: number[] = []
@@ -111,6 +112,28 @@ export function showGrin2ResultTable(opts: ShowGrin2ResultTableOpts): void {
 				}
 			}
 		]
+
+		// Add Reset Sort button. We use onResetSort so that our tooltip tables in the manhattan plot don't show this button. Can enable there if desired
+		if (onResetSort) {
+			let resetButtonNode: HTMLButtonElement
+
+			tableOptions.buttons.push({
+				text: 'Reset Sort',
+				callback: () => onResetSort(),
+				onChange: (_selectedIndices: number[], buttonNode: HTMLButtonElement) => {
+					resetButtonNode = buttonNode
+					buttonNode.disabled = true // Start disabled since the table is already in default sorted state
+				}
+			})
+
+			// Enable Reset Sort button when user clicks a sort button in the top genes header
+			tableDiv.node().addEventListener('click', (e: MouseEvent) => {
+				const target = e.target as HTMLElement
+				if (target.closest('.sjpp-table-sort-button') && resetButtonNode) {
+					resetButtonNode.disabled = false
+				}
+			})
+		}
 	}
 
 	renderTable(tableOptions)
@@ -790,7 +813,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.append('h3')
 				.style('margin', this.headerMargin)
 				.style('font-size', `${this.headerFontSize}px`)
-				.text(`Top Genes (showing ${result.stats.lst[0].rows[1][1]} of ${result.stats.lst[0].rows[0][1]})`)
+				.text(`Top Genes (showing ${result.stats.showingTop} of ${result.stats.totalGenes})`)
 
 			const tableDiv = tableContainer.append('div')
 
@@ -844,31 +867,40 @@ class GRIN2 extends PlotBase implements RxComponent {
 				return [{ value: '', html: circles.join('') }, ...row]
 			})
 
-			// Use showGrin2ResultTable for consistent table rendering
-			showGrin2ResultTable({
-				tableDiv,
-				app: this.app,
-				columns: modifiedColumns,
-				rows: processedRows,
-				dataItems: result.topGeneTable.rows,
-				getGene: (row: any) => row[0]?.value,
-				matrixButtonFormat: 'Matrix ({n} genes selected)',
-				maxHeight: '400px',
-				maxWidth: '100%',
-				dataTestId: 'sjpp-grin2-top-genes-table',
-				resize: 'both',
-				selectAll: false,
-				download: {
-					fileName: `grin2_top_genes_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}.tsv`
-				},
-				header: {
-					allowSort: true,
-					style: {
-						'font-weight': this.statsTableFontWeight,
-						'background-color': this.backgroundColor
+			// Render the top genes table (extracted to allow reset)
+			const renderTopGenesTable = () => {
+				showGrin2ResultTable({
+					tableDiv,
+					app: this.app,
+					columns: modifiedColumns,
+					rows: [...processedRows],
+					dataItems: result.topGeneTable.rows,
+					getGene: (row: any) => row[0]?.value,
+					matrixButtonFormat: 'Matrix ({n} genes selected)',
+					maxHeight: '400px',
+					maxWidth: '100%',
+					dataTestId: 'sjpp-grin2-top-genes-table',
+					resize: 'both',
+					selectAll: false,
+					download: {
+						fileName: `grin2_top_genes_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}.tsv`
+					},
+					header: {
+						allowSort: true,
+						style: {
+							'font-weight': this.statsTableFontWeight,
+							'background-color': this.backgroundColor
+						}
+					},
+					onResetSort: () => {
+						tableDiv.selectAll('*').remove()
+						renderTopGenesTable()
 					}
-				}
-			})
+				})
+			}
+
+			// Initial render
+			renderTopGenesTable()
 		}
 
 		// Display run stats information

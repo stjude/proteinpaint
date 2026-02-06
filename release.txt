@@ -1,1 +1,2 @@
-
+Features:
+- GRIN2: Added button to reset top gene table to default sort

@@ -129,6 +129,8 @@ export interface ShowGrin2ResultTableOpts {
 	getGene?: (item: any) => string
 	/** Format for matrix button text. Use {n} as placeholder for count. Defaults to "Matrix ({n})" */
 	matrixButtonFormat?: string
+	/** Callback function to reset sorting when "Reset Sort" button is clicked */
+	onResetSort?: () => void
 	/** Additional options passed directly to renderTable */
 	[key: string]: any
 }

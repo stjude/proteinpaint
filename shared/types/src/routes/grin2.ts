@@ -159,6 +159,8 @@ export type GRIN2Response = {
 	}
 
 	stats?: {
+		totalGenes: string
+		showingTop: string
 		lst: Array<{
 			name: string
 			rows: string[][]

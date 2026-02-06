@@ -350,13 +350,12 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		plotData: manhattanPlotData.plot_data,
 		topGeneTable: resultData.topGeneTable,
 		stats: {
+			totalGenes: resultData.totalGenes.toLocaleString(),
+			showingTop: resultData.showingTop.toLocaleString(),
 			lst: [
 				{
 					name: 'GRIN2 Processing Summary',
 					rows: [
-						['Total Genes', resultData.totalGenes.toLocaleString()],
-						['Showing Top', resultData.showingTop.toLocaleString()],
-						['Cache File Name', resultData.cacheFileName],
 						['Total Samples', processing.totalSamples!.toLocaleString()],
 						['Processed Samples', processing.processedSamples!.toLocaleString()],
 						['Unprocessed Samples', (processing.unprocessedSamples ?? 0).toLocaleString()],
