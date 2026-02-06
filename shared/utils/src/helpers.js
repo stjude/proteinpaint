@@ -64,7 +64,6 @@ export class CustomError extends Error {
 
 	constructor(message, opts = {}) {
 		super(message)
-		console.log(66, opts)
 		if (opts.name) this.name = opts.name
 		if (opts.code) this.code = opts.code
 		if (opts.level) this.level = opts.level

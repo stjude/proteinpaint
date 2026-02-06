@@ -68,18 +68,36 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 				configKey: 'term2',
 				usecase: { target: 'summaryInput', detail: 'term2' },
 				label: controlLabels.term2.label,
-				defaultQ4fillTW: config.term?.term.type == 'survival' ? term0_term2_defaultQ_surv : term0_term2_defaultQ
+				defaultQ4fillTW: term0_term2_defaultQ,
+				getDisplayStyle: plot => (plot.config.term?.term.type == 'survival' ? 'none' : 'table-row')
 			},
 			{
 				type: 'term',
 				configKey: 'term0',
 				usecase: { target: 'summaryInput', detail: 'term0' },
 				label: controlLabels.term0.label,
-				defaultQ4fillTW: config.term?.term.type == 'survival' ? term0_term2_defaultQ_surv : term0_term2_defaultQ
+				defaultQ4fillTW: term0_term2_defaultQ,
+				getDisplayStyle: plot => (plot.config.term?.term.type == 'survival' ? 'none' : 'table-row')
+			},
+			{
+				type: 'term',
+				configKey: 'term2_surv',
+				usecase: { target: 'summaryInput', detail: 'term2' },
+				label: controlLabels.term2.label,
+				defaultQ4fillTW: term0_term2_defaultQ_surv,
+				getDisplayStyle: plot => (plot.config.term?.term.type == 'survival' ? 'table-row' : 'none')
+			},
+			{
+				type: 'term',
+				configKey: 'term0_surv',
+				usecase: { target: 'summaryInput', detail: 'term0' },
+				label: controlLabels.term0.label,
+				defaultQ4fillTW: term0_term2_defaultQ_surv + '_surv',
+				getDisplayStyle: plot => (plot.config.term?.term.type == 'survival' ? 'table-row' : 'none')
 			}
 		]
 
-		const controls = await controlsInit({
+		this.components.controls = await controlsInit({
 			app: this.app,
 			id: this.id,
 			holder: this.dom.controls.style('display', 'inline-block'),
@@ -92,8 +110,8 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 			loadingMasks: [this.dom.submitMask]
 		})
 
-		const appState = this.app.getState()
-		controls.update({ state: this.state, appState })
+		//const appState = this.app.getState()
+		//this.components.update({ state: this.state, appState })
 	}
 
 	renderSubmit() {
@@ -105,17 +123,23 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 			.style('padding', '10px 15px')
 			.text('Submit')
 			.on('click', () => {
-				const config = structuredClone(this.config)
-				if (!config.term) throw 'config.term is missing'
+				const { term, term2, term0, term2_surv, term0_surv } = structuredClone(this.config)
+
+				if (!term) throw 'config.term is missing'
 				// if term1 is surival term, launch survival plot
 				// otherwise, launch summary plot
-				config.chartType = config.term.term.type == 'survival' ? 'survival' : 'summary'
+				const chartType = term.term.type == 'survival' ? 'survival' : 'summary'
 				this.app.dispatch({
 					type: 'app_refresh',
 					subactions: [
 						{
 							type: 'plot_create',
-							config
+							config: {
+								chartType,
+								term,
+								term2: chartType == 'survival' ? term2_surv : term2,
+								term0: chartType == 'survival' ? term0_surv : term0
+							}
 						},
 						{
 							type: 'plot_delete',
@@ -137,7 +161,6 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 	}
 
 	async main() {
-		console.log(133, 'summaryInput.main()')
 		this.config = await this.getMutableConfig()
 		this.dom.submitBtn.property('disabled', !this.config.term).style('cursor', this.config.term ? 'pointer' : 'default')
 		this.dom.submitMask.style('display', 'none')
