@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- correctly translate tvs.ranges into the expected GDC API filter shape
+- make the case count limit message applicable to both correlation plot and gene exp clustering
+
 
 ## 2.174.0
 
