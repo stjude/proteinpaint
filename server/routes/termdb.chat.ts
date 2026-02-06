@@ -98,7 +98,8 @@ export async function run_chat_pipeline(
 		llm_backend_type,
 		apilink,
 		aiRoute,
-		dataset_json
+		dataset_json,
+		testing
 	)
 	let ai_output_json: any
 	mayLog('Time taken for classification:', formatElapsedTime(Date.now() - time1))
@@ -238,7 +239,8 @@ async function classify_query_by_dataset_type(
 	llm_backend_type: string,
 	apilink: string,
 	aiRoute: string,
-	dataset_json: any
+	dataset_json: any,
+	testing: boolean
 ) {
 	const data = await readJSONFile(aiRoute)
 	let contents = data['general'] // The general description should be right at the top of the system prompt
@@ -303,7 +305,11 @@ async function classify_query_by_dataset_type(
 		// Will later add support for azure server also
 		throw 'Unknown LLM backend'
 	}
-	return JSON.parse(response)
+	if (testing) {
+		return { action: 'html', response: JSON.parse(response) }
+	} else {
+		return JSON.parse(response)
+	}
 }
 
 async function extract_DE_search_terms_from_query(
@@ -445,9 +451,9 @@ async function extract_DE_search_terms_from_query(
 		}
 		if (testing) {
 			// When testing, send raw LLM response
-			return response
+			return { action: 'dge', response: JSON.parse(response) }
 		} else {
-			// In actual production (inside PP) to LLM output validation
+			// In actual production (inside PP) send LLM output for validation
 			return await validate_DE_response(response, ds, dataset_db_output.db_rows)
 		}
 	} else {
@@ -753,9 +759,9 @@ async function extract_summary_terms(
 	}
 	if (testing) {
 		// When testing, send raw LLM response
-		return response
+		return { action: 'summary', response: JSON.parse(response) }
 	} else {
-		// In actual production (inside PP) to LLM output validation
+		// In actual production (inside PP) send LLM output for validation
 		return validate_summary_response(response, common_genes, dataset_json, ds)
 	}
 }
