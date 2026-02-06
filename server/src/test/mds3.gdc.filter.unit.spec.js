@@ -151,26 +151,47 @@ const filterNum = {
 		op: 'and',
 		content: [
 			{
-				op: 'not',
-				content: {
-					op: 'or',
-					content: [
-						{
-							op: 'and',
-							content: [
-								{ op: '>', content: { field: 'cases.diagnoses.age_at_diagnosis', value: 10000 } },
-								{ op: '<=', content: { field: 'cases.diagnoses.age_at_diagnosis', value: 20000 } }
-							]
-						},
-						{
-							op: 'and',
-							content: [
-								{ op: '>', content: { field: 'cases.diagnoses.age_at_diagnosis', value: 50000 } },
-								{ op: '<=', content: { field: 'cases.diagnoses.age_at_diagnosis', value: 70000 } }
-							]
-						}
-					]
-				}
+				op: 'or',
+				content: [
+					{
+						op: 'and',
+						content: [
+							{
+								op: '>=',
+								content: {
+									field: 'cases.diagnoses.age_at_diagnosis',
+									value: 10000
+								}
+							},
+							{
+								op: '>',
+								content: {
+									field: 'cases.diagnoses.age_at_diagnosis',
+									value: 20000
+								}
+							}
+						]
+					},
+					{
+						op: 'and',
+						content: [
+							{
+								op: '>=',
+								content: {
+									field: 'cases.diagnoses.age_at_diagnosis',
+									value: 50000
+								}
+							},
+							{
+								op: '>',
+								content: {
+									field: 'cases.diagnoses.age_at_diagnosis',
+									value: 70000
+								}
+							}
+						]
+					}
+				]
 			}
 		]
 	}
@@ -317,52 +338,42 @@ const filterNested = {
 						}
 					},
 					{
-						op: 'or',
+						op: 'and',
 						content: [
 							{
-								op: 'and',
-								content: [
-									{
-										op: '>',
-										content: {
-											field: 'cases.diagnoses.age_at_diagnosis',
-											value: 10157
-										}
-									},
-									{
-										op: '<',
-										content: {
-											field: 'cases.diagnoses.age_at_diagnosis',
-											value: 16729
-										}
-									}
-								]
+								op: '>',
+								content: {
+									field: 'cases.diagnoses.age_at_diagnosis',
+									value: 10157
+								}
+							},
+							{
+								op: '<',
+								content: {
+									field: 'cases.diagnoses.age_at_diagnosis',
+									value: 16729
+								}
 							}
 						]
 					}
 				]
 			},
 			{
-				op: 'or',
+				op: 'and',
 				content: [
 					{
-						op: 'and',
-						content: [
-							{
-								op: '>',
-								content: {
-									field: 'cases.demographic.year_of_birth',
-									value: 1967
-								}
-							},
-							{
-								op: '<',
-								content: {
-									field: 'cases.demographic.year_of_birth',
-									value: 1971
-								}
-							}
-						]
+						op: '>',
+						content: {
+							field: 'cases.demographic.year_of_birth',
+							value: 1967
+						}
+					},
+					{
+						op: '<',
+						content: {
+							field: 'cases.demographic.year_of_birth',
+							value: 1971
+						}
 					}
 				]
 			}
