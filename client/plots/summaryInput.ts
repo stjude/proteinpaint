@@ -23,19 +23,16 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 	constructor(opts, api) {
 		super(opts, api)
 		this.type = SummaryInputPlot.type
-		this.dom = this.getDom()
-	}
-
-	getDom() {
-		const opts = this.opts
-		const dom = {
-			header: opts.header,
+		this.dom = {
+			header: opts.header.html('Correlation Input'),
 			holder: opts.holder,
 			controls: opts.holder.append('div'),
-			submit: opts.holder.append('div').style('margin', '10px')
+			submit: opts.holder
+				.append('div')
+				.style('position', 'relative')
+				.style('margin', '10px')
+				.style('max-width', '200px')
 		}
-		if (dom.header) dom.header.html('Correlation Input')
-		return dom
 	}
 
 	getState(appState) {
@@ -51,9 +48,14 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 		}
 	}
 
-	async setControls() {
-		this.dom.controls.selectAll('*').remove()
-		const controlLabels = this.config.controlLabels
+	async init(appState) {
+		const state = this.getState(appState)
+		this.renderSubmit()
+		await this.setControls(state.config)
+	}
+
+	async setControls(config) {
+		const controlLabels = config.controlLabels
 		const inputs = [
 			{
 				type: 'term',
@@ -66,14 +68,14 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 				configKey: 'term2',
 				usecase: { target: 'summaryInput', detail: 'term2' },
 				label: controlLabels.term2.label,
-				defaultQ4fillTW: this.config.term?.term.type == 'survival' ? term0_term2_defaultQ_surv : term0_term2_defaultQ
+				defaultQ4fillTW: config.term?.term.type == 'survival' ? term0_term2_defaultQ_surv : term0_term2_defaultQ
 			},
 			{
 				type: 'term',
 				configKey: 'term0',
 				usecase: { target: 'summaryInput', detail: 'term0' },
 				label: controlLabels.term0.label,
-				defaultQ4fillTW: this.config.term?.term.type == 'survival' ? term0_term2_defaultQ_surv : term0_term2_defaultQ
+				defaultQ4fillTW: config.term?.term.type == 'survival' ? term0_term2_defaultQ_surv : term0_term2_defaultQ
 			}
 		]
 
@@ -83,7 +85,11 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 			holder: this.dom.controls.style('display', 'inline-block'),
 			isOpen: true,
 			showTopBar: false,
-			inputs
+			inputs,
+			// may comment out loadingMasks option to be able to click the submit button and
+			// manually test submitting before a config tw is fully filled, there should only be
+			// a console warning and no displayed error messages in the app
+			loadingMasks: [this.dom.submitMask]
 		})
 
 		const appState = this.app.getState()
@@ -91,14 +97,12 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 	}
 
 	renderSubmit() {
-		this.dom.submit.selectAll('*').remove()
-		this.dom.submit
+		this.dom.submitBtn = this.dom.submit
 			.append('button')
-			.property('disabled', !this.config.term)
+			.property('disabled', true)
 			.style('border', 'none')
 			.style('border-radius', '20px')
 			.style('padding', '10px 15px')
-			.style('cursor', this.config.term ? 'pointer' : 'default')
 			.text('Submit')
 			.on('click', () => {
 				const config = structuredClone(this.config)
@@ -120,12 +124,23 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 					]
 				})
 			})
+
+		this.dom.submitMask = this.dom.submit
+			.append('div')
+			.style('position', 'absolute')
+			.style('top', 0)
+			.style('left', 0)
+			.style('height', '100%')
+			.style('width', '100%')
+			.style('background-color', `rgba(240,240,240,0.7)`)
+			.style('display', 'none')
 	}
 
 	async main() {
+		console.log(133, 'summaryInput.main()')
 		this.config = await this.getMutableConfig()
-		await this.setControls()
-		this.renderSubmit()
+		this.dom.submitBtn.property('disabled', !this.config.term).style('cursor', this.config.term ? 'pointer' : 'default')
+		this.dom.submitMask.style('display', 'none')
 	}
 }
 
