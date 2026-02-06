@@ -47,6 +47,10 @@ export class ColorScale {
 		this.validateOpts(opts)
 
 		this.tickValues = niceNumLabels(opts.domain)
+		if (opts.removeDuplicates) {
+			this.tickValues = Array.from(new Set(this.tickValues))
+			this.colors = Array.from(new Set(this.colors))
+		}
 
 		let scaleSvg: SvgSvg //
 		if (opts.width || opts.height) {
