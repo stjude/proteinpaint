@@ -115,24 +115,31 @@ export function showGrin2ResultTable(opts: ShowGrin2ResultTableOpts): void {
 
 		// Add Reset Sort button. We use onResetSort so that our tooltip tables in the manhattan plot don't show this button. Can enable there if desired
 		if (onResetSort) {
-			let resetButtonNode: HTMLButtonElement
+			const node = tableDiv.node() as HTMLElement & {
+				__resetSortButton?: HTMLButtonElement
+				__resetSortListenerAdded?: boolean
+			}
 
 			tableOptions.buttons.push({
 				text: 'Reset Sort',
 				callback: () => onResetSort(),
 				onChange: (_selectedIndices: number[], buttonNode: HTMLButtonElement) => {
-					resetButtonNode = buttonNode
+					node.__resetSortButton = buttonNode
 					buttonNode.disabled = true // Start disabled since the table is already in default sorted state
 				}
 			})
 
-			// Enable Reset Sort button when user clicks a sort button in the top genes header
-			tableDiv.node().addEventListener('click', (e: MouseEvent) => {
-				const target = e.target as HTMLElement
-				if (target.closest('.sjpp-table-sort-button') && resetButtonNode) {
-					resetButtonNode.disabled = false
-				}
-			})
+			// Only add listener once per container so we don't accumulate multiple listeners if the table is re-rendered
+			if (!node.__resetSortListenerAdded) {
+				node.__resetSortListenerAdded = true
+				node.addEventListener('click', (e: MouseEvent) => {
+					// Enable Reset Sort button when user clicks a sort button in the top genes header
+					const target = e.target as HTMLElement
+					if (target.closest('.sjpp-table-sort-button') && node.__resetSortButton) {
+						node.__resetSortButton.disabled = false
+					}
+				})
+			}
 		}
 	}
 
