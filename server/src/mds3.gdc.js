@@ -1296,7 +1296,7 @@ function mayApplyBinning(samples, twLst) {
 			*/
 			for (const b of bins) b.name = b.label
 
-			byTermId[tw.term.id] = { bins }
+			byTermId[tw.$id || tw.term.id] = { bins }
 
 			// uncomment to allow to see term range and assist hardcoding binconfig in termdb.gdc.js
 			//console.log(summary,bins)
@@ -1372,7 +1372,7 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 			survivalTwLst.push(tw)
 		} else {
 			const t = ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
-			if (t) dictTwLst.push({ term: t, q: tw.q })
+			if (t) dictTwLst.push({ $id: tw.$id, term: t, q: tw.q })
 		}
 	}
 

@@ -148,7 +148,16 @@ export class ListSamples {
 		this.tvslst.lst.push(tvsEntry)
 	}
 
-	createTvsValues(tvsEntry: any, tw: any, key: string) {
+	getFilterParams(tvs: any, tw: TermWrapper, termNum: number): void {
+		const key: any = termNum == 0 ? this.plot.chartId : this.plot.seriesId
+		if (isNumericTerm(tw.term)) {
+			this.createTvsRanges(tvs, termNum, key)
+			this.createTvsValues(tvs, tw, key) // TODO: most likely not needed
+		} else {
+			this.createTvsValues(tvs, tw, key)
+		}
+	}
+	createTvsValues(tvs: any, tw: any, key: string): void {
 		if (
 			(tw?.q?.type == 'custom-groupset' || tw?.q?.type == 'predefined-groupset') &&
 			tw.term.type !== TermTypes.GENE_VARIANT
