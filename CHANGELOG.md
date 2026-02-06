@@ -2,12 +2,6 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
-
-Fixes:
-- correctly translate tvs.ranges into the expected GDC API filter shape
-- make the case count limit message applicable to both correlation plot and gene exp clustering
-
 
 ## 2.174.0
 
@@ -49,6 +43,15 @@ Fixes:
 - stream matrix response data to prevent RangeError during json-encoding
 - do not join to global filter in getTreeFilter() if the join argument is 'or', so that the edit menu will list all applicable categories
 - show loading and error messages when switching to barchart tab in summary plot
+
+
+## 2.170.5
+
+Fixes:
+- only allow searching by gene, and not coordinate, for geneVariant term
+- fix the visibility of chart button menu when there is a footer div with overflow-y: 'clip'
+- handle missing data for divideBy term in survival plot
+- disable the chart-specific download option in survival plot
 
 
 ## 2.170.4
