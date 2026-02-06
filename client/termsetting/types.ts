@@ -134,7 +134,7 @@ export type TermSettingOpts = BaseTermSettingOpts & {
 	getBodyParams?: () => any
 
 	/** d3 selection of divs that can be shown/hidden based on tw data-loading status */
-	loadingMasks: any[]
+	loadingMasks?: any[]
 }
 
 /*** types supporting TermSettingInstance type ***/

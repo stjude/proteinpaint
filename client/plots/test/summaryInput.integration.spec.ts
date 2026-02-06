@@ -194,7 +194,7 @@ tape('term1=survival; term2=categorical', function (test) {
 				{
 					chartType: 'summaryInput',
 					term: { id: 'os' },
-					term2: { id: 'sex' }
+					term2_surv: { id: 'sex' }
 				}
 			]
 		},
@@ -227,7 +227,7 @@ tape('term1=survival; term2=numeric', function (test) {
 				{
 					chartType: 'summaryInput',
 					term: { id: 'os' },
-					term2: { id: 'agedx' }
+					term2_surv: { id: 'agedx' }
 				}
 			]
 		},
@@ -260,7 +260,7 @@ tape('term1=survival; term2=geneVariant', function (test) {
 				{
 					chartType: 'summaryInput',
 					term: { id: 'os' },
-					term2: getGeneVariantTw()
+					term2_surv: getGeneVariantTw()
 				}
 			]
 		},
@@ -293,7 +293,7 @@ tape('term1=survival; term2=geneExpression', function (test) {
 				{
 					chartType: 'summaryInput',
 					term: { id: 'os' },
-					term2: { term: { type: 'geneExpression', gene: 'TP53' } }
+					term2_surv: { term: { type: 'geneExpression', gene: 'TP53' } }
 				}
 			]
 		},
