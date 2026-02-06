@@ -1,4 +1,4 @@
-import { getCompInit, multiInit } from '../rx'
+import { getCompInit, multiInit, sleep } from '../rx'
 import { make_radios } from '#dom'
 import { termsettingInit } from '#termsetting'
 import { rgb } from 'd3-color'
@@ -38,7 +38,7 @@ class TdbConfigUiInit {
 	async init() {
 		try {
 			const dispatch = this.app.dispatch
-			const table = this.setDom()
+			const { table } = this.setDom()
 			const debug = this.opts.debug
 			this.inputs = {} // non-rx notified
 			const componentPromises = {} // rx-notified
@@ -83,6 +83,7 @@ class TdbConfigUiInit {
 	setDom() {
 		this.dom = {
 			holder: this.opts.holder
+				.style('position', 'relative')
 				.style('max-width', '50px')
 				.style('height', 0)
 				.style('vertical-align', 'top')
@@ -91,13 +92,26 @@ class TdbConfigUiInit {
 				 * of smoothly fading out. */
 				// .style('transition', '0.2s ease-in-out')
 				//.style('overflow', 'hidden')
-				.style('visibility', 'hidden')
+				.style('visibility', 'hidden'),
+
+			table: this.opts.holder.append('table').attr('cellpadding', 0).attr('cellspacing', 0),
 			// .style('transition', '0.2s')
+
+			// default loading div, see if there is an option to override this
+			loadingDiv: this.opts.holder
+				.append('div')
+				.style('position', 'absolute')
+				.style('top', 0)
+				.style('left', 0)
+				.style('height', '100%')
+				.style('width', '100%')
+				.style('background-color', `rgba(240,240,240,0.7)`)
+				.style('display', 'none')
 		}
 
-		this.dom.table = this.dom.holder.append('table').attr('cellpadding', 0).attr('cellspacing', 0)
-
-		return this.dom.table
+		this.loadingMasks = [this.dom.loadingDiv]
+		if (this.opts.loadingMasks) this.loadingMasks.push(...this.opts.loadingMasks)
+		return this.dom
 	}
 
 	getState(appState) {
@@ -128,6 +142,10 @@ class TdbConfigUiInit {
 		for (const name in this.inputs) {
 			const o = this.inputs[name]
 			o.main(o.usestate ? this.state : plot)
+		}
+		this.dom.loadingDiv.style('display', 'none')
+		if (this.opts.loadingMasks) {
+			for (const m of this.opts.loadingMasks) m.style('display', 'none')
 		}
 	}
 
@@ -807,6 +825,7 @@ async function setTermInput(opts) {
 		getBodyParams: opts.getBodyParams,
 		defaultQ4fillTW: opts.defaultQ4fillTW,
 		geneVariantEditMenuOnlyGrp: opts.geneVariantEditMenuOnlyGrp,
+		loadingMasks: opts.parent.loadingMasks,
 		callback: async tw => {
 			// showing "processing data ..."" before pill is set
 			if (opts.parent.dom.loadingDiv && opts.parent.dom.svg) {
