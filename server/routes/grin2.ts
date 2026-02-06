@@ -36,7 +36,7 @@ import { exec as execCallback } from 'node:child_process'
  *    - Hypermutator: To be implemented at later date
  * 4. Convert filtered data to lesion format and apply overall lesion cap
  * 5. Pass lesion data, maxGenesToShow, and cacheFileName to Python for GRIN2 statistical analysis and then pass device pixel ratio, width, and height to Rust for plot generation
- * 6. Return Manhattan plot from Rust as base64 string, top gene table, timing information, statistically significant results that are displayed as an interactive svg, and cache file name for future use
+ * 6. Return Manhattan plot from Rust as base64 string, top gene table, timing information, statistically significant results that are displayed as an interactive svg
  */
 
 // Constants & types
