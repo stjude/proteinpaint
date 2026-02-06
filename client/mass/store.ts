@@ -3,6 +3,7 @@ import { getFilterItemByTag, findParent } from '#filter/filter'
 import { getSamplelstTW, getFilter } from './groups.js'
 import { rehydrateFilter } from '../filter/rehydrateFilter.js'
 import { importPlot } from '#plots/importPlot.js'
+import { CustomError } from '#shared/helpers.js'
 
 /*
 tmp comment on plot state. later properly define it in typescript
@@ -364,7 +365,14 @@ MassStore.prototype.actions = {
 
 	plot_edit(this: MassStore, action) {
 		const plot = this.state.plots.find(p => p.id === action.id)
-		if (!plot) throw `missing plot id='${action.id}' in store.plot_edit()`
+		if (!plot) {
+			// plot may have been deleted from closing the plot sandbox or another reason,
+			// assume this action is stale and not an error
+			throw new CustomError(`missing plot config for id='${action.id}' in store.plot_edit()`, {
+				name: 'MISSING_PLOT_CONFIG',
+				level: 'warn'
+			})
+		}
 		this.copyMerge(plot, action.config, action.opts ? action.opts : {})
 		const mayAdjustConfig = this.plotAdjusters.get(plot)
 		if (mayAdjustConfig) mayAdjustConfig(plot, action.config)
@@ -391,7 +399,14 @@ MassStore.prototype.actions = {
 
 	plot_nestedEdits(this: MassStore, action) {
 		const plot = this.state.plots.find(p => p.id === action.id)
-		if (!plot) throw `missing plot id='${action.id}' in store.plot_edit_nested`
+		if (!plot) {
+			// plot may have been deleted from closing the plot sandbox or another reason,
+			// assume this action is stale and not an error
+			throw new CustomError(`missing plot config for id='${action.id}' in store.plot_edit_nested`, {
+				name: 'MISSING_PLOT_CONFIG',
+				level: 'warn'
+			})
+		}
 		for (const edit of action.edits) {
 			const lastKey = edit.nestedKeys.pop()
 			const obj = edit.nestedKeys.reduce((obj, key) => obj[key], plot)
