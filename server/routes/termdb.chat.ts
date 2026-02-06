@@ -58,67 +58,97 @@ function init({ genomes }) {
 			const genedb = serverconfig.tpmasterdir + '/' + g.genedb.dbfile
 			// Read dataset JSON file
 			const dataset_json: any = await readJSONFile(serverconfig_ds_entries.aifiles)
-			const time1 = new Date().valueOf()
-			const class_response: ClassificationType = await classify_query_by_dataset_type(
+			const testing = false // This toggles validation of LLM output. In this script, this will ALWAYS be false since we always want validation of LLM output, only for testing we this variable to true
+			const ai_output_json = await run_chat_pipeline(
 				q.prompt,
 				comp_model_name,
 				serverconfig.llm_backend,
-				apilink,
 				serverconfig.aiRoute,
-				dataset_json
+				dataset_json,
+				testing,
+				apilink,
+				dataset_db,
+				genedb,
+				ds
 			)
-			let ai_output_json: any
-			mayLog('Time taken for classification:', formatElapsedTime(Date.now() - time1))
-			if (class_response.type == 'html') {
-				ai_output_json = class_response
-			} else if (class_response.type == 'plot') {
-				const classResult = class_response.plot
-				mayLog('classResult:', classResult)
-				//let ai_output_data: any
-				if (classResult == 'summary') {
-					const time1 = new Date().valueOf()
-					ai_output_json = await extract_summary_terms(
-						q.prompt,
-						serverconfig.llm_backend,
-						comp_model_name,
-						apilink,
-						dataset_db,
-						dataset_json,
-						genedb,
-						ds
-					)
-					mayLog('Time taken for summary agent:', formatElapsedTime(Date.now() - time1))
-				} else if (classResult == 'dge') {
-					const time1 = new Date().valueOf()
-					ai_output_json = await extract_DE_search_terms_from_query(
-						q.prompt,
-						serverconfig.llm_backend,
-						comp_model_name,
-						apilink,
-						dataset_db,
-						dataset_json,
-						ds
-					)
-					mayLog('Time taken for DE agent:', formatElapsedTime(Date.now() - time1))
-				} else if (classResult == 'survival') {
-					ai_output_json = { type: 'html', html: 'survival agent has not been implemented yet' }
-				} else {
-					// Will define all other agents later as desired
-					ai_output_json = { type: 'html', html: 'Unknown classification value' }
-				}
-			} else {
-				// Should not happen
-				ai_output_json = {
-					type: 'html',
-					html: 'Unknown classification type'
-				}
-			}
 			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
 			if (e.stack) mayLog(e.stack)
 			res.send({ error: e?.message || e })
 		}
 	}
+}
+
+export async function run_chat_pipeline(
+	user_prompt: string,
+	comp_model_name: string,
+	llm_backend_type: string,
+	aiRoute: string,
+	dataset_json: any,
+	testing: boolean,
+	apilink: string,
+	dataset_db: string,
+	genedb: string,
+	ds: any
+) {
+	const time1 = new Date().valueOf()
+	const class_response: ClassificationType = await classify_query_by_dataset_type(
+		user_prompt,
+		comp_model_name,
+		llm_backend_type,
+		apilink,
+		aiRoute,
+		dataset_json
+	)
+	let ai_output_json: any
+	mayLog('Time taken for classification:', formatElapsedTime(Date.now() - time1))
+	if (class_response.type == 'html') {
+		ai_output_json = class_response
+	} else if (class_response.type == 'plot') {
+		const classResult = class_response.plot
+		mayLog('classResult:', classResult)
+		//let ai_output_data: any
+		if (classResult == 'summary') {
+			const time1 = new Date().valueOf()
+			ai_output_json = await extract_summary_terms(
+				user_prompt,
+				llm_backend_type,
+				comp_model_name,
+				apilink,
+				dataset_db,
+				dataset_json,
+				genedb,
+				ds,
+				testing
+			)
+			mayLog('Time taken for summary agent:', formatElapsedTime(Date.now() - time1))
+		} else if (classResult == 'dge') {
+			const time1 = new Date().valueOf()
+			ai_output_json = await extract_DE_search_terms_from_query(
+				user_prompt,
+				llm_backend_type,
+				comp_model_name,
+				apilink,
+				dataset_db,
+				dataset_json,
+				ds,
+				testing
+			)
+			mayLog('Time taken for DE agent:', formatElapsedTime(Date.now() - time1))
+		} else if (classResult == 'survival') {
+			ai_output_json = { type: 'html', html: 'survival agent has not been implemented yet' }
+		} else {
+			// Will define all other agents later as desired
+			ai_output_json = { type: 'html', html: 'Unknown classification value' }
+		}
+	} else {
+		// Should not happen
+		ai_output_json = {
+			type: 'html',
+			html: 'Unknown classification type'
+		}
+	}
+	return ai_output_json
 }
 
 async function call_ollama(prompt: string, model_name: string, apilink: string) {
@@ -197,7 +227,7 @@ function checkField(sentence: string) {
 	else return sentence
 }
 
-async function readJSONFile(file: string) {
+export async function readJSONFile(file: string) {
 	const json_file = await fs.promises.readFile(file)
 	return JSON.parse(json_file.toString())
 }
@@ -283,7 +313,8 @@ async function extract_DE_search_terms_from_query(
 	apilink: string,
 	dataset_db: string,
 	dataset_json: any,
-	ds: any
+	ds: any,
+	testing: boolean
 ) {
 	if (dataset_json.hasDE) {
 		const dataset_db_output = await parse_dataset_db(dataset_db)
@@ -412,7 +443,13 @@ async function extract_DE_search_terms_from_query(
 			// Will later add support for azure server also
 			throw 'Unknown LLM backend'
 		}
-		return await validate_DE_response(response, ds, dataset_db_output.db_rows)
+		if (testing) {
+			// When testing, send raw LLM response
+			return response
+		} else {
+			// In actual production (inside PP) to LLM output validation
+			return await validate_DE_response(response, ds, dataset_db_output.db_rows)
+		}
 	} else {
 		return { type: 'html', html: 'Differential gene expression not supported for this dataset' }
 	}
@@ -580,7 +617,8 @@ async function extract_summary_terms(
 	dataset_db: string,
 	dataset_json: any,
 	genedb: string,
-	ds: any
+	ds: any,
+	testing: boolean
 ) {
 	const dataset_db_output = await parse_dataset_db(dataset_db)
 	const genes_list = await parse_geneset_db(genedb)
@@ -685,7 +723,7 @@ async function extract_summary_terms(
 	let system_prompt =
 		'I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. The JSON schema is as follows: ' +
 		JSON.stringify(Schema) +
-		' term and term2 (if present) should ONLY contain names of the fields from the sqlite db. The "simpleFilter" field is optional and should contain an array of JSON terms with which the dataset will be filtered. A variable simultaneously CANNOT be part of both "term"/"term2" and "simpleFilter". There are two kinds of filter variables: "Categorical" and "Numeric". "Categorical" variables are those variables which can have a fixed set of values e.g. gender, race. They are defined by the "CategoricalFilterTerm" which consists of "term" (a field from the sqlite3 db)  and "category" (a value of the field from the sqlite db).  "Numeric" variables are those which can have any numeric value. They are defined by "NumericFilterTerm" and contain  the subfields "term" (a field from the sqlite3 db), "start" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and "stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. ' + // May consider deprecating this natural language description after unit tests are implemented
+		' term and term2 (if present) should ONLY contain names of the fields from the sqlite db. The "simpleFilter" field is optional and should contain an array of JSON terms with which the dataset will be filtered. There are two kinds of filter variables: "Categorical" and "Numeric". "Categorical" variables are those variables which can have a fixed set of values e.g. gender, race. They are defined by the "CategoricalFilterTerm" which consists of "term" (a field from the sqlite3 db)  and "category" (a value of the field from the sqlite db).  "Numeric" variables are those which can have any numeric value. They are defined by "NumericFilterTerm" and contain  the subfields "term" (a field from the sqlite3 db), "start" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and "stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. ' + // May consider deprecating this natural language description after unit tests are implemented
 		checkField(dataset_json.DatasetPrompt) +
 		checkField(summary_ds[0].SystemPrompt) +
 		'\n The DB content is as follows: ' +
@@ -713,7 +751,13 @@ async function extract_summary_terms(
 		// Will later add support for azure server also
 		throw 'Unknown LLM backend'
 	}
-	return validate_summary_response(response, common_genes, dataset_json, ds)
+	if (testing) {
+		// When testing, send raw LLM response
+		return response
+	} else {
+		// In actual production (inside PP) to LLM output validation
+		return validate_summary_response(response, common_genes, dataset_json, ds)
+	}
 }
 
 function validate_summary_response(response: string, common_genes: string[], dataset_json: any, ds: any) {
