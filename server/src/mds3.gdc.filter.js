@@ -11,9 +11,12 @@ export function filter2GDCfilter(f, level = 0) {
 	// gdc filter that will be returned
 	let obj = {
 		op: f.join || 'and',
+
 		content: []
 	}
 	if (!Array.isArray(f.lst)) throw new Error('filter.lst[] not array')
+	if (f.in === false) throw `negation of nested filters is not supported`
+
 	for (const item of f.lst) {
 		if (item.type != 'tvs') {
 			const f = filter2GDCfilter(item, level + 1)
@@ -63,13 +66,13 @@ export function filter2GDCfilter(f, level = 0) {
 					f.content.push(range2GDCrange(range, item))
 				}
 			}
-			if (item.tvs.isnot) f = { op: 'not', content: f }
+			//if (item.tvs.isnot) f = { op: '!=', content: f }
 			obj.content.push(f)
 			continue
 		}
 		throw new Error('unknown tvs structure when converting to gdc filter')
 	}
-	if (!f.in) obj = { op: 'not', content: obj }
+	if (!level) console.log(JSON.stringify(obj, null, '  '))
 	return obj.content.length ? obj : null
 }
 
@@ -105,11 +108,11 @@ function range2GDCrange(range, item) {
 		op: 'and',
 		content: [
 			{
-				op: range.startinclusive ? '>=' : '>',
+				op: range.startinclusive ? (item.tvs.isnot ? '<' : '>=') : item.tvs.isnot ? '>=' : '>',
 				content: { field: mayChangeCase2Cases(item.tvs.term), value: range.start }
 			},
 			{
-				op: range.stopinclusive ? '<=' : '<',
+				op: range.stopinclusive ? (item.tvs.isnot ? '>' : '<=') : item.tvs.isnot ? '<=' : '<',
 				content: { field: mayChangeCase2Cases(item.tvs.term), value: range.stop }
 			}
 		]

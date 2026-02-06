@@ -28,7 +28,7 @@ export function setInteractivity(self) {
 
 		const label = t1.q.mode === 'continuous' ? 'term2' : 'term'
 		const options = []
-		if (this.app.getState().nav.header_mode === 'with_tabs')
+		if (this.app.getState().nav.header_mode !== 'only_buttons')
 			options.push({
 				label: `Add filter: ${plot.label.split(',')[0]}`,
 				testid: 'sjpp-violinLabOpt-addf',
