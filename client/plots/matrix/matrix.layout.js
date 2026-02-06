@@ -342,7 +342,7 @@ export function setLabelsAndScales() {
 		const minLoss = this.cnvValues[0] < 0 ? this.cnvValues[0] : undefined
 		const maxGain =
 			this.cnvValues[this.cnvValues.length - 1] > 0 ? this.cnvValues[this.cnvValues.length - 1] : undefined
-		let maxLoss, minGain
+		let maxLoss, minGain, absMax
 		for (const n of this.cnvValues) {
 			if (n < 0) maxLoss = n
 			if (!minGain && n > 0) {
@@ -369,7 +369,7 @@ export function setLabelsAndScales() {
 					// ColorScale legend renderer in matrix.legend.js. By computing
 					// these values here, the legend will match the scale
 					// min/max values and rendered-value colors in matrix cells.
-					const absMax =
+					absMax =
 						minLoss !== undefined && maxGain !== undefined
 							? Math.max(Math.abs(minLoss), maxGain)
 							: minLoss !== undefined
@@ -400,6 +400,7 @@ export function setLabelsAndScales() {
 					maxGain,
 					minLoss,
 					minGain,
+					absMax,
 					legend: cnvLegendDomainRange
 				}
 			}

@@ -224,9 +224,15 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 		if (value.dt == dtcnv) {
 			if (t.scales && value.class.startsWith('CNV_')) {
 				// const max = t.scales.max // value.value < 0 ? self.cnvValues.maxLoss : self.cnvValues.maxGain
-				const { maxLoss, maxGain, minLoss, minGain } = t.scales
-				// value.scaledValue = value.value < 0 ? value.value / minLoss : value.value / maxGain
-				value.scaledValue = value.value < 0 ? Math.abs(value.value) : value.value
+				const { /*maxLoss,*/ maxGain, minLoss, /*minGain,*/ absMax } = t.scales
+				/** CNV values are presented on an equidistant range.
+				 * The color interpolators use a 0-1 arg.
+				 * Dividing the raw value by the max abs loss/gain calculates
+				 * a value in the 0-1 range. This will match the color in the
+				 * legend and cell accordingly to the equidistant range
+				 * displayed in the legend. See the scale creation is in
+				 * matrix.layout.js for more details.*/
+				value.scaledValue = value.value < 0 ? value.value / -absMax : value.value / absMax
 				cell.fill = value.value < 0 ? t.scales.loss(value.scaledValue) : t.scales.gain(value.scaledValue)
 
 				return {
