@@ -191,22 +191,22 @@ async function fillMenu(self, div, tvs) {
 	self.num_obj.ranges = ranges
 	self.num_obj.brushes = []
 	addBrushes(self)
-	addRangeTable(self)
-	const add_range_btn = self.num_obj.num_div
-		.append('div')
-		.style('width', '100px')
-		.attr('class', 'add_range_btn sja_menuoption')
-		.style('border-radius', '13px')
-		.style('padding', '7px 6px')
-		.style('margin', '5px')
-		.style('margin-left', '20px')
-		.style('text-align', 'center')
-		.style('font-size', '.8em')
-		.text('Add a Range')
-		.on('click', () => {
-			const callback = () => addRangeTable(self)
-			addNewBrush(self, ranges.length ? 'end' : 'center', callback)
-		})
+	// addRangeTable(self)
+	// const add_range_btn = self.num_obj.num_div
+	// 	.append('div')
+	// 	.style('width', '100px')
+	// 	.attr('class', 'add_range_btn sja_menuoption')
+	// 	.style('border-radius', '13px')
+	// 	.style('padding', '7px 6px')
+	// 	.style('margin', '5px')
+	// 	.style('margin-left', '20px')
+	// 	.style('text-align', 'center')
+	// 	.style('font-size', '.8em')
+	// 	.text('Add a Range')
+	// 	.on('click', () => {
+	// 		const callback = () => addRangeTable(self)
+	// 		addNewBrush(self, ranges.length ? 'end' : 'center', callback)
+	// 	})
 
 	if (!ranges.length) {
 		const callback = () => addRangeTable(self)
