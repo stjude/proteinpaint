@@ -4,25 +4,23 @@
  * Unit test for the topGeneByExpressionVariance Rust module that selects top variable genes from expression matrix from HDF5 file with 3 datasets: item, samples and matrix
  *
  *
- * 1. The validation test checks that the response is valid JSON and contains the expected fields:
- * - `status` should be "success"
- * - `format` should be "matrix"
- * - `samples` should exist, be an array, and contain at least one entry.
+ * This module reads an expression matrix stored in HDF5 format and returns
+ * the top N most variable genes (typically ranked by expression variance).
  *
- * 2. The reading test verify the single gene query and multiple gene query
- * - Query TP53 Gene
- *  - The queried gene "TP53" should exist in the response
- *  - The `dataId` field should match the gene name
- *  - The `samples` field should exist, be a non-empty object
- *  - There should be exactly 100 samples in the result
+ * The expected HDF5 file structure contains at least three datasets:
+ * 		- item      (gene symbols or IDs)
+ * 		- samples   (sample identifiers)
+ * 		- matrix    (expression values)
  *
- * - Query Multiple Genes
- *  - All requested genes appear in the response
- *  - Valid genes (TP53, DDX11L1, KRAS) return data with correct `dataId`
- *  - Invalid genes (e.g., NONEXISTENT_GENE) return an error object
- *  - Timing/performance metadata (`total_time_ms`) is included in the response
+ * Current test suite focuses on:
+ * 		- Output starts with "output_json:" prefix
+ * 		- Following content is valid JSON
+ * 		- JSON parses to an array of gene objects
+ * 		- Each gene object contains at least: gene_symbol (string), rank_type (number)
+ * 		- Array is non-empty when reasonable parameters are used
  *
- * To run the tests use the command: node readH5.unit.spec.js
+ *
+ * To run the tests use the command: node topGeneByExpressionVariance.unit.spec.js
  */
 
 import tape from 'tape'
@@ -58,7 +56,6 @@ tape('Returns valid output_json array of gene objects', async t => {
 
 		const rawOutput = await run_rust('topGeneByExpressionVariance', JSON.stringify(inputJson))
 		const rawOutputVargene = rawOutput.split('\n')[1]
-		console.log(rawOutputVargene)
 
 		// 1. Check prefix
 		t.ok(
