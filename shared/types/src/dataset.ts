@@ -1587,6 +1587,8 @@ keep this setting here for reason of:
 		/** key is string as disease/survial etc, value is tw */
 		[index: string]: Tw
 	}
+	/** maximum number of genes to query in geneVariant gene set */
+	maxGeneVariantGeneSetSize?: number
 	//terms  are shown in the dictionary based on term and user role.
 	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
 	hiddenIds?: string[]
