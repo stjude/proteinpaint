@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes
+- apply fixes from release-2.170 branch patch version .6
+
 
 ## 2.174.0
 
@@ -16,6 +19,7 @@ Fixes:
 - convert legacy qualitative q.mode='values' to discrete
 - Deleted GRIN2 concurrency testing script as it has been moved to sjpp repo
 - GRIN2: Removed unnecessary data copy. Now using dynamic lesion types sent by client
+- apply fixes from release-2.170 branch patch versions .4 and .5 
 
 
 ## 2.173.0
@@ -45,6 +49,21 @@ Fixes:
 - stream matrix response data to prevent RangeError during json-encoding
 - do not join to global filter in getTreeFilter() if the join argument is 'or', so that the edit menu will list all applicable categories
 - show loading and error messages when switching to barchart tab in summary plot
+
+
+## 2.170.6
+
+Fixes:
+- correctly translate tvs.ranges into the expected GDC API filter shape
+- remove all untagged html text in menu.clear(), previously only tagged children were removed
+- hide not-fully functional undo-redo buttons in plot and summary components
+- make the case count limit message applicable to both correlation plot and gene exp clustering
+- remove 5K case limit when doing hiercluster; avoid 1min /cases/ query on empty cohort filter
+- lessen GDC API requests by generating sample filter only once in mayGetGeneVariantData()
+- add max limit to number of genes supplied to geneVariant gene set
+- prevent the submission of plot edits while input variable data is still being loaded
+- downgrade missing plot config into a warning, instead of displaying an irrelevant error message
+- remove add-to-filter option from correlation plot selection of rendered data; fix the returned GDC API  bins from getData()
 
 
 ## 2.170.5
