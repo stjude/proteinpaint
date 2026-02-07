@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.174.1
 
 Fixes:
 - apply fixes from release-2.170 branch patch version .6
