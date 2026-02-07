@@ -157,7 +157,7 @@ export class ListSamples {
 			this.createTvsValues(tvs, tw, key)
 		}
 	}
-	createTvsValues(tvs: any, tw: any, key: string): void {
+	createTvsValues(tvsEntry: any, tw: any, key: string): void {
 		if (
 			(tw?.q?.type == 'custom-groupset' || tw?.q?.type == 'predefined-groupset') &&
 			tw.term.type !== TermTypes.GENE_VARIANT
