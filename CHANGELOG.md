@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.170.6
 
 Fixes:
 - correctly translate tvs.ranges into the expected GDC API filter shape
