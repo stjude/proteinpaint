@@ -220,15 +220,17 @@ export class AppApi {
 			const component = self.components[name]
 			if (!component) continue
 			if (Array.isArray(component)) {
-				for (const c of component) c.triggerAbort()
-			} else if (typeof component == 'object') {
-				if (Object.keys(component).includes('triggerAbort')) {
-					component.triggerAbort()
-				} else if (!component.main) {
-					for (const subname of Object.keys(component)) {
-						if (typeof component[subname].triggerAbort == 'function') {
-							component[subname].triggerAbort()
-						}
+				for (const c of component) c.triggerAbort?.()
+			} else if (!component || typeof component !== 'object') {
+				continue
+			} else if (typeof component.triggerAbort == 'function') {
+				// NOTE: triggerAbort() is a prototype method, cannot use Object.keys(component).includes('triggerAbort')
+				// which does not detect prototype/inherited methods
+				component.triggerAbort()
+			} else if (!component.main) {
+				for (const subname of Object.keys(component)) {
+					if (typeof component[subname].triggerAbort === 'function') {
+						component[subname].triggerAbort()
 					}
 				}
 			}

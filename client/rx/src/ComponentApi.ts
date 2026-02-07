@@ -268,12 +268,16 @@ export class ComponentApi {
 		for (const name of Object.keys(self.components)) {
 			const component = self.components[name]
 			if (Array.isArray(component)) {
-				for (const c of component) c.triggerAbort()
-			} else if (Object.keys(component).includes('triggerAbort')) {
+				for (const c of component) c.triggerAbort?.()
+			} else if (!component || typeof component !== 'object') {
+				continue
+			} else if (typeof component.triggerAbort === 'function') {
+				// NOTE: triggerAbort() is a prototype method, cannot use Object.keys(component).includes('triggerAbort')
+				// which does not detect prototype/inherited methods
 				component.triggerAbort()
-			} else if (component && typeof component == 'object' && !component.main) {
+			} else if (!component.main) {
 				for (const subname of Object.keys(component)) {
-					if (typeof component[subname].triggerAbort == 'function') {
+					if (typeof component[subname].triggerAbort === 'function') {
 						component[subname].triggerAbort()
 					}
 				}
@@ -290,6 +294,7 @@ export class ComponentApi {
 	}
 
 	destroy() {
+		this.triggerAbort()
 		const self = this.#Component
 		// delete references to other objects to make it easier
 		// for automatic garbage collection to find unreferenced objects

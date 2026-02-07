@@ -1,0 +1,3 @@
+Fixes:
+- detect component triggerAbort() as an prototype method and support correlation plot triggerAbort() to cancel stale network requests
+- detect component triggerAbort() as a prototype method and support correlation plot triggerAbort() to cancel stale network requests
