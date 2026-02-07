@@ -4,8 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
-Fixes
+Fixes:
 - apply fixes from release-2.170 branch patch version .6
+- remove add-to-filter option from correlation plot selection of rendered data; fix the returned GDC API  bins from getData()
 
 
 ## 2.174.0
