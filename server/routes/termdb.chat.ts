@@ -223,6 +223,26 @@ async function call_sj_llm(prompt: string, model_name: string, apilink: string) 
 	}
 }
 
+async function route_to_appropriate_llm_provider(
+	template: string,
+	llm_backend_type: string,
+	comp_model_name: string,
+	apilink: string
+): Promise<string> {
+	let response: string
+	if (llm_backend_type == 'SJ') {
+		// Local SJ server
+		response = await call_sj_llm(template, comp_model_name, apilink)
+	} else if (llm_backend_type == 'ollama') {
+		// Ollama server
+		response = await call_ollama(template, comp_model_name, apilink)
+	} else {
+		// Will later add support for azure server also
+		throw 'Unknown LLM backend'
+	}
+	return response
+}
+
 function checkField(sentence: string) {
 	if (!sentence) return ''
 	else return sentence
@@ -294,17 +314,7 @@ async function classify_query_by_dataset_type(
 	const template =
 		contents + ' training data is as follows:' + training_data + ' Question: {' + user_prompt + '} Answer: {answer}'
 
-	let response: string
-	if (llm_backend_type == 'SJ') {
-		// Local SJ server
-		response = await call_sj_llm(template, comp_model_name, apilink)
-	} else if (llm_backend_type == 'ollama') {
-		// Ollama server
-		response = await call_ollama(template, comp_model_name, apilink)
-	} else {
-		// Will later add support for azure server also
-		throw 'Unknown LLM backend'
-	}
+	const response: string = await route_to_appropriate_llm_provider(template, llm_backend_type, comp_model_name, apilink)
 	if (testing) {
 		return { action: 'html', response: JSON.parse(response) }
 	} else {
@@ -438,17 +448,13 @@ async function extract_DE_search_terms_from_query(
 			' Question: {' +
 			prompt +
 			'} answer:'
-		let response: string
-		if (llm_backend_type == 'SJ') {
-			// Local SJ server
-			response = await call_sj_llm(system_prompt, comp_model_name, apilink)
-		} else if (llm_backend_type == 'ollama') {
-			// Ollama server
-			response = await call_ollama(system_prompt, comp_model_name, apilink)
-		} else {
-			// Will later add support for azure server also
-			throw 'Unknown LLM backend'
-		}
+
+		const response: string = await route_to_appropriate_llm_provider(
+			system_prompt,
+			llm_backend_type,
+			comp_model_name,
+			apilink
+		)
 		if (testing) {
 			// When testing, send raw LLM response
 			return { action: 'dge', response: JSON.parse(response) }
@@ -746,17 +752,12 @@ async function extract_summary_terms(
 
 	system_prompt += ' Question: {' + prompt + '} answer:'
 
-	let response: string
-	if (llm_backend_type == 'SJ') {
-		// Local SJ server
-		response = await call_sj_llm(system_prompt, comp_model_name, apilink)
-	} else if (llm_backend_type == 'ollama') {
-		// Ollama server
-		response = await call_ollama(system_prompt, comp_model_name, apilink)
-	} else {
-		// Will later add support for azure server also
-		throw 'Unknown LLM backend'
-	}
+	const response: string = await route_to_appropriate_llm_provider(
+		system_prompt,
+		llm_backend_type,
+		comp_model_name,
+		apilink
+	)
 	if (testing) {
 		// When testing, send raw LLM response
 		return { action: 'summary', response: JSON.parse(response) }
