@@ -77,7 +77,8 @@ export async function init(
 					]
 				})
 			}
-		}
+		},
+		triggerAbort: (reason = '') => massApi.triggerAbort(reason)
 	}
 
 	return api
