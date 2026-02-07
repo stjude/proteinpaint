@@ -17,26 +17,10 @@ export const api: RouteApi = {
 }
 
 export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChartResponse> {
-	// Collect terms from term and term2
-	const terms: any = [q.term, q.term2]
-	const xTermId = q.term['$id']
-	const yTermId = q.term2['$id']
+	const terms: any = [q.xtw, q.ytw]
 
-	// if (q.term && q.term2) {
-	// 	const tws = [
-	// 		{ term: q.term, q: { mode: 'continuous' }, $id: q.term.id },
-	// 		{ term: q.term2, q: { mode: 'continuous' }, $id: q.term2.id }
-	// 	]
-	// 	terms.push(...tws)
-	// 	xTermId = q.term.id
-	// 	yTermId = q.term2.id
-	// } else {
-	// 	throw new Error('term and term2 must be provided')
-	// }
-
-	// if (!xTermId || !yTermId) {
-	// 	throw new Error('Unable to determine term IDs for x and y axes')
-	// }
+	const xTermId = q.xtw['$id'] ?? q.xtw.term?.id
+	const yTermId = q.ytw['$id'] ?? q.ytw.term?.id
 
 	const { getData } = await import('../src/termdb.matrix.js')
 
@@ -52,15 +36,55 @@ export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChart
 
 	if (data.error) throw new Error(data.error)
 
-	return buildRunChartFromData(q.aggregation, xTermId, yTermId, data)
+	// Partition by xtw when xtw is in discrete mode
+	const shouldPartition = q.xtw?.q?.mode === 'discrete'
+
+	return buildRunChartFromData(q.aggregation, xTermId, yTermId, data, shouldPartition, xTermId)
 }
 
 export function buildRunChartFromData(
 	aggregation: string,
 	xTermId: string,
 	yTermId: string,
-	data: any
+	data: any,
+	shouldPartition: boolean,
+	partitionTermId?: string
 ): RunChartResponse {
+	const allSamples = (data.samples || {}) as Record<string, any>
+
+	if (shouldPartition && partitionTermId) {
+		// runChart2Period: partition samples by divide-by term's bin key (period)
+		const period2Samples: Record<string, Record<string, any>> = {}
+		for (const sampleId in allSamples) {
+			const sample = allSamples[sampleId]
+			const partitionTerm = sample?.[partitionTermId]
+			if (partitionTerm?.key == null) {
+				// Skip samples that don't have a value for the partition term
+				continue
+			}
+			const periodKey = partitionTerm.key
+			if (!period2Samples[periodKey]) period2Samples[periodKey] = {}
+			period2Samples[periodKey][sampleId] = sample
+		}
+		const periodKeys = Object.keys(period2Samples).sort()
+		const series = periodKeys.map(seriesId => {
+			const subset = { samples: period2Samples[seriesId] }
+			const one = buildOneSeries(aggregation, xTermId, yTermId, subset)
+			return { seriesId, ...one }
+		})
+		return { status: 'ok', series }
+	}
+
+	const one = buildOneSeries(aggregation, xTermId, yTermId, data)
+	return { status: 'ok', series: [{ ...one }] }
+}
+
+function buildOneSeries(
+	aggregation: string,
+	xTermId: string,
+	yTermId: string,
+	data: any
+): { median: number; points: any[] } {
 	const buckets: Record<
 		string,
 		{
@@ -68,6 +92,7 @@ export function buildRunChartFromData(
 			xName: string
 			ySum: number
 			count: number
+			missingCount?: number
 			success?: number
 			total?: number
 			countSum?: number
@@ -76,18 +101,13 @@ export function buildRunChartFromData(
 		}
 	> = {}
 
-	let skippedSamples = 0
-
 	for (const sampleId in (data.samples || {}) as any) {
 		const sample = (data.samples as any)[sampleId]
+		// For discrete xtw, use .value (raw date) for x positioning; .key is the period label
 		const xRaw = sample?.[xTermId]?.value ?? sample?.[xTermId]?.key
 		const yRaw = sample?.[yTermId]?.value ?? sample?.[yTermId]?.key
 
-		if (xRaw == null || yRaw == null) {
-			skippedSamples++
-			console.log(
-				`Skipping sample ${sampleId}: Missing x or y value - xTermId=${xTermId} (value: ${xRaw}), yTermId=${yTermId} (value: ${yRaw})`
-			)
+		if (xRaw == null) {
 			continue
 		}
 
@@ -120,15 +140,11 @@ export function buildRunChartFromData(
 				month = Math.floor(frac * 12) + 1
 			}
 		} else {
-			// No decimal part, invalid date
-			year = null
+			// No decimal part (year-only). Default to January so the year renders.
+			month = 1
 		}
 
 		if (year == null || month == null || Number.isNaN(year) || Number.isNaN(month)) {
-			skippedSamples++
-			console.log(
-				`Skipping sample ${sampleId}: Invalid date value - xTermId=${xTermId}, xRaw=${xRaw}, parsed year=${year}, month=${month}`
-			)
 			continue
 		}
 
@@ -147,12 +163,19 @@ export function buildRunChartFromData(
 				xName,
 				ySum: 0,
 				count: 0,
+				missingCount: 0,
 				success: 0,
 				total: 0,
 				countSum: 0,
 				sortKey: yearNum * 100 + monthNum,
 				yValues: []
 			}
+		}
+
+		// If y is missing, track the bucket but do not add to aggregates
+		if (yRaw == null) {
+			buckets[bucketKey].missingCount = (buckets[bucketKey].missingCount || 0) + 1
+			continue
 		}
 
 		if (aggregation === 'proportion') {
@@ -210,10 +233,6 @@ export function buildRunChartFromData(
 		}
 	}
 
-	if (skippedSamples > 0) {
-		console.log(`buildRunChartFromData: Skipped ${skippedSamples} sample(s) due to missing x or y values`)
-	}
-
 	function xFromBucket(b: { sortKey: number }) {
 		const yearNum = Math.floor(b.sortKey / 100)
 		const monthNum = b.sortKey % 100
@@ -243,7 +262,8 @@ export function buildRunChartFromData(
 					y = b.count ? b.ySum / b.count : 0
 				}
 				y = Math.round(y * 100) / 100
-				return { x, xName: b.xName, y, sampleCount: b.count }
+				const sampleCount = b.count > 0 ? b.count : b.missingCount || 0
+				return { x, xName: b.xName, y, sampleCount }
 			}
 		})
 
@@ -257,15 +277,7 @@ export function buildRunChartFromData(
 			  })()
 			: 0
 
-	return {
-		status: 'ok',
-		series: [
-			{
-				median,
-				points
-			}
-		]
-	}
+	return { median, points }
 }
 
 function init({ genomes }) {
@@ -280,7 +292,6 @@ function init({ genomes }) {
 			const result = await getRunChart(q, ds)
 			res.send(result)
 		} catch (e: any) {
-			console.log(e.stack)
 			res.send({ error: e.message || e })
 		}
 	}

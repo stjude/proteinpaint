@@ -92,21 +92,23 @@ function getBaseInputs(app: AppApi) {
 	return [
 		{
 			type: 'term',
-			configKey: 'term',
+			configKey: 'xtw',
 			chartType: 'runChart2',
-			usecase: { target: 'runChart2', detail: 'term' },
+			usecase: { target: 'runChart2', detail: 'xtw' },
 			label: 'X',
 			vocabApi: app.vocabApi,
-			menuOptions: 'edit'
+			menuOptions: 'edit',
+			numericEditMenuVersion: ['continuous', 'discrete']
 		},
 		{
 			type: 'term',
-			configKey: 'term2',
+			configKey: 'ytw',
 			chartType: 'runChart2',
-			usecase: { target: 'runChart2', detail: 'term2' },
+			usecase: { target: 'runChart2', detail: 'ytw' },
 			label: 'Y',
 			vocabApi: app.vocabApi,
-			defaultQ4fillTW: term0_term2_defaultQ
+			defaultQ4fillTW: term0_term2_defaultQ,
+			numericEditMenuVersion: ['continuous']
 		},
 		{
 			label: 'Aggregation',

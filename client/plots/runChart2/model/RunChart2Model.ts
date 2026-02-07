@@ -18,13 +18,13 @@ export class RunChart2Model {
 			throw new Error('RunChart2 requires genome and dslabel.')
 		}
 
-		const body = {
+		const body: any = {
 			genome: opts.genome,
 			dslabel: opts.dslabel,
-			filter: getNormalRoot(opts.filter),
-			term: opts.term,
-			term2: opts.term2,
-			aggregation: opts.aggregation
+			filter: getNormalRoot(opts.filter ?? undefined),
+			xtw: opts.xtw,
+			ytw: opts.ytw,
+			aggregation: opts.aggregation ?? 'mean'
 		}
 		const result: RunChartResponse = await dofetch3('termdb/runChart', { body })
 
@@ -35,13 +35,14 @@ export class RunChart2Model {
 
 	getRequestOpts(config: any): RunChartRequest {
 		const state = this.runChart2.state
-		return {
+		const opts: RunChartRequest = {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,
-			filter: state.termfilter.filter,
-			term: config.term,
-			term2: config.term2,
+			filter: state.termfilter?.filter,
+			xtw: config.xtw,
+			ytw: config.ytw,
 			aggregation: config.settings.runChart2.aggregation
 		}
+		return opts
 	}
 }

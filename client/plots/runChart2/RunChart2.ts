@@ -18,7 +18,7 @@ export class RunChart2 extends PlotBase implements RxComponent {
 	model!: RunChart2Model
 	viewModel!: RunChart2ViewModel
 	view!: RunChart2View
-	configTermKeys = ['term', 'term2']
+	configTermKeys = ['xtw', 'ytw']
 
 	constructor(opts: any, api: any) {
 		super(opts, api)
@@ -34,14 +34,16 @@ export class RunChart2 extends PlotBase implements RxComponent {
 			opts.header.append('span').style('font-size', '0.8em').style('opacity', 0.7).text('RUN CHART')
 		}
 
-		const controls = opts.controls ? opts.holder : opts.holder.append('div')
+		const leftDiv = opts.holder.insert('div').style('display', 'inline-block')
+		const controlsHolder = leftDiv.append('div').style('display', 'inline-block')
 		const chartHolder = opts.holder
 			.append('div')
 			.attr('data-testId', 'sjpp-runChart2-chartHolder')
 			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
 
 		this.dom = {
-			controls,
+			controls: controlsHolder,
 			chartHolder,
 			error: chartHolder.append('div').attr('data-testId', 'sjpp-runChart2-error'),
 			clickMenu: new Menu({ padding: '5px' }),
@@ -78,7 +80,7 @@ export class RunChart2 extends PlotBase implements RxComponent {
 			vocab: appState.vocab,
 			config: Object.assign({}, config, {
 				settings: {
-					runChart2: config.settings.runChart2
+					runChart2: config.settings?.runChart2
 				}
 			})
 		}
@@ -96,6 +98,8 @@ export class RunChart2 extends PlotBase implements RxComponent {
 		this.components.controls.on('downloadClick.runChart2', async (event: any) => {
 			await this.download(event)
 		})
+		const appState = this.app.getState()
+		this.components.controls.update?.({ appState })
 	}
 
 	async download(event: any) {
@@ -115,15 +119,15 @@ export class RunChart2 extends PlotBase implements RxComponent {
 
 		const svg = this.view.chartDom.svg
 		if (svg && !svg.empty()) {
-			const chartName = this.state?.config?.term?.term?.name || 'runChart2'
+			const chartName = this.state?.config?.xtw?.term?.name || 'runChart2'
 			chartImages.push({ name: chartName, svg })
 		}
 		return chartImages
 	}
 
 	getDownloadFilename() {
-		const termName = this.state?.config?.term?.term?.name || 'runChart2'
-		const term2Name = this.state?.config?.term2?.term?.name || ''
+		const termName = this.state?.config?.xtw?.term?.name || 'runChart2'
+		const term2Name = this.state?.config?.ytw?.term?.name || ''
 		return term2Name ? `${termName}_${term2Name}` : termName
 	}
 
@@ -159,13 +163,28 @@ export class RunChart2 extends PlotBase implements RxComponent {
 export const runChart2Init = getCompInit(RunChart2)
 export const componentInit = runChart2Init
 
+async function ensureTermHydrated(tw: any, vocabApi: AppApi['vocabApi']) {
+	const term = tw?.term
+	if (!term?.id || term.type != null) return
+	const terms = await vocabApi.getTerms([term.id])
+	const full = terms[term.id]
+	if (full) tw.term = full
+}
+
 export async function getPlotConfig(opts: any, app: AppApi) {
-	if (!opts.term) throw new Error('opts.term is required for the X axis')
-	if (!opts.term2) throw new Error('opts.term2 is required for the Y axis')
+	const xtw = opts.xtw
+	const ytw = opts.ytw
 
 	try {
-		await fillTermWrapper(opts.term, app.vocabApi)
-		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
+		await ensureTermHydrated(xtw, app.vocabApi)
+		await ensureTermHydrated(ytw, app.vocabApi)
+
+		if (!xtw.q) xtw.q = {}
+		if (!ytw.q) ytw.q = {}
+		xtw.q.mode = xtw.q.mode ?? 'continuous'
+		ytw.q.mode = ytw.q.mode ?? 'continuous'
+		await fillTermWrapper(xtw, app.vocabApi)
+		await fillTermWrapper(ytw, app.vocabApi)
 	} catch (e) {
 		console.error(e)
 		throw new Error(`runChart2 getPlotConfig() failed: ${e}`)
@@ -175,6 +194,8 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 
 	const config: any = {
 		hidePlotFilter: true, // sandbox filter not implemented
+		xtw,
+		ytw,
 		settings: {
 			controls: { isOpen: false },
 			runChart2: getDefaultRunChart2Settings(opts)
@@ -191,8 +212,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			type: 'plot_create',
 			config: {
 				chartType: 'runChart2',
-				term: { term: xterm, q: { mode: 'continuous' } },
-				term2: { term: yterm, q: { mode: 'continuous' } },
+				xtw: { term: xterm, q: { mode: 'continuous' } },
+				ytw: { term: yterm, q: { mode: 'continuous' } },
 				name: `${xterm.name} vs ${yterm.name}`
 			}
 		})

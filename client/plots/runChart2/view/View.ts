@@ -2,6 +2,7 @@ import { SeriesRender } from './SeriesRender.ts'
 import type { RunChart2Settings } from '../Settings'
 import { axisstyle } from '#src/client'
 import { axisBottom, axisLeft } from 'd3-axis'
+import { getColors } from '#shared/common.js'
 
 export class RunChart2View {
 	viewData: any
@@ -43,18 +44,24 @@ export class RunChart2View {
 			.attr('data-testId', 'sjpp-runChart2-seriesGroup')
 			.attr('transform', `translate(${plotDims.xAxis.x}, ${plotDims.yAxis.y})`)
 
-		for (const series of this.viewData.series || []) {
-			new SeriesRender(series, plotDims, this.settings, seriesGroup, this.runChart2)
+		const seriesList = this.viewData.series || []
+		const cat2Color = seriesList.length > 1 ? getColors(seriesList.length) : null
+		for (let i = 0; i < seriesList.length; i++) {
+			const series = seriesList[i]
+			const seriesColor = cat2Color ? cat2Color(series.seriesId ?? String(i)) : undefined
+			new SeriesRender(series, plotDims, this.settings, seriesGroup, this.runChart2, seriesColor)
 		}
 
 		this.renderAxisLabels(plotDims)
 	}
 
 	renderAxisLabels(plotDims: any) {
-		const xName = this.config?.term?.term?.name || 'X Axis'
+		const xName = this.config?.xtw?.term?.name || 'X Axis'
 		const xLabel =
-			this.viewData.totalSampleCount != null ? `${xName}, n=${this.viewData.totalSampleCount.toLocaleString()}` : xName
-		const yLabel = this.config?.term2?.term?.name || 'Y Axis'
+			this.viewData.totalSampleCount != null && this.config?.xtw?.q?.mode !== 'discrete'
+				? `${xName}, n=${this.viewData.totalSampleCount.toLocaleString()}`
+				: xName
+		const yLabel = this.config?.ytw?.term?.name || 'Y Axis'
 
 		const xAxisLabelY = plotDims.xAxis.y + (plotDims.xAxis.labelOffset ?? 50)
 		this.chartDom.svg
@@ -65,6 +72,24 @@ export class RunChart2View {
 			.style('font-size', '0.9em')
 			.text(xLabel)
 
+		const seriesList = this.viewData.series || []
+		if (seriesList.length > 0 && this.config?.xtw?.q?.mode === 'discrete') {
+			const firstSeries = seriesList[0]
+			const firstSeriesId = firstSeries?.seriesId
+			if (firstSeriesId != null) {
+				const periodN = firstSeries?.points?.reduce((sum: number, p: any) => sum + (Number(p.sampleCount) || 0), 0) ?? 0
+				const labelText =
+					periodN > 0 ? `${String(firstSeriesId)}, n=${periodN.toLocaleString()}` : String(firstSeriesId)
+				this.chartDom.svg
+					.append('text')
+					.attr('data-testId', 'sjpp-runChart2-xAxisSeriesIds')
+					.attr('transform', `translate(${plotDims.xAxis.x + this.settings.svgw / 2}, ${xAxisLabelY + 20})`)
+					.attr('text-anchor', 'middle')
+					.style('font-size', '0.9em')
+					.style('opacity', 1)
+					.text(labelText)
+			}
+		}
 		const yAxisLabelX = plotDims.yAxis.labelX ?? 55
 		this.chartDom.svg
 			.append('text')
