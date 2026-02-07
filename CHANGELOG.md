@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+
+## Unreleased:
+
+Fixes
+- support correlation plot triggerAbort() to cancel stale network requests; detect component triggerAbort() as a prototype method
+
+
 ## 2.170.6
 
 Fixes:
