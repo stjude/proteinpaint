@@ -12,6 +12,9 @@ Fixes:
 - remove 5K case limit when doing hiercluster; avoid 1min /cases/ query on empty cohort filter
 - lessen GDC API requests by generating sample filter only once in mayGetGeneVariantData()
 - add max limit to number of genes supplied to geneVariant gene set
+- prevent the submission of plot edits while input variable data is still being loaded
+- downgrade missing plot config into a warning, instead of displaying an irrelevant error message
+- remove add-to-filter option from correlation plot selection of rendered data; fix the returned GDC API  bins from getData()
 
 
 ## 2.170.5
