@@ -131,7 +131,7 @@ class GenesetComp {
 			// XXX this is optional query!! if ds is missing then should show input ui instead
 			// TODO why cannot use vocab method?
 			// TODO purpose of 2nd and 3rd arguments?
-			data = await dofetch3('termdb/topMutatedGenes', { body, signal }, { cacheAs: 'decoded' })
+			data = await dofetch3('termdb/topMutatedGenes', { body, signal })
 		} else if (this.opts.mode == 'geneExpression') {
 			const body = {
 				genome: this.state.vocab.genome,
@@ -140,7 +140,7 @@ class GenesetComp {
 			}
 			if (this.state.filter0) body.filter0 = this.state.filter0
 			// XXX this is optional query!! if ds is missing then should show input ui instead
-			data = await dofetch3('termdb/topVariablyExpressedGenes', { body, signal }, { cacheAs: 'decoded' })
+			data = await dofetch3('termdb/topVariablyExpressedGenes', { body, signal })
 		} else {
 			throw 'unknown opts.mode [geneset.js]'
 		}
