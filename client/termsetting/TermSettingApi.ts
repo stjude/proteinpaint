@@ -134,8 +134,13 @@ export class TermSettingApi {
 						tw = await fillTermWrapper(tw, self.vocabApi, self.opts.defaultQ4fillTW)
 						// tw is now furbished
 					} catch (e: any) {
-						const msg = e.message || e.error || e
-						self.dom.loadingdiv.text(`Error loading term ${self.handler?.getPillName?.(tw.term)}: ${msg}`)
+						if (this.isAbortError(e)) {
+							self.dom.loadingdiv.text('')
+						} else {
+							console.log(140, e)
+							const msg = e.message || e.error || e
+							self.dom.loadingdiv.text(`Error loading term ${self.handler?.getPillName?.(tw.term)}: ${msg}`)
+						}
 						self.dom.nopilldiv.style('display', !self.term ? 'inline-block' : 'none')
 						self.dom.pilldiv.style('display', self.term ? 'block' : 'none')
 						this.toggleOptionalLoadingMasks('none')
@@ -345,6 +350,12 @@ export class TermSettingApi {
 		for (const m of this.loadingMasks) {
 			m.style('display', display || '')
 		}
+	}
+
+	isAbortError(e) {
+		if (e instanceof DOMException) return e.name === 'AbortError'
+		if (typeof e == 'string') return e.includes('stale sequenceId') || e.includes('AbortError')
+		return false
 	}
 
 	destroy() {

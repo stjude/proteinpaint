@@ -122,7 +122,7 @@ export class AppApi {
 			const current = { action, appState: self.state }
 			await notifyComponents(current.action?._notificationRoot_ || self.components, current)
 		} catch (e: any) {
-			if (e.level === 'warn') {
+			if (this.isAbortError(e) || (typeof e == 'object' && e.level === 'warn')) {
 				self.bus.emit('postRender')
 				console.warn(String(e))
 				return

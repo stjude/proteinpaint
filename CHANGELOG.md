@@ -2,8 +2,6 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
-
 
 ## 2.174.1
 
@@ -53,6 +51,18 @@ Fixes:
 - stream matrix response data to prevent RangeError during json-encoding
 - do not join to global filter in getTreeFilter() if the join argument is 'or', so that the edit menu will list all applicable categories
 - show loading and error messages when switching to barchart tab in summary plot
+
+
+## 2.170.8
+
+Fixes:
+- supply abort signal option to getDefaultBins and getpercentile requests when filling-in term wrappers
+
+
+## 2.170.7:
+
+Fixes
+- support correlation plot triggerAbort() to cancel stale network requests; detect component triggerAbort() as a prototype method
 
 
 ## 2.170.6

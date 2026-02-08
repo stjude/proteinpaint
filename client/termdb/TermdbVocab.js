@@ -504,7 +504,8 @@ export class TermdbVocab extends Vocab {
 			if (termfilter.filter) body.filter = getNormalRoot(termfilter.filter)
 			if (termfilter.filter0) body.filter0 = termfilter.filter0
 		}
-		return await dofetch3('termdb/getpercentile', { body })
+		const signal = this.app?.getAbortSignal?.() // ok to be undefined
+		return await dofetch3('termdb/getpercentile', { body, signal })
 	}
 
 	async getDescrStats(tw, termfilter, logScale) {
@@ -826,7 +827,7 @@ export class TermdbVocab extends Vocab {
 			}
 
 			promises.push(
-				dofetch3('termdb', init, { cacheAs: 'decoded' }).then(data => {
+				dofetch3('termdb', init).then(data => {
 					if (data.error) throw data.error
 					if (data.warning) warnings.push(data.warning.message)
 					// console.log(825, structuredClone(Object.fromEntries(Object.entries(data.samples).slice(0, 5))))
@@ -1064,7 +1065,8 @@ export class TermdbVocab extends Vocab {
 			if (tf.filter) body.filter = getNormalRoot(tf.filter)
 			if (tf.filter0) body.filter0 = tf.filter0
 		}
-		return await dofetch3('termdb', { headers, body })
+		const signal = opts.signal || this.app?.getAbortSignal?.()
+		return await dofetch3('termdb', { headers, body, signal })
 	}
 
 	// it's safer to separately treat term and q as persisted objects but not tw,
