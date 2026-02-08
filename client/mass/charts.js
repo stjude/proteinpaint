@@ -588,9 +588,12 @@ function setRenderers(self) {
 	}
 }
 
-// to assign chart ID to distinguish between chart instances
-const idPrefix = '_CHART_AUTOID_' // to distinguish from user-assigned chart IDs
-let id = Date.now()
+// idPrefix to assign chart ID to distinguish between chart instances,
+// will not be used if there is a user-assigned or recovered session chart ID;
+// the random string is in case this code is bundled as independent code in
+// different chunks
+const idPrefix = '_CHART_AUTOID_' + Math.random().toString().slice(-6) + '_'
+let id = Date.now().toString().slice(-6)
 
 function getId() {
 	return idPrefix + id++
