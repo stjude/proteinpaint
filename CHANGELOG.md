@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 
 
+## Unreleased
+
+Fixes:
+- supply abort signal option to getDefaultBins and getpercentile requests when filling-in term wrappers
+
+
 ## 2.170.7:
 
 Fixes
