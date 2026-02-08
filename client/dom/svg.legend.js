@@ -235,6 +235,7 @@ export default function svgLegend(opts) {
 				opts.ticks = domainRange > 5 ? 2 : 1
 			}
 			if (d.numericInputs) opts.numericInputs = d.numericInputs
+			if (d.removeDuplicates) opts.removeDuplicates = d.removeDuplicates
 
 			new ColorScale(opts)
 

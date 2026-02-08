@@ -24,12 +24,12 @@ export function getInterpolatedDomainRange({
 	for (let p = 0; p < absMax; p += stepSize) {
 		if (negInterpolator) {
 			n += stepSize
-			const vn = n / absMax
+			const vn = n // / absMax // do not divide by absMax, use raw value
 			neg.values.push(vn)
 			neg.colors.push(negInterpolator(-vn))
 		}
 		if (posInterpolator) {
-			const vp = p / absMax
+			const vp = p // / absMax // do not divide by absMax, use raw value
 			pos.values.push(vp)
 			pos.colors.push(posInterpolator(vp))
 		}

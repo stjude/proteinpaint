@@ -4,6 +4,7 @@ import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-ch
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common.js'
 import { colorDelta, getInterpolatedDomainRange, removeInterpolatedOutliers, removeOutliers } from '#dom'
+import { roundValueAuto } from '#shared/roundValue.js'
 
 export function setAutoDimensions(xOffset) {
 	const m = this.state.config.settings.matrix
@@ -333,11 +334,15 @@ export function setLabelsAndScales() {
 	let cnvLegendDomainRange // if cnv data is present, compute once and reuse across geneVariant tw's
 
 	if (this.cnvValues.length) {
-		this.cnvValues = removeOutliers(this.cnvValues)
+		if (s.cnvValues.cutoffMode == 'percentile') {
+			const max = s.cnvValues.percentile
+			const min = roundValueAuto(1 - max)
+			this.cnvValues = removeOutliers(this.cnvValues, min, max)
+		}
 		const minLoss = this.cnvValues[0] < 0 ? this.cnvValues[0] : undefined
 		const maxGain =
 			this.cnvValues[this.cnvValues.length - 1] > 0 ? this.cnvValues[this.cnvValues.length - 1] : undefined
-		let maxLoss, minGain
+		let maxLoss, minGain, absMax
 		for (const n of this.cnvValues) {
 			if (n < 0) maxLoss = n
 			if (!minGain && n > 0) {
@@ -364,7 +369,7 @@ export function setLabelsAndScales() {
 					// ColorScale legend renderer in matrix.legend.js. By computing
 					// these values here, the legend will match the scale
 					// min/max values and rendered-value colors in matrix cells.
-					const absMax =
+					absMax =
 						minLoss !== undefined && maxGain !== undefined
 							? Math.max(Math.abs(minLoss), maxGain)
 							: minLoss !== undefined
@@ -395,6 +400,7 @@ export function setLabelsAndScales() {
 					maxGain,
 					minLoss,
 					minGain,
+					absMax,
 					legend: cnvLegendDomainRange
 				}
 			}

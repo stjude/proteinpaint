@@ -47,6 +47,10 @@ export class ColorScale {
 		this.validateOpts(opts)
 
 		this.tickValues = niceNumLabels(opts.domain)
+		if (opts.removeDuplicates) {
+			this.tickValues = Array.from(new Set(this.tickValues))
+			this.colors = Array.from(new Set(this.colors))
+		}
 
 		let scaleSvg: SvgSvg //
 		if (opts.width || opts.height) {
@@ -262,11 +266,11 @@ export class ColorScale {
 		// const colorInt = interpolateRgb.apply(null, this.colors)
 		// const color = colorInt(x)
 		// if (color) {
-		// 	const colorMap = color.match(/\d+/g)?.map(Number)
-		// 	const [r, g, b] = colorMap.map(v => v / 255)
-		// 	const contrast = 0.2126 * r + 0.7152 * g + 0.0722 * b
-		// 	if (contrast < 0.5) this.dom.label.attr('fill', 'white').attr('stroke', 'black').attr('stroke-width', 0.3)
-		// 	else this.dom.label.attr('fill', 'black').attr('stroke', 'none')
+		//   const colorMap = color.match(/\d+/g)?.map(Number)
+		//   const [r, g, b] = colorMap.map(v => v / 255)
+		//   const contrast = 0.2126 * r + 0.7152 * g + 0.0722 * b
+		//   if (contrast < 0.5) this.dom.label.attr('fill', 'white').attr('stroke', 'black').attr('stroke-width', 0.3)
+		//   else this.dom.label.attr('fill', 'black').attr('stroke', 'none')
 		// }
 	}
 
