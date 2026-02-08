@@ -109,8 +109,10 @@ class TdbConfigUiInit {
 				.style('display', 'none')
 		}
 
+		this.dom.loadingDiv.append('div').attr('class', 'sjpp-spinner-small')
 		this.loadingMasks = [this.dom.loadingDiv]
 		if (this.opts.loadingMasks) this.loadingMasks.push(...this.opts.loadingMasks)
+
 		return this.dom
 	}
 
