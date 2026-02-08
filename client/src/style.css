@@ -1218,7 +1218,7 @@ sandbox header
 
 .sjpp-spinner {
     position: absolute;
-    left: 50%;
+    left: calc(50% - 30px);
     top: 30%;
     height: 60px;
     width: 60px;
@@ -1231,6 +1231,24 @@ sandbox header
     border-right: 6px solid rgba(0, 174, 239, .15);
     border-bottom: 6px solid rgba(0, 174, 239, .15);
     border-top: 6px solid rgba(0, 174, 239, .8);
+    border-radius: 100%;
+}
+
+.sjpp-spinner-small {
+    position: absolute;
+    left: calc(50% - 15px);
+    top: calc(50% - 15px);
+    height: 30px;
+    width: 30px;
+    margin: 0px auto;
+    -webkit-animation: rotation .6s infinite linear;
+    -moz-animation: rotation .6s infinite linear;
+    -o-animation: rotation .6s infinite linear;
+    animation: rotation .6s infinite linear;
+    border-left: 3px solid rgba(0, 174, 239, .15);
+    border-right: 3px solid rgba(0, 174, 239, .15);
+    border-bottom: 3px solid rgba(0, 174, 239, .15);
+    border-top: 3px solid rgba(0, 174, 239, .8);
     border-radius: 100%;
 }
 
