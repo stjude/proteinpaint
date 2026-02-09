@@ -102,7 +102,7 @@ export class NumDiscreteEditor extends HandlerBase implements Handler {
 				q.stopinclusive = this.boundaryInclusion === 'stopinclusive'
 			})
 
-		const options = []
+		const options: { value: string; html: string }[] = []
 		if (this.termsetting?.opts?.usecase?.target == 'runChart2') {
 			// in runChart this is applying binning to X/date term to divide X axis to period. here we do not want stopinclusive as it causes wrong summary data, and won't show this options
 		} else {
