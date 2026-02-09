@@ -3134,36 +3134,49 @@ function mayFilterByMaf(mafFilter, m) {
 		let pass = false
 		if (item.type != 'tvs') throw 'unexpected item.type' // not supporting nested tvslst
 		const tvs = item.tvs
-		if (Object.keys(m).includes(tvs.term.id)) {
-			// mutation is annotated for maf field
-			const mafField = m[tvs.term.id] // <ref read count>,<alt read count>
-			const alleles = mafField.split(',').map(Number)
-			if (alleles.length == 2) {
-				// only handling bi-allelic variants for now
-				// TODO: how to handle multi-allelic variants?
-				const [ref, alt] = alleles
-				if (Number.isFinite(ref) && Number.isFinite(alt)) {
-					const maf = alt / (alt + ref)
-					// test if maf is in range of tvs
-					const intvs = tvs.ranges.every(r => {
-						let startPass = true
-						let stopPass = true
-						if (Number.isFinite(r.start)) {
-							startPass = r.startinclusive ? maf >= r.start : maf > r.start
-						}
-						if (Number.isFinite(r.stop)) {
-							stopPass = r.stopinclusive ? maf <= r.stop : maf < r.stop
-						}
-						return startPass && stopPass
-					})
-					pass = tvs.isnot ? !intvs : intvs
-				}
+		const alleleCnts = { ref: 0, alt: 0 } // allele counts for maf filter term
+		if (tvs.term.child_ids?.length) {
+			// maf filter term has child terms
+			// sum allele counts across child terms
+			for (const id of tvs.term.child_ids) {
+				addAlleleCnts(m, id, alleleCnts)
 			}
+		} else {
+			// maf filter term does not have child terms
+			// get allele counts of term directly
+			addAlleleCnts(m, tvs.term.id, alleleCnts)
 		}
+		const { ref, alt } = alleleCnts
+		const maf = alt / (alt + ref)
+		// test if maf is in range of tvs
+		const intvs = tvs.ranges.every(r => {
+			let startPass = true
+			let stopPass = true
+			if (Number.isFinite(r.start)) {
+				startPass = r.startinclusive ? maf >= r.start : maf > r.start
+			}
+			if (Number.isFinite(r.stop)) {
+				stopPass = r.stopinclusive ? maf <= r.stop : maf < r.stop
+			}
+			return startPass && stopPass
+		})
+		pass = tvs.isnot ? !intvs : intvs
 		passLst.push(pass)
 	}
 	const passFilter = filter.join == 'or' ? passLst.some(pass => pass) : passLst.every(pass => pass)
 	return passFilter
+}
+
+// add allele counts of maf field to total allele counts
+function addAlleleCnts(m, mafFieldId, alleleCnts) {
+	const mafField = m[mafFieldId] // <ref read count>,<alt read count>
+	if (!mafField) return // sample not annotated for maf field
+	const alleles = mafField.split(',').map(Number)
+	if (alleles.length != 2) return // skip multi-allelic variants
+	const [ref, alt] = alleles
+	if (!Number.isFinite(ref) || !Number.isFinite(alt)) return
+	alleleCnts.ref += ref
+	alleleCnts.alt += alt
 }
 
 /*function mayFilterByGeneVariant(filter, mlst, ds) {
