@@ -47,7 +47,7 @@ export class ColorScale {
 		this.validateOpts(opts)
 
 		this.tickValues = niceNumLabels(opts.domain)
-		if (opts.removeDuplicates) {
+		if (!opts.retainDuplicates) {
 			this.tickValues = Array.from(new Set(this.tickValues))
 			this.colors = Array.from(new Set(this.colors))
 		}
