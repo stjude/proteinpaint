@@ -56,8 +56,9 @@ if (!fs.existsSync(HDF5_File)) {
 
 			const rawOutput = await run_rust('topGeneByExpressionVariance', JSON.stringify(inputJson))
 			const rawOutputLines = String(rawOutput).split('\n')
+			const outputJsonPattern = /^\s*output_json:\s*/
 			const rawOutputVargene = rawOutputLines.find(
-				line => typeof line === 'string' && line.trim().startsWith('output_json')
+				line => typeof line === 'string' && outputJsonPattern.test(line)
 			)
 
 			// 1. Check prefix
@@ -68,7 +69,7 @@ if (!fs.existsSync(HDF5_File)) {
 			}
 
 			// 2. Extract JSON part
-			const jsonPart = rawOutputVargene.replace(/^output_json:\s*/, '').trim()
+			const jsonPart = rawOutputVargene.replace(outputJsonPattern, '').trim()
 
 			let data
 			try {
