@@ -44,6 +44,8 @@ export type ColorScaleOpts = {
 	width?: number
 	/** Optional. Height fo the svg. Default is 30.*/
 	height?: number
+	/** Optional. If true, keeps duplicate color and tick values */
+	retainDuplicates?: boolean
 	/** If present, creates a menu on click to change the colors */
 	setColorsCallback?: (val: string, idx: number) => void
 	/** Optional. Suggested number of ticks to show. Cannot be zero. Default is 5.
@@ -57,8 +59,6 @@ export type ColorScaleOpts = {
 	/** Optional. Placement of numbered ticks. Default is false (i.e. placement
 	 * below the color bar). */
 	topTicks?: boolean
-	/** Optional. If true, removes duplicate color and tick values */
-	removeDuplicates?: boolean
 }
 
 export type ColorScaleDom = {
