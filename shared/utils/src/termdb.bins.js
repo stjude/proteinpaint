@@ -126,8 +126,6 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
   }
 */
 	const bc = binconfig
-	// assign default type (same as in validate_bins)
-	if (bc && typeof bc === 'object' && !('type' in bc)) bc.type = 'regular-bin'
 
 	validate_bins(bc)
 	if (bc.lst) {
