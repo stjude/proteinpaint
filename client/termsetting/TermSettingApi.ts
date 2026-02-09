@@ -354,6 +354,7 @@ export class TermSettingApi {
 
 	isAbortError(e) {
 		if (e instanceof DOMException) return e.name === 'AbortError'
+		if (typeof e === 'object' && e !== null && e.name === 'AbortError') return true
 		if (typeof e == 'string') return e.includes('stale sequenceId') || e.includes('AbortError')
 		return false
 	}
