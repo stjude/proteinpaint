@@ -3147,7 +3147,13 @@ function mayFilterByMaf(mafFilter, m) {
 			addAlleleCnts(m, tvs.term.id, alleleCnts)
 		}
 		const { ref, alt } = alleleCnts
-		const maf = alt / (alt + ref)
+		const total = ref + alt
+		if (total == 0) {
+			// no allele counts, sample does not pass
+			passLst.push(pass)
+			continue
+		}
+		const maf = alt / total
 		// test if maf is in range of tvs
 		const intvs = tvs.ranges.every(r => {
 			let startPass = true
