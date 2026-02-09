@@ -107,6 +107,7 @@ function getBaseInputs(app: AppApi) {
 			usecase: { target: 'runChart2', detail: 'ytw' },
 			label: 'Y',
 			vocabApi: app.vocabApi,
+			menuOptions: '!edit',
 			defaultQ4fillTW: term0_term2_defaultQ,
 			numericEditMenuVersion: ['continuous']
 		},
