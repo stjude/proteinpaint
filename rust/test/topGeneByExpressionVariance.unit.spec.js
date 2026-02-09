@@ -35,7 +35,7 @@ const HDF5_FILE = path.join(serverconfig.binpath, 'test/tp/files/hg38/TermdbTest
 /**
  * Test: Validate topGeneByExpressionVariance rust code
  *
- * Verifies the rust code returns a valid JSON object with a "genes" key that is an array.
+ * Verifies the rust code returns a valid JSON object.
  */
 tape('Returns valid output_json array of gene objects', async t => {
 	try {
