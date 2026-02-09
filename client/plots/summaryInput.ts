@@ -64,15 +64,15 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 				label: controlLabels.term1?.label || 'Primary variable',
 				processConfig: config => {
 					const { term, term2, term0, term2_surv, term0_surv } = this.state.config
-					const editedType = config.term?.term.type
-					if (editedType === term?.type) return
+					const editedType = config.term?.term?.type
+					if (editedType === term?.term?.type) return
 					if (editedType == 'survival') {
 						if (term2 && term2.term?.name != term2_surv?.term?.name)
 							config.term2 = { term: structuredClone(term2.term), q: {} }
 						if (term0 && term0.term?.name != term0_surv?.term?.name)
 							config.term0 = { term: structuredClone(term0.term), q: {} }
 					} else {
-						if (term2_surv && term2_surv.term.name != term2?.term?.name)
+						if (term2_surv && term2_surv.term?.name != term2?.term?.name)
 							config.term2 = { term: structuredClone(term2_surv.term), q: {} }
 						if (term0_surv && term0_surv.term.name != term0?.term?.name)
 							config.term0 = { term: structuredClone(term0_surv.term), q: {} }
