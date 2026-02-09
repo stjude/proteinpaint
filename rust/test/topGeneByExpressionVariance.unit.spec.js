@@ -30,12 +30,12 @@ import fs from 'fs'
 import serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
 
 // Prepare paths to HDF5 test file
-const HDF5_File = path.join(serverconfig.binpath, 'test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5')
+const HDF5_FILE = path.join(serverconfig.binpath, 'test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5')
 
 // Skip entire test suite if required file is missing
-if (!fs.existsSync(HDF5_File)) {
+if (!fs.existsSync(HDF5_FILE)) {
 	tape.skip('Returns valid output_json array of gene objects (HDF5 fixture missing)', t => {
-		t.comment(`Skipping test because data file not found: ${HDF5_File}`)
+		t.comment(`Skipping test because data file not found: ${HDF5_FILE}`)
 		t.end()
 	})
 } else {
@@ -48,7 +48,7 @@ if (!fs.existsSync(HDF5_File)) {
 		try {
 			const inputJson = {
 				samples: '2646,2660,2898,3150,3178,3206,3220,3346,3360,1,3,7,21,22,23,37,38,39',
-				input_file: HDF5_File,
+				input_file: HDF5_FILE,
 				filter_extreme_values: 0,
 				num_genes: 20,
 				rank_type: 'var'
