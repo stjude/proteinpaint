@@ -404,7 +404,7 @@ function setRenderers(self) {
 			.style('display', 'block')
 			.style('opacity', '0.65')
 			.html(
-				`<u>${self.sessionDaysLeft} days</u> left until this session is removed. Click the "Save Session" button to create a new one.`
+				`<u>${self.sessionDaysLeft} days</u> left until this session is removed. Click the "Session ▼" button and select "Save" option to create a new one.`
 			)
 	}
 
