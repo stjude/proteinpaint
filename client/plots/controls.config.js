@@ -105,7 +105,7 @@ class TdbConfigUiInit {
 				.style('left', 0)
 				.style('height', '100%')
 				.style('width', '100%')
-				.style('background-color', `rgba(240,240,240,0.6)`)
+				.style('background-color', `rgba(255,255,255,0.7)`)
 				.style('display', 'none')
 		}
 
