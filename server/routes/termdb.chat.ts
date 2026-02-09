@@ -778,6 +778,10 @@ function validate_summary_response(response: string, common_genes: string[], dat
 		html += term1_validation.html
 	} else {
 		pp_plot_json.term = term1_validation.term_type
+		if (term1_validation.category == 'float' || term1_validation.category == 'integer') {
+			pp_plot_json.term.q = { mode: 'continuous' }
+		}
+		pp_plot_json.category = term1_validation.category
 	}
 
 	if (response_type.term2) {
@@ -786,8 +790,39 @@ function validate_summary_response(response: string, common_genes: string[], dat
 			html += term2_validation.html
 		} else {
 			pp_plot_json.term2 = term2_validation.term_type
+			if (term2_validation.category == 'float' || term2_validation.category == 'integer') {
+				pp_plot_json.term2.q = { mode: 'continuous' }
+			}
+			pp_plot_json.category2 = term2_validation.category
 		}
 	}
+
+	if (pp_plot_json.category == 'categorical' && !pp_plot_json.category2) {
+		pp_plot_json.childType = 'barchart'
+	} else if ((pp_plot_json.category == 'float' || pp_plot_json.category == 'integer') && !pp_plot_json.category2) {
+		pp_plot_json.childType = 'violin'
+	} else if (pp_plot_json.category == 'categorical' && pp_plot_json.category2 == 'categorical') {
+		pp_plot_json.childType = 'barchart'
+	} else if (
+		(pp_plot_json.category == 'float' || pp_plot_json.category == 'integer') &&
+		pp_plot_json.category2 == 'categorical'
+	) {
+		pp_plot_json.childType = 'violin'
+	} else if (
+		(pp_plot_json.category2 == 'float' || pp_plot_json.category2 == 'integer') &&
+		pp_plot_json.category == 'categorical'
+	) {
+		pp_plot_json.childType = 'violin'
+	} else if (
+		(pp_plot_json.category2 == 'float' || pp_plot_json.category2 == 'integer') &&
+		(pp_plot_json.category == 'float' || pp_plot_json.category == 'integer')
+	) {
+		pp_plot_json.childType = 'scatter'
+	} else {
+		pp_plot_json.childType = 'barchart'
+	}
+	delete pp_plot_json.category
+	if (pp_plot_json.category2) delete pp_plot_json.category2
 
 	if (response_type.simpleFilter && response_type.simpleFilter.length > 0) {
 		const validated_filters = validate_filter(response_type.simpleFilter, ds, '')
@@ -808,6 +843,7 @@ function validate_summary_response(response: string, common_genes: string[], dat
 function validate_term(response_term: string, common_genes: string[], dataset_json: any, ds: any) {
 	let html = ''
 	let term_type: any
+	let category: string = ''
 	const term: any = ds.cohort.termdb.q.termjsonByOneid(response_term)
 	if (!term) {
 		const gene_hits = common_genes.filter(gene => gene == response_term.toLowerCase())
@@ -818,14 +854,16 @@ function validate_term(response_term: string, common_genes: string[], dataset_js
 			if (dataset_json.hasGeneExpression) {
 				// Check to see if dataset support gene expression
 				term_type = { term: { gene: response_term.toUpperCase(), type: 'geneExpression' } }
+				category = 'float'
 			} else {
 				html += 'Dataset does not support gene expression'
 			}
 		}
 	} else {
 		term_type = { id: term.id }
+		category = term.type
 	}
-	return { term_type: term_type, html: html }
+	return { term_type: term_type, html: html, category: category }
 }
 
 function countOccurrences(str: string, word: string): number {
