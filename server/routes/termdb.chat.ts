@@ -751,7 +751,6 @@ function validate_summary_response(response: string, common_genes: string[], dat
 		}
 	}
 
-	mayLog('response_type.childType:', response_type.childType)
 	// Override childType if the user explicitly requested a chart type
 	if (response_type.childType) {
 		const validChartTypes = ['violin', 'boxplot', 'sampleScatter', 'barchart']
@@ -836,6 +835,10 @@ function validate_summary_response(response: string, common_genes: string[], dat
 			pp_plot_json.childType = pp_plot_json.llmchildType // These are also possibly other plot types that could be displayed for a single numeric variable
 		} else {
 			pp_plot_json.childType = 'sampleScatter'
+		}
+		if (pp_plot_json.childType == 'violin' || pp_plot_json.childType == 'boxplot') {
+			// Discretize one of the terms in case of a boxplot or violin plot
+			pp_plot_json.term2.q = { mode: 'discrete' }
 		}
 	} else {
 		// Should not happen
