@@ -1152,7 +1152,7 @@ tape('tvs: Gene Variant - CNV - continuous', async test => {
 		editOpt.click()
 
 		const cutoffsInputs = tipd.selectAll("input[type='number']").nodes()
-		test.equal(cutoffsInputs.length, 4, 'Should have four numeric inputs')
+		test.equal(cutoffsInputs.length, 4, 'Should have 4 numeric inputs')
 		test.equal(
 			Number(cutoffsInputs[0].value),
 			opts.filterData.lst[0].tvs.cnvGainCutoff,

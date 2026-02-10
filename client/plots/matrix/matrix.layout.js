@@ -343,7 +343,7 @@ export function setLabelsAndScales() {
 			let maxPercentile = s.cnvValues.cutoffMode == 'auto' ? s.cnvValues.defaultPercentile : s.cnvValues.percentile
 			maxPercentile = maxPercentile / 100
 			const minPercentile = roundValueAuto(1 - maxPercentile)
-			this.cnvValues = removeOutliers(this.cnvValues, minPercentile, maxPercentile)
+			this.cnvValues = removeOutliers(this.cnvValues, minPercentile, maxPercentile, { baseValue: 0 })
 		}
 		if (this.cnvValues.length == 0) return
 		const minLoss = this.cnvValues[0] < 0 ? this.cnvValues[0] : undefined
