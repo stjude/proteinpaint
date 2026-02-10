@@ -817,10 +817,19 @@ function validate_summary_response(response: string, common_genes: string[], dat
 		(pp_plot_json.category2 == 'float' || pp_plot_json.category2 == 'integer') &&
 		(pp_plot_json.category == 'float' || pp_plot_json.category == 'integer')
 	) {
-		pp_plot_json.childType = 'scatter'
+		pp_plot_json.childType = 'sampleScatter'
 	} else {
 		pp_plot_json.childType = 'barchart'
 	}
+
+	// Override childType if the user explicitly requested a chart type
+	if (response_type.chartType) {
+		const validChartTypes = ['violin', 'boxplot', 'sampleScatter', 'barchart']
+		if (validChartTypes.includes(response_type.chartType)) {
+			pp_plot_json.childType = response_type.chartType
+		}
+	}
+
 	delete pp_plot_json.category
 	if (pp_plot_json.category2) delete pp_plot_json.category2
 
