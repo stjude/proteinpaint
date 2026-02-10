@@ -94,6 +94,7 @@ function getBaseInputs(app: AppApi) {
 			type: 'term',
 			configKey: 'xtw',
 			chartType: 'runChart2',
+			usecase: { target: 'runChart2', detail: 'numeric' },
 			label: 'X',
 			vocabApi: app.vocabApi,
 			menuOptions: 'edit',
