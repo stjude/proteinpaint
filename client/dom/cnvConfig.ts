@@ -12,6 +12,7 @@ type Arg = {
 	cnvGainCutoff?: number // minimum positive value (log2 ratio) for CNV gain
 	cnvLossCutoff?: number // maximum negative value (log2 ratio) for CNV loss
 	cnvMaxLength?: number | null // max segment bp length; null = no length limit (UI shows -1)
+	fractionOverlap?: number // fraction of query length overlapping with cnv segment, set to 0.8 by default
 	callback: (config: {
 		cnvGainCutoff?: number
 		cnvLossCutoff?: number
@@ -25,6 +26,7 @@ type Arg = {
 export function renderCnvConfig(arg: Arg) {
 	const { cnvGainCutoff, cnvLossCutoff } = arg
 	const cnvMaxLength = arg.cnvMaxLength === null ? -1 : arg.cnvMaxLength
+	const fractionOverlap = arg.fractionOverlap || 0.8
 
 	if (!Number.isFinite(cnvGainCutoff) && !Number.isFinite(cnvLossCutoff) && !Number.isFinite(cnvMaxLength)) {
 		// no cutoffs defined, do not render config UI
@@ -120,7 +122,7 @@ export function renderCnvConfig(arg: Arg) {
 	let cnvLengthInput
 	if (Number.isFinite(cnvMaxLength)) {
 		const cnvLengthDiv = inputsDiv.append('div').style('margin-bottom', '5px')
-		cnvLengthDiv.append('span').style('opacity', 0.7).text('CNV Max Length')
+		cnvLengthDiv.append('span').style('opacity', 0.7).text('CNV Max Length (bp)')
 		cnvLengthInput = cnvLengthDiv
 			.append('input')
 			.attr('data-testid', 'sjpp-cnv-length-input')
@@ -146,6 +148,37 @@ export function renderCnvConfig(arg: Arg) {
 			})
 	}
 
+	// Percent overlap input
+	let overlapInput
+	if (Number.isFinite(fractionOverlap)) {
+		const percentOverlap = fractionOverlap * 100
+		const overlapDiv = inputsDiv.append('div').style('margin-bottom', '5px')
+		overlapDiv.append('span').style('opacity', 0.7).text('Minimum Overlap (%)')
+		overlapInput = overlapDiv
+			.append('input')
+			.attr('data-testid', 'sjpp-cnv-length-input')
+			.attr('type', 'number')
+			.property('value', percentOverlap)
+			.style('width', '100px')
+			.style('margin-left', '15px')
+			.on('change', event => {
+				const value = event.target.value
+				if (!isValidNumber(value)) {
+					window.alert('Please enter a numeric value.')
+					event.target.value = percentOverlap
+					return
+				}
+			})
+			.on('mouseover', event => {
+				tip.clear()
+				tip.d.append('div').text('Percent of query region overlapping CNV segment')
+				tip.showunder(event.target)
+			})
+			.on('mouseout', () => {
+				tip.hide()
+			})
+	}
+
 	// Apply button
 	div
 		.append('div')
@@ -163,6 +196,10 @@ export function renderCnvConfig(arg: Arg) {
 				const tempCnvMaxLength = Number(cnvLengthInput.property('value'))
 				// no max length if value == -1
 				config.cnvMaxLength = tempCnvMaxLength == -1 ? null : tempCnvMaxLength
+			}
+			if (overlapInput) {
+				const percentOverlap = Number(overlapInput.property('value'))
+				config.fractionOverlap = percentOverlap / 100
 			}
 			if (genotypeRadio) {
 				const radios = genotypeRadio.inputs.nodes()
