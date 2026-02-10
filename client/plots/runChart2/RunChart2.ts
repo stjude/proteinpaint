@@ -173,23 +173,25 @@ async function ensureTermHydrated(tw: any, vocabApi: AppApi['vocabApi']) {
 
 export async function getPlotConfig(opts: any, app: AppApi) {
 	// Backward compatibility: convert old term/term2 format to new xtw/ytw format
-	if (opts.term && !opts.xtw) {
-		opts.xtw = { term: opts.term }
-		if (opts.term.q) opts.xtw.q = opts.term.q
+	let xtw = opts.xtw
+	let ytw = opts.ytw
+
+	if (opts.term && !xtw) {
+		xtw = { term: opts.term }
+		if (opts.term.q) xtw.q = opts.term.q
 	}
-	if (opts.term2 && !opts.ytw) {
-		opts.ytw = { term: opts.term2 }
-		if (opts.term2.q) opts.ytw.q = opts.term2.q
+	if (opts.term2 && !ytw) {
+		ytw = { term: opts.term2 }
+		if (opts.term2.q) ytw.q = opts.term2.q
 	}
 
-	// Convert old settings.runChart to settings.runChart2
-	if (opts.settings?.runChart && !opts.settings?.runChart2) {
-		opts.settings.runChart2 = opts.settings.runChart
-		delete opts.settings.runChart
-	}
+	const migratedSettings =
+		opts.settings?.runChart && !opts.settings?.runChart2
+			? { ...opts.settings, runChart2: opts.settings.runChart }
+			: opts.settings
 
-	const xtw = opts.xtw
-	const ytw = opts.ytw
+	xtw = { ...xtw }
+	ytw = { ...ytw }
 
 	try {
 		await ensureTermHydrated(xtw, app.vocabApi)
@@ -213,10 +215,10 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 		ytw,
 		settings: {
 			controls: { isOpen: false },
-			runChart2: getDefaultRunChart2Settings(opts)
+			runChart2: getDefaultRunChart2Settings({ ...opts, settings: migratedSettings })
 		}
 	}
-	return copyMerge(config, defaultConfig, opts)
+	return copyMerge(config, defaultConfig, { ...opts, xtw, ytw, settings: migratedSettings })
 }
 
 export function makeChartBtnMenu(holder, chartsInstance) {
