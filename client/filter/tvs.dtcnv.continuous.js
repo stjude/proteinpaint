@@ -26,6 +26,8 @@ function fillMenu(self, div, tvs) {
 		cnvMaxLength: cnv.cnvMaxLength,
 		cnvWT: cnv.cnvWT,
 		genotypeToggle: true,
+		fractionOverlap: cnv.fractionOverlap,
+		showOverlap: true,
 		callback: config => {
 			const new_tvs = structuredClone(tvs)
 			Object.assign(new_tvs, config)
