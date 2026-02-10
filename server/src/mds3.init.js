@@ -2865,7 +2865,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					if (group.type != 'filter') throw 'unexpected group.type'
 					values = []
 					const filter = group.filter
-					const [pass, tested] = filterByTvsLst(filter, mlst, values)
+					const [pass, tested] = filterByTvsLst(filter, mlst, values, tw)
 					return pass
 				})
 
@@ -3006,12 +3006,12 @@ function addDataAvailability(sid, sample2mlst, dtKey, c, origin, sampleFilter, g
 }
 
 // function to filter a sample based on its mlst and a tvslst
-export function filterByTvsLst(filter, mlst, values) {
+export function filterByTvsLst(filter, mlst, values, tw) {
 	if (filter.type != 'tvslst') throw 'unexpected filter.type'
 	const passLst = []
 	const testedLst = []
 	for (const item of filter.lst) {
-		const [pass, tested] = filterByItem(item, mlst, values)
+		const [pass, tested] = filterByItem(item, mlst, values, tw)
 		passLst.push(pass)
 		testedLst.push(tested)
 	}
@@ -3031,7 +3031,7 @@ export function filterByTvsLst(filter, mlst, values) {
 }
 
 // function to filter a sample based on its mlst and a filter item
-export function filterByItem(filter, mlst, values) {
+export function filterByItem(filter, mlst, values, tw) {
 	if (filter.type == 'tvslst') return filterByTvsLst(filter, mlst, values)
 	if (filter.type != 'tvs') throw 'unexpected filter.type'
 	const tvs = filter.tvs
@@ -3062,7 +3062,7 @@ export function filterByItem(filter, mlst, values) {
 				const cnvLength = m.stop - m.start
 				if (!cnvLength) return false
 				if (tvs.cnvMaxLength && cnvLength > tvs.cnvMaxLength) return false
-				if (tvs.fractionOverlap && !mayFilterCnvByOverlap(m, tvs)) return false
+				if (tvs.fractionOverlap && !mayFilterCnvByOverlap(m, tvs, tw)) return false
 				let intvs
 				if (m.value > 0) {
 					// cnv gain
@@ -3189,11 +3189,18 @@ function addAlleleCnts(m, mafFieldId, alleleCnts) {
 }
 
 // may filter cnv segment by a minimum overlap with query
-function mayFilterCnvByOverlap(cnv, tvs) {
+function mayFilterCnvByOverlap(cnv, tvs, tw) {
 	if (!tvs.fractionOverlap) return true
 	if (!Number.isFinite(tvs.fractionOverlap)) throw new Error('tvs.fractionOverlap is non-numeric')
 	if (tvs.fractionOverlap < 0 || tvs.fractionOverlap > 1) throw new Error('tvs.fractionOverlap is out of range')
-	const gene = tvs.term.parentTerm.genes.find(g => g.gene == cnv.gene)
+	let gene = tvs.term.parentTerm.genes.find(g => g.gene == cnv.gene)
+	if (!gene.hasOwnProperty('start') || !gene.hasOwnProperty('stop')) {
+		// start/stop may not be annotated on tvs.term, but rather on tw.term
+		gene = tw.term.genes.find(g => g.gene == cnv.gene)
+	}
+	for (const v of [gene.start, gene.stop, cnv.start, cnv.stop]) {
+		if (!Number.isInteger(v)) throw new Error(`${v} is not an integer`)
+	}
 	const queryLength = gene.stop - gene.start
 	const overlapLength = Math.max(0, Math.min(gene.stop, cnv.stop) - Math.max(gene.start, cnv.start))
 	const fractionOverlap = overlapLength / queryLength
