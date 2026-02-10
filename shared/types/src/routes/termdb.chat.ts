@@ -41,8 +41,8 @@ export type SummaryType = {
 	term2?: string
 	/** Optional simple filter terms */
 	simpleFilter: FilterTerm[]
-	/** Optional explicit chart type requested by the user. If omitted, the logic of the data types picks the chart type. */
-	chartType?: 'violin' | 'boxplot' | 'sampleScatter' | 'barchart'
+	/** Optional explicit child type requested by the user. If omitted, the logic of the data types picks the child type. */
+	childType?: 'violin' | 'boxplot' | 'sampleScatter' | 'barchart'
 }
 
 export type FilterTerm =
