@@ -1,5 +1,5 @@
 import { select } from 'd3-selection'
-import { ColorScale } from '#dom'
+import { ColorScale, computeTicks } from '#dom'
 
 export default function svgLegend(opts) {
 	let currlinex = 0
@@ -220,7 +220,7 @@ export default function svgLegend(opts) {
 				holder: g,
 				id: colorGradientId,
 				position: `${bbox.width + 25},${yPos}`,
-				ticks: 3,
+				ticks: computeTicks(domainRange, 2),
 				tickSize: 2,
 				topTicks: true
 			}
@@ -228,14 +228,7 @@ export default function svgLegend(opts) {
 				opts.labels = d.labels
 				if (d.text) opts.position = `${bbox.width + bbox.x + 45 + settings.padx},${yPos}`
 			}
-			// Ticks must be spaced appropriately for loss and gain
-			// scales. Lowering the range for smaller ranges
-			// appropriates spaces the scale ticks
-			if ((min == 0 || max == 0) && domainRange > 1) {
-				opts.ticks = domainRange > 5 ? 2 : 1
-			}
 			if (d.numericInputs) opts.numericInputs = d.numericInputs
-			if (d.removeDuplicates) opts.removeDuplicates = d.removeDuplicates
 
 			new ColorScale(opts)
 
