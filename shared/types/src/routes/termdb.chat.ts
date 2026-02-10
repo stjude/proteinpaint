@@ -43,7 +43,7 @@ export type SummaryType = {
 	/** Optional simple filter terms */
 	simpleFilter: FilterTerm[]
 	/** Optional explicit chart type requested by the user. If omitted, the logic of the data types picks the default. */
-	chartType?: 'violin' | 'boxplot' | 'sampleScatter' | 'barchart' | 'table'
+	chartType?: 'violin' | 'boxplot' | 'sampleScatter' | 'barchart'
 }
 
 export type FilterTerm =
