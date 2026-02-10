@@ -3058,8 +3058,11 @@ export function filterByItem(filter, mlst, values) {
 			// may also have loss events because the gain events still satisfied
 			// the gain cutoff criterion
 			const mlst_genotype = mlst_tested.filter(m => {
+				if (m.class == 'WT') return false
 				const cnvLength = m.stop - m.start
+				if (!cnvLength) return false
 				if (tvs.cnvMaxLength && cnvLength > tvs.cnvMaxLength) return false
+				if (tvs.fractionOverlap && !mayFilterCnvByOverlap(m, tvs)) return false
 				let intvs
 				if (m.value > 0) {
 					// cnv gain
@@ -3183,6 +3186,18 @@ function addAlleleCnts(m, mafFieldId, alleleCnts) {
 	if (!Number.isFinite(ref) || !Number.isFinite(alt)) return
 	alleleCnts.ref += ref
 	alleleCnts.alt += alt
+}
+
+// may filter cnv segment by a minimum overlap with query
+function mayFilterCnvByOverlap(cnv, tvs) {
+	if (!tvs.fractionOverlap) return true
+	if (!Number.isFinite(tvs.fractionOverlap)) throw new Error('tvs.fractionOverlap is non-numeric')
+	if (tvs.fractionOverlap < 0 || tvs.fractionOverlap > 1) throw new Error('tvs.fractionOverlap is out of range')
+	const gene = tvs.term.parentTerm.genes.find(g => g.gene == cnv.gene)
+	const queryLength = gene.stop - gene.start
+	const overlapLength = Math.max(0, Math.min(gene.stop, cnv.stop) - Math.max(gene.start, cnv.start))
+	const fractionOverlap = overlapLength / queryLength
+	return fractionOverlap >= tvs.fractionOverlap
 }
 
 /*function mayFilterByGeneVariant(filter, mlst, ds) {
