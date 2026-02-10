@@ -3091,17 +3091,27 @@ export function filterByItem(filter, mlst, values, tw) {
 						}
 					}
 				})
-				// sample matches tvs if number of matching mutations
-				// passes mutation count cutoff
-				intvs =
-					tvs.mcount == 'any'
-						? mlst_intvs.length > 0
-						: tvs.mcount == 'single'
-						? mlst_intvs.length == 1
-						: tvs.mcount == 'multiple'
-						? mlst_intvs.length > 1
-						: null
-				if (intvs === null) throw 'unexpected tvs.mcount'
+				// test if number of matching mutations passes mutation count cutoff
+				switch (tvs.mcount) {
+					case 'any':
+						// whether sample has any matching mutation
+						intvs = mlst_intvs.length > 0
+						break
+					case 'single':
+						// whether sample has a single matching mutation
+						intvs = mlst_intvs.length == 1
+						break
+					case 'multiple':
+						// whether sample has multiple matching mutations
+						intvs = mlst_intvs.length > 1
+						break
+					case 'all':
+						// whether all mutations in sample are matching
+						intvs = mlst_intvs.length == mlst_tested.length
+						break
+					default:
+						throw new Error('unexpected tvs.mcount')
+				}
 			} else if (tvs.genotype == 'wt') {
 				// wildtype tvs
 				// sample matches tvs if it is wildtype (across all queried genes)
