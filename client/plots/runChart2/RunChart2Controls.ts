@@ -117,8 +117,7 @@ function getBaseInputs(app: AppApi) {
 			settingsKey: 'aggregation',
 			options: [
 				{ label: 'Mean', value: 'mean' },
-				{ label: 'Median', value: 'median' },
-				{ label: 'Count', value: 'count' }
+				{ label: 'Median', value: 'median' }
 			]
 		},
 		{
