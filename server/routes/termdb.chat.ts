@@ -96,7 +96,6 @@ export async function run_chat_pipeline(
 	} else if (class_response.type == 'plot') {
 		const classResult = class_response.plot
 		mayLog('classResult:', classResult)
-		//let ai_output_data: any
 		if (classResult == 'summary') {
 			const time1 = new Date().valueOf()
 			ai_output_json = await extract_summary_terms(user_prompt, llm, dataset_db, dataset_json, genedb, ds, testing)
@@ -107,6 +106,18 @@ export async function run_chat_pipeline(
 			mayLog('Time taken for DE agent:', formatElapsedTime(Date.now() - time1))
 		} else if (classResult == 'survival') {
 			ai_output_json = { type: 'html', html: 'survival agent has not been implemented yet' }
+		} else if (classResult == 'matrix') {
+			const time1 = new Date().valueOf()
+			ai_output_json = await extract_matrix_search_terms_from_query(
+				user_prompt,
+				llm,
+				dataset_db,
+				dataset_json,
+				genedb,
+				ds,
+				testing
+			)
+			mayLog('Time taken for matrix agent:', formatElapsedTime(Date.now() - time1))
 		} else {
 			// Will define all other agents later as desired
 			ai_output_json = { type: 'html', html: 'Unknown classification value' }
@@ -861,6 +872,199 @@ function validate_summary_response(response: string, common_genes: string[], dat
 	if (html.length > 0) {
 		return { type: 'html', html: html }
 	} else {
+		return { type: 'plot', plot: pp_plot_json }
+	}
+}
+
+async function extract_matrix_search_terms_from_query(
+	prompt: string,
+	llm: LlmConfig,
+	dataset_db: string,
+	dataset_json: any,
+	genedb: string,
+	ds: any,
+	testing: boolean
+) {
+	const dataset_db_output = await parse_dataset_db(dataset_db)
+	const genes_list = await parse_geneset_db(genedb)
+
+	const Schema = {
+		$schema: 'http://json-schema.org/draft-07/schema#',
+		$ref: '#/definitions/MatrixType',
+		definitions: {
+			MatrixType: {
+				type: 'object',
+				properties: {
+					terms: {
+						type: 'array',
+						items: { type: 'string' },
+						description: 'Names of dictionary/clinical terms to include as rows in the matrix'
+					},
+					geneNames: {
+						type: 'array',
+						items: { type: 'string' },
+						description: 'Names of genes to include as gene variant rows in the matrix'
+					},
+					simpleFilter: {
+						type: 'array',
+						items: { $ref: '#/definitions/FilterTerm' },
+						description: 'Optional simple filter terms to restrict the sample set'
+					}
+				},
+				additionalProperties: false
+			},
+			FilterTerm: {
+				anyOf: [{ $ref: '#/definitions/CategoricalFilterTerm' }, { $ref: '#/definitions/NumericFilterTerm' }]
+			},
+			CategoricalFilterTerm: {
+				type: 'object',
+				properties: {
+					term: { type: 'string', description: 'Name of categorical term' },
+					category: { type: 'string', description: 'The category of the term' },
+					join: {
+						type: 'string',
+						enum: ['and', 'or'],
+						description:
+							'join term to be used only when there is more than one filter term and should be placed from the 2nd filter term onwards describing how it connects to the previous term'
+					}
+				},
+				required: ['term', 'category'],
+				additionalProperties: false
+			},
+			NumericFilterTerm: {
+				type: 'object',
+				properties: {
+					term: { type: 'string', description: 'Name of numeric term' },
+					start: { type: 'number', description: 'start position (or lower limit) of numeric term' },
+					stop: { type: 'number', description: 'stop position (or upper limit) of numeric term' },
+					join: {
+						type: 'string',
+						enum: ['and', 'or'],
+						description:
+							'join term to be used only when there is more than one filter term and should be placed from the 2nd filter term onwards describing how it connects to the previous term'
+					}
+				},
+				required: ['term'],
+				additionalProperties: false
+			}
+		}
+	}
+
+	// Extract gene names from the user prompt that exist in the gene db
+	const words = prompt
+		.replace(/[^a-zA-Z0-9\s]/g, '')
+		.split(/\s+/)
+		.map(str => str.toLowerCase())
+	const common_genes = words.filter(item => genes_list.includes(item))
+
+	// Parse out training data from the dataset JSON
+	const matrix_ds = dataset_json.charts.filter((chart: any) => chart.type == 'Matrix')
+	if (matrix_ds.length == 0) throw 'Matrix information is not present in the dataset file.'
+	if (matrix_ds[0].TrainingData.length == 0) throw 'No training data is provided for the matrix agent.'
+
+	let train_iter = 0
+	let training_data = ''
+	for (const train_data of matrix_ds[0].TrainingData) {
+		train_iter += 1
+		training_data +=
+			'Example question' +
+			train_iter.toString() +
+			': ' +
+			train_data.question +
+			' Example answer' +
+			train_iter.toString() +
+			':' +
+			JSON.stringify(train_data.answer) +
+			' '
+	}
+
+	let system_prompt =
+		'I am an assistant that extracts terms and gene names from the user query to create a matrix plot. A matrix plot displays multiple genes and/or clinical variables across samples in a grid layout. The final output must be in the following JSON format with NO extra comments. The JSON schema is as follows: ' +
+		JSON.stringify(Schema) +
+		' The "terms" field should ONLY contain names of clinical/dictionary fields from the sqlite db. The "geneNames" field should ONLY contain gene names. At least one of "terms" or "geneNames" must be provided. The "simpleFilter" field is optional and should contain an array of JSON terms with which the dataset will be filtered. There are two kinds of filter variables: "Categorical" and "Numeric". "Categorical" variables are those variables which can have a fixed set of values e.g. gender, race. They are defined by the "CategoricalFilterTerm" which consists of "term" (a field from the sqlite3 db) and "category" (a value of the field from the sqlite db). "Numeric" variables are those which can have any numeric value. They are defined by "NumericFilterTerm" and contain the subfields "term" (a field from the sqlite3 db), "start" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and "stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. ' +
+		checkField(dataset_json.DatasetPrompt) +
+		checkField(matrix_ds[0].SystemPrompt) +
+		'\n The DB content is as follows: ' +
+		dataset_db_output.rag_docs.join(',') +
+		' training data is as follows:' +
+		training_data
+
+	if (dataset_json.hasGeneExpression && common_genes.length > 0) {
+		system_prompt += '\n List of relevant genes are as follows (separated by comma(,)):' + common_genes.join(',')
+	}
+
+	system_prompt += ' Question: {' + prompt + '} answer:'
+
+	const response: string = await route_to_appropriate_llm_provider(system_prompt, llm)
+	if (testing) {
+		return { action: 'matrix', response: JSON.parse(response) }
+	} else {
+		return validate_matrix_response(response, common_genes, dataset_json, ds)
+	}
+}
+
+function validate_matrix_response(response: string, common_genes: string[], dataset_json: any, ds: any) {
+	const response_type = JSON.parse(response)
+	const pp_plot_json: any = { chartType: 'matrix' }
+	let html = ''
+
+	if (response_type.html) html = response_type.html
+
+	// Must have at least one of terms or geneNames
+	if (
+		(!response_type.terms || response_type.terms.length == 0) &&
+		(!response_type.geneNames || response_type.geneNames.length == 0)
+	) {
+		html += 'At least one clinical term or gene name is required for a matrix plot'
+	}
+
+	// Validate dictionary terms — use shorthand { id } at tw top level
+	const twLst: any[] = []
+	if (response_type.terms && Array.isArray(response_type.terms)) {
+		for (const t of response_type.terms) {
+			const term: any = ds.cohort.termdb.q.termjsonByOneid(t)
+			if (!term) {
+				html += 'invalid term id:' + t + ' '
+			} else {
+				twLst.push({ id: term.id })
+			}
+		}
+	}
+
+	// Validate gene names — use geneExpression type for datasets with expression data,
+	// fall back to geneVariant for datasets with mutation data
+	if (response_type.geneNames && Array.isArray(response_type.geneNames)) {
+		for (const g of response_type.geneNames) {
+			const gene_hits = common_genes.filter(gene => gene == g.toLowerCase())
+			if (gene_hits.length == 0) {
+				html += 'invalid gene name:' + g + ' '
+			} else {
+				const geneName = g.toUpperCase()
+				if (dataset_json.hasGeneExpression) {
+					twLst.push({ term: { gene: geneName, type: 'geneExpression' } })
+				} else {
+					twLst.push({ term: { gene: geneName, name: geneName, type: 'geneVariant' } })
+				}
+			}
+		}
+	}
+
+	// Validate filters
+	if (response_type.simpleFilter && response_type.simpleFilter.length > 0) {
+		const validated_filters = validate_filter(response_type.simpleFilter, ds, '')
+		if (validated_filters.html.length > 0) {
+			html += validated_filters.html
+		} else {
+			pp_plot_json.filter = validated_filters.simplefilter
+		}
+	}
+
+	if (html.length > 0) {
+		return { type: 'html', html: html }
+	} else {
+		// Structure as termgroups matching what matrix.js expects:
+		// termgroups: [{ name: '', lst: [ { term: {...} }, ... ] }]
+		pp_plot_json.termgroups = [{ name: '', lst: twLst }]
 		return { type: 'plot', plot: pp_plot_json }
 	}
 }
