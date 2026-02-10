@@ -337,8 +337,8 @@ export function setLabelsAndScales() {
 		//Percentile is default with no UI to change
 		//Will address this logic in future PR.
 		if (s.cnvValues.cutoffMode == 'percentile') {
-			const minPercentile = s.cnvValues.percentile
-			const maxPercentile = roundValueAuto(1 - minPercentile)
+			const maxPercentile = s.cnvValues.percentile
+			const minPercentile = roundValueAuto(1 - maxPercentile)
 			this.cnvValues = removeOutliers(this.cnvValues, { minPercentile, maxPercentile, baseValue: 0 })
 		}
 		const minLoss = this.cnvValues[0] < 0 ? this.cnvValues[0] : undefined

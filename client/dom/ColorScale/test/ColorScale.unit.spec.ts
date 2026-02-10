@@ -1,6 +1,6 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
-import { ColorScale, removeOutliers, removeInterpolatedOutliers } from '#dom'
+import { ColorScale } from '#dom'
 import { detectGte } from '../../../test/test.helpers.js'
 
 /* Tests

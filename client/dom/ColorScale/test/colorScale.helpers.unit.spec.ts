@@ -13,82 +13,186 @@ tape('\n', test => {
 
 tape('getInterpolatedDomainRange()', test => {
 	test.timeoutAfter(100)
-	test.deepEqual(
-		getInterpolatedDomainRange({
+
+	{
+		const result = getInterpolatedDomainRange({
 			absMax: 50,
 			absMin: 0,
 			numSteps: 10,
 			negInterpolator: interpolateBlues,
 			posInterpolator: interpolateReds
-		}),
-		{
-			domain: [-50, -45, -40, -35, -30, -25, -20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50],
-			range: [
-				'rgb(8, 48, 107)',
-				'rgb(10, 74, 144)',
-				'rgb(24, 100, 170)',
-				'rgb(47, 126, 188)',
-				'rgb(75, 151, 201)',
-				'rgb(109, 174, 213)',
-				'rgb(147, 195, 223)',
-				'rgb(181, 212, 233)',
-				'rgb(207, 225, 242)',
-				'rgb(227, 238, 249)',
-				'white',
-				'rgb(254, 227, 214)',
-				'rgb(253, 201, 180)',
-				'rgb(252, 170, 142)',
-				'rgb(252, 138, 107)',
-				'rgb(249, 105, 76)',
-				'rgb(239, 69, 51)',
-				'rgb(217, 39, 35)',
-				'rgb(187, 21, 26)',
-				'rgb(151, 11, 19)',
-				'rgb(103, 0, 13)'
-			]
-		},
-		`should give the expected interpolated domain and range for combined negative and positive inputs`
-	)
-	test.deepEqual(
-		getInterpolatedDomainRange({ absMax: 50, absMin: 0, numSteps: 10, posInterpolator: interpolateReds }),
-		{
-			domain: [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50],
-			range: [
-				'rgb(255, 245, 240)',
-				'rgb(254, 227, 214)',
-				'rgb(253, 201, 180)',
-				'rgb(252, 170, 142)',
-				'rgb(252, 138, 107)',
-				'rgb(249, 105, 76)',
-				'rgb(239, 69, 51)',
-				'rgb(217, 39, 35)',
-				'rgb(187, 21, 26)',
-				'rgb(151, 11, 19)',
-				'rgb(103, 0, 13)'
-			]
-		},
-		`should give the expected interpolated domain and range for positive inputs`
-	)
-	test.deepEqual(
-		getInterpolatedDomainRange({ absMax: 50, absMin: 0, numSteps: 10, negInterpolator: interpolateBlues }),
-		{
-			domain: [-50, -45, -40, -35, -30, -25, -20, -15, -10, -5, 0],
-			range: [
-				'rgb(8, 48, 107)',
-				'rgb(10, 74, 144)',
-				'rgb(24, 100, 170)',
-				'rgb(47, 126, 188)',
-				'rgb(75, 151, 201)',
-				'rgb(109, 174, 213)',
-				'rgb(147, 195, 223)',
-				'rgb(181, 212, 233)',
-				'rgb(207, 225, 242)',
-				'rgb(227, 238, 249)',
-				'rgb(247, 251, 255)'
-			]
-		},
-		`should give the expected interpolated domain and range for negative inputs`
-	)
+		})
+		test.deepEqual(
+			result,
+			{
+				domain: [-50, -45, -40, -35, -30, -25, -20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50],
+				range: [
+					'rgb(8, 48, 107)',
+					'rgb(10, 74, 144)',
+					'rgb(24, 100, 170)',
+					'rgb(47, 126, 188)',
+					'rgb(75, 151, 201)',
+					'rgb(109, 174, 213)',
+					'rgb(147, 195, 223)',
+					'rgb(181, 212, 233)',
+					'rgb(207, 225, 242)',
+					'rgb(227, 238, 249)',
+					'white',
+					'rgb(254, 227, 214)',
+					'rgb(253, 201, 180)',
+					'rgb(252, 170, 142)',
+					'rgb(252, 138, 107)',
+					'rgb(249, 105, 76)',
+					'rgb(239, 69, 51)',
+					'rgb(217, 39, 35)',
+					'rgb(187, 21, 26)',
+					'rgb(151, 11, 19)',
+					'rgb(103, 0, 13)'
+				]
+			},
+			`should give the expected interpolated domain and range for combined negative and positive inputs`
+		)
+		test.equal(
+			result.domain.length,
+			result.range.length,
+			`should have equal # entries for numeric domain and color range`
+		)
+		test.equal(result.domain.length, new Set(result.domain).size, `should have only unique domain values`)
+		test.equal(result.range.length, new Set(result.range).size, `should have only unique range values`)
+	}
+
+	{
+		const result = getInterpolatedDomainRange({ absMax: 50, absMin: 0, numSteps: 10, posInterpolator: interpolateReds })
+		test.deepEqual(
+			result,
+			{
+				domain: [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50],
+				range: [
+					'rgb(255, 245, 240)',
+					'rgb(254, 227, 214)',
+					'rgb(253, 201, 180)',
+					'rgb(252, 170, 142)',
+					'rgb(252, 138, 107)',
+					'rgb(249, 105, 76)',
+					'rgb(239, 69, 51)',
+					'rgb(217, 39, 35)',
+					'rgb(187, 21, 26)',
+					'rgb(151, 11, 19)',
+					'rgb(103, 0, 13)'
+				]
+			},
+			`should give the expected interpolated domain and range for positive inputs`
+		)
+		test.equal(
+			result.domain.length,
+			result.range.length,
+			`should have equal # entries for positive domain and color range`
+		)
+		test.equal(result.domain.length, new Set(result.domain).size, `should have only unique domain values`)
+		test.equal(result.range.length, new Set(result.range).size, `should have only unique range values`)
+	}
+
+	{
+		const result = getInterpolatedDomainRange({
+			absMax: 50,
+			absMin: 0,
+			numSteps: 10,
+			negInterpolator: interpolateBlues
+		})
+		test.deepEqual(
+			result,
+			{
+				domain: [-50, -45, -40, -35, -30, -25, -20, -15, -10, -5, 0],
+				range: [
+					'rgb(8, 48, 107)',
+					'rgb(10, 74, 144)',
+					'rgb(24, 100, 170)',
+					'rgb(47, 126, 188)',
+					'rgb(75, 151, 201)',
+					'rgb(109, 174, 213)',
+					'rgb(147, 195, 223)',
+					'rgb(181, 212, 233)',
+					'rgb(207, 225, 242)',
+					'rgb(227, 238, 249)',
+					'rgb(247, 251, 255)'
+				]
+			},
+			`should give the expected interpolated domain and range for negative inputs`
+		)
+		test.equal(
+			result.domain.length,
+			result.range.length,
+			`should have equal # entries for negative domain and color range`
+		)
+		test.equal(result.domain.length, new Set(result.domain).size, `should have only unique domain values`)
+		test.equal(result.range.length, new Set(result.range).size, `should have only unique range values`)
+	}
+
+	{
+		const result = getInterpolatedDomainRange({
+			absMax: 0.0025,
+			absMin: 0,
+			numSteps: 15,
+			negInterpolator: interpolateBlues,
+			posInterpolator: interpolateReds
+		})
+		test.deepEqual(
+			result,
+			{
+				domain: [
+					-0.0025, -0.0023333333333333335, -0.002166666666666667, -0.0020000000000000005, -0.0018333333333333337,
+					-0.001666666666666667, -0.0015000000000000002, -0.0013333333333333335, -0.0011666666666666668, -0.001,
+					-0.0008333333333333334, -0.0006666666666666668, -0.0005000000000000001, -0.0003333333333333335,
+					-0.00016666666666666682, 0, 0.00016666666666666666, 0.0003333333333333333, 0.0005, 0.0006666666666666666,
+					0.0008333333333333333, 0.001, 0.0011666666666666668, 0.0013333333333333335, 0.0015000000000000002,
+					0.001666666666666667, 0.0018333333333333337, 0.0020000000000000005, 0.002166666666666667,
+					0.0023333333333333335, 0.0025
+				],
+				range: [
+					'rgb(8, 48, 107)',
+					'rgb(9, 66, 133)',
+					'rgb(13, 83, 154)',
+					'rgb(24, 100, 170)',
+					'rgb(38, 118, 182)',
+					'rgb(55, 135, 192)',
+					'rgb(75, 151, 201)',
+					'rgb(97, 167, 209)',
+					'rgb(121, 181, 217)',
+					'rgb(147, 195, 223)',
+					'rgb(171, 207, 230)',
+					'rgb(191, 217, 236)',
+					'rgb(207, 225, 242)',
+					'rgb(221, 234, 246)',
+					'rgb(234, 242, 251)',
+					'white',
+					'rgb(254, 233, 224)',
+					'rgb(254, 219, 204)',
+					'rgb(253, 201, 180)',
+					'rgb(252, 181, 155)',
+					'rgb(252, 160, 130)',
+					'rgb(252, 138, 107)',
+					'rgb(251, 116, 85)',
+					'rgb(247, 93, 67)',
+					'rgb(239, 69, 51)',
+					'rgb(226, 48, 40)',
+					'rgb(208, 31, 32)',
+					'rgb(187, 21, 26)',
+					'rgb(164, 15, 22)',
+					'rgb(135, 8, 17)',
+					'rgb(103, 0, 13)'
+				]
+			},
+			`should give the expected interpolated domain and range for combined negative and positive inputs`
+		)
+		test.equal(
+			result.domain.length,
+			result.range.length,
+			`should have equal # entries for numeric domain and color range`
+		)
+		test.equal(result.domain.length, new Set(result.domain).size, `should have only unique domain values`)
+		test.equal(result.range.length, new Set(result.range).size, `should have only unique range values`)
+	}
+
 	test.end()
 })
 
