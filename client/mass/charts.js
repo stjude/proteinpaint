@@ -234,11 +234,6 @@ function getChartTypeList(self, state) {
 		},
 		{
 			label: 'Run Chart',
-			chartType: 'runChart',
-			clickTo: self.loadChartSpecificMenu
-		},
-		{
-			label: 'Run Chart2',
 			chartType: 'runChart2',
 			clickTo: self.loadChartSpecificMenu
 		},
