@@ -1,5 +1,5 @@
 import type { SvgG, SvgSvg, Td } from '../../types/d3'
-import type { ColorScaleMenuOpts, CutoffMode } from '../types/colorScale'
+import type { ColorScaleMenuOpts, CutoffMode } from './types'
 import { Menu } from '#dom'
 import { rgb } from 'd3-color'
 
