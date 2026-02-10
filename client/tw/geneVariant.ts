@@ -326,6 +326,7 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 						cnvGainCutoff: cnvDefault.cnvGainCutoff,
 						cnvLossCutoff: -99, // set to very low number to get samples with gain events
 						cnvMaxLength: cnvDefault.cnvMaxLength,
+						fractionOverlap: 0.8,
 						excludeGeneName: true
 					}
 				}
@@ -345,6 +346,7 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 						cnvGainCutoff: 99, // set to very high number to get samples with loss events
 						cnvLossCutoff: cnvDefault.cnvLossCutoff,
 						cnvMaxLength: cnvDefault.cnvMaxLength,
+						fractionOverlap: 0.8,
 						excludeGeneName: true
 					}
 				}
@@ -365,6 +367,7 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 						cnvGainCutoff: cnvDefault.cnvGainCutoff,
 						cnvLossCutoff: cnvDefault.cnvLossCutoff,
 						cnvMaxLength: cnvDefault.cnvMaxLength,
+						fractionOverlap: 0.8,
 						excludeGeneName: true
 					}
 				}
