@@ -4,14 +4,12 @@ import { get_samples } from '#src/termdb.sql.js'
 //import { createGenerator } from 'ts-json-schema-generator'
 //import type { SchemaGenerator } from 'ts-json-schema-generator'
 //import path from 'path'
-import type { ChatRequest, ChatResponse, RouteApi, DbRows, DbValue, ClassificationType } from '#types'
+import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, DbRows, DbValue, ClassificationType } from '#types'
 import { ChatPayload } from '#types/checkers'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import Database from 'better-sqlite3'
 import { formatElapsedTime } from '#shared'
-
-type LlmConfig = { provider: 'SJ' | 'ollama'; api: string; modelName: string }
 
 const num_filter_cutoff = 3 // The maximum number of filter terms that can be entered and parsed using the chatbot
 export const api: RouteApi = {
@@ -618,6 +616,12 @@ async function extract_summary_terms(
 						type: 'array',
 						items: { $ref: '#/definitions/FilterTerm' },
 						description: 'Optional simple filter terms'
+					},
+					childType: {
+						type: 'string',
+						enum: ['violin', 'boxplot', 'sampleScatter', 'barchart'],
+						description:
+							'Optional explicit child type requested by the user. If omitted, the logic of the data types picks the child type.'
 					}
 				},
 				required: ['term', 'simpleFilter'],
@@ -635,7 +639,7 @@ async function extract_summary_terms(
 						type: 'string',
 						enum: ['and', 'or'],
 						description:
-							'join term to be used only when there there is more than one filter term and should be placed in the 2nd filter term describing how it connects to the 1st term'
+							'join term to be used only when there is more than one filter term and should be placed from the 2nd filter term onwards describing how it connects to the previous term'
 					}
 				},
 				required: ['term', 'category'],
@@ -651,7 +655,7 @@ async function extract_summary_terms(
 						type: 'string',
 						enum: ['and', 'or'],
 						description:
-							'join term to be used only when there there is more than one filter term and should be placed in the 2nd filter term describing how it connects to the 1st term'
+							'join term to be used only when there is more than one filter term and should be placed from the 2nd filter term onwards describing how it connects to the previous term'
 					}
 				},
 				required: ['term'],
@@ -747,43 +751,100 @@ function validate_summary_response(response: string, common_genes: string[], dat
 		}
 	}
 
+	mayLog('response_type.childType:', response_type.childType)
+	// Override childType if the user explicitly requested a chart type
+	if (response_type.childType) {
+		const validChartTypes = ['violin', 'boxplot', 'sampleScatter', 'barchart']
+		if (validChartTypes.includes(response_type.childType)) {
+			pp_plot_json.llmchildType = response_type.childType // This stores the putative childType parsed out by the LLM. This may contain an inappropriate childType for the query. For e.g. scatter for two categorical variables
+		}
+	}
+
 	/** Based on data types of term and term2, decide the most appropriate default chart type to show in PP. The user can always override this default chart type by explicitly mentioning
 	 *  the desired chart type in the user prompt which will be parsed out and added to the LLM output as the "chartType" field and will be used to override the default chart type determined by this logic.*/
 	if (pp_plot_json.category == 'categorical' && !pp_plot_json.category2) {
-		pp_plot_json.childType = 'barchart'
+		if (
+			pp_plot_json.llmchildType == 'violin' ||
+			pp_plot_json.llmchildType == 'boxplot' ||
+			pp_plot_json.llmchildType == 'sampleScatter'
+		) {
+			html +=
+				'Invalid plot type supplied by the user: ' +
+				pp_plot_json.llmchildType +
+				'. For a single categorical variable the plot type should always be barchart'
+		} else {
+			pp_plot_json.childType = 'barchart'
+		}
 	} else if ((pp_plot_json.category == 'float' || pp_plot_json.category == 'integer') && !pp_plot_json.category2) {
-		pp_plot_json.childType = 'violin'
+		if (
+			pp_plot_json.llmchildType == 'barchart' ||
+			pp_plot_json.llmchildType == 'boxplot' ||
+			pp_plot_json.llmchildType == 'sampleScatter'
+		) {
+			pp_plot_json.childType = pp_plot_json.llmchildType // These are also possibly other plot types that could be displayed for a single numeric variable
+		} else {
+			pp_plot_json.childType = 'violin'
+		}
 	} else if (pp_plot_json.category == 'categorical' && pp_plot_json.category2 == 'categorical') {
-		pp_plot_json.childType = 'barchart'
+		if (
+			pp_plot_json.llmchildType == 'violin' ||
+			pp_plot_json.llmchildType == 'boxplot' ||
+			pp_plot_json.llmchildType == 'sampleScatter'
+		) {
+			html +=
+				'Invalid plot type supplied by the user: ' +
+				pp_plot_json.llmchildType +
+				'. For two categorical variables the plot type should always be barchart'
+		} else {
+			pp_plot_json.childType = 'barchart'
+		}
 	} else if (
 		(pp_plot_json.category == 'float' || pp_plot_json.category == 'integer') &&
 		pp_plot_json.category2 == 'categorical'
 	) {
-		pp_plot_json.childType = 'violin'
+		if (
+			pp_plot_json.llmchildType == 'barchart' ||
+			pp_plot_json.llmchildType == 'boxplot' ||
+			pp_plot_json.llmchildType == 'sampleScatter'
+		) {
+			pp_plot_json.childType = pp_plot_json.llmchildType // These are also possibly other plot types that could be displayed for a single numeric variable
+		} else {
+			pp_plot_json.childType = 'violin'
+		}
 	} else if (
 		(pp_plot_json.category2 == 'float' || pp_plot_json.category2 == 'integer') &&
 		pp_plot_json.category == 'categorical'
 	) {
-		pp_plot_json.childType = 'violin'
+		if (
+			pp_plot_json.llmchildType == 'barchart' ||
+			pp_plot_json.llmchildType == 'boxplot' ||
+			pp_plot_json.llmchildType == 'sampleScatter'
+		) {
+			pp_plot_json.childType = pp_plot_json.llmchildType // These are also possibly other plot types that could be displayed for a single numeric variable
+		} else {
+			pp_plot_json.childType = 'violin'
+		}
 	} else if (
 		(pp_plot_json.category2 == 'float' || pp_plot_json.category2 == 'integer') &&
 		(pp_plot_json.category == 'float' || pp_plot_json.category == 'integer')
 	) {
-		pp_plot_json.childType = 'sampleScatter'
-	} else {
-		pp_plot_json.childType = 'barchart'
-	}
-
-	// Override childType if the user explicitly requested a chart type
-	if (response_type.chartType) {
-		const validChartTypes = ['violin', 'boxplot', 'sampleScatter', 'barchart']
-		if (validChartTypes.includes(response_type.chartType)) {
-			pp_plot_json.childType = response_type.chartType
+		if (
+			pp_plot_json.llmchildType == 'barchart' ||
+			pp_plot_json.llmchildType == 'boxplot' ||
+			pp_plot_json.llmchildType == 'violin'
+		) {
+			pp_plot_json.childType = pp_plot_json.llmchildType // These are also possibly other plot types that could be displayed for a single numeric variable
+		} else {
+			pp_plot_json.childType = 'sampleScatter'
 		}
+	} else {
+		// Should not happen
+		pp_plot_json.childType = 'barchart'
 	}
 
 	delete pp_plot_json.category
 	if (pp_plot_json.category2) delete pp_plot_json.category2
+	if (pp_plot_json.llmchildType) delete pp_plot_json.llmchildType
 
 	if (response_type.simpleFilter && response_type.simpleFilter.length > 0) {
 		const validated_filters = validate_filter(response_type.simpleFilter, ds, '')
