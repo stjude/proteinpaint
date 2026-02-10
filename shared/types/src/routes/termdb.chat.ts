@@ -18,7 +18,6 @@ type HtmlResponse = {
 }
 export type PlotResponse = {
 	type: 'plot'
-	/** plot state. Currently only supports summary chart, will add other chart types later */
 	plot: object
 	/** Specifies what action to take e.g. Summary plot or no action. Will add more chart types later */
 }
@@ -42,7 +41,7 @@ export type SummaryType = {
 	term2?: string
 	/** Optional simple filter terms */
 	simpleFilter: FilterTerm[]
-	/** Optional explicit chart type requested by the user. If omitted, the logic of the data types picks the default. */
+	/** Optional explicit chart type requested by the user. If omitted, the logic of the data types picks the chart type. */
 	chartType?: 'violin' | 'boxplot' | 'sampleScatter' | 'barchart'
 }
 
