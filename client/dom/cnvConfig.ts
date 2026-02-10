@@ -21,6 +21,7 @@ type Arg = {
 	}) => void // called upon clicking apply
 	cnvWT?: boolean // wildtype for CNV specified by cutoffs
 	genotypeToggle?: boolean // display altered vs. wildtype genotype toggle
+	showOverlap?: boolean // display percent overlap input
 }
 
 export function renderCnvConfig(arg: Arg) {
@@ -150,7 +151,7 @@ export function renderCnvConfig(arg: Arg) {
 
 	// Percent overlap input
 	let overlapInput
-	if (Number.isFinite(fractionOverlap)) {
+	if (arg.showOverlap && Number.isFinite(fractionOverlap)) {
 		const percentOverlap = fractionOverlap * 100
 		const overlapDiv = inputsDiv.append('div').style('margin-bottom', '5px')
 		overlapDiv.append('span').style('opacity', 0.7).text('Minimum Overlap (%)')
