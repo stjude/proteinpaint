@@ -202,7 +202,7 @@ async function route_to_appropriate_llm_provider(template: string, llm: LlmConfi
 		response = await call_ollama(template, llm.modelName, llm.api)
 	} else {
 		// Will later add support for azure server also
-		throw 'Unknown LLM backend'
+		throw 'Unknown LLM provider'
 	}
 	return response
 }
@@ -234,14 +234,14 @@ async function classify_query_by_dataset_type(
 	}
 
 	// Parse out training data from the dataset JSON and add it to a string
-	const classification_ds = dataset_json.charts.filter((chart: any) => chart.type == 'Classification')
-	if (classification_ds.length == 0) throw 'Classification information is not present in the dataset file.'
-	if (classification_ds[0].TrainingData.length == 0) throw 'No training data is provided for the classification agent.'
+	const classification_ds = dataset_json.charts.find((chart: any) => chart.type == 'Classification')
+	if (!classification_ds) throw 'Classification information is not present in the dataset file.'
+	if (classification_ds.TrainingData.length == 0) throw 'No training data is provided for the classification agent.'
 	let train_iter = 0
 	let training_data = ''
-	if (classification_ds.length > 0 && classification_ds[0].TrainingData.length > 0) {
-		contents += checkField(dataset_json.DatasetPrompt) + checkField(classification_ds[0].SystemPrompt)
-		for (const train_data of classification_ds[0].TrainingData) {
+	if (classification_ds && classification_ds.TrainingData.length > 0) {
+		contents += checkField(dataset_json.DatasetPrompt) + checkField(classification_ds.SystemPrompt)
+		for (const train_data of classification_ds.TrainingData) {
 			train_iter += 1
 			training_data +=
 				'Example question' +
@@ -375,13 +375,13 @@ async function extract_DE_search_terms_from_query(
 		//mayLog('DEType Schema:', JSON.stringify(Schema))
 
 		// Parse out training data from the dataset JSON and add it to a string
-		const DE_ds = dataset_json.charts.filter((chart: any) => chart.type == 'DE')
-		if (DE_ds.length == 0) throw 'DE information is not present in the dataset file.'
-		if (DE_ds[0].TrainingData.length == 0) throw 'No training data is provided for the DE agent.'
+		const DE_ds = dataset_json.charts.find((chart: any) => chart.type == 'DE')
+		if (!DE_ds) throw 'DE information is not present in the dataset file.'
+		if (DE_ds.TrainingData.length == 0) throw 'No training data is provided for the DE agent.'
 
 		let train_iter = 0
 		let training_data = ''
-		for (const train_data of DE_ds[0].TrainingData) {
+		for (const train_data of DE_ds.TrainingData) {
 			train_iter += 1
 			training_data +=
 				'Example question' +
@@ -400,7 +400,7 @@ async function extract_DE_search_terms_from_query(
 			JSON.stringify(Schema) +
 			' . "group1" and "group2" fields are compulsory. Both "group1" and "group2" consist of an array of filter variables. There are two kinds of filter variables: "Categorical" and "Numeric". "Categorical" variables are those variables which can have a fixed set of values e.g. gender, race. They are defined by the "CategoricalFilterTerm" which consists of "term" (a field from the sqlite3 db)  and "category" (a value of the field from the sqlite db).  "Numeric" variables are those which can have any numeric value. They are defined by "NumericFilterTerm" and contain  the subfields "term" (a field from the sqlite3 db), "start" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and "stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. ' + // May consider deprecating this natural language description after units tests are implemented
 			checkField(dataset_json.DatasetPrompt) +
-			checkField(DE_ds[0].SystemPrompt) +
+			checkField(DE_ds.SystemPrompt) +
 			'The sqlite db in plain language is as follows:\n' +
 			dataset_db_output.rag_docs.join(',') +
 			' training data is as follows:' +
@@ -671,13 +671,13 @@ async function extract_summary_terms(
 	const common_genes = words.filter(item => genes_list.includes(item)) // The reason behind showing common genes that are actually present in the genedb is because otherwise showing ~20000 genes would increase the number of tokens significantly and may cause the LLM to loose context. Much easier to parse out relevant genes from the user prompt.
 
 	// Parse out training data from the dataset JSON and add it to a string
-	const summary_ds = dataset_json.charts.filter((chart: any) => chart.type == 'Summary')
-	if (summary_ds.length == 0) throw 'Summary information is not present in the dataset file.'
-	if (summary_ds[0].TrainingData.length == 0) throw 'No training data is provided for the summary agent.'
+	const summary_ds = dataset_json.charts.find((chart: any) => chart.type == 'Summary')
+	if (!summary_ds) throw 'Summary information is not present in the dataset file.'
+	if (summary_ds.TrainingData.length == 0) throw 'No training data is provided for the summary agent.'
 
 	let train_iter = 0
 	let training_data = ''
-	for (const train_data of summary_ds[0].TrainingData) {
+	for (const train_data of summary_ds.TrainingData) {
 		train_iter += 1
 		training_data +=
 			'Example question' +
@@ -696,7 +696,7 @@ async function extract_summary_terms(
 		JSON.stringify(Schema) +
 		' term and term2 (if present) should ONLY contain names of the fields from the sqlite db. The "simpleFilter" field is optional and should contain an array of JSON terms with which the dataset will be filtered. There are two kinds of filter variables: "Categorical" and "Numeric". "Categorical" variables are those variables which can have a fixed set of values e.g. gender, race. They are defined by the "CategoricalFilterTerm" which consists of "term" (a field from the sqlite3 db)  and "category" (a value of the field from the sqlite db).  "Numeric" variables are those which can have any numeric value. They are defined by "NumericFilterTerm" and contain  the subfields "term" (a field from the sqlite3 db), "start" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and "stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. ' + // May consider deprecating this natural language description after unit tests are implemented
 		checkField(dataset_json.DatasetPrompt) +
-		checkField(summary_ds[0].SystemPrompt) +
+		checkField(summary_ds.SystemPrompt) +
 		'\n The DB content is as follows: ' +
 		dataset_db_output.rag_docs.join(',') +
 		' training data is as follows:' +
