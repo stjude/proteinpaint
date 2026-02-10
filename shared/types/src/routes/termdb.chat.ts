@@ -104,7 +104,7 @@ export type plot_type = {
 	/** When type == plot, show the corresponding plot in the plot field */
 	type: 'plot'
 	/** The type of plot to be displayed on the UI. */
-	plot: 'summary' | 'dge' | 'none' | 'survival'
+	plot: 'summary' | 'dge' | 'none' | 'survival' | 'matrix'
 }
 
 export type DEType = {
@@ -114,4 +114,13 @@ export type DEType = {
 	group2: FilterTerm[]
 	/** Method used for carrying out differential gene expression analysis */
 	method?: 'edgeR' | 'limma' | 'wilcoxon'
+}
+
+export type MatrixType = {
+	/** Names of dictionary terms to include as rows in the matrix (e.g. "Diagnosis", "Gender", "Race") */
+	terms?: string[]
+	/** Names of genes to include as gene variant rows in the matrix (e.g. "TP53", "KRAS", "NRAS") */
+	geneNames?: string[]
+	/** Optional simple filter terms to restrict the sample set */
+	simpleFilter?: FilterTerm[]
 }
