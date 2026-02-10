@@ -172,26 +172,13 @@ async function ensureTermHydrated(tw: any, vocabApi: AppApi['vocabApi']) {
 }
 
 export async function getPlotConfig(opts: any, app: AppApi) {
-	// Backward compatibility: convert old term/term2 format to new xtw/ytw format
-	let xtw = opts.xtw
-	let ytw = opts.ytw
-
-	if (opts.term && !xtw) {
-		xtw = { term: opts.term }
-		if (opts.term.q) xtw.q = opts.term.q
-	}
-	if (opts.term2 && !ytw) {
-		ytw = { term: opts.term2 }
-		if (opts.term2.q) ytw.q = opts.term2.q
-	}
-
 	const migratedSettings =
 		opts.settings?.runChart && !opts.settings?.runChart2
 			? { ...opts.settings, runChart2: opts.settings.runChart }
 			: opts.settings
 
-	xtw = { ...xtw }
-	ytw = { ...ytw }
+	const xtw = { ...opts.xtw }
+	const ytw = { ...opts.ytw }
 
 	try {
 		await ensureTermHydrated(xtw, app.vocabApi)
@@ -251,7 +238,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		})
 
 	const byDefault = chartsInstance.state.termdbConfig?.plotConfigByCohort?.default
-	const runChart2Plots = byDefault?.runChart2?.plots ?? byDefault?.runChart?.plots ?? []
+	const runChart2Plots = byDefault?.runChart2?.plots ?? []
 	for (const plot of runChart2Plots) {
 		const config = structuredClone(plot)
 		const dispatchPlot = () => {

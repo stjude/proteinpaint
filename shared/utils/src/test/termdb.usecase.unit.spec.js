@@ -120,8 +120,8 @@ tape('evenCount term', test => {
 	test.end()
 })
 
-tape('runChart term', test => {
-	const usecase = { target: 'runChart', detail: 'term' }
+tape('runChart2 date term', test => {
+	const usecase = { target: 'runChart2', detail: 'date' }
 	multiDeepEqual(test, usecase, {
 		plot: [{ isleaf: true, type: 'date' }],
 		branch: [{ type: '', child_types: ['date'] }]
@@ -130,8 +130,8 @@ tape('runChart term', test => {
 	test.end()
 })
 
-tape('runChart numeric term2', test => {
-	const usecase = { target: 'runChart', detail: 'numeric' }
+tape('runChart2 numeric term', test => {
+	const usecase = { target: 'runChart2', detail: 'numeric' }
 	multiDeepEqual(test, usecase, {
 		plot: [{ type: 'float' }, { type: 'integer' }],
 		branch: [{ type: '', child_types: ['float', 'integer'] }]
