@@ -1,4 +1,4 @@
-import type { GetInterpolatedArg, InterpolatedDomainRange } from '../types/colorScale'
+import type { GetInterpolatedArg, InterpolatedDomainRange } from './types'
 
 /** Generate an interpolated color scale based on the domain and range.
  * @param absMin - the absolute magnitude of the interpolation domain minimum value
@@ -20,38 +20,38 @@ export function getInterpolatedDomainRange({
 	const stepSize = (absMax - absMin) / numSteps
 	const neg: InterpolatedDomainRange = { values: [], colors: [] }
 	const pos: InterpolatedDomainRange = { values: [], colors: [] }
-	let n = -absMax
-	for (let p = 0; p < absMax; p += stepSize) {
+	let p=0, n = -absMax //- stepSize
+	for (let i = 0; i < numSteps; i++) {
 		if (negInterpolator) {
-			n += stepSize
-			const vn = n // / absMax
 			/** Include the raw value in the domain and calculate the color
 			 * as a percent of the absMax. */
-			neg.values.push(vn)
-			neg.colors.push(negInterpolator(-vn / absMax))
+			neg.values.push(n)
+			neg.colors.push(negInterpolator(-n / absMax))
+       // increment with step size after adding entries to values/colors 
+       n += stepSize
 		}
 		if (posInterpolator) {
-			const vp = p // / absMax // do not divide by absMax, use raw value
-			pos.values.push(vp)
-			pos.colors.push(posInterpolator(vp / absMax))
+      p += stepSize
+			pos.values.push(p)
+			pos.colors.push(posInterpolator(p / absMax))
 		}
 	}
 
 	if (negInterpolator && posInterpolator) {
-		return {
-			domain: [-absMax, ...neg.values, 0, ...pos.values, absMax],
-			range: [negInterpolator(1), ...neg.colors, middleColor, ...pos.colors, posInterpolator(1)]
-		}
+    const domain = Array.from(new Set([...neg.values, 0, ...pos.values]))
+    const range = Array.from(new Set([...neg.colors, middleColor, ...pos.colors]))
+    if (domain.length != range.length) throw `unable to generate same-sized numeric -/+ domain and color range`
+		return {domain, range}
 	} else if (negInterpolator) {
-		return {
-			domain: [-absMax, ...neg.values, 0],
-			range: [negInterpolator(1), ...neg.colors, negInterpolator(0)]
-		}
+    const domain = Array.from(new Set([...neg.values, 0]))
+    const range = Array.from(new Set([...neg.colors, negInterpolator(0)]))
+    if (domain.length != range.length) throw `unable to generate same-sized negative domain and color range`
+    return {domain, range}
 	} else if (posInterpolator) {
-		return {
-			domain: [0, ...pos.values, absMax],
-			range: [posInterpolator(0), ...pos.colors, posInterpolator(1)]
-		}
+		const domain = Array.from(new Set([0, ...pos.values]))
+		const range = Array.from(new Set([posInterpolator(0), ...pos.colors]))
+    if (domain.length != range.length) throw `unable to generate same-sized positive domain and color range`
+    return {domain, range}
 	} else {
 		throw `missing both negInterpolator and posInterpolator in getInterpolatedDomainRange()`
 	}
@@ -80,16 +80,22 @@ export function colorDelta(rgb1, rgb2) {
 	return maxDiff
 }
 
-/** Remove outliers from the domain array by removing the top and bottom 1% of values.
+
+
+/** Remove outliers from the domain array by removing the top and bottom percent of values.
  * Prevents outlier ticks from appearing in the color scale.
- * Logic specifc to cnv data where the min and max value maybe zero.
  * @param domain - number array to remove outliers from
- * @returns the cleaned up domain array
+ * @returns the domain array without outliers
  */
-export function removeOutliers(domain: number[], firstPercent = 0.01, lastPercent = 0.99) {
+export function removeOutliers(domain: number[], _opts={}) {
+  const opts = Object.assign({
+    minPercentile: 0.01, 
+    maxPercentile: 0.99,
+    baseValue: undefined // if specified and detected in the domain, this value must not be considered an outlier
+  }, _opts)
 	const sorted = domain.sort((a, b) => a - b)
-	const first = sorted[0] == 0 ? 0 : sorted[Math.floor(sorted.length * firstPercent)]
-	const last = sorted[sorted.length - 1] == 0 ? 0 : sorted[Math.floor(sorted.length * lastPercent)]
+	const first = sorted[0] === opts.baseValue ? opts.baseValue : sorted[Math.floor(sorted.length * opts.minPercentile)]
+	const last = sorted[sorted.length - 1] === opts.baseValue ? opts.baseValue : sorted[Math.floor(sorted.length * opts.maxPercentile)]
 	return sorted.filter(d => d >= first && d <= last)
 }
 
@@ -101,10 +107,10 @@ export function removeOutliers(domain: number[], firstPercent = 0.01, lastPercen
  */
 export function removeInterpolatedOutliers(
 	domainRange: { domain: number[]; range: string[] },
-	firstPercent = 0.01,
-	lastPercent = 0.99
+	minPercentile = 0.01,
+	maxPercentile = 0.99
 ) {
-	const domain = removeOutliers(domainRange.domain, firstPercent, lastPercent)
+	const domain = removeOutliers(domainRange.domain, {minPercentile, maxPercentile})
 	const range = domain.map(d => domainRange.range[domainRange.domain.indexOf(d)])
 	return { domain, range }
 }
