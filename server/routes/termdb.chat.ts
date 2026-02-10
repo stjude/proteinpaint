@@ -11,6 +11,8 @@ import { mayLog } from '#src/helpers.ts'
 import Database from 'better-sqlite3'
 import { formatElapsedTime } from '#shared'
 
+type LlmConfig = { provider: 'SJ' | 'ollama'; api: string; modelName: string }
+
 const num_filter_cutoff = 3 // The maximum number of filter terms that can be entered and parsed using the chatbot
 export const api: RouteApi = {
 	endpoint: 'termdb/chat',
@@ -42,16 +44,10 @@ function init({ genomes }) {
 				throw 'aifiles are missing for chatbot to work'
 			}
 
-			let apilink: string
-			let comp_model_name: string
-			if (serverconfig.llm_backend == 'SJ') {
-				apilink = serverconfig.sj_apilink
-				comp_model_name = serverconfig.sj_comp_model_name
-			} else if (serverconfig.llm_backend == 'ollama') {
-				apilink = serverconfig.ollama_apilink
-				comp_model_name = serverconfig.ollama_comp_model_name
-			} else {
-				throw "llm_backend either needs to be 'SJ' or 'ollama'" // Currently only 'SJ' and 'ollama' LLM backends are supported
+			const llm = serverconfig.llm
+			if (!llm) throw 'serverconfig.llm is not configured'
+			if (llm.provider !== 'SJ' && llm.provider !== 'ollama') {
+				throw "llm.provider must be 'SJ' or 'ollama'"
 			}
 
 			const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
@@ -61,12 +57,10 @@ function init({ genomes }) {
 			const testing = false // This toggles validation of LLM output. In this script, this will ALWAYS be false since we always want validation of LLM output, only for testing we this variable to true
 			const ai_output_json = await run_chat_pipeline(
 				q.prompt,
-				comp_model_name,
-				serverconfig.llm_backend,
+				llm,
 				serverconfig.aiRoute,
 				dataset_json,
 				testing,
-				apilink,
 				dataset_db,
 				genedb,
 				ds
@@ -81,12 +75,10 @@ function init({ genomes }) {
 
 export async function run_chat_pipeline(
 	user_prompt: string,
-	comp_model_name: string,
-	llm_backend_type: string,
+	llm: LlmConfig,
 	aiRoute: string,
 	dataset_json: any,
 	testing: boolean,
-	apilink: string,
 	dataset_db: string,
 	genedb: string,
 	ds: any
@@ -94,9 +86,7 @@ export async function run_chat_pipeline(
 	const time1 = new Date().valueOf()
 	const class_response: ClassificationType = await classify_query_by_dataset_type(
 		user_prompt,
-		comp_model_name,
-		llm_backend_type,
-		apilink,
+		llm,
 		aiRoute,
 		dataset_json,
 		testing
@@ -111,30 +101,11 @@ export async function run_chat_pipeline(
 		//let ai_output_data: any
 		if (classResult == 'summary') {
 			const time1 = new Date().valueOf()
-			ai_output_json = await extract_summary_terms(
-				user_prompt,
-				llm_backend_type,
-				comp_model_name,
-				apilink,
-				dataset_db,
-				dataset_json,
-				genedb,
-				ds,
-				testing
-			)
+			ai_output_json = await extract_summary_terms(user_prompt, llm, dataset_db, dataset_json, genedb, ds, testing)
 			mayLog('Time taken for summary agent:', formatElapsedTime(Date.now() - time1))
 		} else if (classResult == 'dge') {
 			const time1 = new Date().valueOf()
-			ai_output_json = await extract_DE_search_terms_from_query(
-				user_prompt,
-				llm_backend_type,
-				comp_model_name,
-				apilink,
-				dataset_db,
-				dataset_json,
-				ds,
-				testing
-			)
+			ai_output_json = await extract_DE_search_terms_from_query(user_prompt, llm, dataset_db, dataset_json, ds, testing)
 			mayLog('Time taken for DE agent:', formatElapsedTime(Date.now() - time1))
 		} else if (classResult == 'survival') {
 			ai_output_json = { type: 'html', html: 'survival agent has not been implemented yet' }
@@ -223,19 +194,14 @@ async function call_sj_llm(prompt: string, model_name: string, apilink: string) 
 	}
 }
 
-async function route_to_appropriate_llm_provider(
-	template: string,
-	llm_backend_type: string,
-	comp_model_name: string,
-	apilink: string
-): Promise<string> {
+async function route_to_appropriate_llm_provider(template: string, llm: LlmConfig): Promise<string> {
 	let response: string
-	if (llm_backend_type == 'SJ') {
+	if (llm.provider == 'SJ') {
 		// Local SJ server
-		response = await call_sj_llm(template, comp_model_name, apilink)
-	} else if (llm_backend_type == 'ollama') {
+		response = await call_sj_llm(template, llm.modelName, llm.api)
+	} else if (llm.provider == 'ollama') {
 		// Ollama server
-		response = await call_ollama(template, comp_model_name, apilink)
+		response = await call_ollama(template, llm.modelName, llm.api)
 	} else {
 		// Will later add support for azure server also
 		throw 'Unknown LLM backend'
@@ -255,9 +221,7 @@ export async function readJSONFile(file: string) {
 
 async function classify_query_by_dataset_type(
 	user_prompt: string,
-	comp_model_name: string,
-	llm_backend_type: string,
-	apilink: string,
+	llm: LlmConfig,
 	aiRoute: string,
 	dataset_json: any,
 	testing: boolean
@@ -314,7 +278,7 @@ async function classify_query_by_dataset_type(
 	const template =
 		contents + ' training data is as follows:' + training_data + ' Question: {' + user_prompt + '} Answer: {answer}'
 
-	const response: string = await route_to_appropriate_llm_provider(template, llm_backend_type, comp_model_name, apilink)
+	const response: string = await route_to_appropriate_llm_provider(template, llm)
 	if (testing) {
 		return { action: 'html', response: JSON.parse(response) }
 	} else {
@@ -324,9 +288,7 @@ async function classify_query_by_dataset_type(
 
 async function extract_DE_search_terms_from_query(
 	prompt: string,
-	llm_backend_type: string,
-	comp_model_name: string,
-	apilink: string,
+	llm: LlmConfig,
 	dataset_db: string,
 	dataset_json: any,
 	ds: any,
@@ -449,12 +411,7 @@ async function extract_DE_search_terms_from_query(
 			prompt +
 			'} answer:'
 
-		const response: string = await route_to_appropriate_llm_provider(
-			system_prompt,
-			llm_backend_type,
-			comp_model_name,
-			apilink
-		)
+		const response: string = await route_to_appropriate_llm_provider(system_prompt, llm)
 		if (testing) {
 			// When testing, send raw LLM response
 			return { action: 'dge', response: JSON.parse(response) }
@@ -623,9 +580,7 @@ function find_label(filter: any, db_rows: DbRows[]): string {
 
 async function extract_summary_terms(
 	prompt: string,
-	llm_backend_type: string,
-	comp_model_name: string,
-	apilink: string,
+	llm: LlmConfig,
 	dataset_db: string,
 	dataset_json: any,
 	genedb: string,
@@ -752,12 +707,7 @@ async function extract_summary_terms(
 
 	system_prompt += ' Question: {' + prompt + '} answer:'
 
-	const response: string = await route_to_appropriate_llm_provider(
-		system_prompt,
-		llm_backend_type,
-		comp_model_name,
-		apilink
-	)
+	const response: string = await route_to_appropriate_llm_provider(system_prompt, llm)
 	if (testing) {
 		// When testing, send raw LLM response
 		return { action: 'summary', response: JSON.parse(response) }
@@ -797,6 +747,8 @@ function validate_summary_response(response: string, common_genes: string[], dat
 		}
 	}
 
+	/** Based on data types of term and term2, decide the most appropriate default chart type to show in PP. The user can always override this default chart type by explicitly mentioning
+	 *  the desired chart type in the user prompt which will be parsed out and added to the LLM output as the "chartType" field and will be used to override the default chart type determined by this logic.*/
 	if (pp_plot_json.category == 'categorical' && !pp_plot_json.category2) {
 		pp_plot_json.childType = 'barchart'
 	} else if ((pp_plot_json.category == 'float' || pp_plot_json.category == 'integer') && !pp_plot_json.category2) {
