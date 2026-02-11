@@ -119,7 +119,11 @@ export function getSerieses(data) {
 							if (legend.entry.scale) lg.values[legendK].scale = legend.entry.scale
 						}
 						if (!lg.values[legendK].samples) lg.values[legendK].samples = new Set()
-						lg.values[legendK].samples.add(row.sample)
+
+						if (t.tw.type == 'TermCollectionTWValues') {
+							// only count sample when it's signature value > 0
+							if (value?.value > 0) lg.values[legendK].samples.add(row.sample)
+						} else lg.values[legendK].samples.add(row.sample)
 
 						if (isDivideByTerm) {
 							lg.values[legend.value].isExcluded = so.grp.isExcluded
