@@ -427,7 +427,7 @@ test('filterByItem: mcount=multiple', t => {
 })
 
 test('filterByItem: mcount=all', t => {
-	t.plan(18)
+	t.plan(22)
 	const filter = {
 		type: 'tvs',
 		tvs: {
@@ -498,6 +498,12 @@ test('filterByItem: mcount=all', t => {
 		t.equal(tested, true, 'Sample is tested')
 	}
 	{
+		const mlst = [{ dt: 1, class: 'Blank' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample passes filter')
+		t.equal(tested, false, 'Sample is tested')
+	}
+	{
 		const mlst = [
 			{ dt: 1, class: 'L' },
 			{ dt: 1, class: 'L' }
@@ -515,6 +521,12 @@ test('filterByItem: mcount=all', t => {
 		const [pass, tested] = filterByItem(filter, mlst)
 		t.equal(pass, true, 'Sample passes filter')
 		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [{ dt: 4, class: 'CNV_amp' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample passes filter')
+		t.equal(tested, false, 'Sample is tested')
 	}
 
 	t.end()
