@@ -1152,7 +1152,7 @@ tape('tvs: Gene Variant - CNV - continuous', async test => {
 		editOpt.click()
 
 		const cutoffsInputs = tipd.selectAll("input[type='number']").nodes()
-		test.equal(cutoffsInputs.length, 3, 'Should have three numeric inputs')
+		test.equal(cutoffsInputs.length, 4, 'Should have four numeric inputs')
 		test.equal(
 			Number(cutoffsInputs[0].value),
 			opts.filterData.lst[0].tvs.cnvGainCutoff,
@@ -1167,6 +1167,11 @@ tape('tvs: Gene Variant - CNV - continuous', async test => {
 			Number(cutoffsInputs[2].value),
 			opts.filterData.lst[0].tvs.cnvMaxLength,
 			'Value of third input should be max length'
+		)
+		test.equal(
+			Number(cutoffsInputs[3].value),
+			80,
+			'Value of fourth input should be equal to default percent overlap value'
 		)
 
 		const genotypeRadio = tipd.selectAll("input[type='radio']").nodes()
