@@ -1373,11 +1373,6 @@ for (const dtTerm of dtTerms_temp) {
 }
 export const dtTerms = dtTerms_temp2
 
-export const numericTermCollectionNames = {
-	MUTATION_SIGNATURE: 'Mutation Signature',
-	RNASEQ_CELL_TYPES: 'RNA-seq Cell Types'
-}
-
 export const colorScaleMap = {
 	blueWhiteRed: { domain: [0, 0.5, 1], range: ['blue', 'white', 'red'] },
 	greenWhiteRed: { domain: [0, 0.5, 1], range: ['green', 'white', 'red'] },
