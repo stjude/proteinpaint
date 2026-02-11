@@ -168,13 +168,9 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 		throw new Error('runChart2 requires both xtw and ytw to be present')
 	}
 
-	const migratedSettings =
-		opts.settings?.runChart && !opts.settings?.runChart2
-			? { ...opts.settings, runChart2: opts.settings.runChart }
-			: opts.settings
-
 	const xtw = { ...opts.xtw }
 	const ytw = { ...opts.ytw }
+	const settings = { ...(opts.settings || {}) }
 
 	try {
 		// Fetch term metadata if missing
@@ -198,6 +194,9 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 		throw new Error(`runChart2 getPlotConfig() failed: ${e}`)
 	}
 
+	// Migrate settings: prioritize runChart2, fallback to runChart
+	const runChart2Settings = settings.runChart2 || settings.runChart || {}
+
 	const defaultConfig = app.vocabApi.termdbConfig?.plotConfigByCohort?.default?.[opts.chartType]
 
 	const config: any = {
@@ -205,10 +204,15 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 		ytw,
 		settings: {
 			controls: { isOpen: false },
-			runChart2: getDefaultRunChart2Settings({ ...opts, settings: migratedSettings })
+			runChart2: getDefaultRunChart2Settings({ ...opts, settings })
 		}
 	}
-	return copyMerge(config, defaultConfig, { ...opts, xtw, ytw, settings: migratedSettings })
+	return copyMerge(config, defaultConfig, {
+		...opts,
+		xtw,
+		ytw,
+		settings: { ...settings, runChart2: runChart2Settings }
+	})
 }
 
 export function makeChartBtnMenu(holder, chartsInstance) {
