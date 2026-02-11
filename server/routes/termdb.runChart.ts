@@ -90,7 +90,6 @@ function buildOneSeries(
 		{
 			x: number
 			xName: string
-			ySum: number
 			count: number
 			missingCount?: number
 			success?: number
@@ -161,7 +160,6 @@ function buildOneSeries(
 			buckets[bucketKey] = {
 				x,
 				xName,
-				ySum: 0,
 				count: 0,
 				missingCount: 0,
 				success: 0,
@@ -227,7 +225,6 @@ function buildOneSeries(
 					`Non-finite y value for median aggregation in sample ${sampleId}: yTermId=${yTermId}, yRaw=${yRaw}`
 				)
 			}
-			buckets[bucketKey].ySum += yn
 			buckets[bucketKey].count += 1
 			buckets[bucketKey].yValues.push(yn)
 		}
