@@ -120,8 +120,8 @@ export function getSerieses(data) {
 						}
 						if (!lg.values[legendK].samples) lg.values[legendK].samples = new Set()
 
-						if (t.tw.type == 'TermCollectionTWValues') {
-							// only count sample when it's signature value > 0
+						if (t.tw?.term?.collectionId == 'Mutation Signature') {
+							// for Mutation Signature only count sample when it's signature value > 0
 							if (value?.value > 0) lg.values[legendK].samples.add(row.sample)
 						} else lg.values[legendK].samples.add(row.sample)
 
