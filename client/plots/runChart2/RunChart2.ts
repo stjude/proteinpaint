@@ -163,15 +163,11 @@ export class RunChart2 extends PlotBase implements RxComponent {
 export const runChart2Init = getCompInit(RunChart2)
 export const componentInit = runChart2Init
 
-async function ensureTermHydrated(tw: any, vocabApi: AppApi['vocabApi']) {
-	const term = tw?.term
-	if (!term?.id || term.type != null) return
-	const terms = await vocabApi.getTerms([term.id])
-	const full = terms[term.id]
-	if (full) tw.term = full
-}
-
 export async function getPlotConfig(opts: any, app: AppApi) {
+	if (!opts.xtw || !opts.ytw) {
+		throw new Error('runChart2 requires both xtw and ytw to be present')
+	}
+
 	const migratedSettings =
 		opts.settings?.runChart && !opts.settings?.runChart2
 			? { ...opts.settings, runChart2: opts.settings.runChart }
@@ -181,8 +177,15 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 	const ytw = { ...opts.ytw }
 
 	try {
-		await ensureTermHydrated(xtw, app.vocabApi)
-		await ensureTermHydrated(ytw, app.vocabApi)
+		// Fetch term metadata if missing
+		if (xtw.term?.id && xtw.term.type == null) {
+			const terms = await app.vocabApi.getTerms([xtw.term.id])
+			if (terms[xtw.term.id]) xtw.term = terms[xtw.term.id]
+		}
+		if (ytw.term?.id && ytw.term.type == null) {
+			const terms = await app.vocabApi.getTerms([ytw.term.id])
+			if (terms[ytw.term.id]) ytw.term = terms[ytw.term.id]
+		}
 
 		if (!xtw.q) xtw.q = {}
 		if (!ytw.q) ytw.q = {}
