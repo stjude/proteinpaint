@@ -294,7 +294,7 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 		term.groupsetting.lst.push(groupset)
 	}
 
-	mayGetAllelicGroupset(vocabApi, term)
+	mayGetAllelicGroupset(term, vocabApi)
 
 	// function to get cnv groupset
 	// will route to appropriate function depending on mode of cnv data
@@ -472,17 +472,16 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 	}
 
 	// build predefined groupset for biallelic vs. monoallelic alteration
-	function mayGetAllelicGroupset(vocabApi, term) {
-		const queries = vocabApi.termdbConfig.queries
-		if (!queries || !queries.snvindel || !queries.cnv) return // dataset must have snvindel and cnv data
-		if (!queries.snvindel?.mafFilter) return // dataset must have a maf filter
-		if (!('cnvGainCutoff' in queries.cnv) && !('cnvLossCutoff' in queries.cnv)) return // cnv data must be continuous
-		const snvIndelTerm = term.childTerms.find(t => t.dt == dtsnvindel)
-		const cnvTerm = term.childTerms.find(t => t.dt == dtcnv)
-		if (!snvIndelTerm || !cnvTerm) return
-		if (snvIndelTerm.origin || cnvTerm.origin) return // different origins not supported (may support later)
+	function mayGetAllelicGroupset(term, vocabApi) {
+		if (!isEligibleForAllelicGroupset(term, vocabApi)) {
+			// term and/or dataset is not eligible for building the groupset
+			return
+		}
 
 		// can build biallelic vs. monoallelic groupset
+		const snvIndelTerm = term.childTerms.find(t => t.dt == dtsnvindel)
+		const cnvTerm = term.childTerms.find(t => t.dt == dtcnv)
+
 		// homozygous deletion tvs
 		const homoDel = {
 			type: 'tvs',
@@ -557,7 +556,8 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 					},
 					homoMut
 				]
-			}
+			},
+			color: '#d10000'
 		}
 		const monoallelicGroup: any = {
 			name: 'Mono-allelic alteration',
@@ -567,17 +567,31 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 				in: true,
 				join: 'or',
 				lst: [hetDel, hetMut]
-			}
+			},
+			color: '#7489d2'
 		}
 
 		// build groupset
 		const groupset: any = {
-			name: 'Bi-allelic vs. Mono-allelic Alteration',
+			name: 'Bi-/mono-allelic',
 			groups: [biallelicGroup, monoallelicGroup]
 		}
 
 		term.groupsetting.lst.push(groupset)
 	}
+}
+
+// determine if term/dataset is eligible for building bi-allelic vs. mono-allelic groupset
+export function isEligibleForAllelicGroupset(term, vocabApi) {
+	const queries = vocabApi.termdbConfig.queries
+	if (!queries || !queries.snvindel || !queries.cnv) return // dataset must have snvindel and cnv data
+	if (!queries.snvindel?.mafFilter) return // dataset must have a maf filter
+	if (!('cnvGainCutoff' in queries.cnv) && !('cnvLossCutoff' in queries.cnv)) return // cnv data must be continuous
+	const snvIndelTerm = term.childTerms.find(t => t.dt == dtsnvindel)
+	const cnvTerm = term.childTerms.find(t => t.dt == dtcnv)
+	if (!snvIndelTerm || !cnvTerm) return
+	if (snvIndelTerm.origin || cnvTerm.origin) return // different origins not supported (may support later)
+	return true
 }
 
 // build maf filter according to genotype (homozygous or heterozygous)

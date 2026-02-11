@@ -1,6 +1,7 @@
 import { Menu, make_radios, addGeneSearchbox, GeneSetEditUI, table2col } from '#dom'
 import type { VocabApi } from '#types'
 import { dtTerms } from '#shared/common.js'
+import { isEligibleForAllelicGroupset } from '../../tw/geneVariant'
 
 // TODO: output of this handler should not be q.predefined_groupset_idx, instead should be q.dt and q.origin. Then, in client/tw/geneVariant.ts, should fill in q.predefined_groupset_idx based on q.dt and q.origin. This will also allow easy specification of desired dt/origin in url. Will need to make separate radio buttons for dt and origin to support the different q properties.
 
@@ -46,9 +47,16 @@ export class SearchHandler {
 		// get child dt terms
 		getChildTerms(this.term, this.opts.app.vocabApi)
 
-		// get index of child dt term to select in mutation type radios
-		const childTermIdx = opts.dt ? this.term.childTerms.findIndex(t => t.dt == opts.dt) : 0
-		if (!Number.isInteger(childTermIdx) || childTermIdx == -1) throw 'invalid child term index'
+		// collect mutation type terms
+		const mutationTypeTerms = structuredClone(this.term.childTerms)
+		// add in bi/mono-allelic mutation type, if applicable
+		if (isEligibleForAllelicGroupset(this.term, this.opts.app.vocabApi))
+			mutationTypeTerms.push({ name: 'Bi/mono-allelic' })
+
+		// get index of mutation type term to select in mutation type radios
+		const mutationTypeTermIdx = opts.dt ? mutationTypeTerms.findIndex(t => t.dt == opts.dt) : 0
+		if (!Number.isInteger(mutationTypeTermIdx) || mutationTypeTermIdx == -1)
+			throw new Error('invalid mutation type term index')
 
 		{
 			const table = table2col({ holder: this.dom.typeSettingDiv, margin: '0px 0px 15px 0px' })
@@ -59,8 +67,8 @@ export class SearchHandler {
 				this.mutationTypeRadio = make_radios({
 					holder: td2.attr('data-testid', 'sjpp-genevariant-mutationTypeRadios'),
 					styles: { display: 'inline-block' },
-					options: this.term.childTerms.map((t, i) => {
-						return { label: t.name, value: i, checked: i == childTermIdx }
+					options: mutationTypeTerms.map((t, i) => {
+						return { label: t.name, value: i, checked: i == mutationTypeTermIdx }
 					}),
 					callback: () => {}
 				})
@@ -187,9 +195,7 @@ export class SearchHandler {
 		// that gene(s) have been selected
 		addParentTerm(this.term)
 		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
-		const childTermIdx = Number(selectedMutationType.value)
-		this.q.predefined_groupset_idx = childTermIdx
-		this.q.dtLst = [this.term.childTerms[childTermIdx].dt]
+		this.q.predefined_groupset_idx = Number(selectedMutationType.value)
 		await this.callback({ term: this.term, q: this.q })
 		this.dom.msgDiv.style('display', 'none')
 	}
