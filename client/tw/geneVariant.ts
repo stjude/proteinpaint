@@ -224,7 +224,8 @@ export class GvPredefinedGS extends GvBase {
 			// TODO: remove these type assertions
 			const idx = q.predefined_groupset_idx as number
 			const lst = term.groupsetting.lst as any[]
-			q.dtLst = [lst[idx].dt]
+			const groupset = lst[idx]
+			q.dtLst = Number.isInteger(groupset.dt) ? [groupset.dt] : getDtsFromGroups(groupset.groups)
 		}
 		set_hiddenvalues(q, term)
 		return tw as GvPredefinedGsTW
@@ -292,6 +293,8 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 		else getNonCnvGroupset(groupset, dtTerm, term.name)
 		term.groupsetting.lst.push(groupset)
 	}
+
+	mayGetAllelicGroupset(vocabApi, term)
 
 	// function to get cnv groupset
 	// will route to appropriate function depending on mode of cnv data
@@ -466,5 +469,156 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 			filter: grp2Filter,
 			color: mclass['WT'].color
 		})
+	}
+
+	// build predefined groupset for biallelic vs. monoallelic alteration
+	function mayGetAllelicGroupset(vocabApi, term) {
+		const queries = vocabApi.termdbConfig.queries
+		if (!queries || !queries.snvindel || !queries.cnv) return // dataset must have snvindel and cnv data
+		if (!queries.snvindel?.mafFilter) return // dataset must have a maf filter
+		if (!('cnvGainCutoff' in queries.cnv) && !('cnvLossCutoff' in queries.cnv)) return // cnv data must be continuous
+		const snvIndelTerm = term.childTerms.find(t => t.dt == dtsnvindel)
+		const cnvTerm = term.childTerms.find(t => t.dt == dtcnv)
+		if (!snvIndelTerm || !cnvTerm) return
+		if (snvIndelTerm.origin || cnvTerm.origin) return // different origins not supported (may support later)
+
+		// can build biallelic vs. monoallelic groupset
+		// homozygous deletion tvs
+		const homoDel = {
+			type: 'tvs',
+			tvs: {
+				term: cnvTerm,
+				values: [],
+				continuousCnv: true,
+				cnvGainCutoff: 99, // set to very high number to get samples with loss events
+				cnvLossCutoff: -1,
+				cnvMaxLength: null,
+				excludeGeneName: true
+			}
+		}
+		// heterozygous deletion tvs
+		const hetDel = {
+			type: 'tvs',
+			tvs: {
+				term: cnvTerm,
+				values: [],
+				continuousCnv: true,
+				cnvGainCutoff: 99, // set to very high number to get samples with loss events
+				cnvLossCutoff: -0.3,
+				cnvMaxLength: null,
+				excludeGeneName: true
+			}
+		}
+		// homozygous mutated tvs
+		const mutatedValues = Object.entries(snvIndelTerm.values)
+			.filter(([k, _v]) => k != 'Intron' && k != 'Utr3')
+			.map(([k, v]: any) => {
+				return { key: k, label: v.label, value: k }
+			})
+		const homoMut = {
+			type: 'tvs',
+			tvs: {
+				term: snvIndelTerm,
+				values: mutatedValues,
+				genotype: 'variant',
+				mcount: 'any',
+				mafFilter: getMafFilter(true),
+				excludeGeneName: true
+			}
+		}
+		// heterozygous mutated tvs
+		const hetMut = {
+			type: 'tvs',
+			tvs: {
+				term: snvIndelTerm,
+				values: mutatedValues,
+				genotype: 'variant',
+				mcount: 'all',
+				mafFilter: getMafFilter(false),
+				excludeGeneName: true
+			}
+		}
+
+		// build bi-allelic and mono-allelic groups
+		const biallelicGroup: any = {
+			name: 'Bi-allelic alteration',
+			type: 'filter',
+			filter: {
+				type: 'tvslst',
+				in: true,
+				join: 'or',
+				lst: [
+					homoDel,
+					{
+						type: 'tvslst',
+						in: true,
+						join: 'and',
+						lst: [hetDel, hetMut]
+					},
+					homoMut
+				]
+			}
+		}
+		const monoallelicGroup: any = {
+			name: 'Mono-allelic alteration',
+			type: 'filter',
+			filter: {
+				type: 'tvslst',
+				in: true,
+				join: 'or',
+				lst: [hetDel, hetMut]
+			}
+		}
+
+		// build groupset
+		const groupset: any = {
+			name: 'Bi-allelic vs. Mono-allelic Alteration',
+			groups: [biallelicGroup, monoallelicGroup]
+		}
+
+		term.groupsetting.lst.push(groupset)
+	}
+}
+
+function getMafFilter(homo) {
+	const range = homo
+		? {
+				start: 0.6,
+				startinclusive: true,
+				startunbounded: false,
+				stopunbounded: true
+		  }
+		: {
+				stop: 0.6,
+				stopinclusive: false,
+				startunbounded: true,
+				stopunbounded: false
+		  }
+
+	return {
+		type: 'tvslst',
+		join: '',
+		in: true,
+		lst: [
+			{
+				type: 'tvs',
+				tvs: {
+					term: {
+						id: 'tumor_DNA',
+						name: 'Tumor DNA',
+						parent_id: null,
+						child_ids: ['tumor_DNA_WGS', 'tumor_DNA_WES'],
+						isleaf: true,
+						type: 'float',
+						min: 0,
+						max: 1,
+						tvs: {
+							ranges: [{ start: 0.1, startinclusive: true, stopunbounded: true }]
+						}
+					},
+					ranges: [range]
+				}
+			}
+		]
 	}
 }
