@@ -183,9 +183,6 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 		throw new Error(`runChart2 getPlotConfig() failed: ${e}`)
 	}
 
-	// Migrate settings: prioritize runChart2, fallback to runChart
-	const runChart2Settings = settings.runChart2 || settings.runChart || {}
-
 	const defaultConfig = app.vocabApi.termdbConfig?.plotConfigByCohort?.default?.[opts.chartType]
 
 	const config: any = {
@@ -200,7 +197,7 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 		...opts,
 		xtw,
 		ytw,
-		settings: { ...settings, runChart2: runChart2Settings }
+		settings: { ...settings, runChart2: settings.runChart2 ?? {} }
 	})
 }
 
