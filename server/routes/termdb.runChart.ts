@@ -224,7 +224,7 @@ function buildOneSeries(
 			const yn = Number(yRaw)
 			if (!Number.isFinite(yn)) {
 				throw new Error(
-					`Non-finite y value for mean aggregation in sample ${sampleId}: yTermId=${yTermId}, yRaw=${yRaw}`
+					`Non-finite y value for median aggregation in sample ${sampleId}: yTermId=${yTermId}, yRaw=${yRaw}`
 				)
 			}
 			buckets[bucketKey].ySum += yn
@@ -254,12 +254,12 @@ function buildOneSeries(
 				return { x, xName: b.xName, y, sampleCount: b.count }
 			} else {
 				let y: number
-				if (aggregation === 'median' && (b.yValues?.length ?? 0) > 0) {
+				if ((b.yValues?.length ?? 0) > 0) {
 					const sorted = [...b.yValues].sort((a, b) => a - b)
 					const mid = Math.floor(sorted.length / 2)
 					y = sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2
 				} else {
-					y = b.count ? b.ySum / b.count : 0
+					y = 0
 				}
 				y = Math.round(y * 100) / 100
 				const sampleCount = b.count > 0 ? b.count : b.missingCount || 0

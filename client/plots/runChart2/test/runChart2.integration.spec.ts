@@ -530,46 +530,6 @@ tape.skip('RunChart2Period should render series with different colors', async te
 	test.end()
 })
 
-tape('RunChart2 with mean aggregation should render correctly', async test => {
-	test.timeoutAfter(10000)
-	test.plan(2)
-
-	const holder = getHolder()
-	runpp({
-		holder,
-		state: {
-			plots: [
-				{
-					chartType: 'runChart2',
-					xtw: { id: 'date', q: { mode: 'continuous' } },
-					ytw: { id: 'hrtavg', q: { mode: 'continuous' } },
-					settings: {
-						runChart2: {
-							aggregation: 'mean'
-						}
-					}
-				}
-			]
-		}
-	})
-
-	try {
-		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
-		const svg = await waitForElement('svg', chartHolder, 5000)
-		test.ok(!svg.empty(), 'should render with mean aggregation')
-
-		const seriesGroup = await waitForElement('[data-testId="sjpp-runChart2-seriesGroup"]', svg, 5000)
-		const circles = seriesGroup.selectAll('circle')
-		test.ok(circles.size() > 0, `should render data points with mean aggregation. Found ${circles.size()}.`)
-	} catch (e) {
-		console.error('Test error:', e)
-		test.fail(`${e}`)
-	} finally {
-		holder.remove()
-	}
-	test.end()
-})
-
 tape('RunChart2 axis labels and tick marks should render correctly', async test => {
 	test.timeoutAfter(10000)
 	test.plan(4)
