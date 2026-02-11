@@ -587,6 +587,7 @@ export function isEligibleForAllelicGroupset(term: RawGvTerm, vocabApi: VocabApi
 	if (!queries || !queries.snvindel || !queries.cnv) return false // dataset must have snvindel and cnv data
 	if (!queries.snvindel?.mafFilter) return false // dataset must have a maf filter
 	if (!('cnvGainCutoff' in queries.cnv) && !('cnvLossCutoff' in queries.cnv)) return false // cnv data must be continuous
+	if (!term.childTerms) throw new Error('term.childTerms[] is missing')
 	const snvIndelTerm = term.childTerms.find(t => t.dt == dtsnvindel)
 	const cnvTerm = term.childTerms.find(t => t.dt == dtcnv)
 	if (!snvIndelTerm || !cnvTerm) return false
