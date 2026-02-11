@@ -1,11 +1,5 @@
 import type { SvgSvg, SvgG } from '../../types/d3'
-import type {
-	ColorScaleDom,
-	ColorScaleOpts,
-	GradientElem,
-	ColorScaleMenuOpts,
-	NumericInputs
-} from '../types/colorScale'
+import type { ColorScaleDom, ColorScaleOpts, GradientElem, ColorScaleMenuOpts, NumericInputs } from './types.ts'
 import { scaleLinear } from 'd3-scale'
 import { axisBottom, axisTop } from 'd3-axis'
 import { font } from '../../src/client'
@@ -45,12 +39,7 @@ export class ColorScale {
 		this.topTicks = opts.topTicks || false
 
 		this.validateOpts(opts)
-
 		this.tickValues = niceNumLabels(opts.domain)
-		if (!opts.retainDuplicates) {
-			this.tickValues = Array.from(new Set(this.tickValues))
-			this.colors = Array.from(new Set(this.colors))
-		}
 
 		let scaleSvg: SvgSvg //
 		if (opts.width || opts.height) {
@@ -91,8 +80,15 @@ export class ColorScale {
 	validateOpts(opts: ColorScaleOpts) {
 		if (!opts.holder) throw new Error('No holder provided for #dom/ColorScale.')
 		if (!opts.domain || !opts.domain.length) throw new Error('No data provided for #dom/ColorScale.')
-		if (opts.domain.length != this.colors.length)
+		if (opts.domain.length != this.colors.length) {
 			throw new Error('Data and color arrays for #dom/ColorScale must be the same length')
+		}
+		if (opts.domain.length != new Set(opts.domain).size) {
+			throw new Error('Duplicate values in #dom/ColorScale opts.domain')
+		}
+		if (this.colors.length != new Set(this.colors).size) {
+			throw new Error('Duplicate values in #dom/ColorScale opts.colors or default colors')
+		}
 		if (opts.labels && (!opts.labels.left || !opts.labels.right))
 			throw new Error('Missing a label for #dom/ColorScale.')
 	}

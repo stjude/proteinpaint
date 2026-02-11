@@ -95,9 +95,9 @@ export type GetInterpolatedArg = {
 	/** the absolute magnitude of the interpolation domain minimum value */
 	absMax: number
 	/** function to convert number to css color */
-	negInterpolator: (a: number) => string
+	negInterpolator?: (a: number) => string
 	/** function to convert number to css color */
-	posInterpolator: (a: number) => string
+	posInterpolator?: (a: number) => string
 	/**
 	 * Optional color to insert between two interpolated color ranges,
 	 * This can be used to generate a zero-centered divergent color bar
@@ -106,11 +106,6 @@ export type GetInterpolatedArg = {
 	middleColor?: string
 	/** the target number of increments within the interpolation domain and range  */
 	numSteps?: number
-}
-
-export type InterpolatedDomainRange = {
-	values: number[]
-	colors: string[]
 }
 
 export type CutoffMode = 'auto' | 'fixed' | 'percentile'
