@@ -6,7 +6,7 @@ import { dt2label, dtsnvindel } from '#shared/common.js'
 type Config = {
 	genotype: 'variant' | 'wt' | 'nt'
 	values: BaseValue[]
-	mcount?: 'any' | 'single' | 'multiple'
+	mcount?: 'any' | 'single' | 'multiple' | 'all'
 	mafFilter?: any
 }
 
@@ -17,7 +17,7 @@ type Arg = {
 	selectedValues?: BaseValue[] // selected mutation classes, when missing will default to all classes of term
 	genotype?: 'variant' | 'wt' | 'nt' // genotype (variant, wildtype, not tested)
 	dt: number // dt value, rendering of some elements are based on this value
-	mcount?: 'any' | 'single' | 'multiple' // mutation count, when missing will default to 'any'
+	mcount?: 'any' | 'single' | 'multiple' | 'all' // mutation count, when missing will default to 'any'
 	mafFilter?: any // maf filter
 	callback: (config: Config) => void
 }
@@ -32,7 +32,7 @@ export function renderVariantConfig(arg: Arg) {
 	const selectedValues = arg.selectedValues?.length ? arg.selectedValues : values
 	if (!Number.isInteger(dt)) throw 'unexpected dt value'
 	const mcount = arg.mcount || 'any'
-	if (!['any', 'single', 'multiple'].includes(mcount)) throw 'invalid mcount'
+	if (!['any', 'single', 'multiple', 'all'].includes(mcount)) throw 'invalid mcount'
 
 	holder.style('margin', '10px')
 
@@ -108,7 +108,7 @@ export function renderVariantConfig(arg: Arg) {
 				.style('margin-right', '5px')
 				.style('opacity', 0.7)
 				.text('Occurrence')
-			const countOpts = [
+			const countOpts: any = [
 				{ label: 'Any', value: 'any' },
 				{ label: 'Single', value: 'single' },
 				{ label: 'Multiple', value: 'multiple' }
@@ -116,6 +116,12 @@ export function renderVariantConfig(arg: Arg) {
 			countOpts.forEach((opt: any) => {
 				if (opt.value == mcount) opt.checked = true
 			})
+			// not displaying the 'all' option by default because its usecase
+			// is currently limited (e.g. for tvs in biallelic/monoallelic groupset)
+			// can display the option by default if needed more broadly
+			if (!countOpts.some((opt: any) => opt.checked)) {
+				if (mcount == 'all') countOpts.push({ label: 'All', value: 'all', checked: true })
+			}
 			countRadio = make_radios({
 				holder: countDiv,
 				styles: { display: 'inline-block' },
