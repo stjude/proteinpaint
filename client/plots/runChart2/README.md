@@ -13,7 +13,7 @@ RunChart2 connects the data points and adds a median line by calculating the mid
 - Plots values over time for one or more groups
 - Interactive controls for data exploration and customization
 - Support for dividing data by time periods or other dimensions
-- Configurable aggregation methods (median, mean, etc.)
+- Configurable aggregation methods (median)
 - Full immutability pattern preventing unintended state mutations
 
 ## Architecture
@@ -30,9 +30,8 @@ RunChart2 follows a modular design with clear separation of data, view, and logi
 
 ### Data Flow and Aggregation
 
-RunChart2 fetches data from the server endpoint `termdb/runChart`, which performs server-side aggregation to group time-series data by month. The aggregation methods available are:
+RunChart2 fetches data from the server endpoint `termdb/runChart`, which performs server-side aggregation to group time-series data by month. The aggregation method available is:
 
-- **Mean**: Average value of all data points within each time bucket
 - **Median**: Middle value of sorted data points in each bucket
 
 The server-side function `buildRunChartFromData()` converts decimal year values (e.g., 2023.83) into monthly buckets and calculates the aggregated Y value for each month, along with metadata like sample counts.

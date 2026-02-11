@@ -10,8 +10,8 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('buildRunChartFromData() mean aggregation', function (test) {
-	const aggregation = 'mean'
+tape('buildRunChartFromData() median aggregation', function (test) {
+	const aggregation = 'median'
 	const xTermId = 'x'
 	const yTermId = 'y'
 
@@ -165,7 +165,7 @@ tape('buildRunChartFromData() count aggregation', function (test) {
 })
 
 tape('buildRunChartFromData() year-only dates (no decimal)', function (test) {
-	const aggregation = 'mean'
+	const aggregation = 'median'
 	const xTermId = 'x'
 	const yTermId = 'y'
 
@@ -193,8 +193,8 @@ tape('buildRunChartFromData() year-only dates (no decimal)', function (test) {
 	test.end()
 })
 
-tape('buildRunChartFromData() missing Y values with mean aggregation', function (test) {
-	const aggregation = 'mean'
+tape('buildRunChartFromData() missing Y values with median aggregation', function (test) {
+	const aggregation = 'median'
 	const xTermId = 'x'
 	const yTermId = 'y'
 
@@ -211,14 +211,14 @@ tape('buildRunChartFromData() missing Y values with mean aggregation', function 
 
 	test.equal(result.status, 'ok', 'status should be ok')
 	const point = result.series[0].points[0]
-	test.equal(point.y, 15, 'mean should only use non-null values: (10+20)/2 = 15')
-	test.equal(point.sampleCount, 2, 'sampleCount should only count valid Y values for mean aggregation')
+	test.equal(point.y, 15, 'median should only use non-null values: (10+20)/2 = 15')
+	test.equal(point.sampleCount, 2, 'sampleCount should only count valid Y values for median aggregation')
 
 	test.end()
 })
 
 tape('buildRunChartFromData() all missing Y values for a time bucket', function (test) {
-	const aggregation = 'mean'
+	const aggregation = 'median'
 	const xTermId = 'x'
 	const yTermId = 'y'
 

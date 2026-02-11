@@ -24,7 +24,7 @@ export class RunChart2Model {
 			filter: getNormalRoot(opts.filter ?? undefined),
 			xtw: opts.xtw,
 			ytw: opts.ytw,
-			aggregation: opts.aggregation ?? 'mean'
+			aggregation: opts.aggregation ?? 'median'
 		}
 		const result: RunChartResponse = await dofetch3('termdb/runChart', { body })
 

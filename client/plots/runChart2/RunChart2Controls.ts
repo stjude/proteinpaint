@@ -116,10 +116,7 @@ function getBaseInputs(app: AppApi) {
 			type: 'dropdown',
 			chartType: 'runChart2',
 			settingsKey: 'aggregation',
-			options: [
-				{ label: 'Mean', value: 'mean' },
-				{ label: 'Median', value: 'median' }
-			]
+			options: [{ label: 'Median', value: 'median' }]
 		},
 		{
 			label: 'Plot height',
