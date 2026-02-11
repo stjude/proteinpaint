@@ -53,8 +53,8 @@ tape('Render TermdbTest runChart2 plot with data', async function (test) {
 			plots: [
 				{
 					chartType: 'runChart2',
-					xtw: { term: { id: 'date' }, q: { mode: 'continuous' } },
-					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
+					xtw: { id: 'date', q: { mode: 'continuous' } },
+					ytw: { id: 'hrtavg', q: { mode: 'continuous' } }
 				}
 			]
 		}
@@ -97,8 +97,8 @@ tape.skip('runChart2Period (period) renders series and data points', async test 
 			plots: [
 				{
 					chartType: 'runChart2',
-					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
-					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
+					xtw: { id: 'date', q: { mode: 'discrete' } },
+					ytw: { id: 'hrtavg', q: { mode: 'continuous' } }
 				}
 			]
 		}
@@ -138,8 +138,8 @@ tape.skip('runChart2Period has x-axis and y-axis groups', async test => {
 			plots: [
 				{
 					chartType: 'runChart2',
-					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
-					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
+					xtw: { id: 'date', q: { mode: 'discrete' } },
+					ytw: { id: 'hrtavg', q: { mode: 'continuous' } }
 				}
 			]
 		}
@@ -174,8 +174,8 @@ tape.skip('runChart2Period has axis labels', async test => {
 			plots: [
 				{
 					chartType: 'runChart2',
-					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
-					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
+					xtw: { id: 'date', q: { mode: 'discrete' } },
+					ytw: { id: 'hrtavg', q: { mode: 'continuous' } }
 				}
 			]
 		}
@@ -243,8 +243,8 @@ tape('runChart2Period renders with mocked discrete data', async test => {
 			plots: [
 				{
 					chartType: 'runChart2',
-					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
-					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
+					xtw: { id: 'date', q: { mode: 'discrete' } },
+					ytw: { id: 'hrtavg', q: { mode: 'continuous' } }
 				}
 			]
 		}
@@ -298,8 +298,8 @@ tape.skip('runChart2Period chart SVG is valid for download', async test => {
 			plots: [
 				{
 					chartType: 'runChart2',
-					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
-					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
+					xtw: { id: 'date', q: { mode: 'discrete' } },
+					ytw: { id: 'hrtavg', q: { mode: 'continuous' } }
 				}
 			]
 		}
@@ -332,8 +332,8 @@ tape('RunChart2 control panel initializes and renders', async test => {
 			plots: [
 				{
 					chartType: 'runChart2',
-					xtw: { term: { id: 'date' }, q: { mode: 'continuous' } },
-					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
+					xtw: { id: 'date', q: { mode: 'continuous' } },
+					ytw: { id: 'hrtavg', q: { mode: 'continuous' } }
 				}
 			]
 		}
@@ -370,8 +370,8 @@ tape('RunChart2 chart images can be extracted for download', async test => {
 			plots: [
 				{
 					chartType: 'runChart2',
-					xtw: { term: { id: 'date' }, q: { mode: 'continuous' } },
-					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
+					xtw: { id: 'date', q: { mode: 'continuous' } },
+					ytw: { id: 'hrtavg', q: { mode: 'continuous' } }
 				}
 			]
 		}
@@ -406,8 +406,8 @@ tape.skip('RunChart2Period should render median lines for each series', async te
 			plots: [
 				{
 					chartType: 'runChart2',
-					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
-					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
+					xtw: { id: 'date', q: { mode: 'discrete' } },
+					ytw: { id: 'hrtavg', q: { mode: 'continuous' } }
 				}
 			]
 		}
@@ -451,8 +451,8 @@ tape('RunChart2 Y-axis baseline should be 0 for positive-only data', async test 
 			plots: [
 				{
 					chartType: 'runChart2',
-					xtw: { term: { id: 'date' }, q: { mode: 'continuous' } },
-					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } } // All positive values
+					xtw: { id: 'date', q: { mode: 'continuous' } },
+					ytw: { id: 'hrtavg', q: { mode: 'continuous' } } // All positive values
 				}
 			]
 		}
@@ -495,8 +495,8 @@ tape.skip('RunChart2Period should render series with different colors', async te
 			plots: [
 				{
 					chartType: 'runChart2',
-					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
-					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
+					xtw: { id: 'date', q: { mode: 'discrete' } },
+					ytw: { id: 'hrtavg', q: { mode: 'continuous' } }
 				}
 			]
 		}
@@ -541,8 +541,8 @@ tape('RunChart2 with mean aggregation should render correctly', async test => {
 			plots: [
 				{
 					chartType: 'runChart2',
-					xtw: { term: { id: 'date' }, q: { mode: 'continuous' } },
-					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } },
+					xtw: { id: 'date', q: { mode: 'continuous' } },
+					ytw: { id: 'hrtavg', q: { mode: 'continuous' } },
 					settings: {
 						runChart2: {
 							aggregation: 'mean'
@@ -581,8 +581,8 @@ tape('RunChart2 axis labels and tick marks should render correctly', async test 
 			plots: [
 				{
 					chartType: 'runChart2',
-					xtw: { term: { id: 'date' }, q: { mode: 'continuous' } },
-					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
+					xtw: { id: 'date', q: { mode: 'continuous' } },
+					ytw: { id: 'hrtavg', q: { mode: 'continuous' } }
 				}
 			]
 		}
@@ -669,8 +669,8 @@ tape.skip('RunChart2 with discrete X-axis should partition data into series', as
 			plots: [
 				{
 					chartType: 'runChart2',
-					xtw: { term: { id: 'date' }, q: { mode: 'discrete' } },
-					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
+					xtw: { id: 'date', q: { mode: 'discrete' } },
+					ytw: { id: 'hrtavg', q: { mode: 'continuous' } }
 				}
 			]
 		}
@@ -715,8 +715,8 @@ tape.skip('RunChart2 with continuous X-axis should render single series', async 
 			plots: [
 				{
 					chartType: 'runChart2',
-					xtw: { term: { id: 'date' }, q: { mode: 'continuous' } },
-					ytw: { term: { id: 'hrtavg' }, q: { mode: 'continuous' } }
+					xtw: { id: 'date', q: { mode: 'continuous' } },
+					ytw: { id: 'hrtavg', q: { mode: 'continuous' } }
 				}
 			]
 		}
