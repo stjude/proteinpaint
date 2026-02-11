@@ -46,7 +46,6 @@ export class RunChart2 extends PlotBase implements RxComponent {
 			controls: controlsHolder,
 			chartHolder,
 			error: chartHolder.append('div').attr('data-testId', 'sjpp-runChart2-error'),
-			clickMenu: new Menu({ padding: '5px' }),
 			hovertip: new Menu({ padding: '3px' })
 		}
 	}
@@ -126,9 +125,9 @@ export class RunChart2 extends PlotBase implements RxComponent {
 	}
 
 	getDownloadFilename() {
-		const termName = this.state?.config?.xtw?.term?.name || 'runChart2'
-		const term2Name = this.state?.config?.ytw?.term?.name || ''
-		return term2Name ? `${termName}_${term2Name}` : termName
+		const xTermName = this.state?.config?.xtw?.term?.name || 'runChart2'
+		const yTermName = this.state?.config?.ytw?.term?.name || ''
+		return yTermName ? `${xTermName}_${yTermName}` : xTermName
 	}
 
 	async main() {
