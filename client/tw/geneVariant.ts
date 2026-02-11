@@ -582,15 +582,15 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 }
 
 // determine if term/dataset is eligible for building bi-allelic vs. mono-allelic groupset
-export function isEligibleForAllelicGroupset(term, vocabApi) {
+export function isEligibleForAllelicGroupset(term: RawGvTerm, vocabApi: VocabApi): boolean {
 	const queries = vocabApi.termdbConfig.queries
-	if (!queries || !queries.snvindel || !queries.cnv) return // dataset must have snvindel and cnv data
-	if (!queries.snvindel?.mafFilter) return // dataset must have a maf filter
-	if (!('cnvGainCutoff' in queries.cnv) && !('cnvLossCutoff' in queries.cnv)) return // cnv data must be continuous
+	if (!queries || !queries.snvindel || !queries.cnv) return false // dataset must have snvindel and cnv data
+	if (!queries.snvindel?.mafFilter) return false // dataset must have a maf filter
+	if (!('cnvGainCutoff' in queries.cnv) && !('cnvLossCutoff' in queries.cnv)) return false // cnv data must be continuous
 	const snvIndelTerm = term.childTerms.find(t => t.dt == dtsnvindel)
 	const cnvTerm = term.childTerms.find(t => t.dt == dtcnv)
-	if (!snvIndelTerm || !cnvTerm) return
-	if (snvIndelTerm.origin || cnvTerm.origin) return // different origins not supported (may support later)
+	if (!snvIndelTerm || !cnvTerm) return false
+	if (snvIndelTerm.origin || cnvTerm.origin) return false // different origins not supported (may support later)
 	return true
 }
 
