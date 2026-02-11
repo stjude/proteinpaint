@@ -2,7 +2,7 @@ import type { RunChart2Settings } from './Settings.ts'
 
 export function getDefaultRunChart2Settings(overrides = {}): RunChart2Settings {
 	const defaults = {
-		aggregation: 'median',
+		aggregation: 'median' as const,
 		svgw: 1000,
 		svgh: 500,
 		color: '#ce768e',
