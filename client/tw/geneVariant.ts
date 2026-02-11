@@ -522,7 +522,7 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 				values: mutatedValues,
 				genotype: 'variant',
 				mcount: 'any',
-				mafFilter: getMafFilter(true),
+				mafFilter: getMafFilter('homo', vocabApi),
 				excludeGeneName: true
 			}
 		}
@@ -534,7 +534,7 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 				values: mutatedValues,
 				genotype: 'variant',
 				mcount: 'all',
-				mafFilter: getMafFilter(false),
+				mafFilter: getMafFilter('het', vocabApi),
 				excludeGeneName: true
 			}
 		}
@@ -580,20 +580,28 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 	}
 }
 
-function getMafFilter(homo) {
-	const range = homo
-		? {
-				start: 0.6,
-				startinclusive: true,
-				startunbounded: false,
-				stopunbounded: true
-		  }
-		: {
-				stop: 0.6,
-				stopinclusive: false,
-				startunbounded: true,
-				stopunbounded: false
-		  }
+// build maf filter according to genotype (homozygous or heterozygous)
+function getMafFilter(genotype: string, vocabApi: any) {
+	const mafFilter = vocabApi.termdbConfig.queries.snvindel.mafFilter
+	if (!mafFilter) throw new Error('mafFilter is missing')
+	const mafTerm = mafFilter.terms.find(t => t.default)
+	if (!mafTerm) throw new Error('no default mafTerm found')
+	if (genotype != 'homo' && genotype != 'het') throw new Error('unexpected genotype value')
+
+	const range =
+		genotype == 'homo'
+			? {
+					start: 0.6,
+					startinclusive: true,
+					startunbounded: false,
+					stopunbounded: true
+			  }
+			: {
+					stop: 0.6,
+					stopinclusive: false,
+					startunbounded: true,
+					stopunbounded: false
+			  }
 
 	return {
 		type: 'tvslst',
@@ -603,19 +611,7 @@ function getMafFilter(homo) {
 			{
 				type: 'tvs',
 				tvs: {
-					term: {
-						id: 'tumor_DNA',
-						name: 'Tumor DNA',
-						parent_id: null,
-						child_ids: ['tumor_DNA_WGS', 'tumor_DNA_WES'],
-						isleaf: true,
-						type: 'float',
-						min: 0,
-						max: 1,
-						tvs: {
-							ranges: [{ start: 0.1, startinclusive: true, stopunbounded: true }]
-						}
-					},
+					term: mafTerm,
 					ranges: [range]
 				}
 			}
