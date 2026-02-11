@@ -108,11 +108,6 @@ export type GetInterpolatedArg = {
 	numSteps?: number
 }
 
-export type InterpolatedDomainRange = {
-	values: number[]
-	colors: string[]
-}
-
 export type CutoffMode = 'auto' | 'fixed' | 'percentile'
 
 export type NumericInputs = {
