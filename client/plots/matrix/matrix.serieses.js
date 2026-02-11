@@ -1,5 +1,6 @@
 import { setCellProps, getEmptyCell, maySetEmptyCell, setGeneVariantCellProps } from './matrix.cells'
 import { TermTypes } from '#shared/terms.js'
+import { numericTermCollectionNames } from '#shared/common.js'
 
 export function getSerieses(data) {
 	const s = this.settings.matrix
@@ -120,7 +121,7 @@ export function getSerieses(data) {
 						}
 						if (!lg.values[legendK].samples) lg.values[legendK].samples = new Set()
 
-						if (t.tw?.term?.collectionId == 'Mutation Signature') {
+						if (t.tw.term.collectionId == numericTermCollectionNames.MUTATION_SIGNATURE) {
 							// for Mutation Signature only count sample when it's signature value > 0
 							if (value?.value > 0) lg.values[legendK].samples.add(row.sample)
 						} else lg.values[legendK].samples.add(row.sample)
