@@ -1,5 +1,5 @@
 export type RunChart2Settings = {
-	aggregation: 'mean' | 'median' | 'count' | string
+	aggregation: 'mean' | 'median' | string
 	svgw: number
 	svgh: number
 	color: string
