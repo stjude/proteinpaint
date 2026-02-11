@@ -45,7 +45,8 @@ export function renderTable({
 	dataTestId = null,
 	download = undefined,
 	noAutoScroll = false,
-	hoverEffects
+	hoverEffects,
+	allowRestoreRowOrder = false
 }: TableArgs) {
 	validateInput()
 	let _selectedRowStyle = selectedRowStyle
@@ -73,12 +74,57 @@ export function renderTable({
 			}
 		}
 
+		// Validate allowRestoreRowOrder can only be true when at least one column is sortable
+		if (allowRestoreRowOrder) {
+			const hasSortableColumn = columns.some(col => col.sortable === true)
+			if (!hasSortableColumn) {
+				throw `allowRestoreRowOrder can only be true when at least one column has sortable:true`
+			}
+		}
+
 		// this check is disabled for now as it breaks gdc bam slicing ui
 		//if (singleMode == true && (!buttons || !noButtonCallback)) throw `Missing buttons array and noButtonCallback but singleMode = true`
 	}
 
 	const uniqueInputName = inputName || getUniqueNameOrId('input')
+	
+	// Track whether the table has been sorted by user
+	let isSorted = false
+	// Store the original row order to restore
+	const originalRows = rows.map(i => i)
+	
 	const parentDiv = div.append('div').style('background-color', 'white').style('display', 'inline-block')
+	
+	// Create restore button container (will be shown/hidden based on sort state)
+	let restoreButtonDiv: any
+	if (allowRestoreRowOrder) {
+		restoreButtonDiv = div
+			.append('div')
+			.style('display', 'none') // Initially hidden
+			.style('padding', '5px')
+			.style('vertical-align', 'top')
+		
+		restoreButtonDiv
+			.append('button')
+			.text('Restore row order')
+			.attr('class', 'sjpp_apply_btn')
+			.on('click', () => {
+				// Restore original row order
+				isSorted = false
+				restoreButtonDiv.style('display', 'none')
+				
+				const checked = getCheckedRowIndex()
+				const idxMap = new Map(rowsCopy.map((val, idx) => [val, idx]))
+				selectedRows = checked.map(i => originalRows.findIndex((v: TableCell[]) => idxMap.get(v) === i))
+
+				/** Must override caller setting once user selects row(s) */
+				if (selectedRows.length) selectAll = false
+
+				rows = originalRows.map(i => i) // Create a copy
+				updateRows()
+			})
+	}
+	
 	if (download) {
 		const downloadDiv = div
 			.append('div')
@@ -427,6 +473,14 @@ export function renderTable({
 
 			rows = newRows
 			updateRows()
+			
+			// Show restore button when table is sorted (and allowRestoreRowOrder is true)
+			if (allowRestoreRowOrder) {
+				isSorted = true
+				if (restoreButtonDiv) {
+					restoreButtonDiv.style('display', 'inline-block')
+				}
+			}
 		}
 		createSortButton(th, callback, updateTable)
 	}

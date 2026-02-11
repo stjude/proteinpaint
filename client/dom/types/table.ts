@@ -152,4 +152,7 @@ export type TableArgs = {
 	hoverEffects?: (tr: Tr, row: TableRow) => void
 	/** Table will not auto-scroll to selected row. quick fix. see comments in code */
 	noAutoScroll?: boolean
+	/** When true, shows a "Restore row order" button after user sorts the table.
+	 * Can only be set to true when at least one column has sortable:true */
+	allowRestoreRowOrder?: boolean
 }
