@@ -10,7 +10,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('buildRunChartFromData() median aggregation', function (test) {
+tape('buildRunChartFromData() median aggregation (multi-month)', function (test) {
 	const aggregation = 'median'
 	const xTermId = 'x'
 	const yTermId = 'y'
@@ -111,9 +111,9 @@ tape('buildRunChartFromData() median aggregation', function (test) {
 
 	const inputData = {
 		samples: {
-			s1: { [xTermId]: { value: 2023.83 }, [yTermId]: { value: 10 } },
-			s2: { [xTermId]: { value: 2023.83 }, [yTermId]: { value: 20 } },
-			s3: { [xTermId]: { value: 2023.83 }, [yTermId]: { value: 30 } }
+			s1: { [xTermId]: { value: 2023.83 }, [yTermId]: { value: 1 } },
+			s2: { [xTermId]: { value: 2023.83 }, [yTermId]: { value: 2 } },
+			s3: { [xTermId]: { value: 2023.83 }, [yTermId]: { value: 100 } }
 		}
 	}
 
@@ -122,7 +122,7 @@ tape('buildRunChartFromData() median aggregation', function (test) {
 	test.equal(result.status, 'ok', 'status should be ok')
 	test.equal(result.series[0].points.length, 1, 'should have one monthly point')
 	const p = result.series[0].points[0]
-	test.equal(p.y, 20, 'median of [10,20,30] should be 20')
+	test.equal(p.y, 2, 'median of [1,2,100] should be 2')
 	test.equal(p.sampleCount, 3, 'sampleCount should be 3')
 	test.end()
 })
