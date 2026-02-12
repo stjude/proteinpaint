@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
 import serverconfig from './serverconfig.js'
-import ky from 'ky'
+import { xfetch } from './xfetch.js'
 
 const extApiCache = serverconfig.features?.extApiCache || {}
 const extApiResponseDir = path.join(serverconfig.cachedir, 'extApiResponse')
@@ -16,83 +16,6 @@ if (serverconfig.features?.extApiCache) {
 			fs.mkdirSync(cacheDir, { recursive: true })
 		}
 	}
-}
-
-// retryDelay is equivalent to ky's retry.backoffLimit option,
-// which by default is computed as 0.3 * (2 ** (attemptCount - 1)) * backoffLimit
-const retryMax = serverconfig.features?.gdcGeneExpRetryMax || 2
-const retryDelay = serverconfig.features?.gdcGeneExpRetryDelay || 10000
-
-// xfetch = extended fetch with retry support (needed for GDC API)
-// First two arguments are the same as native fetch,
-export async function xfetch(url, opts = {}) {
-	if (xfetchTracker) {
-		// count the number of external requests to the same URL within
-		// the same expressjs request handler call
-		if (!xfetchTracker.has(url)) xfetchTracker.set(url, 0)
-		const i = xfetchTracker.get(url)
-		xfetchTracker.set(url, i + 1)
-	}
-
-	if (opts.json && !opts.body) opts.body = opts.json
-	if (opts.body && typeof opts.body != 'string') opts.body = JSON.stringify(opts.body)
-
-	// 1/27/2026, retry per Phil's suggestion in https://gdc-ctds.atlassian.net/browse/SV-2709
-	if (!opts.retry) opts.retry = getRetry(url)
-
-	return await ky(url, opts)
-		.then(async r => {
-			if (!r.ok || (typeof r?.status == 'number' && r?.status > 399 && r.status < 500)) {
-				// catch HTTP 4xx that are due to client request,
-				// not network or server errors that are considered recoverable
-				throw `error from ${url}: ` + (payload.message || payload.error || JSON.stringify(payload))
-			} else if (r?.status >= 500) {
-				// server-side error, such as during maintenance period;
-				// may use isRecoverableError() above to detect
-				throw e
-			}
-			const contentType = r.headers.get('content-type')
-			const payload = contentType == 'application/json' ? await r.json() : await r.text()
-			return payload
-		})
-		.catch(e => {
-			throw e
-		})
-}
-
-const retriesByHostpath = serverconfig.retriesByHostpath || {
-	'gdc.cancer.gov': {
-		limit: 2,
-		backoffLimit: 10000
-	}
-}
-
-function getRetry(url) {
-	for (const [hostpath, retry] of Object.entries(retriesByHostpath)) {
-		if (url.includes(hostpath)) return retry
-	}
-	return undefined
-}
-
-let xfetchTracker = null
-export function trackXfetch(tracker) {
-	if (tracker !== null && !(tracker instanceof Map)) throw `xfetch tracker must be either null or a Map instance`
-
-	if (!tracker) {
-		if (xfetchTracker) console.log(Object.fromEntries(xfetchTracker.entries()))
-	} else {
-		if (xfetchTracker) {
-			// console.warn(`replacing an active xfetchTracker`)
-			xfetchTracker.clear()
-		}
-
-		// cleanup in case the caller does not do a follow-up `trackXfetch(null)`
-		setTimeout(() => {
-			xfetchTracker = null
-		}, 60000)
-	}
-
-	xfetchTracker = tracker
 }
 
 /**

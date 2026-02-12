@@ -3,7 +3,7 @@ import { string2pos } from '#shared/common.js'
 import { get_samples, get_term_cte, interpolateSqlValues, get_active_groupset } from './termdb.sql.js'
 import { getFilterCTEs } from './termdb.filter.js'
 import serverconfig from './serverconfig.js'
-import { read_file, trackXfetch } from './utils.js'
+import { read_file, trackXfetch, abortCtrlByFilter0 } from './utils.js'
 import {
 	TermTypes,
 	isDictionaryType,
@@ -43,6 +43,11 @@ Returns:
 
 export async function getData(q, ds, onlyChildren = false) {
 	if (serverconfig.debugmode) trackXfetch(new Map())
+	if (q.filter0) {
+		abortCtrlByFilter0.set(q.filter0, new AbortController())
+		console.log(46, abortCtrlByFilter0.get(q.filter0))
+	}
+
 	try {
 		validateArg(q, ds)
 		authApi.mayAdjustFilter(q, ds, q.terms)
@@ -62,6 +67,7 @@ export async function getData(q, ds, onlyChildren = false) {
 			}
 		}
 		trackXfetch(null)
+		abortCtrlByFilter0.delete(q.filter0)
 		return data
 	} catch (e) {
 		trackXfetch(null)

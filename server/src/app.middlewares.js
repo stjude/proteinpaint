@@ -13,6 +13,7 @@ import jsonwebtoken from 'jsonwebtoken'
 import fs from 'fs'
 import crypto from 'crypto'
 import { ReqResCache } from '@sjcrh/augen'
+import { abortCtrlByFilter0 } from './xfetch.js'
 
 const basepath = serverconfig.basepath || ''
 
@@ -140,6 +141,27 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 				res.send({ error: 'The server has not finished caching the case IDs: try again in about 2 minutes.' })
 				return
 			}
+		}
+
+		if (req.query.filter0) {
+			let isFinished = false
+			res.on('finish', () => {
+				console.log(148, 'res.on(finish)')
+				isFinished = true
+			})
+			res.on('close', () => {
+				console.log(156, 'res.on(close)', isFinished, res.writableEnded)
+				if (isFinished || res.writableEnded) return
+				const abortCtrl = abortCtrlByFilter0.get(req.query.filter0)
+				if (!abortCtrl) return
+				// Abort the operations associated with this signal
+
+				setTimeout(() => {
+					if (isFinished || res.writableEnded) return
+					console.log('Client disconnected, aborting active fetch or spawned processes...')
+					abortCtrl.abort()
+				}, 3000)
+			})
 		}
 
 		// log the request before adding protected info
