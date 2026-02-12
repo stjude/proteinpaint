@@ -119,7 +119,7 @@ export type DEType = {
 export type MatrixType = {
 	/** Names of dictionary terms to include as rows in the matrix (e.g. "Diagnosis", "Gender", "Race") */
 	terms?: string[]
-	/** Names of genes to include as gene variant rows in the matrix (e.g. "TP53", "KRAS", "NRAS") */
+	/** Names of genes to include as gene variant rows in the matrix (e.g. "TP53", "KRAS", "MYC") */
 	geneNames?: string[]
 	/** Optional simple filter terms to restrict the sample set */
 	simpleFilter?: FilterTerm[]
