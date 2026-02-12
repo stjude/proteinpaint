@@ -220,7 +220,21 @@ export class GvPredefinedGS extends GvBase {
 
 		const { term, q } = tw
 		if (!term.groupsetting?.lst?.length) throw 'term.groupsetting.lst[] is empty'
-		if (!q.dtLst?.length) {
+		if (q.dtLst?.length) {
+			// query dts specified
+			// select the groupset that has the query dts
+			const groupsetIdx = term.groupsetting.lst.findIndex(groupset => {
+				const dts = Number.isInteger(groupset.dt) ? [groupset.dt] : getDtsFromGroups(groupset.groups)
+				if (!dts?.length) return false
+				if (dts.length != q.dtLst?.length) return false
+				if (dts.some(dt => !q.dtLst?.includes(dt))) return false
+				return true
+			})
+			if (groupsetIdx == -1) throw new Error('groupset with query dt(s) not found')
+			q.predefined_groupset_idx = groupsetIdx
+		} else {
+			// query dts not specified
+			// set the query dts to be the dts of the selected groupset
 			// TODO: remove these type assertions
 			const idx = q.predefined_groupset_idx as number
 			const lst = term.groupsetting.lst as any[]
