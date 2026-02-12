@@ -222,7 +222,7 @@ function buildOneSeries(
 			const yn = Number(yRaw)
 			if (!Number.isFinite(yn)) {
 				throw new Error(
-					`Non-finite y value for median aggregation in sample ${sampleId}: yTermId=${yTermId}, yRaw=${yRaw}`
+					`Non-finite y value for ${aggregation} aggregation in sample ${sampleId}: yTermId=${yTermId}, yRaw=${yRaw}`
 				)
 			}
 			buckets[bucketKey].count += 1
