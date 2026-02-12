@@ -200,10 +200,11 @@ tape('buildRunChartFromData() missing Y values with median aggregation', functio
 
 	const data = {
 		samples: {
-			s1: { [xTermId]: { value: 2023.5 }, [yTermId]: { value: 10 } },
-			s2: { [xTermId]: { value: 2023.5 }, [yTermId]: { value: 20 } },
-			s3: { [xTermId]: { value: 2023.5 }, [yTermId]: { value: null } },
-			s4: { [xTermId]: { value: 2023.5 }, [yTermId]: { value: null } }
+			s1: { [xTermId]: { value: 2023.5 }, [yTermId]: { value: 1 } },
+			s2: { [xTermId]: { value: 2023.5 }, [yTermId]: { value: 2 } },
+			s3: { [xTermId]: { value: 2023.5 }, [yTermId]: { value: 100 } },
+			s4: { [xTermId]: { value: 2023.5 }, [yTermId]: { value: null } },
+			s5: { [xTermId]: { value: 2023.5 }, [yTermId]: { value: null } }
 		}
 	}
 
@@ -211,8 +212,8 @@ tape('buildRunChartFromData() missing Y values with median aggregation', functio
 
 	test.equal(result.status, 'ok', 'status should be ok')
 	const point = result.series[0].points[0]
-	test.equal(point.y, 15, 'median should only use non-null values: (10+20)/2 = 15')
-	test.equal(point.sampleCount, 2, 'sampleCount should only count valid Y values for median aggregation')
+	test.equal(point.y, 2, 'median of [1, 2, 100] should be 2 (not mean ~34.33)')
+	test.equal(point.sampleCount, 3, 'sampleCount should only count valid Y values for median aggregation')
 
 	test.end()
 })
