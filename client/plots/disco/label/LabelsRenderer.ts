@@ -5,23 +5,24 @@ import type Label from './Label.ts'
 import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
 import type MutationTooltip from '#plots/disco/label/MutationTooltip.ts'
 import type FusionTooltip from '#plots/disco/fusion/FusionTooltip.ts'
+import { fillbar } from '#dom'
 import { table2col } from '#dom/table2col'
 import type CnvTooltip from '#plots/disco/cnv/CnvTooltip.ts'
 
 export default class LabelsRenderer implements IRenderer {
-       private animationDuration: number
-       private fontSize: number
-       private geneClickListener: (gene: string, mnames: Array<string>) => void
+	private animationDuration: number
+	private fontSize: number
+	private geneClickListener: (gene: string, mnames: Array<string>) => void
 
-       constructor(
-               animationDuration: number,
-               fontSize: number,
-               geneClickListener: (gene: string, mnames: Array<string>) => void
-       ) {
-			this.animationDuration = animationDuration
-			this.fontSize = fontSize
-			this.geneClickListener = geneClickListener
-       }
+	constructor(
+		animationDuration: number,
+		fontSize: number,
+		geneClickListener: (gene: string, mnames: Array<string>) => void
+	) {
+		this.animationDuration = animationDuration
+		this.fontSize = fontSize
+		this.geneClickListener = geneClickListener
+	}
 
 	render(holder: any, elements: Array<Label>, collisions?: Array<Label>) {
 		const labelsG = holder.append('g')
@@ -120,6 +121,7 @@ export default class LabelsRenderer implements IRenderer {
 						.style('color', 'black')
 						.style('font-size', '0.8em')
 						.text(` ${mutation.chr}:${mutation.position}`)
+					this.appendReadCountBar(td2, mutation)
 				}
 			})
 		}
@@ -159,5 +161,24 @@ export default class LabelsRenderer implements IRenderer {
 					.text(`${cnv.chr}:${cnv.start}-${cnv.stop}`)
 			})
 		}
+	}
+	private appendReadCountBar(td2: any, mutation: MutationTooltip) {
+		const refCount = this.getIntegerCount(mutation.refCount)
+		const altCount = this.getIntegerCount(mutation.altCount)
+		if (refCount == null || altCount == null) return
+		if (refCount < 0 || altCount < 0 || refCount + altCount <= 0) return
+
+		const div = td2.append('div').style('margin-left', '5px').style('margin-top', '4px')
+		fillbar(div, { f: altCount / (refCount + altCount), v1: altCount, v2: refCount + altCount })
+	}
+
+	private getIntegerCount(v: unknown): number | null {
+		if (Number.isInteger(v)) return v as number
+		//Expect str, (optional minus sign), 0-9, end of str.
+		if (typeof v == 'string' && /^-?\d+$/.test(v)) {
+			const n = Number(v)
+			if (Number.isInteger(n)) return n
+		}
+		return null
 	}
 }

@@ -131,7 +131,9 @@ export default class LabelsMapper {
 			color: color,
 			dataClass: dataClass,
 			chr: data.chr,
-			position: data.position
+			position: data.position,
+			refCount: data.refCount,
+			altCount: data.altCount
 		}
 		if (!label) {
 			this.labelMap.set(
