@@ -12,6 +12,142 @@ import Database from 'better-sqlite3'
 import { formatElapsedTime } from '#shared'
 
 const num_filter_cutoff = 3 // The maximum number of filter terms that can be entered and parsed using the chatbot
+
+/** Shared JSON Schema definitions for filter terms, used by DE, Summary, and Matrix agents. */
+const FILTER_TERM_DEFINITIONS = {
+	FilterTerm: {
+		anyOf: [{ $ref: '#/definitions/CategoricalFilterTerm' }, { $ref: '#/definitions/NumericFilterTerm' }]
+	},
+	CategoricalFilterTerm: {
+		type: 'object',
+		properties: {
+			term: { type: 'string', description: 'Name of categorical term' },
+			category: { type: 'string', description: 'The category of the term' },
+			join: {
+				type: 'string',
+				enum: ['and', 'or'],
+				description:
+					'join term to be used only when there is more than one filter term and should be placed from the 2nd filter term onwards describing how it connects to the previous term'
+			}
+		},
+		required: ['term', 'category'],
+		additionalProperties: false
+	},
+	NumericFilterTerm: {
+		type: 'object',
+		properties: {
+			term: { type: 'string', description: 'Name of numeric term' },
+			start: { type: 'number', description: 'start position (or lower limit) of numeric term' },
+			stop: { type: 'number', description: 'stop position (or upper limit) of numeric term' },
+			join: {
+				type: 'string',
+				enum: ['and', 'or'],
+				description:
+					'join term to be used only when there is more than one filter term and should be placed from the 2nd filter term onwards describing how it connects to the previous term'
+			}
+		},
+		required: ['term'],
+		additionalProperties: false
+	}
+}
+
+/** Format few-shot training examples into a prompt string. */
+function formatTrainingExamples(trainingData: { question: string; answer: any }[]): string {
+	return trainingData
+		.map(
+			(td, i) =>
+				'Example question' +
+				(i + 1).toString() +
+				': ' +
+				td.question +
+				' Example answer' +
+				(i + 1).toString() +
+				':' +
+				JSON.stringify(td.answer)
+		)
+		.join(' ')
+}
+
+/** Shared natural language description of filter term types for LLM prompts. */
+const FILTER_DESCRIPTION =
+	'There are two kinds of filter variables: "Categorical" and "Numeric". ' +
+	'"Categorical" variables are those variables which can have a fixed set of values e.g. gender, race. ' +
+	'They are defined by the "CategoricalFilterTerm" which consists of "term" (a field from the sqlite3 db) and "category" (a value of the field from the sqlite db). ' +
+	'"Numeric" variables are those which can have any numeric value. ' +
+	'They are defined by "NumericFilterTerm" and contain the subfields "term" (a field from the sqlite3 db), ' +
+	'"start" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and ' +
+	'"stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. '
+
+/** Extract gene names from user prompt that exist in the gene database. */
+function extractGenesFromPrompt(prompt: string, genes_list: string[]): string[] {
+	const words = prompt
+		.replace(/[^a-zA-Z0-9\s]/g, '')
+		.split(/\s+/)
+		.map(str => str.toLowerCase())
+	return words.filter(item => genes_list.includes(item))
+}
+
+/**
+ * Resolve the appropriate chart childType based on the data categories of term and term2,
+ * and an optional user-requested override from the LLM output.
+ *
+ * Returns { childType } on success, or { error } if the user requested an invalid chart type.
+ * Also returns { bothNumeric: true } when both terms are numeric so the caller can
+ * apply discretization for violin/boxplot.
+ */
+
+type TermCategory = 'categorical' | 'float' | 'integer' | undefined
+
+// Default chart type for each (normalized cat1, normalized cat2) combination
+const CHILD_TYPE_DEFAULTS: Record<string, string> = {
+	'categorical:undefined': 'barchart',
+	'numeric:undefined': 'violin',
+	'categorical:categorical': 'barchart',
+	'numeric:categorical': 'violin',
+	'categorical:numeric': 'violin',
+	'numeric:numeric': 'sampleScatter'
+}
+
+// Overrides that are invalid (produce an error) for a given combination
+const CHILD_TYPE_INVALID: Record<string, Set<string>> = {
+	'categorical:undefined': new Set(['violin', 'boxplot', 'sampleScatter']),
+	'categorical:categorical': new Set(['violin', 'boxplot', 'sampleScatter'])
+}
+
+function resolveChildType(
+	cat1: TermCategory,
+	cat2: TermCategory,
+	llmChildType: string | undefined
+): { childType?: string; error?: string; bothNumeric?: boolean } {
+	const norm1 = cat1 == 'float' || cat1 == 'integer' ? 'numeric' : cat1 || 'undefined'
+	const norm2 = cat2 == 'float' || cat2 == 'integer' ? 'numeric' : cat2 || 'undefined'
+	const key = norm1 + ':' + norm2
+
+	const defaultType = CHILD_TYPE_DEFAULTS[key]
+	if (!defaultType) {
+		// Unknown category combination — should not happen, fall back to barchart
+		return { childType: 'barchart' }
+	}
+	const invalid = CHILD_TYPE_INVALID[key]
+
+	if (llmChildType && invalid && invalid.has(llmChildType)) {
+		return {
+			error:
+				'Invalid plot type supplied by the user: ' +
+				llmChildType +
+				'. For ' +
+				key.replace(':', ' and ') +
+				' variables the plot type should always be ' +
+				defaultType
+		}
+	}
+
+	return {
+		childType: llmChildType || defaultType,
+		bothNumeric: norm1 == 'numeric' && norm2 == 'numeric'
+	}
+}
+
 export const api: RouteApi = {
 	endpoint: 'termdb/chat',
 	methods: {
@@ -96,17 +232,46 @@ export async function run_chat_pipeline(
 	} else if (class_response.type == 'plot') {
 		const classResult = class_response.plot
 		mayLog('classResult:', classResult)
-		//let ai_output_data: any
+		// Parse DBs once and pass to whichever agent runs
+		const dataset_db_output = await parse_dataset_db(dataset_db)
+		const genes_list = dataset_json.hasGeneExpression ? await parse_geneset_db(genedb) : []
 		if (classResult == 'summary') {
 			const time1 = new Date().valueOf()
-			ai_output_json = await extract_summary_terms(user_prompt, llm, dataset_db, dataset_json, genedb, ds, testing)
+			ai_output_json = await extract_summary_terms(
+				user_prompt,
+				llm,
+				dataset_db_output,
+				dataset_json,
+				genes_list,
+				ds,
+				testing
+			)
 			mayLog('Time taken for summary agent:', formatElapsedTime(Date.now() - time1))
 		} else if (classResult == 'dge') {
 			const time1 = new Date().valueOf()
-			ai_output_json = await extract_DE_search_terms_from_query(user_prompt, llm, dataset_db, dataset_json, ds, testing)
+			ai_output_json = await extract_DE_search_terms_from_query(
+				user_prompt,
+				llm,
+				dataset_db_output,
+				dataset_json,
+				ds,
+				testing
+			)
 			mayLog('Time taken for DE agent:', formatElapsedTime(Date.now() - time1))
 		} else if (classResult == 'survival') {
 			ai_output_json = { type: 'html', html: 'survival agent has not been implemented yet' }
+		} else if (classResult == 'matrix') {
+			const time1 = new Date().valueOf()
+			ai_output_json = await extract_matrix_search_terms_from_query(
+				user_prompt,
+				llm,
+				dataset_db_output,
+				dataset_json,
+				genes_list,
+				ds,
+				testing
+			)
+			mayLog('Time taken for matrix agent:', formatElapsedTime(Date.now() - time1))
 		} else {
 			// Will define all other agents later as desired
 			ai_output_json = { type: 'html', html: 'Unknown classification value' }
@@ -237,23 +402,10 @@ async function classify_query_by_dataset_type(
 	const classification_ds = dataset_json.charts.find((chart: any) => chart.type == 'Classification')
 	if (!classification_ds) throw 'Classification information is not present in the dataset file.'
 	if (classification_ds.TrainingData.length == 0) throw 'No training data is provided for the classification agent.'
-	let train_iter = 0
 	let training_data = ''
 	if (classification_ds && classification_ds.TrainingData.length > 0) {
 		contents += checkField(dataset_json.DatasetPrompt) + checkField(classification_ds.SystemPrompt)
-		for (const train_data of classification_ds.TrainingData) {
-			train_iter += 1
-			training_data +=
-				'Example question' +
-				train_iter.toString() +
-				': ' +
-				train_data.question +
-				' Example answer' +
-				train_iter.toString() +
-				':' +
-				JSON.stringify(train_data.answer) +
-				' '
-		}
+		training_data = formatTrainingExamples(classification_ds.TrainingData)
 	}
 
 	//const SchemaConfig = {
@@ -287,14 +439,12 @@ async function classify_query_by_dataset_type(
 async function extract_DE_search_terms_from_query(
 	prompt: string,
 	llm: LlmConfig,
-	dataset_db: string,
+	dataset_db_output: { db_rows: DbRows[]; rag_docs: string[] },
 	dataset_json: any,
 	ds: any,
 	testing: boolean
 ) {
 	if (dataset_json.hasDE) {
-		const dataset_db_output = await parse_dataset_db(dataset_db)
-
 		//const SchemaConfig = {
 		//    path: path.resolve('#types'),
 		//    // Path to your tsconfig (required for proper type resolution)
@@ -336,40 +486,7 @@ async function extract_DE_search_terms_from_query(
 					required: ['group1', 'group2'],
 					additionalProperties: false
 				},
-				FilterTerm: {
-					anyOf: [{ $ref: '#/definitions/CategoricalFilterTerm' }, { $ref: '#/definitions/NumericFilterTerm' }]
-				},
-				CategoricalFilterTerm: {
-					type: 'object',
-					properties: {
-						term: { type: 'string', description: 'Name of categorical term' },
-						category: { type: 'string', description: 'The category of the term' },
-						join: {
-							type: 'string',
-							enum: ['and', 'or'],
-							description:
-								'join term to be used only when there is more than one filter term and should be placed from the 2nd filter term onwards describing how it connects to the previous term'
-						}
-					},
-					required: ['term', 'category'],
-					additionalProperties: false
-				},
-				NumericFilterTerm: {
-					type: 'object',
-					properties: {
-						term: { type: 'string', description: 'Name of numeric term' },
-						start: { type: 'number', description: 'start position (or lower limit) of numeric term' },
-						stop: { type: 'number', description: 'stop position (or upper limit) of numeric term' },
-						join: {
-							type: 'string',
-							enum: ['and', 'or'],
-							description:
-								'join term to be used only when there is more than one filter term and should be placed from the 2nd filter term onwards describing how it connects to the previous term'
-						}
-					},
-					required: ['term'],
-					additionalProperties: false
-				}
+				...FILTER_TERM_DEFINITIONS
 			}
 		} // This JSON schema is generated by ts-json-schema-generator. When DEType is updated, please update this schema by uncommenting the above code and running it locally
 		//mayLog('DEType Schema:', JSON.stringify(Schema))
@@ -379,26 +496,13 @@ async function extract_DE_search_terms_from_query(
 		if (!DE_ds) throw 'DE information is not present in the dataset file.'
 		if (DE_ds.TrainingData.length == 0) throw 'No training data is provided for the DE agent.'
 
-		let train_iter = 0
-		let training_data = ''
-		for (const train_data of DE_ds.TrainingData) {
-			train_iter += 1
-			training_data +=
-				'Example question' +
-				train_iter.toString() +
-				': ' +
-				train_data.question +
-				' Example answer' +
-				train_iter.toString() +
-				':' +
-				JSON.stringify(train_data.answer) +
-				' '
-		}
+		const training_data = formatTrainingExamples(DE_ds.TrainingData)
 
 		const system_prompt =
 			'I am an assistant that extracts the groups from the user prompt to carry out differential gene expression. The final output must be in the following JSON with NO extra comments. The schema is as follows: ' +
 			JSON.stringify(Schema) +
-			' . "group1" and "group2" fields are compulsory. Both "group1" and "group2" consist of an array of filter variables. There are two kinds of filter variables: "Categorical" and "Numeric". "Categorical" variables are those variables which can have a fixed set of values e.g. gender, race. They are defined by the "CategoricalFilterTerm" which consists of "term" (a field from the sqlite3 db)  and "category" (a value of the field from the sqlite db).  "Numeric" variables are those which can have any numeric value. They are defined by "NumericFilterTerm" and contain  the subfields "term" (a field from the sqlite3 db), "start" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and "stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. ' + // May consider deprecating this natural language description after units tests are implemented
+			' . "group1" and "group2" fields are compulsory. Both "group1" and "group2" consist of an array of filter variables. ' +
+			FILTER_DESCRIPTION +
 			checkField(dataset_json.DatasetPrompt) +
 			checkField(DE_ds.SystemPrompt) +
 			'The sqlite db in plain language is as follows:\n' +
@@ -579,15 +683,12 @@ function find_label(filter: any, db_rows: DbRows[]): string {
 async function extract_summary_terms(
 	prompt: string,
 	llm: LlmConfig,
-	dataset_db: string,
+	dataset_db_output: { db_rows: DbRows[]; rag_docs: string[] },
 	dataset_json: any,
-	genedb: string,
+	genes_list: string[],
 	ds: any,
 	testing: boolean
 ) {
-	const dataset_db_output = await parse_dataset_db(dataset_db)
-	const genes_list = await parse_geneset_db(genedb)
-
 	//const SchemaConfig = {
 	//    path: path.resolve('#types'),
 	//    // Path to your tsconfig (required for proper type resolution)
@@ -627,74 +728,24 @@ async function extract_summary_terms(
 				required: ['term', 'simpleFilter'],
 				additionalProperties: false
 			},
-			FilterTerm: {
-				anyOf: [{ $ref: '#/definitions/CategoricalFilterTerm' }, { $ref: '#/definitions/NumericFilterTerm' }]
-			},
-			CategoricalFilterTerm: {
-				type: 'object',
-				properties: {
-					term: { type: 'string', description: 'Name of categorical term' },
-					category: { type: 'string', description: 'The category of the term' },
-					join: {
-						type: 'string',
-						enum: ['and', 'or'],
-						description:
-							'join term to be used only when there is more than one filter term and should be placed from the 2nd filter term onwards describing how it connects to the previous term'
-					}
-				},
-				required: ['term', 'category'],
-				additionalProperties: false
-			},
-			NumericFilterTerm: {
-				type: 'object',
-				properties: {
-					term: { type: 'string', description: 'Name of numeric term' },
-					start: { type: 'number', description: 'start position (or lower limit) of numeric term' },
-					stop: { type: 'number', description: 'stop position (or upper limit) of numeric term' },
-					join: {
-						type: 'string',
-						enum: ['and', 'or'],
-						description:
-							'join term to be used only when there is more than one filter term and should be placed from the 2nd filter term onwards describing how it connects to the previous term'
-					}
-				},
-				required: ['term'],
-				additionalProperties: false
-			}
+			...FILTER_TERM_DEFINITIONS
 		}
 	} // This JSON schema is generated by ts-json-schema-generator. When SummaryType is updated, please update this schema by uncommenting the above code and running it locally
 
-	const words = prompt
-		.replace(/[^a-zA-Z0-9\s]/g, '')
-		.split(/\s+/)
-		.map(str => str.toLowerCase()) // Keep only letters, numbers, and whitespace and then split on whitespace and convert to lowercase
-	const common_genes = words.filter(item => genes_list.includes(item)) // The reason behind showing common genes that are actually present in the genedb is because otherwise showing ~20000 genes would increase the number of tokens significantly and may cause the LLM to loose context. Much easier to parse out relevant genes from the user prompt.
+	const common_genes = extractGenesFromPrompt(prompt, genes_list)
 
 	// Parse out training data from the dataset JSON and add it to a string
 	const summary_ds = dataset_json.charts.find((chart: any) => chart.type == 'Summary')
 	if (!summary_ds) throw 'Summary information is not present in the dataset file.'
 	if (summary_ds.TrainingData.length == 0) throw 'No training data is provided for the summary agent.'
 
-	let train_iter = 0
-	let training_data = ''
-	for (const train_data of summary_ds.TrainingData) {
-		train_iter += 1
-		training_data +=
-			'Example question' +
-			train_iter.toString() +
-			': ' +
-			train_data.question +
-			' Example answer' +
-			train_iter.toString() +
-			':' +
-			JSON.stringify(train_data.answer) +
-			' '
-	}
+	const training_data = formatTrainingExamples(summary_ds.TrainingData)
 
 	let system_prompt =
 		'I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. The JSON schema is as follows: ' +
 		JSON.stringify(Schema) +
-		' term and term2 (if present) should ONLY contain names of the fields from the sqlite db. The "simpleFilter" field is optional and should contain an array of JSON terms with which the dataset will be filtered. There are two kinds of filter variables: "Categorical" and "Numeric". "Categorical" variables are those variables which can have a fixed set of values e.g. gender, race. They are defined by the "CategoricalFilterTerm" which consists of "term" (a field from the sqlite3 db)  and "category" (a value of the field from the sqlite db).  "Numeric" variables are those which can have any numeric value. They are defined by "NumericFilterTerm" and contain  the subfields "term" (a field from the sqlite3 db), "start" an optional filter which is defined when a lower cutoff is defined in the user input for the numeric variable and "stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. ' + // May consider deprecating this natural language description after unit tests are implemented
+		' term and term2 (if present) should ONLY contain names of the fields from the sqlite db. The "simpleFilter" field is optional and should contain an array of JSON terms with which the dataset will be filtered. ' +
+		FILTER_DESCRIPTION +
 		checkField(dataset_json.DatasetPrompt) +
 		checkField(summary_ds.SystemPrompt) +
 		'\n The DB content is as follows: ' +
@@ -751,103 +802,26 @@ function validate_summary_response(response: string, common_genes: string[], dat
 		}
 	}
 
-	// Override childType if the user explicitly requested a chart type
-	if (response_type.childType) {
-		const validChartTypes = ['violin', 'boxplot', 'sampleScatter', 'barchart']
-		if (validChartTypes.includes(response_type.childType)) {
-			pp_plot_json.llmchildType = response_type.childType // This stores the putative childType parsed out by the LLM. This may contain an inappropriate childType for the query. For e.g. scatter for two categorical variables
-		}
-	}
-
-	/** Based on data types of term and term2, decide the most appropriate default chart type to show in PP. The user can always override this default chart type by explicitly mentioning
-	 *  the desired chart type in the user prompt which will be parsed out and added to the LLM output as the "chartType" field and will be used to override the default chart type determined by this logic.*/
-	if (pp_plot_json.category == 'categorical' && !pp_plot_json.category2) {
-		if (
-			pp_plot_json.llmchildType == 'violin' ||
-			pp_plot_json.llmchildType == 'boxplot' ||
-			pp_plot_json.llmchildType == 'sampleScatter'
-		) {
-			html +=
-				'Invalid plot type supplied by the user: ' +
-				pp_plot_json.llmchildType +
-				'. For a single categorical variable the plot type should always be barchart'
-		} else {
-			pp_plot_json.childType = 'barchart'
-		}
-	} else if ((pp_plot_json.category == 'float' || pp_plot_json.category == 'integer') && !pp_plot_json.category2) {
-		if (
-			pp_plot_json.llmchildType == 'barchart' ||
-			pp_plot_json.llmchildType == 'boxplot' ||
-			pp_plot_json.llmchildType == 'sampleScatter'
-		) {
-			pp_plot_json.childType = pp_plot_json.llmchildType // These are also possibly other plot types that could be displayed for a single numeric variable
-		} else {
-			pp_plot_json.childType = 'violin'
-		}
-	} else if (pp_plot_json.category == 'categorical' && pp_plot_json.category2 == 'categorical') {
-		if (
-			pp_plot_json.llmchildType == 'violin' ||
-			pp_plot_json.llmchildType == 'boxplot' ||
-			pp_plot_json.llmchildType == 'sampleScatter'
-		) {
-			html +=
-				'Invalid plot type supplied by the user: ' +
-				pp_plot_json.llmchildType +
-				'. For two categorical variables the plot type should always be barchart'
-		} else {
-			pp_plot_json.childType = 'barchart'
-		}
-	} else if (
-		(pp_plot_json.category == 'float' || pp_plot_json.category == 'integer') &&
-		pp_plot_json.category2 == 'categorical'
-	) {
-		if (
-			pp_plot_json.llmchildType == 'barchart' ||
-			pp_plot_json.llmchildType == 'boxplot' ||
-			pp_plot_json.llmchildType == 'sampleScatter'
-		) {
-			pp_plot_json.childType = pp_plot_json.llmchildType // These are also possibly other plot types that could be displayed for a single numeric variable
-		} else {
-			pp_plot_json.childType = 'violin'
-		}
-	} else if (
-		(pp_plot_json.category2 == 'float' || pp_plot_json.category2 == 'integer') &&
-		pp_plot_json.category == 'categorical'
-	) {
-		if (
-			pp_plot_json.llmchildType == 'barchart' ||
-			pp_plot_json.llmchildType == 'boxplot' ||
-			pp_plot_json.llmchildType == 'sampleScatter'
-		) {
-			pp_plot_json.childType = pp_plot_json.llmchildType // These are also possibly other plot types that could be displayed for a single numeric variable
-		} else {
-			pp_plot_json.childType = 'violin'
-		}
-	} else if (
-		(pp_plot_json.category2 == 'float' || pp_plot_json.category2 == 'integer') &&
-		(pp_plot_json.category == 'float' || pp_plot_json.category == 'integer')
-	) {
-		if (
-			pp_plot_json.llmchildType == 'barchart' ||
-			pp_plot_json.llmchildType == 'boxplot' ||
-			pp_plot_json.llmchildType == 'violin'
-		) {
-			pp_plot_json.childType = pp_plot_json.llmchildType // These are also possibly other plot types that could be displayed for a single numeric variable
-		} else {
-			pp_plot_json.childType = 'sampleScatter'
-		}
-		if (pp_plot_json.childType == 'violin' || pp_plot_json.childType == 'boxplot') {
-			// Discretize one of the terms in case of a boxplot or violin plot
+	/** Based on data types of term and term2, decide the most appropriate chart type.
+	 *  The user can override the default by explicitly mentioning a chart type in their prompt,
+	 *  which the LLM parses into the "childType" field. Invalid overrides produce an error. */
+	const llmChildType =
+		response_type.childType && ['violin', 'boxplot', 'sampleScatter', 'barchart'].includes(response_type.childType)
+			? response_type.childType
+			: undefined
+	const resolved = resolveChildType(pp_plot_json.category, pp_plot_json.category2, llmChildType)
+	if (resolved.error) {
+		html += resolved.error
+	} else {
+		pp_plot_json.childType = resolved.childType
+		// For two numeric variables displayed as violin/boxplot, discretize term2
+		if (resolved.bothNumeric && (resolved.childType == 'violin' || resolved.childType == 'boxplot')) {
 			pp_plot_json.term2.q = { mode: 'discrete' }
 		}
-	} else {
-		// Should not happen
-		pp_plot_json.childType = 'barchart'
 	}
 
 	delete pp_plot_json.category
 	if (pp_plot_json.category2) delete pp_plot_json.category2
-	if (pp_plot_json.llmchildType) delete pp_plot_json.llmchildType
 
 	if (response_type.simpleFilter && response_type.simpleFilter.length > 0) {
 		const validated_filters = validate_filter(response_type.simpleFilter, ds, '')
@@ -861,6 +835,147 @@ function validate_summary_response(response: string, common_genes: string[], dat
 	if (html.length > 0) {
 		return { type: 'html', html: html }
 	} else {
+		return { type: 'plot', plot: pp_plot_json }
+	}
+}
+
+async function extract_matrix_search_terms_from_query(
+	prompt: string,
+	llm: LlmConfig,
+	dataset_db_output: { db_rows: DbRows[]; rag_docs: string[] },
+	dataset_json: any,
+	genes_list: string[],
+	ds: any,
+	testing: boolean
+) {
+	const Schema = {
+		$schema: 'http://json-schema.org/draft-07/schema#',
+		$ref: '#/definitions/MatrixType',
+		definitions: {
+			MatrixType: {
+				type: 'object',
+				properties: {
+					terms: {
+						type: 'array',
+						items: { type: 'string' },
+						description: 'Names of dictionary/clinical terms to include as rows in the matrix'
+					},
+					geneNames: {
+						type: 'array',
+						items: { type: 'string' },
+						description: 'Names of genes to include as gene variant rows in the matrix'
+					},
+					simpleFilter: {
+						type: 'array',
+						items: { $ref: '#/definitions/FilterTerm' },
+						description: 'Optional simple filter terms to restrict the sample set'
+					}
+				},
+				additionalProperties: false
+			},
+			...FILTER_TERM_DEFINITIONS
+		}
+	}
+
+	const common_genes = extractGenesFromPrompt(prompt, genes_list)
+
+	// Parse out training data from the dataset JSON
+	const matrix_ds = dataset_json.charts.filter((chart: any) => chart.type == 'Matrix')
+	console.log('matrix_ds', matrix_ds)
+	console.log('dataset_json.charts', dataset_json.charts)
+	if (matrix_ds.length == 0) throw 'Matrix information is not present in the dataset file.'
+	if (matrix_ds[0].TrainingData.length == 0) throw 'No training data is provided for the matrix agent.'
+
+	const training_data = formatTrainingExamples(matrix_ds[0].TrainingData)
+
+	let system_prompt =
+		'I am an assistant that extracts terms and gene names from the user query to create a matrix plot. A matrix plot displays multiple genes and/or clinical variables across samples in a grid layout. The final output must be in the following JSON format with NO extra comments. The JSON schema is as follows: ' +
+		JSON.stringify(Schema) +
+		' The "terms" field should ONLY contain names of clinical/dictionary fields from the sqlite db. The "geneNames" field should ONLY contain gene names. At least one of "terms" or "geneNames" must be provided. The "simpleFilter" field is optional and should contain an array of JSON terms with which the dataset will be filtered. ' +
+		FILTER_DESCRIPTION +
+		checkField(dataset_json.DatasetPrompt) +
+		checkField(matrix_ds[0].SystemPrompt) +
+		'\n The DB content is as follows: ' +
+		dataset_db_output.rag_docs.join(',') +
+		' training data is as follows:' +
+		training_data
+
+	if (dataset_json.hasGeneExpression && common_genes.length > 0) {
+		system_prompt += '\n List of relevant genes are as follows (separated by comma(,)):' + common_genes.join(',')
+	}
+
+	system_prompt += ' Question: {' + prompt + '} answer:'
+
+	const response: string = await route_to_appropriate_llm_provider(system_prompt, llm)
+	if (testing) {
+		return { action: 'matrix', response: JSON.parse(response) }
+	} else {
+		return validate_matrix_response(response, common_genes, dataset_json, ds)
+	}
+}
+
+function validate_matrix_response(response: string, common_genes: string[], dataset_json: any, ds: any) {
+	const response_type = JSON.parse(response)
+	const pp_plot_json: any = { chartType: 'matrix' }
+	let html = ''
+
+	if (response_type.html) html = response_type.html
+
+	// Must have at least one of terms or geneNames
+	if (
+		(!response_type.terms || response_type.terms.length == 0) &&
+		(!response_type.geneNames || response_type.geneNames.length == 0)
+	) {
+		html += 'At least one clinical term or gene name is required for a matrix plot'
+	}
+
+	// Validate dictionary terms — use shorthand { id } at tw top level
+	const twLst: any[] = []
+	if (response_type.terms && Array.isArray(response_type.terms)) {
+		for (const t of response_type.terms) {
+			const term: any = ds.cohort.termdb.q.termjsonByOneid(t)
+			if (!term) {
+				html += 'invalid term id:' + t + ' '
+			} else {
+				twLst.push({ id: term.id })
+			}
+		}
+	}
+
+	// Validate gene names — use geneExpression type for datasets with expression data,
+	// fall back to geneVariant for datasets with mutation data
+	if (response_type.geneNames && Array.isArray(response_type.geneNames)) {
+		for (const g of response_type.geneNames) {
+			const gene_hits = common_genes.filter(gene => gene == g.toLowerCase())
+			if (gene_hits.length == 0) {
+				html += 'invalid gene name:' + g + ' '
+			} else {
+				const geneName = g.toUpperCase()
+				if (dataset_json.hasGeneExpression) {
+					twLst.push({ term: { gene: geneName, type: 'geneExpression' } })
+				} else {
+					twLst.push({ term: { gene: geneName, name: geneName, type: 'geneVariant' } })
+				}
+			}
+		}
+	}
+
+	// Validate filters
+	if (response_type.simpleFilter && response_type.simpleFilter.length > 0) {
+		const validated_filters = validate_filter(response_type.simpleFilter, ds, '')
+		if (validated_filters.html.length > 0) {
+			html += validated_filters.html
+		} else {
+			pp_plot_json.filter = validated_filters.simplefilter
+		}
+	}
+
+	if (html.length > 0) {
+		return { type: 'html', html: html }
+	} else {
+		// Structure as termgroups matching what matrix.js expects:
+		// termgroups: [{ name: '', lst: [ { term: {...} }, ... ] }]
+		pp_plot_json.termgroups = [{ name: '', lst: twLst }]
 		return { type: 'plot', plot: pp_plot_json }
 	}
 }
