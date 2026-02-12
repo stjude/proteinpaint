@@ -168,8 +168,18 @@ export default class LabelsRenderer implements IRenderer {
 		if (refCount == null || altCount == null) return
 		if (refCount < 0 || altCount < 0 || refCount + altCount <= 0) return
 
-		const div = td2.append('div').style('margin-left', '5px').style('margin-top', '4px')
-		fillbar(div, { f: altCount / (refCount + altCount), v1: altCount, v2: refCount + altCount })
+		const totalCount = refCount + altCount
+		const fraction = altCount / totalCount
+		const div = td2
+			.append('div')
+			.style('margin-left', '5px')
+			.style('margin-top', '4px')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '6px')
+
+		div.append('span').style('font-size', '0.8em').style('color', '#555').text('VAF')
+		fillbar(div, { f: fraction, v1: altCount, v2: totalCount })
 	}
 
 	private getIntegerCount(v: unknown): number | null {
