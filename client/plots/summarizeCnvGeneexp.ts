@@ -2,7 +2,7 @@ import { table2col, addGeneSearchbox, make_one_checkbox, Menu } from '#dom'
 import { dtcnv } from '#shared/common.js'
 import { select } from 'd3-selection'
 import { launchPlot } from './summarizeMutationDiagnosis'
-import { fillTermWrapper, get$id } from '#termsetting'
+import { fillTermWrapper } from '#termsetting'
 
 /*
 same design as summarizeMutationDiagnosis.ts
@@ -136,15 +136,9 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 				],
 				type: 'geneVariant'
 			},
-			q: { type: 'predefined-groupset' }
+			q: { type: 'predefined-groupset', dtLst: [dt] }
 		}
 		await fillTermWrapper(tw, chartsInstance.app.vocabApi)
-		// get index of groupset corresponding to dt
-		const i = tw.term.groupsetting.lst.findIndex(groupset => groupset.dt == dt)
-		if (i == -1) throw 'dt not found in groupsets'
-		tw.q.predefined_groupset_idx = i
-		// update $id after setting predefined_groupset_idx (to distinguish from other gene tw)
-		tw.$id = await get$id(chartsInstance.app.vocabApi.getTwMinCopy(tw))
 		return tw
 	}
 
