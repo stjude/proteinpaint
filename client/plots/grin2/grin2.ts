@@ -877,7 +877,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 		if (result.stats?.lst) {
 			const tablesContainer = this.dom.div.append('div').style('margin-top', '50px')
 
-			for (const section of result.stats.lst) {
+			// Skip first section (contains Total Genes and Showing Top used in header)
+			for (const section of result.stats.lst.slice(1)) {
 				tablesContainer
 					.append('h4')
 					.style('margin', this.headerMargin)
