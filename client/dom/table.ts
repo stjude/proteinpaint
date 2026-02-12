@@ -109,6 +109,7 @@ export function renderTable({
 			.append('button')
 			.text('Restore row order')
 			.attr('class', 'sjpp_apply_btn')
+			.attr('data-testid', 'sjpp-table-restore-button')
 			.on('click', () => {
 				// Restore original row order
 				restoreButtonDiv.style('display', 'none')
@@ -427,6 +428,7 @@ export function renderTable({
 				.append('button')
 				.text('Restore row order')
 				.attr('class', 'sjpp_apply_btn')
+				.attr('data-testid', 'sjpp-table-restore-button')
 				.style('margin', '10px 10px 0 0')
 				.style('display', 'none') // Initially hidden
 				.on('click', () => {
