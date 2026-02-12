@@ -58,6 +58,9 @@ export function renderTable({
 	*/
 	const rowsCopy = rows.map(i => i)
 
+	/** Store reset functions for all sort buttons so we can reset their state when restore is clicked */
+	const sortButtonResetFns: Array<() => void> = []
+
 	function validateInput() {
 		if (!columns || columns?.length == 0) throw `Missing columns data`
 		if (!rows) throw `Missing rows data`
@@ -119,6 +122,9 @@ export function renderTable({
 
 				/** Must override caller setting once user selects row(s) */
 				if (selectedRows.length) selectAll = false
+
+				// Reset all sort button states
+				for (const resetFn of sortButtonResetFns) resetFn()
 
 				rows = originalRows.map(i => i) // Create a copy
 				updateRows()
@@ -439,6 +445,9 @@ export function renderTable({
 					/** Must override caller setting once user selects row(s) */
 					if (selectedRows.length) selectAll = false
 
+					// Reset all sort button states
+					for (const resetFn of sortButtonResetFns) resetFn()
+
 					rows = originalRows.map(i => i) // Create a copy
 					updateRows()
 				})
@@ -506,7 +515,8 @@ export function renderTable({
 				}
 			}
 		}
-		createSortButton(th, callback, updateTable)
+		const resetFn = createSortButton(th, callback, updateTable)
+		sortButtonResetFns.push(resetFn)
 	}
 
 	const api = {
@@ -600,7 +610,8 @@ export async function downloadTable(rows, cols, filename = 'table.tsv') {
 	link.remove()
 }
 
-/** Toggles between ascending and descending sort */
+/** Toggles between ascending and descending sort
+ * Returns a reset function to reset the sort state */
 function createSortButton(th: Th, callback, updateTable) {
 	let isAscending = false
 	const sortDiv = th.append('div').style('display', 'inline-block').attr('class', 'sjpp-table-sort-button')
@@ -611,6 +622,10 @@ function createSortButton(th: Th, callback, updateTable) {
 			updateTable(newRows)
 		}
 	})
+	// Return a function to reset this sort button's state
+	return () => {
+		isAscending = false
+	}
 }
 
 /** Detects the type of values in a column and sorts accordingly */
