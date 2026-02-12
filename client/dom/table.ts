@@ -421,7 +421,7 @@ export function renderTable({
 			.style('float', buttonsToLeft ? 'left' : 'right')
 			.style('padding-bottom', '5px')
 
-		// Add restore button to footer if requested
+		// Add restore button to footer if requested (so button is grouped with other action buttons instead of separately below the table)
 		if (allowRestoreRowOrder && restoreButtonInFooter) {
 			restoreButton = footerDiv
 				.append('button')

@@ -1,1 +1,2 @@
-
+Features:
+- Table.ts: Support for restoring original row order of table
