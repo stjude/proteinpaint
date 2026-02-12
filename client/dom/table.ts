@@ -419,7 +419,8 @@ export function renderTable({
 
 	updateRows()
 
-	if (buttons) {
+	// Create footer div if we have buttons OR if restore button should be in footer
+	if (buttons || (allowRestoreRowOrder && restoreButtonInFooter)) {
 		const footerDiv = div
 			.append('div')
 			.insert('div')
@@ -453,21 +454,23 @@ export function renderTable({
 				})
 		}
 
-		for (const bCfg of buttons) {
-			bCfg.button = footerDiv
-				.append('button')
-				.text(bCfg.text)
-				.style('margin', '10px 10px 0 0')
-				.on('click', () => {
-					bCfg.callback(getCheckedRowIndex(), bCfg.button.node())
-				})
-			if (bCfg.class) bCfg.button.attr('class', bCfg.class)
-			//else button.button.attr('class', 'sjpp_apply_btn')
-			bCfg.button.node().disabled = selectedRows.length == 0 && !selectAll
-		}
+		if (buttons) {
+			for (const bCfg of buttons) {
+				bCfg.button = footerDiv
+					.append('button')
+					.text(bCfg.text)
+					.style('margin', '10px 10px 0 0')
+					.on('click', () => {
+						bCfg.callback(getCheckedRowIndex(), bCfg.button.node())
+					})
+				if (bCfg.class) bCfg.button.attr('class', bCfg.class)
+				//else button.button.attr('class', 'sjpp_apply_btn')
+				bCfg.button.node().disabled = selectedRows.length == 0 && !selectAll
+			}
 
-		// call function to update buttons with .onChange(), so their text can reflect default checkbox selection
-		updateButtons()
+			// call function to update buttons with .onChange(), so their text can reflect default checkbox selection
+			updateButtons()
+		}
 	}
 
 	function updateButtons() {
