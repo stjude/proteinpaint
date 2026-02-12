@@ -1,533 +1,633 @@
 {
-  "hasGeneExpression": true,
-  "hasDE": true,
-  "db": "files/hg38/TermdbTest/db",
-  "genedb": "anno/genes.hg38.test.db",
-  "DatasetPrompt": "",
-  "charts": [
-    {
-      "type": "Classification",
-      "SystemPrompt": "The first original publication pertaining to Proteinpaint is https://www.cell.com/cancer-cell/fulltext/S1535-6108(20)30659-0?dgcid=raven_jbs_etoc_email. GenomePaint/Proteinpaint is an interactive visualization platform for whole-genome, whole-exome, transcriptome, and epigenomic data of tumor samples. Its design captures the inter-relatedness between DNA variations and RNA expression, supporting in-depth exploration of both individual cancer genomes and full cohorts. \n Link to survivorship portal https://aacrjournals.org/cancerdiscovery/article/14/8/1403/746507. It shows datasets comprising demographic, diagnosis, treatment, outcome, and genomic data from survivors of childhood cancer. Put weblinks inside HTML <a> tag so that links are clickable",
-      "TrainingData": [
-        {
-          "question": "Show link to survivorship portal",
-          "answer": {
-            "type": "html",
-            "html": "<a href=\"https://aacrjournals.org/cancerdiscovery/article/14/8/1403/746507\">Visit weblink</a>"
-          }
-        },
-        {
-          "question": "Show main publication for proteinpaint",
-          "answer": {
-            "type": "html",
-            "html": "<a href=\"https://www.cell.com/cancer-cell/fulltext/S1535-6108(20)30659-0?dgcid=raven_jbs_etoc_email\">Visit weblink</a>"
-          }
-        },
-        {
-          "question": "compare tp53 expression between genders",
-          "answer": {
-            "type": "plot",
-            "plot": "Summary"
-          }
-        },
-        {
-          "question": "Show summary of all molecular subtypes for patients with age from 10 to 40 years",
-          "answer": {
-            "type": "plot",
-            "plot": "Summary"
-          }
-        },
-        {
-          "question": "Show correlation between diagnosis groups and ancestry",
-          "answer": {
-            "type": "plot",
-            "plot": "Summary"
-          }
-        },
-        {
-          "question": "show summary of molecular subtype for men under 40 years only",
-          "answer": {
-            "type": "plot",
-            "plot": "Summary"
-          }
-        },
-        {
-          "question": "is tmem88b overexpressed in men?",
-          "answer": {
-            "type": "plot",
-            "plot": "Summary"
-          }
-        },
-        {
-          "question": "is myc overexpressed in women?",
-          "answer": {
-            "type": "plot",
-            "plot": "Summary"
-          }
-        },
-        {
-          "question": "Show differential gene expression between men and women",
-          "answer": {
-            "type": "plot",
-            "plot": "DE"
-          }
-        },
-        {
-          "question": "Show volcano plot between men with age greater than 30 and women with age less than 50",
-          "answer": {
-            "type": "plot",
-            "plot": "DE"
-          }
-        },
-        {
-          "question": "Show differential gene expression between men and women",
-          "answer": {
-            "type": "plot",
-            "plot": "DE"
-          }
-        }
-      ]
-    },
-    {
-      "type": "DE",
-      "SystemPrompt": "",
-      "TrainingData": [
-        {
-          "question": "Show differential gene expression between men and women",
-          "answer": {
-            "group1": [
-              {
-                "term": "sex",
-                "category": "1"
-              }
-            ],
-            "group2": [
-              {
-                "term": "sex",
-                "category": "2"
-              }
-            ],
-            "method": "edgeR"
-          }
-        },
-        {
-          "question": "Show differential gene expression between non-hodgkin lymphoma, aml and neuroblastoma, all using wilcoxon method",
-          "answer": {
-            "group1": [
-              {
-                "term": "diaggrp",
-                "category": "Non-Hodgkin lymphoma"
-              },
-              {
-                "term": "diaggrp",
-                "category": "Acute myeloid leukemia",
-                "join": "or"
-              }
-            ],
-            "group2": [
-              {
-                "term": "diaggrp",
-                "category": "Neuroblastoma"
-              },
-              {
-                "term": "diaggrp",
-                "category": "Acute lymphoblastic leukemia",
-                "join": "or"
-              }
-            ],
-            "method": "wilcoxon"
-          }
-        },
-        {
-          "question": "Show volcano plot between men with age greater than 30 and women with age less than 50 using limma",
-          "answer": {
-            "group1": [
-              {
-                "term": "sex",
-                "category": "1"
-              },
-              {
-                "term": "agedx",
-                "start": 30,
-                "join": "and"
-              }
-            ],
-            "group2": [
-              {
-                "term": "sex",
-                "category": "2"
-              },
-              {
-                "term": "agedx",
-                "stop": 50,
-                "join": "and"
-              }
-            ],
-            "method": "limma"
-          }
-        },
-        {
-          "question": "Show volcano plot between white or black men vs black or asian women",
-          "answer": {
-            "group1": [
-              {
-                "term": "genetic_race",
-                "category": "European Ancestry"
-              },
-              {
-                "term": "genetic_race",
-                "category": "African Ancestry",
-                "join": "or"
-              },
-              {
-                "term": "sex",
-                "category": "1",
-                "join": "and"
-              }
-            ],
-            "group2": [
-              {
-                "term": "genetic_race",
-                "category": "African Ancestry"
-              },
-              {
-                "term": "genetic_race",
-                "category": "Asian Ancestry",
-                "join": "or"
-              },
-              {
-                "term": "sex",
-                "category": "2",
-                "join": "and"
-              }
-            ],
-            "method": "edgeR"
-          }
-        },
-        {
-          "question": "Show volcano plot between white men and black women using edgeR",
-          "answer": {
-            "group1": [
-              {
-                "term": "sex",
-                "category": "1"
-              },
-              {
-                "term": "genetic_race",
-                "category": "European Ancestry",
-                "join": "and"
-              }
-            ],
-            "group2": [
-              {
-                "term": "sex",
-                "category": "2"
-              },
-              {
-                "term": "genetic_race",
-                "category": "African Ancestry",
-                "join": "and"
-              }
-            ],
-            "method": "edgeR"
-          }
-        }
-      ]
-    },
-    {
-      "type": "Summary",
-      "SystemPrompt": "The \"geneExpression\" subfield should ONLY contain genes names from the relevant genes list.",
-      "TrainingData": [
-        {
-          "question": "Show summary of all molecular subtypes for patients with age from 10 to 40 years",
-          "answer": {
-            "term": "diaggrp",
-            "simpleFilter": [
-              {
-                "term": "agedx",
-                "start": 10,
-                "stop": 40
-              }
-            ]
-          }
-        },
-        {
-          "question": "Show correlation between diagnosis groups and ancestry",
-          "answer": {
-            "term": "diaggrp",
-            "term2": "genetic_race"
-          }
-        },
-        {
-          "question": "show summary of molecular subtype for men under 40 years only",
-          "answer": {
-            "term": "diaggrp",
-            "simpleFilter": [
-              {
-                "term": "sex",
-                "category": "1"
-              },
-              {
-                "start": null,
-                "stop": 40.0,
-                "term": "agedx",
-                "join": "and"
-              }
-            ]
-          }
-        },
-        {
-          "question": "compare tp53 expression vs age using a scatter plot",
-          "answer": {
-            "term": "TP53",
-            "term2": "agedx",
-            "childType": "sampleScatter"
-          }
-        },
-        {
-          "question": "compare tp53 expression vs age using a violin plot",
-          "answer": {
-            "term": "TP53",
-            "term2": "agedx",
-            "childType": "violin"
-          }
-        },
-        {
-          "question": "compare tp53 expression vs age using a boxplot",
-          "answer": {
-            "term": "TP53",
-            "term2": "agedx",
-            "childType": "boxplot"
-          }
-        },
-        {
-          "question": "compare tp53 expression between genders",
-          "answer": {
-            "term": "sex",
-            "term2": "TP53"
-          }
-        },
-        {
-          "question": "compare tp53 expression between genders using a boxplot",
-          "answer": {
-            "term": "sex",
-            "term2": "TP53",
-            "childType": "boxplot"
-          }
-        },
-        {
-          "question": "is tmem88b overexpressed in men?",
-          "answer": {
-            "term": "sex",
-            "term2": "TMEM88B"
-          }
-        },
-        {
-          "question": "Show ancestry for aml and neuroblastoma subtypes",
-          "answer": {
-            "term": "genetic_race",
-            "simpleFilter": [
-              {
-                "term": "diaggrp",
-                "category": "Acute myeloid leukemia"
-              },
-              {
-                "term": "diaggrp",
-                "category": "Neuroblastoma",
-                "join": "or"
-              }
-            ]
-          }
-        },
-        {
-          "question": "show molecular subtype for black women",
-          "answer": {
-            "term": "diaggrp",
-            "simpleFilter": [
-              {
-                "term": "genetic_race",
-                "category": "African Ancestry"
-              },
-              {
-                "term": "sex",
-                "category": "2",
-                "join": "and"
-              }
-            ]
-          }
-        },
-        {
-          "question": "is myc overexpressed in women?",
-          "answer": {
-            "term": "sex",
-            "simpleFilter": [
-              {
-                "term": "sex",
-                "category": "2"
-              }
-            ]
-          }
-        },
-        {
-          "question": "show ancestry for wilms tumor, neuroblastoma patients with age < 20yrs",
-          "answer": {
-            "term": "genetic_race",
-            "simpleFilter": [
-              {
-                "term": "diaggrp",
-                "category": "Wilms tumor"
-              },
-              {
-                "term": "diaggrp",
-                "category": "Neuroblastoma",
-                "join": "or"
-              },
-              {
-                "stop": 20.0,
-                "term": "agedx",
-                "join": "and"
-              }
-            ]
-          }
-        },
-        {
-          "question": "Show molecular subtypes for patients with early onset of cancer",
-          "answer": {
-            "term": "diaggrp"
-          },
-          "simpleFilter": [
-            {
-              "term": "agedx",
-              "stop": 15
-            }
-          ]
-        }
-      ]
-    }
-  ],
-  "TestData": [
-    {
-      "question": "Please show link to survivorship portal",
-      "answer": {
-        "type": "html",
-        "html": "<a href=\"https://aacrjournals.org/cancerdiscovery/article/14/8/1403/746507\">Visit weblink</a>"
-      }
-    },
-    {
-      "question": "Correlate molecular subtype with gender",
-      "answer": {
-        "type": "plot",
-        "plot": "Summary"
-      }
-    },
-    {
-      "question": "Show differential gene expression between wilms tumor and neuroblastoma using limma",
-      "answer": {
-        "group1": [
-          {
-            "term": "diaggrp",
-            "category": "Wilms tumor"
-          }
-        ],
-        "group2": [
-          {
-            "term": "diaggrp",
-            "category": "Neuroblastoma"
-          }
-        ],
-        "method": "limma"
-      }
-    },
-    {
-      "question": "Show differential gene expression between wilms tumor patients with age less than 20  and neuroblastoma patients with age greater than 60",
-      "answer": {
-        "group1": [
-          {
-            "term": "diaggrp",
-            "category": "Wilms tumor"
-          },
-          {
-            "term": "agedx",
-            "stop": 20,
-            "join": "and"
-          }
-        ],
-        "group2": [
-          {
-            "term": "diaggrp",
-            "category": "Neuroblastoma"
-          },
-          {
-            "term": "agedx",
-            "start": 60,
-            "join": "and"
-          }
-        ],
-        "method": "edgeR"
-      }
-    },
-    {
-      "question": "Show correlation between kras gene expression and race",
-      "answer": {
-        "term": "KRAS",
-        "term2": "genetic_race"
-      }
-    },
-    {
-      "question": "Show molecular subtypes for men greater than 60 yrs only",
-      "answer": {
-        "simpleFilter": [
-          {
-            "term": "sex",
-            "value": "1"
-          },
-          {
-            "start": 60.0,
-            "lessThan": null,
-            "term": "agedx",
-            "join": "and"
-          }
-        ],
-        "term": "diaggrp"
-      }
-    },
-    {
-      "question": "Show TP53 gene expression between genders",
-      "answer": {
-        "term": "sex",
-        "term2": "TP53"
-      }
-    },
-    {
-      "question": "compare noc2l expression vs age using a scatter plot",
-      "answer": {
-        "term": "NOC2L",
-        "term2": "agedx",
-        "childType": "sampleScatter"
-      }
-    },
-    {
-      "question": "compare noc2l expression vs gender using a violin plot",
-      "answer": {
-        "term": "NOC2L",
-        "term2": "sex",
-        "childType": "violin"
-      }
-    },
-    {
-      "question": "compare noc2l expression vs molecular subtype using a boxplot",
-      "answer": {
-        "term": "NOC2L",
-        "term2": "diaggrp",
-        "childType": "boxplot"
-      }
-    },
-    {
-      "question": "show molecular subtype using a barchart",
-      "answer": {
-        "term": "diaggrp",
-        "childType": "barchart"
-      }
-    }
-  ]
+	"hasGeneExpression": true,
+	"hasDE": true,
+	"db": "files/hg38/TermdbTest/db",
+	"genedb": "anno/genes.hg38.test.db",
+	"DatasetPrompt": "",
+	"charts": [
+		{
+			"type": "Classification",
+			"SystemPrompt": "The first original publication pertaining to Proteinpaint is https://www.cell.com/cancer-cell/fulltext/S1535-6108(20)30659-0?dgcid=raven_jbs_etoc_email. GenomePaint/Proteinpaint is an interactive visualization platform for whole-genome, whole-exome, transcriptome, and epigenomic data of tumor samples. Its design captures the inter-relatedness between DNA variations and RNA expression, supporting in-depth exploration of both individual cancer genomes and full cohorts. \n Link to survivorship portal https://aacrjournals.org/cancerdiscovery/article/14/8/1403/746507. It shows datasets comprising demographic, diagnosis, treatment, outcome, and genomic data from survivors of childhood cancer. Put weblinks inside HTML <a> tag so that links are clickable",
+			"TrainingData": [
+				{
+					"question": "Show link to survivorship portal",
+					"answer": {
+						"type": "html",
+						"html": "<a href=\"https://aacrjournals.org/cancerdiscovery/article/14/8/1403/746507\">Visit weblink</a>"
+					}
+				},
+				{
+					"question": "Show main publication for proteinpaint",
+					"answer": {
+						"type": "html",
+						"html": "<a href=\"https://www.cell.com/cancer-cell/fulltext/S1535-6108(20)30659-0?dgcid=raven_jbs_etoc_email\">Visit weblink</a>"
+					}
+				},
+				{
+					"question": "compare tp53 expression between genders",
+					"answer": {
+						"type": "plot",
+						"plot": "Summary"
+					}
+				},
+				{
+					"question": "Show summary of all molecular subtypes for patients with age from 10 to 40 years",
+					"answer": {
+						"type": "plot",
+						"plot": "Summary"
+					}
+				},
+				{
+					"question": "Show correlation between diagnosis groups and ancestry",
+					"answer": {
+						"type": "plot",
+						"plot": "Summary"
+					}
+				},
+				{
+					"question": "show summary of molecular subtype for men under 40 years only",
+					"answer": {
+						"type": "plot",
+						"plot": "Summary"
+					}
+				},
+				{
+					"question": "is tmem88b overexpressed in men?",
+					"answer": {
+						"type": "plot",
+						"plot": "Summary"
+					}
+				},
+				{
+					"question": "is myc overexpressed in women?",
+					"answer": {
+						"type": "plot",
+						"plot": "Summary"
+					}
+				},
+				{
+					"question": "Show differential gene expression between men and women",
+					"answer": {
+						"type": "plot",
+						"plot": "DE"
+					}
+				},
+				{
+					"question": "Show volcano plot between men with age greater than 30 and women with age less than 50",
+					"answer": {
+						"type": "plot",
+						"plot": "DE"
+					}
+				},
+				{
+					"question": "Show differential gene expression between men and women",
+					"answer": {
+						"type": "plot",
+						"plot": "DE"
+					}
+				}
+			]
+		},
+		{
+			"type": "DE",
+			"SystemPrompt": "",
+			"TrainingData": [
+				{
+					"question": "Show differential gene expression between men and women",
+					"answer": {
+						"group1": [
+							{
+								"term": "sex",
+								"category": "1"
+							}
+						],
+						"group2": [
+							{
+								"term": "sex",
+								"category": "2"
+							}
+						],
+						"method": "edgeR"
+					}
+				},
+				{
+					"question": "Show differential gene expression between non-hodgkin lymphoma, aml and neuroblastoma, all using wilcoxon method",
+					"answer": {
+						"group1": [
+							{
+								"term": "diaggrp",
+								"category": "Non-Hodgkin lymphoma"
+							},
+							{
+								"term": "diaggrp",
+								"category": "Acute myeloid leukemia",
+								"join": "or"
+							}
+						],
+						"group2": [
+							{
+								"term": "diaggrp",
+								"category": "Neuroblastoma"
+							},
+							{
+								"term": "diaggrp",
+								"category": "Acute lymphoblastic leukemia",
+								"join": "or"
+							}
+						],
+						"method": "wilcoxon"
+					}
+				},
+				{
+					"question": "Show volcano plot between men with age greater than 30 and women with age less than 50 using limma",
+					"answer": {
+						"group1": [
+							{
+								"term": "sex",
+								"category": "1"
+							},
+							{
+								"term": "agedx",
+								"start": 30,
+								"join": "and"
+							}
+						],
+						"group2": [
+							{
+								"term": "sex",
+								"category": "2"
+							},
+							{
+								"term": "agedx",
+								"stop": 50,
+								"join": "and"
+							}
+						],
+						"method": "limma"
+					}
+				},
+				{
+					"question": "Show volcano plot between white or black men vs black or asian women",
+					"answer": {
+						"group1": [
+							{
+								"term": "genetic_race",
+								"category": "European Ancestry"
+							},
+							{
+								"term": "genetic_race",
+								"category": "African Ancestry",
+								"join": "or"
+							},
+							{
+								"term": "sex",
+								"category": "1",
+								"join": "and"
+							}
+						],
+						"group2": [
+							{
+								"term": "genetic_race",
+								"category": "African Ancestry"
+							},
+							{
+								"term": "genetic_race",
+								"category": "Asian Ancestry",
+								"join": "or"
+							},
+							{
+								"term": "sex",
+								"category": "2",
+								"join": "and"
+							}
+						],
+						"method": "edgeR"
+					}
+				},
+				{
+					"question": "Show volcano plot between white men and black women using edgeR",
+					"answer": {
+						"group1": [
+							{
+								"term": "sex",
+								"category": "1"
+							},
+							{
+								"term": "genetic_race",
+								"category": "European Ancestry",
+								"join": "and"
+							}
+						],
+						"group2": [
+							{
+								"term": "sex",
+								"category": "2"
+							},
+							{
+								"term": "genetic_race",
+								"category": "African Ancestry",
+								"join": "and"
+							}
+						],
+						"method": "edgeR"
+					}
+				}
+			]
+		},
+		{
+			"type": "Summary",
+			"SystemPrompt": "The \"geneExpression\" subfield should ONLY contain genes names from the relevant genes list.",
+			"TrainingData": [
+				{
+					"question": "Show summary of all molecular subtypes for patients with age from 10 to 40 years",
+					"answer": {
+						"term": "diaggrp",
+						"simpleFilter": [
+							{
+								"term": "agedx",
+								"start": 10,
+								"stop": 40
+							}
+						]
+					}
+				},
+				{
+					"question": "Show correlation between diagnosis groups and ancestry",
+					"answer": {
+						"term": "diaggrp",
+						"term2": "genetic_race"
+					}
+				},
+				{
+					"question": "show summary of molecular subtype for men under 40 years only",
+					"answer": {
+						"term": "diaggrp",
+						"simpleFilter": [
+							{
+								"term": "sex",
+								"category": "1"
+							},
+							{
+								"start": null,
+								"stop": 40.0,
+								"term": "agedx",
+								"join": "and"
+							}
+						]
+					}
+				},
+				{
+					"question": "compare tp53 expression vs age using a scatter plot",
+					"answer": {
+						"term": "TP53",
+						"term2": "agedx",
+						"childType": "sampleScatter"
+					}
+				},
+				{
+					"question": "compare tp53 expression vs age using a violin plot",
+					"answer": {
+						"term": "TP53",
+						"term2": "agedx",
+						"childType": "violin"
+					}
+				},
+				{
+					"question": "compare tp53 expression vs age using a boxplot",
+					"answer": {
+						"term": "TP53",
+						"term2": "agedx",
+						"childType": "boxplot"
+					}
+				},
+				{
+					"question": "compare tp53 expression between genders",
+					"answer": {
+						"term": "sex",
+						"term2": "TP53"
+					}
+				},
+				{
+					"question": "compare tp53 expression between genders using a boxplot",
+					"answer": {
+						"term": "sex",
+						"term2": "TP53",
+						"childType": "boxplot"
+					}
+				},
+				{
+					"question": "is tmem88b overexpressed in men?",
+					"answer": {
+						"term": "sex",
+						"term2": "TMEM88B"
+					}
+				},
+				{
+					"question": "Show ancestry for aml and neuroblastoma subtypes",
+					"answer": {
+						"term": "genetic_race",
+						"simpleFilter": [
+							{
+								"term": "diaggrp",
+								"category": "Acute myeloid leukemia"
+							},
+							{
+								"term": "diaggrp",
+								"category": "Neuroblastoma",
+								"join": "or"
+							}
+						]
+					}
+				},
+				{
+					"question": "show molecular subtype for black women",
+					"answer": {
+						"term": "diaggrp",
+						"simpleFilter": [
+							{
+								"term": "genetic_race",
+								"category": "African Ancestry"
+							},
+							{
+								"term": "sex",
+								"category": "2",
+								"join": "and"
+							}
+						]
+					}
+				},
+				{
+					"question": "is myc overexpressed in women?",
+					"answer": {
+						"term": "sex",
+						"simpleFilter": [
+							{
+								"term": "sex",
+								"category": "2"
+							}
+						]
+					}
+				},
+				{
+					"question": "show ancestry for wilms tumor, neuroblastoma patients with age < 20yrs",
+					"answer": {
+						"term": "genetic_race",
+						"simpleFilter": [
+							{
+								"term": "diaggrp",
+								"category": "Wilms tumor"
+							},
+							{
+								"term": "diaggrp",
+								"category": "Neuroblastoma",
+								"join": "or"
+							},
+							{
+								"stop": 20.0,
+								"term": "agedx",
+								"join": "and"
+							}
+						]
+					}
+				},
+				{
+					"question": "Show molecular subtypes for patients with early onset of cancer",
+					"answer": {
+						"term": "diaggrp"
+					},
+					"simpleFilter": [
+						{
+							"term": "agedx",
+							"stop": 15
+						}
+					]
+				}
+			]
+		},
+		{
+			"type": "Matrix",
+			"SystemPrompt": "A matrix plot displays mutation status and clinical variables across samples in a grid. The \"geneNames\" field should ONLY contain gene names. The \"terms\" field should ONLY contain clinical/dictionary variable names from the dataset (e.g. \"diaggrp\", \"sex\", \"agedx\", \"genetic_race\"). At least one of \"geneNames\" or \"terms\" must be provided. If the user specifies filters to restrict the sample set, include them in \"simpleFilter\" using the same format as other chart types.",
+			"TrainingData": [
+				{
+					"question": "Show a matrix of TP53, KRAS, and NRAS mutations",
+					"answer": {
+						"geneNames": ["TP53", "KRAS", "NRAS"]
+					}
+				},
+				{
+					"question": "Show an oncoplot of TP53 and RB1 with diagnosis group and sex",
+					"answer": {
+						"geneNames": ["TP53", "RB1"],
+						"terms": ["diaggrp", "sex"]
+					}
+				},
+				{
+					"question": "Show mutation landscape of TP53, MYC, and BCL2 for male patients",
+					"answer": {
+						"geneNames": ["TP53", "MYC", "BCL2"],
+						"simpleFilter": [{ "term": "sex", "category": "1" }]
+					}
+				},
+				{
+					"question": "Create a matrix with diagnosis group, sex, and TP53 mutations",
+					"answer": {
+						"geneNames": ["TP53"],
+						"terms": ["diaggrp", "sex"]
+					}
+				},
+				{
+					"question": "Show an oncoprint of TP53, CDKN2A, and PAX5 across all samples",
+					"answer": {
+						"geneNames": ["TP53", "CDKN2A", "PAX5"]
+					}
+				},
+				{
+					"question": "Show me the mutation pattern of IKZF1 and CDKN2A with age and ancestry",
+					"answer": {
+						"geneNames": ["IKZF1", "CDKN2A"],
+						"terms": ["agedx", "genetic_race"]
+					}
+				},
+				{
+					"question": "Show a matrix of diagnosis group, sex, and ancestry",
+					"answer": {
+						"terms": ["diaggrp", "sex", "genetic_race"]
+					}
+				},
+				{
+					"question": "Show oncoplot of TP53 and PAX5 for AML and neuroblastoma subtypes",
+					"answer": {
+						"geneNames": ["TP53", "PAX5"],
+						"simpleFilter": [
+							{ "term": "diaggrp", "category": "Acute myeloid leukemia" },
+							{ "term": "diaggrp", "category": "Neuroblastoma", "join": "or" }
+						]
+					}
+				},
+				{
+					"question": "Show a matrix of TP53, NRAS, KRAS with diagnosis group for patients under 20",
+					"answer": {
+						"geneNames": ["TP53", "NRAS", "KRAS"],
+						"terms": ["diaggrp"],
+						"simpleFilter": [{ "term": "agedx", "stop": 20 }]
+					}
+				},
+				{
+					"question": "Show mutation landscape of CDKN2A and IKZF1 between male and female patients with ancestry",
+					"answer": {
+						"geneNames": ["CDKN2A", "IKZF1"],
+						"terms": ["sex", "genetic_race"]
+					}
+				}
+			],
+			"TestData": [
+				{
+					"question": "Show an oncoplot of MYC and BCL2 with sex",
+					"answer": {
+						"geneNames": ["MYC", "BCL2"],
+						"terms": ["sex"]
+					}
+				},
+				{
+					"question": "Show a matrix of TP53 and NRAS for wilms tumor",
+					"answer": {
+						"geneNames": ["TP53", "NRAS"],
+						"simpleFilter": [{ "term": "diaggrp", "category": "Wilms tumor" }]
+					}
+				},
+				{
+					"question": "Create a matrix with age, ancestry, and diagnosis group for female patients",
+					"answer": {
+						"terms": ["agedx", "genetic_race", "diaggrp"],
+						"simpleFilter": [{ "term": "sex", "category": "2" }]
+					}
+				}
+			]
+		}
+	],
+	"TestData": [
+		{
+			"question": "Please show link to survivorship portal",
+			"answer": {
+				"type": "html",
+				"html": "<a href=\"https://aacrjournals.org/cancerdiscovery/article/14/8/1403/746507\">Visit weblink</a>"
+			}
+		},
+		{
+			"question": "Correlate molecular subtype with gender",
+			"answer": {
+				"type": "plot",
+				"plot": "Summary"
+			}
+		},
+		{
+			"question": "Show differential gene expression between wilms tumor and neuroblastoma using limma",
+			"answer": {
+				"group1": [
+					{
+						"term": "diaggrp",
+						"category": "Wilms tumor"
+					}
+				],
+				"group2": [
+					{
+						"term": "diaggrp",
+						"category": "Neuroblastoma"
+					}
+				],
+				"method": "limma"
+			}
+		},
+		{
+			"question": "Show differential gene expression between wilms tumor patients with age less than 20  and neuroblastoma patients with age greater than 60",
+			"answer": {
+				"group1": [
+					{
+						"term": "diaggrp",
+						"category": "Wilms tumor"
+					},
+					{
+						"term": "agedx",
+						"stop": 20,
+						"join": "and"
+					}
+				],
+				"group2": [
+					{
+						"term": "diaggrp",
+						"category": "Neuroblastoma"
+					},
+					{
+						"term": "agedx",
+						"start": 60,
+						"join": "and"
+					}
+				],
+				"method": "edgeR"
+			}
+		},
+		{
+			"question": "Show correlation between kras gene expression and race",
+			"answer": {
+				"term": "KRAS",
+				"term2": "genetic_race"
+			}
+		},
+		{
+			"question": "Show molecular subtypes for men greater than 60 yrs only",
+			"answer": {
+				"simpleFilter": [
+					{
+						"term": "sex",
+						"value": "1"
+					},
+					{
+						"start": 60.0,
+						"lessThan": null,
+						"term": "agedx",
+						"join": "and"
+					}
+				],
+				"term": "diaggrp"
+			}
+		},
+		{
+			"question": "Show TP53 gene expression between genders",
+			"answer": {
+				"term": "sex",
+				"term2": "TP53"
+			}
+		},
+		{
+			"question": "compare noc2l expression vs age using a scatter plot",
+			"answer": {
+				"term": "NOC2L",
+				"term2": "agedx",
+				"childType": "sampleScatter"
+			}
+		},
+		{
+			"question": "compare noc2l expression vs gender using a violin plot",
+			"answer": {
+				"term": "NOC2L",
+				"term2": "sex",
+				"childType": "violin"
+			}
+		},
+		{
+			"question": "compare noc2l expression vs molecular subtype using a boxplot",
+			"answer": {
+				"term": "NOC2L",
+				"term2": "diaggrp",
+				"childType": "boxplot"
+			}
+		},
+		{
+			"question": "show molecular subtype using a barchart",
+			"answer": {
+				"term": "diaggrp",
+				"childType": "barchart"
+			}
+		}
+	]
 }
