@@ -71,7 +71,7 @@ export function filter2GDCfilter(f, level = 0) {
 		}
 		throw new Error('unknown tvs structure when converting to gdc filter')
 	}
-	if (!level) console.log(JSON.stringify(obj, null, '  '))
+	//if (!level) console.log(JSON.stringify(obj, null, '  '))
 	return obj.content.length ? obj : null
 }
 

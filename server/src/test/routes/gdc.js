@@ -3,6 +3,7 @@
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '../../serverconfig.js'
+import ky from 'ky'
 
 // simulate GDC sessionid to token mapping
 // sessionid will be the index of the entry in the array
@@ -81,6 +82,30 @@ export default async function setRoutes(app, basepath) {
 		}
 		res.send(str)
 	})
+
+	let forceError = true
+	app.get('/ky-retry-test', async (req, res) => {
+		// if (!serverconfig.debugmode) return false
+		// test of ky retry option, used in conjuction with the example
+		if (forceError) {
+			forceError = !forceError
+			res.status(502)
+			console.log('/ky-retry-test --- sent 502 ---')
+			res.send(
+				`<html><head><title>502 Bad Gateway</title></head><body><center><h1>502 Bad Gateway</h1></center></body></html>`
+			)
+			return true
+		} else forceError = !forceError
+
+		res.send({ ok: true, status: 'ok', message: 'built-in retry works!!' })
+	})
+
+	// setTimeout(async ()=>{
+	//   // immediately after server listens to port, should see
+	//   // --- sent 502 --- (ignored initial failure) and then an ok response (successful retry)
+	//   // in the server logs
+	//   ky('http://localhost:3000/ky-retry-test', {retry: {limit: 2, backoffLimit: 10000}}).then(r => r.json()).then(console.log).catch(console.log)
+	// }, 2000)
 }
 
 function sleep(ms) {

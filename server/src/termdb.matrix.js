@@ -3,7 +3,7 @@ import { string2pos } from '#shared/common.js'
 import { get_samples, get_term_cte, interpolateSqlValues, get_active_groupset } from './termdb.sql.js'
 import { getFilterCTEs } from './termdb.filter.js'
 import serverconfig from './serverconfig.js'
-import { read_file } from './utils.js'
+import { read_file, trackXfetch } from './utils.js'
 import {
 	TermTypes,
 	isDictionaryType,
@@ -42,6 +42,7 @@ Returns:
 */
 
 export async function getData(q, ds, onlyChildren = false) {
+	if (serverconfig.debugmode) trackXfetch(new Map())
 	try {
 		validateArg(q, ds)
 		authApi.mayAdjustFilter(q, ds, q.terms)
@@ -60,8 +61,10 @@ export async function getData(q, ds, onlyChildren = false) {
 				byTermId[k].categories = categories[k]
 			}
 		}
+		trackXfetch(null)
 		return data
 	} catch (e) {
+		trackXfetch(null)
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e, code: e.code } // ok for e.code to be undefined
 	}

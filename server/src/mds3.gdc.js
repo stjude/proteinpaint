@@ -1,13 +1,12 @@
 import * as common from '#shared/common.js'
-import { joinUrl, ezFetch } from '#shared/index.js'
+import { joinUrl } from '#shared/index.js'
 import { compute_bins } from '#shared/termdb.bins.js'
 import { getBin } from '#shared/terms.js'
-import ky from 'ky'
-import nodeFetch from 'node-fetch'
+// import ky from 'ky'
 import { combineSamplesById } from './mds3.variant2samples.js'
 import { guessSsmid } from '#shared/mds3tk.js'
 import { filter2GDCfilter } from './mds3.gdc.filter.js'
-import { write_tmpfile, cachedFetch, sleep } from './utils.js'
+import { write_tmpfile, xfetch, sleep } from './utils.js'
 import { mayLog } from './helpers.ts'
 import serverconfig from './serverconfig.js'
 
@@ -90,13 +89,13 @@ export async function validate_ssm2canonicalisoform(api, getHostHeaders) {
 		// q is client request object
 		if (!q.ssm_id) throw '.ssm_id missing'
 		const { host, headers } = getHostHeaders(q)
-		const re = await ky(
+		const re = await xfetch(
 			joinUrl(
 				joinUrl(host.rest, 'ssms'),
 				q.ssm_id + '?fields=consequence.transcript.is_canonical,consequence.transcript.transcript_id'
 			),
 			{ timeout: false, headers }
-		).json()
+		)
 		if (!Array.isArray(re?.data?.consequence)) throw '.data.consequence not array'
 		const canonical = re.data.consequence.find(i => i.transcript.is_canonical)
 		return canonical ? canonical.transcript.transcript_id : re.data.consequence[0].transcript.transcript_id
@@ -117,8 +116,6 @@ export function validate_query_snvindel_byrange(ds) {
 // these constants are temp fixes for the GDC API issue where
 // /gene_expression/values may randomly not return data or second tsv line
 const caseCountLimitError = `Case count > ${maxCase4geneExp}: please limit the cohort size to access gene expression data`
-const retryMax = serverconfig.features?.gdcGeneExpRetryMax || 0
-const retryDelay = serverconfig.features?.gdcGeneExpRetryDelay || 3000
 // user-friendly error message, to be followed by the technical message in parentheses
 const unknownApiError = `Something went wrong while loading the gene expression data. Please try again.`
 
@@ -229,22 +226,21 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 		}
 		let bySampleId
 		for (let i = 0; i < retryMax + 1; i++) {
-			// 1/27/2026, retry per Phil's suggestion in https://gdc-ctds.atlassian.net/browse/SV-2709
-			try {
-				// throw new Error('no gene lines') // uncomment to test
-				bySampleId = await getExpressionData(q, ensgLst, cases4clustering, ensg2id, term2sample2value, ds)
-				// returns mapping from uuid to submitter id; since uuid is used in term2sample2value, but need to display submitter id on ui
-				const t4 = new Date()
-				mayLog('gene-case matrix built,', Object.keys(bySampleId).length, 'cases,', t4 - t3, 'ms')
-			} catch (e) {
-				// TODO: use custom Error class/name/code to reliably detect
-				if (!String(e).includes('no gene lines')) throw e
-				// 1/27/2026 the message below is per Himanso's feedback in https://gdc-ctds.atlassian.net/browse/SV-2709
-				if (i >= retryMax) throw unknownApiError
-				const delay = Math.random() * (retryDelay * Math.pow(2, i)) // exponential backoff with random jitter
-				await sleep(delay) // wait until the next retry
-				mayLog(`(!) no gene lines error for getExpressionData() request #${i + 1}`)
-			}
+			//try {
+			// throw new Error('no gene lines') // uncomment to test
+			bySampleId = await getExpressionData(q, ensgLst, cases4clustering, ensg2id, term2sample2value, ds)
+			// returns mapping from uuid to submitter id; since uuid is used in term2sample2value, but need to display submitter id on ui
+			const t4 = new Date()
+			mayLog('gene-case matrix built,', Object.keys(bySampleId).length, 'cases,', t4 - t3, 'ms')
+			// } catch (e) {
+			// 	// TODO: use custom Error class/name/code to reliably detect
+			// 	if (!String(e).includes('no gene lines')) throw e
+			// 	// 1/27/2026 the message below is per Himanso's feedback in https://gdc-ctds.atlassian.net/browse/SV-2709
+			// 	if (i >= retryMax) throw unknownApiError
+			// 	const delay = Math.random() * (retryDelay * Math.pow(2, i)) // exponential backoff with random jitter
+			// 	await sleep(delay) // wait until the next retry
+			// 	mayLog(`(!) no gene lines error for getExpressionData() request #${i + 1}`)
+			// }
 		}
 		return { term2sample2value, byTermId, bySampleId, skippedSexChrGenes }
 	}
@@ -310,7 +306,7 @@ async function geneExpression_getGenes(twlst, cases4clustering, genome, ds, q) {
 		// 		})
 		// 	}).then(r => r.json()).catch(e => {throw e})
 
-		const re = await nodeFetch(`${host.rest}/gene_expression/gene_selection`, {
+		const re = await xfetch(`${host.rest}/gene_expression/gene_selection`, {
 			method: 'POST',
 			headers,
 			timeout: false, // instead of 10 second default
@@ -320,7 +316,7 @@ async function geneExpression_getGenes(twlst, cases4clustering, genome, ds, q) {
 				selection_size: ensgLst.length,
 				min_median_log2_uqfpkm: 0.01
 			})
-		}).then(r => r.json())
+		})
 
 		if (!Array.isArray(re.gene_selection)) throw 're.gene_selection[] not array'
 		const ensgLst2 = []
@@ -373,12 +369,12 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2id, term2sa
 	}
 
 	const { host, headers } = ds.getHostHeaders(q)
-	const re = await nodeFetch(`${host.rest}/gene_expression/values`, {
+	const re = await xfetch(`${host.rest}/gene_expression/values`, {
 		method: 'POST',
 		timeout: false,
 		headers,
 		body: JSON.stringify(arg)
-	}).then(r => r.text())
+	})
 	if (typeof re != 'string') throw `${unknownApiError} (response.body is not tsv text)`
 	const lines = re.trim().split('\n')
 
@@ -461,7 +457,7 @@ async function getCases4exp(q, ds, case_filters) {
 		return lst
 	}
 
-	const json = {
+	const body = {
 		fields: 'case_id',
 		case_filters,
 		// hiercluster app will limit max number of allowed cases by hardcoded value. times 10 is a generous guess to allow for cases without gene exp data, as is from current cohort
@@ -469,9 +465,7 @@ async function getCases4exp(q, ds, case_filters) {
 	}
 	try {
 		const { host, headers } = ds.getHostHeaders(q)
-		const r0 = await ky.post(joinUrl(host.rest, 'cases'), { timeout: false, headers, json })
-		if (!r0.ok) throw r0
-		const re = await r0.json()
+		const re = await xfetch(joinUrl(host.rest, 'cases'), { method: 'POST', timeout: false, headers, body })
 		if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
 		for (const h of re.data.hits) {
 			if (h.id && ds.__gdc.casesWithExpData.has(h.id)) {
@@ -650,19 +644,18 @@ export function validate_query_geneCnv(ds) {
 	*/
 	ds.queries.geneCnv.bygene.get = async opts => {
 		const { host, headers } = ds.getHostHeaders(opts)
-		const re = await ky
-			.post(joinUrl(host.rest, 'cnvs'), {
-				timeout: false,
-				headers,
-				json: {
-					size: 100000,
-					fields: getFields(opts),
-					filters: getFilter(opts)
-				}
-			})
-			.json()
-		if (!Array.isArray(re?.data?.hits)) throw 'geneCnv response body is not {data:hits[]}'
+		const re = await xfetch(joinUrl(host.rest, 'cnvs'), {
+			method: 'POST',
+			timeout: false,
+			headers,
+			body: {
+				size: 100000,
+				fields: getFields(opts),
+				filters: getFilter(opts)
+			}
+		})
 
+		if (!Array.isArray(re?.data?.hits)) throw 'geneCnv response body is not {data:hits[]}'
 		const cnvevents = [] // collect list of cnv events to return
 
 		for (const hit of re.data.hits) {
@@ -778,17 +771,16 @@ async function getCnvFusion4oneCase(opts, ds) {
 		'analysis.workflow_type'
 	]
 	const { host, headers } = ds.getHostHeaders(opts)
-	const re = await ky
-		.post(joinUrl(host.rest, 'files'), {
-			timeout: false,
-			headers,
-			json: {
-				size: 10000,
-				fields: fields.join(','),
-				filters: getFilter(opts)
-			}
-		})
-		.json()
+	const re = await xfetch(joinUrl(host.rest, 'files'), {
+		method: 'POST',
+		timeout: false,
+		headers,
+		body: {
+			size: 10000,
+			fields: fields.join(','),
+			filters: getFilter(opts)
+		}
+	})
 	if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
 
 	// collect usable cnv/fusion files, each: {fid, name, mlst[]}, will be returned to client as-is
@@ -902,7 +894,7 @@ export function getGdcSampletypes(c) {
 cnv files come in different formats. detect by header line
 */
 async function loadCnvFile(host, fid) {
-	const re = await ky(joinUrl(host.rest, 'data', fid), { timeout: false }).text()
+	const re = await xfetch(joinUrl(host.rest, 'data', fid), { timeout: false })
 	const lines = re.trim().split('\n')
 	const mlst = []
 	switch (lines[0]) {
@@ -971,7 +963,7 @@ async function loadCnvFile(host, fid) {
 
 // must use headers to access controlled fusion file
 async function loadArribaFile(host, headers, fid) {
-	const re = await ky(joinUrl(host.rest, 'data', fid), { headers, timeout: false }).text()
+	const re = await xfetch(joinUrl(host.rest, 'data', fid), { headers, timeout: false })
 	const lines = re.split('\n')
 	// first line is header
 	// #chrom1 start1  end1    chrom2  start2  end2    name    score   strand1 strand2 strand1(gene/fusion)    strand2(gene/fusion)    site1   site2   type    direction1      direction2      split_reads1    split_reads2    discordant_mates        coverage1       coverage2       closest_genomic_breakpoint1     closest_genomic_breakpoint2     filters fusion_transcript       reading_frame   peptide_sequence        read_identifiers
@@ -1032,13 +1024,13 @@ async function snvindel_byisoform(opts, ds) {
 	// 	})
 	// 	.json()
 
-	const p1 = cachedFetch(joinUrl(host.rest, query1.endpoint), {
+	const p1 = xfetch(joinUrl(host.rest, query1.endpoint), {
 		method: 'POST',
 		timeout: false,
 		headers,
 		body: Object.assign({ size: query1.size, fields: query1.fields.join(',') }, query1.filters(opts))
 	})
-	const p2 = cachedFetch(joinUrl(host.rest, query2.endpoint), {
+	const p2 = xfetch(joinUrl(host.rest, query2.endpoint), {
 		method: 'POST',
 		timeout: false,
 		headers,
@@ -1046,8 +1038,7 @@ async function snvindel_byisoform(opts, ds) {
 	})
 
 	const starttime = Date.now()
-	const r = await Promise.all([p1, p2])
-	const [re_ssms, re_cases] = [r[0].body, r[1].body]
+	const [re_ssms, re_cases] = await Promise.all([p1, p2])
 
 	mayLog('gdc snvindel tandem queries', Date.now() - starttime)
 
@@ -1485,13 +1476,12 @@ async function querySamplesSurvival(q, survivalTwLst, ds, samples, geneTwLst) {
 
 	// the survival term itself is not used in api query, since there's just one type of survival data from gdc and no need to distinguish
 	const { host, headers } = ds.getHostHeaders(q)
-	const re = await ky
-		.post(joinUrl(host.rest, 'analysis/survival'), {
-			timeout: false,
-			headers,
-			json: { filters: [filter] }
-		})
-		.json()
+	const re = await xfetch(joinUrl(host.rest, 'analysis/survival'), {
+		method: 'POST',
+		timeout: false,
+		headers,
+		body: { filters: [filter] }
+	})
 	if (!Array.isArray(re.results?.[0].donors)) throw 're.results[0].donors[] not array'
 	for (const d of re.results[0].donors) {
 		/* each d:
@@ -1640,14 +1630,12 @@ async function querySamplesTwlstNotForGeneexpclustering_withGenomicFilter(q, dic
 
 	const { host, headers } = ds.getHostHeaders(q) // will be reused below
 
-	const response = await cachedFetch(joinUrl(host.rest, isoform2ssm_query2_getcase.endpoint), {
+	const re = await xfetch(joinUrl(host.rest, isoform2ssm_query2_getcase.endpoint), {
 		method: 'POST',
 		timeout: false,
 		headers,
 		body: param
 	})
-
-	const re = response.body
 
 	delete q.isoforms
 
@@ -1790,9 +1778,9 @@ export async function querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q
 
 	const t1 = Date.now()
 
-	const { body: re } = await cachedFetch(
+	const re = await xfetch(
 		joinUrl(host.rest, 'cases'),
-		{ method: 'POST', headers, body: JSON.stringify(param) } //,
+		{ method: 'POST', timeout: false, headers, body: JSON.stringify(param) } //,
 		//{ q } // this q does not seem to be a request object reference that is shared across all genes, cannot use as a cache key
 	)
 
@@ -1863,11 +1851,7 @@ async function querySamplesTwlstForGeneexpclustering(q, twLst, ds) {
 	}
 
 	const { host, headers } = ds.getHostHeaders(q)
-
-	// NOTE: not using ky, until the issue with undici intermittent timeout/socket hangup is
-	// fully resolved, and which hapens only for long-running requests where possibly
-	// garbage collection is not being performed on http socket resources
-	const re = await ezFetch(
+	const re = await xfetch(
 		joinUrl(host.rest, 'cases'),
 		{
 			method: 'POST',
@@ -1965,7 +1949,7 @@ export async function get_termlst2size(twLst, q, combination, ds) {
 	const query = termid2size_query(termPaths)
 	const variables = termid2size_filters(q, ds)
 	const { host, headers } = ds.getHostHeaders(q)
-	const re = await ky.post(host.graphql, { timeout: false, headers, json: { query, variables } }).json()
+	const re = await xfetch(host.graphql, { method: 'POST', timeout: false, headers, body: { query, variables } })
 
 	// levels to traverse in api return
 	const keys = ['data', 'explore', 'cases', 'aggregations']
@@ -2013,10 +1997,11 @@ export function validate_m2csq(ds) {
 	ds.queries.snvindel.m2csq.get = async q => {
 		// q is client request object
 		const { host, headers } = ds.getHostHeaders(q)
-		const re = await ky(host.rest + '/ssms/' + q.ssm_id + '?fields=' + fields.join(','), {
+		const re = await xfetch(host.rest + '/ssms/' + q.ssm_id + '?fields=' + fields.join(','), {
 			timeout: false,
 			headers
-		}).json()
+		})
+
 		if (!re.data || !re.data.consequence) throw 'returned data not .data.consequence'
 		if (!Array.isArray(re.data.consequence)) throw '.data.consequence not array'
 		return re.data.consequence.map(i => i.transcript)
@@ -2128,24 +2113,23 @@ async function convert2caseId(q, ds) {
 	- sample submitter id (TCGA-B5-A1MR-01A)
 	*/
 	const { host, headers } = ds.getHostHeaders(q)
-	const re = await ky
-		.post(joinUrl(host.rest, 'cases'), {
-			timeout: false,
-			headers,
-			json: {
-				size: 1,
-				fields: 'case_id,submitter_id',
-				filters: {
-					op: 'or',
-					content: [
-						{ op: '=', content: { field: 'samples.portions.analytes.aliquots.aliquot_id', value: q.sample } },
-						{ op: '=', content: { field: 'submitter_id', value: q.sample } },
-						{ op: '=', content: { field: 'samples.submitter_id', value: q.sample } }
-					]
-				}
+	const re = await xfetch(joinUrl(host.rest, 'cases'), {
+		method: 'POST',
+		timeout: false,
+		headers,
+		body: {
+			size: 1,
+			fields: 'case_id,submitter_id',
+			filters: {
+				op: 'or',
+				content: [
+					{ op: '=', content: { field: 'samples.portions.analytes.aliquots.aliquot_id', value: q.sample } },
+					{ op: '=', content: { field: 'submitter_id', value: q.sample } },
+					{ op: '=', content: { field: 'samples.submitter_id', value: q.sample } }
+				]
 			}
-		})
-		.json()
+		}
+	})
 
 	for (const h of re.data.hits) {
 		if (h.case_id) return h.case_id
@@ -2169,12 +2153,12 @@ export function gdc_validate_query_singleCell_DEgenes(ds) {
 
 // given a file uuid, find out the case uuid this file belongs to
 async function getCaseidByFileid(q, fileId, ds) {
-	const json = {
+	const body = {
 		size: 1,
 		fields: 'cases.case_id'
 	}
 	const { host, headers } = ds.getHostHeaders(q)
-	const re = await ky.post(joinUrl(host.rest, 'files', fileId), { timeout: false, headers, json }).json()
+	const re = await xfetch(joinUrl(host.rest, 'files', fileId), { method: 'POST', timeout: false, headers, body })
 	if (!re.data?.cases?.[0].case_id) throw 'structure not re.data.cases[].case_id'
 	return re.data?.cases[0].case_id
 }
@@ -2182,7 +2166,7 @@ async function getCaseidByFileid(q, fileId, ds) {
 async function getSinglecellDEfile(caseuuid, q, ds) {
 	// find the seurat.deg.tsv file for the requested experient, and return file id. many cases have multiple sc experiments. to identify the correct experiment, use q.sample which is seurat.analysis.tsv file id. find the matching deg.tsv
 
-	const json = {
+	const body = {
 		filters: {
 			op: 'and',
 			content: [
@@ -2197,7 +2181,7 @@ async function getSinglecellDEfile(caseuuid, q, ds) {
 	}
 
 	const { host, headers } = ds.getHostHeaders(q)
-	const re = await ky.post(joinUrl(host.rest, 'files'), { timeout: false, headers, json }).json()
+	const re = await xfetch(joinUrl(host.rest, 'files'), { method: 'POST', timeout: false, headers, body })
 	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
 	/* can have multiple hits. a hit looks like:
 	{
@@ -2244,7 +2228,7 @@ async function getSinglecellDEgenes(q, degFileId, ds) {
 	// with seurat.deg.tsv file id, read file content and find DE genes belonging to given cluster
 	const { host } = ds.getHostHeaders(q)
 	// do not use headers here that has accept: 'application/json'
-	const re = await ky(joinUrl(host.rest, 'data', degFileId), { timeout: false }).text()
+	const re = await xfetch(joinUrl(host.rest, 'data', degFileId), { timeout: false })
 	const lines = re.trim().split('\n')
 	/*
         this tsv file first line is header:
@@ -2278,7 +2262,7 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 	ds.queries.singleCell.data.get = async q => {
 		const { host } = ds.getHostHeaders(q)
 		// do not use headers here that has accept: 'application/json'
-		const re = await ky(joinUrl(host.rest, 'data', q.sample.eID || q.sample.sID), { timeout: false }).text()
+		const re = await xfetch(joinUrl(host.rest, 'data', q.sample.eID || q.sample.sID), { timeout: false })
 		const lines = re.trim().split('\n')
 		const datasetPlots = ds.queries.singleCell.data.plots
 		/*
@@ -2355,17 +2339,16 @@ async function getSingleSampleMutations(query, ds, genome) {
 	{
 		const { host, headers } = ds.getHostHeaders(query)
 
-		const re = await ky
-			.post(joinUrl(host.rest, isoform2ssm_query1_getvariant.endpoint), {
-				timeout: false,
-				headers,
-				json: {
-					size: 10000, // ssm max!
-					fields: isoform2ssm_query1_getvariant.fields.join(','),
-					filters: isoform2ssm_query1_getvariant.filters(query).filters
-				}
-			})
-			.json()
+		const re = await xfetch(joinUrl(host.rest, isoform2ssm_query1_getvariant.endpoint), {
+			method: 'POST',
+			timeout: false,
+			headers,
+			body: {
+				size: 10000, // ssm max!
+				fields: isoform2ssm_query1_getvariant.fields.join(','),
+				filters: isoform2ssm_query1_getvariant.filters(query).filters
+			}
+		})
 
 		if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total not integer'
 		if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
