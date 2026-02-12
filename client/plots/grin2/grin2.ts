@@ -858,6 +858,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 				dataTestId: 'sjpp-grin2-top-genes-table',
 				resize: 'both',
 				selectAll: false,
+				allowRestoreRowOrder: true,
+				restoreButtonInFooter: true,
 				download: {
 					fileName: `grin2_top_genes_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}.tsv`
 				},

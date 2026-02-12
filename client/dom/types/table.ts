@@ -155,4 +155,6 @@ export type TableArgs = {
 	/** When true, shows a "Restore row order" button after user sorts the table.
 	 * Can only be set to true when at least one column has sortable:true */
 	allowRestoreRowOrder?: boolean
+	/** When true, places the restore button with footer buttons instead of separately */
+	restoreButtonInFooter?: boolean
 }

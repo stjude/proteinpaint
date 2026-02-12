@@ -46,7 +46,8 @@ export function renderTable({
 	download = undefined,
 	noAutoScroll = false,
 	hoverEffects,
-	allowRestoreRowOrder = false
+	allowRestoreRowOrder = false,
+	restoreButtonInFooter = false
 }: TableArgs) {
 	validateInput()
 	let _selectedRowStyle = selectedRowStyle
@@ -87,32 +88,31 @@ export function renderTable({
 	}
 
 	const uniqueInputName = inputName || getUniqueNameOrId('input')
-	
-	// Track whether the table has been sorted by user
-	let isSorted = false
+
 	// Store the original row order to restore
 	const originalRows = rows.map(i => i)
-	
+
 	const parentDiv = div.append('div').style('background-color', 'white').style('display', 'inline-block')
-	
+
 	// Create restore button container (will be shown/hidden based on sort state)
+	// If restoreButtonInFooter is true, we'll create it later with the footer buttons
 	let restoreButtonDiv: any
-	if (allowRestoreRowOrder) {
+	let restoreButton: any
+	if (allowRestoreRowOrder && !restoreButtonInFooter) {
 		restoreButtonDiv = div
 			.append('div')
 			.style('display', 'none') // Initially hidden
 			.style('padding', '5px')
 			.style('vertical-align', 'top')
-		
-		restoreButtonDiv
+
+		restoreButton = restoreButtonDiv
 			.append('button')
 			.text('Restore row order')
 			.attr('class', 'sjpp_apply_btn')
 			.on('click', () => {
 				// Restore original row order
-				isSorted = false
 				restoreButtonDiv.style('display', 'none')
-				
+
 				const checked = getCheckedRowIndex()
 				const idxMap = new Map(rowsCopy.map((val, idx) => [val, idx]))
 				selectedRows = checked.map(i => originalRows.findIndex((v: TableCell[]) => idxMap.get(v) === i))
@@ -124,7 +124,7 @@ export function renderTable({
 				updateRows()
 			})
 	}
-	
+
 	if (download) {
 		const downloadDiv = div
 			.append('div')
@@ -421,6 +421,30 @@ export function renderTable({
 			.style('float', buttonsToLeft ? 'left' : 'right')
 			.style('padding-bottom', '5px')
 
+		// Add restore button to footer if requested
+		if (allowRestoreRowOrder && restoreButtonInFooter) {
+			restoreButton = footerDiv
+				.append('button')
+				.text('Restore row order')
+				.attr('class', 'sjpp_apply_btn')
+				.style('margin', '10px 10px 0 0')
+				.style('display', 'none') // Initially hidden
+				.on('click', () => {
+					// Restore original row order
+					restoreButton.style('display', 'none')
+
+					const checked = getCheckedRowIndex()
+					const idxMap = new Map(rowsCopy.map((val, idx) => [val, idx]))
+					selectedRows = checked.map(i => originalRows.findIndex((v: TableCell[]) => idxMap.get(v) === i))
+
+					/** Must override caller setting once user selects row(s) */
+					if (selectedRows.length) selectAll = false
+
+					rows = originalRows.map(i => i) // Create a copy
+					updateRows()
+				})
+		}
+
 		for (const bCfg of buttons) {
 			bCfg.button = footerDiv
 				.append('button')
@@ -473,12 +497,13 @@ export function renderTable({
 
 			rows = newRows
 			updateRows()
-			
+
 			// Show restore button when table is sorted (and allowRestoreRowOrder is true)
 			if (allowRestoreRowOrder) {
-				isSorted = true
-				if (restoreButtonDiv) {
-					restoreButtonDiv.style('display', 'inline-block')
+				if (restoreButtonInFooter && restoreButton) {
+					restoreButton.style('display', 'inline-block')
+				} else if (restoreButtonDiv) {
+					restoreButtonDiv.style('display', 'block')
 				}
 			}
 		}
