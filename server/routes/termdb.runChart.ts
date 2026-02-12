@@ -85,6 +85,13 @@ function buildOneSeries(
 	yTermId: string,
 	data: any
 ): { median: number; points: any[] } {
+	const supportedAggregations = ['proportion', 'count', 'median']
+	if (!supportedAggregations.includes(aggregation)) {
+		throw new Error(
+			`Unsupported aggregation method: ${aggregation}. Supported values are: ${supportedAggregations.join(', ')}`
+		)
+	}
+
 	const buckets: Record<
 		string,
 		{

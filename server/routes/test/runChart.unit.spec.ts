@@ -273,3 +273,28 @@ tape('buildRunChartFromData() period partitioning (shouldPartition=true)', funct
 
 	test.end()
 })
+
+tape('buildRunChartFromData() unsupported aggregation method throws error', function (test) {
+	const aggregation = 'mean'
+	const xTermId = 'x'
+	const yTermId = 'y'
+
+	const inputData = {
+		samples: {
+			s1: {
+				[xTermId]: { value: 2023.8 },
+				[yTermId]: { value: 10 }
+			}
+		}
+	}
+
+	test.throws(
+		() => {
+			buildRunChartFromData(aggregation, xTermId, yTermId, inputData, false)
+		},
+		/Unsupported aggregation method: mean/,
+		'should throw error for unsupported aggregation method'
+	)
+
+	test.end()
+})
