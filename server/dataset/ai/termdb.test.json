@@ -85,6 +85,34 @@
 						"type": "plot",
 						"plot": "DE"
 					}
+				},
+				{
+					"question": "Show me the t-SNE plot",
+					"answer": {
+						"type": "plot",
+						"plot": "SampleScatter"
+					}
+				},
+				{
+					"question": "Show t-SNE colored by TP53 expression",
+					"answer": {
+						"type": "plot",
+						"plot": "SampleScatter"
+					}
+				},
+				{
+					"question": "Divide the t-SNE by sex",
+					"answer": {
+						"type": "plot",
+						"plot": "SampleScatter"
+					}
+				},
+				{
+					"question": "Remove color overlay from t-SNE",
+					"answer": {
+						"type": "plot",
+						"plot": "SampleScatter"
+					}
 				}
 			]
 		},
@@ -425,7 +453,12 @@
 					"question": "Show mutation landscape of TP53, MYC, and BCL2 for male patients",
 					"answer": {
 						"geneNames": ["TP53", "MYC", "BCL2"],
-						"simpleFilter": [{ "term": "sex", "category": "1" }]
+						"simpleFilter": [
+							{
+								"term": "sex",
+								"category": "1"
+							}
+						]
 					}
 				},
 				{
@@ -459,8 +492,15 @@
 					"answer": {
 						"geneNames": ["TP53", "PAX5"],
 						"simpleFilter": [
-							{ "term": "diaggrp", "category": "Acute myeloid leukemia" },
-							{ "term": "diaggrp", "category": "Neuroblastoma", "join": "or" }
+							{
+								"term": "diaggrp",
+								"category": "Acute myeloid leukemia"
+							},
+							{
+								"term": "diaggrp",
+								"category": "Neuroblastoma",
+								"join": "or"
+							}
 						]
 					}
 				},
@@ -469,7 +509,12 @@
 					"answer": {
 						"geneNames": ["TP53", "NRAS", "KRAS"],
 						"terms": ["diaggrp"],
-						"simpleFilter": [{ "term": "agedx", "stop": 20 }]
+						"simpleFilter": [
+							{
+								"term": "agedx",
+								"stop": 20
+							}
+						]
 					}
 				},
 				{
@@ -492,14 +537,107 @@
 					"question": "Show a matrix of TP53 and NRAS for wilms tumor",
 					"answer": {
 						"geneNames": ["TP53", "NRAS"],
-						"simpleFilter": [{ "term": "diaggrp", "category": "Wilms tumor" }]
+						"simpleFilter": [
+							{
+								"term": "diaggrp",
+								"category": "Wilms tumor"
+							}
+						]
 					}
 				},
 				{
 					"question": "Create a matrix with age, ancestry, and diagnosis group for female patients",
 					"answer": {
 						"terms": ["agedx", "genetic_race", "diaggrp"],
-						"simpleFilter": [{ "term": "sex", "category": "2" }]
+						"simpleFilter": [
+							{
+								"term": "sex",
+								"category": "2"
+							}
+						]
+					}
+				}
+			]
+		},
+		{
+			"type": "SampleScatter",
+			"SystemPrompt": "Pre-built scatter plots available are: TermdbTest TSNE. The user can overlay clinical variables or gene expression on these plots via color, shape, or divide (Z). To remove an overlay, set the corresponding field to null. If the user does not specify a plot name, default to 'TermdbTest TSNE'. If the user says 'tsne' or 't-sne' match it to 'TermdbTest TSNE'. This dataset does NOT have UMAP plots.",
+			"TrainingData": [
+				{
+					"question": "Show me the t-SNE plot",
+					"answer": {
+						"plotName": "TermdbTest TSNE"
+					}
+				},
+				{
+					"question": "Color the t-SNE by diagnosis group",
+					"answer": {
+						"plotName": "TermdbTest TSNE",
+						"colorTerm": "diaggrp"
+					}
+				},
+				{
+					"question": "Divide the t-SNE by sex",
+					"answer": {
+						"plotName": "TermdbTest TSNE",
+						"divideTerm": "sex"
+					}
+				},
+				{
+					"question": "Show t-SNE with ancestry as shape",
+					"answer": {
+						"plotName": "TermdbTest TSNE",
+						"shapeTerm": "genetic_race"
+					}
+				},
+				{
+					"question": "Show t-SNE divided by diagnosis group and colored by age",
+					"answer": {
+						"plotName": "TermdbTest TSNE",
+						"divideTerm": "diaggrp",
+						"colorTerm": "agedx"
+					}
+				},
+				{
+					"question": "Remove the color from the t-SNE",
+					"answer": {
+						"plotName": "TermdbTest TSNE",
+						"colorTerm": null
+					}
+				},
+				{
+					"question": "Show t-SNE colored by sex for patients under 20",
+					"answer": {
+						"plotName": "TermdbTest TSNE",
+						"colorTerm": "sex",
+						"simpleFilter": [
+							{
+								"term": "agedx",
+								"stop": 20
+							}
+						]
+					}
+				}
+			],
+			"TestData": [
+				{
+					"question": "Color the t-SNE by MYC expression",
+					"answer": {
+						"plotName": "TermdbTest TSNE",
+						"colorTerm": "MYC"
+					}
+				},
+				{
+					"question": "Show t-SNE shaped by diagnosis group for female patients",
+					"answer": {
+						"plotName": "TermdbTest TSNE",
+						"shapeTerm": "diaggrp",
+						"simpleFilter": [
+							{
+								"term": "sex",
+								"category": "2"
+							}
+						]
 					}
 				}
 			]
@@ -628,6 +766,12 @@
 				"term": "diaggrp",
 				"childType": "barchart"
 			}
+		}
+	],
+	"prebuiltPlots": [
+		{
+			"name": "TermdbTest TSNE",
+			"chartType": "sampleScatter"
 		}
 	]
 }
