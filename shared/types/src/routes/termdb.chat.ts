@@ -104,7 +104,7 @@ export type plot_type = {
 	/** When type == plot, show the corresponding plot in the plot field */
 	type: 'plot'
 	/** The type of plot to be displayed on the UI. */
-	plot: 'summary' | 'dge' | 'none' | 'survival' | 'matrix'
+	plot: 'summary' | 'dge' | 'none' | 'survival' | 'matrix' | 'sampleScatter'
 }
 
 export type DEType = {
@@ -122,5 +122,18 @@ export type MatrixType = {
 	/** Names of genes to include as gene variant rows in the matrix (e.g. "TP53", "KRAS", "NRAS") */
 	geneNames?: string[]
 	/** Optional simple filter terms to restrict the sample set */
+	simpleFilter?: FilterTerm[]
+}
+
+export type SampleScatterType = {
+	/** Name of the pre-built plot (e.g. "Transcriptome t-SNE", "Transcriptome UMAP") */
+	plotName: string
+	/** Term or gene name to overlay as color, or null to remove color overlay */
+	colorTW?: string | null
+	/** Term or gene name to overlay as shape, or null to remove shape overlay */
+	shapeTW?: string | null
+	/** Term or gene name to overlay as Z-divide, or null to remove divide overlay */
+	term0?: string | null
+	/** Optional simple filter terms */
 	simpleFilter?: FilterTerm[]
 }
