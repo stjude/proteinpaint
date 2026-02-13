@@ -65,6 +65,7 @@ export const routeFiles = [
 	import('../routes/termdb.topTermsByType.ts'),
 	import('../routes/termdb.topVariablyExpressedGenes.ts'),
 	import('../routes/termdb.violin.ts'),
+	import('../routes/termdb.frequencyChart.ts'),
 	import('../routes/tileserver.ts'),
 	import('../routes/wsimages.ts'),
 	import('../routes/wsisamples.ts'),

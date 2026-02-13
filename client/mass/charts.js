@@ -243,7 +243,12 @@ function getChartTypeList(self, state) {
 			clickTo: self.showTree_select1term,
 			usecase: { target: 'frequencyChart', detail: 'term' }
 		},
-
+		{
+			label: 'Frequency Chart2',
+			chartType: 'frequencyChart2',
+			clickTo: self.showTree_select1term,
+			usecase: { target: 'frequencyChart', detail: 'term' }
+		},
 		{
 			label: 'Cumulative Incidence',
 			chartType: 'cuminc',

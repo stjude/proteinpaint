@@ -1,0 +1,148 @@
+import type { AppApi } from '#rx'
+import { roundValueAuto } from '#shared/roundValue.js'
+
+/** Builds X/Y min-max control inputs from data range. Uses fallback 0–1 when range is invalid. */
+export function getMinMaxInputs(
+	range: { xMin: number; xMax: number; yMin: number; yMax: number },
+	frequencyChart2?: { dom: { controls: any } }
+) {
+	const fallback = { xMin: 0, xMax: 1, yMin: 0, yMax: 1 }
+	const valid =
+		[range.xMin, range.xMax, range.yMin, range.yMax].every(n => Number.isFinite(n)) &&
+		range.xMin < range.xMax &&
+		range.yMin < range.yMax
+	const r = valid ? range : fallback
+	const xMin = roundValueAuto(r.xMin)
+	const xMax = roundValueAuto(r.xMax)
+	const xStep = (xMax - xMin) / 10 || 0.1
+	const yMin = roundValueAuto(r.yMin)
+	const yMax = roundValueAuto(r.yMax)
+	const yStep = (yMax - yMin) / 10 || 0.1
+
+	return [
+		{
+			label: 'X axis minimum',
+			type: 'number',
+			chartType: 'frequencyChart2',
+			settingsKey: 'minXScale',
+			title: `Set the minimum X axis value between ${xMin} and ${xMax}`,
+			placeholder: `${xMin}`,
+			min: xMin,
+			max: xMax,
+			step: xStep
+		},
+		{
+			label: 'X axis maximum',
+			type: 'number',
+			chartType: 'frequencyChart2',
+			settingsKey: 'maxXScale',
+			title: `Set the maximum X axis value between ${xMin} and ${xMax}`,
+			placeholder: `${xMax}`,
+			min: xMin,
+			max: xMax,
+			step: xStep,
+			...(frequencyChart2 && {
+				processInput: (value: number) => {
+					const sel = frequencyChart2.dom.controls.selectAll('input').filter(function (this: HTMLInputElement) {
+						return this.placeholder === `${xMax}`
+					})
+					if (!sel.node()?.value) return xMax
+					return value
+				}
+			})
+		},
+		{
+			label: 'Y axis minimum',
+			type: 'number',
+			chartType: 'frequencyChart2',
+			settingsKey: 'minYScale',
+			title: `Set the minimum Y axis value between ${yMin} and ${yMax}`,
+			placeholder: `${yMin}`,
+			min: yMin,
+			max: yMax,
+			step: yStep
+		},
+		{
+			label: 'Y axis maximum',
+			type: 'number',
+			chartType: 'frequencyChart2',
+			settingsKey: 'maxYScale',
+			title: `Set the maximum Y axis value between ${yMin} and ${yMax}`,
+			placeholder: `${yMax}`,
+			min: yMin,
+			max: yMax,
+			step: yStep,
+			...(frequencyChart2 && {
+				processInput: (value: number) => {
+					const sel = frequencyChart2.dom.controls.selectAll('input').filter(function (this: HTMLInputElement) {
+						return this.placeholder === `${yMax}`
+					})
+					if (!sel.node()?.value) return yMax
+					return value
+				}
+			})
+		}
+	]
+}
+
+function getBaseInputs(app: AppApi) {
+	return [
+		{
+			type: 'term',
+			configKey: 'tw',
+			chartType: 'frequencyChart2',
+			usecase: { target: 'frequencyChart2', detail: 'numeric' },
+			label: 'Date/Time',
+			title: 'Date or time term for frequency analysis',
+			vocabApi: app.vocabApi,
+			menuOptions: 'edit',
+			numericEditMenuVersion: ['continuous']
+		},
+		{
+			label: 'Show cumulative frequency',
+			boxLabel: '',
+			type: 'checkbox',
+			chartType: 'frequencyChart2',
+			settingsKey: 'showCumulativeFrequency',
+			title: 'Option to show the cumulative number of events over time'
+		},
+		{
+			label: 'Plot height',
+			title: 'Set the plot height in pixels, >=200',
+			type: 'number',
+			chartType: 'frequencyChart2',
+			settingsKey: 'svgh',
+			debounceInterval: 500,
+			min: 200,
+			step: 25
+		},
+		{
+			label: 'Plot width',
+			title: 'Set the plot width in pixels, >=200',
+			type: 'number',
+			chartType: 'frequencyChart2',
+			settingsKey: 'svgw',
+			debounceInterval: 500,
+			min: 200,
+			step: 25
+		},
+		{
+			label: 'Default color',
+			type: 'color',
+			chartType: 'frequencyChart2',
+			settingsKey: 'color'
+		}
+	]
+}
+
+export function getFrequencyChart2Controls(
+	app: AppApi,
+	range?: { xMin: number; xMax: number; yMin: number; yMax: number },
+	frequencyChart2?: { dom: { controls: any } }
+) {
+	const inputs: any[] = getBaseInputs(app)
+	if (range) {
+		inputs.push(...getMinMaxInputs(range, frequencyChart2))
+	}
+	return inputs
+}

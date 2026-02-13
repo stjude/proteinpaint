@@ -26,6 +26,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'Disco':
 			return await import('./disco/Disco.ts')
 
+		case 'frequencyChart2':
+			return await import(`./frequencyChart2/FrequencyChart2.ts`)
+
 		case 'grin2':
 			return await import('./grin2/grin2')
 

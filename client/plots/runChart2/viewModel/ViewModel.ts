@@ -26,6 +26,12 @@ export class RunChart2ViewModel {
 	}
 
 	map(data: any) {
+		// Reset so domain is always derived from current data (fixes stale range when data/filter/term changes)
+		this.xMin = Infinity
+		this.xMax = -Infinity
+		this.yMin = Infinity
+		this.yMax = -Infinity
+
 		let totalSampleCount = 0
 		for (const series of data) {
 			if (!series.points || series.points.length === 0) continue
@@ -53,6 +59,11 @@ export class RunChart2ViewModel {
 			const xPadded = usePaddingX ? this.setDomain(this.xMin, this.xMax, 0.02) : null
 			xMinForDomain = this.settings.minXScale ?? (xPadded ? xPadded[0] : this.xMin)
 			xMaxForDomain = this.settings.maxXScale ?? (xPadded ? xPadded[1] : this.xMax)
+			// Align left domain to first major tick year (even year) so the first year label appears at the axis origin, not beyond 0
+			const firstEvenYear = 2 * Math.floor(this.xMin / 2)
+			if (firstEvenYear >= Math.floor(xMinForDomain) && firstEvenYear <= xMaxForDomain) {
+				xMinForDomain = Math.min(xMinForDomain, firstEvenYear)
+			}
 
 			const usePaddingY = this.settings.minYScale == null && this.settings.maxYScale == null
 			const yPadded = usePaddingY ? this.setDomain(this.yMin, this.yMax, 0.1) : null
