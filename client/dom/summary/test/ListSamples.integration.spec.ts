@@ -301,9 +301,10 @@ tape('ListSamples.getData() for term=numeric and term2=samplelst returns the cor
 		term: { term: JSON.parse(JSON.stringify(termjson['agedx'])), q: { mode: 'continuous' }, $id: 'term1' },
 		term2: mockTerm2
 	}
+	const key = 'Group 1'
 	const mockBins = { term1: {}, term2: {} }
 	const mockPlot = {
-		seriesId: 'Group 1',
+		seriesId: key,
 		chartId: ''
 	}
 
@@ -314,13 +315,30 @@ tape('ListSamples.getData() for term=numeric and term2=samplelst returns the cor
 		start: -2,
 		end: 25
 	})
+
+	const sampleLstTvs = listSamples.tvslst.lst[1]
+	const sampleLstTvsTerm = sampleLstTvs.tvs.term
+	const expected = mockTerm2.term.values[key].list.length
+
+	//Samplelst terms require a specific tvs entry, unlike the others
+	//Test the construction is correct before testing the data output
+	test.true(
+		sampleLstTvs.noEdit == true && sampleLstTvsTerm.values.group,
+		'Should create tvs entry specific for sampleLst terms'
+	)
+	test.equal(
+		sampleLstTvsTerm.values.group.list.length,
+		expected,
+		`Should include correct number of samples in sampleLst tvs entry`
+	)
+
 	const data = await listSamples.getData()
 
+	//Data output tests
 	test.true(
 		typeof data == 'object' && data.lst && data.refs && data.samples,
 		'Should return data object from getData() with a list, references, and sample info'
 	)
-	const expected = 13
 	test.equal(
 		data.lst.length,
 		expected,
