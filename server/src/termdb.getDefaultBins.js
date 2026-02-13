@@ -44,7 +44,8 @@ export async function trigger_getDefaultBins(q, ds, res) {
 				dslabel: q.dslabel,
 				filter: q.filter,
 				filter0: q.filter0,
-				terms: [tw]
+				terms: [tw],
+				__abortSignal: q.__abortSignal
 			}
 			const data = await ds.queries[tw.term.type].get(args)
 			const termData = data.term2sample2value.get(tw.$id)

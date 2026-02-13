@@ -1,4 +1,5 @@
 import type { BoxPlotRequest, BoxPlotResponse, RouteApi, ValidGetDataResponse, DescrStats } from '#types'
+import type { ReqQueryAddons } from './types.ts'
 import { boxplotPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import { boxplot_getvalue } from '../src/utils.js'
@@ -24,7 +25,7 @@ export const api: RouteApi = {
 
 function init({ genomes }) {
 	return async (req, res) => {
-		const q: BoxPlotRequest = req.query
+		const q: BoxPlotRequest & ReqQueryAddons = req.query
 		const genome = genomes[q.genome]
 		if (!genome) throw new Error('invalid genome name')
 		const ds = genome.datasets?.[q.dslabel]
@@ -34,7 +35,10 @@ function init({ genomes }) {
 		if (q.divideTw) terms.push(q.divideTw)
 
 		try {
-			const data = await getData({ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__ }, ds)
+			const data = await getData(
+				{ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__, __abortSignal: q.__abortSignal },
+				ds
+			)
 			if (data.error) throw new Error(data.error)
 
 			const { absMin, absMax, bins, charts, uncomputableValues, descrStats, outlierMin, outlierMax } =

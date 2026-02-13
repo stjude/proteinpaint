@@ -16,7 +16,6 @@ export type DescrStatsRequest = {
 	filter?: Filter
 	/** optional gdc filter */
 	filter0?: any
-	__protected__?: any //reuse definition from termdb.matrix.ts!!!
 }
 
 export type DescrStats = {

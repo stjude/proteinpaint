@@ -10,6 +10,7 @@ import serverconfig from './serverconfig.js'
 import { Readable } from 'stream'
 import { minimatch } from 'minimatch'
 export * from './cachedFetch.js'
+export * from './xfetch.js'
 
 const { tabix, samtools, bcftools, bigBedToBed, bigBedNamedItems, bigBedInfo } = serverconfig
 
