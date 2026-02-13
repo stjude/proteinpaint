@@ -41,6 +41,8 @@ export async function xfetch(url, opts = {}) {
 
 	return await ky(url, opts)
 		.then(async r => {
+			const contentType = r.headers.get('content-type')
+			const payload = contentType == 'application/json' ? await r.json() : await r.text()
 			if (!r.ok || (typeof r?.status == 'number' && r?.status > 399 && r.status < 500)) {
 				// catch HTTP 4xx that are due to client request,
 				// not network or server errors that are considered recoverable
@@ -50,8 +52,6 @@ export async function xfetch(url, opts = {}) {
 				// may use isRecoverableError() above to detect
 				throw e
 			}
-			const contentType = r.headers.get('content-type')
-			const payload = contentType == 'application/json' ? await r.json() : await r.text()
 			return payload
 		})
 		.catch(e => {
@@ -59,16 +59,11 @@ export async function xfetch(url, opts = {}) {
 		})
 }
 
-// retryDelay is equivalent to ky's retry.backoffLimit option,
-// which by default is computed as 0.3 * (2 ** (attemptCount - 1)) * backoffLimit
-const retryMax = serverconfig.features?.gdcGeneExpRetryMax || 2
-const retryDelay = serverconfig.features?.gdcGeneExpRetryDelay || 10000
-
 const retriesByHostpath = serverconfig.retriesByHostpath || {
-	'gdc.cancer.gov/gene_expression/values': {
-		limit: 3,
-		backoffLimit: 10000
-	},
+	// 'gdc.cancer.gov/gene_expression/values': {
+	// 	limit: 3,
+	// 	backoffLimit: 10000
+	// },
 	'gdc.cancer.gov': {
 		limit: 2,
 		backoffLimit: 10000

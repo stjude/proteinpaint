@@ -94,7 +94,7 @@ export async function validate_ssm2canonicalisoform(api, getHostHeaders) {
 				joinUrl(host.rest, 'ssms'),
 				q.ssm_id + '?fields=consequence.transcript.is_canonical,consequence.transcript.transcript_id'
 			),
-			{ timeout: false, headers }
+			{ timeout: false, headers, signal: q.__abortSignal }
 		)
 		if (!Array.isArray(re?.data?.consequence)) throw '.data.consequence not array'
 		const canonical = re.data.consequence.find(i => i.transcript.is_canonical)
@@ -225,7 +225,7 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 			term2sample2value.set(id, new Map())
 		}
 		let bySampleId
-		//for (let i = 0; i < retryMax + 1; i++) {
+
 		try {
 			// throw new Error('no gene lines') // uncomment to test
 			bySampleId = await getExpressionData(q, ensgLst, cases4clustering, ensg2id, term2sample2value, ds)
@@ -233,14 +233,10 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 			const t4 = new Date()
 			mayLog('gene-case matrix built,', Object.keys(bySampleId).length, 'cases,', t4 - t3, 'ms')
 		} catch (e) {
-			// 	// TODO: use custom Error class/name/code to reliably detect
+			// TODO: use custom Error class/name/code to reliably detect
 			if (!String(e).includes('no gene lines')) throw e
 			// 1/27/2026 the message below is per Himanso's feedback in https://gdc-ctds.atlassian.net/browse/SV-2709
-			/*if (i >= retryMax)*/ throw unknownApiError
-			// 	const delay = Math.random() * (retryDelay * Math.pow(2, i)) // exponential backoff with random jitter
-			// 	await sleep(delay) // wait until the next retry
-			// 	mayLog(`(!) no gene lines error for getExpressionData() request #${i + 1}`)
-			// }
+			throw unknownApiError
 		}
 		return { term2sample2value, byTermId, bySampleId, skippedSexChrGenes }
 	}
@@ -373,7 +369,8 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2id, term2sa
 		method: 'POST',
 		timeout: false,
 		headers,
-		body: JSON.stringify(arg)
+		body: JSON.stringify(arg),
+		signal: query.__abortSignal
 	})
 	if (typeof re != 'string') throw `${unknownApiError} (response.body is not tsv text)`
 	const lines = re.trim().split('\n')
@@ -658,7 +655,8 @@ export function validate_query_geneCnv(ds) {
 				size: 100000,
 				fields: getFields(opts),
 				filters: getFilter(opts)
-			}
+			},
+			signal: opts.__abortSignal
 		})
 
 		if (!Array.isArray(re?.data?.hits)) throw 'geneCnv response body is not {data:hits[]}'
@@ -785,7 +783,8 @@ async function getCnvFusion4oneCase(opts, ds) {
 			size: 10000,
 			fields: fields.join(','),
 			filters: getFilter(opts)
-		}
+		},
+		signal: opts.__abortSignal
 	})
 	if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
 
@@ -1961,7 +1960,13 @@ export async function get_termlst2size(twLst, q, combination, ds) {
 	const query = termid2size_query(termPaths)
 	const variables = termid2size_filters(q, ds)
 	const { host, headers } = ds.getHostHeaders(q)
-	const re = await xfetch(host.graphql, { method: 'POST', timeout: false, headers, body: { query, variables } })
+	const re = await xfetch(host.graphql, {
+		method: 'POST',
+		timeout: false,
+		headers,
+		body: { query, variables },
+		signal: q.__abortSignal
+	})
 
 	// levels to traverse in api return
 	const keys = ['data', 'explore', 'cases', 'aggregations']
@@ -2011,7 +2016,8 @@ export function validate_m2csq(ds) {
 		const { host, headers } = ds.getHostHeaders(q)
 		const re = await xfetch(host.rest + '/ssms/' + q.ssm_id + '?fields=' + fields.join(','), {
 			timeout: false,
-			headers
+			headers,
+			signal: query.__abortSignal
 		})
 
 		if (!re.data || !re.data.consequence) throw 'returned data not .data.consequence'
@@ -2140,7 +2146,8 @@ async function convert2caseId(q, ds) {
 					{ op: '=', content: { field: 'samples.submitter_id', value: q.sample } }
 				]
 			}
-		}
+		},
+		signal: query.__abortSignal
 	})
 
 	for (const h of re.data.hits) {
@@ -2170,7 +2177,13 @@ async function getCaseidByFileid(q, fileId, ds) {
 		fields: 'cases.case_id'
 	}
 	const { host, headers } = ds.getHostHeaders(q)
-	const re = await xfetch(joinUrl(host.rest, 'files', fileId), { method: 'POST', timeout: false, headers, body })
+	const re = await xfetch(joinUrl(host.rest, 'files', fileId), {
+		method: 'POST',
+		timeout: false,
+		headers,
+		body,
+		signal: q.__abortSignal
+	})
 	if (!re.data?.cases?.[0].case_id) throw 'structure not re.data.cases[].case_id'
 	return re.data?.cases[0].case_id
 }
@@ -2193,7 +2206,13 @@ async function getSinglecellDEfile(caseuuid, q, ds) {
 	}
 
 	const { host, headers } = ds.getHostHeaders(q)
-	const re = await xfetch(joinUrl(host.rest, 'files'), { method: 'POST', timeout: false, headers, body })
+	const re = await xfetch(joinUrl(host.rest, 'files'), {
+		method: 'POST',
+		timeout: false,
+		headers,
+		body,
+		signal: q.__abortSignal
+	})
 	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
 	/* can have multiple hits. a hit looks like:
 	{
@@ -2359,7 +2378,8 @@ async function getSingleSampleMutations(query, ds, genome) {
 				size: 10000, // ssm max!
 				fields: isoform2ssm_query1_getvariant.fields.join(','),
 				filters: isoform2ssm_query1_getvariant.filters(query).filters
-			}
+			},
+			signal: query.__abortSignal
 		})
 
 		if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total not integer'

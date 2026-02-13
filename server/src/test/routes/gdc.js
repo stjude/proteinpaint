@@ -3,7 +3,7 @@
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '../../serverconfig.js'
-import ky from 'ky'
+// import ky from 'ky'
 
 // simulate GDC sessionid to token mapping
 // sessionid will be the index of the entry in the array
@@ -85,7 +85,7 @@ export default async function setRoutes(app, basepath) {
 
 	let forceError = true
 	app.get('/ky-retry-test', async (req, res) => {
-		// if (!serverconfig.debugmode) return false
+		if (!serverconfig.debugmode) return { ok: true, status: 'ok' }
 		// test of ky retry option, used in conjuction with the example
 		if (forceError) {
 			forceError = !forceError
