@@ -1,4 +1,5 @@
-import type { ViolinRequest, ViolinResponse, RouteApi, ValidGetDataResponse, TermWrapper, ReqQueryAddons } from '#types'
+import type { ViolinRequest, ViolinResponse, RouteApi, ValidGetDataResponse, TermWrapper } from '#types'
+import type { ReqQueryAddons } from './types.ts'
 import { violinPayload } from '#types/checkers'
 import { scaleLinear, scaleLog } from 'd3'
 import { run_rust } from '@sjcrh/proteinpaint-rust'

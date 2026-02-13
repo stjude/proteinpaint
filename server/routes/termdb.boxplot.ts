@@ -1,11 +1,5 @@
-import type {
-	BoxPlotRequest,
-	BoxPlotResponse,
-	RouteApi,
-	ValidGetDataResponse,
-	DescrStats,
-	ReqQueryAddons
-} from '#types'
+import type { BoxPlotRequest, BoxPlotResponse, RouteApi, ValidGetDataResponse, DescrStats } from '#types'
+import type { ReqQueryAddons } from './types.ts'
 import { boxplotPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import { boxplot_getvalue } from '../src/utils.js'

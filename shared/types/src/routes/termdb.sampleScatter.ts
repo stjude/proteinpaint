@@ -15,6 +15,8 @@ export type TermdbSampleScatterRequest = {
 	filter0?: any
 	chartType?: string
 	singleCellPlot?: any
+	colorColumn?: any
+	excludeOutliers?: any
 }
 
 export type ScatterSample = {

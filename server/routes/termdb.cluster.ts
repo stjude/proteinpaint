@@ -11,9 +11,9 @@ import type {
 	GeneExpressionQuery,
 	GeneExpressionQueryNative,
 	GeneExpressionQueryGdc,
-	RouteApi,
-	ReqQueryAddons
+	RouteApi
 } from '#types'
+import type { ReqQueryAddons } from './types.ts'
 import { termdbClusterPayload } from '#types/checkers'
 import * as utils from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'

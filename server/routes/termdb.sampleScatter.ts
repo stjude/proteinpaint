@@ -10,9 +10,9 @@ import type {
 	TermWrapper,
 	Term,
 	ValidGetDataResponse,
-	Cell,
-	ReqQueryAddons
+	Cell
 } from '#types'
+import type { ReqQueryAddons } from './types.ts'
 import { termdbSampleScatterPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import path from 'path'

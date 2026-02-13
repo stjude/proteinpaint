@@ -1,4 +1,5 @@
-import type { DescrStatsRequest, DescrStatsResponse, DescrStats, RouteApi, ReqQueryAddons } from '#types'
+import type { DescrStatsRequest, DescrStatsResponse, DescrStats, RouteApi } from '#types'
+import type { ReqQueryAddons } from './types.ts'
 import { descrStatsPayload } from '#types/checkers'
 import { getData } from '#src/termdb.matrix.js'
 import computePercentile from '#shared/compute.percentile.js'
