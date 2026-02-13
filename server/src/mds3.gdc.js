@@ -370,7 +370,7 @@ async function getExpressionData(q, gene_ids, cases4clustering, ensg2id, term2sa
 		timeout: false,
 		headers,
 		body: JSON.stringify(arg),
-		signal: query.__abortSignal
+		signal: q.__abortSignal
 	})
 	if (typeof re != 'string') throw `${unknownApiError} (response.body is not tsv text)`
 	const lines = re.trim().split('\n')
@@ -2017,7 +2017,7 @@ export function validate_m2csq(ds) {
 		const re = await xfetch(host.rest + '/ssms/' + q.ssm_id + '?fields=' + fields.join(','), {
 			timeout: false,
 			headers,
-			signal: query.__abortSignal
+			signal: q.__abortSignal
 		})
 
 		if (!re.data || !re.data.consequence) throw 'returned data not .data.consequence'
@@ -2147,7 +2147,7 @@ async function convert2caseId(q, ds) {
 				]
 			}
 		},
-		signal: query.__abortSignal
+		signal: q.__abortSignal
 	})
 
 	for (const h of re.data.hits) {

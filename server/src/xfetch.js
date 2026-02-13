@@ -4,8 +4,10 @@ import ky from 'ky'
 // track AbortController instance by filter0 object,
 // to get a signal to cancel active requests after a client
 // connection closes unexpectedly
-export const abortCtrlByFilter0 = new WeakMap()
-export const signalByQ = new WeakMap()
+export const abortCtrlBy = {
+	filter0: new WeakMap(),
+	signal: new WeakMap()
+}
 
 // xfetch = extended fetch with retry support (needed for GDC API)
 // First two arguments are the same as native fetch,
@@ -28,8 +30,8 @@ export async function xfetch(url, opts = {}) {
 			// the nested query processing failed to pass req.query.__abortSignal from the app.middleware,
 			// resort to the alternative method of finding the applicable abortSignal that's tracked by req.query,filter0;
 			// if filter0 is null, this will not return anything
-			filter0 = opts.body.case_filters?.content?.find(f => abortCtrlByFilter0.has(f))
-			if (filter0) opts.signal = abortCtrlByFilter0.get(filter0)?.signal
+			filter0 = opts.body.case_filters?.content?.find(f => abortCtrlBy.filter0.has(f))
+			if (filter0) opts.signal = abortCtrlBy.filter0.get(filter0)?.signal
 		}
 		// console.log(24, opts.signal, filter0, opts.body.case_filters?.content)
 		opts.body = JSON.stringify(opts.body)

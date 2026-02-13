@@ -3,7 +3,7 @@ import { string2pos } from '#shared/common.js'
 import { get_samples, get_term_cte, interpolateSqlValues, get_active_groupset } from './termdb.sql.js'
 import { getFilterCTEs } from './termdb.filter.js'
 import serverconfig from './serverconfig.js'
-import { read_file, trackXfetch, abortCtrlByFilter0 } from './utils.js'
+import { read_file, trackXfetch } from './utils.js'
 import {
 	TermTypes,
 	isDictionaryType,
@@ -63,7 +63,6 @@ export async function getData(q, ds, onlyChildren = false) {
 			}
 		}
 		trackXfetch(null)
-		abortCtrlByFilter0.delete(q.filter0)
 		return data
 	} catch (e) {
 		//console.log(72, 'termdb.matrix getData() catch')

@@ -13,7 +13,7 @@ import jsonwebtoken from 'jsonwebtoken'
 import fs from 'fs'
 import crypto from 'crypto'
 import { ReqResCache } from '@sjcrh/augen'
-import { abortCtrlByFilter0 } from './xfetch.js'
+import { abortCtrlBy } from './xfetch.js'
 
 const basepath = serverconfig.basepath || ''
 
@@ -260,6 +260,14 @@ function maySetAbortCtrl(req, res) {
 	const abortCtrl = new AbortController()
 	q.__abortSignal = abortCtrl.signal
 
+	abortCtrlBy.signal.set(abortCtrl.signal, abortCtrl)
+	if (q.filter0) {
+		// in case q.__abortSignal is not passed to the xfetch caller,
+		// abortCtrlByFilter0.get(req.query.filter0)?.signal may be used within xfetch()
+		// as an alternative means to get the applicable abortSignal
+		abortCtrlBy.filter0.set(req.query.filter0, abortCtrl)
+	}
+
 	if (q.dslabel) {
 		let isFinished = false
 		res.on('finish', () => {
@@ -267,6 +275,8 @@ function maySetAbortCtrl(req, res) {
 			isFinished = true
 		})
 		res.on('close', () => {
+			abortCtrlBy.filter0.delete(q.filter0)
+			abortCtrlBy.signal.delete(abortCtrl.signal)
 			//console.log(156, 'res.on(close)', isFinished, res.writableEnded, q.filter0?.content?.[0]?.content, abortCtrl.signal)
 			if (isFinished || res.writableEnded) return
 			if (serverconfig.debugmode)
@@ -278,12 +288,5 @@ function maySetAbortCtrl(req, res) {
 			abortCtrl.abort()
 			//}, 0) // uncomment to log the cohort filter of requests that got aborted in xfetch()
 		})
-	}
-
-	if (q.filter0) {
-		// in case q.__abortSignal is not passed to the xfetch caller,
-		// abortCtrlByFilter0.get(req.query.filter0)?.signal may be used within xfetch()
-		// as an alternative means to get the applicable abortSignal
-		abortCtrlByFilter0.set(req.query.filter0, abortCtrl)
 	}
 }
