@@ -179,7 +179,29 @@ export function getLegendData(legendGroups, refs, self) {
 						maxLabel: domain.slice(-1)[0],
 						labels: { left: 'Loss', right: 'Gain' },
 						parents: [Object.assign(setLegendAttr(loss), loss), Object.assign(setLegendAttr(gain), gain)],
-						samples: new Set([...gain.samples, ...loss.samples])
+						samples: new Set([...gain.samples, ...loss.samples]),
+						numericInputs: {
+							cutoffMode: s.cnvValues.cutoffMode,
+							defaultPercentile: s.cnvValues.defaultPercentile,
+							callback: async obj => {
+								await self.app.dispatch({
+									type: 'plot_edit',
+									id: self.id,
+									config: {
+										settings: {
+											matrix: {
+												cnvValues: {
+													cutoffMode: obj.cutoffMode,
+													min: obj.min,
+													max: obj.max,
+													percentile: obj.percentile
+												}
+											}
+										}
+									}
+								})
+							}
+						}
 					}
 					delete legend.values[gain.key]
 					delete legend.values[loss.key]
@@ -202,11 +224,10 @@ export function getLegendData(legendGroups, refs, self) {
 					const item = legend.values[key]
 					const count = item.samples?.size
 					if (item.scale) {
-						// a legend item with scale, that has not been combined as CNV_gain_loss above
 						const colors = item.scales?.legend?.range || getColors(item)
 						const domain =
 							item.scales?.legend?.domain || setColorScaleDomain(item.minLabel, item.maxLabel, item.domain, colors)
-						return {
+						const opts = {
 							termid: $id,
 							key: item.key,
 							text: this.getLegendItemText(item, count, t, s),
@@ -224,6 +245,10 @@ export function getLegendData(legendGroups, refs, self) {
 							parents: item.parents,
 							labels: item.labels
 						}
+						if (item.numericInputs) {
+							opts.numericInputs = item.numericInputs
+						}
+						return opts
 					} else {
 						return {
 							termid: $id,

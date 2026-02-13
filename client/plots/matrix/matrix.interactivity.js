@@ -2867,50 +2867,50 @@ function setLengendActions(self) {
 					})
 			}
 
-			// adding the option to specify criteria for a CNV alteration for numeric CNV
-			const cnv =
-				Object.keys(self.config.cnvCutoffs).length !== 0
-					? self.config.cnvCutoffs
-					: self.state.termdbConfig?.queries?.cnv
-			const keys = Object.keys(cnv)
-			if (
-				targetData.dt.includes(dtcnv) &&
-				legendGrpFilterIndex == -1 &&
-				(keys.includes('cnvGainCutoff') || keys.includes('cnvLossCutoff' || keys.includes('cnvMaxLength')))
-			) {
-				const existingCnvSetDiv = div.select('.cnv-set-div')
-				if (!existingCnvSetDiv.empty()) existingCnvSetDiv.remove()
+			// // adding the option to specify criteria for a CNV alteration for numeric CNV
+			// const cnv =
+			// 	Object.keys(self.config.cnvCutoffs).length !== 0
+			// 		? self.config.cnvCutoffs
+			// 		: self.state.termdbConfig?.queries?.cnv
+			// const keys = Object.keys(cnv)
+			// if (
+			// 	targetData.dt.includes(dtcnv) &&
+			// 	legendGrpFilterIndex == -1 &&
+			// 	(keys.includes('cnvGainCutoff') || keys.includes('cnvLossCutoff' || keys.includes('cnvMaxLength')))
+			// ) {
+			// 	const existingCnvSetDiv = div.select('.cnv-set-div')
+			// 	if (!existingCnvSetDiv.empty()) existingCnvSetDiv.remove()
 
-				const cnvSetDiv = div.append('div').classed('cnv-set-div', true)
+			// 	const cnvSetDiv = div.append('div').classed('cnv-set-div', true)
 
-				// render cnv config
-				const arg = {
-					holder: cnvSetDiv,
-					cnvGainCutoff: cnv.cnvGainCutoff,
-					cnvLossCutoff: cnv.cnvLossCutoff,
-					cnvMaxLength: cnv.cnvMaxLength,
-					callback: config => {
-						menuGrp.hide()
-						self.config.cnvCutoffs = structuredClone(config)
-						for (const termgroup of self.config.termgroups) {
-							for (const t of termgroup.lst) {
-								if (t.term.type == 'geneVariant') {
-									t.q.cnvGainCutoff = config.cnvGainCutoff
-									t.q.cnvLossCutoff = config.cnvLossCutoff
-									t.q.cnvMaxLength = config.cnvMaxLength
-								}
-							}
-						}
-						self.app.dispatch({
-							type: 'plot_edit',
-							id: self.id,
-							config: self.config
-						})
-					}
-				}
+			// 	// render cnv config
+			// 	const arg = {
+			// 		holder: cnvSetDiv,
+			// 		cnvGainCutoff: cnv.cnvGainCutoff,
+			// 		cnvLossCutoff: cnv.cnvLossCutoff,
+			// 		cnvMaxLength: cnv.cnvMaxLength,
+			// 		callback: config => {
+			// 			menuGrp.hide()
+			// 			self.config.cnvCutoffs = structuredClone(config)
+			// 			for (const termgroup of self.config.termgroups) {
+			// 				for (const t of termgroup.lst) {
+			// 					if (t.term.type == 'geneVariant') {
+			// 						t.q.cnvGainCutoff = config.cnvGainCutoff
+			// 						t.q.cnvLossCutoff = config.cnvLossCutoff
+			// 						t.q.cnvMaxLength = config.cnvMaxLength
+			// 					}
+			// 				}
+			// 			}
+			// 			self.app.dispatch({
+			// 				type: 'plot_edit',
+			// 				id: self.id,
+			// 				config: self.config
+			// 			})
+			// 		}
+			// 	}
 
-				renderCnvConfig(arg)
-			}
+			// 	renderCnvConfig(arg)
+			// }
 			menuGrp.showunder(event.target)
 			return
 		}
@@ -2971,6 +2971,7 @@ function setLengendActions(self) {
 			//Add the hard filter option
 			if (
 				term?.type !== 'termCollection' &&
+				targetItemData.dt != 4 &&
 				(!targetItemData.dt || self.type !== 'hierCluster' || legendFilterIndex !== -1)
 			) {
 				// Do not show the hard filter option for hierCluster geneVariant legend items.
@@ -3109,7 +3110,7 @@ function setLengendActions(self) {
 
 			if (targetItemData.isLegendItem) {
 				// Add the soft filter option only for the not already hidden geneVariant legend
-				if (targetItemData.dt && legendFilterIndex == -1 && term?.type !== 'termCollection') {
+				if (targetItemData.dt && legendFilterIndex == -1 && term?.type !== 'termCollection' && targetItemData.dt != 4) {
 					// only when filtering a not already hidden geneVariant legend, show the soft filter
 					div
 						.append('div')
