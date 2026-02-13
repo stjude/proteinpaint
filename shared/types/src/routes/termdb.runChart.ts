@@ -11,7 +11,7 @@ export type RunChartRequest = {
 	xtw: { term: { id: string }; q?: { mode?: 'continuous' | 'discrete' }; $id?: string }
 	/** term wrapper for y axis: { term, q } */
 	ytw: { term: { id: string }; q?: { mode?: string }; $id?: string }
-	aggregation: 'median' | 'count'
+	aggregation: 'median'
 	filter?: any
 	__protected__?: any // auth token for accessing protected data
 }
