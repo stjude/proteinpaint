@@ -614,6 +614,10 @@ export function getComponentApi(self) {
 		},
 		triggerAbort(reason = '') {
 			if (reason) console.info(`triggerAbort()`, reason)
+			if (abortController) {
+				abortController.abort('stale sequenceId')
+				abortController = undefined
+			}
 			for (const c of (abortControllers as Set<AbortController>).values()) {
 				try {
 					c.abort()
@@ -629,7 +633,7 @@ export function getComponentApi(self) {
 				const component = self.components[name]
 				if (Array.isArray(component)) {
 					for (const c of component) c.triggerAbort()
-				} else if (Object.keys(component).includes('triggerAbort')) {
+				} else if (typeof component.triggerAbort == 'function') {
 					component.triggerAbort()
 				} else if (component && typeof component == 'object' && !component.main) {
 					for (const subname of Object.keys(component)) {

@@ -10,7 +10,8 @@ import type {
 	TermWrapper,
 	Term,
 	ValidGetDataResponse,
-	Cell
+	Cell,
+	ReqQueryAddons
 } from '#types'
 import { termdbSampleScatterPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
@@ -44,7 +45,7 @@ const refColor = '#F5F5DC'
 2. from two numeric terms. determined by q.coordTWs[] */
 function init({ genomes }) {
 	return async function (req, res) {
-		const q = req.query satisfies TermdbSampleScatterRequest
+		const q: TermdbSampleScatterRequest & ReqQueryAddons = req.query
 		if (!q.genome || !q.dslabel) {
 			throw new Error('Genome and dataset label are required for termdb/sampleScatter request.')
 		}
@@ -65,13 +66,13 @@ function init({ genomes }) {
 			if (q.scaleDotTW) terms.push(q.scaleDotTW)
 			if (q.coordTWs) for (const tw of q.coordTWs) terms.push(tw)
 			const data = await getData(
-				{ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__ },
+				{ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__, __abortSignal: q.__abortSignal },
 				ds,
 				true // FIXME 3rd arg hardcoded to true
 			)
 			if (data.error) throw new Error(data.error)
 			let result
-			if (q.coordTWs.length > 0) {
+			if (q.coordTWs && q.coordTWs.length > 0) {
 				const tmp = await getSampleCoordinatesByTerms(req, q, ds, data as ValidGetDataResponse)
 				cohortSamples = tmp[0]
 				// coordTwData = tmp[1]

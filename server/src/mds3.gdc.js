@@ -225,18 +225,18 @@ export function gdc_validate_query_geneExpression(ds, genome) {
 			term2sample2value.set(id, new Map())
 		}
 		let bySampleId
-		for (let i = 0; i < retryMax + 1; i++) {
-			//try {
+		//for (let i = 0; i < retryMax + 1; i++) {
+		try {
 			// throw new Error('no gene lines') // uncomment to test
 			bySampleId = await getExpressionData(q, ensgLst, cases4clustering, ensg2id, term2sample2value, ds)
 			// returns mapping from uuid to submitter id; since uuid is used in term2sample2value, but need to display submitter id on ui
 			const t4 = new Date()
 			mayLog('gene-case matrix built,', Object.keys(bySampleId).length, 'cases,', t4 - t3, 'ms')
-			// } catch (e) {
+		} catch (e) {
 			// 	// TODO: use custom Error class/name/code to reliably detect
-			// 	if (!String(e).includes('no gene lines')) throw e
-			// 	// 1/27/2026 the message below is per Himanso's feedback in https://gdc-ctds.atlassian.net/browse/SV-2709
-			// 	if (i >= retryMax) throw unknownApiError
+			if (!String(e).includes('no gene lines')) throw e
+			// 1/27/2026 the message below is per Himanso's feedback in https://gdc-ctds.atlassian.net/browse/SV-2709
+			/*if (i >= retryMax)*/ throw unknownApiError
 			// 	const delay = Math.random() * (retryDelay * Math.pow(2, i)) // exponential backoff with random jitter
 			// 	await sleep(delay) // wait until the next retry
 			// 	mayLog(`(!) no gene lines error for getExpressionData() request #${i + 1}`)
@@ -465,7 +465,13 @@ async function getCases4exp(q, ds, case_filters) {
 	}
 	try {
 		const { host, headers } = ds.getHostHeaders(q)
-		const re = await xfetch(joinUrl(host.rest, 'cases'), { method: 'POST', timeout: false, headers, body })
+		const re = await xfetch(joinUrl(host.rest, 'cases'), {
+			method: 'POST',
+			timeout: false,
+			headers,
+			body,
+			signal: q.__abortSignal
+		})
 		if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
 		for (const h of re.data.hits) {
 			if (h.id && ds.__gdc.casesWithExpData.has(h.id)) {
@@ -1028,13 +1034,15 @@ async function snvindel_byisoform(opts, ds) {
 		method: 'POST',
 		timeout: false,
 		headers,
-		body: Object.assign({ size: query1.size, fields: query1.fields.join(',') }, query1.filters(opts))
+		body: Object.assign({ size: query1.size, fields: query1.fields.join(',') }, query1.filters(opts)),
+		signal: opts.__abortSignal
 	})
 	const p2 = xfetch(joinUrl(host.rest, query2.endpoint), {
 		method: 'POST',
 		timeout: false,
 		headers,
-		body: Object.assign({ size: query2.size, fields: query2.fields.join(',') }, query2.filters(opts, ds))
+		body: Object.assign({ size: query2.size, fields: query2.fields.join(',') }, query2.filters(opts, ds)),
+		signal: opts.__abortSignal
 	})
 
 	const starttime = Date.now()
@@ -1401,7 +1409,8 @@ async function querySamplesWithCnv(q, dictTwLst, ds) {
 	const q2 = {
 		dictTwLst,
 		cnvMaxLength: q.cnvMaxLength,
-		hiddenmclass: q.hiddenmclass
+		hiddenmclass: q.hiddenmclass,
+		__abortSignal: q.__abortSignal
 	}
 	if (q.rglst) {
 		// is from sample summary via leftlabel
@@ -1480,7 +1489,8 @@ async function querySamplesSurvival(q, survivalTwLst, ds, samples, geneTwLst) {
 		method: 'POST',
 		timeout: false,
 		headers,
-		body: { filters: [filter] }
+		body: { filters: [filter] },
+		signal: q.__abortSignal
 	})
 	if (!Array.isArray(re.results?.[0].donors)) throw 're.results[0].donors[] not array'
 	for (const d of re.results[0].donors) {
@@ -1634,7 +1644,8 @@ async function querySamplesTwlstNotForGeneexpclustering_withGenomicFilter(q, dic
 		method: 'POST',
 		timeout: false,
 		headers,
-		body: param
+		body: param,
+		signal: q.__abortSignal
 	})
 
 	delete q.isoforms
@@ -1719,7 +1730,8 @@ async function querySamplesTwlstNotForGeneexpclustering_withGenomicFilter(q, dic
 	if (geneTwLst) {
 		const param = {
 			gene: geneTwLst.map(i => i.term.name).join(','),
-			twLst: dictTwLst
+			twLst: dictTwLst,
+			__abortSignal: q.__abortSignal
 		}
 		const cnvdata = await ds.queries.geneCnv.bygene.get(param)
 		for (const h of cnvdata) {
@@ -1780,7 +1792,7 @@ export async function querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q
 
 	const re = await xfetch(
 		joinUrl(host.rest, 'cases'),
-		{ method: 'POST', timeout: false, headers, body: JSON.stringify(param) } //,
+		{ method: 'POST', timeout: false, headers, body: JSON.stringify(param), signal: q.__abortSignal } //,
 		//{ q } // this q does not seem to be a request object reference that is shared across all genes, cannot use as a cache key
 	)
 

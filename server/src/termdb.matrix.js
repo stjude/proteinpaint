@@ -43,10 +43,6 @@ Returns:
 
 export async function getData(q, ds, onlyChildren = false) {
 	if (serverconfig.debugmode) trackXfetch(new Map())
-	if (q.filter0) {
-		abortCtrlByFilter0.set(q.filter0, new AbortController())
-		console.log(46, abortCtrlByFilter0.get(q.filter0))
-	}
 
 	try {
 		validateArg(q, ds)
@@ -70,6 +66,7 @@ export async function getData(q, ds, onlyChildren = false) {
 		abortCtrlByFilter0.delete(q.filter0)
 		return data
 	} catch (e) {
+		//console.log(72, 'termdb.matrix getData() catch')
 		trackXfetch(null)
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e, code: e.code } // ok for e.code to be undefined
@@ -610,7 +607,8 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 			genome: q.genome,
 			get: 'samples',
 			twLst: termWrappers,
-			isHierCluster: q.isHierCluster // !! gdc specific parameter !!
+			isHierCluster: q.isHierCluster, // !! gdc specific parameter !!
+			__abortSignal: q.__abortSignal
 		},
 		q.ds.mayGetGeneVariantDataParam || {}
 	)

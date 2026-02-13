@@ -143,25 +143,36 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 			}
 		}
 
-		if (req.query.filter0) {
-			let isFinished = false
-			res.on('finish', () => {
-				console.log(148, 'res.on(finish)')
-				isFinished = true
-			})
-			res.on('close', () => {
-				console.log(156, 'res.on(close)', isFinished, res.writableEnded)
-				if (isFinished || res.writableEnded) return
-				const abortCtrl = abortCtrlByFilter0.get(req.query.filter0)
-				if (!abortCtrl) return
-				// Abort the operations associated with this signal
+		// TODO: only pass the abortSignal, not the controller
+		const abortCtrl = new AbortController()
+		req.query.__abortSignal = abortCtrl.signal
 
-				setTimeout(() => {
-					if (isFinished || res.writableEnded) return
-					console.log('Client disconnected, aborting active fetch or spawned processes...')
-					abortCtrl.abort()
-				}, 3000)
-			})
+		let isFinished = false
+		res.on('finish', () => {
+			//console.log(148, 'res.on(finish)')
+			isFinished = true
+		})
+		res.on('close', () => {
+			//console.log(156, 'res.on(close)', isFinished, res.writableEnded, req.query.filter0?.content?.[0]?.content, abortCtrl.signal)
+			if (res.writableEnded) return
+			if (serverconfig.debugmode)
+				console.log(
+					`--- !!! will abort ${JSON.stringify(req.query.filter0?.content?.[0]?.content)} !!! ---`,
+					abortCtrl.signal
+				)
+			// Abort fetch or spawned processes that have the abortCtrl.signal as an option
+			//setTimeout(() => {
+			if (isFinished || res.writableEnded) return
+			if (serverconfig.debugmode) console.log('Client disconnected, aborting active fetch or spawned processes...')
+			abortCtrl.abort()
+			//}, 0) // uncomment to log the cohort filter of requests that got aborted in xfetch()
+		})
+
+		if (req.query.filter0) {
+			// in case req.query.__abortSignal is not passed to the xfetch caller,
+			// abortCtrlByFilter0.get(req.query.filter0)?.signal may be used within xfetch()
+			// as an alternative means to get the applicable abortSignal
+			abortCtrlByFilter0.set(req.query.filter0, abortCtrl)
 		}
 
 		// log the request before adding protected info

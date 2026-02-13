@@ -14,7 +14,7 @@ export type TermdbSampleScatterRequest = {
 	filter?: any
 	filter0?: any
 	chartType?: string
-	__protected__?: any // auth token for accessing protected data
+	singleCellPlot?: any
 }
 
 export type ScatterSample = {
