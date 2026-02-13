@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.175.0
 
 Features:
 - LLM: Adding support for multiple chart types within the summary type. Adding testing of the LLM.
