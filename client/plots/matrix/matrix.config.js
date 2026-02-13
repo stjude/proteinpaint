@@ -41,7 +41,7 @@ export async function getPlotConfig(opts = {}, app) {
 			join: 'and',
 			lst: []
 		},
-		cnvCutoffs: {},
+		// cnvCutoffs: {},
 
 		// rendering options
 		settings: {
@@ -143,7 +143,10 @@ export async function getPlotConfig(opts = {}, app) {
 				twSpecificSettings: {},
 				oncoPrintSNVindelCellBorder: false, // whether to show white cell border for SNVindel in oncoPrint mode
 				cnvValues: {
+					//Properties match the args for the ColorScales
+					//numericInput arg
 					cutoffMode: 'percentile',
+					defaultPercentile: 0.99,
 					min: null,
 					max: null,
 					percentile: 0.99

@@ -334,13 +334,15 @@ export function setLabelsAndScales() {
 	let cnvLegendDomainRange // if cnv data is present, compute once and reuse across geneVariant tw's
 
 	if (this.cnvValues.length) {
-		//Percentile is default with no UI to change
-		//Will address this logic in future PR.
-		if (s.cnvValues.cutoffMode == 'percentile') {
-			const max = s.cnvValues.percentile
+		if (s.cnvValues.cutoffMode == 'fixed') {
+			this.cnvValues = this.cnvValues.filter(v => v > s.cnvValues.min && v < s.cnvValues.max).sort((a, b) => a - b)
+		}
+		if (s.cnvValues.cutoffMode == 'percentile' || s.cnvValues.cutoffMode == 'auto') {
+			const max = s.cnvValues.cutoffMode == 'auto' ? s.cnvValues.defaultPercentile : s.cnvValues.percentile
 			const min = roundValueAuto(1 - max)
 			this.cnvValues = removeOutliers(this.cnvValues, min, max)
 		}
+		if (this.cnvValues.length == 0) return
 		const minLoss = this.cnvValues[0] < 0 ? this.cnvValues[0] : undefined
 		const maxGain =
 			this.cnvValues[this.cnvValues.length - 1] > 0 ? this.cnvValues[this.cnvValues.length - 1] : undefined
