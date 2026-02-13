@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Features:
 - LLM: Adding support for multiple chart types within the summary type. Adding testing of the LLM.
 - LLM: Adding support for matrix in the chatbot.
+- Table.ts: Support for restoring original row order of table
 
 
 ## 2.174.1
