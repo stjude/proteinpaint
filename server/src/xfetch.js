@@ -40,6 +40,7 @@ export async function xfetch(url, opts = {}) {
 
 	// 1/27/2026, retry per Phil's suggestion in https://gdc-ctds.atlassian.net/browse/SV-2709
 	if (!opts.retry) opts.retry = getRetry(url)
+	if (!opts.timeout) opts.timeout = false // for ky, convert timeout=0 to false
 
 	return await ky(url, opts)
 		.then(async r => {
@@ -57,6 +58,7 @@ export async function xfetch(url, opts = {}) {
 			return payload
 		})
 		.catch(e => {
+			abortCtrlBy.signal.get(opts.signal)?.abort()
 			throw e
 		})
 }

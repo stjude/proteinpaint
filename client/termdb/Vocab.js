@@ -276,4 +276,10 @@ export class Vocab {
 		// return list of term{}; do not return whole object
 		return this.state.groups
 	}
+
+	isAbortError(e) {
+		if (e instanceof DOMException) return e.name === 'AbortError'
+		if (typeof e == 'string') return e.includes('stale sequenceId') || e.includes('AbortError')
+		return false
+	}
 }

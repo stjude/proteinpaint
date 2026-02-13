@@ -154,10 +154,12 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 	app.use(validator.middleware)
 }
 
+const hiddenQueryKeys = new Set(['jwt', '__protected__', '__abortSignal'])
+
 function log(req) {
 	const j = {}
 	for (const k of Object.keys(req.query)) {
-		if (k != 'jwt' && k !== '__protected__') j[k] = req.query[k]
+		if (!hiddenQueryKeys.has(k)) j[k] = req.query[k]
 	}
 	// okay to supply a dummy hostname here, since only the pathname needs to be computed
 	const pathname = new URL(`http://localhost${req.url}`).pathname
