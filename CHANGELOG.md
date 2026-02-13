@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- LLM: Adding support for multiple chart types within the summary type. Adding testing of the LLM.
+- LLM: Adding support for matrix in the chatbot.
+
 
 ## 2.174.1
 

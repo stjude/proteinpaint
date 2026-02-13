@@ -1,3 +1,1 @@
-Features:
-- LLM: Adding support for multiple chart types within the summary type. Adding testing of the LLM.
-- LLM: Adding support for matrix in the chatbot.
+
