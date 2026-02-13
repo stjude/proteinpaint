@@ -44,7 +44,13 @@ export async function get_survival(q, ds) {
 		// dt: divideBy term, the chart term
 		const dt = q.term0
 		const data = await getData(
-			{ terms: twLst, filter: q.filter, filter0: q.filter0, __protected__: q.__protected__ },
+			{
+				terms: twLst,
+				filter: q.filter,
+				filter0: q.filter0,
+				__protected__: q.__protected__,
+				__abortSignal: q.__abortSignal
+			},
 			ds,
 			ifIsOnlyChildren(q, st, ot, ds)
 		)

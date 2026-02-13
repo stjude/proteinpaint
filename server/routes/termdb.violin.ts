@@ -1,4 +1,5 @@
 import type { ViolinRequest, ViolinResponse, RouteApi, ValidGetDataResponse, TermWrapper } from '#types'
+import type { ReqQueryAddons } from './types.ts'
 import { violinPayload } from '#types/checkers'
 import { scaleLinear, scaleLog } from 'd3'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
@@ -29,7 +30,7 @@ export const api: RouteApi = {
 
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
-		const q: ViolinRequest = req.query
+		const q: ViolinRequest & ReqQueryAddons = req.query
 		let data
 		try {
 			const g = genomes[q.genome]
@@ -45,7 +46,7 @@ function init({ genomes }) {
 	}
 }
 
-async function getViolin(q: ViolinRequest, ds: any) {
+async function getViolin(q: ViolinRequest & ReqQueryAddons, ds: any) {
 	if (typeof q.tw?.term != 'object' || typeof q.tw?.q != 'object') throw new Error('q.tw not of {term,q}')
 	const term = q.tw.term
 	if (!q.tw.q.mode) q.tw.q.mode = 'continuous'
@@ -61,7 +62,8 @@ async function getViolin(q: ViolinRequest, ds: any) {
 			filter: q.filter,
 			filter0: q.filter0,
 			currentGeneNames: q.currentGeneNames,
-			__protected__: q.__protected__
+			__protected__: q.__protected__,
+			__abortSignal: q.__abortSignal
 		},
 		ds
 	)

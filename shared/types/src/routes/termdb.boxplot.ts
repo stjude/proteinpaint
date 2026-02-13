@@ -23,7 +23,6 @@ export type BoxPlotRequest = {
 	divideTw?: TermWrapper
 	filter?: Filter
 	filter0?: any
-	__protected__: any
 }
 
 export type BoxPlotResponse = {

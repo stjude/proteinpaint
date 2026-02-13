@@ -2968,7 +2968,7 @@ async function filterSamples4assayAvailability(q, ds) {
 			client passes blank pp filter with empty array of fitler.lst[]!
 			*/
 			const [byTermId, samples] = await gdc.querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(
-				{ filterObj, filter0: q.filter0 },
+				{ filterObj, filter0: q.filter0, __abortSignal: q.__abortSignal },
 				[],
 				ds
 			)
@@ -3255,7 +3255,8 @@ async function getSnvindelByTerm(ds, term, genome, q) {
 			addFormatValues: true,
 			filter0: q.filter0, // hidden filter
 			filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
-			sessionid: q.sessionid
+			sessionid: q.sessionid,
+			__abortSignal: q.__abortSignal
 		},
 		ds.mayGetGeneVariantDataParam || {}
 	)
@@ -3354,7 +3355,8 @@ async function getProbe2cnvByTw(ds, tw, genome, q) {
 async function getGenecnvByTerm(ds, term, genome, q) {
 	const arg = {
 		filter0: q.filter0,
-		sessionid: q.sessionid
+		sessionid: q.sessionid,
+		__abortSignal: q.__abortSignal
 	}
 
 	if (ds.queries.geneCnv.bygene) {

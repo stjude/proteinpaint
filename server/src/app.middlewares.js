@@ -13,6 +13,7 @@ import jsonwebtoken from 'jsonwebtoken'
 import fs from 'fs'
 import crypto from 'crypto'
 import { ReqResCache } from '@sjcrh/augen'
+import { abortCtrlBy } from './xfetch.js'
 
 const basepath = serverconfig.basepath || ''
 
@@ -142,6 +143,8 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 			}
 		}
 
+		maySetAbortCtrl(req, res)
+
 		// log the request before adding protected info
 		log(req)
 		next()
@@ -151,10 +154,12 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 	app.use(validator.middleware)
 }
 
+const hiddenQueryKeys = new Set(['jwt', '__protected__', '__abortSignal'])
+
 function log(req) {
 	const j = {}
 	for (const k of Object.keys(req.query)) {
-		if (k != 'jwt' && k !== '__protected__') j[k] = req.query[k]
+		if (!hiddenQueryKeys.has(k)) j[k] = req.query[k]
 	}
 	// okay to supply a dummy hostname here, since only the pathname needs to be computed
 	const pathname = new URL(`http://localhost${req.url}`).pathname
@@ -248,5 +253,42 @@ function mayWrapResponseSend(cachedir, req, res) {
 		// TODO: will need to also set the actual status
 		if (!fs.existsSync(cache.loc.file)) await cache.write({ header: { status: 200 }, body }) // no need to await
 		send.call(this, body)
+	}
+}
+
+function maySetAbortCtrl(req, res) {
+	const q = req.query
+	if (q.dslabel !== 'GDC' || (!req.path.includes('termdb') && !req.path.includes('/mds3'))) return // TODO: do not harcode
+	const abortCtrl = new AbortController()
+	q.__abortSignal = abortCtrl.signal
+
+	abortCtrlBy.signal.set(abortCtrl.signal, abortCtrl)
+	if (q.filter0) {
+		// in case q.__abortSignal is not passed to the xfetch caller,
+		// abortCtrlByFilter0.get(req.query.filter0)?.signal may be used within xfetch()
+		// as an alternative means to get the applicable abortSignal
+		abortCtrlBy.filter0.set(req.query.filter0, abortCtrl)
+	}
+
+	if (q.dslabel) {
+		let isFinished = false
+		res.on('finish', () => {
+			//console.log(148, 'res.on(finish)')
+			isFinished = true
+		})
+		res.on('close', () => {
+			abortCtrlBy.filter0.delete(q.filter0)
+			abortCtrlBy.signal.delete(abortCtrl.signal)
+			//console.log(156, 'res.on(close)', isFinished, res.writableEnded, q.filter0?.content?.[0]?.content, abortCtrl.signal)
+			if (isFinished || res.writableEnded) return
+			if (serverconfig.debugmode)
+				console.log(`--- !!! will abort ${JSON.stringify(q.filter0?.content?.[0]?.content)} !!! ---`, abortCtrl.signal)
+			// Abort fetch or spawned processes that have the abortCtrl.signal as an option
+			//setTimeout(() => {
+			if (isFinished || res.writableEnded) return
+			if (serverconfig.debugmode) console.log('Client disconnected, aborting active fetch or spawned processes...')
+			abortCtrl.abort()
+			//}, 0) // uncomment to log the cohort filter of requests that got aborted in xfetch()
+		})
 	}
 }

@@ -1,4 +1,5 @@
 import type { DescrStatsRequest, DescrStatsResponse, DescrStats, RouteApi } from '#types'
+import type { ReqQueryAddons } from './types.ts'
 import { descrStatsPayload } from '#types/checkers'
 import { getData } from '#src/termdb.matrix.js'
 import computePercentile from '#shared/compute.percentile.js'
@@ -20,7 +21,7 @@ export const api: RouteApi = {
 
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
-		const q: DescrStatsRequest = req.query
+		const q: DescrStatsRequest & ReqQueryAddons = req.query
 		try {
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome name'
@@ -41,9 +42,15 @@ function init({ genomes }) {
 	}
 }
 
-async function trigger_getDescrStats(q, ds) {
+async function trigger_getDescrStats(q: DescrStatsRequest & ReqQueryAddons, ds) {
 	const data = await getData(
-		{ filter: q.filter, filter0: q.filter0, terms: [q.tw], __protected__: q.__protected__ },
+		{
+			filter: q.filter,
+			filter0: q.filter0,
+			terms: [q.tw],
+			__protected__: q.__protected__,
+			__abortSignal: q.__abortSignal
+		},
 		ds
 	)
 	if (data.error) throw data.error
@@ -51,7 +58,7 @@ async function trigger_getDescrStats(q, ds) {
 	const values: number[] = []
 	for (const key in data.samples) {
 		const sample = data.samples[key]
-		const v = sample[q.tw.$id]
+		const v = sample[q.tw.$id || '']
 		if (!v && v !== 0) {
 			// skip undefined values
 			continue

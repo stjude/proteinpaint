@@ -1,4 +1,5 @@
 import type { CategoriesRequest, CategoriesResponse, RouteApi } from '#types'
+import type { ReqQueryAddons } from './types.ts'
 import { termdbCategoriesPayload } from '#types/checkers'
 import { getOrderedLabels } from '#src/termdb.barchart.js'
 import { getData } from '#src/termdb.matrix.js'
@@ -37,7 +38,7 @@ function init({ genomes }) {
 }
 
 async function trigger_getcategories(
-	q: CategoriesRequest,
+	q: CategoriesRequest & ReqQueryAddons,
 	res: any,
 	tdb: any,
 	ds: { assayAvailability: { byDt: { [s: string]: any } | ArrayLike<any> } }
@@ -52,7 +53,8 @@ async function trigger_getcategories(
 		terms: [q.tw],
 		currentGeneNames: q.currentGeneNames, // optional, from mds3 mayAddGetCategoryArgs()
 		rglst: q.rglst, // optional, from mds3 mayAddGetCategoryArgs()
-		__protected__: q.__protected__
+		__protected__: q.__protected__,
+		__abortSignal: q.__abortSignal
 	}
 
 	const data = await getData(arg, ds)

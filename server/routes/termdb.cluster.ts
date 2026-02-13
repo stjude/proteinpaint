@@ -11,6 +11,7 @@ import type {
 	GeneExpressionQuery,
 	RouteApi
 } from '#types'
+import type { ReqQueryAddons } from './types.ts'
 import { termdbClusterPayload } from '#types/checkers'
 import * as utils from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
@@ -39,7 +40,7 @@ export const api: RouteApi = {
 
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
-		const q: TermdbClusterRequest = req.query
+		const q: TermdbClusterRequest & ReqQueryAddons = req.query
 		let result
 		try {
 			const g = genomes[q.genome]
@@ -73,13 +74,14 @@ function init({ genomes }) {
 	}
 }
 
-async function getResult(q: TermdbClusterRequest, ds: any) {
+async function getResult(q: TermdbClusterRequest & ReqQueryAddons, ds: any) {
 	let _q: any = q // may assign adhoc flag, use "any" to avoid tsc err and no need to include the flag in the type doc
 
 	if (q.dataType == TermTypes.GENE_EXPRESSION) {
 		// gdc gene exp clustering analysis is restricted to max 1000 cases, this is done at ds.queries.geneExpression.get() in mds3.gdc.js. the same getter also serves non-clustering requests and that should not limit cases. add this flag to be able to conditionally limit cases in get()
 		_q = JSON.parse(JSON.stringify(q))
 		_q.forClusteringAnalysis = true
+		_q.__abortSignal = q.__abortSignal
 	}
 
 	let term2sample2value, byTermId, bySampleId, skippedSexChrGenes

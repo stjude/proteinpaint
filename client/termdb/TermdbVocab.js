@@ -635,14 +635,15 @@ export class TermdbVocab extends Vocab {
 		// TODO if this filter0 can be properly updated when api.update() is called from pp launcher on GFF cohort change
 		if (this.state.termfilter?.filter0) body.filter0 = this.state.termfilter.filter0
 
+		const signal = this.app?.getAbortSignal?.()
 		try {
-			const data = await dofetch3('termdb/categories', { headers, body })
+			const data = await dofetch3('termdb/categories', { headers, body, signal })
 			if (data.error) throwMsgWithFilePathAndFnName(data.error)
 			return data
 		} catch (e) {
 			// TODO: should handle this error more gracefully, maybe show only in the termsetting pill;
 			//       right now, this alert pops up even when this data or related pill is not visible
-			window.alert(e.message || e)
+			if (!this.isAbortError(e)) window.alert(e.message || e)
 		}
 	}
 
@@ -662,7 +663,7 @@ export class TermdbVocab extends Vocab {
 			if (data.error) throw data.error
 			return data
 		} catch (e) {
-			window.alert(e.message || e)
+			if (!this.isAbortError(e)) window.alert(e.message || e)
 		}
 	}
 
@@ -789,7 +790,7 @@ export class TermdbVocab extends Vocab {
 		// - NOTE: for GDC, 17 genes results in a total of about 150MB in-memory JSON string length
 		//         in the server route handler, which avoids the 512MB hard limit for sting processing
 		//         in the V8 engine
-		const maxNumTerms = opts.terms.length // this.vocab.dslabel === 'GDC' ? opts.terms.length : 1 // revert back to 1 to revert to previous behavior
+		const maxNumTerms = 17 //opts.terms.length // this.vocab.dslabel === 'GDC' ? opts.terms.length : 1 // revert back to 1 to revert to previous behavior
 		let numResponses = 0
 		if (opts.loadingDiv) opts.loadingDiv.html('Updating data ...')
 
@@ -812,7 +813,7 @@ export class TermdbVocab extends Vocab {
 					embedder: window.location.hostname
 				}
 			}
-			if (opts.signal) init.signal = opts.signal
+			init.signal = opts.signal || this.app?.getAbortSignal?.()
 
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 			if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
@@ -908,7 +909,6 @@ export class TermdbVocab extends Vocab {
 			await Promise.all(promises)
 			if (opts.loadingDiv) opts.loadingDiv.html('')
 		} catch (e) {
-			console.log(e)
 			if (typeof e == 'string') {
 				const _e = e.toLowerCase()
 				// TODO: standardize the auth error message across all SJ viz tools/portals,

@@ -21,8 +21,9 @@ const dsHelpers = {
 	mapGenes2isoforms,
 	isUsableTerm,
 	joinUrl,
-	cachedFetch: utils.cachedFetch,
-	ezFetch
+	ezFetch,
+	xfetch: utils.xfetch,
+	cachedFetch: utils.cachedFetch
 }
 
 export const genomes = {} // { hg19: {...}, ... }
