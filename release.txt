@@ -1,2 +1,1 @@
-Features:
-- LLM: Adding support for UMAP/t-SNE plots and variable overlay
+
