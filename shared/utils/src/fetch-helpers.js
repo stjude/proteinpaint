@@ -8,7 +8,9 @@ import { encode } from './urljson.js'
 	- this addresses issues with ky.json() or got.json(), where a HTTP 404 NOT FOUND
 		response with text/html can break error handling/logging, making it harder to debug
 
-	- this also automatically handles multipart responses 
+	- this also automatically handles multipart responses
+
+  - NOTE: for backend, use xfetch() instead, it uses ky() and its built-in retry support
 
 	arguments:
 	url

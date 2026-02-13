@@ -3,6 +3,19 @@
 All notable changes to this project will be documented in this file.
 
 
+## Unreleased
+
+Fixes:
+- forced version bump
+
+
+## 2.170.9-57f94bf9a.0
+
+Fixes:
+- fix violin plot not loading due to unsynchronized q.dtLst[] and q.predefined_groupset_idx
+- improve fault tolerance by retrying failed GDC API requests
+
+
 ## 2.170.8
 
 Fixes:
