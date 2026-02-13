@@ -812,7 +812,7 @@ export class TermdbVocab extends Vocab {
 					embedder: window.location.hostname
 				}
 			}
-			if (opts.signal) init.signal = opts.signal
+			init.signal = opts.signal || this.app?.getAbortSignal()
 
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 			if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along

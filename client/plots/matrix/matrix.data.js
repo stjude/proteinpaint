@@ -92,9 +92,11 @@ function sortTwLst(twa, twb) {
 export async function setData(_data) {
 	const opts = this.currRequestOpts?.matrix || this.getMatrixRequestOpts(this.state)
 	this.numTerms = opts.terms.length
-	const abortCtrl = new AbortController()
-	opts.signal = abortCtrl.signal
 	opts.loadingDiv = this.chartType != 'hierCluster' && this.dom.loadingDiv
+	// const abortCtrl = new AbortController()
+	// opts.signal = abortCtrl.signal
+	// opts.signal = this.api.getAbortSignal()
+	// rely on getAnnotatedSampleData() to set a default abortSignal from `this.app.getAbortSignal()`
 	const data = await this.app.vocabApi.getAnnotatedSampleData(opts, _data)
 	this.data = data
 	this.origData = structuredClone(this.data)
