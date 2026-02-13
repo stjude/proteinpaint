@@ -134,7 +134,7 @@ export class ListSamples {
 		const key: any = termNum == 0 ? this.plot.chartId : this.plot.seriesId
 		if (!key && key !== 0) return
 
-		const tvsEntry = {
+		let tvsEntry = {
 			type: 'tvs',
 			tvs: {
 				term: tw.term
@@ -142,22 +142,13 @@ export class ListSamples {
 		}
 		//TODO: delete isContinuousOrBinned and tests if isNumericTerm works
 		if (this.isContinuousOrBinned(tw, termNum)) {
-			this.createTvsRanges(tvsEntry.tvs, termNum, key)
+			tvsEntry.tvs = this.createTvsRanges(tvsEntry.tvs, termNum, key)
 		}
-		this.createTvsValues(tvsEntry, tw, key)
+		tvsEntry = this.createTvsValues(tvsEntry, tw, key)
 		this.tvslst.lst.push(tvsEntry)
 	}
 
-	getFilterParams(tvs: any, tw: TermWrapper, termNum: number): void {
-		const key: any = termNum == 0 ? this.plot.chartId : this.plot.seriesId
-		if (isNumericTerm(tw.term)) {
-			this.createTvsRanges(tvs, termNum, key)
-			this.createTvsValues(tvs, tw, key) // TODO: most likely not needed
-		} else {
-			this.createTvsValues(tvs, tw, key)
-		}
-	}
-	createTvsValues(tvsEntry: any, tw: any, key: string): void {
+	createTvsValues(tvsEntry: any, tw: any, key: string): any {
 		if (
 			(tw?.q?.type == 'custom-groupset' || tw?.q?.type == 'predefined-groupset') &&
 			tw.term.type !== TermTypes.GENE_VARIANT
@@ -169,7 +160,7 @@ export class ListSamples {
 			tvsEntry.tvs.values = group.values
 		} else if (tw.term.type === TermTypes.SAMPLELST) {
 			if (!tw.term.values?.[key]) throw new Error(`Sample list not found for ${tw.term.name}: ${key}`)
-			const ids = tw.term.values[key].list.map(s => s.sampleId)
+			const ids = (tw.term.values[key].list || []).map(s => s.sampleId)
 			// Returns filter obj with lst array of 1 tvs
 			const tmpTvsLst = getSamplelstFilter(ids)
 			tvsEntry = tmpTvsLst.lst[0]
@@ -182,9 +173,10 @@ export class ListSamples {
 				value_by_max_grade: tw.q.value_by_max_grade
 			})
 		}
+		return tvsEntry
 	}
 
-	createTvsRanges(tvs: any, termNum: number, key: string): void {
+	createTvsRanges(tvs: any, termNum: number, key: string): any {
 		const keyBin = this.bins[`term${termNum}`]?.[`${key}`]
 		const uncomputable = Object.entries(this[`t${termNum}`].term?.values ?? {}).find(
 			([_, v]: [string, any]) => v.label === key && v?.uncomputable
@@ -225,6 +217,7 @@ export class ListSamples {
 				]
 			}
 		}
+		return tvs
 	}
 
 	//TODO: Remove entirely??
