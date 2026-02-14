@@ -99,24 +99,31 @@ export function addSelectedRowsOptions(clickedRowNames, event) {
 		}
 	]
 
-	const minGeneCutoff = this.app.opts.genome.termdbs.msigdb.geneORAparam.minCutoff // gene ORA cutoffs queried from genome file
-	const maxGeneCutoff = this.app.opts.genome.termdbs.msigdb.geneORAparam.maxCutoff // gene ORA cutoffs queried from genome file
-	if (this.app.opts.genome.termdbs) {
-		// Check if genome build contains termdbs, only then enable gene ora
+	if (this.config.dataType == 'geneExpression' && this.app.opts.genome.termdbs) {
+		// when doing gene exp clustering and has genome-level geneset db, enable option for gene ORA analysis
+		// gene ORA cutoffs queried from genome file
+		const minGeneCutoff = this.app.opts.genome.termdbs.msigdb.geneORAparam.minCutoff
+		const maxGeneCutoff = this.app.opts.genome.termdbs.msigdb.geneORAparam.maxCutoff
 		optionArr.push({
 			label: `Gene set overrepresentation analysis`,
 			disabled: clickedRowNames.length < minGeneCutoff || clickedRowNames.length > maxGeneCutoff,
 			callback: () => {
 				if (clickedRowNames.length < minGeneCutoff || clickedRowNames.length > maxGeneCutoff) return
 				this.dom.dendroClickMenu.d.selectAll('*').remove()
-				const sample_genes = clickedRowNames
-				const geneORAparams = {
-					sample_genes: sample_genes.toString(),
-					genome: this.app.vocabApi.opts.state.vocab.genome
+				const lst = []
+				for (const x of clickedRowNames) {
+					const j = this.terms?.find?.(t => t.tw.$id == x)
+					if (j) {
+						const n = j.tw?.term?.gene
+						if (n) lst.push(n)
+					}
 				}
 				const config = {
 					chartType: 'geneORA',
-					geneORAparams: geneORAparams
+					geneORAparams: {
+						sample_genes: lst.join(','),
+						genome: this.app.vocabApi.opts.state.vocab.genome
+					}
 				}
 				this.app.dispatch({
 					type: 'plot_create',

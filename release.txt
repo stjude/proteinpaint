@@ -1,0 +1,2 @@
+Fixes:
+- restore geneORA by passing gene names but not tw.$id
