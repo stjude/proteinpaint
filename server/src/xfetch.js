@@ -12,35 +12,26 @@ export const abortCtrlBy = {
 // xfetch = extended fetch with retry support (needed for GDC API)
 // First two arguments are the same as native fetch,
 export async function xfetch(url, opts = {}) {
-	// console.log(12, opts.signal) // change to console.trace() to determine code that need to pass q.__abortSignal
-	if (xfetchTracker) {
-		// count the number of external requests to the same URL within
-		// the same expressjs request handler call
-		if (!xfetchTracker.has(url)) xfetchTracker.set(url, 0)
-		const i = xfetchTracker.get(url)
-		xfetchTracker.set(url, i + 1)
-	}
-
 	if (opts.json && !opts.body) opts.body = opts.json
 	if (opts.body && typeof opts.body != 'string') {
-		// q.__abortSignal, which becomes opts.signal, here may be converted to an empty object
-		// by creating a JSON.parse(JSON.stringify(q.__abortSignal)), need to detect that as an invalid opts.signal
+		// q.__abortSignal, which becomes opts.signal, here may be converted to an empty object when creating
+		// a JSON.parse(JSON.stringify(q.__abortSignal)) copy, need to detect that as an invalid opts.signal
 		if (!opts.signal || (opts.signal !== null && typeof opts.signal === 'object' && !Object.keys(opts.signal).length)) {
 			// the nested query processing failed to pass req.query.__abortSignal from the app.middleware,
-			// resort to the alternative method of finding the applicable abortSignal that's tracked by req.query,filter0;
-			// if filter0 is null, this will not return anything
+			// resort to the alternative method of finding the applicable abortSignal that's tracked by req.query,filter0
+			// if content or filter0 is empty, this will not set opts.signal
 			const content = opts.body.case_filters?.content
 			const filter0 = Array.isArray(content) && content.find(f => abortCtrlBy.filter0.has(f))
 			if (filter0) opts.signal = abortCtrlBy.filter0.get(filter0)?.signal
 		}
-		// console.log(24, opts.signal, filter0, opts.body.case_filters?.content)
 		opts.body = JSON.stringify(opts.body)
 	}
-	// if (serverconfig.debugmode) console.log(`(!) xfetch() opts.signal=`, opts.signal, 'filter value=', filter0?.content[0]?.content?.value)
+
+	mayCollectTrackedInfo(url, opts)
 
 	// 1/27/2026, retry per Phil's suggestion in https://gdc-ctds.atlassian.net/browse/SV-2709
 	if (!opts.retry) opts.retry = getRetry(url)
-	if (!opts.timeout) opts.timeout = false // for ky, convert timeout=0 to false
+	if (!opts.timeout) opts.timeout = false // force any empty timeout value to boolean false, in case ky is strict
 
 	return await ky(url, opts)
 		.then(async r => {
@@ -81,23 +72,65 @@ function getRetry(url) {
 	return undefined
 }
 
+/********************
+  Diagnostic helpers
+*********************/
+
 let xfetchTracker = null
+
+// trackXfetch()
+// - is expected to be called towards the beginning of a route handler or helper like getData(),
+//   so that all calls to xfetch() within the same request could be tracked by url, init.body, etc
+// - once a tracker is cleared, the number of requests per unique URL/path?params will be logged
+//
+// @tracker
+// - if empty/null, it will clear the tracker and stop all tracking
+// - if a Map instance, will replace the current or undefined tracker
+//
 export function trackXfetch(tracker) {
+	if (!serverconfig.debugmode) return
 	if (tracker !== null && !(tracker instanceof Map)) throw `xfetch tracker must be either null or a Map instance`
 
 	if (!tracker) {
-		if (xfetchTracker) console.log(Object.fromEntries(xfetchTracker.entries()))
+		if (xfetchTracker) {
+			console.log(`(i) Number of requests per URL/path?param`)
+			console.log(Object.fromEntries(xfetchTracker.entries()))
+			console.log(`(i) Non-unique requests by URL/path?param + body`)
+			console.log(Object.fromEntries(uniqueReqTracker.entries().filter(t => t[1] > 1)))
+		}
 	} else {
 		if (xfetchTracker) {
 			// console.warn(`replacing an active xfetchTracker`)
 			xfetchTracker.clear()
+			uniqueReqTracker.clear()
 		}
 
 		// cleanup in case the caller does not do a follow-up `trackXfetch(null)`
 		setTimeout(() => {
 			xfetchTracker = null
 		}, 60000)
+
+		uniqueReqTracker.clear()
 	}
 
 	xfetchTracker = tracker
+}
+
+const uniqueReqTracker = new Map()
+
+// trackByUrl will populate xfetchTracker and uniqueReqTracker
+// when called from inside xfetch()
+function mayCollectTrackedInfo(url, opts) {
+	// console.trace(12, opts.signal) // uncomment to determine upstream code that need to pass q.__abortSignal
+	if (!xfetchTracker || !serverconfig.debugmode) return
+	// count the number of external requests to the same URL within
+	// the same expressjs request handler call
+	if (!xfetchTracker.has(url)) xfetchTracker.set(url, 0)
+	const i = xfetchTracker.get(url)
+	xfetchTracker.set(url, i + 1)
+
+	const body = typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body)
+	const key = '[' + url + ']' + (body || '')
+	if (!uniqueReqTracker.has(key)) uniqueReqTracker.set(key, 0)
+	uniqueReqTracker.set(key, uniqueReqTracker.get(key) + 1)
 }
