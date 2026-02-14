@@ -786,11 +786,7 @@ export class TermdbVocab extends Vocab {
 						.map(tw => (tw.term.chr ? `${tw.term.chr}:${tw.term.start}-${tw.term.stop}` : tw.term.name))
 						.sort() // sort the gene names by the default alphanumeric order to improve cache reuse even when terms are resorted
 		const allTerms2update = opts.terms.slice().sort((a, b) => (a.term.name < b.term.name ? -1 : 1)) // make copy of array as it will be truncated to empty. do not modify original
-		// TODO: do not hardcode maxNumTerms, detect from termdbConfig, if this approach is preferred
-		// - NOTE: for GDC, 17 genes results in a total of about 150MB in-memory JSON string length
-		//         in the server route handler, which avoids the 512MB hard limit for sting processing
-		//         in the V8 engine
-		const maxNumTerms = 17 //opts.terms.length // this.vocab.dslabel === 'GDC' ? opts.terms.length : 1 // revert back to 1 to revert to previous behavior
+		const maxNumTerms = this.opts.app.vocabApi.termdbConfig?.maxAnnoTermsPerClientRequest || opts.terms.length // this.vocab.dslabel === 'GDC' ? opts.terms.length : 1 // revert back to 1 to revert to previous behavior
 		let numResponses = 0
 		if (opts.loadingDiv) opts.loadingDiv.html('Updating data ...')
 
