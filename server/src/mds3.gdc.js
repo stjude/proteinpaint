@@ -1,5 +1,5 @@
 import * as common from '#shared/common.js'
-import { joinUrl } from '#shared/index.js'
+import { joinUrl, memFetch } from '#shared/index.js'
 import { compute_bins } from '#shared/termdb.bins.js'
 import { getBin } from '#shared/terms.js'
 // import ky from 'ky'
@@ -1752,7 +1752,8 @@ async function querySamplesTwlstNotForGeneexpclustering_withGenomicFilter(q, dic
 query samples without genomic filter, must use /cases/ endpoint but not ssm_occurrences,
 /cases returns up to 40K entries but /ssm_occurrences has 3M, too much
 
-this will only be used for oncomatrix (without gene mutation rows), and summary chart, and identify samples by case uuid rather than sample/aliquot
+this will only be used for oncomatrix (without gene mutation rows), and summary chart, 
+and identify samples by case uuid rather than sample/aliquot
 
 this won't work for lollipop which uses ssm filters and identify samples by sample uuid
 
@@ -1789,10 +1790,16 @@ export async function querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q
 
 	const t1 = Date.now()
 
-	const re = await xfetch(
+	// This '/cases' request is not unique to certain genes, only unique to cohort.
+	// Use memFetch() to reuse the same req/response from this machine's RAM, but make sure
+	// that the expected response size is not big. For example, these estimates are from
+	// JSON.stringify(re).length
+	// - Gliomas cohort is roughly 4467679 bytes or 4.4MB
+	// - FM-AD is roughly 12845726 or 12 MB
+	const re = await memFetch(
 		joinUrl(host.rest, 'cases'),
-		{ method: 'POST', timeout: false, headers, body: JSON.stringify(param), signal: q.__abortSignal } //,
-		//{ q } // this q does not seem to be a request object reference that is shared across all genes, cannot use as a cache key
+		{ method: 'POST', timeout: false, headers, body: JSON.stringify(param), signal: q.__abortSignal },
+		{ client: xfetch }
 	)
 
 	mayLog('gdc /cases queries', Date.now() - t1)
