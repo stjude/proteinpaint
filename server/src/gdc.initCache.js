@@ -1,10 +1,8 @@
 import ky from 'ky'
-import { isUsableTerm } from '#shared/termdb.usecase.js'
 import serverconfig from './serverconfig.js'
 import { gdcBuildDictionary } from './gdc.buildDictionary.js'
 import { cachedFetch, isRecoverableError } from './utils.js'
-import { deepEqual } from '#shared/helpers.js'
-import { joinUrl } from '#shared/joinUrl.js'
+import { deepEqual, joinUrl, isUsableTerm, clearMemFetchDataCache } from '#shared/index.js'
 
 // wait time for next check on stale case-id cache, 5min. feature flag allows testing with short internal
 const cacheCheckWait = serverconfig.features.gdcCacheCheckWait || 5 * 60 * 1000
@@ -85,6 +83,10 @@ async function mayRefreshCache(ds) {
 	try {
 		version = await hasNewVersion(ds)
 		if (!version) return
+
+		// avoid reusing in-memory cache of GDC API response that used a previous data version
+		clearMemFetchDataCache()
+
 		// on first call, ds.__gdc.doneCaching will be false as expected,
 		// and `gdcBuildDictionary(ds)` would have been called once in mds3.init.js,
 		// so no need to repeat `gdcBuildDictionary(ds)` on the first call;
