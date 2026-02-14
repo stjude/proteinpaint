@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - LLM: Adding support for UMAP/t-SNE plots and variable overlay
+- restore geneORA by passing gene names but not tw.$id
 
 
 ## 2.175.0
