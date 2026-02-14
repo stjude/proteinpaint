@@ -120,6 +120,7 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	if (ds.cohort.correlationVolcano) c.correlationVolcano = ds.cohort.correlationVolcano
 	if (ds.cohort.boxplots) c.boxplots = ds.cohort.boxplots
 	if (tdb.maxGeneVariantGeneSetSize) c.maxGeneVariantGeneSetSize = tdb.maxGeneVariantGeneSetSize
+	if (tdb.maxAnnoTermsPerClientRequest) c.maxAnnoTermsPerClientRequest = tdb.maxAnnoTermsPerClientRequest
 	addRestrictAncestries(c, tdb)
 	addScatterplots(c, ds)
 	addMatrixplots(c, ds)

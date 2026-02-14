@@ -122,6 +122,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 		} else {
 			// common ds handling, one query per tw
 			if (!q.ds.mayGetGeneVariantData) throw 'not supported by dataset: geneVariant'
+			const maxConcurrentQueries = ds.cohort.termdb.maxConcurrentQueries || 10
 			const promises = []
 			for (const tw of geneVariantTws) {
 				if (tw.term.gene && q.ds.cohort?.termdb?.getGeneAlias) {
@@ -138,8 +139,14 @@ async function getSampleData(q, ds, onlyChildren = false) {
 						}
 					})()
 				)
+
+				// prevent excessive API calls that may lead to network errors,
+				// for example https://gdc-ctds.atlassian.net/browse/SV-2728
+				if (promises.length >= maxConcurrentQueries) {
+					await Promise.all(promises)
+					promises.length = 0
+				}
 			}
-			await Promise.all(promises)
 		}
 	}
 
