@@ -72,7 +72,8 @@ export async function get_matrix(q, req, res, ds, genome) {
 	}
 	const data = await getData(q, ds, true) // FIXME hardcoded to true
 	if (data.error) {
-		console.trace(data)
+		if (String(data.error).includes('operation was aborted')) console.log(`(!) abort error`)
+		else console.trace(data)
 		res.send({ error: data.error })
 		return
 	}
@@ -89,7 +90,7 @@ export async function get_matrix(q, req, res, ds, genome) {
 
 	const sampleEntries = Object.entries(data.samples || {})
 	const unsentSampleIds = new Set()
-	const lastSampleId = sampleEntries.slice(-1)[0][0]
+	const lastSampleId = sampleEntries.slice(-1)?.[0]?.[0] || -1
 	//debugLog('lastSampleId=', lastSampleId)
 
 	let hasStarted = false

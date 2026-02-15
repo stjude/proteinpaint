@@ -273,10 +273,11 @@ function maySetAbortCtrl(req, res) {
 	if (q.dslabel) {
 		let isFinished = false
 		res.on('finish', () => {
-			//console.log(148, 'res.on(finish)')
+			//console.log(276, '---- res.on(finish)')
 			isFinished = true
 		})
 		res.on('close', () => {
+			//console.log(279, '---- res.on(close)')
 			abortCtrlBy.filter0.delete(q.filter0)
 			abortCtrlBy.signal.delete(abortCtrl.signal)
 			//console.log(156, 'res.on(close)', isFinished, res.writableEnded, q.filter0?.content?.[0]?.content, abortCtrl.signal)
