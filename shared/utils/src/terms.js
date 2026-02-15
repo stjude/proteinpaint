@@ -1,4 +1,11 @@
-import { dtgeneexpression, dtssgsea, dtmetaboliteintensity, TermTypeGroups, dtTerms } from './common.js'
+import {
+	dtgeneexpression,
+	dtssgsea,
+	dtdnamethylation,
+	dtmetaboliteintensity,
+	TermTypeGroups,
+	dtTerms
+} from './common.js'
 
 // moved TermTypeGroups to `server/src/common.js`, so now has to re-export
 export { TermTypeGroups } from './common.js'
@@ -26,6 +33,7 @@ export const TermTypes = {
 	GENE_VARIANT: 'geneVariant',
 	GENE_EXPRESSION: 'geneExpression',
 	SSGSEA: 'ssGSEA',
+	DNA_METHYLATION: 'dnaMethylation',
 	CATEGORICAL: 'categorical',
 	INTEGER: 'integer',
 	FLOAT: 'float',
@@ -52,6 +60,7 @@ export const NUMERIC_DICTIONARY_TERM = 'numericDictTerm'
 export const TermTypes2Dt = {
 	[TermTypes.GENE_EXPRESSION]: dtgeneexpression,
 	[TermTypes.SSGSEA]: dtssgsea,
+	[TermTypes.DNA_METHYLATION]: dtdnamethylation,
 	[TermTypes.METABOLITE_INTENSITY]: dtmetaboliteintensity
 }
 
@@ -69,6 +78,7 @@ export const typeGroup = {
 	[TermTypes.SNP_LOCUS]: TermTypeGroups.SNP_LOCUS,
 	[TermTypes.GENE_EXPRESSION]: TermTypeGroups.GENE_EXPRESSION,
 	[TermTypes.SSGSEA]: TermTypeGroups.SSGSEA,
+	[TermTypes.DNA_METHYLATION]: TermTypeGroups.DNA_METHYLATION,
 	[TermTypes.METABOLITE_INTENSITY]: TermTypeGroups.METABOLITE_INTENSITY,
 	[TermTypes.TERM_COLLECTION]: TermTypeGroups.TERM_COLLECTION,
 	[TermTypes.SINGLECELL_CELLTYPE]: TermTypeGroups.SINGLECELL_CELLTYPE
@@ -80,6 +90,7 @@ const nonDictTypes = new Set([
 	TermTypes.SNP_LOCUS,
 	TermTypes.GENE_EXPRESSION,
 	TermTypes.SSGSEA,
+	TermTypes.DNA_METHYLATION,
 	TermTypes.GENE_VARIANT,
 	TermTypes.METABOLITE_INTENSITY,
 	TermTypes.SINGLECELL_GENE_EXPRESSION,
@@ -94,6 +105,7 @@ export const numericTypes = new Set([
 	TermTypes.FLOAT,
 	TermTypes.GENE_EXPRESSION,
 	TermTypes.SSGSEA,
+	TermTypes.DNA_METHYLATION,
 	TermTypes.METABOLITE_INTENSITY,
 	TermTypes.SINGLECELL_GENE_EXPRESSION,
 	TermTypes.DATE
@@ -139,6 +151,8 @@ export function equals(t1, t2) {
 			return t1.gene == t2.gene
 		case TermTypes.SSGSEA:
 			return t1.id == t2.id
+		case TermTypes.DNA_METHYLATION:
+			return t1.chr == t2.chr && t1.start == t2.start && t1.stop == t2.stop
 		case TermTypes.METABOLITE_INTENSITY:
 			return t1.name == t2.name
 		case TermTypes.GENE_VARIANT:
@@ -214,6 +228,7 @@ const typeMap = {
 	integer: 'Numerical',
 	geneExpression: 'Gene Expression',
 	ssGSEA: 'Geneset Expression',
+	dnaMethylation: 'DNA Methylation',
 	geneVariant: 'Gene Variant',
 	metaboliteIntensity: 'Metabolite Intensity',
 	multiValue: 'Multi Value',

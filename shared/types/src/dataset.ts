@@ -967,6 +967,12 @@ type Mds3Queries = {
 		file: string
 		// in case a genome may have more than 1 geneset dbs, here may specify name of db that this result is based on */
 	}
+	/** dna methylation beta value matrix
+	 */
+	dnaMethylation?: {
+		/** path to h5 file */
+		file: string
+	}
 	rnaseqGeneCount?: RnaseqGeneCount
 	/** Used to create the top mutated genes UI in the gene
 	 * set edit ui and data requests. */

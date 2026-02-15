@@ -65,6 +65,7 @@ export const dtcloss = 9
 export const dtloh = 10
 export const dtmetaboliteintensity = 11
 export const dtssgsea = 12
+export const dtdnamethylation = 13
 // add new dt value here. !!!DO NOT change value of existing dt!!!
 
 export const dt2label = {
