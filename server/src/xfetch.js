@@ -76,7 +76,8 @@ function getRetry(url) {
   Diagnostic helpers
 *********************/
 
-let xfetchTracker = null
+let xfetchTracker = null,
+	i = 0
 
 // trackXfetch()
 // - is expected to be called towards the beginning of a route handler or helper like getData(),
@@ -92,6 +93,7 @@ export function trackXfetch(tracker) {
 	if (tracker !== null && !(tracker instanceof Map)) throw `xfetch tracker must be either null or a Map instance`
 
 	if (!tracker) {
+		i = 0 // reset the request counter for simulating which browser request to abort/cancel with an error response
 		if (xfetchTracker) {
 			console.log(`(i) Number of requests per URL/path?param`)
 			console.log(Object.fromEntries(xfetchTracker.entries()))
@@ -100,11 +102,11 @@ export function trackXfetch(tracker) {
 		}
 	} else {
 		if (xfetchTracker) {
+			// i++; if (i == 1) throw `--- test abort of 2nd request ---`
 			// console.warn(`replacing an active xfetchTracker`)
 			xfetchTracker.clear()
 			uniqueReqTracker.clear()
 		}
-
 		// cleanup in case the caller does not do a follow-up `trackXfetch(null)`
 		setTimeout(() => {
 			xfetchTracker = null

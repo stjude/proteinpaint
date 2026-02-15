@@ -792,6 +792,7 @@ export class TermdbVocab extends Vocab {
 
 		const warnings = []
 		const frozenEmptyObj = Object.freeze({})
+		const signal = opts.signal || this.app?.getAbortSignal?.()
 
 		while (true) {
 			const copies = getTerms2update(allTerms2update, maxNumTerms) // list of unique terms to update in this round
@@ -807,9 +808,9 @@ export class TermdbVocab extends Vocab {
 					terms: copies.map(this.getTwMinCopy),
 					filter,
 					embedder: window.location.hostname
-				}
+				},
+				signal
 			}
-			init.signal = opts.signal || this.app?.getAbortSignal?.()
 
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 			if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
@@ -824,80 +825,109 @@ export class TermdbVocab extends Vocab {
 			}
 
 			promises.push(
-				dofetch3('termdb', init).then(data => {
-					if (data.error) throw data.error
-					if (data.warning) warnings.push(data.warning.message)
-					// console.log(825, structuredClone(Object.fromEntries(Object.entries(data.samples).slice(0, 5))))
-					if (!data.refs.bySampleId) data.refs.bySampleId = {}
+				dofetch3('termdb', init)
+					.then(data => {
+						if (data.error) throw data.error
+						if (data.warning) warnings.push(data.warning.message)
+						// console.log(825, structuredClone(Object.fromEntries(Object.entries(data.samples).slice(0, 5))))
+						if (!data.refs.bySampleId) data.refs.bySampleId = {}
 
-					const $copyAs = data.refs.$codes.copyAs || {}
-					const $objAssign = data.refs.$codes.objAssign || {}
+						const $copyAs = data.refs.$codes.copyAs || {}
+						const $objAssign = data.refs.$codes.objAssign || {}
 
-					for (const tw of copies) {
-						const { shortId, gene } = data.refs.byTermId[tw.$id] || frozenEmptyObj // avoid unnecessarily creating placeholder objects
-						const origTw = opts.terms.find(o => o.$id === tw.$id)
+						for (const tw of copies) {
+							const { shortId, gene } = data.refs.byTermId[tw.$id] || frozenEmptyObj // avoid unnecessarily creating placeholder objects
 
-						for (const [sampleId, sample] of Object.entries(data.samples)) {
-							// ignore sample objects that are not annotated by other keys besides 'sample'
-							if (!Object.keys(sample).filter(k => k != 'sample').length) continue
-							samplesToShow.add(sampleId)
-							if (!(sampleId in samples)) {
-								// normalize the expected data shape
-								if (!data.refs.bySampleId[sampleId]) data.refs.bySampleId[sampleId] = {}
-								if (typeof data.refs.bySampleId[sampleId] == 'string')
-									data.refs.bySampleId[sampleId] = { label: data.refs.bySampleId[sampleId] }
+							for (const [sampleId, sample] of Object.entries(data.samples)) {
+								// ignore sample objects that are not annotated by other keys besides 'sample'
+								if (!Object.keys(sample).filter(k => k != 'sample').length) continue
+								samplesToShow.add(sampleId)
+								if (!(sampleId in samples)) {
+									// normalize the expected data shape
+									if (!data.refs.bySampleId[sampleId]) data.refs.bySampleId[sampleId] = {}
+									if (typeof data.refs.bySampleId[sampleId] == 'string')
+										data.refs.bySampleId[sampleId] = { label: data.refs.bySampleId[sampleId] }
 
-								const _ref_ = data.refs.bySampleId[sampleId]
-								// assign default sample ref values here
-								// TODO: may assign an empty string value if not allowed to display sample IDs or names ???
-								if (!_ref_.label) _ref_.label = sampleId
-								const s = {
-									sample: sampleId,
-									// must reserve _ref -> should not be used as a term.id or tw.$id
-									_ref_
+									const _ref_ = data.refs.bySampleId[sampleId]
+									// assign default sample ref values here
+									// TODO: may assign an empty string value if not allowed to display sample IDs or names ???
+									if (!_ref_.label) _ref_.label = sampleId
+									const s = {
+										sample: sampleId,
+										// must reserve _ref -> should not be used as a term.id or tw.$id
+										_ref_
+									}
+									samples[sampleId] = s
 								}
-								samples[sampleId] = s
-							}
 
-							if (!sample.sample) sample.sample = data.refs.bySampleId[sampleId].sample || sampleId
-							if (!sample.sampleName) sample.sampleName = data.refs.bySampleId[sampleId].sampleName || sample.sample
+								if (!sample.sample) sample.sample = data.refs.bySampleId[sampleId].sample || sampleId
+								if (!sample.sampleName) sample.sampleName = data.refs.bySampleId[sampleId].sampleName || sample.sample
 
-							const d = shortId ? sample[shortId] : sample[tw.$id]
-							if (!d) continue
-							if (shortId in sample) {
-								sample[tw.$id] = d
-								delete sample[shortId]
+								const d = shortId ? sample[shortId] : sample[tw.$id]
+								if (!d) continue
+								if (shortId in sample) {
+									sample[tw.$id] = d
+									delete sample[shortId]
 
-								// rehydrate stripped props
-								if (d.$) d[$copyAs[d.$]] = d.key
-								if (gene && d.values) {
-									for (const v of d.values) {
-										if (!v.class && v.$) {
-											v.gene = gene
-											// rehydrate stripped props
-											Object.assign(v, $objAssign[v.$])
-											delete v.$
+									// rehydrate stripped props
+									if (d.$) d[$copyAs[d.$]] = d.key
+
+									if (tw.term.type == 'termCollection') {
+										const termsValue = JSON.parse(d.value)
+										const sum = termsValue.reduce((a, o) => a + Object.values(o)[0], 0)
+
+										let pre_val_sum = 0
+										let numerators_sum = 0
+										const values = []
+										for (const termV of termsValue) {
+											const label = Object.keys(termV)[0]
+											const value = (Object.values(termV)[0] / sum) * 100
+											if (value && tw.q.numerators?.includes(label)) {
+												numerators_sum += value
+											}
+											const color = tw.term.termlst.find(t => t.id === label || t.name == label).color
+											values.push({
+												label,
+												value,
+												pre_val_sum,
+												color
+											})
+											pre_val_sum += value
+										}
+										d.values = values
+										d.numerators_sum = numerators_sum
+										delete d.value
+									} else if (gene && d.values) {
+										for (const v of d.values) {
+											if (!v.class && v.$) {
+												v.gene = gene
+												// rehydrate stripped props
+												Object.assign(v, $objAssign[v.$])
+												delete v.$
+											}
 										}
 									}
 								}
+								if (origTw.transformData) origTw.transformData(d)
+								samples[sampleId][tw.$id] = d
 							}
 
-							if (origTw.transformData) origTw.transformData(d)
-							samples[sampleId][tw.$id] = d
-						}
+							for (const sampleId in data.refs.bySampleId) {
+								refs.bySampleId[sampleId] = data.refs.bySampleId[sampleId]
+							}
 
-						for (const sampleId in data.refs.bySampleId) {
-							refs.bySampleId[sampleId] = data.refs.bySampleId[sampleId]
+							refs.byTermId[tw.$id] = tw
+							if (tw.$id in data.refs.byTermId) {
+								refs.byTermId[tw.$id] = Object.assign({}, refs.byTermId[tw.$id], data.refs.byTermId[tw.$id])
+							}
 						}
-
-						refs.byTermId[tw.$id] = tw
-						if (tw.$id in data.refs.byTermId) {
-							refs.byTermId[tw.$id] = Object.assign({}, refs.byTermId[tw.$id], data.refs.byTermId[tw.$id])
-						}
-					}
-					numResponses++
-					if (opts.loadingDiv) opts.loadingDiv.html(`Updating data (${numResponses}/${promises.length}) ...`)
-				})
+						numResponses++
+						if (opts.loadingDiv) opts.loadingDiv.html(`Updating data (${numResponses}/${promises.length}) ...`)
+					})
+					.catch(e => {
+						if (signal) this.app?.triggerAbort('', signal)
+						throw e
+					})
 			)
 		}
 		try {

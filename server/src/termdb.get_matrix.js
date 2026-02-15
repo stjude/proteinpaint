@@ -72,7 +72,8 @@ export async function get_matrix(q, req, res, ds, genome) {
 	}
 	const data = await getData(q, ds, true) // FIXME hardcoded to true
 	if (data.error) {
-		console.trace(data)
+		if (String(data.error).includes('operation was aborted')) console.log(`(!) abort error`)
+		else console.trace(data)
 		res.send({ error: data.error })
 		return
 	}
