@@ -6,10 +6,11 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 Fixes:
-- forced version bump
+- throttle the number of concurrent by-term queries for sample data as triggered by getData()
+- revert to using memFetch to avoid redundant GDC API `/cases` request/responses across different genes
 
 
-## 2.170.9-57f94bf9a.0
+## 2.170.9
 
 Fixes:
 - fix violin plot not loading due to unsynchronized q.dtLst[] and q.predefined_groupset_idx
