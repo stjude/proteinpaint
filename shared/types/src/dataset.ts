@@ -1159,7 +1159,7 @@ type Scatterplots = {
 	if not defined:
 		entire plots[] is always send to client
 	*/
-	get?: (clientAuthResult: any) => any
+	get?: (clientAuthResult: any) => ScatterPlotsEntry[]
 	/** hardcoded plots */
 	plots: ScatterPlotsEntry[]
 }
