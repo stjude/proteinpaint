@@ -211,9 +211,10 @@ export class AppApi {
 		// // can also change timeout to 1000, to see that aborting is okay after the signaled fetch completes
 	}
 
-	triggerAbort(reason = '', signal) {
+	triggerAbort(reason = '', signal?: any) {
 		if (reason) if (reason) console.info(`triggerAbort()`, reason)
 		if (signal) {
+			if (signal.aborted) return
 			if (this.#abortController && signal === this.#abortController?.signal) this.#abortController.abort()
 			else {
 				const abortCtrl = this.#trackedAbortContrlsBySignal.get(signal)

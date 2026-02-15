@@ -167,7 +167,7 @@ async function processNDJSON_nestedKey(r) {
 
 // key: request object reference or computed string dataName
 // value: {
-//   promResponse: fetch promise or response,
+//   response: fetch promise or response,
 //   expi
 // }
 const dataCache = new Map()
@@ -198,22 +198,24 @@ const cacheLifetime = 1000 * 60 * 5
 export async function memFetch(url, init, opts = {}) {
 	if (typeof init.body === 'object') init.body = JSON.stringify(init.body)
 	const dataKey = opts.q || (await getDataName(url, init))
-	const { promResponse, exp } = dataCache.get(dataKey) || {}
+	const { response, exp } = dataCache.get(dataKey) || {}
 	const now = Date.now()
-	let result = promResponse
-	if (!result || exp < now || (typeof result != 'object' && !(result instanceof Promise))) {
-		dataCache.delete(dataKey)
-		result = undefined
-	}
-	if (result) dataCache.set(dataKey, { promResponse, exp: now + cacheLifetime })
+	let result = response // either a Promise or actual data
 
-	if (!result) {
-		let response
+	if (result) {
+		dataCache.set(dataKey, { response, exp: now + cacheLifetime })
+		return result
+	} else {
 		try {
 			// IMPORTANT: do not await so that this same promise may be reused
-			// by all subsequent requests with the same dataKey
+			// by subsequent requests with the same dataKey
 			result = opts.client
-				? opts.client(url, init, Object.assign(opts, { client: undefined }))
+				? opts.client(url, init, Object.assign(opts, { client: undefined })).then(response => {
+						// replace the cached promise result with the actual data,
+						// since persisting a cached promise for a long time is likely not best practice
+						dataCache.set(dataKey, { response, exp: Date.now() + cacheLifetime })
+						return response
+				  })
 				: fetch(url, init).then(async r => {
 						const response = await processResponse(r)
 						if (!r.ok) {
@@ -225,16 +227,22 @@ export async function memFetch(url, init, opts = {}) {
 								(typeof response == 'object' ? response.message || response.error : response)
 							)
 						}
+						// replace the cached promise result with the actual data,
+						// since persisting a cached promise for a long time is likely not best practice
+						dataCache.set(dataKey, { response, exp: Date.now() + cacheLifetime })
 						return response
 				  })
-			dataCache.set(dataKey, { promResponse: result, exp: Date.now() + cacheLifetime })
+
+			dataCache.set(dataKey, { response: result, exp: Date.now() + cacheLifetime })
 			manageCacheSize(now)
+			return result
 		} catch (e) {
-			delete dataCache.delete(dataKey)
+			// delete this cache only if it is a promise;
+			// do not delete a valid resolved data cache
+			if (dataCache.delete(dataKey) instanceof Promise) delete dataCache.delete(dataKey)
 			throw e
 		}
 	}
-	return result
 }
 
 export function deleteCache(key) {
