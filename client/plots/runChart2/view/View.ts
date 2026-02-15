@@ -61,7 +61,10 @@ export class RunChart2View {
 			this.viewData.totalSampleCount != null && this.config?.xtw?.q?.mode !== 'discrete'
 				? `${xName}, n=${this.viewData.totalSampleCount.toLocaleString()}`
 				: xName
-		const yLabel = this.config?.ytw?.term?.name || 'Y Axis'
+		const isFrequency = this.config?.ytw == null
+		const yLabel =
+			this.config?.ytw?.term?.name ??
+			(isFrequency && this.settings?.showCumulativeFrequency ? 'Cumulative count' : 'Count')
 
 		const xAxisLabelY = plotDims.xAxis.y + (plotDims.xAxis.labelOffset ?? 50)
 		this.chartDom.svg

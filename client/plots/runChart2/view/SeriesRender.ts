@@ -127,14 +127,21 @@ export class SeriesRender {
 		const tip = this.runChart2?.dom?.hovertip
 		if (!tip) return
 		const cfg = this.runChart2?.state?.config
-		const xTermName = cfg?.xtw?.term?.name ?? 'X'
-		const yTermName = cfg?.ytw?.term?.name ?? 'Y'
+		const isFrequency = cfg?.ytw == null
 		tip.clear()
 		const table = table2col({ holder: tip.d.append('div') })
 		if (this.series.seriesId) table.addRow('Period', this.series.seriesId)
+		const xTermName = cfg?.xtw?.term?.name ?? 'X'
 		table.addRow(xTermName, d.xName ?? String(d.x))
-		table.addRow(yTermName, roundValueAuto(d.y, true, 2))
-		table.addRow('Sample Count', String(d.sampleCount ?? ''))
+		if (isFrequency) {
+			const showCumulative = this.runChart2?.state?.config?.settings?.runChart2?.showCumulativeFrequency
+			const countLabel = showCumulative ? 'Cumulative count' : 'Count'
+			table.addRow(countLabel, String(d.sampleCount ?? d.y ?? ''))
+		} else {
+			const yTermName = cfg?.ytw?.term?.name ?? 'Y'
+			table.addRow(yTermName, roundValueAuto(d.y, true, 2))
+			table.addRow('Sample Count', String(d.sampleCount ?? ''))
+		}
 		tip.show(event.clientX, event.clientY)
 	}
 
