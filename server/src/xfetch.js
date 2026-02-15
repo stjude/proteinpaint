@@ -1,5 +1,6 @@
 import serverconfig from './serverconfig.js'
 import ky from 'ky'
+import { isAbortError } from './utils.js'
 
 // track AbortController instance by filter0 object,
 // to get a signal to cancel active requests after a client
@@ -10,7 +11,7 @@ export const abortCtrlBy = {
 }
 
 // xfetch = extended fetch with retry support (needed for GDC API)
-// First two arguments are the same as native fetch,
+// First two arguments are the same as native fetch
 export async function xfetch(url, opts = {}) {
 	if (opts.json && !opts.body) opts.body = opts.json
 	if (opts.body && typeof opts.body != 'string') {
@@ -49,7 +50,8 @@ export async function xfetch(url, opts = {}) {
 			return payload
 		})
 		.catch(e => {
-			abortCtrlBy.signal.get(opts.signal)?.abort()
+			// prevent re-aborting the same signal
+			if (!opts.signal?.aborted) abortCtrlBy.signal.get(opts.signal)?.abort()
 			throw e
 		})
 }
