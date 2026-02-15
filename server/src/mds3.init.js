@@ -2714,7 +2714,11 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		// retrieve mutation data for each gene
 		// query genes concurrently to speed up geneset query
 		// limit to 50 genes at a time (otherwise gdc query can fail)
-		if (!tw.term.genes?.length) throw 'tw.term.genes[] is empty'
+		if (!tw.term.genes?.length) {
+			const { gene, type } = tw.term
+			if (gene && type == 'geneVariant') tw.term.genes = [{ id: gene, gene, type, kind: 'gene', name: gene }]
+			else throw 'tw.term.genes[] is empty'
+		}
 		const maxNumGenes = ds.cohort.termdb.maxGeneVariantGeneSetSize || 200
 		if (tw.term.genes.length > maxNumGenes) throw `gene set size exceeds ${maxNumGenes} genes`
 		const termdbmclass = q.ds?.cohort?.termdb?.mclass // custom mclass labels from dataset
