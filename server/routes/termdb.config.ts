@@ -151,7 +151,7 @@ function addScatterplots(c, ds, info) {
 	if (!ds.cohort.scatterplots) return
 	// this dataset has premade scatterplots. reveal to client
 	if (ds.cohort.scatterplots.get) {
-		c.scatterplots = ds.cohort.scatterplots.get(info)
+		c.scatterplots = ds.cohort.scatterplots.get(info?.clientAuthResult)
 		return
 	}
 	c.scatterplots = ds.cohort.scatterplots.plots.map(p => {
