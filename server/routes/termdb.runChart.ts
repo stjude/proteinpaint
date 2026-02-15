@@ -1,6 +1,40 @@
-import type { RouteApi, RunChartRequest, RunChartResponse } from '#types'
+import type { RouteApi, RunChartRequest, RunChartSeries, RunChartSuccessResponse } from '#types'
 import { runChartPayload } from '#types/checkers'
-import { getNumberFromDate } from '#shared/terms.js'
+import { getDateFromNumber, getNumberFromDate } from '#shared/terms.js'
+
+/**
+ * Parse numeric x (decimal year or legacy YYYY.MM) to year and month for bucketing.
+ * Prefer getDateFromNumber (fraction-of-days-in-year); fall back to legacy string-splitting
+ * for invalid dates or alternate formats (e.g. YYYY.MM).
+ */
+function decimalYearToYearMonth(xRaw: number): { yearNum: number; monthNum: number } | null {
+	const date = getDateFromNumber(xRaw)
+	const t = date.getTime()
+	if (Number.isFinite(t)) {
+		const yearNum = date.getFullYear()
+		const monthNum = date.getMonth() + 1
+		if (Number.isFinite(yearNum) && Number.isFinite(monthNum)) return { yearNum, monthNum }
+	}
+	// Fallback: legacy YYYY.MM or fractional-year interpretation
+	const parts = String(xRaw).split('.')
+	const year = Number(parts[0])
+	if (!Number.isFinite(year)) return null
+	let month: number
+	if (parts.length > 1) {
+		const decimalPart = parts[1]
+		if (decimalPart.length === 2) {
+			const monthCandidate = Number(decimalPart)
+			if (monthCandidate >= 1 && monthCandidate <= 12) month = monthCandidate
+			else month = Math.floor((xRaw - year) * 12) + 1
+		} else {
+			month = Math.floor((xRaw - year) * 12) + 1
+		}
+	} else {
+		month = 1
+	}
+	if (!Number.isFinite(month) || month < 1 || month > 12) return null
+	return { yearNum: year, monthNum: month }
+}
 
 export const api: RouteApi = {
 	endpoint: 'termdb/runChart',
@@ -16,11 +50,12 @@ export const api: RouteApi = {
 	}
 }
 
-export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChartResponse> {
-	const terms: any = [q.xtw, q.ytw]
+export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChartSuccessResponse> {
+	const isFrequency = !q.ytw
+	const terms: any = isFrequency ? [q.xtw] : [q.xtw, q.ytw]
 
 	const xTermId = q.xtw['$id'] ?? q.xtw.term?.id
-	const yTermId = q.ytw['$id'] ?? q.ytw.term?.id
+	const yTermId = q.ytw ? q.ytw['$id'] ?? q.ytw.term?.id : undefined
 
 	const { getData } = await import('../src/termdb.matrix.js')
 
@@ -39,7 +74,10 @@ export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChart
 	// Partition by xtw when xtw is in discrete mode
 	const shouldPartition = q.xtw?.q?.mode === 'discrete'
 
-	return buildRunChartFromData(q.aggregation, xTermId, yTermId, data, shouldPartition, xTermId)
+	if (isFrequency) {
+		return buildFrequencyFromData(xTermId, data, shouldPartition, xTermId)
+	}
+	return buildRunChartFromData(q.aggregation ?? 'median', xTermId, yTermId!, data, shouldPartition, xTermId)
 }
 
 export function buildRunChartFromData(
@@ -49,7 +87,7 @@ export function buildRunChartFromData(
 	data: any,
 	shouldPartition: boolean,
 	partitionTermId?: string
-): RunChartResponse {
+): RunChartSuccessResponse {
 	const allSamples = (data.samples || {}) as Record<string, any>
 
 	if (shouldPartition && partitionTermId) {
@@ -77,6 +115,95 @@ export function buildRunChartFromData(
 
 	const one = buildOneSeries(aggregation, xTermId, yTermId, data)
 	return { status: 'ok', series: [{ ...one }] }
+}
+
+/** Frequency mode: no y term; Y = count of samples per time bucket. */
+export function buildFrequencyFromData(
+	xTermId: string,
+	data: any,
+	shouldPartition: boolean,
+	partitionTermId?: string
+): RunChartSuccessResponse {
+	const allSamples = (data.samples || {}) as Record<string, any>
+
+	if (shouldPartition && partitionTermId) {
+		const period2Samples: Record<string, Record<string, any>> = {}
+		for (const sampleId in allSamples) {
+			const sample = allSamples[sampleId]
+			const partitionTerm = sample?.[partitionTermId]
+			if (partitionTerm?.key == null) continue
+			const periodKey = partitionTerm.key
+			if (!period2Samples[periodKey]) period2Samples[periodKey] = {}
+			period2Samples[periodKey][sampleId] = sample
+		}
+		const periodKeys = Object.keys(period2Samples).sort()
+		const series = periodKeys.map(seriesId => {
+			const subset = { samples: period2Samples[seriesId] }
+			const one = buildOneSeriesFrequency(xTermId, subset)
+			return { seriesId, ...one }
+		})
+		return { status: 'ok', series }
+	}
+
+	const one = buildOneSeriesFrequency(xTermId, data)
+	return { status: 'ok', series: [{ ...one }] }
+}
+
+function buildOneSeriesFrequency(xTermId: string, data: any): { median: number; points: any[] } {
+	const buckets: Record<string, { x: number; xName: string; count: number; sortKey: number }> = {}
+
+	for (const sampleId in (data.samples || {}) as any) {
+		const sample = (data.samples as any)[sampleId]
+		const xRaw = sample?.[xTermId]?.value ?? sample?.[xTermId]?.key
+		if (xRaw == null) continue
+		if (typeof xRaw !== 'number') {
+			throw new Error(
+				`x value must be a number for sample ${sampleId}: xTermId=${xTermId}, received type ${typeof xRaw}, value: ${xRaw}`
+			)
+		}
+
+		const parsed = decimalYearToYearMonth(xRaw)
+		if (!parsed) continue
+		const { yearNum, monthNum } = parsed
+
+		const bucketKey = `${yearNum}-${String(monthNum).padStart(2, '0')}`
+		const bucketDate = new Date(yearNum, monthNum - 1, 1)
+		const xName = bucketDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })
+
+		if (!buckets[bucketKey]) {
+			const midMonthX = getNumberFromDate(new Date(yearNum, monthNum - 1, 15))
+			buckets[bucketKey] = { x: midMonthX, xName, count: 0, sortKey: yearNum * 100 + monthNum }
+		}
+		buckets[bucketKey].count += 1
+	}
+
+	function xFromBucket(b: { sortKey: number }) {
+		const yearNum = Math.floor(b.sortKey / 100)
+		const monthNum = b.sortKey % 100
+		const x = getNumberFromDate(new Date(yearNum, monthNum - 1, 15))
+		return Math.round(x * 100) / 100
+	}
+
+	const points = Object.values(buckets)
+		.sort((a, b) => a.sortKey - b.sortKey)
+		.map(b => ({
+			x: xFromBucket(b),
+			xName: b.xName,
+			y: b.count,
+			sampleCount: b.count
+		}))
+
+	const yValues = points.map(p => p.y).filter(v => typeof v === 'number' && !Number.isNaN(v))
+	const median =
+		yValues.length > 0
+			? (() => {
+					const sorted = [...yValues].sort((a, b) => a - b)
+					const mid = Math.floor(sorted.length / 2)
+					return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]
+			  })()
+			: 0
+
+	return { median, points }
 }
 
 function buildOneSeries(
@@ -124,48 +251,17 @@ function buildOneSeries(
 			)
 		}
 
-		let year: number | null = null
-		let month: number | null = null
-		const parts = String(xRaw).split('.')
-		year = Number(parts[0])
-		if (parts.length > 1) {
-			const decimalPart = parts[1]
-			// If decimal part is exactly 2 digits and represents a valid month (01-12), treat as YYYY.MM
-			if (decimalPart.length === 2) {
-				const monthCandidate = Number(decimalPart)
-				if (monthCandidate >= 1 && monthCandidate <= 12) {
-					month = monthCandidate
-				} else {
-					// Invalid month, treat as fractional year
-					const frac = xRaw - year
-					month = Math.floor(frac * 12) + 1
-				}
-			} else {
-				// Decimal part is not 2 digits, treat as fractional year
-				const frac = xRaw - year
-				month = Math.floor(frac * 12) + 1
-			}
-		} else {
-			// No decimal part (year-only). Default to January so the year renders.
-			month = 1
-		}
-
-		if (year == null || month == null || Number.isNaN(year) || Number.isNaN(month)) {
-			continue
-		}
-
-		// TypeScript narrowing: at this point year and month are guaranteed to be numbers
-		const yearNum = year as number
-		const monthNum = month as number
+		const parsed = decimalYearToYearMonth(xRaw)
+		if (!parsed) continue
+		const { yearNum, monthNum } = parsed
 
 		const bucketKey = `${yearNum}-${String(monthNum).padStart(2, '0')}`
-		const x = Number(`${yearNum}.${String(monthNum).padStart(2, '0')}`)
-		const date = new Date(yearNum, monthNum - 1, 1)
-		const xName = date.toLocaleString('en-US', { month: 'long', year: 'numeric' })
+		const bucketDate = new Date(yearNum, monthNum - 1, 1)
+		const xName = bucketDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })
 
 		if (!buckets[bucketKey]) {
 			buckets[bucketKey] = {
-				x,
+				x: getNumberFromDate(new Date(yearNum, monthNum - 1, 15)),
 				xName,
 				count: 0,
 				missingCount: 0,
@@ -284,6 +380,11 @@ function buildOneSeries(
 	return { median, points }
 }
 
+/** Builds the error response body so it always includes required fields (e.g. series: []). */
+export function runChartErrorPayload(message: string): { error: string; series: RunChartSeries[] } {
+	return { error: message, series: [] }
+}
+
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
@@ -296,7 +397,7 @@ function init({ genomes }) {
 			const result = await getRunChart(q, ds)
 			res.send(result)
 		} catch (e: any) {
-			res.send({ error: e.message || e })
+			res.send(runChartErrorPayload(e.message || e))
 		}
 	}
 }

@@ -1,5 +1,7 @@
 export type RunChart2Settings = {
 	aggregation: 'median'
+	/** When true (frequency mode only), Y axis shows cumulative count over time. */
+	showCumulativeFrequency?: boolean
 	svgw: number
 	svgh: number
 	color: string

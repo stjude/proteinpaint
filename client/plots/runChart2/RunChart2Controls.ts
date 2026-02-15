@@ -107,7 +107,7 @@ function getBaseInputs(app: AppApi) {
 			usecase: { target: 'runChart2', detail: 'numeric' },
 			label: 'Y',
 			vocabApi: app.vocabApi,
-			menuOptions: 'replace',
+			menuOptions: '{replace,remove}',
 			defaultQ4fillTW: term0_term2_defaultQ,
 			numericEditMenuVersion: ['continuous']
 		},
@@ -150,9 +150,23 @@ function getBaseInputs(app: AppApi) {
 export function getRunChart2Controls(
 	app: AppApi,
 	range?: { xMin: number; xMax: number; yMin: number; yMax: number },
-	runChart2?: { dom: { controls: any } }
+	runChart2?: { dom: { controls: any }; state?: { config?: any } }
 ) {
-	const inputs: any[] = getBaseInputs(app)
+	let inputs: any[] = getBaseInputs(app)
+	const isFrequency = runChart2?.state?.config?.ytw == null
+	if (isFrequency) {
+		inputs = inputs.filter(i => i.settingsKey !== 'aggregation')
+		const plotHeightIndex = inputs.findIndex(i => i.settingsKey === 'svgh')
+		const cumulativeCheckbox = {
+			label: 'Show cumulative frequency',
+			boxLabel: '',
+			type: 'checkbox',
+			chartType: 'runChart2',
+			settingsKey: 'showCumulativeFrequency',
+			title: 'Show the cumulative number of events over time'
+		}
+		inputs.splice(plotHeightIndex >= 0 ? plotHeightIndex : inputs.length, 0, cumulativeCheckbox)
+	}
 	if (range) {
 		inputs.push(...getMinMaxInputs(range, runChart2))
 	}

@@ -1,11 +1,12 @@
-import type { RunChartRequest, RunChartResponse } from '#types'
+import type { RunChartRequest, RunChartResponse, RunChartSuccessResponse } from '#types'
+import { isRunChartSuccess } from '#types'
 import { getNormalRoot } from '#filter'
 import { dofetch3 } from '#common/dofetch'
 
 export class RunChart2Model {
 	runChart2: any
 	charts: any[] = []
-	chartData: RunChartResponse | null = null
+	chartData: RunChartSuccessResponse | null = null
 
 	constructor(runChart2: any) {
 		this.runChart2 = runChart2
@@ -23,12 +24,14 @@ export class RunChart2Model {
 			dslabel: opts.dslabel,
 			filter: getNormalRoot(opts.filter ?? undefined),
 			xtw: opts.xtw,
-			ytw: opts.ytw,
-			aggregation: opts.aggregation ?? 'median'
+			...(opts.ytw != null && { ytw: opts.ytw }),
+			...(opts.ytw != null && { aggregation: opts.aggregation ?? 'median' })
 		}
 		const result: RunChartResponse = await dofetch3('termdb/runChart', { body })
 
-		if (result['error']) throw new Error(`RunChart2Model.fetchData() failed: ${result['error']}`)
+		if (!isRunChartSuccess(result)) {
+			throw new Error(`RunChart2Model.fetchData() failed: ${result.error}`)
+		}
 
 		return result.series
 	}
@@ -40,8 +43,10 @@ export class RunChart2Model {
 			dslabel: state.vocab.dslabel,
 			filter: state.termfilter?.filter,
 			xtw: config.xtw,
-			ytw: config.ytw,
-			aggregation: config.settings.runChart2.aggregation
+			...(config.ytw != null && {
+				ytw: config.ytw,
+				aggregation: config.settings.runChart2.aggregation
+			})
 		}
 		return opts
 	}
