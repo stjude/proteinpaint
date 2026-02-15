@@ -121,7 +121,6 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	if (ds.cohort.boxplots) c.boxplots = ds.cohort.boxplots
 	if (tdb.maxGeneVariantGeneSetSize) c.maxGeneVariantGeneSetSize = tdb.maxGeneVariantGeneSetSize
 	addRestrictAncestries(c, tdb)
-	addScatterplots(c, ds)
 	addMatrixplots(c, ds)
 	addMutationSignatureplots(c, ds)
 	addNonDictionaryQueries(c, ds, genome)
@@ -136,6 +135,9 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	// note this may be undefined if there is no ds.cohort.termdb.getAdditionalFilter
 	c.authFilter = req.query.filter
 
+	// continue to add contents that may require auth
+	addScatterplots(c, ds, info)
+
 	res.send({ termdbConfig: c })
 }
 
@@ -145,9 +147,13 @@ function addRestrictAncestries(c, tdb) {
 		return { name: i.name, tvs: i.tvs, PCcount: i.PCcount }
 	})
 }
-function addScatterplots(c, ds) {
+function addScatterplots(c, ds, info) {
 	if (!ds.cohort.scatterplots) return
 	// this dataset has premade scatterplots. reveal to client
+	if (ds.cohort.scatterplots.get) {
+		c.scatterplots = ds.cohort.scatterplots.get(info)
+		return
+	}
 	c.scatterplots = ds.cohort.scatterplots.plots.map(p => {
 		return {
 			name: p.name,

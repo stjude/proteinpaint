@@ -1124,8 +1124,6 @@ type DataDownloadCatch = {
 	jwt: { [index: string]: string }
 }
 
-//Plots
-
 type ScatterPlotsEntry = {
 	name: string
 	dimension: number
@@ -1154,8 +1152,12 @@ this is limited to only one term and doesn't allow switching between multiple te
 }
 
 type Scatterplots = {
-	plots: ScatterPlotsEntry[]
+	/** ds-supplied getter, arg is clientAuthResult, returns array of obj for client */
+	get?: (clientAuthResult: any) => any
+	/** hardcoded plots */
+	plots?: ScatterPlotsEntry[]
 }
+
 /** this plot compares correlation of one feature against a bunch of variables across samples
  */
 type CorrelationVolcano = {
