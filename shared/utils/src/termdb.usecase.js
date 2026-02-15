@@ -17,6 +17,7 @@ export const graphableTypes = new Set([
 	'dtsv',
 	'date',
 	TermTypes.SSGSEA,
+	TermTypes.DNA_METHYLATION,
 	TermTypes.METABOLITE_INTENSITY,
 	TermTypes.SINGLECELL_GENE_EXPRESSION,
 	TermTypes.SINGLECELL_CELLTYPE,
