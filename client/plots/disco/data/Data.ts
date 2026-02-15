@@ -7,6 +7,8 @@ export default interface Data {
 	readonly chr: string
 	readonly ref: string
 	readonly alt: string
+	readonly refCount?: string | number
+	readonly altCount?: string | number
 	readonly position: number
 	readonly poschr: any
 	readonly posbins: any

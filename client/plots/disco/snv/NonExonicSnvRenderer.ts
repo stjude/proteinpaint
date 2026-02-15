@@ -5,6 +5,7 @@ import type Arc from '#plots/disco/arc/Arc.ts'
 import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
 import { dtsnvindel } from '#shared/common.js'
 import { table2col } from '#dom/table2col'
+import { appendVafBar, hasValidReadCounts } from './vafTooltip.ts'
 
 export default class NonExonicSnvRenderer implements IRenderer {
 	private geneClickListener: (gene: string, mnames: Array<string>) => void
@@ -61,6 +62,11 @@ export default class NonExonicSnvRenderer implements IRenderer {
 					const [td1, td2] = table.addRow()
 					td1.text('Occurrence')
 					td2.text(snv.occurrence)
+				}
+				if (hasValidReadCounts(arc.refCount, arc.altCount)) {
+					const [td1, td2] = table.addRow()
+					td1.text('Read count')
+					appendVafBar(td2, arc.refCount, arc.altCount)
 				}
 
 				menu.show(mouseEvent.x, mouseEvent.y)
