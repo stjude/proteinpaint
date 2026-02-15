@@ -5,9 +5,9 @@ import type Label from './Label.ts'
 import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
 import type MutationTooltip from '#plots/disco/label/MutationTooltip.ts'
 import type FusionTooltip from '#plots/disco/fusion/FusionTooltip.ts'
-import { fillbar } from '#dom'
 import { table2col } from '#dom/table2col'
 import type CnvTooltip from '#plots/disco/cnv/CnvTooltip.ts'
+import { appendVafBar, hasValidReadCounts } from '#plots/disco/snv/vafTooltip.ts'
 
 export default class LabelsRenderer implements IRenderer {
 	private animationDuration: number
@@ -121,7 +121,9 @@ export default class LabelsRenderer implements IRenderer {
 						.style('color', 'black')
 						.style('font-size', '0.8em')
 						.text(` ${mutation.chr}:${mutation.position}`)
-					this.appendReadCountBar(td2, mutation)
+					if (hasValidReadCounts(mutation.refCount, mutation.altCount)) {
+						appendVafBar(td2, mutation.refCount, mutation.altCount)
+					}
 				}
 			})
 		}
@@ -161,34 +163,5 @@ export default class LabelsRenderer implements IRenderer {
 					.text(`${cnv.chr}:${cnv.start}-${cnv.stop}`)
 			})
 		}
-	}
-	private appendReadCountBar(td2: any, mutation: MutationTooltip) {
-		const refCount = this.getIntegerCount(mutation.refCount)
-		const altCount = this.getIntegerCount(mutation.altCount)
-		if (refCount == null || altCount == null) return
-		if (refCount < 0 || altCount < 0 || refCount + altCount <= 0) return
-
-		const totalCount = refCount + altCount
-		const fraction = altCount / totalCount
-		const div = td2
-			.append('div')
-			.style('margin-left', '5px')
-			.style('margin-top', '4px')
-			.style('display', 'flex')
-			.style('align-items', 'center')
-			.style('gap', '6px')
-
-		div.append('span').style('font-size', '0.8em').style('color', '#555').text('VAF')
-		fillbar(div, { f: fraction, v1: altCount, v2: totalCount })
-	}
-
-	private getIntegerCount(v: unknown): number | null {
-		if (Number.isInteger(v)) return v as number
-		//Expect str, (optional minus sign), 0-9, end of str.
-		if (typeof v == 'string' && /^-?\d+$/.test(v)) {
-			const n = Number(v)
-			if (Number.isInteger(n)) return n
-		}
-		return null
 	}
 }
