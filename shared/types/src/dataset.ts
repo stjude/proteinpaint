@@ -1152,10 +1152,16 @@ this is limited to only one term and doesn't allow switching between multiple te
 }
 
 type Scatterplots = {
-	/** ds-supplied getter, arg is clientAuthResult, returns array of obj for client */
+	/** 
+	if defined:
+		ds-supplied getter, arg is clientAuthResult, returns list of plot available for this request based on auth
+		here plots[] array is still needed! so on loading a plot the server can find the matching plot by requested name
+	if not defined:
+		entire plots[] is always send to client
+	*/
 	get?: (clientAuthResult: any) => any
 	/** hardcoded plots */
-	plots?: ScatterPlotsEntry[]
+	plots: ScatterPlotsEntry[]
 }
 
 /** this plot compares correlation of one feature against a bunch of variables across samples
