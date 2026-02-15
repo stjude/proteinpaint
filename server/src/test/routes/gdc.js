@@ -3,6 +3,8 @@
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '../../serverconfig.js'
+import { sleep, xfetch } from '../../utils.js'
+import { joinUrl, memFetch } from '#shared/index.js'
 // import ky from 'ky'
 
 // simulate GDC sessionid to token mapping
@@ -100,16 +102,30 @@ export default async function setRoutes(app, basepath) {
 		res.send({ ok: true, status: 'ok', message: 'built-in retry works!!' })
 	})
 
-	// setTimeout(async ()=>{
-	//   // immediately after server listens to port, should see
-	//   // --- sent 502 --- (ignored initial failure) and then an ok response (successful retry)
-	//   // in the server logs
-	//   ky('http://localhost:3000/ky-retry-test', {retry: {limit: 2, backoffLimit: 10000}}).then(r => r.json()).then(console.log).catch(console.log)
-	// }, 2000)
-}
+	app.get('/termdb/external-API-test', async (req, res) => {
+		const q = req.query
+		// client request should include ?dslabel=GDC so that app.middleware will set up abortCtrl
+		console.log('req.query.__abortSignal', q.__abortSignal)
+		try {
+			const payload = await Promise.all([triggerReq(), triggerReq(), triggerReq()])
+			res.send(payload[0])
+		} catch (e) {
+			if (!res.writableEnded) res.send({ status: 'error', error: 'AbortError' })
+		}
 
-function sleep(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms))
+		async function triggerReq() {
+			const url = `http://localhost:3000/external-API-route` //?test=${i}`
+			const opts = { signal: req.query.__abortSignal }
+			// memFetch causes the server to crash on abort, xfetch() doesn't
+			return q.client === 'xfetch' ? await xfetch(url, opts) : await memFetch(url, opts, { client: xfetch })
+		}
+	})
+
+	app.get('/external-API-route', async (req, res) => {
+		await sleep(1000)
+		//res.header('content-type', 'application/json')
+		res.send({ status: 'ok' })
+	})
 }
 
 const pastExpiration =
