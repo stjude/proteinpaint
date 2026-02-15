@@ -22,7 +22,6 @@ export async function xfetch(url, opts = {}) {
 	}
 
 	if (opts.json && !opts.body) opts.body = opts.json
-	let filter0
 	if (opts.body && typeof opts.body != 'string') {
 		// q.__abortSignal, which becomes opts.signal, here may be converted to an empty object
 		// by creating a JSON.parse(JSON.stringify(q.__abortSignal)), need to detect that as an invalid opts.signal
@@ -30,7 +29,8 @@ export async function xfetch(url, opts = {}) {
 			// the nested query processing failed to pass req.query.__abortSignal from the app.middleware,
 			// resort to the alternative method of finding the applicable abortSignal that's tracked by req.query,filter0;
 			// if filter0 is null, this will not return anything
-			filter0 = opts.body.case_filters?.content?.find(f => abortCtrlBy.filter0.has(f))
+			const content = opts.body.case_filters?.content
+			const filter0 = Array.isArray(content) && content.find(f => abortCtrlBy.filter0.has(f))
 			if (filter0) opts.signal = abortCtrlBy.filter0.get(filter0)?.signal
 		}
 		// console.log(24, opts.signal, filter0, opts.body.case_filters?.content)
