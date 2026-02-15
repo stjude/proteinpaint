@@ -597,6 +597,7 @@ async function loadFile(p: any, ds: any) {
 // called in mds3.init
 export async function mayInitiateScatterplots(ds) {
 	if (!ds.cohort.scatterplots) return
+	if (typeof ds.cohort.scatterplots.get == 'function') return // if ds supplies getter, don't need anything else
 	if (!Array.isArray(ds.cohort.scatterplots.plots)) throw new Error('cohort.scatterplots.plots is not array')
 	for (const p of ds.cohort.scatterplots.plots) {
 		if (!p.name) throw new Error('.name missing from one of scatterplots.plots[]')
