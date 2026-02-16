@@ -98,6 +98,9 @@ function validateArg(q, ds) {
 	}
 }
 
+const maxActiveQueriesAcrossUsers = serverconfig.features?.maxActiveQueriesAcrossUsers || 10
+let numActiveQueriesAcrossUsers = 0
+
 async function getSampleData(q, ds, onlyChildren = false) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, geneVariantTws, nonDictTerms] = divideTerms(q.terms)
@@ -142,8 +145,14 @@ async function getSampleData(q, ds, onlyChildren = false) {
 
 				// prevent excessive API calls that may lead to network errors,
 				// for example https://gdc-ctds.atlassian.net/browse/SV-2728
-				if (promises.length >= maxConcurrentQueries || i >= geneVariantTws.length - 1) {
+				if (
+					numActiveQueriesAcrossUsers >= maxActiveQueriesAcrossUsers ||
+					promises.length >= maxConcurrentQueries ||
+					i >= geneVariantTws.length - 1
+				) {
+					numActiveQueriesAcrossUsers += promises.length
 					await Promise.all(promises)
+					numActiveQueriesAcrossUsers -= promises.length
 					promises.length = 0
 				}
 			}
