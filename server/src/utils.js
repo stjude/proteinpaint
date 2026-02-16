@@ -890,19 +890,9 @@ export function isRecoverableError(e, opts = {}) {
 
 export function isAbortError(e) {
 	if (e !== null && typeof e === 'object') {
-		console.log(893, e.name)
 		if (e.name === 'AbortError') return true
 	}
 	// may add additional logic to detect
-}
-
-export function deepFreeze(obj) {
-	Object.freeze(obj)
-	// not using for..in loop, in order to not descend into inherited props/methods
-	for (const value of Object.values(obj)) {
-		if (value !== null && typeof value == 'object') deepFreeze(value)
-	}
-	return obj
 }
 
 //////////////////////////////
