@@ -92,16 +92,21 @@ export class GvBase extends TwBase {
 		// add geneVariant term to each child dt term
 		addParentTerm(tw.term)
 
-		{
-			// apply optional ds-level configs for this specific term
-			const c = opts.vocabApi.termdbConfig.queries.cnv
-			if (c && tw.term.name) {
-				//if (c) valid js code but `&& tw.term.name` required to avoid type error
-				// order of overide: 1) do not override existing settings in tw.q{} 2) c.cnvCutoffsByGene[thisGene] 3) default cutoffs in c
-				const { cnvMaxLength, cnvGainCutoff, cnvLossCutoff } = c
-				const defaultCnvCutoff =
-					cnvMaxLength || cnvGainCutoff || cnvLossCutoff ? { cnvMaxLength, cnvGainCutoff, cnvLossCutoff } : {}
-				Object.assign(tw.q, defaultCnvCutoff, c.cnvCutoffsByGene?.[tw.term.name] || {}, tw.q)
+		// apply optional ds-level configs for this specific term
+		const cnv = opts.vocabApi.termdbConfig.queries.cnv
+		if (cnv) {
+			if ('cnvGainCutoff' in cnv || 'cnvLossCutoff' in cnv || 'cnvMaxLength' in cnv) {
+				// continuous cnv data
+				// assign cnv cutoffs to tw.q
+				// priority of cnv cutoffs: tw.q > cnvCutoffsByGene > dsCnvCutoffs
+				const dsCnvCutoffs = {
+					cnvGainCutoff: cnv.cnvGainCutoff,
+					cnvLossCutoff: cnv.cnvLossCutoff,
+					cnvMaxLength: cnv.cnvMaxLength
+				}
+				const cnvCutoffsByGene = cnv.cnvCutoffsByGene?.[tw.term.name]
+				const defaultCnvCutoffs = cnvCutoffsByGene || dsCnvCutoffs
+				tw.q = Object.assign({}, defaultCnvCutoffs, tw.q)
 			}
 		}
 		/* 
