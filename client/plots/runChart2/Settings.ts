@@ -11,3 +11,7 @@ export type RunChart2Settings = {
 	minYScale: null | number
 	maxYScale: null | number
 }
+
+export function getFrequencyCountLabel(showCumulative?: boolean): string {
+	return showCumulative ? 'Cumulative count' : 'Count'
+}

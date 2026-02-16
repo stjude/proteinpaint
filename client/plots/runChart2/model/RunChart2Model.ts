@@ -1,5 +1,4 @@
-import type { RunChartRequest, RunChartResponse, RunChartSuccessResponse } from '#types'
-import { isRunChartSuccess } from '#types'
+import type { RunChartRequest, RunChartResponse, RunChartErrorResponse, RunChartSuccessResponse } from '#types'
 import { getNormalRoot } from '#filter'
 import { dofetch3 } from '#common/dofetch'
 
@@ -24,14 +23,14 @@ export class RunChart2Model {
 			dslabel: opts.dslabel,
 			filter: getNormalRoot(opts.filter ?? undefined),
 			xtw: opts.xtw,
-			...(opts.ytw != null && { ytw: opts.ytw }),
-			...(opts.ytw != null && { aggregation: opts.aggregation ?? 'median' }),
-			...(opts.ytw == null && opts.showCumulativeFrequency === true && { showCumulativeFrequency: true })
+			ytw: opts.ytw,
+			aggregation: opts.aggregation,
+			showCumulativeFrequency: opts.showCumulativeFrequency
 		}
 		const result: RunChartResponse = await dofetch3('termdb/runChart', { body })
 
-		if (!isRunChartSuccess(result)) {
-			throw new Error(`RunChart2Model.fetchData() failed: ${result.error}`)
+		if (!('status' in result) || result.status !== 'ok') {
+			throw new Error(`RunChart2Model.fetchData() failed: ${(result as RunChartErrorResponse).error}`)
 		}
 
 		return result.series
@@ -39,19 +38,14 @@ export class RunChart2Model {
 
 	getRequestOpts(config: any): RunChartRequest {
 		const state = this.runChart2.state
-		const opts: RunChartRequest = {
+		return {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,
 			filter: state.termfilter?.filter,
 			xtw: config.xtw,
-			...(config.ytw != null && {
-				ytw: config.ytw,
-				aggregation: config.settings.runChart2.aggregation
-			}),
-			...(config.ytw == null && {
-				showCumulativeFrequency: config.settings?.runChart2?.showCumulativeFrequency === true
-			})
+			ytw: config.ytw,
+			aggregation: config.settings?.runChart2?.aggregation,
+			showCumulativeFrequency: config.settings?.runChart2?.showCumulativeFrequency === true
 		}
-		return opts
 	}
 }
