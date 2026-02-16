@@ -45,8 +45,8 @@ tape('buildRunChartFromData() median aggregation (multi-month)', function (test)
 						sampleCount: 1
 					},
 					{
-						x: 2023.79,
-						xName: 'October 2023',
+						x: 2023.87,
+						xName: 'November 2023',
 						y: 15,
 						sampleCount: 2
 					}

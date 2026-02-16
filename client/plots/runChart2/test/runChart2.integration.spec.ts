@@ -77,6 +77,350 @@ tape('Render TermdbTest runChart2 plot with data', async function (test) {
 	test.end()
 })
 
+// --- Frequency chart (no ytw) integration tests ---
+
+tape('Frequency mode (no ytw) renders with mocked frequency data', async function (test) {
+	test.timeoutAfter(10000)
+	test.plan(4)
+
+	const holder = getHolder()
+	const mockFrequencyResponse = {
+		status: 'ok',
+		series: [
+			{
+				median: 2.5,
+				points: [
+					{ x: 2024.04, xName: 'January 2024', y: 2, sampleCount: 2 },
+					{ x: 2024.29, xName: 'April 2024', y: 3, sampleCount: 3 },
+					{ x: 2024.54, xName: 'July 2024', y: 4, sampleCount: 4 }
+				]
+			}
+		]
+	}
+
+	const originalFetch = window.fetch
+	window.fetch = (input: RequestInfo | URL) => {
+		const url = typeof input === 'string' ? input : (input as Request).url
+		if (url.includes('termdb/runChart')) {
+			return Promise.resolve(
+				new Response(JSON.stringify(mockFrequencyResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		}
+		return originalFetch(input as RequestInfo)
+	}
+
+	runpp({
+		holder,
+		state: {
+			plots: [
+				{
+					chartType: 'runChart2',
+					xtw: { id: 'date', q: { mode: 'continuous' } }
+					// no ytw => frequency mode
+				}
+			]
+		}
+	})
+
+	try {
+		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const svg = await waitForElement('svg', chartHolder, 5000)
+		test.ok(!svg.empty(), 'should have SVG in chartHolder')
+
+		const seriesGroup = await waitForElement('[data-testId="sjpp-runChart2-seriesGroup"]', svg, 5000)
+		const circles = seriesGroup.selectAll('circle')
+		test.ok(circles.size() > 0, `should render data points. Rendered ${circles.size()}.`)
+
+		const errorEl = chartHolder.select('[data-testId="sjpp-runChart2-error"]')
+		const errorText = !errorEl.empty() ? errorEl.text() : ''
+		test.ok(!errorText, 'should not show error message')
+
+		test.ok(
+			seriesGroup.selectAll('[data-testId="sjpp-runChart2-series"]').size() >= 1,
+			'should have at least one series group'
+		)
+	} catch (e) {
+		console.error('Test error:', e)
+		test.fail(`${e}`)
+	} finally {
+		window.fetch = originalFetch
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('Frequency mode shows FREQUENCY CHART header', async function (test) {
+	test.timeoutAfter(10000)
+	test.plan(2)
+
+	const holder = getHolder()
+	const mockFrequencyResponse = {
+		status: 'ok',
+		series: [{ median: 1, points: [{ x: 2024.04, xName: 'January 2024', y: 1, sampleCount: 1 }] }]
+	}
+
+	const originalFetch = window.fetch
+	window.fetch = (input: RequestInfo | URL) => {
+		const url = typeof input === 'string' ? input : (input as Request).url
+		if (url.includes('termdb/runChart')) {
+			return Promise.resolve(
+				new Response(JSON.stringify(mockFrequencyResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		}
+		return originalFetch(input as RequestInfo)
+	}
+
+	runpp({
+		holder,
+		state: {
+			plots: [
+				{
+					chartType: 'runChart2',
+					xtw: { id: 'date', q: { mode: 'continuous' } }
+				}
+			]
+		}
+	})
+
+	try {
+		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		await waitForElement('svg', chartHolder, 5000)
+
+		// Header is rendered in holder when app provides opts.header
+		const header = holder.select('[data-testId="sjpp-runChart2-header"]')
+		test.ok(!header.empty(), 'should have header element')
+		test.equal(header.text().trim(), 'FREQUENCY CHART', 'header should say FREQUENCY CHART when no ytw')
+	} catch (e) {
+		console.error('Test error:', e)
+		test.fail(`${e}`)
+	} finally {
+		window.fetch = originalFetch
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('Frequency mode with showCumulativeFrequency shows Cumulative count y-axis label', async function (test) {
+	test.timeoutAfter(10000)
+	test.plan(2)
+
+	const holder = getHolder()
+	const mockCumulativeResponse = {
+		status: 'ok',
+		series: [
+			{
+				median: 3,
+				points: [
+					{ x: 2024.04, xName: 'January 2024', y: 2, sampleCount: 2 },
+					{ x: 2024.29, xName: 'April 2024', y: 4, sampleCount: 4 }
+				]
+			}
+		]
+	}
+
+	const originalFetch = window.fetch
+	window.fetch = (input: RequestInfo | URL) => {
+		const url = typeof input === 'string' ? input : (input as Request).url
+		if (url.includes('termdb/runChart')) {
+			return Promise.resolve(
+				new Response(JSON.stringify(mockCumulativeResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		}
+		return originalFetch(input as RequestInfo)
+	}
+
+	runpp({
+		holder,
+		state: {
+			plots: [
+				{
+					chartType: 'runChart2',
+					xtw: { id: 'date', q: { mode: 'continuous' } },
+					settings: { runChart2: { showCumulativeFrequency: true } }
+				}
+			]
+		}
+	})
+
+	try {
+		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const svg = await waitForElement('svg', chartHolder, 5000)
+
+		const yAxisLabel = svg.select('[data-testId="sjpp-runChart2-yAxisLabel"]')
+		test.ok(!yAxisLabel.empty(), 'should have y-axis label')
+		test.equal(
+			yAxisLabel.text(),
+			'Cumulative count',
+			'y-axis label should be Cumulative count when showCumulativeFrequency is true'
+		)
+	} catch (e) {
+		console.error('Test error:', e)
+		test.fail(`${e}`)
+	} finally {
+		window.fetch = originalFetch
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('Frequency mode without showCumulativeFrequency shows Count y-axis label', async function (test) {
+	test.timeoutAfter(10000)
+	test.plan(2)
+
+	const holder = getHolder()
+	const mockCountResponse = {
+		status: 'ok',
+		series: [
+			{
+				median: 2,
+				points: [
+					{ x: 2024.04, xName: 'January 2024', y: 2, sampleCount: 2 },
+					{ x: 2024.29, xName: 'April 2024', y: 1, sampleCount: 1 }
+				]
+			}
+		]
+	}
+
+	const originalFetch = window.fetch
+	window.fetch = (input: RequestInfo | URL) => {
+		const url = typeof input === 'string' ? input : (input as Request).url
+		if (url.includes('termdb/runChart')) {
+			return Promise.resolve(
+				new Response(JSON.stringify(mockCountResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		}
+		return originalFetch(input as RequestInfo)
+	}
+
+	runpp({
+		holder,
+		state: {
+			plots: [
+				{
+					chartType: 'runChart2',
+					xtw: { id: 'date', q: { mode: 'continuous' } },
+					settings: { runChart2: { showCumulativeFrequency: false } }
+				}
+			]
+		}
+	})
+
+	try {
+		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const svg = await waitForElement('svg', chartHolder, 5000)
+
+		const yAxisLabel = svg.select('[data-testId="sjpp-runChart2-yAxisLabel"]')
+		test.ok(!yAxisLabel.empty(), 'should have y-axis label')
+		test.equal(yAxisLabel.text(), 'Count', 'y-axis label should be Count when showCumulativeFrequency is false')
+	} catch (e) {
+		console.error('Test error:', e)
+		test.fail(`${e}`)
+	} finally {
+		window.fetch = originalFetch
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('Frequency mode request includes showCumulativeFrequency when enabled', async function (test) {
+	test.timeoutAfter(10000)
+	test.plan(2)
+
+	const holder = getHolder()
+	let lastRunChartBody: any = null
+	const mockResponse = {
+		status: 'ok',
+		series: [{ median: 1, points: [{ x: 2024.04, xName: 'January 2024', y: 1, sampleCount: 1 }] }]
+	}
+
+	function parseRunChartPayload(url: string, init?: RequestInit): any {
+		if (init?.body) {
+			try {
+				return typeof init.body === 'string' ? JSON.parse(init.body) : init.body
+			} catch (_) {
+				return null
+			}
+		}
+		const q = url.indexOf('?')
+		if (q === -1) return null
+		const payload: any = {}
+		for (const pair of url.slice(q + 1).split('&')) {
+			const eq = pair.indexOf('=')
+			if (eq === -1) continue
+			const key = decodeURIComponent(pair.slice(0, eq))
+			let val: string
+			try {
+				val = decodeURIComponent(pair.slice(eq + 1))
+			} catch (_) {
+				continue
+			}
+			try {
+				payload[key] = JSON.parse(val)
+			} catch (_) {
+				payload[key] = val
+			}
+		}
+		return Object.keys(payload).length ? payload : null
+	}
+
+	const originalFetch = window.fetch
+	window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+		const url = typeof input === 'string' ? input : (input as Request).url
+		if (url.includes('termdb/runChart')) {
+			lastRunChartBody = parseRunChartPayload(url, init)
+			return new Response(JSON.stringify(mockResponse), {
+				status: 200,
+				headers: { 'Content-Type': 'application/json' }
+			})
+		}
+		return originalFetch(input as RequestInfo, init)
+	}
+
+	runpp({
+		holder,
+		state: {
+			plots: [
+				{
+					chartType: 'runChart2',
+					xtw: { id: 'date', q: { mode: 'continuous' } },
+					settings: { runChart2: { showCumulativeFrequency: true } }
+				}
+			]
+		}
+	})
+
+	try {
+		await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		await waitForElement('svg', holder.select('[data-testId="sjpp-runChart2-chartHolder"]'), 5000)
+
+		test.ok(lastRunChartBody != null, 'runChart should have been called')
+		test.equal(
+			lastRunChartBody?.showCumulativeFrequency,
+			true,
+			'request body should include showCumulativeFrequency: true'
+		)
+	} catch (e) {
+		console.error('Test error:', e)
+		test.fail(`${e}`)
+	} finally {
+		window.fetch = originalFetch
+		holder.remove()
+	}
+	test.end()
+})
+
 /**
  * TODO: runChart2Period tests are timing out when rendering SVG in discrete mode.
  * Error: Missing key for xTermId in sample data - suggests test data structure
