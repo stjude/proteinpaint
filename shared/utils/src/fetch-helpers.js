@@ -231,7 +231,7 @@ export async function memFetch(url, init, opts = {}) {
 						}
 						// replace the cached promise result with the actual data,
 						// since persisting a cached promise for a long time is likely not best practice
-						dataCache.set(dataKey, { response, exp: Date.now() + cacheLifetime })
+						dataCache.set(dataKey, { response: deepFreeze(response), exp: Date.now() + cacheLifetime })
 						return response
 				  })
 

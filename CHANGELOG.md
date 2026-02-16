@@ -7,7 +7,8 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - throttle the number of concurrent by-term queries for sample data as triggered by getData()
-- revert to using memFetch to avoid redundant GDC API `/cases` request/responses across different genes
+- revert to using memFetch to avoid redundant GDC API `/cases` request/responses across different genes that adds up to minutes of delayed response
+- prevent crashing the server due to unhandled exceptions when aborting GDC API fetch requests
 
 
 ## 2.170.9
