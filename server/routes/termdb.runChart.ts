@@ -57,6 +57,13 @@ export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChart
 	const xTermId = q.xtw['$id'] ?? q.xtw.term?.id
 	const yTermId = q.ytw ? q.ytw['$id'] ?? q.ytw.term?.id : undefined
 
+	if (xTermId == null || xTermId === '') {
+		throw new Error('runChart requires xtw with $id or term.id')
+	}
+	if (!isFrequency && (yTermId == null || yTermId === '')) {
+		throw new Error('runChart requires ytw with $id or term.id when ytw is provided')
+	}
+
 	const { getData } = await import('../src/termdb.matrix.js')
 
 	const data = await getData(
@@ -75,7 +82,7 @@ export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChart
 	const shouldPartition = q.xtw?.q?.mode === 'discrete'
 
 	if (isFrequency) {
-		return buildFrequencyFromData(xTermId, data, shouldPartition, xTermId)
+		return buildFrequencyFromData(xTermId, data, shouldPartition, xTermId, q.showCumulativeFrequency === true)
 	}
 	return buildRunChartFromData(q.aggregation ?? 'median', xTermId, yTermId!, data, shouldPartition, xTermId)
 }
@@ -117,12 +124,13 @@ export function buildRunChartFromData(
 	return { status: 'ok', series: [{ ...one }] }
 }
 
-/** Frequency mode: no y term; Y = count of samples per time bucket. */
+/** Frequency mode: no y term; Y = count of samples per time bucket (or cumulative when showCumulativeFrequency). */
 export function buildFrequencyFromData(
 	xTermId: string,
 	data: any,
 	shouldPartition: boolean,
-	partitionTermId?: string
+	partitionTermId?: string,
+	showCumulativeFrequency?: boolean
 ): RunChartSuccessResponse {
 	const allSamples = (data.samples || {}) as Record<string, any>
 
@@ -139,17 +147,24 @@ export function buildFrequencyFromData(
 		const periodKeys = Object.keys(period2Samples).sort()
 		const series = periodKeys.map(seriesId => {
 			const subset = { samples: period2Samples[seriesId] }
-			const one = buildOneSeriesFrequency(xTermId, subset)
+			const one = buildOneSeriesFrequency(xTermId, subset, showCumulativeFrequency === true)
 			return { seriesId, ...one }
 		})
 		return { status: 'ok', series }
 	}
 
-	const one = buildOneSeriesFrequency(xTermId, data)
+	const one = buildOneSeriesFrequency(xTermId, data, showCumulativeFrequency === true)
 	return { status: 'ok', series: [{ ...one }] }
 }
 
-function buildOneSeriesFrequency(xTermId: string, data: any): { median: number; points: any[] } {
+function buildOneSeriesFrequency(
+	xTermId: string,
+	data: any,
+	showCumulativeFrequency = false
+): { median: number; points: any[] } {
+	if (xTermId == null || xTermId === '') {
+		throw new Error('buildOneSeriesFrequency requires a defined xTermId (xtw.$id or xtw.term.id)')
+	}
 	const buckets: Record<string, { x: number; xName: string; count: number; sortKey: number }> = {}
 
 	for (const sampleId in (data.samples || {}) as any) {
@@ -172,26 +187,32 @@ function buildOneSeriesFrequency(xTermId: string, data: any): { median: number; 
 
 		if (!buckets[bucketKey]) {
 			const midMonthX = getNumberFromDate(new Date(yearNum, monthNum - 1, 15))
-			buckets[bucketKey] = { x: midMonthX, xName, count: 0, sortKey: yearNum * 100 + monthNum }
+			buckets[bucketKey] = {
+				x: Math.round(midMonthX * 100) / 100,
+				xName,
+				count: 0,
+				sortKey: yearNum * 100 + monthNum
+			}
 		}
 		buckets[bucketKey].count += 1
 	}
 
-	function xFromBucket(b: { sortKey: number }) {
-		const yearNum = Math.floor(b.sortKey / 100)
-		const monthNum = b.sortKey % 100
-		const x = getNumberFromDate(new Date(yearNum, monthNum - 1, 15))
-		return Math.round(x * 100) / 100
-	}
-
-	const points = Object.values(buckets)
+	let points = Object.values(buckets)
 		.sort((a, b) => a.sortKey - b.sortKey)
 		.map(b => ({
-			x: xFromBucket(b),
+			x: b.x,
 			xName: b.xName,
 			y: b.count,
 			sampleCount: b.count
 		}))
+
+	if (showCumulativeFrequency) {
+		let sum = 0
+		points = points.map(p => {
+			sum += p.y
+			return { ...p, y: sum, sampleCount: sum }
+		})
+	}
 
 	const yValues = points.map(p => p.y).filter(v => typeof v === 'number' && !Number.isNaN(v))
 	const median =

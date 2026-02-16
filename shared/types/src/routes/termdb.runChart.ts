@@ -11,7 +11,9 @@ export type RunChartRequest = {
 	xtw: { term: { id: string }; q?: { mode?: 'continuous' | 'discrete' }; $id?: string }
 	/** term wrapper for y axis: { term, q }. When omitted, chart renders as frequency (count per time bucket). */
 	ytw?: { term: { id: string }; q?: { mode?: string }; $id?: string }
-	aggregation?: 'median' | 'count'
+	aggregation?: 'median'
+	/** When true (frequency mode only), series Y values are cumulative counts. */
+	showCumulativeFrequency?: boolean
 	filter?: any
 	__protected__?: any // auth token for accessing protected data
 }
@@ -40,7 +42,7 @@ export type RunChartErrorResponse = {
 export type RunChartResponse = RunChartSuccessResponse | RunChartErrorResponse
 
 export function isRunChartSuccess(r: RunChartResponse): r is RunChartSuccessResponse {
-	return 'status' in r && r.status === 'ok' && 'series' in r
+	return 'status' in r && r.status === 'ok'
 }
 
 type Point = {

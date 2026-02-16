@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { buildRunChartFromData } from '../termdb.runChart.ts'
+import { buildRunChartFromData, buildFrequencyFromData } from '../termdb.runChart.ts'
 
 /**************
  test sections
@@ -296,5 +296,30 @@ tape('buildRunChartFromData() unsupported aggregation method throws error', func
 		'should throw error for unsupported aggregation method'
 	)
 
+	test.end()
+})
+
+tape('buildFrequencyFromData() showCumulativeFrequency returns cumulative y and server median', function (test) {
+	const xTermId = 'date'
+	const data = {
+		samples: {
+			s1: { [xTermId]: { value: 2024.01 } },
+			s2: { [xTermId]: { value: 2024.01 } },
+			s3: { [xTermId]: { value: 2024.29 } },
+			s4: { [xTermId]: { value: 2024.54 } }
+		}
+	}
+
+	const result = buildFrequencyFromData(xTermId, data, false, undefined, true)
+
+	test.equal(result.status, 'ok', 'status should be ok')
+	test.equal(result.series.length, 1, 'should return one series')
+	const points = result.series[0].points
+	test.equal(points.length, 3, 'should have three monthly buckets')
+	test.equal(points[0].y, 2, 'first bucket cumulative count 2')
+	test.equal(points[1].y, 3, 'second bucket cumulative count 3')
+	test.equal(points[2].y, 4, 'third bucket cumulative count 4')
+	test.equal(points[0].sampleCount, 2, 'sampleCount should match cumulative y')
+	test.equal(result.series[0].median, 3, 'median of cumulative values [2, 3, 4] should be 3')
 	test.end()
 })
