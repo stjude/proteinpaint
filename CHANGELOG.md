@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 
-## Unreleased
+## 2.170.10
 
 Fixes:
 - throttle the number of concurrent by-term queries for sample data as triggered by getData()
