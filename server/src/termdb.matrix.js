@@ -102,6 +102,7 @@ function validateArg(q, ds) {
 // to have only one active query per batch. If the number is below this,
 // then maxConcurrentQueries will be used as the batch size.
 const maxActiveQueriesBeforeSingleQueryBatch = serverconfig.features?.maxActiveQueriesBeforeSingleQueryBatch || 10
+const maxPendingQueriesBeforeRejectingRequest = serverconfig.features?.maxPendingQueriesBeforeRejectingRequest || 100
 let numActiveQueriesAcrossUsers = 0
 
 async function getSampleData(q, ds, onlyChildren = false) {
@@ -126,6 +127,11 @@ async function getSampleData(q, ds, onlyChildren = false) {
 			// special ds handling, must make one query with all tws, but not to process one tw a time
 			await q.ds.queries.snvindel.byisoform.get(q, geneVariantTws, samples)
 		} else {
+			if (numActiveQueriesAcrossUsers + geneVariantTws.length > maxPendingQueriesBeforeRejectingRequest) {
+				// prevent PP server crash, out of memory issue
+				throw `Ths server is too busy, try again in a few minutes.`
+			}
+
 			// common ds handling, one query per tw
 			if (!q.ds.mayGetGeneVariantData) throw 'not supported by dataset: geneVariant'
 			const maxConcurrentQueries = ds.cohort.termdb.maxConcurrentQueries || 10
