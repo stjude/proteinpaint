@@ -122,7 +122,6 @@ function resolveChildType(
 	const norm1 = cat1 == 'float' || cat1 == 'integer' ? 'numeric' : cat1 || 'undefined'
 	const norm2 = cat2 == 'float' || cat2 == 'integer' ? 'numeric' : cat2 || 'undefined'
 	const key = norm1 + ':' + norm2
-
 	const defaultType = CHILD_TYPE_DEFAULTS[key]
 	if (!defaultType) {
 		// Unknown category combination — should not happen, fall back to barchart
@@ -813,7 +812,6 @@ function validate_summary_response(response: string, common_genes: string[], dat
 			pp_plot_json.category2 = term2_validation.category
 		}
 	}
-
 	/** Based on data types of term and term2, decide the most appropriate chart type.
 	 *  The user can override the default by explicitly mentioning a chart type in their prompt,
 	 *  which the LLM parses into the "childType" field. Invalid overrides produce an error. */
@@ -822,11 +820,18 @@ function validate_summary_response(response: string, common_genes: string[], dat
 			? response_type.childType
 			: undefined
 	const resolved = resolveChildType(pp_plot_json.category, pp_plot_json.category2, llmChildType)
+
 	if (resolved.error) {
 		html += resolved.error
 	} else {
 		pp_plot_json.childType = resolved.childType
 		// For two numeric variables displayed as violin/boxplot, discretize term2
+		if (pp_plot_json.childType == 'barchart') {
+			pp_plot_json.term.q = { mode: 'discrete' }
+			if (pp_plot_json.term2) {
+				pp_plot_json.term2.q = { mode: 'discrete' }
+			}
+		}
 		if (resolved.bothNumeric && (resolved.childType == 'violin' || resolved.childType == 'boxplot')) {
 			pp_plot_json.term2.q = { mode: 'discrete' }
 		}
