@@ -1,7 +1,6 @@
 [
  {
   "alt": "G",
-  "altCount": 7,
   "chr": "chr17",
   "class": "F",
   "dna_assay": "wgs",
@@ -12,7 +11,13 @@
   "origin": "somatic",
   "pos": 7675147,
   "ref": "GG",
-  "refCount": 9
+  "vafs": [
+   {
+    "altCount": 7,
+    "name": "tumor DNA WGS",
+    "refCount": 9
+   }
+  ]
  },
  {
   "chrA": "chr17",

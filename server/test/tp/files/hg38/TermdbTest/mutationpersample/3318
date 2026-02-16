@@ -1,7 +1,6 @@
 [
  {
   "alt": "T",
-  "altCount": 15,
   "chr": "chr17",
   "class": "M",
   "dna_assay": "wgs",
@@ -12,7 +11,13 @@
   "origin": "germline",
   "pos": 7675088,
   "ref": "C",
-  "refCount": 13
+  "vafs": [
+   {
+    "altCount": 15,
+    "name": "tumor DNA WGS",
+    "refCount": 13
+   }
+  ]
  },
  {
   "chr": "chr17",
