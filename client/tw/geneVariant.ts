@@ -99,11 +99,10 @@ export class GvBase extends TwBase {
 				// continuous cnv data
 				// assign cnv cutoffs to tw.q
 				// priority of cnv cutoffs: tw.q > cnvCutoffsByGene > dsCnvCutoffs
-				const dsCnvCutoffs = {
-					cnvGainCutoff: cnv.cnvGainCutoff,
-					cnvLossCutoff: cnv.cnvLossCutoff,
-					cnvMaxLength: cnv.cnvMaxLength
-				}
+				const dsCnvCutoffs: { [key: string]: number } = {}
+				if ('cnvGainCutoff' in cnv) dsCnvCutoffs.cnvGainCutoff = cnv.cnvGainCutoff
+				if ('cnvLossCutoff' in cnv) dsCnvCutoffs.cnvLossCutoff = cnv.cnvLossCutoff
+				if ('cnvMaxLength' in cnv) dsCnvCutoffs.cnvMaxLength = cnv.cnvMaxLength
 				const cnvCutoffsByGene = cnv.cnvCutoffsByGene?.[tw.term.name]
 				const defaultCnvCutoffs = cnvCutoffsByGene || dsCnvCutoffs
 				tw.q = Object.assign({}, defaultCnvCutoffs, tw.q)
