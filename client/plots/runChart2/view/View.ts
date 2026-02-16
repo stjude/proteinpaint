@@ -1,5 +1,6 @@
 import { SeriesRender } from './SeriesRender.ts'
 import type { RunChart2Settings } from '../Settings'
+import { getFrequencyCountLabel } from '../Settings'
 import { axisstyle } from '#src/client'
 import { axisBottom, axisLeft } from 'd3-axis'
 import { getColors } from '#shared/common.js'
@@ -61,10 +62,7 @@ export class RunChart2View {
 			this.viewData.totalSampleCount != null && this.config?.xtw?.q?.mode !== 'discrete'
 				? `${xName}, n=${this.viewData.totalSampleCount.toLocaleString()}`
 				: xName
-		const isFrequency = this.config?.ytw == null
-		const yLabel =
-			this.config?.ytw?.term?.name ??
-			(isFrequency && this.settings?.showCumulativeFrequency ? 'Cumulative count' : 'Count')
+		const yLabel = this.config?.ytw?.term?.name ?? getFrequencyCountLabel(this.settings?.showCumulativeFrequency)
 
 		const xAxisLabelY = plotDims.xAxis.y + (plotDims.xAxis.labelOffset ?? 50)
 		this.chartDom.svg

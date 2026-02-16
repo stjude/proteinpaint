@@ -3,6 +3,7 @@ import { rgb } from 'd3-color'
 import { table2col } from '#dom'
 import { roundValueAuto } from '#shared/roundValue.js'
 import type { RunChart2Settings } from '../Settings.ts'
+import { getFrequencyCountLabel } from '../Settings.ts'
 import type { RunChart2 } from '../RunChart2.ts'
 
 function getCoordinate(val: number, min: number | null, max: number | null): number {
@@ -134,12 +135,12 @@ export class SeriesRender {
 		const xTermName = cfg?.xtw?.term?.name ?? 'X'
 		table.addRow(xTermName, d.xName ?? String(d.x))
 		if (isFrequency) {
-			const showCumulative = this.runChart2?.state?.config?.settings?.runChart2?.showCumulativeFrequency
-			const countLabel = showCumulative ? 'Cumulative count' : 'Count'
-			table.addRow(countLabel, String(d.sampleCount ?? d.y ?? ''))
+			table.addRow(
+				getFrequencyCountLabel(cfg?.settings?.runChart2?.showCumulativeFrequency),
+				String(d.sampleCount ?? d.y ?? '')
+			)
 		} else {
-			const yTermName = cfg?.ytw?.term?.name ?? 'Y'
-			table.addRow(yTermName, roundValueAuto(d.y, true, 2))
+			table.addRow(cfg?.ytw?.term?.name ?? 'Y', roundValueAuto(d.y, true, 2))
 			table.addRow('Sample Count', String(d.sampleCount ?? ''))
 		}
 		tip.show(event.clientX, event.clientY)

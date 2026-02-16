@@ -24,8 +24,11 @@ function decimalYearToYearMonth(xRaw: number): { yearNum: number; monthNum: numb
 		const decimalPart = parts[1]
 		if (decimalPart.length === 2) {
 			const monthCandidate = Number(decimalPart)
-			if (monthCandidate >= 1 && monthCandidate <= 12) month = monthCandidate
-			else month = Math.floor((xRaw - year) * 12) + 1
+			if (monthCandidate >= 1 && monthCandidate <= 12) {
+				month = monthCandidate
+			} else {
+				month = Math.floor((xRaw - year) * 12) + 1
+			}
 		} else {
 			month = Math.floor((xRaw - year) * 12) + 1
 		}
@@ -51,19 +54,18 @@ export const api: RouteApi = {
 }
 
 export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChartSuccessResponse> {
-	const isFrequency = !q.ytw
-	const terms: any = isFrequency ? [q.xtw] : [q.xtw, q.ytw]
-
 	const xTermId = q.xtw['$id'] ?? q.xtw.term?.id
 	const yTermId = q.ytw ? q.ytw['$id'] ?? q.ytw.term?.id : undefined
 
 	if (xTermId == null || xTermId === '') {
 		throw new Error('runChart requires xtw with $id or term.id')
 	}
+	const isFrequency = !q.ytw
 	if (!isFrequency && (yTermId == null || yTermId === '')) {
 		throw new Error('runChart requires ytw with $id or term.id when ytw is provided')
 	}
 
+	const terms: any = isFrequency ? [q.xtw] : [q.xtw, q.ytw]
 	const { getData } = await import('../src/termdb.matrix.js')
 
 	const data = await getData(
@@ -84,7 +86,10 @@ export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChart
 	if (isFrequency) {
 		return buildFrequencyFromData(xTermId, data, shouldPartition, xTermId, q.showCumulativeFrequency === true)
 	}
-	return buildRunChartFromData(q.aggregation ?? 'median', xTermId, yTermId!, data, shouldPartition, xTermId)
+	if (yTermId == null || yTermId === '') {
+		throw new Error('runChart requires ytw with $id or term.id when ytw is provided')
+	}
+	return buildRunChartFromData(q.aggregation ?? 'median', xTermId, yTermId, data, shouldPartition, xTermId)
 }
 
 export function buildRunChartFromData(
@@ -210,7 +215,7 @@ function buildOneSeriesFrequency(
 		let sum = 0
 		points = points.map(p => {
 			sum += p.y
-			return { ...p, y: sum, sampleCount: sum }
+			return { ...p, y: sum }
 		})
 	}
 
@@ -403,7 +408,7 @@ function buildOneSeries(
 
 /** Builds the error response body so it always includes required fields (e.g. series: []). */
 export function runChartErrorPayload(message: string): { error: string; series: RunChartSeries[] } {
-	return { error: message, series: [] }
+	return { error: String(message), series: [] }
 }
 
 function init({ genomes }) {
