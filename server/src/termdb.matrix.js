@@ -150,10 +150,18 @@ async function getSampleData(q, ds, onlyChildren = false) {
 					promises.length >= maxConcurrentQueries ||
 					i >= geneVariantTws.length - 1
 				) {
-					numActiveQueriesAcrossUsers += promises.length
-					await Promise.all(promises)
-					numActiveQueriesAcrossUsers -= promises.length
-					promises.length = 0
+					const batchSize = promises.length
+					numActiveQueriesAcrossUsers += batchSize
+					try {
+						const results = await Promise.allSettled(promises)
+						const firstRejected = results.find(r => r.status === 'rejected')
+						if (firstRejected) {
+							throw firstRejected.reason
+						}
+					} finally {
+						numActiveQueriesAcrossUsers -= batchSize
+						promises.length = 0
+					}
 				}
 			}
 		}

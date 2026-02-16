@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes
+- throttle the number of active sample data queries across all users
+
 
 ## 2.170.10
 
