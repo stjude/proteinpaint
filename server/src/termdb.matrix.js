@@ -98,7 +98,10 @@ function validateArg(q, ds) {
 	}
 }
 
-const maxActiveQueriesAcrossUsers = serverconfig.features?.maxActiveQueriesAcrossUsers || 10
+// When maxActiveQueriesBeforeSingleQueryBatch is reached, a request will be allowed
+// to have only one active query per batch. If the number is below this,
+// then maxConcurrentQueries will be used as the batch size.
+const maxActiveQueriesBeforeSingleQueryBatch = serverconfig.features?.maxActiveQueriesBeforeSingleQueryBatch || 10
 let numActiveQueriesAcrossUsers = 0
 
 async function getSampleData(q, ds, onlyChildren = false) {
@@ -132,6 +135,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 					byTermId[tw.$id] = q.ds.cohort?.termdb?.getGeneAlias(q, tw)
 				}
 
+				// this may contain 1 or more query promise
 				promises.push(
 					(async () => {
 						const data = await q.ds.mayGetGeneVariantData(tw, q)
@@ -146,7 +150,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				// prevent excessive API calls that may lead to network errors,
 				// for example https://gdc-ctds.atlassian.net/browse/SV-2728
 				if (
-					numActiveQueriesAcrossUsers >= maxActiveQueriesAcrossUsers ||
+					numActiveQueriesAcrossUsers > maxActiveQueriesBeforeSingleQueryBatch ||
 					promises.length >= maxConcurrentQueries ||
 					i >= geneVariantTws.length - 1
 				) {
