@@ -1,5 +1,6 @@
 import { hash } from './hash.js'
 import { encode } from './urljson.js'
+import { deepFreeze } from './helpers.js'
 
 /*
 	ezFetch()
@@ -168,7 +169,7 @@ async function processNDJSON_nestedKey(r) {
 // key: request object reference or computed string dataName
 // value: {
 //   response: fetch promise or response,
-//   expi
+//   exp: expiration timestamp
 // }
 const dataCache = new Map()
 // maximum number of cached dataNames, oldest will be deleted if this is exceeded
@@ -203,6 +204,10 @@ export async function memFetch(url, init, opts = {}) {
 	let result = response // either a Promise or actual data
 
 	if (result) {
+		// extend the expiration, since exp is more about managing the cache size
+		// and not the validity of the cached response. A response for the current
+		// dataName req.url + body + headers is technically valid until a new data version
+		// gets published.
 		dataCache.set(dataKey, { response, exp: now + cacheLifetime })
 		return result
 	} else {
@@ -239,26 +244,26 @@ export async function memFetch(url, init, opts = {}) {
 		} catch (e) {
 			// delete this cache only if it is a promise;
 			// do not delete a valid resolved data cache
-			if (dataCache.delete(dataKey) instanceof Promise) delete dataCache.delete(dataKey)
+			if (dataCache.get(dataKey) instanceof Promise) delete dataCache.delete(dataKey)
 			throw e
 		}
 	}
 }
 
 export function deleteCache(key) {
-	delete dataCache.delete(key)
+	dataCache.delete(key)
 }
 
 export function manageCacheSize(_now) {
 	const now = _now || Date.now()
 	const keyExp = []
-	for (const [key, result] of dataCache) {
+	for (const [key, result] of dataCache.entries()) {
 		if (result.exp < now) dataCache.delete(key)
 		else keyExp.push({ key, exp: result.exp })
 	}
 	if (dataCache.size > maxNumOfDataKeys) {
-		const oldestKeys = keyExp.sort((a, b) => a.exp - b.exp).slice(maxNumOfDataKeys)
-		for (const key of oldestKeys) dataCache.delete(key)
+		const oldestEntries = keyExp.sort((a, b) => a.exp - b.exp).slice(maxNumOfDataKeys)
+		for (const entry of oldestEntries) dataCache.delete(entry.key)
 	}
 }
 

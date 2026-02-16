@@ -212,7 +212,7 @@ export class AppApi {
 	}
 
 	triggerAbort(reason = '', signal?: any) {
-		if (reason) if (reason) console.info(`triggerAbort()`, reason)
+		if (reason) console.info(`triggerAbort()`, reason)
 		if (signal) {
 			if (signal.aborted) return
 			if (this.#abortController && signal === this.#abortController?.signal) this.#abortController.abort()

@@ -20,11 +20,6 @@ tape('xfetch', async test => {
 	const url = 'http://localhost:3000/termdb/external-API-test?dslabel=GDC'
 	const abortCtrl = new AbortController()
 	const init = { signal: abortCtrl.signal }
-	const get = () => {
-		return fetch(url, init).then(r => {
-			r, r.json()
-		})
-	}
 
 	let result
 	try {

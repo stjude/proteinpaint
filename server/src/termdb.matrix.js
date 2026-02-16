@@ -42,7 +42,7 @@ Returns:
 */
 
 export async function getData(q, ds, onlyChildren = false) {
-	if (serverconfig.debugmode) trackXfetch(new Map())
+	if (serverconfig.debugmode && !ds?.cohort?.db) trackXfetch(new Map())
 
 	try {
 		validateArg(q, ds)
@@ -122,7 +122,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 		} else {
 			// common ds handling, one query per tw
 			if (!q.ds.mayGetGeneVariantData) throw 'not supported by dataset: geneVariant'
-			const maxConcurrentQueries = ds.cohort.termdb.maxConcurrentQueries
+			const maxConcurrentQueries = ds.cohort.termdb.maxConcurrentQueries || 10
 			const promises = []
 			for (const [i, tw] of geneVariantTws.entries()) {
 				if (tw.term.gene && q.ds.cohort?.termdb?.getGeneAlias) {
