@@ -24,11 +24,7 @@ function decimalYearToYearMonth(xRaw: number): { yearNum: number; monthNum: numb
 		const decimalPart = parts[1]
 		if (decimalPart.length === 2) {
 			const monthCandidate = Number(decimalPart)
-			if (monthCandidate >= 1 && monthCandidate <= 12) {
-				month = monthCandidate
-			} else {
-				month = Math.floor((xRaw - year) * 12) + 1
-			}
+			month = monthCandidate >= 1 && monthCandidate <= 12 ? monthCandidate : Math.floor((xRaw - year) * 12) + 1
 		} else {
 			month = Math.floor((xRaw - year) * 12) + 1
 		}
