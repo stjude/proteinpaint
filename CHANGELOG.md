@@ -2,6 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
+
 ## 2.176.0
 
 Features:
@@ -72,6 +73,12 @@ Fixes:
 - stream matrix response data to prevent RangeError during json-encoding
 - do not join to global filter in getTreeFilter() if the join argument is 'or', so that the edit menu will list all applicable categories
 - show loading and error messages when switching to barchart tab in summary plot
+
+
+## 2.170.10
+
+Fixes
+- throttle the number of active sample data queries across all users
 
 
 ## 2.170.9

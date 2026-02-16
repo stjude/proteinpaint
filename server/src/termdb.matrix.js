@@ -98,6 +98,13 @@ function validateArg(q, ds) {
 	}
 }
 
+// When maxActiveQueriesBeforeSingleQueryBatch is reached, a request will be allowed
+// to have only one active query per batch. If the number is below this,
+// then maxConcurrentQueries will be used as the batch size.
+const maxActiveQueriesBeforeSingleQueryBatch = serverconfig.features?.maxActiveQueriesBeforeSingleQueryBatch || 10
+const maxPendingQueriesBeforeRejectingRequest = serverconfig.features?.maxPendingQueriesBeforeRejectingRequest || 100
+let numActiveQueriesAcrossUsers = 0
+
 async function getSampleData(q, ds, onlyChildren = false) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, geneVariantTws, nonDictTerms] = divideTerms(q.terms)
@@ -120,6 +127,11 @@ async function getSampleData(q, ds, onlyChildren = false) {
 			// special ds handling, must make one query with all tws, but not to process one tw a time
 			await q.ds.queries.snvindel.byisoform.get(q, geneVariantTws, samples)
 		} else {
+			if (numActiveQueriesAcrossUsers + geneVariantTws.length > maxPendingQueriesBeforeRejectingRequest) {
+				// prevent PP server crash, out of memory issue
+				throw `Ths server is too busy, try again in a few minutes.`
+			}
+
 			// common ds handling, one query per tw
 			if (!q.ds.mayGetGeneVariantData) throw 'not supported by dataset: geneVariant'
 			const maxConcurrentQueries = ds.cohort.termdb.maxConcurrentQueries || 10
@@ -129,6 +141,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 					byTermId[tw.$id] = q.ds.cohort?.termdb?.getGeneAlias(q, tw)
 				}
 
+				// this may contain 1 or more query promise
 				promises.push(
 					(async () => {
 						const data = await q.ds.mayGetGeneVariantData(tw, q)
@@ -142,9 +155,23 @@ async function getSampleData(q, ds, onlyChildren = false) {
 
 				// prevent excessive API calls that may lead to network errors,
 				// for example https://gdc-ctds.atlassian.net/browse/SV-2728
-				if (promises.length >= maxConcurrentQueries || i >= geneVariantTws.length - 1) {
-					await Promise.all(promises)
-					promises.length = 0
+				if (
+					numActiveQueriesAcrossUsers > maxActiveQueriesBeforeSingleQueryBatch ||
+					promises.length >= maxConcurrentQueries ||
+					i >= geneVariantTws.length - 1
+				) {
+					const batchSize = promises.length
+					numActiveQueriesAcrossUsers += batchSize
+					try {
+						const results = await Promise.allSettled(promises)
+						const firstRejected = results.find(r => r.status === 'rejected')
+						if (firstRejected) {
+							throw firstRejected.reason
+						}
+					} finally {
+						numActiveQueriesAcrossUsers -= batchSize
+						promises.length = 0
+					}
 				}
 			}
 		}
