@@ -1,6 +1,7 @@
 import { addGeneSearchbox, Menu, table2col } from '#dom'
 import { termsettingInit, fillTermWrapper } from '#termsetting'
 import { launchPlot } from './summarizeMutationDiagnosis'
+import { t0_t2_defaultQ } from './survival/survival'
 
 /*
 duplicates code from summarizeMutationDiagnosis, with minute changes
@@ -28,15 +29,24 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 		const [td1, td2] = table.addRow()
 		td1.text('Search Gene For Expression')
 		const searchDiv = td2.append('div')
+		const loadingDiv = td2
+			.append('div')
+			.style('display', 'none')
+			.style('margin', '5px')
+			.style('font-size', '.7em')
+			.text('LOADING ...')
 		const result = addGeneSearchbox({
 			row: searchDiv,
 			tip,
 			searchOnly: 'gene',
 			genome: chartsInstance.app.opts.genome!,
 			callback: async () => {
+				loadingDiv.style('display', 'block')
+				const expTw: any = { term: { gene: result.geneSymbol, type: 'geneExpression' } }
+				await fillTermWrapper(expTw, chartsInstance.app.vocabApi, t0_t2_defaultQ)
 				launchPlot({
 					tw1: dictTw,
-					tw2: { term: { gene: result.geneSymbol, type: 'geneExpression' } },
+					tw2: expTw,
 					chartsInstance,
 					holder
 				})
