@@ -122,9 +122,9 @@ async function getSampleData(q, ds, onlyChildren = false) {
 		} else {
 			// common ds handling, one query per tw
 			if (!q.ds.mayGetGeneVariantData) throw 'not supported by dataset: geneVariant'
-			const maxConcurrentQueries = Math.min(geneVariantTws.length, ds.cohort.termdb.maxConcurrentQueries || 10)
+			const maxConcurrentQueries = ds.cohort.termdb.maxConcurrentQueries
 			const promises = []
-			for (const tw of geneVariantTws) {
+			for (const [i, tw] of geneVariantTws.entries()) {
 				if (tw.term.gene && q.ds.cohort?.termdb?.getGeneAlias) {
 					byTermId[tw.$id] = q.ds.cohort?.termdb?.getGeneAlias(q, tw)
 				}
@@ -142,7 +142,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 
 				// prevent excessive API calls that may lead to network errors,
 				// for example https://gdc-ctds.atlassian.net/browse/SV-2728
-				if (promises.length >= maxConcurrentQueries) {
+				if (promises.length >= maxConcurrentQueries || i >= geneVariantTws.length - 1) {
 					await Promise.all(promises)
 					promises.length = 0
 				}

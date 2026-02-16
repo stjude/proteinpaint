@@ -896,6 +896,15 @@ export function isAbortError(e) {
 	// may add additional logic to detect
 }
 
+export function deepFreeze(obj) {
+	Object.freeze(obj)
+	// not using for..in loop, in order to not descend into inherited props/methods
+	for (const value of Object.values(obj)) {
+		if (value !== null && typeof value == 'object') deepFreeze(value)
+	}
+	return obj
+}
+
 //////////////////////////////
 //         fragile!!        //
 //////////////////////////////
