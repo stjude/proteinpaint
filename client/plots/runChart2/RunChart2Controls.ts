@@ -116,7 +116,17 @@ function getBaseInputs(app: AppApi) {
 			type: 'dropdown',
 			chartType: 'runChart2',
 			settingsKey: 'aggregation',
-			options: [{ label: 'Median', value: 'median' }]
+			options: [{ label: 'Median', value: 'median' }],
+			getDisplayStyle: (plot: any) => (plot?.ytw != null ? 'table-row' : 'none')
+		},
+		{
+			label: 'Show cumulative frequency',
+			boxLabel: '',
+			type: 'checkbox',
+			chartType: 'runChart2',
+			settingsKey: 'showCumulativeFrequency',
+			title: 'Show the cumulative number of events over time',
+			getDisplayStyle: (plot: any) => (plot?.ytw == null ? 'table-row' : 'none')
 		},
 		{
 			label: 'Plot height',
@@ -152,21 +162,7 @@ export function getRunChart2Controls(
 	range?: { xMin: number; xMax: number; yMin: number; yMax: number },
 	runChart2?: { dom: { controls: any }; state?: { config?: any } }
 ) {
-	let inputs: any[] = getBaseInputs(app)
-	const isFrequency = runChart2?.state?.config?.ytw == null
-	if (isFrequency) {
-		inputs = inputs.filter(i => i.settingsKey !== 'aggregation')
-		const plotHeightIndex = inputs.findIndex(i => i.settingsKey === 'svgh')
-		const cumulativeCheckbox = {
-			label: 'Show cumulative frequency',
-			boxLabel: '',
-			type: 'checkbox',
-			chartType: 'runChart2',
-			settingsKey: 'showCumulativeFrequency',
-			title: 'Show the cumulative number of events over time'
-		}
-		inputs.splice(plotHeightIndex >= 0 ? plotHeightIndex : inputs.length, 0, cumulativeCheckbox)
-	}
+	const inputs: any[] = getBaseInputs(app)
 	if (range) {
 		inputs.push(...getMinMaxInputs(range, runChart2))
 	}

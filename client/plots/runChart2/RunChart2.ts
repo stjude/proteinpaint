@@ -147,14 +147,11 @@ export class RunChart2 extends PlotBase implements RxComponent {
 
 		try {
 			this.model = new RunChart2Model(this)
-			let data = await this.model.fetchData(config)
+			const data = await this.model.fetchData(config)
 			if (!data) {
 				this.dom.error.text('No data available for the selected terms and filter.')
 			}
 			const settings = config.settings.runChart2
-			if (config.ytw == null && settings?.showCumulativeFrequency && data?.length) {
-				data = transformFrequencyToCumulative(data)
-			}
 			this.viewModel = new RunChart2ViewModel(settings)
 			const viewData = this.viewModel.map(data)
 
@@ -173,28 +170,6 @@ export class RunChart2 extends PlotBase implements RxComponent {
 
 export const runChart2Init = getCompInit(RunChart2)
 export const componentInit = runChart2Init
-
-/** In frequency mode, convert per-bucket counts to cumulative counts per series. */
-function transformFrequencyToCumulative(series: any[]): any[] {
-	return series.map(s => {
-		const points = [...(s.points || [])].sort((a, b) => a.x - b.x)
-		let sum = 0
-		const newPoints = points.map(p => {
-			sum += p.y
-			return { ...p, y: sum, sampleCount: sum }
-		})
-		const yValues = newPoints.map(p => p.y).filter((v: number) => typeof v === 'number' && !Number.isNaN(v))
-		const median =
-			yValues.length > 0
-				? (() => {
-						const sorted = [...yValues].sort((a, b) => a - b)
-						const mid = Math.floor(sorted.length / 2)
-						return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]
-				  })()
-				: 0
-		return { ...s, points: newPoints, median }
-	})
-}
 
 export async function getPlotConfig(opts: any, app: AppApi) {
 	const xtw = opts.xtw

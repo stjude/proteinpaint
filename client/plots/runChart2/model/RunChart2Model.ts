@@ -25,7 +25,8 @@ export class RunChart2Model {
 			filter: getNormalRoot(opts.filter ?? undefined),
 			xtw: opts.xtw,
 			...(opts.ytw != null && { ytw: opts.ytw }),
-			...(opts.ytw != null && { aggregation: opts.aggregation ?? 'median' })
+			...(opts.ytw != null && { aggregation: opts.aggregation ?? 'median' }),
+			...(opts.ytw == null && opts.showCumulativeFrequency === true && { showCumulativeFrequency: true })
 		}
 		const result: RunChartResponse = await dofetch3('termdb/runChart', { body })
 
@@ -46,6 +47,9 @@ export class RunChart2Model {
 			...(config.ytw != null && {
 				ytw: config.ytw,
 				aggregation: config.settings.runChart2.aggregation
+			}),
+			...(config.ytw == null && {
+				showCumulativeFrequency: config.settings?.runChart2?.showCumulativeFrequency === true
 			})
 		}
 		return opts
