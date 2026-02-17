@@ -2838,9 +2838,11 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				}
 			}
 
-			// add data availability for each dt
-			for (const dt of dts) {
-				mayAddDataAvailability(sample2mlst, dt, ds, gene, sampleFilter)
+			if (!q.disableAssayAvailability) {
+				// add data availability for each dt
+				for (const dt of dts) {
+					mayAddDataAvailability(sample2mlst, dt, ds, gene, sampleFilter)
+				}
 			}
 		}
 

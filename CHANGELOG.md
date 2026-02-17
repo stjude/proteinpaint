@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes
+- prevent excessive memory usage during OncoMatrix data requests
+
+
 ## 2.170.11
 
 Fixes
