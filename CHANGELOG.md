@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.176.0
 
 Features:
 - LLM: Adding support for UMAP/t-SNE plots and variable overlay
