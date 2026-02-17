@@ -112,6 +112,9 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 			Object.assign(req.query, req.body)
 		}
 
+		// log the request before adding additional or protected info
+		log(req)
+
 		let { genome, dslabel, mds3, dsname } = req.query
 		dslabel = dslabel || mds3 || dsname
 		if (genome && dslabel) {
@@ -144,9 +147,6 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 		}
 
 		maySetAbortCtrl(req, res)
-
-		// log the request before adding protected info
-		log(req)
 		next()
 	})
 
