@@ -873,32 +873,7 @@ export class TermdbVocab extends Vocab {
 									// rehydrate stripped props
 									if (d.$) d[$copyAs[d.$]] = d.key
 
-									if (tw.term.type == 'termCollection') {
-										const termsValue = JSON.parse(d.value)
-										const sum = termsValue.reduce((a, o) => a + Object.values(o)[0], 0)
-
-										let pre_val_sum = 0
-										let numerators_sum = 0
-										const values = []
-										for (const termV of termsValue) {
-											const label = Object.keys(termV)[0]
-											const value = (Object.values(termV)[0] / sum) * 100
-											if (value && tw.q.numerators?.includes(label)) {
-												numerators_sum += value
-											}
-											const color = tw.term.termlst.find(t => t.id === label || t.name == label).color
-											values.push({
-												label,
-												value,
-												pre_val_sum,
-												color
-											})
-											pre_val_sum += value
-										}
-										d.values = values
-										d.numerators_sum = numerators_sum
-										delete d.value
-									} else if (gene && d.values) {
+									if (gene && d.values) {
 										for (const v of d.values) {
 											if (!v.class && v.$) {
 												v.gene = gene
