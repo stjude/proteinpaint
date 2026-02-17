@@ -46,6 +46,22 @@ export class SeriesRender {
 		}
 	}
 
+	private get config() {
+		return this.runChart2?.state?.config
+	}
+
+	private get isFrequency(): boolean {
+		return this.config?.ytw == null
+	}
+
+	private get isCumulativeFrequency(): boolean {
+		return this.isFrequency && this.config?.settings?.runChart2?.showCumulativeFrequency === true
+	}
+
+	private shouldDrawMedian(): boolean {
+		return !this.isCumulativeFrequency && this.series.median != null && !isNaN(this.series.median)
+	}
+
 	render() {
 		if (!this.series.points || this.series.points.length === 0) return
 
@@ -64,7 +80,7 @@ export class SeriesRender {
 			.attr('data-series-id', this.series.seriesId ?? '')
 
 		// Median line and text FIRST (background layer)
-		if (this.series.median != null && !isNaN(this.series.median)) {
+		if (this.shouldDrawMedian()) {
 			const yMedian = this.plotDims.yAxis.scale(
 				getCoordinate(this.series.median, this.settings.minYScale, this.settings.maxYScale)
 			)
@@ -127,20 +143,20 @@ export class SeriesRender {
 	showHoverTip(event: any, d: any) {
 		const tip = this.runChart2?.dom?.hovertip
 		if (!tip) return
-		const cfg = this.runChart2?.state?.config
-		const isFrequency = cfg?.ytw == null
+		const cfg = this.config
 		tip.clear()
 		const table = table2col({ holder: tip.d.append('div') })
 		if (this.series.seriesId) table.addRow('Period', this.series.seriesId)
 		const xTermName = cfg?.xtw?.term?.name ?? 'X'
 		table.addRow(xTermName, d.xName ?? String(d.x))
-		if (isFrequency) {
-			table.addRow(
-				getFrequencyCountLabel(cfg?.settings?.runChart2?.showCumulativeFrequency),
-				String(d.sampleCount ?? d.y ?? '')
-			)
+		if (this.isFrequency) {
+			// y = plotted value (count or cumulative count).
+			table.addRow(getFrequencyCountLabel(cfg?.settings?.runChart2?.showCumulativeFrequency), String(d.y ?? ''))
+			if (d.sampleCount != null && d.sampleCount !== d.y) {
+				table.addRow('Sample Count', String(d.sampleCount))
+			}
 		} else {
-			table.addRow(cfg?.ytw?.term?.name ?? 'Y', roundValueAuto(d.y, true, 2))
+			table.addRow(this.config?.ytw?.term?.name ?? 'Y', roundValueAuto(d.y, true, 2))
 			table.addRow('Sample Count', String(d.sampleCount ?? ''))
 		}
 		tip.show(event.clientX, event.clientY)
