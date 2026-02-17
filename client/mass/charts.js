@@ -239,9 +239,9 @@ function getChartTypeList(self, state) {
 		},
 		{
 			label: 'Frequency Chart',
-			chartType: 'frequencyChart',
+			chartType: 'runChart2',
 			clickTo: self.showTree_select1term,
-			usecase: { target: 'frequencyChart', detail: 'term' }
+			usecase: { target: 'runChart2', detail: 'xtw' }
 		},
 
 		{
