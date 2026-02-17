@@ -12,6 +12,18 @@ function getCoordinate(val: number, min: number | null, max: number | null): num
 	return val
 }
 
+function isFrequencyMode(config: any): boolean {
+	return config?.ytw == null
+}
+
+function isCumulativeFrequencyMode(config: any): boolean {
+	return isFrequencyMode(config) && config?.settings?.runChart2?.showCumulativeFrequency === true
+}
+
+function shouldDrawMedianLine(config: any, series: any): boolean {
+	return !isCumulativeFrequencyMode(config) && series?.median != null && !isNaN(series.median)
+}
+
 export class SeriesRender {
 	series: any
 	plotDims: any
@@ -46,25 +58,10 @@ export class SeriesRender {
 		}
 	}
 
-	private get config() {
-		return this.runChart2?.state?.config
-	}
-
-	private get isFrequency(): boolean {
-		return this.config?.ytw == null
-	}
-
-	private get isCumulativeFrequency(): boolean {
-		return this.isFrequency && this.config?.settings?.runChart2?.showCumulativeFrequency === true
-	}
-
-	private shouldDrawMedian(): boolean {
-		return !this.isCumulativeFrequency && this.series.median != null && !isNaN(this.series.median)
-	}
-
 	render() {
 		if (!this.series.points || this.series.points.length === 0) return
 
+		const cfg = this.runChart2?.state?.config
 		const color = this.seriesColor ?? this.settings.color ?? '#1f77b4'
 		const medianColor = rgb(color).darker(2)
 		const sortedPoints = [...this.series.points].sort((a, b) => a.x - b.x)
@@ -80,7 +77,7 @@ export class SeriesRender {
 			.attr('data-series-id', this.series.seriesId ?? '')
 
 		// Median line and text FIRST (background layer)
-		if (this.shouldDrawMedian()) {
+		if (shouldDrawMedianLine(cfg, this.series)) {
 			const yMedian = this.plotDims.yAxis.scale(
 				getCoordinate(this.series.median, this.settings.minYScale, this.settings.maxYScale)
 			)
@@ -143,20 +140,20 @@ export class SeriesRender {
 	showHoverTip(event: any, d: any) {
 		const tip = this.runChart2?.dom?.hovertip
 		if (!tip) return
-		const cfg = this.config
+		const cfg = this.runChart2?.state?.config
 		tip.clear()
 		const table = table2col({ holder: tip.d.append('div') })
 		if (this.series.seriesId) table.addRow('Period', this.series.seriesId)
 		const xTermName = cfg?.xtw?.term?.name ?? 'X'
 		table.addRow(xTermName, d.xName ?? String(d.x))
-		if (this.isFrequency) {
+		if (isFrequencyMode(cfg)) {
 			// y = plotted value (count or cumulative count).
 			table.addRow(getFrequencyCountLabel(cfg?.settings?.runChart2?.showCumulativeFrequency), String(d.y ?? ''))
 			if (d.sampleCount != null && d.sampleCount !== d.y) {
 				table.addRow('Sample Count', String(d.sampleCount))
 			}
 		} else {
-			table.addRow(this.config?.ytw?.term?.name ?? 'Y', roundValueAuto(d.y, true, 2))
+			table.addRow(cfg?.ytw?.term?.name ?? 'Y', roundValueAuto(d.y, true, 2))
 			table.addRow('Sample Count', String(d.sampleCount ?? ''))
 		}
 		tip.show(event.clientX, event.clientY)
