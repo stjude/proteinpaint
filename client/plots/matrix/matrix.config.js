@@ -146,10 +146,10 @@ export async function getPlotConfig(opts = {}, app) {
 					//Properties match the args for the ColorScales
 					//numericInput arg
 					cutoffMode: 'percentile',
-					defaultPercentile: 0.99,
+					defaultPercentile: 99,
 					min: null,
 					max: null,
-					percentile: 0.99
+					percentile: 99
 				}
 			}
 		}

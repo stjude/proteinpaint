@@ -84,6 +84,7 @@ export type ColorScaleMenuOpts = {
 	colors: string[]
 	cutoffMode?: CutoffMode
 	domain: number[]
+	defaultPercentile?: number
 	percentile?: number
 	setColorsCallback?: (val: string, idx: number) => void
 	setNumbersCallback?: (f?: { cutoffMode: CutoffMode; min?: number; max?: number; percentile?: number }) => void
@@ -121,6 +122,7 @@ export type NumericInputs = {
 	/** If default percentile value provided, 'Percentile' added to dropdown.
 	 * Value is show by default. */
 	defaultPercentile?: number
+	percentile?: number
 	/** Creates inputs for the user to set the min and max or use the percentile
 	 *  Use the callback to update the plot/track/app/etc.
 	 * 'Auto' mode is the absolute min and max values provided to the data array

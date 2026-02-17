@@ -24,7 +24,9 @@ export class ColorScaleMenu {
 				max: opts.domain[opts.domain.length - 1]
 			}
 			if (opts.percentile) {
-				this.default.percentile = opts.percentile
+				/** Both opts are defined in ColorScale.ts even if
+				 * the caller only passes one. See note in ColorScale.ts. */
+				this.default.percentile = opts.defaultPercentile
 				this.percentile = opts.percentile
 			}
 		}
@@ -48,7 +50,7 @@ export class ColorScaleMenu {
 					.style('opacity', 0.65)
 					.style('font-size', '0.7em')
 					.text('Press ENTER to submit')
-					.style('display', 'none')
+					.style('display', this.cutoffMode != 'auto' ? '' : 'none')
 
 				const percentRow = table
 					.append('tr')
@@ -91,8 +93,8 @@ export class ColorScaleMenu {
 					const percentInput = this.appendValueInput(percentRow, this.percentile || null, 0, 100)
 
 					const minMaxInputRow = table.append('tr').style('display', this.cutoffMode == 'fixed' ? 'table-row' : 'none')
-					const minInput = this.appendValueInput(minMaxInputRow.append('td'), 0)
-					this.appendValueInput(minMaxInputRow.append('td'), this.domain.length - 1)
+					const minInput = this.appendValueInput(minMaxInputRow.append('td'), this.domain[0])
+					this.appendValueInput(minMaxInputRow.append('td'), this.domain[this.domain.length - 1])
 
 					select.on('change', async () => {
 						this.cutoffMode = select.node()!.value as CutoffMode
@@ -169,7 +171,7 @@ export class ColorScaleMenu {
 			.append('input')
 			.attr('type', 'number')
 			.style('width', '60px')
-			.attr('value', this.domain[elemValue] || elemValue)
+			.attr('value', elemValue)
 			.style('padding', '3px')
 
 		//Limit input if necessary

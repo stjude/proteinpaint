@@ -338,14 +338,21 @@ export function setLabelsAndScales() {
 			this.cnvValues = this.cnvValues.filter(v => v > s.cnvValues.min && v < s.cnvValues.max).sort((a, b) => a - b)
 		}
 		if (s.cnvValues.cutoffMode == 'percentile' || s.cnvValues.cutoffMode == 'auto') {
-			const max = s.cnvValues.cutoffMode == 'auto' ? s.cnvValues.defaultPercentile : s.cnvValues.percentile
-			const min = roundValueAuto(1 - max)
-			this.cnvValues = removeOutliers(this.cnvValues, min, max)
+			/** Users enter the percentile as whole number.
+			 * Convert to a fraction for removeOutliers.*/
+			let maxPercentile = s.cnvValues.cutoffMode == 'auto' ? s.cnvValues.defaultPercentile : s.cnvValues.percentile
+			maxPercentile = maxPercentile / 100
+			const minPercentile = roundValueAuto(1 - maxPercentile)
+			this.cnvValues = removeOutliers(this.cnvValues, minPercentile, maxPercentile)
 		}
 		if (this.cnvValues.length == 0) return
 		const minLoss = this.cnvValues[0] < 0 ? this.cnvValues[0] : undefined
-		const maxGain =
-			this.cnvValues[this.cnvValues.length - 1] > 0 ? this.cnvValues[this.cnvValues.length - 1] : undefined
+		/** Do not use undefined for maxGain. In instances where the filtered cnv values
+		 * are all negative (such as from changing the percentile) but positive numbers
+		 * exist in the original data, the domain for the legend will not be equidistant
+		 * and the cells will remain transparent. Use 0 to allow both the calculation
+		 * of an equidistant domain and proper cell rendering.*/
+		const maxGain = this.cnvValues[this.cnvValues.length - 1] > 0 ? this.cnvValues[this.cnvValues.length - 1] : 0
 		let maxLoss, minGain, absMax
 		for (const n of this.cnvValues) {
 			if (n < 0) maxLoss = n
@@ -390,7 +397,6 @@ export function setLabelsAndScales() {
 						middleColor: 'white'
 					})
 				}
-
 				// const min = cnvLegendDomainRange.domain[0]
 				// const max = cnvLegendDomainRange.domain[cnvLegendDomainRange.domain.length - 1]
 				// const domainRange = Math.abs(max - min)
