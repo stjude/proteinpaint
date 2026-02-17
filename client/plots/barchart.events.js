@@ -400,25 +400,27 @@ function handle_click(event, self, chart) {
 
 	const options = []
 	if (self.opts.bar_click_opts.includes('hide_bar')) {
-		options.push({
-			label: data.seriesId ? 'Hide "' + seriesLabel + '"' : 'Hide',
-			callback: () => {
-				const term = self.config.term
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: self.id,
-					config: {
-						term: {
-							$id: term.$id,
-							id: term.id,
-							isAtomic: true,
-							term: term.term,
-							q: getUpdatedQfromClick({ id: data.seriesId, type: 'col' }, term, true)
+		if (chart.visibleSerieses?.length > 1) {
+			options.push({
+				label: data.seriesId ? 'Hide "' + seriesLabel + '"' : 'Hide',
+				callback: () => {
+					const term = self.config.term
+					self.app.dispatch({
+						type: 'plot_edit',
+						id: self.id,
+						config: {
+							term: {
+								$id: term.$id,
+								id: term.id,
+								isAtomic: true,
+								term: term.term,
+								q: getUpdatedQfromClick({ id: data.seriesId, type: 'col' }, term, true)
+							}
 						}
-					}
-				})
-			}
-		})
+					})
+				}
+			})
+		}
 
 		if (data.dataId || data.dataId === 0) {
 			options.push({
