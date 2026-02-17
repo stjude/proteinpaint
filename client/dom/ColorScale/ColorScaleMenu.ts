@@ -181,6 +181,11 @@ export class ColorScaleMenu {
 			const valueNode = valueInput.node()
 			if (!valueNode) return
 			const value: number = parseFloat(valueNode.value)
+			if (!value || isNaN(value)) {
+				/** Prevent the user from entering invalid numbers (e.g. --2, 1e, etc.) */
+				alert('Please enter a valid number')
+				return
+			}
 			const opts: any = {
 				cutoffMode: this.cutoffMode
 			}
