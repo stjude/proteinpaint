@@ -2,6 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
+
 ## 2.176.0
 
 Features:
@@ -21,6 +22,10 @@ Features:
 
 
 ## 2.174.1
+- throttle the number of concurrent by-term queries for sample data as triggered by getData()
+- revert to using memFetch to avoid redundant GDC API `/cases` request/responses across different genes that adds up to minutes of delayed response
+- prevent crashing the server due to unhandled exceptions when aborting GDC API fetch requests
+
 
 Fixes:
 - apply fixes from release-2.170 branch patch version .6
@@ -68,6 +73,20 @@ Fixes:
 - stream matrix response data to prevent RangeError during json-encoding
 - do not join to global filter in getTreeFilter() if the join argument is 'or', so that the edit menu will list all applicable categories
 - show loading and error messages when switching to barchart tab in summary plot
+
+
+## 2.170.10
+
+Fixes
+- throttle the number of active sample data queries across all users
+
+
+## 2.170.9
+
+Fixes:
+
+- fix violin plot not loading due to unsynchronized q.dtLst[] and q.predefined_groupset_idx
+- improve fault tolerance by retrying failed GDC API requests
 
 
 ## 2.170.8

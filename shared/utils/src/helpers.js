@@ -59,6 +59,15 @@ export function deepEqual(x, y) {
 	} else return false
 }
 
+export function deepFreeze(obj) {
+	Object.freeze(obj)
+	// not using for..in loop, in order to not descend into inherited props/methods
+	for (const value of Object.values(obj)) {
+		if (value !== null && typeof value == 'object') deepFreeze(value)
+	}
+	return obj
+}
+
 export class CustomError extends Error {
 	level = '' // '' | 'warn'
 

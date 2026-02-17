@@ -1,5 +1,6 @@
 import { hash } from './hash.js'
 import { encode } from './urljson.js'
+import { deepFreeze } from './helpers.js'
 
 /*
 	ezFetch()
@@ -165,17 +166,15 @@ async function processNDJSON_nestedKey(r) {
 	return rootObj
 }
 
-// key: request object reference or conputed string dataName
-// value: fetch promise or response
+// key: request object reference or computed string dataName
+// value: {
+//   response: fetch promise or response,
+//   exp: expiration timestamp
+// }
 const dataCache = new Map()
-// NOTE: when caching by request object reference,
-// consumer code must call deleteCache(q) at the end of the request handling
-
-// when caching by string dataName, track entries to manage the cache size
-const cachedDataNames = []
-// maximum number of cached dataNames, oldest will be deleted if 1000 is exceeded
-const maxNumOfDataKeys = 360
-
+// maximum number of cached dataNames, oldest will be deleted if this is exceeded
+const maxNumOfDataKeys = 10
+const cacheLifetime = 1000 * 60 * 5
 /*
 	memFetch()
 	- fetch wrapper that saves cached responses into memory and recovers them for matching subsequent requests
@@ -188,65 +187,83 @@ const maxNumOfDataKeys = 360
 	url
 	init{headers?, body?}
 	- first two arguments are same as native fetch
+  - when passing opts.client, may include other applicable options inside the init{} object, such as retry
 
-	opts{q}
-	q?: request object (passed by reference, not copy)
-		- if provided, will be used as cache data key 
-	  - if not provided, then a string cache data key will be computed from the request url, body, headers
+	opts{client}
+
+  client: use this http client instead of native fetch
+    - since fetch-helpers is shared between server and frontend workspaces, 
+      cannot directly import non-native modules at the beginning of this code file 
+    - for server side usage, client may be `xfetch()`, `ky` or other libraries 
 */
 export async function memFetch(url, init, opts = {}) {
 	if (typeof init.body === 'object') init.body = JSON.stringify(init.body)
 	const dataKey = opts.q || (await getDataName(url, init))
-	let result = dataCache.get(dataKey)
+	const { response, exp } = dataCache.get(dataKey) || {}
+	const now = Date.now()
+	let result = response // either a Promise or actual data
 
-	if (!result || (typeof result != 'object' && !(result instanceof Promise))) {
-		dataCache.delete(dataKey)
-		result = undefined
-	}
-
-	if (!result) {
+	if (result) {
+		// extend the expiration, since exp is more about managing the cache size
+		// and not the validity of the cached response. A response for the current
+		// dataName req.url + body + headers is technically valid until a new data version
+		// gets published.
+		dataCache.set(dataKey, { response, exp: now + cacheLifetime })
+		return result
+	} else {
 		try {
-			// do not await so that this same promise may be reused by all subsequent requests with the same dataKey
-			dataCache.set(
-				dataKey,
-				fetch(url, init).then(async r => {
-					const response = await processResponse(r)
-					if (!r.ok) {
-						console.trace(response)
-						throw (
-							'memFetch error ' +
-							r.status +
-							': ' +
-							(typeof response == 'object' ? response.message || response.error : response)
-						)
-					}
-					// to-do: support opt.freeze to enforce deep freeze of data.json()
-					dataCache.set(dataKey, response)
-					return dataCache.get(dataKey)
-				})
-			)
-			result = dataCache.get(dataKey)
+			// IMPORTANT: do not await so that this same promise may be reused
+			// by subsequent requests with the same dataKey
+			result = opts.client
+				? opts.client(url, init, Object.assign(opts, { client: undefined })).then(response => {
+						// replace the cached promise result with the actual data,
+						// since persisting a cached promise for a long time is likely not best practice
+						dataCache.set(dataKey, { response, exp: Date.now() + cacheLifetime })
+						return response
+				  })
+				: fetch(url, init).then(async r => {
+						const response = await processResponse(r)
+						if (!r.ok) {
+							console.trace(response)
+							throw (
+								'memFetch error ' +
+								r.status +
+								': ' +
+								(typeof response == 'object' ? response.message || response.error : response)
+							)
+						}
+						// replace the cached promise result with the actual data,
+						// since persisting a cached promise for a long time is likely not best practice
+						dataCache.set(dataKey, { response: deepFreeze(response), exp: Date.now() + cacheLifetime })
+						return response
+				  })
+
+			dataCache.set(dataKey, { response: result, exp: Date.now() + cacheLifetime })
+			manageCacheSize(now)
+			return result
 		} catch (e) {
-			delete dataCache.delete(dataKey)
+			// delete this cache only if it is a promise;
+			// do not delete a valid resolved data cache
+			if (dataCache.get(dataKey) instanceof Promise) delete dataCache.delete(dataKey)
 			throw e
 		}
 	}
-	if (typeof dataKey === 'string') manageCacheSize(dataKey)
-	return result
 }
 
 export function deleteCache(key) {
-	delete dataCache.delete(key)
+	dataCache.delete(key)
 }
 
-export function manageCacheSize(dataKey) {
-	// manage the number of stored keys in dataCache
-	const i = cachedDataNames.indexOf(dataKey)
-	if (i !== -1) cachedDataNames.splice(i, 1) // if the dataKey already exists, delete from current place in tracking array to move to front
-	cachedDataNames.unshift(dataKey) // add the dataKey to the front of the tracking array
-	while (cachedDataNames.length > maxNumOfDataKeys) {
-		const oldestDataname = cachedDataNames.pop() // delete the dataKey from the tracking array
-		dataCache.delete(oldestDataname)
+export function manageCacheSize(_now) {
+	const now = _now || Date.now()
+	const keyExp = []
+	for (const [key, result] of dataCache.entries()) {
+		if (result.exp < now) dataCache.delete(key)
+		else keyExp.push({ key, exp: result.exp })
+	}
+	if (dataCache.size > maxNumOfDataKeys) {
+		const oldestEntries = keyExp.sort((a, b) => a.exp - b.exp).slice(maxNumOfDataKeys)
+		for (const entry of oldestEntries) dataCache.delete(entry.key)
 	}
 }
 
@@ -261,7 +278,7 @@ export async function getDataName(url, init) {
 }
 
 //
-export function clearCache(opts = {}) {
+export function clearMemFetchDataCache(opts = {}) {
 	if (!opts.serverData) {
 		dataCache.clear()
 		return

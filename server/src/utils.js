@@ -888,6 +888,13 @@ export function isRecoverableError(e, opts = {}) {
 	return RecoverableErrorCodes.has(code)
 }
 
+export function isAbortError(e) {
+	if (e !== null && typeof e === 'object') {
+		if (e.name === 'AbortError') return true
+	}
+	// may add additional logic to detect
+}
+
 //////////////////////////////
 //         fragile!!        //
 //////////////////////////////

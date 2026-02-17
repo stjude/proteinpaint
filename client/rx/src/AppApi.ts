@@ -43,6 +43,8 @@ export class AppApi {
 
 	#latestActionSequenceId: number
 	#abortController?: AbortController
+	/** trackedAbortContrlsBySignal is used by trackAbortCtrlBySignal() */
+	#trackedAbortContrlsBySignal = new WeakMap()
 	#componentsByType: {
 		[chartType: string]: {
 			[plotId: string]: ComponentApi
@@ -209,9 +211,19 @@ export class AppApi {
 		// // can also change timeout to 1000, to see that aborting is okay after the signaled fetch completes
 	}
 
-	triggerAbort(reason = '') {
+	triggerAbort(reason = '', signal?: any) {
+		if (reason) console.info(`triggerAbort()`, reason)
+		if (signal) {
+			if (signal.aborted) return
+			if (this.#abortController && signal === this.#abortController?.signal) this.#abortController.abort()
+			else {
+				const abortCtrl = this.#trackedAbortContrlsBySignal.get(signal)
+				if (abortCtrl) abortCtrl.abort()
+			}
+			return
+		}
+
 		const self = this.#App
-		if (reason) if (reason) console.info(`triggerAbort()`, reason)
 		if (this.#abortController) {
 			this.#abortController.abort('stale sequenceId')
 			this.#abortController = undefined
@@ -233,6 +245,10 @@ export class AppApi {
 				}
 			}
 		}
+	}
+
+	trackAbortCtrlBySignal(abortCtrl) {
+		this.#trackedAbortContrlsBySignal.set(abortCtrl.signal, abortCtrl)
 	}
 
 	getSequenceId() {

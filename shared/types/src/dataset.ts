@@ -1597,6 +1597,10 @@ keep this setting here for reason of:
 	}
 	/** maximum number of genes to query in geneVariant gene set */
 	maxGeneVariantGeneSetSize?: number
+	/** (server-side) maximum number of awaited by-term queries for sample data */
+	maxConcurrentQueries?: number
+	/** (client-side) maximum number of terms that should be submitted in one fetch request in TermdbVocab.getAnnotatedSampleData() */
+	maxAnnoTermsPerClientRequest?: number
 	//terms  are shown in the dictionary based on term and user role.
 	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
 	hiddenIds?: string[]

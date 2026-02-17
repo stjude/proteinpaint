@@ -273,22 +273,22 @@ function maySetAbortCtrl(req, res) {
 	if (q.dslabel) {
 		let isFinished = false
 		res.on('finish', () => {
-			//console.log(148, 'res.on(finish)')
 			isFinished = true
 		})
 		res.on('close', () => {
 			abortCtrlBy.filter0.delete(q.filter0)
 			abortCtrlBy.signal.delete(abortCtrl.signal)
-			//console.log(156, 'res.on(close)', isFinished, res.writableEnded, q.filter0?.content?.[0]?.content, abortCtrl.signal)
-			if (isFinished || res.writableEnded) return
-			if (serverconfig.debugmode)
-				console.log(`--- !!! will abort ${JSON.stringify(q.filter0?.content?.[0]?.content)} !!! ---`, abortCtrl.signal)
-			// Abort fetch or spawned processes that have the abortCtrl.signal as an option
-			//setTimeout(() => {
-			if (isFinished || res.writableEnded) return
-			if (serverconfig.debugmode) console.log('Client disconnected, aborting active fetch or spawned processes...')
-			abortCtrl.abort()
-			//}, 0) // uncomment to log the cohort filter of requests that got aborted in xfetch()
+			if (isFinished || res.writableEnded || abortCtrl.signal.aborted) return
+			if (serverconfig.debugmode) {
+				console.log(`(!) client unexpectedly disconnected, will abort stale requests`)
+				//console.log(JSON.stringify(q.filter0?.content?.[0]?.content), abortCtrl.signal)
+			}
+			try {
+				abortCtrl.abort()
+			} catch (e) {
+				// there should not be any errors to catch
+				console.trace(e)
+			}
 		})
 	}
 }
