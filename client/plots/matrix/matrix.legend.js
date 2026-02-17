@@ -165,7 +165,6 @@ export function getLegendData(legendGroups, refs, self) {
 							termid: 'CNV'
 						}
 					}
-
 					legend.values.CNV_gain_loss = {
 						key: $id,
 						label: 'Gain and Loss',
@@ -183,22 +182,18 @@ export function getLegendData(legendGroups, refs, self) {
 						numericInputs: {
 							cutoffMode: s.cnvValues.cutoffMode,
 							defaultPercentile: s.cnvValues.defaultPercentile,
+							percentile: s.cnvValues.percentile,
 							callback: async obj => {
+								self.config.settings.matrix.cnvValues = {
+									cutoffMode: obj.cutoffMode,
+									min: obj.min,
+									max: obj.max,
+									percentile: obj.percentile
+								}
 								await self.app.dispatch({
 									type: 'plot_edit',
-									id: self.id,
-									config: {
-										settings: {
-											matrix: {
-												cnvValues: {
-													cutoffMode: obj.cutoffMode,
-													min: obj.min,
-													max: obj.max,
-													percentile: obj.percentile
-												}
-											}
-										}
-									}
+									id: self.opts.id,
+									config: self.config
 								})
 							}
 						}

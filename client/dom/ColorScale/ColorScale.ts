@@ -205,7 +205,13 @@ export class ColorScale {
 			}
 		if (opts.numericInputs) {
 			_opts.cutoffMode = opts.numericInputs.cutoffMode || 'auto'
-			if (opts.numericInputs.defaultPercentile) _opts.percentile = opts.numericInputs?.defaultPercentile
+			if (opts.numericInputs.defaultPercentile || opts.numericInputs.percentile) {
+				/** If the color scale is rerendered instead of persisted, tracking the default
+				 * vs the user provided percentile within this component is not possible. Give
+				 * the menu the option to receive both values and use whichever is present. */
+				_opts.defaultPercentile = opts.numericInputs.defaultPercentile || opts.numericInputs.percentile
+				_opts.percentile = opts.numericInputs.percentile || opts.numericInputs.defaultPercentile
+			}
 			_opts.setNumbersCallback = async obj => {
 				if (!obj) return
 				await opts.numericInputs!.callback(obj)
