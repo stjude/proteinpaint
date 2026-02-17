@@ -172,14 +172,7 @@ export const runChart2Init = getCompInit(RunChart2)
 export const componentInit = runChart2Init
 
 export async function getPlotConfig(opts: any, app: AppApi) {
-	// Support legacy frequencyChart/frequencyChart2 config (tw or term → xtw, no ytw)
-	const xtw =
-		opts.xtw ??
-		(opts.tw
-			? { ...opts.tw, q: opts.tw.q ?? { mode: 'continuous' as const } }
-			: opts.term
-			? { term: opts.term.term ?? opts.term, q: opts.term.q ?? { mode: 'continuous' as const } }
-			: undefined)
+	const xtw = opts.xtw
 	const ytw = opts.ytw ?? null
 	if (!xtw) throw new Error('runChart2 requires xtw (X term wrapper)')
 
@@ -190,9 +183,6 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 			...(raw.runChart2 ?? {}),
 			...(raw.frequencyChart?.showCumulativeFrequency !== undefined && {
 				showCumulativeFrequency: raw.frequencyChart.showCumulativeFrequency
-			}),
-			...(raw.frequencyChart2?.showCumulativeFrequency !== undefined && {
-				showCumulativeFrequency: raw.frequencyChart2.showCumulativeFrequency
 			})
 		}
 	}
@@ -213,13 +203,13 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 
 	const defaultConfig =
 		app.vocabApi.termdbConfig?.plotConfigByCohort?.default?.[opts.chartType] ??
-		(opts.chartType === 'frequencyChart' || opts.chartType === 'frequencyChart2'
+		(opts.chartType === 'frequencyChart'
 			? app.vocabApi.termdbConfig?.plotConfigByCohort?.default?.runChart2
 			: undefined)
 
 	const config: any = {
 		xtw,
-		...(ytw != null && { ytw }),
+		ytw,
 		settings: {
 			controls: { isOpen: false },
 			runChart2: getDefaultRunChart2Settings({ ...opts, settings })
@@ -228,7 +218,7 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 	return copyMerge(config, defaultConfig, {
 		...opts,
 		xtw,
-		...(ytw != null && { ytw }),
+		ytw,
 		settings: { ...settings, runChart2: settings.runChart2 ?? {} }
 	})
 }
