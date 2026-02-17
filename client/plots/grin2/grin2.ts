@@ -218,22 +218,22 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const t2 = table2col({ holder: right })
 
 		// Top numeric options
-		this.dom.snvindel_minTotalDepth = this.addOptionRowToTable(
-			t2,
-			'Min Total Depth',
-			this.state.config.settings?.snvindelOptions?.minTotalDepth ?? 10, // default. Getting from state and defaulting to 10 if not available
-			0, // min
-			1e6, // max
-			1 // step
-		)
-		this.dom.snvindel_minAltAlleleCount = this.addOptionRowToTable(
-			t2,
-			'Min Alt Allele Count',
-			this.state.config.settings?.snvindelOptions?.minAltAlleleCount ?? 2, // default. Getting from state and defaulting to 2 if not available
-			0,
-			1e6,
-			1
-		)
+		// this.dom.snvindel_minTotalDepth = this.addOptionRowToTable(
+		// 	t2,
+		// 	'Min Total Depth',
+		// 	this.state.config.settings?.snvindelOptions?.minTotalDepth ?? 10, // default. Getting from state and defaulting to 10 if not available
+		// 	0, // min
+		// 	1e6, // max
+		// 	1 // step
+		// )
+		// this.dom.snvindel_minAltAlleleCount = this.addOptionRowToTable(
+		// 	t2,
+		// 	'Min Alt Allele Count',
+		// 	this.state.config.settings?.snvindelOptions?.minAltAlleleCount ?? 2, // default. Getting from state and defaulting to 2 if not available
+		// 	0,
+		// 	1e6,
+		// 	1
+		// )
 
 		// if 5/3 flanking size will be needed in future, can create a helper this.addFlankingOption() to dedup
 
@@ -614,8 +614,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 		if (usage[dtsnvindel]?.checked) {
 			requestConfig.snvindelOptions = {
-				minTotalDepth: parseFloat(this.dom.snvindel_minTotalDepth.property('value')),
-				minAltAlleleCount: parseFloat(this.dom.snvindel_minAltAlleleCount.property('value')),
+				// minTotalDepth: parseFloat(this.dom.snvindel_minTotalDepth.property('value')),
+				// minAltAlleleCount: parseFloat(this.dom.snvindel_minAltAlleleCount.property('value')),
 				consequences: this.getSelectedConsequences()
 			}
 		}
@@ -1002,8 +1002,8 @@ export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 			},
 			snvindelOptions: queries?.snvindel
 				? {
-						minTotalDepth: 10,
-						minAltAlleleCount: 2,
+						// minTotalDepth: 10,
+						// minAltAlleleCount: 2,
 						consequences: [],
 						hyperMutator: 1000
 				  }

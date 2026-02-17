@@ -647,19 +647,19 @@ function filterAndConvertSnvIndel(
 	}
 
 	// Filter by minimum alternate allele count
-	if (options.minAltAlleleCount !== undefined && options.minAltAlleleCount > 0) {
-		if (!entry.altCount || entry.altCount < options.minAltAlleleCount) {
-			return null
-		}
-	}
+	// if (options.minAltAlleleCount !== undefined && options.minAltAlleleCount > 0) {
+	// 	if (!entry.altCount || entry.altCount < options.minAltAlleleCount) {
+	// 		return null
+	// 	}
+	// }
 
 	// Filter by minimum total depth (refCount + altCount)
-	if (options.minTotalDepth !== undefined && options.minTotalDepth > 0) {
-		const totalDepth = (entry.refCount || 0) + (entry.altCount || 0)
-		if (totalDepth < options.minTotalDepth) {
-			return null
-		}
-	}
+	// if (options.minTotalDepth !== undefined && options.minTotalDepth > 0) {
+	// 	const totalDepth = (entry.refCount || 0) + (entry.altCount || 0)
+	// 	if (totalDepth < options.minTotalDepth) {
+	// 		return null
+	// 	}
+	// }
 
 	// Apply 5' and 3' flanking to the point mutation
 	// const flanking5p = options.fivePrimeFlankSize || 0
