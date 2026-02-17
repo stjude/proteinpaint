@@ -14,7 +14,7 @@
   "vafs": [
    {
     "altCount": 7,
-    "name": "tumor DNA WGS",
+    "id": "tumor_DNA_WGS",
     "refCount": 9
    }
   ]
@@ -25,6 +25,7 @@
   "dt": 2,
   "geneA": "TP53",
   "geneB": "AKT1",
+  "origin": "somatic",
   "posA": 7674289,
   "posB": 104779348,
   "strandA": "-",

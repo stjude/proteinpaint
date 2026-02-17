@@ -14,7 +14,7 @@
   "vafs": [
    {
     "altCount": 7,
-    "name": "tumor DNA WGS",
+    "id": "tumor_DNA_WGS",
     "refCount": 9
    }
   ]
@@ -22,6 +22,7 @@
  {
   "chr": "chr12",
   "dt": 4,
+  "origin": "somatic",
   "start": 25205244,
   "stop": 25250928,
   "value": -1.0
@@ -32,6 +33,7 @@
   "dt": 2,
   "geneA": "KRAS",
   "geneB": "AKT1",
+  "origin": "somatic",
   "posA": 25225245,
   "posB": 104779948,
   "strandA": "-",

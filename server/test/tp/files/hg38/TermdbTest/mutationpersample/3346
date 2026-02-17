@@ -14,7 +14,7 @@
   "vafs": [
    {
     "altCount": 20,
-    "name": "tumor DNA WGS",
+    "id": "tumor_DNA_WGS",
     "refCount": 12
    }
   ]
@@ -22,6 +22,7 @@
  {
   "chr": "chr12",
   "dt": 4,
+  "origin": "somatic",
   "start": 25205244,
   "stop": 25250928,
   "value": 1.0

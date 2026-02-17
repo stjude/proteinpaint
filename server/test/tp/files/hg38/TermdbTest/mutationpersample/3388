@@ -2,6 +2,7 @@
  {
   "chr": "chr14",
   "dt": 4,
+  "origin": "somatic",
   "start": 104769347,
   "stop": 104795747,
   "value": -1.0
