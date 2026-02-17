@@ -221,8 +221,7 @@ export async function run_chat_pipeline(
 		user_prompt,
 		llm,
 		aiRoute,
-		dataset_json,
-		testing
+		dataset_json
 	)
 	let ai_output_json: any
 	mayLog('Time taken for classification:', formatElapsedTime(Date.now() - time1))
@@ -393,13 +392,7 @@ export async function readJSONFile(file: string) {
 	return JSON.parse(json_file.toString())
 }
 
-async function classify_query_by_dataset_type(
-	user_prompt: string,
-	llm: LlmConfig,
-	aiRoute: string,
-	dataset_json: any,
-	testing: boolean
-) {
+async function classify_query_by_dataset_type(user_prompt: string, llm: LlmConfig, aiRoute: string, dataset_json: any) {
 	const data = await readJSONFile(aiRoute)
 	let contents = data['general'] // The general description should be right at the top of the system prompt
 	for (const key of Object.keys(data)) {
@@ -440,11 +433,12 @@ async function classify_query_by_dataset_type(
 		contents + ' training data is as follows:' + training_data + ' Question: {' + user_prompt + '} Answer: {answer}'
 
 	const response: string = await route_to_appropriate_llm_provider(template, llm)
-	if (testing) {
-		return { action: 'html', response: JSON.parse(response) }
-	} else {
-		return JSON.parse(response)
-	}
+	//if (testing) {
+	//    return { action: 'html', response: response } // In case of classification agent a response could be an html pointing to some weblink. So JSON.parse() will fail
+	//} else {
+	//    return JSON.parse(response)
+	//}
+	return JSON.parse(response)
 }
 
 async function extract_DE_search_terms_from_query(
@@ -788,10 +782,14 @@ function validate_summary_response(response: string, common_genes: string[], dat
 	const pp_plot_json: any = { chartType: 'summary' }
 	let html = ''
 	if (response_type.html) html = response_type.html
-	if (!response_type.term) html += 'term type is not present in summary output'
+	if (!response_type.term) {
+		html += 'term type is not present in summary output'
+		return { type: 'html', html: html }
+	}
 	const term1_validation = validate_term(response_type.term, common_genes, dataset_json, ds)
 	if (term1_validation.html.length > 0) {
 		html += term1_validation.html
+		return { type: 'html', html: html }
 	} else {
 		pp_plot_json.term = term1_validation.term_type
 		if (term1_validation.category == 'float' || term1_validation.category == 'integer') {
@@ -804,6 +802,7 @@ function validate_summary_response(response: string, common_genes: string[], dat
 		const term2_validation = validate_term(response_type.term2, common_genes, dataset_json, ds)
 		if (term2_validation.html.length > 0) {
 			html += term2_validation.html
+			return { type: 'html', html: html }
 		} else {
 			pp_plot_json.term2 = term2_validation.term_type
 			if (term2_validation.category == 'float' || term2_validation.category == 'integer') {
@@ -823,6 +822,7 @@ function validate_summary_response(response: string, common_genes: string[], dat
 
 	if (resolved.error) {
 		html += resolved.error
+		return { type: 'html', html: html }
 	} else {
 		pp_plot_json.childType = resolved.childType
 		// For two numeric variables displayed as violin/boxplot, discretize term2
@@ -844,16 +844,12 @@ function validate_summary_response(response: string, common_genes: string[], dat
 		const validated_filters = validate_filter(response_type.simpleFilter, ds, '')
 		if (validated_filters.html.length > 0) {
 			html += validated_filters.html
+			return { type: 'html', html: html }
 		} else {
 			pp_plot_json.filter = validated_filters.simplefilter
 		}
 	}
-
-	if (html.length > 0) {
-		return { type: 'html', html: html }
-	} else {
-		return { type: 'plot', plot: pp_plot_json }
-	}
+	return { type: 'plot', plot: pp_plot_json }
 }
 
 async function extract_matrix_search_terms_from_query(
