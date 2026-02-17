@@ -381,9 +381,8 @@ function handle_click(event, self, chart) {
 	const uncomp_term2 = term2 && term2.values ? Object.values(term2.values).map(v => v.label) : []
 	const term1unit = term1.unit && !uncomp_term1.includes(d.seriesId || d.id) ? ' ' + term1.unit : ''
 	const term2unit = term2 && term2.unit && !uncomp_term2.includes(d.dataId || d.id) ? ' ' + term2.unit : ''
-	const seriesLabel =
-		(term1.values && d.seriesId in term1.values ? term1.values[d.seriesId].label : d.seriesId ? d.seriesId : d.id) +
-		term1unit
+	const seriesId = d.seriesId || d.id
+	const seriesLabel = (term1.values && seriesId in term1.values ? term1.values[seriesId].label : seriesId) + term1unit
 	const dataLabel =
 		(term2 && term2.values && d.dataId in term2.values ? term2.values[d.dataId].label : d.dataId ? d.dataId : d.id) +
 		term2unit
