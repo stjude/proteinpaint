@@ -837,6 +837,7 @@ export class TermdbVocab extends Vocab {
 
 						for (const tw of copies) {
 							const { shortId, gene } = data.refs.byTermId[tw.$id] || frozenEmptyObj // avoid unnecessarily creating placeholder objects
+							const origTw = opts.terms.find(o => o.$id === tw.$id)
 
 							for (const [sampleId, sample] of Object.entries(data.samples)) {
 								// ignore sample objects that are not annotated by other keys besides 'sample'
