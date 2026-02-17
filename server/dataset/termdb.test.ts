@@ -22,6 +22,41 @@ NOTE: genome/hg38.test.js
                 serverconfig dataset entries in local dev ang github CI
 */
 
+// MAF fields in bcf file, expressed as term objects
+const mafFields = [
+	{
+		id: 'tumor_DNA',
+		name: 'Tumor DNA',
+		parent_id: null,
+		child_ids: ['tumor_DNA_WGS'],
+		isleaf: true,
+		type: 'float',
+		default: true, // indicates default maf term (e.g. will be used by default for making maf filters in predefined groupset)
+		min: 0,
+		max: 1,
+		tvs: {
+			ranges: [
+				{
+					start: 0.1,
+					startinclusive: true,
+					stopunbounded: true
+				}
+			]
+		}
+	}
+]
+
+const mafFilter = {
+	opts: { joinWith: ['and', 'or'] },
+	filter: {
+		type: 'tvslst',
+		join: '',
+		in: true,
+		lst: []
+	},
+	terms: mafFields
+}
+
 // export a function to allow reuse of this dataset without causing conflicts
 // for the different use cases in runtime/tests
 export default function (): Mds3 {
@@ -317,6 +352,7 @@ export default function (): Mds3 {
 						}
 					]
 				},
+				mafFilter,
 				skewerRim: {
 					type: 'format',
 					formatKey: 'origin',
