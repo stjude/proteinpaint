@@ -1601,6 +1601,8 @@ keep this setting here for reason of:
 	maxConcurrentQueries?: number
 	/** (client-side) maximum number of terms that should be submitted in one fetch request in TermdbVocab.getAnnotatedSampleData() */
 	maxAnnoTermsPerClientRequest?: number
+	/** option to disable mayAddDataAvailability() based on request path and query parameters */
+	disableAssayAvailability?: (path: string, query: { [key: string]: any }) => boolean
 	//terms  are shown in the dictionary based on term and user role.
 	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
 	hiddenIds?: string[]

@@ -103,7 +103,8 @@ function validateArg(q, ds) {
 // then maxConcurrentQueries will be used as the batch size.
 const maxActiveQueriesBeforeSingleQueryBatch = serverconfig.features?.maxActiveQueriesBeforeSingleQueryBatch || 10
 const maxPendingQueriesBeforeRejectingRequest = serverconfig.features?.maxPendingQueriesBeforeRejectingRequest || 100
-let numActiveQueriesAcrossUsers = 0
+let numActiveQueriesAcrossUsers = 0,
+	numPendingQueriesAcrossUsers = 0
 
 async function getSampleData(q, ds, onlyChildren = false) {
 	// dictionary and non-dictionary terms require different methods for data query
@@ -127,52 +128,51 @@ async function getSampleData(q, ds, onlyChildren = false) {
 			// special ds handling, must make one query with all tws, but not to process one tw a time
 			await q.ds.queries.snvindel.byisoform.get(q, geneVariantTws, samples)
 		} else {
-			if (numActiveQueriesAcrossUsers + geneVariantTws.length > maxPendingQueriesBeforeRejectingRequest) {
+			if (!q.ds.mayGetGeneVariantData) throw 'not supported by dataset: geneVariant'
+			if (numPendingQueriesAcrossUsers + geneVariantTws.length > maxPendingQueriesBeforeRejectingRequest) {
 				// prevent PP server crash, out of memory issue
-				throw `Ths server is too busy, try again in a few minutes.`
+				throw `The server is too busy, try again in a few minutes.`
 			}
 
-			// common ds handling, one query per tw
-			if (!q.ds.mayGetGeneVariantData) throw 'not supported by dataset: geneVariant'
-			const maxConcurrentQueries = ds.cohort.termdb.maxConcurrentQueries || 10
-			const promises = []
-			for (const [i, tw] of geneVariantTws.entries()) {
-				if (tw.term.gene && q.ds.cohort?.termdb?.getGeneAlias) {
-					byTermId[tw.$id] = q.ds.cohort?.termdb?.getGeneAlias(q, tw)
-				}
+			try {
+				numPendingQueriesAcrossUsers += geneVariantTws.length
 
-				// this may contain 1 or more query promise
-				promises.push(
-					(async () => {
-						const data = await q.ds.mayGetGeneVariantData(tw, q)
+				// common ds handling, one query per tw
 
-						for (const [sampleId, value] of data.entries()) {
-							if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
-							samples[sampleId][tw.$id] = value[tw.$id]
+				const maxConcurrentQueries = ds.cohort.termdb.maxConcurrentQueries || 10
+				const promises = []
+
+				for (const [i, tw] of geneVariantTws.entries()) {
+					if (tw.term.gene && q.ds.cohort?.termdb?.getGeneAlias) {
+						byTermId[tw.$id] = q.ds.cohort?.termdb?.getGeneAlias(q, tw)
+					}
+
+					// this may contain 1 or more query promise
+					promises.push(setGeneVariantDataForTw(q, tw, samples))
+
+					// prevent excessive API calls that may lead to network errors,
+					// for example https://gdc-ctds.atlassian.net/browse/SV-2728
+					if (
+						numActiveQueriesAcrossUsers > maxActiveQueriesBeforeSingleQueryBatch ||
+						promises.length >= maxConcurrentQueries ||
+						i >= geneVariantTws.length - 1
+					) {
+						const batchSize = promises.length
+						numActiveQueriesAcrossUsers += batchSize
+						try {
+							const results = await Promise.allSettled(promises)
+							const firstRejected = results.find(r => r.status === 'rejected')
+							if (firstRejected) {
+								throw firstRejected.reason
+							}
+						} finally {
+							numActiveQueriesAcrossUsers -= batchSize
+							promises.length = 0
 						}
-					})()
-				)
-
-				// prevent excessive API calls that may lead to network errors,
-				// for example https://gdc-ctds.atlassian.net/browse/SV-2728
-				if (
-					numActiveQueriesAcrossUsers > maxActiveQueriesBeforeSingleQueryBatch ||
-					promises.length >= maxConcurrentQueries ||
-					i >= geneVariantTws.length - 1
-				) {
-					const batchSize = promises.length
-					numActiveQueriesAcrossUsers += batchSize
-					try {
-						const results = await Promise.allSettled(promises)
-						const firstRejected = results.find(r => r.status === 'rejected')
-						if (firstRejected) {
-							throw firstRejected.reason
-						}
-					} finally {
-						numActiveQueriesAcrossUsers -= batchSize
-						promises.length = 0
 					}
 				}
+			} finally {
+				numPendingQueriesAcrossUsers -= geneVariantTws.length
 			}
 		}
 	}
@@ -334,6 +334,14 @@ async function getSampleData(q, ds, onlyChildren = false) {
 		sampleType = q.ds.cohort.termdb.sampleTypes[stid]
 	}
 	return { samples, refs: { byTermId, bySampleId }, sampleType }
+}
+
+async function setGeneVariantDataForTw(q, tw, samples) {
+	const data = await q.ds.mayGetGeneVariantData(tw, q)
+	for (const [sampleId, value] of data.entries()) {
+		if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+		samples[sampleId][tw.$id] = value[tw.$id]
+	}
 }
 
 // function to get sample genotype data for a single snp

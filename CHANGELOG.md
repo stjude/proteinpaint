@@ -2,8 +2,6 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
-
 
 ## 2.176.0
 
@@ -77,9 +75,15 @@ Fixes:
 - show loading and error messages when switching to barchart tab in summary plot
 
 
+## 2.170.11
+
+Fixes:
+- throttle the number of active sample data queries across all users
+
+
 ## 2.170.10
 
-Fixes
+Fixes:
 - throttle the number of active sample data queries across all users
 
 
@@ -97,9 +101,9 @@ Fixes:
 - supply abort signal option to getDefaultBins and getpercentile requests when filling-in term wrappers
 
 
-## 2.170.7:
+## 2.170.7
 
-Fixes
+Fixes:
 - support correlation plot triggerAbort() to cancel stale network requests; detect component triggerAbort() as a prototype method
 
 
