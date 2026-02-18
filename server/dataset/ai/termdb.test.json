@@ -447,7 +447,7 @@
           }
         },
         {
-          "question": "Show an oncoplot of TP53 and RB1 with diagnosis group and sex",
+          "question": "Show a matrix of TP53 and RB1 with diagnosis group and sex",
           "answer": {
             "geneNames": [
               "TP53",
@@ -460,7 +460,7 @@
           }
         },
         {
-          "question": "Show mutation landscape of TP53, MYC, and BCL2 for male patients",
+          "question": "Show gene expression landscape of TP53, MYC, and BCL2 for male patients",
           "answer": {
             "geneNames": [
               "TP53",
@@ -476,7 +476,7 @@
           }
         },
         {
-          "question": "Create a matrix with diagnosis group, sex, and TP53 mutations",
+          "question": "Create a matrix with diagnosis group, sex, and TP53 gene expression",
           "answer": {
             "geneNames": [
               "TP53"
@@ -488,7 +488,7 @@
           }
         },
         {
-          "question": "Show an oncoprint of TP53, CDKN2A, and PAX5 across all samples",
+          "question": "Show an matrix plot of TP53, CDKN2A, and PAX5 across all samples",
           "answer": {
             "geneNames": [
               "TP53",
@@ -498,7 +498,7 @@
           }
         },
         {
-          "question": "Show me the mutation pattern of IKZF1 and CDKN2A with age and ancestry",
+          "question": "Show me the gene expression pattern of IKZF1 and CDKN2A with age and ancestry",
           "answer": {
             "geneNames": [
               "IKZF1",
@@ -521,7 +521,7 @@
           }
         },
         {
-          "question": "Show oncoplot of TP53 and PAX5 for AML and neuroblastoma subtypes",
+          "question": "Show matrix of TP53 and PAX5 for AML and neuroblastoma subtypes",
           "answer": {
             "geneNames": [
               "TP53",
@@ -560,7 +560,7 @@
           }
         },
         {
-          "question": "Show mutation landscape of CDKN2A and IKZF1 between male and female patients with ancestry",
+          "question": "Show gene expression landscape of CDKN2A and IKZF1 between male and female patients with ancestry",
           "answer": {
             "geneNames": [
               "CDKN2A",
@@ -572,8 +572,7 @@
             ]
           }
         }
-      ],
-      "TestData": []
+      ]
     },
     {
       "type": "SampleScatter",
