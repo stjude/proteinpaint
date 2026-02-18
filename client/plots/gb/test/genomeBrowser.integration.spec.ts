@@ -115,7 +115,9 @@ tape('add variants track', (test: any) => {
 		// Verify Variants tab is active after clicking
 		const activeTabBeforeCheckbox = tabsDiv.select('button.sjpp-active').datum()
 		test.ok(activeTabBeforeCheckbox, 'Should have an active tab')
-		test.equal(activeTabBeforeCheckbox?.label, 'Variants', 'Variants tab should be active after clicking')
+		if (activeTabBeforeCheckbox) {
+			test.equal(activeTabBeforeCheckbox.label, 'Variants', 'Variants tab should be active after clicking')
+		}
 		const variantsCheckbox = tabsDiv.select('input[type="checkbox"]').node()
 		variantsCheckbox.click()
 		const blockDiv = await detectOne({ elem: dom.blockHolder.node(), selector: '.sja_Block_div' })
@@ -131,7 +133,9 @@ tape('add variants track', (test: any) => {
 		// Test that Variants tab remains active after checking the checkbox
 		const activeTabAfterCheckbox = tabsDiv.select('button.sjpp-active').datum()
 		test.ok(activeTabAfterCheckbox, 'Should have an active tab after checkbox toggle')
-		test.equal(activeTabAfterCheckbox?.label, 'Variants', 'Variants tab should remain active after checkbox toggle')
+		if (activeTabAfterCheckbox) {
+			test.equal(activeTabAfterCheckbox.label, 'Variants', 'Variants tab should remain active after checkbox toggle')
+		}
 		if (test._ok) gb.Inner.app.destroy()
 		test.end()
 	}
