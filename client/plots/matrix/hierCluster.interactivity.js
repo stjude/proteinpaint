@@ -223,18 +223,33 @@ export function showTable4selectedSamples(clickedSampleNames) {
 
 // show the list of clicked samples as a table
 export function showTable4selectedRows(clickedRowNames, rowType) {
+	// clickedRowNames is array of tw.$id
 	const templates = this.state.termdbConfig.urlTemplates
 
-	const rows =
-		templates?.gene && this.config.dataType == 'geneExpression' && this.hierClusterData.byTermId
-			? clickedRowNames.map(c =>
-					this.hierClusterData.byTermId[c]?.gencodeId
-						? [{ value: c, url: `${templates.gene.base}${this.hierClusterData.byTermId[c].gencodeId}` }]
-						: [{ value: c }]
-			  )
-			: clickedRowNames.map(c => [{ value: c }])
-
-	const columns = [{ label: rowType }]
+	const rows = []
+	if (templates?.gene && this.config.dataType == 'geneExpression' && this.hierClusterData.byTermId) {
+		// show gene names with templated url
+		for (const i of clickedRowNames) {
+			const genesymbol = this.terms.find(t => t.tw?.$id == i)?.tw?.term?.gene
+			if (!genesymbol) continue
+			// FIXME hardcoded to assume gencode
+			const gencode = this.hierClusterData.byTermId[i]?.gencodeId
+			if (gencode) {
+				rows.push([{ value: genesymbol, url: `${templates.gene.base}${gencode}` }])
+			} else {
+				rows.push([{ value: genesymbol }])
+			}
+		}
+	} else {
+		for (const i of clickedRowNames) {
+			const tw = this.terms.find(t => t.tw?.$id == i)?.tw
+			if (!tw) continue
+			// item name can be either gene or not gene (will use term.name)
+			const n = tw.term?.gene || tw.term?.name
+			if (!n) continue
+			rows.push([{ value: n }])
+		}
+	}
 
 	const div = this.dom.dendroClickMenu.clear().d.append('div').style('margin', '10px')
 
@@ -253,7 +268,7 @@ export function showTable4selectedRows(clickedRowNames, rowType) {
 		})
 	renderTable({
 		rows,
-		columns,
+		columns: [{ label: rowType }],
 		div: div.append('div'),
 		showLines: true,
 		maxHeight: '35vh',
