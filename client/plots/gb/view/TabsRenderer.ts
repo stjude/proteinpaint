@@ -19,8 +19,30 @@ export class TabsRenderer {
 	}
 
 	async main() {
+		// Preserve the currently active tab label before clearing
+		let activeTabLabel = null
+		const existingActiveButton = this.dom.tabsDiv.select('button.sjpp-active')
+		if (!existingActiveButton.empty()) {
+			const activeTabData = existingActiveButton.datum()
+			if (activeTabData && activeTabData.label) {
+				activeTabLabel = activeTabData.label
+			}
+		}
+		
 		this.dom.tabsDiv.selectAll('*').remove()
 		this.getTabs()
+		
+		// Restore the active tab if it still exists in the new tabs array
+		if (activeTabLabel) {
+			const matchingTab = this.tabs.find(tab => tab.label === activeTabLabel)
+			if (matchingTab) {
+				// Clear active state from all tabs first
+				this.tabs.forEach(tab => tab.active = false)
+				// Set the preserved tab as active
+				matchingTab.active = true
+			}
+		}
+		
 		await this.mayRenderTabs()
 	}
 
