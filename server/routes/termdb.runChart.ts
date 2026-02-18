@@ -7,7 +7,7 @@ import { getDateFromNumber, getNumberFromDate } from '#shared/terms.js'
  * Prefer getDateFromNumber (fraction-of-days-in-year); fall back to legacy string-splitting
  * for invalid dates or alternate formats (e.g. YYYY.MM).
  */
-function decimalYearToYearMonth(xRaw: number): { yearNum: number; monthNum: number } | null {
+export function decimalYearToYearMonth(xRaw: number): { yearNum: number; monthNum: number } | null {
 	const date = getDateFromNumber(xRaw)
 	const t = date.getTime()
 	if (Number.isFinite(t)) {
