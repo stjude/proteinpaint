@@ -18,6 +18,7 @@ export class GeneSearchRenderer {
 
 	renderGeneSearch() {
 		const gbRestrictMode = this.opts.vocabApi.termdbConfig.queries.gbRestrictMode
+		this.holder.selectAll('*').remove()
 		const row = this.holder.append('div')
 		row.append('span').html('Search')
 		const arg: any = {

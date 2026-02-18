@@ -121,6 +121,9 @@ tape('add variants track', (test: any) => {
 		const variantTk = tklst[3]
 		const variants = await detectGt({ elem: variantTk, selector: '.sja_aa_discg' })
 		test.ok(variants.length > 0, 'Should render variants in variants track')
+		// Test for duplicate gene search box bug fix
+		const geneSearchDivs = dom.geneSearchDiv.selectAll(':scope > div').nodes()
+		test.equal(geneSearchDivs.length, 1, 'Should have only one gene search box (no duplicates)')
 		if (test._ok) gb.Inner.app.destroy()
 		test.end()
 	}
