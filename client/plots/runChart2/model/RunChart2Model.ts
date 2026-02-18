@@ -12,22 +12,7 @@ export class RunChart2Model {
 	}
 
 	async fetchData(config: any) {
-		const opts = this.getRequestOpts(config)
-
-		if (!opts.genome || !opts.dslabel) {
-			throw new Error('RunChart2 requires genome and dslabel.')
-		}
-
-		const body: any = {
-			genome: opts.genome,
-			dslabel: opts.dslabel,
-			filter: getNormalRoot(opts.filter ?? undefined),
-			xtw: opts.xtw,
-			ytw: opts.ytw,
-			aggregation: opts.aggregation,
-			showCumulativeFrequency: opts.showCumulativeFrequency
-		}
-		const result: RunChartResponse = await dofetch3('termdb/runChart', { body })
+		const result: RunChartResponse = await dofetch3('termdb/runChart', { body: this.getRequestOpts(config) })
 
 		if (!('status' in result) || result.status !== 'ok') {
 			throw new Error(`RunChart2Model.fetchData() failed: ${(result as RunChartErrorResponse).error}`)
@@ -41,11 +26,11 @@ export class RunChart2Model {
 		return {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,
-			filter: state.termfilter?.filter,
+			filter: getNormalRoot(state.termfilter?.filter),
 			xtw: config.xtw,
 			ytw: config.ytw,
 			aggregation: config.settings?.runChart2?.aggregation,
-			showCumulativeFrequency: config.settings?.runChart2?.showCumulativeFrequency === true
+			showCumulativeFrequency: config.settings?.runChart2?.showCumulativeFrequency
 		}
 	}
 }
