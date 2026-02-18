@@ -894,8 +894,6 @@ async function extract_matrix_search_terms_from_query(
 
 	// Parse out training data from the dataset JSON
 	const matrix_ds = dataset_json.charts.filter((chart: any) => chart.type == 'Matrix')
-	console.log('matrix_ds', matrix_ds)
-	console.log('dataset_json.charts', dataset_json.charts)
 	if (matrix_ds.length == 0) throw 'Matrix information is not present in the dataset file.'
 	if (matrix_ds[0].TrainingData.length == 0) throw 'No training data is provided for the matrix agent.'
 
