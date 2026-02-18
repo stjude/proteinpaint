@@ -42,9 +42,6 @@ class TdbConfigUiInit {
 			const debug = this.opts.debug
 			this.inputs = {} // non-rx notified
 			const componentPromises = {} // rx-notified
-
-			this.disableSelectedTerms()
-
 			for (const key of this.opts.inputs) {
 				if (typeof key == 'object') {
 					const obj = key // reassign to be less confusing
@@ -126,15 +123,6 @@ class TdbConfigUiInit {
 			config,
 			isOpen: this.opts.isOpen()
 		}
-	}
-
-	// disable selected terms in all term inputs
-	// to prevent entering the same term in multiple inputs
-	disableSelectedTerms() {
-		const state = this.getState(this.app.getState())
-		const termInputs = this.opts.inputs.filter(i => i.type === 'term')
-		const selectedTerms = termInputs.map(i => state.config[i.configKey]?.term).filter(Boolean)
-		for (const i of termInputs) i.disable_terms = selectedTerms
 	}
 
 	main() {
@@ -863,11 +851,13 @@ async function setTermInput(opts) {
 			opts.holder.style('display', display)
 			const { config, activeCohort, termfilter } = JSON.parse(JSON.stringify(plot))
 			const tw = plot[opts.configKey] || (config && config[opts.configKey]) || {}
+			const selectedTerms = getSelectedTerms(opts, config)
 			const arg = {
 				term: tw.term || null,
 				q: tw.q,
 				activeCohort,
-				filter: termfilter && termfilter.filter
+				filter: termfilter && termfilter.filter,
+				disable_terms: selectedTerms
 			}
 			if ('$id' in tw) arg.$id = tw.$id
 			pill.main(arg)
@@ -877,6 +867,19 @@ async function setTermInput(opts) {
 
 	if (opts.debug) api.Inner = self
 	return Object.freeze(api)
+}
+
+// get selected terms across all term inputs
+// will disable these terms in termdb tree to prevent
+// entering the same term in multiple inputs
+function getSelectedTerms(opts, config) {
+	const termInputs = opts.parent.opts.inputs.filter(i => i.type === 'term')
+	const selectedTerms = []
+	for (const termInput of termInputs) {
+		const tw = config[termInput.configKey]
+		if (tw) selectedTerms.push(tw.term)
+	}
+	return selectedTerms
 }
 
 export const initByInput = {
