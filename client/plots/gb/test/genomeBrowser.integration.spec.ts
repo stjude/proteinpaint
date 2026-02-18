@@ -112,6 +112,9 @@ tape('add variants track', (test: any) => {
 		const tabs = tabsDiv.selectAll('[data-testid="sja_toggle_button"]').nodes()
 		const variantsTab = tabs[1]
 		variantsTab.click()
+		// Verify Variants tab is active after clicking
+		const activeTabBeforeCheckbox = tabsDiv.select('button.sjpp-active').datum()
+		test.equal(activeTabBeforeCheckbox.label, 'Variants', 'Variants tab should be active after clicking')
 		const variantsCheckbox = tabsDiv.select('input[type="checkbox"]').node()
 		variantsCheckbox.click()
 		const blockDiv = await detectOne({ elem: dom.blockHolder.node(), selector: '.sja_Block_div' })
@@ -124,6 +127,9 @@ tape('add variants track', (test: any) => {
 		// Test for duplicate gene search box bug fix
 		const geneSearchDivs = dom.geneSearchDiv.selectAll(':scope > div').nodes()
 		test.equal(geneSearchDivs.length, 1, 'Should have only one gene search box (no duplicates)')
+		// Test that Variants tab remains active after checking the checkbox
+		const activeTabAfterCheckbox = tabsDiv.select('button.sjpp-active').datum()
+		test.equal(activeTabAfterCheckbox.label, 'Variants', 'Variants tab should remain active after checkbox toggle')
 		if (test._ok) gb.Inner.app.destroy()
 		test.end()
 	}
