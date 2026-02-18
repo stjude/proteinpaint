@@ -199,11 +199,14 @@ export class TabsRenderer {
 					const tklst = facet.tracks.filter(i => i.assay == assay && i.sample == sampleLst[si])
 					if (tklst.length == 0) return // no tracks for this combo
 					// has track(s) for this combo; render <div> in table cell; click to launch tracks
-					// TODO text color based on if track is already shown, but hard to update facet table when user remove a track from block
+					// Count how many tracks are currently shown
+					const activeTracks = this.state.config.trackLst.activeTracks
+					const shownCount = tklst.filter(tk => activeTracks.includes(tk.name)).length
+					const displayText = shownCount > 0 ? `${shownCount}/${tklst.length}` : tklst.length.toString()
 					td.append('div')
 						.attr('class', 'sja_clbtext')
 						.style('text-align', 'center')
-						.text(tklst.length)
+						.text(displayText)
 						.on('click', event => {
 							this.clickFacetCell(event, tklst)
 						})
