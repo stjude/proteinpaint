@@ -1,4 +1,4 @@
-import type { GetInterpolatedArg, InterpolatedDomainRange } from './types'
+import type { GetInterpolatedArg } from './types'
 
 /** Generate an interpolated color scale based on the domain and range.
  * @param absMin - the absolute magnitude of the interpolation domain minimum value
@@ -6,7 +6,7 @@ import type { GetInterpolatedArg, InterpolatedDomainRange } from './types'
  * @param negInterpolator - function to convert number to css color
  * @param posInterpolator - function to convert number to css color
  * @param middleColor - Optional color to insert between two interpolated color ranges,
- * @numSteps - the target number of increments within the interpolation domain and range
+ * @param totalNumSteps - the target number of increments within the interpolation domain and range
  * @returns the domain and range for the interpolated color scale
  */
 
@@ -21,28 +21,47 @@ export function getInterpolatedDomainRange({
 	negInterpolator,
 	posInterpolator,
 	middleColor = 'white',
-	numSteps = 100
+	totalNumSteps = 100
 }: GetInterpolatedArg) {
-	const stepSize = (absMax - absMin) / numSteps
+	/** If the range includes both negative and positive values, dividing
+	 * the steps equally between the neg and pos values ensures the
+	 * return domain does not exceed the intended length (i.e. total num steps)*/
+	const denominator = negInterpolator && posInterpolator ? totalNumSteps / 2 : totalNumSteps
+	const stepSize = (absMax - absMin) / denominator
 	const neg: InterpolatedDomainRange = { values: new Set(), colors: [] }
 	const pos: InterpolatedDomainRange = { values: new Set(), colors: [] }
-	let p = absMin,
-		n = -absMax //- stepSize
-	for (let i = 0; i < numSteps; i++) {
-		if (negInterpolator && !neg.values.has(n)) {
-			/** Include the raw value in the domain and calculate the color
-			 * as a percent of the absMax. */
-			neg.values.add(n)
-			neg.colors.push(negInterpolator(-n / absMax))
+	let n = -absMax
+	for (let p = 0; p < absMax; p += stepSize) {
+		if (p == 0) continue //In all instances, 0 is added to the final domain.
+		if (negInterpolator) {
+			n += stepSize
+			const vn = n // / absMax
+			neg.values.add(vn)
+			neg.colors.push(negInterpolator(-vn / absMax))
 		}
-		// increment negative value after adding entries to neg.values/colors
-		n += stepSize
-		p += stepSize
-		if (posInterpolator && !pos.values.has(p)) {
-			pos.values.add(p)
-			pos.colors.push(posInterpolator(p / absMax))
+		if (posInterpolator) {
+			const vp = p // / absMax // do not divide by absMax, use raw value
+			pos.values.add(vp)
+			pos.colors.push(posInterpolator(vp / absMax))
 		}
 	}
+	// let p = absMin,
+	// 	n = -absMax //- stepSize
+	// for (let i = 0; i < numSteps; i++) {
+	// 	if (negInterpolator && !neg.values.has(n)) {
+	// 		/** Include the raw value in the domain and calculate the color
+	// 		 * as a percent of the absMax. */
+	// 		neg.values.add(n)
+	// 		neg.colors.push(negInterpolator(-n / absMax))
+	// 	}
+	// 	// increment negative value after adding entries to neg.values/colors
+	// 	n += stepSize
+	// 	p += stepSize
+	// 	if (posInterpolator && !pos.values.has(p)) {
+	// 		pos.values.add(p)
+	// 		pos.colors.push(posInterpolator(p / absMax))
+	// 	}
+	// }
 
 	if (negInterpolator && posInterpolator) {
 		const domain = [...neg.values, 0, ...pos.values]

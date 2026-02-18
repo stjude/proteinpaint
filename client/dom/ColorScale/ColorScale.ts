@@ -87,7 +87,7 @@ export class ColorScale {
 			throw new Error('Duplicate values in #dom/ColorScale opts.domain')
 		}
 		if (this.colors.length != new Set(this.colors).size) {
-			throw new Error('Duplicate values in #dom/ColorScale opts.colors or default colors')
+			throw new Error('Duplicate values in #dom/ColorScale opts.colors')
 		}
 		if (opts.labels && (!opts.labels.left || !opts.labels.right))
 			throw new Error('Missing a label for #dom/ColorScale.')

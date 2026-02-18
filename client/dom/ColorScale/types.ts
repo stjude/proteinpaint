@@ -44,8 +44,6 @@ export type ColorScaleOpts = {
 	width?: number
 	/** Optional. Height fo the svg. Default is 30.*/
 	height?: number
-	/** Optional. If true, keeps duplicate color and tick values */
-	retainDuplicates?: boolean
 	/** If present, creates a menu on click to change the colors */
 	setColorsCallback?: (val: string, idx: number) => void
 	/** Optional. Suggested number of ticks to show. Cannot be zero. Default is 5.
@@ -106,7 +104,7 @@ export type GetInterpolatedArg = {
 	 * */
 	middleColor?: string
 	/** the target number of increments within the interpolation domain and range  */
-	numSteps?: number
+	totalNumSteps?: number
 }
 
 export type CutoffMode = 'auto' | 'fixed' | 'percentile'
