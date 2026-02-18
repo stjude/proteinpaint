@@ -79,6 +79,8 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 	// default handling
 	switch (usecase.target) {
 		case 'barchart':
+		case 'violin':
+		case 'boxplot':
 		case 'summary':
 			if (term.type && term.type !== 'survival') uses.add('plot')
 			if (hasAllowedChildTypes(child_types, ['survival'])) uses.add('branch')
