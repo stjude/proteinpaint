@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Changing CNV cutoffs from the color scale in the matrix label is enabled. Click on the color scale and a new menu will appear with options on how to change the CNV values. Clicking on the color scale label shows the menu to hide or show the copy number loss or gain.
+
 
 ## 2.176.0
 
