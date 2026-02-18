@@ -1,5 +1,26 @@
 import tape from 'tape'
-import { buildRunChartFromData, buildFrequencyFromData } from '../termdb.runChart.ts'
+import { buildRunChartFromData, buildFrequencyFromData, decimalYearToYearMonth } from '../termdb.runChart.ts'
+
+/**
+ * Table of contents — runChart unit tests
+ *
+ * decimalYearToYearMonth()
+ *   • decimalYearToYearMonth() decimal years and year-only years
+ *
+ * buildRunChartFromData()
+ *   • buildRunChartFromData() median aggregation (multi-month)
+ *   • buildRunChartFromData() proportion aggregation
+ *   • buildRunChartFromData() median aggregation
+ *   • buildRunChartFromData() count aggregation
+ *   • buildRunChartFromData() year-only dates (no decimal)
+ *   • buildRunChartFromData() missing Y values with median aggregation
+ *   • buildRunChartFromData() all missing Y values for a time bucket
+ *   • buildRunChartFromData() period partitioning (shouldPartition=true)
+ *   • buildRunChartFromData() unsupported aggregation method throws error
+ *
+ * buildFrequencyFromData()
+ *   • buildFrequencyFromData() showCumulativeFrequency returns cumulative y and server median
+ */
 
 /**************
  test sections
@@ -7,6 +28,23 @@ import { buildRunChartFromData, buildFrequencyFromData } from '../termdb.runChar
 
 tape('\n', function (test) {
 	test.comment('-***- #routes/termdb.runChart -***-')
+	test.end()
+})
+
+tape('decimalYearToYearMonth() decimal years and year-only years', function (test) {
+	const cases = [
+		{ input: 2023.8328767123287, expected: { yearNum: 2023, monthNum: 11 }, label: '2023.8328767 → November 2023' },
+		{ input: 2023.5, expected: { yearNum: 2023, monthNum: 7 }, label: '2023.5 → July 2023 (mid-year)' },
+		{ input: 2020, expected: { yearNum: 2020, monthNum: 1 }, label: '2020 → January 2020 (year-only)' },
+		{ input: 2020.62021857923, expected: { yearNum: 2020, monthNum: 8 }, label: '2020.62 → August 2020' },
+		{ input: 2024.456, expected: { yearNum: 2024, monthNum: 6 }, label: '2024.456 → June 2024' }
+	]
+
+	for (const { input, expected, label } of cases) {
+		const result = decimalYearToYearMonth(input)
+		test.deepEqual(result, expected, label)
+	}
+
 	test.end()
 })
 
