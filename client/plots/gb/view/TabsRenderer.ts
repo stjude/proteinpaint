@@ -20,7 +20,7 @@ export class TabsRenderer {
 
 	async main() {
 		// Preserve the currently active tab label before clearing
-		let previousActiveTabLabel = null
+		let previousActiveTabLabel: string | null = null
 		const existingActiveButton = this.dom.tabsDiv.select('button.sjpp-active')
 		if (!existingActiveButton.empty()) {
 			previousActiveTabLabel = existingActiveButton.datum()?.label ?? null
