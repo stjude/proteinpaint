@@ -204,7 +204,7 @@ export class TabsRenderer {
 					// has track(s) for this combo; render <div> in table cell; click to launch tracks
 					// Count how many tracks are currently shown
 					const shownCount = tklst.filter(tk => activeTracksSet.has(tk.name)).length
-					const displayText = shownCount > 0 ? `${shownCount}/${tklst.length}` : tklst.length.toString()
+					const displayText = shownCount > 0 ? `${shownCount}/${tklst.length}` : `${tklst.length}`
 					td.append('div')
 						.attr('class', 'sja_clbtext')
 						.style('text-align', 'center')
