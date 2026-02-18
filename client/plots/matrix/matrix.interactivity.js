@@ -2788,16 +2788,15 @@ function setLengendActions(self) {
 
 	self.legendLabelMouseup = event => {
 		const targetData = event.target.__data__
+		if (!targetData || targetData.dt == dtgeneexpression || targetData.dt == dtmetaboliteintensity) {
+			// for gene expression don't use legend as filter
+			return
+		}
 		if (event.target.className.baseVal.includes('sjpp-color-scale') && targetData.dt == dtcnv) {
 			/** Changing the cnv cutoffs are enabled from the clickable color scale menu.
 			 * Disable creating the standard matrix menu from clicking the color scale.*/
 			return
 		}
-		if (!targetData || targetData.dt == dtgeneexpression || targetData.dt == dtmetaboliteintensity) {
-			// for gene expression don't use legend as filter
-			return
-		}
-
 		const byOrigin = self.state.termdbConfig.assayAvailability?.byDt?.[parseInt(targetData.dt)]?.byOrigin
 		const menuGrp = self.dom.legendMenu.clear()
 

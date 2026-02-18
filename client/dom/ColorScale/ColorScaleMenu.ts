@@ -91,7 +91,7 @@ export class ColorScaleMenu {
 						.property('selected', d => d.selected)
 
 					//Do not allow users to put in negative or > 100 values
-					const percentInput = this.appendValueInput(percentRow, this.percentile || null, 0, 100)
+					const percentInput = this.appendValueInput(percentRow, this.percentile ?? null, 0, 100)
 
 					const minMaxInputRow = table.append('tr').style('display', this.cutoffMode == 'fixed' ? 'table-row' : 'none')
 					const minInput = this.appendValueInput(minMaxInputRow.append('td'), this.domain[0])
@@ -185,7 +185,7 @@ export class ColorScaleMenu {
 			const valueNode = valueInput.node()
 			if (!valueNode) return
 			const value: number = parseFloat(valueNode.value)
-			if (!value || isNaN(value)) {
+			if (!Number.isFinite(value)) {
 				/** Prevent the user from entering invalid numbers (e.g. --2, 1e, etc.) */
 				alert('Please enter a valid number')
 				return
@@ -194,7 +194,8 @@ export class ColorScaleMenu {
 				cutoffMode: this.cutoffMode
 			}
 			if (this.cutoffMode == 'fixed') {
-				this.domain[elemValue] = value
+				const idx = elemValue == this.domain[0] ? 0 : this.domain.length - 1
+				this.domain[idx] = value
 				opts.min = this.domain[0]
 				opts.max = this.domain[this.domain.length - 1]
 			} else if (this.cutoffMode == 'percentile') {

@@ -185,6 +185,7 @@ export function getLegendData(legendGroups, refs, self) {
 							percentile: s.cnvValues.percentile,
 							callback: async obj => {
 								self.config.settings.matrix.cnvValues = {
+									defaultPercentile: self.config.settings.matrix.cnvValues.defaultPercentile,
 									cutoffMode: obj.cutoffMode,
 									min: obj.min,
 									max: obj.max,
