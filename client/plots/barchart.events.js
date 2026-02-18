@@ -399,7 +399,8 @@ function handle_click(event, self, chart) {
 
 	const options = []
 	if (self.opts.bar_click_opts.includes('hide_bar')) {
-		const visibleSerieses = chart.visibleSerieses || self.charts.find(c => c.chartId == chart.chartId).visibleSerieses
+		const chartId = chart.chartId === undefined ? '' : chart.chartId
+		const visibleSerieses = chart.visibleSerieses || self.charts.find(c => c.chartId == chartId).visibleSerieses
 		if (visibleSerieses.length > 1) {
 			options.push({
 				label: data.seriesId ? 'Hide "' + seriesLabel + '"' : 'Hide',
