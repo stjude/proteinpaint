@@ -102,6 +102,7 @@ export class ColorScale {
 			return scaleSvg
 				.append('text')
 				.text(text)
+				.attr('class', 'sjpp-color-scale-label')
 				.attr('font-size', '.8em')
 				.attr('opacity', 0.6)
 				.attr('text-anchor', 'end')
@@ -142,6 +143,7 @@ export class ColorScale {
 	makeAxis(div: SvgG, id: string) {
 		div
 			.append('rect')
+			.attr('class', 'sjpp-color-scale-rect')
 			.attr('height', this.barheight)
 			.attr('width', this.barwidth)
 			.attr('fill', 'url(#' + id + ')')

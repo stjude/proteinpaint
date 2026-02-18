@@ -38,7 +38,8 @@ export class ColorScaleMenu {
 	renderMenu(scaleSvg: SvgSvg, barG: SvgG) {
 		let showTooltip = true
 		scaleSvg
-			.on('click', () => {
+			.on('click', event => {
+				event.stopPropagation()
 				this.tip.clear().showunder(barG.node())
 				const selectDiv = this.tip.d.append('div').style('padding', '2px')
 				const table = this.tip.d.append('table').style('margin', 'auto')
@@ -133,7 +134,8 @@ export class ColorScaleMenu {
 				}
 				showTooltip = false
 			})
-			.on('mouseenter', () => {
+			.on('mouseenter', event => {
+				event.stopPropagation()
 				//Prevent showing the tooltip after user interacts with the color picker
 				if (showTooltip == false) return
 				this.tip.clear().showunder(barG.node())

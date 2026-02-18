@@ -2788,6 +2788,11 @@ function setLengendActions(self) {
 
 	self.legendLabelMouseup = event => {
 		const targetData = event.target.__data__
+		if (event.target.className.baseVal.includes('sjpp-color-scale') && targetData.dt == dtcnv) {
+			/** Changing the cnv cutoffs are enabled from the clickable color scale menu.
+			 * Disable creating the standard matrix menu from clicking the color scale.*/
+			return
+		}
 		if (!targetData || targetData.dt == dtgeneexpression || targetData.dt == dtmetaboliteintensity) {
 			// for gene expression don't use legend as filter
 			return
@@ -2971,7 +2976,6 @@ function setLengendActions(self) {
 			//Add the hard filter option
 			if (
 				term?.type !== 'termCollection' &&
-				targetItemData.dt != 4 &&
 				(!targetItemData.dt || self.type !== 'hierCluster' || legendFilterIndex !== -1)
 			) {
 				// Do not show the hard filter option for hierCluster geneVariant legend items.
@@ -3110,7 +3114,7 @@ function setLengendActions(self) {
 
 			if (targetItemData.isLegendItem) {
 				// Add the soft filter option only for the not already hidden geneVariant legend
-				if (targetItemData.dt && legendFilterIndex == -1 && term?.type !== 'termCollection' && targetItemData.dt != 4) {
+				if (targetItemData.dt && legendFilterIndex == -1 && term?.type !== 'termCollection') {
 					// only when filtering a not already hidden geneVariant legend, show the soft filter
 					div
 						.append('div')
