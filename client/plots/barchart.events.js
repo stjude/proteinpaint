@@ -399,7 +399,8 @@ function handle_click(event, self, chart) {
 
 	const options = []
 	if (self.opts.bar_click_opts.includes('hide_bar')) {
-		if (chart.visibleSerieses?.length > 1) {
+		const visibleSerieses = chart.visibleSerieses || self.charts.find(c => c.chartId == chart.chartId).visibleSerieses
+		if (visibleSerieses.length > 1) {
 			options.push({
 				label: data.seriesId ? 'Hide "' + seriesLabel + '"' : 'Hide',
 				callback: () => {
@@ -421,7 +422,8 @@ function handle_click(event, self, chart) {
 			})
 		}
 
-		if (data.dataId || data.dataId === 0) {
+		const hasMultipleCells = visibleSerieses.some(s => s.visibleData.length > 1)
+		if (hasMultipleCells && (data.dataId || data.dataId === 0)) {
 			options.push({
 				label: 'Hide "' + dataLabel + '" ' + icon,
 				callback: () => {
