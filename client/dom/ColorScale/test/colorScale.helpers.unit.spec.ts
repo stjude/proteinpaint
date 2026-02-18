@@ -18,7 +18,7 @@ tape('getInterpolatedDomainRange()', test => {
 		const result = getInterpolatedDomainRange({
 			absMax: 50,
 			absMin: 0,
-			numSteps: 10,
+			totalNumSteps: 10,
 			negInterpolator: interpolateBlues,
 			posInterpolator: interpolateReds
 		})
@@ -62,7 +62,12 @@ tape('getInterpolatedDomainRange()', test => {
 	}
 
 	{
-		const result = getInterpolatedDomainRange({ absMax: 50, absMin: 0, numSteps: 10, posInterpolator: interpolateReds })
+		const result = getInterpolatedDomainRange({
+			absMax: 50,
+			absMin: 0,
+			totalNumSteps: 10,
+			posInterpolator: interpolateReds
+		})
 		test.deepEqual(
 			result,
 			{
@@ -96,7 +101,7 @@ tape('getInterpolatedDomainRange()', test => {
 		const result = getInterpolatedDomainRange({
 			absMax: 50,
 			absMin: 0,
-			numSteps: 10,
+			totalNumSteps: 10,
 			negInterpolator: interpolateBlues
 		})
 		test.deepEqual(
@@ -132,7 +137,7 @@ tape('getInterpolatedDomainRange()', test => {
 		const result = getInterpolatedDomainRange({
 			absMax: 0.0025,
 			absMin: 0,
-			numSteps: 15,
+			totalNumSteps: 15,
 			negInterpolator: interpolateBlues,
 			posInterpolator: interpolateReds
 		})

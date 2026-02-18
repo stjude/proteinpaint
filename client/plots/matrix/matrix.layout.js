@@ -389,7 +389,7 @@ export function setLabelsAndScales() {
 					cnvLegendDomainRange = getInterpolatedDomainRange({
 						absMin: 0,
 						absMax,
-						numSteps: 100,
+						totalNumSteps: 100,
 						negInterpolator: minLoss !== undefined && interpolateBlues,
 						posInterpolator: maxGain !== undefined && interpolateReds,
 						// force this middleColor to white, knowing that interpolateBlues and interpolateReds,
