@@ -25,21 +25,21 @@ export class TabsRenderer {
 		if (!existingActiveButton.empty()) {
 			previousActiveTabLabel = existingActiveButton.datum()?.label ?? null
 		}
-		
+
 		this.dom.tabsDiv.selectAll('*').remove()
 		this.getTabs()
-		
+
 		// Restore the active tab if it still exists in the new tabs array
 		if (previousActiveTabLabel) {
 			const matchingTab = this.tabs.find(tab => tab.label === previousActiveTabLabel)
 			if (matchingTab) {
 				// Clear active state from all tabs first
-				this.tabs.forEach(tab => tab.active = false)
+				this.tabs.forEach(tab => (tab.active = false))
 				// Set the preserved tab as active
 				matchingTab.active = true
 			}
 		}
-		
+
 		await this.mayRenderTabs()
 	}
 
@@ -190,9 +190,6 @@ export class TabsRenderer {
 
 		// TODO click on row/column header to batch operate
 
-		// Create Set once for efficient lookup of active tracks
-		const activeTracksSet = new Set(this.state.config.trackLst.activeTracks)
-
 		const columns: any = [{ label: 'Sample' }] // TODO use ds sample type
 		for (const assay of assayLst) {
 			columns.push({
@@ -203,8 +200,8 @@ export class TabsRenderer {
 					if (tklst.length == 0) return // no tracks for this combo
 					// has track(s) for this combo; render <div> in table cell; click to launch tracks
 					// Count how many tracks are currently shown
-					const shownCount = tklst.filter(tk => activeTracksSet.has(tk.name)).length
-					const displayText = shownCount > 0 ? `${shownCount}/${tklst.length}` : `${tklst.length}`
+					const shownCount = tklst.filter(tk => this.state.config.trackLst.activeTracks.includes(tk.name)).length
+					const displayText = shownCount ? `${shownCount}/${tklst.length}` : `${tklst.length}`
 					td.append('div')
 						.attr('class', 'sja_clbtext')
 						.style('text-align', 'center')
