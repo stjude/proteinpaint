@@ -3,6 +3,34 @@ import * as helpers from '../../../test/front.helpers.js'
 import * as d3s from 'd3-selection'
 import type { Selection } from 'd3-selection'
 
+/**
+ * runChart2.integration.spec.ts — Table of contents
+ *
+ * | #  | Test name |
+ * |----|-----------|
+ * | 1  | (banner) plots/runChart2/RunChart2 |
+ * | 2  | Render TermdbTest runChart2 plot with data |
+ * | 3  | Frequency mode (no ytw) renders with mocked frequency data |
+ * | 4  | Frequency mode shows FREQUENCY CHART header |
+ * | 5  | Frequency mode with showCumulativeFrequency shows Cumulative count y-axis label |
+ * | 6  | Frequency mode without showCumulativeFrequency shows Count y-axis label |
+ * | 7  | Frequency mode request includes showCumulativeFrequency when enabled |
+ * | 8  | runChart2Period (period) renders series and data points |
+ * | 9  | runChart2Period has x-axis and y-axis groups |
+ * | 10 | runChart2Period has axis labels |
+ * | 11 | runChart2Period renders with mocked discrete data |
+ * | 12 | runChart2Period chart SVG is valid for download |
+ * | 13 | RunChart2 control panel initializes and renders |
+ * | 14 | RunChart2 chart images can be extracted for download |
+ * | 15 | RunChart2Period should render median lines for each series |
+ * | 16 | RunChart2 Y-axis baseline should be 0 for positive-only data |
+ * | 17 | RunChart2Period should render series with different colors |
+ * | 18 | RunChart2 axis labels and tick marks should render correctly |
+ * | 19 | RunChart2 with count aggregation should render correctly |
+ * | 20 | RunChart2 with discrete X-axis should partition data into series |
+ * | 21 | RunChart2 with continuous X-axis should render single series |
+ */
+
 const runpp = helpers.getRunPp('mass', {
 	state: {
 		nav: { activeTab: 1, header_mode: 'hidden' },
@@ -421,16 +449,7 @@ tape('Frequency mode request includes showCumulativeFrequency when enabled', asy
 	test.end()
 })
 
-/**
- * TODO: runChart2Period tests are timing out when rendering SVG in discrete mode.
- * Error: Missing key for xTermId in sample data - suggests test data structure
- * doesn't match what discrete mode expects. This appears to be a pre-existing issue.
- * Needs investigation into:
- * 1. Whether test data should have .key properties for discrete mode
- * 2. Whether getData() returns different data structure for discrete queries
- * 3. Error handling for missing keys in discrete mode
- */
-tape.skip('runChart2Period (period) renders series and data points', async test => {
+tape('runChart2Period (period) renders series and data points', async test => {
 	test.timeoutAfter(10000)
 	test.plan(3)
 
@@ -471,7 +490,7 @@ tape.skip('runChart2Period (period) renders series and data points', async test 
 	test.end()
 })
 
-tape.skip('runChart2Period has x-axis and y-axis groups', async test => {
+tape('runChart2Period has x-axis and y-axis groups', async test => {
 	test.timeoutAfter(10000)
 	test.plan(2)
 
@@ -507,7 +526,7 @@ tape.skip('runChart2Period has x-axis and y-axis groups', async test => {
 	test.end()
 })
 
-tape.skip('runChart2Period has axis labels', async test => {
+tape('runChart2Period has axis labels', async test => {
 	test.timeoutAfter(10000)
 	test.plan(2)
 
@@ -631,7 +650,7 @@ tape('runChart2Period renders with mocked discrete data', async test => {
 	test.end()
 })
 
-tape.skip('runChart2Period chart SVG is valid for download', async test => {
+tape('runChart2Period chart SVG is valid for download', async test => {
 	test.timeoutAfter(10000)
 	test.plan(2)
 
@@ -739,7 +758,7 @@ tape('RunChart2 chart images can be extracted for download', async test => {
 	test.end()
 })
 
-tape.skip('RunChart2Period should render median lines for each series', async test => {
+tape('RunChart2Period should render median lines for each series', async test => {
 	test.timeoutAfter(10000)
 	test.plan(2)
 
@@ -828,7 +847,7 @@ tape('RunChart2 Y-axis baseline should be 0 for positive-only data', async test 
 	test.end()
 })
 
-tape.skip('RunChart2Period should render series with different colors', async test => {
+tape('RunChart2Period should render series with different colors', async test => {
 	test.timeoutAfter(10000)
 	test.plan(2)
 
@@ -961,7 +980,7 @@ tape('RunChart2 with count aggregation should render correctly', async test => {
 	test.end()
 })
 
-tape.skip('RunChart2 with discrete X-axis should partition data into series', async test => {
+tape('RunChart2 with discrete X-axis should partition data into series', async test => {
 	test.plan(3)
 	test.timeoutAfter(5000)
 
@@ -1007,7 +1026,7 @@ tape.skip('RunChart2 with discrete X-axis should partition data into series', as
 	test.end()
 })
 
-tape.skip('RunChart2 with continuous X-axis should render single series', async test => {
+tape('RunChart2 with continuous X-axis should render single series', async test => {
 	test.plan(2)
 	test.timeoutAfter(5000)
 
