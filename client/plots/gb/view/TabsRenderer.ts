@@ -200,8 +200,8 @@ export class TabsRenderer {
 					if (tklst.length == 0) return // no tracks for this combo
 					// has track(s) for this combo; render <div> in table cell; click to launch tracks
 					// Count how many tracks are currently shown
-					const activeTracks = this.state.config.trackLst.activeTracks
-					const shownCount = tklst.filter(tk => activeTracks.includes(tk.name)).length
+					const activeTracksSet = new Set(this.state.config.trackLst.activeTracks)
+					const shownCount = tklst.filter(tk => activeTracksSet.has(tk.name)).length
 					const displayText = shownCount > 0 ? `${shownCount}/${tklst.length}` : tklst.length.toString()
 					td.append('div')
 						.attr('class', 'sja_clbtext')
