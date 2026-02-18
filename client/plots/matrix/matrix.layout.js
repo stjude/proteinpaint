@@ -345,7 +345,6 @@ export function setLabelsAndScales() {
 			const minPercentile = roundValueAuto(1 - maxPercentile)
 			this.cnvValues = removeOutliers(this.cnvValues, { minPercentile, maxPercentile, baseValue: 0 })
 		}
-		if (this.cnvValues.length == 0) return
 		const minLoss = this.cnvValues[0] < 0 ? this.cnvValues[0] : undefined
 		/** Do not use undefined for maxGain. In instances where the filtered cnv values
 		 * are all negative (such as from changing the percentile) but positive numbers
