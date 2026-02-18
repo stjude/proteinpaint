@@ -217,7 +217,10 @@ export default function svgLegend(opts) {
 				colors: d.colors || d.scale.range() || ['white', 'grey'],
 				domain,
 				fontSize: 0.82 * settings.fontsize,
-				holder: g,
+				/** Must separate the color scale from the label for
+				 * event handlers (e.g. if click behavior on the label
+				 * is different than click behavior on the color scale itself)*/
+				holder: g.append('g'),
 				id: colorGradientId,
 				position: `${bbox.width + 25},${yPos}`,
 				ticks: computeTicks(domainRange, 2),
@@ -228,6 +231,8 @@ export default function svgLegend(opts) {
 				opts.labels = d.labels
 				if (d.text) opts.position = `${bbox.width + bbox.x + 45 + settings.padx},${yPos}`
 			}
+			// numericInputs is the clickable menu
+			// see ColorScaleOpts type for description
 			if (d.numericInputs) opts.numericInputs = d.numericInputs
 
 			new ColorScale(opts)
