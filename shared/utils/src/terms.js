@@ -70,7 +70,8 @@ export const typeGroup = {
 	[TermTypes.GENE_EXPRESSION]: TermTypeGroups.GENE_EXPRESSION,
 	[TermTypes.SSGSEA]: TermTypeGroups.SSGSEA,
 	[TermTypes.METABOLITE_INTENSITY]: TermTypeGroups.METABOLITE_INTENSITY,
-	[TermTypes.TERM_COLLECTION]: TermTypeGroups.TERM_COLLECTION
+	[TermTypes.TERM_COLLECTION]: TermTypeGroups.TERM_COLLECTION,
+	[TermTypes.SINGLECELL_CELLTYPE]: TermTypeGroups.SINGLECELL_CELLTYPE
 }
 
 const nonDictTypes = new Set([
