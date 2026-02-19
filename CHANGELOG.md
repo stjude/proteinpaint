@@ -2,14 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+
+## Unreleased
+
+Fixes
+- set __protected__.sessionid even when there are no dsCredentials
+
+
 ## 2.170.12
 
 Fixes
 - prevent excessive memory usage during OncoMatrix data requests
-- do not allow repeated term id for correlation plot primary, correlation, and divide-by variables
+- do not allow repeated term id for correlation plot primary, correlation, and Fdivide-by variables
 - hide survival terms in dictionary tree for violin and boxplot
 - do not allow hiding all chart serieses/overlay, there should at least be one visible rendered data 
-
+- restore geneORA by passing gene names but not tw.$id
 
 ## 2.170.11
 
