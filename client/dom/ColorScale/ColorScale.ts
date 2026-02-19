@@ -86,9 +86,11 @@ export class ColorScale {
 		if (opts.domain.length != new Set(opts.domain).size) {
 			throw new Error('Duplicate values in #dom/ColorScale opts.domain')
 		}
-		if (this.colors.length != new Set(this.colors).size) {
-			throw new Error('Duplicate values in #dom/ColorScale opts.colors')
-		}
+		/** TODO: It's possible for very small values to calculate the same the
+		 * color for a small range. Need a solution for these edge cases. */
+		// if (this.colors.length != new Set(this.colors).size) {
+		// 	throw new Error('Duplicate values in #dom/ColorScale opts.colors')
+		// }
 		if (opts.labels && (!opts.labels.left || !opts.labels.right))
 			throw new Error('Missing a label for #dom/ColorScale.')
 	}
@@ -207,8 +209,8 @@ export class ColorScale {
 				/** If the color scale is rerendered instead of persisted, tracking the default
 				 * vs the user provided percentile within this component is not possible. Give
 				 * the menu the option to receive both values and use whichever is present. */
-				_opts.defaultPercentile = opts.numericInputs.defaultPercentile || opts.numericInputs.percentile
-				_opts.percentile = opts.numericInputs.percentile || opts.numericInputs.defaultPercentile
+				_opts.defaultPercentile = opts.numericInputs.defaultPercentile ?? opts.numericInputs.percentile
+				_opts.percentile = opts.numericInputs.percentile ?? opts.numericInputs.defaultPercentile
 			}
 			_opts.setNumbersCallback = async obj => {
 				if (!obj) return
