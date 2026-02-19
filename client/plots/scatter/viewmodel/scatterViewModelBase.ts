@@ -210,25 +210,27 @@ export class ScatterViewModelBase {
 					.attr('text-anchor', 'middle')
 					.text(term0Name)
 			}
-			const t2name = this.scatter.config.term2?.term?.name
-			const term2Name = getTitle(t2name, 60)
-			text = labelsG
-				.append('text')
-				.attr(
-					'transform',
-					`translate(${this.model.axisOffset.x - 50}, ${
-						this.scatter.settings.svgh / 2 + this.model.axisOffset.y
-					}) rotate(-90)`
-				)
-				.attr('text-anchor', 'middle')
-				.text(term2Name)
-				.style('font-size', '0.9em')
-			if (term2Name.length > 60) {
-				text
-					.on('mouseenter', event => {
-						this.scatter.interactivity.showText(event, this.scatter.config.term2.term.name)
-					})
-					.on('mouseleave', () => this.view.dom.tooltip.hide())
+			if (this.scatter.config.term2) {
+				const t2name = this.scatter.config.term2.term.name
+				const term2Name = getTitle(t2name, 60)
+				text = labelsG
+					.append('text')
+					.attr(
+						'transform',
+						`translate(${this.model.axisOffset.x - 50}, ${
+							this.scatter.settings.svgh / 2 + this.model.axisOffset.y
+						}) rotate(-90)`
+					)
+					.attr('text-anchor', 'middle')
+					.text(term2Name)
+					.style('font-size', '0.9em')
+				if (term2Name.length > 60) {
+					text
+						.on('mouseenter', event => {
+							this.scatter.interactivity.showText(event, this.scatter.config.term2.term.name)
+						})
+						.on('mouseleave', () => this.view.dom.tooltip.hide())
+				}
 			}
 		}
 	}
