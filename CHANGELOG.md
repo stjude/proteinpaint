@@ -645,7 +645,7 @@ Fixes:
 ## 2.134.0
 
 Features:
-- We now support the report plot that shows an aggregation of plots embedded, according to the dataset configuration for the plot. If specified this plot shows country and site filters. This plot was developed to build the sjcares report.
+- We now support the report plot that shows an aggregation of plots embedded, according to the dataset configuration for the plot. If specified this plot shows country and site filters. This plot was developed to build the carereg report.
 
 Fixes:
 - distinguish by term.id, instead of term.name, in multi-select term tree menu
