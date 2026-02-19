@@ -45,6 +45,7 @@ export function getInterpolatedDomainRange({
 			pos.colors.push(posInterpolator(vp / absMax))
 		}
 	}
+	/** Keep separate solution for now to reevlautate at a later time. */
 	// let p = absMin,
 	// 	n = -absMax //- stepSize
 	// for (let i = 0; i < numSteps; i++) {
@@ -64,19 +65,19 @@ export function getInterpolatedDomainRange({
 	// }
 
 	if (negInterpolator && posInterpolator) {
-		const domain = [...neg.values, 0, ...pos.values]
-		const range = [...neg.colors, middleColor, ...pos.colors]
+		const domain = [-absMax, ...neg.values, 0, ...pos.values, absMax]
+		const range = [negInterpolator(1), ...neg.colors, middleColor, ...pos.colors, posInterpolator(1)]
 		if (domain.length != range.length)
 			throw new Error(`unable to generate same-sized numeric -/+ domain and color range`)
 		return { domain, range }
 	} else if (negInterpolator) {
-		const domain = [...neg.values, 0]
-		const range = [...neg.colors, negInterpolator(0)]
+		const domain = [-absMax, ...neg.values, 0]
+		const range = [negInterpolator(1), ...neg.colors, negInterpolator(0)]
 		if (domain.length != range.length) throw new Error(`unable to generate same-sized negative domain and color range`)
 		return { domain, range }
 	} else if (posInterpolator) {
-		const domain = [0, ...pos.values]
-		const range = [posInterpolator(0), ...pos.colors]
+		const domain = [0, ...pos.values, absMax]
+		const range = [posInterpolator(0), ...pos.colors, posInterpolator(1)]
 		if (domain.length != range.length) throw new Error(`unable to generate same-sized positive domain and color range`)
 		return { domain, range }
 	} else {
