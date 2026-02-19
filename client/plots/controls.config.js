@@ -873,7 +873,9 @@ async function setTermInput(opts) {
 // will disable these terms in termdb tree to prevent
 // entering the same term in multiple inputs
 function getSelectedTerms(opts, config) {
-	const termInputs = opts.parent.opts.inputs.filter(i => i.type === 'term')
+	const inputs = opts.inputs || opts.parent?.opts?.inputs
+	if (!inputs) return []
+	const termInputs = inputs.filter(i => i.type === 'term')
 	const selectedTerms = []
 	for (const termInput of termInputs) {
 		const tw = config[termInput.configKey]
