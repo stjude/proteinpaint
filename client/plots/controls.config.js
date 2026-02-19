@@ -879,6 +879,21 @@ async function setTermInput(opts) {
 	return Object.freeze(api)
 }
 
+// get selected terms across all term inputs
+// will disable these terms in termdb tree to prevent
+// entering the same term in multiple inputs
+function getSelectedTerms(opts, config) {
+	const inputs = opts.inputs || opts.parent?.opts?.inputs
+	if (!inputs) return []
+	const termInputs = inputs.filter(i => i.type === 'term')
+	const selectedTerms = []
+	for (const termInput of termInputs) {
+		const tw = config[termInput.configKey]
+		if (tw) selectedTerms.push(tw.term)
+	}
+	return selectedTerms
+}
+
 export const initByInput = {
 	number: setNumberInput,
 	math: setMathExprInput,

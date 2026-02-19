@@ -1,2 +1,4 @@
 Fixes:
 - Ensure the genome browser plots launches regardless of the holder
+- detect if the inputs[] option exists before using it to detect which terms to disable
+- detect if the inputs[] option exists before using it to detect which terms to disable (#4222)
