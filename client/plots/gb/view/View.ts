@@ -297,7 +297,7 @@ export class View {
 			this.blockInstance = arg.__blockInstance
 
 			// update sandbox header with gene name
-			this.opts.header.text(arg.query)
+			if (this.opts.header) this.opts.header.text(arg.query)
 			return
 		}
 		// must be in genomic mode and requires coord

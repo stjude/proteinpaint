@@ -29,12 +29,15 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 
 	getDom() {
 		const holder = this.opts.holder.append('div')
-		this.opts.header
-			.append('div')
-			.style('opacity', 0.6)
-			.style('padding-left', '10px')
-			.style('font-size', '0.75em')
-			.text('GENOME BROWSER')
+		if (this.opts.header) {
+			/** Plot may not launch in a sandbox, hence no header. */
+			this.opts.header
+				.append('div')
+				.style('opacity', 0.6)
+				.style('padding-left', '10px')
+				.style('font-size', '0.75em')
+				.text('GENOME BROWSER')
+		}
 		// layout rows from top to bottom
 		const loadingDiv = holder.append('div').style('display', 'none').style('margin-left', '25px').text('Loading...')
 		const errDiv = holder.append('div').style('display', 'none').style('margin', '10px')
