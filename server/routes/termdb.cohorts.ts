@@ -1,7 +1,6 @@
 import type { TermdbCohortsRequest, TermdbCohortsResponse, RouteApi } from '#types'
 import { termdbCohortsPayload } from '#types/checkers'
 import { get_ds_tdb } from '#src/termdb.js'
-import { mayCopyFromCookie } from '#src/utils.js' // ??? is this needed for this route ???
 
 export const api: RouteApi = {
 	endpoint: 'termdb/cohorts',
@@ -16,7 +15,6 @@ export const api: RouteApi = {
 function init({ genomes }) {
 	return async (req, res) => {
 		const q: TermdbCohortsRequest = req.query
-		mayCopyFromCookie(q, req.cookies) // ??? is this needed for this route ???
 		try {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'

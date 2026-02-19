@@ -1,7 +1,6 @@
 import type { TermdbCohortSummaryRequest, TermdbCohortSummaryResponse, RouteApi } from '#types'
 import { termdbCohortSummaryPayload } from '#types/checkers'
 import { get_ds_tdb } from '#src/termdb.js'
-import { mayCopyFromCookie } from '#src/utils.js' // ??? is this needed for this route ???
 import { get_samples } from '#src/termdb.sql.js'
 import { authApi } from '#src/auth.js'
 export const api: RouteApi = {
@@ -17,7 +16,6 @@ export const api: RouteApi = {
 function init({ genomes }) {
 	return async (req, res) => {
 		const q: TermdbCohortSummaryRequest = req.query
-		mayCopyFromCookie(q, req.cookies) // ??? is this needed for this route ???
 		try {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'

@@ -8,7 +8,7 @@ import { validate as snpValidate } from './termdb.snp.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { trigger_getLowessCurve } from '../routes/termdb.sampleScatter.ts'
 import { get_mds3variantData } from './mds3.variant.js'
-import { get_lines_bigfile, mayCopyFromCookie } from './utils.js'
+import { get_lines_bigfile } from './utils.js'
 import { authApi } from './auth.js'
 import { getResult as geneSearch } from './gene.js'
 import { searchSNP } from '../routes/snp.ts'
@@ -32,8 +32,6 @@ export function handle_request_closure(genomes) {
 
 	return async (req, res) => {
 		const q = req.query
-
-		mayCopyFromCookie(q, req.cookies)
 
 		try {
 			const genome = genomes[q.genome]
