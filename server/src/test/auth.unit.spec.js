@@ -73,7 +73,13 @@ tape(`initialization, empty credentials`, async test => {
 	const app = appInit()
 	await authApi.maySetAuthRoutes(app, {}, '', { debugmode, cachedir })
 	const middlewares = Object.keys(app.middlewares)
-	test.deepEqual(middlewares, [], 'should NOT set a global middleware when there are NO dsCredentials in serverconfig')
+	const middlewareName = Object.values(app.middlewares)[0]?.name
+	test.deepEqual(middlewares, ['*'], 'should set a global middleware when there are no dsCredentials')
+	test.equal(
+		middlewareName,
+		'setQueryProtectedProps',
+		'should set a global middleware named setQueryProtectedProps when there no dsCredentials'
+	)
 	const routes = Object.keys(app.routes)
 	routes.sort()
 	test.deepEqual(routes, [], 'should NOT set the expected routes when there are NO dsCredentials in serverconfig')
@@ -136,13 +142,27 @@ tape(`initialization, empty credentials`, async test => {
 
 tape(`initialization, non-empty credentials`, async test => {
 	{
+		const dsCredentials = {
+			testDs: {
+				testRoute: {
+					testEmbedder: {
+						type: 'basic',
+						password: '...'
+					}
+				}
+			}
+		}
 		const app = appInit()
-		await authApi.maySetAuthRoutes(app, {}, '', { debugmode, cachedir, dsCredentials: {}, secrets })
+		await authApi.maySetAuthRoutes(app, {}, '', { debugmode, cachedir, dsCredentials, secrets })
 		const middlewares = Object.keys(app.middlewares)
-		test.deepEqual(middlewares, [], 'should NOT set a global middleware when dsCredentials is empty')
+		test.deepEqual(middlewares, ['*'], 'should set a global middleware when dsCredentials is not empty')
 		const routes = Object.keys(app.routes)
 		routes.sort()
-		test.deepEqual(routes, [], 'should NOT set the expected routes when dsCredentials is empty')
+		test.deepEqual(
+			routes,
+			['/authorizedActions', '/demoToken', '/dslogin', '/dslogout', '/jwt-status'],
+			'should NOT set the expected routes when dsCredentials is empty'
+		)
 	}
 
 	{
