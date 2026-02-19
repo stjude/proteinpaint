@@ -204,9 +204,6 @@ export class Scatter extends PlotBase implements RxComponent {
 }
 
 export async function getPlotConfig(opts, app) {
-	//if (!opts.colorTW) throw 'sampleScatter getPlotConfig: opts.colorTW{} missing'
-	//if (!opts.name && !(opts.term && opts.term2)) throw 'sampleScatter getPlotConfig: missing coordinates input'
-
 	const plot: any = {
 		groups: [],
 		// scatter controls should not use defaultUiLabels as they
@@ -253,6 +250,11 @@ export async function getPlotConfig(opts, app) {
 
 		if (plot.term0?.q?.mode == 'continuous' && !app.hasWebGL())
 			throw 'Can not load Z/Divide by term in continuous mode as WebGL is not supported'
+
+		if (!plot.settings.sampleScatter.itemLabel) {
+			// missing. auto assign so `itemLabel` will be always present as is required in type def and no need for testing if present in subsequent use
+			plot.settings.sampleScatter.itemLabel = opts.singleCellPlot ? 'Cell' : 'Sample'
+		}
 		return plot
 	} catch (e) {
 		console.error(e)
@@ -314,7 +316,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	}
 }
 
-export function getDefaultScatterSettings(): Settings {
+export function getDefaultScatterSettings(): Partial<Settings> {
 	return {
 		size: 0.8,
 		minShapeSize: 0.5,
@@ -357,8 +359,7 @@ export function getDefaultScatterSettings(): Settings {
 		minXScale: null,
 		maxXScale: null,
 		minYScale: null,
-		maxYScale: null,
-		itemLabel: 'Sample'
+		maxYScale: null
 	}
 }
 

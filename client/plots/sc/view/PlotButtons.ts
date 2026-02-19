@@ -281,11 +281,6 @@ export class PlotButtons {
 					}
 				},
 				q: { mode: 'continuous' }
-			},
-			settings: {
-				sampleScatter: {
-					itemLabel: 'Cell'
-				}
 			}
 		}
 	}
@@ -324,11 +319,6 @@ export class PlotButtons {
 				sample: {
 					sID: this.item.sample,
 					eID: this.item.experiment
-				}
-			},
-			settings: {
-				sampleScatter: {
-					itemLabel: 'Cell'
 				}
 			}
 		}
