@@ -30,7 +30,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 	getDom() {
 		const holder = this.opts.holder.append('div')
 		if (this.opts.header) {
-			/** Plot may not launch in a sandbox, hence no header. */
+			/** Plot may not launch in a sandbox (such as in GDC), hence no header. */
 			this.opts.header
 				.append('div')
 				.style('opacity', 0.6)
