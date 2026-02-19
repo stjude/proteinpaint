@@ -19,7 +19,7 @@ export class SingleCellCellTypeBase {
 	}
 
 	static validate(term: RawSingleCellCellTypeTerm) {
-		if (typeof term !== 'object') throw new Error('term is not an object')
+		if (!term || typeof term !== 'object') throw new Error('term is not an object')
 		if (term.type != termType) throw new Error(`incorrect term.type='${term?.type}', expecting '${termType}'`)
 		/** Note: In GDC .sample:{} contains required .sID:string and .eID: string.
 		 * It's unclear how other ds will implement .sample:{} */
