@@ -253,7 +253,7 @@ export async function getPlotConfig(opts, app) {
 
 		if (!plot.settings.sampleScatter.itemLabel) {
 			// missing. auto assign so `itemLabel` will be always present as is required in type def and no need for testing if present in subsequent use
-			plot.settings.sampleScatter.itemLabel = opts.singleCellPlot ? 'Cell' : 'Sample'
+			plot.settings.sampleScatter.itemLabel = plot.singleCellPlot ? 'Cell' : 'Sample'
 		}
 		return plot
 	} catch (e) {
