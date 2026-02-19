@@ -76,7 +76,7 @@ class Chat extends PlotBase implements RxComponent {
 				const serverBubble = this.addBubble({ msg: '...' })
 
 				try {
-					const data = await dofetch3('termdb/chat', { body })
+					const data = await dofetch3('termdb/chat2', { body })
 					if (data.error) throw data.error
 					console.log(data)
 
