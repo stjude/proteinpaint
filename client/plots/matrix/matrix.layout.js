@@ -335,7 +335,7 @@ export function setLabelsAndScales() {
 
 	if (this.cnvValues.length) {
 		if (s.cnvValues.cutoffMode == 'fixed') {
-			this.cnvValues = this.cnvValues.filter(v => v > s.cnvValues.min && v < s.cnvValues.max).sort((a, b) => a - b)
+			this.cnvValues = this.cnvValues.filter(v => v >= s.cnvValues.min && v <= s.cnvValues.max).sort((a, b) => a - b)
 		}
 		if (s.cnvValues.cutoffMode == 'percentile' || s.cnvValues.cutoffMode == 'auto') {
 			/** Users enter the percentile as whole number.
@@ -345,9 +345,9 @@ export function setLabelsAndScales() {
 			const minPercentile = roundValueAuto(1 - maxPercentile)
 			this.cnvValues = removeOutliers(this.cnvValues, { minPercentile, maxPercentile, baseValue: 0 })
 		}
-		const minLoss = this.cnvValues[0] < 0 ? this.cnvValues[0] : undefined
+		const minLoss = this.cnvValues[0] <= 0 ? this.cnvValues[0] : undefined
 		const maxGain =
-			this.cnvValues[this.cnvValues.length - 1] > 0 ? this.cnvValues[this.cnvValues.length - 1] : undefined
+			this.cnvValues[this.cnvValues.length - 1] >= 0 ? this.cnvValues[this.cnvValues.length - 1] : undefined
 		let maxLoss, minGain, absMax
 		for (const n of this.cnvValues) {
 			if (n < 0) maxLoss = n
