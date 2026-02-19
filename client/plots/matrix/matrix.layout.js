@@ -346,12 +346,8 @@ export function setLabelsAndScales() {
 			this.cnvValues = removeOutliers(this.cnvValues, { minPercentile, maxPercentile, baseValue: 0 })
 		}
 		const minLoss = this.cnvValues[0] < 0 ? this.cnvValues[0] : undefined
-		/** Do not use undefined for maxGain. In instances where the filtered cnv values
-		 * are all negative (such as from changing the percentile) but positive numbers
-		 * exist in the original data, the domain for the legend will not be equidistant
-		 * and the cells will remain transparent. Use 0 to allow both the calculation
-		 * of an equidistant domain and proper cell rendering.*/
-		const maxGain = this.cnvValues[this.cnvValues.length - 1] > 0 ? this.cnvValues[this.cnvValues.length - 1] : 0
+		const maxGain =
+			this.cnvValues[this.cnvValues.length - 1] > 0 ? this.cnvValues[this.cnvValues.length - 1] : undefined
 		let maxLoss, minGain, absMax
 		for (const n of this.cnvValues) {
 			if (n < 0) maxLoss = n

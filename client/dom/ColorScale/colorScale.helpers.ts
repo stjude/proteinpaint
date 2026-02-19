@@ -127,14 +127,20 @@ export function removeOutliers(domain: number[], _opts = {}) {
 		sorted[sorted.length - 1] === opts.baseValue
 			? opts.baseValue
 			: sorted[Math.floor(sorted.length * opts.maxPercentile)]
-	let filteredArray = sorted.filter(d => d >= first && d <= last)
-	if (filteredArray.length === 0) {
+	let calculatedArray = sorted.filter(d => d >= first && d <= last)
+	if (calculatedArray.length === 0) {
 		/** It's possible user inputs restrict the range to the point
 		 * where no values are included. In this instance, the smallest possible
 		 * range is returned to allow the color scale to render. */
 		const hasNeg = sorted[0] < 0
 		const hasBoth = hasNeg && sorted[sorted.length - 1] > 0
-		const idx = hasBoth ? Math.floor(sorted.length / 2) : hasNeg ? sorted.length - 1 : 0
+		const idxClosestToZero = () => {
+			return sorted.reduce((closestIdx, currentValue, currentIdx) => {
+				const closestValue = sorted[closestIdx]
+				return Math.abs(currentValue) < Math.abs(closestValue) ? currentIdx : closestIdx
+			}, 0)
+		}
+		const idx = hasBoth ? idxClosestToZero() : hasNeg ? sorted.length - 1 : 0
 		const firstValue = sorted[idx] ?? 0
 		const secondValue = hasBoth
 			? sorted[idx - 1] ?? firstValue
@@ -146,9 +152,9 @@ export function removeOutliers(domain: number[], _opts = {}) {
 			: hasNeg
 			? sorted[idx - 2] ?? secondValue
 			: sorted[idx + 2] ?? secondValue
-		filteredArray = [firstValue, secondValue, thirdValue]
+		calculatedArray = [firstValue, secondValue, thirdValue].sort((a, b) => a - b)
 	}
-	return filteredArray
+	return calculatedArray
 }
 
 /** Removes outlier values from the interpolated domain/range object.
