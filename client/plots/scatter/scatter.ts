@@ -316,6 +316,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	}
 }
 
+// Note: use Partial as "itemLabel" property has to be missing, so it can be auto computed.
 export function getDefaultScatterSettings(): Partial<Settings> {
 	return {
 		size: 0.8,
