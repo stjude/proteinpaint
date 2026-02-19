@@ -1,3 +1,2 @@
 Fixes:
-- Ensure the genome browser plots launches regardless of the holder
-- detect if the inputs[] option exists before using it to detect which terms to disable
+- include WT/Not Tested in summary plot data requests that use `/termdb?for=matrix` route

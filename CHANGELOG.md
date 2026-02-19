@@ -6,7 +6,11 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 Fixes
-- set __protected__.sessionid even when there are no dsCredentials
+- set protected sessionid even when there are no dsCredentials
+- Ensure the genome browser plots launches regardless of the holder
+- detect if the inputs option exists before using it to detect which terms to disable
+- include WT/Not Tested in summary plot data requests that use the termdb?for=matrix route
+- also render divide-by variable data when listing samples in barchart
 
 
 ## 2.170.12

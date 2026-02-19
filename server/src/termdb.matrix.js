@@ -129,24 +129,32 @@ async function getSampleData(q, ds, onlyChildren = false) {
 			await q.ds.queries.snvindel.byisoform.get(q, geneVariantTws, samples)
 		} else {
 			if (!q.ds.mayGetGeneVariantData) throw 'not supported by dataset: geneVariant'
+			const maxGenesPerUser = ds.cohort.termdb?.maxGenesPerUser || 1000
+			const totalNumGenes = geneVariantTws.reduce((total, tw) => total + (tw.term.genes?.length || 1), 0)
+			// throttle a user submitting too many genes
+			if (totalNumGenes > maxGenesPerUser) {
+				throw `Too many genes submitted. Limit the total number of genes to ${maxGenesPerUser} or fewer.`
+			}
+			// for current pending requests from all users impacting the next request
 			if (numPendingQueriesAcrossUsers + geneVariantTws.length > maxPendingQueriesBeforeRejectingRequest) {
 				// prevent PP server crash, out of memory issue
 				throw `The server is too busy, try again in a few minutes.`
 			}
 
 			try {
-				numPendingQueriesAcrossUsers += geneVariantTws.length
-
-				// common ds handling, one query per tw
-
+				numPendingQueriesAcrossUsers += totalNumGenes
+				// 1 query here means 1 gene query, but downstream code may trigger multiple requests per query;
+				// for example, 1 gene query will trigger 3 GDC API requests plus the shared `/cases` request
 				const maxConcurrentQueries = ds.cohort.termdb.maxConcurrentQueries || 10
 				const promises = []
+				let numGenes = 0
 
 				for (const [i, tw] of geneVariantTws.entries()) {
 					if (tw.term.gene && q.ds.cohort?.termdb?.getGeneAlias) {
 						byTermId[tw.$id] = q.ds.cohort?.termdb?.getGeneAlias(q, tw)
 					}
-
+					// a geneVariant term may have 1 more genes
+					numGenes += tw.term.genes?.length || 1
 					// this may contain 1 or more query promise
 					promises.push(setGeneVariantDataForTw(q, tw, samples))
 
@@ -154,10 +162,10 @@ async function getSampleData(q, ds, onlyChildren = false) {
 					// for example https://gdc-ctds.atlassian.net/browse/SV-2728
 					if (
 						numActiveQueriesAcrossUsers > maxActiveQueriesBeforeSingleQueryBatch ||
-						promises.length >= maxConcurrentQueries ||
-						i >= geneVariantTws.length - 1
+						numGenes >= maxConcurrentQueries ||
+						i >= geneVariantTws.length - 1 // detect the end of geneVariantTws array
 					) {
-						const batchSize = promises.length
+						const batchSize = numGenes
 						numActiveQueriesAcrossUsers += batchSize
 						try {
 							const results = await Promise.allSettled(promises)
@@ -167,12 +175,13 @@ async function getSampleData(q, ds, onlyChildren = false) {
 							}
 						} finally {
 							numActiveQueriesAcrossUsers -= batchSize
-							promises.length = 0
+							promises.length = 0 // empty out the array
+							numGenes = 0
 						}
 					}
 				}
 			} finally {
-				numPendingQueriesAcrossUsers -= geneVariantTws.length
+				numPendingQueriesAcrossUsers -= totalNumGenes
 			}
 		}
 	}
