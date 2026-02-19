@@ -90,8 +90,11 @@ export type Settings = {
 	/** User defined max for Y scale
 	 * If none, null and use calculated value */
 	maxYScale: null | number
-	//Optional settings
 	sampleCategory?: object[]
-	aggregateData?: any
 	excludeOutliers?: boolean
+	/** Label for the individual data points in the scatter plot
+	if missing, auto-assign a default name e.g. sample or cell
+	if given, won't overwrite and use as-is
+	*/
+	itemLabel: string
 }

@@ -152,7 +152,7 @@ export class ScatterTooltip {
 				.append('div')
 				.style('color', '#aaa')
 				.style('font-weight', 'bold')
-				.html(`&nbsp;&nbsp;&nbsp;${samples.length} Samples`)
+				.html(`&nbsp;&nbsp;&nbsp;${samples.length} ${this.scatter.settings.itemLabel}s`)
 		const tableDiv = div.append('div').style('max-height', '500px').style('overflow-y', 'scroll')
 		if (samples.length > 4) tableDiv.attr('class', 'sjpp_show_scrollbar')
 		this.tableDiv = tableDiv
@@ -267,7 +267,7 @@ export class ScatterTooltip {
 					}
 
 				const [tdlabel, td] = table.addRow()
-				tdlabel.text('Sample')
+				tdlabel.text(this.scatter.settings.itemLabel)
 				td.text(sample.sample)
 				if ('sampleId' in sample && this.onClick) {
 					if (this.scatter.state.currentCohortChartTypes.includes('sampleView')) {
