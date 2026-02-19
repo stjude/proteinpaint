@@ -301,7 +301,7 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 	if (!creds || !Object.keys(creds).length) {
 		// need to set this for datasets that don't use dsCredentials,
 		// such as GDC as an embedder portal that uses domain-based session cookies
-		app.use((req, res, next) => {
+		app.use(function setQueryProtectedProps(req, res, next) {
 			const sessionid = req.cookies.sessionid // can be undefined
 			req.query.__protected__ = Object.freeze({ sessionid })
 
