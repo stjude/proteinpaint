@@ -92,6 +92,4 @@ export type ScatterChart = {
 	shapeLegend: Map<string, ShapeLegendItem>
 	axisG?: any
 	labelsG?: any
-	/* Sum of samples grouped by month for the events chart*/
-	events?: any[]
 }

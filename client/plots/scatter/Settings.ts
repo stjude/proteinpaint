@@ -94,5 +94,4 @@ export type Settings = {
 	sampleCategory?: object[]
 	aggregateData?: any
 	excludeOutliers?: boolean
-	showCumulativeFrequency?: number
 }
