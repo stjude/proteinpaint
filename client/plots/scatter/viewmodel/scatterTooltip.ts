@@ -152,7 +152,8 @@ export class ScatterTooltip {
 				.append('div')
 				.style('color', '#aaa')
 				.style('font-weight', 'bold')
-				.html(`&nbsp;&nbsp;&nbsp;${samples.length} ${this.scatter.settings.itemLabel}s`)
+				.style('margin-left', '1em')
+				.text(`${samples.length} ${this.scatter.settings.itemLabel}s`)
 		const tableDiv = div.append('div').style('max-height', '500px').style('overflow-y', 'scroll')
 		if (samples.length > 4) tableDiv.attr('class', 'sjpp_show_scrollbar')
 		this.tableDiv = tableDiv
