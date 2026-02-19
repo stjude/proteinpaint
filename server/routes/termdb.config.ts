@@ -1,7 +1,6 @@
 import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
 import { get_ds_tdb } from '#src/termdb.js'
-import { mayCopyFromCookie } from '#src/utils.js'
 import { TermTypes } from '#shared/terms.js'
 import type { Mds3WithCohort } from '#types'
 
@@ -23,7 +22,6 @@ export const api: any = {
 function init({ genomes }) {
 	return async (req, res) => {
 		const q = req.query
-		mayCopyFromCookie(q, req.cookies)
 		try {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'

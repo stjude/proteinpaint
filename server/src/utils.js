@@ -807,14 +807,6 @@ export function validateRglst(q, genome) {
 	}
 }
 
-export function mayCopyFromCookie(q, cookies) {
-	if (cookies.sessionid) {
-		if ('sessionid' in q) throw 'q.sessionid already exists so cannot copy from cookies.sessionid'
-		// sessionid is available after user logs into gdc portal
-		q.sessionid = cookies.sessionid
-	}
-}
-
 export function boxplot_getvalue(lst, removeOutliers = false) {
 	/* ascending order
     each element: {value}
