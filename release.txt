@@ -1,0 +1,2 @@
+Fixes:
+- Ensure the genome browser plots launches regardless of the holder
