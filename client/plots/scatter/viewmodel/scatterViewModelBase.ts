@@ -210,9 +210,8 @@ export class ScatterViewModelBase {
 					.attr('text-anchor', 'middle')
 					.text(term0Name)
 			}
-			const isEvents = this.scatter.config.term2 ? false : true
 			const t2name = this.scatter.config.term2?.term?.name
-			const term2Name = isEvents ? 'Frequency' : getTitle(t2name, 60)
+			const term2Name = getTitle(t2name, 60)
 			text = labelsG
 				.append('text')
 				.attr(
