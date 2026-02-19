@@ -1,4 +1,4 @@
-import { mayCopyFromCookie, fileurl, validateRglst } from './utils.js'
+import { fileurl, validateRglst } from './utils.js'
 import { snvindelByRangeGetter_bcf } from './mds3.init.js'
 import { validate_variant2samples } from './mds3.variant2samples.js'
 import { dtcnv, mclasscnvgain, mclasscnvAmp, mclasscnvloss, mclasscnvHomozygousDel } from '#shared/common.js'
@@ -62,8 +62,6 @@ function init_q(req, genome) {
 		// user token may be provided from request header, the logic could be specific to gdc or another dataset
 		query.token = req.get('X-Auth-Token')
 	}
-
-	mayCopyFromCookie(query, req.cookies)
 
 	// cannot validate filter0 here as ds will be required and is not made yet
 	if (query.hiddenmclasslst) {

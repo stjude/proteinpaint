@@ -295,9 +295,23 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 	// always start with an empty sessions tracking object,
 	// will fill-in as requests with auth or x-ds-*-token are received
 	let sessions = {}
-	// no need to setup additional middlewares and routes
+	// no need to setup auth middlewares and routes that's related to dsCredentals,
 	// if there are no protected datasets
+
 	if (!creds || !Object.keys(creds).length) {
+		// need to set this for datasets that don't use dsCredentials,
+		// such as GDC as an embedder portal that uses domain-based session cookies
+		app.use((req, res, next) => {
+			const sessionid = req.cookies.sessionid // can be undefined
+			req.query.__protected__ = Object.freeze({ sessionid })
+
+			// legacy support for the deprecated mayCopyFromCookie() behavior in route handler code,
+			// should migrate such code to using req.query.__protected__.sessionid
+			if (req.query.sessionid) throw 'q.sessionid already exists so cannot copy from cookies.sessionid'
+			else req.query.sessionid = sessionid
+
+			next()
+		})
 		// in case maySetAuthRoutes() is called more than once in the same runtime,
 		// such as during combined coverage tests, reset to default methods if there are no credentials
 		Object.assign(authApi, defaultApiMethods)

@@ -2,6 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
+
 ## Unreleased
 
 Features:
@@ -78,6 +79,28 @@ Fixes:
 - stream matrix response data to prevent RangeError during json-encoding
 - do not join to global filter in getTreeFilter() if the join argument is 'or', so that the edit menu will list all applicable categories
 - show loading and error messages when switching to barchart tab in summary plot
+
+
+## 2.170.13
+
+Fixes
+- set protected sessionid even when there are no dsCredentials
+- Ensure the genome browser plots launches regardless of the holder
+- detect if the inputs option exists before using it to detect which terms to disable
+- include WT/Not Tested in summary plot data requests that use the termdb?for=matrix route
+- also render divide-by variable data when listing samples in barchart
+- sample list should work when dragging a violin range
+
+
+## 2.170.12
+
+Fixes
+- prevent excessive memory usage during OncoMatrix data requests
+- do not allow repeated term id for correlation plot primary, correlation, and Fdivide-by variables
+- hide survival terms in dictionary tree for violin and boxplot
+- do not allow hiding all chart serieses/overlay, there should at least be one visible rendered data 
+- restore geneORA by passing gene names but not tw.$id
+- set __protected__.sessionid even when there are no dsCredentials
 
 
 ## 2.170.11
