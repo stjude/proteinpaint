@@ -11,28 +11,14 @@ import {
 	CNVClasses
 } from '#shared/common.js'
 
-/*************************
- reusable helper functions
-**************************/
-
-const runpp = helpers.getRunPp('mass', {
-	state: {
-		dslabel: 'TermdbTest',
-		genome: 'hg38-test'
-	},
-	debug: 1
-})
-
-function getGenes() {
-	return [
-		{ term: { gene: 'TP53', name: 'TP53', type: 'geneVariant', isleaf: true } },
-		{ term: { gene: 'KRAS', name: 'KRAS', type: 'geneVariant', isleaf: true } },
-		{ term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant', isleaf: true } }
-	]
-}
-
 /**************
  test sections
+
+only dictionary terms
+termCollection
+with divide by terms
+long column group labels
+
 ***************/
 tape('\n', function (test) {
 	test.comment('-***- plots/matrix -***-')
@@ -44,9 +30,6 @@ tape('only dictionary terms', function (test) {
 	test.plan(5)
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					chartType: 'matrix',
@@ -135,14 +118,42 @@ tape('only dictionary terms', function (test) {
 	}
 })
 
+tape('termCollection', function (test) {
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'matrix',
+					termgroups: [
+						{
+							name: '',
+							lst: [getTermCollection()]
+						}
+					]
+				}
+			]
+		},
+		matrix: { callbacks: { 'postRender.test': runTests } }
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		test.equal(
+			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
+			1,
+			`should render the expected number of serieses`
+		)
+		// TODO: test sorting after simulated use of edit menu
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
 tape('with divide by terms', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(3)
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					chartType: 'matrix',
@@ -204,9 +215,6 @@ tape('long column group labels', function (test) {
 	test.plan(2)
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					chartType: 'matrix',
@@ -257,9 +265,6 @@ tape('divide by continuous terms', function (test) {
 	test.plan(3)
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					chartType: 'matrix',
@@ -936,9 +941,6 @@ tape('sort sample groups by Hits 2', function (test) {
 	test.plan(2)
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					id: 'xyz',
@@ -987,9 +989,6 @@ tape('Display Sample Counts for Gene: Absolute', function (test) {
 	test.plan(2)
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					chartType: 'matrix',
@@ -1037,9 +1036,6 @@ tape('Display Sample Counts for Gene: Percent', function (test) {
 	test.plan(2)
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					chartType: 'matrix',
@@ -1087,9 +1083,6 @@ tape('Display Sample Counts for Gene: None', function (test) {
 	test.plan(2)
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					chartType: 'matrix',
@@ -1134,9 +1127,6 @@ tape('Sort Genes By Sample Count', function (test) {
 	test.plan(2)
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					chartType: 'matrix',
@@ -1180,9 +1170,6 @@ tape('Sort Genes By Input Data Order', function (test) {
 	test.plan(2)
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					chartType: 'matrix',
@@ -1226,9 +1213,6 @@ tape('avoid race condition', function (test) {
 	test.plan(4)
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					chartType: 'matrix',
@@ -1260,8 +1244,14 @@ tape('avoid race condition', function (test) {
 		matrix.on('postRender.test', null)
 		matrix.Inner.app.vocabApi.origGetAnnotatedSampleData = matrix.Inner.app.vocabApi.getAnnotatedSampleData
 		matrix.Inner.app.vocabApi.getAnnotatedSampleData = async (opts, _refs = {}) => {
-			await sleep(i)
+			// set the signal before the sleep(), so that the app's current #abortController will be used;
+			// doing it after sleep() means that a later app.#abortController will be used, which makes
+			// this simulated race condition inaccurate
+			opts.signal = matrix.Inner.app.getAbortSignal()
+			const j = i
+			// immediately set i to zero before sleep(), so that the next dispatch() actually uses the updated i value
 			i = 0
+			await sleep(j)
 			const data = await matrix.Inner.app.vocabApi.origGetAnnotatedSampleData(opts, _refs)
 			return data
 		}
@@ -1285,7 +1275,7 @@ tape('avoid race condition', function (test) {
 			test.end()
 		})
 
-		const responseDelay = 10
+		const responseDelay = 1
 		let i = responseDelay
 		try {
 			const results = await Promise.all([
@@ -1377,9 +1367,6 @@ tape('apply "hide" legend filters to a dictionary term', function (test) {
 	test.plan(10)
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					chartType: 'matrix',
@@ -1527,9 +1514,6 @@ tape('apply "show only" and "show all" legend filters to dictionary terms', func
 	test.plan(14)
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					chartType: 'matrix',
@@ -1751,9 +1735,6 @@ tape(
 
 		runpp({
 			state: {
-				nav: {
-					activeTab: 1
-				},
 				plots: [
 					{
 						chartType: 'matrix',
@@ -1955,9 +1936,6 @@ tape('apply legend group filters to a geneVariant term in geneVariant term only 
 
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					chartType: 'matrix',
@@ -2177,9 +2155,6 @@ tape(
 
 		runpp({
 			state: {
-				nav: {
-					activeTab: 1
-				},
 				plots: [
 					{
 						chartType: 'matrix',
@@ -2416,9 +2391,6 @@ tape('cell brush zoom in', function (test) {
 	test.plan(1)
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					chartType: 'matrix',
@@ -2497,9 +2469,6 @@ tape('survival term in continous mode', function (test) {
 	test.plan(2)
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					chartType: 'matrix',
@@ -2561,9 +2530,6 @@ tape('survival term in discrete mode', function (test) {
 	test.plan(2)
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					chartType: 'matrix',
@@ -2625,9 +2591,6 @@ tape('survival term with divide by dictionary term', function (test) {
 	test.plan(3)
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					chartType: 'matrix',
@@ -2697,9 +2660,6 @@ tape('dictionary term with divide by survival term', function (test) {
 	test.plan(3)
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					chartType: 'matrix',
@@ -2760,9 +2720,6 @@ tape('apply "hide" and "show" legend filters to a survival term', function (test
 	test.plan(10)
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					chartType: 'matrix',
@@ -2919,9 +2876,6 @@ tape('apply "show only" and "show all" legend filters to a survival terms', func
 	test.plan(14)
 	runpp({
 		state: {
-			nav: {
-				activeTab: 1
-			},
 			plots: [
 				{
 					chartType: 'matrix',
@@ -3143,3 +3097,96 @@ tape('apply "show only" and "show all" legend filters to a survival terms', func
 		test.end()
 	}
 })
+
+/*************************
+ reusable helper functions
+**************************/
+
+const runpp = helpers.getRunPp('mass', {
+	state: {
+		dslabel: 'TermdbTest',
+		genome: 'hg38-test',
+		nav: { activeTab: -1 }
+	},
+	debug: 1
+})
+
+function getGenes() {
+	return [
+		{ term: { gene: 'TP53', name: 'TP53', type: 'geneVariant', isleaf: true } },
+		{ term: { gene: 'KRAS', name: 'KRAS', type: 'geneVariant', isleaf: true } },
+		{ term: { gene: 'AKT1', name: 'AKT1', type: 'geneVariant', isleaf: true } }
+	]
+}
+function getTermCollection() {
+	return {
+		//isAtomic: true,
+		type: 'TermCollectionTWValues',
+		//$id: 'TwBase_0__48243_99155',
+		term: {
+			collectionId: 'Fake Collection 1',
+			type: 'termCollection',
+			termlst: [
+				{
+					type: 'float',
+					bins: {
+						default: {
+							type: 'regular-bin',
+							bin_size: 5,
+							startinclusive: true,
+							first_bin: { startunbounded: true, stop: 5 }
+						},
+						label_offset: 1
+					},
+					name: 'Age (years) at Cancer Diagnosis',
+					id: 'agedx',
+					isleaf: true,
+					values: {},
+					hashtmldetail: true
+				},
+				{
+					type: 'float',
+					bins: {
+						default: {
+							type: 'regular-bin',
+							startinclusive: true,
+							bin_size: 5,
+							first_bin: { stop: 25 },
+							last_bin: { start: 55 }
+						}
+					},
+					name: 'Age (years) at Death',
+					id: 'a_death',
+					isleaf: true,
+					values: {},
+					hashtmldetail: true
+				},
+				{
+					type: 'float',
+					bins: { default: { type: 'regular-bin', startinclusive: true, bin_size: 10, first_bin: { stop: 15 } } },
+					name: 'Age (years) at Last NDI Search',
+					id: 'a_ndi',
+					isleaf: true,
+					values: {}
+				},
+				{
+					type: 'float',
+					bins: { default: { type: 'regular-bin', startinclusive: true, bin_size: 10, first_bin: { stop: 15 } } },
+					values: { '-994': { label: 'N/A: No campus visit', uncomputable: true } },
+					name: 'Age at last ABC assessment',
+					id: 'agelastvisit',
+					isleaf: true
+				}
+			],
+			name: ' (agedx,a_death,a_ndi,agel...',
+			isleaf: true,
+			propsByTermId: {
+				agedx: { color: '#1b9e77' },
+				a_death: { color: '#d95f02' },
+				a_ndi: { color: '#7570b3' },
+				agelastvisit: { color: '#e7298a' }
+			}
+		},
+		q: { isAtomic: true, mode: 'continuous', lst: [] }
+	}
+}
