@@ -19,7 +19,8 @@ export const routedTermTypes = new Set([
 	'snp',
 	'singleCellGeneExpression',
 	'singleCellCellType',
-	'termCollection'
+	'termCollection',
+	'dnaMethylation'
 ])
 
 export type UseCase = {
@@ -98,6 +99,7 @@ export class TwRouter {
 			case 'date':
 			case 'ssGSEA':
 			case 'singleCellGeneExpression':
+			case 'dnaMethylation':
 				return await NumericBase.fill(tw, opts)
 
 			// case 'condition':

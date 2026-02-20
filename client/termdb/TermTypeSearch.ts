@@ -46,6 +46,7 @@ const useCasesExcluded = {
 		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.DICTIONARY_VARIABLES,
 		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.DNA_METHYLATION,
 		TermTypeGroups.SSGSEA,
 		TermTypeGroups.TERM_COLLECTION
 	],
@@ -63,6 +64,7 @@ const useCasesExcluded = {
 		TermTypeGroups.SNP_LIST,
 		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.DNA_METHYLATION,
 		TermTypeGroups.METABOLITE_INTENSITY,
 		TermTypeGroups.SSGSEA,
 		TermTypeGroups.TERM_COLLECTION
@@ -72,6 +74,7 @@ const useCasesExcluded = {
 		TermTypeGroups.SNP_LIST,
 		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.DNA_METHYLATION,
 		TermTypeGroups.METABOLITE_INTENSITY,
 		TermTypeGroups.SSGSEA,
 		// we are still using dictionary tab to select mutation signature terms. The reason why we
@@ -274,6 +277,7 @@ export class TermTypeSearch {
 					if (type == TermTypes.SNP) continue // same funcationality is covered by snplst/snplocus terms
 					if (type == TermTypes.GENE_VARIANT && state.usecase.detail != 'independent') continue
 					if (type == TermTypes.GENE_EXPRESSION && state.usecase.detail != 'independent') continue
+					if (type == TermTypes.DNA_METHYLATION && state.usecase.detail != 'independent') continue
 					if (type == TermTypes.SSGSEA && state.usecase.detail != 'independent') continue
 				}
 
