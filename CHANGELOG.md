@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 
-## Unreleased
+## 2.170.13
 
 Fixes
 - set protected sessionid even when there are no dsCredentials
