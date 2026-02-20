@@ -1234,7 +1234,7 @@ export class TermdbVocab extends Vocab {
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
 			for: 'getMultivalueTWs',
-			parent_id: opts.parent_id
+			parent_id: opts?.parent_id
 		}
 		return await dofetch3('termdb', { headers, body })
 	}

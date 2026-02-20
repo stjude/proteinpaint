@@ -1,2 +1,2 @@
 Fixes:
-- include WT/Not Tested in summary plot data requests that use `/termdb?for=matrix` route
+- sample list should work when dragging a violin range

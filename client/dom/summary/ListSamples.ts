@@ -161,7 +161,7 @@ export class ListSamples {
 	}
 
 	createTvsRanges(tvs: any, termNum: number, key: string): void {
-		if (termNum == 1 && this.useRange) {
+		if ((termNum == 1 || termNum == 2) && this.useRange) {
 			//May limit the range for the first term (i.e. violin brush)
 			tvs.ranges = [
 				{
