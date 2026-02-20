@@ -1,5 +1,10 @@
 import tape from 'tape'
-import { getInterpolatedDomainRange, removeOutliers, removeInterpolatedOutliers } from '../colorScale.helpers.ts'
+import {
+	getInterpolatedDomainRange,
+	removeOutliers,
+	removeInterpolatedOutliers,
+	computeTicks
+} from '../colorScale.helpers.ts'
 import { interpolateReds, interpolateBlues } from 'd3-scale-chromatic'
 
 /**************
@@ -367,6 +372,37 @@ tape('removeInterpolatedOutliers()', test => {
 		expected,
 		`Should remove the extreme outliers from the domain and range with a ${minPercent}% and ${maxPercent}% cutoff`
 	)
+
+	test.end()
+})
+
+tape('computeTicks()', test => {
+	test.timeoutAfter(100)
+	test.equal(computeTicks(0, 5), 1, `Should return 1 tick for a domain range of 0`)
+	test.equal(computeTicks(Infinity, 5), 1, `Should return 1 tick for an infinite domain range`)
+	test.equal(computeTicks(-Infinity, 5), 1, `Should return 1 tick for an infinite domain range`)
+	test.equal(computeTicks(10, 0), 1, `Should return 1 tick for a target interval of 0`)
+	// test.equal(, 1, `Should return 1 tick for a negative target interval`)
+	test.equal(computeTicks(10, 2), 5, `Should return 5 ticks for a domain range of 10 and target intervals of 2`)
+	test.equal(computeTicks(10, 4), 3, `Should return 3 ticks for a domain range of 10 and target intervals of 4`)
+	test.equal(computeTicks(10, 5), 2, `Should return 2 ticks for a domain range of 10 and target intervals of 5`)
+	test.equal(computeTicks(10, 10), 2, `Should return 2 ticks for a domain range of 10 and target intervals of 10`)
+
+	let message = `Should throw for a negative targetInterval`
+	try {
+		computeTicks(10, -5)
+		test.fail(message)
+	} catch (error) {
+		test.pass(`${message}: ${error}`)
+	}
+
+	message = `Should throw for a negative domainRange`
+	try {
+		computeTicks(-10, 5)
+		test.fail(message)
+	} catch (error) {
+		test.pass(`${message}: ${error}`)
+	}
 
 	test.end()
 })
