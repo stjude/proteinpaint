@@ -1275,7 +1275,7 @@ tape('avoid race condition', function (test) {
 			test.end()
 		})
 
-		const responseDelay = 10
+		const responseDelay = 1
 		let i = responseDelay
 		try {
 			const results = await Promise.all([
