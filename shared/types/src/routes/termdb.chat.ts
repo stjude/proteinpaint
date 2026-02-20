@@ -22,7 +22,7 @@ export type PlotResponse = {
 	/** Specifies what action to take e.g. Summary plot or no action. Will add more chart types later */
 }
 
-export type LlmConfig = { provider: 'SJ' | 'ollama'; api: string; modelName: string }
+export type LlmConfig = { provider: 'SJ' | 'ollama'; api: string; modelName: string; embeddingModelName: string }
 
 export type ChatResponse = HtmlResponse | PlotResponse
 
