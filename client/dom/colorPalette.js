@@ -6,8 +6,9 @@
 //   this would require something like https://github.com/Evercoder/d3-color-difference,
 //   since two colors may still look very similar to each other even when not exactly the same
 export function getHslPalette(numColors) {
+	if (numColors <= 0) return []
 	// These preassigned angles are the corners of equilateral triangle, inside
-	// a 360 degree circle and touching it's circumference. The angle sequence
+	// a 360 degree circle and touching its circumference. The angle sequence
 	// proceed in sequence of 3 distant colors (the triangle corners)
 	// - after the first 3 angles, flip the triangle upside down
 	// - then rotate to 270 which somewhat opposes 60
@@ -27,7 +28,9 @@ export function getHslPalette(numColors) {
 		for (const [i, a] of startAngles.entries()) {
 			const hsl = `hsl(${pad + a},${i < 9 ? 90 : 30}%,${i < 9 ? 40 : 60}%)`
 			if (!colors.has(hsl)) colors.add(hsl)
+			if (colors.size >= numColors) break
 		}
+		if (colors.size >= numColors) break
 	}
 	return [...colors].slice(0, numColors)
 }

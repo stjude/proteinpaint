@@ -7,7 +7,7 @@ import { select } from 'd3-selection'
 ***************/
 
 tape('\n', test => {
-	test.comment('-***- dom/boxplot -***-')
+	test.comment('-***- dom/colorPalette -***-')
 	test.end()
 })
 
@@ -35,6 +35,6 @@ tape('default behavior', test => {
 	}
 
 	test.equal(uniqueColors.size, numColors, 'should generate unique colors')
-	if (test._ok) holder.remove()
+	//if (test._ok) holder.remove()
 	test.end()
 })

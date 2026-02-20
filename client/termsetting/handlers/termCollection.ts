@@ -57,8 +57,6 @@ export class TermCollectionHandler extends HandlerBase implements Handler {
 				const trs = groupDiv.select('table').select('tbody').node().querySelectorAll('tr')
 
 				self.term.termlst = terms.filter((term, i) => trs[i].querySelectorAll('td')[1].querySelector('input')?.checked)
-				console.log(59, self.term.termlst)
-
 				q.numerators = terms
 					.filter((term, i) => trs[i].querySelectorAll('td')[3].querySelector('input')?.checked)
 					.map(t => t.id)

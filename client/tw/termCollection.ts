@@ -34,7 +34,7 @@ export class TermCollection {
 	// - does not have to construct, but may require forced type casting in consumer code
 	static fill(term: RawTermCollection, opts: TwOpts = {}) {
 		if (term instanceof TermCollection) return
-		const collection = opts.vocabApi.termdbConfig.numericTermCollections.find(
+		const collection = opts.vocabApi?.termdbConfig?.numericTermCollections?.find(
 			c => c.name === term.collectionId || c.name == term.id || c.name == term.name || term.name.includes(c.name)
 		)
 		if (!collection) throw `missing termCollection term.lst and termdbConfig.numericTermCollection[term.id]`
@@ -45,17 +45,14 @@ export class TermCollection {
 		}
 		const pt = term.propsByTermId
 		const values = Object.values(pt)
+		// NOTE: When not all terms have a preassigned color, there is a risk of
+		// the same color being reused/reassigned to multiple terms. The termCollection
+		// creator should understand this risk.
 		const usedColors = values.filter(p => p.color).map(p => p.color)
-		// avoid color reuse if only a few terms have preassigned colors,
-		// by forcing all terms to use the same color palette scale,
-		// see getHslPalette() TODO on how it may have a usedColors argument
-		const reassignColor = usedColors.length < values.length
 		const hslPalette = getHslPalette(values.length - usedColors.length)
 		for (const [i, t] of collection.termIds.entries()) {
 			if (!pt[t]) pt[t] = {}
-			if (!pt[t].color || reassignColor) {
-				pt[t].color = hslPalette[i]
-			}
+			if (!pt[t].color) pt[t].color = hslPalette[i]
 		}
 
 		TermCollection.validate(term)
