@@ -222,7 +222,7 @@ export async function run_chat_pipeline(
 	// Use the embedding classifier with LLM fallback for uncertain queries.
 	// The classifier is a singleton that loads the model once and reuses it.
 	const clf = await getClassifier()
-	const embeddingResult = await clf.classifyHybrid(user_prompt, llm, aiRoute, dataset_json)
+	const embeddingResult = await clf.classifyHybrid(user_prompt, llm)
 	mayLog(
 		`Embedding classifier: category=${embeddingResult.category}, confidence=${embeddingResult.confidence.toFixed(4)}`
 	)

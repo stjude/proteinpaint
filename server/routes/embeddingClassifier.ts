@@ -15,7 +15,6 @@
 
 import { pipeline, type FeatureExtractionPipeline } from '@xenova/transformers'
 import { ezFetch } from '#shared'
-import fs from 'fs'
 import type { LlmConfig } from '#types'
 import { mayLog } from '#src/helpers.ts'
 
@@ -160,7 +159,29 @@ const _GENE_NOISE = new Set([
 	'CR',
 	'VS',
 	'TNBC',
-	'CAR'
+	'CAR',
+	'High hyperdiploid',
+	'ETV6-RUNX1',
+	'BCR-ABL1',
+	'KMT2A',
+	'CRLF2',
+	'B-other',
+	'DUX4',
+	'PAX5alt',
+	'BCR-ABL1-like',
+	'TCF3-PBX1',
+	'Low hypodiploid',
+	'ETV6-RUNX1-like',
+	'MEF2D',
+	'Near haploid',
+	'PAX5 P80R',
+	'iAMP21',
+	'BCL2/MYC',
+	'NUTM1',
+	'ZNF384-like',
+	'KMT2A-like',
+	'TCF3-HLF',
+	'IKZF1 N159Y'
 ])
 
 function looksLikeMultiGene(query: string, minGenes = 3): boolean {
@@ -500,6 +521,44 @@ const CATEGORY_EXAMPLES: Record<string, string[]> = {
 }
 
 // ---------------------------------------------------------------------------
+//  Explicit chart type overrides — bypass embedding when the user
+//  unambiguously names a chart type or visualization keyword.
+// ---------------------------------------------------------------------------
+
+const EXPLICIT_OVERRIDES: { patterns: RegExp[]; category: string }[] = [
+	{
+		category: 'dge',
+		patterns: [/\bvolcano\s*(plot|chart)?\b/i]
+	},
+	{
+		category: 'sampleScatter',
+		patterns: [/\bt[- ]?SNE\b/i, /\bUMAP\b/i, /\bPCA\b/i]
+	},
+	{
+		category: 'matrix',
+		patterns: [/\bheatmap\b/i, /\bmatrix\b/i]
+	},
+	{
+		// explicit summary sub-types — user names the chart directly
+		category: 'summary',
+		patterns: [
+			/\bviolin\s*(plot|chart)?\b/i,
+			/\bbox\s*plot\b/i,
+			/\bbar\s*chart\b/i,
+			/\bhistogram\b/i,
+			/\bscatter\s*plot\b/i
+		]
+	}
+]
+
+function getExplicitOverride(query: string): string | null {
+	for (const { patterns, category } of EXPLICIT_OVERRIDES) {
+		if (patterns.some(p => p.test(query))) return category
+	}
+	return null
+}
+
+// ---------------------------------------------------------------------------
 //  Embedder & Classifier
 // ---------------------------------------------------------------------------
 
@@ -610,7 +669,20 @@ export class EmbeddingClassifier {
 	 *
 	 * This mirrors the hybrid_router.py approach from the Python demo.
 	 */
-	async classifyHybrid(query: string, llm: LlmConfig, aiRoute: string, datasetJson: any): Promise<ClassifyResult> {
+	async classifyHybrid(query: string, llm: LlmConfig): Promise<ClassifyResult> {
+		// Check for explicit chart type keywords first — these always win.
+		const override = getExplicitOverride(query)
+		if (override) {
+			mayLog(`Hybrid router: explicit chart type override → ${override}`)
+			return {
+				query,
+				category: override,
+				confidence: 1.0,
+				all_scores: {},
+				above_threshold: true
+			}
+		}
+
 		const embeddingResult = await this.classify(query)
 
 		if (embeddingResult.above_threshold) {
@@ -628,7 +700,7 @@ export class EmbeddingClassifier {
 		)
 
 		try {
-			const llmResult = await classifyViaLlm(query, llm, aiRoute, datasetJson)
+			const llmResult = await classifyViaLlm(query, llm)
 			const llmCategory = llmResult.plot ?? 'none'
 			mayLog(`Hybrid router: LLM fallback returned category=${llmCategory}`)
 
@@ -652,30 +724,29 @@ export class EmbeddingClassifier {
 
 async function classifyViaLlm(
 	userPrompt: string,
-	llm: LlmConfig,
-	aiRoute: string,
-	datasetJson: any
+	llm: LlmConfig
 ): Promise<{ type: string; plot?: string; html?: string }> {
-	const data = JSON.parse((await fs.promises.readFile(aiRoute)).toString())
-	let contents = data['general'] || ''
-	for (const key of Object.keys(data)) {
-		if (key !== 'general') contents += data[key]
-	}
+	// Lean prompt — just the category definitions and a few examples each.
+	// This replaces the old approach of sending the entire aiRoute + dataset prompt
+	// + all training examples, which could be thousands of tokens.
+	const template = `Classify the following user query into exactly one category. Respond with ONLY a JSON object, no explanation.
 
-	const classificationDs = datasetJson.charts?.find((chart: any) => chart.type === 'Classification')
-	if (!classificationDs) throw 'Classification information is not present in the dataset file.'
-	if (!classificationDs.TrainingData?.length) throw 'No training data is provided for the classification agent.'
+Categories:
+- "summary": Clinical data plots — distributions, bar charts, violin plots, boxplots, scatter plots of 1-2 variables. Queries about counts, percentages, expression by group, or correlating two variables.
+- "dge": Differential gene expression — comparing gene expression between two groups. Keywords: upregulated, downregulated, DE, DGE, volcano plot, fold change, differential expression.
+- "matrix": Multi-gene heatmap/matrix — displaying 3+ genes or variables across samples in a grid. Keywords: heatmap, matrix, landscape, multiple genes.
+- "sampleScatter": Dimensionality reduction plots — t-SNE, UMAP, PCA embeddings with optional overlays. Keywords: t-SNE, UMAP, PCA, clustering, embedding.
+- "survival": Survival/outcome analysis — Kaplan-Meier curves, hazard ratios, time-to-event. Keywords: survival, Kaplan-Meier, hazard ratio, prognosis, outcomes.
 
-	if (datasetJson.DatasetPrompt) contents += datasetJson.DatasetPrompt
-	if (classificationDs.SystemPrompt) contents += classificationDs.SystemPrompt
+Examples:
+Q: "Show TP53 expression by sex" → {"type":"plot","plot":"summary"}
+Q: "How many patients in each subtype" → {"type":"plot","plot":"summary"}
+Q: "Which genes are upregulated in KMT2A vs DUX4" → {"type":"plot","plot":"dge"}
+Q: "Show a heatmap of TP53 KRAS and NRAS" → {"type":"plot","plot":"matrix"}
+Q: "Color the UMAP by molecular subtype" → {"type":"plot","plot":"sampleScatter"}
+Q: "Compare survival rates between KMT2A and DUX4" → {"type":"plot","plot":"survival"}
 
-	const trainingData = classificationDs.TrainingData.map(
-		(td: any, i: number) =>
-			'Example question' + (i + 1) + ': ' + td.question + ' Example answer' + (i + 1) + ':' + JSON.stringify(td.answer)
-	).join(' ')
-
-	const template =
-		contents + ' training data is as follows:' + trainingData + ' Question: {' + userPrompt + '} Answer: {answer}'
+Q: "${userPrompt}" →`
 
 	const response = await routeToLlm(template, llm)
 	mayLog('LLM fallback raw response:', response)
