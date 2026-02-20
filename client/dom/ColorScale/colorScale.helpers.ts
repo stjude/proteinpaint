@@ -183,7 +183,12 @@ export function removeInterpolatedOutliers(
  * @returns the computed number of ticks
  */
 export function computeTicks(domainRange: number, targetIntervals: number): number {
-	if (!isFinite(domainRange) || domainRange === 0) return 1
+	if (!isFinite(domainRange) || domainRange === 0 || targetIntervals == 0) return 1
+	if (domainRange < 0 || targetIntervals < 0) {
+		throw new Error(
+			`Neither domainRange or targetIntervals can be a non-negative number. Received domainRange: ${domainRange}, targetIntervals: ${targetIntervals}`
+		)
+	}
 	const intervals = Math.max(1, targetIntervals ?? 4)
 	const step = domainRange / intervals
 
