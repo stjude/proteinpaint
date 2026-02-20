@@ -807,7 +807,8 @@ export class TermdbVocab extends Vocab {
 					// one request per term
 					terms: copies.map(this.getTwMinCopy),
 					filter,
-					embedder: window.location.hostname
+					embedder: window.location.hostname,
+					isSummary: opts.isSummary
 				},
 				signal
 			}
