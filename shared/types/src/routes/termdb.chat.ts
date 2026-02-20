@@ -22,7 +22,23 @@ export type PlotResponse = {
 	/** Specifies what action to take e.g. Summary plot or no action. Will add more chart types later */
 }
 
-export type LlmConfig = { provider: 'SJ' | 'ollama'; api: string; modelName: string }
+export type ModelAccess = 'local' | 'api'
+
+export type LlmModelConfig = {
+	/** Model name or identifier (e.g. "llama3.3-70b-instruct-vllm" for API, "Xenova/bge-small-en-v1.5" for local) */
+	model: string
+	/** Whether to load the model locally (via transformers.js/Python) or call a remote API */
+	access: ModelAccess
+}
+
+export type LlmConfig = {
+	provider: 'SJ' | 'ollama'
+	api: string
+	/** Model used for the main chat/agent interactions */
+	agent: LlmModelConfig
+	/** Model used for query classification/routing */
+	classification: LlmModelConfig
+}
 
 export type ChatResponse = HtmlResponse | PlotResponse
 

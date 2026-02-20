@@ -371,10 +371,10 @@ async function route_to_appropriate_llm_provider(template: string, llm: LlmConfi
 	let response: string
 	if (llm.provider == 'SJ') {
 		// Local SJ server
-		response = await call_sj_llm(template, llm.modelName, llm.api)
+		response = await call_sj_llm(template, llm.agent.model, llm.api)
 	} else if (llm.provider == 'ollama') {
 		// Ollama server
-		response = await call_ollama(template, llm.modelName, llm.api)
+		response = await call_ollama(template, llm.agent.model, llm.api)
 	} else {
 		// Will later add support for azure server also
 		throw 'Unknown LLM provider'
