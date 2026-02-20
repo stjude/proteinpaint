@@ -66,6 +66,7 @@ def validate_dnameth_hdf5(input_hdf5_file: str) -> list[str]:
     Returns:
         List[str]: sample names from /meta/samples/names
     """
+    print("Validating the HDF structure...", flush=True)
     with h5py.File(input_hdf5_file, "r") as h5:
         required_datasets = [
             "/beta/values",
@@ -129,10 +130,11 @@ def validate_dnameth_hdf5(input_hdf5_file: str) -> list[str]:
             )
 
         # Read sample names 
-        sample_names = [str(s) for s in sample_names_ds]
+        sample_names = [str(s.decode()) for s in sample_names_ds]
         # Sanity check: unique samples 
         if len(set(sample_names)) != len(sample_names):
             raise ValueError("Duplicate sample names detected")
+        print(f"First 10 samples: {sample_names[:10]}")
         return sample_names
 
 
