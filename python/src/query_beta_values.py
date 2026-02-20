@@ -1,20 +1,46 @@
 """
-    This script processes DNA methylation queries of two types:
+    This script processes DNA methylation queries of two types 
+    given a HDF5 file of DNA methylation beta matrix:
 
-    Returns all the DNA methylation beta values in the range [0, 1]:
-    Currently, "NA" values for the samples are being coded as -1.0.
-    
-        Type 1: Provided a list of sample(s) and genomic range.
-            For e.g.:  samples: [a, b, c, d], genomic query range: chr2:23434-3434553
+        Type 1: Provided a list of sample(s) and a genomic range, returns all the beta values
+                for those samples in the specified genomic range.
+
+                For e.g.:  samples: [a, b, c, d], genomic query range: chr2:23434-3434553
+                    :  output: [[0.1, 0.3, 0.5, 0.2],
+                               [...,...,...,...],
+                               [...,...,...,...],
+                                  ...
+                               [...,...,...,...]]
+
         Type 2: Provided a list of sample(s) and a list of CpG id(s)
-            For e.g.:  samples: [a, b, c, d], CpG ids: [cg12323423, cg34583234,...]
+                
+                For e.g.:  samples: [a, b, c, d], CpG ids: [cg12323423, cg34583234,...]
 
-    Inputs:
-        1. --h : path to the HDF5 file of DNA methylation values
-        2. --s : sample(s)
-               : When directly running the script, sample names are separated by commas. For e.g.: "--s a,b,c,d"
-        2. --q : Either genomic range query or CpG IDs
-               : When directly running the script, CpG ids are separated by commas. For e.g.: "--q cg1232,cg54324b"
+    Inputs: The script parses input first via standard input (stdin) and if no stdin found
+            falls back on command line arguments.
+
+            Stdin:
+                When using stdin, a json input is expected. For e.g.:
+                    1) echo '{h:"dnaMeth.h5", s:"a,b,c", q:"cg123,cg5343"}' | python query_beta_values.py
+                    2) echo '{h:"dnaMeth.h5", validate:True}' | python query_beta_values.py
+                
+            Command Line Inputs:
+                1. --h : path to the HDF5 file of DNA methylation values
+                2. --s : sample(s)
+                       : When directly running the script, sample names are separated by commas. For e.g.: "--s a,b,c,d"
+                3. --q : Either genomic range query or CpG IDs
+                       : When directly running the script, CpG ids are separated by commas. For e.g.: "--q cg1232,cg54324b"
+
+                For e.g.:
+                    1) python --h dnaMeth.h5 --s a,b,c --q cg123,cg5343
+                    2) python --h dnaMeth.h5 --s a,b,c --q chr17:3434-5837403
+                    3) python --h dnaMeth.h5 --validate 
+
+    Output: Returns a 2-D matrix of dimension n_query_sites X n_query_samples where the input query sample order is preserved.
+          : For genomic range query, n_query_sites will depend on the input query genomic range and if any values are present
+            for the input range in the HDF5 file.
+
+          Note: If the returned matrix has -1.0 for some samples, it means no methylation values were available for those samples.
 """
 
 import h5py
