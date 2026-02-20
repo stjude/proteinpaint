@@ -4,7 +4,16 @@ import { get_samples } from '#src/termdb.sql.js'
 //import { createGenerator } from 'ts-json-schema-generator'
 //import type { SchemaGenerator } from 'ts-json-schema-generator'
 //import path from 'path'
-import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, DbRows, DbValue, ClassificationType } from '#types'
+import type {
+	ChatRequest,
+	ChatResponse,
+	LlmConfig,
+	RouteApi,
+	DbRows,
+	DbValue,
+	ClassificationType,
+	FilterTerm
+} from '#types'
 import { ChatPayload } from '#types/checkers'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
@@ -1209,24 +1218,23 @@ function sortSameCategoricalFilterKeys(filters: any[], ds: any): any {
 	const keys = filters.map(f => f.term)
 	if (new Set(keys).size == keys.length) return { filters: filters, html: html } // All filter terms have separate keys
 
-	const seen = new Set()
-	const duplicates = new Set()
+	const seen = new Set<string>()
+	const categorical_filter_terms_with_multiple_fields = new Set<string>()
 
 	for (const item of filters) {
-		if (seen.has(item.term)) duplicates.add(item.term)
+		if (seen.has(item.term)) categorical_filter_terms_with_multiple_fields.add(item.term)
 		else seen.add(item.term)
 	}
-	//mayLog("duplicates:",duplicates)
+	//mayLog("categorical_filter_terms_with_multiple_fields:",categorical_filter_terms_with_multiple_fields)
 
-	const multiple_fields_keys: any[] = []
-	for (const key of duplicates) {
+	const multiple_fields_keys: { key: string; categories: string[] }[] = []
+	for (const key of categorical_filter_terms_with_multiple_fields) {
 		const term = ds.cohort.termdb.q.termjsonByOneid(key)
 		if (!term) {
 			html += 'invalid filter id:' + key
 		} else {
 			if (term.type == 'categorical') {
 				const multiple_fields = filters.filter(x => x.term == key)
-				mayLog('multiple_fields:', multiple_fields)
 				multiple_fields_keys.push({ key: key, categories: multiple_fields.map(f => f.category) })
 			}
 		}
@@ -1234,16 +1242,18 @@ function sortSameCategoricalFilterKeys(filters: any[], ds: any): any {
 	//mayLog("multiple_fields_keys:", multiple_fields_keys)
 	// Try to preserve the order of the original filter terms
 
-	const sorted_filter: any[] = []
-	const seen2 = new Set()
+	const sorted_filter: FilterTerm[] = []
+	const seen2 = new Set<string>()
 	for (const f of filters) {
 		const repeated_term = multiple_fields_keys.find(x => x.key == f.term)
 		if (!repeated_term) {
 			sorted_filter.push(f)
 		} else {
 			if (!seen2.has(f.term)) {
-				const new_filter_term: any = { term: f.term }
-				new_filter_term.category = repeated_term.categories
+				const new_filter_term: { term: string; category: string[] } = {
+					term: f.term,
+					category: repeated_term.categories
+				}
 				seen2.add(f.term)
 				sorted_filter.push(new_filter_term)
 			}
