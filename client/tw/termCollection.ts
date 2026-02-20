@@ -7,6 +7,7 @@ import type {
 	TermCollectionTWValues
 } from '#types'
 import { type TwOpts, TwBase } from './TwBase'
+import { getHslPalette } from '#dom'
 
 export type TermCollectionTransformedValue = {
 	label: string
@@ -33,19 +34,30 @@ export class TermCollection {
 	// - does not have to construct, but may require forced type casting in consumer code
 	static fill(term: RawTermCollection, opts: TwOpts = {}) {
 		if (term instanceof TermCollection) return
-		if (!term.termlst && opts.vocabApi) {
-			const collection = opts.vocabApi.termdbConfig.numericTermCollections.find(
-				c => c.name == term.id || c.name == term.name || term.name.includes(c.name)
-			)
-			if (!collection) throw `missing termCollection term.lst and termdbConfig.numericTermCollection[term.id]`
-			term.termlst = collection.termIds
-		}
+		const collection = opts.vocabApi.termdbConfig.numericTermCollections.find(
+			c => c.name === term.collectionId || c.name == term.id || c.name == term.name || term.name.includes(c.name)
+		)
+		if (!collection) throw `missing termCollection term.lst and termdbConfig.numericTermCollection[term.id]`
+		if (!term.termlst && opts.vocabApi) term.termlst = collection.termIds
 		if (!term.propsByTermId) {
-			const details = /*opts.details ||*/ opts.vocabApi?.termdbConfig?.numericTermCollections?.find(ntc =>
-				term.name.includes(ntc.name)
-			)
-			if (details?.propsByTermId) term.propsByTermId = details.propsByTermId
+			if (collection?.propsByTermId) term.propsByTermId = collection.propsByTermId
+			else term.propsByTermId = {}
 		}
+		const pt = term.propsByTermId
+		const values = Object.values(pt)
+		const usedColors = values.filter(p => p.color).map(p => p.color)
+		// avoid color reuse if only a few terms have preassigned colors,
+		// by forcing all terms to use the same color palette scale,
+		// see getHslPalette() TODO on how it may have a usedColors argument
+		const reassignColor = usedColors.length < values.length
+		const hslPalette = getHslPalette(values.length - usedColors.length)
+		for (const [i, t] of collection.termIds.entries()) {
+			if (!pt[t]) pt[t] = {}
+			if (!pt[t].color || reassignColor) {
+				pt[t].color = hslPalette[i]
+			}
+		}
+
 		TermCollection.validate(term)
 	}
 

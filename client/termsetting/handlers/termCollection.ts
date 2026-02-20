@@ -56,16 +56,11 @@ export class TermCollectionHandler extends HandlerBase implements Handler {
 				const q = self.q as TermCollectionQValues
 				const trs = groupDiv.select('table').select('tbody').node().querySelectorAll('tr')
 
-				self.term.termlst = terms.filter((term, i) => {
-					const checked = trs[i].querySelectorAll('td')[1].querySelector('input')?.checked
-					return checked === true
-				})
+				self.term.termlst = terms.filter((term, i) => trs[i].querySelectorAll('td')[1].querySelector('input')?.checked)
+				console.log(59, self.term.termlst)
 
 				q.numerators = terms
-					.filter((term, i) => {
-						const checked = trs[i].querySelectorAll('td')[3].querySelector('input')?.checked
-						return checked === true
-					})
+					.filter((term, i) => trs[i].querySelectorAll('td')[3].querySelector('input')?.checked)
 					.map(t => t.id)
 
 				self.api.runCallback()
