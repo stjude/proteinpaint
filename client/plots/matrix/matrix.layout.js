@@ -336,15 +336,17 @@ export function setLabelsAndScales() {
 	if (this.cnvValues.length) {
 		if (s.cnvValues.cutoffMode == 'fixed') {
 			this.cnvValues = this.cnvValues.filter(v => v >= s.cnvValues.min && v <= s.cnvValues.max).sort((a, b) => a - b)
-		}
-		if (s.cnvValues.cutoffMode == 'percentile' || s.cnvValues.cutoffMode == 'auto') {
+			//Need to include the input value for the user
+			if (this.cnvValues[0] != s.cnvValues.min) this.cnvValues.unshift(s.cnvValues.min)
+			if (this.cnvValues[this.cnvValues.length - 1] != s.cnvValues.max) this.cnvValues.push(s.cnvValues.max)
+		} else if (s.cnvValues.cutoffMode == 'percentile' || s.cnvValues.cutoffMode == 'auto') {
 			/** Users enter the percentile as whole number.
 			 * Convert to a fraction for removeOutliers.*/
 			let maxPercentile = s.cnvValues.cutoffMode == 'auto' ? s.cnvValues.defaultPercentile : s.cnvValues.percentile
 			maxPercentile = maxPercentile / 100
 			const minPercentile = roundValueAuto(1 - maxPercentile)
 			this.cnvValues = removeOutliers(this.cnvValues, { minPercentile, maxPercentile, baseValue: 0 })
-		}
+		} else throw new Error(`Invalid cnvValues cutoffMode: ${s.cnvValues.cutoffMode}`)
 		const minLoss = this.cnvValues[0] <= 0 ? this.cnvValues[0] : undefined
 		const maxGain =
 			this.cnvValues[this.cnvValues.length - 1] >= 0 ? this.cnvValues[this.cnvValues.length - 1] : undefined
@@ -384,7 +386,7 @@ export function setLabelsAndScales() {
 					cnvLegendDomainRange = getInterpolatedDomainRange({
 						absMin: 0,
 						absMax,
-						totalNumSteps: 100,
+						totalNumSteps: 10,
 						negInterpolator: minLoss !== undefined && interpolateBlues,
 						posInterpolator: maxGain !== undefined && interpolateReds,
 						// force this middleColor to white, knowing that interpolateBlues and interpolateReds,

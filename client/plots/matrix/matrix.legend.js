@@ -165,6 +165,35 @@ export function getLegendData(legendGroups, refs, self) {
 							termid: 'CNV'
 						}
 					}
+					const numericInputs = {
+						cutoffMode: s.cnvValues.cutoffMode,
+						defaultPercentile: s.cnvValues.defaultPercentile,
+						percentile: s.cnvValues.percentile,
+						callback: async obj => {
+							const cValues = self.config.settings.matrix.cnvValues
+							if (obj.cutoffMode == 'fixed') {
+								// When first changed, need to set a value for comparison.
+								if (cValues.min == null) cValues.min = domain[0]
+								if (cValues.max == null) cValues.max = domain[domain.length - 1]
+								// Note: the color scale only accepts one change at a time.
+								if (obj.min != cValues.min) obj.max = Math.abs(obj.min)
+								else obj.min = -obj.max
+							}
+							self.config.settings.matrix.cnvValues = {
+								defaultPercentile: self.config.settings.matrix.cnvValues.defaultPercentile,
+								cutoffMode: obj.cutoffMode,
+								min: obj.min,
+								max: obj.max,
+								percentile: obj.percentile
+							}
+							await self.app.dispatch({
+								type: 'plot_edit',
+								id: self.opts.id,
+								config: self.config
+							})
+						}
+					}
+
 					legend.values.CNV_gain_loss = {
 						key: $id,
 						label: 'Gain and Loss',
@@ -179,25 +208,7 @@ export function getLegendData(legendGroups, refs, self) {
 						labels: { left: 'Loss', right: 'Gain' },
 						parents: [Object.assign(setLegendAttr(loss), loss), Object.assign(setLegendAttr(gain), gain)],
 						samples: new Set([...gain.samples, ...loss.samples]),
-						numericInputs: {
-							cutoffMode: s.cnvValues.cutoffMode,
-							defaultPercentile: s.cnvValues.defaultPercentile,
-							percentile: s.cnvValues.percentile,
-							callback: async obj => {
-								self.config.settings.matrix.cnvValues = {
-									defaultPercentile: self.config.settings.matrix.cnvValues.defaultPercentile,
-									cutoffMode: obj.cutoffMode,
-									min: obj.min,
-									max: obj.max,
-									percentile: obj.percentile
-								}
-								await self.app.dispatch({
-									type: 'plot_edit',
-									id: self.opts.id,
-									config: self.config
-								})
-							}
-						}
+						numericInputs
 					}
 					delete legend.values[gain.key]
 					delete legend.values[loss.key]

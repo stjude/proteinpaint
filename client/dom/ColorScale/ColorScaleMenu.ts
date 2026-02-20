@@ -13,15 +13,15 @@ export class ColorScaleMenu {
 	numInputCallback?: (f?: { cutoffMode: CutoffMode; min?: number; max?: number; percentile?: number }) => void
 	private tip = new Menu({ padding: '2px' })
 	constructor(opts: ColorScaleMenuOpts) {
-		this.domain = opts.domain
+		this.domain = [...opts.domain] // Create a copy of the domain to prevent mutating the original array when changing values in fixed cutoff mode
 		this.colors = opts.colors
 
 		if (opts.setNumbersCallback) {
 			this.numInputCallback = opts.setNumbersCallback
 			this.cutoffMode = opts.cutoffMode
 			this.default = {
-				min: opts.domain[0],
-				max: opts.domain[opts.domain.length - 1]
+				min: this.domain[0],
+				max: this.domain[this.domain.length - 1]
 			}
 			if (opts.percentile) {
 				/** Both opts are defined in ColorScale.ts even if

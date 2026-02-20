@@ -185,12 +185,8 @@ export function removeInterpolatedOutliers(
 export function computeTicks(domainRange: number, targetIntervals: number): number {
 	if (!isFinite(domainRange) || domainRange === 0) return 1
 	const intervals = Math.max(1, targetIntervals ?? 4)
-	const rawStep = domainRange / intervals
+	const step = domainRange / intervals
 
-	if (!isFinite(rawStep) || rawStep <= 0) return 1
-	const pow10 = Math.pow(10, Math.floor(Math.log10(rawStep)))
-	const norm = rawStep / pow10 // in [1, 10)
-	const nice = norm <= 1 ? 1 : norm <= 3 ? 3 : norm <= 5 ? 5 : 10
-	const niceStep = nice * pow10 >= 1 ? nice * pow10 : 1
-	return niceStep
+	if (!isFinite(step) || step <= 0) return 1
+	return step <= 2 ? 2 : step <= 3 ? 3 : 5
 }
