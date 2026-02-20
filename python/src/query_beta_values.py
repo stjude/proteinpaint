@@ -66,7 +66,7 @@ def validate_dnameth_hdf5(input_hdf5_file: str) -> list[str]:
     Returns:
         List[str]: sample names from /meta/samples/names
     """
-    print("Validating the HDF structure...", flush=True)
+    #print("Validating the HDF structure...", flush=True)
     with h5py.File(input_hdf5_file, "r") as h5:
         required_datasets = [
             "/beta/values",
@@ -314,7 +314,7 @@ class Query:
             num_sites_per_chrom = json.loads(h5.attrs['chrom_lengths'])
             # check if self.q_chrom doesn't exist
             if query_chrom not in num_sites_per_chrom:
-                raise KeyError(f"{query_chrom} does not exist in the HDF5 file provided.")
+                raise KeyError(f"{query_chrom} not found in HDF5 file.")
 
             # Find rows that correspond to the query chromosome
             all_chromosomes = list(num_sites_per_chrom.keys())
@@ -324,8 +324,8 @@ class Query:
 
             row_start, row_end = self.get_row_ranges_for_chrom(query_chrom, all_chromosomes, num_sites_pref_sum)
             target_start_pos = start_pos[row_start: row_end]
-            print(f"{query_chrom}: [{target_start_pos[0]}, {target_start_pos[-1]}]")
-            print(f"row range: [{row_start}, {row_end})")
+            #print(f"{query_chrom}: [{target_start_pos[0]}, {target_start_pos[-1]}]")
+            #print(f"row range: [{row_start}, {row_end})")
 
 
             # Find the genomic range in HDF5 that is in the query range
@@ -341,7 +341,7 @@ class Query:
 
             # For single point query, the genomic position must exist in the data
             if query_start == query_end:
-                if left >= total_pos or query_start < target_start_pos[left]:
+                if left >= num_sites_per_chrom[query_chrom] or query_start < target_start_pos[left]:
                     raise ValueError(f"{query_chrom}:{query_start} is not within the genomic bounds [{target_start_pos[0]}, {target_start_pos[-1]}] !")
                 if query_start != target_start_pos[left]:
                     raise ValueError(f"No DNA methylation data for {query_chrom}:{query_start} !!!")
@@ -366,7 +366,11 @@ class Query:
                 print("####################")
 
             sample_to_col = dict(zip(names, cols))
-            col_idx = [sample_to_col[s] for s in query_samples]
+            col_idx = []
+            for s in query_samples:
+                if s not in sample_to_col:
+                    raise KeyError(f"Sample(s) not found in HDF5 file.")
+                col_idx.append(sample_to_col[s])
             dset = h5["/beta/values"]
             query_beta = dset[left:right, :]
             query_beta = query_beta[:, col_idx]
@@ -385,9 +389,9 @@ def main(hdf_file, query_samples, query_string, verbose=False):
 
     # Process based on query type
     if query_info['type'] == 'genomic':
-        print(f"Processing genomic query:")
-        print(f"  Chromosome: {query_info['chrom']}")
-        print(f"  Range: {query_info['start']}-{query_info['end']}")
+        #print(f"Processing genomic query:")
+        #print(f"  Chromosome: {query_info['chrom']}")
+        #print(f"  Range: {query_info['start']}-{query_info['end']}")
         q_chrom = query_info['chrom']
         q_start = query_info['start']
         q_end = query_info['end']
@@ -399,15 +403,15 @@ def main(hdf_file, query_samples, query_string, verbose=False):
         print(json.dumps(result))
 
     elif query_info['type'] == 'cpg':
-        print(f"Processing CpG query:")
-        print(f"  CpG IDs(first 5): {query_info['cpg_ids'][:5]}")
-        print(f"  Count: {len(query_info['cpg_ids'])}")
+        #print(f"Processing CpG query:")
+        #print(f"  CpG IDs(first 5): {query_info['cpg_ids'][:5]}")
+        #print(f"  Count: {len(query_info['cpg_ids'])}")
 
         # Call your CpG query function
-        start_t = time.time()
+        #start_t = time.time()
         betavals = q.process_cpg_queries(query_samples_list, query_info['cpg_ids'], verbose)
-        end_t = time.time()
-        print(f"Query time: {end_t-start_t:.4f} secs")
+        #end_t = time.time()
+        #print(f"Query time: {end_t-start_t:.4f} secs")
         #print(betavals)
         # Convert numpy array to list for JSON serialization
         result = betavals.tolist()
@@ -497,7 +501,7 @@ def validate_inputs(hdf_file, query_samples, query_string, validate):
         print("Error: --h (HDF5 file) is required.", file=sys.stderr)
         sys.exit(1)
     if not os.path.exists(hdf_file):
-        print(f"Error: HDF5 file {hdf_file} does not exist!", file=sys.stderr)
+        print(f"Error: {hdf_file}: HDF5 file not found!", file=sys.stderr)
         sys.exit(1)
     if not validate:
         if not query_samples and not query_string:
