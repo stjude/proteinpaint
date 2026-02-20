@@ -384,9 +384,9 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 
 		// see if input is dbsnp id
 		const dbsnp = await dofetch3('snp', { body: { byName: true, genome: arg.genome.name, lst: [v] } })
-		if (dbsnp.error) throw dbsnp.error
-		if (dbsnp.results.length) {
+		if (dbsnp?.results?.length) {
 			// display hits in menu
+			if (dbsnp.error) throw dbsnp.error
 			displayVariantHits(tip, dbsnp.results)
 			return
 		}
