@@ -280,12 +280,12 @@ export class ListSamples {
 				} else this.addRowValue(s, this.t1, row)
 			} else continue //skip rows with no term value
 			if (this.t2) {
-				//See comment above about 'value' property
-				const term2Sample = s[this.t2.$id!]
-				if (this.t2?.q?.hiddenValues && this.t2?.q.hiddenValues[term2Sample?.['value']]) {
-					continue
-				}
-				if (term2Sample) this.addRowValue(s, this.t2, row)
+				if (!s[this.t2.$id!]) continue
+				this.addRowValue(s, this.t2, row)
+			}
+			if (this.t0) {
+				if (!s[this.t0.$id!]) continue
+				this.addRowValue(s, this.t0, row)
 			}
 			rows.push(row)
 		}
@@ -294,6 +294,7 @@ export class ListSamples {
 		const columns: TableColumn[] = [{ label: 'Sample' }]
 		this.addColValue(this.t1, columns)
 		if (this.t2) this.addColValue(this.t2, columns)
+		if (this.t0) this.addColValue(this.t0, columns)
 
 		return [rows, columns]
 	}

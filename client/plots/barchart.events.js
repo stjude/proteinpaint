@@ -601,9 +601,12 @@ export async function listSamples(arg) {
 	const rows = []
 	const termIsNumeric = isNumericTerm(self.config.term.term)
 	const term2isNumeric = self.config.term2 ? isNumericTerm(self.config.term2.term) : false
+	const term0isNumeric = self.config.term0 ? isNumericTerm(self.config.term0.term) : false
 	const termIsGv = self.config.term.term.type == 'geneVariant'
 	const term2isGv = self.config.term2?.term.type == 'geneVariant'
+	const term0isGv = self.config.term0?.term.type == 'geneVariant'
 	const term2isSurv = self.config.term2?.term.type == 'survival'
+	const term0isSurv = self.config.term0?.term.type == 'survival'
 	const termdbmclass = self.app.vocabApi.termdbConfig?.mclass
 	for (const sample of data.lst) {
 		const pass = mayFilterByGeneVariant(sample, self, geneVariant)
@@ -646,6 +649,27 @@ export async function listSamples(arg) {
 				row.push({ value })
 			}
 		}
+		// for now, duplicating if block for term2 and term0
+		// TODO: use dom/summary/ListSamples.ts
+		if (self.config.term0) {
+			const t0entry = sample[self.config.term0.$id]
+			if (!t0entry) continue
+			//Don't show hidden values in the results
+			if (self.config.term0.q?.hiddenValues && self.config.term0.q.hiddenValues[t0entry.value]) continue
+			if (term0isNumeric) {
+				const value = roundValueAuto(t0entry.value)
+				row.push({ value })
+			} else if (term0isGv) {
+				addGvRowVals(sample, self.config.term0, row, termdbmclass)
+			} else if (term0isSurv) {
+				const value = self.config.term0.term.values[t0entry.key].label
+				row.push({ value })
+			} else {
+				const label = self.config.term0.term.values?.[t0entry.value]?.label
+				const value = label || t0entry.value
+				row.push({ value })
+			}
+		}
 		rows.push(row)
 	}
 
@@ -661,6 +685,13 @@ export async function listSamples(arg) {
 			addGvCols(self.config.term2, columns)
 		} else {
 			columns.push({ label: self.config.term2.term.name })
+		}
+	}
+	if (self.config.term0) {
+		if (term0isGv) {
+			addGvCols(self.config.term0, columns)
+		} else {
+			columns.push({ label: self.config.term0.term.name })
 		}
 	}
 
