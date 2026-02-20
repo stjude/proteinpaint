@@ -2777,13 +2777,15 @@ function setLengendActions(self) {
 			// when the term has customized groupsetting
 			return
 		}
-		if (event.target.nodeName == 'rect') select(event.target).style('stroke', 'blue').style('cursor', 'pointer')
+		if (event.target.nodeName == 'rect') select(event.target).style('cursor', 'pointer')
 		else select(event.target).style('fill', 'blue').style('cursor', 'pointer')
 	}
 
 	self.legendLabelMouseout = event => {
-		if (event.target.nodeName == 'rect') select(event.target).style('stroke', '#aaa')
-		else select(event.target).style('fill', '')
+		// Commenting out for reference. Borders for mouse events are not desired.
+		// if (event.target.nodeName == 'rect') select(event.target).style('stroke', '#aaa')
+		// else
+		select(event.target).style('fill', '')
 	}
 
 	self.legendLabelMouseup = event => {
