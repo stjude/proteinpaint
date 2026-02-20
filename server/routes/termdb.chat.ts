@@ -4,7 +4,16 @@ import { get_samples } from '#src/termdb.sql.js'
 //import { createGenerator } from 'ts-json-schema-generator'
 //import type { SchemaGenerator } from 'ts-json-schema-generator'
 //import path from 'path'
-import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, DbRows, DbValue, ClassificationType } from '#types'
+import type {
+	ChatRequest,
+	ChatResponse,
+	LlmConfig,
+	RouteApi,
+	DbRows,
+	DbValue,
+	ClassificationType,
+	FilterTerm
+} from '#types'
 import { ChatPayload } from '#types/checkers'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
@@ -1204,46 +1213,45 @@ function removeLastOccurrence(str: string, word: string): string {
 	}
 }
 
-function sort_same_categorical_filter_keys(filters: any[], ds: any): any {
+function sortSameCategoricalFilterKeys(filters: any[], ds: any): any {
 	let html = ''
 	const keys = filters.map(f => f.term)
 	if (new Set(keys).size == keys.length) return { filters: filters, html: html } // All filter terms have separate keys
 
-	const seen = new Set()
-	const duplicates = new Set()
+	const seen = new Set<string>()
+	const categorical_filter_terms_with_multiple_fields = new Set<string>()
 
 	for (const item of filters) {
-		if (seen.has(item.term)) duplicates.add(item.term)
+		if (seen.has(item.term)) categorical_filter_terms_with_multiple_fields.add(item.term)
 		else seen.add(item.term)
 	}
-	//mayLog("duplicates:",duplicates)
 
-	const multiple_fields_keys: any[] = []
-	for (const key of duplicates) {
+	const multiple_fields_keys: { key: string; categories: string[] }[] = []
+	for (const key of categorical_filter_terms_with_multiple_fields) {
 		const term = ds.cohort.termdb.q.termjsonByOneid(key)
 		if (!term) {
-			html += 'invalid filter id: ' + key
+			html += 'invalid filter id:' + key
 		} else {
 			if (term.type == 'categorical') {
 				const multiple_fields = filters.filter(x => x.term == key)
-				mayLog('multiple_fields:', multiple_fields)
 				multiple_fields_keys.push({ key: key, categories: multiple_fields.map(f => f.category) })
 			}
 		}
 	}
-	//mayLog("multiple_fields_keys:", multiple_fields_keys)
-	// Try to preserve the order of the original filter terms
 
-	const sorted_filter: any[] = []
-	const seen2 = new Set()
+	// Try to preserve the order of the original filter terms
+	const sorted_filter: FilterTerm[] = []
+	const seen2 = new Set<string>()
 	for (const f of filters) {
 		const repeated_term = multiple_fields_keys.find(x => x.key == f.term)
 		if (!repeated_term) {
 			sorted_filter.push(f)
 		} else {
 			if (!seen2.has(f.term)) {
-				const new_filter_term: any = { term: f.term }
-				new_filter_term.category = repeated_term.categories
+				const new_filter_term: { term: string; category: string[] } = {
+					term: f.term,
+					category: repeated_term.categories
+				}
 				seen2.add(f.term)
 				sorted_filter.push(new_filter_term)
 			}
@@ -1252,16 +1260,18 @@ function sort_same_categorical_filter_keys(filters: any[], ds: any): any {
 	return { filters: sorted_filter, html: html }
 }
 
-function validate_filter(filters: any[], ds: any, group_name: string): any {
+function validate_filter(filters: FilterTerm[], ds: any, group_name: string): any {
 	if (!Array.isArray(filters)) throw 'filter is not array'
-	const sorted_filters = sort_same_categorical_filter_keys(filters, ds)
-	let filter_result: any = { html: sorted_filters.html }
+	const sorted_filters = sortSameCategoricalFilterKeys(filters, ds)
+	let filter_result: { simplefilter?: any; html: string } = { html: sorted_filters.html }
 	if (sorted_filters.filters.length <= 2) {
 		// If number of filter terms <=2 then simply a single iteration of generate_filter_term() is sufficient
-		filter_result = generate_filter_term(sorted_filters.filters, ds)
+		const generated = generate_filter_term(sorted_filters.filters, ds)
+		filter_result.simplefilter = generated.simplefilter
+		filter_result.html += generated.html
 	} else {
 		if (sorted_filters.filters.length > num_filter_cutoff) {
-			filter_result.html =
+			filter_result.html +=
 				'For now, the maximum number of filter terms supported through the chatbot is ' + num_filter_cutoff
 			if (group_name.length > 0) {
 				// Group name is blank for summary filter, this is case for groups
@@ -1307,11 +1317,7 @@ function generate_filter_term(filters: any, ds: any) {
 						// Array of categories
 						const categories: any[] = []
 						for (const category of f.category) {
-							let cat: any
-							for (const ck in term.values) {
-								if (ck == category) cat = ck
-								else if (term.values[ck].label == category) cat = ck
-							}
+							const cat = findCategoryKey(term.values, category)
 							if (!cat) invalid_html += 'invalid category from ' + JSON.stringify(f)
 							else {
 								categories.push({ key: cat })
@@ -1327,20 +1333,18 @@ function generate_filter_term(filters: any, ds: any) {
 						})
 					} else {
 						// Single string category
-						let cat: any
-						for (const ck in term.values) {
-							if (ck == f.category) cat = ck
-							else if (term.values[ck].label == f.category) cat = ck
-						}
+						const cat = findCategoryKey(term.values, f.category)
 						if (!cat) invalid_html += 'invalid category from ' + JSON.stringify(f)
-						// term and category validated
-						localfilter.lst.push({
-							type: 'tvs',
-							tvs: {
-								term,
-								values: [{ key: cat }]
-							}
-						})
+						else {
+							// term and category validated
+							localfilter.lst.push({
+								type: 'tvs',
+								tvs: {
+									term,
+									values: [{ key: cat }]
+								}
+							})
+						}
 					}
 				} else if (term.type == 'float' || term.type == 'integer') {
 					const numeric: any = {
@@ -1374,6 +1378,13 @@ function generate_filter_term(filters: any, ds: any) {
 		//invalid_html += 'Connection (and/or) between the filter terms is not clear, please try to rephrase your question'
 	}
 	return { simplefilter: localfilter, html: invalid_html }
+}
+
+function findCategoryKey(termValues: Record<string, any>, category: string): string | undefined {
+	for (const ck in termValues) {
+		if (ck === category || termValues[ck].label === category) return ck
+	}
+	return undefined
 }
 
 async function parse_geneset_db(genedb: string) {
