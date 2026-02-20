@@ -1204,7 +1204,7 @@ function removeLastOccurrence(str: string, word: string): string {
 	}
 }
 
-function sort_same_categorical_filter_keys(filters: any[], ds: any): any {
+function sortSameCategoricalFilterKeys(filters: any[], ds: any): any {
 	let html = ''
 	const keys = filters.map(f => f.term)
 	if (new Set(keys).size == keys.length) return { filters: filters, html: html } // All filter terms have separate keys
@@ -1222,7 +1222,7 @@ function sort_same_categorical_filter_keys(filters: any[], ds: any): any {
 	for (const key of duplicates) {
 		const term = ds.cohort.termdb.q.termjsonByOneid(key)
 		if (!term) {
-			html += 'invalid filter id: ' + key
+			html += 'invalid filter id:' + key
 		} else {
 			if (term.type == 'categorical') {
 				const multiple_fields = filters.filter(x => x.term == key)
@@ -1254,14 +1254,16 @@ function sort_same_categorical_filter_keys(filters: any[], ds: any): any {
 
 function validate_filter(filters: any[], ds: any, group_name: string): any {
 	if (!Array.isArray(filters)) throw 'filter is not array'
-	const sorted_filters = sort_same_categorical_filter_keys(filters, ds)
+	const sorted_filters = sortSameCategoricalFilterKeys(filters, ds)
 	let filter_result: any = { html: sorted_filters.html }
 	if (sorted_filters.filters.length <= 2) {
 		// If number of filter terms <=2 then simply a single iteration of generate_filter_term() is sufficient
-		filter_result = generate_filter_term(sorted_filters.filters, ds)
+		const generated = generate_filter_term(sorted_filters.filters, ds)
+		filter_result.simplefilter = generated.simplefilter
+		filter_result.html += generated.html
 	} else {
 		if (sorted_filters.filters.length > num_filter_cutoff) {
-			filter_result.html =
+			filter_result.html +=
 				'For now, the maximum number of filter terms supported through the chatbot is ' + num_filter_cutoff
 			if (group_name.length > 0) {
 				// Group name is blank for summary filter, this is case for groups
