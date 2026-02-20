@@ -312,7 +312,7 @@ export async function run_chat_pipeline(
 	return ai_output_json
 }
 
-async function call_ollama(prompt: string, model_name: string, apilink: string) {
+async function call_ollama_llm(prompt: string, model_name: string, apilink: string) {
 	const temperature = 0.01
 	const top_p = 0.95
 	const timeout = 200000
@@ -390,7 +390,7 @@ async function route_to_appropriate_llm_provider(template: string, llm: LlmConfi
 		response = await call_sj_llm(template, llm.modelName, llm.api)
 	} else if (llm.provider == 'ollama') {
 		// Ollama server
-		response = await call_ollama(template, llm.modelName, llm.api)
+		response = await call_ollama_llm(template, llm.modelName, llm.api)
 	} else {
 		// Will later add support for azure server also
 		throw 'Unknown LLM provider'
@@ -398,6 +398,77 @@ async function route_to_appropriate_llm_provider(template: string, llm: LlmConfi
 	// Some models (e.g. llama3-8B) wrap JSON in markdown fences and/or
 	// append explanations. Extract the first balanced JSON object or array.
 	return extractJson(response)
+}
+
+async function route_to_appropriate_embedding_provider(templates: string[], llm: LlmConfig): Promise<string> {
+	let response: string
+	if (llm.provider == 'SJ') {
+		// Local SJ server
+		response = await call_sj_embedding(templates, llm.embeddingModelName, llm.api)
+	} else if (llm.provider == 'ollama') {
+		// Ollama server
+		response = await call_ollama_embedding(templates, llm.embeddingModelName, llm.api)
+	} else {
+		// Will later add support for azure server also
+		throw 'Unknown LLM provider'
+	}
+	// Some models (e.g. llama3-8B) wrap JSON in markdown fences and/or
+	// append explanations. Extract the first balanced JSON object or array.
+	return extractJson(response)
+}
+
+async function call_ollama_embedding(prompts: string[], model_name: string, apilink: string) {
+	const timeout = 200000
+	const payload = {
+		model: model_name,
+		input: prompts
+	}
+
+	try {
+		const result = await ezFetch(apilink + '/api/embed', {
+			method: 'POST',
+			body: payload, // ezfetch automatically stringifies objects
+			headers: { 'Content-Type': 'application/json' },
+			timeout: { request: timeout } // ezfetch accepts milliseconds directly
+		})
+		if (result && result.embeddings && result.embeddings.length > 0) {
+			if (result.embeddings.length != prompts.length) throw 'Number of returned embeddings does not match input'
+			return result.embeddings
+		} else {
+			throw 'Error: Received an unexpected response format:' + result
+		}
+	} catch (error) {
+		throw 'Ollama API request failed:' + error
+	}
+}
+
+async function call_sj_embedding(prompts: string[], model_name: string, apilink: string) {
+	const payload = {
+		inputs: [
+			{
+				model_name: model_name,
+				inputs: { text: prompts }
+			}
+		]
+	}
+
+	const timeout = 200000
+	try {
+		const response = await ezFetch(apilink, {
+			method: 'POST',
+			body: payload, // ezfetch automatically stringifies objects
+			headers: { 'Content-Type': 'application/json' },
+			timeout: { request: timeout } // ezfetch accepts milliseconds directly
+		})
+		if (response.outputs && response.outputs[0] && response.outputs[0].embeddings) {
+			const result = response.outputs[0].embeddings
+			return result
+		} else {
+			throw 'Error: Received an unexpected response format:' + response
+		}
+	} catch (error) {
+		throw 'SJ API embedding request failed:' + error
+	}
 }
 
 /** Extract the first balanced JSON object or array from a string. */
@@ -741,6 +812,9 @@ async function extract_summary_terms(
 	//}
 	//const generator: SchemaGenerator = createGenerator(SchemaConfig)
 	//const Schema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // This will be generated at server startup later
+
+	const embeddings = route_to_appropriate_embedding_provider(dataset_db_output.rag_docs, llm)
+	mayLog('embeddings:', embeddings)
 	const Schema = {
 		$schema: 'http://json-schema.org/draft-07/schema#',
 		$ref: '#/definitions/SummaryType',
