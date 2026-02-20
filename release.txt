@@ -1,0 +1,2 @@
+Fixes:
+- sample list should work when dragging a violin range (#4227)
