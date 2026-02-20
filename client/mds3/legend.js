@@ -868,11 +868,8 @@ function may_create_cnv(tk, block) {
 		.style('font-size', '.9em')
 		.attr('class', 'sja_clbtext')
 		.on('click', () => {
-			// show menu above prompt
-			const p = R.cnvFilterPrompt.node().getBoundingClientRect()
-			const x = p.left + window.scrollX
-			const y = p.top + window.scrollY
-			menu.clear().show(x, y, false, false, false)
+			// no longer show above due to https://gdc-ctds.atlassian.net/browse/SV-2757
+			menu.clear().showunder(R.cnvFilterPrompt.node())
 			// render cnv config
 			const arg = {
 				holder: menu.d.append('div'),
