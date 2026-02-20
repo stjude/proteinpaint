@@ -176,7 +176,21 @@ export class ListSamples {
 		return tvsEntry
 	}
 
-	createTvsRanges(tvs: any, termNum: number, key: string): any {
+	createTvsRanges(tvs: any, termNum: number, key: string): void {
+		if ((termNum == 1 || termNum == 2) && this.useRange) {
+			//May limit the range for the first term (i.e. violin brush)
+			tvs.ranges = [
+				{
+					start: this.start,
+					stop: this.end,
+					startinclusive: true,
+					stopinclusive: true,
+					startunbounded: false,
+					stopunbounded: false
+				}
+			]
+			return
+		}
 		const keyBin = this.bins[`term${termNum}`]?.[`${key}`]
 		const uncomputable = Object.entries(this[`t${termNum}`].term?.values ?? {}).find(
 			([_, v]: [string, any]) => v.label === key && v?.uncomputable
