@@ -196,6 +196,7 @@ export function getParentType(types, ds) {
 	if (!ids || ids.length == 0) return null
 	for (const id of ids) {
 		const typeObj = ds.cohort.termdb.sampleTypes[id]
+		if (!typeObj) continue
 		if (typeObj.parent_id == null) return id //this is the root type
 		//if my parent is in the list, then I am not the parent
 		if (ids.includes(typeObj.parent_id)) continue

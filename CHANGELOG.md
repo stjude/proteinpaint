@@ -11,6 +11,7 @@ Fixes
 - detect if the inputs option exists before using it to detect which terms to disable
 - include WT/Not Tested in summary plot data requests that use the termdb?for=matrix route
 - also render divide-by variable data when listing samples in barchart
+- sample list should work when dragging a violin range
 
 
 ## 2.170.12
