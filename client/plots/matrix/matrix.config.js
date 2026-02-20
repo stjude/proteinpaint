@@ -230,7 +230,7 @@ export async function getPlotConfig(opts = {}, app) {
 				}
 				if (tw.term?.type != 'samplelst' && tw.term?.type != 'termCollection') delete tw.term
 			}
-			promises.push(fillTermWrapper(tw, app.vocabApi))
+			promises.push(fillTermWrapper({ ...tw, q: { ...tw.q } }, app.vocabApi))
 		}
 		grp.lst = await Promise.all(promises)
 	}
