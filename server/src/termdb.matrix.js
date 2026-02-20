@@ -136,7 +136,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				throw `Too many genes submitted. Limit the total number of genes to ${maxGenesPerUser} or fewer.`
 			}
 			// for current pending requests from all users impacting the next request
-			if (numPendingQueriesAcrossUsers + geneVariantTws.length > maxPendingQueriesBeforeRejectingRequest) {
+			if (numPendingQueriesAcrossUsers + totalNumGenes > maxPendingQueriesBeforeRejectingRequest) {
 				// prevent PP server crash, out of memory issue
 				throw `The server is too busy, try again in a few minutes.`
 			}
