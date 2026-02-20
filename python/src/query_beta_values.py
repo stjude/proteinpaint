@@ -32,8 +32,8 @@
                        : When directly running the script, CpG ids are separated by commas. For e.g.: "--q cg1232,cg54324b"
 
                 For e.g.:
-                    1) python --h dnaMeth.h5 --s a,b,c --q cg123,cg5343
-                    2) python --h dnaMeth.h5 --s a,b,c --q chr17:3434-5837403
+                    1) python --h dnaMeth.h5 --s 1,3,2 --q cg123,cg5343
+                    2) python --h dnaMeth.h5 --s 1,3,2 --q chr17:3434-5837403
                     3) python --h dnaMeth.h5 --validate 
 
     Output: Returns a 2-D matrix of dimension n_query_sites X n_query_samples where the input query sample order is preserved.
@@ -87,7 +87,7 @@ def validate_dnameth_hdf5(input_hdf5_file: str) -> list[str]:
         probe_ids = h5["/meta/probe/probeID"]
         row_idx = h5["/meta/probe/row_idx"]
         col_idx = h5["/meta/samples/col_idx"]
-        sample_names_ds = h5["/meta/samples/names"]
+        sample_names_ds = h5["/meta/samples/names"].asstr()[:]
         starts = h5["/meta/start"]
 
         # Validate beta matrix 
@@ -129,12 +129,10 @@ def validate_dnameth_hdf5(input_hdf5_file: str) -> list[str]:
                 f"!= number of samples ({n_samples})"
             )
 
-        # Read sample names 
-        sample_names = [str(s.decode()) for s in sample_names_ds]
         # Sanity check: unique samples 
+        sample_names = [str(s) for s in sample_names_ds]
         if len(set(sample_names)) != len(sample_names):
             raise ValueError("Duplicate sample names detected")
-        print(f"First 10 samples: {sample_names[:10]}")
         return sample_names
 
 
@@ -210,7 +208,7 @@ class Query:
 
     def group_by_chunks(self, chunk_ids):
         """
-            input_list contains a sorted list of chunk_ids.
+            chun_ids contains a sorted list of chunk_ids.
             Returns a list of lists where the sublists contain group boundaries
         """
         arr = np.array(chunk_ids)
@@ -252,7 +250,7 @@ class Query:
             col_order = sorted(range(len(col_idx)), key=lambda i: col_idx[i])
 
             # define dset and get row chunk
-            dset = h5["beta"]["values"]
+            dset = h5["beta/values"]
             row_chunk = dset.chunks[0]
 
             # sort the row indices and get chunk ids for the query rows
@@ -344,25 +342,20 @@ class Query:
             # For single point query, the genomic position must exist in the data
             if query_start == query_end:
                 if left >= total_pos or query_start < target_start_pos[left]:
-                    print(f"{query_chrom}:{query_start} is not within the existing genomic bounds [{target_start_pos[0]}, {target_start_pos[-1]}] !")
-                    exit(1)
+                    raise ValueError(f"{query_chrom}:{query_start} is not within the genomic bounds [{target_start_pos[0]}, {target_start_pos[-1]}] !")
                 if query_start != target_start_pos[left]:
-                    print(f"No DNA methylation data for {query_chrom}:{query_start} !!!")
-                    exit(1)
+                    raise ValueError(f"No DNA methylation data for {query_chrom}:{query_start} !!!")
             else:
                 # out-of-boundary case
                 # left boundary
                 if left >= num_sites_per_chrom[query_chrom]:
-                   print(f"{query_chrom}:{query_start} is not within the bounds [{target_start_pos[0]}, {target_start_pos[-1]}] !")
-                   exit(1)
+                   raise ValueError(f"{query_chrom}:{query_start} is not within the genomic bounds [{target_start_pos[0]}, {target_start_pos[-1]}] !")
 
                 # right boundary
                 if right <= 0: 
-                    print(f"{query_chrom}:{query_end} is not within the bounds [{target_start_pos[0]}, {target_start_pos[-1]}] !")
-                    exit(1)
+                    raise ValueError(f"{query_chrom}:{query_end} is not within the genomic bounds [{target_start_pos[0]}, {target_start_pos[-1]}] !")
                 if left >= right:
-                    print(f"No DNA methylation data for the provided range {query_chrom}:[{query_start}, {query_end}] !!!")
-                    exit(1)
+                    raise ValueError(f"No DNA methylation data for the provided range {query_chrom}:[{query_start}, {query_end}] !!!")
 
 
             if verbose:
@@ -522,7 +515,8 @@ if __name__ == "__main__":
     validate_inputs(hdf_file, query_samples, query_string, validate)
 
     if validate:
-        validate_dnameth_hdf5(hdf_file)
+        samples = validate_dnameth_hdf5(hdf_file)
+        print(json.dumps(samples))
     else:
         main(hdf_file, query_samples, query_string, verbose)
 
