@@ -89,8 +89,9 @@ function sortTwLst(twa, twb) {
 	return a < b ? -1 : 1
 }
 
-export async function setData(_data) {
+export async function setData(signal, _data) {
 	const opts = this.currRequestOpts?.matrix || this.getMatrixRequestOpts(this.state)
+	opts.signal = signal
 	this.numTerms = opts.terms.length
 	opts.loadingDiv = this.chartType != 'hierCluster' && this.dom.loadingDiv
 	// const abortCtrl = new AbortController()

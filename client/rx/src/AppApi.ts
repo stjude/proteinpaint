@@ -99,6 +99,7 @@ export class AppApi {
 			this.#abortController.abort('stale sequenceId')
 			this.#abortController = undefined
 		}
+		this.#abortController = new AbortController()
 
 		try {
 			if (this.#middlewares.length) {

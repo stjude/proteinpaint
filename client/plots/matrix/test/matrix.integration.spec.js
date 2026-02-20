@@ -1244,10 +1244,6 @@ tape('avoid race condition', function (test) {
 		matrix.on('postRender.test', null)
 		matrix.Inner.app.vocabApi.origGetAnnotatedSampleData = matrix.Inner.app.vocabApi.getAnnotatedSampleData
 		matrix.Inner.app.vocabApi.getAnnotatedSampleData = async (opts, _refs = {}) => {
-			// set the signal before the sleep(), so that the app's current #abortController will be used;
-			// doing it after sleep() means that a later app.#abortController will be used, which makes
-			// this simulated race condition inaccurate
-			opts.signal = matrix.Inner.app.getAbortSignal()
 			const j = i
 			// immediately set i to zero before sleep(), so that the next dispatch() actually uses the updated i value
 			i = 0

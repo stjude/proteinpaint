@@ -125,8 +125,9 @@ export class ComponentApi {
 			if (current.action) this.#latestActionSequenceId = current.action.sequenceId
 			if (this.#abortController) {
 				this.#abortController.abort('stale sequenceId')
-				this.#abortController = undefined //new AbortController()
+				this.#abortController = undefined
 			}
+			this.#abortController = new AbortController()
 
 			if (self.mainArg == 'state') {
 				// some components may require passing state to its .main() method,

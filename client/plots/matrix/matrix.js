@@ -156,6 +156,9 @@ export class Matrix extends PlotBase {
 	}
 
 	async main() {
+		// must set signal before any async calls and passed as argument to abortable steps like fetch(),
+		// must not attach or use as this.signal since that reference may change between async steps
+		const signal = this.app.getAbortSignal()
 		try {
 			this.config = await this.getMutableConfig()
 			if (this.mayRequireToken()) return
@@ -182,7 +185,7 @@ export class Matrix extends PlotBase {
 				const promises = []
 				// get the data
 				if (this.setHierClusterData) promises.push(this.setHierClusterData())
-				promises.push(this.setData())
+				promises.push(this.setData(signal)) // pass signal as argument here
 				this.dom.loadingDiv.html('Processing data ...')
 				await Promise.all(promises)
 				const warnings = this.data.warnings.join('\n')

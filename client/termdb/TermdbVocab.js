@@ -752,6 +752,7 @@ export class TermdbVocab extends Vocab {
     tw.term.values={}
     */
 	async getAnnotatedSampleData(opts, _refs = {}) {
+		const signal = opts.signal || this.app?.getAbortSignal?.()
 		// may check against required auth credentials for the server route
 		const headers = await this.mayGetAuthHeaders('termdb')
 		// unlike scatter and violin, the matrix plot will NOT display anything
@@ -792,7 +793,6 @@ export class TermdbVocab extends Vocab {
 
 		const warnings = []
 		const frozenEmptyObj = Object.freeze({})
-		const signal = opts.signal || this.app?.getAbortSignal?.()
 
 		while (true) {
 			const copies = getTerms2update(allTerms2update, maxNumTerms) // list of unique terms to update in this round
