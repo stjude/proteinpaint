@@ -294,11 +294,15 @@ export class ListSamples {
 				} else this.addRowValue(s, this.t1, row)
 			} else continue //skip rows with no term value
 			if (this.t2) {
-				if (!s[this.t2.$id!]) continue
+				const term2Sample = s[this.t2.$id!]
+				if (!term2Sample) continue
+				if (this.t2?.q?.hiddenValues && this.t2.q.hiddenValues?.[term2Sample?.['value']]) continue //skip hidden values
 				this.addRowValue(s, this.t2, row)
 			}
 			if (this.t0) {
-				if (!s[this.t0.$id!]) continue
+				const term0Sample = s[this.t0.$id!]
+				if (!term0Sample) continue
+				if (this.t0?.q?.hiddenValues && this.t0.q.hiddenValues?.[term0Sample?.['value']]) continue //skip hidden values
 				this.addRowValue(s, this.t0, row)
 			}
 			rows.push(row)
