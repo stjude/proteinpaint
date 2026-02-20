@@ -130,7 +130,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 		} else {
 			if (!q.ds.mayGetGeneVariantData) throw 'not supported by dataset: geneVariant'
 			const maxGenesPerUser = ds.cohort.termdb?.maxGenesPerUser || 1000
-			const totalNumGenes = geneVariantTws.reduce((total, tw) => total + (tw.term.genes?.length || 1), 0)
+			const totalNumGenes = geneVariantTws.reduce(twlstGeneCountReducer, 0)
 			// throttle a user submitting too many genes
 			if (totalNumGenes > maxGenesPerUser) {
 				throw `Too many genes submitted. Limit the total number of genes to ${maxGenesPerUser} or fewer.`
@@ -343,6 +343,10 @@ async function getSampleData(q, ds, onlyChildren = false) {
 		sampleType = q.ds.cohort.termdb.sampleTypes[stid]
 	}
 	return { samples, refs: { byTermId, bySampleId }, sampleType }
+}
+
+function twlstGeneCountReducer(sum, tw) {
+	return sum + (tw.term.genes?.length || 1)
 }
 
 async function setGeneVariantDataForTw(q, tw, samples) {
