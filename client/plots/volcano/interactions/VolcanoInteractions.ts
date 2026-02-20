@@ -210,26 +210,20 @@ export class VolcanoInteractions {
 		const group = { lst: tws, type: 'hierCluster' }
 		const customVariable = this.app.getState().plots.find((p: any) => p.id === this.id).tw
 		const annotationGroup = { lst: [customVariable] }
+		const config = {
+			chartType: 'hierCluster',
+			termgroups: [group, annotationGroup],
+			dataType: TermTypes.GENE_EXPRESSION,
+			filter: {
+				in: true,
+				join: '',
+				type: 'tvslst',
+				lst: [{ type: 'tvs', tvs: { term: customVariable.term } }]
+			}
+		}
 		await this.app.dispatch({
 			type: 'plot_create',
-			config: {
-				chartType: 'hierCluster',
-				termgroups: [group, annotationGroup],
-				dataType: TermTypes.GENE_EXPRESSION,
-				filter: {
-					in: true,
-					join: '',
-					type: 'tvslst',
-					lst: [
-						{
-							type: 'tvs',
-							tvs: {
-								term: customVariable.term
-							}
-						}
-					]
-				}
-			}
+			config: structuredClone(config)
 		})
 	}
 }

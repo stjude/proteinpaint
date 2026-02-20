@@ -230,7 +230,10 @@ export async function getPlotConfig(opts = {}, app) {
 				}
 				if (tw.term?.type != 'samplelst' && tw.term?.type != 'termCollection') delete tw.term
 			}
-			promises.push(fillTermWrapper({ ...tw, q: { ...tw.q } }, app.vocabApi))
+			/** If tw fails at this step, consider using structuredClone(tw) in
+			 * the config for app.dispatch() to make the tw mutable. Should
+			 * not fail from runpp(), only app.dispatch(). */
+			promises.push(fillTermWrapper(tw, app.vocabApi))
 		}
 		grp.lst = await Promise.all(promises)
 	}
