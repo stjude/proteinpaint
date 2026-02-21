@@ -106,6 +106,8 @@ export function setLabelsAndScales() {
 		const countedSamples = new Set()
 		t.counts = { samples: 0, hits: 0 }
 		const renderedContinuousVs = []
+		// Track if any sample in this term has mixed positive/negative values
+		let hasMixedValues = false
 
 		// store counts for each subGroup in subGroupCounts
 		t.counts.subGroupCounts = {}
@@ -139,6 +141,12 @@ export function setLabelsAndScales() {
 
 			const anno = sample.row[t.tw.$id]
 			if (!anno) continue
+			
+			// Check if this annotation has mixed positive/negative values (for termCollection)
+			if (t.tw.term.type == 'termCollection' && anno.hasMixedValues) {
+				hasMixedValues = true
+			}
+			
 			// This is the second call to classifyValues(), to determine case/hit counts for row labels
 			const { filteredValues, countedValues, renderedValues } = this.classifyValues(
 				anno,
@@ -286,8 +294,15 @@ export function setLabelsAndScales() {
 			if (!('gap' in twSettings)) twSettings.contBarGap = 4
 			const barh = twSettings.contBarH
 			if (t.tw.term.type == 'termCollection') {
-				t.counts.maxval = 100
-				t.counts.minval = 0
+				// If data has mixed positive/negative values, use -100 to 100 range
+				// Otherwise, use the default 0 to 100 range
+				if (hasMixedValues) {
+					t.counts.maxval = 100
+					t.counts.minval = -100
+				} else {
+					t.counts.maxval = 100
+					t.counts.minval = 0
+				}
 			}
 
 			const absMin = Math.abs(t.counts.minval)

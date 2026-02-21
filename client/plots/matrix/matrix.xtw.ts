@@ -212,9 +212,23 @@ const TermCollectionValuesAddons = {
 			if (!twSettings.contBarH) twSettings.contBarH = s.barh
 			if (!('gap' in twSettings)) twSettings.contBarGap = 4
 
-			cell.height = t.scales.pos(value.value)
-			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
-			cell.y = t.counts.posMaxHt + twSettings.contBarGap - t.scales.pos(value.pre_val_sum) - cell.height
+			// Determine if value is positive or negative
+			const isNegative = value.value < 0
+			
+			if (isNegative) {
+				// For negative values, use the neg scale and position below the zero line
+				cell.height = t.scales.neg ? t.scales.neg(value.value) : 0
+				cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+				// Position negative bars downward from the zero line (posMaxHt)
+				cell.y = t.counts.posMaxHt + twSettings.contBarGap + (t.scales.neg ? t.scales.neg(value.pre_val_sum) : 0)
+			} else {
+				// For positive values, use the pos scale and position above the zero line
+				cell.height = t.scales.pos(value.value)
+				cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+				// Position positive bars upward from the zero line
+				cell.y = t.counts.posMaxHt + twSettings.contBarGap - t.scales.pos(value.pre_val_sum) - cell.height
+			}
+			
 			cell.label = value.label
 			cell.fill = twSettings[value.label]?.color || value.color || tw.term.propsByTermId?.[value.label]?.color
 			cell.value = value.value
