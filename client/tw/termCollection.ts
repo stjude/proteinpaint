@@ -40,11 +40,16 @@ export class TermCollection {
 			if (!collection) throw `missing termCollection term.lst and termdbConfig.numericTermCollection[term.id]`
 			term.termlst = collection.termIds
 		}
-		if (!term.propsByTermId) {
-			const details = /*opts.details ||*/ opts.vocabApi?.termdbConfig?.numericTermCollections?.find(ntc =>
-				term.name.includes(ntc.name)
-			)
-			if (details?.propsByTermId) term.propsByTermId = details.propsByTermId
+
+		const details = /*opts.details ||*/ opts.vocabApi?.termdbConfig?.numericTermCollections?.find(
+			ntc => ntc.name == term.collectionId
+		)
+		if (!details.propsByTermId) throw new Error('propsByTermId missing')
+		if (!term.propsByTermId) term.propsByTermId = details.propsByTermId // assign if missing
+		for (const t of term.termlst) {
+			if (!t.id) throw new Error('t.id missing')
+			// a term newly added to term.termlst may be missing from propsByTermId and must include it
+			if (!term.propsByTermId[t.id]) term.propsByTermId[t.id] = details.propsByTermId[t.id]
 		}
 		TermCollection.validate(term)
 	}
