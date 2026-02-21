@@ -96,7 +96,7 @@ tape('transformData with negative values only', async test => {
 	test.equal(data.values[0].value, -30, 'sig1 should be -30%')
 	test.equal(data.values[0].pre_val_sum, 0, 'sig1 pre_val_sum should be 0')
 	test.equal(data.values[1].value, -70, 'sig2 should be -70%')
-	test.equal(data.values[1].pre_val_sum, 30, 'sig2 pre_val_sum should be 30 (absolute)')
+	test.equal(data.values[1].pre_val_sum, -30, 'sig2 pre_val_sum should be -30')
 	test.end()
 })
 
@@ -137,18 +137,23 @@ tape('transformData with mixed positive and negative values', async test => {
 	test.equal(data.hasMixedValues, true, 'should have mixed values')
 	test.equal(data.values.length, 3, 'should have 3 values')
 
+	// With absolute sum calculation: |60| + |40| + |-50| = 150
+	// sig1: 60/150 * 100 = 40%
+	// sig2: 40/150 * 100 = 26.67%
+	// sig3: -50/150 * 100 = -33.33%
+	
 	// Find positive values
 	const positiveValues = data.values.filter(v => v.value > 0)
 	test.equal(positiveValues.length, 2, 'should have 2 positive values')
-	test.equal(positiveValues[0].value, 60, 'sig1 should be 60%')
+	test.ok(Math.abs(positiveValues[0].value - 40) < 0.01, 'sig1 should be ~40%')
 	test.equal(positiveValues[0].pre_val_sum, 0, 'sig1 pre_val_sum should be 0')
-	test.equal(positiveValues[1].value, 40, 'sig2 should be 40%')
-	test.equal(positiveValues[1].pre_val_sum, 60, 'sig2 pre_val_sum should be 60')
+	test.ok(Math.abs(positiveValues[1].value - 26.67) < 0.01, 'sig2 should be ~26.67%')
+	test.ok(Math.abs(positiveValues[1].pre_val_sum - 40) < 0.01, 'sig2 pre_val_sum should be ~40')
 
 	// Find negative values
 	const negativeValues = data.values.filter(v => v.value < 0)
 	test.equal(negativeValues.length, 1, 'should have 1 negative value')
-	test.equal(negativeValues[0].value, -100, 'sig3 should be -100%')
+	test.ok(Math.abs(negativeValues[0].value - (-33.33)) < 0.01, 'sig3 should be ~-33.33%')
 	test.equal(negativeValues[0].pre_val_sum, 0, 'sig3 pre_val_sum should be 0')
 	test.end()
 })
@@ -192,13 +197,19 @@ tape('transformData with equal positive and negative values', async test => {
 	test.equal(data.hasMixedValues, true, 'should have mixed values')
 	test.equal(data.values.length, 4, 'should have 4 values')
 
-	// Check positive values sum to 100%
+	// With absolute sum: |30| + |20| + |-25| + |-25| = 100
+	// enrich1: 30/100 * 100 = 30%
+	// enrich2: 20/100 * 100 = 20%
+	// deplete1: -25/100 * 100 = -25%
+	// deplete2: -25/100 * 100 = -25%
+	
+	// Check positive values sum to 50%
 	const positiveSum = data.values.filter(v => v.value > 0).reduce((sum, v) => sum + v.value, 0)
-	test.equal(positiveSum, 100, 'positive values should sum to 100%')
+	test.equal(positiveSum, 50, 'positive values should sum to 50%')
 
-	// Check negative values sum to -100%
+	// Check negative values sum to -50%
 	const negativeSum = data.values.filter(v => v.value < 0).reduce((sum, v) => sum + v.value, 0)
-	test.equal(negativeSum, -100, 'negative values should sum to -100%')
+	test.equal(negativeSum, -50, 'negative values should sum to -50%')
 	test.end()
 })
 
