@@ -1343,14 +1343,16 @@ function generate_filter_term(filters: any, ds: any) {
 							else if (term.values[ck].label == f.category) cat = ck
 						}
 						if (!cat) invalid_html += 'invalid category from ' + JSON.stringify(f)
-						// term and category validated
-						localfilter.lst.push({
-							type: 'tvs',
-							tvs: {
-								term,
-								values: [{ key: cat }]
-							}
-						})
+						else {
+							// term and category validated
+							localfilter.lst.push({
+								type: 'tvs',
+								tvs: {
+									term,
+									values: [{ key: cat }]
+								}
+							})
+						}
 					}
 				} else if (term.type == 'float' || term.type == 'integer') {
 					const numeric: any = {
