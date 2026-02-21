@@ -54,157 +54,66 @@ function argsort(arr: number[]): number[] {
 const DGE_PATTERNS: RegExp[] = [
 	/\bdifferential(ly)?\b/i,
 	/\b(DE|DGE|GSEA)\b/,
-	/\bvolcano\b/i,
-	/\bMA plot\b/i,
+	/\b(volcano|MA plot)\b/i,
 	/\b(up|down)[-\s]?regulated\b/i,
-	/\boverexpressed\b/i,
+	/\b(overexpressed|enriched|dysregulated|activated)\b/i,
 	/\bfold[- ]?change\b/i,
-	/\benriched\b/i,
-	/\bdysregulated\b/i,
-	/\bactivated\b/i,
 	/\bDE genes\b/,
-	/\bdifferential expression\b/i,
-	/\bdifferential gene expression\b/i,
+	/\bdifferential (gene )?expression\b/i,
 	/\b(edgeR|limma|wilcoxon)\b/i,
 	/\bgenes?.{0,15}(differ|change|significant)/i,
 	/\b(top|most).{0,10}(upregulated|downregulated|overexpressed)\b/i
 ]
 
 const SURVIVAL_PATTERNS: RegExp[] = [
-	/\bsurvival\b/i,
+	/\b(survival|mortality|prognos(is|tic)|life expectancy)\b/i,
 	/\bkaplan[- ]?meier\b/i,
 	/\b(KM|OS|EFS|PFS|DFS) (curve|plot|rate|stratif)/,
-	/\bhazard ratio\b/i,
+	/\b(hazard ratio|log[- ]?rank|cumulative incidence|median survival)\b/i,
 	/\bcox (regression|model|proportional)\b/i,
-	/\blog[- ]?rank\b/i,
 	/\b(overall|event[- ]?free|relapse[- ]?free|progression[- ]?free|disease[- ]?free) survival\b/i,
 	/\btime[- ]?to[- ]?(event|relapse|death|progression)\b/i,
 	/\b(mortality|death) (rate|curve|risk)\b/i,
-	/\bmortal(ity)? curve\b/i,
-	/\bsurvive longer\b/i,
-	/\blive longer\b/i,
+	/\b(mortal(ity)? curve|survive longer|live longer)\b/i,
 	/\bdie (earlier|sooner|faster)\b/i,
 	/\brisk of (death|dying|relapse)\b/i,
-	/\bprognos(is|tic)\b/i,
 	/\bpredic.{0,5} (survival|outcome|death|mortality)/i,
 	/\b(patient|overall) outcome\b/i,
 	/\b(better|worse|poor) outcomes?\b/i,
-	/\bcumulative incidence\b/i,
-	/\bmedian survival\b/i,
 	/\b\d+[- ]?year survival\b/i,
 	/\bsurvival (rate|benefit|difference|advantage|curve|plot)\b/i,
-	/\b(alive|living) at \d+\b/i,
-	/\blife expectancy\b/i
+	/\b(alive|living) at \d+\b/i
 ]
 
 const SAMPLESCATTER_PATTERNS: RegExp[] = [
-	/\bt[- ]?SNE\b/i,
-	/\bUMAP\b/i,
-	/\bPCA\b/i,
+	/\b(t[- ]?SNE|UMAP|PCA)\b/i,
 	/\b(dimensionality|dimension) reduction\b/i,
 	/\b2D (embedding|projection)\b/i,
 	/\bsample (cluster|embedding|projection|neighborhood)\b/i,
 	/\bcluster(ing)? (plot|visualization)\b/i,
-	/\breduced dimension\b/i,
-	/\bembedding (space|plot|colored|with)\b/i,
+	/\b(reduced dimension|embedding (space|plot|colored|with))\b/i,
 	/\boverlay.{0,20}(on the|on a).{0,10}(scatter|UMAP|t-?SNE|PCA)\b/i
 ]
 
 const MATRIX_PATTERNS: RegExp[] = [
-	/\bheatmap\b/i,
-	/\bmatrix\b/i,
-	/\bgrid\b/i,
+	/\b(heatmap|matrix|grid|landscape)\b/i,
 	/\bside by side\b/i,
-	/\blandscape\b/i,
-	/\bmulti-?gene\b/i,
-	/\bmultiple genes?\b/i,
+	/\b(multi-?gene|multiple genes?)\b/i,
 	/\bper (sample|patient)\b/i,
 	/\bexpression (of|for|levels).{0,30}(and|,).{0,30}(and|,)/i
 ]
 
-const _GENE_TOKEN_RE = /\b[A-Z][A-Z0-9]{1,7}\b/g
-const _GENE_NOISE = new Set([
-	'THE',
-	'AND',
-	'FOR',
-	'ALL',
-	'NOT',
-	'ARE',
-	'RNA',
-	'DNA',
-	'AML',
-	'DE',
-	'DGE',
-	'GSEA',
-	'UMAP',
-	'PCA',
-	'MRD',
-	'CNS',
-	'BMI',
-	'WBC',
-	'RAS',
-	'MAPK',
-	'PI3K',
-	'AKT',
-	'JAK',
-	'STAT',
-	'SWI',
-	'SNF',
-	'DB',
-	'SQL',
-	'KM',
-	'OS',
-	'EFS',
-	'PFS',
-	'CR',
-	'VS',
-	'TNBC',
-	'CAR',
-	'High hyperdiploid',
-	'ETV6-RUNX1',
-	'BCR-ABL1',
-	'KMT2A',
-	'CRLF2',
-	'B-other',
-	'DUX4',
-	'PAX5alt',
-	'BCR-ABL1-like',
-	'TCF3-PBX1',
-	'Low hypodiploid',
-	'ETV6-RUNX1-like',
-	'MEF2D',
-	'Near haploid',
-	'PAX5 P80R',
-	'iAMP21',
-	'BCL2/MYC',
-	'NUTM1',
-	'ZNF384-like',
-	'KMT2A-like',
-	'TCF3-HLF',
-	'IKZF1 N159Y'
-])
-
-function looksLikeMultiGene(query: string, minGenes = 3): boolean {
-	const hits = query.match(_GENE_TOKEN_RE) || []
-	return hits.filter(h => !_GENE_NOISE.has(h)).length >= minGenes
-}
-
 const SUMMARY_SCATTER_PATTERNS: RegExp[] = [
-	/\b(correlate|correlation)\b/i,
-	/\bagainst\b/i,
+	/\b(correlate|correlation|against)\b/i,
 	/\b\w+ (vs|versus) \w+ expression\b/i,
 	/\bscatter\s*plot\b/i,
-	/\bplot \w+ expression against\b/i,
-	/\bexpression.{0,20}(vs|versus|against)\b/i
+	/\b(plot \w+ expression against|expression.{0,20}(vs|versus|against))\b/i
 ]
 
 const SUMMARY_VIOLIN_PATTERNS: RegExp[] = [
-	/\bexpression (by|in|for|across|between)\b/i,
-	/\bexpression levels? (by|in|for|of|across|between)\b/i,
+	/\bexpression (levels? )?(by|in|for|of|across|between)\b/i,
 	/\b\w+ expression (by|in|for|across|between)\b/i,
-	/\bstratified by\b/i,
-	/\bviolin\b/i,
-	/\bboxplot\b/i,
+	/\b(stratified by|violin|boxplot)\b/i,
 	/\bexpression.{0,30}(group|subtype|category|cohort|phase|arm|race|sex|gender|age|diagnosis)\b/i,
 	/\b(levels?|counts?) (for|by|in|across|between|stratified)\b/i
 ]
@@ -212,33 +121,68 @@ const SUMMARY_VIOLIN_PATTERNS: RegExp[] = [
 const SUMMARY_BARCHART_PATTERNS: RegExp[] = [
 	/\bhow many\b/i,
 	/\bwhat (is|are) the (count|number|total|mean|median|average|percentage|proportion|frequency)\b/i,
-	/\bwhat percentage\b/i,
-	/\blist all\b/i,
+	/\b(what percentage|list all|count of|ratio of|frequency of|distribution of)\b/i,
 	/\bshow (the )?(count|number|total|frequency|percentage|proportion|distribution)\b/i,
-	/\bcount of\b/i,
 	/\bdescribe the (cohort|dataset|population|samples?|patients?)\b/i,
 	/\bwho (are|is) in\b/i,
-	/\bbreakdown\b/i,
-	/\bdemographic\b/i,
-	/\bsummarize\b/i,
-	/\boverview\b/i,
-	/\bcross-?tabulate\b/i,
-	/\bratio of\b/i,
-	/\bbar ?chart\b/i,
-	/\bhistogram\b/i,
-	/\bfrequency of\b/i,
-	/\bdistribution of\b/i
+	/\b(breakdown|demographic|summarize|overview|cross-?tabulate)\b/i,
+	/\b(bar ?chart|histogram)\b/i
 ]
+
+// Tokens matching the gene-name pattern that are NOT genes — prevents false
+// positives in multi-gene detection. Kept generic (no dataset-specific terms).
+const _GENE_TOKEN_RE = /\b[A-Z][A-Z0-9]{1,7}\b/g
+const _GENE_NOISE = new Set([
+	// Common words / abbreviations
+	'THE',
+	'AND',
+	'FOR',
+	'ALL',
+	'NOT',
+	'ARE',
+	'VS',
+	'CR',
+	// Clinical & biological abbreviations (not gene names)
+	'RNA',
+	'DNA',
+	'AML',
+	'CNS',
+	'BMI',
+	'WBC',
+	'MRD',
+	'TNBC',
+	'CAR',
+	// Analysis & visualization terms
+	'DE',
+	'DGE',
+	'GSEA',
+	'UMAP',
+	'PCA',
+	// Survival / statistics abbreviations
+	'KM',
+	'OS',
+	'EFS',
+	'PFS',
+	'DFS',
+	// Technical
+	'DB',
+	'SQL'
+])
+
+function looksLikeMultiGene(query: string, minGenes = 3, datasetNoise?: Set<string>): boolean {
+	const hits = query.match(_GENE_TOKEN_RE) || []
+	return hits.filter(h => !_GENE_NOISE.has(h) && !datasetNoise?.has(h)).length >= minGenes
+}
 
 function matchesAny(query: string, patterns: RegExp[]): boolean {
 	return patterns.some(p => p.test(query))
 }
 
-function augmentQuery(query: string): string {
+function augmentQuery(query: string, datasetNoise?: Set<string>): string {
 	if (matchesAny(query, DGE_PATTERNS)) return 'Differential gene expression analysis: ' + query
 	if (matchesAny(query, SURVIVAL_PATTERNS)) return 'Patient survival and outcome analysis: ' + query
 	if (matchesAny(query, SAMPLESCATTER_PATTERNS)) return 'Dimensionality reduction sample scatter plot: ' + query
-	if (matchesAny(query, MATRIX_PATTERNS) || looksLikeMultiGene(query))
+	if (matchesAny(query, MATRIX_PATTERNS) || looksLikeMultiGene(query, 3, datasetNoise))
 		return 'Multi-gene expression matrix or heatmap: ' + query
 	if (matchesAny(query, SUMMARY_SCATTER_PATTERNS)) return 'Summary scatter plot comparing two variables: ' + query
 	if (matchesAny(query, SUMMARY_VIOLIN_PATTERNS)) return 'Summary violin plot of expression by clinical group: ' + query
@@ -570,7 +514,16 @@ export interface ClassifyResult {
 	above_threshold: boolean
 }
 
-class SentenceTransformerEmbedder {
+// ---------------------------------------------------------------------------
+//  Embedder interface & implementations
+// ---------------------------------------------------------------------------
+
+interface Embedder {
+	init(): Promise<void>
+	embed(texts: string[]): Promise<number[][]>
+}
+
+class LocalEmbedder implements Embedder {
 	private extractor: FeatureExtractionPipeline | null = null
 	private modelName: string
 
@@ -591,15 +544,67 @@ class SentenceTransformerEmbedder {
 	}
 }
 
+class ApiEmbedder implements Embedder {
+	private provider: string
+	private modelName: string
+	private api: string
+
+	constructor(provider: string, modelName: string, api: string) {
+		this.provider = provider
+		this.modelName = modelName
+		this.api = api
+	}
+
+	async init(): Promise<void> {
+		// No-op for API — nothing to preload
+	}
+
+	async embed(texts: string[]): Promise<number[][]> {
+		if (this.provider === 'SJ') {
+			return await this.callSjEmbedding(texts)
+		} else if (this.provider === 'ollama') {
+			return await this.callOllamaEmbedding(texts)
+		}
+		throw new Error('Unknown embedding provider: ' + this.provider)
+	}
+
+	private async callSjEmbedding(texts: string[]): Promise<number[][]> {
+		const response = await ezFetch(this.api, {
+			method: 'POST',
+			body: {
+				inputs: [{ model_name: this.modelName, inputs: { text: texts } }]
+			},
+			headers: { 'Content-Type': 'application/json' },
+			timeout: { request: 200000 }
+		})
+		if (response.outputs?.[0]?.embeddings) return response.outputs[0].embeddings
+		throw new Error('Unexpected response format from SJ embedding API')
+	}
+
+	private async callOllamaEmbedding(texts: string[]): Promise<number[][]> {
+		const result = await ezFetch(this.api + '/api/embed', {
+			method: 'POST',
+			body: { model: this.modelName, input: texts },
+			headers: { 'Content-Type': 'application/json' },
+			timeout: { request: 200000 }
+		})
+		if (result?.embeddings?.length > 0) {
+			if (result.embeddings.length !== texts.length) throw new Error('Embedding count mismatch')
+			return result.embeddings
+		}
+		throw new Error('Unexpected response format from Ollama embedding API')
+	}
+}
+
 export class EmbeddingClassifier {
-	private embedder: SentenceTransformerEmbedder
+	private embedder: Embedder
 	threshold: number
 	private k: number
 	private categories: string[] = []
 	private allEmbeddings: number[][] = []
 	private allLabels: string[] = []
 
-	constructor(embedder: SentenceTransformerEmbedder, threshold = 0.9, k = 5) {
+	constructor(embedder: Embedder, threshold = 0.9, k = 5) {
 		this.embedder = embedder
 		this.threshold = threshold
 		this.k = k
@@ -628,8 +633,8 @@ export class EmbeddingClassifier {
 		)
 	}
 
-	async classify(query: string): Promise<ClassifyResult> {
-		const augmented = augmentQuery(query)
+	async classify(query: string, datasetNoise?: Set<string>): Promise<ClassifyResult> {
+		const augmented = augmentQuery(query, datasetNoise)
 		const [qEmb] = await this.embedder.embed([augmented])
 		return this.classifyFromEmbedding(query, qEmb)
 	}
@@ -669,7 +674,7 @@ export class EmbeddingClassifier {
 	 *
 	 * This mirrors the hybrid_router.py approach from the Python demo.
 	 */
-	async classifyHybrid(query: string, llm: LlmConfig): Promise<ClassifyResult> {
+	async classifyHybrid(query: string, llm: LlmConfig, datasetNoise?: Set<string>): Promise<ClassifyResult> {
 		// Check for explicit chart type keywords first — these always win.
 		const override = getExplicitOverride(query)
 		if (override) {
@@ -683,7 +688,7 @@ export class EmbeddingClassifier {
 			}
 		}
 
-		const embeddingResult = await this.classify(query)
+		const embeddingResult = await this.classify(query, datasetNoise)
 
 		if (embeddingResult.above_threshold) {
 			mayLog(
@@ -694,9 +699,10 @@ export class EmbeddingClassifier {
 		}
 
 		// Below threshold — fall back to LLM
+		const classifierModel = llm.classifierModelName ?? llm.modelName
 		mayLog(
 			`Hybrid router: embedding uncertain (${embeddingResult.confidence.toFixed(4)}), ` +
-				`falling back to LLM (${llm.provider}/${llm.modelName})`
+				`falling back to LLM (${llm.provider}/${classifierModel})`
 		)
 
 		try {
@@ -772,11 +778,12 @@ function extractJson(text: string): string {
 }
 
 async function routeToLlm(prompt: string, llm: LlmConfig): Promise<string> {
+	const modelName = llm.classifierModelName ?? llm.modelName
 	let response: string
 	if (llm.provider === 'SJ') {
-		response = await callSjLlm(prompt, llm.modelName, llm.api)
+		response = await callSjLlm(prompt, modelName, llm.api)
 	} else if (llm.provider === 'ollama') {
-		response = await callOllama(prompt, llm.modelName, llm.api)
+		response = await callOllama(prompt, modelName, llm.api)
 	} else {
 		throw 'Unknown LLM provider: ' + llm.provider
 	}
@@ -820,8 +827,44 @@ async function callSjLlm(prompt: string, modelName: string, apilink: string): Pr
 }
 
 // ---------------------------------------------------------------------------
-//  Singleton — initialized once, reused across all requests
+//  Singletons — initialized once, reused across all requests
 // ---------------------------------------------------------------------------
+
+let embedderInstance: Embedder | null = null
+let embedderInitPromise: Promise<Embedder> | null = null
+
+/**
+ * Get the singleton Embedder, initializing on first call.
+ * Safe to call concurrently — only one init runs.
+ *
+ * Uses llm.embeddingModelAccess to choose between:
+ *   - "local" (default): loads model via transformers.js in-process
+ *   - "api": calls the configured SJ/Ollama embedding API endpoint
+ */
+export async function getEmbedder(llm: LlmConfig): Promise<Embedder> {
+	if (embedderInstance) return embedderInstance
+
+	if (!embedderInitPromise) {
+		embedderInitPromise = (async () => {
+			const access = llm.embeddingModelAccess ?? 'local'
+			let embedder: Embedder
+
+			if (access === 'api') {
+				mayLog(`Embedder: using API (${llm.provider}/${llm.embeddingModelName})`)
+				embedder = new ApiEmbedder(llm.provider, llm.embeddingModelName, llm.api)
+			} else {
+				mayLog(`Embedder: using local (${llm.embeddingModelName})`)
+				embedder = new LocalEmbedder(llm.embeddingModelName)
+			}
+
+			await embedder.init()
+			embedderInstance = embedder
+			return embedder
+		})()
+	}
+
+	return embedderInitPromise
+}
 
 let classifierInstance: EmbeddingClassifier | null = null
 let initPromise: Promise<EmbeddingClassifier> | null = null
@@ -830,17 +873,15 @@ let initPromise: Promise<EmbeddingClassifier> | null = null
  * Get the singleton EmbeddingClassifier, initializing on first call.
  * Safe to call concurrently — only one init runs.
  *
+ * @param llm - LLM configuration from serverconfig.json
  * @param threshold - OOD rejection threshold (default 0.9, tune via demo script)
  */
-export async function getClassifier(threshold = 0.9): Promise<EmbeddingClassifier> {
+export async function getClassifier(llm: LlmConfig, threshold = 0.9): Promise<EmbeddingClassifier> {
 	if (classifierInstance) return classifierInstance
 
-	// Prevent duplicate init if called concurrently during startup
 	if (!initPromise) {
 		initPromise = (async () => {
-			mayLog('EmbeddingClassifier: loading model...')
-			const embedder = new SentenceTransformerEmbedder()
-			await embedder.init()
+			const embedder = await getEmbedder(llm)
 			const clf = new EmbeddingClassifier(embedder, threshold)
 			await clf.fit(CATEGORY_EXAMPLES)
 			classifierInstance = clf

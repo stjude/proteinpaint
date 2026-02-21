@@ -5,7 +5,7 @@ import { get_samples } from '#src/termdb.sql.js'
 //import type { SchemaGenerator } from 'ts-json-schema-generator'
 //import path from 'path'
 import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, DbRows, DbValue, ClassificationType } from '#types'
-import { getClassifier } from './embeddingClassifier.ts'
+import { getClassifier, getEmbedder } from './embeddingClassifier.ts'
 import { ChatPayload } from '#types/checkers'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
@@ -219,10 +219,20 @@ export async function run_chat_pipeline(
 ) {
 	const time1 = new Date().valueOf()
 
+	// Parse the dataset DB upfront to extract categorical term values (e.g. molecular
+	// subtype names). These are passed to the classifier so they aren't mistaken for
+	// gene names in multi-gene detection, making the classifier dataset-agnostic.
+	const dataset_db_output = await parse_dataset_db(dataset_db)
+	const datasetNoise = new Set(
+		dataset_db_output.db_rows
+			.filter(row => row.term_type === 'categorical')
+			.flatMap(row => row.values.map(v => v.key.toUpperCase()))
+	)
+
 	// Use the embedding classifier with LLM fallback for uncertain queries.
 	// The classifier is a singleton that loads the model once and reuses it.
-	const clf = await getClassifier()
-	const embeddingResult = await clf.classifyHybrid(user_prompt, llm)
+	const clf = await getClassifier(llm)
+	const embeddingResult = await clf.classifyHybrid(user_prompt, llm, datasetNoise)
 	mayLog(
 		`Embedding classifier: category=${embeddingResult.category}, confidence=${embeddingResult.confidence.toFixed(4)}`
 	)
@@ -246,8 +256,6 @@ export async function run_chat_pipeline(
 	} else if (class_response.type == 'plot') {
 		const classResult = class_response.plot
 		mayLog('classResult:', classResult)
-		// Parse DBs once and pass to whichever agent runs
-		const dataset_db_output = await parse_dataset_db(dataset_db)
 		const genes_list = dataset_json.hasGeneExpression ? await parse_geneset_db(genedb) : []
 		if (classResult == 'summary') {
 			const time1 = new Date().valueOf()
@@ -368,9 +376,9 @@ async function call_sj_llm(prompt: string, model_name: string, apilink: string) 
 	try {
 		const response = await ezFetch(apilink, {
 			method: 'POST',
-			body: payload, // ezfetch automatically stringifies objects
+			body: payload,
 			headers: { 'Content-Type': 'application/json' },
-			timeout: { request: timeout } // ezfetch accepts milliseconds directly
+			timeout: { request: timeout }
 		})
 		if (response.outputs && response.outputs[0] && response.outputs[0].generated_text) {
 			const result = response.outputs[0].generated_text
@@ -400,75 +408,9 @@ async function route_to_appropriate_llm_provider(template: string, llm: LlmConfi
 	return extractJson(response)
 }
 
-async function route_to_appropriate_embedding_provider(templates: string[], llm: LlmConfig): Promise<string> {
-	let response: string
-	if (llm.provider == 'SJ') {
-		// Local SJ server
-		response = await call_sj_embedding(templates, llm.embeddingModelName, llm.api)
-	} else if (llm.provider == 'ollama') {
-		// Ollama server
-		response = await call_ollama_embedding(templates, llm.embeddingModelName, llm.api)
-	} else {
-		// Will later add support for azure server also
-		throw 'Unknown LLM provider'
-	}
-	// Some models (e.g. llama3-8B) wrap JSON in markdown fences and/or
-	// append explanations. Extract the first balanced JSON object or array.
-	return extractJson(response)
-}
-
-async function call_ollama_embedding(prompts: string[], model_name: string, apilink: string) {
-	const timeout = 200000
-	const payload = {
-		model: model_name,
-		input: prompts
-	}
-
-	try {
-		const result = await ezFetch(apilink + '/api/embed', {
-			method: 'POST',
-			body: payload, // ezfetch automatically stringifies objects
-			headers: { 'Content-Type': 'application/json' },
-			timeout: { request: timeout } // ezfetch accepts milliseconds directly
-		})
-		if (result && result.embeddings && result.embeddings.length > 0) {
-			if (result.embeddings.length != prompts.length) throw 'Number of returned embeddings does not match input'
-			return result.embeddings
-		} else {
-			throw 'Error: Received an unexpected response format:' + result
-		}
-	} catch (error) {
-		throw 'Ollama API request failed:' + error
-	}
-}
-
-async function call_sj_embedding(prompts: string[], model_name: string, apilink: string) {
-	const payload = {
-		inputs: [
-			{
-				model_name: model_name,
-				inputs: { text: prompts }
-			}
-		]
-	}
-
-	const timeout = 200000
-	try {
-		const response = await ezFetch(apilink, {
-			method: 'POST',
-			body: payload, // ezfetch automatically stringifies objects
-			headers: { 'Content-Type': 'application/json' },
-			timeout: { request: timeout } // ezfetch accepts milliseconds directly
-		})
-		if (response.outputs && response.outputs[0] && response.outputs[0].embeddings) {
-			const result = response.outputs[0].embeddings
-			return result
-		} else {
-			throw 'Error: Received an unexpected response format:' + response
-		}
-	} catch (error) {
-		throw 'SJ API embedding request failed:' + error
-	}
+async function route_to_appropriate_embedding_provider(templates: string[], llm: LlmConfig): Promise<number[][]> {
+	const embedder = await getEmbedder(llm)
+	return await embedder.embed(templates)
 }
 
 /** Extract the first balanced JSON object or array from a string. */
@@ -517,32 +459,6 @@ export async function readJSONFile(file: string) {
 	const json_file = await fs.promises.readFile(file)
 	return JSON.parse(json_file.toString())
 }
-
-// ---------------------------------------------------------------------------
-// DEPRECATED: LLM-based classification agent — replaced by embedding classifier.
-// Kept for reference. Remove once embedding approach is validated in production.
-// ---------------------------------------------------------------------------
-// async function classify_query_by_dataset_type(user_prompt: string, llm: LlmConfig, aiRoute: string, dataset_json: any) {
-// 	const data = await readJSONFile(aiRoute)
-// 	let contents = data['general']
-// 	for (const key of Object.keys(data)) {
-// 		if (key != 'general') {
-// 			contents += data[key]
-// 		}
-// 	}
-// 	const classification_ds = dataset_json.charts.find((chart: any) => chart.type == 'Classification')
-// 	if (!classification_ds) throw 'Classification information is not present in the dataset file.'
-// 	if (classification_ds.TrainingData.length == 0) throw 'No training data is provided for the classification agent.'
-// 	let training_data = ''
-// 	if (classification_ds && classification_ds.TrainingData.length > 0) {
-// 		contents += checkField(dataset_json.DatasetPrompt) + checkField(classification_ds.SystemPrompt)
-// 		training_data = formatTrainingExamples(classification_ds.TrainingData)
-// 	}
-// 	const template =
-// 		contents + ' training data is as follows:' + training_data + ' Question: {' + user_prompt + '} Answer: {answer}'
-// 	const response: string = await route_to_appropriate_llm_provider(template, llm)
-// 	return JSON.parse(response)
-// }
 
 async function extract_DE_search_terms_from_query(
 	prompt: string,
@@ -813,8 +729,8 @@ async function extract_summary_terms(
 	//const generator: SchemaGenerator = createGenerator(SchemaConfig)
 	//const Schema = JSON.stringify(generator.createSchema(SchemaConfig.type)) // This will be generated at server startup later
 
-	const embeddings = route_to_appropriate_embedding_provider(dataset_db_output.rag_docs, llm)
-	mayLog('embeddings:', embeddings)
+	const embeddings = await route_to_appropriate_embedding_provider(dataset_db_output.rag_docs, llm)
+	if (llm.verbose) mayLog('embeddings:', embeddings)
 	const Schema = {
 		$schema: 'http://json-schema.org/draft-07/schema#',
 		$ref: '#/definitions/SummaryType',
