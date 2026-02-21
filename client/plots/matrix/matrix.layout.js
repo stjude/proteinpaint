@@ -109,6 +109,12 @@ export function setLabelsAndScales() {
 		// Track if any sample in this term has mixed positive/negative values
 		let hasMixedValues = false
 
+		// Initialize min/max for termCollection
+		if (t.tw.term.type == 'termCollection') {
+			t.counts.minval = 0
+			t.counts.maxval = 0
+		}
+
 		// store counts for each subGroup in subGroupCounts
 		t.counts.subGroupCounts = {}
 		for (const group of this.sampleGroups) {

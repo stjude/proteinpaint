@@ -217,19 +217,22 @@ const TermCollectionValuesAddons = {
 			
 			if (isNegative) {
 				// For negative values, use the neg scale and position below the zero line
-				// value.value is negative (e.g., -50), which neg scale maps to pixel height
-				cell.height = t.scales.neg ? t.scales.neg(value.value) : 0
+				// Height is the scale distance from 0 to the value
+				cell.height = t.scales.neg ? (t.scales.neg(value.value) - t.scales.neg(0)) : 0
 				cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 				// Position negative bars downward from the zero line
-				// pre_val_sum is stored as positive (e.g., 50), but neg scale expects negative input
-				// so we negate it before passing to the scale (e.g., -50)
-				cell.y = t.counts.posMaxHt + twSettings.contBarGap + (t.scales.neg ? t.scales.neg(-value.pre_val_sum) : 0)
+				// Cumulative height is the scale distance from 0 to pre_val_sum
+				const cumulativeHeight = value.pre_val_sum === 0 ? 0 : (t.scales.neg(value.pre_val_sum) - t.scales.neg(0))
+				cell.y = t.counts.posMaxHt + twSettings.contBarGap + t.scales.neg(0) + cumulativeHeight
 			} else {
 				// For positive values, use the pos scale and position above the zero line
-				cell.height = t.scales.pos(value.value)
+				// Height is the scale distance from 0 to the value
+				cell.height = t.scales.pos(value.value) - t.scales.pos(0)
 				cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 				// Position positive bars upward from the zero line
-				cell.y = t.counts.posMaxHt + twSettings.contBarGap - t.scales.pos(value.pre_val_sum) - cell.height
+				// Cumulative height is the scale distance from 0 to pre_val_sum
+				const cumulativeHeight = value.pre_val_sum === 0 ? 0 : (t.scales.pos(value.pre_val_sum) - t.scales.pos(0))
+				cell.y = t.counts.posMaxHt + twSettings.contBarGap - t.scales.pos(0) - cumulativeHeight - cell.height
 			}
 			
 			cell.label = value.label
