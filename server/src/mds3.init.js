@@ -2,6 +2,7 @@ import fs from 'fs'
 import readline from 'readline'
 import path from 'path'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
+import { run_python } from '@sjcrh/proteinpaint-python'
 import { spawnSync } from 'child_process'
 import { scaleLinear } from 'd3-scale'
 import { createCanvas } from 'canvas'
@@ -172,6 +173,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 		await validate_query_ld(ds, genome)
 		await validate_query_geneExpression(ds, genome)
 		await validate_query_ssGSEA(ds, genome)
+		await validate_query_dnaMethylation(ds, genome)
 		await validate_query_metaboliteIntensity(ds, genome)
 		await validate_query_getTopTermsByType(ds, genome)
 		await validate_query_getTopMutatedGenes(ds, genome)
@@ -1655,6 +1657,86 @@ async function validate_query_ssGSEA(ds, genome) {
 
 		const time1 = Date.now()
 		const tmp = await run_rust('readH5', JSON.stringify({ hdf5_file: q.file, query: genesetNames }))
+		const results = JSON.parse(tmp)
+		mayLog('ssGSEA h5 file', Date.now() - time1)
+
+		for (const tw of param.terms) {
+			const result = results.query_output[tw.term.id]?.samples
+			if (!result) {
+				console.warn(`No data found for geneset ${tw.term.id} in the response`)
+				continue
+			}
+
+			const s2v = {}
+			for (const sampleName in result) {
+				const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
+				if (!sampleId) continue
+				if (limitSamples && !limitSamples.has(sampleId)) continue
+				s2v[sampleId] = result[sampleName]
+			}
+
+			if (Object.keys(s2v).length) {
+				term2sample2value.set(tw.$id, s2v)
+			}
+		}
+		if (term2sample2value.size == 0) throw 'No data available for the input.'
+
+		return { term2sample2value, byTermId, bySampleId }
+	}
+}
+async function validate_query_dnaMethylation(ds, genome) {
+	const q = ds.queries.dnaMethylation
+	if (!q) return
+	try {
+		if (!q.file) throw '.file missing'
+		q.file = path.join(serverconfig.tpmasterdir, q.file)
+		q.samples = [] // array of sample ids
+		await utils.file_is_readable(q.file)
+		const tmp = await run_python('query_beta_values.py', JSON.stringify({ validate: true, hdf5_file: q.file }))
+
+		const vr = JSON.parse(tmp)
+		if (vr.status !== 'success') throw vr.message
+		if (!Array.isArray(vr.samples)) throw 'HDF5 file has no samples, please check file.'
+		for (const sn of vr.samples) {
+			const si = ds.cohort.termdb.q.sampleName2id(sn)
+			if (si == undefined) throw `unknown sample ${sn} from HDF5 ${q.file}`
+			q.samples.push(si)
+		}
+		console.log(`${ds.label}: ssGSEA HDF5 file validated. Format: ${vr.format}, Samples:`, vr.samples.length)
+	} catch (error) {
+		throw `${ds.label}: Failed to validate ssGSEA HDF5 file: ${error}`
+	}
+
+	// HDF5 validation successful, set up the getter function
+	q.get = async param => {
+		const limitSamples = await mayLimitSamples(param, q.samples, ds)
+		if (limitSamples?.size == 0) {
+			// Got 0 sample after filtering, must still return expected structure with no data
+			return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
+		}
+		const bySampleId = {}
+		const samples = q.samples || []
+		if (limitSamples) {
+			for (const sid of limitSamples) {
+				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+			}
+		} else {
+			for (const sid of samples) {
+				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+			}
+		}
+		const term2sample2value = new Map()
+		const byTermId = {}
+
+		const genesetNames = param.terms.map(tw => tw.term.id)
+
+		if (genesetNames.length === 0) {
+			console.log('No genesets to query')
+			return { term2sample2value, byTermId }
+		}
+
+		const time1 = Date.now()
+		const tmp = await run_python('query_beta_values.py', JSON.stringify({ hdf5_file: q.file, query: genesetNames }))
 		const results = JSON.parse(tmp)
 		mayLog('ssGSEA h5 file', Date.now() - time1)
 

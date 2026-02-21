@@ -228,7 +228,8 @@ async function getSampleData(q, ds, onlyChildren = false) {
 		} else if (
 			tw.term.type == TermTypes.GENE_EXPRESSION ||
 			tw.term.type == TermTypes.METABOLITE_INTENSITY ||
-			tw.term.type == TermTypes.SSGSEA
+			tw.term.type == TermTypes.SSGSEA ||
+			tw.term.type == TermTypes.DNA_METHYLATION
 		) {
 			if (!q.ds.queries?.[tw.term.type]) throw 'not supported by dataset: ' + tw.term.type
 			let lstOfBins // of this tw. only set when q.mode is discrete
