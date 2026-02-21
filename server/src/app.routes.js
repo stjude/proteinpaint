@@ -44,6 +44,7 @@ export const routeFiles = [
 	import('../routes/termdb.DE.ts'),
 	import('../routes/termdb.boxplot.ts'),
 	import('../routes/termdb.chat.ts'),
+	import('../routes/termdb.chat2.ts'),
 	import('../routes/termdb.categories.ts'),
 	import('../routes/termdb.cluster.ts'),
 	import('../routes/termdb.cohort.summary.ts'),

@@ -22,7 +22,18 @@ export type PlotResponse = {
 	/** Specifies what action to take e.g. Summary plot or no action. Will add more chart types later */
 }
 
-export type LlmConfig = { provider: 'SJ' | 'ollama'; api: string; modelName: string }
+export type LlmConfig = {
+	provider: 'SJ' | 'ollama'
+	api: string
+	modelName: string
+	embeddingModelName: string
+	/** Whether to load the embedding model locally (via transformers.js) or call a remote API. Defaults to 'local'. */
+	embeddingModelAccess?: 'local' | 'api'
+	/** Smaller model to use for LLM classification fallback. Defaults to modelName if not set. */
+	classifierModelName?: string
+	/** Log verbose debug output (e.g. raw embedding arrays) to the terminal. Defaults to false. */
+	verbose?: boolean
+}
 
 export type ChatResponse = HtmlResponse | PlotResponse
 
