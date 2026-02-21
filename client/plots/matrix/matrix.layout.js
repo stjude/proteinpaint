@@ -147,6 +147,23 @@ export function setLabelsAndScales() {
 				hasMixedValues = true
 			}
 			
+			// Track min/max percentage values for termCollection
+			if (t.tw.term.type == 'termCollection' && anno.values) {
+				for (const val of anno.values) {
+					const pct = val.value
+					if (!('minval' in t.counts) || t.counts.minval > pct) t.counts.minval = pct
+					if (!('maxval' in t.counts) || t.counts.maxval < pct + val.pre_val_sum) {
+						t.counts.maxval = pct + val.pre_val_sum
+					}
+					if (pct < 0) {
+						const negSum = pct + val.pre_val_sum
+						if (!('minval' in t.counts) || t.counts.minval > negSum) {
+							t.counts.minval = negSum
+						}
+					}
+				}
+			}
+			
 			// This is the second call to classifyValues(), to determine case/hit counts for row labels
 			const { filteredValues, countedValues, renderedValues } = this.classifyValues(
 				anno,
@@ -293,16 +310,12 @@ export function setLabelsAndScales() {
 			if (!twSettings.contBarH) twSettings.contBarH = t.tw.term.type == 'termCollection' ? 150 : s.barh
 			if (!('gap' in twSettings)) twSettings.contBarGap = 4
 			const barh = twSettings.contBarH
+			// For termCollection, min/max values are already calculated from the percentage values
+			// No need to force specific ranges - use dynamic range based on actual data
 			if (t.tw.term.type == 'termCollection') {
-				// If data has mixed positive/negative values, use -100 to 100 range
-				// Otherwise, use the default 0 to 100 range
-				if (hasMixedValues) {
-					t.counts.maxval = 100
-					t.counts.minval = -100
-				} else {
-					t.counts.maxval = 100
-					t.counts.minval = 0
-				}
+				// Ensure minval and maxval are set (default to 0 if no values)
+				if (!('minval' in t.counts)) t.counts.minval = 0
+				if (!('maxval' in t.counts)) t.counts.maxval = 0
 			}
 
 			const absMin = Math.abs(t.counts.minval)

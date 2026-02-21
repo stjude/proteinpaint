@@ -113,39 +113,31 @@ export class TermCollectionValues extends TwBase {
 	transformData(d) {
 		const termsValue: { [termId: string]: number } = d.value
 		
-		// Separate positive and negative values
-		const positiveValues: { [label: string]: number } = {}
-		const negativeValues: { [label: string]: number } = {}
-		let hasPositive = false
-		let hasNegative = false
-		
-		// Separate values by sign; zero values are intentionally excluded
+		// Collect all non-zero values
+		const allValues: { [label: string]: number } = {}
 		for (const [label, value] of Object.entries(termsValue)) {
-			if (value > 0) {
-				positiveValues[label] = value
-				hasPositive = true
-			} else if (value < 0) {
-				negativeValues[label] = value
-				hasNegative = true
+			if (value !== 0) {
+				allValues[label] = value
 			}
-			// Note: zero values are not included in the output
 		}
 		
-		// Determine if we have mixed positive/negative data
-		const hasMixedValues = hasPositive && hasNegative
+		// Calculate total absolute sum of all values
+		const absoluteSum = Object.values(allValues).reduce((total, val) => total + Math.abs(val), 0)
 		
-		// Calculate sums
-		const positiveSum = Object.values(positiveValues).reduce((total, val) => total + val, 0)
-		const negativeSum = Math.abs(Object.values(negativeValues).reduce((total, val) => total + val, 0))
+		// Separate positive and negative values for proper stacking
+		const positiveEntries = Object.entries(allValues).filter(([_, v]) => v > 0)
+		const negativeEntries = Object.entries(allValues).filter(([_, v]) => v < 0)
+		const hasMixedValues = positiveEntries.length > 0 && negativeEntries.length > 0
 		
 		let pre_val_sum_positive = 0
 		let pre_val_sum_negative = 0
 		let numerators_sum = 0
 		const values: TermCollectionTransformedValue[] = []
 		
-		// Process positive values (0 to 100 percentage)
-		for (const [label, value] of Object.entries(positiveValues)) {
-			const pct = positiveSum > 0 ? (value / positiveSum) * 100 : 0
+		// Process positive values
+		for (const [label, value] of positiveEntries) {
+			// Calculate percentage based on absolute sum of all values
+			const pct = absoluteSum > 0 ? (value / absoluteSum) * 100 : 0
 			if (pct && this.q.numerators?.includes(label)) {
 				numerators_sum += pct
 			}
@@ -159,22 +151,21 @@ export class TermCollectionValues extends TwBase {
 			pre_val_sum_positive += pct
 		}
 		
-		// Process negative values (0 to -100 percentage)
-		for (const [label, value] of Object.entries(negativeValues)) {
-			// Calculate absolute percentage, then negate to make it negative
-			const absPct = negativeSum > 0 ? (Math.abs(value) / negativeSum) * 100 : 0
-			const pct = -absPct
-			if (absPct && this.q.numerators?.includes(label)) {
-				numerators_sum += absPct
+		// Process negative values
+		for (const [label, value] of negativeEntries) {
+			// Calculate percentage based on absolute sum of all values (keeps sign)
+			const pct = absoluteSum > 0 ? (value / absoluteSum) * 100 : 0
+			if (Math.abs(pct) && this.q.numerators?.includes(label)) {
+				numerators_sum += Math.abs(pct)
 			}
 			const color = this.term.propsByTermId[label]?.color
 			values.push({
 				label,
 				value: pct,
-				pre_val_sum: pre_val_sum_negative, // stored as positive for stacking calculation
+				pre_val_sum: pre_val_sum_negative,
 				color
 			})
-			pre_val_sum_negative += absPct
+			pre_val_sum_negative += pct
 		}
 		
 		d.values = values
