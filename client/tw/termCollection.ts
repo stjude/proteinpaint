@@ -125,8 +125,8 @@ export class TermCollectionValues extends TwBase {
 		const absoluteSum = Object.values(allValues).reduce((total, val) => total + Math.abs(val), 0)
 		
 		// Separate positive and negative values for proper stacking
-		const positiveEntries = Object.entries(allValues).filter(([_, v]) => v > 0)
-		const negativeEntries = Object.entries(allValues).filter(([_, v]) => v < 0)
+		const positiveEntries = Object.entries(allValues).filter(([label, value]) => value > 0)
+		const negativeEntries = Object.entries(allValues).filter(([label, value]) => value < 0)
 		const hasMixedValues = positiveEntries.length > 0 && negativeEntries.length > 0
 		
 		let pre_val_sum_positive = 0
