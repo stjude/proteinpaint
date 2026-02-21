@@ -112,26 +112,70 @@ export class TermCollectionValues extends TwBase {
 
 	transformData(d) {
 		const termsValue: { [termId: string]: number } = d.value
-		const sum = Object.values(termsValue).reduce((total, abs) => total + abs, 0)
-		let pre_val_sum = 0
+		
+		// Separate positive and negative values
+		const positiveValues: { [label: string]: number } = {}
+		const negativeValues: { [label: string]: number } = {}
+		let hasPositive = false
+		let hasNegative = false
+		
+		for (const [label, value] of Object.entries(termsValue)) {
+			if (value > 0) {
+				positiveValues[label] = value
+				hasPositive = true
+			} else if (value < 0) {
+				negativeValues[label] = value
+				hasNegative = true
+			}
+		}
+		
+		// Determine if we have mixed positive/negative data
+		const hasMixedValues = hasPositive && hasNegative
+		
+		// Calculate sums
+		const positiveSum = Object.values(positiveValues).reduce((total, val) => total + val, 0)
+		const negativeSum = Math.abs(Object.values(negativeValues).reduce((total, val) => total + val, 0))
+		
+		let pre_val_sum_positive = 0
+		let pre_val_sum_negative = 0
 		let numerators_sum = 0
 		const values: TermCollectionTransformedValue[] = []
-		for (const [label, abs] of Object.entries(termsValue)) {
-			const pct = (abs / sum) * 100
+		
+		// Process positive values (0 to 100 percentage)
+		for (const [label, value] of Object.entries(positiveValues)) {
+			const pct = positiveSum > 0 ? (value / positiveSum) * 100 : 0
 			if (pct && this.q.numerators?.includes(label)) {
 				numerators_sum += pct
 			}
-			const color = this.term.propsByTermId[label]?.color //|| this.term.lst.find(t => t.id === label || t.name == label)?.color
+			const color = this.term.propsByTermId[label]?.color
 			values.push({
 				label,
 				value: pct,
-				pre_val_sum,
+				pre_val_sum: pre_val_sum_positive,
 				color
 			})
-			pre_val_sum += pct
+			pre_val_sum_positive += pct
 		}
+		
+		// Process negative values (0 to -100 percentage)
+		for (const [label, value] of Object.entries(negativeValues)) {
+			const pct = negativeSum > 0 ? (Math.abs(value) / negativeSum) * -100 : 0
+			if (pct && this.q.numerators?.includes(label)) {
+				numerators_sum += pct
+			}
+			const color = this.term.propsByTermId[label]?.color
+			values.push({
+				label,
+				value: pct,
+				pre_val_sum: pre_val_sum_negative,
+				color
+			})
+			pre_val_sum_negative += Math.abs(pct)
+		}
+		
 		d.values = values
 		d.numerators_sum = numerators_sum
+		d.hasMixedValues = hasMixedValues
 		delete d.value
 	}
 }
