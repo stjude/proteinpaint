@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { vocabInit } from '#termdb/vocabulary'
-import { TermCollectionValues } from '../termCollection.ts'
+import { TermCollectionValues, type TermCollectionTransformedValue } from '../termCollection'
 
 /*************************
  reusable helper functions
@@ -8,6 +8,13 @@ import { TermCollectionValues } from '../termCollection.ts'
 
 const vocabApi = await vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } } })
 if (!vocabApi) console.log(`!!! missing vocabApi !!!`)
+
+// Type for data object after transformData() is called
+type TransformedData = {
+	values: TermCollectionTransformedValue[]
+	numerators_sum: number
+	hasMixedValues: boolean
+}
 
 /**************
  test sections
@@ -41,7 +48,7 @@ tape('transformData with positive values only', async test => {
 		{ vocabApi }
 	)
 
-	const data = {
+	const data: any = {
 		value: {
 			sig1: 30,
 			sig2: 70
@@ -82,7 +89,7 @@ tape('transformData with negative values only', async test => {
 		{ vocabApi }
 	)
 
-	const data = {
+	const data: any = {
 		value: {
 			sig1: -30,
 			sig2: -70
@@ -124,7 +131,7 @@ tape('transformData with mixed positive and negative values', async test => {
 		{ vocabApi }
 	)
 
-	const data = {
+	const data: any = {
 		value: {
 			sig1: 60,
 			sig2: 40,
@@ -183,7 +190,7 @@ tape('transformData with equal positive and negative values', async test => {
 		{ vocabApi }
 	)
 
-	const data = {
+	const data: any = {
 		value: {
 			enrich1: 30,
 			enrich2: 20,
