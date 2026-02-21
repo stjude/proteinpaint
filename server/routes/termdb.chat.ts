@@ -1225,7 +1225,6 @@ function sortSameCategoricalFilterKeys(filters: any[], ds: any): any {
 		if (seen.has(item.term)) categorical_filter_terms_with_multiple_fields.add(item.term)
 		else seen.add(item.term)
 	}
-	//mayLog("categorical_filter_terms_with_multiple_fields:",categorical_filter_terms_with_multiple_fields)
 
 	const multiple_fields_keys: { key: string; categories: string[] }[] = []
 	for (const key of categorical_filter_terms_with_multiple_fields) {
@@ -1239,9 +1238,8 @@ function sortSameCategoricalFilterKeys(filters: any[], ds: any): any {
 			}
 		}
 	}
-	//mayLog("multiple_fields_keys:", multiple_fields_keys)
-	// Try to preserve the order of the original filter terms
 
+	// Try to preserve the order of the original filter terms
 	const sorted_filter: FilterTerm[] = []
 	const seen2 = new Set<string>()
 	for (const f of filters) {
@@ -1265,7 +1263,7 @@ function sortSameCategoricalFilterKeys(filters: any[], ds: any): any {
 function validate_filter(filters: any[], ds: any, group_name: string): any {
 	if (!Array.isArray(filters)) throw 'filter is not array'
 	const sorted_filters = sortSameCategoricalFilterKeys(filters, ds)
-	let filter_result: any = { html: sorted_filters.html }
+	let filter_result: { simplefilter?: any; html: string } = { html: sorted_filters.html }
 	if (sorted_filters.filters.length <= 2) {
 		// If number of filter terms <=2 then simply a single iteration of generate_filter_term() is sufficient
 		const generated = generate_filter_term(sorted_filters.filters, ds)
@@ -1319,7 +1317,7 @@ function generate_filter_term(filters: any, ds: any) {
 						// Array of categories
 						const categories: any[] = []
 						for (const category of f.category) {
-							let cat: any
+							let cat: string | undefined
 							for (const ck in term.values) {
 								if (ck == category) cat = ck
 								else if (term.values[ck].label == category) cat = ck
@@ -1339,7 +1337,7 @@ function generate_filter_term(filters: any, ds: any) {
 						})
 					} else {
 						// Single string category
-						let cat: any
+						let cat: string | undefined
 						for (const ck in term.values) {
 							if (ck == f.category) cat = ck
 							else if (term.values[ck].label == f.category) cat = ck
