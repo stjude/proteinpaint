@@ -161,7 +161,7 @@ export class TermCollectionValues extends TwBase {
 		for (const [label, value] of Object.entries(negativeValues)) {
 			const pct = negativeSum > 0 ? (Math.abs(value) / negativeSum) * -100 : 0
 			if (pct && this.q.numerators?.includes(label)) {
-				numerators_sum += pct
+				numerators_sum += Math.abs(pct)
 			}
 			const color = this.term.propsByTermId[label]?.color
 			values.push({

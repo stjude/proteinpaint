@@ -217,10 +217,12 @@ const TermCollectionValuesAddons = {
 			
 			if (isNegative) {
 				// For negative values, use the neg scale and position below the zero line
+				// Note: value.value is negative (e.g., -50), pre_val_sum is stored as positive absolute value
 				cell.height = t.scales.neg ? t.scales.neg(value.value) : 0
 				cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 				// Position negative bars downward from the zero line (posMaxHt)
-				cell.y = t.counts.posMaxHt + twSettings.contBarGap + (t.scales.neg ? t.scales.neg(value.pre_val_sum) : 0)
+				// Convert pre_val_sum to negative for the scale (pre_val_sum is stored as absolute)
+				cell.y = t.counts.posMaxHt + twSettings.contBarGap + (t.scales.neg ? t.scales.neg(-value.pre_val_sum) : 0)
 			} else {
 				// For positive values, use the pos scale and position above the zero line
 				cell.height = t.scales.pos(value.value)
