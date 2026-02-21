@@ -4,7 +4,16 @@ import { get_samples } from '#src/termdb.sql.js'
 //import { createGenerator } from 'ts-json-schema-generator'
 //import type { SchemaGenerator } from 'ts-json-schema-generator'
 //import path from 'path'
-import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, DbRows, DbValue, ClassificationType } from '#types'
+import type {
+	ChatRequest,
+	ChatResponse,
+	LlmConfig,
+	RouteApi,
+	DbRows,
+	DbValue,
+	ClassificationType,
+	FilterTerm
+} from '#types'
 import { ChatPayload } from '#types/checkers'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
@@ -1204,34 +1213,84 @@ function removeLastOccurrence(str: string, word: string): string {
 	}
 }
 
+function sortSameCategoricalFilterKeys(filters: any[], ds: any): any {
+	let html = ''
+	const keys = filters.map(f => f.term)
+	if (new Set(keys).size == keys.length) return { filters: filters, html: html } // All filter terms have separate keys
+
+	const seen = new Set<string>()
+	const categorical_filter_terms_with_multiple_fields = new Set<string>()
+
+	for (const item of filters) {
+		if (seen.has(item.term)) categorical_filter_terms_with_multiple_fields.add(item.term)
+		else seen.add(item.term)
+	}
+
+	const multiple_fields_keys: { key: string; categories: string[] }[] = []
+	for (const key of categorical_filter_terms_with_multiple_fields) {
+		const term = ds.cohort.termdb.q.termjsonByOneid(key)
+		if (!term) {
+			html += 'invalid filter id:' + key
+		} else {
+			if (term.type == 'categorical') {
+				const multiple_fields = filters.filter(x => x.term == key)
+				multiple_fields_keys.push({ key: key, categories: multiple_fields.map(f => f.category) })
+			}
+		}
+	}
+
+	// Try to preserve the order of the original filter terms
+	const sorted_filter: FilterTerm[] = []
+	const seen2 = new Set<string>()
+	for (const f of filters) {
+		const repeated_term = multiple_fields_keys.find(x => x.key == f.term)
+		if (!repeated_term) {
+			sorted_filter.push(f)
+		} else {
+			if (!seen2.has(f.term)) {
+				const new_filter_term: { term: string; category: string[] } = {
+					term: f.term,
+					category: repeated_term.categories
+				}
+				seen2.add(f.term)
+				sorted_filter.push(new_filter_term)
+			}
+		}
+	}
+	return { filters: sorted_filter, html: html }
+}
+
 function validate_filter(filters: any[], ds: any, group_name: string): any {
 	if (!Array.isArray(filters)) throw 'filter is not array'
-
-	let filter_result: any = { html: '' }
-	if (filters.length <= 2) {
+	const sorted_filters = sortSameCategoricalFilterKeys(filters, ds)
+	let filter_result: { simplefilter?: any; html: string } = { html: sorted_filters.html }
+	if (sorted_filters.filters.length <= 2) {
 		// If number of filter terms <=2 then simply a single iteration of generate_filter_term() is sufficient
-		filter_result = generate_filter_term(filters, ds)
+		const generated = generate_filter_term(sorted_filters.filters, ds)
+		filter_result.simplefilter = generated.simplefilter
+		filter_result.html += generated.html
 	} else {
-		if (filters.length > num_filter_cutoff) {
-			filter_result.html =
+		if (sorted_filters.filters.length > num_filter_cutoff) {
+			filter_result.html +=
 				'For now, the maximum number of filter terms supported through the chatbot is ' + num_filter_cutoff
 			if (group_name.length > 0) {
 				// Group name is blank for summary filter, this is case for groups
-				filter_result.html += ' . The number of filter terms for group ' + group_name + ' is ' + filters.length + '\n' // Added temporary logic to restrict the number of filter terms to num_filter_cutoff.
+				filter_result.html +=
+					' . The number of filter terms for group ' + group_name + ' is ' + sorted_filters.filters.length + '\n' // Added temporary logic to restrict the number of filter terms to num_filter_cutoff.
 			} else {
 				// For summary filter prompts which do not have a group
-				filter_result.html += 'The number of filter terms for this query is ' + filters.length
+				filter_result.html += 'The number of filter terms for this query is ' + sorted_filters.filters.length
 			}
 		} else {
 			// When number of filter terms is greater than 2, then in each iteration the first two terms are taken and a filter object is created which is passed in the following iteration as a filter term
-			for (let i = 0; i < filters.length - 1; i++) {
+			for (let i = 0; i < sorted_filters.filters.length - 1; i++) {
 				const filter_lst = [] as any[]
 				if (i == 0) {
-					filter_lst.push(filters[i])
+					filter_lst.push(sorted_filters.filters[i])
 				} else {
 					filter_lst.push(filter_result.simplefilter)
 				}
-				filter_lst.push(filters[i + 1])
+				filter_lst.push(sorted_filters.filters[i + 1])
 				filter_result = generate_filter_term(filter_lst, ds)
 			}
 		}
@@ -1254,20 +1313,47 @@ function generate_filter_term(filters: any, ds: any) {
 					localfilter.join = f.join
 				}
 				if (term.type == 'categorical') {
-					let cat: any
-					for (const ck in term.values) {
-						if (ck == f.category) cat = ck
-						else if (term.values[ck].label == f.category) cat = ck
-					}
-					if (!cat) invalid_html += 'invalid category from ' + JSON.stringify(f)
-					// term and category validated
-					localfilter.lst.push({
-						type: 'tvs',
-						tvs: {
-							term,
-							values: [{ key: cat }]
+					if (Array.isArray(f.category)) {
+						// Array of categories
+						const categories: any[] = []
+						for (const category of f.category) {
+							let cat: string | undefined
+							for (const ck in term.values) {
+								if (ck == category) cat = ck
+								else if (term.values[ck].label == category) cat = ck
+							}
+							if (!cat) invalid_html += 'invalid category from ' + JSON.stringify(f)
+							else {
+								categories.push({ key: cat })
+							}
 						}
-					})
+						// term and category validated
+						localfilter.lst.push({
+							type: 'tvs',
+							tvs: {
+								term,
+								values: categories
+							}
+						})
+					} else {
+						// Single string category
+						let cat: string | undefined
+						for (const ck in term.values) {
+							if (ck == f.category) cat = ck
+							else if (term.values[ck].label == f.category) cat = ck
+						}
+						if (!cat) invalid_html += 'invalid category from ' + JSON.stringify(f)
+						else {
+							// term and category validated
+							localfilter.lst.push({
+								type: 'tvs',
+								tvs: {
+									term,
+									values: [{ key: cat }]
+								}
+							})
+						}
+					}
 				} else if (term.type == 'float' || term.type == 'integer') {
 					const numeric: any = {
 						type: 'tvs',
