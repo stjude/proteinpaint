@@ -151,14 +151,17 @@ export function setLabelsAndScales() {
 			if (t.tw.term.type == 'termCollection' && anno.values) {
 				for (const val of anno.values) {
 					const pct = val.value
-					if (!('minval' in t.counts) || t.counts.minval > pct) t.counts.minval = pct
-					if (!('maxval' in t.counts) || t.counts.maxval < pct + val.pre_val_sum) {
-						t.counts.maxval = pct + val.pre_val_sum
-					}
-					if (pct < 0) {
-						const negSum = pct + val.pre_val_sum
-						if (!('minval' in t.counts) || t.counts.minval > negSum) {
-							t.counts.minval = negSum
+					if (pct > 0) {
+						// For positive values, track the cumulative sum (pre_val_sum + pct)
+						const cumSum = val.pre_val_sum + pct
+						if (!('maxval' in t.counts) || t.counts.maxval < cumSum) {
+							t.counts.maxval = cumSum
+						}
+					} else if (pct < 0) {
+						// For negative values, track the cumulative sum (pre_val_sum + pct, which is negative)
+						const cumSum = val.pre_val_sum + pct
+						if (!('minval' in t.counts) || t.counts.minval > cumSum) {
+							t.counts.minval = cumSum
 						}
 					}
 				}
