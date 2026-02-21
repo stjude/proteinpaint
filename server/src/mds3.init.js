@@ -202,7 +202,6 @@ export async function init(ds, genome, totalDsLst = 0) {
 
 	await mayValidateAssayAvailability(ds)
 	await mayValidateViewModes(ds)
-	await mayValidateNumericTermCollection(ds)
 
 	// uncomment below to manually trigger server crash if there is only 1 dataset;
 	// make sure that serverconfig only has one genome and datasets[] entry,
@@ -344,8 +343,12 @@ export async function validate_termdb(ds) {
 		for (const c of tdb.numericTermCollections) {
 			if (!c.name) throw 'unamed tdb.numericTermCollections'
 			if (!Array.isArray(c.termIds)) throw 'termdb.numericTermCollections[].termIds[] not array'
+			if (!c.propsByTermId) throw 'c.propsByTermId missing'
+			const colorScale = getColors(c.termIds.length)
 			for (const i of c.termIds) {
 				if (!tdb.q.termjsonByOneid(i)) throw `invalid term id "${i}" from termdb.numericTermCollections[].${c.name}`
+				if (!c.propsByTermId[i]) c.propsByTermId[i] = {}
+				if (!c.propsByTermId[i].color) c.propsByTermId[i].color = colorScale(i)
 			}
 			if (c.plots) {
 				if (!Array.isArray(c.plots)) throw 'c.plots[] not array'
@@ -3506,24 +3509,5 @@ function mayInitTermid2totalsize2(tdb, ds) {
 			return await gdc.get_termlst2size(twLst, q, combination, ds)
 		}
 		return await call_barchart_data(twLst, q, combination, ds)
-	}
-}
-
-function mayValidateNumericTermCollection(ds) {
-	if (!ds.cohort?.termdb?.numericTermCollections) return
-	const collections = ds.cohort?.termdb?.numericTermCollections
-	if (!Array.isArray(collections)) throw `ds.cohort.termdb.numericTermCollections not an array`
-	if (!collections.length) throw `empty ds.cohort.termdb.numericTermCollections`
-	for (const c of collections) {
-		if (!c.name) throw `missing numericTermCollection.name`
-		if (c.propsByTermId) {
-			const colorScale = getColors(c.termIds.length)
-			for (const termId of c.termIds) {
-				if (!c.propsByTermId[termId]) c.propsByTermId[termId] = {}
-			}
-			for (const [k, v] of Object.entries(c.propsByTermId)) {
-				if (!v.color) v.color = colorScale(k)
-			}
-		}
 	}
 }
