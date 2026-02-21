@@ -222,8 +222,8 @@ const TermCollectionValuesAddons = {
 				cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 				// Position negative bars downward from the zero line
 				// Cumulative height is the scale distance from 0 to pre_val_sum
-				const cumulativeHeight = value.pre_val_sum === 0 ? 0 : (t.scales.neg(value.pre_val_sum) - t.scales.neg(0))
-				cell.y = t.counts.posMaxHt + twSettings.contBarGap + t.scales.neg(0) + cumulativeHeight
+				const cumulativeHeight = t.scales.neg ? (t.scales.neg(value.pre_val_sum) - t.scales.neg(0)) : 0
+				cell.y = t.counts.posMaxHt + twSettings.contBarGap + (t.scales.neg ? t.scales.neg(0) : 0) + cumulativeHeight
 			} else {
 				// For positive values, use the pos scale and position above the zero line
 				// Height is the scale distance from 0 to the value
@@ -231,7 +231,7 @@ const TermCollectionValuesAddons = {
 				cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 				// Position positive bars upward from the zero line
 				// Cumulative height is the scale distance from 0 to pre_val_sum
-				const cumulativeHeight = value.pre_val_sum === 0 ? 0 : (t.scales.pos(value.pre_val_sum) - t.scales.pos(0))
+				const cumulativeHeight = t.scales.pos(value.pre_val_sum) - t.scales.pos(0)
 				cell.y = t.counts.posMaxHt + twSettings.contBarGap - t.scales.pos(0) - cumulativeHeight - cell.height
 			}
 			
