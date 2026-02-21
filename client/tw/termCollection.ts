@@ -22,7 +22,7 @@ export class TermCollection {
 	type = termType
 	id: string
 	name: string
-	termlst: string[]
+	termlst: object[]
 	propsByTermId: {
 		[termId: string]: {
 			[prop: string]: any
@@ -42,8 +42,9 @@ export class TermCollection {
 		}
 
 		const details = /*opts.details ||*/ opts.vocabApi?.termdbConfig?.numericTermCollections?.find(
-			ntc => ntc.name == term.collectionId
+			ntc => ntc.name === term.collectionId
 		)
+		if (!details) throw new Error('no matching details for ' + term.collectionId)
 		if (!details.propsByTermId) throw new Error('propsByTermId missing')
 		if (!term.propsByTermId) term.propsByTermId = details.propsByTermId // assign if missing
 		for (const t of term.termlst) {
