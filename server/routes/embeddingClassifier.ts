@@ -32,14 +32,14 @@ function norm(a: number[]): number {
 	return Math.sqrt(dot(a, a))
 }
 
-function cosineSim(a: number[], b: number[]): number {
+export function cosineSim(a: number[], b: number[]): number {
 	const d = dot(a, b)
 	const na = norm(a)
 	const nb = norm(b)
 	return na === 0 || nb === 0 ? 0 : d / (na * nb)
 }
 
-function argsort(arr: number[]): number[] {
+export function argsort(arr: number[]): number[] {
 	return arr
 		.map((v, i) => ({ v, i }))
 		.sort((a, b) => a.v - b.v)
@@ -48,8 +48,20 @@ function argsort(arr: number[]): number[] {
 
 // ---------------------------------------------------------------------------
 //  Query Augmentation
-//  Priority: DGE > Survival > SampleScatter > Matrix > Summary(child-type)
+//  Priority: Resource > DGE > Survival > SampleScatter > Matrix > Summary(child-type)
 // ---------------------------------------------------------------------------
+
+const RESOURCE_PATTERNS: RegExp[] = [
+	/\b(link|url|website|web ?page|portal|web ?link)\b/i,
+	/\b(paper|publication|article|manuscript|preprint|journal)\b/i,
+	/\b(citation|cite|reference)\b/i,
+	/\bhow (do|can|to) (I|we|users?).{0,20}(use|access|find|get|download|navigate)\b/i,
+	/\bwhat is (this|the) (dataset|portal|study|cohort|data)\b/i,
+	/\b(tell me about|describe|about this|overview of|background on) (this|the) (dataset|portal|study|cohort|data)\b/i,
+	/\b(download|access) the data\b/i,
+	/\bwhere (can|do) (I|we|users?).{0,20}(find|get|access|download)\b/i,
+	/\bmore information about (this|the) (dataset|portal|study)\b/i
+]
 
 const DGE_PATTERNS: RegExp[] = [
 	/\bdifferential(ly)?\b/i,
@@ -179,6 +191,7 @@ function matchesAny(query: string, patterns: RegExp[]): boolean {
 }
 
 function augmentQuery(query: string, datasetNoise?: Set<string>): string {
+	if (matchesAny(query, RESOURCE_PATTERNS)) return 'Resource or information request: ' + query
 	if (matchesAny(query, DGE_PATTERNS)) return 'Differential gene expression analysis: ' + query
 	if (matchesAny(query, SURVIVAL_PATTERNS)) return 'Patient survival and outcome analysis: ' + query
 	if (matchesAny(query, SAMPLESCATTER_PATTERNS)) return 'Dimensionality reduction sample scatter plot: ' + query
@@ -409,6 +422,38 @@ const CATEGORY_EXAMPLES: Record<string, string[]> = {
 		'Display a heatmap of TP53 and RAS pathway genes for male patients',
 		'Show a matrix comparing expression patterns between KMT2A and DUX4',
 		'Create a multi-gene expression grid with sex and subtype overlays'
+	],
+
+	resource: [
+		'Where can I find the paper for this dataset',
+		'Show me the link to the portal',
+		'What is the main publication for this study',
+		'Give me the citation for this data',
+		'What paper should I cite',
+		'Is there a methods paper for this dataset',
+		'Link to the original publication',
+		'Where was this data published',
+		'Show me more information about this cohort',
+		'What is this dataset about',
+		'Tell me about the survivorship study',
+		'Give me background on this portal',
+		'Where can I download the data',
+		'How do I access this data',
+		'What data is available here',
+		'What data variables are available',
+		'What variables does this dataset have',
+		'What clinical variables are in this dataset',
+		'What fields are available in this study',
+		'Give me a weblink to the genomic data',
+		'What institution manages this data',
+		'Is there a data dictionary',
+		'Where can I learn more about this study',
+		'Show me the supplementary data link',
+		'What is the URL for this dataset',
+		'Give me the publication link',
+		'What are the terms of use for this data',
+		'Tell me about the data portal',
+		'Show portal description'
 	],
 
 	sampleScatter: [
@@ -707,7 +752,10 @@ export class EmbeddingClassifier {
 
 		try {
 			const llmResult = await classifyViaLlm(query, llm)
-			const llmCategory = llmResult.plot ?? 'none'
+			// Prefer .plot field; fall back to .type if it looks like a category name
+			// (some smaller LLMs return {"type":"resource"} instead of {"type":"plot","plot":"resource"})
+			const VALID_CATEGORIES = ['summary', 'dge', 'matrix', 'sampleScatter', 'survival', 'resource']
+			const llmCategory = llmResult.plot ?? (VALID_CATEGORIES.includes(llmResult.type) ? llmResult.type : 'none')
 			mayLog(`Hybrid router: LLM fallback returned category=${llmCategory}`)
 
 			return {
@@ -743,6 +791,7 @@ Categories:
 - "matrix": Multi-gene heatmap/matrix — displaying 3+ genes or variables across samples in a grid. Keywords: heatmap, matrix, landscape, multiple genes.
 - "sampleScatter": Dimensionality reduction plots — t-SNE, UMAP, PCA embeddings with optional overlays. Keywords: t-SNE, UMAP, PCA, clustering, embedding.
 - "survival": Survival/outcome analysis — Kaplan-Meier curves, hazard ratios, time-to-event. Keywords: survival, Kaplan-Meier, hazard ratio, prognosis, outcomes.
+- "resource": Requests for links, papers, publications, portal info, citations, data access, or background about the study/cohort/dataset. Keywords: link, URL, paper, publication, cite, portal, about, download, access.
 
 Examples:
 Q: "Show TP53 expression by sex" → {"type":"plot","plot":"summary"}
@@ -751,6 +800,8 @@ Q: "Which genes are upregulated in KMT2A vs DUX4" → {"type":"plot","plot":"dge
 Q: "Show a heatmap of TP53 KRAS and NRAS" → {"type":"plot","plot":"matrix"}
 Q: "Color the UMAP by molecular subtype" → {"type":"plot","plot":"sampleScatter"}
 Q: "Compare survival rates between KMT2A and DUX4" → {"type":"plot","plot":"survival"}
+Q: "Where can I find the paper for this dataset" → {"type":"plot","plot":"resource"}
+Q: "Show me the link to the portal" → {"type":"plot","plot":"resource"}
 
 Q: "${userPrompt}" →`
 
