@@ -8,6 +8,10 @@ export type ChatRequest = {
 	filter?: Filter
 	/** user prompt */
 	prompt: string
+	/** ID of the most recently created plot from this chat session, for follow-up detection */
+	activePlotId?: string
+	/** Full config of the active plot, so the server can modify it in follow-up queries */
+	activePlotConfig?: Record<string, any>
 	__protected__?: any
 }
 
@@ -35,7 +39,14 @@ export type LlmConfig = {
 	verbose?: boolean
 }
 
-export type ChatResponse = HtmlResponse | PlotResponse
+type PlotEditResponse = {
+	type: 'plot_edit'
+	/** ID of the existing plot to update in place */
+	plotId: string
+	plot: object
+}
+
+export type ChatResponse = HtmlResponse | PlotResponse | PlotEditResponse
 
 export const ChatPayload: RoutePayload = {
 	request: {
@@ -115,7 +126,7 @@ export type plot_type = {
 	/** When type == plot, show the corresponding plot in the plot field */
 	type: 'plot'
 	/** The type of plot to be displayed on the UI. */
-	plot: 'summary' | 'dge' | 'none' | 'survival' | 'matrix' | 'sampleScatter'
+	plot: 'summary' | 'dge' | 'none' | 'survival' | 'matrix' | 'sampleScatter' | 'resource'
 }
 
 export type DEType = {

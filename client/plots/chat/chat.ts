@@ -11,6 +11,10 @@ class Chat extends PlotBase implements RxComponent {
 	static type = 'chat'
 	readonly type = 'chat'
 	components: { controls: any }
+	/** ID of the most recently created plot from this chat session */
+	lastCreatedPlotId: string | null = null
+	/** Latest config of that plot, kept in sync via getState() */
+	lastPlotConfig: Record<string, any> | null = null
 
 	constructor(opts: any, api) {
 		super(opts, api)
@@ -25,6 +29,11 @@ class Chat extends PlotBase implements RxComponent {
 		const config = appState.plots.find((p: BasePlotConfig) => p.id === this.id)
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+		}
+		// Keep the last created plot config in sync so follow-up requests always
+		// send the current state (e.g. after the user manually edits it via the UI)
+		if (this.lastCreatedPlotId) {
+			this.lastPlotConfig = appState.plots.find((p: BasePlotConfig) => p.id === this.lastCreatedPlotId) ?? null
 		}
 		return {}
 	}
@@ -70,7 +79,10 @@ class Chat extends PlotBase implements RxComponent {
 				const body: ChatRequest = {
 					genome: this.app.vocabApi.vocab.genome,
 					dslabel: this.app.vocabApi.vocab.dslabel,
-					prompt
+					prompt,
+					...(this.lastCreatedPlotId && this.lastPlotConfig
+						? { activePlotId: this.lastCreatedPlotId, activePlotConfig: this.lastPlotConfig }
+						: {})
 				}
 				event.target.value = '' // clear input
 				const serverBubble = this.addBubble({ msg: '...' })
@@ -85,12 +97,21 @@ class Chat extends PlotBase implements RxComponent {
 						// Show error message in chatbot and exit, do not show any plot
 						serverBubble.html(result.html)
 					} else if (result.type == 'plot') {
+						const newPlotId = getId()
 						this.app.dispatch({
 							type: 'plot_create',
-							id: getId(),
+							id: newPlotId,
 							config: result.plot
 						})
+						this.lastCreatedPlotId = newPlotId
 						serverBubble.html('Please refer to the plot generated above')
+					} else if (result.type == 'plot_edit') {
+						this.app.dispatch({
+							type: 'plot_edit',
+							id: result.plotId,
+							config: result.plot
+						})
+						serverBubble.html('Chart updated')
 					}
 					/* may switch by data.type
 type=chat: server returns a chat msg
