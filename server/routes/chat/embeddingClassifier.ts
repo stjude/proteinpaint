@@ -563,7 +563,7 @@ export interface ClassifyResult {
 //  Embedder interface & implementations
 // ---------------------------------------------------------------------------
 
-interface Embedder {
+export interface Embedder {
 	init(): Promise<void>
 	embed(texts: string[]): Promise<number[][]>
 }
