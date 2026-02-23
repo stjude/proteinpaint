@@ -1,5 +1,6 @@
-import type { DbRows } from '#types'
+import type { DbRows, DbValue } from '#types'
 import fs from 'fs'
+import Database from 'better-sqlite3'
 
 /** Format few-shot training examples into a prompt string. */
 export function formatTrainingExamples(trainingData: { question: string; answer: any }[]): string {
@@ -155,4 +156,96 @@ export function validate_term(response_term: string, common_genes: string[], dat
 		category = term.type
 	}
 	return { term_type: term_type, html: html, category: category }
+}
+
+export async function parse_geneset_db(genedb: string) {
+	let genes_list: string[] = []
+	const db = new Database(genedb)
+	try {
+		// Query the database
+		const desc_rows = db.prepare('SELECT name from codingGenes').all()
+		desc_rows.forEach((row: any) => {
+			genes_list.push(row.name)
+		})
+		genes_list = genes_list.map(str => str.toLowerCase()) // Converting to lowercase
+	} catch (error) {
+		throw 'Could not parse geneDB' + error
+	} finally {
+		db.close()
+	}
+	return genes_list
+}
+
+export async function parse_dataset_db(dataset_db: string) {
+	const db = new Database(dataset_db)
+	const rag_docs: string[] = []
+	const db_rows: DbRows[] = []
+	try {
+		// Query the database
+		const desc_rows = db.prepare('SELECT * from termhtmldef').all()
+
+		const description_map: any = []
+		// Process the retrieved rows
+		desc_rows.forEach((row: any) => {
+			const name: string = row.id
+			const jsonhtml = JSON.parse(row.jsonhtml)
+			const description: string = jsonhtml.description[0].value
+			description_map.push({ name: name, description: description })
+		})
+
+		const term_db_rows = db.prepare('SELECT * from terms').all()
+
+		term_db_rows.forEach((row: any) => {
+			const found = description_map.find((item: any) => item.name === row.id)
+			if (found) {
+				// Restrict db to only those items that have a description
+				const jsondata = JSON.parse(row.jsondata)
+				const description = description_map.filter((item: any) => item.name === row.id)
+				const term_type: string = row.type
+
+				const values: DbValue[] = []
+				if (jsondata.values && Object.keys(jsondata.values).length > 0) {
+					for (const key of Object.keys(jsondata.values)) {
+						const value = jsondata.values[key]
+						const db_val: DbValue = { key: key, value: value }
+						values.push(db_val)
+					}
+				}
+				const db_row: DbRows = {
+					name: row.id,
+					description: description[0].description,
+					values: values,
+					term_type: term_type
+				}
+				const stringified_db = parse_db_rows(db_row)
+				rag_docs.push(stringified_db)
+				db_rows.push(db_row)
+			}
+		})
+	} catch (error) {
+		throw 'Error in parsing dataset DB:' + error
+	} finally {
+		db.close()
+	}
+	return { db_rows: db_rows, rag_docs: rag_docs }
+}
+
+export function parse_db_rows(db_row: DbRows) {
+	let output_string: string =
+		'Name of the field is:"' +
+		db_row.name +
+		'". This field is of the type:' +
+		db_row.term_type +
+		'. Description: ' +
+		db_row.description
+
+	if (db_row.values.length > 0) {
+		output_string += 'This field contains the following possible values.'
+		for (const value of db_row.values) {
+			if (value.value && value.value.label) {
+				output_string += 'The key is "' + value.key + '" and the label is "' + value.value.label + '".'
+			}
+		}
+	}
+	return output_string
 }
