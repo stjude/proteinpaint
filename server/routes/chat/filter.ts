@@ -150,18 +150,22 @@ function generate_filter_term(filters: any, ds: any) {
 					localfilter.join = f.join
 				}
 				if (term.type == 'categorical') {
-					let cat: any
-					for (const ck in term.values) {
-						if (ck == f.category) cat = ck
-						else if (term.values[ck].label == f.category) cat = ck
+					const categories = Array.isArray(f.category) ? f.category : [f.category]
+					const values: { key: string }[] = []
+					for (const category of categories) {
+						let cat: string | undefined
+						for (const ck in term.values) {
+							if (ck == category) cat = ck
+							else if (term.values[ck].label == category) cat = ck
+						}
+						if (!cat) invalid_html += 'invalid category from ' + JSON.stringify({ term: f.term, category })
+						else values.push({ key: cat })
 					}
-					if (!cat) invalid_html += 'invalid category from ' + JSON.stringify(f)
-					// term and category validated
 					localfilter.lst.push({
 						type: 'tvs',
 						tvs: {
 							term,
-							values: [{ key: cat }]
+							values
 						}
 					})
 				} else if (term.type == 'float' || term.type == 'integer') {
