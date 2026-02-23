@@ -403,6 +403,13 @@ class Query:
                 query_beta[:, ~missing_mask] = tmp_block[:, valid_cols]
         return query_beta
 
+def nan_to_none(obj):
+    import math
+    if isinstance(obj, float) and math.isnan(obj):
+        return None
+    if isinstance(obj, list):
+        return [nan_to_none(x) for x in obj]
+    return obj
 
 def main(hdf_file, query_samples, query_string, verbose=False):
     if not os.path.exists(hdf_file):
@@ -426,8 +433,8 @@ def main(hdf_file, query_samples, query_string, verbose=False):
         betavals = q.process_genomic_queries(query_samples_list, q_chrom,q_start, q_end, verbose)
         #print(betavals)
         # Convert numpy array to list for JSON serialization
-        result = betavals.tolist()
-        print(json.dumps(result))
+        clean_result = nan_to_none(betavals.tolist())
+        print(json.dumps(clean_result))
 
     elif query_info['type'] == 'cpg':
         #print(f"Processing CpG query:")
@@ -441,8 +448,9 @@ def main(hdf_file, query_samples, query_string, verbose=False):
         #print(f"Query time: {end_t-start_t:.4f} secs")
         #print(betavals)
         # Convert numpy array to list for JSON serialization
-        result = betavals.tolist()
-        print(json.dumps(result))
+        #result = betavals.tolist()
+        clean_result = nan_to_none(betavals.tolist())
+        print(json.dumps(clean_result))
 
 
 def parse_stdin():
