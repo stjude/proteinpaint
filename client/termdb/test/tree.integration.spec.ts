@@ -86,7 +86,7 @@ tape('default behavior', function (test) {
 	}
 
 	function testExpand1(tree) {
-		parTermObj = Object.values(tree.Inner.termsById).find(d => d.name == parentTerm)
+		parTermObj = Object.values(tree.Inner.termsById).find((d:any) => d.name == parentTerm)
 		test.equal(childdiv1.style.display, 'block', 'child DIV of first term is now visible')
 		test.equal(
 			childdiv1.querySelectorAll('.termdiv').length,
@@ -139,7 +139,7 @@ tape('default behavior', function (test) {
 		termbtn2.click()
 	}
 	function testExpandTerm1_child1(tree) {
-		parTermObj = Object.values(tree.Inner.termsById).find(d => d.name == parentTerm)
+		parTermObj = Object.values(tree.Inner.termsById).find((d:any) => d.name == parentTerm)
 		test.equal(childdiv2.style.display, 'block', 'child DIV of second term is now visible')
 		test.equal(
 			childdiv2.querySelectorAll('.termdiv').length,
@@ -189,7 +189,7 @@ tape('default behavior, MSigDB (genome-level termdb, not ds)', function (test) {
 	}
 
 	function testExpand1(tree) {
-		parTermObj = Object.values(tree.Inner.termsById).find(d => d.name == parentTerm)
+		parTermObj = Object.values(tree.Inner.termsById).find((d:any) => d.name == parentTerm)
 		test.equal(childdiv1.style.display, 'block', 'child DIV of first term is now visible')
 		test.equal(
 			childdiv1.querySelectorAll('.termdiv').length,
@@ -251,6 +251,7 @@ tape('click_term', test => {
 tape('click_term2select_tvs', test => {
 	test.timeoutAfter(1000)
 
+	let graphable
 	runpp({
 		app: {
 			callbacks: {
@@ -264,6 +265,7 @@ tape('click_term2select_tvs', test => {
 	})
 
 	function runTests(app) {
+		graphable = app.vocabApi.graphable()
 		const tree = app.Inner.components.tree
 		helpers
 			.rideInit({ arg: tree, bus: tree, eventType: 'postRender.test' })
@@ -338,7 +340,7 @@ tape('rehydrated from saved state', function (test) {
 			numTreeTerms,
 			`should have ${numTreeTerms} expanded terms`
 		)
-		const nonLeafTerms = Object.values(tree.Inner.termsById).filter(d => !d?.isleaf && d.id != 'root')
+		const nonLeafTerms = Object.values(tree.Inner.termsById).filter((d:any) => !d?.isleaf && d.id != 'root')
 		test.equal(
 			tree.Inner.dom.holder.selectAll('.termbtn').size(),
 			nonLeafTerms.length,
