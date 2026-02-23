@@ -86,7 +86,7 @@ tape('default behavior', function (test) {
 	}
 
 	function testExpand1(tree) {
-		parTermObj = Object.values(tree.Inner.termsById).find((d:any) => d.name == parentTerm)
+		parTermObj = Object.values(tree.Inner.termsById).find((d: any) => d.name == parentTerm)
 		test.equal(childdiv1.style.display, 'block', 'child DIV of first term is now visible')
 		test.equal(
 			childdiv1.querySelectorAll('.termdiv').length,
@@ -96,7 +96,7 @@ tape('default behavior', function (test) {
 	}
 
 	let childdiv2
-	function expandTerm1_child1(tree) {
+	function expandTerm1_child1(/*tree*/) {
 		// term1 has already been expanded
 		// from child div of term1, expand the first child term
 		/*
@@ -139,7 +139,7 @@ tape('default behavior', function (test) {
 		termbtn2.click()
 	}
 	function testExpandTerm1_child1(tree) {
-		parTermObj = Object.values(tree.Inner.termsById).find((d:any) => d.name == parentTerm)
+		parTermObj = Object.values(tree.Inner.termsById).find((d: any) => d.name == parentTerm)
 		test.equal(childdiv2.style.display, 'block', 'child DIV of second term is now visible')
 		test.equal(
 			childdiv2.querySelectorAll('.termdiv').length,
@@ -148,11 +148,11 @@ tape('default behavior', function (test) {
 		)
 	}
 
-	function triggerFold(tree) {
+	function triggerFold(/*tree*/) {
 		termbtn1.click()
 	}
 
-	function testFold(tree) {
+	function testFold(/*tree*/) {
 		test.equal(childdiv1.style.display, 'none', 'child DIV is now invisible')
 	}
 })
@@ -189,7 +189,7 @@ tape('default behavior, MSigDB (genome-level termdb, not ds)', function (test) {
 	}
 
 	function testExpand1(tree) {
-		parTermObj = Object.values(tree.Inner.termsById).find((d:any) => d.name == parentTerm)
+		parTermObj = Object.values(tree.Inner.termsById).find((d: any) => d.name == parentTerm)
 		test.equal(childdiv1.style.display, 'block', 'child DIV of first term is now visible')
 		test.equal(
 			childdiv1.querySelectorAll('.termdiv').length,
@@ -228,12 +228,12 @@ tape('click_term', test => {
 		childdiv_term1 = term1.querySelector('.termchilddiv')
 	}
 	let childdiv_child1
-	function expandTerm1_child1(tree) {
+	function expandTerm1_child1(/*tree*/) {
 		const child1 = childdiv_term1.querySelector('.termdiv')
 		child1.querySelector('.termbtn').click()
 		childdiv_child1 = child1.querySelector('.termchilddiv')
 	}
-	function testExpand_child1(tree) {
+	function testExpand_child1(/*tree*/) {
 		//Find disabled term button specified in tree.disable_terms
 		const disabledlabels = childdiv_child1.querySelectorAll('.sja_tree_click_term_disabled')
 		test.ok(disabledlabels.length > 0, 'should have one or more disabled terms')
@@ -251,7 +251,6 @@ tape('click_term', test => {
 tape('click_term2select_tvs', test => {
 	test.timeoutAfter(1000)
 
-	let graphable
 	runpp({
 		app: {
 			callbacks: {
@@ -259,13 +258,14 @@ tape('click_term2select_tvs', test => {
 			}
 		},
 		tree: {
-			click_term2select_tvs: modifier_callback,
+			click_term2select_tvs: () => {
+				/** Empty. Added as a client action before the app.dispatch() to show the submenu. */
+			},
 			disable_terms: [termjson['agedx']]
 		}
 	})
 
 	function runTests(app) {
-		graphable = app.vocabApi.graphable()
 		const tree = app.Inner.components.tree
 		helpers
 			.rideInit({ arg: tree, bus: tree, eventType: 'postRender.test' })
@@ -286,14 +286,14 @@ tape('click_term2select_tvs', test => {
 	}
 
 	let childdiv_child1
-	function expandTerm1_child1(tree) {
+	function expandTerm1_child1(/*tree*/) {
 		const child1 = childdiv_term1.querySelector('.termdiv')
 		child1.querySelector('.termbtn').click()
 		childdiv_child1 = child1.querySelector('.termchilddiv')
 	}
 
 	let buttons
-	function testExpand_child1(tree) {
+	function testExpand_child1(/*tree*/) {
 		const disabledlabels = childdiv_child1.getElementsByClassName('sja_tree_click_term_disabled termlabel')
 		test.ok(disabledlabels.length > 0, 'should have one or more disabled terms')
 		buttons = childdiv_child1.getElementsByClassName('sja_filter_tag_btn sja_tree_click_term termlabel')
@@ -309,10 +309,6 @@ tape('click_term2select_tvs', test => {
 		test.equal(typeof components.submenu, 'object', 'should have a submenu')
 		test.equal(tree.Inner.dom.holder.style('display'), 'none', 'should have a hidden tree')
 		test.equal(components.submenu.Inner.dom.holder.style('display'), 'block', 'should have a visible submenu')
-	}
-
-	function modifier_callback(tvs) {
-		test.ok(graphable(term), 'modifier callback called with a graphable term')
 	}
 })
 
@@ -340,12 +336,14 @@ tape('rehydrated from saved state', function (test) {
 			numTreeTerms,
 			`should have ${numTreeTerms} expanded terms`
 		)
-		const nonLeafTerms = Object.values(tree.Inner.termsById).filter((d:any) => !d?.isleaf && d.id != 'root')
+		const nonLeafTerms = Object.values(tree.Inner.termsById).filter((d: any) => !d?.isleaf && d.id != 'root')
 		test.equal(
 			tree.Inner.dom.holder.selectAll('.termbtn').size(),
 			nonLeafTerms.length,
 			'should have 7 term toggle buttons'
 		)
+
+		if (test['_ok']) tree.Inner.app.destroy()
 	}
 })
 
@@ -365,6 +363,8 @@ tape('error handling', function (test) {
 	function testWrongGenome(app) {
 		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div:nth-child(2)')
 		test.equal(d.text(), 'Error: invalid genome', 'should show for invalid genome')
+
+		if (test['_ok']) app.destroy()
 	}
 
 	runpp({
@@ -379,6 +379,8 @@ tape('error handling', function (test) {
 	function testWrongDslabel(app) {
 		const d = app.Inner.dom.errdiv.select('.sja_errorbar').select('div:nth-child(2)')
 		test.equal(d.text(), 'Error: invalid dslabel', 'should show for genome-level termdb not available')
+
+		if (test['_ok']) app.destroy()
 	}
 })
 
@@ -413,6 +415,8 @@ tape('usecase', function (test) {
 			0,
 			'should not display any "Diagnosis Year" term label'
 		)
+
+		if (test['_ok']) tree.Inner.app.destroy()
 		test.end()
 	}
 })
