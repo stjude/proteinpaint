@@ -5,7 +5,7 @@ import * as categoricalSql from './termdb.sql.categorical.js'
 import * as conditionSql from './termdb.sql.condition.js'
 import { sampleLstSql } from './termdb.sql.samplelst.js'
 import { multivalueCTE } from './termdb.sql.multivalue.js'
-import { termCollectionCTE } from './termdb.sql.termCollection.js'
+import { termCollectionCategorical, termCollectionNumeric } from './termdb.sql.termCollection.js'
 import { boxplot_getvalue } from './utils.js'
 import { DEFAULT_SAMPLE_TYPE, isNumericTerm, annoNumericTypes } from '#shared/terms.js'
 import { authApi } from '#src/auth.js'
@@ -482,7 +482,9 @@ export async function get_term_cte(q, values, index, filter, termWrapper = null)
 	} else if (term.type == 'multivalue') {
 		CTE = await multivalueCTE.getCTE(tablename, termWrapper || { term, q: termq }, values)
 	} else if (term.type == 'termCollection') {
-		CTE = await termCollectionCTE.getCTE(tablename, termWrapper || { term, q: termq }, values)
+		if (term.memberType == 'categorical')
+			CTE = await termCollectionCategorical.getCTE(tablename, termWrapper || { term, q: termq }, values)
+		else CTE = await termCollectionNumeric.getCTE(tablename, termWrapper || { term, q: termq }, values)
 	} else {
 		throw 'unknown term type [get_term_cte() server/src/termdb.sql.js]'
 	}

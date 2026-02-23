@@ -256,6 +256,15 @@ export default function (): Mds3 {
 						termIds: ['a_death', 'a_ndi', 'agelastvisit'],
 						branchIds: ['Demographic Variables', 'Age (years)'],
 						propsByTermId: {}
+					},
+					{
+						name: 'Assay Availabiliy',
+						//keys: ['yes'],
+						type: 'categorical',
+						memberType: 'categorical',
+						termIds: ['assayavailability_cnv', 'assayavailability_fusion', 'assayavailability_germline'],
+						branchIds: [''],
+						propsByTermId: {}
 					}
 				]
 			},
