@@ -299,6 +299,19 @@ class Query:
         row_end = num_sites_pref_sum[q_idx + 1] 
         return row_start, row_end
 
+    def resolve_samples(self, query_samples, sample_to_col):
+        col_indices = []
+        # mark which samples are missing in HDF5
+        missing_mask = [] 
+        for s in query_samples:
+            if s in sample_to_col:
+                col_indices.append(sample_to_col[s])
+                missing_mask.append(False)
+            else:
+                col_indices.append(-1)  # placeholder
+                missing_mask.append(True)
+        return np.array(col_indices), np.array(missing_mask)
+
     def process_genomic_queries(self, query_samples, query_chrom, query_start, query_end, verbose=False):
         assert os.path.exists(self.h5file)
         try:
@@ -312,7 +325,7 @@ class Query:
             start_pos = h5["meta/start"][:]
 
             num_sites_per_chrom = json.loads(h5.attrs['chrom_lengths'])
-            # check if self.q_chrom doesn't exist
+            # check if query_chrom doesn't exist
             if query_chrom not in num_sites_per_chrom:
                 raise KeyError(f"{query_chrom} not found in HDF5 file.")
 
@@ -327,17 +340,9 @@ class Query:
             #print(f"{query_chrom}: [{target_start_pos[0]}, {target_start_pos[-1]}]")
             #print(f"row range: [{row_start}, {row_end})")
 
-
             # Find the genomic range in HDF5 that is in the query range
             left  = np.searchsorted(target_start_pos, query_start, "left") # uses binary search
-            right = np.searchsorted(target_start_pos, query_end, "right") # uses binary search
-
-            if verbose:
-                print("######### In the H5 file provided ###########")
-                print(f"Total # of samples: {len(names)}")
-                print(f"Total # of sites in {query_chrom}: {len(target_start_pos)}")
-                print(f"Genomic range: [{target_start_pos[0]}, {target_start_pos[-1]}]")
-                print()
+            right = np.searchsorted(target_start_pos, query_end, "right") # uses binary search #exclusive end
 
             # For single point query, the genomic position must exist in the data
             if query_start == query_end:
@@ -359,21 +364,33 @@ class Query:
 
 
             if verbose:
+                print("######### In the H5 file provided ###########")
+                print(f"Total # of samples: {len(names)}")
+                print(f"Total # of sites in {query_chrom}: {len(target_start_pos)}")
+                print(f"Genomic range: [{target_start_pos[0]}, {target_start_pos[-1]}]")
+                print()
                 print("######### Processing Queries ###########")
                 print(f"Finding beta values in genomic range: [{target_start_pos[left]}, {target_start_pos[right-1]}]")
                 print(f"# of beta values in the genomic range: {right - left}")
                 print()
                 print("####################")
 
+            # Allocate result array
+            n_rows = right - left
+            n_cols = len(query_samples)
+            default_fill_value = -1
+            query_beta = np.full((n_rows, n_cols), default_fill_value, dtype='float32')
+
             sample_to_col = dict(zip(names, cols))
-            col_idx = []
-            for s in query_samples:
-                if s not in sample_to_col:
-                    raise KeyError(f"Sample(s) not found in HDF5 file.")
-                col_idx.append(sample_to_col[s])
+            col_idx, missing_mask = self.resolve_samples(query_samples, sample_to_col)
+
+            # Extract only samples in the HDF5 
+            valid_cols = col_idx[~missing_mask]
+
             dset = h5["/beta/values"]
-            query_beta = dset[left:right, :]
-            query_beta = query_beta[:, col_idx]
+            if len(valid_cols) > 0 and n_rows > 0: 
+                tmp_block = dset[left:right, :]
+                query_beta[:, ~missing_mask] = tmp_block[:, valid_cols]
         return query_beta
 
 
