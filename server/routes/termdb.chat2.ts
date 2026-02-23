@@ -5,8 +5,10 @@ import { get_samples } from '#src/termdb.sql.js'
 //import type { SchemaGenerator } from 'ts-json-schema-generator'
 //import path from 'path'
 import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, DbRows, DbValue, ClassificationType } from '#types'
-import { getClassifier, getEmbedder, cosineSim, argsort } from './embeddingClassifier.ts'
+import { getEmbedder } from './embeddingClassifier.ts'
 import { ChatPayload } from '#types/checkers'
+import { classifyQuery } from './chat/classify.ts'
+import { extractResourceResponse } from './chat/resource.ts'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import Database from 'better-sqlite3'
@@ -30,9 +32,6 @@ const FOLLOWUP_PATTERNS: RegExp[] = [
 	/\b(color|colour) (it|this|by)\b/i,
 	/\boverlay (it|this|on (the|this) (chart|plot))\b/i
 ]
-
-/** In-memory cache of decoded resource embeddings keyed by absolute DB path. Populated on first resource query. */
-const resourceDbCache = new Map<string, { texts: string[]; embeddings: number[][] }>()
 
 /** Shared JSON Schema definitions for filter terms, used by DE, Summary, and Matrix agents. */
 const FILTER_TERM_DEFINITIONS = {
@@ -73,7 +72,7 @@ const FILTER_TERM_DEFINITIONS = {
 }
 
 /** Format few-shot training examples into a prompt string. */
-function formatTrainingExamples(trainingData: { question: string; answer: any }[]): string {
+export function formatTrainingExamples(trainingData: { question: string; answer: any }[]): string {
 	return trainingData
 		.map(
 			(td, i) =>
@@ -277,33 +276,7 @@ export async function run_chat_pipeline(
 			.flatMap(row => row.values.map(v => v.key.toUpperCase()))
 	)
 
-	// Use the embedding classifier with LLM fallback for uncertain queries.
-	// The classifier is a singleton that loads the model once and reuses it.
-	const clf = await getClassifier(llm)
-	const embeddingResult = await clf.classifyHybrid(user_prompt, llm, datasetNoise)
-	mayLog(
-		`Embedding classifier: category=${embeddingResult.category}, confidence=${embeddingResult.confidence.toFixed(4)}`
-	)
-
-	let class_response: ClassificationType
-	if (embeddingResult.category === 'none') {
-		class_response = {
-			type: 'html',
-			html: 'Your query does not appear to be related to the available genomic data visualizations. Please try rephrasing your question about gene expression, differential analysis, sample clustering, or clinical data exploration.'
-		}
-	} else {
-		class_response = {
-			type: 'plot',
-			plot: embeddingResult.category as
-				| 'summary'
-				| 'dge'
-				| 'survival'
-				| 'matrix'
-				| 'sampleScatter'
-				| 'none'
-				| 'resource'
-		}
-	}
+	const class_response: ClassificationType = await classifyQuery(user_prompt, llm, datasetNoise)
 	let ai_output_json: any
 	mayLog('Time taken for classification:', formatElapsedTime(Date.now() - time1))
 	if (class_response.type == 'html') {
@@ -337,7 +310,7 @@ export async function run_chat_pipeline(
 			mayLog('Time taken for DE agent:', formatElapsedTime(Date.now() - time1))
 		} else if (classResult == 'resource') {
 			const time1 = new Date().valueOf()
-			ai_output_json = await extract_resource_response(user_prompt, llm, dataset_json)
+			ai_output_json = await extractResourceResponse(user_prompt, llm, dataset_json)
 			mayLog('Time taken for resource agent:', formatElapsedTime(Date.now() - time1))
 		} else if (classResult == 'survival') {
 			ai_output_json = { type: 'html', html: 'survival agent has not been implemented yet' }
@@ -519,7 +492,7 @@ async function call_sj_llm(prompt: string, model_name: string, apilink: string) 
 	}
 }
 
-async function route_to_appropriate_llm_provider(
+export async function route_to_appropriate_llm_provider(
 	template: string,
 	llm: LlmConfig,
 	modelOverride?: string
@@ -562,7 +535,7 @@ function extractJson(text: string): string {
 }
 
 /** Safely parse LLM output that may be wrapped in markdown fences or explanations. */
-function safeParseLlmJson(response: string): any {
+export function safeParseLlmJson(response: string): any {
 	// Try direct parse first (works for well-behaved models)
 	try {
 		return JSON.parse(response)
@@ -591,99 +564,6 @@ function checkField(sentence: string) {
 export async function readJSONFile(file: string) {
 	const json_file = await fs.promises.readFile(file)
 	return JSON.parse(json_file.toString())
-}
-
-async function extract_resource_response(
-	prompt: string,
-	llm: LlmConfig,
-	dataset_json: any
-): Promise<{ type: 'html'; html: string }> {
-	const classification_ds = dataset_json.charts?.find((chart: any) => chart.type == 'Classification')
-	if (!classification_ds) {
-		return { type: 'html', html: 'No resource information is available for this dataset.' }
-	}
-
-	const training_data =
-		classification_ds.TrainingData?.length > 0 ? formatTrainingExamples(classification_ds.TrainingData) : ''
-
-	// RAG: retrieve relevant text from the optional generalized resource DB
-	let rag_context = ''
-	if (dataset_json.resourceDb) {
-		try {
-			const db_path = serverconfig.tpmasterdir + '/' + dataset_json.resourceDb
-			if (!resourceDbCache.has(db_path)) {
-				const res_db = new Database(db_path, { readonly: true })
-				const rows = res_db.prepare('SELECT text, embedding FROM resources').all() as {
-					text: string
-					embedding: Buffer
-				}[]
-				res_db.close()
-				resourceDbCache.set(db_path, {
-					texts: rows.map(r => r.text),
-					embeddings: rows.map(r =>
-						Array.from({ length: r.embedding.byteLength / 4 }, (_, i) => r.embedding.readFloatLE(i * 4))
-					)
-				})
-				mayLog(`RAG: loaded ${rows.length} entries from resourceDb into cache`)
-			}
-
-			const cached = resourceDbCache.get(db_path)!
-			if (cached.embeddings.length > 0) {
-				const embedder = await getEmbedder(llm)
-				const [query_emb] = await embedder.embed([prompt])
-				const storedDim = cached.embeddings[0].length
-				const queryDim = query_emb.length
-				if (storedDim !== queryDim) {
-					mayLog(
-						`RAG: resourceDb dimension mismatch — query=${queryDim}d vs stored=${storedDim}d. ` +
-							`Rebuild the DB with the currently configured embedding model.`
-					)
-				} else {
-					const sims = cached.embeddings.map(emb => cosineSim(query_emb, emb))
-					const top_idx = argsort(sims).slice(-5).reverse()
-					rag_context =
-						'Relevant resource information:\n' +
-						top_idx.map((i, n) => `[${n + 1}] ${cached.texts[i]}`).join('\n\n') +
-						'\n'
-					mayLog(`RAG: top resource similarity: ${sims[top_idx[0]]?.toFixed(3)}`)
-				}
-			}
-		} catch (e) {
-			mayLog('resourceDb RAG error:', e)
-		}
-	}
-
-	const system_prompt =
-		'I am an assistant that provides information and links about this data portal. ' +
-		"Answer the user's question using only the provided resource information. " +
-		'Format all URLs as clickable HTML links using <a href="url" target="_blank" rel="noopener noreferrer">descriptive text</a>. ' +
-		'The final output must be ONLY a JSON object with NO extra comments, in this format: {"type":"html","html":"your html here"}\n' +
-		(classification_ds.SystemPrompt ? classification_ds.SystemPrompt + '\n' : '') +
-		(rag_context ? rag_context + '\n' : '') +
-		(training_data ? 'Training data examples:\n' + training_data + '\n' : '') +
-		'Question: {' +
-		prompt +
-		'} answer:'
-
-	// Use the smaller classifier model for resource responses — it only needs to format
-	// retrieved text into HTML, so the full 70B model is unnecessary.
-	const response: string = await route_to_appropriate_llm_provider(
-		system_prompt,
-		llm,
-		llm.classifierModelName ?? llm.modelName
-	)
-	const parsed = safeParseLlmJson(response)
-
-	let html: string
-	if (parsed?.type === 'html' && parsed?.html) {
-		html = parsed.html
-	} else if (typeof parsed === 'string') {
-		html = parsed
-	} else {
-		html = response
-	}
-
-	return { type: 'html', html: html }
 }
 
 async function extract_DE_search_terms_from_query(
