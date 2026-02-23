@@ -22,6 +22,7 @@ export class TermCollection {
 	type = termType
 	id: string
 	name: string
+	memberType: 'numeric' | 'categorical'
 	termlst: object[]
 	propsByTermId: {
 		[termId: string]: {
@@ -47,6 +48,7 @@ export class TermCollection {
 		if (!details) throw new Error('no matching details for ' + term.collectionId)
 		if (!details.propsByTermId) throw new Error('propsByTermId missing')
 		if (!term.propsByTermId) term.propsByTermId = details.propsByTermId // assign if missing
+		if (!term.memberType) term.memberType = details.type // copy memberType from dataset termCollection config
 		for (const t of term.termlst) {
 			if (!t.id) throw new Error('t.id missing')
 			// a term newly added to term.termlst may be missing from propsByTermId and must include it
@@ -66,6 +68,7 @@ export class TermCollection {
 		TermCollection.validate(term)
 		this.id = term.id
 		this.name = term.name
+		this.memberType = term.memberType
 		this.termlst = term.termlst || []
 		this.propsByTermId = term.propsByTermId || {}
 	}

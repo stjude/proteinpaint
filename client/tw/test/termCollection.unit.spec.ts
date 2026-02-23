@@ -33,6 +33,7 @@ tape('transformData with positive values only', async test => {
 				type: 'termCollection',
 				id: 'test',
 				name: 'Test Collection',
+				memberType: 'numeric',
 				termlst: [],
 				propsByTermId: {
 					sig1: { color: 'red' },
@@ -74,6 +75,7 @@ tape('transformData with negative values only', async test => {
 				type: 'termCollection',
 				id: 'test',
 				name: 'Test Collection',
+				memberType: 'numeric',
 				termlst: [],
 				propsByTermId: {
 					sig1: { color: 'red' },
@@ -115,6 +117,7 @@ tape('transformData with mixed positive and negative values', async test => {
 				type: 'termCollection',
 				id: 'test',
 				name: 'Test Collection',
+				memberType: 'numeric',
 				termlst: [],
 				propsByTermId: {
 					sig1: { color: 'red' },
@@ -173,6 +176,7 @@ tape('transformData with equal positive and negative values', async test => {
 				type: 'termCollection',
 				id: 'test',
 				name: 'Test Collection',
+				memberType: 'numeric',
 				termlst: [],
 				propsByTermId: {
 					enrich1: { color: 'red' },
