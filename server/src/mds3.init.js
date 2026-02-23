@@ -353,7 +353,7 @@ export async function validate_termdb(ds) {
 					if (t.type != 'integer' && t.type != 'float') throw 'member term type not integer/float: ' + i
 				} else {
 					if (t.type != 'categorical') throw 'member term type not categorical: ' + i
-					// later: ensure categories are same
+					// TODO: validate that all categorical terms in this collection have identical category sets
 				}
 				// assign default color when missing, simplify client rendering as there's always color
 				if (!c.propsByTermId[i]) c.propsByTermId[i] = {}

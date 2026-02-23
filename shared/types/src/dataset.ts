@@ -1622,7 +1622,7 @@ type TermCollection = {
 	- all member terms must be categorical terms with same set of categories
 	*/
 	type: 'numeric' | 'categorical'
-	// categoryKey:string // for categorical collection
+	// TODO: add categoryKey field for categorical collections to specify which category attribute to use
 	/** array of dictionary term ids belonging to this collection */
 	termIds: string[]
 	/** array of branch term ids belonging to this collection,
