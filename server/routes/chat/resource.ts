@@ -1,5 +1,6 @@
-import { getEmbedder, cosineSim, argsort } from '../embeddingClassifier.ts'
-import { formatTrainingExamples, route_to_appropriate_llm_provider, safeParseLlmJson } from '../termdb.chat2.ts'
+import { getEmbedder, cosineSim, argsort } from './embeddingClassifier.ts'
+import { formatTrainingExamples, safeParseLlmJson } from './utils.ts'
+import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type { LlmConfig } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import Database from 'better-sqlite3'
