@@ -113,7 +113,7 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	if (tdb.survival) c.survival = tdb.survival
 	if (tdb.regression) c.regression = tdb.regression
 	if (tdb.uiLabels) c.uiLabels = tdb.uiLabels
-	if (tdb.numericTermCollections) c.numericTermCollections = tdb.numericTermCollections
+	if (tdb.termCollections) c.termCollections = tdb.termCollections
 	if (ds.assayAvailability) c.assayAvailability = ds.assayAvailability
 	if (ds.cohort.correlationVolcano) c.correlationVolcano = ds.cohort.correlationVolcano
 	if (ds.cohort.boxplots) c.boxplots = ds.cohort.boxplots
@@ -176,6 +176,7 @@ function addMatrixplots(c, ds) {
 	})
 }
 
+// FIXME should undo this; might not be no need for mutsig chart btn. even if needed don't need this
 function addMutationSignatureplots(c, ds) {
 	const mutationSignatureplots = ds.cohort.termdb.numericTermCollections?.find(
 		ntc => ntc.name == 'Mutation Signature'
@@ -334,7 +335,7 @@ function getAllowedTermTypes(ds) {
 	if (ds.queries?.geneExpression) typeSet.add(TermTypes.GENE_EXPRESSION)
 	if (ds.queries?.metaboliteIntensity) typeSet.add(TermTypes.METABOLITE_INTENSITY)
 	if (ds.queries?.ssGSEA) typeSet.add(TermTypes.SSGSEA)
-	if (ds.cohort.termdb.numericTermCollections) typeSet.add('termCollection')
+	if (ds.cohort.termdb.termCollections) typeSet.add(TermTypes.TERM_COLLECTION)
 	return [...typeSet]
 }
 

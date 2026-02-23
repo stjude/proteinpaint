@@ -1607,16 +1607,22 @@ keep this setting here for reason of:
 	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
 	hiddenIds?: string[]
 	getAdditionalFilter?: (__protected__: any, term: any) => Filter | undefined
-	/** collections of numeric dictionary terms that are related and can be used together in some plots
+	/** collections of related dictionary terms to be used together in some plots
 	 */
-	numericTermCollections?: NumericTermCollection[]
+	termCollections?: TermCollection[]
 }
 
-type NumericTermCollection = {
-	/** collection id */
-	id?: string
-	/** human readable name for this collection, may be as collection id if missing */
+type TermCollection = {
+	/** human readable name for this collection, also uniquely identifies this collection */
 	name: string
+	/** collection term type.
+	numeric:
+	- all member terms must be either integer or float type
+	categorical:
+	- all member terms must be categorical terms with same set of categories
+	*/
+	type: 'numeric' | 'categorical'
+	// categoryKey:string // for categorical collection
 	/** array of dictionary numeric term ids belonging to this collection */
 	termIds: string[]
 	/** array of branch term ids belonging to this collection,
