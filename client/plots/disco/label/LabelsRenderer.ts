@@ -7,7 +7,7 @@ import type MutationTooltip from '#plots/disco/label/MutationTooltip.ts'
 import type FusionTooltip from '#plots/disco/fusion/FusionTooltip.ts'
 import { table2col } from '#dom/table2col'
 import type CnvTooltip from '#plots/disco/cnv/CnvTooltip.ts'
-import { appendVafBar, hasValidReadCounts } from '#plots/disco/snv/vafTooltip.ts'
+import { appendVafBars, hasAnyValidVafEntry } from '#plots/disco/snv/vafTooltip.ts'
 
 export default class LabelsRenderer implements IRenderer {
 	private animationDuration: number
@@ -121,8 +121,8 @@ export default class LabelsRenderer implements IRenderer {
 						.style('color', 'black')
 						.style('font-size', '0.8em')
 						.text(` ${mutation.chr}:${mutation.position}`)
-					if (hasValidReadCounts(mutation.refCount, mutation.altCount)) {
-						appendVafBar(td2, mutation.refCount, mutation.altCount)
+					if (hasAnyValidVafEntry(mutation.vafs, mutation.refCount, mutation.altCount)) {
+						appendVafBars(td2, mutation.vafs, mutation.refCount, mutation.altCount)
 					}
 				}
 			})

@@ -1,3 +1,10 @@
+export type Vaf = {
+	readonly id?: string
+	readonly name?: string
+	readonly refCount: number
+	readonly altCount: number
+}
+
 export default interface Data {
 	isPrioritized
 	readonly dt: number
@@ -9,6 +16,7 @@ export default interface Data {
 	readonly alt: string
 	readonly refCount?: string | number
 	readonly altCount?: string | number
+	readonly vafs?: Vaf[]
 	readonly position: number
 	readonly poschr: any
 	readonly posbins: any

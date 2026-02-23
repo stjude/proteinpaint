@@ -20,6 +20,7 @@ export default class DataObjectMapper {
 			alt: dObject.alt,
 			refCount: dObject.refCount,
 			altCount: dObject.altCount,
+			vafs: dObject.vafs,
 			position: dObject.pos ? dObject.pos : dObject.position,
 			poschr: dObject.poschr,
 			posbins: dObject.posbins,
