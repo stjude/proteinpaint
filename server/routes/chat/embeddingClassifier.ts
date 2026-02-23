@@ -228,6 +228,8 @@ const CATEGORY_EXAMPLES: Record<string, string[]> = {
 		'Display ERG expression in the PAX5alt subgroup',
 		'Show drug sensitivity by molecular subtype',
 		'Compare Asparaginase LC50 between DUX4 and CRLF2',
+		'Compare Mercaptopurine LC50 between CRLF2, B-other and DUX4 subtypes',
+		'Compare Bortezomib LC50 between KMT2A, DUX4 and BCR-ABL1',
 		'Show TP53 expression by ancestry',
 		'Show MYC expression for patients over age 15',
 		'Show ABL1 expression levels for BCR-ABL1 patients',
