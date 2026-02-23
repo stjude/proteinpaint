@@ -623,7 +623,9 @@ class ApiEmbedder implements Embedder {
 			timeout: { request: 200000 }
 		})
 		if (response.outputs?.[0]?.embeddings) return response.outputs[0].embeddings
-		throw new Error('Unexpected response format from SJ embedding API')
+		const apiError = response.outputs?.[0]?.error
+		if (apiError) throw new Error(`SJ embedding API error: ${apiError}`)
+		throw new Error(`Unexpected response format from SJ embedding API: ${JSON.stringify(response)}`)
 	}
 
 	private async callOllamaEmbedding(texts: string[]): Promise<number[][]> {
