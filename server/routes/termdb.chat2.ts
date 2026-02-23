@@ -656,13 +656,22 @@ async function extract_resource_response(
 
 			const cached = pubDbChunkCache.get(db_path)!
 			if (cached.embeddings.length > 0) {
-				const sims = cached.embeddings.map(emb => cosineSim(query_emb!, emb))
-				const top_idx = argsort(sims).slice(-5).reverse()
-				rag_context =
-					'Relevant excerpts from the publication:\n' +
-					top_idx.map((i, n) => `[${n + 1}] ${cached.texts[i]}`).join('\n\n') +
-					'\n'
-				mayLog(`RAG: top chunk similarity: ${sims[top_idx[0]]?.toFixed(3)}`)
+				const storedDim = cached.embeddings[0].length
+				const queryDim = query_emb!.length
+				if (storedDim !== queryDim) {
+					mayLog(
+						`RAG: publicationsDb dimension mismatch — query=${queryDim}d vs stored=${storedDim}d. ` +
+							`Rebuild the DB with the currently configured embedding model.`
+					)
+				} else {
+					const sims = cached.embeddings.map(emb => cosineSim(query_emb!, emb))
+					const top_idx = argsort(sims).slice(-5).reverse()
+					rag_context =
+						'Relevant excerpts from the publication:\n' +
+						top_idx.map((i, n) => `[${n + 1}] ${cached.texts[i]}`).join('\n\n') +
+						'\n'
+					mayLog(`RAG: top chunk similarity: ${sims[top_idx[0]]?.toFixed(3)}`)
+				}
 			}
 		} catch (e) {
 			mayLog('publicationsDb RAG error:', e)
@@ -698,14 +707,23 @@ async function extract_resource_response(
 
 			const cached = referencesDbCache.get(db_path)!
 			if (cached.embeddings.length > 0) {
-				const sims = cached.embeddings.map(emb => cosineSim(query_emb!, emb))
-				const top_idx = argsort(sims).slice(-8).reverse()
-				const top_refs = top_idx.map(i => {
-					const num = cached.refNumbers[i]
-					return num ? `[${num}] ${cached.texts[i]}` : cached.texts[i]
-				})
-				references_context = 'Relevant references from the paper:\n' + top_refs.join('\n') + '\n'
-				mayLog(`RAG: top reference similarity: ${sims[top_idx[0]]?.toFixed(3)}`)
+				const storedDim = cached.embeddings[0].length
+				const queryDim = query_emb!.length
+				if (storedDim !== queryDim) {
+					mayLog(
+						`RAG: referencesDb dimension mismatch — query=${queryDim}d vs stored=${storedDim}d. ` +
+							`Rebuild the DB with the currently configured embedding model.`
+					)
+				} else {
+					const sims = cached.embeddings.map(emb => cosineSim(query_emb!, emb))
+					const top_idx = argsort(sims).slice(-8).reverse()
+					const top_refs = top_idx.map(i => {
+						const num = cached.refNumbers[i]
+						return num ? `[${num}] ${cached.texts[i]}` : cached.texts[i]
+					})
+					references_context = 'Relevant references from the paper:\n' + top_refs.join('\n') + '\n'
+					mayLog(`RAG: top reference similarity: ${sims[top_idx[0]]?.toFixed(3)}`)
+				}
 			}
 		} catch (e) {
 			mayLog('referencesDb RAG error:', e)
@@ -716,6 +734,7 @@ async function extract_resource_response(
 	// Only run when the user explicitly mentions a figure, image, or picture — general
 	// resource queries (methods, publications, etc.) should never trigger figure retrieval.
 	let figure_html = ''
+	let figure_context = ''
 	const EXPLICIT_FIGURE_RE = /\b(fig(?:ure)?|image|picture|photo|illustration)\b/i
 	const isExplicitFigureRequest = EXPLICIT_FIGURE_RE.test(prompt)
 	const FIGURE_SIM_THRESHOLD = 0.5
@@ -795,10 +814,21 @@ async function extract_resource_response(
 					best_sim = 1.0 // explicit reference, always show
 					mayLog(`RAG: explicit figure reference — Figure ${resolvedNum}`)
 				} else {
-					const sims = cached.embeddings.map(emb => cosineSim(query_emb!, emb))
-					best_idx = argsort(sims).at(-1)!
-					best_sim = sims[best_idx]
-					mayLog(`RAG: top figure similarity: ${best_sim.toFixed(3)}`)
+					const storedDim = cached.embeddings[0]?.length ?? 0
+					const queryDim = query_emb!.length
+					if (storedDim !== queryDim) {
+						mayLog(
+							`RAG: figuresDb dimension mismatch — query=${queryDim}d vs stored=${storedDim}d. ` +
+								`Rebuild the DB with the currently configured embedding model.`
+						)
+						best_idx = -1
+						best_sim = -1
+					} else {
+						const sims = cached.embeddings.map(emb => cosineSim(query_emb!, emb))
+						best_idx = argsort(sims).at(-1)!
+						best_sim = sims[best_idx]
+						mayLog(`RAG: top figure similarity: ${best_sim.toFixed(3)}`)
+					}
 				}
 
 				if (best_sim >= FIGURE_SIM_THRESHOLD) {
@@ -810,8 +840,14 @@ async function extract_resource_response(
 					figure_html =
 						`<div style="margin-top:14px">` +
 						`<img src="data:image/${fmt};base64,${base64}" style="max-width:100%;height:auto;border:1px solid #ddd;border-radius:4px" alt="${alt}" />` +
-						`<p style="font-size:0.85em;color:#666;margin-top:6px">${alt} — ${caption.slice(0, 200)}</p>` +
+						`<p style="font-size:0.85em;color:#666;margin-top:6px">${alt} — ${caption.slice(0, 2000)}</p>` +
 						`</div>`
+					// Tell the LLM which figure was retrieved so it references the correct number.
+					// Without this it has no knowledge of what image was found and defaults to "Figure 1".
+					figure_context = `Retrieved figure: ${alt}. Caption: ${caption.slice(
+						0,
+						2000
+					)}. The image is already displayed below your response — do NOT generate a separate link for it.`
 				}
 			}
 		} catch (e) {
@@ -827,6 +863,7 @@ async function extract_resource_response(
 		(classification_ds.SystemPrompt ? classification_ds.SystemPrompt + '\n' : '') +
 		(rag_context ? rag_context + '\n' : '') +
 		(references_context ? references_context + '\n' : '') +
+		(figure_context ? figure_context + '\n' : '') +
 		(training_data ? 'Training data examples:\n' + training_data + '\n' : '') +
 		'Question: {' +
 		prompt +
