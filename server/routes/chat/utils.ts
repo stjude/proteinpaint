@@ -121,3 +121,38 @@ function countOccurrences(str: string, word: string): number {
 	}
 	return count
 }
+
+/** Extract gene names from user prompt that exist in the gene database. */
+export function extractGenesFromPrompt(prompt: string, genes_list: string[]): string[] {
+	const words = prompt
+		.replace(/[^a-zA-Z0-9\s]/g, '')
+		.split(/\s+/)
+		.map(str => str.toLowerCase())
+	return words.filter(item => genes_list.includes(item))
+}
+
+export function validate_term(response_term: string, common_genes: string[], dataset_json: any, ds: any) {
+	let html = ''
+	let term_type: any
+	let category: string = ''
+	const term: any = ds.cohort.termdb.q.termjsonByOneid(response_term)
+	if (!term) {
+		const gene_hits = common_genes.filter(gene => gene == response_term.toLowerCase())
+		if (gene_hits.length == 0) {
+			// Neither a clinical term nor a gene
+			html += 'invalid term id:' + response_term
+		} else {
+			if (dataset_json.hasGeneExpression) {
+				// Check to see if dataset support gene expression
+				term_type = { term: { gene: response_term.toUpperCase(), type: 'geneExpression' } }
+				category = 'float'
+			} else {
+				html += 'Dataset does not support gene expression'
+			}
+		}
+	} else {
+		term_type = { id: term.id }
+		category = term.type
+	}
+	return { term_type: term_type, html: html, category: category }
+}
