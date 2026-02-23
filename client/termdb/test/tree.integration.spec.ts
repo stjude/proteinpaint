@@ -4,13 +4,36 @@ import { termjson } from '../../test/testdata/termjson.js'
 
 /*
 Tests:
-	default behavior
-	default behavior, MSigDB (genome-level termdb, not ds)
-	click_term
-	click_term2select_tvs
-	rehydrated from saved state
-	error handling
-	usecase
+Construction and default behavior
+	- default behavior
+	- default behavior, MSigDB (genome-level termdb, not ds)
+	- rehydrated from saved state
+	- error handling
+Rendering
+Opts and callbacks
+	- click_term
+	- Trigger opts.click_term2select_tvs callback
+	- Trigger click_term_wrapper callback
+	- usecase
+
+	TODO: 
+	**requests:
+	mayGetCustomTerms()
+	requestTermRecursive
+	getTermsById
+
+	**setters: 
+	bindKey
+
+	**rendering:
+	renderBranch
+	hideTerm
+	updateTerm
+	addTerm
+	toggleBranch
+
+	**opts:
+	submit_lst
  */
 
 /*************************
@@ -47,6 +70,10 @@ tape('\n', function (test) {
 	test.comment('-***- termdb/tree -***-')
 	test.end()
 })
+
+/*********************************
+ Construction and default behavior
+**********************************/
 
 tape('default behavior', function (test) {
 	test.timeoutAfter(2000)
@@ -199,6 +226,86 @@ tape('default behavior, MSigDB (genome-level termdb, not ds)', function (test) {
 	}
 })
 
+tape('rehydrated from saved state', function (test) {
+	test.timeoutAfter(1000)
+	test.plan(2)
+
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis']
+			}
+		},
+		tree: {
+			callbacks: {
+				'postRender.test': testDom
+			}
+		}
+	})
+
+	function testDom(tree) {
+		const numTreeTerms = Object.keys(tree.Inner.termsById).length - 1 //exclude {root}
+		test.equal(
+			tree.Inner.dom.holder.selectAll('.termdiv').size(),
+			numTreeTerms,
+			`should have ${numTreeTerms} expanded terms`
+		)
+		const nonLeafTerms = Object.values(tree.Inner.termsById).filter((d: any) => !d?.isleaf && d.id != 'root')
+		test.equal(
+			tree.Inner.dom.holder.selectAll('.termbtn').size(),
+			nonLeafTerms.length,
+			`should have ${nonLeafTerms.length} term toggle buttons`
+		)
+
+		if (test['_ok']) tree.Inner.app.destroy()
+	}
+})
+
+tape('error handling', function (test) {
+	test.timeoutAfter(1000)
+	test.plan(2)
+
+	runpp({
+		state: {
+			vocab: { genome: 'ahg38' },
+			termdbConfig: {}
+		},
+		callbacks: {
+			'postInit.test': testWrongGenome
+		}
+	})
+	function testWrongGenome(app) {
+		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div:nth-child(2)')
+		test.equal(d.text(), 'Error: invalid genome', 'should show for invalid genome')
+
+		if (test['_ok']) app.destroy()
+	}
+
+	runpp({
+		state: {
+			vocab: { dslabel: 'xxx' },
+			termdbConfig: {}
+		},
+		callbacks: {
+			'postInit.test': testWrongDslabel
+		}
+	})
+	function testWrongDslabel(app) {
+		const d = app.Inner.dom.errdiv.select('.sja_errorbar').select('div:nth-child(2)')
+		test.equal(d.text(), 'Error: invalid dslabel', 'should show for genome-level termdb not available')
+
+		if (test['_ok']) app.destroy()
+	}
+})
+
+/*********
+ Rendering
+**********/
+
+/*******************
+ Opts and callbacks
+********************/
+
 tape('click_term', test => {
 	test.timeoutAfter(1000)
 	runpp({
@@ -248,7 +355,7 @@ tape('click_term', test => {
 	}
 })
 
-tape('click_term2select_tvs', test => {
+tape('Trigger opts.click_term2select_tvs callback', test => {
 	test.timeoutAfter(1000)
 
 	runpp({
@@ -312,75 +419,39 @@ tape('click_term2select_tvs', test => {
 	}
 })
 
-tape('rehydrated from saved state', function (test) {
+tape('Trigger opts.click_term_wrapper callback', test => {
 	test.timeoutAfter(1000)
-	test.plan(2)
 
+	let t
 	runpp({
-		state: {
-			tree: {
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis']
-			}
-		},
 		tree: {
+			click_term_wrapper: () => {
+				test.pass('click_term_wrapper callback called')
+				if (test['_ok']) t.Inner.app.destroy()
+				test.end()
+			},
 			callbacks: {
-				'postRender.test': testDom
+				'postRender.test': runTests
 			}
 		}
 	})
 
-	function testDom(tree) {
-		const numTreeTerms = Object.keys(tree.Inner.termsById).length - 1 //exclude {root}
-		test.equal(
-			tree.Inner.dom.holder.selectAll('.termdiv').size(),
-			numTreeTerms,
-			`should have ${numTreeTerms} expanded terms`
-		)
-		const nonLeafTerms = Object.values(tree.Inner.termsById).filter((d: any) => !d?.isleaf && d.id != 'root')
-		test.equal(
-			tree.Inner.dom.holder.selectAll('.termbtn').size(),
-			nonLeafTerms.length,
-			'should have 7 term toggle buttons'
-		)
+	async function runTests(tree) {
+		t = tree
+		tree.on('postRender.test', null)
+		const divs = tree.Inner.dom.holder.node().querySelectorAll('.termdiv')
+		const term1 = [...divs].find(elem => elem.__data__.name.startsWith('Demographic Variables'))
+		term1.querySelector('.termbtn').click()
+		const childdiv_term1 = term1.querySelector('.termchilddiv')
 
-		if (test['_ok']) tree.Inner.app.destroy()
-	}
-})
+		await helpers.sleep(100) //Need to mimic the wait from rideInit()
+		const child1 = childdiv_term1.querySelector('.termdiv')
+		child1.querySelector('.termbtn').click()
 
-tape('error handling', function (test) {
-	test.timeoutAfter(1000)
-	test.plan(2)
-
-	runpp({
-		state: {
-			vocab: { genome: 'ahg38' },
-			termdbConfig: {}
-		},
-		callbacks: {
-			'postInit.test': testWrongGenome
-		}
-	})
-	function testWrongGenome(app) {
-		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div:nth-child(2)')
-		test.equal(d.text(), 'Error: invalid genome', 'should show for invalid genome')
-
-		if (test['_ok']) app.destroy()
-	}
-
-	runpp({
-		state: {
-			vocab: { dslabel: 'xxx' },
-			termdbConfig: {}
-		},
-		callbacks: {
-			'postInit.test': testWrongDslabel
-		}
-	})
-	function testWrongDslabel(app) {
-		const d = app.Inner.dom.errdiv.select('.sja_errorbar').select('div:nth-child(2)')
-		test.equal(d.text(), 'Error: invalid dslabel', 'should show for genome-level termdb not available')
-
-		if (test['_ok']) app.destroy()
+		const childdiv_child1 = child1.querySelector('.termchilddiv')
+		await helpers.sleep(100) //Need to mimic the wait from rideInit()
+		const buttons = childdiv_child1.getElementsByClassName('sja_filter_tag_btn sja_tree_click_term termlabel')
+		buttons[0].click()
 	}
 })
 
