@@ -1692,19 +1692,16 @@ async function validate_query_dnaMethylation(ds, genome) {
 		q.file = path.join(serverconfig.tpmasterdir, q.file)
 		q.samples = [] // array of sample ids
 		await utils.file_is_readable(q.file)
-		const tmp = await run_python('query_beta_values.py', JSON.stringify({ validate: true, hdf5_file: q.file }))
-
-		const vr = JSON.parse(tmp)
-		if (vr.status !== 'success') throw vr.message
-		if (!Array.isArray(vr.samples)) throw 'HDF5 file has no samples, please check file.'
-		for (const sn of vr.samples) {
+		const samples = JSON.parse(await run_python('query_beta_values.py', JSON.stringify({ validate: true, h: q.file })))
+		if (!Array.isArray(samples)) throw 'HDF5 file has no samples, please check file.'
+		for (const sn of samples) {
 			const si = ds.cohort.termdb.q.sampleName2id(sn)
 			if (si == undefined) throw `unknown sample ${sn} from HDF5 ${q.file}`
 			q.samples.push(si)
 		}
-		console.log(`${ds.label}: ssGSEA HDF5 file validated. Format: ${vr.format}, Samples:`, vr.samples.length)
+		console.log(`${ds.label}: dnaMethylation HDF5 file validated. Samples:`, samples.length)
 	} catch (error) {
-		throw `${ds.label}: Failed to validate ssGSEA HDF5 file: ${error}`
+		throw `${ds.label}: Failed to validate dnaMethylation HDF5 file: ${error}`
 	}
 
 	// HDF5 validation successful, set up the getter function
@@ -1714,6 +1711,8 @@ async function validate_query_dnaMethylation(ds, genome) {
 			// Got 0 sample after filtering, must still return expected structure with no data
 			return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
 		}
+
+		// Set up sample IDs and labels
 		const bySampleId = {}
 		const samples = q.samples || []
 		if (limitSamples) {
@@ -1721,45 +1720,72 @@ async function validate_query_dnaMethylation(ds, genome) {
 				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
 			}
 		} else {
+			// Use all samples with methylation data
 			for (const sid of samples) {
 				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
 			}
 		}
+
+		// Initialize data structure
 		const term2sample2value = new Map()
 		const byTermId = {}
 
-		const genesetNames = param.terms.map(tw => tw.term.id)
-
-		if (genesetNames.length === 0) {
-			console.log('No genesets to query')
+		// Get methylation term
+		const dnaMethylTws = param.terms.filter(tw => tw.term.type == 'dnaMethylation')
+		if (!dnaMethylTws.length) {
+			console.log('No coordinates to query')
 			return { term2sample2value, byTermId }
 		}
+		if (dnaMethylTws.length > 1) throw new Error('not currently supporting multiple dnaMethylation terms')
+		const dnaMethylTw = dnaMethylTws[0]
 
-		const time1 = Date.now()
-		const tmp = await run_python('query_beta_values.py', JSON.stringify({ hdf5_file: q.file, query: genesetNames }))
-		const results = JSON.parse(tmp)
-		mayLog('ssGSEA h5 file', Date.now() - time1)
+		// Query methylation values at given coordinate across all samples
+		// test query coordinate - chr17:7672003-7677430
+		// TODO: python script should query all samples by default
+		const sampleNames = Object.values(bySampleId).map(s => s.label)
+		const input = { h: q.file, s: sampleNames.join(','), q: dnaMethylTw.term.id }
+		const dnaMethylData = JSON.parse(await run_python('query_beta_values.py', JSON.stringify(input)))
+		if (!Array.isArray(dnaMethylData)) throw new Error('methylation data has unexpected format')
+		if (!dnaMethylData.length) throw new Error('no methylation data returned from HDF5 query')
 
-		for (const tw of param.terms) {
-			const result = results.query_output[tw.term.id]?.samples
-			if (!result) {
-				console.warn(`No data found for geneset ${tw.term.id} in the response`)
-				continue
-			}
+		/* output format:
+		array of arrays with dimension n_query_sites X n_query_samples
+		input query sample order is preserved
+		[
+			[0.4, 0.6, 0.2],
+			[0.7, 0.1, 0.6],
+			[0.3, 0.7, 0.5],
+		]
+		*/
 
-			const s2v = {}
-			for (const sampleName in result) {
-				const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
-				if (!sampleId) continue
-				if (limitSamples && !limitSamples.has(sampleId)) continue
-				s2v[sampleId] = result[sampleName]
-			}
-
-			if (Object.keys(s2v).length) {
-				term2sample2value.set(tw.$id, s2v)
+		// map sample idx to beta values
+		const sampleidx2values = new Map()
+		for (const site of dnaMethylData) {
+			for (const [sampleidx, v] of site.entries()) {
+				if (!sampleidx2values.has(sampleidx)) sampleidx2values.set(sampleidx, [])
+				const values = sampleidx2values.get(sampleidx)
+				values.push(v)
 			}
 		}
-		if (term2sample2value.size == 0) throw 'No data available for the input.'
+
+		// map sampleid to average beta value
+		const s2v = {}
+		for (const [i, sampleName] of sampleNames.entries()) {
+			const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
+			if (!sampleId) continue
+			if (limitSamples && !limitSamples.has(sampleId)) continue
+			const values = sampleidx2values.get(i)
+			const avg = values.reduce((sum, v) => sum + v, 0) / values.length
+			s2v[sampleId] = avg
+		}
+
+		if (Object.keys(s2v).length) {
+			term2sample2value.set(dnaMethylTw.$id, s2v)
+		}
+
+		if (term2sample2value.size == 0) {
+			throw 'No data available for the input ' + dnaMethylTw.term.id
+		}
 
 		return { term2sample2value, byTermId, bySampleId }
 	}
