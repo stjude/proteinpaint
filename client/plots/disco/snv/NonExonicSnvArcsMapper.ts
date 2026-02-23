@@ -45,6 +45,7 @@ export default class NonExonicSnvArcsMapper {
 				pos: data.position,
 				refCount: data.refCount,
 				altCount: data.altCount,
+				vafs: data.vafs,
 				sampleName: [data.sampleName]
 			}
 

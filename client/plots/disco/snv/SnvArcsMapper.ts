@@ -60,6 +60,7 @@ export default class SnvArcsMapper {
 						pos: data.position,
 						refCount: data.refCount,
 						altCount: data.altCount,
+						vafs: data.vafs,
 						sampleName: [data.sampleName]
 					}
 					snvArray.push(arc)
