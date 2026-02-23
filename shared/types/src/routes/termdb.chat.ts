@@ -8,10 +8,6 @@ export type ChatRequest = {
 	filter?: Filter
 	/** user prompt */
 	prompt: string
-	/** ID of the most recently created plot from this chat session, for follow-up detection */
-	activePlotId?: string
-	/** Full config of the active plot, so the server can modify it in follow-up queries */
-	activePlotConfig?: Record<string, any>
 	__protected__?: any
 }
 
@@ -39,14 +35,7 @@ export type LlmConfig = {
 	verbose?: boolean
 }
 
-type PlotEditResponse = {
-	type: 'plot_edit'
-	/** ID of the existing plot to update in place */
-	plotId: string
-	plot: object
-}
-
-export type ChatResponse = HtmlResponse | PlotResponse | PlotEditResponse
+export type ChatResponse = HtmlResponse | PlotResponse
 
 export const ChatPayload: RoutePayload = {
 	request: {
