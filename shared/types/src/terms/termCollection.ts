@@ -1,17 +1,14 @@
 import type { BaseTerm, BaseTW, MinBaseQ } from '../index.ts'
 
-/*
-For term type 'snp'
-*/
-
 export type TermCollection = BaseTerm & {
 	name: string
 	collectionId?: string
 	type: 'termCollection'
+	memberType: 'numeric' | 'categorical'
 	// may be queried from backend, but should be available in frontend for termsetting edit menu
 	/** the full list of term.ids that are available in this collection */
 	termlst: BaseTerm[]
-	numerators?: string[]
+	numerators?: string[] // only needed for memberType=numeric
 	newTvs?: boolean
 	propsByTermId: {
 		[termId: string]: {
