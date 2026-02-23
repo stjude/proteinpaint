@@ -67,7 +67,7 @@ const useCasesExcluded = {
 		TermTypeGroups.SSGSEA,
 		TermTypeGroups.TERM_COLLECTION
 	],
-	numericTermCollections: [
+	termCollections: [
 		TermTypeGroups.SNP_LOCUS,
 		TermTypeGroups.SNP_LIST,
 		TermTypeGroups.MUTATION_CNV_FUSION,
@@ -304,7 +304,7 @@ export class TermTypeSearch {
 				} catch (e) {
 					throw `error with handler='./handlers/${type}.ts': ${e}`
 				}
-				const collections = this.app.vocabApi?.termdbConfig?.numericTermCollections
+				const collections = this.app.vocabApi?.termdbConfig?.termCollections
 				if (type == TermTypes.TERM_COLLECTION && collections) {
 					for (const ntc of collections) {
 						this.tabs.push({

@@ -1281,7 +1281,7 @@ tape('tvs: termCollection', async test => {
 	test.timeoutAfter(1000)
 	test.plan(2)
 	const vocabApi = await getVocabApi()
-	const ntc = vocabApi.termdbConfig.numericTermCollections[0]
+	const ntc = vocabApi.termdbConfig.termCollections[0]
 	const term = Object.assign(
 		{
 			collectionId: ntc.name,

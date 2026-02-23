@@ -781,14 +781,14 @@ export async function mayInitiateNumericDictionaryTermplots(ds) {
 }
 
 export async function mayInitiatemutationSignatureplots(ds) {
-	const mutationSignatureplots = ds.cohort.termdb.numericTermCollections?.find(
-		ntc => ntc.name == 'Mutation Signature'
+	const mutationSignatureplots = ds.cohort.termdb.termCollections?.find(
+		ntc => ntc.name == 'Mutation Signature' && ntc.type == 'numeric'
 	)?.plots
 	if (!mutationSignatureplots) return
 	if (!Array.isArray(mutationSignatureplots))
-		throw 'cohort.termdb.numericTermCollections mutation signature plots is not array'
+		throw 'cohort.termdb.termCollections mutation signature plots is not array'
 	for (const p of mutationSignatureplots) {
-		if (!p.name) throw '.name missing from one of numericTermCollections mutation signature plots'
+		if (!p.name) throw '.name missing from one of termCollections mutation signature plots'
 		if (p.file) {
 			const mutationSignatureplotsConfig = await read_file(path.join(serverconfig.tpmasterdir, p.file))
 			p.mutationSignatureplotsConfig = JSON.parse(mutationSignatureplotsConfig)

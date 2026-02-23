@@ -139,7 +139,7 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 			}
 			return uses
 
-		case 'numericTermCollections':
+		case 'termCollections':
 			if (usecase.detail?.termIds?.includes(term.id)) uses.add('plot')
 			if (usecase.detail?.branchIds?.includes(term.id)) uses.add('branch')
 			return uses

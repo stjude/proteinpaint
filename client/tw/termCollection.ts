@@ -34,14 +34,14 @@ export class TermCollection {
 	static fill(term: RawTermCollection, opts: TwOpts = {}) {
 		if (term instanceof TermCollection) return
 		if (!term.termlst && opts.vocabApi) {
-			const collection = opts.vocabApi.termdbConfig.numericTermCollections.find(
+			const collection = opts.vocabApi.termdbConfig.termCollections.find(
 				c => c.name == term.id || c.name == term.name || term.name.includes(c.name)
 			)
-			if (!collection) throw `missing termCollection term.lst and termdbConfig.numericTermCollection[term.id]`
+			if (!collection) throw `missing termCollection term.lst and termdbConfig.termCollection[term.id]`
 			term.termlst = collection.termIds
 		}
 
-		const details = /*opts.details ||*/ opts.vocabApi?.termdbConfig?.numericTermCollections?.find(
+		const details = /*opts.details ||*/ opts.vocabApi?.termdbConfig?.termCollections?.find(
 			ntc => ntc.name === term.collectionId
 		)
 		if (!details) throw new Error('no matching details for ' + term.collectionId)

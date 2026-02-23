@@ -178,8 +178,8 @@ function addMatrixplots(c, ds) {
 
 // FIXME should undo this; might not be no need for mutsig chart btn. even if needed don't need this
 function addMutationSignatureplots(c, ds) {
-	const mutationSignatureplots = ds.cohort.termdb.numericTermCollections?.find(
-		ntc => ntc.name == 'Mutation Signature'
+	const mutationSignatureplots = ds.cohort.termdb.termCollections?.find(
+		ntc => ntc.name == 'Mutation Signature' && ntc.type == 'numeric'
 	)?.plots
 	if (!mutationSignatureplots) return
 	// this dataset has premade mutationSignatureplots. reveal mutationSignature plot names to client

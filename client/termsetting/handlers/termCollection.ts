@@ -26,7 +26,7 @@ export class TermCollectionHandler extends HandlerBase implements Handler {
 		const self = this.termsetting
 		div.selectAll('*').remove()
 		const termIds =
-			self.vocabApi.termdbConfig.numericTermCollections?.find(c => c.name === self.term.collectionId)?.termIds || []
+			self.vocabApi.termdbConfig.termCollections?.find(c => c.name === self.term.collectionId)?.termIds || []
 		const terms: any[] = []
 		const toBeHydrated: any[] = []
 		for (const id of termIds) {
