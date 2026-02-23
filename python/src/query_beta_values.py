@@ -216,6 +216,19 @@ class Query:
         split_indices = np.where(diff != 0)[0] + 1
         return split_indices
 
+    def resolve_cpg(self, query_cpg_ids, probe_to_row):
+        row_indices = []
+        # mark which CpGs are missing in HDF5
+        missing_mask = [] 
+        for c in query_cpg_ids:
+            if c in probe_to_row:
+                row_indices.append(probe_to_row[c])
+                missing_mask.append(False)
+            else:
+                row_indices.append(-1)  # placeholder
+                missing_mask.append(True)
+        return np.array(row_indices), np.array(missing_mask)
+
     def process_cpg_queries(self, query_samples, query_cpg_ids, verbose=False):
         try:
             h5 = h5py.File(self.h5file, "r")
@@ -242,51 +255,47 @@ class Query:
                 print()
                 print("####################")
 
-            col_idx = [sample_to_col[s] for s in query_samples]
-            row_idx = [probe_to_row[p] for p in query_cpg_ids]
+            row_idx, missing_row_mask = self.resolve_cpg(query_cpg_ids, probe_to_row)
+            col_idx, missing_col_mask = self.resolve_samples(query_samples, sample_to_col)
 
-            # preserve query order 
-            row_order = sorted(range(len(row_idx)), key=lambda i: row_idx[i])
-            col_order = sorted(range(len(col_idx)), key=lambda i: col_idx[i])
+            # preserve query CpG order 
+            row_order = sorted(range(len(row_idx)), key=lambda i: (row_idx[i] if not missing_row_mask[i] else np.inf))
 
             # define dset and get row chunk
             dset = h5["beta/values"]
             row_chunk = dset.chunks[0]
 
-            # sort the row indices and get chunk ids for the query rows
-            sorted_row_idx = np.zeros(len(row_order), dtype=int)
-            chunk_ids = np.zeros(len(row_order), dtype=int)
-            for idx, i in enumerate(row_order):
-                sorted_row_idx[idx] = row_idx[i]
-                chunk_ids[idx] = row_idx[i] // row_chunk
-            #sorted_row_idx = [row_idx[i] for i in row_order]
-            sorted_col_idx = [col_idx[i] for i in col_order]
+            # Separate valid rows
+            valid_positions = [i for i in row_order if not missing_row_mask[i]]
 
-            # group the row indices by chunk ids 
-            split_indices = self.group_by_chunks(chunk_ids)
-            groups = np.split(sorted_row_idx, split_indices)
-            repeated_row_groups = [list(g) for g in groups if len(g) >= 1]
+            # sort the row indices and get chunk ids for the query rows
+            sorted_row_idx = np.array([row_idx[i] for i in valid_positions], dtype=int)
 
             # Allocate result array
-            result = np.empty((len(sorted_row_idx), len(sorted_col_idx)), dtype='float32')
-            ## More efficient blocking method ###
-            start = 0
-            end = 0
-            for gp in repeated_row_groups:
-                end += len(gp)
-                block_data = dset[gp, :]
-                result[start:end, :] = block_data[:, sorted_col_idx]
-                start = end
-            ### Efficient blocking method end ###
-                
-            # restore original order
-            inverse_row = [0] * len(row_order)
-            inverse_col = [0] * len(col_order)
-            for i, j in enumerate(row_order):
-                inverse_row[j] = i
-            for i, j in enumerate(col_order):
-                inverse_col[j] = i
-            query_beta = result[inverse_row,:][:,inverse_col]
+            result = np.full((len(row_idx), len(col_idx)), np.nan, dtype='float32')
+            valid_cols = col_idx[~missing_col_mask]
+
+            if len(valid_positions) > 0 and len(valid_cols) > 0:
+                ## More efficient blocking method ###
+                chunk_ids = sorted_row_idx // row_chunk
+                split_indices = self.group_by_chunks(chunk_ids)
+                groups = np.split(sorted_row_idx, split_indices)
+
+                # process one chunk group at a time
+                start = 0
+                for gp in groups:
+                    if len(gp) == 0:
+                        continue
+                    end = start + len(gp)
+                    block_data = dset[gp, :]
+                    result[start:end, ~missing_col_mask] = block_data[:, valid_cols]
+                    start = end
+                ### Efficient blocking method end ###
+                # restore original CpG order
+                inverse_row = [0] * len(row_order)
+                for i, j in enumerate(row_order):
+                    inverse_row[j] = i
+                query_beta = result[inverse_row,:]
         return query_beta
 
     def get_row_ranges_for_chrom(self, query_chrom, all_chromosomes, num_sites_pref_sum):
@@ -298,6 +307,7 @@ class Query:
         row_start = num_sites_pref_sum[prev_idx + 1] if prev_idx is not None else 0
         row_end = num_sites_pref_sum[q_idx + 1] 
         return row_start, row_end
+
 
     def resolve_samples(self, query_samples, sample_to_col):
         col_indices = []
@@ -378,7 +388,7 @@ class Query:
             # Allocate result array
             n_rows = right - left
             n_cols = len(query_samples)
-            default_fill_value = -1
+            default_fill_value = np.nan
             query_beta = np.full((n_rows, n_cols), default_fill_value, dtype='float32')
 
             sample_to_col = dict(zip(names, cols))
