@@ -1,4 +1,4 @@
-import { getClassifier } from '../embeddingClassifier.ts'
+import { getClassifier } from './embeddingClassifier.ts'
 import type { ClassificationType, LlmConfig } from '#types'
 import { mayLog } from '#src/helpers.ts'
 
