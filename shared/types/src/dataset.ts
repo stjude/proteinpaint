@@ -1623,7 +1623,7 @@ type TermCollection = {
 	*/
 	type: 'numeric' | 'categorical'
 	// categoryKey:string // for categorical collection
-	/** array of dictionary numeric term ids belonging to this collection */
+	/** array of dictionary term ids belonging to this collection */
 	termIds: string[]
 	/** array of branch term ids belonging to this collection,
 	 * may be used as state.tree.expandedTermIds[] option to termdb appInit() */

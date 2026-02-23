@@ -37,7 +37,7 @@ export class TermCollection {
 			const collection = opts.vocabApi.termdbConfig.termCollections.find(
 				c => c.name == term.id || c.name == term.name || term.name.includes(c.name)
 			)
-			if (!collection) throw `missing termCollection term.lst and termdbConfig.termCollection[term.id]`
+			if (!collection) throw `missing termCollection term.lst and termdbConfig.termCollections[term.id]`
 			term.termlst = collection.termIds
 		}
 
