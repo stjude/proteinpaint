@@ -31,23 +31,8 @@ const FOLLOWUP_PATTERNS: RegExp[] = [
 	/\boverlay (it|this|on (the|this) (chart|plot))\b/i
 ]
 
-/** In-memory cache of decoded chunk embeddings keyed by absolute DB path. Populated on first resource query. */
-const pubDbChunkCache = new Map<string, { texts: string[]; embeddings: number[][] }>()
-
-/** In-memory cache of decoded figure caption embeddings keyed by absolute DB path. */
-const figuresDbCache = new Map<
-	string,
-	{
-		captions: string[]
-		figureNumbers: (string | null)[]
-		imageData: Buffer[]
-		imageFormats: string[]
-		embeddings: number[][]
-	}
->()
-
-/** In-memory cache of decoded reference embeddings keyed by absolute DB path. */
-const referencesDbCache = new Map<string, { refNumbers: (string | null)[]; texts: string[]; embeddings: number[][] }>()
+/** In-memory cache of decoded resource embeddings keyed by absolute DB path. Populated on first resource query. */
+const resourceDbCache = new Map<string, { texts: string[]; embeddings: number[][] }>()
 
 /** Shared JSON Schema definitions for filter terms, used by DE, Summary, and Matrix agents. */
 const FILTER_TERM_DEFINITIONS = {
@@ -621,249 +606,60 @@ async function extract_resource_response(
 	const training_data =
 		classification_ds.TrainingData?.length > 0 ? formatTrainingExamples(classification_ds.TrainingData) : ''
 
-	// Embed the query once — reused for chunk, reference, and figure retrieval
-	let query_emb: number[] | null = null
-	const hasAnyDb = dataset_json.publicationsDb || dataset_json.referencesDb || dataset_json.figuresDb
-	if (hasAnyDb) {
-		try {
-			const embedder = await getEmbedder(llm)
-			;[query_emb] = await embedder.embed([prompt])
-		} catch (e) {
-			mayLog('RAG: failed to embed query:', e)
-		}
-	}
-
-	// RAG: retrieve relevant text chunks from the publications SQLite DB if configured
+	// RAG: retrieve relevant text from the optional generalized resource DB
 	let rag_context = ''
-	if (dataset_json.publicationsDb && query_emb) {
-		const db_path = serverconfig.tpmasterdir + '/' + dataset_json.publicationsDb
+	if (dataset_json.resourceDb) {
 		try {
-			if (!pubDbChunkCache.has(db_path)) {
-				const pub_db = new Database(db_path, { readonly: true })
-				const rows = pub_db.prepare('SELECT text, embedding FROM chunks').all() as {
+			const db_path = serverconfig.tpmasterdir + '/' + dataset_json.resourceDb
+			if (!resourceDbCache.has(db_path)) {
+				const res_db = new Database(db_path, { readonly: true })
+				const rows = res_db.prepare('SELECT text, embedding FROM resources').all() as {
 					text: string
 					embedding: Buffer
 				}[]
-				pub_db.close()
-				pubDbChunkCache.set(db_path, {
+				res_db.close()
+				resourceDbCache.set(db_path, {
 					texts: rows.map(r => r.text),
 					embeddings: rows.map(r =>
 						Array.from({ length: r.embedding.byteLength / 4 }, (_, i) => r.embedding.readFloatLE(i * 4))
 					)
 				})
-				mayLog(`RAG: loaded ${rows.length} chunks from publicationsDb into cache`)
+				mayLog(`RAG: loaded ${rows.length} entries from resourceDb into cache`)
 			}
 
-			const cached = pubDbChunkCache.get(db_path)!
+			const cached = resourceDbCache.get(db_path)!
 			if (cached.embeddings.length > 0) {
+				const embedder = await getEmbedder(llm)
+				const [query_emb] = await embedder.embed([prompt])
 				const storedDim = cached.embeddings[0].length
-				const queryDim = query_emb!.length
+				const queryDim = query_emb.length
 				if (storedDim !== queryDim) {
 					mayLog(
-						`RAG: publicationsDb dimension mismatch — query=${queryDim}d vs stored=${storedDim}d. ` +
+						`RAG: resourceDb dimension mismatch — query=${queryDim}d vs stored=${storedDim}d. ` +
 							`Rebuild the DB with the currently configured embedding model.`
 					)
 				} else {
-					const sims = cached.embeddings.map(emb => cosineSim(query_emb!, emb))
+					const sims = cached.embeddings.map(emb => cosineSim(query_emb, emb))
 					const top_idx = argsort(sims).slice(-5).reverse()
 					rag_context =
-						'Relevant excerpts from the publication:\n' +
+						'Relevant resource information:\n' +
 						top_idx.map((i, n) => `[${n + 1}] ${cached.texts[i]}`).join('\n\n') +
 						'\n'
-					mayLog(`RAG: top chunk similarity: ${sims[top_idx[0]]?.toFixed(3)}`)
+					mayLog(`RAG: top resource similarity: ${sims[top_idx[0]]?.toFixed(3)}`)
 				}
 			}
 		} catch (e) {
-			mayLog('publicationsDb RAG error:', e)
-		}
-	}
-
-	// RAG: retrieve relevant references when the user asks about citations or further reading.
-	// Only runs when the query explicitly mentions references, citations, papers, etc.
-	let references_context = ''
-	const EXPLICIT_REFERENCE_RE =
-		/\b(reference|citation|cite|bibliography|further reading|additional papers?|related work|background reading|more papers?|other papers?|what (papers?|works?|studies|articles?) (should|to|can)|papers? to read)\b/i
-	const isReferenceRequest = EXPLICIT_REFERENCE_RE.test(prompt)
-	if (dataset_json.referencesDb && query_emb && isReferenceRequest) {
-		const db_path = serverconfig.tpmasterdir + '/' + dataset_json.referencesDb
-		try {
-			if (!referencesDbCache.has(db_path)) {
-				const ref_db = new Database(db_path, { readonly: true })
-				const rows = ref_db.prepare('SELECT ref_number, text, embedding FROM refs').all() as {
-					ref_number: string | null
-					text: string
-					embedding: Buffer
-				}[]
-				ref_db.close()
-				referencesDbCache.set(db_path, {
-					refNumbers: rows.map(r => r.ref_number),
-					texts: rows.map(r => r.text),
-					embeddings: rows.map(r =>
-						Array.from({ length: r.embedding.byteLength / 4 }, (_, i) => r.embedding.readFloatLE(i * 4))
-					)
-				})
-				mayLog(`RAG: loaded ${rows.length} references from referencesDb into cache`)
-			}
-
-			const cached = referencesDbCache.get(db_path)!
-			if (cached.embeddings.length > 0) {
-				const storedDim = cached.embeddings[0].length
-				const queryDim = query_emb!.length
-				if (storedDim !== queryDim) {
-					mayLog(
-						`RAG: referencesDb dimension mismatch — query=${queryDim}d vs stored=${storedDim}d. ` +
-							`Rebuild the DB with the currently configured embedding model.`
-					)
-				} else {
-					const sims = cached.embeddings.map(emb => cosineSim(query_emb!, emb))
-					const top_idx = argsort(sims).slice(-8).reverse()
-					const top_refs = top_idx.map(i => {
-						const num = cached.refNumbers[i]
-						return num ? `[${num}] ${cached.texts[i]}` : cached.texts[i]
-					})
-					references_context = 'Relevant references from the paper:\n' + top_refs.join('\n') + '\n'
-					mayLog(`RAG: top reference similarity: ${sims[top_idx[0]]?.toFixed(3)}`)
-				}
-			}
-		} catch (e) {
-			mayLog('referencesDb RAG error:', e)
-		}
-	}
-
-	// RAG: retrieve the best-matching figure from the figures SQLite DB if configured.
-	// Only run when the user explicitly mentions a figure, image, or picture — general
-	// resource queries (methods, publications, etc.) should never trigger figure retrieval.
-	let figure_html = ''
-	let figure_context = ''
-	const EXPLICIT_FIGURE_RE = /\b(fig(?:ure)?|image|picture|photo|illustration)\b/i
-	const isExplicitFigureRequest = EXPLICIT_FIGURE_RE.test(prompt)
-	const FIGURE_SIM_THRESHOLD = 0.5
-	if (dataset_json.figuresDb && query_emb && isExplicitFigureRequest) {
-		const db_path = serverconfig.tpmasterdir + '/' + dataset_json.figuresDb
-		try {
-			if (!figuresDbCache.has(db_path)) {
-				const fig_db = new Database(db_path, { readonly: true })
-				const rows = fig_db
-					.prepare('SELECT figure_number, caption, image_data, image_format, embedding FROM figures')
-					.all() as {
-					figure_number: string | null
-					caption: string
-					image_data: Buffer
-					image_format: string
-					embedding: Buffer
-				}[]
-				fig_db.close()
-				figuresDbCache.set(db_path, {
-					captions: rows.map(r => r.caption),
-					figureNumbers: rows.map(r => r.figure_number),
-					imageData: rows.map(r => r.image_data),
-					imageFormats: rows.map(r => r.image_format),
-					embeddings: rows.map(r =>
-						Array.from({ length: r.embedding.byteLength / 4 }, (_, i) => r.embedding.readFloatLE(i * 4))
-					)
-				})
-				mayLog(`RAG: loaded ${rows.length} figures from figuresDb into cache`)
-			}
-
-			const cached = figuresDbCache.get(db_path)!
-			if (cached.embeddings.length > 0) {
-				// Resolve which figure the user is asking for. Embedding similarity cannot
-				// reliably distinguish "figure 1" from "figure 3", so we try explicit references first.
-				const ORDINAL_MAP: Record<string, number> = {
-					first: 1,
-					second: 2,
-					third: 3,
-					fourth: 4,
-					fifth: 5,
-					sixth: 6,
-					seventh: 7,
-					eighth: 8,
-					ninth: 9,
-					tenth: 10
-				}
-
-				// 1. Digit reference — "figure 3", "fig 3"
-				const digitMatch = prompt.match(/\bfig(?:ure)?\s*(\d+[a-zA-Z]?)\b/i)
-				// 2. Ordinal word — "the fourth figure", "fourth figure"
-				const ordinalMatch = prompt.match(/\b(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\b/i)
-				// 3. Relative — "last figure", "final figure"
-				const isLast = /\b(last|final)\b/i.test(prompt)
-
-				let resolvedNum: string | null = null
-				let resolvedIdx = -1
-
-				if (digitMatch) {
-					resolvedNum = digitMatch[1].toLowerCase()
-					resolvedIdx = cached.figureNumbers.findIndex(n => n?.toLowerCase() === resolvedNum)
-				} else if (ordinalMatch) {
-					const nth = ORDINAL_MAP[ordinalMatch[1].toLowerCase()]
-					// figureNumbers are stored as '1','2',... so nth directly maps to that string
-					resolvedNum = String(nth)
-					resolvedIdx = cached.figureNumbers.findIndex(n => n?.toLowerCase() === resolvedNum)
-					// Fall back to positional index if figure number doesn't match (e.g. gaps in numbering)
-					if (resolvedIdx === -1 && nth <= cached.figureNumbers.length) resolvedIdx = nth - 1
-				} else if (isLast) {
-					resolvedIdx = cached.figureNumbers.length - 1
-					resolvedNum = cached.figureNumbers[resolvedIdx] ?? String(resolvedIdx + 1)
-				}
-
-				let best_idx: number
-				let best_sim: number
-				if (resolvedIdx !== -1) {
-					best_idx = resolvedIdx
-					best_sim = 1.0 // explicit reference, always show
-					mayLog(`RAG: explicit figure reference — Figure ${resolvedNum}`)
-				} else {
-					const storedDim = cached.embeddings[0]?.length ?? 0
-					const queryDim = query_emb!.length
-					if (storedDim !== queryDim) {
-						mayLog(
-							`RAG: figuresDb dimension mismatch — query=${queryDim}d vs stored=${storedDim}d. ` +
-								`Rebuild the DB with the currently configured embedding model.`
-						)
-						best_idx = -1
-						best_sim = -1
-					} else {
-						const sims = cached.embeddings.map(emb => cosineSim(query_emb!, emb))
-						best_idx = argsort(sims).at(-1)!
-						best_sim = sims[best_idx]
-						mayLog(`RAG: top figure similarity: ${best_sim.toFixed(3)}`)
-					}
-				}
-
-				if (best_sim >= FIGURE_SIM_THRESHOLD) {
-					const fig_num = cached.figureNumbers[best_idx]
-					const caption = cached.captions[best_idx]
-					const fmt = cached.imageFormats[best_idx]
-					const base64 = cached.imageData[best_idx].toString('base64')
-					const alt = fig_num ? `Figure ${fig_num}` : 'Figure'
-					figure_html =
-						`<div style="margin-top:14px">` +
-						`<img src="data:image/${fmt};base64,${base64}" style="max-width:100%;height:auto;border:1px solid #ddd;border-radius:4px" alt="${alt}" />` +
-						`<p style="font-size:0.85em;color:#666;margin-top:6px">${alt} — ${caption.slice(0, 2000)}</p>` +
-						`</div>`
-					// Tell the LLM which figure was retrieved so it references the correct number.
-					// Without this it has no knowledge of what image was found and defaults to "Figure 1".
-					figure_context = `Retrieved figure: ${alt}. Caption: ${caption.slice(
-						0,
-						2000
-					)}. The image is already displayed below your response — do NOT generate a separate link for it.`
-				}
-			}
-		} catch (e) {
-			mayLog('figuresDb RAG error:', e)
+			mayLog('resourceDb RAG error:', e)
 		}
 	}
 
 	const system_prompt =
-		'I am an assistant that provides information and links about this genomic data portal. ' +
+		'I am an assistant that provides information and links about this data portal. ' +
 		"Answer the user's question using only the provided resource information. " +
 		'Format all URLs as clickable HTML links using <a href="url" target="_blank" rel="noopener noreferrer">descriptive text</a>. ' +
 		'The final output must be ONLY a JSON object with NO extra comments, in this format: {"type":"html","html":"your html here"}\n' +
 		(classification_ds.SystemPrompt ? classification_ds.SystemPrompt + '\n' : '') +
 		(rag_context ? rag_context + '\n' : '') +
-		(references_context ? references_context + '\n' : '') +
-		(figure_context ? figure_context + '\n' : '') +
 		(training_data ? 'Training data examples:\n' + training_data + '\n' : '') +
 		'Question: {' +
 		prompt +
@@ -887,7 +683,7 @@ async function extract_resource_response(
 		html = response
 	}
 
-	return { type: 'html', html: html + figure_html }
+	return { type: 'html', html: html }
 }
 
 async function extract_DE_search_terms_from_query(
