@@ -276,7 +276,7 @@ export async function run_chat_pipeline(
 			.flatMap(row => row.values.map(v => v.key.toUpperCase()))
 	)
 
-	const class_response: ClassificationType = await classifyQuery(user_prompt, llm, datasetNoise)
+	const class_response: ClassificationType = await classifyQuery(user_prompt, llm, datasetNoise, dataset_json)
 	let ai_output_json: any
 	mayLog('Time taken for classification:', formatElapsedTime(Date.now() - time1))
 	if (class_response.type == 'html') {
