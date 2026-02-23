@@ -18,9 +18,9 @@ const useCasesExcluded = {
 	matrix: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
 	facet: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
 	filter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
-	dictionary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
-	summary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
-	barchart: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
+	dictionary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST /*, TermTypeGroups.TERM_COLLECTION*/],
+	summary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST /*, TermTypeGroups.TERM_COLLECTION*/],
+	barchart: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST /*, TermTypeGroups.TERM_COLLECTION*/],
 	violin: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
 	sampleScatter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
 	cuminc: [
@@ -308,7 +308,8 @@ export class TermTypeSearch {
 				} catch (e) {
 					throw `error with handler='./handlers/${type}.ts': ${e}`
 				}
-				const collections = this.app.vocabApi?.termdbConfig?.numericTermCollections
+				const collections =
+					this.app.vocabApi?.termdbConfig?.numericTermCollections || this.app.vocabApi?.termdbConfig?.termCollections
 				if (type == TermTypes.TERM_COLLECTION && collections) {
 					for (const ntc of collections) {
 						this.tabs.push({
@@ -355,6 +356,7 @@ export class TermTypeSearch {
 		})
 	}
 	async setTermTypeGroup(type, termTypeGroup, details = {}) {
+		console.log(353, details)
 		await this.app.dispatch({ type: 'set_term_type_group', value: termTypeGroup })
 		const tab = this.tabs.find(tab => tab.termTypeGroup == termTypeGroup)
 		if (!tab) return

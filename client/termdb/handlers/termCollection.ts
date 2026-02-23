@@ -78,6 +78,7 @@ export class SearchHandler {
 					type: 'termCollection',
 					termlst,
 					name: termName,
+					memberType: opts.details.memberType,
 					isleaf: true,
 					propsByTermId
 				})
