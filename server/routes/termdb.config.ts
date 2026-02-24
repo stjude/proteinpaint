@@ -252,6 +252,9 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 	if (q.geneExpression) {
 		q2.geneExpression = { unit: q.geneExpression.unit }
 	}
+	if (q.dnaMethylation) {
+		q2.dnaMethylation = { unit: q.dnaMethylation.unit }
+	}
 	if (q.ld) {
 		q2.ld = structuredClone(q.ld)
 	}

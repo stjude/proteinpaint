@@ -1,4 +1,5 @@
 import type { RawDnaMethylationTerm } from '#types'
+import { type TwOpts } from './TwBase.ts'
 import { TermTypes } from '#shared/terms.js'
 
 const termType = TermTypes.DNA_METHYLATION
@@ -10,10 +11,10 @@ export class DnaMethylationBase {
 
 	// option to fill-in/mutate the input raw term object in-place
 	// - does not have to construct, but may require forced type casting in consumer code
-	static async fill(term: RawDnaMethylationTerm) {
+	static async fill(term: RawDnaMethylationTerm, opts: TwOpts) {
 		DnaMethylationBase.validate(term)
 		if (!term.name) {
-			term.unit = 'Average Beta Value'
+			term.unit = opts.vocabApi.termdbConfig.queries.dnaMethylation?.unit || 'Average Beta Value'
 			const name = `${term.id} ${term.unit}`
 			term.name = name
 		}
@@ -31,10 +32,10 @@ export class DnaMethylationBase {
 
 	// option to construct an object instance and not mutate the input raw term
 	// - will be used instead of term literal object
-	constructor(term: RawDnaMethylationTerm) {
+	constructor(term: RawDnaMethylationTerm, opts: TwOpts) {
 		DnaMethylationBase.validate(term)
 		this.id = term.id
-		this.unit = term.unit || 'Average Beta Value'
+		this.unit = term.unit || opts.vocabApi.termdbConfig.queries.dnaMethylation?.unit || 'Average Beta Value'
 		this.name = term.name || `${this.id} ${this.unit}`
 	}
 }
