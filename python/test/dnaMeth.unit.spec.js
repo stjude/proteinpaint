@@ -83,21 +83,20 @@ tape('Test #3: Sample does not exist', async t => {
 		s: '0',
 		q: 'chr17:7673850-7684495'
 	}
+	// Run the script (should not throw anymore)
+	const result = await run_python('query_beta_values.py', JSON.stringify(input))
 
-	try {
-		await run_python('query_beta_values.py', JSON.stringify(input))
-		t.fail('Expected Python ValueError but the script succeeded')
-	} catch (err) {
-		// Convert to string regardless of type
-		const errorText = String(err)
-		// console.log('Caught error:', errorText);  // This should show
+	// Convert result to object if needed
+	const matrix = typeof result === 'string' ? JSON.parse(result) : result
 
-		// Check if the error contains the expected message
-		t.ok(
-			errorText.includes('Sample(s) not found in HDF5 file.'),
-			'Error message should indicate that one or more samples does not exist'
-		)
-	}
+	// Ensure matrix exists
+	t.ok(Array.isArray(matrix), 'Returned result should be a matrix (array)')
+
+	// Check that every value in the matrix is null
+	const allNull = matrix.every(row => Array.isArray(row) && row.every(value => value === null))
+
+	t.ok(allNull, 'Returned matrix should consist entirely of null values when sample does not exist')
+
 	console.log('='.repeat(70) + '\n')
 	t.end()
 })
@@ -299,7 +298,7 @@ tape('Test #10: Check returned float value', async t => {
 		const result = typeof out === 'string' ? JSON.parse(out) : out
 
 		const expected = 0.773956
-		const actual = result
+		const actual = result[0][0]
 
 		const tolerance = 1e-6
 		t.ok(Math.abs(actual - expected) < tolerance, `Expected ~${expected}, got ${actual}`)
@@ -341,7 +340,7 @@ tape('Test #11: Single CpG ID and Multiple Samples', async t => {
 	t.end()
 })
 
-tape('Test #11: Single CpG ID and Multiple Samples', async t => {
+tape('Test #12: Single CpG ID and Multiple Samples', async t => {
 	const input = {
 		h: termdb_test_file,
 		s: '1,2,7,5',
@@ -370,7 +369,7 @@ tape('Test #11: Single CpG ID and Multiple Samples', async t => {
 	t.end()
 })
 
-tape('Test #11: Multiple CpG IDs and Single Sample', async t => {
+tape('Test #13: Multiple CpG IDs and Single Sample', async t => {
 	const input = {
 		h: termdb_test_file,
 		s: '7',
