@@ -119,7 +119,7 @@ export class Barchart extends PlotBase {
 					title: controlLabels.term2.title || controlLabels.term2.label,
 					label: controlLabels.term2.label,
 					vocabApi: this.app.vocabApi,
-					numericEditMenuVersion: this.opts.numericEditMenuVersion,
+					numericEditMenuVersion: this.opts.numericEditMenuVersion || ['continuous', 'discrete'],
 					defaultQ4fillTW: term0_term2_defaultQ,
 					// overlay option should always be visible, but must convert unit from log to abs
 					// when an overlay is added
@@ -149,7 +149,10 @@ export class Barchart extends PlotBase {
 					title: controlLabels.term0.title || controlLabels.term0.label,
 					label: controlLabels.term0.label,
 					vocabApi: this.app.vocabApi,
-					numericEditMenuVersion: this.opts.numericEditMenuVersion,
+					// by default, do not allow continuous mode for divide-by term, since
+					// it will create a separate violin-overlay group per unique float or integer value
+					// and there will nonsensical tens/hundreds of these charts based on the cohort size
+					numericEditMenuVersion: this.opts.numericEditMenuVersion || ['discrete'],
 					defaultQ4fillTW: term0_term2_defaultQ,
 					getBodyParams: () => {
 						const tw = this.config['term0']
