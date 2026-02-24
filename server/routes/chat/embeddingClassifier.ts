@@ -270,7 +270,7 @@ export async function loadTrainingExamples(
 	for (const entry of classificationTraining) {
 		if (!entry.question) continue
 		let cat: string
-		if (entry.answer?.type === 'html') {
+		if (entry.answer?.type === 'resource') {
 			cat = 'resource'
 		} else if (entry.answer?.plot) {
 			cat = CHART_TYPE_TO_CATEGORY[entry.answer.plot] ?? entry.answer.plot.toLowerCase()

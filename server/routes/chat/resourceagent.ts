@@ -1,20 +1,11 @@
-import { getEmbedder } from './embeddingClassifier.ts'
-import { formatTrainingExamples, safeParseLlmJson, cosineSim, argsort } from './utils.ts'
+import { formatTrainingExamples, safeParseLlmJson } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type { LlmConfig } from '#types'
-import { mayLog } from '#src/helpers.ts'
-import Database from 'better-sqlite3'
-import serverconfig from '../../src/serverconfig.js'
-
-/** In-memory cache of decoded resource embeddings keyed by absolute DB path. */
-const resourceDbCache = new Map<string, { texts: string[]; embeddings: number[][] }>()
 
 /**
- * Handle a resource-type query by retrieving relevant context from an optional
- * generalized resource DB and formatting an HTML response via the LLM.
- *
- * Falls back to the Classification SystemPrompt + TrainingData when no
- * resourceDb is configured for the dataset.
+ * Handle a resource-type query by asking the LLM to select a resource index
+ * from the dataset's `resources` array. The server resolves the index to the
+ * pre-authored HTML — the LLM never generates HTML directly.
  */
 export async function extractResourceResponse(
 	prompt: string,
@@ -26,70 +17,30 @@ export async function extractResourceResponse(
 		return { type: 'html', html: 'No resource information is available for this dataset.' }
 	}
 
+	const resources: { label: string; html: string }[] = dataset_json.resources ?? []
+	if (resources.length === 0) {
+		return { type: 'html', html: 'No resources are configured for this dataset.' }
+	}
+
 	const training_data =
 		classification_ds.TrainingData?.length > 0 ? formatTrainingExamples(classification_ds.TrainingData) : ''
 
-	// RAG: retrieve relevant text from the optional generalized resource DB
-	let rag_context = ''
-	if (dataset_json.resourceDb) {
-		try {
-			const db_path = serverconfig.tpmasterdir + '/' + dataset_json.resourceDb
-			if (!resourceDbCache.has(db_path)) {
-				const res_db = new Database(db_path, { readonly: true })
-				const rows = res_db.prepare('SELECT text, embedding FROM resources').all() as {
-					text: string
-					embedding: Buffer
-				}[]
-				res_db.close()
-				resourceDbCache.set(db_path, {
-					texts: rows.map(r => r.text),
-					embeddings: rows.map(r =>
-						Array.from({ length: r.embedding.byteLength / 4 }, (_, i) => r.embedding.readFloatLE(i * 4))
-					)
-				})
-				mayLog(`RAG: loaded ${rows.length} entries from resourceDb into cache`)
-			}
-
-			const cached = resourceDbCache.get(db_path)!
-			if (cached.embeddings.length > 0) {
-				const embedder = await getEmbedder(llm)
-				const [query_emb] = await embedder.embed([prompt])
-				const storedDim = cached.embeddings[0].length
-				const queryDim = query_emb.length
-				if (storedDim !== queryDim) {
-					mayLog(
-						`RAG: resourceDb dimension mismatch — query=${queryDim}d vs stored=${storedDim}d. ` +
-							`Rebuild the DB with the currently configured embedding model.`
-					)
-				} else {
-					const sims = cached.embeddings.map(emb => cosineSim(query_emb, emb))
-					const top_idx = argsort(sims).slice(-5).reverse()
-					rag_context =
-						'Relevant resource information:\n' +
-						top_idx.map((i, n) => `[${n + 1}] ${cached.texts[i]}`).join('\n\n') +
-						'\n'
-					mayLog(`RAG: top resource similarity: ${sims[top_idx[0]]?.toFixed(3)}`)
-				}
-			}
-		} catch (e) {
-			mayLog('resourceDb RAG error:', e)
-		}
-	}
+	const resourceList = resources.map((r, i) => `  ${i}: "${r.label}"`).join('\n')
 
 	const system_prompt =
-		'I am an assistant that provides information and links about this data portal. ' +
-		"Answer the user's question using only the provided resource information. " +
-		'Format all URLs as clickable HTML links using <a href="url" target="_blank" rel="noopener noreferrer">descriptive text</a>. ' +
-		'The final output must be ONLY a JSON object with NO extra comments, in this format: {"type":"html","html":"your html here"}\n' +
+		'I am an assistant that matches user questions to pre-defined resources for this data portal. ' +
+		'The available resources are:\n' +
+		resourceList +
+		'\n' +
+		'The final output must be ONLY a JSON object with NO extra comments, in this format: {"idx": <integer>}\n' +
+		'where idx is the index of the best matching resource from the list above. ' +
+		'If none of the resources match the question, return {"idx": -1}\n' +
 		(classification_ds.SystemPrompt ? classification_ds.SystemPrompt + '\n' : '') +
-		(rag_context ? rag_context + '\n' : '') +
 		(training_data ? 'Training data examples:\n' + training_data + '\n' : '') +
 		'Question: {' +
 		prompt +
 		'} answer:'
 
-	// Use the smaller classifier model for resource responses — it only needs to format
-	// retrieved text into HTML, so the full 70B model is unnecessary.
 	const response: string = await route_to_appropriate_llm_provider(
 		system_prompt,
 		llm,
@@ -97,14 +48,13 @@ export async function extractResourceResponse(
 	)
 	const parsed = safeParseLlmJson(response)
 
-	let html: string
-	if (parsed?.type === 'html' && parsed?.html) {
-		html = parsed.html
-	} else if (typeof parsed === 'string') {
-		html = parsed
-	} else {
-		html = response
+	const idx = typeof parsed?.idx === 'number' ? parsed.idx : -1
+	if (idx >= 0 && idx < resources.length) {
+		return { type: 'html', html: resources[idx].html }
 	}
 
-	return { type: 'html', html: html }
+	return {
+		type: 'html',
+		html: 'Your question does not appear to be related to this dataset. Please ask a question about the available data or visualizations.'
+	}
 }
