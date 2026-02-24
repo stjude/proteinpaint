@@ -114,8 +114,9 @@ export type html_type = {
 export type plot_type = {
 	/** When type == plot, show the corresponding plot in the plot field */
 	type: 'plot'
-	/** The type of plot to be displayed on the UI. */
-	plot: 'summary' | 'dge' | 'none' | 'survival' | 'matrix' | 'sampleScatter' | 'resource'
+	/** The type of plot to be displayed on the UI.
+	 *  Standard categories are listed; datasets may define additional custom categories. */
+	plot: 'summary' | 'dge' | 'none' | 'survival' | 'matrix' | 'sampleScatter' | 'resource' | (string & {})
 }
 
 export type DEType = {

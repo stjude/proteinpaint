@@ -2,6 +2,34 @@ import type { DbRows, DbValue } from '#types'
 import fs from 'fs'
 import Database from 'better-sqlite3'
 
+// ---------------------------------------------------------------------------
+//  Numerical helpers (cosine similarity, sorting)
+// ---------------------------------------------------------------------------
+
+function dot(a: number[], b: number[]): number {
+	let s = 0
+	for (let i = 0; i < a.length; i++) s += a[i] * b[i]
+	return s
+}
+
+function norm(a: number[]): number {
+	return Math.sqrt(dot(a, a))
+}
+
+export function cosineSim(a: number[], b: number[]): number {
+	const d = dot(a, b)
+	const na = norm(a)
+	const nb = norm(b)
+	return na === 0 || nb === 0 ? 0 : d / (na * nb)
+}
+
+export function argsort(arr: number[]): number[] {
+	return arr
+		.map((v, i) => ({ v, i }))
+		.sort((a, b) => a.v - b.v)
+		.map(x => x.i)
+}
+
 /** Format few-shot training examples into a prompt string. */
 export function formatTrainingExamples(trainingData: { question: string; answer: any }[]): string {
 	return trainingData
