@@ -1,6 +1,7 @@
 import tape from 'tape'
 import * as helpers from '../../test/front.helpers.js'
 import { termjson } from '../../test/testdata/termjson.js'
+import { custom_variables_ID } from '../tree.js'
 
 /*
 Tests:
@@ -8,32 +9,15 @@ Construction and default behavior
 	- default behavior
 	- default behavior, MSigDB (genome-level termdb, not ds)
 	- rehydrated from saved state
-	- error handling
-Rendering
+	- Error handling for invalid genome and invalid dslabel
+	- requestTermRecursive() returns a list of child terms
 Opts and callbacks
-	- click_term
+	- state.customTerms adds custom variables to tree
+	- opts.expandedTermIds displays expanded branches in the tree
+	- Trigger click_term with opts.disable_terms
 	- Trigger opts.click_term2select_tvs callback
-	- Trigger click_term_wrapper callback
-	- usecase
-
-	TODO: 
-	**requests:
-	mayGetCustomTerms()
-	requestTermRecursive
-	getTermsById
-
-	**setters: 
-	bindKey
-
-	**rendering:
-	renderBranch
-	hideTerm
-	updateTerm
-	addTerm
-	toggleBranch
-
-	**opts:
-	submit_lst
+	- Trigger opts.click_term_wrapper callback
+	- Set usecase, target == survival, with expandedTermIds
  */
 
 /*************************
@@ -261,7 +245,7 @@ tape('rehydrated from saved state', function (test) {
 	}
 })
 
-tape('error handling', function (test) {
+tape('Error handling for invalid genome and invalid dslabel', function (test) {
 	test.timeoutAfter(1000)
 	test.plan(2)
 
@@ -298,15 +282,156 @@ tape('error handling', function (test) {
 	}
 })
 
-/*********
- Rendering
-**********/
+tape('requestTermRecursive() returns a list of child terms', function (test) {
+	test.timeoutAfter(1000)
+
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds: ['Diagnosis']
+			}
+		},
+		tree: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(tree) {
+		tree.on('postRender.test', null)
+		const demoVarTerm: any = Object.values(tree.Inner.termsById).find((d: any) => d.name === 'Demographic Variables')
+		test.true(demoVarTerm, 'Should load child variables from Demographic Variables.')
+
+		const terms = await tree.Inner.requestTermRecursive(demoVarTerm)
+		test.true(terms && Array.isArray(terms) && terms.length > 0, 'Should return a list of child terms.')
+		const ageTerm = terms.find((t: any) => t.name === 'Age (years)')
+		test.true(ageTerm, 'Should include Age (years) term in child list.')
+		const missingChild = terms.find((t: any) => !tree.Inner.termsById[t.id || t.name])
+		test.true(!missingChild, 'Should return all child terms in termsById.')
+
+		if (test['_ok']) tree.Inner.app.destroy()
+		test.end()
+	}
+})
 
 /*******************
  Opts and callbacks
 ********************/
 
-tape('click_term', test => {
+tape('state.customTerms adds custom variables to tree', function (test) {
+	test.timeoutAfter(1000)
+
+	const customTerms = [
+		{
+			name: 'Custom Diagnosis Group',
+			tw: {
+				term: {
+					...termjson.diaggrp,
+					id: 'custom_diaggrp',
+					name: 'Custom Diagnosis Group'
+				}
+			}
+		},
+		{
+			name: 'Custom Sex',
+			tw: {
+				term: {
+					...termjson.sex,
+					id: 'custom_sex',
+					name: 'Custom Sex'
+				}
+			}
+		}
+	]
+
+	runpp({
+		state: {
+			customTerms
+		},
+		tree: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(tree) {
+		tree.on('postRender.test', null)
+		const termdivs = tree.Inner.dom.holder.node().querySelectorAll('.termdiv')
+		const customTermDiv = [...termdivs].find(elem => elem.__data__?.name === 'Custom Variables')
+		test.true(customTermDiv, 'Should render Custom Variables root term')
+		if (!customTermDiv) {
+			if (test['_ok']) tree.Inner.app.destroy()
+			test.end()
+			return
+		}
+		test.true(tree.Inner.termsById[custom_variables_ID], 'Should register custom variables in termsById')
+
+		const toggleBtn = customTermDiv.querySelector('.termbtn')
+		const childDiv = customTermDiv.querySelector('.termchilddiv')
+		toggleBtn.click()
+		test.equal(childDiv.style.display, 'block', 'Should see custom terms child div.')
+		test.equal(childDiv.querySelectorAll('.termdiv').length, customTerms.length, 'Should show custom term count')
+		const labels = [...childDiv.querySelectorAll('.termlabel')].map(elem => elem.textContent)
+		test.true(labels.includes('Custom Diagnosis Group'), 'Should include Custom Diagnosis Group label')
+		test.true(labels.includes('Custom Sex'), 'Should include Custom Sex label')
+
+		if (test['_ok']) tree.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('opts.expandedTermIds displays expanded branches in the tree', function (test) {
+	test.timeoutAfter(1000)
+
+	runpp({
+		state: {
+			tree: {
+				expandedTermIds: ['root', 'Demographic Variables', 'Cancer-related Variables']
+			}
+		},
+		tree: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(tree) {
+		tree.on('postRender.test', null)
+		const demoVarTerm: any = Object.values(tree.Inner.termsById).find((d: any) => d.name === 'Demographic Variables')
+		const cancRelatedTerm: any = Object.values(tree.Inner.termsById).find(
+			(d: any) => d.name === 'Cancer-related Variables'
+		)
+		test.true(demoVarTerm, 'Should load the Demographic Variables term.')
+		test.true(cancRelatedTerm, 'Should load the Cancer-related Variables term.')
+
+		test.true(
+			Array.isArray(demoVarTerm.terms) && demoVarTerm.terms.length > 0,
+			'Should preload child terms for the expanded Demographic Variables term.'
+		)
+		const childIds = demoVarTerm.terms.map((t: any) => t.id || t.name)
+		const missingChild = childIds.find(id => !tree.Inner.termsById[id])
+		test.true(!missingChild, 'Should register all Demographic Variables child terms in termsById.')
+
+		const termdivs = tree.Inner.dom.holder.node().querySelectorAll('.termdiv')
+		const demoVarDiv = [...termdivs].find(elem => elem.__data__?.name === 'Demographic Variables')
+		test.true(!!demoVarDiv, 'Should render the Demographic Variables term container.')
+		if (demoVarDiv) {
+			const childDiv = demoVarDiv.querySelector('.termchilddiv')
+			test.true(
+				!!childDiv && childDiv.querySelectorAll('.termdiv').length > 0,
+				'Should render child term divs for Demographic Variables.'
+			)
+		}
+
+		if (test['_ok']) tree.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Trigger click_term with opts.disable_terms', test => {
 	test.timeoutAfter(1000)
 	runpp({
 		tree: {
@@ -444,18 +569,58 @@ tape('Trigger opts.click_term_wrapper callback', test => {
 		term1.querySelector('.termbtn').click()
 		const childdiv_term1 = term1.querySelector('.termchilddiv')
 
-		await helpers.sleep(100) //Need to mimic the wait from rideInit()
+		await helpers.sleep(200) //Mimics the wait from rideInit()
 		const child1 = childdiv_term1.querySelector('.termdiv')
 		child1.querySelector('.termbtn').click()
 
 		const childdiv_child1 = child1.querySelector('.termchilddiv')
-		await helpers.sleep(100) //Need to mimic the wait from rideInit()
+		await helpers.sleep(200) //Mimics the wait from rideInit()
 		const buttons = childdiv_child1.getElementsByClassName('sja_filter_tag_btn sja_tree_click_term termlabel')
 		buttons[0].click()
 	}
 })
 
-tape('usecase', function (test) {
+tape('Trigger opts.submit_lst callback', test => {
+	test.timeoutAfter(1000)
+
+	let t
+	runpp({
+		tree: {
+			submit_lst: () => {
+				test.pass('submit_lst callback called')
+			},
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(tree) {
+		t = tree
+		tree.on('postRender.test', null)
+		const divs = tree.Inner.dom.holder.node().querySelectorAll('.termdiv')
+		const term1 = [...divs].find(elem => elem.__data__.name.startsWith('Demographic Variables'))
+		term1.querySelector('.termbtn').click()
+		const childdiv_term1 = term1.querySelector('.termchilddiv')
+
+		await helpers.sleep(200) //Mimics the wait from rideInit()
+		const child1 = childdiv_term1.querySelector('.termdiv')
+		child1.querySelector('.termbtn').click()
+
+		const childdiv_child1 = child1.querySelector('.termchilddiv')
+		await helpers.sleep(200) //Mimics the wait from rideInit()
+		const buttons = childdiv_child1.getElementsByClassName('sja_filter_tag_btn sja_tree_click_term termlabel')
+		buttons[0].click()
+
+		const checkbox = childdiv_child1.querySelector('.termcheck')
+		test.true(checkbox, 'should have a checkbox for submit_lst interactivity')
+
+		if (test['_ok']) t.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Set usecase, target == survival, with expandedTermIds', function (test) {
 	test.timeoutAfter(2000)
 
 	runpp({
