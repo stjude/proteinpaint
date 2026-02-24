@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- Expanded integration tests for the tree app.
+
+
 ## 2.177.0
 
 Features:
