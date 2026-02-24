@@ -292,7 +292,11 @@ export class ScatterView {
 				title: 'Term to to divide by categories or to use as Z coordinate',
 				label: 'Z / Divide by',
 				vocabApi: this.scatter.app.vocabApi,
-				numericEditMenuVersion: ['discrete', 'continuous'],
+				// do not allow 'continuous' mode for now, even if it can be rendered along z-axis,
+				// since clicking to barchart/violin/boxplot tab from the scatter tab does not
+				// automatically convert the divide-by term to discrete; a continuous mode in those
+				// other charts leads to nonsensical chart per unique float/integer value
+				numericEditMenuVersion: ['discrete'],
 				processInput: tw => {
 					if (!isPremade && isNumericTerm(tw?.term)) tw.q = { mode: 'continuous' } //use continuous mode by default if not premade plot
 				}
