@@ -1,5 +1,5 @@
-import { getEmbedder, cosineSim, argsort } from './embeddingClassifier.ts'
-import { formatTrainingExamples, safeParseLlmJson } from './utils.ts'
+import { getEmbedder } from './embeddingClassifier.ts'
+import { formatTrainingExamples, safeParseLlmJson, cosineSim, argsort } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type { LlmConfig } from '#types'
 import { mayLog } from '#src/helpers.ts'

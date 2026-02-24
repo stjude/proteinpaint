@@ -30,24 +30,28 @@ function buildUnrecognizedMessage(dataset_json: any): string {
 }
 
 /**
- * Classify a user query using the embedding classifier with LLM fallback.
+ * Classify a user query using the hybrid embedding + LLM classifier.
  *
- * @param user_prompt  The raw user query string.
- * @param llm          LLM configuration (provider, model names, API endpoint).
- * @param datasetNoise Set of uppercase categorical term values from the dataset DB,
- *                     used to avoid false gene-name matches in multi-gene detection.
- * @param dataset_json The dataset configuration, used to generate a context-aware
- *                     fallback message when the query cannot be classified.
- * @returns            A ClassificationType indicating the query category.
+ * @param user_prompt   The raw user query string.
+ * @param llm           LLM configuration (provider, model names, API endpoint).
+ * @param datasetNoise  Set of uppercase categorical term values from the dataset DB,
+ *                      used to avoid false gene-name matches in multi-gene detection.
+ * @param dataset_json  The dataset AI configuration (from aifiles JSON), used for
+ *                      per-dataset classifier examples and fallback messages.
+ * @param datasetLabel  Unique dataset identifier (e.g. "ALL-pharmacotyping").
+ * @param aiFilesDir    Directory containing the aifiles JSON (used to resolve
+ *                      defaultClassifierExamples.json).
+ * @returns             A ClassificationType indicating the query category.
  */
 export async function classifyQuery(
 	user_prompt: string,
 	llm: LlmConfig,
 	datasetNoise: Set<string>,
-	dataset_json: any
+	dataset_json: any,
+	datasetLabel: string,
+	aiFilesDir: string
 ): Promise<ClassificationType> {
-	// The classifier is a singleton that loads the model once and reuses it.
-	const clf = await getClassifier(llm)
+	const clf = await getClassifier(llm, datasetLabel, dataset_json, aiFilesDir)
 	const embeddingResult = await clf.classifyHybrid(user_prompt, llm, datasetNoise)
 	mayLog(
 		`Embedding classifier: category=${embeddingResult.category}, confidence=${embeddingResult.confidence.toFixed(4)}`
@@ -62,6 +66,6 @@ export async function classifyQuery(
 
 	return {
 		type: 'plot',
-		plot: embeddingResult.category as 'summary' | 'dge' | 'survival' | 'matrix' | 'sampleScatter' | 'resource'
+		plot: embeddingResult.category
 	}
 }
