@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+
+## Unreleased
+
+Fixes:
+- limit divide-by terms to discrete mode to avoid a nonsensical one rendered chart per unique float/integer value
+
+
 ## 2.170.14
 
 Fixes:

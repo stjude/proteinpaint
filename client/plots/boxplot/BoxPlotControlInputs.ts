@@ -33,7 +33,10 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, getChar
 			title: controlLabels.term0.title || controlLabels.term0.label,
 			label: controlLabels.term0.label,
 			vocabApi: app.vocabApi,
-			numericEditMenuVersion: opts.numericEditMenuVersion || ['continuous', 'discrete'],
+			// by default, do not allow continuous mode for divide-by term, since
+			// it will create a separate violin-overlay group per unique float or integer value
+			// and there will nonsensical tens/hundreds of these charts based on the cohort size
+			numericEditMenuVersion: opts.numericEditMenuVersion || ['discrete'],
 			defaultQ4fillTW: term0_term2_defaultQ
 		},
 		{
