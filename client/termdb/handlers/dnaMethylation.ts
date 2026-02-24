@@ -22,7 +22,7 @@ export class SearchHandler {
 		// TODO: currently, when inputting a single position (e.g. chr17:7661778 or chr17:7661778-7661778), the output is a region 400bp long. Need to support single position input.
 		// TODO: verify whether coordiante is 0-based or 1-based (need to do the same for other search handlers e.g. geneVariant.ts, snp.ts, etc.)
 		const coord = `${chr}:${start}-${stop}`
-		const unit = 'Average Beta Value'
+		const unit = this.app.vocabApi.termdbConfig.queries.dnaMethylation?.unit || 'Average Beta Value'
 		const term = {
 			id: coord,
 			chr,

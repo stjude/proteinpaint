@@ -972,6 +972,8 @@ type Mds3Queries = {
 	dnaMethylation?: {
 		/** path to h5 file */
 		file: string
+		/** dna methylation unit (e.g. 'Average Beta Value') */
+		unit: string
 	}
 	rnaseqGeneCount?: RnaseqGeneCount
 	/** Used to create the top mutated genes UI in the gene

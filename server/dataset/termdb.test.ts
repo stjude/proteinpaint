@@ -407,7 +407,8 @@ export default function (): Mds3 {
 				file: 'files/hg38/TermdbTest/rnaseq/TermdbTest.ssgsea.h5'
 			},
 			dnaMethylation: {
-				file: 'files/hg38/TermdbTest/dnaMeth.h5'
+				file: 'files/hg38/TermdbTest/dnaMeth.h5',
+				unit: 'Average Beta Value'
 			},
 			topVariablyExpressedGenes: {
 				src: 'native'

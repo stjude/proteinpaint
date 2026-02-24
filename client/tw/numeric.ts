@@ -80,7 +80,7 @@ export class NumericBase extends TwBase {
 				break
 
 			case 'dnaMethylation':
-				DnaMethylationBase.fill(tw.term)
+				DnaMethylationBase.fill(tw.term, opts)
 				if (!tw.q.mode) tw.q.mode = 'continuous'
 				break
 
