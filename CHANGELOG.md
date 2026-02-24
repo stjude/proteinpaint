@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - Expanded integration tests for the tree app.
+- New integration tests for TermTypeSearch.ts.
 
 
 ## 2.177.0
