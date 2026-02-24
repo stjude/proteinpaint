@@ -58,7 +58,7 @@ import {
 } from '#routes/aiProjectSelectedWSImages.ts'
 import { validate_query_getWSISamples } from '#routes/wsisamples.ts'
 import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
-import { dtTermTypes } from '#shared/terms.js'
+import { dtTermTypes, TermTypes } from '#shared/terms.js'
 import { makeAdHocDicTermdbQueries } from './adHocDictionary/buildAdHocDictionary.ts'
 import { validate_query_saveWSIAnnotation } from '#routes/saveWSIAnnotation.ts'
 import { validate_query_deleteWSIAnnotation } from '#routes/deleteWSITileSelection.ts'
@@ -1692,13 +1692,9 @@ async function validate_query_dnaMethylation(ds, genome) {
 		q.file = path.join(serverconfig.tpmasterdir, q.file)
 		q.samples = [] // array of sample ids
 		await utils.file_is_readable(q.file)
-		let samples
-		try {
-			samples = JSON.parse(await run_python('query_beta_values.py', JSON.stringify({ validate: true, h: q.file })))
-		} catch (e) {
-			throw e
-		}
-		if (!Array.isArray(samples)) throw 'HDF5 file has no samples, please check file.'
+		const samples = JSON.parse(await run_python('query_beta_values.py', JSON.stringify({ validate: true, h: q.file })))
+		if (!Array.isArray(samples)) throw 'query_beta_values.py did not return samples array: ' + q.file
+		if (!samples.length) throw 'No samples from hdf5 file: ' + q.file
 		for (const sn of samples) {
 			const si = ds.cohort.termdb.q.sampleName2id(sn)
 			if (si == undefined) throw `unknown sample ${sn} from HDF5 ${q.file}`
@@ -1736,25 +1732,19 @@ async function validate_query_dnaMethylation(ds, genome) {
 		const byTermId = {}
 
 		// Get methylation term
-		const dnaMethylTws = param.terms.filter(tw => tw.term.type == 'dnaMethylation')
+		const dnaMethylTws = param.terms.filter(tw => tw.term.type == TermTypes.DNA_METHYLATION)
 		if (!dnaMethylTws.length) {
 			console.log('No coordinates to query')
 			return { term2sample2value, byTermId }
 		}
-		if (dnaMethylTws.length > 1) throw new Error('not currently supporting multiple dnaMethylation terms')
+		if (dnaMethylTws.length > 1) throw new Error('not currently supporting multiple dnaMethylation terms') // FIXME support it!
 		const dnaMethylTw = dnaMethylTws[0]
 
 		// Query methylation values at given coordinate across all samples
-		// test query coordinate - chr17:7672003-7677430
 		// TODO: python script should query all samples by default
 		const sampleNames = Object.values(bySampleId).map(s => s.label)
 		const input = { h: q.file, s: sampleNames.join(','), q: dnaMethylTw.term.id }
-		let dnaMethylData
-		try {
-			dnaMethylData = JSON.parse(await run_python('query_beta_values.py', JSON.stringify(input)))
-		} catch (e) {
-			throw e
-		}
+		const dnaMethylData = JSON.parse(await run_python('query_beta_values.py', JSON.stringify(input)))
 		if (!Array.isArray(dnaMethylData)) throw new Error('methylation data has unexpected format')
 		if (!dnaMethylData.length) throw new Error('no methylation data returned from HDF5 query')
 
