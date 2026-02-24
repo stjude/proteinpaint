@@ -1692,7 +1692,12 @@ async function validate_query_dnaMethylation(ds, genome) {
 		q.file = path.join(serverconfig.tpmasterdir, q.file)
 		q.samples = [] // array of sample ids
 		await utils.file_is_readable(q.file)
-		const samples = JSON.parse(await run_python('query_beta_values.py', JSON.stringify({ validate: true, h: q.file })))
+		let samples
+		try {
+			samples = JSON.parse(await run_python('query_beta_values.py', JSON.stringify({ validate: true, h: q.file })))
+		} catch (e) {
+			throw e
+		}
 		if (!Array.isArray(samples)) throw 'HDF5 file has no samples, please check file.'
 		for (const sn of samples) {
 			const si = ds.cohort.termdb.q.sampleName2id(sn)
@@ -1744,7 +1749,12 @@ async function validate_query_dnaMethylation(ds, genome) {
 		// TODO: python script should query all samples by default
 		const sampleNames = Object.values(bySampleId).map(s => s.label)
 		const input = { h: q.file, s: sampleNames.join(','), q: dnaMethylTw.term.id }
-		const dnaMethylData = JSON.parse(await run_python('query_beta_values.py', JSON.stringify(input)))
+		let dnaMethylData
+		try {
+			dnaMethylData = JSON.parse(await run_python('query_beta_values.py', JSON.stringify(input)))
+		} catch (e) {
+			throw e
+		}
 		if (!Array.isArray(dnaMethylData)) throw new Error('methylation data has unexpected format')
 		if (!dnaMethylData.length) throw new Error('no methylation data returned from HDF5 query')
 
