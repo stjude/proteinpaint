@@ -213,7 +213,7 @@ export async function getPlotConfig(opts, app) {
 			controls: {
 				isOpen: false // control panel is hidden by default
 			},
-			sampleScatter: getDefaultScatterSettings(),
+			sampleScatter: getDefaultScatterSettings(opts),
 			startColor: {}, //dict to store the start color of the gradient for each chart when using continuous color
 			stopColor: {} //dict to store the stop color of the gradient for each chart when using continuous color
 		},
@@ -250,11 +250,6 @@ export async function getPlotConfig(opts, app) {
 
 		if (plot.term0?.q?.mode == 'continuous' && !app.hasWebGL())
 			throw 'Can not load Z/Divide by term in continuous mode as WebGL is not supported'
-
-		if (!plot.settings.sampleScatter.itemLabel) {
-			// missing. auto assign so `itemLabel` will be always present as is required in type def and no need for testing if present in subsequent use
-			plot.settings.sampleScatter.itemLabel = plot.singleCellPlot ? 'Cell' : 'Sample'
-		}
 		return plot
 	} catch (e) {
 		console.error(e)
@@ -316,9 +311,9 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	}
 }
 
-// Note: use Partial as "itemLabel" property has to be missing, so it can be auto computed.
-export function getDefaultScatterSettings(): Partial<Settings> {
-	return {
+export function getDefaultScatterSettings(opts): Settings {
+	const overrides = opts?.overrides || {}
+	const defaults = {
 		size: 0.8,
 		minShapeSize: 0.5,
 		maxShapeSize: 4,
@@ -360,8 +355,11 @@ export function getDefaultScatterSettings(): Partial<Settings> {
 		minXScale: null,
 		maxXScale: null,
 		minYScale: null,
-		maxYScale: null
+		maxYScale: null,
+		itemLabel: opts.singleCellPlot ? 'Cell' : 'Sample'
 	}
+
+	return Object.assign(defaults, overrides)
 }
 
 export function openScatterPlot(app, plot, filter = null) {

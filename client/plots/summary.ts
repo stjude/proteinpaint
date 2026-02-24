@@ -473,7 +473,7 @@ export async function getPlotConfig(opts, app) {
 
 			boxplot: getDefaultBoxplotSettings(app),
 
-			sampleScatter: getDefaultScatterSettings()
+			sampleScatter: getDefaultScatterSettings(opts)
 		},
 		mayAdjustConfig(config, edits: { childType?: string } = {}) {
 			/*
