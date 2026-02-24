@@ -1,3 +1,4 @@
+import path from 'path'
 import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, ClassificationType } from '#types'
 import { ChatPayload } from '#types/checkers'
 import { classifyQuery } from './chat/classify.ts'
@@ -51,7 +52,9 @@ function init({ genomes }) {
 			const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
 			const genedb = serverconfig.tpmasterdir + '/' + g.genedb.dbfile
 			// Read dataset JSON file
-			const dataset_json: any = await readJSONFile(serverconfig_ds_entries.aifiles)
+			const aiFilesPath = serverconfig_ds_entries.aifiles
+			const dataset_json: any = await readJSONFile(aiFilesPath)
+			const aiFilesDir = path.dirname(aiFilesPath)
 			const testing = false // This toggles validation of LLM output. In this script, this will ALWAYS be false since we always want validation of LLM output, only for testing we set this variable to true
 			const ai_output_json = await run_chat_pipeline(
 				q.prompt,
@@ -61,7 +64,8 @@ function init({ genomes }) {
 				testing,
 				dataset_db,
 				genedb,
-				ds
+				ds,
+				aiFilesDir
 			)
 			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
@@ -79,7 +83,8 @@ export async function run_chat_pipeline(
 	testing: boolean,
 	dataset_db: string,
 	genedb: string,
-	ds: any
+	ds: any,
+	aiFilesDir: string
 ) {
 	const time1 = new Date().valueOf()
 
@@ -94,7 +99,14 @@ export async function run_chat_pipeline(
 			.flatMap(row => row.values.map(v => v.key.toUpperCase()))
 	)
 
-	const class_response: ClassificationType = await classifyQuery(user_prompt, llm, datasetNoise, dataset_json)
+	const class_response: ClassificationType = await classifyQuery(
+		user_prompt,
+		llm,
+		datasetNoise,
+		dataset_json,
+		ds.label,
+		aiFilesDir
+	)
 	let ai_output_json: any
 	mayLog('Time taken for classification:', formatElapsedTime(Date.now() - time1))
 	if (class_response.type == 'html') {
