@@ -23,8 +23,6 @@ export class DnaMethylationBase {
 	static validate(term: RawDnaMethylationTerm) {
 		if (typeof term !== 'object') throw 'term is not an object'
 		if (term.type != termType) throw `incorrect term.type='${term?.type}', expecting '${termType}'`
-		if (term.type != TermTypes.DNA_METHYLATION) throw 'unexpected term.type'
-		if (typeof term !== 'object') throw 'term is not an object'
 		if (!term.id) throw 'term.id is missing'
 		if (!term.chr || !Number.isInteger(term.start) || !Number.isInteger(term.stop))
 			throw 'incomplete coordinate in term{}'
