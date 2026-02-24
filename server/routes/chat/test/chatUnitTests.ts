@@ -1,4 +1,4 @@
-// Syntax: cd ~/sjpp && npx tsx proteinpaint/server/utils/test/chatbot.ts
+// Syntax: cd ~/sjpp && npx tsx proteinpaint/server/routes/chat/test/chatUnitTests.ts
 
 import { readJSONFile } from '../utils.ts'
 import { run_chat_pipeline } from '../../termdb.chat2.ts'
@@ -29,7 +29,8 @@ for (const genome of serverconfig.genomes) {
 					testing,
 					serverconfig.tpmasterdir + '/' + dataset_json.db,
 					serverconfig.tpmasterdir + '/' + dataset_json.genedb,
-					ds
+					ds,
+					dataset.aifiles
 				)
 				console.log('test_result:', test_result)
 				if (test_result.action == 'html') {
