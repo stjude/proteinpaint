@@ -1737,57 +1737,55 @@ async function validate_query_dnaMethylation(ds, genome) {
 			console.log('No coordinates to query')
 			return { term2sample2value, byTermId }
 		}
-		if (dnaMethylTws.length > 1) throw new Error('not currently supporting multiple dnaMethylation terms') // FIXME support it!
-		const dnaMethylTw = dnaMethylTws[0]
 
-		// Query methylation values at given coordinate across all samples
+		// Query methylation values
 		// TODO: python script should query all samples by default
 		const sampleNames = Object.values(bySampleId).map(s => s.label)
-		const input = { h: q.file, s: sampleNames.join(','), q: dnaMethylTw.term.id }
-		const dnaMethylData = JSON.parse(await run_python('query_beta_values.py', JSON.stringify(input)))
-		if (!Array.isArray(dnaMethylData)) throw new Error('methylation data has unexpected format')
-		if (!dnaMethylData.length) throw new Error('no methylation data returned from HDF5 query')
+		for (const tw of dnaMethylTws) {
+			const input = { h: q.file, s: sampleNames.join(','), q: tw.term.id }
+			const dnaMethylData = JSON.parse(await run_python('query_beta_values.py', JSON.stringify(input)))
+			if (!Array.isArray(dnaMethylData)) throw new Error('methylation data has unexpected format')
+			if (!dnaMethylData.length) throw new Error('no methylation data returned from HDF5 query')
 
-		/* output format:
-		array of arrays with dimension n_query_sites X n_query_samples
-		input query sample order is preserved
-		[
-			[0.4, 0.6, 0.2],
-			[0.7, 0.1, 0.6],
-			[0.3, 0.7, 0.5],
-		]
-		*/
+			/* output format:
+			array of arrays with dimension n_query_sites X n_query_samples
+			input query sample order is preserved
+			[
+				[0.4, 0.6, 0.2],
+				[0.7, 0.1, 0.6],
+				[0.3, 0.7, 0.5],
+			]
+			*/
 
-		// map sample idx to beta values
-		const sampleidx2values = new Map()
-		for (const site of dnaMethylData) {
-			for (const [sampleidx, v] of site.entries()) {
-				if (!Number.isFinite(v)) continue // skip missing values
-				if (!sampleidx2values.has(sampleidx)) sampleidx2values.set(sampleidx, [])
-				const values = sampleidx2values.get(sampleidx)
-				values.push(v)
+			// map sample idx to beta values
+			const sampleidx2values = new Map()
+			for (const site of dnaMethylData) {
+				for (const [sampleidx, v] of site.entries()) {
+					if (!Number.isFinite(v)) continue // skip missing values
+					if (!sampleidx2values.has(sampleidx)) sampleidx2values.set(sampleidx, [])
+					const values = sampleidx2values.get(sampleidx)
+					values.push(v)
+				}
+			}
+
+			// map sampleid to average beta value
+			const s2v = {}
+			for (const [i, sampleName] of sampleNames.entries()) {
+				const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
+				if (!sampleId) continue
+				if (limitSamples && !limitSamples.has(sampleId)) continue
+				const values = sampleidx2values.get(i)
+				if (!values?.length) continue // skip samples with no beta values
+				const avg = values.reduce((sum, v) => sum + v, 0) / values.length
+				s2v[sampleId] = avg
+			}
+
+			if (Object.keys(s2v).length) {
+				term2sample2value.set(tw.$id, s2v)
 			}
 		}
 
-		// map sampleid to average beta value
-		const s2v = {}
-		for (const [i, sampleName] of sampleNames.entries()) {
-			const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
-			if (!sampleId) continue
-			if (limitSamples && !limitSamples.has(sampleId)) continue
-			const values = sampleidx2values.get(i)
-			if (!values?.length) continue // skip samples with no beta values
-			const avg = values.reduce((sum, v) => sum + v, 0) / values.length
-			s2v[sampleId] = avg
-		}
-
-		if (Object.keys(s2v).length) {
-			term2sample2value.set(dnaMethylTw.$id, s2v)
-		}
-
-		if (term2sample2value.size == 0) {
-			throw 'No data available for the input ' + dnaMethylTw.term.id
-		}
+		if (term2sample2value.size == 0) throw 'No data available for the input'
 
 		return { term2sample2value, byTermId, bySampleId }
 	}
