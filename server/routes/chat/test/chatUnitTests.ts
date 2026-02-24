@@ -1,8 +1,9 @@
 // Syntax: cd ~/sjpp && npx tsx proteinpaint/server/utils/test/chatbot.ts
 
-import { readJSONFile, run_chat_pipeline } from '../../routes/termdb.chat.ts'
-import serverconfig from '../../src/serverconfig.js'
-import type { DEType, FilterTerm, CategoricalFilterTerm, NumericFilterTerm } from '#types'
+import { readJSONFile } from '../utils.ts'
+import { run_chat_pipeline } from '../../termdb.chat2.ts'
+import serverconfig from '../../../src/serverconfig.js'
+import type { DEType, SummaryType, FilterTerm, CategoricalFilterTerm, NumericFilterTerm } from '#types'
 
 const testing = true // This causes raw LLM output to be sent by the agent
 const llm = serverconfig.llm
@@ -42,14 +43,7 @@ for (const genome of serverconfig.genomes) {
 						)
 					}
 				} else if (test_result.action == 'summary') {
-					if (test_result.response != test_data.answer) {
-						console.log(
-							'Summary request did not match. LLM response :' +
-								test_result.response +
-								' Actual response: ' +
-								test_data.answer
-						)
-					}
+					validate_summary_output(test_result.response, test_data.answer)
 				} else if (test_result.action == 'dge') {
 					if (test_result.response != test_data.answer) {
 						//console.log("DE request did not match. LLM response :" + JSON.stringify(test_result.response) + " Actual response: " + JSON.stringify(test_data.answer))
@@ -59,6 +53,42 @@ for (const genome of serverconfig.genomes) {
 			}
 		}
 	}
+}
+
+function validate_summary_output(output: SummaryType, expected: SummaryType): boolean {
+	if (output.term != expected.term) {
+		console.log('Summary term did not match. LLM response: ' + output.term + ' Expected: ' + expected.term)
+		return false
+	}
+
+	if (output.term2 != expected.term2) {
+		console.log('Summary term2 did not match. LLM response: ' + output.term2 + ' Expected: ' + expected.term2)
+		return false
+	}
+
+	if (!output.simpleFilter && !expected.simpleFilter) {
+		return true
+	}
+	if (!output.simpleFilter || !expected.simpleFilter) {
+		console.log(
+			'Summary simpleFilter mismatch. LLM response: ' +
+				JSON.stringify(output.simpleFilter) +
+				' Expected: ' +
+				JSON.stringify(expected.simpleFilter)
+		)
+		return false
+	}
+
+	const filter_valid = validate_filter(output.simpleFilter, expected.simpleFilter)
+	if (!filter_valid) {
+		console.log(
+			'Summary simpleFilter did not match. LLM response: ' +
+				JSON.stringify(output.simpleFilter) +
+				' Expected: ' +
+				JSON.stringify(expected.simpleFilter)
+		)
+	}
+	return filter_valid
 }
 
 function validate_DE_output(output_DE_object: DEType, expected_DE_output: DEType): boolean {
