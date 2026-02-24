@@ -1762,6 +1762,7 @@ async function validate_query_dnaMethylation(ds, genome) {
 		const sampleidx2values = new Map()
 		for (const site of dnaMethylData) {
 			for (const [sampleidx, v] of site.entries()) {
+				if (!Number.isFinite(v)) continue // skip missing values
 				if (!sampleidx2values.has(sampleidx)) sampleidx2values.set(sampleidx, [])
 				const values = sampleidx2values.get(sampleidx)
 				values.push(v)
@@ -1775,6 +1776,7 @@ async function validate_query_dnaMethylation(ds, genome) {
 			if (!sampleId) continue
 			if (limitSamples && !limitSamples.has(sampleId)) continue
 			const values = sampleidx2values.get(i)
+			if (!values?.length) continue // skip samples with no beta values
 			const avg = values.reduce((sum, v) => sum + v, 0) / values.length
 			s2v[sampleId] = avg
 		}
