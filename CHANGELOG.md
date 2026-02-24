@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.170.14
 
 Fixes:
 - use optional chaining when checking for ds.assayAvailability?.useFilter0
