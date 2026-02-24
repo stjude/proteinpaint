@@ -1,151 +1,168 @@
 /**
- * Embedding Classifier Service
- * =============================
+ * Hybrid Query Classifier
+ * =======================
  *
- * Singleton wrapper around the embedding-based query classifier.
- * Loads the BAAI/bge-small-en-v1.5 model once at startup and provides
- * a fast classify() method (~50ms) that replaces the LLM-based
- * classification agent.
+ * Classifies user queries into plot categories (summary, dge, matrix,
+ * sampleScatter, survival, resource) using a three-tier strategy:
  *
- * Usage in termdb_chat.ts:
+ * 1. **Explicit override** — regex patterns detect unambiguous chart-type
+ *    keywords (e.g. "volcano plot", "UMAP", "heatmap") and return immediately.
+ *
+ * 2. **Embedding classifier** — a kNN classifier backed by a sentence-
+ *    embedding model (local via transformers.js or remote via API) compares
+ *    the query against labeled training examples using cosine similarity.
+ *    The top-k neighbors vote (weighted by similarity) and the category
+ *    with the highest total score wins. If the best neighbor's similarity
+ *    meets a configurable threshold the result is returned (~50 ms latency).
+ *
+ * 3. **LLM fallback** — when the embedding confidence falls below the
+ *    threshold, a small LLM (configured via `classifierModelName` in
+ *    serverconfig) is prompted to classify the query. This handles
+ *    ambiguous or out-of-distribution inputs that the embedding model
+ *    is uncertain about.
+ *
+ * Training data is externalized into JSON files:
+ *   - dataset/ai/defaultClassifierExamples.json — generic, dataset-agnostic examples
+ *   - Per-dataset aifiles JSON — dataset-specific examples via `classifierExamples`
+ *     and extracted from `Classification.TrainingData` entries
+ *
+ * Each dataset gets its own classifier instance (keyed by dataset label) fitted
+ * with the merged generic + dataset-specific examples. The embedder (sentence
+ * model) is shared across all datasets.
+ *
+ * Entry point: classifyHybrid() on the per-dataset EmbeddingClassifier
+ * returned by getClassifier().
+ *
+ * Usage in termdb_chat2.ts:
  *   import { getClassifier } from './embeddingClassifier.js'
- *   const clf = await getClassifier()
- *   const result = clf.classify(userPrompt)
+ *   const clf = await getClassifier(llm, dslabel, datasetJson, aiFilesDir)
+ *   const result = await clf.classifyHybrid(userPrompt, llm)
  */
 
+import path from 'path'
 import { pipeline, type FeatureExtractionPipeline } from '@xenova/transformers'
-import { ezFetch } from '#shared'
 import type { LlmConfig } from '#types'
 import { mayLog } from '#src/helpers.ts'
+import { readJSONFile, cosineSim, argsort } from './utils.ts'
+import { route_to_appropriate_llm_provider, callSjEmbedding, callOllamaEmbedding } from './routeAPIcall.ts'
 
 // ---------------------------------------------------------------------------
-//  Numerical helpers (replacing numpy/sklearn)
+//  Query Augmentation (priority order — first match wins)
 // ---------------------------------------------------------------------------
 
-function dot(a: number[], b: number[]): number {
-	let s = 0
-	for (let i = 0; i < a.length; i++) s += a[i] * b[i]
-	return s
-}
-
-function norm(a: number[]): number {
-	return Math.sqrt(dot(a, a))
-}
-
-export function cosineSim(a: number[], b: number[]): number {
-	const d = dot(a, b)
-	const na = norm(a)
-	const nb = norm(b)
-	return na === 0 || nb === 0 ? 0 : d / (na * nb)
-}
-
-export function argsort(arr: number[]): number[] {
-	return arr
-		.map((v, i) => ({ v, i }))
-		.sort((a, b) => a.v - b.v)
-		.map(x => x.i)
-}
-
-// ---------------------------------------------------------------------------
-//  Query Augmentation
-//  Priority: Resource > DGE > Survival > SampleScatter > Matrix > Summary(child-type)
-// ---------------------------------------------------------------------------
-
-const RESOURCE_PATTERNS: RegExp[] = [
-	/\b(link|url|website|web ?page|portal|web ?link)\b/i,
-	/\b(paper|publication|article|manuscript|preprint|journal)\b/i,
-	/\b(citation|cite|reference)\b/i,
-	/\bhow (do|can|to) (I|we|users?).{0,20}(use|access|find|get|download|navigate)\b/i,
-	/\bwhat is (this|the) (dataset|portal|study|cohort|data)\b/i,
-	/\b(tell me about|describe|about this|overview of|background on) (this|the) (dataset|portal|study|cohort|data)\b/i,
-	/\b(download|access) the data\b/i,
-	/\bwhere (can|do) (I|we|users?).{0,20}(find|get|access|download)\b/i,
-	/\bmore information about (this|the) (dataset|portal|study)\b/i
-]
-
-const DGE_PATTERNS: RegExp[] = [
-	/\bdifferential(ly)?\b/i,
-	/\b(DE|DGE|GSEA)\b/,
-	/\b(volcano|MA plot)\b/i,
-	/\b(up|down)[-\s]?regulated\b/i,
-	/\b(overexpressed|enriched|dysregulated|activated)\b/i,
-	/\bfold[- ]?change\b/i,
-	/\bDE genes\b/,
-	/\bdifferential (gene )?expression\b/i,
-	/\b(edgeR|limma|wilcoxon)\b/i,
-	/\bgenes?.{0,15}(differ|change|significant)/i,
-	/\b(top|most).{0,10}(upregulated|downregulated|overexpressed)\b/i
-]
-
-const SURVIVAL_PATTERNS: RegExp[] = [
-	/\b(survival|mortality|prognos(is|tic)|life expectancy)\b/i,
-	/\bkaplan[- ]?meier\b/i,
-	/\b(KM|OS|EFS|PFS|DFS) (curve|plot|rate|stratif)/,
-	/\b(hazard ratio|log[- ]?rank|cumulative incidence|median survival)\b/i,
-	/\bcox (regression|model|proportional)\b/i,
-	/\b(overall|event[- ]?free|relapse[- ]?free|progression[- ]?free|disease[- ]?free) survival\b/i,
-	/\btime[- ]?to[- ]?(event|relapse|death|progression)\b/i,
-	/\b(mortality|death) (rate|curve|risk)\b/i,
-	/\b(mortal(ity)? curve|survive longer|live longer)\b/i,
-	/\bdie (earlier|sooner|faster)\b/i,
-	/\brisk of (death|dying|relapse)\b/i,
-	/\bpredic.{0,5} (survival|outcome|death|mortality)/i,
-	/\b(patient|overall) outcome\b/i,
-	/\b(better|worse|poor) outcomes?\b/i,
-	/\b\d+[- ]?year survival\b/i,
-	/\bsurvival (rate|benefit|difference|advantage|curve|plot)\b/i,
-	/\b(alive|living) at \d+\b/i
-]
-
-const SAMPLESCATTER_PATTERNS: RegExp[] = [
-	/\b(t[- ]?SNE|UMAP|PCA)\b/i,
-	/\b(dimensionality|dimension) reduction\b/i,
-	/\b2D (embedding|projection)\b/i,
-	/\bsample (cluster|embedding|projection|neighborhood)\b/i,
-	/\bcluster(ing)? (plot|visualization)\b/i,
-	/\b(reduced dimension|embedding (space|plot|colored|with))\b/i,
-	/\boverlay.{0,20}(on the|on a).{0,10}(scatter|UMAP|t-?SNE|PCA)\b/i
-]
-
-const MATRIX_PATTERNS: RegExp[] = [
-	/\b(heatmap|matrix|grid|landscape)\b/i,
-	/\bside by side\b/i,
-	/\b(multi-?gene|multiple genes?)\b/i,
-	/\bper (sample|patient)\b/i,
-	/\bexpression (of|for|levels).{0,30}(and|,).{0,30}(and|,)/i
-]
-
-const SUMMARY_SCATTER_PATTERNS: RegExp[] = [
-	/\b(correlate|correlation|against)\b/i,
-	/\b\w+ (vs|versus) \w+ expression\b/i,
-	/\bscatter\s*plot\b/i,
-	/\b(plot \w+ expression against|expression.{0,20}(vs|versus|against))\b/i
-]
-
-const SUMMARY_VIOLIN_PATTERNS: RegExp[] = [
-	/\bexpression (levels? )?(by|in|for|of|across|between)\b/i,
-	/\b\w+ expression (by|in|for|across|between)\b/i,
-	/\b(stratified by|violin|boxplot)\b/i,
-	/\bexpression.{0,30}(group|subtype|category|cohort|phase|arm|race|sex|gender|age|diagnosis)\b/i,
-	/\b(levels?|counts?) (for|by|in|across|between|stratified)\b/i
-]
-
-const SUMMARY_BARCHART_PATTERNS: RegExp[] = [
-	/\bhow many\b/i,
-	/\bwhat (is|are) the (count|number|total|mean|median|average|percentage|proportion|frequency)\b/i,
-	/\b(what percentage|list all|count of|ratio of|frequency of|distribution of)\b/i,
-	/\bshow (the )?(count|number|total|frequency|percentage|proportion|distribution)\b/i,
-	/\bdescribe the (cohort|dataset|population|samples?|patients?)\b/i,
-	/\bwho (are|is) in\b/i,
-	/\b(breakdown|demographic|summarize|overview|cross-?tabulate)\b/i,
-	/\b(bar ?chart|histogram)\b/i
+const AUGMENTATION_RULES: { prefix: string; patterns: RegExp[] }[] = [
+	{
+		prefix: 'Resource or information request',
+		patterns: [
+			/\b(link|url|website|web ?page|portal|web ?link)\b/i,
+			/\b(paper|publication|article|manuscript|preprint|journal)\b/i,
+			/\b(citation|cite|reference)\b/i,
+			/\bhow (do|can|to) (I|we|users?).{0,20}(use|access|find|get|download|navigate)\b/i,
+			/\bwhat is (this|the) (dataset|portal|study|cohort|data)\b/i,
+			/\b(tell me about|describe|about this|overview of|background on) (this|the) (dataset|portal|study|cohort|data)\b/i,
+			/\b(download|access) the data\b/i,
+			/\bwhere (can|do) (I|we|users?).{0,20}(find|get|access|download)\b/i,
+			/\bmore information about (this|the) (dataset|portal|study)\b/i
+		]
+	},
+	{
+		prefix: 'Differential gene expression analysis',
+		patterns: [
+			/\bdifferential(ly)?\b/i,
+			/\b(DE|DGE|GSEA)\b/,
+			/\b(volcano|MA plot)\b/i,
+			/\b(up|down)[-\s]?regulated\b/i,
+			/\b(overexpressed|enriched|dysregulated|activated)\b/i,
+			/\bfold[- ]?change\b/i,
+			/\bDE genes\b/,
+			/\bdifferential (gene )?expression\b/i,
+			/\b(edgeR|limma|wilcoxon)\b/i,
+			/\bgenes?.{0,15}(differ|change|significant)/i,
+			/\b(top|most).{0,10}(upregulated|downregulated|overexpressed)\b/i
+		]
+	},
+	{
+		prefix: 'Patient survival and outcome analysis',
+		patterns: [
+			/\b(survival|mortality|prognos(is|tic)|life expectancy)\b/i,
+			/\bkaplan[- ]?meier\b/i,
+			/\b(KM|OS|EFS|PFS|DFS) (curve|plot|rate|stratif)/,
+			/\b(hazard ratio|log[- ]?rank|cumulative incidence|median survival)\b/i,
+			/\bcox (regression|model|proportional)\b/i,
+			/\b(overall|event[- ]?free|relapse[- ]?free|progression[- ]?free|disease[- ]?free) survival\b/i,
+			/\btime[- ]?to[- ]?(event|relapse|death|progression)\b/i,
+			/\b(mortality|death) (rate|curve|risk)\b/i,
+			/\b(mortal(ity)? curve|survive longer|live longer)\b/i,
+			/\bdie (earlier|sooner|faster)\b/i,
+			/\brisk of (death|dying|relapse)\b/i,
+			/\bpredic.{0,5} (survival|outcome|death|mortality)/i,
+			/\b(patient|overall) outcome\b/i,
+			/\b(better|worse|poor) outcomes?\b/i,
+			/\b\d+[- ]?year survival\b/i,
+			/\bsurvival (rate|benefit|difference|advantage|curve|plot)\b/i,
+			/\b(alive|living) at \d+\b/i
+		]
+	},
+	{
+		prefix: 'Dimensionality reduction sample scatter plot',
+		patterns: [
+			/\b(t[- ]?SNE|UMAP|PCA)\b/i,
+			/\b(dimensionality|dimension) reduction\b/i,
+			/\b2D (embedding|projection)\b/i,
+			/\bsample (cluster|embedding|projection|neighborhood)\b/i,
+			/\bcluster(ing)? (plot|visualization)\b/i,
+			/\b(reduced dimension|embedding (space|plot|colored|with))\b/i,
+			/\boverlay.{0,20}(on the|on a).{0,10}(scatter|UMAP|t-?SNE|PCA)\b/i
+		]
+	},
+	{
+		prefix: 'Multi-gene expression matrix or heatmap',
+		patterns: [
+			/\b(heatmap|matrix|grid|landscape)\b/i,
+			/\bside by side\b/i,
+			/\b(multi-?gene|multiple genes?)\b/i,
+			/\bper (sample|patient)\b/i,
+			/\bexpression (of|for|levels).{0,30}(and|,).{0,30}(and|,)/i
+		]
+	},
+	{
+		prefix: 'Summary scatter plot comparing two variables',
+		patterns: [
+			/\b(correlate|correlation|against)\b/i,
+			/\b\w+ (vs|versus) \w+ expression\b/i,
+			/\bscatter\s*plot\b/i,
+			/\b(plot \w+ expression against|expression.{0,20}(vs|versus|against))\b/i
+		]
+	},
+	{
+		prefix: 'Summary violin plot of expression by clinical group',
+		patterns: [
+			/\bexpression (levels? )?(by|in|for|of|across|between)\b/i,
+			/\b\w+ expression (by|in|for|across|between)\b/i,
+			/\b(stratified by|violin|boxplot)\b/i,
+			/\bexpression.{0,30}(group|subtype|category|cohort|phase|arm|race|sex|gender|age|diagnosis)\b/i,
+			/\b(levels?|counts?) (for|by|in|across|between|stratified)\b/i
+		]
+	},
+	{
+		prefix: 'Summary barchart of categorical distribution',
+		patterns: [
+			/\bhow many\b/i,
+			/\bwhat (is|are) the (count|number|total|mean|median|average|percentage|proportion|frequency)\b/i,
+			/\b(what percentage|list all|count of|ratio of|frequency of|distribution of)\b/i,
+			/\bshow (the )?(count|number|total|frequency|percentage|proportion|distribution)\b/i,
+			/\bdescribe the (cohort|dataset|population|samples?|patients?)\b/i,
+			/\bwho (are|is) in\b/i,
+			/\b(breakdown|demographic|summarize|overview|cross-?tabulate)\b/i,
+			/\b(bar ?chart|histogram)\b/i
+		]
+	}
 ]
 
 // Tokens matching the gene-name pattern that are NOT genes — prevents false
 // positives in multi-gene detection. Kept generic (no dataset-specific terms).
 const _GENE_TOKEN_RE = /\b[A-Z][A-Z0-9]{1,7}\b/g
 const _GENE_NOISE = new Set([
-	// Common words / abbreviations
 	'THE',
 	'AND',
 	'FOR',
@@ -153,8 +170,7 @@ const _GENE_NOISE = new Set([
 	'NOT',
 	'ARE',
 	'VS',
-	'CR',
-	// Clinical & biological abbreviations (not gene names)
+	'CR', // common words
 	'RNA',
 	'DNA',
 	'AML',
@@ -163,22 +179,19 @@ const _GENE_NOISE = new Set([
 	'WBC',
 	'MRD',
 	'TNBC',
-	'CAR',
-	// Analysis & visualization terms
+	'CAR', // clinical abbreviations
 	'DE',
 	'DGE',
 	'GSEA',
 	'UMAP',
-	'PCA',
-	// Survival / statistics abbreviations
+	'PCA', // analysis terms
 	'KM',
 	'OS',
 	'EFS',
 	'PFS',
-	'DFS',
-	// Technical
+	'DFS', // survival abbreviations
 	'DB',
-	'SQL'
+	'SQL' // technical
 ])
 
 function looksLikeMultiGene(query: string, minGenes = 3, datasetNoise?: Set<string>): boolean {
@@ -186,359 +199,128 @@ function looksLikeMultiGene(query: string, minGenes = 3, datasetNoise?: Set<stri
 	return hits.filter(h => !_GENE_NOISE.has(h) && !datasetNoise?.has(h)).length >= minGenes
 }
 
-function matchesAny(query: string, patterns: RegExp[]): boolean {
-	return patterns.some(p => p.test(query))
-}
-
 function augmentQuery(query: string, datasetNoise?: Set<string>): string {
-	if (matchesAny(query, RESOURCE_PATTERNS)) return 'Resource or information request: ' + query
-	if (matchesAny(query, DGE_PATTERNS)) return 'Differential gene expression analysis: ' + query
-	if (matchesAny(query, SURVIVAL_PATTERNS)) return 'Patient survival and outcome analysis: ' + query
-	if (matchesAny(query, SAMPLESCATTER_PATTERNS)) return 'Dimensionality reduction sample scatter plot: ' + query
-	if (matchesAny(query, MATRIX_PATTERNS) || looksLikeMultiGene(query, 3, datasetNoise))
-		return 'Multi-gene expression matrix or heatmap: ' + query
-	if (matchesAny(query, SUMMARY_SCATTER_PATTERNS)) return 'Summary scatter plot comparing two variables: ' + query
-	if (matchesAny(query, SUMMARY_VIOLIN_PATTERNS)) return 'Summary violin plot of expression by clinical group: ' + query
-	if (matchesAny(query, SUMMARY_BARCHART_PATTERNS)) return 'Summary barchart of categorical distribution: ' + query
+	for (const rule of AUGMENTATION_RULES) {
+		if (rule.patterns.some(p => p.test(query))) return rule.prefix + ': ' + query
+		// Multi-gene heuristic piggybacks on the matrix rule
+		if (rule.prefix.includes('matrix') && looksLikeMultiGene(query, 3, datasetNoise)) return rule.prefix + ': ' + query
+	}
 	return query
 }
 
 // ---------------------------------------------------------------------------
-//  Training Data
+//  Training Data — loaded from external JSON files
 // ---------------------------------------------------------------------------
 
-const CATEGORY_EXAMPLES: Record<string, string[]> = {
-	summary: [
-		// --- violin ---
-		'Show TP53 expression by sex',
-		'Compare MYC expression between molecular subtypes',
-		'Show CDKN2A expression for KMT2A and DUX4 patients',
-		'Show TP53 expression in males and females',
-		'Plot PAX5 expression across each molecular subtype',
-		'Show IKZF1 expression for BCR-ABL1 and TCF3-HLF samples',
-		'What is the average RUNX1 expression in the KMT2A subtype',
-		'Show NOTCH1 expression for DUX4 patients',
-		'Compare Bortezomib LC50 between molecular subtypes',
-		'Show Asparaginase LC50 by sex',
-		'Compare Prednisolone LC50 between KMT2A and High hyperdiploid',
-		'Show Bortezomib LC50 for male and female patients',
-		'What is the median expression of FLT3 in this cohort',
-		'Show GATA3 expression for patients under age 10',
-		'Plot CEBPA expression levels across ancestry groups',
-		'Display ERG expression in the PAX5alt subgroup',
-		'Show drug sensitivity by molecular subtype',
-		'Compare Asparaginase LC50 between DUX4 and CRLF2',
-		'Compare Mercaptopurine LC50 between CRLF2, B-other and DUX4 subtypes',
-		'Compare Bortezomib LC50 between KMT2A, DUX4 and BCR-ABL1',
-		'Show TP53 expression by ancestry',
-		'Show MYC expression for patients over age 15',
-		'Show ABL1 expression levels for BCR-ABL1 patients',
-		'is tmem181 overexpressed in men',
-		'compare tp53 expression between genders',
-		'Show correlation between age and gender for KMT2A subtype',
-		// --- scatter ---
-		'Plot TP53 expression against MYC expression',
-		'Correlate Bortezomib LC50 and Asparaginase LC50',
-		'Show scatter plot of TP53 vs NRAS expression',
-		'Plot CDKN2A expression against age',
-		'Compare TP53 expression vs age using a scatter plot',
-		'Correlate MYC and BCL2 expression',
-		'Plot drug sensitivity against age',
-		// --- barchart ---
-		'How many patients are in each molecular subtype',
-		'Show the distribution of molecular subtypes',
-		'How many males and females are in this cohort',
-		'What is the breakdown of ancestry in this dataset',
-		'Show the age distribution for this cohort',
-		'What percentage of patients are in the KMT2A subtype',
-		'Cross-tabulate sex and molecular subtype',
-		'Show the frequency of each ancestry group',
-		'How many patients have the DUX4 subtype',
-		'Show sample counts per molecular subtype',
-		'What is the ratio of male to female patients',
-		'Show the distribution of age at diagnosis',
-		'Cross-tabulate ancestry and molecular subtype',
-		'Show the number of patients in each subtype by sex',
-		'What percentage of patients are male',
-		'Show the breakdown of subtypes for patients under age 10',
-		'How many BCR-ABL1 patients are in this cohort',
-		'Display the distribution of Bortezomib LC50 values',
-		'Show the percentage of each ancestry group by subtype',
-		'Show ancestry for MEF2D and TCF3-PBX1 subtypes',
-		// --- general ---
-		'Show all molecular subtypes of leukemia',
-		'List the clinical variables available',
-		'What are the available subtypes in this cohort',
-		'Summarize the clinical characteristics of the cohort',
-		'Show summary of all molecular subtypes for patients with age from 10 to 40 years'
-	],
-
-	dge: [
-		'Which genes are upregulated in KMT2A vs DUX4',
-		'Show differential gene expression between males and females',
-		'Run DE between BCR-ABL1 and TCF3-HLF subtypes',
-		'Which genes are overexpressed in males compared to females',
-		'Show volcano plot between men and women',
-		'Which genes are the most upregulated between DUX4 and PAX5alt',
-		'Run DGE analysis for KMT2A vs High hyperdiploid',
-		'What are the most downregulated genes between CRLF2 and MEF2D',
-		'Generate a volcano plot comparing DUX4 and NUTM1',
-		'Show DE between patients under 10 and over 15',
-		'Do differential gene expression for TCF3-HLF and TCF3-PBX1',
-		'Which pathways are enriched between KMT2A and DUX4',
-		'Run GSEA comparing BCR-ABL1 vs all other subtypes',
-		'Which genes are differentially expressed between male and female patients',
-		'Show DE between sensitive and resistant samples to Bortezomib',
-		'Compare transcriptome differences between sensitive and resistant samples to Asparaginase in BCR-ABL1',
-		'What are the top 50 DE genes between KMT2A and DUX4',
-		'Run differential expression for BCR-ABL1 vs CRLF2',
-		'Show volcano plot for male vs female patients in the DUX4 subtype',
-		'Which genes have the largest fold change between KMT2A and High hyperdiploid',
-		'Compare gene expression profiles between DUX4 and PAX5alt',
-		'Show DE between men with age greater than 30 and women with age less than 50',
-		'What are the most significant DE genes between TCF3-HLF and NUTM1',
-		'Show volcano plot between men and women using wilcoxon method',
-		'Which transcription factors are differentially expressed between subtypes',
-		'Find upregulated genes in KMT2A compared to DUX4',
-		'Show differential gene expression between TCF3-HLF NUTM1 and DUX4 PAX5alt',
-		'Run differential gene expression analysis for males vs females using limma',
-		'Compare gene expression between drug sensitive and drug resistant patients',
-		'Run DGE between patients of European and African ancestry',
-		'Show differentially expressed genes between BCR-ABL1 and all other patients',
-		'What are the top DE genes between KMT2A and CRLF2',
-		'Which kinase genes are overexpressed in KMT2A compared to DUX4',
-		'Run DE analysis comparing patients under 5 vs over 10',
-		'Show differentially expressed genes between Bortezomib sensitive and resistant',
-		'Which cell cycle genes are dysregulated between KMT2A and High hyperdiploid',
-		'Run DE between Asparaginase sensitive and resistant samples using edgeR',
-		'Show differentially expressed genes with adjusted p-value below 0.01',
-		'Which immune genes are upregulated in BCR-ABL1 vs DUX4',
-		'Show top 100 differentially expressed genes sorted by p-value',
-		'Compare expression between Prednisolone sensitive and resistant patients',
-		'Run differential gene expression analysis for BCR-ABL1 vs TCF3-PBX1',
-		'Which genes are housekeeping genes between male and female',
-		'What genes are significantly different between KMT2A and MEF2D',
-		'Run GSEA for hallmark gene sets between drug sensitive and resistant',
-		'Compare transcriptomes between DUX4 and CRLF2 subtypes',
-		'Which signaling pathways are activated in BCR-ABL1 compared to DUX4'
-	],
-
-	survival: [
-		'Compare survival rates between KMT2A and DUX4',
-		'Do patients with BCR-ABL1 have lower survival rates than other subtypes',
-		'Show Kaplan-Meier curve for males vs females',
-		'What is the hazard ratio for KMT2A vs DUX4',
-		'Is there a survival difference between males and females',
-		'Run Cox regression with age and molecular subtype as covariates',
-		'Show time to event analysis for the BCR-ABL1 subtype',
-		'Does Bortezomib sensitivity affect patient survival',
-		'Compare overall survival between molecular subtypes',
-		'What is the median survival for TCF3-HLF patients',
-		'Does the treatment improve patient outcomes',
-		'Do patients with DUX4 subtype survive longer than KMT2A',
-		'Is there a difference in mortality between the subtypes',
-		'Are outcomes better for patients under age 10',
-		'Show Kaplan-Meier for BCR-ABL1 vs TCF3-PBX1 patients',
-		'What is the 5-year event-free survival for DUX4',
-		'Compare relapse-free survival between KMT2A and High hyperdiploid',
-		'Does IKZF1 deletion affect overall survival',
-		'Plot survival by molecular subtype',
-		'Is there a survival benefit for drug-sensitive patients',
-		'Show OS curves stratified by molecular subtype',
-		'What is the 10-year survival rate for DUX4 patients',
-		'Compare progression-free survival across subtypes',
-		'Is there a survival advantage for patients under age 5',
-		'Show time to relapse for KMT2A vs DUX4',
-		'Do patients with low Bortezomib LC50 survive longer',
-		'Run log-rank test comparing survival by sex',
-		'What is the median event-free survival for the entire cohort',
-		'Show cumulative incidence of relapse by molecular subtype',
-		'Is TP53 associated with worse prognosis',
-		'Compare disease-free survival between BCR-ABL1 and DUX4',
-		'What is the probability of survival at 3 years for KMT2A patients',
-		'Plot overall survival by age group',
-		'Do females have better outcomes than males in this cohort',
-		'Show Kaplan-Meier for patients with and without IKZF1 deletions',
-		'Does achieving complete remission predict long-term survival',
-		'Compare survival between patients who relapsed early vs late',
-		'Is there a difference in time to death between the treatment protocols',
-		'Show event-free survival for patients with KMT2A rearrangements',
-		'What is the hazard ratio for BCR-ABL1 vs other subtypes',
-		'Plot survival curves for each molecular subtype',
-		'Run multivariate Cox model adjusting for age sex and subtype',
-		'Are there any differences in survival based on ancestry',
-		'Does drug resistance status affect long-term outcomes',
-		'Show cumulative incidence curves for treatment-related mortality',
-		'Is age at diagnosis a prognostic factor',
-		'Compare time to progression between drug-sensitive and resistant patients',
-		'What is the overall survival for patients over 15'
-	],
-
-	matrix: [
-		'Show a matrix of TP53 KRAS and NRAS',
-		'Show a heatmap of TP53 and RB1 with molecular subtype and sex',
-		'Show TP53 MYC and BCL2 for male patients in a matrix',
-		'Create a matrix with molecular subtype sex and TP53',
-		'Show me a heatmap of the top expressed genes',
-		'Display TP53 and PAX5 with sex and ancestry in a grid',
-		'Show the expression of TP53 CDKN2A and IKZF1 across all samples',
-		'Create a matrix of molecular subtype sex and ancestry',
-		'Show TP53 and PAX5 for KMT2A and DUX4 subtypes in a matrix',
-		'Show a matrix of TP53 NRAS KRAS with molecular subtype for patients under 20',
-		'Show CDKN2A and IKZF1 with sex and ancestry in a grid',
-		'Create a heatmap showing TP53 PAX5 and CDKN2A',
-		'Show a matrix of the top genes across all samples',
-		'Display TP53 and NRAS with molecular subtype annotation',
-		'Create a matrix of CDKN2A IKZF1 and PAX5 with molecular subtype',
-		'Show a heatmap of multiple genes across samples',
-		'Show TP53 CDKN2A and NRAS by sex in a matrix',
-		'Create a matrix with TP53 and molecular subtype annotation',
-		'Show a heatmap of all genes in the KMT2A subtype',
-		'Display IKZF1 and CDKN2A expression across subtypes in a grid',
-		'Show a matrix of TP53 RB1 and CDKN2A for female patients',
-		'Create a heatmap with TP53 PAX5 and IKZF1 annotated by ancestry',
-		'Show the gene landscape across all molecular subtypes',
-		'Display a matrix of TP53 and NRAS for DUX4 patients',
-		'Create a matrix showing co-expression of TP53 and KRAS',
-		'Show a heatmap of DNA repair genes',
-		'Display the matrix with molecular subtype and sex overlays',
-		'Create a matrix of NRAS and KRAS by subtype',
-		'Show a heatmap of the most variable genes',
-		'Display a matrix for kinase genes across the cohort',
-		'Create a matrix of TP53 with ancestry annotation',
-		'Show a matrix of TP53 IKZF1 and CDKN2A for patients under 10',
-		'Show a heatmap of cell cycle genes',
-		'Display PAX5 across molecular subtypes in a matrix',
-		'Create a matrix with genes and drug sensitivity annotations',
-		'Show a heatmap of transcription factor genes',
-		'Display TP53 PAX5 CDKN2A and IKZF1 in a matrix',
-		'Create a matrix of all highly expressed genes in this cohort',
-		'Show a matrix of TP53 and NRAS for BCR-ABL1 vs DUX4',
-		'Display a heatmap of leukemia driver genes',
-		'Create a matrix showing gene and clinical variable associations',
-		'Show a heatmap of pathway genes across samples',
-		'Display a matrix of tumor suppressor genes',
-		'Show TP53 CDKN2A NRAS KRAS with sex and subtype in a matrix',
-		'Create a matrix of chromatin remodeling genes',
-		'Show the gene expression landscape of signaling pathway genes',
-		'Display a heatmap of TP53 and RAS pathway genes for male patients',
-		'Show a matrix comparing expression patterns between KMT2A and DUX4',
-		'Create a multi-gene expression grid with sex and subtype overlays'
-	],
-
-	resource: [
-		'Where can I find the paper for this dataset',
-		'Show me the link to the portal',
-		'What is the main publication for this study',
-		'Give me the citation for this data',
-		'What paper should I cite',
-		'Is there a methods paper for this dataset',
-		'Link to the original publication',
-		'Where was this data published',
-		'Show me more information about this cohort',
-		'What is this dataset about',
-		'Tell me about the survivorship study',
-		'Give me background on this portal',
-		'Where can I download the data',
-		'How do I access this data',
-		'What data is available here',
-		'What data variables are available',
-		'What variables does this dataset have',
-		'What clinical variables are in this dataset',
-		'What fields are available in this study',
-		'Give me a weblink to the genomic data',
-		'What institution manages this data',
-		'Is there a data dictionary',
-		'Where can I learn more about this study',
-		'Show me the supplementary data link',
-		'What is the URL for this dataset',
-		'Give me the publication link',
-		'What are the terms of use for this data',
-		'Tell me about the data portal',
-		'Show portal description'
-	],
-
-	sampleScatter: [
-		'Show me the t-SNE plot',
-		'Color the UMAP by molecular subtype',
-		'Show t-SNE colored by TP53 expression',
-		'Divide the t-SNE by sex',
-		'Show UMAP with ancestry as shape',
-		'Remove color from t-SNE',
-		'Display the UMAP embedding',
-		'Color the t-SNE by molecular subtype',
-		'Show dimensionality reduction plot',
-		'Split the UMAP into panels by molecular subtype',
-		'Show me the transcriptome t-SNE',
-		'Color the t-SNE by ancestry',
-		'Show UMAP colored by MYC expression',
-		'Split the t-SNE into panels by sex',
-		'Change the UMAP color to molecular subtype',
-		'Overlay TP53 expression on the UMAP',
-		'Show the transcriptome UMAP',
-		'Display t-SNE with molecular subtypes labeled',
-		'Color the UMAP by age',
-		'Remove the overlay from the UMAP',
-		'Show t-SNE colored by sex',
-		'Display UMAP grouped by molecular subtype',
-		'Show the 2D embedding of the transcriptome data',
-		'Color the scatter plot by molecular subtype',
-		'Show the t-SNE for just the KMT2A samples',
-		'Display UMAP with ancestry annotation',
-		'Show t-SNE with Bortezomib LC50 as color',
-		'Split the UMAP by molecular subtype',
-		'Show t-SNE colored by Asparaginase LC50',
-		'Display the UMAP colored by drug sensitivity',
-		'Show UMAP for the BCR-ABL1 samples only',
-		'Color the t-SNE by CDKN2A expression',
-		'Show t-SNE colored by sex for patients under 20',
-		'Display t-SNE with drug sensitivity overlay',
-		'Change the UMAP coloring to ancestry',
-		'Show dimensionality reduction colored by molecular subtype',
-		'Split the t-SNE by sex and color by subtype',
-		'Display the UMAP with subtype labels',
-		'Show t-SNE for DUX4 patients only',
-		'Color the UMAP by PAX5 expression',
-		'Show the t-SNE without any annotations',
-		'Display UMAP with KMT2A patients highlighted',
-		'Show UMAP colored by IKZF1 expression',
-		'Split UMAP into panels by ancestry',
-		'Color t-SNE by Prednisolone LC50',
-		'Show the sample scatter plot by molecular subtype',
-		'Remove all overlays from the UMAP',
-		'Show UMAP colored by sex and shaped by ancestry',
-		'Show t-SNE divided by molecular subtype and colored by age'
-	]
+/** Maps aifiles chart type names to classifier category names. */
+const CHART_TYPE_TO_CATEGORY: Record<string, string> = {
+	Classification: 'resource',
+	Summary: 'summary',
+	DE: 'dge',
+	Matrix: 'matrix',
+	sampleScatter: 'sampleScatter',
+	survival: 'survival'
 }
 
-// ---------------------------------------------------------------------------
-//  Explicit chart type overrides — bypass embedding when the user
-//  unambiguously names a chart type or visualization keyword.
-// ---------------------------------------------------------------------------
+/**
+ * Load and merge training examples from the generic default file and
+ * optional per-dataset sources (classifierExamples + Classification.TrainingData).
+ *
+ * Categories are determined by the union of:
+ *   1. Categories present in the default examples
+ *   2. Categories defined in datasetJson.classifierExamples
+ *   3. Categories derived from datasetJson.charts[].type
+ *
+ * If the dataset declares supported chart types, the final set is filtered
+ * to only those categories the dataset actually supports.
+ */
+export async function loadTrainingExamples(
+	defaultExamplesPath: string,
+	datasetJson?: any
+): Promise<Record<string, string[]>> {
+	// 1. Load generic default examples
+	let base: Record<string, string[]> = {}
+	try {
+		base = await readJSONFile(defaultExamplesPath)
+	} catch (e: any) {
+		mayLog(`Warning: could not load default classifier examples from ${defaultExamplesPath}: ${e.message}`)
+	}
 
-const EXPLICIT_OVERRIDES: { patterns: RegExp[]; category: string }[] = [
+	if (!datasetJson) return base
+
+	// 2. Determine which categories this dataset supports (from charts array)
+	const supportedCategories = new Set<string>()
+	const charts: { type: string }[] = datasetJson.charts ?? []
+	for (const chart of charts) {
+		const cat = CHART_TYPE_TO_CATEGORY[chart.type]
+		if (cat) supportedCategories.add(cat)
+	}
+
+	// 3. Merge dataset-specific classifierExamples
+	const dsExamples: Record<string, string[]> = datasetJson.classifierExamples ?? {}
+	for (const cat of Object.keys(dsExamples)) {
+		supportedCategories.add(cat)
+	}
+
+	// 4. Extract classifier examples from Classification.TrainingData
+	//    Each entry maps a question to a plot type (or html for resource).
+	const classificationChart = charts.find((c: any) => c.type === 'Classification') as any
+	const classificationTraining: { question: string; answer: any }[] = classificationChart?.TrainingData ?? []
+	const extractedExamples: Record<string, string[]> = {}
+	for (const entry of classificationTraining) {
+		if (!entry.question) continue
+		let cat: string
+		if (entry.answer?.type === 'html') {
+			cat = 'resource'
+		} else if (entry.answer?.plot) {
+			cat = CHART_TYPE_TO_CATEGORY[entry.answer.plot] ?? entry.answer.plot.toLowerCase()
+		} else {
+			continue
+		}
+		if (!extractedExamples[cat]) extractedExamples[cat] = []
+		extractedExamples[cat].push(entry.question)
+	}
+
+	// 5. Merge all sources: base + extracted + dataset-specific
+	const merged: Record<string, string[]> = {}
+
+	// If dataset declares supported categories, filter base to those only.
+	// If no charts declared, include all base categories (backward compat).
+	const filterBase = supportedCategories.size > 0
+	for (const [cat, examples] of Object.entries(base)) {
+		if (filterBase && !supportedCategories.has(cat)) continue
+		merged[cat] = [...examples]
+	}
+
+	// Add extracted examples from Classification.TrainingData
+	for (const [cat, examples] of Object.entries(extractedExamples)) {
+		if (!merged[cat]) merged[cat] = []
+		merged[cat].push(...examples)
+	}
+
+	// Add dataset-specific classifierExamples (highest priority, appended last)
+	for (const [cat, examples] of Object.entries(dsExamples)) {
+		if (!merged[cat]) merged[cat] = []
+		merged[cat].push(...examples)
+	}
+
+	// Deduplicate within each category
+	for (const cat of Object.keys(merged)) {
+		merged[cat] = [...new Set(merged[cat])]
+	}
+
+	return merged
+}
+
+// Explicit chart type overrides — bypass embedding when the user
+// unambiguously names a chart type or visualization keyword.
+const EXPLICIT_OVERRIDES: { category: string; patterns: RegExp[] }[] = [
+	{ category: 'dge', patterns: [/\bvolcano\s*(plot|chart)?\b/i] },
+	{ category: 'sampleScatter', patterns: [/\bt[- ]?SNE\b/i, /\bUMAP\b/i, /\bPCA\b/i] },
+	{ category: 'matrix', patterns: [/\bheatmap\b/i, /\bmatrix\b/i] },
 	{
-		category: 'dge',
-		patterns: [/\bvolcano\s*(plot|chart)?\b/i]
-	},
-	{
-		category: 'sampleScatter',
-		patterns: [/\bt[- ]?SNE\b/i, /\bUMAP\b/i, /\bPCA\b/i]
-	},
-	{
-		category: 'matrix',
-		patterns: [/\bheatmap\b/i, /\bmatrix\b/i]
-	},
-	{
-		// explicit summary sub-types — user names the chart directly
 		category: 'summary',
-		patterns: [
-			/\bviolin\s*(plot|chart)?\b/i,
-			/\bbox\s*plot\b/i,
-			/\bbar\s*chart\b/i,
-			/\bhistogram\b/i,
-			/\bscatter\s*plot\b/i
-		]
+		patterns: [/\bviolin\s*(plot|chart)?\b/i, /\bbox\s*plot\b/i, /\bbar\s*chart\b/i, /\bscatter\s*plot\b/i]
 	}
 ]
 
@@ -549,10 +331,6 @@ function getExplicitOverride(query: string): string | null {
 	return null
 }
 
-// ---------------------------------------------------------------------------
-//  Embedder & Classifier
-// ---------------------------------------------------------------------------
-
 export interface ClassifyResult {
 	query: string
 	category: string
@@ -561,9 +339,7 @@ export interface ClassifyResult {
 	above_threshold: boolean
 }
 
-// ---------------------------------------------------------------------------
-//  Embedder interface & implementations
-// ---------------------------------------------------------------------------
+// Embedder interface & implementations
 
 export interface Embedder {
 	init(): Promise<void>
@@ -608,40 +384,11 @@ class ApiEmbedder implements Embedder {
 
 	async embed(texts: string[]): Promise<number[][]> {
 		if (this.provider === 'SJ') {
-			return await this.callSjEmbedding(texts)
+			return await callSjEmbedding(texts, this.modelName, this.api)
 		} else if (this.provider === 'ollama') {
-			return await this.callOllamaEmbedding(texts)
+			return await callOllamaEmbedding(texts, this.modelName, this.api)
 		}
 		throw new Error('Unknown embedding provider: ' + this.provider)
-	}
-
-	private async callSjEmbedding(texts: string[]): Promise<number[][]> {
-		const response = await ezFetch(this.api, {
-			method: 'POST',
-			body: {
-				inputs: [{ model_name: this.modelName, inputs: { text: texts } }]
-			},
-			headers: { 'Content-Type': 'application/json' },
-			timeout: { request: 200000 }
-		})
-		if (response.outputs?.[0]?.embeddings) return response.outputs[0].embeddings
-		const apiError = response.outputs?.[0]?.error
-		if (apiError) throw new Error(`SJ embedding API error: ${apiError}`)
-		throw new Error(`Unexpected response format from SJ embedding API: ${JSON.stringify(response)}`)
-	}
-
-	private async callOllamaEmbedding(texts: string[]): Promise<number[][]> {
-		const result = await ezFetch(this.api + '/api/embed', {
-			method: 'POST',
-			body: { model: this.modelName, input: texts },
-			headers: { 'Content-Type': 'application/json' },
-			timeout: { request: 200000 }
-		})
-		if (result?.embeddings?.length > 0) {
-			if (result.embeddings.length !== texts.length) throw new Error('Embedding count mismatch')
-			return result.embeddings
-		}
-		throw new Error('Unexpected response format from Ollama embedding API')
 	}
 }
 
@@ -758,8 +505,7 @@ export class EmbeddingClassifier {
 			const llmResult = await classifyViaLlm(query, llm)
 			// Prefer .plot field; fall back to .type if it looks like a category name
 			// (some smaller LLMs return {"type":"resource"} instead of {"type":"plot","plot":"resource"})
-			const VALID_CATEGORIES = ['summary', 'dge', 'matrix', 'sampleScatter', 'survival', 'resource']
-			const llmCategory = llmResult.plot ?? (VALID_CATEGORIES.includes(llmResult.type) ? llmResult.type : 'none')
+			const llmCategory = llmResult.plot ?? (this.categories.includes(llmResult.type) ? llmResult.type : 'none')
 			mayLog(`Hybrid router: LLM fallback returned category=${llmCategory}`)
 
 			return {
@@ -776,17 +522,12 @@ export class EmbeddingClassifier {
 	}
 }
 
-// ---------------------------------------------------------------------------
-//  LLM Fallback — used by classifyHybrid when embedding is uncertain
-// ---------------------------------------------------------------------------
+// LLM Fallback — used by classifyHybrid when embedding is uncertain
 
 async function classifyViaLlm(
 	userPrompt: string,
 	llm: LlmConfig
 ): Promise<{ type: string; plot?: string; html?: string }> {
-	// Lean prompt — just the category definitions and a few examples each.
-	// This replaces the old approach of sending the entire aiRoute + dataset prompt
-	// + all training examples, which could be thousands of tokens.
 	const template = `Classify the following user query into exactly one category. Respond with ONLY a JSON object, no explanation.
 
 Categories:
@@ -809,81 +550,15 @@ Q: "Show me the link to the portal" → {"type":"plot","plot":"resource"}
 
 Q: "${userPrompt}" →`
 
-	const response = await routeToLlm(template, llm)
+	const response = await route_to_appropriate_llm_provider(template, llm, llm.classifierModelName)
 	mayLog('LLM fallback raw response:', response)
 
-	// LLMs often wrap JSON in markdown fences and/or append explanations.
-	// Extract the first balanced JSON object from the response.
-	return JSON.parse(extractJson(response))
+	// route_to_appropriate_llm_provider already extracts JSON from the raw
+	// LLM response, so we can parse directly.
+	return JSON.parse(response)
 }
 
-/** Extract the first balanced JSON object or array from a string. */
-function extractJson(text: string): string {
-	const start = text.search(/[[{]/)
-	if (start === -1) return text
-	const open = text[start]
-	const close = open === '{' ? '}' : ']'
-	let depth = 0
-	for (let i = start; i < text.length; i++) {
-		if (text[i] === open) depth++
-		else if (text[i] === close) depth--
-		if (depth === 0) return text.slice(start, i + 1)
-	}
-	return text
-}
-
-async function routeToLlm(prompt: string, llm: LlmConfig): Promise<string> {
-	const modelName = llm.classifierModelName ?? llm.modelName
-	let response: string
-	if (llm.provider === 'SJ') {
-		response = await callSjLlm(prompt, modelName, llm.api)
-	} else if (llm.provider === 'ollama') {
-		response = await callOllama(prompt, modelName, llm.api)
-	} else {
-		throw 'Unknown LLM provider: ' + llm.provider
-	}
-	return extractJson(response)
-}
-
-async function callOllama(prompt: string, modelName: string, apilink: string): Promise<string> {
-	const result = await ezFetch(apilink + '/api/chat', {
-		method: 'POST',
-		body: {
-			model: modelName,
-			messages: [{ role: 'user', content: prompt }],
-			raw: false,
-			stream: false,
-			keep_alive: 15,
-			options: { top_p: 0.95, temperature: 0.01, num_ctx: 10000 }
-		},
-		headers: { 'Content-Type': 'application/json' },
-		timeout: { request: 200000 }
-	})
-	if (result?.message?.content?.length > 0) return result.message.content
-	throw 'Unexpected response format from Ollama'
-}
-
-async function callSjLlm(prompt: string, modelName: string, apilink: string): Promise<string> {
-	const response = await ezFetch(apilink, {
-		method: 'POST',
-		body: {
-			inputs: [
-				{
-					model_name: modelName,
-					inputs: { text: prompt, max_new_tokens: 512, temperature: 0.01, top_p: 0.95 }
-				}
-			]
-		},
-		headers: { 'Content-Type': 'application/json' },
-		timeout: { request: 200000 }
-	})
-	if (response?.outputs?.[0]?.generated_text) return response.outputs[0].generated_text
-	throw 'Unexpected response format from SJ LLM'
-}
-
-// ---------------------------------------------------------------------------
-//  Singletons — initialized once, reused across all requests
-// ---------------------------------------------------------------------------
+// Singletons — initialized once, reused across all requests
 
 let embedderInstance: Embedder | null = null
 let embedderInitPromise: Promise<Embedder> | null = null
@@ -921,29 +596,47 @@ export async function getEmbedder(llm: LlmConfig): Promise<Embedder> {
 	return embedderInitPromise
 }
 
-let classifierInstance: EmbeddingClassifier | null = null
-let initPromise: Promise<EmbeddingClassifier> | null = null
+const classifierCache = new Map<string, EmbeddingClassifier>()
+const classifierInitPromises = new Map<string, Promise<EmbeddingClassifier>>()
 
 /**
- * Get the singleton EmbeddingClassifier, initializing on first call.
- * Safe to call concurrently — only one init runs.
+ * Get a per-dataset EmbeddingClassifier, initializing on first call for each dataset.
+ * Safe to call concurrently — only one init runs per dataset.
+ * The embedder (sentence model) is shared across all datasets.
  *
- * @param llm - LLM configuration from serverconfig.json
- * @param threshold - OOD rejection threshold (default 0.9, tune via demo script)
+ * @param llm             - LLM configuration from serverconfig.json
+ * @param datasetLabel    - Unique dataset identifier (used as cache key)
+ * @param datasetJson     - Dataset AI config (from aifiles JSON), used for
+ *                          per-dataset classifierExamples and chart types
+ * @param aiFilesDir      - Directory containing the aifiles (used to resolve
+ *                          defaultClassifierExamples.json)
+ * @param threshold       - OOD rejection threshold (default 0.9)
  */
-export async function getClassifier(llm: LlmConfig, threshold = 0.9): Promise<EmbeddingClassifier> {
-	if (classifierInstance) return classifierInstance
+export async function getClassifier(
+	llm: LlmConfig,
+	datasetLabel: string,
+	datasetJson: any,
+	aiFilesDir: string,
+	threshold = 0.9
+): Promise<EmbeddingClassifier> {
+	const cached = classifierCache.get(datasetLabel)
+	if (cached) return cached
 
-	if (!initPromise) {
-		initPromise = (async () => {
+	let pending = classifierInitPromises.get(datasetLabel)
+	if (!pending) {
+		pending = (async () => {
 			const embedder = await getEmbedder(llm)
+			const defaultExamplesPath = path.join(aiFilesDir, 'defaultClassifierExamples.json')
+			const trainingExamples = await loadTrainingExamples(defaultExamplesPath, datasetJson)
 			const clf = new EmbeddingClassifier(embedder, threshold)
-			await clf.fit(CATEGORY_EXAMPLES)
-			classifierInstance = clf
-			mayLog('EmbeddingClassifier: ready')
+			await clf.fit(trainingExamples)
+			classifierCache.set(datasetLabel, clf)
+			classifierInitPromises.delete(datasetLabel)
+			mayLog(`EmbeddingClassifier[${datasetLabel}]: ready`)
 			return clf
 		})()
+		classifierInitPromises.set(datasetLabel, pending)
 	}
 
-	return initPromise
+	return pending
 }
