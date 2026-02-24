@@ -98,6 +98,9 @@ export class Scatter extends PlotBase implements RxComponent {
 		this.toggleLoadingDiv()
 		this.config = await this.getMutableConfig()
 		this.settings = structuredClone(this.config.settings.sampleScatter)
+		if (!this.settings.itemLabel) {
+			this.settings.itemLabel = this.config.singleCellPlot ? 'Cell' : 'Sample'
+		}
 		try {
 			this.dom.bannerDiv.style('display', '').selectAll('*').remove()
 			await this.model.initData()
