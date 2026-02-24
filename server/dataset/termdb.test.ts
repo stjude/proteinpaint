@@ -244,15 +244,17 @@ export default function (): Mds3 {
 				defaultTw4correlationPlot: {
 					disease: { id: 'diaggrp', q: {} }
 				},
-				numericTermCollections: [
+				termCollections: [
 					{
 						name: 'Fake Collection 1',
+						type: 'numeric',
 						termIds: ['agedx', 'a_death', 'a_ndi', 'agelastvisit'],
 						branchIds: ['Demographic Variables', 'Age (years)'],
 						propsByTermId: {}
 					},
 					{
 						name: 'Fake Collection 2',
+						type: 'numeric',
 						termIds: ['a_death', 'a_ndi', 'agelastvisit'],
 						branchIds: ['Demographic Variables', 'Age (years)'],
 						propsByTermId: {}
@@ -261,7 +263,6 @@ export default function (): Mds3 {
 						name: 'Assay Availabiliy',
 						//keys: ['yes'],
 						type: 'categorical',
-						memberType: 'categorical',
 						termIds: ['assayavailability_cnv', 'assayavailability_fusion', 'assayavailability_germline'],
 						branchIds: [''],
 						propsByTermId: {}

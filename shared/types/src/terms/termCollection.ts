@@ -8,6 +8,11 @@ export type TermCollection = BaseTerm & {
 	name: string
 	collectionId?: string
 	type: 'termCollection'
+	/**
+	 * Copies ds.cohort.termdb.termCollections[].type ('numeric' | 'categorical').
+	 * Allows client code using the term to know the collection kind without looking up config.
+	 */
+	memberType?: 'numeric' | 'categorical'
 	// may be queried from backend, but should be available in frontend for termsetting edit menu
 	/** the full list of term.ids that are available in this collection */
 	termlst: BaseTerm[]

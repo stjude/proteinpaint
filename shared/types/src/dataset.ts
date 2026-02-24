@@ -1615,33 +1615,8 @@ keep this setting here for reason of:
 	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
 	hiddenIds?: string[]
 	getAdditionalFilter?: (__protected__: any, term: any) => Filter | undefined
-	/** collections of numeric dictionary terms that are related and can be used together in some plots
-	 */
-	numericTermCollections?: NumericTermCollection[] // to be deprecated
+	/** collections of dictionary terms (numeric or categorical) that are related and can be used together in some plots */
 	termCollections?: TermCollection[]
-}
-
-// to be deprecated
-type NumericTermCollection = {
-	/** collection id */
-	id?: string
-	/** human readable name for this collection, may be as collection id if missing */
-	name: string
-	/** array of dictionary numeric term ids belonging to this collection */
-	termIds: string[]
-	/** array of branch term ids belonging to this collection,
-	 * may be used as state.tree.expandedTermIds[] option to termdb appInit() */
-	branchIds: string[]
-	propsByTermId: {
-		[termId: string]: any
-	}
-	/** preconfigured cohort-level plots for this collection */
-	plots?: {
-		/** name of this plot */
-		name: string
-		/** json file path of this plot */
-		file: string
-	}[]
 }
 
 type TermCollection = {
@@ -1650,8 +1625,7 @@ type TermCollection = {
 	/** human readable name for this collection, may be as collection id if missing */
 	name: string
 	type: 'numeric' | 'categorical'
-	memberType: string // 'float' 'integer' | 'categorical' ...
-	/** array of dictionary numeric term ids belonging to this collection */
+	/** array of dictionary term ids belonging to this collection */
 	termIds: string[]
 	/** array of branch term ids belonging to this collection,
 	 * may be used as state.tree.expandedTermIds[] option to termdb appInit() */

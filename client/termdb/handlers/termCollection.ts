@@ -63,7 +63,7 @@ export class SearchHandler {
 					return checked === true
 				})
 				const termNames = termlst.map((o: any) => o.id).join(',')
-				const termNamesLabel = `${name} (${termNames})`
+				const termNamesLabel = `${opts.details.name} (${termNames})`
 				const termName = termNamesLabel.length <= 26 ? termNamesLabel : termNamesLabel.slice(0, 26) + '...'
 				const propsByTermId = {}
 				if (opts.details.propsByTermId) {
@@ -78,7 +78,8 @@ export class SearchHandler {
 					type: 'termCollection',
 					termlst,
 					name: termName,
-					memberType: opts.details.memberType,
+					// memberType copies collection type (ds.cohort.termdb.termCollections[].type) for client code
+					memberType: opts.details.type,
 					isleaf: true,
 					propsByTermId
 				})

@@ -340,15 +340,17 @@ export async function validate_termdb(ds) {
 			throw 'unknown implementation of tdb.convertSampleId'
 		}
 	}
-	if (tdb.numericTermCollections) {
-		if (!Array.isArray(tdb.numericTermCollections)) throw 'termdb.numericTermCollections not array'
-		for (const c of tdb.numericTermCollections) {
-			if (!c.name) throw 'unamed tdb.numericTermCollections'
-			if (!Array.isArray(c.termIds)) throw 'termdb.numericTermCollections[].termIds[] not array'
+	if (tdb.termCollections) {
+		if (!Array.isArray(tdb.termCollections)) throw 'termdb.termCollections not array'
+		for (const c of tdb.termCollections) {
+			if (!c.name) throw 'unnamed tdb.termCollections'
+			if (c.type !== 'numeric' && c.type !== 'categorical')
+				throw `termdb.termCollections[].type must be 'numeric' or 'categorical' (${c.name})`
+			if (!Array.isArray(c.termIds)) throw 'termdb.termCollections[].termIds[] not array'
 			if (!c.propsByTermId) throw 'c.propsByTermId missing'
 			const colorScale = getColors(c.termIds.length)
 			for (const i of c.termIds) {
-				if (!tdb.q.termjsonByOneid(i)) throw `invalid term id "${i}" from termdb.numericTermCollections[].${c.name}`
+				if (!tdb.q.termjsonByOneid(i)) throw `invalid term id "${i}" from termdb.termCollections[].${c.name}`
 				if (!c.propsByTermId[i]) c.propsByTermId[i] = {}
 				if (!c.propsByTermId[i].color) c.propsByTermId[i].color = colorScale(i)
 			}
@@ -359,7 +361,6 @@ export async function validate_termdb(ds) {
 					if (!p.file) throw 'plot.file missing'
 				}
 			}
-			// validate additional properties
 		}
 	}
 
