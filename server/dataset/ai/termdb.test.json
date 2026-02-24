@@ -4,23 +4,33 @@
   "db": "files/hg38/TermdbTest/db",
   "genedb": "anno/genes.hg38.test.db",
   "DatasetPrompt": "",
+  "resources": [
+    {
+      "label": "Survivorship portal",
+      "html": "<a href=\"https://aacrjournals.org/cancerdiscovery/article/14/8/1403/746507\" target=\"_blank\" rel=\"noopener noreferrer\">Visit weblink</a>"
+    },
+    {
+      "label": "ProteinPaint publication",
+      "html": "<a href=\"https://www.cell.com/cancer-cell/fulltext/S1535-6108(20)30659-0?dgcid=raven_jbs_etoc_email\" target=\"_blank\" rel=\"noopener noreferrer\">Visit weblink</a>"
+    }
+  ],
   "charts": [
     {
       "type": "Classification",
-      "SystemPrompt": "The first original publication pertaining to Proteinpaint is https://www.cell.com/cancer-cell/fulltext/S1535-6108(20)30659-0?dgcid=raven_jbs_etoc_email. GenomePaint/Proteinpaint is an interactive visualization platform for whole-genome, whole-exome, transcriptome, and epigenomic data of tumor samples. Its design captures the inter-relatedness between DNA variations and RNA expression, supporting in-depth exploration of both individual cancer genomes and full cohorts. \n Link to survivorship portal https://aacrjournals.org/cancerdiscovery/article/14/8/1403/746507. It shows datasets comprising demographic, diagnosis, treatment, outcome, and genomic data from survivors of childhood cancer. Put weblinks inside HTML <a> tag so that links are clickable",
+      "SystemPrompt": "The first original publication pertaining to Proteinpaint is https://www.cell.com/cancer-cell/fulltext/S1535-6108(20)30659-0?dgcid=raven_jbs_etoc_email. Link to survivorship portal https://aacrjournals.org/cancerdiscovery/article/14/8/1403/746507.",
       "TrainingData": [
         {
           "question": "Show link to survivorship portal",
           "answer": {
-            "type": "html",
-            "html": "<a href=\"https://aacrjournals.org/cancerdiscovery/article/14/8/1403/746507\">Visit weblink</a>"
+            "type": "resource",
+            "idx": 0
           }
         },
         {
           "question": "Show main publication for proteinpaint",
           "answer": {
-            "type": "html",
-            "html": "<a href=\"https://www.cell.com/cancer-cell/fulltext/S1535-6108(20)30659-0?dgcid=raven_jbs_etoc_email\">Visit weblink</a>"
+            "type": "resource",
+            "idx": 1
           }
         },
         {
@@ -640,8 +650,8 @@
     {
       "question": "Please show link to survivorship portal",
       "answer": {
-        "type": "html",
-        "html": "<a href=\"https://aacrjournals.org/cancerdiscovery/article/14/8/1403/746507\">Visit weblink</a>"
+        "type": "resource",
+        "idx": 0
       }
     },
     {
