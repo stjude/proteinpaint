@@ -47,10 +47,10 @@ export async function launch() {
 		const routeCallbacks = await setOptionalRoutes(app)
 		console.log('may set auth routes ...')
 		/*
-		 !!! the order of middlewares is critical, must be set before data routes !!!
-		  - so that a request will be inspected by auth before allowing 
-		    to proceed to any *protected* route handler
-		*/
+         !!! the order of middlewares is critical, must be set before data routes !!!
+          - so that a request will be inspected by auth before allowing 
+            to proceed to any *protected* route handler
+        */
 		await authApi.maySetAuthRoutes(app, genomes, basepath, serverconfig)
 
 		const routes = await Promise.all(routeFiles)
@@ -63,11 +63,11 @@ export async function launch() {
 			basepath: serverconfig.basepath || '',
 			apiJson: path.join(__dirname, '../../public/docs/server-api.json')
 			/*
-			 	As an alternative to manually adding/removing imports in shared/types/src/routes, 
-			 	you may temporarily uncomment below to generate runtime route checker code, 
-			  should only uncomment when a file has been added or deleted in 
-			  shared/types/src/routes and not when modified.
-			*/
+                      As an alternative to manually adding/removing imports in shared/types/src/routes, 
+                      you may temporarily uncomment below to generate runtime route checker code, 
+              should only uncomment when a file has been added or deleted in 
+              shared/types/src/routes and not when modified.
+            */
 			// , types: serverconfig.debugmode && {
 			// 	importDir: '../routes',
 			// 	outputFile: path.join(__dirname, '../../shared/types/src/checkers/routes.ts')
@@ -120,11 +120,11 @@ export async function launch() {
 		if (exitCode) console.error('\n!!!\n' + err + '\n\n')
 		else console.log('\n!!!\n' + err + '\n\n')
 		/*
-      when the app server is monitored by another process via the command line,
-      process.exit(1) is required to stop execution flow with `set -e`
-      and thereby avoid unnecessary endless restarts of an invalid server
-      init with bad config, data, and/or code
-    */
+when the app server is monitored by another process via the command line,
+process.exit(1) is required to stop execution flow with `set -e`
+and thereby avoid unnecessary endless restarts of an invalid server
+init with bad config, data, and/or code
+*/
 		const msg = err?.stack || err
 		if (serverconfig.slackWebhookUrl) {
 			const url = serverconfig.URL
@@ -151,6 +151,14 @@ async function handle_argv(argv) {
 	if (argv.includes('validate'))
 		// exit early if only doing a validation of configuration + data + startup code
 		return { message: `You may now run the server.`, code: 0 }
+	if (argv.includes('testchat')) {
+		//console.log("genomes:", Object.values(genomes))
+		for (const genome of Object.values(genomes)) {
+			for (const ds of Object.values(genome.datasets)) {
+				console.log('ds:', ds)
+			}
+		}
+	}
 
 	if (argv.includes('phewas-precompute')) {
 		// argv[3] is genome, argv[4] is dslabel
