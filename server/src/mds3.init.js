@@ -2953,7 +2953,7 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter) {
 }
 
 async function filterSamples4assayAvailability(q, ds) {
-	if (ds.assayAvailability.useFilter0) {
+	if (ds.assayAvailability?.useFilter0) {
 		/////////////////////////////
 		// if true, instructs this ds will use both filter and filter0 to get it
 		// TODO solution below uses a hardcoded gdc function and is not generalized

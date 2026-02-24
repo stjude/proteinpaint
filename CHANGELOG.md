@@ -2,10 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- use optional chaining when checking for ds.assayAvailability?.useFilter0
+
 
 ## 2.170.13
 
-Fixes
+Fixes:
 - set protected sessionid even when there are no dsCredentials
 - Ensure the genome browser plots launches regardless of the holder
 - detect if the inputs option exists before using it to detect which terms to disable
@@ -16,7 +21,7 @@ Fixes
 
 ## 2.170.12
 
-Fixes
+Fixes:
 - prevent excessive memory usage during OncoMatrix data requests
 - do not allow repeated term id for correlation plot primary, correlation, and Fdivide-by variables
 - hide survival terms in dictionary tree for violin and boxplot
@@ -25,7 +30,7 @@ Fixes
 
 ## 2.170.11
 
-Fixes
+Fixes:
 - throttle the number of active sample data queries across all users
 
 
