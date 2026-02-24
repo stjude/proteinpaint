@@ -1,4 +1,5 @@
 import { Menu, addGeneSearchbox } from '#dom'
+import { TermTypes } from '#shared/terms.js'
 
 export class SearchHandler {
 	callback: any
@@ -28,7 +29,7 @@ export class SearchHandler {
 			start,
 			stop,
 			name: `${coord} ${unit}`, // will also allow to be user-assigned
-			type: 'dnaMethylation'
+			type: TermTypes.DNA_METHYLATION
 		}
 		await this.callback(term)
 	}
