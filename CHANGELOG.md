@@ -81,6 +81,12 @@ Fixes:
 - show loading and error messages when switching to barchart tab in summary plot
 
 
+## 2.170.15
+
+Fixes:
+- limit divide-by terms to discrete mode to avoid a nonsensical one rendered chart per unique float/integer value
+
+
 ## 2.170.14
 
 Fixes:
