@@ -276,6 +276,10 @@ async function get_geneVariant(tvs, CTEname, ds, onlyChildren) {
 }
 
 async function get_termCollection(tvs, CTEname, ds, onlyChildren) {
+	// Percentage-based filter is only for numeric term collections
+	if (tvs.term.memberType === 'categorical') {
+		throw new Error('Filter by percentage range is only supported for numeric term collections')
+	}
 	const tw = { $id, term: tvs.term, q: {} }
 	const data = await getData(
 		{

@@ -113,8 +113,8 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	if (tdb.survival) c.survival = tdb.survival
 	if (tdb.regression) c.regression = tdb.regression
 	if (tdb.uiLabels) c.uiLabels = tdb.uiLabels
-	// TODO: deprecate numericTermCollections and switch all code to use ds.cohort.termdb.termCollections
-	if (tdb.numericTermCollections) c.numericTermCollections = tdb.numericTermCollections || tdb.termCollections
+	// termCollections (with type: 'numeric' | 'categorical') replace legacy numericTermCollections
+	if (tdb.termCollections) c.termCollections = tdb.termCollections
 	if (ds.assayAvailability) c.assayAvailability = ds.assayAvailability
 	if (ds.cohort.correlationVolcano) c.correlationVolcano = ds.cohort.correlationVolcano
 	if (ds.cohort.boxplots) c.boxplots = ds.cohort.boxplots
@@ -178,11 +178,11 @@ function addMatrixplots(c, ds) {
 }
 
 function addMutationSignatureplots(c, ds) {
-	const mutationSignatureplots = ds.cohort.termdb.numericTermCollections?.find(
-		ntc => ntc.name == 'Mutation Signature'
+	// Mutation Signature plots require a numeric term collection
+	const mutationSignatureplots = ds.cohort.termdb.termCollections?.find(
+		tc => tc.name == 'Mutation Signature' && tc.type === 'numeric'
 	)?.plots
 	if (!mutationSignatureplots) return
-	// this dataset has premade mutationSignatureplots. reveal mutationSignature plot names to client
 	c.mutationSignatureplots = mutationSignatureplots.map(p => {
 		return { name: p.name }
 	})
@@ -339,7 +339,7 @@ function getAllowedTermTypes(ds) {
 	if (ds.queries?.metaboliteIntensity) typeSet.add(TermTypes.METABOLITE_INTENSITY)
 	if (ds.queries?.ssGSEA) typeSet.add(TermTypes.SSGSEA)
 	if (ds.queries?.dnaMethylation) typeSet.add(TermTypes.DNA_METHYLATION)
-	if (ds.cohort.termdb.numericTermCollections) typeSet.add('termCollection')
+	if (ds.cohort.termdb.termCollections?.length) typeSet.add('termCollection')
 	return [...typeSet]
 }
 

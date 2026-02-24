@@ -10,8 +10,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 
 	chartsInstance.dom.tip.clear()
 	const menuDiv = holder.append('div')
-	const mutSigPreBuiltPlots = chartsInstance.state.termdbConfig.numericTermCollections?.find(
-		ntc => ntc.name == 'Mutation Signature'
+	const mutSigPreBuiltPlots = chartsInstance.state.termdbConfig.termCollections?.find(
+		tc => tc.name == 'Mutation Signature' && tc.type === 'numeric'
 	)?.plots
 	if (mutSigPreBuiltPlots) {
 		for (const plot of mutSigPreBuiltPlots) {
@@ -47,9 +47,11 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		chartType: 'mutationSignature',
 		clickTo: self.showTree_selectlst,
 		usecase: {
-			target: 'numericTermCollections',
+			target: 'termCollections',
 			detail: {
-				...chartsInstance.state.termdbConfig.numericTermCollections.find(ntc => ntc.name == 'Mutation Signature')
+				...(chartsInstance.state.termdbConfig.termCollections?.find(
+					tc => tc.name == 'Mutation Signature' && tc.type === 'numeric'
+				) ?? {})
 			}
 		},
 		updateActionBySelectedTerms: (action, termlst) => {

@@ -24,7 +24,16 @@ async function fillMenu(self, div, tvs: TermCollectionTvs) {
 	div.style('font-size', '0.8em')
 
 	const brush = renderRangeInput(div, tvs, applyRange)
-	const details = self.opts.vocabApi.termdbConfig.numericTermCollections.find(c => c.name === tvs.term.collectionId)
+	const details = self.opts.vocabApi.termdbConfig.termCollections?.find(c => c.name === tvs.term.collectionId)
+	if (!details) throw new Error(`No termCollection found for collectionId=${tvs.term.collectionId}`)
+	// Percentage-range filter UI is only for numeric term collections
+	if (details.type !== 'numeric') {
+		div
+			.append('div')
+			.style('padding', '8px')
+			.text('Filter by percentage is only available for numeric term collections.')
+		return
+	}
 	const getTableData = await addFilterTable({ holder: div, tvs, details, vocabApi: self.opts.vocabApi })
 
 	async function applyRange(tvs) {
@@ -68,7 +77,7 @@ function renderRangeInput(div, tvs, applyRange) {
 	return brush
 }
 
-// details = a numericTermCollections entry in dataset.cohort.termdb
+// details = a termCollections entry in dataset.cohort.termdb
 export async function addFilterTable(opts): Promise<any> {
 	const terms: any[] = []
 	const toBeHydrated: any[] = []

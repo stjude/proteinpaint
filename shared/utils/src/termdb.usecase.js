@@ -67,8 +67,8 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 	const usecase = _usecase || {}
 
 	// may apply dataset specific override filter for a use case
-	if (typeof ds?.usecase?.[use.target] == 'function') {
-		return ds.usecase[use.target](term, use)
+	if (typeof ds?.usecase?.[usecase.target] == 'function') {
+		return ds.usecase[usecase.target](term, usecase)
 	}
 
 	// if (term.isprivate && !user.roleCanUse(term)) return false
@@ -93,6 +93,7 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 				if (hasAllowedChildTypes(child_types, ['survival'])) uses.add('branch')
 				return uses
 			}
+			return uses
 
 		case 'matrix':
 			if (term.type) uses.add('plot')
@@ -142,7 +143,7 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 			}
 			return uses
 
-		case 'numericTermCollections':
+		case 'termCollections':
 			if (usecase.detail?.termIds?.includes(term.id)) uses.add('plot')
 			if (usecase.detail?.branchIds?.includes(term.id)) uses.add('branch')
 			return uses
@@ -173,6 +174,7 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 				if (hasAllowedChildTypes(child_types, ['condition', 'survival'])) uses.add('branch')
 				return uses
 			}
+			return uses
 
 		case 'survival':
 			if (usecase.detail == 'term') {
@@ -185,6 +187,7 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 				if (hasAllowedChildTypes(child_types, ['survival'])) uses.add('branch')
 				return uses
 			}
+			return uses
 
 		case 'regression':
 			if (usecase.detail == 'outcome') {
@@ -210,8 +213,9 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 				if (hasChildTypes(child_types, ['categorical', 'float', 'integer'])) uses.add('branch')
 				return uses
 			}
+			return uses
 
-		case 'filter':
+		case 'filter': {
 			// apply "exlst" to other targets as needed
 			const exlst = termdbConfig?.excludedTermtypeByTarget?.filter
 			if (exlst) {
@@ -219,7 +223,9 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 				if (child_types.find(t => !exlst.includes(t))) uses.add('branch') // there's a non-excluded child type, allow branch to show
 				return uses
 			}
-		// no specific rule for filter. pass and use default rules
+			// no specific rule for filter. pass and use default rules
+			break
+		}
 
 		case 'correlationVolcano':
 			if (usecase.detail == 'numeric') {

@@ -1308,10 +1308,10 @@ tape('tvs: termCollection', async test => {
 	test.timeoutAfter(1000)
 	test.plan(2)
 	const vocabApi = await getVocabApi()
-	const ntc = vocabApi.termdbConfig.numericTermCollections[0]
+	const tc = vocabApi.termdbConfig.termCollections[0]
 	const term = Object.assign(
 		{
-			collectionId: ntc.name,
+			collectionId: tc.name,
 			name: ' (agedx,a_death)',
 			type: 'termCollection',
 			numerators: ['agedx', 'a_death'],
