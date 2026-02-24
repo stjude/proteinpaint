@@ -18,7 +18,8 @@ let i = 0 // track controls "instances" for assigning unambiguous unique input n
 export const term0_term2_defaultQ = {
 	[TermTypes.GENE_VARIANT]: { type: 'predefined-groupset' },
 	[TermTypes.GENE_EXPRESSION]: { mode: 'discrete' },
-	[TermTypes.METABOLITE_INTENSITY]: { mode: 'discrete' }
+	[TermTypes.METABOLITE_INTENSITY]: { mode: 'discrete' },
+	[TermTypes.DNA_METHYLATION]: { mode: 'discrete' }
 }
 
 class TdbPlotControls {
