@@ -49,7 +49,7 @@ import os, re
 import argparse
 import json, sys
 
-def validate_dnameth_hdf5(input_hdf5_file: str) -> list[str]:
+def validate_dnameth_hdf5(input_hdf5_file):
     """
     Validate a DNA methylation HDF5 file with the expected structure:
 
@@ -342,8 +342,6 @@ class Query:
 
             row_start, row_end = self.get_row_ranges_for_chrom(query_chrom, all_chromosomes, num_sites_pref_sum)
             target_start_pos = start_pos[row_start: row_end]
-            #print(f"{query_chrom}: [{target_start_pos[0]}, {target_start_pos[-1]}]")
-            #print(f"row range: [{row_start}, {row_end})")
 
             # Find the genomic range in HDF5 that is in the query range
             left  = np.searchsorted(target_start_pos, query_start, "left") # uses binary search
@@ -399,6 +397,7 @@ class Query:
         return query_beta
 
 def nan_to_none(obj):
+    """ Convert np.nan in returned beta matrix to null values for NodeJS compatiblity """
     import math
     if isinstance(obj, float) and math.isnan(obj):
         return None
@@ -426,7 +425,6 @@ def main(hdf_file, query_samples, query_string, verbose=False):
         q_end = query_info['end']
         # Call your genomic query function
         betavals = q.process_genomic_queries(query_samples_list, q_chrom,q_start, q_end, verbose)
-        #print(betavals)
         # Convert numpy array to list for JSON serialization
         clean_result = nan_to_none(betavals.tolist())
         print(json.dumps(clean_result))
@@ -437,13 +435,8 @@ def main(hdf_file, query_samples, query_string, verbose=False):
         #print(f"  Count: {len(query_info['cpg_ids'])}")
 
         # Call your CpG query function
-        #start_t = time.time()
         betavals = q.process_cpg_queries(query_samples_list, query_info['cpg_ids'], verbose)
-        #end_t = time.time()
-        #print(f"Query time: {end_t-start_t:.4f} secs")
-        #print(betavals)
         # Convert numpy array to list for JSON serialization
-        #result = betavals.tolist()
         clean_result = nan_to_none(betavals.tolist())
         print(json.dumps(clean_result))
 
@@ -470,23 +463,6 @@ def parse_stdin():
         inp.get("validate", False),
     )
 
-    #data = sys.stdin.read()
-    #inp = json.loads(data)
-    ## Extract expected fields
-    #h = inp.get("h")
-    #s = inp.get("s")
-    #q = inp.get("q")
-    #v = inp.get("v", False)
-    #validate = inp.get("validate", False)
-
-    #if data:
-    #    try:
-    #        obj = json.loads(data)
-    #        return obj.get('h'), obj.get('s'), obj.get('q'), obj.get('v'), obj.get("validate")
-    #    except json.JSONDecodeError as e:
-    #        print(f"Error parsing JSON input: {e}", file=sys.stderr)
-    #        sys.exit(1)
-    #return None, None, None, None, None
 
 def parse_cli_args():
     parser = argparse.ArgumentParser(
