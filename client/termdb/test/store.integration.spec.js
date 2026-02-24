@@ -43,6 +43,7 @@ tape('init errors', function (test) {
 		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div:nth-child(2)')
 		setTimeout(() => {
 			test.equal(d.text(), 'Error: .state{} missing', 'should be displayed for missing .state{}')
+			if (test._ok) app.destroy()
 		}, 200)
 	}
 
@@ -62,6 +63,7 @@ tape('init errors', function (test) {
 		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div:nth-child(2)')
 		setTimeout(() => {
 			test.equal(d.text(), 'Error: .state[.vocab].genome missing', 'should be displayed for missing .state.genome')
+			if (test._ok) app.destroy()
 		}, 200)
 	}
 
@@ -81,6 +83,7 @@ tape('init errors', function (test) {
 		const d = app.Inner.dom.errdiv.selectAll('.sja_errorbar').select('div:nth-child(2)')
 		setTimeout(() => {
 			test.equal(d.text(), 'Error: .state[.vocab].dslabel missing', 'should be displayed for missing .state.dslabel')
+			if (test._ok) app.destroy()
 			test.end()
 		}, 400)
 	}
@@ -104,6 +107,7 @@ tape('state: no cohort.termdb.selectCohort', function (test) {
 	async function runTests(app) {
 		app.Inner.bus.on('postRender.test', null)
 		test.equal(app.Inner.state.activeCohort, -1, 'should not set the default activeCohort')
+		if (test._ok) app.destroy()
 		test.end()
 	}
 })
@@ -152,6 +156,7 @@ tape('state rehydrate: default cohort', function (test) {
 			},
 			'should have matching cohort filter data'
 		)
+		if (test._ok) app.destroy()
 		test.end()
 	}
 })
@@ -201,6 +206,7 @@ tape('state rehydrate: activeCohort=1', function (test) {
 			},
 			'should have matching cohort filter data'
 		)
+		if (test._ok) app.destroy()
 		test.end()
 	}
 })
@@ -307,6 +313,7 @@ tape('state rehydrate: by cohortFilter', function (test) {
 			},
 			'should have matching cohort filter data regardless of value.keys order'
 		)
+		if (test._ok) app.destroy()
 		test.end()
 	}
 })
