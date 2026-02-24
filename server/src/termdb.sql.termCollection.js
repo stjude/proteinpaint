@@ -21,18 +21,15 @@ export const termCollectionNumeric = {
 
 export const termCollectionCategorical = {
 	getCTE(tablename, tw, values) {
-		console.log(23, 'termCollectionCategorical', tw)
 		values.push(...tw.term.termlst.map(t => t.id))
-		console.log(24, values)
-		//const uncomputable = getUncomputableClause(term, q)
-		//values.push(...uncomputable.values)
-		// groupsetting not applied
 		return {
 			sql: `${tablename} AS (
-				SELECT '_TEST_' as sample, term_id as key, count(distinct(sample)) as value
+				SELECT sample,
+					sample AS key,
+					json_group_object(term_id, value) AS value
 				FROM anno_categorical
-				WHERE term_id IN (${tw.term.termlst.map(_ => '?').join(',')})
-				GROUP BY sample, term_id
+				WHERE term_id IN (${tw.term.termlst.map(() => '?').join(',')})
+				GROUP BY sample
 			)`,
 			tablename
 		}
