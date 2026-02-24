@@ -233,7 +233,7 @@ class Query:
         try:
             h5 = h5py.File(self.h5file, "r")
         except Exception as e:
-            fail(f"Failed to open HDF5 file: {e}")
+            raise Exception(f"Failed to open HDF5 file: {e}")
 
         with h5:
             names = h5["meta/samples/names"].asstr()[:] #so that correctly decodes as string
@@ -247,13 +247,8 @@ class Query:
             if verbose:
                 print("######### In the H5 file provided ###########")
                 print(f"Total # of samples: {len(names)}")
-                print(f"Total # of CpG sites in {self.q_chrom}: {len(starts)}")
+                print(f"Total # of CpG sites in {self.h5file}: {len(probes)}")
                 print()
-                print("######### Processing Queries ###########")
-                print(f"Finding beta values in genomic range: [{starts[left]}, {starts[right-1]}]")
-                print(f"# of beta values in the genomic range: {right - left}")
-                print()
-                print("####################")
 
             row_idx, missing_row_mask = self.resolve_cpg(query_cpg_ids, probe_to_row)
             col_idx, missing_col_mask = self.resolve_samples(query_samples, sample_to_col)
@@ -327,7 +322,7 @@ class Query:
         try:
             h5 = h5py.File(self.h5file, "r")
         except Exception as e:
-            fail(f"Failed to open HDF5 file: {e}")
+            raise Exception(f"Failed to open HDF5 file: {e}")
 
         with h5:
             names = h5["meta/samples/names"].asstr()[:] #so that correctly decodes as string
