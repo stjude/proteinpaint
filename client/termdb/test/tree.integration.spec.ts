@@ -288,7 +288,7 @@ tape('requestTermRecursive() returns a list of child terms', function (test) {
 	runpp({
 		state: {
 			tree: {
-				expandedTermIds: ['Diagnosis']
+				expandedTermIds: ['Demographic Variables']
 			}
 		},
 		tree: {
