@@ -311,7 +311,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	}
 }
 
-export function getDefaultScatterSettings(opts): Settings {
+export function getDefaultScatterSettings(opts: any): Settings {
 	const overrides = opts?.overrides || {}
 	const defaults = {
 		size: 0.8,
@@ -356,7 +356,7 @@ export function getDefaultScatterSettings(opts): Settings {
 		maxXScale: null,
 		minYScale: null,
 		maxYScale: null,
-		itemLabel: opts.singleCellPlot ? 'Cell' : 'Sample'
+		itemLabel: opts?.singleCellPlot ? 'Cell' : 'Sample'
 	}
 
 	return Object.assign(defaults, overrides)
