@@ -1,6 +1,6 @@
 export const termCollectionNumeric = {
 	getCTE(tablename, tw, values) {
-		values.push(...tw.term.termlst.map(term => term.id))
+		values.push(...tw.term.termlst)
 		// For now, use sample as key for matrix, could update key later if used for other types of plots.
 		return {
 			sql: `${tablename} AS (
@@ -21,12 +21,7 @@ export const termCollectionNumeric = {
 
 export const termCollectionCategorical = {
 	getCTE(tablename, tw, values) {
-		console.log(23, 'termCollectionCategorical', tw)
-		values.push(...tw.term.termlst.map(t => t.id))
-		console.log(24, values)
-		//const uncomputable = getUncomputableClause(term, q)
-		//values.push(...uncomputable.values)
-		// groupsetting not applied
+		values.push(...tw.term.termlst)
 		return {
 			sql: `${tablename} AS (
 				SELECT sample, term_id as key, value

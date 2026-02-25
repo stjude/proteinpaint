@@ -33,24 +33,21 @@ export class TermCollection {
 	// - does not have to construct, but may require forced type casting in consumer code
 	static fill(term: RawTermCollection, opts: TwOpts = {}) {
 		if (term instanceof TermCollection) return
-		if (!term.termlst && opts.vocabApi) {
-			const collection = opts.vocabApi.termdbConfig.termCollections.find(
-				c => c.name == term.id || c.name == term.name || term.name?.includes(c.name)
-			)
-			if (!collection) throw `missing termCollection term.lst and termdbConfig.termCollections[term.id]`
-			term.termlst = collection.termIds
-		}
-
-		const details = opts.vocabApi?.termdbConfig?.termCollections?.find(tc => tc.name === term.collectionId)
-		if (!details) throw new Error('no matching details for ' + term.collectionId)
-		if (!details.propsByTermId) throw new Error('propsByTermId missing')
-		if (!term.propsByTermId) term.propsByTermId = details.propsByTermId // assign if missing
+		if (!opts.vocabApi?.termdbConfig?.termCollections)
+			throw `missing vocabApi.termdbConfig.termCollections argument for fill()`
+		const tc = opts.vocabApi.termdbConfig.termCollections.find(
+			c => c.name == term.collectionId || c.name == term.id || c.name == term.name || term.name?.includes(c.name)
+		)
+		if (!tc) throw new Error(`no matching termCollection for for ${term.collectionId}`)
+		if (!tc.termIds) throw `missing termCollection.termIds for '${tc.name}'`
+		if (!tc.termlst) term.termlst = tc.termIds
+		if (!tc.propsByTermId) throw new Error(`propsByTermId missing for termCollection='${tc.name}'`)
+		if (!term.propsByTermId) term.propsByTermId = tc.propsByTermId // assign if missing
 		// memberType copies collection type so client code can tell numeric vs categorical without looking up config
-		term.memberType = details.type
-		for (const t of term.termlst) {
-			if (!t.id) throw new Error('t.id missing')
+		term.memberType = tc.type
+		for (const tid of term.termlst) {
 			// a term newly added to term.termlst may be missing from propsByTermId and must include it
-			if (!term.propsByTermId[t.id]) term.propsByTermId[t.id] = details.propsByTermId[t.id]
+			if (!term.propsByTermId[tid]) term.propsByTermId[tid] = tc.propsByTermId[tid]
 		}
 		TermCollection.validate(term)
 	}
