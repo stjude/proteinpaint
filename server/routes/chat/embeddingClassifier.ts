@@ -156,7 +156,8 @@ const AUGMENTATION_RULES: { prefix: string; patterns: RegExp[] }[] = [
 			/\bdescribe the (cohort|dataset|population|samples?|patients?)\b/i,
 			/\bwho (are|is) in\b/i,
 			/\b(breakdown|demographic|summarize|overview|cross-?tabulate)\b/i,
-			/\b(bar ?chart|histogram)\b/i
+			/\b(bar ?chart|histogram)\b/i,
+			/\bkaryotypes?\b/i
 		]
 	}
 ]
