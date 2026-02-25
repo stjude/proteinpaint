@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 
-## Unreleased
+## 2.170.18
 
 Fixes:
 - improve the error message when there is no numeric data for a variable or filter edit menu
