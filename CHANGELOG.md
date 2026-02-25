@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 
 
+## Unreleased
+
+Fixes:
+- limit divide-by terms to discrete mode in the input menu before a correlation plot is rendered
+
+
 ## 2.170.16
 
 Fixes:
@@ -19,7 +25,7 @@ Fixes:
 ## 2.170.14
 
 Fixes:
-- use optional chaining when checking for ds.assayAvailability?.useFilter0
+- use optional chaining when checking for ds.assayAvailability?.urseFilter0
 
 
 ## 2.170.13
