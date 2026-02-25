@@ -260,7 +260,7 @@ export default function (): Mds3 {
 						propsByTermId: {}
 					},
 					{
-						name: 'Assay Availabiliy',
+						name: 'Assay Availability',
 						//keys: ['yes'],
 						type: 'categorical',
 						termIds: ['assayavailability_cnv', 'assayavailability_fusion', 'assayavailability_germline'],

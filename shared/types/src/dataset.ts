@@ -1624,7 +1624,14 @@ type TermCollection = {
 	id?: string
 	/** human readable name for this collection, may be as collection id if missing */
 	name: string
+	/** collection term type.
+	numeric:
+	- all member terms must be either integer or float type
+	categorical:
+	- all member terms must be categorical terms with same set of categories
+	*/
 	type: 'numeric' | 'categorical'
+	// TODO: add categoryKey field for categorical collections to specify which category attribute to use
 	/** array of dictionary term ids belonging to this collection */
 	termIds: string[]
 	/** array of branch term ids belonging to this collection,
