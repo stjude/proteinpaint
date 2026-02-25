@@ -5,11 +5,13 @@ import { detectOne } from '../../../test/test.helpers.js'
 /**************
  test sections
 For each section we test if the svg plot and table are rendered
-grin2
+
+grin2 default
 fusion only
 cnv only
 snvindel only
 all data types unchecked
+
 ***************/
 
 tape('\n', function (test) {
@@ -17,7 +19,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('grin2', function (test) {
+tape('grin2 default', function (test) {
 	test.timeoutAfter(10000)
 	runpp({
 		state: {
@@ -118,11 +120,38 @@ tape('grin2 cnv-only', function (test) {
 })
 
 tape('grin2 snvindel-only', function (test) {
-	test.timeoutAfter(10000)
+	test.timeoutAfter(20000) // adding maf filter can time out at 10s
+	const mafFilter = {
+		type: 'tvslst',
+		join: '',
+		in: true,
+		lst: [
+			{
+				type: 'tvs',
+				tvs: {
+					term: {
+						id: 'tumor_DNA',
+						name: 'Tumor DNA',
+						parent_id: null,
+						child_ids: ['tumor_DNA_WGS'],
+						isleaf: true,
+						type: 'float',
+						default: true,
+						min: 0,
+						max: 1,
+						tvs: { ranges: [{ start: 0.1, startinclusive: true, stopunbounded: true }] }
+					},
+					ranges: [{ start: 0.1, startinclusive: false, startunbounded: false, stopunbounded: true }]
+				}
+			}
+		],
+		$id: 0,
+		tag: 'filterUiRoot'
+	}
 
 	runpp({
 		state: {
-			plots: [{ chartType: 'grin2' }]
+			plots: [{ chartType: 'grin2', settings: { snvindelOptions: { mafFilter } } }]
 		},
 		grin2: {
 			callbacks: {

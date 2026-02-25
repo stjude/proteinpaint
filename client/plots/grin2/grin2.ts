@@ -250,7 +250,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 
 		// MAF filter UI, if mafFilter is defined in the dataset config
-		console.log(this.state.config.settings?.snvindelOptions)
 		const mafFilterConfig = this.app.vocabApi.termdbConfig.queries?.snvindel?.mafFilter
 		if (mafFilterConfig) {
 			this.snvindelMafFilter = structuredClone(
