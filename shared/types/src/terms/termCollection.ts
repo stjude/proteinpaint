@@ -27,7 +27,7 @@ export type TermCollection = BaseTerm & {
 
 export type RawTermCollection = TermCollection & {
 	type?: 'termCollection'
-	termlst: BaseTerm[]
+	termlst: string[] // list of term.id's
 	propsByTermId?: {
 		[termId: string]: {
 			[prop: string]: any
