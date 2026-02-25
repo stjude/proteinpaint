@@ -647,8 +647,9 @@ function filterAndConvertSnvIndel(
 		return null
 	}
 
-	if (options.mafFilter) {
-		if (!Array.isArray(entry.vafs)) return null // need maf filter but lacks vaf. skip entry
+	if (options.mafFilter?.lst?.length > 0) {
+		// has non-empty maf filter. apply maf filtering
+		if (!Array.isArray(entry.vafs)) return null // lacks vaf and skip entry
 		// TEMP fix! delete this and use !mayFilterByMaf(options.mafFilter, entry) when helper accepts .vafs[]
 		const copy = { dt: dtsnvindel }
 		for (const v of entry.vafs) {
