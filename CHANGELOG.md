@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 
-## Unreleased
+## 2.170.17
 
 Fixes:
 - limit divide-by terms to discrete mode in the input menu before a correlation plot is rendered
