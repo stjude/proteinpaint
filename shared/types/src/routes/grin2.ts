@@ -1,13 +1,5 @@
-/** General GRIN2 route
- * This route handles the GRIN2 analysis for any non-GDC data.
- * It processes the incoming data structure via PP's existing filter infrastructure
- * and returns the same structured results as GDC-GRIN2.
- * Specifically it will return a sortable table of top mutated genes and
- * a static PNG manhattan-like plot of the -log10(q-value).
- * We allow the user to customize the snvindel, CNV, and fusion filtering options.
- */
-
 import type { RoutePayload } from './routeApi.js'
+import type { Filter } from '../filter.ts'
 
 /** GRIN2 request */
 export type GRIN2Request = {
@@ -49,8 +41,8 @@ export type GRIN2Request = {
 	/** Bin size for Manhattan plot histogram bin size. Used in the calculation of dynamic y-axis capping process (default: 10) */
 	binSize: number
 
-	/** Filter from existing PP infrastructure */
-	filter?: any // Filter object passed to get_samples(filter, ds)
+	/** pp filter */
+	filter?: Filter
 
 	/** Options for filtering SNV/indel file content */
 	snvindelOptions?: {
@@ -67,7 +59,7 @@ export type GRIN2Request = {
 		/** Number of bases to include as 3' flank around the mutation position */
 		threePrimeFlankSize?: number
 		/** MAF filter object (tvslst) to filter mutations by allele frequency */
-		mafFilter?: any
+		mafFilter?: Filter
 	}
 
 	/** Options for filtering CNV file content */

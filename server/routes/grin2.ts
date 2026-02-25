@@ -647,7 +647,7 @@ function filterAndConvertSnvIndel(
 		return null
 	}
 
-	if (options.mafFilter?.lst?.length > 0) {
+	if (options.mafFilter?.lst?.length) {
 		// has non-empty maf filter. apply maf filtering
 		if (!Array.isArray(entry.vafs)) return null // lacks vaf and skip entry
 		// TEMP fix! delete this and use !mayFilterByMaf(options.mafFilter, entry) when helper accepts .vafs[]
@@ -655,7 +655,12 @@ function filterAndConvertSnvIndel(
 		for (const v of entry.vafs) {
 			copy[v.id] = v.refCount + ',' + v.altCount
 		}
-		if (!mayFilterByMaf(options.mafFilter, copy)) return null
+		try {
+			if (!mayFilterByMaf(options.mafFilter, copy)) return null
+		} catch (e: any) {
+			mayLog('mayFilterByMaf() crashed on a snvindel ' + (e.message || e))
+			return null
+		}
 	}
 
 	// Apply 5' and 3' flanking to the point mutation
