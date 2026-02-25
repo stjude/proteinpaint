@@ -42,11 +42,18 @@
  */
 
 import path from 'path'
+import { fileURLToPath } from 'url'
 import { pipeline, type FeatureExtractionPipeline } from '@xenova/transformers'
 import type { LlmConfig } from '#types'
 import { chatLog } from './chatLog.ts'
 import { readJSONFile, cosineSim, argsort } from './utils.ts'
 import { route_to_appropriate_llm_provider, callSjEmbedding, callOllamaEmbedding } from './routeAPIcall.ts'
+
+// Shared AI files (defaultClassifierExamples.json, generalRoutes.json) live in
+// dataset/ai/ at the repo root — four levels up from this file's directory
+// (server/routes/chat/ → server/ → proteinpaint/ → repo root → dataset/ai/).
+// Resolving via import.meta.url makes this cwd-independent.
+const _sharedAiDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../dataset/ai')
 
 // ---------------------------------------------------------------------------
 //  Query Augmentation (priority order — first match wins)
@@ -246,13 +253,15 @@ export async function loadTrainingExamples(
 	try {
 		base = await readJSONFile(defaultExamplesPath)
 	} catch (e: any) {
-		// Fall back to the canonical dataset/ai/ location (relative to cwd) in case
-		// the dataset's aifiles live in a different directory (e.g. termdbTest).
-		const fallbackPath = path.resolve(process.cwd(), 'dataset', 'ai', 'defaultClassifierExamples.json')
+		// Fall back to the shared dataset/ai/ location (resolved relative to this
+		// module, cwd-independent) for datasets whose aifiles live elsewhere (e.g. termdbTest).
+		const fallbackPath = path.join(_sharedAiDir, 'defaultClassifierExamples.json')
 		try {
 			base = await readJSONFile(fallbackPath)
-		} catch {
-			chatLog(`Warning: could not load default classifier examples from ${defaultExamplesPath}: ${e.message}`)
+		} catch (inner: any) {
+			throw new Error(
+				`Could not load default classifier examples from "${defaultExamplesPath}" or fallback "${fallbackPath}": ${e.message}; ${inner.message}`
+			)
 		}
 	}
 
@@ -554,7 +563,7 @@ let generalRoutesCache: GeneralRoutesClassifier | null = null
 
 async function loadGeneralRoutes(): Promise<GeneralRoutesClassifier> {
 	if (generalRoutesCache) return generalRoutesCache
-	const routesPath = path.resolve(process.cwd(), 'dataset', 'ai', 'generalRoutes.json')
+	const routesPath = path.join(_sharedAiDir, 'generalRoutes.json')
 	const { classifierDescriptions, classifierExamples } = await readJSONFile(routesPath)
 	generalRoutesCache = { classifierDescriptions, classifierExamples }
 	return generalRoutesCache
