@@ -236,7 +236,7 @@ function addRangeTableNoDensity(self, tvs) {
 	brush.equation_td = rangeTr.append('td')
 	brush.rangeInput = new NumericRangeInput(brush.equation_td, range, () => {})
 
-	if (self.opts.mafFilter) {
+	if (self.opts.isMafFilter) {
 		// maf filter tvs
 		// render maf range input and min allelic depth input
 		rangeLabelTd.text('MAF Range')
