@@ -9,6 +9,7 @@ import os from 'os'
 import { get_samples } from '#src/termdb.sql.js'
 import { read_file, file_is_readable } from '#src/utils.js'
 import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dt2lesion, optionToDt, formatElapsedTime } from '#shared'
+import { mayFilterByMaf } from '#src/mds3.init.js'
 import crypto from 'crypto'
 import { promisify } from 'node:util'
 import { exec as execCallback } from 'node:child_process'
@@ -646,20 +647,10 @@ function filterAndConvertSnvIndel(
 		return null
 	}
 
-	// Filter by minimum alternate allele count
-	// if (options.minAltAlleleCount !== undefined && options.minAltAlleleCount > 0) {
-	// 	if (!entry.altCount || entry.altCount < options.minAltAlleleCount) {
-	// 		return null
-	// 	}
-	// }
-
-	// Filter by minimum total depth (refCount + altCount)
-	// if (options.minTotalDepth !== undefined && options.minTotalDepth > 0) {
-	// 	const totalDepth = (entry.refCount || 0) + (entry.altCount || 0)
-	// 	if (totalDepth < options.minTotalDepth) {
-	// 		return null
-	// 	}
-	// }
+	// Apply MAF filter if configured
+	if (options.mafFilter && !mayFilterByMaf(options.mafFilter, entry)) {
+		return null
+	}
 
 	// Apply 5' and 3' flanking to the point mutation
 	// const flanking5p = options.fivePrimeFlankSize || 0

@@ -2,7 +2,7 @@ import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { GRIN2Dom, GRIN2Opts, ShowGrin2ResultTableOpts } from './GRIN2Types'
 import { dofetch3 } from '#common/dofetch'
-import { getCombinedTermFilter, getNormalRoot } from '#filter'
+import { getCombinedTermFilter, getNormalRoot, filterInit } from '#filter'
 import { Menu, renderTable, table2col, make_one_checkbox, sayerror } from '#dom'
 import { dtsnvindel, mclass, dtcnv, dtfusionrna, dtsv, proteinChangingMutations, dt2lesion } from '#shared/common.js'
 import { PlotBase } from '#plots/PlotBase.ts'
@@ -120,6 +120,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
 	dom: GRIN2Dom
 	components: { controls: ComponentApi }
+	private snvindelMafFilter: any // active MAF filter state, updated by filterInit UI
 
 	// Colors
 	readonly borderColor = '#eee'
@@ -268,6 +269,25 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			// Build the consequence checkboxes in the right cell
 			this.createConsequenceCheckboxes(containerCell)
+		}
+
+		// MAF filter UI, if mafFilter is defined in the dataset config
+		const mafFilterConfig = this.app.vocabApi.termdbConfig.queries?.snvindel?.mafFilter
+		if (mafFilterConfig) {
+			this.snvindelMafFilter = structuredClone(mafFilterConfig.filter)
+			const [mafLabelCell, mafContainer] = t2.addRow()
+			mafLabelCell
+				.text('MAF filter')
+				.style('font-size', `${this.optionsTextFontSize}px`)
+			filterInit({
+				emptyLabel: '+',
+				holder: mafContainer,
+				header_mode: 'hide_search',
+				vocab: { terms: mafFilterConfig.terms },
+				callback: async (filter: any) => {
+					this.snvindelMafFilter = filter
+				}
+			}).main(this.snvindelMafFilter)
 		}
 
 		// ----- Left-side SNV/INDEL checkbox -----
@@ -617,6 +637,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 				// minTotalDepth: parseFloat(this.dom.snvindel_minTotalDepth.property('value')),
 				// minAltAlleleCount: parseFloat(this.dom.snvindel_minAltAlleleCount.property('value')),
 				consequences: this.getSelectedConsequences()
+			}
+			if (this.snvindelMafFilter) {
+				requestConfig.snvindelOptions.mafFilter = this.snvindelMafFilter
 			}
 		}
 

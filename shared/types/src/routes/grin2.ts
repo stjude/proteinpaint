@@ -66,6 +66,8 @@ export type GRIN2Request = {
 		fivePrimeFlankSize?: number
 		/** Number of bases to include as 3' flank around the mutation position */
 		threePrimeFlankSize?: number
+		/** MAF filter object (tvslst) to filter mutations by allele frequency */
+		mafFilter?: any
 	}
 
 	/** Options for filtering CNV file content */
