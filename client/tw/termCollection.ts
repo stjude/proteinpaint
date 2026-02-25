@@ -46,7 +46,7 @@ export class TermCollection {
 		if (!details.propsByTermId) throw new Error('propsByTermId missing')
 		if (!term.propsByTermId) term.propsByTermId = details.propsByTermId // assign if missing
 		// memberType copies collection type so client code can tell numeric vs categorical without looking up config
-		if (details.type) term.memberType = details.type
+		term.memberType = details.type
 		for (const t of term.termlst) {
 			if (!t.id) throw new Error('t.id missing')
 			// a term newly added to term.termlst may be missing from propsByTermId and must include it
