@@ -234,21 +234,21 @@ function addRangeTableNoDensity(self, tvs) {
 	const rangeTr = table.append('tr')
 	const rangeLabelTd = rangeTr.append('td')
 	brush.equation_td = rangeTr.append('td')
-	brush.rangeInput = new NumericRangeInput(brush.equation_td, range, () => {})
+	brush.rangeInput = new NumericRangeInput(brush.equation_td, range, () => {}, { width: '125px' })
 
 	if (self.opts.isMafFilter) {
 		// maf filter tvs
 		// render maf range input and min allelic depth input
 		rangeLabelTd.text('MAF Range (0-1)')
 		const depthTr = table.append('tr')
-		depthTr.append('td').text('Minimum Allelic Depth')
+		depthTr.append('td').text('Minimum Total Depth')
 		brush.depthInput = depthTr
 			.append('td')
 			.append('input')
 			.attr('type', 'number')
 			.attr('min', 1)
 			.attr('step', 1)
-			.style('width', '250px')
+			.style('width', '125px')
 			.property('value', tvs.minAllelicDepth)
 		const applyTr = table.append('tr')
 		brush.apply_btn = applyTr

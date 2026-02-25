@@ -2,18 +2,21 @@ import type { Elem, Input } from '../types/d3'
 import type { FullyBoundedBin } from '#types'
 
 type TvsRange = FullyBoundedBin & { value?: number }
+type Opts = {
+	width?: string // width of input
+}
 
 export class NumericRangeInput {
 	callback: (f: any) => void
 	input: Input
 	range: any
 
-	constructor(holder: Elem, range: any, callback: () => void) {
+	constructor(holder: Elem, range: any, callback: () => void, opts?: Opts) {
 		this.input = holder
 			.append('input')
 			.attr('name', 'rangeInput')
 			.attr('aria-label', 'Leave blank for the allowed minimum value')
-			.style('width', '250px')
+			.style('width', opts?.width || '250px')
 			.style('margin', '3px 5px')
 			//.style('font-size', '20px')
 			.on('change', () => {
