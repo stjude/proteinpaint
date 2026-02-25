@@ -11,15 +11,17 @@
  * 2. **Embedding classifier** — a kNN classifier backed by a sentence-
  *    embedding model (local via transformers.js or remote via API) compares
  *    the query against labeled training examples using cosine similarity.
- *    The top-k neighbors vote (weighted by similarity) and the category
- *    with the highest total score wins. If the best neighbor's similarity
- *    meets a configurable threshold the result is returned (~50 ms latency).
+ *    The top-k neighbors cast one vote each (count-based majority vote) and
+ *    the category with the most votes wins. k must be odd to prevent ties in
+ *    the two-category case. If the winning category's nearest-neighbor
+ *    similarity meets a configurable threshold the result is returned
+ *    (~50 ms latency).
  *
- * 3. **LLM fallback** — when the embedding confidence falls below the
- *    threshold, a small LLM (configured via `classifierModelName` in
- *    serverconfig) is prompted to classify the query. This handles
- *    ambiguous or out-of-distribution inputs that the embedding model
- *    is uncertain about.
+ * 3. **LLM fallback** — triggered when the embedding confidence falls below
+ *    the threshold OR when the vote is tied (two or more categories share the
+ *    top count, e.g. A=2, B=2, C=1 for k=5). A small LLM (configured via
+ *    `classifierModelName` in serverconfig) is prompted to break the
+ *    ambiguity. This handles uncertain or out-of-distribution inputs.
  *
  * Training data is externalized into JSON files:
  *   - dataset/ai/defaultClassifierExamples.json — generic, dataset-agnostic examples
@@ -236,7 +238,7 @@ const CHART_TYPE_TO_CATEGORY: Record<string, string> = {
  */
 export async function loadTrainingExamples(
 	defaultExamplesPath: string,
-	datasetJson?: any
+	datasetJson: any
 ): Promise<Record<string, string[]>> {
 	// 1. Load generic default examples
 	let base: Record<string, string[]> = {}
@@ -253,11 +255,16 @@ export async function loadTrainingExamples(
 		}
 	}
 
-	if (!datasetJson) return base
+	if (!datasetJson) throw new Error('loadTrainingExamples: datasetJson is required')
 
 	// 2. Determine which categories this dataset supports (from charts array)
+	// TODO: discuss whether specific chart types beyond this check are also required
+	if (!datasetJson.charts?.length)
+		throw new Error(
+			'loadTrainingExamples: datasetJson.charts is required — without it the classifier has no categories and the chatbot will hallucinate'
+		)
 	const supportedCategories = new Set<string>()
-	const charts: { type: string }[] = datasetJson.charts ?? []
+	const charts: { type: string }[] = datasetJson.charts
 	for (const chart of charts) {
 		const cat = CHART_TYPE_TO_CATEGORY[chart.type]
 		if (cat) supportedCategories.add(cat)
@@ -291,8 +298,7 @@ export async function loadTrainingExamples(
 	// 5. Merge all sources: base + extracted + dataset-specific
 	const merged: Record<string, string[]> = {}
 
-	// If dataset declares supported categories, filter base to those only.
-	// If no charts declared, include all base categories (backward compat).
+	// Filter base examples to only categories this dataset supports.
 	const filterBase = supportedCategories.size > 0
 	for (const [cat, examples] of Object.entries(base)) {
 		if (filterBase && !supportedCategories.has(cat)) continue
@@ -344,6 +350,8 @@ export interface ClassifyResult {
 	confidence: number
 	all_scores: Record<string, number>
 	above_threshold: boolean
+	/** True when two or more categories share the top vote count; triggers LLM fallback. */
+	tied?: boolean
 }
 
 // Embedder interface & implementations
@@ -408,6 +416,7 @@ export class EmbeddingClassifier {
 	private allLabels: string[] = []
 
 	constructor(embedder: Embedder, threshold = 0.9, k = 5) {
+		if (k % 2 === 0) throw new Error(`EmbeddingClassifier: k must be odd, got ${k}`)
 		this.embedder = embedder
 		this.threshold = threshold
 		this.k = k
@@ -449,17 +458,24 @@ export class EmbeddingClassifier {
 		const topKLabels = topKIdx.map(i => this.allLabels[i])
 		const topKSims = topKIdx.map(i => sims[i])
 
+		// Count-based majority vote (1 per neighbor, not weighted by similarity).
 		const vote: Record<string, number> = {}
-		for (let i = 0; i < topKLabels.length; i++) {
-			vote[topKLabels[i]] = (vote[topKLabels[i]] ?? 0) + topKSims[i]
+		for (const label of topKLabels) {
+			vote[label] = (vote[label] ?? 0) + 1
 		}
-		const bestCat = Object.entries(vote).reduce((a, b) => (b[1] > a[1] ? b : a))[0]
+
+		// Detect a tie: two or more categories share the highest vote count.
+		const sortedVotes = Object.entries(vote).sort((a, b) => b[1] - a[1])
+		const topCount = sortedVotes[0][1]
+		const tied = sortedVotes.length > 1 && sortedVotes[1][1] === topCount
+
+		const bestCat = sortedVotes[0][0]
 		const bestScore = topKSims[0]
-		const above = bestScore >= this.threshold
+		const above = !tied && bestScore >= this.threshold
 
 		const allScores: Record<string, number> = {}
 		for (const cat of this.categories) {
-			allScores[cat] = Math.round((vote[cat] ?? 0) * 10000) / 10000
+			allScores[cat] = vote[cat] ?? 0
 		}
 
 		return {
@@ -467,7 +483,8 @@ export class EmbeddingClassifier {
 			category: above ? bestCat : 'none',
 			confidence: Math.round(bestScore * 10000) / 10000,
 			all_scores: allScores,
-			above_threshold: above
+			above_threshold: above,
+			tied
 		}
 	}
 
@@ -499,12 +516,12 @@ export class EmbeddingClassifier {
 			return embeddingResult
 		}
 
-		// Below threshold — fall back to LLM
+		// Below threshold or tied vote — fall back to LLM
 		const classifierModel = llm.classifierModelName ?? llm.modelName
-		mayLog(
-			`Hybrid router: embedding uncertain (${embeddingResult.confidence.toFixed(4)}), ` +
-				`falling back to LLM (${llm.provider}/${classifierModel})`
-		)
+		const reason = embeddingResult.tied
+			? `tied vote (${JSON.stringify(embeddingResult.all_scores)})`
+			: `low confidence (${embeddingResult.confidence.toFixed(4)})`
+		mayLog(`Hybrid router: ${reason}, falling back to LLM (${llm.provider}/${classifierModel})`)
 
 		try {
 			const llmResult = await classifyViaLlm(query, llm)
@@ -529,29 +546,39 @@ export class EmbeddingClassifier {
 
 // LLM Fallback — used by classifyHybrid when embedding is uncertain
 
+type GeneralRoutesClassifier = {
+	classifierDescriptions: Record<string, string>
+	classifierExamples: Array<{ q: string; a: object }>
+}
+let generalRoutesCache: GeneralRoutesClassifier | null = null
+
+async function loadGeneralRoutes(): Promise<GeneralRoutesClassifier> {
+	if (generalRoutesCache) return generalRoutesCache
+	const routesPath = path.resolve(process.cwd(), 'dataset', 'ai', 'generalRoutes.json')
+	const { classifierDescriptions, classifierExamples } = await readJSONFile(routesPath)
+	generalRoutesCache = { classifierDescriptions, classifierExamples }
+	return generalRoutesCache
+}
+
 async function classifyViaLlm(
 	userPrompt: string,
 	llm: LlmConfig
 ): Promise<{ type: string; plot?: string; html?: string }> {
+	const { classifierDescriptions: descriptions, classifierExamples: examples } = await loadGeneralRoutes()
+
+	const categoriesBlock = Object.entries(descriptions)
+		.map(([cat, desc]) => `- "${cat}": ${desc}`)
+		.join('\n')
+
+	const examplesBlock = examples.map(({ q, a }) => `Q: "${q}" → ${JSON.stringify(a)}`).join('\n')
+
 	const template = `Classify the following user query into exactly one category. Respond with ONLY a JSON object, no explanation.
 
 Categories:
-- "summary": Clinical data plots — distributions, bar charts, violin plots, boxplots, scatter plots of 1-2 variables. Queries about counts, percentages, expression by group, or correlating two variables.
-- "dge": Differential gene expression — comparing gene expression between two groups. Keywords: upregulated, downregulated, DE, DGE, volcano plot, fold change, differential expression.
-- "matrix": Multi-gene heatmap/matrix — displaying 3+ genes or variables across samples in a grid. Keywords: heatmap, matrix, landscape, multiple genes.
-- "sampleScatter": Dimensionality reduction plots — t-SNE, UMAP, PCA embeddings with optional overlays. Keywords: t-SNE, UMAP, PCA, clustering, embedding.
-- "survival": Survival/outcome analysis — Kaplan-Meier curves, hazard ratios, time-to-event. Keywords: survival, Kaplan-Meier, hazard ratio, prognosis, outcomes.
-- "resource": Requests for links, papers, publications, portal info, citations, or data access. Keywords: link, URL, paper, publication, cite, portal, about, download, access.
+${categoriesBlock}
 
 Examples:
-Q: "Show TP53 expression by sex" → {"type":"plot","plot":"summary"}
-Q: "How many patients in each subtype" → {"type":"plot","plot":"summary"}
-Q: "Which genes are upregulated in KMT2A vs DUX4" → {"type":"plot","plot":"dge"}
-Q: "Show a heatmap of TP53 KRAS and NRAS" → {"type":"plot","plot":"matrix"}
-Q: "Color the UMAP by molecular subtype" → {"type":"plot","plot":"sampleScatter"}
-Q: "Compare survival rates between KMT2A and DUX4" → {"type":"plot","plot":"survival"}
-Q: "Where can I find the paper for this dataset" → {"type":"plot","plot":"resource"}
-Q: "Show me the link to the portal" → {"type":"plot","plot":"resource"}
+${examplesBlock}
 
 Q: "${userPrompt}" →`
 
