@@ -81,6 +81,13 @@ Fixes:
 - show loading and error messages when switching to barchart tab in summary plot
 
 
+## 2.170.16
+
+Fixes:
+- persist a correlation plot filter after submitting to create the plot
+- always include a range input in a numeric filter edit menu
+
+
 ## 2.170.15
 
 Fixes:
