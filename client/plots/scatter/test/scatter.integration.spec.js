@@ -19,34 +19,33 @@ import {
 	getCategoryGroupsetting,
 	getGenesetMutTw,
 	getGeneVariantTw,
-	getSsgseaTw
+	getSsgseaTw,
+	getScgeneexpTw
 } from '../../../test/testdata/data.ts'
 
-/*
-Tests:
-	Render TermdbTest scatter plot and open survival and summary
-	Render TermdbTest scatter plot adding age as Z to render a 3D plot
-	Render 3D plot with age as Z and showContour set to true to apply contour on 3D plot
-	dynamic scatter of agedx & hrtavg
-	dynamic scatter of 2-gene expression
-	dynamic scatter of 2-ssgsea
-	Invalid colorTW.id
-	Invalid colorTW.term
-	Invalid plot name
-	Test legend
-	Render color groups
-	Change symbol and reference size from menu
-	Change chart width and height from menu
-	Check/uncheck Show axes from menu
-	Click zoom in, zoom out, and reset buttons
-	Groups and group menus function
-	colorTW=geneVariant with no groupsetting
-	colorTW=geneVariant gene list
-	colorTW=ssgsea
-	singlecell map
-
-todo
-	dynamic scatter of two singlecell geneexp
+/* Tests:
+Render TermdbTest scatter plot and open survival and summary
+Render TermdbTest scatter plot adding age as Z to render a 3D plot
+Render 3D plot with age as Z and showContour set to true to apply contour on 3D plot
+dynamic scatter of agedx & hrtavg
+dynamic scatter of 2-gene expression
+dynamic scatter of 2-ssgsea
+dynamic scatter of 2-dnameth
+Invalid colorTW.id
+Invalid colorTW.term
+Invalid plot name
+Test legend
+Render color groups
+Change symbol and reference size from menu
+Change chart width and height from menu
+Check/uncheck Show axes from menu
+Click zoom in, zoom out, and reset buttons
+Groups and group menus function
+colorTW=geneVariant with no groupsetting
+colorTW=geneVariant gene list
+colorTW=ssgsea
+singlecell map
+singlecell geneexp
 */
 
 const runpp = helpers.getRunPp('mass', {
@@ -135,6 +134,15 @@ const state2dnameth = {
 				term: { type: 'dnaMethylation', chr: 'chr17', start: 7663195, stop: 7671664 },
 				q: { mode: 'continuous' }
 			}
+		}
+	]
+}
+const state2scgeneexp = {
+	plots: [
+		{
+			chartType: 'sampleScatter',
+			term: getScgeneexpTw(),
+			term2: getScgeneexpTw('TP53')
 		}
 	]
 }
@@ -421,7 +429,7 @@ tape('dynamic scatter of 2-ssgsea', function (test) {
 		test.end()
 	}
 })
-tape.only('dynamic scatter of 2-dnameth', function (test) {
+tape('dynamic scatter of 2-dnameth', function (test) {
 	const holder = getHolder()
 	runpp({
 		holder,
@@ -432,7 +440,7 @@ tape.only('dynamic scatter of 2-dnameth', function (test) {
 		scatter.on('postRender.test', null)
 		const chart = scatter.Inner.model.charts[0]
 		test.true(scatter.Inner.settings.showAxes, 'Dynamic scatter should have axes')
-		//if (test._ok) holder.remove()
+		if (test._ok) holder.remove()
 		test.end()
 	}
 })
@@ -1289,6 +1297,18 @@ tape('singlecell map', function (test) {
 				}
 			]
 		},
+		sampleScatter: { callbacks: { 'postRender.test': runTests } }
+	})
+	async function runTests(scatter) {
+		const dots = scatter.Inner.view.dom.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
+		test.true(dots.length, 'some dots are loaded from singlecell map')
+		if (test._ok) scatter.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('singlecell geneexp', function (test) {
+	runpp({
+		state: state2scgeneexp,
 		sampleScatter: { callbacks: { 'postRender.test': runTests } }
 	})
 	async function runTests(scatter) {
