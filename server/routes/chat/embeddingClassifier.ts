@@ -243,7 +243,14 @@ export async function loadTrainingExamples(
 	try {
 		base = await readJSONFile(defaultExamplesPath)
 	} catch (e: any) {
-		mayLog(`Warning: could not load default classifier examples from ${defaultExamplesPath}: ${e.message}`)
+		// Fall back to the canonical dataset/ai/ location (relative to cwd) in case
+		// the dataset's aifiles live in a different directory (e.g. termdbTest).
+		const fallbackPath = path.resolve(process.cwd(), 'dataset', 'ai', 'defaultClassifierExamples.json')
+		try {
+			base = await readJSONFile(fallbackPath)
+		} catch {
+			mayLog(`Warning: could not load default classifier examples from ${defaultExamplesPath}: ${e.message}`)
+		}
 	}
 
 	if (!datasetJson) return base
@@ -467,8 +474,6 @@ export class EmbeddingClassifier {
 	/**
 	 * Hybrid classification: tries the embedding classifier first, falls back
 	 * to the LLM if the confidence is below the threshold.
-	 *
-	 * This mirrors the hybrid_router.py approach from the Python demo.
 	 */
 	async classifyHybrid(query: string, llm: LlmConfig, datasetNoise?: Set<string>): Promise<ClassifyResult> {
 		// Check for explicit chart type keywords first — these always win.
@@ -536,7 +541,7 @@ Categories:
 - "matrix": Multi-gene heatmap/matrix — displaying 3+ genes or variables across samples in a grid. Keywords: heatmap, matrix, landscape, multiple genes.
 - "sampleScatter": Dimensionality reduction plots — t-SNE, UMAP, PCA embeddings with optional overlays. Keywords: t-SNE, UMAP, PCA, clustering, embedding.
 - "survival": Survival/outcome analysis — Kaplan-Meier curves, hazard ratios, time-to-event. Keywords: survival, Kaplan-Meier, hazard ratio, prognosis, outcomes.
-- "resource": Requests for links, papers, publications, portal info, citations, data access, or background about the study/cohort/dataset. Keywords: link, URL, paper, publication, cite, portal, about, download, access.
+- "resource": Requests for links, papers, publications, portal info, citations, or data access. Keywords: link, URL, paper, publication, cite, portal, about, download, access.
 
 Examples:
 Q: "Show TP53 expression by sex" → {"type":"plot","plot":"summary"}
@@ -553,8 +558,6 @@ Q: "${userPrompt}" →`
 	const response = await route_to_appropriate_llm_provider(template, llm, llm.classifierModelName)
 	mayLog('LLM fallback raw response:', response)
 
-	// route_to_appropriate_llm_provider already extracts JSON from the raw
-	// LLM response, so we can parse directly.
 	return JSON.parse(response)
 }
 
