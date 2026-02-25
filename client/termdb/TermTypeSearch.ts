@@ -343,7 +343,7 @@ export class TermTypeSearch {
 			if (termTypeGroup && !this.tabs.some(tab => tab.label == termTypeGroup)) {
 				//regression snplst/snplocus cases will be handled when the search handler is added
 				if (state.usecase.target == 'regression') {
-					if (type == TermTypes.SNP) continue // same funcationality is covered by snplst/snplocus terms
+					if (type == TermTypes.SNP) continue // same functionality is covered by snplst/snplocus terms
 					if (type == TermTypes.GENE_VARIANT && state.usecase.detail != 'independent') continue
 					if (type == TermTypes.GENE_EXPRESSION && state.usecase.detail != 'independent') continue
 					if (type == TermTypes.DNA_METHYLATION && state.usecase.detail != 'independent') continue
@@ -352,6 +352,12 @@ export class TermTypeSearch {
 
 				if (state.usecase.target == 'sampleScatter') {
 					if (state.usecase.detail == 'numeric' && !numericTypes.has(type)) continue
+					//Limit the tree to only single cell types when use case is single cell
+					if (state.usecase.detail == 'sc') {
+						if (type != TermTypes.SINGLECELL_CELLTYPE && type != TermTypes.SINGLECELL_GENE_EXPRESSION) continue
+					} else {
+						if (type == TermTypes.SINGLECELL_CELLTYPE || type == TermTypes.SINGLECELL_GENE_EXPRESSION) continue
+					}
 				}
 
 				if (
@@ -362,7 +368,7 @@ export class TermTypeSearch {
 				}
 
 				if (state.usecase.target == 'dataDownload') {
-					if (type == TermTypes.SNP) continue // same funcationality is covered by snplst/snplocus terms
+					if (type == TermTypes.SNP) continue // same functionality is covered by snplst/snplocus terms
 				}
 
 				if (state.usecase.target && this.useCasesExcluded[state.usecase.target]?.includes(termTypeGroup)) continue

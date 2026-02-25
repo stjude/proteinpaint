@@ -175,17 +175,11 @@ export class ScatterView {
 				type: 'term',
 				configKey: 'colorTW',
 				chartType: 'sampleScatter',
-				usecase: { target: 'sampleScatter', detail: 'colorTW' },
+				usecase: { target: 'sampleScatter', detail: this.scatter.config?.singleCellPlot ? 'sc' : 'colorTW' },
 				title: 'Categories to color the samples',
 				label: 'Color',
 				vocabApi: this.scatter.app.vocabApi,
-				numericEditMenuVersion: ['continuous', 'discrete'],
-				//Eventually this will be corrected with usecase.detail
-				//When single cell, only relevant terms will be displayed
-				//in the tree
-				getDisplayStyle: () => {
-					return this.scatter.config?.singleCellPlot ? 'none' : ''
-				}
+				numericEditMenuVersion: ['continuous', 'discrete']
 			},
 
 			{
