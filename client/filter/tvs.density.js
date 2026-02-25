@@ -77,6 +77,8 @@ function applyBrush(self, elem, brush) {
 		.on('brush', function (event, d) {
 			const s = event.selection
 			if (!s) return // not an event triggered by brush dragging
+			// brush.rangeInput is created from NumericRangeInput() as called in tvs.numeric.js
+			// when filling a menu with or without density plot, should always be present
 			const inputRange = brush.rangeInput.getRange()
 			if (inputRange?.value != undefined) {
 				brush.range = inputRange
