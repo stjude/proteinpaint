@@ -457,7 +457,6 @@ export class EmbeddingClassifier {
 		const sortedIdx = argsort(sims)
 		const topKIdx = sortedIdx.slice(-this.k).reverse()
 		const topKLabels = topKIdx.map(i => this.allLabels[i])
-		const topKSims = topKIdx.map(i => sims[i])
 
 		// Count-based majority vote (1 per neighbor, not weighted by similarity).
 		const vote: Record<string, number> = {}
@@ -471,7 +470,7 @@ export class EmbeddingClassifier {
 		const tied = sortedVotes.length > 1 && sortedVotes[1][1] === topCount
 
 		const bestCat = sortedVotes[0][0]
-		const bestScore = topKSims[0]
+		const bestScore = Math.max(...topKIdx.filter(i => this.allLabels[i] === bestCat).map(i => sims[i]))
 		const above = !tied && bestScore >= this.threshold
 
 		const allScores: Record<string, number> = {}
