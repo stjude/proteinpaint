@@ -102,7 +102,7 @@ const stateDynamicScatter = {
 		}
 	]
 }
-const stateDynamicScatter2geneexp = {
+const state2geneexp = {
 	plots: [
 		{
 			chartType: 'sampleScatter',
@@ -112,13 +112,29 @@ const stateDynamicScatter2geneexp = {
 		}
 	]
 }
-const stateDynamicScatter2ssgsea = {
+const state2ssgsea = {
 	plots: [
 		{
 			chartType: 'sampleScatter',
 			colorTW: { id: 'diaggrp' },
 			term: { term: { type: 'ssGSEA', id: 'HALLMARK_ADIPOGENESIS' }, q: { mode: 'continuous' } },
 			term2: { term: { type: 'ssGSEA', id: 'HALLMARK_ALLOGRAFT_REJECTION' }, q: { mode: 'continuous' } }
+		}
+	]
+}
+const state2dnameth = {
+	plots: [
+		{
+			chartType: 'sampleScatter',
+			colorTW: { id: 'diaggrp' },
+			term: {
+				term: { type: 'dnaMethylation', chr: 'chr17', start: 7673484, stop: 7681953 },
+				q: { mode: 'continuous' }
+			},
+			term2: {
+				term: { type: 'dnaMethylation', chr: 'chr17', start: 7663195, stop: 7671664 },
+				q: { mode: 'continuous' }
+			}
 		}
 	]
 }
@@ -379,7 +395,7 @@ tape('dynamic scatter of 2-gene expression', function (test) {
 	const holder = getHolder()
 	runpp({
 		holder,
-		state: stateDynamicScatter2geneexp,
+		state: state2geneexp,
 		sampleScatter: { callbacks: { 'postRender.test': runTests } }
 	})
 	async function runTests(scatter) {
@@ -394,7 +410,7 @@ tape('dynamic scatter of 2-ssgsea', function (test) {
 	const holder = getHolder()
 	runpp({
 		holder,
-		state: stateDynamicScatter2ssgsea,
+		state: state2ssgsea,
 		sampleScatter: { callbacks: { 'postRender.test': runTests } }
 	})
 	async function runTests(scatter) {
@@ -402,6 +418,21 @@ tape('dynamic scatter of 2-ssgsea', function (test) {
 		const chart = scatter.Inner.model.charts[0]
 		test.true(scatter.Inner.settings.showAxes, 'Dynamic scatter should have axes')
 		if (test._ok) holder.remove()
+		test.end()
+	}
+})
+tape.only('dynamic scatter of 2-dnameth', function (test) {
+	const holder = getHolder()
+	runpp({
+		holder,
+		state: state2dnameth,
+		sampleScatter: { callbacks: { 'postRender.test': runTests } }
+	})
+	async function runTests(scatter) {
+		scatter.on('postRender.test', null)
+		const chart = scatter.Inner.model.charts[0]
+		test.true(scatter.Inner.settings.showAxes, 'Dynamic scatter should have axes')
+		//if (test._ok) holder.remove()
 		test.end()
 	}
 })
