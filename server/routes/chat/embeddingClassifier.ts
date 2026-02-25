@@ -232,6 +232,11 @@ const CHART_TYPE_TO_CATEGORY: Record<string, string> = {
 	survival: 'survival'
 }
 
+// Case-insensitive version of the map for normalizing training data entries
+const CHART_TYPE_TO_CATEGORY_LC: Record<string, string> = Object.fromEntries(
+	Object.entries(CHART_TYPE_TO_CATEGORY).map(([k, v]) => [k.toLowerCase(), v])
+)
+
 /**
  * Load and merge training examples from the generic default file and
  * optional per-dataset sources (classifierExamples + Classification.TrainingData).
@@ -297,7 +302,8 @@ export async function loadTrainingExamples(
 		if (entry.answer?.type === 'resource') {
 			cat = 'resource'
 		} else if (entry.answer?.plot) {
-			cat = CHART_TYPE_TO_CATEGORY[entry.answer.plot] ?? entry.answer.plot.toLowerCase()
+			cat = CHART_TYPE_TO_CATEGORY[entry.answer.plot] ?? CHART_TYPE_TO_CATEGORY_LC[entry.answer.plot.toLowerCase()]
+			if (!cat) continue
 		} else {
 			continue
 		}
