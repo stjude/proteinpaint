@@ -339,7 +339,11 @@ function getAllowedTermTypes(ds) {
 	if (ds.queries?.metaboliteIntensity) typeSet.add(TermTypes.METABOLITE_INTENSITY)
 	if (ds.queries?.ssGSEA) typeSet.add(TermTypes.SSGSEA)
 	if (ds.queries?.dnaMethylation) typeSet.add(TermTypes.DNA_METHYLATION)
-	if (ds.cohort.termdb.termCollections?.length) typeSet.add('termCollection')
+	if (ds.queries?.singleCell) {
+		typeSet.add(TermTypes.SINGLECELL_CELLTYPE)
+		if (ds.queries.singleCell?.geneExpression) typeSet.add(TermTypes.SINGLECELL_GENE_EXPRESSION)
+	}
+	if (ds.cohort.termdb.numericTermCollections) typeSet.add('termCollection')
 	return [...typeSet]
 }
 
