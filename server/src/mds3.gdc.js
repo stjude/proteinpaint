@@ -1214,7 +1214,7 @@ export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1) {
 		const field = fields[i]
 		if (i == fields.length - 1) {
 			// i is at the end of fields[], sample attr key is term.id
-			if (sample[tw.term.id]) {
+			if (sample[tw.term.id] instanceof Set) {
 				sample[tw.term.id].add(current[field])
 			} else {
 				sample[tw.term.id] = current[field]

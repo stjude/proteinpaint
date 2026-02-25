@@ -852,6 +852,7 @@ async function setTermInput(opts) {
 			opts.holder.style('display', display)
 			const { config, activeCohort, termfilter } = JSON.parse(JSON.stringify(plot))
 			const tw = plot[opts.configKey] || (config && config[opts.configKey]) || {}
+			const selectedTerms = getSelectedTerms(opts, config)
 			const arg = {
 				term: tw.term || null,
 				q: tw.q,
