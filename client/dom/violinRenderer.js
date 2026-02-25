@@ -22,7 +22,7 @@ export class violinRenderer {
 		this.holder = holder
 		this.rd = rd // ViolinResponse route data
 		this.vd = rd.charts?.['']?.plots?.[0] // the only violin data from route data
-		if (!this.vd) throw "rd.charts?.['']?.plots?.[0] missing"
+		if (!this.vd) throw 'No density plot data to render.'
 		this.width = width
 		this.height = height
 		this.radius = radius
