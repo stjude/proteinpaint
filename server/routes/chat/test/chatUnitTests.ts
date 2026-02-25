@@ -3,7 +3,6 @@ import path from 'path'
 import { readJSONFile } from '../utils.ts'
 import { run_chat_pipeline } from '../../termdb.chat2.ts'
 import serverconfig from '../../../src/serverconfig.js'
-<<<<<<< HEAD
 import type {
     DEType,
     SummaryType,
@@ -13,9 +12,6 @@ import type {
     CategoricalFilterTerm,
     NumericFilterTerm
 } from '#types'
-=======
-import type { DEType, SummaryType, MatrixType, FilterTerm, CategoricalFilterTerm, NumericFilterTerm } from '#types'
->>>>>>> 5fff187a1 (Add matrix agent validation to chat unit tests)
 
 const testing = true // This causes raw LLM output to be sent by the agent
 const llm = serverconfig.llm
