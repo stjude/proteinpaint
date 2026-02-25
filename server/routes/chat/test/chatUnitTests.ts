@@ -3,7 +3,7 @@ import path from 'path'
 import { readJSONFile } from '../utils.ts'
 import { run_chat_pipeline } from '../../termdb.chat2.ts'
 import serverconfig from '../../../src/serverconfig.js'
-import type { DEType, SummaryType, FilterTerm, CategoricalFilterTerm, NumericFilterTerm } from '#types'
+import type { DEType, SummaryType, MatrixType, FilterTerm, CategoricalFilterTerm, NumericFilterTerm } from '#types'
 
 const testing = true // This causes raw LLM output to be sent by the agent
 const llm = serverconfig.llm
@@ -50,6 +50,8 @@ export async function test_chatbot_by_dataset(ds: any) {
 				//console.log("DE request did not match. LLM response :" + JSON.stringify(test_result.response) + " Actual response: " + JSON.stringify(test_data.answer))
 				validate_DE_output(test_result.response, test_data.answer)
 			}
+		} else if (test_result.action == 'matrix') {
+			validate_matrix_output(test_result.response, test_data.answer)
 		}
 	}
 }
@@ -110,6 +112,56 @@ function validate_DE_output(output_DE_object: DEType, expected_DE_output: DEType
 	if (!validate_DE_groups) console.log('group2 not validated')
 
 	return validate_DE_groups
+}
+
+function validate_matrix_output(output: MatrixType, expected: MatrixType): boolean {
+	const outputTerms = output.terms || []
+	const expectedTerms = expected.terms || []
+	if (outputTerms.length != expectedTerms.length || !outputTerms.every((t, i) => t == expectedTerms[i])) {
+		console.log(
+			'Matrix terms did not match. LLM response: ' +
+				JSON.stringify(outputTerms) +
+				' Expected: ' +
+				JSON.stringify(expectedTerms)
+		)
+		return false
+	}
+
+	const outputGenes = output.geneNames || []
+	const expectedGenes = expected.geneNames || []
+	if (outputGenes.length != expectedGenes.length || !outputGenes.every((g, i) => g == expectedGenes[i])) {
+		console.log(
+			'Matrix geneNames did not match. LLM response: ' +
+				JSON.stringify(outputGenes) +
+				' Expected: ' +
+				JSON.stringify(expectedGenes)
+		)
+		return false
+	}
+
+	if (!output.simpleFilter && !expected.simpleFilter) {
+		return true
+	}
+	if (!output.simpleFilter || !expected.simpleFilter) {
+		console.log(
+			'Matrix simpleFilter mismatch. LLM response: ' +
+				JSON.stringify(output.simpleFilter) +
+				' Expected: ' +
+				JSON.stringify(expected.simpleFilter)
+		)
+		return false
+	}
+
+	const filter_valid = validate_filter(output.simpleFilter, expected.simpleFilter)
+	if (!filter_valid) {
+		console.log(
+			'Matrix simpleFilter did not match. LLM response: ' +
+				JSON.stringify(output.simpleFilter) +
+				' Expected: ' +
+				JSON.stringify(expected.simpleFilter)
+		)
+	}
+	return filter_valid
 }
 
 function validate_filter(output_filter: FilterTerm[], expected_filter: FilterTerm[]): boolean {
