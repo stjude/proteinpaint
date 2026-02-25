@@ -292,7 +292,8 @@ function setRenderers(self) {
 		self.included_terms = []
 		if (self.state.usecase) {
 			for (const t of term.terms) {
-				if (isUsableTerm(t, self.state.usecase, self.app.vocabApi.termdbConfig).size) {
+				const uses = isUsableTerm(t, self.state.usecase, self.app.vocabApi.termdbConfig)
+				if (uses && uses.size) {
 					self.included_terms.push(t)
 				}
 			}
