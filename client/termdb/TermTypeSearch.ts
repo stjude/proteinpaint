@@ -355,7 +355,6 @@ export class TermTypeSearch {
 		})
 	}
 	async setTermTypeGroup(type, termTypeGroup, details = {}) {
-		console.log(353, details)
 		await this.app.dispatch({ type: 'set_term_type_group', value: termTypeGroup })
 		const tab = this.tabs.find(tab => tab.termTypeGroup == termTypeGroup)
 		if (!tab) return
