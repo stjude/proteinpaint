@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 
-## Unreleased
+## 2.170.16
 
 Fixes:
 - persist a correlation plot filter after submitting to create the plot
