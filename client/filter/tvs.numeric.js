@@ -224,37 +224,61 @@ function setTvsDefaults(tvs) {
 function addRangeTableNoDensity(self, tvs) {
 	const termrange = tvs.term.range || {}
 	const range = tvs.ranges && tvs.ranges[0] ? tvs.ranges[0] : termrange
-	const num_div = self.num_obj.num_div
-	num_div.selectAll('*').remove()
-	num_div.append('div').style('padding', '5px').style('font-weight', 600).html(tvs.term.name)
-
-	const brush = {}
-	const table = num_div.append('table')
-	const tr = table.append('tr')
-	tr.append('td').html('Range')
-	brush.equation_td = tr.append('td')
-
 	range.min = 'min' in tvs.term ? tvs.term.min : null
 	range.max = 'max' in tvs.term ? tvs.term.max : null
-	brush.rangeInput = new NumericRangeInput(brush.equation_td, range, applyRange)
+	const num_div = self.num_obj.num_div
+	num_div.selectAll('*').remove()
 
-	brush.apply_btn = tr
-		.append('td')
-		.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
-		.style('border-radius', '13px')
-		.style('margin', '5px')
-		.style('margin-left', '10px')
-		.style('text-align', 'center')
-		.style('font-size', '.8em')
-		.style('text-transform', 'uppercase')
-		.text('apply')
-		.on('click', async () => {
-			brush.rangeInput.parseRange()
-		})
+	const brush = {}
+	const table = num_div.append('table').style('padding-left', '5px')
+	const rangeTr = table.append('tr')
+	const rangeLabelTd = rangeTr.append('td')
+	brush.equation_td = rangeTr.append('td')
+	brush.rangeInput = new NumericRangeInput(brush.equation_td, range, () => {})
 
-	function applyRange() {
+	if (self.opts.mafFilter) {
+		// maf filter tvs
+		// render maf range input and min allelic depth input
+		rangeLabelTd.text('MAF Range')
+		const depthTr = table.append('tr')
+		depthTr.append('td').text('Minimum Allelic Depth')
+		brush.depthInput = depthTr.append('td').append('input').attr('type', 'number').style('width', '250px')
+		const applyTr = table.append('tr')
+		brush.apply_btn = applyTr
+			.append('td')
+			.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
+			.style('border-radius', '13px')
+			.style('margin-top', '10px')
+			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
+			.text('apply')
+			.on('click', clickApply)
+	} else {
+		// tvs is not part of maf filter
+		// render range input
+		rangeLabelTd.text('Range')
+		brush.apply_btn = rangeTr
+			.append('td')
+			.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
+			.style('border-radius', '13px')
+			.style('margin', '5px')
+			.style('margin-left', '10px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
+			.text('apply')
+			.on('click', clickApply)
+	}
+
+	function clickApply() {
+		const new_tvs = { term: tvs.term, ranges: [brush.rangeInput.getRange()] }
+		if (brush.depthInput) {
+			const minAllelicDepth = Number(brush.depthInput.property('value'))
+			if (!Number.isFinite(minAllelicDepth)) throw new Error('minAllelicDepth is non-numeric')
+			new_tvs.minAllelicDepth = minAllelicDepth
+		}
 		self.dom.tip.hide()
-		self.opts.callback({ term: tvs.term, ranges: [brush.rangeInput.getRange()] })
+		self.opts.callback(new_tvs)
 	}
 }
 

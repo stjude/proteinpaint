@@ -141,6 +141,7 @@ export function renderVariantConfig(arg: Arg) {
 					emptyLabel: '+',
 					holder: mafDiv,
 					header_mode: 'hide_search',
+					isMafFilter: true, // will be handled by "client/filter/tvs.numeric.js"
 					vocab: { terms: mafFilter.terms },
 					callback: async filter => {
 						mafFilter.active = filter
