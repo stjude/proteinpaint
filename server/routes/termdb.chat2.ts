@@ -170,7 +170,7 @@ export async function run_chat_pipeline(
 			mayLog('Time taken for sampleScatter agent:', formatElapsedTime(Date.now() - time1))
 		} else {
 			// Will define all other agents later as desired
-			ai_output_json = { type: 'html', html: `Unknown classification value: "${classResult}"` }
+			ai_output_json = { type: 'html', html: 'Unknown classification value' }
 		}
 	} else {
 		// Should not happen
