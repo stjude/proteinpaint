@@ -647,9 +647,14 @@ function filterAndConvertSnvIndel(
 		return null
 	}
 
-	// Apply MAF filter if configured
-	if (options.mafFilter && !mayFilterByMaf(options.mafFilter, entry)) {
-		return null
+	if (options.mafFilter) {
+		if (!Array.isArray(entry.vafs)) return null // need maf filter but lacks vaf. skip entry
+		// TEMP fix! delete this and use !mayFilterByMaf(options.mafFilter, entry) when helper accepts .vafs[]
+		const copy = { dt: dtsnvindel }
+		for (const v of entry.vafs) {
+			copy[v.id] = v.refCount + ',' + v.altCount
+		}
+		if (!mayFilterByMaf(options.mafFilter, copy)) return null
 	}
 
 	// Apply 5' and 3' flanking to the point mutation
