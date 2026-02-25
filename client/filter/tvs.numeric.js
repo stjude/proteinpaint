@@ -191,7 +191,7 @@ async function fillMenu(self, div, tvs) {
 	self.num_obj.ranges = ranges
 	self.num_obj.brushes = []
 	addBrushes(self)
-	// addRangeTable(self)
+	addRangeTable(self)
 	// const add_range_btn = self.num_obj.num_div
 	// 	.append('div')
 	// 	.style('width', '100px')
