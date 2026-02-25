@@ -239,7 +239,7 @@ function addRangeTableNoDensity(self, tvs) {
 	if (self.opts.isMafFilter) {
 		// maf filter tvs
 		// render maf range input and min allelic depth input
-		rangeLabelTd.text('MAF Range')
+		rangeLabelTd.text('MAF Range (0-1)')
 		const depthTr = table.append('tr')
 		depthTr.append('td').text('Minimum Allelic Depth')
 		brush.depthInput = depthTr
@@ -278,11 +278,16 @@ function addRangeTableNoDensity(self, tvs) {
 	}
 
 	function clickApply() {
-		const new_tvs = { term: tvs.term, ranges: [brush.rangeInput.getRange()] }
+		const r = brush.rangeInput.getRange()
+		if (!Number.isFinite(r.start) && !Number.isFinite(r.stop)) {
+			window.alert('Invalid range.')
+			return
+		}
+		const new_tvs = { term: tvs.term, ranges: [r] }
 		if (brush.depthInput) {
 			const minAllelicDepth = Number(brush.depthInput.property('value'))
 			if (!Number.isFinite(minAllelicDepth)) {
-				window.alert('Minimum allelic depth must be a non-zero numeric value.')
+				window.alert('Minimum allelic depth must be a numeric value.')
 				return
 			}
 			new_tvs.minAllelicDepth = Math.max(minAllelicDepth, 1)
