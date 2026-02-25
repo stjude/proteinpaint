@@ -65,7 +65,10 @@ function sortSameCategoricalFilterKeys(filters: any[], ds: any): any {
 
 	const multiple_fields_keys: { key: string; categories: string[] }[] = []
 	for (const key of categorical_filter_terms_with_multiple_fields) {
-		const term = ds.cohort.termdb.q.termjsonByOneid(key)
+		const term =
+			ds.cohort.termdb.q.termjsonByOneid(key) ||
+			ds.cohort.termdb.q.termjsonByOneid(key.toUpperCase()) ||
+			ds.cohort.termdb.q.termjsonByOneid(key.toLowerCase())
 		if (!term) {
 			html += 'invalid filter id:' + key
 		} else {
@@ -142,7 +145,10 @@ function generate_filter_term(filters: any, ds: any) {
 		if (f.type == 'tvslst') {
 			localfilter.lst.push(f)
 		} else {
-			const term = ds.cohort.termdb.q.termjsonByOneid(f.term)
+			const term =
+				ds.cohort.termdb.q.termjsonByOneid(f.term) ||
+				ds.cohort.termdb.q.termjsonByOneid(f.term.toUpperCase()) ||
+				ds.cohort.termdb.q.termjsonByOneid(f.term.toLowerCase())
 			if (!term) {
 				invalid_html += 'invalid filter id:' + f.term
 			} else {
@@ -155,8 +161,8 @@ function generate_filter_term(filters: any, ds: any) {
 					for (const category of categories) {
 						let cat: string | undefined
 						for (const ck in term.values) {
-							if (ck == category) cat = ck
-							else if (term.values[ck].label == category) cat = ck
+							if (ck.toLowerCase() == category.toLowerCase()) cat = ck
+							else if (term.values[ck].label?.toLowerCase() == category.toLowerCase()) cat = ck
 						}
 						if (!cat) invalid_html += 'invalid category from ' + JSON.stringify({ term: f.term, category })
 						else values.push({ key: cat })

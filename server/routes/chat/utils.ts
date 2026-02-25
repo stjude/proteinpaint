@@ -164,7 +164,10 @@ export function validate_term(response_term: string, common_genes: string[], dat
 	let html = ''
 	let term_type: any
 	let category: string = ''
-	const term: any = ds.cohort.termdb.q.termjsonByOneid(response_term)
+	const term: any =
+		ds.cohort.termdb.q.termjsonByOneid(response_term) ||
+		ds.cohort.termdb.q.termjsonByOneid(response_term.toUpperCase()) ||
+		ds.cohort.termdb.q.termjsonByOneid(response_term.toLowerCase())
 	if (!term) {
 		const gene_hits = common_genes.filter(gene => gene == response_term.toLowerCase())
 		if (gene_hits.length == 0) {
