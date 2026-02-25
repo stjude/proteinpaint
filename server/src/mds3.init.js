@@ -347,10 +347,19 @@ export async function validate_termdb(ds) {
 			if (c.type !== 'numeric' && c.type !== 'categorical')
 				throw `termdb.termCollections[].type must be 'numeric' or 'categorical' (${c.name})`
 			if (!Array.isArray(c.termIds)) throw 'termdb.termCollections[].termIds[] not array'
-			if (!c.propsByTermId) throw 'c.propsByTermId missing'
+			if (c.termIds.length == 0) throw 'termdb.termCollections[].termIds[] blank array'
+			if (!c.propsByTermId) c.propsByTermId = {}
 			const colorScale = getColors(c.termIds.length)
 			for (const i of c.termIds) {
-				if (!tdb.q.termjsonByOneid(i)) throw `invalid term id "${i}" from termdb.termCollections[].${c.name}`
+				const t = tdb.q.termjsonByOneid(i)
+				if (!t) throw `invalid term id "${i}" from termdb.termCollections[].${c.name}`
+				if (c.type === 'numeric') {
+					if (t.type !== 'integer' && t.type != 'float') throw 'member term type not integer/float ' + i
+				} else {
+					if (t.type !== 'categorical') throw 'member term type not categorical ' + i
+					// later ensure all categories are same
+				}
+				// assign default color when missing, simplify client rendering as there's always color
 				if (!c.propsByTermId[i]) c.propsByTermId[i] = {}
 				if (!c.propsByTermId[i].color) c.propsByTermId[i].color = colorScale(i)
 			}
