@@ -2,7 +2,123 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+
+## 2.170.16
+
+Fixes:
+- persist a correlation plot filter after submitting to create the plot
+- always include a range input in a numeric filter edit menu
+
+
+## 2.170.15
+
+Fixes:
+- limit divide-by terms to discrete mode to avoid a nonsensical one rendered chart per unique float/integer value
+
+
+## 2.170.14
+
+Fixes:
+- use optional chaining when checking for ds.assayAvailability?.useFilter0
+
+
+## 2.170.13
+
+Fixes:
+- set protected sessionid even when there are no dsCredentials
+- Ensure the genome browser plots launches regardless of the holder
+- detect if the inputs option exists before using it to detect which terms to disable
+- include WT/Not Tested in summary plot data requests that use the termdb?for=matrix route
+- also render divide-by variable data when listing samples in barchart
+- sample list should work when dragging a violin range
+
+
+## 2.170.12
+
+Fixes:
+- prevent excessive memory usage during OncoMatrix data requests
+- do not allow repeated term id for correlation plot primary, correlation, and Fdivide-by variables
+- hide survival terms in dictionary tree for violin and boxplot
+- do not allow hiding all chart serieses/overlay, there should at least be one visible rendered data 
+- restore geneORA by passing gene names but not tw.$id
+
+## 2.170.11
+
+Fixes:
+- throttle the number of active sample data queries across all users
+
+
+## 2.170.10
+
+Fixes:
+- throttle the number of concurrent by-term queries for sample data as triggered by getData()
+- revert to using memFetch to avoid redundant GDC API `/cases` request/responses across different genes that adds up to minutes of delayed response
+- prevent crashing the server due to unhandled exceptions when aborting GDC API fetch requests
+
+
+## 2.170.9
+
+Fixes:
+- fix violin plot not loading due to unsynchronized q.dtLst[] and q.predefined_groupset_idx
+- improve fault tolerance by retrying failed GDC API requests
+
+
+## 2.170.8
+
+Fixes:
+- supply abort signal option to getDefaultBins and getpercentile requests when filling-in term wrappers
+
+
+## 2.170.7:
+
+Fixes
+- support correlation plot triggerAbort() to cancel stale network requests; detect component triggerAbort() as a prototype method
+
+
+## 2.170.6
+
+Fixes:
+- correctly translate tvs.ranges into the expected GDC API filter shape
+- remove all untagged html text in menu.clear(), previously only tagged children were removed
+- hide not-fully functional undo-redo buttons in plot and summary components
+- make the case count limit message applicable to both correlation plot and gene exp clustering
+- remove 5K case limit when doing hiercluster; avoid 1min /cases/ query on empty cohort filter
+- lessen GDC API requests by generating sample filter only once in mayGetGeneVariantData()
+- add max limit to number of genes supplied to geneVariant gene set
+- prevent the submission of plot edits while input variable data is still being loaded
+- downgrade missing plot config into a warning, instead of displaying an irrelevant error message
+- remove add-to-filter option from correlation plot selection of rendered data; fix the returned GDC API  bins from getData()
+
+
+## 2.170.5
+
+Fixes:
+- only allow searching by gene, and not coordinate, for geneVariant term
+- fix the visibility of chart button menu when there is a footer div with overflow-y: 'clip'
+- handle missing data for divideBy term in survival plot
+- disable the chart-specific download option in survival plot
+
+
+## 2.170.4
+
+Fixes:
+- may detect the end of matrix data streaming using sampleIndex instead of the lastSampleId, which may not have data
+
+
+## 2.170.3
+
+Fixes
+- display a more user-friendly error message instead of an obscure bin-related error, when there is no numeric data by GDC cohort to compute bins
+- do not allow a user to double-click on gene search while loading the coordinate
+
+
+## 2.170.2
+
+Fixes:
+- show loading and error messages when switching to barchart tab in summary plot
+
+
+## 2.170.1
 
 
 ## 2.177.0

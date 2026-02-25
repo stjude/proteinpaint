@@ -1377,12 +1377,12 @@ tape('tvs: termCollection', async test => {
 	const filternode = opts.holder.node()
 	await opts.filter.main(opts.filterData)
 
+	const controlTipd = opts.filter.Inner.dom.controlsTip.d
+	const tipd = opts.filter.Inner.dom.termSrcDiv
 	try {
 		const pill = await detectOne({ target: filternode, selector: '.tvs_pill' })
-		const controlTipd = opts.filter.Inner.dom.controlsTip.d
 		const menuRows = controlTipd.selectAll('tr')
 		const editOpt = menuRows.filter(d => d.action == 'edit').node()
-		const tipd = opts.filter.Inner.dom.termSrcDiv
 
 		// --- trigger and check tip menu ---
 		pill.click()
@@ -1409,5 +1409,4 @@ tape('tvs: termCollection', async test => {
 	}
 
 	test.end()
-	if (test._ok) opts.holder.remove()
 })
