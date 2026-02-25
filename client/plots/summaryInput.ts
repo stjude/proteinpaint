@@ -139,7 +139,7 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 			.style('padding', '10px 15px')
 			.text('Submit')
 			.on('click', () => {
-				const { term, term2, term0, term2_surv, term0_surv } = structuredClone(this.config)
+				const { term, term2, term0, term2_surv, term0_surv, filter } = structuredClone(this.config)
 
 				if (!term) throw 'config.term is missing'
 				// if term1 is surival term, launch survival plot
@@ -154,7 +154,8 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 								chartType,
 								term,
 								term2: chartType == 'survival' ? term2_surv : term2,
-								term0: chartType == 'survival' ? term0_surv : term0
+								term0: chartType == 'survival' ? term0_surv : term0,
+								filter
 							}
 						},
 						{
