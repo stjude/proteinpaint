@@ -597,6 +597,54 @@ export function getCnv_categorical() {
 	}
 }
 
+export function getScgeneexpTw(gene = 'KRAS') {
+	return {
+		term: {
+			type: 'singleCellGeneExpression',
+			id: gene,
+			gene,
+			name: gene,
+			sample: {
+				sID: '1_patient'
+			}
+		},
+		q: {
+			mode: 'continuous'
+		}
+	}
+}
+export function getScctTw() {
+	return {
+		term: {
+			type: 'singleCellCellType',
+			id: 'CellType',
+			name: 'CellType',
+			sample: {
+				sID: '1_patient'
+			},
+			plot: 'scRNA',
+			colorBy: 'CellType',
+			values: {
+				T_NK: {
+					key: 'T_NK',
+					value: 'T_NK'
+				},
+				Blast: {
+					key: 'Blast',
+					value: 'Blast'
+				},
+				Monocyte: {
+					key: 'Monocyte',
+					value: 'Monocyte'
+				}
+			},
+			groupsetting: {
+				disabled: false
+			}
+		}
+	}
+}
+
 ////////////// following are gdc-specific! may move to separate file
 
 export function getGdcDiseaseGroupsetting() {
