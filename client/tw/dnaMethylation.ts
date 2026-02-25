@@ -13,6 +13,9 @@ export class DnaMethylationBase {
 	// - does not have to construct, but may require forced type casting in consumer code
 	static async fill(term: RawDnaMethylationTerm, opts: TwOpts) {
 		DnaMethylationBase.validate(term)
+		if (!term.id) {
+			term.id = `${term.chr}:${term.start}-${term.stop}`
+		}
 		if (!term.name) {
 			term.unit = opts.vocabApi.termdbConfig.queries.dnaMethylation?.unit || 'Average Beta Value'
 			const name = `${term.id} ${term.unit}`
@@ -23,7 +26,6 @@ export class DnaMethylationBase {
 	static validate(term: RawDnaMethylationTerm) {
 		if (typeof term !== 'object') throw 'term is not an object'
 		if (term.type != termType) throw `incorrect term.type='${term?.type}', expecting '${termType}'`
-		if (!term.id) throw 'term.id is missing'
 		if (!term.chr || !Number.isInteger(term.start) || !Number.isInteger(term.stop))
 			throw 'incomplete coordinate in term{}'
 	}
@@ -32,7 +34,7 @@ export class DnaMethylationBase {
 	// - will be used instead of term literal object
 	constructor(term: RawDnaMethylationTerm, opts: TwOpts) {
 		DnaMethylationBase.validate(term)
-		this.id = term.id
+		this.id = term.id || `${term.chr}:${term.start}-${term.stop}`
 		this.unit = term.unit || opts.vocabApi.termdbConfig.queries.dnaMethylation?.unit || 'Average Beta Value'
 		this.name = term.name || `${this.id} ${this.unit}`
 	}
