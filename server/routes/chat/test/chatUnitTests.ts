@@ -1,5 +1,5 @@
 // Syntax: cd ~/sjpp && npx tsx proteinpaint/server/routes/chat/test/chatUnitTests.ts
-
+import path from 'path'
 import { readJSONFile } from '../utils.ts'
 import { run_chat_pipeline } from '../../termdb.chat2.ts'
 import serverconfig from '../../../src/serverconfig.js'
@@ -12,45 +12,43 @@ if (llm.provider !== 'SJ' && llm.provider !== 'ollama') {
 	throw "llm.provider must be 'SJ' or 'ollama'"
 }
 
-for (const genome of serverconfig.genomes) {
-	for (const dataset of genome.datasets) {
-		if (dataset.aifiles) {
-			// Check to see if the dataset supports the AI chatbot
-			//console.log("dataset:", dataset.aifiles)
-			const dataset_json = await readJSONFile(dataset.aifiles) // Read AI JSON data file
-			//console.log("dataset_json:", dataset_json)
-			const ds = null // Not needed for testing
-			for (const test_data of dataset_json.TestData) {
-				const test_result = await run_chat_pipeline(
-					test_data.question,
-					llm,
-					serverconfig.aiRoute,
-					dataset_json,
-					testing,
-					serverconfig.tpmasterdir + '/' + dataset_json.db,
-					serverconfig.tpmasterdir + '/' + dataset_json.genedb,
-					ds,
-					dataset.aifiles
+export async function test_chatbot_by_dataset(ds: any) {
+	// Check to see if the dataset supports the AI chatbot
+	//console.log("dataset:", dataset.aifiles)
+	if (!(ds as any)?.queries?.chat.aifiles) throw 'AI dataset JSON file is missing for dataset:' + ds.label
+	const aifiles = (ds as any)?.queries?.chat.aifiles
+	const dataset_json = await readJSONFile(aifiles) // Read AI JSON data file
+	//console.log("dataset_json:", dataset_json)
+	const aiFilesDir = path.dirname(aifiles)
+	for (const test_data of dataset_json.TestData) {
+		const test_result = await run_chat_pipeline(
+			test_data.question,
+			llm,
+			serverconfig.aiRoute,
+			dataset_json,
+			testing, // This is not needed anymore, need to be deprecated
+			serverconfig.tpmasterdir + '/' + dataset_json.db,
+			serverconfig.tpmasterdir + '/' + dataset_json.genedb,
+			ds,
+			aiFilesDir
+		)
+		console.log('test_result:', test_result)
+		if (test_result.action == 'html') {
+			// Resource request
+			if (test_result.response != test_data.answer) {
+				console.log(
+					'html resource request did not match. LLM response :' +
+						test_result.response +
+						' Actual response: ' +
+						test_data.answer
 				)
-				console.log('test_result:', test_result)
-				if (test_result.action == 'html') {
-					// Resource request
-					if (test_result.response != test_data.answer) {
-						console.log(
-							'html resource request did not match. LLM response :' +
-								test_result.response +
-								' Actual response: ' +
-								test_data.answer
-						)
-					}
-				} else if (test_result.action == 'summary') {
-					validate_summary_output(test_result.response, test_data.answer)
-				} else if (test_result.action == 'dge') {
-					if (test_result.response != test_data.answer) {
-						//console.log("DE request did not match. LLM response :" + JSON.stringify(test_result.response) + " Actual response: " + JSON.stringify(test_data.answer))
-						validate_DE_output(test_result.response, test_data.answer)
-					}
-				}
+			}
+		} else if (test_result.action == 'summary') {
+			validate_summary_output(test_result.response, test_data.answer)
+		} else if (test_result.action == 'dge') {
+			if (test_result.response != test_data.answer) {
+				//console.log("DE request did not match. LLM response :" + JSON.stringify(test_result.response) + " Actual response: " + JSON.stringify(test_data.answer))
+				validate_DE_output(test_result.response, test_data.answer)
 			}
 		}
 	}
