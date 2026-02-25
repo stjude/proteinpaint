@@ -113,6 +113,7 @@ export class Scatter extends PlotBase implements RxComponent {
 			return
 		}
 
+		this.vm?.dispose()
 		if (this.model.is3D) this.vm = new ScatterViewModel3D(this)
 		else if (this.model.is2DLarge) this.vm = new ScatterViewModel2DLarge(this)
 		else this.vm = new ScatterViewModel(this)
