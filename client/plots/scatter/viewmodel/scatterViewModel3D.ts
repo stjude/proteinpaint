@@ -11,6 +11,10 @@ import type { Scatter } from '../scatter.js'
 export class ScatterViewModel3D extends ScatterViewModel {
 	scatter!: Scatter
 	canvas: any
+	private rafId: number | null = null
+	private renderer: THREE.WebGLRenderer | null = null
+	private wheelHandler: ((event: WheelEvent) => void) | null = null
+	private canvasWheelHandler: ((event: any) => void) | null = null
 
 	constructor(scatter: Scatter) {
 		super(scatter)
@@ -76,14 +80,11 @@ export class ScatterViewModel3D extends ScatterViewModel {
 				this.addLabels(scene)
 			}
 
-			document.addEventListener(
-				'wheel',
-				event => {
-					if (event.ctrlKey) event.preventDefault()
-					controls.enableZoom = event.ctrlKey
-				},
-				{ passive: false }
-			)
+			this.wheelHandler = (event: WheelEvent) => {
+				if (event.ctrlKey) event.preventDefault()
+				controls.enableZoom = event.ctrlKey
+			}
+			document.addEventListener('wheel', this.wheelHandler, { passive: false })
 
 			const geometry = new THREE.BufferGeometry()
 			geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
@@ -92,20 +93,18 @@ export class ScatterViewModel3D extends ScatterViewModel {
 			scene.add(particles)
 		}
 
-		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: this.canvas, preserveDrawingBuffer: true })
-		renderer.setSize(this.scatter.settings.svgw, this.scatter.settings.svgh)
-		renderer.setPixelRatio(window.devicePixelRatio)
-		renderer.outputColorSpace = THREE.LinearSRGBColorSpace
+		this.renderer = new THREE.WebGLRenderer({ antialias: true, canvas: this.canvas, preserveDrawingBuffer: true })
+		this.renderer.setSize(this.scatter.settings.svgw, this.scatter.settings.svgh)
+		this.renderer.setPixelRatio(window.devicePixelRatio)
+		this.renderer.outputColorSpace = THREE.LinearSRGBColorSpace
 
 		//document.addEventListener( 'pointermove', onPointerMove );
 
-		function animate() {
-			requestAnimationFrame(animate)
-			// required if controls.enableDamping or controls.autoRotate are set to true
-
-			renderer.render(scene, camera)
+		const tick = () => {
+			this.rafId = requestAnimationFrame(tick)
+			this.renderer!.render(scene, camera)
 		}
-		animate()
+		tick()
 		this.addLegendSVG(chart)
 	}
 
@@ -132,11 +131,12 @@ export class ScatterViewModel3D extends ScatterViewModel {
 		const DragControls = await import('three/examples/jsm/controls/DragControls.js')
 		new DragControls.DragControls([particles], camera, this.canvas)
 		scene.add(particles)
-		this.canvas.addEventListener('mousewheel', event => {
+		this.canvasWheelHandler = (event: any) => {
 			if (!event.ctrlKey) return
 			event.preventDefault()
 			particles.position.z -= event.deltaY / 500
-		})
+		}
+		this.canvas.addEventListener('mousewheel', this.canvasWheelHandler)
 
 		const data = chart.data.samples.map(s => ({ x: xAxisScale(s.x), y: yAxisScale(s.y), z: zAxisScale(s.z) }))
 		const width = this.scatter.settings.svgw
@@ -164,6 +164,25 @@ export class ScatterViewModel3D extends ScatterViewModel {
 			chart.plane = plane
 			particles.add(plane)
 		})
+	}
+
+	dispose() {
+		if (this.rafId !== null) {
+			cancelAnimationFrame(this.rafId)
+			this.rafId = null
+		}
+		if (this.wheelHandler) {
+			document.removeEventListener('wheel', this.wheelHandler)
+			this.wheelHandler = null
+		}
+		if (this.canvas && this.canvasWheelHandler) {
+			this.canvas.removeEventListener('mousewheel', this.canvasWheelHandler)
+			this.canvasWheelHandler = null
+		}
+		if (this.renderer) {
+			this.renderer.dispose()
+			this.renderer = null
+		}
 	}
 
 	async addLabels(scene) {

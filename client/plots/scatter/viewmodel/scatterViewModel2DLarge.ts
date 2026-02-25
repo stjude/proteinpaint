@@ -3,6 +3,10 @@ import * as THREE from 'three'
 import { ScatterViewModel } from './scatterViewModel.js'
 
 export class ScatterViewModel2DLarge extends ScatterViewModel {
+	private rafId: number | null = null
+	private renderer: THREE.WebGLRenderer | null = null
+	private mousewheelHandler: ((event: any) => void) | null = null
+
 	constructor(scatter) {
 		super(scatter)
 	}
@@ -46,25 +50,41 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 		const particles = new THREE.Points(geometry, material)
 
 		scene.add(particles)
-		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: this.canvas, preserveDrawingBuffer: true })
-		renderer.setSize(this.scatter.settings.svgw, this.scatter.settings.svgh)
-		renderer.setPixelRatio(window.devicePixelRatio)
+		this.renderer = new THREE.WebGLRenderer({ antialias: true, canvas: this.canvas, preserveDrawingBuffer: true })
+		this.renderer.setSize(this.scatter.settings.svgw, this.scatter.settings.svgh)
+		this.renderer.setPixelRatio(window.devicePixelRatio)
 
-		new DragControls.DragControls([particles], camera, renderer.domElement)
+		new DragControls.DragControls([particles], camera, this.renderer.domElement)
 
-		document.addEventListener('mousewheel', (event: any) => {
+		this.mousewheelHandler = (event: any) => {
 			if (event.ctrlKey) camera.position.z += event.deltaY / 500
-		})
+		}
+		document.addEventListener('mousewheel', this.mousewheelHandler)
 
 		this.addLegendSVG(chart)
-		this.animate(camera, scene, renderer)
+		this.animate(camera, scene, this.renderer)
 	}
 
 	animate(camera, scene, renderer) {
-		requestAnimationFrame(() => this.animate(camera, scene, renderer))
+		this.rafId = requestAnimationFrame(() => this.animate(camera, scene, renderer))
 		camera.zoom = this.scatter.vm.scatterZoom.zoom
 		camera.updateProjectionMatrix()
 		renderer.render(scene, camera)
+	}
+
+	dispose() {
+		if (this.rafId !== null) {
+			cancelAnimationFrame(this.rafId)
+			this.rafId = null
+		}
+		if (this.mousewheelHandler) {
+			document.removeEventListener('mousewheel', this.mousewheelHandler)
+			this.mousewheelHandler = null
+		}
+		if (this.renderer) {
+			this.renderer.dispose()
+			this.renderer = null
+		}
 	}
 
 	getVertices(chart) {
