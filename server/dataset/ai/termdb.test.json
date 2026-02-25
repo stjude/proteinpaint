@@ -439,7 +439,25 @@
               "stop": 15
             }
           ]
-        }
+        },
+	{
+          "question": "compare age between wilms tumor and hodgkin lymphoma",
+          "answer": {
+              "term": "agedx",
+	      "term2":"diaggrp",
+              "simpleFilter": [
+		              {
+                "term": "diaggrp",
+                "category": "Wilms tumor"
+              },
+              {
+                "term": "diaggrp",
+                "category": "Hodgkin lymphoma",
+                "join": "or"
+              }
+          ]
+          }
+        }  
       ]
     },
     {
