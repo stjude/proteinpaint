@@ -37,21 +37,49 @@ export async function test_chatbot_by_dataset(ds: any) {
 			// Resource request
 			if (test_result.response != test_data.answer) {
 				console.log(
-					'html resource request did not match. LLM response :' +
+					'html resource request did not match for prompt' +
+						test_data.question +
+						'. LLM response :' +
 						test_result.response +
 						' Actual response: ' +
 						test_data.answer
 				)
 			}
 		} else if (test_result.action == 'summary') {
-			validate_summary_output(test_result.response, test_data.answer)
+			const validated_llm_summary_output = validate_summary_output(test_result.response, test_data.answer)
+			if (!validated_llm_summary_output)
+				console.log(
+					'Summary output did not match for prompt' +
+						test_data.question +
+						'. LLM response :' +
+						test_result.response +
+						' Actual response: ' +
+						test_data.answer
+				)
 		} else if (test_result.action == 'dge') {
 			if (test_result.response != test_data.answer) {
-				//console.log("DE request did not match. LLM response :" + JSON.stringify(test_result.response) + " Actual response: " + JSON.stringify(test_data.answer))
-				validate_DE_output(test_result.response, test_data.answer)
+				const validated_llm_DE_output = validate_DE_output(test_result.response, test_data.answer)
+				if (!validated_llm_DE_output)
+					console.log(
+						'DE output did not match for prompt' +
+							test_data.question +
+							'. LLM response :' +
+							test_result.response +
+							' Actual response: ' +
+							test_data.answer
+					)
 			}
 		} else if (test_result.action == 'matrix') {
-			validate_matrix_output(test_result.response, test_data.answer)
+			const validated_llm_matrix_output = validate_matrix_output(test_result.response, test_data.answer)
+			if (!validated_llm_matrix_output)
+				console.log(
+					'Matrix output did not match for prompt' +
+						test_data.question +
+						'. LLM response :' +
+						test_result.response +
+						' Actual response: ' +
+						test_data.answer
+				)
 		}
 	}
 }
