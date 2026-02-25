@@ -242,7 +242,14 @@ function addRangeTableNoDensity(self, tvs) {
 		rangeLabelTd.text('MAF Range')
 		const depthTr = table.append('tr')
 		depthTr.append('td').text('Minimum Allelic Depth')
-		brush.depthInput = depthTr.append('td').append('input').attr('type', 'number').style('width', '250px')
+		brush.depthInput = depthTr
+			.append('td')
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', 1)
+			.attr('step', 1)
+			.style('width', '250px')
+			.property('value', tvs.minAllelicDepth)
 		const applyTr = table.append('tr')
 		brush.apply_btn = applyTr
 			.append('td')
@@ -274,8 +281,11 @@ function addRangeTableNoDensity(self, tvs) {
 		const new_tvs = { term: tvs.term, ranges: [brush.rangeInput.getRange()] }
 		if (brush.depthInput) {
 			const minAllelicDepth = Number(brush.depthInput.property('value'))
-			if (!Number.isFinite(minAllelicDepth)) throw new Error('minAllelicDepth is non-numeric')
-			new_tvs.minAllelicDepth = minAllelicDepth
+			if (!Number.isFinite(minAllelicDepth)) {
+				window.alert('Minimum allelic depth must be a non-zero numeric value.')
+				return
+			}
+			new_tvs.minAllelicDepth = Math.max(minAllelicDepth, 1)
 		}
 		self.dom.tip.hide()
 		self.opts.callback(new_tvs)

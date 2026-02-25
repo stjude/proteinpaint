@@ -3265,7 +3265,7 @@ export function mayFilterByMaf(mafFilter, m) {
 		if (item.type != 'tvs') throw 'unexpected item.type' // not supporting nested tvslst
 		const tvs = item.tvs
 		const alleleCnts = { ref: 0, alt: 0 } // allele counts for maf filter term
-		const minAllelicDepth = tvs.minAllelicDepth || 1
+		const minAllelicDepth = Number.isFinite(tvs.minAllelicDepth) && tvs.minAllelicDepth != 0 ? tvs.minAllelicDepth : 1
 		if (tvs.term.child_ids?.length) {
 			// maf filter term has child terms
 			// sum allele counts across child terms
