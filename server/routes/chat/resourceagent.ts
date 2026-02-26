@@ -11,15 +11,15 @@ export async function extractResourceResponse(
 	prompt: string,
 	llm: LlmConfig,
 	dataset_json: any
-): Promise<{ type: 'html'; html: string }> {
+): Promise<{ type: 'text'; text: string } | { type: 'html'; html: string }> {
 	const classification_ds = dataset_json.charts?.find((chart: any) => chart.type == 'Classification')
 	if (!classification_ds) {
-		return { type: 'html', html: 'No resource information is available for this dataset.' }
+		return { type: 'text', text: 'No resource information is available for this dataset.' }
 	}
 
 	const resources: { label: string; html: string }[] = dataset_json.resources ?? []
 	if (resources.length === 0) {
-		return { type: 'html', html: 'No resources are configured for this dataset.' }
+		return { type: 'text', text: 'No resources are configured for this dataset.' }
 	}
 
 	const training_data =
@@ -54,7 +54,7 @@ export async function extractResourceResponse(
 	}
 
 	return {
-		type: 'html',
-		html: 'Your question does not appear to be related to this dataset. Please ask a question about the available data or visualizations.'
+		type: 'text',
+		text: 'Your question does not appear to be related to this dataset. Please ask a question about the available data or visualizations.'
 	}
 }

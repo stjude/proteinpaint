@@ -109,8 +109,15 @@ export async function run_chat_pipeline(
 	)
 	let ai_output_json: any
 	mayLog('Time taken for classification:', formatElapsedTime(Date.now() - time1))
-	if (class_response.type == 'html') {
-		ai_output_json = class_response
+	if (class_response.type == 'none') {
+		ai_output_json = {
+			type: 'text',
+			text: 'Your query does not appear to be related to the available data visualizations. Please try rephrasing your question.'
+		}
+	} else if (class_response.type == 'resource') {
+		const time1 = new Date().valueOf()
+		ai_output_json = await extractResourceResponse(user_prompt, llm, dataset_json)
+		mayLog('Time taken for resource agent:', formatElapsedTime(Date.now() - time1))
 	} else if (class_response.type == 'plot') {
 		const classResult = class_response.plot
 		mayLog('classResult:', classResult)
@@ -138,12 +145,8 @@ export async function run_chat_pipeline(
 				testing
 			)
 			mayLog('Time taken for DE agent:', formatElapsedTime(Date.now() - time1))
-		} else if (classResult == 'resource') {
-			const time1 = new Date().valueOf()
-			ai_output_json = await extractResourceResponse(user_prompt, llm, dataset_json)
-			mayLog('Time taken for resource agent:', formatElapsedTime(Date.now() - time1))
 		} else if (classResult == 'survival') {
-			ai_output_json = { type: 'html', html: 'survival agent has not been implemented yet' }
+			ai_output_json = { type: 'text', text: 'survival agent has not been implemented yet' }
 		} else if (classResult == 'matrix') {
 			const time1 = new Date().valueOf()
 			ai_output_json = await extract_matrix_search_terms_from_query(
@@ -170,14 +173,11 @@ export async function run_chat_pipeline(
 			mayLog('Time taken for sampleScatter agent:', formatElapsedTime(Date.now() - time1))
 		} else {
 			// Will define all other agents later as desired
-			ai_output_json = { type: 'html', html: 'Unknown classification value' }
+			ai_output_json = { type: 'text', text: 'Unknown classification value' }
 		}
 	} else {
 		// Should not happen
-		ai_output_json = {
-			type: 'html',
-			html: 'Unknown classification type'
-		}
+		ai_output_json = { type: 'text', text: 'Unknown classification type' }
 	}
 	return ai_output_json
 }

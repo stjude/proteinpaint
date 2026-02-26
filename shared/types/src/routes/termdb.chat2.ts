@@ -11,9 +11,14 @@ export type ChatRequest = {
 	__protected__?: any
 }
 
-type HtmlResponse = {
+export type TextResponse = {
+	type: 'text'
+	/** Plain text message to display in the chat */
+	text: string
+}
+export type HtmlResponse = {
 	type: 'html'
-	/** for display only */
+	/** Pre-approved HTML from the dataset JSON resources array */
 	html: string
 }
 export type PlotResponse = {
@@ -35,7 +40,7 @@ export type LlmConfig = {
 	verbose?: boolean
 }
 
-export type ChatResponse = HtmlResponse | PlotResponse
+export type ChatResponse = TextResponse | HtmlResponse | PlotResponse
 
 export const ChatPayload: RoutePayload = {
 	request: {
@@ -101,22 +106,26 @@ export type DbValue = {
 }
 
 export type ClassificationType =
-	| html_type
-	| plot_type /** Variable containing the type of action the UI needs to take */
-
-export type html_type = {
-	/** When type == html, display the string in the html field */
-	type: 'html'
-	/** The message to be dislayed on the chatbot UI */
-	html: string
-}
+	| plot_type
+	| resource_type
+	| none_type /** Variable containing the type of action the UI needs to take */
 
 export type plot_type = {
 	/** When type == plot, show the corresponding plot in the plot field */
 	type: 'plot'
 	/** The type of plot to be displayed on the UI.
 	 *  Standard categories are listed; datasets may define additional custom categories. */
-	plot: 'summary' | 'dge' | 'none' | 'survival' | 'matrix' | 'sampleScatter' | 'resource' | (string & {})
+	plot: 'summary' | 'dge' | 'survival' | 'matrix' | 'sampleScatter'
+}
+
+export type resource_type = {
+	/** When type == resource, invoke the resource agent to return a matching resource link */
+	type: 'resource'
+}
+
+export type none_type = {
+	/** When type == none, the query did not match any known category */
+	type: 'none'
 }
 
 export type DEType = {
