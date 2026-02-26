@@ -9,7 +9,6 @@ import https from 'https'
 import { spawnSync } from 'child_process'
 import * as augen from '@sjcrh/augen'
 import serverconfig from './serverconfig.js'
-import { test_chatbot_by_dataset } from '../routes/chat/test/chatUnitTests.ts'
 import { genomes, initGenomesDs } from './initGenomesDs.js'
 import { setAppMiddlewares } from './app.middlewares.js'
 import * as oldApp from './app.unorg.js'
@@ -48,9 +47,9 @@ export async function launch() {
 		const routeCallbacks = await setOptionalRoutes(app)
 		console.log('may set auth routes ...')
 		/*
- !!! the order of middlewares is critical, must be set before data routes !!!
-  - so that a request will be inspected by auth before allowing 
-    to proceed to any *protected* route handler
+!!! the order of middlewares is critical, must be set before data routes !!!
+- so that a request will be inspected by auth before allowing 
+to proceed to any *protected* route handler
 */
 		await authApi.maySetAuthRoutes(app, genomes, basepath, serverconfig)
 
@@ -64,10 +63,10 @@ export async function launch() {
 			basepath: serverconfig.basepath || '',
 			apiJson: path.join(__dirname, '../../public/docs/server-api.json')
 			/*
-          As an alternative to manually adding/removing imports in shared/types/src/routes, 
-          you may temporarily uncomment below to generate runtime route checker code, 
-  should only uncomment when a file has been added or deleted in 
-  shared/types/src/routes and not when modified.
+As an alternative to manually adding/removing imports in shared/types/src/routes, 
+you may temporarily uncomment below to generate runtime route checker code, 
+should only uncomment when a file has been added or deleted in 
+shared/types/src/routes and not when modified.
 */
 			// , types: serverconfig.debugmode && {
 			// 	importDir: '../routes',
@@ -152,16 +151,6 @@ async function handle_argv(argv) {
 	if (argv.includes('validate'))
 		// exit early if only doing a validation of configuration + data + startup code
 		return { message: `You may now run the server.`, code: 0 }
-	if (argv.includes('testchat')) {
-		//console.log("genomes:", Object.values(genomes))
-		for (const genome of Object.values(genomes)) {
-			for (const ds of Object.values(genome.datasets)) {
-				if ((ds as any)?.queries?.chat) {
-					test_chatbot_by_dataset(ds)
-				}
-			}
-		}
-	}
 
 	if (argv.includes('phewas-precompute')) {
 		// argv[3] is genome, argv[4] is dslabel
@@ -236,7 +225,7 @@ async function setOptionalRoutes(app) {
 	if (!serverconfig.routeSetters) return
 	const routeCallbacks: OptionalRouteCallbacks = {}
 	for (const fname of serverconfig.routeSetters) {
-		if (fname.endsWith('.js')) {
+		if (fname.endsWith('.js') || fname.endsWith('.ts')) {
 			const _ = await import(fname)
 			const d = _.default(app, basepath)
 			if (d?.setCloseServer && fname.includes('coverage')) {
