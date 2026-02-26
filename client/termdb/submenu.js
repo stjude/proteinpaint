@@ -66,6 +66,7 @@ function setRenderers(self) {
 			vocabApi: self.app.vocabApi,
 			debug: self.app.debug,
 			getCategoriesArguments: self.app.opts.getCategoriesArguments,
+			isMafFilter: self.app.opts.isMafFilter,
 			callback: self.app.opts.tree.click_term2select_tvs
 		})
 	}

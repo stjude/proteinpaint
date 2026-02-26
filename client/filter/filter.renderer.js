@@ -293,6 +293,7 @@ export function setRenderers(self) {
 				holder,
 				debug: self.opts.debug,
 				getCategoriesArguments: self.opts.getCategoriesArguments,
+				isMafFilter: self.opts.isMafFilter,
 				callback: tvs => {
 					const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
 					const filterCopy = findItem(filterUiRoot, filter.$id)
