@@ -76,6 +76,7 @@ export class ScatterZoom {
 			const new_xScale = transform.rescaleX(chart.xAxisScale)
 			const new_yScale = transform.rescaleY(chart.yAxisScale)
 			chart.serie.attr('transform', transform)
+			chart.regressionG?.attr('transform', transform)
 			chart.xAxis.call(chart.axisBottom.scale(new_xScale))
 			chart.yAxis.call(chart.axisLeft.scale(new_yScale))
 			if (this.scatter.config.lassoOn)
