@@ -22,9 +22,10 @@ Tests:
 	filterByTvsLst: multiple tvs, AND join
 	filterByTvsLst: in=false
 	filterByTvsLst: nested tvslst
-	mayFilterByMaf: start bounded, stop unbounded
-	mayFilterByMaf: start and stop bounded
-	mayFilterByMaf: start unbounded, stop bounded
+	mayFilterByMaf: basic mafFilter
+	mayFilterByMaf: mafFilter with child ids
+	mayFilterByMaf: basic mafFilter, min allelic depth
+	mayFilterByMaf: mafFilter with child ids, min allelic depth
 */
 
 test('\n', t => {
@@ -1236,8 +1237,8 @@ test('filterByTvsLst: nested tvslst', t => {
 	t.end()
 })
 
-test('mayFilterByMaf: start bounded, stop unbounded', t => {
-	t.plan(16)
+test('mayFilterByMaf: basic mafFilter', t => {
+	//t.plan(16)
 	const filter = {
 		type: 'tvs',
 		tvs: {
@@ -1253,6 +1254,7 @@ test('mayFilterByMaf: start bounded, stop unbounded', t => {
 		}
 	}
 
+	// start bounded, stop unbounded
 	{
 		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,30' }]
 		const [pass, tested] = filterByItem(filter, mlst)
@@ -1282,20 +1284,6 @@ test('mayFilterByMaf: start bounded, stop unbounded', t => {
 	}
 
 	{
-		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,5', tumor_DNA_WES: '70,30' }]
-		const [pass, tested] = filterByItem(filter, mlst)
-		t.equal(pass, true, 'Sample passes filter')
-		t.equal(tested, true, 'Sample is tested')
-	}
-
-	{
-		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,5', tumor_DNA_WES: '70,2' }]
-		const [pass, tested] = filterByItem(filter, mlst)
-		t.equal(pass, false, 'Sample does not pass filter')
-		t.equal(tested, true, 'Sample is tested')
-	}
-
-	{
 		const mlst = [{ dt: 1, class: 'M' }]
 		const [pass, tested] = filterByItem(filter, mlst)
 		t.equal(pass, false, 'Sample does not pass filter')
@@ -1309,40 +1297,19 @@ test('mayFilterByMaf: start bounded, stop unbounded', t => {
 		t.equal(tested, true, 'Sample is tested')
 	}
 
-	t.end()
-})
-
-test('mayFilterByMaf: start and stop bounded', t => {
-	t.plan(12)
+	// start and stop bounded
 	const mafFilter2 = structuredClone(mafFilter)
-	for (const item of mafFilter2.lst) {
-		const tvs = item.tvs
-		tvs.ranges = [
-			{
-				start: 0.1,
-				stop: 0.6,
-				startinclusive: true,
-				stopinclusive: true,
-				startunbounded: false,
-				stopunbounded: false
-			}
-		]
-	}
-
-	const filter = {
-		type: 'tvs',
-		tvs: {
-			term: { dt: 1, type: 'dtsnvindel' },
-			values: [
-				{ key: 'M', label: 'MISSENSE', value: 'M' },
-				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
-				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
-			],
-			genotype: 'variant',
-			mcount: 'any',
-			mafFilter: mafFilter2
+	mafFilter2.lst[0].tvs.ranges = [
+		{
+			start: 0.1,
+			stop: 0.6,
+			startinclusive: true,
+			stopinclusive: true,
+			startunbounded: false,
+			stopunbounded: false
 		}
-	}
+	]
+	filter.tvs.mafFilter = mafFilter2
 
 	{
 		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,30' }]
@@ -1365,52 +1332,10 @@ test('mayFilterByMaf: start and stop bounded', t => {
 		t.equal(tested, true, 'Sample is tested')
 	}
 
-	{
-		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '30,70', tumor_DNA_WES: '70,30' }]
-		const [pass, tested] = filterByItem(filter, mlst)
-		t.equal(pass, true, 'Sample passes filter')
-		t.equal(tested, true, 'Sample is tested')
-	}
-
-	{
-		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,30', tumor_DNA_WES: '30,70' }]
-		const [pass, tested] = filterByItem(filter, mlst)
-		t.equal(pass, true, 'Sample passes filter')
-		t.equal(tested, true, 'Sample is tested')
-	}
-
-	{
-		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '30,70', tumor_DNA_WES: '30,80' }]
-		const [pass, tested] = filterByItem(filter, mlst)
-		t.equal(pass, false, 'Sample does not pass filter')
-		t.equal(tested, true, 'Sample is tested')
-	}
-
-	t.end()
-})
-
-test('mayFilterByMaf: start unbounded, stop bounded', t => {
-	t.plan(10)
-	const mafFilter2 = structuredClone(mafFilter)
-	for (const item of mafFilter2.lst) {
-		const tvs = item.tvs
-		tvs.ranges = [{ stop: 0.6, stopinclusive: true, startunbounded: true }]
-	}
-
-	const filter = {
-		type: 'tvs',
-		tvs: {
-			term: { dt: 1, type: 'dtsnvindel' },
-			values: [
-				{ key: 'M', label: 'MISSENSE', value: 'M' },
-				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
-				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
-			],
-			genotype: 'variant',
-			mcount: 'any',
-			mafFilter: mafFilter2
-		}
-	}
+	// start unbounded, stop bounded
+	const mafFilter3 = structuredClone(mafFilter)
+	mafFilter3.lst[0].tvs.ranges = [{ stop: 0.6, stopinclusive: true, startunbounded: true }]
+	filter.tvs.mafFilter = mafFilter3
 
 	{
 		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,30' }]
@@ -1440,10 +1365,327 @@ test('mayFilterByMaf: start unbounded, stop bounded', t => {
 		t.equal(tested, true, 'Sample is tested')
 	}
 
+	t.end()
+})
+
+test('mayFilterByMaf: mafFilter with child ids', t => {
+	//t.plan(16)
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [
+				{ key: 'M', label: 'MISSENSE', value: 'M' },
+				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
+				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
+			],
+			genotype: 'variant',
+			mcount: 'any',
+			mafFilter: mafFilter_childIds
+		}
+	}
+
 	{
-		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '30,70', tumor_DNA_WES: '70,5' }]
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,30' }]
 		const [pass, tested] = filterByItem(filter, mlst)
 		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WES: '70,30' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,5' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,30', tumor_DNA_WES: '70,30' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,10' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,10', tumor_DNA_WES: '70,2' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,2', tumor_DNA_WES: '70,10' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	t.end()
+})
+
+test('mayFilterByMaf: basic mafFilter, min allelic depth', t => {
+	//t.plan(16)
+
+	// default allelic depth
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [
+				{ key: 'M', label: 'MISSENSE', value: 'M' },
+				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
+				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
+			],
+			genotype: 'variant',
+			mcount: 'any',
+			mafFilter
+		}
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,30' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '1,1' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '0,1' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '1,0' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '0,0' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	// min allelic depth = 100
+	const mafFilter_100 = structuredClone(mafFilter)
+	mafFilter_100.lst[0].tvs.minAllelicDepth = 100
+	const filter_100 = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [
+				{ key: 'M', label: 'MISSENSE', value: 'M' },
+				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
+				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
+			],
+			genotype: 'variant',
+			mcount: 'any',
+			mafFilter: mafFilter_100
+		}
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,30' }]
+		const [pass, tested] = filterByItem(filter_100, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,40' }]
+		const [pass, tested] = filterByItem(filter_100, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,20' }]
+		const [pass, tested] = filterByItem(filter_100, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,10' }]
+		const [pass, tested] = filterByItem(filter_100, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '140,20' }]
+		const [pass, tested] = filterByItem(filter_100, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	t.end()
+})
+
+test('mayFilterByMaf: mafFilter with child ids, min allelic depth', t => {
+	//t.plan(16)
+
+	// default allelic depth
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [
+				{ key: 'M', label: 'MISSENSE', value: 'M' },
+				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
+				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
+			],
+			genotype: 'variant',
+			mcount: 'any',
+			mafFilter: mafFilter_childIds
+		}
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,30', tumor_DNA_WES: '70,30' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '1,1', tumor_DNA_WES: '1,1' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '1,1', tumor_DNA_WES: '1,0' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '1,1', tumor_DNA_WES: '0,0' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '0,1', tumor_DNA_WES: '0,0' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '1,0', tumor_DNA_WES: '0,0' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '0,0', tumor_DNA_WES: '1,0' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '0,0', tumor_DNA_WES: '0,0' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	// min allelic depth = 100
+	const mafFilter_100 = structuredClone(mafFilter_childIds)
+	mafFilter_100.lst[0].tvs.minAllelicDepth = 100
+	const filter_100 = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [
+				{ key: 'M', label: 'MISSENSE', value: 'M' },
+				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
+				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
+			],
+			genotype: 'variant',
+			mcount: 'any',
+			mafFilter: mafFilter_100
+		}
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,30', tumor_DNA_WES: '70,30' }]
+		const [pass, tested] = filterByItem(filter_100, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '50,20', tumor_DNA_WES: '30,5' }]
+		const [pass, tested] = filterByItem(filter_100, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '50,20', tumor_DNA_WES: '20,5' }]
+		const [pass, tested] = filterByItem(filter_100, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '50,20', tumor_DNA_WES: '10,5' }]
+		const [pass, tested] = filterByItem(filter_100, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '90,15', tumor_DNA_WES: '0,0' }]
+		const [pass, tested] = filterByItem(filter_100, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M', tumor_DNA_WGS: '90,15', tumor_DNA_WES: '90,5' }]
+		const [pass, tested] = filterByItem(filter_100, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
 		t.equal(tested, true, 'Sample is tested')
 	}
 
@@ -1452,37 +1694,64 @@ test('mayFilterByMaf: start unbounded, stop bounded', t => {
 
 const mafFilter = {
 	type: 'tvslst',
-	join: 'or',
+	join: '',
 	in: true,
 	lst: [
 		{
 			type: 'tvs',
 			tvs: {
-				ranges: [{ start: 0.1, startinclusive: true, stopunbounded: true }],
 				term: {
 					id: 'tumor_DNA_WGS',
-					name: 'Tumor WGS',
+					name: 'Tumor DNA WGS',
 					parent_id: null,
 					isleaf: true,
 					type: 'float',
+					default: true,
 					min: 0,
 					max: 1
-				}
+				},
+				ranges: [
+					{
+						start: 0.1,
+						startinclusive: false,
+						startunbounded: false,
+						stopunbounded: true
+					}
+				],
+				minAllelicDepth: 1
 			}
-		},
+		}
+	]
+}
+
+const mafFilter_childIds = {
+	type: 'tvslst',
+	join: '',
+	in: true,
+	lst: [
 		{
 			type: 'tvs',
 			tvs: {
-				ranges: [{ start: 0.1, startinclusive: true, stopunbounded: true }],
 				term: {
-					id: 'tumor_DNA_WES',
-					name: 'Tumor WES',
+					id: 'tumor_DNA',
+					name: 'Tumor DNA',
 					parent_id: null,
+					child_ids: ['tumor_DNA_WGS', 'tumor_DNA_WES'],
 					isleaf: true,
 					type: 'float',
+					default: true,
 					min: 0,
 					max: 1
-				}
+				},
+				ranges: [
+					{
+						start: 0.1,
+						startinclusive: false,
+						startunbounded: false,
+						stopunbounded: true
+					}
+				],
+				minAllelicDepth: 1
 			}
 		}
 	]
