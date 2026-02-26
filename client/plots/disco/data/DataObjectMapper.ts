@@ -18,8 +18,6 @@ export default class DataObjectMapper {
 			chr: dObject.chr,
 			ref: dObject.ref,
 			alt: dObject.alt,
-			refCount: dObject.refCount,
-			altCount: dObject.altCount,
 			vafs: dObject.vafs,
 			position: dObject.pos ? dObject.pos : dObject.position,
 			poschr: dObject.poschr,

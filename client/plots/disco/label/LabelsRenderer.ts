@@ -121,8 +121,8 @@ export default class LabelsRenderer implements IRenderer {
 						.style('color', 'black')
 						.style('font-size', '0.8em')
 						.text(` ${mutation.chr}:${mutation.position}`)
-					if (hasAnyValidVafEntry(mutation.vafs, mutation.refCount, mutation.altCount)) {
-						appendVafBars(td2, mutation.vafs, mutation.refCount, mutation.altCount)
+					if (hasAnyValidVafEntry(mutation.vafs)) {
+						appendVafBars(td2, mutation.vafs)
 					}
 				}
 			})

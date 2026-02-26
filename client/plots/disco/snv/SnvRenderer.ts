@@ -74,10 +74,10 @@ export default class SnvRenderer implements IRenderer {
 					td2.text(snv.occurrence)
 				}
 
-				if (hasAnyValidVafEntry(arc.vafs, arc.refCount, arc.altCount)) {
+				if (hasAnyValidVafEntry(arc.vafs)) {
 					const [td1, td2] = table.addRow()
 					td1.text('Read count')
-					appendVafBars(td2, arc.vafs, arc.refCount, arc.altCount)
+					appendVafBars(td2, arc.vafs)
 				}
 
 				menu.show(mouseEvent.x, mouseEvent.y)

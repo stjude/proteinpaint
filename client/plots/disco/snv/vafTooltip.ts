@@ -1,7 +1,7 @@
 import { fillbar } from '#dom'
 import type Data from '#plots/disco/data/Data.ts'
 
-export type ReadCountValue = Data['refCount'] | Data['altCount']
+export type ReadCountValue = string | number | undefined
 export type VafEntry = {
 	label: string
 	refCount: ReadCountValue
@@ -23,33 +23,22 @@ export function hasValidReadCounts(refCountValue: ReadCountValue, altCountValue:
 	return refCount != null && altCount != null && refCount >= 0 && altCount >= 0 && refCount + altCount > 0
 }
 
-export function getVafEntries(
-	vafs: Data['vafs'],
-	fallbackRefCount?: ReadCountValue,
-	fallbackAltCount?: ReadCountValue
-): VafEntry[] {
+export function getVafEntries(vafs: Data['vafs']): VafEntry[] {
 	const entries: VafEntry[] = []
 	if (Array.isArray(vafs)) {
 		for (const vaf of vafs) {
 			const label = vaf?.id || vaf?.name
-			if (!label) continue
-			entries.push({ label, refCount: vaf.refCount, altCount: vaf.altCount })
+			const refCount = vaf?.refCount
+			const altCount = vaf?.altCount
+			if (!label || refCount == null || altCount == null) continue
+			entries.push({ label, refCount, altCount })
 		}
-	}
-	if (!entries.length && fallbackRefCount !== undefined && fallbackAltCount !== undefined) {
-		entries.push({ label: 'VAF', refCount: fallbackRefCount, altCount: fallbackAltCount })
 	}
 	return entries
 }
 
-export function hasAnyValidVafEntry(
-	vafs: Data['vafs'],
-	fallbackRefCount?: ReadCountValue,
-	fallbackAltCount?: ReadCountValue
-): boolean {
-	return getVafEntries(vafs, fallbackRefCount, fallbackAltCount).some(vaf =>
-		hasValidReadCounts(vaf.refCount, vaf.altCount)
-	)
+export function hasAnyValidVafEntry(vafs: Data['vafs']): boolean {
+	return getVafEntries(vafs).some(vaf => hasValidReadCounts(vaf.refCount, vaf.altCount))
 }
 
 export function appendVafBar(td2: any, refCountValue: ReadCountValue, altCountValue: ReadCountValue, label = 'VAF') {
@@ -71,13 +60,8 @@ export function appendVafBar(td2: any, refCountValue: ReadCountValue, altCountVa
 	fillbar(div, { f: fraction, v1: altCount, v2: totalCount })
 }
 
-export function appendVafBars(
-	td2: any,
-	vafs: Data['vafs'],
-	fallbackRefCount?: ReadCountValue,
-	fallbackAltCount?: ReadCountValue
-) {
-	for (const vaf of getVafEntries(vafs, fallbackRefCount, fallbackAltCount)) {
+export function appendVafBars(td2: any, vafs: Data['vafs']) {
+	for (const vaf of getVafEntries(vafs)) {
 		if (!hasValidReadCounts(vaf.refCount, vaf.altCount)) continue
 		appendVafBar(td2, vaf.refCount, vaf.altCount, vaf.label)
 	}

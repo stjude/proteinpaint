@@ -6,7 +6,5 @@ export default interface MutationTooltip {
 	readonly dataClass: any
 	readonly chr: string
 	readonly position: number
-	readonly refCount?: Data['refCount']
-	readonly altCount?: Data['altCount']
 	readonly vafs?: Data['vafs']
 }
