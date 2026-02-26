@@ -3,10 +3,89 @@
 All notable changes to this project will be documented in this file.
 
 
+## 2.177.0
+
+Features:
+- Changing CNV cutoffs from the color scale in the matrix label is enabled. Click on the color scale and a new menu will appear with options on how to change the CNV values. Clicking on the color scale label shows the menu to hide or show the copy number loss or gain.
+
+
+## 2.176.0
+
+Features:
+- LLM: Adding support for UMAP/t-SNE plots and variable overlay
+- restore geneORA by passing gene names but not tw.$id
+
+Fixes:
+- restore geneORA by passing gene names but not tw.$id
+
+
+## 2.175.0
+
+Features:
+- LLM: Adding support for multiple chart types within the summary type. Adding testing of the LLM.
+- LLM: Adding support for matrix in the chatbot.
+- Table.ts: Support for restoring original row order of table
+
+
+## 2.174.1
+- throttle the number of concurrent by-term queries for sample data as triggered by getData()
+- revert to using memFetch to avoid redundant GDC API `/cases` request/responses across different genes that adds up to minutes of delayed response
+- prevent crashing the server due to unhandled exceptions when aborting GDC API fetch requests
+
+
+Fixes:
+- apply fixes from release-2.170 branch patch version .6
+- remove add-to-filter option from correlation plot selection of rendered data; fix the returned GDC API  bins from getData()
+
+
+## 2.174.0
+
+Features:
+- GRIN2: Increased max lesion cap to 250,000. Refactored per lesion type cap to a single overall cap. Introduced memory profilling and dynamic lesion cap generation based on available memory in a particular environment. Other improvements.
+- GRIN2: Simplified several stats related outputs under a much concise stats object. Now displaying all memory usage information as new table
+
+Fixes:
+- Now fetching clustalo binary from PP instead of defunct URL
+- convert legacy qualitative q.mode='values' to discrete
+- Deleted GRIN2 concurrency testing script as it has been moved to sjpp repo
+- GRIN2: Removed unnecessary data copy. Now using dynamic lesion types sent by client
+- apply fixes from release-2.170 branch patch versions .4 and .5 
+
+
+## 2.173.0
+
+Features:
+- Decoupled the filter helper class, ListSamples, from the box plot into a reusable component for all summary plots. Implemented in both the violin and box plot. Included in this improvement is new unit and integration tests. The implementation centralizes all use-case logic, improving scalability and maintainability.
+
+Fixes:
+- do not create menu tip until after runpp() call, to prevent errors with missing document.body or arg.holder
+
+
+## 2.172.0
+
+Features:
+- GRIN2: Sped up multiple core GRIN2 functions through various optimizations and improvements
+
+
+## 2.171.0
+
+Features:
+- Grin2 will now display a link to the wiki in the top left hand corner.
+
+Fixes:
+- GDC lollipop now displays ssm=2000 for TTN rather than 1999; the limit is applied to both ssm & sv
+- restore old singlecell gene exp violin by supplying q.mode=continuous
+- skip most GDC dict terms under "diagnoses." branch due to diagnoses__days_to_hiv_diagnosis breaking grapqhl in qa-yellow
+- stream matrix response data to prevent RangeError during json-encoding
+- do not join to global filter in getTreeFilter() if the join argument is 'or', so that the edit menu will list all applicable categories
+- show loading and error messages when switching to barchart tab in summary plot
+
+
 ## 2.170.18
 
 Fixes:
 - improve the error message when there is no numeric data for a variable or filter edit menu
+
 
 ## 2.170.17
 
