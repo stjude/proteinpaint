@@ -1,6 +1,6 @@
 import { getClassifier } from './embeddingClassifier.ts'
 import type { ClassificationType, LlmConfig } from '#types'
-import { chatLog } from './chatLog.ts'
+import { mayLog } from '#src/helpers.ts'
 
 /** Map dataset JSON chart types to user-friendly descriptions for the fallback message. */
 const CHART_TYPE_DESCRIPTIONS: Record<string, string> = {
@@ -53,7 +53,7 @@ export async function classifyQuery(
 ): Promise<ClassificationType> {
 	const clf = await getClassifier(llm, datasetLabel, dataset_json, aiFilesDir)
 	const embeddingResult = await clf.classifyHybrid(user_prompt, llm, datasetNoise)
-	chatLog(
+	mayLog(
 		`Embedding classifier: category=${embeddingResult.category}, confidence=${embeddingResult.confidence.toFixed(4)}`
 	)
 
