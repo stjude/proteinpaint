@@ -141,7 +141,9 @@ async function fillMenu(self, div, tvs) {
 				self.opts.getCategoriesArguments
 			)
 			if (data.error) throw data.error
-			if (data.max === null && data.min === null) throw `no available data`
+			if (data.max === null && data.min === null) {
+				throw `No data available under current filter conditions.`
+			}
 			self.num_obj.density_data = data
 		} catch (err) {
 			throw err

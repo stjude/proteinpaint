@@ -93,6 +93,7 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 				usecase: { target: 'summaryInput', detail: 'term0' },
 				label: controlLabels.term0.label,
 				defaultQ4fillTW: term0_term2_defaultQ,
+				numericEditMenuVersion: this.opts.numericEditMenuVersion || ['discrete'],
 				getDisplayStyle: plot => (plot.config.term?.term.type == 'survival' ? 'none' : 'table-row')
 			},
 			{
@@ -109,6 +110,7 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 				usecase: { target: 'summaryInput', detail: 'term0' },
 				label: controlLabels.term0.label,
 				defaultQ4fillTW: term0_term2_defaultQ_surv + '_surv',
+				numericEditMenuVersion: this.opts.numericEditMenuVersion || ['discrete'],
 				getDisplayStyle: plot => (plot.config.term?.term.type == 'survival' ? 'table-row' : 'none')
 			}
 		]
