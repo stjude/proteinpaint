@@ -53,6 +53,7 @@ export type ScatterChart = {
 	svg?: any
 	chartDiv?: any
 	mainG?: any
+	regressionG?: any
 	xAxis?: any
 	axisBottom?: any
 	yAxis?: any
