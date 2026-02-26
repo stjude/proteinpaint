@@ -29,7 +29,6 @@ export async function test_chatbot_by_dataset(ds: any) {
     //console.log("dataset_json:", dataset_json)
     const aiFilesDir = path.dirname(aifiles)
     for (const test_data of dataset_json.TestData) {
-        //console.log("Test question:", test_data.question)
         const test_result = await run_chat_pipeline(
             test_data.question,
             llm,
@@ -38,73 +37,68 @@ export async function test_chatbot_by_dataset(ds: any) {
             testing, // This is not needed anymore, need to be deprecated
             serverconfig.tpmasterdir + '/' + dataset_json.db,
             serverconfig.tpmasterdir + '/' + dataset_json.genedb,
-            ds
+            ds,
+            aiFilesDir
         )
         console.log('test_result:', test_result)
-        if (test_result.type == 'html') {
+        if (test_result.action == 'html') {
             // Resource request
-            if (test_result.html != test_data.answer) {
+            if (test_result.response != test_data.answer) {
                 console.log(
-                    'html resource request did not match for prompt: ' +
+                    'html resource request did not match for prompt' +
                     test_data.question +
-                    '. LLM response: ' +
-                    test_result.html +
+                    '. LLM response :' +
+                    test_result.response +
                     ' Actual response: ' +
                     test_data.answer
                 )
             }
-        } else if (test_result.type == 'plot') {
-            if (test_result.plot == 'summary') {
-                const validated_llm_summary_output = validate_summary_output(test_result, test_data.answer)
-                if (!validated_llm_summary_output)
-                    console.log(
-                        'Summary output did not match for prompt: ' +
-                        test_data.question +
-                        '. LLM response: ' +
-                        test_result +
-                        ' Actual response: ' +
-                        test_data.answer
-                    )
-            } else if (test_result.plot == 'dge') {
-                const validated_llm_DE_output = validate_DE_output(test_result, test_data.answer)
+        } else if (test_result.action == 'summary') {
+            const validated_llm_summary_output = validate_summary_output(test_result.response, test_data.answer)
+            if (!validated_llm_summary_output)
+                console.log(
+                    'Summary output did not match for prompt' +
+                    test_data.question +
+                    '. LLM response :' +
+                    test_result.response +
+                    ' Actual response: ' +
+                    test_data.answer
+                )
+        } else if (test_result.action == 'dge') {
+            if (test_result.response != test_data.answer) {
+                const validated_llm_DE_output = validate_DE_output(test_result.response, test_data.answer)
                 if (!validated_llm_DE_output)
                     console.log(
-                        'DE output did not match for prompt: ' +
+                        'DE output did not match for prompt' +
                         test_data.question +
-                        '. LLM response: ' +
-                        test_result +
+                        '. LLM response :' +
+                        test_result.response +
                         ' Actual response: ' +
                         test_data.answer
                     )
-            } else if (test_result.plot == 'matrix') {
-                const validated_llm_matrix_output = validate_matrix_output(test_result, test_data.answer)
-                if (!validated_llm_matrix_output)
-                    console.log(
-                        'Matrix output did not match for prompt: ' +
-                        test_data.question +
-                        '. LLM response: ' +
-                        test_result +
-                        ' Actual response: ' +
-                        test_data.answer
-                    )
-            } else if (test_result.plot == 'sampleScatter') {
-                const validated_llm_scatter_output = validate_scatter_output(test_result, test_data.answer)
-                if (!validated_llm_scatter_output)
-                    console.log(
-                        'SampleScatter output did not match for prompt: ' +
-                        test_data.question +
-                        '. LLM response: ' +
-                        test_result +
-                        ' Actual response: ' +
-                        test_data.answer
-                    )
-            } else {
-                console.log('Unknown chart type for prompt: ' + test_data.question)
             }
-        } else if (test_result.type == 'resource') {
-            // Need to add support for resource agent
-        } else {
-            console.log('Unknown type for prompt:' + test_data.question)
+        } else if (test_result.action == 'matrix') {
+            const validated_llm_matrix_output = validate_matrix_output(test_result.response, test_data.answer)
+            if (!validated_llm_matrix_output)
+                console.log(
+                    'Matrix output did not match for prompt' +
+                    test_data.question +
+                    '. LLM response :' +
+                    test_result.response +
+                    ' Actual response: ' +
+                    test_data.answer
+                )
+        } else if (test_result.action == 'sampleScatter') {
+            const validated_llm_scatter_output = validate_scatter_output(test_result.response, test_data.answer)
+            if (!validated_llm_scatter_output)
+                console.log(
+                    'SampleScatter output did not match for prompt' +
+                    test_data.question +
+                    '. LLM response :' +
+                    test_result.response +
+                    ' Actual response: ' +
+                    test_data.answer
+                )
         }
     }
 }
@@ -291,6 +285,58 @@ function compare_join_terms(output_filter_term: FilterTerm, expected_filter_term
         // If both are missing join terms buth other terms are equal pass the test
         return true
     }
+}
+
+function validate_scatter_output(output: SampleScatterType, expected: SampleScatterType): boolean {
+    if (output.plotName != expected.plotName) {
+        console.log(
+            'SampleScatter plotName did not match. LLM response: ' + output.plotName + ' Expected: ' + expected.plotName
+        )
+        return false
+    }
+
+    if (output.colorTW != expected.colorTW) {
+        console.log(
+            'SampleScatter colorTW did not match. LLM response: ' + output.colorTW + ' Expected: ' + expected.colorTW
+        )
+        return false
+    }
+
+    if (output.shapeTW != expected.shapeTW) {
+        console.log(
+            'SampleScatter shapeTW did not match. LLM response: ' + output.shapeTW + ' Expected: ' + expected.shapeTW
+        )
+        return false
+    }
+
+    if (output.term0 != expected.term0) {
+        console.log('SampleScatter term0 did not match. LLM response: ' + output.term0 + ' Expected: ' + expected.term0)
+        return false
+    }
+
+    if (!output.simpleFilter && !expected.simpleFilter) {
+        return true
+    }
+    if (!output.simpleFilter || !expected.simpleFilter) {
+        console.log(
+            'SampleScatter simpleFilter mismatch. LLM response: ' +
+            JSON.stringify(output.simpleFilter) +
+            ' Expected: ' +
+            JSON.stringify(expected.simpleFilter)
+        )
+        return false
+    }
+
+    const filter_valid = validate_filter(output.simpleFilter, expected.simpleFilter)
+    if (!filter_valid) {
+        console.log(
+            'SampleScatter simpleFilter did not match. LLM response: ' +
+            JSON.stringify(output.simpleFilter) +
+            ' Expected: ' +
+            JSON.stringify(expected.simpleFilter)
+        )
+    }
+    return filter_valid
 }
 
 function validate_scatter_output(output: SampleScatterType, expected: SampleScatterType): boolean {
