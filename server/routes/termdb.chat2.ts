@@ -1,7 +1,7 @@
-import path from 'path'
-import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, ClassificationType } from '#types'
+import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, QueryClassification } from '#types'
 import { ChatPayload } from '#types/checkers'
 import { classifyQuery } from './chat/classify.ts'
+import { classifyPlotType } from './chat/plot.ts'
 import { readJSONFile } from './chat/utils.ts'
 import { extract_DE_search_terms_from_query } from './chat/DEagent.ts'
 import { extract_summary_terms } from './chat/summaryagent.ts'
@@ -54,7 +54,6 @@ function init({ genomes }) {
 			// Read dataset JSON file
 			const aiFilesPath = serverconfig_ds_entries.aifiles
 			const dataset_json: any = await readJSONFile(aiFilesPath)
-			const aiFilesDir = path.dirname(aiFilesPath)
 			const testing = false // This toggles validation of LLM output. In this script, this will ALWAYS be false since we always want validation of LLM output, only for testing we set this variable to true
 			const ai_output_json = await run_chat_pipeline(
 				q.prompt,
@@ -64,8 +63,7 @@ function init({ genomes }) {
 				testing,
 				dataset_db,
 				genedb,
-				ds,
-				aiFilesDir
+				ds
 			)
 			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
@@ -83,30 +81,11 @@ export async function run_chat_pipeline(
 	testing: boolean,
 	dataset_db: string,
 	genedb: string,
-	ds: any,
-	aiFilesDir: string
+	ds: any
 ) {
 	const time1 = new Date().valueOf()
 
-	// Parse the dataset DB upfront to extract categorical term values (e.g. molecular
-	// subtype names). These are passed to the classifier so they aren't mistaken for
-	// gene names in multi-gene detection, making the classifier dataset-agnostic.
-	const dataset_db_output = await parse_dataset_db(dataset_db)
-
-	const datasetNoise = new Set(
-		dataset_db_output.db_rows
-			.filter(row => row.term_type === 'categorical')
-			.flatMap(row => row.values.map(v => v.key.toUpperCase()))
-	)
-
-	const class_response: ClassificationType = await classifyQuery(
-		user_prompt,
-		llm,
-		datasetNoise,
-		dataset_json,
-		ds.label,
-		aiFilesDir
-	)
+	const class_response: QueryClassification = await classifyQuery(user_prompt, llm)
 	let ai_output_json: any
 	mayLog('Time taken for classification:', formatElapsedTime(Date.now() - time1))
 	if (class_response.type == 'none') {
@@ -119,8 +98,9 @@ export async function run_chat_pipeline(
 		ai_output_json = await extractResourceResponse(user_prompt, llm, dataset_json)
 		mayLog('Time taken for resource agent:', formatElapsedTime(Date.now() - time1))
 	} else if (class_response.type == 'plot') {
-		const classResult = class_response.plot
+		const classResult = await classifyPlotType(user_prompt, llm)
 		mayLog('classResult:', classResult)
+		const dataset_db_output = await parse_dataset_db(dataset_db)
 		const genes_list = dataset_json.hasGeneExpression ? await parse_geneset_db(genedb) : []
 		if (classResult == 'summary') {
 			const time1 = new Date().valueOf()

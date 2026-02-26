@@ -128,6 +128,12 @@ export type none_type = {
 	type: 'none'
 }
 
+/** Top-level classification returned by classifyQuery: none, resource, or plot (subtype determined separately by plot.ts) */
+export type QueryClassification = { type: 'none' } | { type: 'resource' } | { type: 'plot' }
+
+/** Specific plot type returned by classifyPlotType in plot.ts */
+export type PlotType = 'summary' | 'dge' | 'survival' | 'matrix' | 'sampleScatter'
+
 export type DEType = {
 	/** Name of group1 which is an array of filter terms */
 	group1: FilterTerm[]
