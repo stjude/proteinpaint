@@ -19,9 +19,7 @@ export async function route_to_appropriate_llm_provider(
 		// Will later add support for azure server also
 		throw 'Unknown LLM provider'
 	}
-	// Some models (e.g. llama3-8B) wrap JSON in markdown fences and/or
-	// append explanations. Extract the first balanced JSON object or array.
-	return extractJson(response)
+	return response
 }
 
 export async function route_to_appropriate_embedding_provider(
@@ -30,21 +28,6 @@ export async function route_to_appropriate_embedding_provider(
 ): Promise<number[][]> {
 	const embedder = await getEmbedder(llm)
 	return await embedder.embed(templates)
-}
-
-/** Extract the first balanced JSON object or array from a string. */
-function extractJson(text: string): string {
-	const start = text.search(/[[{]/)
-	if (start === -1) return text
-	const open = text[start]
-	const close = open === '{' ? '}' : ']'
-	let depth = 0
-	for (let i = start; i < text.length; i++) {
-		if (text[i] === open) depth++
-		else if (text[i] === close) depth--
-		if (depth === 0) return text.slice(start, i + 1)
-	}
-	return text // unbalanced — return as-is, let JSON.parse give a clear error
 }
 
 async function call_sj_llm(prompt: string, model_name: string, apilink: string) {
@@ -133,9 +116,9 @@ async function call_ollama_llm(prompt: string, model_name: string, apilink: stri
 	try {
 		const result = await ezFetch(apilink + '/api/chat', {
 			method: 'POST',
-			body: payload, // ezfetch automatically stringifies objects
+			body: payload,
 			headers: { 'Content-Type': 'application/json' },
-			timeout: { request: timeout } // ezfetch accepts milliseconds directly
+			timeout: { request: timeout }
 		})
 		if (result && result.message && result.message.content && result.message.content.length > 0)
 			return result.message.content

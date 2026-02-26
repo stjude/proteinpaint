@@ -10,6 +10,7 @@ import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
  * @returns            The specific plot type (e.g. 'summary', 'dge', 'survival', 'matrix', 'sampleScatter').
  */
 export async function classifyPlotType(user_prompt: string, llm: LlmConfig): Promise<PlotType> {
+	console.log('classifyPlotType called with prompt:', user_prompt)
 	const prompt = `Classify the following data visualization query into exactly one of these plot types:
 - "summary": bar chart, violin plot, box plot, or scatter plot comparing two variables or groups
 - "dge": differential gene expression analysis (volcano plot, MA plot, fold change)
