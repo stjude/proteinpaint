@@ -349,10 +349,12 @@ export async function validate_termdb(ds) {
 			if (!Array.isArray(c.termIds)) throw 'termdb.termCollections[].termIds[] not array'
 			if (c.termIds.length == 0) throw 'termdb.termCollections[].termIds[] blank array'
 			if (!c.propsByTermId) c.propsByTermId = {}
+			c.termlst = []
 			const colorScale = getColors(c.termIds.length)
 			for (const i of c.termIds) {
 				const t = tdb.q.termjsonByOneid(i)
 				if (!t) throw `invalid term id "${i}" from termdb.termCollections[].${c.name}`
+				c.termlst.push(t)
 				if (c.type === 'numeric') {
 					if (t.type !== 'integer' && t.type != 'float') throw 'member term type not integer/float ' + i
 				} else {
