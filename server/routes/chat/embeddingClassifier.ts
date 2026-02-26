@@ -45,7 +45,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { pipeline, type FeatureExtractionPipeline } from '@xenova/transformers'
 import type { LlmConfig } from '#types'
-import { chatLog } from './chatLog.ts'
+import { mayLog } from '#src/helpers.ts'
 import { readJSONFile, cosineSim, argsort } from './utils.ts'
 import { route_to_appropriate_llm_provider, callSjEmbedding, callOllamaEmbedding } from './routeAPIcall.ts'
 
@@ -456,7 +456,7 @@ export class EmbeddingClassifier {
 
 		const elapsed = ((performance.now() - t0) / 1000).toFixed(2)
 		const dim = this.allEmbeddings[0]?.length ?? 0
-		chatLog(
+		mayLog(
 			`EmbeddingClassifier.fit: ${allLabels.length} examples, ${this.categories.length} categories, dim=${dim}, ${elapsed}s`
 		)
 	}
@@ -511,7 +511,7 @@ export class EmbeddingClassifier {
 		// Check for explicit chart type keywords first — these always win.
 		const override = getExplicitOverride(query)
 		if (override) {
-			chatLog(`Hybrid router: explicit chart type override → ${override}`)
+			mayLog(`Hybrid router: explicit chart type override → ${override}`)
 			return {
 				query,
 				category: override,
@@ -524,7 +524,7 @@ export class EmbeddingClassifier {
 		const embeddingResult = await this.classify(query, datasetNoise)
 
 		if (embeddingResult.above_threshold) {
-			chatLog(
+			mayLog(
 				`Hybrid router: embedding confident (${embeddingResult.confidence.toFixed(4)}), ` +
 					`category=${embeddingResult.category}`
 			)
@@ -536,14 +536,14 @@ export class EmbeddingClassifier {
 		const reason = embeddingResult.tied
 			? `tied vote (${JSON.stringify(embeddingResult.all_scores)})`
 			: `low confidence (${embeddingResult.confidence.toFixed(4)})`
-		chatLog(`Hybrid router: ${reason}, falling back to LLM (${llm.provider}/${classifierModel})`)
+		mayLog(`Hybrid router: ${reason}, falling back to LLM (${llm.provider}/${classifierModel})`)
 
 		try {
 			const llmResult = await classifyViaLlm(query, llm)
 			// Prefer .plot field; fall back to .type if it looks like a category name
 			// (some smaller LLMs return {"type":"resource"} instead of {"type":"plot","plot":"resource"})
 			const llmCategory = llmResult.plot ?? (this.categories.includes(llmResult.type) ? llmResult.type : 'none')
-			chatLog(`Hybrid router: LLM fallback returned category=${llmCategory}`)
+			mayLog(`Hybrid router: LLM fallback returned category=${llmCategory}`)
 
 			return {
 				query,
@@ -553,7 +553,7 @@ export class EmbeddingClassifier {
 				above_threshold: false // was below embedding threshold, resolved by LLM
 			}
 		} catch (e: any) {
-			chatLog(`Hybrid router: LLM fallback failed (${e?.message || e}), returning 'none'`)
+			mayLog(`Hybrid router: LLM fallback failed (${e?.message || e}), returning 'none'`)
 			return embeddingResult // return the below-threshold embedding result as-is
 		}
 	}
@@ -598,7 +598,7 @@ ${examplesBlock}
 Q: "${userPrompt}" →`
 
 	const response = await route_to_appropriate_llm_provider(template, llm, llm.classifierModelName)
-	chatLog('LLM fallback raw response:', response)
+	mayLog('LLM fallback raw response:', response)
 
 	return JSON.parse(response)
 }
@@ -625,10 +625,10 @@ export async function getEmbedder(llm: LlmConfig): Promise<Embedder> {
 			let embedder: Embedder
 
 			if (access === 'api') {
-				chatLog(`Embedder: using API (${llm.provider}/${llm.embeddingModelName})`)
+				mayLog(`Embedder: using API (${llm.provider}/${llm.embeddingModelName})`)
 				embedder = new ApiEmbedder(llm.provider, llm.embeddingModelName, llm.api)
 			} else {
-				chatLog(`Embedder: using local (${llm.embeddingModelName})`)
+				mayLog(`Embedder: using local (${llm.embeddingModelName})`)
 				embedder = new LocalEmbedder(llm.embeddingModelName)
 			}
 
@@ -677,7 +677,7 @@ export async function getClassifier(
 			await clf.fit(trainingExamples)
 			classifierCache.set(datasetLabel, clf)
 			classifierInitPromises.delete(datasetLabel)
-			chatLog(`EmbeddingClassifier[${datasetLabel}]: ready`)
+			mayLog(`EmbeddingClassifier[${datasetLabel}]: ready`)
 			return clf
 		})()
 		classifierInitPromises.set(datasetLabel, pending)
