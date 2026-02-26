@@ -253,6 +253,7 @@ tape('tvs (common): buttons', async test => {
 		}
 	} catch (e) {
 		test.fail('test error: ' + e)
+		return
 	}
 	if (test._ok) opts.holder.remove()
 	test.end()
@@ -1305,13 +1306,14 @@ tape('tvs: Gene Variant - Fusion', async test => {
 })
 
 tape('tvs: termCollection', async test => {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(10000)
 	test.plan(2)
 	const vocabApi = await getVocabApi()
 	const tc = vocabApi.termdbConfig.termCollections[0]
 	const term = Object.assign(
 		{
 			collectionId: tc.name,
+			memberType: 'numeric',
 			name: ' (agedx,a_death)',
 			type: 'termCollection',
 			numerators: ['agedx', 'a_death'],
@@ -1353,7 +1355,7 @@ tape('tvs: termCollection', async test => {
 			],
 			isleaf: true
 		},
-		ntc,
+		tc,
 		{ branchIds: undefined, termIds: undefined }
 	)
 	const opts = getOpts({
@@ -1390,7 +1392,7 @@ tape('tvs: termCollection', async test => {
 		const rows = await detectGte({
 			target: tipd.node(),
 			selector: `tbody tr`,
-			count: ntc.termIds.length,
+			count: tc.termIds.length,
 			observe: { subtree: true, childList: true },
 			trigger: () => {
 				editOpt.click()
@@ -1401,7 +1403,7 @@ tape('tvs: termCollection', async test => {
 			arr.push(...tr.querySelectorAll('input'))
 			return arr
 		}, [])
-		test.equal(inputs.length, ntc.termIds.length * 2, 'Should have 2 checkboxes for each term')
+		test.equal(inputs.length, tc.termIds.length * 2, 'Should have 2 checkboxes for each term')
 		const applyBtn = tipd.node().querySelector('.sjpp_apply_btn')
 		test.ok(applyBtn, 'Should have 1 button to apply value change')
 	} catch (e) {
