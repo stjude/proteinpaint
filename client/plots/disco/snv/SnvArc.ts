@@ -6,8 +6,6 @@ export default interface SnvArc extends Arc {
 	readonly mname: string
 	readonly chr: string
 	readonly pos: number
-	readonly refCount?: Data['refCount']
-	readonly altCount?: Data['altCount']
 	readonly vafs?: Data['vafs']
 	readonly sampleName: string[]
 }

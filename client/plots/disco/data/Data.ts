@@ -1,8 +1,8 @@
 export type Vaf = {
 	readonly id?: string
 	readonly name?: string
-	readonly refCount: number
-	readonly altCount: number
+	readonly refCount?: string | number
+	readonly altCount?: string | number
 }
 
 export default interface Data {
@@ -14,8 +14,6 @@ export default interface Data {
 	readonly chr: string
 	readonly ref: string
 	readonly alt: string
-	readonly refCount?: string | number
-	readonly altCount?: string | number
 	readonly vafs?: Vaf[]
 	readonly position: number
 	readonly poschr: any

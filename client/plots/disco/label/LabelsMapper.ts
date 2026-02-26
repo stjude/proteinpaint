@@ -132,8 +132,6 @@ export default class LabelsMapper {
 			dataClass: dataClass,
 			chr: data.chr,
 			position: data.position,
-			refCount: data.refCount,
-			altCount: data.altCount,
 			vafs: data.vafs
 		}
 		if (!label) {
