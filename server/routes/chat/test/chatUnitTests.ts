@@ -37,8 +37,7 @@ export async function test_chatbot_by_dataset(ds: any) {
             testing, // This is not needed anymore, need to be deprecated
             serverconfig.tpmasterdir + '/' + dataset_json.db,
             serverconfig.tpmasterdir + '/' + dataset_json.genedb,
-            ds,
-            aiFilesDir
+            ds
         )
         console.log('test_result:', test_result)
         if (test_result.action == 'html') {
