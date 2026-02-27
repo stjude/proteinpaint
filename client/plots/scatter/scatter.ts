@@ -12,9 +12,8 @@ import { ScatterInteractivity, downloadImage } from './viewmodel/scatterInteract
 import { ScatterViewModel2DLarge } from './viewmodel/scatterViewModel2DLarge.js'
 import { ScatterViewModel3D } from './viewmodel/scatterViewModel3D.js'
 import { controlsInit } from '../controls'
-import { select2Terms } from '#dom/select2Terms'
-import type { MassState } from '../../../client/mass/types/mass.js'
-import { DownloadMenu } from '#dom/downloadMenu'
+import { select2Terms, DownloadMenu } from '#dom'
+import type { MassState } from '../../mass/types/mass.js'
 import { PlotBase } from '#plots/PlotBase.js'
 import type { Settings } from './Settings.ts'
 
@@ -166,6 +165,7 @@ export class Scatter extends PlotBase implements RxComponent {
 	}
 
 	async setControls() {
+		console.log(this)
 		this.view.dom.controlsHolder.selectAll('*').remove()
 		const inputs = this.view.getControlInputs()
 		this.components = {
@@ -188,9 +188,36 @@ export class Scatter extends PlotBase implements RxComponent {
 			downloadImage(url)
 		} else {
 			const name2svg = this.getChartImages()
-			const menu = new DownloadMenu(name2svg, 'scatter')
+			const menu = new DownloadMenu(name2svg, 'scatter', () => {
+				return this.toText()
+			})
 			menu.show(event.clientX, event.clientY, event.target)
 		}
+	}
+	toText() {
+		const lines: string[] = []
+		const h: string[] = [
+			this.settings.itemLabel,
+			this.config.term?.term?.name || 'x',
+			this.config.term2?.term?.name || 'y'
+		]
+		if (this.config.colorTW) h.push(this.config.colorTW.term.name)
+		if (this.config.shapeTW) h.push(this.config.shapeTW.term.name)
+		lines.push(h.join('\t'))
+		for (const c of this.model.charts) {
+			if (!c.data?.samples) continue
+			for (const s of c.data.samples) {
+				const l: any[] = [] // one text line for each sample
+				l.push(s.sample || s.sampleId)
+				l.push(s.x)
+				l.push(s.y)
+				// these are quick fix and won't give available mutation. need to revise poor choice of "category" key
+				if (this.config.colorTW) l.push(s.category)
+				if (this.config.shapeTW) l.push(s.shape)
+				lines.push(l.join('\t'))
+			}
+		}
+		return lines.join('\n')
 	}
 
 	getChartImages() {
