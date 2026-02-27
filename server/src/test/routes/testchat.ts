@@ -1,5 +1,4 @@
 // Test URL: http://localhost:3000/testchat
-import path from 'path'
 import serverconfig from '../../serverconfig.js'
 import { readJSONFile } from '../../../routes/chat/utils.ts'
 import { run_chat_pipeline } from '../../../routes/termdb.chat2.ts'
@@ -43,7 +42,6 @@ export async function test_chatbot_by_dataset(ds: any) {
 	const aifiles = (ds as any)?.queries?.chat.aifiles
 	const dataset_json = await readJSONFile(aifiles) // Read AI JSON data file
 	//console.log("dataset_json:", dataset_json)
-	const aiFilesDir = path.dirname(aifiles)
 	for (const test_data of dataset_json.TestData) {
 		//console.log("Test question:", test_data.question)
 		const test_result = await run_chat_pipeline(
@@ -54,8 +52,7 @@ export async function test_chatbot_by_dataset(ds: any) {
 			testing, // This is not needed anymore, need to be deprecated
 			serverconfig.tpmasterdir + '/' + dataset_json.db,
 			serverconfig.tpmasterdir + '/' + dataset_json.genedb,
-			ds,
-			aiFilesDir
+			ds
 		)
 		console.log('test_result:', test_result)
 		if (test_result.type == 'html') {
