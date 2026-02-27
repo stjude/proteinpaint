@@ -28,7 +28,6 @@ export default function setRoutes(app, basepath, genomes) {
 		console.log('test chat page')
 		for (const genome of Object.values(genomes)) {
 			for (const ds of Object.values((genome as any).datasets)) {
-				console.log('ds.label:', ds)
 				if ((ds as any)?.queries?.chat) {
 					await test_chatbot_by_dataset(ds)
 					console.log('Tests complete for ' + (ds as any).label)
@@ -66,9 +65,9 @@ export async function test_chatbot_by_dataset(ds: any) {
 					'html resource request did not match for prompt: ' +
 						test_data.question +
 						'. LLM response: ' +
-						test_result.html +
+						JSON.stringify(test_result.html) +
 						' Actual response: ' +
-						test_data.answer
+						JSON.stringify(test_data.answer)
 				)
 			}
 		} else if (test_result.type == 'plot') {
@@ -79,9 +78,9 @@ export async function test_chatbot_by_dataset(ds: any) {
 						'Summary output did not match for prompt: ' +
 							test_data.question +
 							'. LLM response: ' +
-							test_result +
+							JSON.stringify(test_result) +
 							' Actual response: ' +
-							test_data.answer
+							JSON.stringify(test_data.answer)
 					)
 			} else if (test_result.plot == 'dge') {
 				const validated_llm_DE_output = validate_DE_output(test_result, test_data.answer)
@@ -90,9 +89,9 @@ export async function test_chatbot_by_dataset(ds: any) {
 						'DE output did not match for prompt: ' +
 							test_data.question +
 							'. LLM response: ' +
-							test_result +
+							JSON.stringify(test_result) +
 							' Actual response: ' +
-							test_data.answer
+							JSON.stringify(test_data.answer)
 					)
 			} else if (test_result.plot == 'matrix') {
 				const validated_llm_matrix_output = validate_matrix_output(test_result, test_data.answer)
@@ -101,9 +100,9 @@ export async function test_chatbot_by_dataset(ds: any) {
 						'Matrix output did not match for prompt: ' +
 							test_data.question +
 							'. LLM response: ' +
-							test_result +
+							JSON.stringify(test_result) +
 							' Actual response: ' +
-							test_data.answer
+							JSON.stringify(test_data.answer)
 					)
 			} else if (test_result.plot == 'sampleScatter') {
 				const validated_llm_scatter_output = validate_scatter_output(test_result, test_data.answer)
@@ -112,9 +111,9 @@ export async function test_chatbot_by_dataset(ds: any) {
 						'SampleScatter output did not match for prompt: ' +
 							test_data.question +
 							'. LLM response: ' +
-							test_result +
+							JSON.stringify(test_result) +
 							' Actual response: ' +
-							test_data.answer
+							JSON.stringify(test_data.answer)
 					)
 			} else {
 				console.log('Unknown chart type for prompt: ' + test_data.question)
@@ -350,7 +349,6 @@ function validate_scatter_output(output: SampleScatterType, expected: SampleScat
 		)
 		return false
 	}
-
 	const filter_valid = validate_filter(output.simpleFilter, expected.simpleFilter)
 	if (!filter_valid) {
 		console.log(
