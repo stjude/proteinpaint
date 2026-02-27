@@ -88,7 +88,11 @@ export async function extract_summary_terms(
 	let system_prompt =
 		'I am an assistant that extracts the summary terms from user query. The final output must be in the following JSON format with NO extra comments. The JSON schema is as follows: ' +
 		JSON.stringify(Schema) +
-		' term and term2 (if present) should ONLY contain single field names from the sqlite db — never comma-separated values, never category values like subtype names. When comparing a clinical variable between specific subtypes or categories (e.g. "compare age between KMT2A and DUX4"), put those category values in "simpleFilter", not in term or term2. The "simpleFilter" field is optional and should contain an array of JSON terms with which the dataset will be filtered. ' +
+		' term and term2 (if present) should ONLY contain single field names from the sqlite db — never comma-separated values, never category values like subtype names. ' +
+		'When the user says "across [field]" or "by [field]" (e.g. "across molecular subtypes", "by sex"), that field should be term2 — it is the grouping/overlay variable. ' +
+		'When the user mentions specific category VALUES by name (e.g. "between KMT2A and DUX4", "in male patients"), put those values in "simpleFilter" to restrict the data. ' +
+		'A query can have BOTH: e.g. "Vincristine sensitivity in male patients across molecular subtypes" → term=Vincristine sensitivity, term2=molecular subtype field, simpleFilter=[sex=male]. ' +
+		'The "simpleFilter" field is optional and should contain an array of JSON terms with which the dataset will be filtered. ' +
 		FILTER_DESCRIPTION +
 		checkField(dataset_json.DatasetPrompt) +
 		checkField(summary_ds.SystemPrompt) +

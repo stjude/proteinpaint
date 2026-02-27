@@ -139,7 +139,7 @@ export async function run_chat_pipeline(
 				testing
 			)
 			mayLog('Time taken for matrix agent:', formatElapsedTime(Date.now() - time1))
-		} else if (classResult == 'sampleScatter') {
+		} else if (classResult == 'samplescatter') {
 			const time1 = new Date().valueOf()
 			ai_output_json = await extract_samplescatter_terms_from_query(
 				user_prompt,
