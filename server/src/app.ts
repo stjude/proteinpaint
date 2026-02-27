@@ -44,7 +44,7 @@ export async function launch() {
 		setAppMiddlewares(app, genomes, doneLoading)
 
 		console.log('setting server routes ...')
-		const routeCallbacks = await setOptionalRoutes(app)
+		const routeCallbacks = await setOptionalRoutes(app, genomes)
 		console.log('may set auth routes ...')
 		/*
 !!! the order of middlewares is critical, must be set before data routes !!!
@@ -227,7 +227,7 @@ async function setOptionalRoutes(app) {
 	for (const fname of serverconfig.routeSetters) {
 		if (fname.endsWith('.js') || fname.endsWith('.ts')) {
 			const _ = await import(fname)
-			const d = _.default(app, basepath)
+			const d = _.default(app, basepath, genomes)
 			if (d?.setCloseServer && fname.includes('coverage')) {
 				routeCallbacks.setCloseServer = d.setCloseServer
 			}
