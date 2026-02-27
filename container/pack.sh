@@ -67,11 +67,7 @@ do
 	fi
 done
 
-# since the front workspace bundles the client code, the client/dist must be 
-# present if there is a front version bump, even if there is no client version bump.
-# Ideally, the front workspace will be able to download the published client package
-# into front/node_modules, but it's a bit tricky with npm workspaces setup (TODO)
-if [[ "$CHANGEDWS" == *"client"* || "$CHANGEDWS" == *"front"* ]]; then
+if [[ "$CHANGEDWS" == *"client"* ]]; then
 	cd ../client
 	echo "packing client ..."
 	npm pack
@@ -86,6 +82,10 @@ if [[ "$CHANGEDWS" == *"client"* || "$CHANGEDWS" == *"front"* ]]; then
 	cd ../container
 fi
 
+# Since the front workspace bundles the client code, the client/dist must be 
+# present if there is a front version bump, even if there is no client version bump.
+# This is done in the client-dist script as called by the prepack script in the
+# front/package.json.
 if [[ "$CHANGEDWS" == *"front"* ]]; then
 	cd ../front
 	echo "packing front ..."
