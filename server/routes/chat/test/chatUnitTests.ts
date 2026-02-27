@@ -29,8 +29,7 @@ for (const genome of serverconfig.genomes) {
 					testing,
 					serverconfig.tpmasterdir + '/' + dataset_json.db,
 					serverconfig.tpmasterdir + '/' + dataset_json.genedb,
-					ds,
-					dataset.aifiles
+					ds
 				)
 				console.log('test_result:', test_result)
 				if (test_result.action == 'html') {
