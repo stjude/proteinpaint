@@ -1407,6 +1407,10 @@ tape('tvs: termCollection', async test => {
 	} catch (e) {
 		test.fail('test error: ' + e)
 	}
-
+	if (test._ok) {
+		opts.holder.remove()
+		tipd.remove()
+		controlTipd.remove()
+	}
 	test.end()
 })
