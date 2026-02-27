@@ -67,6 +67,18 @@ export async function test_chatbot_by_dataset(ds: any) {
 						JSON.stringify(test_data.answer)
 				)
 			}
+		} else if (test_result.type == 'text') {
+			// Resource request
+			if (test_result.text != test_data.answer) {
+				console.log(
+					'Prompt has invalid terms: ' +
+						test_data.question +
+						'. LLM response: ' +
+						JSON.stringify(test_result.text) +
+						' Actual response: ' +
+						JSON.stringify(test_data.answer)
+				)
+			}
 		} else if (test_result.type == 'plot') {
 			if (test_result.plot == 'summary') {
 				const validated_llm_summary_output = validate_summary_output(test_result, test_data.answer)
