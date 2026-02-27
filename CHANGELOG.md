@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 
-## Unreleased
+## 2.170.19
 
 Fixes:
 - skip GDC diagnoses variables that may have multiple values per case, and throw an error when this situation is detected for any variable at runtime
