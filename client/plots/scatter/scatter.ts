@@ -165,7 +165,6 @@ export class Scatter extends PlotBase implements RxComponent {
 	}
 
 	async setControls() {
-		console.log(this)
 		this.view.dom.controlsHolder.selectAll('*').remove()
 		const inputs = this.view.getControlInputs()
 		this.components = {
