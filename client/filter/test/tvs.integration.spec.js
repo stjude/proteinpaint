@@ -1310,54 +1310,52 @@ tape('tvs: termCollection', async test => {
 	test.plan(2)
 	const vocabApi = await getVocabApi()
 	const tc = vocabApi.termdbConfig.termCollections[0]
-	const term = Object.assign(
-		{
-			collectionId: tc.name,
-			memberType: 'numeric',
-			name: ' (agedx,a_death)',
-			type: 'termCollection',
-			numerators: ['agedx', 'a_death'],
-			termlst: [
-				{
-					type: 'float',
-					bins: {
-						default: {
-							type: 'regular-bin',
-							bin_size: 5,
-							startinclusive: true,
-							first_bin: { startunbounded: true, stop: 5 }
-						},
-						label_offset: 1
+	const term = Object.assign({}, tc, {
+		collectionId: tc.name,
+		memberType: 'numeric',
+		name: ' (agedx,a_death)',
+		type: 'termCollection',
+		numerators: ['agedx', 'a_death'],
+		termlst: [
+			{
+				type: 'float',
+				bins: {
+					default: {
+						type: 'regular-bin',
+						bin_size: 5,
+						startinclusive: true,
+						first_bin: { startunbounded: true, stop: 5 }
 					},
-					name: 'Age (years) at Cancer Diagnosis',
-					id: 'agedx',
-					isleaf: true,
-					values: {},
-					hashtmldetail: true
+					label_offset: 1
 				},
-				{
-					type: 'float',
-					bins: {
-						default: {
-							type: 'regular-bin',
-							startinclusive: true,
-							bin_size: 5,
-							first_bin: { stop: 25 },
-							last_bin: { start: 55 }
-						}
-					},
-					name: 'Age (years) at Death',
-					id: 'a_death',
-					isleaf: true,
-					values: {},
-					hashtmldetail: true
-				}
-			],
-			isleaf: true
-		},
-		tc,
-		{ branchIds: undefined, termIds: undefined }
-	)
+				name: 'Age (years) at Cancer Diagnosis',
+				id: 'agedx',
+				isleaf: true,
+				values: {},
+				hashtmldetail: true
+			},
+			{
+				type: 'float',
+				bins: {
+					default: {
+						type: 'regular-bin',
+						startinclusive: true,
+						bin_size: 5,
+						first_bin: { stop: 25 },
+						last_bin: { start: 55 }
+					}
+				},
+				name: 'Age (years) at Death',
+				id: 'a_death',
+				isleaf: true,
+				values: {},
+				hashtmldetail: true
+			}
+		],
+		isleaf: true,
+		branchIds: undefined,
+		termIds: undefined
+	})
 	const opts = getOpts({
 		vocabApi,
 		filterData: {
