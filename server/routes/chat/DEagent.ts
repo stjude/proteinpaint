@@ -96,23 +96,23 @@ export async function extract_DE_search_terms_from_query(
 			return await validate_DE_response(response, ds, dataset_db_output.db_rows)
 		}
 	} else {
-		return { type: 'html', html: 'Differential gene expression not supported for this dataset' }
+		return { type: 'text', text: 'Differential gene expression not supported for this dataset' }
 	}
 }
 
 async function validate_DE_response(response: string, ds: any, db_rows: DbRows[]) {
 	const response_type = safeParseLlmJson(response)
-	let html = ''
+	let text = ''
 	let group1: any
 	let samples1lst: any
 	const name1 = generate_group_name(response_type.group1, db_rows)
 	if (!response_type.group1) {
-		html += 'group1 not present in DE output'
+		text += 'group1 not present in DE output'
 	} else {
 		// Validate filter terms
 		const validated_filters = validate_filter(response_type.group1, ds, name1)
-		if (validated_filters.html.length > 0) {
-			html += validated_filters.html
+		if (validated_filters.text.length > 0) {
+			text += validated_filters.text
 		} else {
 			const samples1 = await get_samples({ filter: validated_filters.simplefilter }, ds, true) // true is to bypass permission check
 			samples1lst = samples1.map((item: any) => ({
@@ -130,11 +130,11 @@ async function validate_DE_response(response: string, ds: any, db_rows: DbRows[]
 	let samples2lst: any
 	const name2 = generate_group_name(response_type.group2, db_rows)
 	if (!response_type.group2) {
-		html += 'group2 not present in DE output'
+		text += 'group2 not present in DE output'
 	} else {
 		const validated_filters = validate_filter(response_type.group2, ds, name2)
-		if (validated_filters.html.length > 0) {
-			html += validated_filters.html
+		if (validated_filters.text.length > 0) {
+			text += validated_filters.text
 		} else {
 			const samples2 = await get_samples({ filter: validated_filters.simplefilter }, ds, true) // true is to bypass permission check
 			samples2lst = samples2.map((item: any) => ({
@@ -155,16 +155,16 @@ async function validate_DE_response(response: string, ds: any, db_rows: DbRows[]
 		if (response_type.method == 'edgeR' || response_type.method == 'limma' || response_type.method == 'wilcoxon') {
 			settings = { volcano: { method: response_type.method } }
 		} else {
-			html += 'Unknown DE method: ' + response_type.method
+			text += 'Unknown DE method: ' + response_type.method
 		}
 	}
 
-	if (html.length > 0) {
-		html = removeLastOccurrence(
-			html,
+	if (text.length > 0) {
+		text = removeLastOccurrence(
+			text,
 			'For now, the maximum number of filter terms supported through the chatbot is ' + num_filter_cutoff // Remove duplicated statements in error message
 		)
-		return { type: 'html', html: html }
+		return { type: 'text', text }
 	} else {
 		const pp_plot_json: any = { childType: 'volcano', termType: 'geneExpression', chartType: 'differentialAnalysis' }
 		const groups = [group1, group2]
