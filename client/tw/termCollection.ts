@@ -22,7 +22,7 @@ export class TermCollection {
 	type = termType
 	id: string
 	name: string
-	termIds: string[]
+	termIds?: string[]
 	termlst: object[]
 	propsByTermId: {
 		[termId: string]: {
@@ -46,10 +46,9 @@ export class TermCollection {
 		if (tc.termIds.length != tc.termlst.length) throw new Error('tc.termIds.length!=tc.termlst.length')
 		if (!tc.propsByTermId) throw new Error(`propsByTermId missing for termCollection='${tc.name}'`)
 		if (!term.propsByTermId) term.propsByTermId = tc.propsByTermId // assign if missing
-		// memberType copies collection type so client code can tell numeric vs categorical without looking up config
 		term.memberType = tc.type
+		if (!term.termIds) term.termIds = term.termlst.map((t: any) => t.id)
 		for (const t of term.termlst) {
-			// a term newly added to term.termlst may be missing from propsByTermId and must include it
 			if (!term.propsByTermId[t.id]) term.propsByTermId[t.id] = tc.propsByTermId[t.id]
 		}
 		TermCollection.validate(term)
@@ -104,7 +103,16 @@ export class TermCollectionValues extends TwBase {
 		const tw = this.getTw()
 		const copy: any = { term: {}, q: structuredClone(tw.q) }
 		if (tw.$id) copy.$id = tw.$id
-		if (tw.term) copy.term = structuredClone(tw.term)
+		if (tw.term) {
+			copy.term.type = tw.term.type
+			copy.term.name = tw.term.name
+			if ((tw.term as any).id) copy.term.id = (tw.term as any).id
+			if ((tw.term as any).collectionId) copy.term.collectionId = (tw.term as any).collectionId
+			if ((tw.term as any).memberType) copy.term.memberType = (tw.term as any).memberType
+			if ((tw.term as any).numerators) copy.term.numerators = structuredClone((tw.term as any).numerators)
+			if ((tw.term as any).propsByTermId) copy.term.propsByTermId = structuredClone((tw.term as any).propsByTermId)
+			copy.term.termIds = (tw.term as any).termlst?.map((t: any) => t.id) || []
+		}
 		if (copy.q) {
 			delete copy.q.isAtomic
 		}

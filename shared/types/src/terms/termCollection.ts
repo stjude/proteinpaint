@@ -14,7 +14,7 @@ export type TermCollection = BaseTerm & {
 	 */
 	memberType?: 'numeric' | 'categorical'
 	/** list of term.ids that are available in this collection. this is used in request payload and server side */
-	termIds: string[]
+	termIds?: string[]
 	/** list of term objs corresponding to termIds[]. 
 	this is generated on server init, and sent to client, so client has easy access to show name of every term */
 	termlst: BaseTerm[]
@@ -32,8 +32,8 @@ export type TermCollection = BaseTerm & {
 export type RawTermCollection = TermCollection & {
 	type?: 'termCollection'
 	termlst: BaseTerm[]
-	termIds: string[]
-	propsByTermId: {
+	termIds?: string[]
+	propsByTermId?: {
 		[termId: string]: {
 			[prop: string]: any
 		}
