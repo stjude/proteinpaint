@@ -50,7 +50,12 @@ async function getViolin(q: ViolinRequest & ReqQueryAddons, ds: any) {
 	if (typeof q.tw?.term != 'object' || typeof q.tw?.q != 'object') throw new Error('q.tw not of {term,q}')
 	const term = q.tw.term
 	if (!q.tw.q.mode) q.tw.q.mode = 'continuous'
-	if (!isNumericTerm(term) && term.type !== 'survival') throw new Error('term type is not numeric or survival')
+	if (
+		!isNumericTerm(term) &&
+		term.type !== 'survival' &&
+		!(term.type === 'termCollection' && term.memberType === 'numeric')
+	)
+		throw new Error('term type is not numeric or survival')
 
 	const terms = [q.tw]
 	if (q.overlayTw) terms.push(q.overlayTw)

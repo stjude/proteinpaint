@@ -10,6 +10,10 @@ import { isNumericTerm } from '#shared/terms.js'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
 
+function isNumericOrTermCollection(term) {
+	return isNumericTerm(term) || (term?.type === 'termCollection' && term?.memberType === 'numeric')
+}
+
 /*
 when opts.mode = 'minimal', a minimal violin plot will be rendered that will have a single term and minimal features (i.e. no controls, legend, labels, brushing, transitions, etc.)
 
@@ -404,10 +408,10 @@ class ViolinPlot extends PlotBase {
 				// scale the data on the server-side
 				arg.scale = term.q.scale
 			}
-		} else if (isNumericTerm(term.term) && term.q.mode === 'continuous') {
+		} else if (isNumericOrTermCollection(term.term) && term.q.mode === 'continuous') {
 			arg.tw = term
 			if (term2) arg.overlayTw = term2
-		} else if (isNumericTerm(term2?.term) && term2.q.mode === 'continuous') {
+		} else if (isNumericOrTermCollection(term2?.term) && term2.q.mode === 'continuous') {
 			arg.tw = term2
 			arg.overlayTw = term
 		} else {
