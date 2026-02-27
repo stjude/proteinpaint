@@ -43,7 +43,6 @@
 
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { pipeline, type FeatureExtractionPipeline } from '@xenova/transformers'
 import type { LlmConfig } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { readJSONFile, cosineSim, argsort } from './utils.ts'
@@ -378,23 +377,12 @@ export interface Embedder {
 }
 
 class LocalEmbedder implements Embedder {
-	private extractor: FeatureExtractionPipeline | null = null
-	private modelName: string
-
-	constructor(modelName = 'Xenova/bge-small-en-v1.5') {
-		this.modelName = modelName
-	}
-
 	async init(): Promise<void> {
-		if (!this.extractor) {
-			this.extractor = (await pipeline('feature-extraction', this.modelName)) as FeatureExtractionPipeline
-		}
+		throw new Error('LocalEmbedder requires @xenova/transformers which is not installed')
 	}
 
-	async embed(texts: string[]): Promise<number[][]> {
-		if (!this.extractor) throw new Error('Embedder not initialized — call init() first')
-		const output = await this.extractor(texts, { pooling: 'cls', normalize: true })
-		return output.tolist() as number[][]
+	async embed(_texts: string[]): Promise<number[][]> {
+		throw new Error('LocalEmbedder requires @xenova/transformers which is not installed')
 	}
 }
 
@@ -629,7 +617,7 @@ export async function getEmbedder(llm: LlmConfig): Promise<Embedder> {
 				embedder = new ApiEmbedder(llm.provider, llm.embeddingModelName, llm.api)
 			} else {
 				mayLog(`Embedder: using local (${llm.embeddingModelName})`)
-				embedder = new LocalEmbedder(llm.embeddingModelName)
+				embedder = new LocalEmbedder()
 			}
 
 			await embedder.init()
