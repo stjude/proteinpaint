@@ -1,5 +1,5 @@
 /**
- * Hybrid Query Classifier
+ * Hybrid Query Classifier This code is currently not used anywhere in the chatbot pipeline but represents a hybrid approach to query classification that we may use for things in the future. It combines explicit regex-based overrides, a kNN classifier using sentence embeddings, and an LLM fallback for ambiguous cases.
  * =======================
  *
  * Classifies user queries into plot categories (summary, dge, matrix,
