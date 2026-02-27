@@ -136,20 +136,20 @@ export async function test_chatbot_by_dataset(ds: any) {
 }
 
 function validate_summary_output(output: SummaryType, expected: SummaryType): boolean {
-	if (output.term != expected.term) {
-		console.log('Summary term did not match. LLM response: ' + output.term + ' Expected: ' + expected.term)
-		return false
-	}
-
-	if (output.term2 != expected.term2) {
-		console.log('Summary term2 did not match. LLM response: ' + output.term2 + ' Expected: ' + expected.term2)
-		return false
-	}
+	if (
+		!(
+			(output.term == expected.term && output.term2 == expected.term2) ||
+			(output.term == expected.term2 && output.term2 == expected.term)
+		)
+	)
+		return false // term and term2 are interchangeable in summary output so need to check for both combinations
 
 	if (!output.simpleFilter && !expected.simpleFilter) {
+		// If both expected and actual response are missing simpleFilter, pass the test as simpleFilter is optional in summary output
 		return true
 	}
 	if (!output.simpleFilter || !expected.simpleFilter) {
+		// If one of them is missing simpleFilter while the other has it, fail the test
 		console.log(
 			'Summary simpleFilter mismatch. LLM response: ' +
 				JSON.stringify(output.simpleFilter) +
