@@ -22,6 +22,7 @@ export class TermCollection {
 	type = termType
 	id: string
 	name: string
+	termIds: string[]
 	termlst: object[]
 	propsByTermId: {
 		[termId: string]: {
@@ -39,8 +40,10 @@ export class TermCollection {
 			c => c.name == term.collectionId || c.name == term.id || c.name == term.name || term.name?.includes(c.name)
 		)
 		if (!tc) throw new Error(`no matching termCollection for for ${term.collectionId}`)
-		if (!tc.termIds) throw new Error(`missing termCollection.termIds for '${tc.name}'`)
-		if (!tc.termlst) throw new Error('missing tc.termlst[]')
+		if (!Array.isArray(tc.termIds)) throw new Error(`missing termCollection.termIds for '${tc.name}'`)
+		if (!Array.isArray(tc.termlst)) throw new Error('missing tc.termlst[]')
+		if (tc.termIds.length == 0) throw new Error('empty termIds[]')
+		if (tc.termIds.length != tc.termlst.length) throw new Error('tc.termIds.length!=tc.termlst.length')
 		if (!tc.propsByTermId) throw new Error(`propsByTermId missing for termCollection='${tc.name}'`)
 		if (!term.propsByTermId) term.propsByTermId = tc.propsByTermId // assign if missing
 		// memberType copies collection type so client code can tell numeric vs categorical without looking up config
@@ -63,7 +66,8 @@ export class TermCollection {
 		TermCollection.validate(term)
 		this.id = term.id
 		this.name = term.name
-		this.termlst = term.termlst || []
+		this.termlst = term.termlst
+		this.termIds = term.termIds
 		this.propsByTermId = term.propsByTermId || {}
 	}
 }

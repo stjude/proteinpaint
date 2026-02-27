@@ -1,7 +1,6 @@
 import { renderTable } from '../dom/table'
 import { NumericRangeInput } from '#dom/numericRangeInput'
 import { format_val_text } from './tvs.numeric.js'
-import { mayHydrateDictTwLst } from '#termsetting'
 import type { TermCollectionTvs } from '#types'
 
 export const handler = {
@@ -77,28 +76,15 @@ function renderRangeInput(div, tvs, applyRange) {
 	return brush
 }
 
-// details = a termCollections entry in dataset.cohort.termdb
+// opts.details = a termCollections entry in dataset.cohort.termdb (a term obj)
 export async function addFilterTable(opts): Promise<any> {
-	const terms: any[] = []
-	const toBeHydrated: any[] = []
-
-	for (const id of opts.details.termIds) {
-		// const term = self.term.termlst.find(t => t.id === id)
-		// if (term) terms.push(term)
-		// else
-		toBeHydrated.push({ id })
-	}
-	if (toBeHydrated.length) {
-		await mayHydrateDictTwLst(toBeHydrated, opts.vocabApi)
-		terms.push(...toBeHydrated.map(tw => tw.term))
-	}
 	if (!opts.tvs.term.numerators) opts.tvs.term.numerators = opts.tvs.term.termlst.map(t => t.id)
 
 	const termlst = opts.tvs.term.termlst || []
 	const numerators = opts.tvs.term.numerators || []
 
 	const rows: any = []
-	for (const term of terms) {
+	for (const term of opts.details.termlst) {
 		const numeratorChecked = numerators?.find(tid => tid === term.id) ? 'checked' : ''
 		const denominatorChecked = opts.tvs.term.termlst.find(t => t.id === term.id) ? 'checked' : ''
 		rows.push([
@@ -107,7 +93,7 @@ export async function addFilterTable(opts): Promise<any> {
 			{ html: `<input type='checkbox' ${denominatorChecked} />` }
 		])
 	}
-	const selectedRows: number[] = terms
+	const selectedRows: number[] = opts.details.termlst
 		.map((term, index) => (termlst.find(t => t.id === term.id) ? index : -1))
 		.filter(index => index !== -1)
 
@@ -129,15 +115,15 @@ export async function addFilterTable(opts): Promise<any> {
 		buttons: undefined
 	})
 
+	// FIXME use table callback
 	return () => {
 		const trs = tableDiv.select('table').select('tbody').node().querySelectorAll('tr')
-		// console.log(132, trs, opts.callback, opts)
 		return {
-			termlst: terms.filter((term, i) => {
+			termlst: opts.details.termlst.filter((term, i) => {
 				const checked = trs[i].querySelectorAll('td')[3].querySelector('input')?.checked
 				return checked === true
 			}),
-			numerators: terms
+			numerators: opts.details.termlst
 				.filter((term, i) => {
 					const checked = trs[i].querySelectorAll('td')[2].querySelector('input')?.checked
 					return checked === true
