@@ -14,6 +14,46 @@ The chat pipeline uses a two-stage LLM classifier to route user queries to the c
 
 Downstream of classification, each plot type has its own agent that calls an LLM to extract structured parameters (terms, filters, groups, etc.) from the query.
 
+## Classification Flow
+
+```
+User query
+    │
+    ▼
+┌─────────────────────────────────────┐
+│  classify.ts — Stage 1 LLM call     │
+│  "Is this none, resource, or plot?" │
+└─────────────────────────────────────┘
+    │
+    ├─── none ──────────────────────────▶  "Query not related to data" (text response)
+    │
+    ├─── resource ──────────────────────▶  resourceagent.ts
+    │                                         └─ LLM picks index from resources[]
+    │                                         └─ returns pre-authored HTML
+    │
+    └─── plot
+              │
+              ▼
+         ┌─────────────────────────────────────────┐
+         │  plot.ts — Stage 2 LLM call              │
+         │  "Which plot type does this query need?" │
+         └─────────────────────────────────────────┘
+              │
+              ├─── summary ──────▶  summaryagent.ts
+              │                       └─ LLM extracts term, term2, simpleFilter
+              │
+              ├─── dge ──────────▶  DEagent.ts
+              │                       └─ LLM extracts group1, group2, method
+              │
+              ├─── survival ─────▶  (not yet implemented)
+              │
+              ├─── matrix ───────▶  matrixagent.ts
+              │                       └─ LLM extracts geneNames, terms
+              │
+              └─── sampleScatter ▶  samplescatteragent.ts
+                                      └─ LLM extracts plotName, colorTW, shapeTW
+```
+
 ## File Location
 
 Each dataset's AI configuration is a JSON file referenced by the dataset's main config. By convention these live in:
@@ -39,7 +79,7 @@ The following fields are the bare minimum. The server will throw an error if `ch
 }
 ```
 
-Only declare chart types your dataset actually supports. The `charts` array drives both the classifier (which categories are valid for this dataset) and the downstream agents (which training examples to use). Declaring a chart type with no `TrainingData` is valid but will reduce LLM accuracy for that plot type.
+Only declare chart types your dataset actually supports. The `charts` array drives the downstream agents (which training examples to use). Declaring a chart type with no `TrainingData` is valid but will reduce LLM accuracy for that plot type.
 
 ---
 
@@ -53,15 +93,6 @@ Only declare chart types your dataset actually supports. The `charts` array driv
   "genedb": "path/to/genes.db",
 
   "DatasetPrompt": "...",
-
-  "classifierExamples": {
-    "summary":       ["...", "..."],
-    "dge":           ["...", "..."],
-    "survival":      ["...", "..."],
-    "matrix":        ["...", "..."],
-    "sampleScatter": ["...", "..."],
-    "resource":      ["...", "..."]
-  },
 
   "resources": [
     { "label": "Primary publication", "html": "<a href='...'>...</a>" },
@@ -96,7 +127,6 @@ Only declare chart types your dataset actually supports. The `charts` array driv
 | `db`                 | Yes                           | Path to the clinical SQLite database.                                                                                                                                          |
 | `genedb`             | If using gene expression      | Path to the gene symbol SQLite database.                                                                                                                                       |
 | `DatasetPrompt`      | Recommended                   | Free-text appended to every agent system prompt. Use this for dataset-specific terminology disambiguation (e.g. what "LC50" means, naming conventions for clinical variables). |
-| `classifierExamples` | Strongly recommended          | Dataset-specific embedding classifier training examples. See below.                                                                                                            |
 | `resources`          | If using Classification chart | Links and publications returned when a user asks about the dataset.                                                                                                            |
 | `prebuiltPlots`      | If using sampleScatter        | Names of available pre-built scatter plots (t-SNE, UMAP).                                                                                                                      |
 | `TestData`           | Recommended                   | Ground-truth Q&A pairs used by the automated test suite.                                                                                                                       |
