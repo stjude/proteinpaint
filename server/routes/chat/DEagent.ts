@@ -164,7 +164,7 @@ async function validate_DE_response(response: string, ds: any, db_rows: DbRows[]
 			text,
 			'For now, the maximum number of filter terms supported through the chatbot is ' + num_filter_cutoff // Remove duplicated statements in error message
 		)
-		return { type: 'text', text }
+		return { type: 'text', text: text }
 	} else {
 		const pp_plot_json: any = { childType: 'volcano', termType: 'geneExpression', chartType: 'differentialAnalysis' }
 		const groups = [group1, group2]

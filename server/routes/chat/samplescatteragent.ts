@@ -159,7 +159,7 @@ function validate_samplescatter_response(response: string, common_genes: string[
 	}
 
 	if (text.length > 0) {
-		return { type: 'text', text }
+		return { type: 'text', text: text }
 	} else {
 		return { type: 'plot', plot: pp_plot_json }
 	}
