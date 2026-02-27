@@ -1620,9 +1620,7 @@ keep this setting here for reason of:
 }
 
 type TermCollection = {
-	/** collection id */
-	id?: string
-	/** human readable name for this collection, may be as collection id if missing */
+	/** human readable name as well as unique identifier for this collection */
 	name: string
 	/** collection term type.
 	numeric:

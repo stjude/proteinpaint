@@ -13,10 +13,14 @@ export type TermCollection = BaseTerm & {
 	 * Allows client code using the term to know the collection kind without looking up config.
 	 */
 	memberType?: 'numeric' | 'categorical'
-	// may be queried from backend, but should be available in frontend for termsetting edit menu
-	/** the full list of term.ids that are available in this collection */
+	/** list of term.ids that are available in this collection. this is used in request payload and server side */
+	termIds: string[]
+	/** list of term objs corresponding to termIds[]. 
+	this is generated on server init, and sent to client, so client has easy access to show name of every term */
 	termlst: BaseTerm[]
+	/** TODO purpose */
 	numerators?: string[]
+	/** TODO purpose */
 	newTvs?: boolean
 	propsByTermId: {
 		[termId: string]: {
@@ -28,7 +32,8 @@ export type TermCollection = BaseTerm & {
 export type RawTermCollection = TermCollection & {
 	type?: 'termCollection'
 	termlst: BaseTerm[]
-	propsByTermId?: {
+	termIds: string[]
+	propsByTermId: {
 		[termId: string]: {
 			[prop: string]: any
 		}
