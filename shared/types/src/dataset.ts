@@ -1619,17 +1619,9 @@ keep this setting here for reason of:
 	termCollections?: TermCollection[]
 }
 
-type TermCollection = {
+type TermCollectionBase = {
 	/** human readable name as well as unique identifier for this collection */
 	name: string
-	/** collection term type.
-	numeric:
-	- all member terms must be either integer or float type
-	categorical:
-	- all member terms must be categorical terms with same set of categories
-	*/
-	type: 'numeric' | 'categorical'
-	// TODO: add categoryKey field for categorical collections to specify which category attribute to use
 	/** array of dictionary term ids belonging to this collection */
 	termIds: string[]
 	/** array of branch term ids belonging to this collection,
@@ -1646,6 +1638,17 @@ type TermCollection = {
 		file: string
 	}[]
 }
+
+type NumericTermCollection = TermCollectionBase & {
+	type: 'numeric'
+}
+
+type CategoricalTermCollection = TermCollectionBase & {
+	type: 'categorical'
+	categoryKeys: string[]
+}
+
+type TermCollection = NumericTermCollection | CategoricalTermCollection
 
 type SampleType = {
 	name: string
