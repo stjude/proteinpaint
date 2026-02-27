@@ -132,7 +132,7 @@ export type none_type = {
 export type QueryClassification = { type: 'none' } | { type: 'resource' } | { type: 'plot' }
 
 /** Specific plot type returned by classifyPlotType in plot.ts */
-export type PlotType = 'summary' | 'dge' | 'survival' | 'matrix' | 'sampleScatter'
+export type PlotType = 'summary' | 'dge' | 'survival' | 'matrix' | 'samplescatter'
 
 export type DEType = {
 	/** Name of group1 which is an array of filter terms */
