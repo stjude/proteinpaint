@@ -1,7 +1,13 @@
+function getTermIds(term) {
+	if (term.termIds?.length) return term.termIds
+	if (term.termlst?.length) return term.termlst.map(t => t.id || t)
+	throw 'termCollection: neither termIds nor termlst available'
+}
+
 export const termCollectionNumeric = {
 	getCTE(tablename, tw, values) {
-		values.push(...tw.term.termIds)
-		// For now, use sample as key for matrix, could update key later if used for other types of plots.
+		const ids = getTermIds(tw.term)
+		values.push(...ids)
 		return {
 			sql: `${tablename} AS (
 				SELECT sample,
@@ -11,7 +17,7 @@ export const termCollectionNumeric = {
                     value
                 ) AS value 
 				FROM anno_float
-				WHERE term_id IN (${tw.term.termIds.map(() => '?').join(',')})
+				WHERE term_id IN (${ids.map(() => '?').join(',')})
                 GROUP BY sample
 			)`,
 			tablename
@@ -21,12 +27,13 @@ export const termCollectionNumeric = {
 
 export const termCollectionCategorical = {
 	getCTE(tablename, tw, values) {
-		values.push(...tw.term.termIds)
+		const ids = getTermIds(tw.term)
+		values.push(...ids)
 		return {
 			sql: `${tablename} AS (
 				SELECT sample, term_id as key, value
 				FROM anno_categorical
-				WHERE term_id IN (${tw.term.termIds.map(_ => '?').join(',')})
+				WHERE term_id IN (${ids.map(() => '?').join(',')})
 			)`,
 			tablename
 		}
