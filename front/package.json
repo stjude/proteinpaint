@@ -7,7 +7,7 @@
 	"scripts": {
 		"dev": "./dev.sh &",
 		"//TODO": "# delete webpack use, once esbuild migration is fully tested and unlikely to be reverted",
-		"client-dist": "if [[ ! -d ../client/dist ]]; then cd ../client; npm pack; fi",
+		"client-dist": "if ! -d ../client/dist; then cd ../client; npm pack; fi",
 		"prepack": "npm run client-dist && rm -rf public/bin && rm -rf *.tgz && webpack && tar -czf bundles.tgz public/bin",
 		"test:unit": "echo 'TODO: front unit tests'",
 		"test:integration": "echo 'TODO: front integration tests'"
