@@ -1168,11 +1168,18 @@ export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1) {
 
 	*** quick fix!! ***
 	downstream mds3 code does not handle array value well.
-	return 1st value for those to work; later can change back when array values can be handled
+	before 2/27/2026: before returns 1st value for those to work; later can change back when array values can be handled
+	starting on 2/27/2028: throw on multivalue terms, because of the following reasons
+	- would need to sort values to make sure that the first value is deterministic
+	- however, the case filter may still affect which value is first, missing, or matched for a sample[tw.$id] in the API response;
+	  for example, in List Samples, the same case may be returned for different clicked bar segments for
+	  Age at diagnosis, if a case has multiple values that can each be rendered in a different bar/overlay/chart
 	*/
 	if (sample[tw.term.id] instanceof Set) {
-		//sample[term.id] = [...sample[term.id]]
-		sample[tw.term.id] = [...sample[tw.term.id]][0]
+		if (sample[tw.term.id].size > 1) {
+			delete sample[tw.term.id] // later may skip throwing, and simply not include cases with multiple values for the same annotation term
+			throw `At least one case has multiple values for ${tw.term.name}.`
+		} else sample[tw.term.id] = [...sample[tw.term.id]][0]
 	}
 
 	if (tw.term.id in sample) {
