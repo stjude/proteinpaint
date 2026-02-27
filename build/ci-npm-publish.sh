@@ -7,10 +7,11 @@
 set -euo pipefail
 
 WORKSPACES=""
-
 if (( "$#" > 0 )); then
-  WORKSPACES=$1
-elif [[ -f ./build/unpublishedPkgs.txt ]]; then
+	WORKSPACES="$1"
+fi
+
+if [[ "$WORKSPACES" == "" && -f ./build/unpublishedPkgs.txt ]]; then
   # support the recovery of interruped publish step,
   # /build/bump.cjs may generate ./build/unpublishedPkgs.txt if applicable
   WORKSPACES="$(cat ./build/unpublishedPkgs.txt)"
