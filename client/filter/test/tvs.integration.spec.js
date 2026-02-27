@@ -1313,7 +1313,7 @@ tape('tvs: termCollection', async test => {
 	const term = Object.assign({}, tc, {
 		collectionId: tc.name,
 		memberType: 'numeric',
-		name: ' (agedx,a_death)',
+		name: ' (agedx,a_death,a_ndi,agelastvisit)',
 		type: 'termCollection',
 		numerators: ['agedx', 'a_death'],
 		termlst: [
@@ -1350,6 +1350,22 @@ tape('tvs: termCollection', async test => {
 				isleaf: true,
 				values: {},
 				hashtmldetail: true
+			},
+			{
+				type: 'float',
+				bins: { default: { type: 'regular-bin', startinclusive: true, bin_size: 10, first_bin: { stop: 15 } } },
+				name: 'Age (years) at Last NDI Search',
+				id: 'a_ndi',
+				isleaf: true,
+				values: {}
+			},
+			{
+				type: 'float',
+				bins: { default: { type: 'regular-bin', startinclusive: true, bin_size: 10, first_bin: { stop: 15 } } },
+				values: { '-994': { label: 'N/A: No campus visit', uncomputable: true } },
+				name: 'Age at last ABC assessment',
+				id: 'agelastvisit',
+				isleaf: true
 			}
 		],
 		isleaf: true,
