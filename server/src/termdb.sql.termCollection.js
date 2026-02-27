@@ -1,6 +1,6 @@
 export const termCollectionNumeric = {
 	getCTE(tablename, tw, values) {
-		values.push(...tw.term.termlst)
+		values.push(...tw.term.termlst.map(t => t.id))
 		// For now, use sample as key for matrix, could update key later if used for other types of plots.
 		return {
 			sql: `${tablename} AS (
@@ -21,7 +21,7 @@ export const termCollectionNumeric = {
 
 export const termCollectionCategorical = {
 	getCTE(tablename, tw, values) {
-		values.push(...tw.term.termlst)
+		values.push(...tw.term.termlst.map(t => t.id))
 		return {
 			sql: `${tablename} AS (
 				SELECT sample, term_id as key, value
