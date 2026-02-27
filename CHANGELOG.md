@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 
 
+## Unreleased
+
+Fixes:
+- skip GDC diagnoses variables that may have multiple values per case, and throw an error when this situation is detected for any variable at runtime
+
+
 ## 2.177.0
 
 Features:
@@ -79,11 +85,6 @@ Fixes:
 - stream matrix response data to prevent RangeError during json-encoding
 - do not join to global filter in getTreeFilter() if the join argument is 'or', so that the edit menu will list all applicable categories
 - show loading and error messages when switching to barchart tab in summary plot
-
-## 2.170.19
-
-Fixes:
-- skip GDC diagnoses variables that may have multiple values per case, and throw an error when this situation is detected for any variable at runtime
 
 
 ## 2.170.18
