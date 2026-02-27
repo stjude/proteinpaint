@@ -123,16 +123,16 @@ export async function extract_summary_terms(
 function validate_summary_response(response: string, common_genes: string[], dataset_json: any, ds: any) {
 	const response_type = safeParseLlmJson(response)
 	const pp_plot_json: any = { chartType: 'summary' }
-	let html = ''
-	if (response_type.html) html = response_type.html
+	let text = ''
+	if (response_type.text) text = response_type.text
 	if (!response_type.term) {
-		html += 'term type is not present in summary output'
-		return { type: 'html', html: html }
+		text += 'term type is not present in summary output'
+		return { type: 'text', text }
 	}
 	const term1_validation = validate_term(response_type.term, common_genes, dataset_json, ds)
-	if (term1_validation.html.length > 0) {
-		html += term1_validation.html
-		return { type: 'html', html: html }
+	if (term1_validation.text.length > 0) {
+		text += term1_validation.text
+		return { type: 'text', text }
 	} else {
 		pp_plot_json.term = term1_validation.term_type
 		if (term1_validation.category == 'float' || term1_validation.category == 'integer') {
@@ -143,9 +143,9 @@ function validate_summary_response(response: string, common_genes: string[], dat
 
 	if (response_type.term2) {
 		const term2_validation = validate_term(response_type.term2, common_genes, dataset_json, ds)
-		if (term2_validation.html.length > 0) {
-			html += term2_validation.html
-			return { type: 'html', html: html }
+		if (term2_validation.text.length > 0) {
+			text += term2_validation.text
+			return { type: 'text', text }
 		} else {
 			pp_plot_json.term2 = term2_validation.term_type
 			if (term2_validation.category == 'float' || term2_validation.category == 'integer') {
@@ -164,8 +164,8 @@ function validate_summary_response(response: string, common_genes: string[], dat
 	const resolved = resolveChildType(pp_plot_json.category, pp_plot_json.category2, llmChildType)
 
 	if (resolved.error) {
-		html += resolved.error
-		return { type: 'html', html: html }
+		text += resolved.error
+		return { type: 'text', text }
 	} else {
 		pp_plot_json.childType = resolved.childType
 		// For two numeric variables displayed as violin/boxplot, discretize term2
@@ -185,9 +185,9 @@ function validate_summary_response(response: string, common_genes: string[], dat
 
 	if (response_type.simpleFilter && response_type.simpleFilter.length > 0) {
 		const validated_filters = validate_filter(response_type.simpleFilter, ds, '')
-		if (validated_filters.html.length > 0) {
-			html += validated_filters.html
-			return { type: 'html', html: html }
+		if (validated_filters.text.length > 0) {
+			text += validated_filters.text
+			return { type: 'text', text }
 		} else {
 			pp_plot_json.filter = validated_filters.simplefilter
 		}

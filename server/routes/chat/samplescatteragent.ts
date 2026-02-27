@@ -13,7 +13,7 @@ export async function extract_samplescatter_terms_from_query(
 	testing: boolean
 ) {
 	if (!dataset_json.prebuiltPlots || dataset_json.prebuiltPlots.length == 0) {
-		return { type: 'html', html: 'No pre-built scatter plots (t-SNE/UMAP) are available for this dataset' }
+		return { type: 'text', text: 'No pre-built scatter plots (t-SNE/UMAP) are available for this dataset' }
 	}
 
 	const Schema = {
@@ -99,20 +99,20 @@ export async function extract_samplescatter_terms_from_query(
 
 function validate_samplescatter_response(response: string, common_genes: string[], dataset_json: any, ds: any) {
 	const response_type = safeParseLlmJson(response)
-	let html = ''
+	let text = ''
 
-	if (response_type.html) html = response_type.html
+	if (response_type.text) text = response_type.text
 
 	// Validate plotName against prebuiltPlots
 	if (!response_type.plotName) {
-		html += 'plotName is required for sample scatter output'
+		text += 'plotName is required for sample scatter output'
 	} else {
 		const matchedPlot = dataset_json.prebuiltPlots.find(
 			(p: any) => p.name.toLowerCase() == response_type.plotName.toLowerCase()
 		)
 		if (!matchedPlot) {
 			const availablePlots = dataset_json.prebuiltPlots.map((p: any) => p.name).join(', ')
-			html += 'Unknown plot name: ' + response_type.plotName + '. Available plots are: ' + availablePlots
+			text += 'Unknown plot name: ' + response_type.plotName + '. Available plots are: ' + availablePlots
 		}
 	}
 
@@ -133,8 +133,8 @@ function validate_samplescatter_response(response: string, common_genes: string[
 			return
 		}
 		const termValidation = validate_term(termName, common_genes, dataset_json, ds)
-		if (termValidation.html.length > 0) {
-			html += termValidation.html
+		if (termValidation.text.length > 0) {
+			text += termValidation.text
 		} else {
 			const tw: any = { ...termValidation.term_type }
 			if (termValidation.category == 'float' || termValidation.category == 'integer') {
@@ -151,15 +151,15 @@ function validate_samplescatter_response(response: string, common_genes: string[
 	// Validate filters
 	if (response_type.simpleFilter && response_type.simpleFilter.length > 0) {
 		const validated_filters = validate_filter(response_type.simpleFilter, ds, '')
-		if (validated_filters.html.length > 0) {
-			html += validated_filters.html
+		if (validated_filters.text.length > 0) {
+			text += validated_filters.text
 		} else {
 			pp_plot_json.filter = validated_filters.simplefilter
 		}
 	}
 
-	if (html.length > 0) {
-		return { type: 'html', html: html }
+	if (text.length > 0) {
+		return { type: 'text', text }
 	} else {
 		return { type: 'plot', plot: pp_plot_json }
 	}
