@@ -51,9 +51,9 @@ export const FILTER_DESCRIPTION =
 	'"stop" an optional filter which is defined when a higher cutoff is defined in the user input for the numeric variable. '
 
 function sortSameCategoricalFilterKeys(filters: any[], ds: any): any {
-	let html = ''
+	let text = ''
 	const keys = filters.map(f => f.term)
-	if (new Set(keys).size == keys.length) return { filters: filters, html: html } // All filter terms have separate keys
+	if (new Set(keys).size == keys.length) return { filters: filters, text } // All filter terms have separate keys
 
 	const seen = new Set<string>()
 	const categorical_filter_terms_with_multiple_fields = new Set<string>()
@@ -70,7 +70,7 @@ function sortSameCategoricalFilterKeys(filters: any[], ds: any): any {
 			ds.cohort.termdb.q.termjsonByOneid(key.toUpperCase()) ||
 			ds.cohort.termdb.q.termjsonByOneid(key.toLowerCase())
 		if (!term) {
-			html += 'invalid filter id:' + key
+			text += 'invalid filter id:' + key
 		} else {
 			if (term.type == 'categorical') {
 				const multiple_fields = filters.filter(x => x.term == key)
@@ -97,29 +97,29 @@ function sortSameCategoricalFilterKeys(filters: any[], ds: any): any {
 			}
 		}
 	}
-	return { filters: sorted_filter, html: html }
+	return { filters: sorted_filter, text }
 }
 
 export function validate_filter(filters: FilterTerm[], ds: any, group_name: string): any {
 	if (!Array.isArray(filters)) throw 'filter is not array'
 	const sorted_filters = sortSameCategoricalFilterKeys(filters, ds)
-	let filter_result: { simplefilter?: any; html: string } = { html: sorted_filters.html }
+	let filter_result: { simplefilter?: any; text: string } = { text: sorted_filters.text }
 	if (sorted_filters.filters.length <= 2) {
 		// If number of filter terms <=2 then simply a single iteration of generate_filter_term() is sufficient
 		const generated = generate_filter_term(sorted_filters.filters, ds)
 		filter_result.simplefilter = generated.simplefilter
-		filter_result.html += generated.html
+		filter_result.text += generated.text
 	} else {
 		if (sorted_filters.filters.length > num_filter_cutoff) {
-			filter_result.html +=
+			filter_result.text +=
 				'For now, the maximum number of filter terms supported through the chatbot is ' + num_filter_cutoff
 			if (group_name.length > 0) {
 				// Group name is blank for summary filter, this is case for groups
-				filter_result.html +=
+				filter_result.text +=
 					' . The number of filter terms for group ' + group_name + ' is ' + sorted_filters.filters.length + '\n' // Added temporary logic to restrict the number of filter terms to num_filter_cutoff.
 			} else {
 				// For summary filter prompts which do not have a group
-				filter_result.html += 'The number of filter terms for this query is ' + sorted_filters.filters.length
+				filter_result.text += 'The number of filter terms for this query is ' + sorted_filters.filters.length
 			}
 		} else {
 			// When number of filter terms is greater than 2, then in each iteration the first two terms are taken and a filter object is created which is passed in the following iteration as a filter term
@@ -135,11 +135,11 @@ export function validate_filter(filters: FilterTerm[], ds: any, group_name: stri
 			}
 		}
 	}
-	return { simplefilter: filter_result.simplefilter, html: filter_result.html }
+	return { simplefilter: filter_result.simplefilter, text: filter_result.text }
 }
 
 function generate_filter_term(filters: any, ds: any) {
-	let invalid_html = ''
+	let invalid_text = ''
 	const localfilter: any = { type: 'tvslst', in: true, lst: [] as any[] }
 	for (const f of filters) {
 		if (f.type == 'tvslst') {
@@ -150,7 +150,7 @@ function generate_filter_term(filters: any, ds: any) {
 				ds.cohort.termdb.q.termjsonByOneid(f.term.toUpperCase()) ||
 				ds.cohort.termdb.q.termjsonByOneid(f.term.toLowerCase())
 			if (!term) {
-				invalid_html += 'invalid filter id:' + f.term
+				invalid_text += 'invalid filter id:' + f.term
 			} else {
 				if (f.join) {
 					localfilter.join = f.join
@@ -164,7 +164,7 @@ function generate_filter_term(filters: any, ds: any) {
 							if (ck.toLowerCase() == category.toLowerCase()) cat = ck
 							else if (term.values[ck].label?.toLowerCase() == category.toLowerCase()) cat = ck
 						}
-						if (!cat) invalid_html += 'invalid category from ' + JSON.stringify({ term: f.term, category })
+						if (!cat) invalid_text += 'invalid category from ' + JSON.stringify({ term: f.term, category })
 						else values.push({ key: cat })
 					}
 					localfilter.lst.push({
@@ -193,7 +193,7 @@ function generate_filter_term(filters: any, ds: any) {
 						range.start = Number(f.start)
 						range.stop = Number(f.stop)
 					} else {
-						invalid_html += 'Neither greater or lesser defined'
+						invalid_text += 'Neither greater or lesser defined'
 					}
 					numeric.tvs.ranges.push(range)
 					localfilter.lst.push(numeric)
@@ -203,7 +203,7 @@ function generate_filter_term(filters: any, ds: any) {
 	}
 	if (filters.length > 1 && !localfilter.join) {
 		localfilter.join = 'and' // Hardcoding and when the LLM is not able to detect the connection
-		//invalid_html += 'Connection (and/or) between the filter terms is not clear, please try to rephrase your question'
+		//invalid_text += 'Connection (and/or) between the filter terms is not clear, please try to rephrase your question'
 	}
-	return { simplefilter: localfilter, html: invalid_html }
+	return { simplefilter: localfilter, text: invalid_text }
 }

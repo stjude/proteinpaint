@@ -79,16 +79,16 @@ export async function extract_matrix_search_terms_from_query(
 function validate_matrix_response(response: string, common_genes: string[], dataset_json: any, ds: any) {
 	const response_type = safeParseLlmJson(response)
 	const pp_plot_json: any = { chartType: 'matrix' }
-	let html = ''
+	let text = ''
 
-	if (response_type.html) html = response_type.html
+	if (response_type.text) text = response_type.text
 
 	// Must have at least one of terms or geneNames
 	if (
 		(!response_type.terms || response_type.terms.length == 0) &&
 		(!response_type.geneNames || response_type.geneNames.length == 0)
 	) {
-		html += 'At least one clinical term or gene name is required for a matrix plot'
+		text += 'At least one clinical term or gene name is required for a matrix plot'
 	}
 
 	// Validate dictionary terms — use shorthand { id } at tw top level
@@ -97,7 +97,7 @@ function validate_matrix_response(response: string, common_genes: string[], data
 		for (const t of response_type.terms) {
 			const term: any = ds.cohort.termdb.q.termjsonByOneid(t)
 			if (!term) {
-				html += 'invalid term id:' + t + ' '
+				text += 'invalid term id:' + t + ' '
 			} else {
 				twLst.push({ id: term.id })
 			}
@@ -110,7 +110,7 @@ function validate_matrix_response(response: string, common_genes: string[], data
 		for (const g of response_type.geneNames) {
 			const gene_hits = common_genes.filter(gene => gene == g.toLowerCase())
 			if (gene_hits.length == 0) {
-				html += 'invalid gene name:' + g + ' '
+				text += 'invalid gene name:' + g + ' '
 			} else {
 				const geneName = g.toUpperCase()
 				if (dataset_json.hasGeneExpression) {
@@ -125,15 +125,15 @@ function validate_matrix_response(response: string, common_genes: string[], data
 	// Validate filters
 	if (response_type.simpleFilter && response_type.simpleFilter.length > 0) {
 		const validated_filters = validate_filter(response_type.simpleFilter, ds, '')
-		if (validated_filters.html.length > 0) {
-			html += validated_filters.html
+		if (validated_filters.text.length > 0) {
+			text += validated_filters.text
 		} else {
 			pp_plot_json.filter = validated_filters.simplefilter
 		}
 	}
 
-	if (html.length > 0) {
-		return { type: 'html', html: html }
+	if (text.length > 0) {
+		return { type: 'text', text }
 	} else {
 		// Structure as termgroups matching what matrix.js expects:
 		// termgroups: [{ name: '', lst: [ { term: {...} }, ... ] }]
