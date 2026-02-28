@@ -462,10 +462,10 @@
 		},
 		{
 			"type": "Matrix",
-			"SystemPrompt": "A matrix plot displays mutation status and clinical variables across samples in a grid. The \"geneNames\" field should ONLY contain gene names. The \"terms\" field should ONLY contain clinical/dictionary variable names from the dataset (e.g. \"diaggrp\", \"sex\", \"agedx\", \"genetic_race\"). At least one of \"geneNames\" or \"terms\" must be provided. If the user specifies filters to restrict the sample set, include them in \"simpleFilter\" using the same format as other chart types.",
+			"SystemPrompt": "A matrix plot displays expression status and clinical variables across samples in a grid. The \"geneNames\" field should ONLY contain gene names. The \"terms\" field should ONLY contain clinical/dictionary variable names from the dataset (e.g. \"diaggrp\", \"sex\", \"agedx\", \"genetic_race\"). At least one of \"geneNames\" or \"terms\" must be provided. If the user specifies filters to restrict the sample set, include them in \"simpleFilter\" using the same format as other chart types.",
 			"TrainingData": [
 				{
-					"question": "Show a matrix of TP53 and KRAS mutations",
+					"question": "Show a matrix of TP53 and KRAS expression across all samples",
 					"answer": {
 						"geneNames": ["TP53", "KRAS"]
 					}
@@ -497,7 +497,7 @@
 					}
 				},
 				{
-					"question": "Show an matrix plot of TP53, KRAS across all samples",
+					"question": "Show a matrix plot of TP53 and KRAS expression across all samples",
 					"answer": {
 						"geneNames": ["TP53", "KRAS"]
 					}
