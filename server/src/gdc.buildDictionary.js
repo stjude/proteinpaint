@@ -633,6 +633,9 @@ function maySkipFieldLine(line) {
 		return true
 	}
 	if (line.startsWith('case.diagnoses.')) {
+		// due to diagnoses__days_to_hiv_diagnosis term breaking graphql query in qa-yellow, skip all terms under "diagnoses." except following two which are known to work and frequently used
+		if (line == 'case.diagnoses.age_at_diagnosis') return false
+		if (line == 'case.diagnoses.primary_diagnosis') return false
 		// all terms under this branch are multivalue and skipped
 		return true
 	}
