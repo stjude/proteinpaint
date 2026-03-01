@@ -343,7 +343,7 @@ function getAllowedTermTypes(ds) {
 		typeSet.add(TermTypes.SINGLECELL_CELLTYPE)
 		if (ds.queries.singleCell?.geneExpression) typeSet.add(TermTypes.SINGLECELL_GENE_EXPRESSION)
 	}
-	if (ds.cohort.termdb.numericTermCollections) typeSet.add('termCollection')
+	if (ds.cohort.termdb.termCollections?.length) typeSet.add('termCollection')
 	return [...typeSet]
 }
 
