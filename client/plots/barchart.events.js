@@ -482,7 +482,7 @@ function handle_click(event, self, chart) {
 			label: 'List samples',
 			callback: async () => {
 				const arg = getListSamplesArg(event, self, data.seriesId, data.dataId, chart.chartId)
-				await listSamples(arg)
+				await listSamples(arg, data.seriesId, data.dataId, chart.chartId)
 			}
 		})
 	}
@@ -587,7 +587,12 @@ function getTvs(termIndex, value, self, geneVariant) {
 	return tvs
 }
 
-export async function listSamples(arg) {
+// NOTE: should make these notes dataset specific, maybe a callback with tw as the argument
+const notCountedNote =
+	'Not counted in this bar segment for statistical reasons; the earliest value was used and rendered in a different bar segment'
+const unusedValue = '-'
+
+export async function listSamples(arg, seriesId, dataId, chartId) {
 	// validate arg
 	for (const k of Object.keys(arg)) {
 		const param = arg[k]
@@ -631,12 +636,18 @@ export async function listSamples(arg) {
 		 * May not be caught in server request for custom variables
 		 * with user supplied keys */
 		if (self.config.term.q?.hiddenValues && self.config.term.q.hiddenValues[t1entry.value]) continue
+		const value = t1entry.value
 		if (termIsNumeric) {
-			const value = t1entry.value
-			row.push({ value: roundValueAuto(value) })
+			row.push({ value: t1entry.key === seriesId ? roundValueAuto(value) : unusedValue })
+			row.push({ value: t1entry.key === seriesId ? '' : notCountedNote })
 		} else if (termIsGv) {
 			addGvRowVals(sample, self.config.term, row, termdbmclass)
+			row.push({ value: '' })
+		} else {
+			row.push({ value: t1entry.key === seriesId ? value : unusedValue })
+			row.push({ value: t1entry.key === seriesId ? '' : notCountedNote })
 		}
+
 		if (self.config.term2) {
 			const t2entry = sample[self.config.term2.$id]
 			if (!t2entry) continue
@@ -644,16 +655,19 @@ export async function listSamples(arg) {
 			if (self.config.term2.q?.hiddenValues && self.config.term2.q.hiddenValues[t2entry.value]) continue
 			if (term2isNumeric) {
 				const value = roundValueAuto(t2entry.value)
-				row.push({ value })
+				row.push({ value: t2entry.key === dataId ? value : unusedValue })
+				row.push({ value: t2entry.key === dataId ? '' : notCountedNote })
 			} else if (term2isGv) {
 				addGvRowVals(sample, self.config.term2, row, termdbmclass)
+				row.push({ value: '' })
 			} else if (term2isSurv) {
 				const value = self.config.term2.term.values[t2entry.key].label
-				row.push({ value })
+				row.push({ value }, { value: '' })
 			} else {
 				const label = self.config.term2.term.values?.[t2entry.value]?.label
 				const value = label || t2entry.value
-				row.push({ value })
+				row.push({ value: t2entry.key === dataId ? value : unusedValue })
+				row.push({ value: t2entry.key === dataId ? '' : notCountedNote })
 			}
 		}
 		// for now, duplicating if block for term2 and term0
@@ -665,16 +679,19 @@ export async function listSamples(arg) {
 			if (self.config.term0.q?.hiddenValues && self.config.term0.q.hiddenValues[t0entry.value]) continue
 			if (term0isNumeric) {
 				const value = roundValueAuto(t0entry.value)
-				row.push({ value })
+				row.push({ value: t0entry.key === chartId ? value : unusedValue })
+				row.push({ value: t2entry.key === chartId ? '' : notCountedNote })
 			} else if (term0isGv) {
 				addGvRowVals(sample, self.config.term0, row, termdbmclass)
+				row.push({ value: '' })
 			} else if (term0isSurv) {
 				const value = self.config.term0.term.values[t0entry.key].label
-				row.push({ value })
+				row.push({ value }, { value: '' })
 			} else {
 				const label = self.config.term0.term.values?.[t0entry.value]?.label
 				const value = label || t0entry.value
-				row.push({ value })
+				row.push({ value: t0entry.key === chartId ? value : unusedValue })
+				row.push({ value: t0entry.key === chartId ? '' : notCountedNote })
 			}
 		}
 		rows.push(row)
@@ -701,6 +718,7 @@ export async function listSamples(arg) {
 			columns.push({ label: self.config.term0.term.name })
 		}
 	}
+	columns.push({ label: 'Notes' })
 
 	// render table in div. from now on arg.tip should always be given
 	let div

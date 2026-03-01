@@ -1157,10 +1157,28 @@ args:
 
 todo unit test
 */
-export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1) {
+export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1, case_filters) {
+	if (tw.term.id === 'diagnoses.age_at_diagnosis' && Array.isArray(caseObj.diagnoses)) {
+		const diagnoses = caseObj.diagnoses.filter(agedxIsNotNull)
+		if (!diagnoses.length) return
+
+		if (
+			caseObj.diagnoses.find(
+				d =>
+					d.submitter_id.includes('TCGA-78-8662') ||
+					d.submitter_id.includes('TCGA-78-8648') ||
+					d.submitter_id.includes('TCGA-05-4402')
+			)
+		)
+			console.log(1178, caseObj)
+
+		caseObj.diagnoses = diagnoses.sort(agedxSort)[0]
+		//const diagnosesFilters = case_filter.contents.
+	}
+
 	const fields = tw.term.id.split('.')
 
-	query(caseObj, startIdx)
+	query(fields, sample, tw, caseObj, startIdx)
 
 	/* done searching; if available, a new value is now assigned to sample[term.id]
 	if value is a Set, convert to array
@@ -1171,8 +1189,24 @@ export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1) {
 	return 1st value for those to work; later can change back when array values can be handled
 	*/
 	if (sample[tw.term.id] instanceof Set) {
-		//sample[term.id] = [...sample[term.id]]
-		sample[tw.term.id] = [...sample[tw.term.id]][0]
+		if (
+			caseObj.diagnoses.find(
+				d =>
+					d.submitter_id.includes('TCGA-78-8662') ||
+					d.submitter_id.includes('TCGA-78-8648') ||
+					d.submitter_id.includes('TCGA-05-4402')
+			)
+		)
+			console.log(
+				1178,
+				caseObj,
+				sample.sample_id.slice(0, 5),
+				[...sample[tw.term.id]].filter(isNotNull).sort(basicSort)
+			)
+		/*if (sample[tw.term.id].size > 1) {
+			delete sample[tw.term.id] // later may skip throwing, and simply not include cases with multiple values for the same annotation term
+			throw `At least one case has multiple values for ${tw.term.name}.`
+		} else*/ sample[tw.term.id] = [...sample[tw.term.id]].filter(isNotNull).sort(basicSort)[0]
 	}
 
 	if (tw.term.id in sample) {
@@ -1188,57 +1222,76 @@ export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1) {
 		} else if (tw.term.type == 'integer' || tw.term.type == 'float') {
 			*/
 	}
+}
 
-	/* helper function query()
+/* helper function query()
 
-	e.g. "case.AA.BB.CC"
-	begin with query( case{}, 1 )
-		--> found case.AA{}
-		query( AA{}, 2 )
-			--> found AA.BB{}
-			query( BB{}, 3)
-				--> found BB.CC, assign BB.CC to sample[case.AA.BB.CC]
+e.g. "case.AA.BB.CC"
+begin with query( case{}, 1 )
+	--> found case.AA{}
+	query( AA{}, 2 )
+		--> found AA.BB{}
+		query( BB{}, 3)
+			--> found BB.CC, assign BB.CC to sample[case.AA.BB.CC]
 
-	e.g. "case.diagnoses.age_at_diagnosis"
-	begin with query( case{}, 1 ):
-		--> found case.diagnoses, is array
-		for(diagnosis of array) {
-			query( diagnosis, 2 )
-				--> found diagnosis.age_at_diagnosis=int
-					collect int value to sample[case.diagnoses.age_at_diagnosis]
-		}
-
-	recursion is used to advance i and when current is array, to loop through it
-	*/
-	function query(current, i) {
-		const field = fields[i]
-		if (i == fields.length - 1) {
-			// i is at the end of fields[], sample attr key is term.id
-			if (sample[tw.term.id] instanceof Set) {
-				sample[tw.term.id].add(current[field])
-			} else {
-				sample[tw.term.id] = current[field]
-			}
-			return
-		}
-		// i is not at the end of fields[], advance to next "root"
-		const next = current[field]
-		if (next == undefined) {
-			// no more values, unable to assign term.id value to sample
-			return
-		}
-		if (Array.isArray(next)) {
-			// next is array, initiate set to collect values from all array elements
-			sample[tw.term.id] = new Set()
-			// recurse through each array element
-			for (const n of next) {
-				query(n, i + 1)
-			}
-			return
-		}
-		// advance i and recurse
-		query(next, i + 1)
+e.g. "case.diagnoses.age_at_diagnosis"
+begin with query( case{}, 1 ):
+	--> found case.diagnoses, is array
+	for(diagnosis of array) {
+		query( diagnosis, 2 )
+			--> found diagnosis.age_at_diagnosis=int
+				collect int value to sample[case.diagnoses.age_at_diagnosis]
 	}
+
+recursion is used to advance i and when current is array, to loop through it
+*/
+function query(fields, sample, tw, current, i) {
+	const field = fields[i]
+	if (i == fields.length - 1) {
+		// i is at the end of fields[], sample attr key is term.id
+		if (sample[tw.term.id] instanceof Set) {
+			sample[tw.term.id].add(current[field])
+		} else {
+			sample[tw.term.id] = current[field]
+		}
+		return
+	}
+	// i is not at the end of fields[], advance to next "root"
+	const next = current[field]
+	if (next == undefined) {
+		// no more values, unable to assign term.id value to sample
+		return
+	}
+	if (Array.isArray(next)) {
+		// next is array, initiate set to collect values from all array elements
+		sample[tw.term.id] = new Set()
+		// recurse through each array element
+		for (const n of next) {
+			query(fields, sample, tw, n, i + 1)
+		}
+		return
+	}
+	// advance i and recurse
+	query(fields, sample, tw, next, i + 1)
+}
+
+function isNotNull(v) {
+	return v !== null
+}
+
+function basicSort(a, b) {
+	return a < b ? -1 : a > b ? 1 : 0
+}
+
+function agedxIsNotNull(d) {
+	return d.age_at_diagnosis !== null
+}
+
+function agedxSort(a, b) {
+	if (a.age_at_diagnosis === null && b.age_at_diagnosis === null) return 0
+	if (a.age_at_diagnosis === null) return 1
+	if (b.age_at_diagnosis === null) return -1
+	return a.age_at_diagnosis < b.age_at_diagnosis ? -1 : a.age_at_diagnosis > b.age_at_diagnosis ? 1 : 0
 }
 
 function mayApplyGroupsetting(v, tw) {
@@ -1389,6 +1442,7 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 			// but not by mutated cases anymore, thus geneTwLst should not be used (and not supplied)
 			;[byTermId, samples] = await querySamplesTwlstForGeneexpclustering(q, dictTwLst, ds)
 		} else {
+			console.log(1406)
 			// not in gene exp clustering mode
 			;[byTermId, samples] = await querySamplesTwlstNotForGeneexpclustering(q, dictTwLst, ds, geneTwLst)
 		}
@@ -1689,7 +1743,7 @@ async function querySamplesTwlstNotForGeneexpclustering_withGenomicFilter(q, dic
 				continue
 			}
 		}
-
+		//
 		if (q.gdcUseCaseuuid) {
 			/* identify sample with case uuid, but no need to convert to case submitter id
 			as this should be for getData() query, which will fill in bySampleId{} with submitter id;
@@ -1762,7 +1816,12 @@ dictionary term ids starting with "case." must be trimmed before using as /cases
 case_filter variable names can still be "cases.xx"
 */
 export async function querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q, dictTwLst, ds) {
-	const fieldset = new Set()
+	const fieldset = new Set([
+		'submitter_id',
+		'diagnoses.submitter_id',
+		'diagnoses.primary_diagnosis',
+		'cases.diagnoses.submitter_id'
+	])
 	const updatedTwLst = [] // copy of dictTwLst by trimming "case."
 	const termIdMap = new Map() // map of new term id lacking "case." to original term id
 	for (const tw of dictTwLst) {
@@ -1787,7 +1846,6 @@ export async function querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q
 	param.case_filters = { op: 'and', content: f }
 	// throw param.case_filters // make it easier to inspect in browser console as an error object
 	const { host, headers } = ds.getHostHeaders(q) // will be reused below
-
 	const t1 = Date.now()
 
 	// This '/cases' request is not unique to certain genes, only unique to cohort.
@@ -1818,7 +1876,7 @@ export async function querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q
 		}
 
 		for (const tw of updatedTwLst) {
-			flattenCaseByFields(sample, s, tw, 0)
+			flattenCaseByFields(sample, s, tw, 0, param.case_filters)
 		}
 		for (const [k1, k2] of termIdMap) {
 			if (k1 in sample) {
@@ -1831,7 +1889,6 @@ export async function querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q
 	}
 
 	const byTermId = mayApplyBinning(samples, dictTwLst)
-
 	return [byTermId, samples]
 }
 
