@@ -96,6 +96,23 @@ export async function barchart_data(q, ds, tdb) {
 		q.genotype2sample = genotype2sample
 	}
 
+	// defensive: multi-categoryKey collections use categoryKeys as implicit overlay
+	const term1Obj = q.term1 || {}
+	if (
+		term1Obj.type === 'termCollection' &&
+		term1Obj.memberType === 'categorical' &&
+		term1Obj.categoryKeys?.length > 1
+	) {
+		delete q.term0_id
+		delete q.term0
+		delete q.term0_q
+		delete q.term0_$id
+		delete q.term2_id
+		delete q.term2
+		delete q.term2_q
+		delete q.term2_$id
+	}
+
 	const startTime = +new Date()
 	q.results = {}
 	const map = new Map()
@@ -171,6 +188,38 @@ export async function barchart_data(q, ds, tdb) {
 								// plotting/dedpulication
 								item[`key${i}`] = i != 1 ? value.key : [value.key]
 								item[`val${i}`] = value.value
+							} else if (
+								i === 1 &&
+								tw.term.type == 'termCollection' &&
+								tw.term.memberType == 'categorical' &&
+								tw.term.categoryKeys?.length > 1 &&
+								!map.get(2)
+							) {
+								// categorical termCollection with multiple categoryKeys and no explicit term2:
+								// explode into separate items per (member_term, category_value) so
+								// bars = member terms, stacked segments = category values
+								const vals = value.values || [value]
+								// replace current item with first val, add rest as new items
+								item[`key${i}`] = [vals[0].key]
+								item[`val${i}`] = vals[0].value
+								item.dedupkey1 = [vals[0].key]
+								item.key2 = vals[0].value
+								item.val2 = vals[0].value
+								for (let vi = 1; vi < vals.length; vi++) {
+									const v = vals[vi]
+									const explodedItem = { sample: sampleId }
+									// copy term0 keys if present
+									if ('key0' in item) {
+										explodedItem.key0 = item.key0
+										explodedItem.val0 = item.val0
+									}
+									explodedItem[`key${i}`] = [v.key]
+									explodedItem[`val${i}`] = v.value
+									explodedItem.dedupkey1 = [v.key]
+									explodedItem.key2 = v.value
+									explodedItem.val2 = v.value
+									samplesMap.set(`${sampleId}_tc_${vi}`, explodedItem)
+								}
 							} else {
 								// this series key will not deduplicate multi-valued samples (those that belong to multiple groups)
 								item[`key${i}`] = i != 1 ? value.key : value.values?.map(v => v.key) || [value.key]

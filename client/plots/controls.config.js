@@ -831,6 +831,17 @@ async function setTermInput(opts) {
 			if (opts.processInput) await opts.processInput(tw)
 			await pill.main(tw ? tw : { term: null, q: null })
 
+			// guard: reject term2/term0 edits when term1 is a multi-categoryKey collection
+			if ((opts.configKey === 'term2' || opts.configKey === 'term0') && tw) {
+				const state = opts.app.getState()
+				const plot = state?.plots?.find(p => p.id === opts.id)
+				const t1 = plot?.term?.term
+				if (t1?.type === 'termCollection' && t1?.memberType === 'categorical' && t1?.categoryKeys?.length > 1) {
+					console.warn(`${opts.configKey} not allowed with multi-categoryKey termCollection`)
+					return
+				}
+			}
+
 			const config = {
 				[opts.configKey]: tw
 			}

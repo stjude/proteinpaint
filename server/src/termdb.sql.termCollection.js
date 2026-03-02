@@ -28,12 +28,18 @@ export const termCollectionNumeric = {
 export const termCollectionCategorical = {
 	getCTE(tablename, tw, values) {
 		const ids = getTermIds(tw.term)
+		const categoryKeys = tw.term.categoryKeys
 		values.push(...ids)
+		let whereClause = `term_id IN (${ids.map(() => '?').join(',')})`
+		if (categoryKeys?.length) {
+			values.push(...categoryKeys)
+			whereClause += ` AND value IN (${categoryKeys.map(() => '?').join(',')})`
+		}
 		return {
 			sql: `${tablename} AS (
 				SELECT sample, term_id as key, value
 				FROM anno_categorical
-				WHERE term_id IN (${ids.map(() => '?').join(',')})
+				WHERE ${whereClause}
 			)`,
 			tablename
 		}
