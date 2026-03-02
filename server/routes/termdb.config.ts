@@ -187,10 +187,13 @@ function addMutationSignatureplots(c, ds) {
 		return { name: p.name }
 	})
 }
-
-/* ds.queries{} contains diverse query types covering genomic, molecular, imaging etc
+/**
+ * Adds non-dictionary methods, properties, etc. to the termdbConfig.queries{} object.
+ * @param c Config object sent to the client with only relevant info for the client.
+ * @param ds Entire dataset configuration from ds file. ds.queries{} contains diverse query types covering genomic, molecular, imaging etc
+ * @param genome Genome obj.
  */
-function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
+function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	const q = ds.queries
 	if (!q) return
 	// this ds supports genomic query methods
@@ -317,6 +320,11 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 		}
 		if (q.singleCell.DEgenes) {
 			q2.singleCell.DEgenes = { termId: q.singleCell.DEgenes.termId }
+		}
+		if (q.singleCell?.terms?.length) {
+			/** This vocab needs to be accessible to other plots, filter, etc.
+			 * Add directly to the termdbConfig obj for broader use. */
+			c.scctTerms = q.singleCell.terms
 		}
 	}
 	if (q.images) {

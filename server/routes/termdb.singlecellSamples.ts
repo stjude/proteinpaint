@@ -22,6 +22,7 @@ import { termdbSingleCellSamplesPayload } from '#types/checkers'
 import { validate_query_singleCell_DEgenes } from './termdb.singlecellDEgenes.ts'
 import { gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 import ky from 'ky'
+import { TermTypes } from '#shared/terms.js'
 
 /* route returns list of samples with sc data
 this is due to the fact that sometimes not all samples in a dataset has sc data
@@ -118,12 +119,23 @@ function validateImages(images) {
 	if (!images.fileName) throw new Error('images.fileName missing')
 }
 
+/** Runs on mds3.init()
+ * Adds ds.queries.singleCell.samples.get() for native ds (see route init() above).
+ * Adds ds.queries.singleCell.twLst which is list of all possible colorBy terms
+ * defined in the ds file, for use in vocabApi methods later.
+ * @param S ds.queries.singleCell.samples{}
+ * @param D ds.queries.singleCell.data{}
+ * @param ds Entire dataset configuration from the ds file
+ */
 async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNative, ds: any) {
 	// folder of every plot contains text files, one file per sample and named by sample names. each folder may contain variable number of samples. look into all folders to get union of samples as list of samples with sc data and return in this getter
 
 	// k: sample integer id
 	// v: { sample: string name, tid1:v1, ...} term ids are from S.sampleColumns[]. list of sample objects are returned in getter
 	const samples = new Map()
+	/** Collect all possible tws defined per plot and make available
+	 * for vocabApi methods later.*/
+	const termSet = new Set()
 	for (const plot of D.plots) {
 		for (const fn of await fs.promises.readdir(path.join(serverconfig.tpmasterdir, plot.folder))) {
 			// fn: string file name.
@@ -139,7 +151,32 @@ async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNati
 			// is valid sample, add to holder
 			samples.set(sid, { sample: sampleName })
 		}
+
+		if (!plot.colorColumns || plot.colorColumns.length == 0) continue
+		/** Creates the tw obj from the existing color map and alias defined
+		 * in the ds file. These will be available to the SC app on init().
+		 *
+		 * TODO: Consider creating these objs in the ds file.*/
+		const tmpTerms = plot.colorColumns.map(c => {
+			const baseValues = c.colorMap ? Object.keys(c.colorMap) : []
+			return {
+				name: c.name,
+				type: TermTypes.SINGLECELL_CELLTYPE,
+				values: baseValues.reduce((acc, v) => {
+					const alias = c?.aliases?.[v]
+					acc[v] = {
+						key: v,
+						label: alias || v,
+						color: c.colorMap?.[v] || '#000000'
+					}
+					return acc
+				}, {})
+			}
+		})
+		tmpTerms.forEach(term => termSet.add(term))
 	}
+	ds.queries.singleCell.terms = [...termSet]
+
 	// samples map populated with samples with sc data
 	if (S.sampleColumns) {
 		// has optional terms to show as table columns and annotate samples; pull sample values and assign
@@ -220,6 +257,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 					}
 				} else noExpCells.push(cell)
 			}
+
 			plots.push({
 				name: plot.name,
 				expCells,
