@@ -47,28 +47,6 @@ export function formatTrainingExamples(trainingData: { question: string; answer:
 		.join(' ')
 }
 
-/** Safely parse LLM output that may be wrapped in markdown fences or explanations. */
-export function safeParseLlmJson(response: string): any {
-	// Try direct parse first (works for well-behaved models)
-	try {
-		return JSON.parse(response)
-	} catch {
-		// Find first { and last } to extract the JSON object
-		const firstBrace = response.indexOf('{')
-		const lastBrace = response.lastIndexOf('}')
-		if (firstBrace !== -1 && lastBrace > firstBrace) {
-			return JSON.parse(response.slice(firstBrace, lastBrace + 1))
-		}
-		// Try array
-		const firstBracket = response.indexOf('[')
-		const lastBracket = response.lastIndexOf(']')
-		if (firstBracket !== -1 && lastBracket > firstBracket) {
-			return JSON.parse(response.slice(firstBracket, lastBracket + 1))
-		}
-		throw 'No JSON found in LLM response'
-	}
-}
-
 export function checkField(sentence: string) {
 	if (!sentence) return ''
 	else return sentence

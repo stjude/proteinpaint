@@ -1,5 +1,6 @@
-import { formatTrainingExamples, safeParseLlmJson } from './utils.ts'
+import { formatTrainingExamples } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
+import { mayLog } from '#src/helpers.ts'
 import type { LlmConfig } from '#types'
 
 /**
@@ -42,12 +43,28 @@ export async function extractResourceResponse(
 		llm,
 		llm.classifierModelName ?? llm.modelName
 	)
-	const parsed = safeParseLlmJson(response)
+	let parsed: any
+	try {
+		parsed = JSON.parse(response)
+	} catch {
+		mayLog('resource.ts: LLM returned invalid JSON:', response)
+		throw new Error(`resource.ts: LLM returned invalid JSON instead of {"idx": <integer>}`)
+	}
+	const idx = parsed?.idx
 
-	const idx = typeof parsed?.idx === 'number' ? parsed.idx : -1
-	if (idx >= 0 && idx < resources.length) {
+	// LLM explicitly said no match
+	if (idx === -1) return { type: 'none' }
+
+	// Valid resource index
+	if (typeof idx === 'number' && idx >= 0 && idx < resources.length) {
 		return { type: 'html', html: resources[idx].html }
 	}
 
-	return { type: 'none' }
+	// Invalid idx response from LLM  (e.g. an idx that is out of bounds, or not an integer)
+	// This is different from the try-catch which captures if the llm returns invalid JSON
+	// in a non idx: integer format
+	mayLog('resource.ts: unexpected LLM response:', parsed)
+	throw new Error(
+		`resource.ts: LLM returned invalid idx=${JSON.stringify(idx)} (expected -1 or 0..${resources.length - 1})`
+	)
 }

@@ -1,6 +1,6 @@
 import type { LlmConfig, DbRows } from '#types'
 import { FILTER_TERM_DEFINITIONS, FILTER_DESCRIPTION, validate_filter } from './filter.ts'
-import { formatTrainingExamples, checkField, safeParseLlmJson, extractGenesFromPrompt, validate_term } from './utils.ts'
+import { formatTrainingExamples, checkField, extractGenesFromPrompt, validate_term } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 
 export async function extract_samplescatter_terms_from_query(
@@ -91,14 +91,14 @@ export async function extract_samplescatter_terms_from_query(
 
 	const response: string = await route_to_appropriate_llm_provider(system_prompt, llm)
 	if (testing) {
-		return { action: 'sampleScatter', response: safeParseLlmJson(response) }
+		return { action: 'sampleScatter', response: JSON.parse(response) }
 	} else {
 		return validate_samplescatter_response(response, common_genes, dataset_json, ds)
 	}
 }
 
 function validate_samplescatter_response(response: string, common_genes: string[], dataset_json: any, ds: any) {
-	const response_type = safeParseLlmJson(response)
+	const response_type = JSON.parse(response)
 	let text = ''
 
 	if (response_type.text) text = response_type.text
