@@ -29,10 +29,11 @@ export async function extractResourceResponse(
 		'The available resources are:\n' +
 		resourceList +
 		'\n' +
-		'The final output must be ONLY a JSON object with NO extra comments, in this format: {"idx": <integer>}\n' +
-		'where idx is the index of the best matching resource from the list above. ' +
-		'If none of the resources match the question, return {"idx": -1}\n' +
-		(classification_ds?.SystemPrompt ? classification_ds.SystemPrompt + '\n' : '') +
+		'IMPORTANT: Return -1 unless the query is clearly and specifically asking about one of the resources listed above. ' +
+		'The query must explicitly reference documentation, publications, papers, data access, citations, or background information. ' +
+		'Random text, numbers, gibberish, single words, vague phrases, or anything that does not clearly ask about a specific resource must return -1.\n' +
+		'Respond with ONLY a single integer: the index of the best matching resource, or -1 if none match.\n' +
+		(classification_ds?.SystemPrompt ?? '') +
 		(training_data ? 'Training data examples:\n' + training_data + '\n' : '') +
 		'Question: {' +
 		prompt +
@@ -43,28 +44,23 @@ export async function extractResourceResponse(
 		llm,
 		llm.classifierModelName ?? llm.modelName
 	)
-	let parsed: any
-	try {
-		parsed = JSON.parse(response)
-	} catch {
-		mayLog('resource.ts: LLM returned invalid JSON:', response)
-		throw new Error(`resource.ts: LLM returned invalid JSON instead of {"idx": <integer>}`)
+	const idx = parseInt(response.trim())
+
+	// LLM returned something that isn't a number
+	if (isNaN(idx)) {
+		mayLog('resource.ts: LLM returned non-integer response:', response)
+		throw new Error(`resource.ts: LLM returned "${response.trim()}" (expected an integer)`)
 	}
-	const idx = parsed?.idx
 
 	// LLM explicitly said no match
 	if (idx === -1) return { type: 'none' }
 
 	// Valid resource index
-	if (typeof idx === 'number' && idx >= 0 && idx < resources.length) {
+	if (idx >= 0 && idx < resources.length) {
 		return { type: 'html', html: resources[idx].html }
 	}
 
-	// Invalid idx response from LLM  (e.g. an idx that is out of bounds, or not an integer)
-	// This is different from the try-catch which captures if the llm returns invalid JSON
-	// in a non idx: integer format
-	mayLog('resource.ts: unexpected LLM response:', parsed)
-	throw new Error(
-		`resource.ts: LLM returned invalid idx=${JSON.stringify(idx)} (expected -1 or 0..${resources.length - 1})`
-	)
+	// Integer but out of bounds
+	mayLog('resource.ts: LLM returned out-of-bounds index:', idx)
+	throw new Error(`resource.ts: LLM returned idx=${idx} (expected -1 or 0..${resources.length - 1})`)
 }
