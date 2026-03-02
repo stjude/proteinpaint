@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 
 
+## Unreleased
+
+Fixes
+- do not show a geneset option when selecting CNV as mutation type
+
+
 ## 2.170.19
 
 Fixes:
