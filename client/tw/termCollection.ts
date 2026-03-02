@@ -20,6 +20,7 @@ const termType = 'termCollection'
 // This is for the term, not tw
 export class TermCollection {
 	type = termType
+	memberType: 'numeric' | 'categorical' = 'numeric'
 	id: string
 	name: string
 	termIds?: string[]
@@ -65,6 +66,7 @@ export class TermCollection {
 		TermCollection.validate(term)
 		this.id = term.id
 		this.name = term.name
+		this.memberType = term.memberType
 		this.termlst = term.termlst
 		this.termIds = term.termIds
 		this.propsByTermId = term.propsByTermId || {}
