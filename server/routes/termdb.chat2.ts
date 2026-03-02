@@ -1,6 +1,7 @@
 import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, QueryClassification } from '#types'
 import { ChatPayload } from '#types/checkers'
-import { classifyQuery } from './chat/classify.ts'
+import { classifyQuery } from './chat/classify1.ts'
+import { classifyNotPlot } from './chat/classify2.ts'
 import { classifyPlotType } from './chat/plot.ts'
 import { readJSONFile } from './chat/utils.ts'
 import { extract_DE_search_terms_from_query } from './chat/DEagent.ts'
@@ -8,7 +9,6 @@ import { extract_summary_terms } from './chat/summaryagent.ts'
 import { extract_matrix_search_terms_from_query } from './chat/matrixagent.ts'
 import { extract_samplescatter_terms_from_query } from './chat/samplescatteragent.ts'
 import { parse_dataset_db, parse_geneset_db } from './chat/utils.ts'
-import { extractResourceResponse } from './chat/resourceagent.ts'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
@@ -88,15 +88,18 @@ export async function run_chat_pipeline(
 	const class_response: QueryClassification = await classifyQuery(user_prompt, llm)
 	let ai_output_json: any
 	mayLog('Time taken for classification:', formatElapsedTime(Date.now() - time1))
-	if (class_response.type == 'none') {
-		ai_output_json = {
-			type: 'text',
-			text: 'Your query does not appear to be related to the available data visualizations. Please try rephrasing your question.'
+	if (class_response.type == 'notplot') {
+		const time2 = new Date().valueOf()
+		const notPlotResult = await classifyNotPlot(user_prompt, llm, dataset_json)
+		mayLog('Time taken for classify2:', formatElapsedTime(Date.now() - time2))
+		if (notPlotResult.type == 'html') {
+			ai_output_json = notPlotResult
+		} else {
+			ai_output_json = {
+				type: 'text',
+				text: 'Your query does not appear to be related to the available data visualizations. Please try rephrasing your question.'
+			}
 		}
-	} else if (class_response.type == 'resource') {
-		const time1 = new Date().valueOf()
-		ai_output_json = await extractResourceResponse(user_prompt, llm, dataset_json)
-		mayLog('Time taken for resource agent:', formatElapsedTime(Date.now() - time1))
 	} else if (class_response.type == 'plot') {
 		const classResult = await classifyPlotType(user_prompt, llm)
 		mayLog('classResult:', classResult)

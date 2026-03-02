@@ -3,27 +3,23 @@ import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type { LlmConfig } from '#types'
 
 /**
- * Handle a resource-type query by asking the LLM to select a resource index
- * from the dataset's `resources` array. The server resolves the index to the
- * pre-authored HTML — the LLM never generates HTML directly.
+ * Ask the LLM to select a resource index from the dataset's `resources` array.
+ * Returns the pre-authored HTML for the matched resource, or { type: 'none' }
+ * if the LLM finds no matching resource.
+ *
+ * Callers (classify2) are responsible for checking that resources exist before
+ * calling this function.
  */
 export async function extractResourceResponse(
 	prompt: string,
 	llm: LlmConfig,
 	dataset_json: any
-): Promise<{ type: 'text'; text: string } | { type: 'html'; html: string }> {
+): Promise<{ type: 'none' } | { type: 'html'; html: string }> {
 	const classification_ds = dataset_json.charts?.find((chart: any) => chart.type == 'Classification')
-	if (!classification_ds) {
-		return { type: 'text', text: 'No resource information is available for this dataset.' }
-	}
-
 	const resources: { label: string; html: string }[] = dataset_json.resources ?? []
-	if (resources.length === 0) {
-		return { type: 'text', text: 'No resources are configured for this dataset.' }
-	}
 
 	const training_data =
-		classification_ds.TrainingData?.length > 0 ? formatTrainingExamples(classification_ds.TrainingData) : ''
+		classification_ds?.TrainingData?.length > 0 ? formatTrainingExamples(classification_ds.TrainingData) : ''
 
 	const resourceList = resources.map((r, i) => `  ${i}: "${r.label}"`).join('\n')
 
@@ -35,7 +31,7 @@ export async function extractResourceResponse(
 		'The final output must be ONLY a JSON object with NO extra comments, in this format: {"idx": <integer>}\n' +
 		'where idx is the index of the best matching resource from the list above. ' +
 		'If none of the resources match the question, return {"idx": -1}\n' +
-		(classification_ds.SystemPrompt ? classification_ds.SystemPrompt + '\n' : '') +
+		(classification_ds?.SystemPrompt ? classification_ds.SystemPrompt + '\n' : '') +
 		(training_data ? 'Training data examples:\n' + training_data + '\n' : '') +
 		'Question: {' +
 		prompt +
@@ -53,8 +49,5 @@ export async function extractResourceResponse(
 		return { type: 'html', html: resources[idx].html }
 	}
 
-	return {
-		type: 'text',
-		text: 'Your question does not appear to be related to this dataset. Please ask a question about the available data or visualizations.'
-	}
+	return { type: 'none' }
 }

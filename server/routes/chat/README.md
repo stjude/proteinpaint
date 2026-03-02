@@ -2,15 +2,16 @@
 
 ## Overview
 
-The chat pipeline uses a two-stage LLM classifier to route user queries to the correct visualization agent (summary plots, differential gene expression, survival analysis, etc.).
+The chat pipeline uses a multi-stage LLM classifier to route user queries to the correct visualization agent (summary plots, differential gene expression, survival analysis, etc.).
 
-**Stage 1 — Top-level classification (`classify.ts`):** A small LLM classifies the query into one of three categories:
+**Stage 1 — Top-level classification (`classify1.ts`):** A small LLM classifies the query into one of two categories:
 
-- `none` — the query is unrelated to data visualization
-- `resource` — the query asks for links, documentation, or background about the dataset
 - `plot` — the query requests a data visualization or analysis
+- `notplot` — the query is not asking to visualize or analyze dataset values
 
-**Stage 2 — Plot type classification (`plot.ts`):** If the query is classified as `plot`, a second small LLM call determines the specific plot type: `summary`, `dge`, `survival`, `matrix`, or `sampleScatter`.
+**Stage 2a — Not-plot routing (`classify2.ts`):** If the query is classified as `notplot`, classify2 checks whether the dataset has resources configured. If resources exist, it delegates to `resource.ts` which asks the LLM to match the query to a resource. If no resources exist or no match is found, the query is classified as `none`.
+
+**Stage 2b — Plot type classification (`plot.ts`):** If the query is classified as `plot`, a second small LLM call determines the specific plot type: `summary`, `dge`, `survival`, `matrix`, or `sampleScatter`.
 
 Downstream of classification, each plot type has its own agent that calls an LLM to extract structured parameters (terms, filters, groups, etc.) from the query.
 
@@ -20,22 +21,38 @@ Downstream of classification, each plot type has its own agent that calls an LLM
 User query
     │
     ▼
-┌─────────────────────────────────────┐
-│  classify.ts — Stage 1 LLM call     │
-│  "Is this none, resource, or plot?" │
-└─────────────────────────────────────┘
+┌──────────────────────────────────┐
+│  classify1.ts — Stage 1 LLM call │
+│  "Is this plot or notplot?"      │
+└──────────────────────────────────┘
     │
-    ├─── none ──────────────────────────▶  "Query not related to data" (text response)
-    │
-    ├─── resource ──────────────────────▶  resourceagent.ts
-    │                                         └─ LLM picks index from resources[]
-    │                                         └─ returns pre-authored HTML
+    ├─── notplot
+    │        │
+    │        ▼
+    │   ┌───────────────────────────────────────┐
+    │   │  classify2.ts — Stage 2a               │
+    │   │  "Does dataset have resources?"        │
+    │   └───────────────────────────────────────┘
+    │        │
+    │        ├─── no resources ────▶  "Query not related to data" (text response)
+    │        │
+    │        └─── has resources
+    │                  │
+    │                  ▼
+    │             ┌──────────────────────────────────┐
+    │             │  resource.ts — LLM call           │
+    │             │  "Which resource matches?"        │
+    │             └──────────────────────────────────┘
+    │                  │
+    │                  ├─── match ────▶  returns pre-authored HTML
+    │                  │
+    │                  └─── no match ─▶  "Query not related to data" (text response)
     │
     └─── plot
               │
               ▼
          ┌─────────────────────────────────────────┐
-         │  plot.ts — Stage 2 LLM call              │
+         │  plot.ts — Stage 2b LLM call             │
          │  "Which plot type does this query need?" │
          └─────────────────────────────────────────┘
               │

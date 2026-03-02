@@ -128,8 +128,8 @@ export type none_type = {
 	type: 'none'
 }
 
-/** Top-level classification returned by classifyQuery: none, resource, or plot (subtype determined separately by plot.ts) */
-export type QueryClassification = { type: 'none' } | { type: 'resource' } | { type: 'plot' }
+/** Top-level classification returned by classifyQuery: plot or notplot (subtype determined separately by plot.ts) */
+export type QueryClassification = { type: 'plot' } | { type: 'notplot' }
 
 /** Specific plot type returned by classifyPlotType in plot.ts */
 export type PlotType = 'summary' | 'dge' | 'survival' | 'matrix' | 'samplescatter'
