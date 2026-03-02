@@ -62,7 +62,11 @@ tape('Search handler layout', async test => {
 		'Mutation type radio buttons should be present'
 	)
 	const inputTypeRadiosDiv = holder.select('[data-testid="sjpp-genevariant-genesetTypeRadios"]')
-	test.ok(inputTypeRadiosDiv.selectAll('input[type="radio"]').size() > 0, 'Input type radio buttons should be present')
+	test.equal(
+		inputTypeRadiosDiv.selectAll('input[type="radio"]').size(),
+		2,
+		'Input type radio buttons should be present'
+	)
 	const searchDiv = holder.select('[data-testid="sjpp-genevariant-geneSearchDiv"]')
 	test.equal(searchDiv.selectAll('input[type="search"]').size(), 1, 'Gene search input should be present')
 	if (test['_ok']) holder.remove()
@@ -106,8 +110,14 @@ tape('Change mutation type', async test => {
 	await initializeSearchHandler({ holder, callback })
 	const mutationTypeRadiosDiv = holder.select('[data-testid="sjpp-genevariant-mutationTypeRadios"]')
 	const mutationTypeRadios = mutationTypeRadiosDiv.selectAll('input[type="radio"]')
+	// select CNV mutation type
 	const thirdRadio: any = mutationTypeRadios.nodes()[2]
 	thirdRadio.click()
+	// verify gene set option is hidden for CNV
+	const inputTypeRadiosDiv = holder.select('[data-testid="sjpp-genevariant-genesetTypeRadios"]')
+	const geneSetDiv = inputTypeRadiosDiv.selectAll('div').filter((d: any) => d.value == 'geneset')
+	test.equal(geneSetDiv.style('display'), 'none', 'Gene set option should be hidden for CNV')
+	// enter gene to search
 	const geneSearchInput: any = holder
 		.select('[data-testid="sjpp-genevariant-geneSearchDiv"]')
 		.select('input[type="search"]')
