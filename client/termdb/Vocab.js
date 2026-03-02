@@ -17,6 +17,17 @@ export class Vocab {
   	*/
 		this.missingCatValsByTermId = {}
 		const dslabel = this.vocab?.dslabel || this.state?.dslabel
+
+		// Calling dofetch3() as a method of Vocab/TermdbVocab will allow
+		// dofetch3() to have access to this.app.getAbortSignal(), to get an
+		// AbortSignal if the dofetch3() 2nd argument doesn't set init.signal.
+		// This signal can cancel any request due to a state change, such as
+		// when the GDC cohort changes, thus aborting stale data requests that may
+		// result in misleading rendered plots. This approach is more reliable than
+		// requiring consumer code that use vocabApi methods to supply an
+		// init.signal option, or for a vocabApi method to supply a default
+		// init.signal.
+		this.dofetch3 = dofetch3
 	}
 
 	async main(stateOverride = null) {
