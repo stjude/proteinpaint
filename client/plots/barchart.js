@@ -104,13 +104,6 @@ export class Barchart extends PlotBase {
 					vocabApi: this.app.vocabApi,
 					menuOptions: 'edit',
 					defaultQ4fillTW: { geneVariant: { type: 'custom-groupset' } },
-					processConfig: config => {
-						const t = config.term?.term
-						if (t?.type === 'termCollection' && t?.memberType === 'categorical' && t?.categoryKeys?.length > 1) {
-							config.term2 = undefined
-							config.term0 = undefined
-						}
-					},
 					getBodyParams: () => {
 						const tw = this.config['term']
 						if (!tw) return { skip_categories: true }
