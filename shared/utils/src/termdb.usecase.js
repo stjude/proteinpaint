@@ -92,8 +92,11 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 				if (term.type && term.type !== 'survival') uses.add('plot')
 				if (hasAllowedChildTypes(child_types, ['survival'])) uses.add('branch')
 				return uses
+			} else {
+				if (graphableTypes.has(term.type)) uses.add('plot')
+				if (!term.isleaf) uses.add('branch')
+				return uses
 			}
-			return uses
 
 		case 'matrix':
 			if (term.type) uses.add('plot')
