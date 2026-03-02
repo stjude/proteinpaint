@@ -1,6 +1,6 @@
 import { Menu, make_radios, addGeneSearchbox, GeneSetEditUI, table2col } from '#dom'
 import type { VocabApi } from '#types'
-import { dtTerms } from '#shared/common.js'
+import { dtTerms, dtcnv } from '#shared/common.js'
 
 // TODO: output of this handler should not be q.predefined_groupset_idx, instead should be q.dt and q.origin. Then, in client/tw/geneVariant.ts, should fill in q.predefined_groupset_idx based on q.dt and q.origin. This will also allow easy specification of desired dt/origin in url. Will need to make separate radio buttons for dt and origin to support the different q properties.
 
@@ -17,6 +17,7 @@ export class SearchHandler {
 	opts: any
 	dom: any
 	mutationTypeRadio: any
+	inputTypeRadio: any
 	term: any // tw.term
 	q: any // tw.q
 	callback: any
@@ -62,14 +63,16 @@ export class SearchHandler {
 					options: this.term.childTerms.map((t, i) => {
 						return { label: t.name, value: i, checked: i == childTermIdx }
 					}),
-					callback: () => {}
+					callback: v => {
+						this.toggleGeneSetRadioDisplay(v)
+					}
 				})
 			}
 			// create radios for type of gene input
 			{
 				const [td1, td2] = table.addRow()
 				td1.text('Input Type')
-				make_radios({
+				this.inputTypeRadio = make_radios({
 					holder: td2.attr('data-testid', 'sjpp-genevariant-genesetTypeRadios'),
 					styles: { display: 'inline-block' },
 					options: [
@@ -80,7 +83,36 @@ export class SearchHandler {
 				})
 			}
 		}
+		this.toggleGeneSetRadioDisplay(childTermIdx)
 		this.searchGene()
+	}
+
+	// hide gene set radio when mutation type is cnv
+	// because cnv of one gene can disguise cnv of another gene
+	// example: if sample has cnv amplification in geneA and
+	// cnv deletion in geneB, classification of the sample will
+	// be ambiguous
+	toggleGeneSetRadioDisplay(childTermIdx) {
+		const childTerm = this.term.childTerms[childTermIdx]
+		const geneSetDiv = this.inputTypeRadio.divs.filter(d => {
+			if (d.value != 'single' && d.value != 'geneset') throw new Error('unexpected input type radio value')
+			return d.value == 'geneset'
+		})
+		const geneInput = this.inputTypeRadio.inputs.filter(d => {
+			if (d.value != 'single' && d.value != 'geneset') throw new Error('unexpected input type radio value')
+			return d.value == 'single'
+		})
+		if (childTerm.dt == dtcnv) {
+			// mutation type is cnv
+			// hide gene set radio button
+			geneSetDiv.style('display', 'none')
+			// select single gene radio button
+			geneInput.node().click()
+		} else {
+			// mutation type is not cnv
+			// can display gene set radio button
+			geneSetDiv.style('display', 'inline-block')
+		}
 	}
 
 	searchGene() {
