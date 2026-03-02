@@ -43,6 +43,10 @@ export class SearchHandler {
 					const checked = trs[i]?.querySelectorAll('td')[1]?.querySelector('input')?.checked
 					return checked === true
 				})
+				if (selectedTermlst.length === 0) {
+					alert('Please select at least one term')
+					return
+				}
 				const termNames = selectedTermlst.map((o: any) => o.id).join(',')
 				const termNamesLabel = `${opts.details.name} (${termNames})`
 				const termName = termNamesLabel.length <= 26 ? termNamesLabel : termNamesLabel.slice(0, 26) + '...'

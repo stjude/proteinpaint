@@ -154,6 +154,8 @@ export async function barchart_data(q, ds, tdb) {
 						samplesMap.set(sampleId, item)
 					}
 					if (!item) continue
+					// Skip term2 processing if key2/val2 already set from multi-categoryKeys explode
+					if (i === 2 && !id && 'key2' in item) continue
 					if (id) {
 						const value = values[id]
 						if (!value) {

@@ -1645,7 +1645,7 @@ type NumericTermCollection = TermCollectionBase & {
 
 type CategoricalTermCollection = TermCollectionBase & {
 	type: 'categorical'
-	categoryKeys?: string[]
+	categoryKeys: string[]
 }
 
 type TermCollection = NumericTermCollection | CategoricalTermCollection
