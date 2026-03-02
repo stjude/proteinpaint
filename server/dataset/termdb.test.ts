@@ -262,8 +262,7 @@ export default function (): Mds3 {
 					{
 						name: 'Assay Availability',
 						type: 'categorical',
-						//categoryKeys: ['1', '2'],
-						categoryKeys: ['1'],
+						categoryKeys: ['1', '2'],
 						termIds: ['assayavailability_cnv', 'assayavailability_fusion', 'assayavailability_germline'],
 						branchIds: [''],
 						propsByTermId: {}

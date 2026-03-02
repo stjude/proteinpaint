@@ -29,6 +29,29 @@ export class SearchHandler {
 			buttons: undefined
 		})
 
+		let categoryTable
+		if (opts.details.categoryKeys) {
+			const categoryDiv = opts.holder.append('div')
+			const values = opts.details.termlst[0].values || {}
+			categoryDiv.append('div').style('margin', '5px').style('padding', '5px').html('Category keys')
+			categoryTable = categoryDiv.append('div')
+			renderTable({
+				columns: [{ label: 'Terms' }],
+				rows: opts.details.categoryKeys.map(key => {
+					return [{ value: values[key].label }]
+				}),
+				div: categoryTable,
+				maxWidth: '30vw',
+				maxHeight: '40vh',
+				noButtonCallback: () => {}, // FIXME to supply a real callback
+				striped: false,
+				showHeader: true, //false,
+				selectAll: true,
+				columnButtons: undefined, //Leave until table.js is typed
+				buttons: undefined
+			})
+		}
+
 		// FIXME backward code!!!!
 		opts.holder
 			.append('div')
@@ -58,20 +81,28 @@ export class SearchHandler {
 					}
 				}
 
-				const termPayload: any = {
+
+				let categoryKeys
+				if (categoryTable) {
+					const trs = categoryTable.select('table').select('tbody').node().querySelectorAll('tr')
+					categoryKeys = opts.details.categoryKeys.filter((term, i) => {
+						const checked = trs[i].querySelectorAll('td')[1].querySelector('input')?.checked
+						return checked === true
+					})
+				}
+
+				opts.callback({
 					collectionId: opts.details.name,
 					type: 'termCollection',
 					termIds: selectedTermlst.map(i => i.id),
 					termlst: selectedTermlst,
 					name: termName,
-					memberType: opts.details.type,
+					// memberType = ds.cohort.termdb.termCollections[].type for client code
+					memberType: opts.details.memberType || opts.details.type,
+					categoryKeys,
 					isleaf: true,
 					propsByTermId
-				}
-				if (opts.details.type === 'categorical' && opts.details.categoryKeys) {
-					termPayload.categoryKeys = opts.details.categoryKeys
-				}
-				opts.callback(termPayload)
+				})
 			})
 	}
 }
