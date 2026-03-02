@@ -239,6 +239,10 @@ export async function memFetch(url, init, opts = {}) {
 						dataCache.set(dataKey, { response: deepFreeze(response), exp: Date.now() + cacheLifetime })
 						return response
 				  })
+					.catch(e => {
+						if (dataCache.get(dataKey)) delete dataCache.delete(dataKey)
+						throw e
+					})
 
 			dataCache.set(dataKey, { response: result, exp: Date.now() + cacheLifetime })
 			manageCacheSize(now)
