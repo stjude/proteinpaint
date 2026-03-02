@@ -595,9 +595,23 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 
 	// query sample data
 	const { event, self, terms, tvslst, geneVariant, tip } = arg
+	const { term0, term, term2 } = self.config
+	const _terms = structuredClone(terms)
+	for (const tw of _terms) {
+		const i = tw.$id === term0?.$id ? 0 : tw.$id === term2?.$id ? 2 : 1
+		if (!self.bins[i].length) continue
+		// reuse already computed bins so that the assigned bin labels
+		// from '/termdb/barchart' response will be consistent with '/termdb?for=matrix'
+		tw.q = {
+			mode: 'discrete',
+			type: 'custom-bin',
+			lst: self.bins[i]
+		}
+	}
+
 	const uiLabels = self.app.vocabApi.termdbConfig.uiLabels
 	const opts = {
-		terms,
+		terms: _terms,
 		filter: filterJoin([self.state.termfilter.filter, tvslst]),
 		filter0: self.state.termfilter.filter0,
 		isSummary: true
@@ -661,7 +675,8 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 				const value = label || t2entry.value
 				row.push({ value: t2entry.key === dataId ? value : t2entry.key })
 			}
-			if (t2entry.key !== dataId) notRendered = true
+			// if the series/bar label is clicked, the ovelay/dataId will not be provided for listSamples
+			if (dataId && t2entry.key !== dataId) notRendered = true
 		}
 		// for now, duplicating if block for term2 and term0
 		// TODO: use dom/summary/ListSamples.ts
@@ -683,7 +698,7 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 				const value = label || t0entry.value
 				row.push({ value: t0entry.key === chartId ? value : t0entry.key })
 			}
-			if (t0entry.key !== chartId) notRendered = true
+			if (chartId && t0entry.key !== chartId) notRendered = true
 		}
 
 		if (notRendered && row.length) {
@@ -732,15 +747,19 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 		return a[0].value < b[0].value ? -1 : 1
 	})
 
-	await renderTable({
-		rows: rows.filter(r => !notRenderedVals.has(r)),
-		columns,
-		div: div.append('div'),
-		showLines: true,
-		maxHeight: '40vh',
-		resize: true,
-		dataTestId: 'sjpp-listsampletable'
-	})
+	const renderedRows = rows.filter(r => !notRenderedVals.has(r))
+
+	if (renderedRows.length) {
+		await renderTable({
+			rows: renderedRows,
+			columns,
+			div: div.append('div'),
+			showLines: true,
+			maxHeight: '40vh',
+			resize: true,
+			dataTestId: 'sjpp-listsampletable'
+		})
+	}
 
 	if (notRenderedVals.size) {
 		// TODO: do not hardcode, make this dataset specific
