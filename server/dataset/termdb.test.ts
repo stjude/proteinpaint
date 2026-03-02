@@ -262,7 +262,15 @@ export default function (): Mds3 {
 					{
 						name: 'Assay Availability',
 						type: 'categorical',
+						termIds: ['assayavailability_cnv', 'assayavailability_fusion', 'assayavailability_germline'],
+						branchIds: [''],
+						propsByTermId: {}
+					},
+					{
+						name: 'Chemo',
+						type: 'categorical',
 						categoryKeys: ['1'],
+						// confirm and change correct termids
 						termIds: ['assayavailability_cnv', 'assayavailability_fusion', 'assayavailability_germline'],
 						branchIds: [''],
 						propsByTermId: {}

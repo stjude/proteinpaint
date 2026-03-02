@@ -365,6 +365,11 @@ export async function validate_termdb(ds) {
 				if (!c.propsByTermId[i]) c.propsByTermId[i] = {}
 				if (!c.propsByTermId[i].color) c.propsByTermId[i].color = colorScale(i)
 			}
+			if (c.type === 'categorical' && c.categoryKeys) {
+				if (!Array.isArray(c.categoryKeys))
+					throw `termdb.termCollections[].categoryKeys must be an array for '${c.name}'`
+				if (c.categoryKeys.length == 0) throw `termdb.termCollections[].categoryKeys[] is empty for '${c.name}'`
+			}
 			if (c.plots) {
 				if (!Array.isArray(c.plots)) throw 'c.plots[] not array'
 				for (const p of c.plots) {

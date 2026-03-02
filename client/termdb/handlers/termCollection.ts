@@ -12,9 +12,10 @@ export class SearchHandler {
 		opts.holder.style('display', '')
 		const tableDiv = opts.holder.append('div')
 
+		const termlst = opts.details.termlst ?? []
 		renderTable({
 			columns: [{ label: 'Terms' }],
-			rows: opts.details.termlst.map(t => {
+			rows: termlst.map(t => {
 				return [{ value: t.name }]
 			}),
 			div: tableDiv,
@@ -38,32 +39,35 @@ export class SearchHandler {
 			.text('Select')
 			.on('click', () => {
 				const trs = tableDiv.select('table').select('tbody').node().querySelectorAll('tr')
-				const termlst = opts.details.termlst.filter((term, i) => {
-					const checked = trs[i].querySelectorAll('td')[1].querySelector('input')?.checked
+				const selectedTermlst = termlst.filter((term, i) => {
+					const checked = trs[i]?.querySelectorAll('td')[1]?.querySelector('input')?.checked
 					return checked === true
 				})
-				const termNames = termlst.map((o: any) => o.id).join(',')
+				const termNames = selectedTermlst.map((o: any) => o.id).join(',')
 				const termNamesLabel = `${opts.details.name} (${termNames})`
 				const termName = termNamesLabel.length <= 26 ? termNamesLabel : termNamesLabel.slice(0, 26) + '...'
 				const propsByTermId = {}
 				if (opts.details.propsByTermId) {
 					// extract properties (like color, etc) for the selected terms
-					for (const t of termlst) {
+					for (const t of selectedTermlst) {
 						if (opts.details.propsByTermId[t.id]) propsByTermId[t.id] = opts.details.propsByTermId[t.id]
 					}
 				}
 
-				opts.callback({
+				const termPayload: any = {
 					collectionId: opts.details.name,
 					type: 'termCollection',
-					termIds: termlst.map(i => i.id),
-					termlst,
+					termIds: selectedTermlst.map(i => i.id),
+					termlst: selectedTermlst,
 					name: termName,
-					// memberType = ds.cohort.termdb.termCollections[].type for client code
 					memberType: opts.details.type,
 					isleaf: true,
 					propsByTermId
-				})
+				}
+				if (opts.details.type === 'categorical' && opts.details.categoryKeys) {
+					termPayload.categoryKeys = opts.details.categoryKeys
+				}
+				opts.callback(termPayload)
 			})
 	}
 }
