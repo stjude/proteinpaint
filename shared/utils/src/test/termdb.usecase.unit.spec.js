@@ -1,6 +1,22 @@
 import tape from 'tape'
 import { isUsableTerm } from '../termdb.usecase.js'
 
+/* Tests
+- barchart term
+- barchart overlay
+- barchart term0
+- cuminc term
+- cuminc overlay
+- survival term
+- survival overlay
+- evenCount term
+- runChart2 date term
+- runChart2 numeric term
+- summaryInput term
+- summaryInput term2
+- summaryInput term0
+*/
+
 /**************
  test sections
 ***************/
@@ -135,6 +151,68 @@ tape('runChart2 numeric term', test => {
 	multiDeepEqual(test, usecase, {
 		plot: [{ type: 'float' }, { type: 'integer' }],
 		branch: [{ type: '', child_types: ['float', 'integer'] }]
+	})
+
+	test.end()
+})
+
+tape('summaryInput term', test => {
+	const usecase = { target: 'summaryInput', detail: 'term' }
+	multiDeepEqual(test, usecase, {
+		plot: [
+			{ type: 'categorical', isleaf: true },
+			{ type: 'float', isleaf: true },
+			{ type: 'integer', isleaf: true },
+			{ type: 'condition', isleaf: true },
+			{ type: 'survival', isleaf: true }
+		],
+		branch: [
+			{ child_types: ['categorical'] },
+			{ child_types: ['float'] },
+			{ child_types: ['integer'] },
+			{ child_types: ['condition'] },
+			{ child_types: ['survival'] }
+		]
+	})
+
+	test.end()
+})
+
+tape('summaryInput term2', test => {
+	const usecase = { target: 'summaryInput', detail: 'term2' }
+	multiDeepEqual(test, usecase, {
+		plot: [
+			{ type: 'categorical', isleaf: true },
+			{ type: 'float', isleaf: true },
+			{ type: 'integer', isleaf: true },
+			{ type: 'condition', isleaf: true }
+		],
+		branch: [
+			{ child_types: ['categorical'] },
+			{ child_types: ['float'] },
+			{ child_types: ['integer'] },
+			{ child_types: ['condition'] }
+		]
+	})
+
+	test.end()
+})
+
+tape('summaryInput term0', test => {
+	const usecase = { target: 'summaryInput', detail: 'term0' }
+	multiDeepEqual(test, usecase, {
+		plot: [
+			{ type: 'categorical', isleaf: true },
+			{ type: 'float', isleaf: true },
+			{ type: 'integer', isleaf: true },
+			{ type: 'condition', isleaf: true }
+		],
+		branch: [
+			{ child_types: ['categorical'] },
+			{ child_types: ['float'] },
+			{ child_types: ['integer'] },
+			{ child_types: ['condition'] }
+		]
 	})
 
 	test.end()
