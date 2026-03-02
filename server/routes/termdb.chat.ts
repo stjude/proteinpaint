@@ -15,7 +15,7 @@ import type {
 	FilterTerm
 } from '#types'
 import { ChatPayload } from '#types/checkers'
-import { extractResourceResponse } from './chat/resourceagent.ts'
+import { extractResourceResponse } from './chat/resource.ts'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import Database from 'better-sqlite3'
