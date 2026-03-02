@@ -503,12 +503,6 @@ export async function getPlotConfig(opts, app) {
 				// TODO: may need more logic later if more than one summary childType,
 				// besides barchart, can support discrete tw only
 				config.childType = config.term.term?.memberType == 'numeric' ? 'violin' : 'barchart'
-				if (config.term.term?.memberType === 'categorical' && config.term.term?.categoryKeys?.length > 1) {
-					// multi-categoryKey collections use categoryKeys as implicit overlay;
-					// explicit term2/term0 are not allowed
-					delete config.term2
-					delete config.term0
-				}
 			} else if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous') {
 				if (!discreteByContinuousPlots.has(config.childType)) {
 					// only change config.childType if the current value is not supported by discrete + continuous tw

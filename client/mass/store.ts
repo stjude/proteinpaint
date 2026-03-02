@@ -40,14 +40,6 @@ function getId() {
 	return idPrefix + '_' + id++
 }
 
-function stripInvalidOverlayDivideBy(plot: any) {
-	const t = plot.term?.term
-	if (t?.type === 'termCollection' && t?.memberType === 'categorical' && t?.categoryKeys?.length > 1) {
-		delete plot.term2
-		delete plot.term0
-	}
-}
-
 const navHeaderModes = new Set([
 	'with_tabs', // default, shows tabs cohort/charts/filter etc
 	'hidden', // no header
@@ -337,7 +329,6 @@ MassStore.prototype.actions = {
 			this.plotAdjusters.set(plot, plot.mayAdjustConfig)
 			delete plot.mayAdjustConfig
 		}
-		stripInvalidOverlayDivideBy(plot)
 		this.state.plots.push(plot)
 		// Parent plots may have child plots, organized in sections to ease the visualization and analysis. For example the carereg report,
 		//has the sections Demographics, Diagnosis and Stagind with their respective plots. We go over the plots for each section to add them
@@ -385,8 +376,6 @@ MassStore.prototype.actions = {
 		this.copyMerge(plot, action.config, action.opts ? action.opts : {})
 		const mayAdjustConfig = this.plotAdjusters.get(plot)
 		if (mayAdjustConfig) mayAdjustConfig(plot, action.config)
-		// guard: multi-categoryKey collections disallow overlay/divide-by
-		stripInvalidOverlayDivideBy(plot)
 
 		if (action.config && 'cutoff' in action.config) {
 			plot.cutoff = action.config.cutoff
