@@ -1,5 +1,5 @@
 import { Vocab } from './Vocab'
-import { dofetch3 } from '../common/dofetch'
+//import { this.dofetch3 } from '../common/dofetch'
 import { getNormalRoot } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
@@ -22,7 +22,7 @@ export class TermdbVocab extends Vocab {
 		}
 
 		const headers = await this.mayGetAuthHeaders('termdb')
-		const data = await dofetch3('termdb/config', {
+		const data = await this.dofetch3('termdb/config', {
 			headers,
 			body: {
 				genome: this.vocab.genome,
@@ -53,11 +53,11 @@ export class TermdbVocab extends Vocab {
 		}
 		if (term.__tree_isroot) {
 			body.default_rootterm = 1
-			data = await dofetch3('termdb/rootterm', { body }, this.opts.fetchOpts)
+			data = await this.dofetch3('termdb/rootterm', { body }, this.opts.fetchOpts)
 		} else {
 			body.get_children = 1
 			body.tid = term.id
-			data = await dofetch3('termdb/termchildren', { body }, this.opts.fetchOpts)
+			data = await this.dofetch3('termdb/termchildren', { body }, this.opts.fetchOpts)
 		}
 		if (data.error) throw data.error
 		for (const term of data.lst) {
@@ -90,7 +90,7 @@ export class TermdbVocab extends Vocab {
 		const headers = await this.mayGetAuthHeaders('termdb')
 		const initOpts = { headers, body }
 		initOpts.signal = signal
-		const data = await dofetch3(route, initOpts, this.opts.fetchOpts)
+		const data = await this.dofetch3(route, initOpts, this.opts.fetchOpts)
 		if (data.error) throw data.error
 
 		const valuesByTermId = {}
@@ -345,7 +345,7 @@ export class TermdbVocab extends Vocab {
 		const filterData = getNormalRoot(opts.filter)
 		if (filterData.lst.length) body.filter = filterData
 		if (opts.includeUnivariate) body.includeUnivariate = opts.includeUnivariate
-		const data = await dofetch3('termdb', { body }, this.opts.fetchOpts)
+		const data = await this.dofetch3('termdb', { body }, this.opts.fetchOpts)
 		if (data.error) throw data.error
 		return data
 	}
@@ -369,7 +369,7 @@ export class TermdbVocab extends Vocab {
 		if (usecase) body.usecase = usecase
 		if (this.state.treeFilter) body.treeFilter = this.state.treeFilter
 		if (targetType) body.targetType = targetType
-		const data = await dofetch3('termdb', { body })
+		const data = await this.dofetch3('termdb', { body })
 		if (data.error) throw data.error
 		// sort results
 		const n = str.toUpperCase()
@@ -389,7 +389,7 @@ export class TermdbVocab extends Vocab {
 	async getTermInfo(id) {
 		if (!id) throw '.getTermInfo: Missing term id' //If missing doesn't throw as expected in later calls
 		const args = ['genome=' + this.vocab.genome + '&dslabel=' + this.vocab.dslabel + '&getterminfo=1&tid=' + id]
-		const data = await dofetch3('/termdb?' + args.join('&'), {}, this.opts.fetchOpts)
+		const data = await this.dofetch3('/termdb?' + args.join('&'), {}, this.opts.fetchOpts)
 		if (data.error) throw data.error
 		return data
 	}
@@ -401,7 +401,7 @@ export class TermdbVocab extends Vocab {
 			dslabel: this.vocab.dslabel,
 			cohort
 		}
-		const data = await dofetch3('termdb/cohort/summary', { body }, this.opts.fetchOpts)
+		const data = await this.dofetch3('termdb/cohort/summary', { body }, this.opts.fetchOpts)
 		if (!data) throw 'missing data'
 		if (data.error) throw data.error
 		return data.count
@@ -418,7 +418,7 @@ export class TermdbVocab extends Vocab {
 			getsamplelist: 1,
 			filter: typeof filterJSON == 'string' ? filterJSON : getNormalRoot(filterJSON)
 		}
-		const data = await dofetch3('termdb', { body }, this.opts.fetchOpts)
+		const data = await this.dofetch3('termdb', { body }, this.opts.fetchOpts)
 		if (!data) throw `missing data`
 		if (data.error) throw data.error
 		if (!Array.isArray(data)) throw 'data is not array'
@@ -435,7 +435,7 @@ export class TermdbVocab extends Vocab {
 			getsamplecount: 1,
 			filter: getNormalRoot(filterJSON)
 		}
-		const data = await dofetch3('termdb', { body }, this.opts.fetchOpts)
+		const data = await this.dofetch3('termdb', { body }, this.opts.fetchOpts)
 		if (!data) throw `missing data`
 		if (data.error) throw data.error
 		return data.count
@@ -467,7 +467,7 @@ export class TermdbVocab extends Vocab {
 		)
 		if (body.filter) body.filter = getNormalRoot(body.filter)
 		const init = { headers, body, signal }
-		const data = await dofetch3('termdb/violin', init)
+		const data = await this.dofetch3('termdb/violin', init)
 		if (data.error) throw data.error
 		return data
 	}
@@ -486,7 +486,7 @@ export class TermdbVocab extends Vocab {
 			arg
 		)
 		if (body.filter) body.filter = getNormalRoot(body.filter)
-		const d = await dofetch3('termdb/boxplot', { headers, body, signal })
+		const d = await this.dofetch3('termdb/boxplot', { headers, body, signal })
 		return d
 	}
 
@@ -505,7 +505,7 @@ export class TermdbVocab extends Vocab {
 			if (termfilter.filter0) body.filter0 = termfilter.filter0
 		}
 		const signal = this.app?.getAbortSignal?.() // ok to be undefined
-		return await dofetch3('termdb/getpercentile', { body, signal })
+		return await this.dofetch3('termdb/getpercentile', { body, signal })
 	}
 
 	async getDescrStats(tw, termfilter, logScale) {
@@ -521,7 +521,7 @@ export class TermdbVocab extends Vocab {
 			if (termfilter.filter) body.filter = getNormalRoot(termfilter.filter)
 			if (termfilter.filter0) body.filter0 = termfilter.filter0
 		}
-		return await dofetch3('/termdb/descrstats', { body })
+		return await this.dofetch3('/termdb/descrstats', { body })
 	}
 
 	/**
@@ -546,7 +546,7 @@ export class TermdbVocab extends Vocab {
 			embedder: window.location.hostname
 		}
 
-		const data = await dofetch3(`termdb/termsbyids`, { body })
+		const data = await this.dofetch3(`termdb/termsbyids`, { body })
 		if (data.error) throw 'getTerm: ' + data.error
 		for (const id in data.terms) {
 			const term = data.terms[id]
@@ -591,7 +591,7 @@ export class TermdbVocab extends Vocab {
 			if (filter) {
 				body.filter = getNormalRoot(filter)
 			}
-			return await dofetch3('/termdb', { headers, body })
+			return await this.dofetch3('/termdb', { headers, body })
 		}
 
 		if (term.category2samplecount) {
@@ -637,7 +637,7 @@ export class TermdbVocab extends Vocab {
 
 		const signal = this.app?.getAbortSignal?.()
 		try {
-			const data = await dofetch3('termdb/categories', { headers, body, signal })
+			const data = await this.dofetch3('termdb/categories', { headers, body, signal })
 			if (data.error) throwMsgWithFilePathAndFnName(data.error)
 			return data
 		} catch (e) {
@@ -659,7 +659,7 @@ export class TermdbVocab extends Vocab {
 			body.filter = getNormalRoot(filter)
 		}
 		try {
-			const data = await dofetch3('/termdb/numericcategories', { body })
+			const data = await this.dofetch3('/termdb/numericcategories', { body })
 			if (data.error) throw data.error
 			return data
 		} catch (e) {
@@ -681,12 +681,12 @@ export class TermdbVocab extends Vocab {
 			lst.push('stop=' + arg.stop)
 			if (arg.variant_filter) lst.push('variant_filter=' + encodeURIComponent(JSON.stringify(arg.variant_filter)))
 		}
-		return await dofetch3('/termdb?' + lst.join('&'))
+		return await this.dofetch3('/termdb?' + lst.join('&'))
 	}
 
 	async get_variantFilter() {
 		// used for snplocus term type
-		return await dofetch3('termdb', {
+		return await this.dofetch3('termdb', {
 			body: { getvariantfilter: 1, genome: this.state.vocab.genome, dslabel: this.state.vocab.dslabel }
 		})
 	}
@@ -826,7 +826,7 @@ export class TermdbVocab extends Vocab {
 			}
 
 			promises.push(
-				dofetch3('termdb', init)
+				this.dofetch3('termdb', init)
 					.then(data => {
 						if (data.error) throw data.error
 						if (data.warning) warnings.push(data.warning.message)
@@ -1003,7 +1003,7 @@ export class TermdbVocab extends Vocab {
 				ids: JSON.stringify(ids)
 			}
 		}
-		const data = await dofetch3('termdb', init, this.opts.fetchOpts)
+		const data = await this.dofetch3('termdb', init, this.opts.fetchOpts)
 		if (data.error) throw data.error
 		return data
 	}
@@ -1016,7 +1016,7 @@ export class TermdbVocab extends Vocab {
 			ldtkname: tkname,
 			m: { chr: m.chr, pos: m.pos, ref: m.ref, alt: m.alt }
 		}
-		return await dofetch3('termdb', { body })
+		return await this.dofetch3('termdb', { body })
 	}
 
 	async getScatterData(opts, signal = undefined) {
@@ -1042,7 +1042,7 @@ export class TermdbVocab extends Vocab {
 		if (opts.divideByTW) body.divideByTW = this.getTwMinCopy(opts.divideByTW)
 		if (opts.scaleDotTW) body.scaleDotTW = this.getTwMinCopy(opts.scaleDotTW)
 		body.excludeOutliers = opts.excludeOutliers
-		const data = await dofetch3('termdb/sampleScatter', { headers, body, signal })
+		const data = await this.dofetch3('termdb/sampleScatter', { headers, body, signal })
 		return data
 	}
 
@@ -1069,7 +1069,7 @@ export class TermdbVocab extends Vocab {
 			if (tf.filter0) body.filter0 = tf.filter0
 		}
 		const signal = opts.signal || this.app?.getAbortSignal?.()
-		return await dofetch3('termdb', { headers, body, signal })
+		return await this.dofetch3('termdb', { headers, body, signal })
 	}
 
 	// it's safer to separately treat term and q as persisted objects but not tw,
@@ -1122,7 +1122,7 @@ export class TermdbVocab extends Vocab {
 			dslabel: this.state.vocab.dslabel,
 			embedder: window.location.hostname
 		}
-		const data = await dofetch3('termdb', { headers, body })
+		const data = await this.dofetch3('termdb', { headers, body })
 		const byTermId = {}
 		if ('error' in data) return data
 		for (const row of data) {
@@ -1145,7 +1145,7 @@ export class TermdbVocab extends Vocab {
 			dslabel: this.state.vocab.dslabel,
 			embedder: window.location.hostname
 		}
-		const data = await dofetch3('termdb', { headers, body })
+		const data = await this.dofetch3('termdb', { headers, body })
 		return data
 	}
 
@@ -1163,7 +1163,7 @@ export class TermdbVocab extends Vocab {
 			embedder: window.location.hostname
 		}
 		if (opts?.filter) body.filter = getNormalRoot(opts.filter)
-		const data = await dofetch3('termdb', { headers, body })
+		const data = await this.dofetch3('termdb', { headers, body })
 		return data
 	}
 
@@ -1180,7 +1180,7 @@ export class TermdbVocab extends Vocab {
 			dslabel: this.state.vocab.dslabel,
 			embedder: window.location.hostname
 		}
-		const data = await dofetch3('termdb', { headers, body })
+		const data = await this.dofetch3('termdb', { headers, body })
 		const result = []
 		for (const row of data) result.push(row.name)
 		return result
@@ -1200,7 +1200,7 @@ export class TermdbVocab extends Vocab {
 			coords: opts.coords
 		}
 
-		return await dofetch3('termdb', { headers, body })
+		return await this.dofetch3('termdb', { headers, body })
 	}
 
 	async getMultivalueTWs(opts) {
@@ -1214,7 +1214,7 @@ export class TermdbVocab extends Vocab {
 			for: 'getMultivalueTWs',
 			parent_id: opts?.parent_id
 		}
-		return await dofetch3('termdb', { headers, body })
+		return await this.dofetch3('termdb', { headers, body })
 	}
 
 	async getCohortsData(opts) {
@@ -1222,12 +1222,12 @@ export class TermdbVocab extends Vocab {
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel
 		}
-		return await dofetch3('termdb/cohorts', { body })
+		return await this.dofetch3('termdb/cohorts', { body })
 	}
 
 	async getMatrixByName(name) {
 		// find a pre-built matrix by name from this dataset
-		return await dofetch3('termdb', {
+		return await this.dofetch3('termdb', {
 			body: {
 				for: 'matrix',
 				getPlotDataByName: name,
@@ -1239,7 +1239,7 @@ export class TermdbVocab extends Vocab {
 
 	async getNumericDictTermClusterByName(name) {
 		// find a pre-built numericDictTermCluster by name from this dataset
-		return await dofetch3('termdb', {
+		return await this.dofetch3('termdb', {
 			body: {
 				for: 'numericDictTermCluster',
 				getPlotDataByName: name,
@@ -1251,7 +1251,7 @@ export class TermdbVocab extends Vocab {
 
 	async getMutationSignatureByName(name) {
 		// find a pre-built numericDictTermCluster by name from this dataset
-		return await dofetch3('termdb', {
+		return await this.dofetch3('termdb', {
 			body: {
 				for: 'mutationSignature',
 				getPlotDataByName: name,
@@ -1261,11 +1261,15 @@ export class TermdbVocab extends Vocab {
 		})
 	}
 
+	async getTopVariablyExpressedGenes(arg) {
+		return await this.dofetch3('termdb/topVariablyExpressedGenes', { method: 'GET', body: arg })
+	}
+
 	async getTopTermsByType(args) {
 		args.genome = this.state.vocab.genome
 		args.dslabel = this.state.vocab.dslabel
 		if (args.filter) args.filter = getNormalRoot(args.filter)
-		return await dofetch3('termdb/getTopTermsByType', { method: 'GET', body: args })
+		return await this.dofetch3('termdb/getTopTermsByType', { method: 'GET', body: args })
 	}
 
 	async getSampleImages(sampleId) {
@@ -1273,7 +1277,7 @@ export class TermdbVocab extends Vocab {
 		args.genome = this.state.vocab.genome
 		args.dslabel = this.state.vocab.dslabel
 		args.sampleId = sampleId
-		return await dofetch3('termdb/getSampleImages', { method: 'GET', body: args })
+		return await this.dofetch3('termdb/getSampleImages', { method: 'GET', body: args })
 	}
 
 	/* 
@@ -1317,7 +1321,7 @@ export class TermdbVocab extends Vocab {
 		for (const [attr, fromValMap] of byAttr) {
 			const inputs = Object.keys(fromValMap)
 			promises.push(
-				await dofetch3('termdb', {
+				await this.dofetch3('termdb', {
 					body: {
 						for: 'convertSampleId',
 						inputs,
@@ -1358,7 +1362,7 @@ export class TermdbVocab extends Vocab {
 		)
 
 		if (body.filter) body.filter = getNormalRoot(body.filter)
-		const d = await dofetch3('termdb/correlationVolcano', { headers, body })
+		const d = await this.dofetch3('termdb/correlationVolcano', { headers, body })
 
 		return d
 	}
@@ -1377,7 +1381,7 @@ export class TermdbVocab extends Vocab {
 			}
 		}
 		if (body.facilityTW) this.mayStripTwProps(body.facilityTW)
-		return await dofetch3('termdb/filterTermValues', { body })
+		return await this.dofetch3('termdb/filterTermValues', { body })
 	}
 
 	async getProfileScores(args) {
@@ -1397,7 +1401,7 @@ export class TermdbVocab extends Vocab {
 				this.mayStripTwProps(t.score)
 			}
 		}
-		return await dofetch3('termdb/profileScores', { body })
+		return await this.dofetch3('termdb/profileScores', { body })
 	}
 
 	async getProfileFormScores(args) {
@@ -1412,7 +1416,7 @@ export class TermdbVocab extends Vocab {
 				if (t.term.id) t.term = { id: t.term.id }
 			}
 		}
-		return await dofetch3('termdb/profileFormScores', { body })
+		return await this.dofetch3('termdb/profileFormScores', { body })
 	}
 
 	// strip some tw properties that
@@ -1436,7 +1440,7 @@ export class TermdbVocab extends Vocab {
 			genome: this.vocab.genome,
 			for: 'buildAdHocDictionary'
 		}
-		return await dofetch3('termdb', { method: 'GET', body })
+		return await this.dofetch3('termdb', { method: 'GET', body })
 	}
 
 	async getFilteredAiImages(project, filter) {
@@ -1448,7 +1452,7 @@ export class TermdbVocab extends Vocab {
 			for: 'filterImages'
 		}
 
-		return await dofetch3('aiProjectAdmin', { body })
+		return await this.dofetch3('aiProjectAdmin', { body })
 	}
 }
 
