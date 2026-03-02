@@ -633,7 +633,12 @@ function maySkipFieldLine(line) {
 		return true
 	}
 	if (line.startsWith('case.diagnoses.')) {
-		// all terms under this branch are multivalue and skipped
+		// 2/27/2026 revert to using diagnoses branch per https://gdc-ctds.atlassian.net/browse/SV-2753?focusedCommentId=84844
+		// due to diagnoses__days_to_hiv_diagnosis term breaking graphql query in qa-yellow, skip all terms under "diagnoses."
+		// except following two which are known to work and frequently used
+		if (line == 'case.diagnoses.age_at_diagnosis') return false
+		if (line == 'case.diagnoses.primary_diagnosis') return false
+		// all other terms under this branch are skipped
 		return true
 	}
 	if (line.endsWith('_id') && !line.endsWith('project_id')) {
