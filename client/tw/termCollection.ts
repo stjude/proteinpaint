@@ -47,6 +47,7 @@ export class TermCollection {
 		if (!tc.propsByTermId) throw new Error(`propsByTermId missing for termCollection='${tc.name}'`)
 		if (!term.propsByTermId) term.propsByTermId = tc.propsByTermId // assign if missing
 		term.memberType = tc.type
+		if (tc.type === 'categorical' && tc.categoryKeys) term.categoryKeys = tc.categoryKeys
 		if (!term.termIds) term.termIds = term.termlst.map((t: any) => t.id)
 		for (const t of term.termlst) {
 			if (!term.propsByTermId[t.id]) term.propsByTermId[t.id] = tc.propsByTermId[t.id]
@@ -109,6 +110,7 @@ export class TermCollectionValues extends TwBase {
 			if ((tw.term as any).id) copy.term.id = (tw.term as any).id
 			if ((tw.term as any).collectionId) copy.term.collectionId = (tw.term as any).collectionId
 			if ((tw.term as any).memberType) copy.term.memberType = (tw.term as any).memberType
+			if ((tw.term as any).categoryKeys) copy.term.categoryKeys = structuredClone((tw.term as any).categoryKeys)
 			if ((tw.term as any).numerators) copy.term.numerators = structuredClone((tw.term as any).numerators)
 			if ((tw.term as any).propsByTermId) copy.term.propsByTermId = structuredClone((tw.term as any).propsByTermId)
 			copy.term.termIds = (tw.term as any).termlst?.map((t: any) => t.id) || []

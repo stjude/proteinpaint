@@ -13,6 +13,7 @@ export type TermCollection = BaseTerm & {
 	 * Allows client code using the term to know the collection kind without looking up config.
 	 */
 	memberType?: 'numeric' | 'categorical'
+	categoryKeys?: string[]
 	/** list of term.ids that are available in this collection. this is used in request payload and server side */
 	termIds?: string[]
 	/** list of term objs corresponding to termIds[]. 

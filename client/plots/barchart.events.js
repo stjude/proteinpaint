@@ -32,7 +32,8 @@ export default function getHandlers(self) {
 		series: {
 			mouseover(event, d) {
 				event.stopPropagation()
-				let percent = self.config.term2 ? (d.total / d.seriesTotal) * 100 : (d.seriesTotal / d.chartTotal) * 100
+				const hasOverlay = self.config.term2 || self.hasMultiCategoryKeys
+				let percent = hasOverlay ? (d.total / d.seriesTotal) * 100 : (d.seriesTotal / d.chartTotal) * 100
 				percent = percent.toFixed(1)
 				const t1 = self.config.term.term
 				const t2 = self.config.term2 && self.config.term2.term
@@ -40,16 +41,22 @@ export default function getHandlers(self) {
 				const seriesLabel =
 					(t1.values && d.seriesId in t1.values ? t1.values[d.seriesId].label : d.seriesId) +
 					(t1.unit ? ' ' + t1.unit : '')
-				const dataLabel =
-					(t2 && t2.values && d.dataId in t2.values ? t2.values[d.dataId].label : d.dataId) +
-					(t2 && t2.unit ? ' ' + t2.unit : '')
-				const icon = !t2
+				let dataLabel
+				if (t2) {
+					dataLabel =
+						(t2.values && d.dataId in t2.values ? t2.values[d.dataId].label : d.dataId) + (t2.unit ? ' ' + t2.unit : '')
+				} else if (self.hasMultiCategoryKeys) {
+					dataLabel = self.getCategoryKeyLabel(self.config.term, null, d.dataId)
+				} else {
+					dataLabel = d.dataId
+				}
+				const icon = !hasOverlay
 					? ''
 					: "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:" +
 					  d.color +
 					  "'>&nbsp;</div>"
 				const rows = [`<tr><td colspan=2 style='padding:3px; text-align:center'>${seriesLabel}</td></tr>`]
-				if (t2) {
+				if (hasOverlay) {
 					rows.push(
 						`<tr><td colspan=2 style='padding:3px; text-align:center'>${icon} <span>${dataLabel}</span></td></tr>`
 					)
