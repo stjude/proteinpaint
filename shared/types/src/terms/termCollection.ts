@@ -4,23 +4,15 @@ import type { BaseTerm, BaseTW, MinBaseQ } from '../index.ts'
 For term type 'snp'
 */
 
-export type TermCollection = BaseTerm & {
+type BaseTermCollection = BaseTerm & {
 	name: string
 	collectionId?: string
 	type: 'termCollection'
-	/**
-	 * Copies ds.cohort.termdb.termCollections[].type ('numeric' | 'categorical').
-	 * Allows client code using the term to know the collection kind without looking up config.
-	 */
-	memberType?: 'numeric' | 'categorical'
-	categoryKeys?: string[]
 	/** list of term.ids that are available in this collection. this is used in request payload and server side */
 	termIds?: string[]
 	/** list of term objs corresponding to termIds[]. 
 	this is generated on server init, and sent to client, so client has easy access to show name of every term */
 	termlst: BaseTerm[]
-	/** TODO purpose */
-	numerators?: string[]
 	/** TODO purpose */
 	newTvs?: boolean
 	propsByTermId: {
@@ -29,6 +21,30 @@ export type TermCollection = BaseTerm & {
 		}
 	}
 }
+
+export type NumericTermCollection = BaseTermCollection & {
+	/**
+	 * Copies ds.cohort.termdb.termCollections[].type ('numeric' | 'categorical').
+	 * Allows client code using the term to know the collection kind without looking up config.
+	 */
+	memberType: 'numeric'
+	/** the sum of numerator values will be divided by the sum of values for all terms,
+	 *  to be used for sorting matrix sample columns */
+	numerators?: string[]
+}
+
+export type CategoricalTermCollection = BaseTermCollection & {
+	/**
+	 * Copies ds.cohort.termdb.termCollections[].type ('numeric' | 'categorical').
+	 * Allows client code using the term to know the collection kind without looking up config.
+	 */
+	memberType: 'categorical'
+	/** the sum of numerator values will be divided by the sum of values for all terms,
+	 *  to be used for sorting matrix sample columns */
+	categoryKeys: string[]
+}
+
+export type TermCollection = NumericTermCollection | CategoricalTermCollection
 
 export type RawTermCollection = TermCollection & {
 	type?: 'termCollection'
