@@ -25,5 +25,8 @@ Category:`
 	mayLog(`classifyQuery: "${category}"`)
 
 	if (category === 'plot') return { type: 'plot' }
-	return { type: 'notplot' }
+	if (category === 'notplot') return { type: 'notplot' }
+
+	mayLog('classify1.ts: unexpected LLM response:', response)
+	throw new Error(`classify1.ts: LLM returned "${category}" (expected "plot" or "notplot")`)
 }

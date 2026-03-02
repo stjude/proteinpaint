@@ -1,6 +1,6 @@
 import type { LlmConfig, DbRows } from '#types'
 import { FILTER_TERM_DEFINITIONS, FILTER_DESCRIPTION, validate_filter } from './filter.ts'
-import { formatTrainingExamples, checkField, safeParseLlmJson, extractGenesFromPrompt, validate_term } from './utils.ts'
+import { formatTrainingExamples, checkField, extractGenesFromPrompt, validate_term } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 
 type TermCategory = 'categorical' | 'float' | 'integer' | undefined
@@ -113,7 +113,7 @@ export async function extract_summary_terms(
 	const response: string = await route_to_appropriate_llm_provider(system_prompt, llm)
 	if (testing) {
 		// When testing, send raw LLM response
-		return { action: 'summary', response: safeParseLlmJson(response) }
+		return { action: 'summary', response: JSON.parse(response) }
 	} else {
 		// In actual production (inside PP) send LLM output for validation
 		return validate_summary_response(response, common_genes, dataset_json, ds)
@@ -121,7 +121,7 @@ export async function extract_summary_terms(
 }
 
 function validate_summary_response(response: string, common_genes: string[], dataset_json: any, ds: any) {
-	const response_type = safeParseLlmJson(response)
+	const response_type = JSON.parse(response)
 	const pp_plot_json: any = { chartType: 'summary' }
 	let text = ''
 	if (response_type.text) text = response_type.text

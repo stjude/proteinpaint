@@ -1,6 +1,6 @@
 import type { LlmConfig, DbRows } from '#types'
 import { FILTER_TERM_DEFINITIONS, FILTER_DESCRIPTION, validate_filter } from './filter.ts'
-import { formatTrainingExamples, checkField, safeParseLlmJson, extractGenesFromPrompt } from './utils.ts'
+import { formatTrainingExamples, checkField, extractGenesFromPrompt } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 
 export async function extract_matrix_search_terms_from_query(
@@ -70,14 +70,14 @@ export async function extract_matrix_search_terms_from_query(
 
 	const response: string = await route_to_appropriate_llm_provider(system_prompt, llm)
 	if (testing) {
-		return { action: 'matrix', response: safeParseLlmJson(response) }
+		return { action: 'matrix', response: JSON.parse(response) }
 	} else {
 		return validate_matrix_response(response, common_genes, dataset_json, ds)
 	}
 }
 
 function validate_matrix_response(response: string, common_genes: string[], dataset_json: any, ds: any) {
-	const response_type = safeParseLlmJson(response)
+	const response_type = JSON.parse(response)
 	const pp_plot_json: any = { chartType: 'matrix' }
 	let text = ''
 
