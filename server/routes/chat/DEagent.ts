@@ -1,13 +1,7 @@
 import { get_samples } from '#src/termdb.sql.js'
 import type { LlmConfig, DbRows } from '#types'
 import { FILTER_TERM_DEFINITIONS, FILTER_DESCRIPTION, validate_filter, num_filter_cutoff } from './filter.ts'
-import {
-	formatTrainingExamples,
-	checkField,
-	safeParseLlmJson,
-	generate_group_name,
-	removeLastOccurrence
-} from './utils.ts'
+import { formatTrainingExamples, checkField, generate_group_name, removeLastOccurrence } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 
 export async function extract_DE_search_terms_from_query(
@@ -90,7 +84,7 @@ export async function extract_DE_search_terms_from_query(
 		const response: string = await route_to_appropriate_llm_provider(system_prompt, llm)
 		if (testing) {
 			// When testing, send raw LLM response
-			return { action: 'dge', response: safeParseLlmJson(response) }
+			return { action: 'dge', response: JSON.parse(response) }
 		} else {
 			// In actual production (inside PP) send LLM output for validation
 			return await validate_DE_response(response, ds, dataset_db_output.db_rows)
@@ -101,7 +95,7 @@ export async function extract_DE_search_terms_from_query(
 }
 
 async function validate_DE_response(response: string, ds: any, db_rows: DbRows[]) {
-	const response_type = safeParseLlmJson(response)
+	const response_type = JSON.parse(response)
 	let text = ''
 	let group1: any
 	let samples1lst: any
