@@ -1176,10 +1176,7 @@ export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1) {
 	  Age at diagnosis, if a case has multiple values that can each be rendered in a different bar/overlay/chart
 	*/
 	if (sample[tw.term.id] instanceof Set) {
-		if (sample[tw.term.id].size > 1) {
-			delete sample[tw.term.id] // later may skip throwing, and simply not include cases with multiple values for the same annotation term
-			throw `At least one case has multiple values for ${tw.term.name}.`
-		} else sample[tw.term.id] = [...sample[tw.term.id]][0]
+		sample[tw.term.id] = [...sample[tw.term.id]][0]
 	}
 
 	if (tw.term.id in sample) {
