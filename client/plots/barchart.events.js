@@ -476,13 +476,19 @@ function handle_click(event, self, chart) {
 		})
 	}
 
+	const uiLabels = self.app.vocabApi.termdbConfig.uiLabels
 	//disable sample listing temporarily
 	if (self.config.displaySampleIds) {
 		options.push({
-			label: 'List samples',
+			label: `List ${uiLabels.samples}`,
 			callback: async () => {
 				const arg = getListSamplesArg(event, self, data.seriesId, data.dataId, chart.chartId)
-				await listSamples(arg, data.seriesId, data.dataId, chart.chartId)
+				try {
+					await listSamples(arg, data.seriesId, data.dataId, chart.chartId)
+				} catch (e) {
+					console.trace(e)
+					throw e
+				}
 			}
 		})
 	}
@@ -587,11 +593,6 @@ function getTvs(termIndex, value, self, geneVariant) {
 	return tvs
 }
 
-// NOTE: should make these notes dataset specific, maybe a callback with tw as the argument
-const notCountedNote =
-	'Not counted in this bar segment for statistical reasons; the earliest value was used and rendered in a different bar segment'
-const unusedValue = '-'
-
 export async function listSamples(arg, seriesId, dataId, chartId) {
 	// validate arg
 	for (const k of Object.keys(arg)) {
@@ -601,6 +602,7 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 
 	// query sample data
 	const { event, self, terms, tvslst, geneVariant, tip } = arg
+	const uiLabels = self.app.vocabApi.termdbConfig.uiLabels
 	const opts = {
 		terms,
 		filter: filterJoin([self.state.termfilter.filter, tvslst]),
@@ -620,6 +622,7 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 	const term2isSurv = self.config.term2?.term.type == 'survival'
 	const term0isSurv = self.config.term0?.term.type == 'survival'
 	const termdbmclass = self.app.vocabApi.termdbConfig?.mclass
+	const notRenderedVals = new Set()
 	for (const sample of data.lst) {
 		const pass = mayFilterByGeneVariant(sample, self, geneVariant)
 		if (!pass) continue
@@ -636,17 +639,16 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 		 * May not be caught in server request for custom variables
 		 * with user supplied keys */
 		if (self.config.term.q?.hiddenValues && self.config.term.q.hiddenValues[t1entry.value]) continue
+		let notRendered = false
 		const value = t1entry.value
 		if (termIsNumeric) {
-			row.push({ value: t1entry.key === seriesId ? roundValueAuto(value) : unusedValue })
-			row.push({ value: t1entry.key === seriesId ? '' : notCountedNote })
+			row.push({ value: t1entry.key === seriesId ? roundValueAuto(value) : t1entry.key })
 		} else if (termIsGv) {
 			addGvRowVals(sample, self.config.term, row, termdbmclass)
-			row.push({ value: '' })
 		} else {
-			row.push({ value: t1entry.key === seriesId ? value : unusedValue })
-			row.push({ value: t1entry.key === seriesId ? '' : notCountedNote })
+			row.push({ value: t1entry.key === seriesId ? value : t1entry.key })
 		}
+		if (t1entry.key !== seriesId) notRendered = true
 
 		if (self.config.term2) {
 			const t2entry = sample[self.config.term2.$id]
@@ -655,20 +657,18 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 			if (self.config.term2.q?.hiddenValues && self.config.term2.q.hiddenValues[t2entry.value]) continue
 			if (term2isNumeric) {
 				const value = roundValueAuto(t2entry.value)
-				row.push({ value: t2entry.key === dataId ? value : unusedValue })
-				row.push({ value: t2entry.key === dataId ? '' : notCountedNote })
+				row.push({ value: t2entry.key === dataId ? value : t2entry.key })
 			} else if (term2isGv) {
 				addGvRowVals(sample, self.config.term2, row, termdbmclass)
-				row.push({ value: '' })
 			} else if (term2isSurv) {
 				const value = self.config.term2.term.values[t2entry.key].label
-				row.push({ value }, { value: '' })
+				row.push({ value })
 			} else {
 				const label = self.config.term2.term.values?.[t2entry.value]?.label
 				const value = label || t2entry.value
-				row.push({ value: t2entry.key === dataId ? value : unusedValue })
-				row.push({ value: t2entry.key === dataId ? '' : notCountedNote })
+				row.push({ value: t2entry.key === dataId ? value : t2entry.key })
 			}
+			if (t2entry.key !== dataId) notRendered = true
 		}
 		// for now, duplicating if block for term2 and term0
 		// TODO: use dom/summary/ListSamples.ts
@@ -679,30 +679,35 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 			if (self.config.term0.q?.hiddenValues && self.config.term0.q.hiddenValues[t0entry.value]) continue
 			if (term0isNumeric) {
 				const value = roundValueAuto(t0entry.value)
-				row.push({ value: t0entry.key === chartId ? value : unusedValue })
-				row.push({ value: t2entry.key === chartId ? '' : notCountedNote })
+				row.push({ value: t0entry.key === chartId ? value : t0entry.key })
 			} else if (term0isGv) {
 				addGvRowVals(sample, self.config.term0, row, termdbmclass)
-				row.push({ value: '' })
 			} else if (term0isSurv) {
 				const value = self.config.term0.term.values[t0entry.key].label
-				row.push({ value }, { value: '' })
+				row.push({ value })
 			} else {
 				const label = self.config.term0.term.values?.[t0entry.value]?.label
 				const value = label || t0entry.value
-				row.push({ value: t0entry.key === chartId ? value : unusedValue })
-				row.push({ value: t0entry.key === chartId ? '' : notCountedNote })
+				row.push({ value: t0entry.key === chartId ? value : t0entry.key })
 			}
+			if (t0entry.key !== chartId) notRendered = true
 		}
+
+		if (notRendered && row.length) {
+			notRenderedVals.add(row)
+		}
+
 		rows.push(row)
 	}
 
 	// fill table columns with term metadata
-	const columns = [{ label: 'Sample' }]
+	const columns = [{ label: uiLabels.Sample }]
 	if (termIsNumeric) {
 		columns.push({ label: self.config.term.term.name })
 	} else if (termIsGv) {
 		addGvCols(self.config.term, columns)
+	} else {
+		columns.push({ label: self.config.term.term.name })
 	}
 	if (self.config.term2) {
 		if (term2isGv) {
@@ -718,7 +723,6 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 			columns.push({ label: self.config.term0.term.name })
 		}
 	}
-	columns.push({ label: 'Notes' })
 
 	// render table in div. from now on arg.tip should always be given
 	let div
@@ -730,15 +734,41 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 		menu.show(event.clientX, event.clientY, false)
 		div = menu.d.append('div')
 	}
-	renderTable({
-		rows,
+
+	rows.sort((a, b) => {
+		return a[0].value < b[0].value ? -1 : 1
+	})
+
+	await renderTable({
+		rows: rows.filter(r => !notRenderedVals.has(r)),
 		columns,
-		div,
+		div: div.append('div'),
 		showLines: true,
 		maxHeight: '40vh',
 		resize: true,
 		dataTestId: 'sjpp-listsampletable'
 	})
+
+	if (notRenderedVals.size) {
+		// TODO: do not hardcode, make this dataset specific
+		const barOrChart = self.config.term0?.term.id.startsWith('case.diagnoses') ? 'bar or chart' : 'bar'
+
+		div.append('div').style('margin', '5px').style('padding', '5px').style('max-width', '600px')
+			.html(`<span>The ${uiLabels.samples} below have matching values that were not rendered in this ${barOrChart}, 
+				due to statistical processing that requires 1 value per ${uiLabels.sample}.
+				A different value was used and rendered in a different ${barOrChart}.</span>
+			`)
+
+		await renderTable({
+			rows: rows.filter(r => notRenderedVals.has(r)),
+			columns,
+			div: div.append('div'),
+			showLines: true,
+			maxHeight: '40vh',
+			resize: true,
+			dataTestId: 'sjpp-listsampletable'
+		})
+	}
 }
 async function getSampleGrp(arg) {
 	// query sample data
