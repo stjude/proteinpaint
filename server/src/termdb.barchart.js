@@ -96,23 +96,6 @@ export async function barchart_data(q, ds, tdb) {
 		q.genotype2sample = genotype2sample
 	}
 
-	// defensive: multi-categoryKey collections use categoryKeys as implicit overlay
-	const term1Obj = q.term1 || {}
-	if (
-		term1Obj.type === 'termCollection' &&
-		term1Obj.memberType === 'categorical' &&
-		term1Obj.categoryKeys?.length > 1
-	) {
-		delete q.term0_id
-		delete q.term0
-		delete q.term0_q
-		delete q.term0_$id
-		delete q.term2_id
-		delete q.term2
-		delete q.term2_q
-		delete q.term2_$id
-	}
-
 	const startTime = +new Date()
 	q.results = {}
 	const map = new Map()
@@ -192,10 +175,9 @@ export async function barchart_data(q, ds, tdb) {
 								i === 1 &&
 								tw.term.type == 'termCollection' &&
 								tw.term.memberType == 'categorical' &&
-								tw.term.categoryKeys?.length > 1 &&
-								!map.get(2)
+								tw.term.categoryKeys?.length > 1
 							) {
-								// categorical termCollection with multiple categoryKeys and no explicit term2:
+								// categorical termCollection with multiple categoryKeys:
 								// explode into separate items per (member_term, category_value) so
 								// bars = member terms, stacked segments = category values
 								const vals = value.values || [value]

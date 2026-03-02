@@ -365,7 +365,9 @@ export async function validate_termdb(ds) {
 				if (!c.propsByTermId[i]) c.propsByTermId[i] = {}
 				if (!c.propsByTermId[i].color) c.propsByTermId[i].color = colorScale(i)
 			}
-			if (c.type === 'categorical' && c.categoryKeys) {
+			if (c.type === 'categorical') {
+				if (!c.categoryKeys)
+					throw `termdb.termCollections[].categoryKeys is required for categorical collection '${c.name}'`
 				if (!Array.isArray(c.categoryKeys))
 					throw `termdb.termCollections[].categoryKeys must be an array for '${c.name}'`
 				if (c.categoryKeys.length == 0) throw `termdb.termCollections[].categoryKeys[] is empty for '${c.name}'`
