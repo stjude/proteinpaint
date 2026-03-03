@@ -1,7 +1,127 @@
 import type { LlmConfig, DbRows } from '#types'
-import { FILTER_TERM_DEFINITIONS, FILTER_DESCRIPTION, validate_filter } from './filter.ts'
-import { formatTrainingExamples, checkField, extractGenesFromPrompt } from './utils.ts'
+import { TermTypes } from '#shared/terms.js'
+import { FILTER_TERM_DEFINITIONS, validate_filter } from './filter.ts'
+import {
+	formatTrainingExamples,
+	extractGenesFromPrompt,
+	extractGenesetsFromPrompt,
+	DATA_TYPE_REGISTRY,
+	buildCommonPrompt
+} from './utils.ts'
+import type { DataTypeConfig } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
+import { mayLog } from '#src/helpers.ts'
+
+// ---------------------------------------------------------------------------
+//  Schema builder — generates JSON schema from dataset capabilities
+// ---------------------------------------------------------------------------
+
+function buildMatrixSchema(ds: any, dataset_json: any): { schema: object; activeConfigs: DataTypeConfig[] } {
+	const activeConfigs: DataTypeConfig[] = []
+	const properties: Record<string, object> = {
+		terms: {
+			type: 'array',
+			items: { type: 'string' },
+			description: 'Names of dictionary/clinical terms to include as rows in the matrix'
+		},
+		simpleFilter: {
+			type: 'array',
+			items: { $ref: '#/definitions/FilterTerm' },
+			description: 'Optional simple filter terms to restrict the sample set'
+		}
+	}
+
+	const addedFields = new Set<string>()
+
+	for (const config of DATA_TYPE_REGISTRY) {
+		if (!config.detectAvailability(ds, dataset_json)) continue
+		activeConfigs.push(config)
+		// Deduplicate shared schema fields (e.g. geneExpression + geneVariant both use 'geneNames')
+		if (!addedFields.has(config.schemaFieldName)) {
+			properties[config.schemaFieldName] = config.schemaDefinition
+			addedFields.add(config.schemaFieldName)
+		}
+	}
+
+	const schema = {
+		$schema: 'http://json-schema.org/draft-07/schema#',
+		$ref: '#/definitions/MatrixType',
+		definitions: {
+			MatrixType: {
+				type: 'object',
+				properties,
+				additionalProperties: false
+			},
+			...FILTER_TERM_DEFINITIONS
+		}
+	}
+
+	mayLog(
+		'matrixagent: active data types:',
+		activeConfigs.map(c => c.termType),
+		'schema fields:',
+		Object.keys(properties)
+	)
+
+	return { schema, activeConfigs }
+}
+
+// ---------------------------------------------------------------------------
+//  System prompt builder
+// ---------------------------------------------------------------------------
+
+function buildMatrixSystemPrompt(
+	schema: object,
+	activeConfigs: DataTypeConfig[],
+	dataset_json: any,
+	dataset_db_output: { rag_docs: string[] },
+	matrix_ds: any[],
+	training_data: string,
+	common_genes: string[],
+	ds: any,
+	prompt: string,
+	matchedGenesets: string[]
+): string {
+	let s =
+		'I am an assistant that extracts terms and data identifiers from the user query to create a matrix plot. ' +
+		'A matrix plot displays multiple genes, clinical variables, and/or other data types across samples in a grid layout. ' +
+		'The final output must be in the following JSON format with NO extra comments. The JSON schema is as follows: ' +
+		JSON.stringify(schema)
+
+	// Always-present field description
+	s += ' The "terms" field should ONLY contain names of clinical/dictionary fields from the sqlite db.'
+
+	// Describe each active data type field (deduplicated by field name)
+	const describedFields = new Set<string>()
+	for (const config of activeConfigs) {
+		if (!describedFields.has(config.schemaFieldName)) {
+			s += ' ' + config.promptFieldDescription
+			describedFields.add(config.schemaFieldName)
+		}
+	}
+
+	// At least one data field must be provided
+	const allFieldNames = ['terms', ...new Set(activeConfigs.map(c => c.schemaFieldName))]
+	s += ` At least one of ${allFieldNames.map(f => '"' + f + '"').join(' or ')} must be provided.`
+
+	// Common tail: filter, DB context, training data, gene list, geneset list, question
+	s += buildCommonPrompt({
+		ds,
+		dataset_json,
+		chart_ds: matrix_ds[0],
+		dataset_db_output,
+		training_data,
+		common_genes,
+		prompt,
+		matchedGenesets
+	})
+
+	return s
+}
+
+// ---------------------------------------------------------------------------
+//  Main entry point
+// ---------------------------------------------------------------------------
 
 export async function extract_matrix_search_terms_from_query(
 	prompt: string,
@@ -10,38 +130,12 @@ export async function extract_matrix_search_terms_from_query(
 	dataset_json: any,
 	genes_list: string[],
 	ds: any,
-	testing: boolean
+	testing: boolean,
+	genesetNames: string[] = []
 ) {
-	const Schema = {
-		$schema: 'http://json-schema.org/draft-07/schema#',
-		$ref: '#/definitions/MatrixType',
-		definitions: {
-			MatrixType: {
-				type: 'object',
-				properties: {
-					terms: {
-						type: 'array',
-						items: { type: 'string' },
-						description: 'Names of dictionary/clinical terms to include as rows in the matrix'
-					},
-					geneNames: {
-						type: 'array',
-						items: { type: 'string' },
-						description: 'Names of genes to include as gene variant rows in the matrix'
-					},
-					simpleFilter: {
-						type: 'array',
-						items: { $ref: '#/definitions/FilterTerm' },
-						description: 'Optional simple filter terms to restrict the sample set'
-					}
-				},
-				additionalProperties: false
-			},
-			...FILTER_TERM_DEFINITIONS
-		}
-	}
-
+	const { schema, activeConfigs } = buildMatrixSchema(ds, dataset_json)
 	const common_genes = extractGenesFromPrompt(prompt, genes_list)
+	const matchedGenesets = extractGenesetsFromPrompt(prompt, genesetNames)
 
 	// Parse out training data from the dataset JSON
 	const matrix_ds = dataset_json.charts.filter((chart: any) => chart.type == 'Matrix')
@@ -50,49 +144,41 @@ export async function extract_matrix_search_terms_from_query(
 
 	const training_data = formatTrainingExamples(matrix_ds[0].TrainingData)
 
-	let system_prompt =
-		'I am an assistant that extracts terms and gene names from the user query to create a matrix plot. A matrix plot displays multiple genes and/or clinical variables across samples in a grid layout. The final output must be in the following JSON format with NO extra comments. The JSON schema is as follows: ' +
-		JSON.stringify(Schema) +
-		' The "terms" field should ONLY contain names of clinical/dictionary fields from the sqlite db. The "geneNames" field should ONLY contain gene names. At least one of "terms" or "geneNames" must be provided. The "simpleFilter" field is optional and should contain an array of JSON terms with which the dataset will be filtered. ' +
-		FILTER_DESCRIPTION +
-		checkField(dataset_json.DatasetPrompt) +
-		checkField(matrix_ds[0].SystemPrompt) +
-		'\n The DB content is as follows: ' +
-		dataset_db_output.rag_docs.join(',') +
-		' training data is as follows:' +
-		training_data
-
-	if (dataset_json.hasGeneExpression && common_genes.length > 0) {
-		system_prompt += '\n List of relevant genes are as follows (separated by comma(,)):' + common_genes.join(',')
-	}
-
-	system_prompt += ' Question: {' + prompt + '} answer:'
+	const system_prompt = buildMatrixSystemPrompt(
+		schema,
+		activeConfigs,
+		dataset_json,
+		dataset_db_output,
+		matrix_ds,
+		training_data,
+		common_genes,
+		ds,
+		prompt,
+		matchedGenesets
+	)
 
 	const response: string = await route_to_appropriate_llm_provider(system_prompt, llm)
 	if (testing) {
 		return { action: 'matrix', response: JSON.parse(response) }
 	} else {
-		return validate_matrix_response(response, common_genes, dataset_json, ds)
+		return validate_matrix_response(response, common_genes, ds, activeConfigs)
 	}
 }
 
-function validate_matrix_response(response: string, common_genes: string[], dataset_json: any, ds: any) {
+// ---------------------------------------------------------------------------
+//  Validation — builds term wrappers from LLM response using active configs
+// ---------------------------------------------------------------------------
+
+function validate_matrix_response(response: string, common_genes: string[], ds: any, activeConfigs: DataTypeConfig[]) {
 	const response_type = JSON.parse(response)
 	const pp_plot_json: any = { chartType: 'matrix' }
 	let text = ''
 
 	if (response_type.text) text = response_type.text
 
-	// Must have at least one of terms or geneNames
-	if (
-		(!response_type.terms || response_type.terms.length == 0) &&
-		(!response_type.geneNames || response_type.geneNames.length == 0)
-	) {
-		text += 'At least one clinical term or gene name is required for a matrix plot'
-	}
+	const twLst: any[] = []
 
 	// Validate dictionary terms — use shorthand { id } at tw top level
-	const twLst: any[] = []
 	if (response_type.terms && Array.isArray(response_type.terms)) {
 		for (const t of response_type.terms) {
 			const term: any = ds.cohort.termdb.q.termjsonByOneid(t)
@@ -104,22 +190,38 @@ function validate_matrix_response(response: string, common_genes: string[], data
 		}
 	}
 
-	// Validate gene names — use geneExpression type for datasets with expression data,
-	// fall back to geneVariant for datasets with mutation data
-	if (response_type.geneNames && Array.isArray(response_type.geneNames)) {
-		for (const g of response_type.geneNames) {
-			const gene_hits = common_genes.filter(gene => gene == g.toLowerCase())
-			if (gene_hits.length == 0) {
-				text += 'invalid gene name:' + g + ' '
-			} else {
-				const geneName = g.toUpperCase()
-				if (dataset_json.hasGeneExpression) {
-					twLst.push({ term: { gene: geneName, type: 'geneExpression' } })
+	// Validate each active data type field
+	const processedFields = new Set<string>()
+
+	for (const config of activeConfigs) {
+		if (processedFields.has(config.schemaFieldName)) continue
+		processedFields.add(config.schemaFieldName)
+
+		const fieldValues = response_type[config.schemaFieldName]
+		if (!fieldValues || !Array.isArray(fieldValues)) continue
+
+		// For shared fields (e.g. geneNames), prefer geneExpression over geneVariant
+		const configsForField = activeConfigs.filter(c => c.schemaFieldName === config.schemaFieldName)
+		const preferredConfig = configsForField.find(c => c.termType === TermTypes.GENE_EXPRESSION) || configsForField[0]
+
+		for (const identifier of fieldValues) {
+			if (preferredConfig.identifierMode === 'gene') {
+				const gene_hits = common_genes.filter(gene => gene === identifier.toLowerCase())
+				if (gene_hits.length === 0) {
+					text += 'invalid gene name:' + identifier + ' '
 				} else {
-					twLst.push({ term: { gene: geneName, name: geneName, type: 'geneVariant' } })
+					twLst.push(preferredConfig.buildTermWrapper(identifier))
 				}
+			} else {
+				// Name-based: pass through (backend handles validation)
+				twLst.push(preferredConfig.buildTermWrapper(identifier))
 			}
 		}
+	}
+
+	// Must have at least one term wrapper
+	if (twLst.length === 0 && text === '') {
+		text += 'At least one clinical term or data identifier is required for a matrix plot'
 	}
 
 	// Validate filters
@@ -133,7 +235,7 @@ function validate_matrix_response(response: string, common_genes: string[], data
 	}
 
 	if (text.length > 0) {
-		return { type: 'text', text: text }
+		return { type: 'text', text }
 	} else {
 		// Structure as termgroups matching what matrix.js expects:
 		// termgroups: [{ name: '', lst: [ { term: {...} }, ... ] }]
