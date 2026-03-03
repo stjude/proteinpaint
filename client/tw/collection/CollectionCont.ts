@@ -1,6 +1,6 @@
 import { TermCollection } from './TermCollection'
 import { TwBase, type TwOpts } from '../TwBase'
-import type { TermCollectionTW, TermCollectionQCont, RawTermCollectionTWCont, TermCollectionTWCont } from '#types'
+import type { TermCollectionQCont, RawTermCollectionTWCont, TermCollectionTWCont } from '#types'
 
 export type TermCollectionTransformedValue = {
 	label: string
