@@ -16,6 +16,7 @@ export class TermCollection {
 			[prop: string]: any
 		}
 	}
+	categoryKeys?: string[]
 
 	// option to fill-in/mutate the input raw term object in-place
 	// - does not have to construct, but may require forced type casting in consumer code
@@ -34,7 +35,7 @@ export class TermCollection {
 		if (!tc.propsByTermId) throw new Error(`propsByTermId missing for termCollection='${tc.name}'`)
 		if (!term.propsByTermId) term.propsByTermId = tc.propsByTermId // assign if missing
 		term.memberType = tc.type
-		if (tc.type === 'categorical' && tc.categoryKeys) term.categoryKeys = tc.categoryKeys
+		if (!term.categoryKeys && tc.type === 'categorical' && tc.categoryKeys) term.categoryKeys = tc.categoryKeys
 		if (!term.termIds) term.termIds = term.termlst.map((t: any) => t.id)
 		for (const t of term.termlst) {
 			if (!term.propsByTermId[t.id]) term.propsByTermId[t.id] = tc.propsByTermId[t.id]
@@ -57,5 +58,6 @@ export class TermCollection {
 		this.termlst = term.termlst
 		this.termIds = term.termIds
 		this.propsByTermId = term.propsByTermId || {}
+		if (term.memberType == 'categorical') this.categoryKeys = term.categoryKeys
 	}
 }

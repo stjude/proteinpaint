@@ -159,6 +159,7 @@ function addCategoricalTable(self, div: any, terms: any, noButtonCallback: any) 
 		//const q = self.q as TermCollectionQValues
 		const trs = div.select('table').select('tbody').node().querySelectorAll('tr')
 
+		// this should be in self.q ???
 		self.term.termlst = terms.filter((term, i) => {
 			const checked = trs[i].querySelectorAll('td')[1].querySelector('input')?.checked
 			return checked === true
