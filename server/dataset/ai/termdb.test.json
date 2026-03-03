@@ -144,27 +144,6 @@
             "type": "plot",
             "plot": "matrix"
           }
-        },
-        {
-          "question": "Create a matrix of TP53, KRAS, and NRAS mutations for men",
-          "answer": {
-            "type": "plot",
-            "plot": "matrix"
-          }
-        },
-        {
-          "question": "Show gene expression landscape of TP53, MYC, and BCL2 for male patients",
-          "answer": {
-            "type": "plot",
-            "plot": "matrix"
-          }
-        },
-        {
-          "question": "Show a matrix of TP53 and RB1 with diagnosis group and sex",
-          "answer": {
-            "type": "plot",
-            "plot": "matrix"
-          }
         }
       ]
     },
