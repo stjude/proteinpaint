@@ -157,7 +157,8 @@ export class View {
 			dslabel: this.state.vocab.dslabel,
 			name: 'Variants',
 			custom_variants: this.data.mlst,
-			skewerModes: [nm]
+			skewerModes: [nm],
+			filter0: this.state.filter0
 		}
 		return tk
 	}
@@ -277,7 +278,8 @@ export class View {
 			debugmode: this.opts.debug,
 			onAddRemoveTk: () => {
 				this.interactions.maySaveTrackUpdatesToState(this.blockInstance)
-			}
+			},
+			filter0: this.state.filter0
 		}
 
 		if (this.data) {
