@@ -30,6 +30,7 @@ export class Model {
 			stop: this.state.config.geneSearchResult.stop,
 			details: this.state.config.snvindel.details,
 			filter: this.state.filter,
+			filter0: this.state.filter0,
 			variantFilter: this.state.config.variantFilter?.filter
 		}
 

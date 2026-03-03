@@ -3,9 +3,15 @@
 All notable changes to this project will be documented in this file.
 
 
+## Unreleased
+
+Fixes:
+- add gdc cohort filter0 to gb data request and tklst entries
+
+
 ## 2.170.20
 
-Fixes
+Fixes:
 - do not show a geneset option when selecting CNV as mutation type
 
 
