@@ -217,7 +217,8 @@ export class TermSetting {
 					return
 				}
 
-				case 'TermCollectionTWValues': {
+				case 'TermCollectionTWQual':
+				case 'TermCollectionTWCont': {
 					const { TermCollectionHandler } = await import('./handlers/termCollection.ts')
 					this.handler = new TermCollectionHandler({ termsetting: this })
 					return

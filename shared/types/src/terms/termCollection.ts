@@ -50,6 +50,7 @@ export type RawTermCollection = TermCollection & {
 	type?: 'termCollection'
 	termlst: BaseTerm[]
 	termIds?: string[]
+	categoryKeys?: string[]
 	propsByTermId?: {
 		[termId: string]: {
 			[prop: string]: any
@@ -57,32 +58,55 @@ export type RawTermCollection = TermCollection & {
 	}
 }
 
-export type TermCollectionQValues = MinBaseQ & {
+export type TermCollectionQCont = MinBaseQ & {
 	mode: 'continuous' // | 'discrete'
 	type: 'values'
 	// groupValuesBy: 'sampleId' | 'termId'
 	/** a selection of term.ids for the current termwrapper, selected from term.lst */
 	lst: string[]
+	/** the sum of numerator values divided by the sum of all values will be used
+	 * to sort matrix sample columns */
 	numerators?: string[]
 }
 
+export type TermCollectionQQual = MinBaseQ & {
+	mode: 'discrete'
+	type: 'values'
+	// groupValuesBy: 'sampleId' | 'termId'
+	/** a selection of term.ids for the current termwrapper, selected from term.lst */
+	lst: string[]
+	categoryKeys?: string[]
+}
+
 // TODO: may add different q types below
-export type TermCollectionQ = TermCollectionQValues
+export type TermCollectionQ = TermCollectionQCont | TermCollectionQQual
 
-export type TermCollectionTWValues = BaseTW & {
-	type: 'TermCollectionTWValues'
+export type TermCollectionTWCont = BaseTW & {
+	type: 'TermCollectionTWCont'
 	term: TermCollection
-	q: TermCollectionQValues
+	q: TermCollectionQCont
+}
+
+export type TermCollectionTWQual = BaseTW & {
+	type: 'TermCollectionTWQual'
+	term: TermCollection
+	q: TermCollectionQQual
 }
 
 // TODO: may add different termCollection TW types here
-export type TermCollectionTW = TermCollectionTWValues
+export type TermCollectionTW = TermCollectionTWCont | TermCollectionTWQual
 
-export type RawTermCollectionTWValues = /*TermCollectionTW &*/ {
-	type?: 'TermCollectionTWValues' | 'termCollection' // deprecated
+export type RawTermCollectionTWCont = {
+	type?: 'TermCollectionTWCont'
 	term: RawTermCollection
-	q: TermCollectionQValues
+	q: TermCollectionQCont
+}
+
+export type RawTermCollectionTWQual = {
+	type?: 'TermCollectionTWQual'
+	term: RawTermCollection
+	q?: TermCollectionQQual
 }
 
 // TODO: may add different termCollection TW types here
-export type RawTermCollectionTW = RawTermCollectionTWValues
+export type RawTermCollectionTW = RawTermCollectionTWCont | RawTermCollectionTWQual

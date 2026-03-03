@@ -1,4 +1,4 @@
-import type { ContinuousXTW, DiscreteXTW, TermCollectionValues, TermCollectionTransformedValue } from '#tw'
+import type { ContinuousXTW, DiscreteXTW, CollectionCont, TermCollectionTransformedValue } from '#tw'
 import { TwRouter, routedTermTypes } from '#tw'
 import type { TermWrapper } from '#types'
 import { convertUnits } from '#shared/helpers.js'
@@ -16,7 +16,7 @@ export async function getTermGroups(termgroups, app) {
 			NumTWRegularBin: discreteAddons,
 			NumTWCustomBin: discreteAddons,
 			NumTWCont: continuousAddons,
-			TermCollectionTWValues: TermCollectionValuesAddons
+			TermCollectionTWCont: TermCollectionContAddons
 		}
 
 	const opts = {
@@ -186,10 +186,10 @@ const continuousAddons: MatrixTWObj = {
 	}
 }
 
-const TermCollectionValuesAddons = {
+const TermCollectionContAddons = {
 	setCellProps: {
 		value: function (
-			this: TermCollectionValues,
+			this: CollectionCont,
 			cell: any,
 			anno: any,
 			value: TermCollectionTransformedValue,
@@ -203,7 +203,7 @@ const TermCollectionValuesAddons = {
 			_i: number
 		) {
 			//
-			const tw = this.getTw() as TermCollectionValues
+			const tw = this.getTw() as CollectionCont
 			//cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
 			const twSpecificSettings = self.config.settings.matrix.twSpecificSettings
 			if (!twSpecificSettings[tw.$id]) twSpecificSettings[tw.$id] = {}
@@ -214,15 +214,15 @@ const TermCollectionValuesAddons = {
 
 			// Determine if value is positive or negative
 			const isNegative = value.value < 0
-			
+
 			if (isNegative) {
 				// For negative values, use the neg scale and position below the zero line
 				// Height is the scale distance from 0 to the value
-				cell.height = t.scales.neg ? (t.scales.neg(value.value) - t.scales.neg(0)) : 0
+				cell.height = t.scales.neg ? t.scales.neg(value.value) - t.scales.neg(0) : 0
 				cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 				// Position negative bars downward from the zero line
 				// Cumulative height is the scale distance from 0 to pre_val_sum
-				const cumulativeHeight = t.scales.neg ? (t.scales.neg(value.pre_val_sum) - t.scales.neg(0)) : 0
+				const cumulativeHeight = t.scales.neg ? t.scales.neg(value.pre_val_sum) - t.scales.neg(0) : 0
 				cell.y = t.counts.posMaxHt + twSettings.contBarGap + (t.scales.neg ? t.scales.neg(0) : 0) + cumulativeHeight
 			} else {
 				// For positive values, use the pos scale and position above the zero line
@@ -234,7 +234,7 @@ const TermCollectionValuesAddons = {
 				const cumulativeHeight = t.scales.pos(value.pre_val_sum) - t.scales.pos(0)
 				cell.y = t.counts.posMaxHt + twSettings.contBarGap - t.scales.pos(0) - cumulativeHeight - cell.height
 			}
-			
+
 			cell.label = value.label
 			cell.fill = twSettings[value.label]?.color || value.color || tw.term.propsByTermId?.[value.label]?.color
 			cell.value = value.value
