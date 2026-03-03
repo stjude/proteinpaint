@@ -276,7 +276,7 @@ tape('categorical (row), termCollection (col)', test => {
 
 function getTermCollection() {
 	return {
-		type: 'TermCollectionTWValues',
+		type: 'TermCollectionTWCont',
 		term: {
 			collectionId: 'Fake Collection 1',
 			type: 'termCollection',

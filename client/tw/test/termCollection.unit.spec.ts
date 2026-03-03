@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { vocabInit } from '#termdb/vocabulary'
-import { TermCollectionValues, type TermCollectionTransformedValue } from '../termCollection'
+import { CollectionCont } from '../termCollection'
 
 /*************************
  reusable helper functions
@@ -9,12 +9,12 @@ import { TermCollectionValues, type TermCollectionTransformedValue } from '../te
 const vocabApi = await vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } } })
 if (!vocabApi) console.log(`!!! missing vocabApi !!!`)
 
-// Type for data object after transformData() is called
-type TransformedData = {
-	values: TermCollectionTransformedValue[]
-	numerators_sum: number
-	hasMixedValues: boolean
-}
+// // Type for data object after transformData() is called
+// type TransformedData = {
+// 	values: TermCollectionTransformedValue[]
+// 	numerators_sum: number
+// 	hasMixedValues: boolean
+// }
 
 /**************
  test sections
@@ -26,11 +26,12 @@ tape('\n', function (test) {
 })
 
 tape('transformData with positive values only', async test => {
-	const tw = new TermCollectionValues(
+	const tw = new CollectionCont(
 		{
-			type: 'TermCollectionTWValues',
+			type: 'TermCollectionTWCont',
 			term: {
 				type: 'termCollection',
+				memberType: 'numeric',
 				id: 'test',
 				name: 'Test Collection',
 				termlst: [],
@@ -67,11 +68,12 @@ tape('transformData with positive values only', async test => {
 })
 
 tape('transformData with negative values only', async test => {
-	const tw = new TermCollectionValues(
+	const tw = new CollectionCont(
 		{
-			type: 'TermCollectionTWValues',
+			type: 'TermCollectionTWCont',
 			term: {
 				type: 'termCollection',
+				memberType: 'numeric',
 				id: 'test',
 				name: 'Test Collection',
 				termlst: [],
@@ -108,11 +110,12 @@ tape('transformData with negative values only', async test => {
 })
 
 tape('transformData with mixed positive and negative values', async test => {
-	const tw = new TermCollectionValues(
+	const tw = new CollectionCont(
 		{
-			type: 'TermCollectionTWValues',
+			type: 'TermCollectionTWCont',
 			term: {
 				type: 'termCollection',
+				memberType: 'numeric',
 				id: 'test',
 				name: 'Test Collection',
 				termlst: [],
@@ -148,7 +151,7 @@ tape('transformData with mixed positive and negative values', async test => {
 	// sig1: 60/150 * 100 = 40%
 	// sig2: 40/150 * 100 = 26.67%
 	// sig3: -50/150 * 100 = -33.33%
-	
+
 	// Find positive values
 	const positiveValues = data.values.filter(v => v.value > 0)
 	test.equal(positiveValues.length, 2, 'should have 2 positive values')
@@ -160,17 +163,18 @@ tape('transformData with mixed positive and negative values', async test => {
 	// Find negative values
 	const negativeValues = data.values.filter(v => v.value < 0)
 	test.equal(negativeValues.length, 1, 'should have 1 negative value')
-	test.ok(Math.abs(negativeValues[0].value - (-33.33)) < 0.01, 'sig3 should be ~-33.33%')
+	test.ok(Math.abs(negativeValues[0].value - -33.33) < 0.01, 'sig3 should be ~-33.33%')
 	test.equal(negativeValues[0].pre_val_sum, 0, 'sig3 pre_val_sum should be 0')
 	test.end()
 })
 
 tape('transformData with equal positive and negative values', async test => {
-	const tw = new TermCollectionValues(
+	const tw = new CollectionCont(
 		{
-			type: 'TermCollectionTWValues',
+			type: 'TermCollectionTWCont',
 			term: {
 				type: 'termCollection',
+				memberType: 'numeric',
 				id: 'test',
 				name: 'Test Collection',
 				termlst: [],
@@ -209,7 +213,7 @@ tape('transformData with equal positive and negative values', async test => {
 	// enrich2: 20/100 * 100 = 20%
 	// deplete1: -25/100 * 100 = -25%
 	// deplete2: -25/100 * 100 = -25%
-	
+
 	// Check positive values sum to 50%
 	const positiveSum = data.values.filter(v => v.value > 0).reduce((sum, v) => sum + v.value, 0)
 	test.equal(positiveSum, 50, 'positive values should sum to 50%')

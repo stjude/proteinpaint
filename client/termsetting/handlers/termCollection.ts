@@ -1,14 +1,14 @@
 import { HandlerBase } from '../HandlerBase.ts'
 import type { Handler } from '../index.ts'
 import { renderTable } from '#dom'
-import type { TermCollectionValues } from '#tw'
-import type { TermCollectionQValues } from '#types'
+import type { CollectionCont } from '#tw'
+import type { TermCollectionQCont } from '#types'
 import type { TermSetting } from '../TermSetting.ts'
 import { mayHydrateDictTwLst } from '#termsetting'
 
 // self is the termsetting instance
 export class TermCollectionHandler extends HandlerBase implements Handler {
-	tw: TermCollectionValues
+	tw: CollectionCont
 	termsetting: TermSetting
 	dom: {
 		[name: string]: any
@@ -93,7 +93,7 @@ function addNumericTable(self, div: any, terms: any, noButtonCallback: any) {
 	})
 
 	return () => {
-		const q: TermCollectionQValues = self.q
+		const q: TermCollectionQCont = self.q
 		const trs = div.select('table').select('tbody').node().querySelectorAll('tr')
 
 		self.term.termlst = terms.filter((_, i) => trs[i].querySelectorAll('td')[1].querySelector('input')?.checked)
