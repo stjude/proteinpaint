@@ -1761,8 +1761,7 @@
                   ]
                 }
               }
-            ],
-            "join": "and"
+            ]
           }
         }
       }
@@ -1816,6 +1815,62 @@
             "category": "2"
           }
         ]
+      },
+      "PPoutput": {
+        "type": "plot",
+        "plot": {
+          "chartType": "summary",
+          "term": {
+            "id": "diaggrp",
+            "q": {
+              "mode": "discrete"
+            }
+          },
+          "term2": {
+            "id": "genetic_race",
+            "q": {
+              "mode": "discrete"
+            }
+          },
+          "childType": "barchart",
+          "filter": {
+            "type": "tvslst",
+            "in": true,
+            "lst": [
+              {
+                "type": "tvs",
+                "tvs": {
+                  "term": {
+                    "type": "categorical",
+                    "values": {
+                      "1": {
+                        "label": "Male",
+                        "color": "#e75480"
+                      },
+                      "2": {
+                        "label": "Female",
+                        "color": "blue"
+                      }
+                    },
+                    "groupsetting": {
+                      "disabled": true
+                    },
+                    "name": "Sex",
+                    "id": "sex",
+                    "isleaf": true,
+                    "sample_type": "1",
+                    "hashtmldetail": true
+                  },
+                  "values": [
+                    {
+                      "key": "2"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
       }
     }
   ],
