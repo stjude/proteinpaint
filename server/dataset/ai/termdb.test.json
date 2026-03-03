@@ -694,6 +694,10 @@
       "answer": {
         "type": "resource",
         "idx": 0
+      },
+      "PPoutput": {
+        "type": "html",
+        "html": "<a href=\"https://aacrjournals.org/cancerdiscovery/article/14/8/1403/746507\" target=\"_blank\" rel=\"noopener noreferrer\">Visit weblink</a>"
       }
     },
     {
@@ -701,6 +705,25 @@
       "answer": {
         "term": "diaggrp",
         "term2": "sex"
+      },
+      "PPoutput": {
+        "type": "plot",
+        "plot": {
+          "chartType": "summary",
+          "term": {
+            "id": "diaggrp",
+            "q": {
+              "mode": "discrete"
+            }
+          },
+          "term2": {
+            "id": "sex",
+            "q": {
+              "mode": "discrete"
+            }
+          },
+          "childType": "barchart"
+        }
       }
     },
     {

@@ -11,6 +11,7 @@ import type {
 	CategoricalFilterTerm,
 	NumericFilterTerm
 } from '#types'
+import assert from 'node:assert/strict'
 
 process.removeAllListeners('warning')
 
@@ -55,82 +56,101 @@ export async function test_chatbot_by_dataset(ds: any) {
 			ds
 		)
 		console.log('test_result:', test_result)
-		if (test_result.type == 'html') {
-			// Resource request
-			if (test_result.html != test_data.answer) {
-				console.log(
-					'html resource request did not match for prompt: ' +
-						test_data.question +
-						'. LLM response: ' +
-						JSON.stringify(test_result.html) +
-						' Actual response: ' +
-						JSON.stringify(test_data.answer)
-				)
-			}
-		} else if (test_result.type == 'text') {
-			// Resource request
-			if (test_result.text != test_data.answer) {
-				console.log(
-					'Prompt has invalid terms: ' +
-						test_data.question +
-						'. LLM response: ' +
-						JSON.stringify(test_result.text) +
-						' Actual response: ' +
-						JSON.stringify(test_data.answer)
-				)
-			}
-		} else if (test_result.type == 'plot') {
-			if (test_result.plot == 'summary') {
-				const validated_llm_summary_output = validate_summary_output(test_result, test_data.answer)
-				if (!validated_llm_summary_output)
-					console.log(
-						'Summary output did not match for prompt: ' +
-							test_data.question +
-							'. LLM response: ' +
-							JSON.stringify(test_result) +
-							' Actual response: ' +
-							JSON.stringify(test_data.answer)
-					)
-			} else if (test_result.plot == 'dge') {
-				const validated_llm_DE_output = validate_DE_output(test_result, test_data.answer)
-				if (!validated_llm_DE_output)
-					console.log(
-						'DE output did not match for prompt: ' +
-							test_data.question +
-							'. LLM response: ' +
-							JSON.stringify(test_result) +
-							' Actual response: ' +
-							JSON.stringify(test_data.answer)
-					)
-			} else if (test_result.plot == 'matrix') {
-				const validated_llm_matrix_output = validate_matrix_output(test_result, test_data.answer)
-				if (!validated_llm_matrix_output)
-					console.log(
-						'Matrix output did not match for prompt: ' +
-							test_data.question +
-							'. LLM response: ' +
-							JSON.stringify(test_result) +
-							' Actual response: ' +
-							JSON.stringify(test_data.answer)
-					)
-			} else if (test_result.plot == 'sampleScatter') {
-				const validated_llm_scatter_output = validate_scatter_output(test_result, test_data.answer)
-				if (!validated_llm_scatter_output)
-					console.log(
-						'SampleScatter output did not match for prompt: ' +
-							test_data.question +
-							'. LLM response: ' +
-							JSON.stringify(test_result) +
-							' Actual response: ' +
-							JSON.stringify(test_data.answer)
-					)
+		if (test_result.type == test_data.PPoutput.type) {
+			// Only proceed further if the type of the LLM output matches the expected type. Otherwise its a classification agent error.
+			if (test_result.type == 'html') {
+				// Resource request
+				assert.deepStrictEqual(test_result.html, test_data.PPoutput.html)
+			} else if (test_result.type == 'text') {
+				// Displaying error for e.g. invalid dictionary items. This may not be reproducible since invalid dictionary items have no context in DB.
+				try {
+					assert.deepStrictEqual(test_result.text, test_data.PPoutput.text)
+				} catch (err) {
+					// err.message contains a string diff you can search
+					if (test_result.text.includes('invalid') && test_data.PPoutput.text.includes('invalid')) {
+						console.log(
+							'Prompt: ' +
+								test_data.question +
+								' Invalid terms do not match (but probably ok): Actual LLM response: ' +
+								test_result.text +
+								' Expected LLM Response: ' +
+								test_data.PPoutput.text
+						)
+					} else {
+						console.log(
+							'Prompt: ' +
+								test_data.question +
+								' Unknown error : Actual LLM response: ' +
+								test_result.text +
+								' Expected LLM Response: ' +
+								test_data.PPoutput.text +
+								' Error: ' +
+								err
+						)
+					}
+				}
+			} else if (test_result.type == 'plot') {
+				if (test_result.plot == 'summary') {
+					const validated_llm_summary_output = validate_summary_output(test_result, test_data.answer)
+					if (!validated_llm_summary_output)
+						console.log(
+							'Summary output did not match for prompt: ' +
+								test_data.question +
+								'. LLM response: ' +
+								JSON.stringify(test_result) +
+								' Actual response: ' +
+								JSON.stringify(test_data.answer)
+						)
+				} else if (test_result.plot == 'dge') {
+					const validated_llm_DE_output = validate_DE_output(test_result, test_data.answer)
+					if (!validated_llm_DE_output)
+						console.log(
+							'DE output did not match for prompt: ' +
+								test_data.question +
+								'. LLM response: ' +
+								JSON.stringify(test_result) +
+								' Actual response: ' +
+								JSON.stringify(test_data.answer)
+						)
+				} else if (test_result.plot == 'matrix') {
+					const validated_llm_matrix_output = validate_matrix_output(test_result, test_data.answer)
+					if (!validated_llm_matrix_output)
+						console.log(
+							'Matrix output did not match for prompt: ' +
+								test_data.question +
+								'. LLM response: ' +
+								JSON.stringify(test_result) +
+								' Actual response: ' +
+								JSON.stringify(test_data.answer)
+						)
+				} else if (test_result.plot == 'sampleScatter') {
+					const validated_llm_scatter_output = validate_scatter_output(test_result, test_data.answer)
+					if (!validated_llm_scatter_output)
+						console.log(
+							'SampleScatter output did not match for prompt: ' +
+								test_data.question +
+								'. LLM response: ' +
+								JSON.stringify(test_result) +
+								' Actual response: ' +
+								JSON.stringify(test_data.answer)
+						)
+				} else {
+					console.log('Unknown chart type for prompt: ' + test_data.question)
+				}
+			} else if (test_result.type == 'resource') {
+				// Need to add support for resource agent
 			} else {
-				console.log('Unknown chart type for prompt: ' + test_data.question)
+				console.log('Unknown type for prompt:' + test_data.question)
 			}
-		} else if (test_result.type == 'resource') {
-			// Need to add support for resource agent
 		} else {
-			console.log('Unknown type for prompt:' + test_data.question)
+			console.log(
+				'Prompt: ' +
+					test_data.question +
+					' Classification error: Actual LLM response: ' +
+					test_result.type +
+					' Expected LLM response: ' +
+					test_data.PPoutput.type
+			)
 		}
 	}
 }
