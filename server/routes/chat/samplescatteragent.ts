@@ -1,6 +1,12 @@
 import type { LlmConfig, DbRows } from '#types'
-import { FILTER_TERM_DEFINITIONS, FILTER_DESCRIPTION, validate_filter } from './filter.ts'
-import { formatTrainingExamples, checkField, extractGenesFromPrompt, validate_term } from './utils.ts'
+import { FILTER_TERM_DEFINITIONS, validate_filter } from './filter.ts'
+import {
+	formatTrainingExamples,
+	extractGenesFromPrompt,
+	extractGenesetsFromPrompt,
+	validate_term,
+	buildCommonPrompt
+} from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 
 export async function extract_samplescatter_terms_from_query(
@@ -10,7 +16,8 @@ export async function extract_samplescatter_terms_from_query(
 	dataset_json: any,
 	genes_list: string[],
 	ds: any,
-	testing: boolean
+	testing: boolean,
+	genesetNames: string[] = []
 ) {
 	if (!dataset_json.prebuiltPlots || dataset_json.prebuiltPlots.length == 0) {
 		return { type: 'text', text: 'No pre-built scatter plots (t-SNE/UMAP) are available for this dataset' }
@@ -56,6 +63,7 @@ export async function extract_samplescatter_terms_from_query(
 	}
 
 	const common_genes = extractGenesFromPrompt(prompt, genes_list)
+	const matchedGenesets = extractGenesetsFromPrompt(prompt, genesetNames)
 
 	// Parse out training data from the dataset JSON
 	const scatter_ds = dataset_json.charts.find((chart: any) => chart.type == 'sampleScatter')
@@ -66,28 +74,29 @@ export async function extract_samplescatter_terms_from_query(
 
 	const plotNames = dataset_json.prebuiltPlots.map((p: any) => p.name).join(', ')
 
-	let system_prompt =
+	const system_prompt =
 		'I am an assistant that extracts overlay parameters for pre-built scatter plots (t-SNE/UMAP). The final output must be in the following JSON format with NO extra comments. The JSON schema is as follows: ' +
 		JSON.stringify(Schema) +
 		' The available pre-built plots are: ' +
 		plotNames +
 		'. The "plotName" field must match one of these exactly. ' +
-		'The "colorTW", "shapeTW", and "term0" fields should contain names of clinical fields from the sqlite db OR gene names. ' +
+		'The "colorTW", "shapeTW", and "term0" fields should contain names of clinical fields from the sqlite db, gene names' +
+		(ds?.queries?.ssGSEA ? ', gene set pathway names (e.g. HALLMARK_APOPTOSIS)' : '') +
+		(ds?.queries?.metaboliteIntensity ? ', or metabolite names' : '') +
+		'. ' +
 		'To remove an overlay, set the corresponding field to null explicitly. If the user does not mention a particular overlay, do NOT include that field in the output (omit it entirely). ' +
 		'Only include "colorTW", "shapeTW", or "term0" if the user explicitly mentions coloring, shaping, or dividing. ' +
-		FILTER_DESCRIPTION +
-		checkField(dataset_json.DatasetPrompt) +
-		checkField(scatter_ds.SystemPrompt) +
-		'\n The DB content is as follows: ' +
-		dataset_db_output.rag_docs.join(',') +
-		' training data is as follows:' +
-		training_data
-
-	if (dataset_json.hasGeneExpression && common_genes.length > 0) {
-		system_prompt += '\n List of relevant genes are as follows (separated by comma(,)):' + common_genes.join(',')
-	}
-
-	system_prompt += ' Question: {' + prompt + '} answer:'
+		buildCommonPrompt({
+			ds,
+			dataset_json,
+			chart_ds: scatter_ds,
+			dataset_db_output,
+			training_data,
+			common_genes,
+			prompt,
+			termFieldNames: ['colorTW', 'shapeTW', 'term0'],
+			matchedGenesets
+		})
 
 	const response: string = await route_to_appropriate_llm_provider(system_prompt, llm)
 	if (testing) {
@@ -132,7 +141,7 @@ function validate_samplescatter_response(response: string, common_genes: string[
 			// Not mentioned, don't include in output
 			return
 		}
-		const termValidation = validate_term(termName, common_genes, dataset_json, ds)
+		const termValidation = validate_term(termName, common_genes, ds)
 		if (termValidation.text.length > 0) {
 			text += termValidation.text
 		} else {

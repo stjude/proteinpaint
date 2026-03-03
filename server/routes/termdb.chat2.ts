@@ -8,7 +8,7 @@ import { extract_DE_search_terms_from_query } from './chat/DEagent.ts'
 import { extract_summary_terms } from './chat/summaryagent.ts'
 import { extract_matrix_search_terms_from_query } from './chat/matrixagent.ts'
 import { extract_samplescatter_terms_from_query } from './chat/samplescatteragent.ts'
-import { parse_dataset_db, parse_geneset_db } from './chat/utils.ts'
+import { parse_dataset_db, parse_geneset_db, getGenesetNames } from './chat/utils.ts'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
@@ -55,6 +55,7 @@ function init({ genomes }) {
 			const aiFilesPath = serverconfig_ds_entries.aifiles
 			const dataset_json: any = await readJSONFile(aiFilesPath)
 			const testing = false // This toggles validation of LLM output. In this script, this will ALWAYS be false since we always want validation of LLM output, only for testing we set this variable to true
+			const genesetNames = getGenesetNames(g)
 			const ai_output_json = await run_chat_pipeline(
 				q.prompt,
 				llm,
@@ -63,7 +64,8 @@ function init({ genomes }) {
 				testing,
 				dataset_db,
 				genedb,
-				ds
+				ds,
+				genesetNames
 			)
 			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
@@ -81,7 +83,8 @@ export async function run_chat_pipeline(
 	testing: boolean,
 	dataset_db: string,
 	genedb: string,
-	ds: any
+	ds: any,
+	genesetNames: string[] = []
 ) {
 	const time1 = new Date().valueOf()
 
@@ -114,7 +117,8 @@ export async function run_chat_pipeline(
 				dataset_json,
 				genes_list,
 				ds,
-				testing
+				testing,
+				genesetNames
 			)
 			mayLog('Time taken for summary agent:', formatElapsedTime(Date.now() - time1))
 		} else if (classResult == 'dge') {
@@ -139,7 +143,8 @@ export async function run_chat_pipeline(
 				dataset_json,
 				genes_list,
 				ds,
-				testing
+				testing,
+				genesetNames
 			)
 			mayLog('Time taken for matrix agent:', formatElapsedTime(Date.now() - time1))
 		} else if (classResult == 'samplescatter') {
@@ -151,7 +156,8 @@ export async function run_chat_pipeline(
 				dataset_json,
 				genes_list,
 				ds,
-				testing
+				testing,
+				genesetNames
 			)
 			mayLog('Time taken for sampleScatter agent:', formatElapsedTime(Date.now() - time1))
 		} else {
