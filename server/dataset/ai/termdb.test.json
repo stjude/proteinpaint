@@ -139,6 +139,13 @@
           }
         },
         {
+          "question": "Create a matrix with age, ethnicity, and molecular subtype",
+          "answer": {
+            "type": "plot",
+            "plot": "matrix"
+          }
+        },
+        {
           "question": "Show a matrix of TP53 and RB1 with diagnosis group and sex",
           "answer": {
             "type": "plot",
@@ -1819,20 +1826,7 @@
       "PPoutput": {
         "type": "plot",
         "plot": {
-          "chartType": "summary",
-          "term": {
-            "id": "diaggrp",
-            "q": {
-              "mode": "discrete"
-            }
-          },
-          "term2": {
-            "id": "genetic_race",
-            "q": {
-              "mode": "discrete"
-            }
-          },
-          "childType": "barchart",
+          "chartType": "matrix",
           "filter": {
             "type": "tvslst",
             "in": true,
@@ -1869,7 +1863,23 @@
                 }
               }
             ]
-          }
+          },
+          "termgroups": [
+            {
+              "name": "",
+              "lst": [
+                {
+                  "id": "agedx"
+                },
+                {
+                  "id": "genetic_race"
+                },
+                {
+                  "id": "diaggrp"
+                }
+              ]
+            }
+          ]
         }
       }
     }
