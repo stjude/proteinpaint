@@ -30,16 +30,14 @@ export const termCollectionCategorical = {
 		const ids = getTermIds(tw.term)
 		const categoryKeys = tw.term.categoryKeys
 		values.push(...ids)
-		let whereClause = `term_id IN (${ids.map(() => '?').join(',')})`
-		if (categoryKeys?.length) {
-			values.push(...categoryKeys)
-			whereClause += ` AND value IN (${categoryKeys.map(() => '?').join(',')})`
-		}
+		if (categoryKeys?.length) values.push(...categoryKeys)
 		return {
 			sql: `${tablename} AS (
-				SELECT sample, term_id as key, value
-				FROM anno_categorical
-				WHERE ${whereClause}
+				SELECT a.sample, t.name as key, a.value
+				FROM anno_categorical a
+				JOIN terms t ON t.id = a.term_id
+				WHERE a.term_id IN (${ids.map(() => '?').join(',')})
+				${categoryKeys?.length ? `AND a.value IN (${categoryKeys.map(() => '?').join(',')})` : ''}
 			)`,
 			tablename
 		}
