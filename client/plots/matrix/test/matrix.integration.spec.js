@@ -3121,7 +3121,7 @@ function getGenes() {
 function getTermCollection() {
 	return {
 		//isAtomic: true,
-		type: 'TermCollectionTWValues',
+		type: 'TermCollectionTWCont',
 		//$id: 'TwBase_0__48243_99155',
 		term: {
 			collectionId: 'Fake Collection 1',
