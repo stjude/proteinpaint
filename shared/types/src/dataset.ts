@@ -1,4 +1,5 @@
 import type { Mclass } from './Mclass.ts'
+import type { BaseTerm } from './terms/term.ts'
 import type { WSImage } from './routes/samplewsimages.ts'
 import type { WSISample } from './routes/wsisamples.ts'
 import type { SaveWSIAnnotationRequest } from './routes/saveWSIAnnotation.ts'
@@ -1630,6 +1631,9 @@ type TermCollectionBase = {
 	propsByTermId: {
 		[termId: string]: any
 	}
+	/** full term objects corresponding to termIds[]; populated by server on dataset init,
+	 * sent to client so fill() can resolve member term names without extra requests */
+	termlst?: BaseTerm[]
 	/** preconfigured cohort-level plots for this collection */
 	plots?: {
 		/** name of this plot */

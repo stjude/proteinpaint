@@ -121,7 +121,7 @@ export class Barchart extends PlotBase {
 					vocabApi: this.app.vocabApi,
 					numericEditMenuVersion: this.opts.numericEditMenuVersion || ['continuous', 'discrete'],
 					defaultQ4fillTW: term0_term2_defaultQ,
-					getDisplayStyle: () => (this.isMultiCategoryKeyCollection() ? 'none' : ''),
+					getDisplayStyle: () => (this.isCategoricalTermCollection() ? 'none' : ''),
 					processConfig: config => {
 						//config.settings not usually passed for logic check below
 						const s = this.state.config.settings.barchart
@@ -152,7 +152,7 @@ export class Barchart extends PlotBase {
 					// and there will nonsensical tens/hundreds of these charts based on the cohort size
 					numericEditMenuVersion: this.opts.numericEditMenuVersion || ['discrete'],
 					defaultQ4fillTW: term0_term2_defaultQ,
-					getDisplayStyle: () => (this.isMultiCategoryKeyCollection() ? 'none' : ''),
+					getDisplayStyle: () => (this.isCategoricalTermCollection() ? 'none' : ''),
 					getBodyParams: () => {
 						const tw = this.config['term0']
 						if (!tw) return { skip_categories: true }
@@ -392,7 +392,7 @@ export class Barchart extends PlotBase {
 
 			this.term1toColor = {}
 			this.term2toColor = {} // forget any assigned overlay colors when refreshing a barchart
-			this.hasMultiCategoryKeys = this.isMultiCategoryKeyCollection()
+			this.hasMultiCategoryKeys = this.isCategoricalTermCollection()
 			this.updateSettings(this.config)
 			for (const chart of data.charts) {
 				const categoriesPerSerie = chart.serieses.map(s => s.data.length)
@@ -717,17 +717,18 @@ export class Barchart extends PlotBase {
 		this.term2toColor[result.dataId] = this.getColor(chart, this.config.term2, result.dataId, this.bins?.[2])
 	}
 
-	isMultiCategoryKeyCollection() {
+	isCategoricalTermCollection() {
 		const t1 = this.config.term
-		return (
-			t1?.term?.type === 'termCollection' && t1.term.memberType === 'categorical' && t1.term.categoryKeys?.length > 1
-		)
+		return t1?.term?.type === 'termCollection' && t1.term.memberType === 'categorical'
 	}
 
 	getCategoryKeyLabel(t1, t2, dataId) {
 		if (t2?.term?.values && dataId in t2.term.values) return t2.term.values[dataId].label
 		if (this.hasMultiCategoryKeys && t1?.term?.termlst?.length) {
-			// try to look up category value label from one of the member terms
+			// for categorical termCollection, dataId is the term name (from server JOIN); find by name
+			const memberTerm = t1.term.termlst.find(mt => mt.name === dataId)
+			if (memberTerm?.name) return memberTerm.name
+			// fallback: look up category value label from member term values dict (numeric collection)
 			for (const mt of t1.term.termlst) {
 				if (mt.values && dataId in mt.values) return mt.values[dataId].label
 			}

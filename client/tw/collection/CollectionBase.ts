@@ -1,11 +1,18 @@
-import type { TermCollectionTW, RawTermCollectionTW, TermCollectionQ } from '#types'
-import { TermCollection } from './TermCollection'
+import type {
+	TermCollectionTW,
+	RawTermCollectionTW,
+	RawTermCollectionTWCont,
+	RawTermCollectionTWQual,
+	TermCollectionQ
+} from '#types'
+import type { NumericTermCollection } from './NumericTermCollection'
+import type { QualTermCollection } from './QualTermCollection'
 import { CollectionCont } from './CollectionCont'
 import { CollectionQual } from './CollectionQual'
 import { type TwOpts, TwBase } from '../TwBase'
 
 export class CollectionBase extends TwBase {
-	term: TermCollection
+	term: NumericTermCollection | QualTermCollection
 	q: TermCollectionQ
 
 	constructor(tw: TermCollectionTW, opts: TwOpts) {
@@ -16,39 +23,37 @@ export class CollectionBase extends TwBase {
 	}
 
 	static fill(tw: RawTermCollectionTW, opts: TwOpts = {}): TermCollectionTW {
-		TermCollection.fill(tw.term, opts)
-
 		if (!tw.type) {
-			tw.type = tw.term.memberType == 'numeric' ? 'TermCollectionTWCont' : 'TermCollectionTWQual'
+			// Peek at config to determine memberType for routing (full fill happens inside CollectionCont/Qual)
+			if (!opts.vocabApi?.termdbConfig?.termCollections)
+				throw `missing vocabApi.termdbConfig.termCollections argument for fill()`
+			const term = tw.term
+			const tc = opts.vocabApi.termdbConfig.termCollections.find(
+				(c: { name: string }) =>
+					c.name == term.collectionId ||
+					c.name == (term as any).id ||
+					c.name == term.name ||
+					term.name?.includes(c.name)
+			)
+			if (!tc) throw new Error(`no matching termCollection for '${term.name || term.collectionId}'`)
+			tw.type = tc.type === 'numeric' ? 'TermCollectionTWCont' : 'TermCollectionTWQual'
 		}
 
 		switch (tw.type) {
 			case 'TermCollectionTWCont': {
-				CollectionCont.fill(tw, opts)
+				CollectionCont.fill(tw as RawTermCollectionTWCont, opts)
 				break
 			}
 			case 'TermCollectionTWQual': {
-				CollectionQual.fill(tw, opts)
+				CollectionQual.fill(tw as RawTermCollectionTWQual, opts)
 				break
 			}
 			default:
 				// should never be reached if TwRouter.fill() routes correctly
-				throw `unexpected collection tw.term.memberType='${(tw.term as any).memberType}'`
+				throw `unexpected collection tw.type='${(tw as any).type}'`
 		}
 
-		// // Normalize raw tw.type ('termCollection' or missing) to canonical type
-		// if (!tw.type || tw.type === 'termCollection') tw.type = 'TermCollectionTWCont'
-
-		// // TODO: when more termCollection types needed, should assign different q.type here.
-		// if (!tw.q) tw.q = { mode: 'continuous', type: 'values', lst: [] }
-		// else {
-		// 	if (!tw.q.mode) tw.q.mode = 'continuous'
-		// 	if (!tw.q.lst) tw.q.lst = []
-		// }
-
-		// //if (!tw.q.lst?.length) throw `invalid tw.q.lst[]`
-
 		return tw as TermCollectionTW
-		//TODO: check tw.q.lst against term.lst, should be a subset
+		//TODO: check tw.q.lst against term.termIds[], should be a subset
 	}
 }

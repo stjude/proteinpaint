@@ -1,25 +1,24 @@
-import { TermCollection } from './TermCollection'
+import { QualTermCollection } from './QualTermCollection'
 import { TwBase, type TwOpts } from '../TwBase'
 import type { TermCollectionQQual, RawTermCollectionTWQual, TermCollectionTWQual } from '#types'
 
 export class CollectionQual extends TwBase {
-	term: TermCollection
+	term: QualTermCollection
 	q: TermCollectionQQual
 
 	static fill(tw: RawTermCollectionTWQual, opts: TwOpts = {}): TermCollectionTWQual {
-		TermCollection.fill(tw.term, opts)
-		// Normalize raw tw.type ('termCollection' or missing) to canonical type
+		QualTermCollection.fill(tw.term, opts)
 		tw.type = 'TermCollectionTWQual'
 
-		if (!tw.q) tw.q = { mode: 'discrete', type: 'values', lst: [], categoryKeys: tw.term.categoryKeys }
+		if (!tw.q) tw.q = { mode: 'discrete', type: 'values', lst: [] }
 		else {
 			if (!tw.q.mode) tw.q.mode = 'discrete'
 			if (!tw.q.lst) tw.q.lst = tw.term.termIds || []
-			if (!tw.q.categoryKeys) tw.q.categoryKeys = tw.term.categoryKeys
 		}
+		// categoryKeys live on tw.term.categoryKeys — the server reads them from there, not from tw.q
 
 		return tw as TermCollectionTWQual
-		//TODO: check tw.q.lst against term.lst, should be a subset
+		//TODO: check tw.q.lst against term.termIds[], should be a subset
 	}
 
 	constructor(tw: TermCollectionTWQual, opts: TwOpts) {
@@ -29,20 +28,16 @@ export class CollectionQual extends TwBase {
 	}
 
 	getMinCopy() {
-		const tw = this.getTw()
-		const copy: any = { term: {}, q: structuredClone(tw.q) }
-		if (tw.$id) copy.$id = tw.$id
-		if (tw.term) {
-			copy.term.type = tw.term.type
-			copy.term.name = tw.term.name
-			if ((tw.term as any).id) copy.term.id = (tw.term as any).id
-			if ((tw.term as any).collectionId) copy.term.collectionId = (tw.term as any).collectionId
-			if ((tw.term as any).memberType) copy.term.memberType = (tw.term as any).memberType
-			if ((tw.term as any).categoryKeys) copy.term.categoryKeys = structuredClone((tw.term as any).categoryKeys)
-			if ((tw.term as any).numerators) copy.term.numerators = structuredClone((tw.term as any).numerators)
-			if ((tw.term as any).propsByTermId) copy.term.propsByTermId = structuredClone((tw.term as any).propsByTermId)
-			copy.term.termIds = (tw.term as any).termlst?.map((t: any) => t.id) || []
-		}
+		const copy: any = { term: {}, q: structuredClone(this.q) }
+		if (this.$id) copy.$id = this.$id
+		copy.term.type = this.term.type
+		copy.term.name = this.term.name
+		if (this.term.id) copy.term.id = this.term.id
+		if ((this.term as any).collectionId) copy.term.collectionId = (this.term as any).collectionId
+		copy.term.memberType = this.term.memberType
+		if (this.term.categoryKeys) copy.term.categoryKeys = structuredClone(this.term.categoryKeys)
+		if (this.term.propsByTermId) copy.term.propsByTermId = structuredClone(this.term.propsByTermId)
+		copy.term.termIds = this.term.termlst?.map((t: any) => t.id) || []
 		if (copy.q) {
 			delete copy.q.isAtomic
 		}
