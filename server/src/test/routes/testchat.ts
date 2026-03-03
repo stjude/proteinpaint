@@ -20,15 +20,16 @@ export default function setRoutes(app, basepath, genomes) {
 		for (const genome of Object.values(genomes)) {
 			for (const ds of Object.values((genome as any).datasets)) {
 				if ((ds as any)?.queries?.chat) {
-					await test_chatbot_by_dataset(ds)
-					console.log('Tests complete for ' + (ds as any).label)
+					const num_errors = await test_chatbot_by_dataset(ds)
+					console.log('Tests complete for ' + (ds as any).label + '. Number of failed prompts: ' + num_errors)
 				}
 			}
 		}
 	})
 }
 
-export async function test_chatbot_by_dataset(ds: any) {
+export async function test_chatbot_by_dataset(ds: any): Promise<number> {
+	let num_errors = 0
 	// Check to see if the dataset supports the AI chatbot
 	if (!(ds as any)?.queries?.chat.aifiles) throw 'AI dataset JSON file is missing for dataset:' + ds.label
 	const aifiles = (ds as any)?.queries?.chat.aifiles
@@ -46,7 +47,6 @@ export async function test_chatbot_by_dataset(ds: any) {
 			serverconfig.tpmasterdir + '/' + dataset_json.genedb,
 			ds
 		)
-		console.log('test_result:', test_result)
 		if (test_result.type == test_data.PPoutput.type) {
 			// Only proceed further if the type of the LLM output matches the expected type. Otherwise its a classification agent error.
 			if (test_result.type == 'html') {
@@ -64,6 +64,7 @@ export async function test_chatbot_by_dataset(ds: any) {
 							' Error: ' +
 							err
 					)
+					num_errors += 1
 				}
 			} else if (test_result.type == 'text') {
 				// Displaying error for e.g. invalid dictionary items. This may not be reproducible since invalid dictionary items have no context in DB.
@@ -91,6 +92,7 @@ export async function test_chatbot_by_dataset(ds: any) {
 								' Error: ' +
 								err
 						)
+						num_errors += 1
 					}
 				}
 			} else if (test_result.type == 'plot') {
@@ -110,6 +112,7 @@ export async function test_chatbot_by_dataset(ds: any) {
 								' Error: ' +
 								err
 						)
+						num_errors += 1
 					}
 				} else {
 					console.log(
@@ -120,6 +123,7 @@ export async function test_chatbot_by_dataset(ds: any) {
 							' Expected LLM plot: ' +
 							test_data.PPoutput.plot.chartType
 					)
+					num_errors += 1
 				}
 			} else if (test_result.type == 'resource') {
 				try {
@@ -135,9 +139,11 @@ export async function test_chatbot_by_dataset(ds: any) {
 							' Error: ' +
 							err
 					)
+					num_errors += 1
 				}
 			} else {
 				console.log('Unknown type for prompt:' + test_data.question)
+				num_errors += 1
 			}
 		} else {
 			console.log(
@@ -148,6 +154,8 @@ export async function test_chatbot_by_dataset(ds: any) {
 					' Expected LLM response: ' +
 					test_data.PPoutput.type
 			)
+			num_errors += 1
 		}
 	}
+	return num_errors
 }
