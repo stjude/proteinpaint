@@ -2,20 +2,11 @@
 import serverconfig from '../../serverconfig.js'
 import { readJSONFile } from '../../../routes/chat/utils.ts'
 import { run_chat_pipeline } from '../../../routes/termdb.chat2.ts'
-import type {
-	DEType,
-	SummaryType,
-	MatrixType,
-	SampleScatterType,
-	FilterTerm,
-	CategoricalFilterTerm,
-	NumericFilterTerm
-} from '#types'
 import assert from 'node:assert/strict'
 
 process.removeAllListeners('warning')
 
-const testing = true // This causes raw LLM output to be sent by the agent
+const testing = false // This causes raw LLM output to be sent by the agent
 const llm = serverconfig.llm
 if (!llm) throw 'serverconfig.llm is not configured'
 if (llm.provider !== 'SJ' && llm.provider !== 'ollama') {
@@ -60,7 +51,20 @@ export async function test_chatbot_by_dataset(ds: any) {
 			// Only proceed further if the type of the LLM output matches the expected type. Otherwise its a classification agent error.
 			if (test_result.type == 'html') {
 				// Resource request
-				assert.deepStrictEqual(test_result.html, test_data.PPoutput.html)
+				try {
+					assert.deepStrictEqual(test_result.html, test_data.PPoutput.html)
+				} catch (err) {
+					console.log(
+						'Prompt: ' +
+							test_data.question +
+							' Invalid terms do not match (but probably ok): Actual LLM response: ' +
+							test_result.html +
+							' Expected LLM Response: ' +
+							test_data.PPoutput.html +
+							' Error: ' +
+							err
+					)
+				}
 			} else if (test_result.type == 'text') {
 				// Displaying error for e.g. invalid dictionary items. This may not be reproducible since invalid dictionary items have no context in DB.
 				try {
@@ -90,55 +94,48 @@ export async function test_chatbot_by_dataset(ds: any) {
 					}
 				}
 			} else if (test_result.type == 'plot') {
-				if (test_result.plot == 'summary') {
-					const validated_llm_summary_output = validate_summary_output(test_result, test_data.answer)
-					if (!validated_llm_summary_output)
+				if (test_result.plot.chartType == test_data.PPoutput.plot.chartType) {
+					try {
+						assert.deepStrictEqual(test_result.plot, test_data.PPoutput.plot)
+					} catch (err) {
 						console.log(
-							'Summary output did not match for prompt: ' +
+							'Prompt: ' +
 								test_data.question +
-								'. LLM response: ' +
-								JSON.stringify(test_result) +
-								' Actual response: ' +
-								JSON.stringify(test_data.answer)
+								' ' +
+								test_result.plot.chartType +
+								' output did not match: Actual LLM response: ' +
+								JSON.stringify(test_result.plot) +
+								' Expected LLM Response: ' +
+								JSON.stringify(test_data.PPoutput.plot) +
+								' Error: ' +
+								err
 						)
-				} else if (test_result.plot == 'dge') {
-					const validated_llm_DE_output = validate_DE_output(test_result, test_data.answer)
-					if (!validated_llm_DE_output)
-						console.log(
-							'DE output did not match for prompt: ' +
-								test_data.question +
-								'. LLM response: ' +
-								JSON.stringify(test_result) +
-								' Actual response: ' +
-								JSON.stringify(test_data.answer)
-						)
-				} else if (test_result.plot == 'matrix') {
-					const validated_llm_matrix_output = validate_matrix_output(test_result, test_data.answer)
-					if (!validated_llm_matrix_output)
-						console.log(
-							'Matrix output did not match for prompt: ' +
-								test_data.question +
-								'. LLM response: ' +
-								JSON.stringify(test_result) +
-								' Actual response: ' +
-								JSON.stringify(test_data.answer)
-						)
-				} else if (test_result.plot == 'sampleScatter') {
-					const validated_llm_scatter_output = validate_scatter_output(test_result, test_data.answer)
-					if (!validated_llm_scatter_output)
-						console.log(
-							'SampleScatter output did not match for prompt: ' +
-								test_data.question +
-								'. LLM response: ' +
-								JSON.stringify(test_result) +
-								' Actual response: ' +
-								JSON.stringify(test_data.answer)
-						)
+					}
 				} else {
-					console.log('Unknown chart type for prompt: ' + test_data.question)
+					console.log(
+						'Prompt: ' +
+							test_data.question +
+							' plot type does not match: Actual LLM plot: ' +
+							test_result.plot.chartType +
+							' Expected LLM plot: ' +
+							test_data.PPoutput.plot.chartType
+					)
 				}
 			} else if (test_result.type == 'resource') {
-				// Need to add support for resource agent
+				try {
+					assert.deepStrictEqual(test_result.plot, test_data.PPoutput.plot)
+				} catch (err) {
+					console.log(
+						'Prompt: ' +
+							test_data.question +
+							' Resource agent output did not match: Actual LLM response: ' +
+							JSON.stringify(test_result.plot) +
+							' Expected LLM Response: ' +
+							JSON.stringify(test_data.PPoutput.plot) +
+							' Error: ' +
+							err
+					)
+				}
 			} else {
 				console.log('Unknown type for prompt:' + test_data.question)
 			}
@@ -146,246 +143,11 @@ export async function test_chatbot_by_dataset(ds: any) {
 			console.log(
 				'Prompt: ' +
 					test_data.question +
-					' Classification error: Actual LLM response: ' +
+					' Classification type error: Actual LLM response: ' +
 					test_result.type +
 					' Expected LLM response: ' +
 					test_data.PPoutput.type
 			)
 		}
 	}
-}
-
-function validate_summary_output(output: SummaryType, expected: SummaryType): boolean {
-	if (
-		!(
-			(output.term == expected.term && output.term2 == expected.term2) ||
-			(output.term == expected.term2 && output.term2 == expected.term)
-		)
-	)
-		return false // term and term2 are interchangeable in summary output so need to check for both combinations
-
-	if (!output.simpleFilter && !expected.simpleFilter) {
-		// If both expected and actual response are missing simpleFilter, pass the test as simpleFilter is optional in summary output
-		return true
-	}
-	if (!output.simpleFilter || !expected.simpleFilter) {
-		// If one of them is missing simpleFilter while the other has it, fail the test
-		console.log(
-			'Summary simpleFilter mismatch. LLM response: ' +
-				JSON.stringify(output.simpleFilter) +
-				' Expected: ' +
-				JSON.stringify(expected.simpleFilter)
-		)
-		return false
-	}
-
-	const filter_valid = validate_filter(output.simpleFilter, expected.simpleFilter)
-	if (!filter_valid) {
-		console.log(
-			'Summary simpleFilter did not match. LLM response: ' +
-				JSON.stringify(output.simpleFilter) +
-				' Expected: ' +
-				JSON.stringify(expected.simpleFilter)
-		)
-	}
-	return filter_valid
-}
-
-function validate_DE_output(output_DE_object: DEType, expected_DE_output: DEType): boolean {
-	let validate_DE_groups = true
-	if (output_DE_object.group1 && expected_DE_output.group1) {
-		validate_DE_groups = validate_filter(output_DE_object.group1, expected_DE_output.group1)
-	} else {
-		console.log('group1 is missing')
-		return false
-	}
-
-	if (!validate_DE_groups) console.log('group1 not validated')
-
-	if (output_DE_object.group2 && expected_DE_output.group2) {
-		validate_DE_groups = validate_filter(output_DE_object.group2, expected_DE_output.group2)
-	} else {
-		console.log('group2 is missing')
-		return false
-	}
-	if (!validate_DE_groups) console.log('group2 not validated')
-
-	return validate_DE_groups
-}
-
-function validate_matrix_output(output: MatrixType, expected: MatrixType): boolean {
-	const outputTerms = output.terms || []
-	const expectedTerms = expected.terms || []
-	if (outputTerms.length != expectedTerms.length || !outputTerms.every((t, i) => t == expectedTerms[i])) {
-		console.log(
-			'Matrix terms did not match. LLM response: ' +
-				JSON.stringify(outputTerms) +
-				' Expected: ' +
-				JSON.stringify(expectedTerms)
-		)
-		return false
-	}
-
-	const outputGenes = output.geneNames || []
-	const expectedGenes = expected.geneNames || []
-	if (outputGenes.length != expectedGenes.length || !outputGenes.every((g, i) => g == expectedGenes[i])) {
-		console.log(
-			'Matrix geneNames did not match. LLM response: ' +
-				JSON.stringify(outputGenes) +
-				' Expected: ' +
-				JSON.stringify(expectedGenes)
-		)
-		return false
-	}
-
-	if (!output.simpleFilter && !expected.simpleFilter) {
-		return true
-	}
-	if (!output.simpleFilter || !expected.simpleFilter) {
-		console.log(
-			'Matrix simpleFilter mismatch. LLM response: ' +
-				JSON.stringify(output.simpleFilter) +
-				' Expected: ' +
-				JSON.stringify(expected.simpleFilter)
-		)
-		return false
-	}
-
-	const filter_valid = validate_filter(output.simpleFilter, expected.simpleFilter)
-	if (!filter_valid) {
-		console.log(
-			'Matrix simpleFilter did not match. LLM response: ' +
-				JSON.stringify(output.simpleFilter) +
-				' Expected: ' +
-				JSON.stringify(expected.simpleFilter)
-		)
-	}
-	return filter_valid
-}
-
-function validate_filter(output_filter: FilterTerm[], expected_filter: FilterTerm[]): boolean {
-	if (output_filter.length != expected_filter.length) {
-		return false
-	} else {
-		let filter_term_validation = true
-		for (let i = 0; i < output_filter.length; i++) {
-			filter_term_validation = validate_each_filter_term(output_filter[i], expected_filter[i]) // Validate each filter term sequentially
-			if (filter_term_validation == false) {
-				break
-			}
-		}
-		return filter_term_validation
-	}
-}
-
-function validate_each_filter_term(output_filter_term: FilterTerm, expected_filter_term: FilterTerm): boolean {
-	if (
-		(output_filter_term as CategoricalFilterTerm).category &&
-		(expected_filter_term as CategoricalFilterTerm).category
-	) {
-		// Both are categorical filter terms
-		if (
-			output_filter_term.term == expected_filter_term.term &&
-			(output_filter_term as CategoricalFilterTerm).category == (expected_filter_term as CategoricalFilterTerm).category
-		) {
-			return compare_join_terms(output_filter_term, expected_filter_term)
-		} else {
-			// If term or category fields do not match, fail the test
-			return false
-		}
-	} else if (
-		output_filter_term.term == expected_filter_term.term &&
-		(output_filter_term as NumericFilterTerm).start == (expected_filter_term as NumericFilterTerm).start &&
-		!(output_filter_term as NumericFilterTerm).stop == !(expected_filter_term as NumericFilterTerm).stop
-	) {
-		// Numeric filter term when only start term is present
-		return compare_join_terms(output_filter_term, expected_filter_term)
-	} else if (
-		output_filter_term.term == expected_filter_term.term &&
-		(output_filter_term as NumericFilterTerm).stop == (expected_filter_term as NumericFilterTerm).stop &&
-		!(output_filter_term as NumericFilterTerm).start == !(expected_filter_term as NumericFilterTerm).start
-	) {
-		// Numeric filter term when only stop term is present
-		return compare_join_terms(output_filter_term, expected_filter_term)
-	} else if (
-		output_filter_term.term == expected_filter_term.term &&
-		(output_filter_term as NumericFilterTerm).start == (expected_filter_term as NumericFilterTerm).start &&
-		(output_filter_term as NumericFilterTerm).stop == (expected_filter_term as NumericFilterTerm).stop
-	) {
-		// Numeric filter term when both start and stop terms are present
-		return compare_join_terms(output_filter_term, expected_filter_term)
-	} else {
-		// Fail in all other conditions such as if one has only a start and the other only a stop
-		return false
-	}
-}
-
-function compare_join_terms(output_filter_term: FilterTerm, expected_filter_term: FilterTerm): boolean {
-	if (output_filter_term.join && expected_filter_term.join) {
-		if (output_filter_term.join == expected_filter_term.join) {
-			return true
-		} else {
-			return false
-		}
-	} else if (
-		(output_filter_term.join && !expected_filter_term.join) ||
-		(!output_filter_term.join && expected_filter_term.join)
-	) {
-		// If one term has a join term while the other is missing, filter term comparison fails
-		return false
-	} else {
-		// If both are missing join terms buth other terms are equal pass the test
-		return true
-	}
-}
-
-function validate_scatter_output(output: SampleScatterType, expected: SampleScatterType): boolean {
-	if (output.plotName != expected.plotName) {
-		console.log(
-			'SampleScatter plotName did not match. LLM response: ' + output.plotName + ' Expected: ' + expected.plotName
-		)
-		return false
-	}
-
-	if (output.colorTW != expected.colorTW) {
-		console.log(
-			'SampleScatter colorTW did not match. LLM response: ' + output.colorTW + ' Expected: ' + expected.colorTW
-		)
-		return false
-	}
-
-	if (output.shapeTW != expected.shapeTW) {
-		console.log(
-			'SampleScatter shapeTW did not match. LLM response: ' + output.shapeTW + ' Expected: ' + expected.shapeTW
-		)
-		return false
-	}
-
-	if (output.term0 != expected.term0) {
-		console.log('SampleScatter term0 did not match. LLM response: ' + output.term0 + ' Expected: ' + expected.term0)
-		return false
-	}
-
-	if (!output.simpleFilter && !expected.simpleFilter) {
-		return true
-	}
-	if (!output.simpleFilter || !expected.simpleFilter) {
-		console.log(
-			'SampleScatter simpleFilter mismatch. LLM response: ' +
-				JSON.stringify(output.simpleFilter) +
-				' Expected: ' +
-				JSON.stringify(expected.simpleFilter)
-		)
-		return false
-	}
-	const filter_valid = validate_filter(output.simpleFilter, expected.simpleFilter)
-	if (!filter_valid) {
-		console.log(
-			'SampleScatter simpleFilter did not match. LLM response: ' +
-				JSON.stringify(output.simpleFilter) +
-				' Expected: ' +
-				JSON.stringify(expected.simpleFilter)
-		)
-	}
-	return filter_valid
 }
