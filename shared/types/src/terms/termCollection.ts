@@ -1,7 +1,7 @@
 import type { BaseTerm, BaseTW, MinBaseQ } from '../index.ts'
 
 /*
-For term type 'snp'
+For term type 'termCollection'
 */
 
 type BaseTermCollection = BaseTerm & {
@@ -39,29 +39,51 @@ export type CategoricalTermCollection = BaseTermCollection & {
 	 * Allows client code using the term to know the collection kind without looking up config.
 	 */
 	memberType: 'categorical'
-	/** the sum of numerator values will be divided by the sum of values for all terms,
-	 *  to be used for sorting matrix sample columns */
+	/** category values to include (e.g. ['Yes']); filters SQL results to matching rows */
 	categoryKeys: string[]
 }
 
 export type TermCollection = NumericTermCollection | CategoricalTermCollection
 
-export type RawTermCollection = TermCollection & {
+/** Pre-fill shape for a numeric termCollection (memberType set by TermCollection.fill()) */
+export type RawNumericTermCollection = {
 	type?: 'termCollection'
-	termlst: BaseTerm[]
+	memberType?: 'numeric'
+	name?: string
+	collectionId?: string
 	termIds?: string[]
-	categoryKeys?: string[]
+	termlst?: BaseTerm[]
 	propsByTermId?: {
 		[termId: string]: {
 			[prop: string]: any
 		}
 	}
+	numerators?: string[]
 }
 
+/** Pre-fill shape for a categorical termCollection (memberType set by TermCollection.fill()) */
+export type RawCategoricalTermCollection = {
+	type?: 'termCollection'
+	memberType?: 'categorical'
+	name?: string
+	collectionId?: string
+	termIds?: string[]
+	termlst?: BaseTerm[]
+	propsByTermId?: {
+		[termId: string]: {
+			[prop: string]: any
+		}
+	}
+	/** category values to filter on (e.g. ['Yes']); may be provided up-front or set during fill() */
+	categoryKeys?: string[]
+}
+
+export type RawTermCollection = RawNumericTermCollection | RawCategoricalTermCollection
+
+/** Q shape for numeric (continuous) termCollection wrappers */
 export type TermCollectionQCont = MinBaseQ & {
-	mode: 'continuous' // | 'discrete'
+	mode: 'continuous'
 	type: 'values'
-	// groupValuesBy: 'sampleId' | 'termId'
 	/** a selection of term.ids for the current termwrapper, selected from term.lst */
 	lst: string[]
 	/** the sum of numerator values divided by the sum of all values will be used
@@ -69,13 +91,14 @@ export type TermCollectionQCont = MinBaseQ & {
 	numerators?: string[]
 }
 
+/** Q shape for categorical (qualitative) termCollection wrappers */
 export type TermCollectionQQual = MinBaseQ & {
 	mode: 'discrete'
 	type: 'values'
-	// groupValuesBy: 'sampleId' | 'termId'
 	/** a selection of term.ids for the current termwrapper, selected from term.lst */
 	lst: string[]
-	categoryKeys?: string[]
+	// categoryKeys intentionally NOT here — they live on CategoricalTermCollection.categoryKeys
+	// and are read by the server from tw.term.categoryKeys, not tw.q
 }
 
 // TODO: may add different q types below
@@ -83,13 +106,13 @@ export type TermCollectionQ = TermCollectionQCont | TermCollectionQQual
 
 export type TermCollectionTWCont = BaseTW & {
 	type: 'TermCollectionTWCont'
-	term: TermCollection
+	term: NumericTermCollection
 	q: TermCollectionQCont
 }
 
 export type TermCollectionTWQual = BaseTW & {
 	type: 'TermCollectionTWQual'
-	term: TermCollection
+	term: CategoricalTermCollection
 	q: TermCollectionQQual
 }
 
@@ -98,13 +121,13 @@ export type TermCollectionTW = TermCollectionTWCont | TermCollectionTWQual
 
 export type RawTermCollectionTWCont = {
 	type?: 'TermCollectionTWCont'
-	term: RawTermCollection
-	q: TermCollectionQCont
+	term: RawNumericTermCollection
+	q?: TermCollectionQCont
 }
 
 export type RawTermCollectionTWQual = {
 	type?: 'TermCollectionTWQual'
-	term: RawTermCollection
+	term: RawCategoricalTermCollection
 	q?: TermCollectionQQual
 }
 

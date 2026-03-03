@@ -1,14 +1,14 @@
 import { HandlerBase } from '../HandlerBase.ts'
 import type { Handler } from '../index.ts'
 import { renderTable } from '#dom'
-import type { CollectionCont } from '#tw'
+import type { CollectionBase } from '#tw'
 import type { TermCollectionQCont } from '#types'
 import type { TermSetting } from '../TermSetting.ts'
 import { mayHydrateDictTwLst } from '#termsetting'
 
 // self is the termsetting instance
 export class TermCollectionHandler extends HandlerBase implements Handler {
-	tw: CollectionCont
+	tw: CollectionBase
 	termsetting: TermSetting
 	dom: {
 		[name: string]: any
@@ -111,7 +111,6 @@ function addNumericTable(self, div: any, terms: any, noButtonCallback: any) {
 
 function addCategoricalTable(self, div: any, terms: any, noButtonCallback: any) {
 	const rows: any = []
-	console.log(114, self.tw.term)
 	for (const term of terms) {
 		rows.push([{ value: term.name }])
 	}
