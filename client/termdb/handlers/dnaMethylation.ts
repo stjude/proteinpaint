@@ -26,6 +26,7 @@ export class SearchHandler {
 			row: this.dom.geneSearchDiv,
 			callback: async () => {
 				try {
+					this.dom.errDiv.style('display', 'none')
 					await this.handleGeneSearch(geneSearch)
 				} catch (e: any) {
 					this.dom.errDiv.style('display', 'block')
@@ -44,6 +45,7 @@ export class SearchHandler {
 			if (!chr || !Number.isInteger(start) || !Number.isInteger(stop))
 				throw new Error('unable to retrieve gene coordinate')
 
+			this.dom.blockDiv.selectAll('*').remove()
 			this.dom.blockDiv.style('display', 'block')
 			this.dom.blockDiv.append('div').style('opacity', 0.6).text('Navigate genome browser to desired region')
 
@@ -55,6 +57,7 @@ export class SearchHandler {
 				stop,
 				tklst: [],
 				nobox: true,
+				width: 500,
 				hidegenelegend: true,
 				debugmode: this.opts.debug
 			}
