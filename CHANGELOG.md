@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.170.21
 
 Fixes:
 - add gdc cohort filter0 to gb data request and tklst entries
