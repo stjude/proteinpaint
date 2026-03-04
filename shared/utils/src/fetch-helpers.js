@@ -241,7 +241,7 @@ export async function memFetch(url, init, opts = {}) {
 							return response
 						})
 						.catch(e => {
-							if (dataCache.get(dataKey)) delete dataCache.delete(dataKey)
+							if (dataCache.get(dataKey)) dataCache.delete(dataKey)
 							throw e
 						})
 
@@ -251,7 +251,7 @@ export async function memFetch(url, init, opts = {}) {
 		} catch (e) {
 			// delete this cache only if it is a promise;
 			// do not delete a valid resolved data cache
-			if (dataCache.get(dataKey) instanceof Promise) delete dataCache.delete(dataKey)
+			if (dataCache.get(dataKey) instanceof Promise) dataCache.delete(dataKey)
 			throw e
 		}
 	}

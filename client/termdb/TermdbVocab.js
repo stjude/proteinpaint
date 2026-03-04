@@ -1,5 +1,4 @@
 import { Vocab } from './Vocab'
-//import { this.dofetch3 } from '../common/dofetch'
 import { getNormalRoot } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
