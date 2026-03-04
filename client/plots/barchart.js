@@ -428,7 +428,7 @@ export class Barchart extends PlotBase {
 
 		for (const t of terms) {
 			if (isNumericTerm(t.term)) {
-				const data = await this.app.vocabApi.getDescrStats(t, this.state.termfilter)
+				const data = await this.app.vocabApi.getDescrStats(t, this.state.termfilter, null, this.api.getAbortSignal())
 				if (data.error) throw data.error
 				t.q.descrStats = data
 			}
