@@ -507,7 +507,7 @@ export class TermdbVocab extends Vocab {
 		return await this.dofetch3('termdb/getpercentile', { body, signal })
 	}
 
-	async getDescrStats(tw, termfilter, logScale) {
+	async getDescrStats(tw, termfilter, logScale, signal) {
 		// for a numeric term, get descriptive statistics e.g mean, median, standard deviation, min, max
 		// logScale is boolean
 		const body = {
@@ -520,7 +520,7 @@ export class TermdbVocab extends Vocab {
 			if (termfilter.filter) body.filter = getNormalRoot(termfilter.filter)
 			if (termfilter.filter0) body.filter0 = termfilter.filter0
 		}
-		return await this.dofetch3('/termdb/descrstats', { body })
+		return await this.dofetch3('/termdb/descrstats', { body, signal })
 	}
 
 	/**
@@ -575,6 +575,7 @@ export class TermdbVocab extends Vocab {
 	optionally, caller can supply a {term1_q: {...}} key-object value in _body to customize categories
 	*/
 	async getCategories(term, filter, _body = {}) {
+		const signal = this.app?.getAbortSignal?.()
 		const headers = await this.mayGetAuthHeaders()
 		if (term.type == 'snplst' || term.type == 'snplocus') {
 			const body = Object.assign(
@@ -633,8 +634,6 @@ export class TermdbVocab extends Vocab {
 		// when calling getCategories(), external code does not supply filter0. to avoid much code changes, use this step to detect filter0 from this.state and supply to request
 		// TODO if this filter0 can be properly updated when api.update() is called from pp launcher on GFF cohort change
 		if (this.state.termfilter?.filter0) body.filter0 = this.state.termfilter.filter0
-
-		const signal = this.app?.getAbortSignal?.()
 		try {
 			const data = await this.dofetch3('termdb/categories', { headers, body, signal })
 			if (data.error) throwMsgWithFilePathAndFnName(data.error)
