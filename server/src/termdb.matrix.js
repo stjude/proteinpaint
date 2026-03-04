@@ -297,7 +297,10 @@ async function getSampleData(q, ds, onlyChildren = false) {
 			const data = await q.ds.queries.singleCell.data.get({
 				sample: tw.term.sample,
 				plots: [tw.term.plot],
-				colorBy: { [tw.term.plot]: tw.term.colorBy }
+				//No idea where tw.term.colorBy comes from.
+				//Commenting out until clear.
+				// colorBy: { [tw.term.plot]: tw.term.colorBy }
+				colorBy: { [tw.term.plot]: tw.term.name }
 			})
 			const groups = tw.q?.customset?.groups
 			for (const cell of data.plots[0].noExpCells) {

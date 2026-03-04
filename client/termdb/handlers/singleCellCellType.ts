@@ -25,8 +25,7 @@ export class SearchHandler {
 			},
 			tree: {
 				vocab: { terms: this.app.vocabApi.termdbConfig.scctTerms },
-				click_term: term => {
-					console.log(this.app)
+				click_term_wrapper: (term: any) => {
 					this.callback!(term)
 				}
 			}

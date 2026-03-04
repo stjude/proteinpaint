@@ -65,6 +65,7 @@ function init({ genomes }) {
 }
 
 /////////////////// ds query validator
+//runs during mds3.init()
 export async function validate_query_singleCell(ds: any, genome: any) {
 	const q: SingleCellQuery = ds.queries.singleCell
 	if (!q) return
@@ -121,7 +122,7 @@ function validateImages(images) {
 
 /** Runs on mds3.init()
  * Adds ds.queries.singleCell.samples.get() for native ds (see route init() above).
- * Adds ds.queries.singleCell.twLst which is list of all possible colorBy terms
+ * Adds ds.queries.singleCell.terms which is list of all possible colorBy terms
  * defined in the ds file, for use in vocabApi methods later.
  * @param S ds.queries.singleCell.samples{}
  * @param D ds.queries.singleCell.data{}
@@ -203,7 +204,11 @@ async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNati
 	}
 }
 
-function validateDataNative(D: SingleCellDataNative, ds: any) {
+/** Adds ds.queries.singleCell.data.get() on init()
+ * @param D ds.queries.singleCell.data{}
+ * @param ds Entire dataset configuration from the ds file
+ */
+function validateDataNative(D: SingleCellDataNative, ds: any): void {
 	const nameSet = new Set() // guard against duplicating plot names
 	for (const plot of D.plots) {
 		if (nameSet.has(plot.name)) throw new Error('duplicate plot.name')
@@ -241,7 +246,11 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 				file2Lines[tsvfile] = lines2
 			}
 
-			const colorColumn = plot.colorColumns.find(c => c.name == q.colorBy?.[plot.name]) || plot.colorColumns[0]
+			//No idea why colorBy can't be a string but must be a whole object.
+			//Obj created somewhere else. Commenting out till code found.
+			// const colorColumn = plot.colorColumns.find(c => c.name == q.colorBy?.[plot.name]) || plot.colorColumns[0]
+			const colorColumn = plot.colorColumns.find(c => c.name == q.colorBy) || plot.colorColumns[0]
+
 			const expCells: Cell[] = []
 			const noExpCells: Cell[] = []
 

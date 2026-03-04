@@ -44,7 +44,8 @@ export type TermdbSingleCellDataRequest = {
 	key: plot.name, value: column name
 	if missing, use default setting of the plot
 	*/
-	colorBy?: { [key: string]: string }
+	// colorBy?: { [key: string]: string }
+	colorBy?: string
 	colorMap?: { [key: string]: string }
 }
 

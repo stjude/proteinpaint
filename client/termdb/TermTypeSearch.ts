@@ -353,7 +353,7 @@ export class TermTypeSearch {
 				if (state.usecase.target == 'sampleScatter') {
 					if (state.usecase.detail == 'numeric' && !numericTypes.has(type)) continue
 					//Limit the tree to only single cell types when use case is single cell
-					if (state.usecase.vocab == 'singleCell') {
+					if (state.usecase?.vocab?.type == 'singleCell') {
 						if (type != TermTypes.SINGLECELL_CELLTYPE && type != TermTypes.SINGLECELL_GENE_EXPRESSION) continue
 					} else {
 						if (type == TermTypes.SINGLECELL_CELLTYPE || type == TermTypes.SINGLECELL_GENE_EXPRESSION) continue
