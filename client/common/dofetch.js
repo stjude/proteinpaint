@@ -219,7 +219,7 @@ export async function namedFetch(url, init, opts = {}) {
 const defaultServerDataCache = {}
 /*
 	This is a convenience function that sets a default serverData object
-	and init.AbortSignal option (if missing) to dofetch2(), instead of
+	and init.signal (AbortSignal) option to dofetch2(), instead of
 	requiring consumer code to call dofetch2() directly with those options.
 
 	path: request url
@@ -227,7 +227,7 @@ const defaultServerDataCache = {}
 	opts: dofetch2() 3rd argument, options that are not related to native fetch	
 */
 export function dofetch3(path, init = {}, opts = {}) {
-	// may set a default init.AbortSignal if missing;
+	// may set a default init.signal if missing;
 	// The AbortSignal can cancel any request due to an app state change, such as
 	// when the GDC cohort changes, thus aborting stale data requests that may
 	// result in misleading rendered plots. This approach is more reliable than

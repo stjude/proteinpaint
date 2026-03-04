@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - add gdc cohort filter0 to gb data request and tklst entries
-- dofetch3(), when called as a Vocab method, will set a AbortSignal option if it's missing
+- dofetch3(), when called as a Vocab method, will set an AbortSignal option if it's missing
 
 
 ## 2.170.20
