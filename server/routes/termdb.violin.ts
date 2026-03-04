@@ -340,7 +340,11 @@ export async function getDensities(
 	let transformedPlot2Values = {}
 	if (useLog) {
 		for (const plot in plot2Values) {
-			transformedPlot2Values[plot] = plot2Values[plot].map(v => Math.log(v) / Math.log(logBase))
+			// Filter out non-positive values and transform to log space
+			// Log is undefined for values <= 0, so we filter them out
+			transformedPlot2Values[plot] = plot2Values[plot]
+				.filter(v => v > 0)
+				.map(v => Math.log(v) / Math.log(logBase))
 		}
 	} else {
 		transformedPlot2Values = plot2Values

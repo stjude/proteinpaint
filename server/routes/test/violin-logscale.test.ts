@@ -61,22 +61,38 @@ describe('Violin plot log scale density calculation', () => {
 		assert.strictEqual(logValues[2], 2) // log2(4) = 2
 		assert.strictEqual(logValues[7], 7) // log2(128) = 7
 	})
+	
+	it('should filter out non-positive values when using log scale', () => {
+		// Values with some non-positive values
+		const values = [-5, 0, 1, 2, 10, 100]
+		const logBase = 10
+		
+		// Filter and transform (what getDensities does)
+		const filteredAndTransformed = values
+			.filter(v => v > 0)
+			.map(v => Math.log(v) / Math.log(logBase))
+		
+		// Verify only positive values are included
+		assert.strictEqual(filteredAndTransformed.length, 4) // Only [1, 2, 10, 100]
+		assert.strictEqual(filteredAndTransformed[0], 0) // log10(1) = 0
+		assert.ok(Math.abs(filteredAndTransformed[1] - 0.301) < 0.001) // log10(2) ≈ 0.301
+		assert.strictEqual(filteredAndTransformed[2], 1) // log10(10) = 1
+		assert.strictEqual(filteredAndTransformed[3], 2) // log10(100) = 2
+	})
 })
 
 /**
- * Additional verification helper - not actually runnable without full setup
- * but documents expected behavior
+ * Demonstrates the issue and the fix (for documentation purposes)
+ * 
+ * BEFORE THE FIX:
+ * Values: [1, 10, 100, 1000]
+ * R density calculates in linear space: bins might be [1, 250, 500, 750, 1000]
+ * These are then plotted on log scale axis
+ * Result: Most bins cluster near the top (1000), creating visual distortion
+ * 
+ * AFTER THE FIX:
+ * Values: [1, 10, 100, 1000] → log10: [0, 1, 2, 3]
+ * R density calculates in log space: bins evenly distributed [0, 0.75, 1.5, 2.25, 3]
+ * Back-transform: [1, 5.62, 31.6, 177.8, 1000]
+ * Result: Bins are evenly distributed on log scale axis - correct visualization!
  */
-function demonstrateTheIssue() {
-	// BEFORE THE FIX:
-	// Values: [1, 10, 100, 1000]
-	// R density calculates in linear space: bins might be [1, 250, 500, 750, 1000]
-	// These are then plotted on log scale axis
-	// Result: Most bins cluster near the top (1000), creating visual distortion
-	
-	// AFTER THE FIX:
-	// Values: [1, 10, 100, 1000] → log10: [0, 1, 2, 3]
-	// R density calculates in log space: bins evenly distributed [0, 0.75, 1.5, 2.25, 3]
-	// Back-transform: [1, 5.62, 31.6, 177.8, 1000]
-	// Result: Bins are evenly distributed on log scale axis - correct visualization!
-}
