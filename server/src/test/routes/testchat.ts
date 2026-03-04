@@ -20,6 +20,7 @@ export default function setRoutes(app, basepath, genomes) {
 		for (const genome of Object.values(genomes)) {
 			for (const ds of Object.values((genome as any).datasets)) {
 				if ((ds as any)?.queries?.chat) {
+					console.log('Testing chatbot for dataset: ' + (ds as any).label)
 					const num_errors = await test_chatbot_by_dataset(ds)
 					console.log('Tests complete for ' + (ds as any).label + '. Number of failed prompts: ' + num_errors)
 				}
