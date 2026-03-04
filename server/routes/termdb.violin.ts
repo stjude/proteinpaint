@@ -255,10 +255,11 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 		const chart = result.charts[k]
 		const plot2Values = {}
 		for (const plot of chart.plots) plot2Values[plot.label] = plot.values
-		const densities = await getDensities(plot2Values)
+		const useLog = q.unit == 'log'
+		const logBase = ds.cohort.termdb.logscaleBase2 ? 2 : 10
+		const densities = await getDensities(plot2Values, useLog, logBase)
 
 		let axisScale
-		const useLog = q.unit == 'log'
 		if (useLog) {
 			axisScale = scaleLog()
 				.base(ds.cohort.termdb.logscaleBase2 ? 2 : 10)
@@ -330,8 +331,26 @@ export async function getDensity(
 	return result.plot
 }
 
-export async function getDensities(plot2Values): Promise<{ [plot: string]: any }> {
-	const plot2Density: any = JSON.parse(await run_R('density.R', JSON.stringify({ plot2Values })))
+export async function getDensities(
+	plot2Values,
+	useLog: boolean = false,
+	logBase: number = 10
+): Promise<{ [plot: string]: any }> {
+	// If using log scale, transform values to log space before density calculation
+	let transformedPlot2Values = {}
+	if (useLog) {
+		for (const plot in plot2Values) {
+			// Filter out non-positive values and transform to log space
+			// Log is undefined for values <= 0, so we filter them out
+			transformedPlot2Values[plot] = plot2Values[plot]
+				.filter(v => v > 0)
+				.map(v => Math.log(v) / Math.log(logBase))
+		}
+	} else {
+		transformedPlot2Values = plot2Values
+	}
+
+	const plot2Density: any = JSON.parse(await run_R('density.R', JSON.stringify({ plot2Values: transformedPlot2Values })))
 	const densities = {}
 	for (const plot in plot2Density) {
 		const result: { x: number[]; y: number[] } = plot2Density[plot]
@@ -342,11 +361,13 @@ export async function getDensities(plot2Values): Promise<{ [plot: string]: any }
 		let xMax = -Infinity
 		for (const [i, x] of Object.entries(result.x)) {
 			const density = result.y[i]
-			xMin = Math.min(xMin, x)
-			xMax = Math.max(xMax, x)
+			// Transform x back to original space if using log scale
+			const x0 = useLog ? Math.pow(logBase, x) : x
+			xMin = Math.min(xMin, x0)
+			xMax = Math.max(xMax, x0)
 			densityMin = Math.min(densityMin, density)
 			densityMax = Math.max(densityMax, density)
-			bins.push({ x0: x, density })
+			bins.push({ x0, density })
 		}
 		bins.unshift({ x0: xMin, density: densityMin }) //close the path
 		bins.push({ x0: xMax, density: densityMin }) //close the path
