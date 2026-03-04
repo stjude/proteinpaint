@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+
+## Unreleased
+
+Fixes:
+- make an OncoMatrix-launched lollipop react to GDC cohort change
+
+
 ## 2.170.21
 
 Fixes:
