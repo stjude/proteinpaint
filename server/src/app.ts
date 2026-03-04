@@ -220,7 +220,7 @@ type OptionalRouteCallbacks = {
 	setCloseServer?: (a: any) => void
 }
 
-async function setOptionalRoutes(app) {
+async function setOptionalRoutes(app, genomes) {
 	// routeSetters is an array of "filepath/name.js"
 	if (!serverconfig.routeSetters) return
 	const routeCallbacks: OptionalRouteCallbacks = {}
