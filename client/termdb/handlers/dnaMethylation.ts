@@ -19,7 +19,7 @@ export class SearchHandler {
 		this.dom = {}
 		this.dom.errDiv = holder.append('div').style('margin', '5px 0px').style('display', 'none')
 		this.dom.geneSearchDiv = holder.append('div')
-		this.dom.blockDiv = holder.append('div').style('display', 'none').style('margin', '20px 3px')
+		this.dom.blockDiv = holder.append('div').style('display', 'none').style('margin', '15px 4px')
 		const geneSearch = addGeneSearchbox({
 			tip: new Menu({ padding: '0px' }),
 			genome: opts.genomeObj,
@@ -45,7 +45,7 @@ export class SearchHandler {
 				throw new Error('unable to retrieve gene coordinate')
 
 			this.dom.blockDiv.style('display', 'block')
-			this.dom.blockDiv.append('div').style('opacity', 0.6).text('Navigate within browser to desired region')
+			this.dom.blockDiv.append('div').style('opacity', 0.6).text('Navigate genome browser to desired region')
 
 			const arg: any = {
 				holder: this.dom.blockDiv,
@@ -64,6 +64,7 @@ export class SearchHandler {
 
 			this.dom.submitBtn = this.dom.blockDiv
 				.append('div')
+				.attr('data-testid', 'sjpp-dnaMethylation-submitDiv')
 				.style('margin', '10px 0px')
 				.append('button')
 				.style('border', 'none')
