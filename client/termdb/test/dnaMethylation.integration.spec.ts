@@ -74,6 +74,8 @@ tape('Gene search', async test => {
 	geneSearchInput.value = geneSymbol
 	geneSearchInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }))
 	await sleep(100)
+	const blockSvg = holder.select('[data-testid="sjpp_block_svg"]').node()
+	test.ok(blockSvg, 'should render block svg')
 	const submitBtn: any = holder.select('[data-testid="sjpp-dnaMethylation-submitDiv"]').select('button').node()
 	submitBtn.click()
 	await sleep(100)
