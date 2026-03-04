@@ -18,7 +18,7 @@ Definitions:
 - dge: differential gene expression analysis (e.g. fold change, differentially expressed genes between groups)
 - survival: survival or time-to-event analysis (e.g. Kaplan-Meier, overall survival, event-free survival)
 - matrix: expression overview of two or more GENE NAMES displayed together (e.g. heatmap, expression landscape, expression matrix, side-by-side gene expression). The multiple items must be gene names (e.g. TP53, KRAS, CDKN2A) or can be displayed with clinical variables such as molecular subtype, diagnosis group, ancestry/race, gender/sex etc.
-- samplescatter: ONLY for pre-built dimensionality reduction embeddings (UMAP, t-SNE, PCA). Do NOT use this for scatter plots comparing two variables — those are summary.
+- samplescatter: ONLY for pre-built dimensionality reduction embeddings (UMAP, t-SNE, PCA). Maybe used for overlaying clinical variables or gene expression or geneset enrichment scores. Do NOT use this for scatter plots comparing two variables — those are summary.
 
 IMPORTANT: Your response must be exactly one word. Do not return chart type names like "violin", "box plot", or "bar chart". Return only: summary, dge, survival, matrix, or samplescatter.
 
