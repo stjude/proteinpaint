@@ -223,26 +223,27 @@ export async function memFetch(url, init, opts = {}) {
 						dataCache.set(dataKey, { response, exp: Date.now() + cacheLifetime })
 						return response
 				  })
-				: fetch(url, init).then(async r => {
-						const response = await processResponse(r)
-						if (!r.ok) {
-							console.trace(response)
-							throw (
-								'memFetch error ' +
-								r.status +
-								': ' +
-								(typeof response == 'object' ? response.message || response.error : response)
-							)
-						}
-						// replace the cached promise result with the actual data,
-						// since persisting a cached promise for a long time is likely not best practice
-						dataCache.set(dataKey, { response: deepFreeze(response), exp: Date.now() + cacheLifetime })
-						return response
-				  })
-					.catch(e => {
-						if (dataCache.get(dataKey)) delete dataCache.delete(dataKey)
-						throw e
-					})
+				: fetch(url, init)
+						.then(async r => {
+							const response = await processResponse(r)
+							if (!r.ok) {
+								console.trace(response)
+								throw (
+									'memFetch error ' +
+									r.status +
+									': ' +
+									(typeof response == 'object' ? response.message || response.error : response)
+								)
+							}
+							// replace the cached promise result with the actual data,
+							// since persisting a cached promise for a long time is likely not best practice
+							dataCache.set(dataKey, { response: deepFreeze(response), exp: Date.now() + cacheLifetime })
+							return response
+						})
+						.catch(e => {
+							if (dataCache.get(dataKey)) dataCache.delete(dataKey)
+							throw e
+						})
 
 			dataCache.set(dataKey, { response: result, exp: Date.now() + cacheLifetime })
 			manageCacheSize(now)
@@ -250,7 +251,7 @@ export async function memFetch(url, init, opts = {}) {
 		} catch (e) {
 			// delete this cache only if it is a promise;
 			// do not delete a valid resolved data cache
-			if (dataCache.get(dataKey) instanceof Promise) delete dataCache.delete(dataKey)
+			if (dataCache.get(dataKey) instanceof Promise) dataCache.delete(dataKey)
 			throw e
 		}
 	}
