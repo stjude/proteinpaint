@@ -170,12 +170,26 @@ export class ScatterView {
 			testid: 'showAxes'
 		}
 
+		// let vocab: any = 'default'
+		// if (this.scatter.config?.singleCellPlot) {
+		// 	vocab = {
+		// 		type: 'singleCell',
+		// 		getDetails: () => {
+		// 			return this.scatter.config.singleCellPlot
+		// 		}
+		// 	}
+		// }
+
 		const inputs: any = [
 			{
 				type: 'term',
 				configKey: 'colorTW',
 				chartType: 'sampleScatter',
-				usecase: { target: 'sampleScatter', detail: this.scatter.config?.singleCellPlot ? 'sc' : 'colorTW' },
+				usecase: {
+					target: 'sampleScatter',
+					detail: 'colorTW',
+					vocab: this.scatter.config?.singleCellPlot ? 'singleCell' : 'default'
+				},
 				title: 'Categories to color the samples',
 				label: 'Color',
 				vocabApi: this.scatter.app.vocabApi,

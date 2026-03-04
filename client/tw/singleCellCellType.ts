@@ -5,7 +5,7 @@ const termType = 'singleCellCellType'
 export class SingleCellCellTypeBase {
 	type = termType
 	// sample: object
-	// plot: string
+	plot?: string
 	groupsetting: TermGroupSetting
 	values: TermValues
 
@@ -32,7 +32,7 @@ export class SingleCellCellTypeBase {
 	constructor(term: RawSingleCellCellTypeTerm | SingleCellCellTypeTerm) {
 		SingleCellCellTypeBase.validate(term)
 		// this.sample = term.sample || {}
-		// this.plot = term.plot || ''
+		this.plot = term.plot || ''
 		this.groupsetting = term.groupsetting || { disabled: false }
 		this.values = term.values || {}
 	}

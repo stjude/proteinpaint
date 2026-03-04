@@ -62,7 +62,6 @@ class TdbTree {
 	*/
 	constructor(opts) {
 		this.type = 'tree'
-
 		// attach instance-specific methods via closure
 		setInteractivity(this)
 		setRenderers(this)
@@ -111,12 +110,18 @@ class TdbTree {
 				state.cohortValuelst = choice.keys
 			}
 		}
+		if (appState.termdbConfig.scctTerms) {
+			state.scctTerms = appState.termdbConfig.scctTerms
+		}
 
 		return state
 	}
 
 	async main() {
-		if (this.state.termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES) {
+		if (
+			this.state.termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES &&
+			this.state.termTypeGroup != TermTypeGroups.SINGLECELL_CELLTYPE
+		) {
 			this.dom.holder.style('display', 'none')
 			return
 		}
@@ -124,7 +129,6 @@ class TdbTree {
 			this.dom.holder.style('display', 'none')
 			return
 		}
-
 		if (this.state.toSelectCohort) {
 			// dataset requires a cohort to be selected
 			if (!this.state.cohortValuelst) {
@@ -135,8 +139,13 @@ class TdbTree {
 		// refer to the current cohort's termsById
 		this.termsById = this.getTermsById()
 		const root = this.termsById[root_ID]
-		root.terms = await this.requestTermRecursive(root)
-		root.terms.push(...(await this.mayGetCustomTerms()))
+		if (this.state.termTypeGroup == TermTypeGroups.SINGLECELL_CELLTYPE && this.state.scctTerms?.length) {
+			root.terms = this.mayGetCustomVocab()
+		} else {
+			root.terms = await this.requestTermRecursive(root)
+			root.terms.push(...(await this.mayGetCustomTerms()))
+		}
+
 		this.dom.holder.style('display', 'block')
 		await this.renderBranch(root, this.dom.holder)
 		this.dom.holder
@@ -233,6 +242,12 @@ class TdbTree {
 		}
 		this.termsById[id] = parentTerm
 		return [parentTerm]
+	}
+
+	mayGetCustomVocab() {
+		if (this.state.termTypeGroup == TermTypeGroups.SINGLECELL_CELLTYPE) {
+			return this.state.scctTerms || []
+		}
 	}
 }
 

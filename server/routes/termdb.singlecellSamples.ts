@@ -161,7 +161,12 @@ async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNati
 			const baseValues = c.colorMap ? Object.keys(c.colorMap) : []
 			return {
 				name: c.name,
+				isleaf: true,
+				/** TODO: possible term may apply to multiple plots.
+				 * May need to change to plots: [] */
+				plot: plot.name,
 				type: TermTypes.SINGLECELL_CELLTYPE,
+				groupsetting: {},
 				values: baseValues.reduce((acc, v) => {
 					const alias = c?.aliases?.[v]
 					acc[v] = {
