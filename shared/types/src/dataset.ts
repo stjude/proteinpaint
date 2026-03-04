@@ -1625,17 +1625,15 @@ type TermCollectionBase = {
 	name: string
 	/** array of dictionary term ids belonging to this collection */
 	termIds: string[]
+	/** full term objects corresponding to termIds[]; populated by server on dataset init,
+	 * sent to client so fill() can resolve member term names without extra requests */
+	termlst?: BaseTerm[]
 	/** array of branch term ids belonging to this collection,
 	 * may be used as state.tree.expandedTermIds[] option to termdb appInit() */
 	branchIds: string[]
 	propsByTermId: {
 		[termId: string]: any
 	}
-	/** full term objects corresponding to termIds[]; populated by server on dataset init,
-	 * sent to client so fill() can resolve member term names without extra requests */
-	termlst?: BaseTerm[]
-	/** category values to filter on (categorical collections only); required on CategoricalTermCollection */
-	categoryKeys?: string[]
 	/** preconfigured cohort-level plots for this collection */
 	plots?: {
 		/** name of this plot */
@@ -1651,6 +1649,7 @@ type NumericTermCollection = TermCollectionBase & {
 
 type CategoricalTermCollection = TermCollectionBase & {
 	type: 'categorical'
+	/** category values to filter on (categorical collections only); required on CategoricalTermCollection */
 	categoryKeys: string[]
 }
 
