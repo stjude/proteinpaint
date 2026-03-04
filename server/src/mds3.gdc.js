@@ -1798,6 +1798,9 @@ export async function querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q
 	// - FM-AD is roughly 12845726 or 12 MB
 	const re = await memFetch(
 		joinUrl(host.rest, 'cases'),
+		// do not pass a `signal: q.__abortSignal` option, since this shared request/response
+		// may cause the app to fail in different browser tabs or subsequent requests if
+		// an aborted request is reused before the relevant cache is deleted
 		{ method: 'POST', timeout: false, headers, body: JSON.stringify(param) },
 		{ client: xfetch }
 	)
