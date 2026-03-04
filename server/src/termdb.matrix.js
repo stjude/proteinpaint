@@ -583,7 +583,11 @@ export async function getSamples(q, rows, termWrappers) {
 	//      [termId]: {key, value} | {key, values[]}
 	//   }
 	// }
-	const tw$idsWithJson = new Set(termWrappers.filter(tw => termTypesWithJsonValue.has(tw.term?.type)).map(tw => tw.$id))
+	const tw$idsWithJson = new Set(
+		termWrappers
+			.filter(tw => termTypesWithJsonValue.has(tw.term?.type) && tw.term?.memberType !== 'categorical')
+			.map(tw => tw.$id)
+	)
 
 	const samples = {} // to return
 	// if q.currentGeneNames is in use, must restrict to these samples

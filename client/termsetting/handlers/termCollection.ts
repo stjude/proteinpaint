@@ -100,7 +100,7 @@ function addNumericTable(self, div: any, terms: any, noButtonCallback: any) {
 
 		q.numerators = terms
 			.filter((term, i) => {
-				const checked = trs[i].querySelectorAll('td')[3].querySelector('input')?.checked
+				const checked = trs[i].querySelectorAll('td')[1].querySelector('input')?.checked
 				return checked === true
 			})
 			.map(t => t.id)
@@ -135,13 +135,14 @@ function addCategoricalTable(self, div: any, terms: any, noButtonCallback: any) 
 	})
 
 	const categoryDiv = div.append('div')
-	const values = self.tw.term.termlst[0].values || {}
+	// Merge .values from all termlst entries; safe when termlst is empty or entries lack .values
+	const values = Object.assign({}, ...(self.tw.term.termlst?.map((t: any) => t.values || {}) ?? []))
 	categoryDiv.append('div').style('margin', '5px').style('padding', '5px').html('Category keys')
 	const categoryTable = categoryDiv.append('div')
 	renderTable({
 		columns: [{ label: 'Terms' }],
 		rows: self.tw.term.categoryKeys.map(key => {
-			return [{ value: values[key].label, checked: self.tw.q.categoryKeys?.includes(key) }]
+			return [{ value: values[key]?.label ?? key, checked: self.term.categoryKeys?.includes(key) }]
 		}),
 		div: categoryTable,
 		maxWidth: '30vw',
