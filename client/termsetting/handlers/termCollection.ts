@@ -2,7 +2,7 @@ import { HandlerBase } from '../HandlerBase.ts'
 import type { Handler } from '../index.ts'
 import { renderTable } from '#dom'
 import type { CollectionBase } from '#tw'
-import type { TermCollectionQCont } from '#types'
+import type { CategoryKey, TermCollectionQCont } from '#types'
 import type { TermSetting } from '../TermSetting.ts'
 import { mayHydrateDictTwLst } from '#termsetting'
 
@@ -139,10 +139,11 @@ function addCategoricalTable(self, div: any, terms: any, noButtonCallback: any) 
 	const values = Object.assign({}, ...(self.tw.term.termlst?.map((t: any) => t.values || {}) ?? []))
 	categoryDiv.append('div').style('margin', '5px').style('padding', '5px').html('Category keys')
 	const categoryTable = categoryDiv.append('div')
+	const ckSource = self.tw.q.categoryKeys || self.tw.term.categoryKeys || []
 	renderTable({
 		columns: [{ label: 'Terms' }],
-		rows: self.tw.term.categoryKeys.map(key => {
-			return [{ value: values[key]?.label ?? key, checked: self.term.categoryKeys?.includes(key) }]
+		rows: ckSource.map((ck: CategoryKey) => {
+			return [{ value: values[ck.key]?.label ?? ck.key, checked: ck.shown }]
 		}),
 		div: categoryTable,
 		maxWidth: '30vw',
@@ -166,9 +167,9 @@ function addCategoricalTable(self, div: any, terms: any, noButtonCallback: any) 
 		})
 
 		const catTrs = categoryTable.select('table').select('tbody').node().querySelectorAll('tr')
-		self.q.categoryKeys = self.tw.term.categoryKeys.filter((term, i) => {
+		self.q.categoryKeys = ckSource.map((ck: CategoryKey, i: number) => {
 			const checked = catTrs[i].querySelectorAll('td')[1].querySelector('input')?.checked
-			return checked === true
+			return { key: ck.key, shown: !!checked }
 		})
 
 		self.api.runCallback()

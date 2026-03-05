@@ -1,5 +1,6 @@
 import type { Mclass } from './Mclass.ts'
 import type { BaseTerm } from './terms/term.ts'
+import type { CategoryKey } from './terms/termCollection.ts'
 import type { WSImage } from './routes/samplewsimages.ts'
 import type { WSISample } from './routes/wsisamples.ts'
 import type { SaveWSIAnnotationRequest } from './routes/saveWSIAnnotation.ts'
@@ -1651,8 +1652,8 @@ type NumericTermCollection = TermCollectionBase & {
 
 type CategoricalTermCollection = TermCollectionBase & {
 	type: 'categorical'
-	/** category values to filter on (categorical collections only); required on CategoricalTermCollection */
-	categoryKeys: string[]
+	/** category values to filter on; string[] in raw DS config, CategoryKey[] once hydrated */
+	categoryKeys: string[] | CategoryKey[]
 }
 
 type TermCollection = NumericTermCollection | CategoricalTermCollection
