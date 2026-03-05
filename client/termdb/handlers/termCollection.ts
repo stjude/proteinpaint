@@ -1,4 +1,5 @@
 import { renderTable } from '#dom'
+import type { CategoryKey } from '#types'
 
 export class SearchHandler {
 	callback: any
@@ -37,8 +38,8 @@ export class SearchHandler {
 			categoryTable = categoryDiv.append('div')
 			renderTable({
 				columns: [{ label: 'Terms' }],
-				rows: opts.details.categoryKeys.map(key => {
-					return [{ value: values[key].label }]
+				rows: opts.details.categoryKeys.map((ck: CategoryKey) => {
+					return [{ value: values[ck.key]?.label ?? ck.key, checked: ck.shown }]
 				}),
 				div: categoryTable,
 				maxWidth: '30vw',
@@ -81,13 +82,12 @@ export class SearchHandler {
 					}
 				}
 
-
 				let categoryKeys
 				if (categoryTable) {
 					const trs = categoryTable.select('table').select('tbody').node().querySelectorAll('tr')
-					categoryKeys = opts.details.categoryKeys.filter((term, i) => {
+					categoryKeys = opts.details.categoryKeys.map((ck: CategoryKey, i: number) => {
 						const checked = trs[i].querySelectorAll('td')[1].querySelector('input')?.checked
-						return checked === true
+						return { key: ck.key, shown: !!checked }
 					})
 				}
 

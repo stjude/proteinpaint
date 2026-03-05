@@ -97,7 +97,6 @@ export type TermCollectionQQual = MinBaseQ & {
 	type: 'values'
 	/** a selection of term.ids for the current termwrapper, selected from term.lst */
 	lst: string[]
-	/** User-editable category filter; shown=true means include in query. Initialized from term.categoryKeys. */
 	categoryKeys?: CategoryKey[]
 }
 
