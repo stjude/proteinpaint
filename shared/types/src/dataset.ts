@@ -1650,8 +1650,8 @@ type NumericTermCollection = TermCollectionBase & {
 
 type CategoricalTermCollection = TermCollectionBase & {
 	type: 'categorical'
-	/** category values to filter on; string[] in raw DS config, CategoryKey[] once hydrated */
-	categoryKeys: string[] | CategoryKey[]
+	/** category values to filter on; hydrated form uses CategoryKey[] */
+	categoryKeys: CategoryKey[]
 }
 
 type TermCollection = NumericTermCollection | CategoricalTermCollection
