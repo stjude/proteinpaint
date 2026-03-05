@@ -8,13 +8,6 @@ import assert from 'node:assert/strict'
 
 process.removeAllListeners('warning')
 
-const testing = false // This causes raw LLM output to be sent by the agent
-const llm = serverconfig.llm
-if (!llm) throw 'serverconfig.llm is not configured'
-if (llm.provider !== 'SJ' && llm.provider !== 'ollama') {
-	throw "llm.provider must be 'SJ' or 'ollama'"
-}
-
 export default function setRoutes(app, basepath, genomes) {
 	app.get(basepath + '/testchat', async () => {
 		// (req.res) not currently used
@@ -42,7 +35,13 @@ export default function setRoutes(app, basepath, genomes) {
 }
 
 export async function test_chatbot_by_dataset(ds: any): Promise<number> {
-	let num_errors = 0
+	const testing = false // This causes raw LLM output to be sent by the agent
+	const llm = serverconfig.llm
+	if (!llm) throw 'serverconfig.llm is not configured'
+	if (llm.provider !== 'SJ' && llm.provider !== 'ollama') {
+		throw "llm.provider must be 'SJ' or 'ollama'"
+	}
+	let num_errors = 0 // Number of errors encountered across all prompts for this dataset
 	// Check to see if the dataset supports the AI chatbot
 	if (!(ds as any)?.queries?.chat.aifiles) throw 'AI dataset JSON file is missing for dataset:' + ds.label
 	const aifiles = (ds as any)?.queries?.chat.aifiles
