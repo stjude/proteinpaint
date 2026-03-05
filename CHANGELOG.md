@@ -3,38 +3,6 @@
 All notable changes to this project will be documented in this file.
 
 
-## 2.170.23
-
-Fixes:
-- supply an abort signal to the descriptive stats data request in barchart
-- limit pre-emptive aborts of previous actions in app.dispatch() so that unaffected plots may continue rendering
-
-
-## 2.170.22
-
-Fixes:
-- make an OncoMatrix-launched lollipop react to GDC cohort change
-
-
-## 2.170.21
-
-Fixes:
-- add gdc cohort filter0 to gb data request and tklst entries
-- dofetch3(), when called as a Vocab method, will set an AbortSignal option if it's missing
-
-
-## 2.170.20
-
-Fixes:
-- do not show a geneset option when selecting CNV as mutation type
-
-
-## 2.170.19
-
-Fixes:
-- skip GDC diagnoses variables that may have multiple values per case, and throw an error when this situation is detected for any variable at runtime
-
-
 ## 2.177.0
 
 Features:
@@ -111,6 +79,38 @@ Fixes:
 - stream matrix response data to prevent RangeError during json-encoding
 - do not join to global filter in getTreeFilter() if the join argument is 'or', so that the edit menu will list all applicable categories
 - show loading and error messages when switching to barchart tab in summary plot
+
+
+## 2.170.23
+
+Fixes:
+- supply an abort signal to the descriptive stats data request in barchart
+- limit pre-emptive aborts of previous actions in app.dispatch() so that unaffected plots may continue rendering
+
+
+## 2.170.22
+
+Fixes:
+- make an OncoMatrix-launched lollipop react to GDC cohort change
+
+
+## 2.170.21
+
+Fixes:
+- add gdc cohort filter0 to gb data request and tklst entries
+- dofetch3(), when called as a Vocab method, will set an AbortSignal option if it's missing
+
+
+## 2.170.20
+
+Fixes:
+- do not show a geneset option when selecting CNV as mutation type
+
+
+## 2.170.19
+
+Fixes:
+- skip GDC diagnoses variables that may have multiple values per case, and throw an error when this situation is detected for any variable at runtime
 
 
 ## 2.170.18
