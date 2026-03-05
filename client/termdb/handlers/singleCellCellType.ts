@@ -20,7 +20,7 @@ export class SearchHandler {
 			state: {
 				dslabel: scDsLabel,
 				genome: opts.genomeObj.name,
-				nav: { header_mode: 'hide' },
+				nav: { header_mode: 'hide_search' },
 				vocab: { terms: this.app.vocabApi.termdbConfig.scctTerms }
 			},
 			tree: {

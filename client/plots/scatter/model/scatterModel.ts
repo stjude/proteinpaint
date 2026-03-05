@@ -44,10 +44,7 @@ export class ScatterModel {
 	getDataRequestOpts() {
 		const c: any = this.scatter.config
 
-		if (c.singleCellPlot) {
-			c.colorBy = c.colorTW?.term?.name
-			return c
-		}
+		if (c.singleCellPlot) return c
 		const coordTWs: any = []
 		if (c.term) coordTWs.push(c.term)
 		if (c.term2) coordTWs.push(c.term2)
