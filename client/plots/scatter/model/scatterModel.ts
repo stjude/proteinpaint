@@ -134,7 +134,7 @@ export class ScatterModel {
 				plotMax = Math.max(plotMax, cell.y)
 				plotGEMin = Math.min(plotGEMin, cell.geneExp)
 				plotGEMax = Math.max(plotGEMax, cell.geneExp)
-				cell.shape = 'Expressed'
+				cell.shape = 'Ref'
 			}
 			plot.min = plotMin
 			plot.max = plotMax
@@ -144,7 +144,7 @@ export class ScatterModel {
 			plot.cohortSamples = plot.expCells.concat(plot.noExpCells)
 			plot.colorLegend = new Map()
 			plot.shapeLegend = new Map()
-			plot.shapeLegend.set('Expressed', { shape: 0, key: 'Expressed', sampleCount: plot.expCells.length })
+			plot.shapeLegend.set('Ref', { shape: 0, key: 'Ref', sampleCount: plot.expCells.length })
 			this.charts.push(plot)
 		}
 		this.range = { xMin, xMax, yMin, yMax }

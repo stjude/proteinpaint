@@ -51,7 +51,7 @@ export class ScatterTooltip {
 
 	showSampleTooltip(s2, x, y, chart) {
 		this.chart = chart
-		this.displaySample = 'sample' in s2
+		this.displaySample = 'sample' in s2 || 'cellId' in s2
 		const threshold = 5 / this.scatter.zoom //Threshold should consider the zoom
 		/** Avoid calculating the min and max for x and y
 		 * multiple times in the distance function.
@@ -269,7 +269,7 @@ export class ScatterTooltip {
 
 				const [tdlabel, td] = table.addRow()
 				tdlabel.text(this.scatter.settings.itemLabel)
-				td.text(sample.sample)
+				td.text(sample.sample || sample.cellId)
 				if ('sampleId' in sample && this.onClick) {
 					if (this.scatter.state.currentCohortChartTypes.includes('sampleView')) {
 						td.append('button')
