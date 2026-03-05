@@ -39,7 +39,7 @@ export class ComponentApi {
 	#Component: RxComponent
 	Inner?: RxComponent // only in debugmode
 	#latestActionSequenceId: number
-	#abortController?: AbortController
+	#abortController?: AbortController = new AbortController()
 	#abortControllers: Set<AbortController>
 	// TODO: may use #incompleteUpdate property, if the shared app abortController signal is used
 	// #incompleteUpdate: boolean = true
@@ -125,8 +125,8 @@ export class ComponentApi {
 			if (current.action) this.#latestActionSequenceId = current.action.sequenceId
 			if (this.#abortController) {
 				this.#abortController.abort('stale sequenceId')
-				this.#abortController = undefined //new AbortController()
 			}
+			this.#abortController = new AbortController()
 
 			if (self.mainArg == 'state') {
 				// some components may require passing state to its .main() method,
@@ -240,7 +240,7 @@ export class ComponentApi {
 
 	getAbortSignal() {
 		if (!this.#abortController) this.#abortController = new AbortController()
-		return this.#abortController?.signal
+		return this.#abortController.signal
 		// NOTE: the same signal can be reused to cancel different fetch requests, as tested pasting and running the following in the browser console:
 		// > const ac = new AbortController(); for(let i=0; i<3; i++) fetch('/healthcheck', {signal: ac.signal}).then(r=>r.json()).then(console.log).catch(console.log); const t = setTimeout(()=>ac.abort('stale sequenceId'), 0);
 		// stale sequenceId // repeats 3x

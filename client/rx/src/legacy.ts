@@ -513,7 +513,8 @@ export function getComponentApi(self) {
 			// if the current and pending state is not equal
 			if (!current.action || !deepEqual(componentState, self.state)) {
 				if (current.action) latestActionSequenceId = current.action.sequenceId
-				if (abortController) abortController.abort()
+				if (abortController) abortController.abort('stale sequenceId')
+				abortController = new AbortController()
 				if (self.mainArg == 'state') {
 					// some components may require passing state to its .main() method,
 					// for example when extending a simple object class into an rx-component
