@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 
-## Unreleased
+## 2.170.23
 
 Fixes:
 - supply an abort signal to the descriptive stats data request in barchart
