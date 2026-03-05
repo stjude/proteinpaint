@@ -2299,8 +2299,9 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 	// q{} TermdbSinglecellDataRequest
 	ds.queries.singleCell.data.get = async q => {
 		const { host } = ds.getHostHeaders(q)
+		const sample = q.sample || q.singleCellPlot.sample
 		// do not use headers here that has accept: 'application/json'
-		const re = await xfetch(joinUrl(host.rest, 'data', q.sample.eID || q.sample.sID), { timeout: false })
+		const re = await xfetch(joinUrl(host.rest, 'data', sample?.eID || sample.sID), { timeout: false })
 		const lines = re.trim().split('\n')
 		const datasetPlots = ds.queries.singleCell.data.plots
 		/*
@@ -2318,11 +2319,11 @@ export function gdc_validate_query_singleCell_data(ds, genome) {
 		!! important !! file column index must match with `coordsColumns:{x,y}` 
 		values of each plot in dataset/gdc.hg38.ts */
 		const seuratClusterTerm = { id: 'cluster', name: 'Seurat cluster', type: 'categorical', values: {} }
-		const plots = q.plots.map(p => ({ expCells: [], noExpCells: [], name: p }))
+		const plots = (q.plots || [q.singleCellPlot.name]).map(p => ({ expCells: [], noExpCells: [], name: p }))
 
 		let geneExpMap
 		if (ds.queries.singleCell.geneExpression && q.gene) {
-			geneExpMap = await ds.queries.singleCell.geneExpression.get({ sample: q.sample, gene: q.gene })
+			geneExpMap = await ds.queries.singleCell.geneExpression.get({ sample, gene: q.gene })
 			if (geneExpMap.error) {
 				return { error: geneExpMap.error }
 			}

@@ -1,5 +1,5 @@
 import { Tabs } from '#dom'
-import { getCompInit } from '../rx'
+import { type AppApi, getCompInit } from '../rx'
 import { TermTypeGroups, TermTypes, typeGroup, numericTypes } from '#shared/terms.js'
 import type { Term } from '#types'
 import { select } from 'd3-selection'
@@ -492,3 +492,12 @@ export class TermTypeSearch {
 }
 
 export const TermTypeSearchInit = getCompInit(TermTypeSearch)
+
+export type SearchHandlerOpts = {
+	holder: any
+	app: AppApi
+	genomeObj: any
+	callback: (arg0: { gene: string; name: string; type: string }) => void
+	details: any
+	usecase: { target: string; detail: string; [index: string]: any }
+}

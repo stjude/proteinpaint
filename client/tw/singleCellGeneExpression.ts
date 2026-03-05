@@ -6,7 +6,7 @@ const termType = 'singleCellGeneExpression'
 export class SingleCellGeneExpressionBase {
 	type = termType
 	gene: string
-	// sample: string
+	sample: string
 	unit: string
 
 	static fill(term: RawSingleCellGeneExpTerm, opts: TwOpts) {
@@ -23,13 +23,13 @@ export class SingleCellGeneExpressionBase {
 		if (term.type != termType) throw new Error(`incorrect term.type='${term?.type}', expecting '${termType}'`)
 		if (!term.gene && !term.name) throw new Error('no gene or name present')
 		if (!term.gene || typeof term.gene != 'string') throw new Error(`${termType} term.gene must be non-empty string`)
-		// if (!term.sample) throw new Error('missing sample name')
+		if (!term.sample) throw new Error('missing sample name')
 	}
 
 	constructor(term: RawSingleCellGeneExpTerm | SingleCellGeneExpressionTerm, opts: TwOpts) {
 		SingleCellGeneExpressionBase.validate(term)
 		this.gene = term.gene
-		// this.sample = term.sample
+		this.sample = term.sample
 		this.unit = term.unit || getSCGEunit(opts.vocabApi)
 	}
 }

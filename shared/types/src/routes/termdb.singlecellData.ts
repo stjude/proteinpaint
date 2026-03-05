@@ -47,6 +47,7 @@ export type TermdbSingleCellDataRequest = {
 	// colorBy?: { [key: string]: string }
 	colorBy?: string
 	colorMap?: { [key: string]: string }
+	singleCellPlot?: any
 }
 
 export type HasdataResponse = {

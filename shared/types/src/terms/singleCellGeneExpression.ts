@@ -20,7 +20,7 @@ type Coord = {
 export type SingleCellGeneExpressionTerm = NumericBaseTerm & {
 	type: 'singleCellGeneExpression'
 	gene: string
-	// sample: string
+	sample: string
 	unit: string
 	bins?: PresetNumericBins
 } & (Gene | Coord)
