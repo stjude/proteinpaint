@@ -588,9 +588,8 @@ export class TermdbVocab extends Vocab {
 				_body
 			)
 
-			if (filter) {
-				body.filter = getNormalRoot(filter)
-			}
+			if (filter) body.filter = getNormalRoot(filter)
+			if (this.state.termfilter?.filter0) body.filter0 = this.state.termfilter.filter0
 			return await this.dofetch3('/termdb', { headers, body, signal })
 		}
 
@@ -631,19 +630,12 @@ export class TermdbVocab extends Vocab {
 		if (filter) {
 			body.filter = getNormalRoot(filter)
 		}
-		// when calling getCategories(), external code does not supply filter0. to avoid much code changes, use this step to detect filter0 from this.state and supply to request
-		// TODO if this filter0 can be properly updated when api.update() is called from pp launcher on GFF cohort change
+
 		if (this.state.termfilter?.filter0) body.filter0 = this.state.termfilter.filter0
-		try {
-			const data = await this.dofetch3('termdb/categories', { headers, body, signal })
-			if (data.error) throwMsgWithFilePathAndFnName(data.error)
-			return data
-		} catch (e) {
-			// TODO: should handle this error more gracefully, maybe show only in the termsetting pill;
-			//       right now, this alert pops up even when this data or related pill is not visible
-			// if (!this.isAbortError(e)) window.alert(e.message || e)
-			throw e
-		}
+
+		const data = await this.dofetch3('termdb/categories', { headers, body, signal })
+		if (data.error) throwMsgWithFilePathAndFnName(data.error)
+		return data
 	}
 
 	async getNumericUncomputableCategories(term, filter) {
@@ -654,9 +646,9 @@ export class TermdbVocab extends Vocab {
 			dslabel: this.state.vocab.dslabel,
 			tid: term.id
 		}
-		if (filter) {
-			body.filter = getNormalRoot(filter)
-		}
+		if (filter) body.filter = getNormalRoot(filter)
+		if (this.state.termfilter?.filter0) body.filter0 = this.state.termfilter.filter0
+
 		try {
 			const data = await this.dofetch3('/termdb/numericcategories', { body })
 			if (data.error) throw data.error
@@ -684,10 +676,10 @@ export class TermdbVocab extends Vocab {
 	}
 
 	async get_variantFilter() {
+		const body = { getvariantfilter: 1, genome: this.state.vocab.genome, dslabel: this.state.vocab.dslabel }
+		if (this.state.termfilter?.filter0) body.filter0 = this.state.termfilter.filter0
 		// used for snplocus term type
-		return await this.dofetch3('termdb', {
-			body: { getvariantfilter: 1, genome: this.state.vocab.genome, dslabel: this.state.vocab.dslabel }
-		})
+		return await this.dofetch3('termdb', { body })
 	}
 
 	/*

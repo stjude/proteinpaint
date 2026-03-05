@@ -76,16 +76,13 @@ export async function getDtTermValues(dtTerm, filter, vocabApi) {
 		// use values already present on dt term
 		return
 	}
-	let categories
+
 	// get mutation classes of gene
 	const body = { term1_q: { dtLst: [dtTerm.dt] } }
-	try {
-		categories = await vocabApi.getCategories(dtTerm.parentTerm, filter, body)
-		// filter for mutations of specific dt
-		if (!categories) throw new Error('unable to retrieve variant data')
-	} catch (e) {
-		throw e
-	}
+	const categories = await vocabApi.getCategories(dtTerm.parentTerm, filter, body)
+	// filter for mutations of specific dt
+	if (!categories) throw new Error('unable to retrieve variant data')
+
 	// filter for mutations of specific dt
 	const data = categories?.lst.find(x => x.dt == dtTerm.dt)
 	if (!data) return
