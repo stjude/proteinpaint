@@ -1,3 +1,4 @@
+// Test prettier
 // from the proteinpaint/server dir, run via
 // $ npx tsx watch src/app.ts
 //
@@ -46,7 +47,7 @@ export async function launch() {
 		console.log('setting server routes ...')
 		const routeCallbacks = await setOptionalRoutes(app, genomes)
 		console.log('may set auth routes ...')
-		/*
+		/**
 !!! the order of middlewares is critical, must be set before data routes !!!
 - so that a request will be inspected by auth before allowing 
 to proceed to any *protected* route handler
@@ -73,11 +74,6 @@ shared/types/src/routes and not when modified.
 			// 	outputFile: path.join(__dirname, '../../shared/types/src/checkers/routes.ts')
 			// }
 		})
-		/**
-		 *
-		 *
-		 *
-		 */
 
 		oldApp.setRoutes(app, genomes, serverconfig)
 
@@ -124,12 +120,12 @@ shared/types/src/routes and not when modified.
 		if (err?.stack) console.log(err.stack)
 		if (exitCode) console.error('\n!!!\n' + err + '\n\n')
 		else console.log('\n!!!\n' + err + '\n\n')
-		/*
-		when the app server is monitored by another process via the command line,
-		process.exit(1) is required to stop execution flow with `set -e`
-		and thereby avoid unnecessary endless restarts of an invalid server
-		init with bad config, data, and/or code
-		*/
+		/**
+when the app server is monitored by another process via the command line,
+process.exit(1) is required to stop execution flow with `set -e`
+and thereby avoid unnecessary endless restarts of an invalid server
+init with bad config, data, and/or code
+*/
 
 		//Test comment.
 		const msg = err?.stack || err

@@ -28,6 +28,8 @@ export async function extract_DE_search_terms_from_query(
 		//}
 		//const generator: SchemaGenerator = createGenerator(SchemaConfig)
 		//const Schema = generator.createSchema(SchemaConfig.type) // This commented out code generates the JSON schema below
+
+		// Test prettier
 		const Schema = {
 			$schema: 'http://json-schema.org/draft-07/schema#',
 			$ref: '#/definitions/DEType',

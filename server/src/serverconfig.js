@@ -1,3 +1,4 @@
+// Test prettier
 /*
 	Detect and process the server configuration file,
 	including generating and applying overrides as needed
