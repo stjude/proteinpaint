@@ -1,6 +1,7 @@
 import { Menu, addGeneSearchbox } from '#dom'
 import type { AppApi } from '#rx'
 import { TermTypes } from '#shared/terms.js'
+import { getSCGEunit } from '#tw/singleCellGeneExpression'
 
 export class SearchHandler {
 	callback?: (arg0: { gene: string; name: string; type: string }) => void
@@ -22,7 +23,7 @@ export class SearchHandler {
 
 	async selectGene(gene: string | undefined) {
 		if (!gene) throw new Error('No gene selected')
-		const unit = this.app!.vocabApi.termdbConfig.queries.singleCell.geneExpression?.unit || 'Gene Expression'
+		const unit = getSCGEunit(this.app!.vocabApi)
 		const name = `${gene} ${unit}`
 		this.callback!({ gene, name, type: TermTypes.SINGLECELL_GENE_EXPRESSION })
 	}
