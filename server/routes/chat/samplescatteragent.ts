@@ -105,7 +105,9 @@ export async function extract_samplescatter_terms_from_query(
 		test_response.type = 'plot'
 		return test_response
 	} else {
-		return validate_samplescatter_response(response, common_genes, dataset_json, ds)
+		const result = validate_samplescatter_response(response, common_genes, dataset_json, ds)
+		console.log('Samplescatter agent result:', JSON.stringify(result))
+		return result
 	}
 }
 

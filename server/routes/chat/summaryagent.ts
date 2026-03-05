@@ -103,7 +103,9 @@ export async function extract_summary_terms(
 		return test_response
 	} else {
 		// In actual production (inside PP) send LLM output for validation
-		return validate_summary_response(response, common_genes, ds)
+		const result = validate_summary_response(response, common_genes, ds)
+		console.log('Summary agent result:', JSON.stringify(result))
+		return result
 	}
 }
 

@@ -168,5 +168,6 @@ export async function run_chat_pipeline(
 		// Should not happen
 		ai_output_json = { type: 'text', text: 'Unknown classification type' }
 	}
+	mayLog('Final AI output JSON:', JSON.stringify(ai_output_json))
 	return ai_output_json
 }

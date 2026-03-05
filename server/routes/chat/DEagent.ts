@@ -91,7 +91,9 @@ export async function extract_DE_search_terms_from_query(
 			return test_response
 		} else {
 			// In actual production (inside PP) send LLM output for validation
-			return await validate_DE_response(response, ds, dataset_db_output.db_rows)
+			const result = await validate_DE_response(response, ds, dataset_db_output.db_rows)
+			console.log('DE agent result:', JSON.stringify(result))
+			return result
 		}
 	} else {
 		return { type: 'text', text: 'Differential gene expression not supported for this dataset' }

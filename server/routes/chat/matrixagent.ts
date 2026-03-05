@@ -164,7 +164,9 @@ export async function extract_matrix_search_terms_from_query(
 		test_response.type = 'plot'
 		return test_response
 	} else {
-		return validate_matrix_response(response, common_genes, ds, activeConfigs)
+		const result = validate_matrix_response(response, common_genes, ds, activeConfigs)
+		console.log('Matrix agent result:', JSON.stringify(result))
+		return result
 	}
 }
 
