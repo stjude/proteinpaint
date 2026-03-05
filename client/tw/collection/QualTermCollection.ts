@@ -40,12 +40,9 @@ export class QualTermCollection {
 		if (!term.propsByTermId) term.propsByTermId = tc.propsByTermId
 		if (!term.termlst) term.termlst = tc.termlst
 		term.memberType = 'categorical'
-		if (!term.categoryKeys && tc.categoryKeys) {
-			term.categoryKeys = (tc.categoryKeys as Array<string | CategoryKey>).map(k =>
-				typeof k === 'string' ? { key: k, shown: true } : k
-			)
-		} else if (term.categoryKeys) {
-			term.categoryKeys = (term.categoryKeys as Array<string | CategoryKey>).map(k =>
+		const rawCategoryKeys = term.categoryKeys ?? tc.categoryKeys
+		if (rawCategoryKeys) {
+			term.categoryKeys = (rawCategoryKeys as Array<string | CategoryKey>).map(k =>
 				typeof k === 'string' ? { key: k, shown: true } : k
 			)
 		}

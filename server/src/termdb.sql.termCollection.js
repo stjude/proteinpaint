@@ -30,7 +30,12 @@ export const termCollectionCategorical = {
 		const ids = getTermIds(tw.term)
 		const rawKeys = tw.q?.categoryKeys || tw.term.categoryKeys
 		const categoryKeys = rawKeys
-			?.filter(k => typeof k === 'string' || k.shown)
+			?.filter(k => {
+				if (typeof k === 'string') return true
+				if (!k || typeof k !== 'object') return false
+				if (!k.shown) return false
+				return typeof k.key === 'string' && k.key.length > 0
+			})
 			.map(k => (typeof k === 'string' ? k : k.key))
 		values.push(...ids)
 		if (categoryKeys?.length) values.push(...categoryKeys)
