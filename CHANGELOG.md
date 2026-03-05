@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 
 
+## Unreleased
+
+Fixes:
+- supply an abort signal to the descriptive stats data request in barchart
+- limit pre-emptive aborts of previous actions in app.dispatch() so that unaffected plots may continue rendering
+
+
 ## 2.170.22
 
 Fixes:
