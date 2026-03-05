@@ -124,6 +124,16 @@ export class AppApi {
 				}
 			}
 
+			// IMPORTANT: Since a dispatched action does not necessarily affect all plot,
+			// there should not be any guard here to detect stale sequence ID. The app
+			// must continue dispatching actions that may update a specific plot or component,
+			// and allow a subsequent action to also update another component without canceling
+			// the previous action. This allows plots to continue rendering without unnecessarily
+			// aborting for unrelated dispatched actions. The main exception to these are changes
+			// to global filter and cohort (action.type == 'filter_replace' || 'cohort_set'), which
+			// are assumed to affect all plots and components - there excemptions are specified
+			// in this.#App.skipPrevActionAbort().
+
 			// expect store.write() to be debounced and handle rapid succession of dispatches
 			// replace app.state if there is an action
 			if (action) self.state = await self.store.write(action)
