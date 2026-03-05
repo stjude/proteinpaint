@@ -22,9 +22,19 @@ export default function setRoutes(app, basepath, genomes) {
 		for (const genome of Object.values(genomes)) {
 			for (const ds of Object.values((genome as any).datasets)) {
 				if ((ds as any)?.queries?.chat) {
-					console.log('Testing chatbot for dataset: ' + (ds as any).label)
+					console.log('\x1b[32m%s\x1b[0m', 'Testing chatbot for dataset: ' + (ds as any).label)
 					const num_errors = await test_chatbot_by_dataset(ds)
-					console.log('Tests complete for ' + (ds as any).label + '. Number of failed prompts: ' + num_errors)
+					if (num_errors == 0) {
+						console.log(
+							'\x1b[32m%s\x1b[0m',
+							'Tests complete for ' + (ds as any).label + '. Number of failed prompts: ' + num_errors
+						) // Show in green if all tests passed
+					} else {
+						console.log(
+							'\x1b[31m%s\x1b[0m',
+							'Tests complete for ' + (ds as any).label + '. Number of failed prompts: ' + num_errors
+						) // Show in red if any of the tests failed
+					}
 				}
 			}
 		}
@@ -58,6 +68,7 @@ export async function test_chatbot_by_dataset(ds: any): Promise<number> {
 					assert.deepStrictEqual(test_result.html, test_data.PPoutput.html)
 				} catch (err) {
 					console.log(
+						'\x1b[31m%s\x1b[0m',
 						'Prompt: ' +
 							test_data.question +
 							' Invalid terms do not match (but probably ok): Actual LLM response: ' +
@@ -86,6 +97,7 @@ export async function test_chatbot_by_dataset(ds: any): Promise<number> {
 						)
 					} else {
 						console.log(
+							'\x1b[31m%s\x1b[0m',
 							'Prompt: ' +
 								test_data.question +
 								' Unknown error : Actual LLM response: ' +
@@ -104,6 +116,7 @@ export async function test_chatbot_by_dataset(ds: any): Promise<number> {
 						assert.deepStrictEqual(test_result.plot, test_data.PPoutput.plot)
 					} catch (err) {
 						console.log(
+							'\x1b[31m%s\x1b[0m',
 							'Prompt: ' +
 								test_data.question +
 								' ' +
@@ -119,6 +132,7 @@ export async function test_chatbot_by_dataset(ds: any): Promise<number> {
 					}
 				} else {
 					console.log(
+						'\x1b[31m%s\x1b[0m',
 						'Prompt: ' +
 							test_data.question +
 							' plot type does not match: Actual LLM plot: ' +
@@ -133,6 +147,7 @@ export async function test_chatbot_by_dataset(ds: any): Promise<number> {
 					assert.deepStrictEqual(test_result.plot, test_data.PPoutput.plot)
 				} catch (err) {
 					console.log(
+						'\x1b[31m%s\x1b[0m',
 						'Prompt: ' +
 							test_data.question +
 							' Resource agent output did not match: Actual LLM response: ' +
@@ -145,11 +160,12 @@ export async function test_chatbot_by_dataset(ds: any): Promise<number> {
 					num_errors += 1
 				}
 			} else {
-				console.log('Unknown type for prompt:' + test_data.question)
+				console.log('\x1b[31m%s\x1b[0m', 'Unknown type for prompt:' + test_data.question)
 				num_errors += 1
 			}
 		} else {
 			console.log(
+				'\x1b[31m%s\x1b[0m',
 				'Prompt: ' +
 					test_data.question +
 					' Classification type error: Actual LLM response: ' +
