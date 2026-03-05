@@ -1,4 +1,3 @@
-// Test prettier
 // from the proteinpaint/server dir, run via
 // $ npx tsx watch src/app.ts
 //
@@ -127,7 +126,6 @@ and thereby avoid unnecessary endless restarts of an invalid server
 init with bad config, data, and/or code
 */
 
-		//Test comment.
 		const msg = err?.stack || err
 		if (serverconfig.slackWebhookUrl) {
 			const url = serverconfig.URL

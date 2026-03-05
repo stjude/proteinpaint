@@ -1,4 +1,3 @@
-// Test prettier
 import type { LlmConfig, DbRows } from '#types'
 import { FILTER_TERM_DEFINITIONS, validate_filter } from './filter.ts'
 import {
@@ -62,7 +61,7 @@ export async function extract_samplescatter_terms_from_query(
 			...FILTER_TERM_DEFINITIONS
 		}
 	}
-	//Test commit
+
 	const common_genes = extractGenesFromPrompt(prompt, genes_list)
 	const matchedGenesets = extractGenesetsFromPrompt(prompt, genesetNames)
 

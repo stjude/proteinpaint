@@ -1,4 +1,3 @@
-// Test prettier
 import type { LlmConfig, DbRows } from '#types'
 import { TermTypes } from '#shared/terms.js'
 import { FILTER_TERM_DEFINITIONS, validate_filter } from './filter.ts'

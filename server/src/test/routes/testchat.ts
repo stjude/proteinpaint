@@ -1,4 +1,3 @@
-// Test prettier
 // This file defines a test route for the AI chatbot functionality. It reads test prompts and expected outputs from a JSON file for each dataset, runs the chatbot pipeline on the prompts, and compares the actual outputs to the expected outputs, logging any discrepancies.
 
 // Test URL: http://localhost:3000/testchat
