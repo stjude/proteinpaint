@@ -591,7 +591,7 @@ export class TermdbVocab extends Vocab {
 			if (filter) {
 				body.filter = getNormalRoot(filter)
 			}
-			return await this.dofetch3('/termdb', { headers, body })
+			return await this.dofetch3('/termdb', { headers, body, signal })
 		}
 
 		if (term.category2samplecount) {
@@ -641,7 +641,8 @@ export class TermdbVocab extends Vocab {
 		} catch (e) {
 			// TODO: should handle this error more gracefully, maybe show only in the termsetting pill;
 			//       right now, this alert pops up even when this data or related pill is not visible
-			if (!this.isAbortError(e)) window.alert(e.message || e)
+			// if (!this.isAbortError(e)) window.alert(e.message || e)
+			throw e
 		}
 	}
 

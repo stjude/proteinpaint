@@ -1244,15 +1244,13 @@ tape('avoid race condition', function (test) {
 		matrix.on('postRender.test', null)
 		matrix.Inner.app.vocabApi.origGetAnnotatedSampleData = matrix.Inner.app.vocabApi.getAnnotatedSampleData
 		matrix.Inner.app.vocabApi.getAnnotatedSampleData = async (opts, _refs = {}) => {
-			// set the signal before the sleep(), so that the app's current #abortController will be used;
-			// doing it after sleep() means that a later app.#abortController will be used, which makes
-			// this simulated race condition inaccurate
-			opts.signal = matrix.Inner.app.getAbortSignal()
 			const j = i
 			// immediately set i to zero before sleep(), so that the next dispatch() actually uses the updated i value
 			i = 0
-			await sleep(j)
 			const data = await matrix.Inner.app.vocabApi.origGetAnnotatedSampleData(opts, _refs)
+			// simulate the delay after the network request, so that the component.api.getAbortSignal()
+			// is called before network requests and the signal matches the sequenceId for the component api
+			await sleep(j)
 			return data
 		}
 		// set up the postRender callback before triggering rerenders via app.dispatch
@@ -1275,7 +1273,7 @@ tape('avoid race condition', function (test) {
 			test.end()
 		})
 
-		const responseDelay = 1
+		const responseDelay = 10
 		let i = responseDelay
 		try {
 			const results = await Promise.all([
