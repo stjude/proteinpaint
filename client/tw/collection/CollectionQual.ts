@@ -1,6 +1,6 @@
 import { QualTermCollection } from './QualTermCollection'
 import { TwBase, type TwOpts } from '../TwBase'
-import type { TermCollectionQQual, RawTermCollectionTWQual, TermCollectionTWQual } from '#types'
+import type { CategoryKey, TermCollectionQQual, RawTermCollectionTWQual, TermCollectionTWQual } from '#types'
 
 export class CollectionQual extends TwBase {
 	term: QualTermCollection
@@ -15,7 +15,9 @@ export class CollectionQual extends TwBase {
 			if (!tw.q.mode) tw.q.mode = 'discrete'
 			if (!tw.q.lst) tw.q.lst = tw.term.termIds || []
 		}
-		// categoryKeys live on tw.term.categoryKeys — the server reads them from there, not from tw.q
+		if (!tw.q.categoryKeys && tw.term.categoryKeys?.length) {
+			tw.q.categoryKeys = structuredClone(tw.term.categoryKeys as CategoryKey[])
+		}
 
 		return tw as TermCollectionTWQual
 		//TODO: check tw.q.lst against term.termIds[], should be a subset
