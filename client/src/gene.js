@@ -2,7 +2,14 @@ import * as client from './client'
 import { dofetch3 } from '#common/dofetch'
 import { debounce } from 'debounce'
 
+let tip
+
 export function gene_searchbox(p) {
+	if (!tip) {
+		tip = new Menu({ padding: '' })
+		tip.d.style('z-index', 1000)
+	}
+
 	/*
 make a <input> to search for gene names as you type into it
 matching genes are shown beneath the input
@@ -16,7 +23,7 @@ matching genes are shown beneath the input
 
 if .resultdiv is provided, show gene list inside <div>;
 if .tip is provided, show under <input> to show matches;
-otherwise to show in client.tip
+otherwise to show in tip
 */
 	// for auto gene column, show
 	const input = p.div
@@ -24,7 +31,7 @@ otherwise to show in client.tip
 		.attr('placeholder', 'Search gene')
 		.style('width', p.width || '100px')
 
-	const printdiv = p.resultdiv || (p.tip ? p.tip.d : client.tip.d)
+	const printdiv = p.resultdiv || (p.tip ? p.tip.d : tip.d)
 
 	function fold() {
 		if (p.resultdiv) {
@@ -32,11 +39,11 @@ otherwise to show in client.tip
 		} else if (p.tip) {
 			p.tip.hide()
 		} else {
-			client.tip.hide()
+			tip.hide()
 		}
 	}
 
-	input.on('keyup', (event) => {
+	input.on('keyup', event => {
 		const str = event.target.value
 		if (str.length <= 1) {
 			fold()
@@ -58,7 +65,7 @@ otherwise to show in client.tip
 	function genesearch() {
 		client
 			.dofetch('genelookup', { genome: p.genome, input: input.property('value') })
-			.then((data) => {
+			.then(data => {
 				if (data.error) throw data.error
 				if (!data.hits) throw '.hits[] missing'
 
@@ -67,7 +74,7 @@ otherwise to show in client.tip
 				} else if (p.tip) {
 					p.tip.clear().showunder(input.node())
 				} else {
-					client.tip.clear().showunder(input.node())
+					tip.clear().showunder(input.node())
 				}
 
 				for (const name of data.hits) {
@@ -81,7 +88,7 @@ otherwise to show in client.tip
 						})
 				}
 			})
-			.catch((err) => {
+			.catch(err => {
 				printdiv.append('div').text(err.message || err)
 				if (err.stack) console.log(err.stack)
 			})
@@ -94,15 +101,15 @@ export function findgenemodel_bysymbol(genome, str) {
 		body: {
 			deep: 1,
 			input: str,
-			genome: genome,
-		},
+			genome: genome
+		}
 	})
-		.then((data) => {
+		.then(data => {
 			if (data.error) throw data.error
 			if (!data.gmlst || data.gmlst.length == 0) return null
 			return data.gmlst
 		})
-		.catch((e) => {
+		.catch(e => {
 			throw e
 		})
 }

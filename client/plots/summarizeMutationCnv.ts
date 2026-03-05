@@ -16,13 +16,13 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 	let mutTw, // stores mutation tw. overwritten by gene search
 		cnvTw, // stores cnv tw
 		/* important flag, true/false is set by toggling checkbox
-    - true
-      cnvTw uses same gene as mutTw
-      no submit btn needed. on mutation gene search will create plot
-    - false
-      show both mutation gene search and cnv gene search
-      show submit btn. btn only enabled when both exp and cnv tws are set
-    */
+		- true
+			cnvTw uses same gene as mutTw
+			no submit btn needed. on mutation gene search will create plot
+		- false
+			show both mutation gene search and cnv gene search
+			show submit btn. btn only enabled when both exp and cnv tws are set
+		*/
 		cnvGeneSameAsMut = true,
 		mutSearchPrompt, // <div> under mutation gene search to show prompt
 		cnvTableRow // <tr> of cnv selector. hidden when cnvGeneSameAsMut is true

@@ -16,31 +16,34 @@ import type { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.t
 import { addProjection } from 'ol/proj'
 
 export class MapRenderer {
-	public wSImageLayers: WSImageLayers
-	private viewerClickListener: (
-		coordinateX: number,
-		coordinateY: number,
-		sessionWSImage: SessionWSImage,
-		map: OLMap
-	) => void
-	private sessionWSImage: SessionWSImage
-	private settings: Settings
+	private wSImageLayers: WSImageLayers | undefined
 
-	constructor(
+	private viewerClickListener:
+		| ((coordinateX: number, coordinateY: number, sessionWSImage: SessionWSImage, map: OLMap) => void)
+		| undefined
+
+	private sessionWSImage: SessionWSImage | undefined
+
+	// Allow construction without state so the same instance can be reused.
+	constructor() {}
+
+	public setState(
 		wSImageLayers: WSImageLayers,
 		viewerClickListener: {
 			(coordinateX: number, coordinateY: number, sessionWSImage: SessionWSImage, map: OLMap): void
 		},
-		sessionWSImage: SessionWSImage,
-		settings: Settings
+		sessionWSImage: SessionWSImage
 	) {
 		this.wSImageLayers = wSImageLayers
-		this.sessionWSImage = sessionWSImage
 		this.viewerClickListener = viewerClickListener
-		this.settings = settings
+		this.sessionWSImage = sessionWSImage
 	}
 
 	public render(holder: any, settings: Settings): OLMap {
+		if (!this.wSImageLayers || !this.viewerClickListener || !this.sessionWSImage) {
+			throw new Error('MapRenderer: missing state (wSImageLayers, viewerClickListener, sessionWSImage, or settings)')
+		}
+
 		holder.select('div[id="wsi-viewer"]').remove()
 
 		holder
@@ -48,7 +51,6 @@ export class MapRenderer {
 			.attr('id', 'wsi-viewer')
 			.style('width', settings.imageWidth)
 			.style('height', settings.imageHeight)
-		// .style('display', 'none') // Initially hidden
 
 		const activeImage: TileLayer = this.wSImageLayers.wsimage
 
@@ -94,12 +96,12 @@ export class MapRenderer {
 
 		const hasOverlay = this.wSImageLayers.overlays != null
 
-		this.addControls(map, activeImage, hasOverlay)
+		this.addControls(map, activeImage, hasOverlay, settings)
 
 		return map
 	}
 
-	private addControls(map: OLMap, activeImage: TileLayer, hasOverlay: boolean) {
+	private addControls(map: OLMap, activeImage: TileLayer, hasOverlay: boolean, settings: Settings) {
 		if (hasOverlay) {
 			map.addControl(
 				new LayerSwitcher({
@@ -126,13 +128,14 @@ export class MapRenderer {
 
 			map.on('singleclick', event => {
 				const coordinate = event.coordinate
-				const tileSize = this.settings.tileSize
+				const tileSize = settings.tileSize
 				// Compute upper-left corner of the tile containing the clicked point
 				const tileX = Math.floor(coordinate[0] / tileSize) * tileSize
 				const tileY = Math.floor(-coordinate[1] / tileSize) * tileSize
 
 				// Call the listener with upper-left corner
-				this.viewerClickListener(tileX, tileY, this.sessionWSImage, map)
+				// this.viewerClickListener is defined by setState / constructor
+				this.viewerClickListener!(tileX, tileY, this.sessionWSImage!, map)
 			})
 		}
 

@@ -5,6 +5,7 @@ import FullArcRenderer from '#plots/disco/arc/FullArcRenderer.ts'
 import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
 import { dtsnvindel } from '#shared/common.js'
 import { table2col } from '#dom/table2col'
+import { appendVafBars, hasAnyValidVafEntry } from './vafTooltip.ts'
 
 export default class SnvRenderer implements IRenderer {
 	private svnWidth: number
@@ -71,6 +72,12 @@ export default class SnvRenderer implements IRenderer {
 					const [td1, td2] = table.addRow()
 					td1.text('Occurrence')
 					td2.text(snv.occurrence)
+				}
+
+				if (hasAnyValidVafEntry(arc.vafs)) {
+					const [td1, td2] = table.addRow()
+					td1.text('Read count')
+					appendVafBars(td2, arc.vafs)
 				}
 
 				menu.show(mouseEvent.x, mouseEvent.y)

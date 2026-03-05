@@ -1,37 +1,51 @@
 import { make_radios, renderTable } from '#dom'
 import type { TermValues, BaseValue } from '#types'
-import { dt2label } from '#shared/common.js'
+import { filterInit } from '#filter'
+import { dt2label, dtsnvindel } from '#shared/common.js'
 
 type Config = {
-	wt: boolean
+	genotype: 'variant' | 'wt' | 'nt'
 	values: BaseValue[]
-	mcount?: 'any' | 'single' | 'multiple'
+	mcount?: 'any' | 'single' | 'multiple' | 'all'
+	mafFilter?: any
 }
 
 type Arg = {
 	holder: any // D3 holder where UI is rendered
+	header?: string // UI header
 	values: TermValues // mutation classes of term
 	selectedValues?: BaseValue[] // selected mutation classes, when missing will default to all classes of term
+	genotype?: 'variant' | 'wt' | 'nt' // genotype (variant, wildtype, not tested)
 	dt: number // dt value, rendering of some elements are based on this value
-	mcount?: 'any' | 'single' | 'multiple' // mutation count, when missing will default to 'any'
-	wt?: boolean // whether genotype is wildtype
+	mcount?: 'any' | 'single' | 'multiple' | 'all' // mutation count, when missing will default to 'any'
+	mafFilter?: any // maf filter
 	callback: (config: Config) => void
 }
 
 export function renderVariantConfig(arg: Arg) {
-	const { holder, dt } = arg
-	const wt = arg.wt || false
+	const { holder, dt, mafFilter } = arg
+	const genotype = arg.genotype || 'variant'
+	if (!['variant', 'wt', 'nt'].includes(genotype)) throw 'invalid genotype'
 	const values: BaseValue[] = Object.entries(arg.values).map(([k, v]) => {
 		return { key: k, label: v.label, value: k }
 	})
 	const selectedValues = arg.selectedValues?.length ? arg.selectedValues : values
 	if (!Number.isInteger(dt)) throw 'unexpected dt value'
 	const mcount = arg.mcount || 'any'
+	if (!['any', 'single', 'multiple', 'all'].includes(mcount)) throw 'invalid mcount'
 
 	holder.style('margin', '10px')
 
+	// header
+	if (arg.header) {
+		holder.append('div').style('font-weight', 'bold').style('font-size', '.9em').text(arg.header)
+	}
+
 	// mutant vs. wildtype radio buttons
-	const genotypeDiv = holder.append('div').attr('data-testid', 'sjpp-variantConfig-genotype')
+	const genotypeDiv = holder
+		.append('div')
+		.attr('data-testid', 'sjpp-variantConfig-genotype')
+		.style('margin-top', '10px')
 	genotypeDiv
 		.append('div')
 		.style('display', 'inline-block')
@@ -42,12 +56,13 @@ export function renderVariantConfig(arg: Arg) {
 		holder: genotypeDiv,
 		styles: { display: 'inline-block' },
 		options: [
-			{ label: dt2label[dt], value: 'mutated', checked: !wt },
-			{ label: 'Wildtype', value: 'wildtype', checked: wt }
+			{ label: dt2label[dt], value: 'variant', checked: genotype == 'variant' },
+			{ label: 'Wildtype', value: 'wt', checked: genotype == 'wt' },
+			{ label: 'Not tested', value: 'nt', checked: genotype == 'nt' }
 		],
 		callback: value => {
-			variantsDiv.style('display', value == 'mutated' ? 'block' : 'none')
-			applyBtn.property('disabled', value == 'mutated' && !values.length)
+			variantsDiv.style('display', value == 'variant' ? 'block' : 'none')
+			applyBtn.property('disabled', value == 'variant' && !values.length)
 		}
 	})
 
@@ -55,13 +70,12 @@ export function renderVariantConfig(arg: Arg) {
 	const variantsDiv = holder
 		.append('div')
 		.attr('data-testid', 'sjpp-variantConfig-variant')
-		.style('display', wt ? 'none' : 'block')
+		.style('display', genotype == 'variant' ? 'block' : 'none')
 		.style('margin-top', '10px')
 
 	let countRadio
 	if (values.length) {
-		// variant data present
-		// display data in table
+		// variant data present, display as table
 		variantsDiv.append('div').style('opacity', 0.7).style('margin-bottom', '5px').text(dt2label[dt])
 		const tableDiv = variantsDiv.append('div').style('margin-left', '5px').style('font-size', '0.8rem')
 		const rows: any[] = []
@@ -84,9 +98,9 @@ export function renderVariantConfig(arg: Arg) {
 			showLines: false,
 			selectedRows: selectedIdxs
 		})
-		// mutation count
-		if (dt == 1) {
-			// snvindel, render mutation count radios
+		if (dt == dtsnvindel) {
+			// snvindel
+			// render mutation count radios
 			const countDiv = variantsDiv.append('div').style('margin-top', '5px')
 			countDiv
 				.append('div')
@@ -94,7 +108,7 @@ export function renderVariantConfig(arg: Arg) {
 				.style('margin-right', '5px')
 				.style('opacity', 0.7)
 				.text('Occurrence')
-			const countOpts = [
+			const countOpts: any = [
 				{ label: 'Any', value: 'any' },
 				{ label: 'Single', value: 'single' },
 				{ label: 'Multiple', value: 'multiple' }
@@ -102,12 +116,38 @@ export function renderVariantConfig(arg: Arg) {
 			countOpts.forEach((opt: any) => {
 				if (opt.value == mcount) opt.checked = true
 			})
+			// not displaying the 'all' option by default because its usecase
+			// is currently limited (e.g. for tvs in biallelic/monoallelic groupset)
+			// can display the option by default if needed more broadly
+			if (!countOpts.some((opt: any) => opt.checked)) {
+				if (mcount == 'all') countOpts.push({ label: 'All', value: 'all', checked: true })
+			}
 			countRadio = make_radios({
 				holder: countDiv,
 				styles: { display: 'inline-block' },
 				options: countOpts,
 				callback: () => {}
 			})
+			// render maf filter, if defined
+			if (mafFilter) {
+				const mafDiv = variantsDiv.append('div').style('margin-top', '5px')
+				mafDiv
+					.append('div')
+					.style('display', 'inline-block')
+					.style('margin-right', '5px')
+					.style('opacity', 0.7)
+					.text('MAF filter')
+				filterInit({
+					emptyLabel: '+',
+					holder: mafDiv,
+					header_mode: 'hide_search',
+					isMafFilter: true, // will be handled by "client/filter/tvs.numeric.js"
+					vocab: { terms: mafFilter.terms },
+					callback: async filter => {
+						mafFilter.active = filter
+					}
+				}).main(mafFilter.active)
+			}
 		}
 	} else {
 		// no variant data
@@ -125,15 +165,15 @@ export function renderVariantConfig(arg: Arg) {
 		.style('border-radius', '13px')
 		.style('margin-top', '15px')
 		.style('font-size', '.8em')
-		.property('disabled', !wt && !values.length)
+		.property('disabled', genotype == 'variant' && !values.length)
 		.text('APPLY')
 		.on('click', () => {
 			// get genotype
 			const selectedGenotype: any = genotypeRadio.inputs.nodes().find(r => r.checked)
 			if (!selectedGenotype) throw 'no genotype selected'
-			const config: Config = { values: [], wt: selectedGenotype.value == 'wildtype' }
-			if (!config.wt) {
-				// mutant genotype
+			const config: Config = { values: [], genotype: selectedGenotype.value }
+			if (config.genotype == 'variant') {
+				// variant genotype
 				// get selected mutation classes
 				const checkboxes = variantsDiv.select('tbody').selectAll('input').nodes()
 				const checkedIdxs: number[] = []
@@ -141,11 +181,13 @@ export function renderVariantConfig(arg: Arg) {
 					if (c.checked) checkedIdxs.push(i)
 				}
 				config.values = values.filter((v, i) => checkedIdxs.includes(i))
-				// get mutation count
-				if (countRadio) {
+				if (dt == dtsnvindel) {
+					// get mutation count
 					const selectedCount: any = countRadio.inputs.nodes().find(r => r.checked)
 					if (!selectedCount) throw 'no mutation count selected'
 					config.mcount = selectedCount.value
+					// get maf filter
+					if (mafFilter) config.mafFilter = mafFilter.active
 				} else {
 					config.mcount = 'any'
 				}

@@ -15,12 +15,20 @@ export type AnnotatedSampleData = {
 	samples: AnnotatedSampleEntry[]
 }
 
-type AnnotatedSampleEntry = {
-	[index: string]: {
-		key: number
-		value: number
-	} & {
-		sample: string
-		_ref_: { label: string }
-	}
+type SampleInfo = {
+	/** Sample id */
+	sample: string
+	/** Human readable label */
+	_ref_: { label: string }
+}
+
+type TWKeyValue = {
+	/** Key matching the term.value[idx] */
+	key: string | number
+	/** Actual value of the key */
+	value: string | number
+}
+
+export type AnnotatedSampleEntry = SampleInfo & {
+	[k: string]: TWKeyValue | SampleInfo[keyof SampleInfo]
 }

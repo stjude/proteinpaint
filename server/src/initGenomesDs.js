@@ -13,6 +13,7 @@ import { clinsig } from '../dataset/clinvar.ts'
 // will pass below as argument to mds3_init()
 import { mayMapRefseq2ensembl, flattenCaseByFields, may_add_readdepth, mapGenes2isoforms } from './mds3.gdc.js'
 import { isUsableTerm, joinUrl, ezFetch } from '@sjcrh/proteinpaint-shared'
+import { mayLog } from './helpers.ts'
 
 const dsHelpers = {
 	mayMapRefseq2ensembl,
@@ -23,7 +24,8 @@ const dsHelpers = {
 	joinUrl,
 	ezFetch,
 	xfetch: utils.xfetch,
-	cachedFetch: utils.cachedFetch
+	cachedFetch: utils.cachedFetch,
+	mayLog
 }
 
 export const genomes = {} // { hg19: {...}, ... }
@@ -541,7 +543,11 @@ function mayRetryInit(g, ds, d, e) {
 					)
 				}
 			} else {
-				console.warn(`${gdlabel} init() failed. Retrying... (${ds.init.retryMax - currentRetry} attempts left)`)
+				console.warn(
+					`${gdlabel} init() failed. Retrying in ${Math.round(ds.init.retryDelay / 1000)} second(s) ... (${
+						ds.init.retryMax - currentRetry
+					} attempts left)`
+				)
 				if (currentRetry >= ds.init.retryMax) {
 					clearInterval(interval) // cancel retries
 					const msg = `Max retry attempts for ${gdlabel} reached. Failing with error:`

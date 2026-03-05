@@ -1,13 +1,5 @@
-/** General GRIN2 route
- * This route handles the GRIN2 analysis for any non-GDC data.
- * It processes the incoming data structure via PP's existing filter infrastructure
- * and returns the same structured results as GDC-GRIN2.
- * Specifically it will return a sortable table of top mutated genes and
- * a static PNG manhattan-like plot of the -log10(q-value).
- * We allow the user to customize the snvindel, CNV, and fusion filtering options.
- */
-
 import type { RoutePayload } from './routeApi.js'
+import type { Filter } from '../filter.ts'
 
 /** GRIN2 request */
 export type GRIN2Request = {
@@ -32,7 +24,7 @@ export type GRIN2Request = {
 	/** Lesion type colors */
 	lesionTypeColors?: any
 
-	/** Threshold for q-values to be included as interactive dots */
+	/** Threshold for q-values to be included as interactive dots, have significance indicators in the table and tooltips */
 	qValueThreshold?: number
 
 	/** Log cutoff for Manhattan plot rendering before we scale the y-axis (default: 40).
@@ -40,8 +32,17 @@ export type GRIN2Request = {
 	 * Sending it with request for consistency. In future we will allow user to set scale value or disable scaling if they wish */
 	logCutoff?: number
 
-	/** Filter from existing PP infrastructure */
-	filter?: any // Filter object passed to get_samples(filter, ds)
+	/** Maximum number of points to cap the dynamic y-axis in Manhattan plots */
+	maxCappedPoints: number
+
+	/** Absolute maximum cap for the y-axis in Manhattan plots regardless of its data distribution */
+	hardCap: number
+
+	/** Bin size for Manhattan plot histogram bin size. Used in the calculation of dynamic y-axis capping process (default: 10) */
+	binSize: number
+
+	/** pp filter */
+	filter?: Filter
 
 	/** Options for filtering SNV/indel file content */
 	snvindelOptions?: {
@@ -57,6 +58,8 @@ export type GRIN2Request = {
 		fivePrimeFlankSize?: number
 		/** Number of bases to include as 3' flank around the mutation position */
 		threePrimeFlankSize?: number
+		/** MAF filter object (tvslst) to filter mutations by allele frequency */
+		mafFilter?: Filter
 	}
 
 	/** Options for filtering CNV file content */
@@ -117,6 +120,7 @@ interface grin2PlotData {
 		}
 	>
 	total_genome_length: number // Gives us the full length of the genome so we can easily append x buffer space when building d3 x-axis
+	has_capped_points: boolean // Whether we have capped the y-axis due to q-values exceeding the cap
 }
 
 /**
@@ -147,47 +151,13 @@ export type GRIN2Response = {
 			}>
 		>
 	}
-	/** Summary statistics */
-	totalGenes?: number
-	showingTop?: number
-	/** Timing info for the analysis */
-	timing?: {
-		/** Time taken to run data processing */
-		processingTime: string
-		/** Time taken to run GRIN2 processing */
-		grin2Time: string
-		/** Time taken to run Manhattan plot generation */
-		plottingTime: string
-		/** Total time taken for the entire run */
-		totalTime: string
-	}
-	/** Detailed processing summary */
-	processingSummary?: {
-		totalSamples?: number
-		processedSamples?: number
-		failedSamples?: number
-		failedFiles?: Array<{
-			sampleName: string
-			filePath: string
-			error: string
+
+	stats?: {
+		lst: Array<{
+			name: string
+			rows: string[][]
 		}>
-		totalLesions?: number
-		processedLesions?: number
-		unprocessedSamples?: number
-		lesionCounts?: {
-			total?: number
-			byType?: Record<
-				string, // Our key is the GRIN2 lesion type
-				{
-					count: number
-					capped: boolean
-					samples: number
-				}
-			>
-		}
 	}
-	/** Cache file name for storing GRIN2 results */
-	cacheFileName?: string
 }
 
 /**

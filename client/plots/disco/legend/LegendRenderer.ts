@@ -1,10 +1,9 @@
 import type Legend from './Legend.ts'
-import svgLegend from '#dom/svg.legend'
+import { svgLegend, getMaxLabelWidth } from '#dom'
 import LegendJSONMapper from './LegendJSONMapper.ts'
 import { dtcnv } from '#shared/common.js'
-import { renderCnvSourceLegend } from '../cnv/renderCnvSourceLegend.ts'
+import { renderCnvSourceLegend, type AlternativeCnvSet } from '../cnv/renderCnvSourceLegend.ts'
 import type ViewModel from '../viewmodel/ViewModel.ts'
-import type { AlternativeCnvSet } from '../cnv/renderCnvSourceLegend.ts'
 
 export default class LegendRenderer {
 	private legendJSONMapper: LegendJSONMapper
@@ -29,14 +28,14 @@ export default class LegendRenderer {
 			rectFillFxn: d => d.color,
 			iconStroke: '#aaa'
 		})
+		const data = this.legendJSONMapper.map(legend)
 
-		// TODO calculate legend dimensions
+		const legendTitles = data.map(d => d.name.trim())
+		const maxLabelWidth = getMaxLabelWidth(holder, legendTitles)
 
 		const d = {
-			xOffset: xOffset
+			xOffset: maxLabelWidth + xOffset
 		}
-
-		const data = this.legendJSONMapper.map(legend)
 
 		svgLegendRenderer(data, {
 			settings: Object.assign(

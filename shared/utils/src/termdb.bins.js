@@ -1,6 +1,6 @@
 import { format } from 'd3-format'
 import { getColors } from './common.js'
-import { isStrictNumeric, convertUnits } from './helpers.js'
+import { isNumeric, isStrictNumeric, convertUnits } from './helpers.js'
 
 export default function validate_bins(binconfig) {
 	// Number.isFinite('1') returns false, which is desired
@@ -126,6 +126,7 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
   }
 */
 	const bc = binconfig
+
 	validate_bins(bc)
 	if (bc.lst) {
 		const k2c = getColors(bc.lst.length) //to color bins
@@ -139,7 +140,6 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 	bc.results = { summary }
 	if (!bc.binLabelFormatter) bc.binLabelFormatter = getNumDecimalsFormatter(bc)
 
-	const orderedLabels = []
 	// round the min and max values for use as bin start and stop
 	// in the first and last bins, respectively
 	const minFloor = Math.floor(summary.min * 100) / 100

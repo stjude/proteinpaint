@@ -53,6 +53,7 @@ export type ScatterChart = {
 	svg?: any
 	chartDiv?: any
 	mainG?: any
+	regressionG?: any
 	xAxis?: any
 	axisBottom?: any
 	yAxis?: any
@@ -92,6 +93,4 @@ export type ScatterChart = {
 	shapeLegend: Map<string, ShapeLegendItem>
 	axisG?: any
 	labelsG?: any
-	/* Sum of samples grouped by month for the events chart*/
-	events?: any[]
 }

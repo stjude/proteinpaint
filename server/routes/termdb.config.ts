@@ -113,14 +113,14 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	if (tdb.survival) c.survival = tdb.survival
 	if (tdb.regression) c.regression = tdb.regression
 	if (tdb.uiLabels) c.uiLabels = tdb.uiLabels
-	if (tdb.numericTermCollections) c.numericTermCollections = tdb.numericTermCollections
+	// termCollections (with type: 'numeric' | 'categorical') replace legacy numericTermCollections
+	if (tdb.termCollections) c.termCollections = tdb.termCollections
 	if (ds.assayAvailability) c.assayAvailability = ds.assayAvailability
 	if (ds.cohort.correlationVolcano) c.correlationVolcano = ds.cohort.correlationVolcano
 	if (ds.cohort.boxplots) c.boxplots = ds.cohort.boxplots
 	if (tdb.maxGeneVariantGeneSetSize) c.maxGeneVariantGeneSetSize = tdb.maxGeneVariantGeneSetSize
 	if (tdb.maxAnnoTermsPerClientRequest) c.maxAnnoTermsPerClientRequest = tdb.maxAnnoTermsPerClientRequest
 	addRestrictAncestries(c, tdb)
-	addScatterplots(c, ds)
 	addMatrixplots(c, ds)
 	addMutationSignatureplots(c, ds)
 	addNonDictionaryQueries(c, ds, genome)
@@ -135,6 +135,9 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	// note this may be undefined if there is no ds.cohort.termdb.getAdditionalFilter
 	c.authFilter = req.query.filter
 
+	// continue to add contents that may require auth
+	addScatterplots(c, ds, info)
+
 	res.send({ termdbConfig: c })
 }
 
@@ -144,9 +147,13 @@ function addRestrictAncestries(c, tdb) {
 		return { name: i.name, tvs: i.tvs, PCcount: i.PCcount }
 	})
 }
-function addScatterplots(c, ds) {
+function addScatterplots(c, ds, info) {
 	if (!ds.cohort.scatterplots) return
 	// this dataset has premade scatterplots. reveal to client
+	if (ds.cohort.scatterplots.get) {
+		c.scatterplots = ds.cohort.scatterplots.get(info?.clientAuthResult)
+		return
+	}
 	c.scatterplots = ds.cohort.scatterplots.plots.map(p => {
 		return {
 			name: p.name,
@@ -171,11 +178,11 @@ function addMatrixplots(c, ds) {
 }
 
 function addMutationSignatureplots(c, ds) {
-	const mutationSignatureplots = ds.cohort.termdb.numericTermCollections?.find(
-		ntc => ntc.name == 'Mutation Signature'
+	// Mutation Signature plots require a numeric term collection
+	const mutationSignatureplots = ds.cohort.termdb.termCollections?.find(
+		tc => tc.name == 'Mutation Signature' && tc.type === 'numeric'
 	)?.plots
 	if (!mutationSignatureplots) return
-	// this dataset has premade mutationSignatureplots. reveal mutationSignature plot names to client
 	c.mutationSignatureplots = mutationSignatureplots.map(p => {
 		return { name: p.name }
 	})
@@ -200,7 +207,8 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 			// some of the stuff here are to provide user-selectable choices
 			// e.g. computing methods, info fields, populations.
 			details: q.snvindel.details,
-			populations: q.snvindel.populations
+			populations: q.snvindel.populations,
+			mafFilter: q.snvindel.mafFilter
 		}
 		if (q.snvindel.byisoform?.processTwsInOneQuery) q2.snvindel.byisoform = { processTwsInOneQuery: true } // quick fix; may revise later
 	}
@@ -244,6 +252,9 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 	}
 	if (q.geneExpression) {
 		q2.geneExpression = { unit: q.geneExpression.unit }
+	}
+	if (q.dnaMethylation) {
+		q2.dnaMethylation = { unit: q.dnaMethylation.unit }
 	}
 	if (q.ld) {
 		q2.ld = structuredClone(q.ld)
@@ -327,7 +338,8 @@ function getAllowedTermTypes(ds) {
 	if (ds.queries?.geneExpression) typeSet.add(TermTypes.GENE_EXPRESSION)
 	if (ds.queries?.metaboliteIntensity) typeSet.add(TermTypes.METABOLITE_INTENSITY)
 	if (ds.queries?.ssGSEA) typeSet.add(TermTypes.SSGSEA)
-	if (ds.cohort.termdb.numericTermCollections) typeSet.add('termCollection')
+	if (ds.queries?.dnaMethylation) typeSet.add(TermTypes.DNA_METHYLATION)
+	if (ds.cohort.termdb.termCollections?.length) typeSet.add('termCollection')
 	return [...typeSet]
 }
 

@@ -1,54 +1,58 @@
-import { mayHydrateDictTwLst } from '#termsetting'
-import { renderTable } from '../../dom/table.ts'
+import { renderTable } from '#dom'
 
 export class SearchHandler {
 	callback: any
 	app: any
 
 	async init(opts) {
+		// opts.details is the term object for term collection
 		this.callback = opts.callback
 		this.app = opts.app
-
-		const terms: any[] = []
-		const toBeHydrated: any[] = []
-		for (const id of opts.details.termIds) {
-			toBeHydrated.push({ id })
-		}
-		if (toBeHydrated.length) {
-			await mayHydrateDictTwLst(toBeHydrated, opts.app.vocabApi)
-			terms.push(...toBeHydrated.map(tw => tw.term))
-		}
-
-		const termlst: any[] = []
-		const rows: any[] = []
-
-		for (const term of terms) {
-			rows.push([{ value: term.name }])
-		}
-
-		const selectedRows: number[] = terms
-			.map((term, index) => (termlst.find(t => t.id === term.id) ? index : -1))
-			.filter(index => index !== -1)
-
-		const columns: any = [{ label: 'Terms' }]
 
 		opts.holder.style('display', '')
 		const tableDiv = opts.holder.append('div')
 
+		const termlst = opts.details.termlst ?? []
 		renderTable({
-			rows,
-			columns,
+			columns: [{ label: 'Terms' }],
+			rows: termlst.map(t => {
+				return [{ value: t.name }]
+			}),
 			div: tableDiv,
 			maxWidth: '30vw',
 			maxHeight: '40vh',
-			noButtonCallback: () => {},
+			noButtonCallback: () => {}, // FIXME to supply a real callback
 			striped: false,
 			showHeader: true, //false,
-			selectedRows,
+			selectAll: true,
 			columnButtons: undefined, //Leave until table.js is typed
 			buttons: undefined
 		})
 
+		let categoryTable
+		if (opts.details.categoryKeys) {
+			const categoryDiv = opts.holder.append('div')
+			const values = opts.details.termlst[0].values || {}
+			categoryDiv.append('div').style('margin', '5px').style('padding', '5px').html('Category keys')
+			categoryTable = categoryDiv.append('div')
+			renderTable({
+				columns: [{ label: 'Terms' }],
+				rows: opts.details.categoryKeys.map(key => {
+					return [{ value: values[key].label }]
+				}),
+				div: categoryTable,
+				maxWidth: '30vw',
+				maxHeight: '40vh',
+				noButtonCallback: () => {}, // FIXME to supply a real callback
+				striped: false,
+				showHeader: true, //false,
+				selectAll: true,
+				columnButtons: undefined, //Leave until table.js is typed
+				buttons: undefined
+			})
+		}
+
+		// FIXME backward code!!!!
 		opts.holder
 			.append('div')
 			.style('float', 'right')
@@ -58,26 +62,44 @@ export class SearchHandler {
 			.text('Select')
 			.on('click', () => {
 				const trs = tableDiv.select('table').select('tbody').node().querySelectorAll('tr')
-				const termlst = terms.filter((term, i) => {
-					const checked = trs[i].querySelectorAll('td')[1].querySelector('input')?.checked
+				const selectedTermlst = termlst.filter((term, i) => {
+					const checked = trs[i]?.querySelectorAll('td')[1]?.querySelector('input')?.checked
 					return checked === true
 				})
-				const termNames = termlst.map((o: any) => o.id).join(',')
-				const termNamesLabel = `${name} (${termNames})`
+				if (selectedTermlst.length === 0) {
+					alert('Please select at least one term')
+					return
+				}
+				const termNames = selectedTermlst.map((o: any) => o.id).join(',')
+				const termNamesLabel = `${opts.details.name} (${termNames})`
 				const termName = termNamesLabel.length <= 26 ? termNamesLabel : termNamesLabel.slice(0, 26) + '...'
 				const propsByTermId = {}
 				if (opts.details.propsByTermId) {
 					// extract properties (like color, etc) for the selected terms
-					for (const t of termlst) {
+					for (const t of selectedTermlst) {
 						if (opts.details.propsByTermId[t.id]) propsByTermId[t.id] = opts.details.propsByTermId[t.id]
 					}
+				}
+
+
+				let categoryKeys
+				if (categoryTable) {
+					const trs = categoryTable.select('table').select('tbody').node().querySelectorAll('tr')
+					categoryKeys = opts.details.categoryKeys.filter((term, i) => {
+						const checked = trs[i].querySelectorAll('td')[1].querySelector('input')?.checked
+						return checked === true
+					})
 				}
 
 				opts.callback({
 					collectionId: opts.details.name,
 					type: 'termCollection',
-					termlst,
+					termIds: selectedTermlst.map(i => i.id),
+					termlst: selectedTermlst,
 					name: termName,
+					// memberType = ds.cohort.termdb.termCollections[].type for client code
+					memberType: opts.details.memberType || opts.details.type,
+					categoryKeys,
 					isleaf: true,
 					propsByTermId
 				})

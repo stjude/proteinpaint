@@ -19,33 +19,33 @@ import {
 	getCategoryGroupsetting,
 	getGenesetMutTw,
 	getGeneVariantTw,
-	getSsgseaTw
+	getSsgseaTw,
+	getScgeneexpTw
 } from '../../../test/testdata/data.ts'
 
-/*
-Tests:
-	Render TermdbTest scatter plot and open survival and summary
-	Render TermdbTest scatter plot adding age as Z to render a 3D plot
-	Render 3D plot with age as Z and showContour set to true to apply contour on 3D plot
-	dynamic scatter of agedx & hrtavg
-	Invalid colorTW.id
-	Invalid colorTW.term
-	Invalid plot name
-	Test legend
-	Render color groups
-	Change symbol and reference size from menu
-	Change chart width and height from menu
-	Check/uncheck Show axes from menu
-	Click zoom in, zoom out, and reset buttons
-	Groups and group menus function
-	colorTW=geneVariant with no groupsetting
-	colorTW=geneVariant gene list
-	colorTW=ssgsea
-	singlecell
-
-todo
-	dynamic scatter of two gene exp
-	dynamic scatter of two ssgsea
+/* Tests:
+Render TermdbTest scatter plot and open survival and summary
+Render TermdbTest scatter plot adding age as Z to render a 3D plot
+Render 3D plot with age as Z and showContour set to true to apply contour on 3D plot
+dynamic scatter of agedx & hrtavg
+dynamic scatter of 2-gene expression
+dynamic scatter of 2-ssgsea
+dynamic scatter of 2-dnameth
+Invalid colorTW.id
+Invalid colorTW.term
+Invalid plot name
+Test legend
+Render color groups
+Change symbol and reference size from menu
+Change chart width and height from menu
+Check/uncheck Show axes from menu
+Click zoom in, zoom out, and reset buttons
+Groups and group menus function
+colorTW=geneVariant with no groupsetting
+colorTW=geneVariant gene list
+colorTW=ssgsea
+singlecell map
+singlecell geneexp
 */
 
 const runpp = helpers.getRunPp('mass', {
@@ -96,9 +96,53 @@ const stateDynamicScatter = {
 		{
 			chartType: 'sampleScatter',
 			colorTW: { id: 'diaggrp' },
-			name: 'TermdbTest TSNE',
 			term: { id: 'agedx', q: { mode: 'continuous' } },
 			term2: { id: 'hrtavg', q: { mode: 'continuous' } }
+		}
+	]
+}
+const state2geneexp = {
+	plots: [
+		{
+			chartType: 'sampleScatter',
+			colorTW: { id: 'diaggrp' },
+			term: { term: { type: 'geneExpression', gene: 'AKT1' }, q: { mode: 'continuous' } },
+			term2: { term: { type: 'geneExpression', gene: 'TP53' }, q: { mode: 'continuous' } }
+		}
+	]
+}
+const state2ssgsea = {
+	plots: [
+		{
+			chartType: 'sampleScatter',
+			colorTW: { id: 'diaggrp' },
+			term: { term: { type: 'ssGSEA', id: 'HALLMARK_ADIPOGENESIS' }, q: { mode: 'continuous' } },
+			term2: { term: { type: 'ssGSEA', id: 'HALLMARK_ALLOGRAFT_REJECTION' }, q: { mode: 'continuous' } }
+		}
+	]
+}
+const state2dnameth = {
+	plots: [
+		{
+			chartType: 'sampleScatter',
+			colorTW: { id: 'diaggrp' },
+			term: {
+				term: { type: 'dnaMethylation', chr: 'chr17', start: 7673484, stop: 7681953 },
+				q: { mode: 'continuous' }
+			},
+			term2: {
+				term: { type: 'dnaMethylation', chr: 'chr17', start: 7663195, stop: 7671664 },
+				q: { mode: 'continuous' }
+			}
+		}
+	]
+}
+const state2scgeneexp = {
+	plots: [
+		{
+			chartType: 'sampleScatter',
+			term: getScgeneexpTw(),
+			term2: getScgeneexpTw('TP53')
 		}
 	]
 }
@@ -327,7 +371,7 @@ tape('dynamic scatter of agedx & hrtavg', function (test) {
 	test.plan(2)
 	const holder = getHolder()
 	runpp({
-		holder, //Fix for test failing because survival & summary sandboxs are not destroyed.
+		holder,
 		state: stateDynamicScatter,
 		sampleScatter: {
 			callbacks: {
@@ -351,6 +395,51 @@ tape('dynamic scatter of agedx & hrtavg', function (test) {
 			contourG != null,
 			'Scatter should have contour showing the density of points after selecting show contour'
 		)
+		if (test._ok) holder.remove()
+		test.end()
+	}
+})
+tape('dynamic scatter of 2-gene expression', function (test) {
+	const holder = getHolder()
+	runpp({
+		holder,
+		state: state2geneexp,
+		sampleScatter: { callbacks: { 'postRender.test': runTests } }
+	})
+	async function runTests(scatter) {
+		scatter.on('postRender.test', null)
+		const chart = scatter.Inner.model.charts[0]
+		test.true(scatter.Inner.settings.showAxes, 'Dynamic scatter should have axes')
+		if (test._ok) holder.remove()
+		test.end()
+	}
+})
+tape('dynamic scatter of 2-ssgsea', function (test) {
+	const holder = getHolder()
+	runpp({
+		holder,
+		state: state2ssgsea,
+		sampleScatter: { callbacks: { 'postRender.test': runTests } }
+	})
+	async function runTests(scatter) {
+		scatter.on('postRender.test', null)
+		const chart = scatter.Inner.model.charts[0]
+		test.true(scatter.Inner.settings.showAxes, 'Dynamic scatter should have axes')
+		if (test._ok) holder.remove()
+		test.end()
+	}
+})
+tape('dynamic scatter of 2-dnameth', function (test) {
+	const holder = getHolder()
+	runpp({
+		holder,
+		state: state2dnameth,
+		sampleScatter: { callbacks: { 'postRender.test': runTests } }
+	})
+	async function runTests(scatter) {
+		scatter.on('postRender.test', null)
+		const chart = scatter.Inner.model.charts[0]
+		test.true(scatter.Inner.settings.showAxes, 'Dynamic scatter should have axes')
 		if (test._ok) holder.remove()
 		test.end()
 	}
@@ -1162,7 +1251,7 @@ tape('colorTW=geneVariant with gene list', function (test) {
 	})
 	async function runTests(scatter) {
 		const dots = scatter.Inner.view.dom.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
-		const lab = 'TP53, KRAS, AKT1 SNV/indel Mutated (somatic)'
+		const lab = 'TP53, KRAS, AKT1, BCR SNV/indel Mutated (somatic)'
 		test.true(
 			dots.find(d => d.__data__.category == lab),
 			`A dot with category=${lab}`
@@ -1197,7 +1286,7 @@ tape('colorTW=ssgsea', function (test) {
 	}
 })
 
-tape('singlecell', function (test) {
+tape('singlecell map', function (test) {
 	test.timeoutAfter(6000)
 	runpp({
 		state: {
@@ -1212,7 +1301,19 @@ tape('singlecell', function (test) {
 	})
 	async function runTests(scatter) {
 		const dots = scatter.Inner.view.dom.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
-		test.true(dots.length, 'some dots are loaded from singlecell plot')
+		test.true(dots.length, 'some dots are loaded from singlecell map')
+		if (test._ok) scatter.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('singlecell geneexp', function (test) {
+	runpp({
+		state: state2scgeneexp,
+		sampleScatter: { callbacks: { 'postRender.test': runTests } }
+	})
+	async function runTests(scatter) {
+		const dots = scatter.Inner.view.dom.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
+		test.true(dots.length, 'some dots are loaded from singlecell map')
 		if (test._ok) scatter.Inner.app.destroy()
 		test.end()
 	}

@@ -1,11 +1,5 @@
 import type { SvgSvg, SvgG } from '../../types/d3'
-import type {
-	ColorScaleDom,
-	ColorScaleOpts,
-	GradientElem,
-	ColorScaleMenuOpts,
-	NumericInputs
-} from '../types/colorScale'
+import type { ColorScaleDom, ColorScaleOpts, GradientElem, ColorScaleMenuOpts, NumericInputs } from './types.ts'
 import { scaleLinear } from 'd3-scale'
 import { axisBottom, axisTop } from 'd3-axis'
 import { font } from '../../src/client'
@@ -45,7 +39,6 @@ export class ColorScale {
 		this.topTicks = opts.topTicks || false
 
 		this.validateOpts(opts)
-
 		this.tickValues = niceNumLabels(opts.domain)
 
 		let scaleSvg: SvgSvg //
@@ -87,8 +80,17 @@ export class ColorScale {
 	validateOpts(opts: ColorScaleOpts) {
 		if (!opts.holder) throw new Error('No holder provided for #dom/ColorScale.')
 		if (!opts.domain || !opts.domain.length) throw new Error('No data provided for #dom/ColorScale.')
-		if (opts.domain.length != this.colors.length)
+		if (opts.domain.length != this.colors.length) {
 			throw new Error('Data and color arrays for #dom/ColorScale must be the same length')
+		}
+		if (opts.domain.length != new Set(opts.domain).size) {
+			throw new Error('Duplicate values in #dom/ColorScale opts.domain')
+		}
+		/** TODO: It's possible for very small values to calculate the same the
+		 * color for a small range. Need a solution for these edge cases. */
+		// if (this.colors.length != new Set(this.colors).size) {
+		// 	throw new Error('Duplicate values in #dom/ColorScale opts.colors')
+		// }
 		if (opts.labels && (!opts.labels.left || !opts.labels.right))
 			throw new Error('Missing a label for #dom/ColorScale.')
 	}
@@ -98,6 +100,7 @@ export class ColorScale {
 			return scaleSvg
 				.append('text')
 				.text(text)
+				.attr('class', 'sjpp-color-scale-label')
 				.attr('font-size', '.8em')
 				.attr('opacity', 0.6)
 				.attr('text-anchor', 'end')
@@ -138,6 +141,7 @@ export class ColorScale {
 	makeAxis(div: SvgG, id: string) {
 		div
 			.append('rect')
+			.attr('class', 'sjpp-color-scale-rect')
 			.attr('height', this.barheight)
 			.attr('width', this.barwidth)
 			.attr('fill', 'url(#' + id + ')')
@@ -201,7 +205,13 @@ export class ColorScale {
 			}
 		if (opts.numericInputs) {
 			_opts.cutoffMode = opts.numericInputs.cutoffMode || 'auto'
-			if (opts.numericInputs.defaultPercentile) _opts.percentile = opts.numericInputs?.defaultPercentile
+			if (opts.numericInputs.defaultPercentile || opts.numericInputs.percentile) {
+				/** If the color scale is rerendered instead of persisted, tracking the default
+				 * vs the user provided percentile within this component is not possible. Give
+				 * the menu the option to receive both values and use whichever is present. */
+				_opts.defaultPercentile = opts.numericInputs.defaultPercentile ?? opts.numericInputs.percentile
+				_opts.percentile = opts.numericInputs.percentile ?? opts.numericInputs.defaultPercentile
+			}
 			_opts.setNumbersCallback = async obj => {
 				if (!obj) return
 				await opts.numericInputs!.callback(obj)
@@ -262,11 +272,11 @@ export class ColorScale {
 		// const colorInt = interpolateRgb.apply(null, this.colors)
 		// const color = colorInt(x)
 		// if (color) {
-		// 	const colorMap = color.match(/\d+/g)?.map(Number)
-		// 	const [r, g, b] = colorMap.map(v => v / 255)
-		// 	const contrast = 0.2126 * r + 0.7152 * g + 0.0722 * b
-		// 	if (contrast < 0.5) this.dom.label.attr('fill', 'white').attr('stroke', 'black').attr('stroke-width', 0.3)
-		// 	else this.dom.label.attr('fill', 'black').attr('stroke', 'none')
+		//   const colorMap = color.match(/\d+/g)?.map(Number)
+		//   const [r, g, b] = colorMap.map(v => v / 255)
+		//   const contrast = 0.2126 * r + 0.7152 * g + 0.0722 * b
+		//   if (contrast < 0.5) this.dom.label.attr('fill', 'white').attr('stroke', 'black').attr('stroke-width', 0.3)
+		//   else this.dom.label.attr('fill', 'black').attr('stroke', 'none')
 		// }
 	}
 

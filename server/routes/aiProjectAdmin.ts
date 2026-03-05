@@ -82,7 +82,7 @@ function init({ genomes }) {
 				 * from the ad hoc dictionary. */
 				const q = ds.cohort.termdb.q
 				const data = await q.getFilteredImages(query.project.filter)
-				/** TODO: Should send list of images to API */
+				data.selectedImages = await ds.queries?.WSImages?.selectWSIImages()
 				res.status(200).send({
 					status: 'ok',
 					data

@@ -4,6 +4,10 @@ import { filterInit, filterPromptInit, getNormalRoot, excludeFilterByTag } from 
 import type { TermSetting } from '../TermSetting.ts'
 import { vocabInit } from '#termdb/vocabulary'
 import { getDtTermValues } from '#filter/tvs.dt'
+import { getColors } from '#shared/common.js'
+import { rgb } from 'd3-color'
+
+const colorScale = getColors(5)
 
 // self is the termsetting instance
 export function getHandler(self: TermSetting) {
@@ -278,7 +282,7 @@ async function makeGroupUI(self: TermSetting, div) {
 					self.groups.splice(i, 1)
 				} else {
 					// update filter
-					f.lst.forEach(item => (item.tvs.excludeGeneName = true)) // no need to show gene name in filter pill
+					excludeGeneNameFromFilter(f) // no need to show gene name in filter pill
 					group.filter = f
 				}
 				makeGroupUI(self, div)
@@ -297,14 +301,26 @@ function addNewGroup(filter, groups, name?: string) {
 			if (!groups.find(g => g.name === name)) break
 		}
 	}
-	filter.lst.forEach(item => (item.tvs.excludeGeneName = true)) // no need to show gene name in filter pill
+	excludeGeneNameFromFilter(filter) // no need to show gene name in filter pill
 	const newGroup = {
 		name,
 		type: 'filter',
 		filter,
-		color: '#000000'
+		color: rgb(colorScale(groups.length)).formatHex()
 	}
 	groups.push(newGroup)
+}
+
+function excludeGeneNameFromFilter(filter) {
+	for (const item of filter.lst) {
+		if (item.type == 'tvslst') {
+			excludeGeneNameFromFilter(item)
+		} else if (item.type == 'tvs') {
+			item.tvs.excludeGeneName = true
+		} else {
+			throw 'unexpected item.type'
+		}
+	}
 }
 
 function clearGroupset(self) {

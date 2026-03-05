@@ -829,6 +829,7 @@ export class TermdbVocab extends Vocab {
 
 						for (const tw of copies) {
 							const { shortId, gene } = data.refs.byTermId[tw.$id] || frozenEmptyObj // avoid unnecessarily creating placeholder objects
+							const origTw = opts.terms.find(o => o.$id === tw.$id)
 
 							for (const [sampleId, sample] of Object.entries(data.samples)) {
 								// ignore sample objects that are not annotated by other keys besides 'sample'
@@ -864,32 +865,7 @@ export class TermdbVocab extends Vocab {
 									// rehydrate stripped props
 									if (d.$) d[$copyAs[d.$]] = d.key
 
-									if (tw.term.type == 'termCollection') {
-										const termsValue = JSON.parse(d.value)
-										const sum = termsValue.reduce((a, o) => a + Object.values(o)[0], 0)
-
-										let pre_val_sum = 0
-										let numerators_sum = 0
-										const values = []
-										for (const termV of termsValue) {
-											const label = Object.keys(termV)[0]
-											const value = (Object.values(termV)[0] / sum) * 100
-											if (value && tw.q.numerators?.includes(label)) {
-												numerators_sum += value
-											}
-											const color = tw.term.termlst.find(t => t.id === label || t.name == label).color
-											values.push({
-												label,
-												value,
-												pre_val_sum,
-												color
-											})
-											pre_val_sum += value
-										}
-										d.values = values
-										d.numerators_sum = numerators_sum
-										delete d.value
-									} else if (gene && d.values) {
+									if (gene && d.values) {
 										for (const v of d.values) {
 											if (!v.class && v.$) {
 												v.gene = gene
@@ -900,6 +876,7 @@ export class TermdbVocab extends Vocab {
 										}
 									}
 								}
+								if (origTw.transformData) origTw.transformData(d)
 								samples[sampleId][tw.$id] = d
 							}
 
@@ -1002,6 +979,7 @@ export class TermdbVocab extends Vocab {
 			}
 			return data
 		} catch (e) {
+			console.log(e)
 			throw e
 		}
 	}
@@ -1273,6 +1251,7 @@ export class TermdbVocab extends Vocab {
 			}
 		})
 	}
+
 	async getTopVariablyExpressedGenes(arg) {
 		return await this.dofetch3('termdb/topVariablyExpressedGenes', { method: 'GET', body: arg })
 	}
@@ -1517,7 +1496,7 @@ function mayFillInCategory2samplecount4term(tw, lst, termdbConfig) {
 	- missing term.values{}
 	- blank term.values{}
 	*/
-	if (termdbConfig.alwaysRefillCategoricalTermValues || !tw.term.values || Object.keys(tw.term.values).length == 0) {
+	if (termdbConfig?.alwaysRefillCategoricalTermValues || !tw.term.values || Object.keys(tw.term.values).length == 0) {
 		tw.term.values = k2label
 	}
 }
@@ -1533,7 +1512,8 @@ function getTerms2update(lst, count) {
 		n = lst.length
 	while (i < n) {
 		i++
-		const tw = lst.shift() // first of lst[]
+		const _tw = lst.shift() // first of lst[]
+		const tw = _tw.getMinCopy?.() || _tw
 		if (
 			copies.find(
 				c =>

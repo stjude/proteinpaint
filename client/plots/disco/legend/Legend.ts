@@ -4,6 +4,11 @@ import type LohLegend from '#plots/disco/loh/LohLegend.ts'
 import type { CnvType } from '#plots/disco/cnv/CnvType.ts'
 import type { DiscoInteractions } from '../interactions/DiscoInteractions'
 
+export type MutationWaterfallLegend = {
+	color: string
+	onColorChange: (color: string) => void
+}
+
 export default class Legend {
 	snvTitle: string
 	snvClassMap: Map<string, SnvLegendElement>
@@ -22,6 +27,8 @@ export default class Legend {
 
 	discoInteractions: DiscoInteractions
 
+	mutationWaterfallLegend?: MutationWaterfallLegend
+
 	constructor(
 		snvTitle: string,
 		cnvTitle: string,
@@ -34,7 +41,8 @@ export default class Legend {
 		cnvRenderingType: string,
 		fusionLegend: boolean,
 		discoInteractions: DiscoInteractions,
-		lohLegend?: LohLegend
+		lohLegend?: LohLegend,
+		mutationWaterfallLegend?: MutationWaterfallLegend
 	) {
 		this.snvTitle = snvTitle
 		this.cnvTitle = cnvTitle
@@ -48,6 +56,7 @@ export default class Legend {
 		this.lohLegend = lohLegend
 		this.fusionLegend = fusionLegend
 		this.discoInteractions = discoInteractions
+		this.mutationWaterfallLegend = mutationWaterfallLegend
 	}
 
 	legendCount(): number {
@@ -55,7 +64,8 @@ export default class Legend {
 			(this.snvClassMap.size > 0 ? 1 : 0) +
 			(this.cnvClassMap.size > 0 ? 1 : 0) +
 			(this.lohLegend ? 1 : 0) +
-			(this.fusionLegend ? 1 : 0)
+			(this.fusionLegend ? 1 : 0) +
+			(this.mutationWaterfallLegend ? 1 : 0)
 		)
 	}
 }

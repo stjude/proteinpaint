@@ -73,9 +73,11 @@ export class QualitativeBase extends TwBase {
 			copyMerge(tw.q, opts.defaultQ)
 		}
 		// set a default q.mode for clarity, otherwise `mode?: 'binary'` may seem like the only option
-		// NOTE: many code that process categorical tw already assume discrete mode, without checking q.mode,
+		// NOTES:
+		// - many code that process categorical tw already assume discrete mode, without checking q.mode,
 		// except for applications that allow or require q.mode='binary'
-		if (!tw.q.mode) tw.q.mode = 'discrete'
+		// - may convert legacy q.mode
+		if (!tw.q.mode || tw.q.mode == 'values') tw.q.mode = 'discrete'
 
 		// set q.type based on q.mode
 		switch (tw.q.mode) {

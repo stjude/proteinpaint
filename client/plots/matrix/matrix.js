@@ -20,6 +20,8 @@ import { rebaseGroupFilter } from '../../mass/groups.js'
 import { PlotBase } from '#plots/PlotBase.js'
 
 export class Matrix extends PlotBase {
+	configTermKeys = ['termgroups.lst', 'divideBy']
+
 	constructor(opts) {
 		super(opts)
 		this.type = 'matrix'
@@ -162,7 +164,7 @@ export class Matrix extends PlotBase {
 			// do not assign this.termgroups until the data request is complete, to avoid stale value in a race condition;
 			// this termGroups value is directly associated with the submitted data request, and the response will match
 			// the tw.$id's in these term groups
-			const termGroups = getTermGroups(this.config.termgroups, this.app)
+			const termGroups = await getTermGroups(this.config.termgroups, this.app)
 
 			const prevTranspose = this.settings.transpose
 			// controlsRenderer.getSettings() supplies settings that are not tracked in the global app and plot state

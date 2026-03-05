@@ -1,5 +1,5 @@
 import type { SvgG, SvgSvg, Td } from '../../types/d3'
-import type { ColorScaleMenuOpts, CutoffMode } from '../types/colorScale'
+import type { ColorScaleMenuOpts, CutoffMode } from './types'
 import { Menu } from '#dom'
 import { rgb } from 'd3-color'
 
@@ -13,18 +13,20 @@ export class ColorScaleMenu {
 	numInputCallback?: (f?: { cutoffMode: CutoffMode; min?: number; max?: number; percentile?: number }) => void
 	private tip = new Menu({ padding: '2px' })
 	constructor(opts: ColorScaleMenuOpts) {
-		this.domain = opts.domain
+		this.domain = [...opts.domain] // Create a copy of the domain to prevent mutating the original array when changing values in fixed cutoff mode
 		this.colors = opts.colors
 
 		if (opts.setNumbersCallback) {
 			this.numInputCallback = opts.setNumbersCallback
 			this.cutoffMode = opts.cutoffMode
 			this.default = {
-				min: opts.domain[0],
-				max: opts.domain[opts.domain.length - 1]
+				min: this.domain[0],
+				max: this.domain[this.domain.length - 1]
 			}
 			if (opts.percentile) {
-				this.default.percentile = opts.percentile
+				/** Both opts are defined in ColorScale.ts even if
+				 * the caller only passes one. See note in ColorScale.ts. */
+				this.default.percentile = opts.defaultPercentile
 				this.percentile = opts.percentile
 			}
 		}
@@ -36,7 +38,8 @@ export class ColorScaleMenu {
 	renderMenu(scaleSvg: SvgSvg, barG: SvgG) {
 		let showTooltip = true
 		scaleSvg
-			.on('click', () => {
+			.on('click', event => {
+				event.stopPropagation()
 				this.tip.clear().showunder(barG.node())
 				const selectDiv = this.tip.d.append('div').style('padding', '2px')
 				const table = this.tip.d.append('table').style('margin', 'auto')
@@ -48,7 +51,7 @@ export class ColorScaleMenu {
 					.style('opacity', 0.65)
 					.style('font-size', '0.7em')
 					.text('Press ENTER to submit')
-					.style('display', 'none')
+					.style('display', this.cutoffMode != 'auto' ? '' : 'none')
 
 				const percentRow = table
 					.append('tr')
@@ -88,11 +91,11 @@ export class ColorScaleMenu {
 						.property('selected', d => d.selected)
 
 					//Do not allow users to put in negative or > 100 values
-					const percentInput = this.appendValueInput(percentRow, this.percentile || null, 0, 100)
+					const percentInput = this.appendValueInput(percentRow, this.percentile ?? null, 0.1, 100)
 
 					const minMaxInputRow = table.append('tr').style('display', this.cutoffMode == 'fixed' ? 'table-row' : 'none')
-					const minInput = this.appendValueInput(minMaxInputRow.append('td'), 0)
-					this.appendValueInput(minMaxInputRow.append('td'), this.domain.length - 1)
+					const minInput = this.appendValueInput(minMaxInputRow.append('td'), this.domain[0])
+					this.appendValueInput(minMaxInputRow.append('td'), this.domain[this.domain.length - 1])
 
 					select.on('change', async () => {
 						this.cutoffMode = select.node()!.value as CutoffMode
@@ -131,7 +134,8 @@ export class ColorScaleMenu {
 				}
 				showTooltip = false
 			})
-			.on('mouseenter', () => {
+			.on('mouseenter', event => {
+				event.stopPropagation()
 				//Prevent showing the tooltip after user interacts with the color picker
 				if (showTooltip == false) return
 				this.tip.clear().showunder(barG.node())
@@ -169,7 +173,7 @@ export class ColorScaleMenu {
 			.append('input')
 			.attr('type', 'number')
 			.style('width', '60px')
-			.attr('value', this.domain[elemValue] || elemValue)
+			.attr('value', elemValue)
 			.style('padding', '3px')
 
 		//Limit input if necessary
@@ -181,14 +185,24 @@ export class ColorScaleMenu {
 			const valueNode = valueInput.node()
 			if (!valueNode) return
 			const value: number = parseFloat(valueNode.value)
+			if (!Number.isFinite(value)) {
+				/** Prevent the user from entering invalid numbers (e.g. --2, 1e, etc.) */
+				alert('Please enter a valid number')
+				return
+			}
 			const opts: any = {
 				cutoffMode: this.cutoffMode
 			}
 			if (this.cutoffMode == 'fixed') {
-				this.domain[elemValue] = value
+				const idx = elemValue == this.domain[0] ? 0 : this.domain.length - 1
+				this.domain[idx] = value
 				opts.min = this.domain[0]
 				opts.max = this.domain[this.domain.length - 1]
 			} else if (this.cutoffMode == 'percentile') {
+				if (value <= 0 || value >= 100) {
+					alert('Please enter a value between 0 and 100')
+					return
+				}
 				this.percentile = value
 				opts.percentile = value
 			}

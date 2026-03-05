@@ -22,13 +22,48 @@ NOTE: genome/hg38.test.js
                 serverconfig dataset entries in local dev ang github CI
 */
 
+// MAF fields in bcf file, expressed as term objects
+const mafFields = [
+	{
+		id: 'tumor_DNA',
+		name: 'Tumor DNA',
+		parent_id: null,
+		child_ids: ['tumor_DNA_WGS'],
+		isleaf: true,
+		type: 'float',
+		default: true, // indicates default maf term (e.g. will be used by default for making maf filters in predefined groupset)
+		min: 0,
+		max: 1,
+		tvs: {
+			ranges: [
+				{
+					start: 0.1,
+					startinclusive: true,
+					stopunbounded: true
+				}
+			]
+		}
+	}
+]
+
+const mafFilter = {
+	opts: { joinWith: ['and', 'or'] },
+	filter: {
+		type: 'tvslst',
+		join: '',
+		in: true,
+		lst: []
+	},
+	terms: mafFields
+}
+
 // export a function to allow reuse of this dataset without causing conflicts
 // for the different use cases in runtime/tests
 export default function (): Mds3 {
 	return {
 		isMds3: true,
 		isSupportedChartOverride: {
-			runChart: () => true,
+			runChart2: () => true,
 			frequencyChart: () => true,
 			report: () => true,
 			summarizeMutationDiagnosis: () => true
@@ -209,17 +244,27 @@ export default function (): Mds3 {
 				defaultTw4correlationPlot: {
 					disease: { id: 'diaggrp', q: {} }
 				},
-				numericTermCollections: [
+				termCollections: [
 					{
 						name: 'Fake Collection 1',
+						type: 'numeric',
 						termIds: ['agedx', 'a_death', 'a_ndi', 'agelastvisit'],
 						branchIds: ['Demographic Variables', 'Age (years)'],
 						propsByTermId: {}
 					},
 					{
 						name: 'Fake Collection 2',
+						type: 'numeric',
 						termIds: ['a_death', 'a_ndi', 'agelastvisit'],
 						branchIds: ['Demographic Variables', 'Age (years)'],
+						propsByTermId: {}
+					},
+					{
+						name: 'Assay Availability',
+						type: 'categorical',
+						categoryKeys: ['1', '2'],
+						termIds: ['assayavailability_cnv', 'assayavailability_fusion', 'assayavailability_germline'],
+						branchIds: [''],
 						propsByTermId: {}
 					}
 				]
@@ -317,6 +362,7 @@ export default function (): Mds3 {
 						}
 					]
 				},
+				mafFilter,
 				skewerRim: {
 					type: 'format',
 					formatKey: 'origin',
@@ -369,6 +415,10 @@ export default function (): Mds3 {
 			},
 			ssGSEA: {
 				file: 'files/hg38/TermdbTest/rnaseq/TermdbTest.ssgsea.h5'
+			},
+			dnaMethylation: {
+				file: 'files/hg38/TermdbTest/dnaMeth.h5',
+				unit: 'Average Beta Value'
 			},
 			topVariablyExpressedGenes: {
 				src: 'native'

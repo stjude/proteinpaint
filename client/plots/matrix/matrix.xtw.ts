@@ -1,11 +1,11 @@
-import type { ContinuousXTW, DiscreteXTW } from '#tw'
-import { TwRouter } from '#tw'
+import type { ContinuousXTW, DiscreteXTW, CollectionCont, TermCollectionTransformedValue } from '#tw'
+import { TwRouter, routedTermTypes } from '#tw'
 import type { TermWrapper } from '#types'
 import { convertUnits } from '#shared/helpers.js'
 
 let addons
 
-export function getTermGroups(termgroups, app) {
+export async function getTermGroups(termgroups, app) {
 	const termGroups = structuredClone(termgroups)
 	// should only set the addons once, it should not vary from one call to the next
 	if (!addons)
@@ -15,7 +15,8 @@ export function getTermGroups(termgroups, app) {
 			QualTWCustomGS: discreteAddons,
 			NumTWRegularBin: discreteAddons,
 			NumTWCustomBin: discreteAddons,
-			NumTWCont: continuousAddons
+			NumTWCont: continuousAddons,
+			TermCollectionTWCont: TermCollectionContAddons
 		}
 
 	const opts = {
@@ -28,7 +29,12 @@ export function getTermGroups(termgroups, app) {
 		if (tG.type == 'hierCluster') continue
 		const xtwlst: (MatrixTWObj | TermWrapper)[] = []
 		for (const tw of tG.lst) {
-			xtwlst.push(tw.type in opts.addons ? TwRouter.init(tw, opts) : tw)
+			const inputTw = tw.getTw?.() || tw
+			xtwlst.push(
+				inputTw.type in opts.addons && routedTermTypes.has(inputTw.term.type)
+					? await TwRouter.init(inputTw, opts)
+					: inputTw
+			)
 		}
 		tG.lst = xtwlst
 	}
@@ -175,6 +181,71 @@ const continuousAddons: MatrixTWObj = {
 						? t.counts.posMaxHt + twSettings.contBarGap - cell.height
 						: t.counts.posMaxHt + twSettings.contBarGap
 				cell.convertedValueLabel = !vc ? '' : convertUnits(cell.key, vc.fromUnit, vc.toUnit, vc.scaleFactor)
+			}
+		}
+	}
+}
+
+const TermCollectionContAddons = {
+	setCellProps: {
+		value: function (
+			this: CollectionCont,
+			cell: any,
+			anno: any,
+			value: TermCollectionTransformedValue,
+			s: any,
+			t: any,
+			self: any,
+			width: number,
+			height: number,
+			dx: number,
+			_dy: number,
+			_i: number
+		) {
+			//
+			const tw = this.getTw() as CollectionCont
+			//cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
+			const twSpecificSettings = self.config.settings.matrix.twSpecificSettings
+			if (!twSpecificSettings[tw.$id]) twSpecificSettings[tw.$id] = {}
+			const twSettings = twSpecificSettings[tw.$id]
+
+			if (!twSettings.contBarH) twSettings.contBarH = s.barh
+			if (!('gap' in twSettings)) twSettings.contBarGap = 4
+
+			// Determine if value is positive or negative
+			const isNegative = value.value < 0
+
+			if (isNegative) {
+				// For negative values, use the neg scale and position below the zero line
+				// Height is the scale distance from 0 to the value
+				cell.height = t.scales.neg ? t.scales.neg(value.value) - t.scales.neg(0) : 0
+				cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+				// Position negative bars downward from the zero line
+				// Cumulative height is the scale distance from 0 to pre_val_sum
+				const cumulativeHeight = t.scales.neg ? t.scales.neg(value.pre_val_sum) - t.scales.neg(0) : 0
+				cell.y = t.counts.posMaxHt + twSettings.contBarGap + (t.scales.neg ? t.scales.neg(0) : 0) + cumulativeHeight
+			} else {
+				// For positive values, use the pos scale and position above the zero line
+				// Height is the scale distance from 0 to the value
+				cell.height = t.scales.pos(value.value) - t.scales.pos(0)
+				cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+				// Position positive bars upward from the zero line
+				// Cumulative height is the scale distance from 0 to pre_val_sum
+				const cumulativeHeight = t.scales.pos(value.pre_val_sum) - t.scales.pos(0)
+				cell.y = t.counts.posMaxHt + twSettings.contBarGap - t.scales.pos(0) - cumulativeHeight - cell.height
+			}
+
+			cell.label = value.label
+			cell.fill = twSettings[value.label]?.color || value.color || tw.term.propsByTermId?.[value.label]?.color
+			cell.value = value.value
+
+			// return the corresponding legend item data
+			return {
+				ref: t.ref,
+				group: tw.$id,
+				value: value.label,
+				order: -1,
+				entry: { key: value.label, label: value.label, fill: cell.fill }
 			}
 		}
 	}

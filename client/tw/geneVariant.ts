@@ -22,8 +22,8 @@ import { set_hiddenvalues } from '#termsetting'
 import { getWrappedTvslst } from '#filter/filter'
 import { getDtTermValues } from '#filter/tvs.dt'
 import { getChildTerms, addParentTerm } from '../termdb/handlers/geneVariant'
+import { getColors, dtcnv, dtsnvindel, mclass } from '#shared/common.js'
 import { getDtsFromGroups } from '../termsetting/handlers/geneVariant'
-import { getColors, dtcnv, mclass } from '#shared/common.js'
 import { rgb } from 'd3-color'
 
 let colorScale = getColors(3)
@@ -92,16 +92,20 @@ export class GvBase extends TwBase {
 		// add geneVariant term to each child dt term
 		addParentTerm(tw.term)
 
-		{
-			// apply optional ds-level configs for this specific term
-			const c = opts.vocabApi.termdbConfig.queries.cnv
-			if (c && tw.term.name) {
-				//if (c) valid js code but `&& tw.term.name` required to avoid type error
-				// order of overide: 1) do not override existing settings in tw.q{} 2) c.cnvCutoffsByGene[thisGene] 3) default cutoffs in c
-				const { cnvMaxLength, cnvGainCutoff, cnvLossCutoff } = c
-				const defaultCnvCutoff =
-					cnvMaxLength || cnvGainCutoff || cnvLossCutoff ? { cnvMaxLength, cnvGainCutoff, cnvLossCutoff } : {}
-				Object.assign(tw.q, defaultCnvCutoff, c.cnvCutoffsByGene?.[tw.term.name] || {}, tw.q)
+		// apply optional ds-level configs for this specific term
+		const cnv = opts.vocabApi.termdbConfig.queries.cnv
+		if (cnv) {
+			if ('cnvGainCutoff' in cnv || 'cnvLossCutoff' in cnv || 'cnvMaxLength' in cnv) {
+				// continuous cnv data
+				// assign cnv cutoffs to tw.q
+				// priority of cnv cutoffs: tw.q > cnvCutoffsByGene > dsCnvCutoffs
+				const dsCnvCutoffs: { [key: string]: number } = {}
+				if ('cnvGainCutoff' in cnv) dsCnvCutoffs.cnvGainCutoff = cnv.cnvGainCutoff
+				if ('cnvLossCutoff' in cnv) dsCnvCutoffs.cnvLossCutoff = cnv.cnvLossCutoff
+				if ('cnvMaxLength' in cnv) dsCnvCutoffs.cnvMaxLength = cnv.cnvMaxLength
+				const cnvCutoffsByGene = cnv.cnvCutoffsByGene?.[tw.term.name]
+				const defaultCnvCutoffs = cnvCutoffsByGene || dsCnvCutoffs
+				tw.q = Object.assign({}, defaultCnvCutoffs, tw.q)
 			}
 		}
 		/* 
@@ -308,6 +312,8 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 		term.groupsetting.lst.push(groupset)
 	}
 
+	mayGetAllelicGroupset(term, vocabApi)
+
 	// function to get cnv groupset
 	// will route to appropriate function depending on mode of cnv data
 	function getCnvGroupset(groupset, dtTerm, geneName, vocabApi) {
@@ -341,6 +347,7 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 						cnvGainCutoff: cnvDefault.cnvGainCutoff,
 						cnvLossCutoff: -99, // set to very low number to get samples with gain events
 						cnvMaxLength: cnvDefault.cnvMaxLength,
+						fractionOverlap: 0.8,
 						excludeGeneName: true
 					}
 				}
@@ -360,6 +367,7 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 						cnvGainCutoff: 99, // set to very high number to get samples with loss events
 						cnvLossCutoff: cnvDefault.cnvLossCutoff,
 						cnvMaxLength: cnvDefault.cnvMaxLength,
+						fractionOverlap: 0.8,
 						excludeGeneName: true
 					}
 				}
@@ -380,6 +388,7 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 						cnvGainCutoff: cnvDefault.cnvGainCutoff,
 						cnvLossCutoff: cnvDefault.cnvLossCutoff,
 						cnvMaxLength: cnvDefault.cnvMaxLength,
+						fractionOverlap: 0.8,
 						excludeGeneName: true
 					}
 				}
@@ -407,6 +416,7 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 					tvs: {
 						term: dtTerm,
 						values: [{ key: k, label: v.label, value: k }],
+						genotype: 'variant',
 						mcount: 'any',
 						excludeGeneName: true
 					}
@@ -426,7 +436,7 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 					tvs: {
 						term: dtTerm,
 						values: [],
-						wt: true,
+						genotype: 'wt',
 						excludeGeneName: true
 					}
 				}
@@ -442,19 +452,20 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 		// group 1: mutant
 		const grp1Name = `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Mutated (${dtTerm.origin})` : 'Mutated'}`
 		const values = dtTerm.values as TermValues
-		const grp1Filter = getWrappedTvslst([
-			{
-				type: 'tvs',
-				tvs: {
-					term: dtTerm,
-					values: Object.entries(values).map(([k, v]) => {
-						return { key: k, label: v.label, value: k }
-					}),
-					mcount: 'any',
-					excludeGeneName: true
-				}
-			}
-		])
+		const grp1Tvs: any = {
+			term: dtTerm,
+			values: Object.entries(values).map(([k, v]) => {
+				return { key: k, label: v.label, value: k }
+			}),
+			genotype: 'variant',
+			mcount: 'any',
+			excludeGeneName: true
+		}
+		const mafFilter = vocabApi.termdbConfig.queries?.snvindel?.mafFilter
+		if (dtTerm.dt == dtsnvindel && mafFilter) {
+			grp1Tvs.mafFilter = mafFilter.filter
+		}
+		const grp1Filter = getWrappedTvslst([{ type: 'tvs', tvs: grp1Tvs }])
 		groupset.groups.push({
 			name: grp1Name,
 			type: 'filter',
@@ -463,22 +474,180 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 		})
 		// group 2: wildtype
 		const grp2Name = `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Wildtype (${dtTerm.origin})` : 'Wildtype'}`
-		const grp2Filter = getWrappedTvslst([
-			{
-				type: 'tvs',
-				tvs: {
-					term: dtTerm,
-					values: [],
-					wt: true,
-					excludeGeneName: true
-				}
-			}
-		])
+		const grp2Tvs = {
+			term: dtTerm,
+			values: [],
+			genotype: 'wt',
+			excludeGeneName: true
+		}
+		const grp2Filter = getWrappedTvslst([{ type: 'tvs', tvs: grp2Tvs }])
 		groupset.groups.push({
 			name: grp2Name,
 			type: 'filter',
 			filter: grp2Filter,
 			color: mclass['WT'].color
 		})
+	}
+
+	// build predefined groupset for biallelic vs. monoallelic alteration
+	function mayGetAllelicGroupset(term, vocabApi) {
+		if (!isEligibleForAllelicGroupset(term, vocabApi)) {
+			// term and/or dataset is not eligible for building the groupset
+			return
+		}
+
+		// can build biallelic vs. monoallelic groupset
+		const snvIndelTerm = term.childTerms.find(t => t.dt == dtsnvindel)
+		const cnvTerm = term.childTerms.find(t => t.dt == dtcnv)
+
+		// homozygous deletion tvs
+		const homoDel = {
+			type: 'tvs',
+			tvs: {
+				term: cnvTerm,
+				values: [],
+				continuousCnv: true,
+				cnvGainCutoff: 99, // set to very high number to get samples with loss events
+				cnvLossCutoff: -1,
+				cnvMaxLength: null,
+				excludeGeneName: true
+			}
+		}
+		// heterozygous deletion tvs
+		const hetDel = {
+			type: 'tvs',
+			tvs: {
+				term: cnvTerm,
+				values: [],
+				continuousCnv: true,
+				cnvGainCutoff: 99, // set to very high number to get samples with loss events
+				cnvLossCutoff: -0.3,
+				cnvMaxLength: null,
+				excludeGeneName: true
+			}
+		}
+		// homozygous mutated tvs
+		const mutatedValues = Object.entries(snvIndelTerm.values)
+			.filter(([k, _v]) => k != 'Intron' && k != 'Utr3')
+			.map(([k, v]: any) => {
+				return { key: k, label: v.label, value: k }
+			})
+		const homoMut = {
+			type: 'tvs',
+			tvs: {
+				term: snvIndelTerm,
+				values: mutatedValues,
+				genotype: 'variant',
+				mcount: 'any',
+				mafFilter: getMafFilter('homo', vocabApi),
+				excludeGeneName: true
+			}
+		}
+		// heterozygous mutated tvs
+		const hetMut = {
+			type: 'tvs',
+			tvs: {
+				term: snvIndelTerm,
+				values: mutatedValues,
+				genotype: 'variant',
+				mcount: 'all',
+				mafFilter: getMafFilter('het', vocabApi),
+				excludeGeneName: true
+			}
+		}
+
+		// build bi-allelic and mono-allelic groups
+		const biallelicGroup: any = {
+			name: 'Bi-allelic alteration',
+			type: 'filter',
+			filter: {
+				type: 'tvslst',
+				in: true,
+				join: 'or',
+				lst: [
+					homoDel,
+					{
+						type: 'tvslst',
+						in: true,
+						join: 'and',
+						lst: [hetDel, hetMut]
+					},
+					homoMut
+				]
+			},
+			color: '#d10000'
+		}
+		const monoallelicGroup: any = {
+			name: 'Mono-allelic alteration',
+			type: 'filter',
+			filter: {
+				type: 'tvslst',
+				in: true,
+				join: 'or',
+				lst: [hetDel, hetMut]
+			},
+			color: '#7489d2'
+		}
+
+		// build groupset
+		const groupset: any = {
+			name: 'Bi-/mono-allelic',
+			groups: [biallelicGroup, monoallelicGroup]
+		}
+
+		term.groupsetting.lst.push(groupset)
+	}
+}
+
+// determine if term/dataset is eligible for building bi-allelic vs. mono-allelic groupset
+export function isEligibleForAllelicGroupset(term: RawGvTerm, vocabApi: VocabApi): boolean {
+	const queries = vocabApi.termdbConfig.queries
+	if (!queries || !queries.snvindel || !queries.cnv) return false // dataset must have snvindel and cnv data
+	if (!queries.snvindel?.mafFilter) return false // dataset must have a maf filter
+	if (!('cnvGainCutoff' in queries.cnv) && !('cnvLossCutoff' in queries.cnv)) return false // cnv data must be continuous
+	if (!term.childTerms) throw new Error('term.childTerms[] is missing')
+	const snvIndelTerm = term.childTerms.find(t => t.dt == dtsnvindel)
+	const cnvTerm = term.childTerms.find(t => t.dt == dtcnv)
+	if (!snvIndelTerm || !cnvTerm) return false
+	if (snvIndelTerm.origin || cnvTerm.origin) return false // different origins not supported (may support later)
+	return true
+}
+
+// build maf filter according to genotype (homozygous or heterozygous)
+function getMafFilter(genotype: string, vocabApi: any) {
+	const mafFilter = vocabApi.termdbConfig.queries.snvindel.mafFilter
+	if (!mafFilter) throw new Error('mafFilter is missing')
+	const mafTerm = mafFilter.terms.find(t => t.default)
+	if (!mafTerm) throw new Error('no default mafTerm found')
+	if (genotype != 'homo' && genotype != 'het') throw new Error('unexpected genotype value')
+
+	const range =
+		genotype == 'homo'
+			? {
+					start: 0.6,
+					startinclusive: true,
+					startunbounded: false,
+					stopunbounded: true
+			  }
+			: {
+					stop: 0.6,
+					stopinclusive: false,
+					startunbounded: true,
+					stopunbounded: false
+			  }
+
+	return {
+		type: 'tvslst',
+		join: '',
+		in: true,
+		lst: [
+			{
+				type: 'tvs',
+				tvs: {
+					term: mafTerm,
+					ranges: [range]
+				}
+			}
+		]
 	}
 }

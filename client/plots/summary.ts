@@ -75,12 +75,7 @@ class SummaryPlot extends PlotBase implements RxComponent {
 			// will hold no data notice or the page title in multichart views
 			errdiv: holder.body.append('div').attr('class', 'sja_errorbar').style('display', 'none').style('padding', '5px'),
 
-			loading: holder.body
-				.append('div')
-				.style('display', 'none')
-				.style('margin-left', '20px')
-				.style('padding', '5px')
-				.html('Loading ...'),
+			loading: holder.body.append('div').style('display', 'none').style('padding', '5px').html('Loading ...'),
 
 			// dom.viz will hold the rendered view
 			viz: holder.body.append('div'),
@@ -478,7 +473,7 @@ export async function getPlotConfig(opts, app) {
 
 			boxplot: getDefaultBoxplotSettings(app),
 
-			sampleScatter: getDefaultScatterSettings()
+			sampleScatter: getDefaultScatterSettings(opts)
 		},
 		mayAdjustConfig(config, edits: { childType?: string } = {}) {
 			/*
@@ -495,7 +490,6 @@ export async function getPlotConfig(opts, app) {
 					throw `action.config.childType was not applied in mass store.plot_edit()`
 				return
 			}
-
 			// config.childType may be stale, OR edits.childType may not be available,
 			// when the summary plot_edit is triggered by replacing a term, such as replacing
 			// categorical overlay with numeric, in which case the dispatched action might not
@@ -505,6 +499,10 @@ export async function getPlotConfig(opts, app) {
 				// TODO: may need more logic later if more than one summary childType,
 				// besides scatter, can support 2 continuous terms
 				config.childType = 'sampleScatter'
+			} else if (config.term?.term?.type == 'termCollection') {
+				// TODO: may need more logic later if more than one summary childType,
+				// besides barchart, can support discrete tw only
+				config.childType = config.term.term?.memberType == 'numeric' ? 'violin' : 'barchart'
 			} else if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous') {
 				if (!discreteByContinuousPlots.has(config.childType)) {
 					// only change config.childType if the current value is not supported by discrete + continuous tw

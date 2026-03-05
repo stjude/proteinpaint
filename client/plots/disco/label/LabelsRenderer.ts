@@ -7,21 +7,22 @@ import type MutationTooltip from '#plots/disco/label/MutationTooltip.ts'
 import type FusionTooltip from '#plots/disco/fusion/FusionTooltip.ts'
 import { table2col } from '#dom/table2col'
 import type CnvTooltip from '#plots/disco/cnv/CnvTooltip.ts'
+import { appendVafBars, hasAnyValidVafEntry } from '#plots/disco/snv/vafTooltip.ts'
 
 export default class LabelsRenderer implements IRenderer {
-       private animationDuration: number
-       private fontSize: number
-       private geneClickListener: (gene: string, mnames: Array<string>) => void
+	private animationDuration: number
+	private fontSize: number
+	private geneClickListener: (gene: string, mnames: Array<string>) => void
 
-       constructor(
-               animationDuration: number,
-               fontSize: number,
-               geneClickListener: (gene: string, mnames: Array<string>) => void
-       ) {
-			this.animationDuration = animationDuration
-			this.fontSize = fontSize
-			this.geneClickListener = geneClickListener
-       }
+	constructor(
+		animationDuration: number,
+		fontSize: number,
+		geneClickListener: (gene: string, mnames: Array<string>) => void
+	) {
+		this.animationDuration = animationDuration
+		this.fontSize = fontSize
+		this.geneClickListener = geneClickListener
+	}
 
 	render(holder: any, elements: Array<Label>, collisions?: Array<Label>) {
 		const labelsG = holder.append('g')
@@ -120,6 +121,9 @@ export default class LabelsRenderer implements IRenderer {
 						.style('color', 'black')
 						.style('font-size', '0.8em')
 						.text(` ${mutation.chr}:${mutation.position}`)
+					if (hasAnyValidVafEntry(mutation.vafs)) {
+						appendVafBars(td2, mutation.vafs)
+					}
 				}
 			})
 		}

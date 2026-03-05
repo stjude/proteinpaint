@@ -1,8 +1,8 @@
-import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { GRIN2Dom, GRIN2Opts, ShowGrin2ResultTableOpts } from './GRIN2Types'
 import { dofetch3 } from '#common/dofetch'
-import { getCombinedTermFilter, getNormalRoot } from '#filter'
+import { getCombinedTermFilter, getNormalRoot, filterInit } from '#filter'
 import { Menu, renderTable, table2col, make_one_checkbox, sayerror } from '#dom'
 import { dtsnvindel, mclass, dtcnv, dtfusionrna, dtsv, proteinChangingMutations, dt2lesion } from '#shared/common.js'
 import { PlotBase } from '#plots/PlotBase.ts'
@@ -12,6 +12,7 @@ import {
 	createMatrixFromGenes,
 	updateSelectionTracking
 } from '#plots/manhattan/manhattan.ts'
+import { controlsInit } from '#plots/controls.js'
 
 /**
  * Renders a GRIN2 result table for gene data.
@@ -118,6 +119,8 @@ export function showGrin2ResultTable(opts: ShowGrin2ResultTableOpts): void {
 class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
 	dom: GRIN2Dom
+	components: { controls: ComponentApi }
+	private snvindelMafFilter: any // active MAF filter state, updated by filterInit UI
 
 	// Colors
 	readonly borderColor = '#eee'
@@ -171,8 +174,13 @@ class GRIN2 extends PlotBase implements RxComponent {
 	constructor(opts: any, api) {
 		super(opts, api)
 		this.opts = opts
+		this.components = {
+			controls: {} as ComponentApi
+		}
 		opts.holder.classed('sjpp-grin2-main', true)
 		this.dom = {
+			massControls: opts.holder.append('div').style('display', 'inline-block'),
+			headerText: opts.holder.append('div').style('display', 'inline-block'),
 			controls: opts.holder.append('div'), // controls ui on top
 			div: opts.holder.append('div').style('margin', '20px'), // result ui on bottom
 			tip: new Menu({ padding: '' }),
@@ -210,24 +218,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// Options table
 		const t2 = table2col({ holder: right })
 
-		// Top numeric options
-		this.dom.snvindel_minTotalDepth = this.addOptionRowToTable(
-			t2,
-			'Min Total Depth',
-			this.state.config.settings?.snvindelOptions?.minTotalDepth ?? 10, // default. Getting from state and defaulting to 10 if not available
-			0, // min
-			1e6, // max
-			1 // step
-		)
-		this.dom.snvindel_minAltAlleleCount = this.addOptionRowToTable(
-			t2,
-			'Min Alt Allele Count',
-			this.state.config.settings?.snvindelOptions?.minAltAlleleCount ?? 2, // default. Getting from state and defaulting to 2 if not available
-			0,
-			1e6,
-			1
-		)
-
 		// if 5/3 flanking size will be needed in future, can create a helper this.addFlankingOption() to dedup
 
 		// TODO: Enable once talk to collaborators about supporting these options
@@ -253,14 +243,29 @@ class GRIN2 extends PlotBase implements RxComponent {
 		// Consequences section header + checkbox grid
 		{
 			const [labelCell, containerCell] = t2.addRow()
-			labelCell
-				.text('Consequences')
-				.style('font-size', `${this.optionsTextFontSize}px`)
-				.style('font-weight', '600')
-				.style('padding-top', '8px')
+			labelCell.text('Consequences').style('padding-top', '8px')
 
 			// Build the consequence checkboxes in the right cell
 			this.createConsequenceCheckboxes(containerCell)
+		}
+
+		// MAF filter UI, if mafFilter is defined in the dataset config
+		const mafFilterConfig = this.app.vocabApi.termdbConfig.queries?.snvindel?.mafFilter
+		if (mafFilterConfig) {
+			this.snvindelMafFilter = structuredClone(
+				this.state.config.settings?.snvindelOptions?.mafFilter || mafFilterConfig.filter
+			)
+			const [td1, td2] = t2.addRow()
+			td1.text('MAF filter')
+			filterInit({
+				emptyLabel: '+',
+				holder: td2,
+				header_mode: 'hide_search',
+				vocab: { terms: mafFilterConfig.terms },
+				callback: async (filter: any) => {
+					this.snvindelMafFilter = filter
+				}
+			}).main(this.snvindelMafFilter)
 		}
 
 		// ----- Left-side SNV/INDEL checkbox -----
@@ -454,8 +459,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	private createConfigTable() {
 		// Add citation text
-		this.dom.controls
-			.append('div')
+		this.dom.headerText
 			.style('margin', '15px')
 			.html(
 				'GRIN2 stands for Genomic Random Interval (GRIN) statistical model. For details, see <a href=https://pubmed.ncbi.nlm.nih.gov/23842812/ target=_blank>Pounds, S. et al. Bioinformatics 2013</a>.'
@@ -505,7 +509,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 		step?: number
 	) {
 		const [labelCell, inputCell] = table.addRow()
-		labelCell.text(label).style('font-size', `${this.optionsTextFontSize}px`)
+		labelCell.text(label)
 
 		const input = inputCell
 			.append('input')
@@ -608,9 +612,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 		if (usage[dtsnvindel]?.checked) {
 			requestConfig.snvindelOptions = {
-				minTotalDepth: parseFloat(this.dom.snvindel_minTotalDepth.property('value')),
-				minAltAlleleCount: parseFloat(this.dom.snvindel_minAltAlleleCount.property('value')),
+				// minTotalDepth: parseFloat(this.dom.snvindel_minTotalDepth.property('value')),
+				// minAltAlleleCount: parseFloat(this.dom.snvindel_minAltAlleleCount.property('value')),
 				consequences: this.getSelectedConsequences()
+			}
+			if (this.snvindelMafFilter) {
+				requestConfig.snvindelOptions.mafFilter = this.snvindelMafFilter
 			}
 		}
 
@@ -693,6 +700,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 				maxGenesToShow: this.state.config.settings?.manhattan?.maxGenesToShow,
 				lesionTypeColors: this.state.config.settings?.manhattan?.lesionTypeColors,
 				qValueThreshold: this.state.config.settings?.manhattan?.qValueThreshold,
+				maxCappedPoints: this.state.config.settings?.manhattan?.maxCappedPoints,
+				hardCap: this.state.config.settings?.manhattan?.hardCap,
+				binSize: this.state.config.settings?.manhattan?.binSize,
 				...configValues
 			}
 
@@ -728,7 +738,24 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 	}
 
-	async init() {}
+	async init() {
+		this.components.controls = await controlsInit({
+			app: this.app,
+			id: this.id,
+			holder: this.dom.massControls.style('display', 'inline-block'),
+			inputs: []
+		})
+
+		/** Removing the burger and download btn for now. Will implement later.*/
+		const burgerMenu = this.dom.massControls.select('div > svg.bi.bi-copy')
+		if (burgerMenu) burgerMenu.remove()
+		const downloadBtn = this.dom.massControls.select('div > svg.bi.bi-download')
+		if (downloadBtn) downloadBtn.remove()
+
+		this.components.controls.on('helpClick.grin2', () => {
+			window.open('https://github.com/stjude/proteinpaint/wiki/Grin2')
+		})
+	}
 
 	async main() {
 		// Initialize the table with the different data types and options
@@ -764,7 +791,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				.append('h3')
 				.style('margin', this.headerMargin)
 				.style('font-size', `${this.headerFontSize}px`)
-				.text(`Top Genes (showing ${result.showingTop?.toLocaleString()} of ${result.totalGenes?.toLocaleString()})`)
+				.text(`Top Genes (showing ${result.stats.lst[0].rows[1][1]} of ${result.stats.lst[0].rows[0][1]})`)
 
 			const tableDiv = tableContainer.append('div')
 
@@ -832,6 +859,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 				dataTestId: 'sjpp-grin2-top-genes-table',
 				resize: 'both',
 				selectAll: false,
+				allowRestoreRowOrder: true,
+				restoreButtonInFooter: true,
 				download: {
 					fileName: `grin2_top_genes_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}.tsv`
 				},
@@ -846,116 +875,23 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 
 		// Display run stats information
-		if (result.processingSummary) {
-			// Create header with title
-			const headerDiv = this.dom.div
-				.append('div')
-				.style('display', 'flex')
-				.style('align-items', 'center')
-				.style('margin', this.btnMargin)
-				.style('margin-top', '40px') // Extra space for buttons from table above
+		if (result.stats?.lst) {
+			const tablesContainer = this.dom.div.append('div').style('margin-top', '50px')
 
-			headerDiv
-				.append('h3')
-				.style('margin', this.headerMargin)
-				.style('font-size', `${this.headerFontSize}px`)
-				.text('GRIN2 Processing Summary')
+			// Skip first section (contains Total Genes and Showing Top used in header)
+			for (const section of result.stats.lst.slice(1)) {
+				tablesContainer
+					.append('h4')
+					.style('margin', this.headerMargin)
+					.style('margin-top', '15px')
+					.style('font-size', `${this.headerFontSize - 2}px`)
+					.text(section.name)
 
-			// Container for tables
-			const tablesContainer = this.dom.div.append('div')
-
-			// General stats using table2col
-			const generalTable = table2col({
-				holder: tablesContainer.append('div')
-			})
-
-			generalTable.addRow('Total Samples', result.processingSummary.totalSamples.toLocaleString())
-			generalTable.addRow('Processed Samples', result.processingSummary.processedSamples.toLocaleString())
-			generalTable.addRow('Unprocessed Samples', (result.processingSummary.unprocessedSamples ?? 0).toLocaleString())
-			generalTable.addRow('Failed Samples', result.processingSummary.failedSamples.toLocaleString())
-			generalTable.addRow(
-				'Failed Files',
-				result.processingSummary.failedFiles?.length
-					? result.processingSummary.failedFiles.map(f => f.sampleName).join(', ')
-					: '0'
-			)
-			generalTable.addRow('Total Lesions', result.processingSummary.totalLesions.toLocaleString())
-			generalTable.addRow('Processed Lesions', result.processingSummary.processedLesions.toLocaleString())
-
-			// Lesion type details
-			if (result.processingSummary.lesionCounts?.byType) {
-				const typeLabels: Record<string, string> = {}
-				Object.values(dt2lesion).forEach(config => {
-					config.lesionTypes.forEach(lt => {
-						typeLabels[lt.lesionType] = lt.name
-					})
-				})
-
-				const columns = [
-					{ label: 'Lesion Type' },
-					{ label: 'Count', sortable: true },
-					{ label: 'Samples', sortable: true },
-					{ label: 'Capped' }
-				]
-
-				const rows = Object.entries(result.processingSummary.lesionCounts.byType).map(([type, typeData]) => {
-					const { count, capped, samples } = typeData as { count: number; capped: boolean; samples: number }
-					return [
-						{ value: typeLabels[type] || type },
-						{ value: count.toLocaleString() },
-						{ value: samples?.toLocaleString() ?? '0' },
-						{ value: capped ? 'Yes' : 'No' }
-					]
-				})
-
-				renderTable({
-					columns,
-					rows,
-					dataTestId: 'grin2-lesion-counts-table',
-					div: tablesContainer.append('div'),
-					showLines: false,
-					striped: true,
-					maxHeight: 'none',
-					maxWidth: '100%',
-					resize: false,
-					download: {
-						fileName: `grin2_lesion_stats_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}.tsv`
-					},
-					header: {
-						style: {
-							'font-weight': this.statsTableFontWeight,
-							'background-color': this.backgroundColor
-						},
-						allowSort: true
-					}
-				})
+				const table = table2col({ holder: tablesContainer.append('div'), margin: '2px 8px' })
+				for (const [k, v] of section.rows) {
+					table.addRow(k, v)
+				}
 			}
-		}
-
-		// Display timing information
-		if (result.timing) {
-			this.dom.div
-				.append('div')
-				.style('margin', this.sectionMargin)
-				.style('font-size', `${this.optionsTextFontSize}px`)
-				.style('color', this.optionsTextColor)
-				.text(
-					`Analysis completed in ${result.timing.totalTime} (Processing: ${result.timing.processingTime}, GRIN2: ${result.timing.grin2Time}, Plotting: ${result.timing.plottingTime})`
-				)
-		}
-
-		// If we didn't process all samples, note that caps truncated the run
-		const expectedToProcessSamples = result.processingSummary.totalSamples - result.processingSummary.failedSamples
-		if (result.processingSummary.processedSamples < expectedToProcessSamples) {
-			this.dom.div
-				.append('div')
-				.style('margin', this.sectionMargin)
-				.style('font-size', `${this.optionsTextFontSize}px`)
-				.style('color', this.optionsTextColor)
-				.text(
-					`Note: Per-type lesion caps were reached before all samples could be processed. ` +
-						`Analysis ran on ${result.processingSummary.processedSamples.toLocaleString()} of ${expectedToProcessSamples.toLocaleString()} samples.`
-				)
 		}
 	}
 }
@@ -1005,7 +941,7 @@ export function getDefaultSettings(opts) {
 			interactiveDotsCap: 5000,
 			maxTooltipGenes: 5,
 
-			// Q-value threshold for significance indicators in the table
+			// Q-value threshold for significance indicators in the table, tooltips, and for determining which dots become interactive
 			qValueThreshold: 0.05,
 
 			// Colors for lesion types (currently used for table significance indicators. Long term will also be used for the rust code colors)
@@ -1015,7 +951,16 @@ export function getDefaultSettings(opts) {
 				gain: '#FF4444', // red
 				fusion: '#FFA500', // orange
 				sv: '#9932CC' // purple
-			}
+			},
+
+			// Threshold for the rust code when determining if we need to raise the cap value from the default
+			maxCappedPoints: 5,
+
+			// Bin size for cap calculations
+			binSize: 10,
+
+			// Hard cap regardless of data distribution
+			hardCap: 200
 		}
 	}
 
@@ -1058,8 +1003,8 @@ export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 			},
 			snvindelOptions: queries?.snvindel
 				? {
-						minTotalDepth: 10,
-						minAltAlleleCount: 2,
+						// minTotalDepth: 10,
+						// minAltAlleleCount: 2,
 						consequences: [],
 						hyperMutator: 1000
 				  }

@@ -1,5 +1,5 @@
 import { select } from 'd3-selection'
-import { ColorScale } from '#dom'
+import { ColorScale, computeTicks } from '#dom'
 
 export default function svgLegend(opts) {
 	let currlinex = 0
@@ -110,6 +110,7 @@ export default function svgLegend(opts) {
 		} else {
 			currlinex += settings.padleft + grplabel.node().getBBox().width + 2 * settings.padx
 		}
+		d.itemStartX = currlinex
 
 		if (d.sorter) d.items.sort(d.sorter)
 
@@ -129,9 +130,15 @@ export default function svgLegend(opts) {
 
 	function addItem(d, i) {
 		const g = select(this)
-			.attr('transform', 'translate(' + currlinex + ',' + currliney + ')')
 			.style('opacity', settings.itemOpacity)
 			.style('opacity', d.greyedOut ? '0.6' : 1)
+		if (d.newLine) {
+			currliney += settings.lineh
+			const groupData = this.parentNode ? this.parentNode.__data__ : null
+			const leftdist = !settings.hangleft ? settings.padleft : settings.padleft + settings.hangleft + settings.padx
+			currlinex = groupData && groupData.itemStartX != null ? groupData.itemStartX : leftdist
+		}
+		g.attr('transform', 'translate(' + currlinex + ',' + currliney + ')')
 
 		const itemlabel = g
 			.append('text')
@@ -178,7 +185,11 @@ export default function svgLegend(opts) {
 		})
 
 		const bbox = itemlabel.node().getBBox()
-		const width = d.width || settings.iconw
+		let width = d.width || settings.iconw
+		if (d.colorPicker) {
+			width += (d.inputWidth || 30) + settings.padx
+		}
+		if (d.skipIcon) width = 0
 		currlinex += bbox.width + width
 		if (settings.linesep || currlinex > settings.svgw - settings.padright) {
 			currliney += settings.lineh
@@ -206,10 +217,13 @@ export default function svgLegend(opts) {
 				colors: d.colors || d.scale.range() || ['white', 'grey'],
 				domain,
 				fontSize: 0.82 * settings.fontsize,
-				holder: g,
+				/** Must separate the color scale from the label for
+				 * event handlers (e.g. if click behavior on the label
+				 * is different than click behavior on the color scale itself)*/
+				holder: g.append('g'),
 				id: colorGradientId,
 				position: `${bbox.width + 25},${yPos}`,
-				ticks: 3,
+				ticks: computeTicks(domainRange, 2),
 				tickSize: 2,
 				topTicks: true
 			}
@@ -217,12 +231,8 @@ export default function svgLegend(opts) {
 				opts.labels = d.labels
 				if (d.text) opts.position = `${bbox.width + bbox.x + 45 + settings.padx},${yPos}`
 			}
-			// Ticks must be spaced appropriately for loss and gain
-			// scales. Lowering the range for smaller ranges
-			// appropriates spaces the scale ticks
-			if ((min == 0 || max == 0) && domainRange > 1) {
-				opts.ticks = domainRange > 5 ? 2 : 1
-			}
+			// numericInputs is the clickable menu
+			// see ColorScaleOpts type for description
 			if (d.numericInputs) opts.numericInputs = d.numericInputs
 
 			new ColorScale(opts)
@@ -230,16 +240,42 @@ export default function svgLegend(opts) {
 			if (opts.labels) currlinex += bbox.width + 25 + 15 * settings.padx
 			else currlinex += 10 * settings.padx
 		} else {
-			g.append('rect')
-				.attr('height', settings.iconh)
-				.attr('width', width)
-				//.attr('x', bbox.width)
-				.attr('y', y)
-				.attr('fill', colorGradientId ? `url(#${colorGradientId})` : opts.rectFillFxn)
-				.attr('stroke', opts.iconStroke)
-				.attr('shape-rendering', 'crispEdges')
+			if (d.colorPicker) {
+				const inputHeight = d.inputHeight || settings.iconh + 6
+				const inputWidth = d.inputWidth || 30
 
-			currlinex += 2.5 * settings.padx
+				const colorInput = g
+					.append('foreignObject')
+					.attr('x', bbox.width + settings.padx)
+					.attr('y', y + settings.iconh / 2 - inputHeight / 2)
+					.attr('width', inputWidth)
+					.attr('height', inputHeight)
+					.append('xhtml:input')
+					.attr('type', 'color')
+					.attr('value', d.color || '#4d4d4d')
+					.style('width', `${inputWidth}px`)
+					.style('height', `${inputHeight}px`)
+					.style('padding', '0')
+					.style('border', '1px solid #ccc')
+					.style('border-radius', '4px')
+
+				if (typeof d.onColorChange === 'function') {
+					colorInput.on('change', event => {
+						d.onColorChange(event.target.value)
+					})
+				}
+			} else if (!d.skipIcon) {
+				g.append('rect')
+					.attr('height', settings.iconh)
+					.attr('width', width)
+					//.attr('x', bbox.width)
+					.attr('y', y)
+					.attr('fill', colorGradientId ? `url(#${colorGradientId})` : opts.rectFillFxn)
+					.attr('stroke', opts.iconStroke)
+					.attr('shape-rendering', 'crispEdges')
+
+				currlinex += 2.5 * settings.padx
+			}
 		}
 
 		if (Math.abs(bbox.y + bbox.height / 2) > 1) {

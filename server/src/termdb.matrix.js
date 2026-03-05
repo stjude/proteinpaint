@@ -189,7 +189,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 	// for each non dictionary term type
 	// query sample data with its own method and append results to "samples"
 	for (const tw of nonDictTerms) {
-		if (tw.term.type == 'snp') {
+		if (tw.term?.type == 'snp') {
 			const sampleGTs = await getSnpData(tw, q)
 			const groupset = get_active_groupset(tw.term, tw.q)
 			for (const s of sampleGTs) {
@@ -228,7 +228,8 @@ async function getSampleData(q, ds, onlyChildren = false) {
 		} else if (
 			tw.term.type == TermTypes.GENE_EXPRESSION ||
 			tw.term.type == TermTypes.METABOLITE_INTENSITY ||
-			tw.term.type == TermTypes.SSGSEA
+			tw.term.type == TermTypes.SSGSEA ||
+			tw.term.type == TermTypes.DNA_METHYLATION
 		) {
 			if (!q.ds.queries?.[tw.term.type]) throw 'not supported by dataset: ' + tw.term.type
 			let lstOfBins // of this tw. only set when q.mode is discrete
@@ -244,7 +245,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				filter: q.filter,
 				filter0: q.filter0
 			}
-			const data = await q.ds.queries[tw.term.type].get(args)
+			const data = await q.ds.queries[tw.term.type].get(args, q.ds) // 2nd ds parameter is needed for ds-supplied getter
 			const values = data.term2sample2value.get(tw.$id)
 			for (const sampleId in values) {
 				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
@@ -339,8 +340,10 @@ async function getSampleData(q, ds, onlyChildren = false) {
 	let sampleType
 	if (sids.length > 0) {
 		const sid = Number(sids[0]) || sids[0]
-		const stid = q.ds.sampleId2Type.get(sid)
-		sampleType = q.ds.cohort.termdb.sampleTypes[stid]
+		const stid = q.ds.sampleId2Type?.get?.(sid)
+		if (stid !== undefined && q.ds.cohort?.termdb?.sampleTypes) {
+			sampleType = q.ds.cohort.termdb.sampleTypes[stid]
+		}
 	}
 	return { samples, refs: { byTermId, bySampleId }, sampleType }
 }
@@ -523,7 +526,7 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, only
 	const types = filter ? filter.sampleTypes : sampleTypes //the filter adds the types in the filter, that need to be considered
 	if (!onlyChildren) onlyChildren = types.size > 1
 	const rows = await getAnnotationRows(q, termWrappers, filter, CTEs, values, types, onlyChildren)
-	const samples = await getSamples(q, rows)
+	const samples = await getSamples(q, rows, termWrappers)
 	return [samples, byTermId]
 }
 
@@ -564,41 +567,53 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs, values, t
 				${filter ? ` WHERE sample IN ${filter.CTEname} ` : ''}`
 			return query
 		}).join(`UNION ALL`)}`
-	//console.log(interpolateSqlValues(sql, values))
 
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
 	return rows
 }
 
-export async function getSamples(q, rows) {
+const termTypesWithJsonValue = new Set(['termCollection'])
+
+// returns a data object indexed by sampleId then tw.$id
+// - may also preprocess data by tw.$id
+export async function getSamples(q, rows, termWrappers) {
+	// reshapes the data rows into the following:
+	// samples = {
+	//   [sampleId]: {
+	//      [termId]: {key, value} | {key, values[]}
+	//   }
+	// }
+	const tw$idsWithJson = new Set(
+		termWrappers
+			.filter(tw => termTypesWithJsonValue.has(tw.term?.type) && tw.term?.memberType !== 'categorical')
+			.map(tw => tw.$id)
+	)
+
 	const samples = {} // to return
 	// if q.currentGeneNames is in use, must restrict to these samples
 	const limitMutatedSamples = await mayQueryMutatedSamples(q)
 	for (const { sample, key, term_id, value } of rows) {
-		addSample(sample, term_id, key, value)
-	}
-	return samples
-
-	function addSample(sample, term_id, key, value) {
 		if (limitMutatedSamples && !limitMutatedSamples.has(sample)) return // this sample is not mutated for given genes
 		if (!samples[sample]) samples[sample] = { sample }
+		const v = tw$idsWithJson.has(term_id) && typeof value == 'string' ? JSON.parse(value) : value
 		// this assumes unique term key/value for a given sample
 		// samples[sample][term_id] = { key, value }
 		if (!samples[sample][term_id]) {
 			// first value of term for a sample
-			samples[sample][term_id] = { key, value }
+			samples[sample][term_id] = { key, value: v }
 		} else {
 			// samples has multiple values for a term
 			// convert to .values[]
 			if (!samples[sample][term_id].values) {
 				const firstvalue = samples[sample][term_id] // first term value of the sample
-				if (firstvalue.key == key && firstvalue.value == value) return // duplicate
+				if (firstvalue.key === key && firstvalue.value === v) return // duplicate
 				samples[sample][term_id] = { values: [firstvalue] } // convert to object with .values[]
 			}
 			// add next term value to .values[]
-			samples[sample][term_id].values.push({ key, value })
+			samples[sample][term_id].values.push({ key, value: v })
 		}
 	}
+	return samples
 }
 
 // FIXME change currentGeneNames[] into list of tw (but may increase request payload a lot esp for matrix with many genes)
@@ -772,14 +787,14 @@ export async function mayInitiateNumericDictionaryTermplots(ds) {
 }
 
 export async function mayInitiatemutationSignatureplots(ds) {
-	const mutationSignatureplots = ds.cohort.termdb.numericTermCollections?.find(
-		ntc => ntc.name == 'Mutation Signature'
+	const mutationSignatureplots = ds.cohort.termdb.termCollections?.find(
+		tc => tc.name == 'Mutation Signature' && tc.type === 'numeric'
 	)?.plots
 	if (!mutationSignatureplots) return
 	if (!Array.isArray(mutationSignatureplots))
-		throw 'cohort.termdb.numericTermCollections mutation signature plots is not array'
+		throw 'cohort.termdb.termCollections Mutation Signature plots is not array'
 	for (const p of mutationSignatureplots) {
-		if (!p.name) throw '.name missing from one of numericTermCollections mutation signature plots'
+		if (!p.name) throw '.name missing from one of termCollections mutation signature plots'
 		if (p.file) {
 			const mutationSignatureplotsConfig = await read_file(path.join(serverconfig.tpmasterdir, p.file))
 			p.mutationSignatureplotsConfig = JSON.parse(mutationSignatureplotsConfig)

@@ -1,52 +1,135 @@
 import type { BaseTerm, BaseTW, MinBaseQ } from '../index.ts'
 
 /*
-For term type 'snp'
+For term type 'termCollection'
 */
 
-export type TermCollection = BaseTerm & {
+type BaseTermCollection = BaseTerm & {
 	name: string
 	collectionId?: string
 	type: 'termCollection'
-	// may be queried from backend, but should be available in frontend for termsetting edit menu
-	/** the full list of term.ids that are available in this collection */
-	lst?: string[]
-	termlst?: any[] // TODO: choose either lst or termlst
-	numerators?: string[]
+	/** list of term.ids that are available in this collection. this is used in request payload and server side */
+	termIds?: string[]
+	/** list of term objs corresponding to termIds[]. 
+	this is generated on server init, and sent to client, so client has easy access to show name of every term */
+	termlst: BaseTerm[]
+	/** TODO purpose */
 	newTvs?: boolean
+	propsByTermId: {
+		[termId: string]: {
+			[prop: string]: any
+		}
+	}
 }
 
-export type RawTermCollection = TermCollection & {
+export type NumericTermCollection = BaseTermCollection & {
+	/**
+	 * Copies ds.cohort.termdb.termCollections[].type ('numeric' | 'categorical').
+	 * Allows client code using the term to know the collection kind without looking up config.
+	 */
+	memberType: 'numeric'
+	/** the sum of numerator values will be divided by the sum of values for all terms,
+	 *  to be used for sorting matrix sample columns */
+	numerators?: string[]
+}
+
+export type CategoricalTermCollection = BaseTermCollection & {
+	/**
+	 * Copies ds.cohort.termdb.termCollections[].type ('numeric' | 'categorical').
+	 * Allows client code using the term to know the collection kind without looking up config.
+	 */
+	memberType: 'categorical'
+	/** category values to include (e.g. ['Yes']); filters SQL results to matching rows */
+	categoryKeys: string[]
+}
+
+export type TermCollection = NumericTermCollection | CategoricalTermCollection
+
+/** Pre-fill shape for a numeric termCollection (memberType set by TermCollection.fill()) */
+export type RawNumericTermCollection = {
 	type?: 'termCollection'
-	termlst?: string[]
+	memberType?: 'numeric'
+	name?: string
+	collectionId?: string
+	termIds?: string[]
+	termlst?: BaseTerm[]
+	propsByTermId?: {
+		[termId: string]: {
+			[prop: string]: any
+		}
+	}
+	numerators?: string[]
 }
 
-export type TermCollectionQValues = MinBaseQ & {
-	mode: 'continuous' // | 'discrete'
+/** Pre-fill shape for a categorical termCollection (memberType set by TermCollection.fill()) */
+export type RawCategoricalTermCollection = {
+	type?: 'termCollection'
+	memberType?: 'categorical'
+	name?: string
+	collectionId?: string
+	termIds?: string[]
+	termlst?: BaseTerm[]
+	propsByTermId?: {
+		[termId: string]: {
+			[prop: string]: any
+		}
+	}
+	/** category values to filter on (e.g. ['Yes']); may be provided up-front or set during fill() */
+	categoryKeys?: string[]
+}
+
+export type RawTermCollection = RawNumericTermCollection | RawCategoricalTermCollection
+
+/** Q shape for numeric (continuous) termCollection wrappers */
+export type TermCollectionQCont = MinBaseQ & {
+	mode: 'continuous'
 	type: 'values'
-	// groupValuesBy: 'sampleId' | 'termId'
 	/** a selection of term.ids for the current termwrapper, selected from term.lst */
 	lst: string[]
+	/** the sum of numerator values divided by the sum of all values will be used
+	 * to sort matrix sample columns */
 	numerators?: string[]
+}
+
+/** Q shape for categorical (qualitative) termCollection wrappers */
+export type TermCollectionQQual = MinBaseQ & {
+	mode: 'discrete'
+	type: 'values'
+	/** a selection of term.ids for the current termwrapper, selected from term.lst */
+	lst: string[]
+	// categoryKeys intentionally NOT here — they live on CategoricalTermCollection.categoryKeys
+	// and are read by the server from tw.term.categoryKeys, not tw.q
 }
 
 // TODO: may add different q types below
-export type TermCollectionQ = TermCollectionQValues
+export type TermCollectionQ = TermCollectionQCont | TermCollectionQQual
 
-export type TermCollectionTWValues = BaseTW & {
-	type: 'TermCollectionTWValues'
-	term: TermCollection
-	q: TermCollectionQValues
+export type TermCollectionTWCont = BaseTW & {
+	type: 'TermCollectionTWCont'
+	term: NumericTermCollection
+	q: TermCollectionQCont
+}
+
+export type TermCollectionTWQual = BaseTW & {
+	type: 'TermCollectionTWQual'
+	term: CategoricalTermCollection
+	q: TermCollectionQQual
 }
 
 // TODO: may add different termCollection TW types here
-export type TermCollectionTW = TermCollectionTWValues
+export type TermCollectionTW = TermCollectionTWCont | TermCollectionTWQual
 
-export type RawTermCollectionTWValues = /*TermCollectionTW &*/ {
-	type?: 'TermCollectionTWValues' | 'termCollection' // deprecated
-	term: RawTermCollection
-	q: TermCollectionQValues
+export type RawTermCollectionTWCont = {
+	type?: 'TermCollectionTWCont'
+	term: RawNumericTermCollection
+	q?: TermCollectionQCont
+}
+
+export type RawTermCollectionTWQual = {
+	type?: 'TermCollectionTWQual'
+	term: RawCategoricalTermCollection
+	q?: TermCollectionQQual
 }
 
 // TODO: may add different termCollection TW types here
-export type RawTermCollectionTW = RawTermCollectionTWValues
+export type RawTermCollectionTW = RawTermCollectionTWCont | RawTermCollectionTWQual

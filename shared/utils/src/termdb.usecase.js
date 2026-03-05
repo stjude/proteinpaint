@@ -17,6 +17,7 @@ export const graphableTypes = new Set([
 	'dtsv',
 	'date',
 	TermTypes.SSGSEA,
+	TermTypes.DNA_METHYLATION,
 	TermTypes.METABOLITE_INTENSITY,
 	TermTypes.SINGLECELL_GENE_EXPRESSION,
 	TermTypes.SINGLECELL_CELLTYPE,
@@ -66,8 +67,8 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 	const usecase = _usecase || {}
 
 	// may apply dataset specific override filter for a use case
-	if (typeof ds?.usecase?.[use.target] == 'function') {
-		return ds.usecase[use.target](term, use)
+	if (typeof ds?.usecase?.[usecase.target] == 'function') {
+		return ds.usecase[usecase.target](term, usecase)
 	}
 
 	// if (term.isprivate && !user.roleCanUse(term)) return false
@@ -90,6 +91,10 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 			if (usecase.detail === 'term2' || usecase.detail == 'term0') {
 				if (term.type && term.type !== 'survival') uses.add('plot')
 				if (hasAllowedChildTypes(child_types, ['survival'])) uses.add('branch')
+				return uses
+			} else {
+				if (graphableTypes.has(term.type)) uses.add('plot')
+				if (!term.isleaf) uses.add('branch')
 				return uses
 			}
 
@@ -114,24 +119,8 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 				if (!term.isleaf) uses.add('branch')
 			}
 			return uses
-		case 'runChart':
-			if (usecase.detail == 'date') {
-				if (term.type == 'date') {
-					uses.add('plot')
-				}
-				if (child_types.includes('date')) uses.add('branch')
-			} else if (usecase.detail == 'numeric') {
-				if (isNumericTerm(term) && term.type != 'date') {
-					uses.add('plot')
-				}
-				if (hasNumericChild(child_types)) uses.add('branch')
-			} else {
-				if (graphableTypes.has(term.type)) uses.add('plot')
-				if (!term.isleaf) uses.add('branch')
-			}
-			return uses
-		case 'frequencyChart':
-			if (usecase.detail == 'term') {
+		case 'runChart2':
+			if (usecase.detail == 'date' || usecase.detail == 'xtw') {
 				if (term.type == 'date') {
 					uses.add('plot')
 				}
@@ -157,7 +146,7 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 			}
 			return uses
 
-		case 'numericTermCollections':
+		case 'termCollections':
 			if (usecase.detail?.termIds?.includes(term.id)) uses.add('plot')
 			if (usecase.detail?.branchIds?.includes(term.id)) uses.add('branch')
 			return uses
@@ -188,6 +177,7 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 				if (hasAllowedChildTypes(child_types, ['condition', 'survival'])) uses.add('branch')
 				return uses
 			}
+			return uses
 
 		case 'survival':
 			if (usecase.detail == 'term') {
@@ -200,6 +190,7 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 				if (hasAllowedChildTypes(child_types, ['survival'])) uses.add('branch')
 				return uses
 			}
+			return uses
 
 		case 'regression':
 			if (usecase.detail == 'outcome') {
@@ -225,8 +216,9 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 				if (hasChildTypes(child_types, ['categorical', 'float', 'integer'])) uses.add('branch')
 				return uses
 			}
+			return uses
 
-		case 'filter':
+		case 'filter': {
 			// apply "exlst" to other targets as needed
 			const exlst = termdbConfig?.excludedTermtypeByTarget?.filter
 			if (exlst) {
@@ -234,7 +226,11 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 				if (child_types.find(t => !exlst.includes(t))) uses.add('branch') // there's a non-excluded child type, allow branch to show
 				return uses
 			}
-		// no specific rule for filter. pass and use default rules
+			// no specific rule for filter. use default rules
+			if (graphableTypes.has(term.type)) uses.add('plot')
+			if (!term.isleaf) uses.add('branch')
+			return uses
+		}
 
 		case 'correlationVolcano':
 			if (usecase.detail == 'numeric') {

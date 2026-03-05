@@ -2,6 +2,7 @@ import fs from 'fs'
 import readline from 'readline'
 import path from 'path'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
+import { run_python } from '@sjcrh/proteinpaint-python'
 import { spawnSync } from 'child_process'
 import { scaleLinear } from 'd3-scale'
 import { createCanvas } from 'canvas'
@@ -57,7 +58,7 @@ import {
 } from '#routes/aiProjectSelectedWSImages.ts'
 import { validate_query_getWSISamples } from '#routes/wsisamples.ts'
 import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
-import { dtTermTypes } from '#shared/terms.js'
+import { dtTermTypes, TermTypes } from '#shared/terms.js'
 import { makeAdHocDicTermdbQueries } from './adHocDictionary/buildAdHocDictionary.ts'
 import { validate_query_saveWSIAnnotation } from '#routes/saveWSIAnnotation.ts'
 import { validate_query_deleteWSIAnnotation } from '#routes/deleteWSITileSelection.ts'
@@ -172,6 +173,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 		await validate_query_ld(ds, genome)
 		await validate_query_geneExpression(ds, genome)
 		await validate_query_ssGSEA(ds, genome)
+		await validate_query_dnaMethylation(ds, genome)
 		await validate_query_metaboliteIntensity(ds, genome)
 		await validate_query_getTopTermsByType(ds, genome)
 		await validate_query_getTopMutatedGenes(ds, genome)
@@ -202,7 +204,6 @@ export async function init(ds, genome, totalDsLst = 0) {
 
 	await mayValidateAssayAvailability(ds)
 	await mayValidateViewModes(ds)
-	await mayValidateNumericTermCollection(ds)
 
 	// uncomment below to manually trigger server crash if there is only 1 dataset;
 	// make sure that serverconfig only has one genome and datasets[] entry,
@@ -339,13 +340,37 @@ export async function validate_termdb(ds) {
 			throw 'unknown implementation of tdb.convertSampleId'
 		}
 	}
-	if (tdb.numericTermCollections) {
-		if (!Array.isArray(tdb.numericTermCollections)) throw 'termdb.numericTermCollections not array'
-		for (const c of tdb.numericTermCollections) {
-			if (!c.name) throw 'unamed tdb.numericTermCollections'
-			if (!Array.isArray(c.termIds)) throw 'termdb.numericTermCollections[].termIds[] not array'
+	if (tdb.termCollections) {
+		if (!Array.isArray(tdb.termCollections)) throw 'termdb.termCollections not array'
+		for (const c of tdb.termCollections) {
+			if (!c.name) throw 'unnamed tdb.termCollections'
+			if (c.type !== 'numeric' && c.type !== 'categorical')
+				throw `termdb.termCollections[].type must be 'numeric' or 'categorical' (${c.name})`
+			if (!Array.isArray(c.termIds)) throw 'termdb.termCollections[].termIds[] not array'
+			if (c.termIds.length == 0) throw 'termdb.termCollections[].termIds[] blank array'
+			if (!c.propsByTermId) c.propsByTermId = {}
+			c.termlst = []
+			const colorScale = getColors(c.termIds.length)
 			for (const i of c.termIds) {
-				if (!tdb.q.termjsonByOneid(i)) throw `invalid term id "${i}" from termdb.numericTermCollections[].${c.name}`
+				const t = tdb.q.termjsonByOneid(i)
+				if (!t) throw `invalid term id "${i}" from termdb.termCollections[].${c.name}`
+				c.termlst.push(t)
+				if (c.type === 'numeric') {
+					if (t.type !== 'integer' && t.type != 'float') throw 'member term type not integer/float ' + i
+				} else {
+					if (t.type !== 'categorical') throw 'member term type not categorical ' + i
+					// later ensure all categories are same
+				}
+				// assign default color when missing, simplify client rendering as there's always color
+				if (!c.propsByTermId[i]) c.propsByTermId[i] = {}
+				if (!c.propsByTermId[i].color) c.propsByTermId[i].color = colorScale(i)
+			}
+			if (c.type === 'categorical') {
+				if (!c.categoryKeys)
+					throw `termdb.termCollections[].categoryKeys is required for categorical collection '${c.name}'`
+				if (!Array.isArray(c.categoryKeys))
+					throw `termdb.termCollections[].categoryKeys must be an array for '${c.name}'`
+				if (c.categoryKeys.length == 0) throw `termdb.termCollections[].categoryKeys[] is empty for '${c.name}'`
 			}
 			if (c.plots) {
 				if (!Array.isArray(c.plots)) throw 'c.plots[] not array'
@@ -354,7 +379,6 @@ export async function validate_termdb(ds) {
 					if (!p.file) throw 'plot.file missing'
 				}
 			}
-			// validate additional properties
 		}
 	}
 
@@ -1679,6 +1703,112 @@ async function validate_query_ssGSEA(ds, genome) {
 		return { term2sample2value, byTermId, bySampleId }
 	}
 }
+async function validate_query_dnaMethylation(ds, genome) {
+	const q = ds.queries.dnaMethylation
+	if (!q) return
+	try {
+		if (!q.file) throw '.file missing'
+		q.file = path.join(serverconfig.tpmasterdir, q.file)
+		q.samples = [] // array of sample ids
+		await utils.file_is_readable(q.file)
+		const samples = JSON.parse(await run_python('query_beta_values.py', JSON.stringify({ validate: true, h: q.file })))
+		if (!Array.isArray(samples)) throw 'query_beta_values.py did not return samples array: ' + q.file
+		if (!samples.length) throw 'No samples from hdf5 file: ' + q.file
+		for (const sn of samples) {
+			const si = ds.cohort.termdb.q.sampleName2id(sn)
+			if (si == undefined) throw `unknown sample ${sn} from HDF5 ${q.file}`
+			q.samples.push(si)
+		}
+		console.log(`${ds.label}: dnaMethylation HDF5 file validated. Samples:`, samples.length)
+	} catch (error) {
+		throw `${ds.label}: Failed to validate dnaMethylation HDF5 file: ${error}`
+	}
+
+	// HDF5 validation successful, set up the getter function
+	q.get = async param => {
+		const limitSamples = await mayLimitSamples(param, q.samples, ds)
+		if (limitSamples?.size == 0) {
+			// Got 0 sample after filtering, must still return expected structure with no data
+			return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
+		}
+
+		// Set up sample IDs and labels
+		const bySampleId = {}
+		const samples = q.samples || []
+		if (limitSamples) {
+			for (const sid of limitSamples) {
+				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+			}
+		} else {
+			// Use all samples with methylation data
+			for (const sid of samples) {
+				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+			}
+		}
+
+		// Initialize data structure
+		const term2sample2value = new Map()
+		const byTermId = {}
+
+		// Get methylation term
+		const dnaMethylTws = param.terms.filter(tw => tw.term.type == TermTypes.DNA_METHYLATION)
+		if (!dnaMethylTws.length) {
+			console.log('No coordinates to query')
+			return { term2sample2value, byTermId }
+		}
+
+		// Query methylation values
+		// TODO: python script should query all samples by default
+		const sampleNames = Object.values(bySampleId).map(s => s.label)
+		for (const tw of dnaMethylTws) {
+			const input = { h: q.file, s: sampleNames.join(','), q: tw.term.id }
+			const dnaMethylData = JSON.parse(await run_python('query_beta_values.py', JSON.stringify(input)))
+			if (!Array.isArray(dnaMethylData)) throw new Error('methylation data has unexpected format')
+			if (!dnaMethylData.length) throw new Error('no methylation data returned from HDF5 query')
+
+			/* output format:
+			array of arrays with dimension n_query_sites X n_query_samples
+			input query sample order is preserved
+			[
+				[0.4, 0.6, 0.2],
+				[0.7, 0.1, 0.6],
+				[0.3, 0.7, 0.5],
+			]
+			*/
+
+			// map sample idx to beta values
+			const sampleidx2values = new Map()
+			for (const site of dnaMethylData) {
+				for (const [sampleidx, v] of site.entries()) {
+					if (!Number.isFinite(v)) continue // skip missing values
+					if (!sampleidx2values.has(sampleidx)) sampleidx2values.set(sampleidx, [])
+					const values = sampleidx2values.get(sampleidx)
+					values.push(v)
+				}
+			}
+
+			// map sampleid to average beta value
+			const s2v = {}
+			for (const [i, sampleName] of sampleNames.entries()) {
+				const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
+				if (!sampleId) continue
+				if (limitSamples && !limitSamples.has(sampleId)) continue
+				const values = sampleidx2values.get(i)
+				if (!values?.length) continue // skip samples with no beta values
+				const avg = values.reduce((sum, v) => sum + v, 0) / values.length
+				s2v[sampleId] = avg
+			}
+
+			if (Object.keys(s2v).length) {
+				term2sample2value.set(tw.$id, s2v)
+			}
+		}
+
+		if (term2sample2value.size == 0) throw 'No data available for the input'
+
+		return { term2sample2value, byTermId, bySampleId }
+	}
+}
 
 export async function validate_query_metaboliteIntensity(ds, genome) {
 	const q = ds.queries.metaboliteIntensity
@@ -2871,7 +3001,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					if (group.type != 'filter') throw 'unexpected group.type'
 					values = []
 					const filter = group.filter
-					const [pass, tested] = filterByTvsLst(filter, mlst, values)
+					const [pass, tested] = filterByTvsLst(filter, mlst, values, tw)
 					return pass
 				})
 
@@ -2881,13 +3011,13 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				// key will be the name of the assigned group
 				data.set(sample, {
 					sample,
-					[tw.$id]: { key: group.name, label: group.name, value: group.name, values }
+					[tw.$id]: { key: group.name, value: group.name, values }
 				})
 			} else {
 				// groupsetting is not active
 				data.set(sample, {
 					sample,
-					[tw.$id]: { key: tw.term.name, label: tw.term.name, values: mlst }
+					[tw.$id]: { key: tw.term.name, values: mlst }
 				})
 			}
 		}
@@ -3012,12 +3142,12 @@ function addDataAvailability(sid, sample2mlst, dtKey, c, origin, sampleFilter, g
 }
 
 // function to filter a sample based on its mlst and a tvslst
-export function filterByTvsLst(filter, mlst, values) {
+export function filterByTvsLst(filter, mlst, values, tw) {
 	if (filter.type != 'tvslst') throw 'unexpected filter.type'
 	const passLst = []
 	const testedLst = []
 	for (const item of filter.lst) {
-		const [pass, tested] = filterByItem(item, mlst, values)
+		const [pass, tested] = filterByItem(item, mlst, values, tw)
 		passLst.push(pass)
 		testedLst.push(tested)
 	}
@@ -3037,7 +3167,7 @@ export function filterByTvsLst(filter, mlst, values) {
 }
 
 // function to filter a sample based on its mlst and a filter item
-export function filterByItem(filter, mlst, values) {
+export function filterByItem(filter, mlst, values, tw) {
 	if (filter.type == 'tvslst') return filterByTvsLst(filter, mlst, values)
 	if (filter.type != 'tvs') throw 'unexpected filter.type'
 	const tvs = filter.tvs
@@ -3064,8 +3194,11 @@ export function filterByItem(filter, mlst, values) {
 			// may also have loss events because the gain events still satisfied
 			// the gain cutoff criterion
 			const mlst_genotype = mlst_tested.filter(m => {
+				if (m.class == 'WT') return false
 				const cnvLength = m.stop - m.start
+				if (!cnvLength) return false
 				if (tvs.cnvMaxLength && cnvLength > tvs.cnvMaxLength) return false
+				if (tvs.fractionOverlap && !mayFilterCnvByOverlap(m, tvs, tw)) return false
 				let intvs
 				if (m.value > 0) {
 					// cnv gain
@@ -3082,37 +3215,144 @@ export function filterByItem(filter, mlst, values) {
 		} else {
 			// categorical mutation data
 			let mlst_intvs, intvs
-			if (!tvs.wt) {
+			if (tvs.genotype == 'variant') {
 				// mutant tvs
 				// get mutations in sample that match tvs
-				mlst_intvs = mlst_tested.filter(m => tvs.values.some(v => v.key == m.class))
-				// sample matches tvs if number of matching mutations
-				// passes mutation count cutoff
-				intvs =
-					tvs.mcount == 'any'
-						? mlst_intvs.length > 0
-						: tvs.mcount == 'single'
-						? mlst_intvs.length == 1
-						: tvs.mcount == 'multiple'
-						? mlst_intvs.length > 1
-						: null
-				if (intvs === null) throw 'unexpected tvs.mcount'
-			} else {
+				mlst_intvs = mlst_tested.filter(m => {
+					if (tvs.values.some(v => v.key == m.class)) {
+						// mutation is in tvs
+						if (mayFilterByMaf(tvs.mafFilter, m)) {
+							// mutation passes maf cutoff of tvs
+							return true
+						}
+					}
+				})
+				// test if number of matching mutations passes mutation count cutoff
+				switch (tvs.mcount) {
+					case 'any':
+						// whether sample has any matching mutation
+						intvs = mlst_intvs.length > 0
+						break
+					case 'single':
+						// whether sample has a single matching mutation
+						intvs = mlst_intvs.length == 1
+						break
+					case 'multiple':
+						// whether sample has multiple matching mutations
+						intvs = mlst_intvs.length > 1
+						break
+					case 'all':
+						// whether all mutations in sample are matching
+						intvs = mlst_intvs.length == mlst_tested.length
+						break
+					default:
+						throw new Error('unexpected tvs.mcount')
+				}
+			} else if (tvs.genotype == 'wt') {
 				// wildtype tvs
 				// sample matches tvs if it is wildtype (across all queried genes)
 				mlst_intvs = mlst_tested.filter(m => m.class == mclass['WT'].key)
 				intvs = mlst_intvs.length == mlst_tested.length
+			} else if (tvs.genotype == 'nt') {
+				// not tested tvs
+				// sample is tested, so it does not match tvs
+				mlst_intvs = []
+				intvs = false
+			} else {
+				throw 'unexpected tvs.genotype'
 			}
 			pass = tvs.isnot ? !intvs : intvs
 			if (values) values.push(...mlst_intvs)
 		}
 	} else {
 		// sample is not tested for the dt of the filter
-		// so sample does not pass the filter
 		tested = false
-		pass = false
+		pass = tvs.genotype ? tvs.genotype == 'nt' : false
 	}
 	return [pass, tested]
+}
+
+// filter mutation by maf
+export function mayFilterByMaf(mafFilter, m) {
+	if (!mafFilter?.lst.length || m.dt != dtsnvindel) return true
+	const filter = mafFilter
+	if (filter.type != 'tvslst') throw 'unexpected filter.type'
+	if (!filter.in) throw 'filter.in must be set to true'
+	const passLst = []
+	for (const item of filter.lst) {
+		let pass = false
+		if (item.type != 'tvs') throw 'unexpected item.type' // not supporting nested tvslst
+		const tvs = item.tvs
+		const alleleCnts = { ref: 0, alt: 0 } // allele counts for maf filter term
+		const minAllelicDepth = Number.isFinite(tvs.minAllelicDepth) && tvs.minAllelicDepth != 0 ? tvs.minAllelicDepth : 1
+		if (tvs.term.child_ids?.length) {
+			// maf filter term has child terms
+			// sum allele counts across child terms
+			for (const id of tvs.term.child_ids) {
+				addAlleleCnts(m, id, alleleCnts)
+			}
+		} else {
+			// maf filter term does not have child terms
+			// get allele counts of term directly
+			addAlleleCnts(m, tvs.term.id, alleleCnts)
+		}
+		const { ref, alt } = alleleCnts
+		const total = ref + alt
+		if (total < minAllelicDepth) {
+			// allelic depth does not meet cutoff
+			// sample does not pass
+			passLst.push(pass)
+			continue
+		}
+		const maf = alt / total
+		// test if maf is in range of tvs
+		const intvs = tvs.ranges.every(r => {
+			let startPass = true
+			let stopPass = true
+			if (Number.isFinite(r.start)) {
+				startPass = r.startinclusive ? maf >= r.start : maf > r.start
+			}
+			if (Number.isFinite(r.stop)) {
+				stopPass = r.stopinclusive ? maf <= r.stop : maf < r.stop
+			}
+			return startPass && stopPass
+		})
+		pass = tvs.isnot ? !intvs : intvs
+		passLst.push(pass)
+	}
+	const passFilter = filter.join == 'or' ? passLst.some(pass => pass) : passLst.every(pass => pass)
+	return passFilter
+}
+
+// add allele counts of maf field to total allele counts
+function addAlleleCnts(m, mafFieldId, alleleCnts) {
+	const mafField = m[mafFieldId] // <ref read count>,<alt read count>
+	if (!mafField) return // sample not annotated for maf field
+	const alleles = mafField.split(',').map(Number)
+	if (alleles.length != 2) return // skip multi-allelic variants
+	const [ref, alt] = alleles
+	if (!Number.isFinite(ref) || !Number.isFinite(alt)) return
+	alleleCnts.ref += ref
+	alleleCnts.alt += alt
+}
+
+// may filter cnv segment by a minimum overlap with query
+function mayFilterCnvByOverlap(cnv, tvs, tw) {
+	if (!tvs.fractionOverlap) return true
+	if (!Number.isFinite(tvs.fractionOverlap)) throw new Error('tvs.fractionOverlap is non-numeric')
+	if (tvs.fractionOverlap < 0 || tvs.fractionOverlap > 1) throw new Error('tvs.fractionOverlap is out of range')
+	let gene = tvs.term.parentTerm.genes.find(g => g.gene == cnv.gene)
+	if (!gene.hasOwnProperty('start') || !gene.hasOwnProperty('stop')) {
+		// start/stop may not be annotated on tvs.term, but rather on tw.term
+		gene = tw.term.genes.find(g => g.gene == cnv.gene)
+	}
+	for (const v of [gene.start, gene.stop, cnv.start, cnv.stop]) {
+		if (!Number.isInteger(v)) throw new Error(`${v} is not an integer`)
+	}
+	const queryLength = gene.stop - gene.start
+	const overlapLength = Math.max(0, Math.min(gene.stop, cnv.stop) - Math.max(gene.start, cnv.start))
+	const fractionOverlap = overlapLength / queryLength
+	return fractionOverlap >= tvs.fractionOverlap
 }
 
 /*function mayFilterByGeneVariant(filter, mlst, ds) {
@@ -3398,24 +3638,5 @@ function mayInitTermid2totalsize2(tdb, ds) {
 			return await gdc.get_termlst2size(twLst, q, combination, ds)
 		}
 		return await call_barchart_data(twLst, q, combination, ds)
-	}
-}
-
-function mayValidateNumericTermCollection(ds) {
-	if (!ds.cohort?.termdb?.numericTermCollections) return
-	const collections = ds.cohort?.termdb?.numericTermCollections
-	if (!Array.isArray(collections)) throw `ds.cohort.termdb.numericTermCollections not an array`
-	if (!collections.length) throw `empty ds.cohort.termdb.numericTermCollections`
-	for (const c of collections) {
-		if (!c.name) throw `missing numericTermCollection.name`
-		if (c.propsByTermId) {
-			const colorScale = getColors(c.termIds.length)
-			for (const termId of c.termIds) {
-				if (!c.propsByTermId[termId]) c.propsByTermId[termId] = {}
-			}
-			for (const [k, v] of Object.entries(c.propsByTermId)) {
-				if (!v.color) v.color = colorScale(k)
-			}
-		}
 	}
 }

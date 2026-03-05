@@ -83,18 +83,15 @@ export class Menu {
 
 		this.dnode = this.d.node()
 
-		// detect if this menu is launched from within another menu
-		// (aka, the 'parent_menu'); this value may be empty (undefined, null)
-		// check if this.d isn't empty before assigning parent_menu
-		if (Object.values(this.d._groups[0]).length) this.dnode.parent_menu = arg.parent_menu //; console.log(74, this.dnode.parent_menu)
-
-		if (arg.ancestor_menus) this.dnode.ancestor_menus = arg.ancestor_menus // attach property to DOM node, since other code does not know about any menu instance directly, but can detect properties of other menus by DOM node
+		this.setRelatedMenus(arg)
 
 		body.on('mousedown.menu' + this.typename, event => {
 			// when pressing the mouse cursor on the menu itself or any of its submenu, it should stay open
 			if (this.dnode.contains(event.target)) return
 			// this assumes that the mousedown occured on the menu holder itself (not any of its child elements)
 			if (event.target.parent_menu === this.dnode) return
+			// detect if mousedown occurred on any descendent menu
+			if (this.dnode.ancestor_menus?.includes(this.dnode)) return
 			// detect in case the mousedown occurred on a menu's child element,
 			// in which case the menu's parent should still be not hidden
 			const menu = event.target.closest('.sja_menu_div')
@@ -130,6 +127,33 @@ export class Menu {
 		this.clearSelector = arg.clearSelector
 
 		if (arg.onHide) this.onHide = arg.onHide
+	}
+
+	setRelatedMenus(arg) {
+		// detect if this menu is launched from within another menu
+		// (aka, the 'parent_menu'); this value may be empty (undefined, null)
+		// check if this.d isn't empty before assigning parent_menu
+		if (Object.values(this.d._groups[0]).length) this.dnode.parent_menu = arg.parent_menu //; console.log(74, this.dnode.parent_menu)
+
+		// collect all ancestor menus so that they can be detected
+		// in the mousedown.menu event listener
+		this.dnode.ancestor_menus = arg.ancestor_menus || [] // attach property to DOM node, since other code does not know about any menu instance directly, but can detect properties of other menus by DOM node
+		if (this.dnode.parent_menu && !this.dnode.ancestor_menus.includes(this.dnode.parent_menu)) {
+			this.dnode.ancestor_menus.push(this.dnode.parent_menu)
+		}
+		const ancestor_menus = this.dnode.ancestor_menus.slice(0)
+		while (ancestor_menus.length) {
+			const m = ancestor_menus.pop()
+			if (!m) continue // m may be a null element, needs to be skipped
+			if (m.parent_menu && !this.dnode.ancestor_menus.includes(m.parent_menu)) {
+				this.dnode.ancestor_menus.push(m.parent_menu)
+			}
+			if (m.ancestor_menus) {
+				for (const mm of m.ancestor_menus) {
+					if (!this.dnode.ancestor_menus.includes(mm)) this.dnode.ancestor_menus.push(mm)
+				}
+			}
+		}
 	}
 
 	clear() {

@@ -382,13 +382,15 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 			if (variant) return
 		}
 
-		// see if input is dbsnp id
-		const dbsnp = await dofetch3('snp', { body: { byName: true, genome: arg.genome.name, lst: [v] } })
-		if (dbsnp.error) throw dbsnp.error
-		if (dbsnp.results.length) {
-			// display hits in menu
-			displayVariantHits(tip, dbsnp.results)
-			return
+		if (arg.genome.hasSNP) {
+			// has snp; test if input is dbsnp id
+			const dbsnp = await dofetch3('snp', { body: { byName: true, genome: arg.genome.name, lst: [v] } })
+			if (dbsnp.error) throw dbsnp.error
+			if (dbsnp?.results?.length) {
+				// display hits in menu
+				displayVariantHits(tip, dbsnp.results)
+				return
+			}
 		}
 
 		// see if input is coord

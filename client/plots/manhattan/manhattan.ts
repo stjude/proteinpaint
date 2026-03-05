@@ -8,7 +8,6 @@ import type { ManhattanPoint } from './manhattanTypes'
 import { get$id } from '#termsetting'
 import { showGrin2ResultTable } from '../grin2/grin2.ts'
 import type { GeneDataItem } from '../grin2/GRIN2Types.ts'
-import { MANHATTAN_LOG_QVALUE_CUTOFF } from '#shared'
 
 /**
  * Searches a quadtree for all points within a specified radius of target coordinates.
@@ -239,7 +238,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		.attr('text-anchor', 'middle')
 		.attr('font-size', `${settings.fontSize + 4}px`)
 		.attr('fill', 'black')
-		.text(data.plotData.y_max >= MANHATTAN_LOG_QVALUE_CUTOFF ? '-log₁₀(q-value) [capped]' : '-log₁₀(q-value)')
+		.text(data.plotData.has_capped_points ? '-log₁₀(q-value) [capped]' : '-log₁₀(q-value)')
 
 	// Add png image
 	svg
@@ -402,7 +401,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 	// Add chromosome labels
 	if (data.plotData.chrom_data) {
-		const chromLabelY = settings.plotHeight + 2 * settings.pngDotRadius + settings.yAxisY
+		const chromLabelY = settings.plotHeight + 2 * settings.pngDotRadius + settings.yAxisY + 10
 
 		Object.entries(data.plotData.chrom_data).forEach(([chrom, chromData]: [string, any]) => {
 			const chromLabel = chrom.replace('chr', '')

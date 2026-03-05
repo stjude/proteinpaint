@@ -730,12 +730,15 @@ function setTermActions(self) {
 		const termMenuWaitDiv = self.dom.menutop.append('div').style('display', 'block').text('Loading...')
 		self.dom.tip.show(event.clientX - 20, event.clientY - 20)
 
-		await self.pill.main(
-			Object.assign(
-				{ menuOptions: self.getMenuOptions(t), filter: self.state.filter },
-				t.tw ? t.tw : { term: null, q: null }
-			)
+		const pillArg = Object.assign(
+			{ menuOptions: self.getMenuOptions(t), filter: self.state.filter },
+			t.tw ? t.tw : { term: null, q: null }
 		)
+
+		mayAddEditMsg(pillArg, t)
+
+		await self.pill.main(pillArg)
+
 		termMenuWaitDiv.remove()
 
 		self.dom.shortcutDiv = self.dom.menutop.append('div').style('z-index', 10000)
@@ -1577,7 +1580,7 @@ function setTermActions(self) {
 		const matchingSortSamples = activeOption.sortPriority?.find(o => o.types.includes(t.tw?.term?.type))?.tiebreakers[0]
 		const sortSamples = matchingSortSamples
 			? {} // will let matrix.sort fill-in based on the first matching tiebreaker
-			: t.tw?.term?.type == 'geneVariant'
+			: t.tw?.term?.type == 'geneVariant' && t.tw?.q?.type == 'values'
 			? {
 					by: 'class',
 					order: [
@@ -2774,13 +2777,15 @@ function setLengendActions(self) {
 			// when the term has customized groupsetting
 			return
 		}
-		if (event.target.nodeName == 'rect') select(event.target).style('stroke', 'blue').style('cursor', 'pointer')
+		if (event.target.nodeName == 'rect') select(event.target).style('cursor', 'pointer')
 		else select(event.target).style('fill', 'blue').style('cursor', 'pointer')
 	}
 
 	self.legendLabelMouseout = event => {
-		if (event.target.nodeName == 'rect') select(event.target).style('stroke', '#aaa')
-		else select(event.target).style('fill', '')
+		// Commenting out for reference. Borders for mouse events are not desired.
+		// if (event.target.nodeName == 'rect') select(event.target).style('stroke', '#aaa')
+		// else
+		select(event.target).style('fill', '')
 	}
 
 	self.legendLabelMouseup = event => {
@@ -2789,7 +2794,11 @@ function setLengendActions(self) {
 			// for gene expression don't use legend as filter
 			return
 		}
-
+		if (event.target.className.baseVal.includes('sjpp-color-scale') && targetData.dt == dtcnv) {
+			/** Changing the cnv cutoffs are enabled from the clickable color scale menu.
+			 * Disable creating the standard matrix menu from clicking the color scale.*/
+			return
+		}
 		const byOrigin = self.state.termdbConfig.assayAvailability?.byDt?.[parseInt(targetData.dt)]?.byOrigin
 		const menuGrp = self.dom.legendMenu.clear()
 
@@ -2864,50 +2873,50 @@ function setLengendActions(self) {
 					})
 			}
 
-			// adding the option to specify criteria for a CNV alteration for numeric CNV
-			const cnv =
-				Object.keys(self.config.cnvCutoffs).length !== 0
-					? self.config.cnvCutoffs
-					: self.state.termdbConfig?.queries?.cnv
-			const keys = Object.keys(cnv)
-			if (
-				targetData.dt.includes(dtcnv) &&
-				legendGrpFilterIndex == -1 &&
-				(keys.includes('cnvGainCutoff') || keys.includes('cnvLossCutoff' || keys.includes('cnvMaxLength')))
-			) {
-				const existingCnvSetDiv = div.select('.cnv-set-div')
-				if (!existingCnvSetDiv.empty()) existingCnvSetDiv.remove()
+			// // adding the option to specify criteria for a CNV alteration for numeric CNV
+			// const cnv =
+			// 	Object.keys(self.config.cnvCutoffs).length !== 0
+			// 		? self.config.cnvCutoffs
+			// 		: self.state.termdbConfig?.queries?.cnv
+			// const keys = Object.keys(cnv)
+			// if (
+			// 	targetData.dt.includes(dtcnv) &&
+			// 	legendGrpFilterIndex == -1 &&
+			// 	(keys.includes('cnvGainCutoff') || keys.includes('cnvLossCutoff' || keys.includes('cnvMaxLength')))
+			// ) {
+			// 	const existingCnvSetDiv = div.select('.cnv-set-div')
+			// 	if (!existingCnvSetDiv.empty()) existingCnvSetDiv.remove()
 
-				const cnvSetDiv = div.append('div').classed('cnv-set-div', true)
+			// 	const cnvSetDiv = div.append('div').classed('cnv-set-div', true)
 
-				// render cnv config
-				const arg = {
-					holder: cnvSetDiv,
-					cnvGainCutoff: cnv.cnvGainCutoff,
-					cnvLossCutoff: cnv.cnvLossCutoff,
-					cnvMaxLength: cnv.cnvMaxLength,
-					callback: config => {
-						menuGrp.hide()
-						self.config.cnvCutoffs = structuredClone(config)
-						for (const termgroup of self.config.termgroups) {
-							for (const t of termgroup.lst) {
-								if (t.term.type == 'geneVariant') {
-									t.q.cnvGainCutoff = config.cnvGainCutoff
-									t.q.cnvLossCutoff = config.cnvLossCutoff
-									t.q.cnvMaxLength = config.cnvMaxLength
-								}
-							}
-						}
-						self.app.dispatch({
-							type: 'plot_edit',
-							id: self.id,
-							config: self.config
-						})
-					}
-				}
+			// 	// render cnv config
+			// 	const arg = {
+			// 		holder: cnvSetDiv,
+			// 		cnvGainCutoff: cnv.cnvGainCutoff,
+			// 		cnvLossCutoff: cnv.cnvLossCutoff,
+			// 		cnvMaxLength: cnv.cnvMaxLength,
+			// 		callback: config => {
+			// 			menuGrp.hide()
+			// 			self.config.cnvCutoffs = structuredClone(config)
+			// 			for (const termgroup of self.config.termgroups) {
+			// 				for (const t of termgroup.lst) {
+			// 					if (t.term.type == 'geneVariant') {
+			// 						t.q.cnvGainCutoff = config.cnvGainCutoff
+			// 						t.q.cnvLossCutoff = config.cnvLossCutoff
+			// 						t.q.cnvMaxLength = config.cnvMaxLength
+			// 					}
+			// 				}
+			// 			}
+			// 			self.app.dispatch({
+			// 				type: 'plot_edit',
+			// 				id: self.id,
+			// 				config: self.config
+			// 			})
+			// 		}
+			// 	}
 
-				renderCnvConfig(arg)
-			}
+			// 	renderCnvConfig(arg)
+			// }
 			menuGrp.showunder(event.target)
 			return
 		}
@@ -3777,4 +3786,13 @@ function getLabel(c, v, p) {
 			: mclass[v.class].label
 
 	return label
+}
+
+// if group value filter is defined, then cannot reliably edit term
+// notify user in edit menu
+function mayAddEditMsg(arg, t) {
+	if (!t.grp.valueFilter) return
+	const editMsg =
+		'Cannot edit variable because group value filter is in use.<br>Please add new variable/variable group to enable editing.'
+	arg.editMsg = editMsg
 }

@@ -1,5 +1,6 @@
 import { getCompInit } from '../rx'
 import { showTvsMenu } from '../filter/tvs'
+import { dtTermTypes } from '#shared/terms.js'
 
 class TdbSubmenu {
 	constructor(opts) {
@@ -41,20 +42,22 @@ function setRenderers(self) {
 		self.dom.holder
 			.style('display', 'block')
 			.append('div')
-			.style('margin', '10px')
+			.style('margin', '10px 10px 15px 10px')
 			.append('span')
 			.html('&laquo; ' + (self.app.opts.tree?.backToSelectionText || 'Back to variable selection'))
 			.attr('class', 'sja_clbtext')
 			.attr('data-testid', 'sja_treesubmenu_backprompt')
 			.on('click', () => self.app.dispatch({ type: 'submenu_set', submenu: {} }))
 
-		self.dom.holder
-			.style('display', 'block')
-			.append('div')
-			.style('margin', '15px 0px 5px 10px')
-			.style('font-weight', 'bold')
-			.style('font-size', '.9em')
-			.text(term.name)
+		if (!dtTermTypes.has(term.type)) {
+			self.dom.holder
+				.style('display', 'block')
+				.append('div')
+				.style('margin', '10px 0px 5px 10px')
+				.style('font-weight', 'bold')
+				.style('font-size', '.9em')
+				.text(term.name)
+		}
 
 		showTvsMenu({
 			term,
@@ -63,6 +66,7 @@ function setRenderers(self) {
 			vocabApi: self.app.vocabApi,
 			debug: self.app.debug,
 			getCategoriesArguments: self.app.opts.getCategoriesArguments,
+			isMafFilter: self.app.opts.isMafFilter,
 			callback: self.app.opts.tree.click_term2select_tvs
 		})
 	}

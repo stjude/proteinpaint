@@ -1,5 +1,6 @@
 import { setCellProps, getEmptyCell, maySetEmptyCell, setGeneVariantCellProps } from './matrix.cells'
 import { TermTypes } from '#shared/terms.js'
+import { TermTypeGroups } from '#shared/common.js'
 
 export function getSerieses(data) {
 	const s = this.settings.matrix
@@ -82,13 +83,10 @@ export function getSerieses(data) {
 					legend = t.tw.setCellProps(cell, anno, value, s, t, this, width, height, dx, dy, i)
 				} else {
 					// hierCluster terms have their own setCellProps
-					// when groupsetting is used for geneVariant term, should treat as categorical term
 					const cellProps =
 						t.grp.type == 'hierCluster'
 							? setCellProps['hierCluster']
-							: (t.tw.term.type == 'geneVariant' &&
-									(t.tw?.q?.type == 'predefined-groupset' || t.tw?.q?.type == 'custom-groupset')) ||
-							  t.tw.term.type == 'samplelst'
+							: t.tw.term.type == 'samplelst'
 							? setCellProps['categorical']
 							: setCellProps[t.tw.term.type]
 
@@ -122,7 +120,11 @@ export function getSerieses(data) {
 							if (legend.entry.scale) lg.values[legendK].scale = legend.entry.scale
 						}
 						if (!lg.values[legendK].samples) lg.values[legendK].samples = new Set()
-						lg.values[legendK].samples.add(row.sample)
+
+						if (t.tw.term.collectionId == TermTypeGroups.MUTATION_SIGNATURE) {
+							// for Mutation Signature only count sample when it's signature value > 0
+							if (value?.value > 0) lg.values[legendK].samples.add(row.sample)
+						} else lg.values[legendK].samples.add(row.sample)
 
 						if (isDivideByTerm) {
 							lg.values[legend.value].isExcluded = so.grp.isExcluded

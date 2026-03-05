@@ -150,37 +150,29 @@ function setCategoricalCellProps(cell, tw, anno, value, s, t, self, width, heigh
 }
 
 export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
-	const values = anno.renderedValues || anno.filteredValues || anno.values || [anno.value]
-	const colorFromq = tw.q?.values && tw.q?.values[value.class]?.color // TODO: may fill in tw.q.values{} based on groupsetting
 	if (tw.q?.type == 'predefined-groupset' || tw.q?.type == 'custom-groupset') {
 		// groupsetting in use
 		// value is name of group assignment
 		cell.label = value
-		// TODO: import getColors() from client/shared/common.js
-		cell.fill = ['Mutated', 'Protein-changing', 'Truncating'].includes(value)
-			? '#FF0000'
-			: ['Wildtype', 'Rest'].includes(anno.key)
-			? /*'#D3D3D3'*/ '#0000FF'
-			: anno.key == 'Not tested'
-			? /*'#fff'*/ '#00FF00'
-			: '#000000'
-		cell.value = { value, dt: tw.q.dt, origin: tw.q.origin }
+		const groupset =
+			tw.q.type == 'custom-groupset' ? tw.q.customset : tw.term.groupsetting.lst[tw.q.predefined_groupset_idx]
+		if (!groupset) throw 'groupset not found'
+		const group = groupset.groups.find(group => group.name == value)
+		if (!group) throw 'group not found'
+		cell.fill = group.color
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 		cell.y = height * i
-		const group =
-			tw.legend?.group || tw.q.origin
-				? `${tw.q.origin[0].toUpperCase() + tw.q.origin.slice(1)} ${self.dt2label[tw.q.dt]}`
-				: self.dt2label[tw.q.dt]
 		return {
 			ref: t.ref,
-			group,
-			value: anno.key,
-			order: -2,
-			entry: { key: anno.key, label: cell.label, fill: cell.fill, dt: tw.q.dt, origin: tw.q.origin }
+			group: tw.legend?.group || tw.$id,
+			value,
+			entry: { key: anno.key, label: cell.label, fill: cell.fill }
 		}
 	} else {
 		// groupsetting not in use
 		// value is mutation object
+		const values = anno.renderedValues || anno.filteredValues || anno.values || [anno.value]
+		const colorFromq = tw.q?.values && tw.q?.values[value.class]?.color
 		cell.label = value.label || self.mclass[value.class].label
 		// may be overriden by a color scale by dt, if applicable below
 		cell.fill = self.getValueColor?.(value.value) || colorFromq || value.color || self.mclass[value.class]?.color
@@ -231,9 +223,16 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 		const order = CNVkey2order(value.class)
 		if (value.dt == dtcnv) {
 			if (t.scales && value.class.startsWith('CNV_')) {
-				const max = t.scales.max // value.value < 0 ? self.cnvValues.maxLoss : self.cnvValues.maxGain
-				const { maxLoss, maxGain, minLoss, minGain } = t.scales
-				value.scaledValue = value.value < 0 ? value.value / minLoss : value.value / maxGain
+				// const max = t.scales.max // value.value < 0 ? self.cnvValues.maxLoss : self.cnvValues.maxGain
+				const { /*maxLoss,*/ maxGain, minLoss, /*minGain,*/ absMax } = t.scales
+				/** CNV values are presented on an equidistant range.
+				 * The color interpolators use a 0-1 arg.
+				 * Dividing the raw value by the max abs loss/gain calculates
+				 * a value in the 0-1 range. This will match the color in the
+				 * legend and cell according to the equidistant range,
+				 * displayed in the legend. See the scale creation is in
+				 * matrix.layout.js for more details.*/
+				value.scaledValue = value.value < 0 ? value.value / -absMax : value.value / absMax
 				cell.fill = value.value < 0 ? t.scales.loss(value.scaledValue) : t.scales.gain(value.scaledValue)
 
 				return {
@@ -319,31 +318,6 @@ export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width
 	}
 }
 
-export function setTermCollectionCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
-	const twSpecificSettings = self.config.settings.matrix.twSpecificSettings
-	if (!twSpecificSettings[tw.$id]) twSpecificSettings[tw.$id] = {}
-	const twSettings = twSpecificSettings[tw.$id]
-
-	if (!twSettings.contBarH) twSettings.contBarH = s.barh
-	if (!('gap' in twSettings)) twSettings.contBarGap = 4
-
-	cell.height = t.scales.pos(value.value)
-	cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
-	cell.y = t.counts.posMaxHt + twSettings.contBarGap - t.scales.pos(value.pre_val_sum) - cell.height
-	cell.label = value.label
-	cell.fill = twSettings[value.label]?.color || value.color || tw.term.propsByTermId?.[value.label]?.color
-	cell.value = value.value
-
-	// return the corresponding legend item data
-	return {
-		ref: t.ref,
-		group: tw.$id,
-		value: value.label,
-		order: -1,
-		entry: { key: value.label, label: value.label, fill: cell.fill }
-	}
-}
-
 export function setHierClusterCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
 	const values = anno.renderedValues || anno.filteredValues || anno.values || [anno.value]
 	cell.label = value.value
@@ -410,6 +384,8 @@ export function getEmptyCell(cellTemplate, s, d) {
 	s: plotConfig.settings.matrix
 */
 export const setCellProps = {
+	// some of these have been replaced by addOns{setCellProps} in matrix.xtw.ts,
+	// but leaving here for now since non-classed tw's may still use these
 	categorical: setCategoricalCellProps,
 	condition: setCategoricalCellProps,
 	integer: setNumericCellProps,
@@ -418,8 +394,8 @@ export const setCellProps = {
 	geneVariant: setGeneVariantCellProps,
 	hierCluster: setHierClusterCellProps,
 	[TermTypes.GENE_EXPRESSION]: setNumericCellProps,
-	[TermTypes.METABOLITE_INTENSITY]: setNumericCellProps,
-	termCollection: setTermCollectionCellProps
+	[TermTypes.METABOLITE_INTENSITY]: setNumericCellProps
+	//termCollection: setTermCollectionCellProps
 }
 
 export const maySetEmptyCell = {

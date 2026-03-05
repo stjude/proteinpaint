@@ -5,12 +5,15 @@ import {
 	getCategoryGroupsetting,
 	getGenesetMutTw,
 	getSsgseaTw,
-	getGeneVariantTw
+	getGeneVariantTw,
+	getScgeneexpTw,
+	getScctTw
 } from '../../test/testdata/data.ts'
 import { fillTermWrapper } from '#termsetting'
 import { getFilterItemByTag, filterJoin } from '#filter'
 import { sleep, detectOne, detectGte, detectLst, whenVisible, whenHidden } from '../../test/test.helpers.js'
 import { select, brushX } from 'd3'
+import { testViolinByCount } from './helpers.spec'
 
 /**************
  test sections
@@ -45,6 +48,7 @@ term1=numeric, term2=numeric, term0=categorical
 test uncomputable categories legend
 Load linear regression-violin UI
 term1=singleCellExpression, term2=singleCellCellType
+term1=dnameth, term2=geneExp
 
 ***************/
 
@@ -732,17 +736,11 @@ tape('term1=geneExp, term2=categorical', function (test) {
 						term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' },
 						q: { mode: 'continuous' }
 					},
-					term2: {
-						id: 'diaggrp'
-					}
+					term2: { id: 'diaggrp' }
 				}
 			]
 		},
-		violin: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+		violin: { callbacks: { 'postRender.test': runTests } }
 	})
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
@@ -1356,49 +1354,8 @@ tape('term1=singleCellExpression, term2=singleCellCellType', function (test) {
 			plots: [
 				{
 					chartType: 'summary',
-					term: {
-						term: {
-							type: 'singleCellGeneExpression',
-							id: 'KRAS',
-							gene: 'KRAS',
-							name: 'KRAS',
-							sample: {
-								sID: '1_patient'
-							}
-						},
-						q: {
-							mode: 'continuous'
-						}
-					},
-					term2: {
-						term: {
-							type: 'singleCellCellType',
-							id: 'CellType',
-							name: 'CellType',
-							sample: {
-								sID: '1_patient'
-							},
-							plot: 'scRNA',
-							colorBy: 'CellType',
-							values: {
-								T_NK: {
-									key: 'T_NK',
-									value: 'T_NK'
-								},
-								Blast: {
-									key: 'Blast',
-									value: 'Blast'
-								},
-								Monocyte: {
-									key: 'Monocyte',
-									value: 'Monocyte'
-								}
-							},
-							groupsetting: {
-								disabled: false
-							}
-						}
-					}
+					term: getScgeneexpTw(),
+					term2: getScctTw()
 				}
 			],
 			vocab: {
@@ -1417,6 +1374,31 @@ tape('term1=singleCellExpression, term2=singleCellCellType', function (test) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolinByCount(test, violinDiv, 3)
 		await testLabelHoverClick(test, violin, violinDiv, 3)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('term1=dnameth, term2=geneExp', function (test) {
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: {
+						term: { type: 'dnaMethylation', chr: 'chr17', start: 7673484, stop: 7681953 },
+						q: { mode: 'continuous' }
+					},
+					term2: { term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' } }
+				}
+			]
+		},
+		violin: { callbacks: { 'postRender.test': runTests } }
+	})
+	async function runTests(violin) {
+		const violinDiv = violin.Inner.dom.violinDiv
+		await testViolinByCount(test, violinDiv, 4)
+		await testLabelHoverClick(test, violin, violinDiv, 8)
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
@@ -1496,10 +1478,4 @@ async function testLabelHoverClick(test, violin, violinDiv, labelcount) {
 		violin.Inner.dom.sampletabletip.hide()
 		tip.hide()
 	}
-}
-// detect given number of violin svg <path>
-async function testViolinByCount(test, violinDiv, count) {
-	// each violin has two path.sjpp-vp-path, thus *2!!
-	const groups = await detectLst({ elem: violinDiv.node(), selector: 'path.sjpp-vp-path', count: count * 2 })
-	test.ok(groups, `Detected ${count} violin <path class=sjpp-vp-path>`)
 }

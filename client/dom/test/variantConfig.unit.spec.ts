@@ -2,6 +2,7 @@ import tape from 'tape'
 import { renderVariantConfig } from '../variantConfig'
 import type { TermValues, BaseValue } from '#types'
 import { select } from 'd3-selection'
+import { detectGt } from '../../test/test.helpers.js'
 
 /*
 test sections:
@@ -10,25 +11,13 @@ test sections:
     - callback
     - unselect values
     - preselected values
-    - genotype toggle
+    - wildtype toggle
+	- not tested toggle
 	- no mutations
-	- any mutation count
     - single mutation count
     - multiple mutation count
+	- maf filter
 */
-
-const values: TermValues = {
-	M: { key: 'M', label: 'MISSENSE' },
-	F: { key: 'F', label: 'FRAMESHIFT' },
-	N: { key: 'N', label: 'NONSENSE' },
-	D: { key: 'D', label: 'PROTEINDEL' }
-}
-
-const values2: TermValues = {
-	CNV_amp: { key: 'CNV_amp', label: 'Gain' },
-	CNV_loss: { key: 'CNV_loss', label: 'Heterozygous Deletion' },
-	CNV_amplification: { key: 'CNV_amplification', label: 'Amplification' }
-}
 
 tape('\n', test => {
 	test.comment('-***- dom/variantConfig unit tests-***-')
@@ -47,7 +36,7 @@ tape('basic render: snvindel', test => {
 
 	const genotypeDiv = holder.select('[data-testid="sjpp-variantConfig-genotype"]')
 	const genotypeRadio = genotypeDiv.selectAll('input[type="radio"]').nodes()
-	test.equal(genotypeRadio.length, 2, 'should render 2 genotype radio buttons')
+	test.equal(genotypeRadio.length, 3, 'should render 3 genotype radio buttons')
 
 	const variantsDiv = holder.select('[data-testid="sjpp-variantConfig-variant"]')
 	const table = variantsDiv.select('table')
@@ -81,7 +70,7 @@ tape('basic render: cnv', test => {
 
 	const genotypeDiv = holder.select('[data-testid="sjpp-variantConfig-genotype"]')
 	const genotypeRadio = genotypeDiv.selectAll('input[type="radio"]').nodes()
-	test.equal(genotypeRadio.length, 2, 'should render 2 genotype radio buttons')
+	test.equal(genotypeRadio.length, 3, 'should render 3 genotype radio buttons')
 
 	const variantsDiv = holder.select('[data-testid="sjpp-variantConfig-variant"]')
 	const table = variantsDiv.select('table')
@@ -122,7 +111,7 @@ tape('callback', test => {
 			{ key: 'N', label: 'NONSENSE', value: 'N' },
 			{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 		],
-		wt: false,
+		genotype: 'variant',
 		mcount: 'any'
 	}
 
@@ -158,7 +147,7 @@ tape('unselect values', test => {
 			{ key: 'M', label: 'MISSENSE', value: 'M' },
 			{ key: 'F', label: 'FRAMESHIFT', value: 'F' }
 		],
-		wt: false,
+		genotype: 'variant',
 		mcount: 'any'
 	}
 
@@ -200,7 +189,7 @@ tape('preselected values', test => {
 			{ key: 'M', label: 'MISSENSE', value: 'M' },
 			{ key: 'F', label: 'FRAMESHIFT', value: 'F' }
 		],
-		wt: false,
+		genotype: 'variant',
 		mcount: 'any'
 	}
 
@@ -210,7 +199,7 @@ tape('preselected values', test => {
 	test.end()
 })
 
-tape('genotype toggle', test => {
+tape('wildtype toggle', test => {
 	const holder = select(document.body).append('div')
 	let newConfig
 
@@ -223,15 +212,15 @@ tape('genotype toggle', test => {
 
 	const genotypeDiv = holder.select('[data-testid="sjpp-variantConfig-genotype"]')
 	const genotypeRadio: any = genotypeDiv.selectAll('input[type="radio"]').nodes()
-	test.equal(genotypeRadio.length, 2, 'should render 2 genotype radio buttons')
+	test.equal(genotypeRadio.length, 3, 'should render 3 genotype radio buttons')
 	const selectedGenotype: any = genotypeRadio.find((r: any) => r.checked)
-	test.equal(selectedGenotype.value, 'mutated', 'selected genotype should be mutated')
+	test.equal(selectedGenotype.value, 'variant', 'selected genotype should be variant')
 
 	const variantsDiv: any = holder.select('[data-testid="sjpp-variantConfig-variant"]').node()
 	test.equal(window.getComputedStyle(variantsDiv).display, 'block', 'should display variants div')
 
 	// select wildtype genotype
-	genotypeRadio.find(r => r.value == 'wildtype').click()
+	genotypeRadio.find(r => r.value == 'wt').click()
 	test.equal(window.getComputedStyle(variantsDiv).display, 'none', 'should not display variants div')
 
 	const applyBtn: any = holder.select('button').node()
@@ -239,10 +228,45 @@ tape('genotype toggle', test => {
 
 	const expectedConfig = {
 		values: [],
-		wt: true
+		genotype: 'wt'
 	}
 
 	test.deepEqual(newConfig, expectedConfig, 'config should have wildtype genotype')
+
+	holder.remove()
+	test.end()
+})
+
+tape('not tested toggle', test => {
+	const holder = select(document.body).append('div')
+	let newConfig
+
+	renderVariantConfig({
+		holder,
+		values,
+		dt: 1,
+		callback: config => (newConfig = config)
+	})
+
+	const genotypeDiv = holder.select('[data-testid="sjpp-variantConfig-genotype"]')
+	const genotypeRadio: any = genotypeDiv.selectAll('input[type="radio"]').nodes()
+
+	const variantsDiv: any = holder.select('[data-testid="sjpp-variantConfig-variant"]').node()
+	test.equal(window.getComputedStyle(variantsDiv).display, 'block', 'should display variants div')
+
+	// select not tested genotype
+	genotypeRadio.find(r => r.value == 'nt').click()
+	test.equal(window.getComputedStyle(variantsDiv).display, 'none', 'should not display variants div')
+
+	const applyBtn: any = holder.select('button').node()
+	applyBtn.click()
+
+	const expectedConfig = {
+		values: [],
+		genotype: 'nt'
+	}
+
+	test.deepEqual(newConfig, expectedConfig, 'config should have not tested genotype')
 
 	holder.remove()
 	test.end()
@@ -260,9 +284,9 @@ tape('no mutations', test => {
 
 	const genotypeDiv = holder.select('[data-testid="sjpp-variantConfig-genotype"]')
 	const genotypeRadio: any = genotypeDiv.selectAll('input[type="radio"]').nodes()
-	test.equal(genotypeRadio.length, 2, 'should render 2 genotype radio buttons')
+	test.equal(genotypeRadio.length, 3, 'should render 3 genotype radio buttons')
 	const selectedGenotype: any = genotypeRadio.find((r: any) => r.checked)
-	test.equal(selectedGenotype.value, 'mutated', 'selected genotype should be mutated')
+	test.equal(selectedGenotype.value, 'variant', 'selected genotype should be variant')
 
 	const variantsDiv: any = holder.select('[data-testid="sjpp-variantConfig-variant"]')
 	const table = variantsDiv.select('table').node()
@@ -276,7 +300,7 @@ tape('no mutations', test => {
 	test.ok(applyBtn.property('disabled'), 'apply button should be disabled')
 
 	// select wildtype genotype
-	genotypeRadio.find(r => r.value == 'wildtype').click()
+	genotypeRadio.find(r => r.value == 'wt').click()
 	test.notOk(applyBtn.property('disabled'), 'apply button should not be disabled')
 
 	holder.remove()
@@ -332,3 +356,115 @@ tape('multiple mutation count', test => {
 	holder.remove()
 	test.end()
 })
+
+tape('maf filter', async test => {
+	const holder = select(document.body).append('div')
+	let newConfig
+
+	renderVariantConfig({
+		holder,
+		values,
+		dt: 1,
+		mafFilter,
+		callback: config => (newConfig = config)
+	})
+
+	const variantsDiv = holder.select('[data-testid="sjpp-variantConfig-variant"]')
+	const mafFilterDiv = variantsDiv.select('.sja_filter_container')
+	const tvsPills = await detectGt({ target: mafFilterDiv.node(), selector: '.tvs_pill' })
+	test.equal(tvsPills.length, 2, 'should render 2 maf tvs pills')
+
+	const applyBtn: any = holder.select('button').node()
+	applyBtn.click()
+
+	test.deepEqual(newConfig.mafFilter, activeMafFilter, 'should set .mafFilter in config')
+
+	holder.remove()
+	test.end()
+})
+
+/*********
+Variables
+*********/
+
+const values: TermValues = {
+	M: { key: 'M', label: 'MISSENSE' },
+	F: { key: 'F', label: 'FRAMESHIFT' },
+	N: { key: 'N', label: 'NONSENSE' },
+	D: { key: 'D', label: 'PROTEINDEL' }
+}
+
+const values2: TermValues = {
+	CNV_amp: { key: 'CNV_amp', label: 'Gain' },
+	CNV_loss: { key: 'CNV_loss', label: 'Heterozygous Deletion' },
+	CNV_amplification: { key: 'CNV_amplification', label: 'Amplification' }
+}
+
+const activeMafFilter = {
+	type: 'tvslst',
+	join: 'or',
+	in: true,
+	lst: [
+		{
+			type: 'tvs',
+			tvs: {
+				ranges: [{ start: 0.1, startinclusive: true, stopunbounded: true }],
+				term: {
+					id: 'tumor_DNA_WGS',
+					name: 'Tumor WGS',
+					parent_id: null,
+					isleaf: true,
+					type: 'float',
+					min: 0,
+					max: 1
+				}
+			}
+		},
+		{
+			type: 'tvs',
+			tvs: {
+				ranges: [{ start: 0.1, startinclusive: true, stopunbounded: true }],
+				term: {
+					id: 'tumor_DNA_WES',
+					name: 'Tumor WES',
+					parent_id: null,
+					isleaf: true,
+					type: 'float',
+					min: 0,
+					max: 1
+				}
+			}
+		}
+	]
+}
+
+const mafFilter = {
+	filter: activeMafFilter,
+	terms: [
+		{
+			id: 'tumor_DNA_WGS',
+			name: 'Tumor WGS',
+			parent_id: null,
+			isleaf: true,
+			type: 'float',
+			min: 0,
+			max: 1,
+			tvs: {
+				ranges: [{ start: 0.1, startinclusive: true, stopunbounded: true }]
+			}
+		},
+		{
+			id: 'tumor_DNA_WES',
+			name: 'Tumor WES',
+			parent_id: null,
+			isleaf: true,
+			type: 'float',
+			min: 0,
+			max: 1,
+			tvs: {
+				ranges: [{ start: 0.1, startinclusive: true, stopunbounded: true }]
+			}
+		}
+	],
+	active: activeMafFilter
+}

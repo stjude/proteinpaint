@@ -7,12 +7,20 @@ export default class MutationWaterfallMapper {
 	private ringWidth: number
 	private reference: Reference
 	private logRange?: MutationWaterfallLogRange
+	private color: string
 
-	constructor(innerRadius: number, ringWidth: number, reference: Reference, logRange?: MutationWaterfallLogRange) {
+	constructor(
+		innerRadius: number,
+		ringWidth: number,
+		reference: Reference,
+		logRange?: MutationWaterfallLogRange,
+		color = '#4d4d4d'
+	) {
 		this.innerRadius = innerRadius
 		this.ringWidth = ringWidth
 		this.reference = reference
 		this.logRange = logRange
+		this.color = color
 	}
 
 	map(data: Array<MutationWaterfallDatum> = []): Array<MutationWaterfallPoint> {
@@ -41,7 +49,7 @@ export default class MutationWaterfallMapper {
 				innerRadius: radius,
 				outerRadius: radius,
 				text: chromosome.text,
-				color: '#4d4d4d',
+				color: this.color,
 				chr: datum.chr,
 				position: datum.position,
 				logDistance: datum.logDistance,

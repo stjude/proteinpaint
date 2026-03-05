@@ -334,7 +334,9 @@ export class GeneSetEditUI {
 			this.menuList.push({
 				label: 'Top variably expressed genes',
 				callback: (event: Event) => {
-					this.api.topVariablyExpressedGenesParams
+					/** Create a copy to avoid mutating the args in the state */
+					const copy = structuredClone(this.api.topVariablyExpressedGenesParams)
+					copy
 						.filter(p => p.param.type == 'radio' && p.param?.options)
 						.forEach(p => {
 							//Sets the default value of the radio button to the first option
@@ -358,8 +360,8 @@ export class GeneSetEditUI {
 							if (this.vocabApi.state.termfilter.filter0) args.filter0 = this.vocabApi.state.termfilter.filter0 // gdc filter
 						}
 
-						this.getInputs(this.api.topVariablyExpressedGenesParams, args)
-						const result = await this.vocabApi.getTopVariablyExpressedGenes(args)
+						this.getInputs(copy, args)
+						const result = await dofetch3('termdb/topVariablyExpressedGenes', { method: 'GET', body: args })
 
 						this.geneList = []
 						if (result.genes) {
@@ -368,7 +370,7 @@ export class GeneSetEditUI {
 						this.renderGenes()
 					}
 
-					const menuArgs = Object.assign(this.baseGeneMenuArgs(this.api.topVariablyExpressedGenesParams), { callback })
+					const menuArgs = Object.assign(this.baseGeneMenuArgs(copy), { callback })
 					new GenesMenu(menuArgs)
 				}
 			})
@@ -452,6 +454,7 @@ export class GeneSetEditUI {
 		}
 	}
 
+	/** Get the input value for the entire menu */
 	getInputs(arr, args) {
 		for (const { param, input } of arr) {
 			if (param.parentId) {
@@ -465,6 +468,7 @@ export class GeneSetEditUI {
 		}
 	}
 
+	/** Get value for single input based on type */
 	getInputValue({ param, input }) {
 		if (param.type == 'radio') return param.value
 		const value = input.node().value

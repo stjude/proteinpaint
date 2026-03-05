@@ -121,9 +121,7 @@ export class Barchart extends PlotBase {
 					vocabApi: this.app.vocabApi,
 					numericEditMenuVersion: this.opts.numericEditMenuVersion || ['continuous', 'discrete'],
 					defaultQ4fillTW: term0_term2_defaultQ,
-					// overlay option should always be visible, but must convert unit from log to abs
-					// when an overlay is added
-					//getDisplayStyle: () => (this.settings.unit == 'log' ? 'none' : ''),
+					getDisplayStyle: () => (this.isCategoricalTermCollection() ? 'none' : ''),
 					processConfig: config => {
 						//config.settings not usually passed for logic check below
 						const s = this.state.config.settings.barchart
@@ -154,6 +152,7 @@ export class Barchart extends PlotBase {
 					// and there will nonsensical tens/hundreds of these charts based on the cohort size
 					numericEditMenuVersion: this.opts.numericEditMenuVersion || ['discrete'],
 					defaultQ4fillTW: term0_term2_defaultQ,
+					getDisplayStyle: () => (this.isCategoricalTermCollection() ? 'none' : ''),
 					getBodyParams: () => {
 						const tw = this.config['term0']
 						if (!tw) return { skip_categories: true }
@@ -393,10 +392,12 @@ export class Barchart extends PlotBase {
 
 			this.term1toColor = {}
 			this.term2toColor = {} // forget any assigned overlay colors when refreshing a barchart
+			this.hasMultiCategoryKeys = this.isCategoricalTermCollection()
 			this.updateSettings(this.config)
 			for (const chart of data.charts) {
 				const categoriesPerSerie = chart.serieses.map(s => s.data.length)
-				const numColors = this.config.term2 ? Math.max(...categoriesPerSerie) : chart.serieses.length
+				const hasOverlay = this.config.term2 || this.hasMultiCategoryKeys
+				const numColors = hasOverlay ? Math.max(...categoriesPerSerie) : chart.serieses.length
 				chart.colorScale = getColors(numColors)
 			}
 			this.chartsData = this.processData(this.currServerData)
@@ -708,8 +709,31 @@ export class Barchart extends PlotBase {
 	}
 
 	setTerm2Color(chart, result) {
+		if (this.hasMultiCategoryKeys && !this.config.term2) {
+			this.term2toColor[result.dataId] = rgb(chart.colorScale(result.dataId)).toString()
+			return
+		}
 		if (!this.config.term2) return
 		this.term2toColor[result.dataId] = this.getColor(chart, this.config.term2, result.dataId, this.bins?.[2])
+	}
+
+	isCategoricalTermCollection() {
+		const t1 = this.config.term
+		return t1?.term?.type === 'termCollection' && t1.term.memberType === 'categorical'
+	}
+
+	getCategoryKeyLabel(t1, t2, dataId) {
+		if (t2?.term?.values && dataId in t2.term.values) return t2.term.values[dataId].label
+		if (this.hasMultiCategoryKeys && t1?.term?.termlst?.length) {
+			// for categorical termCollection, dataId is the term name (from server JOIN); find by name
+			const memberTerm = t1.term.termlst.find(mt => mt.name === dataId)
+			if (memberTerm?.name) return memberTerm.name
+			// fallback: look up category value label from member term values dict (numeric collection)
+			for (const mt of t1.term.termlst) {
+				if (mt.values && dataId in mt.values) return mt.values[dataId].label
+			}
+		}
+		return dataId
 	}
 
 	getColor(chart, t, label, bins) {
@@ -861,27 +885,26 @@ export class Barchart extends PlotBase {
 				})
 			}
 		}
-		if (s.rows /*&& s.rows.length > 1*/ && !s.hidelegend && t2 && this.term2toColor) {
+		const showOverlayLegend = (t2 || this.hasMultiCategoryKeys) && Object.keys(this.term2toColor).length
+		if (s.rows && !s.hidelegend && showOverlayLegend) {
 			const value_by_label =
-				t2.term.type != 'condition' || !t2.q
+				!t2 || t2.term.type != 'condition' || !t2.q
 					? ''
 					: t2.q.value_by_max_grade
 					? 'max. grade'
 					: t2.q.value_by_most_recent
 					? 'most recent'
 					: ''
+			const legendName =
+				this.hasMultiCategoryKeys && !t2 ? 'Category' : t2.term.type == 'geneVariant' ? '' : t2.term.name
 			legendGrps.push({
-				name:
-					`<span style="${headingStyle}">` +
-					(t2.term.type == 'geneVariant' ? '' : t2.term.name) +
-					(value_by_label ? ', ' + value_by_label : '') +
-					'</span>',
+				name: `<span style="${headingStyle}">` + legendName + (value_by_label ? ', ' + value_by_label : '') + '</span>',
 				items: s.rows
 					.flatMap(d => {
 						const total = chart ? this.totalsByDataId[d]?.[chart.chartId] : this.totalsByDataId[d]
 						if (!total) return []
 						const ntotal = total ? ', n=' + total : ''
-						const label = t2.term.values && d in t2.term.values ? t2.term.values[d].label : d
+						const label = this.getCategoryKeyLabel(t1, t2, d)
 						return [
 							{
 								dataId: d,

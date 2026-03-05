@@ -32,9 +32,9 @@ function testSnvIndelGroupset(groupset, test) {
 		],
 		'mutant tvs should have mutant values'
 	)
-	test.notOk(mutTvs.wt, 'mutant tvs should have wt=false')
+	test.equal(mutTvs.genotype, 'variant', 'mutant tvs should have .genotype=variant')
+	test.equal(wtTvs.genotype, 'wt', 'wildtype tvs should have .genotype=wt')
 	test.deepEqual(wtTvs.values, [], 'wildtype tvs should have empty values')
-	test.ok(wtTvs.wt, 'wildtype tvs should have wt=true')
 }
 
 function testFusionGroupset(groupset, test) {
@@ -48,9 +48,9 @@ function testFusionGroupset(groupset, test) {
 		[{ key: 'Fuserna', label: 'Fusion transcript', value: 'Fuserna' }],
 		'mutant tvs should have mutant values'
 	)
-	test.notOk(mutTvs.wt, 'mutant tvs should have wt=false')
+	test.equal(mutTvs.genotype, 'variant', 'mutant tvs should have .genotype=variant')
+	test.equal(wtTvs.genotype, 'wt', 'wildtype tvs should have .genotype=wt')
 	test.deepEqual(wtTvs.values, [], 'wildtype tvs should have empty values')
-	test.ok(wtTvs.wt, 'wildtype tvs should have wt=true')
 }
 
 function testSvGroupset(groupset, test) {
@@ -60,9 +60,9 @@ function testSvGroupset(groupset, test) {
 	const wtGrp = groupset.groups[1]
 	const wtTvs = wtGrp.filter.lst[0].tvs
 	test.deepEqual(mutTvs.values, [], 'mutant tvs should have empty values because gene does not have SVs in dataset')
-	test.notOk(mutTvs.wt, 'mutant tvs should have wt=false')
+	test.equal(mutTvs.genotype, 'variant', 'mutant tvs should have .genotype=variant')
+	test.equal(wtTvs.genotype, 'wt', 'wildtype tvs should have .genotype=wt')
 	test.deepEqual(wtTvs.values, [], 'wildtype tvs should have empty values')
-	test.ok(wtTvs.wt, 'wildtype tvs should have wt=true')
 }
 
 /**************

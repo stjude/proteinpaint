@@ -5,7 +5,7 @@ import { mayHydrateDictTwLst, get$id } from '#termsetting'
 import { QualValues, QualPredefinedGS, QualCustomGS } from './qualitative.ts'
 import { GvBase, GvValues, GvPredefinedGS, GvCustomGS } from './geneVariant.ts'
 import { NumericBase, NumRegularBin, NumCustomBins, NumCont, NumSpline } from './numeric.ts'
-import { TermCollectionValues } from './termCollection.ts'
+import { CollectionBase, CollectionCont, CollectionQual } from './termCollection'
 
 export const routedTermTypes = new Set([
 	'categorical',
@@ -19,7 +19,8 @@ export const routedTermTypes = new Set([
 	'snp',
 	'singleCellGeneExpression',
 	'singleCellCellType',
-	'termCollection'
+	'termCollection',
+	'dnaMethylation'
 ])
 
 export type UseCase = {
@@ -63,8 +64,10 @@ export class TwRouter {
 			case 'QualTWCustomGS':
 				return new QualCustomGS(tw, opts)
 
-			case 'TermCollectionTWValues':
-				return new TermCollectionValues(tw, opts)
+			case 'TermCollectionTWCont':
+				return new CollectionCont(tw, opts)
+			case 'TermCollectionTWQual':
+				return new CollectionQual(tw, opts)
 
 			default:
 				throw `unable to init(tw)`
@@ -98,6 +101,7 @@ export class TwRouter {
 			case 'date':
 			case 'ssGSEA':
 			case 'singleCellGeneExpression':
+			case 'dnaMethylation':
 				return await NumericBase.fill(tw, opts)
 
 			// case 'condition':
@@ -110,7 +114,7 @@ export class TwRouter {
 				return await GvBase.fill(tw, opts)
 
 			case 'termCollection':
-				return await TermCollectionValues.fill(tw, opts)
+				return await CollectionBase.fill(tw, opts)
 
 			default:
 				throw `unrecognized tw.term?.type='${tw.term?.type}'`
@@ -130,7 +134,7 @@ export class TwRouter {
 		}
 
 		if (!tw.q) tw.q = {}
-		tw.q.isAtomic = true
+		if (!tw.q.isAtomic) tw.q.isAtomic = true
 		TwRouter.reshapeLegacyTw(tw)
 	}
 

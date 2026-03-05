@@ -53,7 +53,10 @@ async function getJwt(dslabel, role) {
 	const res = await fetch('/demoToken', { method: 'POST', body })
 		.then(r => r.json())
 		.catch(console.error)
-	//console.log(55, 'res.fakeTokensByRole[role]', res.fakeTokensByRole[role])
+	if (res.error) {
+		console.error(res.error)
+		return null
+	}
 	return res.fakeTokensByRole[role]
 }
 

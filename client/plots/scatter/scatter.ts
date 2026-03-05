@@ -12,9 +12,8 @@ import { ScatterInteractivity, downloadImage } from './viewmodel/scatterInteract
 import { ScatterViewModel2DLarge } from './viewmodel/scatterViewModel2DLarge.js'
 import { ScatterViewModel3D } from './viewmodel/scatterViewModel3D.js'
 import { controlsInit } from '../controls'
-import { select2Terms } from '#dom/select2Terms'
-import type { MassState } from '../../../client/mass/types/mass.js'
-import { DownloadMenu } from '#dom/downloadMenu'
+import { select2Terms, DownloadMenu } from '#dom'
+import type { MassState } from '../../mass/types/mass.js'
 import { PlotBase } from '#plots/PlotBase.js'
 import type { Settings } from './Settings.ts'
 
@@ -98,6 +97,7 @@ export class Scatter extends PlotBase implements RxComponent {
 		this.toggleLoadingDiv()
 		this.config = await this.getMutableConfig()
 		this.settings = structuredClone(this.config.settings.sampleScatter)
+
 		try {
 			this.dom.bannerDiv.style('display', '').selectAll('*').remove()
 			await this.model.initData()
@@ -188,9 +188,36 @@ export class Scatter extends PlotBase implements RxComponent {
 			downloadImage(url)
 		} else {
 			const name2svg = this.getChartImages()
-			const menu = new DownloadMenu(name2svg, 'scatter')
+			const menu = new DownloadMenu(name2svg, 'scatter', () => {
+				return this.toText()
+			})
 			menu.show(event.clientX, event.clientY, event.target)
 		}
+	}
+	toText() {
+		const lines: string[] = []
+		const h: string[] = [
+			this.settings.itemLabel,
+			this.config.term?.term?.name || 'x',
+			this.config.term2?.term?.name || 'y'
+		]
+		if (this.config.colorTW) h.push(this.config.colorTW.term.name)
+		if (this.config.shapeTW) h.push(this.config.shapeTW.term.name)
+		lines.push(h.join('\t'))
+		for (const c of this.model.charts) {
+			if (!c.data?.samples) continue
+			for (const s of c.data.samples) {
+				const l: any[] = [] // one text line for each sample
+				l.push(s.sample || s.sampleId)
+				l.push(s.x)
+				l.push(s.y)
+				// these are quick fix and won't give available mutation. need to revise poor choice of "category" key
+				if (this.config.colorTW) l.push(s.category)
+				if (this.config.shapeTW) l.push(s.shape)
+				lines.push(l.join('\t'))
+			}
+		}
+		return lines.join('\n')
 	}
 
 	getChartImages() {
@@ -204,9 +231,6 @@ export class Scatter extends PlotBase implements RxComponent {
 }
 
 export async function getPlotConfig(opts, app) {
-	//if (!opts.colorTW) throw 'sampleScatter getPlotConfig: opts.colorTW{} missing'
-	//if (!opts.name && !(opts.term && opts.term2)) throw 'sampleScatter getPlotConfig: missing coordinates input'
-
 	const plot: any = {
 		groups: [],
 		// scatter controls should not use defaultUiLabels as they
@@ -216,7 +240,7 @@ export async function getPlotConfig(opts, app) {
 			controls: {
 				isOpen: false // control panel is hidden by default
 			},
-			sampleScatter: getDefaultScatterSettings(),
+			sampleScatter: getDefaultScatterSettings(opts),
 			startColor: {}, //dict to store the start color of the gradient for each chart when using continuous color
 			stopColor: {} //dict to store the stop color of the gradient for each chart when using continuous color
 		},
@@ -253,10 +277,9 @@ export async function getPlotConfig(opts, app) {
 
 		if (plot.term0?.q?.mode == 'continuous' && !app.hasWebGL())
 			throw 'Can not load Z/Divide by term in continuous mode as WebGL is not supported'
-
 		return plot
 	} catch (e) {
-		console.log(e)
+		console.error(e)
 		throw `${e} [sampleScatter getPlotConfig()]`
 	}
 }
@@ -315,8 +338,9 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	}
 }
 
-export function getDefaultScatterSettings(): Settings {
-	return {
+export function getDefaultScatterSettings(opts: any): Settings {
+	const overrides = opts?.overrides || {}
+	const defaults = {
 		size: 0.8,
 		minShapeSize: 0.5,
 		maxShapeSize: 4,
@@ -358,8 +382,11 @@ export function getDefaultScatterSettings(): Settings {
 		minXScale: null,
 		maxXScale: null,
 		minYScale: null,
-		maxYScale: null
+		maxYScale: null,
+		itemLabel: opts?.singleCellPlot ? 'Cell' : 'Sample'
 	}
+
+	return Object.assign(defaults, overrides)
 }
 
 export function openScatterPlot(app, plot, filter = null) {

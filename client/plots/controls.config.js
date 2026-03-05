@@ -42,6 +42,7 @@ class TdbConfigUiInit {
 			const debug = this.opts.debug
 			this.inputs = {} // non-rx notified
 			const componentPromises = {} // rx-notified
+
 			for (const key of this.opts.inputs) {
 				if (typeof key == 'object') {
 					const obj = key // reassign to be less confusing
@@ -107,9 +108,9 @@ class TdbConfigUiInit {
 		}
 
 		this.dom.loadingDiv.append('div').attr('class', 'sjpp-spinner-small')
-
 		this.loadingMasks = [this.dom.loadingDiv]
 		if (this.opts.loadingMasks) this.loadingMasks.push(...this.opts.loadingMasks)
+
 		return this.dom
 	}
 
@@ -857,7 +858,7 @@ async function setTermInput(opts) {
 				q: tw.q,
 				activeCohort,
 				filter: termfilter && termfilter.filter,
-				disable_terms: selectedTerms
+				disable_terms: getSelectedTerms(opts, config)
 			}
 			if ('$id' in tw) arg.$id = tw.$id
 			pill.main(arg)

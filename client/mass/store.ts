@@ -16,7 +16,7 @@ a basic plot:
 }
 
 Sometimes a plot may have sections where each section has a name and an array of plots, like in the report plot. 
-An example of such plot is seeing in sjcares. In that case the plot config will look like this:
+An example of such plot is seeing in carereg. In that case the plot config will look like this:
 {
 	id?: dynamically assigned to identify this plot
 	sections: {
@@ -330,7 +330,7 @@ MassStore.prototype.actions = {
 			delete plot.mayAdjustConfig
 		}
 		this.state.plots.push(plot)
-		// Parent plots may have child plots, organized in sections to ease the visualization and analysis. For example the sjcares report,
+		// Parent plots may have child plots, organized in sections to ease the visualization and analysis. For example the carereg report,
 		//has the sections Demographics, Diagnosis and Stagind with their respective plots. We go over the plots for each section to add them
 		// to the state.plots array, so that they can be treated as regular plots and be embedded in a parent plot
 		if (plot.sections) {

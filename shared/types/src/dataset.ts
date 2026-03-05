@@ -1,4 +1,5 @@
 import type { Mclass } from './Mclass.ts'
+import type { BaseTerm } from './terms/term.ts'
 import type { WSImage } from './routes/samplewsimages.ts'
 import type { WSISample } from './routes/wsisamples.ts'
 import type { SaveWSIAnnotationRequest } from './routes/saveWSIAnnotation.ts'
@@ -344,6 +345,7 @@ type SnvIndelQuery = {
 	format4filters?: string[]
 	format?: SnvIndelFormat
 	variant_filter?: VariantFilter
+	mafFilter?: VariantFilter
 	populations?: Population[]
 	/** NOTE **
 this definition can appear either in queries.snvindel{} or termdb{}
@@ -693,32 +695,30 @@ export type MetaboliteIntensityQueryNative = {
 
 export type MetaboliteIntensityQuery = MetaboliteIntensityQueryNative
 
-/** the geneExpression query */
-export type GeneExpressionQueryGdc = {
-	src: 'gdcapi'
-	geneExpression2bins?: { [index: string]: any }
-	/** gene expression unit (e.g. 'FPKM') */
-	unit?: string
-}
-
-export type GeneExpressionQueryNative = {
-	src: 'native'
+/** the geneExpression query
+three possibilities
+{ src: 'native', file }
+{ src: 'gdcapi' } // dynamically add get()
+{ src: 'gdcapi', get } // ds supplied get
+*/
+export type GeneExpressionQuery = {
+	src: 'native' | 'gdcapi' // when gdc getter can become supplied, will remove src
+	/** either ds-supplied or dynamically added getter */
+	get?: (param: any, ds: any) => void
 	/** bgzip-compressed, tabix-index file.
-	first line must be "#chr \t start \t stop \t gene \t sample1 \t ..." */
-	file: string
+	first line must be "#chr \t start \t stop \t gene \t sample1 \t ..."
+	(required when src=native and no ds-supplied getter)
+	*/
+	file?: string
 	/** dynamically added during server launch, list of sample integer IDs from file */
 	samples?: number[]
 	/** dynamically added flag during launch */
 	nochr?: boolean
-	/** dynamically added getter */
-	get?: (param: any) => void
 	/** This dictionary is used to store/cache the default bins calculated for a geneExpression term when initialized in the fillTermWrapper */
 	geneExpression2bins?: { [index: string]: any }
 	/** gene expression unit (e.g. 'FPKM') */
 	unit?: string
 }
-
-export type GeneExpressionQuery = GeneExpressionQueryGdc | GeneExpressionQueryNative
 
 export type SingleCellGeneExpressionNative = {
 	src: 'native'
@@ -968,6 +968,14 @@ type Mds3Queries = {
 		file: string
 		// in case a genome may have more than 1 geneset dbs, here may specify name of db that this result is based on */
 	}
+	/** dna methylation beta value matrix
+	 */
+	dnaMethylation?: {
+		/** path to h5 file */
+		file: string
+		/** dna methylation unit (e.g. 'Average Beta Value') */
+		unit: string
+	}
 	rnaseqGeneCount?: RnaseqGeneCount
 	/** Used to create the top mutated genes UI in the gene
 	 * set edit ui and data requests. */
@@ -1067,6 +1075,8 @@ export type WSImages = {
 	getAnnotationClasses?: (projectId: string) => Promise<WSIClass[] | undefined>
 	/**  ds supplied */
 	retrainModel?: (projectId: string, wsimages: string[]) => Promise<void>
+	/**  ds supplied */
+	selectWSIImages?: () => Promise<string[]>
 }
 
 export type WSIClass = { id: number; key_shortcut: string; label: string; color: string }
@@ -1123,8 +1133,6 @@ type DataDownloadCatch = {
 	jwt: { [index: string]: string }
 }
 
-//Plots
-
 type ScatterPlotsEntry = {
 	name: string
 	dimension: number
@@ -1153,8 +1161,18 @@ this is limited to only one term and doesn't allow switching between multiple te
 }
 
 type Scatterplots = {
+	/** 
+	if defined:
+		ds-supplied getter, arg is clientAuthResult, returns list of plot available for this request based on auth
+		here plots[] array is still needed! so on loading a plot the server can find the matching plot by requested name
+	if not defined:
+		entire plots[] is always send to client
+	*/
+	get?: (clientAuthResult: any) => ScatterPlotsEntry[]
+	/** hardcoded plots */
 	plots: ScatterPlotsEntry[]
 }
+
 /** this plot compares correlation of one feature against a bunch of variables across samples
  */
 type CorrelationVolcano = {
@@ -1598,18 +1616,18 @@ keep this setting here for reason of:
 	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
 	hiddenIds?: string[]
 	getAdditionalFilter?: (__protected__: any, term: any) => Filter | undefined
-	/** collections of numeric dictionary terms that are related and can be used together in some plots
-	 */
-	numericTermCollections?: NumericTermCollection[]
+	/** collections of dictionary terms (numeric or categorical) that are related and can be used together in some plots */
+	termCollections?: TermCollection[]
 }
 
-type NumericTermCollection = {
-	/** collection id */
-	id?: string
-	/** human readable name for this collection, may be as collection id if missing */
+type TermCollectionBase = {
+	/** human readable name as well as unique identifier for this collection */
 	name: string
-	/** array of dictionary numeric term ids belonging to this collection */
+	/** array of dictionary term ids belonging to this collection */
 	termIds: string[]
+	/** full term objects corresponding to termIds[]; populated by server on dataset init,
+	 * sent to client so fill() can resolve member term names without extra requests */
+	termlst?: BaseTerm[]
 	/** array of branch term ids belonging to this collection,
 	 * may be used as state.tree.expandedTermIds[] option to termdb appInit() */
 	branchIds: string[]
@@ -1624,6 +1642,18 @@ type NumericTermCollection = {
 		file: string
 	}[]
 }
+
+type NumericTermCollection = TermCollectionBase & {
+	type: 'numeric'
+}
+
+type CategoricalTermCollection = TermCollectionBase & {
+	type: 'categorical'
+	/** category values to filter on (categorical collections only); required on CategoricalTermCollection */
+	categoryKeys: string[]
+}
+
+type TermCollection = NumericTermCollection | CategoricalTermCollection
 
 type SampleType = {
 	name: string

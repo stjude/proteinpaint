@@ -240,3 +240,80 @@ test('When Two mutations on two genes LabelsMapper.map() and only one gene is pr
 	}
 	t.end()
 })
+test('When SNV has vafs array, mutation tooltip should retain vafs entries', t => {
+	const rawData = [
+		{
+			dt: 1,
+			mname: 'Mutation1',
+			class: 'M',
+			gene: 'Gene1',
+			chr: 'chr1',
+			pos: 50,
+			ref: 'G',
+			alt: 'A',
+			position: 50,
+			vafs: [
+				{ id: 'Tumor', refCount: 12, altCount: 3 },
+				{ name: 'Relapse', refCount: '5', altCount: '1' }
+			]
+		}
+	]
+
+	const dataHolder = new DataMapper(settings, reference, sampleName, []).map(rawData)
+	const labelsMapper = new LabelsMapper(settings, sampleName, reference)
+	const labels = labelsMapper.map(dataHolder.labelData)
+
+	t.equal(labels.length, 1, 'Should create one label')
+	if (labels[0].mutationsTooltip) {
+		t.deepEqual(
+			labels[0].mutationsTooltip[0].vafs,
+			[
+				{ id: 'Tumor', refCount: 12, altCount: 3 },
+				{ name: 'Relapse', refCount: '5', altCount: '1' }
+			],
+			'Mutation tooltip should include vafs array'
+		)
+	} else {
+		t.error('No mutations tooltip')
+	}
+	t.end()
+})
+
+test('When SNV has vafs array, mutation tooltip should retain vafs entries', t => {
+	const rawData = [
+		{
+			dt: 1,
+			mname: 'Mutation1',
+			class: 'M',
+			gene: 'Gene1',
+			chr: 'chr1',
+			pos: 50,
+			ref: 'G',
+			alt: 'A',
+			position: 50,
+			vafs: [
+				{ id: 'Tumor', refCount: 12, altCount: 3 },
+				{ name: 'Relapse', refCount: '5', altCount: '1' }
+			]
+		}
+	]
+
+	const dataHolder = new DataMapper(settings, reference, sampleName, []).map(rawData)
+	const labelsMapper = new LabelsMapper(settings, sampleName, reference)
+	const labels = labelsMapper.map(dataHolder.labelData)
+
+	t.equal(labels.length, 1, 'Should create one label')
+	if (labels[0].mutationsTooltip) {
+		t.deepEqual(
+			labels[0].mutationsTooltip[0].vafs,
+			[
+				{ id: 'Tumor', refCount: 12, altCount: 3 },
+				{ name: 'Relapse', refCount: '5', altCount: '1' }
+			],
+			'Mutation tooltip should include vafs array'
+		)
+	} else {
+		t.error('No mutations tooltip')
+	}
+	t.end()
+})

@@ -16,10 +16,11 @@ NOTE: dataset-specific overrides may be applied when the TermTypeSearch is initi
 
 const useCasesExcluded = {
 	matrix: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
+	facet: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
 	filter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
-	dictionary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
-	summary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
-	barchart: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
+	dictionary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST /*, TermTypeGroups.TERM_COLLECTION*/],
+	summary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST /*, TermTypeGroups.TERM_COLLECTION*/],
+	barchart: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST /*, TermTypeGroups.TERM_COLLECTION*/],
 	violin: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
 	sampleScatter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
 	cuminc: [
@@ -45,6 +46,7 @@ const useCasesExcluded = {
 		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.DICTIONARY_VARIABLES,
 		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.DNA_METHYLATION,
 		TermTypeGroups.SSGSEA,
 		TermTypeGroups.TERM_COLLECTION
 	],
@@ -62,15 +64,17 @@ const useCasesExcluded = {
 		TermTypeGroups.SNP_LIST,
 		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.DNA_METHYLATION,
 		TermTypeGroups.METABOLITE_INTENSITY,
 		TermTypeGroups.SSGSEA,
 		TermTypeGroups.TERM_COLLECTION
 	],
-	numericTermCollections: [
+	termCollections: [
 		TermTypeGroups.SNP_LOCUS,
 		TermTypeGroups.SNP_LIST,
 		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.DNA_METHYLATION,
 		TermTypeGroups.METABOLITE_INTENSITY,
 		TermTypeGroups.SSGSEA,
 		// we are still using dictionary tab to select mutation signature terms. The reason why we
@@ -273,6 +277,7 @@ export class TermTypeSearch {
 					if (type == TermTypes.SNP) continue // same funcationality is covered by snplst/snplocus terms
 					if (type == TermTypes.GENE_VARIANT && state.usecase.detail != 'independent') continue
 					if (type == TermTypes.GENE_EXPRESSION && state.usecase.detail != 'independent') continue
+					if (type == TermTypes.DNA_METHYLATION && state.usecase.detail != 'independent') continue
 					if (type == TermTypes.SSGSEA && state.usecase.detail != 'independent') continue
 				}
 
@@ -303,7 +308,7 @@ export class TermTypeSearch {
 				} catch (e) {
 					throw `error with handler='./handlers/${type}.ts': ${e}`
 				}
-				const collections = this.app.vocabApi?.termdbConfig?.numericTermCollections
+				const collections = this.app.vocabApi?.termdbConfig?.termCollections
 				if (type == TermTypes.TERM_COLLECTION && collections) {
 					for (const ntc of collections) {
 						this.tabs.push({

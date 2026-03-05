@@ -1,7 +1,6 @@
 [
  {
   "alt": "T",
-  "altCount": 7,
   "chr": "chr17",
   "class": "M",
   "dna_assay": "wgs",
@@ -12,11 +11,18 @@
   "origin": "somatic",
   "pos": 7673802,
   "ref": "C",
-  "refCount": 9
+  "vafs": [
+   {
+    "altCount": 7,
+    "id": "tumor_DNA_WGS",
+    "refCount": 9
+   }
+  ]
  },
  {
   "chr": "chr14",
   "dt": 4,
+  "origin": "somatic",
   "start": 104769347,
   "stop": 104795747,
   "value": -1.0
@@ -27,6 +33,7 @@
   "dt": 2,
   "geneA": "TP53",
   "geneB": "AKT1",
+  "origin": "somatic",
   "posA": 7674915,
   "posB": 104779348,
   "strandA": "-",

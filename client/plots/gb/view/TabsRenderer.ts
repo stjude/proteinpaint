@@ -19,8 +19,27 @@ export class TabsRenderer {
 	}
 
 	async main() {
+		// Preserve the currently active tab label before clearing
+		let previousActiveTabLabel: string | null = null
+		const existingActiveButton = this.dom.tabsDiv.select('button.sjpp-active')
+		if (!existingActiveButton.empty()) {
+			previousActiveTabLabel = existingActiveButton.datum()?.label ?? null
+		}
+
 		this.dom.tabsDiv.selectAll('*').remove()
 		this.getTabs()
+
+		// Restore the active tab if it still exists in the new tabs array
+		if (previousActiveTabLabel) {
+			const matchingTab = this.tabs.find(tab => tab.label === previousActiveTabLabel)
+			if (matchingTab) {
+				// Clear active state from all tabs first
+				this.tabs.forEach(tab => (tab.active = false))
+				// Set the preserved tab as active
+				matchingTab.active = true
+			}
+		}
+
 		await this.mayRenderTabs()
 	}
 
@@ -180,11 +199,13 @@ export class TabsRenderer {
 					const tklst = facet.tracks.filter(i => i.assay == assay && i.sample == sampleLst[si])
 					if (tklst.length == 0) return // no tracks for this combo
 					// has track(s) for this combo; render <div> in table cell; click to launch tracks
-					// TODO text color based on if track is already shown, but hard to update facet table when user remove a track from block
+					// Count how many tracks are currently shown
+					const shownCount = tklst.filter(tk => this.state.config.trackLst.activeTracks.includes(tk.name)).length
+					const displayText = shownCount ? `${shownCount}/${tklst.length}` : `${tklst.length}`
 					td.append('div')
 						.attr('class', 'sja_clbtext')
 						.style('text-align', 'center')
-						.text(tklst.length)
+						.text(displayText)
 						.on('click', event => {
 							this.clickFacetCell(event, tklst)
 						})

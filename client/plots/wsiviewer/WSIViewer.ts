@@ -35,6 +35,9 @@ class WSIViewer extends PlotBase implements RxComponent {
 	private map: OLMap | undefined = undefined
 	private annotationTable: any
 
+	// New: persistent MapRenderer instance reused across main() calls
+	private mapRenderer: MapRenderer | undefined
+
 	constructor(opts: any, api) {
 		super(opts, api)
 		this.type = 'WSIViewer'
@@ -129,6 +132,16 @@ class WSIViewer extends PlotBase implements RxComponent {
 
 		const imageViewData: ImageViewData = viewModel.getImageViewData(settings.displayedImageIndex)
 
+		// set MapRenderer state here: ensure the persistent renderer receives current state
+		if (!this.mapRenderer) {
+			this.mapRenderer = new MapRenderer()
+		}
+		this.mapRenderer.setState(
+			activeLayerData,
+			this.wsiViewerInteractions.viewerClickListener,
+			viewModel.sampleWSImages[settings.displayedImageIndex]
+		)
+
 		if (settings.renderWSIViewer) {
 			this.wsiViewerInteractions.toggleLoadingDiv(settings.renderAnnotationTable)
 
@@ -148,12 +161,8 @@ class WSIViewer extends PlotBase implements RxComponent {
 				numTotalFiles
 			)
 
-			this.map = new MapRenderer(
-				activeLayerData,
-				this.wsiViewerInteractions.viewerClickListener,
-				viewModel.sampleWSImages[settings.displayedImageIndex],
-				settings
-			).render(this.dom.mapHolder, settings)
+			// Use the reused mapRenderer instance to render/update the map
+			this.map = this.mapRenderer.render(this.dom.mapHolder, settings)
 
 			if (activeImageExtent && this.map) {
 				this.map.getView().fit(activeImageExtent)

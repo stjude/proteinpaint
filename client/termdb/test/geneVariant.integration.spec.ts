@@ -62,9 +62,14 @@ tape('Search handler layout', async test => {
 		'Mutation type radio buttons should be present'
 	)
 	const inputTypeRadiosDiv = holder.select('[data-testid="sjpp-genevariant-genesetTypeRadios"]')
-	test.ok(inputTypeRadiosDiv.selectAll('input[type="radio"]').size() > 0, 'Input type radio buttons should be present')
+	test.equal(
+		inputTypeRadiosDiv.selectAll('input[type="radio"]').size(),
+		2,
+		'Input type radio buttons should be present'
+	)
 	const searchDiv = holder.select('[data-testid="sjpp-genevariant-geneSearchDiv"]')
 	test.equal(searchDiv.selectAll('input[type="search"]').size(), 1, 'Gene search input should be present')
+	if (test['_ok']) holder.remove()
 	test.end()
 })
 
@@ -92,6 +97,7 @@ tape('Single gene input', async test => {
 		{ kind: 'gene', id: 'TP53', gene: 'TP53', name: 'TP53', type: 'geneVariant' },
 		'term.genes[0] should have expected structure'
 	)
+	if (test['_ok']) holder.remove()
 	test.end()
 })
 
@@ -104,8 +110,14 @@ tape('Change mutation type', async test => {
 	await initializeSearchHandler({ holder, callback })
 	const mutationTypeRadiosDiv = holder.select('[data-testid="sjpp-genevariant-mutationTypeRadios"]')
 	const mutationTypeRadios = mutationTypeRadiosDiv.selectAll('input[type="radio"]')
+	// select CNV mutation type
 	const thirdRadio: any = mutationTypeRadios.nodes()[2]
 	thirdRadio.click()
+	// verify gene set option is hidden for CNV
+	const inputTypeRadiosDiv = holder.select('[data-testid="sjpp-genevariant-genesetTypeRadios"]')
+	const geneSetDiv = inputTypeRadiosDiv.selectAll('div').filter((d: any) => d.value == 'geneset')
+	test.equal(geneSetDiv.style('display'), 'none', 'Gene set option should be hidden for CNV')
+	// enter gene to search
 	const geneSearchInput: any = holder
 		.select('[data-testid="sjpp-genevariant-geneSearchDiv"]')
 		.select('input[type="search"]')
@@ -114,6 +126,7 @@ tape('Change mutation type', async test => {
 	geneSearchInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }))
 	await sleep(100)
 	test.equal(tw.q.predefined_groupset_idx, 2, 'q.predefined_groupset_idx should be 2 upon selecting third radio button')
+	if (test['_ok']) holder.remove()
 	test.end()
 })
 
@@ -144,6 +157,7 @@ tape('Gene set input', async test => {
 	await sleep(100) // wait until tw is populated
 	test.equal(tw.term.genes.length, 2, 'term.genes[] should have length of 2')
 	test.equal(tw.term.name, 'TP53, KRAS', 'term.name should concatenate gene names')
+	if (test['_ok']) holder.remove()
 	test.end()
 })
 
@@ -177,5 +191,6 @@ tape('Gene set input - custom name', async test => {
 	await sleep(100) // wait until tw is populated
 	test.equal(tw.term.genes.length, 2, 'term.genes[] should have length of 2')
 	test.equal(tw.term.name, 'Test gene set', 'term.name should be custom name')
+	if (test['_ok']) holder.remove()
 	test.end()
 })

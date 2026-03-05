@@ -1,5 +1,5 @@
 import test from 'tape'
-import { filterByItem, filterByTvsLst } from '../mds3.init.js'
+import { filterByItem, filterByTvsLst, mayFilterByMaf } from '../mds3.init.js'
 
 /*
 Tests:
@@ -8,9 +8,12 @@ Tests:
 	filterByItem: sample not tested
 	filterByItem: wildtype sample matches wildtype filter
 	filterByItem: mutated sample does not match wildtype filter
+	filterByItem: not tested sample matches not tested filter
+	filterByItem: wildtype/mutated samples do not match not tested filter
 	filterByItem: mcount=any
 	filterByItem: mcount=single
 	filterByItem: mcount=multiple
+	filterByItem: mcount=all
 	filterByItem: mutation, origin
 	filterByItem: wildtype, origin
 	filterByItem: continuous CNV
@@ -19,6 +22,10 @@ Tests:
 	filterByTvsLst: multiple tvs, AND join
 	filterByTvsLst: in=false
 	filterByTvsLst: nested tvslst
+	mayFilterByMaf: basic mafFilter
+	mayFilterByMaf: mafFilter with child ids
+	mayFilterByMaf: basic mafFilter, min allelic depth
+	mayFilterByMaf: mafFilter with child ids, min allelic depth
 */
 
 test('\n', t => {
@@ -37,6 +44,7 @@ test('filterByItem: mutated sample matches filter', t => {
 				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 			],
+			genotype: 'variant',
 			mcount: 'any'
 		}
 	}
@@ -50,7 +58,6 @@ test('filterByItem: mutated sample matches filter', t => {
 		t.equal(pass, true, 'Sample passes filter')
 		t.equal(tested, true, 'Sample is tested')
 	}
-	t.end()
 })
 
 test('filterByItem: tested sample, but no match', t => {
@@ -64,6 +71,7 @@ test('filterByItem: tested sample, but no match', t => {
 				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 			],
+			genotype: 'variant',
 			mcount: 'any'
 		}
 	}
@@ -74,7 +82,6 @@ test('filterByItem: tested sample, but no match', t => {
 		t.equal(pass, false, 'Sample does not pass filter')
 		t.equal(tested, true, 'Sample is tested')
 	}
-	t.end()
 })
 
 test('filterByItem: sample not tested', t => {
@@ -88,6 +95,7 @@ test('filterByItem: sample not tested', t => {
 				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 			],
+			genotype: 'variant',
 			mcount: 'any'
 		}
 	}
@@ -103,7 +111,6 @@ test('filterByItem: sample not tested', t => {
 		t.equal(pass, false, 'Sample does not pass filter')
 		t.equal(tested, false, 'Sample is not tested')
 	}
-	t.end()
 })
 
 test('filterByItem: wildtype sample matches wildtype filter', t => {
@@ -113,14 +120,13 @@ test('filterByItem: wildtype sample matches wildtype filter', t => {
 		tvs: {
 			term: { dt: 1, type: 'dtsnvindel' },
 			values: [],
-			wt: true
+			genotype: 'wt'
 		}
 	}
 	const mlst = [{ dt: 1, class: 'WT' }]
 	const [pass, tested] = filterByItem(filter, mlst)
 	t.equal(pass, true, 'Sample passes filter')
 	t.equal(tested, true, 'Sample is tested')
-	t.end()
 })
 
 test('filterByItem: mutated sample does not match wildtype filter', t => {
@@ -130,7 +136,7 @@ test('filterByItem: mutated sample does not match wildtype filter', t => {
 		tvs: {
 			term: { dt: 1, type: 'dtsnvindel' },
 			values: [],
-			wt: true
+			genotype: 'wt'
 		}
 	}
 
@@ -146,8 +152,46 @@ test('filterByItem: mutated sample does not match wildtype filter', t => {
 	const [pass, tested] = filterByItem(filter, mlst3)
 	t.equal(pass, false, 'Sample does not pass filter')
 	t.equal(tested, false, 'Sample is not tested')
+})
 
-	t.end()
+test('filterByItem: not tested sample matches not tested filter', t => {
+	t.plan(2)
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [],
+			genotype: 'nt'
+		}
+	}
+	const mlst = [{ dt: 1, class: 'Blank' }]
+	const [pass, tested] = filterByItem(filter, mlst)
+	t.equal(pass, true, 'Sample passes filter')
+	t.equal(tested, false, 'Sample is not tested')
+})
+
+test('filterByItem: wildtype/mutated samples do not match not tested filter', t => {
+	t.plan(6)
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [],
+			genotype: 'nt'
+		}
+	}
+	const mlst = [{ dt: 1, class: 'WT' }]
+	const [pass, tested] = filterByItem(filter, mlst)
+	t.equal(pass, false, 'Sample does not pass filter')
+	t.equal(tested, true, 'Sample is tested')
+
+	const mlst1 = [{ dt: 1, class: 'M' }]
+	const mlst2 = [{ dt: 1, class: 'F' }]
+	for (const mlst of [mlst1, mlst2]) {
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
 })
 
 test('filterByItem: mcount=any', t => {
@@ -161,6 +205,7 @@ test('filterByItem: mcount=any', t => {
 				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 			],
+			genotype: 'variant',
 			mcount: 'any'
 		}
 	}
@@ -220,8 +265,6 @@ test('filterByItem: mcount=any', t => {
 		t.equal(pass, false, 'Sample does not pass filter')
 		t.equal(tested, true, 'Sample is tested')
 	}
-
-	t.end()
 })
 
 test('filterByItem: mcount=single', t => {
@@ -235,6 +278,7 @@ test('filterByItem: mcount=single', t => {
 				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 			],
+			genotype: 'variant',
 			mcount: 'single'
 		}
 	}
@@ -284,8 +328,6 @@ test('filterByItem: mcount=single', t => {
 		t.equal(pass, false, 'Sample does not pass filter')
 		t.equal(tested, true, 'Sample is tested')
 	}
-
-	t.end()
 })
 
 test('filterByItem: mcount=multiple', t => {
@@ -299,6 +341,7 @@ test('filterByItem: mcount=multiple', t => {
 				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 			],
+			genotype: 'variant',
 			mcount: 'multiple'
 		}
 	}
@@ -368,8 +411,110 @@ test('filterByItem: mcount=multiple', t => {
 		t.equal(pass, false, 'Sample does not pass filter')
 		t.equal(tested, true, 'Sample is tested')
 	}
+})
 
-	t.end()
+test('filterByItem: mcount=all', t => {
+	t.plan(22)
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [
+				{ key: 'M', label: 'MISSENSE', value: 'M' },
+				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
+				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
+			],
+			genotype: 'variant',
+			mcount: 'all'
+		}
+	}
+
+	{
+		const mlst = [{ dt: 1, class: 'M' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [
+			{ dt: 1, class: 'M' },
+			{ dt: 1, class: 'M' }
+		]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [
+			{ dt: 1, class: 'M' },
+			{ dt: 1, class: 'F' }
+		]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [
+			{ dt: 1, class: 'M' },
+			{ dt: 1, class: 'F' },
+			{ dt: 1, class: 'D' }
+		]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [
+			{ dt: 1, class: 'M' },
+			{ dt: 1, class: 'L' }
+		]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [{ dt: 1, class: 'L' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [{ dt: 1, class: 'WT' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [{ dt: 1, class: 'Blank' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample passes filter')
+		t.equal(tested, false, 'Sample is tested')
+	}
+	{
+		const mlst = [
+			{ dt: 1, class: 'L' },
+			{ dt: 1, class: 'L' }
+		]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [
+			{ dt: 1, class: 'M' },
+			{ dt: 1, class: 'F' },
+			{ dt: 4, class: 'CNV_amp' }
+		]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'Sample passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		const mlst = [{ dt: 4, class: 'CNV_amp' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample passes filter')
+		t.equal(tested, false, 'Sample is tested')
+	}
 })
 
 test('filterByItem: isnot=true', t => {
@@ -383,6 +528,7 @@ test('filterByItem: isnot=true', t => {
 				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 			],
+			genotype: 'variant',
 			mcount: 'any',
 			isnot: true
 		}
@@ -430,6 +576,7 @@ test('filterByItem: isnot=true', t => {
 				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 			],
+			genotype: 'variant',
 			mcount: 'single',
 			isnot: true
 		}
@@ -468,7 +615,6 @@ test('filterByItem: isnot=true', t => {
 		t.equal(pass, true, 'Sample passes filter')
 		t.equal(tested, true, 'Sample is tested')
 	}
-	t.end()
 })
 
 test('filterByItem: mutation, origin', t => {
@@ -482,6 +628,7 @@ test('filterByItem: mutation, origin', t => {
 				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 				{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 			],
+			genotype: 'variant',
 			mcount: 'any'
 		}
 	}
@@ -531,7 +678,6 @@ test('filterByItem: mutation, origin', t => {
 		t.equal(pass, false, 'Sample does not pass filter')
 		t.equal(tested, false, 'Sample is not tested')
 	}
-	t.end()
 })
 
 test('filterByItem: wildtype, origin', t => {
@@ -541,7 +687,7 @@ test('filterByItem: wildtype, origin', t => {
 		tvs: {
 			term: { dt: 1, type: 'dtsnvindel', origin: 'somatic' },
 			values: [],
-			wt: true
+			genotype: 'wt'
 		}
 	}
 
@@ -590,7 +736,6 @@ test('filterByItem: wildtype, origin', t => {
 		t.equal(pass, false, 'Sample does not pass filter')
 		t.equal(tested, false, 'Sample is not tested')
 	}
-	t.end()
 })
 
 test('filterByItem: continuous CNV', t => {
@@ -672,7 +817,6 @@ test('filterByItem: continuous CNV', t => {
 		t.equal(pass, false, 'Sample does not pass filter (not tested)')
 		t.equal(tested, false, 'Sample is not tested')
 	}
-	t.end()
 })
 
 test('filterByTvsLst: single tvs', t => {
@@ -691,6 +835,7 @@ test('filterByTvsLst: single tvs', t => {
 						{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 						{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 					],
+					genotype: 'variant',
 					mcount: 'any'
 				}
 			}
@@ -736,7 +881,6 @@ test('filterByTvsLst: single tvs', t => {
 		t.equal(pass, false, 'Sample does not pass filter')
 		t.equal(tested, false, 'Sample is not tested for mutation type')
 	}
-	t.end()
 })
 
 test('filterByTvsLst: multiple tvs, OR join', t => {
@@ -751,6 +895,7 @@ test('filterByTvsLst: multiple tvs, OR join', t => {
 				tvs: {
 					term: { dt: 1, type: 'dtsnvindel' },
 					values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
+					genotype: 'variant',
 					mcount: 'any'
 				}
 			},
@@ -759,6 +904,7 @@ test('filterByTvsLst: multiple tvs, OR join', t => {
 				tvs: {
 					term: { dt: 4, type: 'dtcnv' },
 					values: [{ key: 'CNV_amp', label: 'Gain', value: 'CNV_amp' }],
+					genotype: 'variant',
 					mcount: 'any'
 				}
 			}
@@ -819,7 +965,6 @@ test('filterByTvsLst: multiple tvs, OR join', t => {
 		t.equal(pass, true, 'Sample passes filter')
 		t.equal(tested, false, 'Sample is not tested')
 	}
-	t.end()
 })
 
 test('filterByTvsLst: multiple tvs, AND join', t => {
@@ -834,6 +979,7 @@ test('filterByTvsLst: multiple tvs, AND join', t => {
 				tvs: {
 					term: { dt: 1, type: 'dtsnvindel' },
 					values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
+					genotype: 'variant',
 					mcount: 'any'
 				}
 			},
@@ -842,6 +988,7 @@ test('filterByTvsLst: multiple tvs, AND join', t => {
 				tvs: {
 					term: { dt: 4, type: 'dtcnv' },
 					values: [{ key: 'CNV_amp', label: 'Gain', value: 'CNV_amp' }],
+					genotype: 'variant',
 					mcount: 'any'
 				}
 			}
@@ -902,7 +1049,6 @@ test('filterByTvsLst: multiple tvs, AND join', t => {
 		t.equal(pass, false, 'Sample does not pass filter')
 		t.equal(tested, false, 'Sample is not tested')
 	}
-	t.end()
 })
 
 test('filterByTvsLst: in=false', t => {
@@ -921,6 +1067,7 @@ test('filterByTvsLst: in=false', t => {
 						{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
 						{ key: 'D', label: 'PROTEINDEL', value: 'D' }
 					],
+					genotype: 'variant',
 					mcount: 'any'
 				}
 			}
@@ -966,7 +1113,6 @@ test('filterByTvsLst: in=false', t => {
 		t.equal(pass, false, 'Sample does not pass filter')
 		t.equal(tested, false, 'Sample is not tested for mutation type')
 	}
-	t.end()
 })
 
 test('filterByTvsLst: nested tvslst', t => {
@@ -981,6 +1127,7 @@ test('filterByTvsLst: nested tvslst', t => {
 				tvs: {
 					term: { dt: 1, type: 'dtsnvindel', origin: 'somatic' },
 					values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
+					genotype: 'variant',
 					mcount: 'any'
 				}
 			},
@@ -989,6 +1136,7 @@ test('filterByTvsLst: nested tvslst', t => {
 				tvs: {
 					term: { dt: 1, type: 'dtsnvindel', origin: 'germline' },
 					values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
+					genotype: 'variant',
 					mcount: 'any'
 				}
 			}
@@ -1000,6 +1148,7 @@ test('filterByTvsLst: nested tvslst', t => {
 		tvs: {
 			term: { dt: 4, type: 'dtcnv' },
 			values: [{ key: 'CNV_amp', label: 'Gain', value: 'CNV_amp' }],
+			genotype: 'variant',
 			mcount: 'any'
 		}
 	}
@@ -1061,5 +1210,377 @@ test('filterByTvsLst: nested tvslst', t => {
 		t.equal(pass, true, 'Sample passes filter')
 		t.equal(tested, false, 'Sample is not tested')
 	}
-	t.end()
 })
+
+test('mayFilterByMaf: basic mafFilter', t => {
+	t.plan(12)
+
+	// start bounded, stop unbounded
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '70,30' }
+		const pass = mayFilterByMaf(mafFilter, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '70,20' }
+		const pass = mayFilterByMaf(mafFilter, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '30,70' }
+		const pass = mayFilterByMaf(mafFilter, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '70,5' }
+		const pass = mayFilterByMaf(mafFilter, m)
+		t.equal(pass, false, 'Sample does not pass filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M' }
+		const pass = mayFilterByMaf(mafFilter, m)
+		t.equal(pass, false, 'Sample does not pass filter')
+	}
+
+	// start and stop bounded
+	const mafFilter2 = structuredClone(mafFilter)
+	mafFilter2.lst[0].tvs.ranges = [
+		{
+			start: 0.1,
+			stop: 0.6,
+			startinclusive: true,
+			stopinclusive: true,
+			startunbounded: false,
+			stopunbounded: false
+		}
+	]
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '70,30' }
+		const pass = mayFilterByMaf(mafFilter2, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '70,5' }
+		const pass = mayFilterByMaf(mafFilter2, m)
+		t.equal(pass, false, 'Sample does not pass filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '30,70' }
+		const pass = mayFilterByMaf(mafFilter2, m)
+		t.equal(pass, false, 'Sample does not pass filter')
+	}
+
+	// start unbounded, stop bounded
+	const mafFilter3 = structuredClone(mafFilter)
+	mafFilter3.lst[0].tvs.ranges = [{ stop: 0.6, stopinclusive: true, startunbounded: true }]
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '70,30' }
+		const pass = mayFilterByMaf(mafFilter3, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '70,5' }
+		const pass = mayFilterByMaf(mafFilter3, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '70,2' }
+		const pass = mayFilterByMaf(mafFilter3, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '30,70' }
+		const pass = mayFilterByMaf(mafFilter3, m)
+		t.equal(pass, false, 'Sample does not pass filter')
+	}
+})
+
+test('mayFilterByMaf: mafFilter with child ids', t => {
+	t.plan(7)
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '70,30' }
+		const pass = mayFilterByMaf(mafFilter_childIds, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WES: '70,30' }
+		const pass = mayFilterByMaf(mafFilter_childIds, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '70,5' }
+		const pass = mayFilterByMaf(mafFilter_childIds, m)
+		t.equal(pass, false, 'Sample does not pass filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '70,30', tumor_DNA_WES: '70,30' }
+		const pass = mayFilterByMaf(mafFilter_childIds, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '70,10' }
+		const pass = mayFilterByMaf(mafFilter_childIds, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '70,10', tumor_DNA_WES: '70,2' }
+		const pass = mayFilterByMaf(mafFilter_childIds, m)
+		t.equal(pass, false, 'Sample does not pass filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '70,2', tumor_DNA_WES: '70,10' }
+		const pass = mayFilterByMaf(mafFilter_childIds, m)
+		t.equal(pass, false, 'Sample does not pass filter')
+	}
+})
+
+test('mayFilterByMaf: basic mafFilter, min allelic depth', t => {
+	t.plan(11)
+
+	// default allelic depth
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '70,30' }
+		const pass = mayFilterByMaf(mafFilter, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '1,1' }
+		const pass = mayFilterByMaf(mafFilter, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '0,1' }
+		const pass = mayFilterByMaf(mafFilter, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '1,0' }
+		const pass = mayFilterByMaf(mafFilter, m)
+		t.equal(pass, false, 'Sample does not pass filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '0,0' }
+		const pass = mayFilterByMaf(mafFilter, m)
+		t.equal(pass, false, 'Sample does not pass filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M' }
+		const pass = mayFilterByMaf(mafFilter, m)
+		t.equal(pass, false, 'Sample does not pass filter')
+	}
+
+	// min allelic depth = 100
+	const mafFilter_100 = structuredClone(mafFilter)
+	mafFilter_100.lst[0].tvs.minAllelicDepth = 100
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '70,30' }
+		const pass = mayFilterByMaf(mafFilter_100, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '70,40' }
+		const pass = mayFilterByMaf(mafFilter_100, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '70,20' }
+		const pass = mayFilterByMaf(mafFilter_100, m)
+		t.equal(pass, false, 'Sample does not pass filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '70,10' }
+		const pass = mayFilterByMaf(mafFilter_100, m)
+		t.equal(pass, false, 'Sample does not pass filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '140,20' }
+		const pass = mayFilterByMaf(mafFilter_100, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+})
+
+test('mayFilterByMaf: mafFilter with child ids, min allelic depth', t => {
+	t.plan(14)
+
+	// default allelic depth
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '70,30', tumor_DNA_WES: '70,30' }
+		const pass = mayFilterByMaf(mafFilter_childIds, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '1,1', tumor_DNA_WES: '1,1' }
+		const pass = mayFilterByMaf(mafFilter_childIds, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '1,1', tumor_DNA_WES: '1,0' }
+		const pass = mayFilterByMaf(mafFilter_childIds, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '1,1', tumor_DNA_WES: '0,0' }
+		const pass = mayFilterByMaf(mafFilter_childIds, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '0,1', tumor_DNA_WES: '0,0' }
+		const pass = mayFilterByMaf(mafFilter_childIds, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '1,0', tumor_DNA_WES: '0,0' }
+		const pass = mayFilterByMaf(mafFilter_childIds, m)
+		t.equal(pass, false, 'Sample does not pass filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '0,0', tumor_DNA_WES: '1,0' }
+		const pass = mayFilterByMaf(mafFilter_childIds, m)
+		t.equal(pass, false, 'Sample does not pass filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '0,0', tumor_DNA_WES: '0,0' }
+		const pass = mayFilterByMaf(mafFilter_childIds, m)
+		t.equal(pass, false, 'Sample does not pass filter')
+	}
+
+	// min allelic depth = 100
+	const mafFilter_100 = structuredClone(mafFilter_childIds)
+	mafFilter_100.lst[0].tvs.minAllelicDepth = 100
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '70,30', tumor_DNA_WES: '70,30' }
+		const pass = mayFilterByMaf(mafFilter_100, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '50,20', tumor_DNA_WES: '30,5' }
+		const pass = mayFilterByMaf(mafFilter_100, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '50,20', tumor_DNA_WES: '20,5' }
+		const pass = mayFilterByMaf(mafFilter_100, m)
+		t.equal(pass, false, 'Sample does not pass filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '50,20', tumor_DNA_WES: '10,5' }
+		const pass = mayFilterByMaf(mafFilter_100, m)
+		t.equal(pass, false, 'Sample does not pass filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '90,15', tumor_DNA_WES: '0,0' }
+		const pass = mayFilterByMaf(mafFilter_100, m)
+		t.equal(pass, true, 'Sample passes filter')
+	}
+
+	{
+		const m = { dt: 1, class: 'M', tumor_DNA_WGS: '90,15', tumor_DNA_WES: '90,5' }
+		const pass = mayFilterByMaf(mafFilter_100, m)
+		t.equal(pass, false, 'Sample does not pass filter')
+	}
+})
+
+const mafFilter = {
+	type: 'tvslst',
+	join: '',
+	in: true,
+	lst: [
+		{
+			type: 'tvs',
+			tvs: {
+				term: {
+					id: 'tumor_DNA_WGS',
+					name: 'Tumor DNA WGS',
+					parent_id: null,
+					isleaf: true,
+					type: 'float',
+					default: true,
+					min: 0,
+					max: 1
+				},
+				ranges: [
+					{
+						start: 0.1,
+						startinclusive: false,
+						startunbounded: false,
+						stopunbounded: true
+					}
+				],
+				minAllelicDepth: 1
+			}
+		}
+	]
+}
+
+const mafFilter_childIds = {
+	type: 'tvslst',
+	join: '',
+	in: true,
+	lst: [
+		{
+			type: 'tvs',
+			tvs: {
+				term: {
+					id: 'tumor_DNA',
+					name: 'Tumor DNA',
+					parent_id: null,
+					child_ids: ['tumor_DNA_WGS', 'tumor_DNA_WES'],
+					isleaf: true,
+					type: 'float',
+					default: true,
+					min: 0,
+					max: 1
+				},
+				ranges: [
+					{
+						start: 0.1,
+						startinclusive: false,
+						startunbounded: false,
+						stopunbounded: true
+					}
+				],
+				minAllelicDepth: 1
+			}
+		}
+	]
+}

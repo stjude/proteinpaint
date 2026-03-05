@@ -141,7 +141,7 @@ Fixes:
 ## 2.170.14
 
 Fixes:
-- use optional chaining when checking for ds.assayAvailability?.urseFilter0
+- use optional chaining when checking for ds.assayAvailability?.useFilter0
 
 
 ## 2.170.13
@@ -163,6 +163,8 @@ Fixes:
 - hide survival terms in dictionary tree for violin and boxplot
 - do not allow hiding all chart serieses/overlay, there should at least be one visible rendered data 
 - restore geneORA by passing gene names but not tw.$id
+- set __protected__.sessionid even when there are no dsCredentials
+
 
 ## 2.170.11
 
@@ -173,14 +175,13 @@ Fixes:
 ## 2.170.10
 
 Fixes:
-- throttle the number of concurrent by-term queries for sample data as triggered by getData()
-- revert to using memFetch to avoid redundant GDC API `/cases` request/responses across different genes that adds up to minutes of delayed response
-- prevent crashing the server due to unhandled exceptions when aborting GDC API fetch requests
+- throttle the number of active sample data queries across all users
 
 
 ## 2.170.9
 
 Fixes:
+
 - fix violin plot not loading due to unsynchronized q.dtLst[] and q.predefined_groupset_idx
 - improve fault tolerance by retrying failed GDC API requests
 
@@ -191,9 +192,9 @@ Fixes:
 - supply abort signal option to getDefaultBins and getpercentile requests when filling-in term wrappers
 
 
-## 2.170.7:
+## 2.170.7
 
-Fixes
+Fixes:
 - support correlation plot triggerAbort() to cancel stale network requests; detect component triggerAbort() as a prototype method
 
 
@@ -733,7 +734,7 @@ Fixes:
 ## 2.134.0
 
 Features:
-- We now support the report plot that shows an aggregation of plots embedded, according to the dataset configuration for the plot. If specified this plot shows country and site filters. This plot was developed to build the sjcares report.
+- We now support the report plot that shows an aggregation of plots embedded, according to the dataset configuration for the plot. If specified this plot shows country and site filters. This plot was developed to build the carereg report.
 
 Fixes:
 - distinguish by term.id, instead of term.name, in multi-select term tree menu

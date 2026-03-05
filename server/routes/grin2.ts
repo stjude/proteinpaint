@@ -5,19 +5,14 @@ import path from 'path'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { mayLog } from '#src/helpers.ts'
+import os from 'os'
 import { get_samples } from '#src/termdb.sql.js'
 import { read_file, file_is_readable } from '#src/utils.js'
-import {
-	dtsnvindel,
-	dtcnv,
-	dtfusionrna,
-	dtsv,
-	dt2lesion,
-	optionToDt,
-	formatElapsedTime,
-	MANHATTAN_LOG_QVALUE_CUTOFF
-} from '#shared'
+import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dt2lesion, optionToDt, formatElapsedTime } from '#shared'
+import { mayFilterByMaf } from '#src/mds3.init.js'
 import crypto from 'crypto'
+import { promisify } from 'node:util'
+import { exec as execCallback } from 'node:child_process'
 
 /**
  * General GRIN2 analysis route
@@ -40,15 +35,18 @@ import crypto from 'crypto'
  *    - Fusion: Filter by 5' and 3' flanking sizes
  *    - SV: Filter by 5' and 3' flanking sizes
  *    - Hypermutator: To be implemented at later date
- * 4. Convert filtered data to lesion format and apply filter caps per type. Note: For CNV, count gains and losses separately but share capped status and sample count
+ * 4. Convert filtered data to lesion format and apply overall lesion cap
  * 5. Pass lesion data, maxGenesToShow, and cacheFileName to Python for GRIN2 statistical analysis and then pass device pixel ratio, width, and height to Rust for plot generation
  * 6. Return Manhattan plot from Rust as base64 string, top gene table, timing information, statistically significant results that are displayed as an interactive svg, and cache file name for future use
  */
 
 // Constants & types
-const MAX_LESIONS_PER_TYPE = serverconfig.features.grin2maxLesionPerType || 110000 // Maximum number of lesions to process per type to avoid overwhelming the production server
-type TrackState = { count: number }
-type LesionTracker = Map<number, TrackState>
+const MAX_LESIONS = serverconfig.features.grin2maxLesions || 250000 // Maximum total number of lesions to process to avoid overwhelming the production server
+const GRIN2_MEMORY_BUDGET_MB = 950
+const GRIN2_CONCURRENCY_LIMIT = 10
+const MEMORY_BASE_MB = 260
+const MEMORY_PER_1K_LESIONS = 2.4
+const MIN_LESIONS = 50000
 
 export const api: RouteApi = {
 	endpoint: 'grin2',
@@ -78,7 +76,7 @@ function init({ genomes }) {
 
 			if (!ds.queries?.singleSampleMutation) throw new Error('singleSampleMutation query missing from dataset')
 
-			const result = await runGrin2(g, ds, request)
+			const result = await runGrin2WithLimit(g, ds, request)
 			res.json(result)
 		} catch (e: any) {
 			console.error('[GRIN2] Error stack:', e.stack)
@@ -90,6 +88,90 @@ function init({ genomes }) {
 
 			res.status(500).send(errorResponse)
 		}
+	}
+}
+
+// =============================================================================
+// CONCURRENCY and MEMORY MANAGEMENT
+// =============================================================================
+
+const exec = promisify(execCallback)
+
+async function getAvailableMemoryMB(): Promise<number> {
+	try {
+		if (process.platform === 'darwin') {
+			// macOS: use vm_stat
+			const { stdout } = await exec('vm_stat')
+			const output = stdout.toString()
+
+			// Parse page size from vm_stat header: "page size of 4096 bytes for Apple silicon, 16384 bytes for Intel macs"
+			const headerLine = output.split('\n')[0] || ''
+			const pageSizeMatch = headerLine.match(/page size of\s+(\d+)\s+bytes/i)
+			const pageSize = pageSizeMatch ? parseInt(pageSizeMatch[1], 10) : 16384
+			const freeMatch = output.match(/Pages free:\s+(\d+)/)
+			const inactiveMatch = output.match(/Pages inactive:\s+(\d+)/)
+			const freePages = freeMatch ? parseInt(freeMatch[1], 10) : 0
+			const inactivePages = inactiveMatch ? parseInt(inactiveMatch[1], 10) : 0
+
+			// Available ≈ free + inactive
+			return ((freePages + inactivePages) * pageSize) / (1024 * 1024)
+		} else {
+			// Linux: use free command
+			const { stdout } = await exec('free -m')
+			const output = stdout.toString()
+			const lines = output.split('\n')
+			const memLine = lines.find(l => l.startsWith('Mem:'))
+			if (memLine) {
+				const parts = memLine.split(/\s+/)
+				return parseInt(parts[6]) // "available" column
+			}
+		}
+	} catch (e) {
+		mayLog(`[GRIN2] Memory check failed, using fallback: ${e}`)
+	}
+
+	// Fallback: os.freemem (less accurate but always works)
+	return os.freemem() / (1024 * 1024)
+}
+
+async function getMaxLesions(): Promise<number> {
+	const availableMemoryMB = await getAvailableMemoryMB()
+	mayLog(`[GRIN2] Available system memory: ${availableMemoryMB.toFixed(0)} MB`)
+
+	// If server is under heavy load, reduce lesion cap. Our calculation assumes each 1,000 lesions use ~2.4MB of memory plus a base overhead (i.e. a linear relationship).
+	if (availableMemoryMB < GRIN2_MEMORY_BUDGET_MB * 2) {
+		const reducedBudget = availableMemoryMB * 0.4
+		mayLog(`[GRIN2] Reducing lesion cap due to memory constraints. New budget: ${reducedBudget.toFixed(2)} MB`)
+		const calculated = Math.floor((reducedBudget - MEMORY_BASE_MB) / MEMORY_PER_1K_LESIONS) * 1000
+		mayLog(`[GRIN2] Calculated lesion cap based on memory: ${calculated.toLocaleString()}`)
+		return Math.max(MIN_LESIONS, Math.min(MAX_LESIONS, calculated))
+	}
+
+	return MAX_LESIONS
+}
+
+let activeGrin2Jobs = 0
+
+async function runGrin2WithLimit(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Response> {
+	if (activeGrin2Jobs >= GRIN2_CONCURRENCY_LIMIT) {
+		const error: any = new Error(
+			`GRIN2 analysis queue is full (${GRIN2_CONCURRENCY_LIMIT} concurrent analyses). Please try again in a few minutes.`
+		)
+
+		// Explicitly set status code for rate limiting so we ensure this error doesn't get cached
+		error.status = 429
+		error.statusCode = 429
+		throw error
+	}
+
+	activeGrin2Jobs++
+	mayLog(`[GRIN2] Starting analysis. Active jobs: ${activeGrin2Jobs}/${GRIN2_CONCURRENCY_LIMIT}`)
+
+	try {
+		return await runGrin2(g, ds, request)
+	} finally {
+		activeGrin2Jobs--
+		mayLog(`[GRIN2] Analysis complete. Active jobs: ${activeGrin2Jobs}/${GRIN2_CONCURRENCY_LIMIT}`)
 	}
 }
 
@@ -147,22 +229,24 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		throw new Error('No samples found matching the provided filter criteria')
 	}
 
-	// Step 2: Process sample data, convert to lesion format, and apply filter caps per type
-	const tracker = getLesionTracker(request)
+	// Step 2: Process sample data, convert to lesion format, and apply overall lesion cap
 	const processingStartTime = Date.now()
 
-	const { lesions, processingSummary } = await processSampleData(samples, ds, request, tracker)
+	const { lesions, processing } = await processSampleData(samples, ds, request)
+
+	// Guard against undefined processing summary so eslint doesn't complain
+	if (!processing) throw new Error('Processing summary is missing')
 
 	const processingTime = Date.now() - processingStartTime
 	mayLog(`[GRIN2] Data processing took ${formatElapsedTime(processingTime)}`)
 	mayLog(
-		`[GRIN2] Processing summary: ${processingSummary?.processedSamples ?? 0}/${
-			processingSummary?.totalSamples ?? samples.length
+		`[GRIN2] Processing summary: ${processing?.processedSamples ?? 0}/${
+			processing?.totalSamples ?? samples.length
 		} samples processed successfully`
 	)
 
-	if (processingSummary?.failedSamples !== undefined && processingSummary.failedSamples > 0) {
-		mayLog(`[GRIN2] Warning: ${processingSummary.failedSamples} samples failed to process`)
+	if (processing?.failedSamples !== undefined && processing.failedSamples > 0) {
+		mayLog(`[GRIN2] Warning: ${processing.failedSamples} samples failed to process`)
 	}
 
 	if (lesions.length === 0) {
@@ -171,23 +255,18 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 
 	// Step 3: Prepare input for Python script
 	const availableDataTypes = Object.keys(optionToDt).filter(key => key in request)
+
 	const pyInput = {
 		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 		chromosomelist: {} as { [key: string]: number },
 		lesion: JSON.stringify(lesions),
 		cacheFileName: generateCacheFileName(),
-		availableDataTypes: availableDataTypes,
 		maxGenesToShow: request.maxGenesToShow,
 		lesionTypeMap: buildLesionTypeMap(availableDataTypes)
 	}
 
 	// Build chromosome list from genome reference
 	for (const c in g.majorchr) {
-		// List is short so a small penalty for accessing the flag in the loop
-		if (ds.queries.singleSampleMutation.discoPlot?.skipChrM) {
-			// Skip chrM; this property is set in gdc ds but still assess it to avoid hardcoding the logic, in case code maybe reused for non-gdc ds
-			if (c.toLowerCase() == 'chrm') continue
-		}
 		pyInput.chromosomelist[c] = g.majorchr[c]
 	}
 
@@ -218,7 +297,9 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 		png_dot_radius: request.pngDotRadius,
 		lesion_type_colors: request.lesionTypeColors,
 		q_value_threshold: request.qValueThreshold,
-		log_cutoff: MANHATTAN_LOG_QVALUE_CUTOFF
+		max_capped_points: request.maxCappedPoints,
+		hard_cap: request.hardCap,
+		bin_size: request.binSize
 	}
 
 	// Step 6: Generate manhattan plot via rust
@@ -238,70 +319,130 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 
 	const totalTime = processingTime + grin2AnalysisTime + manhattanPlotTime
 
+	// Build lesion type display rows
+	const lesionTypeRows: string[][] = []
+	if (processing.lesionCounts?.byType) {
+		const typeLabels: Record<string, string> = {}
+		Object.values(dt2lesion).forEach(config => {
+			config.lesionTypes.forEach(lt => {
+				typeLabels[lt.lesionType] = lt.name
+			})
+		})
+		for (const [type, data] of Object.entries(processing.lesionCounts.byType)) {
+			const { count, samples } = data as { count: number; samples: number }
+			lesionTypeRows.push([typeLabels[type] || type, `${count.toLocaleString()} (${samples} samples)`])
+		}
+	}
+
+	// Build cap warning if applicable
+	const capWarningRows: string[][] = []
+	const expectedToProcess = processing.totalSamples! - processing.failedSamples!
+	if (processing.processedSamples! < expectedToProcess) {
+		capWarningRows.push([
+			'Note',
+			`Lesion cap of ${processing.lesionCap?.toLocaleString()} was reached before all samples could be processed. ` +
+				`Analysis ran on ${processing.processedSamples!.toLocaleString()} of ${expectedToProcess.toLocaleString()} samples.`
+		])
+	}
+
 	const response: GRIN2Response = {
 		status: 'success',
 		pngImg: manhattanPlotData.png,
 		plotData: manhattanPlotData.plot_data,
 		topGeneTable: resultData.topGeneTable,
-		totalGenes: resultData.totalGenes,
-		showingTop: resultData.showingTop,
-		timing: {
-			processingTime: formatElapsedTime(processingTime),
-			grin2Time: formatElapsedTime(grin2AnalysisTime),
-			plottingTime: formatElapsedTime(manhattanPlotTime),
-			totalTime: formatElapsedTime(totalTime)
-		},
-		processingSummary: processingSummary,
-		cacheFileName: resultData.cacheFileName
+		stats: {
+			lst: [
+				{
+					name: 'GRIN2 Processing Summary',
+					rows: [
+						['Total Genes', resultData.totalGenes.toLocaleString()],
+						['Showing Top', resultData.showingTop.toLocaleString()],
+						['Cache File Name', resultData.cacheFileName],
+						['Total Samples', processing.totalSamples!.toLocaleString()],
+						['Processed Samples', processing.processedSamples!.toLocaleString()],
+						['Unprocessed Samples', (processing.unprocessedSamples ?? 0).toLocaleString()],
+						['Failed Samples', processing.failedSamples!.toLocaleString()],
+						['Failed Files', (processing.failedFiles?.length ?? 0).toLocaleString()],
+						['Total Lesions', processing.totalLesions!.toLocaleString()],
+						['Processed Lesions', processing.processedLesions!.toLocaleString()]
+					]
+				},
+				{
+					name: 'Lesion Counts',
+					rows: lesionTypeRows
+				},
+				{
+					name: 'Memory Usage',
+					rows: [
+						['Start', `${resultData.memory?.start} MB`],
+						['After prep', `${resultData.memory?.after_prep} MB`],
+						['After overlaps', `${resultData.memory?.after_overlaps} MB`],
+						['After counts', `${resultData.memory?.after_counts} MB`],
+						['After stats', `${resultData.memory?.after_stats} MB`],
+						['Peak', `${resultData.memory?.peak} MB`]
+					]
+				},
+				{
+					name: 'Timing',
+					rows: [
+						['Processing', formatElapsedTime(processingTime)],
+						['GRIN2', formatElapsedTime(grin2AnalysisTime)],
+						['Plotting', formatElapsedTime(manhattanPlotTime)],
+						['Total', formatElapsedTime(totalTime)],
+						...capWarningRows
+					]
+				}
+			]
+		}
 	}
 
 	return response
 }
 
-/**  Initializes a new, request-specific lesion tracker.
- * Builds a set of enabled lesion types from the request and a Map that tracks
- * per-type lesion counts and warning flags. */
-function getLesionTracker(req: GRIN2Request): LesionTracker {
-	const currentTypes: number[] = []
-	if (req.snvindelOptions) currentTypes.push(dtsnvindel)
-	if (req.cnvOptions) currentTypes.push(dtcnv)
-	if (req.fusionOptions) currentTypes.push(dtfusionrna)
-	if (req.svOptions) currentTypes.push(dtsv)
-
-	const track = new Map<number, TrackState>()
-	for (const t of currentTypes) track.set(t, { count: 0 })
-	return track
-}
-
-/** Early-stop if all enabled types are at their caps */
-function allTypesCapped(tracker: LesionTracker): boolean {
-	for (const value of tracker.values()) {
-		if (value.count < MAX_LESIONS_PER_TYPE) return false
-	}
-	return true
-}
-
 /**
  * Process sample data by reading per-sample JSON files and converting to lesion format
  * Each sample has a JSON file containing mutation data (mlst array)
- * Returns a string array of lesions: [ID, chrom, loc.start, loc.end, lsn.type] and processing summary that now includes detailed stats breakdown
- * We limit the number of lesions per type to avoid overwhelming the production server. The limit is set by MAX_LESIONS_PER_TYPE
+ * Returns a string array of lesions: [ID, chrom, loc.start, loc.end, lsn.type] and processing summary
+ * We limit the total number of lesions to avoid overwhelming the production server. The limit is set by MAX_LESIONS
  */
 async function processSampleData(
 	samples: any[],
 	ds: any,
-	request: GRIN2Request,
-	tracker: LesionTracker
-): Promise<{ lesions: any[]; processingSummary: GRIN2Response['processingSummary'] }> {
+	request: GRIN2Request
+): Promise<{
+	lesions: any[]
+	processing: {
+		totalSamples: number
+		processedSamples: number
+		failedSamples: number
+		failedFiles: Array<{ sampleName: string; filePath: string; error: string }>
+		totalLesions: number
+		processedLesions: number
+		unprocessedSamples: number
+		lesionCap?: number
+		lesionCounts?: {
+			total: number
+			byType: Record<string, { count: number; samples: number }>
+		}
+	}
+}> {
 	const lesions: any[] = []
+	const maxLesions = await getMaxLesions()
+	mayLog(`[GRIN2] Max lesions for this run: ${maxLesions.toLocaleString()}`)
 
-	// Track unique samples per lesion type
+	// Track unique samples per lesion type for reporting
 	const samplesPerType = new Map<number, Set<string>>()
-	for (const [type] of tracker.entries()) {
+	const enabledTypes: number[] = []
+	if (request.snvindelOptions) enabledTypes.push(dtsnvindel)
+	if (request.cnvOptions) enabledTypes.push(dtcnv)
+	if (request.fusionOptions) enabledTypes.push(dtfusionrna)
+	if (request.svOptions) enabledTypes.push(dtsv)
+
+	for (const type of enabledTypes) {
 		samplesPerType.set(type, new Set<string>())
 	}
 
-	const processingSummary: GRIN2Response['processingSummary'] = {
+	const processing = {
 		totalSamples: samples.length,
 		processedSamples: 0,
 		failedSamples: 0,
@@ -309,14 +450,27 @@ async function processSampleData(
 		totalLesions: 0,
 		processedLesions: 0,
 		unprocessedSamples: 0
+	} as {
+		totalSamples: number
+		processedSamples: number
+		failedSamples: number
+		failedFiles: Array<{ sampleName: string; filePath: string; error: string }>
+		totalLesions: number
+		processedLesions: number
+		unprocessedSamples: number
+		lesionCap?: number
+		lesionCounts?: {
+			total: number
+			byType: Record<string, { count: number; samples: number }>
+		}
 	}
 
-	outer: for (let i = 0; i < samples.length; i++) {
-		if (allTypesCapped(tracker)) {
+	for (let i = 0; i < samples.length; i++) {
+		if (lesions.length >= maxLesions) {
 			const remaining = samples.length - i
-			if (remaining > 0) processingSummary.unprocessedSamples! += remaining
-			mayLog('[GRIN2] All enabled per-type caps reached; stopping early.')
-			break outer
+			if (remaining > 0) processing.unprocessedSamples! += remaining
+			mayLog(`[GRIN2] Overall lesion cap (${maxLesions}) reached; stopping early.`)
+			break
 		}
 
 		const sample = samples[i]
@@ -326,26 +480,29 @@ async function processSampleData(
 			await file_is_readable(filepath)
 			const mlst = JSON.parse(await read_file(filepath))
 
-			const { sampleLesions, contributedTypes } = await processSampleMlst(sample.name, mlst, request, tracker)
-			lesions.push(...sampleLesions)
+			const { sampleLesions, contributedTypes } = processSampleMlst(sample.name, mlst, request)
+
+			// Filter out chrM lesions
+			const skipChrM = ds.queries.singleSampleMutation.discoPlot?.skipChrM
+			const filteredLesions = skipChrM
+				? sampleLesions.filter(lesion => lesion[1].toLowerCase() !== 'chrm')
+				: sampleLesions
+
+			// Only add lesions up to the cap
+			const remainingCapacity = maxLesions - lesions.length
+			const lesionsToAdd = filteredLesions.slice(0, remainingCapacity)
+			lesions.push(...lesionsToAdd)
 
 			// Track samples for each type they contributed to
 			for (const type of contributedTypes) {
 				samplesPerType.get(type)?.add(sample.name)
 			}
 
-			processingSummary.processedSamples! += 1
-			processingSummary.totalLesions! += sampleLesions.length
-
-			if (allTypesCapped(tracker)) {
-				const remaining = samples.length - 1 - i
-				if (remaining > 0) processingSummary.unprocessedSamples! += remaining
-				mayLog('[GRIN2] All enabled per-type caps reached; stopping early.')
-				break outer
-			}
+			processing.processedSamples! += 1
+			processing.totalLesions! += filteredLesions.length
 		} catch (error) {
-			processingSummary.failedSamples! += 1
-			processingSummary.failedFiles!.push({
+			processing.failedSamples! += 1
+			processing.failedFiles!.push({
 				sampleName: sample.name,
 				filePath: filepath,
 				error: error instanceof Error ? error.message || 'Unknown error' : String(error)
@@ -354,9 +511,10 @@ async function processSampleData(
 		}
 	}
 
-	processingSummary.processedLesions = lesions.length
+	processing.processedLesions = lesions.length
+	processing.lesionCap = maxLesions
 
-	// After processing all samples, we will warn for any type that has reached its cap
+	// Build lesion counts for summary
 	const lesionCounts: any = {
 		total: lesions.length,
 		byType: {}
@@ -365,12 +523,11 @@ async function processSampleData(
 	// Count lesions by type in a single pass
 	const lesionTypeCounts: Record<string, number> = {}
 	for (const lesion of lesions) {
-		const lesionType = lesion[4] // Get the lesion type from the 5th element
+		const lesionType = lesion[4]
 		lesionTypeCounts[lesionType] = (lesionTypeCounts[lesionType] || 0) + 1
 	}
 
-	for (const [type, info] of tracker.entries()) {
-		const isCapped = info.count >= MAX_LESIONS_PER_TYPE
+	for (const type of enabledTypes) {
 		const sampleCount = samplesPerType.get(type)?.size || 0
 		const dtConfig = dt2lesion[type]
 
@@ -379,25 +536,22 @@ async function processSampleData(
 		dtConfig.lesionTypes.forEach(lt => {
 			lesionCounts.byType[lt.lesionType] = {
 				count: lesionTypeCounts[lt.lesionType] || 0,
-				capped: isCapped,
 				samples: sampleCount
 			}
 		})
 	}
 
-	// Add lesionCounts to processingSummary
-	processingSummary.lesionCounts = lesionCounts
+	processing.lesionCounts = lesionCounts
 
-	return { lesions, processingSummary }
+	return { lesions, processing }
 }
 
-/** Process the MLST data for each sample and cap the number of lesions per data type */
-async function processSampleMlst(
+/** Process the MLST data for each sample - no per-type caps, just filter and convert */
+function processSampleMlst(
 	sampleName: string,
 	mlst: any[],
-	request: GRIN2Request,
-	tracker: LesionTracker
-): Promise<{ sampleLesions: any[]; contributedTypes: Set<number> }> {
+	request: GRIN2Request
+): { sampleLesions: any[]; contributedTypes: Set<number> } {
 	const sampleLesions: any[] = []
 	const contributedTypes = new Set<number>()
 
@@ -406,14 +560,8 @@ async function processSampleMlst(
 			case dtsnvindel: {
 				if (!request.snvindelOptions) break
 
-				const entry = tracker.get(dtsnvindel)
-				if (entry && entry.count >= MAX_LESIONS_PER_TYPE) {
-					break
-				}
-
 				const les = filterAndConvertSnvIndel(sampleName, m, request.snvindelOptions)
-				if (les && entry) {
-					entry.count++
+				if (les) {
 					sampleLesions.push(les)
 					contributedTypes.add(dtsnvindel)
 				}
@@ -423,15 +571,8 @@ async function processSampleMlst(
 			case dtcnv: {
 				if (!request.cnvOptions) break
 
-				// Shared cap for both gain & loss
-				const cnv = tracker.get(dtcnv)
-				if (cnv && cnv.count >= MAX_LESIONS_PER_TYPE) {
-					break
-				}
-
 				const les = filterAndConvertCnv(sampleName, m, request.cnvOptions)
-				if (les && cnv) {
-					cnv.count++ // single counter for both gain and loss
+				if (les) {
 					sampleLesions.push(les)
 					contributedTypes.add(dtcnv)
 				}
@@ -441,32 +582,17 @@ async function processSampleMlst(
 			case dtfusionrna: {
 				if (!request.fusionOptions) break
 
-				const fusion = tracker.get(dtfusionrna)
-				if (fusion && fusion.count >= MAX_LESIONS_PER_TYPE) {
-					break
-				}
-
 				const les = filterAndConvertFusion(sampleName, m, request.fusionOptions)
-				if (les && fusion) {
-					// Check if adding these lesions would exceed the cap
-					const lesionsToAdd = Array.isArray(les[0]) ? (les as string[][]).length : 1
-
-					if (fusion.count + lesionsToAdd > MAX_LESIONS_PER_TYPE) {
-						// Would exceed cap, skip this fusion
-						break
-					}
-
+				if (les) {
 					// Add all lesions (breakpoints) to the list
 					if (Array.isArray(les[0])) {
 						// Multiple lesions (two breakpoints)
 						for (const lesion of les as string[][]) {
 							sampleLesions.push(lesion)
-							fusion.count++ // ← Increment for each lesion added
 						}
 					} else {
 						// Single lesion
 						sampleLesions.push(les)
-						fusion.count++
 					}
 					contributedTypes.add(dtfusionrna)
 				}
@@ -476,32 +602,17 @@ async function processSampleMlst(
 			case dtsv: {
 				if (!request.svOptions) break
 
-				const sv = tracker.get(dtsv)
-				if (sv && sv.count >= MAX_LESIONS_PER_TYPE) {
-					break
-				}
-
 				const les = filterAndConvertSV(sampleName, m, request.svOptions)
-				if (les && sv) {
-					// Check if adding these lesions would exceed the cap
-					const lesionsToAdd = Array.isArray(les[0]) ? (les as string[][]).length : 1
-
-					if (sv.count + lesionsToAdd > MAX_LESIONS_PER_TYPE) {
-						// Would exceed cap, skip this SV
-						break
-					}
-
+				if (les) {
 					// Add all lesions (breakpoints) to the list
 					if (Array.isArray(les[0])) {
 						// Multiple lesions (two breakpoints)
 						for (const lesion of les as string[][]) {
 							sampleLesions.push(lesion)
-							sv.count++ // ← Increment for each lesion added
 						}
 					} else {
 						// Single lesion
 						sampleLesions.push(les)
-						sv.count++
 					}
 					contributedTypes.add(dtsv)
 				}
@@ -536,17 +647,18 @@ function filterAndConvertSnvIndel(
 		return null
 	}
 
-	// Filter by minimum alternate allele count
-	if (options.minAltAlleleCount !== undefined && options.minAltAlleleCount > 0) {
-		if (!entry.altCount || entry.altCount < options.minAltAlleleCount) {
-			return null
+	if (options.mafFilter?.lst?.length) {
+		// has non-empty maf filter. apply maf filtering
+		if (!Array.isArray(entry.vafs)) return null // lacks vaf and skip entry
+		// TEMP fix! delete this and use !mayFilterByMaf(options.mafFilter, entry) when helper accepts .vafs[]
+		const copy = { dt: dtsnvindel }
+		for (const v of entry.vafs) {
+			copy[v.id] = v.refCount + ',' + v.altCount
 		}
-	}
-
-	// Filter by minimum total depth (refCount + altCount)
-	if (options.minTotalDepth !== undefined && options.minTotalDepth > 0) {
-		const totalDepth = (entry.refCount || 0) + (entry.altCount || 0)
-		if (totalDepth < options.minTotalDepth) {
+		try {
+			if (!mayFilterByMaf(options.mafFilter, copy)) return null
+		} catch (e: any) {
+			mayLog('mayFilterByMaf() crashed on a snvindel ' + (e.message || e))
 			return null
 		}
 	}

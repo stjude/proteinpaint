@@ -1,7 +1,10 @@
 import type { Menu } from '#dom'
 import type { ManhattanPoint } from '#plots/manhattan/manhattanTypes.ts'
+import type { Elem } from '../../types/d3'
 
 export interface GRIN2Dom {
+	massControls: Elem
+	headerText: Elem
 	controls: any
 	div: any
 	tip: Menu

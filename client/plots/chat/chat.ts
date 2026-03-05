@@ -76,18 +76,20 @@ class Chat extends PlotBase implements RxComponent {
 				const serverBubble = this.addBubble({ msg: '...' })
 
 				try {
-					const data = await dofetch3('termdb/chat', { body })
+					const data = await dofetch3('termdb/chat2', { body })
 					if (data.error) throw data.error
 					console.log(data)
 
 					const result: ChatResponse = data
-					if (result.type == 'html') {
-						// Show error message in chatbot and exit, do not show any plot
+					if (result.type == 'text') {
+						serverBubble.text(result.text)
+					} else if (result.type == 'html') {
 						serverBubble.html(result.html)
 					} else if (result.type == 'plot') {
+						const newPlotId = getId()
 						this.app.dispatch({
 							type: 'plot_create',
-							id: getId(),
+							id: newPlotId,
 							config: result.plot
 						})
 						serverBubble.html('Please refer to the plot generated above')

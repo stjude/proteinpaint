@@ -45,7 +45,9 @@ export function renderTable({
 	dataTestId = null,
 	download = undefined,
 	noAutoScroll = false,
-	hoverEffects
+	hoverEffects,
+	allowRestoreRowOrder = false,
+	restoreButtonInFooter = false
 }: TableArgs) {
 	validateInput()
 	let _selectedRowStyle = selectedRowStyle
@@ -55,6 +57,9 @@ export function renderTable({
 	to a callback, so that the downstream code can correctly access data for the selected rows after sorting
 	*/
 	const rowsCopy = rows.map(i => i)
+
+	/** Store reset functions for all sort buttons so we can reset their state when restore is clicked */
+	const sortButtonResetFns: Array<() => void> = []
 
 	function validateInput() {
 		if (!columns || columns?.length == 0) throw `Missing columns data`
@@ -73,12 +78,59 @@ export function renderTable({
 			}
 		}
 
+		// Validate allowRestoreRowOrder can only be true when at least one column is sortable
+		if (allowRestoreRowOrder) {
+			const hasSortableColumn = columns.some(col => col.sortable === true)
+			if (!hasSortableColumn) {
+				throw `allowRestoreRowOrder can only be true when at least one column has sortable:true`
+			}
+		}
+
 		// this check is disabled for now as it breaks gdc bam slicing ui
 		//if (singleMode == true && (!buttons || !noButtonCallback)) throw `Missing buttons array and noButtonCallback but singleMode = true`
 	}
 
 	const uniqueInputName = inputName || getUniqueNameOrId('input')
+
+	// Store the original row order to restore
+	const originalRows = rows.map(i => i)
+
 	const parentDiv = div.append('div').style('background-color', 'white').style('display', 'inline-block')
+
+	// Create restore button container (will be shown/hidden based on sort state)
+	// If restoreButtonInFooter is true, we'll create it later with the footer buttons
+	let restoreButtonDiv: any
+	let restoreButton: any
+	if (allowRestoreRowOrder && !restoreButtonInFooter) {
+		restoreButtonDiv = div
+			.append('div')
+			.style('display', 'none') // Initially hidden
+			.style('padding', '5px')
+			.style('vertical-align', 'top')
+
+		restoreButton = restoreButtonDiv
+			.append('button')
+			.text('Restore row order')
+			.attr('data-testid', 'sjpp-table-restore-button')
+			.on('click', () => {
+				// Restore original row order
+				restoreButtonDiv.style('display', 'none')
+
+				const checked = getCheckedRowIndex()
+				const idxMap = new Map(rowsCopy.map((val, idx) => [val, idx]))
+				selectedRows = checked.map(i => originalRows.findIndex((v: TableCell[]) => idxMap.get(v) === i))
+
+				/** Must override caller setting once user selects row(s) */
+				if (selectedRows.length) selectAll = false
+
+				// Reset all sort button states
+				for (const resetFn of sortButtonResetFns) resetFn()
+
+				rows = originalRows.map(i => i) // Create a copy
+				updateRows()
+			})
+	}
+
 	if (download) {
 		const downloadDiv = div
 			.append('div')
@@ -367,7 +419,8 @@ export function renderTable({
 
 	updateRows()
 
-	if (buttons) {
+	// Create footer div if we have buttons OR if restore button should be in footer
+	if (buttons || (allowRestoreRowOrder && restoreButtonInFooter)) {
 		const footerDiv = div
 			.append('div')
 			.insert('div')
@@ -375,21 +428,49 @@ export function renderTable({
 			.style('float', buttonsToLeft ? 'left' : 'right')
 			.style('padding-bottom', '5px')
 
-		for (const bCfg of buttons) {
-			bCfg.button = footerDiv
+		// Add restore button to footer if requested (so button is grouped with other action buttons instead of separately below the table)
+		if (allowRestoreRowOrder && restoreButtonInFooter) {
+			restoreButton = footerDiv
 				.append('button')
-				.text(bCfg.text)
-				.style('margin', '10px 10px 0 0')
+				.text('Restore row order')
+				.attr('data-testid', 'sjpp-table-restore-button')
+				.style('display', 'none') // Initially hidden
 				.on('click', () => {
-					bCfg.callback(getCheckedRowIndex(), bCfg.button.node())
+					// Restore original row order
+					restoreButton.style('display', 'none')
+
+					const checked = getCheckedRowIndex()
+					const idxMap = new Map(rowsCopy.map((val, idx) => [val, idx]))
+					selectedRows = checked.map(i => originalRows.findIndex((v: TableCell[]) => idxMap.get(v) === i))
+
+					/** Must override caller setting once user selects row(s) */
+					if (selectedRows.length) selectAll = false
+
+					// Reset all sort button states
+					for (const resetFn of sortButtonResetFns) resetFn()
+
+					rows = originalRows.map(i => i) // Create a copy
+					updateRows()
 				})
-			if (bCfg.class) bCfg.button.attr('class', bCfg.class)
-			//else button.button.attr('class', 'sjpp_apply_btn')
-			bCfg.button.node().disabled = selectedRows.length == 0 && !selectAll
 		}
 
-		// call function to update buttons with .onChange(), so their text can reflect default checkbox selection
-		updateButtons()
+		if (buttons) {
+			for (const bCfg of buttons) {
+				bCfg.button = footerDiv
+					.append('button')
+					.text(bCfg.text)
+					.style('margin', '10px 10px 0 0')
+					.on('click', () => {
+						bCfg.callback(getCheckedRowIndex(), bCfg.button.node())
+					})
+				if (bCfg.class) bCfg.button.attr('class', bCfg.class)
+				//else button.button.attr('class', 'sjpp_apply_btn')
+				bCfg.button.node().disabled = selectedRows.length == 0 && !selectAll
+			}
+
+			// call function to update buttons with .onChange(), so their text can reflect default checkbox selection
+			updateButtons()
+		}
 	}
 
 	function updateButtons() {
@@ -427,8 +508,18 @@ export function renderTable({
 
 			rows = newRows
 			updateRows()
+
+			// Show restore button when table is sorted (and allowRestoreRowOrder is true)
+			if (allowRestoreRowOrder) {
+				if (restoreButtonInFooter && restoreButton) {
+					restoreButton.style('display', 'inline-block')
+				} else if (restoreButtonDiv) {
+					restoreButtonDiv.style('display', 'block')
+				}
+			}
 		}
-		createSortButton(th, callback, updateTable)
+		const resetFn = createSortButton(th, callback, updateTable)
+		sortButtonResetFns.push(resetFn)
 	}
 
 	const api = {
@@ -522,7 +613,8 @@ export async function downloadTable(rows, cols, filename = 'table.tsv') {
 	link.remove()
 }
 
-/** Toggles between ascending and descending sort */
+/** Toggles between ascending and descending sort
+ * Returns a reset function to reset the sort state */
 function createSortButton(th: Th, callback, updateTable) {
 	let isAscending = false
 	const sortDiv = th.append('div').style('display', 'inline-block').attr('class', 'sjpp-table-sort-button')
@@ -533,6 +625,10 @@ function createSortButton(th: Th, callback, updateTable) {
 			updateTable(newRows)
 		}
 	})
+	// Return a function to reset this sort button's state
+	return () => {
+		isAscending = false
+	}
 }
 
 /** Detects the type of values in a column and sorts accordingly */

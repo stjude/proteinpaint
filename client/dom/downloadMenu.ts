@@ -1,18 +1,27 @@
-import { Menu } from '#dom/menu'
+import { Menu, to_textfile } from '#dom'
 import { downloadSingleSVG, downloadAggregatedSVG } from '../common/svg.download.js'
 
+/* if a callback is provided for the 3rd argument, 
+it displays "Text" option, call callback to generate text data and save to text file
+as the svg/pdf download only relies on <svg> element and no way to access text data
+ */
 export class DownloadMenu {
 	menu: Menu
 	chartImages: any[]
 	holder: any
 	multipleSVGs: boolean
 	filename: string
+	textCallback?: any
 
-	constructor(chartImages, filename = 'charts') {
+	constructor(chartImages, filename = 'charts', textCallback?: () => string) {
 		this.menu = new Menu({ padding: '0px' })
 		this.chartImages = chartImages
 		this.multipleSVGs = chartImages.length > 1
 		this.filename = filename.replace(/\s/g, '_')
+		if (textCallback) {
+			if (typeof textCallback != 'function') throw new Error('textCallback not function')
+			this.textCallback = textCallback
+		}
 	}
 
 	show(x, y, elem = null) {
@@ -44,7 +53,7 @@ export class DownloadMenu {
 				this.menu.hide()
 			})
 
-		if (this.multipleSVGs)
+		if (this.multipleSVGs) {
 			menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
@@ -54,6 +63,18 @@ export class DownloadMenu {
 						downloadSingleSVG(chart.svg, chart.name.replace(/[^a-zA-Z0-9]/g, '_'), chart.svg.node(), chart.name)
 					this.menu.hide()
 				})
+		}
+
+		if (this.textCallback) {
+			menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Text')
+				.on('click', () => {
+					to_textfile(this.filename + '.txt', this.textCallback())
+					this.menu.hide()
+				})
+		}
 		this.menu.show(x - 20, y - 10, true, true, true, elem)
 	}
 }

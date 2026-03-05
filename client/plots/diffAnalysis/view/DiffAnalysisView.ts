@@ -59,9 +59,11 @@ function setRenderers(self) {
 		return tabs
 	}
 
-	//event is used in Tabs but not needed here
 	self.tabCallback = async (event, tab) => {
-		if (!tab || !tab.id) return
+		/** When loading a mass session file, the callback for the
+		 * tab will trigger before the plot component is initialized.
+		 * check for the event before triggering an app.dispatch.*/
+		if (!event || !tab || !tab.id) return
 		const plotConfig = tab.getPlotConfig()
 		await self.app.dispatch({
 			type: 'plot_edit',

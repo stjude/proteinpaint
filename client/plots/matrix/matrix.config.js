@@ -41,7 +41,7 @@ export async function getPlotConfig(opts = {}, app) {
 			join: 'and',
 			lst: []
 		},
-		cnvCutoffs: {},
+		// cnvCutoffs: {},
 
 		// rendering options
 		settings: {
@@ -141,7 +141,16 @@ export async function getPlotConfig(opts = {}, app) {
 				showHints: [],
 				// settings for a specific tw
 				twSpecificSettings: {},
-				oncoPrintSNVindelCellBorder: false // whether to show white cell border for SNVindel in oncoPrint mode
+				oncoPrintSNVindelCellBorder: false, // whether to show white cell border for SNVindel in oncoPrint mode
+				cnvValues: {
+					//Properties match the args for the ColorScales
+					//numericInput arg
+					cutoffMode: 'percentile',
+					defaultPercentile: 99,
+					min: null,
+					max: null,
+					percentile: 99
+				}
 			}
 		}
 	}
@@ -221,6 +230,9 @@ export async function getPlotConfig(opts = {}, app) {
 				}
 				if (tw.term?.type != 'samplelst' && tw.term?.type != 'termCollection') delete tw.term
 			}
+			/** If tw fails at this step, consider using structuredClone(tw) in
+			 * the config for app.dispatch() to make the tw mutable. Should
+			 * not fail from runpp(), only app.dispatch(). */
 			promises.push(fillTermWrapper(tw, app.vocabApi))
 		}
 		grp.lst = await Promise.all(promises)

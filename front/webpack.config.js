@@ -4,15 +4,21 @@ const path = require('path')
 const fs = require('fs')
 
 // TODO: delete webpack use, once esbuild migration is fully tested and unlikely to be reverted
+// as of 1/24/2025: still using webpack since esbuild chunks are still too granular,
+// while webpack is able to combine more related code into one for less code downloads;
+// will re-investigate using esbuild when future versions results in less bundle chunks
 
 module.exports = function getPortalConfig(env = {}) {
+	// TODO: webpack hot reload/rebundling on code change sometimes do not persist the env.NODE_ENV
+	// that is supplied on initial bundling call - fix this later
+	const mode = env.NODE_ENV ? env.NODE_ENV : 'production'
 	const config = {
-		mode: env.NODE_ENV ? env.NODE_ENV : 'production',
+		mode,
 		target: 'web',
 		entry: './src/index.js',
 		output: {
 			path: path.join(__dirname, 'public/bin'),
-			publicPath: '__PP_URL__',
+			publicPath: mode === 'production' ? '__PP_URL__' : '/bin/front/',
 			filename: 'proteinpaint.js',
 			chunkLoadingGlobal: 'ppJsonp',
 			// the library name exposed by this bundle

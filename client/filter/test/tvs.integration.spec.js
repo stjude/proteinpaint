@@ -253,6 +253,7 @@ tape('tvs (common): buttons', async test => {
 		}
 	} catch (e) {
 		test.fail('test error: ' + e)
+		return
 	}
 	if (test._ok) opts.holder.remove()
 	test.end()
@@ -884,7 +885,9 @@ tape('tvs: Gene Variant - SNV/indel', async test => {
 								]
 							}
 						},
-						values: [{ key: 'M', label: 'MISSENSE', value: 'M', bar_width_frac: null }]
+						values: [{ key: 'M', label: 'MISSENSE', value: 'M', bar_width_frac: null }],
+						genotype: 'variant',
+						mcount: 'any'
 					}
 				}
 			]
@@ -971,7 +974,9 @@ tape('tvs: Gene Variant - SNV/indel - Wildtype', async test => {
 								]
 							}
 						},
-						values: [{ key: 'M', label: 'MISSENSE', value: 'M', bar_width_frac: null }]
+						values: [{ key: 'M', label: 'MISSENSE', value: 'M', bar_width_frac: null }],
+						genotype: 'variant',
+						mcount: 'any'
 					}
 				}
 			]
@@ -1002,7 +1007,7 @@ tape('tvs: Gene Variant - SNV/indel - Wildtype', async test => {
 
 		const genotypeDiv = tipd.select('[data-testid="sjpp-variantConfig-genotype"]')
 		const genotypeRadio = genotypeDiv.selectAll('input[type="radio"]').nodes()
-		genotypeRadio.find(r => r.value == 'wildtype').click()
+		genotypeRadio.find(r => r.value == 'wt').click()
 		valueBtn = await detectChildText({
 			target: filternode,
 			selector: '.value_btn',
@@ -1014,6 +1019,7 @@ tape('tvs: Gene Variant - SNV/indel - Wildtype', async test => {
 	}
 	if (test._ok) opts.holder.remove()
 	test.end()
+	if (test._ok) opts.holder.remove()
 })
 
 tape('tvs: Gene Variant - CNV - categorical', async test => {
@@ -1055,7 +1061,9 @@ tape('tvs: Gene Variant - CNV - categorical', async test => {
 								]
 							}
 						},
-						values: [{ key: 'CNV_amp', label: 'Copy number gain', value: 'CNV_amp', bar_width_frac: null }]
+						values: [{ key: 'CNV_amp', label: 'Copy number gain', value: 'CNV_amp', bar_width_frac: null }],
+						genotype: 'variant',
+						mcount: 'any'
 					}
 				}
 			]
@@ -1168,7 +1176,7 @@ tape('tvs: Gene Variant - CNV - continuous', async test => {
 		editOpt.click()
 
 		const cutoffsInputs = tipd.selectAll("input[type='number']").nodes()
-		test.equal(cutoffsInputs.length, 3, 'Should have three numeric inputs')
+		test.equal(cutoffsInputs.length, 4, 'Should have four numeric inputs')
 		test.equal(
 			Number(cutoffsInputs[0].value),
 			opts.filterData.lst[0].tvs.cnvGainCutoff,
@@ -1183,6 +1191,11 @@ tape('tvs: Gene Variant - CNV - continuous', async test => {
 			Number(cutoffsInputs[2].value),
 			opts.filterData.lst[0].tvs.cnvMaxLength,
 			'Value of third input should be max length'
+		)
+		test.equal(
+			Number(cutoffsInputs[3].value),
+			80,
+			'Value of fourth input should be equal to default percent overlap value'
 		)
 
 		const genotypeRadio = tipd.selectAll("input[type='radio']").nodes()
@@ -1251,7 +1264,9 @@ tape('tvs: Gene Variant - Fusion', async test => {
 								value: 'Fuserna',
 								bar_width_frac: null
 							}
-						]
+						],
+						genotype: 'variant',
+						mcount: 'any'
 					}
 				}
 			]
@@ -1279,6 +1294,132 @@ tape('tvs: Gene Variant - Fusion', async test => {
 		test.ok(applyBtn, 'Should have 1 button to apply value change')
 		test.equal(tipd.selectAll("input[name^='sjpp-input']").size(), 1, 'Should have a checkbox for each value')
 		test.equal(tipd.selectAll("input[name^='sjpp-input']:checked").size(), 1, 'Should have 1 box checked')
+	} catch (e) {
+		test.fail('test error: ' + e)
+	}
+	if (test._ok) {
+		opts.holder.remove()
+		tipd.remove()
+		controlTipd.remove()
+	}
+	test.end()
+})
+
+tape('tvs: termCollection', async test => {
+	test.timeoutAfter(10000)
+	test.plan(2)
+	const vocabApi = await getVocabApi()
+	const tc = vocabApi.termdbConfig.termCollections[0]
+	const term = Object.assign({}, tc, {
+		collectionId: tc.name,
+		memberType: 'numeric',
+		name: ' (agedx,a_death,a_ndi,agelastvisit)',
+		type: 'termCollection',
+		numerators: ['agedx', 'a_death'],
+		termlst: [
+			{
+				type: 'float',
+				bins: {
+					default: {
+						type: 'regular-bin',
+						bin_size: 5,
+						startinclusive: true,
+						first_bin: { startunbounded: true, stop: 5 }
+					},
+					label_offset: 1
+				},
+				name: 'Age (years) at Cancer Diagnosis',
+				id: 'agedx',
+				isleaf: true,
+				values: {},
+				hashtmldetail: true
+			},
+			{
+				type: 'float',
+				bins: {
+					default: {
+						type: 'regular-bin',
+						startinclusive: true,
+						bin_size: 5,
+						first_bin: { stop: 25 },
+						last_bin: { start: 55 }
+					}
+				},
+				name: 'Age (years) at Death',
+				id: 'a_death',
+				isleaf: true,
+				values: {},
+				hashtmldetail: true
+			},
+			{
+				type: 'float',
+				bins: { default: { type: 'regular-bin', startinclusive: true, bin_size: 10, first_bin: { stop: 15 } } },
+				name: 'Age (years) at Last NDI Search',
+				id: 'a_ndi',
+				isleaf: true,
+				values: {}
+			},
+			{
+				type: 'float',
+				bins: { default: { type: 'regular-bin', startinclusive: true, bin_size: 10, first_bin: { stop: 15 } } },
+				values: { '-994': { label: 'N/A: No campus visit', uncomputable: true } },
+				name: 'Age at last ABC assessment',
+				id: 'agelastvisit',
+				isleaf: true
+			}
+		],
+		isleaf: true,
+		branchIds: undefined,
+		termIds: undefined
+	})
+	const opts = getOpts({
+		vocabApi,
+		filterData: {
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term,
+						ranges: [{ start: 30, startinclusive: false, startunbounded: false, stopunbounded: true }]
+					}
+				}
+			]
+		}
+	})
+
+	const filternode = opts.holder.node()
+	await opts.filter.main(opts.filterData)
+
+	const controlTipd = opts.filter.Inner.dom.controlsTip.d
+	const tipd = opts.filter.Inner.dom.termSrcDiv
+	try {
+		const pill = await detectOne({ target: filternode, selector: '.tvs_pill' })
+		const menuRows = controlTipd.selectAll('tr')
+		const editOpt = menuRows.filter(d => d.action == 'edit').node()
+
+		// --- trigger and check tip menu ---
+		pill.click()
+
+		const rows = await detectGte({
+			target: tipd.node(),
+			selector: `tbody tr`,
+			count: tc.termIds.length,
+			observe: { subtree: true, childList: true },
+			trigger: () => {
+				editOpt.click()
+			}
+		})
+
+		const inputs = [...rows].reduce((arr, tr) => {
+			arr.push(...tr.querySelectorAll('input'))
+			return arr
+		}, [])
+		test.equal(inputs.length, tc.termIds.length * 2, 'Should have 2 checkboxes for each term')
+		const applyBtn = tipd.node().querySelector('.sjpp_apply_btn')
+		test.ok(applyBtn, 'Should have 1 button to apply value change')
 	} catch (e) {
 		test.fail('test error: ' + e)
 	}

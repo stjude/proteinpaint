@@ -4,6 +4,7 @@ import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-ch
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common.js'
 import { colorDelta, getInterpolatedDomainRange, removeInterpolatedOutliers, removeOutliers } from '#dom'
+import { roundValueAuto } from '#shared/roundValue.js'
 
 export function setAutoDimensions(xOffset) {
 	const m = this.state.config.settings.matrix
@@ -105,6 +106,14 @@ export function setLabelsAndScales() {
 		const countedSamples = new Set()
 		t.counts = { samples: 0, hits: 0 }
 		const renderedContinuousVs = []
+		// Track if any sample in this term has mixed positive/negative values
+		let hasMixedValues = false
+
+		// Initialize min/max for termCollection
+		if (t.tw.term.type == 'termCollection') {
+			t.counts.minval = 0
+			t.counts.maxval = 0
+		}
 
 		// store counts for each subGroup in subGroupCounts
 		t.counts.subGroupCounts = {}
@@ -138,6 +147,32 @@ export function setLabelsAndScales() {
 
 			const anno = sample.row[t.tw.$id]
 			if (!anno) continue
+			
+			// Check if this annotation has mixed positive/negative values (for termCollection)
+			if (t.tw.term.type == 'termCollection' && anno.hasMixedValues) {
+				hasMixedValues = true
+			}
+			
+			// Track min/max percentage values for termCollection
+			if (t.tw.term.type == 'termCollection' && anno.values) {
+				for (const val of anno.values) {
+					const pct = val.value
+					if (pct > 0) {
+						// For positive values, track the cumulative sum (pre_val_sum + pct)
+						const cumSum = val.pre_val_sum + pct
+						if (!('maxval' in t.counts) || t.counts.maxval < cumSum) {
+							t.counts.maxval = cumSum
+						}
+					} else if (pct < 0) {
+						// For negative values, track the cumulative sum (pre_val_sum + pct, which is negative)
+						const cumSum = val.pre_val_sum + pct
+						if (!('minval' in t.counts) || t.counts.minval > cumSum) {
+							t.counts.minval = cumSum
+						}
+					}
+				}
+			}
+			
 			// This is the second call to classifyValues(), to determine case/hit counts for row labels
 			const { filteredValues, countedValues, renderedValues } = this.classifyValues(
 				anno,
@@ -284,9 +319,12 @@ export function setLabelsAndScales() {
 			if (!twSettings.contBarH) twSettings.contBarH = t.tw.term.type == 'termCollection' ? 150 : s.barh
 			if (!('gap' in twSettings)) twSettings.contBarGap = 4
 			const barh = twSettings.contBarH
+			// For termCollection, min/max values are already calculated from the percentage values
+			// No need to force specific ranges - use dynamic range based on actual data
 			if (t.tw.term.type == 'termCollection') {
-				t.counts.maxval = 100
-				t.counts.minval = 0
+				// Ensure minval and maxval are set (default to 0 if no values)
+				if (!('minval' in t.counts)) t.counts.minval = 0
+				if (!('maxval' in t.counts)) t.counts.maxval = 0
 			}
 
 			const absMin = Math.abs(t.counts.minval)
@@ -333,11 +371,23 @@ export function setLabelsAndScales() {
 	let cnvLegendDomainRange // if cnv data is present, compute once and reuse across geneVariant tw's
 
 	if (this.cnvValues.length) {
-		this.cnvValues = removeOutliers(this.cnvValues)
-		const minLoss = this.cnvValues[0] < 0 ? this.cnvValues[0] : undefined
+		if (s.cnvValues.cutoffMode == 'fixed') {
+			this.cnvValues = this.cnvValues.filter(v => v >= s.cnvValues.min && v <= s.cnvValues.max).sort((a, b) => a - b)
+			//Need to include the input value for the user
+			if (this.cnvValues[0] != s.cnvValues.min) this.cnvValues.unshift(s.cnvValues.min)
+			if (this.cnvValues[this.cnvValues.length - 1] != s.cnvValues.max) this.cnvValues.push(s.cnvValues.max)
+		} else if (s.cnvValues.cutoffMode == 'percentile' || s.cnvValues.cutoffMode == 'auto') {
+			/** Users enter the percentile as whole number.
+			 * Convert to a fraction for removeOutliers.*/
+			let maxPercentile = s.cnvValues.cutoffMode == 'auto' ? s.cnvValues.defaultPercentile : s.cnvValues.percentile
+			maxPercentile = maxPercentile / 100
+			const minPercentile = roundValueAuto(1 - maxPercentile)
+			this.cnvValues = removeOutliers(this.cnvValues, { minPercentile, maxPercentile, baseValue: 0 })
+		} else throw new Error(`Invalid cnvValues cutoffMode: ${s.cnvValues.cutoffMode}`)
+		const minLoss = this.cnvValues[0] <= 0 ? this.cnvValues[0] : undefined
 		const maxGain =
-			this.cnvValues[this.cnvValues.length - 1] > 0 ? this.cnvValues[this.cnvValues.length - 1] : undefined
-		let maxLoss, minGain
+			this.cnvValues[this.cnvValues.length - 1] >= 0 ? this.cnvValues[this.cnvValues.length - 1] : undefined
+		let maxLoss, minGain, absMax
 		for (const n of this.cnvValues) {
 			if (n < 0) maxLoss = n
 			if (!minGain && n > 0) {
@@ -364,7 +414,7 @@ export function setLabelsAndScales() {
 					// ColorScale legend renderer in matrix.legend.js. By computing
 					// these values here, the legend will match the scale
 					// min/max values and rendered-value colors in matrix cells.
-					const absMax =
+					absMax =
 						minLoss !== undefined && maxGain !== undefined
 							? Math.max(Math.abs(minLoss), maxGain)
 							: minLoss !== undefined
@@ -373,7 +423,7 @@ export function setLabelsAndScales() {
 					cnvLegendDomainRange = getInterpolatedDomainRange({
 						absMin: 0,
 						absMax,
-						stepSize: 100,
+						totalNumSteps: 10,
 						negInterpolator: minLoss !== undefined && interpolateBlues,
 						posInterpolator: maxGain !== undefined && interpolateReds,
 						// force this middleColor to white, knowing that interpolateBlues and interpolateReds,
@@ -381,12 +431,11 @@ export function setLabelsAndScales() {
 						middleColor: 'white'
 					})
 				}
-
 				// const min = cnvLegendDomainRange.domain[0]
 				// const max = cnvLegendDomainRange.domain[cnvLegendDomainRange.domain.length - 1]
 				// const domainRange = Math.abs(max - min)
 				// if (((min === 0 || max === 0) && domainRange > 1) || domainRange > 5)
-				// 	cnvLegendDomainRange = removeInterpolatedOutliers(cnvLegendDomainRange)
+				// cnvLegendDomainRange = removeInterpolatedOutliers(cnvLegendDomainRange)
 
 				t.scales = {
 					loss: interpolateBlues,
@@ -395,6 +444,7 @@ export function setLabelsAndScales() {
 					maxGain,
 					minLoss,
 					minGain,
+					absMax,
 					legend: cnvLegendDomainRange
 				}
 			}

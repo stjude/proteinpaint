@@ -85,6 +85,8 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 			f = await get_metaboliteIntensity(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == TermTypes.SSGSEA) {
 			f = await get_ssGSEA(item.tvs, CTEname_i, ds)
+		} else if (item.tvs.term.type == TermTypes.DNA_METHYLATION) {
+			f = await get_dnaMethylation(item.tvs, CTEname_i, ds)
 		} else if (dtTermTypes.has(item.tvs.term.type)) {
 			f = await get_dtTerm(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'categorical') {
@@ -167,9 +169,7 @@ function get_survival(tvs, CTEname, ds, onlyChildren) {
 	${tvs.q?.cutoff ? 'AND tte >= ' + tvs.q?.cutoff : ''}
 	AND exit_code ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
 
-	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry)
-		query = ` select sa.sample_id as sample from sample_ancestry sa where sa.ancestor_id in (${query}) `
-
+	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
 	return {
 		CTEs: [
 			`
@@ -276,6 +276,11 @@ async function get_geneVariant(tvs, CTEname, ds, onlyChildren) {
 }
 
 async function get_termCollection(tvs, CTEname, ds, onlyChildren) {
+	// Percentage-based filter is only for numeric term collections
+	if (tvs.term.memberType === 'categorical') {
+		throw new Error('termcollection memberType=categorical not supported yet')
+	}
+	if (tvs.term.memberType !== 'numeric') throw new Error('termcollection memberType not categorical/numeric')
 	const tw = { $id, term: tvs.term, q: {} }
 	const data = await getData(
 		{
@@ -285,18 +290,16 @@ async function get_termCollection(tvs, CTEname, ds, onlyChildren) {
 	)
 	const samplenames = []
 	for (const [key, value] of Object.entries(data.samples)) {
-		const sampleValues = JSON.parse(value[$id].value)
+		const sampleValues = value[$id].value
 		/*
-		sampleVlaues here is an array of results for each mutation signature term for the sampleID. e.g.
- 		[ { SBS1: 83 }, { SBS2: 0 }, { SBS5: 185 } ]
+		sampleValues here is an object with a key for each mutation signature term for the sampleID. e.g.
+ 		{ SBS1: 83, SBS2: 0, SBS5: 185 }
 		*/
 		let numeratorSum = 0
 		let totalSum = 0
-		for (const sampleValue of sampleValues) {
-			for (const [key, value] of Object.entries(sampleValue)) {
-				totalSum += value
-				if (tvs.term.numerators.includes(key)) numeratorSum += value
-			}
+		for (const [key, value] of Object.entries(sampleValues)) {
+			totalSum += value
+			if (tvs.term.numerators.includes(key)) numeratorSum += value
 		}
 		const percentage = totalSum == 0 ? 0 : (numeratorSum / totalSum) * 100
 
@@ -370,7 +373,7 @@ async function get_snp(tvs, CTEname, ds) {
 async function get_geneExpression(tvs, CTEname, ds) {
 	const q = ds.queries?.geneExpression
 	if (!q) throw 'not supported' // guard against request to unsupported data. FIXME may improve filterui to gracefully handle such and avoid showing completely broken mass ui when the request comes from handwrite state or url
-	const data = await q.get({ terms: [{ $id, term: tvs.term }] })
+	const data = await q.get({ terms: [{ $id, term: tvs.term }] }, ds)
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
 async function get_metaboliteIntensity(tvs, CTEname, ds) {
@@ -381,7 +384,13 @@ async function get_metaboliteIntensity(tvs, CTEname, ds) {
 }
 async function get_ssGSEA(tvs, CTEname, ds) {
 	const q = ds.queries?.ssGSEA
-	if (!q) throw 'not supported'
+	if (!q) throw 'ssGSEA not supported'
+	const data = await q.get({ terms: [{ $id, term: tvs.term }] })
+	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
+}
+async function get_dnaMethylation(tvs, CTEname, ds) {
+	const q = ds.queries?.dnaMethylation
+	if (!q) throw 'dnaMethylation not supported'
 	const data = await q.get({ terms: [{ $id, term: tvs.term }] })
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
