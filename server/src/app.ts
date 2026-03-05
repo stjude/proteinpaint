@@ -62,7 +62,7 @@ to proceed to any *protected* route handler
 			genomes,
 			basepath: serverconfig.basepath || '',
 			apiJson: path.join(__dirname, '../../public/docs/server-api.json')
-			/*
+			/**
 As an alternative to manually adding/removing imports in shared/types/src/routes, 
 you may temporarily uncomment below to generate runtime route checker code, 
 should only uncomment when a file has been added or deleted in 
@@ -73,6 +73,11 @@ shared/types/src/routes and not when modified.
 			// 	outputFile: path.join(__dirname, '../../shared/types/src/checkers/routes.ts')
 			// }
 		})
+		/**
+		 *
+		 *
+		 *
+		 */
 
 		oldApp.setRoutes(app, genomes, serverconfig)
 
@@ -120,11 +125,13 @@ shared/types/src/routes and not when modified.
 		if (exitCode) console.error('\n!!!\n' + err + '\n\n')
 		else console.log('\n!!!\n' + err + '\n\n')
 		/*
-when the app server is monitored by another process via the command line,
-process.exit(1) is required to stop execution flow with `set -e`
-and thereby avoid unnecessary endless restarts of an invalid server
-init with bad config, data, and/or code
-*/
+		when the app server is monitored by another process via the command line,
+		process.exit(1) is required to stop execution flow with `set -e`
+		and thereby avoid unnecessary endless restarts of an invalid server
+		init with bad config, data, and/or code
+		*/
+
+		//Test comment.
 		const msg = err?.stack || err
 		if (serverconfig.slackWebhookUrl) {
 			const url = serverconfig.URL
