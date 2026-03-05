@@ -2,6 +2,13 @@ import { type ComponentApi } from './ComponentApi.ts'
 import { Bus } from './Bus.ts'
 import { notifyComponents, getComponents } from './utils.ts'
 
+type DispatchAction =
+	| {
+			type: string
+			[key: string]: any
+	  }
+	| undefined
+
 export interface RxApp {
 	type: string
 	api?: AppApi
@@ -17,13 +24,18 @@ export interface RxApp {
 	components: ComponentApi[] | { [name: string]: ComponentApi | { [name: string]: ComponentApi } }
 	preApiFreeze?: (api: AppApi) => Promise<void>
 	init: () => Promise<void>
-	reactsTo?: (action: { type: string; [key: string]: any }) => boolean
+	reactsTo?: (action: DispatchAction) => boolean
 	getState?: (appState: any) => any
 	hasStatePreMain?: boolean
 	main: (arg?: any) => void
 	mainArg?: any
 	printError?: (any) => void
 	destroy?: () => void
+	// may skip aborting previously dispatched actions in AppApi.dispatch()
+	// if the new dispatched action doesn't affect all components; this will
+	// allow plots and control menus to continue rendering while creating,
+	// editing, or deleting another plot
+	skipPrevActionAbort?: (action: DispatchAction) => boolean
 
 	bus: Bus
 	eventTypes?: string[]
@@ -95,10 +107,8 @@ export class AppApi {
 		// any active but stale async operation, like fetch, should be canceled
 		// if a new dispatch supercedes previous dispatches.
 		// NOTE: this cancellation should not affect synchronous steps
-		if (this.#abortController) {
-			this.#abortController.abort('stale sequenceId')
-			this.#abortController = undefined
-		}
+		if (this.#abortController && !self.skipPrevActionAbort?.(action)) this.#abortController.abort('stale sequenceId')
+		this.#abortController = new AbortController()
 
 		try {
 			if (this.#middlewares.length) {
