@@ -1,6 +1,6 @@
 import { QualTermCollection } from './QualTermCollection'
 import { TwBase, type TwOpts } from '../TwBase'
-import type { CategoryKey, TermCollectionQQual, RawTermCollectionTWQual, TermCollectionTWQual } from '#types'
+import type { TermCollectionQQual, RawTermCollectionTWQual, TermCollectionTWQual } from '#types'
 
 export class CollectionQual extends TwBase {
 	term: QualTermCollection
@@ -16,9 +16,7 @@ export class CollectionQual extends TwBase {
 			if (!tw.q.lst) tw.q.lst = tw.term.termIds || []
 		}
 		if (!tw.q.categoryKeys && tw.term.categoryKeys?.length) {
-			tw.q.categoryKeys = (tw.term.categoryKeys as Array<string | CategoryKey>).map(k =>
-				typeof k === 'string' ? { key: k, shown: true } : k
-			)
+			tw.q.categoryKeys = structuredClone(tw.term.categoryKeys)
 		}
 
 		return tw as TermCollectionTWQual
