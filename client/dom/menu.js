@@ -351,7 +351,7 @@ export class Menu {
 	showunderoffset(dom) {
 		const p = dom.getBoundingClientRect()
 		const y = p.top + p.height + window.scrollY + 5
-		return this.show(p.left, y, true, true, false)
+		return this.show(p.left + this.offsetX, y + this.offsetY, false, true, false)
 
 		/*
 		this.d
