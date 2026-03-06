@@ -42,9 +42,7 @@ export class QualTermCollection {
 		term.memberType = 'categorical'
 		const rawCategoryKeys = term.categoryKeys ?? tc.categoryKeys
 		if (rawCategoryKeys) {
-			term.categoryKeys = (rawCategoryKeys as Array<string | CategoryKey>).map(k =>
-				typeof k === 'string' ? { key: k, shown: true } : k
-			)
+			term.categoryKeys = rawCategoryKeys
 		}
 		if (!term.termIds) term.termIds = term.termlst!.map((t: any) => t.id)
 		const propsByTermId = term.propsByTermId!
