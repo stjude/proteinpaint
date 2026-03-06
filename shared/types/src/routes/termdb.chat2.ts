@@ -115,7 +115,7 @@ export type plot_type = {
 	type: 'plot'
 	/** The type of plot to be displayed on the UI.
 	 *  Standard categories are listed; datasets may define additional custom categories. */
-	plot: 'summary' | 'dge' | 'survival' | 'matrix' | 'sampleScatter'
+	plot: 'summary' | 'dge' | 'survival' | 'matrix' | 'sampleScatter' | 'hierCluster'
 }
 
 export type resource_type = {
@@ -132,7 +132,7 @@ export type none_type = {
 export type QueryClassification = { type: 'plot' } | { type: 'notplot' }
 
 /** Specific plot type returned by classifyPlotType in plot.ts */
-export type PlotType = 'summary' | 'dge' | 'survival' | 'matrix' | 'samplescatter'
+export type PlotType = 'summary' | 'dge' | 'survival' | 'matrix' | 'samplescatter' | 'hiercluster'
 
 export type DEType = {
 	/** Name of group1 which is an array of filter terms */
@@ -148,6 +148,17 @@ export type MatrixType = {
 	terms?: string[]
 	/** Names of genes to include as gene variant rows in the matrix (e.g. "TP53", "KRAS", "NRAS") */
 	geneNames?: string[]
+	/** Optional simple filter terms to restrict the sample set */
+	simpleFilter?: FilterTerm[]
+}
+
+export type HierClusterType = {
+	/** Names of genes to include in the hierarchical clustering (e.g. "TP53", "KRAS", "BCR") */
+	geneNames?: string[]
+	/** Names of gene sets (e.g. HALLMARK pathways) for ssGSEA enrichment clustering */
+	genesetNames?: string[]
+	/** Names of metabolites for metabolite intensity clustering */
+	metaboliteNames?: string[]
 	/** Optional simple filter terms to restrict the sample set */
 	simpleFilter?: FilterTerm[]
 }

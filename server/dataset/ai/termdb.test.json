@@ -693,6 +693,56 @@
           }
         }
       ]
+    },
+    {
+      "type": "hierCluster",
+      "SystemPrompt": "A hierarchical clustering plot clusters genes or other numeric features across samples and displays the result as a heatmap with dendrograms. The \"geneNames\" field should ONLY contain gene names. At least one of \"geneNames\" must be provided. If the user specifies filters to restrict the sample set, include them in \"simpleFilter\".",
+      "TrainingData": [
+        {
+          "question": "Cluster TP53 and KRAS gene expression",
+          "answer": {
+            "geneNames": [
+              "TP53",
+              "KRAS"
+            ]
+          }
+        },
+        {
+          "question": "Show hierarchical clustering of AKT1, TP53, BCR, and KRAS",
+          "answer": {
+            "geneNames": [
+              "AKT1",
+              "TP53",
+              "BCR",
+              "KRAS"
+            ]
+          }
+        },
+        {
+          "question": "Cluster TP53 and KRAS for patients with acute lymphoblastic leukemia",
+          "answer": {
+            "geneNames": [
+              "TP53",
+              "KRAS"
+            ],
+            "simpleFilter": [
+              {
+                "term": "diaggrp",
+                "category": "Acute lymphoblastic leukemia"
+              }
+            ]
+          }
+        },
+        {
+          "question": "Show a gene expression dendrogram for BCR and AKT1",
+          "answer": {
+            "geneNames": [
+              "BCR",
+              "AKT1"
+            ]
+          }
+        }
+      ]
     }
   ],
   "TestData": [
@@ -1881,6 +1931,178 @@
             }
           ]
         }
+      }
+    },
+    {
+      "question": "Cluster TP53 and KRAS gene expression",
+      "answer": {
+        "geneNames": [
+          "TP53",
+          "KRAS"
+        ]
+      },
+      "PPoutput": {
+        "type": "plot",
+        "plot": {
+          "chartType": "hierCluster",
+          "terms": [
+            {
+              "term": {
+                "gene": "TP53",
+                "type": "geneExpression"
+              }
+            },
+            {
+              "term": {
+                "gene": "KRAS",
+                "type": "geneExpression"
+              }
+            }
+          ],
+          "dataType": "geneExpression"
+        }
+      }
+    },
+    {
+      "question": "Show hierarchical clustering of AKT1, TP53, BCR, and KRAS",
+      "answer": {
+        "geneNames": [
+          "AKT1",
+          "TP53",
+          "BCR",
+          "KRAS"
+        ]
+      },
+      "PPoutput": {
+        "type": "plot",
+        "plot": {
+          "chartType": "hierCluster",
+          "terms": [
+            {
+              "term": {
+                "gene": "AKT1",
+                "type": "geneExpression"
+              }
+            },
+            {
+              "term": {
+                "gene": "TP53",
+                "type": "geneExpression"
+              }
+            },
+            {
+              "term": {
+                "gene": "BCR",
+                "type": "geneExpression"
+              }
+            },
+            {
+              "term": {
+                "gene": "KRAS",
+                "type": "geneExpression"
+              }
+            }
+          ],
+          "dataType": "geneExpression"
+        }
+      }
+    },
+    {
+      "question": "Show gene expression clustering of BCR and AKT1 for acute lymphoblastic leukemia",
+      "answer": {
+        "geneNames": [
+          "BCR",
+          "AKT1"
+        ],
+        "simpleFilter": [
+          {
+            "term": "diaggrp",
+            "category": "Acute lymphoblastic leukemia"
+          }
+        ]
+      },
+      "PPoutput": {
+        "type": "plot",
+        "plot": {
+          "chartType": "hierCluster",
+          "terms": [
+            {
+              "term": {
+                "gene": "BCR",
+                "type": "geneExpression"
+              }
+            },
+            {
+              "term": {
+                "gene": "AKT1",
+                "type": "geneExpression"
+              }
+            }
+          ],
+          "dataType": "geneExpression",
+          "filter": {
+            "type": "tvslst",
+            "in": true,
+            "lst": [
+              {
+                "type": "tvs",
+                "tvs": {
+                  "term": {
+                    "type": "categorical",
+                    "values": {
+                      "Acute lymphoblastic leukemia": {
+                        "label": "Acute lymphoblastic leukemia",
+                        "color": "#b22028"
+                      },
+                      "Acute myeloid leukemia": {
+                        "label": "Acute myeloid leukemia",
+                        "color": "#C85200"
+                      },
+                      "Neuroblastoma": {
+                        "label": "Neuroblastoma",
+                        "color": "#fdb462"
+                      },
+                      "Wilms tumor": {
+                        "label": "Wilms tumor",
+                        "color": "#1B9E77"
+                      },
+                      "Osteosarcoma": {
+                        "label": "Osteosarcoma",
+                        "color": "#006837"
+                      }
+                    },
+                    "groupsetting": {
+                      "disabled": true
+                    },
+                    "name": "Diagnosis Group",
+                    "id": "diaggrp",
+                    "isleaf": true,
+                    "sample_type": "1",
+                    "hashtmldetail": true
+                  },
+                  "values": [
+                    {
+                      "key": "Acute lymphoblastic leukemia"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "question": "Cluster MYC and BCL2 gene expression",
+      "answer": {
+        "geneNames": [
+          "MYC",
+          "BCL2"
+        ]
+      },
+      "PPoutput": {
+        "type": "text",
+        "text": "invalid gene name:MYC invalid gene name:BCL2"
       }
     }
   ],
