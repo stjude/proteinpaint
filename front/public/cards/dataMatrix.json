@@ -15,6 +15,7 @@
 				},
 				"termgroups":[{"lst":[
 					{"id":"case.project.name"},
+					{"id":"case.diagnoses.age_at_diagnosis","q":{"mode":"continuous"}},,
 					{"term":{"type":"geneExpression","gene":"IDH1"},"q":{"mode":"continuous"}}
 				]}]
          	},
