@@ -16,7 +16,9 @@ export class CollectionQual extends TwBase {
 			if (!tw.q.lst) tw.q.lst = tw.term.termIds || []
 		}
 		if (!tw.q.categoryKeys && tw.term.categoryKeys?.length) {
-			tw.q.categoryKeys = structuredClone(tw.term.categoryKeys as CategoryKey[])
+			tw.q.categoryKeys = (tw.term.categoryKeys as Array<string | CategoryKey>).map(k =>
+				typeof k === 'string' ? { key: k, shown: true } : k
+			)
 		}
 
 		return tw as TermCollectionTWQual
