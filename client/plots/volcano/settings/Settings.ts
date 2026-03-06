@@ -33,6 +33,11 @@ export type GEVolcanoSettings = DefaultVolcanoSettings & {
 	rankBy: 'abs(foldChange)' | 'pValue'
 }
 
+export type DMVolcanoSettings = DefaultVolcanoSettings & {
+	/** Minimum non-NA samples required per group */
+	minSamplesPerGroup: number
+}
+
 export type SCCTVolcanoSettings = DefaultVolcanoSettings & {}
 
-export type ValidatedVolcanoSettings = GEVolcanoSettings | SCCTVolcanoSettings
+export type ValidatedVolcanoSettings = GEVolcanoSettings | DMVolcanoSettings | SCCTVolcanoSettings

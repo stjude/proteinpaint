@@ -133,7 +133,7 @@ export const DiffAnalysisInit = getCompInit(DifferentialAnalysis)
 export const componentInit = DiffAnalysisInit
 
 //Use this as a sanity check.
-const enabledTermTypes = [TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTYPE]
+const enabledTermTypes = [TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTYPE, TermTypes.DNA_METHYLATION]
 
 export function getPlotConfig(opts: any) {
 	if (!opts.termType) throw new Error('.termType is required')

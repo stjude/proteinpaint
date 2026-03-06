@@ -3,7 +3,7 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import type { SvgCircle } from '../../../types/d3'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
 import type { DataPointEntry } from '../VolcanoTypes'
-// import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#shared/terms.js'
 
 export class DataPointMouseEvents {
 	termType: string
@@ -16,7 +16,7 @@ export class DataPointMouseEvents {
 			tip.clear().showunder(circle.node())
 			const table = table2col({ holder: tip.d.append('table') })
 
-			this.mayAddGeneExpressionRows(d, table)
+			this.addTooltipRows(d, table)
 		})
 
 		circle.on('mouseout', () => {
@@ -36,11 +36,15 @@ export class DataPointMouseEvents {
 		td2.text(value)
 	}
 
-	mayAddGeneExpressionRows(d: DataPointEntry, table: any) {
-		// if (this.termType !== TermTypes.GENE_EXPRESSION) return
-		this.addTooltipRow(table, 'Gene name', d.gene_name)
-		this.addTooltipRow(table, 'log2(fold change)', roundValueAuto(d.fold_change))
-		this.addTooltipRow(table, 'Original p value', roundValueAuto(d.original_p_value))
-		this.addTooltipRow(table, 'Adjusted p value', roundValueAuto(d.adjusted_p_value))
+	addTooltipRows(d: DataPointEntry, table: any) {
+		if (this.termType === TermTypes.DNA_METHYLATION) {
+			if ('promoter_id' in d) this.addTooltipRow(table, 'Promoter', d.promoter_id)
+			if (d.gene_name) this.addTooltipRow(table, 'Gene(s)', d.gene_name)
+		} else {
+			this.addTooltipRow(table, 'Gene name', d.gene_name)
+		}
+		this.addTooltipRow(table, 'log<sub>2</sub>(fold-change)', roundValueAuto(d.fold_change))
+		this.addTooltipRow(table, 'Original p-value', roundValueAuto(d.original_p_value))
+		this.addTooltipRow(table, 'Adjusted p-value', roundValueAuto(d.adjusted_p_value))
 	}
 }

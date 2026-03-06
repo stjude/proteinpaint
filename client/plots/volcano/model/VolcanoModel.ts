@@ -1,7 +1,7 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { dofetch3 } from '#common/dofetch'
 import type { VolcanoPlotConfig } from '../VolcanoTypes'
-import type { DERequest, TermdbSingleCellDEgenesRequest } from '#types'
+import type { DERequest, DiffMethRequest, TermdbSingleCellDEgenesRequest } from '#types'
 import { TermTypes } from '#shared/terms.js'
 import type { ValidatedVolcanoSettings } from '../settings/Settings'
 
@@ -23,6 +23,10 @@ export class VolcanoModel {
 		if (this.termType === TermTypes.GENE_EXPRESSION) {
 			const body = await this.getGERequestBody()
 			return await dofetch3('termdb/DE', { body })
+		}
+		if (this.termType === TermTypes.DNA_METHYLATION) {
+			const body = await this.getDMRequestBody()
+			return await dofetch3('termdb/diffMeth', { body })
 		}
 		if (this.termType === TermTypes.SINGLECELL_CELLTYPE) {
 			const body = await this.getSCCTRequestBody()
@@ -54,6 +58,26 @@ export class VolcanoModel {
 			if (confounders.length > 1) body.tw2 = this.config.confounderTws[1]
 		}
 
+		return body
+	}
+
+	//DNA methylation
+	async getDMRequestBody() {
+		await this.getOtherSamples(this.config.samplelst)
+		const state = this.app.getState()
+		const body = {
+			genome: this.app.vocabApi.vocab.genome,
+			dslabel: this.app.vocabApi.vocab.dslabel,
+			samplelst: this.config.samplelst,
+			filter: state.termfilter.filter,
+			filter0: state.termfilter.filter0,
+			min_samples_per_group: this.settings.minSamplesPerGroup
+		} as Partial<DiffMethRequest>
+		const confounders = this.config?.confounderTws
+		if (confounders?.length) {
+			body.tw = this.config.confounderTws[0]
+			if (confounders.length > 1) body.tw2 = this.config.confounderTws[1]
+		}
 		return body
 	}
 

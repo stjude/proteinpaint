@@ -541,6 +541,112 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 			})
 	}
 
+	if (self.app.vocabApi.termdbConfig.queries?.dnaMethylation?.promoter) {
+		const itemDiv = div
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text(`Differential ${termType2label(TermTypes.DNA_METHYLATION)} Analysis`)
+			.on('click', async () => {
+				const groups = []
+				for (const group of samplelstTW.q.groups) {
+					if (group.values && group.values.length > 0) {
+						groups.push(group)
+					} else {
+						throw 'group does not contain samples for differential analysis'
+					}
+				}
+
+				// get actual numbers of samples with methylation data
+				const body = {
+					genome: self.app.vocabApi.vocab.genome,
+					dslabel: self.app.vocabApi.vocab.dslabel,
+					samplelst: { groups },
+					filter: self.state.termfilter.filter,
+					filter0: self.state.termfilter.filter0,
+					preAnalysis: true
+				}
+				const preAnalysisData = await dofetch3('termdb/diffMeth', { body })
+
+				const tip = self.tip2
+				if (!preAnalysisData?.data) {
+					tip.clear().showunderoffset(itemDiv.node())
+					sayerror(tip.d.append('div'), 'Error retrieving pre-analysis data')
+					throw new Error('no data returned from pre-analysis request')
+				}
+
+				const numControl = preAnalysisData.data[samplelstTW.q.groups[0].name]
+				const numCase = preAnalysisData.data[samplelstTW.q.groups[1].name]
+
+				if (numControl + numCase > maxSampleCutoff) {
+					if (preAnalysisData.data.alert)
+						preAnalysisData.data.alert += ` | Sample size ${
+							numControl + numCase
+						} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
+					else
+						preAnalysisData.data.alert = `Sample size ${
+							numControl + numCase
+						} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
+				}
+
+				tip.clear().showunderoffset(itemDiv.node())
+				const menuDiv = tip.d.append('div')
+				const table = table2col({ holder: menuDiv })
+				table.table.style('margin-left', '5px').style('padding', '5px 10px')
+				{
+					const controlGColor = samplelstTW.term.values[samplelstTW.q.groups[0].name].color
+					const colorSquareCtrl = controlGColor
+						? `<span style="display:inline-block; width:12px; height:12px; background-color:${controlGColor}" ></span>`
+						: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
+					const [c1, c2] = table.addRow()
+					c1.html(
+						`<span style="font-size:.8em;font-weight:bold">CONTROL</span> ${colorSquareCtrl} ${samplelstTW.q.groups[0].name}`
+					)
+					c2.html(`${numControl} samples`)
+				}
+				{
+					const caseGColor = samplelstTW.term.values[samplelstTW.q.groups[1].name].color
+					const colorSquareCase = caseGColor
+						? `<span style="display:inline-block; width:12px; height:12px; background-color:${caseGColor}" ></span>`
+						: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
+					const [c1, c2] = table.addRow()
+					c1.html(
+						`<span style="font-size:.8em;font-weight:bold">CASE</span> ${colorSquareCase} ${samplelstTW.q.groups[1].name}`
+					)
+					c2.html(`${numCase} samples`)
+				}
+
+				const alertDiv = menuDiv.append('div')
+				if (preAnalysisData.data.alert) {
+					sayerror(alertDiv, preAnalysisData.data.alert)
+				}
+
+				if (!preAnalysisData.data.alert) {
+					const launchDiv = menuDiv.append('div').style('margin', '8px 5px').style('padding', '5px 10px')
+					launchDiv
+						.append('button')
+						.style('border', 'none')
+						.style('border-radius', '20px')
+						.style('padding', '10px 15px')
+						.text(`Run Differential ${termType2label(TermTypes.DNA_METHYLATION)} Analysis`)
+						.on('click', async () => {
+							const config = {
+								chartType: 'differentialAnalysis',
+								state: self.state,
+								samplelst: { groups },
+								termType: TermTypes.DNA_METHYLATION,
+								tw: samplelstTW
+							}
+							tip.hide()
+							self.tip.hide()
+							self.app.dispatch({
+								type: 'plot_create',
+								config
+							})
+						})
+				}
+			})
+	}
+
 	if (self.app.vocabApi.termdbConfig.allowedTermTypes?.includes(TermTypes.METABOLITE_INTENSITY)) {
 		div.append('div').text('DA should support metabolite')
 	}

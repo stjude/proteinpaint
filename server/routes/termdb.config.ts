@@ -255,6 +255,9 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 	}
 	if (q.dnaMethylation) {
 		q2.dnaMethylation = { unit: q.dnaMethylation.unit }
+		if (q.dnaMethylation.promoter) {
+			q2.dnaMethylation.promoter = { unit: q.dnaMethylation.promoter.unit }
+		}
 	}
 	if (q.ld) {
 		q2.ld = structuredClone(q.ld)
