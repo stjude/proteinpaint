@@ -79,9 +79,8 @@ function init({ genomes }) {
 			} else {
 				// no coordinate terms. check prebuilt map
 				if (!q.plotName) throw new Error('Neither plot name or coordinates where provided')
-				const scatterplots = ds.cohort?.scatterplots || ds.scatterplots
-				if (!Array.isArray(scatterplots?.plots)) throw new Error('not supported')
-				const plot = scatterplots.plots.find(p => p.name == q.plotName)
+				if (!Array.isArray(ds.cohort?.scatterplots?.plots)) throw new Error('not supported')
+				const plot = ds.cohort.scatterplots.plots.find(p => p.name == q.plotName)
 				if (!plot) throw new Error(`plot not found with plotName ${q.plotName}`)
 
 				const tmp = await getSamples(ds, plot)
@@ -597,6 +596,11 @@ async function loadFile(p: any, ds: any) {
 
 // called in mds3.init
 export async function mayInitiateScatterplots(ds) {
+	if (ds.scatterplots) {
+		// nest under ds.cohort
+		ds.cohort.scatterplots = ds.scatterplots
+		delete ds.scatterplots
+	}
 	if (!ds.cohort.scatterplots) return
 	if (typeof ds.cohort.scatterplots.get == 'function') {
 		// allowed but still requires plots[]
