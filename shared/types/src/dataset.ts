@@ -979,6 +979,8 @@ type Mds3Queries = {
 		promoter?: {
 			/** path to promoter-level M-value h5 file (from createHdf5ForDnaMeth.py --format promoter) */
 			file: string
+			/** unit label for promoter values (e.g. 'Average M-value') */
+			unit: string
 		}
 	}
 	rnaseqGeneCount?: RnaseqGeneCount
