@@ -74,8 +74,7 @@ export type RawCategoricalTermCollection = {
 			[prop: string]: any
 		}
 	}
-	/** category values; may be string[] from DS config or CategoryKey[] after fill() */
-	categoryKeys?: string[] | CategoryKey[]
+	categoryKeys?: CategoryKey[]
 }
 
 export type RawTermCollection = RawNumericTermCollection | RawCategoricalTermCollection

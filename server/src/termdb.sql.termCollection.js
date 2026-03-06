@@ -29,14 +29,11 @@ export const termCollectionCategorical = {
 	getCTE(tablename, tw, values) {
 		const ids = getTermIds(tw.term)
 		const rawKeys = tw.q?.categoryKeys || tw.term.categoryKeys
-		const categoryKeys = rawKeys
-			?.filter(k => {
-				if (typeof k === 'string') return true
-				if (!k || typeof k !== 'object') return false
-				if (!k.shown) return false
-				return typeof k.key === 'string' && k.key.length > 0
-			})
-			.map(k => (typeof k === 'string' ? k : k.key))
+		for (const k of rawKeys || []) {
+			if (!k || typeof k !== 'object' || typeof k.key !== 'string')
+				throw `termCollection categoryKeys entry must be {key, shown} but got: ${JSON.stringify(k)}`
+		}
+		const categoryKeys = rawKeys?.filter(k => k.shown).map(k => k.key)
 		values.push(...ids)
 		if (categoryKeys?.length) values.push(...categoryKeys)
 		return {
