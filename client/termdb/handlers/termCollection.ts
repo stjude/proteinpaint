@@ -31,14 +31,18 @@ export class SearchHandler {
 		})
 
 		let categoryTable
+		let ckSource: CategoryKey[] = []
 		if (opts.details.categoryKeys) {
+			ckSource = (opts.details.categoryKeys as Array<string | CategoryKey>).map(k =>
+				typeof k === 'string' ? { key: k, shown: true } : k
+			)
 			const categoryDiv = opts.holder.append('div')
 			const values = opts.details.termlst[0].values || {}
 			categoryDiv.append('div').style('margin', '5px').style('padding', '5px').html('Category keys')
 			categoryTable = categoryDiv.append('div')
 			renderTable({
 				columns: [{ label: 'Terms' }],
-				rows: opts.details.categoryKeys.map((ck: CategoryKey) => {
+				rows: ckSource.map((ck: CategoryKey) => {
 					return [{ value: values[ck.key]?.label ?? ck.key, checked: ck.shown }]
 				}),
 				div: categoryTable,
@@ -85,7 +89,7 @@ export class SearchHandler {
 				let categoryKeys
 				if (categoryTable) {
 					const trs = categoryTable.select('table').select('tbody').node().querySelectorAll('tr')
-					categoryKeys = opts.details.categoryKeys.map((ck: CategoryKey, i: number) => {
+					categoryKeys = ckSource.map((ck: CategoryKey, i: number) => {
 						const checked = trs[i].querySelectorAll('td')[1].querySelector('input')?.checked
 						return { key: ck.key, shown: !!checked }
 					})
