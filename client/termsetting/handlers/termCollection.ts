@@ -41,6 +41,7 @@ export class TermCollectionHandler extends HandlerBase implements Handler {
 		const groupDiv = div.append('div')
 		const noButtonCallback = (i: number, node: any) => {
 			terms[i].checked = node.checked
+			// TODO disable "Apply" btn when no terms are selected
 		}
 		const callback =
 			this.tw.term.memberType == 'numeric'
@@ -76,7 +77,7 @@ function addNumericTable(self, div: any, terms: any, noButtonCallback: any) {
 		.map((term, index) => (self.term.termlst.find(t => t.id === term.id) ? index : -1))
 		.filter(index => index !== -1)
 
-	const columns: any = [{ label: 'Terms' }, { label: 'Use for sorting' }]
+	const columns: any = [{ label: 'VARIABLES' }, { label: 'Use for sorting' }]
 
 	renderTable({
 		rows,
@@ -118,12 +119,12 @@ function addCategoricalTable(self, div: any, terms: any, noButtonCallback: any) 
 		.map((term, index) => (self.term.termlst.find(t => t.id === term.id) ? index : -1))
 		.filter(index => index !== -1)
 
-	const columns: any = [{ label: 'Terms' }]
+	const columns: any = [{ label: 'VARIABLES' }]
 
 	renderTable({
 		rows,
 		columns,
-		div: div.append('div'),
+		div: div.append('div').style('margin-top', '10px'),
 		maxWidth: '30vw',
 		maxHeight: '40vh',
 		noButtonCallback,
@@ -134,14 +135,13 @@ function addCategoricalTable(self, div: any, terms: any, noButtonCallback: any) 
 		buttons: undefined
 	})
 
-	const categoryDiv = div.append('div')
+	const categoryDiv = div.append('div').style('margin-top', '15px')
 	// Merge .values from all termlst entries; safe when termlst is empty or entries lack .values
 	const values = Object.assign({}, ...(self.tw.term.termlst?.map((t: any) => t.values || {}) ?? []))
-	categoryDiv.append('div').style('margin', '5px').style('padding', '5px').html('Category keys')
 	const categoryTable = categoryDiv.append('div')
 	const ckSource: CategoryKey[] = self.tw.q.categoryKeys || self.tw.term.categoryKeys || []
 	renderTable({
-		columns: [{ label: 'Terms' }],
+		columns: [{ label: 'CATEGORIES' }],
 		rows: ckSource.map((ck: CategoryKey) => {
 			return [{ value: values[ck.key]?.label ?? ck.key, checked: ck.shown }]
 		}),
