@@ -11,14 +11,13 @@ process.removeAllListeners('warning')
 export default function setRoutes(app, basepath, genomes) {
 	app.get(basepath + '/testchat', async (req, _res) => {
 		// URL parameters:
-		// ?dataset=<label> - restrict testing to a specific dataset (e.g. ?dataset=all-pharmacotyping)
-		const datasetFilter = req.query.dataset as string | undefined
-		console.log('test chat page' + (datasetFilter ? ` (dataset filter: ${datasetFilter})` : ''))
+		// ?dataset=<label> - restrict testing to a specific dataset (e.g. ?dataset=TermdbTest)
+		const datasetFilter = req.query.dslabel as string | undefined
+		console.log('test chat page' + (datasetFilter ? ` (dslabel filter: ${datasetFilter})` : ''))
 		for (const genome of Object.values(genomes)) {
 			for (const ds of Object.values((genome as any).datasets)) {
 				if ((ds as any)?.queries?.chat) {
 					const label = (ds as any).label
-					console.log('Checking dataset: ' + label)
 					if (datasetFilter && label !== datasetFilter) continue
 					console.log('\x1b[32m%s\x1b[0m', 'Testing chatbot for dataset: ' + label)
 					const num_errors = await test_chatbot_by_dataset(ds)
