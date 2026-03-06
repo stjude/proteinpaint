@@ -33,9 +33,7 @@ export class SearchHandler {
 		let categoryTable
 		let ckSource: CategoryKey[] = []
 		if (opts.details.categoryKeys) {
-			ckSource = (opts.details.categoryKeys as Array<string | CategoryKey>).map(k =>
-				typeof k === 'string' ? { key: k, shown: true } : k
-			)
+			ckSource = opts.details.categoryKeys as CategoryKey[]
 			const categoryDiv = opts.holder.append('div')
 			const values = opts.details.termlst[0].values || {}
 			categoryDiv.append('div').style('margin', '5px').style('padding', '5px').html('Category keys')

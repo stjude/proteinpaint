@@ -139,9 +139,7 @@ function addCategoricalTable(self, div: any, terms: any, noButtonCallback: any) 
 	const values = Object.assign({}, ...(self.tw.term.termlst?.map((t: any) => t.values || {}) ?? []))
 	categoryDiv.append('div').style('margin', '5px').style('padding', '5px').html('Category keys')
 	const categoryTable = categoryDiv.append('div')
-	const ckSource: CategoryKey[] = (self.tw.q.categoryKeys || self.tw.term.categoryKeys || []).map(
-		(k: string | CategoryKey) => (typeof k === 'string' ? { key: k, shown: true } : k)
-	)
+	const ckSource: CategoryKey[] = self.tw.q.categoryKeys || self.tw.term.categoryKeys || []
 	renderTable({
 		columns: [{ label: 'Terms' }],
 		rows: ckSource.map((ck: CategoryKey) => {
