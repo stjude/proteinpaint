@@ -238,7 +238,7 @@ function validate_matrix_response(response: string, common_genes: string[], ds: 
 	}
 
 	if (text.length > 0) {
-		return { type: 'text', text }
+		return { type: 'text', text: text }
 	} else {
 		// Structure as termgroups matching what matrix.js expects:
 		// termgroups: [{ name: '', lst: [ { term: {...} }, ... ] }]

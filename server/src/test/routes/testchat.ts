@@ -9,11 +9,12 @@ import assert from 'node:assert/strict'
 process.removeAllListeners('warning')
 
 export default function setRoutes(app, basepath, genomes) {
-	app.get(basepath + '/testchat', async (req, _res) => {
+	app.get(basepath + '/testchat', async (req, res) => {
 		// URL parameters:
 		// ?dataset=<label> - restrict testing to a specific dataset (e.g. ?dataset=TermdbTest)
 		const datasetFilter = req.query.dslabel as string | undefined
 		console.log('test chat page' + (datasetFilter ? ` (dslabel filter: ${datasetFilter})` : ''))
+		const results: { dataset: string; num_errors: number }[] = []
 		for (const genome of Object.values(genomes)) {
 			for (const ds of Object.values((genome as any).datasets)) {
 				if ((ds as any)?.queries?.chat) {
@@ -32,9 +33,11 @@ export default function setRoutes(app, basepath, genomes) {
 							'Tests complete for ' + label + '. Number of failed prompts: ' + num_errors
 						) // Show in red if any of the tests failed
 					}
+					results.push({ dataset: label, num_errors: num_errors })
 				}
 			}
 		}
+		res.send(results)
 	})
 }
 
