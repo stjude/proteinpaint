@@ -70,6 +70,8 @@ tape('avoid race condition - specified gene list', async test => {
 		const data = await hc.origRequestData({})
 		if (lst.length === 3) return data
 		// artificially delay response to first request, to simulate a race condition
+		// do this after the network request, so that this.api.getAbortSignal() in hc.requestData()
+		// will generate the correct signal based on the order of dispatch/sequenceId
 		await sleep(250)
 		return data
 	}

@@ -36,6 +36,41 @@ tape('processFormData', async test => {
 	test.end()
 })
 
+tape('dofetch3() init.signal behavior', async test => {
+	const mockSignal = new AbortController().signal
+
+	// 1. init.signal is set when called as an object method with app.getAbortSignal()
+	{
+		const init = {}
+		const obj = { app: { getAbortSignal: () => mockSignal } }
+		await df.dofetch3.call(obj, '/', init, {}).catch(() => {
+			/*ignore fetch failure in test environment */
+		})
+		test.equal(init.signal, mockSignal, 'should set init.signal from app.getAbortSignal() when called as object method')
+	}
+
+	// 2. init.signal is untouched when called as a plain function (no this context)
+	{
+		const init = {}
+		await df.dofetch3('/', init, {}).catch(() => {
+			/*ignore fetch failure in test environment */
+		})
+		test.equal(init.signal, undefined, 'should not set init.signal when called as plain function')
+	}
+
+	// 3. init.signal is untouched when already provided
+	{
+		const existingSignal = new AbortController().signal
+		const init = { signal: existingSignal }
+		const obj = { app: { getAbortSignal: () => mockSignal } }
+		await df.dofetch3.call(obj, '/', init, {}).catch(() => {
+			/*ignore fetch failure in test environment */
+		})
+		test.equal(init.signal, existingSignal, 'should not overwrite init.signal when already provided')
+	}
+	test.end()
+})
+
 tape('setAuth()', async test => {
 	const opts = {
 		dsAuth: [

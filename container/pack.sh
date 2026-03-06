@@ -82,6 +82,10 @@ if [[ "$CHANGEDWS" == *"client"* ]]; then
 	cd ../container
 fi
 
+# Since the front workspace bundles the client code, the client/dist must be 
+# present if there is a front version bump, even if there is no client version bump.
+# This is done in the client-dist script as called by the prepack script in the
+# front/package.json.
 if [[ "$CHANGEDWS" == *"front"* ]]; then
 	cd ../front
 	echo "packing front ..."

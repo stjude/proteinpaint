@@ -157,7 +157,8 @@ export class View {
 			dslabel: this.state.vocab.dslabel,
 			name: 'Variants',
 			custom_variants: this.data.mlst,
-			skewerModes: [nm]
+			skewerModes: [nm],
+			filter0: this.state.filter0
 		}
 		return tk
 	}
@@ -214,7 +215,7 @@ export class View {
 
 	/* tricky logic */
 	async launchBlockWithTracks(tklst) {
-		if (this.blockInstance) {
+		if (this.state?.vocab?.dslabel != 'GDC' && this.blockInstance) {
 			/* block instance is present
             this should be updating tracks in this block, by adding new ones listed in tklst[],
             and deleting old ones via a tricky method
@@ -266,7 +267,7 @@ export class View {
 			return
 		}
 
-		// no block instance, create new block
+		// is GDC and/or no block instance, create new block
 
 		this.dom.blockHolder.selectAll('*').remove()
 		const arg: any = {
@@ -277,7 +278,8 @@ export class View {
 			debugmode: this.opts.debug,
 			onAddRemoveTk: () => {
 				this.interactions.maySaveTrackUpdatesToState(this.blockInstance)
-			}
+			},
+			filter0: this.state.filter0
 		}
 
 		if (this.data) {
