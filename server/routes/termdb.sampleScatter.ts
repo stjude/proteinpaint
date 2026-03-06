@@ -79,8 +79,9 @@ function init({ genomes }) {
 			} else {
 				// no coordinate terms. check prebuilt map
 				if (!q.plotName) throw new Error('Neither plot name or coordinates where provided')
-				if (!Array.isArray(ds.cohort?.scatterplots?.plots)) throw new Error('not supported')
-				const plot = ds.cohort.scatterplots.plots.find(p => p.name == q.plotName)
+				const scatterplots = ds.cohort?.scatterplots || ds.scatterplots
+				if (!Array.isArray(scatterplots?.plots)) throw new Error('not supported')
+				const plot = scatterplots.plots.find(p => p.name == q.plotName)
 				if (!plot) throw new Error(`plot not found with plotName ${q.plotName}`)
 
 				const tmp = await getSamples(ds, plot)

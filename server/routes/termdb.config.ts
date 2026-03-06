@@ -148,13 +148,15 @@ function addRestrictAncestries(c, tdb) {
 	})
 }
 function addScatterplots(c, ds, info) {
-	if (!ds.cohort.scatterplots) return
+	// TODO: always nest .scatterplots under .cohort
+	const scatterplots = ds.cohort.scatterplots || ds.scatterplots
+	if (!scatterplots) return
 	// this dataset has premade scatterplots. reveal to client
-	if (ds.cohort.scatterplots.get) {
-		c.scatterplots = ds.cohort.scatterplots.get(info?.clientAuthResult)
+	if (scatterplots.get) {
+		c.scatterplots = scatterplots.get(info?.clientAuthResult)
 		return
 	}
-	c.scatterplots = ds.cohort.scatterplots.plots.map(p => {
+	c.scatterplots = scatterplots.plots.map(p => {
 		return {
 			name: p.name,
 			dimensions: p.dimensions,
