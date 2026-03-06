@@ -8,6 +8,7 @@ import { extract_DE_search_terms_from_query } from './chat/DEagent.ts'
 import { extract_summary_terms } from './chat/summaryagent.ts'
 import { extract_matrix_search_terms_from_query } from './chat/matrixagent.ts'
 import { extract_samplescatter_terms_from_query } from './chat/samplescatteragent.ts'
+import { extract_hiercluster_terms_from_query } from './chat/hierclusteragent.ts'
 import { parse_dataset_db, parse_geneset_db, getGenesetNames } from './chat/utils.ts'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
@@ -160,6 +161,19 @@ export async function run_chat_pipeline(
 				genesetNames
 			)
 			mayLog('Time taken for sampleScatter agent:', formatElapsedTime(Date.now() - time1))
+		} else if (classResult == 'hiercluster') {
+			const time1 = new Date().valueOf()
+			ai_output_json = await extract_hiercluster_terms_from_query(
+				user_prompt,
+				llm,
+				dataset_db_output,
+				dataset_json,
+				genes_list,
+				ds,
+				testing,
+				genesetNames
+			)
+			mayLog('Time taken for hierCluster agent:', formatElapsedTime(Date.now() - time1))
 		} else {
 			// Will define all other agents later as desired
 			ai_output_json = { type: 'text', text: 'Unknown classification value' }
