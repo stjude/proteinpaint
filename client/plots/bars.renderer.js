@@ -509,17 +509,8 @@ export default function barsRenderer(barsapp, holder) {
 			.style('opacity', 1)
 	}
 
-	function getBarsStartX() {
-		return hm.colspace
-	}
-
-	function getHorizontalAxisStartX() {
-		// 0.5px keeps the axis stroke crisp while aligning with bar start.
-		return getBarsStartX() - 0.5
-	}
-
 	function seriesGrpTransform() {
-		const x = getBarsStartX()
+		const x = hm.colspace
 		let y = hm.colheadtop ? hm.collabelh : hm.colgrplabelh
 		if (hm.legendontop) y += hm.legendh
 		return 'translate(' + x + ',' + y + ')'
@@ -761,7 +752,7 @@ export default function barsRenderer(barsapp, holder) {
 
 		xAxis
 			.style('display', 'block')
-			.attr('transform', 'translate(' + getHorizontalAxisStartX() + ',' + y + ')')
+			.attr('transform', 'translate(2.5,' + y + ')')
 			.call(getAxisScale(axisTop, range))
 		/*
     yLine
