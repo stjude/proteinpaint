@@ -15,7 +15,7 @@ export class SearchHandler {
 
 		const termlst = opts.details.termlst ?? []
 		renderTable({
-			columns: [{ label: 'Terms' }],
+			columns: [{ label: 'VARIABLES' }],
 			rows: termlst.map(t => {
 				return [{ value: t.name }]
 			}),
@@ -33,13 +33,13 @@ export class SearchHandler {
 		let categoryTable
 		let ckSource: CategoryKey[] = []
 		if (opts.details.categoryKeys) {
+			// later, if there's just one category, simply show a disabled checked box for this category and no longer uncheckable
 			ckSource = opts.details.categoryKeys as CategoryKey[]
-			const categoryDiv = opts.holder.append('div')
+			const categoryDiv = opts.holder.append('div').style('margin-top', '15px')
 			const values = opts.details.termlst[0].values || {}
-			categoryDiv.append('div').style('margin', '5px').style('padding', '5px').html('Category keys')
 			categoryTable = categoryDiv.append('div')
 			renderTable({
-				columns: [{ label: 'Terms' }],
+				columns: [{ label: 'CATEGORIES' }],
 				rows: ckSource.map((ck: CategoryKey) => {
 					return [{ value: values[ck.key]?.label ?? ck.key, checked: ck.shown }]
 				}),
