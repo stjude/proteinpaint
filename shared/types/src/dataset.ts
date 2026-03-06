@@ -976,6 +976,11 @@ type Mds3Queries = {
 		file: string
 		/** dna methylation unit (e.g. 'Average Beta Value') */
 		unit: string
+		/** promoter-level M-value matrix for differential methylation analysis */
+		promoter?: {
+			/** path to promoter-level M-value h5 file (from createHdf5ForDnaMeth.py --format promoter) */
+			file: string
+		}
 	}
 	rnaseqGeneCount?: RnaseqGeneCount
 	/** Used to create the top mutated genes UI in the gene

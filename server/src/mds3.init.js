@@ -1808,6 +1808,24 @@ async function validate_query_dnaMethylation(ds, genome) {
 
 		return { term2sample2value, byTermId, bySampleId }
 	}
+
+	// Validate the optional promoter-level M-value H5 file for differential methylation
+	if (q.promoter) {
+		try {
+			if (!q.promoter.file) throw '.promoter.file missing'
+			q.promoter.file = path.join(serverconfig.tpmasterdir, q.promoter.file)
+			await utils.file_is_readable(q.promoter.file)
+			const samples = JSON.parse(
+				await run_python('query_beta_values.py', JSON.stringify({ validate: true, h: q.promoter.file }))
+			)
+			if (!Array.isArray(samples)) throw 'query_beta_values.py did not return samples array: ' + q.promoter.file
+			if (!samples.length) throw 'No samples from promoter hdf5 file: ' + q.promoter.file
+			q.promoter.allSampleSet = new Set(samples)
+			console.log(`${ds.label}: dnaMethylation promoter HDF5 file validated. Samples:`, samples.length)
+		} catch (error) {
+			throw `${ds.label}: Failed to validate dnaMethylation promoter HDF5 file: ${error}`
+		}
+	}
 }
 
 export async function validate_query_metaboliteIntensity(ds, genome) {
