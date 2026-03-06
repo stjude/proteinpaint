@@ -1036,9 +1036,9 @@ export class TermdbVocab extends Vocab {
 
 		if (opts.singleCellPlot && opts.colorTW.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
 			body.gene = opts.colorTW.term.gene
-			return await dofetch3('termdb/singlecellData', { headers, body, signal })
+			return await this.dofetch3('termdb/singlecellData', { headers, body, signal })
 		}
-		return await dofetch3('termdb/sampleScatter', { headers, body, signal })
+		return await this.dofetch3('termdb/sampleScatter', { headers, body, signal })
 	}
 
 	async getDefaultBins(opts) {
