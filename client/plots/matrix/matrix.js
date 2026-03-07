@@ -20,9 +20,11 @@ import { rebaseGroupFilter } from '../../mass/groups.js'
 import { PlotBase } from '#plots/PlotBase.js'
 
 export class Matrix extends PlotBase {
+	static type = 'matrix'
+
 	constructor(opts) {
 		super(opts)
-		this.type = 'matrix'
+		this.type = Matrix.type
 		this.holderTitle = 'Sample Matrix'
 		this.optionalFeatures = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)?.matrix || []
 		setInteractivity(this)
