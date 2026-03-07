@@ -3,6 +3,7 @@ import type { BaseTerm, BaseTW, MinBaseQ } from '../index.ts'
 /*
 For term type 'termCollection'
 */
+export type CategoryKey = { key: string; shown: boolean }
 
 type BaseTermCollection = BaseTerm & {
 	name: string
@@ -39,8 +40,7 @@ export type CategoricalTermCollection = BaseTermCollection & {
 	 * Allows client code using the term to know the collection kind without looking up config.
 	 */
 	memberType: 'categorical'
-	/** category values to include (e.g. ['Yes']); filters SQL results to matching rows */
-	categoryKeys: string[]
+	categoryKeys: CategoryKey[]
 }
 
 export type TermCollection = NumericTermCollection | CategoricalTermCollection
@@ -74,8 +74,7 @@ export type RawCategoricalTermCollection = {
 			[prop: string]: any
 		}
 	}
-	/** category values to filter on (e.g. ['Yes']); may be provided up-front or set during fill() */
-	categoryKeys?: string[]
+	categoryKeys?: CategoryKey[]
 }
 
 export type RawTermCollection = RawNumericTermCollection | RawCategoricalTermCollection
@@ -97,8 +96,7 @@ export type TermCollectionQQual = MinBaseQ & {
 	type: 'values'
 	/** a selection of term.ids for the current termwrapper, selected from term.lst */
 	lst: string[]
-	// categoryKeys intentionally NOT here — they live on CategoricalTermCollection.categoryKeys
-	// and are read by the server from tw.term.categoryKeys, not tw.q
+	categoryKeys?: CategoryKey[]
 }
 
 // TODO: may add different q types below

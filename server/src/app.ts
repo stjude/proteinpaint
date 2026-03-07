@@ -44,13 +44,13 @@ export async function launch() {
 		setAppMiddlewares(app, genomes, doneLoading)
 
 		console.log('setting server routes ...')
-		const routeCallbacks = await setOptionalRoutes(app)
+		const routeCallbacks = await setOptionalRoutes(app, genomes)
 		console.log('may set auth routes ...')
-		/*
-		 !!! the order of middlewares is critical, must be set before data routes !!!
-		  - so that a request will be inspected by auth before allowing 
-		    to proceed to any *protected* route handler
-		*/
+		/**
+!!! the order of middlewares is critical, must be set before data routes !!!
+- so that a request will be inspected by auth before allowing 
+to proceed to any *protected* route handler
+*/
 		await authApi.maySetAuthRoutes(app, genomes, basepath, serverconfig)
 
 		const routes = await Promise.all(routeFiles)
@@ -62,12 +62,12 @@ export async function launch() {
 			genomes,
 			basepath: serverconfig.basepath || '',
 			apiJson: path.join(__dirname, '../../public/docs/server-api.json')
-			/*
-			 	As an alternative to manually adding/removing imports in shared/types/src/routes, 
-			 	you may temporarily uncomment below to generate runtime route checker code, 
-			  should only uncomment when a file has been added or deleted in 
-			  shared/types/src/routes and not when modified.
-			*/
+			/**
+As an alternative to manually adding/removing imports in shared/types/src/routes, 
+you may temporarily uncomment below to generate runtime route checker code, 
+should only uncomment when a file has been added or deleted in 
+shared/types/src/routes and not when modified.
+*/
 			// , types: serverconfig.debugmode && {
 			// 	importDir: '../routes',
 			// 	outputFile: path.join(__dirname, '../../shared/types/src/checkers/routes.ts')
@@ -119,12 +119,13 @@ export async function launch() {
 		if (err?.stack) console.log(err.stack)
 		if (exitCode) console.error('\n!!!\n' + err + '\n\n')
 		else console.log('\n!!!\n' + err + '\n\n')
-		/*
-      when the app server is monitored by another process via the command line,
-      process.exit(1) is required to stop execution flow with `set -e`
-      and thereby avoid unnecessary endless restarts of an invalid server
-      init with bad config, data, and/or code
-    */
+		/**
+when the app server is monitored by another process via the command line,
+process.exit(1) is required to stop execution flow with `set -e`
+and thereby avoid unnecessary endless restarts of an invalid server
+init with bad config, data, and/or code
+*/
+
 		const msg = err?.stack || err
 		if (serverconfig.slackWebhookUrl) {
 			const url = serverconfig.URL
@@ -220,14 +221,14 @@ type OptionalRouteCallbacks = {
 	setCloseServer?: (a: any) => void
 }
 
-async function setOptionalRoutes(app) {
+async function setOptionalRoutes(app, genomes) {
 	// routeSetters is an array of "filepath/name.js"
 	if (!serverconfig.routeSetters) return
 	const routeCallbacks: OptionalRouteCallbacks = {}
 	for (const fname of serverconfig.routeSetters) {
-		if (fname.endsWith('.js')) {
+		if (fname.endsWith('.js') || fname.endsWith('.ts')) {
 			const _ = await import(fname)
-			const d = _.default(app, basepath)
+			const d = _.default(app, basepath, genomes)
 			if (d?.setCloseServer && fname.includes('coverage')) {
 				routeCallbacks.setCloseServer = d.setCloseServer
 			}

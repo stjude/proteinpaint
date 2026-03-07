@@ -28,6 +28,7 @@ export async function extract_DE_search_terms_from_query(
 		//}
 		//const generator: SchemaGenerator = createGenerator(SchemaConfig)
 		//const Schema = generator.createSchema(SchemaConfig.type) // This commented out code generates the JSON schema below
+
 		const Schema = {
 			$schema: 'http://json-schema.org/draft-07/schema#',
 			$ref: '#/definitions/DEType',
@@ -84,7 +85,10 @@ export async function extract_DE_search_terms_from_query(
 		const response: string = await route_to_appropriate_llm_provider(system_prompt, llm)
 		if (testing) {
 			// When testing, send raw LLM response
-			return { action: 'dge', response: JSON.parse(response) }
+			const test_response = JSON.parse(response)
+			test_response.plot = 'dge'
+			test_response.type = 'plot'
+			return test_response
 		} else {
 			// In actual production (inside PP) send LLM output for validation
 			return await validate_DE_response(response, ds, dataset_db_output.db_rows)
@@ -185,6 +189,7 @@ async function validate_DE_response(response: string, ds: any, db_rows: DbRows[]
 				}
 			}
 		}
+
 		pp_plot_json.state = {
 			customTerms: [
 				{

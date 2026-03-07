@@ -1,4 +1,5 @@
 import { renderTable } from '#dom'
+import type { CategoryKey } from '#types'
 
 export class SearchHandler {
 	callback: any
@@ -14,7 +15,7 @@ export class SearchHandler {
 
 		const termlst = opts.details.termlst ?? []
 		renderTable({
-			columns: [{ label: 'Terms' }],
+			columns: [{ label: 'VARIABLES' }],
 			rows: termlst.map(t => {
 				return [{ value: t.name }]
 			}),
@@ -30,15 +31,17 @@ export class SearchHandler {
 		})
 
 		let categoryTable
+		let ckSource: CategoryKey[] = []
 		if (opts.details.categoryKeys) {
-			const categoryDiv = opts.holder.append('div')
+			// later, if there's just one category, simply show a disabled checked box for this category and no longer uncheckable
+			ckSource = opts.details.categoryKeys as CategoryKey[]
+			const categoryDiv = opts.holder.append('div').style('margin-top', '15px')
 			const values = opts.details.termlst[0].values || {}
-			categoryDiv.append('div').style('margin', '5px').style('padding', '5px').html('Category keys')
 			categoryTable = categoryDiv.append('div')
 			renderTable({
-				columns: [{ label: 'Terms' }],
-				rows: opts.details.categoryKeys.map(key => {
-					return [{ value: values[key].label }]
+				columns: [{ label: 'CATEGORIES' }],
+				rows: ckSource.map((ck: CategoryKey) => {
+					return [{ value: values[ck.key]?.label ?? ck.key, checked: ck.shown }]
 				}),
 				div: categoryTable,
 				maxWidth: '30vw',
@@ -81,13 +84,12 @@ export class SearchHandler {
 					}
 				}
 
-
 				let categoryKeys
 				if (categoryTable) {
 					const trs = categoryTable.select('table').select('tbody').node().querySelectorAll('tr')
-					categoryKeys = opts.details.categoryKeys.filter((term, i) => {
+					categoryKeys = ckSource.map((ck: CategoryKey, i: number) => {
 						const checked = trs[i].querySelectorAll('td')[1].querySelector('input')?.checked
-						return checked === true
+						return { key: ck.key, shown: !!checked }
 					})
 				}
 

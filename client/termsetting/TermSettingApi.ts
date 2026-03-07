@@ -137,7 +137,6 @@ export class TermSettingApi {
 						if (this.isAbortError(e)) {
 							self.dom.loadingdiv.text('')
 						} else {
-							console.log(140, e)
 							const msg = e.message || e.error || e
 							self.dom.loadingdiv.text(`Error loading term ${self.handler?.getPillName?.(tw.term)}: ${msg}`)
 						}

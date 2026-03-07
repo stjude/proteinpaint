@@ -97,7 +97,10 @@ export async function extract_summary_terms(
 	const response: string = await route_to_appropriate_llm_provider(system_prompt, llm)
 	if (testing) {
 		// When testing, send raw LLM response
-		return { action: 'summary', response: JSON.parse(response) }
+		const test_response = JSON.parse(response)
+		test_response.plot = 'summary'
+		test_response.type = 'plot'
+		return test_response
 	} else {
 		// In actual production (inside PP) send LLM output for validation
 		return validate_summary_response(response, common_genes, ds)

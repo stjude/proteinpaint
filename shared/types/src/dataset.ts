@@ -1,5 +1,6 @@
 import type { Mclass } from './Mclass.ts'
 import type { BaseTerm } from './terms/term.ts'
+import type { CategoryKey } from './terms/termCollection.ts'
 import type { WSImage } from './routes/samplewsimages.ts'
 import type { WSISample } from './routes/wsisamples.ts'
 import type { SaveWSIAnnotationRequest } from './routes/saveWSIAnnotation.ts'
@@ -975,6 +976,13 @@ type Mds3Queries = {
 		file: string
 		/** dna methylation unit (e.g. 'Average Beta Value') */
 		unit: string
+		/** promoter-by-sample matrix, values are average M-value */
+		promoter?: {
+			/** path to h5 file */
+			file: string
+			/** unit label for promoter values (e.g. 'Average M-value') */
+			unit: string
+		}
 	}
 	rnaseqGeneCount?: RnaseqGeneCount
 	/** Used to create the top mutated genes UI in the gene
@@ -1649,8 +1657,8 @@ type NumericTermCollection = TermCollectionBase & {
 
 type CategoricalTermCollection = TermCollectionBase & {
 	type: 'categorical'
-	/** category values to filter on (categorical collections only); required on CategoricalTermCollection */
-	categoryKeys: string[]
+	/** category values to filter on; hydrated form uses CategoryKey[] */
+	categoryKeys: CategoryKey[]
 }
 
 type TermCollection = NumericTermCollection | CategoricalTermCollection

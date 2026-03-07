@@ -1,4 +1,8 @@
-import type { RawCategoricalTermCollection, CategoricalTermCollection as QualTermCollectionType } from '#types'
+import type {
+	CategoryKey,
+	RawCategoricalTermCollection,
+	CategoricalTermCollection as QualTermCollectionType
+} from '#types'
 import { type TwOpts } from '../TwBase'
 
 const termType = 'termCollection'
@@ -16,7 +20,7 @@ export class QualTermCollection {
 			[prop: string]: any
 		}
 	}
-	categoryKeys: string[]
+	categoryKeys: CategoryKey[]
 
 	// Mutates the raw term object in-place; routes from CollectionQual.fill()
 	static fill(term: RawCategoricalTermCollection, opts: TwOpts = {}) {
@@ -36,7 +40,10 @@ export class QualTermCollection {
 		if (!term.propsByTermId) term.propsByTermId = tc.propsByTermId
 		if (!term.termlst) term.termlst = tc.termlst
 		term.memberType = 'categorical'
-		if (!term.categoryKeys && tc.categoryKeys) term.categoryKeys = tc.categoryKeys
+		const rawCategoryKeys = term.categoryKeys ?? tc.categoryKeys
+		if (rawCategoryKeys) {
+			term.categoryKeys = rawCategoryKeys
+		}
 		if (!term.termIds) term.termIds = term.termlst!.map((t: any) => t.id)
 		const propsByTermId = term.propsByTermId!
 		for (const t of term.termlst!) {

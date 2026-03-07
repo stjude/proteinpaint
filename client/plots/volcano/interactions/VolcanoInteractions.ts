@@ -23,7 +23,7 @@ export class VolcanoInteractions {
 	async confoundersMenu() {
 		const state = this.app.getState()
 		const config = state.plots.find((p: VolcanoPlotConfig) => p.id === this.id)
-		if (config.termType !== TermTypes.GENE_EXPRESSION) return
+		if (config.termType !== TermTypes.GENE_EXPRESSION && config.termType !== TermTypes.DNA_METHYLATION) return
 
 		/** Find terms used to create the groups and disable in the
 		 * termsetting UI. Prevents users from trying to control for

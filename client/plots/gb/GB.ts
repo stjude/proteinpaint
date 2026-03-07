@@ -64,6 +64,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		return {
 			config,
 			filter: getNormalRoot(appState.termfilter.filter),
+			filter0: appState.termfilter.filter0,
 			vocab: appState.vocab
 		}
 	}

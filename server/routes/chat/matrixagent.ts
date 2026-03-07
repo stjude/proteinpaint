@@ -159,7 +159,10 @@ export async function extract_matrix_search_terms_from_query(
 
 	const response: string = await route_to_appropriate_llm_provider(system_prompt, llm)
 	if (testing) {
-		return { action: 'matrix', response: JSON.parse(response) }
+		const test_response = JSON.parse(response)
+		test_response.plot = 'matrix'
+		test_response.type = 'plot'
+		return test_response
 	} else {
 		return validate_matrix_response(response, common_genes, ds, activeConfigs)
 	}
@@ -235,7 +238,7 @@ function validate_matrix_response(response: string, common_genes: string[], ds: 
 	}
 
 	if (text.length > 0) {
-		return { type: 'text', text }
+		return { type: 'text', text: text }
 	} else {
 		// Structure as termgroups matching what matrix.js expects:
 		// termgroups: [{ name: '', lst: [ { term: {...} }, ... ] }]

@@ -100,7 +100,10 @@ export async function extract_samplescatter_terms_from_query(
 
 	const response: string = await route_to_appropriate_llm_provider(system_prompt, llm)
 	if (testing) {
-		return { action: 'sampleScatter', response: JSON.parse(response) }
+		const test_response = JSON.parse(response)
+		test_response.plot = 'sampleScatter'
+		test_response.type = 'plot'
+		return test_response
 	} else {
 		return validate_samplescatter_response(response, common_genes, dataset_json, ds)
 	}

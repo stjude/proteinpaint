@@ -1,6 +1,11 @@
 import { roundValue } from '#shared/roundValue.js'
 import { TermTypes } from '#shared/terms.js'
-import type { ValidatedVolcanoSettings, GEVolcanoSettings, DefaultVolcanoSettings } from '../settings/Settings'
+import type {
+	ValidatedVolcanoSettings,
+	GEVolcanoSettings,
+	DMVolcanoSettings,
+	DefaultVolcanoSettings
+} from '../settings/Settings'
 
 // The max sample cutoff for volcano rendering
 export const maxSampleCutoff = 4000
@@ -23,6 +28,7 @@ export function getDefaultVolcanoSettings(overrides = {}, opts: any): ValidatedV
 	} satisfies DefaultVolcanoSettings
 
 	addGEDefaults(opts.termType, defaults)
+	addDMDefaults(opts.termType, defaults)
 	addSCCTDefaults(opts.termType)
 
 	return Object.assign(defaults, overrides)
@@ -39,6 +45,11 @@ function addGEDefaults(termType: string, defaults: Partial<GEVolcanoSettings>) {
 	defaults.minCount = 10
 	defaults.minTotalCount = 15
 	defaults.rankBy = 'abs(foldChange)'
+}
+
+function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>) {
+	if (termType != TermTypes.DNA_METHYLATION) return
+	defaults.minSamplesPerGroup = 3
 }
 
 function addSCCTDefaults(termType: string) {
@@ -61,11 +72,15 @@ export function validateVolcanoSettings(config: any, opts: any) {
 	}
 
 	validateGESettings(config.termType, settings, sampleNum, opts)
+	validateDMSettings(config.termType)
 	validateSCCTSettings(config.termType)
 }
 
 export function getSampleNum(config: any) {
 	if (config.termType == TermTypes.GENE_EXPRESSION) {
+		return config.samplelst.groups.reduce((sum: number, g: any) => sum + g.values.length, 0)
+	}
+	if (config.termType == TermTypes.DNA_METHYLATION) {
 		return config.samplelst.groups.reduce((sum: number, g: any) => sum + g.values.length, 0)
 	}
 	if (config.termType == TermTypes.SINGLECELL_CELLTYPE) {
@@ -85,6 +100,11 @@ function validateGESettings(termType: string, settings: GEVolcanoSettings, sampl
 			`${settings.method} is not supported for ${sampleNum} samples when termtype = ${termType}. Please use Wilcoxon.`
 		)
 	}
+}
+
+function validateDMSettings(termType: string) {
+	if (termType != TermTypes.DNA_METHYLATION) return
+	//add validations when there are settings for DM
 }
 
 function validateSCCTSettings(termType: string) {

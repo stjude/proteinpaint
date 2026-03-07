@@ -262,7 +262,10 @@ export default function (): Mds3 {
 					{
 						name: 'Assay Availability',
 						type: 'categorical',
-						categoryKeys: ['1', '2'],
+						categoryKeys: [
+							{ key: '1', shown: true },
+							{ key: '2', shown: true }
+						],
 						termIds: ['assayavailability_cnv', 'assayavailability_fusion', 'assayavailability_germline'],
 						branchIds: [''],
 						propsByTermId: {}
@@ -464,7 +467,7 @@ export default function (): Mds3 {
 				jsonFile: 'files/hg38/TermdbTest/trackLst/facet.json',
 				activeTracks: ['bw 1', 'bed 1']
 			},
-			chat: {}
+			chat: { aifiles: './proteinpaint/server/dataset/ai/termdb.test.json' }
 		}
 	} satisfies Mds3
 }

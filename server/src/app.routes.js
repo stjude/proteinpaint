@@ -42,6 +42,7 @@ export const routeFiles = [
 	import('../routes/saveWSIAnnotation.ts'),
 	import('../routes/snp.ts'),
 	import('../routes/termdb.DE.ts'),
+	import('../routes/termdb.diffMeth.ts'),
 	import('../routes/termdb.boxplot.ts'),
 	import('../routes/termdb.chat.ts'),
 	import('../routes/termdb.chat2.ts'),

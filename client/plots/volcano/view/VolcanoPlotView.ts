@@ -68,27 +68,39 @@ export class VolcanoPlotView {
 		//Images may have a large margin. Hide the overflow.
 		this.dom.actionsTip.d.style('overflow', 'hidden')
 		this.volcanoDom.actions.style('margin-left', '20px').style('padding', '5px')
-		this.addActionButton('Confounding factors', [TermTypes.GENE_EXPRESSION], () => this.interactions.confoundersMenu())
-		this.addActionButton('Highlight genes', [TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTYPE], () =>
-			this.interactions.launchGeneSetEdit()
+		this.addActionButton('Confounding factors', [TermTypes.GENE_EXPRESSION, TermTypes.DNA_METHYLATION], () =>
+			this.interactions.confoundersMenu()
 		)
-		this.addActionButton('Statistics', [TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTYPE], () => {
-			this.renderStatsMenu()
-		})
-		const numSigGenes = this.viewData.statsData.find(d => d.label == 'Number of significant genes')?.value
+		this.addActionButton(
+			'Highlight genes',
+			[TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTYPE, TermTypes.DNA_METHYLATION],
+			() => this.interactions.launchGeneSetEdit()
+		)
+		this.addActionButton(
+			'Statistics',
+			[TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTYPE, TermTypes.DNA_METHYLATION],
+			() => {
+				this.renderStatsMenu()
+			}
+		)
+		const sigLabel =
+			this.termType == TermTypes.DNA_METHYLATION ? 'Number of significant promoters' : 'Number of significant genes'
+		const numSigGenes = this.viewData.statsData.find(d => d.label == sigLabel)?.value
 		if (numSigGenes) {
-			this.volcanoDom.actions
-				.append('span')
-				.text(`${numSigGenes} DE genes:`)
-				.style('margin-left', '10px')
-				.style('font-weight', 'bold')
+			const sigText =
+				this.termType == TermTypes.DNA_METHYLATION ? `${numSigGenes} DM promoters:` : `${numSigGenes} DE genes:`
+			this.volcanoDom.actions.append('span').text(sigText).style('margin-left', '10px').style('font-weight', 'bold')
 
-			this.addActionButton('Show p-value table', [TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTYPE], () => {
-				this.volcanoDom.pValueTable.style(
-					'display',
-					this.volcanoDom.pValueTable.style('display') == 'none' ? 'inline-block' : 'none'
-				)
-			})
+			this.addActionButton(
+				'Show p-value table',
+				[TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTYPE, TermTypes.DNA_METHYLATION],
+				() => {
+					this.volcanoDom.pValueTable.style(
+						'display',
+						this.volcanoDom.pValueTable.style('display') == 'none' ? 'inline-block' : 'none'
+					)
+				}
+			)
 		}
 		if (numSigGenes && numSigGenes >= 3) {
 			// Launch hierCluster for DEGs between the two groups
@@ -123,13 +135,14 @@ export class VolcanoPlotView {
 
 		this.renderTermInfo(plotDim)
 
-		this.volcanoDom.yAxisLabel
-			.attr('transform', `translate(${plotDim.yAxisLabel.x}, ${plotDim.yAxisLabel.y}) rotate(-90)`)
-			.text(plotDim.yAxisLabel.text)
+		this.volcanoDom.yAxisLabel.attr(
+			'transform',
+			`translate(${plotDim.yAxisLabel.x}, ${plotDim.yAxisLabel.y}) rotate(-90)`
+		)
+		this.setSvgSubscriptLabel(this.volcanoDom.yAxisLabel, '-log', '10', `(${this.settings.pValueType} p-value)`)
 
-		this.volcanoDom.xAxisLabel
-			.attr('transform', `translate(${plotDim.xAxisLabel.x}, ${plotDim.xAxisLabel.y})`)
-			.text('log2(fold change)')
+		this.volcanoDom.xAxisLabel.attr('transform', `translate(${plotDim.xAxisLabel.x}, ${plotDim.xAxisLabel.y})`)
+		this.setSvgSubscriptLabel(this.volcanoDom.xAxisLabel, 'log', '2', '(fold-change)')
 
 		this.renderScale(plotDim.xScale)
 		this.renderScale(plotDim.yScale, true)
@@ -281,6 +294,13 @@ export class VolcanoPlotView {
 				})
 			}
 		})
+	}
+
+	setSvgSubscriptLabel(textElem: any, prefix: string, subscript: string, suffix: string) {
+		textElem.text(null)
+		textElem.append('tspan').text(prefix)
+		textElem.append('tspan').attr('baseline-shift', 'sub').attr('font-size', '0.7em').text(subscript)
+		textElem.append('tspan').text(suffix)
 	}
 }
 

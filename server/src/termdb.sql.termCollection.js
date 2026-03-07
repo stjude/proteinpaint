@@ -28,7 +28,12 @@ export const termCollectionNumeric = {
 export const termCollectionCategorical = {
 	getCTE(tablename, tw, values) {
 		const ids = getTermIds(tw.term)
-		const categoryKeys = tw.term.categoryKeys
+		const rawKeys = tw.q?.categoryKeys || tw.term.categoryKeys
+		for (const k of rawKeys || []) {
+			if (!k || typeof k !== 'object' || typeof k.key !== 'string')
+				throw `termCollection categoryKeys entry must be {key, shown} but got: ${JSON.stringify(k)}`
+		}
+		const categoryKeys = rawKeys?.filter(k => k.shown).map(k => k.key)
 		values.push(...ids)
 		if (categoryKeys?.length) values.push(...categoryKeys)
 		return {

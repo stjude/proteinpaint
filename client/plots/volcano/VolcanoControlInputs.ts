@@ -120,6 +120,7 @@ export class VolcanoControlInputs {
 	/** Add more term type specific controls here. */
 	setVolcanoControlInputs() {
 		this.addGeneExpControlInputs()
+		this.addDNAMethControlInputs()
 		this.addSingleCellCTControlInputs()
 	}
 
@@ -176,6 +177,22 @@ export class VolcanoControlInputs {
 		]
 
 		this.inputs.splice(0, 0, ...geInputs)
+	}
+
+	addDNAMethControlInputs() {
+		if (this.termType !== TermTypes.DNA_METHYLATION) return
+		const dmInputs = [
+			{
+				label: 'Min samples per group',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'minSamplesPerGroup',
+				title: 'Minimum non-NA samples required per group for a promoter to be tested',
+				min: 1,
+				max: 100
+			}
+		]
+		this.inputs.splice(0, 0, ...dmInputs)
 	}
 
 	addSingleCellCTControlInputs() {

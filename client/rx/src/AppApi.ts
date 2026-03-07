@@ -2,6 +2,13 @@ import { type ComponentApi } from './ComponentApi.ts'
 import { Bus } from './Bus.ts'
 import { notifyComponents, getComponents } from './utils.ts'
 
+type DispatchAction =
+	| {
+			type: string
+			[key: string]: any
+	  }
+	| undefined
+
 export interface RxApp {
 	type: string
 	api?: AppApi
@@ -17,13 +24,18 @@ export interface RxApp {
 	components: ComponentApi[] | { [name: string]: ComponentApi | { [name: string]: ComponentApi } }
 	preApiFreeze?: (api: AppApi) => Promise<void>
 	init: () => Promise<void>
-	reactsTo?: (action: { type: string; [key: string]: any }) => boolean
+	reactsTo?: (action: DispatchAction) => boolean
 	getState?: (appState: any) => any
 	hasStatePreMain?: boolean
 	main: (arg?: any) => void
 	mainArg?: any
 	printError?: (any) => void
 	destroy?: () => void
+	// may skip aborting previously dispatched actions in AppApi.dispatch()
+	// if the new dispatched action doesn't affect all components; this will
+	// allow plots and control menus to continue rendering while creating,
+	// editing, or deleting another plot
+	skipPrevActionAbort?: (action: DispatchAction) => boolean
 
 	bus: Bus
 	eventTypes?: string[]
@@ -95,10 +107,8 @@ export class AppApi {
 		// any active but stale async operation, like fetch, should be canceled
 		// if a new dispatch supercedes previous dispatches.
 		// NOTE: this cancellation should not affect synchronous steps
-		if (this.#abortController) {
-			this.#abortController.abort('stale sequenceId')
-			this.#abortController = undefined
-		}
+		if (this.#abortController && !self.skipPrevActionAbort?.(action)) this.#abortController.abort('stale sequenceId')
+		this.#abortController = new AbortController()
 
 		try {
 			if (this.#middlewares.length) {
@@ -113,6 +123,16 @@ export class AppApi {
 					}
 				}
 			}
+
+			// IMPORTANT: Since a dispatched action does not necessarily affect all plot,
+			// there should not be any guard here to detect stale sequence ID. The app
+			// must continue dispatching actions that may update a specific plot or component,
+			// and allow a subsequent action to also update another component without canceling
+			// the previous action. This allows plots to continue rendering without unnecessarily
+			// aborting for unrelated dispatched actions. The main exception to these are changes
+			// to global filter and cohort (action.type == 'filter_replace' || 'cohort_set'), which
+			// are assumed to affect all plots and components - there excemptions are specified
+			// in this.#App.skipPrevActionAbort().
 
 			// expect store.write() to be debounced and handle rapid succession of dispatches
 			// replace app.state if there is an action

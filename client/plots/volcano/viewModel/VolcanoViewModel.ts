@@ -83,6 +83,7 @@ export class VolcanoViewModel {
 
 	setDataType() {
 		if (this.termType == TermTypes.GENE_EXPRESSION) return 'genes'
+		else if (this.termType == TermTypes.DNA_METHYLATION) return 'promoters'
 		else if (this.termType == TermTypes.SINGLECELL_CELLTYPE) return 'genes' //'cells'??
 		else throw new Error(`Unknown termType: ${this.termType}`)
 	}
@@ -151,7 +152,7 @@ export class VolcanoViewModel {
 		// caseColor: string,
 		// controlColor: string
 	) {
-		if (this.termType != TermTypes.GENE_EXPRESSION) return
+		if (this.termType != TermTypes.GENE_EXPRESSION && this.termType != TermTypes.DNA_METHYLATION) return
 		const getLabel = (name: string) => {
 			if (name.length >= 25) return name.substring(0, 20) + '...'
 			return name
@@ -189,10 +190,11 @@ export class VolcanoViewModel {
 					{ value: roundValueAuto(d.original_p_value) },
 					{ value: roundValueAuto(d.adjusted_p_value) }
 				]
-				//May reimplement this later if other data types are added
-				// if (this.dataType == 'genes') {
-				row.splice(0, 0, { value: d.gene_name })
-				// }
+				if (this.termType == TermTypes.DNA_METHYLATION) {
+					row.splice(0, 0, { value: d.promoter_id || '' }, { value: d.gene_name || '' })
+				} else {
+					row.splice(0, 0, { value: d.gene_name || '' })
+				}
 				this.pValueTable.rows.push(row)
 			} else {
 				this.numNonSignificant++
@@ -216,8 +218,8 @@ export class VolcanoViewModel {
 	}
 
 	getGenesColor(d: DataPointEntry, significant: boolean, controlColor: string, caseColor: string) {
-		// if (this.termType != TermTypes.GENE_EXPRESSION) return
-		if (!d.gene_name) throw new Error(`Missing gene_name in data: ${JSON.stringify(d)}`)
+		if (!d.gene_name && this.termType != TermTypes.DNA_METHYLATION)
+			throw new Error(`Missing gene_name in data: ${JSON.stringify(d)}`)
 		if (significant) {
 			if (controlColor && caseColor) d.color = d.fold_change > 0 ? caseColor : controlColor
 			else d.color = this.settings.defaultSignColor
@@ -239,7 +241,7 @@ export class VolcanoViewModel {
 				value: this.numSignificant + this.numNonSignificant
 			}
 		]
-		if (this.termType == TermTypes.GENE_EXPRESSION) {
+		if (this.termType == TermTypes.GENE_EXPRESSION || this.termType == TermTypes.DNA_METHYLATION) {
 			tableRows.push(
 				{
 					label: this.config.samplelst.groups[0].name + ' sample size (control group)',
@@ -262,9 +264,11 @@ export class VolcanoViewModel {
 	}
 
 	setPTableColumns() {
-		// if (this.termType == TermTypes.GENE_EXPRESSION) {
-		this.pValueTable.columns.splice(0, 0, { label: 'Gene Name', sortable: true })
-		// }
+		if (this.termType == TermTypes.DNA_METHYLATION) {
+			this.pValueTable.columns.splice(0, 0, { label: 'Promoter', sortable: true }, { label: 'Gene(s)', sortable: true })
+		} else {
+			this.pValueTable.columns.splice(0, 0, { label: 'Gene Name', sortable: true })
+		}
 	}
 
 	setUserActions() {
