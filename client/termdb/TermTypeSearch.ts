@@ -47,6 +47,13 @@ const useCasesExcluded = {
 		TermTypeGroups.SINGLECELL_CELLTYPE,
 		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
 	],
+	summaryInput: [
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.TERM_COLLECTION,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
+	],
 	barchart: [
 		TermTypeGroups.SNP_LOCUS,
 		TermTypeGroups.SNP_LIST,
@@ -323,6 +330,7 @@ export class TermTypeSearch {
 	}
 
 	async addTabsAllowed(state) {
+		console.log(state)
 		for (const type of this.types) {
 			const termTypeGroup = typeGroup[type]
 			let label = termTypeGroup
