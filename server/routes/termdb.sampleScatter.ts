@@ -596,6 +596,11 @@ async function loadFile(p: any, ds: any) {
 
 // called in mds3.init
 export async function mayInitiateScatterplots(ds) {
+	if (ds.scatterplots) {
+		// nest under ds.cohort
+		ds.cohort.scatterplots = ds.scatterplots
+		delete ds.scatterplots
+	}
 	if (!ds.cohort.scatterplots) return
 	if (typeof ds.cohort.scatterplots.get == 'function') {
 		// allowed but still requires plots[]

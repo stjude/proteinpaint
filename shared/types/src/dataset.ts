@@ -1989,6 +1989,7 @@ export type Mds3 = BaseMds & {
 	validate_filter0?: (f: any) => void
 	ssm2canonicalisoform?: GdcApi
 	variant2samples?: Variant2Samples
+	scatterplots?: Scatterplots
 	/** disables switching to genomic mode for the protein view mds3 tk of this ds
 	works by preventing block gmmode menu from showing "genomic" option
 	is only passed via mds3 adhoc ds copy, but not termdbConfig
