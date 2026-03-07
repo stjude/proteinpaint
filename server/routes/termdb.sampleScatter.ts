@@ -156,7 +156,7 @@ async function getSingleCellScatter(req, res, ds) {
 	const { name, sample } = q.singleCellPlot
 	const tw = q.colorTW as TermWrapper
 	try {
-		const data = await ds.queries.singleCell.data.get({ plots: [name], sample })
+		const data = await ds.queries.singleCell.data.get({ plots: [name], sample, colorBy: tw.term.name })
 
 		const plot = data.plots[0]
 		const cells: Cell[] = [...plot.expCells, ...plot.noExpCells]
