@@ -1033,7 +1033,6 @@ export class TermdbVocab extends Vocab {
 		if (opts.divideByTW) body.divideByTW = this.getTwMinCopy(opts.divideByTW)
 		if (opts.scaleDotTW) body.scaleDotTW = this.getTwMinCopy(opts.scaleDotTW)
 		body.excludeOutliers = opts.excludeOutliers
-
 		if (opts.singleCellPlot && opts.colorTW.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
 			body.gene = opts.colorTW.term.gene
 			return await this.dofetch3('termdb/singlecellData', { headers, body, signal })
