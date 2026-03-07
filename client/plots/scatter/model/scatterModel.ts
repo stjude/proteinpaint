@@ -255,7 +255,7 @@ export class ScatterModel {
 	}
 
 	getColor(c, chart) {
-		if (this.scatter.config.colorTW.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
+		if (this.scatter.config.colorTW?.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
 			let color
 			if (!c.geneExp) color = noExpColor
 			else if (c.geneExp > chart.geMax) color = expColor
@@ -386,20 +386,21 @@ export class ScatterModel {
 
 		const gradientColor = rgb(this.scatter.settings.defaultColor)
 		if (!config.startColor) {
+			// FIXME should move these to getPlotConfig
 			config.startColor = {}
 			config.stopColor = {}
 		}
 		// supply start and stop color, if term has hardcoded colors, use; otherwise use default
 		if (!config.startColor[chart.id]) {
 			config.startColor[chart.id] =
-				config.colorTW.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION
+				config.colorTW?.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION
 					? noExpColor
 					: config.colorTW?.term.continuousColorScale?.minColor || gradientColor.brighter().brighter().toString()
 		}
 
 		if (!config.stopColor[chart.id]) {
 			config.stopColor[chart.id] =
-				config.colorTW.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION
+				config.colorTW?.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION
 					? expColor
 					: config.colorTW?.term.continuousColorScale?.maxColor || gradientColor.darker().toString()
 		}
