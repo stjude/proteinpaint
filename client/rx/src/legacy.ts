@@ -530,7 +530,6 @@ export function getComponentApi(self) {
 						}
 					}
 				}
-				abortController = undefined
 			}
 			try {
 				// notify children
@@ -617,7 +616,6 @@ export function getComponentApi(self) {
 			if (reason) console.info(`triggerAbort()`, reason)
 			if (abortController) {
 				abortController.abort('stale sequenceId')
-				abortController = undefined
 			}
 			for (const c of (abortControllers as Set<AbortController>).values()) {
 				try {
@@ -652,6 +650,7 @@ export function getComponentApi(self) {
 			return sequenceId != latestActionSequenceId
 		},
 		destroy() {
+			if (abortController) abortController.abort()
 			// delete references to other objects to make it easier
 			// for automatic garbage collection to find unreferenced objects
 			self.app.deregister(self.api)
