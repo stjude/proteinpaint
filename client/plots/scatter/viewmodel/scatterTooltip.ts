@@ -107,7 +107,7 @@ export class ScatterTooltip {
 						parentId: id,
 						samples: [sample],
 						level: 2,
-						category: this.scatter.config.term.term.name,
+						category: this.scatter.config.term?.term?.name || 'X',
 						children: [],
 						value: xvalue
 					}
@@ -120,7 +120,7 @@ export class ScatterTooltip {
 						parentId: xvalue,
 						samples: [sample],
 						level: 3,
-						category: this.scatter.config.term2.term.name,
+						category: this.scatter.config.term2?.term?.name || 'Y',
 						children: [],
 						value: yvalue
 					}

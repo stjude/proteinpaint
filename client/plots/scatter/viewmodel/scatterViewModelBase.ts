@@ -211,7 +211,7 @@ export class ScatterViewModelBase {
 					.text(term0Name)
 			}
 			if (this.scatter.config.term2) {
-				const t2name = this.scatter.config.term2.term.name
+				const t2name = this.scatter.config.term2?.term?.name || 'Y'
 				const term2Name = getTitle(t2name, 60)
 				text = labelsG
 					.append('text')
@@ -227,7 +227,7 @@ export class ScatterViewModelBase {
 				if (term2Name.length > 60) {
 					text
 						.on('mouseenter', event => {
-							this.scatter.interactivity.showText(event, this.scatter.config.term2.term.name)
+							this.scatter.interactivity.showText(event, this.scatter.config.term2?.term?.name || 'Y')
 						})
 						.on('mouseleave', () => this.view.dom.tooltip.hide())
 				}
