@@ -1,4 +1,4 @@
-import type { DiffMethRequest, DiffMethInput, DiffMethResponse, RouteApi } from '#types'
+import type { DiffMethRequest, DiffMethResponse, RouteApi } from '#types'
 import { diffMethPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import { get_ds_tdb } from '../src/termdb.js'
@@ -215,4 +215,23 @@ function validateGroups(sample_size1: number, sample_size2: number, group1names:
 	const commonnames = group1names.filter(x => group2names.includes(x))
 	if (commonnames.length) alerts.push(`Common elements found between both groups: ${commonnames.join(', ')}`)
 	return alerts
+}
+
+type DiffMethInput = {
+	/** Case samples separated by , */
+	case: string
+	/** Control samples separated by , */
+	control: string
+	/** Absolute path to promoter-level M-value HDF5 file */
+	input_file: string
+	/** Minimum non-NA samples required per group */
+	min_samples_per_group?: number
+	/** Confounding variable 1 values, one per sample */
+	conf1?: any[]
+	/** Type of the confounding variable 1 (continuous/discrete) */
+	conf1_mode?: 'continuous' | 'discrete'
+	/** Confounding variable 2 values, one per sample */
+	conf2?: any[]
+	/** Type of the confounding variable 2 (continuous/discrete) */
+	conf2_mode?: 'continuous' | 'discrete'
 }
