@@ -39,7 +39,7 @@ export class ComponentApi {
 	#Component: RxComponent
 	Inner?: RxComponent // only in debugmode
 	#latestActionSequenceId: number
-	#abortController?: AbortController = new AbortController()
+	#abortController: AbortController = new AbortController()
 	#abortControllers: Set<AbortController>
 	// TODO: may use #incompleteUpdate property, if the shared app abortController signal is used
 	// #incompleteUpdate: boolean = true
@@ -127,15 +127,16 @@ export class ComponentApi {
 				this.#abortController.abort('stale sequenceId')
 			}
 			this.#abortController = new AbortController()
+			const preMainProps = self.opts.debug && self.opts.preMain?.(this, self)
 
 			if (self.mainArg == 'state') {
 				// some components may require passing state to its .main() method,
 				// for example when extending a simple object class into an rx-component
 				try {
 					await self.main(componentState)
-					this.#abortController = undefined
 				} catch (e) {
-					this.#abortController = undefined
+					if (self.app.isAbortError(e)) return
+					if (self.bus) self.bus.emit('error')
 					throw e
 				}
 			} else {
@@ -143,15 +144,17 @@ export class ComponentApi {
 				if (self.main) {
 					try {
 						await self.main()
-						this.#abortController = undefined
+						// uncomment to temporarily force an "abort previous action on update()" failure in rx-async.unit.spec.js;
+						// may need to also copy this line to the catch below and also in triggerAbort()
+						// this.#abortController = undefined
 					} catch (e) {
-						this.#abortController = undefined
 						if (self.app.isAbortError(e)) return
 						if (self.bus) self.bus.emit('error')
 						throw e
 					}
 				}
 			}
+			if (preMainProps) self.opts.postMain?.(this, self, preMainProps)
 		}
 		try {
 			// notify children
@@ -251,7 +254,6 @@ export class ComponentApi {
 		if (reason) console.info(`triggerAbort()`, reason)
 		if (this.#abortController) {
 			this.#abortController.abort('stale sequenceId')
-			this.#abortController = undefined
 		}
 		for (const c of this.#abortControllers.values()) {
 			try {
