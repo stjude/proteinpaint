@@ -54,7 +54,7 @@ export class AppApi {
 	state: any
 
 	#latestActionSequenceId: number
-	#abortController?: AbortController
+	#abortController: AbortController = new AbortController()
 	/** trackedAbortContrlsBySignal is used by trackAbortCtrlBySignal() */
 	#trackedAbortContrlsBySignal = new WeakMap()
 	#componentsByType: {
@@ -103,11 +103,12 @@ export class AppApi {
 
 	async dispatch(action?: any) {
 		const self = this.#App
-		self.bus.emit('preDispatch')
+		self.bus.emit('preDispatch') //; console.log(106, 'AppApi.dispatch() signal', this.#abortController?.signal)
 		// any active but stale async operation, like fetch, should be canceled
 		// if a new dispatch supercedes previous dispatches.
 		// NOTE: this cancellation should not affect synchronous steps
-		if (this.#abortController && !self.skipPrevActionAbort?.(action)) this.#abortController.abort('stale sequenceId')
+		if (this.#abortController /*&& !self.skipPrevActionAbort?.(action)*/)
+			this.#abortController.abort('stale sequenceId')
 		this.#abortController = new AbortController()
 
 		try {
@@ -156,7 +157,7 @@ export class AppApi {
 		}
 		// do not emit a postRender event if the action has become stale
 		if (self.bus && this.#latestActionSequenceId == action?.sequenceId) self.bus.emit('postRender')
-		this.#abortController = undefined
+		//this.#abortController = undefined
 	}
 
 	// action: RxAction
@@ -246,7 +247,7 @@ export class AppApi {
 		const self = this.#App
 		if (this.#abortController) {
 			this.#abortController.abort('stale sequenceId')
-			this.#abortController = undefined
+			//this.#abortController = undefined
 		}
 		for (const name of Object.keys(self.components)) {
 			const component = self.components[name]
@@ -288,6 +289,7 @@ export class AppApi {
 	}
 
 	destroy() {
+		this.#abortController?.abort()
 		const self = this.#App
 		// delete references to other objects to make it easier
 		// for automatic garbage collection to find unreferenced objects
