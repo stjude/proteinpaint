@@ -975,9 +975,9 @@ type Mds3Queries = {
 		file: string
 		/** dna methylation unit (e.g. 'Average Beta Value') */
 		unit: string
-		/** promoter-level M-value matrix for differential methylation analysis */
+		/** promoter-by-sample matrix, values are average M-value */
 		promoter?: {
-			/** path to promoter-level M-value h5 file (from createHdf5ForDnaMeth.py --format promoter) */
+			/** path to h5 file */
 			file: string
 			/** unit label for promoter values (e.g. 'Average M-value') */
 			unit: string

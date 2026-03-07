@@ -17,25 +17,6 @@ export type DiffMethRequest = {
 	preAnalysis?: boolean
 }
 
-export type DiffMethInput = {
-	/** Case samples separated by , */
-	case: string
-	/** Control samples separated by , */
-	control: string
-	/** Absolute path to promoter-level M-value HDF5 file */
-	input_file: string
-	/** Minimum non-NA samples required per group */
-	min_samples_per_group?: number
-	/** Confounding variable 1 values, one per sample */
-	conf1?: any[]
-	/** Type of the confounding variable 1 (continuous/discrete) */
-	conf1_mode?: 'continuous' | 'discrete'
-	/** Confounding variable 2 values, one per sample */
-	conf2?: any[]
-	/** Type of the confounding variable 2 (continuous/discrete) */
-	conf2_mode?: 'continuous' | 'discrete'
-}
-
 export type DiffMethResponse = {
 	/** Array of promoter-level differential methylation results */
 	data: DiffMethDataEntry[]
