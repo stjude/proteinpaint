@@ -995,6 +995,12 @@ type Mds3Queries = {
 		src: 'native'
 		file: string
 	}
+	proteome?: {
+		whole?: {
+			src: 'native' | string
+			file: string
+		}
+	}
 	singleCell?: SingleCellQuery
 	singleSampleGenomeQuantification?: SingleSampleGenomeQuantification
 	singleSampleGbtk?: SingleSampleGbtk
