@@ -259,7 +259,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				samples[sampleId][tw.$id] = { key, value }
 			}
 		} else if (tw.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE) {
-			if (!q.ds.queries?.proteomics?.whole) throw 'not supported by dataset: ' + tw.term.type
+			if (!q.ds.queries?.proteome?.whole) throw 'not supported by dataset: ' + tw.term.type
 
 			let lstOfBins // of this tw. only set when q.mode is discrete
 			if (tw.q?.mode == 'discrete' || tw.q?.mode == 'binary') {
@@ -274,7 +274,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				filter: q.filter,
 				filter0: q.filter0
 			}
-			const data = await q.ds.queries.proteomics.whole.get(args, q.ds) // 2nd ds parameter is needed for ds-supplied getter
+			const data = await q.ds.queries.proteome.whole.get(args, q.ds) // 2nd ds parameter is needed for ds-supplied getter
 			const values = data.term2sample2value.get(tw.$id)
 			for (const sampleId in values) {
 				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }

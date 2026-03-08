@@ -1935,15 +1935,11 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 }
 
 export async function validate_query_wholeProteomeAbundance(ds, genome) {
-	const q = ds.queries.proteomics?.whole
+	const q = ds.queries.proteome?.whole
 	if (!q) return
 	q.wholeProteomeAbundance2bins = {}
-
-	if (q.src == 'native') {
-		await validateWholeProteomeAbundanceNative(q, ds, genome)
-		return
-	}
-	throw 'unknown queries.proteomics.whole.src'
+	if (!q.file) throw 'queries.proteome.whole.file missing'
+	await validateWholeProteomeAbundanceNative(q, ds, genome)
 }
 
 async function validateWholeProteomeAbundanceNative(q, ds, genome) {
@@ -1958,7 +1954,7 @@ async function validateWholeProteomeAbundanceNative(q, ds, genome) {
 		const l = line.split('\t')
 		for (let i = 9; i < l.length; i++) {
 			const id = ds.cohort.termdb.q.sampleName2id(l[i])
-			if (id == undefined) throw 'queries.proteomics.whole: unknown sample from header: ' + l[i]
+			if (id == undefined) throw 'queries.proteome.whole: unknown sample from header: ' + l[i]
 			q.samples.push(id)
 		}
 	}

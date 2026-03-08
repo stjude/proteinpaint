@@ -116,6 +116,7 @@ const useCasesExcluded = {
 		TermTypeGroups.DICTIONARY_VARIABLES,
 		TermTypeGroups.GENE_EXPRESSION,
 		TermTypeGroups.DNA_METHYLATION,
+		TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE,
 		TermTypeGroups.SSGSEA,
 		TermTypeGroups.TERM_COLLECTION,
 		TermTypeGroups.SINGLECELL_CELLTYPE,
@@ -129,7 +130,10 @@ const useCasesExcluded = {
 		TermTypeGroups.GENE_EXPRESSION,
 		TermTypeGroups.DNA_METHYLATION,
 		TermTypeGroups.SSGSEA,
-		TermTypeGroups.TERM_COLLECTION
+		TermTypeGroups.TERM_COLLECTION,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION,
+		TermTypeGroups.METABOLITE_INTENSITY
 	],
 	geneExpression: [
 		TermTypeGroups.SNP_LOCUS,

@@ -660,7 +660,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 		if (
 			ds.queries?.geneExpression ||
 			ds.queries?.metaboliteIntensity ||
-			ds.queries?.proteomics ||
+			ds.queries?.proteome ||
 			ds.queries?.ssGSEA ||
 			ds.queries?.dnaMethylation
 		)
@@ -674,7 +674,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 		if (
 			ds.queries?.geneExpression ||
 			ds.queries?.metaboliteIntensity ||
-			ds.queries?.proteomics ||
+			ds.queries?.proteome ||
 			ds.queries?.ssGSEA ||
 			ds.queries?.dnaMethylation
 		)
@@ -694,7 +694,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	alphaGenome: ({ ds }) => ds.queries?.alphaGenome,
 	geneExpression: ({ ds }) => ds.queries?.geneExpression,
 	metaboliteIntensity: ({ ds }) => ds.queries?.metaboliteIntensity,
-	wholeProteomeAbundance: ({ ds }) => ds.queries?.proteomics?.whole,
+	wholeProteomeAbundance: ({ ds }) => ds.queries?.proteome?.whole,
 	DA: ({ ds }) => ds.queries?.rnaseqGeneCount,
 	brainImaging: ({ ds }) => ds.queries?.NIdata,
 	DziViewer: ({ ds }) => ds.queries?.DZImages, // replaced by WSIViewer, but keep it here just in case
