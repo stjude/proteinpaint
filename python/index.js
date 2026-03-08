@@ -14,13 +14,29 @@ export function setPythonBinPath(binpath) {
 	python = binpath
 }
 
-export function run_python(pyfile, input_data) {
+export function run_python(pyfile, input_data, { signal } = {}) {
 	return new Promise((resolve, reject) => {
 		const pypath = path.join(__dirname, '/src/', pyfile)
+
+		if (signal?.aborted) {
+			reject(new Error(`run_python('${pyfile}'): aborted before start`))
+			return
+		}
 
 		const ps = spawn(python, [pypath])
 		const stdout = []
 		const stderr = []
+
+		if (signal) {
+			const onAbort = () => {
+				if (!ps.killed) {
+					ps.kill()
+					reject(new Error(`run_python('${pyfile}'): aborted`))
+				}
+			}
+			signal.addEventListener('abort', onAbort, { once: true })
+			ps.on('close', () => signal.removeEventListener('abort', onAbort))
+		}
 
 		// Handle stdin errors (e.g. EPIPE)
 		ps.stdin.on('error', err => {

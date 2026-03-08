@@ -26,12 +26,29 @@ const binaryDir = path.join(__dirname, '/target/release/')
 if (!fs.existsSync(binaryDir)) throw `missing rust binary directory='${binaryDir}'`
 if (!fs.readdirSync(binaryDir).length) throw `empty rust binary directory='${binaryDir}'`
 
-export function run_rust(binfile, input_data, args = []) {
+export function run_rust(binfile, input_data, args = [], { signal } = {}) {
 	return new Promise((resolve, reject) => {
 		const binpath = path.join(__dirname, '/target/release/', binfile)
+
+		if (signal?.aborted) {
+			reject(new Error(`run_rust('${binfile}'): aborted before start`))
+			return
+		}
+
 		const ps = spawn(binpath, args)
 		const stdout = []
 		const stderr = []
+
+		if (signal) {
+			const onAbort = () => {
+				if (!ps.killed) {
+					ps.kill()
+					reject(new Error(`run_rust('${binfile}'): aborted`))
+				}
+			}
+			signal.addEventListener('abort', onAbort, { once: true })
+			ps.on('close', () => signal.removeEventListener('abort', onAbort))
+		}
 
 		try {
 			Readable.from(input_data).pipe(ps.stdin)

@@ -1,0 +1,2 @@
+Features:
+- Added support for passing AbortSignal to run_python and run_rust

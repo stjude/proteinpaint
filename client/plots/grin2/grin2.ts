@@ -707,7 +707,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 			}
 
 			const response = await dofetch3('/grin2', {
-				body: requestData
+				body: requestData,
+				signal: this.api!.getAbortSignal()
 			})
 
 			if (response.status === 'error') throw `GRIN2 analysis failed: ${response.error}`
