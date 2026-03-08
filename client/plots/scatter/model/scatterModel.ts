@@ -4,7 +4,7 @@ import { scaleLinear as d3Linear, scaleTime } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { regressionPoly } from 'd3-regression'
 import type { Scatter } from '../scatter'
-import { getDateFromNumber } from '../../../../shared/utils/src/terms.js'
+import { getDateFromNumber, TermTypes } from '#shared/terms.js'
 import type {
 	ScatterResponse,
 	ScatterChart,
@@ -16,6 +16,8 @@ import type {
 export const shapes = shapesArray
 
 const numberOfSamplesCutoff = 20000 // if map is greater than cutoff, switch from svg to canvas rendering
+const noExpColor = '#F5F5F5' //light gray
+const expColor = '#ff000d' //default color for gene expression
 
 export class ScatterModel {
 	startGradient: any
@@ -80,14 +82,20 @@ export class ScatterModel {
 				reqOpts,
 				this.scatter.api?.getAbortSignal()
 			)
-			this.is3D = this.scatter.config.term0?.q.mode == 'continuous'
 			if ('error' in data) throw data.error
-			this.range = data.range
+
 			this.charts = []
-			for (const [key, chartData] of Object.entries(data.result)) {
-				if (!Array.isArray(chartData.samples)) throw 'data.samples[] not array'
-				this.createChart(key, chartData)
+			//This is not preferable.
+			if (reqOpts.colorTW?.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
+				this.processGEData(data['plots'])
+			} else {
+				this.range = data.range
+				for (const [key, chartData] of Object.entries(data.result)) {
+					if (!Array.isArray(chartData.samples)) throw 'data.samples[] not array'
+					this.createChart(key, chartData)
+				}
 			}
+			this.is3D = this.scatter.config.term0?.q.mode == 'continuous'
 			this.initRanges()
 		} catch (e: any) {
 			if (this.scatter.app.isAbortError(e)) return
@@ -102,6 +110,44 @@ export class ScatterModel {
 		const colorLegend: Map<string, ColorLegendItem> = new Map(data.colorLegend)
 		const shapeLegend: Map<string, ShapeLegendItem> = new Map(data.shapeLegend)
 		this.charts.push({ id, data, cohortSamples, colorLegend, shapeLegend })
+	}
+
+	processGEData(plots: any) {
+		const plotsCopy = structuredClone(plots)
+		let xMin = Infinity,
+			xMax = -Infinity,
+			yMin = Infinity,
+			yMax = -Infinity
+		for (const plot of plotsCopy) {
+			plot.data = plot.data || {}
+			plot.id = plot.name
+			let plotMax = -Infinity,
+				plotMin = Infinity,
+				plotGEMin = Infinity,
+				plotGEMax = -Infinity
+			for (const cell of plot.expCells) {
+				xMin = Math.min(xMin, cell.x)
+				xMax = Math.max(xMax, cell.x)
+				yMin = Math.min(yMin, cell.y)
+				yMax = Math.max(yMax, cell.y)
+				plotMin = Math.min(plotMin, cell.x)
+				plotMax = Math.max(plotMax, cell.y)
+				plotGEMin = Math.min(plotGEMin, cell.geneExp)
+				plotGEMax = Math.max(plotGEMax, cell.geneExp)
+				cell.shape = 'Ref'
+			}
+			plot.min = plotMin
+			plot.max = plotMax
+			plot.geMin = plotGEMin
+			plot.geMax = plotGEMax
+			plot.data.samples = plot.expCells.concat(plot.noExpCells)
+			plot.cohortSamples = plot.expCells.concat(plot.noExpCells)
+			plot.colorLegend = new Map()
+			plot.shapeLegend = new Map()
+			plot.shapeLegend.set('Ref', { shape: 0, key: 'Ref', sampleCount: plot.expCells.length })
+			this.charts.push(plot)
+		}
+		this.range = { xMin, xMax, yMin, yMax }
 	}
 
 	async initRanges() {
@@ -209,6 +255,13 @@ export class ScatterModel {
 	}
 
 	getColor(c, chart) {
+		if (this.scatter.config.colorTW?.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
+			let color
+			if (!c.geneExp) color = noExpColor
+			else if (c.geneExp > chart.geMax) color = expColor
+			else color = chart.colorGenerator(c.geneExp)
+			return color
+		}
 		if (this.scatter.config.colorTW?.q.mode == 'continuous' && 'sampleId' in c) {
 			const [min, max] = chart.colorGenerator.domain()
 			if (c.category < min) return chart.colorGenerator(min)
@@ -288,6 +341,7 @@ export class ScatterModel {
 	}
 
 	initAxes(chart) {
+		const config = this.scatter.config
 		if (chart.data.samples.length == 0) return
 		const offsetX = this.axisOffset.x
 		const offsetY = this.axisOffset.y
@@ -331,33 +385,42 @@ export class ScatterModel {
 		chart.zAxisScale = d3Linear().domain([chart.ranges.zMin, chart.ranges.zMax]).range([0, this.scatter.settings.svgd])
 
 		const gradientColor = rgb(this.scatter.settings.defaultColor)
-		if (!this.scatter.config.startColor) {
-			this.scatter.config.startColor = {}
-			this.scatter.config.stopColor = {}
+		if (!config.startColor) {
+			// FIXME should move these to getPlotConfig
+			config.startColor = {}
+			config.stopColor = {}
 		}
 		// supply start and stop color, if term has hardcoded colors, use; otherwise use default
-		if (!this.scatter.config.startColor[chart.id]) {
-			this.scatter.config.startColor[chart.id] =
-				this.scatter.config.colorTW?.term.continuousColorScale?.minColor ||
-				gradientColor.brighter().brighter().toString()
+		if (!config.startColor[chart.id]) {
+			config.startColor[chart.id] =
+				config.colorTW?.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION
+					? noExpColor
+					: config.colorTW?.term.continuousColorScale?.minColor || gradientColor.brighter().brighter().toString()
 		}
 
-		if (!this.scatter.config.stopColor[chart.id]) {
-			this.scatter.config.stopColor[chart.id] =
-				this.scatter.config.colorTW?.term.continuousColorScale?.maxColor || gradientColor.darker().toString()
+		if (!config.stopColor[chart.id]) {
+			config.stopColor[chart.id] =
+				config.colorTW?.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION
+					? expColor
+					: config.colorTW?.term.continuousColorScale?.maxColor || gradientColor.darker().toString()
 		}
 
 		// Handle continuous color scaling when color term wrapper is in continuous mode
-		if (this.scatter.config.colorTW?.q.mode === 'continuous') {
+		if (config.colorTW?.q.mode === 'continuous') {
 			// Extract and sort all sample values for our calculations
 			// We filter out any values that are explicitly defined in the term values
 			// This gives us the raw numerical data we need for scaling
-			const colorValues = chart.cohortSamples
-				.filter(
-					s => !this.scatter.config.colorTW.term.values || !(s.category in this.scatter.config.colorTW.term.values)
-				)
-				.map(s => s.category)
-				.sort((a, b) => a - b)
+			let colorValues
+			if (config.colorTW.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
+				colorValues = [chart.geMin, chart.geMax]
+			} else {
+				colorValues = chart.cohortSamples
+					.filter(
+						s => !this.scatter.config.colorTW.term.values || !(s.category in this.scatter.config.colorTW.term.values)
+					)
+					.map(s => s.category)
+					.sort((a, b) => a - b)
+			}
 			chart.colorValues = colorValues // to use it in renderLegend
 			// Determine min/max based on current mode
 			let min, max, index

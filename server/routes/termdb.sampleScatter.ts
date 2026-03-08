@@ -154,9 +154,15 @@ function init({ genomes }) {
 async function getSingleCellScatter(req, res, ds) {
 	const q = req.query satisfies TermdbSampleScatterRequest
 	const { name, sample } = q.singleCellPlot
-	const tw = q.colorTW as TermWrapper
 	try {
-		const data = await ds.queries.singleCell.data.get({ plots: [name], sample })
+		const tw = q.colorTW as any // not using "TermWrapper" due to tsc err
+		const arg: any = { plots: [name], sample }
+		if (tw) {
+			if (tw.term.type == 'singleCellGeneExpression') arg.gene = tw.term.gene
+			else if (tw.term.type == 'singleCellCellType') arg.colorBy = tw.term.name
+			else throw new Error('unsupported tw')
+		}
+		const data = await ds.queries.singleCell.data.get(arg)
 
 		const plot = data.plots[0]
 		const cells: Cell[] = [...plot.expCells, ...plot.noExpCells]

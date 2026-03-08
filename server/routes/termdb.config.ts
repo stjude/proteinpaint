@@ -187,10 +187,13 @@ function addMutationSignatureplots(c, ds) {
 		return { name: p.name }
 	})
 }
-
-/* ds.queries{} contains diverse query types covering genomic, molecular, imaging etc
+/**
+ * Adds non-dictionary methods, properties, etc. to the termdbConfig.queries{} object.
+ * @param c Config object sent to the client with only relevant info for the client.
+ * @param ds Entire dataset configuration from ds file. ds.queries{} contains diverse query types covering genomic, molecular, imaging etc
+ * @param genome Genome obj.
  */
-function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
+function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	const q = ds.queries
 	if (!q) return
 	// this ds supports genomic query methods
@@ -321,6 +324,11 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome) {
 		if (q.singleCell.DEgenes) {
 			q2.singleCell.DEgenes = { termId: q.singleCell.DEgenes.termId }
 		}
+		if (q.singleCell?.terms?.length) {
+			/** This vocab needs to be accessible to other plots, filter, etc.
+			 * Add directly to the termdbConfig obj for broader use. */
+			c.scctTerms = q.singleCell.terms
+		}
 	}
 	if (q.images) {
 		q2.images = {} //nothing to pass to the client for now, but the key must be present
@@ -342,6 +350,10 @@ function getAllowedTermTypes(ds) {
 	if (ds.queries?.metaboliteIntensity) typeSet.add(TermTypes.METABOLITE_INTENSITY)
 	if (ds.queries?.ssGSEA) typeSet.add(TermTypes.SSGSEA)
 	if (ds.queries?.dnaMethylation) typeSet.add(TermTypes.DNA_METHYLATION)
+	if (ds.queries?.singleCell) {
+		typeSet.add(TermTypes.SINGLECELL_CELLTYPE)
+		if (ds.queries.singleCell?.geneExpression) typeSet.add(TermTypes.SINGLECELL_GENE_EXPRESSION)
+	}
 	if (ds.cohort.termdb.termCollections?.length) typeSet.add('termCollection')
 	return [...typeSet]
 }
