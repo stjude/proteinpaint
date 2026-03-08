@@ -1208,7 +1208,7 @@ tape('Sort Genes By Input Data Order', function (test) {
 	}
 })
 
-tape('avoid race condition', function (test) {
+tape('avoid race condition - plot edit', function (test) {
 	test.timeoutAfter(1500)
 	test.plan(4)
 	runpp({
@@ -1349,6 +1349,113 @@ tape('avoid race condition', function (test) {
 								}
 							]
 						}
+					})
+				})()
+			])
+		} catch (e) {
+			test.fail('error: ' + e)
+			throw e
+		}
+	}
+})
+
+tape('avoid race condition - cohort change', function (test) {
+	test.timeoutAfter(3000)
+	test.plan(4)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200,
+							sortTermsBy: 'asListed'
+						}
+					},
+					termgroups: [
+						{
+							name: '',
+							lst: getGenes()
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		matrix.Inner.app.vocabApi.origGetAnnotatedSampleData = matrix.Inner.app.vocabApi.getAnnotatedSampleData
+		matrix.Inner.app.vocabApi.getAnnotatedSampleData = async (opts, _refs = {}) => {
+			const vkeys = opts.filter.lst?.[0].tvs.values.map(v => v.key)
+			const j = responseDelays[i]
+			// immediately increment i before before sleep(), so that the next dispatch() actually uses the updated i value
+			i++
+			// Simulate the delay before the network request, so that subsequent component.api.update()
+			// will abort the opts.signal that is supplied to the fetch request that will be cancelled.
+			// Ideally, an aborted request will show up as red text in the Network tab to verify the
+			// simulated request cancellations, but in this test, the abort signal will be aborted before
+			// fetch and Chrome doesn't display non-initiated requests at all in the Netrok tab. Also,
+			// memoized responses in namedFetch() will not trigger fetch if an already aborted signal is detected.
+			await sleep(j)
+			const data = await matrix.Inner.app.vocabApi.origGetAnnotatedSampleData(opts, _refs)
+			return data
+		}
+		// set up the postRender callback before triggering rerenders via app.dispatch
+		matrix.on('postRender.test', async () => {
+			matrix.on('postRender.test', null)
+			// run tests after all the delayed responses as part of simulating the race condition
+			await sleep(responseDelays.reduce((sum, v) => sum + v, 0) + 300)
+			const termLabels = matrix.Inner.dom.termLabelG.selectAll('.sjpp-matrix-term-label-g .sjpp-matrix-label')
+			test.equal(termLabels.size(), 3, `should have 3 gene rows`)
+			const rects = matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect')
+			test.equal(
+				rects.size(),
+				1200,
+				'should have the expected total number of matrix cell rects, inlcuding WT and not tested'
+			)
+			const hits = rects.filter(d => d.key === 'BCR' && d.value.class != 'WT' && d.value.class != 'Blank')
+			test.equal(hits.size(), 0, 'should have the expected number of matrix cell rects with hits')
+			test.deepEqual(
+				matrix.Inner.app.getState().termfilter.filter.lst?.[0].tvs,
+				matrix.Inner.state.filter.lst?.[0].tvs,
+				`app.state and matrix.state should have the same cohort filter value`
+			)
+			if (test._ok) matrix.Inner.app.destroy()
+			test.end()
+		})
+
+		const responseDelays = [800, 500, 10]
+		let i = 0
+		try {
+			const results = await Promise.all([
+				(async () => {
+					await sleep(100)
+					matrix.Inner.app.dispatch({
+						type: 'cohort_set',
+						activeCohort: 1
+					})
+				})(),
+				(async () => {
+					await sleep(200)
+					matrix.Inner.app.dispatch({
+						type: 'cohort_set',
+						activeCohort: 0
+					})
+				})(),
+				(async () => {
+					await sleep(300)
+					matrix.Inner.app.dispatch({
+						type: 'cohort_set',
+						activeCohort: 2
 					})
 				})()
 			])
