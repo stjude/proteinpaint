@@ -1401,15 +1401,15 @@ function setTermActions(self) {
 
 		const isNumericDictTermCBut = self.config.dataType == NUMERIC_DICTIONARY_TERM && !t
 		const isMetaboliteIntensityCBut = self.config.dataType == TermTypes.METABOLITE_INTENSITY && !t
-		const isWholeProteinAbundanceCBut = self.config.dataType == TermTypes.WHOLE_PROTEIN_ABUNDANCE && !t
+		const isWholeProteomeAbundanceCBut = self.config.dataType == TermTypes.WHOLE_PROTEOME_ABUNDANCE && !t
 		if (
 			isNumericDictTermCBut ||
 			isMetaboliteIntensityCBut ||
-			isWholeProteinAbundanceCBut ||
+			isWholeProteomeAbundanceCBut ||
 			t.grp.type == 'hierCluster'
 		) {
 			const grp =
-				isNumericDictTermCBut || isMetaboliteIntensityCBut || isWholeProteinAbundanceCBut
+				isNumericDictTermCBut || isMetaboliteIntensityCBut || isWholeProteomeAbundanceCBut
 					? termgroups[0]
 					: termgroups[t.grpIndex]
 			// for hiercluster group, use selected terms as new group.lst
@@ -1421,7 +1421,7 @@ function setTermActions(self) {
 					{
 						nestedKeys: [
 							'termgroups',
-							isNumericDictTermCBut || isMetaboliteIntensityCBut || isWholeProteinAbundanceCBut ? 0 : t.grpIndex,
+							isNumericDictTermCBut || isMetaboliteIntensityCBut || isWholeProteomeAbundanceCBut ? 0 : t.grpIndex,
 							'lst'
 						],
 						value: grp.lst
