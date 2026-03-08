@@ -5,6 +5,25 @@ Run test script as follows (from 'server/'):
 
 	cd ~/sjpp && npx tsx proteinpaint/server/utils/test/Rscripts.spec.js
 
+Active tests:
+	- survival.R
+	- corr.R pearson
+	- corr.R spearman
+	- corr.R kendall
+	- edge.R limma
+	- edge.R edgeR
+	- hclust.R Clustering:Average-Distance:Euclidean
+	- hclust.R Clustering:Complete-Distance:Maximum
+	- diffMeth.R: output shape and required keys
+	- diffMeth.R: p-values sorted ascending
+	- diffMeth.R: adjusted p-values >= original p-values
+	- diffMeth.R: filtered promoters excluded
+	- diffMeth.R: known differential promoters have significant p-values
+	- diffMeth.R: matches expected output for specific promoters
+	- diffMeth.R: confounder support
+	- diffMeth.R: error on too few samples
+	- diffMeth.R: error on invalid sample name
+
 *********************************************/
 
 import tape from 'tape'
@@ -17,37 +36,8 @@ import { roundValueAuto } from '#shared/roundValue.js'
 const p_value_cutoff = 0.0001 // If the difference between the actual and expected p-value is greater than this, the test will fail (used for testing edge.R)
 const fold_change_cutoff = 0.001 // If the difference between the actual and expected p-value is greater than this, the test will fail (used for testing edge.R)
 
-// Helpers
-// Simple function to round numbers in our objects
-/*function roundNumbers(obj, decimals = 10) {
-	// Handle arrays
-	if (Array.isArray(obj)) {
-		return obj.map(item => roundNumbers(item, decimals))
-	}
-
-	// Handle objects
-	if (obj && typeof obj === 'object') {
-		const result = {}
-		for (const key in obj) {
-			result[key] = roundNumbers(obj[key], decimals)
-		}
-		return result
-	}
-
-	// Round numbers (both actual numbers and number strings)
-	if (typeof obj === 'number') {
-		return Number(obj.toFixed(decimals))
-	}
-
-	// Handle numeric strings but preserve 'NA' strings
-	if (typeof obj === 'string' && obj !== 'NA' && !isNaN(parseFloat(obj))) {
-		return String(Number(parseFloat(obj).toFixed(decimals)))
-	}
-
-	// Return everything else unchanged
-	return obj
-}*/
-
+// TODO: Why are these tests commented out? Probably should re-enable them and fix any issues if possible.
+// If they are no longer relevant or needed, they should be removed
 /** 
 // fisher.2x3.R tests
 tape('fisher.2x3.R', async function (test) {
@@ -543,5 +533,192 @@ tape('hclust.R Clustering:Complete-Distance:Maximum', async function (test) {
 	const Rout = await run_R('hclust.R', inJson)
 	const out = JSON.parse(Rout)
 	test.deepEqual(out, JSON.parse(expJson), 'Test Clustering:Complete-Distance:Maximum should match expected output')
+	test.end()
+})
+
+/*********** diffMeth.R tests ***********/
+
+tape('\n', function (test) {
+	test.comment('-***- diffMeth.R specs -***-')
+	test.end()
+})
+
+const diffMethFixturePath = path.join(serverconfig.binpath, 'test/testdata/R/diffMeth_fixture.h5')
+const diffMethBaseInput = {
+	case: 'case_1,case_2,case_3,case_4,case_5',
+	control: 'ctrl_1,ctrl_2,ctrl_3,ctrl_4,ctrl_5',
+	input_file: diffMethFixturePath,
+	min_samples_per_group: 3
+}
+
+tape('diffMeth.R: output shape and required keys', async function (test) {
+	test.timeoutAfter(15000)
+	const Rout = await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput))
+	const out = JSON.parse(Rout)
+
+	test.ok(out.promoter_data, 'output should have promoter_data key')
+	test.ok(Array.isArray(out.promoter_data), 'promoter_data should be an array')
+	test.ok(out.promoter_data.length > 0, 'promoter_data should not be empty')
+
+	const firstRow = out.promoter_data[0]
+	test.ok('promoter_id' in firstRow, 'each row should have promoter_id')
+	test.ok('gene_name' in firstRow, 'each row should have gene_name')
+	test.ok('fold_change' in firstRow, 'each row should have fold_change')
+	test.ok('original_p_value' in firstRow, 'each row should have original_p_value')
+	test.ok('adjusted_p_value' in firstRow, 'each row should have adjusted_p_value')
+
+	test.end()
+})
+
+tape('diffMeth.R: p-values sorted ascending', async function (test) {
+	test.timeoutAfter(15000)
+	const Rout = await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput))
+	const out = JSON.parse(Rout)
+	const pvals = out.promoter_data.map(d => d.original_p_value)
+	const sorted = [...pvals].sort((a, b) => a - b)
+	test.deepEqual(pvals, sorted, 'original p-values should be in ascending order')
+	test.end()
+})
+
+tape('diffMeth.R: adjusted p-values >= original p-values', async function (test) {
+	test.timeoutAfter(15000)
+	const Rout = await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput))
+	const out = JSON.parse(Rout)
+	for (const d of out.promoter_data) {
+		test.ok(
+			d.adjusted_p_value >= d.original_p_value - 1e-15,
+			`adjusted p-value (${d.adjusted_p_value}) should be >= original (${d.original_p_value}) for ${d.promoter_id}`
+		)
+	}
+	test.end()
+})
+
+tape('diffMeth.R: filtered promoters excluded', async function (test) {
+	test.timeoutAfter(15000)
+	const Rout = await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput))
+	const out = JSON.parse(Rout)
+	const ids = out.promoter_data.map(d => d.promoter_id)
+
+	// Promoters 18 and 19 have all-NA in one group — should be filtered
+	test.ok(!ids.includes('EH38E_TEST_0018'), 'promoter 18 (all-NA case group) should be filtered out')
+	test.ok(!ids.includes('EH38E_TEST_0019'), 'promoter 19 (all-NA control group) should be filtered out')
+
+	// Promoter 17 has partial NAs — should be filtered (we drop rows with any NA)
+	test.ok(!ids.includes('EH38E_TEST_0017'), 'promoter 17 (partial NAs) should be filtered out')
+
+	test.end()
+})
+
+tape('diffMeth.R: known differential promoters have significant p-values', async function (test) {
+	test.timeoutAfter(15000)
+	const Rout = await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput))
+	const out = JSON.parse(Rout)
+
+	// TP53 (promoter 0): case mean ~3.0, control mean ~0.0 — should be significant with positive fold change
+	const tp53 = out.promoter_data.find(d => d.gene_name === 'TP53')
+	test.ok(tp53, 'TP53 should be in the results')
+	test.ok(tp53.adjusted_p_value < 0.05, `TP53 adjusted p-value (${tp53.adjusted_p_value}) should be < 0.05`)
+	test.ok(tp53.fold_change > 0, `TP53 fold change (${tp53.fold_change}) should be positive (hypermethylated in case)`)
+
+	// RB1 (promoter 5): case mean ~-1.0, control mean ~2.0 — should be significant with negative fold change
+	const rb1 = out.promoter_data.find(d => d.gene_name === 'RB1')
+	test.ok(rb1, 'RB1 should be in the results')
+	test.ok(rb1.adjusted_p_value < 0.05, `RB1 adjusted p-value (${rb1.adjusted_p_value}) should be < 0.05`)
+	test.ok(rb1.fold_change < 0, `RB1 fold change (${rb1.fold_change}) should be negative (hypomethylated in case)`)
+
+	// GAPDH (promoter 10): both groups mean ~1.0 — should be less significant than TP53
+	const gapdh = out.promoter_data.find(d => d.gene_name === 'GAPDH')
+	test.ok(gapdh, 'GAPDH should be in the results')
+	test.ok(gapdh.original_p_value > tp53.original_p_value, 'GAPDH should be less significant than TP53')
+
+	test.end()
+})
+
+tape('diffMeth.R: matches expected output for specific promoters', async function (test) {
+	test.timeoutAfter(15000)
+	const expJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/diffMeth-output.json'), {
+		encoding: 'utf8'
+	})
+	const exp = JSON.parse(expJson)
+	const Rout = await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput))
+	const out = JSON.parse(Rout)
+
+	for (const probeId of ['EH38E_TEST_0000', 'EH38E_TEST_0005', 'EH38E_TEST_0010']) {
+		const actual = out.promoter_data.find(d => d.promoter_id === probeId)
+		const expected = exp.promoter_data.find(d => d.promoter_id === probeId)
+		test.ok(actual, `${probeId} should be present in output`)
+		test.ok(expected, `${probeId} should be present in expected output`)
+		test.ok(
+			Math.abs(actual.fold_change - expected.fold_change) < fold_change_cutoff,
+			`${probeId} fold change: actual=${actual.fold_change}, expected=${expected.fold_change}`
+		)
+		test.ok(
+			Math.abs(actual.original_p_value - expected.original_p_value) < p_value_cutoff,
+			`${probeId} original p-value: actual=${actual.original_p_value}, expected=${expected.original_p_value}`
+		)
+		test.ok(
+			Math.abs(actual.adjusted_p_value - expected.adjusted_p_value) < p_value_cutoff,
+			`${probeId} adjusted p-value: actual=${actual.adjusted_p_value}, expected=${expected.adjusted_p_value}`
+		)
+	}
+	test.end()
+})
+
+tape('diffMeth.R: confounder support', async function (test) {
+	test.timeoutAfter(15000)
+	const input = {
+		...diffMethBaseInput,
+		conf1: ['A', 'A', 'B', 'B', 'A', 'A', 'B', 'B', 'A', 'B'],
+		conf1_mode: 'discrete'
+	}
+	const Rout = await run_R('diffMeth.R', JSON.stringify(input))
+	const out = JSON.parse(Rout)
+
+	test.ok(out.promoter_data, 'confounder run should produce promoter_data')
+	test.ok(out.promoter_data.length > 0, 'confounder run should return results')
+
+	// With confounder, TP53 should still be significant (the signal is strong)
+	const tp53 = out.promoter_data.find(d => d.gene_name === 'TP53')
+	test.ok(tp53, 'TP53 should still be present with confounder')
+	test.ok(tp53.adjusted_p_value < 0.05, 'TP53 should still be significant with confounder adjustment')
+
+	test.end()
+})
+
+tape('diffMeth.R: error on too few samples', async function (test) {
+	test.timeoutAfter(15000)
+	const input = {
+		case: 'case_1,case_2',
+		control: 'ctrl_1,ctrl_2',
+		input_file: diffMethFixturePath,
+		min_samples_per_group: 3
+	}
+	try {
+		await run_R('diffMeth.R', JSON.stringify(input))
+		test.fail('should throw an error with too few samples')
+	} catch (e) {
+		test.ok(
+			String(e).includes('Number of promoters after filtering = 0'),
+			'error should mention zero promoters after filtering'
+		)
+	}
+	test.end()
+})
+
+tape('diffMeth.R: error on invalid sample name', async function (test) {
+	test.timeoutAfter(15000)
+	const input = {
+		...diffMethBaseInput,
+		case: 'case_1,case_2,NONEXISTENT,case_4,case_5'
+	}
+	try {
+		await run_R('diffMeth.R', JSON.stringify(input))
+		test.fail('should throw an error with invalid sample name')
+	} catch (e) {
+		test.ok(
+			String(e).includes('NONEXISTENT') && String(e).includes('not found'),
+			'error should mention the missing sample name'
+		)
+	}
 	test.end()
 })
