@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- do not immediately unset the ComponentApi.#abortController within the same update cycle
+
 
 ## 2.177.0
 

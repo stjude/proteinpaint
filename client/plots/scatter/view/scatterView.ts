@@ -170,22 +170,27 @@ export class ScatterView {
 			testid: 'showAxes'
 		}
 
+		//TODO: Revisit this implementation
+		//see note in termdb.usecase.js
+		let vocab: any = 'default'
+		if (this.scatter.config?.singleCellPlot) {
+			vocab = {
+				type: 'singleCell',
+				config: this.scatter.config.singleCellPlot
+			}
+		}
+
 		const inputs: any = [
 			{
 				type: 'term',
 				configKey: 'colorTW',
 				chartType: 'sampleScatter',
-				usecase: { target: 'sampleScatter', detail: 'colorTW' },
+				// usecase: { target: 'sampleScatter', detail: 'colorTW', vocab: this.scatter.config?.singleCellPlot ? 'singleCell' : 'default' },
+				usecase: { target: 'sampleScatter', detail: 'colorTW', vocab },
 				title: 'Categories to color the samples',
 				label: 'Color',
 				vocabApi: this.scatter.app.vocabApi,
-				numericEditMenuVersion: ['continuous', 'discrete'],
-				//Eventually this will be corrected with usecase.detail
-				//When single cell, only relevant terms will be displayed
-				//in the tree
-				getDisplayStyle: () => {
-					return this.scatter.config?.singleCellPlot ? 'none' : ''
-				}
+				numericEditMenuVersion: ['continuous', 'discrete']
 			},
 
 			{

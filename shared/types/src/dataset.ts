@@ -869,6 +869,8 @@ export type SingleCellQuery = {
 	DEgenes?: SingleCellDEgeneGdc
 	/** supplies per-sample images. will create a new tab on the ui. one image per sample */
 	images?: SCImages
+	/** Created on mds.init() from colorMap and alias within each plot. */
+	terms?: object[]
 }
 
 type SCImages = {

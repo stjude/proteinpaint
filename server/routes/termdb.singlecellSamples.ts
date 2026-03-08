@@ -22,6 +22,7 @@ import { termdbSingleCellSamplesPayload } from '#types/checkers'
 import { validate_query_singleCell_DEgenes } from './termdb.singlecellDEgenes.ts'
 import { gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 import ky from 'ky'
+import { TermTypes } from '#shared/terms.js'
 
 /* route returns list of samples with sc data
 this is due to the fact that sometimes not all samples in a dataset has sc data
@@ -64,6 +65,7 @@ function init({ genomes }) {
 }
 
 /////////////////// ds query validator
+//runs during mds3.init()
 export async function validate_query_singleCell(ds: any, genome: any) {
 	const q: SingleCellQuery = ds.queries.singleCell
 	if (!q) return
@@ -88,8 +90,7 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 	} else {
 		throw new Error('unknown singleCell.data.src')
 	}
-
-	// validate optional settings below
+	colorColumn2terms(ds.queries.singleCell.data.plots, ds) // convert colorBy columns defined in ds file to term objects for use in vocabApi methods later
 
 	if (q.geneExpression) {
 		if (typeof q.geneExpression != 'object') throw new Error('singleCell.geneExpression not object')
@@ -118,6 +119,14 @@ function validateImages(images) {
 	if (!images.fileName) throw new Error('images.fileName missing')
 }
 
+/** Runs on mds3.init()
+ * Adds ds.queries.singleCell.samples.get() for native ds (see route init() above).
+ * Adds ds.queries.singleCell.terms which is list of all possible colorBy terms
+ * defined in the ds file, for use in vocabApi methods later.
+ * @param S ds.queries.singleCell.samples{}
+ * @param D ds.queries.singleCell.data{}
+ * @param ds Entire dataset configuration from the ds file
+ */
 async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNative, ds: any) {
 	// folder of every plot contains text files, one file per sample and named by sample names. each folder may contain variable number of samples. look into all folders to get union of samples as list of samples with sc data and return in this getter
 
@@ -139,7 +148,10 @@ async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNati
 			// is valid sample, add to holder
 			samples.set(sid, { sample: sampleName })
 		}
+
+		if (!plot.colorColumns || plot.colorColumns.length == 0) continue
 	}
+
 	// samples map populated with samples with sc data
 	if (S.sampleColumns) {
 		// has optional terms to show as table columns and annotate samples; pull sample values and assign
@@ -161,7 +173,11 @@ async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNati
 	}
 }
 
-function validateDataNative(D: SingleCellDataNative, ds: any) {
+/** Adds ds.queries.singleCell.data.get() on init()
+ * @param D ds.queries.singleCell.data{}
+ * @param ds Entire dataset configuration from the ds file
+ */
+function validateDataNative(D: SingleCellDataNative, ds: any): void {
 	const nameSet = new Set() // guard against duplicating plot names
 	for (const plot of D.plots) {
 		if (nameSet.has(plot.name)) throw new Error('duplicate plot.name')
@@ -177,12 +193,17 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 		const plots: Plot[] = [] // given a sample name, collect every plot data for this sample and return
 		let geneExpMap
 		if (ds.queries.singleCell.geneExpression && q.gene) {
-			geneExpMap = await ds.queries.singleCell.geneExpression.get({ sample: q.sample, gene: q.gene })
+			const sample = q.sample || q.singleCellPlot.sample
+			geneExpMap = await ds.queries.singleCell.geneExpression.get({ sample, gene: q.gene })
 		}
 		for (const plot of D.plots) {
 			if (!q.plots.includes(plot.name)) continue
 			//some plots share the same file, just read different columns
-			const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, (q.sample.eID || q.sample.sID) + plot.fileSuffix)
+			const tsvfile = path.join(
+				serverconfig.tpmasterdir,
+				plot.folder,
+				(q.sample?.eID || q.sample?.sID) + plot.fileSuffix
+			)
 			if (!file2Lines[tsvfile]) {
 				await file_is_readable(tsvfile)
 				const text = await read_file(tsvfile)
@@ -199,7 +220,11 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 				file2Lines[tsvfile] = lines2
 			}
 
-			const colorColumn = plot.colorColumns.find(c => c.name == q.colorBy?.[plot.name]) || plot.colorColumns[0]
+			//No idea why colorBy can't be a string but must be a whole object.
+			//Obj created somewhere else. Commenting out till code found.
+			// const colorColumn = plot.colorColumns.find(c => c.name == q.colorBy?.[plot.name]) || plot.colorColumns[0]
+			const colorColumn = plot.colorColumns.find(c => c.name == q.colorBy) || plot.colorColumns[0]
+
 			const expCells: Cell[] = []
 			const noExpCells: Cell[] = []
 
@@ -220,6 +245,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 					}
 				} else noExpCells.push(cell)
 			}
+
 			plots.push({
 				name: plot.name,
 				expCells,
@@ -237,14 +263,16 @@ function validateDataNative(D: SingleCellDataNative, ds: any) {
 		return { plots }
 	}
 }
-
-function validateGeneExpressionNative(G: SingleCellGeneExpressionNative) {
+/** Adds ds.queries.singleCell.geneExpression.get() on init() if geneExpression.src is 'native'.
+ * @param G ds.queries.singleCell.geneExpression
+ */
+function validateGeneExpressionNative(G: SingleCellGeneExpressionNative): void {
 	G.sample2gene2expressionBins = {} // cache for binning gene expression values
 	// per-sample rds files are not validated up front, and simply used as-is on the fly
 
 	G.get = async (q: TermdbSingleCellDataRequest) => {
 		// q {sample:str, gene:str}
-		const h5file = path.join(serverconfig.tpmasterdir, G.folder, (q.sample.eID || q.sample.sID) + '.h5')
+		const h5file = path.join(serverconfig.tpmasterdir, G.folder, (q.sample?.eID || q.sample?.sID) + '.h5')
 		await file_is_readable(h5file)
 
 		const query_gene = q.gene
@@ -319,4 +347,39 @@ function gdc_validateGeneExpression(G, ds, genome) {
 			return { error: 'GDC scRNAseq gene expression request failed with error: ' + (e.message || e) }
 		}
 	}
+}
+
+function colorColumn2terms(plots, ds) {
+	/** Collect all possible tws defined per plot and make available
+	 * for vocabApi methods later.*/
+	const termSet = new Set()
+	for (const plot of plots) {
+		/** Creates the tw obj from the existing color map and alias defined
+		 * in the ds file. These will be available to the SC app on init().
+		 *
+		 * TODO: Consider creating these objs in the ds file.*/
+		const tmpTerms = plot.colorColumns.map(c => {
+			const baseValues = c.colorMap ? Object.keys(c.colorMap) : []
+			return {
+				name: c.name,
+				isleaf: true,
+				/** TODO: possible term may apply to multiple plots.
+				 * May need to change to plots: [] */
+				plot: plot.name,
+				type: TermTypes.SINGLECELL_CELLTYPE,
+				groupsetting: {},
+				values: baseValues.reduce((acc, v) => {
+					const alias = c?.aliases?.[v]
+					acc[v] = {
+						key: v,
+						label: alias || v,
+						color: c.colorMap?.[v] || '#000000'
+					}
+					return acc
+				}, {})
+			}
+		})
+		tmpTerms.forEach(term => termSet.add(term))
+	}
+	ds.queries.singleCell.terms = [...termSet]
 }

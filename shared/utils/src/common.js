@@ -27,6 +27,7 @@ export const TermTypeGroups = {
 	MUTATION_SIGNATURE: 'Mutation Signature',
 	PROTEIN_EXPRESSION: 'Protein Expression',
 	SINGLECELL_CELLTYPE: 'Single-cell Cell Type',
+	SINGLECELL_GENE_EXPRESSION: 'Single-cell Gene Expression',
 	SNP: 'SNP Genotype',
 	SNP_LIST: 'SNP List',
 	SNP_LOCUS: 'SNP Locus',

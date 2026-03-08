@@ -67,7 +67,7 @@ tape('getAppInit -  async, closured and classed', async function (test) {
 	test.end()
 })
 
-tape('detectStale', async function (test) {
+tape('detectStale()', async function (test) {
 	const opts = {
 		debug: 1,
 		state: {
@@ -96,6 +96,7 @@ tape('detectStale', async function (test) {
 			{
 				appWait: 3,
 				partWait: 0,
+				abortWait: 0,
 				_scope_: undefined
 			},
 			`app should have the last dispatched state`
@@ -110,6 +111,86 @@ tape('detectStale', async function (test) {
 			{
 				numStale: 2,
 				currWait: 0
+			},
+			`component should have the correct computed state`
+		)
+	} catch (e) {
+		test.fail('error: ' + e)
+	}
+	test.end()
+})
+
+tape('abort previous action on update()', async function (test) {
+	const verbose = false
+	const opts = {
+		debug: 1,
+		state: {
+			appWait: 3,
+			cohort: 'abc'
+		},
+		partAbort: {
+			preMain(api, part) {
+				if (!verbose) return
+				const sequenceId = api.getSequenceId() //; console.log(134, part)
+				const signal = api.getAbortSignal()
+				const cohort = part.state?.cohort
+				console.log('---', part.type, 'before self.main()', sequenceId, cohort, signal.aborted)
+				return { sequenceId, cohort, signal }
+			},
+			postMain(api, part, props) {
+				if (!verbose) return
+				console.log(
+					'---',
+					part.type,
+					'after self.main()',
+					props.sequenceId,
+					api.getSequenceId(),
+					['resolved promise=', props.cohort, `rendered=${!props.signal.aborted},`],
+					[`label='${part.state.cohort}'`, `part.cohort=${part.cohort}`]
+				)
+			}
+		}
+	}
+	const app = await appInit(opts)
+	try {
+		await Promise.all([
+			(async () => {
+				await sleep(0)
+				await app.dispatch({ type: 'app_refresh', state: { abortWait: 50, cohort: 'abc' } })
+			})(),
+			(async () => {
+				await sleep(10)
+				await app.dispatch({ type: 'app_refresh', state: { abortWait: 30, cohort: 'qrs' } })
+			})(),
+			(async () => {
+				await sleep(25)
+				await app.dispatch({ type: 'app_refresh', state: { abortWait: 0, cohort: 'xyz' } })
+			})()
+		])
+
+		test.deepEqual(
+			app.getState(),
+			{
+				appWait: 3,
+				partWait: 0,
+				abortWait: 0,
+				cohort: 'xyz',
+				_scope_: undefined
+			},
+			`app should have the last dispatched state`
+		)
+
+		const part = app.getComponents('partAbort').Inner
+		test.deepEqual(
+			{
+				numStale: part.numStale,
+				currWait: part.currWait,
+				cohort: part.cohort
+			},
+			{
+				numStale: 2,
+				currWait: 0,
+				cohort: 'xyz'
 			},
 			`component should have the correct computed state`
 		)

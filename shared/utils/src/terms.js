@@ -85,7 +85,8 @@ export const typeGroup = {
 	[TermTypes.METABOLITE_INTENSITY]: TermTypeGroups.METABOLITE_INTENSITY,
 	[TermTypes.WHOLE_PROTEOME_ABUNDANCE]: TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE,
 	[TermTypes.TERM_COLLECTION]: TermTypeGroups.TERM_COLLECTION,
-	[TermTypes.SINGLECELL_CELLTYPE]: TermTypeGroups.SINGLECELL_CELLTYPE
+	[TermTypes.SINGLECELL_CELLTYPE]: TermTypeGroups.SINGLECELL_CELLTYPE,
+	[TermTypes.SINGLECELL_GENE_EXPRESSION]: TermTypeGroups.SINGLECELL_GENE_EXPRESSION
 }
 
 const nonDictTypes = new Set([
@@ -123,7 +124,7 @@ export const annoNumericTypes = new Set([TermTypes.INTEGER, TermTypes.FLOAT, Ter
 
 const categoricalTypes = new Set([TermTypes.CATEGORICAL, TermTypes.SNP])
 
-const singleSampleTerms = new Set([TermTypes.SINGLECELL_GENE_EXPRESSION])
+const singleSampleTerms = new Set([TermTypes.SINGLECELL_CELLTYPE, TermTypes.SINGLECELL_GENE_EXPRESSION])
 
 export function isSingleSampleTerm(term) {
 	if (!term) return false

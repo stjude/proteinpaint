@@ -4,8 +4,8 @@ const termType = 'singleCellCellType'
 
 export class SingleCellCellTypeBase {
 	type = termType
-	sample: string
-	plot: string
+	sample: object
+	plot?: string
 	groupsetting: TermGroupSetting
 	values: TermValues
 
@@ -23,16 +23,16 @@ export class SingleCellCellTypeBase {
 		if (term.type != termType) throw new Error(`incorrect term.type='${term?.type}', expecting '${termType}'`)
 		/** Note: In GDC .sample:{} contains required .sID:string and .eID: string.
 		 * It's unclear how other ds will implement .sample:{} */
-		if (!term?.sample || typeof term.sample !== 'object') throw new Error('missing term.sample')
-		if (!term?.plot) throw new Error('missing term.plot')
+		// if (!term?.sample || typeof term.sample !== 'object') throw new Error('missing term.sample')
+		// if (!term?.plot) throw new Error('missing term.plot')
 	}
 
 	// option to construct an object instance and not mutate the input raw term
 	// - will be used instead of tw.term literal object
 	constructor(term: RawSingleCellCellTypeTerm | SingleCellCellTypeTerm) {
 		SingleCellCellTypeBase.validate(term)
-		this.sample = term.sample
-		this.plot = term.plot
+		this.sample = term.sample || {}
+		this.plot = term.plot || ''
 		this.groupsetting = term.groupsetting || { disabled: false }
 		this.values = term.values || {}
 	}
