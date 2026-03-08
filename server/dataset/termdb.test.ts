@@ -421,7 +421,11 @@ export default function (): Mds3 {
 			},
 			dnaMethylation: {
 				file: 'files/hg38/TermdbTest/dnaMeth.h5',
-				unit: 'Average Beta Value'
+				unit: 'Average Beta Value',
+				promoter: {
+					file: 'files/hg38/TermdbTest/diffMeth.h5',
+					unit: 'M-value'
+				}
 			},
 			topVariablyExpressedGenes: {
 				src: 'native'
