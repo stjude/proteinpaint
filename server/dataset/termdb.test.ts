@@ -423,7 +423,7 @@ export default function (): Mds3 {
 				file: 'files/hg38/TermdbTest/dnaMeth.h5',
 				unit: 'Average Beta Value',
 				promoter: {
-					file: 'files/hg38/TermdbTest/diffMeth.h5',
+					file: 'files/hg38/TermdbTest/dnaMethPromoterMvalue.h5',
 					unit: 'M-value'
 				}
 			},
