@@ -1727,7 +1727,10 @@ async function validate_query_dnaMethylation(ds, genome) {
 			q.promoter.file = path.join(serverconfig.tpmasterdir, q.promoter.file)
 			await utils.file_is_readable(q.promoter.file)
 			const samples = JSON.parse(
-				await run_python('query_beta_values.py', JSON.stringify({ validate: true, h: q.promoter.file }))
+				await run_python(
+					'query_beta_values.py',
+					JSON.stringify({ validate: true, h: q.promoter.file, format: 'promoter' })
+				)
 			)
 			if (!Array.isArray(samples)) throw 'query_beta_values.py did not return samples array: ' + q.promoter.file
 			if (!samples.length) throw 'No samples from promoter hdf5 file: ' + q.promoter.file

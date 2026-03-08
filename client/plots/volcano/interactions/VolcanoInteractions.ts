@@ -150,7 +150,10 @@ export class VolcanoInteractions {
 	launchGeneSetEdit() {
 		const plotConfig = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		const holder = this.dom.actionsTip.d.append('div').style('padding', '5px') as any
-		const limitedGenesList = this.data.map(d => d.gene_name)
+		const limitedGenesList =
+			plotConfig.termType === TermTypes.DNA_METHYLATION
+				? this.data.map(d => d.promoter_id)
+				: this.data.map(d => d.gene_name)
 		new GeneSetEditUI({
 			holder,
 			genome: this.app.opts.genome,
