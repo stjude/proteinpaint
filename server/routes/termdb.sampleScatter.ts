@@ -155,7 +155,7 @@ async function getSingleCellScatter(req, res, ds) {
 	const q = req.query satisfies TermdbSampleScatterRequest
 	const { name, sample } = q.singleCellPlot
 	try {
-		const tw = q.colorTW as TermWrapper
+		const tw = q.colorTW as any // not using "TermWrapper" due to tsc err
 		const arg: any = { plots: [name], sample }
 		if (tw) {
 			if (tw.term.type == 'singleCellGeneExpression') arg.gene = tw.term.gene
