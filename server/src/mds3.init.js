@@ -1994,7 +1994,7 @@ async function validateWholeProteomeAbundanceNative(q, ds, genome) {
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
 			// got 0 sample after filtering, must still return expected structure with no data
-			return { term2sample2value: new Set(), byTermId: {}, bySampleId: {} }
+			return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
 		}
 
 		// has at least 1 sample passing filter and with intensity data
