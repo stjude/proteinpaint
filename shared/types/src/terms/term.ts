@@ -47,7 +47,7 @@ export type BaseTerm = {
 	}
 }
 
-// NumericTerm includes integer, float, date, geneExpression, metaboliteIntensity, and other non-dict terms
+// NumericTerm includes integer, float, date, geneExpression, metaboliteIntensity, wholeProteomeAbundance, and other non-dict terms
 export type Term = BaseTerm &
 	(NumericTerm | ConditionTerm | SampleLstTerm | SnpsTerm | GvTerm | QualTerm | TermCollection)
 

@@ -83,6 +83,7 @@ export async function extract_samplescatter_terms_from_query(
 		'The "colorTW", "shapeTW", and "term0" fields should contain names of clinical fields from the sqlite db, gene names' +
 		(ds?.queries?.ssGSEA ? ', gene set pathway names (e.g. HALLMARK_APOPTOSIS)' : '') +
 		(ds?.queries?.metaboliteIntensity ? ', or metabolite names' : '') +
+		(ds?.queries?.proteomics ? ', or protein names' : '') +
 		'. ' +
 		'To remove an overlay, set the corresponding field to null explicitly. If the user does not mention a particular overlay, do NOT include that field in the output (omit it entirely). ' +
 		'Only include "colorTW", "shapeTW", or "term0" if the user explicitly mentions coloring, shaping, or dividing. ' +

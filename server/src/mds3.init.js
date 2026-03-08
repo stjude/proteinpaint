@@ -102,6 +102,8 @@ validate_query_ld
 validate_query_geneExpression
 validate_query_metaboliteIntensity
 	validateMetaboliteIntensityNative
+validate_query_wholeProteomeAbundance
+	validateWholeProteomeAbundanceNative
 validate_query_rnaseqGeneCount
 validate_query_singleSampleGenomeQuantification
 validate_query_singleSampleGbtk
@@ -175,6 +177,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 		await validate_query_ssGSEA(ds, genome)
 		await validate_query_dnaMethylation(ds, genome)
 		await validate_query_metaboliteIntensity(ds, genome)
+		await validate_query_wholeProteomeAbundance(ds, genome)
 		await validate_query_getTopTermsByType(ds, genome)
 		await validate_query_getTopMutatedGenes(ds, genome)
 		await validate_query_getSampleImages(ds, genome)
@@ -1920,6 +1923,115 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 						s2v[sampleId] = v
 					}
 					if (Object.keys(s2v).length) term2sample2value.set(tw.$id, s2v) // only add metabolite if it has data
+				}
+			})
+		}
+		// pass blank byTermId to match with expected output structure
+		const byTermId = {}
+		if (term2sample2value.size == 0)
+			throw 'no data available for the input ' + param.terms?.map(tw => tw.term.name).join(', ')
+		return { term2sample2value, byTermId, bySampleId }
+	}
+}
+
+export async function validate_query_wholeProteomeAbundance(ds, genome) {
+	const q = ds.queries.proteomics?.whole
+	if (!q) return
+	q.wholeProteomeAbundance2bins = {}
+
+	if (q.src == 'native') {
+		await validateWholeProteomeAbundanceNative(q, ds, genome)
+		return
+	}
+	throw 'unknown queries.wholeProteomeAbundance.src'
+}
+
+async function validateWholeProteomeAbundanceNative(q, ds, genome) {
+	if (!q.file.startsWith(serverconfig.tpmasterdir)) q.file = path.join(serverconfig.tpmasterdir, q.file)
+	if (!q.samples) q.samples = []
+	await utils.validate_txtfile(q.file)
+	q.samples = []
+
+	{
+		// is a gene-by-sample matrix file
+		const line = await utils.get_header_txt(q.file)
+		const l = line.split('\t')
+		for (let i = 9; i < l.length; i++) {
+			const id = ds.cohort.termdb.q.sampleName2id(l[i])
+			if (id == undefined) throw 'queries.proteomics.whole: unknown sample from header: ' + l[i]
+			q.samples.push(id)
+		}
+	}
+
+	q.find = async proteins => {
+		// if !q.proteins, read all proteins from file
+		if (!q._proteins) {
+			const proteins = []
+			await utils.get_lines_txtfile({
+				args: [q.file],
+				callback: line => {
+					const l = line.split('\t')
+					if (l[0].startsWith('#Unique identifier')) return
+					proteins.push(l[4])
+				}
+			})
+			q._proteins = proteins
+		}
+
+		const matches = []
+		for (const p of proteins) {
+			if (!p) continue
+			for (const protein of q._proteins) {
+				if (protein.toLowerCase().includes(p.toLowerCase())) {
+					matches.push(protein)
+				}
+			}
+		}
+		return matches
+	}
+
+	q.get = async param => {
+		const limitSamples = await mayLimitSamples(param, q.samples, ds)
+		if (limitSamples?.size == 0) {
+			// got 0 sample after filtering, must still return expected structure with no data
+			return { term2sample2value: new Set(), byTermId: {}, bySampleId: {} }
+		}
+
+		// has at least 1 sample passing filter and with intensity data
+		// TODO what if there's just 1 sample not enough for clustering?
+		const bySampleId = {}
+		const samples = q.samples || []
+		if (limitSamples) {
+			for (const sid of limitSamples) {
+				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+			}
+		} else {
+			// use all samples with exp data
+			for (const sid of samples) {
+				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+			}
+		}
+
+		const term2sample2value = new Map() // k: gene name, v: { sampleId : value }
+		for (const tw of param.terms) {
+			if (!tw) continue
+
+			const s2v = {}
+			const protein = tw.term.name
+			await utils.get_lines_txtfile({
+				args: [q.file],
+				callback: line => {
+					const l = line.split('\t')
+					if (l[4].toLowerCase() != protein.toLowerCase()) return
+					for (let i = 9; i < l.length; i++) {
+						const sampleId = samples[i - 9]
+						if (limitSamples && !limitSamples.has(sampleId)) continue // doing filtering and sample of current column is not used
+						if (!l[i]) continue // blank string
+						const v = Number(l[i])
+						if (Number.isNaN(v)) throw 'exp value not number'
+						s2v[sampleId] = v
+					}
+					if (Object.keys(s2v).length) term2sample2value.set(tw.$id, s2v) // only add protein if it has data
 				}
 			})
 		}

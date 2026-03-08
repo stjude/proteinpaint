@@ -258,6 +258,35 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				}
 				samples[sampleId][tw.$id] = { key, value }
 			}
+		} else if (tw.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE) {
+			if (!q.ds.queries?.proteomics?.whole) throw 'not supported by dataset: ' + tw.term.type
+
+			let lstOfBins // of this tw. only set when q.mode is discrete
+			if (tw.q?.mode == 'discrete' || tw.q?.mode == 'binary') {
+				lstOfBins = await findListOfBins(q, tw, ds)
+				byTermId[tw.$id] = { bins: lstOfBins }
+			}
+			const args = {
+				genome: q.ds.genomename,
+				dslabel: q.ds.label,
+				dataType: tw.term.type,
+				terms: [tw],
+				filter: q.filter,
+				filter0: q.filter0
+			}
+			const data = await q.ds.queries.proteomics.whole.get(args, q.ds) // 2nd ds parameter is needed for ds-supplied getter
+			const values = data.term2sample2value.get(tw.$id)
+			for (const sampleId in values) {
+				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+				const value = Number(values[sampleId])
+				let key = value
+				if (lstOfBins) {
+					// term is in binning mode. key should be changed into the label of the bin to which value belongs
+					const bin = getBin(lstOfBins, value)
+					key = get_bin_label(lstOfBins[bin], tw.q)
+				}
+				samples[sampleId][tw.$id] = { key, value }
+			}
 		} else if (tw.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
 			if (!q.ds.queries?.singleCell?.geneExpression) throw 'not supported by dataset: singleCell.geneExpression'
 			let lst // list of bins based on tw config

@@ -60,6 +60,15 @@ function init({ genomes }) {
 				if (q.terms.length < 3)
 					throw `A minimum of three genes is required for clustering. Please refresh this page to clear this error.`
 				result = (await getResult(q, ds)) as TermdbClusterResponse
+			} else if (TermTypes.WHOLE_PROTEOME_ABUNDANCE == q.dataType) {
+				if (!ds.queries?.proteomics?.whole) throw `no ${TermTypes.WHOLE_PROTEOME_ABUNDANCE} data on this dataset`
+				if (!q.terms) throw `missing gene list`
+				if (!Array.isArray(q.terms)) throw `gene list is not an array`
+				// TODO: there should be a fix on the client-side to handle this error more gracefully,
+				// instead of emitting the client-side instructions from the server response and forcing a reload
+				if (q.terms.length < 3)
+					throw `A minimum of three genes is required for clustering. Please refresh this page to clear this error.`
+				result = (await getResult(q, ds)) as TermdbClusterResponse
 			} else {
 				throw 'unknown q.dataType ' + q.dataType
 			}
@@ -88,6 +97,8 @@ async function getResult(q: TermdbClusterRequest & ReqQueryAddons, ds: any) {
 
 	if (q.dataType == NUMERIC_DICTIONARY_TERM) {
 		;({ term2sample2value, byTermId, bySampleId } = await getNumericDictTermAnnotation(q, ds))
+	} else if (q.dataType == TermTypes.WHOLE_PROTEOME_ABUNDANCE) {
+		;({ term2sample2value, byTermId, bySampleId, skippedSexChrGenes } = await ds.queries.proteomics.whole.get(_q, ds)) // 2nd ds param needed for ds-supplied getter
 	} else {
 		;({ term2sample2value, byTermId, bySampleId, skippedSexChrGenes } = await ds.queries[q.dataType].get(_q, ds)) // 2nd ds param needed for ds-supplied getter
 	}

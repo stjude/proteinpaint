@@ -4,6 +4,7 @@ import type { Filter } from '../filter.ts'
 import type { Term } from '../terms/term.ts'
 import type { GeneExpressionTW } from '../terms/geneExpression.ts'
 import type { MetaboliteIntensityTW } from '../terms/metaboliteIntensity.ts'
+import type { WholeProteomeAbundanceTW } from 'src/terms/wholeProteomeAbundance.ts'
 import type { NumericTW } from '../terms/numeric.ts'
 
 export type Gene = {
@@ -48,6 +49,15 @@ export type TermdbClusterRequestMetabolite = TermdbClusterRequestBase & {
 	zScoreTransformation?: string
 }
 
+export type TermdbClusterRequestWholeProteomeAbundance = TermdbClusterRequestBase & {
+	/** Data type */
+	dataType: 'wholeProteomeAbundance'
+	/** List of terms */
+	terms: WholeProteomeAbundanceTW[]
+	/** perform z-score transformation on values */
+	zScoreTransformation?: string
+}
+
 export type TermdbClusterRequestNumericDictTerm = TermdbClusterRequestBase & {
 	/** Data type */
 	dataType: 'numericDictTerm'
@@ -61,6 +71,7 @@ export type TermdbClusterRequest =
 	| TermdbClusterRequestGeneExpression
 	| TermdbClusterRequestMetabolite
 	| TermdbClusterRequestNumericDictTerm
+	| TermdbClusterRequestWholeProteomeAbundance
 
 export type Hclust = {
 	merge: { n1: number; n2: number }[]

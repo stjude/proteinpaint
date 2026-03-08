@@ -4,7 +4,15 @@ import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons, newSandboxDiv, Menu, renderTable, table2col, renderCnvConfig } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { TermTypes, isNumericTerm, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
-import { mclass, dt2label, dtsnvindel, dtcnv, dtgeneexpression, dtmetaboliteintensity } from '#shared/common.js'
+import {
+	mclass,
+	dt2label,
+	dtsnvindel,
+	dtcnv,
+	dtgeneexpression,
+	dtmetaboliteintensity,
+	dtwholeproteomeabundance
+} from '#shared/common.js'
 import { rgb2hex } from '#src/client'
 import { getSamplelstTW, getFilter, addNewGroup } from '../../mass/groups.js'
 import { TwBase } from '#tw/TwBase'
@@ -187,6 +195,28 @@ export function setInteractivity(self) {
 
 						const [c1, c2] = table.addRow()
 						c1.html('Metabolite Intensity')
+						c2.html(
+							`${colorSquare} ${d.convertedValueLabel || d.label}${
+								d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous' && d.zscoreLabel ? d.zscoreLabel : ''
+							}`
+						)
+					}
+				} else if (d.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE) {
+					{
+						const [c1, c2] = table.addRow()
+						c1.html('gene')
+						c2.html(d.term.name)
+					}
+					{
+						const colorSquare =
+							(d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous') || d.tw.q.mode !== 'continuous'
+								? `<span style="display:inline-block; width:12px; height:12px; background-color:${
+										d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
+								  }" ></span>`
+								: ''
+
+						const [c1, c2] = table.addRow()
+						c1.html('Protein Abundance')
 						c2.html(
 							`${colorSquare} ${d.convertedValueLabel || d.label}${
 								d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous' && d.zscoreLabel ? d.zscoreLabel : ''
@@ -531,6 +561,31 @@ export function setInteractivity(self) {
 							}`
 						)
 					}
+				} else if (sampleData.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE) {
+					{
+						const [c1, c2] = table.addRow()
+						c1.html('Gene')
+						c2.html(sampleData.term.name)
+					}
+					{
+						const colorSquare =
+							(sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous') ||
+							sampleData.tw.q.mode !== 'continuous'
+								? `<span style="display:inline-block; width:12px; height:12px; background-color:${
+										sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
+								  }" ></span>`
+								: ''
+
+						const [c1, c2] = table.addRow()
+						c1.html('Protein Abundance')
+						c2.html(
+							`${colorSquare} ${sampleData.convertedValueLabel || sampleData.label}${
+								sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous' && sampleData.zscoreLabel
+									? sampleData.zscoreLabel
+									: ''
+							}`
+						)
+					}
 				} else if (sampleData.term.type == TermTypes.SURVIVAL) {
 					{
 						const [c1, c2] = table.addRow()
@@ -753,6 +808,8 @@ function setTermActions(self) {
 				? 'gene'
 				: t.tw.term.type == TermTypes.METABOLITE_INTENSITY
 				? 'metabolite'
+				: t.tw.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE
+				? 'protein'
 				: 'variable'
 
 		if (t.tw?.term?.type)
@@ -933,6 +990,8 @@ function setTermActions(self) {
 				? 'gene'
 				: t.tw.term.type == TermTypes.METABOLITE_INTENSITY
 				? 'metabolite'
+				: t.tw.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE
+				? 'protein'
 				: 'variable'
 		const sortRevertable = self.type != 'hierCluster' && t.tw.sortSamples?.priority !== undefined
 		div
@@ -1290,6 +1349,12 @@ function setTermActions(self) {
 			) {
 				usecase.target = TermTypes.METABOLITE_INTENSITY
 				usecase.detail = 'term'
+			} else if (
+				self.config.dataType == TermTypes.WHOLE_PROTEOME_ABUNDANCE &&
+				(!self.activeLabel || self.activeLabel.grp.type == 'hierCluster')
+			) {
+				usecase.target = TermTypes.WHOLE_PROTEOME_ABUNDANCE
+				usecase.detail = 'term'
 			} else {
 				usecase.target = self.activeLabel.tw.term.type
 				usecase.detail = 'term'
@@ -1336,8 +1401,17 @@ function setTermActions(self) {
 
 		const isNumericDictTermCBut = self.config.dataType == NUMERIC_DICTIONARY_TERM && !t
 		const isMetaboliteIntensityCBut = self.config.dataType == TermTypes.METABOLITE_INTENSITY && !t
-		if (isNumericDictTermCBut || isMetaboliteIntensityCBut || t.grp.type == 'hierCluster') {
-			const grp = isNumericDictTermCBut || isMetaboliteIntensityCBut ? termgroups[0] : termgroups[t.grpIndex]
+		const isWholeProteinAbundanceCBut = self.config.dataType == TermTypes.WHOLE_PROTEIN_ABUNDANCE && !t
+		if (
+			isNumericDictTermCBut ||
+			isMetaboliteIntensityCBut ||
+			isWholeProteinAbundanceCBut ||
+			t.grp.type == 'hierCluster'
+		) {
+			const grp =
+				isNumericDictTermCBut || isMetaboliteIntensityCBut || isWholeProteinAbundanceCBut
+					? termgroups[0]
+					: termgroups[t.grpIndex]
 			// for hiercluster group, use selected terms as new group.lst
 			grp.lst.splice(0, grp.lst.length, ...newterms)
 			self.app.dispatch({
@@ -1345,7 +1419,11 @@ function setTermActions(self) {
 				id: self.opts.id,
 				edits: [
 					{
-						nestedKeys: ['termgroups', isNumericDictTermCBut || isMetaboliteIntensityCBut ? 0 : t.grpIndex, 'lst'],
+						nestedKeys: [
+							'termgroups',
+							isNumericDictTermCBut || isMetaboliteIntensityCBut || isWholeProteinAbundanceCBut ? 0 : t.grpIndex,
+							'lst'
+						],
 						value: grp.lst
 					}
 				]
@@ -2756,7 +2834,12 @@ function setZoomPanActions(self) {
 function setLengendActions(self) {
 	self.legendLabelMouseover = event => {
 		const targetData = event.target.__data__
-		if (!targetData || targetData.dt == dtgeneexpression || targetData.dt == dtmetaboliteintensity) {
+		if (
+			!targetData ||
+			targetData.dt == dtgeneexpression ||
+			targetData.dt == dtmetaboliteintensity ||
+			targetData.dt == dtwholeproteomeabundance
+		) {
 			// for gene expression don't use legend as filter
 			return
 		}
@@ -2790,7 +2873,12 @@ function setLengendActions(self) {
 
 	self.legendLabelMouseup = event => {
 		const targetData = event.target.__data__
-		if (!targetData || targetData.dt == dtgeneexpression || targetData.dt == dtmetaboliteintensity) {
+		if (
+			!targetData ||
+			targetData.dt == dtgeneexpression ||
+			targetData.dt == dtmetaboliteintensity ||
+			targetData.dt == dtwholeproteomeabundance
+		) {
 			// for gene expression don't use legend as filter
 			return
 		}

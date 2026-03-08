@@ -22,6 +22,7 @@ export const TermTypeGroups = {
 	GENE_EXPRESSION: 'Gene Expression',
 	GSEA: 'GSEA',
 	METABOLITE_INTENSITY: 'Metabolite Intensity',
+	WHOLE_PROTEOME_ABUNDANCE: 'Whole Proteome Abundance',
 	MUTATION_CNV_FUSION: 'Mutation/CNV/Fusion',
 	MUTATION_SIGNATURE: 'Mutation Signature',
 	PROTEIN_EXPRESSION: 'Protein Expression',
@@ -66,6 +67,7 @@ export const dtloh = 10
 export const dtmetaboliteintensity = 11
 export const dtssgsea = 12
 export const dtdnamethylation = 13
+export const dtwholeproteomeabundance = 14
 // add new dt value here. !!!DO NOT change value of existing dt!!!
 
 export const dt2label = {
@@ -79,7 +81,8 @@ export const dt2label = {
 	[dtcloss]: 'C-loss',
 	[dtloh]: 'LOH',
 	[dtgeneexpression]: 'Gene Expression',
-	[dtmetaboliteintensity]: 'Metabolite Intensity'
+	[dtmetaboliteintensity]: 'Metabolite Intensity',
+	[dtwholeproteomeabundance]: 'Whole Proteome Abundance'
 }
 
 // Maps dt types to UI labels and lesion types for GRIN2

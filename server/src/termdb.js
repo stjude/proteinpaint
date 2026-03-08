@@ -181,6 +181,13 @@ async function trigger_findterm(q, req, res, termdb, ds, genome) {
 				foundTerms.push({ name: metabolite, type: 'metaboliteIntensity' })
 			}
 			terms.push(...foundTerms)
+		} else if (q.targetType == TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE) {
+			const matches = await ds.queries.proteomics.whole.find([q.findterm])
+			const foundTerms = []
+			for (const protein of matches) {
+				foundTerms.push({ name: protein, type: 'wholeProteomeAbundance' })
+			}
+			terms.push(...foundTerms)
 		}
 		terms = filterTerms(req, ds, terms)
 		const id2ancestors = {}

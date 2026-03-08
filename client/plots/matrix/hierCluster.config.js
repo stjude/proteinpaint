@@ -33,7 +33,7 @@ export async function getPlotConfig(opts = {}, app) {
 	}
 	const overrides = app.vocabApi.termdbConfig.hierCluster || {}
 
-	// hierClusterSubTypeOverrides has settings from specific hierCluster type, such as geneExpression, metaboliteIntensity, numericDictTermCluster.
+	// hierClusterSubTypeOverrides has settings from specific hierCluster type, such as geneExpression, metaboliteIntensity, wholeProteomeAbundance, numericDictTermCluster.
 	// should override config so that each hierCluster type could have its own customized settings that are different from the other hierCluster
 	// types in the same dataset. e.g. redomics could do z-score transformation for gene expression cluster and do not do z-score tranformation for
 	// metabolite intensity cluster
@@ -71,7 +71,11 @@ export async function getPlotConfig(opts = {}, app) {
 			const tw = i.term ? i : { term: i }
 
 			if (!tw.term.type) {
-				if (config.dataType == TermTypes.GENE_EXPRESSION || config.dataType == TermTypes.METABOLITE_INTENSITY) {
+				if (
+					config.dataType == TermTypes.GENE_EXPRESSION ||
+					config.dataType == TermTypes.METABOLITE_INTENSITY ||
+					config.dataType == TermTypes.WHOLE_PROTEOME_ABUNDANCE
+				) {
 					// set missing term type based on data type
 					tw.term.type = config.dataType
 				} else {

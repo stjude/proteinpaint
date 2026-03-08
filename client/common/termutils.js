@@ -40,7 +40,8 @@ export function sample_match_termvaluesetting(row, filter, geneVariant$ids) {
 				t.term.type == 'integer' ||
 				t.term.type == 'float' ||
 				t.term.type == TermTypes.GENE_EXPRESSION ||
-				t.term.type == TermTypes.METABOLITE_INTENSITY
+				t.term.type == TermTypes.METABOLITE_INTENSITY ||
+				t.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE
 			) {
 				samplevalue = row[t.term.id] || row[t.term.$id]?.key
 			} else if (t.term.type == 'survival') {
@@ -64,7 +65,8 @@ export function sample_match_termvaluesetting(row, filter, geneVariant$ids) {
 				t.term.type == 'integer' ||
 				t.term.type == 'float' ||
 				t.term.type == TermTypes.GENE_EXPRESSION ||
-				t.term.type == TermTypes.METABOLITE_INTENSITY
+				t.term.type == TermTypes.METABOLITE_INTENSITY ||
+				t.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE
 			) {
 				if (samplevalue === undefined) {
 					// this sample has no anno for this term, check isnot

@@ -651,6 +651,9 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 		div.append('div').text('DA should support metabolite')
 	}
 
+	if (self.app.vocabApi.termdbConfig.allowedTermTypes?.includes(TermTypes.WHOLE_PROTEOME_ABUNDANCE)) {
+		div.append('div').text('DA should support whole proteome abundance')
+	}
 	// small text to explain which is case/control. always show this for all DA
 	div
 		.append('div')
