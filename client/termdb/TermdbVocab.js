@@ -427,6 +427,15 @@ export class TermdbVocab extends Vocab {
 	 	filterJSON: JSON || string, required
 		returns sample count per type
 	 */
+	async getGrin2Data(body, signal) {
+		const headers = await this.mayGetAuthHeaders('termdb')
+		body.genome = this.vocab.genome
+		body.dslabel = this.vocab.dslabel
+		const data = await this.dofetch3('grin2', { headers, body, signal }, this.opts.fetchOpts)
+		if (data.error) throw data.error
+		return data
+	}
+
 	async getFilteredSampleCount(filterJSON) {
 		const body = {
 			genome: this.vocab.genome,

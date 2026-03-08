@@ -64,13 +64,8 @@ export const api: RouteApi = {
 
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
-		const abortController = new AbortController()
-		res.on('close', () => {
-			if (!res.writableEnded) {
-				mayLog('[GRIN2] Client disconnected, aborting analysis')
-				abortController.abort()
-			}
-		})
+		// __abortSignal is set by maySetAbortCtrl() middleware in app.middlewares.js
+		const signal: AbortSignal | undefined = req.query.__abortSignal
 
 		try {
 			const request = req.query as GRIN2Request
@@ -84,10 +79,10 @@ function init({ genomes }) {
 
 			if (!ds.queries?.singleSampleMutation) throw new Error('singleSampleMutation query missing from dataset')
 
-			const result = await runGrin2WithLimit(g, ds, request, abortController.signal)
+			const result = await runGrin2WithLimit(g, ds, request, signal)
 			res.json(result)
 		} catch (e: any) {
-			if (abortController.signal.aborted) {
+			if (signal?.aborted) {
 				// Client disconnected, no point sending a response
 				mayLog('[GRIN2] Analysis aborted due to client disconnect')
 				return

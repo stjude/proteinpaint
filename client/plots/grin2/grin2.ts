@@ -1,7 +1,6 @@
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { GRIN2Dom, GRIN2Opts, ShowGrin2ResultTableOpts } from './GRIN2Types'
-import { dofetch3 } from '#common/dofetch'
 import { getCombinedTermFilter, getNormalRoot, filterInit } from '#filter'
 import { Menu, renderTable, table2col, make_one_checkbox, sayerror } from '#dom'
 import { dtsnvindel, mclass, dtcnv, dtfusionrna, dtsv, proteinChangingMutations, dt2lesion } from '#shared/common.js'
@@ -689,8 +688,6 @@ class GRIN2 extends PlotBase implements RxComponent {
 			// Get configuration and make request using the dtUsage we just read
 			const configValues = this.getConfigValues(dtUsage)
 			const requestData = {
-				genome: this.app.vocabApi.vocab.genome,
-				dslabel: this.app.vocabApi.vocab.dslabel,
 				filter: getNormalRoot(this.state.termfilter.filter),
 				filter0: this.state.termfilter.filter0,
 				width: this.state.config.settings.manhattan?.plotWidth,
@@ -706,10 +703,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				...configValues
 			}
 
-			const response = await dofetch3('/grin2', {
-				body: requestData,
-				signal: this.api!.getAbortSignal()
-			})
+			const response = await this.app.vocabApi.getGrin2Data(requestData, this.api!.getAbortSignal())
 
 			if (response.status === 'error') throw `GRIN2 analysis failed: ${response.error}`
 

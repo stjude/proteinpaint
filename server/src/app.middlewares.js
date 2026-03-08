@@ -258,7 +258,8 @@ function mayWrapResponseSend(cachedir, req, res) {
 
 function maySetAbortCtrl(req, res) {
 	const q = req.query
-	if (q.dslabel !== 'GDC' || (!req.path.includes('termdb') && !req.path.includes('/mds3'))) return // TODO: do not harcode
+	if (q.dslabel !== 'GDC' && !req.path.includes('/grin2')) return // TODO: do not hardcode
+	if (q.dslabel === 'GDC' && !req.path.includes('termdb') && !req.path.includes('/mds3')) return
 	const abortCtrl = new AbortController()
 	q.__abortSignal = abortCtrl.signal
 
