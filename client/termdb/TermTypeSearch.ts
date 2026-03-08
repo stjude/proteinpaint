@@ -330,7 +330,6 @@ export class TermTypeSearch {
 	}
 
 	async addTabsAllowed(state) {
-		console.log(state)
 		for (const type of this.types) {
 			const termTypeGroup = typeGroup[type]
 			let label = termTypeGroup
