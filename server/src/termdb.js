@@ -182,6 +182,7 @@ async function trigger_findterm(q, req, res, termdb, ds, genome) {
 			}
 			terms.push(...foundTerms)
 		} else if (q.targetType == TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE) {
+			if (!ds.queries?.proteomics?.whole) throw 'ds.queries.proteomics.whole missing for the dataset'
 			const matches = await ds.queries.proteomics.whole.find([q.findterm])
 			const foundTerms = []
 			for (const protein of matches) {
