@@ -213,9 +213,15 @@ if (length(input$conf1) == 0) {
 # any promoter that still has NA values, ensuring only complete data is analyzed.
 na_rows <- rowSums(is.na(mvalues)) > 0
 if (any(na_rows)) {
-  mvalues <- mvalues[!na_rows, ]
+  mvalues <- mvalues[!na_rows, drop = FALSE]
   gene_names_filtered <- gene_names_filtered[!na_rows]
   probe_ids_filtered <- probe_ids_filtered[!na_rows]
+}
+
+if (nrow(mvalues) == 0) {
+  stop(
+    "No promoters remain after removing rows with NA values; cannot perform differential methylation analysis."
+  )
 }
 
 ###############################################################################
