@@ -4,7 +4,7 @@ import type { Filter } from '../filter.ts'
 import type { Term } from '../terms/term.ts'
 import type { GeneExpressionTW } from '../terms/geneExpression.ts'
 import type { MetaboliteIntensityTW } from '../terms/metaboliteIntensity.ts'
-import type { WholeProteomeAbundanceTW } from 'src/terms/wholeProteomeAbundance.ts'
+import type { WholeProteomeAbundanceTW } from '../terms/wholeProteomeAbundance.ts'
 import type { NumericTW } from '../terms/numeric.ts'
 
 export type Gene = {
