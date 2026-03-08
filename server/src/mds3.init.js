@@ -1943,7 +1943,7 @@ export async function validate_query_wholeProteomeAbundance(ds, genome) {
 		await validateWholeProteomeAbundanceNative(q, ds, genome)
 		return
 	}
-	throw 'unknown queries.wholeProteomeAbundance.src'
+	throw 'unknown queries.proteomics.whole.src'
 }
 
 async function validateWholeProteomeAbundanceNative(q, ds, genome) {
