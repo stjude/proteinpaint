@@ -203,24 +203,19 @@ if (length(input$conf1) == 0) {
 }
 
 ###############################################################################
-# Step 6: Impute remaining NAs with row means
+# Step 6: Remove promoters with any remaining NAs
 ###############################################################################
 # limma's lmFit() cannot handle NA values in the expression matrix.
-# After filtering (Step 4), some promoters may still have a few NAs in
-# individual samples (we only required min_samples_per_group non-NAs, not all).
-# We replace those remaining NAs with the row mean (mean M-value across all
-# non-NA samples for that promoter). This is a conservative imputation that
-# pulls missing values toward the overall promoter average, reducing their
-# influence on the differential test.
-na_count <- sum(is.na(mvalues))
-if (na_count > 0) {
-  row_means <- rowMeans(mvalues, na.rm = TRUE) # Mean M-value per promoter (ignoring NAs)
-  for (i in seq_len(nrow(mvalues))) {
-    na_cols <- which(is.na(mvalues[i, ])) # Which samples are NA for this promoter?
-    if (length(na_cols) > 0) {
-      mvalues[i, na_cols] <- row_means[i] # Replace NAs with the row mean
-    }
-  }
+# After filtering (Step 4), some promoters may still have NAs in individual
+# samples (we only required min_samples_per_group non-NAs, not all).
+# NAs arise from different array types (450K vs EPIC vs EPIC 2) covering different probe
+# sets, so imputation would be misleading. Instead, we conservatively remove
+# any promoter that still has NA values, ensuring only complete data is analyzed.
+na_rows <- rowSums(is.na(mvalues)) > 0
+if (any(na_rows)) {
+  mvalues <- mvalues[!na_rows, ]
+  gene_names_filtered <- gene_names_filtered[!na_rows]
+  probe_ids_filtered <- probe_ids_filtered[!na_rows]
 }
 
 ###############################################################################

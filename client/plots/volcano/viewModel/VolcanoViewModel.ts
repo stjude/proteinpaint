@@ -49,7 +49,7 @@ export class VolcanoViewModel {
 
 		this.pValueTable = {
 			columns: [
-				{ label: 'log2(Fold change)', barplot, sortable: true },
+				{ label: 'log₂(fold-change)', barplot, sortable: true },
 				{ label: 'Original p-value', sortable: true },
 				{ label: 'Adjusted p-value', sortable: true }
 			],
@@ -67,7 +67,7 @@ export class VolcanoViewModel {
 		this.setPTableColumns()
 		const pointData = this.setPointData(plotDim, controlColor, caseColor)
 		//Get all rows data for the pValueTable in setPointsData, then sort by fold change
-		const foldChangeIdx = this.pValueTable.columns.findIndex(c => c.label.includes('log2(Fold change)'))
+		const foldChangeIdx = this.pValueTable.columns.findIndex(c => c.label.includes('log₂(fold-change)'))
 		this.pValueTable.rows.sort((a: any, b: any) => b[foldChangeIdx].value - a[foldChangeIdx].value)
 
 		this.viewData = {
@@ -180,7 +180,8 @@ export class VolcanoViewModel {
 		const radius = Math.max(this.settings.width, this.settings.height) / 80
 		const dataCopy: any = structuredClone(this.response.data)
 		for (const d of dataCopy) {
-			d.highlighted = this.config?.highlightedData?.includes(d.gene_name)
+			const highlightKey = this.termType === TermTypes.DNA_METHYLATION ? d.promoter_id : d.gene_name
+			d.highlighted = this.config?.highlightedData?.includes(highlightKey)
 			d.significant = this.isSignificant(d)
 			this.getGenesColor(d, d.significant, controlColor, caseColor)
 			if (d.significant) {
