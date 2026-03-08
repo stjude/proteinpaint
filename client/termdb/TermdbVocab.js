@@ -1034,7 +1034,10 @@ export class TermdbVocab extends Vocab {
 		if (opts.scaleDotTW) body.scaleDotTW = this.getTwMinCopy(opts.scaleDotTW)
 		body.excludeOutliers = opts.excludeOutliers
 		if (opts.singleCellPlot && opts.colorTW?.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
+			// required by legacy singlecell. delete when that's retired
 			body.gene = opts.colorTW.term.gene
+			body.plots = [opts.singleCellPlot.name]
+			body.sample = opts.singleCellPlot.sample
 			return await this.dofetch3('termdb/singlecellData', { headers, body, signal })
 		}
 		return await this.dofetch3('termdb/sampleScatter', { headers, body, signal })

@@ -1293,7 +1293,6 @@ tape('singlecell map', function (test) {
 			plots: [
 				{
 					chartType: 'sampleScatter',
-					colorTW: { term: { type: 'singleCellCellType', name: 'CellType' } }, // required for now. later should allow to be missing
 					singleCellPlot: { name: 'scRNA', sample: { sID: '1_patient' } }
 				}
 			]
