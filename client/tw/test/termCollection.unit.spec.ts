@@ -224,7 +224,68 @@ tape('transformData with equal positive and negative values', async test => {
 	test.end()
 })
 
-tape('fill(invalid tw)', async test => {
-	// todo
+// Minimal vocabApi stub for QualTermCollection.fill() tests
+const mockVocabApi = {
+	termdbConfig: {
+		termCollections: [
+			{
+				name: 'Assay Availability',
+				termIds: ['t1', 't2'],
+				termlst: [
+					{ id: 't1', name: 'CNV availability' },
+					{ id: 't2', name: 'Fusion availability' }
+				],
+				propsByTermId: { t1: { color: 'blue' }, t2: { color: 'red' } },
+				categoryKeys: []
+			}
+		]
+	}
+}
+
+tape('QualTermCollection.fill() - exact name match fills term from config', async test => {
+	const { QualTermCollection } = await import('../collection/QualTermCollection')
+	const term: any = { type: 'termCollection', name: 'Assay Availability', memberType: 'categorical' }
+	QualTermCollection.fill(term, { vocabApi: mockVocabApi as any })
+	test.equal(term.termlst?.length, 2, 'termlst populated from config')
+	test.equal(term.termIds?.length, 2, 'termIds set from termlst')
+	test.deepEqual(term.propsByTermId, mockVocabApi.termdbConfig.termCollections[0].propsByTermId, 'propsByTermId set')
+	test.end()
+})
+
+tape('QualTermCollection.fill() - name with suffix does NOT match collection', async test => {
+	const { QualTermCollection } = await import('../collection/QualTermCollection')
+	const term: any = { type: 'termCollection', name: 'Assay Availability (3)', memberType: 'categorical' }
+	test.throws(
+		() => QualTermCollection.fill(term, { vocabApi: mockVocabApi as any }),
+		/no matching termCollection/,
+		'should throw when name has suffix and no termlst fallback'
+	)
+	test.end()
+})
+
+tape('QualTermCollection.fill() - no config match but termlst present proceeds without error', async test => {
+	const { QualTermCollection } = await import('../collection/QualTermCollection')
+	const term: any = {
+		type: 'termCollection',
+		name: 'Unknown Collection',
+		memberType: 'categorical',
+		termlst: [{ id: 't1', name: 'CNV availability' }]
+	}
+	test.doesNotThrow(
+		() => QualTermCollection.fill(term, { vocabApi: mockVocabApi as any }),
+		'should not throw when no config match but termlst is provided'
+	)
+	test.equal(term.termIds?.length, 1, 'termIds derived from termlst')
+	test.end()
+})
+
+tape('QualTermCollection.fill() - no config match and no termlst throws', async test => {
+	const { QualTermCollection } = await import('../collection/QualTermCollection')
+	const term: any = { type: 'termCollection', name: 'Unknown Collection', memberType: 'categorical' }
+	test.throws(
+		() => QualTermCollection.fill(term, { vocabApi: mockVocabApi as any }),
+		/no matching termCollection/,
+		'should throw when no config match and no termlst'
+	)
 	test.end()
 })
