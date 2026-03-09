@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- wrap uncaught termdb route handler errors in try-catch to avoid server crash
+
+
 ## 2.170.24
 
 Fixes:
