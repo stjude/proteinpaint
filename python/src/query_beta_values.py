@@ -136,85 +136,6 @@ def validate_dnameth_hdf5(input_hdf5_file):
         return sample_names
 
 
-def validate_promoter_hdf5(input_hdf5_file):
-    """
-    Validate a promoter-level DNA methylation HDF5 file with the expected structure:
-
-        /beta/values             Dataset {n_promoters, n_samples}
-        /meta                    Group
-        /meta/gene_names         Dataset {n_promoters}
-        /meta/probe              Group
-        /meta/probe/probeID      Dataset {n_promoters}
-        /meta/samples            Group
-        /meta/samples/names      Dataset {n_samples}
-        /meta/start              Dataset {n_promoters}
-        /meta/stop               Dataset {n_promoters}
-
-    Returns:
-        List[str]: sample names from /meta/samples/names
-    """
-    with h5py.File(input_hdf5_file, "r") as h5:
-        required_datasets = [
-            "/beta/values",
-            "/meta/gene_names",
-            "/meta/probe/probeID",
-            "/meta/samples/names",
-            "/meta/start",
-            "/meta/stop",
-        ]
-
-        for path in required_datasets:
-            if path not in h5:
-                raise KeyError(f"Missing required dataset: '{path}'")
-
-        beta = h5["/beta/values"]
-        gene_names = h5["/meta/gene_names"]
-        probe_ids = h5["/meta/probe/probeID"]
-        sample_names_ds = h5["/meta/samples/names"].asstr()[:]
-        starts = h5["/meta/start"]
-        stops = h5["/meta/stop"]
-
-        if beta.ndim != 2:
-            raise ValueError(
-                f"/beta/values must be 2 dimensional but has the shape: {beta.shape}"
-            )
-
-        n_promoters, n_samples = beta.shape
-        if n_promoters == 0 or n_samples == 0:
-            raise ValueError("Matrix dimensions must be > 0")
-
-        if gene_names.shape[0] != n_promoters:
-            raise ValueError(
-                f"gene_names length ({gene_names.shape[0]}) "
-                f"!= number of promoters ({n_promoters})"
-            )
-        if probe_ids.shape[0] != n_promoters:
-            raise ValueError(
-                f"probeID length ({probe_ids.shape[0]}) "
-                f"!= number of promoters ({n_promoters})"
-            )
-        if starts.shape[0] != n_promoters:
-            raise ValueError(
-                f"start length ({starts.shape[0]}) "
-                f"!= number of promoters ({n_promoters})"
-            )
-        if stops.shape[0] != n_promoters:
-            raise ValueError(
-                f"stop length ({stops.shape[0]}) "
-                f"!= number of promoters ({n_promoters})"
-            )
-        if sample_names_ds.shape[0] != n_samples:
-            raise ValueError(
-                f"sample names length ({sample_names_ds.shape[0]}) "
-                f"!= number of samples ({n_samples})"
-            )
-
-        sample_names = [str(s) for s in sample_names_ds]
-        if len(set(sample_names)) != len(sample_names):
-            raise ValueError("Duplicate sample names detected")
-        return sample_names
-
-
 class Query:
     def __init__(self, input_hdf5_file):
         self.h5file = input_hdf5_file
@@ -540,7 +461,6 @@ def parse_stdin():
         inp.get("q"),
         inp.get("v", False),
         inp.get("validate", False),
-        inp.get("format", "probe"),
     )
 
 
@@ -550,7 +470,7 @@ def parse_cli_args():
                 "Query DNA methylation beta values from an HDF5 file OR validate the HDF5 file structure.\n\n"
                 "Modes:\n"
                 "  1) Query mode: provide --h, --s, and --q\n"
-                "  2) Validate mode: provide --h and --validate"),
+                "  2) Validate mode: provide --h and --validate\n"),
                 epilog=(
                 "Examples:\n"
                 "  Query genomic range:\n"
@@ -571,14 +491,8 @@ def parse_cli_args():
         action="store_true",
         help="Validate HDF5 file structure instead of running a query",
     )
-    parser.add_argument(
-        "--format",
-        default="probe",
-        choices=["probe", "promoter"],
-        help="HDF5 format to validate: 'probe' (default) or 'promoter'",
-    )
     args = parser.parse_args()
-    return args.h, args.s, args.q, args.v, args.validate, args.format
+    return args.h, args.s, args.q, args.v, args.validate
 
 def get_inputs():
     """Unified input handler (stdin JSON OR CLI)."""
@@ -607,14 +521,11 @@ def validate_inputs(hdf_file, query_samples, query_string, validate):
             sys.exit(1)
 
 if __name__ == "__main__":
-    hdf_file, query_samples, query_string, verbose, validate, fmt = get_inputs()
+    hdf_file, query_samples, query_string, verbose, validate = get_inputs()
     validate_inputs(hdf_file, query_samples, query_string, validate)
 
     if validate:
-        if fmt == "promoter":
-            samples = validate_promoter_hdf5(hdf_file)
-        else:
-            samples = validate_dnameth_hdf5(hdf_file)
+        samples = validate_dnameth_hdf5(hdf_file)
         print(json.dumps(samples))
     else:
         main(hdf_file, query_samples, query_string, verbose)

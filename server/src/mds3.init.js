@@ -1726,16 +1726,12 @@ async function validate_query_dnaMethylation(ds, genome) {
 			if (!q.promoter.file) throw '.promoter.file missing'
 			q.promoter.file = path.join(serverconfig.tpmasterdir, q.promoter.file)
 			await utils.file_is_readable(q.promoter.file)
-			const samples = JSON.parse(
-				await run_python(
-					'query_beta_values.py',
-					JSON.stringify({ validate: true, h: q.promoter.file, format: 'promoter' })
-				)
-			)
-			if (!Array.isArray(samples)) throw 'query_beta_values.py did not return samples array: ' + q.promoter.file
-			if (!samples.length) throw 'No samples from promoter hdf5 file: ' + q.promoter.file
-			q.promoter.allSampleSet = new Set(samples)
-			console.log(`${ds.label}: dnaMethylation promoter HDF5 file validated. Samples:`, samples.length)
+			const vr = JSON.parse(await run_rust('validateHDF5', JSON.stringify({ hdf5_file: q.promoter.file })))
+			if (vr.status !== 'success') throw vr.message
+			if (!Array.isArray(vr.sampleNames)) throw 'validateHDF5 did not return sampleNames array: ' + q.promoter.file
+			if (!vr.sampleNames.length) throw 'No samples from promoter hdf5 file: ' + q.promoter.file
+			q.promoter.allSampleSet = new Set(vr.sampleNames)
+			console.log(`${ds.label}: dnaMethylation promoter HDF5 file validated. Samples:`, vr.sampleNames.length)
 		}
 	} catch (error) {
 		throw `${ds.label}: Failed to validate dnaMethylation HDF5 file: ${error}`
