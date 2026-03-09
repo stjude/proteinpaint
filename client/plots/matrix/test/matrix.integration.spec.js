@@ -3229,7 +3229,6 @@ function getTermCollection() {
 		type: 'TermCollectionTWCont',
 		//$id: 'TwBase_0__48243_99155',
 		term: {
-			collectionId: 'Fake Collection 1',
 			type: 'termCollection',
 			termlst: [
 				{
@@ -3283,7 +3282,7 @@ function getTermCollection() {
 					isleaf: true
 				}
 			],
-			name: ' (agedx,a_death,a_ndi,agel...',
+			name: 'Fake Collection 1',
 			isleaf: true,
 			propsByTermId: {
 				agedx: { color: '#1b9e77' },

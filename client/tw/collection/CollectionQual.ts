@@ -35,7 +35,6 @@ export class CollectionQual extends TwBase {
 		copy.term.type = this.term.type
 		copy.term.name = this.term.name
 		if (this.term.id) copy.term.id = this.term.id
-		if ((this.term as any).collectionId) copy.term.collectionId = (this.term as any).collectionId
 		copy.term.memberType = this.term.memberType
 		if (this.term.categoryKeys) copy.term.categoryKeys = structuredClone(this.term.categoryKeys)
 		if (this.term.propsByTermId) copy.term.propsByTermId = structuredClone(this.term.propsByTermId)

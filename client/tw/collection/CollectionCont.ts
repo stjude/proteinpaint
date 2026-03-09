@@ -20,7 +20,10 @@ export class CollectionCont extends TwBase {
 		if (!tw.q) tw.q = { mode: 'continuous', type: 'values', lst: [] }
 		else {
 			if (!tw.q.mode) tw.q.mode = 'continuous'
+			if (!tw.q.type) tw.q.type = 'values'
 			if (!tw.q.lst) tw.q.lst = []
+			// Default numerators to all term IDs for old URLs that predate this field
+			if (!tw.q.numerators) tw.q.numerators = tw.term.termIds?.slice() || []
 		}
 
 		return tw as TermCollectionTWCont
@@ -39,7 +42,6 @@ export class CollectionCont extends TwBase {
 		copy.term.type = this.term.type
 		copy.term.name = this.term.name
 		if (this.term.id) copy.term.id = this.term.id
-		if ((this.term as any).collectionId) copy.term.collectionId = (this.term as any).collectionId
 		copy.term.memberType = this.term.memberType
 		if (this.term.numerators) copy.term.numerators = structuredClone(this.term.numerators)
 		if (this.term.propsByTermId) copy.term.propsByTermId = structuredClone(this.term.propsByTermId)

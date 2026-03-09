@@ -73,9 +73,6 @@ export class SearchHandler {
 					alert('Please select at least one term')
 					return
 				}
-				const termNames = selectedTermlst.map((o: any) => o.id).join(',')
-				const termNamesLabel = `${opts.details.name} (${termNames})`
-				const termName = termNamesLabel.length <= 26 ? termNamesLabel : termNamesLabel.slice(0, 26) + '...'
 				const propsByTermId = {}
 				if (opts.details.propsByTermId) {
 					// extract properties (like color, etc) for the selected terms
@@ -94,11 +91,10 @@ export class SearchHandler {
 				}
 
 				opts.callback({
-					collectionId: opts.details.name,
 					type: 'termCollection',
 					termIds: selectedTermlst.map(i => i.id),
 					termlst: selectedTermlst,
-					name: termName,
+					name: opts.details.name,
 					// memberType = ds.cohort.termdb.termCollections[].type for client code
 					memberType: opts.details.memberType || opts.details.type,
 					categoryKeys,
