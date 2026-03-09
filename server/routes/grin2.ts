@@ -64,6 +64,9 @@ export const api: RouteApi = {
 
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
+		// __abortSignal is set by maySetAbortCtrl() middleware in app.middlewares.js
+		const signal: AbortSignal | undefined = req.query.__abortSignal
+
 		try {
 			const request = req.query as GRIN2Request
 
@@ -76,9 +79,15 @@ function init({ genomes }) {
 
 			if (!ds.queries?.singleSampleMutation) throw new Error('singleSampleMutation query missing from dataset')
 
-			const result = await runGrin2WithLimit(g, ds, request)
+			const result = await runGrin2WithLimit(g, ds, request, signal)
 			res.json(result)
 		} catch (e: any) {
+			if (signal?.aborted) {
+				// Client disconnected, no point sending a response
+				mayLog('[GRIN2] Analysis aborted due to client disconnect')
+				return
+			}
+
 			console.error('[GRIN2] Error stack:', e.stack)
 
 			const errorResponse: GRIN2Response = {
@@ -152,7 +161,7 @@ async function getMaxLesions(): Promise<number> {
 
 let activeGrin2Jobs = 0
 
-async function runGrin2WithLimit(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Response> {
+async function runGrin2WithLimit(g: any, ds: any, request: GRIN2Request, signal?: AbortSignal): Promise<GRIN2Response> {
 	if (activeGrin2Jobs >= GRIN2_CONCURRENCY_LIMIT) {
 		const error: any = new Error(
 			`GRIN2 analysis queue is full (${GRIN2_CONCURRENCY_LIMIT} concurrent analyses). Please try again in a few minutes.`
@@ -168,7 +177,7 @@ async function runGrin2WithLimit(g: any, ds: any, request: GRIN2Request): Promis
 	mayLog(`[GRIN2] Starting analysis. Active jobs: ${activeGrin2Jobs}/${GRIN2_CONCURRENCY_LIMIT}`)
 
 	try {
-		return await runGrin2(g, ds, request)
+		return await runGrin2(g, ds, request, signal)
 	} finally {
 		activeGrin2Jobs--
 		mayLog(`[GRIN2] Analysis complete. Active jobs: ${activeGrin2Jobs}/${GRIN2_CONCURRENCY_LIMIT}`)
@@ -212,7 +221,7 @@ function getCnvLesionType(isGain: boolean): string {
 	return lesionType.lesionType
 }
 
-async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Response> {
+async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSignal): Promise<GRIN2Response> {
 	const startTime = Date.now()
 
 	// Step 1: Get samples using cohort infrastructure
@@ -272,7 +281,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 
 	// Step 4: Run GRIN2 analysis via Python
 	const grin2AnalysisStart = Date.now()
-	const pyResult = await run_python('grin2PpWrapper.py', JSON.stringify(pyInput))
+	const pyResult = await run_python('grin2PpWrapper.py', JSON.stringify(pyInput), { signal })
 
 	if (pyResult.stderr?.trim()) {
 		mayLog(`[GRIN2] Python stderr: ${pyResult.stderr}`)
@@ -304,7 +313,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request): Promise<GRIN2Re
 
 	// Step 6: Generate manhattan plot via rust
 	const manhattanPlotStart = Date.now()
-	const rsResult = await run_rust('manhattan_plot', JSON.stringify(rustInput))
+	const rsResult = await run_rust('manhattan_plot', JSON.stringify(rustInput), [], { signal })
 	const manhattanPlotTime = Date.now() - manhattanPlotStart
 	mayLog(`[GRIN2] Manhattan plot generation took ${formatElapsedTime(manhattanPlotTime)}`)
 
@@ -657,8 +666,8 @@ function filterAndConvertSnvIndel(
 		}
 		try {
 			if (!mayFilterByMaf(options.mafFilter, copy)) return null
-		} catch (e: any) {
-			mayLog('mayFilterByMaf() crashed on a snvindel ' + (e.message || e))
+		} catch (e: unknown) {
+			mayLog('mayFilterByMaf() crashed on a snvindel ' + (e instanceof Error ? e.message : String(e)))
 			return null
 		}
 	}

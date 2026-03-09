@@ -50,7 +50,10 @@ export async function xfetch(url, opts = {}) {
 			return payload
 		})
 		.catch(e => {
-			// prevent re-aborting the same signal
+			// prevent re-aborting the same signal, but if not yet aborted, then
+			// trigger an abort to affect all other signal listeners, since failure
+			// in one request in a set of awaited parallel requests means that the
+			// Promise.all() will fail anyway
 			if (!opts.signal?.aborted) abortCtrlBy.signal.get(opts.signal)?.abort()
 			throw e
 		})

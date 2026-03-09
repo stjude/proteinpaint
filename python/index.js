@@ -14,13 +14,31 @@ export function setPythonBinPath(binpath) {
 	python = binpath
 }
 
-export function run_python(pyfile, input_data) {
+export function run_python(pyfile, input_data, { signal } = {}) {
 	return new Promise((resolve, reject) => {
 		const pypath = path.join(__dirname, '/src/', pyfile)
+
+		if (signal?.aborted) {
+			reject(new Error(`run_python('${pyfile}'): aborted before start`))
+			return
+		}
 
 		const ps = spawn(python, [pypath])
 		const stdout = []
 		const stderr = []
+
+		let aborted = false
+		if (signal) {
+			const onAbort = () => {
+				if (!ps.killed) {
+					aborted = true
+					ps.kill()
+					reject(new Error(`run_python('${pyfile}'): aborted`))
+				}
+			}
+			signal.addEventListener('abort', onAbort, { once: true })
+			ps.on('close', () => signal.removeEventListener('abort', onAbort))
+		}
 
 		// Handle stdin errors (e.g. EPIPE)
 		ps.stdin.on('error', err => {
@@ -45,7 +63,7 @@ export function run_python(pyfile, input_data) {
 		ps.stdout.on('data', data => stdout.push(data))
 		ps.stderr.on('data', data => {
 			stderr.push(data)
-			console.log(`run_python('${pyfile}'): stderr: ${data.toString().trim()}`)
+			if (!aborted) console.log(`run_python('${pyfile}'): stderr: ${data.toString().trim()}`)
 		})
 		ps.on('error', err => {
 			const stderrStr = stderr.join('').trim()
@@ -54,12 +72,12 @@ export function run_python(pyfile, input_data) {
 			reject(new Error(errmsg))
 		})
 		ps.on('close', code => {
+			if (aborted) return // already rejected in onAbort; suppress noise from expected termination
 			const stderrStr = stderr.join('').trim()
 			if (code !== 0) {
 				const errorMessage = `spawned '${pyfile}' exited with code ${code} and stderr:\n${stderr.join('')}`
 				console.error('Python error:', errorMessage) // Log full error
 				reject(errorMessage)
-				// reject(`spawned '${pyfile}' exited with a non-zero status and this stderr:\n${stderr.join('')}`)
 			} else if (stderr.length) {
 				// python stderr
 				const err = stderr.join('').trim()
