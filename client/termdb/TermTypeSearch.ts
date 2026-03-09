@@ -74,6 +74,7 @@ const useCasesExcluded = {
 		TermTypeGroups.SNP_LIST,
 		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.METABOLITE_INTENSITY,
+		TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE,
 		TermTypeGroups.TERM_COLLECTION,
 		TermTypeGroups.SINGLECELL_CELLTYPE,
 		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
@@ -115,10 +116,24 @@ const useCasesExcluded = {
 		TermTypeGroups.DICTIONARY_VARIABLES,
 		TermTypeGroups.GENE_EXPRESSION,
 		TermTypeGroups.DNA_METHYLATION,
+		TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE,
 		TermTypeGroups.SSGSEA,
 		TermTypeGroups.TERM_COLLECTION,
 		TermTypeGroups.SINGLECELL_CELLTYPE,
 		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
+	],
+	wholeProteomeAbundance: [
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.MUTATION_CNV_FUSION,
+		TermTypeGroups.DICTIONARY_VARIABLES,
+		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.DNA_METHYLATION,
+		TermTypeGroups.SSGSEA,
+		TermTypeGroups.TERM_COLLECTION,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION,
+		TermTypeGroups.METABOLITE_INTENSITY
 	],
 	geneExpression: [
 		TermTypeGroups.SNP_LOCUS,
@@ -126,6 +141,7 @@ const useCasesExcluded = {
 		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.DICTIONARY_VARIABLES,
 		TermTypeGroups.METABOLITE_INTENSITY,
+		TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE,
 		TermTypeGroups.SSGSEA,
 		TermTypeGroups.TERM_COLLECTION,
 		TermTypeGroups.SINGLECELL_CELLTYPE,
@@ -138,6 +154,7 @@ const useCasesExcluded = {
 		TermTypeGroups.GENE_EXPRESSION,
 		TermTypeGroups.DNA_METHYLATION,
 		TermTypeGroups.METABOLITE_INTENSITY,
+		TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE,
 		TermTypeGroups.SSGSEA,
 		TermTypeGroups.TERM_COLLECTION,
 		TermTypeGroups.SINGLECELL_CELLTYPE,
@@ -150,6 +167,7 @@ const useCasesExcluded = {
 		TermTypeGroups.GENE_EXPRESSION,
 		TermTypeGroups.DNA_METHYLATION,
 		TermTypeGroups.METABOLITE_INTENSITY,
+		TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE,
 		TermTypeGroups.SSGSEA,
 		// we are still using dictionary tab to select mutation signature terms. The reason why we
 		// add the TERM_COLLECTION term type is to show it at the first level of tabs. After clicking
@@ -407,7 +425,11 @@ export class TermTypeSearch {
 	}
 
 	usesDefaultSearch(termTypeGroup) {
-		return termTypeGroup == TermTypeGroups.DICTIONARY_VARIABLES || termTypeGroup == TermTypeGroups.METABOLITE_INTENSITY
+		return (
+			termTypeGroup == TermTypeGroups.DICTIONARY_VARIABLES ||
+			termTypeGroup == TermTypeGroups.METABOLITE_INTENSITY ||
+			termTypeGroup == TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE
+		)
 	}
 
 	async addLoadTopTerms(type) {
@@ -444,7 +466,8 @@ export class TermTypeSearch {
 		holder.selectAll('*').remove()
 		if (
 			tab.termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES &&
-			tab.termTypeGroup != TermTypeGroups.METABOLITE_INTENSITY
+			tab.termTypeGroup != TermTypeGroups.METABOLITE_INTENSITY &&
+			tab.termTypeGroup != TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE
 		) {
 			const handler = this.handlerByType[type]
 			await handler.init({

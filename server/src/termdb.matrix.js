@@ -229,9 +229,14 @@ async function getSampleData(q, ds, onlyChildren = false) {
 			tw.term.type == TermTypes.GENE_EXPRESSION ||
 			tw.term.type == TermTypes.METABOLITE_INTENSITY ||
 			tw.term.type == TermTypes.SSGSEA ||
-			tw.term.type == TermTypes.DNA_METHYLATION
+			tw.term.type == TermTypes.DNA_METHYLATION ||
+			tw.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE
 		) {
-			if (!q.ds.queries?.[tw.term.type]) throw 'not supported by dataset: ' + tw.term.type
+			const queryHandler =
+				tw.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE
+					? q.ds.queries?.proteome?.whole
+					: q.ds.queries?.[tw.term.type]
+			if (!queryHandler) throw 'not supported by dataset: ' + tw.term.type
 			let lstOfBins // of this tw. only set when q.mode is discrete
 			if (tw.q?.mode == 'discrete' || tw.q?.mode == 'binary') {
 				lstOfBins = await findListOfBins(q, tw, ds)
@@ -245,7 +250,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				filter: q.filter,
 				filter0: q.filter0
 			}
-			const data = await q.ds.queries[tw.term.type].get(args, q.ds) // 2nd ds parameter is needed for ds-supplied getter
+			const data = await queryHandler.get(args, q.ds) // 2nd ds parameter is needed for ds-supplied getter
 			const values = data.term2sample2value.get(tw.$id)
 			for (const sampleId in values) {
 				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }

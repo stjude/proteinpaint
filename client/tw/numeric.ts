@@ -24,6 +24,7 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import { copyMerge } from '#rx'
 import { GeneExpBase } from './geneExpression.ts'
 import { MetaboliteIntensityBase } from './metaboliteIntensity.ts'
+import { WholeProteomeAbundanceBase } from './wholeProteomeAbundance.ts'
 import { DateBase } from './date.ts'
 import { SsGSEABase } from './ssGSEA.ts'
 import { DnaMethylationBase } from './dnaMethylation.ts'
@@ -39,6 +40,7 @@ export class NumericBase extends TwBase {
 		'date',
 		'geneExpression',
 		'metaboliteIntensity',
+		'wholeProteomeAbundance',
 		'ssGSEA',
 		'dnaMethylation',
 		'singleCellGeneExpression'
@@ -67,6 +69,11 @@ export class NumericBase extends TwBase {
 
 			case 'metaboliteIntensity':
 				MetaboliteIntensityBase.fill(tw.term)
+				if (!tw.q.mode) tw.q.mode = 'continuous'
+				break
+
+			case 'wholeProteomeAbundance':
+				WholeProteomeAbundanceBase.fill(tw.term)
 				if (!tw.q.mode) tw.q.mode = 'continuous'
 				break
 

@@ -94,6 +94,20 @@ export const DATA_TYPE_REGISTRY: DataTypeConfig[] = [
 		buildTermWrapper: (name: string) => ({ term: { name, metabolite: name, type: 'metaboliteIntensity' } }),
 		promptFieldDescription: 'The "metaboliteNames" field should contain metabolite names.',
 		dataTypeDescription: 'Metabolite names'
+	},
+	{
+		termType: TermTypes.WHOLE_PROTEOME_ABUNDANCE,
+		detectAvailability: (ds: any) => !!ds?.queries?.proteome?.whole,
+		schemaFieldName: 'proteinNames',
+		schemaDefinition: {
+			type: 'array',
+			items: { type: 'string' },
+			description: 'Names of proteins to include as whole proteome abundance rows in the matrix'
+		},
+		identifierMode: 'name',
+		buildTermWrapper: (name: string) => ({ term: { name, protein: name, type: 'wholeProteomeAbundance' } }),
+		promptFieldDescription: 'The "proteinNames" field should contain protein names.',
+		dataTypeDescription: 'Protein names'
 	}
 ]
 

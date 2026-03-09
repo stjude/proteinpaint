@@ -33,7 +33,9 @@ export async function trigger_getDefaultBins(q, ds, res) {
 				lst.push(value)
 			}
 		} else {
-			if (!ds.queries?.[tw.term.type]) throw 'term type not supported by this dataset'
+			const queryHandler =
+				tw.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE ? ds.queries?.proteome?.whole : ds.queries?.[tw.term.type]
+			if (!queryHandler) throw `term type ${tw.term.type} not supported by this dataset`
 			// this cache ignores filter, can lead to misleading result caused by different filter usage; also assumes that filter is infinite and impossible to cache
 			//binsCache = ds.queries[tw.term.type][`${tw.term.type}2bins`]
 			//if (binsCache[tw.term.name]) return res.send(binsCache[tw.term.name])
@@ -47,7 +49,7 @@ export async function trigger_getDefaultBins(q, ds, res) {
 				terms: [tw],
 				__abortSignal: q.__abortSignal
 			}
-			const data = await ds.queries[tw.term.type].get(args)
+			const data = await queryHandler.get(args)
 			const termData = data.term2sample2value.get(tw.$id)
 			for (const sample in termData) {
 				const value = termData[sample]

@@ -696,6 +696,17 @@ export type MetaboliteIntensityQueryNative = {
 
 export type MetaboliteIntensityQuery = MetaboliteIntensityQueryNative
 
+export type WholeProteomeAbundanceQuery = {
+	/** document structure */
+	file: string
+	samples?: number[]
+	/** _proteins,used to dynamically built cache of protein names to speed up search */
+	_proteins?: string[]
+	get?: (param: any) => void
+	find?: (param: string[]) => void
+	bins?: { [index: string]: any }
+}
+
 /** the geneExpression query
 three possibilities
 { src: 'native', file }
@@ -996,6 +1007,10 @@ type Mds3Queries = {
 	metaboliteIntensity?: {
 		src: 'native'
 		file: string
+	}
+	proteome?: {
+		/** whole proteome abundance */
+		whole?: WholeProteomeAbundanceQuery
 	}
 	singleCell?: SingleCellQuery
 	singleSampleGenomeQuantification?: SingleSampleGenomeQuantification

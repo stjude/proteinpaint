@@ -342,6 +342,8 @@ export function setHierClusterCellProps(cell, tw, anno, value, s, t, self, width
 		else if (unit) groupName += ` (${unit})`
 	} else if (tw.term.type == 'metaboliteIntensity') {
 		groupName = 'Intensity'
+	} else if (tw.term.type == 'wholeProteomeAbundance') {
+		groupName = 'Protein Abundance'
 	} else {
 		groupName = 'Heatmap color scale'
 	}
@@ -394,7 +396,8 @@ export const setCellProps = {
 	geneVariant: setGeneVariantCellProps,
 	hierCluster: setHierClusterCellProps,
 	[TermTypes.GENE_EXPRESSION]: setNumericCellProps,
-	[TermTypes.METABOLITE_INTENSITY]: setNumericCellProps
+	[TermTypes.METABOLITE_INTENSITY]: setNumericCellProps,
+	[TermTypes.WHOLE_PROTEOME_ABUNDANCE]: setNumericCellProps
 	//termCollection: setTermCollectionCellProps
 }
 
@@ -406,7 +409,8 @@ export const maySetEmptyCell = {
 	condition: setDefaultEmptyCell,
 	survival: setNumericEmptyCell,
 	[TermTypes.GENE_EXPRESSION]: setNumericEmptyCell,
-	[TermTypes.METABOLITE_INTENSITY]: setNumericEmptyCell
+	[TermTypes.METABOLITE_INTENSITY]: setNumericEmptyCell,
+	[TermTypes.WHOLE_PROTEOME_ABUNDANCE]: setNumericEmptyCell
 }
 
 function setVariantEmptyCell(siblingCells, cellTemplate, s, d) {

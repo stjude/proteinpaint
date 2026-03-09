@@ -986,7 +986,8 @@ export class MatrixControls {
 										row.push(allVariant.join('|'))
 									} else if (
 										tw.term.type == TermTypes.GENE_EXPRESSION ||
-										tw.term.type == TermTypes.METABOLITE_INTENSITY
+										tw.term.type == TermTypes.METABOLITE_INTENSITY ||
+										tw.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE
 									) {
 										row.push(s[tw.$id]?.renderedValues?.[0]?.value || '')
 									} else {
