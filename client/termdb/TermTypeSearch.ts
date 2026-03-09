@@ -1,5 +1,5 @@
 import { Tabs } from '#dom'
-import { getCompInit } from '../rx'
+import { type AppApi, getCompInit } from '../rx'
 import { TermTypeGroups, TermTypes, typeGroup, numericTypes } from '#shared/terms.js'
 import type { Term } from '#types'
 import { select } from 'd3-selection'
@@ -15,31 +15,100 @@ NOTE: dataset-specific overrides may be applied when the TermTypeSearch is initi
  */
 
 const useCasesExcluded = {
-	matrix: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
-	facet: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
-	filter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST],
-	dictionary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST /*, TermTypeGroups.TERM_COLLECTION*/],
-	summary: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST /*, TermTypeGroups.TERM_COLLECTION*/],
-	barchart: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST /*, TermTypeGroups.TERM_COLLECTION*/],
-	violin: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
+	matrix: [
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
+	],
+	facet: [
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
+	],
+	filter: [
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
+	],
+	dictionary: [
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.TERM_COLLECTION,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
+	],
+	summary: [
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.TERM_COLLECTION,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
+	],
+	summaryInput: [
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.TERM_COLLECTION,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
+	],
+	barchart: [
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.TERM_COLLECTION,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
+	],
+	violin: [
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.TERM_COLLECTION,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
+	],
 	sampleScatter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
 	cuminc: [
 		TermTypeGroups.SNP_LOCUS,
 		TermTypeGroups.SNP_LIST,
 		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.METABOLITE_INTENSITY,
-		TermTypeGroups.TERM_COLLECTION
+		TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE,
+		TermTypeGroups.TERM_COLLECTION,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
 	],
 	dataDownload: [
 		//TermTypeGroups.SNP_LOCUS, //this tabs require that the handler for this term type to be implemented
 		//TermTypeGroups.SNP_LIST, //this tabs require that the handler for this term type to be implemented
 		TermTypeGroups.MUTATION_CNV_FUSION,
-		TermTypeGroups.TERM_COLLECTION
+		TermTypeGroups.TERM_COLLECTION,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
 	], //Later on can support other term types like snplocus, snplst, geneVariant, non dictionary terms
-	survival: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
+	survival: [
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.TERM_COLLECTION,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
+	],
 	//Used from the termsetting when searching for a term, as any term with categories is allowed
-	default: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
-	regression: [TermTypeGroups.SNP_LIST, TermTypeGroups.SNP_LOCUS, TermTypeGroups.TERM_COLLECTION],
+	default: [
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.TERM_COLLECTION,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
+	],
+	regression: [
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.TERM_COLLECTION,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
+	],
 	metaboliteIntensity: [
 		TermTypeGroups.SNP_LOCUS,
 		TermTypeGroups.SNP_LIST,
@@ -47,8 +116,24 @@ const useCasesExcluded = {
 		TermTypeGroups.DICTIONARY_VARIABLES,
 		TermTypeGroups.GENE_EXPRESSION,
 		TermTypeGroups.DNA_METHYLATION,
+		TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE,
 		TermTypeGroups.SSGSEA,
-		TermTypeGroups.TERM_COLLECTION
+		TermTypeGroups.TERM_COLLECTION,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
+	],
+	wholeProteomeAbundance: [
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.MUTATION_CNV_FUSION,
+		TermTypeGroups.DICTIONARY_VARIABLES,
+		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.DNA_METHYLATION,
+		TermTypeGroups.SSGSEA,
+		TermTypeGroups.TERM_COLLECTION,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION,
+		TermTypeGroups.METABOLITE_INTENSITY
 	],
 	geneExpression: [
 		TermTypeGroups.SNP_LOCUS,
@@ -56,8 +141,11 @@ const useCasesExcluded = {
 		TermTypeGroups.MUTATION_CNV_FUSION,
 		TermTypeGroups.DICTIONARY_VARIABLES,
 		TermTypeGroups.METABOLITE_INTENSITY,
+		TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE,
 		TermTypeGroups.SSGSEA,
-		TermTypeGroups.TERM_COLLECTION
+		TermTypeGroups.TERM_COLLECTION,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
 	],
 	numericDictTermCluster: [
 		TermTypeGroups.SNP_LOCUS,
@@ -66,8 +154,11 @@ const useCasesExcluded = {
 		TermTypeGroups.GENE_EXPRESSION,
 		TermTypeGroups.DNA_METHYLATION,
 		TermTypeGroups.METABOLITE_INTENSITY,
+		TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE,
 		TermTypeGroups.SSGSEA,
-		TermTypeGroups.TERM_COLLECTION
+		TermTypeGroups.TERM_COLLECTION,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
 	],
 	termCollections: [
 		TermTypeGroups.SNP_LOCUS,
@@ -76,12 +167,15 @@ const useCasesExcluded = {
 		TermTypeGroups.GENE_EXPRESSION,
 		TermTypeGroups.DNA_METHYLATION,
 		TermTypeGroups.METABOLITE_INTENSITY,
+		TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE,
 		TermTypeGroups.SSGSEA,
 		// we are still using dictionary tab to select mutation signature terms. The reason why we
 		// add the TERM_COLLECTION term type is to show it at the first level of tabs. After clicking
 		// TERM_COLLECTION tab, we use DICTIONARY tab to select the mutation signature terms, and all other tabs
 		// will be hidden by default.
-		TermTypeGroups.TERM_COLLECTION
+		TermTypeGroups.TERM_COLLECTION,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
 	]
 }
 
@@ -274,7 +368,7 @@ export class TermTypeSearch {
 			if (termTypeGroup && !this.tabs.some(tab => tab.label == termTypeGroup)) {
 				//regression snplst/snplocus cases will be handled when the search handler is added
 				if (state.usecase.target == 'regression') {
-					if (type == TermTypes.SNP) continue // same funcationality is covered by snplst/snplocus terms
+					if (type == TermTypes.SNP) continue // same functionality is covered by snplst/snplocus terms
 					if (type == TermTypes.GENE_VARIANT && state.usecase.detail != 'independent') continue
 					if (type == TermTypes.GENE_EXPRESSION && state.usecase.detail != 'independent') continue
 					if (type == TermTypes.DNA_METHYLATION && state.usecase.detail != 'independent') continue
@@ -283,6 +377,12 @@ export class TermTypeSearch {
 
 				if (state.usecase.target == 'sampleScatter') {
 					if (state.usecase.detail == 'numeric' && !numericTypes.has(type)) continue
+					//Limit the tree to only single cell types when use case is single cell
+					if (state.usecase?.vocab?.type == 'singleCell') {
+						if (type != TermTypes.SINGLECELL_CELLTYPE && type != TermTypes.SINGLECELL_GENE_EXPRESSION) continue
+					} else {
+						if (type == TermTypes.SINGLECELL_CELLTYPE || type == TermTypes.SINGLECELL_GENE_EXPRESSION) continue
+					}
 				}
 
 				if (
@@ -293,7 +393,7 @@ export class TermTypeSearch {
 				}
 
 				if (state.usecase.target == 'dataDownload') {
-					if (type == TermTypes.SNP) continue // same funcationality is covered by snplst/snplocus terms
+					if (type == TermTypes.SNP) continue // same functionality is covered by snplst/snplocus terms
 				}
 
 				if (state.usecase.target && this.useCasesExcluded[state.usecase.target]?.includes(termTypeGroup)) continue
@@ -325,7 +425,11 @@ export class TermTypeSearch {
 	}
 
 	usesDefaultSearch(termTypeGroup) {
-		return termTypeGroup == TermTypeGroups.DICTIONARY_VARIABLES || termTypeGroup == TermTypeGroups.METABOLITE_INTENSITY
+		return (
+			termTypeGroup == TermTypeGroups.DICTIONARY_VARIABLES ||
+			termTypeGroup == TermTypeGroups.METABOLITE_INTENSITY ||
+			termTypeGroup == TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE
+		)
 	}
 
 	async addLoadTopTerms(type) {
@@ -362,7 +466,8 @@ export class TermTypeSearch {
 		holder.selectAll('*').remove()
 		if (
 			tab.termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES &&
-			tab.termTypeGroup != TermTypeGroups.METABOLITE_INTENSITY
+			tab.termTypeGroup != TermTypeGroups.METABOLITE_INTENSITY &&
+			tab.termTypeGroup != TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE
 		) {
 			const handler = this.handlerByType[type]
 			await handler.init({
@@ -417,3 +522,12 @@ export class TermTypeSearch {
 }
 
 export const TermTypeSearchInit = getCompInit(TermTypeSearch)
+
+export type SearchHandlerOpts = {
+	holder: any
+	app: AppApi
+	genomeObj: any
+	callback: (arg0: { gene: string; name: string; type: string }) => void
+	details: any
+	usecase: { target: string; detail: string; [index: string]: any }
+}

@@ -19,6 +19,7 @@ export const graphableTypes = new Set([
 	TermTypes.SSGSEA,
 	TermTypes.DNA_METHYLATION,
 	TermTypes.METABOLITE_INTENSITY,
+	TermTypes.WHOLE_PROTEOME_ABUNDANCE,
 	TermTypes.SINGLECELL_GENE_EXPRESSION,
 	TermTypes.SINGLECELL_CELLTYPE,
 	TermTypes.SNP,
@@ -76,7 +77,6 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 	const uses = new Set()
 	// note: expects term.child_types to be null if term.isleaf == true
 	const child_types = term.child_types || []
-
 	// default handling
 	switch (usecase.target) {
 		case 'barchart':
@@ -114,6 +114,13 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 					uses.add('plot')
 				}
 				if (hasNumericChild(child_types)) uses.add('branch')
+			} else if (usecase?.vocab?.type == 'singleCell') {
+				/** TODO: Revisit this approach. Seems chaotic.  */
+				if (term.type && term.type.startsWith('singleCell')) {
+					if (term.plot && term.plot == usecase.vocab?.config.name) {
+						uses.add('plot')
+					}
+				}
 			} else {
 				if (graphableTypes.has(term.type)) uses.add('plot')
 				if (!term.isleaf) uses.add('branch')

@@ -102,6 +102,7 @@ validate_query_ld
 validate_query_geneExpression
 validate_query_metaboliteIntensity
 	validateMetaboliteIntensityNative
+validate_query_proteome
 validate_query_rnaseqGeneCount
 validate_query_singleSampleGenomeQuantification
 validate_query_singleSampleGbtk
@@ -175,6 +176,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 		await validate_query_ssGSEA(ds, genome)
 		await validate_query_dnaMethylation(ds, genome)
 		await validate_query_metaboliteIntensity(ds, genome)
+		await validate_query_proteome(ds, genome)
 		await validate_query_getTopTermsByType(ds, genome)
 		await validate_query_getTopMutatedGenes(ds, genome)
 		await validate_query_getSampleImages(ds, genome)
@@ -1724,13 +1726,12 @@ async function validate_query_dnaMethylation(ds, genome) {
 			if (!q.promoter.file) throw '.promoter.file missing'
 			q.promoter.file = path.join(serverconfig.tpmasterdir, q.promoter.file)
 			await utils.file_is_readable(q.promoter.file)
-			const samples = JSON.parse(
-				await run_python('query_beta_values.py', JSON.stringify({ validate: true, h: q.promoter.file }))
-			)
-			if (!Array.isArray(samples)) throw 'query_beta_values.py did not return samples array: ' + q.promoter.file
-			if (!samples.length) throw 'No samples from promoter hdf5 file: ' + q.promoter.file
-			q.promoter.allSampleSet = new Set(samples)
-			console.log(`${ds.label}: dnaMethylation promoter HDF5 file validated. Samples:`, samples.length)
+			const vr = JSON.parse(await run_rust('validateHDF5', JSON.stringify({ hdf5_file: q.promoter.file })))
+			if (vr.status !== 'success') throw vr.message
+			if (!Array.isArray(vr.sampleNames)) throw 'validateHDF5 did not return sampleNames array: ' + q.promoter.file
+			if (!vr.sampleNames.length) throw 'No samples from promoter hdf5 file: ' + q.promoter.file
+			q.promoter.allSampleSet = new Set(vr.sampleNames)
+			console.log(`${ds.label}: dnaMethylation promoter HDF5 file validated. Samples:`, vr.sampleNames.length)
 		}
 	} catch (error) {
 		throw `${ds.label}: Failed to validate dnaMethylation HDF5 file: ${error}`
@@ -1928,6 +1929,104 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 		if (term2sample2value.size == 0)
 			throw 'no data available for the input ' + param.terms?.map(tw => tw.term.name).join(', ')
 		return { term2sample2value, byTermId, bySampleId }
+	}
+}
+
+export async function validate_query_proteome(ds, genome) {
+	const q = ds.queries.proteome
+	if (!q) return
+	if (q.whole) {
+		q.whole.bins = {}
+		if (!q.whole.file) throw 'queries.proteome.whole.file missing'
+		if (!q.whole.file.startsWith(serverconfig.tpmasterdir))
+			q.whole.file = path.join(serverconfig.tpmasterdir, q.whole.file)
+		await utils.validate_txtfile(q.whole.file)
+		q.whole.samples = []
+		const line = await utils.get_header_txt(q.whole.file)
+		const l = line.split('\t')
+		for (let i = 9; i < l.length; i++) {
+			const id = ds.cohort.termdb.q.sampleName2id(l[i])
+			if (id == undefined) throw 'queries.proteome.whole: unknown sample from header: ' + l[i]
+			q.whole.samples.push(id)
+		}
+		// add getters
+		q.whole.find = async proteins => {
+			// if !q.proteins, read all proteins from file
+			if (!q._proteins) {
+				const proteins = []
+				await utils.get_lines_txtfile({
+					args: [q.whole.file],
+					callback: line => {
+						const l = line.split('\t')
+						if (l[0].startsWith('#Unique identifier')) return
+						proteins.push(l[4])
+					}
+				})
+				q._proteins = proteins
+			}
+
+			const matches = []
+			for (const p of proteins) {
+				if (!p) continue
+				for (const protein of q._proteins) {
+					if (protein.toLowerCase().includes(p.toLowerCase())) {
+						matches.push(protein)
+					}
+				}
+			}
+			return matches
+		}
+		q.whole.get = async param => {
+			const limitSamples = await mayLimitSamples(param, q.whole.samples, ds)
+			if (limitSamples?.size == 0) {
+				// got 0 sample after filtering, must still return expected structure with no data
+				return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
+			}
+
+			// has at least 1 sample passing filter and with intensity data
+			// TODO what if there's just 1 sample not enough for clustering?
+			const bySampleId = {}
+			const samples = q.whole.samples || []
+			if (limitSamples) {
+				for (const sid of limitSamples) {
+					bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+				}
+			} else {
+				// use all samples with exp data
+				for (const sid of samples) {
+					bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+				}
+			}
+
+			const term2sample2value = new Map() // k: gene name, v: { sampleId : value }
+			for (const tw of param.terms) {
+				if (!tw) continue
+
+				const s2v = {}
+				const protein = tw.term.name
+				await utils.get_lines_txtfile({
+					args: [q.whole.file],
+					callback: line => {
+						const l = line.split('\t')
+						if (l[4].toLowerCase() != protein.toLowerCase()) return
+						for (let i = 9; i < l.length; i++) {
+							const sampleId = samples[i - 9]
+							if (limitSamples && !limitSamples.has(sampleId)) continue // doing filtering and sample of current column is not used
+							if (!l[i]) continue // blank string
+							const v = Number(l[i])
+							if (Number.isNaN(v)) throw 'exp value not number'
+							s2v[sampleId] = v
+						}
+						if (Object.keys(s2v).length) term2sample2value.set(tw.$id, s2v) // only add protein if it has data
+					}
+				})
+			}
+			// pass blank byTermId to match with expected output structure
+			const byTermId = {}
+			if (term2sample2value.size == 0)
+				throw 'no data available for the input ' + param.terms?.map(tw => tw.term.name).join(', ')
+			return { term2sample2value, byTermId, bySampleId }
+		}
 	}
 }
 

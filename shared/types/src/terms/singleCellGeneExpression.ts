@@ -1,26 +1,32 @@
-import type { TermWrapper } from './tw.ts'
-import type { TermSettingInstance } from '../termsetting.ts'
-import type { NumericTerm, NumericQ } from './numeric.ts'
+// import type { BaseTerm } from '../index.ts'
+import type { PresetNumericBins, NumericBaseTerm, NumTW, RawNumTW } from '../index.ts'
 
-/*
---------EXPORTED--------
-GeneExpressionQ
-GeneExpressionTermWrapper
-GeneExpressionTermSettingInstance
-
-*/
-
-export type SingleCellGeneExpressionTW = TermWrapper & {
-	q: NumericQ
-	term: SingleCellGeneExpressionTerm
+type Gene = {
+	kind?: 'gene'
+	gene: string
+	chr?: string
+	start?: number
+	stop?: number
 }
 
-export type SingleCellGeneExpressionTerm = NumericTerm & {
+type Coord = {
+	kind?: 'coord'
+	gene?: string
+	chr: string
+	start: number
+	stop: number
+}
+
+export type SingleCellGeneExpressionTerm = NumericBaseTerm & {
+	type: 'singleCellGeneExpression'
 	gene: string
 	sample: string
-}
+	unit: string
+	bins?: PresetNumericBins
+} & (Gene | Coord)
 
-export type SingleCellGeneExpressionTermSettingInstance = TermSettingInstance & {
-	q: NumericQ
-	term: SingleCellGeneExpressionTerm
-}
+export type SingleCellGeneExpressionTermTW = NumTW & { term: SingleCellGeneExpressionTerm }
+
+export type RawSingleCellGeneExpTerm = SingleCellGeneExpressionTerm & { name?: string }
+
+export type RawSingleCellGeneExpTW = RawNumTW & { term: RawSingleCellGeneExpTerm }

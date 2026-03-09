@@ -30,8 +30,9 @@ function init({ genomes }) {
 			if (!ds) throw new Error('invalid dataset name')
 			if (!ds.queries?.singleCell) throw new Error('no single cell data on this dataset')
 			if (!ds.queries.singleCell.data?.get) throw new Error('dataset has no single cell data get() function')
-			/** If .get() not defined in ds file, defined in
-			 * server/src/mds3.gdc.js (gdc only for now). */
+			/** data.get() not defined in ds file, defined in
+			 * server/src/mds3.gdc.js for gdc or singlecellSamples
+			 * route file for native ds. */
 			result = await ds.queries.singleCell.data.get(q)
 		} catch (e: any) {
 			if (e.stack) console.log(e)

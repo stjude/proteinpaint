@@ -639,26 +639,26 @@ async function getAnalysisTsv2loom4scrna(ds, ref) {
 		// should still throw here to stop getAnalysisTsv2loom4scrna() code execution and allow its caller to catch
 		throw e
 	}
-	if (!Array.isArray(re.data.hits)) throw 'scrna: re.data.hits[] not array'
+	if (!Array.isArray(re.data.hits)) throw new Error('scrna: re.data.hits[] not array')
 	const submitter2tsv = new Map(),
 		submitter2hdf5 = new Map()
 	for (const hit of re.data.hits) {
-		if (!hit.id) throw 'hit.id missing'
+		if (!hit.id) throw new Error('hit.id missing')
 		const submitter = hit.cases?.[0]?.samples?.[0]?.portions?.[0]?.analytes?.[0]?.aliquots?.[0]?.submitter_id
-		if (!submitter) throw 'aliquot submitter missing'
+		if (!submitter) throw new Error('aliquot submitter missing')
 		if (hit.data_format == 'HDF5') {
-			if (submitter2hdf5.has(submitter)) throw 'submitter already there'
+			if (submitter2hdf5.has(submitter)) throw new Error('submitter already there')
 			submitter2hdf5.set(submitter, hit.id)
 		} else if (hit.data_format == 'TSV') {
-			if (submitter2tsv.has(submitter)) throw 'submitter already there'
+			if (submitter2tsv.has(submitter)) throw new Error('submitter already there')
 			submitter2tsv.set(submitter, hit.id)
 		} else {
-			throw 'unknown data_format'
+			throw new Error('unknown data_format')
 		}
 	}
 	for (const [submitter, tsv] of submitter2tsv) {
 		const hdf5 = submitter2hdf5.get(submitter)
-		if (!hdf5) throw 'aliquot has tsv but missing hdf5'
+		if (!hdf5) throw new Error('aliquot has tsv but missing hdf5')
 		ref.scrnaAnalysis2hdf5.set(tsv, hdf5)
 	}
 }

@@ -470,7 +470,7 @@ def parse_cli_args():
                 "Query DNA methylation beta values from an HDF5 file OR validate the HDF5 file structure.\n\n"
                 "Modes:\n"
                 "  1) Query mode: provide --h, --s, and --q\n"
-                "  2) Validate mode: provide --h and --validate"),
+                "  2) Validate mode: provide --h and --validate\n"),
                 epilog=(
                 "Examples:\n"
                 "  Query genomic range:\n"

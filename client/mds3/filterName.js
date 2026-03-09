@@ -47,6 +47,7 @@ export function getFilterName(f) {
 			case 'float':
 			case 'geneExpression':
 			case 'metaboliteIntensity':
+			case 'wholeProteomeAbundance':
 				// tvs is numeric, show numeric range
 				return getNumericRangeLabel(tvs)
 			case 'samplelst':

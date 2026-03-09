@@ -24,9 +24,11 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import { copyMerge } from '#rx'
 import { GeneExpBase } from './geneExpression.ts'
 import { MetaboliteIntensityBase } from './metaboliteIntensity.ts'
+import { WholeProteomeAbundanceBase } from './wholeProteomeAbundance.ts'
 import { DateBase } from './date.ts'
 import { SsGSEABase } from './ssGSEA.ts'
 import { DnaMethylationBase } from './dnaMethylation.ts'
+import { SingleCellGeneExpressionBase } from './singleCellGeneExpression.ts'
 
 export class NumericBase extends TwBase {
 	// type is set by TwBase constructor
@@ -38,9 +40,10 @@ export class NumericBase extends TwBase {
 		'date',
 		'geneExpression',
 		'metaboliteIntensity',
+		'wholeProteomeAbundance',
 		'ssGSEA',
-		'singleCellGeneExpression',
-		'dnaMethylation'
+		'dnaMethylation',
+		'singleCellGeneExpression'
 	])
 
 	constructor(tw: NumTW, opts: TwOpts) {
@@ -69,6 +72,11 @@ export class NumericBase extends TwBase {
 				if (!tw.q.mode) tw.q.mode = 'continuous'
 				break
 
+			case 'wholeProteomeAbundance':
+				WholeProteomeAbundanceBase.fill(tw.term)
+				if (!tw.q.mode) tw.q.mode = 'continuous'
+				break
+
 			case 'date':
 				DateBase.fill(tw.term)
 				if (!tw.q.mode) tw.q.mode = 'continuous'
@@ -81,6 +89,11 @@ export class NumericBase extends TwBase {
 
 			case 'dnaMethylation':
 				DnaMethylationBase.fill(tw.term, opts)
+				if (!tw.q.mode) tw.q.mode = 'continuous'
+				break
+
+			case 'singleCellGeneExpression':
+				SingleCellGeneExpressionBase.fill(tw.term, opts)
 				if (!tw.q.mode) tw.q.mode = 'continuous'
 				break
 

@@ -90,6 +90,8 @@ export function addSelectedRowsOptions(clickedRowNames, event) {
 			? 'genes'
 			: this.config.dataType == 'metaboliteIntensity'
 			? 'metabolites'
+			: this.config.dataType == 'wholeProteomeAbundance'
+			? 'proteins'
 			: 'items'
 
 	const optionArr = [
@@ -328,6 +330,8 @@ export function setClusteringBtn(holder, callback) {
 			? 'Genes'
 			: dataType == 'metaboliteIntensity'
 			? 'Metabolites'
+			: dataType == 'wholeProteomeAbundance'
+			? 'Proteins'
 			: dataType == 'numericDictTerm'
 			? 'Terms'
 			: 'Rows'
@@ -336,6 +340,8 @@ export function setClusteringBtn(holder, callback) {
 			? 'Gene Expression Clustering'
 			: dataType == 'metaboliteIntensity'
 			? 'Metabolite Intensity Clustering'
+			: dataType == 'wholeProteomeAbundance'
+			? 'Protein Abundance Clustering'
 			: 'Clustering'
 	holder
 		.append('button')
@@ -343,7 +349,12 @@ export function setClusteringBtn(holder, callback) {
 		.datum({
 			label: cluteringButtonLabel,
 			getCount: () => this.hcTermGroup?.lst.length || 0,
-			showCount: dataType == TermTypes.METABOLITE_INTENSITY || dataType == NUMERIC_DICTIONARY_TERM ? 'append' : 'hide',
+			showCount:
+				dataType == TermTypes.METABOLITE_INTENSITY ||
+				dataType == TermTypes.WHOLE_PROTEOME_ABUNDANCE ||
+				dataType == NUMERIC_DICTIONARY_TERM
+					? 'append'
+					: 'hide',
 			rows: [
 				{
 					label: `Cluster ${cl.Samples}`,
@@ -536,10 +547,12 @@ function updateClusteringControls(self, app, parent, table) {
 		colorSchemeControl.style('display', 'none')
 	}
 
-	// Only add set edit option for METABOLITE_INTENSITY and NUMERIC_DICTIONARY_TERM
+	// Only add set edit option for METABOLITE_INTENSITY, WHOLE_PROTEOME_ABUNDANCE, and NUMERIC_DICTIONARY_TERM
 	if (
 		parent.chartType == 'hierCluster' &&
-		(parent.config.dataType == TermTypes.METABOLITE_INTENSITY || parent.config.dataType == NUMERIC_DICTIONARY_TERM)
+		(parent.config.dataType == TermTypes.METABOLITE_INTENSITY ||
+			parent.config.dataType == TermTypes.WHOLE_PROTEOME_ABUNDANCE ||
+			parent.config.dataType == NUMERIC_DICTIONARY_TERM)
 	) {
 		const geneInputTr = table.insert('tr', () => table.select('tr').node())
 		geneInputTr.append('td').attr('class', 'sja-termdb-config-row-label').html('Hierarchical Clustering Term Set')

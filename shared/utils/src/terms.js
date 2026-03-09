@@ -3,6 +3,7 @@ import {
 	dtssgsea,
 	dtdnamethylation,
 	dtmetaboliteintensity,
+	dtwholeproteomeabundance,
 	TermTypeGroups,
 	dtTerms
 } from './common.js'
@@ -44,6 +45,7 @@ export const TermTypes = {
 	SURVIVAL: 'survival',
 	SAMPLELST: 'samplelst',
 	METABOLITE_INTENSITY: 'metaboliteIntensity',
+	WHOLE_PROTEOME_ABUNDANCE: 'wholeProteomeAbundance',
 	SINGLECELL_GENE_EXPRESSION: 'singleCellGeneExpression',
 	SINGLECELL_CELLTYPE: 'singleCellCellType',
 	MULTIVALUE: 'multivalue',
@@ -61,7 +63,8 @@ export const TermTypes2Dt = {
 	[TermTypes.GENE_EXPRESSION]: dtgeneexpression,
 	[TermTypes.SSGSEA]: dtssgsea,
 	[TermTypes.DNA_METHYLATION]: dtdnamethylation,
-	[TermTypes.METABOLITE_INTENSITY]: dtmetaboliteintensity
+	[TermTypes.METABOLITE_INTENSITY]: dtmetaboliteintensity,
+	[TermTypes.WHOLE_PROTEOME_ABUNDANCE]: dtwholeproteomeabundance
 }
 
 // maps term type to group (as is shown as toggles in search ui)
@@ -80,8 +83,10 @@ export const typeGroup = {
 	[TermTypes.SSGSEA]: TermTypeGroups.SSGSEA,
 	[TermTypes.DNA_METHYLATION]: TermTypeGroups.DNA_METHYLATION,
 	[TermTypes.METABOLITE_INTENSITY]: TermTypeGroups.METABOLITE_INTENSITY,
+	[TermTypes.WHOLE_PROTEOME_ABUNDANCE]: TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE,
 	[TermTypes.TERM_COLLECTION]: TermTypeGroups.TERM_COLLECTION,
-	[TermTypes.SINGLECELL_CELLTYPE]: TermTypeGroups.SINGLECELL_CELLTYPE
+	[TermTypes.SINGLECELL_CELLTYPE]: TermTypeGroups.SINGLECELL_CELLTYPE,
+	[TermTypes.SINGLECELL_GENE_EXPRESSION]: TermTypeGroups.SINGLECELL_GENE_EXPRESSION
 }
 
 const nonDictTypes = new Set([
@@ -93,6 +98,7 @@ const nonDictTypes = new Set([
 	TermTypes.DNA_METHYLATION,
 	TermTypes.GENE_VARIANT,
 	TermTypes.METABOLITE_INTENSITY,
+	TermTypes.WHOLE_PROTEOME_ABUNDANCE,
 	TermTypes.SINGLECELL_GENE_EXPRESSION,
 	TermTypes.SINGLECELL_CELLTYPE
 ])
@@ -107,6 +113,7 @@ export const numericTypes = new Set([
 	TermTypes.SSGSEA,
 	TermTypes.DNA_METHYLATION,
 	TermTypes.METABOLITE_INTENSITY,
+	TermTypes.WHOLE_PROTEOME_ABUNDANCE,
 	TermTypes.SINGLECELL_GENE_EXPRESSION,
 	TermTypes.DATE
 ])
@@ -117,7 +124,7 @@ export const annoNumericTypes = new Set([TermTypes.INTEGER, TermTypes.FLOAT, Ter
 
 const categoricalTypes = new Set([TermTypes.CATEGORICAL, TermTypes.SNP])
 
-const singleSampleTerms = new Set([TermTypes.SINGLECELL_GENE_EXPRESSION])
+const singleSampleTerms = new Set([TermTypes.SINGLECELL_CELLTYPE, TermTypes.SINGLECELL_GENE_EXPRESSION])
 
 export function isSingleSampleTerm(term) {
 	if (!term) return false
@@ -154,6 +161,7 @@ export function equals(t1, t2) {
 		case TermTypes.DNA_METHYLATION:
 			return t1.chr == t2.chr && t1.start == t2.start && t1.stop == t2.stop
 		case TermTypes.METABOLITE_INTENSITY:
+		case TermTypes.WHOLE_PROTEOME_ABUNDANCE:
 			return t1.name == t2.name
 		case TermTypes.GENE_VARIANT:
 			return t1.gene == t2.gene || (t1.chr == t2.chr && t1.start == t2.start && t1.stop == t2.stop)
@@ -231,6 +239,7 @@ const typeMap = {
 	dnaMethylation: 'DNA Methylation',
 	geneVariant: 'Gene Variant',
 	metaboliteIntensity: 'Metabolite Intensity',
+	wholeProteomeAbundance: 'Whole Proteome Abundance',
 	multiValue: 'Multi Value',
 	singleCellGeneExpression: 'Single Cell, Gene Expression',
 	singleCellCellType: 'Single Cell, Cell Type',

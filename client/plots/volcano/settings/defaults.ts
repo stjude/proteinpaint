@@ -72,7 +72,7 @@ export function validateVolcanoSettings(config: any, opts: any) {
 	}
 
 	validateGESettings(config.termType, settings, sampleNum, opts)
-	validateDMSettings(config.termType)
+	validateDMSettings(config.termType, settings)
 	validateSCCTSettings(config.termType)
 }
 
@@ -102,9 +102,12 @@ function validateGESettings(termType: string, settings: GEVolcanoSettings, sampl
 	}
 }
 
-function validateDMSettings(termType: string) {
-	if (termType != TermTypes.DNA_METHYLATION) return
-	//add validations when there are settings for DM
+function validateDMSettings(termType: string, settings?: DMVolcanoSettings) {
+	if (termType != TermTypes.DNA_METHYLATION || !settings) return
+	const min = settings.minSamplesPerGroup
+	if (!Number.isFinite(min) || !Number.isInteger(min) || min < 3) {
+		settings.minSamplesPerGroup = 3
+	}
 }
 
 function validateSCCTSettings(termType: string) {

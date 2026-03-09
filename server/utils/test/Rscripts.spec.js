@@ -5,6 +5,25 @@ Run test script as follows (from 'server/'):
 
 	cd ~/sjpp && npx tsx proteinpaint/server/utils/test/Rscripts.spec.js
 
+Active tests:
+	- survival.R
+	- corr.R pearson
+	- corr.R spearman
+	- corr.R kendall
+	- edge.R limma
+	- edge.R edgeR
+	- hclust.R Clustering:Average-Distance:Euclidean
+	- hclust.R Clustering:Complete-Distance:Maximum
+	- diffMeth.R: output shape and required keys
+	- diffMeth.R: p-values sorted ascending
+	- diffMeth.R: adjusted p-values >= original p-values
+	- diffMeth.R: all promoters returned for complete data
+	- diffMeth.R: output values are valid numbers
+	- diffMeth.R: reproducible output across runs
+	- diffMeth.R: confounder support
+	- diffMeth.R: error on too few samples
+	- diffMeth.R: error on invalid sample name
+
 *********************************************/
 
 import tape from 'tape'
@@ -17,37 +36,8 @@ import { roundValueAuto } from '#shared/roundValue.js'
 const p_value_cutoff = 0.0001 // If the difference between the actual and expected p-value is greater than this, the test will fail (used for testing edge.R)
 const fold_change_cutoff = 0.001 // If the difference between the actual and expected p-value is greater than this, the test will fail (used for testing edge.R)
 
-// Helpers
-// Simple function to round numbers in our objects
-/*function roundNumbers(obj, decimals = 10) {
-	// Handle arrays
-	if (Array.isArray(obj)) {
-		return obj.map(item => roundNumbers(item, decimals))
-	}
-
-	// Handle objects
-	if (obj && typeof obj === 'object') {
-		const result = {}
-		for (const key in obj) {
-			result[key] = roundNumbers(obj[key], decimals)
-		}
-		return result
-	}
-
-	// Round numbers (both actual numbers and number strings)
-	if (typeof obj === 'number') {
-		return Number(obj.toFixed(decimals))
-	}
-
-	// Handle numeric strings but preserve 'NA' strings
-	if (typeof obj === 'string' && obj !== 'NA' && !isNaN(parseFloat(obj))) {
-		return String(Number(parseFloat(obj).toFixed(decimals)))
-	}
-
-	// Return everything else unchanged
-	return obj
-}*/
-
+// TODO: Why are these tests commented out? Probably should re-enable them and fix any issues if possible.
+// If they are no longer relevant or needed, they should be removed
 /** 
 // fisher.2x3.R tests
 tape('fisher.2x3.R', async function (test) {
@@ -543,5 +533,188 @@ tape('hclust.R Clustering:Complete-Distance:Maximum', async function (test) {
 	const Rout = await run_R('hclust.R', inJson)
 	const out = JSON.parse(Rout)
 	test.deepEqual(out, JSON.parse(expJson), 'Test Clustering:Complete-Distance:Maximum should match expected output')
+	test.end()
+})
+
+/*********** diffMeth.R tests ***********/
+
+tape('\n', function (test) {
+	test.comment('-***- diffMeth.R specs -***-')
+	test.end()
+})
+
+// Uses the same sample set from utils/termdb/imports/samples as all other TermdbTest genomic data
+const diffMethFixturePath = path.join(serverconfig.binpath, 'test/tp/files/hg38/TermdbTest/dnaMethPromoterMvalue.h5')
+const diffMethCaseSamples =
+	'1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,2646,2660,2674,2688,2702,2716,2730,2744,2758,2772'
+const diffMethControlSamples =
+	'2786,2800,2814,2828,2842,2856,2870,2884,2898,2912,2926,2940,2954,2968,2982,2996,3010,3024,3038,3052,3066,3080,3094,3108,3122,3136,3150,3164,3178,3192,3206,3220,3234,3248,3262,3276,3290,3304,3318,3332,3346,3360,3374,3388,3402,3416,3430,3444,3458,3472'
+const diffMethBaseInput = {
+	case: diffMethCaseSamples,
+	control: diffMethControlSamples,
+	input_file: diffMethFixturePath,
+	min_samples_per_group: 3
+}
+
+tape('diffMeth.R: output shape and required keys', async function (test) {
+	test.timeoutAfter(15000)
+	const Rout = await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput))
+	const out = JSON.parse(Rout)
+
+	test.ok(out.promoter_data, 'output should have promoter_data key')
+	test.ok(Array.isArray(out.promoter_data), 'promoter_data should be an array')
+	test.ok(out.promoter_data.length > 0, 'promoter_data should not be empty')
+
+	const firstRow = out.promoter_data[0]
+	test.ok('promoter_id' in firstRow, 'each row should have promoter_id')
+	test.ok('gene_name' in firstRow, 'each row should have gene_name')
+	test.ok('fold_change' in firstRow, 'each row should have fold_change')
+	test.ok('original_p_value' in firstRow, 'each row should have original_p_value')
+	test.ok('adjusted_p_value' in firstRow, 'each row should have adjusted_p_value')
+
+	test.end()
+})
+
+tape('diffMeth.R: p-values sorted ascending', async function (test) {
+	test.timeoutAfter(15000)
+	const Rout = await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput))
+	const out = JSON.parse(Rout)
+	const pvals = out.promoter_data.map(d => d.original_p_value)
+	const sorted = [...pvals].sort((a, b) => a - b)
+	test.deepEqual(pvals, sorted, 'original p-values should be in ascending order')
+	test.end()
+})
+
+tape('diffMeth.R: adjusted p-values >= original p-values', async function (test) {
+	test.timeoutAfter(15000)
+	const Rout = await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput))
+	const out = JSON.parse(Rout)
+	for (const d of out.promoter_data) {
+		test.ok(
+			d.adjusted_p_value >= d.original_p_value - 1e-15,
+			`adjusted p-value (${d.adjusted_p_value}) should be >= original (${d.original_p_value}) for ${d.promoter_id}`
+		)
+	}
+	test.end()
+})
+
+tape('diffMeth.R: all promoters returned for complete data', async function (test) {
+	test.timeoutAfter(15000)
+	const Rout = await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput))
+	const out = JSON.parse(Rout)
+	const ids = out.promoter_data.map(d => d.promoter_id)
+
+	// All 5 promoters should be present (no NAs in random test data)
+	for (let i = 0; i < 5; i++) {
+		const id = `EH38E_TEST_${String(i).padStart(4, '0')}`
+		test.ok(ids.includes(id), `${id} should be present in results`)
+	}
+	test.equal(out.promoter_data.length, 5, 'should return all 5 promoters')
+
+	test.end()
+})
+
+tape('diffMeth.R: output values are valid numbers', async function (test) {
+	test.timeoutAfter(15000)
+	const Rout = await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput))
+	const out = JSON.parse(Rout)
+
+	for (const d of out.promoter_data) {
+		test.ok(
+			typeof d.fold_change === 'number' && isFinite(d.fold_change),
+			`${d.promoter_id} fold_change should be a finite number`
+		)
+		test.ok(
+			typeof d.original_p_value === 'number' && d.original_p_value >= 0 && d.original_p_value <= 1,
+			`${d.promoter_id} original_p_value should be between 0 and 1`
+		)
+		test.ok(
+			typeof d.adjusted_p_value === 'number' && d.adjusted_p_value >= 0 && d.adjusted_p_value <= 1,
+			`${d.promoter_id} adjusted_p_value should be between 0 and 1`
+		)
+		test.ok(d.gene_name === 'TP53', `${d.promoter_id} gene_name should be TP53`)
+	}
+
+	test.end()
+})
+
+tape('diffMeth.R: reproducible output across runs', async function (test) {
+	test.timeoutAfter(30000)
+	// Run twice and verify the output is identical (deterministic with same input)
+	const Rout1 = await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput))
+	const out1 = JSON.parse(Rout1)
+	const Rout2 = await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput))
+	const out2 = JSON.parse(Rout2)
+
+	test.equal(out1.promoter_data.length, out2.promoter_data.length, 'both runs should return same number of promoters')
+	for (let i = 0; i < out1.promoter_data.length; i++) {
+		const a = out1.promoter_data[i]
+		const b = out2.promoter_data[i]
+		test.equal(a.promoter_id, b.promoter_id, `run 1 and 2 should have same promoter_id at index ${i}`)
+		test.ok(
+			Math.abs(a.fold_change - b.fold_change) < fold_change_cutoff,
+			`${a.promoter_id} fold_change should be reproducible`
+		)
+		test.ok(
+			Math.abs(a.original_p_value - b.original_p_value) < p_value_cutoff,
+			`${a.promoter_id} original_p_value should be reproducible`
+		)
+	}
+	test.end()
+})
+
+tape('diffMeth.R: confounder support', async function (test) {
+	test.timeoutAfter(15000)
+	// 100 confounder values: alternating A/B for all 100 samples (50 case + 50 control)
+	const conf1 = Array.from({ length: 100 }, (_, i) => (i % 2 === 0 ? 'A' : 'B'))
+	const input = {
+		...diffMethBaseInput,
+		conf1,
+		conf1_mode: 'discrete'
+	}
+	const Rout = await run_R('diffMeth.R', JSON.stringify(input))
+	const out = JSON.parse(Rout)
+
+	test.ok(out.promoter_data, 'confounder run should produce promoter_data')
+	test.ok(out.promoter_data.length > 0, 'confounder run should return results')
+
+	test.end()
+})
+
+tape('diffMeth.R: error on too few samples', async function (test) {
+	test.timeoutAfter(15000)
+	const input = {
+		case: '1,2',
+		control: '2786,2800',
+		input_file: diffMethFixturePath,
+		min_samples_per_group: 3
+	}
+	try {
+		await run_R('diffMeth.R', JSON.stringify(input))
+		test.fail('should throw an error with too few samples')
+	} catch (e) {
+		test.ok(
+			String(e).includes('Number of promoters after filtering = 0'),
+			'error should mention zero promoters after filtering'
+		)
+	}
+	test.end()
+})
+
+tape('diffMeth.R: error on invalid sample name', async function (test) {
+	test.timeoutAfter(15000)
+	const input = {
+		...diffMethBaseInput,
+		case: '1,2,NONEXISTENT,4,5'
+	}
+	try {
+		await run_R('diffMeth.R', JSON.stringify(input))
+		test.fail('should throw an error with invalid sample name')
+	} catch (e) {
+		test.ok(
+			String(e).includes('NONEXISTENT') && String(e).includes('not found'),
+			'error should mention the missing sample name'
+		)
+	}
 	test.end()
 })

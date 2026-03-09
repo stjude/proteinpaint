@@ -696,6 +696,17 @@ export type MetaboliteIntensityQueryNative = {
 
 export type MetaboliteIntensityQuery = MetaboliteIntensityQueryNative
 
+export type WholeProteomeAbundanceQuery = {
+	/** document structure */
+	file: string
+	samples?: number[]
+	/** _proteins,used to dynamically built cache of protein names to speed up search */
+	_proteins?: string[]
+	get?: (param: any) => void
+	find?: (param: string[]) => void
+	bins?: { [index: string]: any }
+}
+
 /** the geneExpression query
 three possibilities
 { src: 'native', file }
@@ -855,6 +866,8 @@ export type SingleCellQuery = {
 	DEgenes?: SingleCellDEgeneGdc
 	/** supplies per-sample images. will create a new tab on the ui. one image per sample */
 	images?: SCImages
+	/** Created on mds.init() from colorMap and alias within each plot. */
+	terms?: object[]
 }
 
 type SCImages = {
@@ -994,6 +1007,10 @@ type Mds3Queries = {
 	metaboliteIntensity?: {
 		src: 'native'
 		file: string
+	}
+	proteome?: {
+		/** whole proteome abundance */
+		whole?: WholeProteomeAbundanceQuery
 	}
 	singleCell?: SingleCellQuery
 	singleSampleGenomeQuantification?: SingleSampleGenomeQuantification

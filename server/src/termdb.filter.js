@@ -83,6 +83,8 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 			f = await get_geneExpression(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == TermTypes.METABOLITE_INTENSITY) {
 			f = await get_metaboliteIntensity(item.tvs, CTEname_i, ds)
+		} else if (item.tvs.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE) {
+			f = await get_wholeProteomeAbundance(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == TermTypes.SSGSEA) {
 			f = await get_ssGSEA(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == TermTypes.DNA_METHYLATION) {
@@ -378,6 +380,12 @@ async function get_geneExpression(tvs, CTEname, ds) {
 }
 async function get_metaboliteIntensity(tvs, CTEname, ds) {
 	const q = ds.queries?.metaboliteIntensity
+	if (!q) throw 'not supported'
+	const data = await q.get({ terms: [{ $id, term: tvs.term }] })
+	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
+}
+async function get_wholeProteomeAbundance(tvs, CTEname, ds) {
+	const q = ds.queries?.proteome?.whole
 	if (!q) throw 'not supported'
 	const data = await q.get({ terms: [{ $id, term: tvs.term }] })
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
