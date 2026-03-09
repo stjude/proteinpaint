@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- DNA Meth: Removed NA imputation, added unit tests, and other miscellaneous cleanups
+
 Fixes:
 - do not immediately unset the ComponentApi.#abortController within the same update cycle
 
