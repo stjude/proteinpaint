@@ -429,9 +429,8 @@ export class TermdbVocab extends Vocab {
 	 */
 	async getGrin2Data(body, signal) {
 		const headers = await this.mayGetAuthHeaders('termdb')
-		body.genome = this.vocab.genome
-		body.dslabel = this.vocab.dslabel
-		const data = await this.dofetch3('grin2', { headers, body, signal }, this.opts.fetchOpts)
+		const payload = { ...body, genome: this.vocab.genome, dslabel: this.vocab.dslabel }
+		const data = await this.dofetch3('grin2', { headers, body: payload, signal }, this.opts.fetchOpts)
 		if (data.error) throw data.error
 		return data
 	}
