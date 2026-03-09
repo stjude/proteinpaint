@@ -23,8 +23,8 @@ async function fillMenu(self, div, tvs: TermCollectionTvs) {
 	div.style('font-size', '0.8em')
 
 	const brush = renderRangeInput(div, tvs, applyRange)
-	const details = self.opts.vocabApi.termdbConfig.termCollections?.find(c => c.name === tvs.term.collectionId)
-	if (!details) throw new Error(`No termCollection found for collectionId=${tvs.term.collectionId}`)
+	const details = self.opts.vocabApi.termdbConfig.termCollections?.find(c => c.name === tvs.term.name)
+	if (!details) throw new Error(`No termCollection found for name=${tvs.term.name}`)
 	// Percentage-range filter UI is only for numeric term collections
 	if (details.type !== 'numeric') {
 		div

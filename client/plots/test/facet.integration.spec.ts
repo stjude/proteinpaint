@@ -278,7 +278,6 @@ function getTermCollection() {
 	return {
 		type: 'TermCollectionTWCont',
 		term: {
-			collectionId: 'Fake Collection 1',
 			type: 'termCollection',
 			termlst: [
 				{
@@ -324,7 +323,7 @@ function getTermCollection() {
 					hashtmldetail: true
 				}
 			],
-			name: '(agedx,agelastvisit,a_death)',
+			name: 'Fake Collection 1',
 			isleaf: true,
 			propsByTermId: {
 				agedx: { color: '#1b9e77' },

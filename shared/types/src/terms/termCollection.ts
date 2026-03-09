@@ -7,7 +7,6 @@ export type CategoryKey = { key: string; shown: boolean }
 
 type BaseTermCollection = BaseTerm & {
 	name: string
-	collectionId?: string
 	type: 'termCollection'
 	/** list of term.ids that are available in this collection. this is used in request payload and server side */
 	termIds?: string[]
@@ -50,7 +49,6 @@ export type RawNumericTermCollection = {
 	type?: 'termCollection'
 	memberType?: 'numeric'
 	name?: string
-	collectionId?: string
 	termIds?: string[]
 	termlst?: BaseTerm[]
 	propsByTermId?: {
@@ -66,7 +64,6 @@ export type RawCategoricalTermCollection = {
 	type?: 'termCollection'
 	memberType?: 'categorical'
 	name?: string
-	collectionId?: string
 	termIds?: string[]
 	termlst?: BaseTerm[]
 	propsByTermId?: {

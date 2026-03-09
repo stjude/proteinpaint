@@ -1311,9 +1311,8 @@ tape('tvs: termCollection', async test => {
 	const vocabApi = await getVocabApi()
 	const tc = vocabApi.termdbConfig.termCollections[0]
 	const term = Object.assign({}, tc, {
-		collectionId: tc.name,
 		memberType: 'numeric',
-		name: ' (agedx,a_death,a_ndi,agelastvisit)',
+		name: tc.name,
 		type: 'termCollection',
 		numerators: ['agedx', 'a_death'],
 		termlst: [

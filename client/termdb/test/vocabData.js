@@ -108,7 +108,6 @@ export const terms = [
 	},
 	{
 		type: 'termCollection',
-		collectionId: 'Fake Collection 1',
 		name: 'age percentages',
 		termlst: [{ id: 'agedx' }, { id: 'a_death' }, { id: 'a_ndi' }, { id: 'agelastvisit' }],
 		numerators: ['agedx']
