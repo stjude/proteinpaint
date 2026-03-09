@@ -27,9 +27,7 @@ export class QualTermCollection {
 		if (term instanceof QualTermCollection) return
 		if (!opts.vocabApi?.termdbConfig?.termCollections)
 			throw `missing vocabApi.termdbConfig.termCollections argument for fill()`
-		const tc = opts.vocabApi.termdbConfig.termCollections.find(
-			(c: { name: string }) => c.name === term.name || term.name?.startsWith(c.name + ' (')
-		)
+		const tc = opts.vocabApi.termdbConfig.termCollections.find((c: { name: string }) => c.name === term.name)
 		if (tc) {
 			if (!Array.isArray(tc.termIds)) throw new Error(`missing termCollection.termIds for '${tc.name}'`)
 			if (!Array.isArray(tc.termlst)) throw new Error('missing tc.termlst[]')
