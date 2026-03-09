@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.178.0
 
 Features:
 - DNA Meth: Removed NA imputation, added unit tests, and other miscellaneous cleanups
