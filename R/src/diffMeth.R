@@ -55,20 +55,20 @@ read_json_time <- system.time({
 ###############################################################################
 # The H5 file was created by createHdf5ForDnaMeth.py --format promoter.
 # Its internal structure:
-#   /beta/values           {n_promoters, n_samples}  float32  — the M-value matrix
-#   /meta/gene_names       {n_promoters}             str      — comma-separated gene symbols per promoter
-#   /meta/samples/names    {n_samples}               str      — sample identifiers (column headers)
-#   /meta/probe/probeID    {n_promoters}             str      — ENCODE CRE IDs (e.g. EH38E2776539)
-#   /meta/start            {n_promoters}             int      — promoter start coordinate (0-based)
-#   /meta/stop             {n_promoters}             int      — promoter end coordinate (exclusive)
-#   /meta/num_cpg_sites    {n_promoters}             int      — how many CpG probes fell in this promoter
+#   /beta/values                 {n_promoters, n_samples}  float32  — the M-value matrix
+#   /meta/gene_names             {n_promoters}             str      — comma-separated gene symbols per promoter
+#   /meta/samples/names          {n_samples}               str      — sample identifiers (column headers)
+#   /meta/promoter/promoterID    {n_promoters}             str      — ENCODE CRE IDs (e.g. EH38E2776539)
+#   /meta/start                  {n_promoters}             int      — promoter start coordinate (0-based)
+#   /meta/stop                   {n_promoters}             int      — promoter end coordinate (exclusive)
+#   /meta/num_cpg_sites          {n_promoters}             int      — how many CpG probes fell in this promoter
 read_data_time <- system.time({
   h5_file <- input$input_file # Path to the HDF5 file from the JSON input
 
   # Read the three metadata vectors we need:
   all_samples <- h5read(h5_file, "meta/samples/names") # All 1,544 sample names in the H5
   gene_names <- h5read(h5_file, "meta/gene_names") # Gene annotation per promoter (e.g. "TP53" or "TP53,TP53-AS1")
-  probe_ids <- h5read(h5_file, "meta/probe/probeID") # ENCODE CRE ID per promoter (used as row identifier)
+  promoter_ids <- h5read(h5_file, "meta/promoter/promoterID") # ENCODE CRE ID per promoter (used as row identifier)
 
   # match() returns the positional index of each case/control sample within all_samples.
   # These indices are used to read only the relevant columns from the H5 matrix,
@@ -109,7 +109,7 @@ read_data_time <- system.time({
   # Label columns with sample names and rows with ENCODE CRE IDs.
   # These labels are used by limma and carried through to topTable() output.
   colnames(mvalues) <- c(cases, controls)
-  rownames(mvalues) <- probe_ids
+  rownames(mvalues) <- promoter_ids
 })
 
 ###############################################################################
@@ -150,9 +150,9 @@ filter_time <- system.time({
   keep <- keep & !is.na(row_vars) & (row_vars > 0)
 
   # Subset the matrix and metadata vectors to only the promoters that passed filtering
-  mvalues <- mvalues[keep, ]
+  mvalues <- mvalues[keep, , drop = FALSE]
   gene_names_filtered <- gene_names[keep]
-  probe_ids_filtered <- probe_ids[keep]
+  promoter_ids_filtered <- promoter_ids[keep]
 })
 
 # If nothing survived filtering, exit gracefully with an informative error
@@ -213,9 +213,9 @@ if (length(input$conf1) == 0) {
 # any promoter that still has NA values, ensuring only complete data is analyzed.
 na_rows <- rowSums(is.na(mvalues)) > 0
 if (any(na_rows)) {
-  mvalues <- mvalues[!na_rows, drop = FALSE]
+  mvalues <- mvalues[!na_rows, , drop = FALSE]
   gene_names_filtered <- gene_names_filtered[!na_rows]
-  probe_ids_filtered <- probe_ids_filtered[!na_rows]
+  promoter_ids_filtered <- promoter_ids_filtered[!na_rows]
 }
 
 if (nrow(mvalues) == 0) {
@@ -274,17 +274,17 @@ results_time <- system.time({
 # topTable() stores the ENCODE CRE IDs (our rownames) as its own rownames.
 # We use these to look up the corresponding gene names from our filtered
 # metadata vector via match().
-result_probe_ids <- rownames(top_table)
+result_promoter_ids <- rownames(top_table)
 result_gene_names <- gene_names_filtered[match(
-  result_probe_ids,
-  probe_ids_filtered
+  result_promoter_ids,
+  promoter_ids_filtered
 )]
 
 # Assemble the output data frame. Field names are kept agnostic since these are
 # promoter-level results (not gene-level like DE): the primary ID is an ENCODE
 # CRE promoter ID, not a gene ID.
 output <- data.frame(
-  promoter_id = result_probe_ids, # ENCODE CRE ID (e.g. "EH38E3756858")
+  promoter_id = result_promoter_ids, # ENCODE CRE ID (e.g. "EH38E3756858")
   gene_name = result_gene_names, # Gene symbol(s) (e.g. "TP53" or "TP53,TP53-AS1" or "")
   fold_change = top_table$logFC, # M-value difference (positive = hypermethylated in cases)
   original_p_value = top_table$P.Value, # Raw p-value from moderated t-test
