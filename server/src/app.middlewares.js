@@ -14,6 +14,7 @@ import fs from 'fs'
 import crypto from 'crypto'
 import { ReqResCache } from '@sjcrh/augen'
 import { abortCtrlBy } from './xfetch.js'
+import { mayLog } from './helpers.ts'
 
 const basepath = serverconfig.basepath || ''
 
@@ -270,7 +271,7 @@ function maySetAbortCtrl(req, res) {
 		// in case q.__abortSignal is not passed to the xfetch caller,
 		// abortCtrlByFilter0.get(req.query.filter0)?.signal may be used within xfetch()
 		// as an alternative means to get the applicable abortSignal
-		abortCtrlBy.filter0.set(req.query.filter0, abortCtrl)
+		abortCtrlBy.filter0.set(q.filter0, abortCtrl)
 	}
 
 	let isFinished = false
@@ -281,9 +282,7 @@ function maySetAbortCtrl(req, res) {
 		abortCtrlBy.filter0.delete(q.filter0)
 		abortCtrlBy.signal.delete(abortCtrl.signal)
 		if (isFinished || res.writableEnded || abortCtrl.signal.aborted) return
-		if (serverconfig.debugmode) {
-			console.log(`(!) client unexpectedly disconnected, will abort stale requests`)
-		}
+		mayLog('(!) client unexpectedly disconnected, will abort stale requests')
 		// Trigger an abort() for any code that uses req.query.signal in computations or
 		// external requests such as to GDC API. It's also okay for the abort signal to not be used by
 		// route handler, data query, or computation code, it may be ignored just like q.__protected__.

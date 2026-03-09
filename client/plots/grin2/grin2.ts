@@ -726,10 +726,14 @@ class GRIN2 extends PlotBase implements RxComponent {
 				config: updatedConfig
 			})
 		} catch (error) {
-			sayerror(this.dom.div, `Error running GRIN2: ${error instanceof Error ? error.message : error}`)
+			if (this.dom.div) {
+				sayerror(this.dom.div, `Error running GRIN2: ${error instanceof Error ? error.message : error}`)
+			} else {
+				// while request running and sandbox deleted by user, it reaches here but dom.* are undefined and should not crash
+			}
 		} finally {
-			this.dom.controls.style('pointer-events', 'auto').style('opacity', '1')
-			this.dom.runButton.property('disabled', false).text('Run GRIN2')
+			this.dom.controls?.style('pointer-events', 'auto').style('opacity', '1')
+			this.dom.runButton?.property('disabled', false).text('Run GRIN2')
 		}
 	}
 
