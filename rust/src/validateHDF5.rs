@@ -1,7 +1,7 @@
 // syntax:
 // echo '{"hdf5_file":"/path/to/my/local/file.h5"}' | ./target/release/validateHDF5
 
-use hdf5::types::VarLenAscii;
+use hdf5::types::{VarLenAscii, VarLenUnicode};
 use hdf5::{File, Result};
 use ndarray::Array1;
 use ndarray::Dim;
@@ -20,12 +20,17 @@ pub fn detect_hdf5_format(hdf5_filename: &str) -> Result<&'static str> {
     let has_data_group = file.group("data").is_ok();
     let has_sample_names = file.dataset("sample_names").is_ok();
 
+    // Check for promoter DNA methylation format (has meta/samples/names)
+    let has_meta_sample_names = file.dataset("meta/samples/names").is_ok();
+
     if has_counts && has_gene_names && has_samples {
         // eprintln!("Dense format detected");
         Ok("dense")
     } else if has_data_group && has_sample_names {
         // eprintln!("Sparse format detected");
         Ok("sparse")
+    } else if has_meta_sample_names {
+        Ok("dna_meth_promoter")
     } else {
         // eprintln!("Unknown format detected");
         Ok("unknown")
@@ -130,6 +135,27 @@ pub fn validate_hdf5_file(hdf5_filename: String) -> Result<()> {
                     "num_genes": num_genes,
                     "num_samples": num_samples
                 }
+            })
+        }
+        "dna_meth_promoter" => {
+            // For promoter DNA methylation format - only read sample names
+            let mut sample_names: Vec<String> = Vec::new();
+            if let Ok(ds_samples) = file.dataset("meta/samples/names") {
+                if let Ok(samples) = ds_samples.read_1d::<VarLenUnicode>() {
+                    for sample in samples.iter() {
+                        sample_names.push(sample.to_string());
+                    }
+                } else {
+                    eprintln!("Error reading meta/samples/names as VarLenUnicode");
+                }
+            }
+
+            serde_json::json!({
+                "status": "success",
+                "message": "HDF5 promoter DNA methylation file loaded successfully",
+                "file_path": hdf5_filename,
+                "format": "dna_meth_promoter",
+                "sampleNames": sample_names
             })
         }
         _ => {
