@@ -26,15 +26,15 @@ export const api: RouteApi = {
 function init({ genomes }) {
 	return async (req, res) => {
 		const q: BoxPlotRequest & ReqQueryAddons = req.query
-		const genome = genomes[q.genome]
-		if (!genome) throw new Error('invalid genome name')
-		const ds = genome.datasets?.[q.dslabel]
-		if (!ds) throw new Error('invalid ds')
-		const terms = [q.tw]
-		if (q.overlayTw) terms.push(q.overlayTw)
-		if (q.divideTw) terms.push(q.divideTw)
-
 		try {
+			const genome = genomes[q.genome]
+			if (!genome) throw new Error('invalid genome name')
+			const ds = genome.datasets?.[q.dslabel]
+			if (!ds) throw new Error('invalid dslabel')
+			const terms = [q.tw]
+			if (q.overlayTw) terms.push(q.overlayTw)
+			if (q.divideTw) terms.push(q.divideTw)
+
 			const data = await getData(
 				{ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__, __abortSignal: q.__abortSignal },
 				ds

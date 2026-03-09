@@ -45,16 +45,17 @@ const refColor = '#F5F5DC'
 2. from two numeric terms. determined by q.coordTWs[] */
 function init({ genomes }) {
 	return async function (req, res) {
-		const q: TermdbSampleScatterRequest & ReqQueryAddons = req.query
-		if (!q.genome || !q.dslabel) {
-			throw new Error('Genome and dataset label are required for termdb/sampleScatter request.')
-		}
-		const g = genomes[q.genome]
-		const ds = g.datasets[q.dslabel]
-		if (q.singleCellPlot)
-			//single cell plot
-			return getSingleCellScatter(req, res, ds)
 		try {
+			const q: TermdbSampleScatterRequest & ReqQueryAddons = req.query
+			if (!q.genome || !q.dslabel) {
+				throw new Error('Genome and dataset label are required for termdb/sampleScatter request.')
+			}
+			const g = genomes[q.genome]
+			const ds = g.datasets[q.dslabel]
+			if (q.singleCellPlot)
+				//single cell plot
+				return getSingleCellScatter(req, res, ds)
+
 			let refSamples: number[] = [], // reference samples, those that are not in termdb and only present in prebuilt scatter map
 				cohortSamples // cohort (or termdb) samples, those are annotated by terms
 			// coordTwData // getData() returned obj. only when sample coordinates are determined by TW. if created, this will be used for colorAndShapeSamples()
