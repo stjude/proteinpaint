@@ -10,34 +10,28 @@ import {
 } from './utils.ts'
 import type { DataTypeConfig } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
-import { mayLog } from '#src/helpers.ts'
+//import { mayLog } from '#src/helpers.ts'
 
 // ---------------------------------------------------------------------------
 //  Schema builder — generates JSON schema from dataset capabilities
 // ---------------------------------------------------------------------------
 
 function buildHierClusterSchema(ds: any, dataset_json: any): { schema: object; activeConfigs: DataTypeConfig[] } {
-	const activeConfigs: DataTypeConfig[] = []
-	const properties: Record<string, object> = {
+	const properties = {
 		simpleFilter: {
 			type: 'array',
 			items: { $ref: '#/definitions/FilterTerm' },
 			description: 'Optional simple filter terms to restrict the sample set'
-		}
-	}
-
-	const addedFields = new Set<string>()
-
-	// Only include data types valid for hierCluster (numeric types that support clustering)
-	const hierClusterTypes = new Set([TermTypes.GENE_EXPRESSION, TermTypes.METABOLITE_INTENSITY])
-
-	for (const config of DATA_TYPE_REGISTRY) {
-		if (!hierClusterTypes.has(config.termType)) continue
-		if (!config.detectAvailability(ds, dataset_json)) continue
-		activeConfigs.push(config)
-		if (!addedFields.has(config.schemaFieldName)) {
-			properties[config.schemaFieldName] = config.schemaDefinition
-			addedFields.add(config.schemaFieldName)
+		},
+		geneNames: {
+			type: 'array',
+			items: { type: 'string' },
+			description: 'Names of genes to include as gene expression rows in hierarchical clustering'
+		},
+		genesetNames: {
+			type: 'array',
+			items: { type: 'string' },
+			description: 'Names of gene sets (e.g. HALLMARK pathways) to be used for hierarchical clustering'
 		}
 	}
 
@@ -54,12 +48,22 @@ function buildHierClusterSchema(ds: any, dataset_json: any): { schema: object; a
 		}
 	}
 
-	mayLog(
-		'hierclusteragent: active data types:',
-		activeConfigs.map(c => c.termType),
-		'schema fields:',
-		Object.keys(properties)
-	)
+	// Only include data types valid for hierCluster (numeric types that support clustering)
+	const hierClusterTypes = new Set([TermTypes.GENE_EXPRESSION, TermTypes.METABOLITE_INTENSITY])
+
+	const activeConfigs: DataTypeConfig[] = []
+	for (const config of DATA_TYPE_REGISTRY) {
+		if (!hierClusterTypes.has(config.termType)) continue
+		if (!config.detectAvailability(ds, dataset_json)) continue
+		activeConfigs.push(config)
+	}
+
+	//mayLog(
+	//    'hierclusteragent: active data types:',
+	//    activeConfigs.map(c => c.termType),
+	//    'schema fields:',
+	//    Object.keys(properties)
+	//)
 
 	return { schema, activeConfigs }
 }
@@ -178,7 +182,9 @@ function validate_hiercluster_response(
 	let text = ''
 
 	if (response_type.text) text = response_type.text
-
+	if (response_type.genesetNames) {
+		text += 'GenesetNames are not currently supported for hierarahical clustering'
+	}
 	const terms: any[] = []
 
 	// Validate each active data type field
@@ -186,7 +192,6 @@ function validate_hiercluster_response(
 
 	// Track data type for the hierCluster config
 	let dataType: string | undefined
-
 	for (const config of activeConfigs) {
 		if (processedFields.has(config.schemaFieldName)) continue
 		processedFields.add(config.schemaFieldName)
