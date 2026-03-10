@@ -46,7 +46,7 @@ export function getFilteredSamples(sampleAnno: SampleAnnotation[], filter: Filte
  */
 export function sample_match_termvaluesetting(
 	row: any,
-	filter: Filter | any,
+	filter: Filter,
 	_term: any = null,
 	sample: any = null
 ): boolean {
@@ -186,7 +186,7 @@ export function sample_match_termvaluesetting(
 		}
 	}
 	// for join="and" (Set intersection)
-	if (!('in' in filter)) filter.in = true
+	if (!('in' in filter)) (filter as any).in = true // casting to any avoids tsc err despite it's typed!
 	return filter.in == (numberofmatchedterms == lst.length)
 }
 
@@ -287,7 +287,7 @@ export function getWrappedTvslst(lst: Filter['lst'] = [], join: string = '', $id
 		join,
 		lst
 	}
-	if ($id !== null) (filter as any).$id = $id
+	if ($id !== null) filter.$id = $id
 	return filter
 }
 
