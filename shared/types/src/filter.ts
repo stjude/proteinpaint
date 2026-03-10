@@ -63,7 +63,7 @@ export type ConditionTvs = BaseTvs & {
 
 export type GeneVariantValue = {
 	key?: string
-	label?: string
+	label?: string | number
 	value?: string
 	dt?: number
 	mclasslst?: string[]
@@ -79,6 +79,16 @@ export type GeneVariantTvs = BaseTvs & {
 	/** boolean for excluding gene name from pill name (included by default)
 	 * used by geneVariant edit ui to exclude unnecessary gene name */
 	excludeGeneName?: boolean
+	/** FIXME following are quick fix to avoid tsc err. TODO define snvindel tsv type */
+	genotype?: 'variant' | 'nt' | 'wt'
+	mcount?: 'any' | 'single' | 'multiple' | 'all'
+	/** FIXME following are quick fix to avoid tsc err. TODO define cnv tsv type */
+	continuousCnv?: boolean
+	cnvLossCutoff?: number
+	cnvGainCutoff?: number
+	cnvMaxLength?: number
+	cnvWT?: boolean
+	fractionOverlap?: number
 }
 
 export type TermCollectionTvs = BaseTvs & {
