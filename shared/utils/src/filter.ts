@@ -1,4 +1,4 @@
-import type { Filter, Tvs } from '#types/filter'
+import type { Filter, Tvs } from '#types'
 
 /**
  * Sample annotation structure
@@ -280,11 +280,7 @@ export function filterJoin(lst: Filter[]): Filter | undefined {
  * @param $id Optional filter ID
  * @returns Wrapped filter object
  */
-export function getWrappedTvslst(
-	lst: Filter['lst'] = [],
-	join: string = '',
-	$id: string | null = null
-): Filter {
+export function getWrappedTvslst(lst: Filter['lst'] = [], join: string = '', $id: string | null = null): Filter {
 	const filter: Filter = {
 		type: 'tvslst',
 		in: true,
