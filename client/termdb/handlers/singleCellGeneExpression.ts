@@ -18,7 +18,7 @@ export class SearchHandler {
 			genome: opts.genomeObj,
 			row: holder,
 			searchOnly: 'gene',
-			callback: () => this.selectGene(geneSearch.geneSymbol, opts.usecase.vocab.config.sample)
+			callback: () => this.selectGene(geneSearch.geneSymbol, opts.usecase.specialCase.config.sample)
 		})
 	}
 
