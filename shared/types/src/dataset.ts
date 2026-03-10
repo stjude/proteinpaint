@@ -161,6 +161,16 @@ type AiApi = {
 	}
 }
 
+type DictApi = {
+	// indicates whether dictionary is api-based
+	isApi?: boolean
+	// builds dictionary and sets
+	// standard helpers at ds.cohort.termdb.q{}
+	build?: (ds: any) => void
+	// gets dictionary term data
+	get?: (twLst: any) => void
+}
+
 type SnvIndelFormat = {
 	[index: string]: {
 		/* has value for a non-GT field indicating the variant 
@@ -1460,12 +1470,6 @@ export type Termdb = {
 	}
 	/** if true, backend is allowed to send sample names to client in charts */
 	displaySampleIds?: (clientAuthResult: any) => boolean
-	/** ds-supplied async callback to build dictionary
-	argument: dataset object
-	sets termdb.q{}
-	no return
-	*/
-	buildDictionary?: (ds: any) => void
 	converSampleIds?: boolean
 	alwaysShowBranchTerms?: boolean
 	minimumSampleAllowed4filter?: number
@@ -1567,7 +1571,8 @@ keep this setting here for reason of:
 		gdcapi?: true
 	}
 	/** Do not use a union here. */
-	dictionary?: GdcApi & AiApi
+	/** TODO: should use a union to distinguish between type defs */
+	dictionary?: GdcApi & AiApi & DictApi
 	allowCaseDetails?: AllowCaseDetails
 	/** Searches the genedb alias list to return the genecode ID */
 	getGeneAlias?: (q: any, tw: any) => { gencodeId: any }
