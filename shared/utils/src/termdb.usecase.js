@@ -114,10 +114,10 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 					uses.add('plot')
 				}
 				if (hasNumericChild(child_types)) uses.add('branch')
-			} else if (usecase?.vocab?.type == 'singleCell') {
+			} else if (usecase?.specialCase?.type == 'singleCell') {
 				/** TODO: Revisit this approach. Seems chaotic.  */
 				if (term.type && term.type.startsWith('singleCell')) {
-					if (term.plot && term.plot == usecase.vocab?.config.name) {
+					if (term.plot && term.plot == usecase.specialCase?.config.name) {
 						uses.add('plot')
 					}
 				}
