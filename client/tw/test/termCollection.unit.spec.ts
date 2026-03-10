@@ -289,3 +289,72 @@ tape('QualTermCollection.fill() - no config match and no termlst throws', async 
 	)
 	test.end()
 })
+
+function getRawCategoricalTw(termOverrides: any = {}, twOverrides: any = {}) {
+	return {
+		term: {
+			type: 'termCollection',
+			name: 'Assay Availability',
+			memberType: 'categorical',
+			...termOverrides
+		},
+		...twOverrides
+	}
+}
+
+tape('CollectionQual.fill() - initializes q when absent', async test => {
+	const { CollectionQual } = await import('../collection/CollectionQual')
+	const tw: any = getRawCategoricalTw()
+	CollectionQual.fill(tw, { vocabApi: mockVocabApi as any })
+	test.equal(tw.type, 'TermCollectionTWQual', 'tw.type set')
+	test.equal(tw.q.mode, 'discrete', 'q.mode defaults to discrete')
+	test.equal(tw.q.type, 'values', 'q.type defaults to values')
+	test.ok(Array.isArray(tw.q.lst), 'q.lst defaults to array')
+	test.end()
+})
+
+tape('CollectionQual.fill() - applies defaults to partial q', async test => {
+	const { CollectionQual } = await import('../collection/CollectionQual')
+	const tw: any = { ...getRawCategoricalTw(), q: { type: 'values' } }
+	CollectionQual.fill(tw, { vocabApi: mockVocabApi as any })
+	test.equal(tw.q.mode, 'discrete', 'missing q.mode defaults to discrete')
+	test.deepEqual(tw.q.lst, ['t1', 't2'], 'missing q.lst set from term.termIds')
+	test.end()
+})
+
+tape('CollectionQual.fill() - copies categoryKeys from term to q', async test => {
+	const { CollectionQual } = await import('../collection/CollectionQual')
+	const categoryKeys = [{ key: '1', shown: true }]
+	const tw: any = getRawCategoricalTw({ categoryKeys })
+	CollectionQual.fill(tw, { vocabApi: mockVocabApi as any })
+	test.deepEqual(tw.q.categoryKeys, categoryKeys, 'categoryKeys copied from term to q')
+	test.end()
+})
+
+tape('CollectionQual.fill() - does not overwrite existing q.categoryKeys', async test => {
+	const { CollectionQual } = await import('../collection/CollectionQual')
+	const existing = [{ key: 'X', shown: false }]
+	const tw: any = {
+		...getRawCategoricalTw({ categoryKeys: [{ key: '1', shown: true }] }),
+		q: { categoryKeys: existing }
+	}
+	CollectionQual.fill(tw, { vocabApi: mockVocabApi as any })
+	test.deepEqual(tw.q.categoryKeys, existing, 'existing q.categoryKeys preserved')
+	test.end()
+})
+
+tape('CollectionQual.getMinCopy() - returns essential fields without termlst', async test => {
+	const { CollectionQual } = await import('../collection/CollectionQual')
+	const tw: any = getRawCategoricalTw()
+	CollectionQual.fill(tw, { vocabApi: mockVocabApi as any })
+	const handler = new CollectionQual(tw, { vocabApi: mockVocabApi as any })
+	const copy = handler.getMinCopy()
+	test.equal(copy.term.type, 'termCollection', 'copy.term.type preserved')
+	test.equal(copy.term.name, 'Assay Availability', 'copy.term.name preserved')
+	test.equal(copy.term.memberType, 'categorical', 'copy.term.memberType preserved')
+	test.deepEqual(copy.term.termIds, ['t1', 't2'], 'copy.term.termIds derived from termlst')
+	test.notOk('termlst' in copy.term, 'termlst excluded from min copy')
+	test.equal(copy.q.mode, 'discrete', 'copy.q.mode preserved')
+	test.notOk('isAtomic' in copy.q, 'isAtomic stripped from q')
+	test.end()
+})

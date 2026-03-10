@@ -13,6 +13,7 @@ export class CollectionQual extends TwBase {
 		if (!tw.q) tw.q = { mode: 'discrete', type: 'values', lst: [] }
 		else {
 			if (!tw.q.mode) tw.q.mode = 'discrete'
+			if (!tw.q.type) tw.q.type = 'values'
 			if (!tw.q.lst) tw.q.lst = tw.term.termIds || []
 		}
 		if (!tw.q.categoryKeys && tw.term.categoryKeys?.length) {
