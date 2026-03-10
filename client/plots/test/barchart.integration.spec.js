@@ -1,6 +1,12 @@
 import tape from 'tape'
 import { termjson } from '../../test/testdata/termjson'
-import { getSamplelstTw, getCategoryGroupsetting, getGeneVariantTw, getGenesetMutTw } from '../../test/testdata/data.ts'
+import {
+	getSamplelstTw,
+	getCategoryGroupsetting,
+	getGeneVariantTw,
+	getGenesetMutTw,
+	getCategoricalTermcollectionTw
+} from '../../test/testdata/data.ts'
 import * as helpers from '../../test/front.helpers.js'
 import { sleep, detectLst, detectGte, detectOne } from '../../test/test.helpers.js'
 import { getFilterItemByTag } from '../../filter/filter'
@@ -160,7 +166,7 @@ tape('term1=termCollection categorical', function (test) {
 
 	runpp({
 		state: {
-			plots: [{ chartType: 'summary', childType: 'barchart', term: getAssayAvailabilityTw() }]
+			plots: [{ chartType: 'summary', childType: 'barchart', term: getCategoricalTermcollectionTw() }]
 		},
 		barchart: {
 			callbacks: {
@@ -2356,37 +2362,6 @@ const tp53dtTermFilter = {
 /*************************
  reusable helper functions
 **************************/
-
-function getAssayAvailabilityTw() {
-	const memberTerm = {
-		type: 'categorical',
-		values: { 1: { label: 'Yes', color: '#e75480' }, 2: { label: 'No', color: 'blue' } },
-		groupsetting: { disabled: true },
-		isleaf: true,
-		hashtmldetail: true
-	}
-	return {
-		type: 'TermCollectionTWQual',
-		term: {
-			type: 'termCollection',
-			memberType: 'categorical',
-			name: 'Assay Availability',
-			isleaf: true,
-			termlst: [
-				{ ...memberTerm, id: 'assayavailability_cnv', name: 'CNV availability' },
-				{ ...memberTerm, id: 'assayavailability_fusion', name: 'Fusion availability' },
-				{ ...memberTerm, id: 'assayavailability_germline', name: 'Germline mutation availability' }
-			],
-			termIds: ['assayavailability_cnv', 'assayavailability_fusion', 'assayavailability_germline'],
-			propsByTermId: {},
-			categoryKeys: [
-				{ key: '1', shown: true },
-				{ key: '2', shown: true }
-			]
-		},
-		q: { mode: 'discrete', type: 'values', lst: [] }
-	}
-}
 
 const runpp = helpers.getRunPp('mass', {
 	state: {

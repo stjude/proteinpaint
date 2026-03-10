@@ -703,3 +703,10 @@ export function getGdcDiseaseGroupsetting() {
 		}
 	}
 }
+
+export function getCategoricalTermcollectionTw() {
+	return {
+		type: 'TermCollectionTWQual',
+		term: { type: 'termCollection', name: 'Assay Availability' }
+	}
+}
