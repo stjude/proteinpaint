@@ -183,7 +183,7 @@ function validate_hiercluster_response(
 
 	if (response_type.text) text = response_type.text
 	if (response_type.genesetNames) {
-		text += 'GenesetNames are not currently supported for hierarahical clustering'
+		text += ' Geneset names are not currently supported for hierarchical clustering.'
 	}
 	const terms: any[] = []
 
