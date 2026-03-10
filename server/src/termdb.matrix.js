@@ -481,6 +481,11 @@ async function getSampleData_dictionaryTerms(q, termWrappers, onlyChildren = fal
 		// dataset uses server-side sqlite db, must use this method for dictionary terms
 		return await getSampleData_dictionaryTerms_termdb(q, termWrappers, onlyChildren)
 	}
+	if (q.ds.cohort.termdb.dictionary?.isApi) {
+		// dataset uses api-based db
+		// use ds-supplied getter to retrieve dictionary term data
+		return await getSampleData_dictionaryTerms_api(q, termWrappers)
+	}
 	/* gdc ds has no cohort.db. thus call v2s.get() to return sample annotations for its dictionary terms
 	 */
 	if (q.ds?.variant2samples?.get) {
@@ -669,6 +674,40 @@ async function mayQueryMutatedSamples(q) {
 		}
 	}
 	return sampleSet
+}
+
+// query dictionary data for api-based datasets
+// TODO: account for filter/filter0
+// TODO: use tw.$id instead of tw.term.id (will need to also change in flattenCaseByFields() in server/src/mds3.gdc.js)
+async function getSampleData_dictionaryTerms_api(q, termWrappers) {
+	const data = await q.ds.cohort.termdb.dictionary.get(termWrappers)
+	const samples = {} // data.samples[] converts into this
+	for (const s of data.samples) {
+		const sampleId = q.ds.cohort.termdb.q.sampleName2id(s.sample_id)
+		if (!sampleId && sampleId !== 0) throw new Error('cannot find sample')
+		const s2 = { sample: sampleId }
+		for (const tw of termWrappers) {
+			const id = tw.term.id || tw.term.name
+			const $id = tw.$id || id
+			if (!tw.$id) tw.$id = $id
+			const v = s[id]
+			if (!v && v !== 0) {
+				// skip undefined values
+				continue
+			} else if (Array.isArray(v)) {
+				// not handling it yet
+				throw new Error(`value '${v}' is an array`)
+			} else if (typeof v == 'object') {
+				// observed in gdc, but not handling it yet for mmrf
+				throw new Error(`value '${v}' is an object`)
+			} else {
+				// scalar value
+				s2[$id] = { key: v, value: v }
+			}
+		}
+		samples[sampleId] = s2
+	}
+	return [samples, data.byTermId || {}]
 }
 
 /*
