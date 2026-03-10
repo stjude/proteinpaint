@@ -309,7 +309,7 @@ tape('CollectionQual.fill() - initializes q when absent', async test => {
 	test.equal(tw.type, 'TermCollectionTWQual', 'tw.type set')
 	test.equal(tw.q.mode, 'discrete', 'q.mode defaults to discrete')
 	test.equal(tw.q.type, 'values', 'q.type defaults to values')
-	test.ok(Array.isArray(tw.q.lst), 'q.lst defaults to array')
+	test.deepEqual(tw.q.lst, ['t1', 't2'], 'q.lst defaults to termIds from config')
 	test.end()
 })
 

@@ -10,7 +10,7 @@ export class CollectionQual extends TwBase {
 		QualTermCollection.fill(tw.term, opts)
 		tw.type = 'TermCollectionTWQual'
 
-		if (!tw.q) tw.q = { mode: 'discrete', type: 'values', lst: [] }
+		if (!tw.q) tw.q = { mode: 'discrete', type: 'values', lst: tw.term.termIds || [] }
 		else {
 			if (!tw.q.mode) tw.q.mode = 'discrete'
 			if (!tw.q.type) tw.q.type = 'values'
