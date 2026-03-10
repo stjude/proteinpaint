@@ -253,3 +253,17 @@ export function getWrappedTvslst(lst = [], join = '', $id = null) {
 	if ($id !== null && filter.$id !== undefined) filter.$id = $id
 	return filter
 }
+
+export function validateTermCollectionTvs(lst1, lst2) {
+	// lst1/lst2: numerator and denominator. both are lists of term ids
+	if (!Array.isArray(lst1)) throw new Error('numerator not array')
+	if (!Array.isArray(lst2)) throw new Error('denominator not array')
+	if (lst1.length == 0) throw new Error('numerator empty')
+	if (lst2.length == 0) throw new Error('denominator empty')
+	if (lst1.length > lst2.length) throw new Error('numerator longer than denominator')
+	for (const s of lst1) {
+		if (typeof s != 'string') throw new Error('one of numerator not string')
+		if (!s) throw new Error('empty string in numerator')
+		if (!lst2.includes(s)) throw new Error('one of numerator not in denominator')
+	}
+}

@@ -7,6 +7,7 @@ import {
 	getSampleType,
 	dtTermTypes
 } from '#shared/terms.js'
+import { validateTermCollectionTvs } from '#shared/filter.js'
 import { getSnpData, getData } from './termdb.matrix.js'
 import { filterByItem } from './mds3.init.js'
 
@@ -278,11 +279,14 @@ async function get_geneVariant(tvs, CTEname, ds, onlyChildren) {
 }
 
 async function get_termCollection(tvs, CTEname, ds, onlyChildren) {
-	// Percentage-based filter is only for numeric term collections
 	if (tvs.term.memberType === 'categorical') {
 		throw new Error('termcollection memberType=categorical not supported yet')
 	}
 	if (tvs.term.memberType !== 'numeric') throw new Error('termcollection memberType not categorical/numeric')
+	validateTermCollectionTvs(
+		tvs.term.numerators,
+		tvs.term.termlst?.map(i => i.id)
+	)
 	const tw = { $id, term: tvs.term, q: {} }
 	const data = await getData(
 		{

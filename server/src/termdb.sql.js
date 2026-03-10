@@ -482,11 +482,15 @@ export async function get_term_cte(q, values, index, filter, termWrapper = null)
 	} else if (term.type == 'multivalue') {
 		CTE = await multivalueCTE.getCTE(tablename, termWrapper || { term, q: termq }, values)
 	} else if (term.type == 'termCollection') {
-		if (term.memberType == 'categorical')
+		if (term.memberType == 'categorical') {
 			CTE = await termCollectionCategorical.getCTE(tablename, termWrapper || { term, q: termq }, values)
-		else CTE = await termCollectionNumeric.getCTE(tablename, termWrapper || { term, q: termq }, values)
+		} else if (term.memberType == 'numeric') {
+			CTE = await termCollectionNumeric.getCTE(tablename, termWrapper || { term, q: termq }, values)
+		} else {
+			throw new Error('invalid termCollection memberType')
+		}
 	} else {
-		throw 'unknown term type [get_term_cte() server/src/termdb.sql.js]'
+		throw new Error('unknown term type [get_term_cte() server/src/termdb.sql.js]')
 	}
 	return CTE
 }
