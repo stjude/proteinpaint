@@ -60,7 +60,6 @@ function init({ genomes }) {
 			const ai_output_json = await run_chat_pipeline(
 				q.prompt,
 				llm,
-				serverconfig.aiRoute,
 				dataset_json,
 				testing,
 				dataset_db,
@@ -79,7 +78,6 @@ function init({ genomes }) {
 export async function run_chat_pipeline(
 	user_prompt: string,
 	llm: LlmConfig,
-	aiRoute: string,
 	dataset_json: any,
 	testing: boolean,
 	dataset_db: string,
@@ -107,7 +105,7 @@ export async function run_chat_pipeline(
 	} else if (class_response.type == 'plot') {
 		const classResult = await classifyPlotType(user_prompt, llm)
 		const dataset_db_output = await parse_dataset_db(dataset_db)
-		const genes_list = ds?.queries?.geneExpression ? await parse_geneset_db(genedb) : []
+		const genes_list = await parse_geneset_db(genedb) // gene_list should always be populated irrespective of whether the dataset has gene expression data, since even if its missing gene expression data, the gene list can still be useful for validating gene mentions in the user query and providing additional context to the LLM. If the dataset does not have gene expression data, the gene list can still be used for telling the user that gene expression is not supported.
 		if (classResult == 'summary') {
 			const time1 = new Date().valueOf()
 			ai_output_json = await extract_summary_terms(

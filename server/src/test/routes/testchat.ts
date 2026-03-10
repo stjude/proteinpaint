@@ -59,7 +59,6 @@ export async function test_chatbot_by_dataset(ds: any): Promise<number> {
 		const test_result = await run_chat_pipeline(
 			test_data.question,
 			llm,
-			serverconfig.aiRoute,
 			dataset_json,
 			testing, // This is not needed anymore, need to be deprecated
 			serverconfig.tpmasterdir + '/' + dataset_json.db,

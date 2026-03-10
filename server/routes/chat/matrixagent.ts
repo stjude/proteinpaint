@@ -5,19 +5,50 @@ import {
 	formatTrainingExamples,
 	extractGenesFromPrompt,
 	extractGenesetsFromPrompt,
-	DATA_TYPE_REGISTRY,
 	buildCommonPrompt
 } from './utils.ts'
 import type { DataTypeConfig } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
-import { mayLog } from '#src/helpers.ts'
+//import { mayLog } from '#src/helpers.ts'
 
 // ---------------------------------------------------------------------------
 //  Schema builder — generates JSON schema from dataset capabilities
 // ---------------------------------------------------------------------------
 
-function buildMatrixSchema(ds: any, dataset_json: any): { schema: object; activeConfigs: DataTypeConfig[] } {
-	const activeConfigs: DataTypeConfig[] = []
+function buildMatrixSchema(): { schema: object; activeConfigs: DataTypeConfig[] } {
+	const activeConfigs: DataTypeConfig[] = [
+		// This is the full list of potential data types for matrix plots. Each config includes logic for detecting availability, JSON schema field definition, and building term wrappers from LLM output. The activeConfigs array is filtered from this list based on dataset capabilities
+		{
+			termType: TermTypes.GENE_EXPRESSION,
+			detectAvailability: (ds: any) => !!ds?.queries?.geneExpression,
+			schemaFieldName: 'geneNames',
+			schemaDefinition: {
+				type: 'array',
+				items: { type: 'string' },
+				description: 'Names of genes to include as gene expression rows in the matrix'
+			},
+			identifierMode: 'gene',
+			buildTermWrapper: (gene: string) => ({ term: { gene: gene.toUpperCase(), type: 'geneExpression' } }),
+			promptFieldDescription:
+				'The "geneNames" field should ONLY contain gene names. These will be shown as gene expression rows.'
+		},
+		{
+			termType: TermTypes.SSGSEA,
+			detectAvailability: (ds: any) => !!ds?.queries?.ssGSEA,
+			schemaFieldName: 'genesetNames',
+			schemaDefinition: {
+				type: 'array',
+				items: { type: 'string' },
+				description:
+					'Names of gene sets (e.g. HALLMARK pathways) to include as ssGSEA enrichment score rows in the matrix'
+			},
+			identifierMode: 'name',
+			buildTermWrapper: (name: string) => ({ term: { id: name, name, type: 'ssGSEA' } }),
+			promptFieldDescription:
+				'The "genesetNames" field should contain gene set pathway names (e.g. HALLMARK_P53_PATHWAY).',
+			dataTypeDescription: 'Gene set pathway names (e.g. HALLMARK_APOPTOSIS, HALLMARK_ADIPOGENESIS)'
+		}
+	]
 	const properties: Record<string, object> = {
 		terms: {
 			type: 'array',
@@ -28,18 +59,6 @@ function buildMatrixSchema(ds: any, dataset_json: any): { schema: object; active
 			type: 'array',
 			items: { $ref: '#/definitions/FilterTerm' },
 			description: 'Optional simple filter terms to restrict the sample set'
-		}
-	}
-
-	const addedFields = new Set<string>()
-
-	for (const config of DATA_TYPE_REGISTRY) {
-		if (!config.detectAvailability(ds, dataset_json)) continue
-		activeConfigs.push(config)
-		// Deduplicate shared schema fields (e.g. geneExpression + geneVariant both use 'geneNames')
-		if (!addedFields.has(config.schemaFieldName)) {
-			properties[config.schemaFieldName] = config.schemaDefinition
-			addedFields.add(config.schemaFieldName)
 		}
 	}
 
@@ -55,13 +74,6 @@ function buildMatrixSchema(ds: any, dataset_json: any): { schema: object; active
 			...FILTER_TERM_DEFINITIONS
 		}
 	}
-
-	mayLog(
-		'matrixagent: active data types:',
-		activeConfigs.map(c => c.termType),
-		'schema fields:',
-		Object.keys(properties)
-	)
 
 	return { schema, activeConfigs }
 }
@@ -133,7 +145,7 @@ export async function extract_matrix_search_terms_from_query(
 	testing: boolean,
 	genesetNames: string[] = []
 ) {
-	const { schema, activeConfigs } = buildMatrixSchema(ds, dataset_json)
+	const { schema, activeConfigs } = buildMatrixSchema()
 	const common_genes = extractGenesFromPrompt(prompt, genes_list)
 	const matchedGenesets = extractGenesetsFromPrompt(prompt, genesetNames)
 
@@ -213,7 +225,12 @@ function validate_matrix_response(response: string, common_genes: string[], ds: 
 				if (gene_hits.length === 0) {
 					text += 'invalid gene name:' + identifier + ' '
 				} else {
-					twLst.push(preferredConfig.buildTermWrapper(identifier))
+					if (ds?.queries?.geneExpression) {
+						twLst.push(preferredConfig.buildTermWrapper(identifier))
+					} else {
+						if (!text.includes('gene expression data is not available for this dataset'))
+							text += 'gene expression data is not available for this dataset'
+					}
 				}
 			} else {
 				// Name-based: pass through (backend handles validation)
