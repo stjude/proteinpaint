@@ -49,7 +49,7 @@ function buildHierClusterSchema(ds: any, dataset_json: any): { schema: object; a
 	}
 
 	// Only include data types valid for hierCluster (numeric types that support clustering)
-	const hierClusterTypes = new Set([TermTypes.GENE_EXPRESSION, TermTypes.METABOLITE_INTENSITY])
+	const hierClusterTypes = new Set([TermTypes.GENE_EXPRESSION]) // Will add TermTypes.METABOLITE_INTENSITY later
 
 	const activeConfigs: DataTypeConfig[] = []
 	for (const config of DATA_TYPE_REGISTRY) {
@@ -86,7 +86,7 @@ function buildHierClusterSystemPrompt(
 ): string {
 	let s =
 		'I am an assistant that extracts terms and data identifiers from the user query to create a hierarchical clustering plot. ' +
-		'A hierarchical clustering plot clusters samples and features (genes, metabolites, etc.) using hierarchical clustering and displays the result as a heatmap with dendrograms. ' +
+		'A hierarchical clustering plot clusters samples and features such as genes using hierarchical clustering and displays the result as a heatmap with dendrograms. ' + // Need to add metabolite intensity and other data types later
 		'The final output must be in the following JSON format with NO extra comments. The JSON schema is as follows: ' +
 		JSON.stringify(schema)
 
