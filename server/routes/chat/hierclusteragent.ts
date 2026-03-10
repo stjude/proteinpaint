@@ -114,7 +114,6 @@ function buildHierClusterSystemPrompt(
 		prompt,
 		matchedGenesets
 	})
-
 	return s
 }
 
@@ -132,38 +131,43 @@ export async function extract_hiercluster_terms_from_query(
 	testing: boolean,
 	genesetNames: string[] = []
 ) {
-	const { schema, activeConfigs } = buildHierClusterSchema(ds, dataset_json)
-	const common_genes = extractGenesFromPrompt(prompt, genes_list)
-	const matchedGenesets = extractGenesetsFromPrompt(prompt, genesetNames)
+	if (ds?.queries?.geneExpression) {
+		// Will later optionally allow hierarchical clustering if metabolite intensity or other numeric data types are present, but for now require gene expression since that's the most common use case and ensures availability of gene list for validation and prompt context
+		const { schema, activeConfigs } = buildHierClusterSchema(ds, dataset_json)
+		const common_genes = extractGenesFromPrompt(prompt, genes_list)
+		const matchedGenesets = extractGenesetsFromPrompt(prompt, genesetNames)
 
-	// Parse out training data from the dataset JSON
-	const hiercluster_ds = dataset_json.charts.find((chart: any) => chart.type == 'hierCluster')
-	if (!hiercluster_ds) throw 'hierCluster information is not present in the dataset file.'
-	if (hiercluster_ds.TrainingData.length == 0) throw 'No training data is provided for the hierCluster agent.'
+		// Parse out training data from the dataset JSON
+		const hiercluster_ds = dataset_json.charts.find((chart: any) => chart.type == 'hierCluster')
+		if (!hiercluster_ds) throw 'hierCluster information is not present in the dataset file.'
+		if (hiercluster_ds.TrainingData.length == 0) throw 'No training data is provided for the hierCluster agent.'
 
-	const training_data = formatTrainingExamples(hiercluster_ds.TrainingData)
+		const training_data = formatTrainingExamples(hiercluster_ds.TrainingData)
 
-	const system_prompt = buildHierClusterSystemPrompt(
-		schema,
-		activeConfigs,
-		dataset_json,
-		dataset_db_output,
-		hiercluster_ds,
-		training_data,
-		common_genes,
-		ds,
-		prompt,
-		matchedGenesets
-	)
+		const system_prompt = buildHierClusterSystemPrompt(
+			schema,
+			activeConfigs,
+			dataset_json,
+			dataset_db_output,
+			hiercluster_ds,
+			training_data,
+			common_genes,
+			ds,
+			prompt,
+			matchedGenesets
+		)
 
-	const response: string = await route_to_appropriate_llm_provider(system_prompt, llm)
-	if (testing) {
-		const test_response = JSON.parse(response)
-		test_response.plot = 'hierCluster'
-		test_response.type = 'plot'
-		return test_response
+		const response: string = await route_to_appropriate_llm_provider(system_prompt, llm)
+		if (testing) {
+			const test_response = JSON.parse(response)
+			test_response.plot = 'hierCluster'
+			test_response.type = 'plot'
+			return test_response
+		} else {
+			return validate_hiercluster_response(response, common_genes, ds, activeConfigs)
+		}
 	} else {
-		return validate_hiercluster_response(response, common_genes, ds, activeConfigs)
+		return { type: 'text', text: 'Gene expression hierarchical clustering is not supported for this dataset' }
 	}
 }
 
