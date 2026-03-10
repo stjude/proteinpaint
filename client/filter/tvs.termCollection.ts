@@ -1,6 +1,7 @@
 import { renderTable, NumericRangeInput } from '#dom'
 import { format_val_text } from './tvs.numeric.js'
 import type { TermCollectionTvs } from '#types'
+import { validateTermCollectionTvs } from '#shared/filter.js'
 
 export const handler = {
 	type: 'termCollection',
@@ -28,6 +29,7 @@ async function fillMenu(self, div, tvs: TermCollectionTvs) {
 
 	async function applyRange(tvs) {
 		const tvsProps = getTableData()
+		if (!tvsProps) return
 		tvs.term.termlst = tvsProps.termlst
 		tvs.term.numerators = tvsProps.numerators // tvs.term.termlst.filter(term => term.checked).map(t => t.id)
 		self.dom.tip.hide()
@@ -105,17 +107,24 @@ export async function addFilterTable(opts): Promise<any> {
 
 	return () => {
 		const trs = tableDiv.select('table').select('tbody').node().querySelectorAll('tr')
-		return {
-			numerators: opts.details.termlst
-				.filter((term, i) => {
-					const checked = trs[i].querySelectorAll('td')[2].querySelector('input')?.checked
-					return checked === true
-				})
-				.map(t => t.id),
-			termlst: opts.details.termlst.filter((term, i) => {
-				const checked = trs[i].querySelectorAll('td')[3].querySelector('input')?.checked
+		const numerators = opts.details.termlst
+			.filter((term, i) => {
+				const checked = trs[i].querySelectorAll('td')[2].querySelector('input')?.checked
 				return checked === true
 			})
+			.map(t => t.id)
+		const termlst = opts.details.termlst.filter((term, i) => {
+			const checked = trs[i].querySelectorAll('td')[3].querySelector('input')?.checked
+			return checked === true
+		})
+		try {
+			validateTermCollectionTvs(
+				numerators,
+				termlst.map(i => i.id)
+			)
+			return { numerators, termlst }
+		} catch (e) {
+			window.alert(e.message)
 		}
 	}
 }
