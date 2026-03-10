@@ -18,19 +18,26 @@ Filter
 export type BaseTvs = {
 	join?: string //and, or
 	isnot?: boolean
+	// Additional properties used in runtime
+	bar_by_grade?: boolean
+	bar_by_children?: boolean
+	value_by_max_grade?: boolean
+	value_by_most_recent?: boolean
+	value_by_computable_grade?: boolean
 }
 
 export type CategoricalTvs = BaseTvs & {
 	term: CategoricalTerm
 	groupset_label?: string
 	values: BaseValue[]
+	valueset?: Set<any> // Runtime property set by setDatasetAnnotations
 }
 
 export type NumericTvs = BaseTvs & {
 	term: NumericTerm
-	ranges: NumericBin[]
+	ranges: (NumericBin | { value: number; label?: string; name?: string })[]
 	// TODO: define uncomputable values object
-	values: {
+	values?: {
 		key: string
 		value: number
 		uncomputable: true
@@ -51,11 +58,22 @@ export type ConditionTvs = BaseTvs & {
 	value_by_most_recent?: boolean
 	value_by_computable_grade?: boolean
 	grade_and_child?: GradeAndChildEntry[]
+	values: { key: string | number; label?: string; [key: string]: any }[]
 }
 
-type GeneVariantTvs = BaseTvs & {
+export type GeneVariantValue = {
+	key?: string
+	label?: string
+	value?: string
+	dt?: number
+	mclasslst?: string[]
+	mclassExcludeLst?: string[]
+	origin?: string
+}
+
+export type GeneVariantTvs = BaseTvs & {
 	term: DtTerm
-	values: { key: string; label: string; value: string }[]
+	values: GeneVariantValue[]
 	/** boolean for including not tested classes (excluded by default) */
 	includeNotTested?: boolean
 	/** boolean for excluding gene name from pill name (included by default)
@@ -78,4 +96,5 @@ export type Filter = {
 	join: string
 	tag?: string // client-side only
 	lst: ({ type: 'tvs'; tvs: Tvs } | Filter)[]
+	$id?: string // Optional ID property
 }

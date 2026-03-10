@@ -23,6 +23,9 @@ getWrappedTvslst()
 validateTermCollectionTvs()
 */
 
+// Helper to create mock filters for tests - bypasses strict type checking
+const mockFilter = (filter: any): Filter => filter as Filter
+
 tape('\n', function (test) {
 	test.comment('-***- filter specs -***-')
 	test.end()
@@ -35,7 +38,7 @@ tape('getFilteredSamples() - basic categorical filter', t => {
 		{ sample: 'sample3', s: { sex: 'male' } }
 	]
 
-	const filter: Filter = {
+	const filter = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: '',
@@ -48,7 +51,7 @@ tape('getFilteredSamples() - basic categorical filter', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = getFilteredSamples(sampleAnno, filter)
 	t.equal(result.size, 2, 'should return 2 samples matching male')
@@ -64,7 +67,7 @@ tape('getFilteredSamples() - with data property', t => {
 		{ sample: 'sample2', data: { diagnosis: 'AML' } }
 	]
 
-	const filter: Filter = {
+	const filter = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: '',
@@ -77,7 +80,7 @@ tape('getFilteredSamples() - with data property', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = getFilteredSamples(sampleAnno, filter)
 	t.equal(result.size, 1, 'should return 1 sample')
@@ -92,7 +95,7 @@ tape('getFilteredSamples() - handles duplicate samples', t => {
 		{ sample: 'sample2', s: { sex: 'female' } }
 	]
 
-	const filter: Filter = {
+	const filter = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: '',
@@ -105,7 +108,7 @@ tape('getFilteredSamples() - handles duplicate samples', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = getFilteredSamples(sampleAnno, filter)
 	t.equal(result.size, 1, 'should return only unique samples')
@@ -115,7 +118,7 @@ tape('getFilteredSamples() - handles duplicate samples', t => {
 
 tape('sample_match_termvaluesetting() - categorical match', t => {
 	const row = { sex: 'male', diagnosis: 'ALL' }
-	const filter: Filter = {
+	const filter = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: '',
@@ -129,7 +132,7 @@ tape('sample_match_termvaluesetting() - categorical match', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = sample_match_termvaluesetting(row, filter)
 	t.ok(result, 'should match male value')
@@ -138,7 +141,7 @@ tape('sample_match_termvaluesetting() - categorical match', t => {
 
 tape('sample_match_termvaluesetting() - categorical no match', t => {
 	const row = { sex: 'female' }
-	const filter: Filter = {
+	const filter = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: '',
@@ -152,7 +155,7 @@ tape('sample_match_termvaluesetting() - categorical no match', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = sample_match_termvaluesetting(row, filter)
 	t.notOk(result, 'should not match female value')
@@ -161,7 +164,7 @@ tape('sample_match_termvaluesetting() - categorical no match', t => {
 
 tape('sample_match_termvaluesetting() - categorical with isnot', t => {
 	const row = { sex: 'female' }
-	const filter: Filter = {
+	const filter = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: '',
@@ -176,7 +179,7 @@ tape('sample_match_termvaluesetting() - categorical with isnot', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = sample_match_termvaluesetting(row, filter)
 	t.ok(result, 'should match with isnot flag (female is not male)')
@@ -185,7 +188,7 @@ tape('sample_match_termvaluesetting() - categorical with isnot', t => {
 
 tape('sample_match_termvaluesetting() - integer range inclusive', t => {
 	const row = { age: 25 }
-	const filter: Filter = {
+	const filter = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: '',
@@ -205,7 +208,7 @@ tape('sample_match_termvaluesetting() - integer range inclusive', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = sample_match_termvaluesetting(row, filter)
 	t.ok(result, 'should match age 25 in range [20, 30]')
@@ -214,7 +217,7 @@ tape('sample_match_termvaluesetting() - integer range inclusive', t => {
 
 tape('sample_match_termvaluesetting() - integer range exclusive', t => {
 	const row = { age: 20 }
-	const filter: Filter = {
+	const filter = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: '',
@@ -234,7 +237,7 @@ tape('sample_match_termvaluesetting() - integer range exclusive', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = sample_match_termvaluesetting(row, filter)
 	t.notOk(result, 'should not match age 20 with exclusive start (20, 30)')
@@ -243,7 +246,7 @@ tape('sample_match_termvaluesetting() - integer range exclusive', t => {
 
 tape('sample_match_termvaluesetting() - float range', t => {
 	const row = { wbc: 5.5 }
-	const filter: Filter = {
+	const filter = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: '',
@@ -263,7 +266,7 @@ tape('sample_match_termvaluesetting() - float range', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = sample_match_termvaluesetting(row, filter)
 	t.ok(result, 'should match wbc 5.5 in range [5.0, 10.0]')
@@ -272,7 +275,7 @@ tape('sample_match_termvaluesetting() - float range', t => {
 
 tape('sample_match_termvaluesetting() - integer with exact value', t => {
 	const row = { age: 25 }
-	const filter: Filter = {
+	const filter = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: '',
@@ -285,7 +288,7 @@ tape('sample_match_termvaluesetting() - integer with exact value', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = sample_match_termvaluesetting(row, filter)
 	t.ok(result, 'should match exact age value 25')
@@ -294,7 +297,7 @@ tape('sample_match_termvaluesetting() - integer with exact value', t => {
 
 tape('sample_match_termvaluesetting() - integer unbounded start', t => {
 	const row = { age: 10 }
-	const filter: Filter = {
+	const filter = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: '',
@@ -313,7 +316,7 @@ tape('sample_match_termvaluesetting() - integer unbounded start', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = sample_match_termvaluesetting(row, filter)
 	t.ok(result, 'should match age 10 with unbounded start (-, 30]')
@@ -322,7 +325,7 @@ tape('sample_match_termvaluesetting() - integer unbounded start', t => {
 
 tape('sample_match_termvaluesetting() - integer unbounded stop', t => {
 	const row = { age: 100 }
-	const filter: Filter = {
+	const filter = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: '',
@@ -341,7 +344,7 @@ tape('sample_match_termvaluesetting() - integer unbounded stop', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = sample_match_termvaluesetting(row, filter)
 	t.ok(result, 'should match age 100 with unbounded stop [20, -)')
@@ -355,7 +358,7 @@ tape('sample_match_termvaluesetting() - condition term', t => {
 		}
 	}
 
-	const filter: Filter = {
+	const filter = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: '',
@@ -370,7 +373,7 @@ tape('sample_match_termvaluesetting() - condition term', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = sample_match_termvaluesetting(row, filter)
 	t.ok(result, 'should match condition with maxGrade=3')
@@ -387,7 +390,7 @@ tape('sample_match_termvaluesetting() - geneVariant match', t => {
 		}
 	}
 
-	const filter: Filter = {
+	const filter = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: '',
@@ -406,7 +409,7 @@ tape('sample_match_termvaluesetting() - geneVariant match', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = sample_match_termvaluesetting(row, filter)
 	t.ok(result, 'should match geneVariant with dt=1, class=WT, origin=germline')
@@ -415,7 +418,7 @@ tape('sample_match_termvaluesetting() - geneVariant match', t => {
 
 tape('sample_match_termvaluesetting() - AND join', t => {
 	const row = { sex: 'male', age: 25 }
-	const filter: Filter = {
+	const filter = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: 'and',
@@ -443,7 +446,7 @@ tape('sample_match_termvaluesetting() - AND join', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = sample_match_termvaluesetting(row, filter)
 	t.ok(result, 'should match both sex=male AND age in [20,30]')
@@ -452,7 +455,7 @@ tape('sample_match_termvaluesetting() - AND join', t => {
 
 tape('sample_match_termvaluesetting() - AND join with one mismatch', t => {
 	const row = { sex: 'male', age: 35 }
-	const filter: Filter = {
+	const filter = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: 'and',
@@ -480,7 +483,7 @@ tape('sample_match_termvaluesetting() - AND join with one mismatch', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = sample_match_termvaluesetting(row, filter)
 	t.notOk(result, 'should not match when age is outside range (AND fails)')
@@ -489,7 +492,7 @@ tape('sample_match_termvaluesetting() - AND join with one mismatch', t => {
 
 tape('sample_match_termvaluesetting() - OR join', t => {
 	const row = { sex: 'male', age: 35 }
-	const filter: Filter = {
+	const filter = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: 'or',
@@ -517,7 +520,7 @@ tape('sample_match_termvaluesetting() - OR join', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = sample_match_termvaluesetting(row, filter)
 	t.ok(result, 'should match when sex=male OR age in range (OR succeeds with one match)')
@@ -526,7 +529,7 @@ tape('sample_match_termvaluesetting() - OR join', t => {
 
 tape('sample_match_termvaluesetting() - nested tvslst', t => {
 	const row = { sex: 'male', age: 25, diagnosis: 'ALL' }
-	const filter: Filter = {
+	const filter = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: 'and',
@@ -563,7 +566,7 @@ tape('sample_match_termvaluesetting() - nested tvslst', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = sample_match_termvaluesetting(row, filter)
 	t.ok(result, 'should match nested tvslst: (male OR female) AND diagnosis=ALL')
@@ -571,7 +574,7 @@ tape('sample_match_termvaluesetting() - nested tvslst', t => {
 })
 
 tape('setDatasetAnnotations() - categorical', t => {
-	const filter: Filter = {
+	const filter = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: '',
@@ -587,7 +590,7 @@ tape('setDatasetAnnotations() - categorical', t => {
 				}
 			}
 		]
-	}
+	})
 
 	setDatasetAnnotations(filter)
 	const tvs = (filter.lst[0] as any).tvs
@@ -621,7 +624,7 @@ tape('setDatasetAnnotations() - with dataset', t => {
 })
 
 tape('setDatasetAnnotations() - nested tvslst', t => {
-	const filter: Filter = {
+	const filter = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: 'and',
@@ -648,7 +651,7 @@ tape('setDatasetAnnotations() - nested tvslst', t => {
 				}
 			}
 		]
-	}
+	})
 
 	setDatasetAnnotations(filter)
 	const nestedTvs = ((filter.lst[0] as Filter).lst[0] as any).tvs
@@ -660,7 +663,7 @@ tape('setDatasetAnnotations() - nested tvslst', t => {
 })
 
 tape('filterJoin() - single filter', t => {
-	const filter1: Filter = {
+	const filter1 = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: '',
@@ -673,7 +676,7 @@ tape('filterJoin() - single filter', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = filterJoin([filter1])
 	t.deepEqual(result, filter1, 'should return same filter when only one provided')
@@ -681,7 +684,7 @@ tape('filterJoin() - single filter', t => {
 })
 
 tape('filterJoin() - join two filters with empty join', t => {
-	const filter1: Filter = {
+	const filter1 = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: '',
@@ -694,9 +697,9 @@ tape('filterJoin() - join two filters with empty join', t => {
 				}
 			}
 		]
-	}
+	})
 
-	const filter2: Filter = {
+	const filter2 = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: '',
@@ -709,7 +712,7 @@ tape('filterJoin() - join two filters with empty join', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = filterJoin([filter1, filter2])
 	t.equal(result?.join, 'and', 'result should have AND join')
@@ -718,7 +721,7 @@ tape('filterJoin() - join two filters with empty join', t => {
 })
 
 tape('filterJoin() - join AND and OR filters', t => {
-	const filter1: Filter = {
+	const filter1 = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: 'and',
@@ -738,9 +741,9 @@ tape('filterJoin() - join AND and OR filters', t => {
 				}
 			}
 		]
-	}
+	})
 
-	const filter2: Filter = {
+	const filter2 = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: 'or',
@@ -760,7 +763,7 @@ tape('filterJoin() - join AND and OR filters', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = filterJoin([filter1, filter2])
 	t.equal(result?.join, 'and', 'result should have AND join')
@@ -770,7 +773,7 @@ tape('filterJoin() - join AND and OR filters', t => {
 })
 
 tape('filterJoin() - wrap OR filter with AND', t => {
-	const filter1: Filter = {
+	const filter1 = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: 'or',
@@ -790,9 +793,9 @@ tape('filterJoin() - wrap OR filter with AND', t => {
 				}
 			}
 		]
-	}
+	})
 
-	const filter2: Filter = {
+	const filter2 = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: '',
@@ -805,7 +808,7 @@ tape('filterJoin() - wrap OR filter with AND', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = filterJoin([filter1, filter2])
 	t.equal(result?.join, 'and', 'result should have AND join')
@@ -821,14 +824,14 @@ tape('filterJoin() - empty list', t => {
 })
 
 tape('filterJoin() - single tvs result', t => {
-	const filter1: Filter = {
+	const filter1 = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: '',
 		lst: []
-	}
+	})
 
-	const filter2: Filter = {
+	const filter2 = mockFilter({
 		type: 'tvslst',
 		in: true,
 		join: '',
@@ -841,7 +844,7 @@ tape('filterJoin() - single tvs result', t => {
 				}
 			}
 		]
-	}
+	})
 
 	const result = filterJoin([filter1, filter2])
 	t.equal(result?.join, '', 'should set join to empty string for single tvs')
@@ -860,7 +863,7 @@ tape('getWrappedTvslst() - basic', t => {
 })
 
 tape('getWrappedTvslst() - with parameters', t => {
-	const lst: Filter['lst'] = [
+	const lst: any = [
 		{
 			type: 'tvs',
 			tvs: {
