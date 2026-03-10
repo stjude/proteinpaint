@@ -1,7 +1,7 @@
 import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
 import { get_ds_tdb } from '#src/termdb.js'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypeGroups, TermTypes } from '#shared/terms.js'
 import type { Mds3WithCohort } from '#types'
 
 export const api: any = {
@@ -327,7 +327,8 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		if (q.singleCell?.terms?.length) {
 			/** This vocab needs to be accessible to other plots, filter, etc.
 			 * Add directly to the termdbConfig obj for broader use. */
-			c.scctTerms = q.singleCell.terms
+			if (!c.termType2terms) c.termType2terms = {}
+			c.termType2terms[TermTypeGroups.SINGLECELL_CELLTYPE] = q.singleCell.terms
 		}
 	}
 	if (q.images) {

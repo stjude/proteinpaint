@@ -1,5 +1,6 @@
 import type { AppApi } from '#rx'
 import { appInit } from '#termdb/app'
+import { TermTypeGroups } from '#shared/terms.js'
 
 export class SearchHandler {
 	callback?: (f?: any) => void
@@ -9,8 +10,9 @@ export class SearchHandler {
 		this.validateOpts(opts)
 		this.callback = opts.callback
 		this.app = opts.app
-		if (!this.app?.vocabApi.termdbConfig.scctTerms) {
-			throw new Error('scctTerms:[] is required in termdbConfig for singleCellCellType')
+		const scctTerms = opts.app.vocabApi.termdbConfig?.termType2terms?.[TermTypeGroups.SINGLECELL_CELLTYPE]
+		if (!scctTerms) {
+			throw new Error('termType2terms.singleCellCellType:[] is required in termdbConfig for singleCellCellType handler')
 		}
 		const scDsLabel = Object.keys(opts.genomeObj.termdbs || {})[0]
 		if (!scDsLabel) throw new Error(`No termdbs found for genome ${opts.genomeObj.name}`)
@@ -21,10 +23,10 @@ export class SearchHandler {
 				dslabel: scDsLabel,
 				genome: opts.genomeObj.name,
 				nav: { header_mode: 'hide_search' },
-				vocab: { terms: this.app.vocabApi.termdbConfig.scctTerms }
+				vocab: { terms: scctTerms }
 			},
 			tree: {
-				vocab: { terms: this.app.vocabApi.termdbConfig.scctTerms },
+				vocab: { terms: scctTerms },
 				click_term_wrapper: (term: any) => {
 					this.callback!(term)
 				}
