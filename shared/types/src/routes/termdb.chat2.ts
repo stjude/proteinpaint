@@ -155,10 +155,8 @@ export type MatrixType = {
 export type HierClusterType = {
 	/** Names of genes to include in the hierarchical clustering (e.g. "TP53", "KRAS", "BCR") */
 	geneNames?: string[]
-	/** Names of gene sets (e.g. HALLMARK pathways) for ssGSEA enrichment clustering */
+	/** Names of gene sets containing list of genes to be used for hierarchical clustering */
 	genesetNames?: string[]
-	/** Names of metabolites for metabolite intensity clustering */
-	metaboliteNames?: string[]
 	/** Optional simple filter terms to restrict the sample set */
 	simpleFilter?: FilterTerm[]
 }
