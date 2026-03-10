@@ -1,5 +1,4 @@
-import { renderTable } from '../dom/table'
-import { NumericRangeInput } from '#dom/numericRangeInput'
+import { renderTable, NumericRangeInput } from '#dom'
 import { format_val_text } from './tvs.numeric.js'
 import type { TermCollectionTvs } from '#types'
 
@@ -17,22 +16,14 @@ function setTvsDefaults(tvs) {
 }
 
 async function fillMenu(self, div, tvs: TermCollectionTvs) {
-	tvs = JSON.parse(JSON.stringify(tvs))
+	tvs = structuredClone(tvs)
 	div.selectAll('*').remove()
-	div = div.append('div')
-	div.style('font-size', '0.8em')
+	div = div.append('div').style('font-size', '0.8em')
 
-	const brush = renderRangeInput(div, tvs, applyRange)
+	const rangeInput = renderRangeInput(div, tvs, applyRange)
 	const details = self.opts.vocabApi.termdbConfig.termCollections?.find(c => c.name === tvs.term.name)
 	if (!details) throw new Error(`No termCollection found for name=${tvs.term.name}`)
-	// Percentage-range filter UI is only for numeric term collections
-	if (details.type !== 'numeric') {
-		div
-			.append('div')
-			.style('padding', '8px')
-			.text('Filter by percentage is only available for numeric term collections.')
-		return
-	}
+	if (details.type !== 'numeric') throw new Error('filter only supports numeric term collection')
 	const getTableData = await addFilterTable({ holder: div, tvs, details, vocabApi: self.opts.vocabApi })
 
 	async function applyRange(tvs) {
@@ -40,7 +31,7 @@ async function fillMenu(self, div, tvs: TermCollectionTvs) {
 		tvs.term.termlst = tvsProps.termlst
 		tvs.term.numerators = tvsProps.numerators // tvs.term.termlst.filter(term => term.checked).map(t => t.id)
 		self.dom.tip.hide()
-		self.opts.callback({ term: tvs.term, ranges: [brush.rangeInput.getRange()] })
+		self.opts.callback({ term: tvs.term, ranges: [rangeInput.getRange()] })
 	}
 }
 
@@ -49,31 +40,28 @@ function renderRangeInput(div, tvs, applyRange) {
 	const range = tvs.ranges && tvs.ranges[0] ? tvs.ranges[0] : termrange
 	const num_div = div.append('div')
 	num_div.selectAll('*').remove()
-	const brush: any = {}
 	const table = num_div.append('table')
 	const tr = table.append('tr')
-	tr.append('td').html('Percentage range')
-	brush.equation_td = tr.append('td')
+	tr.append('td').text('Percentage 0 to 100')
+	const equation_td = tr.append('td')
 
 	range.min = 0
 	range.max = 100
-	brush.rangeInput = new NumericRangeInput(brush.equation_td, range, () => applyRange(tvs))
+	const rangeInput = new NumericRangeInput(equation_td, range, () => applyRange(tvs))
 
-	brush.apply_btn = tr
-		.append('td')
+	tr.append('td')
 		.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
 		.style('border-radius', '13px')
 		.style('margin', '5px')
 		.style('margin-left', '10px')
 		.style('text-align', 'center')
 		.style('font-size', '.8em')
-		.style('text-transform', 'uppercase')
-		.text('apply')
+		.text('APPLY')
 		.on('click', async () => {
-			brush.rangeInput.parseRange()
+			rangeInput.parseRange()
 		})
 
-	return brush
+	return rangeInput
 }
 
 // opts.details = a termCollections entry in dataset.cohort.termdb (a term obj)
@@ -97,70 +85,40 @@ export async function addFilterTable(opts): Promise<any> {
 		.map((term, index) => (termlst.find(t => t.id === term.id) ? index : -1))
 		.filter(index => index !== -1)
 
-	const columns: any = [{ label: 'Terms' }, { label: 'Use in numerator' }, { label: 'Use in denominator' }]
+	const columns: any = [{ label: 'Variables' }, { label: 'Use in numerator' }, { label: 'Use in denominator' }]
 
 	const tableDiv = opts.holder.append('div')
 
+	// cannot use table button callback as it cannot manage two sets of custom checkboxes
 	renderTable({
 		rows,
 		columns,
 		div: tableDiv,
 		maxWidth: '30vw',
 		maxHeight: '40vh',
-		//noButtonCallback,
 		striped: false,
-		showHeader: true, //false,
+		showHeader: true,
 		selectedRows,
-		columnButtons: undefined, //Leave until table.js is typed
+		columnButtons: undefined,
 		buttons: undefined
 	})
 
-	// FIXME use table callback
 	return () => {
 		const trs = tableDiv.select('table').select('tbody').node().querySelectorAll('tr')
 		return {
-			termlst: opts.details.termlst.filter((term, i) => {
-				const checked = trs[i].querySelectorAll('td')[3].querySelector('input')?.checked
-				return checked === true
-			}),
 			numerators: opts.details.termlst
 				.filter((term, i) => {
 					const checked = trs[i].querySelectorAll('td')[2].querySelector('input')?.checked
 					return checked === true
 				})
-				.map(t => t.id)
+				.map(t => t.id),
+			termlst: opts.details.termlst.filter((term, i) => {
+				const checked = trs[i].querySelectorAll('td')[3].querySelector('input')?.checked
+				return checked === true
+			})
 		}
 	}
 }
-
-// export function addTable(div, tvs) {
-// 	div
-// 		.style('padding', '6px')
-// 		.append('div')
-// 		.style('margin', '10px')
-// 		.style('font-size', '0.8rem')
-// 		.html(`<b> Select terms whose combined percentage will be used as the filter</b>.`)
-
-// 	const termlst = tvs.term.termlst
-// 	const rows = []
-// 	for (const term of termlst) rows.push([{ value: term.id }])
-
-// 	const selectedRows = termlst.map((term, index) => (term.checked ? index : -1)).filter(index => index !== -1)
-// 	const columns = [{ label: 'Term' }]
-// 	renderTable({
-// 		rows,
-// 		columns,
-// 		div,
-// 		maxWidth: '30vw',
-// 		maxHeight: '40vh',
-// 		noButtonCallback: (index, node) => {
-// 			termlst[index].checked = node.checked
-// 		},
-// 		striped: false,
-// 		showHeader: false,
-// 		selectedRows
-// 	})
-// }
 
 function getSelectRemovePos(j) {
 	return j
