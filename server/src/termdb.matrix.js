@@ -481,9 +481,8 @@ async function getSampleData_dictionaryTerms(q, termWrappers, onlyChildren = fal
 		// dataset uses server-side sqlite db, must use this method for dictionary terms
 		return await getSampleData_dictionaryTerms_termdb(q, termWrappers, onlyChildren)
 	}
-	if (q.ds.cohort.termdb.dictionary?.isApi) {
-		// dataset uses api-based db
-		// use ds-supplied getter to retrieve dictionary term data
+	if (q.ds.cohort.termdb.dictionary?.get) {
+		// ds-supplied getter to retrieve dictionary term data
 		return await getSampleData_dictionaryTerms_api(q, termWrappers)
 	}
 	/* gdc ds has no cohort.db. thus call v2s.get() to return sample annotations for its dictionary terms

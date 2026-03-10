@@ -161,11 +161,12 @@ type AiApi = {
 	}
 }
 
+/** configuration for api-based dictionary
+NOTE: currently used by mmrf, but may also be used
+by other api-based datasets (e.g. gdc) */
 type DictApi = {
-	// indicates whether dictionary is api-based
-	isApi?: boolean
-	// builds dictionary and sets
-	// standard helpers at ds.cohort.termdb.q{}
+	// builds dictionary and sets standard
+	// helpers at ds.cohort.termdb.q{}
 	build?: (ds: any) => void
 	// gets dictionary term data
 	get?: (twLst: any) => void
