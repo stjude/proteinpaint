@@ -8,9 +8,29 @@ const vocabApi = vocabInit({ state: { vocab } })
 
 const features = JSON.parse(sessionStorage.getItem('optionalFeatures') || '{}')
 
+// Minimal vocabApi stub for categorical termCollection tests
+const tcVocabApi = {
+	termdbConfig: {
+		termCollections: [
+			{
+				name: 'Assay Availability',
+				termIds: ['t1', 't2'],
+				termlst: [
+					{ id: 't1', name: 'CNV', type: 'categorical', values: {}, groupsetting: { disabled: true }, isleaf: true },
+					{ id: 't2', name: 'Fusion', type: 'categorical', values: {}, groupsetting: { disabled: true }, isleaf: true }
+				],
+				propsByTermId: { t1: {}, t2: {} },
+				categoryKeys: []
+			}
+		]
+	}
+}
+
 /*
 Tests:
 	fillTermWrapper - continuous term
+	fillTermWrapper - categorical termCollection, no q
+	fillTermWrapper - categorical termCollection, partial q
  */
 
 /**************
@@ -174,4 +194,38 @@ tape('fillTermWrapper - continuous term', async function (test) {
 		},
 		'should merge defaultQ into tw.q when defaultQ.preferredBins is not defined'
 	)
+})
+
+tape('fillTermWrapper - categorical termCollection, no q', async function (test) {
+	test.timeoutAfter(100)
+	const tw = {
+		term: {
+			type: 'termCollection',
+			name: 'Assay Availability',
+			memberType: 'categorical'
+		}
+	}
+	const xtw = await fillTermWrapper(tw, tcVocabApi)
+	test.equal(xtw.type, 'TermCollectionTWQual', 'should set tw.type to TermCollectionTWQual')
+	test.equal(xtw.q.mode, 'discrete', 'should set q.mode to discrete')
+	test.equal(xtw.q.type, 'values', 'should set q.type to values')
+	test.equal(xtw.term.termlst.length, 2, 'should populate termlst from config')
+	test.ok(xtw.$id, 'should assign a $id')
+	test.end()
+})
+
+tape('fillTermWrapper - categorical termCollection, partial q', async function (test) {
+	test.timeoutAfter(100)
+	const tw = {
+		term: {
+			type: 'termCollection',
+			name: 'Assay Availability',
+			memberType: 'categorical'
+		},
+		q: { type: 'values' }
+	}
+	const xtw = await fillTermWrapper(tw, tcVocabApi)
+	test.equal(xtw.q.mode, 'discrete', 'should default q.mode to discrete when missing')
+	test.deepEqual(xtw.q.lst, ['t1', 't2'], 'should set q.lst from termIds when missing')
+	test.end()
 })
