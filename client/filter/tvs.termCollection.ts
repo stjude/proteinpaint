@@ -123,7 +123,7 @@ export async function addFilterTable(opts): Promise<any> {
 				termlst.map(i => i.id)
 			)
 			return { numerators, termlst }
-		} catch (e) {
+		} catch (e: any) {
 			window.alert(e.message)
 		}
 	}
