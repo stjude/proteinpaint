@@ -260,3 +260,5 @@ This is independent of `debugmode` so that other developers can disable chat log
 ## Testing chatbot
 
 The chatbot prompts can be tested for each dataset using the [URL](http://localhost:3000/testchat). Select datasets (for e.g. TermdbTest)  can be run using the [URL](http://localhost:3000/testchat?dslabel=TermdbTest). It is recommended before merging a PR pertaining to the chatbot or changing a model used by the chatbot, all datasets are tested so that no prompt output drifts away from expected results. 
+
+In addition to using the script, please test presence/absence of gene expression in various agents (summary, matrix etc.) by commenting out ds?.queries?.geneExpression.

@@ -132,7 +132,7 @@ export async function extract_hiercluster_terms_from_query(
 	genesetNames: string[] = []
 ) {
 	if (ds?.queries?.geneExpression) {
-		// Will later optionally allow hierarchical clustering if metabolite intensity or other numeric data types are present, but for now require gene expression since that's the most common use case and ensures availability of gene list for validation and prompt context
+		// Will later optionally allow hierarchical clustering if metabolite intensity or other numeric data types are present, but for now require gene expression
 		const { schema, activeConfigs } = buildHierClusterSchema(ds, dataset_json)
 		const common_genes = extractGenesFromPrompt(prompt, genes_list)
 		const matchedGenesets = extractGenesetsFromPrompt(prompt, genesetNames)
