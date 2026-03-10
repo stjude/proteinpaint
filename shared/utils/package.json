@@ -4,6 +4,10 @@
   "description": "ProteinPaint code that is shared between server and client-side workspaces",
   "type": "module",
   "main": "src/index.js",
+  "imports": {
+    "#types": "@sjcrh/proteinpaint-types",
+    "#types/*": "@sjcrh/proteinpaint-types/*"
+  },
   "exports": {
     ".": "./src/index.js",
     "./*.ts": "./src/*.ts_SHOULD_BE_js",

@@ -8,7 +8,7 @@ import {
 	validateTermCollectionTvs,
 	type SampleAnnotation
 } from '../filter.js'
-import type { Filter } from '#types/filter'
+import type { Filter } from '#types'
 
 /* test sections
 
