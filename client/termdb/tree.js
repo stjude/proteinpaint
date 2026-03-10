@@ -110,18 +110,19 @@ class TdbTree {
 				state.cohortValuelst = choice.keys
 			}
 		}
-		if (appState.termdbConfig.scctTerms) {
-			state.scctTerms = appState.termdbConfig.scctTerms
+		if (appState.termdbConfig.termType2terms) {
+			state.termType2terms = appState.termdbConfig.termType2terms
 		}
 
 		return state
 	}
 
 	async main() {
-		if (
-			this.state.termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES &&
-			this.state.termTypeGroup != TermTypeGroups.SINGLECELL_CELLTYPE
-		) {
+		const allowableTermTypeGroups = new Set([
+			TermTypeGroups.DICTIONARY_VARIABLES,
+			...Object.keys(this.state?.termType2terms || {})
+		])
+		if (allowableTermTypeGroups.size && !allowableTermTypeGroups.has(this.state.termTypeGroup)) {
 			this.dom.holder.style('display', 'none')
 			return
 		}
@@ -139,13 +140,12 @@ class TdbTree {
 		// refer to the current cohort's termsById
 		this.termsById = this.getTermsById()
 		const root = this.termsById[root_ID]
-		if (this.state.termTypeGroup == TermTypeGroups.SINGLECELL_CELLTYPE && this.state.scctTerms?.length) {
+		if (this.state.termType2terms && this.state.termType2terms?.[this.state.termTypeGroup]) {
 			root.terms = this.mayGetCustomVocab()
 		} else {
 			root.terms = await this.requestTermRecursive(root)
 			root.terms.push(...(await this.mayGetCustomTerms()))
 		}
-
 		this.dom.holder.style('display', 'block')
 		await this.renderBranch(root, this.dom.holder)
 		this.dom.holder
@@ -245,9 +245,10 @@ class TdbTree {
 	}
 
 	mayGetCustomVocab() {
-		if (this.state.termTypeGroup == TermTypeGroups.SINGLECELL_CELLTYPE) {
-			return this.state.scctTerms || []
-		}
+		/** Implementation for scct terms formats the terms for the tree on
+		 * server init. Not advisable to overcomplicate the logic here per
+		 * termtype. */
+		return this.state.termType2terms?.[this.state.termTypeGroup]
 	}
 }
 
