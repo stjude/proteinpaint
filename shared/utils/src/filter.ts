@@ -39,14 +39,14 @@ export function getFilteredSamples(sampleAnno: SampleAnnotation[], filter: Filte
 /**
  * Given a value from a sample's annotation of a term, return true if a value matches the filter
  * @param row Sample annotation data
- * @param filter Filter structure
+ * @param filter Filter structure or single tvs item
  * @param _term Optional term to filter by
  * @param sample Optional sample data
  * @returns True if the sample matches the filter
  */
 export function sample_match_termvaluesetting(
 	row: any,
-	filter: Filter,
+	filter: Filter | any,
 	_term: any = null,
 	sample: any = null
 ): boolean {
