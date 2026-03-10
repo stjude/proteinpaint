@@ -95,17 +95,12 @@ tape('Launch SC plot and test basic functionalities', test => {
 				})
 				test.ok(plotButton, 'Plot buttons should appear after selecting a row')
 
-				// Test 5: Verify at least one plot button is visible (should be scRNA button)
-				const buttons = scInner.dom.plotsBtnsDiv.selectAll('button').nodes()
-				test.ok(buttons.length > 0, `At least one plot button should be visible (found ${buttons.length})`)
-
-				// Additional verification: Click the first plot button and verify it doesn't throw an error
-				if (buttons.length > 0) {
-					const firstButton = buttons[0] as HTMLButtonElement
-					const buttonText = firstButton.textContent
+				// Test 5: Click the plot button and verify it doesn't throw an error
+				if (plotButton) {
+					const buttonText = plotButton.textContent
 					test.pass(`Clicking plot button: "${buttonText}"`)
 					
-					firstButton.click()
+					plotButton.click()
 
 					// Wait a bit for the subplot to initialize
 					await new Promise(resolve => setTimeout(resolve, 500))
