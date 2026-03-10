@@ -141,3 +141,4 @@ log.txt
 build/sj/env.sh
 build/unpublishedPkgs.txt
 rust/Dockerfile
+rust/binaries.tar.gz
