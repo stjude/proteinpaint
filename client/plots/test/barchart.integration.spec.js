@@ -12,6 +12,7 @@ test sections
 
 term1=categorical
 term1=categorical (no values)
+term1=termCollection categorical
 term1=categorical, term2=defaultbins
 term0=defaultbins, term1=categorical
 term1=geneVariant no group
@@ -151,6 +152,52 @@ tape('term1=categorical (no values)', function (test) {
 		const xAxis = barDiv.select('.sjpcb-bar-chart-x-axis').node()
 		const seriesG = barDiv.select('.bars-series').node()
 		test.true(xAxis.getBBox().width >= seriesG.getBBox().width, 'x-axis width should be >= series width')
+	}
+})
+
+tape('term1=termCollection categorical', function (test) {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [{ chartType: 'summary', childType: 'barchart', term: getAssayAvailabilityTw() }]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(barchart) {
+		barchart.on('postRender.test', null)
+		const barDiv = barchart.Inner.dom.barDiv
+		testBarCount(barDiv)
+		testBarOrder(barDiv)
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+
+	function testBarCount(barDiv) {
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.equal(numBars, 3, 'should render 3 bars, one per member term')
+	}
+
+	function testBarOrder(barDiv) {
+		// Bars should appear in termIds order: CNV, Fusion, Germline
+		// Each rowlabel g has transform="translate(x,y)" where y increases with row index
+		const labelGs = barDiv.selectAll('[data-testid="sjpcb-bars-rowlabels"] g').nodes()
+		test.equal(labelGs.length, 3, 'should have 3 row label elements')
+		if (labelGs.length < 2) return
+		const yValues = labelGs.map(g => {
+			const t = g.getAttribute('transform') || ''
+			const m = t.match(/translate\([^,]+,([^)]+)\)/)
+			return m ? parseFloat(m[1]) : 0
+		})
+		test.ok(
+			yValues[0] < yValues[1] && yValues[1] < yValues[2],
+			'row label y positions should increase in termIds order (CNV < Fusion < Germline)'
+		)
 	}
 })
 
@@ -2309,6 +2356,37 @@ const tp53dtTermFilter = {
 /*************************
  reusable helper functions
 **************************/
+
+function getAssayAvailabilityTw() {
+	const memberTerm = {
+		type: 'categorical',
+		values: { 1: { label: 'Yes', color: '#e75480' }, 2: { label: 'No', color: 'blue' } },
+		groupsetting: { disabled: true },
+		isleaf: true,
+		hashtmldetail: true
+	}
+	return {
+		type: 'TermCollectionTWQual',
+		term: {
+			type: 'termCollection',
+			memberType: 'categorical',
+			name: 'Assay Availability',
+			isleaf: true,
+			termlst: [
+				{ ...memberTerm, id: 'assayavailability_cnv', name: 'CNV availability' },
+				{ ...memberTerm, id: 'assayavailability_fusion', name: 'Fusion availability' },
+				{ ...memberTerm, id: 'assayavailability_germline', name: 'Germline mutation availability' }
+			],
+			termIds: ['assayavailability_cnv', 'assayavailability_fusion', 'assayavailability_germline'],
+			propsByTermId: {},
+			categoryKeys: [
+				{ key: '1', shown: true },
+				{ key: '2', shown: true }
+			]
+		},
+		q: { mode: 'discrete', type: 'values', lst: [] }
+	}
+}
 
 const runpp = helpers.getRunPp('mass', {
 	state: {

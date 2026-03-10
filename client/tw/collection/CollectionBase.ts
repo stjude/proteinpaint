@@ -28,9 +28,7 @@ export class CollectionBase extends TwBase {
 			if (!opts.vocabApi?.termdbConfig?.termCollections)
 				throw `missing vocabApi.termdbConfig.termCollections argument for fill()`
 			const term = tw.term
-			const tc = opts.vocabApi.termdbConfig.termCollections.find(
-				(c: { name: string }) => c.name === term.name || term.name?.startsWith(c.name + ' (')
-			)
+			const tc = opts.vocabApi.termdbConfig.termCollections.find((c: { name: string }) => c.name === term.name)
 			if (!tc) throw new Error(`no matching termCollection for '${term.name}'`)
 			tw.type = tc.type === 'numeric' ? 'TermCollectionTWCont' : 'TermCollectionTWQual'
 		}
