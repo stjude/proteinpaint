@@ -12,7 +12,7 @@ export async function extract_DE_search_terms_from_query(
 	ds: any,
 	testing: boolean
 ) {
-	if (dataset_json.hasDE) {
+	if (ds?.queries?.rnaseqGeneCount) {
 		//const SchemaConfig = {
 		//    path: path.resolve('#types'),
 		//    // Path to your tsconfig (required for proper type resolution)

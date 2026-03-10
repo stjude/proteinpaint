@@ -104,8 +104,6 @@ Only declare chart types your dataset actually supports. The `charts` array driv
 
 ```json
 {
-  "hasGeneExpression": true,
-  "hasDE": true,
   "db": "path/to/clinical.db",
   "genedb": "path/to/genes.db",
 
@@ -136,17 +134,17 @@ Only declare chart types your dataset actually supports. The `charts` array driv
 
 ### Top-level fields
 
-| Field                | Required                      | Description                                                                                                                                                                    |
-| -------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `charts`             | **Yes**                       | Declares which plot types the dataset supports. The pipeline throws if this is missing or empty.                                                                               |
-| `hasGeneExpression`  | If using gene expression      | Enables gene name extraction and geneExpression term type.                                                                                                                     |
-| `hasDE`              | If using DE                   | Enables the differential expression agent.                                                                                                                                     |
-| `db`                 | Yes                           | Path to the clinical SQLite database.                                                                                                                                          |
-| `genedb`             | If using gene expression      | Path to the gene symbol SQLite database.                                                                                                                                       |
-| `DatasetPrompt`      | Recommended                   | Free-text appended to every agent system prompt. Use this for dataset-specific terminology disambiguation (e.g. what "LC50" means, naming conventions for clinical variables). |
-| `resources`          | If using Classification chart | Links and publications returned when a user asks about the dataset.                                                                                                            |
-| `prebuiltPlots`      | If using sampleScatter        | Names of available pre-built scatter plots (t-SNE, UMAP).                                                                                                                      |
-| `TestData`           | Recommended                   | Ground-truth Q&A pairs used by the automated test suite.                                                                                                                       |
+| Field                          | Required                      | Description                                                                                                                                                                    |
+|--------------------------------|-------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `charts`                       | **Yes**                       | Declares which plot types the dataset supports. The pipeline throws if this is missing or empty.                                                                               |
+| `ds?.queries?.geneExpression`  | If using gene expression      | Enables gene name extraction and geneExpression term type.                                                                                                                     |
+| `ds?.queries?.rnaseqGeneCount` | If using DE                   | Enables the differential expression agent.                                                                                                                                     |
+| `db`                           | Yes                           | Path to the clinical SQLite database.                                                                                                                                          |
+| `genedb`                       | If using gene expression      | Path to the gene symbol SQLite database.                                                                                                                                       |
+| `DatasetPrompt`                | Recommended                   | Free-text appended to every agent system prompt. Use this for dataset-specific terminology disambiguation (e.g. what "LC50" means, naming conventions for clinical variables). |
+| `resources`                    | If using Classification chart | Links and publications returned when a user asks about the dataset.                                                                                                            |
+| `prebuiltPlots`                | If using sampleScatter        | Names of available pre-built scatter plots (t-SNE, UMAP).                                                                                                                      |
+| `TestData`                     | Recommended                   | Ground-truth Q&A pairs used by the automated test suite.                                                                                                                       |
 
 ---
 

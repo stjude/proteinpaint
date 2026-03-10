@@ -36,8 +36,7 @@ export interface DataTypeConfig {
 export const DATA_TYPE_REGISTRY: DataTypeConfig[] = [
 	{
 		termType: TermTypes.GENE_EXPRESSION,
-		detectAvailability: (ds: any, dataset_json: any) =>
-			!!ds?.queries?.geneExpression || !!dataset_json?.hasGeneExpression,
+		detectAvailability: (ds: any) => !!ds?.queries?.geneExpression,
 		schemaFieldName: 'geneNames',
 		schemaDefinition: {
 			type: 'array',

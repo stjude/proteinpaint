@@ -148,6 +148,8 @@ export type MatrixType = {
 	terms?: string[]
 	/** Names of genes to include as gene variant rows in the matrix (e.g. "TP53", "KRAS", "NRAS") */
 	geneNames?: string[]
+	/** Names of gene sets containing ssGSEA enrichment scores */
+	genesetNames?: string[]
 	/** Optional simple filter terms to restrict the sample set */
 	simpleFilter?: FilterTerm[]
 }
