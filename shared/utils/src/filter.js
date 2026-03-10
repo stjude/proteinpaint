@@ -124,8 +124,8 @@ function setDatasetAnnotations(item, ds = null) {
       ds.setAnnoByTermId(item.tvs.term.id);
     }
     if (item.tvs.term.type == "categorical") {
-      ;
-      item.tvs.valueset = new Set(item.tvs.values.map((i) => i.key));
+      const tvsAny = item.tvs;
+      tvsAny.valueset = new Set(tvsAny.values.map((i) => i.key));
     }
   }
 }
@@ -168,7 +168,7 @@ function getWrappedTvslst(lst = [], join = "", $id = null) {
     join,
     lst
   };
-  if ($id !== null && filter.$id !== void 0) filter.$id = $id;
+  if ($id !== null) filter.$id = $id;
   return filter;
 }
 function validateTermCollectionTvs(lst1, lst2) {

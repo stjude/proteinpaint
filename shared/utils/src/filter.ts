@@ -205,7 +205,8 @@ export function setDatasetAnnotations(item: Filter | { type: 'tvs'; tvs: Tvs }, 
 			ds.setAnnoByTermId(item.tvs.term.id)
 		}
 		if (item.tvs.term.type == 'categorical') {
-			;(item.tvs as any).valueset = new Set((item.tvs as any).values.map((i: any) => i.key))
+			const tvsAny = item.tvs as any
+			tvsAny.valueset = new Set(tvsAny.values.map((i: any) => i.key))
 		}
 	}
 }
@@ -290,7 +291,7 @@ export function getWrappedTvslst(
 		join,
 		lst
 	}
-	if ($id !== null && (filter as any).$id !== undefined) (filter as any).$id = $id
+	if ($id !== null) (filter as any).$id = $id
 	return filter
 }
 
