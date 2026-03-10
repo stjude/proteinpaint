@@ -106,9 +106,8 @@ export async function run_chat_pipeline(
 		}
 	} else if (class_response.type == 'plot') {
 		const classResult = await classifyPlotType(user_prompt, llm)
-		mayLog('classResult:', classResult)
 		const dataset_db_output = await parse_dataset_db(dataset_db)
-		const genes_list = dataset_json.hasGeneExpression ? await parse_geneset_db(genedb) : []
+		const genes_list = ds?.queries?.geneExpression ? await parse_geneset_db(genedb) : []
 		if (classResult == 'summary') {
 			const time1 = new Date().valueOf()
 			ai_output_json = await extract_summary_terms(
