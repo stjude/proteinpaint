@@ -296,9 +296,8 @@ export async function validate_termdb(ds) {
 	if (tdb.q) {
 		// equipped with ds-supplied methods
 		if (typeof tdb.q != 'object') throw 'ds-supplied tdb.q{} not object'
-	} else if (tdb.dictionary?.isApi) {
-		// dictionary is api-based
-		// build it using a ds-supplied builder method
+	} else if (tdb.dictionary?.build) {
+		// ds-supplied builder method
 		if (typeof tdb.dictionary.build != 'function') throw 'termdb.dictionary.build() is not a function'
 		await tdb.dictionary.build(ds)
 	} else if (tdb.dictionary?.gdcapi) {
