@@ -10,24 +10,24 @@ tmp comment on plot state. later properly define it in typescript
 
 a basic plot:
 {
-        chartType: string
-        ... other properties
-        id?: dynamically assigned to identify this plot
+	chartType: string
+	... other properties
+	id?: dynamically assigned to identify this plot
 }
 
 Sometimes a plot may have sections where each section has a name and an array of plots, like in the report plot. 
 An example of such plot is seeing in carereg. In that case the plot config will look like this:
 {
-        id?: dynamically assigned to identify this plot
-        sections: {
-                name: string
-                plots: {
-                        chartType: string
-                        ... other properties of this child plot
-                        parentId?: dynamically assigned to point to plot.id
-                }[]
-                ... other properties of a section
-        }[]
+	id?: dynamically assigned to identify this plot
+	sections: {
+		name: string
+		plots: {
+			chartType: string
+			... other properties of this child plot
+			parentId?: dynamically assigned to point to plot.id
+		}[]
+		... other properties of a section
+	}[]
 }
 The state of each plot is added to the appState plots array, so that these plots can be treated as regular plots and be embedded in a parent plot.
 */
@@ -247,9 +247,9 @@ class MassStore extends StoreBase implements RxStore {
 }
 
 /*
-        To clearly indicate the allowed store actions,
-        supply a literal "actions" object on the 
-        constructor prototype
+	To clearly indicate the allowed store actions,
+	supply a literal "actions" object on the 
+	constructor prototype
 */
 MassStore.prototype.actions = {
 	// Type '{ app_refresh(this: MassStore, action?: {}): Promise<void>; tab_set(action: any): void; cohort_set(action: any): void; plot_prep(action: any): Promise<void>; ... 13 more ...; delete_group({ name }: { ...; }): void; }' is not assignable to type '(action: { [prop: string]: any; type: string; }) => void | Promise<void>'.
@@ -333,7 +333,6 @@ MassStore.prototype.actions = {
 		// Parent plots may have child plots, organized in sections to ease the visualization and analysis. For example the carereg report,
 		//has the sections Demographics, Diagnosis and Stagind with their respective plots. We go over the plots for each section to add them
 		// to the state.plots array, so that they can be treated as regular plots and be embedded in a parent plot
-		console.log('plot_create:', plot)
 		if (plot.sections) {
 			// this is handled for embedder convenience,
 			// ideally app state.plots would already have all the plot entries
@@ -383,7 +382,7 @@ MassStore.prototype.actions = {
 		} else {
 			delete plot.cutoff
 		}
-		console.log('plot_edit:', plot)
+
 		// action.parentId may be used in reactsTo() code
 		if (!action.parentId && plot.parentId) action.parentId = plot.parentId
 	},
