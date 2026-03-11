@@ -9,7 +9,7 @@ import { extract_summary_terms } from './chat/summaryagent.ts'
 import { extract_matrix_search_terms_from_query } from './chat/matrixagent.ts'
 import { extract_samplescatter_terms_from_query } from './chat/samplescatteragent.ts'
 import { extract_hiercluster_terms_from_query } from './chat/hierclusteragent.ts'
-import { parse_dataset_db, parse_geneset_db, getGenesetNames } from './chat/utils.ts'
+import { extractGenesFromPrompt, parse_dataset_db, parse_geneset_db, getGenesetNames } from './chat/utils.ts'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
@@ -103,9 +103,10 @@ export async function run_chat_pipeline(
 			}
 		}
 	} else if (class_response.type == 'plot') {
-		const classResult = await classifyPlotType(user_prompt, llm)
-		const dataset_db_output = await parse_dataset_db(dataset_db)
 		const genes_list = await parse_geneset_db(genedb) // gene_list should always be populated irrespective of whether the dataset has gene expression data, since even if its missing gene expression data, the gene list can still be useful for validating gene mentions in the user query and providing additional context to the LLM. If the dataset does not have gene expression data, the gene list can still be used for telling the user that gene expression is not supported.
+		const relevant_genes = extractGenesFromPrompt(user_prompt, genes_list)
+		const classResult = await classifyPlotType(user_prompt, llm, relevant_genes)
+		const dataset_db_output = await parse_dataset_db(dataset_db)
 		if (classResult == 'summary') {
 			const time1 = new Date().valueOf()
 			ai_output_json = await extract_summary_terms(
