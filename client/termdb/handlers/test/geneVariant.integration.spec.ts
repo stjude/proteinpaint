@@ -1,9 +1,9 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
-import { SearchHandler } from '../handlers/geneVariant.ts'
-import { hg38 } from '../../test/testdata/genomes'
-import { sleep } from '../../test/test.helpers.js'
-import { vocabInit } from '../vocabulary'
+import { SearchHandler } from '../geneVariant.ts'
+import { hg38 } from '../../../test/testdata/genomes'
+import { sleep } from '../../../test/test.helpers.js'
+import { vocabInit } from '../../vocabulary'
 
 /*
 Tests:
