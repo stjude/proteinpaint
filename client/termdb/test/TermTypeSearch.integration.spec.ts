@@ -6,7 +6,9 @@ import { TermTypeGroups, TermTypes } from '#shared/terms.js'
 /*
 Tests:
 	- init() should accept usecase filtering for allowed term type tabs
+	- init() should ignore appState.termTypeGroup and derive tabs from allowed types
 	- init() should throw when no term types are allowed
+	- init() should throw when TERM_COLLECTION lacks termdbConfig.termCollections
 	- selectTerm() should append and replace selected terms correctly in submit mode
 	- renderTermsSelected() click should remove selected term
 	- getDtTerm() should return child term and throw on invalid input
@@ -112,6 +114,42 @@ tape('init() should accept usecase filtering for allowed term type tabs', async 
 	test.end()
 })
 
+tape('init() should ignore appState.termTypeGroup and derive tabs from allowed types', async test => {
+	const appState = {
+		...getDefaultState(),
+		termTypeGroup: TermTypeGroups.METABOLITE_INTENSITY
+	}
+	const { termTypeSearch, holder, dispatched } = getNewTermTypeSearch({
+		appState,
+		termdbConfig: {
+			allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.METABOLITE_INTENSITY],
+			queries: {}
+		}
+	})
+
+	await termTypeSearch.init(appState)
+	test.equal(
+		termTypeSearch.tabs.length,
+		2,
+		'Should create tabs from allowed term types regardless of appState.termTypeGroup'
+	)
+	test.deepEqual(
+		termTypeSearch.tabs.map(t => t.termTypeGroup),
+		[TermTypeGroups.DICTIONARY_VARIABLES, TermTypeGroups.METABOLITE_INTENSITY],
+		'Should keep tab groups in allowedTermTypes order'
+	)
+
+	const setGroupAction = dispatched.find(a => a.type == 'set_term_type_group')
+	test.equal(
+		setGroupAction?.value,
+		TermTypeGroups.DICTIONARY_VARIABLES,
+		'Should dispatch first tab group and not prior appState.termTypeGroup'
+	)
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
 tape('init() should throw when no term types are allowed', async test => {
 	const appState = getDefaultState()
 	const { termTypeSearch, holder } = getNewTermTypeSearch({
@@ -129,6 +167,31 @@ tape('init() should throw when no term types are allowed', async test => {
 	} catch (e) {
 		test.equal(e, 'No term types allowed for this use case', 'Should throw expected error message')
 	}
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('init() should throw when TERM_COLLECTION lacks termdbConfig.termCollections', async test => {
+	const appState = getDefaultState()
+	const { termTypeSearch, holder } = getNewTermTypeSearch({
+		appState,
+		termdbConfig: {
+			allowedTermTypes: [TermTypes.TERM_COLLECTION],
+			queries: {}
+		}
+	})
+
+	try {
+		await termTypeSearch.init(appState)
+		test.fail('Should throw when TERM_COLLECTION is enabled without termCollections config')
+	} catch (e) {
+		test.match(
+			String(e),
+			/No term types allowed for this use case/,
+			'Should throw expected handler setup error for missing termCollections'
+		)
+	}
+
 	if (test['_ok']) holder.remove()
 	test.end()
 })
