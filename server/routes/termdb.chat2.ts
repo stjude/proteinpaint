@@ -115,7 +115,7 @@ export async function run_chat_pipeline(
 					text: 'Your query includes a gene name, but it is not clear which feature of the gene you are referring to (e.g. expression, methylation, mutation, etc.). Please rephrase your question to clarify what information you are seeking about the gene.'
 				}
 		}
-		const classResult = await classifyPlotType(user_prompt, llm, relevant_genes)
+		const classResult = await classifyPlotType(user_prompt, llm)
 		const dataset_db_output = await parse_dataset_db(dataset_db)
 		if (classResult == 'summary') {
 			const time1 = new Date().valueOf()
