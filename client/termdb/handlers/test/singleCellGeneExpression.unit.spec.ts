@@ -26,7 +26,7 @@ function getUsecase(sample: any = { id: 'sample-A' }) {
 ***************/
 
 tape('\n', function (test) {
-	test.comment('-***- termdb/handler/singleCellGeneExpression -***-')
+	test.comment('-***- termdb/handlers/singleCellGeneExpression -***-')
 	test.end()
 })
 

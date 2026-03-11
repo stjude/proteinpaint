@@ -26,7 +26,7 @@ function getUsecase(plotName = 'Plot A') {
 ***************/
 
 tape('\n', function (test) {
-	test.comment('-***- termdb/handler/singleCellCellType -***-')
+	test.comment('-***- termdb/handlers/singleCellCellType -***-')
 	test.end()
 })
 
