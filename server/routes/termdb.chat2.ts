@@ -106,14 +106,14 @@ export async function run_chat_pipeline(
 	} else if (class_response.type == 'plot') {
 		const genes_list = await parse_geneset_db(genedb) // gene_list should always be populated irrespective of whether the dataset has gene expression data, since even if its missing gene expression data, the gene list can still be useful for validating gene mentions in the user query and providing additional context to the LLM. If the dataset does not have gene expression data, the gene list can still be used for telling the user that gene expression is not supported.
 		const relevant_genes = extractGenesFromPrompt(user_prompt, genes_list)
-		let ambiguous_gene_prompt: boolean = false
 		if (relevant_genes.length > 0) {
-			ambiguous_gene_prompt = determineAmbiguousGenePrompt(user_prompt, relevant_genes) // for e.g. classifying prompts such as "Show TP53". In this prompt its not clear which feature (gene expression, mutation, etc.) of TP53 the user is referring to, so we want to classify this as an "ambiguous_gene_prompt" plot type and prompt the user to clarify their question.
-			if (ambiguous_gene_prompt)
+			const ambiguous_gene_prompt = determineAmbiguousGenePrompt(user_prompt, relevant_genes, dataset_json) // for e.g. classifying prompts such as "Show TP53". In this prompt its not clear which feature (gene expression, mutation, etc.) of TP53 the user is referring to, so we want to classify this as an "ambiguous_gene_prompt" plot type and prompt the user to clarify their question.
+			if (ambiguous_gene_prompt.length > 0) {
 				return {
 					type: 'text',
-					text: 'Your query includes a gene name, but it is not clear which feature of the gene you are referring to (e.g. expression, methylation, mutation, etc.). Please rephrase your question to clarify what information you are seeking about the gene.'
+					text: ambiguous_gene_prompt
 				}
+			}
 		}
 		const classResult = await classifyPlotType(user_prompt, llm)
 		const dataset_db_output = await parse_dataset_db(dataset_db)
