@@ -872,7 +872,7 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 			routeTwLst === undefined
 				? undefined
 				: routeTwLst.filter(tw => !q.__protected__.ignoredTermIds.includes(tw.term.id)).map(tw => tw.term)
-		const authFilter = ds.cohort.termdb.getAdditionalFilter(q.__protected__, routeTerms)
+		const authFilter = ds.cohort.termdb.getAdditionalFilter(q.__protected__, routeTerms, ds)
 
 		if (!q.filter) q.filter = { type: 'tvslst', join: '', lst: [] }
 		else if (q.filter.type != 'tvslst') throw `invalid q.filter.type != 'tvslst'`
