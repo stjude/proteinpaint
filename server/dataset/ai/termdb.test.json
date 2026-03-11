@@ -102,6 +102,13 @@
           }
         },
         {
+          "question": "Show t-SNE colored by TP53",
+          "answer": {
+            "type": "plot",
+            "plot": "ambiguous_gene_name"
+          }
+        },
+        {
           "question": "Show t-SNE colored by TP53 expression",
           "answer": {
             "type": "plot",
@@ -130,6 +137,27 @@
           }
         },
         {
+          "question": "Show mutations in TMEM181 locus",
+          "answer": {
+            "type": "plot",
+            "plot": "lollipop"
+          }
+        },
+        {
+          "question": "Show NUPR1",
+          "answer": {
+            "type": "plot",
+            "plot": "ambiguous_gene_name"
+          }
+        },
+        {
+          "question": "Show NUPR1 mutation",
+          "answer": {
+            "type": "plot",
+            "plot": "lollipop"
+          }
+        },
+        {
           "question": "Show gene expression landscape of TP53, MYC, and BCL2 for male patients",
           "answer": {
             "type": "plot",
@@ -145,6 +173,13 @@
         },
         {
           "question": "Show a matrix of TP53 and RB1 with diagnosis group and sex",
+          "answer": {
+            "type": "plot",
+            "plot": "ambiguous_gene_name"
+          }
+        },
+        {
+          "question": "Show a matrix of TP53 and RB1 gene expression with diagnosis group and sex",
           "answer": {
             "type": "plot",
             "plot": "matrix"
