@@ -114,6 +114,10 @@ class TdbTree {
 	}
 
 	async main() {
+		if (this.state.termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES) {
+			this.dom.holder.style('display', 'none')
+			return
+		}
 		if (!this.state.isVisible) {
 			this.dom.holder.style('display', 'none')
 			return
@@ -128,11 +132,8 @@ class TdbTree {
 		// refer to the current cohort's termsById
 		this.termsById = this.getTermsById()
 		const root = this.termsById[root_ID]
-		root.terms = this.app.vocabApi.termdbConfig?.termType2terms?.[this.state.termTypeGroup]
-		if (!root.terms) {
-			root.terms = await this.requestTermRecursive(root)
-			root.terms.push(...(await this.mayGetCustomTerms()))
-		}
+		root.terms = await this.requestTermRecursive(root)
+		root.terms.push(...(await this.mayGetCustomTerms()))
 		this.dom.holder.style('display', 'block')
 		await this.renderBranch(root, this.dom.holder)
 		this.dom.holder
