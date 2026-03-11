@@ -12,7 +12,9 @@ export class SearchHandler {
 		this.app = opts.app
 		const scctTerms = opts.app.vocabApi.termdbConfig?.termType2terms?.[TermTypeGroups.SINGLECELL_CELLTYPE]
 		if (!scctTerms) {
-			throw new Error('termType2terms.singleCellCellType:[] is required in termdbConfig for singleCellCellType handler')
+			throw new Error(
+				`termType2terms[${TermTypeGroups.SINGLECELL_CELLTYPE}]:[] is required in termdbConfig for singleCellCellType handler`
+			)
 		}
 		const scDsLabel = Object.keys(opts.genomeObj.termdbs || {})[0]
 		if (!scDsLabel) throw new Error(`No termdbs found for genome ${opts.genomeObj.name}`)
