@@ -171,6 +171,16 @@ export async function run_chat_pipeline(
 				genesetNames
 			)
 			mayLog('Time taken for hierCluster agent:', formatElapsedTime(Date.now() - time1))
+		} else if (classResult == 'lollipop') {
+			ai_output_json = {
+				type: 'text',
+				text: 'This is a gene mutation prompt. But, lollipop agent has not been implemented yet'
+			}
+		} else if (classResult == 'ambiguous_gene_name') {
+			ai_output_json = {
+				type: 'text',
+				text: 'Your query includes a gene name, but it is not clear which feature of the gene you are referring to (e.g. expression, mutation, etc.). Please rephrase your question to clarify what information you are seeking about the gene.'
+			}
 		} else {
 			// Will define all other agents later as desired
 			ai_output_json = { type: 'text', text: 'Unknown classification value' }
