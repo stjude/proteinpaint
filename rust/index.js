@@ -83,6 +83,11 @@ export function run_rust(binfile, input_data, args = [], { signal } = {}) {
 	})
 }
 
+// May need to add an abort signal as argument like in run_rust above.
+// Or it's likely not needed since a closed stream connection from a web browser
+// will already trigger an error. `stream_rust()` was heavily tested manually
+// while troubleshooting and fixing the idle rust processes the led to memory leacks
+// as part of `/gdc/mafBuild` handler code, leave this code as-is for now.
 export function stream_rust(binfile, input_data, emitJson) {
 	const binpath = path.join(__dirname, '/target/release/', binfile)
 
