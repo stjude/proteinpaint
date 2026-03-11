@@ -2,5 +2,5 @@ Features
 - Expanded integration tests for TermTypeSearch. New unit tests available for the recently added Single-Cell Cell Type and Single-Cell Gene Expression handlers as well as previously implemented Gene Expression, SNP, ssGSEA, and Term Collection handlers. 
 
 Fixes
-- Simplifed logic for custom termType2Terms vocabulary. Resolved issue with elements from other handlers lingering on tab change and the pills for the singleCellCellType not appearing after clicking away from the Single-Cell Cell Type tab. 
+- Simplified logic for custom termType2terms vocabulary. Resolved issue with elements from other handlers lingering on tab change and the pills for the singleCellCellType not appearing after clicking away from the Single-Cell Cell Type tab. 
  
