@@ -30,7 +30,7 @@ Definitions:
 - hiercluster: hierarchical clustering of genes, metabolites, or other numeric features across samples (e.g. "cluster these genes", "hierarchical clustering of TP53 KRAS BCR", "gene expression clustering", "cluster metabolites"). Use this when the user explicitly asks for clustering, dendrogram, or heatmap with clustering. The prompt should include the word "cluster" or "dendrogram" and/or explicitly describe clustering of multiple genes or features across samples.
 - lollipop: lollipop plot showing mutation distribution along a gene or protein (e.g. "lollipop plot of TP53 mutations", "mutation distribution along KRAS"). Use this when the user explicitly asks for a lollipop plot or describes a plot with mutation positions along a gene or protein.
 
-IMPORTANT: Your response must be exactly one word. Do not return chart type names like "violin", "box plot", or "bar chart". Return only: summary, dge, survival, matrix, samplescatter, or hiercluster.    
+IMPORTANT: Your response must be exactly one word. Do not return chart type names like "violin", "box plot", or "bar chart". Return only: summary, dge, survival, matrix, samplescatter, hiercluster, or lollipop.    
 
 Query: "${user_prompt}"
 Classification:`
