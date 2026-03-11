@@ -110,22 +110,10 @@ class TdbTree {
 				state.cohortValuelst = choice.keys
 			}
 		}
-		if (appState.termdbConfig.termType2terms) {
-			state.termType2terms = appState.termdbConfig.termType2terms
-		}
-
 		return state
 	}
 
 	async main() {
-		const allowableTermTypeGroups = new Set([
-			TermTypeGroups.DICTIONARY_VARIABLES,
-			...Object.keys(this.state?.termType2terms || {})
-		])
-		if (allowableTermTypeGroups.size && !allowableTermTypeGroups.has(this.state.termTypeGroup)) {
-			this.dom.holder.style('display', 'none')
-			return
-		}
 		if (!this.state.isVisible) {
 			this.dom.holder.style('display', 'none')
 			return
@@ -140,9 +128,8 @@ class TdbTree {
 		// refer to the current cohort's termsById
 		this.termsById = this.getTermsById()
 		const root = this.termsById[root_ID]
-		if (this.state.termType2terms && this.state.termType2terms?.[this.state.termTypeGroup]) {
-			root.terms = this.mayGetCustomVocab()
-		} else {
+		root.terms = this.app.vocabApi.termdbConfig?.termType2terms?.[this.state.termTypeGroup]
+		if (!root.terms) {
 			root.terms = await this.requestTermRecursive(root)
 			root.terms.push(...(await this.mayGetCustomTerms()))
 		}
@@ -242,13 +229,6 @@ class TdbTree {
 		}
 		this.termsById[id] = parentTerm
 		return [parentTerm]
-	}
-
-	mayGetCustomVocab() {
-		/** Implementation for scct terms formats the terms for the tree on
-		 * server init. Not advisable to overcomplicate the logic here per
-		 * termtype. */
-		return this.state.termType2terms?.[this.state.termTypeGroup]
 	}
 }
 
