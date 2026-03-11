@@ -5,6 +5,7 @@ import { classifyNotPlot } from './chat/classify2.ts'
 import { classifyPlotType } from './chat/plot.ts'
 import { readJSONFile } from './chat/utils.ts'
 import { extract_DE_search_terms_from_query } from './chat/DEagent.ts'
+import { determineAmbiguousGenePrompt } from './chat/ambiguousgeneagent.ts'
 import { extract_summary_terms } from './chat/summaryagent.ts'
 import { extract_matrix_search_terms_from_query } from './chat/matrixagent.ts'
 import { extract_samplescatter_terms_from_query } from './chat/samplescatteragent.ts'
@@ -105,6 +106,15 @@ export async function run_chat_pipeline(
 	} else if (class_response.type == 'plot') {
 		const genes_list = await parse_geneset_db(genedb) // gene_list should always be populated irrespective of whether the dataset has gene expression data, since even if its missing gene expression data, the gene list can still be useful for validating gene mentions in the user query and providing additional context to the LLM. If the dataset does not have gene expression data, the gene list can still be used for telling the user that gene expression is not supported.
 		const relevant_genes = extractGenesFromPrompt(user_prompt, genes_list)
+		let ambiguous_gene_prompt: boolean = false
+		if (relevant_genes.length > 0) {
+			ambiguous_gene_prompt = determineAmbiguousGenePrompt(user_prompt, relevant_genes) // for e.g. classifying prompts such as "Show TP53". In this prompt its not clear which feature (gene expression, mutation, etc.) of TP53 the user is referring to, so we want to classify this as an "ambiguous_gene_prompt" plot type and prompt the user to clarify their question.
+			if (ambiguous_gene_prompt)
+				return {
+					type: 'text',
+					text: 'Your query includes a gene name, but it is not clear which feature of the gene you are referring to (e.g. expression, methylation, mutation, etc.). Please rephrase your question to clarify what information you are seeking about the gene.'
+				}
+		}
 		const classResult = await classifyPlotType(user_prompt, llm, relevant_genes)
 		const dataset_db_output = await parse_dataset_db(dataset_db)
 		if (classResult == 'summary') {
@@ -176,11 +186,6 @@ export async function run_chat_pipeline(
 			ai_output_json = {
 				type: 'text',
 				text: 'This is a gene mutation prompt. But, lollipop agent has not been implemented yet'
-			}
-		} else if (classResult == 'ambiguous_gene_name') {
-			ai_output_json = {
-				type: 'text',
-				text: 'Your query includes a gene name, but it is not clear which feature of the gene you are referring to (e.g. expression, mutation, etc.). Please rephrase your question to clarify what information you are seeking about the gene.'
 			}
 		} else {
 			// Will define all other agents later as desired
