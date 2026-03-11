@@ -2229,6 +2229,13 @@
         "type": "text",
         "text": "invalid gene name:MYC invalid gene name:BCL2"
       }
+    },
+    {
+      "question": "cluster BCR, TP53 and AKT1",
+      "PPoutput": {
+        "type": "text",
+        "text": "Your query includes gene names (bcr, tp53, akt1), but it is not clear which feature of the gene you are referring to (e.g. expression, methylation, mutation, etc.). Please rephrase your question to clarify what information you are seeking about the gene."
+      }
     }
   ],
   "prebuiltPlots": [
