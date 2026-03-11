@@ -245,7 +245,7 @@ export class TermTypeSearch {
 		if (this.tabs.length == 0) throw 'No term types allowed for this use case'
 		this.app.dispatch({ type: 'set_term_type_group', value: this.tabs[0].termTypeGroup })
 
-		if (this.tabs.length == 1 && this.tabs[0].termTypeGroup == TermTypeGroups.DICTIONARY_VARIABLES) return
+		if (this.tabs.length == 1) return
 
 		new Tabs({
 			holder: this.dom.holder,
@@ -337,19 +337,27 @@ export class TermTypeSearch {
 	}
 
 	getState(appState) {
-		return {
+		const s = {
 			dslabel: appState.dslabel,
-			termTypeGroup: appState.termTypeGroup,
+			termTypeGroup: appState.termTypeGroup, // if provided, meaning the ui will only show one type
 			usecase: appState.tree.usecase,
 			isVisible: !appState.submenu.term,
 			selectedTerms: appState.selectedTerms,
 			termfilter: appState.termfilter
 		}
+		console.log('state', s)
+		return s
 	}
 
 	async addTabsAllowed(state) {
 		for (const type of this.types) {
 			const termTypeGroup = typeGroup[type]
+
+			if (state.termTypeGroup && termTypeGroup != state.termTypeGroup) {
+				// state specifies this instance is only for one termTypeGroup, thus skip all others
+				continue
+			}
+
 			let label = termTypeGroup
 			if (type == TermTypes.GENE_VARIANT) {
 				const labels: string[] = []
