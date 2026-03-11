@@ -1,7 +1,8 @@
 import type { RawSingleCellGeneExpTerm, SingleCellGeneExpressionTerm } from '#types'
 import type { TwOpts } from './TwBase.ts'
+import { TermTypes } from '#shared/terms.js'
 
-const termType = 'singleCellGeneExpression'
+const termType = TermTypes.SINGLECELL_GENE_EXPRESSION
 
 export class SingleCellGeneExpressionBase {
 	type = termType
@@ -19,7 +20,7 @@ export class SingleCellGeneExpressionBase {
 	}
 
 	static validate(term: RawSingleCellGeneExpTerm) {
-		if (typeof term !== 'object') throw new Error('term is not an object')
+		if (!term || typeof term !== 'object') throw new Error('term is not an object')
 		if (term.type != termType) throw new Error(`incorrect term.type='${term?.type}', expecting '${termType}'`)
 		if (!term.gene && !term.name) throw new Error('no gene or name present')
 		if (!term.gene || typeof term.gene != 'string') throw new Error(`${termType} term.gene must be non-empty string`)
