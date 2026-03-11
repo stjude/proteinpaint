@@ -1,8 +1,11 @@
 import type { MassAppApi } from '#mass/types/mass'
-import { downloadTable, GeneSetEditUI, MultiTermWrapperEditUI } from '#dom'
+import { downloadTable, GeneSetEditUI, MultiTermWrapperEditUI, newSandboxDiv } from '#dom'
 import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
 import { DNA_METHYLATION, GENE_EXPRESSION } from '#shared/terms.js'
+import { GpdmPlot } from '../../gpdm/GpdmPlot'
+import { dofetch3 } from '#common/dofetch'
+import { select } from 'd3-selection'
 
 export class VolcanoInteractions {
 	app: MassAppApi
@@ -183,6 +186,57 @@ export class VolcanoInteractions {
 				})
 				this.dom.actionsTip.hide()
 			}
+		})
+	}
+
+	/** When clicking on a DM data point, launches the GPDM probe-level
+	 * analysis in a new sandbox. Looks up gene coordinates via genelookup,
+	 * then calls termdb/gpdm for the region. */
+	async launchGpdm(geneName: string, promoterId?: string) {
+		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
+		if (config.termType !== TermTypes.DNA_METHYLATION) return
+
+		const genome = this.app.vocabApi.vocab.genome
+
+		// Look up gene coordinates
+		const result = await dofetch3('genelookup', {
+			body: { deep: 1, input: geneName, genome }
+		})
+		if (result.error || !result.gmlst || result.gmlst.length === 0) {
+			window.alert(`Could not find coordinates for gene "${geneName}"`)
+			return
+		}
+
+		const gm = result.gmlst[0]
+		// Expand region by 2kb on each side to capture flanking probes
+		const pad = 2000
+		const chr = gm.chr
+		const start = Math.max(0, gm.start - pad)
+		const stop = gm.stop + pad
+
+		// Build sample lists from the config's group data
+		const group1 = config.samplelst.groups[0].values || []
+		const group2 = config.samplelst.groups[1].values || []
+
+		// Open a new sandbox (PP standard pattern)
+		const sandboxParent = this.app.opts.plotDiv || select(this.dom.holder.node()!.parentNode as HTMLElement)
+		const sandbox = newSandboxDiv(sandboxParent)
+		const title = promoterId ? `GPDM: ${geneName} (${promoterId})` : `GPDM: ${geneName}`
+		sandbox.header.text(title)
+
+		new GpdmPlot({
+			holder: sandbox.body as any,
+			genome,
+			dslabel: this.app.vocabApi.vocab.dslabel,
+			chr,
+			start,
+			stop,
+			geneName,
+			promoterId,
+			group1,
+			group2,
+			group1Name: config.samplelst.groups[0].name,
+			group2Name: config.samplelst.groups[1].name
 		})
 	}
 
