@@ -115,6 +115,17 @@ class TdbTree {
 
 	async main() {
 		if (this.state.termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES) {
+			/* due to original design, in ./app.ts, tree component is always created
+			in this app ui, the tree component only shows native/custom dictionary tree
+			for both cases, state.termTypeGroup value is TermTypeGroups.DICTIONARY_VARIABLES
+			
+			it must be noted that tree.js will not support non-dict term selection ui
+			and it is wrong to attempt to do so
+			those are carried out in ./handlers/<termtype>
+
+			when the app ui is only for showing contents from non-dict term types, e.g. scrna gene exp
+			this check will avoid a dictionary ui from showing up alongside the ui and causing a bug
+			*/
 			this.dom.holder.style('display', 'none')
 			return
 		}

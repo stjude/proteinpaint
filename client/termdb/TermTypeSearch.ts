@@ -181,15 +181,15 @@ const useCasesExcluded = {
 
 export class TermTypeSearch {
 	dom: any
-	types: Array<string>
 	app: any
 	type: string
+	types: Array<string> // array of term types
 	tabs: {
 		label: string // required by Tabs
 		termTypeGroup: string // required for comparing
 		contentHolder?: any // added by Tabs
 		callback: (any) => void
-	}[]
+	}[] // each element is one term type group, when there are multiple, tabs are shown
 	state: any
 	genomeObj: any
 	handlerByType: Dict
@@ -245,7 +245,7 @@ export class TermTypeSearch {
 		if (this.tabs.length == 0) throw 'No term types allowed for this use case'
 		this.app.dispatch({ type: 'set_term_type_group', value: this.tabs[0].termTypeGroup })
 
-		if (this.tabs.length == 1) return
+		if (this.tabs.length == 1) return // only one tab (group of term type); return and do not show a lone tab
 
 		new Tabs({
 			holder: this.dom.holder,
@@ -339,7 +339,6 @@ export class TermTypeSearch {
 	getState(appState) {
 		return {
 			dslabel: appState.dslabel,
-			termTypeGroup: appState.termTypeGroup, // if provided, meaning the ui will only show one type
 			usecase: appState.tree.usecase,
 			isVisible: !appState.submenu.term,
 			selectedTerms: appState.selectedTerms,
@@ -351,12 +350,7 @@ export class TermTypeSearch {
 		for (const type of this.types) {
 			const termTypeGroup = typeGroup[type]
 
-			if (state.termTypeGroup && termTypeGroup != state.termTypeGroup) {
-				// state specifies this instance is only for one termTypeGroup, thus skip all others
-				continue
-			}
-
-			let label = termTypeGroup
+			let label = termTypeGroup // label displayed on the tab for this group. might be customized as below
 			if (type == TermTypes.GENE_VARIANT) {
 				const labels: string[] = []
 				if (this.app.vocabApi.termdbConfig.queries.snvindel) labels.push('Mutation')
@@ -414,12 +408,15 @@ export class TermTypeSearch {
 				} catch (e) {
 					throw `error with handler='./handlers/${type}.ts': ${e}`
 				}
-				const collections = this.app.vocabApi?.termdbConfig?.termCollections
-				if (type == TermTypes.TERM_COLLECTION && collections) {
-					for (const ntc of collections) {
+				if (type == TermTypes.TERM_COLLECTION) {
+					const collections = this.app.vocabApi?.termdbConfig?.termCollections
+					if (!collections) throw new Error('termdbConfig.termCollections missing')
+					// one tab for each collection
+					for (const c of collections) {
+						// TODO restict what's shown based on support
 						this.tabs.push({
-							label: ntc.name,
-							callback: () => this.setTermTypeGroup(type, termTypeGroup, ntc),
+							label: c.name,
+							callback: () => this.setTermTypeGroup(type, termTypeGroup, c),
 							termTypeGroup
 						})
 					}
