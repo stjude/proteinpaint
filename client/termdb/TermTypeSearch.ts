@@ -337,7 +337,7 @@ export class TermTypeSearch {
 	}
 
 	getState(appState) {
-		const s = {
+		return {
 			dslabel: appState.dslabel,
 			termTypeGroup: appState.termTypeGroup, // if provided, meaning the ui will only show one type
 			usecase: appState.tree.usecase,
@@ -345,8 +345,6 @@ export class TermTypeSearch {
 			selectedTerms: appState.selectedTerms,
 			termfilter: appState.termfilter
 		}
-		console.log('state', s)
-		return s
 	}
 
 	async addTabsAllowed(state) {
