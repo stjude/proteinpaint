@@ -10,9 +10,11 @@ const root_ID = 'root'
 const samplesLimit = 15
 
 class SampleView {
+	static type = 'sampleView'
+
 	constructor(opts) {
 		this.opts = opts
-		this.type = 'sampleView'
+		this.type = SampleView.type
 		this.setDom(opts)
 		setInteractivity(this)
 		setRenderers(this)

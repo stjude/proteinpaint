@@ -7,6 +7,8 @@ import type { TableCell, TableColumn, TableRow } from '#dom'
 import { renderTable } from '#dom'
 
 export default class WSISamplesPlot {
+	static type = 'WSISamplesPlot'
+
 	// following attributes are required by rx
 	private type: string
 	private id: any
@@ -14,7 +16,7 @@ export default class WSISamplesPlot {
 	private app: any
 
 	constructor(opts: any) {
-		this.type = 'WSISamplesPlot'
+		this.type = WSISamplesPlot.type
 		this.opts = opts
 	}
 

@@ -27,6 +27,7 @@ import { dofetch3 } from '#common/dofetch'
 // .showWaitMessage(waitDiv)  optional function to display a custom message while genes are being loaded
 
 class GenesetComp {
+	static type = 'geneset'
 	// type: 'geneset'
 	// dom: {
 	// 	[domKey: string]: any // usually a d3-selection
@@ -41,7 +42,7 @@ class GenesetComp {
 	// }
 
 	constructor(opts) {
-		this.type = 'geneset'
+		this.type = GenesetComp.type
 
 		this.dom = {
 			holder: opts.holder.style('position', 'relative').style('min-height', '300px'),

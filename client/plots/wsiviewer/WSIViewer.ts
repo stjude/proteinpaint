@@ -40,7 +40,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 
 	constructor(opts: any, api) {
 		super(opts, api)
-		this.type = 'WSIViewer'
+		this.type = WSIViewer.type
 		this.opts = opts
 		this.wsiViewerInteractions = new WSIViewerInteractions(this, opts)
 		this.dom = {

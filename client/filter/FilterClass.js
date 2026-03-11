@@ -3,11 +3,11 @@ import { setInteractivity } from './filter.interactivity'
 import { findItem, findParent, getFilterItemByTag, getNormalRoot, filterJoin } from './filter.utils'
 import { vocabInit } from '#termdb/vocabulary'
 import { Menu } from '#dom/menu'
-import { deepEqual } from '#rx'
+import { deepEqual, deepFreeze } from '#rx'
 
-const defaults = {
+const defaults = deepFreeze({
 	joinWith: ['and', 'or']
-}
+})
 
 /*
 	opts{}

@@ -21,9 +21,11 @@ click on table cells allow to select corresponding samples, this is only allowed
 */
 
 class Facet extends PlotBase {
+	static type = 'facet'
+
 	constructor(opts) {
 		super(opts)
-		this.type = 'facet'
+		this.type = Facet.type
 		const holder = opts.holder
 
 		const controlsHolder = holder.append('div').style('display', 'inline-block')

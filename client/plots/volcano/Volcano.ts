@@ -25,7 +25,7 @@ class Volcano extends PlotBase implements RxComponent {
 	constructor(opts: VolcanoOpts, api) {
 		super(opts, api)
 		if (this.opts.parentId) this.parentId = this.opts.parentId
-		this.type = 'volcano'
+		this.type = Volcano.type
 		this.components = {
 			controls: {}
 		}

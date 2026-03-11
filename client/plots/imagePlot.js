@@ -2,8 +2,10 @@ import { getCompInit, copyMerge } from '../rx'
 import { controlsInit } from './controls'
 
 class imagePlot {
+	static type = 'imagePlot'
+
 	constructor() {
-		this.type = 'imagePlot'
+		this.type = imagePlot.type
 	}
 
 	async init(appState) {

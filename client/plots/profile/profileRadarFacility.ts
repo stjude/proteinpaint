@@ -6,6 +6,8 @@ import { getDefaultProfilePlotSettings, makeChartBtnMenu, getProfilePlotConfig, 
 export { makeChartBtnMenu }
 
 class profileRadarFacility extends profilePlot {
+	static type = 'profileRadarFacility'
+
 	radius: number
 	lineGenerator: any
 	arcGenerator: any

@@ -11,10 +11,14 @@ import { roundValueAuto } from '#shared/roundValue.js'
 
 const hlcolor = '#ffa200'
 const tip = new Menu()
+
 class geneORA {
+	static type = 'geneORA'
+
 	constructor() {
-		this.type = 'geneORA'
+		this.type = geneORA.type
 	}
+
 	async init(opts) {
 		if (!this.opts.holder || !this.opts.header) {
 			const sandBox = newSandboxDiv(select(this.opts.holder.node().parentNode))

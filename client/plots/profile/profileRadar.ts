@@ -6,6 +6,8 @@ import { renderTable } from '../../dom/table.js'
 import { getDefaultProfilePlotSettings, ABBREV_COHORT, makeChartBtnMenu, getProfilePlotConfig } from './profilePlot.js'
 
 class profileRadar extends profilePlot {
+	static type = 'profileRadar'
+
 	radius: number
 	lineGenerator: any
 	arcGenerator: any

@@ -68,8 +68,10 @@ const DE_GENES_TAB = 8
 const DE_GSEA_TAB = 7
 
 class singleCellPlot {
+	static type = 'singleCellPlot'
+
 	constructor() {
-		this.type = 'singleCellPlot'
+		this.type = singleCellPlot.type
 
 		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 0 })
 		this.tip.d.style('max-height', '300px').style('overflow', 'scroll').style('font-size', '0.9em')

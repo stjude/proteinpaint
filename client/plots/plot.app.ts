@@ -55,6 +55,8 @@ constructor options (opts)
 */
 
 class PlotApp extends AppBase implements RxApp {
+	static type = 'app'
+
 	// expected RxApp, some are already declared/set in AppBase
 	api: AppApi
 	type: string
@@ -73,7 +75,7 @@ class PlotApp extends AppBase implements RxApp {
 	constructor(opts, api) {
 		super(opts)
 		this.api = api
-		this.type = 'app'
+		this.type = PlotApp.type
 		this.dom = this.getDom(opts)
 	}
 

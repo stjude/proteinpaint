@@ -58,7 +58,7 @@ export class ComponentApi {
 		// the component type + id may be used later to
 		// simplify getting its state from the store
 		const self: RxComponent = new __Class__(opts, this)
-		self.opts = opts
+		self.opts = Object.assign(self.opts || {}, opts)
 		if (!self.id) self.id = opts.id || self.opts?.id
 		if (!self.type) self.type = __Class__.type
 		self.app = opts.app

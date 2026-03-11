@@ -6,10 +6,13 @@ import svgLegend from '#dom/svg.legend'
 import { scaleLinear } from 'd3-scale'
 import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
+
 class BrainImaging {
+	static type = 'brainImaging'
+
 	constructor(opts) {
 		this.opts = opts
-		this.type = 'brainImaging'
+		this.type = BrainImaging.type
 		setInteractivity(this)
 	}
 

@@ -20,7 +20,7 @@ class ViolinPlot extends PlotBase {
 
 	constructor(opts) {
 		super(opts)
-		this.type = 'violin'
+		this.type = ViolinPlot.type
 	}
 
 	async init(appState) {

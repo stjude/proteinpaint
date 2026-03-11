@@ -27,8 +27,10 @@ function getElemId(instanceNum) {
 }
 
 class TdbConfigUiInit {
+	static type = 'controlsConfig'
+
 	constructor(opts) {
-		this.type = 'controlsConfig'
+		this.type = TdbConfigUiInit.type
 		this.app = opts.app
 		this.id = opts.id
 		this.instanceNum = instanceNum++

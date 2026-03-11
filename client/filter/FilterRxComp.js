@@ -5,9 +5,11 @@ import * as htmlToImage from 'html-to-image'
 
 // use this in rx-based apps
 class FilterRxComp extends Filter {
+	static type = 'filter'
+
 	constructor(opts) {
 		super(opts)
-		this.type = 'filter'
+		this.type = FilterRxComp.type
 		this.parentId = opts.parentId
 		this.initHolder()
 		// rx.getCompInit() will create this.opts, this.api

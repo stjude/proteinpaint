@@ -36,8 +36,10 @@ class Cuminc
 	- no skipped charts
 */
 export class Cuminc extends PlotBase {
+	static type = 'cuminc'
+
 	constructor(opts) {
-		this.type = 'cuminc'
+		this.type = Cuminc.type
 		this.pj = getPj(this)
 		this.state = {
 			config: copyMerge(

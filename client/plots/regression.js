@@ -17,9 +17,11 @@ regression.js
 */
 
 class Regression extends PlotBase {
+	static type = 'regression'
+
 	constructor(opts) {
 		super(opts)
-		this.type = 'regression'
+		this.type = Regression.type
 		this.genomeObj = opts.app.opts.genome
 	}
 
