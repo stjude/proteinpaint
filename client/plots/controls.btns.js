@@ -2,8 +2,10 @@ import { getCompInit, multiInit } from '../rx'
 import { icons as icon_functions } from '../dom/control.icons'
 
 class TdbControlsTopBar {
+	static type = 'controlsTopBar'
+
 	constructor(opts) {
-		this.type = 'controlsTopBar'
+		this.type = TdbControlsTopBar.type
 	}
 
 	async init() {

@@ -18,10 +18,13 @@ const clusterMethodLst = [
 
 const distanceMethodLst = ['euclidean', 'maximum', 'manhattan', 'canberra']
 
-class geneExpression {
+class GeneExpression {
+	static type = 'geneExpression'
+
 	constructor() {
-		this.type = 'geneExpression'
+		this.type = GeneExpression.type
 	}
+
 	async init(opts) {
 		const holder = this.opts.holder.append('div')
 		this.dom = {
@@ -86,7 +89,7 @@ export async function getPlotConfig(opts, app) {
 	}
 }
 
-export const geneExpressionInit = getCompInit(geneExpression)
+export const geneExpressionInit = getCompInit(GeneExpression)
 // this alias will allow abstracted dynamic imports
 export const componentInit = geneExpressionInit
 

@@ -24,6 +24,8 @@ import { dtcnv, dtloh } from '#shared/common.js'
 import MutationWaterfallRenderer from './waterfall/MutationWaterfallRenderer.ts'
 
 export default class Disco {
+	static type = 'Disco'
+
 	// following attributes are required by rx
 	private type: string
 	private opts: any

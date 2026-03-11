@@ -13,9 +13,11 @@ import { getCombinedTermFilter } from '#filter'
 const tip = new Menu()
 
 class gsea extends PlotBase {
+	static type = 'gsea'
+
 	constructor(opts) {
 		super(opts)
-		this.type = 'gsea'
+		this.type = gsea.type
 		this.opts = opts
 		this.components = {
 			controls: {}

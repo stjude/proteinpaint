@@ -2,13 +2,15 @@ import { getCompInit } from '#rx'
 import OpenSeadragon from 'openseadragon'
 
 export default class DziViewer {
+	static type = 'DziViewer'
+
 	// following attributes are required by rx
 	private type: string
 	private opts: any
 	private app: any
 
 	constructor(opts: any) {
-		this.type = 'DziViewer'
+		this.type = DziViewer.type
 		this.opts = opts
 	}
 

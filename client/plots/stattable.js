@@ -1,8 +1,10 @@
 import { getCompInit } from '../rx'
 
 class TdbStatTable {
+	static type = 'stattable'
+
 	constructor(opts) {
-		this.type = 'stattable'
+		this.type = TdbStatTable.type
 	}
 
 	async init() {

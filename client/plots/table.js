@@ -3,8 +3,10 @@ import { getCompInit } from '../rx'
 import { select } from 'd3-selection'
 
 class TdbTable {
+	static type = 'table'
+
 	constructor(opts) {
-		this.type = 'table'
+		this.type = TdbTable.type
 	}
 
 	async init() {

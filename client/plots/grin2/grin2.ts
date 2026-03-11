@@ -116,6 +116,7 @@ export function showGrin2ResultTable(opts: ShowGrin2ResultTableOpts): void {
 }
 
 class GRIN2 extends PlotBase implements RxComponent {
+	static type = 'grin2'
 	readonly type = 'grin2'
 	dom: GRIN2Dom
 	components: { controls: ComponentApi }

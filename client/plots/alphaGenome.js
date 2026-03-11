@@ -5,9 +5,11 @@ import { controlsInit } from './controls'
 import { interval } from 'd3'
 
 class AlphaGenome extends PlotBase {
+	static type = 'alphaGenome'
+
 	constructor(opts) {
 		super(opts)
-		this.type = 'alphaGenome'
+		this.type = AlphaGenome.type
 		this.dom = {
 			holder: opts.holder,
 			controlsDiv: opts.holder.append('div').style('display', 'inline-block'),

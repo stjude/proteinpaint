@@ -24,9 +24,11 @@ export const term0_term2_defaultQ = {
 }
 
 class TdbPlotControls {
+	static type = 'plotControls'
+
 	constructor(opts) {
 		this.opts = opts
-		this.type = 'plotControls'
+		this.type = TdbPlotControls.type
 		this.customEvents = ['downloadClick', 'infoClick', 'helpClick']
 		this.isOpen = opts.isOpen || false
 		this.showTopBar = opts.hasOwnProperty('showTopBar') ? opts.showTopBar : true

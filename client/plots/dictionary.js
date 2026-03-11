@@ -2,8 +2,10 @@ import { getCompInit, copyMerge } from '#rx'
 import { appInit } from '#termdb/app'
 
 class MassDict {
+	static type = 'tree'
+
 	constructor(opts) {
-		this.type = 'tree'
+		this.type = MassDict.type
 		this.dom = {
 			holder: opts.holder.style('padding', '20px'),
 			header: opts.header

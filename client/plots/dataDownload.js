@@ -19,8 +19,10 @@ this {}
 */
 
 class DataDownload {
+	static type = 'dataDownload'
+
 	constructor(opts) {
-		this.type = 'dataDownload'
+		this.type = DataDownload.type
 		this.genomeObj = opts.app.opts.genome
 		this.pillBy$id = {}
 	}
