@@ -140,7 +140,6 @@ export type PlotType =
 	| 'samplescatter'
 	| 'hiercluster'
 	| 'lollipop'
-	| 'ambiguous_gene_name'
 
 export type DEType = {
 	/** Name of group1 which is an array of filter terms */
