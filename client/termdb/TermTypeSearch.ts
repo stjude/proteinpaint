@@ -339,6 +339,7 @@ export class TermTypeSearch {
 	getState(appState) {
 		return {
 			dslabel: appState.dslabel,
+			termTypeGroup: appState.termTypeGroup, //See comment in store for usage
 			usecase: appState.tree.usecase,
 			isVisible: !appState.submenu.term,
 			selectedTerms: appState.selectedTerms,
