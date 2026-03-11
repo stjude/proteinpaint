@@ -29,10 +29,7 @@ export class SearchHandler {
 				.classed('termdiv', true)
 				.style('padding', '0px 5px')
 				.append('div')
-				.classed('termlabel', true)
-				.classed('sja_filter_tag_btn', true)
-				.classed('sja_tree_click_term', true)
-				.classed('ts_pill', true)
+				.classed('termlabel sja_filter_tag_btn sja_tree_click_term ts_pill', true)
 				.style('display', 'inline-block')
 				.style('padding', '5px 8px')
 				.style('margin', '1px 0px')
@@ -50,6 +47,8 @@ export class SearchHandler {
 		if (opts.app == null) throw new Error('app is required')
 		if (opts.holder == null) throw new Error('holder is required')
 		if (opts.usecase == null) throw new Error('usecase is required')
+		if (!opts.app.vocabApi.termdbConfig?.termType2terms)
+			throw new Error('termType2terms is required in termdbConfig for singleCellCellType handler')
 		if (!opts.usecase?.specialCase?.config?.name) {
 			throw new Error('usecase.specialCase.config.name defining the plot is required for singleCellCellType handler')
 		}
