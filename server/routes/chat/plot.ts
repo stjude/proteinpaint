@@ -9,7 +9,11 @@ import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
  * @param llm          LLM configuration (provider, model names, API endpoint).
  * @returns            The specific plot type (e.g. 'summary', 'dge', 'survival', 'matrix', 'samplescatter').
  */
-export async function classifyPlotType(user_prompt: string, llm: LlmConfig): Promise<PlotType> {
+export async function classifyPlotType(
+	user_prompt: string,
+	llm: LlmConfig,
+	relevant_genes: string[]
+): Promise<PlotType> {
 	mayLog('classifyPlotType called with prompt:', user_prompt)
 	const prompt = `You are a classifier. Given a user query about data visualization, respond with exactly one word from this list: summary, dge, survival, matrix, samplescatter, hiercluster
 
@@ -23,7 +27,9 @@ Definitions:
 - lollipop: lollipop plot showing mutation distribution along a gene or protein (e.g. "lollipop plot of TP53 mutations", "mutation distribution along KRAS"). Use this when the user explicitly asks for a lollipop plot or describes a plot with mutation positions along a gene or protein.
 - ambiguous_gene_name: if the query involves a GENE NAME but not clear what feature of a gene the user is referring to, respond with "ambiguous_gene_name".
 
-IMPORTANT: Your response must be exactly one word. Do not return chart type names like "violin", "box plot", or "bar chart". Return only: summary, dge, survival, matrix, samplescatter, or hiercluster.
+IMPORTANT: Your response must be exactly one word. Do not return chart type names like "violin", "box plot", or "bar chart". Return only: summary, dge, survival, matrix, samplescatter, or hiercluster. Relevant gene names in the query: ${relevant_genes.join(
+		', '
+	)}.    
 
 Query: "${user_prompt}"
 Classification:`
