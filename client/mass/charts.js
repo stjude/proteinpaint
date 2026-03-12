@@ -5,8 +5,10 @@ import { NumericModes, TermTypes } from '#shared/terms.js'
 import { importPlot } from '#plots/importPlot.js'
 
 class MassCharts {
+	static type = 'charts'
+
 	constructor(opts = {}) {
-		this.type = 'charts'
+		this.type = MassCharts.type
 		// stickyAncestor will attached to button data, to be used by menu.stickyPosition()
 		// when showing the menu tip near a clicked chart button
 		this.stickyAncestor = getAncestorWithComputedStyle(opts.holder.node(), 'position', new Set(['sticky', 'fixed']))

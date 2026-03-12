@@ -24,8 +24,10 @@ allow to search categories, e.g. hodgkin lymphoma from diaggrp, how to act upon 
  */
 
 class MassSearch {
+	static type = 'search'
+
 	constructor(opts) {
-		this.type = 'search'
+		this.type = MassSearch.type
 		setRenderers(this)
 		setInteractivity(this)
 	}
