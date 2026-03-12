@@ -872,7 +872,9 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 			routeTwLst === undefined
 				? undefined
 				: routeTwLst.filter(tw => !q.__protected__.ignoredTermIds.includes(tw.term.id)).map(tw => tw.term)
+		console.log('[mayAdjustFilter] routeTerms:', routeTerms?.map(t => t.id) ?? 'undefined (strict mode)')
 		const authFilter = ds.cohort.termdb.getAdditionalFilter(q.__protected__, routeTerms, ds)
+		console.log('[mayAdjustFilter] authFilter:', authFilter ? authFilter.lst?.map(t => t.tvs?.term?.id) : 'undefined')
 
 		if (!q.filter) q.filter = { type: 'tvslst', join: '', lst: [] }
 		else if (q.filter.type != 'tvslst') throw `invalid q.filter.type != 'tvslst'`
@@ -886,6 +888,7 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 			// revert or do not adjust the q.filter in this case
 			if (i !== -1) {
 				// remove a previously added auth filter
+				console.log('[mayAdjustFilter] REMOVING auth filter from q.filter')
 				q.filter.lst.splice(i)
 				if (q.filter.lst.length < 2) q.filter.join = ''
 			} else if (q.filter.tag === FILTER_TAG) {
