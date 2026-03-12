@@ -560,6 +560,20 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 	app.post(basepath + '/jwt-status', async (req, res) => {
 		let code = 401 // assume unauthorized by default
 
+		if (req.headers.referer) {
+			const referer = Array.isArray(req.headers.referer) ? req.headers.referer[0] : req.headers.referer
+			if (!referer.toLowerCase().startsWith('http')) {
+				// NOTE: The restriction below only applies to dsCredentials jwt. It does not apply
+				// to portal-wide serverconfig.jwt usage that is verified in app.middleware.js.
+				res.status(401)
+				res.send({
+					error:
+						'Token authorization is not supported from a non-HTTP page. The referer URL must start with http:// or https://.'
+				})
+				return
+			}
+		}
+
 		// To simulate a failed JWT signature verification uncomment the following lines
 		// res.status(code)
 		// res.send({"error":{"name":"JsonWebTokenError","message":"invalid signature"}})
