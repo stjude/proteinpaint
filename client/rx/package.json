@@ -1,11 +1,12 @@
 {
   "name": "@sjcrh/rx",
-  "//type": "module",
+  "type": "module",
   "version": "0.0.0",
   "description": "a minimal reactive framework for managing application state, inspired by React/Redux and Vue",
   "main": "index.js",
   "scripts": {
-    "#test": "/* TODO: use puppeteer */ tape test/*.unit.spec.js"
+  	"#test": "/* TODO: use puppeteer */ tape test/*.unit.spec.js",
+    "build": "esbuild --bundle --sourcemap --format=esm --outfile=public/js/rx.js --platform=browser index.ts"
   },
   "license": "UNLICENSED",
   "devDependencies": {

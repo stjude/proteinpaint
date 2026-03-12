@@ -1,8 +1,10 @@
 import { getCompInit } from './rx.js'
 
 class MyButton {
+	static type = 'button'
+
 	constructor(opts) {
-		this.type = 'button'
+		this.type = MyButton.type
 		const leftLabel = opts.holder.append('span').style('margin-right', '10px')
 		const button = opts.holder.append('button').on('click', () => {
 			this.app.dispatch({

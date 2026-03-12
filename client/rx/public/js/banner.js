@@ -1,8 +1,10 @@
 import { getCompInit } from './rx.js'
 
 class PortalBanner {
+	static type = 'banner'
+
 	constructor(opts) {
-		this.type = 'banner'
+		this.type = PortalBanner.type
 		this.dom = {
 			holder: opts.holder.style('font-size', '2em').style('font-weight', 600)
 		}
