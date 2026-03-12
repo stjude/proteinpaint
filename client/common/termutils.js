@@ -1,5 +1,10 @@
-import { TermTypes } from '#shared/terms.js'
-import { dofetch3 } from '../src/client'
+import {
+	SINGLECELL_GENE_EXPRESSION,
+	GENE_EXPRESSION,
+	METABOLITE_INTENSITY,
+	WHOLE_PROTEOME_ABUNDANCE
+} from '#shared/terms.js'
+// import { dofetch3 } from '../src/client'
 
 /*
 to retrieve the termjson object of one term, using its id
@@ -39,9 +44,9 @@ export function sample_match_termvaluesetting(row, filter, geneVariant$ids) {
 			} else if (
 				t.term.type == 'integer' ||
 				t.term.type == 'float' ||
-				t.term.type == TermTypes.GENE_EXPRESSION ||
-				t.term.type == TermTypes.METABOLITE_INTENSITY ||
-				t.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE
+				t.term.type == GENE_EXPRESSION ||
+				t.term.type == METABOLITE_INTENSITY ||
+				t.term.type == WHOLE_PROTEOME_ABUNDANCE
 			) {
 				samplevalue = row[t.term.id] || row[t.term.$id]?.key
 			} else if (t.term.type == 'survival') {
@@ -64,9 +69,9 @@ export function sample_match_termvaluesetting(row, filter, geneVariant$ids) {
 			} else if (
 				t.term.type == 'integer' ||
 				t.term.type == 'float' ||
-				t.term.type == TermTypes.GENE_EXPRESSION ||
-				t.term.type == TermTypes.METABOLITE_INTENSITY ||
-				t.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE
+				t.term.type == GENE_EXPRESSION ||
+				t.term.type == METABOLITE_INTENSITY ||
+				t.term.type == WHOLE_PROTEOME_ABUNDANCE
 			) {
 				if (samplevalue === undefined) {
 					// this sample has no anno for this term, check isnot
@@ -141,7 +146,7 @@ export function sample_match_termvaluesetting(row, filter, geneVariant$ids) {
 							if (v.dt == f.dt && (!v.origin || v.origin == f.origin) && f.mclasslst.includes(v.class)) return true
 						}
 					}) && true
-			} else if (t.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
+			} else if (t.term.type == SINGLECELL_GENE_EXPRESSION) {
 			} else {
 				throw 'unknown term type'
 			}

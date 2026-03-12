@@ -1,7 +1,7 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { SearchHandler } from '../singleCellGeneExpression.ts'
-import { TermTypes } from '#shared/terms.js'
+import { SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
 
 /*************************
  reusable helper functions
@@ -137,7 +137,7 @@ tape('selectGene() should call callback with configured unit and default unit fa
 	await handler.selectGene('TP53', sample)
 	test.equal(selected?.gene, 'TP53', 'Should pass selected gene')
 	test.equal(selected?.name, 'TP53 log2 CPM', 'Should include configured unit in term name')
-	test.equal(selected?.type, TermTypes.SINGLECELL_GENE_EXPRESSION, 'Should set type to singleCellGeneExpression')
+	test.equal(selected?.type, SINGLECELL_GENE_EXPRESSION, 'Should set type to singleCellGeneExpression')
 	test.deepEqual(selected?.sample, sample, 'Should pass through selected sample')
 
 	handler.app = { vocabApi: { termdbConfig: { queries: { singleCell: { geneExpression: {} } } } } } as any
