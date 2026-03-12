@@ -1,6 +1,7 @@
 import type { RawSingleCellCellTypeTerm, SingleCellCellTypeTerm, TermGroupSetting, TermValues } from '#types'
+import { TermTypes } from '#shared/terms.js'
 
-const termType = 'singleCellCellType'
+const termType = TermTypes.SINGLECELL_CELL_TYPE
 
 export class SingleCellCellTypeBase {
 	type = termType
