@@ -24,6 +24,7 @@ import { TwBase } from './TwBase.ts'
 import { copyMerge } from '#rx'
 import { set_hiddenvalues, type UseCase } from '#termsetting'
 import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
+import * as tt from '#shared/terms.js'
 
 export type QualInstance = QualValues | QualPredefinedGS | QualCustomGS
 export type QualTypes = typeof QualValues | typeof QualPredefinedGS | typeof QualCustomGS
@@ -32,7 +33,7 @@ export class QualitativeBase extends TwBase {
 	// type, isAtomic, $id are set in ancestor base classes
 	term: QualTerm
 	q: QualQ
-	static termTypes = new Set(['categorical', 'snp', 'singleCellCellType'])
+	static termTypes = new Set([tt.CATEGORICAL, tt.SNP, tt.SINGLECELL_CELLTYPE])
 
 	constructor(tw: QualTW, opts: TwOpts) {
 		super(tw, opts)
@@ -55,7 +56,7 @@ export class QualitativeBase extends TwBase {
 				SnpBase.fill(tw.term)
 				break
 
-			case 'singleCellCellType':
+			case tt.SINGLECELL_CELLTYPE:
 				SingleCellCellTypeBase.fill(tw.term)
 				break
 

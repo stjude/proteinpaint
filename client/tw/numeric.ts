@@ -29,6 +29,7 @@ import { DateBase } from './date.ts'
 import { SsGSEABase } from './ssGSEA.ts'
 import { DnaMethylationBase } from './dnaMethylation.ts'
 import { SingleCellGeneExpressionBase } from './singleCellGeneExpression.ts'
+import * as tt from '#shared/terms.js'
 
 export class NumericBase extends TwBase {
 	// type is set by TwBase constructor
@@ -43,7 +44,7 @@ export class NumericBase extends TwBase {
 		'wholeProteomeAbundance',
 		'ssGSEA',
 		'dnaMethylation',
-		'singleCellGeneExpression'
+		tt.SINGLECELL_GENE_EXPRESSION
 	])
 
 	constructor(tw: NumTW, opts: TwOpts) {
@@ -92,7 +93,7 @@ export class NumericBase extends TwBase {
 				if (!tw.q.mode) tw.q.mode = 'continuous'
 				break
 
-			case 'singleCellGeneExpression':
+			case tt.SINGLECELL_GENE_EXPRESSION:
 				SingleCellGeneExpressionBase.fill(tw.term, opts)
 				if (!tw.q.mode) tw.q.mode = 'continuous'
 				break

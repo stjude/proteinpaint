@@ -5,7 +5,7 @@ import { vocabInit } from '../../termdb/vocabulary'
 import { termjson } from '../../test/testdata/termjson'
 import { termsettingInit } from '#termsetting'
 import { sleep, detectLst, detectGte, whenGone, detectOne } from '../../test/test.helpers'
-import { TwRouter } from '#tw'
+import * as tt from '#shared/terms.js'
 
 /*
 Tests:
@@ -1172,7 +1172,7 @@ tape('singleCellCellType', async test => {
 	const opts = await getOpts({
 		tsData: {
 			term: {
-				type: 'singleCellCellType',
+				type: tt.SINGLECELL_CELLTYPE,
 				id: 'CellType',
 				name: 'CellType',
 				sample: {

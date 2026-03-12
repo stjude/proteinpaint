@@ -11,9 +11,9 @@ import {
 } from '../../test/testdata/data.ts'
 import { fillTermWrapper } from '#termsetting'
 import { getFilterItemByTag, filterJoin } from '#filter'
-import { sleep, detectOne, detectGte, detectLst, whenVisible, whenHidden } from '../../test/test.helpers.js'
-import { select, brushX } from 'd3'
+import { sleep, detectOne, detectGte, detectLst, whenVisible } from '../../test/test.helpers.js'
 import { testViolinByCount } from './helpers.spec'
+import { SINGLECELL_CELLTYPE } from '@sjcrh/proteinpaint-shared'
 
 /**************
  test sections
@@ -102,7 +102,7 @@ tape('agedx/sex, basic rendering', function (test) {
 		test.equal(
 			+pvalues[0][2].html,
 			+violinPvalueDiv.node().querySelectorAll('.sjpp_table_item')[5].innerHTML,
-			`p-value of ${+violinPvalueDiv.node().querySelectorAll('.sjpp_table_item')[5].innerHTML} is correct`
+			`Should render correct p-value of ${+violinPvalueDiv.node().querySelectorAll('.sjpp_table_item')[5].innerHTML}.`
 		)
 	}
 
@@ -110,42 +110,42 @@ tape('agedx/sex, basic rendering', function (test) {
 		test.equal(
 			+legendDiv.node().querySelectorAll('.legend-row')[0].innerText.split(':')[1],
 			+violin.Inner.config.term.q.descrStats.total.value,
-			'Total n values rendered'
+			'Should render Total n values.'
 		)
 		test.equal(
 			+legendDiv.node().querySelectorAll('.legend-row')[1].innerText.split(':')[1],
 			+violin.Inner.config.term.q.descrStats.min.value,
-			'Minimum value rendered'
+			'Should render Minimum value.'
 		)
 		test.equal(
 			+legendDiv.node().querySelectorAll('.legend-row')[2].innerText.split(':')[1],
 			+violin.Inner.config.term.q.descrStats.p25.value,
-			'1st quartile value rendered'
+			'Should render 1st quartile value.'
 		)
 		test.equal(
 			+legendDiv.node().querySelectorAll('.legend-row')[3].innerText.split(':')[1],
 			+violin.Inner.config.term.q.descrStats.median.value,
-			'Median value rendered'
+			'Should render Median value.'
 		)
 		test.equal(
 			+legendDiv.node().querySelectorAll('.legend-row')[4].innerText.split(':')[1],
 			+violin.Inner.config.term.q.descrStats.p75.value,
-			'3rd quartile value rendered'
+			'Should render 3rd quartile value.'
 		)
 		test.equal(
 			+legendDiv.node().querySelectorAll('.legend-row')[5].innerText.split(':')[1],
 			+violin.Inner.config.term.q.descrStats.max.value,
-			'Max value rendered'
+			'Should render Max value.'
 		)
 		test.equal(
 			+legendDiv.node().querySelectorAll('.legend-row')[6].innerText.split(':')[1],
 			+violin.Inner.config.term.q.descrStats.mean.value,
-			'Mean value rendered'
+			'Should render Mean value.'
 		)
 		test.equal(
 			+legendDiv.node().querySelectorAll('.legend-row')[7].innerText.split(':')[1],
 			+violin.Inner.config.term.q.descrStats.stdDev.value,
-			'Standard deviation rendered'
+			'Should render Standard deviation.'
 		)
 	}
 	async function testMedianRendering(violin, violinDiv) {
@@ -154,12 +154,8 @@ tape('agedx/sex, basic rendering', function (test) {
 			selector: '.sjpp-median-line',
 			count: 2
 		})
-		test.ok(median, 'Median exists')
-		test.equal(
-			median.length,
-			violin.Inner.data.charts[''].plots.length,
-			'Number of median lines rendered should be/is equal to number of plots rendered'
-		)
+		test.ok(median, 'Should render median line(s)')
+		test.equal(median.length, violin.Inner.data.charts[''].plots.length, 'Should render correct number of median lines')
 		const medianValues = median.map(({ __data__: { summaryStats } }) => {
 			const { value } = summaryStats.median
 			return value
@@ -172,12 +168,12 @@ tape('agedx/sex, basic rendering', function (test) {
 		test.equal(
 			medianValues[0],
 			sumStatsValues[0],
-			`median rendered correctly for plot ${violin.Inner.data.charts[''].plots[0].label}`
+			`Should render median correctly for plot ${violin.Inner.data.charts[''].plots[0].label}`
 		)
 		test.equal(
 			medianValues[1],
 			sumStatsValues[1],
-			`median rendered correctly for plot ${violin.Inner.data.charts[''].plots[1].label}`
+			`Should render median correctly for plot ${violin.Inner.data.charts[''].plots[1].label}`
 		)
 	}
 })
@@ -249,12 +245,12 @@ tape('agedx/sex, basic controls', function (test) {
 		test.equal(
 			violin.Inner.app.Inner.state.plots[0].settings.violin.medianLength,
 			testMedianLength,
-			'Median length changed in state'
+			'Should change Median length in state'
 		)
 		test.equal(
 			violin.Inner.app.Inner.state.plots[0].settings.violin.medianLength,
 			testMedianLength,
-			'Median thickness changed in state'
+			'Should change Median thickness in state'
 		)
 	}
 	async function changeOrientation(violin, violinDiv) {
@@ -272,7 +268,7 @@ tape('agedx/sex, basic controls', function (test) {
 		test.equal(
 			violin.Inner.app.Inner.state.plots[0].settings.violin.orientation,
 			'vertical',
-			'state changed to vertical'
+			'Should change orientation to vertical in state'
 		)
 	}
 
@@ -288,7 +284,10 @@ tape('agedx/sex, basic controls', function (test) {
 				}
 			}
 		})
-		test.true(violin.Inner.app.Inner.state.plots[0].settings.violin.datasymbol === 'rug', 'Data Symbol are now Ticks')
+		test.true(
+			violin.Inner.app.Inner.state.plots[0].settings.violin.datasymbol === 'rug',
+			'Should change Data Symbol to Ticks'
+		)
 	}
 
 	async function changeStrokeWidth(violin) {
@@ -306,7 +305,7 @@ tape('agedx/sex, basic controls', function (test) {
 		})
 		test.true(
 			violin.Inner.app.Inner.state.plots[0].settings.violin.strokeWidth === testStrokeWidth,
-			`Stroke width changed to ${testStrokeWidth}`
+			`Should change stroke width to ${testStrokeWidth}`
 		)
 	}
 
@@ -1452,7 +1451,7 @@ async function testLabelHoverClick(test, violin, violinDiv, labelcount) {
 
 	labs[0].dispatchEvent(new Event('click'), { bubbles: true })
 	const tip = violin.Inner.dom.clicktip
-	if (!violin.Inner.state.config.term2 || violin.Inner.state.config.term2.term.type == 'singleCellCellType') {
+	if (!violin.Inner.state.config.term2 || violin.Inner.state.config.term2.term.type == SINGLECELL_CELLTYPE) {
 		/* by design, menu won't show:
 		- if no term2
 		- if term2 is singleCellCellType

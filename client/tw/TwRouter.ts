@@ -6,22 +6,23 @@ import { QualValues, QualPredefinedGS, QualCustomGS } from './qualitative.ts'
 import { GvBase, GvValues, GvPredefinedGS, GvCustomGS } from './geneVariant.ts'
 import { NumericBase, NumRegularBin, NumCustomBins, NumCont, NumSpline } from './numeric.ts'
 import { CollectionBase, CollectionCont, CollectionQual } from './termCollection'
+import * as tt from '#shared/terms.js'
 
 export const routedTermTypes = new Set([
-	'categorical',
-	'integer',
-	'float',
-	'geneVariant',
-	'geneExpression',
-	'date',
-	'metaboliteIntensity',
-	'wholeProteomeAbundance',
-	'ssGSEA',
-	'snp',
-	'singleCellGeneExpression',
-	'singleCellCellType',
-	'termCollection',
-	'dnaMethylation'
+	tt.CATEGORICAL,
+	tt.INTEGER,
+	tt.FLOAT,
+	tt.GENE_VARIANT,
+	tt.GENE_EXPRESSION,
+	tt.DATE,
+	tt.METABOLITE_INTENSITY,
+	tt.WHOLE_PROTEOME_ABUNDANCE,
+	tt.SSGSEA,
+	tt.SNP,
+	tt.SINGLECELL_GENE_EXPRESSION,
+	tt.SINGLECELL_CELLTYPE,
+	tt.TERM_COLLECTION,
+	tt.DNA_METHYLATION
 ])
 
 export type UseCase = {
@@ -89,7 +90,7 @@ export class TwRouter {
 
 		switch (tw.term.type) {
 			case 'categorical':
-			case 'singleCellCellType':
+			case tt.SINGLECELL_CELLTYPE:
 			case 'snp': {
 				const { QualitativeBase } = await import('./qualitative')
 				return await QualitativeBase.fill(tw, opts)
@@ -102,7 +103,7 @@ export class TwRouter {
 			case 'wholeProteomeAbundance':
 			case 'date':
 			case 'ssGSEA':
-			case 'singleCellGeneExpression':
+			case tt.SINGLECELL_GENE_EXPRESSION:
 			case 'dnaMethylation':
 				return await NumericBase.fill(tw, opts)
 

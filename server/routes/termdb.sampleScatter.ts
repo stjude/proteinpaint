@@ -22,6 +22,7 @@ import { authApi } from '../src/auth.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { read_file } from '../src/utils.js'
 import { getDescrStats } from '#routes/termdb.descrstats.ts'
+import { SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/sampleScatter',
@@ -159,8 +160,8 @@ async function getSingleCellScatter(req, res, ds) {
 		const tw = q.colorTW as any // not using "TermWrapper" due to tsc err
 		const arg: any = { plots: [name], sample }
 		if (tw) {
-			if (tw.term.type == 'singleCellGeneExpression') arg.gene = tw.term.gene
-			else if (tw.term.type == 'singleCellCellType') arg.colorBy = tw.term.name
+			if (tw.term.type == SINGLECELL_GENE_EXPRESSION) arg.gene = tw.term.gene
+			else if (tw.term.type == SINGLECELL_CELLTYPE) arg.colorBy = tw.term.name
 			else throw new Error('unsupported tw')
 		}
 		const data = await ds.queries.singleCell.data.get(arg)
