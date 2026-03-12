@@ -307,6 +307,7 @@ export class View {
 		arg.chr = this.state.config.geneSearchResult.chr
 		arg.start = this.state.config.geneSearchResult.start
 		arg.stop = this.state.config.geneSearchResult.stop
+		if (this.state.config.hlregions?.length) arg.hlregions = this.state.config.hlregions
 		first_genetrack_tolist(this.opts.genome, arg.tklst)
 
 		const _ = await import('#src/block')
