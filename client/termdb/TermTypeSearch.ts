@@ -180,6 +180,8 @@ const useCasesExcluded = {
 }
 
 export class TermTypeSearch {
+	static type = 'termTypeSearch'
+
 	dom: any
 	app: any
 	type: string
@@ -200,7 +202,7 @@ export class TermTypeSearch {
 	}
 
 	constructor(opts) {
-		this.type = 'termTypeSearch'
+		this.type = TermTypeSearch.type
 		this.genomeObj = opts.genome
 		this.click_term = opts.click_term
 		this.submit_lst = opts.submit_lst

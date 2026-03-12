@@ -13,13 +13,14 @@ TODOs:
 */
 
 class MainHeadboxBtn {
+	static type = 'mainBtn'
+
 	constructor(opts) {
 		this.type = 'mainBtn'
 		this.opts = this.validateOpts(opts)
 		this.dom = opts.dom
 		this.state = opts.state
 		this.hasStatePreMain = true
-		setRenderers(this)
 	}
 
 	validateOpts(opts) {
@@ -28,11 +29,18 @@ class MainHeadboxBtn {
 
 	getState(appState) {
 		return {
-			appBtnActive: appState.appBtnActive
+			appBtnActive: appState.appBtnActive,
+			duration: appState.duration,
+			arrowSize: appState.arrowSize,
+			arrowColor: appState.arrowColor,
+			hintWidth: appState.hintWidth,
+			hintPos: appState.hintPos
 		}
 	}
 
-	async init() {
+	async init(appState) {
+		this.state = this.getState(appState)
+		setRenderers(this)
 		this.btnRendered = false
 		this.drawerFullHeight = ''
 		try {
@@ -48,7 +56,7 @@ class MainHeadboxBtn {
 	}
 
 	async main(appState) {
-		if (this.app.getState(appState).appBtnActive == true && this.btnRendered == false) {
+		if (this.state.appBtnActive == true && this.btnRendered == false) {
 			this.dom.drawerDiv.style('background-color', '#f5f5f5') //Quick fix for drawerDiv initially appearing before layout init
 			//Init layout only once when 'Apps' button is active for the first time
 			this.components.layout.push(

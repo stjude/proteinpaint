@@ -1,4 +1,4 @@
-import { getInitFxn } from '#rx'
+import { getCompInit } from '#rx'
 import * as utils from './utils.js'
 import { openSandbox } from './adSandbox'
 import { slideDrawer } from './mainBtn'
@@ -15,6 +15,8 @@ import { slideDrawer } from './mainBtn'
 */
 
 class AppDrawerButton {
+	static type = 'button'
+
 	constructor(opts) {
 		this.type = 'button' // works for 'dsButton'. May expand to other button types
 		this.opts = this.validateOpts(opts)
@@ -34,7 +36,7 @@ class AppDrawerButton {
 	main() {}
 }
 
-export const buttonInit = getInitFxn(AppDrawerButton)
+export const buttonInit = getCompInit(AppDrawerButton)
 
 function setRenderers(self) {
 	const btn = utils.makeButton({ div: self.holder, text: self.opts.element.name, margin: '20px 20px 0px' })

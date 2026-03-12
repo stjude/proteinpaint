@@ -194,8 +194,10 @@ class MassCumInc
 - input data is for one or more charts
 */
 class MassCumInc {
+	static type = 'cuminc'
+
 	constructor(opts) {
-		this.type = 'cuminc'
+		this.type = MassCumInc.type
 		this.chartIncrement = 0
 	}
 

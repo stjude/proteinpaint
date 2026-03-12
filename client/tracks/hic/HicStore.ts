@@ -1,6 +1,7 @@
 import { getStoreInit } from '#rx'
 
 class HicStore {
+	static type = 'store'
 	type: 'store'
 	defaultState: {
 		defaultNmeth: string

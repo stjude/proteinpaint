@@ -26,6 +26,8 @@ TODOs:
 */
 
 class AppDrawerCard {
+	static type = 'card'
+
 	// handles types 'card' and 'nestedCard'
 	constructor(opts) {
 		this.type = 'card'

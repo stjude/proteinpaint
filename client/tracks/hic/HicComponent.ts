@@ -13,6 +13,8 @@ import { DataFetcher } from './data/DataFetcher.ts'
 import { Resolution } from './data/Resolution.ts'
 
 export class HicComponent {
+	static type = 'view'
+
 	dom: HicstrawDom
 	plotDiv: MainPlotDiv
 	type: 'view'
