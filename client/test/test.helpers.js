@@ -1,4 +1,4 @@
-import { getAppInit, getStoreInit } from '../rx'
+import { getAppInit, getStoreInit, StoreBase } from '../rx'
 
 /********* EXPORTED ********
 sleep
@@ -353,12 +353,15 @@ export async function whenVisible(elem, opts = {}) {
 	})
 }
 
-class TestAppStore {
+class TestAppStore extends StoreBase {
+	static type = 'store'
+
 	constructor(opts) {
-		;(this.type = 'store'),
-			(this.defaultState = {
-				debug: true
-			})
+		super(opts)
+		this.type = TestAppStore.type
+		this.defaultState = {
+			debug: true
+		}
 	}
 
 	async init() {}
@@ -367,6 +370,8 @@ class TestAppStore {
 const storeInit = getStoreInit(TestAppStore)
 
 class TestApp {
+	static type = 'app'
+
 	constructor(opts) {
 		this.type = 'app'
 		this.opts = opts

@@ -55,6 +55,8 @@ root term does not exist in the termdb, but is synthesized upon initializing ins
 */
 
 class TdbTree {
+	static type = 'tree'
+
 	/*
 	Termdb Tree Component
 	- api-related and data processing code

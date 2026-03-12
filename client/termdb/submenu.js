@@ -3,8 +3,10 @@ import { showTvsMenu } from '../filter/tvs'
 import { dtTermTypes } from '#shared/terms.js'
 
 class TdbSubmenu {
+	static type = 'submenu'
+
 	constructor(opts) {
-		this.type = 'submenu'
+		this.type = TdbSubmenu.type
 		this.dom = { holder: opts.holder }
 		setRenderers(this)
 		//getCompInit(TdbSubmenu) will set this.id, .app, .opts, .api

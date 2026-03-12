@@ -20,6 +20,8 @@ Questions:
 */
 
 class AppDrawerLayoutComp {
+	static type = 'layout'
+
 	constructor(opts) {
 		this.type = 'layout'
 		this.dom = {

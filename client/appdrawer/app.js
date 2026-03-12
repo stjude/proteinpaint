@@ -20,8 +20,10 @@ Questions:
 */
 
 class AppDrawerApp {
+	static type = 'app'
+
 	constructor(opts) {
-		this.type = 'app'
+		this.type = AppDrawerApp.type
 
 		const drawerDiv = opts.drawerRow
 			.append('div')

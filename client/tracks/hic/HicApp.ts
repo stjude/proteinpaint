@@ -10,6 +10,8 @@ import { select as d3select } from 'd3-selection'
 import { hicParseFile } from './data/parseData'
 
 class HicApp {
+	static type = 'app'
+
 	/** Required for rx */
 	api: any
 	components: any

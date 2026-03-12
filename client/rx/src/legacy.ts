@@ -112,7 +112,7 @@ export function getStoreInit(_Class_) {
 
 export function getCompInit(_Class_) {
 	if (_Class_.type) return ComponentApi.getInitFxn(_Class_)
-	console.trace(115, _Class_)
+	console.trace(115, _Class_.type, _Class_)
 	throw `A rx component class must declare a static type.`
 }
 

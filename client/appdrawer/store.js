@@ -1,13 +1,16 @@
-import { getStoreInit } from '#rx'
+import { getStoreInit, StoreBase } from '#rx'
 
 /*
 .opts{}
 
 */
 
-class AppDrawerStore {
+class AppDrawerStore extends StoreBase {
+	static type = 'store'
+
 	constructor(opts) {
-		this.type = 'store'
+		super(opts)
+		this.type = AppDrawerStore.type
 		this.defaultState = {
 			// for apps drawer animation
 			duration: 500,
