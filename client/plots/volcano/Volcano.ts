@@ -12,7 +12,7 @@ import { VolcanoInteractions } from './interactions/VolcanoInteractions'
 import { VolcanoPlotView } from './view/VolcanoPlotView'
 import { VolcanoControlInputs } from './VolcanoControlInputs'
 import { getCombinedTermFilter } from '#filter'
-import { TermTypes } from '#shared/terms.js'
+import { GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
 
 class Volcano extends PlotBase implements RxComponent {
 	static type = 'volcano'
@@ -167,7 +167,7 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 	}
 
 	//Define Gene Expression config
-	if (opts.termType == TermTypes.GENE_EXPRESSION) {
+	if (opts.termType == GENE_EXPRESSION) {
 		if (opts.confounderTws) {
 			try {
 				for (const tw of opts.confounderTws) {
@@ -185,7 +185,7 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 	}
 
 	//Define Single Cell Cell Type config
-	if (opts.termType == TermTypes.SINGLECELL_CELLTYPE) {
+	if (opts.termType == SINGLECELL_CELLTYPE) {
 		Object.assign(config, {
 			//TODO: Fix this logic
 			sample: opts.experimentID || opts.sample || opts.samples?.[0]?.experiments[0]?.experimentID,

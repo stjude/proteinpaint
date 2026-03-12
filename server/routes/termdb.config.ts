@@ -1,7 +1,16 @@
 import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
 import { get_ds_tdb } from '#src/termdb.js'
-import { TermTypeGroups, TermTypes } from '#shared/terms.js'
+import {
+	TermTypeGroups,
+	SINGLECELL_CELLTYPE,
+	GENE_EXPRESSION,
+	METABOLITE_INTENSITY,
+	WHOLE_PROTEOME_ABUNDANCE,
+	SINGLECELL_GENE_EXPRESSION,
+	DNA_METHYLATION,
+	SSGSEA
+} from '#shared/terms.js'
 import type { Mds3WithCohort } from '#types'
 
 export const api: any = {
@@ -347,14 +356,14 @@ function getAllowedTermTypes(ds) {
 		for (const t of ds.cohort.termdb.allowedTermTypes) typeSet.add(t)
 	}
 	// assess other data types and add corresponding term types
-	if (ds.queries?.geneExpression) typeSet.add(TermTypes.GENE_EXPRESSION)
-	if (ds.queries?.metaboliteIntensity) typeSet.add(TermTypes.METABOLITE_INTENSITY)
-	if (ds.queries?.proteome?.whole) typeSet.add(TermTypes.WHOLE_PROTEOME_ABUNDANCE)
-	if (ds.queries?.ssGSEA) typeSet.add(TermTypes.SSGSEA)
-	if (ds.queries?.dnaMethylation) typeSet.add(TermTypes.DNA_METHYLATION)
+	if (ds.queries?.geneExpression) typeSet.add(GENE_EXPRESSION)
+	if (ds.queries?.metaboliteIntensity) typeSet.add(METABOLITE_INTENSITY)
+	if (ds.queries?.proteome?.whole) typeSet.add(WHOLE_PROTEOME_ABUNDANCE)
+	if (ds.queries?.ssGSEA) typeSet.add(SSGSEA)
+	if (ds.queries?.dnaMethylation) typeSet.add(DNA_METHYLATION)
 	if (ds.queries?.singleCell) {
-		typeSet.add(TermTypes.SINGLECELL_CELLTYPE)
-		if (ds.queries.singleCell?.geneExpression) typeSet.add(TermTypes.SINGLECELL_GENE_EXPRESSION)
+		typeSet.add(SINGLECELL_CELLTYPE)
+		if (ds.queries.singleCell?.geneExpression) typeSet.add(SINGLECELL_GENE_EXPRESSION)
 	}
 	if (ds.cohort.termdb.termCollections?.length) typeSet.add('termCollection')
 	return [...typeSet]

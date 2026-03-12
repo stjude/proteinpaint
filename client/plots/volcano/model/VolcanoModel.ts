@@ -2,7 +2,7 @@ import type { MassAppApi } from '#mass/types/mass'
 import { dofetch3 } from '#common/dofetch'
 import type { VolcanoPlotConfig } from '../VolcanoTypes'
 import type { DERequest, DiffMethRequest, TermdbSingleCellDEgenesRequest } from '#types'
-import { TermTypes } from '#shared/terms.js'
+import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
 import type { ValidatedVolcanoSettings } from '../settings/Settings'
 
 export class VolcanoModel {
@@ -20,15 +20,15 @@ export class VolcanoModel {
 
 	/** May use mapper instead as more termTypes are added */
 	async getData() {
-		if (this.termType === TermTypes.GENE_EXPRESSION) {
+		if (this.termType === GENE_EXPRESSION) {
 			const body = await this.getGERequestBody()
 			return await dofetch3('termdb/DE', { body })
 		}
-		if (this.termType === TermTypes.DNA_METHYLATION) {
+		if (this.termType === DNA_METHYLATION) {
 			const body = await this.getDMRequestBody()
 			return await dofetch3('termdb/diffMeth', { body })
 		}
-		if (this.termType === TermTypes.SINGLECELL_CELLTYPE) {
+		if (this.termType === SINGLECELL_CELLTYPE) {
 			const body = await this.getSCCTRequestBody()
 			return await dofetch3('termdb/singlecellDEgenes', { body })
 		} else {

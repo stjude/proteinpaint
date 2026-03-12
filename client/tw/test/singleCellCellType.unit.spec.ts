@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { SingleCellCellTypeBase } from '../singleCellCellType.ts'
-import { TermTypes } from '#shared/terms.js'
+import { SINGLECELL_CELLTYPE } from '#shared/terms.js'
 
 /*************************
  reusable helper functions
@@ -8,7 +8,7 @@ import { TermTypes } from '#shared/terms.js'
 
 function getValidRawTerm(overrides: any = {}) {
 	return {
-		type: TermTypes.SINGLECELL_CELLTYPE,
+		type: SINGLECELL_CELLTYPE,
 		sample: { sID: 'S1', eID: 'E1' },
 		plot: 'My plot',
 		...overrides
@@ -82,7 +82,7 @@ tape('constructor should set explicit term fields', test => {
 	})
 	const x = new SingleCellCellTypeBase(term as any)
 
-	test.equal(x.type, TermTypes.SINGLECELL_CELLTYPE, 'Should set type')
+	test.equal(x.type, SINGLECELL_CELLTYPE, 'Should set type')
 	test.deepEqual(x.sample, { sID: 'S1', eID: 'E1' }, 'Should set sample')
 	test.equal(x.plot, 'My plot', 'Should set plot')
 	test.deepEqual(x.groupsetting, { disabled: true }, 'Should preserve provided groupsetting')

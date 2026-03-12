@@ -1,6 +1,6 @@
 import { Tabs } from '#dom'
 import { type AppApi, getCompInit } from '../rx'
-import { TermTypeGroups, TermTypes, typeGroup, numericTypes } from '#shared/terms.js'
+import { TermTypeGroups, TermTypes, typeGroup, numericTypes, isSingleCellTerm } from '#shared/terms.js'
 import type { Term } from '#types'
 import { select } from 'd3-selection'
 
@@ -382,9 +382,7 @@ export class TermTypeSearch {
 					if (state.usecase.detail == 'numeric' && !numericTypes.has(type)) continue
 					//Limit the tree to only single cell types when use case is single cell
 					if (state.usecase?.specialCase?.type == 'singleCell') {
-						if (type != TermTypes.SINGLECELL_CELLTYPE && type != TermTypes.SINGLECELL_GENE_EXPRESSION) continue
-					} else {
-						if (type == TermTypes.SINGLECELL_CELLTYPE || type == TermTypes.SINGLECELL_GENE_EXPRESSION) continue
+						if (!isSingleCellTerm(type)) continue
 					}
 				}
 
