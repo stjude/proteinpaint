@@ -58,9 +58,16 @@ async function getFilters(query, ds) {
 		ds
 	)
 	const tw2List = {}
+	console.log('query.terms', query.terms)
 	for (const tw of query.terms) {
 		// related to auth: make sure the returned list are not sensitive !!!
-		tw2List[tw.term.id] = getList(samplesPerFilter, filtersData, tw, query.showAll)
+		let values = getList(samplesPerFilter, filtersData, tw, query.showAll)
+		// Restrict which values are shown for role-protected terms (e.g. site, country)
+		const allowedValues = ds.cohort.termdb.getRestrictedValues?.(query.__protected__.clientAuthResult, tw.term.id, ds)
+		if (allowedValues) {
+			values = values.filter((v: any) => !v.value || allowedValues.includes(v.value))
+		}
+		tw2List[tw.term.id] = values
 	}
 	return { ...tw2List }
 }

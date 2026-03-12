@@ -60,8 +60,10 @@ async function trigger_getcategories(
 	const data = await getData(arg, ds)
 	if (data.error) throw data.error
 	const [lst, orderedLabels] = getCategories(data, q, ds, $id)
+	// Restrict which categories are returned for role-protected terms (e.g. site, country)
+	const allowedValues = tdb.getRestrictedValues?.((q.__protected__ as any)?.clientAuthResult, q.tw.term.id, ds)
 	res.send({
-		lst,
+		lst: allowedValues ? lst.filter((item: any) => allowedValues.includes(item.key)) : lst,
 		orderedLabels
 	} satisfies CategoriesResponse)
 }
