@@ -2,6 +2,7 @@ import type { Div, Elem } from '../../../types/d3'
 import type { SCInteractions } from '../interactions/SCInteractions'
 import { Menu, GeneSetEditUI } from '#dom'
 import { digestMessage } from '#termsetting'
+import { SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
 
 /** Rendering for the plot buttons that appear below the item
  * table.
@@ -142,7 +143,7 @@ export class PlotButtons {
 					//TODO: refine this config
 					return {
 						chartType: 'differentialAnalysis',
-						termType: 'singleCellCellType',
+						termType: SINGLECELL_CELLTYPE,
 						//Eventually category will be updated to a term
 						// term: {
 						// 	name: term
@@ -219,7 +220,7 @@ export class PlotButtons {
 				$id: await digestMessage(`${gene}-${this.item.sample}-${this.item.experiment}`),
 				term: {
 					/** NOTE: There are no term handlers for the single cell types */
-					type: 'singleCellGeneExpression',
+					type: SINGLECELL_GENE_EXPRESSION,
 					id: gene,
 					gene,
 					name: gene,
@@ -234,7 +235,7 @@ export class PlotButtons {
 				$id: await digestMessage(`CHANGEME-${this.item.sample}-${this.item.experiment}`),
 				term: {
 					/** NOTE: There are no term handlers for the single cell types */
-					type: 'singleCellCellType',
+					type: SINGLECELL_CELLTYPE,
 					id: 'cluster', //CHANGE ME, singlecell.data.plots.[i].colorColumns
 					name: 'cluster', //CHANGE ME
 					sample: {
@@ -257,7 +258,7 @@ export class PlotButtons {
 			term: {
 				$id: await digestMessage(`${gene1}-${this.item.sample}-${this.item.experiment}`),
 				term: {
-					type: 'singleCellGeneExpression',
+					type: SINGLECELL_GENE_EXPRESSION,
 					gene: gene1,
 					id: gene1,
 					name: gene1,
@@ -271,7 +272,7 @@ export class PlotButtons {
 			term2: {
 				$id: await digestMessage(`${gene2}-${this.item.sample}-${this.item.experiment}`),
 				term: {
-					type: 'singleCellGeneExpression',
+					type: SINGLECELL_GENE_EXPRESSION,
 					gene: gene2,
 					id: gene2,
 					name: gene2,
@@ -293,7 +294,7 @@ export class PlotButtons {
 				term: {
 					gene: g.gene,
 					name: `${g.gene} ${this.settings.hierCluster.unit}`,
-					type: 'singleCellGeneExpression',
+					type: SINGLECELL_GENE_EXPRESSION,
 					sample: this.item
 				},
 				q: {}
@@ -327,7 +328,7 @@ export class PlotButtons {
 			cfg.colorTW = {
 				$id: await digestMessage(`${plot.name}-${this.item.sample}-${this.item.experiment}`),
 				term: {
-					type: 'singleCellCellType',
+					type: SINGLECELL_CELLTYPE,
 					name: plot.colorColumns[0].name,
 					sample: {
 						sID: this.item.sample,

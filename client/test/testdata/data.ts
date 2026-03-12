@@ -1,3 +1,4 @@
+import * as tt from '#shared/terms.js'
 /* 
 exports a set of functions, each returns a TermdbTest-based term/tw/tvs that is complex and lengthy
 that are used in unit/integration tests so to simplify test and avoid code duplication
@@ -600,7 +601,7 @@ export function getCnv_categorical() {
 export function getScgeneexpTw(gene = 'KRAS') {
 	return {
 		term: {
-			type: 'singleCellGeneExpression',
+			type: tt.SINGLECELL_GENE_EXPRESSION,
 			id: gene,
 			gene,
 			name: gene,
@@ -616,7 +617,7 @@ export function getScgeneexpTw(gene = 'KRAS') {
 export function getScctTw() {
 	return {
 		term: {
-			type: 'singleCellCellType',
+			type: tt.SINGLECELL_CELLTYPE,
 			id: 'CellType',
 			name: 'CellType',
 			sample: {
