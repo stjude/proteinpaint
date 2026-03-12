@@ -1,14 +1,12 @@
 import { getCompInit } from './rx.js'
 
 class Counter {
+	static type = 'counter'
 	constructor(opts) {
-		this.type = 'counter'
+		this.type = Counter.type
 		this.dom = {
 			holder: opts.holder,
-			leftLabel: opts.holder
-				.append('span')
-				.style('margin-right', '10px')
-				.html('Total #clicks: '),
+			leftLabel: opts.holder.append('span').style('margin-right', '10px').html('Total #clicks: '),
 			rightLabel: opts.holder.append('span')
 		}
 	}

@@ -1,4 +1,4 @@
-import { getStoreInit } from './rx.js'
+import { StoreApi, StoreBase } from './rx.js'
 
 const defaultState = {
 	banner: 'Default Banner Name',
@@ -10,13 +10,18 @@ const defaultState = {
 	]
 }
 
-class MyStore {
+class MyStore extends StoreBase {
+	static type = 'store'
+
 	constructor(opts) {
-		this.type = 'store'
+		super(opts)
+		this.type = MyStore.type
 		this.defaultState = defaultState
 	}
 
-	validateOpts(opts) {}
+	validateOpts(opts) {
+		return opts
+	}
 
 	init() {
 		if (this.state.buttons) {
@@ -42,4 +47,4 @@ MyStore.prototype.actions = {
 	}
 }
 
-export const storeInit = getStoreInit(MyStore)
+export const storeInit = StoreApi.getInitFxn(MyStore)

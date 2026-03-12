@@ -1,12 +1,14 @@
-import { getAppInit, multiInit } from './rx.js'
+import { AppApi, multiInit } from './rx.js'
 import { storeInit } from './store.js'
 import { portalBannerInit } from './banner.js'
 import { myButtonInit } from './button.js'
 import { counterInit } from './counter.js'
 
 class MyApp {
+	static type = 'app'
+
 	constructor(opts) {
-		opts.type = 'app'
+		opts.type = MyApp.type
 		const holder = d3.select(opts.holder)
 		this.dom = {
 			holder,
@@ -62,4 +64,4 @@ class MyApp {
 	}
 }
 
-export const appInit = getAppInit(MyApp)
+export const appInit = AppApi.getInitFxn(MyApp)
