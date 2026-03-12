@@ -10,7 +10,7 @@ import { extract_summary_terms } from './chat/summaryagent.ts'
 import { extract_matrix_search_terms_from_query } from './chat/matrixagent.ts'
 import { extract_samplescatter_terms_from_query } from './chat/samplescatteragent.ts'
 import { extract_hiercluster_terms_from_query } from './chat/hierclusteragent.ts'
-import { classifyGeneDataTypes } from './chat/genedatatypeagent.ts'
+import { classifyGeneDataType } from './chat/genedatatypeagent.ts'
 import { extractGenesFromPrompt, parse_dataset_db, parse_geneset_db, getGenesetNames } from './chat/utils.ts'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
@@ -116,7 +116,7 @@ export async function run_chat_pipeline(
 				}
 			}
 
-			const geneDataTypeMessage = await classifyGeneDataTypes(user_prompt, llm, relevant_genes, dataset_json)
+			const geneDataTypeMessage = await classifyGeneDataType(user_prompt, llm, relevant_genes, dataset_json)
 			if (geneDataTypeMessage.length > 0) {
 				return {
 					type: 'text',
