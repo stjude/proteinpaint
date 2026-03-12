@@ -37,8 +37,10 @@ this
 const colorScale = getColors(5)
 
 class MassGroups {
+	static type = 'groups'
+
 	constructor(opts = {}) {
-		this.type = 'groups'
+		this.type = MassGroups.type
 		this.selectedGroupsIdx = new Set() // set of array index for this.state.groups[], for those selected in table ui
 	}
 

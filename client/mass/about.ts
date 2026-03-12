@@ -55,6 +55,8 @@ type MassAboutDom = {
 }
 //TODO: Make a validate opts fn
 export class MassAbout {
+	static type = 'about'
+
 	aboutOverrides: AboutObj | null
 	app: MassAppApi
 	dom: MassAboutDom
@@ -67,7 +69,7 @@ export class MassAbout {
 
 	constructor(opts: MassAboutOpts) {
 		this.opts = opts
-		this.type = 'about'
+		this.type = MassAbout.type
 		this.app = opts.app
 		this.subheader = opts.subheader
 		this.instanceNum = opts.instanceNum

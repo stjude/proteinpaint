@@ -44,8 +44,10 @@ export function getId() {
 }
 
 class TdbNav {
+	static type = 'nav'
+
 	constructor(opts) {
-		this.type = 'nav'
+		this.type = TdbNav.type
 		this.instanceNum = instanceNum++
 		this.tabs = [] // array of tab objects corresponding to what's shown on header, based on ds customization. hidden tabs are not in this array. filled in initUI()
 		this.activeTab = 0 // array index for .tabs[]; -1 for no active tabs and all closed

@@ -7,8 +7,10 @@ import { select } from 'd3-selection'
 import { importPlot } from '#plots/importPlot.js'
 
 class MassSessionBtn {
+	static type = 'sessionBtn'
+
 	constructor() {
-		this.type = 'sessionBtn'
+		this.type = MassSessionBtn.type
 		this.route = 'termdb'
 		this.embedderOrigin = window.location.origin
 		this.hostURL = sessionStorage.getItem('hostURL') || this.embedderOrigin
