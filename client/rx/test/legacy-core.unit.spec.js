@@ -46,7 +46,6 @@ class TestStore {
 
 	constructor(opts) {
 		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
 		//this.api = rx.getStoreApi(this)
 		this.deepFreeze = rx.deepFreeze
 		this.fromJson = rx.fromJson // used in store.api.copyState()
@@ -80,7 +79,6 @@ class TestPart {
 	constructor(opts = {}) {
 		this.type = 'part'
 		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
 		if (opts.components) this.components = opts.components
 	}
 	getState(appState) {
@@ -98,36 +96,6 @@ class TestPart {
 
 tape('\n', function (test) {
 	test.comment('-***- rx.core -***-')
-	test.end()
-})
-
-tape('getOpts', function (test) {
-	// this app object will be its own appApi
-	const app = {
-		opts: {
-			debug: 1,
-			abc: {
-				callbacks: {
-					postInit() {}
-				},
-				random: []
-			}
-		}
-	}
-	const absInstance = { type: 'abc', app }
-	const opts0 = { app, testKey: 'xyz' }
-	const opts1 = rx.getOpts(opts0, absInstance)
-	test.deepEqual(
-		opts1,
-		{
-			app,
-			testKey: opts0.testKey,
-			callbacks: app.opts.abc.callbacks,
-			debug: 1,
-			random: app.opts.abc.random
-		},
-		'should copyMerge options by component type'
-	)
 	test.end()
 })
 
