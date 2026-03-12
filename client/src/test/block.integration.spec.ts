@@ -22,11 +22,21 @@ tape('basic bedj & bw test, could be expanded', test => {
 		block: 1,
 		onloadalltk_always,
 		tracks: [
+			/**** keep order of tk as-is! as assumed by tests */
 			{ type: 'bedj', name: 'refgene', file: 'anno/refGene.hg38.test.gz' },
 			{ type: 'bedj', name: 'good bed', file: 'files/hg38/TermdbTest/trackLst/bed1.gz' },
 			{ type: 'bedj', name: 'bad bed', file: 'files/hg38/TermdbTest/trackLst/bed' },
 			{ type: 'bigwig', name: 'good bw', file: 'files/hg38/TermdbTest/trackLst/bw1.bw' },
-			{ type: 'bigwig', name: 'bad bw', file: 'files/hg38/TermdbTest/trackLst/bw' }
+			{ type: 'bigwig', name: 'bad bw', file: 'files/hg38/TermdbTest/trackLst/bw' },
+			{
+				type: 'bedj',
+				name: 'items',
+				bedItems: [
+					{ chr: 'chr17', start: 7683642, stop: 7688710, color: 'red' },
+					{ chr: 'chr17', start: 7673116, stop: 7674386, color: 'green' },
+					{ chr: 'chr17', start: 7673016, stop: 7674286, color: 'purple' }
+				]
+			}
 		]
 	})
 	function onloadalltk_always(bb) {
@@ -75,6 +85,13 @@ tape('basic bedj & bw test, could be expanded', test => {
 			test.ok(b.width == 0 && b.height == 0, 'bad bw <image> width=height=0')
 			test.equal(t.gerror?.text(), 'Cannot read bigWig file', 'gerror text="Cannot read bigWig file"')
 			test.equal(t.leftaxis.selectAll('text').nodes().length, 0, 'left axis is blank, no tick labels')
+		}
+		{
+			// custom list of bed items
+			const t = bb.tklst[5]
+			test.equal(t.name, 'items', 'tk named "items" exists')
+			const b = t.img.node().getBBox()
+			test.ok(b.width > 500 && b.height == 25, '"items" <image> width>500 & height=25 as there are two stacks')
 		}
 		if (test['_ok']) holder.remove()
 		test.end()

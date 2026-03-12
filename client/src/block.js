@@ -3255,7 +3255,9 @@ seekrange(chr,start,stop) {
 			width: this.width,
 			devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1
 		}
-		if (tk.file) {
+		if (tk.bedItems) {
+			par.bedItems = tk.bedItems
+		} else if (tk.file) {
 			par.file = tk.file
 		} else {
 			par.url = tk.url
