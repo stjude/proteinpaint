@@ -114,14 +114,17 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 					uses.add('plot')
 				}
 				if (hasNumericChild(child_types)) uses.add('branch')
-			} else if (usecase?.vocab?.type == 'singleCell') {
-				/** TODO: Revisit this approach. Seems chaotic.  */
-				if (term.type && term.type.startsWith('singleCell')) {
-					if (term.plot && term.plot == usecase.vocab?.config.name) {
-						uses.add('plot')
-					}
-				}
-			} else {
+			}
+			// Commenting out for now. May need later for another single
+			// cell term. Revisit logic at that time.
+			// else if (usecase?.specialCase?.type == 'singleCell') {
+			// 		if (term.type && term.type.startsWith('singleCell')) {
+			// 			if (term.plot && term.plot == usecase.specialCase?.config.name) {
+			// 				uses.add('plot')
+			// 			}
+			// 		}
+			// }
+			else {
 				if (graphableTypes.has(term.type)) uses.add('plot')
 				if (!term.isleaf) uses.add('branch')
 			}

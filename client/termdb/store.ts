@@ -226,6 +226,8 @@ TdbStore.prototype.actions = {
 		}
 	},
 
+	/** Changing the state.termTypeGroup in TermTypeSearch notifies
+	 * the tree of which handler should be shown. */
 	set_term_type_group(this: TdbStore, { value }) {
 		this.state.termTypeGroup = value
 	}

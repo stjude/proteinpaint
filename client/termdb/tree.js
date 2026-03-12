@@ -110,18 +110,22 @@ class TdbTree {
 				state.cohortValuelst = choice.keys
 			}
 		}
-		if (appState.termdbConfig.scctTerms) {
-			state.scctTerms = appState.termdbConfig.scctTerms
-		}
-
 		return state
 	}
 
 	async main() {
-		if (
-			this.state.termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES &&
-			this.state.termTypeGroup != TermTypeGroups.SINGLECELL_CELLTYPE
-		) {
+		if (this.state.termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES) {
+			/* due to original design, in ./app.ts, tree component is always created
+			in this app ui, the tree component only shows native/custom dictionary tree
+			for both cases, state.termTypeGroup value is TermTypeGroups.DICTIONARY_VARIABLES
+			
+			it must be noted that tree.js will not support non-dict term selection ui
+			and it is wrong to attempt to do so
+			those are carried out in ./handlers/<termtype>
+
+			when the app ui is only for showing contents from non-dict term types, e.g. scrna gene exp
+			this check will avoid a dictionary ui from showing up alongside the ui and causing a bug
+			*/
 			this.dom.holder.style('display', 'none')
 			return
 		}
@@ -139,13 +143,8 @@ class TdbTree {
 		// refer to the current cohort's termsById
 		this.termsById = this.getTermsById()
 		const root = this.termsById[root_ID]
-		if (this.state.termTypeGroup == TermTypeGroups.SINGLECELL_CELLTYPE && this.state.scctTerms?.length) {
-			root.terms = this.mayGetCustomVocab()
-		} else {
-			root.terms = await this.requestTermRecursive(root)
-			root.terms.push(...(await this.mayGetCustomTerms()))
-		}
-
+		root.terms = await this.requestTermRecursive(root)
+		root.terms.push(...(await this.mayGetCustomTerms()))
 		this.dom.holder.style('display', 'block')
 		await this.renderBranch(root, this.dom.holder)
 		this.dom.holder
@@ -242,12 +241,6 @@ class TdbTree {
 		}
 		this.termsById[id] = parentTerm
 		return [parentTerm]
-	}
-
-	mayGetCustomVocab() {
-		if (this.state.termTypeGroup == TermTypeGroups.SINGLECELL_CELLTYPE) {
-			return this.state.scctTerms || []
-		}
 	}
 }
 

@@ -172,9 +172,9 @@ export class ScatterView {
 
 		//TODO: Revisit this implementation
 		//see note in termdb.usecase.js
-		let vocab: any = 'default'
+		let specialCase: any = 'default'
 		if (this.scatter.config?.singleCellPlot) {
-			vocab = {
+			specialCase = {
 				type: 'singleCell',
 				config: this.scatter.config.singleCellPlot
 			}
@@ -185,8 +185,7 @@ export class ScatterView {
 				type: 'term',
 				configKey: 'colorTW',
 				chartType: 'sampleScatter',
-				// usecase: { target: 'sampleScatter', detail: 'colorTW', vocab: this.scatter.config?.singleCellPlot ? 'singleCell' : 'default' },
-				usecase: { target: 'sampleScatter', detail: 'colorTW', vocab },
+				usecase: { target: 'sampleScatter', detail: 'colorTW', specialCase },
 				title: 'Categories to color the samples',
 				label: 'Color',
 				vocabApi: this.scatter.app.vocabApi,

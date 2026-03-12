@@ -18,7 +18,7 @@ export class SearchHandler {
 			genome: opts.genomeObj,
 			row: holder,
 			searchOnly: 'gene',
-			callback: () => this.selectGene(geneSearch.geneSymbol, opts.usecase.vocab.config.sample)
+			callback: () => this.selectGene(geneSearch.geneSymbol, opts.usecase.specialCase.config.sample)
 		})
 	}
 
@@ -34,5 +34,9 @@ export class SearchHandler {
 		if (opts.app == null) throw new Error('app is required')
 		if (opts.holder == null) throw new Error('holder is required')
 		if (opts.genomeObj == null) throw new Error('genomeObj is required')
+		if (opts.usecase == null) throw new Error('usecase is required')
+		if (!opts.usecase?.specialCase?.config?.sample) {
+			throw new Error('usecase.specialCase.config.sample is required for singleCellGeneExpression handler')
+		}
 	}
 }
