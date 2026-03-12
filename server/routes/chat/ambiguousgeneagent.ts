@@ -63,6 +63,8 @@ const GENE_FEATURE_KEYWORDS: string[] = [
 	'splice',
 	'knockout',
 	'knockoff',
+	'gain',
+	'loss',
 	// Differential expression
 	'differential',
 	'fold change',
