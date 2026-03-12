@@ -21,7 +21,9 @@ import formatPlotData from './viewModel/plotData.ts'
  */
 
 class SCViewer extends PlotBase implements RxComponent {
-	readonly type = 'sc'
+	static type = 'sc'
+
+	type: string
 	components: { plots: { [key: string]: any } }
 	dom: SCDom
 	interactions?: SCInteractions
@@ -34,6 +36,7 @@ class SCViewer extends PlotBase implements RxComponent {
 
 	constructor(opts: SCViewerOpts, api: any) {
 		super(opts, api)
+		this.type = SCViewer.type
 		this.components = {
 			plots: {}
 		}
