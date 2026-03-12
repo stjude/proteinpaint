@@ -6,24 +6,34 @@ import * as rx from '../index.js'
 **************************/
 
 class TestApp {
+	static type = 'app'
+
 	constructor(opts) {
 		this.type = 'app'
 		this.opts = opts
-		this.api = rx.getAppApi(this)
+		//this.api = rx.getAppApi(this)
+	}
 
+	async init() {
+		const opts = this.opts
 		if (opts.storeInit) {
-			this.store = opts.storeInit({ app: this.api })
+			this.store = await opts.storeInit({ app: this.api })
 			this.state = this.store.copyState()
 		}
 		if (opts.components) {
 			this.components = opts.components
-			for (const name in this.components) {
-				if (!this.components[name].app) {
+			for (const [name, obj] of Object.entries(this.components)) {
+				if (!obj) continue
+				if (obj.initFxn) {
+					this.components[name] = await obj.initFxn({ app: this.api })
+					delete obj.initFxn
+				} else if (!obj.app) {
 					this.components[name].app = this.api
 				}
 			}
 		}
 	}
+
 	main(state) {
 		if (state) this.state = state
 		if (this.state.prop !== 'xyz') return this.state.prop
@@ -31,10 +41,13 @@ class TestApp {
 }
 
 class TestStore {
+	static type = 'store'
+	sequenceId = 0
+
 	constructor(opts) {
 		this.app = opts.app
 		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getStoreApi(this)
+		//this.api = rx.getStoreApi(this)
 		this.deepFreeze = rx.deepFreeze
 		this.fromJson = rx.fromJson // used in store.api.copyState()
 		this.toJson = rx.toJson // used in store.api.copyState()
@@ -62,11 +75,13 @@ TestStore.prototype.actions = {
 }
 
 class TestPart {
+	static type = 'part'
+
 	constructor(opts = {}) {
 		this.type = 'part'
 		this.app = opts.app
 		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getComponentApi(this)
+		this.api = rx.ComponentApi.getInitFxn(this)
 
 		if (opts.components) this.components = opts.components
 	}
@@ -156,28 +171,10 @@ tape('getInitFxn', function (test) {
 	test.end()
 })
 
-tape('getStoreApi', function (test) {
-	test.equal(typeof rx.getStoreApi, 'function', 'should be an rx.function')
+tape('getComponentApi', async function (test) {
+	test.equal(typeof rx.ComponentApi.getInitFxn, 'function', 'should be an rx.function')
 
-	const storeInit = rx.getInitFxn(TestStore)
-	const app = {
-		opts: {
-			state: { abc: 123 },
-			debug: 1
-		}
-	}
-	const store0 = storeInit({ app, state: app.opts.state })
-	test.equal(typeof store0.write, 'function', 'should provide a write() method')
-	test.equal(typeof store0.copyState, 'function', 'should provide a copyState() method')
-	test.equal(store0.Inner.state, app.opts.state, 'should have the expected initial state')
-	test.equal(Object.isFrozen(store0), true, 'should produce a frozen api')
-	test.end()
-})
-
-tape('getComponentApi', function (test) {
-	test.equal(typeof rx.getComponentApi, 'function', 'should be an rx.function')
-
-	const partInit = rx.getInitFxn(TestPart)
+	const partInit = rx.ComponentApi.getInitFxn(TestPart)
 	const opts = {
 		app: {
 			opts: {
@@ -185,9 +182,9 @@ tape('getComponentApi', function (test) {
 				debug: 1
 			}
 		},
-		getApi: rx.getComponentApi
+		getApi: rx.ComponentApi.getInitFxn
 	}
-	const part0 = partInit(opts)
+	const part0 = await partInit(opts)
 	test.equal('type' in part0, true, 'should have an api.type property, even if undefined)')
 	test.equal('id' in part0, true, 'should set an api.id property, even if undefined')
 	test.equal(typeof part0.update, 'function', 'should provide an update() method')
@@ -197,13 +194,12 @@ tape('getComponentApi', function (test) {
 	test.end()
 })
 
-tape('getAppApi', function (test) {
-	test.equal(typeof rx.getAppApi, 'function', 'should be an rx.function')
+tape('getAppApi', async function (test) {
+	test.equal(typeof rx.AppApi.getInitFxn, 'function', 'should be an rx.function')
 
-	const appInit = rx.getInitFxn(TestApp)
-	const arg0 = { getApi: rx.getAppApi }
+	const appInit = await rx.AppApi.getInitFxn(TestApp)
 	const opts = {}
-	const api0 = appInit(opts)
+	const api0 = await appInit(opts)
 	test.equal(typeof api0.dispatch, 'function', 'should provide a dispatch() method')
 	test.equal(typeof api0.save, 'function', 'should provide a save() method')
 	test.equal(typeof api0.getState, 'function', 'should provide a getState() method')
@@ -239,29 +235,32 @@ tape('Reactive flow', async function (test) {
 			}
 		}
 	}
-	const comp2 = {
-		type: 'type1',
+	class Comp2 {
+		static type = 'comp2'
+		constructor() {
+			this.type = Comp2.type
+		}
 		reactsTo(action) {
 			return action.type.startsWith('todo') || action.type.startsWith('prop')
-		},
+		}
 		getState(appState) {
 			return appState
-		},
+		}
 		main() {}
 	}
-	comp2.api = rx.getComponentApi(comp2)
+	Comp2.initFxn = await rx.ComponentApi.getInitFxn(Comp2)
 
 	const arg0 = {
-		getApi: rx.getAppApi,
-		storeInit: rx.getInitFxn(TestStore),
+		getApi: rx.AppApi.getInitFxn,
+		storeInit: await rx.StoreApi.getInitFxn(TestStore),
 		components: {
 			comp1,
-			comp2: comp2.api
+			comp2: Comp2
 		},
 		debug: 1
 	}
-	const appInit = rx.getInitFxn(TestApp)
-	const app = appInit(arg0)
+	const appInit = await rx.AppApi.getInitFxn(TestApp)
+	const app = await appInit(arg0)
 
 	const todo = { id: 1 }
 	const updateTests = {}
@@ -298,6 +297,7 @@ tape('Reactive flow', async function (test) {
 			'dispatch() should trigger component.api.update() but not necessarily component.main()'
 		)
 	}
+	const comp2 = app.getComponents('comp2').Inner
 	comp2.main = function (state, data) {
 		test.fail(`must not trigger component.main() when its type's reactsTo.prefix is not matched`)
 	}
