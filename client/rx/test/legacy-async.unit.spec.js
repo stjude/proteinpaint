@@ -1,7 +1,7 @@
 import tape from 'tape'
 import * as rx from '../index.js'
 import * as apiClass from './testInit.ts'
-import { ComponentApi } from '../src/ComponentApi.js'
+import { ComponentApi } from '../src/ComponentApi.ts'
 
 /*************************
  reusable helper functions

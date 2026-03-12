@@ -81,8 +81,6 @@ class TestPart {
 		this.type = 'part'
 		this.app = opts.app
 		this.opts = rx.getOpts(opts, this)
-		this.api = rx.ComponentApi.getInitFxn(this)
-
 		if (opts.components) this.components = opts.components
 	}
 	getState(appState) {
