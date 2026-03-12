@@ -382,7 +382,7 @@ export class TermTypeSearch {
 					if (state.usecase.detail == 'numeric' && !numericTypes.has(type)) continue
 					//Limit the tree to only single cell types when use case is single cell
 					if (state.usecase?.specialCase?.type == 'singleCell') {
-						if (!isSingleCellTerm(type)) continue
+						if (!isSingleCellTerm({ type })) continue
 					}
 				}
 
