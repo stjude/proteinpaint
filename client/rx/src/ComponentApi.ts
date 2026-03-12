@@ -108,6 +108,7 @@ export class ComponentApi {
 					`set this.hasStatePreMain = true in the ${self.type} constructor.`
 			)
 		}
+		self.bus.emit('postInit')
 	}
 
 	// current: {action: RxAction, appState}

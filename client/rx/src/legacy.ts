@@ -51,51 +51,15 @@ export function getInitFxn(_Class_) {
 	return opts => {
 		// create a _Class_ instance with mutable private properties and methods
 		const self = new _Class_(opts)
+		if (!self.opts) self.opts = opts
+		if (self.bus) self.bus.emit('postInit')
+		if (!self.api) return Object.freeze(self)
 
-		if (!self.api && self.type) {
-			if (self.type == 'app') throw `use AppApi.getInitFxn() instead of getInitFxn()`
-			else if (self.type == 'store') throw `use StoreApi.getInitFxn() instead of getInitFxn()`
-			else {
-				if (_Class_.type) throw `use ComponentApi.getInitFxn() instead of getInitFxn()`
-				prepComponent(self, opts)
-			}
-		}
-
-		// get the instance's api that may hide its mutable props and methods
-		// - if there is already an instance api as constructed, use it
-		// - if not, expose the mutable instance as its public api
-		const api = self.api || self
-		// optionally expose the hidden instance to debugging and testing code
-		if (self.debug || (self.opts && self.opts.debug)) api.Inner = self
-		// an instance may want to add or modify api properties before it is frozen
-		if (typeof self.preApiFreeze == 'function') self.preApiFreeze(api)
-		// freeze the api's properties and methods before exposing
-		Object.freeze(api)
-
-		// the optional instance.init() is expected to be an async function,
-		// which is not compatible within a constructor() function,
-		// so call it here if it is available as an instance method
-		if (self.init) {
-			// return a Promise thar resolves to the instance API;
-			// the parent component must use the await keyword
-			// when using this initializer to get the instance's API
-			return self
-				.init()
-				.then(() => {
-					if (self.bus) self.bus.emit('postInit')
-					return api
-				})
-				.catch(e => {
-					if (self.printError) self.printError(e)
-					if (self.bus) self.bus.emit('postInit', null, 0, e)
-					else throw e
-				})
-		} else {
-			if (self.bus) self.bus.emit('postInit')
-			// return the instance API; the parent component that uses this initializer
-			// does NOT have to use the await keyword
-			return api
-		}
+		if (self.init) throw `legacy getInitFxn() does not accept a class with an init() method`
+		if (self.debug || self.opts?.debug) self.api.Inner = self
+		// return the instance API; the parent component that uses this initializer
+		// does NOT have to use the await keyword
+		return Object.freeze(self.api)
 	}
 }
 
@@ -105,14 +69,15 @@ export function getAppInit(_Class_) {
 	throw `A rx app class must declare a static type='app'.`
 }
 
+// should use StoreApi.getInitFxn() directly
 export function getStoreInit(_Class_) {
 	if (_Class_.type) return StoreApi.getInitFxn(_Class_)
 	throw `A rx store class must declare a static type='store'.`
 }
 
+// should use ComponentApi.getInitFxn() directly
 export function getCompInit(_Class_) {
 	if (_Class_.type) return ComponentApi.getInitFxn(_Class_)
-	console.trace(115, _Class_.type, _Class_)
 	throw `A rx component class must declare a static type.`
 }
 

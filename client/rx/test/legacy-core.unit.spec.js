@@ -145,7 +145,7 @@ tape('getInitFxn', function (test) {
 	)
 	test.equal(typeof appInit0, 'function', 'returned value should be a function')
 
-	const opts = {}
+	const opts = { debug: true }
 	const obj0 = appInit0(opts)
 	test.deepEqual(obj0.opts, opts, 'should pass the only argument to object constructor')
 	test.equal(obj0.constructor.name, 'AppCls0', 'should return the object itself if it has no .api')

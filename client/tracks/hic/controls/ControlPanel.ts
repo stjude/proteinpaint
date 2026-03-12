@@ -6,6 +6,7 @@ import { MatrixTypeControl } from './MatrixTypeControl'
 import { ColorizeElement } from '../dom/ColorizeElement'
 
 class ControlPanel {
+	static type = 'controlPanel'
 	type: 'controlPanel'
 	app: any
 	controls: {

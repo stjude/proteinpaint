@@ -203,13 +203,6 @@ class TdbApp extends AppBase implements RxApp {
 	async getComponents() {
 		const header_mode = this.state.nav?.header_mode
 		const compPromises: { [name: string]: Promise<ComponentApi> } = {
-			/*
-		 	TODO: may need to handle a cohort filter option as an OPTIONAL component 
-		  filter: filterInit({
-				app: this.api,
-				holder: this.dom.filterDiv
-		  }),
-			***/
 			search: searchInit({
 				app: this.api,
 				holder: this.dom.searchDiv,

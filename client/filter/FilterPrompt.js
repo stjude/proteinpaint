@@ -3,7 +3,7 @@ import { Filter } from './FilterClass'
 import { getNormalRoot, getFilterItemByTag, findParent } from './filter.utils'
 
 // use this as a non-rx, stateless component
-// BUT where there a filterUiRoot tag is used and would need to be handled
+// BUT where a filterUiRoot tag is used and would need to be handled
 // correctly when refreshing the filter data and UI
 class FilterPrompt extends Filter {
 	constructor(opts) {
