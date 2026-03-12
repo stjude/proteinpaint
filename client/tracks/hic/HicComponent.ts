@@ -1,4 +1,4 @@
-import { getCompInit } from '#rx'
+import { getCompInit, type ComponentApi } from '#rx'
 import type { HicstrawDom, MainPlotDiv } from '../../types/hic.ts'
 import { ChrPairView } from './chrpair/ChrPairView.ts'
 import { HorizontalView } from './horizontal/HorizontalView.ts'
@@ -28,9 +28,7 @@ export class HicComponent {
 	dataMapper: DataMapper
 	activeView: string
 	errList: string[]
-	components = {
-		controls: []
-	}
+	components!: { controls: ComponentApi }
 	data: any
 	genomeData = []
 	fragData: any
