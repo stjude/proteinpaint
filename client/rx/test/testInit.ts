@@ -31,6 +31,8 @@ export class AppBase {
 }
 
 class TestApp extends AppBase implements RxApp {
+	static type = 'app'
+
 	// expected RxApp, some are already declared/set in AppBase
 	api: AppApi
 	type: string
@@ -67,6 +69,8 @@ class TestApp extends AppBase implements RxApp {
 export const appInit = AppApi.getInitFxn(TestApp)
 
 class TestStore extends StoreBase implements RxStore {
+	static type = 'store'
+
 	// expected RxStore, some are already declared/set in StoreBase
 	//app: AppApi
 	api: StoreApi
@@ -100,6 +104,8 @@ TestStore.prototype.actions = {
 export const storeInit = StoreApi.getInitFxn(TestStore)
 
 class TestPart implements RxComponent {
+	static type = 'part'
+
 	// expected RxComponent props, some are already declared/set in PlotBase
 	opts: any
 	app: AppApi

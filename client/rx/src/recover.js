@@ -10,8 +10,10 @@ opts:{}
 */
 
 class Recover {
+	static type = 'recover'
+
 	constructor(opts = {}) {
-		this.type = 'recover'
+		this.type = Recover.type
 		this.initialHolderDisplay = opts.holder.style('display')
 		this.dom = {
 			holder: opts.holder,

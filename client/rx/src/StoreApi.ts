@@ -47,7 +47,8 @@ export class StoreApi {
 		// the component type + id may be used later to
 		// simplify getting its state from the store
 		const self: RxStore = new __Class__(opts, this)
-		//self.opts = opts
+		self.opts = Object.assign(self.opts || {}, opts)
+		if (!self.state) self.state = self.copyMerge(self.toJson(self.defaultState), opts.state || {})
 		//self.app = opts.app
 		if (!self.id) self.id = opts.id || self.opts?.id
 		if (!self.type) self.type = __Class__.type

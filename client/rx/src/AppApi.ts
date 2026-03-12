@@ -97,7 +97,7 @@ export class AppApi {
 
 	async init() {
 		if (this.#App.preApiFreeze) await this.#App.preApiFreeze(this)
-		await this.#App.init()
+		if (typeof this.#App.init === 'function') await this.#App.init()
 		if (this.#App.bus) this.#App.bus.emit('postInit')
 	}
 
