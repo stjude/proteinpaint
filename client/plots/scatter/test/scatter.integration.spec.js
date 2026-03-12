@@ -12,15 +12,13 @@ import {
 	sleep
 } from '../../../test/test.helpers'
 import { openSummaryPlot, openPlot, getSamplelstTW } from '../../../mass/groups.js'
-import { rgb } from 'd3-color'
 import { mclass } from '#shared/common.js'
 import {
-	getSamplelstTw,
-	getCategoryGroupsetting,
 	getGenesetMutTw,
 	getGeneVariantTw,
 	getSsgseaTw,
-	getScgeneexpTw
+	getScgeneexpTw,
+	getScctTw
 } from '../../../test/testdata/data.ts'
 
 /* Tests:
@@ -1293,6 +1291,7 @@ tape('singlecell map', function (test) {
 			plots: [
 				{
 					chartType: 'sampleScatter',
+					colorTW: getScctTw(),
 					singleCellPlot: { name: 'scRNA', sample: { sID: '1_patient' } }
 				}
 			]
