@@ -2,7 +2,7 @@ import type { MassAppApi } from '#mass/types/mass'
 import { downloadTable, GeneSetEditUI, MultiTermWrapperEditUI } from '#dom'
 import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
-import { TermTypes } from '#shared/terms.js'
+import { DNA_METHYLATION, GENE_EXPRESSION } from '#shared/terms.js'
 
 export class VolcanoInteractions {
 	app: MassAppApi
@@ -23,7 +23,7 @@ export class VolcanoInteractions {
 	async confoundersMenu() {
 		const state = this.app.getState()
 		const config = state.plots.find((p: VolcanoPlotConfig) => p.id === this.id)
-		if (config.termType !== TermTypes.GENE_EXPRESSION && config.termType !== TermTypes.DNA_METHYLATION) return
+		if (config.termType !== GENE_EXPRESSION && config.termType !== DNA_METHYLATION) return
 
 		/** Find terms used to create the groups and disable in the
 		 * termsetting UI. Prevents users from trying to control for
@@ -109,7 +109,7 @@ export class VolcanoInteractions {
 	 * For geneExpression, value == gene symbol */
 	async launchBoxPlot(value: string) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
-		if (config.termType != TermTypes.GENE_EXPRESSION) return
+		if (config.termType != GENE_EXPRESSION) return
 		const values = {}
 		for (const group of config.samplelst.groups) {
 			values[group.name] = {
@@ -122,7 +122,7 @@ export class VolcanoInteractions {
 		 * need to be handled separately.
 		 * TODO: In the future with more use cases, simplify this logic. */
 		const setTerm = () => {
-			if (config.termType == TermTypes.GENE_EXPRESSION) {
+			if (config.termType == GENE_EXPRESSION) {
 				return {
 					q: { mode: 'continuous' },
 					term: {
@@ -151,9 +151,7 @@ export class VolcanoInteractions {
 		const plotConfig = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		const holder = this.dom.actionsTip.d.append('div').style('padding', '5px') as any
 		const limitedGenesList =
-			plotConfig.termType === TermTypes.DNA_METHYLATION
-				? this.data.map(d => d.promoter_id)
-				: this.data.map(d => d.gene_name)
+			plotConfig.termType === DNA_METHYLATION ? this.data.map(d => d.promoter_id) : this.data.map(d => d.gene_name)
 		new GeneSetEditUI({
 			holder,
 			genome: this.app.opts.genome,
@@ -205,7 +203,7 @@ export class VolcanoInteractions {
 			const gene = d.gene
 			const unit = this.app.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression'
 			const name = `${gene} ${unit}`
-			const term = { gene, name, type: TermTypes.GENE_EXPRESSION }
+			const term = { gene, name, type: GENE_EXPRESSION }
 			const tw = { term, q: {} }
 			return tw
 		})
@@ -216,7 +214,7 @@ export class VolcanoInteractions {
 		const config = {
 			chartType: 'hierCluster',
 			termgroups: [group, annotationGroup],
-			dataType: TermTypes.GENE_EXPRESSION,
+			dataType: GENE_EXPRESSION,
 			filter: {
 				in: true,
 				join: '',

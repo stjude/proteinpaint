@@ -1,4 +1,4 @@
-import { TermTypes, isNumericTerm } from './terms.js'
+import { TermTypes, isNumericTerm, SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION } from './terms.js'
 
 export const graphableTypes = new Set([
 	'categorical',
@@ -21,7 +21,7 @@ export const graphableTypes = new Set([
 	TermTypes.METABOLITE_INTENSITY,
 	TermTypes.WHOLE_PROTEOME_ABUNDANCE,
 	TermTypes.SINGLECELL_GENE_EXPRESSION,
-	TermTypes.SINGLECELL_CELLTYPE,
+	SINGLECELL_CELLTYPE,
 	TermTypes.SNP,
 	TermTypes.TERM_COLLECTION
 ])

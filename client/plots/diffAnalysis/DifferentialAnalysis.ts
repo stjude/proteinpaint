@@ -4,7 +4,7 @@ import { getCompInit, copyMerge, type RxComponent } from '#rx'
 import { PlotBase } from '../PlotBase'
 import { importPlot } from '../importPlot.js'
 import { Menu } from '#dom'
-import { termType2label, TermTypes } from '#shared/terms.js'
+import { GENE_EXPRESSION, termType2label, SINGLECELL_CELLTYPE, DNA_METHYLATION } from '#shared/terms.js'
 import type { DiffAnalysisDom, /*DiffAnalysisOpts,*/ DiffAnalysisPlotConfig } from './DiffAnalysisTypes'
 import { DiffAnalysisView } from './view/DiffAnalysisView'
 import { getDefaultVolcanoSettings, validateVolcanoSettings } from '../volcano/settings/defaults.ts'
@@ -133,7 +133,7 @@ export const DiffAnalysisInit = getCompInit(DifferentialAnalysis)
 export const componentInit = DiffAnalysisInit
 
 //Use this as a sanity check.
-const enabledTermTypes = [TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTYPE, TermTypes.DNA_METHYLATION]
+const enabledTermTypes = [GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION]
 
 export function getPlotConfig(opts: any) {
 	if (!opts.termType) throw new Error('.termType is required')
@@ -151,7 +151,7 @@ export function getPlotConfig(opts: any) {
 
 	/** TODO: Fix this config. This only applies to the
 	 * gdc and won't work long term for terms */
-	if (opts.termType == TermTypes.SINGLECELL_CELLTYPE) {
+	if (opts.termType == SINGLECELL_CELLTYPE) {
 		Object.assign(config, {
 			categoryName: opts.categoryName || '',
 			termId: opts.termId || '',

@@ -11,7 +11,7 @@ import type {
 } from '../VolcanoTypes'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
 import { DataPointMouseEvents } from './DataPointMouseEvents'
-import { TermTypes } from '#shared/terms.js'
+import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
 import type { ValidatedVolcanoSettings } from '../settings/Settings'
 
 export class VolcanoPlotView {
@@ -68,45 +68,34 @@ export class VolcanoPlotView {
 		//Images may have a large margin. Hide the overflow.
 		this.dom.actionsTip.d.style('overflow', 'hidden')
 		this.volcanoDom.actions.style('margin-left', '20px').style('padding', '5px')
-		this.addActionButton('Confounding factors', [TermTypes.GENE_EXPRESSION, TermTypes.DNA_METHYLATION], () =>
+		this.addActionButton('Confounding factors', [GENE_EXPRESSION, DNA_METHYLATION], () =>
 			this.interactions.confoundersMenu()
 		)
-		this.addActionButton(
-			'Highlight genes',
-			[TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTYPE, TermTypes.DNA_METHYLATION],
-			() => this.interactions.launchGeneSetEdit()
+		this.addActionButton('Highlight genes', [GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION], () =>
+			this.interactions.launchGeneSetEdit()
 		)
-		this.addActionButton(
-			'Statistics',
-			[TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTYPE, TermTypes.DNA_METHYLATION],
-			() => {
-				this.renderStatsMenu()
-			}
-		)
+		this.addActionButton('Statistics', [GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION], () => {
+			this.renderStatsMenu()
+		})
 		const sigLabel =
-			this.termType == TermTypes.DNA_METHYLATION ? 'Number of significant promoters' : 'Number of significant genes'
+			this.termType == DNA_METHYLATION ? 'Number of significant promoters' : 'Number of significant genes'
 		const numSigGenes = this.viewData.statsData.find(d => d.label == sigLabel)?.value
 		if (numSigGenes) {
-			const sigText =
-				this.termType == TermTypes.DNA_METHYLATION ? `${numSigGenes} DM promoters:` : `${numSigGenes} DE genes:`
+			const sigText = this.termType == DNA_METHYLATION ? `${numSigGenes} DM promoters:` : `${numSigGenes} DE genes:`
 			this.volcanoDom.actions.append('span').text(sigText).style('margin-left', '10px').style('font-weight', 'bold')
 
-			this.addActionButton(
-				'Show p-value table',
-				[TermTypes.GENE_EXPRESSION, TermTypes.SINGLECELL_CELLTYPE, TermTypes.DNA_METHYLATION],
-				() => {
-					this.volcanoDom.pValueTable.style(
-						'display',
-						this.volcanoDom.pValueTable.style('display') == 'none' ? 'inline-block' : 'none'
-					)
-				}
-			)
+			this.addActionButton('Show p-value table', [GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION], () => {
+				this.volcanoDom.pValueTable.style(
+					'display',
+					this.volcanoDom.pValueTable.style('display') == 'none' ? 'inline-block' : 'none'
+				)
+			})
 		}
 		if (numSigGenes && numSigGenes >= 3) {
 			// Launch hierCluster for DEGs between the two groups
 			this.addActionButton(
 				`Hierarchical clustering of ${numSigGenes > 100 ? 'top 100' : numSigGenes} DE genes`,
-				[TermTypes.GENE_EXPRESSION],
+				[GENE_EXPRESSION],
 				async () => {
 					await this.interactions.launchDEGClustering()
 				}
@@ -257,18 +246,18 @@ export class VolcanoPlotView {
 			noRadioBtn: true,
 			noButtonCallback: (i: number) => {
 				//On click, persistently highlight the data point
-				// if (this.termType != TermTypes.GENE_EXPRESSION) return
+				// if (this.termType != GENE_EXPRESSION) return
 				const gene = this.viewData.pValueTableData.rows[i][0].value as string
 				if (!gene) return
 				this.interactions.highlightDataPoint(gene)
 			},
 			hoverEffects: (tr, row) => {
 				//May restrict termTypes later
-				// if (this.termType != TermTypes.GENE_EXPRESSION) return
+				// if (this.termType != GENE_EXPRESSION) return
 				//Highlight the data point when hovering over the table row
 				//Previously highlighted data points are not affected
 				const circles = this.volcanoDom.plot.selectAll('circle').nodes()
-				const dataKey = this.termType === TermTypes.DNA_METHYLATION ? 'promoter_id' : 'gene_name'
+				const dataKey = this.termType === DNA_METHYLATION ? 'promoter_id' : 'gene_name'
 				const circle = circles.find((d: any) => d.__data__[dataKey] == row[0].value) as any
 				if (!circle || circle.__data__.highlighted) return
 

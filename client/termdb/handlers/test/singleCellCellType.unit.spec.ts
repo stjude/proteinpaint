@@ -1,7 +1,7 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { SearchHandler } from '../singleCellCellType.ts'
-import { TermTypeGroups, TermTypes } from '#shared/terms.js'
+import { TermTypeGroups, SINGLECELL_CELLTYPE } from '#shared/terms.js'
 
 /*************************
  reusable helper functions
@@ -86,9 +86,9 @@ tape('init() should render only terms matching usecase plot and call callback on
 	const holder = getHolder()
 	let selectedTerm: any
 	const scctTerms = [
-		{ id: 't1', name: 'Myeloid', type: TermTypes.SINGLECELL_CELLTYPE, plot: 'Plot A' },
-		{ id: 't2', name: 'Lymphoid', type: TermTypes.SINGLECELL_CELLTYPE, plot: 'Plot A' },
-		{ id: 't3', name: 'Nonmatching', type: TermTypes.SINGLECELL_CELLTYPE, plot: 'Plot B' }
+		{ id: 't1', name: 'Myeloid', type: SINGLECELL_CELLTYPE, plot: 'Plot A' },
+		{ id: 't2', name: 'Lymphoid', type: SINGLECELL_CELLTYPE, plot: 'Plot A' },
+		{ id: 't3', name: 'Nonmatching', type: SINGLECELL_CELLTYPE, plot: 'Plot B' }
 	]
 
 	await handler.init({
@@ -119,7 +119,7 @@ tape('init() should render only terms matching usecase plot and call callback on
 	const firstLabel: any = labels.nodes()[0]
 	firstLabel.click()
 	test.equal(selectedTerm?.id, 't1', 'Should pass clicked term object to callback')
-	test.equal(selectedTerm?.type, TermTypes.SINGLECELL_CELLTYPE, 'Callback term type should be singleCellCellType')
+	test.equal(selectedTerm?.type, SINGLECELL_CELLTYPE, 'Callback term type should be singleCellCellType')
 
 	if (test['_ok']) holder.remove()
 	test.end()

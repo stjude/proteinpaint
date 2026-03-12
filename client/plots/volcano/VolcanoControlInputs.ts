@@ -1,7 +1,7 @@
 import type { ControlInputEntry } from '#mass/types/mass'
 import type { VolcanoPlotConfig } from './VolcanoTypes'
 import { getSampleNum } from './settings/defaults'
-import { TermTypes } from '#shared/terms.js'
+import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
 
 /** Handles settings the controls in the menu based on the app
  * termType.
@@ -27,7 +27,7 @@ export class VolcanoControlInputs {
 	inputs: ControlInputEntry[]
 	constructor(config: VolcanoPlotConfig, termType: string) {
 		this.config = config
-		if (this.config.termType == TermTypes.GENE_EXPRESSION) this.sampleNum = getSampleNum(config)
+		if (this.config.termType == GENE_EXPRESSION) this.sampleNum = getSampleNum(config)
 		this.termType = termType
 		//Populated with the default controls for the volcano plot
 		this.inputs = [
@@ -91,7 +91,7 @@ export class VolcanoControlInputs {
 				title: 'Default color for significant data points.',
 				settingsKey: 'defaultSignColor',
 				getDisplayStyle: () => {
-					if (this.config.termType == TermTypes.SINGLECELL_CELLTYPE) return 'none'
+					if (this.config.termType == SINGLECELL_CELLTYPE) return 'none'
 					const controlColor = this.config.tw?.term?.values?.[this.config.samplelst.groups[0].name]?.color
 					const caseColor = this.config.tw?.term?.values?.[this.config.samplelst.groups[1].name].color
 					if (controlColor && caseColor) return 'none'
@@ -125,7 +125,7 @@ export class VolcanoControlInputs {
 	}
 
 	addGeneExpControlInputs() {
-		if (this.termType !== TermTypes.GENE_EXPRESSION) return
+		if (this.termType !== GENE_EXPRESSION) return
 		const geInputs = [
 			{
 				label: 'Minimum read count',
@@ -180,7 +180,7 @@ export class VolcanoControlInputs {
 	}
 
 	addDNAMethControlInputs() {
-		if (this.termType !== TermTypes.DNA_METHYLATION) return
+		if (this.termType !== DNA_METHYLATION) return
 		const dmInputs = [
 			{
 				label: 'Min samples per group',
@@ -196,7 +196,7 @@ export class VolcanoControlInputs {
 	}
 
 	addSingleCellCTControlInputs() {
-		if (this.termType !== TermTypes.SINGLECELL_CELLTYPE) return
+		if (this.termType !== SINGLECELL_CELLTYPE) return
 
 		const scctInputs = []
 
@@ -204,7 +204,7 @@ export class VolcanoControlInputs {
 	}
 
 	getMethodOptions() {
-		if (this.termType !== TermTypes.GENE_EXPRESSION) return
+		if (this.termType !== GENE_EXPRESSION) return
 		const settings = this.config.settings.volcano
 		const features = JSON.parse(sessionStorage.getItem('optionalFeatures') as string)
 		if (features?.runDE_methods?.length) {

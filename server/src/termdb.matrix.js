@@ -10,7 +10,8 @@ import {
 	isNonDictionaryType,
 	getBin,
 	getParentType,
-	getSampleType
+	getSampleType,
+	SINGLECELL_CELLTYPE
 } from '#shared/terms.js'
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
@@ -297,7 +298,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				}
 				samples[sampleId][tw.$id] = { value, key }
 			}
-		} else if (tw.term.type == TermTypes.SINGLECELL_CELLTYPE) {
+		} else if (tw.term.type == SINGLECELL_CELLTYPE) {
 			if (!q.ds.queries?.singleCell?.data) throw 'not supported by dataset: singleCell.data'
 			const data = await q.ds.queries.singleCell.data.get({
 				sample: tw.term.sample,

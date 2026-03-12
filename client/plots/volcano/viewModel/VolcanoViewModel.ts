@@ -10,7 +10,7 @@ import type { DEResponse } from '#types'
 import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getSampleNum } from '../settings/defaults'
-import { TermTypes } from '#shared/terms.js'
+import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
 
 export class VolcanoViewModel {
 	config: any
@@ -82,9 +82,9 @@ export class VolcanoViewModel {
 	}
 
 	setDataType() {
-		if (this.termType == TermTypes.GENE_EXPRESSION) return 'genes'
-		else if (this.termType == TermTypes.DNA_METHYLATION) return 'promoters'
-		else if (this.termType == TermTypes.SINGLECELL_CELLTYPE) return 'genes' //'cells'??
+		if (this.termType == GENE_EXPRESSION) return 'genes'
+		else if (this.termType == DNA_METHYLATION) return 'promoters'
+		else if (this.termType == SINGLECELL_CELLTYPE) return 'genes' //'cells'??
 		else throw new Error(`Unknown termType: ${this.termType}`)
 	}
 
@@ -152,7 +152,7 @@ export class VolcanoViewModel {
 		// caseColor: string,
 		// controlColor: string
 	) {
-		if (this.termType != TermTypes.GENE_EXPRESSION && this.termType != TermTypes.DNA_METHYLATION) return
+		if (this.termType != GENE_EXPRESSION && this.termType != DNA_METHYLATION) return
 		const getLabel = (name: string) => {
 			if (name.length >= 25) return name.substring(0, 20) + '...'
 			return name
@@ -180,7 +180,7 @@ export class VolcanoViewModel {
 		const radius = Math.max(this.settings.width, this.settings.height) / 80
 		const dataCopy: any = structuredClone(this.response.data)
 		for (const d of dataCopy) {
-			const highlightKey = this.termType === TermTypes.DNA_METHYLATION ? d.promoter_id : d.gene_name
+			const highlightKey = this.termType === DNA_METHYLATION ? d.promoter_id : d.gene_name
 			d.highlighted = this.config?.highlightedData?.includes(highlightKey)
 			d.significant = this.isSignificant(d)
 			this.getGenesColor(d, d.significant, controlColor, caseColor)
@@ -191,7 +191,7 @@ export class VolcanoViewModel {
 					{ value: roundValueAuto(d.original_p_value) },
 					{ value: roundValueAuto(d.adjusted_p_value) }
 				]
-				if (this.termType == TermTypes.DNA_METHYLATION) {
+				if (this.termType == DNA_METHYLATION) {
 					row.splice(0, 0, { value: d.promoter_id || '' }, { value: d.gene_name || '' })
 				} else {
 					row.splice(0, 0, { value: d.gene_name || '' })
@@ -219,7 +219,7 @@ export class VolcanoViewModel {
 	}
 
 	getGenesColor(d: DataPointEntry, significant: boolean, controlColor: string, caseColor: string) {
-		if (!d.gene_name && this.termType != TermTypes.DNA_METHYLATION)
+		if (!d.gene_name && this.termType != DNA_METHYLATION)
 			throw new Error(`Missing gene_name in data: ${JSON.stringify(d)}`)
 		if (significant) {
 			if (controlColor && caseColor) d.color = d.fold_change > 0 ? caseColor : controlColor
@@ -242,7 +242,7 @@ export class VolcanoViewModel {
 				value: this.numSignificant + this.numNonSignificant
 			}
 		]
-		if (this.termType == TermTypes.GENE_EXPRESSION || this.termType == TermTypes.DNA_METHYLATION) {
+		if (this.termType == GENE_EXPRESSION || this.termType == DNA_METHYLATION) {
 			tableRows.push(
 				{
 					label: this.config.samplelst.groups[0].name + ' sample size (control group)',
@@ -265,7 +265,7 @@ export class VolcanoViewModel {
 	}
 
 	setPTableColumns() {
-		if (this.termType == TermTypes.DNA_METHYLATION) {
+		if (this.termType == DNA_METHYLATION) {
 			this.pValueTable.columns.splice(0, 0, { label: 'Promoter', sortable: true }, { label: 'Gene(s)', sortable: true })
 		} else {
 			this.pValueTable.columns.splice(0, 0, { label: 'Gene Name', sortable: true })
@@ -276,7 +276,7 @@ export class VolcanoViewModel {
 		const userActions = {
 			noShow: new Set<string>()
 		}
-		if (this.termType == TermTypes.GENE_EXPRESSION) {
+		if (this.termType == GENE_EXPRESSION) {
 			if (this.settings.method == 'edgeR' && getSampleNum(this.config) > 100) {
 				userActions.noShow.add('Confounding factors')
 			}

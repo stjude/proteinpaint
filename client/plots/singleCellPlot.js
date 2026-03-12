@@ -1,4 +1,4 @@
-import { getCompInit, copyMerge, deepEqual } from '../rx/index.js'
+import { getCompInit, copyMerge } from '../rx/index.js'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { dofetch3 } from '#common/dofetch'
 import { getColors } from '#shared/common.js'
@@ -7,7 +7,7 @@ import { downloadSingleSVG } from '#common/svg.download'
 import { select } from 'd3-selection'
 import { rgb, create, extent } from 'd3'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { TermTypes } from '#shared/terms.js'
+import { SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
 import {
 	ColorScale,
 	icons as icon_functions,
@@ -621,7 +621,7 @@ class singleCellPlot {
 						term: {
 							$id: await digestMessage(`${gene}-${this.state.config.sample}-${this.state.config.experimentID}`),
 							term: {
-								type: TermTypes.SINGLECELL_GENE_EXPRESSION,
+								type: SINGLECELL_GENE_EXPRESSION,
 								id: gene,
 								gene,
 								name: gene,
@@ -636,7 +636,7 @@ class singleCellPlot {
 							$id: await digestMessage(`${colorBy}-${this.state.config.sample}-${this.state.config.experimentID}`),
 
 							term: {
-								type: TermTypes.SINGLECELL_CELLTYPE,
+								type: SINGLECELL_CELLTYPE,
 								id: colorBy,
 								name: colorBy,
 								sample: {

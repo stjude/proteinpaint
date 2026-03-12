@@ -22,7 +22,7 @@ import { termdbSingleCellSamplesPayload } from '#types/checkers'
 import { validate_query_singleCell_DEgenes } from './termdb.singlecellDEgenes.ts'
 import { gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 import ky from 'ky'
-import { TermTypes } from '#shared/terms.js'
+import { SINGLECELL_CELLTYPE } from '#shared/terms.js'
 
 /* route returns list of samples with sc data
 this is due to the fact that sometimes not all samples in a dataset has sc data
@@ -366,7 +366,7 @@ function colorColumn2terms(plots, ds) {
 				/** TODO: possible term may apply to multiple plots.
 				 * May need to change to plots: [] */
 				plot: plot.name,
-				type: TermTypes.SINGLECELL_CELLTYPE,
+				type: SINGLECELL_CELLTYPE,
 				groupsetting: {},
 				values: baseValues.reduce((acc, v) => {
 					const alias = c?.aliases?.[v]

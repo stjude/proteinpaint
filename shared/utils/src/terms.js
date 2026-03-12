@@ -28,29 +28,50 @@ export const NumericModes = {
 	discrete: 'discrete'
 }
 
+export const CATEGORICAL = 'categorical'
+export const CONDITION = 'condition'
+export const DATE = 'date'
+export const DNA_METHYLATION = 'dnaMethylation'
+export const FLOAT = 'float'
+export const GENE_VARIANT = 'geneVariant'
+export const GENE_EXPRESSION = 'geneExpression'
+export const INTEGER = 'integer'
+export const METABOLITE_INTENSITY = 'metaboliteIntensity'
+export const MULTIVALUE = 'multivalue'
+export const SAMPLELST = 'samplelst'
+export const SINGLECELL_CELLTYPE = 'singleCellCellType'
+export const SINGLECELL_GENE_EXPRESSION = 'singleCellGeneExpression'
+export const SNP = 'snp'
+export const SNP_LIST = 'snplst'
+export const SNP_LOCUS = 'snplocus'
+export const SSGSEA = 'ssGSEA'
+export const SURVIVAL = 'survival'
+export const TERM_COLLECTION = 'termCollection'
+export const WHOLE_PROTEOME_ABUNDANCE = 'wholeProteomeAbundance'
+
 //Term types should be used gradually using these constants instead of hardcoding the values,
-// eg: type == TermTypes.CATEGORICAL instead of type == 'categorical'
+// eg: type == CATEGORICAL instead of type == 'categorical'
 export const TermTypes = {
-	GENE_VARIANT: 'geneVariant',
-	GENE_EXPRESSION: 'geneExpression',
-	SSGSEA: 'ssGSEA',
-	DNA_METHYLATION: 'dnaMethylation',
-	CATEGORICAL: 'categorical',
-	INTEGER: 'integer',
-	FLOAT: 'float',
-	SNP: 'snp',
-	SNP_LIST: 'snplst',
-	SNP_LOCUS: 'snplocus',
-	CONDITION: 'condition',
-	SURVIVAL: 'survival',
-	SAMPLELST: 'samplelst',
-	METABOLITE_INTENSITY: 'metaboliteIntensity',
-	WHOLE_PROTEOME_ABUNDANCE: 'wholeProteomeAbundance',
-	SINGLECELL_GENE_EXPRESSION: 'singleCellGeneExpression',
-	SINGLECELL_CELLTYPE: 'singleCellCellType',
-	MULTIVALUE: 'multivalue',
-	DATE: 'date',
-	TERM_COLLECTION: 'termCollection'
+	GENE_VARIANT,
+	GENE_EXPRESSION,
+	SSGSEA,
+	DNA_METHYLATION,
+	CATEGORICAL,
+	INTEGER,
+	FLOAT,
+	SNP,
+	SNP_LIST,
+	SNP_LOCUS,
+	CONDITION,
+	SURVIVAL,
+	SAMPLELST,
+	METABOLITE_INTENSITY,
+	WHOLE_PROTEOME_ABUNDANCE,
+	SINGLECELL_CELLTYPE,
+	SINGLECELL_GENE_EXPRESSION,
+	MULTIVALUE,
+	DATE,
+	TERM_COLLECTION
 }
 export const dtTermTypes = new Set(dtTerms.map(t => t.type))
 for (const dtTermType of dtTermTypes) {
@@ -60,75 +81,76 @@ for (const dtTermType of dtTermTypes) {
 export const NUMERIC_DICTIONARY_TERM = 'numericDictTerm'
 
 export const TermTypes2Dt = {
-	[TermTypes.GENE_EXPRESSION]: dtgeneexpression,
-	[TermTypes.SSGSEA]: dtssgsea,
-	[TermTypes.DNA_METHYLATION]: dtdnamethylation,
-	[TermTypes.METABOLITE_INTENSITY]: dtmetaboliteintensity,
-	[TermTypes.WHOLE_PROTEOME_ABUNDANCE]: dtwholeproteomeabundance
+	[GENE_EXPRESSION]: dtgeneexpression,
+	[SSGSEA]: dtssgsea,
+	[DNA_METHYLATION]: dtdnamethylation,
+	[METABOLITE_INTENSITY]: dtmetaboliteintensity,
+	[WHOLE_PROTEOME_ABUNDANCE]: dtwholeproteomeabundance
 }
 
 // maps term type to group (as is shown as toggles in search ui)
 export const typeGroup = {
-	[TermTypes.CATEGORICAL]: TermTypeGroups.DICTIONARY_VARIABLES,
-	[TermTypes.CONDITION]: TermTypeGroups.DICTIONARY_VARIABLES,
-	[TermTypes.FLOAT]: TermTypeGroups.DICTIONARY_VARIABLES,
-	[TermTypes.INTEGER]: TermTypeGroups.DICTIONARY_VARIABLES,
-	[TermTypes.SAMPLELST]: TermTypeGroups.DICTIONARY_VARIABLES,
-	[TermTypes.SURVIVAL]: TermTypeGroups.DICTIONARY_VARIABLES,
-	[TermTypes.GENE_VARIANT]: TermTypeGroups.MUTATION_CNV_FUSION,
-	[TermTypes.SNP]: TermTypeGroups.SNP,
-	[TermTypes.SNP_LIST]: TermTypeGroups.SNP_LIST,
-	[TermTypes.SNP_LOCUS]: TermTypeGroups.SNP_LOCUS,
-	[TermTypes.GENE_EXPRESSION]: TermTypeGroups.GENE_EXPRESSION,
-	[TermTypes.SSGSEA]: TermTypeGroups.SSGSEA,
-	[TermTypes.DNA_METHYLATION]: TermTypeGroups.DNA_METHYLATION,
-	[TermTypes.METABOLITE_INTENSITY]: TermTypeGroups.METABOLITE_INTENSITY,
-	[TermTypes.WHOLE_PROTEOME_ABUNDANCE]: TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE,
-	[TermTypes.TERM_COLLECTION]: TermTypeGroups.TERM_COLLECTION,
-	[TermTypes.SINGLECELL_CELLTYPE]: TermTypeGroups.SINGLECELL_CELLTYPE,
-	[TermTypes.SINGLECELL_GENE_EXPRESSION]: TermTypeGroups.SINGLECELL_GENE_EXPRESSION
+	[CATEGORICAL]: TermTypeGroups.DICTIONARY_VARIABLES,
+	[CONDITION]: TermTypeGroups.DICTIONARY_VARIABLES,
+	[FLOAT]: TermTypeGroups.DICTIONARY_VARIABLES,
+	[INTEGER]: TermTypeGroups.DICTIONARY_VARIABLES,
+	[SAMPLELST]: TermTypeGroups.DICTIONARY_VARIABLES,
+	[SURVIVAL]: TermTypeGroups.DICTIONARY_VARIABLES,
+	[GENE_VARIANT]: TermTypeGroups.MUTATION_CNV_FUSION,
+	[SNP]: TermTypeGroups.SNP,
+	[SNP_LIST]: TermTypeGroups.SNP_LIST,
+	[SNP_LOCUS]: TermTypeGroups.SNP_LOCUS,
+	[GENE_EXPRESSION]: TermTypeGroups.GENE_EXPRESSION,
+	[SSGSEA]: TermTypeGroups.SSGSEA,
+	[DNA_METHYLATION]: TermTypeGroups.DNA_METHYLATION,
+	[METABOLITE_INTENSITY]: TermTypeGroups.METABOLITE_INTENSITY,
+	[WHOLE_PROTEOME_ABUNDANCE]: TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE,
+	[TERM_COLLECTION]: TermTypeGroups.TERM_COLLECTION,
+	[SINGLECELL_CELLTYPE]: TermTypeGroups.SINGLECELL_CELLTYPE,
+	[SINGLECELL_GENE_EXPRESSION]: TermTypeGroups.SINGLECELL_GENE_EXPRESSION
 }
 
 const nonDictTypes = new Set([
-	TermTypes.SNP,
-	TermTypes.SNP_LIST,
-	TermTypes.SNP_LOCUS,
-	TermTypes.GENE_EXPRESSION,
-	TermTypes.SSGSEA,
-	TermTypes.DNA_METHYLATION,
-	TermTypes.GENE_VARIANT,
-	TermTypes.METABOLITE_INTENSITY,
-	TermTypes.WHOLE_PROTEOME_ABUNDANCE,
-	TermTypes.SINGLECELL_GENE_EXPRESSION,
-	TermTypes.SINGLECELL_CELLTYPE
+	SNP,
+	SNP_LIST,
+	SNP_LOCUS,
+	GENE_EXPRESSION,
+	SSGSEA,
+	DNA_METHYLATION,
+	GENE_VARIANT,
+	METABOLITE_INTENSITY,
+	WHOLE_PROTEOME_ABUNDANCE,
+	SINGLECELL_CELLTYPE,
+	SINGLECELL_GENE_EXPRESSION
 ])
+
 for (const dtTermType of dtTermTypes) {
 	nonDictTypes.add(TermTypes[dtTermType.toUpperCase()])
 }
 
 export const numericTypes = new Set([
-	TermTypes.INTEGER,
-	TermTypes.FLOAT,
-	TermTypes.GENE_EXPRESSION,
-	TermTypes.SSGSEA,
-	TermTypes.DNA_METHYLATION,
-	TermTypes.METABOLITE_INTENSITY,
-	TermTypes.WHOLE_PROTEOME_ABUNDANCE,
-	TermTypes.SINGLECELL_GENE_EXPRESSION,
-	TermTypes.DATE
+	INTEGER,
+	FLOAT,
+	GENE_EXPRESSION,
+	SSGSEA,
+	DNA_METHYLATION,
+	METABOLITE_INTENSITY,
+	WHOLE_PROTEOME_ABUNDANCE,
+	SINGLECELL_GENE_EXPRESSION,
+	DATE
 ])
 
 // available termdb numeric table names used as anno_<term.type>,
 // for example anno_integer, anno_float, anno_date
-export const annoNumericTypes = new Set([TermTypes.INTEGER, TermTypes.FLOAT, TermTypes.DATE])
+export const annoNumericTypes = new Set([INTEGER, FLOAT, DATE])
 
-const categoricalTypes = new Set([TermTypes.CATEGORICAL, TermTypes.SNP])
+const categoricalTypes = new Set([CATEGORICAL, SNP])
 
-const singleSampleTerms = new Set([TermTypes.SINGLECELL_CELLTYPE, TermTypes.SINGLECELL_GENE_EXPRESSION])
+const singleCellTerms = new Set([SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION])
 
-export function isSingleSampleTerm(term) {
+export function isSingleCellTerm(term) {
 	if (!term) return false
-	return singleSampleTerms.has(term.type)
+	return singleCellTerms.has(term.type)
 }
 export function isNumericTerm(term) {
 	if (!term) return false
@@ -152,24 +174,24 @@ export function equals(t1, t2) {
 	if (!t1) throw new Error('First term is not defined ')
 	if (!t2) throw new Error('Second term is not defined ')
 	if (t1.type !== t2.type) return false //term types are different
-	if (isDictionaryType(t1.type) && isDictionaryType(t2.type) && t1.type != TermTypes.SAMPLELST) return t1.id === t2.id
+	if (isDictionaryType(t1.type) && isDictionaryType(t2.type) && t1.type != SAMPLELST) return t1.id === t2.id
 	switch (t1.type) {
-		case TermTypes.GENE_EXPRESSION:
+		case GENE_EXPRESSION:
 			return t1.gene == t2.gene
-		case TermTypes.SSGSEA:
+		case SSGSEA:
 			return t1.id == t2.id
-		case TermTypes.DNA_METHYLATION:
+		case DNA_METHYLATION:
 			return t1.chr == t2.chr && t1.start == t2.start && t1.stop == t2.stop
-		case TermTypes.METABOLITE_INTENSITY:
-		case TermTypes.WHOLE_PROTEOME_ABUNDANCE:
+		case METABOLITE_INTENSITY:
+		case WHOLE_PROTEOME_ABUNDANCE:
 			return t1.name == t2.name
-		case TermTypes.GENE_VARIANT:
+		case GENE_VARIANT:
 			return t1.gene == t2.gene || (t1.chr == t2.chr && t1.start == t2.start && t1.stop == t2.stop)
 
 		// TO DO: Add more cases
-		// case TermTypes.SNP_LIST:
-		// case TermTypes.SNP_LOCUS:
-		// case TermTypes.SAMPLELST:
+		// case SNP_LIST:
+		// case SNP_LOCUS:
+		// case SAMPLELST:
 
 		default:
 			return false

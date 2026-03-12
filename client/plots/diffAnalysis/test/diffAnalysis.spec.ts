@@ -1,6 +1,6 @@
 import tape from 'tape'
 import * as helpers from '../../../test/front.helpers.js'
-import { TermTypes } from '#shared/terms.js'
+import { SINGLECELL_CELLTYPE } from '#shared/terms.js'
 
 /*
 Tests:
@@ -41,7 +41,7 @@ tape('Default single cell cell type diffAnalysis', function (test) {
 				{
 					chartType: 'differentialAnalysis',
 					childType: 'volcano',
-					termType: TermTypes.SINGLECELL_CELLTYPE,
+					termType: SINGLECELL_CELLTYPE,
 					categoryName: '2',
 					termId: 'Cluster',
 					sample: '2c33dcbd-454a-468f-89fc-71fd20b5d30c'
