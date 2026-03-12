@@ -122,7 +122,10 @@ const altcolor = 'rgba(122,103,44,.7)',
 export default function (genomes) {
 	return async (req, res) => {
 		try {
-			res.send(await do_query(req, genomes))
+			if (!req.query.genome) throw 'genome missing'
+			const genomeobj = genomes[req.query.genome]
+			if (!genomeobj) throw 'invalid genome'
+			res.send(await do_query(req, genomeobj))
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
@@ -130,13 +133,7 @@ export default function (genomes) {
 	}
 }
 
-async function do_query(req, genomes) {
-	const [e, tkfile, isurl] = utils.fileurl(req)
-	if (e) throw e
-
-	// append new boolean flag to req.query{}
-	req.query.fileIsBigbed = await utils.testIfFileIsBigbed(tkfile)
-
+async function do_query(req, genomeobj) {
 	let stackheight, stackspace, regionspace, width, fontsize
 	if (req.query.getdata) {
 		// no rendering, return list of parsed items
@@ -169,13 +166,8 @@ async function do_query(req, genomes) {
 		if (Number.isNaN(req.query.bplengthUpperLimit)) throw 'bplengthUpperLimit not number'
 	}
 
-	if (!req.query.genome) throw 'genome missing'
-	const genomeobj = genomes[req.query.genome]
-	if (!genomeobj) throw 'invalid genome'
-
 	utils.validateRglst(req.query, genomeobj)
 	for (const r of req.query.rglst) {
-		// TODO validate regions
 		if (r.reverse) {
 			r.scale = p => Math.ceil((r.width * (r.stop - p)) / (r.stop - r.start))
 		} else {
@@ -189,48 +181,7 @@ async function do_query(req, genomes) {
 	const categories = req.query.categories || null
 	const __isgene = req.query.__isgene
 
-	let dir
-	if (!req.query.fileIsBigbed && isurl) {
-		dir = await utils.cache_index(tkfile, req.query.indexURL)
-	}
-
-	const regionitems = await query_file(req.query, tkfile, dir, flag_gm, gmisoform)
-
-	let filterByName
-	if (req.query.filterByName) {
-		filterByName = new Set(req.query.filterByName.split(/[\s\n]/).map(i => i.trim()))
-	}
-
-	const items = []
-
-	// apply filtering
-	for (const lst of regionitems) {
-		for (const i of lst) {
-			if (req.query.usevalue) {
-				const v = i[req.query.usevalue.key]
-				if (!Number.isFinite(v)) {
-					continue
-				}
-				if (req.query.usevalue.dropBelowCutoff && v < req.query.usevalue.dropBelowCutoff) {
-					continue
-				}
-			}
-			if (req.query.bplengthUpperLimit && i.stop - i.start > req.query.bplengthUpperLimit) {
-				continue
-			}
-			if (filterByName) {
-				if (i.isoform) {
-					if (!filterByName.has(i.isoform)) continue
-				} else if (i.name) {
-					if (!filterByName.has(i.name)) continue
-				} else {
-					// do not show nameless items in this case
-					continue
-				}
-			}
-			items.push(i)
-		}
-	}
+	const items = await getBEDitems(req, genomeobj, flag_gm, gmisoform)
 
 	if (req.query.getdata) {
 		///////////////////////// exit ///////////////////
@@ -539,7 +490,7 @@ async function do_query(req, genomes) {
 		}
 		const fillcolor = getItemColor(item, req.query, result)
 
-		// attaches xxx
+		// attaches
 		c.fillcolor = fillcolor
 
 		const y = (stackheight + stackspace) * (c.stack - 1)
@@ -901,6 +852,82 @@ async function do_query(req, genomes) {
 	result.src = canvas.toDataURL()
 	result.mapaa = mapaa
 	return result
+}
+
+async function getBEDitems(req, genomeobj, flag_gm, gmisoform) {
+	if (req.query.bedItems) {
+		// client supplies list of "bed" items to render. no file to read
+		if (!Array.isArray(req.query.bedItems)) throw 'bedItems not array'
+		const lst = []
+		for (const j of req.query.bedItems) {
+			if (typeof j != 'object') throw 'one of bedItems[] not obj'
+			if (!j.chr) throw 'bedItems[].chr missing'
+			if (!Number.isInteger(j.start)) throw 'bedItems[].start not integer'
+			if (!Number.isInteger(j.stop)) throw 'bedItems[].stop not integer'
+			j.rglst = []
+			// duplicate following lines with elsewhere as chr equivalency check is needed here but not there
+			for (let i = 0; i < req.query.rglst.length; i++) {
+				const r = req.query.rglst[i]
+				if (r.chr != j.chr) continue
+				if (Math.max(j.start, r.start) < Math.min(j.stop, r.stop)) {
+					j.rglst.push({ idx: i })
+				}
+			}
+			if (j.rglst.length == 0) continue
+			lst.push(j)
+		}
+		return lst
+	}
+	// read a file for items
+
+	const [e, tkfile, isurl] = utils.fileurl(req)
+	if (e) throw e
+
+	// append new boolean flag to req.query{}
+	req.query.fileIsBigbed = await utils.testIfFileIsBigbed(tkfile)
+	let dir
+	if (!req.query.fileIsBigbed && isurl) {
+		dir = await utils.cache_index(tkfile, req.query.indexURL)
+	}
+
+	const regionitems = await query_file(req.query, tkfile, dir, flag_gm, gmisoform)
+
+	let filterByName
+	if (req.query.filterByName) {
+		filterByName = new Set(req.query.filterByName.split(/[\s\n]/).map(i => i.trim()))
+	}
+
+	const items = []
+
+	// apply filtering
+	for (const lst of regionitems) {
+		for (const i of lst) {
+			if (req.query.usevalue) {
+				const v = i[req.query.usevalue.key]
+				if (!Number.isFinite(v)) {
+					continue
+				}
+				if (req.query.usevalue.dropBelowCutoff && v < req.query.usevalue.dropBelowCutoff) {
+					continue
+				}
+			}
+			if (req.query.bplengthUpperLimit && i.stop - i.start > req.query.bplengthUpperLimit) {
+				continue
+			}
+			if (filterByName) {
+				if (i.isoform) {
+					if (!filterByName.has(i.isoform)) continue
+				} else if (i.name) {
+					if (!filterByName.has(i.name)) continue
+				} else {
+					// do not show nameless items in this case
+					continue
+				}
+			}
+			items.push(i)
+		}
+	}
+	return items
 }
 
 function bedj_may_mapisoform(lst, boxstart, boxstop, y, item) {
