@@ -53,8 +53,41 @@ import h5py
 # import triggers basicConfig.
 logging.getLogger("gpdm").setLevel(logging.CRITICAL)
 
+# Set matplotlib to non-interactive Agg backend before gpdm import,
+# since gpdm/core.py imports matplotlib.pyplot at module load time.
+import matplotlib
+matplotlib.use('Agg')
+
 # Import the GPDM analysis class (now safe to import without stderr side-effects)
 from gpdm import RegionalDMAnalysis
+
+# Import Query from the existing PP HDF5 reader (same python/src/ directory)
+from query_beta_values import Query
+
+
+def get_region_positions(h5file, chrom, start, stop):
+    """
+    Read CpG genomic positions for a region from the HDF5 file.
+    Query.process_genomic_queries() returns only the beta matrix, not positions,
+    so this small helper reads just the meta/start array for the region.
+    Uses the same boundary logic as Query to ensure row alignment.
+    """
+    with h5py.File(h5file, 'r') as f:
+        chrom_lengths = json.loads(f['/'].attrs['chrom_lengths'])
+        if chrom not in chrom_lengths:
+            return None
+        chroms = list(chrom_lengths.keys())
+        prefix = [0]
+        for c in chroms:
+            prefix.append(prefix[-1] + chrom_lengths[c])
+        idx = chroms.index(chrom)
+        row_start = prefix[idx]
+        start_pos = f['meta/start'][row_start:row_start + chrom_lengths[chrom]]
+        left = int(np.searchsorted(start_pos, start, 'left'))
+        right = int(np.searchsorted(start_pos, stop, 'right'))
+        if left >= right:
+            return None
+        return start_pos[left:right]
 
 
 def read_region_from_h5(h5file, samples, chrom, start, stop):
@@ -197,14 +230,16 @@ def run_gpdm(params):
     nan_threshold = float(params.get('nan_threshold', 0.5))  # drop probes with > 50% missing
     annotations = params.get('annotations', [])               # regulatory domain annotations
 
-    # Read the HDF5 for all samples from both groups in a single pass
-    # (more efficient than two separate reads)
+    # Read beta matrix and positions from HDF5
+    # Note: Query.process_genomic_queries has a bug where it uses chromosome-local
+    # row indices to slice the dataset instead of absolute row offsets, producing
+    # wrong data for any chromosome other than the first. read_region_from_h5
+    # correctly computes abs_left = row_start + left before slicing.
     all_samples = group1 + group2
     positions, beta_matrix, valid_samples = read_region_from_h5(
         h5file, all_samples, chrom, start, stop
     )
 
-    # Validate that we have enough probes to fit a GP (minimum 3)
     if positions is None or len(positions) < 3:
         return {'error': f'Too few probes in {chrom}:{start}-{stop} (need >= 3)'}
 
@@ -284,67 +319,51 @@ def run_gpdm(params):
             length_scale_bp=int(ann.get('length_scale_bp', 1000)),
         )
 
-    # --- Step 5: Run both GP models ---
-    # method='both' fits NaiveGP and DomainPartitionedGP independently.
-    # Results are stored in analysis.results_naive and analysis.results_annotation.
-    # The annotation-aware model is set as the primary result (analysis.results).
-    analysis.run(method='both')
+    # --- Step 5: Run annotation-aware GP model only ---
+    # Skips NaiveGP to halve computation time. Results in analysis.results_annotation.
+    analysis.run(method='annotation_aware')
 
-    # --- Step 6: Build grid response for the D3 visualization ---
-    # to_dataframe() exports 500-point predictions aligned to a uniform grid.
-    # Column names use the group label strings passed to load_methylation:
-    #   pred_group1, std_group1, pred_group2, std_group2
+    # --- Step 5b: Write visualization PNG to cache if a path was supplied ---
+    plot_path = params.get('plot_path')
+    if plot_path:
+        try:
+            import os
+            import matplotlib.pyplot as plt
+            os.makedirs(os.path.dirname(plot_path), exist_ok=True)
+            analysis.plot_results(results=analysis.results_annotation, save_path=plot_path, dark_theme=False)
+            plt.close('all')
+        except Exception:
+            pass  # non-fatal: analysis result still returned without image
+
+    # --- Step 6: Build grid response for the D3 visualization (termdb/gpdm) ---
+    # termdb/dmr ignores this; termdb/gpdm needs it for all 4 visualization panels.
     grid_df = analysis.to_dataframe()
 
     def safe_list(arr):
-        """
-        Convert a numpy array or pandas Series to a plain Python list,
-        replacing NaN and Inf values with None (JSON-serializable null).
-        The D3 visualization uses null to skip drawing at missing positions.
-        """
         return [None if (np.isnan(v) or np.isinf(v)) else float(v) for v in arr]
 
-    # Extract the four core GP prediction arrays from the DataFrame
-    pred_a = grid_df['pred_group1'].values  # group A posterior mean
-    std_a = grid_df['std_group1'].values    # group A posterior std
-    pred_b = grid_df['pred_group2'].values  # group B posterior mean
-    std_b = grid_df['std_group2'].values    # group B posterior std
+    pred_a = grid_df['pred_group1'].values
+    std_a  = grid_df['std_group1'].values
+    pred_b = grid_df['pred_group2'].values
+    std_b  = grid_df['std_group2'].values
 
-    # Build the grid dict sent to the client.
-    # CI bands are computed as mean ± 1.96*std (approximates 95% credible interval
-    # for visualization purposes — the exact CI is in ci_lower/ci_upper for DMR calling).
     grid = {
-        'positions': safe_list(grid_df['position']),          # genomic x-axis
-        'group_a_mean': safe_list(pred_a),                    # group A GP mean line
-        'group_a_lower': safe_list(pred_a - 1.96 * std_a),   # group A lower CI band
-        'group_a_upper': safe_list(pred_a + 1.96 * std_a),   # group A upper CI band
-        'group_b_mean': safe_list(pred_b),                    # group B GP mean line
-        'group_b_lower': safe_list(pred_b - 1.96 * std_b),   # group B lower CI band
-        'group_b_upper': safe_list(pred_b + 1.96 * std_b),   # group B upper CI band
-        'difference_mean': safe_list(grid_df['diff_mean']),   # Delta(x) posterior mean
-        'difference_lower': safe_list(grid_df['ci_lower']),   # Delta(x) 95% CI lower
-        'difference_upper': safe_list(grid_df['ci_upper']),   # Delta(x) 95% CI upper
-        'posterior_prob': safe_list(grid_df['prob_B_greater']),# P(group2 > group1) at each point
+        'positions':         safe_list(grid_df['position']),
+        'group_a_mean':      safe_list(pred_a),
+        'group_a_lower':     safe_list(pred_a - 1.96 * std_a),
+        'group_a_upper':     safe_list(pred_a + 1.96 * std_a),
+        'group_b_mean':      safe_list(pred_b),
+        'group_b_lower':     safe_list(pred_b - 1.96 * std_b),
+        'group_b_upper':     safe_list(pred_b + 1.96 * std_b),
+        'difference_mean':   safe_list(grid_df['diff_mean']),
+        'difference_lower':  safe_list(grid_df['ci_lower']),
+        'difference_upper':  safe_list(grid_df['ci_upper']),
+        'posterior_prob':    safe_list(grid_df['prob_B_greater']),
     }
 
-    # --- Step 7: Serialize naive DMRs ---
-    # These come from NaiveGP: a single global kernel, no annotation priors.
-    # Shown in the client as purple bars on the DMR track for comparison.
-    naive_dmrs = []
-    if analysis.results_naive and analysis.results_naive.dmrs:
-        for d in analysis.results_naive.dmrs:
-            naive_dmrs.append({
-                'chr': chrom,
-                'start': int(d.start),
-                'stop': int(d.end),
-                'width': int(d.width_bp),
-                'max_delta_beta': float(d.max_delta_beta),
-                'probability': float(d.mean_posterior_prob),
-            })
-
-    # --- Step 8: Serialize annotation-aware DMRs ---
-    # These come from DomainPartitionedGP: domain-specific priors and kernels.
-    # Shown as orange bars — the primary result shown to the user.
+    # --- Step 7: Serialize annotation-aware DMRs ---
+    # max_delta_beta is always positive (absolute peak effect size).
+    # mean_delta_beta is signed: positive = group B (group2) > group A (group1) = hyper.
     annot_dmrs = []
     if analysis.results_annotation and analysis.results_annotation.dmrs:
         for d in analysis.results_annotation.dmrs:
@@ -354,21 +373,22 @@ def run_gpdm(params):
                 'stop': int(d.end),
                 'width': int(d.width_bp),
                 'max_delta_beta': float(d.max_delta_beta),
+                'direction': 'hyper' if d.mean_delta_beta >= 0 else 'hypo',
                 'probability': float(d.mean_posterior_prob),
             })
 
     return {
         'status': 'ok',
-        'dmrs': annot_dmrs,           # annotation-aware DMRs (primary result)
-        'naive_dmrs': naive_dmrs,     # naive DMRs (comparison reference)
-        'grid': grid,                 # 500-point posterior predictions for D3
+        'dmrs': annot_dmrs,
+        'naive_dmrs': [],   # naive model not run; kept for termdb/gpdm client compatibility
+        'grid': grid,
         'metadata': {
-            'n_probes': int(len(positions)),          # probes used after filtering
-            'n_probes_dropped': n_dropped,            # probes dropped by NaN threshold
-            'n_nan_imputed': nan_count,               # individual NaN values imputed
-            'n_samples_group1': n_g1,                 # group 1 sample count
-            'n_samples_group2': n_g2,                 # group 2 sample count
-            'region': f'{chrom}:{start}-{stop}',      # region string for display
+            'n_probes': int(len(positions)),
+            'n_probes_dropped': n_dropped,
+            'n_nan_imputed': nan_count,
+            'n_samples_group1': n_g1,
+            'n_samples_group2': n_g2,
+            'region': f'{chrom}:{start}-{stop}',
         }
     }
 

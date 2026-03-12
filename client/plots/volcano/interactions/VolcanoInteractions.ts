@@ -3,9 +3,7 @@ import { downloadTable, GeneSetEditUI, MultiTermWrapperEditUI, newSandboxDiv } f
 import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
 import { DNA_METHYLATION, GENE_EXPRESSION } from '#shared/terms.js'
-import { GpdmPlot } from '../../gpdm/GpdmPlot'
 import { dofetch3 } from '#common/dofetch'
-import { select } from 'd3-selection'
 
 export class VolcanoInteractions {
 	app: MassAppApi
@@ -189,55 +187,82 @@ export class VolcanoInteractions {
 		})
 	}
 
-	/** When clicking on a DM data point, launches the GPDM probe-level
-	 * analysis in a new sandbox. Looks up gene coordinates via genelookup,
-	 * then calls termdb/gpdm for the region. */
+	/** When clicking on a DM data point, runs GPDM analysis then opens a sandbox
+	 * (sibling to the volcano in the mass plotDiv) with a genome browser Block
+	 * at the gene locus and annotation-aware DMRs overlaid as highlight regions
+	 * (orange=hyper, blue=hypo). */
 	async launchGpdm(geneName: string, promoterId?: string) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		if (config.termType !== TermTypes.DNA_METHYLATION) return
 
 		const genome = this.app.vocabApi.vocab.genome
+		const dslabel = this.app.vocabApi.vocab.dslabel
+		const genomeObj = this.app.opts.genome
 
 		// Look up gene coordinates
-		const result = await dofetch3('genelookup', {
+		const geneResult = await dofetch3('genelookup', {
 			body: { deep: 1, input: geneName, genome }
 		})
-		if (result.error || !result.gmlst || result.gmlst.length === 0) {
+		if (geneResult.error || !geneResult.gmlst || geneResult.gmlst.length === 0) {
 			window.alert(`Could not find coordinates for gene "${geneName}"`)
 			return
 		}
 
-		const gm = result.gmlst[0]
-		// Expand region by 2kb on each side to capture flanking probes
+		const gm = geneResult.gmlst[0]
 		const pad = 2000
 		const chr = gm.chr
 		const start = Math.max(0, gm.start - pad)
 		const stop = gm.stop + pad
 
-		// Build sample lists from the config's group data
 		const group1 = config.samplelst.groups[0].values || []
 		const group2 = config.samplelst.groups[1].values || []
 
-		// Open a new sandbox (PP standard pattern)
-		const sandboxParent = this.app.opts.plotDiv || select(this.dom.holder.node()!.parentNode as HTMLElement)
-		const sandbox = newSandboxDiv(sandboxParent)
-		const title = promoterId ? `GPDM: ${geneName} (${promoterId})` : `GPDM: ${geneName}`
-		sandbox.header.text(title)
+		const sandbox = newSandboxDiv(this.dom.holder)
+		sandbox.header.text(promoterId ? `DMR: ${geneName} (${promoterId})` : `DMR: ${geneName}`)
+		const waitDiv = sandbox.body.append('div').style('padding', '10px').text('Running GPDM analysis…')
 
-		new GpdmPlot({
-			holder: sandbox.body as any,
-			genome,
-			dslabel: this.app.vocabApi.vocab.dslabel,
+		const dmrResult = await dofetch3('termdb/dmr', {
+			body: { genome, dslabel, chr, start, stop, group1, group2 }
+		})
+		waitDiv.remove()
+
+		if (dmrResult.error) {
+			sandbox.body.append('div').style('padding', '10px').style('color', 'red').text(dmrResult.error)
+			return
+		}
+
+		// Build hlregions — orange=hyper, blue=hypo, alpha scaled by probability
+		const hlregions = (dmrResult.dmrs ?? []).map((dmr: any) => {
+			const alpha = Math.round(Math.min(255, (0.5 + dmr.probability * 0.5) * 255))
+			const hex = alpha.toString(16).padStart(2, '0')
+			const base = dmr.direction === 'hyper' ? '#e66101' : '#5e81f4'
+			return { chr: dmr.chr, start: dmr.start, stop: dmr.stop, color: base + hex }
+		})
+
+		const { first_genetrack_tolist } = await import('#common/1stGenetk')
+		const tklst: any[] = []
+		first_genetrack_tolist(genomeObj, tklst)
+		const { Block } = await import('#src/block')
+		new Block({
+			holder: sandbox.body,
+			genome: genomeObj,
 			chr,
 			start,
 			stop,
-			geneName,
-			promoterId,
-			group1,
-			group2,
-			group1Name: config.samplelst.groups[0].name,
-			group2Name: config.samplelst.groups[1].name
+			tklst,
+			hlregions,
+			nobox: true,
+			width: 800,
+			hidegenelegend: true
 		})
+
+		if (!dmrResult.dmrs?.length) {
+			sandbox.body
+				.append('div')
+				.style('padding', '6px 0')
+				.style('color', '#888')
+				.text('No significant DMRs detected in this region')
+		}
 	}
 
 	async launchDEGClustering() {
