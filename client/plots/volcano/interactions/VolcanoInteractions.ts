@@ -187,9 +187,10 @@ export class VolcanoInteractions {
 		})
 	}
 
-	/** When clicking on a DM data point, launches the GPDM probe-level
-	 * analysis in a new sandbox. Looks up gene coordinates via genelookup,
-	 * then calls termdb/gpdm for the region. */
+	/** When clicking on a DM data point, runs GPDM analysis then opens a sandbox
+	 * (sibling to the volcano in the mass plotDiv) with a genome browser Block
+	 * at the gene locus and annotation-aware DMRs overlaid as highlight regions
+	 * (orange=hyper, blue=hypo). */
 	async launchGpdm(geneName: string, promoterId?: string) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		if (config.termType !== DNA_METHYLATION) return
@@ -198,6 +199,7 @@ export class VolcanoInteractions {
 		const dslabel = this.app.vocabApi.vocab.dslabel
 		const genomeObj = this.app.opts.genome
 
+		// Look up gene coordinates
 		const geneResult = await dofetch3('genelookup', {
 			body: { deep: 1, input: geneName, genome }
 		})
@@ -229,6 +231,7 @@ export class VolcanoInteractions {
 			return
 		}
 
+		// Build hlregions — orange=hyper, blue=hypo, alpha scaled by probability
 		const hlregions = (dmrResult.dmrs ?? []).map((dmr: any) => {
 			const alpha = Math.round(Math.min(255, (0.5 + dmr.probability * 0.5) * 255))
 			const hex = alpha.toString(16).padStart(2, '0')
@@ -240,10 +243,25 @@ export class VolcanoInteractions {
 		const tklst: any[] = []
 		first_genetrack_tolist(genomeObj, tklst)
 		const { Block } = await import('#src/block')
-		new Block({ holder: sandbox.body, genome: genomeObj, chr, start, stop, tklst, hlregions, nobox: true, width: 800, hidegenelegend: true })
+		new Block({
+			holder: sandbox.body,
+			genome: genomeObj,
+			chr,
+			start,
+			stop,
+			tklst,
+			hlregions,
+			nobox: true,
+			width: 800,
+			hidegenelegend: true
+		})
 
 		if (!dmrResult.dmrs?.length) {
-			sandbox.body.append('div').style('padding', '6px 0').style('color', '#888').text('No significant DMRs detected in this region')
+			sandbox.body
+				.append('div')
+				.style('padding', '6px 0')
+				.style('color', '#888')
+				.text('No significant DMRs detected in this region')
 		}
 	}
 
