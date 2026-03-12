@@ -25,40 +25,72 @@ interface GeneDataTypeResult {
 export async function classifyGeneDataTypes(
 	user_prompt: string,
 	llm: LlmConfig,
-	relevant_genes: string[]
+	relevant_genes: string[], // Genes from db that are present in the user prompt
+	dataset_json: any // Optional dataset JSON which may contain additional context such as excluded keywords or dataset-specific gene data types that can be used to improve classification accuracy
 ): Promise<string> {
-	const geneList = relevant_genes.join(', ')
-
+	const geneList = relevant_genes.map(x => x.toUpperCase()).join(', ')
+	const exclude_keywords: string[] = dataset_json?.ExcludedKeywords ?? []
+	let gene_group_intersection: string[] = []
+	if (exclude_keywords.length > 0) {
+		gene_group_intersection = exclude_keywords.filter(x => relevant_genes.includes(x.toLowerCase()))
+	}
 	const prompt = `You are a genomics query classifier. Given a user prompt and a list of gene names found in the prompt, determine which gene data type the user is referring to for EACH gene.
 
 Valid gene data types are:
 - "expression" — gene expression, RNA, transcription, FPKM, TPM, counts, upregulated, downregulated, overexpressed, underexpressed
 - "mutation" — gene variant, mutation, SNV, SNP, indel, deletion, insertion, fusion, CNV, copy number, frameshift, missense, nonsense, splice, truncation
 - "methylation" — DNA methylation, CpG, epigenetic
-- "differential_expression" — differential expression, fold change, DGE, DE analysis
 - "missing" — the prompt does NOT specify or imply any gene data type for this gene
 
 Respond with ONLY a valid JSON array. Each element must have "gene" (string) and "dataType" (string). Do NOT include any text outside the JSON.
 
 Example 1:
 User prompt: "show DUX4 expression in PAX5alt subtype"
-Genes: DUX4
+Genes: [DUX4]
+Genes that are also diagnosis group names:[]
 Response: [{"gene":"DUX4","dataType":"expression"}]
 
 Example 2:
 User prompt: "show TP53 mutations and MYC expression"
-Genes: TP53, MYC
+Genes: [TP53, MYC]
+Genes that are also diagnosis group names:[]
 Response: [{"gene":"TP53","dataType":"mutation"},{"gene":"MYC","dataType":"expression"}]
 
 Example 3:
 User prompt: "show DUX4 in PAX5alt subtype"
-Genes: DUX4
+Genes: [DUX4]
+Genes that are also diagnosis group names:[]
 Response: [{"gene":"DUX4","dataType":"missing"}]
 
-User prompt: "${user_prompt}"
-Genes: ${geneList}
-Response:`
+Example 4:
+User prompt: "show DUX4 expression in MEF2D subtype"
+Genes: [DUX4, MEF2D]
+Genes that are also diagnosis group names:[MEF2D]
+Response: [{"gene":"DUX4","dataType":"expression"}]
 
+Example 5:
+User prompt: "show KMT2A expression in MEF2D and CRLF2 subtypes"
+Genes: [KMT2A, MEF2D, CRLF2]
+Genes that are also diagnosis group names: [MEF2D, CRLF2]
+Response: [{"gene":"DUX4","dataType":"expression"}]
+
+Example 6:
+User prompt: "show age for MEF2D and CRLF2 subtypes"
+Genes: [MEF2D, CRLF2]
+Genes that are also diagnosis group names: [MEF2D, CRLF2]
+Response: []
+
+Example 7:
+User prompt: "show TP53 expression for MEF2D, KMT2A and CRLF2 subtypes"
+Genes: [TP53, MEF2D, KMT2A, CRLF2]
+Genes that are also diagnosis group names: [MEF2D, KMT2A, CRLF2]
+Response: [{"gene":"TP53","dataType":"expression"}]
+
+User prompt: "${user_prompt}"
+Genes: [${geneList}]
+Genes that are also diagnosis group names: [${gene_group_intersection.join(', ')}]
+Response:`
+	//mayLog('classifyGeneDataTypes prompt:', prompt)
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog('classifyGeneDataTypes raw response:', response)
 

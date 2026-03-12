@@ -108,15 +108,15 @@ export async function run_chat_pipeline(
 		const genes_list = await parse_geneset_db(genedb) // gene_list should always be populated irrespective of whether the dataset has gene expression data, since even if its missing gene expression data, the gene list can still be useful for validating gene mentions in the user query and providing additional context to the LLM. If the dataset does not have gene expression data, the gene list can still be used for telling the user that gene expression is not supported.
 		const relevant_genes = extractGenesFromPrompt(user_prompt, genes_list)
 		if (relevant_genes.length > 0) {
-			const ambiguous_gene_prompt = determineAmbiguousGenePrompt(user_prompt, relevant_genes, dataset_json) // for e.g. classifying prompts such as "Show TP53". In this prompt its not clear which feature (gene expression, mutation, etc.) of TP53 the user is referring to, so we want to classify this as an "ambiguous_gene_prompt" plot type and prompt the user to clarify their question.
-			if (ambiguous_gene_prompt.length > 0) {
+			const AmbiguousGeneMessage = determineAmbiguousGenePrompt(user_prompt, relevant_genes, dataset_json) // for e.g. classifying prompts such as "Show TP53". In this prompt its not clear which feature (gene expression, mutation, etc.) of TP53 the user is referring to, so we want to classify this as an "ambiguous_gene_prompt" plot type and prompt the user to clarify their question.
+			if (AmbiguousGeneMessage.length > 0) {
 				return {
 					type: 'text',
-					text: ambiguous_gene_prompt
+					text: AmbiguousGeneMessage
 				}
 			}
 
-			const geneDataTypeMessage = await classifyGeneDataTypes(user_prompt, llm, relevant_genes)
+			const geneDataTypeMessage = await classifyGeneDataTypes(user_prompt, llm, relevant_genes, dataset_json)
 			if (geneDataTypeMessage.length > 0) {
 				return {
 					type: 'text',
@@ -204,6 +204,6 @@ export async function run_chat_pipeline(
 		// Should not happen
 		ai_output_json = { type: 'text', text: 'Unknown classification type' }
 	}
-	mayLog('Final AI output JSON:', JSON.stringify(ai_output_json))
+	//mayLog('Final AI output JSON:', JSON.stringify(ai_output_json))
 	return ai_output_json
 }
