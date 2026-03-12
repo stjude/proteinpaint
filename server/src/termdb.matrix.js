@@ -5,13 +5,19 @@ import { getFilterCTEs } from './termdb.filter.js'
 import serverconfig from './serverconfig.js'
 import { read_file, trackXfetch } from './utils.js'
 import {
-	TermTypes,
 	isDictionaryType,
 	isNonDictionaryType,
 	getBin,
 	getParentType,
 	getSampleType,
-	SINGLECELL_CELLTYPE
+	DNA_METHYLATION,
+	GENE_EXPRESSION,
+	GENE_VARIANT,
+	METABOLITE_INTENSITY,
+	SINGLECELL_CELLTYPE,
+	SINGLECELL_GENE_EXPRESSION,
+	SSGSEA,
+	WHOLE_PROTEOME_ABUNDANCE
 } from '#shared/terms.js'
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
@@ -227,16 +233,14 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				samples[sampleId][tw.$id] = snp2value
 			}
 		} else if (
-			tw.term.type == TermTypes.GENE_EXPRESSION ||
-			tw.term.type == TermTypes.METABOLITE_INTENSITY ||
-			tw.term.type == TermTypes.SSGSEA ||
-			tw.term.type == TermTypes.DNA_METHYLATION ||
-			tw.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE
+			tw.term.type == GENE_EXPRESSION ||
+			tw.term.type == METABOLITE_INTENSITY ||
+			tw.term.type == SSGSEA ||
+			tw.term.type == DNA_METHYLATION ||
+			tw.term.type == WHOLE_PROTEOME_ABUNDANCE
 		) {
 			const queryHandler =
-				tw.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE
-					? q.ds.queries?.proteome?.whole
-					: q.ds.queries?.[tw.term.type]
+				tw.term.type == WHOLE_PROTEOME_ABUNDANCE ? q.ds.queries?.proteome?.whole : q.ds.queries?.[tw.term.type]
 			if (!queryHandler) throw 'not supported by dataset: ' + tw.term.type
 			let lstOfBins // of this tw. only set when q.mode is discrete
 			if (tw.q?.mode == 'discrete' || tw.q?.mode == 'binary') {
@@ -264,7 +268,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				}
 				samples[sampleId][tw.$id] = { key, value }
 			}
-		} else if (tw.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
+		} else if (tw.term.type == SINGLECELL_GENE_EXPRESSION) {
 			if (!q.ds.queries?.singleCell?.geneExpression) throw 'not supported by dataset: singleCell.geneExpression'
 			let lst // list of bins based on tw config
 			if (tw.q?.mode == 'discrete') {
@@ -440,7 +444,7 @@ export function divideTerms(lst) {
 		// TODO FIXME should require valid term type, reject if not and remove assumptions and guesses
 		if (type) {
 			if (!tw.$id || tw.$id == 'undefined') tw.$id = tw.term.id || tw.term.name //for tests and backwards compatibility
-			if (type == TermTypes.GENE_VARIANT) {
+			if (type == GENE_VARIANT) {
 				geneVariantTws.push(tw) // collect into own list to process separately later
 			} else if (isNonDictionaryType(type)) {
 				nonDict.push(tw)

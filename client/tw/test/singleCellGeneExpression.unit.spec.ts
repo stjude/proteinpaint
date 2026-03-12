@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { SingleCellGeneExpressionBase, getSCGEunit } from '../singleCellGeneExpression.ts'
-import { TermTypes } from '#shared/terms.js'
+import { GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
 
 /*************************
  reusable helper functions
@@ -28,7 +28,7 @@ const mockVocabApiNoUnit = {
 
 function getValidRawTerm(overrides: any = {}) {
 	return {
-		type: TermTypes.SINGLECELL_GENE_EXPRESSION,
+		type: SINGLECELL_GENE_EXPRESSION,
 		gene: 'TP53',
 		sample: 'Tumor cells',
 		...overrides
@@ -58,7 +58,7 @@ tape('validate() should throw on invalid terms', test => {
 	)
 
 	test.throws(
-		() => SingleCellGeneExpressionBase.validate({ type: TermTypes.GENE_EXPRESSION } as any),
+		() => SingleCellGeneExpressionBase.validate({ type: GENE_EXPRESSION } as any),
 		/incorrect term.type='geneExpression'/,
 		'Should throw when term.type is incorrect'
 	)
@@ -66,7 +66,7 @@ tape('validate() should throw on invalid terms', test => {
 	test.throws(
 		() =>
 			SingleCellGeneExpressionBase.validate({
-				type: TermTypes.SINGLECELL_GENE_EXPRESSION,
+				type: SINGLECELL_GENE_EXPRESSION,
 				sample: 'Tumor cells'
 			} as any),
 		/no gene or name present/,
@@ -76,7 +76,7 @@ tape('validate() should throw on invalid terms', test => {
 	test.throws(
 		() =>
 			SingleCellGeneExpressionBase.validate({
-				type: TermTypes.SINGLECELL_GENE_EXPRESSION,
+				type: SINGLECELL_GENE_EXPRESSION,
 				gene: 123,
 				name: 'Bad gene',
 				sample: 'Tumor cells'
@@ -88,7 +88,7 @@ tape('validate() should throw on invalid terms', test => {
 	test.throws(
 		() =>
 			SingleCellGeneExpressionBase.validate({
-				type: TermTypes.SINGLECELL_GENE_EXPRESSION,
+				type: SINGLECELL_GENE_EXPRESSION,
 				gene: 'TP53'
 			} as any),
 		/missing sample name/,
@@ -129,7 +129,7 @@ tape('constructor should set fields and use configured unit', test => {
 	const term = getValidRawTerm({ unit: undefined })
 	const x = new SingleCellGeneExpressionBase(term as any, { vocabApi: mockVocabApi as any } as any)
 
-	test.equal(x.type, TermTypes.SINGLECELL_GENE_EXPRESSION, 'Should set type')
+	test.equal(x.type, SINGLECELL_GENE_EXPRESSION, 'Should set type')
 	test.equal(x.gene, 'TP53', 'Should set gene')
 	test.equal(x.sample, 'Tumor cells', 'Should set sample')
 	test.equal(x.unit, 'log2 CPM', 'Should set configured unit when term.unit is missing')

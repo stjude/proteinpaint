@@ -4,7 +4,7 @@ import { scaleLinear as d3Linear, scaleTime } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { regressionPoly } from 'd3-regression'
 import type { Scatter } from '../scatter'
-import { getDateFromNumber, TermTypes } from '#shared/terms.js'
+import { getDateFromNumber, SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
 import type {
 	ScatterResponse,
 	ScatterChart,
@@ -86,7 +86,7 @@ export class ScatterModel {
 
 			this.charts = []
 			//This is not preferable.
-			if (reqOpts.colorTW?.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
+			if (reqOpts.colorTW?.term.type == SINGLECELL_GENE_EXPRESSION) {
 				this.processGEData(data['plots'])
 			} else {
 				this.range = data.range
@@ -255,7 +255,7 @@ export class ScatterModel {
 	}
 
 	getColor(c, chart) {
-		if (this.scatter.config.colorTW?.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
+		if (this.scatter.config.colorTW?.term.type == SINGLECELL_GENE_EXPRESSION) {
 			let color
 			if (!c.geneExp) color = noExpColor
 			else if (c.geneExp > chart.geMax) color = expColor
@@ -393,14 +393,14 @@ export class ScatterModel {
 		// supply start and stop color, if term has hardcoded colors, use; otherwise use default
 		if (!config.startColor[chart.id]) {
 			config.startColor[chart.id] =
-				config.colorTW?.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION
+				config.colorTW?.term.type == SINGLECELL_GENE_EXPRESSION
 					? noExpColor
 					: config.colorTW?.term.continuousColorScale?.minColor || gradientColor.brighter().brighter().toString()
 		}
 
 		if (!config.stopColor[chart.id]) {
 			config.stopColor[chart.id] =
-				config.colorTW?.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION
+				config.colorTW?.term.type == SINGLECELL_GENE_EXPRESSION
 					? expColor
 					: config.colorTW?.term.continuousColorScale?.maxColor || gradientColor.darker().toString()
 		}
@@ -411,7 +411,7 @@ export class ScatterModel {
 			// We filter out any values that are explicitly defined in the term values
 			// This gives us the raw numerical data we need for scaling
 			let colorValues
-			if (config.colorTW.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
+			if (config.colorTW.term.type == SINGLECELL_GENE_EXPRESSION) {
 				colorValues = [chart.geMin, chart.geMax]
 			} else {
 				colorValues = chart.cohortSamples

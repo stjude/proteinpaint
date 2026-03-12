@@ -5,7 +5,7 @@ import { brushX, brushY } from 'd3-brush'
 import { renderTable, getMaxLabelWidth, table2col } from '#dom'
 import { rgb } from 'd3'
 import { format as d3format } from 'd3-format'
-import { TermTypes } from '#shared/terms.js'
+import { SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
 
 const minSampleSize = 5 // a group below cutoff will not render a violin plot
 
@@ -117,7 +117,7 @@ export default function setViolinRenderer(self) {
 				y += height
 				if (self.opts.mode != 'minimal') renderLabels(t1, t2, violinG, plot, isH, settings)
 
-				if (self.config.term.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
+				if (self.config.term.term.type == SINGLECELL_GENE_EXPRESSION) {
 					// is sc data, disable brushing for now because 1) no use 2) avoid bug of listing cells
 				} else {
 					// enable brushing

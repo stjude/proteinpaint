@@ -1,6 +1,6 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
 import { DownloadMenu, niceNumLabels, ListSamples, renderTable } from '#dom'
-import { TermTypes } from '#shared/terms.js'
+import { SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
 
 export function setInteractivity(self) {
 	self.getChartImages = function () {
@@ -24,7 +24,7 @@ export function setInteractivity(self) {
 
 	self.displayLabelClickMenu = function (t1, t2, plot, event) {
 		if (!t2) return // when no term 2 do not show options on the sole violin label
-		if (self.config.term.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) return // is sc gene exp data, none of the options below work, thus disable
+		if (self.config.term.term.type == SINGLECELL_GENE_EXPRESSION) return // is sc gene exp data, none of the options below work, thus disable
 
 		const label = t1.q.mode === 'continuous' ? 'term2' : 'term'
 		const options = []

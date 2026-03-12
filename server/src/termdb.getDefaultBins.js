@@ -1,4 +1,4 @@
-import { TermTypes } from '#shared/terms.js'
+import { SINGLECELL_GENE_EXPRESSION, WHOLE_PROTEOME_ABUNDANCE } from '#shared/terms.js'
 import initBinConfig from '#shared/termdb.initbinconfig.js'
 
 // TODO convert to route
@@ -16,7 +16,7 @@ export async function trigger_getDefaultBins(q, ds, res) {
 	let max = -Infinity
 	let binsCache // fine to cache bins for scrna genes, but not for cohort level data that's subject to filtering
 	try {
-		if (tw.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
+		if (tw.term.type == SINGLECELL_GENE_EXPRESSION) {
 			if (!ds.queries?.singleCell?.geneExpression) throw 'term type not supported by this dataset'
 			binsCache = ds.queries.singleCell.geneExpression.sample2gene2expressionBins[tw.term.sample]
 			if (!binsCache) binsCache = ds.queries.singleCell.geneExpression.sample2gene2expressionBins[tw.term.sample] = {}
@@ -34,7 +34,7 @@ export async function trigger_getDefaultBins(q, ds, res) {
 			}
 		} else {
 			const queryHandler =
-				tw.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE ? ds.queries?.proteome?.whole : ds.queries?.[tw.term.type]
+				tw.term.type == WHOLE_PROTEOME_ABUNDANCE ? ds.queries?.proteome?.whole : ds.queries?.[tw.term.type]
 			if (!queryHandler) throw `term type ${tw.term.type} not supported by this dataset`
 			// this cache ignores filter, can lead to misleading result caused by different filter usage; also assumes that filter is infinite and impossible to cache
 			//binsCache = ds.queries[tw.term.type][`${tw.term.type}2bins`]

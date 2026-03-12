@@ -2,7 +2,7 @@ import { Vocab } from './Vocab'
 import { getNormalRoot } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
-import { isDictionaryType, TermTypes } from '#shared/terms.js'
+import { isDictionaryType, SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
 
 export class TermdbVocab extends Vocab {
 	// migrated from termdb/store
@@ -1041,7 +1041,7 @@ export class TermdbVocab extends Vocab {
 		if (opts.divideByTW) body.divideByTW = this.getTwMinCopy(opts.divideByTW)
 		if (opts.scaleDotTW) body.scaleDotTW = this.getTwMinCopy(opts.scaleDotTW)
 		body.excludeOutliers = opts.excludeOutliers
-		if (opts.singleCellPlot && opts.colorTW?.term.type == TermTypes.SINGLECELL_GENE_EXPRESSION) {
+		if (opts.singleCellPlot && opts.colorTW?.term.type == SINGLECELL_GENE_EXPRESSION) {
 			// required by legacy singlecell. delete when that's retired
 			body.gene = opts.colorTW.term.gene
 			body.plots = [opts.singleCellPlot.name]
