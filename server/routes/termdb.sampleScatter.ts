@@ -22,7 +22,7 @@ import { authApi } from '../src/auth.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { read_file } from '../src/utils.js'
 import { getDescrStats } from '#routes/termdb.descrstats.ts'
-import { SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
+import { SINGLECELL_GENE_EXPRESSION, isSingleCellTerm } from '#shared/terms.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/sampleScatter',
@@ -158,12 +158,13 @@ async function getSingleCellScatter(req, res, ds) {
 	const { name, sample } = q.singleCellPlot
 	try {
 		const tw = q.colorTW as any // not using "TermWrapper" due to tsc err
+		if (tw && !isSingleCellTerm(tw.term))
+			throw new Error('colorTW must be a single cell term for single cell scatter plot')
 		const arg: any = { plots: [name], sample }
-		if (tw) {
-			if (tw.term.type == SINGLECELL_GENE_EXPRESSION) arg.gene = tw.term.gene
-			else if (tw.term.type == SINGLECELL_CELLTYPE) arg.colorBy = tw.term.name
-			else throw new Error('unsupported tw')
-		}
+
+		if (tw.term.type == SINGLECELL_GENE_EXPRESSION) arg.gene = tw.term.gene
+		else arg.colorBy = tw.term.name //SINGLECELL_CELLTYPE
+
 		const data = await ds.queries.singleCell.data.get(arg)
 
 		const plot = data.plots[0]
@@ -180,7 +181,8 @@ async function getSingleCellScatter(req, res, ds) {
 				z: 0,
 				category: cell.category,
 				shape: 'Ref',
-				hidden
+				hidden,
+				geneExp: cell.geneExp
 			}
 		})
 		const [xMin, xMax, yMin, yMax] = samples.reduce(
@@ -189,13 +191,16 @@ async function getSingleCellScatter(req, res, ds) {
 		)
 		const categories: any = new Set(samples.map(s => s.category))
 		const colorMap = {}
-		const k2c = getColors(categories.size)
-		for (const category of categories) {
-			const color = k2c(category)
-			colorMap[category] = {
-				sampleCount: samples.filter((s: any) => s.category == category).length,
-				color,
-				key: category
+
+		if (tw.term.type != SINGLECELL_GENE_EXPRESSION) {
+			const k2c = getColors(categories.size)
+			for (const category of categories) {
+				const color = k2c(category)
+				colorMap[category] = {
+					sampleCount: samples.filter((s: any) => s.category == category).length,
+					color,
+					key: category
+				}
 			}
 		}
 		const shapeLegend: ShapeLegendEntry[] = [['Ref', { sampleCount: samples.length, shape: 0, key: 'Ref' }]]

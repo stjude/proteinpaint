@@ -69,6 +69,8 @@ export type ScatterChart = {
 		zMax?: number
 		scaleMin?: number
 		scaleMax?: number
+		geMin?: number
+		geMax?: number
 	}
 	id: any
 	cohortSamples: any

@@ -15,7 +15,7 @@ import type {
 //icons have size 16x16
 export const shapes = shapesArray
 
-const numberOfSamplesCutoff = 20000 // if map is greater than cutoff, switch from svg to canvas rendering
+const maxSvgSamplesCutoff = 20000 // if map is greater than cutoff, switch from svg to canvas rendering
 const noExpColor = '#F5F5F5' //light gray
 const expColor = '#ff000d' //default color for gene expression
 
@@ -85,16 +85,13 @@ export class ScatterModel {
 			if ('error' in data) throw data.error
 
 			this.charts = []
-			//This is not preferable.
-			if (reqOpts.colorTW?.term.type == SINGLECELL_GENE_EXPRESSION) {
-				this.processGEData(data['plots'])
-			} else {
-				this.range = data.range
-				for (const [key, chartData] of Object.entries(data.result)) {
-					if (!Array.isArray(chartData.samples)) throw 'data.samples[] not array'
-					this.createChart(key, chartData)
-				}
+
+			this.range = data.range
+			for (const [key, chartData] of Object.entries(data.result)) {
+				if (!Array.isArray(chartData.samples)) throw 'data.samples[] not array'
+				this.createChart(key, chartData)
 			}
+
 			this.is3D = this.scatter.config.term0?.q.mode == 'continuous'
 			this.initRanges()
 		} catch (e: any) {
@@ -106,57 +103,19 @@ export class ScatterModel {
 
 	createChart(id: string, data: ScatterDataResult) {
 		const cohortSamples: any[] = data.samples.filter(sample => 'sampleId' in sample)
-		if (cohortSamples.length > numberOfSamplesCutoff) this.is2DLarge = true
+		if (cohortSamples.length > maxSvgSamplesCutoff) this.is2DLarge = true
 		const colorLegend: Map<string, ColorLegendItem> = new Map(data.colorLegend)
 		const shapeLegend: Map<string, ShapeLegendItem> = new Map(data.shapeLegend)
 		this.charts.push({ id, data, cohortSamples, colorLegend, shapeLegend })
 	}
 
-	processGEData(plots: any) {
-		const plotsCopy = structuredClone(plots)
-		let xMin = Infinity,
-			xMax = -Infinity,
-			yMin = Infinity,
-			yMax = -Infinity
-		for (const plot of plotsCopy) {
-			plot.data = plot.data || {}
-			plot.id = plot.name
-			let plotMax = -Infinity,
-				plotMin = Infinity,
-				plotGEMin = Infinity,
-				plotGEMax = -Infinity
-			for (const cell of plot.expCells) {
-				xMin = Math.min(xMin, cell.x)
-				xMax = Math.max(xMax, cell.x)
-				yMin = Math.min(yMin, cell.y)
-				yMax = Math.max(yMax, cell.y)
-				plotMin = Math.min(plotMin, cell.x)
-				plotMax = Math.max(plotMax, cell.y)
-				plotGEMin = Math.min(plotGEMin, cell.geneExp)
-				plotGEMax = Math.max(plotGEMax, cell.geneExp)
-				cell.shape = 'Ref'
-			}
-			plot.min = plotMin
-			plot.max = plotMax
-			plot.geMin = plotGEMin
-			plot.geMax = plotGEMax
-			plot.data.samples = plot.expCells.concat(plot.noExpCells)
-			plot.cohortSamples = plot.expCells.concat(plot.noExpCells)
-			plot.colorLegend = new Map()
-			plot.shapeLegend = new Map()
-			plot.shapeLegend.set('Ref', { shape: 0, key: 'Ref', sampleCount: plot.expCells.length })
-			this.charts.push(plot)
-		}
-		this.range = { xMin, xMax, yMin, yMax }
-	}
-
 	async initRanges() {
 		let samples: any[] = []
 		for (const chart of this.charts) samples = samples.concat(chart.data.samples)
-		if (samples.length > numberOfSamplesCutoff) this.is2DLarge = true
+		if (samples.length > maxSvgSamplesCutoff) this.is2DLarge = true
 		if (samples.length == 0) return
 		const s0 = samples[0] //First sample to start reduce comparisons
-		const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax] = samples.reduce(
+		const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax, geMin, geMax] = samples.reduce(
 			(s, d) => [
 				d.x < s[0] ? d.x : s[0],
 				d.x > s[1] ? d.x : s[1],
@@ -165,9 +124,11 @@ export class ScatterModel {
 				d.z < s[4] ? d.z : s[4],
 				d.z > s[5] ? d.z : s[5],
 				'scale' in d ? (d.scale < s[6] ? d.scale : s[6]) : Number.POSITIVE_INFINITY,
-				'scale' in d ? (d.scale > s[7] ? d.scale : s[7]) : Number.NEGATIVE_INFINITY
+				'scale' in d ? (d.scale > s[7] ? d.scale : s[7]) : Number.NEGATIVE_INFINITY,
+				'geneExp' in d ? (d.geneExp < s[8] ? d.geneExp : s[8]) : Number.POSITIVE_INFINITY,
+				'geneExp' in d ? (d.geneExp > s[9] ? d.geneExp : s[9]) : Number.NEGATIVE_INFINITY
 			],
-			[s0.x, s0.x, s0.y, s0.y, s0.z, s0.z, s0.scale, s0.scale]
+			[s0.x, s0.x, s0.y, s0.y, s0.z, s0.z, s0.scale, s0.scale, s0.geneExp, s0.geneExp]
 		)
 		const settings = this.scatter.settings
 		for (const chart of this.charts) {
@@ -179,7 +140,9 @@ export class ScatterModel {
 				zMin,
 				zMax,
 				scaleMin,
-				scaleMax
+				scaleMax,
+				geMin,
+				geMax
 			}
 		}
 	}
@@ -258,7 +221,7 @@ export class ScatterModel {
 		if (this.scatter.config.colorTW?.term.type == SINGLECELL_GENE_EXPRESSION) {
 			let color
 			if (!c.geneExp) color = noExpColor
-			else if (c.geneExp > chart.geMax) color = expColor
+			else if (c.geneExp > chart.ranges.geMax) color = expColor
 			else color = chart.colorGenerator(c.geneExp)
 			return color
 		}
@@ -404,7 +367,6 @@ export class ScatterModel {
 					? expColor
 					: config.colorTW?.term.continuousColorScale?.maxColor || gradientColor.darker().toString()
 		}
-
 		// Handle continuous color scaling when color term wrapper is in continuous mode
 		if (config.colorTW?.q.mode === 'continuous') {
 			// Extract and sort all sample values for our calculations
@@ -412,7 +374,7 @@ export class ScatterModel {
 			// This gives us the raw numerical data we need for scaling
 			let colorValues
 			if (config.colorTW.term.type == SINGLECELL_GENE_EXPRESSION) {
-				colorValues = [chart.geMin, chart.geMax]
+				colorValues = [chart.ranges.geMin, chart.ranges.geMax]
 			} else {
 				colorValues = chart.cohortSamples
 					.filter(
@@ -452,7 +414,6 @@ export class ScatterModel {
 					// order just get the first and last values
 					break
 			}
-
 			// Create the color generator using d3's linear scale
 			// This maps our numerical range to a color gradient
 
