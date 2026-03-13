@@ -79,8 +79,6 @@ Usage:
 # Standard scientific stack
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 
 # sklearn GP: GaussianProcessRegressor wraps the kernel math and optimizer
 from sklearn.gaussian_process import GaussianProcessRegressor
@@ -101,9 +99,6 @@ import logging
 # when very few CpGs fall in a domain; we handle these gracefully.
 warnings.filterwarnings("ignore", category=UserWarning)
 
-# Module-level logger; callers can silence with:
-#   logging.getLogger("gpdm").setLevel(logging.CRITICAL)
-logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger("gpdm")
 
 
@@ -1626,6 +1621,9 @@ class RegionalDMAnalysis:
         if results is None:
             raise ValueError("Run analysis first")
 
+        import matplotlib.pyplot as plt
+        import matplotlib.gridspec as gridspec
+
         # Color palette for dark or light theme
         if dark_theme:
             c = {
@@ -1836,6 +1834,8 @@ class RegionalDMAnalysis:
         """
         if self.results_naive is None or self.results_annotation is None:
             raise ValueError("Run with method='both' first")
+
+        import matplotlib.pyplot as plt
 
         fig, axes = plt.subplots(2, 2, figsize=figsize, facecolor="#0a0e1a")
         fig.suptitle("Naive GP vs Annotation-Aware GP",
