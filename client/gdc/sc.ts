@@ -1,8 +1,11 @@
 import { appInit } from '#plots/plot.app.js'
-import { copyMerge } from '#rx'
+import { type AppApi, copyMerge } from '#rx'
+import type { Filter } from '#types'
 
-interface InitArg {
-	filter0?: string
+type InitArg = {
+	genome?: string
+	dslabel?: string
+	filter0?: Filter
 	state?: {
 		plots?: Array<{ chartType: string; [key: string]: any }>
 	}
@@ -12,42 +15,28 @@ interface InitArg {
 	}
 }
 
-interface UpdateArg {
-	filter0?: string
+type UpdateArg = {
+	filter0?: Filter
 	[key: string]: any
 }
-
-interface Plot {
-	chartType: string
-	insertBefore?: string
-	id: string
-	[key: string]: any
-}
-
-interface PlotAppAPI {
-	dispatch: (action: any) => void
-	getState: () => {
-		plots: Plot[]
-	}
-}
-
-const gdcGenome = 'hg38'
-const gdcDslabel = 'GDC'
 
 export async function init(
 	arg: InitArg,
 	holder: HTMLElement,
 	genomes: any
 ): Promise<{ update: (updateArg: UpdateArg) => Promise<void> }> {
-	const plotAppApi: PlotAppAPI = await appInit({
+	const useGenome = arg.genome || 'hg38'
+	const useDslabel = arg.dslabel || 'gdc'
+
+	const plotAppApi: AppApi = await appInit({
 		holder,
 		state: {
-			genome: gdcGenome,
-			dslabel: gdcDslabel,
+			genome: useGenome,
+			dslabel: useDslabel,
 			termfilter: { filter0: arg.filter0 },
 			plots: arg.state?.plots || [{ chartType: 'sc' }]
 		},
-		genome: genomes[gdcGenome],
+		genome: genomes[useGenome],
 		app: copyMerge({}, arg.opts?.app || {}),
 		opts: {
 			sc: arg.opts?.sc || {}
