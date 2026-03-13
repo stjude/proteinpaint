@@ -115,8 +115,13 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 		// log the request before adding additional or protected info
 		log(req)
 
+		let ds
 		let { genome, dslabel, mds3, dsname } = req.query
 		dslabel = dslabel || mds3 || dsname
+		if (!dslabel && req.path.startsWith('/gdc')) {
+			genome = 'hg38'
+			dslabel = 'GDC'
+		}
 		if (genome && dslabel) {
 			const altGenome = serverconfig.features?.altGenomeByDslabel?.[dslabel]
 			if (altGenome) {
@@ -132,7 +137,7 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 				res.send({ error: 'invalid genome' })
 				return
 			}
-			const ds = g.datasets?.[dslabel]
+			ds = g.datasets?.[dslabel]
 			// do not check genome-level termdb, not dataset-level termdb
 			if (!ds && !g.termdbs?.[dslabel]) {
 				const paramName = mds3 ? 'mds3' : dsname ? 'dsname' : 'dslabel'
@@ -146,7 +151,7 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 			}
 		}
 
-		maySetAbortCtrl(req, res)
+		if (ds) maySetAbortCtrlAndTrackers(req, res, ds)
 		next()
 	})
 
@@ -256,9 +261,13 @@ function mayWrapResponseSend(cachedir, req, res) {
 	}
 }
 
-function maySetAbortCtrl(req, res) {
+function maySetAbortCtrlAndTrackers(req, res, ds) {
 	const q = req.query
-	if (q.dslabel !== 'GDC' || (!req.path.includes('termdb') && !req.path.includes('/mds3'))) return // TODO: do not harcode
+	// TODO: make dataset-specific rules instead of hardcoding below
+	if (!req.path.includes('/gdc')) {
+		if (q.dslabel !== 'GDC') return
+		if (!req.path.includes('termdb') && !req.path.includes('/mds3')) return
+	}
 	const abortCtrl = new AbortController()
 	q.__abortSignal = abortCtrl.signal
 
@@ -269,6 +278,9 @@ function maySetAbortCtrl(req, res) {
 		// as an alternative means to get the applicable abortSignal
 		abortCtrlBy.filter0.set(req.query.filter0, abortCtrl)
 	}
+
+	// call this after setting q.__abortSignal
+	if (ds.trackReqHeaders) ds.trackReqHeaders(req, res)
 
 	if (q.dslabel) {
 		let isFinished = false
