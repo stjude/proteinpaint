@@ -6,8 +6,6 @@ export type DmrConfig = {
 	chartType: 'dmr'
 	id: string
 	headerText: string
-	genome: string
-	dslabel: string
 	geneName: string
 	promoterId?: string
 	group1: { sample: string }[]
@@ -20,19 +18,6 @@ export type DmrDom = {
 	holder: Elem
 	error: Elem
 	loading: Elem
-}
-
-export type Dmr = {
-	chr: string
-	start: number
-	stop: number
-	direction: 'hyper' | 'hypo'
-	probability: number
-}
-
-export type DmrResult = {
-	error?: string
-	dmrs?: Dmr[]
 }
 
 export type BedItem = {
