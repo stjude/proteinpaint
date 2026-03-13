@@ -51,7 +51,10 @@ class DmrPlot extends PlotBase implements RxComponent {
 					group2
 				}
 			})
-			if (dmrResult.error) throw new Error(dmrResult.error)
+			if (!dmrResult || dmrResult.error) {
+				sayerror(this.dom.error, dmrResult?.error || 'No result returned from server')
+				throw new Error(dmrResult?.error || 'No result returned from server')
+			}
 
 			const genomeObj = this.app.opts.genome
 			const tklst: { type: string; name: string; bedItems?: BedItem[]; __isgene?: boolean }[] = []
