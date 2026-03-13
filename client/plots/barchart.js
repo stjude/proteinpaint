@@ -895,8 +895,16 @@ export class Barchart extends PlotBase {
 					: t2.q.value_by_most_recent
 					? 'most recent'
 					: ''
+			console.log('t1.term.categoryKeys', t1.term.categoryKeys)
 			const legendName =
-				this.hasMultiCategoryKeys && !t2 ? 'Category' : t2.term.type == 'geneVariant' ? '' : t2.term.name
+				this.hasMultiCategoryKeys && !t2
+					? t1.term.categoryKeys
+							?.filter(i => i.shown)
+							.map(i => i.key)
+							.join(', ') || 'Category'
+					: t2.term.type == 'geneVariant'
+					? ''
+					: t2.term.name
 			legendGrps.push({
 				name: `<span style="${headingStyle}">` + legendName + (value_by_label ? ', ' + value_by_label : '') + '</span>',
 				items: s.rows
