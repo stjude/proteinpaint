@@ -54,13 +54,12 @@ TODO revise to a simpler object
 }
 */
 
-const gdcGenome = 'hg38'
-const gdcDslabel = 'GDC'
-
 export async function init(arg, holder, genomes) {
 	try {
-		const genome = genomes[gdcGenome]
-		if (!genome) throw gdcGenome + ' missing'
+		const useGenome = arg.genome || 'hg38'
+		const useDslabel = arg.dslabel || 'GDC'
+		const genome = genomes[useGenome]
+		if (!genome) throw useGenome + ' missing'
 
 		// these options will allow session recovery by an embedder
 		const settings = arg.settings || {}
@@ -73,7 +72,7 @@ export async function init(arg, holder, genomes) {
 		if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
 
 		const vocabApi = await vocabInit({
-			state: { vocab: { genome: gdcGenome, dslabel: gdcDslabel } }
+			state: { vocab: { genome: useGenome, dslabel: useDslabel } }
 		})
 		vocabApi.getTermdbConfig()
 
@@ -82,8 +81,8 @@ export async function init(arg, holder, genomes) {
 			holder: select(arg.holder).select('.sja_root_holder'),
 			genome,
 			state: {
-				genome: gdcGenome,
-				dslabel: gdcDslabel,
+				genome: useGenome,
+				dslabel: useDslabel,
 				termfilter: { filter0: arg.filter0 },
 				plots: [
 					// Initialize with a geneset component, in case the genes lst is empty.
