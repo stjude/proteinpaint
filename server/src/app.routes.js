@@ -53,7 +53,6 @@ export const routeFiles = [
 	import('../routes/termdb.config.ts'),
 	import('../routes/termdb.descrstats.ts'),
 	import('../routes/termdb.dmr.ts'),
-	import('../routes/termdb.gpdm.ts'),
 	import('../routes/termdb.numericcategories.ts'),
 	import('../routes/termdb.percentile.ts'),
 	import('../routes/termdb.rootterm.ts'),
