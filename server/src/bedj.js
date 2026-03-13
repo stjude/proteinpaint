@@ -181,7 +181,7 @@ async function do_query(req, genomeobj) {
 	const categories = req.query.categories || null
 	const __isgene = req.query.__isgene
 
-	const items = await getBEDitems(req, genomeobj, flag_gm, gmisoform)
+	const items = filterItems(await getBEDitems(req, genomeobj, flag_gm, gmisoform), req)
 
 	if (req.query.getdata) {
 		///////////////////////// exit ///////////////////
@@ -860,6 +860,7 @@ async function getBEDitems(req, genomeobj, flag_gm, gmisoform) {
 		if (!Array.isArray(req.query.bedItems)) throw 'bedItems not array'
 		const lst = []
 		for (const j of req.query.bedItems) {
+			if (!j) continue
 			if (typeof j != 'object') throw 'one of bedItems[] not obj'
 			if (!j.chr) throw 'bedItems[].chr missing'
 			if (!Number.isInteger(j.start)) throw 'bedItems[].start not integer'
@@ -875,6 +876,12 @@ async function getBEDitems(req, genomeobj, flag_gm, gmisoform) {
 			}
 			if (j.rglst.length == 0) continue
 			lst.push(j)
+			if (lst.length > 1000) {
+				console.error(
+					'will not process over 1000 items from req.query.bedItems to guard against arbitrarily large array from client'
+				)
+				break
+			}
 		}
 		return lst
 	}
@@ -891,41 +898,44 @@ async function getBEDitems(req, genomeobj, flag_gm, gmisoform) {
 	}
 
 	const regionitems = await query_file(req.query, tkfile, dir, flag_gm, gmisoform)
+	const items = []
+	for (const lst of regionitems) {
+		for (const i of lst) items.push(i)
+	}
+	return items
+}
 
+function filterItems(_items, req) {
 	let filterByName
 	if (req.query.filterByName) {
 		filterByName = new Set(req.query.filterByName.split(/[\s\n]/).map(i => i.trim()))
 	}
-
 	const items = []
 
-	// apply filtering
-	for (const lst of regionitems) {
-		for (const i of lst) {
-			if (req.query.usevalue) {
-				const v = i[req.query.usevalue.key]
-				if (!Number.isFinite(v)) {
-					continue
-				}
-				if (req.query.usevalue.dropBelowCutoff && v < req.query.usevalue.dropBelowCutoff) {
-					continue
-				}
-			}
-			if (req.query.bplengthUpperLimit && i.stop - i.start > req.query.bplengthUpperLimit) {
+	for (const i of _items) {
+		if (req.query.usevalue) {
+			const v = i[req.query.usevalue.key]
+			if (!Number.isFinite(v)) {
 				continue
 			}
-			if (filterByName) {
-				if (i.isoform) {
-					if (!filterByName.has(i.isoform)) continue
-				} else if (i.name) {
-					if (!filterByName.has(i.name)) continue
-				} else {
-					// do not show nameless items in this case
-					continue
-				}
+			if (req.query.usevalue.dropBelowCutoff && v < req.query.usevalue.dropBelowCutoff) {
+				continue
 			}
-			items.push(i)
 		}
+		if (req.query.bplengthUpperLimit && i.stop - i.start > req.query.bplengthUpperLimit) {
+			continue
+		}
+		if (filterByName) {
+			if (i.isoform) {
+				if (!filterByName.has(i.isoform)) continue
+			} else if (i.name) {
+				if (!filterByName.has(i.name)) continue
+			} else {
+				// do not show nameless items in this case
+				continue
+			}
+		}
+		items.push(i)
 	}
 	return items
 }
