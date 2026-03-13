@@ -198,8 +198,6 @@ export class VolcanoInteractions {
 			config: {
 				chartType: 'dmr',
 				headerText: promoterId ? `DMR: ${geneName} (${promoterId})` : `DMR: ${geneName}`,
-				genome: this.app.vocabApi.vocab.genome,
-				dslabel: this.app.vocabApi.vocab.dslabel,
 				geneName,
 				promoterId,
 				group1: config.samplelst.groups[0].values || [],

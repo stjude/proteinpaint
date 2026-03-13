@@ -3,7 +3,8 @@ import { getCompInit, copyMerge, type RxComponent } from '#rx'
 import { sayerror } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { first_genetrack_tolist } from '#common/1stGenetk'
-import type { DmrConfig, DmrDom, DmrResult, BedItem } from './DmrTypes.ts'
+import type { TermdbDmrResponse } from '#types'
+import type { DmrConfig, DmrDom, BedItem } from './DmrTypes.ts'
 import { getDefaultDMRSettings } from './settings/defaults.ts'
 
 class DmrPlot extends PlotBase implements RxComponent {
@@ -41,7 +42,8 @@ class DmrPlot extends PlotBase implements RxComponent {
 		this.dom.loading.style('display', 'block')
 
 		try {
-			const { genome, dslabel, geneName, group1, group2, settings } = config
+			const { geneName, group1, group2, settings } = config
+			const { genome, dslabel } = this.app.vocabApi.vocab
 
 			// Resolve gene name to genomic coordinates
 			const geneResult = await dofetch3('genelookup', {
@@ -55,12 +57,12 @@ class DmrPlot extends PlotBase implements RxComponent {
 			const start = Math.max(0, gm.start - settings.dmr.pad)
 			const stop = gm.stop + settings.dmr.pad
 
-			const dmrResult: DmrResult = await dofetch3('termdb/dmr', {
+			const dmrResult: TermdbDmrResponse = await dofetch3('termdb/dmr', {
 				body: { genome, dslabel, chr, start, stop, group1, group2 }
 			})
-			if (!dmrResult || dmrResult.error) {
-				sayerror(this.dom.error, dmrResult?.error || 'No result returned from server')
-				throw new Error(dmrResult?.error || 'No result returned from server')
+			if ('error' in dmrResult) {
+				sayerror(this.dom.error, dmrResult.error)
+				throw new Error(dmrResult.error)
 			}
 
 			const genomeObj = this.app.opts.genome
@@ -70,7 +72,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 			tklst.push({
 				type: 'bedj',
 				name: 'DMRs',
-				bedItems: (dmrResult.dmrs ?? []).map(dmr => {
+				bedItems: dmrResult.dmrs.map(dmr => {
 					const alpha = Math.round(Math.min(255, (0.5 + dmr.probability * 0.5) * 255))
 					const hex = alpha.toString(16).padStart(2, '0')
 					const base = dmr.direction === 'hyper' ? '#e66101' : '#5e81f4'
@@ -114,8 +116,6 @@ export function getPlotConfig(opts: Partial<DmrConfig>): DmrConfig {
 /** Runs in both getPlotConfig and main() because will only run in main()
  * when plot is loaded from a saved state (e.g. mass session file).*/
 function validateConfig(opts) {
-	if (!opts.genome) throw new Error('genome is required for DMR plot')
-	if (!opts.dslabel) throw new Error('dslabel is required for DMR plot')
 	if (!opts.geneName) throw new Error('geneName is required for DMR plot')
 	if (!opts.group1) throw new Error('group1 is required for DMR plot')
 	if (!opts.group2) throw new Error('group2 is required for DMR plot')
