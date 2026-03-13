@@ -955,5 +955,28 @@ export function getSamplesRelated(samplesData, sampleName) {
 			samples.unshift({ sampleId: sampleData.ancestor_id, sampleName: sampleData.ancestor_name })
 		sampleData = samplesData[sampleData.ancestor_name]
 	}
+	// After traversing the chain, sampleData is the root (ROOT_SAMPLE_TYPE) sample.
+	// Use BFS to find all remaining samples in the root's subtree that are not already in the chain,
+	// so that sibling branches (e.g. 101, 102 for patient 1_patient) are included.
+	const rootName = sampleData.name
+	const includedNames = new Set(samples.map(s => s.sampleName))
+	// Build a parent-to-children map for O(1) child lookup during BFS
+	const childrenByParent = new Map()
+	for (const s of samplesArray) {
+		if (!s.ancestor_name) continue
+		if (!childrenByParent.has(s.ancestor_name)) childrenByParent.set(s.ancestor_name, [])
+		childrenByParent.get(s.ancestor_name).push(s)
+	}
+	const toProcess = [rootName]
+	while (toProcess.length > 0) {
+		const current = toProcess.shift()
+		for (const s of childrenByParent.get(current) || []) {
+			if (!includedNames.has(s.name)) {
+				samples.push({ sampleId: s.id, sampleName: s.name })
+				includedNames.add(s.name)
+				toProcess.push(s.name)
+			}
+		}
+	}
 	return samples
 }
