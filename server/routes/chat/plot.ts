@@ -19,7 +19,7 @@ const training_data = formatTrainingExamples(plot_ds.TrainingData)
 mayLog('classifyPlotType called with prompt:', user_prompt)
 */
 
-	const prompt = `You are a classifier. Given a user query about data visualization, respond with exactly one word from this list: summary, dge, survival, matrix, samplescatter, hiercluster
+	const prompt = `You are a classifier. Given a user query about data visualization, respond with exactly one word from this list: summary, dge, survival, matrix, samplescatter, hiercluster, lollipop.
 
 Definitions:
 - summary: distribution, comparison, or relationship of one or two variables. This includes scatter plots comparing two variables (e.g. "variable A vs variable B"), violin plots, bar charts, and any query about expression distribution or group comparison. Use this when comparing a single variable across groups or subtypes (e.g. "Compare Asparaginase LC50 between CRLF2, DUX4, and MEF2D subtypes" — this is ONE variable filtered by subtypes, not multiple genes).
