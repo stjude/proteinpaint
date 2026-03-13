@@ -62,7 +62,7 @@ async function getFilters(query, ds) {
 		// related to auth: make sure the returned list are not sensitive !!!
 		let values = getList(samplesPerFilter, filtersData, tw, query.showAll)
 		// Restrict which values are shown for role-protected terms (e.g. SITEC, ISOcode)
-		const allowedValues = ds.cohort.termdb.getRestrictedValues?.(query.__protected__.clientAuthResult, tw.term.id, ds)
+		const allowedValues = ds.cohort.termdb.getRestrictedValues?.(query.__protected__.clientAuthResult, tw.term.id)
 		if (allowedValues) {
 			values = values.filter((v: any) => !v.value || allowedValues.includes(v.value))
 		}

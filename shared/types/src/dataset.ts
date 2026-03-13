@@ -1646,13 +1646,12 @@ keep this setting here for reason of:
 	//terms  are shown in the dictionary based on term and user role.
 	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
 	hiddenIds?: string[]
-	getAdditionalFilter?: (__protected__: any, term: any, ds: any) => Filter | undefined
+	getAdditionalFilter?: (__protected__: any, term: any) => Filter | undefined
 	/** Returns allowed values for role-restricted terms (e.g. SITEC, ISOcode). Returns null for no restriction.
 	 *  clientAuthResult.sites is expected to be { site: string; country: string }[] where country is a 3-letter ISO code. */
 	getRestrictedValues?: (
 		clientAuthResult: { role?: string; sites?: { site: string; country: string }[] },
-		termId: string,
-		ds: any
+		termId: string
 	) => string[] | null
 	/** collections of dictionary terms (numeric or categorical) that are related and can be used together in some plots */
 	termCollections?: TermCollection[]
