@@ -22,7 +22,7 @@ import { authApi } from '../src/auth.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { read_file } from '../src/utils.js'
 import { getDescrStats } from '#routes/termdb.descrstats.ts'
-import { SINGLECELL_GENE_EXPRESSION, isSingleCellTerm } from '#shared/terms.js'
+import { isSingleCellTerm, SINGLECELL_GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/sampleScatter',
@@ -163,7 +163,8 @@ async function getSingleCellScatter(req, res, ds) {
 		const arg: any = { plots: [name], sample }
 
 		if (tw.term.type == SINGLECELL_GENE_EXPRESSION) arg.gene = tw.term.gene
-		else arg.colorBy = tw.term.name //SINGLECELL_CELLTYPE
+		else if (tw.term.type == SINGLECELL_CELLTYPE) arg.colorBy = tw.term.name
+		else throw new Error(`unsupported single cell term type: ${tw.term.type}`)
 
 		const data = await ds.queries.singleCell.data.get(arg)
 
