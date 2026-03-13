@@ -32,7 +32,6 @@ export async function extract_summary_terms(
 	geneFeatures: GeneDataTypeResult[]
 ) {
 	const common_genes = geneFeatures.map(g => g.gene)
-	console.log('is array common_genes: ' + Array.isArray(common_genes) + ' ' + common_genes.length)
 	const Schema = {
 		$schema: 'http://json-schema.org/draft-07/schema#',
 		$ref: '#/definitions/SummaryType',
