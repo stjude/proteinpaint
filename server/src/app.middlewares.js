@@ -152,7 +152,7 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 			}
 		}
 
-		if (ds) maySetAbortCtrlAndTrackers(req, res, ds)
+		maySetAbortCtrlAndTrackers(req, res, ds)
 		next()
 	})
 
