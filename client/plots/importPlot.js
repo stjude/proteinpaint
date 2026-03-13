@@ -17,6 +17,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'correlationVolcano':
 			return await import(`./corrVolcano/CorrelationVolcano.ts`)
 
+		case 'dmr':
+			return await import('./dmr/DmrPlot.ts')
+
 		case 'genomeBrowser':
 			return await import('./gb/GB.ts')
 
