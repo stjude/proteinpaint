@@ -1,1 +1,2 @@
-
+Features:
+- DNA Meth: Initial support for region-level DMR analysis
