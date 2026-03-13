@@ -7,9 +7,6 @@ All notable changes to this project will be documented in this file.
 Features:
 - Additional unit tests for scatterModel.tests
 
-Fixes:
-- Color pickers in the legend and within the ColorScale fixed for singleCellCellType and singleCellGeneExpression terms.
-
 
 ## 2.179.0
 
