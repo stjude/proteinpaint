@@ -116,8 +116,13 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 		// log the request before adding additional or protected info
 		log(req)
 
+		let ds
 		let { genome, dslabel, mds3, dsname } = req.query
 		dslabel = dslabel || mds3 || dsname
+		if (!dslabel && req.path.startsWith('/gdc')) {
+			genome = 'hg38'
+			dslabel = 'GDC'
+		}
 		if (genome && dslabel) {
 			const altGenome = serverconfig.features?.altGenomeByDslabel?.[dslabel]
 			if (altGenome) {
@@ -133,7 +138,7 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 				res.send({ error: 'invalid genome' })
 				return
 			}
-			const ds = g.datasets?.[dslabel]
+			ds = g.datasets?.[dslabel]
 			// do not check genome-level termdb, not dataset-level termdb
 			if (!ds && !g.termdbs?.[dslabel]) {
 				const paramName = mds3 ? 'mds3' : dsname ? 'dsname' : 'dslabel'
@@ -147,7 +152,7 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 			}
 		}
 
-		maySetAbortCtrl(req, res)
+		if (ds) maySetAbortCtrlAndTrackers(req, res, ds)
 		next()
 	})
 
@@ -259,12 +264,18 @@ function mayWrapResponseSend(cachedir, req, res) {
 
 const routesWithResOnCloseListener = new Set(['/gdc/mafBuild', '/sse'])
 
-function maySetAbortCtrl(req, res) {
-	if (routesWithResOnCloseListener.has(req.path)) return
+function maySetAbortCtrlAndTrackers(req, res, ds) {
+	if (routesWithResOnCloseListener.has(req.path)) {
+		if (ds.trackReqHeaders) ds.trackReqHeaders(req, res)
+		return
+	}
 
 	const q = req.query
 	const abortCtrl = new AbortController()
 	q.__abortSignal = abortCtrl.signal
+
+	// call this after setting q.__abortSignal
+	if (ds.trackReqHeaders) ds.trackReqHeaders(req, res)
 
 	abortCtrlBy.signal.set(abortCtrl.signal, abortCtrl)
 	if (q.filter0) {

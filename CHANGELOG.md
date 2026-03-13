@@ -96,6 +96,12 @@ Fixes:
 - show loading and error messages when switching to barchart tab in summary plot
 
 
+## 2.170.26
+
+Fixes
+- call ds.trackReqHeaders() as needed in app middleware
+
+
 ## 2.170.25
 
 Fixes:
