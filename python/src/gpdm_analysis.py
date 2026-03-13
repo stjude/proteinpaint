@@ -128,9 +128,6 @@ def read_region_from_h5(h5file, samples, chrom, start, stop):
         all_names = f['meta/samples/names'].asstr()[:]
         col_idx = f['meta/samples/col_idx'][:]
 
-        # Flat array of genomic start positions across all chromosomes
-        start_pos = f['meta/start'][:]
-
         # Build a lookup: sample name → integer column index in beta/values
         name_to_col = dict(zip(all_names, col_idx))
 
@@ -160,8 +157,8 @@ def read_region_from_h5(h5file, samples, chrom, start, stop):
         row_start = prefix[chrom_idx]      # first H5 row for this chromosome
         row_end = prefix[chrom_idx + 1]    # one past last H5 row for this chromosome
 
-        # Extract just this chromosome's genomic positions
-        chrom_pos = start_pos[row_start:row_end]
+        # Read only this chromosome's positions (not the whole genome)
+        chrom_pos = f['meta/start'][row_start:row_end]
 
         # Binary search within the chromosome's position array to find the
         # subarray that falls within [start, stop)
@@ -283,15 +280,27 @@ def run_gpdm(params):
     # missing values (those that survived the nan_threshold filter).
     nan_count = int(np.isnan(beta_matrix).sum())  # total NaNs before imputation (for metadata)
     if nan_count > 0:
+        # Drop probes that are all-NaN in either group to avoid RuntimeWarnings
+        # from nanmean (which would write to stderr and break run_python())
+        keep = np.ones(beta_matrix.shape[1], dtype=bool)
         for grp in ('group1', 'group2'):
-            mask = groups == grp                      # boolean row mask for this group
-            grp_data = beta_matrix[mask, :]           # (n_grp_samples, n_probes)
-            grp_means = np.nanmean(grp_data, axis=0)  # per-probe mean ignoring NaN
-            for j in range(grp_data.shape[1]):        # iterate over probe columns
+            mask = groups == grp
+            all_nan = np.all(np.isnan(beta_matrix[mask, :]), axis=0)
+            keep &= ~all_nan
+        if not np.all(keep):
+            beta_matrix = beta_matrix[:, keep]
+            positions = positions[keep]
+
+        # Impute remaining per-sample NaNs with per-group column mean
+        for grp in ('group1', 'group2'):
+            mask = groups == grp
+            grp_data = beta_matrix[mask, :]
+            grp_means = np.nanmean(grp_data, axis=0)
+            for j in range(grp_data.shape[1]):
                 nans = np.isnan(grp_data[:, j])
                 if np.any(nans):
-                    grp_data[nans, j] = grp_means[j]  # replace NaN with column mean
-            beta_matrix[mask, :] = grp_data           # write imputed values back
+                    grp_data[nans, j] = grp_means[j]
+            beta_matrix[mask, :] = grp_data
 
     # --- Step 3: Initialize GPDM analysis object ---
     analysis = RegionalDMAnalysis(chrom=chrom, start=start, end=stop)
