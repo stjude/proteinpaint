@@ -135,7 +135,8 @@ export default class LegendJSONMapper {
 			}
 			// Always use a symmetric scale for the heatmap showing both Loss and Gain sides
 			// even when only one side has data, so the full color scale is always visible
-			const maxValue = Math.max(Math.abs(loss.value), gain.value, 1)
+			const rawMaxValue = Math.max(Math.abs(loss.value), gain.value)
+			const maxValue = rawMaxValue === 0 ? 1 : rawMaxValue
 			const domain = [-maxValue, 0, maxValue]
 			cnvItems.push(
 				Object.assign(
