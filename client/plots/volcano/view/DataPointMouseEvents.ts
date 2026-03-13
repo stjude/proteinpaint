@@ -56,7 +56,7 @@ export class DataPointMouseEvents {
 		this.addTooltipRow(table, 'Original p-value', roundValueAuto(d.original_p_value))
 		this.addTooltipRow(table, 'Adjusted p-value', roundValueAuto(d.adjusted_p_value))
 		if (this.termType === DNA_METHYLATION && d.gene_name) {
-			this.addTooltipRow(table, '', 'Click for probe-level GP analysis')
+			this.addTooltipRow(table, '', 'Click for region-level GP analysis')
 		}
 	}
 }
