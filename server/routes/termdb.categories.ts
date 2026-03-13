@@ -61,7 +61,7 @@ async function trigger_getcategories(
 	if (data.error) throw data.error
 	const [lst, orderedLabels] = getCategories(data, q, ds, $id)
 	// Restrict which categories are returned for role-protected terms (e.g. SITEC, ISOcode)
-	const allowedValues = tdb.getRestrictedValues?.(q.__protected__, q.tw.term.id)
+	const allowedValues = tdb.getRestrictedValues?.((q.__protected__ as any)?.clientAuthResult, q.tw.term.id)
 	res.send({
 		lst: allowedValues ? lst.filter((item: any) => allowedValues.includes(item.key)) : lst,
 		orderedLabels
