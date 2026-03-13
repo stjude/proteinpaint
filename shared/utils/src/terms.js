@@ -96,6 +96,7 @@ export const typeGroup = {
 	[INTEGER]: TermTypeGroups.DICTIONARY_VARIABLES,
 	[SAMPLELST]: TermTypeGroups.DICTIONARY_VARIABLES,
 	[SURVIVAL]: TermTypeGroups.DICTIONARY_VARIABLES,
+	[DATE]: TermTypeGroups.DICTIONARY_VARIABLES,
 	[GENE_VARIANT]: TermTypeGroups.MUTATION_CNV_FUSION,
 	[SNP]: TermTypeGroups.SNP,
 	[SNP_LIST]: TermTypeGroups.SNP_LIST,
