@@ -27,7 +27,7 @@ export class DataPointMouseEvents {
 		})
 		circle.on('click', async () => {
 			if (termType === DNA_METHYLATION) {
-				// For DM, launch GPDM probe-level analysis
+				// For DM, launch GPDM region-level analysis
 				const geneName = d.gene_name?.split(',')[0]?.trim()
 				if (geneName) {
 					const promoterId = 'promoter_id' in d ? (d as any).promoter_id : undefined
