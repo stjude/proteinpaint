@@ -216,7 +216,8 @@ export class VolcanoInteractions {
 				genome,
 				dslabel,
 				chr: gm.chr,
-				start: Math.max(0, gm.start - pad),
+				// start: Math.max(0, gm.start - pad),
+				start: gm.start,
 				stop: gm.stop + pad,
 				group1: config.samplelst.groups[0].values || [],
 				group2: config.samplelst.groups[1].values || []

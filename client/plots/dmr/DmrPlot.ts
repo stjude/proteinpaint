@@ -4,6 +4,7 @@ import { sayerror } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import type { DmrConfig, DmrDom, DmrResult, BedItem } from './DmrTypes.ts'
+import { getDefaultDMRSettings } from './settings/defaults.ts'
 
 class DmrPlot extends PlotBase implements RxComponent {
 	static type = 'dmr'
@@ -38,9 +39,17 @@ class DmrPlot extends PlotBase implements RxComponent {
 		this.dom.loading.style('display', 'block')
 
 		try {
-			const { genome, dslabel, chr, start, stop, group1, group2 } = config
+			const { genome, dslabel, chr, start, stop, group1, group2, settings } = config
 			const dmrResult: DmrResult = await dofetch3('termdb/dmr', {
-				body: { genome, dslabel, chr, start, stop, group1, group2 }
+				body: {
+					genome,
+					dslabel,
+					chr,
+					start: Math.max(0, start - settings.dmr.pad),
+					stop,
+					group1,
+					group2
+				}
 			})
 			if (dmrResult.error) throw new Error(dmrResult.error)
 
@@ -68,7 +77,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 				stop,
 				tklst,
 				nobox: true,
-				width: 800,
+				width: settings.dmr.blockWidth,
 				hidegenelegend: true
 			})
 		} catch (e: unknown) {
@@ -82,5 +91,10 @@ class DmrPlot extends PlotBase implements RxComponent {
 export const componentInit = getCompInit(DmrPlot)
 
 export function getPlotConfig(opts: Partial<DmrConfig>): DmrConfig {
-	return copyMerge({ chartType: 'dmr', headerText: 'DMR Analysis' }, opts)
+	const config = {
+		settings: {
+			dmr: getDefaultDMRSettings(opts)
+		}
+	}
+	return copyMerge(config, opts)
 }

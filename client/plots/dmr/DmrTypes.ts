@@ -1,4 +1,5 @@
 import type { Elem } from '../../types/d3'
+import type { DMRSettings } from './settings/Settings'
 
 /** Config shape passed via plot_create from VolcanoInteractions */
 export type DmrConfig = {
@@ -12,6 +13,7 @@ export type DmrConfig = {
 	stop: number
 	group1: { sample: string }[]
 	group2: { sample: string }[]
+	settings: { dmr: DMRSettings }
 }
 
 export type DmrDom = {
