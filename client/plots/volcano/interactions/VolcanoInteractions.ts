@@ -188,8 +188,9 @@ export class VolcanoInteractions {
 	}
 
 	/** When clicking on a DM data point, dispatches a DMR plot that runs GPDM
-	 * analysis and renders a genome browser Block with DMR regions overlaid. */
-	async launchGpdm(geneName: string, promoterId?: string) {
+	 * analysis and renders a genome browser Block with DMR regions on their own
+	 * track. */
+	async launchDmr(geneName: string, promoterId?: string) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		if (config.termType !== DNA_METHYLATION) return
 
