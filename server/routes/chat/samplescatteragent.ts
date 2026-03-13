@@ -1,12 +1,6 @@
-import type { LlmConfig, DbRows } from '#types'
+import type { LlmConfig, DbRows, GeneDataTypeResult } from '#types'
 import { FILTER_TERM_DEFINITIONS, validate_filter } from './filter.ts'
-import {
-	formatTrainingExamples,
-	extractGenesFromPrompt,
-	extractGenesetsFromPrompt,
-	validate_term,
-	buildCommonPrompt
-} from './utils.ts'
+import { formatTrainingExamples, extractGenesetsFromPrompt, validate_term, buildCommonPrompt } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 
 export async function extract_samplescatter_terms_from_query(
@@ -14,10 +8,10 @@ export async function extract_samplescatter_terms_from_query(
 	llm: LlmConfig,
 	dataset_db_output: { db_rows: DbRows[]; rag_docs: string[] },
 	dataset_json: any,
-	genes_list: string[],
 	ds: any,
 	testing: boolean,
-	genesetNames: string[] = []
+	genesetNames: string[] = [],
+	geneFeatures: GeneDataTypeResult[]
 ) {
 	if (!dataset_json.prebuiltPlots || dataset_json.prebuiltPlots.length == 0) {
 		return { type: 'text', text: 'No pre-built scatter plots (t-SNE/UMAP) are available for this dataset' }
@@ -62,7 +56,7 @@ export async function extract_samplescatter_terms_from_query(
 		}
 	}
 
-	const common_genes = extractGenesFromPrompt(prompt, genes_list)
+	const common_genes = geneFeatures.map(g => g.gene)
 	const matchedGenesets = extractGenesetsFromPrompt(prompt, genesetNames)
 
 	// Parse out training data from the dataset JSON
@@ -106,11 +100,16 @@ export async function extract_samplescatter_terms_from_query(
 		test_response.type = 'plot'
 		return test_response
 	} else {
-		return validate_samplescatter_response(response, common_genes, dataset_json, ds)
+		return validate_samplescatter_response(response, dataset_json, ds, geneFeatures)
 	}
 }
 
-function validate_samplescatter_response(response: string, common_genes: string[], dataset_json: any, ds: any) {
+function validate_samplescatter_response(
+	response: string,
+	dataset_json: any,
+	ds: any,
+	geneFeatures: GeneDataTypeResult[]
+) {
 	const response_type = JSON.parse(response)
 	let text = ''
 
@@ -145,7 +144,7 @@ function validate_samplescatter_response(response: string, common_genes: string[
 			// Not mentioned, don't include in output
 			return
 		}
-		const termValidation = validate_term(termName, common_genes, ds)
+		const termValidation = validate_term(termName, ds, geneFeatures)
 		if (termValidation.text.length > 0) {
 			text += termValidation.text
 		} else {
