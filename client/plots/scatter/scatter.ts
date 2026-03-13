@@ -1,12 +1,10 @@
-import { getCompInit, copyMerge } from '../../rx/index.js'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import { ScatterModel } from './model/scatterModel.js'
 import { ScatterViewModel } from './viewmodel/scatterViewModel.js'
 import { ScatterView } from './view/scatterView.js'
 import { getCurrentCohortChartTypes } from '#mass/charts'
 import { rebaseGroupFilter } from '#mass/groups'
-import { plotColor } from '#shared/common.js'
-import { type RxComponent, type ComponentApi } from '#rx'
 import { filterJoin, getCombinedTermFilter } from '#filter'
 import { ScatterInteractivity, downloadImage } from './viewmodel/scatterInteractivity.js'
 import { ScatterViewModel2DLarge } from './viewmodel/scatterViewModel2DLarge.js'
@@ -15,7 +13,8 @@ import { controlsInit } from '../controls'
 import { select2Terms, DownloadMenu } from '#dom'
 import type { MassState } from '../../mass/types/mass.js'
 import { PlotBase } from '#plots/PlotBase.js'
-import type { Settings } from './Settings.ts'
+import type { Settings } from './settings/Settings.ts'
+import { getDefaultScatterSettings } from './settings/defaults.js'
 
 export class Scatter extends PlotBase implements RxComponent {
 	static type = 'sampleScatter'
@@ -336,57 +335,6 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		}
 		select2Terms(chartsInstance.dom.tip, chartsInstance.app, 'sampleScatter', 'numeric', callback)
 	}
-}
-
-export function getDefaultScatterSettings(opts: any): Settings {
-	const overrides = opts?.overrides || {}
-	const defaults = {
-		size: 0.8,
-		minShapeSize: 0.5,
-		maxShapeSize: 4,
-		scaleDotOrder: 'Ascending',
-		refSize: 0.8,
-		svgw: 600,
-		svgh: 600,
-		svgd: 600,
-		axisTitleFontSize: 16,
-		showAxes: true,
-		showRef: true,
-		opacity: 0.6,
-		defaultColor: plotColor,
-		regression: 'None',
-		fov: 50,
-		threeSize: 0.005,
-		threeFOV: 70,
-		// Color scale configuration settings
-		// These settings control how numerical values are mapped to colors
-		colorScaleMode: 'auto', // Default to automatic scaling based on data range
-		// Other options: 'fixed' (user-defined range) or
-		// 'percentile' (scale based on data distribution)
-
-		colorScalePercentile: 95, // Default percentile for percentile mode
-		// This means we'll scale colors based on values
-		// up to the 95th percentile by default
-		colorScaleMinFixed: null, // User-defined minimum value for fixed mode
-		// Null indicates this hasn't been set yet
-		colorScaleMaxFixed: null, // User-defined maximum value for fixed mode
-		// Null indicates this hasn't been set yet
-		//3D Plot settings
-		showContour: false,
-		colorContours: false,
-		contourBandwidth: 30,
-		contourThresholds: 10,
-		duration: 500,
-		useGlobalMinMax: true,
-		saveZoomTransform: false,
-		minXScale: null,
-		maxXScale: null,
-		minYScale: null,
-		maxYScale: null,
-		itemLabel: opts?.singleCellPlot ? 'Cell' : 'Sample'
-	}
-
-	return Object.assign(defaults, overrides)
 }
 
 export function openScatterPlot(app, plot, filter = null) {
