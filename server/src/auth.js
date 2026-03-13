@@ -886,7 +886,6 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 			// revert or do not adjust the q.filter in this case
 			if (i !== -1) {
 				// remove a previously added auth filter
-				console.log('[mayAdjustFilter] REMOVING auth filter from q.filter')
 				q.filter.lst.splice(i)
 				if (q.filter.lst.length < 2) q.filter.join = ''
 			} else if (q.filter.tag === FILTER_TAG) {
