@@ -87,7 +87,7 @@ function nativeValidateQuery(ds: any) {
 		} else {
 			// no filter, use all samples with exp data
 			for (const i of gE.samples) {
-				const n: string = ds.cohort.termdb.q.id2sampleName(i.id)
+				const n: string = ds.cohort.termdb.q.id2sampleName(i)
 				if (!n) throw 'sample id cannot convert to string name'
 				samples.push(n)
 			}
