@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.170.26
 
 Fixes:
 - call ds.trackReqHeaders() as needed in app middleware
