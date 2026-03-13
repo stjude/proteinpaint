@@ -1,4 +1,5 @@
 import type { Elem } from '../../types/d3'
+import type { DMRSettings } from './settings/Settings'
 
 /** Config shape passed via plot_create from VolcanoInteractions */
 export type DmrConfig = {
@@ -7,11 +8,11 @@ export type DmrConfig = {
 	headerText: string
 	genome: string
 	dslabel: string
-	chr: string
-	start: number
-	stop: number
+	geneName: string
+	promoterId?: string
 	group1: { sample: string }[]
 	group2: { sample: string }[]
+	settings: { dmr: DMRSettings }
 }
 
 export type DmrDom = {

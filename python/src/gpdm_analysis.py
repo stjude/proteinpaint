@@ -19,8 +19,6 @@ stdin JSON fields:
 stdout JSON fields:
     status      : "ok" on success (only present on success)
     dmrs        : list of annotation-aware DMR dicts
-    naive_dmrs  : list of naive single-kernel DMR dicts
-    grid        : dict of 500-point posterior prediction arrays for visualization
     metadata    : summary stats (probe counts, sample counts, region)
     error       : str — only present on failure; Node route handler checks this
 
@@ -197,7 +195,7 @@ def run_gpdm(params):
     4. Impute remaining NaNs with per-group column means
     5. Initialize RegionalDMAnalysis and load the prepared data
     6. Add any caller-supplied annotations (from the ProteinPaint termdb)
-    7. Run both naive and annotation-aware GP models
+    7. Run annotation-aware GP model
     8. Serialize results to a dict for JSON output
 
     Parameters
@@ -208,7 +206,7 @@ def run_gpdm(params):
     Returns
     -------
     dict
-        On success: {status, dmrs, naive_dmrs, grid, metadata}
+        On success: {status, dmrs, metadata}
         On failure: {error: str}
     """
     # Unpack required parameters
@@ -301,8 +299,7 @@ def run_gpdm(params):
     # --- Step 3: Initialize GPDM analysis object ---
     analysis = RegionalDMAnalysis(chrom=chrom, start=start, end=stop)
 
-    # Load the cleaned beta matrix; explicitly name groups so column names
-    # in to_dataframe() will be "pred_group1" and "pred_group2"
+    # Load the cleaned beta matrix; explicitly name groups for logging
     analysis.load_methylation(
         positions=positions.astype(float),
         beta_values=beta_matrix,
@@ -324,54 +321,16 @@ def run_gpdm(params):
             length_scale_bp=int(ann.get('length_scale_bp', 1000)),
         )
 
-    # --- Step 5: Run annotation-aware GP model only ---
-    # Skips NaiveGP to halve computation time. Results in analysis.results_annotation.
-    analysis.run(method='annotation_aware')
+    # --- Step 5: Run annotation-aware GP model ---
+    analysis.run()
 
-    # --- Step 5b: Write visualization PNG to cache if a path was supplied ---
-    plot_path = params.get('plot_path')
-    if plot_path:
-        try:
-            import os
-            import matplotlib.pyplot as plt
-            os.makedirs(os.path.dirname(plot_path), exist_ok=True)
-            analysis.plot_results(results=analysis.results_annotation, save_path=plot_path, dark_theme=False)
-            plt.close('all')
-        except Exception:
-            pass  # non-fatal: analysis result still returned without image
-
-    # --- Step 6: Build grid response for visualization ---
-    grid_df = analysis.to_dataframe()
-
-    def safe_list(arr):
-        return [None if (np.isnan(v) or np.isinf(v)) else float(v) for v in arr]
-
-    pred_a = grid_df['pred_group1'].values
-    std_a  = grid_df['std_group1'].values
-    pred_b = grid_df['pred_group2'].values
-    std_b  = grid_df['std_group2'].values
-
-    grid = {
-        'positions':         safe_list(grid_df['position']),
-        'group_a_mean':      safe_list(pred_a),
-        'group_a_lower':     safe_list(pred_a - 1.96 * std_a),
-        'group_a_upper':     safe_list(pred_a + 1.96 * std_a),
-        'group_b_mean':      safe_list(pred_b),
-        'group_b_lower':     safe_list(pred_b - 1.96 * std_b),
-        'group_b_upper':     safe_list(pred_b + 1.96 * std_b),
-        'difference_mean':   safe_list(grid_df['diff_mean']),
-        'difference_lower':  safe_list(grid_df['ci_lower']),
-        'difference_upper':  safe_list(grid_df['ci_upper']),
-        'posterior_prob':    safe_list(grid_df['prob_B_greater']),
-    }
-
-    # --- Step 7: Serialize annotation-aware DMRs ---
+    # --- Step 6: Serialize annotation-aware DMRs ---
     # max_delta_beta is always positive (absolute peak effect size).
     # mean_delta_beta is signed: positive = group B (group2) > group A (group1) = hyper.
-    annot_dmrs = []
+    dmrs = []
     if analysis.results_annotation and analysis.results_annotation.dmrs:
         for d in analysis.results_annotation.dmrs:
-            annot_dmrs.append({
+            dmrs.append({
                 'chr': chrom,
                 'start': int(d.start),
                 'stop': int(d.end),
@@ -383,9 +342,7 @@ def run_gpdm(params):
 
     return {
         'status': 'ok',
-        'dmrs': annot_dmrs,
-        'naive_dmrs': [],   # naive model not run; placeholder for future use
-        'grid': grid,
+        'dmrs': dmrs,
         'metadata': {
             'n_probes': int(len(positions)),
             'n_probes_dropped': n_dropped,

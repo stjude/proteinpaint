@@ -2,15 +2,8 @@ import type { RouteApi, TermdbDmrRequest, TermdbDmrSuccessResponse } from '#type
 import { TermdbDmrPayload } from '#types/checkers'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { invalidcoord } from '#shared/common.js'
-import serverconfig from '#src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
-import path from 'path'
-import fs from 'fs'
-import crypto from 'crypto'
-
-const cachedir_gpdm = path.join(serverconfig.cachedir, 'gpdm')
-if (!fs.existsSync(cachedir_gpdm)) fs.mkdirSync(cachedir_gpdm, { recursive: true })
 
 export const api: RouteApi = {
 	endpoint: 'termdb/dmr',
@@ -45,8 +38,6 @@ function init({ genomes }) {
 			if (group1.length < 3) throw new Error(`Need at least 3 samples in group1, got ${group1.length}`)
 			if (group2.length < 3) throw new Error(`Need at least 3 samples in group2, got ${group2.length}`)
 
-			const plotPath = path.join(cachedir_gpdm, `dmr_${crypto.randomBytes(16).toString('hex')}.png`)
-
 			const gpdmInput = {
 				h5file: ds.queries.dnaMethylation.file,
 				chr: q.chr,
@@ -55,8 +46,7 @@ function init({ genomes }) {
 				group1,
 				group2,
 				annotations: q.annotations || [],
-				nan_threshold: q.nan_threshold ?? 0.5,
-				plot_path: plotPath
+				nan_threshold: q.nan_threshold ?? 0.5
 			}
 
 			const time1 = Date.now()
@@ -64,7 +54,6 @@ function init({ genomes }) {
 			mayLog('DMR analysis time:', formatElapsedTime(Date.now() - time1))
 			if (result.error) throw new Error(result.error)
 
-			// PNG is written to cachedir_gpdm by Python and kept there for reference
 			res.send({ status: 'ok', dmrs: result.dmrs } as TermdbDmrSuccessResponse)
 		} catch (e: unknown) {
 			const msg = e instanceof Error ? e.message : String(e)

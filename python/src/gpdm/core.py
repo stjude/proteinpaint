@@ -12,21 +12,13 @@ Rather than treating each CpG site independently (as classical statistical tests
 do), a GP treats the region as a smooth function and explicitly models spatial
 correlation between nearby probes.
 
-Two GP strategies are offered:
-
-  NaiveGP
-    A single Matern(nu=2.5) kernel is fit to the entire region. This is
-    statistically simple but can over-smooth across biologically distinct
-    regulatory domains (e.g., a CGI embedded in a gene body).
-
-  DomainPartitionedGP
-    The region is partitioned into regulatory domains (CGI, Promoter, Enhancer,
-    etc.). Each domain gets its own GP with:
-      - A biologically-motivated prior mean (e.g., CGIs expected ~0.15)
-      - A domain-specific length-scale prior (e.g., CGIs correlate over ~200bp)
-      - 150bp overlap margins so adjacent domains blend smoothly at boundaries
-    Predictions from overlapping domains are stitched via distance-weighted
-    averaging, preventing discontinuities at domain boundaries.
+The region is partitioned into regulatory domains (CGI, Promoter, Enhancer,
+etc.) using a DomainPartitionedGP. Each domain gets its own GP with:
+  - A biologically-motivated prior mean (e.g., CGIs expected ~0.15)
+  - A domain-specific length-scale prior (e.g., CGIs correlate over ~200bp)
+  - 150bp overlap margins so adjacent domains blend smoothly at boundaries
+Predictions from overlapping domains are stitched via distance-weighted
+averaging, preventing discontinuities at domain boundaries.
 
 Posterior Difference and DMR Calling
 -------------------------------------
@@ -67,13 +59,7 @@ Usage:
                             base_methylation=0.45, length_scale_hint=600)
 
     # Run analysis
-    results = analysis.run(method="annotation_aware")  # or "naive"
-
-    # Visualize
-    analysis.plot_results(save_path="results.png")
-
-    # Export
-    results_df = analysis.to_dataframe()
+    results = analysis.run()
 """
 # Imports 
 # Standard scientific stack
@@ -91,7 +77,7 @@ from scipy.stats import norm
 
 # dataclass: lightweight struct for result containers
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Tuple, Union
+from typing import Optional, List, Dict
 import warnings
 import logging
 
@@ -203,7 +189,7 @@ class GPDMResults:
     Attributes
     ----------
     method : str
-        "naive" or "annotation_aware"
+        "annotation_aware"
     grid_positions : ndarray, shape (n_grid,)
         Genomic coordinates of the prediction grid (linspace from start to end)
     pred_A, pred_B : ndarray, shape (n_grid,)
@@ -295,124 +281,6 @@ DEFAULT_BASE_METHYLATION = {
 # =============================================================================
 # CORE GP MODELS
 # =============================================================================
-
-class NaiveGP:
-    """
-    Single-kernel Gaussian Process fit across the entire analysis region.
-
-    Uses a Matern(nu=2.5) covariance function, which corresponds to a
-    twice-differentiable smooth process — appropriate for the gradual
-    methylation transitions seen at most regulatory boundaries.
-
-    A WhiteKernel additive noise term absorbs probe-level measurement error
-    and biological variability not captured by the spatial structure.
-
-    The region is normalized to [0, 1] before fitting so the length-scale
-    hyperparameter is dimensionless and bounded consistently regardless of
-    region size.
-
-    Parameters
-    ----------
-    region_start, region_end : int
-        Genomic coordinates defining the analysis window
-    """
-
-    def __init__(self, region_start, region_end):
-        self.region_start = region_start
-        self.region_end = region_end
-        # Used for normalizing positions to [0, 1] (avoids numerical issues
-        # with large genomic coordinate values in the kernel matrix)
-        self.region_len = region_end - region_start
-        self.gp = None  # set after fit()
-
-    def fit(self, positions, mean_values, se_values):
-        """
-        Fit the GP to per-CpG group mean values.
-
-        Parameters
-        ----------
-        positions : ndarray, shape (n_cpgs,)
-            Genomic coordinates of observed CpG sites
-        mean_values : ndarray, shape (n_cpgs,)
-            Per-CpG mean beta value across samples in this group
-        se_values : ndarray, shape (n_cpgs,)
-            Per-CpG standard error; passed as alpha=se^2 so the GP
-            treats each observation as having known heteroscedastic noise
-
-        Returns
-        -------
-        self (for chaining)
-        """
-        # Normalize genomic positions to [0, 1] for numerical stability
-        X = ((positions - self.region_start) / self.region_len).reshape(-1, 1)
-
-        # Matern(nu=2.5) kernel: smooth but not infinitely differentiable.
-        # Initial length-scale 0.08 = ~8% of region width. Bounds allow the
-        # optimizer to find anything from very local (0.5%) to broad (50%) correlation.
-        # The leading 1.0 * sets initial signal variance (also optimized).
-        kernel = (
-            1.0 * Matern(length_scale=0.08, nu=2.5,
-                         length_scale_bounds=(0.005, 0.5))
-            + WhiteKernel(noise_level=0.001,
-                          noise_level_bounds=(1e-6, 0.05))
-        )
-
-        # alpha=se^2: adds the known observation variance to the diagonal of
-        # the kernel matrix, equivalent to heteroscedastic noise. This is more
-        # principled than treating all observations as equally uncertain.
-        # n_restarts_optimizer=10: run L-BFGS-B from 10 random starting points
-        # to avoid local optima in the marginal likelihood landscape.
-        self.gp = GaussianProcessRegressor(
-            kernel=kernel, n_restarts_optimizer=10,
-            alpha=se_values**2, normalize_y=True,
-        )
-        self.gp.fit(X, mean_values)
-        return self
-
-    def predict(self, grid_positions):
-        """
-        Predict posterior mean and std at arbitrary grid positions.
-
-        Parameters
-        ----------
-        grid_positions : ndarray, shape (n_grid,)
-            Genomic coordinates to predict at
-
-        Returns
-        -------
-        y_mean : ndarray, shape (n_grid,)
-        y_std : ndarray, shape (n_grid,)  — floored at 1e-6 to avoid division by zero
-        """
-        # Normalize using the same scale as training
-        X = ((grid_positions - self.region_start) / self.region_len).reshape(-1, 1)
-        y_mean, y_std = self.gp.predict(X, return_std=True)
-        # Floor std to prevent numerical issues in downstream CI computation
-        return y_mean, np.maximum(y_std, 1e-6)
-
-    def get_learned_params(self):
-        """Extract learned kernel hyperparameters for diagnostics."""
-        if self.gp is None:
-            return {}
-        try:
-            # gp.kernel_ is the optimized kernel; k1 is the Matern part (1.0 * Matern)
-            params = self.gp.kernel_.k1.get_params()
-            # k2__length_scale is Matern's length-scale inside the Product kernel
-            ls = params.get("k2__length_scale", None)
-            # k1__constant_value is the signal variance amplitude
-            sig = params.get("k1__constant_value", None)
-            # k2 of the Sum kernel is the WhiteKernel
-            noise = self.gp.kernel_.k2.get_params().get("noise_level", None)
-            return {
-                "length_scale_frac": ls,
-                # Convert fraction back to bp for human-readable reporting
-                "length_scale_bp": ls * self.region_len if ls else None,
-                "signal_variance": sig,
-                "noise_variance": noise,
-            }
-        except Exception:
-            # Kernel structure might differ if bounds were hit; return empty
-            return {}
-
 
 class DomainPartitionedGP:
     """
@@ -637,8 +505,8 @@ class DomainPartitionedGP:
                               noise_level_bounds=(1e-6, 0.05))
             )
 
-            # Fewer restarts than NaiveGP (5 vs 10) because each domain's
-            # marginal likelihood surface is simpler (fewer data points).
+            # 5 restarts because each domain's marginal likelihood surface
+            # is simpler (fewer data points) than a single whole-region GP.
             # The 1e-5 in alpha adds a small jitter for numerical stability.
             gp = GaussianProcessRegressor(
                 kernel=kernel, n_restarts_optimizer=5,
@@ -777,10 +645,10 @@ class RegionalDMAnalysis:
     Main interface for GP-based regional differential methylation analysis.
 
     Orchestrates the full pipeline:
-      load_methylation → add_annotation(s) → run → to_dataframe / plot_results
+      load_methylation → add_annotation(s) → run
 
     The class holds all state: raw data, preprocessed summaries, annotations,
-    and both naive and annotation-aware results (when method="both").
+    and annotation-aware results.
 
     Parameters
     ----------
@@ -816,7 +684,6 @@ class RegionalDMAnalysis:
 
         # --- Results (set after run()) ---
         self.results: Optional[GPDMResults] = None                # primary results
-        self.results_naive: Optional[GPDMResults] = None          # naive GP results
         self.results_annotation: Optional[GPDMResults] = None     # annotation-aware results
 
     # -----------------------------------------------------------------
@@ -1152,24 +1019,15 @@ class RegionalDMAnalysis:
 
     def run(
         self,
-        method: str = "both",
         credible_level: float = 0.95,
         n_grid: int = 500,
         min_dmr_width_bp: int = 50,
     ) -> GPDMResults:
         """
-        Run the full differential methylation analysis pipeline.
-
-        Dispatches to _fit_and_analyze() for the requested method(s).
-        If method="both", runs naive first, then annotation-aware. The
-        annotation-aware result is returned as the primary result in that case.
+        Run the full annotation-aware differential methylation analysis pipeline.
 
         Parameters
         ----------
-        method : str
-            "naive" — single GP across region (fast, less accurate)
-            "annotation_aware" — domain-partitioned GP (default, more accurate)
-            "both" — run both and store separately; annotation-aware is primary
         credible_level : float
             Credible interval level (default 0.95 → z ≈ 1.96)
         n_grid : int
@@ -1179,7 +1037,7 @@ class RegionalDMAnalysis:
 
         Returns
         -------
-        GPDMResults with the primary method's results
+        GPDMResults
         """
         if self.positions is None:
             raise ValueError("Load methylation data first with load_methylation()")
@@ -1187,41 +1045,26 @@ class RegionalDMAnalysis:
         # Evenly-spaced prediction grid from region start to end
         grid_positions = np.linspace(self.start, self.end, n_grid)
 
-        if method in ("naive", "both"):
-            log.info("\n--- Fitting Naive GP ---")
-            self.results_naive = self._fit_and_analyze(
-                "naive", grid_positions, credible_level, min_dmr_width_bp
-            )
+        # If no annotations were added manually, try to infer from data density
+        if not self.annotations:
+            log.info("No annotations provided — inferring from CpG density...")
+            self.infer_annotations_from_data()
 
-        if method in ("annotation_aware", "both"):
-            # If no annotations were added manually, try to infer from data density
-            if not self.annotations:
-                log.info("No annotations provided — inferring from CpG density...")
-                self.infer_annotations_from_data()
-
-            log.info("\n--- Fitting Annotation-Aware GP ---")
-            self.results_annotation = self._fit_and_analyze(
-                "annotation_aware", grid_positions, credible_level, min_dmr_width_bp
-            )
-
-        # Set primary results pointer
-        if method == "naive":
-            self.results = self.results_naive
-        elif method == "annotation_aware":
-            self.results = self.results_annotation
-        else:
-            # Both: annotation-aware is the preferred primary result
-            self.results = self.results_annotation
+        log.info("\n--- Fitting Annotation-Aware GP ---")
+        self.results_annotation = self._fit_and_analyze(
+            grid_positions, credible_level, min_dmr_width_bp
+        )
+        self.results = self.results_annotation
 
         return self.results
 
-    def _fit_and_analyze(self, method, grid_positions, credible_level, min_dmr_width_bp):
+    def _fit_and_analyze(self, grid_positions, credible_level, min_dmr_width_bp):
         """
-        Core analysis: fit GP models for both groups, compute posterior difference,
-        and call DMRs from the resulting credible intervals.
+        Core analysis: fit annotation-aware GP models for both groups, compute
+        posterior difference, and call DMRs from the resulting credible intervals.
 
         Steps:
-        1. Instantiate the appropriate model class (NaiveGP or DomainPartitionedGP)
+        1. Instantiate DomainPartitionedGP models for each group
         2. Fit separate models for group A and group B
         3. Predict at each grid point to get posterior mean and std for each group
         4. Compute Delta(x) = pred_B - pred_A and propagate uncertainty
@@ -1230,8 +1073,6 @@ class RegionalDMAnalysis:
 
         Parameters
         ----------
-        method : str
-            "naive" or "annotation_aware"
         grid_positions : ndarray
             Grid of genomic positions for posterior prediction
         credible_level : float
@@ -1243,23 +1084,18 @@ class RegionalDMAnalysis:
         -------
         GPDMResults
         """
-        if method == "naive":
-            # Shared NaiveGP structure but fit independently for each group
-            model_A = NaiveGP(self.start, self.end)
-            model_B = NaiveGP(self.start, self.end)
-        else:
-            # Deep copy of annotations: each group needs its own DomainPartitionedGP
-            # instance so they don't share state during gap-filling or fitting
-            model_A = DomainPartitionedGP(
-                self.start, self.end, self.annotations
-            )
-            model_B = DomainPartitionedGP(
-                self.start, self.end,
-                # Reconstruct annotation objects to avoid shared mutable state
-                [Annotation(a.name, a.start, a.end, a.color,
-                           a.base_methylation, a.length_scale_bp,
-                           a.short_label) for a in self.annotations]
-            )
+        # Each group needs its own DomainPartitionedGP instance so they
+        # don't share state during gap-filling or fitting
+        model_A = DomainPartitionedGP(
+            self.start, self.end, self.annotations
+        )
+        model_B = DomainPartitionedGP(
+            self.start, self.end,
+            # Reconstruct annotation objects to avoid shared mutable state
+            [Annotation(a.name, a.start, a.end, a.color,
+                       a.base_methylation, a.length_scale_bp,
+                       a.short_label) for a in self.annotations]
+        )
 
         # Fit each group's GP to its own observed mean + SE
         log.info(f"  Fitting {self.group_names[0]}...")
@@ -1296,28 +1132,19 @@ class RegionalDMAnalysis:
         dmrs = self._call_dmrs(grid_positions, diff_mean, prob_pos,
                                is_sig, min_dmr_width_bp)
 
-        # Collect learned kernel parameters for diagnostics / logging
+        # Log learned per-domain length-scales for diagnostics
         params = model_A.get_learned_params()
         log.info(f"  Detected {len(dmrs)} DMR(s):")
         for dmr in dmrs:
             log.info(f"    {dmr}")
-
-        # Log the learned length-scale for the naive model (single value)
-        if isinstance(model_A, NaiveGP):
-            ls = params.get("length_scale_bp")
+        log.info(f"  Per-domain length-scales:")
+        for name, p in params.items():
+            ls = p.get("learned_ls_bp")
             if ls:
-                log.info(f"  Learned length-scale: {ls:.0f} bp")
-
-        # Log per-domain length-scales for the annotation-aware model
-        if isinstance(model_A, DomainPartitionedGP):
-            log.info(f"  Per-domain length-scales:")
-            for name, p in params.items():
-                ls = p.get("learned_ls_bp")
-                if ls:
-                    log.info(f"    {name:20s}: {ls:.0f} bp")
+                log.info(f"    {name:20s}: {ls:.0f} bp")
 
         return GPDMResults(
-            method=method,
+            method="annotation_aware",
             grid_positions=grid_positions,
             pred_A=pred_A, std_A=std_A,
             pred_B=pred_B, std_B=std_B,
@@ -1469,427 +1296,3 @@ class RegionalDMAnalysis:
             mean_posterior_prob=float(np.mean(pp)),
             overlapping_annotations=overlapping,
         )
-
-    # -----------------------------------------------------------------
-    # OUTPUT
-    # -----------------------------------------------------------------
-
-    def to_dataframe(self, results: Optional[GPDMResults] = None) -> pd.DataFrame:
-        """
-        Export grid-level posterior predictions as a tidy DataFrame.
-
-        Column names for group-specific predictions use the actual group labels
-        (e.g., "pred_tumor", "std_normal") so downstream code does not need
-        to hard-code group names.
-
-        Parameters
-        ----------
-        results : GPDMResults, optional
-            Defaults to self.results (primary results from run())
-
-        Returns
-        -------
-        DataFrame with columns:
-            chrom, position, pred_{groupA}, std_{groupA},
-            pred_{groupB}, std_{groupB}, diff_mean, diff_std,
-            ci_lower, ci_upper, prob_B_greater, is_significant
-        """
-        if results is None:
-            results = self.results
-        if results is None:
-            raise ValueError("Run analysis first")
-
-        df = pd.DataFrame({
-            "chrom": self.chrom,
-            "position": results.grid_positions.astype(int),
-            # Dynamic column names based on actual group labels
-            f"pred_{results.group_A_name}": results.pred_A,
-            f"std_{results.group_A_name}": results.std_A,
-            f"pred_{results.group_B_name}": results.pred_B,
-            f"std_{results.group_B_name}": results.std_B,
-            "diff_mean": results.diff_mean,
-            "diff_std": results.diff_std,
-            "ci_lower": results.ci_lower,
-            "ci_upper": results.ci_upper,
-            # Note: named "prob_B_greater" for clarity in the exported format
-            "prob_B_greater": results.prob_positive,
-            "is_significant": results.is_significant,
-        })
-        return df
-
-    def dmrs_to_dataframe(self, results: Optional[GPDMResults] = None) -> pd.DataFrame:
-        """
-        Export DMRs as a BED-like DataFrame.
-
-        Each row is one DMR with coordinates, effect size, confidence, and
-        overlapping annotation labels.
-
-        Parameters
-        ----------
-        results : GPDMResults, optional
-            Defaults to self.results
-
-        Returns
-        -------
-        DataFrame with columns:
-            chrom, start, end, width_bp, max_delta_beta,
-            mean_delta_beta, mean_posterior_prob, annotations
-        """
-        if results is None:
-            results = self.results
-        if results is None:
-            raise ValueError("Run analysis first")
-
-        rows = []
-        for dmr in results.dmrs:
-            rows.append({
-                "chrom": dmr.chrom,
-                "start": dmr.start,
-                "end": dmr.end,
-                "width_bp": dmr.width_bp,
-                "max_delta_beta": dmr.max_delta_beta,
-                "mean_delta_beta": dmr.mean_delta_beta,
-                "mean_posterior_prob": dmr.mean_posterior_prob,
-                # Comma-joined annotation names for compact tabular output
-                "annotations": ",".join(dmr.overlapping_annotations),
-            })
-        return pd.DataFrame(rows)
-
-    def dmrs_to_bed(self, path: str, results: Optional[GPDMResults] = None):
-        """
-        Export DMRs as a standard BED file for genome browser viewing.
-
-        The BED score field (0-1000) encodes mean_posterior_prob × 1000,
-        so high-confidence DMRs appear more prominently in browsers that
-        scale track height or color by score.
-
-        Parameters
-        ----------
-        path : str
-            Output file path
-        results : GPDMResults, optional
-            Defaults to self.results
-        """
-        if results is None:
-            results = self.results
-        with open(path, 'w') as f:
-            # BED track header for UCSC/IGV genome browsers
-            f.write(f'track name="GPDM_DMRs" description="GP Differential Methylation"\n')
-            for dmr in results.dmrs:
-                # Scale probability to BED score range [0, 1000]
-                score = int(min(dmr.mean_posterior_prob * 1000, 1000))
-                # Embed effect size in the BED name field for easy inspection
-                name = f"DMR_db{dmr.max_delta_beta:.3f}"
-                f.write(f"{dmr.chrom}\t{dmr.start}\t{dmr.end}\t{name}\t{score}\n")
-
-    # -----------------------------------------------------------------
-    # VISUALIZATION
-    # -----------------------------------------------------------------
-
-    def plot_results(
-        self,
-        results: Optional[GPDMResults] = None,
-        save_path: Optional[str] = None,
-        figsize: Tuple[int, int] = (14, 14),
-        dpi: int = 150,
-        dark_theme: bool = True,
-    ):
-        """
-        Generate a 4-panel publication-quality results figure.
-
-        Panels (top to bottom):
-        0. Annotation track — color-coded regulatory domain boundaries
-        1. GP methylation fits — scatter of observed means + posterior mean ±1.96σ bands
-        2. Difference function — Delta(x) with significant regions highlighted
-        3. Posterior probability heatmap — P(Delta > 0) as a color strip + line plot
-
-        Parameters
-        ----------
-        results : GPDMResults, optional
-            Defaults to self.results
-        save_path : str, optional
-            If provided, save the figure to this path
-        figsize : tuple
-            Figure size in inches (width, height)
-        dpi : int
-            Resolution for saved figure
-        dark_theme : bool
-            Use dark background (True) or light background (False)
-        """
-        if results is None:
-            results = self.results
-        if results is None:
-            raise ValueError("Run analysis first")
-
-        import matplotlib.pyplot as plt
-        import matplotlib.gridspec as gridspec
-
-        # Color palette for dark or light theme
-        if dark_theme:
-            c = {
-                "A": "#06b6d4",    # cyan for group A
-                "B": "#f59e0b",    # amber for group B
-                "diff": "#10b981", # green for difference line
-                "dmr": "#ec4899",  # pink for significant DMR regions
-                "true": "#ffffff", # white for reference lines
-                "bg": "#0a0e1a",   # near-black background
-                "panel": "#111827", # dark panel background
-                "grid": "#1e293b", # dark grid lines
-                "text": "#e2e8f0", # light text
-                "muted": "#64748b",# muted/secondary text
-                "accent": "#8b5cf6",# accent color for titles
-            }
-        else:
-            c = {
-                "A": "#0891b2", "B": "#d97706", "diff": "#059669",
-                "dmr": "#db2777", "true": "#000000", "bg": "#ffffff",
-                "panel": "#f8fafc", "grid": "#e2e8f0", "text": "#1e293b",
-                "muted": "#94a3b8", "accent": "#7c3aed",
-            }
-
-        gp = results.grid_positions  # shorthand for repeated use below
-
-        fig = plt.figure(figsize=figsize, facecolor=c["bg"])
-        # GridSpec: 4 rows with height ratios [annotation, GP fits, difference, probability]
-        gs = gridspec.GridSpec(
-            4, 1, height_ratios=[0.08, 1.2, 1.0, 0.4],
-            hspace=0.06, left=0.08, right=0.96, top=0.94, bottom=0.05,
-        )
-
-        def style_ax(ax, ylabel="", show_x=False):
-            """Apply consistent axis styling to a panel."""
-            ax.set_facecolor(c["panel"])
-            ax.tick_params(colors=c["muted"], labelsize=8)
-            if ylabel:
-                ax.set_ylabel(ylabel, color=c["text"], fontsize=10, fontweight=500)
-            for sp in ax.spines.values():
-                sp.set_color(c["grid"])
-            ax.grid(True, alpha=0.12, color=c["grid"])
-            ax.set_xlim(self.start, self.end)  # all panels share x-axis range
-            if not show_x:
-                ax.tick_params(labelbottom=False)  # hide x labels except bottom panel
-            else:
-                ax.set_xlabel(f"Genomic Position ({self.chrom})",
-                             color=c["text"], fontsize=10)
-            ax.ticklabel_format(axis='x', style='plain', useOffset=False)
-
-        # Figure-level title
-        method_label = ("Annotation-Aware GP" if results.method == "annotation_aware"
-                       else "Naive GP")
-        fig.suptitle(
-            f"GPDM: {method_label} — {self.chrom}:{self.start:,}-{self.end:,}",
-            color=c["text"], fontsize=14, fontweight=700,
-            fontfamily="monospace", y=0.97,
-        )
-
-        # --- Panel 0: Annotation track ---
-        ax0 = fig.add_subplot(gs[0])
-        ax0.set_facecolor(c["bg"])
-        for sp in ax0.spines.values():
-            sp.set_visible(False)
-        ax0.set_xlim(self.start, self.end)
-        ax0.set_ylim(0, 1)
-        ax0.set_yticks([])
-        ax0.tick_params(labelbottom=False, length=0)
-
-        for ann in self.annotations:
-            # Color-filled span for each annotation domain
-            ax0.axvspan(ann.start, ann.end, alpha=0.6, color=ann.color)
-            # Short label centered in the domain
-            mid = (ann.start + ann.end) / 2
-            ax0.text(mid, 0.5, ann.short_label, ha="center", va="center",
-                    fontsize=7, fontweight=700, color=c["text"],
-                    fontfamily="monospace")
-
-        # --- Panel 1: GP methylation fits ---
-        ax1 = fig.add_subplot(gs[1])
-        # Faint annotation coloring behind the scatter for visual alignment
-        for ann in self.annotations:
-            ax1.axvspan(ann.start, ann.end, alpha=0.03, color=ann.color)
-
-        # Observed per-CpG group means as scatter points
-        ax1.scatter(self.positions, self.mean_A, s=18, alpha=0.5,
-                   color=c["A"], linewidths=0, zorder=3,
-                   label=f"{results.group_A_name} (observed)")
-        ax1.scatter(self.positions, self.mean_B, s=18, alpha=0.5,
-                   color=c["B"], linewidths=0, zorder=3,
-                   label=f"{results.group_B_name} (observed)")
-
-        # Group A: posterior mean ±1.96σ credible band
-        ax1.fill_between(gp, results.pred_A - 1.96*results.std_A,
-                         results.pred_A + 1.96*results.std_A,
-                         alpha=0.15, color=c["A"], zorder=2)
-        ax1.plot(gp, results.pred_A, color=c["A"], lw=2, zorder=4,
-                label=f"{results.group_A_name} (GP)")
-
-        # Group B: posterior mean ±1.96σ credible band
-        ax1.fill_between(gp, results.pred_B - 1.96*results.std_B,
-                         results.pred_B + 1.96*results.std_B,
-                         alpha=0.15, color=c["B"], zorder=2)
-        ax1.plot(gp, results.pred_B, color=c["B"], lw=2, zorder=4,
-                label=f"{results.group_B_name} (GP)")
-
-        style_ax(ax1, ylabel="β-value")
-        ax1.set_ylim(-0.02, 1.02)  # beta values bounded to [0, 1]
-        ax1.legend(loc="upper right", fontsize=8, framealpha=0.3,
-                  facecolor=c["panel"], edgecolor=c["grid"],
-                  labelcolor=c["text"])
-
-        # --- Panel 2: Difference function ---
-        ax2 = fig.add_subplot(gs[2])
-        for ann in self.annotations:
-            ax2.axvspan(ann.start, ann.end, alpha=0.03, color=ann.color)
-
-        # Horizontal reference line at Delta = 0 (no difference)
-        ax2.axhline(0, color=c["muted"], lw=0.8, ls="--")
-
-        # Fill significant regions (CI excludes zero) in DMR color
-        ax2.fill_between(gp, results.ci_lower, results.ci_upper,
-                         where=results.is_significant, alpha=0.3,
-                         color=c["dmr"], label="Significant DMR")
-        # Fill non-significant regions in muted diff color
-        ax2.fill_between(gp, results.ci_lower, results.ci_upper,
-                         where=~results.is_significant, alpha=0.12,
-                         color=c["diff"], label="Non-significant")
-        # Posterior mean difference line on top
-        ax2.plot(gp, results.diff_mean, color=c["diff"], lw=2.5,
-                label="Δ(x) posterior mean")
-
-        # Annotate each called DMR with its width and effect size
-        for dmr in results.dmrs:
-            mid = (dmr.start + dmr.end) / 2
-            mask = (gp >= dmr.start) & (gp <= dmr.end)
-            if mask.any():
-                # Place label at the peak of the difference within this DMR
-                peak = results.diff_mean[mask][np.argmax(np.abs(results.diff_mean[mask]))]
-                w_kb = dmr.width_bp / 1000
-                ax2.annotate(
-                    f"{w_kb:.1f}kb | Δβ={dmr.max_delta_beta:.3f}\nP={dmr.mean_posterior_prob:.3f}",
-                    xy=(mid, peak), fontsize=7, color=c["dmr"],
-                    fontweight=600, fontfamily="monospace",
-                    ha="center", va="bottom" if peak > 0 else "top",
-                    bbox=dict(boxstyle="round,pad=0.2", fc=c["panel"],
-                             ec=c["dmr"], alpha=0.9),
-                )
-
-        style_ax(ax2, ylabel=f"Δβ ({results.group_B_name} − {results.group_A_name})")
-        ax2.legend(loc="upper right", fontsize=8, framealpha=0.3,
-                  facecolor=c["panel"], edgecolor=c["grid"],
-                  labelcolor=c["text"])
-
-        # --- Panel 3: Posterior probability heatmap + line ---
-        ax3 = fig.add_subplot(gs[3])
-        # Vertical color strips: each strip colored by P(Delta > 0)
-        # RdBu_r: blue=low probability (group A > B), red=high (group B > A)
-        for i in range(len(gp) - 1):
-            prob = results.prob_positive[i]
-            color = plt.cm.RdBu_r(0.05 + 0.9 * prob)  # map to [0.05, 0.95] to avoid clipping
-            ax3.axvspan(gp[i], gp[i+1], color=color, alpha=0.7)
-
-        # Overlay probability line for precise reading
-        ax3.plot(gp, results.prob_positive, color=c["text"], lw=1.2)
-        # Significance threshold line at the 95% CI equivalent
-        ax3.axhline(0.975, color=c["dmr"], lw=0.8, ls=":", alpha=0.5)
-        # Reference line at P=0.5 (no differential methylation)
-        ax3.axhline(0.5, color=c["muted"], lw=0.5, alpha=0.3)
-
-        style_ax(ax3, ylabel=f"P(Δ>0)", show_x=True)
-        ax3.set_ylim(0, 1)
-
-        if save_path:
-            fig.savefig(save_path, dpi=dpi, facecolor=c["bg"],
-                       bbox_inches="tight")
-            log.info(f"\nSaved figure to: {save_path}")
-
-        return fig
-
-    def plot_comparison(
-        self,
-        save_path: Optional[str] = None,
-        figsize: Tuple[int, int] = (18, 10),
-        dpi: int = 150,
-    ):
-        """
-        Side-by-side 2×2 grid comparing naive and annotation-aware GP results.
-
-        Top row: GP methylation fits for each method.
-        Bottom row: Difference function with DMR calls for each method.
-
-        Useful for assessing how much the annotation-aware approach changes
-        the posterior predictions and DMR calls compared to the naive model.
-        Requires running with method="both" first.
-
-        Parameters
-        ----------
-        save_path : str, optional
-            If provided, save the figure to this path
-        figsize : tuple
-            Figure size in inches
-        dpi : int
-            Resolution for saved figure
-
-        Returns
-        -------
-        matplotlib Figure
-        """
-        if self.results_naive is None or self.results_annotation is None:
-            raise ValueError("Run with method='both' first")
-
-        import matplotlib.pyplot as plt
-
-        fig, axes = plt.subplots(2, 2, figsize=figsize, facecolor="#0a0e1a")
-        fig.suptitle("Naive GP vs Annotation-Aware GP",
-                    color="#e2e8f0", fontsize=14, fontweight=700,
-                    fontfamily="monospace")
-
-        for col, (res, label) in enumerate([
-            (self.results_naive, "Naive GP"),
-            (self.results_annotation, "Annotation-Aware GP"),
-        ]):
-            gp = res.grid_positions
-            c_diff, c_dmr = "#10b981", "#ec4899"
-
-            # Top row: GP fits for both groups
-            ax = axes[0, col]
-            ax.set_facecolor("#111827")
-            ax.plot(gp, res.pred_A, color="#06b6d4", lw=2)  # group A
-            ax.plot(gp, res.pred_B, color="#f59e0b", lw=2)  # group B
-            # 95% CI bands for each group
-            ax.fill_between(gp, res.pred_A-1.96*res.std_A,
-                           res.pred_A+1.96*res.std_A, alpha=0.12, color="#06b6d4")
-            ax.fill_between(gp, res.pred_B-1.96*res.std_B,
-                           res.pred_B+1.96*res.std_B, alpha=0.12, color="#f59e0b")
-            ax.set_title(label, color="#8b5cf6", fontsize=11, fontweight=700,
-                        fontfamily="monospace")
-            ax.set_xlim(self.start, self.end)
-            ax.tick_params(colors="#64748b", labelsize=7)
-            for sp in ax.spines.values():
-                sp.set_color("#1e293b")
-
-            # Bottom row: difference function with DMR calls
-            ax = axes[1, col]
-            ax.set_facecolor("#111827")
-            ax.axhline(0, color="#64748b", lw=0.8, ls="--")  # zero reference
-            # Significant regions filled in DMR color
-            ax.fill_between(gp, res.ci_lower, res.ci_upper,
-                           where=res.is_significant, alpha=0.3, color=c_dmr)
-            # Non-significant CI band in green
-            ax.fill_between(gp, res.ci_lower, res.ci_upper,
-                           where=~res.is_significant, alpha=0.12, color=c_diff)
-            ax.plot(gp, res.diff_mean, color=c_diff, lw=2)
-            ax.set_xlim(self.start, self.end)
-            ax.tick_params(colors="#64748b", labelsize=7)
-            for sp in ax.spines.values():
-                sp.set_color("#1e293b")
-
-            # DMR count overlay in the top-left corner of the panel
-            ax.text(0.02, 0.95, f"{len(res.dmrs)} DMR(s)",
-                   transform=ax.transAxes, color=c_dmr,
-                   fontsize=9, fontweight=700, fontfamily="monospace",
-                   va="top")
-
-        plt.tight_layout()
-        if save_path:
-            fig.savefig(save_path, dpi=dpi, facecolor="#0a0e1a",
-                       bbox_inches="tight")
-        return fig
