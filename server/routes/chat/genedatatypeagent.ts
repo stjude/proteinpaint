@@ -25,7 +25,7 @@ export async function classifyGeneOrGroup(
 	user_prompt: string,
 	llm: LlmConfig,
 	gene_group_intersection: string[] // Genes from db that are present in the user prompt
-): Promise<string[]> {
+): Promise<{ term: string; role: string }[]> {
 	//const allTerms = relevant_genes.map(x => x.toUpperCase()).join(', ')
 	const ambiguousTerms = gene_group_intersection.join(', ')
 
@@ -135,11 +135,11 @@ Response:`
 
 	if (!Array.isArray(results)) throw 'classifyGeneOrGroup response is not an array'
 
-	const geneTerms = results.filter(r => r.role === 'gene').map(r => r.term.toLowerCase())
-	const filteredGenes = gene_group_intersection.filter(g => geneTerms.includes(g.toLowerCase()))
+	const geneTerms: { term: string; role: string }[] = results.filter(r => r.role === 'gene')
+	//const filteredGenes = gene_group_intersection.filter(g => geneTerms.includes(g.toLowerCase()))
 
-	mayLog('classifyGeneOrGroup: genes after filtering:', filteredGenes)
-	return filteredGenes
+	//mayLog('classifyGeneOrGroup: genes after filtering:', filteredGenes)
+	return geneTerms
 }
 
 // ---------------------------------------------------------------------------
@@ -166,7 +166,9 @@ export async function classifyGeneDataType(
 	if (exclude_keywords.length > 0) {
 		const gene_group_intersection = exclude_keywords.filter(x => relevant_genes.includes(x.toLowerCase()))
 		if (gene_group_intersection.length > 0) {
-			genes = await classifyGeneOrGroup(user_prompt, llm, gene_group_intersection)
+			genes = (await classifyGeneOrGroup(user_prompt, llm, gene_group_intersection))
+				.filter(geneTerm => geneTerm.role === 'gene')
+				.map(g => g.term.toLowerCase())
 		} else {
 			genes = relevant_genes
 		}
@@ -204,7 +206,6 @@ Genes: [${geneList}]
 Response:`
 
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
-	mayLog('classifyGeneDataType raw response:', response)
 
 	let results: GeneDataTypeResult[]
 	try {
@@ -214,8 +215,7 @@ Response:`
 		mayLog('classifyGeneDataType: failed to parse LLM response as JSON:', response)
 		return ''
 	}
-
-	if (!Array.isArray(results)) return ''
+	if (!Array.isArray(results)) throw 'classifyGeneDataType response is not an array'
 
 	const missingGenes = results.filter(r => r.dataType === 'missing').map(r => r.gene)
 	const classifiedGenes = results.filter(r => r.dataType !== 'missing')
