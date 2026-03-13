@@ -1,5 +1,5 @@
 import type { MassAppApi } from '#mass/types/mass'
-import { downloadTable, GeneSetEditUI, MultiTermWrapperEditUI, newSandboxDiv } from '#dom'
+import { downloadTable, GeneSetEditUI, MultiTermWrapperEditUI } from '#dom'
 import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
 import { DNA_METHYLATION, GENE_EXPRESSION } from '#shared/terms.js'
@@ -187,84 +187,40 @@ export class VolcanoInteractions {
 		})
 	}
 
-	/** When clicking on a DM data point, runs GPDM analysis then opens a sandbox
-	 * (sibling to the volcano in the mass plotDiv) with a genome browser Block
-	 * at the gene locus and annotation-aware DMRs overlaid as highlight regions
-	 * (orange=hyper, blue=hypo). */
+	/** When clicking on a DM data point, dispatches a DMR plot that runs GPDM
+	 * analysis and renders a genome browser Block with DMR regions overlaid. */
 	async launchGpdm(geneName: string, promoterId?: string) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		if (config.termType !== DNA_METHYLATION) return
 
 		const genome = this.app.vocabApi.vocab.genome
 		const dslabel = this.app.vocabApi.vocab.dslabel
-		const genomeObj = this.app.opts.genome
 
-		// Look up gene coordinates
 		const geneResult = await dofetch3('genelookup', {
 			body: { deep: 1, input: geneName, genome }
 		})
-		if (geneResult.error || !geneResult.gmlst || geneResult.gmlst.length === 0) {
+		if (geneResult.error || !geneResult.gmlst?.length) {
 			window.alert(`Could not find coordinates for gene "${geneName}"`)
 			return
 		}
 
 		const gm = geneResult.gmlst[0]
 		const pad = 2000
-		const chr = gm.chr
-		const start = Math.max(0, gm.start - pad)
-		const stop = gm.stop + pad
 
-		const group1 = config.samplelst.groups[0].values || []
-		const group2 = config.samplelst.groups[1].values || []
-
-		const sandbox = newSandboxDiv(this.dom.holder)
-		sandbox.header.text(promoterId ? `DMR: ${geneName} (${promoterId})` : `DMR: ${geneName}`)
-		const waitDiv = sandbox.body.append('div').style('padding', '10px').text('Running GPDM analysis…')
-
-		const dmrResult = await dofetch3('termdb/dmr', {
-			body: { genome, dslabel, chr, start, stop, group1, group2 }
+		this.app.dispatch({
+			type: 'plot_create',
+			config: {
+				chartType: 'dmr',
+				headerText: promoterId ? `DMR: ${geneName} (${promoterId})` : `DMR: ${geneName}`,
+				genome,
+				dslabel,
+				chr: gm.chr,
+				start: Math.max(0, gm.start - pad),
+				stop: gm.stop + pad,
+				group1: config.samplelst.groups[0].values || [],
+				group2: config.samplelst.groups[1].values || []
+			}
 		})
-		waitDiv.remove()
-
-		if (dmrResult.error) {
-			sandbox.body.append('div').style('padding', '10px').style('color', 'red').text(dmrResult.error)
-			return
-		}
-
-		const { first_genetrack_tolist } = await import('#common/1stGenetk')
-		const tklst: any[] = []
-		first_genetrack_tolist(genomeObj, tklst)
-		// Add DMR regions as a custom bedj track — orange=hyper, blue=hypo, alpha scaled by probability
-		tklst.push({
-			type: 'bedj',
-			name: 'DMRs',
-			bedItems: (dmrResult.dmrs ?? []).map((dmr: any) => {
-				const alpha = Math.round(Math.min(255, (0.5 + dmr.probability * 0.5) * 255))
-				const hex = alpha.toString(16).padStart(2, '0')
-				const base = dmr.direction === 'hyper' ? '#e66101' : '#5e81f4'
-				return { chr: dmr.chr, start: dmr.start, stop: dmr.stop, color: base + hex }
-			})
-		})
-		const { Block } = await import('#src/block')
-		new Block({
-			holder: sandbox.body,
-			genome: genomeObj,
-			chr,
-			start,
-			stop,
-			tklst,
-			nobox: true,
-			width: 800,
-			hidegenelegend: true
-		})
-
-		if (!dmrResult.dmrs?.length) {
-			sandbox.body
-				.append('div')
-				.style('padding', '6px 0')
-				.style('color', '#888')
-				.text('No significant DMRs detected in this region')
-		}
 	}
 
 	async launchDEGClustering() {
