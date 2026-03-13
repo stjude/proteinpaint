@@ -1,4 +1,4 @@
-import type { LlmConfig } from '#types'
+import type { LlmConfig, GeneDataTypeResult } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 
@@ -121,7 +121,6 @@ User prompt: "${user_prompt}"
 Ambiguous terms (both gene and group name): [${ambiguousTerms}]
 Response:`
 
-	mayLog('classifyGeneOrGroup prompt:', prompt)
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog('classifyGeneOrGroup raw response:', response)
 
@@ -156,17 +155,12 @@ Response:`
  * more genes are missing a data type.
  */
 
-interface GeneDataTypeResult {
-	gene: string
-	dataType: string
-}
-
 export async function classifyGeneDataType(
 	user_prompt: string,
 	llm: LlmConfig,
 	relevant_genes: string[],
 	dataset_json: any // Dataset JSON which may contain ExcludedKeywords (gene names that double as diagnosis group names)
-): Promise<string> {
+): Promise<GeneDataTypeResult[] | string> {
 	const exclude_keywords: string[] = dataset_json?.ExcludedKeywords ?? []
 	let genes: string[] = []
 	if (exclude_keywords.length > 0) {
@@ -184,7 +178,7 @@ export async function classifyGeneDataType(
 
 Valid gene data types are:
 - "expression" — gene expression, RNA, transcription, FPKM, TPM, counts, upregulated, downregulated, overexpressed, underexpressed
-- "mutation" — gene variant, mutation, SNV, SNP, indel, deletion, insertion, fusion, CNV, copy number, frameshift, missense, nonsense, splice, truncation
+- "variant" — gene variant, mutation, SNV, SNP, indel, deletion, insertion, fusion, CNV, copy number, frameshift, missense, nonsense, splice, truncation
 - "methylation" — DNA methylation, CpG, epigenetic
 - "missing" — the prompt does NOT specify or imply any gene data type for this gene
 
@@ -198,7 +192,7 @@ Response: [{"gene":"DUX4","dataType":"expression"}]
 Example 2:
 User prompt: "show TP53 mutations and MYC expression"
 Genes: [TP53, MYC]
-Response: [{"gene":"TP53","dataType":"mutation"},{"gene":"MYC","dataType":"expression"}]
+Response: [{"gene":"TP53","dataType":"variant"},{"gene":"MYC","dataType":"expression"}]
 
 Example 3:
 User prompt: "show DUX4 in PAX5alt subtype"
@@ -227,32 +221,14 @@ Response:`
 	const classifiedGenes = results.filter(r => r.dataType !== 'missing')
 
 	if (missingGenes.length === 0) {
-		for (const g of classifiedGenes) {
-			mayLog(`Gene "${g.gene}" classified as: ${g.dataType}`)
-		}
-		return ''
-	}
-
-	const parts: string[] = []
-
-	if (classifiedGenes.length > 0) {
-		const classifiedDescriptions = classifiedGenes.map(g => `${g.gene} (${g.dataType})`).join(', ')
-		parts.push(`Identified data types: ${classifiedDescriptions}.`)
-	}
-
-	if (missingGenes.length === 1) {
-		parts.push(
-			`Gene data type is missing for ${missingGenes[0]}. Please specify what you would like to see for this gene (e.g. expression, mutation, methylation).`
-		)
+		return classifiedGenes
+	} else if (missingGenes.length === 1) {
+		return `Gene data type is missing for ${missingGenes[0]}. Please specify what you would like to see for this gene (e.g. expression, variant, methylation).`
 	} else {
-		parts.push(
-			`Gene data type is missing for ${missingGenes.join(
-				', '
-			)}. Please specify what you would like to see for these genes (e.g. expression, mutation, methylation).`
-		)
+		return `Gene data type is missing for ${missingGenes.join(
+			', '
+		)}. Please specify what you would like to see for these genes (e.g. expression, variant, methylation).`
 	}
-
-	return parts.join(' ')
 }
 
 // ---------------------------------------------------------------------------

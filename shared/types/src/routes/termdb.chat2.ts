@@ -40,6 +40,11 @@ export type LlmConfig = {
 	verbose?: boolean
 }
 
+export interface GeneDataTypeResult {
+	gene: string
+	dataType: string
+}
+
 export type ChatResponse = TextResponse | HtmlResponse | PlotResponse
 
 export const ChatPayload: RoutePayload = {
@@ -132,14 +137,7 @@ export type none_type = {
 export type QueryClassification = { type: 'plot' } | { type: 'notplot' }
 
 /** Specific plot type returned by classifyPlotType in plot.ts */
-export type PlotType =
-	| 'summary'
-	| 'dge'
-	| 'survival'
-	| 'matrix'
-	| 'samplescatter'
-	| 'hiercluster'
-	| 'lollipop'
+export type PlotType = 'summary' | 'dge' | 'survival' | 'matrix' | 'samplescatter' | 'hiercluster' | 'lollipop'
 
 export type DEType = {
 	/** Name of group1 which is an array of filter terms */
