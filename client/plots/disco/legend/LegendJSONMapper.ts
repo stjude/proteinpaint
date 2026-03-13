@@ -133,56 +133,26 @@ export default class LegendJSONMapper {
 				isLegendItem: true,
 				dt: 4
 			}
-			if (gain.value > 0 && loss.value < 0) {
-				// Use a symmetric scale for the heatmap
-				// Matches the logic for coloring the arcs in the heatmap
-				// in CnvHeatmapRenderer.ts
-				const maxValue = Math.max(Math.abs(loss.value), gain.value)
-				const domain = [-maxValue, 0, maxValue]
-				cnvItems.push(
-					Object.assign(
-						{
-							key: CnvType.LossGain,
-							domain,
-							scale: scaleLinear([-1, 0, 1], [loss.color, 'white', gain.color]),
-							labels: { left: 'Loss', right: 'Gain' },
-							numericInputs: {
-								cutoffMode: legend.cnvCutoffMode,
-								defaultPercentile: legend.cnvPercentile,
-								callback: obj => legend.discoInteractions.colorScaleNumericInputsCallback(obj)
-							}
-						},
-						base
-					)
+			// Always use a symmetric scale for the heatmap showing both Loss and Gain sides
+			// even when only one side has data, so the full color scale is always visible
+			const maxValue = Math.max(Math.abs(loss.value), gain.value, 1)
+			const domain = [-maxValue, 0, maxValue]
+			cnvItems.push(
+				Object.assign(
+					{
+						key: CnvType.LossGain,
+						domain,
+						scale: scaleLinear([-1, 0, 1], [loss.color, 'white', gain.color]),
+						labels: { left: 'Loss', right: 'Gain' },
+						numericInputs: {
+							cutoffMode: legend.cnvCutoffMode,
+							defaultPercentile: legend.cnvPercentile,
+							callback: obj => legend.discoInteractions.colorScaleNumericInputsCallback(obj)
+						}
+					},
+					base
 				)
-			} else {
-				if (gain.value > 0) {
-					cnvItems.push(
-						Object.assign(
-							{
-								key: CnvType.Gain,
-								text: 'Copy number gain',
-								domain: [0, gain.value],
-								scale: scaleLinear([0, 1], ['white', gain.color])
-							},
-							base
-						)
-					)
-				}
-				if (loss.value < 0) {
-					cnvItems.push(
-						Object.assign(
-							{
-								key: CnvType.Loss,
-								text: 'Copy number loss',
-								domain: [loss.value, 0],
-								scale: scaleLinear([0, 1], [loss.color, 'white'])
-							},
-							base
-						)
-					)
-				}
-			}
+			)
 			legendJSON.push({
 				name: legend.cnvTitle,
 				order: order,
