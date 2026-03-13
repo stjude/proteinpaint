@@ -231,17 +231,20 @@ export class VolcanoInteractions {
 			return
 		}
 
-		// Build hlregions — orange=hyper, blue=hypo, alpha scaled by probability
-		const hlregions = (dmrResult.dmrs ?? []).map((dmr: any) => {
-			const alpha = Math.round(Math.min(255, (0.5 + dmr.probability * 0.5) * 255))
-			const hex = alpha.toString(16).padStart(2, '0')
-			const base = dmr.direction === 'hyper' ? '#e66101' : '#5e81f4'
-			return { chr: dmr.chr, start: dmr.start, stop: dmr.stop, color: base + hex }
-		})
-
 		const { first_genetrack_tolist } = await import('#common/1stGenetk')
 		const tklst: any[] = []
 		first_genetrack_tolist(genomeObj, tklst)
+		// Add DMR regions as a custom bedj track — orange=hyper, blue=hypo, alpha scaled by probability
+		tklst.push({
+			type: 'bedj',
+			name: 'DMRs',
+			bedItems: (dmrResult.dmrs ?? []).map((dmr: any) => {
+				const alpha = Math.round(Math.min(255, (0.5 + dmr.probability * 0.5) * 255))
+				const hex = alpha.toString(16).padStart(2, '0')
+				const base = dmr.direction === 'hyper' ? '#e66101' : '#5e81f4'
+				return { chr: dmr.chr, start: dmr.start, stop: dmr.stop, color: base + hex }
+			})
+		})
 		const { Block } = await import('#src/block')
 		new Block({
 			holder: sandbox.body,
@@ -250,7 +253,6 @@ export class VolcanoInteractions {
 			start,
 			stop,
 			tklst,
-			hlregions,
 			nobox: true,
 			width: 800,
 			hidegenelegend: true
