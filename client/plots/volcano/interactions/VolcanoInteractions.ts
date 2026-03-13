@@ -3,7 +3,6 @@ import { downloadTable, GeneSetEditUI, MultiTermWrapperEditUI } from '#dom'
 import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
 import { DNA_METHYLATION, GENE_EXPRESSION } from '#shared/terms.js'
-import { dofetch3 } from '#common/dofetch'
 
 export class VolcanoInteractions {
 	app: MassAppApi
@@ -194,30 +193,15 @@ export class VolcanoInteractions {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		if (config.termType !== DNA_METHYLATION) return
 
-		const genome = this.app.vocabApi.vocab.genome
-		const dslabel = this.app.vocabApi.vocab.dslabel
-
-		const geneResult = await dofetch3('genelookup', {
-			body: { deep: 1, input: geneName, genome }
-		})
-		if (geneResult.error || !geneResult.gmlst?.length) {
-			window.alert(`Could not find coordinates for gene "${geneName}"`)
-			return
-		}
-
-		const gm = geneResult.gmlst[0]
-		const pad = 2000
-
 		this.app.dispatch({
 			type: 'plot_create',
 			config: {
 				chartType: 'dmr',
 				headerText: promoterId ? `DMR: ${geneName} (${promoterId})` : `DMR: ${geneName}`,
-				genome,
-				dslabel,
-				chr: gm.chr,
-				start: Math.max(0, gm.start - pad),
-				stop: gm.stop + pad,
+				genome: this.app.vocabApi.vocab.genome,
+				dslabel: this.app.vocabApi.vocab.dslabel,
+				geneName,
+				promoterId,
 				group1: config.samplelst.groups[0].values || [],
 				group2: config.samplelst.groups[1].values || []
 			}

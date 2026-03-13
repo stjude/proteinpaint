@@ -8,7 +8,6 @@ from .core import (
     Annotation,
     DMR,
     GPDMResults,
-    NaiveGP,
     DomainPartitionedGP,
 )
 
@@ -18,6 +17,5 @@ __all__ = [
     "Annotation",
     "DMR",
     "GPDMResults",
-    "NaiveGP",
     "DomainPartitionedGP",
 ]

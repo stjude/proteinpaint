@@ -4,6 +4,7 @@ import { sayerror } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import type { DmrConfig, DmrDom, DmrResult, BedItem } from './DmrTypes.ts'
+import { getDefaultDMRSettings } from './settings/defaults.ts'
 
 class DmrPlot extends PlotBase implements RxComponent {
 	static type = 'dmr'
@@ -14,7 +15,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 	constructor(opts: any, api: any) {
 		super(opts, api)
 		this.dom = {
-			header: opts.header,
+			header: opts?.header,
 			holder: opts.holder.append('div'),
 			error: opts.holder.append('div'),
 			loading: opts.holder.append('div').text('Running DMR analysis…')
@@ -33,16 +34,34 @@ class DmrPlot extends PlotBase implements RxComponent {
 		const config = this.state.config as DmrConfig
 		if (this.dom.header) this.dom.header.text(config.headerText || 'DMR Analysis')
 
+		validateConfig(config)
+
 		this.dom.holder.selectAll('*').remove()
 		this.dom.error.selectAll('*').remove()
 		this.dom.loading.style('display', 'block')
 
 		try {
-			const { genome, dslabel, chr, start, stop, group1, group2 } = config
+			const { genome, dslabel, geneName, group1, group2, settings } = config
+
+			// Resolve gene name to genomic coordinates
+			const geneResult = await dofetch3('genelookup', {
+				body: { deep: 1, input: geneName, genome }
+			})
+			if (geneResult.error || !geneResult.gmlst?.length) {
+				throw new Error(`Could not find coordinates for gene "${geneName}"`)
+			}
+			const gm = geneResult.gmlst[0]
+			const chr = gm.chr
+			const start = Math.max(0, gm.start - settings.dmr.pad)
+			const stop = gm.stop + settings.dmr.pad
+
 			const dmrResult: DmrResult = await dofetch3('termdb/dmr', {
 				body: { genome, dslabel, chr, start, stop, group1, group2 }
 			})
-			if (dmrResult.error) throw new Error(dmrResult.error)
+			if (!dmrResult || dmrResult.error) {
+				sayerror(this.dom.error, dmrResult?.error || 'No result returned from server')
+				throw new Error(dmrResult?.error || 'No result returned from server')
+			}
 
 			const genomeObj = this.app.opts.genome
 			const tklst: { type: string; name: string; bedItems?: BedItem[]; __isgene?: boolean }[] = []
@@ -68,7 +87,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 				stop,
 				tklst,
 				nobox: true,
-				width: 800,
+				width: settings.dmr.blockWidth,
 				hidegenelegend: true
 			})
 		} catch (e: unknown) {
@@ -82,5 +101,22 @@ class DmrPlot extends PlotBase implements RxComponent {
 export const componentInit = getCompInit(DmrPlot)
 
 export function getPlotConfig(opts: Partial<DmrConfig>): DmrConfig {
-	return copyMerge({ chartType: 'dmr', headerText: 'DMR Analysis' }, opts)
+	validateConfig(opts)
+
+	const config = {
+		settings: {
+			dmr: getDefaultDMRSettings(opts)
+		}
+	}
+	return copyMerge(config, opts)
+}
+
+/** Runs in both getPlotConfig and main() because will only run in main()
+ * when plot is loaded from a saved state (e.g. mass session file).*/
+function validateConfig(opts) {
+	if (!opts.genome) throw new Error('genome is required for DMR plot')
+	if (!opts.dslabel) throw new Error('dslabel is required for DMR plot')
+	if (!opts.geneName) throw new Error('geneName is required for DMR plot')
+	if (!opts.group1) throw new Error('group1 is required for DMR plot')
+	if (!opts.group2) throw new Error('group2 is required for DMR plot')
 }
