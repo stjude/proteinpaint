@@ -2,11 +2,8 @@ import { Tabs } from '#dom'
 import { type AppApi, getCompInit } from '../rx'
 import { TermTypeGroups, TermTypes, typeGroup, numericTypes, isSingleCellTerm } from '#shared/terms.js'
 import type { Term } from '#types'
+import type { ClientGenome } from '../types/clientGenome'
 import { select } from 'd3-selection'
-
-type Dict = {
-	[key: string]: any
-}
 
 /*
 When searching for terms, depending on the use case, only certain types of terms are allowed.
@@ -36,7 +33,6 @@ const useCasesExcluded = {
 	dictionary: [
 		TermTypeGroups.SNP_LOCUS,
 		TermTypeGroups.SNP_LIST,
-		TermTypeGroups.TERM_COLLECTION,
 		TermTypeGroups.SINGLECELL_CELLTYPE,
 		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
 	],
@@ -169,10 +165,19 @@ const useCasesExcluded = {
 		TermTypeGroups.METABOLITE_INTENSITY,
 		TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE,
 		TermTypeGroups.SSGSEA,
-		// we are still using dictionary tab to select mutation signature terms. The reason why we
-		// add the TERM_COLLECTION term type is to show it at the first level of tabs. After clicking
-		// TERM_COLLECTION tab, we use DICTIONARY tab to select the mutation signature terms, and all other tabs
-		// will be hidden by default.
+		TermTypeGroups.TERM_COLLECTION,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
+	],
+	runChart2: [
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.MUTATION_CNV_FUSION,
+		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.DNA_METHYLATION,
+		TermTypeGroups.METABOLITE_INTENSITY,
+		TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE,
+		TermTypeGroups.SSGSEA,
 		TermTypeGroups.TERM_COLLECTION,
 		TermTypeGroups.SINGLECELL_CELLTYPE,
 		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
@@ -185,7 +190,7 @@ export class TermTypeSearch {
 	dom: any
 	app: any
 	type: string
-	types: Array<string> // array of term types
+	types: Array<string> // array of term types available to ds
 	tabs: {
 		label: string // required by Tabs
 		termTypeGroup: string // required for comparing
@@ -193,8 +198,10 @@ export class TermTypeSearch {
 		callback: (any) => void
 	}[] // each element is one term type group, when there are multiple, tabs are shown
 	state: any
-	genomeObj: any
-	handlerByType: Dict
+	genomeObj: ClientGenome
+	handlerByType: {
+		[termType: string]: any
+	}
 	click_term: (term: Term) => void
 	submit_lst?: (terms: Array<Term>) => void
 	useCasesExcluded: {
@@ -208,16 +215,13 @@ export class TermTypeSearch {
 		this.submit_lst = opts.submit_lst
 		const selectedTermsDiv = opts.topbar
 			.append('div')
-			.append('div')
 			.style('width', '99%')
 			.style('display', 'flex')
 			.style('flex-wrap', 'wrap')
 			.style('gap', '5px')
 			.style('min-height', '20px')
-			.style('border', 'solid 1px #aaa')
 			.style('margin', '10px 0px')
 			.style('padding', '6px 2px')
-			.style('min-height', '30px')
 		this.types = []
 		this.tabs = []
 		this.handlerByType = {}
@@ -351,7 +355,18 @@ export class TermTypeSearch {
 
 	async addTabsAllowed(state) {
 		for (const type of this.types) {
+			if (type == TermTypes.SNP_LIST || type == TermTypes.SNP_LOCUS) {
+				// do not create tabs for snplst/snplocus terms as these
+				// terms do not have termdb search handlers
+				continue
+			}
+
 			const termTypeGroup = typeGroup[type]
+			if (!termTypeGroup) {
+				console.log(type)
+				throw new Error('should not happen: no group for a term type')
+			}
+			if (this.tabs.some(tab => tab.termTypeGroup == termTypeGroup)) continue // tab entry exists for this group (possible because multiple term types can match to same group)
 
 			let label = termTypeGroup // label displayed on the tab for this group. might be customized as below
 			if (type == TermTypes.GENE_VARIANT) {
@@ -362,68 +377,83 @@ export class TermTypeSearch {
 				if (labels.length == 0) continue
 				label = labels.join('/')
 			}
-			if (type == TermTypes.SNP_LIST || type == TermTypes.SNP_LOCUS) {
-				// do not create tabs for snplst/snplocus terms as these
-				// terms do not have termdb search handlers
-				continue
+
+			/* based on usecase, determine if to allow group of this term type
+			- false: continue
+			- true: create tab entry
+			*/
+			if (state.usecase.target && this.useCasesExcluded[state.usecase.target]?.includes(termTypeGroup)) continue
+			if (state.usecase.target == 'regression') {
+				//regression snplst/snplocus cases will be handled when the search handler is added
+				if (type == TermTypes.SNP) continue // same functionality is covered by snplst/snplocus terms
+				if (type == TermTypes.GENE_VARIANT && state.usecase.detail != 'independent') continue
+				if (type == TermTypes.GENE_EXPRESSION && state.usecase.detail != 'independent') continue
+				if (type == TermTypes.DNA_METHYLATION && state.usecase.detail != 'independent') continue
+				if (type == TermTypes.SSGSEA && state.usecase.detail != 'independent') continue
 			}
 
-			if (termTypeGroup && !this.tabs.some(tab => tab.label == termTypeGroup)) {
-				//regression snplst/snplocus cases will be handled when the search handler is added
-				if (state.usecase.target == 'regression') {
-					if (type == TermTypes.SNP) continue // same functionality is covered by snplst/snplocus terms
-					if (type == TermTypes.GENE_VARIANT && state.usecase.detail != 'independent') continue
-					if (type == TermTypes.GENE_EXPRESSION && state.usecase.detail != 'independent') continue
-					if (type == TermTypes.DNA_METHYLATION && state.usecase.detail != 'independent') continue
-					if (type == TermTypes.SSGSEA && state.usecase.detail != 'independent') continue
-				}
-
-				if (state.usecase.target == 'sampleScatter') {
-					if (state.usecase.detail == 'numeric' && !numericTypes.has(type)) continue
-					//Limit the tree to only single cell types when use case is single cell
-					if (state.usecase?.specialCase?.type == 'singleCell') {
-						if (!isSingleCellTerm({ type })) continue
-					}
-				}
-
-				if (
-					(state.usecase.target == 'survival' || state.usecase.target == 'cuminc') &&
-					termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES
-				) {
-					if (state.usecase.detail == 'term') continue
-				}
-
-				if (state.usecase.target == 'dataDownload') {
-					if (type == TermTypes.SNP) continue // same functionality is covered by snplst/snplocus terms
-				}
-
-				if (state.usecase.target && this.useCasesExcluded[state.usecase.target]?.includes(termTypeGroup)) continue
-
-				try {
-					if (!this.usesDefaultSearch(termTypeGroup)) {
-						const _ = await import(`./handlers/${type}.ts`)
-						this.handlerByType[type] = await new _.SearchHandler()
-						if (!this.handlerByType[type].init) throw 'init not implemented'
-					}
-					this.addLoadTopTerms(type)
-				} catch (e) {
-					throw `error with handler='./handlers/${type}.ts': ${e}`
-				}
-				if (type == TermTypes.TERM_COLLECTION) {
-					const collections = this.app.vocabApi?.termdbConfig?.termCollections
-					if (!collections) throw new Error('termdbConfig.termCollections missing')
-					// one tab for each collection
-					for (const c of collections) {
-						// TODO restict what's shown based on support
-						this.tabs.push({
-							label: c.name,
-							callback: () => this.setTermTypeGroup(type, termTypeGroup, c),
-							termTypeGroup
-						})
-					}
+			if (state.usecase.target == 'sampleScatter') {
+				if (state.usecase.detail == 'numeric' && !numericTypes.has(type)) continue
+				//Limit the tree to only single cell types when use case is single cell
+				if (state.usecase?.specialCase?.type == 'singleCell') {
+					if (!isSingleCellTerm({ type })) continue
 				} else {
-					this.tabs.push({ label, callback: () => this.setTermTypeGroup(type, termTypeGroup), termTypeGroup })
+					// not singlecell special case! in cohort mode, disallow sc terms
+					if (isSingleCellTerm({ type })) continue
 				}
+			}
+
+			if (
+				(state.usecase.target == 'survival' || state.usecase.target == 'cuminc') &&
+				termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES
+			) {
+				if (state.usecase.detail == 'term') continue
+			}
+
+			if (state.usecase.target == 'dataDownload') {
+				if (type == TermTypes.SNP) continue // same functionality is covered by snplst/snplocus terms
+			}
+
+			//////////////////////////////////////
+			// reaches here means the group for this term type will be shown!!
+
+			try {
+				if (!this.usesDefaultSearch(termTypeGroup)) {
+					const _ = await import(`./handlers/${type}.ts`)
+					this.handlerByType[type] = await new _.SearchHandler()
+					if (!this.handlerByType[type].init) throw 'init not implemented'
+				}
+				this.addLoadTopTerms(type)
+			} catch (e) {
+				throw `error with handler='./handlers/${type}.ts': ${e}`
+			}
+			if (type == TermTypes.TERM_COLLECTION) {
+				const collections = this.app.vocabApi?.termdbConfig?.termCollections
+				if (!collections) throw new Error('termdbConfig.termCollections missing')
+				// special: one tab for each collection, if permitted by usecase
+				for (const c of collections) {
+					if (c.type != 'categorical' && c.type != 'numeric') throw new Error('tc.type not categorical/numeric')
+					// antipattern: term collection tab filtering by usecase can only be applied here, after loading its handler
+					switch (state.usecase.target) {
+						case 'dictionary':
+							if (c.type == 'numeric') continue // enable when violin is supported
+							break
+						case 'filter':
+						case 'matrix':
+						case 'facet':
+							if (c.type == 'categorical') continue // not supported yet
+							break
+						default:
+							break
+					}
+					this.tabs.push({
+						label: c.name,
+						callback: () => this.setTermTypeGroup(type, termTypeGroup, c),
+						termTypeGroup
+					})
+				}
+			} else {
+				this.tabs.push({ label, callback: () => this.setTermTypeGroup(type, termTypeGroup), termTypeGroup })
 			}
 		}
 	}
