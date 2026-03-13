@@ -15,7 +15,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 	constructor(opts: any, api: any) {
 		super(opts, api)
 		this.dom = {
-			header: opts.header,
+			header: opts?.header,
 			holder: opts.holder.append('div'),
 			error: opts.holder.append('div'),
 			loading: opts.holder.append('div').text('Running DMR analysis…')
@@ -33,6 +33,8 @@ class DmrPlot extends PlotBase implements RxComponent {
 	async main() {
 		const config = this.state.config as DmrConfig
 		if (this.dom.header) this.dom.header.text(config.headerText || 'DMR Analysis')
+
+		validateConfig(config)
 
 		this.dom.holder.selectAll('*').remove()
 		this.dom.error.selectAll('*').remove()
@@ -94,10 +96,24 @@ class DmrPlot extends PlotBase implements RxComponent {
 export const componentInit = getCompInit(DmrPlot)
 
 export function getPlotConfig(opts: Partial<DmrConfig>): DmrConfig {
+	validateConfig(opts)
+
 	const config = {
 		settings: {
 			dmr: getDefaultDMRSettings(opts)
 		}
 	}
 	return copyMerge(config, opts)
+}
+
+/** Runs in both getPlotConfig and main() because will only run in main()
+ * when plot is loaded from a saved state (e.g. mass session file).*/
+function validateConfig(opts) {
+	if (!opts.genome) throw new Error('genome is required for DMR plot')
+	if (!opts.dslabel) throw new Error('dslabel is required for DMR plot')
+	if (!opts.chr) throw new Error('chr is required for DMR plot')
+	if (!opts.start || !Number.isFinite(opts.start)) throw new Error('start is required for DMR plot')
+	if (!opts.stop || !Number.isFinite(opts.stop)) throw new Error('stop is required for DMR plot')
+	if (!opts.group1) throw new Error('group1 is required for DMR plot')
+	if (!opts.group2) throw new Error('group2 is required for DMR plot')
 }
