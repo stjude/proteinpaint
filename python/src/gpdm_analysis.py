@@ -46,15 +46,11 @@ import logging
 import numpy as np
 import h5py
 
-# Silence GPDM's module-level logger BEFORE importing the gpdm package.
-# gpdm/core.py calls logging.basicConfig(level=INFO) at module load time,
-# which would direct INFO messages to stderr. run_python() treats any stderr
-# output as a fatal error, so we must set the level to CRITICAL before the
-# import triggers basicConfig.
+# Silence GPDM's logger so no INFO messages reach stderr.
+# run_python() treats any stderr output as a fatal error.
 logging.getLogger("gpdm").setLevel(logging.CRITICAL)
 
-# Set matplotlib to non-interactive Agg backend before gpdm import,
-# since gpdm/core.py imports matplotlib.pyplot at module load time.
+# Set matplotlib to non-interactive Agg backend before any plotting imports.
 import matplotlib
 matplotlib.use('Agg')
 
@@ -344,8 +340,7 @@ def run_gpdm(params):
         except Exception:
             pass  # non-fatal: analysis result still returned without image
 
-    # --- Step 6: Build grid response for the D3 visualization (termdb/gpdm) ---
-    # termdb/dmr ignores this; termdb/gpdm needs it for all 4 visualization panels.
+    # --- Step 6: Build grid response for visualization ---
     grid_df = analysis.to_dataframe()
 
     def safe_list(arr):
@@ -389,7 +384,7 @@ def run_gpdm(params):
     return {
         'status': 'ok',
         'dmrs': annot_dmrs,
-        'naive_dmrs': [],   # naive model not run; kept for termdb/gpdm client compatibility
+        'naive_dmrs': [],   # naive model not run; placeholder for future use
         'grid': grid,
         'metadata': {
             'n_probes': int(len(positions)),
@@ -442,7 +437,7 @@ if __name__ == '__main__':
     #   - Always exit with code 0 (non-zero exit causes run_python to reject the result)
     #
     # Errors are communicated as {"error": "message"} in the JSON stdout so the
-    # Node route handler (termdb.gpdm.ts) can surface them to the client.
+    # Node route handler (termdb.dmr.ts) can surface them to the client.
     try:
         # Read the complete stdin payload (run_python pipes the request body here)
         input_data = sys.stdin.read()
