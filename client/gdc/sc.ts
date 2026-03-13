@@ -26,7 +26,7 @@ export async function init(
 	genomes: any
 ): Promise<{ update: (updateArg: UpdateArg) => Promise<void> }> {
 	const useGenome = arg.genome || 'hg38'
-	const useDslabel = arg.dslabel || 'gdc'
+	const useDslabel = arg.dslabel || 'GDC'
 
 	const plotAppApi: AppApi = await appInit({
 		holder,
