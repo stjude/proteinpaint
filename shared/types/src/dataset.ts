@@ -1990,13 +1990,20 @@ export type Mds3 = BaseMds & {
 	// !!! TODO: improve these type definitions below !!!
 	serverconfigFeatures?: any
 	/** a dataset may supply custom URL host and headers to use when making external API requests, such as for GDC */
-	getHostHeaders?: (q?: any) => void
+	getHostHeaders?: (q?: any) => {
+		host: {
+			[apiStyle: string]: string
+		}
+		headers?: {
+			[field: string]: string
+		}
+	}
 	/** a dataset may track req.headers based on an abort signal and/or filter0 that was created for the req;
 	 * this tracking is necessary since the req.headers is not necessarily passed through all to downstream code
 	 * when processing external API-based dataset data, such as for GDC, but req.query.__abortSignal and filter0
 	 * both much more likely to be passed as-is and make it to when `getHostHeaders()` is called */
 	trackReqHeaders?: (req: any, res: any) => void
-	/** a dataset may supply additional information to include in the `/healtcheck` response payload, nested under byDataset[dslabel][genome] = {} proeprty */
+	/** a dataset may supply additional information to include in the `/healthcheck` response payload, nested under byDataset[dslabel][genome] = {} property */
 	getHealth?: (ds: any) => {
 		[key: string]: any
 	}
