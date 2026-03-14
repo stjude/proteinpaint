@@ -262,7 +262,7 @@ tape('getAllowedTabs() - GENE_VARIANT custom label generation with snvindel', te
 
 	const geneVariantTab = tabs.find(t => t.termTypeGroup == TermTypeGroups.MUTATION_CNV_FUSION)
 	test.ok(geneVariantTab, 'Should create tab for GENE_VARIANT')
-	test.equal(geneVariantTab.label, 'Mutation', 'Should use "Mutation" label when only snvindel query is available')
+	test.equal(geneVariantTab!.label, 'Mutation', 'Should use "Mutation" label when only snvindel query is available')
 
 	test.end()
 })
@@ -283,7 +283,7 @@ tape('getAllowedTabs() - GENE_VARIANT custom label generation with multiple quer
 	const geneVariantTab = tabs.find(t => t.termTypeGroup == TermTypeGroups.MUTATION_CNV_FUSION)
 	test.ok(geneVariantTab, 'Should create tab for GENE_VARIANT')
 	test.equal(
-		geneVariantTab.label,
+		geneVariantTab!.label,
 		'Mutation/CNV/Fusion',
 		'Should join all available labels with "/" when multiple queries are available'
 	)
