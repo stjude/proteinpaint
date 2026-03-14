@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { getAllowedTabs } from '../TermTypeSearch'
+import { getAllowedTabs, useCasesExcluded } from '../TermTypeSearch'
 import { TermTypeGroups, TermTypes } from '#shared/terms.js'
 
 /*
@@ -44,91 +44,7 @@ function getMockSelf(opts: { allowedTermTypes: string[]; queries?: any; termColl
 				}
 			}
 		},
-		useCasesExcluded: {
-			matrix: [
-				TermTypeGroups.SNP_LOCUS,
-				TermTypeGroups.SNP_LIST,
-				TermTypeGroups.SINGLECELL_CELLTYPE,
-				TermTypeGroups.SINGLECELL_GENE_EXPRESSION
-			],
-			facet: [
-				TermTypeGroups.SNP_LOCUS,
-				TermTypeGroups.SNP_LIST,
-				TermTypeGroups.SINGLECELL_CELLTYPE,
-				TermTypeGroups.SINGLECELL_GENE_EXPRESSION
-			],
-			filter: [
-				TermTypeGroups.SNP_LOCUS,
-				TermTypeGroups.SNP_LIST,
-				TermTypeGroups.SINGLECELL_CELLTYPE,
-				TermTypeGroups.SINGLECELL_GENE_EXPRESSION
-			],
-			dictionary: [
-				TermTypeGroups.SNP_LOCUS,
-				TermTypeGroups.SNP_LIST,
-				TermTypeGroups.SINGLECELL_CELLTYPE,
-				TermTypeGroups.SINGLECELL_GENE_EXPRESSION
-			],
-			summary: [
-				TermTypeGroups.SNP_LOCUS,
-				TermTypeGroups.SNP_LIST,
-				TermTypeGroups.TERM_COLLECTION,
-				TermTypeGroups.SINGLECELL_CELLTYPE,
-				TermTypeGroups.SINGLECELL_GENE_EXPRESSION
-			],
-			summaryInput: [
-				TermTypeGroups.SNP_LOCUS,
-				TermTypeGroups.SNP_LIST,
-				TermTypeGroups.TERM_COLLECTION,
-				TermTypeGroups.SINGLECELL_CELLTYPE,
-				TermTypeGroups.SINGLECELL_GENE_EXPRESSION
-			],
-			barchart: [
-				TermTypeGroups.SNP_LOCUS,
-				TermTypeGroups.SNP_LIST,
-				TermTypeGroups.TERM_COLLECTION,
-				TermTypeGroups.SINGLECELL_CELLTYPE,
-				TermTypeGroups.SINGLECELL_GENE_EXPRESSION
-			],
-			violin: [
-				TermTypeGroups.SNP_LOCUS,
-				TermTypeGroups.SNP_LIST,
-				TermTypeGroups.TERM_COLLECTION,
-				TermTypeGroups.SINGLECELL_CELLTYPE,
-				TermTypeGroups.SINGLECELL_GENE_EXPRESSION
-			],
-			sampleScatter: [TermTypeGroups.SNP_LOCUS, TermTypeGroups.SNP_LIST, TermTypeGroups.TERM_COLLECTION],
-			cuminc: [
-				TermTypeGroups.SNP_LOCUS,
-				TermTypeGroups.SNP_LIST,
-				TermTypeGroups.MUTATION_CNV_FUSION,
-				TermTypeGroups.METABOLITE_INTENSITY,
-				TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE,
-				TermTypeGroups.TERM_COLLECTION,
-				TermTypeGroups.SINGLECELL_CELLTYPE,
-				TermTypeGroups.SINGLECELL_GENE_EXPRESSION
-			],
-			dataDownload: [
-				TermTypeGroups.MUTATION_CNV_FUSION,
-				TermTypeGroups.TERM_COLLECTION,
-				TermTypeGroups.SINGLECELL_CELLTYPE,
-				TermTypeGroups.SINGLECELL_GENE_EXPRESSION
-			],
-			survival: [
-				TermTypeGroups.SNP_LOCUS,
-				TermTypeGroups.SNP_LIST,
-				TermTypeGroups.TERM_COLLECTION,
-				TermTypeGroups.SINGLECELL_CELLTYPE,
-				TermTypeGroups.SINGLECELL_GENE_EXPRESSION
-			],
-			default: [
-				TermTypeGroups.SNP_LOCUS,
-				TermTypeGroups.SNP_LIST,
-				TermTypeGroups.TERM_COLLECTION,
-				TermTypeGroups.SINGLECELL_CELLTYPE,
-				TermTypeGroups.SINGLECELL_GENE_EXPRESSION
-			]
-		},
+		useCasesExcluded,
 		setTermTypeGroup: () => {} // Mock callback function
 	}
 }
@@ -296,8 +212,14 @@ tape('getAllowedTabs() - usecase filtering for sampleScatter with numeric detail
 	const tabs = getAllowedTabs(state, self)
 
 	const groups = tabs.map(t => t.termTypeGroup)
-	test.ok(groups.includes(TermTypeGroups.DICTIONARY_VARIABLES), 'Should include DICTIONARY_VARIABLES with numeric types')
-	test.ok(groups.includes(TermTypeGroups.METABOLITE_INTENSITY), 'Should include METABOLITE_INTENSITY for numeric detail')
+	test.ok(
+		groups.includes(TermTypeGroups.DICTIONARY_VARIABLES),
+		'Should include DICTIONARY_VARIABLES with numeric types'
+	)
+	test.ok(
+		groups.includes(TermTypeGroups.METABOLITE_INTENSITY),
+		'Should include METABOLITE_INTENSITY for numeric detail'
+	)
 
 	test.end()
 })
@@ -379,7 +301,11 @@ tape('getAllowedTabs() - GENE_VARIANT without queries should skip tab creation',
 	const tabs = getAllowedTabs(state, self)
 
 	test.equal(tabs.length, 1, 'Should only create tab for CATEGORICAL')
-	test.equal(tabs[0].termTypeGroup, TermTypeGroups.DICTIONARY_VARIABLES, 'Should not create tab for GENE_VARIANT without queries')
+	test.equal(
+		tabs[0].termTypeGroup,
+		TermTypeGroups.DICTIONARY_VARIABLES,
+		'Should not create tab for GENE_VARIANT without queries'
+	)
 
 	test.end()
 })
