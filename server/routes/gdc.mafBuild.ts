@@ -23,11 +23,11 @@ export const api: RouteApi = {
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
-			const q: GdcMafBuildRequest = req.query
 			const g = genomes.hg38
 			if (!g) throw 'hg38 missing'
 			const ds = g.datasets.GDC
 			if (!ds) throw 'hg38 GDC missing'
+			const q: GdcMafBuildRequest = req.query
 			await buildMaf(q, res, ds)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
@@ -52,15 +52,16 @@ res{}
 */
 async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	const t0 = Date.now()
-	const { host } = ds.getHostHeaders(q)
-	const fileLst2 = (await getFileLstUnderSizeLimit(q.fileIdLst, host)) as string[]
+	const { host, headers } = ds.getHostHeaders(q)
+	const fileLst2: string[] = await getFileLstUnderSizeLimit(q.fileIdLst, host)
 
 	mayLog(`${fileLst2.length} out of ${q.fileIdLst.length} input MAF files accepted by size limit`, Date.now() - t0)
 
 	const arg = {
 		fileIdLst: fileLst2,
 		columns: q.columns,
-		host: joinUrl(host.rest, 'data') // must use the /data/ endpoint from current host
+		host: joinUrl(host.rest, 'data'), // must use the /data/ endpoint from current host
+		headers
 	}
 	// uncomment for manual error testing
 	// const arg = {"host": "https://api.gdc.cancer.gov/data/","columns": ["Hugo_Symbol", "Entrez_Gene_Id", "Center", "NCBI_Build", "Chromosome", "Start_Position"], "fileIdLst": ["8b31d6d1-56f7-4aa8-b026-c64bafd531e7", "83ea587b-1e92-41b3-a8e3-12df30496724"]};
@@ -159,7 +160,7 @@ async function getFileLstUnderSizeLimit(lst: string[], host) {
 	const re: any = await response.json() // type any to avoid tsc err
 
 	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
-	const out = [] as string[]
+	const out: string[] = []
 	let cumsize = 0
 	for (const h of re.data.hits) {
 		if (cumsize >= maxTotalSizeCompressed) break // maxed out

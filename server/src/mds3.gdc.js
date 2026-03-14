@@ -2267,9 +2267,8 @@ async function getSinglecellDEfile(caseuuid, q, ds) {
 
 async function getSinglecellDEgenes(q, degFileId, ds) {
 	// with seurat.deg.tsv file id, read file content and find DE genes belonging to given cluster
-	const { host } = ds.getHostHeaders(q)
-	// do not use headers here that has accept: 'application/json'
-	const re = await xfetch(joinUrl(host.rest, 'data', degFileId), { timeout: false })
+	const { host, headers } = ds.getHostHeaders(q, { accept: undefined })
+	const re = await xfetch(joinUrl(host.rest, 'data', degFileId), { headers, timeout: false })
 	const lines = re.trim().split('\n')
 	/*
         this tsv file first line is header:
@@ -2301,10 +2300,10 @@ async function getSinglecellDEgenes(q, degFileId, ds) {
 export function gdc_validate_query_singleCell_data(ds, genome) {
 	// q{} TermdbSinglecellDataRequest
 	ds.queries.singleCell.data.get = async q => {
-		const { host } = ds.getHostHeaders(q)
+		const { host, headers } = ds.getHostHeaders(q)
 		const sample = q.sample || q.singleCellPlot.sample
 		// do not use headers here that has accept: 'application/json'
-		const re = await xfetch(joinUrl(host.rest, 'data', sample?.eID || sample.sID), { timeout: false })
+		const re = await xfetch(joinUrl(host.rest, 'data', sample?.eID || sample.sID), { headers, timeout: false })
 		const lines = re.trim().split('\n')
 		const datasetPlots = ds.queries.singleCell.data.plots
 		/*

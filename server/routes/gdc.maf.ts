@@ -43,8 +43,8 @@ function init({ genomes }) {
 			if (!g) throw 'hg38 missing'
 			const ds = g.datasets.GDC
 			if (!ds) throw 'hg38 GDC missing'
-
-			const payload = await listMafFiles(req.query as GdcMafRequest, ds)
+			const q: GdcMafRequest = req.query
+			const payload = await listMafFiles(q, ds)
 			res.send(payload)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
@@ -79,7 +79,7 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 		case_filters.content.push(q.filter0)
 	}
 
-	const { host } = ds.getHostHeaders(q)
+	const { host, headers } = ds.getHostHeaders(q)
 
 	const body: any = {
 		filters,
@@ -96,7 +96,7 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 	}
 	if (case_filters.content.length) body.case_filters = case_filters
 
-	const response = await ky.post(joinUrl(host.rest, 'files'), { timeout: false, json: body })
+	const response = await ky.post(joinUrl(host.rest, 'files'), { headers, timeout: false, json: body })
 	if (!response.ok) throw `HTTP Error: ${response.status} ${response.statusText}`
 	const re: any = await response.json() // type any to avoid tsc err
 
@@ -155,7 +155,7 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 			case_submitter_id: c.submitter_id,
 			case_uuid: c.case_id,
 			sample_types: getGdcSampletypes(c)
-		} as GdcMafFile)
+		} satisfies GdcMafFile)
 	}
 
 	// sort files in descending order of file size and show on table as default
@@ -165,7 +165,7 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 		files,
 		filesTotal: re.data.pagination.total,
 		maxTotalSizeCompressed
-	} as GdcMafResponse
+	} satisfies GdcMafResponse
 
 	return result
 }
