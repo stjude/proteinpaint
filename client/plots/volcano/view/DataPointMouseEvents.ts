@@ -26,7 +26,16 @@ export class DataPointMouseEvents {
 			circle.attr('fill-opacity', 0)
 		})
 		circle.on('click', async () => {
-			await interactions.launchBoxPlot(d.gene_name)
+			if (termType === DNA_METHYLATION) {
+				// For DM, launch DMR region-level analysis
+				const geneName = d.gene_name?.split(',')[0]?.trim()
+				if (geneName) {
+					const promoterId = 'promoter_id' in d ? (d as any).promoter_id : undefined
+					await interactions.launchDmr(geneName, promoterId)
+				}
+			} else {
+				await interactions.launchBoxPlot(d.gene_name)
+			}
 		})
 	}
 
@@ -46,5 +55,8 @@ export class DataPointMouseEvents {
 		this.addTooltipRow(table, 'log<sub>2</sub>(fold-change)', roundValueAuto(d.fold_change))
 		this.addTooltipRow(table, 'Original p-value', roundValueAuto(d.original_p_value))
 		this.addTooltipRow(table, 'Adjusted p-value', roundValueAuto(d.adjusted_p_value))
+		if (this.termType === DNA_METHYLATION && d.gene_name) {
+			this.addTooltipRow(table, '', 'Click for region-level DMR analysis')
+		}
 	}
 }
