@@ -11,7 +11,7 @@ The tree target is used to determine the allowed term types.
 NOTE: dataset-specific overrides may be applied when the TermTypeSearch is initialized
  */
 
-const useCasesExcluded = {
+export const useCasesExcluded = {
 	matrix: [
 		TermTypeGroups.SNP_LOCUS,
 		TermTypeGroups.SNP_LIST,
