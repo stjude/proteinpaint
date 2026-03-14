@@ -189,7 +189,7 @@ type Tab = {
 	termTypeGroup: string // required for comparing
 	termType: string
 	contentHolder?: any // added by Tabs
-	callback: (any) => void
+	callback: (...args: any[]) => any
 }
 
 export class TermTypeSearch {
