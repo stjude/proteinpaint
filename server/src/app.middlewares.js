@@ -261,46 +261,45 @@ function mayWrapResponseSend(cachedir, req, res) {
 	}
 }
 
+const routesWithResOnCloseListener = new Set(['/gdc/mafBuild', '/sse'])
+
 function maySetAbortCtrlAndTrackers(req, res, ds) {
-	const q = req.query
-	// TODO: make dataset-specific rules instead of hardcoding below
-	if (!req.path.includes('/gdc')) {
-		if (q.dslabel !== 'GDC') return
-		if (!req.path.includes('termdb') && !req.path.includes('/mds3')) return
+	// assume that cancellations of server computations or external API requests
+	// would only be needed when a dataset is specified in the request payload
+	if (!ds) return
+	if (routesWithResOnCloseListener.has(req.path)) {
+		// optional trackReqHeaders() should handle a req.query without __abortSignal and filter0 properties
+		if (ds.trackReqHeaders) ds.trackReqHeaders(req, res)
+		return
 	}
+
+	const q = req.query
 	const abortCtrl = new AbortController()
 	q.__abortSignal = abortCtrl.signal
+
+	// call this after setting q.__abortSignal
+	if (ds.trackReqHeaders) ds.trackReqHeaders(req, res)
 
 	abortCtrlBy.signal.set(abortCtrl.signal, abortCtrl)
 	if (q.filter0) {
 		// in case q.__abortSignal is not passed to the xfetch caller,
 		// abortCtrlByFilter0.get(req.query.filter0)?.signal may be used within xfetch()
 		// as an alternative means to get the applicable abortSignal
-		abortCtrlBy.filter0.set(req.query.filter0, abortCtrl)
+		abortCtrlBy.filter0.set(q.filter0, abortCtrl)
 	}
 
-	// call this after setting q.__abortSignal
-	if (ds.trackReqHeaders) ds.trackReqHeaders(req, res)
-
-	if (q.dslabel) {
-		let isFinished = false
-		res.on('finish', () => {
-			isFinished = true
-		})
-		res.on('close', () => {
-			abortCtrlBy.filter0.delete(q.filter0)
-			abortCtrlBy.signal.delete(abortCtrl.signal)
-			if (isFinished || res.writableEnded || abortCtrl.signal.aborted) return
-			if (serverconfig.debugmode) {
-				console.log(`(!) client unexpectedly disconnected, will abort stale requests`)
-				//console.log(JSON.stringify(q.filter0?.content?.[0]?.content), abortCtrl.signal)
-			}
-			try {
-				abortCtrl.abort()
-			} catch (e) {
-				// there should not be any errors to catch
-				console.trace(e)
-			}
-		})
-	}
+	let isFinished = false
+	res.once('finish', () => {
+		isFinished = true
+	})
+	res.once('close', () => {
+		abortCtrlBy.filter0.delete(q.filter0)
+		abortCtrlBy.signal.delete(abortCtrl.signal)
+		if (isFinished || res.writableEnded || abortCtrl.signal.aborted) return
+		mayLog('(!) client unexpectedly disconnected, will abort stale requests')
+		// Trigger an abort() for any code that uses req.query.signal in computations or
+		// external requests such as to GDC API. It's also okay for the abort signal to not be used by
+		// route handler, data query, or computation code, it may be ignored just like q.__protected__.
+		abortCtrl.abort()
+	})
 }

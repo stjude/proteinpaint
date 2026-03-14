@@ -4,6 +4,7 @@
   Input JSON:
     host: GDC host
     fileIdLst: An array of uuid
+    headers: required headers for GDC API
   Output gzip compressed maf file to stdout.
 
   Example of usage:
@@ -177,6 +178,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //downloading maf files parallelly and merge them into single maf file
     let download_futures = futures::stream::iter(url.into_iter().map(|url| {
         async move {
+            // !!! should pass headers argument somewhere here !!!
             let client = reqwest::Client::builder()
                 .timeout(Duration::from_secs(60)) // 60-second timeout per request
                 .connect_timeout(Duration::from_secs(15))
