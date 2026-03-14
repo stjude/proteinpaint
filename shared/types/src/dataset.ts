@@ -1647,6 +1647,8 @@ keep this setting here for reason of:
 	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
 	hiddenIds?: string[]
 	getAdditionalFilter?: (__protected__: any, term: any) => Filter | undefined
+	//Returns allowed values for role-restricted terms. Returns null for no restriction
+	getRestrictedValues?: (clientAuthResult: any, termId: string) => string[] | null
 	/** collections of dictionary terms (numeric or categorical) that are related and can be used together in some plots */
 	termCollections?: TermCollection[]
 }
