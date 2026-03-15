@@ -14,23 +14,9 @@
   ],
   "charts": [
     {
-      "type": "Classification",
-      "SystemPrompt": "The first original publication pertaining to Proteinpaint is https://www.cell.com/cancer-cell/fulltext/S1535-6108(20)30659-0?dgcid=raven_jbs_etoc_email. Link to survivorship portal https://aacrjournals.org/cancerdiscovery/article/14/8/1403/746507.",
+      "type": "Plot",
+      "SystemPrompt": "",
       "TrainingData": [
-        {
-          "question": "Show link to survivorship portal",
-          "answer": {
-            "type": "resource",
-            "idx": 0
-          }
-        },
-        {
-          "question": "Show main publication for proteinpaint",
-          "answer": {
-            "type": "resource",
-            "idx": 1
-          }
-        },
         {
           "question": "compare tp53 expression between genders",
           "answer": {
@@ -102,6 +88,13 @@
           }
         },
         {
+          "question": "Show t-SNE colored by TP53",
+          "answer": {
+            "type": "plot",
+            "plot": "ambiguous_gene_name"
+          }
+        },
+        {
           "question": "Show t-SNE colored by TP53 expression",
           "answer": {
             "type": "plot",
@@ -130,6 +123,27 @@
           }
         },
         {
+          "question": "Show mutations in TMEM181 locus",
+          "answer": {
+            "type": "plot",
+            "plot": "lollipop"
+          }
+        },
+        {
+          "question": "Show NUPR1",
+          "answer": {
+            "type": "plot",
+            "plot": "ambiguous_gene_name"
+          }
+        },
+        {
+          "question": "Show NUPR1 mutation",
+          "answer": {
+            "type": "plot",
+            "plot": "lollipop"
+          }
+        },
+        {
           "question": "Show gene expression landscape of TP53, MYC, and BCL2 for male patients",
           "answer": {
             "type": "plot",
@@ -145,6 +159,27 @@
         },
         {
           "question": "Show a matrix of TP53 and RB1 with diagnosis group and sex",
+          "answer": {
+            "type": "plot",
+            "plot": "ambiguous_gene_name"
+          }
+        },
+        {
+          "question": "show KRAS, TP53 clustering",
+          "answer": {
+            "type": "plot",
+            "plot": "ambiguous_gene_name"
+          }
+        },
+        {
+          "question": "show KRAS, TP53 expression clustering",
+          "answer": {
+            "type": "plot",
+            "plot": "hierCluster"
+          }
+        },
+        {
+          "question": "Show a matrix of TP53 and RB1 gene expression with diagnosis group and sex",
           "answer": {
             "type": "plot",
             "plot": "matrix"
@@ -707,18 +742,17 @@
           }
         },
         {
-          "question": "Show hierarchical clustering of AKT1, TP53, BCR, and KRAS",
+          "question": "Show hierarchical clustering of AKT1, TP53, BCR gene expression",
           "answer": {
             "geneNames": [
               "AKT1",
               "TP53",
-              "BCR",
-              "KRAS"
+              "BCR"
             ]
           }
         },
         {
-          "question": "Cluster BCR, TP53 and KRAS for patients with acute lymphoblastic leukemia",
+          "question": "Cluster BCR, TP53 and KRAS gene expression for patients with acute lymphoblastic leukemia",
           "answer": {
             "geneNames": [
               "BCR",
@@ -1841,7 +1875,7 @@
       }
     },
     {
-      "question": "Show a matrix of TP53 and NRAS for wilms tumor",
+      "question": "Show a matrix of TP53 and NRAS gene expression for wilms tumor",
       "answer": {
         "geneNames": [
           "TP53",
@@ -1972,7 +2006,7 @@
       }
     },
     {
-      "question": "Show hierarchical clustering of AKT1, TP53, BCR, and KRAS",
+      "question": "Show hierarchical clustering of AKT1, TP53, BCR, and KRAS gene expression",
       "answer": {
         "geneNames": [
           "AKT1",
@@ -2194,6 +2228,13 @@
       "PPoutput": {
         "type": "text",
         "text": "invalid gene name:MYC invalid gene name:BCL2"
+      }
+    },
+    {
+      "question": "cluster BCR, TP53 and AKT1",
+      "PPoutput": {
+        "type": "text",
+        "text": "Your query includes gene names (bcr, tp53, akt1), but it is not clear which feature of the gene you are referring to (e.g. expression, methylation, mutation, etc.). Please rephrase your question to clarify what information you are seeking about the gene."
       }
     }
   ],

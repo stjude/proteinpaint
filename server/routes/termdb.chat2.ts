@@ -1,15 +1,17 @@
-import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, QueryClassification } from '#types'
+import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, QueryClassification, GeneDataTypeResult } from '#types'
 import { ChatPayload } from '#types/checkers'
 import { classifyQuery } from './chat/classify1.ts'
 import { classifyNotPlot } from './chat/classify2.ts'
 import { classifyPlotType } from './chat/plot.ts'
 import { readJSONFile } from './chat/utils.ts'
 import { extract_DE_search_terms_from_query } from './chat/DEagent.ts'
+import { determineAmbiguousGenePrompt } from './chat/ambiguousgeneagent.ts'
 import { extract_summary_terms } from './chat/summaryagent.ts'
 import { extract_matrix_search_terms_from_query } from './chat/matrixagent.ts'
 import { extract_samplescatter_terms_from_query } from './chat/samplescatteragent.ts'
 import { extract_hiercluster_terms_from_query } from './chat/hierclusteragent.ts'
-import { parse_dataset_db, parse_geneset_db, getGenesetNames } from './chat/utils.ts'
+import { classifyGeneDataType } from './chat/genedatatypeagent.ts'
+import { extractGenesFromPrompt, parse_dataset_db, parse_geneset_db, getGenesetNames } from './chat/utils.ts'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
@@ -103,9 +105,42 @@ export async function run_chat_pipeline(
 			}
 		}
 	} else if (class_response.type == 'plot') {
+		let geneFeatures: GeneDataTypeResult[] = [] // This will hold the specific gene features (e.g. expression, mutation, etc.) that are relevant to the user prompt, which can be used by downstream agents to determine which data to pull and how to interpret it. For example, if the user prompt is "Show me the expression of TP53", then we want to classify that the relevant gene feature is "expression". Or if the user prompt is "Show me TP53 mutations", then we want to classify that the relevant gene feature is "mutation". This is important for correctly interpreting the user's intent and providing accurate responses.
+		const genes_list = await parse_geneset_db(genedb) // gene_list should always be populated irrespective of whether the dataset has gene expression data, since even if its missing gene expression data, the gene list can still be useful for validating gene mentions in the user query and providing additional context to the LLM. If the dataset does not have gene expression data, the gene list can still be used for telling the user that gene expression is not supported.
+		const relevant_genes = extractGenesFromPrompt(user_prompt, genes_list)
+		if (relevant_genes.length > 0) {
+			const AmbiguousGeneMessage = determineAmbiguousGenePrompt(user_prompt, relevant_genes, dataset_json) // for e.g. classifying prompts such as "Show TP53". In this prompt its not clear which feature (gene expression, mutation, etc.) of TP53 the user is referring to, so we want to classify this as an "ambiguous_gene_prompt" plot type and prompt the user to clarify their question.
+			if (AmbiguousGeneMessage.length > 0) {
+				return {
+					type: 'text',
+					text: AmbiguousGeneMessage
+				}
+			}
+			const geneDataTypeMessage: GeneDataTypeResult[] | string = await classifyGeneDataType(
+				user_prompt,
+				llm,
+				relevant_genes,
+				dataset_json
+			)
+			if (typeof geneDataTypeMessage === 'string' || geneDataTypeMessage instanceof String) {
+				if (geneDataTypeMessage.length > 0) {
+					// This shows error is any of the genes are missing relevant features
+					return {
+						type: 'text',
+						text: geneDataTypeMessage
+					}
+				} else {
+					// Should not happen
+					throw 'classifyGeneDataType agent returned an empty string, which is unexpected.'
+				}
+			} else if (Array.isArray(geneDataTypeMessage)) {
+				geneFeatures = geneDataTypeMessage
+			} else {
+				throw 'geneDataTypeMessage has unknown data type returned from classifyGeneDataType agent'
+			}
+		}
 		const classResult = await classifyPlotType(user_prompt, llm)
 		const dataset_db_output = await parse_dataset_db(dataset_db)
-		const genes_list = await parse_geneset_db(genedb) // gene_list should always be populated irrespective of whether the dataset has gene expression data, since even if its missing gene expression data, the gene list can still be useful for validating gene mentions in the user query and providing additional context to the LLM. If the dataset does not have gene expression data, the gene list can still be used for telling the user that gene expression is not supported.
 		if (classResult == 'summary') {
 			const time1 = new Date().valueOf()
 			ai_output_json = await extract_summary_terms(
@@ -113,10 +148,10 @@ export async function run_chat_pipeline(
 				llm,
 				dataset_db_output,
 				dataset_json,
-				genes_list,
 				ds,
 				testing,
-				genesetNames
+				genesetNames,
+				geneFeatures
 			)
 			mayLog('Time taken for summary agent:', formatElapsedTime(Date.now() - time1))
 		} else if (classResult == 'dge') {
@@ -139,10 +174,10 @@ export async function run_chat_pipeline(
 				llm,
 				dataset_db_output,
 				dataset_json,
-				genes_list,
 				ds,
 				testing,
-				genesetNames
+				genesetNames,
+				geneFeatures
 			)
 			mayLog('Time taken for matrix agent:', formatElapsedTime(Date.now() - time1))
 		} else if (classResult == 'samplescatter') {
@@ -152,10 +187,10 @@ export async function run_chat_pipeline(
 				llm,
 				dataset_db_output,
 				dataset_json,
-				genes_list,
 				ds,
 				testing,
-				genesetNames
+				genesetNames,
+				geneFeatures
 			)
 			mayLog('Time taken for sampleScatter agent:', formatElapsedTime(Date.now() - time1))
 		} else if (classResult == 'hiercluster') {
@@ -165,12 +200,17 @@ export async function run_chat_pipeline(
 				llm,
 				dataset_db_output,
 				dataset_json,
-				genes_list,
 				ds,
 				testing,
-				genesetNames
+				genesetNames,
+				geneFeatures
 			)
 			mayLog('Time taken for hierCluster agent:', formatElapsedTime(Date.now() - time1))
+		} else if (classResult == 'lollipop') {
+			ai_output_json = {
+				type: 'text',
+				text: 'This is a gene mutation prompt. But, lollipop agent has not been implemented yet'
+			}
 		} else {
 			// Will define all other agents later as desired
 			ai_output_json = { type: 'text', text: 'Unknown classification value' }
@@ -179,5 +219,6 @@ export async function run_chat_pipeline(
 		// Should not happen
 		ai_output_json = { type: 'text', text: 'Unknown classification type' }
 	}
+	//mayLog('Final AI output JSON:', JSON.stringify(ai_output_json))
 	return ai_output_json
 }
