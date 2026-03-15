@@ -200,10 +200,10 @@ export async function run_chat_pipeline(
 				llm,
 				dataset_db_output,
 				dataset_json,
-				genes_list,
 				ds,
 				testing,
-				genesetNames
+				genesetNames,
+				geneFeatures
 			)
 			mayLog('Time taken for hierCluster agent:', formatElapsedTime(Date.now() - time1))
 		} else if (classResult == 'lollipop') {

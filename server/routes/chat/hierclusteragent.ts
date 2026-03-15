@@ -1,13 +1,7 @@
-import type { LlmConfig, DbRows } from '#types'
+import type { LlmConfig, DbRows, GeneDataTypeResult } from '#types'
 import { TermTypes } from '#shared/terms.js'
 import { FILTER_TERM_DEFINITIONS, validate_filter } from './filter.ts'
-import {
-	formatTrainingExamples,
-	extractGenesFromPrompt,
-	extractGenesetsFromPrompt,
-	DATA_TYPE_REGISTRY,
-	buildCommonPrompt
-} from './utils.ts'
+import { formatTrainingExamples, extractGenesetsFromPrompt, DATA_TYPE_REGISTRY, buildCommonPrompt } from './utils.ts'
 import type { DataTypeConfig } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 //import { mayLog } from '#src/helpers.ts'
@@ -126,15 +120,15 @@ export async function extract_hiercluster_terms_from_query(
 	llm: LlmConfig,
 	dataset_db_output: { db_rows: DbRows[]; rag_docs: string[] },
 	dataset_json: any,
-	genes_list: string[],
 	ds: any,
 	testing: boolean,
-	genesetNames: string[] = []
+	genesetNames: string[] = [],
+	geneFeatures: GeneDataTypeResult[]
 ) {
 	if (ds?.queries?.geneExpression) {
 		// Will later optionally allow hierarchical clustering if metabolite intensity or other numeric data types are present, but for now require gene expression
 		const { schema, activeConfigs } = buildHierClusterSchema(ds, dataset_json)
-		const common_genes = extractGenesFromPrompt(prompt, genes_list)
+		const common_genes = geneFeatures.map(g => g.gene)
 		const matchedGenesets = extractGenesetsFromPrompt(prompt, genesetNames)
 
 		// Parse out training data from the dataset JSON
@@ -164,7 +158,7 @@ export async function extract_hiercluster_terms_from_query(
 			test_response.type = 'plot'
 			return test_response
 		} else {
-			return validate_hiercluster_response(response, common_genes, ds, activeConfigs)
+			return validate_hiercluster_response(response, ds, activeConfigs, geneFeatures)
 		}
 	} else {
 		return { type: 'text', text: 'Gene expression hierarchical clustering is not supported for this dataset' }
@@ -177,9 +171,9 @@ export async function extract_hiercluster_terms_from_query(
 
 function validate_hiercluster_response(
 	response: string,
-	common_genes: string[],
 	ds: any,
-	activeConfigs: DataTypeConfig[]
+	activeConfigs: DataTypeConfig[],
+	geneFeatures: GeneDataTypeResult[]
 ) {
 	const response_type = JSON.parse(response)
 	const pp_plot_json: any = { chartType: 'hierCluster' }
@@ -211,11 +205,21 @@ function validate_hiercluster_response(
 
 		for (const identifier of fieldValues) {
 			if (preferredConfig.identifierMode === 'gene') {
-				const gene_hits = common_genes.filter(gene => gene === identifier.toLowerCase())
-				if (gene_hits.length === 0) {
+				const gene_hit = geneFeatures.find(g => g.gene.toLowerCase() === identifier.toLowerCase())
+				if (!gene_hit) {
 					text += 'invalid gene name:' + identifier + ' '
 				} else {
-					terms.push(preferredConfig.buildTermWrapper(identifier))
+					// Check if the gene type is of "expression" type (e.g. not a mutation or fusion feature)
+					if (gene_hit.dataType == 'expression') {
+						terms.push(preferredConfig.buildTermWrapper(identifier))
+					} else {
+						text +=
+							'Gene ' +
+							identifier +
+							' does not have a valid data type (' +
+							gene_hit.dataType +
+							') for hierarchical clustering. Only genes with expression data can be used for clustering.'
+					}
 				}
 			} else {
 				// Name-based: pass through (backend handles validation)
