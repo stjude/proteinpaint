@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.179.0
 
 Features:
 - New unit tests for recently created termwrappers, singleCellCellType and singleCellGeneExpression.
