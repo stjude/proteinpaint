@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - New unit tests for recently created termwrappers, singleCellCellType and singleCellGeneExpression.
+- DNA Meth: Initial support for region-level DMR analysis
 
 
 ## 2.178.0
