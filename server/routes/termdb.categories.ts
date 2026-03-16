@@ -62,10 +62,38 @@ async function trigger_getcategories(
 	const [lst, orderedLabels] = getCategories(data, q, ds, $id)
 	// Restrict which categories are returned for role-protected terms
 	const allowedValues = tdb.getRestrictedValues?.((q.__protected__ as any)?.clientAuthResult, q.tw.term.id)
+	const filtered = filterCategoriesByAllowedValues(lst, orderedLabels, allowedValues)
 	res.send({
-		lst: allowedValues ? lst.filter((item: any) => allowedValues.includes(item.key)) : lst,
-		orderedLabels
+		lst: filtered.lst as any,
+		orderedLabels: filtered.orderedLabels as any
 	} satisfies CategoriesResponse)
+}
+
+/**
+ * Filters category list and ordered labels based on role-restricted allowed values.
+ * Normalizes values to strings for comparison since term value keys can be string | number.
+ *
+ * @param lst - Array of category objects with { key, label, samplecount } properties
+ * @param orderedLabels - Array of label strings for ordering
+ * @param allowedValues - Array of allowed value keys (string | number), or null/undefined for no restriction
+ * @returns Object with filtered lst and orderedLabels
+ */
+export function filterCategoriesByAllowedValues(
+	lst: { key: string | number; label: string; samplecount?: number }[],
+	orderedLabels: string[],
+	allowedValues: (string | number)[] | null | undefined
+): { lst: { key: string | number; label: string; samplecount?: number }[]; orderedLabels: string[] } {
+	if (!allowedValues) {
+		// null or undefined means no restriction
+		return { lst, orderedLabels }
+	}
+	// Normalize to strings for comparison since term value keys can be string | number
+	const allowedValuesSet = new Set(allowedValues.map(v => String(v)))
+	const filteredLst = lst.filter(item => allowedValuesSet.has(String(item.key)))
+	// Filter orderedLabels to only include labels from allowed categories
+	const allowedLabels = new Set(filteredLst.map(item => item.label))
+	const filteredOrderedLabels = orderedLabels.filter(label => allowedLabels.has(label))
+	return { lst: filteredLst, orderedLabels: filteredOrderedLabels }
 }
 
 export function getCategories(data, q, ds, $id) {

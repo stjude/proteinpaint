@@ -63,12 +63,33 @@ async function getFilters(query, ds) {
 		let values = getList(samplesPerFilter, filtersData, tw, query.showAll)
 		// Restrict which values are shown for role-protected terms
 		const allowedValues = ds.cohort.termdb.getRestrictedValues?.(query.__protected__.clientAuthResult, tw.term.id)
-		if (allowedValues) {
-			values = values.filter((v: any) => !v.value || allowedValues.includes(v.value))
-		}
+		values = filterByAllowedValues(values, allowedValues)
 		tw2List[tw.term.id] = values
 	}
 	return { ...tw2List }
+}
+
+/**
+ * Filters a list of term values based on role-restricted allowed values.
+ * Preserves the empty string placeholder for "no selection" in dropdowns.
+ * Normalizes values to strings for comparison since term value keys can be string | number.
+ *
+ * @param values - Array of value objects with { value, label, disabled } properties
+ * @param allowedValues - Array of allowed value keys (string | number), or null/undefined for no restriction
+ * @returns Filtered array of values
+ */
+export function filterByAllowedValues(
+	values: { value: string | number; label: string; disabled?: boolean }[],
+	allowedValues: (string | number)[] | null | undefined
+): { value: string | number; label: string; disabled?: boolean }[] {
+	if (!allowedValues) {
+		// null or undefined means no restriction
+		return values
+	}
+	// Normalize to strings for comparison since term value keys can be string | number
+	const allowedValuesSet = new Set(allowedValues.map(v => String(v)))
+	// Preserve only the empty string placeholder (for "no selection"), otherwise require membership in allowedValues
+	return values.filter(v => v.value === '' || allowedValuesSet.has(String(v.value)))
 }
 
 async function getSamplesPerFilter(q, ds) {
