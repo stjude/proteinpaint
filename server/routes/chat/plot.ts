@@ -7,7 +7,7 @@ import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
  *
  * @param user_prompt  The raw user query string.
  * @param llm          LLM configuration (provider, model names, API endpoint).
- * @returns            The specific plot type (e.g. 'summary', 'dge', 'survival', 'matrix', 'samplescatter').
+ * @returns            The specific plot type (e.g. 'summary', 'dge', 'survival', 'matrix', 'samplescatter', 'lollipop').
  */
 export async function classifyPlotType(user_prompt: string, llm: LlmConfig): Promise<PlotType> {
 	/** Currently commented out because we are not using training examples for the plot type classifier, but this is where you would add them if desired in the future. 
@@ -28,7 +28,7 @@ Definitions:
 - matrix: expression overview of two or more GENE NAMES displayed together (e.g. heatmap, expression landscape, expression matrix, side-by-side gene expression). The multiple items must be gene names (e.g. TP53, KRAS, CDKN2A) or can be displayed with clinical variables such as molecular subtype, diagnosis group, ancestry/race, gender/sex etc.
 - samplescatter: ONLY for pre-built dimensionality reduction embeddings (UMAP, t-SNE, PCA). Maybe used for overlaying clinical variables or gene expression or geneset enrichment scores. Do NOT use this for scatter plots comparing two variables — those are summary.
 - hiercluster: hierarchical clustering of genes, metabolites, or other numeric features across samples (e.g. "cluster these genes", "hierarchical clustering of TP53 KRAS BCR", "gene expression clustering", "cluster metabolites"). Use this when the user explicitly asks for clustering, dendrogram, or heatmap with clustering. The prompt should include the word "cluster" or "dendrogram" and/or explicitly describe clustering of multiple genes or features across samples.
-- lollipop: lollipop plot showing mutation distribution along a gene or protein (e.g. "lollipop plot of TP53 mutations", "mutation distribution along KRAS"). Use this when the user explicitly asks for a lollipop plot or describes a plot with mutation positions along a gene or protein.
+- lollipop: lollipop plot showing mutation distribution along a gene or protein locus (e.g. "lollipop plot of TP53 mutations", "mutation distribution along KRAS"). Use this when the user explicitly asks for a lollipop plot or describes a plot with mutation positions along a gene or protein.
 
 IMPORTANT: Your response must be exactly one word. Do not return chart type names like "violin", "box plot", or "bar chart". Return only: summary, dge, survival, matrix, samplescatter, hiercluster, or lollipop.    
 

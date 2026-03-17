@@ -2236,6 +2236,165 @@
         "type": "text",
         "text": "Your query includes gene names (bcr, tp53, akt1), but it is not clear which feature of the gene you are referring to (e.g. expression, methylation, mutation, etc.). Please rephrase your question to clarify what information you are seeking about the gene."
       }
+    },
+    {
+      "question": "show TP53 in Acute lymphoblastic leukemia",
+      "PPoutput": {
+        "type": "text",
+        "text": "Your query includes gene names (tp53), but it is not clear which feature of the gene you are referring to (e.g. expression, methylation, mutation, etc.). Please rephrase your question to clarify what information you are seeking about the gene."
+      }
+    },
+    {
+      "question": "show TP53 expression in Acute lymphoblastic leukemia",
+      "answer": {
+        "term": "TP53",
+        "simpleFilter": [
+          {
+            "term": "diaggrp",
+            "category": "Acute lymphoblastic leukemia"
+          }
+        ]
+      },
+      "PPoutput": {
+        "type": "plot",
+        "plot": {
+          "chartType": "summary",
+          "term": {
+            "term": {
+              "gene": "TP53",
+              "type": "geneExpression"
+            },
+            "q": {
+              "mode": "continuous"
+            }
+          },
+          "childType": "violin",
+          "filter": {
+            "type": "tvslst",
+            "in": true,
+            "lst": [
+              {
+                "type": "tvs",
+                "tvs": {
+                  "term": {
+                    "type": "categorical",
+                    "values": {
+                      "Non-Hodgkin lymphoma": {
+                        "label": "Non-Hodgkin lymphoma",
+                        "color": "rgb(110, 64, 170)"
+                      },
+                      "Hodgkin lymphoma": {
+                        "label": "Hodgkin lymphoma",
+                        "color": "rgb(143, 61, 178)"
+                      },
+                      "Central nervous system (CNS)": {
+                        "label": "Central nervous system (CNS)",
+                        "color": "rgb(178, 60, 178)"
+                      },
+                      "Acute myeloid leukemia": {
+                        "label": "Acute myeloid leukemia",
+                        "color": "rgb(210, 62, 167)"
+                      },
+                      "Wilms tumor": {
+                        "label": "Wilms tumor",
+                        "color": "rgb(238, 67, 149)"
+                      },
+                      "Acute lymphoblastic leukemia": {
+                        "label": "Acute lymphoblastic leukemia",
+                        "color": "rgb(255, 78, 125)"
+                      },
+                      "Ewing sarcoma family of tumors": {
+                        "label": "Ewing sarcoma family of tumors",
+                        "color": "rgb(255, 94, 99)"
+                      },
+                      "Neuroblastoma": {
+                        "label": "Neuroblastoma",
+                        "color": "rgb(255, 115, 75)"
+                      },
+                      "Rhabdomyosarcoma": {
+                        "label": "Rhabdomyosarcoma",
+                        "color": "rgb(255, 140, 56)"
+                      },
+                      "Osteosarcoma": {
+                        "label": "Osteosarcoma",
+                        "color": "rgb(239, 167, 47)"
+                      },
+                      "Other leukemia": {
+                        "label": "Other leukemia",
+                        "color": "rgb(217, 194, 49)"
+                      },
+                      "MDS/Acute myeloid leukemia": {
+                        "label": "MDS/Acute myeloid leukemia",
+                        "color": "rgb(194, 219, 64)"
+                      },
+                      "Germ cell tumor": {
+                        "label": "Germ cell tumor",
+                        "color": "rgb(175, 240, 91)"
+                      },
+                      "Soft tissue sarcoma": {
+                        "label": "Soft tissue sarcoma",
+                        "color": "rgb(135, 245, 87)"
+                      },
+                      "Other malignancy": {
+                        "label": "Other malignancy",
+                        "color": "rgb(96, 247, 96)"
+                      },
+                      "Chronic myeloid leukemia": {
+                        "label": "Chronic myeloid leukemia",
+                        "color": "rgb(64, 243, 115)"
+                      },
+                      "Retinoblastoma": {
+                        "label": "Retinoblastoma",
+                        "color": "rgb(40, 234, 141)"
+                      },
+                      "Melanoma": {
+                        "label": "Melanoma",
+                        "color": "rgb(28, 219, 169)"
+                      },
+                      "Liver malignancies": {
+                        "label": "Liver malignancies",
+                        "color": "rgb(26, 199, 194)"
+                      },
+                      "Nasopharyngeal carcinoma": {
+                        "label": "Nasopharyngeal carcinoma",
+                        "color": "rgb(33, 176, 213)"
+                      },
+                      "Other carcinoma": {
+                        "label": "Other carcinoma",
+                        "color": "rgb(47, 150, 224)"
+                      },
+                      "Non-malignancy": {
+                        "label": "Non-malignancy",
+                        "color": "rgb(65, 125, 224)"
+                      },
+                      "Histiocytosis": {
+                        "label": "Histiocytosis",
+                        "color": "rgb(84, 101, 214)"
+                      },
+                      "Colon carcinoma": {
+                        "label": "Colon carcinoma",
+                        "color": "rgb(99, 81, 195)"
+                      }
+                    },
+                    "groupsetting": {
+                      "inuse": false
+                    },
+                    "name": "Diagnosis Group",
+                    "id": "diaggrp",
+                    "isleaf": true,
+                    "hashtmldetail": true
+                  },
+                  "values": [
+                    {
+                      "key": "Acute lymphoblastic leukemia"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
     }
   ],
   "prebuiltPlots": [

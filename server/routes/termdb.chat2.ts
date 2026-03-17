@@ -38,11 +38,7 @@ function init({ genomes }) {
 			if (!g) throw 'invalid genome'
 			const ds = g.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid dslabel'
-			const serverconfig_ds_entries = serverconfig.genomes
-				.find(genome => genome.name == q.genome)
-				.datasets.find(dslabel => dslabel.name == ds.label)
-
-			if (!serverconfig_ds_entries.aifiles) {
+			if (!ds?.queries?.chat?.aifiles) {
 				throw 'aifiles are missing for chatbot to work'
 			}
 
@@ -55,8 +51,7 @@ function init({ genomes }) {
 			const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
 			const genedb = serverconfig.tpmasterdir + '/' + g.genedb.dbfile
 			// Read dataset JSON file
-			const aiFilesPath = serverconfig_ds_entries.aifiles
-			const dataset_json: any = await readJSONFile(aiFilesPath)
+			const dataset_json: any = await readJSONFile(ds?.queries?.chat?.aifiles)
 			const testing = false // This toggles validation of LLM output. In this script, this will ALWAYS be false since we always want validation of LLM output, only for testing we set this variable to true
 			const genesetNames = getGenesetNames(g)
 			const ai_output_json = await run_chat_pipeline(

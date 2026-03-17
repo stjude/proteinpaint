@@ -102,7 +102,7 @@ export function determineAmbiguousGenePrompt(user_prompt: string, relevant_genes
 			return (
 				'Your query includes terms (' +
 				gene_group_intersection.join(', ') +
-				') that matches both gene name and dataset groups, so it is not clear whether you are referring to the gene itself or a diagnosis group/subtype named after the gene. Please rephrase your question to clarify whether you are asking about the gene or a diagnosis group/subtype.'
+				') that matches both a gene name and dataset group/subtype, so it is not clear whether you are referring to the gene itself or a diagnosis group/subtype named after the gene. Please rephrase your question to clarify whether you are asking about the gene or a diagnosis group/subtype.'
 			)
 		}
 	}

@@ -236,12 +236,12 @@ function validate_matrix_response(
 						text +=
 							'Gene ' +
 							gene_hit.gene +
-							' has variant type. However, gene variant/mutation data has not been currently implemented'
+							' has variant type. However, gene variant/mutation data plotting has not been currently implemented'
 					} else if (gene_hit.dataType == 'methylation') {
 						text +=
 							'Gene ' +
 							gene_hit.gene +
-							' has methylation type. However, methylation data has not been currently implemented'
+							' has methylation type. However, methylation data plotting has not been currently implemented'
 					} else {
 						// Should not happen since we only return known data types from getGeneDataTypes, but just in case
 						text += 'Gene ' + gene_hit.gene + ' has unknown data type: ' + gene_hit.dataType
