@@ -328,7 +328,9 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		}
 		// optional data types
 		if (q.singleCell.geneExpression) {
-			q2.singleCell.geneExpression = {}
+			q2.singleCell.geneExpression = {
+				unit: q.singleCell.geneExpression?.unit
+			}
 		}
 		if (q.singleCell.DEgenes) {
 			q2.singleCell.DEgenes = { termId: q.singleCell.DEgenes.termId }
