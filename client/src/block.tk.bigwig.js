@@ -63,7 +63,12 @@ export async function bigwigload(tk, block) {
 
 	let errtext
 	try {
-		const data = await dofetch3('tkbigwig', { method: 'POST', body: JSON.stringify(par) })
+		let data
+		if (tk.imgData) {
+			data = tk.imgData // premade data; same structure as below
+		} else {
+			data = await dofetch3('tkbigwig', { method: 'POST', body: JSON.stringify(par) })
+		}
 		if (data.error) throw data.error
 		if (!data.src) throw 'data.src missing'
 
@@ -139,6 +144,7 @@ export async function bigwigloadsubpanel(tk, block, panel) {
 
 	let errtext
 	try {
+		if (tk.imgData) throw 'subpanel not supported by imgData yet'
 		const data = await dofetch3('tkbigwig', { method: 'POST', body: JSON.stringify(par) })
 		if (data.error) throw data.error
 		panel.img.attr('xlink:href', data.src)
