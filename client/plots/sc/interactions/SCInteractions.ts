@@ -23,10 +23,12 @@ export class SCInteractions {
 	 */
 	async createSubplot(config) {
 		const item = this.app.getState().plots.find(p => p.id === this.id)?.settings.sc.item
+		//'item' isFrozen. Pass the clone to avoid downstream issues.
+		const c = Object.assign({}, config, { parentId: this.id, scItem: structuredClone(item) })
 		await this.app.dispatch({
 			type: 'plot_create',
 			parentId: this.id,
-			config: Object.assign({}, config, { parentId: this.id, scItem: item })
+			config: c
 		})
 	}
 
