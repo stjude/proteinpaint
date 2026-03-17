@@ -32,6 +32,43 @@ type DmrAnnotation = {
 	length_scale_bp?: number
 }
 
+export type DmrAnnotationItem = {
+	name: string
+	chr: string
+	start: number
+	stop: number
+	/** Annotation type: CGI, Shore, Promoter, Enhancer, CTCF */
+	type: string
+}
+
+export type DmrDiagnostic = {
+	probes: {
+		positions: number[]
+		mean_group1: number[]
+		mean_group2: number[]
+	}
+	gp_posterior: {
+		grid: number[]
+		pred_group1: number[]
+		pred_group2: number[]
+		std_group1: number[]
+		std_group2: number[]
+		diff_mean: number[]
+		ci_lower: number[]
+		ci_upper: number[]
+	}
+	domains: {
+		name: string
+		type: string
+		start: number
+		end: number
+		prior_mean: number
+		prior_ls: number
+		learned_ls: number | null
+	}[]
+	probe_spacings: number[]
+}
+
 export type TermdbDmrSuccessResponse = {
 	status: 'ok'
 	dmrs: {
@@ -44,6 +81,10 @@ export type TermdbDmrSuccessResponse = {
 		direction: 'hyper' | 'hypo'
 		probability: number
 	}[]
+	/** Regulatory annotations used in the analysis (CpG islands, ENCODE cCREs) */
+	annotations?: DmrAnnotationItem[]
+	/** Diagnostic data: raw probes, GP posterior, domain params */
+	diagnostic?: DmrDiagnostic
 }
 
 export type TermdbDmrErrorResponse = {

@@ -37,6 +37,10 @@ export default {
 		dbfile: 'anno/db/proteindomain.db',
 		statement: 'select data from domain where isoform=? collate nocase'
 	},
+	regulatoryAnnotations: {
+		cpgIsland: 'anno/cpgIsland.hg38.gz',
+		encodeCCRE: 'anno/encodeCCRE.hg38.gz'
+	},
 	snp: {
 		bigbedfile: 'anno/dbsnp.hg38.bb'
 	},

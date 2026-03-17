@@ -35,12 +35,18 @@ into DMR intervals, filtered by minimum width (50bp), and characterized by
 max/mean delta-beta and mean posterior probability.
 
 Usage:
+    import json
     from gpdm import RegionalDMAnalysis
+
+    # Load dataset-specific priors (required)
+    with open("dnaMeth.priors.json") as f:
+        priors = json.load(f)["priors"]
 
     analysis = RegionalDMAnalysis(
         chrom="chr8",
         start=127_735_000,
         end=127_745_000,
+        dataset_priors=priors,
     )
 
     # Load your data
@@ -50,13 +56,9 @@ Usage:
         groups=group_labels,           # array: "tumor" or "normal" per sample
     )
 
-    # Optionally add annotations
+    # Add annotations (from BED files or manually)
     analysis.add_annotations_from_bed("cpg_islands.bed", name="CGI")
-    analysis.add_annotations_from_bed("ctcf_sites.bed", name="CTCF")
-
-    # Or add them manually
-    analysis.add_annotation("Enhancer", start=127_738_000, end=127_740_000,
-                            base_methylation=0.45, length_scale_hint=600)
+    analysis.add_annotation("Enhancer", start=127_738_000, end=127_740_000)
 
     # Run analysis
     results = analysis.run()
@@ -115,8 +117,16 @@ class Annotation:
         to this value, so a well-calibrated prior reduces overfitting when
         a domain has few CpGs.
     length_scale_bp : float
-        Expected spatial correlation range. Used to initialize and bound the
-        Matern kernel's length-scale hyperparameter.
+        Expected spatial correlation range. Estimated via empirical Bayes
+        (marginal likelihood across representative domains) and used to
+        initialize the Matern kernel's length-scale hyperparameter.
+    ls_lower_bound_bp : float, optional
+        10th percentile of the empirical length-scale distribution (from
+        the priors file). Used to set the lower optimizer bound. If None,
+        defaults to 0.3x the length_scale_bp.
+    ls_upper_bound_bp : float, optional
+        90th percentile of the empirical length-scale distribution. Used
+        to set the upper optimizer bound. If None, defaults to 5x.
     short_label : str
         Up to 5-character label for annotation track visualization.
     """
@@ -126,6 +136,8 @@ class Annotation:
     color: str = "#94a3b8"
     base_methylation: float = 0.5
     length_scale_bp: float = 500.0
+    ls_lower_bound_bp: Optional[float] = None
+    ls_upper_bound_bp: Optional[float] = None
     short_label: str = ""
 
     def __post_init__(self):
@@ -248,36 +260,6 @@ ANNOTATION_COLORS = {
     "Intergenic": "#94a3b8",# light gray — background genomic sequence
 }
 
-# Default Matern length-scale hints in base pairs.
-# These initialize the GP kernel optimizer and set its search bounds.
-# Smaller = finer-grained spatial correlation (e.g., narrow CGIs);
-# larger = broader correlation (e.g., long gene bodies with plateau methylation).
-DEFAULT_LENGTH_SCALES = {
-    "CGI": 200,
-    "Shore": 300,
-    "Shelf": 400,
-    "Promoter": 250,
-    "Enhancer": 600,
-    "CTCF": 150,
-    "Gene body": 1000,
-    "Intergenic": 800,
-}
-
-# Prior expected methylation level per regulatory element type.
-# These become the GP mean function: the model fits residuals relative to
-# this baseline, which regularizes predictions in sparsely-covered domains.
-DEFAULT_BASE_METHYLATION = {
-    "CGI": 0.15,        # CpG islands are characteristically hypomethylated
-    "Shore": 0.40,      # shores transition from CGI to flanking sequence
-    "Shelf": 0.60,      # shelves are typically moderately methylated
-    "Promoter": 0.20,   # active promoters often hypomethylated
-    "Enhancer": 0.45,   # enhancers are intermediate and context-dependent
-    "CTCF": 0.55,       # CTCF sites often partially methylated
-    "Gene body": 0.75,  # gene bodies of expressed genes are hypermethylated
-    "Intergenic": 0.70, # default for non-annotated sequence
-}
-
-
 # =============================================================================
 # CORE GP MODELS
 # =============================================================================
@@ -307,6 +289,10 @@ class DomainPartitionedGP:
         Analysis window coordinates
     annotations : list of Annotation
         Regulatory domain definitions (will be gap-filled by _fill_gaps)
+    intergenic_priors : dict
+        Required priors for Intergenic gap-fill domains, with keys
+        "base_methylation", "length_scale_bp", and optionally
+        "ls_p10"/"ls_p90". Sourced from the dataset's priors file.
     margin_bp : int
         Overlap margin for domain boundary blending (default 150bp)
     max_length_scale_bp : int
@@ -319,12 +305,14 @@ class DomainPartitionedGP:
     """
 
     def __init__(self, region_start, region_end, annotations: List[Annotation],
+                 intergenic_priors: Dict,
                  margin_bp=150, max_length_scale_bp=5000,
                  max_intergenic_bp=50_000):
         self.region_start = region_start
         self.region_end = region_end
         self.region_len = region_end - region_start
         self.annotations = annotations
+        self.intergenic_priors = intergenic_priors
         self.margin_bp = margin_bp
         # Precompute margin as a fraction of region for normalized coordinate math
         self.margin_frac = margin_bp / self.region_len
@@ -347,12 +335,16 @@ class DomainPartitionedGP:
         segments of at most max_intergenic_bp each to prevent a single domain
         from learning an excessively long correlation length.
         """
+        ig = self.intergenic_priors
         if not self.annotations:
             # Trivial case: entire region is one intergenic domain
             self.annotations = [
                 Annotation("Intergenic", self.region_start, self.region_end,
-                           color="#94a3b8", base_methylation=0.65,
-                           length_scale_bp=800)
+                           color="#94a3b8",
+                           base_methylation=ig["base_methylation"],
+                           length_scale_bp=ig["length_scale_bp"],
+                           ls_lower_bound_bp=ig.get("ls_p10"),
+                           ls_upper_bound_bp=ig.get("ls_p90"))
             ]
             return
 
@@ -392,14 +384,21 @@ class DomainPartitionedGP:
         start, end : int
             Genomic coordinates of the gap to fill
         """
+        ig = self.intergenic_priors
+        ig_base = ig["base_methylation"]
+        ig_ls = ig["length_scale_bp"]
+        ig_lo = ig.get("ls_p10")
+        ig_hi = ig.get("ls_p90")
         gap_size = end - start
         if gap_size <= self.max_intergenic_bp:
             # Small enough — add a single intergenic segment
             filled.append(Annotation(
                 f"Intergenic_{start}",  # unique name avoids dict key collisions
                 start, end,
-                color="#94a3b8", base_methylation=0.65,
-                length_scale_bp=800, short_label="Inter"
+                color="#94a3b8", base_methylation=ig_base,
+                length_scale_bp=ig_ls,
+                ls_lower_bound_bp=ig_lo, ls_upper_bound_bp=ig_hi,
+                short_label="Inter"
             ))
         else:
             # Subdivide into ceil(gap/max) equal segments
@@ -412,8 +411,10 @@ class DomainPartitionedGP:
                 filled.append(Annotation(
                     f"Intergenic_{seg_start}",
                     seg_start, seg_end,
-                    color="#94a3b8", base_methylation=0.65,
-                    length_scale_bp=800, short_label="Inter"
+                    color="#94a3b8", base_methylation=ig_base,
+                    length_scale_bp=ig_ls,
+                    ls_lower_bound_bp=ig_lo, ls_upper_bound_bp=ig_hi,
+                    short_label="Inter"
                 ))
 
     def _get_annotation_at(self, genomic_pos):
@@ -483,23 +484,35 @@ class DomainPartitionedGP:
                 prior = ann.base_methylation
             residuals = y_dom - prior  # GP fits zero-mean residuals
 
-            # Compute initial length-scale as a fraction of domain size,
-            # then clip to [0.02, 0.5] to prevent degenerate kernels
-            ls_frac = ann.length_scale_bp / domain_len
-            ls_frac = np.clip(ls_frac, 0.02, 0.5)
+            # --- Length scale from annotation prior ---
+            # Use the annotation's length_scale_bp, which was estimated via
+            # empirical Bayes (marginal likelihood across many representative
+            # domains of the same type) in the priors file, or from the
+            # the dataset's priors file (required).
+            ls_bp = np.clip(ann.length_scale_bp, 50, self.max_length_scale_bp)
+            ls_frac = np.clip(ls_bp / domain_len, 0.02, 0.5)
 
-            # Cap the optimizer's upper search bound to prevent fitting a
-            # length-scale longer than max_length_scale_bp (5kb default).
-            # Without this cap, a 100kb domain could learn ls > 50kb and
-            # produce a nearly flat prediction that masks local DMRs.
+            # Optimizer bounds: use empirical Bayes p10/p90 from the priors
+            # file if available, otherwise default to 0.3x-5x the prior LS.
+            # The p10/p90 bounds come from the distribution of marginal-
+            # likelihood-optimized length scales across many genome-wide
+            # domains of this annotation type.
             max_ls_frac = self.max_length_scale_bp / domain_len
-            ls_upper = min(ls_frac * 8, max(max_ls_frac, ls_frac * 1.5))
+            if ann.ls_lower_bound_bp is not None and ann.ls_upper_bound_bp is not None:
+                ls_lower = max(ann.ls_lower_bound_bp / domain_len, 0.01)
+                ls_upper = min(ann.ls_upper_bound_bp / domain_len, max_ls_frac)
+                # Ensure valid range: lower < initial < upper
+                ls_lower = min(ls_lower, ls_frac * 0.9)
+                ls_upper = max(ls_upper, ls_frac * 1.1)
+            else:
+                ls_lower = max(ls_frac * 0.3, 0.01)
+                ls_upper = min(ls_frac * 5.0, max(max_ls_frac, ls_frac * 2.0))
 
-            # Domain-specific Matern kernel with bounded length-scale
+            # Domain-specific Matern kernel with empirical Bayes bounds
             kernel = (
                 1.0 * Matern(
                     length_scale=ls_frac, nu=2.5,
-                    length_scale_bounds=(ls_frac * 0.2, ls_upper),
+                    length_scale_bounds=(ls_lower, ls_upper),
                 )
                 + WhiteKernel(noise_level=0.001,
                               noise_level_bounds=(1e-6, 0.05))
@@ -560,7 +573,7 @@ class DomainPartitionedGP:
                 continue
 
             gp_data = self.domain_gps.get(ann.name)
-            prior = self.domain_priors.get(ann.name, 0.5)
+            prior = self.domain_priors.get(ann.name, ann.base_methylation)
 
             if gp_data is None:
                 # Domain had < 2 probes: return prior mean with broad uncertainty
@@ -595,10 +608,12 @@ class DomainPartitionedGP:
             weighted_var[mask] += weights * pred_std**2  # weighted sum of variances
             weight_sum[mask] += weights
 
-        # Normalize accumulators; default to prior values for uncovered points
+        # Normalize accumulators; fallback for uncovered points (should not
+        # happen after _fill_gaps, but use intergenic prior as safety net)
         valid = weight_sum > 0
-        y_mean = np.full(n, 0.5)   # fallback mean
-        y_std = np.full(n, 0.2)    # fallback std (broad uncertainty)
+        ig_fallback = self.intergenic_priors["base_methylation"]
+        y_mean = np.full(n, ig_fallback)
+        y_std = np.full(n, 0.15)
         y_mean[valid] = weighted_mean[valid] / weight_sum[valid]
         # Average variance, then take sqrt to get std
         y_std[valid] = np.sqrt(weighted_var[valid] / weight_sum[valid])
@@ -658,13 +673,40 @@ class RegionalDMAnalysis:
         Region start coordinate
     end : int
         Region end coordinate
+    dataset_priors : dict
+        Required. Precomputed empirical priors per annotation type, as
+        produced by compute_methylation_priors.py. Maps annotation type
+        name (e.g. "CGI") to {"base_methylation": float,
+        "length_scale_bp": float, "ls_p10": float, "ls_p90": float}.
     """
 
-    def __init__(self, chrom: str, start: int, end: int):
+    def __init__(self, chrom: str, start: int, end: int,
+                 dataset_priors: Dict):
         self.chrom = chrom
         self.start = start
         self.end = end
         self.region_len = end - start
+
+        if not dataset_priors:
+            raise ValueError(
+                "dataset_priors is required. Run compute_methylation_priors.py "
+                "to generate a priors file for this dataset."
+            )
+
+        # --- Build prior lookup tables from the priors file ---
+        self.base_methylation_priors: Dict[str, float] = {}
+        self.length_scale_priors: Dict[str, float] = {}
+        self.length_scale_bounds: Dict[str, tuple] = {}
+        for ann_type, params in dataset_priors.items():
+            if "base_methylation" in params:
+                self.base_methylation_priors[ann_type] = params["base_methylation"]
+            if "length_scale_bp" in params:
+                self.length_scale_priors[ann_type] = params["length_scale_bp"]
+            if "ls_p10" in params and "ls_p90" in params:
+                self.length_scale_bounds[ann_type] = (
+                    params["ls_p10"], params["ls_p90"]
+                )
+        log.info(f"Using dataset priors for: {list(dataset_priors.keys())}")
 
         # --- Raw data (set by load_methylation) ---
         self.positions = None       # (n_cpgs,) genomic coords, sorted
@@ -859,37 +901,43 @@ class RegionalDMAnalysis:
         # Case-insensitive substring match against known annotation type keys
         name_lower = name.lower()
         ann_type = None
-        for key in DEFAULT_BASE_METHYLATION:
+        for key in self.base_methylation_priors:
             if key.lower() in name_lower:
                 ann_type = key
                 break
 
         if base_methylation is None:
-            if ann_type and self.mean_A is not None:
-                # Use local observed mean from loaded data as a data-driven prior
-                mask = (self.positions >= start) & (self.positions < end)
-                if mask.sum() >= 2:
-                    # Average of group means gives overall expected level
-                    base_methylation = float(np.mean(
-                        np.concatenate([self.mean_A[mask], self.mean_B[mask]])
-                    ))
-                else:
-                    # Fall back to canonical prior if too few probes in domain
-                    base_methylation = DEFAULT_BASE_METHYLATION.get(ann_type, 0.5)
+            if ann_type and ann_type in self.base_methylation_priors:
+                base_methylation = self.base_methylation_priors[ann_type]
             else:
-                # Use canonical biological prior
-                base_methylation = DEFAULT_BASE_METHYLATION.get(ann_type, 0.5)
+                raise ValueError(
+                    f"No base_methylation prior for annotation '{name}' "
+                    f"(matched type: {ann_type}). Ensure the priors file "
+                    f"includes this annotation type."
+                )
 
         if length_scale_bp is None:
-            length_scale_bp = DEFAULT_LENGTH_SCALES.get(ann_type, 500)
+            if ann_type and ann_type in self.length_scale_priors:
+                length_scale_bp = self.length_scale_priors[ann_type]
+            else:
+                raise ValueError(
+                    f"No length_scale_bp prior for annotation '{name}' "
+                    f"(matched type: {ann_type}). Ensure the priors file "
+                    f"includes this annotation type."
+                )
 
         if color is None:
             color = ANNOTATION_COLORS.get(ann_type, "#94a3b8")
+
+        # Look up empirical Bayes bounds (p10/p90) if available
+        bounds = self.length_scale_bounds.get(ann_type)
 
         ann = Annotation(
             name=name, start=start, end=end,
             color=color, base_methylation=base_methylation,
             length_scale_bp=length_scale_bp,
+            ls_lower_bound_bp=bounds[0] if bounds else None,
+            ls_upper_bound_bp=bounds[1] if bounds else None,
             short_label=short_label or name[:6],
         )
         self.annotations.append(ann)
@@ -958,61 +1006,6 @@ class RegionalDMAnalysis:
 
         log.info(f"Loaded {count} annotations from {bed_path}")
 
-    def infer_annotations_from_data(self):
-        """
-        Heuristic fallback: infer domain structure from CpG density.
-
-        Identifies clusters of densely-spaced CpGs (spacing < 50% of median)
-        as likely CpG islands or promoters. This is a rough approximation used
-        when no external annotation file is available.
-
-        Clusters of ≥3 consecutive dense probes are added as "Dense_cluster_N"
-        annotations with a 200bp length-scale (short-range correlation, like a CGI).
-        """
-        if self.positions is None:
-            raise ValueError("Load methylation data first")
-
-        # Inter-probe spacings
-        spacings = np.diff(self.positions)
-        median_spacing = np.median(spacings)
-
-        # Dense = spacing below 50% of median
-        dense_threshold = median_spacing * 0.5
-        in_dense = spacings < dense_threshold
-
-        # Find contiguous runs of dense probes
-        regions = []
-        in_region = False
-        start_idx = 0
-
-        for i, dense in enumerate(in_dense):
-            if dense and not in_region:
-                start_idx = i
-                in_region = True
-            elif not dense and in_region:
-                # Require at least 3 consecutive dense CpGs to call a cluster
-                if i - start_idx >= 3:
-                    regions.append((start_idx, i))
-                in_region = False
-        # Handle run that extends to the end of the array
-        if in_region and len(in_dense) - start_idx >= 3:
-            regions.append((start_idx, len(in_dense)))
-
-        # Add each cluster as an annotation
-        for j, (si, ei) in enumerate(regions):
-            s = int(self.positions[si])
-            # Clamp end index to valid range
-            e = int(self.positions[min(ei, len(self.positions)-1)])
-            self.add_annotation(
-                f"Dense_cluster_{j+1}", s, e,
-                base_methylation=None,      # will be inferred from data
-                length_scale_bp=200,        # short-range, CGI-like
-                color="#06b6d4",
-                short_label=f"Dense{j+1}",
-            )
-
-        log.info(f"Inferred {len(regions)} dense CpG clusters as annotations")
-
     # -----------------------------------------------------------------
     # ANALYSIS
     # -----------------------------------------------------------------
@@ -1044,11 +1037,6 @@ class RegionalDMAnalysis:
 
         # Evenly-spaced prediction grid from region start to end
         grid_positions = np.linspace(self.start, self.end, n_grid)
-
-        # If no annotations were added manually, try to infer from data density
-        if not self.annotations:
-            log.info("No annotations provided — inferring from CpG density...")
-            self.infer_annotations_from_data()
 
         log.info("\n--- Fitting Annotation-Aware GP ---")
         self.results_annotation = self._fit_and_analyze(
@@ -1084,17 +1072,29 @@ class RegionalDMAnalysis:
         -------
         GPDMResults
         """
+        # Build intergenic priors dict from the prior lookup tables
+        ig_priors = {
+            "base_methylation": self.base_methylation_priors.get("Intergenic", 0.65),
+            "length_scale_bp": self.length_scale_priors.get("Intergenic", 800),
+        }
+        ig_bounds = self.length_scale_bounds.get("Intergenic")
+        if ig_bounds:
+            ig_priors["ls_p10"] = ig_bounds[0]
+            ig_priors["ls_p90"] = ig_bounds[1]
+
         # Each group needs its own DomainPartitionedGP instance so they
         # don't share state during gap-filling or fitting
         model_A = DomainPartitionedGP(
-            self.start, self.end, self.annotations
+            self.start, self.end, self.annotations, ig_priors
         )
         model_B = DomainPartitionedGP(
             self.start, self.end,
             # Reconstruct annotation objects to avoid shared mutable state
             [Annotation(a.name, a.start, a.end, a.color,
                        a.base_methylation, a.length_scale_bp,
-                       a.short_label) for a in self.annotations]
+                       a.ls_lower_bound_bp, a.ls_upper_bound_bp,
+                       a.short_label) for a in self.annotations],
+            ig_priors,
         )
 
         # Fit each group's GP to its own observed mean + SE
@@ -1159,7 +1159,7 @@ class RegionalDMAnalysis:
         )
 
     def _call_dmrs(self, grid_positions, diff_mean, prob_pos,
-                   is_sig, min_width_bp):
+                   is_sig, min_width_bp, max_probe_gap_bp=2000):
         """
         Convert per-grid-point significance flags into DMR intervals.
 
@@ -1168,9 +1168,13 @@ class RegionalDMAnalysis:
         2. Merge runs separated by ≤1.5 grid steps (one non-significant point)
            to avoid fragmenting a DMR that briefly dips below the significance
            threshold due to a local probe gap
-        3. Expand single-point DMRs to ±half grid step (each point represents
+        3. Split DMRs at large probe gaps: if a merged DMR spans a stretch
+           of >max_probe_gap_bp with no actual CpG probes, split it there.
+           This prevents the GP from reporting confident DMRs across data
+           deserts where the prediction is pure interpolation.
+        4. Expand single-point DMRs to ±half grid step (each point represents
            a continuous neighborhood, not a single base pair)
-        4. Filter out intervals narrower than min_width_bp
+        5. Filter out intervals narrower than min_width_bp
 
         Parameters
         ----------
@@ -1184,6 +1188,10 @@ class RegionalDMAnalysis:
             Significance flag at each grid point
         min_width_bp : int
             Minimum DMR width to report
+        max_probe_gap_bp : int
+            Maximum gap between consecutive CpG probes before splitting
+            a DMR (default 2000bp). Gaps wider than this indicate a data
+            desert where the GP posterior is pure interpolation.
 
         Returns
         -------
@@ -1226,7 +1234,12 @@ class RegionalDMAnalysis:
             else:
                 merged.append((run_start, run_end))
 
-        # --- Step 3: Convert index pairs to DMR objects ---
+        # --- Step 3: Split DMRs at large probe gaps ---
+        merged = self._split_at_probe_gaps(
+            merged, grid_positions, max_probe_gap_bp
+        )
+
+        # --- Step 4: Convert index pairs to DMR objects ---
         dmrs = []
         half_step = grid_step / 2
         for start_idx, end_idx in merged:
@@ -1237,7 +1250,7 @@ class RegionalDMAnalysis:
                 # a neighborhood of ±half_step, not just one base pair
                 s -= half_step
                 e += half_step
-            # --- Step 4: Width filter ---
+            # --- Step 5: Width filter ---
             if e - s >= min_width_bp:
                 dmr = self._make_dmr(
                     grid_positions, diff_mean, prob_pos,
@@ -1250,6 +1263,91 @@ class RegionalDMAnalysis:
                 dmrs.append(dmr)
 
         return dmrs
+
+    def _split_at_probe_gaps(self, runs, grid_positions, max_gap_bp):
+        """
+        Split merged DMR runs at locations where consecutive CpG probes
+        are separated by more than max_gap_bp.
+
+        The GP interpolates smoothly across probe gaps, which can create
+        false confidence in regions where there is no data. This method
+        finds grid points that fall inside such gaps and splits the DMR
+        so each fragment is anchored by actual observations.
+
+        Parameters
+        ----------
+        runs : list of (start_idx, end_idx)
+            Merged DMR index pairs into grid_positions
+        grid_positions : ndarray
+            The prediction grid
+        max_gap_bp : int
+            Probe gaps wider than this trigger a split
+
+        Returns
+        -------
+        list of (start_idx, end_idx)
+            Possibly more runs than input, with large-gap spans removed
+        """
+        if self.positions is None or len(self.positions) < 2:
+            return runs
+
+        # Precompute probe gap locations: pairs of (gap_start, gap_end)
+        # where gap_end - gap_start > max_gap_bp
+        probe_spacings = np.diff(self.positions)
+        large_gaps = []
+        for i in range(len(probe_spacings)):
+            if probe_spacings[i] > max_gap_bp:
+                large_gaps.append((self.positions[i], self.positions[i + 1]))
+
+        if not large_gaps:
+            return runs
+
+        split_runs = []
+        for run_start, run_end in runs:
+            # Check if any large probe gap falls within this DMR's span
+            dmr_lo = grid_positions[run_start]
+            dmr_hi = grid_positions[run_end]
+
+            # Collect gap midpoints that fall within this DMR
+            split_points = []
+            for gap_lo, gap_hi in large_gaps:
+                # Gap overlaps the DMR if gap starts before DMR ends
+                # and gap ends after DMR starts
+                if gap_lo < dmr_hi and gap_hi > dmr_lo:
+                    gap_mid = (gap_lo + gap_hi) / 2
+                    split_points.append(gap_mid)
+
+            if not split_points:
+                split_runs.append((run_start, run_end))
+                continue
+
+            # Split the run at each gap midpoint
+            split_points.sort()
+            current_start = run_start
+            for mid in split_points:
+                # Find the last grid point before the gap midpoint
+                split_idx = np.searchsorted(
+                    grid_positions[current_start:run_end + 1], mid
+                ) + current_start - 1
+                # Clamp to valid range
+                split_idx = max(current_start, min(split_idx, run_end))
+
+                if split_idx >= current_start:
+                    split_runs.append((current_start, split_idx))
+
+                # Next fragment starts after the gap
+                next_start = split_idx + 1
+                # Advance past any grid points still inside the gap
+                while (next_start <= run_end and
+                       grid_positions[next_start] < mid + (mid - grid_positions[split_idx])):
+                    next_start += 1
+                current_start = next_start
+
+            # Add the remaining tail after the last split
+            if current_start <= run_end:
+                split_runs.append((current_start, run_end))
+
+        return split_runs
 
     def _make_dmr(self, grid, diff_mean, prob_pos, si, ei):
         """

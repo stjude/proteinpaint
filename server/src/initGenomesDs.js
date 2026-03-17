@@ -360,6 +360,25 @@ export async function initGenomesDs(serverconfig) {
 			}
 		}
 
+		if (g.regulatoryAnnotations) {
+			// Validate regulatory annotation files (optional — warn but don't throw)
+			for (const [key, file] of Object.entries(g.regulatoryAnnotations)) {
+				if (!file) continue
+				try {
+					await utils.validate_tabixfile(path.join(serverconfig.tpmasterdir, file))
+					console.log(`  regulatoryAnnotations.${key}: ${file}`)
+				} catch (e) {
+					console.log(
+						`  WARNING: regulatoryAnnotations.${key} (${file}) not available: ${e}. ` +
+							`GPDM DMR analysis will fall back to density-based annotation inference. ` +
+							`Run server/utils/download_regulatory_annotations.sh to download.`
+					)
+					// Remove the entry so getRegulatoryAnnotations() skips it at query time
+					delete g.regulatoryAnnotations[key]
+				}
+			}
+		}
+
 		if (g.hicenzymefragment) {
 			if (!Array.isArray(g.hicenzymefragment)) throw 'hicenzymefragment should be an array'
 			for (const frag of g.hicenzymefragment) {

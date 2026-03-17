@@ -10,6 +10,8 @@ export type DmrConfig = {
 	promoterId?: string
 	group1: { sample: string }[]
 	group2: { sample: string }[]
+	group1Name?: string
+	group2Name?: string
 	settings: { dmr: DMRSettings }
 }
 
@@ -18,6 +20,7 @@ export type DmrDom = {
 	holder: Elem
 	error: Elem
 	loading: Elem
+	diagnosticPanel: Elem
 }
 
 export type BedItem = {

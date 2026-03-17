@@ -116,6 +116,13 @@ export type MinGenome = {
 	majorchr: string
 }
 
+type RegulatoryAnnotations = {
+	/** Tabix-indexed BED file of CpG island coordinates (e.g. UCSC cpgIslandExt) */
+	cpgIsland?: string
+	/** Tabix-indexed BED file of ENCODE cCREs (enhancers, promoters, CTCF sites) */
+	encodeCCRE?: string
+}
+
 export type Genome = MinGenome & {
 	termdbs?: TermDbs
 	proteindomain?: DbStatement
@@ -126,4 +133,6 @@ export type Genome = MinGenome & {
 	geneset?: GeneSet[]
 	hicdomain?: HicDomain
 	minorchr?: string
+	/** Tabix-indexed BED files for regulatory annotations used by GPDM DMR analysis */
+	regulatoryAnnotations?: RegulatoryAnnotations
 }

@@ -1007,6 +1007,10 @@ type Mds3Queries = {
 			/** unit label for promoter values (e.g. 'Average M-value') */
 			unit: string
 		}
+		/** path to precomputed priors JSON from compute_methylation_priors.py.
+		 *  Provides dataset-specific empirical methylation priors per annotation
+		 *  type for the GPDM DMR analysis. If absent, hardcoded defaults are used. */
+		priorsFile?: string
 	}
 	rnaseqGeneCount?: RnaseqGeneCount
 	/** Used to create the top mutated genes UI in the gene

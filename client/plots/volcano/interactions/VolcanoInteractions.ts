@@ -201,7 +201,9 @@ export class VolcanoInteractions {
 				geneName,
 				promoterId,
 				group1: config.samplelst.groups[0].values || [],
-				group2: config.samplelst.groups[1].values || []
+				group2: config.samplelst.groups[1].values || [],
+				group1Name: config.samplelst.groups[0].name,
+				group2Name: config.samplelst.groups[1].name
 			}
 		})
 	}

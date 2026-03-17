@@ -14,6 +14,8 @@ stdin JSON fields:
     group2      : list  — sample names for the comparison group
     annotations : list  — optional annotation dicts with keys:
                           name, start, end, base_methylation, length_scale_bp
+    priors_file : str   — optional path to precomputed priors JSON from
+                          compute_methylation_priors.py (dataset-specific priors)
     nan_threshold: float — max fraction of NaN values to keep a probe (default 0.5)
 
 stdout JSON fields:
@@ -220,6 +222,7 @@ def run_gpdm(params):
     # Optional parameters with sensible defaults
     nan_threshold = float(params.get('nan_threshold', 0.5))  # drop probes with > 50% missing
     annotations = params.get('annotations', [])               # regulatory domain annotations
+    priors_file = params.get('priors_file', None)             # path to precomputed priors JSON
 
     # Read beta matrix and positions from HDF5
     # Note: Query.process_genomic_queries has a bug where it uses chromosome-local
@@ -296,8 +299,25 @@ def run_gpdm(params):
                     grp_data[nans, j] = grp_means[j]
             beta_matrix[mask, :] = grp_data
 
-    # --- Step 3: Initialize GPDM analysis object ---
-    analysis = RegionalDMAnalysis(chrom=chrom, start=start, end=stop)
+    # --- Step 3: Load required dataset-specific priors ---
+    if not priors_file:
+        return {'error': 'priors_file is required. Run compute_methylation_priors.py to generate it.'}
+
+    try:
+        with open(priors_file, 'r') as pf:
+            priors_data = json.load(pf)
+            dataset_priors = priors_data.get('priors', None)
+    except (IOError, json.JSONDecodeError) as exc:
+        return {'error': f'Failed to read priors file ({priors_file}): {exc}'}
+
+    if not dataset_priors:
+        return {'error': f'Priors file ({priors_file}) has no "priors" key or is empty.'}
+
+    # --- Step 4: Initialize GPDM analysis object ---
+    analysis = RegionalDMAnalysis(
+        chrom=chrom, start=start, end=stop,
+        dataset_priors=dataset_priors,
+    )
 
     # Load the cleaned beta matrix; explicitly name groups for logging
     analysis.load_methylation(
@@ -308,23 +328,25 @@ def run_gpdm(params):
         group_B='group2',
     )
 
-    # --- Step 4: Add caller-supplied annotations ---
-    # Annotations come from the ProteinPaint termdb (e.g., CGI tracks, gene
-    # feature annotations). Each annotation refines the DomainPartitionedGP's
-    # prior means and length-scale bounds for that genomic interval.
+    # --- Step 5: Add caller-supplied annotations ---
+    # Annotations come from the server's regulatory annotation query (CpG islands,
+    # ENCODE cCREs) and optionally from the client. The annotation name triggers
+    # type-matching in add_annotation(), which looks up the prior from the
+    # dataset priors file. Only pass explicit base_methylation/length_scale
+    # if the caller provided them, so we don't override the dataset priors.
     for ann in annotations:
         analysis.add_annotation(
             ann['name'],
             int(ann['start']),
             int(ann['end']),
-            base_methylation=float(ann.get('base_methylation', 0.5)),
-            length_scale_bp=int(ann.get('length_scale_bp', 1000)),
+            base_methylation=ann.get('base_methylation'),
+            length_scale_bp=ann.get('length_scale_bp'),
         )
 
-    # --- Step 5: Run annotation-aware GP model ---
+    # --- Step 6: Run annotation-aware GP model ---
     analysis.run()
 
-    # --- Step 6: Serialize annotation-aware DMRs ---
+    # --- Step 7: Serialize annotation-aware DMRs ---
     # max_delta_beta is always positive (absolute peak effect size).
     # mean_delta_beta is signed: positive = group B (group2) > group A (group1) = hyper.
     dmrs = []
@@ -340,6 +362,33 @@ def run_gpdm(params):
                 'probability': float(d.mean_posterior_prob),
             })
 
+    # --- Step 8: Build diagnostic data (raw probes vs GP posterior) ---
+    r = analysis.results_annotation
+    mask_g1 = groups == 'group1'
+    mask_g2 = groups == 'group2'
+
+    # Per-probe raw group means
+    raw_mean_g1 = beta_matrix[mask_g1].mean(axis=0)
+    raw_mean_g2 = beta_matrix[mask_g2].mean(axis=0)
+
+    # Domain info with learned kernel params
+    domains = []
+    for ann in analysis.annotations:
+        ann_type = ann.name.split('_')[0] if '_' in ann.name else ann.name
+        learned = r.learned_params.get(ann.name, {})
+        domains.append({
+            'name': ann.name,
+            'type': ann_type,
+            'start': int(ann.start),
+            'end': int(ann.end),
+            'prior_mean': float(ann.base_methylation),
+            'prior_ls': float(learned.get('hint_ls_bp', ann.length_scale_bp)),
+            'learned_ls': float(learned['learned_ls_bp']) if learned.get('learned_ls_bp') else None,
+        })
+
+    # Probe gap analysis
+    spacings = np.diff(positions).tolist() if len(positions) > 1 else []
+
     return {
         'status': 'ok',
         'dmrs': dmrs,
@@ -350,6 +399,25 @@ def run_gpdm(params):
             'n_samples_group1': n_g1,
             'n_samples_group2': n_g2,
             'region': f'{chrom}:{start}-{stop}',
+        },
+        'diagnostic': {
+            'probes': {
+                'positions': positions.tolist(),
+                'mean_group1': raw_mean_g1.tolist(),
+                'mean_group2': raw_mean_g2.tolist(),
+            },
+            'gp_posterior': {
+                'grid': r.grid_positions.tolist(),
+                'pred_group1': r.pred_A.tolist(),
+                'pred_group2': r.pred_B.tolist(),
+                'std_group1': r.std_A.tolist(),
+                'std_group2': r.std_B.tolist(),
+                'diff_mean': r.diff_mean.tolist(),
+                'ci_lower': r.ci_lower.tolist(),
+                'ci_upper': r.ci_upper.tolist(),
+            },
+            'domains': domains,
+            'probe_spacings': spacings,
         }
     }
 

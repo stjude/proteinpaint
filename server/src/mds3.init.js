@@ -1723,6 +1723,11 @@ async function validate_query_dnaMethylation(ds, genome) {
 			q.samples.push(si)
 		}
 		console.log(`${ds.label}: dnaMethylation HDF5 file validated. Samples:`, samples.length)
+		if (q.priorsFile) {
+			q.priorsFile = path.join(serverconfig.tpmasterdir, q.priorsFile)
+			await utils.file_is_readable(q.priorsFile)
+			console.log(`${ds.label}: dnaMethylation priors file found: ${q.priorsFile}`)
+		}
 		if (q.promoter) {
 			if (!q.promoter.file) throw '.promoter.file missing'
 			q.promoter.file = path.join(serverconfig.tpmasterdir, q.promoter.file)
