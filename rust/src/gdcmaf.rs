@@ -8,7 +8,8 @@
   Output gzip compressed maf file to stdout.
 
   Example of usage:
-    echo '{"host": "https://api.gdc.cancer.gov/data/","columns": ["Hugo_Symbol", "Entrez_Gene_Id", "Center", "NCBI_Build", "Chromosome", "Start_Position"], "fileIdLst": ["8b31d6d1-56f7-4aa8-b026-c64bafd531e7", "b429fcc1-2b59-4b4c-a472-fb27758f6249"]}'|./target/release/gdcmaf
+      headers='{"X-Forwarded-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.…ML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0", "X-Forwarded-For": "127.0.0.1"}'
+    echo '{"host": "https://api.gdc.cancer.gov/data/","columns": ["Hugo_Symbol", "Entrez_Gene_Id", "Center", "NCBI_Build", "Chromosome", "Start_Position"], "fileIdLst": ["8b31d6d1-56f7-4aa8-b026-c64bafd531e7", "b429fcc1-2b59-4b4c-a472-fb27758f6249"], "headers": '$headers'}'|./target/release/gdcmaf
 */
 
 use flate2::Compression;
@@ -140,6 +141,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         //url.push(Path::new(&host).join(&v.as_str().unwrap()).display().to_string());
         url.push(format!("{}/{}", host.trim_end_matches('/'), v.as_str().unwrap()));
     }
+    let headers = file_id_lst_js
+        .get("headers")
+        .expect("missing headers")
+        .as_object()
+        .expect("headers is not an object");
+    let mut req_headers = reqwest::header::HeaderMap::new();
+    for (key, value) in headers {
+        req_headers.insert(
+            reqwest::header::HeaderName::from_bytes(key.as_bytes()).expect("Invalid header key"),
+            reqwest::header::HeaderValue::from_str(value.as_str().expect("Invalid string value"))
+                .expect("Invalid header value"),
+        );
+    }
 
     // read columns as array from input json and convert data type from Vec<Value> to Vec<String>
     let maf_col: Vec<String>;
@@ -177,11 +191,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     //downloading maf files parallelly and merge them into single maf file
     let download_futures = futures::stream::iter(url.into_iter().map(|url| {
+        let req_headers_clone = req_headers.clone();
         async move {
             // !!! should pass headers argument somewhere here !!!
             let client = reqwest::Client::builder()
                 .timeout(Duration::from_secs(60)) // 60-second timeout per request
                 .connect_timeout(Duration::from_secs(15))
+                .default_headers(req_headers_clone.clone())
                 .build()
                 .map_err(|_e| {
                     let client_error = ErrorEntry {
