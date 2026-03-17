@@ -26,16 +26,26 @@ tape('basic bedj & bw test, could be expanded', test => {
 			{ type: 'bedj', name: 'refgene', file: 'anno/refGene.hg38.test.gz' },
 			{ type: 'bedj', name: 'good bed', file: 'files/hg38/TermdbTest/trackLst/bed1.gz' },
 			{ type: 'bedj', name: 'bad bed', file: 'files/hg38/TermdbTest/trackLst/bed' },
-			{ type: 'bigwig', name: 'good bw', file: 'files/hg38/TermdbTest/trackLst/bw1.bw' },
+			{ type: 'bigwig', name: 'good bw', file: 'files/hg38/TermdbTest/trackLst/bw1.bw', height: 123 },
 			{ type: 'bigwig', name: 'bad bw', file: 'files/hg38/TermdbTest/trackLst/bw' },
 			{
 				type: 'bedj',
-				name: 'items',
+				name: 'bedItems',
 				bedItems: [
 					{ chr: 'chr17', start: 7683642, stop: 7688710, color: 'red' },
 					{ chr: 'chr17', start: 7673116, stop: 7674386, color: 'green' },
 					{ chr: 'chr17', start: 7673016, stop: 7674286, color: 'purple' }
 				]
+			},
+			{
+				type: 'bigwig',
+				name: 'bw imgData',
+				height: 49,
+				imgData: {
+					minv: -12,
+					maxv: 34,
+					src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAAxCAIAAACtcFqcAAAA+klEQVR4nO3WwQkAIBDAMHXyG90lCoIkE/TZPTMLAIDOeR0AAPAbgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAELtGdwHiiEfG0gAAAABJRU5ErkJggg=='
+				}
 			}
 		]
 	})
@@ -69,13 +79,13 @@ tape('basic bedj & bw test, could be expanded', test => {
 		{
 			// bw file as custom tk
 			const t = bb.tklst[3]
-			test.equal(t.name, 'good bw', 'tk named good bw exists')
+			test.equal(t.name, 'good bw', 'tk named "good bw" exists')
 			const b = t.img.node().getBBox()
-			test.ok(b.width > 500 && b.height == 50, 'good bw <image> width>500 & height=50')
+			test.ok(b.width > 500 && b.height == 123, 'good bw <image> width>500 & height=123')
 			const leftAxisTickLabels = t.leftaxis.selectAll('text').nodes()
 			test.equal(leftAxisTickLabels.length, 2, 'there are two <text> in left axis')
-			test.ok(Number(leftAxisTickLabels[1].innerHTML) > 100, 'left axis bottom tick value >100')
-			test.equal(leftAxisTickLabels[0].innerHTML, '0', 'left axis top tick value=0')
+			test.ok(Number(leftAxisTickLabels[1].innerHTML) > 100, 'left axis top tick value >100')
+			test.equal(leftAxisTickLabels[0].innerHTML, '0', 'left axis bottom tick value=0')
 		}
 		{
 			// invalid bw
@@ -89,9 +99,20 @@ tape('basic bedj & bw test, could be expanded', test => {
 		{
 			// custom list of bed items
 			const t = bb.tklst[5]
-			test.equal(t.name, 'items', 'tk named "items" exists')
+			test.equal(t.name, 'bedItems', 'tk named "bedItems" exists')
 			const b = t.img.node().getBBox()
-			test.ok(b.width > 500 && b.height == 25, '"items" <image> width>500 & height=25 as there are two stacks')
+			test.ok(b.width > 500 && b.height == 25, '"bedItems" <image> width>500 & height=25 as there are two stacks')
+		}
+		{
+			// imgData via bw tk
+			const t = bb.tklst[6]
+			test.equal(t.name, 'bw imgData', 'tk named "bw imgData" exists')
+			const b = t.img.node().getBBox()
+			test.ok(b.width > 500 && b.height == 49, 'bw imgData <image> width>500 & height=49')
+			const leftAxisTickLabels = t.leftaxis.selectAll('text').nodes()
+			test.equal(leftAxisTickLabels.length, 2, 'there are two <text> in left axis')
+			test.equal(leftAxisTickLabels[1].innerHTML, '34', 'left axis top tick value is 34')
+			test.equal(leftAxisTickLabels[0].innerHTML, '−12', 'left axis bottom tick value is -12')
 		}
 		if (test['_ok']) holder.remove()
 		test.end()
