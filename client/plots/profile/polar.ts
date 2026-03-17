@@ -12,6 +12,7 @@ import { renderTable } from '#dom'
  * Work arounds until profilePlot is migrated to ts.
  */
 class ProfilePolar extends profilePlot {
+	static type = 'profilePolar'
 	readonly radius = 250
 	readonly arcGenerator = d3.arc().innerRadius(0)
 	angle!: number

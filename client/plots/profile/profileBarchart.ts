@@ -9,6 +9,7 @@ const stepx = 500
 const barwidth = 400
 
 class profileBarchart extends profilePlot {
+	static type = 'profileBarchart'
 	additionalInputs: any[]
 	componentNames!: { value: string; label: string }[]
 	configProfileComponent: any
