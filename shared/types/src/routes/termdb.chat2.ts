@@ -120,7 +120,7 @@ export type plot_type = {
 	type: 'plot'
 	/** The type of plot to be displayed on the UI.
 	 *  Standard categories are listed; datasets may define additional custom categories. */
-	plot: 'summary' | 'dge' | 'survival' | 'matrix' | 'sampleScatter' | 'hierCluster'
+	plot: 'summary' | 'dge' | 'survival' | 'matrix' | 'sampleScatter' | 'hierCluster' | 'lollipop'
 }
 
 export type resource_type = {

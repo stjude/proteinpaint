@@ -87,7 +87,10 @@ const DIAGNOSIS_GROUP_KEYWORDS: string[] = ['subtype', 'diagnosis group', 'group
 
 export function determineAmbiguousGenePrompt(user_prompt: string, relevant_genes: string[], dataset_json: any): string {
 	if (relevant_genes.length === 0) return ''
-	const promptLower = user_prompt.toLowerCase()
+	// Remove gene names from the prompt so they don't accidentally match keywords
+	// (e.g. a gene named "EXPRESSION" shouldn't count as a feature keyword)
+	let promptWithoutGenes = user_prompt.toLowerCase()
+
 	const exclude_keywords: string[] = dataset_json?.ExcludedKeywords ?? []
 	if (exclude_keywords.length > 0) {
 		const gene_group_intersection = exclude_keywords.filter(x => relevant_genes.includes(x.toLowerCase()))
@@ -95,21 +98,13 @@ export function determineAmbiguousGenePrompt(user_prompt: string, relevant_genes
 			// If any of the relevant genes are in the excluded keywords list its possible the user is referring to a diagnosis group (named after a gene) rather than the gene itself. If the prompt contains words like "subtype", "diagnosis group", "group", "category", "class", "cluster" then we can infer the user is likely referring to a diagnosis group rather than the gene itself. If not, we should still treat this as an ambiguous gene/diagnosis group prompt and ask the user to clarify.
 			// Check if any gene feature keyword is present in the remaining prompt
 			for (const keyword of DIAGNOSIS_GROUP_KEYWORDS) {
-				if (promptLower.includes(keyword)) {
+				if (promptWithoutGenes.includes(keyword)) {
 					return ''
 				}
 			}
-			return (
-				'Your query includes terms (' +
-				gene_group_intersection.join(', ') +
-				') that matches both a gene name and dataset group/subtype, so it is not clear whether you are referring to the gene itself or a diagnosis group/subtype named after the gene. Please rephrase your question to clarify whether you are asking about the gene or a diagnosis group/subtype.'
-			)
 		}
 	}
 
-	// Remove gene names from the prompt so they don't accidentally match keywords
-	// (e.g. a gene named "EXPRESSION" shouldn't count as a feature keyword)
-	let promptWithoutGenes = promptLower
 	for (const gene of relevant_genes) {
 		const escaped = gene.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 		promptWithoutGenes = promptWithoutGenes.replace(new RegExp(escaped, 'g'), '')
