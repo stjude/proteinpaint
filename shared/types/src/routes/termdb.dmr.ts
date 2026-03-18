@@ -1,6 +1,13 @@
 import type { Filter } from '../filter.ts'
 import type { RoutePayload } from './routeApi.ts'
 
+/** Regulatory annotation passed to the GPDM Python analysis pipeline */
+export type GpdmAnnotation = {
+	name: string
+	start: number
+	end: number
+}
+
 export type TermdbDmrRequest = {
 	genome: string
 	dslabel: string
@@ -11,10 +18,24 @@ export type TermdbDmrRequest = {
 	chr: string
 	start: number
 	stop: number
-	/** optional regulatory domain annotations for the GP model */
-	annotations?: DmrAnnotation[]
 	/** max fraction of NaN per probe before dropping (default 0.5) */
 	nan_threshold?: number
+	/** bp flanking each CpG island used to derive Shore annotations (default 2000) */
+	shoreSize?: number
+	/** colors for the GP Model track PNG */
+	colors?: { group1: string; group2: string; hyper: string; hypo: string }
+	/** PNG resolution in dots per inch (default 100) */
+	trackDpi?: number
+	/** y-axis padding above and below the 0–1 beta range (default 0.1) */
+	trackYPad?: number
+	/** block track width in pixels — when provided with trackHeight, server returns a GP Model PNG */
+	width?: number
+	/** block track height in pixels */
+	trackHeight?: number
+	/** display name for group1 (e.g. from volcano plot) */
+	group1Name?: string
+	/** display name for group2 (e.g. from volcano plot) */
+	group2Name?: string
 	filter?: Filter
 	__protected__?: any
 }
@@ -22,14 +43,6 @@ export type TermdbDmrRequest = {
 type Sample = {
 	sampleId: number | string
 	sample: string
-}
-
-type DmrAnnotation = {
-	name: string
-	start: number
-	end: number
-	base_methylation?: number
-	length_scale_bp?: number
 }
 
 export type DmrAnnotationItem = {
@@ -85,6 +98,8 @@ export type TermdbDmrSuccessResponse = {
 	annotations?: DmrAnnotationItem[]
 	/** Diagnostic data: raw probes, GP posterior, domain params */
 	diagnostic?: DmrDiagnostic
+	/** Base64 PNG data URI of the GP Model plot, for embedding as a bigwig imgData track */
+	trackImg?: string
 }
 
 export type TermdbDmrErrorResponse = {

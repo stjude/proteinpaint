@@ -1,34 +1,27 @@
 import { PlotBase } from '../PlotBase.ts'
 import { getCompInit, copyMerge, type RxComponent } from '#rx'
-import { sayerror } from '#dom'
+import { sayerror, table2col, renderTable } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import type { TermdbDmrResponse, DmrDiagnostic } from '#types'
 import type { DmrConfig, DmrDom, BedItem } from './DmrTypes.ts'
 import { getDefaultDMRSettings } from './settings/defaults.ts'
 
-/** Colors for regulatory annotation types, matching GPDM core.py ANNOTATION_COLORS */
-const ANNOTATION_COLORS: Record<string, string> = {
-	CGI: '#06b6d4',
-	Shore: '#22d3ee',
-	Promoter: '#8b5cf6',
-	Enhancer: '#f59e0b',
-	CTCF: '#ef4444'
-}
-
 class DmrPlot extends PlotBase implements RxComponent {
 	static type = 'dmr'
 	type = DmrPlot.type
 	declare dom: DmrDom
 	blockInstance: InstanceType<any> | null = null
+	analyzedRegion: { chr: string; start: number; stop: number } | null = null
 
 	constructor(opts: any, api: any) {
 		super(opts, api)
 		this.dom = {
 			header: opts?.header,
 			holder: opts.holder.append('div'),
+			rerunBar: opts.holder.append('div').style('display', 'none'),
 			error: opts.holder.append('div'),
-			loading: opts.holder.append('div').text('Running DMR analysis…'),
+			loading: opts.holder.append('div').text('Running DMR analysis\u2026'),
 			diagnosticPanel: opts.holder.append('div').style('display', 'none')
 		}
 	}
@@ -49,11 +42,12 @@ class DmrPlot extends PlotBase implements RxComponent {
 
 		this.dom.holder.selectAll('*').remove()
 		this.dom.error.selectAll('*').remove()
+		this.dom.rerunBar.style('display', 'none')
 		this.dom.loading.style('display', 'block')
 
 		try {
-			const { geneName, group1, group2, settings } = config
-			const { genome, dslabel } = this.app.vocabApi.vocab
+			const { geneName, settings } = config
+			const { genome } = this.app.vocabApi.vocab
 
 			const geneResult = await dofetch3('genelookup', {
 				body: { deep: 1, input: geneName, genome }
@@ -66,13 +60,54 @@ class DmrPlot extends PlotBase implements RxComponent {
 			const start = Math.max(0, gm.start - settings.dmr.pad)
 			const stop = gm.stop + settings.dmr.pad
 
+			await this.runAnalysis(chr, start, stop)
+		} catch (e: unknown) {
+			const msg = e instanceof Error ? e.message : String(e)
+			sayerror(this.dom.error, msg)
+			this.dom.loading.style('display', 'none')
+		}
+	}
+
+	async runAnalysis(chr: string, start: number, stop: number) {
+		const config = this.state.config as DmrConfig
+		const { group1, group2, settings } = config
+		const { genome, dslabel } = this.app.vocabApi.vocab
+
+		this.dom.holder.selectAll('*').remove()
+		this.dom.error.selectAll('*').remove()
+		this.dom.diagnosticPanel.selectAll('*').remove()
+		this.dom.diagnosticPanel.style('display', 'none')
+		this.dom.rerunBar.style('display', 'none')
+		this.dom.loading.style('display', 'block')
+		this.blockInstance = null
+
+		try {
 			const dmrResult: TermdbDmrResponse = await dofetch3('termdb/dmr', {
-				body: { genome, dslabel, chr, start, stop, group1, group2 }
+				body: {
+					genome,
+					dslabel,
+					chr,
+					start,
+					stop,
+					group1,
+					group2,
+					width: settings.dmr.blockWidth,
+					trackHeight: settings.dmr.trackHeight,
+					nan_threshold: settings.dmr.nanThreshold,
+					shoreSize: settings.dmr.shoreSize,
+					colors: settings.dmr.colors,
+					trackDpi: settings.dmr.trackDpi,
+					trackYPad: settings.dmr.trackYPad,
+					group1Name: config.group1Name,
+					group2Name: config.group2Name
+				}
 			})
 			if ('error' in dmrResult) {
 				sayerror(this.dom.error, dmrResult.error)
 				throw new Error(dmrResult.error)
 			}
+
+			this.analyzedRegion = { chr, start, stop }
 
 			const genomeObj = this.app.opts.genome
 			const tklst: { type: string; name: string; bedItems?: BedItem[]; __isgene?: boolean }[] = []
@@ -97,9 +132,23 @@ class DmrPlot extends PlotBase implements RxComponent {
 						chr: a.chr,
 						start: a.start,
 						stop: a.stop,
-						color: ANNOTATION_COLORS[a.type] || '#94a3b8'
+						color: settings.dmr.annotationColors[a.type] || '#94a3b8'
 					}))
 				})
+			}
+
+			// Add GP Model as a bigwig imgData track when the server returns a PNG
+			if (dmrResult.trackImg) {
+				tklst.push({
+					type: 'bigwig',
+					name: 'GP Model',
+					height: settings.dmr.trackHeight,
+					imgData: {
+						minv: 0,
+						maxv: 1,
+						src: dmrResult.trackImg
+					}
+				} as any)
 			}
 
 			const { Block } = await import('#src/block')
@@ -111,10 +160,12 @@ class DmrPlot extends PlotBase implements RxComponent {
 				stop,
 				tklst,
 				nobox: true,
-				width: settings.dmr.blockWidth
+				width: settings.dmr.blockWidth,
+				onCoordinateChange: (rglst: { chr: string; start: number; stop: number }[]) =>
+					this.onBlockCoordinateChange(rglst)
 			})
 			this.renderLegend(!!dmrResult.annotations?.length)
-			if (dmrResult.diagnostic) this.renderDiagnostic(dmrResult.diagnostic, dmrResult.dmrs, chr, start, stop)
+			if (dmrResult.diagnostic) this.renderDiagnosticStats(dmrResult.diagnostic, dmrResult.dmrs)
 		} catch (e: unknown) {
 			const msg = e instanceof Error ? e.message : String(e)
 			sayerror(this.dom.error, msg)
@@ -122,177 +173,30 @@ class DmrPlot extends PlotBase implements RxComponent {
 		this.dom.loading.style('display', 'none')
 	}
 
-	renderDiagnostic(
-		diag: DmrDiagnostic,
-		dmrs: { start: number; stop: number; direction: string }[],
-		_chr: string,
-		viewStart: number,
-		viewStop: number
-	) {
+	onBlockCoordinateChange(rglst: { chr: string; start: number; stop: number }[]) {
+		if (!this.analyzedRegion || !rglst.length) return
+		const r = rglst[0]
+		const a = this.analyzedRegion
+		if (r.chr === a.chr && r.start === a.start && r.stop === a.stop) {
+			this.dom.rerunBar.style('display', 'none')
+			return
+		}
+
+		const coordStr = `${r.chr}:${r.start}-${r.stop}`
+		this.dom.rerunBar.selectAll('*').remove()
+		this.dom.rerunBar.style('display', 'block').style('padding', '4px 0')
+		this.dom.rerunBar
+			.append('button')
+			.text(`Re-run DMR analysis (${coordStr})`)
+			.on('click', () => this.runAnalysis(r.chr, r.start, r.stop))
+	}
+
+	renderDiagnosticStats(diag: DmrDiagnostic, dmrs: { start: number; stop: number; direction: string }[]) {
 		const panel = this.dom.diagnosticPanel
 		panel.selectAll('*').remove()
 		panel.style('display', 'block')
 
-		const block = this.blockInstance as any
-		if (!block) return
-
-		const trackH = 150
-		const { probes, gp_posterior: gp } = diag
-
-		const tk: any = {
-			name: 'GP Model',
-			hidden: false,
-			toppad: 5,
-			bottompad: 0,
-			height_main: trackH,
-			height: trackH,
-			yoff: 0,
-			subpanels: []
-		}
-
-		tk.g = block.gbase.append('g')
-		tk.gmiddle = tk.g.append('g').attr('transform', `translate(${block.leftheadw + block.lpad},0)`)
-		tk.tkbodybgrect = tk.gmiddle
-			.append('rect')
-			.attr('fill', 'white')
-			.attr('fill-opacity', 0)
-			.attr('width', block.width)
-			.attr('height', trackH)
-		tk.glider = tk.gmiddle.append('g').style('cursor', 'default')
-
-		tk.gleft = tk.g.append('g').attr('transform', `translate(${block.leftheadw},0)`)
-		tk.gleft
-			.append('text')
-			.attr('x', -5)
-			.attr('y', trackH / 2)
-			.attr('text-anchor', 'end')
-			.attr('dominant-baseline', 'middle')
-			.attr('font-size', '12px')
-			.attr('font-weight', 'bold')
-			.attr('fill', '#333')
-			.text('GP Model')
-
-		tk.gright = tk.g
-			.append('g')
-			.attr('transform', `translate(${block.leftheadw + block.lpad + block.width + block.rpad},0)`)
-
-		block.tklst.push(tk)
-		block.block_setheight()
-
-		const xScale = (pos: number) => ((pos - viewStart) / (viewStop - viewStart)) * block.width
-		const yPad = 12
-		const yScale = (beta: number) => yPad + (1 - beta) * (trackH - 2 * yPad)
-		const glider = tk.glider
-
-		// DMR shading
-		for (const dmr of dmrs) {
-			glider
-				.append('rect')
-				.attr('x', xScale(dmr.start))
-				.attr('y', 0)
-				.attr('width', Math.max(1, xScale(dmr.stop) - xScale(dmr.start)))
-				.attr('height', trackH)
-				.attr('fill', dmr.direction === 'hyper' ? '#e66101' : '#5e81f4')
-				.attr('opacity', 0.06)
-		}
-
-		// Y-axis gridlines and labels
-		for (const tick of [0, 0.25, 0.5, 0.75, 1.0]) {
-			const y = yScale(tick)
-			glider
-				.append('line')
-				.attr('x1', 0)
-				.attr('x2', block.width)
-				.attr('y1', y)
-				.attr('y2', y)
-				.attr('stroke', '#e5e7eb')
-				.attr('stroke-width', 0.5)
-			tk.gright
-				.append('text')
-				.attr('x', 5)
-				.attr('y', y + 3)
-				.attr('font-size', '9px')
-				.attr('fill', '#999')
-				.text(tick.toFixed(2))
-		}
-
-		// GP credible bands
-		for (const [pred, std, color] of [
-			[gp.pred_group1, gp.std_group1, '#5e81f4'],
-			[gp.pred_group2, gp.std_group2, '#e66101']
-		] as [number[], number[], string][]) {
-			const points = gp.grid.map((x, i) => ({
-				x: xScale(x),
-				lo: yScale(Math.max(0, pred[i] - 1.96 * std[i])),
-				hi: yScale(Math.min(1, pred[i] + 1.96 * std[i]))
-			}))
-			const d =
-				'M' +
-				points.map(p => `${p.x},${p.hi}`).join('L') +
-				'L' +
-				[...points]
-					.reverse()
-					.map(p => `${p.x},${p.lo}`)
-					.join('L') +
-				'Z'
-			glider.append('path').attr('d', d).attr('fill', color).attr('opacity', 0.1)
-		}
-
-		// GP posterior lines
-		const mkLine = (xs: number[], ys: number[]) => 'M' + xs.map((x, i) => `${xScale(x)},${yScale(ys[i])}`).join('L')
-		glider
-			.append('path')
-			.attr('d', mkLine(gp.grid, gp.pred_group1))
-			.attr('stroke', '#3b5ee6')
-			.attr('stroke-width', 1.5)
-			.attr('fill', 'none')
-		glider
-			.append('path')
-			.attr('d', mkLine(gp.grid, gp.pred_group2))
-			.attr('stroke', '#c04e00')
-			.attr('stroke-width', 1.5)
-			.attr('fill', 'none')
-
-		// Raw probe dots
-		for (let i = 0; i < probes.positions.length; i++) {
-			const cx = xScale(probes.positions[i])
-			for (const [y, color] of [
-				[probes.mean_group1[i], '#5e81f4'],
-				[probes.mean_group2[i], '#e66101']
-			] as [number, string][]) {
-				glider
-					.append('circle')
-					.attr('cx', cx)
-					.attr('cy', yScale(y))
-					.attr('r', 2.5)
-					.attr('fill', color)
-					.attr('opacity', 0.6)
-			}
-		}
-
-		// Inline legend — use actual group names from volcano if available
-		const cfg = this.state.config as DmrConfig
-		const g1Label = cfg.group1Name || 'Group1 (ref)'
-		const g2Label = cfg.group2Name || 'Group2 (comp)'
-		for (const [i, label, color] of [
-			[0, g1Label, '#5e81f4'],
-			[1, g2Label, '#e66101']
-		] as [number, string, string][]) {
-			glider
-				.append('circle')
-				.attr('cx', block.width - 8)
-				.attr('cy', 8 + i * 14)
-				.attr('r', 3)
-				.attr('fill', color)
-			glider
-				.append('text')
-				.attr('x', block.width - 14)
-				.attr('y', 11 + i * 14)
-				.attr('font-size', '9px')
-				.attr('fill', '#555')
-				.attr('text-anchor', 'end')
-				.text(label)
-		}
+		const { probes } = diag
 
 		// Collapsible stats panel
 		const toggle = panel.append('div').attr('style', 'cursor:pointer;font-size:12px;color:#888;padding:2px 0')
@@ -300,7 +204,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 		let expanded = false
 		toggle.text('+ Diagnostic details').on('click', () => {
 			expanded = !expanded
-			toggle.text((expanded ? '− ' : '+ ') + 'Diagnostic details')
+			toggle.text((expanded ? '\u2212 ' : '+ ') + 'Diagnostic details')
 			statsContent.style('display', expanded ? 'block' : 'none')
 		})
 
@@ -313,8 +217,8 @@ class DmrPlot extends PlotBase implements RxComponent {
 				? probes.positions.length / ((probes.positions[probes.positions.length - 1] - probes.positions[0]) / 1000)
 				: 0
 
-		const table = statsContent.append('table').attr('style', 'border-collapse:collapse;font-size:12px')
-		for (const [label, value] of [
+		const t = table2col({ holder: statsContent, disableScroll: true })
+		for (const [k, v] of [
 			['Probes in region', String(probes.positions.length)],
 			['Probe density', `${density.toFixed(1)} probes/kb`],
 			['Median spacing', `${medianSpacing.toFixed(0)} bp`],
@@ -322,9 +226,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 			['Gaps > 1kb', String(gapsOver1kb)],
 			['DMRs called', String(dmrs.length)]
 		] as [string, string][]) {
-			const tr = table.append('tr')
-			tr.append('td').attr('style', 'padding:2px 12px 2px 0;color:#666').text(label)
-			tr.append('td').attr('style', 'padding:2px 0;font-weight:bold').text(value)
+			t.addRow(k, v)
 		}
 
 		const namedDomains = diag.domains.filter(d => d.type !== 'Intergenic')
@@ -333,26 +235,34 @@ class DmrPlot extends PlotBase implements RxComponent {
 				.append('div')
 				.attr('style', 'font-size:12px;font-weight:bold;margin-top:8px;color:#555')
 				.text('Domain GP Parameters')
-			const dtable = statsContent.append('table').attr('style', 'border-collapse:collapse;font-size:11px')
-			const dhead = dtable.append('tr')
-			for (const h of ['Domain', 'Type', 'Prior Mean', 'Adaptive LS (bp)', 'Learned LS (bp)'])
-				dhead
-					.append('th')
-					.attr('style', 'padding:2px 8px;text-align:left;border-bottom:1px solid #ddd;color:#666')
-					.text(h)
-			for (const d of namedDomains) {
-				const tr = dtable.append('tr')
-				const cells = [
-					d.name.length > 25 ? d.name.slice(0, 22) + '…' : d.name,
-					d.type,
-					d.prior_mean.toFixed(2),
-					String(d.prior_ls)
-				]
-				for (const text of cells) tr.append('td').attr('style', 'padding:2px 8px').text(text)
-				tr.append('td')
-					.attr('style', 'padding:2px 8px;font-weight:bold')
-					.text(d.learned_ls != null ? d.learned_ls.toFixed(0) : '—')
-			}
+			renderTable({
+				div: statsContent,
+				header: { allowSort: true },
+				columns: [
+					{ label: 'Domain', sortable: true },
+					{ label: 'Type', sortable: true },
+					{ label: 'Prior Mean', sortable: true },
+					{ label: 'Adaptive LS (bp)', sortable: true },
+					{
+						label: 'Learned LS (bp)',
+						sortable: true,
+						tooltip:
+							'\u2014 means the optimizer had no probes in this domain or hit its bounds; the adaptive LS was used instead'
+					}
+				],
+				rows: namedDomains.map(d => [
+					{ value: d.name.length > 25 ? d.name.slice(0, 22) + '\u2026' : d.name },
+					{ value: d.type },
+					{ value: d.prior_mean.toFixed(2) },
+					{ value: String(d.prior_ls) },
+					{ value: d.learned_ls != null ? d.learned_ls.toFixed(0) : '\u2014' }
+				]),
+				noRadioBtn: true,
+				showLines: false,
+				striped: true,
+				allowRestoreRowOrder: true,
+				maxHeight: '30vh'
+			})
 		}
 	}
 
@@ -381,11 +291,19 @@ class DmrPlot extends PlotBase implements RxComponent {
 			}
 		}
 
-		addRow('DMR', [
-			['Hypermethylated', '#e66101'],
-			['Hypomethylated', '#5e81f4']
+		const config = this.state.config as DmrConfig
+		const { colors } = config.settings.dmr
+		const g1 = config.group1Name || 'Group 1'
+		const g2 = config.group2Name || 'Group 2'
+		addRow('GP Model', [
+			[`${g1} (case)`, colors.group1],
+			[`${g2} (reference)`, colors.group2]
 		])
-		if (hasAnnotations) addRow('cCRE', Object.entries(ANNOTATION_COLORS) as [string, string][])
+		addRow('DMR', [
+			['Hypermethylated', colors.hyper],
+			['Hypomethylated', colors.hypo]
+		])
+		if (hasAnnotations) addRow('cCRE', Object.entries(config.settings.dmr.annotationColors) as [string, string][])
 	}
 }
 

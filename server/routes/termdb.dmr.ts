@@ -44,11 +44,7 @@ function init({ genomes }) {
 			if (group1.length < 3) throw new Error(`Need at least 3 samples in group1, got ${group1.length}`)
 			if (group2.length < 3) throw new Error(`Need at least 3 samples in group2, got ${group2.length}`)
 
-			// Merge client-supplied annotations with server-side regulatory annotations
-			// from tabix-indexed BED files (CpG islands, ENCODE cCREs)
-			const clientAnnotations = q.annotations || []
-			const regulatoryAnnotations = await getRegulatoryAnnotations(genome, q.chr, q.start, q.stop)
-			const annotations = [...clientAnnotations, ...regulatoryAnnotations]
+			const annotations = await getRegulatoryAnnotations(genome, q.chr, q.start, q.stop, q.shoreSize)
 
 			const gpdmInput: Record<string, unknown> = {
 				h5file: ds.queries.dnaMethylation.file,
@@ -58,8 +54,15 @@ function init({ genomes }) {
 				group1,
 				group2,
 				annotations,
-				nan_threshold: q.nan_threshold ?? 0.5,
-				priors_file: ds.queries.dnaMethylation.priorsFile
+				nan_threshold: q.nan_threshold,
+				priors_file: ds.queries.dnaMethylation.priorsFile,
+				width: q.width,
+				trackHeight: q.trackHeight,
+				group1Name: q.group1Name,
+				group2Name: q.group2Name,
+				colors: q.colors,
+				trackDpi: q.trackDpi,
+				trackYPad: q.trackYPad
 			}
 
 			const time1 = Date.now()
@@ -69,7 +72,7 @@ function init({ genomes }) {
 
 			// Build annotation items for client visualization.
 			// Extract the type prefix from the annotation name (e.g. "CGI_chr7_123" → "CGI")
-			const annotationItems = regulatoryAnnotations.map(a => {
+			const annotationItems = annotations.map(a => {
 				const typePart = a.name.split('_')[0]
 				return { name: a.name, chr: q.chr, start: a.start, stop: a.end, type: typePart }
 			})
@@ -78,7 +81,8 @@ function init({ genomes }) {
 				status: 'ok',
 				dmrs: result.dmrs,
 				annotations: annotationItems,
-				diagnostic: result.diagnostic
+				diagnostic: result.diagnostic,
+				trackImg: result.trackImg
 			} as TermdbDmrSuccessResponse)
 		} catch (e: unknown) {
 			const msg = e instanceof Error ? e.message : String(e)

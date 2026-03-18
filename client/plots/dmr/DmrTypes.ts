@@ -18,6 +18,7 @@ export type DmrConfig = {
 export type DmrDom = {
 	header: Elem
 	holder: Elem
+	rerunBar: Elem
 	error: Elem
 	loading: Elem
 	diagnosticPanel: Elem

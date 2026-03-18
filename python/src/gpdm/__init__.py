@@ -1,21 +1,4 @@
-"""
-GPDM — Gaussian Process Differential Methylation
-Regional annotation-aware differential methylation analysis.
-"""
-
-from .core import (
-    RegionalDMAnalysis,
-    Annotation,
-    DMR,
-    GPDMResults,
-    DomainPartitionedGP,
-)
+from .core import run_dmr, Annotation, DMR, GPDMResults
 
 __version__ = "0.1.0"
-__all__ = [
-    "RegionalDMAnalysis",
-    "Annotation",
-    "DMR",
-    "GPDMResults",
-    "DomainPartitionedGP",
-]
+__all__ = ["run_dmr", "Annotation", "DMR", "GPDMResults"]
