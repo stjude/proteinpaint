@@ -239,10 +239,30 @@ class DmrPlot extends PlotBase implements RxComponent {
 				div: statsContent,
 				header: { allowSort: true },
 				columns: [
-					{ label: 'Domain', sortable: true },
-					{ label: 'Type', sortable: true },
-					{ label: 'Prior Mean', sortable: true },
-					{ label: 'Adaptive LS (bp)', sortable: true },
+					{
+						label: 'Domain',
+						sortable: true,
+						tooltip:
+							'Regulatory annotation name in the format Type_chr_start (e.g. CGI_chr14_100824186). Intergenic segments are filled in automatically for regions not covered by any known annotation.'
+					},
+					{
+						label: 'Type',
+						sortable: true,
+						tooltip:
+							'Annotation type derived from the name prefix: CGI (CpG island), Shore (\u00b12kb flanking a CGI per Irizarry et al. 2009), Promoter, Enhancer, CTCF, or Intergenic. Each type uses its own dataset-derived priors.'
+					},
+					{
+						label: 'Prior Mean',
+						sortable: true,
+						tooltip:
+							'Dataset-derived mean beta value for this annotation type, computed by compute_methylation_priors.py across all probes of this type in the dataset.'
+					},
+					{
+						label: 'Adaptive LS (bp)',
+						sortable: true,
+						tooltip:
+							'Dataset-derived length-scale initialisation for this domain, from compute_methylation_priors.py. The GP optimizer uses this as its starting point, bounded by the empirical p10\u2013p90 range. Reflects how spatially smooth methylation tends to be across this annotation type in this dataset.'
+					},
 					{
 						label: 'Learned LS (bp)',
 						sortable: true,
