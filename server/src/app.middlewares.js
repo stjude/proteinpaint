@@ -117,9 +117,10 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 		log(req)
 
 		let ds
-		let { genome, dslabel, mds3, dsname } = req.query
+		let { genome, dslabel, mds3, dsname, downloadgdc } = req.query
 		dslabel = dslabel || mds3 || dsname
-		if (!dslabel && req.path.startsWith('/gdc')) {
+		console.log(121, req.path)
+		if (!dslabel && (req.path.startsWith('/gdc') || req.query.downloadgdc)) {
 			genome = 'hg38'
 			dslabel = 'GDC'
 		}
