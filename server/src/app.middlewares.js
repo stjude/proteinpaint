@@ -14,6 +14,7 @@ import fs from 'fs'
 import crypto from 'crypto'
 import { ReqResCache } from '@sjcrh/augen'
 import { abortCtrlBy } from './xfetch.js'
+import { mayLog } from '#src/helpers.ts'
 
 const basepath = serverconfig.basepath || ''
 
@@ -293,7 +294,7 @@ function maySetAbortCtrlAndTrackers(req, res, ds) {
 		isFinished = true
 	})
 	res.once('close', () => {
-		abortCtrlBy.filter0.delete(q.filter0)
+		if (q.filter0 && typeof q.filter0 === 'object') abortCtrlBy.filter0.delete(q.filter0)
 		abortCtrlBy.signal.delete(abortCtrl.signal)
 		if (isFinished || res.writableEnded || abortCtrl.signal.aborted) return
 		mayLog('(!) client unexpectedly disconnected, will abort stale requests')
