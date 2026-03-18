@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes
+- include x-forwarded-* headers in requests to GDC API
+
+
 ## 2.170.26
 
 Fixes:
