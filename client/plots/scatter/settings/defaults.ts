@@ -1,7 +1,7 @@
 import type { Settings } from './Settings.js'
 import { plotColor } from '#shared/common.js'
 
-export function getDefaultScatterSettings(opts: any): Settings {
+export function getDefaultScatterSettings(opts: any = {}): Settings {
 	const overrides = opts?.overrides || {}
 	const defaults: Settings = {
 		size: 0.8,
