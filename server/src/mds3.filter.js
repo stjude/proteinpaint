@@ -20,7 +20,7 @@ if not filtering, undefined
 */
 export async function mayLimitSamples(param, _allSamples, ds) {
 	if (!_allSamples) return // no samples from this big file
-	const allSamples = Number.isInteger(_allSamples[0]) ? _allSamples : _allSamples.map(i => i.name)
+	const allSamples = Number.isInteger(_allSamples[0]) ? new Set(_allSamples) : new Set(_allSamples.map(i => i.name))
 
 	// later should be param.filter, no need for conversion
 	const filter = param2filter(param, ds)
@@ -33,18 +33,20 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 	// get samples that match filter
 	// get_samples() return [{id:int}] with possibly duplicated items, deduplicate and return list of integer ids
 	const filterSamples =
-		typeof ds.cohort?.db?.connection?.prepare == 'function'
-			? [...new Set((await get_samples({ filter }, ds)).map(i => i.id))]
+		filter && typeof ds.cohort?.db?.connection?.prepare == 'function'
+			? new Set((await get_samples({ filter }, ds)).map(i => i.id))
 			: allSamples
 
 	// get samples that match filter0
 	const filter0samples =
-		typeof ds.cohort?.termdb.getSamples == 'function' ? await ds.cohort.termdb.getSamples(filter0, ds) : allSamples
+		filter0 && typeof ds.cohort?.termdb.getSamples == 'function'
+			? await ds.cohort.termdb.getSamples(filter0, ds)
+			: allSamples
 
 	// final set of samples matching filter and filter0
 	const limitSamples = new Set()
 	for (const s of filterSamples) {
-		if (filter0samples.includes(s)) limitSamples.add(s)
+		if (filter0samples.has(s)) limitSamples.add(s)
 	}
 
 	// limitSamples is the set of samples in dataset that match filter/filter0
