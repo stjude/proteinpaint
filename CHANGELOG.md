@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes
+- include x-forwarded-* headers in requests to GDC API
+
 Features:
 - Additional unit tests for scatterModel.tests
 
