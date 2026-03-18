@@ -195,13 +195,13 @@ async function getSingleCellScatter(req, res, ds) {
 
 		if (tw.term.type != SINGLECELL_GENE_EXPRESSION) {
 			const k2c = category => {
+				/** Only assign default color after checking term.values
+				 * and ds defined colors. */
 				if (tw.term.values?.[category]?.color) return tw.term.values[category].color
 				if (ds.queries.singleCell?.terms) {
 					const term = ds.queries.singleCell.terms.find(t => t.name == tw.term.name)
 					if (term?.values?.[category]?.color) return term.values[category].color
 				} else return getColors(categories.size)
-				/** Only assign default color after checking term.values
-				 * and ds defined colors. */
 			}
 
 			for (const category of categories) {

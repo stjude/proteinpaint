@@ -450,7 +450,7 @@ export default function (): Mds3 {
 							colorColumns: [
 								{
 									index: 3,
-									name: 'CellType'
+									name: 'Cell Type'
 								}
 							],
 							coordsColumns: { x: 1, y: 2 },
