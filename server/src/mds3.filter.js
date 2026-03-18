@@ -7,7 +7,8 @@ param={}
 		if present, return list of samples matching the given k/v pairs, assuming AND
 	.filterObj = pp filter
 	.filter = pp filter
-allSamples=[]
+	.filter0 = gdc/mmrf filter
+_allSamples=[]
 	whole list of samples, each ele: {name: int}
 	presumably the set of samples from a bcf file or tabix file
 	NOTE new format is list of integer sample ids!
@@ -17,27 +18,41 @@ output:
 if filter is applied, return set of sample id
 if not filtering, undefined
 */
-export async function mayLimitSamples(param, allSamples, ds) {
-	if (!allSamples) return // no samples from this big file
+export async function mayLimitSamples(param, _allSamples, ds) {
+	if (!_allSamples) return // no samples from this big file
+	const allSamples = Number.isInteger(_allSamples[0]) ? _allSamples : _allSamples.map(i => i.name)
 
 	// later should be param.filter, no need for conversion
 	const filter = param2filter(param, ds)
-	if (!filter) {
+	const filter0 = param2filter0(param)
+	if (!filter && !filter0) {
 		// no filtering, use all samples
 		return
 	}
 
+	// get samples that match filter
 	// get_samples() return [{id:int}] with possibly duplicated items, deduplicate and return list of integer ids
-	const filterSamples = [...new Set((await get_samples({ filter }, ds)).map(i => i.id))]
+	const filterSamples =
+		typeof ds.cohort?.db?.connection?.prepare == 'function'
+			? [...new Set((await get_samples({ filter }, ds)).map(i => i.id))]
+			: allSamples
 
-	// filterSamples is the list of samples retrieved from termdb that are matching filter
-	// as allSamples (from bcf etc) may be a subset of what's in termdb
-	// must only use those from allSamples
-	let set
-	if (Number.isInteger(allSamples[0])) set = new Set(allSamples)
-	else set = new Set(allSamples.map(i => i.name))
+	// get samples that match filter0
+	const filter0samples =
+		typeof ds.cohort?.termdb.getSamples == 'function' ? await ds.cohort.termdb.getSamples(filter0, ds) : allSamples
+
+	// final set of samples matching filter and filter0
+	const limitSamples = new Set()
+	for (const s of filterSamples) {
+		if (filter0samples.includes(s)) limitSamples.add(s)
+	}
+
+	// limitSamples is the set of samples in dataset that match filter/filter0
+	// allSamples (from bcf etc) may be a subset of what's in dataset, so must
+	// only use those from allSamples
+	const set = new Set(allSamples)
 	const useSet = new Set()
-	for (const i of filterSamples) {
+	for (const i of limitSamples) {
 		if (set.has(i)) useSet.add(i)
 	}
 	return useSet
@@ -59,6 +74,11 @@ function param2filter(param, ds) {
 		if (typeof param.tid2value != 'object') throw 'q.tid2value{} not object'
 		return tid2value2filter(param.tid2value, ds)
 	}
+}
+
+function param2filter0(param) {
+	const f = param.filter0
+	return f
 }
 
 // temporary function to convert tid2value={} to filter, can delete later when it's replaced by filter
