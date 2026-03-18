@@ -15,6 +15,7 @@ import { extractGenesFromPrompt, parse_dataset_db, parse_geneset_db, getGenesetN
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
+import path from 'path'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/chat2',
@@ -52,6 +53,13 @@ function init({ genomes }) {
 			const genedb = serverconfig.tpmasterdir + '/' + g.genedb.dbfile
 			// Read dataset JSON file
 			const dataset_json: any = await readJSONFile(ds?.queries?.chat?.aifiles)
+			// Resolve agent file paths relative to the main JSON file's directory
+			if (dataset_json.agentFiles) {
+				const aiFilesDir = path.dirname(ds?.queries?.chat?.aifiles)
+				for (const [key, file] of Object.entries(dataset_json.agentFiles)) {
+					dataset_json.agentFiles[key] = path.join(aiFilesDir, file as string)
+				}
+			}
 			const testing = false // This toggles validation of LLM output. In this script, this will ALWAYS be false since we always want validation of LLM output, only for testing we set this variable to true
 			const genesetNames = getGenesetNames(g)
 			const ai_output_json = await run_chat_pipeline(
