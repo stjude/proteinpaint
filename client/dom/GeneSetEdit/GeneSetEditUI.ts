@@ -179,13 +179,13 @@ export class GeneSetEditUI {
 			.style('float', 'right')
 			.style('gap', '5px')
 
-		const addGene = this.addGene.bind(this)
+		const addGenes = this.addGenes.bind(this)
 		this.geneSearch = addGeneSearchbox({
 			tip: this.tip2,
 			genome: this.genome,
 			row,
-			searchOnly: 'gene',
-			callback: addGene,
+			searchOnly: 'genes',
+			callback: addGenes,
 			hideHelp: true,
 			focusOff: true
 		})
@@ -523,6 +523,34 @@ export class GeneSetEditUI {
 		}
 		if (gene) this.geneList.push({ gene })
 		this.renderGenes()
+	}
+
+	/** Add multiple genes from the genes array */
+	addGenes() {
+		const genes = this.geneSearch.genes
+		if (!genes || genes.length === 0) return
+		
+		const newGenes: Gene[] = []
+		const duplicates: string[] = []
+		
+		for (const geneObj of genes) {
+			const geneName = geneObj.geneSymbol
+			const isDuplicate = this.geneList.some(item => item.gene === geneName)
+			if (isDuplicate) {
+				duplicates.push(geneName)
+			} else {
+				newGenes.push({ gene: geneName })
+			}
+		}
+		
+		if (newGenes.length > 0) {
+			this.geneList.push(...newGenes)
+			this.renderGenes()
+		}
+		
+		if (duplicates.length > 0) {
+			window.alert(`The following genes were already added and skipped: ${duplicates.join(', ')}`)
+		}
 	}
 
 	renderGenes(geneSetName?: string) {
