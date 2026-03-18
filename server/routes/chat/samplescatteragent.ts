@@ -1,6 +1,12 @@
 import type { LlmConfig, DbRows, GeneDataTypeResult } from '#types'
 import { FILTER_TERM_DEFINITIONS, validate_filter } from './filter.ts'
-import { formatTrainingExamples, extractGenesetsFromPrompt, validate_term, buildCommonPrompt } from './utils.ts'
+import {
+	formatTrainingExamples,
+	extractGenesetsFromPrompt,
+	validate_term,
+	buildCommonPrompt,
+	readJSONFile
+} from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 
 export async function extract_samplescatter_terms_from_query(
@@ -59,8 +65,9 @@ export async function extract_samplescatter_terms_from_query(
 	const common_genes = geneFeatures.map(g => g.gene)
 	const matchedGenesets = extractGenesetsFromPrompt(prompt, genesetNames)
 
-	// Parse out training data from the dataset JSON
-	const scatter_ds = dataset_json.charts.find((chart: any) => chart.type == 'sampleScatter')
+	// Read sampleScatter agent-specific JSON file
+	if (!dataset_json.agentFiles?.sampleScatter) throw 'sampleScatter agent file is not specified in the dataset file.'
+	const scatter_ds = await readJSONFile(dataset_json.agentFiles.sampleScatter)
 	if (!scatter_ds) throw 'sampleScatter information is not present in the dataset file.'
 	if (scatter_ds.TrainingData.length == 0) throw 'No training data is provided for the sampleScatter agent.'
 
