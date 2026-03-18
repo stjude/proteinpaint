@@ -40,6 +40,11 @@ export type LlmConfig = {
 	verbose?: boolean
 }
 
+export interface GeneDataTypeResult {
+	gene: string
+	dataType: string
+}
+
 export type ChatResponse = TextResponse | HtmlResponse | PlotResponse
 
 export const ChatPayload: RoutePayload = {
@@ -115,7 +120,7 @@ export type plot_type = {
 	type: 'plot'
 	/** The type of plot to be displayed on the UI.
 	 *  Standard categories are listed; datasets may define additional custom categories. */
-	plot: 'summary' | 'dge' | 'survival' | 'matrix' | 'sampleScatter' | 'hierCluster'
+	plot: 'summary' | 'dge' | 'survival' | 'matrix' | 'sampleScatter' | 'hierCluster' | 'lollipop'
 }
 
 export type resource_type = {
@@ -132,7 +137,7 @@ export type none_type = {
 export type QueryClassification = { type: 'plot' } | { type: 'notplot' }
 
 /** Specific plot type returned by classifyPlotType in plot.ts */
-export type PlotType = 'summary' | 'dge' | 'survival' | 'matrix' | 'samplescatter' | 'hiercluster'
+export type PlotType = 'summary' | 'dge' | 'survival' | 'matrix' | 'samplescatter' | 'hiercluster' | 'lollipop'
 
 export type DEType = {
 	/** Name of group1 which is an array of filter terms */

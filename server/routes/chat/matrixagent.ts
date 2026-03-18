@@ -1,12 +1,7 @@
-import type { LlmConfig, DbRows } from '#types'
+import type { LlmConfig, DbRows, GeneDataTypeResult } from '#types'
 import { TermTypes } from '#shared/terms.js'
 import { FILTER_TERM_DEFINITIONS, validate_filter } from './filter.ts'
-import {
-	formatTrainingExamples,
-	extractGenesFromPrompt,
-	extractGenesetsFromPrompt,
-	buildCommonPrompt
-} from './utils.ts'
+import { formatTrainingExamples, extractGenesetsFromPrompt, buildCommonPrompt } from './utils.ts'
 import type { DataTypeConfig } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 //import { mayLog } from '#src/helpers.ts'
@@ -140,13 +135,13 @@ export async function extract_matrix_search_terms_from_query(
 	llm: LlmConfig,
 	dataset_db_output: { db_rows: DbRows[]; rag_docs: string[] },
 	dataset_json: any,
-	genes_list: string[],
 	ds: any,
 	testing: boolean,
-	genesetNames: string[] = []
+	genesetNames: string[] = [],
+	geneFeatures: GeneDataTypeResult[]
 ) {
 	const { schema, activeConfigs } = buildMatrixSchema()
-	const common_genes = extractGenesFromPrompt(prompt, genes_list)
+	const common_genes = geneFeatures.map(g => g.gene)
 	const matchedGenesets = extractGenesetsFromPrompt(prompt, genesetNames)
 
 	// Parse out training data from the dataset JSON
@@ -176,7 +171,7 @@ export async function extract_matrix_search_terms_from_query(
 		test_response.type = 'plot'
 		return test_response
 	} else {
-		return validate_matrix_response(response, common_genes, ds, activeConfigs)
+		return validate_matrix_response(response, ds, activeConfigs, geneFeatures)
 	}
 }
 
@@ -184,7 +179,12 @@ export async function extract_matrix_search_terms_from_query(
 //  Validation — builds term wrappers from LLM response using active configs
 // ---------------------------------------------------------------------------
 
-function validate_matrix_response(response: string, common_genes: string[], ds: any, activeConfigs: DataTypeConfig[]) {
+function validate_matrix_response(
+	response: string,
+	ds: any,
+	activeConfigs: DataTypeConfig[],
+	geneFeatures: GeneDataTypeResult[]
+) {
 	const response_type = JSON.parse(response)
 	const pp_plot_json: any = { chartType: 'matrix' }
 	let text = ''
@@ -221,15 +221,30 @@ function validate_matrix_response(response: string, common_genes: string[], ds: 
 
 		for (const identifier of fieldValues) {
 			if (preferredConfig.identifierMode === 'gene') {
-				const gene_hits = common_genes.filter(gene => gene === identifier.toLowerCase())
-				if (gene_hits.length === 0) {
+				const gene_hit = geneFeatures.find(geneTerm => geneTerm.gene.toLowerCase() === identifier.toLowerCase())
+				if (!gene_hit) {
 					text += 'invalid gene name:' + identifier + ' '
 				} else {
-					if (ds?.queries?.geneExpression) {
-						twLst.push(preferredConfig.buildTermWrapper(identifier))
+					if (gene_hit.dataType == 'expression') {
+						if (ds?.queries?.geneExpression) {
+							twLst.push(preferredConfig.buildTermWrapper(identifier))
+						} else {
+							if (!text.includes('gene expression data is not available for this dataset'))
+								text += 'gene expression data is not available for this dataset'
+						}
+					} else if (gene_hit.dataType == 'variant') {
+						text +=
+							'Gene ' +
+							gene_hit.gene +
+							' has variant type. However, gene variant/mutation data plotting has not been currently implemented'
+					} else if (gene_hit.dataType == 'methylation') {
+						text +=
+							'Gene ' +
+							gene_hit.gene +
+							' has methylation type. However, methylation data plotting has not been currently implemented'
 					} else {
-						if (!text.includes('gene expression data is not available for this dataset'))
-							text += 'gene expression data is not available for this dataset'
+						// Should not happen since we only return known data types from getGeneDataTypes, but just in case
+						text += 'Gene ' + gene_hit.gene + ' has unknown data type: ' + gene_hit.dataType
 					}
 				}
 			} else {

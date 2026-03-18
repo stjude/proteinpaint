@@ -1,4 +1,4 @@
-import type { DbRows, DbValue } from '#types'
+import type { DbRows, DbValue, GeneDataTypeResult } from '#types'
 import { TermTypes } from '#shared/terms.js'
 import { FILTER_DESCRIPTION } from './filter.ts'
 import { mayLog } from '#src/helpers.ts'
@@ -348,7 +348,7 @@ export function extractGenesFromPrompt(prompt: string, genes_list: string[]): st
 	return words.filter(item => genes_list.includes(item))
 }
 
-export function validate_term(response_term: string, common_genes: string[], ds: any) {
+export function validate_term(response_term: string, ds: any, geneFeatures: GeneDataTypeResult[]) {
 	let text = ''
 	let term_type: any
 	let category: string = ''
@@ -363,16 +363,31 @@ export function validate_term(response_term: string, common_genes: string[], ds:
 		category = term.type
 	} else {
 		// 2. Try gene name lookup
-		const gene_hits = common_genes.filter(gene => gene == response_term.toLowerCase())
-		if (gene_hits.length > 0) {
-			const geneConfig = DATA_TYPE_REGISTRY.find(
-				c => c.termType === TermTypes.GENE_EXPRESSION && c.detectAvailability(ds, null)
-			)
-			if (geneConfig) {
-				term_type = geneConfig.buildTermWrapper(response_term)
-				category = 'float'
+		const gene_hit = geneFeatures.find(geneTerm => geneTerm.gene.toLowerCase() == response_term.toLowerCase())
+		if (gene_hit) {
+			if (gene_hit.dataType == 'expression') {
+				const geneConfig = DATA_TYPE_REGISTRY.find(
+					c => c.termType === TermTypes.GENE_EXPRESSION && c.detectAvailability(ds, null)
+				)
+				if (geneConfig) {
+					term_type = geneConfig.buildTermWrapper(response_term)
+					category = 'float'
+				} else {
+					text += 'Dataset does not support gene expression'
+				}
+			} else if (gene_hit.dataType == 'variant') {
+				text +=
+					'Gene ' +
+					gene_hit.gene +
+					' has variant type. However, gene variant/mutation data plotting has not been currently implemented'
+			} else if (gene_hit.dataType == 'methylation') {
+				text +=
+					'Gene ' +
+					gene_hit.gene +
+					' has methylation type. However, methylation data has plotting not been currently implemented'
 			} else {
-				text += 'Dataset does not support gene expression'
+				// Should not happen since we only return known data types from getGeneDataTypes, but just in case
+				text += 'Gene ' + gene_hit.gene + ' has unknown data type: ' + gene_hit.dataType
 			}
 		}
 		// 3. Try name-based types (ssGSEA, metabolite, etc.) — first available match wins
