@@ -2001,7 +2001,7 @@ export type Mds3 = BaseMds & {
 			[field: string]: string
 		}
 	}
-	/** a dataset may track req.headers based on an abort signal and/or filter0 that was created for the req;
+	/** a dataset may track req.headers based on a req.query, abort signal, and/or filter0;
 	 * this tracking is necessary since the req.headers is not necessarily passed through all to downstream code
 	 * when processing external API-based dataset data, such as for GDC, but req.query.__abortSignal and filter0
 	 * both much more likely to be passed as-is and make it to when `getHostHeaders()` is called */
