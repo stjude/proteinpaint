@@ -1,3 +1,4 @@
+import type { Term } from '#types'
 import {
 	dtgeneexpression,
 	dtssgsea,
@@ -51,7 +52,7 @@ export const WHOLE_PROTEOME_ABUNDANCE = 'wholeProteomeAbundance'
 
 //Term types should be used gradually using these constants instead of hardcoding the values,
 // eg: type == CATEGORICAL instead of type == 'categorical'
-export const TermTypes = {
+export const TermTypes: { [key: string]: string } = {
 	GENE_VARIANT,
 	GENE_EXPRESSION,
 	SSGSEA,
@@ -73,7 +74,7 @@ export const TermTypes = {
 	DATE,
 	TERM_COLLECTION
 }
-export const dtTermTypes = new Set(dtTerms.map(t => t.type))
+export const dtTermTypes: Set<string> = new Set(dtTerms.map((t: any) => t.type))
 for (const dtTermType of dtTermTypes) {
 	TermTypes[dtTermType.toUpperCase()] = dtTermType
 }
@@ -150,29 +151,29 @@ const categoricalTypes = new Set([CATEGORICAL, SNP])
 
 const singleCellTerms = new Set([SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION])
 
-export function isSingleCellTerm(term) {
+export function isSingleCellTerm(term: any) {
 	if (!term) return false
 	return singleCellTerms.has(term.type)
 }
-export function isNumericTerm(term) {
+export function isNumericTerm(term: Term) {
 	if (!term) return false
 	return numericTypes.has(term.type)
 }
-export function isCategoricalTerm(term) {
+export function isCategoricalTerm(term: Term) {
 	if (!term) return false
 	return categoricalTypes.has(term.type)
 }
 
-export function isDictionaryType(type) {
+export function isDictionaryType(type: string) {
 	return !isNonDictionaryType(type)
 }
 
-export function isNonDictionaryType(type) {
+export function isNonDictionaryType(type: string) {
 	if (!type) throw new Error('Type is not defined')
 	return nonDictTypes.has(type)
 }
 
-export function equals(t1, t2) {
+export function equals(t1: any, t2: any) {
 	if (!t1) throw new Error('First term is not defined ')
 	if (!t2) throw new Error('Second term is not defined ')
 	if (t1.type !== t2.type) return false //term types are different
@@ -200,7 +201,7 @@ export function equals(t1, t2) {
 	}
 }
 
-export function getBin(lst, value) {
+export function getBin(lst: any[], value: number) {
 	let bin = lst.findIndex(
 		b => (b.startunbounded && value < b.stop) || (b.startunbounded && b.stopinclusive && value == b.stop)
 	)
@@ -220,7 +221,7 @@ export function getBin(lst, value) {
 //Terms may  have a sample type associated to them, in datasets with multiple types of samples.
 //For example the gender is associated to the patient while the age is associated to the type sample. This function is used
 //for example when calling getData or getFilter, to return either the parent or the child samples, depending on the use case.
-export function getSampleType(term, ds) {
+export function getSampleType(term: any, ds: any) {
 	if (!term) return null
 	//non dict terms annotate only samples, eg: gene expression, metabolite intensity, gene variant.
 	//Their sample type is the default sample type that may or may not have a parent type, depending on the dataset
@@ -237,7 +238,7 @@ export function getSampleType(term, ds) {
 	return DEFAULT_SAMPLE_TYPE //later own term needs to know what type annotates based on the samples
 }
 
-export function getParentType(types, ds) {
+export function getParentType(types: Set<string>, ds: any) {
 	if (Object.keys(ds.cohort.termdb.sampleTypes).length == 0) return null //dataset only has one type of sample
 	const ids = Array.from(types)
 	if (!ids || ids.length == 0) return null
@@ -253,7 +254,7 @@ export function getParentType(types, ds) {
 }
 
 //Returns human readable label for each term type; label is just for printing and not computing
-const typeMap = {
+const typeMap: { [key: string]: string } = {
 	categorical: 'Categorical',
 	condition: 'Condition',
 	float: 'Numerical',
@@ -274,11 +275,11 @@ const typeMap = {
 	termCollection: 'Term Collection'
 }
 
-export function termType2label(type) {
+export function termType2label(type: string) {
 	return typeMap[type] || 'Unknown term type'
 }
 
-export function getDateFromNumber(value) {
+export function getDateFromNumber(value: number) {
 	const year = Math.floor(value)
 	const january1st = new Date(year, 0, 1)
 	const totalDays = getDaysInYear(year)
@@ -296,7 +297,7 @@ Example:
  */
 const oneDayTime = 24 * 60 * 60 * 1000
 
-export function getDateStrFromNumber(value) {
+export function getDateStrFromNumber(value: number) {
 	const date = getDateFromNumber(value)
 
 	//Omit day to  deidentify the patients
@@ -309,21 +310,21 @@ export function getDateStrFromNumber(value) {
 //The value returned is a decimal year
 //A decimal year is a way of expressing a date or time period as a year with a decimal part, where the decimal portion
 //represents the fraction of the year that has elapsed.
-export function getNumberFromDateStr(str) {
+export function getNumberFromDateStr(str: string) {
 	const date = new Date(str)
 	return getNumberFromDate(date)
 }
 
-export function getNumberFromDate(date) {
+export function getNumberFromDate(date: Date) {
 	const year = date.getFullYear()
-	const january1st = new Date(year, 0, 1)
-	const diffDays = (date - january1st) / oneDayTime
+	const january1st: Date = new Date(year, 0, 1)
+	const diffDays = (date.getTime() - january1st.getTime()) / oneDayTime
 	const daysTotal = getDaysInYear(year)
 	const decimal = diffDays / daysTotal
 	return year + decimal
 }
 
-export function getDaysInYear(year) {
+export function getDaysInYear(year: number) {
 	const isLeap = new Date(year, 1, 29).getMonth() === 1
 	const days = isLeap ? 366 : 365
 	return days
