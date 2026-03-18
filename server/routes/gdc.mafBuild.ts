@@ -53,7 +53,7 @@ res{}
 async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	const t0 = Date.now()
 	const { host, headers } = ds.getHostHeaders(q)
-	const fileLst2: string[] = await getFileLstUnderSizeLimit(q.fileIdLst, host)
+	const fileLst2: string[] = await getFileLstUnderSizeLimit(q.fileIdLst, host, headers)
 
 	mayLog(`${fileLst2.length} out of ${q.fileIdLst.length} input MAF files accepted by size limit`, Date.now() - t0)
 
@@ -144,7 +144,7 @@ excess files are not processed in order not to crash server
 must not rely on file size sent by client, as that can be spoofed and never to be trusted
 it's inexpensive to query api for this
 */
-async function getFileLstUnderSizeLimit(lst: string[], host) {
+async function getFileLstUnderSizeLimit(lst: string[], host, headers) {
 	if (lst.length == 0) throw 'fileIdLst[] not array or blank'
 	const body = {
 		filters: {
@@ -155,7 +155,7 @@ async function getFileLstUnderSizeLimit(lst: string[], host) {
 		fields: 'file_size'
 	}
 
-	const response = await ky.post(joinUrl(host.rest, 'files'), { timeout: false, json: body })
+	const response = await ky.post(joinUrl(host.rest, 'files'), { headers, timeout: false, json: body })
 	if (!response.ok) throw `HTTP Error: ${response.status} ${response.statusText}`
 	const re: any = await response.json() // type any to avoid tsc err
 
