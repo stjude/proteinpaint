@@ -265,7 +265,7 @@ const typeMap: { [key: string]: string } = {
 	geneVariant: 'Gene Variant',
 	metaboliteIntensity: 'Metabolite Intensity',
 	wholeProteomeAbundance: 'Whole Proteome Abundance',
-	multiValue: 'Multi Value',
+	multivalue: 'Multi Value',
 	singleCellGeneExpression: 'Single Cell, Gene Expression',
 	singleCellCellType: 'Single Cell, Cell Type',
 	snplocus: 'SNP Locus',
