@@ -619,7 +619,7 @@ export function getScctTw() {
 		term: {
 			type: tt.SINGLECELL_CELLTYPE,
 			id: 'CellType',
-			name: 'CellType',
+			name: 'Cell Type',
 			sample: {
 				sID: '1_patient'
 			},
