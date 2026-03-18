@@ -50,8 +50,12 @@ type GeneSearchBoxArg = {
 		input can be dbSNP id, position, or variant format (chr.pos.ref.alt)
 		allow to enter chr.pos.ref.alt or hgvs (see next section)
 		otherwise, only allow chr:start-stop
+	if 'genes':
+		input can be multiple gene symbols or aliases separated by comma, space, tab, or newline
+		each gene is validated and result is {genes: [{geneSymbol:str},...]}
+		useful for copy-pasting gene lists from spreadsheets
 	*/
-	searchOnly?: 'gene' | 'snp'
+	searchOnly?: 'gene' | 'snp' | 'genes'
 	/** If true, user must click on search box and enter instead of automatically 
     focusing on search box. Use to render d3 animations smoothly. */
 	focusOff?: boolean
@@ -136,7 +140,7 @@ type ResultArg = (GeneOrSNPResult | VariantResult) & {
 }
 
 type Result = Partial<GeneOrSNPResult> &
-	Partial<VariantResult> & { geneSymbol?: string; fromWhat?: string; chr?: string; searchbox?: any }
+	Partial<VariantResult> & { geneSymbol?: string; fromWhat?: string; chr?: string; searchbox?: any; genes?: { geneSymbol: string }[] }
 
 export const debounceDelay = 500
 
@@ -161,6 +165,9 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 	} else if (arg?.searchOnly == 'gene') {
 		placeholder = 'Gene'
 		width = 100 // use shorter width for inputting only one gene name
+	} else if (arg?.searchOnly == 'genes') {
+		placeholder = 'Gene names (comma, space, tab, or newline separated)'
+		width = 300 // wider for multiple genes
 	} else {
 		placeholder = arg?.searchOnly == 'snp' ? 'Position' : 'Gene, position'
 		if (arg.genome.hasSNP) {
@@ -343,6 +350,66 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		const v = searchbox.property('value').trim()
 		if (!v) return
 		tip.showunder(searchbox.node()).clear()
+
+		// Handle multiple gene search mode
+		if (arg?.searchOnly == 'genes') {
+			// Split input by comma, space, tab, or newline
+			const geneNames = v
+				.split(/[,\s\t\n]+/)
+				.map(name => name.trim())
+				.filter(name => name.length > 0)
+			
+			if (geneNames.length === 0) return
+
+			// Validate each gene name
+			const validatedGenes: { geneSymbol: string }[] = []
+			const invalidGenes: string[] = []
+			
+			for (const geneName of geneNames) {
+				const gene = await dofetch3('genelookup', { body: { genome: arg.genome.name, input: geneName } })
+				if (gene.error || !gene.hits?.length) {
+					invalidGenes.push(geneName)
+				} else {
+					// Use the first hit as the validated gene symbol
+					validatedGenes.push({ geneSymbol: gene.hits[0] })
+				}
+			}
+
+			// Display results
+			tip.d.append('div').style('margin', '5px').style('font-weight', 'bold')
+				.text(`Validated ${validatedGenes.length} of ${geneNames.length} genes`)
+			
+			if (validatedGenes.length > 0) {
+				const validDiv = tip.d.append('div').style('margin', '5px')
+				validDiv.append('div').style('color', 'green').text(`Valid genes (${validatedGenes.length}):`)
+				validDiv.append('div').style('font-size', '0.9em').text(validatedGenes.map(g => g.geneSymbol).join(', '))
+			}
+			
+			if (invalidGenes.length > 0) {
+				const invalidDiv = tip.d.append('div').style('margin', '5px')
+				invalidDiv.append('div').style('color', 'red').text(`Invalid genes (${invalidGenes.length}):`)
+				invalidDiv.append('div').style('font-size', '0.9em').text(invalidGenes.join(', '))
+			}
+
+			// Add confirmation button
+			if (validatedGenes.length > 0) {
+				tip.d.append('button')
+					.style('margin', '5px')
+					.text('Add genes')
+					.attr('class', 'sja_menuoption')
+					.on('click', () => {
+						result.genes = validatedGenes
+						searchStat.mark.style('color', 'green').html('&check;')
+						searchStat.word.text(`${validatedGenes.length} genes`)
+						tip.hide()
+						if (arg.callback) {
+							arg.callback()
+						}
+					})
+			}
+			
+			return
+		}
 
 		// see if input is gene
 		if (arg?.searchOnly != 'snp') {
