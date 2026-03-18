@@ -2056,7 +2056,10 @@ export type Mds3 = BaseMds & {
 	// !!! TODO: improve these type definitions below !!!
 	serverconfigFeatures?: any
 	/** a dataset may supply custom URL host and headers to use when making external API requests, such as for GDC */
-	getHostHeaders?: (q?: any) => {
+	getHostHeaders?: (
+		q?: any,
+		overrides?: { [key: string]: string }
+	) => {
 		host: {
 			[apiStyle: string]: string
 		}
