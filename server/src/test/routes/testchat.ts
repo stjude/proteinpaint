@@ -5,6 +5,7 @@ import serverconfig from '../../serverconfig.js'
 import { readJSONFile } from '../../../routes/chat/utils.ts'
 import { run_chat_pipeline } from '../../../routes/termdb.chat2.ts'
 import assert from 'node:assert/strict'
+import path from 'path'
 
 process.removeAllListeners('warning')
 
@@ -53,8 +54,18 @@ export async function test_chatbot_by_dataset(ds: any): Promise<number> {
 	if (!(ds as any)?.queries?.chat.aifiles) throw 'AI dataset JSON file is missing for dataset:' + ds.label
 	const aifiles = (ds as any)?.queries?.chat.aifiles
 	const dataset_json = await readJSONFile(aifiles) // Read AI JSON data file
+	const aiFilesDir = path.dirname(aifiles)
+	// Resolve agent file paths relative to the main JSON file's directory
+	if (dataset_json.agentFiles) {
+		for (const [key, file] of Object.entries(dataset_json.agentFiles)) {
+			dataset_json.agentFiles[key] = path.join(aiFilesDir, file as string)
+		}
+	}
+	// Read test data from separate test.json file
+	const testDataFile = path.join(aiFilesDir, 'test.json')
+	const testData = await readJSONFile(testDataFile)
 	//console.log("dataset_json:", dataset_json)
-	for (const test_data of dataset_json.TestData) {
+	for (const test_data of testData) {
 		//console.log("Test question:", test_data.question)
 		const test_result = await run_chat_pipeline(
 			test_data.question,
