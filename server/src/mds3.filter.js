@@ -20,7 +20,7 @@ if not filtering, undefined
 */
 export async function mayLimitSamples(param, _allSamples, ds) {
 	if (!_allSamples) return // no samples from this big file
-	const allSamples = Number.isInteger(_allSamples[0]) ? new Set(_allSamples) : new Set(_allSamples.map(i => i.name))
+	const allSamples = typeof _allSamples[0] === 'object' ? new Set(_allSamples.map(i => i.name)) : new Set(_allSamples)
 
 	// later should be param.filter, no need for conversion
 	const filter = param2filter(param, ds)
