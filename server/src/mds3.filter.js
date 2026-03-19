@@ -22,40 +22,40 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 	if (!_allSamples) return // no samples from this big file
 	const allSamples = typeof _allSamples[0] === 'object' ? new Set(_allSamples.map(i => i.name)) : new Set(_allSamples)
 
-	// later should be param.filter, no need for conversion
-	const filter = param2filter(param, ds)
-	const filter0 = param2filter0(param)
-	if (!filter && !filter0) {
-		// no filtering, use all samples
-		return
+	let filterSamples
+	if (ds.cohort?.db) {
+		// dataset has sqlite db
+		// get samples that match param.filter
+		if (typeof ds.cohort?.db?.connection?.prepare !== 'function')
+			throw new Error('db.connection.prepare() is not a function')
+		const filter = param2filter(param, ds) // TODO: use param.filter directly, no need for conversion
+		if (!filter) {
+			// no filtering, use all samples
+			return
+		}
+		// get samples that match filter
+		// get_samples() return [{id:int}] with possibly duplicated items, deduplicate and return list of integer ids
+		filterSamples = new Set((await get_samples({ filter }, ds)).map(i => i.id))
+	} else {
+		// dataset is api-based
+		// get samples that match param.filter/filter0
+		// TODO: currently only considering filter0, later will merge in filter
+		if (typeof ds.cohort?.termdb?.getSamples !== 'function') throw new Error('getSamples() is not a function')
+		const filter0 = param2filter0(param) // TODO: use param.filter0 directly, no need for conversion
+		if (!filter0) {
+			// no filtering, use all samples
+			return
+		}
+		// get samples that match filter0
+		filterSamples = await ds.cohort.termdb.getSamples(filter0, ds)
 	}
 
-	// get samples that match filter
-	// get_samples() return [{id:int}] with possibly duplicated items, deduplicate and return list of integer ids
-	const filterSamples =
-		filter && typeof ds.cohort?.db?.connection?.prepare == 'function'
-			? new Set((await get_samples({ filter }, ds)).map(i => i.id))
-			: allSamples
-
-	// get samples that match filter0
-	const filter0samples =
-		filter0 && typeof ds.cohort?.termdb.getSamples == 'function'
-			? await ds.cohort.termdb.getSamples(filter0, ds)
-			: allSamples
-
-	// final set of samples matching filter and filter0
-	const limitSamples = new Set()
-	for (const s of filterSamples) {
-		if (filter0samples.has(s)) limitSamples.add(s)
-	}
-
-	// limitSamples is the set of samples in dataset that match filter/filter0
+	// filterSamples is the set of samples in dataset that match filter/filter0
 	// allSamples (from bcf etc) may be a subset of what's in dataset, so must
 	// only use those from allSamples
-	const set = new Set(allSamples)
 	const useSet = new Set()
-	for (const i of limitSamples) {
-		if (set.has(i)) useSet.add(i)
+	for (const i of filterSamples) {
+		if (allSamples.has(i)) useSet.add(i)
 	}
 	return useSet
 }
