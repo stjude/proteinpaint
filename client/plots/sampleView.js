@@ -933,29 +933,127 @@ export function searchSampleInput(holder, samplesData, hasSampleAncestry, callba
 	}
 
 	function getLabel(sampleName) {
-		const samples = getSamplesRelated(samplesData, sampleName)
-		return samples.map(s => s.sampleName).join(' > ')
+		const related = getSamplesRelated(samplesData, sampleName)
+		if (related.length === 0) return sampleName
+
+		// Find the root name
+		let rootName = sampleName
+		let curr = samplesData[sampleName]
+		while (curr?.ancestor_name) {
+			rootName = curr.ancestor_name
+			curr = samplesData[rootName]
+		}
+
+		// Build children map: parent → sorted list of child names
+		const childrenByParent = new Map()
+		related.forEach(s => {
+			const name = s.sampleName
+			const parent = samplesData[name]?.ancestor_name
+			if (parent) {
+				if (!childrenByParent.has(parent)) childrenByParent.set(parent, [])
+				childrenByParent.get(parent).push(name)
+			}
+		})
+
+		for (const list of childrenByParent.values()) {
+			list.sort((a, b) => {
+				const na = Number(a)
+				const nb = Number(b)
+				if (!isNaN(na) && !isNaN(nb)) return na - nb
+				return a.localeCompare(b)
+			})
+		}
+
+		// Get direct children of root
+		const rootChildren = childrenByParent.get(rootName) || []
+		if (rootChildren.length === 0) {
+			return sampleName
+		}
+
+		// Collect representation for every root-level child
+		const parts = []
+
+		rootChildren.forEach(child => {
+			// Build chain for this child (main path)
+			let chain = [child]
+			let cur = child
+			while (true) {
+				const kids = childrenByParent.get(cur) || []
+				if (kids.length === 0) break
+				chain.push(kids[0])
+				cur = kids[0]
+			}
+
+			// If chain has length > 1 → use > notation
+			if (chain.length > 1) {
+				parts.push(chain.join(' > '))
+			} else {
+				// Just the leaf
+				parts.push(child)
+			}
+		})
+
+		// Build final label
+		let label = parts.join(', ')
+
+		return label
 	}
 	return sampleName
 }
 
 //Get samples related through parent
 export function getSamplesRelated(samplesData, sampleName) {
-	let lastName = sampleName
-	const samplesArray = Object.values(samplesData)
-	let lastSample = samplesArray.find(s => s.ancestor_name == lastName)
-	while (lastSample) {
-		lastName = lastSample.name
-		lastSample = samplesArray.find(s => s.ancestor_name == lastName)
+	if (!samplesData[sampleName]) return []
+
+	// Find root
+	let rootName = sampleName
+	let current = samplesData[sampleName]
+	while (current?.ancestor_name) {
+		rootName = current.ancestor_name
+		current = samplesData[rootName]
 	}
-	let sampleData = samplesData[lastName]
-	if (!sampleData) return []
-	const samples = [{ sampleId: sampleData.id, sampleName: sampleData.name }]
-	while (sampleData.ancestor_name) {
-		if (samplesData[sampleData.ancestor_name]?.sample_type != ROOT_SAMPLE_TYPE)
-			//not a root sample
-			samples.unshift({ sampleId: sampleData.ancestor_id, sampleName: sampleData.ancestor_name })
-		sampleData = samplesData[sampleData.ancestor_name]
+
+	const root = samplesData[rootName]
+	if (!root) return []
+
+	// Build children map
+	const childrenByParent = new Map()
+	for (const s of Object.values(samplesData)) {
+		if (s.ancestor_name) {
+			if (!childrenByParent.has(s.ancestor_name)) {
+				childrenByParent.set(s.ancestor_name, [])
+			}
+			childrenByParent.get(s.ancestor_name).push(s)
+		}
 	}
+
+	//Sort children
+	for (const kids of childrenByParent.values()) {
+		kids.sort((a, b) => {
+			const na = Number(a.name)
+			const nb = Number(b.name)
+			if (!isNaN(na) && !isNaN(nb)) return na - nb
+			return a.name.localeCompare(b.name)
+		})
+	}
+
+	// Collect in pre-order
+	const samples = []
+	const hasChildren = (childrenByParent.get(rootName) || []).length > 0
+
+	// Include root only if it has no descendants or isn't just a grouping node
+	if (root.sample_type !== ROOT_SAMPLE_TYPE || !hasChildren) {
+		samples.push({ sampleId: root.id, sampleName: root.name })
+	}
+
+	function traverse(parentName) {
+		const kids = childrenByParent.get(parentName) || []
+		for (const kid of kids) {
+			samples.push({ sampleId: kid.id, sampleName: kid.name })
+			traverse(kid.name)
+		}
+	}
+
+	traverse(rootName)
 	return samples
 }
