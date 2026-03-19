@@ -22,13 +22,21 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 	if (!_allSamples) return // no samples from this big file
 	const allSamples = typeof _allSamples[0] === 'object' ? new Set(_allSamples.map(i => i.name)) : new Set(_allSamples)
 
+	// TODO: use param.filter/filter0 directly, no need for conversion
+	const filter = param2filter(param, ds)
+	const filter0 = param2filter0(param)
+
+	if (!filter && !filter0) {
+		// no filters specified, use all samples
+		return
+	}
+
 	let filterSamples
 	if (ds.cohort?.db) {
 		// dataset has sqlite db
-		// get samples that match param.filter
+		// get samples that match filter
 		if (typeof ds.cohort?.db?.connection?.prepare !== 'function')
 			throw new Error('db.connection.prepare() is not a function')
-		const filter = param2filter(param, ds) // TODO: use param.filter directly, no need for conversion
 		if (!filter) {
 			// no filtering, use all samples
 			return
@@ -36,18 +44,18 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 		// get samples that match filter
 		// get_samples() return [{id:int}] with possibly duplicated items, deduplicate and return list of integer ids
 		filterSamples = new Set((await get_samples({ filter }, ds)).map(i => i.id))
-	} else {
-		// dataset is api-based
-		// get samples that match param.filter/filter0
+	} else if (typeof ds.cohort?.termdb?.getSamples === 'function') {
+		// dataset is not sqlite-based, but supplies getSamples() function
+		// get samples that match filter/filter0
 		// TODO: currently only considering filter0, later will merge in filter
-		if (typeof ds.cohort?.termdb?.getSamples !== 'function') throw new Error('getSamples() is not a function')
-		const filter0 = param2filter0(param) // TODO: use param.filter0 directly, no need for conversion
 		if (!filter0) {
 			// no filtering, use all samples
 			return
 		}
 		// get samples that match filter0
 		filterSamples = await ds.cohort.termdb.getSamples(filter0, ds)
+	} else {
+		throw new Error('no method available to filter samples')
 	}
 
 	// filterSamples is the set of samples in dataset that match filter/filter0
