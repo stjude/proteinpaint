@@ -59,16 +59,20 @@ read_json_time <- system.time({
 #   /meta/gene_names             {n_promoters}             str      — comma-separated gene symbols per promoter
 #   /meta/samples/names          {n_samples}               str      — sample identifiers (column headers)
 #   /meta/promoter/promoterID    {n_promoters}             str      — ENCODE CRE IDs (e.g. EH38E2776539)
+#   /meta/chr                    {n_promoters}             str      — chromosome (e.g. "chr1")
 #   /meta/start                  {n_promoters}             int      — promoter start coordinate (0-based)
 #   /meta/stop                   {n_promoters}             int      — promoter end coordinate (exclusive)
 #   /meta/num_cpg_sites          {n_promoters}             int      — how many CpG probes fell in this promoter
 read_data_time <- system.time({
   h5_file <- input$input_file # Path to the HDF5 file from the JSON input
 
-  # Read the three metadata vectors we need:
+  # Read metadata vectors we need:
   all_samples <- h5read(h5_file, "meta/samples/names") # All 1,544 sample names in the H5
   gene_names <- h5read(h5_file, "meta/gene_names") # Gene annotation per promoter (e.g. "TP53" or "TP53,TP53-AS1")
   promoter_ids <- h5read(h5_file, "meta/promoter/promoterID") # ENCODE CRE ID per promoter (used as row identifier)
+  chrs <- h5read(h5_file, "meta/chr")     # Chromosome per promoter (e.g. "chr1")
+  starts <- h5read(h5_file, "meta/start") # Promoter start coordinate (0-based)
+  stops <- h5read(h5_file, "meta/stop")   # Promoter end coordinate (exclusive)
 
   # match() returns the positional index of each case/control sample within all_samples.
   # These indices are used to read only the relevant columns from the H5 matrix,
@@ -153,6 +157,9 @@ filter_time <- system.time({
   mvalues <- mvalues[keep, , drop = FALSE]
   gene_names_filtered <- gene_names[keep]
   promoter_ids_filtered <- promoter_ids[keep]
+  chrs_filtered <- chrs[keep]
+  starts_filtered <- starts[keep]
+  stops_filtered <- stops[keep]
 })
 
 # If nothing survived filtering, exit gracefully with an informative error
@@ -216,6 +223,9 @@ if (any(na_rows)) {
   mvalues <- mvalues[!na_rows, , drop = FALSE]
   gene_names_filtered <- gene_names_filtered[!na_rows]
   promoter_ids_filtered <- promoter_ids_filtered[!na_rows]
+  chrs_filtered <- chrs_filtered[!na_rows]
+  starts_filtered <- starts_filtered[!na_rows]
+  stops_filtered <- stops_filtered[!na_rows]
 }
 
 if (nrow(mvalues) == 0) {
@@ -275,10 +285,11 @@ results_time <- system.time({
 # We use these to look up the corresponding gene names from our filtered
 # metadata vector via match().
 result_promoter_ids <- rownames(top_table)
-result_gene_names <- gene_names_filtered[match(
-  result_promoter_ids,
-  promoter_ids_filtered
-)]
+result_indices <- match(result_promoter_ids, promoter_ids_filtered)
+result_gene_names <- gene_names_filtered[result_indices]
+result_chrs <- chrs_filtered[result_indices]
+result_starts <- starts_filtered[result_indices]
+result_stops <- stops_filtered[result_indices]
 
 # Assemble the output data frame. Field names are kept agnostic since these are
 # promoter-level results (not gene-level like DE): the primary ID is an ENCODE
@@ -286,6 +297,9 @@ result_gene_names <- gene_names_filtered[match(
 output <- data.frame(
   promoter_id = result_promoter_ids, # ENCODE CRE ID (e.g. "EH38E3756858")
   gene_name = result_gene_names, # Gene symbol(s) (e.g. "TP53" or "TP53,TP53-AS1" or "")
+  chr = result_chrs, # Chromosome (e.g. "chr1")
+  start = result_starts, # Promoter start coordinate (0-based)
+  stop = result_stops, # Promoter end coordinate (exclusive)
   fold_change = top_table$logFC, # M-value difference (positive = hypermethylated in cases)
   original_p_value = top_table$P.Value, # Raw p-value from moderated t-test
   adjusted_p_value = top_table$adj.P.Val # FDR-adjusted p-value (Benjamini-Hochberg)

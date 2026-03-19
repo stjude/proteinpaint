@@ -27,12 +27,15 @@ export class DataPointMouseEvents {
 		})
 		circle.on('click', async () => {
 			if (termType === DNA_METHYLATION) {
-				// For DM, launch DMR region-level analysis
-				const geneName = d.gene_name?.split(',')[0]?.trim()
-				if (geneName) {
-					const promoterId = 'promoter_id' in d ? (d as any).promoter_id : undefined
-					await interactions.launchDmr(geneName, promoterId)
-				}
+				// For DM, launch DMR region-level analysis using promoter coordinates
+				const dm = d as any
+				await interactions.launchDmr({
+					chr: dm.chr,
+					start: dm.start,
+					stop: dm.stop,
+					geneName: dm.gene_name?.split(',')[0]?.trim(),
+					promoterId: dm.promoter_id
+				})
 			} else {
 				await interactions.launchBoxPlot(d.gene_name)
 			}

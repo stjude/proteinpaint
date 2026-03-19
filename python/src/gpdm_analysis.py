@@ -7,10 +7,6 @@ and writes a single JSON object to stdout.
 stdin fields: h5file, chr, start, stop, group1, group2, annotations,
               priors_file, nan_threshold, width, trackHeight, group1Name,
               group2Name, colors (optional: {group1, group2, hyper, hypo})
-
-IMPORTANT — stderr constraint:
-    run_python() rejects the process on any stderr output or non-zero exit.
-    All errors are returned as {"error": "..."} in stdout JSON.
 """
 
 import sys
@@ -114,8 +110,8 @@ def run_gpdm(params):
     stop = int(params['stop'])
     group1 = params['group1']
     group2 = params['group2']
-    nan_threshold = float(params.get('nan_threshold', 0.5))
-    annotations = params.get('annotations', [])
+    nan_threshold = float(params.get('nan_threshold'))
+    annotations = params.get('annotations')
     priors_file = params.get('priors_file')
 
     positions, beta_matrix, valid_samples = read_region_from_h5(
