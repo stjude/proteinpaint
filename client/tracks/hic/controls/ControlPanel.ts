@@ -7,7 +7,8 @@ import { ColorizeElement } from '../dom/ColorizeElement'
 
 class ControlPanel {
 	static type = 'controlPanel'
-	type: 'controlPanel'
+	type: string
+
 	app: any
 	controls: {
 		normalizationRow?: any
@@ -39,7 +40,7 @@ class ControlPanel {
 	error: any
 
 	constructor(opts) {
-		this.type = 'controlPanel'
+		this.type = ControlPanel.type
 		this.controls = {}
 		this.app = opts.app
 		this.controlsDiv = opts.controlsDiv

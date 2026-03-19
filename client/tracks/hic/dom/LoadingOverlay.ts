@@ -1,13 +1,15 @@
 import { getCompInit } from '#rx'
 
 class LoadingOverlay {
-	type: 'loadingOverlay'
+	static type = 'loadingOverlay'
+	type: string
+
 	app: any
 	loadingDiv: any
 	hasStatePreMain = true
 
 	constructor(opts) {
-		this.type = 'loadingOverlay'
+		this.type = LoadingOverlay.type
 		this.app = opts.app
 		this.loadingDiv = opts.loadingDiv
 	}
