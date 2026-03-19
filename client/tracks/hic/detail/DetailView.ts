@@ -101,7 +101,6 @@ export class DetailView {
 					body.on('mousemove', null).on('mouseup', null)
 					const xoff = event.clientX - x
 					const yoff = event.clientY - y
-					console.log(xoff)
 					this.xBlock.block.pannedby(xoff)
 					this.yBlock.block.pannedby(yoff)
 				})

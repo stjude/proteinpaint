@@ -66,11 +66,18 @@ export class InfoBar {
 		this.colorScaleLabel = this.addLabel('Scale')
 		this.colorScaleDiv = this.valueRow.append('td')
 
-		//TODO: Include upper line to show min cutoff when min < 0
+		/** On initial render, its common for the min and max values
+		 * to == 0. The color scale does not allow duplicate values in the
+		 * domain and will throw an error. This is a workaround until
+		 * this.update() is called after load. */
+		const min = this.parent('min')
+		let max = this.parent('max')
+		if (min == max) max = max + 0.01
+
 		this.colorScale = new ColorScale({
 			barheight: 20,
 			barwidth: 100,
-			domain: [this.parent('min'), this.parent('max')],
+			domain: [min, max],
 			fontSize: 12,
 			height: 40,
 			width: 150,
