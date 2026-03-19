@@ -1,4 +1,5 @@
-import { getAppInit } from '#rx'
+import { getAppInit, type RxApp } from '#rx'
+import { AppBase } from '#plots/AppBase.ts'
 import { hicStoreInit } from './HicStore'
 import type { RestrictionEnzyme } from '../../types/hic'
 import type { Div, Elem } from '../../types/d3'
@@ -9,8 +10,9 @@ import { Menu } from '#src/client'
 import { select as d3select } from 'd3-selection'
 import { hicParseFile } from './data/parseData'
 
-class HicApp {
+class HicApp extends AppBase implements RxApp {
 	static type = 'app'
+	type: string
 
 	/** Required for rx */
 	api: any
@@ -47,15 +49,16 @@ class HicApp {
 		jwt?: any
 	}
 	state: any
-	/** Required for rx */
-	store: any
-	/** Required for rx */
-	type: 'app'
+	store!: any
 	views = ['genome', 'chrpair', 'detail', 'horizontal']
 	errList: string[] = []
+	/** Required for rx but not in use */
+	wasDestroyed = false
+	bus!: any
 
 	constructor(opts) {
-		this.type = 'app'
+		super(opts)
+		this.type = HicApp.type
 		this.hic = {
 			enzyme: opts.enzyme,
 			file: opts.file,

@@ -1,8 +1,9 @@
-import { getStoreInit } from '#rx'
+import { getStoreInit, type RxStore, StoreBase } from '#rx'
 
-class HicStore {
+export class HicStore extends StoreBase implements RxStore {
 	static type = 'store'
-	type: 'store'
+	type: string
+
 	defaultState: {
 		defaultNmeth: string
 		loading: boolean
@@ -17,8 +18,9 @@ class HicStore {
 	state: any
 	readonly views = ['genome', 'chrpair', 'detail', 'horizontal']
 
-	constructor() {
-		this.type = 'store'
+	constructor(opts) {
+		super(opts)
+		this.type = HicStore.type
 		this.defaultState = {
 			defaultNmeth: 'NONE',
 			loading: true,
@@ -29,6 +31,10 @@ class HicStore {
 				widthHeightPx: 800
 			}
 		}
+	}
+
+	init() {
+		this.state = Object.assign({}, this.defaultState, this.state)
 	}
 }
 

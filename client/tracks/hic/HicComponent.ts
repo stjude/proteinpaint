@@ -14,10 +14,10 @@ import { Resolution } from './data/Resolution.ts'
 
 export class HicComponent {
 	static type = 'view'
+	type: string
 
 	dom: HicstrawDom
 	plotDiv: MainPlotDiv
-	type: 'view'
 	hic: any
 	state: any
 	genome: any
@@ -46,7 +46,7 @@ export class HicComponent {
 	hasStatePreMain = true
 
 	constructor(opts) {
-		this.type = 'view'
+		this.type = HicComponent.type
 		this.hic = opts.hic
 		this.state = opts.state
 		this.dom = opts.dom
