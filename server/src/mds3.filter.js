@@ -87,8 +87,19 @@ function param2filter(param, ds) {
 }
 
 function param2filter0(param) {
+	// both gdc and mmrf have filter0, but only mmrf uses
+	// this code (gdc uses server/src/mds3.gdc.filter.js)
+	// so only supporting mmrf filter0 structure here
+	// empty mmrf filter0 is "{ and: [] }"
 	const f = param.filter0
-	return f
+	if (f) {
+		if (typeof f !== 'object') throw new Error('unexpected filter0 structure')
+		if (Object.keys(f).length) {
+			if (Array.isArray(f.and) && f.and.length) {
+				return f
+			}
+		}
+	}
 }
 
 // temporary function to convert tid2value={} to filter, can delete later when it's replaced by filter
