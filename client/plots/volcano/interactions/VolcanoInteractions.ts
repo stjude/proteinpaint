@@ -186,22 +186,26 @@ export class VolcanoInteractions {
 		})
 	}
 
-	/** When clicking on a DM data point, dispatches a DMR plot that runs GPDM
+	/** When clicking on a DM data point, dispatches a DMR plot that runs DMRCate
 	 * analysis and renders a genome browser Block with DMR regions on their own
 	 * track. */
-	async launchDmr(geneName: string, promoterId?: string) {
+	async launchDmr(d: { chr: string; start: number; stop: number; geneName?: string; promoterId?: string }) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		if (config.termType !== DNA_METHYLATION) return
 
+		const label = d.geneName || d.promoterId || `${d.chr}:${d.start}-${d.stop}`
 		this.app.dispatch({
 			type: 'plot_create',
 			config: {
 				chartType: 'dmr',
-				headerText: promoterId ? `DMR: ${geneName} (${promoterId})` : `DMR: ${geneName}`,
-				geneName,
-				promoterId,
+				headerText: `DMR: ${label}`,
+				geneName: d.geneName,
+				promoterId: d.promoterId,
+				coordinateOverride: { chr: d.chr, start: d.start, stop: d.stop },
 				group1: config.samplelst.groups[0].values || [],
-				group2: config.samplelst.groups[1].values || []
+				group2: config.samplelst.groups[1].values || [],
+				group1Name: config.samplelst.groups[0].name,
+				group2Name: config.samplelst.groups[1].name
 			}
 		})
 	}
