@@ -88,7 +88,7 @@ export class ScatterLasso {
 					},
 					event.clientX,
 					event.clientY,
-					true
+					this.scatter.app.getState().nav.header_mode === 'with_tabs'
 				)
 			})
 
