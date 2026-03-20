@@ -9,12 +9,15 @@ export class ScatterLasso {
 	view: any
 	interactivity: any
 	selectedItems!: any[]
+	hasSampleView: boolean
 
 	constructor(scatter: Scatter) {
 		this.scatter = scatter
 		this.model = scatter.model
 		this.view = scatter.view
 		this.interactivity = scatter.interactivity
+		const supportedChartTypes = this.scatter.state.termdbConfig?.supportedChartTypes
+		this.hasSampleView = supportedChartTypes && Object.values(supportedChartTypes).includes('sampleView')
 	}
 
 	start(chart) {
@@ -113,7 +116,7 @@ export class ScatterLasso {
 					this.view.dom.tip.hide()
 				})
 
-		if ('sample' in samples[0])
+		if ('sample' in samples[0] && this.hasSampleView)
 			menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
@@ -227,7 +230,7 @@ export class ScatterLasso {
 				input.node().select()
 			})
 		const tableDiv = div.append('div')
-		const buttons: any[] = []
+		let buttons
 		if (addGroup) {
 			const addGroupCallback = {
 				text: 'Add to a group',
@@ -243,7 +246,7 @@ export class ScatterLasso {
 					addNewGroup(this.scatter.app, filter, this.scatter.state.groups)
 				}
 			}
-			buttons.push(addGroupCallback)
+			buttons = [addGroupCallback]
 		}
 
 		const columnButton = {
@@ -253,7 +256,7 @@ export class ScatterLasso {
 				this.interactivity.openSampleView(sample)
 			}
 		}
-		const columnButtons: any[] = hasSampleName ? [columnButton] : []
+		const columnButtons: any[] = hasSampleName && this.hasSampleView ? [columnButton] : []
 		renderTable({
 			rows,
 			columns,
