@@ -1,9 +1,10 @@
 import type { RouteApi, TermdbDmrRequest, TermdbDmrSuccessResponse } from '#types'
 import { TermdbDmrPayload } from '#types/checkers'
-import { run_python } from '@sjcrh/proteinpaint-python'
+import { run_R } from '@sjcrh/proteinpaint-r'
 import { invalidcoord } from '#shared/common.js'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
+import { getRegulatoryAnnotations } from '#src/regulatoryAnnotations.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/dmr',
@@ -38,23 +39,38 @@ function init({ genomes }) {
 			if (group1.length < 3) throw new Error(`Need at least 3 samples in group1, got ${group1.length}`)
 			if (group2.length < 3) throw new Error(`Need at least 3 samples in group2, got ${group2.length}`)
 
-			const gpdmInput = {
-				h5file: ds.queries.dnaMethylation.file,
+			const annotations = await getRegulatoryAnnotations(genome, q.chr, q.start, q.stop, q.shoreSize)
+
+			const dmrcateInput = {
+				probe_h5_file: ds.queries.dnaMethylation.file,
 				chr: q.chr,
 				start: q.start,
 				stop: q.stop,
-				group1,
-				group2,
-				annotations: q.annotations || [],
-				nan_threshold: q.nan_threshold ?? 0.5
+				case: group2.join(','),
+				control: group1.join(','),
+				fdr_cutoff: q.fdr_cutoff,
+				lambda: q.lambda,
+				C: q.C
 			}
 
 			const time1 = Date.now()
-			const result = JSON.parse(await run_python('gpdm_analysis.py', JSON.stringify(gpdmInput)))
+			const result = JSON.parse(await run_R('dmrcate.R', JSON.stringify(dmrcateInput)))
 			mayLog('DMR analysis time:', formatElapsedTime(Date.now() - time1))
 			if (result.error) throw new Error(result.error)
 
-			res.send({ status: 'ok', dmrs: result.dmrs } as TermdbDmrSuccessResponse)
+			// Build annotation items for client visualization.
+			// Extract the type prefix from the annotation name (e.g. "CGI_chr7_123" → "CGI")
+			const annotationItems = annotations.map(a => {
+				const typePart = a.name.split('_')[0]
+				return { name: a.name, chr: q.chr, start: a.start, stop: a.end, type: typePart }
+			})
+
+			res.send({
+				status: 'ok',
+				dmrs: result.dmrs,
+				annotations: annotationItems,
+				diagnostic: result.diagnostic
+			} as TermdbDmrSuccessResponse)
 		} catch (e: unknown) {
 			const msg = e instanceof Error ? e.message : String(e)
 			res.send({ error: msg })
