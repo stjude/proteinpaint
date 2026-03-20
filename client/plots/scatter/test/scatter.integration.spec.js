@@ -568,7 +568,7 @@ tape('Test lasso menus options', function (test) {
 	}
 
 	function testSampleTable(scatter, group) {
-		const samplesRendered = scatter.Inner.view.dom.tip.d.selectAll('.sjpp_row_wrapper > td:nth-child(4)').nodes()
+		const samplesRendered = scatter.Inner.view.dom.tip.d.selectAll('.sjpp_row_wrapper > td:nth-child(3)').nodes()
 		const samples2Check = []
 		for (const item of samplesRendered) {
 			samples2Check.push(item.innerHTML)
