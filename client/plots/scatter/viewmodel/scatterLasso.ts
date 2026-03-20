@@ -1,6 +1,5 @@
 import { getSamplelstTW, getFilter, addNewGroup } from '../../../mass/groups.js'
 import { getId } from '#mass/nav'
-import { getActiveCohortStr } from '#mass/charts'
 import { renderTable } from '../../../dom/table.ts'
 import type { Scatter } from '../scatter.js'
 import type { TableCell, TableColumn, TableRow } from '#dom'
@@ -17,12 +16,8 @@ export class ScatterLasso {
 		this.model = scatter.model
 		this.view = scatter.view
 		this.interactivity = scatter.interactivity
-		const supportedChartTypes = this.scatter.state.termdbConfig?.supportedChartTypes
-		const activeCohort = getActiveCohortStr(this.scatter.app.getState())
-		this.hasSampleView =
-			supportedChartTypes &&
-			supportedChartTypes[activeCohort] &&
-			supportedChartTypes[activeCohort].includes('sampleView')
+		const supportedChartTypes = this.scatter.state.currentCohortChartTypes
+		this.hasSampleView = supportedChartTypes && supportedChartTypes.includes('sampleView')
 	}
 
 	start(chart) {
