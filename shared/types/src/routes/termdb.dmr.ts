@@ -1,6 +1,13 @@
 import type { Filter } from '../filter.ts'
 import type { RoutePayload } from './routeApi.ts'
 
+/** Regulatory annotation from tabix-indexed BED files (CpG islands, ENCODE cCREs) */
+export type RegulatoryAnnotation = {
+	name: string
+	start: number
+	end: number
+}
+
 export type TermdbDmrRequest = {
 	genome: string
 	dslabel: string
@@ -11,10 +18,18 @@ export type TermdbDmrRequest = {
 	chr: string
 	start: number
 	stop: number
-	/** optional regulatory domain annotations for the GP model */
-	annotations?: DmrAnnotation[]
-	/** max fraction of NaN per probe before dropping (default 0.5) */
-	nan_threshold?: number
+	/** bp flanking each CpG island used to derive Shore annotations (default 2000) */
+	shoreSize?: number
+	/** DMRCate lambda parameter: Gaussian kernel bandwidth in nucleotides (default 1000) */
+	lambda?: number
+	/** DMRCate C parameter: scaling factor for kernel width (default 2) */
+	C?: number
+	/** FDR cutoff for CpG significance (default 0.05) */
+	fdr_cutoff?: number
+	/** display name for group1 (e.g. from volcano plot) */
+	group1Name?: string
+	/** display name for group2 (e.g. from volcano plot) */
+	group2Name?: string
 	filter?: Filter
 	__protected__?: any
 }
@@ -24,12 +39,24 @@ type Sample = {
 	sample: string
 }
 
-type DmrAnnotation = {
+export type DmrAnnotationItem = {
 	name: string
+	chr: string
 	start: number
-	end: number
-	base_methylation?: number
-	length_scale_bp?: number
+	stop: number
+	/** Annotation type: CGI, Shore, Promoter, Enhancer, CTCF */
+	type: string
+}
+
+export type DmrDiagnostic = {
+	probes: {
+		positions: number[]
+		mean_group1: number[]
+		mean_group2: number[]
+		fdr: number[]
+		logFC: number[]
+	}
+	probe_spacings: number[]
 }
 
 export type TermdbDmrSuccessResponse = {
@@ -38,12 +65,25 @@ export type TermdbDmrSuccessResponse = {
 		chr: string
 		start: number
 		stop: number
-		width: number
-		max_delta_beta: number
-		/** hyper = group2 hypermethylated relative to group1; hypo = opposite */
+		/** Number of CpG sites in this DMR */
+		no_cpgs: number
+		/** Minimum FDR from the kernel-smoothed estimate across the region */
+		min_smoothed_fdr: number
+		/** Harmonic mean of individual CpG FDR-corrected p-values */
+		HMFDR: number
+		/** Maximum methylation difference (beta-scale) within the DMR */
+		maxdiff: number
+		/** Mean methylation difference across the DMR */
+		meandiff: number
+		/** hyper = case hypermethylated relative to control; hypo = opposite */
 		direction: 'hyper' | 'hypo'
-		probability: number
+		/** Comma-separated gene symbols overlapping the DMR */
+		overlapping_genes?: string
 	}[]
+	/** Regulatory annotations used in the analysis (CpG islands, ENCODE cCREs) */
+	annotations?: DmrAnnotationItem[]
+	/** Diagnostic data: per-CpG probe means and statistics */
+	diagnostic?: DmrDiagnostic
 }
 
 export type TermdbDmrErrorResponse = {
