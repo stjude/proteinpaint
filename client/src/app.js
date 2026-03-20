@@ -512,7 +512,7 @@ async function parseEmbedThenUrl(arg, app) {
 	}
 
 	if (arg.mclassOverride) {
-		if (!arg.mclassOverride.mclassName) arg.mclassOverride.mclassName = 'Class'
+		if (!arg.mclassOverride.className) arg.mclassOverride.className = 'Class'
 		for (const k in arg.mclassOverride.classes) {
 			const c = common.mclass[k]
 			if (c) {

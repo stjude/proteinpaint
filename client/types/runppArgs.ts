@@ -30,13 +30,13 @@ type CommonBlockLevelArgs = {
 	 * defined under the app specific arguments (e.g. arg.fusioneditor.genome)*/
 	genome?: string
 	/** When provided along with block == true, displays the specified position
-	 * in the genome browser. Cannot be used with arg,gene */
+	 * in the genome browser. Cannot be used with arg.gene */
 	position?: string
-	/** When provided lanuches the protein view. May use either the gene name or
-	 * isform. Cannot be used with arg,position. */
+	/** When provided launches the protein view. May use either the gene name or
+	 * isoform. Cannot be used with arg.position. */
 	gene?: string
-	/** When provided, shows the reference track along side the view and tracks.
-	 * Possible optsions are "refseq", "ensembl", "gencode" */
+	/** When provided, shows the reference track alongside the view and tracks.
+	 * Possible options are "refseq", "ensembl", "gencode" */
 	nativeTracks?: string[] | string
 	commonOverrides?: CommonOverrides
 	mclassOverride?: MClassOverride
@@ -47,7 +47,7 @@ type CommonBlockLevelArgs = {
 type OtherBlockLevelArgs = {
 	/** Sets the minimum z-index for new panes (see client/src/client) */
 	base_zindex?: number
-	/** Show data from an offical ds */
+	/** Show data from an official ds */
 	dataset?: string
 	/** Inits the mass disco plot */
 	disco?: DiscoPlot
@@ -57,13 +57,21 @@ type OtherBlockLevelArgs = {
 	fusioneditor?: FusionEditor
 	gene2canonicalisoform?: any
 	/** Set custom gene domains with default domains */
-	geneDomains?: GeneDomains
+	geneDomains?: GeneDomainsEntry[]
 	/** Inits the gene fusion svg graph */
 	genefusion?: GeneFusion
-	/** Set the view mode when using arg.gene. Does not work with arg.position! */
-	gmmode?: 'protein' | 'exon only' | 'splicing RNA' | 'genomic'
-	/** Highlight amino acid changes */
-	hlaachange?: HighlightAAChangeEntry[]
+	/** Set the view mode when using arg.gene. Does not work with arg.position!
+	 * "protein" shows the protein view with the mutation classes.
+	 * "exon only" shows the exon structure without introns.
+	 * "aggregated exons" shows the exon structure without introns and aggregates all mutations within an exon.
+	 * "splicing RNA" shows the splicing RNA view.
+	 * "genomic" shows the genomic view with introns and exons. */
+	gmmode?: 'protein' | 'exon only' | 'aggregated exons' | 'splicing RNA' | 'genomic'
+	/** Highlight amino acid changes. Multiple entries can be provided as an array of strings or objects.
+	 * string must be in the format "codon:class:label" where codon is the amino acid position,
+	 * class is a valid mutation class, and label is a custom label for the mutation.
+	 * For example, "757:missense:myvariant"*/
+	hlaachange?: HighlightAAChangeEntry[] | string
 	/** Highlight regions by genomic position (e.g. ["chr17:7575049-7576692","chr17:7578987-7580630"]) */
 	hlregions?: string[]
 	/** Highlight variants */
@@ -81,7 +89,7 @@ type OtherBlockLevelArgs = {
 	mass?: any
 	/** Inits the mass UI from a saved session on the server */
 	massSessionId?: string
-	/** Inits the mass UI from a provide session file */
+	/** Inits the mass UI from a provided session file */
 	massSessionFile?: string
 	/** Inits the MA Volcano Plot app */
 	mavolcanoplot?: MAVolcanoPlot
@@ -146,7 +154,9 @@ type CommonOverrides = {
 		/** Index must match the class code */
 		[index: string]: {
 			/** Replaces the default mutation class color */
-			color: string
+			color?: string
+			/** Additional mutation class override properties (e.g. label, desc). */
+			[key: string]: unknown
 		}
 	}
 }
@@ -188,8 +198,6 @@ type HicApp = {
 type FusionEditor = {
 	/** Only show input form */
 	uionly?: boolean
-	/** Genome name (e.g. hg19, hg38, etc.) */
-	genome: string
 	//TODO: add types for this
 }
 
@@ -236,7 +244,7 @@ type MafTimeline = {
 	//TODO: add types for this
 }
 
-type GeneDomains = {
+type GeneDomainsEntry = {
 	/** Index must be the isoform. No gene names */
 	[index: string]: {
 		/** Genomic start position */
@@ -244,9 +252,9 @@ type GeneDomains = {
 		/** Genomic stop position */
 		stop: number
 		/** Domain name */
-		name: string
+		name?: string
 		/** Domain color */
-		color: string
+		color?: string
 	}
 }
 
