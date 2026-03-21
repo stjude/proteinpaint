@@ -57,6 +57,14 @@ export type DmrDiagnostic = {
 		logFC: number[]
 	}
 	probe_spacings: number[]
+	/** Total probes analyzed genome-wide for eBayes */
+	total_probes_analyzed?: number
+	/** Peak RSS memory in MB */
+	peak_memory_mb?: number
+	/** Starting RSS memory in MB */
+	start_memory_mb?: number
+	/** Total elapsed time in milliseconds */
+	elapsed_ms?: number
 }
 
 export type TermdbDmrSuccessResponse = {
