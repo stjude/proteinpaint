@@ -3,8 +3,6 @@ import { debounce } from 'debounce'
 import { dofetch3 } from '#common/dofetch'
 import { invalidcoord, string2pos } from '#src/coord'
 import type { ClientGenome } from '../types/clientGenome'
-//import type {Menu} from '#dom'
-//import type { Div } from '../types/d3'
 
 /*
 exports:
@@ -37,7 +35,7 @@ type GeneSearchBoxArg = {
 	tip: any // applying Menu & Div types here gives many tsc err
 	/** d3 element in which <input> is created */
 	row: any
-	/** Optional. The default is 'Gene, position' */
+	/** if not provided, auto compute to show in <input> */
 	placeholder?: string
 	/** 
 	if 'gene':
@@ -45,15 +43,18 @@ type GeneSearchBoxArg = {
 		result is {geneSymbol:str}, will not map to coord
 		cannot map isoform to gene name!
 		(later may need geneOrIsoform flag to query both) 
+	if 'genes':
+		input can be multiple gene symbols or aliases separated by comma, space, tab, or newline
+		useful for copy-pasting gene lists from spreadsheets
+		if entered single gene, result is same as searchOnly=gene
+        if entered multiple, result is {genes: [{geneSymbol:str},...]}
 	if 'snp':
 		user must select a single snp
 		input can be dbSNP id, position, or variant format (chr.pos.ref.alt)
 		allow to enter chr.pos.ref.alt or hgvs (see next section)
 		otherwise, only allow chr:start-stop
-	if 'genes':
-		input can be multiple gene symbols or aliases separated by comma, space, tab, or newline
-		each gene is validated and result is {genes: [{geneSymbol:str},...]}
-		useful for copy-pasting gene lists from spreadsheets
+	if missing:
+        support gene, region, snp (if available), variant (if allowed). resolves to region
 	*/
 	searchOnly?: 'gene' | 'snp' | 'genes'
 	/** If true, user must click on search box and enter instead of automatically 
@@ -85,7 +86,7 @@ type GeneSearchBoxArg = {
     set to {chr, start, stop} to fill default position into <input>
     when missing, just show placeholder */
 	defaultCoord?: ResultArg
-	/** required. client-side genome obj */
+	/** client-side genome obj */
 	genome: ClientGenome
 	/** default gene name to fill into search box */
 	geneSymbol?: string
@@ -158,8 +159,20 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		row = arg.row
 	const result: Result = {}
 
-	if (arg?.searchOnly == 'snp' && !arg.genome.hasSNP) {
-		row.append('span').text('Cannot support .searchOnly = "snp". Genome lacks SNP')
+	// validate arg
+	try {
+		if (typeof arg.genome != 'object') throw 'genome not object'
+		if (arg.searchOnly) {
+			if (arg.searchOnly != 'gene' && arg.searchOnly != 'genes' && arg.searchOnly != 'snp')
+				throw 'searchOnly not gene/genes/snp'
+			if (arg.searchOnly == 'snp' && !arg.genome.hasSNP) throw 'Cannot support .searchOnly = "snp". Genome lacks SNP'
+		}
+		if (arg.allowVariant) {
+			if (arg.searchOnly == 'gene' || arg.searchOnly == 'genes')
+				throw 'when allowVariant is true, searchOnly cannot be gene/genes'
+		}
+	} catch (e) {
+		row.append('span').text(e)
 		return result
 	}
 
@@ -639,7 +652,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		else setTimeout(() => getResult({ geneSymbol: arg.geneSymbol }, geneSymbol), 10)
 	}
 
-	return result //searchbox
+	return result
 }
 
 export async function string2variant(v: string, genome: ClientGenome) {
