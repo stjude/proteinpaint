@@ -7,8 +7,10 @@ import { Menu } from '../menu'
 import { sleep, detectOne, detectGte, detectLst } from '../../test/test.helpers.js'
 
 /* Tests
-    - SKIPPED string2variant() - HGVS deletion and delins variants
-	- search by p53 should find TP53
+    SKIPPED string2variant() - HGVS deletion and delins variants
+	search by p53 should find TP53
+	searchOnly=gene
+	searchOnly=genes and entered a single gene, same behavior as searchOnly=gene
 */
 
 /**************
@@ -37,7 +39,7 @@ async function getSearchBox(holder, opts = {}) {
 	}
 
 	const args = Object.assign(_opts, opts)
-	addGeneSearchbox(args)
+	return addGeneSearchbox(args)
 }
 
 /**************
@@ -167,6 +169,132 @@ tape('searchOnly=gene', async test => {
 	test.equal(searchInput.placeholder, 'Gene', 'Should display the default placeholder text')
 
 	searchInput.value = 'KRAS'
+
+	const matchingResults = await detectGte({
+		elem: tip.d.node(),
+		selector: '.sja_menuoption',
+		count: 1,
+		trigger: () => {
+			// simulate the last character typed for KRAS
+			searchInput.dispatchEvent(
+				new KeyboardEvent('keyup', {
+					code: 's',
+					key: 'KeyS',
+					charCode: 0,
+					keyCode: 83,
+					view: window,
+					bubbles: true
+				})
+			)
+		}
+	})
+
+	test.equal(matchingResults.length, 1, `should display 1 matching results`)
+
+	// simulate an immediate Enter keypress
+	await detectLst({
+		elem: tip.d.node(),
+		selector: '.sja_menuoption',
+		count: 0,
+		trigger: () => {
+			searchInput.dispatchEvent(
+				new KeyboardEvent('keyup', {
+					code: 'Enter',
+					key: 'Enter',
+					charCode: 13,
+					keyCode: 13,
+					view: window,
+					bubbles: true
+				})
+			)
+		}
+	})
+
+	// slight wait for the color style to be applied in DOM, not dependent on data request
+	await sleep(20)
+	test.equal(
+		(searchInput.nextSibling as HTMLElement).style.color,
+		'green',
+		`should have green checkmark after an immediate Enter`
+	)
+
+	searchInput.value = 'KRAS'
+
+	const matchingResults2 = await detectGte({
+		elem: tip.d.node(),
+		selector: '.sja_menuoption',
+		count: 1,
+		trigger: () => {
+			// simulate the last character typed for KRAS
+			searchInput.dispatchEvent(
+				new KeyboardEvent('keyup', {
+					code: 's',
+					key: 'KeyS',
+					charCode: 0,
+					keyCode: 83,
+					view: window,
+					bubbles: true
+				})
+			)
+		}
+	})
+
+	test.equal(matchingResults2.length, 1, `should display 1 matching matchingResult`)
+
+	// simulate a delayed Enter keypress, longer than debounceDelay
+	await sleep(debounceDelay + 10)
+	await detectLst({
+		elem: tip.d.node(),
+		selector: '.sja_menuoption',
+		count: 0,
+		trigger: () => {
+			// simulate the last character typed for KRAS
+			// simulate a fast enter
+			searchInput.dispatchEvent(
+				new KeyboardEvent('keyup', {
+					code: 'Enter',
+					key: 'Enter',
+					charCode: 13,
+					keyCode: 13,
+					view: window,
+					bubbles: true
+				})
+			)
+		}
+	})
+
+	// slight wait for the color style to be applied in DOM, not dependent on data request
+	await sleep(20)
+	test.equal(
+		(searchInput.nextSibling as HTMLElement).style.color,
+		'green',
+		`should have green checkmark after a delayed Enter`
+	)
+
+	if (test['_ok']) {
+		if (tip.dnode) tip.dnode.remove()
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('searchOnly=genes and entered a single gene, same behavior as searchOnly=gene', async test => {
+	// TODO dedup
+	test.timeoutAfter(2000)
+	const holder = getHolder()
+	const tip = new Menu({ padding: '' })
+	getSearchBox(holder, { tip, searchOnly: 'genes' })
+	const searchInput: HTMLInputElement = await detectOne({
+		elem: holder.node(),
+		selector: 'input'
+	})
+
+	// The line below is for typescript to stop complaining
+	if (!searchInput) test.fail('No gene search box created')
+	test.ok(searchInput.tagName == 'INPUT', 'Should create an input element')
+	//test.equal(searchInput.placeholder, 'Gene', 'Should display the default placeholder text')
+
+	searchInput.value = 'kras'
 
 	const matchingResults = await detectGte({
 		elem: tip.d.node(),

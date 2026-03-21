@@ -140,7 +140,13 @@ type ResultArg = (GeneOrSNPResult | VariantResult) & {
 }
 
 type Result = Partial<GeneOrSNPResult> &
-	Partial<VariantResult> & { geneSymbol?: string; fromWhat?: string; chr?: string; searchbox?: any; genes?: { geneSymbol: string }[] }
+	Partial<VariantResult> & {
+		geneSymbol?: string
+		fromWhat?: string
+		chr?: string
+		searchbox?: any
+		genes?: { geneSymbol: string }[]
+	}
 
 export const debounceDelay = 500
 
@@ -166,8 +172,8 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		placeholder = 'Gene'
 		width = 100 // use shorter width for inputting only one gene name
 	} else if (arg?.searchOnly == 'genes') {
-		placeholder = 'Gene names (comma, space, tab, or newline separated)'
-		width = 300 // wider for multiple genes
+		placeholder = 'Gene names'
+		width = 200
 	} else {
 		placeholder = arg?.searchOnly == 'snp' ? 'Position' : 'Gene, position'
 		if (arg.genome.hasSNP) {
@@ -237,9 +243,9 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 				if (arg?.searchOnly != 'snp') {
 					const hitgene = tip.d.select(".sja_menuoption[isgene='1']")
 					if (hitgene.size()) {
-						// gene match
+						// showing a matched gene in tip
 						const geneSymbol = hitgene.datum()
-						if (arg.searchOnly == 'gene') {
+						if (arg.searchOnly == 'gene' || arg.searchOnly == 'genes') {
 							getResult({ geneSymbol }, geneSymbol)
 							// hit is found. hide gene tip and blur input
 							tip.hide()
@@ -251,6 +257,20 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 						}
 						searchbox.property('disabled', false)
 						// must not clear tip, genes on multiple loci will show as further options
+						return
+					}
+					// no matched gene in tip
+					if (arg.searchOnly == 'genes') {
+						const validGenes = await parseMultiGenes(v)
+						if (validGenes?.length) {
+							getResult({ genes: validGenes }, '')
+						} else {
+							getResult(null, 'Gene not found')
+						}
+						tip.hide()
+						input.blur()
+						debouncer.clear()
+						searchbox.property('disabled', false)
 						return
 					}
 				}
@@ -281,11 +301,13 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 						hit.name || v
 					)
 					searchbox.property('disabled', false)
+					tip.hide()
 					return
 				}
 
 				if (arg?.searchOnly == 'snp') {
 					getResult(null, 'Variant not found')
+					searchbox.property('disabled', false)
 					return
 				}
 
@@ -353,62 +375,19 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 
 		// Handle multiple gene search mode
 		if (arg?.searchOnly == 'genes') {
-			// Split input by comma, space, tab, or newline
-			const geneNames = v
+			const lst = v
 				.split(/[,\s\t\n]+/)
 				.map(name => name.trim())
 				.filter(name => name.length > 0)
-			
-			if (geneNames.length === 0) return
 
-			// Validate each gene name
-			const validatedGenes: { geneSymbol: string }[] = []
-			const invalidGenes: string[] = []
-			
-			for (const geneName of geneNames) {
-				const gene = await dofetch3('genelookup', { body: { genome: arg.genome.name, input: geneName } })
-				if (gene.error || !gene.hits?.length) {
-					invalidGenes.push(geneName)
-				} else {
-					// Use the first hit as the validated gene symbol
-					validatedGenes.push({ geneSymbol: gene.hits[0] })
-				}
+			if (lst.length === 0) return
+			if (lst.length == 1) {
+				// just one name. pass through to single gene handling
+			} else {
+				// entered multiple, won't show result now
+				tip.hide()
+				return
 			}
-
-			// Display results
-			tip.d.append('div').style('margin', '5px').style('font-weight', 'bold')
-				.text(`Validated ${validatedGenes.length} of ${geneNames.length} genes`)
-			
-			if (validatedGenes.length > 0) {
-				const validDiv = tip.d.append('div').style('margin', '5px')
-				validDiv.append('div').style('color', 'green').text(`Valid genes (${validatedGenes.length}):`)
-				validDiv.append('div').style('font-size', '0.9em').text(validatedGenes.map(g => g.geneSymbol).join(', '))
-			}
-			
-			if (invalidGenes.length > 0) {
-				const invalidDiv = tip.d.append('div').style('margin', '5px')
-				invalidDiv.append('div').style('color', 'red').text(`Invalid genes (${invalidGenes.length}):`)
-				invalidDiv.append('div').style('font-size', '0.9em').text(invalidGenes.join(', '))
-			}
-
-			// Add confirmation button
-			if (validatedGenes.length > 0) {
-				tip.d.append('button')
-					.style('margin', '5px')
-					.text('Add genes')
-					.attr('class', 'sja_menuoption')
-					.on('click', () => {
-						result.genes = validatedGenes
-						searchStat.mark.style('color', 'green').html('&check;')
-						searchStat.word.text(`${validatedGenes.length} genes`)
-						tip.hide()
-						if (arg.callback) {
-							arg.callback()
-						}
-					})
-			}
-			
-			return
 		}
 
 		// see if input is gene
@@ -428,7 +407,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 					.style('border-radius', '0px')
 					.attr('isgene', 1)
 					.on('click', async (event, d) => {
-						if (arg?.searchOnly == 'gene') {
+						if (arg?.searchOnly == 'gene' || arg.searchOnly == 'genes') {
 							// finding gene only, got result
 							getResult({ geneSymbol: d }, d)
 							tip.hide()
@@ -497,6 +476,28 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		}
 	}
 	const debouncer = debounce(checkInput, debounceDelay)
+
+	async function parseMultiGenes(v) {
+		const lst = v
+			.split(/[,\s\t\n]+/)
+			.map(name => name.trim())
+			.filter(name => name.length > 0)
+
+		// Validate each gene name
+		const validGenes: { geneSymbol: string }[] = []
+		//let invalidCount = 0 // may report later
+
+		for (const s of lst) {
+			const gene = await dofetch3('genelookup', { body: { genome: arg.genome.name, input: s } })
+			if (gene.error || !gene.hits?.length) {
+				//invalidCount++
+			} else {
+				// Use the first hit as the validated gene symbol
+				validGenes.push({ geneSymbol: gene.hits[0] })
+			}
+		}
+		return validGenes
+	}
 
 	function displayVariantHits(tip, data) {
 		tip.d
@@ -587,6 +588,8 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 				// is only a gene symbol
 				searchbox.property('value', r.geneSymbol)
 				result.geneSymbol = r.geneSymbol
+			} else if (r.genes) {
+				result.genes = r.genes
 			}
 
 			searchStat.mark.style('color', 'green').html('&check;')
