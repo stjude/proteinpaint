@@ -231,6 +231,7 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 				showAll: true
 			})
 			const regions = this.filteredTermValues[this.config.regionTW.id]
+			const sjgRegions = this.filteredTermValues[this.config.sjgRegionTW.id]
 			const countries = this.filteredTermValues[this.config.countryTW.id]
 			const incomes = this.filteredTermValues[this.config.incomeTW.id]
 			const teachingStates = this.filteredTermValues[this.config.teachingStatusTW.id]
@@ -316,12 +317,20 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 				inputs.push(
 					...[
 						{
-							label: 'Region',
+							label: 'WHO Region',
 							type: 'dropdown',
 							chartType,
 							settingsKey: this.config.regionTW.term.id,
 							options: regions,
 							callback: value => this.setFilterValue(this.config.regionTW.term.id, value)
+						},
+						{
+							label: 'SJG Region',
+							type: 'dropdown',
+							chartType,
+							settingsKey: this.config.sjgRegionTW.term.id,
+							options: sjgRegions,
+							callback: value => this.setFilterValue(this.config.sjgRegionTW.term.id, value)
 						},
 						{
 							label: 'Country',
@@ -676,6 +685,8 @@ export async function loadFilterTerms(config, activeCohort, app) {
 	const cohortPreffix = activeCohort == FULL_COHORT ? 'F' : 'A'
 	config.countryTW = { id: cohortPreffix + 'country' }
 	config.regionTW = { id: cohortPreffix + 'WHO_region' }
+	config.sjgRegionTW = { id: cohortPreffix + 'WHO_region' }
+	// TODO - termid needs to be updated.
 	config.incomeTW = { id: cohortPreffix + 'Income_group' }
 	config.typeTW = { id: cohortPreffix + 'FC_TypeofFacility' }
 	config.teachingStatusTW = { id: cohortPreffix + 'FC_TeachingFacility' }
@@ -689,6 +700,7 @@ export async function loadFilterTerms(config, activeCohort, app) {
 		config.facilityTW,
 		config.countryTW,
 		config.regionTW,
+		config.sjgRegionTW,
 		config.incomeTW,
 		config.typeTW,
 		config.teachingStatusTW,
