@@ -147,6 +147,31 @@ export class VolcanoInteractions {
 		})
 	}
 
+	/** Launch a violin plot for a gene expression data point. */
+	async launchViolinGeneExp(value: string) {
+		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
+		if (config.termType != GENE_EXPRESSION) return
+		this.app.dispatch({
+			type: 'plot_create',
+			config: {
+				chartType: 'summary',
+				childType: 'violin',
+				term: {
+					q: { mode: 'continuous' },
+					term: {
+						gene: value,
+						name: value,
+						type: config.termType
+					}
+				},
+				term2: {
+					q: { groups: config.tw.q.groups, type: 'custom-samplelst' },
+					term: config.tw.term
+				}
+			}
+		})
+	}
+
 	launchGeneSetEdit() {
 		const plotConfig = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		const holder = this.dom.actionsTip.d.append('div').style('padding', '5px') as any
@@ -206,6 +231,35 @@ export class VolcanoInteractions {
 				group2: config.samplelst.groups[1].values || [],
 				group1Name: config.samplelst.groups[0].name,
 				group2Name: config.samplelst.groups[1].name
+			}
+		})
+	}
+
+	/** Launch a violin/box plot for a DNA methylation promoter.
+	 * Creates a methylation term using the promoter's chr/start/stop coordinates. */
+	launchViolin(d: { chr: string; start: number; stop: number; gene_name?: string; promoter_id?: string }) {
+		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
+		const geneName = d.gene_name?.split(',')[0]?.trim() || d.promoter_id || ''
+		this.app.dispatch({
+			type: 'plot_create',
+			config: {
+				chartType: 'summary',
+				childType: 'violin',
+				term: {
+					q: { mode: 'continuous' },
+					term: {
+						gene: geneName,
+						name: geneName,
+						type: DNA_METHYLATION,
+						chr: d.chr,
+						start: d.start,
+						stop: d.stop
+					}
+				},
+				term2: {
+					q: { groups: config.tw.q.groups, type: 'custom-samplelst' },
+					term: config.tw.term
+				}
 			}
 		})
 	}
