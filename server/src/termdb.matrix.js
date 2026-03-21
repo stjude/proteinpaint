@@ -53,7 +53,9 @@ export async function getData(q, ds, onlyChildren = false) {
 
 	try {
 		validateArg(q, ds)
-		authApi.mayAdjustFilter(q, ds, q.terms)
+		if (q.__protected__?.ignoredTermIds?.length) {
+			authApi.mayAdjustFilter(q, ds, q.terms)
+		}
 		const data = await getSampleData(q, ds, onlyChildren)
 
 		checkAccessToSampleData(data, ds, q)
