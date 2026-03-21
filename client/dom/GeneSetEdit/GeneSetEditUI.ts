@@ -179,13 +179,13 @@ export class GeneSetEditUI {
 			.style('float', 'right')
 			.style('gap', '5px')
 
-		const addGenes = this.addGenes.bind(this)
+		const addGene = this.addGene.bind(this)
 		this.geneSearch = addGeneSearchbox({
 			tip: this.tip2,
 			genome: this.genome,
 			row,
 			searchOnly: 'genes',
-			callback: addGenes,
+			callback: addGene,
 			hideHelp: true,
 			focusOff: true
 		})
@@ -514,14 +514,37 @@ export class GeneSetEditUI {
 
 	/** Functions supporting adding/removing genes from the geneHoldingDiv */
 	addGene() {
-		const gene = this.geneSearch.geneSymbol
-		for (const item of this.geneList) {
-			if (item.gene == gene) {
-				window.alert(`The gene ${gene} has already been added`)
-				return
+		if (this.geneSearch.geneSymbol) {
+			const gene = this.geneSearch.geneSymbol
+			for (const item of this.geneList) {
+				if (item.gene == gene) {
+					window.alert(`The gene ${gene} has already been added`)
+					return
+				}
+			}
+			if (gene) this.geneList.push({ gene })
+		} else if (this.geneSearch.genes) {
+			const newGenes: Gene[] = []
+			const duplicates: string[] = []
+
+			for (const geneObj of this.geneSearch.genes) {
+				const geneName = geneObj.geneSymbol
+				const isDuplicate = this.geneList.some(item => item.gene === geneName)
+				if (isDuplicate) {
+					duplicates.push(geneName)
+				} else {
+					newGenes.push({ gene: geneName })
+				}
+			}
+
+			if (newGenes.length > 0) {
+				this.geneList.push(...newGenes)
+			}
+
+			if (duplicates.length > 0) {
+				window.alert(`The following genes were already added and skipped: ${duplicates.join(', ')}`)
 			}
 		}
-		if (gene) this.geneList.push({ gene })
 		this.renderGenes()
 	}
 
@@ -529,28 +552,6 @@ export class GeneSetEditUI {
 	addGenes() {
 		const genes = this.geneSearch.genes
 		if (!genes || genes.length === 0) return
-		
-		const newGenes: Gene[] = []
-		const duplicates: string[] = []
-		
-		for (const geneObj of genes) {
-			const geneName = geneObj.geneSymbol
-			const isDuplicate = this.geneList.some(item => item.gene === geneName)
-			if (isDuplicate) {
-				duplicates.push(geneName)
-			} else {
-				newGenes.push({ gene: geneName })
-			}
-		}
-		
-		if (newGenes.length > 0) {
-			this.geneList.push(...newGenes)
-			this.renderGenes()
-		}
-		
-		if (duplicates.length > 0) {
-			window.alert(`The following genes were already added and skipped: ${duplicates.join(', ')}`)
-		}
 	}
 
 	renderGenes(geneSetName?: string) {
