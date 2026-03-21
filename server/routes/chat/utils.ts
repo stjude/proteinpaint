@@ -427,46 +427,32 @@ export async function parse_dataset_db(dataset_db: string) {
 	const rag_docs: string[] = []
 	const db_rows: DbRows[] = []
 	try {
-		// Query the database
-		const desc_rows = db.prepare('SELECT * from termhtmldef').all()
+		const rows = db
+			.prepare('SELECT t.id, t.type, t.jsondata, h.jsonhtml FROM terms t INNER JOIN termhtmldef h ON t.id = h.id')
+			.all()
 
-		const description_map: any = []
-		// Process the retrieved rows
-		desc_rows.forEach((row: any) => {
-			const name: string = row.id
+		rows.forEach((row: any) => {
 			const jsonhtml = JSON.parse(row.jsonhtml)
 			const description: string = jsonhtml.description[0].value
-			description_map.push({ name: name, description: description })
-		})
+			const jsondata = JSON.parse(row.jsondata)
 
-		const term_db_rows = db.prepare('SELECT * from terms').all()
-
-		term_db_rows.forEach((row: any) => {
-			const found = description_map.find((item: any) => item.name === row.id)
-			if (found) {
-				// Restrict db to only those items that have a description
-				const jsondata = JSON.parse(row.jsondata)
-				const description = description_map.filter((item: any) => item.name === row.id)
-				const term_type: string = row.type
-
-				const values: DbValue[] = []
-				if (jsondata.values && Object.keys(jsondata.values).length > 0) {
-					for (const key of Object.keys(jsondata.values)) {
-						const value = jsondata.values[key]
-						const db_val: DbValue = { key: key, value: value }
-						values.push(db_val)
-					}
+			const values: DbValue[] = []
+			if (jsondata.values && Object.keys(jsondata.values).length > 0) {
+				for (const key of Object.keys(jsondata.values)) {
+					const value = jsondata.values[key]
+					const db_val: DbValue = { key: key, value: value }
+					values.push(db_val)
 				}
-				const db_row: DbRows = {
-					name: row.id,
-					description: description[0].description,
-					values: values,
-					term_type: term_type
-				}
-				const stringified_db = parse_db_rows(db_row)
-				rag_docs.push(stringified_db)
-				db_rows.push(db_row)
 			}
+			const db_row: DbRows = {
+				name: row.id,
+				description: description,
+				values: values,
+				term_type: row.type
+			}
+			const stringified_db = parse_db_rows(db_row)
+			rag_docs.push(stringified_db)
+			db_rows.push(db_row)
 		})
 	} catch (error) {
 		throw 'Error in parsing dataset DB:' + error
