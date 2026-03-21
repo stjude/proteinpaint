@@ -548,12 +548,6 @@ export class GeneSetEditUI {
 		this.renderGenes()
 	}
 
-	/** Add multiple genes from the genes array */
-	addGenes() {
-		const genes = this.geneSearch.genes
-		if (!genes || genes.length === 0) return
-	}
-
 	renderGenes(geneSetName?: string) {
 		this.api.dom.geneHoldingDiv.selectAll('*').remove()
 
