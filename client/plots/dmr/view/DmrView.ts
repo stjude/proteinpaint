@@ -1,4 +1,5 @@
 import { table2col } from '#dom'
+import { formatElapsedTime } from '#shared'
 import type { DmrDiagnostic } from '#types'
 import type { DmrDom, LegendRow, DmrViewData } from '../DmrTypes.ts'
 
@@ -129,7 +130,12 @@ export class DmrView {
 			['Median spacing', `${medianSpacing.toFixed(0)} bp`],
 			['Max gap', `${maxGap.toFixed(0)} bp`],
 			['Gaps > 1kb', String(gapsOver1kb)],
-			['DMRs called', String(dmrs.length)]
+			['DMRs called', String(dmrs.length)],
+			...(diagnostic.total_probes_analyzed
+				? [['Probes analyzed (genome-wide)', diagnostic.total_probes_analyzed.toLocaleString()]]
+				: []),
+			...(diagnostic.elapsed_ms != null ? [['Analysis time', formatElapsedTime(diagnostic.elapsed_ms)]] : []),
+			...(diagnostic.peak_memory_mb != null ? [['Peak memory', `${diagnostic.peak_memory_mb.toFixed(1)} MB`]] : [])
 		] as [string, string][]) {
 			t.addRow(k, v)
 		}
