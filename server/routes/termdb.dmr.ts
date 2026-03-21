@@ -1,6 +1,6 @@
 import type { RouteApi, TermdbDmrRequest, TermdbDmrSuccessResponse } from '#types'
 import { TermdbDmrPayload } from '#types/checkers'
-import { run_R } from '@sjcrh/proteinpaint-r'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { invalidcoord } from '#shared/common.js'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
@@ -54,7 +54,7 @@ function init({ genomes }) {
 			}
 
 			const time1 = Date.now()
-			const result = JSON.parse(await run_R('dmrcate.R', JSON.stringify(dmrcateInput)))
+			const result = JSON.parse(await run_rust('dmrcate', JSON.stringify(dmrcateInput)))
 			mayLog('DMR analysis time:', formatElapsedTime(Date.now() - time1))
 			if (result.error) throw new Error(result.error)
 
