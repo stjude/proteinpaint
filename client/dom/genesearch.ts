@@ -74,7 +74,7 @@ type GeneSearchBoxArg = {
 	*/
 	callback?: () => void
 	/** optional
-    triggered when the <input> is emptied. allows an app to de-select a gene in this way */
+    triggered when the <input> is emptied and hitting Enter. allows an app to de-select a gene in this way */
 	emptyInputCallback?: () => void
 	/** if true, hide the text msg on the right of <input> */
 	hideHelp?: boolean
@@ -206,7 +206,6 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 			const v = input.value.trim()
 
 			if (arg.emptyInputCallback && v.length == 0 && keyupEnter(event)) {
-				// has such callback, should be triggered when <input> is emptied and hitting enter
 				tip.hide()
 				arg.emptyInputCallback()
 				searchStat.word.text('')
@@ -263,7 +262,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 					if (arg.searchOnly == 'genes') {
 						const validGenes = await parseMultiGenes(v)
 						if (validGenes?.length) {
-							getResult({ genes: validGenes }, '')
+							getResult({ genes: validGenes }, `${validGenes.length} gene${validGenes.length > 1 ? 's' : ''}`)
 						} else {
 							getResult(null, 'Gene not found')
 						}
@@ -371,6 +370,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		// checking input format
 		const v = searchbox.property('value').trim()
 		if (!v) return
+
 		tip.showunder(searchbox.node()).clear()
 
 		// Handle multiple gene search mode
@@ -384,7 +384,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 			if (lst.length == 1) {
 				// just one name. pass through to single gene handling
 			} else {
-				// entered multiple, won't show result now
+				// multiple strings from input, won't verify them now. only verify on hitting Enter
 				tip.hide()
 				return
 			}
@@ -416,11 +416,10 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 							await geneCoordSearch(d)
 						}
 					})
-				return
+				return // found gene hits and shown in tip. done
 			}
+			// no gene hit; continue for coordinate, variant, snp FIXME unclear logic..
 		}
-
-		if (arg?.searchOnly == 'gene') return
 
 		// see if input is in variant format (chr.pos.ref.alt)
 		if (arg.allowVariant) {
@@ -430,7 +429,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 
 		if (arg.genome.hasSNP) {
 			// has snp; test if input is dbsnp id
-			const dbsnp = await dofetch3('snp', { body: { byName: true, genome: arg.genome.name, lst: [v] } })
+			const dbsnp = await dofetch3('snp', { body: { byName: true, genome: arg.genome.name, lst: [v] } }) // FIXME expensive! only search when searchOnly=snp
 			if (dbsnp.error) throw dbsnp.error
 			if (dbsnp?.results?.length) {
 				// display hits in menu
@@ -489,7 +488,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 
 		for (const s of lst) {
 			const gene = await dofetch3('genelookup', { body: { genome: arg.genome.name, input: s } })
-			if (gene.error || !gene.hits?.length) {
+			if (!gene || gene.error || !gene.hits?.length) {
 				//invalidCount++
 			} else {
 				// Use the first hit as the validated gene symbol
