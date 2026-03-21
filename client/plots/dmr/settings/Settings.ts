@@ -15,4 +15,6 @@ export type DMRSettings = {
 	colors: { group1: string; group2: string; hyper: string; hypo: string }
 	/** Colors for regulatory annotation types in the cCRE track */
 	annotationColors: Record<string, string>
+	/** Backend engine: 'rust' (default) or 'r' (DMRCate via cached limma) */
+	backend: 'rust' | 'r'
 }

@@ -60,7 +60,7 @@ fn trigamma_inverse(x: f64) -> f64 {
     }
     let mut y = if x > 1e-6 { 1.0 / x.sqrt() } else { 1.0 / x };
     for _ in 0..8 {
-        let delta = (trigamma(y) - x) / -trigamma_deriv(y);
+        let delta = (trigamma(y) - x) / trigamma_deriv(y);
         y -= delta;
         if y <= 0.0 {
             y = 0.5 * (y + delta);
@@ -127,11 +127,16 @@ fn read_h5_metadata(file: &File) -> Result<(Vec<String>, Vec<usize>, Vec<String>
         .read_scalar::<VarLenUnicode>()
         .map_err(|e| e.to_string())?
         .to_string();
-    let cl_map: serde_json::Map<String, Value> = serde_json::from_str(&cl_json).map_err(|e| e.to_string())?;
-    let (names, lens): (Vec<String>, Vec<usize>) = cl_map
-        .iter()
-        .map(|(k, v)| (k.clone(), v.as_u64().unwrap_or(0) as usize))
-        .unzip();
+    // Parse chrom_lengths preserving insertion order (HDF5 order, not alphabetical).
+    // serde_json::Map uses BTreeMap which sorts keys alphabetically — wrong for chromosomes.
+    // Use the json crate which preserves insertion order.
+    let cl_parsed = json::parse(&cl_json).map_err(|e| format!("Failed to parse chrom_lengths: {}", e))?;
+    let mut names = Vec::new();
+    let mut lens = Vec::new();
+    for (k, v) in cl_parsed.entries() {
+        names.push(k.to_string());
+        lens.push(v.as_u64().unwrap_or(0) as usize);
+    }
     Ok((names, lens, samples, starts, probes))
 }
 
@@ -144,7 +149,7 @@ fn process_chromosome(
     chr: &str,
     starts: &[i64],
     probe_ids: &[String],
-    min_spg: usize,
+    _min_spg: usize,
 ) -> Result<Vec<ProbeStats>, String> {
     let n_probes = row_end - row_start;
     if n_probes == 0 {
@@ -179,7 +184,9 @@ fn process_chromosome(
                     }
                 }
             }
-            if cv.len() < min_spg || kv.len() < min_spg {
+            // Strict filter: require ALL samples in both groups to be non-NaN
+            // (matches limma's lmFit which cannot handle NA values)
+            if cv.len() != case_idx.len() || kv.len() != ctrl_idx.len() {
                 continue;
             }
             // Beta → M-value
@@ -225,7 +232,21 @@ fn fit_f_dist(vars: &[f64], df: f64) -> (f64, f64) {
     let z: Vec<f64> = vars.iter().map(|&v| v.ln()).collect();
     let mz = z.iter().sum::<f64>() / z.len() as f64;
     let vz = z.iter().map(|&zi| (zi - mz).powi(2)).sum::<f64>() / (z.len() as f64 - 1.0);
-    let target = vz - trigamma(df / 2.0);
+    let tri_df = trigamma(df / 2.0);
+    let target = vz - tri_df;
+    // Debug to file (stderr causes run_rust to error)
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("/tmp/rust_dmrcate_debug.log")
+    {
+        use std::io::Write;
+        let _ = writeln!(
+            f,
+            "fit_f_dist: mean_z={:.6} var_z={:.6} trigamma(df/2)={:.6e} target={:.6}",
+            mz, vz, tri_df, target
+        );
+    }
     let df0 = if target > 0.0 {
         2.0 * trigamma_inverse(target)
     } else {
@@ -264,7 +285,7 @@ fn kernel_smooth(pos: &[i64], t: &[f64], lambda: f64, c: f64) -> Vec<f64> {
             let (exp, var) = (sk, 2.0 * skk);
             let (b, a) = (2.0 * exp * exp / var, var / (2.0 * exp));
             if b > 0.0 && a > 0.0 {
-                ChiSquared::new(b).map(|d| 1.0 - d.cdf(sky / a)).unwrap_or(1.0)
+                ChiSquared::new(b).map(|d| d.sf(sky / a)).unwrap_or(1.0)
             } else {
                 1.0
             }
@@ -427,6 +448,21 @@ fn main() {
     // Phase 2: Empirical Bayes
     let df = all[0].df_residual;
     let (s20, df0) = fit_f_dist(&all.iter().map(|s| s.residual_var).collect::<Vec<_>>(), df);
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("/tmp/rust_dmrcate_debug.log")
+    {
+        use std::io::Write;
+        let _ = writeln!(
+            f,
+            "eBayes: s2_prior={:.6e} df_prior={:.4} df_residual={:.1} n_probes={}",
+            s20,
+            df0,
+            df,
+            all.len()
+        );
+    }
     let df_tot = df + df0;
     let tdist = StudentsT::new(0.0, 1.0, df_tot).unwrap_or_else(|_| StudentsT::new(0.0, 1.0, 100.0).unwrap());
     let mut mod_t = Vec::with_capacity(all.len());
@@ -439,7 +475,7 @@ fn main() {
         };
         let t = s.log_fc / (s2p.sqrt() * su);
         mod_t.push(t);
-        raw_p.push(2.0 * (1.0 - tdist.cdf(t.abs())));
+        raw_p.push(2.0 * tdist.sf(t.abs()));
     }
     let adj_p = bh_adjust(&raw_p);
 
@@ -497,8 +533,24 @@ fn main() {
     }
 
     // Phase 4: Kernel smoothing + DMR segmentation
-    let sfdr = bh_adjust(&kernel_smooth(&rpos, &rt, lambda, c_param));
-    let mut dmrs = build_dmrs(qchr, &rpos, &sfdr, &rlfc, &mg1, &mg2, fdr_cut, lambda, 2, None);
+    // Use per-CpG FDR for segmentation (which probes form DMRs), matching DMRCate's
+    // approach where is.sig comes from per-CpG stats, not smoothed stats.
+    // The smoothed FDR is used as the region-level statistic (min_smoothed_fdr).
+    let smoothed_raw = kernel_smooth(&rpos, &rt, lambda, c_param);
+    let sfdr = bh_adjust(&smoothed_raw);
+    let mut dmrs = build_dmrs(qchr, &rpos, &rfdr, &rlfc, &mg1, &mg2, fdr_cut, lambda, 2, None);
+    // Attach smoothed FDR as region stat: use min smoothed FDR across probes in each DMR
+    for dmr in &mut dmrs {
+        if let (Some(s), Some(e)) = (dmr["start"].as_i64(), dmr["stop"].as_i64()) {
+            let min_sfdr = rpos
+                .iter()
+                .zip(sfdr.iter())
+                .filter(|(&p, _)| p >= s && p <= e)
+                .map(|(_, &f)| f)
+                .fold(f64::INFINITY, f64::min);
+            dmr["min_smoothed_fdr"] = json!(min_sfdr);
+        }
+    }
     if dmrs.is_empty() {
         dmrs = build_dmrs(qchr, &rpos, &rfdr, &rlfc, &mg1, &mg2, fdr_cut, lambda, 2, Some(min_db));
     }

@@ -28,7 +28,8 @@ export class DmrModel {
 				C: settings.dmr.C,
 				fdr_cutoff: settings.dmr.fdr_cutoff,
 				group1Name: this.config.group1Name,
-				group2Name: this.config.group2Name
+				group2Name: this.config.group2Name,
+				backend: settings.dmr.backend
 			}
 		}) as Promise<TermdbDmrResponse>
 	}

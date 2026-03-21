@@ -21,7 +21,8 @@ export function getDefaultDMRSettings(opts: any): DMRSettings {
 			Promoter: '#8b5cf6',
 			Enhancer: '#f59e0b',
 			CTCF: '#ef4444'
-		}
+		},
+		backend: 'rust' as const
 	}
 
 	return Object.assign(defaults, overrides)

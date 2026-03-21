@@ -30,6 +30,8 @@ export type TermdbDmrRequest = {
 	group1Name?: string
 	/** display name for group2 (e.g. from volcano plot) */
 	group2Name?: string
+	/** Backend engine: 'rust' (genome-wide eBayes, default) or 'r' (DMRCate via cached limma) */
+	backend?: 'rust' | 'r'
 	filter?: Filter
 	__protected__?: any
 }
