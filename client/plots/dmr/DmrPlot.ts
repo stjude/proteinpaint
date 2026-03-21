@@ -72,13 +72,15 @@ class DmrPlot extends PlotBase implements RxComponent {
 
 		try {
 			let chr: string, start: number, stop: number
-			if (config.geneName) {
-				;({ chr, start, stop } = await this.model.lookupGene(config.geneName))
-			} else if (config.coordinateOverride) {
+			if (config.coordinateOverride) {
+				// Prefer promoter coordinates from diffMeth (tight region) over
+				// gene lookup (full gene body — too large for DMRCate probe density)
 				const pad = config.settings.dmr.pad
 				chr = config.coordinateOverride.chr
 				start = Math.max(0, config.coordinateOverride.start - pad)
 				stop = config.coordinateOverride.stop + pad
+			} else if (config.geneName) {
+				;({ chr, start, stop } = await this.model.lookupGene(config.geneName))
 			} else {
 				throw new Error('Either geneName or coordinateOverride is required')
 			}
@@ -90,7 +92,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 			}
 
 			this.analyzedRegion = { chr, start, stop }
-			const vm = new DmrViewModel(dmrResult, config, this.genomeObj)
+			const vm = new DmrViewModel(dmrResult, config, this.genomeObj, chr, start, stop)
 
 			this.blockInstance = await this.view.renderBlock(
 				vm.viewData,
@@ -103,12 +105,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 			)
 			this.view.renderLegend(this.blockInstance, vm.viewData.legendRows)
 			if (vm.viewData.diagnostic)
-				this.view.renderDiagnostics(
-					vm.viewData.diagnostic,
-					vm.viewData.dmrs!,
-					config.settings.dmr.colors,
-					config.settings.dmr.fdr_cutoff
-				)
+				this.view.renderDiagnostics(vm.viewData.diagnostic, vm.viewData.dmrs!, config.settings.dmr.fdr_cutoff)
 		} catch (e: unknown) {
 			const msg = e instanceof Error ? e.message : String(e)
 			sayerror(this.dom.error, msg)
@@ -129,17 +126,13 @@ class DmrPlot extends PlotBase implements RxComponent {
 			}
 
 			this.analyzedRegion = { chr, start, stop }
-			const vm = new DmrViewModel(dmrResult, config, this.genomeObj)
+			const vm = new DmrViewModel(dmrResult, config, this.genomeObj, chr, start, stop)
 
 			this.view.updateTracks(vm.viewData, this.blockInstance)
+			this.view.updateLegend(this.blockInstance, vm.viewData.legendRows)
 			this.view.clearDiagnostics()
 			if (vm.viewData.diagnostic)
-				this.view.renderDiagnostics(
-					vm.viewData.diagnostic,
-					vm.viewData.dmrs!,
-					config.settings.dmr.colors,
-					config.settings.dmr.fdr_cutoff
-				)
+				this.view.renderDiagnostics(vm.viewData.diagnostic, vm.viewData.dmrs!, config.settings.dmr.fdr_cutoff)
 		} catch (e: unknown) {
 			const msg = e instanceof Error ? e.message : String(e)
 			sayerror(this.dom.error, msg)
