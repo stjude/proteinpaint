@@ -27,6 +27,25 @@ class DmrPlot extends PlotBase implements RxComponent {
 			.style('position', 'absolute')
 			.style('z-index', '10')
 			.style('background-color', 'rgba(255,255,255,0.65)')
+		// Backend toggle button
+		const toggleDiv = opts.holder.append('div').style('padding', '2px 0')
+		const toggleBtn = toggleDiv
+			.append('button')
+			.style('font-size', '11px')
+			.style('cursor', 'pointer')
+			.text('Backend: Rust')
+			.on('click', () => {
+				const config = this.state.config as DmrConfig
+				const curr = config.settings.dmr.backend || 'rust'
+				const next = curr === 'rust' ? 'r' : 'rust'
+				toggleBtn.text(`Backend: ${next === 'rust' ? 'Rust' : 'R (DMRCate)'}`)
+				this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config: { settings: { dmr: { ...config.settings.dmr, backend: next } } }
+				})
+			})
+
 		this.dom = {
 			header: opts?.header,
 			holder: wrapper.append('div'),
@@ -54,13 +73,22 @@ class DmrPlot extends PlotBase implements RxComponent {
 
 	async main() {
 		const config = this.state.config as DmrConfig
+		// Update model with latest config (settings may have changed, e.g. backend toggle)
+		this.model = new DmrModel(config, this.app.vocabApi.vocab)
 		const isRerun = config.coordinateOverride && this.blockInstance && this.analyzedRegion
 
 		if (isRerun) {
 			const c = config.coordinateOverride!
 			const a = this.analyzedRegion!
-			if (c.chr === a.chr && c.start === a.start && c.stop === a.stop) return
-			await this.rerun(c.chr, c.start, c.stop)
+			const pad = config.settings.dmr.pad
+			const paddedStart = Math.max(0, Number(c.start) - pad)
+			const paddedStop = Number(c.stop) + pad
+			// If coordinates haven't changed (e.g. backend toggle), rerun with existing region
+			if (c.chr === a.chr && paddedStart === a.start && paddedStop === a.stop) {
+				await this.rerun(a.chr, a.start, a.stop)
+			} else {
+				await this.rerun(c.chr, paddedStart, paddedStop)
+			}
 			return
 		}
 
@@ -89,6 +117,12 @@ class DmrPlot extends PlotBase implements RxComponent {
 			if ('error' in dmrResult) {
 				sayerror(this.dom.error, dmrResult.error)
 				throw new Error(dmrResult.error)
+			}
+			if ('status' in dmrResult && (dmrResult as any).status === 'computing') {
+				this.dom.loading.text(
+					'R backend: genome-wide probe-level analysis in progress. This runs once per group comparison and may take a few minutes…'
+				)
+				return
 			}
 
 			this.analyzedRegion = { chr, start, stop }
@@ -123,6 +157,10 @@ class DmrPlot extends PlotBase implements RxComponent {
 			if ('error' in dmrResult) {
 				sayerror(this.dom.error, dmrResult.error)
 				throw new Error(dmrResult.error)
+			}
+			if ('status' in dmrResult && (dmrResult as any).status === 'computing') {
+				sayerror(this.dom.error, 'R backend: probe-level analysis still in progress. Please try again shortly.')
+				return
 			}
 
 			this.analyzedRegion = { chr, start, stop }

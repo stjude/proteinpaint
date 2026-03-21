@@ -1,10 +1,12 @@
 import type { RouteApi, TermdbDmrRequest, TermdbDmrSuccessResponse } from '#types'
 import { TermdbDmrPayload } from '#types/checkers'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
+import { run_R } from '@sjcrh/proteinpaint-r'
 import { invalidcoord } from '#shared/common.js'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { getRegulatoryAnnotations } from '#src/regulatoryAnnotations.ts'
+import { getProbeLimmaCachePath, getProbeLimmaCacheStatus, spawnProbeLimmaJob } from '#src/probeLimmaCache.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/dmr',
@@ -41,22 +43,74 @@ function init({ genomes }) {
 
 			const annotations = await getRegulatoryAnnotations(genome, q.chr, q.start, q.stop, q.shoreSize)
 
-			const dmrcateInput = {
-				probe_h5_file: ds.queries.dnaMethylation.file,
-				chr: q.chr,
-				start: q.start,
-				stop: q.stop,
-				case: group2.join(','),
-				control: group1.join(','),
-				fdr_cutoff: q.fdr_cutoff,
-				lambda: q.lambda,
-				C: q.C
-			}
-
+			const useR = q.backend === 'r'
+			console.log(`DMR ${useR ? 'R' : 'Rust'} request: ${q.chr}:${q.start}-${q.stop}`)
 			const time1 = Date.now()
-			const result = JSON.parse(await run_rust('dmrcate', JSON.stringify(dmrcateInput)))
-			mayLog('DMR analysis time:', formatElapsedTime(Date.now() - time1))
+			let result: any
+
+			if (useR) {
+				// R backend: requires cached probe-level limma results from probeLimma.R
+				const cachePath = getProbeLimmaCachePath(ds.label, group2, group1)
+				const cacheStatus = getProbeLimmaCacheStatus(cachePath)
+				if (cacheStatus.status === 'none') {
+					// No cache — spawn background job and tell client to wait
+					spawnProbeLimmaJob(cachePath, {
+						probe_h5_file: ds.queries.dnaMethylation.file,
+						case: group2.join(','),
+						control: group1.join(','),
+						cache_file: cachePath,
+						running_file: cachePath + '.running'
+					})
+					res.send({ status: 'computing' })
+					return
+				}
+				if (cacheStatus.status === 'computing') {
+					res.send({ status: 'computing' })
+					return
+				}
+				if (cacheStatus.status === 'error') {
+					throw new Error(`Probe-level limma failed: ${cacheStatus.message}`)
+				}
+				const rInput = {
+					cache_file: cachePath,
+					probe_h5_file: ds.queries.dnaMethylation.file,
+					chr: q.chr,
+					start: q.start,
+					stop: q.stop,
+					case: group2.join(','),
+					control: group1.join(','),
+					fdr_cutoff: q.fdr_cutoff,
+					lambda: q.lambda,
+					C: q.C
+				}
+				result = JSON.parse(await run_R('dmrcate.R', JSON.stringify(rInput)))
+			} else {
+				// Rust backend (default): genome-wide eBayes in a single binary
+				const rustInput = {
+					probe_h5_file: ds.queries.dnaMethylation.file,
+					chr: q.chr,
+					start: q.start,
+					stop: q.stop,
+					case: group2.join(','),
+					control: group1.join(','),
+					fdr_cutoff: q.fdr_cutoff,
+					lambda: q.lambda,
+					C: q.C
+				}
+				result = JSON.parse(await run_rust('dmrcate', JSON.stringify(rustInput)))
+			}
+			mayLog(`DMR analysis (${useR ? 'R' : 'Rust'}) time:`, formatElapsedTime(Date.now() - time1))
 			if (result.error) throw new Error(result.error)
+			// Debug: log per-probe stats for comparison
+			if (result.diagnostic?.probes) {
+				const p = result.diagnostic.probes
+				console.log(
+					`${useR ? 'R' : 'Rust'} probes logFC:`,
+					p.logFC,
+					'fdr:',
+					p.fdr?.map((f: number) => f.toExponential(4))
+				)
+			}
 
 			// Build annotation items for client visualization.
 			// Extract the type prefix from the annotation name (e.g. "CGI_chr7_123" → "CGI")
