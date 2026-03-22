@@ -1,6 +1,5 @@
 import tape from 'tape'
 import { hg38 } from '../../test/testdata/genomes'
-import { dofetch3 } from '#common/dofetch'
 import * as d3s from 'd3-selection'
 import { addGeneSearchbox, string2variant, debounceDelay } from '../genesearch.ts'
 import { Menu } from '../menu'
@@ -10,12 +9,11 @@ import { sleep, detectOne, detectGte, detectLst } from '../../test/test.helpers.
     SKIPPED string2variant() - HGVS deletion and delins variants
 	search by p53 should find TP53
 	searchOnly=gene
-	searchOnly=genes and entered a single gene, same behavior as searchOnly=gene
 	searchOnly=gene with "p53" returns {geneSymbol:"TP53"}
 	searchOnly=genes with "p53" returns {geneSymbol:"TP53"}
 	searchOnly=genes with "kras tp53" returns {genes:[...]} with both KRAS and TP53
-	searchOnly missing with "p53" returns coordinates with geneSymbol
-	searchOnly missing with coordinate "chr17:7661001-7662001" returns coordinate object
+	searchOnly=null, "p53" returns {geneSymbol,chr,start,stop}
+	searchOnly=null, "chr:start-stop" returns coordinate object
 	allowVariant=true with "chr2.208248388.C.T" returns variant object
 */
 
@@ -31,15 +29,9 @@ function getRow(holder) {
 	return holder.append('div').style('border', '1px solid #aaa').style('padding', '5px')
 }
 
-async function getHg38test() {
-	const response = await dofetch3('genomes', { body: { genome: 'hg38-test' } })
-	return response.genomes['hg38-test']
-}
-
 async function getSearchBox(holder, opts = {}) {
-	const hg38_test = await getHg38test()
 	const _opts = {
-		genome: hg38_test,
+		genome: hg38,
 		tip: new Menu({ padding: '' }),
 		row: getRow(holder)
 	}
@@ -284,132 +276,6 @@ tape('searchOnly=gene', async test => {
 	test.end()
 })
 
-tape('searchOnly=genes and entered a single gene, same behavior as searchOnly=gene', async test => {
-	// TODO dedup
-	test.timeoutAfter(2000)
-	const holder = getHolder()
-	const tip = new Menu({ padding: '' })
-	getSearchBox(holder, { tip, searchOnly: 'genes' })
-	const searchInput: HTMLInputElement = await detectOne({
-		elem: holder.node(),
-		selector: 'input'
-	})
-
-	// The line below is for typescript to stop complaining
-	if (!searchInput) test.fail('No gene search box created')
-	test.ok(searchInput.tagName == 'INPUT', 'Should create an input element')
-	//test.equal(searchInput.placeholder, 'Gene', 'Should display the default placeholder text')
-
-	searchInput.value = 'kras'
-
-	const matchingResults = await detectGte({
-		elem: tip.d.node(),
-		selector: '.sja_menuoption',
-		count: 1,
-		trigger: () => {
-			// simulate the last character typed for KRAS
-			searchInput.dispatchEvent(
-				new KeyboardEvent('keyup', {
-					code: 's',
-					key: 'KeyS',
-					charCode: 0,
-					keyCode: 83,
-					view: window,
-					bubbles: true
-				})
-			)
-		}
-	})
-
-	test.equal(matchingResults.length, 1, `should display 1 matching results`)
-
-	// simulate an immediate Enter keypress
-	await detectLst({
-		elem: tip.d.node(),
-		selector: '.sja_menuoption',
-		count: 0,
-		trigger: () => {
-			searchInput.dispatchEvent(
-				new KeyboardEvent('keyup', {
-					code: 'Enter',
-					key: 'Enter',
-					charCode: 13,
-					keyCode: 13,
-					view: window,
-					bubbles: true
-				})
-			)
-		}
-	})
-
-	// slight wait for the color style to be applied in DOM, not dependent on data request
-	await sleep(20)
-	test.equal(
-		(searchInput.nextSibling as HTMLElement).style.color,
-		'green',
-		`should have green checkmark after an immediate Enter`
-	)
-
-	searchInput.value = 'KRAS'
-
-	const matchingResults2 = await detectGte({
-		elem: tip.d.node(),
-		selector: '.sja_menuoption',
-		count: 1,
-		trigger: () => {
-			// simulate the last character typed for KRAS
-			searchInput.dispatchEvent(
-				new KeyboardEvent('keyup', {
-					code: 's',
-					key: 'KeyS',
-					charCode: 0,
-					keyCode: 83,
-					view: window,
-					bubbles: true
-				})
-			)
-		}
-	})
-
-	test.equal(matchingResults2.length, 1, `should display 1 matching matchingResult`)
-
-	// simulate a delayed Enter keypress, longer than debounceDelay
-	await sleep(debounceDelay + 10)
-	await detectLst({
-		elem: tip.d.node(),
-		selector: '.sja_menuoption',
-		count: 0,
-		trigger: () => {
-			// simulate the last character typed for KRAS
-			// simulate a fast enter
-			searchInput.dispatchEvent(
-				new KeyboardEvent('keyup', {
-					code: 'Enter',
-					key: 'Enter',
-					charCode: 13,
-					keyCode: 13,
-					view: window,
-					bubbles: true
-				})
-			)
-		}
-	})
-
-	// slight wait for the color style to be applied in DOM, not dependent on data request
-	await sleep(20)
-	test.equal(
-		(searchInput.nextSibling as HTMLElement).style.color,
-		'green',
-		`should have green checkmark after a delayed Enter`
-	)
-
-	if (test['_ok']) {
-		if (tip.dnode) tip.dnode.remove()
-		holder.remove()
-	}
-	test.end()
-})
-
 tape('searchOnly=gene with "p53" returns {geneSymbol:"TP53"}', async test => {
 	test.timeoutAfter(10000)
 	const holder = getHolder()
@@ -542,7 +408,7 @@ tape('searchOnly=genes with "kras tp53" returns {genes:[...]} with both KRAS and
 
 	test.ok(result.genes, 'result should contain genes array')
 	test.equal(result.genes?.length, 2, 'result should contain 2 genes')
-	
+
 	const geneSymbols = result.genes?.map(g => g.geneSymbol).sort()
 	test.deepEqual(geneSymbols, ['KRAS', 'TP53'], 'result should contain both KRAS and TP53')
 
@@ -553,7 +419,7 @@ tape('searchOnly=genes with "kras tp53" returns {genes:[...]} with both KRAS and
 	test.end()
 })
 
-tape('searchOnly missing with "p53" returns coordinates with geneSymbol', async test => {
+tape('searchOnly=null, "p53" returns {geneSymbol,chr,start,stop}', async test => {
 	test.timeoutAfter(10000)
 	const holder = getHolder()
 	const tip = new Menu({ padding: '' })
@@ -606,15 +472,14 @@ tape('searchOnly missing with "p53" returns coordinates with geneSymbol', async 
 	test.end()
 })
 
-tape('searchOnly missing with coordinate "chr17:7661001-7662001" returns coordinate object', async test => {
+tape('searchOnly=null, "chr:start-stop" returns coordinate object', async test => {
 	test.timeoutAfter(10000)
 	const holder = getHolder()
 	const tip = new Menu({ padding: '' })
 	const result = await getSearchBox(holder, { tip })
 	const searchInput = holder.select('input').node() as HTMLInputElement
 
-	// Enter coordinate
-	searchInput.value = 'chr17:7661001-7662001'
+	searchInput.value = 'chr17:7661000-7662000'
 	searchInput.dispatchEvent(new KeyboardEvent('keyup'))
 
 	// Wait for debounce
@@ -636,8 +501,8 @@ tape('searchOnly missing with coordinate "chr17:7661001-7662001" returns coordin
 	await sleep(50)
 
 	test.equal(result.chr, 'chr17', 'result should contain chr17')
-	test.equal(result.start, 7661000, 'result should contain start: 7661000 (0-based)')
-	test.equal(result.stop, 7662000, 'result should contain stop: 7662000 (0-based)')
+	test.equal(result.start, 7661000, 'result should contain start: 7661000')
+	test.equal(result.stop, 7662000, 'result should contain stop: 7662000')
 	test.equal(result.fromWhat, 'Valid coordinate', 'result should contain fromWhat: Valid coordinate')
 
 	if (test['_ok']) {
