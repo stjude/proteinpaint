@@ -51,7 +51,7 @@ tape('Default gene search box', async test => {
 	// The line below is for typescript to stop complaining
 	if (!searchInput) test.fail('No gene search box created')
 	test.ok(searchInput.tagName == 'INPUT', 'Should create an input element')
-	test.equal(searchInput.placeholder, 'Gene, position, dbSNP', 'Should display the default placeholder text')
+	test.equal(searchInput.placeholder, 'Gene, position', 'Should display the default placeholder text')
 
 	if (test['_ok']) {
 		if (tip.dnode) tip.dnode.remove()
