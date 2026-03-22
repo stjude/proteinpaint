@@ -5,7 +5,6 @@ import { run_R } from '@sjcrh/proteinpaint-r'
 import { invalidcoord } from '#shared/common.js'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
-import { getRegulatoryAnnotations } from '#src/regulatoryAnnotations.ts'
 import { getProbeLimmaCachePath, getProbeLimmaCacheStatus, spawnProbeLimmaJob } from '#src/probeLimmaCache.ts'
 
 export const api: RouteApi = {
@@ -41,10 +40,8 @@ function init({ genomes }) {
 			if (group1.length < 3) throw new Error(`Need at least 3 samples in group1, got ${group1.length}`)
 			if (group2.length < 3) throw new Error(`Need at least 3 samples in group2, got ${group2.length}`)
 
-			const annotations = await getRegulatoryAnnotations(genome, q.chr, q.start, q.stop, q.shoreSize)
-
 			const useR = q.backend === 'r'
-			console.log(`DMR ${useR ? 'R' : 'Rust'} request: ${q.chr}:${q.start}-${q.stop}`)
+			console.log(`DMR ${useR ? 'R' : 'Rust'} request: ${q.chr}:${q.start}-${q.stop} backend=${q.backend}`)
 			const time1 = Date.now()
 			let result: any
 
@@ -52,6 +49,7 @@ function init({ genomes }) {
 				// R backend: requires cached probe-level limma results from probeLimma.R
 				const cachePath = getProbeLimmaCachePath(ds.label, group2, group1)
 				const cacheStatus = getProbeLimmaCacheStatus(cachePath)
+				mayLog('R cache status:', cacheStatus.status, 'path:', cachePath)
 				if (cacheStatus.status === 'none') {
 					// No cache — spawn background job and tell client to wait
 					spawnProbeLimmaJob(cachePath, {
@@ -104,7 +102,7 @@ function init({ genomes }) {
 			// Debug: log per-probe stats for comparison
 			if (result.diagnostic?.probes) {
 				const p = result.diagnostic.probes
-				console.log(
+				mayLog(
 					`${useR ? 'R' : 'Rust'} probes logFC:`,
 					p.logFC,
 					'fdr:',
@@ -112,17 +110,9 @@ function init({ genomes }) {
 				)
 			}
 
-			// Build annotation items for client visualization.
-			// Extract the type prefix from the annotation name (e.g. "CGI_chr7_123" → "CGI")
-			const annotationItems = annotations.map(a => {
-				const typePart = a.name.split('_')[0]
-				return { name: a.name, chr: q.chr, start: a.start, stop: a.end, type: typePart }
-			})
-
 			res.send({
 				status: 'ok',
 				dmrs: result.dmrs,
-				annotations: annotationItems,
 				diagnostic: result.diagnostic
 			} as TermdbDmrSuccessResponse)
 		} catch (e: unknown) {
