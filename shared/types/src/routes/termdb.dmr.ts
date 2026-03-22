@@ -1,13 +1,6 @@
 import type { Filter } from '../filter.ts'
 import type { RoutePayload } from './routeApi.ts'
 
-/** Regulatory annotation from tabix-indexed BED files (CpG islands, ENCODE cCREs) */
-export type RegulatoryAnnotation = {
-	name: string
-	start: number
-	end: number
-}
-
 export type TermdbDmrRequest = {
 	genome: string
 	dslabel: string
@@ -18,8 +11,6 @@ export type TermdbDmrRequest = {
 	chr: string
 	start: number
 	stop: number
-	/** bp flanking each CpG island used to derive Shore annotations (default 2000) */
-	shoreSize?: number
 	/** DMRCate lambda parameter: Gaussian kernel bandwidth in nucleotides (default 1000) */
 	lambda?: number
 	/** DMRCate C parameter: scaling factor for kernel width (default 2) */
@@ -39,15 +30,6 @@ export type TermdbDmrRequest = {
 type Sample = {
 	sampleId: number | string
 	sample: string
-}
-
-export type DmrAnnotationItem = {
-	name: string
-	chr: string
-	start: number
-	stop: number
-	/** Annotation type: CGI, Shore, Promoter, Enhancer, CTCF */
-	type: string
 }
 
 export type DmrDiagnostic = {
@@ -90,8 +72,6 @@ export type TermdbDmrSuccessResponse = {
 		/** Comma-separated gene symbols overlapping the DMR */
 		overlapping_genes?: string
 	}[]
-	/** Regulatory annotations used in the analysis (CpG islands, ENCODE cCREs) */
-	annotations?: DmrAnnotationItem[]
 	/** Diagnostic data: per-CpG probe means and statistics */
 	diagnostic?: DmrDiagnostic
 }

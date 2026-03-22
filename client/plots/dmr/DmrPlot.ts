@@ -16,6 +16,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 	view!: DmrView
 	private model!: DmrModel
 	private genomeObj: any
+	private computingPollId: any = null
 
 	constructor(opts: any, api: any) {
 		super(opts, api)
@@ -32,7 +33,6 @@ class DmrPlot extends PlotBase implements RxComponent {
 		const toggleBtn = toggleDiv
 			.append('button')
 			.style('font-size', '11px')
-			.style('cursor', 'pointer')
 			.text('Backend: Rust')
 			.on('click', () => {
 				const config = this.state.config as DmrConfig
@@ -73,6 +73,11 @@ class DmrPlot extends PlotBase implements RxComponent {
 
 	async main() {
 		const config = this.state.config as DmrConfig
+		// Clear any active polling interval from previous computing state
+		if (this.computingPollId) {
+			clearInterval(this.computingPollId)
+			this.computingPollId = null
+		}
 		// Update model with latest config (settings may have changed, e.g. backend toggle)
 		this.model = new DmrModel(config, this.app.vocabApi.vocab)
 		const isRerun = config.coordinateOverride && this.blockInstance && this.analyzedRegion
@@ -83,13 +88,14 @@ class DmrPlot extends PlotBase implements RxComponent {
 			const pad = config.settings.dmr.pad
 			const paddedStart = Math.max(0, Number(c.start) - pad)
 			const paddedStop = Number(c.stop) + pad
-			// If coordinates haven't changed (e.g. backend toggle), rerun with existing region
-			if (c.chr === a.chr && paddedStart === a.start && paddedStop === a.stop) {
-				await this.rerun(a.chr, a.start, a.stop)
-			} else {
+			const coordsChanged = c.chr !== a.chr || paddedStart !== a.start || paddedStop !== a.stop
+			if (coordsChanged) {
+				// User panned/zoomed — update tracks in-place
 				await this.rerun(c.chr, paddedStart, paddedStop)
+				return
 			}
-			return
+			// Coordinates unchanged (e.g. backend toggle) — fall through to full rebuild
+			// using the existing analyzed region coordinates
 		}
 
 		// Full initial load
@@ -118,10 +124,38 @@ class DmrPlot extends PlotBase implements RxComponent {
 				sayerror(this.dom.error, dmrResult.error)
 				throw new Error(dmrResult.error)
 			}
+			console.log('DMR result:', JSON.stringify(dmrResult).slice(0, 200))
 			if ('status' in dmrResult && (dmrResult as any).status === 'computing') {
 				this.dom.loading.text(
-					'R backend: genome-wide probe-level analysis in progress. This runs once per group comparison and may take a few minutes…'
+					'R backend: genome-wide probe-level analysis in progress. This runs once per group comparison…'
 				)
+				// Poll every 10s until cache is ready
+				if (this.computingPollId) clearInterval(this.computingPollId)
+				const pollModel = this.model
+				const pollChr = chr,
+					pollStart = start,
+					pollStop = stop
+				const pollApp = this.app,
+					pollId = this.id,
+					pollSettings = config.settings.dmr
+				this.computingPollId = setInterval(async () => {
+					console.log('Polling R backend cache status...')
+					try {
+						const retry = await pollModel.fetchDmr(pollChr, pollStart, pollStop)
+						console.log('Poll result:', JSON.stringify(retry).slice(0, 100))
+						if ('status' in retry && (retry as any).status === 'computing') return
+						clearInterval(this.computingPollId)
+						this.computingPollId = null
+						pollApp.dispatch({
+							type: 'plot_edit',
+							id: pollId,
+							config: { settings: { dmr: { ...pollSettings } } }
+						})
+					} catch (e) {
+						console.error('Poll error:', e)
+					}
+				}, 10000)
+				console.log('Started polling interval:', this.computingPollId)
 				return
 			}
 
@@ -141,6 +175,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 			if (vm.viewData.diagnostic)
 				this.view.renderDiagnostics(vm.viewData.diagnostic, vm.viewData.dmrs!, config.settings.dmr.fdr_cutoff)
 		} catch (e: unknown) {
+			if (this.app.isAbortError(e)) return
 			const msg = e instanceof Error ? e.message : String(e)
 			sayerror(this.dom.error, msg)
 		}
@@ -153,14 +188,18 @@ class DmrPlot extends PlotBase implements RxComponent {
 		this.view.clearErrors()
 
 		try {
-			const dmrResult = await this.model.fetchDmr(chr, start, stop)
+			let dmrResult = await this.model.fetchDmr(chr, start, stop)
 			if ('error' in dmrResult) {
 				sayerror(this.dom.error, dmrResult.error)
 				throw new Error(dmrResult.error)
 			}
-			if ('status' in dmrResult && (dmrResult as any).status === 'computing') {
-				sayerror(this.dom.error, 'R backend: probe-level analysis still in progress. Please try again shortly.')
-				return
+			while ('status' in dmrResult && (dmrResult as any).status === 'computing') {
+				await new Promise(r => setTimeout(r, 5000))
+				dmrResult = await this.model.fetchDmr(chr, start, stop)
+				if ('error' in dmrResult) {
+					sayerror(this.dom.error, dmrResult.error)
+					throw new Error(dmrResult.error)
+				}
 			}
 
 			this.analyzedRegion = { chr, start, stop }
