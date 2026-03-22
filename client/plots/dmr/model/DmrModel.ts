@@ -23,7 +23,6 @@ export class DmrModel {
 				stop,
 				group1,
 				group2,
-				shoreSize: settings.dmr.shoreSize,
 				lambda: settings.dmr.lambda,
 				C: settings.dmr.C,
 				fdr_cutoff: settings.dmr.fdr_cutoff,

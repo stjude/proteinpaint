@@ -49,7 +49,7 @@ export class DmrView {
 
 	updateLegend(blockInstance: any, legendRows: LegendRow[]) {
 		if (!blockInstance?.legend?.holder) return
-		const labels = ['Per-CpG Means', 'DMR', 'Sig. CpGs', 'cCRE']
+		const labels = ['Per-CpG Means', 'DMR', 'Sig. CpGs']
 		blockInstance.legend.holder
 			.selectAll('tr')
 			.filter((_d: any, i: number, nodes: any) => {
@@ -96,7 +96,7 @@ export class DmrView {
 
 		const { probes } = diagnostic
 
-		const toggle = panel.append('div').attr('style', 'cursor:pointer;font-size:12px;color:#888;padding:2px 0')
+		const toggle = panel.append('div').attr('style', 'cursor:default;font-size:12px;color:#888;padding:2px 0')
 		const statsContent = panel.append('div').style('display', 'none')
 		let expanded = false
 		toggle.text('+ Diagnostic details').on('click', () => {

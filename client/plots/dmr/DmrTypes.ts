@@ -44,7 +44,5 @@ export type DmrViewData = {
 	legendRows: LegendRow[]
 	diagnostic?: DmrDiagnostic
 	dmrs?: { start: number; stop: number; direction: string; min_smoothed_fdr: number }[]
-	hasAnnotations: boolean
 	dmrBedItems: BedItem[]
-	annotationBedItems: BedItem[]
 }

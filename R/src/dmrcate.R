@@ -17,6 +17,7 @@
 ###############################################################################
 # Step 1: Load required R packages
 ###############################################################################
+start_time <- proc.time()
 suppressWarnings({
   library(jsonlite)
   library(rhdf5)
@@ -254,6 +255,11 @@ if (length(dmrs) == 0) {
 ###############################################################################
 probe_spacings <- if (nrow(region_probes) > 1) diff(region_probes$start) else integer(0)
 
+elapsed_ms <- as.integer((proc.time() - start_time)["elapsed"] * 1000)
+# gc() returns cells; Vcells are 8 bytes each, Ncells are 56 bytes each
+gc_info <- gc(reset = FALSE)
+peak_mem_mb <- round((gc_info[1, "max used"] * 56 + gc_info[2, "max used"] * 8) / 1048576, 1)
+
 diagnostic <- list(
   probes = list(
     positions = as.integer(region_probes$start),
@@ -262,7 +268,10 @@ diagnostic <- list(
     fdr = as.numeric(region_probes$adj_p_value),
     logFC = round(as.numeric(region_probes$logFC), 4)
   ),
-  probe_spacings = as.integer(probe_spacings)
+  probe_spacings = as.integer(probe_spacings),
+  total_probes_analyzed = nrow(all_probes),
+  elapsed_ms = elapsed_ms,
+  peak_memory_mb = peak_mem_mb
 )
 
 ###############################################################################

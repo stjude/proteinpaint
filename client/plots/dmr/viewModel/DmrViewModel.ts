@@ -15,9 +15,7 @@ export class DmrViewModel {
 	) {
 		const { settings } = config
 		const dmrBedItems = this.makeDmrBedItems(dmrResult, settings)
-		const annotationBedItems = this.makeAnnotationBedItems(dmrResult, settings)
 		const sigCpgBedItems = this.makeSigCpgBedItems(dmrResult, settings, queryChr)
-		const hasAnnotations = !!dmrResult.annotations?.length
 
 		// Generate per-CpG means track image if diagnostic data is available
 		const betaTrackImg = dmrResult.diagnostic
@@ -32,20 +30,17 @@ export class DmrViewModel {
 			: undefined
 
 		this.viewData = {
-			tklst: this.buildTrackList(dmrBedItems, sigCpgBedItems, annotationBedItems, genomeObj, betaTrackImg),
-			legendRows: this.buildLegendData(config, hasAnnotations, dmrResult.dmrs, sigCpgBedItems),
+			tklst: this.buildTrackList(dmrBedItems, sigCpgBedItems, genomeObj, betaTrackImg),
+			legendRows: this.buildLegendData(config, dmrResult.dmrs, sigCpgBedItems),
 			diagnostic: dmrResult.diagnostic,
 			dmrs: dmrResult.dmrs,
-			hasAnnotations,
-			dmrBedItems,
-			annotationBedItems
+			dmrBedItems
 		}
 	}
 
 	private buildTrackList(
 		dmrBedItems: BedItem[],
 		sigCpgBedItems: BedItem[],
-		annotationBedItems: BedItem[],
 		genomeObj: any,
 		betaTrackImg?: { minv: number; maxv: number; src: string }
 	): any[] {
@@ -54,9 +49,6 @@ export class DmrViewModel {
 		tklst.push({ type: 'bedj', name: 'DMRs', bedItems: dmrBedItems })
 		if (sigCpgBedItems.length) {
 			tklst.push({ type: 'bedj', name: 'Sig. CpGs', bedItems: sigCpgBedItems })
-		}
-		if (annotationBedItems.length) {
-			tklst.push({ type: 'bedj', name: 'cCREs', bedItems: annotationBedItems })
 		}
 		if (betaTrackImg) {
 			tklst.push({
@@ -71,11 +63,10 @@ export class DmrViewModel {
 
 	private buildLegendData(
 		config: DmrConfig,
-		hasAnnotations: boolean,
 		dmrs: TermdbDmrSuccessResponse['dmrs'],
 		sigCpgBedItems: BedItem[]
 	): LegendRow[] {
-		const { colors, annotationColors } = config.settings.dmr
+		const { colors } = config.settings.dmr
 		const g1 = config.group1Name || 'Group 1'
 		const g2 = config.group2Name || 'Group 2'
 		const rows: LegendRow[] = [
@@ -103,9 +94,6 @@ export class DmrViewModel {
 			if (hasHyperCpg) sigItems.push(['Hyper (FDR sig.)', colors.hyper])
 			if (hasHypoCpg) sigItems.push(['Hypo (FDR sig.)', colors.hypo])
 			rows.push({ label: 'Sig. CpGs', items: sigItems })
-		}
-		if (hasAnnotations) {
-			rows.push({ label: 'cCRE', items: Object.entries(annotationColors) as [string, string][] })
 		}
 		return rows
 	}
@@ -209,14 +197,5 @@ export class DmrViewModel {
 			items.push({ chr, start: probes.positions[i], stop: probes.positions[i] + 1, color })
 		}
 		return items
-	}
-
-	private makeAnnotationBedItems(dmrResult: TermdbDmrSuccessResponse, settings: DmrConfig['settings']): BedItem[] {
-		return ((dmrResult as any).annotations || []).map((a: any) => ({
-			chr: a.chr,
-			start: a.start,
-			stop: a.stop,
-			color: settings.dmr.annotationColors[a.type]
-		}))
 	}
 }

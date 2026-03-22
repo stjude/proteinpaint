@@ -31,6 +31,7 @@ fn get_rss_mb() -> f64 {
     }
 }
 
+// Helper functions for matching limma's eBayes implementation, which uses the trigamma function to fit the prior degrees of freedom.
 fn trigamma(mut x: f64) -> f64 {
     if x <= 0.0 {
         return f64::NAN;
