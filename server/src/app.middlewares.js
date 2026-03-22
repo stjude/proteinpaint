@@ -120,7 +120,10 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 		let { genome, dslabel, mds3, dsname, downloadgdc } = req.query
 		dslabel = dslabel || mds3 || dsname
 		// may need to add more conditions here if there are other req payload params that map to GDC dataset
-		if (!dslabel && (req.path.startsWith('/gdc') || req.query.downloadgdc)) {
+		if (
+			(!dslabel && (req.path.startsWith('/gdc') || req.query.downloadgdc)) ||
+			Object.keys(req.query).find(k => k.startsWith('gdcFile'))
+		) {
 			genome = 'hg38'
 			dslabel = 'GDC'
 		}
@@ -264,13 +267,15 @@ function mayWrapResponseSend(cachedir, req, res) {
 }
 
 const routesWithResOnCloseListener = ['/gdc/mafBuild', '/sse']
-const routesThatSkipAbortCtrl = new Set(['/healthcheck', ...routesWithResOnCloseListener])
+// some routes may specify a dataset but should still not set an abortCtrl
+// - healthcheck gets called a lot and does not perform computations
+const dsRoutesThatSkipAbortCtrl = new Set(['/healthcheck', ...routesWithResOnCloseListener])
 
 function maySetAbortCtrlAndTrackers(req, res, ds) {
 	// assume that cancellations of server computations or external API requests
 	// would only be needed when a dataset is specified in the request payload
 	if (!ds) return
-	if (routesThatSkipAbortCtrl.has(req.path)) {
+	if (dsRoutesThatSkipAbortCtrl.has(req.path)) {
 		// optional trackReqHeaders() should handle a req.query without __abortSignal and filter0 properties
 		if (ds.trackReqHeaders) ds.trackReqHeaders(req, res)
 		return
