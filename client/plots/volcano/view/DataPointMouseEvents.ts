@@ -19,22 +19,63 @@ export class DataPointMouseEvents {
 			this.addTooltipRows(d, table)
 		})
 
+		let menuOpen = false
+		const hideMenu = () => {
+			menuOpen = false
+			tip.hide()
+			if (!d.highlighted) circle.attr('fill-opacity', 0)
+		}
 		circle.on('mouseout', () => {
+			if (menuOpen) return
 			tip.hide()
 			if (d.highlighted) return
-			// Remove highlight and tooltip on mouseout
 			circle.attr('fill-opacity', 0)
 		})
-		circle.on('click', async () => {
+		circle.on('click', () => {
+			menuOpen = true
+			tip.clear().showunder(circle.node())
+			const menuDiv = tip.d.append('div').style('padding', '5px')
+
 			if (termType === DNA_METHYLATION) {
-				// For DM, launch DMR region-level analysis
-				const geneName = d.gene_name?.split(',')[0]?.trim()
-				if (geneName) {
-					const promoterId = 'promoter_id' in d ? (d as any).promoter_id : undefined
-					await interactions.launchDmr(geneName, promoterId)
-				}
+				const dm = d as any
+				menuDiv
+					.append('div')
+					.attr('class', 'sja_menuoption')
+					.text('Violin plot')
+					.on('click', () => {
+						hideMenu()
+						interactions.launchViolin(dm)
+					})
+				menuDiv
+					.append('div')
+					.attr('class', 'sja_menuoption')
+					.text('DMR analysis')
+					.on('click', async () => {
+						hideMenu()
+						await interactions.launchDmr({
+							chr: dm.chr,
+							start: dm.start,
+							stop: dm.stop,
+							promoterId: dm.promoter_id
+						})
+					})
 			} else {
-				await interactions.launchBoxPlot(d.gene_name)
+				menuDiv
+					.append('div')
+					.attr('class', 'sja_menuoption')
+					.text('Violin plot')
+					.on('click', async () => {
+						hideMenu()
+						await interactions.launchViolinGeneExp(d.gene_name)
+					})
+				menuDiv
+					.append('div')
+					.attr('class', 'sja_menuoption')
+					.text('Box plot')
+					.on('click', async () => {
+						hideMenu()
+						await interactions.launchBoxPlot(d.gene_name)
+					})
 			}
 		})
 	}
@@ -55,8 +96,5 @@ export class DataPointMouseEvents {
 		this.addTooltipRow(table, 'log<sub>2</sub>(fold-change)', roundValueAuto(d.fold_change))
 		this.addTooltipRow(table, 'Original p-value', roundValueAuto(d.original_p_value))
 		this.addTooltipRow(table, 'Adjusted p-value', roundValueAuto(d.adjusted_p_value))
-		if (this.termType === DNA_METHYLATION && d.gene_name) {
-			this.addTooltipRow(table, '', 'Click for region-level DMR analysis')
-		}
 	}
 }

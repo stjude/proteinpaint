@@ -19,6 +19,7 @@ dependencies = [
  "hdf5-metno",
  "json",
  "kodama",
+ "libc",
  "libmath",
  "memchr",
  "nalgebra 0.32.3",

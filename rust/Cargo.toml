@@ -22,6 +22,7 @@ plotters = "0.3.4"
 tiny-skia = "0.11"
 colorgrad = "0.6.2"
 statrs = "^0.16.0"
+libc = "0.2"
 fishers_exact="^1.0.1"
 bio = "1.5.0"
 bigtools = "^0.1.11"
@@ -134,3 +135,7 @@ path="src/query_classification.rs"
 [[bin]]
 name="summary_agent"
 path="src/summary_agent.rs"
+
+[[bin]]
+name="dmrcate"
+path="src/dmrcate.rs"
