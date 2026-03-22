@@ -7,8 +7,6 @@ export type DmrConfig = {
 	chartType: 'dmr'
 	id: string
 	headerText: string
-	geneName?: string
-	promoterId?: string
 	group1: { sample: string }[]
 	group2: { sample: string }[]
 	group1Name?: string

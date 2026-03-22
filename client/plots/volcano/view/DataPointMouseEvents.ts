@@ -56,7 +56,6 @@ export class DataPointMouseEvents {
 							chr: dm.chr,
 							start: dm.start,
 							stop: dm.stop,
-							geneName: dm.gene_name?.split(',')[0]?.trim(),
 							promoterId: dm.promoter_id
 						})
 					})
