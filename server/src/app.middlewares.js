@@ -263,13 +263,14 @@ function mayWrapResponseSend(cachedir, req, res) {
 	}
 }
 
-const routesWithResOnCloseListener = new Set(['/gdc/mafBuild', '/sse'])
+const routesWithResOnCloseListener = ['/gdc/mafBuild', '/sse']
+const routesThatSkipAbortCtrl = new Set(['/healthcheck', ...routesWithResOnCloseListener])
 
 function maySetAbortCtrlAndTrackers(req, res, ds) {
 	// assume that cancellations of server computations or external API requests
 	// would only be needed when a dataset is specified in the request payload
 	if (!ds) return
-	if (routesWithResOnCloseListener.has(req.path)) {
+	if (routesThatSkipAbortCtrl.has(req.path)) {
 		// optional trackReqHeaders() should handle a req.query without __abortSignal and filter0 properties
 		if (ds.trackReqHeaders) ds.trackReqHeaders(req, res)
 		return
