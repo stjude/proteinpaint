@@ -15,7 +15,7 @@ export class DmrViewModel {
 	) {
 		const { settings } = config
 		const dmrBedItems = this.makeDmrBedItems(dmrResult, settings)
-		const sigCpgBedItems = this.makeSigCpgBedItems(dmrResult, settings, queryChr)
+		const sigCpgBedItems = this.makeSigCpgBedItems(dmrResult, settings, queryChr, queryStart, queryStop)
 
 		// Generate per-CpG means track image if diagnostic data is available
 		const betaTrackImg = dmrResult.diagnostic
@@ -47,9 +47,7 @@ export class DmrViewModel {
 		const tklst: any[] = []
 		first_genetrack_tolist(genomeObj, tklst)
 		tklst.push({ type: 'bedj', name: 'DMRs', bedItems: dmrBedItems })
-		if (sigCpgBedItems.length) {
-			tklst.push({ type: 'bedj', name: 'Sig. CpGs', bedItems: sigCpgBedItems })
-		}
+		tklst.push({ type: 'bedj', name: 'Sig. CpGs', bedItems: sigCpgBedItems })
 		if (betaTrackImg) {
 			tklst.push({
 				type: 'bigwig',
@@ -182,19 +180,23 @@ export class DmrViewModel {
 	private makeSigCpgBedItems(
 		dmrResult: TermdbDmrSuccessResponse,
 		settings: DmrConfig['settings'],
-		chr: string
+		chr: string,
+		queryStart?: number,
+		queryStop?: number
 	): BedItem[] {
 		const diag = dmrResult.diagnostic
 		if (!diag) return []
 		const { probes } = diag
 		const items: BedItem[] = []
-		const minDeltaBeta = 0.05 // minimum effect size filter per EWAS consensus
+		const minDeltaBeta = 0.05
 		for (let i = 0; i < probes.positions.length; i++) {
 			if (probes.fdr[i] >= settings.dmr.fdr_cutoff) continue
+			const pos = probes.positions[i]
+			if (queryStart != null && queryStop != null && (pos < queryStart || pos > queryStop)) continue
 			const deltaBeta = probes.mean_group2[i] - probes.mean_group1[i]
 			if (Math.abs(deltaBeta) < minDeltaBeta) continue
 			const color = deltaBeta >= 0 ? settings.dmr.colors.hyper : settings.dmr.colors.hypo
-			items.push({ chr, start: probes.positions[i], stop: probes.positions[i] + 1, color })
+			items.push({ chr, start: pos, stop: pos + 1, color })
 		}
 		return items
 	}

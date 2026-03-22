@@ -11,6 +11,6 @@ export type DMRSettings = {
 	fdr_cutoff: number
 	/** Colors for DMR and per-CpG means visualization */
 	colors: { group1: string; group2: string; hyper: string; hypo: string }
-	/** Backend engine: 'rust' (default) or 'r' (DMRCate via cached limma) */
+	/** Backend engine: 'rust' (default) or 'r' (DMRCate) */
 	backend: 'rust' | 'r'
 }

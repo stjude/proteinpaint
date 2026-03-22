@@ -144,7 +144,11 @@ class DmrPlot extends PlotBase implements RxComponent {
 			}
 
 			this.analyzedRegion = { chr, start, stop }
-			const vm = new DmrViewModel(dmrResult, config, this.genomeObj, chr, start, stop)
+			// Use block's actual visible range for filtering (may differ from analysis region)
+			const blkRegion = this.blockInstance?.rglst?.[0]
+			const viewStart = blkRegion?.start ?? start
+			const viewStop = blkRegion?.stop ?? stop
+			const vm = new DmrViewModel(dmrResult, config, this.genomeObj, chr, viewStart, viewStop)
 
 			this.view.updateTracks(vm.viewData, this.blockInstance)
 			this.view.updateLegend(this.blockInstance, vm.viewData.legendRows)
