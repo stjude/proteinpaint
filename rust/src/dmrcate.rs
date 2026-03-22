@@ -15,7 +15,6 @@ use std::collections::HashMap;
 use std::io;
 use std::time::Instant;
 
-/// Get current resident set size in MB (macOS returns bytes, Linux returns KB)
 fn get_rss_mb() -> f64 {
     unsafe {
         let mut usage: libc::rusage = std::mem::zeroed();
@@ -31,7 +30,6 @@ fn get_rss_mb() -> f64 {
     }
 }
 
-// Helper functions for matching limma's eBayes implementation, which uses the trigamma function to fit the prior degrees of freedom.
 fn trigamma(mut x: f64) -> f64 {
     if x <= 0.0 {
         return f64::NAN;
@@ -128,9 +126,7 @@ fn read_h5_metadata(file: &File) -> Result<(Vec<String>, Vec<usize>, Vec<String>
         .read_scalar::<VarLenUnicode>()
         .map_err(|e| e.to_string())?
         .to_string();
-    // Parse chrom_lengths preserving insertion order (HDF5 order, not alphabetical).
-    // serde_json::Map uses BTreeMap which sorts keys alphabetically — wrong for chromosomes.
-    // Use the json crate which preserves insertion order.
+    // json crate preserves key order; serde_json::Map sorts alphabetically (wrong for chromosomes)
     let cl_parsed = json::parse(&cl_json).map_err(|e| format!("Failed to parse chrom_lengths: {}", e))?;
     let mut names = Vec::new();
     let mut lens = Vec::new();
@@ -185,12 +181,9 @@ fn process_chromosome(
                     }
                 }
             }
-            // Strict filter: require ALL samples in both groups to be non-NaN
-            // (matches limma's lmFit which cannot handle NA values)
             if cv.len() != case_idx.len() || kv.len() != ctrl_idx.len() {
                 continue;
             }
-            // Beta → M-value
             let to_m = |b: f64| {
                 let c = b.clamp(0.001, 0.999);
                 (c / (1.0 - c)).log2()
@@ -298,7 +291,6 @@ fn kernel_smooth(pos: &[i64], t: &[f64], lambda: f64, c: f64) -> Vec<f64> {
     out
 }
 
-/// Build DMRs from significant probes. If `min_db` is Some, applies delta-beta filter (fallback mode).
 fn build_dmrs(
     chr: &str,
     pos: &[i64],
@@ -312,7 +304,6 @@ fn build_dmrs(
     min_db: Option<f64>,
 ) -> Vec<Value> {
     let n = pos.len();
-    // Find significant indices
     let sig: Vec<usize> = (0..n)
         .filter(|&i| {
             if fdr[i] >= cutoff {
@@ -328,7 +319,6 @@ fn build_dmrs(
     if sig.len() < min_cpgs {
         return vec![];
     }
-    // Group by proximity + direction
     let mut groups: Vec<Vec<usize>> = Vec::new();
     let mut grp = vec![sig[0]];
     for k in 1..sig.len() {
@@ -341,7 +331,6 @@ fn build_dmrs(
         }
     }
     groups.push(grp);
-    // Convert groups to DMR JSON
     groups
         .iter()
         .filter(|g| g.len() >= min_cpgs)
@@ -418,7 +407,6 @@ fn main() {
     }
     let su = (1.0 / ci.len() as f64 + 1.0 / ki.len() as f64).sqrt();
 
-    // Phase 1: Chromosome-chunked OLS
     let mut all: Vec<ProbeStats> = Vec::new();
     let mut pfx = 0usize;
     for (i, &cl) in chr_lens.iter().enumerate() {
@@ -446,7 +434,6 @@ fn main() {
         bail!("Too few probes after filtering ({})", all.len());
     }
 
-    // Phase 2: Empirical Bayes
     let df = all[0].df_residual;
     let (s20, df0) = fit_f_dist(&all.iter().map(|s| s.residual_var).collect::<Vec<_>>(), df);
     if let Ok(mut f) = std::fs::OpenOptions::new()
@@ -480,7 +467,6 @@ fn main() {
     }
     let adj_p = bh_adjust(&raw_p);
 
-    // Phase 3: Subset to query region
     let ri: Vec<usize> = (0..all.len())
         .filter(|&i| all[i].chr == qchr && all[i].start >= qstart && all[i].start <= qstop)
         .collect();
@@ -496,7 +482,6 @@ fn main() {
     let rfdr: Vec<f64> = ri.iter().map(|&i| adj_p[i]).collect();
     let rlfc: Vec<f64> = ri.iter().map(|&i| all[i].log_fc).collect();
 
-    // Diagnostic: per-CpG beta means
     let (mut mg1, mut mg2) = (Vec::new(), Vec::new());
     let ds = file.dataset("beta/values").ok();
     for &idx in &ri {
@@ -533,14 +518,9 @@ fn main() {
         mg2.push(f64::NAN);
     }
 
-    // Phase 4: Kernel smoothing + DMR segmentation
-    // Use per-CpG FDR for segmentation (which probes form DMRs), matching DMRCate's
-    // approach where is.sig comes from per-CpG stats, not smoothed stats.
-    // The smoothed FDR is used as the region-level statistic (min_smoothed_fdr).
     let smoothed_raw = kernel_smooth(&rpos, &rt, lambda, c_param);
     let sfdr = bh_adjust(&smoothed_raw);
     let mut dmrs = build_dmrs(qchr, &rpos, &rfdr, &rlfc, &mg1, &mg2, fdr_cut, lambda, 2, None);
-    // Attach smoothed FDR as region stat: use min smoothed FDR across probes in each DMR
     for dmr in &mut dmrs {
         if let (Some(s), Some(e)) = (dmr["start"].as_i64(), dmr["stop"].as_i64()) {
             let min_sfdr = rpos

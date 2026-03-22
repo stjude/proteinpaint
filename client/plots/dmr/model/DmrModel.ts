@@ -32,18 +32,4 @@ export class DmrModel {
 			}
 		}) as Promise<TermdbDmrResponse>
 	}
-
-	async lookupGene(geneName: string): Promise<{ chr: string; start: number; stop: number }> {
-		const { genome } = this.vocab
-		const geneResult = await dofetch3('genelookup', { body: { deep: 1, input: geneName, genome } })
-		if (geneResult.error || !geneResult.gmlst?.length) {
-			throw new Error(`Could not find coordinates for gene "${geneName}"`)
-		}
-		const gm = geneResult.gmlst[0]
-		return {
-			chr: gm.chr,
-			start: Math.max(0, gm.start - this.config.settings.dmr.pad),
-			stop: gm.stop + this.config.settings.dmr.pad
-		}
-	}
 }
