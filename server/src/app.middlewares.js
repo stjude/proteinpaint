@@ -120,7 +120,10 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 		let { genome, dslabel, mds3, dsname, downloadgdc } = req.query
 		dslabel = dslabel || mds3 || dsname
 		// may need to add more conditions here if there are other req payload params that map to GDC dataset
-		if (!dslabel && (req.path.startsWith('/gdc') || req.query.downloadgdc)) {
+		if (
+			(!dslabel && (req.path.startsWith('/gdc') || req.query.downloadgdc)) ||
+			Object.keys(req.query).find(k => k.startsWith('gdcFile'))
+		) {
 			genome = 'hg38'
 			dslabel = 'GDC'
 		}
@@ -277,10 +280,10 @@ function maySetAbortCtrlAndTrackers(req, res, ds) {
 
 	const q = req.query
 	// TODO: make dataset-specific rules instead of hardcoding below
-	if (!req.path.includes('/gdc') && !q.downloadgdc) {
-		if (q.dslabel !== 'GDC') return
-		if (!req.path.includes('termdb') && !req.path.includes('/mds3')) return
-	}
+	// if (!req.path.includes('/gdc') && !q.downloadgdc) {
+	// 	if (q.dslabel !== 'GDC') return
+	// 	if (!req.path.includes('termdb') && !req.path.includes('/mds3')) return
+	// }
 	const abortCtrl = new AbortController()
 	q.__abortSignal = abortCtrl.signal
 
