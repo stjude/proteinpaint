@@ -516,6 +516,8 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype,
   preddat_ci_adj <- preddat_ci + sum(apply(newdat2, 1, prod), na.rm = T)
   
   # plot data
+  # Use PNG device instead of SVG to avoid X11 dependency (following pattern from edge_newh5.R plotQLDisp)
+  # Dimensions: 6.7" x 5.25"/5.35" at 100 DPI = 670 x 525/535 pixels
   plotfile <- paste0(cachedir, "splinePlot_", ifelse(is.null(formulatype), "", paste0(formulatype, "_")), createRandString(), ".png")
   png(filename = plotfile, width = 670, height = ifelse(is.null(formulatype),525,535), res = 100, pointsize = 20)
   par(mar = c(2, 2, ifelse(is.null(formulatype),0.7,1), 5) + 0.1, mgp = c(1, 1, 0))
