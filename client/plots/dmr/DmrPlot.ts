@@ -165,6 +165,13 @@ class DmrPlot extends PlotBase implements RxComponent {
 	onBlockCoordinateChange(rglst: { chr: string; start: number; stop: number }[]) {
 		if (!this.analyzedRegion || !rglst.length) return
 		const r = rglst[0]
+		if (r.start >= r.stop || r.start < 0) return
+		if (r.stop - r.start > 500_000) {
+			this.view.clearErrors()
+			sayerror(this.dom.error, 'Region too large for DMR analysis (>500kb). Zoom in to re-run.')
+			return
+		}
+		this.view.clearErrors()
 		const a = this.analyzedRegion
 		if (r.chr === a.chr && r.start === a.start && r.stop === a.stop) return
 		this.app.dispatch({
