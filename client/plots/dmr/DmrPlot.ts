@@ -16,7 +16,6 @@ class DmrPlot extends PlotBase implements RxComponent {
 	view!: DmrView
 	private model!: DmrModel
 	private genomeObj: any
-	private computingPollId: any = null
 
 	constructor(opts: any, api: any) {
 		super(opts, api)
@@ -28,7 +27,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 			.style('position', 'absolute')
 			.style('z-index', '10')
 			.style('background-color', 'rgba(255,255,255,0.65)')
-		// Backend toggle button
+		// Backend toggle button (temporary — for R vs Rust validation)
 		const toggleDiv = opts.holder.append('div').style('padding', '2px 0')
 		const toggleBtn = toggleDiv
 			.append('button')
@@ -73,12 +72,6 @@ class DmrPlot extends PlotBase implements RxComponent {
 
 	async main() {
 		const config = this.state.config as DmrConfig
-		// Clear any active polling interval from previous computing state
-		if (this.computingPollId) {
-			clearInterval(this.computingPollId)
-			this.computingPollId = null
-		}
-		// Update model with latest config (settings may have changed, e.g. backend toggle)
 		this.model = new DmrModel(config, this.app.vocabApi.vocab)
 		const isRerun = config.coordinateOverride && this.blockInstance && this.analyzedRegion
 
@@ -90,12 +83,10 @@ class DmrPlot extends PlotBase implements RxComponent {
 			const paddedStop = Number(c.stop) + pad
 			const coordsChanged = c.chr !== a.chr || paddedStart !== a.start || paddedStop !== a.stop
 			if (coordsChanged) {
-				// User panned/zoomed — update tracks in-place
 				await this.rerun(c.chr, paddedStart, paddedStop)
 				return
 			}
 			// Coordinates unchanged (e.g. backend toggle) — fall through to full rebuild
-			// using the existing analyzed region coordinates
 		}
 
 		// Full initial load
@@ -105,58 +96,16 @@ class DmrPlot extends PlotBase implements RxComponent {
 		this.blockInstance = null
 
 		try {
-			let chr: string, start: number, stop: number
-			if (config.coordinateOverride) {
-				// Prefer promoter coordinates from diffMeth (tight region) over
-				// gene lookup (full gene body — too large for DMRCate probe density)
-				const pad = config.settings.dmr.pad
-				chr = config.coordinateOverride.chr
-				start = Math.max(0, config.coordinateOverride.start - pad)
-				stop = config.coordinateOverride.stop + pad
-			} else if (config.geneName) {
-				;({ chr, start, stop } = await this.model.lookupGene(config.geneName))
-			} else {
-				throw new Error('Either geneName or coordinateOverride is required')
-			}
+			if (!config.coordinateOverride) throw new Error('coordinateOverride (chr/start/stop) is required')
+			const pad = config.settings.dmr.pad
+			const chr = config.coordinateOverride.chr
+			const start = Math.max(0, Number(config.coordinateOverride.start) - pad)
+			const stop = Number(config.coordinateOverride.stop) + pad
 
 			const dmrResult = await this.model.fetchDmr(chr, start, stop)
 			if ('error' in dmrResult) {
 				sayerror(this.dom.error, dmrResult.error)
 				throw new Error(dmrResult.error)
-			}
-			console.log('DMR result:', JSON.stringify(dmrResult).slice(0, 200))
-			if ('status' in dmrResult && (dmrResult as any).status === 'computing') {
-				this.dom.loading.text(
-					'R backend: genome-wide probe-level analysis in progress. This runs once per group comparison…'
-				)
-				// Poll every 10s until cache is ready
-				if (this.computingPollId) clearInterval(this.computingPollId)
-				const pollModel = this.model
-				const pollChr = chr,
-					pollStart = start,
-					pollStop = stop
-				const pollApp = this.app,
-					pollId = this.id,
-					pollSettings = config.settings.dmr
-				this.computingPollId = setInterval(async () => {
-					console.log('Polling R backend cache status...')
-					try {
-						const retry = await pollModel.fetchDmr(pollChr, pollStart, pollStop)
-						console.log('Poll result:', JSON.stringify(retry).slice(0, 100))
-						if ('status' in retry && (retry as any).status === 'computing') return
-						clearInterval(this.computingPollId)
-						this.computingPollId = null
-						pollApp.dispatch({
-							type: 'plot_edit',
-							id: pollId,
-							config: { settings: { dmr: { ...pollSettings } } }
-						})
-					} catch (e) {
-						console.error('Poll error:', e)
-					}
-				}, 10000)
-				console.log('Started polling interval:', this.computingPollId)
-				return
 			}
 
 			this.analyzedRegion = { chr, start, stop }
@@ -188,18 +137,10 @@ class DmrPlot extends PlotBase implements RxComponent {
 		this.view.clearErrors()
 
 		try {
-			let dmrResult = await this.model.fetchDmr(chr, start, stop)
+			const dmrResult = await this.model.fetchDmr(chr, start, stop)
 			if ('error' in dmrResult) {
 				sayerror(this.dom.error, dmrResult.error)
 				throw new Error(dmrResult.error)
-			}
-			while ('status' in dmrResult && (dmrResult as any).status === 'computing') {
-				await new Promise(r => setTimeout(r, 5000))
-				dmrResult = await this.model.fetchDmr(chr, start, stop)
-				if ('error' in dmrResult) {
-					sayerror(this.dom.error, dmrResult.error)
-					throw new Error(dmrResult.error)
-				}
 			}
 
 			this.analyzedRegion = { chr, start, stop }
@@ -246,8 +187,7 @@ export function getPlotConfig(opts: Partial<DmrConfig>): DmrConfig {
 /** Runs in both getPlotConfig and main() because will only run in main()
  * when plot is loaded from a saved state (e.g. mass session file).*/
 function validateConfig(opts) {
-	if (!opts.geneName && !opts.coordinateOverride)
-		throw new Error('geneName or coordinateOverride is required for DMR plot')
+	if (!opts.coordinateOverride) throw new Error('coordinateOverride (chr/start/stop) is required for DMR plot')
 	if (!opts.group1) throw new Error('group1 is required for DMR plot')
 	if (!opts.group2) throw new Error('group2 is required for DMR plot')
 }
