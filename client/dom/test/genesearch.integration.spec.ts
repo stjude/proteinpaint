@@ -11,6 +11,12 @@ import { sleep, detectOne, detectGte, detectLst } from '../../test/test.helpers.
 	search by p53 should find TP53
 	searchOnly=gene
 	searchOnly=genes and entered a single gene, same behavior as searchOnly=gene
+	searchOnly=gene with "p53" returns {geneSymbol:"TP53"}
+	searchOnly=genes with "p53" returns {geneSymbol:"TP53"}
+	searchOnly=genes with "kras tp53" returns {genes:[...]} with both KRAS and TP53
+	searchOnly missing with "p53" returns coordinates with geneSymbol
+	searchOnly missing with coordinate "chr17:7661001-7662001" returns coordinate object
+	allowVariant=true with "chr2.208248388.C.T" returns variant object
 */
 
 /**************
@@ -396,6 +402,285 @@ tape('searchOnly=genes and entered a single gene, same behavior as searchOnly=ge
 		'green',
 		`should have green checkmark after a delayed Enter`
 	)
+
+	if (test['_ok']) {
+		if (tip.dnode) tip.dnode.remove()
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('searchOnly=gene with "p53" returns {geneSymbol:"TP53"}', async test => {
+	test.timeoutAfter(10000)
+	const holder = getHolder()
+	const tip = new Menu({ padding: '' })
+	const result = await getSearchBox(holder, { tip, searchOnly: 'gene' })
+	const searchInput = holder.select('input').node() as HTMLInputElement
+
+	// Search for p53
+	const gene = 'p53'
+	await detectOne({
+		selector: '.sja_menuoption',
+		target: tip.dnode,
+		trigger() {
+			searchInput.value = gene
+			searchInput.dispatchEvent(new KeyboardEvent('keyup'))
+		}
+	})
+
+	// Press Enter to select
+	await detectLst({
+		elem: tip.d.node(),
+		selector: '.sja_menuoption',
+		count: 0,
+		trigger: () => {
+			searchInput.dispatchEvent(
+				new KeyboardEvent('keyup', {
+					code: 'Enter',
+					key: 'Enter',
+					charCode: 13,
+					keyCode: 13,
+					view: window,
+					bubbles: true
+				})
+			)
+		}
+	})
+
+	// Wait for result to be populated
+	await sleep(50)
+
+	test.equal(result.geneSymbol, 'TP53', 'result should contain geneSymbol: TP53')
+	test.notOk(result.chr, 'result should not contain chr for searchOnly=gene')
+	test.notOk(result.start, 'result should not contain start for searchOnly=gene')
+
+	if (test['_ok']) {
+		if (tip.dnode) tip.dnode.remove()
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('searchOnly=genes with "p53" returns {geneSymbol:"TP53"}', async test => {
+	test.timeoutAfter(10000)
+	const holder = getHolder()
+	const tip = new Menu({ padding: '' })
+	const result = await getSearchBox(holder, { tip, searchOnly: 'genes' })
+	const searchInput = holder.select('input').node() as HTMLInputElement
+
+	// Search for p53
+	const gene = 'p53'
+	await detectOne({
+		selector: '.sja_menuoption',
+		target: tip.dnode,
+		trigger() {
+			searchInput.value = gene
+			searchInput.dispatchEvent(new KeyboardEvent('keyup'))
+		}
+	})
+
+	// Press Enter to select
+	await detectLst({
+		elem: tip.d.node(),
+		selector: '.sja_menuoption',
+		count: 0,
+		trigger: () => {
+			searchInput.dispatchEvent(
+				new KeyboardEvent('keyup', {
+					code: 'Enter',
+					key: 'Enter',
+					charCode: 13,
+					keyCode: 13,
+					view: window,
+					bubbles: true
+				})
+			)
+		}
+	})
+
+	// Wait for result to be populated
+	await sleep(50)
+
+	test.equal(result.geneSymbol, 'TP53', 'result should contain geneSymbol: TP53')
+	test.notOk(result.chr, 'result should not contain chr for single gene with searchOnly=genes')
+
+	if (test['_ok']) {
+		if (tip.dnode) tip.dnode.remove()
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('searchOnly=genes with "kras tp53" returns {genes:[...]} with both KRAS and TP53', async test => {
+	test.timeoutAfter(10000)
+	const holder = getHolder()
+	const tip = new Menu({ padding: '' })
+	const result = await getSearchBox(holder, { tip, searchOnly: 'genes' })
+	const searchInput = holder.select('input').node() as HTMLInputElement
+
+	// Search for multiple genes
+	searchInput.value = 'kras tp53'
+	searchInput.dispatchEvent(new KeyboardEvent('keyup'))
+
+	// Wait a bit for debounce
+	await sleep(debounceDelay + 50)
+
+	// Press Enter
+	searchInput.dispatchEvent(
+		new KeyboardEvent('keyup', {
+			code: 'Enter',
+			key: 'Enter',
+			charCode: 13,
+			keyCode: 13,
+			view: window,
+			bubbles: true
+		})
+	)
+
+	// Wait for result to be populated
+	await sleep(100)
+
+	test.ok(result.genes, 'result should contain genes array')
+	test.equal(result.genes?.length, 2, 'result should contain 2 genes')
+	
+	const geneSymbols = result.genes?.map(g => g.geneSymbol).sort()
+	test.deepEqual(geneSymbols, ['KRAS', 'TP53'], 'result should contain both KRAS and TP53')
+
+	if (test['_ok']) {
+		if (tip.dnode) tip.dnode.remove()
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('searchOnly missing with "p53" returns coordinates with geneSymbol', async test => {
+	test.timeoutAfter(10000)
+	const holder = getHolder()
+	const tip = new Menu({ padding: '' })
+	const result = await getSearchBox(holder, { tip })
+	const searchInput = holder.select('input').node() as HTMLInputElement
+
+	// Search for p53
+	const gene = 'p53'
+	await detectOne({
+		selector: '.sja_menuoption',
+		target: tip.dnode,
+		trigger() {
+			searchInput.value = gene
+			searchInput.dispatchEvent(new KeyboardEvent('keyup'))
+		}
+	})
+
+	// Press Enter to select
+	await detectLst({
+		elem: tip.d.node(),
+		selector: '.sja_menuoption',
+		count: 0,
+		trigger: () => {
+			searchInput.dispatchEvent(
+				new KeyboardEvent('keyup', {
+					code: 'Enter',
+					key: 'Enter',
+					charCode: 13,
+					keyCode: 13,
+					view: window,
+					bubbles: true
+				})
+			)
+		}
+	})
+
+	// Wait for result to be populated
+	await sleep(100)
+
+	test.equal(result.chr, 'chr17', 'result should contain chr17')
+	test.equal(result.start, 7661778, 'result should contain correct start position')
+	test.equal(result.stop, 7687537, 'result should contain correct stop position')
+	test.equal(result.geneSymbol, 'TP53', 'result should contain geneSymbol: TP53')
+	test.equal(result.fromWhat, 'TP53', 'result should contain fromWhat: TP53')
+
+	if (test['_ok']) {
+		if (tip.dnode) tip.dnode.remove()
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('searchOnly missing with coordinate "chr17:7661001-7662001" returns coordinate object', async test => {
+	test.timeoutAfter(10000)
+	const holder = getHolder()
+	const tip = new Menu({ padding: '' })
+	const result = await getSearchBox(holder, { tip })
+	const searchInput = holder.select('input').node() as HTMLInputElement
+
+	// Enter coordinate
+	searchInput.value = 'chr17:7661001-7662001'
+	searchInput.dispatchEvent(new KeyboardEvent('keyup'))
+
+	// Wait for debounce
+	await sleep(debounceDelay + 50)
+
+	// Press Enter
+	searchInput.dispatchEvent(
+		new KeyboardEvent('keyup', {
+			code: 'Enter',
+			key: 'Enter',
+			charCode: 13,
+			keyCode: 13,
+			view: window,
+			bubbles: true
+		})
+	)
+
+	// Wait for result to be populated
+	await sleep(50)
+
+	test.equal(result.chr, 'chr17', 'result should contain chr17')
+	test.equal(result.start, 7661000, 'result should contain start: 7661000 (0-based)')
+	test.equal(result.stop, 7662000, 'result should contain stop: 7662000 (0-based)')
+	test.equal(result.fromWhat, 'Valid coordinate', 'result should contain fromWhat: Valid coordinate')
+
+	if (test['_ok']) {
+		if (tip.dnode) tip.dnode.remove()
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('allowVariant=true with "chr2.208248388.C.T" returns variant object', async test => {
+	test.timeoutAfter(10000)
+	const holder = getHolder()
+	const tip = new Menu({ padding: '' })
+	const result = await getSearchBox(holder, { tip, allowVariant: true })
+	const searchInput = holder.select('input').node() as HTMLInputElement
+
+	// Enter variant
+	searchInput.value = 'chr2.208248388.C.T'
+	searchInput.dispatchEvent(new KeyboardEvent('keyup'))
+
+	// Wait for debounce
+	await sleep(debounceDelay + 50)
+
+	// Press Enter
+	searchInput.dispatchEvent(
+		new KeyboardEvent('keyup', {
+			code: 'Enter',
+			key: 'Enter',
+			charCode: 13,
+			keyCode: 13,
+			view: window,
+			bubbles: true
+		})
+	)
+
+	// Wait for result to be populated
+	await sleep(50)
+
+	test.equal(result.chr, 'chr2', 'result should contain chr2')
+	test.equal(result.pos, 208248388, 'result should contain pos: 208248388')
+	test.equal(result.ref, 'C', 'result should contain ref: C')
+	test.equal(result.alt, 'T', 'result should contain alt: T')
+	test.equal(result.fromWhat, 'chr2.208248388.C.T', 'result should contain fromWhat with variant string')
 
 	if (test['_ok']) {
 		if (tip.dnode) tip.dnode.remove()
