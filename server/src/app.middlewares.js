@@ -277,7 +277,7 @@ function maySetAbortCtrlAndTrackers(req, res, ds) {
 
 	const q = req.query
 	// TODO: make dataset-specific rules instead of hardcoding below
-	if (!req.path.includes('/gdc')) {
+	if (!req.path.includes('/gdc') && !q.downloadgdc) {
 		if (q.dslabel !== 'GDC') return
 		if (!req.path.includes('termdb') && !req.path.includes('/mds3')) return
 	}
