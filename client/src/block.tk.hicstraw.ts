@@ -938,6 +938,7 @@ function configPanel(tk: any, block: any) {
 		tk.tkconfigtip.d
 			.append('div')
 			.attr('class', 'sja_menuoption')
+			.attr('data-testid', 'sjpp-edit-interaction-data')
 			.style('margin-bottom', '10px')
 			.text('Edit interaction data')
 			.on('click', () => {

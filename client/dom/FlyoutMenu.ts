@@ -186,6 +186,7 @@ export class FlyoutMenu {
 			.append('div')
 			.text(opt.label!)
 			.attr('class', 'sja_menuoption sja_sharp_border')
+			.attr('data-testid', `sjpp-flyout-menu-option-${opt.label?.toLowerCase().replace(/\s/g, '-')}`)
 			.attr('tabindex', 0)
 			.attr('role', 'button')
 			.on('click', event => {

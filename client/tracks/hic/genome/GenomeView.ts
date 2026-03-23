@@ -88,6 +88,7 @@ export class GenomeView {
 			const p2 = item.position2 / this.resolution
 			this.layer_sv
 				.append('circle')
+				.attr('data-testid', 'sjpp-hic-genome-view-sv-circle')
 				.attr('stroke', 'black')
 				.attr('fill', 'white')
 				.attr('fill-opacity', 0)
@@ -107,6 +108,7 @@ export class GenomeView {
 			if (obj.img2) {
 				this.layer_sv
 					.append('circle')
+					.attr('data-testid', 'sjpp-hic-genome-view-sv-circle-2')
 					.attr('stroke', 'black')
 					.attr('fill', 'whilte')
 					.attr('fill-opacity', 0)

@@ -121,6 +121,7 @@ function setRenderers(self) {
 			button
 				.style('cursor', 'pointer')
 				.attr('class', 'sja_menuoption')
+				.attr('data-testid', `sjpp-mass-search-term-${term.id}`)
 				.on('click', async () => {
 					if (self.state.nav?.activeTab == 0) {
 						// see notes in about.ts line 340

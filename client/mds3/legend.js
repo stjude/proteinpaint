@@ -704,6 +704,7 @@ function may_update_skewerRim(data, tk) {
 					.showunder(event.target)
 					.d.append('div')
 					.attr('class', 'sja_menuoption')
+					.attr('data-testid', `sjpp-hide-${sk.rim1value}-option`)
 					.text('Hide')
 					.on('click', () => {
 						sk.hiddenvaluelst.push(sk.rim1value)
@@ -724,6 +725,7 @@ function may_update_skewerRim(data, tk) {
 					.showunder(event.target)
 					.d.append('div')
 					.attr('class', 'sja_menuoption')
+					.attr('data-testid', 'sjpp-hide-no-rim-option')
 					.text('Hide')
 					.on('click', () => {
 						sk.hiddenvaluelst.push(sk.noRimValue)
@@ -1038,11 +1040,13 @@ function createLegendTipMenu(opts, tk, elem) {
 					 * effect) is removed.
 					 */
 					.classed('sja_menuoption', true)
+					.attr('data-testid', 'sjpp-change-shape-option')
 					.style('padding', '5px 10px')
 					.style('margin', '1px')
 					.style('border-radius', '0px')
 					.on('click', () => {
 						div.classed('sja_menuoption', false)
+						div.attr('data-testid', 'sjpp-shape-picker')
 						div.style('background-color', 'white')
 						if (called == false) {
 							called = true
@@ -1057,6 +1061,7 @@ function createLegendTipMenu(opts, tk, elem) {
 				tk.legend.tip.d
 					.append('div')
 					.attr('class', 'sja_menuoption')
+					.attr('data-testid', `sjpp-legend-option-${opt.label.toLowerCase().replace(/\s/g, '-')}`)
 					.style('border-radius', '0px')
 					.text(opt.label)
 					.on('click', () => {
