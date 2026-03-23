@@ -238,20 +238,23 @@ export class VolcanoInteractions {
 	launchViolin(d: { chr: string; start: number; stop: number; gene_name?: string; promoter_id?: string }) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		const geneName = d.gene_name?.split(',')[0]?.trim() || d.promoter_id || ''
+		const label = geneName ? `${geneName} — Promoter avg. beta` : 'Promoter avg. beta'
 		this.app.dispatch({
 			type: 'plot_create',
 			config: {
 				chartType: 'summary',
 				childType: 'violin',
+				headerText: label,
 				term: {
 					q: { mode: 'continuous' },
 					term: {
 						gene: geneName,
-						name: geneName,
+						name: label,
 						type: DNA_METHYLATION,
 						chr: d.chr,
 						start: d.start,
-						stop: d.stop
+						stop: d.stop,
+						unit: 'avg. beta'
 					}
 				},
 				term2: {

@@ -11,10 +11,11 @@ export class DmrModel {
 		this.vocab = vocab
 	}
 
-	async fetchDmr(chr: string, start: number, stop: number): Promise<TermdbDmrResponse> {
+	async fetchDmr(chr: string, start: number, stop: number, signal?: AbortSignal): Promise<TermdbDmrResponse> {
 		const { group1, group2, settings } = this.config
 		const { genome, dslabel } = this.vocab
 		return dofetch3('termdb/dmr', {
+			signal,
 			body: {
 				genome,
 				dslabel,

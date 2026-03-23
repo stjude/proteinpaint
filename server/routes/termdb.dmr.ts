@@ -26,19 +26,24 @@ function init({ genomes }) {
 		try {
 			const q: TermdbDmrRequest = req.query
 			const genome = genomes[q.genome]
-			if (!genome) throw new Error('invalid genome')
+			if (!genome) throw new Error(`Unknown genome "${q.genome}". Please check dataset configuration.`)
 			const ds = genome.datasets?.[q.dslabel]
-			if (!ds) throw new Error('invalid ds')
-			if (!ds.queries?.dnaMethylation) throw new Error('analysis not supported')
+			if (!ds) throw new Error(`Dataset "${q.dslabel}" not found.`)
+			if (!ds.queries?.dnaMethylation) throw new Error('This dataset does not support DNA methylation analysis.')
 
-			if (!Array.isArray(q.group1) || q.group1.length == 0) throw new Error('group1 not non empty array')
-			if (!Array.isArray(q.group2) || q.group2.length == 0) throw new Error('group2 not non empty array')
-			if (invalidcoord(genome, q.chr, q.start, q.stop)) throw new Error('invalid chr/start/stop')
+			if (!Array.isArray(q.group1) || q.group1.length == 0)
+				throw new Error('Group 1 has no samples. Please select at least one sample.')
+			if (!Array.isArray(q.group2) || q.group2.length == 0)
+				throw new Error('Group 2 has no samples. Please select at least one sample.')
+			if (invalidcoord(genome, q.chr, q.start, q.stop))
+				throw new Error(`Invalid genomic coordinates: ${q.chr}:${q.start}-${q.stop}`)
 
 			const group1 = q.group1.map(s => s.sample).filter(Boolean)
 			const group2 = q.group2.map(s => s.sample).filter(Boolean)
-			if (group1.length < 3) throw new Error(`Need at least 3 samples in group1, got ${group1.length}`)
-			if (group2.length < 3) throw new Error(`Need at least 3 samples in group2, got ${group2.length}`)
+			if (group1.length < 3)
+				throw new Error(`Group 1 needs at least 3 samples with methylation data, got ${group1.length}.`)
+			if (group2.length < 3)
+				throw new Error(`Group 2 needs at least 3 samples with methylation data, got ${group2.length}.`)
 
 			const useR = q.backend === 'r'
 			const dmrInput = {

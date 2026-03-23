@@ -63,47 +63,22 @@ class DmrPlot extends PlotBase implements RxComponent {
 		return { config }
 	}
 
-	async init() {
-		const { config } = this.getState(this.app.getState())
+	async init(appState: any) {
+		const { config } = this.getState(appState)
 		validateConfig(config)
 		if (this.dom.header) this.dom.header.text(config.headerText || 'DMR Analysis')
 		this.genomeObj = this.app.opts.genome
 		this.model = new DmrModel(config, this.app.vocabApi.vocab)
-	}
 
-	async main() {
-		const config = this.state.config as DmrConfig
-		this.model = new DmrModel(config, this.app.vocabApi.vocab)
-		const isRerun = config.coordinateOverride && this.blockInstance && this.analyzedRegion
-
-		if (isRerun) {
-			const c = config.coordinateOverride!
-			const a = this.analyzedRegion!
-			const pad = config.settings.dmr.pad
-			const paddedStart = Math.max(0, Number(c.start) - pad)
-			const paddedStop = Number(c.stop) + pad
-			const coordsChanged = c.chr !== a.chr || paddedStart !== a.start || paddedStop !== a.stop
-			if (coordsChanged) {
-				await this.rerun(c.chr, paddedStart, paddedStop)
-				return
-			}
-			// Coordinates unchanged (e.g. backend toggle) — fall through to full rebuild
-		}
-
-		// Full initial load
-		this.dom.holder.selectAll('*').remove()
-		this.view.clearErrors()
+		// First render: fetch data and build the block
 		this.dom.loading.style('display', 'block')
-		this.blockInstance = null
-
 		try {
-			if (!config.coordinateOverride) throw new Error('coordinateOverride (chr/start/stop) is required')
 			const pad = config.settings.dmr.pad
-			const chr = config.coordinateOverride.chr
-			const start = Math.max(0, Number(config.coordinateOverride.start) - pad)
-			const stop = Number(config.coordinateOverride.stop) + pad
+			const chr = config.coordinateOverride!.chr
+			const start = Math.max(0, Number(config.coordinateOverride!.start) - pad)
+			const stop = Number(config.coordinateOverride!.stop) + pad
 
-			const dmrResult = await this.model.fetchDmr(chr, start, stop)
+			const dmrResult = await this.model.fetchDmr(chr, start, stop, this.api?.getAbortSignal())
 			if ('error' in dmrResult) {
 				sayerror(this.dom.error, dmrResult.error)
 				throw new Error(dmrResult.error)
@@ -132,35 +107,88 @@ class DmrPlot extends PlotBase implements RxComponent {
 		this.dom.loading.style('display', 'none')
 	}
 
-	private async rerun(chr: string, start: number, stop: number) {
+	async main() {
+		// Skip the first main() call — init() already rendered
+		if (!this.analyzedRegion) return
+
 		const config = this.state.config as DmrConfig
-		this.view.showOverlay()
-		this.view.clearErrors()
+		this.model = new DmrModel(config, this.app.vocabApi.vocab)
 
-		try {
-			const dmrResult = await this.model.fetchDmr(chr, start, stop)
-			if ('error' in dmrResult) {
-				sayerror(this.dom.error, dmrResult.error)
-				throw new Error(dmrResult.error)
+		const c = config.coordinateOverride
+		if (!c) return
+		const pad = config.settings.dmr.pad
+		const chr = c.chr
+		const start = Math.max(0, Number(c.start) - pad)
+		const stop = Number(c.stop) + pad
+
+		const a = this.analyzedRegion
+		const coordsChanged = chr !== a.chr || start !== a.start || stop !== a.stop
+
+		if (coordsChanged) {
+			// New coordinates — re-fetch and update tracks in place
+			this.view.showOverlay()
+			this.view.clearErrors()
+
+			try {
+				const dmrResult = await this.model.fetchDmr(chr, start, stop, this.api?.getAbortSignal())
+				if ('error' in dmrResult) {
+					sayerror(this.dom.error, dmrResult.error)
+					throw new Error(dmrResult.error)
+				}
+
+				this.analyzedRegion = { chr, start, stop }
+				const blkRegion = this.blockInstance?.rglst?.[0]
+				const viewStart = blkRegion?.start ?? start
+				const viewStop = blkRegion?.stop ?? stop
+				const vm = new DmrViewModel(dmrResult, config, this.genomeObj, chr, viewStart, viewStop)
+
+				this.view.updateTracks(vm.viewData, this.blockInstance)
+				this.view.updateLegend(this.blockInstance, vm.viewData.legendRows)
+				this.view.clearDiagnostics()
+				if (vm.viewData.diagnostic)
+					this.view.renderDiagnostics(vm.viewData.diagnostic, vm.viewData.dmrs!, config.settings.dmr.fdr_cutoff)
+			} catch (e: unknown) {
+				if (this.app.isAbortError(e)) return
+				const msg = e instanceof Error ? e.message : String(e)
+				sayerror(this.dom.error, msg)
 			}
+			this.view.hideOverlay()
+		} else {
+			// Same coordinates but settings changed (e.g. backend toggle) — full rebuild
+			this.dom.holder.selectAll('*').remove()
+			this.view.clearErrors()
+			this.dom.loading.style('display', 'block')
+			this.blockInstance = null
 
-			this.analyzedRegion = { chr, start, stop }
-			// Use block's actual visible range for filtering (may differ from analysis region)
-			const blkRegion = this.blockInstance?.rglst?.[0]
-			const viewStart = blkRegion?.start ?? start
-			const viewStop = blkRegion?.stop ?? stop
-			const vm = new DmrViewModel(dmrResult, config, this.genomeObj, chr, viewStart, viewStop)
+			try {
+				const dmrResult = await this.model.fetchDmr(chr, start, stop, this.api?.getAbortSignal())
+				if ('error' in dmrResult) {
+					sayerror(this.dom.error, dmrResult.error)
+					throw new Error(dmrResult.error)
+				}
 
-			this.view.updateTracks(vm.viewData, this.blockInstance)
-			this.view.updateLegend(this.blockInstance, vm.viewData.legendRows)
-			this.view.clearDiagnostics()
-			if (vm.viewData.diagnostic)
-				this.view.renderDiagnostics(vm.viewData.diagnostic, vm.viewData.dmrs!, config.settings.dmr.fdr_cutoff)
-		} catch (e: unknown) {
-			const msg = e instanceof Error ? e.message : String(e)
-			sayerror(this.dom.error, msg)
+				this.analyzedRegion = { chr, start, stop }
+				const vm = new DmrViewModel(dmrResult, config, this.genomeObj, chr, start, stop)
+
+				this.blockInstance = await this.view.renderBlock(
+					vm.viewData,
+					this.genomeObj,
+					config.settings.dmr,
+					chr,
+					start,
+					stop,
+					rglst => this.onBlockCoordinateChange(rglst)
+				)
+				this.view.renderLegend(this.blockInstance, vm.viewData.legendRows)
+				if (vm.viewData.diagnostic)
+					this.view.renderDiagnostics(vm.viewData.diagnostic, vm.viewData.dmrs!, config.settings.dmr.fdr_cutoff)
+			} catch (e: unknown) {
+				if (this.app.isAbortError(e)) return
+				const msg = e instanceof Error ? e.message : String(e)
+				sayerror(this.dom.error, msg)
+			}
+			this.dom.loading.style('display', 'none')
 		}
-		this.view.hideOverlay()
 	}
 
 	onBlockCoordinateChange(rglst: { chr: string; start: number; stop: number }[]) {
