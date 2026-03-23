@@ -351,7 +351,7 @@ function setRenderers(self) {
 		})
 		for (const plot of result.splinePlots) {
 			const plotDiv = div.append('div').style('margin', '0px 50px 5px 0px')
-			plotDiv.append('img').attr('src', plot.src).style('width', plot.size.width).style('height', plot.size.height)
+			plotDiv.append('img').attr('src', plot.src).attr('width', 670) // quick fix to hardcode width as half of what's used in R/src/regression.utils.R, for crisp img on high-res screen
 		}
 	}
 
