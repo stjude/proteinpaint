@@ -151,15 +151,21 @@ export class DmrViewModel {
 			// Group 1 (control)
 			ctx.globalAlpha = alpha
 			ctx.fillStyle = colors.group1
-			ctx.beginPath()
-			ctx.arc(x, scaleY(probes.mean_group1[i]), 4, 0, Math.PI * 2)
-			ctx.fill()
+			const m1 = probes.mean_group1[i]
+			if (m1 != null) {
+				ctx.beginPath()
+				ctx.arc(x, scaleY(m1), 4, 0, Math.PI * 2)
+				ctx.fill()
+			}
 
 			// Group 2 (case)
 			ctx.fillStyle = colors.group2
-			ctx.beginPath()
-			ctx.arc(x, scaleY(probes.mean_group2[i]), 4, 0, Math.PI * 2)
-			ctx.fill()
+			const m2 = probes.mean_group2[i]
+			if (m2 != null) {
+				ctx.beginPath()
+				ctx.arc(x, scaleY(m2), 4, 0, Math.PI * 2)
+				ctx.fill()
+			}
 		}
 		ctx.globalAlpha = 1
 
@@ -193,7 +199,10 @@ export class DmrViewModel {
 			if (probes.fdr[i] >= settings.dmr.fdr_cutoff) continue
 			const pos = probes.positions[i]
 			if (queryStart != null && queryStop != null && (pos < queryStart || pos > queryStop)) continue
-			const deltaBeta = probes.mean_group2[i] - probes.mean_group1[i]
+			const mg1 = probes.mean_group1[i]
+			const mg2 = probes.mean_group2[i]
+			if (mg1 == null || mg2 == null) continue
+			const deltaBeta = mg2 - mg1
 			if (Math.abs(deltaBeta) < minDeltaBeta) continue
 			const color = deltaBeta >= 0 ? settings.dmr.colors.hyper : settings.dmr.colors.hypo
 			items.push({ chr, start: pos, stop: pos + 1, color })

@@ -31,6 +31,12 @@ export type DiffMethDataEntry = {
 	promoter_id: string
 	/** Gene symbol(s) associated with the promoter (comma-separated if multiple) */
 	gene_name: string
+	/** Chromosome (e.g. "chr1") */
+	chr: string
+	/** Promoter start coordinate (0-based) */
+	start: number
+	/** Promoter end coordinate (exclusive) */
+	stop: number
 	/** M-value difference (positive = hypermethylated in cases) */
 	fold_change: number
 	/** Raw p-value from moderated t-test */

@@ -219,7 +219,7 @@ fn process_chromosome(
     Ok(results)
 }
 
-fn fit_f_dist(vars: &[f64], df: f64) -> (f64, f64) {
+fn fit_f_dist(vars: &[f64], df: f64, debug_log: &str) -> (f64, f64) {
     if vars.len() < 3 {
         return (1.0, 0.0);
     }
@@ -229,11 +229,7 @@ fn fit_f_dist(vars: &[f64], df: f64) -> (f64, f64) {
     let tri_df = trigamma(df / 2.0);
     let target = vz - tri_df;
     // Debug to file (stderr causes run_rust to error)
-    if let Ok(mut f) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open("/tmp/rust_dmrcate_debug.log")
-    {
+    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(debug_log) {
         use std::io::Write;
         let _ = writeln!(
             f,
@@ -367,6 +363,10 @@ fn main() {
     };
 
     let h5_path = p["probe_h5_file"].as_str().unwrap_or("");
+    let cachedir = p["cachedir"].as_str().unwrap_or("/tmp");
+    let dmrcate_dir = format!("{}/dmrcate", cachedir);
+    let _ = std::fs::create_dir_all(&dmrcate_dir);
+    let debug_log = format!("{}/dmrcate_debug.log", dmrcate_dir);
     let qchr = p["chr"].as_str().unwrap_or("");
     let (qstart, qstop) = (p["start"].as_i64().unwrap_or(0), p["stop"].as_i64().unwrap_or(0));
     let cases: Vec<&str> = p["case"]
@@ -426,7 +426,12 @@ fn main() {
             min_spg,
         ) {
             Ok(s) => all.extend(s),
-            Err(e) => eprintln!("Warning: {}: {}", chr_names[i], e),
+            Err(e) => {
+                if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&debug_log) {
+                    use std::io::Write;
+                    let _ = writeln!(f, "Warning: {}: {}", chr_names[i], e);
+                }
+            }
         }
         pfx += cl;
     }
@@ -435,12 +440,8 @@ fn main() {
     }
 
     let df = all[0].df_residual;
-    let (s20, df0) = fit_f_dist(&all.iter().map(|s| s.residual_var).collect::<Vec<_>>(), df);
-    if let Ok(mut f) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open("/tmp/rust_dmrcate_debug.log")
-    {
+    let (s20, df0) = fit_f_dist(&all.iter().map(|s| s.residual_var).collect::<Vec<_>>(), df, &debug_log);
+    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&debug_log) {
         use std::io::Write;
         let _ = writeln!(
             f,

@@ -123,7 +123,7 @@ if (n_total < 10) on_error(paste0("Too few probes genome-wide after filtering ("
 # Step 3: Genome-wide eBayes
 ###############################################################################
 all_var <- all_sigmas^2
-fit_f <- fitFDist(all_var, df1 = all_df_residual)
+fit_f <- suppressWarnings(suppressMessages(fitFDist(all_var, df1 = all_df_residual)))
 s2_prior <- fit_f$scale
 df_prior <- fit_f$df2
 s2_post <- (df_prior * s2_prior + all_df_residual * all_var) / (df_prior + all_df_residual)
@@ -191,11 +191,20 @@ mcols(cpg_ranges)$ind.fdr <- region_probes$adj_p_value
 mcols(cpg_ranges)$is.sig <- region_probes$adj_p_value < fdr_cutoff
 cpg_annotated <- new("CpGannotated", ranges = cpg_ranges)
 
-dmr_output <- tryCatch({ dmrcate(cpg_annotated, lambda = lambda, C = C_param) }, error = function(e) NULL)
+dmr_output <- tryCatch({
+  suppressWarnings(suppressMessages(
+    dmrcate(cpg_annotated, lambda = lambda, C = C_param)
+  ))
+}, error = function(e) NULL)
 
 dmrs <- list()
 if (!is.null(dmr_output)) {
-  dmr_ranges <- tryCatch({ extractRanges(dmr_output, genome = "hg38") }, error = function(e) NULL)
+  genome_build <- if (!is.null(input$genome)) input$genome else "hg38"
+  dmr_ranges <- tryCatch({
+    suppressWarnings(suppressMessages(
+      extractRanges(dmr_output, genome = genome_build)
+    ))
+  }, error = function(e) NULL)
   if (!is.null(dmr_ranges) && length(dmr_ranges) > 0) {
     for (i in seq_along(dmr_ranges)) {
       r <- dmr_ranges[i]
