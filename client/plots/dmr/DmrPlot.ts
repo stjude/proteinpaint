@@ -29,10 +29,11 @@ class DmrPlot extends PlotBase implements RxComponent {
 			.style('background-color', 'rgba(255,255,255,0.65)')
 		// Backend toggle button (temporary — for R vs Rust validation)
 		const toggleDiv = opts.holder.append('div').style('padding', '2px 0')
+		const initBackend = opts.state?.config?.settings?.dmr?.backend || 'rust'
 		const toggleBtn = toggleDiv
 			.append('button')
 			.style('font-size', '11px')
-			.text('Backend: Rust')
+			.text(`Backend: ${initBackend === 'rust' ? 'Rust' : 'R (DMRCate)'}`)
 			.on('click', () => {
 				const config = this.state.config as DmrConfig
 				const curr = config.settings.dmr.backend || 'rust'

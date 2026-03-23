@@ -117,8 +117,10 @@ export class DmrView {
 		const minDeltaBeta = 0.05
 		const sigDualCount = probes.fdr.filter((f, i) => {
 			if (f >= fdr_cutoff) return false
-			const delta = probes.mean_group2[i] - probes.mean_group1[i]
-			return Math.abs(delta) >= minDeltaBeta
+			const m1 = probes.mean_group1[i]
+			const m2 = probes.mean_group2[i]
+			if (m1 == null || m2 == null) return false
+			return Math.abs(m2 - m1) >= minDeltaBeta
 		}).length
 
 		const t = table2col({ holder: statsContent, disableScroll: true })

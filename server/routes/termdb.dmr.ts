@@ -4,6 +4,7 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { invalidcoord } from '#shared/common.js'
 import { mayLog } from '#src/helpers.ts'
+import serverconfig from '#src/serverconfig.js'
 import { formatElapsedTime } from '#shared'
 
 export const api: RouteApi = {
@@ -42,6 +43,8 @@ function init({ genomes }) {
 			const useR = q.backend === 'r'
 			const dmrInput = {
 				probe_h5_file: ds.queries.dnaMethylation.file,
+				cachedir: serverconfig.cachedir,
+				genome: q.genome,
 				chr: q.chr,
 				start: q.start,
 				stop: q.stop,

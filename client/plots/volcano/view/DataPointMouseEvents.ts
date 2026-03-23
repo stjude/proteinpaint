@@ -20,11 +20,6 @@ export class DataPointMouseEvents {
 		})
 
 		let menuOpen = false
-		const hideMenu = () => {
-			menuOpen = false
-			tip.hide()
-			if (!d.highlighted) circle.attr('fill-opacity', 0)
-		}
 		circle.on('mouseout', () => {
 			if (menuOpen) return
 			tip.hide()
@@ -33,6 +28,10 @@ export class DataPointMouseEvents {
 		})
 		circle.on('click', () => {
 			menuOpen = true
+			tip.onHide = () => {
+				menuOpen = false
+				if (!d.highlighted) circle.attr('fill-opacity', 0)
+			}
 			tip.clear().showunder(circle.node())
 			const menuDiv = tip.d.append('div').style('padding', '5px')
 
@@ -43,7 +42,7 @@ export class DataPointMouseEvents {
 					.attr('class', 'sja_menuoption')
 					.text('Violin plot')
 					.on('click', () => {
-						hideMenu()
+						tip.hide()
 						interactions.launchViolin(dm)
 					})
 				menuDiv
@@ -51,7 +50,7 @@ export class DataPointMouseEvents {
 					.attr('class', 'sja_menuoption')
 					.text('DMR analysis')
 					.on('click', async () => {
-						hideMenu()
+						tip.hide()
 						await interactions.launchDmr({
 							chr: dm.chr,
 							start: dm.start,
@@ -65,7 +64,7 @@ export class DataPointMouseEvents {
 					.attr('class', 'sja_menuoption')
 					.text('Violin plot')
 					.on('click', async () => {
-						hideMenu()
+						tip.hide()
 						await interactions.launchViolinGeneExp(d.gene_name)
 					})
 				menuDiv
@@ -73,7 +72,7 @@ export class DataPointMouseEvents {
 					.attr('class', 'sja_menuoption')
 					.text('Box plot')
 					.on('click', async () => {
-						hideMenu()
+						tip.hide()
 						await interactions.launchBoxPlot(d.gene_name)
 					})
 			}

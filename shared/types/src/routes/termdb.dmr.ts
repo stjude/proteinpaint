@@ -35,10 +35,10 @@ type Sample = {
 export type DmrDiagnostic = {
 	probes: {
 		positions: number[]
-		mean_group1: number[]
-		mean_group2: number[]
+		mean_group1: (number | null)[]
+		mean_group2: (number | null)[]
 		fdr: number[]
-		logFC: number[]
+		logFC: (number | null)[]
 	}
 	probe_spacings: number[]
 	/** Total probes analyzed genome-wide for eBayes */
