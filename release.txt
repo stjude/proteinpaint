@@ -1,1 +1,2 @@
-
+Features:
+- DNA Meth: Added R and Rust DMRCate implementations for region level DMR analysis

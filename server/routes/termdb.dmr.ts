@@ -59,7 +59,7 @@ function init({ genomes }) {
 			mayLog(`DMR analysis (${useR ? 'R' : 'Rust'}) time:`, formatElapsedTime(Date.now() - time1))
 			if (result.error) throw new Error(result.error)
 
-			// Debug: log per-probe stats for R vs Rust comparison
+			// Debug: log per-probe stats for R vs Rust comparison. Will remove once confident in Rust implementation.
 			if (result.diagnostic?.probes) {
 				const p = result.diagnostic.probes
 				mayLog(
