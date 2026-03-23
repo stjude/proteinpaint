@@ -21,7 +21,6 @@ import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { TermTypes, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
 import { getData } from '#src/termdb.matrix.js'
 import { termType2label } from '#shared/terms.js'
-import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared/time.js'
 
 export const api: RouteApi = {
@@ -142,7 +141,7 @@ async function getResult(q: TermdbClusterRequest & ReqQueryAddons, ds: any) {
 	// have data for multiple genes, run clustering
 	const t = Date.now() // use "t=new Date()" will lead to tsc error
 	const clustering: Clustering = await doClustering(term2sample2value, q, Object.keys(bySampleId).length)
-	mayLog('clustering done:', formatElapsedTime(Date.now() - t))
+	console.log('clustering done:', formatElapsedTime(Date.now() - t))
 	const result = { clustering, byTermId, bySampleId } as ValidResponse
 	if (removedHierClusterTerms.length) result.removedHierClusterTerms = removedHierClusterTerms
 	return result
@@ -389,7 +388,7 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 		// Query expression values for all genes at once
 		const geneData = JSON.parse(await queryHDF5(q.file, geneNames))
 
-		mayLog('Time taken to run gene query:', formatElapsedTime(Date.now() - time1))
+		console.log('Time taken to run gene query:', formatElapsedTime(Date.now() - time1))
 
 		const genesData = geneData.query_output || {}
 		if (!genesData) throw 'No expression data returned from HDF5 query'
