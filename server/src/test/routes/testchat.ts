@@ -22,7 +22,7 @@ export default function setRoutes(app, basepath, genomes) {
 					const label = (ds as any).label
 					if (datasetFilter && label !== datasetFilter) continue
 					console.log('\x1b[32m%s\x1b[0m', 'Testing chatbot for dataset: ' + label)
-					const num_errors = await test_chatbot_by_dataset(ds)
+					const num_errors = await test_chatbot_by_dataset(ds, genome)
 					if (num_errors == 0) {
 						console.log(
 							'\x1b[32m%s\x1b[0m',
@@ -42,7 +42,7 @@ export default function setRoutes(app, basepath, genomes) {
 	})
 }
 
-export async function test_chatbot_by_dataset(ds: any): Promise<number> {
+export async function test_chatbot_by_dataset(ds: any, genome: any): Promise<number> {
 	const testing = false // This causes raw LLM output to be sent by the agent
 	const llm = serverconfig.llm
 	if (!llm) throw 'serverconfig.llm is not configured'
@@ -62,8 +62,8 @@ export async function test_chatbot_by_dataset(ds: any): Promise<number> {
 		}
 	}
 	// Read test data from separate test.json file
-	const testDataFile = path.join(aiFilesDir, 'test.json')
-	const testData = await readJSONFile(testDataFile)
+	if (!dataset_json?.testDataFile) throw 'Test data file is not specified for dataset:' + ds.label
+	const testData = await readJSONFile(path.join(aiFilesDir, dataset_json.testDataFile))
 	//console.log("dataset_json:", dataset_json)
 	for (const test_data of testData) {
 		//console.log("Test question:", test_data.question)
@@ -72,8 +72,8 @@ export async function test_chatbot_by_dataset(ds: any): Promise<number> {
 			llm,
 			dataset_json,
 			testing, // This is not needed anymore, need to be deprecated
-			serverconfig.tpmasterdir + '/' + dataset_json.db,
-			serverconfig.tpmasterdir + '/' + dataset_json.genedb,
+			serverconfig.tpmasterdir + '/' + ds.cohort.db.file,
+			serverconfig.tpmasterdir + '/' + genome.genedb.dbfile,
 			ds
 		)
 		if (test_result.type == test_data.PPoutput.type) {
