@@ -89,6 +89,34 @@ Proximity-based fallback (Karakachoff et al. 2021) applies when kernel smoothing
 finds no DMRs: groups FDR-significant CpGs with |delta-beta| >= 0.05 within
 lambda bp of each other, requiring same direction and min 2 CpGs.
 
+## Rationale: Genome-Wide Analysis Before Regional Subsetting
+
+The pipeline runs limma-style empirical Bayes moderation across all ~450K probes
+(phases 1-2) before subsetting to the query region (phases 3-5). This is the
+standard approach used by DMRcate (Peters et al. 2015) and is the only way the
+empirical Bayes framework is statistically valid. Three things depend on it:
+
+1. **Stable prior estimation.** The shared prior variance (s0²) and prior degrees
+   of freedom (d0) are estimated from the distribution of all probe variances.
+   With ~450K probes the estimates are very stable. With only 30 probes in a
+   promoter they would be essentially meaningless.
+
+2. **Honest FDR correction.** Benjamini-Hochberg controls the false discovery rate
+   across the set of tests included. Running it on a pre-selected region inflates
+   FDR because the selection is not accounted for. Genome-wide BH followed by
+   subsetting produces FDR values that reflect the true multiple testing burden.
+
+3. **Region-specific output.** Despite the genome-wide foundation, the final result
+   is still a DMR call for the locus of interest. Phases 3-5 subset to the query
+   region, run the kernel smoother on those CpGs, and return per-CpG effect sizes
+   and FDR values. The genome-wide pass provides the statistical foundation;
+   the regional pass provides the biological answer.
+
+Running limma on just the query region would be faster but would produce
+anti-conservative p-values (unstable prior) and anti-conservative FDR (ignoring
+the selection problem) — effectively a standard t-test with extra steps. The ~3s
+Rust runtime makes this a non-issue in practice.
+
 ## HDF5 Data Format
 
 The probe-level beta value HDF5 file has this structure:
