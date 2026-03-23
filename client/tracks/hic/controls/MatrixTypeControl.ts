@@ -21,6 +21,7 @@ export class MatrixTypeControl {
 
 	render() {
 		this.matrixSelect = this.holder
+			.attr('data-testid', 'sjpp-hic-matrix-type-select')
 			.style('margin-right', '10px')
 			.append('select')
 			.on('change', async () => {
