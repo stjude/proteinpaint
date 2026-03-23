@@ -7,7 +7,6 @@ import { makeFilter } from '#src/mds3.gdc.js'
 import { cachedFetch } from '#src/utils.js'
 import { joinUrl } from '#shared/joinUrl.js'
 import { formatElapsedTime } from '#shared/time.js'
-import { mayLog } from '#src/helpers.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/topVariablyExpressedGenes',
@@ -39,7 +38,7 @@ function init({ genomes }) {
 				genes: await ds.queries.topVariablyExpressedGenes.getGenes(q)
 			}
 
-			mayLog('topVariablyExpressedGenes', formatElapsedTime(Date.now() - t))
+			console.log('compute top variably expressed genes:', formatElapsedTime(Date.now() - t))
 		} catch (e: any) {
 			result = { status: e.status || 400, error: e.message || e }
 		}
