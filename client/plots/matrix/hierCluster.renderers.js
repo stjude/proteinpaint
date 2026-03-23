@@ -1,4 +1,4 @@
-import { TermTypes, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
+import { TermTypes } from '#shared/terms.js'
 
 export function maySetSandboxHeader(appState) {
 	// run only once upon init, after state and dataType is given
@@ -12,15 +12,6 @@ export function maySetSandboxHeader(appState) {
 			break
 		case TermTypes.WHOLE_PROTEOME_ABUNDANCE:
 			this.dom.header.text('Protein Abundance Clustering')
-			break
-		case NUMERIC_DICTIONARY_TERM:
-			this.dom.header.text(
-				this.config.preBuiltPlotTitle
-					? this.config.preBuiltPlotTitle
-					: appState.termdbConfig.numericDictTermCluster?.appName
-					? appState.termdbConfig.numericDictTermCluster.appName + ' Clustering'
-					: 'Numercic Dictionary Term Cluster'
-			)
 			break
 		default:
 			throw `dataType '${this.config.dataType}' not recognized`

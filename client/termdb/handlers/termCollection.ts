@@ -95,6 +95,7 @@ export class SearchHandler {
 					termIds: selectedTermlst.map(i => i.id),
 					termlst: selectedTermlst,
 					name: opts.details.name,
+					valueTransform: opts.details.valueTransformByPlots?.[opts.usecase.target],
 					// memberType = ds.cohort.termdb.termCollections[].type for client code
 					memberType: opts.details.memberType || opts.details.type,
 					categoryKeys,

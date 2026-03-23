@@ -5,7 +5,7 @@ import { fillTermWrapper, get$id } from '#termsetting'
 import { Menu, zoom, icons, svgScroll, make_radios, make_one_checkbox, GeneSetEditUI } from '#dom'
 import { select } from 'd3-selection'
 import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common.js'
-import { TermTypes, NUMERIC_DICTIONARY_TERM, isNumericTerm } from '#shared/terms.js'
+import { TermTypes, isNumericTerm } from '#shared/terms.js'
 
 const tip = new Menu({ padding: '' })
 

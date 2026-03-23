@@ -18,8 +18,7 @@ import serverconfig from '#src/serverconfig.js'
 import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
-import { TermTypes, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
-import { getData } from '#src/termdb.matrix.js'
+import { TermTypes } from '#shared/terms.js'
 import { termType2label } from '#shared/terms.js'
 import { formatElapsedTime } from '#shared/time.js'
 
@@ -49,9 +48,8 @@ function init({ genomes }) {
 			// TODO: generalize to any dataset
 			if (ds.label === 'GDC' && !ds.__gdc?.doneCaching)
 				throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
-			if ([TermTypes.GENE_EXPRESSION, TermTypes.METABOLITE_INTENSITY, NUMERIC_DICTIONARY_TERM].includes(q.dataType)) {
-				if (!ds.queries?.[q.dataType] && q.dataType !== NUMERIC_DICTIONARY_TERM)
-					throw `no ${q.dataType} data on this dataset`
+			if ([TermTypes.GENE_EXPRESSION, TermTypes.METABOLITE_INTENSITY].includes(q.dataType)) {
+				if (!ds.queries?.[q.dataType]) throw `no ${q.dataType} data on this dataset`
 				if (!q.terms) throw `missing gene list`
 				if (!Array.isArray(q.terms)) throw `gene list is not an array`
 				// TODO: there should be a fix on the client-side to handle this error more gracefully,
@@ -94,9 +92,7 @@ async function getResult(q: TermdbClusterRequest & ReqQueryAddons, ds: any) {
 
 	let term2sample2value, byTermId, bySampleId, skippedSexChrGenes
 
-	if (q.dataType == NUMERIC_DICTIONARY_TERM) {
-		;({ term2sample2value, byTermId, bySampleId } = await getNumericDictTermAnnotation(q, ds))
-	} else if (q.dataType == TermTypes.WHOLE_PROTEOME_ABUNDANCE) {
+	if (q.dataType == TermTypes.WHOLE_PROTEOME_ABUNDANCE) {
 		;({ term2sample2value, byTermId, bySampleId, skippedSexChrGenes } = await ds.queries.proteome.whole.get(_q, ds)) // 2nd ds param needed for ds-supplied getter
 	} else {
 		;({ term2sample2value, byTermId, bySampleId, skippedSexChrGenes } = await ds.queries[q.dataType].get(_q, ds)) // 2nd ds param needed for ds-supplied getter
@@ -145,31 +141,6 @@ async function getResult(q: TermdbClusterRequest & ReqQueryAddons, ds: any) {
 	const result = { clustering, byTermId, bySampleId } as ValidResponse
 	if (removedHierClusterTerms.length) result.removedHierClusterTerms = removedHierClusterTerms
 	return result
-}
-
-async function getNumericDictTermAnnotation(q, ds) {
-	const getDataArgs = {
-		// TODO: figure out when term is not a termwrapper
-		terms: q.terms.map(tw => (tw.term ? tw : { term: tw, q: { mode: 'continuous' } })),
-		filter: q.filter,
-		filter0: q.filter0,
-		__protected__: q.__protected__
-	}
-	const data = await getData(getDataArgs, ds)
-
-	const term2sample2value = new Map()
-	for (const [key, sampleData] of Object.entries(data.samples)) {
-		for (const [term, value] of Object.entries(sampleData as { [key: string]: unknown })) {
-			if (term !== 'sample') {
-				// Skip the sample number
-				if (!term2sample2value.has(term)) {
-					term2sample2value.set(term, {})
-				}
-				term2sample2value.get(term)[key] = (value as { value: any }).value
-			}
-		}
-	}
-	return { term2sample2value, byTermId: data.refs.byTermId, bySampleId: data.refs.bySampleId }
 }
 
 // default numCases should be matched to maxCase4geneExpCluster in mds3.gdc.js
