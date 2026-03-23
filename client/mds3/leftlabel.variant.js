@@ -164,6 +164,7 @@ function menu_variants(data, tk, block) {
 				.append('div')
 				.text('Cancel highlight')
 				.attr('class', 'sja_menuoption sja_sharp_border')
+				.attr('data-testid', 'sjpp-cancel-highlight-option')
 				.attr('tabindex', 0)
 				.on('click', () => {
 					delete tk.skewer.hlssmid
@@ -216,6 +217,7 @@ function menu_variants(data, tk, block) {
 				.append('div')
 				.text(tk.skewer.pointup ? 'Point down' : 'Point up')
 				.attr('class', 'sja_menuoption sja_sharp_border')
+				.attr('data-testid', 'sjpp-pointup-option')
 				.attr('tabindex', 0)
 				.on('click', () => {
 					tk.skewer.pointup = !tk.skewer.pointup
@@ -231,6 +233,7 @@ function menu_variants(data, tk, block) {
 					.text('Change variant shape')
 					.style('vertical-align', 'middle')
 					.attr('class', 'sja_menuoption sja_sharp_border')
+					.attr('data-testid', 'sja-change-skewer-shape-option')
 					.attr('tabindex', 0)
 					.on('click', () => {
 						if (called == false) {
@@ -256,6 +259,7 @@ function menu_variants(data, tk, block) {
 				.append('div')
 				.text(tk.skewer.hideDotLabels ? 'Show all variant labels' : 'Hide all variant labels')
 				.attr('class', 'sja_menuoption sja_sharp_border')
+				.attr('data-testid', 'sjpp-show-hide-variant-labels-option')
 				.attr('tabindex', 0)
 				.on('click', () => {
 					tk.skewer.hideDotLabels = !tk.skewer.hideDotLabels

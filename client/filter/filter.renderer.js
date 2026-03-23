@@ -16,6 +16,7 @@ export function setRenderers(self) {
 			self.dom.newBtn = self.dom.holder
 				.append('div')
 				.attr('class', 'sja_new_filter_btn sja_menuoption')
+				.attr('data-testid', 'sjpp-new-filter-btn')
 				.html(self.opts.emptyLabel)
 				.style('display', 'inline-block')
 				.on('click', self.displayTreeNew)
@@ -63,6 +64,7 @@ export function setRenderers(self) {
 			.enter()
 			.append('tr')
 			.attr('class', 'sja_menuoption')
+			.attr('data-testid', d => `sjpp-menu-option-${d.action}`)
 			.on('click', self.handleMenuOptionClick)
 			.selectAll('td')
 			.data(d => d.html)

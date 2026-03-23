@@ -96,6 +96,7 @@ function setRenderers(self) {
 
 	self.dom.btn
 		.attr('class', 'sja_menuoption')
+		.attr('data-testid', 'sjpp-appDrawer-main-btn')
 		.style('display', 'inline-block')
 		.style('background-color', 'transparent')
 		.style('color', self.state.appBtnActive ? '#fff' : '#000')

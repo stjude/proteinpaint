@@ -56,6 +56,7 @@ class MassSessionBtn {
 			.enter()
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
+			.attr('data-testid', d => `sjpp-session-btn-${d.label.toLowerCase().replace(/\s/g, '-')}`)
 			.attr('aria-label', d => d.title)
 			.html(d => d.label)
 			.on('click', (event, d) => {
@@ -268,6 +269,7 @@ class MassSessionBtn {
 					.enter()
 					.append('div')
 					.attr('class', 'sja_menuoption')
+					.attr('data-testid', `sjpp-save-session-option`)
 					.html(d => d)
 					.on('click', (event, d) => {
 						input.property('value', d)

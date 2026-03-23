@@ -133,6 +133,10 @@ export class InputSearch {
 			.append('div')
 			.classed('sja_menuoption', true)
 			.classed('sjpp-search-result', true)
+			.attr(
+				'data-testid',
+				d => `sjpp-search-result-${(d.name || d.label || d.title || d).toString().toLowerCase().replace(/\s/g, '-')}`
+			)
 			.style('display', 'block')
 			.style('padding-left', '10px')
 			.style('background-color', result.color || '')
