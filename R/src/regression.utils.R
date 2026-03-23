@@ -517,9 +517,9 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype,
   
   # plot data
   # Use PNG device instead of SVG to avoid X11 dependency (following pattern from edge_newh5.R plotQLDisp)
-  # Dimensions: 6.7" x 5.25"/5.35" at 100 DPI = 670 x 525/535 pixels
   plotfile <- paste0(cachedir, "splinePlot_", ifelse(is.null(formulatype), "", paste0(formulatype, "_")), createRandString(), ".png")
-  png(filename = plotfile, width = 670, height = ifelse(is.null(formulatype),525,535), res = 100, pointsize = 20)
+  # Quick fix to hardcode "*2" factor to width/height/res to show img at proper res on modern screen, without supporting low-res screens
+  png(filename = plotfile, width = 670*2, height = ifelse(is.null(formulatype),525*2,535*2), res = 100*2, pointsize = 20)
   par(mar = c(2, 2, ifelse(is.null(formulatype),0.7,1), 5) + 0.1, mgp = c(1, 1, 0))
   if (regtype == "linear" | regtype == "logistic") {
     if (regtype == "linear") {
@@ -635,7 +635,7 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype,
          border = c(NA, NA, NA),
          xpd = TRUE
   )
-  # dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
+  invisible(capture.output(try(dev.off(), silent = TRUE)))
   return(plotfile)
 }
 

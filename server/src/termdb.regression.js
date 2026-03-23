@@ -696,7 +696,7 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 				const plot = await fs.promises.readFile(file)
 				const { width, height } = imageSize(file)
 				const obj = {
-					src: 'data:image/png;base64,' + new Buffer.from(plot).toString('base64'),
+					src: 'data:image/png;base64,' + Buffer.from(plot).toString('base64'),
 					size: `${width}x${height}`
 				}
 				const type = path.basename(file, '.png').split('_')[1]
