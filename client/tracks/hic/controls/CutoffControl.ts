@@ -14,6 +14,7 @@ export class CutoffControl {
 
 	render(opts?: { width: string }) {
 		const cutoffDiv = this.holder
+			.attr('data-testid', 'sjpp-hic-cutoff-control')
 			.style('margin-right', '10px')
 			.append('input')
 			.attr('type', 'number')
