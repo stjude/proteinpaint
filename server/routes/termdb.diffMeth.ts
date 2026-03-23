@@ -25,7 +25,7 @@ function init({ genomes }) {
 		try {
 			const q = req.query
 			const genome = genomes[q.genome]
-			if (!genome) throw new Error('invalid genome')
+			if (!genome) throw new Error(`Unknown genome "${q.genome}". Please check dataset configuration.`)
 			const [ds] = get_ds_tdb(genome, q)
 
 			// Get confounding variable data if term wrappers are provided
@@ -42,7 +42,12 @@ function init({ genomes }) {
 			}
 
 			const results = await run_diffMeth(req.query as DiffMethRequest, ds, term_results, term_results2)
-			if (!results || !results.data) throw new Error('No data available')
+			if (!results || !results.data)
+				throw new Error(
+					'Differential methylation analysis returned no data. Please verify sample selections and try again.'
+				)
+			if (Array.isArray(results.data) && !results.data.length)
+				throw new Error('No promoters passed filtering. Try relaxing group criteria or selecting more samples.')
 			res.send(results)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
@@ -52,13 +57,16 @@ function init({ genomes }) {
 }
 
 async function run_diffMeth(param: DiffMethRequest, ds: any, term_results: any, term_results2: any) {
-	if (param.samplelst?.groups?.length != 2) throw new Error('.samplelst.groups.length!=2')
-	if (param.samplelst.groups[0].values?.length < 1) throw new Error('samplelst.groups[0].values.length<1')
-	if (param.samplelst.groups[1].values?.length < 1) throw new Error('samplelst.groups[1].values.length<1')
+	if (param.samplelst?.groups?.length != 2)
+		throw new Error('Exactly 2 sample groups are required for differential methylation analysis.')
+	if (param.samplelst.groups[0].values?.length < 1)
+		throw new Error('Group 1 has no samples. Please select at least one sample.')
+	if (param.samplelst.groups[1].values?.length < 1)
+		throw new Error('Group 2 has no samples. Please select at least one sample.')
 
 	const q = ds.queries.dnaMethylation?.promoter
-	if (!q) throw new Error('ds.queries.dnaMethylation.promoter is not configured')
-	if (!q.file) throw new Error('ds.queries.dnaMethylation.promoter.file is missing')
+	if (!q) throw new Error('This dataset does not have promoter-level methylation data configured.')
+	if (!q.file) throw new Error('Promoter methylation data file is not configured for this dataset.')
 
 	// Convert integer sample IDs to string sample names, filtering to those present in the H5
 	const group1names = [] as string[]
@@ -210,10 +218,13 @@ async function run_diffMeth(param: DiffMethRequest, ds: any, term_results: any, 
 
 function validateGroups(sample_size1: number, sample_size2: number, group1names: string[], group2names: string[]) {
 	const alerts: string[] = []
-	if (sample_size1 < 1) alerts.push('sample size of group1 < 1')
-	if (sample_size2 < 1) alerts.push('sample size of group2 < 1')
+	if (sample_size1 < 1) alerts.push('No samples in group 1 have methylation data available.')
+	if (sample_size2 < 1) alerts.push('No samples in group 2 have methylation data available.')
 	const commonnames = group1names.filter(x => group2names.includes(x))
-	if (commonnames.length) alerts.push(`Common elements found between both groups: ${commonnames.join(', ')}`)
+	if (commonnames.length)
+		alerts.push(
+			`${commonnames.length} sample(s) appear in both groups: ${commonnames.join(', ')}. Please remove duplicates.`
+		)
 	return alerts
 }
 
