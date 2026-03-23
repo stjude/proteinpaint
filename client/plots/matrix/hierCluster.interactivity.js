@@ -1,7 +1,7 @@
 import { renderTable } from '#dom'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { select } from 'd3-selection'
-import { TermTypes, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
+import { TermTypes } from '#shared/terms.js'
 
 // Given a clusterId, return all its children clusterIds
 export function getAllChildrenClusterIds(clickedClusterId, left) {
@@ -332,8 +332,6 @@ export function setClusteringBtn(holder, callback) {
 			? 'Metabolites'
 			: dataType == 'wholeProteomeAbundance'
 			? 'Proteins'
-			: dataType == 'numericDictTerm'
-			? 'Terms'
 			: 'Rows'
 	const cluteringButtonLabel =
 		dataType == 'geneExpression'
@@ -350,9 +348,7 @@ export function setClusteringBtn(holder, callback) {
 			label: cluteringButtonLabel,
 			getCount: () => this.hcTermGroup?.lst.length || 0,
 			showCount:
-				dataType == TermTypes.METABOLITE_INTENSITY ||
-				dataType == TermTypes.WHOLE_PROTEOME_ABUNDANCE ||
-				dataType == NUMERIC_DICTIONARY_TERM
+				dataType == TermTypes.METABOLITE_INTENSITY || dataType == TermTypes.WHOLE_PROTEOME_ABUNDANCE
 					? 'append'
 					: 'hide',
 			rows: [
@@ -547,12 +543,11 @@ function updateClusteringControls(self, app, parent, table) {
 		colorSchemeControl.style('display', 'none')
 	}
 
-	// Only add set edit option for METABOLITE_INTENSITY, WHOLE_PROTEOME_ABUNDANCE, and NUMERIC_DICTIONARY_TERM
+	// Only add set edit option for METABOLITE_INTENSITY and WHOLE_PROTEOME_ABUNDANCE
 	if (
 		parent.chartType == 'hierCluster' &&
 		(parent.config.dataType == TermTypes.METABOLITE_INTENSITY ||
-			parent.config.dataType == TermTypes.WHOLE_PROTEOME_ABUNDANCE ||
-			parent.config.dataType == NUMERIC_DICTIONARY_TERM)
+			parent.config.dataType == TermTypes.WHOLE_PROTEOME_ABUNDANCE)
 	) {
 		const geneInputTr = table.insert('tr', () => table.select('tr').node())
 		geneInputTr.append('td').attr('class', 'sja-termdb-config-row-label').html('Hierarchical Clustering Term Set')

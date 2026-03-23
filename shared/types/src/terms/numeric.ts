@@ -1,7 +1,6 @@
 import type {
 	MinBaseQ,
 	BaseTW,
-	TermValues,
 	BaseTerm,
 	GeneExpressionTerm,
 	MetaboliteIntensityTerm,
@@ -48,19 +47,7 @@ export type NumericBaseTerm = BaseTerm & {
 	unit?: string
 }
 
-export type NumericDictTerm = NumericBaseTerm & {
-	id: string
-	type: 'integer' | 'float'
-	bins: PresetNumericBins
-	values?: TermValues
-}
-
-export type RawNumericDictTerm = NumericDictTerm & {
-	id?: string
-}
-
 export type NumericTerm =
-	| NumericDictTerm
 	| GeneExpressionTerm
 	| MetaboliteIntensityTerm
 	| WholeProteomeAbundanceTerm

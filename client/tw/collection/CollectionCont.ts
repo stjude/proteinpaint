@@ -54,12 +54,21 @@ export class CollectionCont extends TwBase {
 
 	transformData(d: any) {
 		const termsValue: { [termId: string]: number } = d.value
-
-		// Collect all non-zero values
+		// Collect all non-zero values after applying value transformation (if any)
 		const allValues: { [label: string]: number } = {}
 		for (const [label, value] of Object.entries(termsValue)) {
-			if (value !== 0) {
-				allValues[label] = value as number
+			let transformedV: number = value
+			if (this.term.valueTransform) {
+				for (const [k, v] of Object.entries(this.term.valueTransform)) {
+					if (k === 'offset') {
+						transformedV += v
+					}
+					// Add more transformation types here as needed
+				}
+			}
+
+			if (transformedV !== 0) {
+				allValues[label] = transformedV as number
 			}
 		}
 

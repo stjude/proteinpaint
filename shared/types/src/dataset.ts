@@ -1314,13 +1314,6 @@ type MatrixSettings = {
 	oncoPrintSNVindelCellBorder?: boolean
 }
 
-type NumericDictTermClusterSettings = {
-	/** default hiercluster group name */
-	termGroupName?: string
-	zScoreTransformation?: boolean
-	colorScale?: string
-}
-
 type Matrix = {
 	/** alternative name, e.g. the plot is called "oncomatrix" in gdc; by default it's called "matrix" */
 	appName?: string
@@ -1336,18 +1329,6 @@ type Matrix = {
 	filter?: any
 	/** matrix criteria for a CNV alteration */
 	cnvCutoffs?: any
-}
-
-// specific hierCluster type settings, should be named as "dataTYpe + Cluster"
-type NumericDictTermCluster = {
-	/** alternative name, e.g. the plot is called "drug sensitivity" in ALL-pharmacotyping; by default it's called "Numeric Dictionary Term cluster" */
-	appName?: string
-	/** default settings for numericDictTermCluster plot */
-	settings?: NumericDictTermClusterSettings
-	/** list of numeric term ids that will be excluded from the numeric dictionary term cluster, add to usecase.detail to exclude terms*/
-	exclude?: string[]
-	/** list of pre-built numericDictTermcluster plots */
-	plots?: NumericDictTermClusterPlotsEntry[]
 }
 
 type Survival = {
@@ -1366,16 +1347,6 @@ type MatrixPlotsEntry = {
 	settings?: {
 		[key: string]: any
 	}
-	getConfig?: (f: any) => void
-}
-
-type NumericDictTermClusterPlotsEntry = {
-	name: string
-	file: string
-	settings?: {
-		[key: string]: any
-	}
-	/** helper function to get plot config from saved session file */
 	getConfig?: (f: any) => void
 }
 
@@ -1500,7 +1471,6 @@ keep this setting here for reason of:
   */
 	useLower?: boolean
 	matrix?: Matrix
-	numericDictTermCluster?: NumericDictTermCluster
 	survival?: Survival
 	regression?: Regression
 	logscaleBase2?: boolean
@@ -1680,6 +1650,10 @@ type TermCollectionBase = {
 
 type NumericTermCollection = TermCollectionBase & {
 	type: 'numeric'
+	/** optional transformations to apply to the term values when used in plots, specified by plot type */
+	valueTransformByPlots?: {
+		[chartType: string]: { offset?: number }
+	}
 }
 
 type CategoricalTermCollection = TermCollectionBase & {

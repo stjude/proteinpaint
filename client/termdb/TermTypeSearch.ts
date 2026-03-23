@@ -143,18 +143,11 @@ export const useCasesExcluded = {
 		TermTypeGroups.SINGLECELL_CELLTYPE,
 		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
 	],
-	numericDictTermCluster: [
+	correlationVolcano: [
 		TermTypeGroups.SNP_LOCUS,
 		TermTypeGroups.SNP_LIST,
 		TermTypeGroups.MUTATION_CNV_FUSION,
-		TermTypeGroups.GENE_EXPRESSION,
-		TermTypeGroups.DNA_METHYLATION,
-		TermTypeGroups.METABOLITE_INTENSITY,
-		TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE,
-		TermTypeGroups.SSGSEA,
-		TermTypeGroups.TERM_COLLECTION,
-		TermTypeGroups.SINGLECELL_CELLTYPE,
-		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
+		TermTypeGroups.TERM_COLLECTION
 	],
 	termCollections: [
 		TermTypeGroups.SNP_LOCUS,
