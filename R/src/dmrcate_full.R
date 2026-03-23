@@ -256,6 +256,64 @@ if (length(dmrs) == 0) {
 }
 
 ###############################################################################
+# Step 7b: LOESS curve computation for each group
+###############################################################################
+eval_positions <- seq(query_start, query_stop, length.out = 200)
+
+fit_loess_group <- function(positions, betas, eval_pos) {
+  valid <- !is.na(positions) & !is.na(betas)
+  pos_v <- positions[valid]
+  beta_v <- betas[valid]
+  if (length(pos_v) < 4) {
+    return(list(fitted = numeric(0), ci_lower = numeric(0), ci_upper = numeric(0)))
+  }
+  span <- 0.75
+  n_pts <- length(pos_v)
+  min_span <- 4 / n_pts
+  if (span < min_span) span <- min_span
+  if (span > 1) span <- 1
+
+  fit <- suppressWarnings(suppressMessages(
+    tryCatch(
+      loess(beta_v ~ pos_v, span = span, degree = 2),
+      error = function(e) {
+        tryCatch(
+          loess(beta_v ~ pos_v, span = 1, degree = 1),
+          error = function(e2) NULL
+        )
+      }
+    )
+  ))
+  if (is.null(fit)) {
+    return(list(fitted = numeric(0), ci_lower = numeric(0), ci_upper = numeric(0)))
+  }
+  pred <- suppressWarnings(suppressMessages(
+    predict(fit, newdata = data.frame(pos_v = eval_pos), se = TRUE)
+  ))
+  fitted_vals <- pred$fit
+  t_crit <- qt(0.975, df = max(fit$enp - 1, 1))
+  ci_lower <- fitted_vals - t_crit * pred$se.fit
+  ci_upper <- fitted_vals + t_crit * pred$se.fit
+  fitted_vals <- pmin(pmax(fitted_vals, 0), 1)
+  ci_lower <- pmin(pmax(ci_lower, 0), 1)
+  ci_upper <- pmin(pmax(ci_upper, 0), 1)
+  list(fitted = round(fitted_vals, 6), ci_lower = round(ci_lower, 6), ci_upper = round(ci_upper, 6))
+}
+
+loess_g1 <- fit_loess_group(region_probes$start, filtered_mean_group1, eval_positions)
+loess_g2 <- fit_loess_group(region_probes$start, filtered_mean_group2, eval_positions)
+
+loess_result <- list(
+  positions = as.integer(eval_positions),
+  group1_fitted = as.numeric(loess_g1$fitted),
+  group1_ci_lower = as.numeric(loess_g1$ci_lower),
+  group1_ci_upper = as.numeric(loess_g1$ci_upper),
+  group2_fitted = as.numeric(loess_g2$fitted),
+  group2_ci_lower = as.numeric(loess_g2$ci_lower),
+  group2_ci_upper = as.numeric(loess_g2$ci_upper)
+)
+
+###############################################################################
 # Step 8: Output
 ###############################################################################
 elapsed_ms <- as.integer((proc.time() - start_time)["elapsed"] * 1000)
@@ -272,6 +330,7 @@ output <- list(
       fdr = as.numeric(region_probes$adj_p_value),
       logFC = round(as.numeric(region_probes$logFC), 4)
     ),
+    loess = loess_result,
     probe_spacings = as.integer(if (nrow(region_probes) > 1) diff(region_probes$start) else integer(0)),
     total_probes_analyzed = n_total,
     elapsed_ms = elapsed_ms,

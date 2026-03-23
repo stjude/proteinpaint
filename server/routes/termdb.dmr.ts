@@ -57,7 +57,11 @@ function init({ genomes }) {
 				control: group1.join(','),
 				fdr_cutoff: q.fdr_cutoff,
 				lambda: q.lambda,
-				C: q.C
+				C: q.C,
+				blockWidth: q.blockWidth,
+				devicePixelRatio: q.devicePixelRatio,
+				maxLoessRegion: q.maxLoessRegion,
+				colors: q.colors
 			}
 
 			const time1 = Date.now()

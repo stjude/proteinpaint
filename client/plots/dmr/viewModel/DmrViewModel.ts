@@ -17,21 +17,16 @@ export class DmrViewModel {
 		const dmrBedItems = this.makeDmrBedItems(dmrResult, settings)
 		const sigCpgBedItems = this.makeSigCpgBedItems(dmrResult, settings, queryChr, queryStart, queryStop)
 
-		// Generate per-CpG means track image if diagnostic data is available
+		const xRange = (queryStop ?? 0) - (queryStart ?? 0)
+		const showLoess = !!(dmrResult.diagnostic?.loess && xRange <= settings.dmr.maxLoessRegion)
+
 		const betaTrackImg = dmrResult.diagnostic
-			? this.renderBetaTrack(
-					dmrResult.diagnostic,
-					dmrResult.dmrs,
-					config,
-					settings.dmr.blockWidth,
-					queryStart,
-					queryStop
-			  )
+			? this.renderBetaTrack(dmrResult.diagnostic, config, settings.dmr.blockWidth, showLoess, queryStart, queryStop)
 			: undefined
 
 		this.viewData = {
 			tklst: this.buildTrackList(dmrBedItems, sigCpgBedItems, genomeObj, betaTrackImg),
-			legendRows: this.buildLegendData(config, dmrResult.dmrs, sigCpgBedItems),
+			legendRows: this.buildLegendData(config, dmrResult.dmrs, sigCpgBedItems, showLoess),
 			diagnostic: dmrResult.diagnostic,
 			dmrs: dmrResult.dmrs,
 			dmrBedItems
@@ -62,36 +57,39 @@ export class DmrViewModel {
 	private buildLegendData(
 		config: DmrConfig,
 		dmrs: TermdbDmrSuccessResponse['dmrs'],
-		sigCpgBedItems: BedItem[]
+		sigCpgBedItems: BedItem[],
+		showLoess: boolean
 	): LegendRow[] {
 		const { colors } = config.settings.dmr
 		const g1 = config.group1Name || 'Group 1'
 		const g2 = config.group2Name || 'Group 2'
-		const rows: LegendRow[] = [
-			{
-				label: 'Per-CpG Means',
-				items: [
-					[`${g1} (control)`, colors.group1],
-					[`${g2} (case)`, colors.group2]
-				]
-			}
+		const meansItems: LegendRow['items'] = [
+			{ text: `${g1} (control)`, color: colors.group1 },
+			{ text: `${g2} (case)`, color: colors.group2 }
 		]
+		if (showLoess) {
+			meansItems.push(
+				{ text: `${g1} LOESS trend + 95% CI`, color: colors.group1, style: 'shaded' },
+				{ text: `${g2} LOESS trend + 95% CI`, color: colors.group2, style: 'shaded' }
+			)
+		}
+		const rows: LegendRow[] = [{ label: 'Per-CpG Means', items: meansItems }]
 		// Only show DMR legend entries for directions present in the results
 		const hasHyper = dmrs.some(d => d.direction === 'hyper')
 		const hasHypo = dmrs.some(d => d.direction === 'hypo')
 		if (hasHyper || hasHypo) {
-			const dmrItems: [string, string][] = []
-			if (hasHyper) dmrItems.push(['Hypermethylated', colors.hyper])
-			if (hasHypo) dmrItems.push(['Hypomethylated', colors.hypo])
-			rows.push({ label: 'DMR', items: dmrItems })
+			const items: LegendRow['items'] = []
+			if (hasHyper) items.push({ text: 'Hypermethylated', color: colors.hyper })
+			if (hasHypo) items.push({ text: 'Hypomethylated', color: colors.hypo })
+			rows.push({ label: 'DMR', items })
 		}
 		if (sigCpgBedItems.length) {
-			const sigItems: [string, string][] = []
+			const items: LegendRow['items'] = []
 			const hasHyperCpg = sigCpgBedItems.some(b => b.color === colors.hyper)
 			const hasHypoCpg = sigCpgBedItems.some(b => b.color === colors.hypo)
-			if (hasHyperCpg) sigItems.push(['Hyper (FDR sig.)', colors.hyper])
-			if (hasHypoCpg) sigItems.push(['Hypo (FDR sig.)', colors.hypo])
-			rows.push({ label: 'Sig. CpGs', items: sigItems })
+			if (hasHyperCpg) items.push({ text: 'Hyper (FDR sig.)', color: colors.hyper })
+			if (hasHypoCpg) items.push({ text: 'Hypo (FDR sig.)', color: colors.hypo })
+			rows.push({ label: 'Sig. CpGs', items })
 		}
 		return rows
 	}
@@ -102,9 +100,9 @@ export class DmrViewModel {
 	 */
 	private renderBetaTrack(
 		diagnostic: DmrDiagnostic,
-		dmrs: TermdbDmrSuccessResponse['dmrs'],
 		config: DmrConfig,
 		blockWidth: number,
+		showLoess: boolean,
 		queryStart?: number,
 		queryStop?: number
 	): { minv: number; maxv: number; src: string } | undefined {
@@ -134,12 +132,41 @@ export class DmrViewModel {
 		// Transparent background so block mouse events (yellow line) show through
 		ctx.clearRect(0, 0, width, height)
 
-		// Draw DMR regions as shaded rectangles
-		for (const dmr of dmrs) {
-			const x1 = Math.max(0, scaleX(dmr.start))
-			const x2 = Math.min(width, scaleX(dmr.stop))
-			ctx.fillStyle = dmr.direction === 'hyper' ? colors.hyper + '1a' : colors.hypo + '1a'
-			ctx.fillRect(x1, 0, Math.max(1, x2 - x1), height)
+		// DMR region shading omitted — already shown as a bedj track above
+
+		// Draw LOESS curves with shaded CI regions
+		if (showLoess && diagnostic.loess) {
+			const { loess } = diagnostic
+			for (const [fitted, ciLower, ciUpper, color] of [
+				[loess.group1_fitted, loess.group1_ci_lower, loess.group1_ci_upper, colors.group1],
+				[loess.group2_fitted, loess.group2_ci_lower, loess.group2_ci_upper, colors.group2]
+			] as [number[], number[], number[], string][]) {
+				if (!fitted.length) continue
+				const lPos = loess.positions
+
+				// Draw CI as shaded region
+				ctx.globalAlpha = 0.12
+				ctx.fillStyle = color
+				ctx.beginPath()
+				for (let i = 0; i < lPos.length; i++) {
+					ctx.lineTo(scaleX(lPos[i]), scaleY(Math.max(0, Math.min(1, ciUpper[i]))))
+				}
+				for (let i = lPos.length - 1; i >= 0; i--) {
+					ctx.lineTo(scaleX(lPos[i]), scaleY(Math.max(0, Math.min(1, ciLower[i]))))
+				}
+				ctx.closePath()
+				ctx.fill()
+
+				// Draw LOESS fitted curve (solid)
+				ctx.globalAlpha = 0.8
+				ctx.strokeStyle = color
+				ctx.lineWidth = 2
+				ctx.beginPath()
+				for (let i = 0; i < lPos.length; i++) {
+					ctx.lineTo(scaleX(lPos[i]), scaleY(Math.max(0, Math.min(1, fitted[i]))))
+				}
+				ctx.stroke()
+			}
 		}
 
 		// Draw dots

@@ -32,9 +32,16 @@ export type BedItem = {
 	color: string
 }
 
+export type LegendItem = {
+	text: string
+	color: string
+	/** 'square' (default), 'dashed' for dashed line, or 'shaded' for shaded region */
+	style?: 'square' | 'dashed' | 'shaded'
+}
+
 export type LegendRow = {
 	label: string
-	items: [string, string][]
+	items: LegendItem[]
 }
 
 export type DmrViewData = {

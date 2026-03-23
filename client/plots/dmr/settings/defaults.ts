@@ -14,6 +14,7 @@ export function getDefaultDMRSettings(opts: any): DMRSettings {
 			hyper: '#e66101',
 			hypo: '#5e81f4'
 		},
+		maxLoessRegion: 250_000,
 		backend: 'rust' as const
 	}
 

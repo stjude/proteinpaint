@@ -29,6 +29,10 @@ export class DmrModel {
 				fdr_cutoff: settings.dmr.fdr_cutoff,
 				group1Name: this.config.group1Name,
 				group2Name: this.config.group2Name,
+				blockWidth: settings.dmr.blockWidth,
+				devicePixelRatio: typeof window !== 'undefined' ? window.devicePixelRatio : 1,
+				maxLoessRegion: settings.dmr.maxLoessRegion,
+				colors: settings.dmr.colors,
 				backend: settings.dmr.backend
 			}
 		}) as Promise<TermdbDmrResponse>
