@@ -70,17 +70,36 @@ export class DmrView {
 				.text(row.label)
 				.attr('style', `padding-right:10px;text-align:right;color:#555;border-right:solid 1px ${legendcolor}`)
 			const td = tr.append('td')
-			for (const [text, color] of row.items) {
+			for (const entry of row.items) {
 				const item = td
 					.append('div')
 					.attr('style', `display:inline-block;white-space:nowrap;padding:${vpad} 20px ${vpad} 0`)
-				item
-					.append('div')
-					.attr(
-						'style',
-						`display:inline-block;width:12px;height:12px;background:${color};margin-right:5px;border-radius:2px;vertical-align:middle`
-					)
-				item.append('div').attr('style', 'display:inline-block;color:#555;font-size:.8em').text(text)
+				if (entry.style === 'shaded') {
+					// Shaded region with line marker
+					item
+						.append('div')
+						.attr(
+							'style',
+							`display:inline-block;width:18px;height:10px;background:${entry.color}20;border-top:2px solid ${entry.color};margin-right:5px;vertical-align:middle;border-radius:1px`
+						)
+				} else if (entry.style === 'dashed') {
+					// Dashed line marker
+					item
+						.append('div')
+						.attr(
+							'style',
+							`display:inline-block;width:18px;height:0;border-top:2px dashed ${entry.color};margin-right:5px;vertical-align:middle`
+						)
+				} else {
+					// Default square marker
+					item
+						.append('div')
+						.attr(
+							'style',
+							`display:inline-block;width:12px;height:12px;background:${entry.color};margin-right:5px;border-radius:2px;vertical-align:middle`
+						)
+				}
+				item.append('div').attr('style', 'display:inline-block;color:#555;font-size:.8em').text(entry.text)
 			}
 		}
 	}

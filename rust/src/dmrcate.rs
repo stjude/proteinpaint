@@ -6,6 +6,7 @@
 // Usage: echo '{"probe_h5_file":"beta.h5","chr":"chr14","start":100000,"stop":105000,
 //              "case":"s1,s2","control":"s3,s4"}' | target/release/dmrcate
 
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use hdf5::File;
 use hdf5::types::VarLenUnicode;
 use serde_json::{Value, json};
@@ -14,6 +15,7 @@ use statrs::function::gamma::digamma;
 use std::collections::HashMap;
 use std::io;
 use std::time::Instant;
+use tiny_skia::{FillRule, Paint, PathBuilder, Pixmap, Stroke, StrokeDash, Transform};
 
 fn get_rss_mb() -> f64 {
     unsafe {
@@ -350,6 +352,253 @@ fn build_dmrs(
 
 macro_rules! bail { ($($t:tt)*) => { { println!("{}", json!({"error": format!($($t)*)})); return; } } }
 
+/// LOESS (locally weighted scatterplot smoothing) with tricube weights and local linear fit.
+/// Returns (fitted, ci_lower, ci_upper) evaluated at `eval_at` positions, clamped to [0,1].
+fn loess_fit(pos: &[i64], vals: &[f64], eval_at: &[f64], span: f64) -> Option<(Vec<f64>, Vec<f64>, Vec<f64>)> {
+    // Collect valid (x, y) pairs (skip NaN)
+    let mut xs = Vec::new();
+    let mut ys = Vec::new();
+    for i in 0..pos.len() {
+        if vals[i].is_finite() {
+            xs.push(pos[i] as f64);
+            ys.push(vals[i]);
+        }
+    }
+    let n = xs.len();
+    if n < 4 {
+        return None;
+    }
+
+    let k = ((span * n as f64).ceil() as usize).max(3).min(n);
+
+    let mut fitted = Vec::with_capacity(eval_at.len());
+    let mut ci_lo = Vec::with_capacity(eval_at.len());
+    let mut ci_hi = Vec::with_capacity(eval_at.len());
+
+    for &x0 in eval_at {
+        // Find k nearest neighbors by distance
+        let mut dists: Vec<(usize, f64)> = xs.iter().enumerate().map(|(i, &xi)| (i, (xi - x0).abs())).collect();
+        dists.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+        let h = dists[k - 1].1.max(1.0); // bandwidth = distance to k-th nearest
+
+        // Tricube weights
+        let mut w = vec![0.0; n];
+        for &(i, d) in dists.iter().take(k) {
+            let u = d / h;
+            if u < 1.0 {
+                let t = 1.0 - u * u * u;
+                w[i] = t * t * t;
+            }
+        }
+
+        // Weighted linear regression: y = a + b*(x - x0)
+        let mut sw = 0.0;
+        let mut swx = 0.0;
+        let mut swy = 0.0;
+        let mut swxx = 0.0;
+        let mut swxy = 0.0;
+        for i in 0..n {
+            if w[i] == 0.0 {
+                continue;
+            }
+            let dx = xs[i] - x0;
+            sw += w[i];
+            swx += w[i] * dx;
+            swy += w[i] * ys[i];
+            swxx += w[i] * dx * dx;
+            swxy += w[i] * dx * ys[i];
+        }
+        if sw == 0.0 {
+            fitted.push(f64::NAN);
+            ci_lo.push(f64::NAN);
+            ci_hi.push(f64::NAN);
+            continue;
+        }
+        let det = sw * swxx - swx * swx;
+        let (a, _b) = if det.abs() < 1e-20 {
+            (swy / sw, 0.0)
+        } else {
+            ((swxx * swy - swx * swxy) / det, (sw * swxy - swx * swy) / det)
+        };
+        let y_hat = a; // at x = x0, dx = 0, so y = a
+
+        // Weighted residual variance for CI
+        let mut sse = 0.0;
+        let mut sw2 = 0.0;
+        for i in 0..n {
+            if w[i] == 0.0 {
+                continue;
+            }
+            let dx = xs[i] - x0;
+            let pred = a + _b * dx;
+            let e = ys[i] - pred;
+            sse += w[i] * e * e;
+            sw2 += w[i] * w[i];
+        }
+        // Effective df ≈ sum(w)^2 / sum(w^2) - 2
+        let eff_n = (sw * sw / sw2).max(3.0);
+        let sigma2 = sse / (eff_n - 2.0).max(1.0);
+        let se = (sigma2 / sw).sqrt();
+
+        // 95% CI with normal approximation (effective n is typically large for LOESS)
+        let margin = 1.96 * se;
+        fitted.push((y_hat * 10000.0).round() / 10000.0);
+        ci_lo.push(((y_hat - margin).max(0.0).min(1.0) * 10000.0).round() / 10000.0);
+        ci_hi.push(((y_hat + margin).max(0.0).min(1.0) * 10000.0).round() / 10000.0);
+    }
+
+    // Clamp fitted values
+    for v in fitted.iter_mut() {
+        *v = v.max(0.0).min(1.0);
+    }
+
+    Some((fitted, ci_lo, ci_hi))
+}
+
+fn hex_to_rgba(hex: &str, alpha: u8) -> (u8, u8, u8, u8) {
+    let hex = hex.trim_start_matches('#');
+    let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(128);
+    let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(128);
+    let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(128);
+    (r, g, b, alpha)
+}
+
+/// Render the complete Per-CpG Means track as a transparent PNG.
+fn render_track_png(
+    rpos: &[i64],
+    mg1: &[f64],
+    mg2: &[f64],
+    fdr: &[f64],
+    _dmrs: &[Value],
+    loess_g1: &Option<(Vec<f64>, Vec<f64>, Vec<f64>)>,
+    loess_g2: &Option<(Vec<f64>, Vec<f64>, Vec<f64>)>,
+    eval_pos: &[f64],
+    xmin: f64,
+    xmax: f64,
+    width: u32,
+    height: u32,
+    dpr: f32,
+    fdr_cutoff: f64,
+    max_loess_region: f64,
+    colors: &HashMap<String, String>,
+) -> Option<String> {
+    let w = (width as f32 * dpr) as u32;
+    let h = (height as f32 * dpr) as u32;
+    let mut pixmap = Pixmap::new(w, h)?;
+    // Transparent background (default)
+
+    let wf = w as f32;
+    let hf = h as f32;
+    let x_range = (xmax - xmin).max(1.0) as f32;
+    let scale_x = |pos: f64| -> f32 { ((pos - xmin) as f32 / x_range) * wf };
+    let scale_y = |beta: f64| -> f32 { hf - (beta as f32) * hf };
+
+    let c_g1 = colors.get("group1").map(|s| s.as_str()).unwrap_or("#3b5ee6");
+    let c_g2 = colors.get("group2").map(|s| s.as_str()).unwrap_or("#c04e00");
+
+    // DMR region shading omitted — already shown as a bedj track above
+
+    // 1. LOESS curves (if region small enough)
+    let region_size = xmax - xmin;
+    if region_size <= max_loess_region {
+        let loess_groups: [(&Option<(Vec<f64>, Vec<f64>, Vec<f64>)>, &str); 2] = [(&loess_g1, c_g1), (&loess_g2, c_g2)];
+        for (loess_opt, color_hex) in &loess_groups {
+            if let Some((fitted, ci_lo, ci_hi)) = loess_opt {
+                if fitted.is_empty() {
+                    continue;
+                }
+                let (r, g, b, _) = hex_to_rgba(color_hex, 255);
+
+                // CI bounds as dashed lines
+                for ci_band in [ci_hi, ci_lo] {
+                    let mut pb = PathBuilder::new();
+                    let mut started = false;
+                    for (i, &pos) in eval_pos.iter().enumerate() {
+                        let px = scale_x(pos);
+                        let py = scale_y(ci_band[i].max(0.0).min(1.0));
+                        if !started {
+                            pb.move_to(px, py);
+                            started = true;
+                        } else {
+                            pb.line_to(px, py);
+                        }
+                    }
+                    if let Some(path) = pb.finish() {
+                        let mut paint = Paint::default();
+                        paint.set_color_rgba8(r, g, b, 128); // ~0.5 alpha
+                        paint.anti_alias = true;
+                        let mut stroke = Stroke::default();
+                        stroke.width = 1.0 * dpr;
+                        stroke.dash = StrokeDash::new(vec![4.0 * dpr, 4.0 * dpr], 0.0);
+                        pixmap.stroke_path(&path, &paint, &stroke, Transform::identity(), None);
+                    }
+                }
+
+                // Fitted curve as solid line
+                let mut pb = PathBuilder::new();
+                let mut started = false;
+                for (i, &pos) in eval_pos.iter().enumerate() {
+                    let px = scale_x(pos);
+                    let py = scale_y(fitted[i].max(0.0).min(1.0));
+                    if !started {
+                        pb.move_to(px, py);
+                        started = true;
+                    } else {
+                        pb.line_to(px, py);
+                    }
+                }
+                if let Some(path) = pb.finish() {
+                    let mut paint = Paint::default();
+                    paint.set_color_rgba8(r, g, b, 204); // ~0.8 alpha
+                    paint.anti_alias = true;
+                    let mut stroke = Stroke::default();
+                    stroke.width = 2.0 * dpr;
+                    pixmap.stroke_path(&path, &paint, &stroke, Transform::identity(), None);
+                }
+            }
+        }
+    }
+
+    // 3. Scatter dots
+    let dot_radius = 4.0 * dpr;
+    for i in 0..rpos.len() {
+        let px = scale_x(rpos[i] as f64);
+        let is_sig = fdr[i] < fdr_cutoff;
+        let alpha = if is_sig { 217u8 } else { 77u8 }; // 0.85 * 255, 0.3 * 255
+
+        // Group 1
+        if mg1[i].is_finite() {
+            let py = scale_y(mg1[i]);
+            let (r, g, b, _) = hex_to_rgba(c_g1, alpha);
+            let mut paint = Paint::default();
+            paint.set_color_rgba8(r, g, b, alpha);
+            paint.anti_alias = true;
+            let mut pb = PathBuilder::new();
+            pb.push_circle(px, py, dot_radius);
+            if let Some(path) = pb.finish() {
+                pixmap.fill_path(&path, &paint, FillRule::Winding, Transform::identity(), None);
+            }
+        }
+
+        // Group 2
+        if mg2[i].is_finite() {
+            let py = scale_y(mg2[i]);
+            let (r, g, b, _) = hex_to_rgba(c_g2, alpha);
+            let mut paint = Paint::default();
+            paint.set_color_rgba8(r, g, b, alpha);
+            paint.anti_alias = true;
+            let mut pb = PathBuilder::new();
+            pb.push_circle(px, py, dot_radius);
+            if let Some(path) = pb.finish() {
+                pixmap.fill_path(&path, &paint, FillRule::Winding, Transform::identity(), None);
+            }
+        }
+    }
+
+    let png_bytes = pixmap.encode_png().ok()?;
+    Some(format!("data:image/png;base64,{}", BASE64.encode(&png_bytes)))
+}
+
 fn main() {
     let t0 = Instant::now();
     let rss_start = get_rss_mb();
@@ -386,6 +635,18 @@ fn main() {
     let c_param = p["C"].as_f64().unwrap_or(2.0);
     let min_db = p["min_delta_beta"].as_f64().unwrap_or(0.05);
     let min_spg = p["min_samples_per_group"].as_u64().unwrap_or(3) as usize;
+    let block_width = p["blockWidth"].as_u64().unwrap_or(800) as u32;
+    let device_pixel_ratio = p["devicePixelRatio"].as_f64().unwrap_or(1.0) as f32;
+    let max_loess_region = p["maxLoessRegion"].as_f64().unwrap_or(50000.0);
+    let track_height = 150u32;
+    let mut render_colors: HashMap<String, String> = HashMap::new();
+    if let Some(obj) = p["colors"].as_object() {
+        for (k, v) in obj {
+            if let Some(s) = v.as_str() {
+                render_colors.insert(k.clone(), s.to_string());
+            }
+        }
+    }
 
     if h5_path.is_empty() || qchr.is_empty() || cases.is_empty() || ctrls.is_empty() {
         bail!("Missing required parameters");
@@ -537,6 +798,43 @@ fn main() {
         dmrs = build_dmrs(qchr, &rpos, &rfdr, &rlfc, &mg1, &mg2, fdr_cut, lambda, 2, Some(min_db));
     }
 
+    // LOESS curves for both groups
+    let n_eval = 200usize;
+    let eval_pos: Vec<f64> = (0..n_eval)
+        .map(|i| qstart as f64 + (qstop as f64 - qstart as f64) * i as f64 / (n_eval - 1) as f64)
+        .collect();
+    let loess_g1 = loess_fit(&rpos, &mg1, &eval_pos, 0.75);
+    let loess_g2 = loess_fit(&rpos, &mg2, &eval_pos, 0.75);
+    let loess_json = json!({
+        "positions": eval_pos.iter().map(|&x| x.round() as i64).collect::<Vec<_>>(),
+        "group1_fitted": loess_g1.as_ref().map_or(vec![], |l| l.0.clone()),
+        "group1_ci_lower": loess_g1.as_ref().map_or(vec![], |l| l.1.clone()),
+        "group1_ci_upper": loess_g1.as_ref().map_or(vec![], |l| l.2.clone()),
+        "group2_fitted": loess_g2.as_ref().map_or(vec![], |l| l.0.clone()),
+        "group2_ci_lower": loess_g2.as_ref().map_or(vec![], |l| l.1.clone()),
+        "group2_ci_upper": loess_g2.as_ref().map_or(vec![], |l| l.2.clone()),
+    });
+
+    // Render the complete track as a transparent PNG
+    let track_png = render_track_png(
+        &rpos,
+        &mg1,
+        &mg2,
+        &rfdr,
+        &dmrs,
+        &loess_g1,
+        &loess_g2,
+        &eval_pos,
+        qstart as f64,
+        qstop as f64,
+        block_width,
+        track_height,
+        device_pixel_ratio,
+        fdr_cut,
+        max_loess_region,
+        &render_colors,
+    );
+
     let rss_peak = get_rss_mb();
     let elapsed_ms = t0.elapsed().as_millis();
     let r4 = |v: f64| -> Value {
@@ -559,11 +857,13 @@ fn main() {
                 "mean_group1": mg1.iter().map(|&v| r4(v)).collect::<Vec<_>>(),
                 "mean_group2": mg2.iter().map(|&v| r4(v)).collect::<Vec<_>>(),
                 "fdr": rfdr, "logFC": rlfc.iter().map(|&v| r4(v)).collect::<Vec<_>>() },
+                "loess": loess_json,
                 "probe_spacings": spacings,
                 "total_probes_analyzed": all.len(),
                 "peak_memory_mb": (rss_peak * 10.0).round() / 10.0,
                 "start_memory_mb": (rss_start * 10.0).round() / 10.0,
-                "elapsed_ms": elapsed_ms }
+                "elapsed_ms": elapsed_ms,
+                "track_png": track_png }
         })
     );
 }

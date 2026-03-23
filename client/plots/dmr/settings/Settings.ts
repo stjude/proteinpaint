@@ -11,6 +11,8 @@ export type DMRSettings = {
 	fdr_cutoff: number
 	/** Colors for DMR and per-CpG means visualization */
 	colors: { group1: string; group2: string; hyper: string; hypo: string }
+	/** Maximum region size (bp) to display LOESS trend curves (default: 250000) */
+	maxLoessRegion: number
 	/** Backend engine: 'rust' (default) or 'r' (DMRCate) */
 	backend: 'rust' | 'r'
 }

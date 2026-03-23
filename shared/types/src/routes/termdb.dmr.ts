@@ -21,6 +21,14 @@ export type TermdbDmrRequest = {
 	group1Name?: string
 	/** display name for group2 (e.g. from volcano plot) */
 	group2Name?: string
+	/** Block width in CSS pixels for server-side track rendering (default 800) */
+	blockWidth?: number
+	/** Device pixel ratio for server-side track rendering (default 1) */
+	devicePixelRatio?: number
+	/** Maximum region size (bp) to show LOESS curves (default 50000) */
+	maxLoessRegion?: number
+	/** Group/DMR colors for server-side track rendering */
+	colors?: { group1: string; group2: string; hyper: string; hypo: string }
 	/** Backend engine: 'rust' (genome-wide eBayes, default) or 'r' (DMRCate via cached limma) */
 	backend?: 'rust' | 'r'
 	filter?: Filter
@@ -32,6 +40,23 @@ type Sample = {
 	sample: string
 }
 
+export type DmrLoessCurves = {
+	/** Evenly spaced genomic positions where LOESS was evaluated */
+	positions: number[]
+	/** LOESS fitted values for group 1 (control) */
+	group1_fitted: number[]
+	/** Lower 95% CI bound for group 1 */
+	group1_ci_lower: number[]
+	/** Upper 95% CI bound for group 1 */
+	group1_ci_upper: number[]
+	/** LOESS fitted values for group 2 (case) */
+	group2_fitted: number[]
+	/** Lower 95% CI bound for group 2 */
+	group2_ci_lower: number[]
+	/** Upper 95% CI bound for group 2 */
+	group2_ci_upper: number[]
+}
+
 export type DmrDiagnostic = {
 	probes: {
 		positions: number[]
@@ -41,6 +66,8 @@ export type DmrDiagnostic = {
 		logFC: (number | null)[]
 	}
 	probe_spacings: number[]
+	/** LOESS smoothed curves with 95% CI for both groups */
+	loess?: DmrLoessCurves
 	/** Total probes analyzed genome-wide for eBayes */
 	total_probes_analyzed?: number
 	/** Peak RSS memory in MB */
@@ -49,6 +76,8 @@ export type DmrDiagnostic = {
 	start_memory_mb?: number
 	/** Total elapsed time in milliseconds */
 	elapsed_ms?: number
+	/** Server-rendered track PNG as data URI (Rust backend only) */
+	track_png?: string
 }
 
 export type TermdbDmrSuccessResponse = {
