@@ -8,7 +8,7 @@ const outdir = path.join(__dirname, process.argv[2] || './dist')
 const opts = {
 	entryPoints: ['./dist/*.ts'],
 	bundle: true,
-	platform: 'browser',
+	platform: 'node',
 	format: 'esm',
 	outdir,
 	splitting: true
