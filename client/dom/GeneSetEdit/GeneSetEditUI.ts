@@ -561,6 +561,7 @@ export class GeneSetEditUI {
 			.append('div')
 			.attr('aria-label', 'Click to delete')
 			.attr('class', 'sja_menuoption')
+			.attr('data-testid', `sjpp-delete-gene-option`)
 			.attr('tabindex', 0)
 			.style('position', 'relative')
 			.style('display', 'inline-block')

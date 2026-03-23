@@ -30,6 +30,7 @@ export class DownloadMenu {
 		menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
+			.attr('data-testid', 'sjpp-download-pdf-portrait')
 			.attr('tabindex', 0)
 			.text('PDF Portrait')
 			.on('click', () => {
@@ -39,6 +40,7 @@ export class DownloadMenu {
 		menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
+			.attr('data-testid', 'sjpp-download-pdf-landscape')
 			.text('PDF Landscape')
 			.on('click', () => {
 				downloadSVGsAsPdf(this.chartImages, this.filename, 'landscape')
@@ -47,6 +49,7 @@ export class DownloadMenu {
 		menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
+			.attr('data-testid', 'sjpp-download-svg')
 			.text('SVG')
 			.on('click', () => {
 				downloadAggregatedSVG(this.chartImages, this.filename)
@@ -57,6 +60,7 @@ export class DownloadMenu {
 			menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
+				.attr('data-testid', 'sjpp-download-multiple-svgs')
 				.text('Multiple SVG')
 				.on('click', () => {
 					for (const chart of this.chartImages)
@@ -69,6 +73,7 @@ export class DownloadMenu {
 			menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
+				.attr('data-testid', 'sjpp-download-text')
 				.text('Text')
 				.on('click', () => {
 					to_textfile(this.filename + '.txt', this.textCallback())

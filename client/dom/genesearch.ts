@@ -417,6 +417,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 					.join('div')
 					.text(d => d)
 					.attr('class', 'sja_menuoption')
+					.attr('data-testid', d => `sjpp-genesearch-gene-hit-${d.toLowerCase().replace(/\s/g, '-')}`)
 					.style('border-radius', '0px')
 					.attr('isgene', 1)
 					.on('click', async (event, d) => {
@@ -522,6 +523,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 				return `${d.name} (${pos} ${alleles})`
 			})
 			.attr('class', 'sja_menuoption')
+			.attr('data-testid', d => `sjpp-genesearch-snp-hit-${d.name.toLowerCase().replace(/\s/g, '-')}`)
 			.style('border-radius', '0px')
 			.attr('issnp', 1)
 			.on('click', (event, d) => {
@@ -550,6 +552,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 			.data(loci)
 			.join('div')
 			.attr('class', 'sja_menuoption')
+			.attr('data-testid', d => `sjpp-genesearch-isoform-hit-${d.name.toLowerCase().replace(/\s/g, '-')}`)
 			.style('border-radius', '0px')
 			.text(d => d.name + ' ' + d.chr + ':' + d.start + '-' + d.stop)
 			.on('click', (event, d) => {

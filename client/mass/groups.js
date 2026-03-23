@@ -237,6 +237,7 @@ class MassGroups {
 		menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
+			.attr('data-testid', 'sjpp-delete-variable')
 			.text('Delete variable')
 			.on('click', event => {
 				deleteCallback()
@@ -248,7 +249,11 @@ class MassGroups {
 export const groupsInit = getCompInit(MassGroups)
 
 function addSummarizeOptions(menuDiv, self, samplelstTW, id) {
-	const d = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border').text('Summarize')
+	const d = menuDiv
+		.append('div')
+		.attr('class', 'sja_menuoption sja_sharp_border')
+		.attr('data-testid', 'sjpp-summarize-option')
+		.text('Summarize')
 	d.on('click', async () => {
 		showTree(
 			d,
@@ -277,6 +282,7 @@ function mayAddGenomebrowserOption(menuDiv, self, samplelstTW) {
 	menuDiv
 		.append('div')
 		.attr('class', 'sja_menuoption sja_sharp_border')
+		.attr('data-testid', 'sjpp-genome-browser-option')
 		.text('Compare mutations')
 		.on('click', () => {
 			self.tip.hide()
@@ -357,6 +363,7 @@ function mayAddSamplescatterOption(menuDiv, self, samplelstTW) {
 			menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
+				.attr('data-testid', `sjpp-samplescatter-option-${plot.name.toLowerCase()}`)
 				.text(`Overlay on ${plot.name}`)
 				.on('click', () => {
 					self.tip2.hide() // in case tip2 is already opened through another option
@@ -391,6 +398,7 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 		const itemDiv = div
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
+			.attr('data-testid', 'sjpp-da-option')
 			.text(`Differential ${termType2label(TermTypes.GENE_EXPRESSION)} Analysis`)
 			.on('click', async e => {
 				// self.tip2.hide() // in case tip2 is already opened through another option
@@ -547,6 +555,7 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 		const itemDiv = div
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
+			.attr('data-testid', 'sjpp-da-dnaMeth-option')
 			.text(`Differential ${termType2label(TermTypes.DNA_METHYLATION)} Analysis`)
 			.on('click', async () => {
 				const groups = []
@@ -686,6 +695,7 @@ function initUI(self) {
 	self.dom.launchButton = self.dom.newTermSpan
 		.append('span')
 		.attr('class', 'sja_menuoption')
+		.attr('data-testid', 'sjpp-launch-button')
 		.on('click', () => clickLaunchBtn(self))
 
 	// msg: none selected
@@ -810,6 +820,7 @@ async function updateUI(self) {
 		row[0].__td
 			.append('div')
 			.attr('class', 'sja_menuoption')
+			.attr('data-testid', 'sjpp-delete-group')
 			.style('padding', '1px 6px')
 			.html('&times;')
 			.on('click', () => {
@@ -956,6 +967,7 @@ function addPlotMenuItem(chartType, div, text, tip, samplelstTW, id, parent, ope
 	const d = div
 		.append('div')
 		.attr('class', 'sja_menuoption sja_sharp_border')
+		.attr('data-testid', `sjpp-${chartType}-option`)
 		.text(text)
 		.on('click', e => {
 			const state = { tree: { usecase: { target: chartType, detail: 'term' } } }
@@ -978,6 +990,7 @@ function mayAddHierClusterPlotMenuItem(chartType, div, text, tip, samplelstTW, i
 	const itemDiv = div
 		.append('div')
 		.attr('class', 'sja_menuoption sja_sharp_border')
+		.attr('data-testid', `sjpp-hiercluster-option`)
 		.text(text)
 		.on('click', () => {
 			tip.clear().showunderoffset(itemDiv.node())
@@ -1064,6 +1077,7 @@ function mayAddMatrixMenuItems(div, text, tip, samplelstTW, id, parent, state, o
 	const itemDiv = div
 		.append('div')
 		.attr('class', 'sja_menuoption sja_sharp_border')
+		.attr('data-testid', `sjpp-matrix-option`)
 		.text(text)
 		.on('click', () => {
 			tip.clear().showunderoffset(itemDiv.node())
