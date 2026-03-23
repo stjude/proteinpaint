@@ -66,6 +66,7 @@ class ControlPanel {
 	init() {
 		const state = this.app.getState()
 		const menuWrapper = this.controlsDiv
+			.attr('data-testid', 'sjpp-hic-control-panel')
 			.style('background', 'rgb(253, 250, 244)')
 			.style('vertical-align', 'top')
 			.style('padding', '5px')
@@ -76,6 +77,7 @@ class ControlPanel {
 		//Burger btn
 		this.controlsDiv
 			.append('button')
+			.attr('data-testid', 'sjpp-hic-burger-btn')
 			.style('display', 'block')
 			.style('border', 'none')
 			.style('font-size', '1.5em')
@@ -89,6 +91,7 @@ class ControlPanel {
 		const menu = menuWrapper
 			.append('div')
 			.attr('class', 'sjpp-hic-menu')
+			.attr('data-testid', 'sjpp-hic-menu')
 			.style('display', menuVisible ? 'block' : 'none')
 		const menuTable = menu.append('table').style('border-spacing', '3px')
 
@@ -136,6 +139,7 @@ class ControlPanel {
 		this.controls.width = this.controls.widthRow.append('td')
 
 		this.controls.width
+			.attr('data-testid', 'sjpp-hic-block-size-input')
 			.style('margin-right', '10px')
 			.append('input')
 			.attr('type', 'number')
@@ -162,6 +166,7 @@ class ControlPanel {
 
 		this.controls.genomeViewBtn = viewBtnDiv
 			.append('button')
+			.attr('data-testid', 'sjpp-hic-genome-view-btn')
 			.style('display', 'none')
 			.style('padding', '2px')
 			.style('margin-top', '4px')
@@ -179,6 +184,7 @@ class ControlPanel {
 
 		this.controls.chrpairViewBtn = viewBtnDiv
 			.append('button')
+			.attr('data-testid', 'sjpp-hic-chrpair-view-btn')
 			.style('display', 'none')
 			.style('padding', '2px')
 			.style('margin', '4px 0px')
@@ -200,6 +206,7 @@ class ControlPanel {
 
 		this.controls.horizontalViewBtn = viewBtnDiv
 			.append('button')
+			.attr('data-testid', 'sjpp-hic-horizontal-view-btn')
 			.style('display', 'none')
 			.style('padding', '2px')
 			.style('margin', '4px 0px')
@@ -213,6 +220,7 @@ class ControlPanel {
 
 		this.controls.detailViewBtn = viewBtnDiv
 			.append('button')
+			.attr('data-testid', 'sjpp-hic-detail-view-btn')
 			.style('display', 'none')
 			.style('padding', '2px')
 			.style('margin', '4px 0px')
@@ -226,12 +234,14 @@ class ControlPanel {
 
 		this.controls.zoomDiv = menuTable
 			.append('tr')
+			.attr('data-testid', 'sjpp-hic-zoom-div')
 			.style('display', state.currView == 'detail' ? 'contents' : 'none') as any
 		this.addLabel(this.controls.zoomDiv, 'ZOOM')
 		const zoomDiv = this.controls.zoomDiv.append('td')
 
 		this.controls.zoomIn = zoomDiv
 			.append('button')
+			.attr('data-testid', 'sjpp-hic-zoom-in-btn')
 			.style('margin-right', '10px')
 			.text('In')
 			.on('click', () => {
@@ -239,6 +249,7 @@ class ControlPanel {
 			})
 		this.controls.zoomOut = zoomDiv
 			.append('button')
+			.attr('data-testid', 'sjpp-hic-zoom-out-btn')
 			.style('margin-right', '10px')
 			.text('Out')
 			.on('click', () => {

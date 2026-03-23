@@ -24,6 +24,7 @@ export class NormalizationMethodControl {
 			this.nmethSelect = this.holder.text(this.defaultNmeth)
 		} else {
 			this.nmethSelect = this.holder
+				.attr('data-testid', 'sjpp-hic-nmeth-select')
 				.style('margin-right', '10px')
 				.append('select')
 				.on('change', async () => {

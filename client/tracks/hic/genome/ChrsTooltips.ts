@@ -15,6 +15,7 @@ export class ChrsTooltips {
 			.clear()
 			.show(p.left, p.top)
 			.d.style('top', null)
+			.attr('data-testid', 'sjpp-hic-chrx-tooltip')
 			.style('bottom', window.innerHeight - p.top - window.pageYOffset + 'px')
 			.text(chrx)
 
@@ -22,6 +23,7 @@ export class ChrsTooltips {
 			.clear()
 			.show(p.left, p.top)
 			.d.style('left', null)
+			.attr('data-testid', 'sjpp-hic-chry-tooltip')
 			.style('right', document.body.clientWidth - p.left - window.pageXOffset + 'px')
 			.text(chry)
 	}

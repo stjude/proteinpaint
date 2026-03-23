@@ -34,6 +34,7 @@ export class InfoBar {
 	addLabel = (text: string) => {
 		return this.labelRow
 			.append('td')
+			.attr('data-testid', `sjpp-hic-infobar-${text.toLowerCase().replace(/\s/g, '-')}-label`)
 			.style('color', '#858585')
 			.style('font-size', '.8em')
 			.style('text-align', 'center')
@@ -44,6 +45,7 @@ export class InfoBar {
 	addValue = (text: string | number) => {
 		return this.valueRow
 			.append('td')
+			.attr('data-testid', `sjpp-hic-infobar-${text.toString().toLowerCase().replace(/\s/g, '-')}-value`)
 			.style('font-size', '1em')
 			.style('text-align', 'center')
 			.style('vertical-align', 'middle')
@@ -64,7 +66,7 @@ export class InfoBar {
 		//Color scale appears dynamically based on the state
 		//Eventually this can be used in tandem with a color picker
 		this.colorScaleLabel = this.addLabel('Scale')
-		this.colorScaleDiv = this.valueRow.append('td')
+		this.colorScaleDiv = this.valueRow.append('td').attr('data-testid', 'sjpp-hic-color-scale')
 
 		/** On initial render, its common for the min and max values
 		 * to == 0. The color scale does not allow duplicate values in the
