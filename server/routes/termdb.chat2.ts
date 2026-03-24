@@ -16,6 +16,7 @@ import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import path from 'path'
+import fs from 'fs'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/chat2',
@@ -39,8 +40,16 @@ function init({ genomes }) {
 			if (!g) throw 'invalid genome'
 			const ds = g.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid dslabel'
-			if (!ds?.queries?.chat?.aifiles) {
-				throw 'aifiles are missing for chatbot to work'
+			const aiFilesDir = serverconfig.binpath + '/../../dataset/ai/' + q.dslabel // This is the directory where the AI JSON files are stored for this dataset. This will use this as the base directory for resolving all agent file paths specified in the dataset JSON file.
+			let agentFiles: string[] = []
+			try {
+				// Read dataset JSON file
+				agentFiles = fs.readdirSync(aiFilesDir).filter(file => file.endsWith('.json'))
+				console.log('agentFiles:', agentFiles)
+			} catch (err: any) {
+				if (err.code === 'ENOENT') throw new Error(`Directory not found: ${aiFilesDir}`)
+				if (err.code === 'ENOTDIR') throw new Error(`Path is not a directory: ${aiFilesDir}`)
+				throw err
 			}
 
 			const llm = serverconfig.llm
@@ -51,7 +60,6 @@ function init({ genomes }) {
 
 			const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
 			const genedb = serverconfig.tpmasterdir + '/' + g.genedb.dbfile
-			// Read dataset JSON file
 			const dataset_json: any = await readJSONFile(ds?.queries?.chat?.aifiles)
 			// Resolve agent file paths relative to the main JSON file's directory
 			if (dataset_json.agentFiles) {
@@ -70,7 +78,9 @@ function init({ genomes }) {
 				dataset_db,
 				genedb,
 				ds,
-				genesetNames
+				genesetNames,
+				agentFiles,
+				aiFilesDir
 			)
 			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
@@ -88,7 +98,9 @@ export async function run_chat_pipeline(
 	dataset_db: string,
 	genedb: string,
 	ds: any,
-	genesetNames: string[] = []
+	genesetNames: string[] = [],
+	agentFiles: string[],
+	aiFilesDir: string
 ) {
 	const time1 = new Date().valueOf()
 
@@ -97,7 +109,7 @@ export async function run_chat_pipeline(
 	mayLog('Time taken for classification:', formatElapsedTime(Date.now() - time1))
 	if (class_response.type == 'notplot') {
 		const time2 = new Date().valueOf()
-		const notPlotResult = await classifyNotPlot(user_prompt, llm, dataset_json)
+		const notPlotResult = await classifyNotPlot(user_prompt, llm, agentFiles, aiFilesDir)
 		mayLog('Time taken for classify2:', formatElapsedTime(Date.now() - time2))
 		if (notPlotResult.type == 'html') {
 			ai_output_json = notPlotResult
