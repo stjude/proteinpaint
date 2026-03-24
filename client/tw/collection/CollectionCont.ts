@@ -59,12 +59,11 @@ export class CollectionCont extends TwBase {
 		for (const [label, value] of Object.entries(termsValue)) {
 			let transformedV: number = value
 			if (this.term.valueTransform) {
-				for (const [k, v] of Object.entries(this.term.valueTransform)) {
-					if (k === 'offset') {
-						transformedV += v
-					}
-					// Add more transformation types here as needed
+				const offset = (this.term.valueTransform as any).offset
+				if (typeof offset === 'number') {
+					transformedV += offset
 				}
+				// Add more transformation types here as needed
 			}
 
 			if (transformedV !== 0) {
