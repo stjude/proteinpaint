@@ -45,6 +45,7 @@ export class CollectionCont extends TwBase {
 		copy.term.memberType = this.term.memberType
 		if (this.term.numerators) copy.term.numerators = structuredClone(this.term.numerators)
 		if (this.term.propsByTermId) copy.term.propsByTermId = structuredClone(this.term.propsByTermId)
+		if (this.term.valueTransform) copy.term.valueTransform = structuredClone(this.term.valueTransform)
 		copy.term.termIds = this.term.termlst?.map((t: any) => t.id) || []
 		if (copy.q) {
 			delete copy.q.isAtomic
