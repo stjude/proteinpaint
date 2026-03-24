@@ -358,3 +358,537 @@ tape('CollectionQual.getMinCopy() - returns essential fields without termlst', a
 	test.notOk('isAtomic' in copy.q, 'isAtomic stripped from q')
 	test.end()
 })
+
+// ====== Tests for valueTransform feature ======
+tape('transformData with valueTransform offset - positive offset', async test => {
+	const tw = new CollectionCont(
+		{
+			type: 'TermCollectionTWCont',
+			term: {
+				type: 'termCollection',
+				memberType: 'numeric',
+				id: 'test',
+				name: 'Test Collection',
+				termlst: [],
+				propsByTermId: {
+					sig1: { color: 'red' },
+					sig2: { color: 'blue' }
+				},
+				valueTransform: { offset: 10 }
+			},
+			q: {
+				mode: 'continuous',
+				type: 'values',
+				lst: []
+			}
+		},
+		{ vocabApi }
+	)
+
+	const data: any = {
+		value: {
+			sig1: 30,
+			sig2: 70
+		}
+	}
+
+	tw.transformData(data)
+
+	// With offset +10: sig1 becomes 40, sig2 becomes 80
+	// Total: 120, so percentages are sig1: 33.33%, sig2: 66.67%
+	test.equal(data.values.length, 2, 'should have 2 values')
+	test.ok(Math.abs(data.values[0].value - 33.33) < 0.01, 'sig1 should be ~33.33% after offset')
+	test.ok(Math.abs(data.values[1].value - 66.67) < 0.01, 'sig2 should be ~66.67% after offset')
+	test.end()
+})
+
+tape('transformData with valueTransform offset - negative offset', async test => {
+	const tw = new CollectionCont(
+		{
+			type: 'TermCollectionTWCont',
+			term: {
+				type: 'termCollection',
+				memberType: 'numeric',
+				id: 'test',
+				name: 'Test Collection',
+				termlst: [],
+				propsByTermId: {
+					sig1: { color: 'red' },
+					sig2: { color: 'blue' }
+				},
+				valueTransform: { offset: -5 }
+			},
+			q: {
+				mode: 'continuous',
+				type: 'values',
+				lst: []
+			}
+		},
+		{ vocabApi }
+	)
+
+	const data: any = {
+		value: {
+			sig1: 30,
+			sig2: 70
+		}
+	}
+
+	tw.transformData(data)
+
+	// With offset -5: sig1 becomes 25, sig2 becomes 65
+	// Total: 90, so percentages are sig1: 27.78%, sig2: 72.22%
+	test.equal(data.values.length, 2, 'should have 2 values')
+	test.ok(Math.abs(data.values[0].value - 27.78) < 0.01, 'sig1 should be ~27.78% after negative offset')
+	test.ok(Math.abs(data.values[1].value - 72.22) < 0.01, 'sig2 should be ~72.22% after negative offset')
+	test.end()
+})
+
+tape('transformData with valueTransform offset - converts positive to zero', async test => {
+	const tw = new CollectionCont(
+		{
+			type: 'TermCollectionTWCont',
+			term: {
+				type: 'termCollection',
+				memberType: 'numeric',
+				id: 'test',
+				name: 'Test Collection',
+				termlst: [],
+				propsByTermId: {
+					sig1: { color: 'red' },
+					sig2: { color: 'blue' }
+				},
+				valueTransform: { offset: -30 }
+			},
+			q: {
+				mode: 'continuous',
+				type: 'values',
+				lst: []
+			}
+		},
+		{ vocabApi }
+	)
+
+	const data: any = {
+		value: {
+			sig1: 30, // becomes 0 after offset
+			sig2: 70 // becomes 40 after offset
+		}
+	}
+
+	tw.transformData(data)
+
+	// sig1 becomes 0 and should be filtered out
+	test.equal(data.values.length, 1, 'should have 1 value (zero value filtered out)')
+	test.equal(data.values[0].label, 'sig2', 'only sig2 should remain')
+	test.equal(data.values[0].value, 100, 'sig2 should be 100% when sig1 is zero')
+	test.end()
+})
+
+tape('transformData with valueTransform offset - converts positive to negative', async test => {
+	const tw = new CollectionCont(
+		{
+			type: 'TermCollectionTWCont',
+			term: {
+				type: 'termCollection',
+				memberType: 'numeric',
+				id: 'test',
+				name: 'Test Collection',
+				termlst: [],
+				propsByTermId: {
+					sig1: { color: 'red' },
+					sig2: { color: 'blue' }
+				},
+				valueTransform: { offset: -80 }
+			},
+			q: {
+				mode: 'continuous',
+				type: 'values',
+				lst: []
+			}
+		},
+		{ vocabApi }
+	)
+
+	const data: any = {
+		value: {
+			sig1: 30, // becomes -50 after offset
+			sig2: 70 // becomes -10 after offset
+		}
+	}
+
+	tw.transformData(data)
+
+	// Both become negative
+	test.equal(data.values.length, 2, 'should have 2 values')
+	test.equal(data.hasMixedValues, false, 'should not have mixed values (all negative)')
+	test.ok(data.values[0].value < 0, 'first value should be negative')
+	test.ok(data.values[1].value < 0, 'second value should be negative')
+	test.end()
+})
+
+tape('CollectionCont.getMinCopy() - includes valueTransform', async test => {
+	const tw = new CollectionCont(
+		{
+			type: 'TermCollectionTWCont',
+			term: {
+				type: 'termCollection',
+				memberType: 'numeric',
+				id: 'test',
+				name: 'Test Collection',
+				termlst: [
+					{ id: 'sig1', name: 'Signature 1' },
+					{ id: 'sig2', name: 'Signature 2' }
+				],
+				propsByTermId: {
+					sig1: { color: 'red' },
+					sig2: { color: 'blue' }
+				},
+				valueTransform: { offset: 10 }
+			},
+			q: {
+				mode: 'continuous',
+				type: 'values',
+				lst: []
+			}
+		},
+		{ vocabApi }
+	)
+
+	const copy = tw.getMinCopy()
+
+	test.ok(copy.term.valueTransform, 'valueTransform should be included in copy')
+	test.equal(copy.term.valueTransform.offset, 10, 'valueTransform offset should be preserved')
+	test.notOk('termlst' in copy.term, 'termlst should not be in min copy')
+	test.deepEqual(copy.term.termIds, ['sig1', 'sig2'], 'termIds should be derived from termlst')
+	test.end()
+})
+
+tape('CollectionCont.getMinCopy() - includes numerators', async test => {
+	const tw = new CollectionCont(
+		{
+			type: 'TermCollectionTWCont',
+			term: {
+				type: 'termCollection',
+				memberType: 'numeric',
+				id: 'test',
+				name: 'Test Collection',
+				termlst: [
+					{ id: 'sig1', name: 'Signature 1' },
+					{ id: 'sig2', name: 'Signature 2' }
+				],
+				propsByTermId: {},
+				numerators: ['sig1']
+			},
+			q: {
+				mode: 'continuous',
+				type: 'values',
+				lst: []
+			}
+		},
+		{ vocabApi }
+	)
+
+	const copy = tw.getMinCopy()
+
+	test.ok(copy.term.numerators, 'numerators should be included in copy')
+	test.deepEqual(copy.term.numerators, ['sig1'], 'numerators should be preserved')
+	test.end()
+})
+
+// ====== Tests for numerators handling ======
+tape('transformData calculates numerators_sum correctly', async test => {
+	const tw = new CollectionCont(
+		{
+			type: 'TermCollectionTWCont',
+			term: {
+				type: 'termCollection',
+				memberType: 'numeric',
+				id: 'test',
+				name: 'Test Collection',
+				termlst: [],
+				propsByTermId: {
+					sig1: { color: 'red' },
+					sig2: { color: 'blue' },
+					sig3: { color: 'green' }
+				}
+			},
+			q: {
+				mode: 'continuous',
+				type: 'values',
+				lst: [],
+				numerators: ['sig1', 'sig3'] // Only sig1 and sig3 are numerators
+			}
+		},
+		{ vocabApi }
+	)
+
+	const data: any = {
+		value: {
+			sig1: 30,
+			sig2: 40,
+			sig3: 30
+		}
+	}
+
+	tw.transformData(data)
+
+	// sig1: 30%, sig2: 40%, sig3: 30%
+	// numerators_sum should be sig1 + sig3 = 30 + 30 = 60
+	test.equal(data.values.length, 3, 'should have 3 values')
+	test.equal(data.numerators_sum, 60, 'numerators_sum should be 60 (sig1 + sig3)')
+	test.end()
+})
+
+tape('transformData calculates numerators_sum with negative values', async test => {
+	const tw = new CollectionCont(
+		{
+			type: 'TermCollectionTWCont',
+			term: {
+				type: 'termCollection',
+				memberType: 'numeric',
+				id: 'test',
+				name: 'Test Collection',
+				termlst: [],
+				propsByTermId: {
+					enrich: { color: 'red' },
+					deplete: { color: 'blue' }
+				}
+			},
+			q: {
+				mode: 'continuous',
+				type: 'values',
+				lst: [],
+				numerators: ['enrich'] // Only enrich is numerator
+			}
+		},
+		{ vocabApi }
+	)
+
+	const data: any = {
+		value: {
+			enrich: 50,
+			deplete: -50
+		}
+	}
+
+	tw.transformData(data)
+
+	// enrich: 50%, deplete: -50%
+	// numerators_sum should be 50 (only enrich)
+	test.equal(data.hasMixedValues, true, 'should have mixed values')
+	test.equal(data.numerators_sum, 50, 'numerators_sum should be 50 (only enrich)')
+	test.end()
+})
+
+// ====== Tests for CollectionCont.fill() ======
+const mockNumericVocabApi = {
+	termdbConfig: {
+		termCollections: [
+			{
+				name: 'Test Numeric Collection',
+				type: 'numeric',
+				termIds: ['t1', 't2'],
+				termlst: [
+					{ id: 't1', name: 'Term 1' },
+					{ id: 't2', name: 'Term 2' }
+				],
+				propsByTermId: { t1: { color: 'red' }, t2: { color: 'blue' } }
+			}
+		]
+	}
+}
+
+tape('CollectionCont.fill() - initializes q when absent', async test => {
+	const tw: any = {
+		term: {
+			type: 'termCollection',
+			name: 'Test Numeric Collection',
+			memberType: 'numeric'
+		}
+	}
+	CollectionCont.fill(tw, { vocabApi: mockNumericVocabApi as any })
+	test.equal(tw.type, 'TermCollectionTWCont', 'tw.type set')
+	test.equal(tw.q.mode, 'continuous', 'q.mode defaults to continuous')
+	test.equal(tw.q.type, 'values', 'q.type defaults to values')
+	test.deepEqual(tw.q.lst, [], 'q.lst defaults to empty array')
+	test.equal(tw.q.numerators, undefined, 'q.numerators is not set when q is newly created')
+	test.end()
+})
+
+tape('CollectionCont.fill() - applies defaults to partial q', async test => {
+	const tw: any = {
+		term: {
+			type: 'termCollection',
+			name: 'Test Numeric Collection',
+			memberType: 'numeric'
+		},
+		q: { type: 'values' }
+	}
+	CollectionCont.fill(tw, { vocabApi: mockNumericVocabApi as any })
+	test.equal(tw.q.mode, 'continuous', 'missing q.mode defaults to continuous')
+	test.deepEqual(tw.q.lst, [], 'missing q.lst defaults to empty array')
+	test.deepEqual(tw.q.numerators, ['t1', 't2'], 'missing q.numerators defaults to termIds')
+	test.end()
+})
+
+tape('CollectionCont.fill() - does not overwrite existing numerators', async test => {
+	const tw: any = {
+		term: {
+			type: 'termCollection',
+			name: 'Test Numeric Collection',
+			memberType: 'numeric'
+		},
+		q: {
+			mode: 'continuous',
+			type: 'values',
+			lst: [],
+			numerators: ['t1'] // Only t1
+		}
+	}
+	CollectionCont.fill(tw, { vocabApi: mockNumericVocabApi as any })
+	test.deepEqual(tw.q.numerators, ['t1'], 'existing q.numerators preserved')
+	test.end()
+})
+
+// ====== Tests for NumericTermCollection ======
+tape('NumericTermCollection.fill() - fills from config', async test => {
+	const { NumericTermCollection } = await import('../collection/NumericTermCollection')
+	const term: any = { type: 'termCollection', name: 'Test Numeric Collection', memberType: 'numeric' }
+	NumericTermCollection.fill(term, { vocabApi: mockNumericVocabApi as any })
+	test.equal(term.termlst?.length, 2, 'termlst populated from config')
+	test.equal(term.termIds?.length, 2, 'termIds set from termlst')
+	test.deepEqual(term.propsByTermId, mockNumericVocabApi.termdbConfig.termCollections[0].propsByTermId, 'propsByTermId set')
+	test.equal(term.memberType, 'numeric', 'memberType set to numeric')
+	test.end()
+})
+
+tape('NumericTermCollection.fill() - derives termIds from termlst when termlst exists but no config match', async test => {
+	const { NumericTermCollection } = await import('../collection/NumericTermCollection')
+	const term: any = {
+		type: 'termCollection',
+		name: 'Unknown Collection',
+		memberType: 'numeric',
+		termlst: [{ id: 't1', name: 'Term 1' }],
+		propsByTermId: { t1: { color: 'red' } }
+	}
+	test.doesNotThrow(
+		() => NumericTermCollection.fill(term, { vocabApi: mockNumericVocabApi as any }),
+		'should not throw when no config match but termlst is provided'
+	)
+	test.equal(term.termIds?.length, 1, 'termIds derived from termlst')
+	test.equal(term.termIds[0], 't1', 'termId matches termlst id')
+	test.end()
+})
+
+tape('NumericTermCollection.fill() - throws when no config match and no termlst', async test => {
+	const { NumericTermCollection } = await import('../collection/NumericTermCollection')
+	const term: any = { type: 'termCollection', name: 'Unknown Collection', memberType: 'numeric' }
+	test.throws(
+		() => NumericTermCollection.fill(term, { vocabApi: mockNumericVocabApi as any }),
+		/no matching termCollection/,
+		'should throw when no config match and no termlst'
+	)
+	test.end()
+})
+
+tape('NumericTermCollection.validate() - validates term type', async test => {
+	const { NumericTermCollection } = await import('../collection/NumericTermCollection')
+	test.throws(
+		() => NumericTermCollection.validate({ type: 'wrongType' } as any),
+		/incorrect term.type/,
+		'should throw when term type is incorrect'
+	)
+	test.end()
+})
+
+tape('NumericTermCollection.validate() - validates term is object', async test => {
+	const { NumericTermCollection } = await import('../collection/NumericTermCollection')
+	test.throws(
+		() => NumericTermCollection.validate('not an object' as any),
+		/term is not an object/,
+		'should throw when term is not an object'
+	)
+	test.end()
+})
+
+// ====== Tests for CollectionBase ======
+tape('CollectionBase.fill() - infers type from config when type is missing', async test => {
+	const { CollectionBase } = await import('../collection/CollectionBase')
+	const tw: any = {
+		term: {
+			type: 'termCollection',
+			name: 'Test Numeric Collection'
+		}
+	}
+	CollectionBase.fill(tw, { vocabApi: mockNumericVocabApi as any })
+	test.equal(tw.type, 'TermCollectionTWCont', 'type inferred as TermCollectionTWCont for numeric collection')
+	test.end()
+})
+
+tape('CollectionBase.fill() - routes to CollectionCont for TermCollectionTWCont', async test => {
+	const { CollectionBase } = await import('../collection/CollectionBase')
+	const tw: any = {
+		type: 'TermCollectionTWCont',
+		term: {
+			type: 'termCollection',
+			name: 'Test Numeric Collection',
+			memberType: 'numeric'
+		}
+	}
+	CollectionBase.fill(tw, { vocabApi: mockNumericVocabApi as any })
+	test.equal(tw.type, 'TermCollectionTWCont', 'type remains TermCollectionTWCont')
+	test.ok(tw.q, 'q object initialized')
+	test.equal(tw.q.mode, 'continuous', 'continuous mode set')
+	test.end()
+})
+
+tape('CollectionBase.fill() - routes to CollectionQual for TermCollectionTWQual', async test => {
+	const { CollectionBase } = await import('../collection/CollectionBase')
+	const tw: any = {
+		type: 'TermCollectionTWQual',
+		term: {
+			type: 'termCollection',
+			name: 'Assay Availability',
+			memberType: 'categorical'
+		}
+	}
+	CollectionBase.fill(tw, { vocabApi: mockVocabApi as any })
+	test.equal(tw.type, 'TermCollectionTWQual', 'type remains TermCollectionTWQual')
+	test.ok(tw.q, 'q object initialized')
+	test.equal(tw.q.mode, 'discrete', 'discrete mode set')
+	test.end()
+})
+
+tape('CollectionBase.fill() - throws for unknown collection name', async test => {
+	const { CollectionBase } = await import('../collection/CollectionBase')
+	const tw: any = {
+		term: {
+			type: 'termCollection',
+			name: 'Unknown Collection'
+		}
+	}
+	test.throws(
+		() => CollectionBase.fill(tw, { vocabApi: mockNumericVocabApi as any }),
+		/no matching termCollection/,
+		'should throw when collection name not found in config'
+	)
+	test.end()
+})
+
+tape('CollectionBase.fill() - throws for unexpected tw.type', async test => {
+	const { CollectionBase } = await import('../collection/CollectionBase')
+	const tw: any = {
+		type: 'UnexpectedType',
+		term: {
+			type: 'termCollection',
+			name: 'Test Numeric Collection'
+		}
+	}
+	test.throws(
+		() => CollectionBase.fill(tw, { vocabApi: mockNumericVocabApi as any }),
+		/unexpected collection tw.type/,
+		'should throw for unexpected tw.type'
+	)
+	test.end()
+})
