@@ -19,7 +19,7 @@ export async function extract_samplescatter_terms_from_query(
 	genesetNames: string[] = [],
 	geneFeatures: GeneDataTypeResult[]
 ) {
-	if (!dataset_json.prebuiltPlots || dataset_json.prebuiltPlots.length == 0) {
+	if (!ds.cohort.scatterplots.plots || ds.cohort.scatterplots.plots.length == 0) {
 		return { type: 'text', text: 'No pre-built scatter plots (t-SNE/UMAP) are available for this dataset' }
 	}
 
@@ -73,7 +73,7 @@ export async function extract_samplescatter_terms_from_query(
 
 	const training_data = formatTrainingExamples(scatter_ds.TrainingData)
 
-	const plotNames = dataset_json.prebuiltPlots.map((p: any) => p.name).join(', ')
+	const plotNames = ds.cohort.scatterplots.plots.map((p: any) => p.name).join(', ')
 
 	const system_prompt =
 		'I am an assistant that extracts overlay parameters for pre-built scatter plots (t-SNE/UMAP). The final output must be in the following JSON format with NO extra comments. The JSON schema is as follows: ' +
@@ -122,15 +122,15 @@ function validate_samplescatter_response(
 
 	if (response_type.text) text = response_type.text
 
-	// Validate plotName against prebuiltPlots
+	// Validate plotName against plot names in ds.cohort.scatterplots.plots
 	if (!response_type.plotName) {
 		text += 'plotName is required for sample scatter output'
 	} else {
-		const matchedPlot = dataset_json.prebuiltPlots.find(
+		const matchedPlot = ds.cohort.scatterplots.plots.find(
 			(p: any) => p.name.toLowerCase() == response_type.plotName.toLowerCase()
 		)
 		if (!matchedPlot) {
-			const availablePlots = dataset_json.prebuiltPlots.map((p: any) => p.name).join(', ')
+			const availablePlots = ds.cohort.scatterplots.plots.map((p: any) => p.name).join(', ')
 			text += 'Unknown plot name: ' + response_type.plotName + '. Available plots are: ' + availablePlots
 		}
 	}
