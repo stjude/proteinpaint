@@ -16,14 +16,14 @@ import { extractResourceResponse } from './resource.ts'
 export async function classifyNotPlot(
 	user_prompt: string,
 	llm: LlmConfig,
-	dataset_json: any
+	agentFiles: string[],
+	aiFilesDir: string
 ): Promise<{ type: 'none' } | { type: 'html'; html: string }> {
-	const resources = dataset_json.resources ?? []
-	if (resources.length === 0) {
+	if (agentFiles.includes('resources.json')) {
+		mayLog('classify2: dataset has resources, delegating to resource agent')
+		return await extractResourceResponse(user_prompt, llm, aiFilesDir)
+	} else {
 		mayLog('classify2: no resources configured for this dataset')
 		return { type: 'none' }
 	}
-
-	mayLog('classify2: dataset has resources, delegating to resource agent')
-	return await extractResourceResponse(user_prompt, llm, dataset_json)
 }
