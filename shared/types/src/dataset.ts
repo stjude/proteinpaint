@@ -707,7 +707,7 @@ export type MetaboliteIntensityQueryNative = {
 
 export type MetaboliteIntensityQuery = MetaboliteIntensityQueryNative
 
-/** the proteomics  query */
+/** the proteomics query */
 type CohortConfig = {
 	file: string
 }
