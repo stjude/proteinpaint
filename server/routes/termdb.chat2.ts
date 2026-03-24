@@ -45,7 +45,6 @@ function init({ genomes }) {
 			try {
 				// Read dataset JSON file
 				agentFiles = fs.readdirSync(aiFilesDir).filter(file => file.endsWith('.json'))
-				console.log('agentFiles:', agentFiles)
 			} catch (err: any) {
 				if (err.code === 'ENOENT') throw new Error(`Directory not found: ${aiFilesDir}`)
 				if (err.code === 'ENOTDIR') throw new Error(`Path is not a directory: ${aiFilesDir}`)
