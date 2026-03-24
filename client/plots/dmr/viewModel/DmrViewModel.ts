@@ -29,7 +29,8 @@ export class DmrViewModel {
 			legendRows: this.buildLegendData(config, dmrResult.dmrs, sigCpgBedItems, showLoess),
 			diagnostic: dmrResult.diagnostic,
 			dmrs: dmrResult.dmrs,
-			dmrBedItems
+			dmrBedItems,
+			showLoess
 		}
 	}
 

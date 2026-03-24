@@ -178,4 +178,17 @@ export class DmrView {
 	clearErrors() {
 		this.dom.error.selectAll('*').remove()
 	}
+
+	showLoessNote(show: boolean) {
+		this.dom.error.selectAll('.sjpp-loess-note').remove()
+		if (show) {
+			this.dom.error
+				.append('div')
+				.attr('class', 'sjpp-loess-note')
+				.style('color', '#888')
+				.style('font-size', '.8em')
+				.style('padding', '4px 0')
+				.text('Zoom in to see LOESS trend lines and confidence intervals.')
+		}
+	}
 }
