@@ -707,9 +707,25 @@ export type MetaboliteIntensityQueryNative = {
 
 export type MetaboliteIntensityQuery = MetaboliteIntensityQueryNative
 
+/** the proteomics  query */
+type CohortConfig = {
+	file: string
+}
+type AssayWithCohorts = {
+	cohorts: {
+		[cohortName: string]: CohortConfig
+	}
+}
+type AssaySingleFile = {
+	file: string
+}
+type AssayConfig = AssayWithCohorts | AssaySingleFile
+
 export type WholeProteomeAbundanceQuery = {
 	/** document structure */
-	file: string
+	assays: {
+		[assayName: string]: AssayConfig
+	}
 	samples?: number[]
 	/** _proteins,used to dynamically built cache of protein names to speed up search */
 	_proteins?: string[]
