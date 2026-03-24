@@ -1795,7 +1795,11 @@ async function validate_query_dnaMethylation(ds, genome) {
 				}
 			}
 
-			// map sampleid to average beta value
+			// map sampleid to average value (M-value or beta depending on term unit)
+			const useM = tw.term.unit === 'avg. M-value'
+			const totalProbes = dnaMethylData.length
+			let _kept = 0,
+				_skipped = 0
 			const s2v = {}
 			for (const [i, sampleName] of sampleNames.entries()) {
 				const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
@@ -1803,10 +1807,29 @@ async function validate_query_dnaMethylation(ds, genome) {
 				if (limitSamples && !limitSamples.has(sampleId)) continue
 				const values = sampleidx2values.get(i)
 				if (!values?.length) continue // skip samples with no beta values
+				// Only include samples with data at ALL probes in the window.
+				// Different arrays (450K/EPIC/EPIC v2) cover different probes;
+				// averaging different probe sets makes values non-comparable.
+				if (values.length < totalProbes) {
+					_skipped++
+					continue
+				}
+				_kept++
 				const avg = values.reduce((sum, v) => sum + v, 0) / values.length
-				s2v[sampleId] = avg
+				if (useM) {
+					// Convert avg beta to M-value: M = log2(beta / (1 - beta))
+					const clamped = Math.min(Math.max(avg, 1e-6), 1 - 1e-6)
+					s2v[sampleId] = Math.log2(clamped / (1 - clamped))
+				} else {
+					s2v[sampleId] = avg
+				}
 			}
 
+			console.log(
+				`[dnaMeth filter] totalProbes=${totalProbes}, kept=${_kept}, skipped=${_skipped}, resultSamples=${
+					Object.keys(s2v).length
+				}`
+			)
 			if (Object.keys(s2v).length) {
 				term2sample2value.set(tw.$id, s2v)
 			}

@@ -391,8 +391,12 @@ class Query:
             valid_cols = col_idx[~missing_mask]
 
             dset = h5["/beta/values"]
-            if len(valid_cols) > 0 and n_rows > 0: 
-                tmp_block = dset[left:right, :]
+            if len(valid_cols) > 0 and n_rows > 0:
+                # left/right are local indices within the chromosome slice;
+                # offset by row_start to get absolute dataset row positions
+                abs_left = row_start + left
+                abs_right = row_start + right
+                tmp_block = dset[abs_left:abs_right, :]
                 query_beta[:, ~missing_mask] = tmp_block[:, valid_cols]
         return query_beta
 

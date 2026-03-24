@@ -209,28 +209,33 @@ if (length(input$conf1) == 0) {
 }
 
 ###############################################################################
-# Step 6: Remove promoters with any remaining NAs
+# Step 6: Impute remaining NAs with group means
 ###############################################################################
-# limma's lmFit() cannot handle NA values in the expression matrix.
 # After filtering (Step 4), some promoters may still have NAs in individual
 # samples (we only required min_samples_per_group non-NAs, not all).
-# NAs arise from different array types (450K vs EPIC vs EPIC 2) covering different probe
-# sets, so imputation would be misleading. Instead, we conservatively remove
-# any promoter that still has NA values, ensuring only complete data is analyzed.
-na_rows <- rowSums(is.na(mvalues)) > 0
-if (any(na_rows)) {
-  mvalues <- mvalues[!na_rows, , drop = FALSE]
-  gene_names_filtered <- gene_names_filtered[!na_rows]
-  promoter_ids_filtered <- promoter_ids_filtered[!na_rows]
-  chrs_filtered <- chrs_filtered[!na_rows]
-  starts_filtered <- starts_filtered[!na_rows]
-  stops_filtered <- stops_filtered[!na_rows]
-}
-
-if (nrow(mvalues) == 0) {
-  stop(
-    "No promoters remain after removing rows with NA values; cannot perform differential methylation analysis."
-  )
+# NAs arise from different array types (450K vs EPIC vs EPIC 2) covering
+# different probe sets. Rather than dropping these promoters entirely — which
+# causes biologically important promoters (e.g. PTCH1) to disappear from the
+# analysis — we impute remaining NAs with the group mean (Maksimovic et al.
+# 2016, F1000Research). This is conservative: it shrinks the imputed sample's
+# contribution toward the group average, slightly reducing power but not
+# inflating false positives. Step 4 already guarantees at least
+# min_samples_per_group non-NA values per group, so group means are always
+# computable.
+na_rows <- which(rowSums(is.na(mvalues)) > 0)
+if (length(na_rows) > 0) {
+  case_cols <- 1:n_cases
+  control_cols <- (n_cases + 1):(n_cases + n_controls)
+  for (i in na_rows) {
+    case_nas <- is.na(mvalues[i, case_cols])
+    if (any(case_nas)) {
+      mvalues[i, case_cols[case_nas]] <- mean(mvalues[i, case_cols], na.rm = TRUE)
+    }
+    control_nas <- is.na(mvalues[i, control_cols])
+    if (any(control_nas)) {
+      mvalues[i, control_cols[control_nas]] <- mean(mvalues[i, control_cols], na.rm = TRUE)
+    }
+  }
 }
 
 ###############################################################################

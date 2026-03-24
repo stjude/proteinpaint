@@ -50,4 +50,6 @@ export type DmrViewData = {
 	diagnostic?: DmrDiagnostic
 	dmrs?: { start: number; stop: number; direction: string; min_smoothed_fdr: number }[]
 	dmrBedItems: BedItem[]
+	/** Whether LOESS curves are shown in the current view */
+	showLoess: boolean
 }

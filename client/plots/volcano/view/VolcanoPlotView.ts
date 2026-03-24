@@ -235,9 +235,24 @@ export class VolcanoPlotView {
 	}
 
 	renderPValueTable() {
+		// Cap rendered rows to prevent browser OOM with large datasets (e.g. 30k+ significant promoters).
+		// The full data is still available in pValueTableData.rows for export/search.
+		const maxTableRows = 1000
+		const allRows = this.viewData.pValueTableData.rows
+		const rows = allRows.length > maxTableRows ? allRows.slice(0, maxTableRows) : allRows
+		if (allRows.length > maxTableRows) {
+			this.volcanoDom.pValueTable
+				.append('div')
+				.style('padding', '5px 10px')
+				.style('font-size', '.8em')
+				.style('color', '#666')
+				.text(
+					`Showing top ${maxTableRows.toLocaleString()} of ${allRows.length.toLocaleString()} significant results (sorted by fold-change)`
+				)
+		}
 		renderTable({
 			columns: this.viewData.pValueTableData.columns,
-			rows: this.viewData.pValueTableData.rows,
+			rows,
 			div: this.volcanoDom.pValueTable,
 			showLines: true,
 			maxHeight: `${this.viewData.pValueTableData.height}px`,

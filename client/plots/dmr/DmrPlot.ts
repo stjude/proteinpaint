@@ -97,6 +97,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 				rglst => this.onBlockCoordinateChange(rglst)
 			)
 			this.view.renderLegend(this.blockInstance, vm.viewData.legendRows)
+			this.view.showLoessNote(!vm.viewData.showLoess && !!vm.viewData.diagnostic?.loess)
 			if (vm.viewData.diagnostic)
 				this.view.renderDiagnostics(vm.viewData.diagnostic, vm.viewData.dmrs!, config.settings.dmr.fdr_cutoff)
 		} catch (e: unknown) {
@@ -144,6 +145,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 
 				this.view.updateTracks(vm.viewData, this.blockInstance)
 				this.view.updateLegend(this.blockInstance, vm.viewData.legendRows)
+				this.view.showLoessNote(!vm.viewData.showLoess && !!vm.viewData.diagnostic?.loess)
 				this.view.clearDiagnostics()
 				if (vm.viewData.diagnostic)
 					this.view.renderDiagnostics(vm.viewData.diagnostic, vm.viewData.dmrs!, config.settings.dmr.fdr_cutoff)
@@ -180,6 +182,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 					rglst => this.onBlockCoordinateChange(rglst)
 				)
 				this.view.renderLegend(this.blockInstance, vm.viewData.legendRows)
+				this.view.showLoessNote(!vm.viewData.showLoess && !!vm.viewData.diagnostic?.loess)
 				if (vm.viewData.diagnostic)
 					this.view.renderDiagnostics(vm.viewData.diagnostic, vm.viewData.dmrs!, config.settings.dmr.fdr_cutoff)
 			} catch (e: unknown) {
