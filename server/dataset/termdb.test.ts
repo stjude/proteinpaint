@@ -471,7 +471,7 @@ export default function (): Mds3 {
 				jsonFile: 'files/hg38/TermdbTest/trackLst/facet.json',
 				activeTracks: ['bw 1', 'bed 1']
 			},
-			chat: { aifiles: './dataset/ai/TermdbTest/termdb.test.json' }
+			chat: {}
 		}
 	} satisfies Mds3
 }

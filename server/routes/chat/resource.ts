@@ -3,6 +3,7 @@ import { readJSONFile } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import { mayLog } from '#src/helpers.ts'
 import type { LlmConfig } from '#types'
+import path from 'path'
 
 /**
  * Ask the LLM to select a resource index from the dataset's `resources` array.
@@ -19,7 +20,7 @@ export async function extractResourceResponse(
 ): Promise<{ type: 'none' } | { type: 'html'; html: string }> {
 	//const classification_ds = dataset_json.charts?.find((chart: any) => chart.type == 'Classification')
 	const resources: { label: string; html: string }[] =
-		(await readJSONFile(aiFilesDir + '/resources.json'))?.Resources ?? []
+		(await readJSONFile(path.join(aiFilesDir, 'resources.json')))?.Resources ?? []
 
 	//const training_data =
 	//    classification_ds?.TrainingData?.length > 0 ? formatTrainingExamples(classification_ds.TrainingData) : ''

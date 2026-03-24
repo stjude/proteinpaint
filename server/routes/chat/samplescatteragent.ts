@@ -8,6 +8,8 @@ import {
 	readJSONFile
 } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
+import path from 'path'
+import fs from 'fs'
 
 export async function extract_samplescatter_terms_from_query(
 	prompt: string,
@@ -17,7 +19,8 @@ export async function extract_samplescatter_terms_from_query(
 	ds: any,
 	testing: boolean,
 	genesetNames: string[] = [],
-	geneFeatures: GeneDataTypeResult[]
+	geneFeatures: GeneDataTypeResult[],
+	aiFilesDir: string
 ) {
 	if (!ds.cohort.scatterplots.plots || ds.cohort.scatterplots.plots.length == 0) {
 		return { type: 'text', text: 'No pre-built scatter plots (t-SNE/UMAP) are available for this dataset' }
@@ -66,8 +69,9 @@ export async function extract_samplescatter_terms_from_query(
 	const matchedGenesets = extractGenesetsFromPrompt(prompt, genesetNames)
 
 	// Read sampleScatter agent-specific JSON file
-	if (!dataset_json.agentFiles?.sampleScatter) throw 'sampleScatter agent file is not specified in the dataset file.'
-	const scatter_ds = await readJSONFile(dataset_json.agentFiles.sampleScatter)
+	if (!fs.existsSync(path.join(aiFilesDir, 'sampleScatter.json')))
+		throw 'sample scatter agent file is not specified for dataset:' + ds.label
+	const scatter_ds = await readJSONFile(path.join(aiFilesDir, 'sampleScatter.json'))
 	if (!scatter_ds) throw 'sampleScatter information is not present in the dataset file.'
 	if (scatter_ds.TrainingData.length == 0) throw 'No training data is provided for the sampleScatter agent.'
 
@@ -107,16 +111,11 @@ export async function extract_samplescatter_terms_from_query(
 		test_response.type = 'plot'
 		return test_response
 	} else {
-		return validate_samplescatter_response(response, dataset_json, ds, geneFeatures)
+		return validate_samplescatter_response(response, ds, geneFeatures)
 	}
 }
 
-function validate_samplescatter_response(
-	response: string,
-	dataset_json: any,
-	ds: any,
-	geneFeatures: GeneDataTypeResult[]
-) {
+function validate_samplescatter_response(response: string, ds: any, geneFeatures: GeneDataTypeResult[]) {
 	const response_type = JSON.parse(response)
 	let text = ''
 

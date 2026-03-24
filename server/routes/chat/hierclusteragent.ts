@@ -10,6 +10,8 @@ import {
 } from './utils.ts'
 import type { DataTypeConfig } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
+import path from 'path'
+import fs from 'fs'
 //import { mayLog } from '#src/helpers.ts'
 
 // ---------------------------------------------------------------------------
@@ -129,7 +131,8 @@ export async function extract_hiercluster_terms_from_query(
 	ds: any,
 	testing: boolean,
 	genesetNames: string[] = [],
-	geneFeatures: GeneDataTypeResult[]
+	geneFeatures: GeneDataTypeResult[],
+	aiFilesDir: string
 ) {
 	if (ds?.queries?.geneExpression) {
 		// Will later optionally allow hierarchical clustering if metabolite intensity or other numeric data types are present, but for now require gene expression
@@ -138,8 +141,9 @@ export async function extract_hiercluster_terms_from_query(
 		const matchedGenesets = extractGenesetsFromPrompt(prompt, genesetNames)
 
 		// Read hierCluster agent-specific JSON file
-		if (!dataset_json.agentFiles?.hierCluster) throw 'hierCluster agent file is not specified in the dataset file.'
-		const hiercluster_ds = await readJSONFile(dataset_json.agentFiles.hierCluster)
+		if (!fs.existsSync(path.join(aiFilesDir, 'hierCluster.json')))
+			throw 'hierarchical clustering agent file is not specified for dataset:' + ds.label
+		const hiercluster_ds = await readJSONFile(path.join(aiFilesDir, 'hierCluster.json'))
 		if (!hiercluster_ds) throw 'hierCluster information is not present in the dataset file.'
 		if (hiercluster_ds.TrainingData.length == 0) throw 'No training data is provided for the hierCluster agent.'
 

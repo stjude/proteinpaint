@@ -90,7 +90,6 @@ export function determineAmbiguousGenePrompt(user_prompt: string, relevant_genes
 	// Remove gene names from the prompt so they don't accidentally match keywords
 	// (e.g. a gene named "EXPRESSION" shouldn't count as a feature keyword)
 	let promptWithoutGenes = user_prompt.toLowerCase()
-
 	const exclude_keywords: string[] = dataset_json?.ExcludedKeywords ?? []
 	if (exclude_keywords.length > 0) {
 		const gene_group_intersection = exclude_keywords.filter(x => relevant_genes.includes(x.toLowerCase()))
