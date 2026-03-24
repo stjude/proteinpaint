@@ -31,6 +31,9 @@ export type NumericTermCollection = BaseTermCollection & {
 	/** the sum of numerator values will be divided by the sum of values for all terms,
 	 *  to be used for sorting matrix sample columns */
 	numerators?: string[]
+	/** optional transformation. app specific
+	 */
+	valueTransform?: { offset?: number }
 }
 
 export type CategoricalTermCollection = BaseTermCollection & {
