@@ -2,6 +2,77 @@ import tape from 'tape'
 import { vocabInit } from '#termdb/vocabulary'
 import { CollectionCont } from '../termCollection'
 
+/**************************************************************
+ * TEST SUITE: tw/termCollection.unit
+ * 
+ * This file contains unit tests for term collection classes:
+ * - CollectionCont: Continuous/numeric term collections
+ * - CollectionQual: Qualitative/categorical term collections
+ * - CollectionBase: Base class and routing logic
+ * - NumericTermCollection: Numeric term collection model
+ * - QualTermCollection: Qualitative term collection model
+ * 
+ * TABLE OF CONTENTS:
+ * ==================
+ * 
+ * CollectionCont.transformData() Tests:
+ *   1. transformData with positive values only
+ *   2. transformData with negative values only
+ *   3. transformData with mixed positive and negative values
+ *   4. transformData with equal positive and negative values
+ * 
+ * QualTermCollection.fill() Tests:
+ *   5. exact name match fills term from config
+ *   6. name with suffix does NOT match collection
+ *   7. no config match but termlst present proceeds without error
+ *   8. no config match and no termlst throws
+ * 
+ * CollectionQual.fill() Tests:
+ *   9. initializes q when absent
+ *  10. applies defaults to partial q
+ *  11. copies categoryKeys from term to q
+ *  12. does not overwrite existing q.categoryKeys
+ * 
+ * CollectionQual.getMinCopy() Tests:
+ *  13. returns essential fields without termlst
+ * 
+ * CollectionCont.transformData() with valueTransform Tests:
+ *  14. valueTransform offset - positive offset
+ *  15. valueTransform offset - negative offset
+ *  16. valueTransform offset - converts positive to zero
+ *  17. valueTransform offset - converts positive to negative
+ * 
+ * CollectionCont.getMinCopy() Tests:
+ *  18. includes valueTransform
+ *  19. includes numerators
+ * 
+ * CollectionCont.transformData() numerators Tests:
+ *  20. calculates numerators_sum correctly
+ *  21. calculates numerators_sum with negative values
+ * 
+ * CollectionCont.fill() Tests:
+ *  22. initializes q when absent
+ *  23. applies defaults to partial q
+ *  24. does not overwrite existing numerators
+ * 
+ * NumericTermCollection.fill() Tests:
+ *  25. fills from config
+ *  26. derives termIds from termlst when termlst exists but no config match
+ *  27. throws when no config match and no termlst
+ * 
+ * NumericTermCollection.validate() Tests:
+ *  28. validates term type
+ *  29. validates term is object
+ * 
+ * CollectionBase.fill() Tests:
+ *  30. infers type from config when type is missing
+ *  31. routes to CollectionCont for TermCollectionTWCont
+ *  32. routes to CollectionQual for TermCollectionTWQual
+ *  33. throws for unknown collection name
+ *  34. throws for unexpected tw.type
+ * 
+ **************************************************************/
+
 /*************************
  reusable helper functions
 **************************/
