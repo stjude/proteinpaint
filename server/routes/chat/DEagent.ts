@@ -3,6 +3,8 @@ import type { LlmConfig, DbRows } from '#types'
 import { FILTER_TERM_DEFINITIONS, FILTER_DESCRIPTION, validate_filter, num_filter_cutoff } from './filter.ts'
 import { formatTrainingExamples, checkField, generate_group_name, removeLastOccurrence, readJSONFile } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
+import path from 'path'
+import fs from 'fs'
 
 export async function extract_DE_search_terms_from_query(
 	prompt: string,
@@ -10,7 +12,8 @@ export async function extract_DE_search_terms_from_query(
 	dataset_db_output: { db_rows: DbRows[]; rag_docs: string[] },
 	dataset_json: any,
 	ds: any,
-	testing: boolean
+	testing: boolean,
+	aiFilesDir: string
 ) {
 	if (ds?.queries?.rnaseqGeneCount) {
 		//const SchemaConfig = {
@@ -61,8 +64,9 @@ export async function extract_DE_search_terms_from_query(
 		//mayLog('DEType Schema:', JSON.stringify(Schema))
 
 		// Read DE agent-specific JSON file
-		if (!dataset_json.agentFiles?.DE) throw 'DE agent file is not specified in the dataset file.'
-		const DE_ds = await readJSONFile(dataset_json.agentFiles.DE)
+		if (!fs.existsSync(path.join(aiFilesDir, 'differentialAnalysis.json')))
+			throw 'DE agent file is not specified for dataset:' + ds.label
+		const DE_ds = await readJSONFile(path.join(aiFilesDir, 'differentialAnalysis.json'))
 		if (!DE_ds) throw 'DE information is not present in the dataset file.'
 		if (DE_ds.TrainingData.length == 0) throw 'No training data is provided for the DE agent.'
 

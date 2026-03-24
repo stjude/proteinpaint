@@ -8,6 +8,8 @@ import {
 	readJSONFile
 } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
+import path from 'path'
+import fs from 'fs'
 
 type TermCategory = 'categorical' | 'float' | 'integer' | undefined
 
@@ -35,7 +37,8 @@ export async function extract_summary_terms(
 	ds: any,
 	testing: boolean,
 	genesetNames: string[] = [],
-	geneFeatures: GeneDataTypeResult[]
+	geneFeatures: GeneDataTypeResult[],
+	aiFilesDir: string
 ) {
 	const common_genes = geneFeatures.map(g => g.gene)
 	const Schema = {
@@ -68,8 +71,9 @@ export async function extract_summary_terms(
 	const matchedGenesets = extractGenesetsFromPrompt(prompt, genesetNames)
 
 	// Read Summary agent-specific JSON file
-	if (!dataset_json.agentFiles?.Summary) throw 'Summary agent file is not specified in the dataset file.'
-	const summary_ds = await readJSONFile(dataset_json.agentFiles.Summary)
+	if (!fs.existsSync(path.join(aiFilesDir, 'summary.json')))
+		throw 'Summary agent file is not specified for dataset:' + ds.label
+	const summary_ds = await readJSONFile(path.join(aiFilesDir, 'summary.json'))
 	if (!summary_ds) throw 'Summary information is not present in the dataset file.'
 	if (summary_ds.TrainingData.length == 0) throw 'No training data is provided for the summary agent.'
 
