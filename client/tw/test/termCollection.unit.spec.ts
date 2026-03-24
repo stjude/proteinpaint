@@ -4,73 +4,73 @@ import { CollectionCont } from '../termCollection'
 
 /**************************************************************
  * TEST SUITE: tw/termCollection.unit
- * 
+ *
  * This file contains unit tests for term collection classes:
  * - CollectionCont: Continuous/numeric term collections
  * - CollectionQual: Qualitative/categorical term collections
  * - CollectionBase: Base class and routing logic
  * - NumericTermCollection: Numeric term collection model
  * - QualTermCollection: Qualitative term collection model
- * 
+ *
  * TABLE OF CONTENTS:
  * ==================
- * 
+ *
  * CollectionCont.transformData() Tests:
  *   1. transformData with positive values only
  *   2. transformData with negative values only
  *   3. transformData with mixed positive and negative values
  *   4. transformData with equal positive and negative values
- * 
+ *
  * QualTermCollection.fill() Tests:
  *   5. exact name match fills term from config
  *   6. name with suffix does NOT match collection
  *   7. no config match but termlst present proceeds without error
  *   8. no config match and no termlst throws
- * 
+ *
  * CollectionQual.fill() Tests:
  *   9. initializes q when absent
  *  10. applies defaults to partial q
  *  11. copies categoryKeys from term to q
  *  12. does not overwrite existing q.categoryKeys
- * 
+ *
  * CollectionQual.getMinCopy() Tests:
  *  13. returns essential fields without termlst
- * 
+ *
  * CollectionCont.transformData() with valueTransform Tests:
  *  14. valueTransform offset - positive offset
  *  15. valueTransform offset - negative offset
  *  16. valueTransform offset - converts positive to zero
  *  17. valueTransform offset - converts positive to negative
- * 
+ *
  * CollectionCont.getMinCopy() Tests:
  *  18. includes valueTransform
  *  19. includes numerators
- * 
+ *
  * CollectionCont.transformData() numerators Tests:
  *  20. calculates numerators_sum correctly
  *  21. calculates numerators_sum with negative values
- * 
+ *
  * CollectionCont.fill() Tests:
  *  22. initializes q when absent
  *  23. applies defaults to partial q
  *  24. does not overwrite existing numerators
- * 
+ *
  * NumericTermCollection.fill() Tests:
  *  25. fills from config
  *  26. derives termIds from termlst when termlst exists but no config match
  *  27. throws when no config match and no termlst
- * 
+ *
  * NumericTermCollection.validate() Tests:
  *  28. validates term type
  *  29. validates term is object
- * 
+ *
  * CollectionBase.fill() Tests:
  *  30. infers type from config when type is missing
  *  31. routes to CollectionCont for TermCollectionTWCont
  *  32. routes to CollectionQual for TermCollectionTWQual
  *  33. throws for unknown collection name
  *  34. throws for unexpected tw.type
- * 
+ *
  **************************************************************/
 
 /*************************
@@ -608,8 +608,8 @@ tape('CollectionCont.getMinCopy() - includes valueTransform', async test => {
 				id: 'test',
 				name: 'Test Collection',
 				termlst: [
-					{ id: 'sig1', name: 'Signature 1' },
-					{ id: 'sig2', name: 'Signature 2' }
+					{ id: 'sig1', name: 'Signature 1', type: 'float' },
+					{ id: 'sig2', name: 'Signature 2', type: 'float' }
 				],
 				propsByTermId: {
 					sig1: { color: 'red' },
@@ -645,8 +645,8 @@ tape('CollectionCont.getMinCopy() - includes numerators', async test => {
 				id: 'test',
 				name: 'Test Collection',
 				termlst: [
-					{ id: 'sig1', name: 'Signature 1' },
-					{ id: 'sig2', name: 'Signature 2' }
+					{ id: 'sig1', name: 'Signature 1', type: 'float' },
+					{ id: 'sig2', name: 'Signature 2', type: 'float' }
 				],
 				propsByTermId: {},
 				numerators: ['sig1']
@@ -761,8 +761,8 @@ const mockNumericVocabApi = {
 				type: 'numeric',
 				termIds: ['t1', 't2'],
 				termlst: [
-					{ id: 't1', name: 'Term 1' },
-					{ id: 't2', name: 'Term 2' }
+					{ id: 't1', name: 'Term 1', type: 'float' },
+					{ id: 't2', name: 'Term 2', type: 'float' }
 				],
 				propsByTermId: { t1: { color: 'red' }, t2: { color: 'blue' } }
 			}
@@ -829,28 +829,35 @@ tape('NumericTermCollection.fill() - fills from config', async test => {
 	NumericTermCollection.fill(term, { vocabApi: mockNumericVocabApi as any })
 	test.equal(term.termlst?.length, 2, 'termlst populated from config')
 	test.equal(term.termIds?.length, 2, 'termIds set from termlst')
-	test.deepEqual(term.propsByTermId, mockNumericVocabApi.termdbConfig.termCollections[0].propsByTermId, 'propsByTermId set')
+	test.deepEqual(
+		term.propsByTermId,
+		mockNumericVocabApi.termdbConfig.termCollections[0].propsByTermId,
+		'propsByTermId set'
+	)
 	test.equal(term.memberType, 'numeric', 'memberType set to numeric')
 	test.end()
 })
 
-tape('NumericTermCollection.fill() - derives termIds from termlst when termlst exists but no config match', async test => {
-	const { NumericTermCollection } = await import('../collection/NumericTermCollection')
-	const term: any = {
-		type: 'termCollection',
-		name: 'Unknown Collection',
-		memberType: 'numeric',
-		termlst: [{ id: 't1', name: 'Term 1' }],
-		propsByTermId: { t1: { color: 'red' } }
+tape(
+	'NumericTermCollection.fill() - derives termIds from termlst when termlst exists but no config match',
+	async test => {
+		const { NumericTermCollection } = await import('../collection/NumericTermCollection')
+		const term: any = {
+			type: 'termCollection',
+			name: 'Unknown Collection',
+			memberType: 'numeric',
+			termlst: [{ id: 't1', name: 'Term 1', type: 'float' }],
+			propsByTermId: { t1: { color: 'red' } }
+		}
+		test.doesNotThrow(
+			() => NumericTermCollection.fill(term, { vocabApi: mockNumericVocabApi as any }),
+			'should not throw when no config match but termlst is provided'
+		)
+		test.equal(term.termIds?.length, 1, 'termIds derived from termlst')
+		test.equal(term.termIds[0], 't1', 'termId matches termlst id')
+		test.end()
 	}
-	test.doesNotThrow(
-		() => NumericTermCollection.fill(term, { vocabApi: mockNumericVocabApi as any }),
-		'should not throw when no config match but termlst is provided'
-	)
-	test.equal(term.termIds?.length, 1, 'termIds derived from termlst')
-	test.equal(term.termIds[0], 't1', 'termId matches termlst id')
-	test.end()
-})
+)
 
 tape('NumericTermCollection.fill() - throws when no config match and no termlst', async test => {
 	const { NumericTermCollection } = await import('../collection/NumericTermCollection')
