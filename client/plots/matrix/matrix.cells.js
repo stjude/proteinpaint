@@ -342,7 +342,7 @@ export function setHierClusterCellProps(cell, tw, anno, value, s, t, self, width
 		else if (unit) groupName += ` (${unit})`
 	} else if (tw.term.type == 'metaboliteIntensity') {
 		groupName = 'Intensity'
-	} else if (tw.term.type == 'wholeProteomeAbundance') {
+	} else if (tw.term.type == 'proteomeAbundance') {
 		groupName = 'Protein Abundance'
 	} else {
 		groupName = 'Heatmap color scale'

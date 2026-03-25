@@ -189,7 +189,7 @@ async function trigger_findterm(q, req, res, termdb, ds, genome) {
 			for (const protein of matches) {
 				foundTerms.push({
 					name: protein,
-					type: 'wholeProteomeAbundance',
+					type: 'proteomeAbundance',
 					assayKey: q.usecase.assayKey,
 					cohortKey: q.usecase.cohortKey
 				})

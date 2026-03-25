@@ -68,7 +68,7 @@ export const dtloh = 10
 export const dtmetaboliteintensity = 11
 export const dtssgsea = 12
 export const dtdnamethylation = 13
-export const dtwholeproteomeabundance = 14
+export const dtproteomeabundance = 14
 // add new dt value here. !!!DO NOT change value of existing dt!!!
 
 export const dt2label = {
@@ -83,7 +83,7 @@ export const dt2label = {
 	[dtloh]: 'LOH',
 	[dtgeneexpression]: 'Gene Expression',
 	[dtmetaboliteintensity]: 'Metabolite Intensity',
-	[dtwholeproteomeabundance]: 'Whole Proteome Abundance'
+	[dtproteomeabundance]: 'Whole Proteome Abundance'
 }
 
 // Maps dt types to UI labels and lesion types for GRIN2

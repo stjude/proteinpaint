@@ -118,7 +118,7 @@ export const useCasesExcluded = {
 		TermTypeGroups.SINGLECELL_CELLTYPE,
 		TermTypeGroups.SINGLECELL_GENE_EXPRESSION
 	],
-	wholeProteomeAbundance: [
+	proteomeAbundance: [
 		TermTypeGroups.SNP_LOCUS,
 		TermTypeGroups.SNP_LIST,
 		TermTypeGroups.MUTATION_CNV_FUSION,

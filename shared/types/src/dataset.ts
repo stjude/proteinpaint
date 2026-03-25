@@ -719,7 +719,7 @@ type AssayWithCohorts = {
 }
 type AssayConfig = AssayWithCohorts
 
-export type WholeProteomeAbundanceQuery = {
+export type ProteomeAbundanceQuery = {
 	/** document structure */
 	assays: {
 		[assayName: string]: AssayConfig

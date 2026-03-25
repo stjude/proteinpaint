@@ -3,7 +3,7 @@ import {
 	dtssgsea,
 	dtdnamethylation,
 	dtmetaboliteintensity,
-	dtwholeproteomeabundance,
+	dtproteomeabundance,
 	TermTypeGroups,
 	dtTerms
 } from './common.js'
@@ -33,7 +33,7 @@ const SNP_LOCUS = 'snplocus'
 const SSGSEA = 'ssGSEA'
 const SURVIVAL = 'survival'
 const TERM_COLLECTION = 'termCollection'
-const WHOLE_PROTEOME_ABUNDANCE = 'wholeProteomeAbundance'
+const WHOLE_PROTEOME_ABUNDANCE = 'proteomeAbundance'
 const TermTypes = {
 	GENE_VARIANT,
 	GENE_EXPRESSION,
@@ -65,7 +65,7 @@ const TermTypes2Dt = {
 	[SSGSEA]: dtssgsea,
 	[DNA_METHYLATION]: dtdnamethylation,
 	[METABOLITE_INTENSITY]: dtmetaboliteintensity,
-	[WHOLE_PROTEOME_ABUNDANCE]: dtwholeproteomeabundance
+	[WHOLE_PROTEOME_ABUNDANCE]: dtproteomeabundance
 }
 const typeGroup = {
 	[CATEGORICAL]: TermTypeGroups.DICTIONARY_VARIABLES,
@@ -215,7 +215,7 @@ const typeMap = {
 	dnaMethylation: 'DNA Methylation',
 	geneVariant: 'Gene Variant',
 	metaboliteIntensity: 'Metabolite Intensity',
-	wholeProteomeAbundance: 'Whole Proteome Abundance',
+	proteomeAbundance: 'Whole Proteome Abundance',
 	multivalue: 'Multi Value',
 	singleCellGeneExpression: 'Single Cell, Gene Expression',
 	singleCellCellType: 'Single Cell, Cell Type',

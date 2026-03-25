@@ -85,7 +85,7 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 		} else if (item.tvs.term.type == TermTypes.METABOLITE_INTENSITY) {
 			f = await get_metaboliteIntensity(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE) {
-			f = await get_wholeProteomeAbundance(item.tvs, CTEname_i, ds)
+			f = await get_proteomeAbundance(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == TermTypes.SSGSEA) {
 			f = await get_ssGSEA(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == TermTypes.DNA_METHYLATION) {
@@ -388,7 +388,7 @@ async function get_metaboliteIntensity(tvs, CTEname, ds) {
 	const data = await q.get({ terms: [{ $id, term: tvs.term }] })
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
-async function get_wholeProteomeAbundance(tvs, CTEname, ds) {
+async function get_proteomeAbundance(tvs, CTEname, ds) {
 	const q = ds.queries?.proteome?.assays?.[tvs.term.assayKey]?.cohorts?.[tvs.term.cohortKey]
 	if (!q) throw 'not supported'
 	const data = await q.get({ terms: [{ $id, term: tvs.term }] })

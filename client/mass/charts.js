@@ -362,7 +362,7 @@ function getChartTypeList(self, state) {
 		},
 		{
 			label: 'Protein Abundance',
-			chartType: 'wholeProteomeAbundance',
+			chartType: 'proteomeAbundance',
 			clickTo: self.loadChartSpecificMenu
 		},
 		{

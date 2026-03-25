@@ -104,7 +104,7 @@ export const DATA_TYPE_REGISTRY: DataTypeConfig[] = [
 			description: 'Names of proteins to include as whole proteome abundance rows in the matrix'
 		},
 		identifierMode: 'name',
-		buildTermWrapper: (name: string) => ({ term: { name, protein: name, type: 'wholeProteomeAbundance' } }),
+		buildTermWrapper: (name: string) => ({ term: { name, protein: name, type: 'proteomeAbundance' } }),
 		promptFieldDescription: 'The "proteinNames" field should contain protein names.',
 		dataTypeDescription: 'Protein names'
 	}

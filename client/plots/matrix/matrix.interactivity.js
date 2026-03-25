@@ -11,7 +11,7 @@ import {
 	dtcnv,
 	dtgeneexpression,
 	dtmetaboliteintensity,
-	dtwholeproteomeabundance
+	dtproteomeabundance
 } from '#shared/common.js'
 import { rgb2hex } from '#src/client'
 import { getSamplelstTW, getFilter, addNewGroup } from '../../mass/groups.js'
@@ -1394,9 +1394,9 @@ function setTermActions(self) {
 		const termgroups = self.termGroups
 
 		const isMetaboliteIntensityCBut = self.config.dataType == TermTypes.METABOLITE_INTENSITY && !t
-		const isWholeProteomeAbundanceCBut = self.config.dataType == TermTypes.WHOLE_PROTEOME_ABUNDANCE && !t
-		if (isMetaboliteIntensityCBut || isWholeProteomeAbundanceCBut || t.grp.type == 'hierCluster') {
-			const grp = isMetaboliteIntensityCBut || isWholeProteomeAbundanceCBut ? termgroups[0] : termgroups[t.grpIndex]
+		const isProteomeAbundanceCBut = self.config.dataType == TermTypes.WHOLE_PROTEOME_ABUNDANCE && !t
+		if (isMetaboliteIntensityCBut || isProteomeAbundanceCBut || t.grp.type == 'hierCluster') {
+			const grp = isMetaboliteIntensityCBut || isProteomeAbundanceCBut ? termgroups[0] : termgroups[t.grpIndex]
 			// for hiercluster group, use selected terms as new group.lst
 			grp.lst.splice(0, grp.lst.length, ...newterms)
 			self.app.dispatch({
@@ -1404,11 +1404,7 @@ function setTermActions(self) {
 				id: self.opts.id,
 				edits: [
 					{
-						nestedKeys: [
-							'termgroups',
-							isMetaboliteIntensityCBut || isWholeProteomeAbundanceCBut ? 0 : t.grpIndex,
-							'lst'
-						],
+						nestedKeys: ['termgroups', isMetaboliteIntensityCBut || isProteomeAbundanceCBut ? 0 : t.grpIndex, 'lst'],
 						value: grp.lst
 					}
 				]
@@ -2823,7 +2819,7 @@ function setLengendActions(self) {
 			!targetData ||
 			targetData.dt == dtgeneexpression ||
 			targetData.dt == dtmetaboliteintensity ||
-			targetData.dt == dtwholeproteomeabundance
+			targetData.dt == dtproteomeabundance
 		) {
 			// for gene expression don't use legend as filter
 			return
@@ -2862,7 +2858,7 @@ function setLengendActions(self) {
 			!targetData ||
 			targetData.dt == dtgeneexpression ||
 			targetData.dt == dtmetaboliteintensity ||
-			targetData.dt == dtwholeproteomeabundance
+			targetData.dt == dtproteomeabundance
 		) {
 			// for gene expression don't use legend as filter
 			return

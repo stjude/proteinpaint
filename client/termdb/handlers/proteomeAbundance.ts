@@ -1,4 +1,4 @@
-import { renderAssayAndCohortRadios } from '../../plots/wholeProteomeAbundance.js'
+import { renderAssayAndCohortRadios } from '../../plots/proteomeAbundance.js'
 
 type Opts = {
 	holder: any

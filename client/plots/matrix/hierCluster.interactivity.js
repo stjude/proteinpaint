@@ -90,7 +90,7 @@ export function addSelectedRowsOptions(clickedRowNames, event) {
 			? 'genes'
 			: this.config.dataType == 'metaboliteIntensity'
 			? 'metabolites'
-			: this.config.dataType == 'wholeProteomeAbundance'
+			: this.config.dataType == 'proteomeAbundance'
 			? 'proteins'
 			: 'items'
 
@@ -330,7 +330,7 @@ export function setClusteringBtn(holder, callback) {
 			? 'Genes'
 			: dataType == 'metaboliteIntensity'
 			? 'Metabolites'
-			: dataType == 'wholeProteomeAbundance'
+			: dataType == 'proteomeAbundance'
 			? 'Proteins'
 			: 'Rows'
 	const cluteringButtonLabel =
@@ -338,7 +338,7 @@ export function setClusteringBtn(holder, callback) {
 			? 'Gene Expression Clustering'
 			: dataType == 'metaboliteIntensity'
 			? 'Metabolite Intensity Clustering'
-			: dataType == 'wholeProteomeAbundance'
+			: dataType == 'proteomeAbundance'
 			? 'Protein Abundance Clustering'
 			: 'Clustering'
 	holder

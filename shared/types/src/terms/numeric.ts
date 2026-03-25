@@ -5,7 +5,7 @@ import type {
 	BaseTerm,
 	GeneExpressionTerm,
 	MetaboliteIntensityTerm,
-	WholeProteomeAbundanceTerm,
+	ProteomeAbundanceTerm,
 	DateTerm,
 	SsGSEATerm,
 	DnaMethylationTerm,
@@ -63,7 +63,7 @@ export type NumericTerm =
 	| NumericDictTerm
 	| GeneExpressionTerm
 	| MetaboliteIntensityTerm
-	| WholeProteomeAbundanceTerm
+	| ProteomeAbundanceTerm
 	| DateTerm
 	| SsGSEATerm
 	| DnaMethylationTerm

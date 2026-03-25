@@ -4,7 +4,7 @@ import {
 	dtssgsea,
 	dtdnamethylation,
 	dtmetaboliteintensity,
-	dtwholeproteomeabundance,
+	dtproteomeabundance,
 	TermTypeGroups,
 	dtTerms
 } from './common.js'
@@ -48,7 +48,7 @@ export const SNP_LOCUS = 'snplocus'
 export const SSGSEA = 'ssGSEA'
 export const SURVIVAL = 'survival'
 export const TERM_COLLECTION = 'termCollection'
-export const WHOLE_PROTEOME_ABUNDANCE = 'wholeProteomeAbundance'
+export const WHOLE_PROTEOME_ABUNDANCE = 'proteomeAbundance'
 
 //Term types should be used gradually using these constants instead of hardcoding the values,
 // eg: type == CATEGORICAL instead of type == 'categorical'
@@ -84,7 +84,7 @@ export const TermTypes2Dt = {
 	[SSGSEA]: dtssgsea,
 	[DNA_METHYLATION]: dtdnamethylation,
 	[METABOLITE_INTENSITY]: dtmetaboliteintensity,
-	[WHOLE_PROTEOME_ABUNDANCE]: dtwholeproteomeabundance
+	[WHOLE_PROTEOME_ABUNDANCE]: dtproteomeabundance
 }
 
 // maps term type to group (as is shown as toggles in search ui)
@@ -262,7 +262,7 @@ const typeMap: { [key: string]: string } = {
 	dnaMethylation: 'DNA Methylation',
 	geneVariant: 'Gene Variant',
 	metaboliteIntensity: 'Metabolite Intensity',
-	wholeProteomeAbundance: 'Whole Proteome Abundance',
+	proteomeAbundance: 'Whole Proteome Abundance',
 	multivalue: 'Multi Value',
 	singleCellGeneExpression: 'Single Cell, Gene Expression',
 	singleCellCellType: 'Single Cell, Cell Type',
