@@ -12,6 +12,7 @@ import type { DataTypeConfig } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import path from 'path'
 import fs from 'fs'
+import { getGenesForGeneset } from './utils.ts'
 //import { mayLog } from '#src/helpers.ts'
 
 // ---------------------------------------------------------------------------
@@ -132,7 +133,8 @@ export async function extract_hiercluster_terms_from_query(
 	testing: boolean,
 	genesetNames: string[] = [],
 	geneFeatures: GeneDataTypeResult[],
-	aiFilesDir: string
+	aiFilesDir: string,
+	genome: any
 ) {
 	if (ds?.queries?.geneExpression) {
 		// Will later optionally allow hierarchical clustering if metabolite intensity or other numeric data types are present, but for now require gene expression
@@ -169,7 +171,7 @@ export async function extract_hiercluster_terms_from_query(
 			test_response.type = 'plot'
 			return test_response
 		} else {
-			return validate_hiercluster_response(response, ds, activeConfigs, geneFeatures)
+			return validate_hiercluster_response(response, ds, activeConfigs, geneFeatures, genome)
 		}
 	} else {
 		return { type: 'text', text: 'Gene expression hierarchical clustering is not supported for this dataset' }
@@ -184,16 +186,40 @@ function validate_hiercluster_response(
 	response: string,
 	ds: any,
 	activeConfigs: DataTypeConfig[],
-	geneFeatures: GeneDataTypeResult[]
+	geneFeatures: GeneDataTypeResult[],
+	genome: any
 ) {
 	const response_type = JSON.parse(response)
 	const pp_plot_json: any = { chartType: 'hierCluster' }
 	let text = ''
 
 	if (response_type.text) text = response_type.text
-	if (response_type.genesetNames) {
-		text += ' Geneset names are not currently supported for hierarchical clustering.'
+
+	// Resolve geneset names to individual genes using trigger_genesetByTermId logic
+	if (response_type.genesetNames && Array.isArray(response_type.genesetNames) && genome) {
+		const geneExprConfig = DATA_TYPE_REGISTRY.find(
+			c => c.termType === TermTypes.GENE_EXPRESSION && c.detectAvailability(ds, null)
+		)
+		if (geneExprConfig) {
+			for (const genesetName of response_type.genesetNames) {
+				const genes = getGenesForGeneset(genome, genesetName)
+				if (genes && genes.length > 0) {
+					for (const gene of genes) {
+						// Ensure genesetNames-resolved genes don't duplicate geneNames-provided genes
+						if (!response_type.geneNames?.some((g: string) => g.toLowerCase() === gene.symbol.toLowerCase())) {
+							response_type.geneNames = response_type.geneNames || []
+							response_type.geneNames.push(gene.symbol)
+						}
+					}
+				} else {
+					text += 'Could not find genes for geneset: ' + genesetName + '. '
+				}
+			}
+		} else {
+			text += 'Gene expression is not available for this dataset to resolve geneset genes. '
+		}
 	}
+
 	const terms: any[] = []
 
 	// Validate each active data type field
