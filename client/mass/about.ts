@@ -1,10 +1,8 @@
 import { getId } from './nav'
-import { getCompInit } from '../rx'
+import { type AppApi, getCompInit } from '#rx'
 import type { Elem, Div, H2 } from '../types/d3'
 import type { SelectCohortEntry } from '#types'
-import type { MassAppApi } from './types/mass'
-import { renderTable } from '#dom'
-import type { TableRow } from '#dom'
+import { renderTable, type TableRow } from '#dom'
 import { select } from 'd3-selection'
 
 /* 
@@ -30,7 +28,7 @@ type MassAboutOpts = {
 	/** Optional. Set in the dataset file under .massNav.tabs.about. Otherwise null. */
 	aboutOverrides: AboutObj | null
 	/** Required. Provided from nav component */
-	app: MassAppApi
+	app: AppApi
 	/** Required. Provided from nav component */
 	instanceNum: number
 	/** Optional. Set in the dataset file under .termdb.selectCohort. Otherwise null. */
@@ -58,7 +56,7 @@ export class MassAbout {
 	static type = 'about'
 
 	aboutOverrides: AboutObj | null
-	app: MassAppApi
+	app: AppApi
 	dom: MassAboutDom
 	instanceNum: number
 	selectCohort: SelectCohortEntry | null
@@ -83,12 +81,17 @@ export class MassAbout {
 		}
 
 		if (opts?.selectCohort?.title) {
-			this.dom.cohortTitle = opts.subheader.append('h2').style('margin-left', '10px').text(opts.selectCohort.title)
+			this.dom.cohortTitle = opts.subheader
+				.append('h2')
+				.attr('data-testid', 'sjpp-about-cohort-title')
+				.style('margin-left', '10px')
+				.text(opts.selectCohort.title)
 		}
 
 		if (opts.selectCohort?.prompt) {
 			this.dom.cohortPrompt = this.subheader
 				.append('div')
+				.attr('data-testid', 'sjpp-about-cohort-prompt')
 				.style('margin-left', '10px')
 				.style('padding-top', '30px')
 				.style('padding-bottom', '10px')
@@ -144,6 +147,7 @@ export class MassAbout {
 		//TODO: replace with make_radios
 		this.dom
 			.cohortOpts!.append('table')
+			.attr('data-testid', 'sjpp-about-cohort-options-table')
 			.selectAll('tr')
 			.data(this.selectCohort.values)
 			.enter()
@@ -240,11 +244,15 @@ export class MassAbout {
 					.style('vertical-align', 'top')
 			})
 
-		this.dom.cohortTable = this.subheader.append('div').style('margin-left', '12px')
+		this.dom.cohortTable = this.subheader
+			.append('div')
+			.attr('data-testid', 'sjpp-about-cohort-table')
+			.style('margin-left', '12px')
 
 		if (this.selectCohort.asterisk) {
 			this.dom.cohortAsterisk = this.subheader
 				.append('div')
+				.attr('data-testid', 'sjpp-about-cohort-asterisk')
 				.style('margin', '10px')
 				.style('font-size', '.8em')
 				.text(this.selectCohort.asterisk)
