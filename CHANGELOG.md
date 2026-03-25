@@ -2,16 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
-
 
 ## 2.180.0
 
 Features:
 - Additional unit tests for scatterModel.tests
-
-Fixes:
-- include x-forwarded-* headers in requests to GDC API
 
 
 ## 2.179.0
@@ -107,6 +102,18 @@ Fixes:
 - stream matrix response data to prevent RangeError during json-encoding
 - do not join to global filter in getTreeFilter() if the join argument is 'or', so that the edit menu will list all applicable categories
 - show loading and error messages when switching to barchart tab in summary plot
+
+
+## 2.170.28
+
+Fixes:
+- detect more GDC-specific parameters when setting dslabel in the server app middleware
+
+
+## 2.170.27
+
+Fixes:
+- include x-forwarded-* headers in requests to GDC API
 
 
 ## 2.170.26
