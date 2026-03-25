@@ -2,9 +2,11 @@
 
 // Test URL: http://localhost:3000/testchat
 import serverconfig from '../../serverconfig.js'
-import { readJSONFile } from '../../../routes/chat/utils.ts'
+import { readJSONFile, getGenesetNames } from '../../../routes/chat/utils.ts'
 import { run_chat_pipeline } from '../../../routes/termdb.chat2.ts'
 import assert from 'node:assert/strict'
+import path from 'path'
+import fs from 'fs'
 
 process.removeAllListeners('warning')
 
@@ -21,7 +23,8 @@ export default function setRoutes(app, basepath, genomes) {
 					const label = (ds as any).label
 					if (datasetFilter && label !== datasetFilter) continue
 					console.log('\x1b[32m%s\x1b[0m', 'Testing chatbot for dataset: ' + label)
-					const num_errors = await test_chatbot_by_dataset(ds)
+					const aiFilesDir = serverconfig.binpath + '/../../dataset/ai/' + label // This is the directory where the AI JSON files are stored for this dataset. This will use this as the base directory for resolving all agent file paths specified in the dataset JSON file.
+					const num_errors = await test_chatbot_by_dataset(ds, genome, aiFilesDir)
 					if (num_errors == 0) {
 						console.log(
 							'\x1b[32m%s\x1b[0m',
@@ -41,29 +44,42 @@ export default function setRoutes(app, basepath, genomes) {
 	})
 }
 
-export async function test_chatbot_by_dataset(ds: any): Promise<number> {
+export async function test_chatbot_by_dataset(ds: any, genome: any, aiFilesDir: string): Promise<number> {
 	const testing = false // This causes raw LLM output to be sent by the agent
+	let agentFiles: string[] = []
+	try {
+		// Read dataset JSON file
+		agentFiles = fs.readdirSync(aiFilesDir).filter(file => file.endsWith('.json'))
+	} catch (err: any) {
+		if (err.code === 'ENOENT') throw new Error(`Directory not found: ${aiFilesDir}`)
+		if (err.code === 'ENOTDIR') throw new Error(`Path is not a directory: ${aiFilesDir}`)
+		throw err
+	}
+
 	const llm = serverconfig.llm
 	if (!llm) throw 'serverconfig.llm is not configured'
 	if (llm.provider !== 'SJ' && llm.provider !== 'ollama') {
 		throw "llm.provider must be 'SJ' or 'ollama'"
 	}
 	let num_errors = 0 // Number of errors encountered across all prompts for this dataset
-	// Check to see if the dataset supports the AI chatbot
-	if (!(ds as any)?.queries?.chat.aifiles) throw 'AI dataset JSON file is missing for dataset:' + ds.label
-	const aifiles = (ds as any)?.queries?.chat.aifiles
-	const dataset_json = await readJSONFile(aifiles) // Read AI JSON data file
+	// Read test data from separate test.json file
+	if (!fs.existsSync(path.join(aiFilesDir, 'test.json')))
+		throw 'Test data file is not specified for dataset:' + ds.label
+	const testData = await readJSONFile(path.join(aiFilesDir, 'test.json'))
 	//console.log("dataset_json:", dataset_json)
-	for (const test_data of dataset_json.TestData) {
+	for (const test_data of testData) {
+		const genesetNames = getGenesetNames(genome)
 		//console.log("Test question:", test_data.question)
 		const test_result = await run_chat_pipeline(
 			test_data.question,
 			llm,
-			dataset_json,
 			testing, // This is not needed anymore, need to be deprecated
-			serverconfig.tpmasterdir + '/' + dataset_json.db,
-			serverconfig.tpmasterdir + '/' + dataset_json.genedb,
-			ds
+			path.join(serverconfig.tpmasterdir, ds.cohort.db.file),
+			path.join(serverconfig.tpmasterdir, genome.genedb.dbfile),
+			ds,
+			genesetNames,
+			agentFiles,
+			aiFilesDir
 		)
 		if (test_result.type == test_data.PPoutput.type) {
 			// Only proceed further if the type of the LLM output matches the expected type. Otherwise its a classification agent error.

@@ -90,7 +90,6 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 		dataDownloadCatch: tdb.dataDownloadCatch,
 		matrix: tdb.matrix,
 		hierCluster: tdb.hierCluster,
-		numericDictTermCluster: tdb.numericDictTermCluster,
 		mclass: tdb.mclass,
 		alwaysRefillCategoricalTermValues: tdb.alwaysRefillCategoricalTermValues,
 		isGeneSetTermdb: tdb.isGeneSetTermdb,
@@ -131,7 +130,6 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	if (tdb.maxAnnoTermsPerClientRequest) c.maxAnnoTermsPerClientRequest = tdb.maxAnnoTermsPerClientRequest
 	addRestrictAncestries(c, tdb)
 	addMatrixplots(c, ds)
-	addMutationSignatureplots(c, ds)
 	addNonDictionaryQueries(c, ds, genome)
 
 	/////////////// CAUTION //////////////
@@ -186,16 +184,6 @@ function addMatrixplots(c, ds) {
 	})
 }
 
-function addMutationSignatureplots(c, ds) {
-	// Mutation Signature plots require a numeric term collection
-	const mutationSignatureplots = ds.cohort.termdb.termCollections?.find(
-		tc => tc.name == 'Mutation Signature' && tc.type === 'numeric'
-	)?.plots
-	if (!mutationSignatureplots) return
-	c.mutationSignatureplots = mutationSignatureplots.map(p => {
-		return { name: p.name }
-	})
-}
 /**
  * Adds non-dictionary methods, properties, etc. to the termdbConfig.queries{} object.
  * @param c Config object sent to the client with only relevant info for the client.

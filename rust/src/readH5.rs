@@ -24,6 +24,7 @@
 use hdf5::types::VarLenUnicode;
 use hdf5::{File, Result, Selection};
 use json::JsonValue;
+use ndarray::Dim;
 use rayon::prelude::*;
 use serde_json::{Map, Value, json};
 use std::io;
@@ -36,6 +37,132 @@ fn error_response(message: impl Into<String>) -> Value {
         "status": "error",
         "message": message.into()
     })
+}
+
+/// **Bulk mode**: Reads the entire matrix once, then extracts requested rows (genes).
+/// Much faster than many small slice reads when querying many genes (>50–100).
+pub fn bulk_query_hdf5(filename: &str, query_items: &[String]) -> Result<Map<String, Value>> {
+    let start = Instant::now();
+
+    let file = match File::open(filename) {
+        Ok(f) => f,
+        Err(err) => {
+            return Err(hdf5::Error::Internal(format!("Failed to open HDF5 file: {}", err)));
+        }
+    };
+
+    // Read all items (genes)
+    let items_dataset = match file.dataset("item") {
+        Ok(ds) => ds,
+        Err(err) => {
+            return Err(hdf5::Error::Internal(format!("Failed to open items dataset: {}", err)));
+        }
+    };
+
+    // Read items as VarLenAscii
+    let items_varlen = match items_dataset.read_1d::<VarLenUnicode>() {
+        Ok(g) => g,
+        Err(err) => {
+            return Err(hdf5::Error::Internal(format!("Failed to read items(genes): {}", err)));
+        }
+    };
+
+    let item_names: Vec<String> = items_varlen.iter().map(|g| g.to_string()).collect();
+    //let num_items = item_names.len();
+
+    // Read all samples names ("samples")
+    let samples_dataset = match file.dataset("samples") {
+        Ok(ds) => ds,
+        Err(err) => {
+            return Err(hdf5::Error::Internal(format!(
+                "Failed to open samples dataset: {}",
+                err
+            )));
+        }
+    };
+
+    let samples_varlen = match samples_dataset.read_1d::<VarLenUnicode>() {
+        Ok(s) => s,
+        Err(err) => {
+            return Err(hdf5::Error::Internal(format!("Failed to read sample names: {}", err)));
+        }
+    };
+
+    let all_samples: Vec<String> = samples_varlen.iter().map(|s| s.to_string()).collect();
+
+    // Find row indices
+    let mut row_indices: Vec<usize> = Vec::with_capacity(query_items.len());
+    let mut found_items: Vec<String> = Vec::with_capacity(query_items.len());
+
+    for item in query_items {
+        if let Some(idx) = item_names.iter().position(|i| i == item) {
+            row_indices.push(idx);
+            found_items.push(item.clone());
+        } else {
+            return Err(hdf5::Error::Internal(format!("Item '{}' not found", item)));
+        }
+    }
+
+    // Read the ENTIRE matrix once (the key for speed in bulk)
+    let matrix_ds = match file.dataset("matrix") {
+        Ok(ds) => ds,
+        Err(err) => {
+            return Err(hdf5::Error::Internal(format!(
+                "Failed to open 'matrix' dataset: {}",
+                err
+            )));
+        }
+    };
+
+    let shape = matrix_ds.shape();
+    if shape.len() != 2 {
+        return Err(hdf5::Error::Internal("Matrix must be 2D".into()));
+    };
+
+    let all_data = match matrix_ds.read::<f64, Dim<[usize; 2]>>() {
+        Ok(data) => data,
+        Err(err) => {
+            return Err(hdf5::Error::Internal(format!(
+                "Failed to read expression data: {}",
+                err
+            )));
+        }
+    };
+
+    // build the same output structure as query_dataset
+    let mut query_output = Map::new();
+    let mut timings = Map::new();
+
+    for (i, &row_idx) in row_indices.iter().enumerate() {
+        let item = &found_items[i];
+        let query_start = Instant::now();
+
+        let mut sample_map = Map::new();
+        for (s_idx, sample) in all_samples.iter().enumerate() {
+            let val = all_data[[row_idx, s_idx]];
+            sample_map.insert(
+                sample.replace("\\", ""),
+                if val.is_finite() { json!(val) } else { Value::Null },
+            );
+        }
+        query_output.insert(
+            item.replace("\\", ""),
+            json!({
+                "dataId": item,
+                "samples": sample_map
+            }),
+        );
+        let elapsed = query_start.elapsed().as_millis() as u64;
+        query_output.insert(format!("{}_ms", item), Value::from(elapsed));
+    }
+
+    timings.insert(
+        "read_full_matrix_ms".to_string(),
+        Value::from(start.elapsed().as_millis() as u64),
+    );
+    timings.insert("query_count".to_string(), Value::from(query_items.len()));
+
+    Ok(query_output)
 }
 
 /// h5 file validation
@@ -581,32 +708,55 @@ fn main() -> Result<()> {
                 }
             };
 
+            let read_mode = input_json["read_mode"].as_str().unwrap_or("default").to_lowercase();
+
             // h5 file validation
             if input_json.has_key("validate") {
                 let v: bool = match input_json["validate"].as_bool() {
                     Some(x) => x,
                     None => false,
                 };
-                if !v {
-                    println!("{}", error_response("The value of validate is invalid"));
-                    return Ok(());
-                }
-                let _ = validate_hdf5_file(hdf5_filename);
-            } else if input_json.has_key("query") {
-                let qry: Vec<String> = match &input_json["query"] {
-                    JsonValue::Array(arr) => arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect(),
-                    _ => vec![],
-                };
-                if !qry.is_empty() {
-                    query_dataset(hdf5_filename, qry)?;
+                if v {
+                    let _ = validate_hdf5_file(hdf5_filename);
                 } else {
-                    println!("{}", error_response(format!("query is empty")));
-                };
+                    println!("{}", error_response("The value of validate is invalid"));
+                }
+                return Ok(());
+            };
+
+            // Get query items
+            let qry: Vec<String> = match &input_json["query"] {
+                JsonValue::Array(arr) => arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect(),
+                _ => vec![],
+            };
+
+            if qry.is_empty() {
+                println!("{}", error_response(format!("query is empty")));
+                return Ok(());
+            }
+
+            let overall_start = Instant::now();
+
+            if read_mode == "bulk" {
+                // ====================== BULK MODE ======================
+                match bulk_query_hdf5(&hdf5_filename, &qry) {
+                    Ok(query_output) => {
+                        let output_json = json!({
+                            "query_output": query_output,
+                            "timings": {
+                                "query_count": qry.len(),
+                                "read_mode": "bulk"
+                            },
+                            "total_time_ms": overall_start.elapsed().as_millis() as u64
+                        });
+                        println!("{}", output_json);
+                    }
+                    Err(e) => {
+                        println!("{}", error_response(format!("Bulk query failed: {}", e)));
+                    }
+                }
             } else {
-                println!(
-                    "{}",
-                    error_response("validate or query has to be provided in input JSON.")
-                );
+                let _ = query_dataset(hdf5_filename, qry);
             }
         }
         Err(error) => {

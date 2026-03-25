@@ -1,7 +1,9 @@
-import { formatTrainingExamples } from './utils.ts'
+//import { formatTrainingExamples } from './utils.ts'
+import { readJSONFile } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import { mayLog } from '#src/helpers.ts'
 import type { LlmConfig } from '#types'
+import path from 'path'
 
 /**
  * Ask the LLM to select a resource index from the dataset's `resources` array.
@@ -14,13 +16,14 @@ import type { LlmConfig } from '#types'
 export async function extractResourceResponse(
 	prompt: string,
 	llm: LlmConfig,
-	dataset_json: any
+	aiFilesDir: string
 ): Promise<{ type: 'none' } | { type: 'html'; html: string }> {
-	const classification_ds = dataset_json.charts?.find((chart: any) => chart.type == 'Classification')
-	const resources: { label: string; html: string }[] = dataset_json.resources ?? []
+	//const classification_ds = dataset_json.charts?.find((chart: any) => chart.type == 'Classification')
+	const resources: { label: string; html: string }[] =
+		(await readJSONFile(path.join(aiFilesDir, 'resources.json')))?.Resources ?? []
 
-	const training_data =
-		classification_ds?.TrainingData?.length > 0 ? formatTrainingExamples(classification_ds.TrainingData) : ''
+	//const training_data =
+	//    classification_ds?.TrainingData?.length > 0 ? formatTrainingExamples(classification_ds.TrainingData) : ''
 
 	const resourceList = resources.map((r, i) => `  ${i}: "${r.label}"`).join('\n')
 
@@ -33,8 +36,6 @@ export async function extractResourceResponse(
 		'The query must explicitly reference documentation, publications, papers, data access, citations, or background information. ' +
 		'Random text, numbers, gibberish, single words, vague phrases, or anything that does not clearly ask about a specific resource must return -1.\n' +
 		'Respond with ONLY a single integer: the index of the best matching resource, or -1 if none match.\n' +
-		(classification_ds?.SystemPrompt ?? '') +
-		(training_data ? 'Training data examples:\n' + training_data + '\n' : '') +
 		'Question: {' +
 		prompt +
 		'} answer:'

@@ -3,7 +3,6 @@ import { ChatPayload } from '#types/checkers'
 import { classifyQuery } from './chat/classify1.ts'
 import { classifyNotPlot } from './chat/classify2.ts'
 import { classifyPlotType } from './chat/plot.ts'
-import { readJSONFile } from './chat/utils.ts'
 import { extract_DE_search_terms_from_query } from './chat/DEagent.ts'
 import { determineAmbiguousGenePrompt } from './chat/ambiguousgeneagent.ts'
 import { extract_summary_terms } from './chat/summaryagent.ts'
@@ -15,6 +14,9 @@ import { extractGenesFromPrompt, parse_dataset_db, parse_geneset_db, getGenesetN
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
+import path from 'path'
+import fs from 'fs'
+import { readJSONFile } from './chat/utils.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/chat2',
@@ -38,8 +40,15 @@ function init({ genomes }) {
 			if (!g) throw 'invalid genome'
 			const ds = g.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid dslabel'
-			if (!ds?.queries?.chat?.aifiles) {
-				throw 'aifiles are missing for chatbot to work'
+			const aiFilesDir = serverconfig.binpath + '/../../dataset/ai/' + q.dslabel // This is the directory where the AI JSON files are stored for this dataset. This will use this as the base directory for resolving all agent file paths specified in the dataset JSON file.
+			let agentFiles: string[] = []
+			try {
+				// Read dataset JSON file
+				agentFiles = fs.readdirSync(aiFilesDir).filter(file => file.endsWith('.json'))
+			} catch (err: any) {
+				if (err.code === 'ENOENT') throw new Error(`Directory not found: ${aiFilesDir}`)
+				if (err.code === 'ENOTDIR') throw new Error(`Path is not a directory: ${aiFilesDir}`)
+				throw err
 			}
 
 			const llm = serverconfig.llm
@@ -47,22 +56,20 @@ function init({ genomes }) {
 			if (llm.provider !== 'SJ' && llm.provider !== 'ollama') {
 				throw "llm.provider must be 'SJ' or 'ollama'"
 			}
-
 			const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
 			const genedb = serverconfig.tpmasterdir + '/' + g.genedb.dbfile
-			// Read dataset JSON file
-			const dataset_json: any = await readJSONFile(ds?.queries?.chat?.aifiles)
 			const testing = false // This toggles validation of LLM output. In this script, this will ALWAYS be false since we always want validation of LLM output, only for testing we set this variable to true
 			const genesetNames = getGenesetNames(g)
 			const ai_output_json = await run_chat_pipeline(
 				q.prompt,
 				llm,
-				dataset_json,
 				testing,
 				dataset_db,
 				genedb,
 				ds,
-				genesetNames
+				genesetNames,
+				agentFiles,
+				aiFilesDir
 			)
 			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
@@ -75,21 +82,25 @@ function init({ genomes }) {
 export async function run_chat_pipeline(
 	user_prompt: string,
 	llm: LlmConfig,
-	dataset_json: any,
 	testing: boolean,
 	dataset_db: string,
 	genedb: string,
 	ds: any,
-	genesetNames: string[] = []
+	genesetNames: string[] = [],
+	agentFiles: string[],
+	aiFilesDir: string
 ) {
+	// Read main.json file
+	if (!fs.existsSync(path.join(aiFilesDir, 'main.json')))
+		throw 'Main data file is not specified for dataset:' + ds.label
+	const dataset_json: any = await readJSONFile(path.join(aiFilesDir, 'main.json'))
 	const time1 = new Date().valueOf()
-
 	const class_response: QueryClassification = await classifyQuery(user_prompt, llm)
 	let ai_output_json: any
 	mayLog('Time taken for classification:', formatElapsedTime(Date.now() - time1))
 	if (class_response.type == 'notplot') {
 		const time2 = new Date().valueOf()
-		const notPlotResult = await classifyNotPlot(user_prompt, llm, dataset_json)
+		const notPlotResult = await classifyNotPlot(user_prompt, llm, agentFiles, aiFilesDir)
 		mayLog('Time taken for classify2:', formatElapsedTime(Date.now() - time2))
 		if (notPlotResult.type == 'html') {
 			ai_output_json = notPlotResult
@@ -146,7 +157,8 @@ export async function run_chat_pipeline(
 				ds,
 				testing,
 				genesetNames,
-				geneFeatures
+				geneFeatures,
+				aiFilesDir
 			)
 			mayLog('Time taken for summary agent:', formatElapsedTime(Date.now() - time1))
 		} else if (classResult == 'dge') {
@@ -157,7 +169,8 @@ export async function run_chat_pipeline(
 				dataset_db_output,
 				dataset_json,
 				ds,
-				testing
+				testing,
+				aiFilesDir
 			)
 			mayLog('Time taken for DE agent:', formatElapsedTime(Date.now() - time1))
 		} else if (classResult == 'survival') {
@@ -172,7 +185,8 @@ export async function run_chat_pipeline(
 				ds,
 				testing,
 				genesetNames,
-				geneFeatures
+				geneFeatures,
+				aiFilesDir
 			)
 			mayLog('Time taken for matrix agent:', formatElapsedTime(Date.now() - time1))
 		} else if (classResult == 'samplescatter') {
@@ -185,7 +199,8 @@ export async function run_chat_pipeline(
 				ds,
 				testing,
 				genesetNames,
-				geneFeatures
+				geneFeatures,
+				aiFilesDir
 			)
 			mayLog('Time taken for sampleScatter agent:', formatElapsedTime(Date.now() - time1))
 		} else if (classResult == 'hiercluster') {
@@ -198,7 +213,8 @@ export async function run_chat_pipeline(
 				ds,
 				testing,
 				genesetNames,
-				geneFeatures
+				geneFeatures,
+				aiFilesDir
 			)
 			mayLog('Time taken for hierCluster agent:', formatElapsedTime(Date.now() - time1))
 		} else if (classResult == 'lollipop') {

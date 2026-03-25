@@ -1,7 +1,15 @@
 import type { LlmConfig, DbRows, GeneDataTypeResult } from '#types'
 import { FILTER_TERM_DEFINITIONS, validate_filter } from './filter.ts'
-import { formatTrainingExamples, extractGenesetsFromPrompt, validate_term, buildCommonPrompt } from './utils.ts'
+import {
+	formatTrainingExamples,
+	extractGenesetsFromPrompt,
+	validate_term,
+	buildCommonPrompt,
+	readJSONFile
+} from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
+import path from 'path'
+import fs from 'fs'
 
 export async function extract_samplescatter_terms_from_query(
 	prompt: string,
@@ -11,9 +19,10 @@ export async function extract_samplescatter_terms_from_query(
 	ds: any,
 	testing: boolean,
 	genesetNames: string[] = [],
-	geneFeatures: GeneDataTypeResult[]
+	geneFeatures: GeneDataTypeResult[],
+	aiFilesDir: string
 ) {
-	if (!dataset_json.prebuiltPlots || dataset_json.prebuiltPlots.length == 0) {
+	if (!ds.cohort.scatterplots.plots || ds.cohort.scatterplots.plots.length == 0) {
 		return { type: 'text', text: 'No pre-built scatter plots (t-SNE/UMAP) are available for this dataset' }
 	}
 
@@ -59,14 +68,16 @@ export async function extract_samplescatter_terms_from_query(
 	const common_genes = geneFeatures.map(g => g.gene)
 	const matchedGenesets = extractGenesetsFromPrompt(prompt, genesetNames)
 
-	// Parse out training data from the dataset JSON
-	const scatter_ds = dataset_json.charts.find((chart: any) => chart.type == 'sampleScatter')
+	// Read sampleScatter agent-specific JSON file
+	if (!fs.existsSync(path.join(aiFilesDir, 'sampleScatter.json')))
+		throw 'sample scatter agent file is not specified for dataset:' + ds.label
+	const scatter_ds = await readJSONFile(path.join(aiFilesDir, 'sampleScatter.json'))
 	if (!scatter_ds) throw 'sampleScatter information is not present in the dataset file.'
 	if (scatter_ds.TrainingData.length == 0) throw 'No training data is provided for the sampleScatter agent.'
 
 	const training_data = formatTrainingExamples(scatter_ds.TrainingData)
 
-	const plotNames = dataset_json.prebuiltPlots.map((p: any) => p.name).join(', ')
+	const plotNames = ds.cohort.scatterplots.plots.map((p: any) => p.name).join(', ')
 
 	const system_prompt =
 		'I am an assistant that extracts overlay parameters for pre-built scatter plots (t-SNE/UMAP). The final output must be in the following JSON format with NO extra comments. The JSON schema is as follows: ' +
@@ -100,30 +111,25 @@ export async function extract_samplescatter_terms_from_query(
 		test_response.type = 'plot'
 		return test_response
 	} else {
-		return validate_samplescatter_response(response, dataset_json, ds, geneFeatures)
+		return validate_samplescatter_response(response, ds, geneFeatures)
 	}
 }
 
-function validate_samplescatter_response(
-	response: string,
-	dataset_json: any,
-	ds: any,
-	geneFeatures: GeneDataTypeResult[]
-) {
+function validate_samplescatter_response(response: string, ds: any, geneFeatures: GeneDataTypeResult[]) {
 	const response_type = JSON.parse(response)
 	let text = ''
 
 	if (response_type.text) text = response_type.text
 
-	// Validate plotName against prebuiltPlots
+	// Validate plotName against plot names in ds.cohort.scatterplots.plots
 	if (!response_type.plotName) {
 		text += 'plotName is required for sample scatter output'
 	} else {
-		const matchedPlot = dataset_json.prebuiltPlots.find(
+		const matchedPlot = ds.cohort.scatterplots.plots.find(
 			(p: any) => p.name.toLowerCase() == response_type.plotName.toLowerCase()
 		)
 		if (!matchedPlot) {
-			const availablePlots = dataset_json.prebuiltPlots.map((p: any) => p.name).join(', ')
+			const availablePlots = ds.cohort.scatterplots.plots.map((p: any) => p.name).join(', ')
 			text += 'Unknown plot name: ' + response_type.plotName + '. Available plots are: ' + availablePlots
 		}
 	}

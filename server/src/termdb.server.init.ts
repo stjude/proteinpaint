@@ -619,7 +619,6 @@ export function filterTerms(req, ds, terms) {
 	to determine if the chart type should be displayed (returns true) or not (returns false).
 
 	This is not an exhaustive list:
-	- numericDictCluster is not defined here; it is defined in the specific dataset that requires it.
 	- Special "uncommon" chart types are not included here.
 
 	These chart types can be overridden by ds.isSupportedChartOverride{} within the init() function to:

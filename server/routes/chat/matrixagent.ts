@@ -1,9 +1,11 @@
 import type { LlmConfig, DbRows, GeneDataTypeResult } from '#types'
 import { TermTypes } from '#shared/terms.js'
 import { FILTER_TERM_DEFINITIONS, validate_filter } from './filter.ts'
-import { formatTrainingExamples, extractGenesetsFromPrompt, buildCommonPrompt } from './utils.ts'
+import { formatTrainingExamples, extractGenesetsFromPrompt, buildCommonPrompt, readJSONFile } from './utils.ts'
 import type { DataTypeConfig } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
+import path from 'path'
+import fs from 'fs'
 //import { mayLog } from '#src/helpers.ts'
 
 // ---------------------------------------------------------------------------
@@ -138,16 +140,20 @@ export async function extract_matrix_search_terms_from_query(
 	ds: any,
 	testing: boolean,
 	genesetNames: string[] = [],
-	geneFeatures: GeneDataTypeResult[]
+	geneFeatures: GeneDataTypeResult[],
+	aiFilesDir: string
 ) {
 	const { schema, activeConfigs } = buildMatrixSchema()
 	const common_genes = geneFeatures.map(g => g.gene)
 	const matchedGenesets = extractGenesetsFromPrompt(prompt, genesetNames)
 
-	// Parse out training data from the dataset JSON
-	const matrix_ds = dataset_json.charts.filter((chart: any) => chart.type == 'Matrix')
-	if (matrix_ds.length == 0) throw 'Matrix information is not present in the dataset file.'
-	if (matrix_ds[0].TrainingData.length == 0) throw 'No training data is provided for the matrix agent.'
+	// Read Matrix agent-specific JSON file
+	if (!fs.existsSync(path.join(aiFilesDir, 'matrix.json')))
+		throw 'Matrix agent file is not specified for dataset:' + ds.label
+	const matrix_ds_data = await readJSONFile(path.join(aiFilesDir, 'matrix.json'))
+	if (!matrix_ds_data) throw 'Matrix information is not present in the dataset file.'
+	if (matrix_ds_data.TrainingData.length == 0) throw 'No training data is provided for the matrix agent.'
+	const matrix_ds = [matrix_ds_data]
 
 	const training_data = formatTrainingExamples(matrix_ds[0].TrainingData)
 

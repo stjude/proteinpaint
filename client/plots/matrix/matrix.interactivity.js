@@ -3,7 +3,7 @@ import { format as d3format } from 'd3-format'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons, newSandboxDiv, Menu, renderTable, table2col, renderCnvConfig } from '#dom'
 import { dofetch3 } from '#common/dofetch'
-import { TermTypes, isNumericTerm, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
+import { TermTypes, isNumericTerm } from '#shared/terms.js'
 import {
 	mclass,
 	dt2label,
@@ -1338,12 +1338,6 @@ function setTermActions(self) {
 		const usecase = { target: 'matrix', detail: 'termgroups' }
 		if (self.chartType == 'hierCluster') {
 			if (
-				self.config.dataType == NUMERIC_DICTIONARY_TERM &&
-				(!self.activeLabel || self.activeLabel.grp.type == 'hierCluster')
-			) {
-				usecase.target = 'numericDictTermCluster'
-				usecase.detail = { exclude: self.state.termdbConfig.numericDictTermCluster?.exclude }
-			} else if (
 				self.config.dataType == TermTypes.METABOLITE_INTENSITY &&
 				(!self.activeLabel || self.activeLabel.grp.type == 'hierCluster')
 			) {
@@ -1399,19 +1393,10 @@ function setTermActions(self) {
 		const t = self.activeLabel
 		const termgroups = self.termGroups
 
-		const isNumericDictTermCBut = self.config.dataType == NUMERIC_DICTIONARY_TERM && !t
 		const isMetaboliteIntensityCBut = self.config.dataType == TermTypes.METABOLITE_INTENSITY && !t
 		const isWholeProteomeAbundanceCBut = self.config.dataType == TermTypes.WHOLE_PROTEOME_ABUNDANCE && !t
-		if (
-			isNumericDictTermCBut ||
-			isMetaboliteIntensityCBut ||
-			isWholeProteomeAbundanceCBut ||
-			t.grp.type == 'hierCluster'
-		) {
-			const grp =
-				isNumericDictTermCBut || isMetaboliteIntensityCBut || isWholeProteomeAbundanceCBut
-					? termgroups[0]
-					: termgroups[t.grpIndex]
+		if (isMetaboliteIntensityCBut || isWholeProteomeAbundanceCBut || t.grp.type == 'hierCluster') {
+			const grp = isMetaboliteIntensityCBut || isWholeProteomeAbundanceCBut ? termgroups[0] : termgroups[t.grpIndex]
 			// for hiercluster group, use selected terms as new group.lst
 			grp.lst.splice(0, grp.lst.length, ...newterms)
 			self.app.dispatch({
@@ -1421,7 +1406,7 @@ function setTermActions(self) {
 					{
 						nestedKeys: [
 							'termgroups',
-							isNumericDictTermCBut || isMetaboliteIntensityCBut || isWholeProteomeAbundanceCBut ? 0 : t.grpIndex,
+							isMetaboliteIntensityCBut || isWholeProteomeAbundanceCBut ? 0 : t.grpIndex,
 							'lst'
 						],
 						value: grp.lst

@@ -516,8 +516,10 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype,
   preddat_ci_adj <- preddat_ci + sum(apply(newdat2, 1, prod), na.rm = T)
   
   # plot data
-  plotfile <- paste0(cachedir, "splinePlot_", ifelse(is.null(formulatype), "", paste0(formulatype, "_")), createRandString(), ".svg")
-  svg(filename = plotfile, width = 6.7, height = ifelse(is.null(formulatype),5.25,5.35), pointsize = 20)
+  # Use PNG device instead of SVG to avoid X11 dependency (following pattern from edge_newh5.R plotQLDisp)
+  plotfile <- paste0(cachedir, "splinePlot_", ifelse(is.null(formulatype), "", paste0(formulatype, "_")), createRandString(), ".png")
+  # Quick fix to hardcode "*2" factor to width/height/res to show img at proper res on modern screen, without supporting low-res screens
+  png(filename = plotfile, width = 670*2, height = ifelse(is.null(formulatype),525*2,535*2), res = 100*2, pointsize = 20)
   par(mar = c(2, 2, ifelse(is.null(formulatype),0.7,1), 5) + 0.1, mgp = c(1, 1, 0))
   if (regtype == "linear" | regtype == "logistic") {
     if (regtype == "linear") {
@@ -633,7 +635,7 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype,
          border = c(NA, NA, NA),
          xpd = TRUE
   )
-  dev.off()
+  invisible(capture.output(try(dev.off(), silent = TRUE)))
   return(plotfile)
 }
 

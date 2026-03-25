@@ -10,6 +10,7 @@ export class NumericTermCollection {
 	id: string
 	name: string
 	termIds?: string[]
+	valueTransform?: { offset?: number }
 	termlst: object[]
 	propsByTermId: {
 		[termId: string]: {

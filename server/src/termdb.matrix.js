@@ -817,45 +817,6 @@ export async function mayInitiateMatrixplots(ds) {
 	}
 }
 
-/*
-works with "canned" NumericDictionaryTerm plot in a dataset, e.g. data from a text file
-called in mds3.init
-*/
-export async function mayInitiateNumericDictionaryTermplots(ds) {
-	if (!ds.cohort.termdb?.numericDictTermCluster?.plots) return
-	if (!Array.isArray(ds.cohort.termdb.numericDictTermCluster.plots))
-		throw 'cohort.termdb.numericDictTermCluster.plots is not array'
-	for (const p of ds.cohort.termdb.numericDictTermCluster.plots) {
-		if (!p.name) throw '.name missing from one of numericDictTermCluster.plots[]'
-		if (p.file) {
-			const numericDictTermClusterConfig = await read_file(path.join(serverconfig.tpmasterdir, p.file))
-			p.numericDictTermClusterConfig = JSON.parse(numericDictTermClusterConfig)
-			if (p.getConfig) p.numericDictTermClusterConfig = p.getConfig(p.numericDictTermClusterConfig)
-		} else {
-			throw 'unknown data source of one of numericDictTermClusterConfig.plots[]'
-		}
-	}
-}
-
-export async function mayInitiatemutationSignatureplots(ds) {
-	const mutationSignatureplots = ds.cohort.termdb.termCollections?.find(
-		tc => tc.name == 'Mutation Signature' && tc.type === 'numeric'
-	)?.plots
-	if (!mutationSignatureplots) return
-	if (!Array.isArray(mutationSignatureplots))
-		throw 'cohort.termdb.termCollections Mutation Signature plots is not array'
-	for (const p of mutationSignatureplots) {
-		if (!p.name) throw '.name missing from one of termCollections mutation signature plots'
-		if (p.file) {
-			const mutationSignatureplotsConfig = await read_file(path.join(serverconfig.tpmasterdir, p.file))
-			p.mutationSignatureplotsConfig = JSON.parse(mutationSignatureplotsConfig)
-			if (p.getConfig) p.mutationSignatureplotsConfig = p.getConfig(p.mutationSignatureplotsConfig)
-		} else {
-			throw 'unknown data source of one of mutationSignatureplots.plots[]'
-		}
-	}
-}
-
 async function findListOfBins(q, tw, ds) {
 	// for non-dict terms which may lack tw.term.bins
 	if (tw.q.type == 'custom-bin') {

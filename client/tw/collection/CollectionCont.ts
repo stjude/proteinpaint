@@ -45,6 +45,7 @@ export class CollectionCont extends TwBase {
 		copy.term.memberType = this.term.memberType
 		if (this.term.numerators) copy.term.numerators = structuredClone(this.term.numerators)
 		if (this.term.propsByTermId) copy.term.propsByTermId = structuredClone(this.term.propsByTermId)
+		if (this.term.valueTransform) copy.term.valueTransform = structuredClone(this.term.valueTransform)
 		copy.term.termIds = this.term.termlst?.map((t: any) => t.id) || []
 		if (copy.q) {
 			delete copy.q.isAtomic
@@ -54,12 +55,20 @@ export class CollectionCont extends TwBase {
 
 	transformData(d: any) {
 		const termsValue: { [termId: string]: number } = d.value
-
-		// Collect all non-zero values
+		// Collect all non-zero values after applying value transformation (if any)
 		const allValues: { [label: string]: number } = {}
 		for (const [label, value] of Object.entries(termsValue)) {
-			if (value !== 0) {
-				allValues[label] = value as number
+			let transformedV: number = value
+			if (this.term.valueTransform) {
+				const offset = (this.term.valueTransform as any).offset
+				if (typeof offset === 'number') {
+					transformedV += offset
+				}
+				// Add more transformation types here as needed
+			}
+
+			if (transformedV !== 0) {
+				allValues[label] = transformedV as number
 			}
 		}
 

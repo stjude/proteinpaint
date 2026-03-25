@@ -157,7 +157,7 @@ export async function classifyGeneDataType(
 	user_prompt: string,
 	llm: LlmConfig,
 	relevant_genes: string[],
-	dataset_json: any // Dataset JSON which may contain ExcludedKeywords (gene names that double as diagnosis group names)
+	dataset_json: any
 ): Promise<GeneDataTypeResult[] | string> {
 	const exclude_keywords: string[] = dataset_json?.ExcludedKeywords ?? []
 	let genes: string[] = []

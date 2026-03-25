@@ -1,9 +1,17 @@
 import type { LlmConfig, DbRows, GeneDataTypeResult } from '#types'
 import { TermTypes } from '#shared/terms.js'
 import { FILTER_TERM_DEFINITIONS, validate_filter } from './filter.ts'
-import { formatTrainingExamples, extractGenesetsFromPrompt, DATA_TYPE_REGISTRY, buildCommonPrompt } from './utils.ts'
+import {
+	formatTrainingExamples,
+	extractGenesetsFromPrompt,
+	DATA_TYPE_REGISTRY,
+	buildCommonPrompt,
+	readJSONFile
+} from './utils.ts'
 import type { DataTypeConfig } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
+import path from 'path'
+import fs from 'fs'
 //import { mayLog } from '#src/helpers.ts'
 
 // ---------------------------------------------------------------------------
@@ -123,7 +131,8 @@ export async function extract_hiercluster_terms_from_query(
 	ds: any,
 	testing: boolean,
 	genesetNames: string[] = [],
-	geneFeatures: GeneDataTypeResult[]
+	geneFeatures: GeneDataTypeResult[],
+	aiFilesDir: string
 ) {
 	if (ds?.queries?.geneExpression) {
 		// Will later optionally allow hierarchical clustering if metabolite intensity or other numeric data types are present, but for now require gene expression
@@ -131,8 +140,10 @@ export async function extract_hiercluster_terms_from_query(
 		const common_genes = geneFeatures.map(g => g.gene)
 		const matchedGenesets = extractGenesetsFromPrompt(prompt, genesetNames)
 
-		// Parse out training data from the dataset JSON
-		const hiercluster_ds = dataset_json.charts.find((chart: any) => chart.type == 'hierCluster')
+		// Read hierCluster agent-specific JSON file
+		if (!fs.existsSync(path.join(aiFilesDir, 'hierCluster.json')))
+			throw 'hierarchical clustering agent file is not specified for dataset:' + ds.label
+		const hiercluster_ds = await readJSONFile(path.join(aiFilesDir, 'hierCluster.json'))
 		if (!hiercluster_ds) throw 'hierCluster information is not present in the dataset file.'
 		if (hiercluster_ds.TrainingData.length == 0) throw 'No training data is provided for the hierCluster agent.'
 
