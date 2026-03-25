@@ -42,18 +42,21 @@ class ViolinPlot extends PlotBase {
 			controls,
 			banner: holder
 				.append('div')
+				.attr('data-testid', 'sjpp-violin-banner')
 				.style('display', 'none')
 				.style('text-align', 'center')
 				.style('padding', '24px')
 				.style('font-size', '16px'),
 			loadingDiv: holder
 				.append('div')
+				.attr('data-testid', 'sjpp-violin-loading-div')
 				.style('display', this.opts.mode != 'minimal' ? 'inline-block' : 'none')
 				.style('padding', '24px')
 				.text('Loading ...'),
 			violinDiv: holder
 				.append('div')
 				.attr('class', 'sjpp-vp-violinDiv')
+				.attr('data-testid', 'sjpp-violin-div')
 				.style('display', 'flex')
 				.style('flex-direction', 'row')
 				.style('flex-wrap', 'wrap')
@@ -61,6 +64,7 @@ class ViolinPlot extends PlotBase {
 			legendDiv: holder
 				.append('div')
 				.classed('sjpp-vp-legend', true)
+				.attr('data-testid', 'sjpp-violin-legend')
 				.style('margin-left', '-15px')
 				.style('padding-top', '20px')
 		}
