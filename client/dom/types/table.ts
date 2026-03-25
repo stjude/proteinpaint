@@ -17,6 +17,7 @@ export type TableCell = {
 	disabled?: boolean
 	/** may be used as a reference ID for aria-labelledby, or other use */
 	elemId?: string
+	dataTestId?: any
 }
 
 export type TableColumn = {
