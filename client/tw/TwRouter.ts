@@ -100,7 +100,7 @@ export class TwRouter {
 			case 'float':
 			case 'geneExpression':
 			case 'metaboliteIntensity':
-			case 'wholeProteomeAbundance':
+			case 'proteomeAbundance':
 			case 'date':
 			case 'ssGSEA':
 			case tt.SINGLECELL_GENE_EXPRESSION:

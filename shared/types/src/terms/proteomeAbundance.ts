@@ -7,10 +7,10 @@ ProteomeTermSettingInstance
 
 */
 
-export type WholeProteomeAbundanceTerm = NumericBaseTerm & {
+export type ProteomeAbundanceTerm = NumericBaseTerm & {
 	id?: string
 	name: string
-	type: 'wholeProteomeAbundance'
+	type: 'proteomeAbundance'
 	protein: string
 	bins?: PresetNumericBins
 	unit?: string
@@ -20,15 +20,15 @@ export type WholeProteomeAbundanceTerm = NumericBaseTerm & {
 	cohortKey: string
 }
 
-export type WholeProteomeAbundanceTW = NumTW & { term: WholeProteomeAbundanceTerm }
+export type ProteomeAbundanceTW = NumTW & { term: ProteomeAbundanceTerm }
 
-export type RawWholeProteomeAbundanceTerm = NumericBaseTerm & {
+export type RawProteomeAbundanceTerm = NumericBaseTerm & {
 	id?: string
-	type: 'wholeProteomeAbundance'
+	type: 'proteomeAbundance'
 	protein: string
 	name?: string
 	bins?: PresetNumericBins
 	unit?: string
 }
 
-export type RawWholeProteomeAbundanceTW = RawNumTW & { term: RawWholeProteomeAbundanceTerm }
+export type RawProteomeAbundanceTW = RawNumTW & { term: RawProteomeAbundanceTerm }

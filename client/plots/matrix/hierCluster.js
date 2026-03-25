@@ -237,7 +237,7 @@ export class HierCluster extends Matrix {
 			filter: getNormalRoot(filterJoin([state.filter, dictionaryLegendFilter])),
 			filter0: state.filter0
 		}
-		if (state.config.dataType == 'wholeProteomeAbundance') {
+		if (state.config.dataType == 'proteomeAbundance') {
 			body.assayKey = state.config.assayKey
 			body.cohortKey = state.config.cohortKey
 		}
