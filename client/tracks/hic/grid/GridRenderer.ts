@@ -41,6 +41,7 @@ export class GridRenderer {
 
 			this.layerMap
 				.append('text')
+				.attr('data-testid', `sjpp-hic-chr-xAxis-label`)
 				.attr('font-family', Grid.font)
 				.attr('text-anchor', 'middle')
 				.attr('font-size', 12)
@@ -78,6 +79,7 @@ export class GridRenderer {
 
 			this.layerMap
 				.append('text')
+				.attr('data-testid', `sjpp-hic-chr-yAxis-label`)
 				.attr('font-family', Grid.font)
 				.attr('text-anchor', 'end')
 				.attr('dominant-baseline', 'central')
