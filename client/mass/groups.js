@@ -191,6 +191,7 @@ class MassGroups {
 			div
 				.text(name)
 				.attr('class', 'sja_filter_tag_btn')
+				.attr('data-testid', `sjpp-custom-term-btn`)
 				.style('padding', '3px 6px')
 				.style('border-radius', '6px')
 				.style('margin-right', '5px')
@@ -695,7 +696,7 @@ function initUI(self) {
 	self.dom.launchButton = self.dom.newTermSpan
 		.append('span')
 		.attr('class', 'sja_menuoption')
-		.attr('data-testid', 'sjpp-new-term-btn')
+		.attr('data-testid', 'sjpp-create-new-variable-btn')
 		.on('click', () => clickLaunchBtn(self))
 
 	// msg: none selected
