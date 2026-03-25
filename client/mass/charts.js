@@ -456,6 +456,7 @@ function setRenderers(self) {
 			.data(chartTypeList)
 			.enter()
 			.append('button')
+			.attr('data-testid', d => `sjpp-chart-btn-${d.label.toLowerCase().replace(/\s/g, '-')}`)
 			.style('margin', '10px')
 			.style('padding', '10px 15px')
 			.style('border-radius', '20px')

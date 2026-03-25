@@ -212,7 +212,7 @@ class MassGroups {
 		const menuDiv = this.tip.d.append('div')
 		const id = this?.lastId
 
-		const groupsInfo = menuDiv.append('div')
+		const groupsInfo = menuDiv.append('div').attr('data-testid', 'sjpp-groups-menu')
 
 		const table = table2col({ holder: groupsInfo })
 		table.table.style('scale', 0.9).style('margin-left', '0px')
@@ -695,7 +695,7 @@ function initUI(self) {
 	self.dom.launchButton = self.dom.newTermSpan
 		.append('span')
 		.attr('class', 'sja_menuoption')
-		.attr('data-testid', 'sjpp-launch-button')
+		.attr('data-testid', 'sjpp-new-term-btn')
 		.on('click', () => clickLaunchBtn(self))
 
 	// msg: none selected
@@ -781,10 +781,10 @@ async function updateUI(self) {
 		striped: false, // no alternating row bg color so delete button appears more visible
 		showLines: false
 	}
-	for (const g of groups) {
+	for (const [i, g] of groups.entries()) {
 		tableArg.rows.push([
 			{}, // blank cell to add delete button
-			{ value: g.name }, // to allow click to show <input>
+			{ value: g.name, dataTestId: `sjpp-groups-name-${i}` }, // to allow click to show <input>
 			{ color: g.color },
 			{ value: 'Loading...' }, // sample count is lazily retrieved to not to hold up table rendering
 			{} // blank cell to show filter ui

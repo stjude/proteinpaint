@@ -345,6 +345,7 @@ export function renderTable({
 					.append('td')
 					.attr('id', cell.elemId || null)
 					.attr('class', 'sjpp_table_item')
+					.attr('data-testid', cell.dataTestId || 'sjpp-table-cell-item')
 
 				// attach <td> for external code to modify
 				cell.__td = td
