@@ -2,9 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- detect more GDC-specific parameters when setting dslabel in the server app middleware
+
+
 ## 2.170.27
 
-Fixes
+Fixes:
 - include x-forwarded-* headers in requests to GDC API
 
 
