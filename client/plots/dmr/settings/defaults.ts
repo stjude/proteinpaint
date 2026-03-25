@@ -15,7 +15,15 @@ export function getDefaultDMRSettings(opts: any): DMRSettings {
 			hypo: '#5e81f4'
 		},
 		maxLoessRegion: 250_000,
+		minProbesForCi: 10,
 		backend: 'rust' as const
+	}
+
+	// Deep-merge colors so hyper/hypo defaults are preserved
+	// when only group colors are overridden
+	if (overrides.colors) {
+		Object.assign(defaults.colors, overrides.colors)
+		delete overrides.colors
 	}
 
 	return Object.assign(defaults, overrides)

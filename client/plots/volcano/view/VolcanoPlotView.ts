@@ -237,7 +237,7 @@ export class VolcanoPlotView {
 	renderPValueTable() {
 		// Cap rendered rows to prevent browser OOM with large datasets (e.g. 30k+ significant promoters).
 		// The full data is still available in pValueTableData.rows for export/search.
-		const maxTableRows = 1000
+		const maxTableRows = 5000
 		const allRows = this.viewData.pValueTableData.rows
 		const rows = allRows.length > maxTableRows ? allRows.slice(0, maxTableRows) : allRows
 		if (allRows.length > maxTableRows) {

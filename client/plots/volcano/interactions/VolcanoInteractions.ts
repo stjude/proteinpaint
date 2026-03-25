@@ -218,28 +218,41 @@ export class VolcanoInteractions {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		if (config.termType !== DNA_METHYLATION) return
 
+		const controlColor = config?.tw?.term?.values?.[config?.samplelst?.groups[0].name]?.color || '#ff0000'
+		const caseColor = config?.tw?.term?.values?.[config?.samplelst?.groups[1].name]?.color || '#0000ff'
+
 		const label = d.promoterId || `${d.chr}:${d.start}-${d.stop}`
+		const dmrConfig: any = {
+			chartType: 'dmr',
+			headerText: `DMR: ${label}`,
+			coordinateOverride: { chr: d.chr, start: d.start, stop: d.stop },
+			group1: config.samplelst.groups[0].values || [],
+			group2: config.samplelst.groups[1].values || [],
+			group1Name: config.samplelst.groups[0].name,
+			group2Name: config.samplelst.groups[1].name,
+			settings: {
+				colors: { group1: controlColor, group2: caseColor }
+			}
+		}
+
 		this.app.dispatch({
 			type: 'plot_create',
-			config: {
-				chartType: 'dmr',
-				headerText: `DMR: ${label}`,
-				coordinateOverride: { chr: d.chr, start: d.start, stop: d.stop },
-				group1: config.samplelst.groups[0].values || [],
-				group2: config.samplelst.groups[1].values || [],
-				group1Name: config.samplelst.groups[0].name,
-				group2Name: config.samplelst.groups[1].name
-			}
+			config: dmrConfig
 		})
 	}
 
 	/** Launch a violin/box plot for a DNA methylation promoter.
-	 * Creates a methylation term using the promoter's chr/start/stop coordinates. */
+	 * Creates a methylation term using the promoter's chr/start/stop coordinates.
+	 * The tw handler fills in id and unit from termdbConfig. */
 	launchViolin(d: { chr: string; start: number; stop: number; gene_name?: string; promoter_id?: string }) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		const geneName = d.gene_name?.split(',')[0]?.trim() || d.promoter_id || ''
+		const unit =
+			this.app.vocabApi.termdbConfig.queries.dnaMethylation?.promoter?.unit ||
+			this.app.vocabApi.termdbConfig.queries.dnaMethylation?.unit ||
+			'avg. M-value'
 		const coords = `${d.chr}:${d.start}-${d.stop}`
-		const label = geneName ? `${geneName} — Promoter avg. M-value (${coords})` : `Promoter avg. M-value (${coords})`
+		const label = geneName ? `${geneName} — Promoter ${unit} (${coords})` : `Promoter ${unit} (${coords})`
 		this.app.dispatch({
 			type: 'plot_create',
 			config: {
@@ -249,14 +262,12 @@ export class VolcanoInteractions {
 				term: {
 					q: { mode: 'continuous' },
 					term: {
-						id: coords,
 						gene: geneName,
 						name: label,
 						type: DNA_METHYLATION,
 						chr: d.chr,
 						start: d.start,
-						stop: d.stop,
-						unit: 'avg. M-value'
+						stop: d.stop
 					}
 				},
 				term2: {
