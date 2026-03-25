@@ -29,7 +29,8 @@ function buildHierClusterSchema(ds: any, dataset_json: any): { schema: object; a
 		geneNames: {
 			type: 'array',
 			items: { type: 'string' },
-			description: 'Names of genes to include as gene expression rows in hierarchical clustering'
+			description:
+				'Names of genes to include as gene expression rows in hierarchical clustering. This should ONLY contain gene names explicitly mentioned in the user prompt.'
 		},
 		genesetNames: {
 			type: 'array',
@@ -89,7 +90,7 @@ function buildHierClusterSystemPrompt(
 ): string {
 	let s =
 		'I am an assistant that extracts terms and data identifiers from the user query to create a hierarchical clustering plot. ' +
-		'A hierarchical clustering plot clusters samples and features such as genes using hierarchical clustering and displays the result as a heatmap with dendrograms. ' + // Need to add metabolite intensity and other data types later
+		'A hierarchical clustering plot clusters samples and features such as genes using hierarchical clustering and displays the result as a heatmap with dendrograms. Do NOT add data identifiers on your own, only those specified by the user or from a geneset. ' + // Need to add metabolite intensity and other data types later
 		'The final output must be in the following JSON format with NO extra comments. The JSON schema is as follows: ' +
 		JSON.stringify(schema)
 
@@ -141,7 +142,6 @@ export async function extract_hiercluster_terms_from_query(
 		const { schema, activeConfigs } = buildHierClusterSchema(ds, dataset_json)
 		const common_genes = geneFeatures.map(g => g.gene)
 		const matchedGenesets = extractGenesetsFromPrompt(prompt, genesetNames)
-
 		// Read hierCluster agent-specific JSON file
 		if (!fs.existsSync(path.join(aiFilesDir, 'hierCluster.json')))
 			throw 'hierarchical clustering agent file is not specified for dataset:' + ds.label
@@ -189,6 +189,7 @@ function validate_hiercluster_response(
 	geneFeatures: GeneDataTypeResult[],
 	genome: any
 ) {
+	console.log('LLM response for hierarchical clustering:', response)
 	const response_type = JSON.parse(response)
 	const pp_plot_json: any = { chartType: 'hierCluster' }
 	let text = ''
@@ -202,13 +203,15 @@ function validate_hiercluster_response(
 		)
 		if (geneExprConfig) {
 			for (const genesetName of response_type.genesetNames) {
+				console.log('Resolving geneset for hierarchical clustering:', genesetName)
 				const genes = getGenesForGeneset(genome, genesetName)
+				if (!response_type.geneNamesFromGeneset) response_type.geneNamesFromGeneset = []
 				if (genes && genes.length > 0) {
 					for (const gene of genes) {
 						// Ensure genesetNames-resolved genes don't duplicate geneNames-provided genes
 						if (!response_type.geneNames?.some((g: string) => g.toLowerCase() === gene.symbol.toLowerCase())) {
 							response_type.geneNames = response_type.geneNames || []
-							response_type.geneNames.push(gene.symbol)
+							response_type.geneNamesFromGeneset.push(gene.symbol)
 						}
 					}
 				} else {
@@ -242,25 +245,39 @@ function validate_hiercluster_response(
 
 		for (const identifier of fieldValues) {
 			if (preferredConfig.identifierMode === 'gene') {
-				const gene_hit = geneFeatures.find(g => g.gene.toLowerCase() === identifier.toLowerCase())
-				if (!gene_hit) {
-					text += 'invalid gene name:' + identifier + ' '
-				} else {
-					// Check if the gene type is of "expression" type (e.g. not a mutation or fusion feature)
-					if (gene_hit.dataType == 'expression') {
-						terms.push(preferredConfig.buildTermWrapper(identifier))
+				if (geneFeatures.length > 0) {
+					// This conditions helps prevent false hallucinated genes from being shown to users when geneFeatures is not available for a dataset, but still allows validation against geneFeatures when it is available
+					const gene_hit = geneFeatures.find(g => g.gene.toLowerCase() === identifier.toLowerCase())
+					if (!gene_hit) {
+						text += 'invalid gene name:' + identifier + ' '
 					} else {
-						text +=
-							'Gene ' +
-							identifier +
-							' does not have a valid data type (' +
-							gene_hit.dataType +
-							') for hierarchical clustering. Only genes with expression data can be used for clustering.'
+						// Check if the gene type is of "expression" type (e.g. not a mutation or fusion feature)
+						if (gene_hit.dataType == 'expression') {
+							terms.push(preferredConfig.buildTermWrapper(identifier))
+						} else {
+							text +=
+								'Gene ' +
+								identifier +
+								' does not have a valid data type (' +
+								gene_hit.dataType +
+								') for hierarchical clustering. Only genes with expression data can be used for clustering.'
+						}
 					}
 				}
 			} else {
 				// Name-based: pass through (backend handles validation)
 				terms.push(preferredConfig.buildTermWrapper(identifier))
+			}
+		}
+
+		if (
+			response_type.geneNamesFromGeneset &&
+			response_type.geneNamesFromGeneset.length > 0 &&
+			preferredConfig.identifierMode === 'gene'
+		) {
+			// Add genes from GeneSet for clustering
+			for (const gene of response_type.geneNamesFromGeneset) {
+				terms.push(preferredConfig.buildTermWrapper(gene))
 			}
 		}
 	}
