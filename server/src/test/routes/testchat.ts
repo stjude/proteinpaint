@@ -79,7 +79,8 @@ export async function test_chatbot_by_dataset(ds: any, genome: any, aiFilesDir: 
 			ds,
 			genesetNames,
 			agentFiles,
-			aiFilesDir
+			aiFilesDir,
+			genome
 		)
 		if (test_result.type == test_data.PPoutput.type) {
 			// Only proceed further if the type of the LLM output matches the expected type. Otherwise its a classification agent error.
