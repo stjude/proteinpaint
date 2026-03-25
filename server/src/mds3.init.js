@@ -1947,11 +1947,8 @@ export async function validate_query_proteome(ds, genome) {
 				}
 				await processCohortFile(ds, assayName, cohortName, cohort)
 			}
-		} else if (assay.file) {
-			console.log(`Validating assay "${assayName}" as single-cohort (legacy)`)
-			await processCohortFile(ds, assayName, 'default', assay) // use 'default' as cohort name for single-cohort assays
 		} else {
-			throw `Invalid assay structure for "${assayName}". Must have either .cohorts or .file`
+			throw `Invalid assay structure for "${assayName}". Must have .cohorts`
 		}
 	}
 }

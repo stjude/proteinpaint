@@ -180,11 +180,19 @@ async function trigger_findterm(q, req, res, termdb, ds, genome) {
 			}
 			terms.push(...foundTerms)
 		} else if (q.targetType == TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE) {
-			if (!ds.queries?.proteome?.whole) throw 'ds.queries.proteome.whole missing for the dataset'
-			const matches = await ds.queries.proteome.whole.find([q.findterm])
+			if (!ds.queries?.proteome?.assays?.[q.usecase.assayKey]?.cohorts?.[q.usecase.cohortKey])
+				throw `ds.queries.proteome.assays.${q.usecase.assayKey}.cohorts.${q.usecase.cohortKey} missing for the dataset`
+			const matches = await ds.queries.proteome.assays[q.usecase.assayKey].cohorts[q.usecase.cohortKey].find([
+				q.findterm
+			])
 			const foundTerms = []
 			for (const protein of matches) {
-				foundTerms.push({ name: protein, type: 'wholeProteomeAbundance' })
+				foundTerms.push({
+					name: protein,
+					type: 'wholeProteomeAbundance',
+					assayKey: q.usecase.assayKey,
+					cohortKey: q.usecase.cohortKey
+				})
 			}
 			terms.push(...foundTerms)
 		}

@@ -363,11 +363,7 @@ export class TermTypeSearch {
 	}
 
 	usesDefaultSearch(termTypeGroup) {
-		return (
-			termTypeGroup == TermTypeGroups.DICTIONARY_VARIABLES ||
-			termTypeGroup == TermTypeGroups.METABOLITE_INTENSITY ||
-			termTypeGroup == TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE
-		)
+		return termTypeGroup == TermTypeGroups.DICTIONARY_VARIABLES || termTypeGroup == TermTypeGroups.METABOLITE_INTENSITY
 	}
 
 	async addLoadTopTerms(type) {
@@ -404,8 +400,7 @@ export class TermTypeSearch {
 		holder.selectAll('*').remove()
 		if (
 			tab.termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES &&
-			tab.termTypeGroup != TermTypeGroups.METABOLITE_INTENSITY &&
-			tab.termTypeGroup != TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE
+			tab.termTypeGroup != TermTypeGroups.METABOLITE_INTENSITY
 		) {
 			const handler = this.handlerByType[type]
 			await handler.init({

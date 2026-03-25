@@ -253,6 +253,23 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	if (q.geneExpression) {
 		q2.geneExpression = { unit: q.geneExpression.unit }
 	}
+	if (q.proteome) {
+		q2.proteome = {}
+		if (q.proteome.assays) {
+			q2.proteome.assays = {}
+			for (const assay in q.proteome.assays) {
+				q2.proteome.assays[assay] = {}
+				if (q.proteome.assays[assay].cohorts) {
+					q2.proteome.assays[assay].cohorts = {}
+					for (const cohort in q.proteome.assays[assay].cohorts) {
+						q2.proteome.assays[assay].cohorts[cohort] = JSON.parse(
+							JSON.stringify(q.proteome.assays[assay].cohorts[cohort])
+						)
+					}
+				}
+			}
+		}
+	}
 	if (q.dnaMethylation) {
 		q2.dnaMethylation = { unit: q.dnaMethylation.unit }
 		if (q.dnaMethylation.promoter) {
@@ -348,7 +365,7 @@ function getAllowedTermTypes(ds) {
 	// assess other data types and add corresponding term types
 	if (ds.queries?.geneExpression) typeSet.add(GENE_EXPRESSION)
 	if (ds.queries?.metaboliteIntensity) typeSet.add(METABOLITE_INTENSITY)
-	if (ds.queries?.proteome?.whole) typeSet.add(WHOLE_PROTEOME_ABUNDANCE)
+	if (ds.queries?.proteome?.assays) typeSet.add(WHOLE_PROTEOME_ABUNDANCE)
 	if (ds.queries?.ssGSEA) typeSet.add(SSGSEA)
 	if (ds.queries?.dnaMethylation) typeSet.add(DNA_METHYLATION)
 	if (ds.queries?.singleCell) {
