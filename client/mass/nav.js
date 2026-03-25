@@ -329,7 +329,10 @@ function setRenderers(self) {
 			Object.assign(filterTab, massNav.tabs?.filter)
 		}
 
-		const table = self.dom.tabDiv.append('table').style('border-collapse', 'collapse')
+		const table = self.dom.tabDiv
+			.append('table')
+			.attr('data-testid', 'sjpp-nav-tabs-table')
+			.style('border-collapse', 'collapse')
 
 		// using a table layout for tabs, iterate through each tab
 		// once for each of [top, mid, btm] row
@@ -338,6 +341,7 @@ function setRenderers(self) {
 			.data(['top', 'mid', 'btm'])
 			.enter()
 			.append('tr')
+			.attr('class', (d, i) => `sjpp-nav-tabs-row-${i}`)
 			.style('font-size', (d, i) => (i == 1 ? '20px' : '12px'))
 			.selectAll('td')
 			.data((key, i) =>
@@ -347,6 +351,7 @@ function setRenderers(self) {
 			)
 			.enter()
 			.append('td')
+			.attr('class', d => `sjpp-nav-tab-col-${d.colNum}`)
 			// hide the about (e.g. cohort tab) until there is termdbConfig.selectCohort or termdbCongfig.massNav.tabs.about
 			.style('display', 'none') // d => (d.colNum === 0 || self.activeCohort !== -1 ? '' : 'none'))
 			.style('width', '100px')
