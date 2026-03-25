@@ -710,16 +710,14 @@ export type MetaboliteIntensityQuery = MetaboliteIntensityQueryNative
 /** the proteomics query */
 type CohortConfig = {
 	file: string
+	filter?: Tvs[]
 }
 type AssayWithCohorts = {
 	cohorts: {
 		[cohortName: string]: CohortConfig
 	}
 }
-type AssaySingleFile = {
-	file: string
-}
-type AssayConfig = AssayWithCohorts | AssaySingleFile
+type AssayConfig = AssayWithCohorts
 
 export type WholeProteomeAbundanceQuery = {
 	/** document structure */
@@ -1037,7 +1035,7 @@ type Mds3Queries = {
 	}
 	proteome?: {
 		/** whole proteome abundance */
-		whole?: WholeProteomeAbundanceQuery
+		assays?: { [assayType: string]: AssayConfig }
 	}
 	singleCell?: SingleCellQuery
 	singleSampleGenomeQuantification?: SingleSampleGenomeQuantification
@@ -1388,7 +1386,7 @@ type TvsTerm = {
 
 type TvsValues = {
 	key?: string
-	label: string
+	label?: string
 }
 
 type Tvs = {

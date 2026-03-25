@@ -55,6 +55,10 @@ export type TermdbClusterRequestWholeProteomeAbundance = TermdbClusterRequestBas
 	terms: WholeProteomeAbundanceTW[]
 	/** perform z-score transformation on values */
 	zScoreTransformation?: string
+	/** assay key to specify which assay to use for the clustering */
+	assayKey: string
+	/** cohort key to specify which cohort to use for the clustering */
+	cohortKey: string
 }
 
 export type TermdbClusterRequest =

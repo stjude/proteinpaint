@@ -14,6 +14,10 @@ export type WholeProteomeAbundanceTerm = NumericBaseTerm & {
 	protein: string
 	bins?: PresetNumericBins
 	unit?: string
+	/** assay key identifying which proteome assay this term belongs to */
+	assayKey: string
+	/** cohort key identifying which cohort within the assay this term belongs to */
+	cohortKey: string
 }
 
 export type WholeProteomeAbundanceTW = NumTW & { term: WholeProteomeAbundanceTerm }

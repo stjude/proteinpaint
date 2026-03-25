@@ -243,7 +243,9 @@ async function getSampleData(q, ds, onlyChildren = false) {
 			tw.term.type == WHOLE_PROTEOME_ABUNDANCE
 		) {
 			const queryHandler =
-				tw.term.type == WHOLE_PROTEOME_ABUNDANCE ? q.ds.queries?.proteome?.whole : q.ds.queries?.[tw.term.type]
+				tw.term.type == WHOLE_PROTEOME_ABUNDANCE
+					? q.ds.queries?.proteome?.assays?.[tw.term.assayKey]?.cohorts?.[tw.term.cohortKey]
+					: q.ds.queries?.[tw.term.type]
 			if (!queryHandler) throw 'not supported by dataset: ' + tw.term.type
 			let lstOfBins // of this tw. only set when q.mode is discrete
 			if (tw.q?.mode == 'discrete' || tw.q?.mode == 'binary') {

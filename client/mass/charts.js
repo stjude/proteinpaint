@@ -363,31 +363,7 @@ function getChartTypeList(self, state) {
 		{
 			label: 'Protein Abundance',
 			chartType: 'wholeProteomeAbundance',
-			clickTo: self.showTree_selectlst,
-			usecase: { target: 'wholeProteomeAbundance', detail: 'term' },
-			updateActionBySelectedTerms: (action, termlst) => {
-				const twlst = termlst.map(term => ({
-					term: structuredClone(term),
-					q: { mode: NumericModes.continuous }
-				}))
-				if (twlst.length == 1) {
-					// violin
-					action.config.chartType = 'summary'
-					action.config.term = twlst[0]
-					return
-				}
-				if (twlst.length == 2) {
-					// scatter
-					action.config.chartType = 'summary'
-					action.config.term = twlst[0]
-					action.config.term2 = twlst[1]
-					return
-				}
-				// 3 or more terms, launch clustering
-				action.config.chartType = 'hierCluster'
-				action.config.dataType = TermTypes.WHOLE_PROTEOME_ABUNDANCE
-				action.config.termgroups = [{ name: 'Protein Abundance Cluster', lst: twlst, type: 'hierCluster' }]
-			}
+			clickTo: self.loadChartSpecificMenu
 		},
 		{
 			label: 'Correlation Volcano',
