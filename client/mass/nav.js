@@ -376,7 +376,11 @@ function setRenderers(self) {
 		self.dom.tds = table.selectAll('td')
 		self.subheaderKeys = self.tabs.map(d => d.subheader)
 
-		self.dom.saveBtn = self.dom.sessionDiv.append('button').style('margin', '10px').text('Session ▼')
+		self.dom.saveBtn = self.dom.sessionDiv
+			.append('button')
+			.attr('data-testid', 'sjpp-nav-session-btn')
+			.style('margin', '10px')
+			.text('Session ▼')
 
 		//.on('click', self.getSessionUrl)
 
@@ -384,6 +388,7 @@ function setRenderers(self) {
 			//Only show if called from `mass-session-id` URL
 			self.dom.fileBtn = self.dom.sessionDiv
 				.append('button')
+				.attr('data-testid', 'sjpp-nav-file-btn')
 				.style('margin', '10px')
 				.text('Export Session')
 				.on('click', event => {
