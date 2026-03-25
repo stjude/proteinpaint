@@ -20,13 +20,19 @@ export class DmrViewModel {
 		const xRange = (queryStop ?? 0) - (queryStart ?? 0)
 		const showLoess = !!(dmrResult.diagnostic?.loess && xRange <= settings.dmr.maxLoessRegion)
 
-		const betaTrackImg = dmrResult.diagnostic
+		const betaTrackResult = dmrResult.diagnostic
 			? this.renderBetaTrack(dmrResult.diagnostic, config, settings.dmr.blockWidth, showLoess, queryStart, queryStop)
 			: undefined
 
 		this.viewData = {
-			tklst: this.buildTrackList(dmrBedItems, sigCpgBedItems, genomeObj, betaTrackImg),
-			legendRows: this.buildLegendData(config, dmrResult.dmrs, sigCpgBedItems, showLoess),
+			tklst: this.buildTrackList(dmrBedItems, sigCpgBedItems, genomeObj, betaTrackResult?.img),
+			legendRows: this.buildLegendData(
+				config,
+				dmrResult.dmrs,
+				sigCpgBedItems,
+				showLoess,
+				betaTrackResult?.showCi ?? false
+			),
 			diagnostic: dmrResult.diagnostic,
 			dmrs: dmrResult.dmrs,
 			dmrBedItems,
@@ -59,7 +65,8 @@ export class DmrViewModel {
 		config: DmrConfig,
 		dmrs: TermdbDmrSuccessResponse['dmrs'],
 		sigCpgBedItems: BedItem[],
-		showLoess: boolean
+		showLoess: boolean,
+		showCi: boolean
 	): LegendRow[] {
 		const { colors } = config.settings.dmr
 		const g1 = config.group1Name || 'Group 1'
@@ -69,9 +76,10 @@ export class DmrViewModel {
 			{ text: `${g2} (case)`, color: colors.group2 }
 		]
 		if (showLoess) {
+			const ciLabel = showCi ? ' + 95% CI' : ''
 			meansItems.push(
-				{ text: `${g1} LOESS trend + 95% CI`, color: colors.group1, style: 'shaded' },
-				{ text: `${g2} LOESS trend + 95% CI`, color: colors.group2, style: 'shaded' }
+				{ text: `${g1} LOESS trend${ciLabel}`, color: colors.group1, style: showCi ? 'shaded' : 'dashed' },
+				{ text: `${g2} LOESS trend${ciLabel}`, color: colors.group2, style: showCi ? 'shaded' : 'dashed' }
 			)
 		}
 		const rows: LegendRow[] = [{ label: 'Per-CpG Means', items: meansItems }]
@@ -106,11 +114,11 @@ export class DmrViewModel {
 		showLoess: boolean,
 		queryStart?: number,
 		queryStop?: number
-	): { minv: number; maxv: number; src: string } | undefined {
+	): { img: { minv: number; maxv: number; src: string }; showCi: boolean } | undefined {
 		const { probes } = diagnostic
 		if (!probes.positions.length) return undefined
 
-		const { colors, fdr_cutoff } = config.settings.dmr
+		const { colors, fdr_cutoff, minProbesForCi } = config.settings.dmr
 		const dpr = typeof window !== 'undefined' && window.devicePixelRatio > 1 ? window.devicePixelRatio : 1
 		const width = blockWidth
 		const height = 150
@@ -135,9 +143,15 @@ export class DmrViewModel {
 
 		// DMR region shading omitted — already shown as a bedj track above
 
-		// Draw LOESS curves with shaded CI regions
+		// Draw LOESS curves with shaded CI regions, clipped to probe data range.
+		// Only show CIs when there are enough probes for a reliable estimate.
+		let showCi = false
 		if (showLoess && diagnostic.loess) {
 			const { loess } = diagnostic
+			const firstProbePos = probes.positions[0]
+			const lastProbePos = probes.positions[probes.positions.length - 1]
+			showCi = probes.positions.length >= minProbesForCi
+
 			for (const [fitted, ciLower, ciUpper, color] of [
 				[loess.group1_fitted, loess.group1_ci_lower, loess.group1_ci_upper, colors.group1],
 				[loess.group2_fitted, loess.group2_ci_lower, loess.group2_ci_upper, colors.group2]
@@ -145,28 +159,39 @@ export class DmrViewModel {
 				if (!fitted.length) continue
 				const lPos = loess.positions
 
-				// Draw CI as shaded region
-				ctx.globalAlpha = 0.12
-				ctx.fillStyle = color
-				ctx.beginPath()
-				for (let i = 0; i < lPos.length; i++) {
-					ctx.lineTo(scaleX(lPos[i]), scaleY(Math.max(0, Math.min(1, ciUpper[i]))))
-				}
-				for (let i = lPos.length - 1; i >= 0; i--) {
-					ctx.lineTo(scaleX(lPos[i]), scaleY(Math.max(0, Math.min(1, ciLower[i]))))
-				}
-				ctx.closePath()
-				ctx.fill()
+				// Find LOESS indices within the range of actual probe positions
+				let iStart = 0
+				let iEnd = lPos.length - 1
+				while (iStart < lPos.length && lPos[iStart] < firstProbePos) iStart++
+				while (iEnd >= 0 && lPos[iEnd] > lastProbePos) iEnd--
+				if (iStart > iEnd) continue
 
-				// Draw LOESS fitted curve (solid)
+				if (showCi) {
+					// Draw CI as shaded region
+					ctx.globalAlpha = 0.12
+					ctx.fillStyle = color
+					ctx.beginPath()
+					for (let i = iStart; i <= iEnd; i++) {
+						ctx.lineTo(scaleX(lPos[i]), scaleY(Math.max(0, Math.min(1, ciUpper[i]))))
+					}
+					for (let i = iEnd; i >= iStart; i--) {
+						ctx.lineTo(scaleX(lPos[i]), scaleY(Math.max(0, Math.min(1, ciLower[i]))))
+					}
+					ctx.closePath()
+					ctx.fill()
+				}
+
+				// Draw LOESS fitted curve (dashed when no CI, solid otherwise)
 				ctx.globalAlpha = 0.8
 				ctx.strokeStyle = color
 				ctx.lineWidth = 2
+				ctx.setLineDash(showCi ? [] : [6, 4])
 				ctx.beginPath()
-				for (let i = 0; i < lPos.length; i++) {
+				for (let i = iStart; i <= iEnd; i++) {
 					ctx.lineTo(scaleX(lPos[i]), scaleY(Math.max(0, Math.min(1, fitted[i]))))
 				}
 				ctx.stroke()
+				ctx.setLineDash([])
 			}
 		}
 
@@ -197,7 +222,7 @@ export class DmrViewModel {
 		}
 		ctx.globalAlpha = 1
 
-		return { minv: 0, maxv: 1, src: canvas.toDataURL('image/png') }
+		return { img: { minv: 0, maxv: 1, src: canvas.toDataURL('image/png') }, showCi }
 	}
 
 	private makeDmrBedItems(dmrResult: TermdbDmrSuccessResponse, settings: DmrConfig['settings']): BedItem[] {

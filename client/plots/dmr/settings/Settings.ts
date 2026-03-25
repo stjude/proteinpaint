@@ -13,6 +13,8 @@ export type DMRSettings = {
 	colors: { group1: string; group2: string; hyper: string; hypo: string }
 	/** Maximum region size (bp) to display LOESS trend curves (default: 250000) */
 	maxLoessRegion: number
+	/** Minimum number of probes required to show LOESS confidence intervals (default: 10) */
+	minProbesForCi: number
 	/** Backend engine: 'rust' (default) or 'r' (DMRCate) */
 	backend: 'rust' | 'r'
 }
