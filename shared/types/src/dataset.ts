@@ -72,9 +72,9 @@ type InfoFieldEntry = {
 
 /*
 type GenomicPositionEntry = {
-                chr: string
-                start: number
-                stop: number
+	chr: string
+	start: number
+	stop: number
 }
 */
 
@@ -175,12 +175,12 @@ type DictApi = {
 type SnvIndelFormat = {
 	[index: string]: {
 		/* has value for a non-GT field indicating the variant 
-        is annotated to this sample*/
+		is annotated to this sample*/
 		ID: string
 		Description: string
 		/** 'R' or 1. do not parse values here based on Number="R"
-        as we don't need to compute on the format values on backend
-        client will parse the values for display */
+		as we don't need to compute on the format values on backend
+		client will parse the values for display */
 		Number: string | number
 		Type: string
 	}
@@ -292,15 +292,15 @@ type SnvindelComputeDetails = {
 		name: string
 	}[]
 	/** a type of computing decides numeric values for each variant displayed in tk
-    computing type is also determined by number of groups
-    if only 1 group:
-         type=info: use numeric info field
-         type=filter: use AF
-         type=population: use AF
-    if there're two groups:
-         both types are "filter": allow AF diff or fisher
-         "filter" and "population": allow AF diff or fisher
-         else: value difference
+	computing type is also determined by number of groups
+	if only 1 group:
+		 type=info: use numeric info field
+		 type=filter: use AF
+		 type=population: use AF
+	if there're two groups:
+		 both types are "filter": allow AF diff or fisher
+		 "filter" and "population": allow AF diff or fisher
+		 else: value difference
 	*/
 	groups: (SnvindelComputeGroup_filter | SnvindelComputeGroup_population | SnvindelComputeGroup_info)[]
 	/** define lists of group-comparison methods to compute one numerical value per variant
@@ -520,11 +520,11 @@ type TrackLst = {
 
 	[
 	  {
-         "isfacet": true,
-         "name": "PEDDEP Prepilot",
-         "tracks": [
+		 "isfacet": true,
+		 "name": "PEDDEP Prepilot",
+		 "tracks": [
 		   {
-		     name:str // required. used as *identifer* for a track
+			 name:str // required. used as *identifer* for a track
 			 sample:str // required. should match with a sample in db!
 			 assay:str // required. free string not controlled in dictionary yet. if missing the track won't appear in facet table
 			 type:str // properties inherent for each custom track
@@ -681,7 +681,7 @@ for a given region, the median signal from probes in the region is used to make 
 this is alternative to CnvSegmentQuery
 
 type Probe2Cnv = {
-                file: string
+	file: string
 }
 */
 
@@ -1419,7 +1419,7 @@ type UrlTemplateBase = {
 }
 export type UrlTemplateSsm = UrlTemplateBase & {
 	/** to create separate link, but not directly on chr.pos.ref.alt string.
-    name of link is determined by either namekey or linkText. former allows to retrieve a name per m that's different from chr.pos.xx */
+	name of link is determined by either namekey or linkText. former allows to retrieve a name per m that's different from chr.pos.xx */
 	shownSeparately?: boolean
 	/** optional name of link, if set, same name will be used for all links. e.g. "ClinVar".
 if missing, name is value of m[url.namekey], as used in url itself (e.g. snp rsid) */
@@ -1568,9 +1568,9 @@ keep this setting here for reason of:
 	hierCluster?: any
 
 	/** ds customization of rules in TermTypeSelect on what term type to exclude for a usecase.
-    used by gdc in that gene exp cannot be used for filtering
-    note this applies to left-side term type tabs, but not terms in dict tree. latter is controlled by excludeTermtypeByTarget
-    */
+	used by gdc in that gene exp cannot be used for filtering
+	note this applies to left-side term type tabs, but not terms in dict tree. latter is controlled by excludeTermtypeByTarget
+	*/
 	useCasesExcluded?: {
 		/** key is target name (todo restrict values), value is array of 1 or more term
 		 * types (todo restrict values) */
@@ -1820,44 +1820,52 @@ type MassNav = {
 	tabs?: {
 		/** supported keys: about, charts, groups, filter
 		invalid key is ignored
-		when dslabel is too long to show in about tab middl row or to define alternative label, do .tabs:{about:{mid:'alt label'}}
-		*/
-		[index: string]: {
-			/** show in a specific order of tabs */
-			order?: number
-			/** label appearing in the top row in upper case */
-			top?: string
-			/** biggest label appearing in the middle row */
-			mid?: string
-			/** label appearing in the bottom row*/
-			btm?: string
-			/** if true, does not show the tab */
-			hide?: boolean
-			/** static html contents to show specifically in "about" tab subheader
-			 * maybe used for other tabs as well.
-			 */
-			html?: string
-			/** declare data release. should only use for "about" */
-			dataRelease?: {
-				/** data release version */
-				version: string
-				/** link to data release page */
-				link: string
-			}
-			/** html string, can include links to other
-			 * pages (e.g., tutorials, google group) */
-			additionalInfo?: string
-			/** "active" items, shown as clickable buttons in about tab. click an item to launch a plot */
-			activeItems?: {
-				items: ActiveItem[]
-				// can add holderStyle to customize
-			}
-		}
+		when dslabel is too long to show in about tab middl row or to define alternative label, 
+		do .tabs:{about:{mid:'alt label'}} */
+		about?: MassNavAboutTabEntry
+		charts?: MassNavTabEntry
+		groups?: MassNavTabEntry
+		filter?: MassNavTabEntry
 	}
 	/** customize background color of active navigation tab */
 	activeColor?: string
 	/** customize background color of active navigation tab on hover */
 	activeColorHover?: string
+}
+
+type MassNavTabEntry = {
+	/** show in a specific order of tabs */
+	order?: number
+	/** label appearing in the top row in upper case */
+	top?: string
+	/** biggest label appearing in the middle row */
+	mid?: string
+	/** label appearing in the bottom row*/
+	btm?: string
+	/** if true, does not show the tab */
+	hide?: boolean
+}
+
+type MassNavAboutTabEntry = MassNavTabEntry & {
+	/** html string, can include links to other
+	 * pages (e.g., tutorials, google group) */
+	additionalInfo?: string
+	/** static html contents to show specifically in "about" tab subheader
+	 * maybe used for other tabs as well.
+	 * Will not render if cohort.termdb.selectCohort is present */
+	html?: string
+	/** declare data release. Shown with the server info */
+	dataRelease?: {
+		/** data release version */
+		version: string
+		/** link to data release page */
+		link: string
+	}
+	/** "active" items, shown as clickable buttons in about tab. click an item to launch a plot */
+	activeItems?: {
+		items: ActiveItem[]
+		// can add holderStyle to customize
+	}
 }
 
 type ActiveItem = {
