@@ -162,7 +162,11 @@ class ControlPanel {
 		const viewRow = menuTable.append('tr') as any
 		this.addLabel(viewRow, 'VIEW')
 		const viewBtnDiv = viewRow.append('td')
-		this.controls.view = viewBtnDiv.append('span').style('padding-right', '5px').style('display', 'block')
+		this.controls.view = viewBtnDiv
+			.append('span')
+			.attr('data-testid', 'sjpp-hic-view-span')
+			.style('padding-right', '5px')
+			.style('display', 'block')
 
 		this.controls.genomeViewBtn = viewBtnDiv
 			.append('button')
