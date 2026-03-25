@@ -138,6 +138,21 @@ export function getGenesetNames(genome: any): string[] {
 	return []
 }
 
+/** Get genes for a geneset term ID from the genome-level geneset termdb.
+ *  Uses the same lookup as trigger_genesetByTermId() in termdb.js.
+ *  Returns the gene list (array of {symbol} objects) or undefined if not found. */
+export function getGenesForGeneset(genome: any, genesetTermId: string): { symbol: string }[] | undefined {
+	if (!genome?.termdbs) return undefined
+	for (const key in genome.termdbs) {
+		const tdb = genome.termdbs[key]
+		if (!tdb.cohort?.termdb?.isGeneSetTermdb) continue
+		const getGenesetByTermId = tdb.cohort?.termdb?.q?.getGenesetByTermId
+		if (!getGenesetByTermId) continue
+		return getGenesetByTermId(genesetTermId)
+	}
+	return undefined
+}
+
 /** Extract geneset names from user prompt that match available genesets.
  *  Splits prompt into keywords (>= 5 chars) and matches against whole
  *  underscore-delimited segments of geneset names to avoid false positives
