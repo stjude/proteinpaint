@@ -11,7 +11,11 @@ export function maySetSandboxHeader(appState) {
 			this.dom.header.text('Metabolite Intensity Clustering')
 			break
 		case TermTypes.WHOLE_PROTEOME_ABUNDANCE:
-			this.dom.header.text('Protein Abundance Clustering')
+			this.dom.header.text(
+				this.config.assayCohortTitle
+					? `Protein Abundance Clustering (${this.config.assayCohortTitle})`
+					: 'Protein Abundance Clustering'
+			)
 			break
 		default:
 			throw `dataType '${this.config.dataType}' not recognized`

@@ -320,9 +320,12 @@ class SummaryPlot extends PlotBase implements RxComponent {
 		const { term, term2 } = this.config
 		const mainTerm = term.getTitleText?.() || term.term.name
 		if (term2?.type) {
-			this.dom.paneTitleText.html(`${term2.getTitleText?.() || term2.term.name} vs ${mainTerm}`)
+			this.dom.paneTitleText.html(
+				`${term2.getTitleText?.() || term2.term.name} vs ${mainTerm}` +
+					(this.config.assayCohortTitle ? ` (${this.config.assayCohortTitle})` : '')
+			)
 		} else {
-			this.dom.paneTitleText.html(mainTerm)
+			this.dom.paneTitleText.html(mainTerm + (this.config.assayCohortTitle ? ` (${this.config.assayCohortTitle})` : ''))
 		}
 	}
 

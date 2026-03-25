@@ -141,7 +141,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		.text('Select Protein')
 		.on('click', () => {
 			if (!selectedCohortKey) return
-
+			const assayCohortTitle = `${selectedAssayKey}: ${selectedCohortKey}`
 			const chart = {
 				label: 'Protein Abundance',
 				chartType: 'wholeProteomeAbundance',
@@ -154,6 +154,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 				},
 				processSelection: termlst => termlst,
 				updateActionBySelectedTerms: (action, termlst) => {
+					action.config.assayCohortTitle = assayCohortTitle
 					action.config.assayKey = selectedAssayKey
 					action.config.cohortKey = selectedCohortKey
 					action.config.filter = buildFilter(
