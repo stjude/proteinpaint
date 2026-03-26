@@ -1,3 +1,5 @@
+import { getNormalRoot } from '#filter'
+
 export class DiscoInteractions {
 	discoApp: any
 
@@ -47,10 +49,10 @@ export class DiscoInteractions {
 				tklst: [
 					{
 						type: 'mds3',
-						dslabel: this.discoApp.app.opts.state.dslabel,
+						dslabel: this.discoApp.app.opts.state.vocab.dslabel,
 						hlaachange: mnames.join(','),
 						filter0,
-						filterObj: structuredClone(filter) // must not pass filter as frozen. duplicate to pass unfrozen copy so mds3 code will work
+						filterObj: getNormalRoot(filter) // must not pass filter as frozen. pass unfrozen, normalized copy so mds3 code will work
 					}
 				]
 			}
