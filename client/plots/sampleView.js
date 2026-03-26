@@ -139,6 +139,7 @@ class SampleView {
 			}
 			const hasSampleAncestry = appState.termdbConfig.hasSampleAncestry
 			const sampleName = searchSampleInput(this.dom.sampleDiv, this.samplesData, hasSampleAncestry, callback)
+			alert(sampleName)
 			this.sample = config.sample || { sampleId: this.samplesData[sampleName].id, sampleName }
 
 			this.dom.downloadbt = sampleDiv
@@ -881,6 +882,11 @@ export function searchSampleInput(holder, samplesData, hasSampleAncestry, callba
 	if (allSamples.length == 0)
 		//Happens if it requires sign in first
 		return
+
+	// === Precompute Hierarchy labels once ===
+	const { childrenByParent, rootFor } = buildHierarchy(samplesData)
+	alert(JSON.stringify(Object.fromEntries(childrenByParent)))
+	alert(JSON.stringify(Object.fromEntries(rootFor)))
 	const sampleName = allSamples[0]
 	const input = holder
 		.append('input')
@@ -921,7 +927,7 @@ export function searchSampleInput(holder, samplesData, hasSampleAncestry, callba
 			.attr(
 				'label',
 				(d, i) =>
-					getLabel(d) +
+					getLabel(d, childrenByParent, rootFor) +
 					(i + 1 == limit
 						? isBigDataset
 							? ` Showing first ${i + 1} hits`
@@ -932,49 +938,15 @@ export function searchSampleInput(holder, samplesData, hasSampleAncestry, callba
 			)
 	}
 
-	function getLabel(sampleName) {
-		const related = getSamplesRelated(samplesData, sampleName)
-		if (related.length === 0) return sampleName
+	function getLabel(sampleName, childrenByParent, rootFor) {
+		const rootName = rootFor.get(sampleName) || sampleName
+		if (!childrenByParent.has(rootName)) return sampleName
 
-		// Find the root name
-		let rootName = sampleName
-		let curr = samplesData[sampleName]
-		while (curr?.ancestor_name) {
-			rootName = curr.ancestor_name
-			curr = samplesData[rootName]
-		}
-
-		// Build children map: parent → sorted list of child names
-		const childrenByParent = new Map()
-		related.forEach(s => {
-			const name = s.sampleName
-			const parent = samplesData[name]?.ancestor_name
-			if (parent) {
-				if (!childrenByParent.has(parent)) childrenByParent.set(parent, [])
-				childrenByParent.get(parent).push(name)
-			}
-		})
-
-		for (const list of childrenByParent.values()) {
-			list.sort((a, b) => {
-				const na = Number(a)
-				const nb = Number(b)
-				if (!isNaN(na) && !isNaN(nb)) return na - nb
-				return a.localeCompare(b)
-			})
-		}
-
-		// Get direct children of root
 		const rootChildren = childrenByParent.get(rootName) || []
-		if (rootChildren.length === 0) {
-			return sampleName
-		}
+		if (rootChildren.length === 0) return sampleName
 
-		// Collect representation for every root-level child
 		const parts = []
-
-		rootChildren.forEach(child => {
-			// Build chain for this child (main path)
+		for (const child of rootChildren) {
 			let chain = [child]
 			let cur = child
 			while (true) {
@@ -983,63 +955,95 @@ export function searchSampleInput(holder, samplesData, hasSampleAncestry, callba
 				chain.push(kids[0])
 				cur = kids[0]
 			}
-
-			// If chain has length > 1 → use > notation
-			if (chain.length > 1) {
-				parts.push(chain.join(' > '))
-			} else {
-				// Just the leaf
-				parts.push(child)
-			}
-		})
-
-		// Build final label
-		let label = parts.join(', ')
-
-		return label
+			parts.push(chain.length > 1 ? chain.join(' > ') : child)
+		}
+		return parts.join(', ')
 	}
 	return sampleName
 }
 
+function buildHierarchy(samplesData) {
+	let childrenByParent = new Map()
+	let rootFor = new Map()
+
+	// Build children map + find roots
+	for (const s of Object.values(samplesData)) {
+		const childName = s.name
+		const parentName = s.ancestor_name
+		if (parentName) {
+			if (!childrenByParent.has(parentName)) {
+				childrenByParent.set(parentName, [])
+			}
+			childrenByParent.get(parentName).push(childName)
+		}
+
+		// find root for this sample
+		let root = childName
+		let curr = s
+		while (curr?.ancestor_name) {
+			root = curr.ancestor_name
+			curr = samplesData[root]
+		}
+		rootFor.set(childName, root)
+	}
+
+	// Sort every children list once
+	for (const list of childrenByParent.values()) {
+		list.sort((a, b) => {
+			const na = Number(a)
+			const nb = Number(b)
+			return !isNaN(na) && !isNaN(nb) ? na - nb : a.localeCompare(b)
+		})
+	}
+	return { childrenByParent, rootFor }
+}
+
 //Get samples related through parent
-export function getSamplesRelated(samplesData, sampleName) {
+export function getSamplesRelated(samplesData, sampleName, childrenByParent = null, rootFor) {
 	if (!samplesData[sampleName]) return []
 
-	// Find root
-	let rootName = sampleName
-	let current = samplesData[sampleName]
-	while (current?.ancestor_name) {
-		rootName = current.ancestor_name
-		current = samplesData[rootName]
+	// Fast path: use precomputed data when available
+	let rootName
+	if (rootFor && childrenByParent) {
+		rootName = rootFor.get(sampleName)
+	} else {
+		// Fallback: compute root on the fly if precomputed data is not available (only when called from getState() or elsewhere)
+		rootName = sampleName
+		let current = samplesData[sampleName]
+		while (current?.ancestor_name) {
+			rootName = current.ancestor_name
+			current = samplesData[rootName]
+		}
 	}
 
 	const root = samplesData[rootName]
 	if (!root) return []
 
-	// Build children map
-	const childrenByParent = new Map()
-	for (const s of Object.values(samplesData)) {
-		if (s.ancestor_name) {
-			if (!childrenByParent.has(s.ancestor_name)) {
-				childrenByParent.set(s.ancestor_name, [])
+	// Use precomputed children map if available, otherwise build it (slow path)
+	let kidsMap = childrenByParent
+	if (!kidsMap) {
+		kidsMap = new Map()
+		for (const s of Object.values(samplesData)) {
+			if (s.ancestor_name) {
+				if (!kidsMap.has(s.ancestor_name)) kidsMap.set(s.ancestor_name, [])
+				kidsMap.get(s.ancestor_name).push(s)
 			}
-			childrenByParent.get(s.ancestor_name).push(s)
 		}
-	}
 
-	//Sort children
-	for (const kids of childrenByParent.values()) {
-		kids.sort((a, b) => {
-			const na = Number(a.name)
-			const nb = Number(b.name)
-			if (!isNaN(na) && !isNaN(nb)) return na - nb
-			return a.name.localeCompare(b.name)
-		})
+		// Sort children
+		for (const list of kidsMap.values()) {
+			list.sort((a, b) => {
+				const na = Number(a.name)
+				const nb = Number(b.name)
+				if (!isNaN(na) && !isNaN(nb)) return na - nb
+				return a.name.localeCompare(b.name)
+			})
+		}
 	}
 
 	// Collect in pre-order
 	const samples = []
-	const hasChildren = (childrenByParent.get(rootName) || []).length > 0
+	const hasChildren = (kidsMap.get(rootName) || []).length > 0
 
 	// Include root only if it has no descendants or isn't just a grouping node
 	if (root.sample_type !== ROOT_SAMPLE_TYPE || !hasChildren) {
@@ -1047,7 +1051,7 @@ export function getSamplesRelated(samplesData, sampleName) {
 	}
 
 	function traverse(parentName) {
-		const kids = childrenByParent.get(parentName) || []
+		const kids = kidsMap.get(parentName) || []
 		for (const kid of kids) {
 			samples.push({ sampleId: kid.id, sampleName: kid.name })
 			traverse(kid.name)
