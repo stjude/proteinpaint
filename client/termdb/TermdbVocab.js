@@ -1264,8 +1264,10 @@ export class TermdbVocab extends Vocab {
 				.from         string, the object to map from, required
 				.to           string, the object to map to, optional
 				.convert      optional step, somehow the caller must know this is needed?
+		
+		byRef <boolean>       whether to use sample._ref_ to convert
 	*/
-	async convertSampleId(samples, attributes) {
+	async convertSampleId(samples, attributes, byRef) {
 		// first pass of attributes[] and perform id conversion
 		const byAttr = new Map()
 		const bySample = []
@@ -1276,8 +1278,13 @@ export class TermdbVocab extends Vocab {
 			for (const attr of attributes) {
 				if (!('to' in attr)) attr.to = attr.from
 				if (!attr.convert) {
-					// can be filled-in without a server request
+					// do not convert, no need for server request
 					obj[attr.to] = sample[attr.from]
+					continue
+				}
+				if (byRef) {
+					// can convert id using sample ref, no need for server request
+					obj[attr.to] = sample._ref_[attr.to]
 					continue
 				}
 				// this attr requires conversion;

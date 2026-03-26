@@ -330,12 +330,20 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 		const samples = q.samples || []
 		if (limitSamples) {
 			for (const sid of limitSamples) {
-				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+				if (ds.cohort?.termdb?.q?.id2sampleRefs) {
+					bySampleId[sid] = ds.cohort.termdb.q.id2sampleRefs(sid)
+				} else {
+					bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+				}
 			}
 		} else {
 			// Use all samples with exp data
 			for (const sid of samples) {
-				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+				if (ds.cohort?.termdb?.q?.id2sampleRefs) {
+					bySampleId[sid] = ds.cohort.termdb.q.id2sampleRefs(sid)
+				} else {
+					bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+				}
 			}
 		}
 
