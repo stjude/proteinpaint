@@ -18,7 +18,7 @@ import serverconfig from '#src/serverconfig.js'
 import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
-import { TermTypes, WHOLE_PROTEOME_ABUNDANCE } from '#shared/terms.js'
+import { TermTypes, PROTEOME_ABUNDANCE } from '#shared/terms.js'
 import { termType2label } from '#shared/terms.js'
 import { formatElapsedTime } from '#shared/time.js'
 
@@ -57,9 +57,9 @@ function init({ genomes }) {
 				if (q.terms.length < 3)
 					throw `A minimum of three genes is required for clustering. Please refresh this page to clear this error.`
 				result = (await getResult(q, ds)) as TermdbClusterResponse
-			} else if (WHOLE_PROTEOME_ABUNDANCE == q.dataType) {
+			} else if (PROTEOME_ABUNDANCE == q.dataType) {
 				const proteomeQuery = ds.queries?.proteome
-				if (!proteomeQuery?.get) throw `no ${TermTypes.WHOLE_PROTEOME_ABUNDANCE} data getter on this dataset`
+				if (!proteomeQuery?.get) throw `no ${TermTypes.PROTEOME_ABUNDANCE} data getter on this dataset`
 				if (!q.terms) throw `missing gene list`
 				if (!Array.isArray(q.terms)) throw `gene list is not an array`
 				// TODO: there should be a fix on the client-side to handle this error more gracefully,
@@ -93,7 +93,7 @@ async function getResult(q: TermdbClusterRequest & ReqQueryAddons, ds: any) {
 
 	let term2sample2value, byTermId, bySampleId, skippedSexChrGenes
 
-	if (q.dataType == WHOLE_PROTEOME_ABUNDANCE) {
+	if (q.dataType == PROTEOME_ABUNDANCE) {
 		;({ term2sample2value, byTermId, bySampleId, skippedSexChrGenes } = await ds.queries.proteome.get(_q))
 	} else {
 		;({ term2sample2value, byTermId, bySampleId, skippedSexChrGenes } = await ds.queries[q.dataType].get(_q, ds)) // 2nd ds param needed for ds-supplied getter

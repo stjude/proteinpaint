@@ -10,7 +10,7 @@ export function maySetSandboxHeader(appState) {
 		case TermTypes.METABOLITE_INTENSITY:
 			this.dom.header.text('Metabolite Intensity Clustering')
 			break
-		case TermTypes.WHOLE_PROTEOME_ABUNDANCE:
+		case TermTypes.PROTEOME_ABUNDANCE:
 			this.dom.header.text(
 				this.config.assayCohortTitle
 					? `Protein Abundance Clustering (${this.config.assayCohortTitle})`

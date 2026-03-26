@@ -397,7 +397,7 @@ export const setCellProps = {
 	hierCluster: setHierClusterCellProps,
 	[TermTypes.GENE_EXPRESSION]: setNumericCellProps,
 	[TermTypes.METABOLITE_INTENSITY]: setNumericCellProps,
-	[TermTypes.WHOLE_PROTEOME_ABUNDANCE]: setNumericCellProps
+	[TermTypes.PROTEOME_ABUNDANCE]: setNumericCellProps
 	//termCollection: setTermCollectionCellProps
 }
 
@@ -410,7 +410,7 @@ export const maySetEmptyCell = {
 	survival: setNumericEmptyCell,
 	[TermTypes.GENE_EXPRESSION]: setNumericEmptyCell,
 	[TermTypes.METABOLITE_INTENSITY]: setNumericEmptyCell,
-	[TermTypes.WHOLE_PROTEOME_ABUNDANCE]: setNumericEmptyCell
+	[TermTypes.PROTEOME_ABUNDANCE]: setNumericEmptyCell
 }
 
 function setVariantEmptyCell(siblingCells, cellTemplate, s, d) {

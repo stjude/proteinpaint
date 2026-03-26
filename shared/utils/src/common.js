@@ -22,7 +22,7 @@ export const TermTypeGroups = {
 	GENE_EXPRESSION: 'Gene Expression',
 	GSEA: 'GSEA',
 	METABOLITE_INTENSITY: 'Metabolite Intensity',
-	WHOLE_PROTEOME_ABUNDANCE: 'Whole Proteome Abundance',
+	PROTEOME_ABUNDANCE: 'Whole Proteome Abundance',
 	MUTATION_CNV_FUSION: 'Mutation/CNV/Fusion',
 	MUTATION_SIGNATURE: 'Mutation Signature',
 	PROTEIN_EXPRESSION: 'Protein Expression',

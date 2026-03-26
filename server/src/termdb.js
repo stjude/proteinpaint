@@ -179,7 +179,7 @@ async function trigger_findterm(q, req, res, termdb, ds, genome) {
 				foundTerms.push({ name: metabolite, type: 'metaboliteIntensity' })
 			}
 			terms.push(...foundTerms)
-		} else if (q.targetType == TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE) {
+		} else if (q.targetType == TermTypeGroups.PROTEOME_ABUNDANCE) {
 			if (!ds.queries?.proteome?.find) throw 'queries.proteome.find() missing'
 			const proteomeDetails = q.usecase?.proteomeDetails
 			const matches = await ds.queries.proteome.find({ proteins: [q.findterm], proteomeDetails })

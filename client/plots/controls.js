@@ -19,7 +19,7 @@ export const term0_term2_defaultQ = {
 	[TermTypes.GENE_VARIANT]: { type: 'predefined-groupset' },
 	[TermTypes.GENE_EXPRESSION]: { mode: 'discrete' },
 	[TermTypes.METABOLITE_INTENSITY]: { mode: 'discrete' },
-	[TermTypes.WHOLE_PROTEOME_ABUNDANCE]: { mode: 'discrete' },
+	[TermTypes.PROTEOME_ABUNDANCE]: { mode: 'discrete' },
 	[TermTypes.DNA_METHYLATION]: { mode: 'discrete' }
 }
 

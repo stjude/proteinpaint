@@ -48,7 +48,7 @@ export const SNP_LOCUS = 'snplocus'
 export const SSGSEA = 'ssGSEA'
 export const SURVIVAL = 'survival'
 export const TERM_COLLECTION = 'termCollection'
-export const WHOLE_PROTEOME_ABUNDANCE = 'proteomeAbundance'
+export const PROTEOME_ABUNDANCE = 'proteomeAbundance'
 
 //Term types should be used gradually using these constants instead of hardcoding the values,
 // eg: type == CATEGORICAL instead of type == 'categorical'
@@ -67,7 +67,7 @@ export const TermTypes: { [key: string]: string } = {
 	SURVIVAL,
 	SAMPLELST,
 	METABOLITE_INTENSITY,
-	WHOLE_PROTEOME_ABUNDANCE,
+	PROTEOME_ABUNDANCE,
 	SINGLECELL_CELLTYPE,
 	SINGLECELL_GENE_EXPRESSION,
 	MULTIVALUE,
@@ -84,7 +84,7 @@ export const TermTypes2Dt = {
 	[SSGSEA]: dtssgsea,
 	[DNA_METHYLATION]: dtdnamethylation,
 	[METABOLITE_INTENSITY]: dtmetaboliteintensity,
-	[WHOLE_PROTEOME_ABUNDANCE]: dtproteomeabundance
+	[PROTEOME_ABUNDANCE]: dtproteomeabundance
 }
 
 // maps term type to group (as is shown as toggles in search ui)
@@ -105,7 +105,7 @@ export const typeGroup = {
 	[SSGSEA]: TermTypeGroups.SSGSEA,
 	[DNA_METHYLATION]: TermTypeGroups.DNA_METHYLATION,
 	[METABOLITE_INTENSITY]: TermTypeGroups.METABOLITE_INTENSITY,
-	[WHOLE_PROTEOME_ABUNDANCE]: TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE,
+	[PROTEOME_ABUNDANCE]: TermTypeGroups.PROTEOME_ABUNDANCE,
 	[TERM_COLLECTION]: TermTypeGroups.TERM_COLLECTION,
 	[SINGLECELL_CELLTYPE]: TermTypeGroups.SINGLECELL_CELLTYPE,
 	[SINGLECELL_GENE_EXPRESSION]: TermTypeGroups.SINGLECELL_GENE_EXPRESSION
@@ -120,7 +120,7 @@ const nonDictTypes = new Set([
 	DNA_METHYLATION,
 	GENE_VARIANT,
 	METABOLITE_INTENSITY,
-	WHOLE_PROTEOME_ABUNDANCE,
+	PROTEOME_ABUNDANCE,
 	SINGLECELL_CELLTYPE,
 	SINGLECELL_GENE_EXPRESSION
 ])
@@ -136,7 +136,7 @@ export const numericTypes = new Set([
 	SSGSEA,
 	DNA_METHYLATION,
 	METABOLITE_INTENSITY,
-	WHOLE_PROTEOME_ABUNDANCE,
+	PROTEOME_ABUNDANCE,
 	SINGLECELL_GENE_EXPRESSION,
 	DATE
 ])
@@ -184,7 +184,7 @@ export function equals(t1: any, t2: any) {
 		case DNA_METHYLATION:
 			return t1.chr == t2.chr && t1.start == t2.start && t1.stop == t2.stop
 		case METABOLITE_INTENSITY:
-		case WHOLE_PROTEOME_ABUNDANCE:
+		case PROTEOME_ABUNDANCE:
 			return t1.name == t2.name
 		case GENE_VARIANT:
 			return t1.gene == t2.gene || (t1.chr == t2.chr && t1.start == t2.start && t1.stop == t2.stop)

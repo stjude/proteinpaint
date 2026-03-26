@@ -6,7 +6,7 @@ import {
 	SINGLECELL_CELLTYPE,
 	GENE_EXPRESSION,
 	METABOLITE_INTENSITY,
-	WHOLE_PROTEOME_ABUNDANCE,
+	PROTEOME_ABUNDANCE,
 	SINGLECELL_GENE_EXPRESSION,
 	DNA_METHYLATION,
 	SSGSEA
@@ -368,7 +368,7 @@ function getAllowedTermTypes(ds) {
 	// assess other data types and add corresponding term types
 	if (ds.queries?.geneExpression) typeSet.add(GENE_EXPRESSION)
 	if (ds.queries?.metaboliteIntensity) typeSet.add(METABOLITE_INTENSITY)
-	if (ds.queries?.proteome?.assays) typeSet.add(WHOLE_PROTEOME_ABUNDANCE)
+	if (ds.queries?.proteome?.assays) typeSet.add(PROTEOME_ABUNDANCE)
 	if (ds.queries?.ssGSEA) typeSet.add(SSGSEA)
 	if (ds.queries?.dnaMethylation) typeSet.add(DNA_METHYLATION)
 	if (ds.queries?.singleCell) {

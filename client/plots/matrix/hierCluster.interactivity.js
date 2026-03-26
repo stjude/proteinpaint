@@ -348,9 +348,7 @@ export function setClusteringBtn(holder, callback) {
 			label: cluteringButtonLabel,
 			getCount: () => this.hcTermGroup?.lst.length || 0,
 			showCount:
-				dataType == TermTypes.METABOLITE_INTENSITY || dataType == TermTypes.WHOLE_PROTEOME_ABUNDANCE
-					? 'append'
-					: 'hide',
+				dataType == TermTypes.METABOLITE_INTENSITY || dataType == TermTypes.PROTEOME_ABUNDANCE ? 'append' : 'hide',
 			rows: [
 				{
 					label: `Cluster ${cl.Samples}`,
@@ -543,11 +541,10 @@ function updateClusteringControls(self, app, parent, table) {
 		colorSchemeControl.style('display', 'none')
 	}
 
-	// Only add set edit option for METABOLITE_INTENSITY and WHOLE_PROTEOME_ABUNDANCE
+	// Only add set edit option for METABOLITE_INTENSITY and PROTEOME_ABUNDANCE
 	if (
 		parent.chartType == 'hierCluster' &&
-		(parent.config.dataType == TermTypes.METABOLITE_INTENSITY ||
-			parent.config.dataType == TermTypes.WHOLE_PROTEOME_ABUNDANCE)
+		(parent.config.dataType == TermTypes.METABOLITE_INTENSITY || parent.config.dataType == TermTypes.PROTEOME_ABUNDANCE)
 	) {
 		const geneInputTr = table.insert('tr', () => table.select('tr').node())
 		geneInputTr.append('td').attr('class', 'sja-termdb-config-row-label').html('Hierarchical Clustering Term Set')

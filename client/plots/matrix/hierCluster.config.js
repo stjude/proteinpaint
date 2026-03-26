@@ -74,7 +74,7 @@ export async function getPlotConfig(opts = {}, app) {
 				if (
 					config.dataType == TermTypes.GENE_EXPRESSION ||
 					config.dataType == TermTypes.METABOLITE_INTENSITY ||
-					config.dataType == TermTypes.WHOLE_PROTEOME_ABUNDANCE
+					config.dataType == TermTypes.PROTEOME_ABUNDANCE
 				) {
 					// set missing term type based on data type
 					tw.term.type = config.dataType

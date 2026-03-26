@@ -84,7 +84,7 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 			f = await get_geneExpression(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == TermTypes.METABOLITE_INTENSITY) {
 			f = await get_metaboliteIntensity(item.tvs, CTEname_i, ds)
-		} else if (item.tvs.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE) {
+		} else if (item.tvs.term.type == TermTypes.PROTEOME_ABUNDANCE) {
 			f = await get_proteomeAbundance(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == TermTypes.SSGSEA) {
 			f = await get_ssGSEA(item.tvs, CTEname_i, ds)
