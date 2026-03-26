@@ -987,7 +987,7 @@ export class MatrixControls {
 									} else if (
 										tw.term.type == TermTypes.GENE_EXPRESSION ||
 										tw.term.type == TermTypes.METABOLITE_INTENSITY ||
-										tw.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE
+										tw.term.type == TermTypes.PROTEOME_ABUNDANCE
 									) {
 										row.push(s[tw.$id]?.renderedValues?.[0]?.value || '')
 									} else {

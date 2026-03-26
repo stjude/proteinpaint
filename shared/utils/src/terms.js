@@ -33,7 +33,7 @@ const SNP_LOCUS = 'snplocus'
 const SSGSEA = 'ssGSEA'
 const SURVIVAL = 'survival'
 const TERM_COLLECTION = 'termCollection'
-const WHOLE_PROTEOME_ABUNDANCE = 'proteomeAbundance'
+const PROTEOME_ABUNDANCE = 'proteomeAbundance'
 const TermTypes = {
 	GENE_VARIANT,
 	GENE_EXPRESSION,
@@ -49,7 +49,7 @@ const TermTypes = {
 	SURVIVAL,
 	SAMPLELST,
 	METABOLITE_INTENSITY,
-	WHOLE_PROTEOME_ABUNDANCE,
+	PROTEOME_ABUNDANCE,
 	SINGLECELL_CELLTYPE,
 	SINGLECELL_GENE_EXPRESSION,
 	MULTIVALUE,
@@ -65,7 +65,7 @@ const TermTypes2Dt = {
 	[SSGSEA]: dtssgsea,
 	[DNA_METHYLATION]: dtdnamethylation,
 	[METABOLITE_INTENSITY]: dtmetaboliteintensity,
-	[WHOLE_PROTEOME_ABUNDANCE]: dtproteomeabundance
+	[PROTEOME_ABUNDANCE]: dtproteomeabundance
 }
 const typeGroup = {
 	[CATEGORICAL]: TermTypeGroups.DICTIONARY_VARIABLES,
@@ -84,7 +84,7 @@ const typeGroup = {
 	[SSGSEA]: TermTypeGroups.SSGSEA,
 	[DNA_METHYLATION]: TermTypeGroups.DNA_METHYLATION,
 	[METABOLITE_INTENSITY]: TermTypeGroups.METABOLITE_INTENSITY,
-	[WHOLE_PROTEOME_ABUNDANCE]: TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE,
+	[PROTEOME_ABUNDANCE]: TermTypeGroups.PROTEOME_ABUNDANCE,
 	[TERM_COLLECTION]: TermTypeGroups.TERM_COLLECTION,
 	[SINGLECELL_CELLTYPE]: TermTypeGroups.SINGLECELL_CELLTYPE,
 	[SINGLECELL_GENE_EXPRESSION]: TermTypeGroups.SINGLECELL_GENE_EXPRESSION
@@ -98,7 +98,7 @@ const nonDictTypes = /* @__PURE__ */ new Set([
 	DNA_METHYLATION,
 	GENE_VARIANT,
 	METABOLITE_INTENSITY,
-	WHOLE_PROTEOME_ABUNDANCE,
+	PROTEOME_ABUNDANCE,
 	SINGLECELL_CELLTYPE,
 	SINGLECELL_GENE_EXPRESSION
 ])
@@ -112,7 +112,7 @@ const numericTypes = /* @__PURE__ */ new Set([
 	SSGSEA,
 	DNA_METHYLATION,
 	METABOLITE_INTENSITY,
-	WHOLE_PROTEOME_ABUNDANCE,
+	PROTEOME_ABUNDANCE,
 	SINGLECELL_GENE_EXPRESSION,
 	DATE
 ])
@@ -151,7 +151,7 @@ function equals(t1, t2) {
 		case DNA_METHYLATION:
 			return t1.chr == t2.chr && t1.start == t2.start && t1.stop == t2.stop
 		case METABOLITE_INTENSITY:
-		case WHOLE_PROTEOME_ABUNDANCE:
+		case PROTEOME_ABUNDANCE:
 			return t1.name == t2.name
 		case GENE_VARIANT:
 			return t1.gene == t2.gene || (t1.chr == t2.chr && t1.start == t2.start && t1.stop == t2.stop)
@@ -286,7 +286,7 @@ export {
 	TermTypeGroups2 as TermTypeGroups,
 	TermTypes,
 	TermTypes2Dt,
-	WHOLE_PROTEOME_ABUNDANCE,
+	PROTEOME_ABUNDANCE,
 	annoNumericTypes,
 	dtTermTypes,
 	equals,

@@ -95,7 +95,7 @@ export const DATA_TYPE_REGISTRY: DataTypeConfig[] = [
 		dataTypeDescription: 'Metabolite names'
 	},
 	{
-		termType: TermTypes.WHOLE_PROTEOME_ABUNDANCE,
+		termType: TermTypes.PROTEOME_ABUNDANCE,
 		detectAvailability: (ds: any) => !!ds?.queries?.proteome?.assays,
 		schemaFieldName: 'proteinNames',
 		schemaDefinition: {

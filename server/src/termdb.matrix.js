@@ -17,7 +17,7 @@ import {
 	SINGLECELL_CELLTYPE,
 	SINGLECELL_GENE_EXPRESSION,
 	SSGSEA,
-	WHOLE_PROTEOME_ABUNDANCE
+	PROTEOME_ABUNDANCE
 } from '#shared/terms.js'
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
@@ -240,10 +240,9 @@ async function getSampleData(q, ds, onlyChildren = false) {
 			tw.term.type == METABOLITE_INTENSITY ||
 			tw.term.type == SSGSEA ||
 			tw.term.type == DNA_METHYLATION ||
-			tw.term.type == WHOLE_PROTEOME_ABUNDANCE
+			tw.term.type == PROTEOME_ABUNDANCE
 		) {
-			const queryHandler =
-				tw.term.type == WHOLE_PROTEOME_ABUNDANCE ? q.ds.queries?.proteome : q.ds.queries?.[tw.term.type]
+			const queryHandler = tw.term.type == PROTEOME_ABUNDANCE ? q.ds.queries?.proteome : q.ds.queries?.[tw.term.type]
 			if (!queryHandler) throw 'not supported by dataset: ' + tw.term.type
 			let lstOfBins // of this tw. only set when q.mode is discrete
 			if (tw.q?.mode == 'discrete' || tw.q?.mode == 'binary') {

@@ -201,7 +201,7 @@ export function setInteractivity(self) {
 							}`
 						)
 					}
-				} else if (d.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE) {
+				} else if (d.term.type == TermTypes.PROTEOME_ABUNDANCE) {
 					{
 						const [c1, c2] = table.addRow()
 						c1.html('gene')
@@ -561,7 +561,7 @@ export function setInteractivity(self) {
 							}`
 						)
 					}
-				} else if (sampleData.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE) {
+				} else if (sampleData.term.type == TermTypes.PROTEOME_ABUNDANCE) {
 					{
 						const [c1, c2] = table.addRow()
 						c1.html('Gene')
@@ -808,7 +808,7 @@ function setTermActions(self) {
 				? 'gene'
 				: t.tw.term.type == TermTypes.METABOLITE_INTENSITY
 				? 'metabolite'
-				: t.tw.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE
+				: t.tw.term.type == TermTypes.PROTEOME_ABUNDANCE
 				? 'protein'
 				: 'variable'
 
@@ -990,7 +990,7 @@ function setTermActions(self) {
 				? 'gene'
 				: t.tw.term.type == TermTypes.METABOLITE_INTENSITY
 				? 'metabolite'
-				: t.tw.term.type == TermTypes.WHOLE_PROTEOME_ABUNDANCE
+				: t.tw.term.type == TermTypes.PROTEOME_ABUNDANCE
 				? 'protein'
 				: 'variable'
 		const sortRevertable = self.type != 'hierCluster' && t.tw.sortSamples?.priority !== undefined
@@ -1344,10 +1344,10 @@ function setTermActions(self) {
 				usecase.target = TermTypes.METABOLITE_INTENSITY
 				usecase.detail = 'term'
 			} else if (
-				self.config.dataType == TermTypes.WHOLE_PROTEOME_ABUNDANCE &&
+				self.config.dataType == TermTypes.PROTEOME_ABUNDANCE &&
 				(!self.activeLabel || self.activeLabel.grp.type == 'hierCluster')
 			) {
-				usecase.target = TermTypes.WHOLE_PROTEOME_ABUNDANCE
+				usecase.target = TermTypes.PROTEOME_ABUNDANCE
 				usecase.detail = 'term'
 			} else {
 				usecase.target = self.activeLabel.tw.term.type
@@ -1394,7 +1394,7 @@ function setTermActions(self) {
 		const termgroups = self.termGroups
 
 		const isMetaboliteIntensityCBut = self.config.dataType == TermTypes.METABOLITE_INTENSITY && !t
-		const isProteomeAbundanceCBut = self.config.dataType == TermTypes.WHOLE_PROTEOME_ABUNDANCE && !t
+		const isProteomeAbundanceCBut = self.config.dataType == TermTypes.PROTEOME_ABUNDANCE && !t
 		if (isMetaboliteIntensityCBut || isProteomeAbundanceCBut || t.grp.type == 'hierCluster') {
 			const grp = isMetaboliteIntensityCBut || isProteomeAbundanceCBut ? termgroups[0] : termgroups[t.grpIndex]
 			// for hiercluster group, use selected terms as new group.lst

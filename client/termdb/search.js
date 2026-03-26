@@ -72,7 +72,7 @@ class TermSearch {
 
 		if (termTypeGroup == TermTypeGroups.DICTIONARY_VARIABLES) return true
 		if (termTypeGroup == TermTypeGroups.METABOLITE_INTENSITY) return true
-		if (termTypeGroup == TermTypeGroups.WHOLE_PROTEOME_ABUNDANCE) return true
+		if (termTypeGroup == TermTypeGroups.PROTEOME_ABUNDANCE) return true
 
 		return false
 	}
