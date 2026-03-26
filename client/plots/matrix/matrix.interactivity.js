@@ -2693,7 +2693,7 @@ function setZoomPanActions(self) {
 				label: ss.buttonText || `Select ${l.Samples}`,
 				callback: async () => {
 					ss.callback({
-						samples: await self.app.vocabApi.convertSampleId(samples, ss.attributes, true),
+						samples: await self.app.vocabApi.convertSampleId(samples, ss.attributes),
 						source: `Selected ${l.samples} from OncoMatrix`
 					})
 					self.zoomArea.remove()

@@ -41,7 +41,7 @@ export function addSelectedSamplesOptions(clickedSampleNames, event) {
 				// attributes defined in allow2selectSamples
 				const samples = clickedSampleNames.map(c => this.data.samples[c])
 				ss.callback({
-					samples: await this.app.vocabApi.convertSampleId(samples, ss.attributes, true),
+					samples: await this.app.vocabApi.convertSampleId(samples, ss.attributes),
 					source: ss.defaultSelectionLabel || `Selected ${l.samples} from gene expression`
 				})
 			}
