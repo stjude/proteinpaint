@@ -346,7 +346,9 @@ async function getSampleData(q, ds, onlyChildren = false) {
 	*/
 	const bySampleId = {}
 	for (const sid in samples) {
-		if (q.ds.cohort?.termdb?.q?.id2sampleName) {
+		if (q.ds.cohort?.termdb?.q?.id2sampleRefs) {
+			bySampleId[sid] = q.ds.cohort.termdb.q.id2sampleRefs(Number(sid))
+		} else if (q.ds.cohort?.termdb?.q?.id2sampleName) {
 			bySampleId[sid] = { label: q.ds.cohort.termdb.q.id2sampleName(Number(sid)) }
 		} else if (q.ds.__gdc?.caseid2submitter) {
 			bySampleId[sid] = { label: q.ds.__gdc.caseid2submitter.get(sid) }

@@ -37,10 +37,11 @@ export function addSelectedSamplesOptions(clickedSampleNames, event) {
 		optionArr.push({
 			label: ss.buttonText || `Select ${l.samples}`,
 			callback: async () => {
+				// convert ids of selected samples based on
+				// attributes defined in allow2selectSamples
+				const samples = clickedSampleNames.map(c => this.data.samples[c])
 				ss.callback({
-					samples: clickedSampleNames.map(c => {
-						return { 'cases.case_id': c }
-					}),
+					samples: await this.app.vocabApi.convertSampleId(samples, ss.attributes, true),
 					source: ss.defaultSelectionLabel || `Selected ${l.samples} from gene expression`
 				})
 			}
